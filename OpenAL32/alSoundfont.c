@@ -395,10 +395,11 @@ void ALsoundfont_deleteSoundfont(ALsoundfont *self, ALCdevice *device)
             {
                 if(sounds[j] && ReadRef(&sounds[j]->ref) == 0)
                 {
+                    ALbuffer *buffer;
+
                     deleting = AL_TRUE;
-                    if(sounds[j]->Buffer)
+                    if((buffer=ATOMIC_LOAD(&sounds[j]->Buffer)) != NULL)
                     {
-                        ALbuffer *buffer = sounds[j]->Buffer;
                         ALbuffer **iter;
 
 #define MATCH_BUFFER(_i) (buffer == *(_i))
@@ -423,8 +424,8 @@ void ALsoundfont_deleteSoundfont(ALsoundfont *self, ALCdevice *device)
     DeleteBuffer(device, *(iter));         \
 } while(0)
     VECTOR_FOR_EACH(ALbuffer*, buffers, DELETE_BUFFER);
-    VECTOR_DEINIT(buffers);
 #undef DELETE_BUFFER
+    VECTOR_DEINIT(buffers);
 }
 
 

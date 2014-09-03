@@ -252,6 +252,8 @@ AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *val
     ALCdevice *device;
     ALCcontext *context;
     const ALfontsound *sound;
+    ALfontsound *link;
+    ALbuffer *buffer;
 
     context = GetContextRef();
     if(!context) return;
@@ -262,7 +264,8 @@ AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *val
     switch(param)
     {
         case AL_BUFFER:
-            values[0] = (sound->Buffer ? sound->Buffer->id : 0);
+            buffer = ATOMIC_LOAD(&sound->Buffer);
+            values[0] = (buffer ? buffer->id : 0);
             break;
 
         case AL_MOD_LFO_TO_PITCH_SOFT:
@@ -439,7 +442,8 @@ AL_API void AL_APIENTRY alGetFontsoundivSOFT(ALuint id, ALenum param, ALint *val
             break;
 
         case AL_FONTSOUND_LINK_SOFT:
-            values[0] = (sound->Link ? sound->Link->id : 0);
+            link = ATOMIC_LOAD(&sound->Link);
+            values[0] = (link ? link->id : 0);
             break;
 
         default:
@@ -528,7 +532,7 @@ static void ALfontsound_Construct(ALfontsound *self)
 {
     InitRef(&self->ref, 0);
 
-    self->Buffer = NULL;
+    ATOMIC_INIT(&self->Buffer, NULL);
 
     self->MinKey = 0;
     self->MaxKey = 127;
@@ -593,7 +597,8 @@ static void ALfontsound_Construct(ALfontsound *self)
     self->PitchKey = 0;
     self->PitchCorrection = 0;
     self->SampleType = AL_MONO_SOFT;
-    self->Link = NULL;
+
+    ATOMIC_INIT(&self->Link, NULL);
 
     InitUIntMap(&self->ModulatorMap, ~0);
 
@@ -602,17 +607,18 @@ static void ALfontsound_Construct(ALfontsound *self)
 
 static void ALfontsound_Destruct(ALfontsound *self)
 {
+    ALfontsound *link;
+    ALbuffer *buffer;
     ALsizei i;
 
     FreeThunkEntry(self->id);
     self->id = 0;
 
-    if(self->Buffer)
-        DecrementRef(&self->Buffer->ref);
-    self->Buffer = NULL;
-    if(self->Link)
-        DecrementRef(&self->Link->ref);
-    self->Link = NULL;
+    if((buffer=ATOMIC_EXCHANGE(ALbuffer*, &self->Buffer, NULL)) != NULL)
+        DecrementRef(&buffer->ref);
+
+    if((link=ATOMIC_EXCHANGE(ALfontsound*, &self->Link, NULL)) != NULL)
+        DecrementRef(&link->ref);
 
     for(i = 0;i < self->ModulatorMap.size;i++)
     {
@@ -641,7 +647,7 @@ void ALfontsound_setPropi(ALfontsound *self, ALCcontext *context, ALenum param, 
             }
 
             if(buffer) IncrementRef(&buffer->ref);
-            if((buffer=ExchangePtr((XchgPtr*)&self->Buffer, buffer)) != NULL)
+            if((buffer=ATOMIC_EXCHANGE(ALbuffer*, &self->Buffer, buffer)) != NULL)
                 DecrementRef(&buffer->ref);
             break;
 
@@ -832,7 +838,7 @@ void ALfontsound_setPropi(ALfontsound *self, ALCcontext *context, ALenum param, 
                 SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
 
             if(link) IncrementRef(&link->ref);
-            if((link=ExchangePtr((XchgPtr*)&self->Link, link)) != NULL)
+            if((link=ATOMIC_EXCHANGE(ALfontsound*, &self->Link, link)) != NULL)
                 DecrementRef(&link->ref);
             break;
 

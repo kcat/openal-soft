@@ -247,6 +247,8 @@ typedef struct FSample {
 static void FSample_Construct(FSample *self, ALfontsound *sound)
 {
     fluid_sample_t *sample = STATIC_CAST(fluid_sample_t, self);
+    ALbuffer *buffer = ATOMIC_LOAD(&sound->Buffer);
+
     memset(sample->name, 0, sizeof(sample->name));
     sample->start = sound->Start;
     sample->end = sound->End;
@@ -256,8 +258,8 @@ static void FSample_Construct(FSample *self, ALfontsound *sound)
     sample->origpitch = sound->PitchKey;
     sample->pitchadj = sound->PitchCorrection;
     sample->sampletype = getSampleType(sound->SampleType);
-    sample->valid = !!sound->Buffer;
-    sample->data = sound->Buffer ? sound->Buffer->data : NULL;
+    sample->valid = !!buffer;
+    sample->data = buffer ? buffer->data : NULL;
 
     sample->amplitude_that_reaches_noise_floor_is_valid = 0;
     sample->amplitude_that_reaches_noise_floor = 0.0;

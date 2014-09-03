@@ -34,7 +34,7 @@ typedef struct ALenvelope {
 typedef struct ALfontsound {
     RefCount ref;
 
-    struct ALbuffer *Buffer;
+    ATOMIC(struct ALbuffer*) Buffer;
 
     ALint MinKey, MaxKey;
     ALint MinVelocity, MaxVelocity;
@@ -85,7 +85,8 @@ typedef struct ALfontsound {
     ALubyte PitchKey;
     ALbyte PitchCorrection;
     ALenum SampleType;
-    struct ALfontsound *Link;
+
+    ATOMIC(struct ALfontsound*) Link;
 
     /* NOTE: Each map entry contains *four* (4) ALsfmodulator objects. */
     UIntMap ModulatorMap;

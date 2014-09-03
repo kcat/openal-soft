@@ -769,11 +769,11 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void)
     context = GetContextRef();
     if(!context) return;
 
+    LockContext(context);
     if(ExchangeInt(&context->DeferUpdates, AL_FALSE))
     {
         ALsizei pos;
 
-        LockContext(context);
         LockUIntMapRead(&context->SourceMap);
         for(pos = 0;pos < context->SourceMap.size;pos++)
         {
@@ -793,8 +793,8 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void)
                 SetSourceState(Source, context, new_state);
         }
         UnlockUIntMapRead(&context->SourceMap);
-        UnlockContext(context);
     }
+    UnlockContext(context);
 
     ALCcontext_DecRef(context);
 }

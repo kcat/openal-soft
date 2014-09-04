@@ -8,18 +8,10 @@
 extern "C" {
 #endif
 
-typedef void *volatile XchgPtr;
-
 /* Atomics using C11 */
 #ifdef HAVE_C11_ATOMIC
 
 #include <stdatomic.h>
-
-inline int ExchangeInt(volatile int *ptr, int newval)
-{ return atomic_exchange(ptr, newval); }
-inline void *ExchangePtr(XchgPtr *ptr, void *newval)
-{ return atomic_exchange(ptr, newval); }
-
 
 #define ATOMIC(T)  struct { T _Atomic value; }
 
@@ -40,12 +32,6 @@ inline void *ExchangePtr(XchgPtr *ptr, void *newval)
 
 /* Atomics using GCC intrinsics */
 #elif defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1)) && !defined(__QNXNTO__)
-
-inline int ExchangeInt(volatile int *ptr, int newval)
-{ return __sync_lock_test_and_set(ptr, newval); }
-inline void *ExchangePtr(XchgPtr *ptr, void *newval)
-{ return __sync_lock_test_and_set(ptr, newval); }
-
 
 #define ATOMIC(T)  struct { T volatile value; }
 
@@ -110,18 +96,6 @@ inline void *ExchangePtr(XchgPtr *ptr, void *newval)
     : "r" (dest), "r" (newval), "0" (oldval)                                  \
     : "memory"                                                                \
 )
-
-
-inline int ExchangeInt(volatile int *dest, int newval)
-{ int ret; WRAP_XCHG("l", ret, dest, newval); return ret; }
-
-#ifdef __i386__
-inline void *ExchangePtr(XchgPtr *dest, void *newval)
-{ void *ret; WRAP_XCHG("l", ret, dest, newval); return ret; }
-#else
-inline void *ExchangePtr(XchgPtr *dest, void *newval)
-{ void *ret; WRAP_XCHG("q", ret, dest, newval); return ret; }
-#endif
 
 
 #define ATOMIC(T)  struct { T volatile value; }
@@ -222,17 +196,6 @@ inline bool CompareAndSwap64(volatile LONGLONG *dest, LONGLONG newval, LONGLONG 
 #define WRAP_XCHG(T, _func, _ptr, _newval)  ((T(*)(T volatile*,T))_func)((_ptr), (_newval))
 #define WRAP_CMPXCHG(T, _func, _ptr, _newval, _oldval) ((bool(*)(T volatile*,T,T*))_func)((_ptr), (_newval), (_oldval))
 
-inline int ExchangeInt(volatile int *ptr, int newval)
-{ return WRAP_XCHG(int,AtomicSwap32,ptr,newval); }
-
-#ifdef _WIN64
-inline void *ExchangePtr(XchgPtr *ptr, void *newval)
-{ return WRAP_XCHG(void*,AtomicSwap64,ptr,newval); }
-#else
-inline void *ExchangePtr(XchgPtr *ptr, void *newval)
-{ return WRAP_XCHG(void*,AtomicSwap32,ptr,newval); }
-#endif
-
 
 #define ATOMIC(T)  struct { T volatile value; }
 
@@ -289,10 +252,6 @@ int _al_invalid_atomic_size(); /* not defined */
 #define ATOMIC_COMPARE_EXCHANGE_WEAK(a, b, c, d) ATOMIC_COMPARE_EXCHANGE_STRONG(a, b, c, d)
 #endif
 
-/* This is *NOT* atomic, but is a handy utility macro to compare-and-swap non-
- * atomic variables. */
-#define COMPARE_EXCHANGE(_val, _oldval, _newval)  ((*(_val) == *(_oldval)) ? ((*(_val)=(_newval)),true) : ((*(_oldval)=*(_val)),false))
-
 
 typedef unsigned int uint;
 typedef ATOMIC(uint) RefCount;
@@ -305,6 +264,29 @@ inline uint IncrementRef(RefCount *ptr)
 { return ATOMIC_ADD(uint, ptr, 1)+1; }
 inline uint DecrementRef(RefCount *ptr)
 { return ATOMIC_SUB(uint, ptr, 1)-1; }
+
+
+/* NOTE: Not atomic! */
+inline int ExchangeInt(volatile int *ptr, int newval)
+{
+    int old = *ptr;
+    *ptr = newval;
+    return old;
+}
+
+typedef void *volatile XchgPtr;
+/* NOTE: Not atomic! */
+inline void *ExchangePtr(XchgPtr *ptr, void *newval)
+{
+    void *old = *ptr;
+    *ptr = newval;
+    return old;
+}
+
+/* This is *NOT* atomic, but is a handy utility macro to compare-and-swap non-
+ * atomic variables. */
+#define COMPARE_EXCHANGE(_val, _oldval, _newval)  ((*(_val) == *(_oldval)) ? ((*(_val)=(_newval)),true) : ((*(_oldval)=*(_val)),false))
+
 
 #ifdef __cplusplus
 }

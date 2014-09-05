@@ -355,7 +355,7 @@ IF(HAVE_CPUID_H)
         int main()
         {
             unsigned int eax, ebx, ecx, edx;
-            return __get_cpuid(0, eax, ebx, ecx, edx);
+            return __get_cpuid(0, &eax, &ebx, &ecx, &edx);
         }" HAVE_GCC_GET_CPUID)
 ENDIF()
 

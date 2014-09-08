@@ -234,7 +234,7 @@ void altss_delete(altss_t tss_id);
 
 int altimespec_get(struct timespec *ts, int base);
 
-void al_nssleep(time_t sec, long nsec);
+void al_nssleep(unsigned long nsec);
 
 #ifdef __cplusplus
 }

@@ -131,7 +131,7 @@ static int ALCplaybackOSS_mixerProc(void *ptr)
                     break;
                 }
 
-                al_nssleep(0, 1000000);
+                al_nssleep(1000000);
                 continue;
             }
 
@@ -362,7 +362,7 @@ static int ALCcaptureOSS_recordProc(void *ptr)
         }
         if(amt == 0)
         {
-            al_nssleep(0, 1000000);
+            al_nssleep(1000000);
             continue;
         }
         if(self->doCapture)

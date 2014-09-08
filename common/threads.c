@@ -733,11 +733,11 @@ int altimespec_get(struct timespec *ts, int base)
 #endif
 
 
-void al_nssleep(time_t sec, long nsec)
+void al_nssleep(unsigned long nsec)
 {
     struct timespec ts, rem;
-    ts.tv_sec = sec;
-    ts.tv_nsec = nsec;
+    ts.tv_sec = nsec / 1000000000ul;
+    ts.tv_nsec = nsec % 1000000000ul;
 
     while(althrd_sleep(&ts, &rem) == -1)
         ts = rem;

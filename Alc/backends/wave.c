@@ -159,7 +159,7 @@ static int ALCwaveBackend_mixerProc(void *ptr)
         }
 
         if(avail-done < device->UpdateSize)
-            al_nssleep(0, restTime);
+            al_nssleep(restTime);
         else while(avail-done >= device->UpdateSize)
         {
             aluMixData(device, self->mBuffer, device->UpdateSize);

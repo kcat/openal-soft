@@ -266,8 +266,7 @@ static const BackendFuncs sndio_funcs = {
     NULL,
     NULL,
     NULL,
-    NULL,
-    ALCdevice_GetLatencyDefault
+    NULL
 };
 
 ALCboolean alc_sndio_init(BackendFuncs *func_list)

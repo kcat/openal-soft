@@ -59,7 +59,7 @@ struct BackendInfo {
     BackendFuncs Funcs;
 };
 
-#define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
+#define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 static struct BackendInfo BackendList[] = {
 #ifdef HAVE_PULSEAUDIO
     { "pulse", ALCpulseBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
@@ -1423,11 +1423,6 @@ DECL_CONST static ALCboolean IsValidALCChannels(ALCenum channels)
  ************************************************/
 extern inline void LockContext(ALCcontext *context);
 extern inline void UnlockContext(ALCcontext *context);
-
-ALint64 ALCdevice_GetLatencyDefault(ALCdevice *UNUSED(device))
-{
-    return 0;
-}
 
 ALint64 ALCdevice_GetLatency(ALCdevice *device)
 {

@@ -396,8 +396,7 @@ static const BackendFuncs opensl_funcs = {
     NULL,
     NULL,
     NULL,
-    NULL,
-    ALCdevice_GetLatencyDefault
+    NULL
 };
 
 

@@ -684,8 +684,7 @@ static const BackendFuncs ca_funcs = {
     ca_start_capture,
     ca_stop_capture,
     ca_capture_samples,
-    ca_available_samples,
-    ALCdevice_GetLatencyDefault
+    ca_available_samples
 };
 
 ALCboolean alc_ca_init(BackendFuncs *func_list)

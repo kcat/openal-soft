@@ -469,8 +469,6 @@ typedef struct {
     void (*StopCapture)(ALCdevice*);
     ALCenum (*CaptureSamples)(ALCdevice*, void*, ALCuint);
     ALCuint (*AvailableSamples)(ALCdevice*);
-
-    ALint64 (*GetLatency)(ALCdevice*);
 } BackendFuncs;
 
 ALCboolean alc_solaris_init(BackendFuncs *func_list);
@@ -761,8 +759,6 @@ void ALCcontext_DecRef(ALCcontext *context);
 
 void AppendAllDevicesList(const ALCchar *name);
 void AppendCaptureDeviceList(const ALCchar *name);
-
-ALint64 ALCdevice_GetLatencyDefault(ALCdevice *device);
 
 void ALCdevice_Lock(ALCdevice *device);
 void ALCdevice_Unlock(ALCdevice *device);

@@ -252,8 +252,7 @@ static const BackendFuncs solaris_funcs = {
     NULL,
     NULL,
     NULL,
-    NULL,
-    ALCdevice_GetLatencyDefault
+    NULL
 };
 
 ALCboolean alc_solaris_init(BackendFuncs *func_list)

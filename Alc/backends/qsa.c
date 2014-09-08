@@ -1073,16 +1073,7 @@ static ALCenum qsa_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint s
     return ALC_NO_ERROR;
 }
 
-static ALint64 qsa_get_latency(ALCdevice* device)
-{
-    ALint frame_size=FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
-
-    return (ALint64)(device->UpdateSize*device->NumUpdates/frame_size)*
-        1000000000/device->Frequency;
-}
-
-BackendFuncs qsa_funcs=
-{
+static const BackendFuncs qsa_funcs= {
     qsa_open_playback,
     qsa_close_playback,
     qsa_reset_playback,
@@ -1093,8 +1084,7 @@ BackendFuncs qsa_funcs=
     qsa_start_capture,
     qsa_stop_capture,
     qsa_capture_samples,
-    qsa_available_samples,
-    qsa_get_latency,
+    qsa_available_samples
 };
 
 ALCboolean alc_qsa_init(BackendFuncs* func_list)

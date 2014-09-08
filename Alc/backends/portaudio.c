@@ -429,8 +429,7 @@ static const BackendFuncs pa_funcs = {
     pa_start_capture,
     pa_stop_capture,
     pa_capture_samples,
-    pa_available_samples,
-    ALCdevice_GetLatencyDefault
+    pa_available_samples
 };
 
 ALCboolean alc_pa_init(BackendFuncs *func_list)

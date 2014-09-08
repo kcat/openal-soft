@@ -699,6 +699,7 @@ static ALCenum qsa_open_capture(ALCdevice* device, const ALCchar* deviceName)
     data->audio_fd=snd_pcm_file_descriptor(data->pcmHandle, SND_PCM_CHANNEL_CAPTURE);
     if (data->audio_fd<0)
     {
+        snd_pcm_close(data->pcmHandle);
         free(data);
         return ALC_INVALID_DEVICE;
     }
@@ -753,170 +754,13 @@ static ALCenum qsa_open_capture(ALCdevice* device, const ALCchar* deviceName)
     data->cparams.format.voices=ChannelsFromDevFmt(device->FmtChans);
     data->cparams.format.format=format;
 
-    if ((snd_pcm_plugin_params(data->pcmHandle, &data->cparams))<0)
+    if(snd_pcm_plugin_params(data->pcmHandle, &data->cparams) < 0)
     {
-        int original_rate=data->cparams.format.rate;
-        int original_voices=data->cparams.format.voices;
-        int original_format=data->cparams.format.format;
-        int it;
-        int jt;
+        snd_pcm_close(data->pcmHandle);
+        free(data);
+        device->ExtraData=NULL;
 
-        for (it=0; it<1; it++)
-        {
-            /* Check for second pass */
-            if (it==1)
-            {
-                original_rate=ratelist[0].rate;
-                original_voices=channellist[0].channels;
-                original_format=formatlist[0].format;
-            }
-
-            do {
-                /* At first downgrade sample format */
-                jt=0;
-                do {
-                    if (formatlist[jt].format==data->cparams.format.format)
-                    {
-                        data->cparams.format.format=formatlist[jt+1].format;
-                        break;
-                    }
-                    if (formatlist[jt].format==0)
-                    {
-                        data->cparams.format.format=0;
-                        break;
-                    }
-                    jt++;
-                } while(1);
-
-                if (data->cparams.format.format==0)
-                {
-                    data->cparams.format.format=original_format;
-
-                    /* At secod downgrade sample rate */
-                    jt=0;
-                    do {
-                        if (ratelist[jt].rate==data->cparams.format.rate)
-                        {
-                            data->cparams.format.rate=ratelist[jt+1].rate;
-                            break;
-                        }
-                        if (ratelist[jt].rate==0)
-                        {
-                            data->cparams.format.rate=0;
-                            break;
-                        }
-                        jt++;
-                    } while(1);
-
-                    if (data->cparams.format.rate==0)
-                    {
-                        data->cparams.format.rate=original_rate;
-                        data->cparams.format.format=original_format;
-
-                        /* At third downgrade channels number */
-                        jt=0;
-                        do {
-                            if(channellist[jt].channels==data->cparams.format.voices)
-                            {
-                                data->cparams.format.voices=channellist[jt+1].channels;
-                                break;
-                            }
-                            if (channellist[jt].channels==0)
-                            {
-                                data->cparams.format.voices=0;
-                                break;
-                            }
-                           jt++;
-                        } while(1);
-                    }
-
-                    if (data->cparams.format.voices==0)
-                    {
-                        break;
-                    }
-                }
-
-                data->cparams.buf.block.frag_size=device->UpdateSize*
-                    data->cparams.format.voices*
-                    snd_pcm_format_width(data->cparams.format.format)/8;
-                data->cparams.buf.block.frags_max=device->NumUpdates;
-                data->cparams.buf.block.frags_min=device->NumUpdates;
-                if ((snd_pcm_plugin_params(data->pcmHandle, &data->cparams))<0)
-                {
-                    continue;
-                }
-                else
-                {
-                    break;
-                }
-            } while(1);
-
-            if (data->cparams.format.voices!=0)
-            {
-                break;
-            }
-        }
-
-        if (data->cparams.format.voices==0)
-        {
-            return ALC_INVALID_VALUE;
-        }
-    }
-
-    /* now fill back to the our AL device */
-    device->Frequency=data->cparams.format.rate;
-
-    switch (data->cparams.format.voices)
-    {
-        case 1:
-             device->FmtChans=DevFmtMono;
-             break;
-        case 2:
-             device->FmtChans=DevFmtStereo;
-             break;
-        case 4:
-             device->FmtChans=DevFmtQuad;
-             break;
-        case 6:
-             device->FmtChans=DevFmtX51;
-             break;
-        case 7:
-             device->FmtChans=DevFmtX61;
-             break;
-        case 8:
-             device->FmtChans=DevFmtX71;
-             break;
-        default:
-             device->FmtChans=DevFmtMono;
-             break;
-    }
-
-    switch (data->cparams.format.format)
-    {
-        case SND_PCM_SFMT_S8:
-             device->FmtType=DevFmtByte;
-             break;
-        case SND_PCM_SFMT_U8:
-             device->FmtType=DevFmtUByte;
-             break;
-        case SND_PCM_SFMT_S16_LE:
-             device->FmtType=DevFmtShort;
-             break;
-        case SND_PCM_SFMT_U16_LE:
-             device->FmtType=DevFmtUShort;
-             break;
-        case SND_PCM_SFMT_S32_LE:
-             device->FmtType=DevFmtInt;
-             break;
-        case SND_PCM_SFMT_U32_LE:
-             device->FmtType=DevFmtUInt;
-             break;
-        case SND_PCM_SFMT_FLOAT_LE:
-             device->FmtType=DevFmtFloat;
-             break;
-        default:
-             device->FmtType=DevFmtShort;
-             break;
+        return ALC_INVALID_VALUE;
     }
 
     return ALC_NO_ERROR;
@@ -927,9 +771,8 @@ static void qsa_close_capture(ALCdevice* device)
     qsa_data* data=(qsa_data*)device->ExtraData;
 
     if (data->pcmHandle!=NULL)
-    {
         snd_pcm_close(data->pcmHandle);
-    }
+
     free(data);
     device->ExtraData=NULL;
 }
@@ -954,10 +797,6 @@ static void qsa_start_capture(ALCdevice* device)
     }
 
     snd_pcm_capture_go(data->pcmHandle);
-
-    device->UpdateSize=data->csetup.buf.block.frag_size/
-        (ChannelsFromDevFmt(device->FmtChans)*BytesFromDevFmt(device->FmtType));
-    device->NumUpdates=data->csetup.buf.block.frags;
 }
 
 static void qsa_stop_capture(ALCdevice* device)

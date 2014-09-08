@@ -332,14 +332,6 @@
 ##
 [qsa]
 
-## device:
-#  Sets the device name for the default playback device.
-#device = default
-
-## capture:
-#  Sets the device name for the default capture device.
-#capture = default
-
 ##
 ## MMDevApi backend stuff
 ##

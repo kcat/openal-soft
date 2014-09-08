@@ -255,22 +255,16 @@ FORCE_ALIGN static int qsa_proc_playback(void* ptr)
 
 static ALCenum qsa_open_playback(ALCdevice* device, const ALCchar* deviceName)
 {
-    qsa_data* data;
-    char driver[64];
-    int status;
+    qsa_data *data;
     int card, dev;
+    int status;
 
-    strncpy(driver, GetConfigValue("qsa", "device", qsaDevice), sizeof(driver)-1);
-    driver[sizeof(driver)-1]=0;
-
-    data=(qsa_data*)calloc(1, sizeof(qsa_data));
-    if (data==NULL)
-    {
+    data = (qsa_data*)calloc(1, sizeof(qsa_data));
+    if(data == NULL)
         return ALC_OUT_OF_MEMORY;
-    }
 
     if(!deviceName)
-        deviceName = driver;
+        deviceName = qsaDevice;
 
     if(strcmp(deviceName, qsaDevice) == 0)
         status = snd_pcm_open_preferred(&data->pcmHandle, &card, &dev, SND_PCM_OPEN_PLAYBACK);
@@ -605,14 +599,10 @@ static void qsa_stop_playback(ALCdevice* device)
 
 static ALCenum qsa_open_capture(ALCdevice* device, const ALCchar* deviceName)
 {
-    qsa_data* data;
-    int format=-1;
-    char driver[64];
+    qsa_data *data;
     int card, dev;
+    int format=-1;
     int status;
-
-    strncpy(driver, GetConfigValue("qsa", "capture", qsaDevice), sizeof(driver)-1);
-    driver[sizeof(driver)-1]=0;
 
     data=(qsa_data*)calloc(1, sizeof(qsa_data));
     if (data==NULL)
@@ -621,7 +611,7 @@ static ALCenum qsa_open_capture(ALCdevice* device, const ALCchar* deviceName)
     }
 
     if(!deviceName)
-        deviceName=driver;
+        deviceName = qsaDevice;
 
     if(strcmp(deviceName, qsaDevice) == 0)
         status = snd_pcm_open_preferred(&data->pcmHandle, &card, &dev, SND_PCM_OPEN_CAPTURE);

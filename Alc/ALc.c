@@ -1449,50 +1449,50 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
     ALuint i;
 
     for(i = 0;i < MaxChannels;i++)
-        device->ChannelOffsets[i] = INVALID_OFFSET;
+        device->ChannelName[i] = InvalidChannel;
 
     switch(device->FmtChans)
     {
-    case DevFmtMono: device->ChannelOffsets[FrontCenter] = 0;
+    case DevFmtMono: device->ChannelName[0] = FrontCenter;
                      break;
-    case DevFmtStereo: device->ChannelOffsets[FrontLeft]  = 0;
-                       device->ChannelOffsets[FrontRight] = 1;
+    case DevFmtStereo: device->ChannelName[0] = FrontLeft;
+                       device->ChannelName[1] = FrontRight;
                        break;
-    case DevFmtQuad: device->ChannelOffsets[FrontLeft]  = 0;
-                     device->ChannelOffsets[FrontRight] = 1;
-                     device->ChannelOffsets[BackLeft]   = 2;
-                     device->ChannelOffsets[BackRight]  = 3;
+    case DevFmtQuad: device->ChannelName[0] = FrontLeft;
+                     device->ChannelName[1] = FrontRight;
+                     device->ChannelName[2] = BackLeft;
+                     device->ChannelName[3] = BackRight;
                      break;
-    case DevFmtX51: device->ChannelOffsets[FrontLeft]   = 0;
-                    device->ChannelOffsets[FrontRight]  = 1;
-                    device->ChannelOffsets[FrontCenter] = 2;
-                    device->ChannelOffsets[LFE]         = 3;
-                    device->ChannelOffsets[BackLeft]    = 4;
-                    device->ChannelOffsets[BackRight]   = 5;
+    case DevFmtX51: device->ChannelName[0] = FrontLeft;
+                    device->ChannelName[1] = FrontRight;
+                    device->ChannelName[2] = FrontCenter;
+                    device->ChannelName[3] = LFE;
+                    device->ChannelName[4] = BackLeft;
+                    device->ChannelName[5] = BackRight;
                     break;
-    case DevFmtX51Side: device->ChannelOffsets[FrontLeft]   = 0;
-                        device->ChannelOffsets[FrontRight]  = 1;
-                        device->ChannelOffsets[FrontCenter] = 2;
-                        device->ChannelOffsets[LFE]         = 3;
-                        device->ChannelOffsets[SideLeft]    = 4;
-                        device->ChannelOffsets[SideRight]   = 5;
+    case DevFmtX51Side: device->ChannelName[0] = FrontLeft;
+                        device->ChannelName[1] = FrontRight;
+                        device->ChannelName[2] = FrontCenter;
+                        device->ChannelName[3] = LFE;
+                        device->ChannelName[4] = SideLeft;
+                        device->ChannelName[5] = SideRight;
                         break;
-    case DevFmtX61: device->ChannelOffsets[FrontLeft]   = 0;
-                    device->ChannelOffsets[FrontRight]  = 1;
-                    device->ChannelOffsets[FrontCenter] = 2;
-                    device->ChannelOffsets[LFE]         = 3;
-                    device->ChannelOffsets[BackCenter]  = 4;
-                    device->ChannelOffsets[SideLeft]    = 5;
-                    device->ChannelOffsets[SideRight]   = 6;
+    case DevFmtX61: device->ChannelName[0] = FrontLeft;
+                    device->ChannelName[1] = FrontRight;
+                    device->ChannelName[2] = FrontCenter;
+                    device->ChannelName[3] = LFE;
+                    device->ChannelName[4] = BackCenter;
+                    device->ChannelName[5] = SideLeft;
+                    device->ChannelName[6] = SideRight;
                     break;
-    case DevFmtX71: device->ChannelOffsets[FrontLeft]   = 0;
-                    device->ChannelOffsets[FrontRight]  = 1;
-                    device->ChannelOffsets[FrontCenter] = 2;
-                    device->ChannelOffsets[LFE]         = 3;
-                    device->ChannelOffsets[BackLeft]    = 4;
-                    device->ChannelOffsets[BackRight]   = 5;
-                    device->ChannelOffsets[SideLeft]    = 6;
-                    device->ChannelOffsets[SideRight]   = 7;
+    case DevFmtX71: device->ChannelName[0] = FrontLeft;
+                    device->ChannelName[1] = FrontRight;
+                    device->ChannelName[2] = FrontCenter;
+                    device->ChannelName[3] = LFE;
+                    device->ChannelName[4] = BackLeft;
+                    device->ChannelName[5] = BackRight;
+                    device->ChannelName[6] = SideLeft;
+                    device->ChannelName[7] = SideRight;
                     break;
     }
 }
@@ -1506,25 +1506,25 @@ void SetDefaultChannelOrder(ALCdevice *device)
     ALuint i;
 
     for(i = 0;i < MaxChannels;i++)
-        device->ChannelOffsets[i] = INVALID_OFFSET;
+        device->ChannelName[i] = InvalidChannel;
 
     switch(device->FmtChans)
     {
-    case DevFmtX51: device->ChannelOffsets[FrontLeft]   = 0;
-                    device->ChannelOffsets[FrontRight]  = 1;
-                    device->ChannelOffsets[BackLeft]    = 2;
-                    device->ChannelOffsets[BackRight]   = 3;
-                    device->ChannelOffsets[FrontCenter] = 4;
-                    device->ChannelOffsets[LFE]         = 5;
+    case DevFmtX51: device->ChannelName[0] = FrontLeft;
+                    device->ChannelName[1] = FrontRight;
+                    device->ChannelName[2] = BackLeft;
+                    device->ChannelName[3] = BackRight;
+                    device->ChannelName[4] = FrontCenter;
+                    device->ChannelName[5] = LFE;
                     return;
-    case DevFmtX71: device->ChannelOffsets[FrontLeft]   = 0;
-                    device->ChannelOffsets[FrontRight]  = 1;
-                    device->ChannelOffsets[BackLeft]    = 2;
-                    device->ChannelOffsets[BackRight]   = 3;
-                    device->ChannelOffsets[FrontCenter] = 4;
-                    device->ChannelOffsets[LFE]         = 5;
-                    device->ChannelOffsets[SideLeft]    = 6;
-                    device->ChannelOffsets[SideRight]   = 7;
+    case DevFmtX71: device->ChannelName[0] = FrontLeft;
+                    device->ChannelName[1] = FrontRight;
+                    device->ChannelName[2] = BackLeft;
+                    device->ChannelName[3] = BackRight;
+                    device->ChannelName[4] = FrontCenter;
+                    device->ChannelName[5] = LFE;
+                    device->ChannelName[6] = SideLeft;
+                    device->ChannelName[7] = SideRight;
                     return;
 
     /* Same as WFX order */
@@ -1533,9 +1533,9 @@ void SetDefaultChannelOrder(ALCdevice *device)
     case DevFmtQuad:
     case DevFmtX51Side:
     case DevFmtX61:
+        SetDefaultWFXChannelOrder(device);
         break;
     }
-    SetDefaultWFXChannelOrder(device);
 }
 
 

@@ -1108,19 +1108,22 @@ static void Write_##T(ALCdevice *device, ALvoid **buffer, ALuint SamplesToDo) \
 {                                                                             \
     ALfloat (*restrict DryBuffer)[BUFFERSIZE] = device->DryBuffer;            \
     const ALuint numchans = ChannelsFromDevFmt(device->FmtChans);             \
-    const ALuint *offsets = device->ChannelOffsets;                           \
+    const enum Channel *chans = device->ChannelName;                          \
     ALuint i, j;                                                              \
                                                                               \
     for(j = 0;j < MaxChannels;j++)                                            \
     {                                                                         \
+        const enum Channel c = chans[j];                                      \
+        const ALfloat *in;                                                    \
         T *restrict out;                                                      \
                                                                               \
-        if(offsets[j] == INVALID_OFFSET)                                      \
+        if(c == InvalidChannel)                                               \
             continue;                                                         \
                                                                               \
-        out = (T*)(*buffer) + offsets[j];                                     \
+        in = DryBuffer[c];                                                    \
+        out = (T*)(*buffer) + j;                                              \
         for(i = 0;i < SamplesToDo;i++)                                        \
-            out[i*numchans] = func(DryBuffer[j][i]);                          \
+            out[i*numchans] = func(in[i]);                                    \
     }                                                                         \
     *buffer = (char*)(*buffer) + SamplesToDo*numchans*sizeof(T);              \
 }

@@ -525,6 +525,7 @@ enum Channel {
     SideRight,
 
     MaxChannels,
+    InvalidChannel = MaxChannels
 };
 
 
@@ -645,7 +646,7 @@ struct ALCdevice_struct
     // Device flags
     ALuint       Flags;
 
-    ALuint ChannelOffsets[MaxChannels];
+    enum Channel ChannelName[MaxChannels];
 
     enum Channel Speaker2Chan[MaxChannels];
     ALfloat SpeakerAngle[MaxChannels];

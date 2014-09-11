@@ -1043,7 +1043,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
 
     /* Attenuate reverb according to its coverage (dirGain=0 will give
      * Gain*ambientGain, and dirGain=1 will give Gain). */
-    ambientGain = minf(sqrtf(2.0f/Device->NumChan), 1.0f);
+    ambientGain = minf(sqrtf(2.0f/Device->NumSpeakers), 1.0f);
 
     length = earlyPan[0]*earlyPan[0] + earlyPan[1]*earlyPan[1] + earlyPan[2]*earlyPan[2];
     if(length > 1.0f)
@@ -1158,7 +1158,7 @@ static ALvoid ALreverbState_update(ALreverbState *State, ALCdevice *Device, cons
     else
     {
         /* Update channel gains */
-        ALfloat gain = sqrtf(2.0f/Device->NumChan) * ReverbBoost * Slot->Gain;
+        ALfloat gain = sqrtf(2.0f/Device->NumSpeakers) * ReverbBoost * Slot->Gain;
         SetGains(Device, gain, State->Gain);
     }
 }

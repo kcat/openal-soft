@@ -648,9 +648,12 @@ struct ALCdevice_struct
 
     enum Channel ChannelName[MaxChannels];
 
-    enum Channel Speaker2Chan[MaxChannels];
-    ALfloat SpeakerAngle[MaxChannels];
-    ALuint  NumChan;
+    /* This only counts positional speakers, i.e. not including LFE. */
+    struct {
+        enum Channel ChanName;
+        ALfloat Angle;
+    } Speaker[MaxChannels];
+    ALuint NumSpeakers;
 
     ALuint64 ClockBase;
     ALuint SamplesDone;

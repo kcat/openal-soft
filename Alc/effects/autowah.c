@@ -76,7 +76,7 @@ static ALvoid ALautowahState_update(ALautowahState *state, ALCdevice *device, co
     state->PeakGain = slot->EffectProps.Autowah.PeakGain;
     state->Resonance = slot->EffectProps.Autowah.Resonance;
 
-    gain = sqrtf(1.0f / device->NumChan) * slot->Gain;
+    gain = sqrtf(1.0f / device->NumSpeakers) * slot->Gain;
     SetGains(device, gain, state->Gain);
 }
 

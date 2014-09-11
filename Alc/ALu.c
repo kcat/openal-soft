@@ -358,9 +358,9 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         for(c = 0;c < num_channels;c++)
         {
             MixGains *gains = voice->Direct.Mix.Gains[c];
-            for(i = 0;i < (ALint)Device->NumChan;i++)
+            for(i = 0;i < (ALint)Device->NumSpeakers;i++)
             {
-                enum Channel chan = Device->Speaker2Chan[i];
+                enum Channel chan = Device->Speaker[i].ChanName;
                 if(chan == chans[c].channel)
                 {
                     gains[chan].Target = DryGain;
@@ -444,7 +444,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                 gains[j].Target = 0.0f;
         }
 
-        DryGain *= lerp(1.0f, 1.0f/sqrtf((float)Device->NumChan), hwidth/F_PI);
+        DryGain *= lerp(1.0f, 1.0f/sqrtf((float)Device->NumSpeakers), hwidth/F_PI);
         for(c = 0;c < num_channels;c++)
         {
             MixGains *gains = voice->Direct.Mix.Gains[c];
@@ -984,10 +984,10 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
 
         /* Adjustment for vertical offsets. Not the greatest, but simple
          * enough. */
-        AmbientGain = DryGain * sqrtf(1.0f/Device->NumChan) * (1.0f-DirGain);
-        for(i = 0;i < (ALint)Device->NumChan;i++)
+        AmbientGain = DryGain * sqrtf(1.0f/Device->NumSpeakers) * (1.0f-DirGain);
+        for(i = 0;i < (ALint)Device->NumSpeakers;i++)
         {
-            enum Channel chan = Device->Speaker2Chan[i];
+            enum Channel chan = Device->Speaker[i].ChanName;
             gains[chan].Target = maxf(gains[chan].Target, AmbientGain);
         }
 

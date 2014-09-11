@@ -33,15 +33,14 @@
 
 extern inline void SetGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MaxChannels]);
 
-static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[MaxChannels],
-                                  enum Channel Speaker2Chan[MaxChannels], ALint chans)
+static void SetSpeakerArrangement(const char *name, ALCdevice *device)
 {
     char *confkey, *next;
     char *layout_str;
     char *sep, *end;
     enum Channel val;
     const char *str;
-    int i;
+    ALuint i;
 
     if(!ConfigValueStr(NULL, name, &str) && !ConfigValueStr(NULL, "layout", &str))
         return;
@@ -98,13 +97,13 @@ static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[MaxChan
         while(isspace(*sep))
             sep++;
 
-        for(i = 0;i < chans;i++)
+        for(i = 0;i < device->NumSpeakers;i++)
         {
-            if(Speaker2Chan[i] == val)
+            if(device->Speaker[i].ChanName == val)
             {
                 long angle = strtol(sep, NULL, 10);
                 if(angle >= -180 && angle <= 180)
-                    SpeakerAngle[i] = DEG2RAD(angle);
+                    device->Speaker[i].Angle = DEG2RAD(angle);
                 else
                     ERR("Invalid angle for speaker \"%s\": %ld\n", confkey, angle);
                 break;
@@ -114,14 +113,14 @@ static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[MaxChan
     free(layout_str);
     layout_str = NULL;
 
-    for(i = 0;i < chans;i++)
+    for(i = 0;i < device->NumSpeakers;i++)
     {
-        int min = i;
-        int i2;
+        ALuint min = i;
+        ALuint i2;
 
-        for(i2 = i+1;i2 < chans;i2++)
+        for(i2 = i+1;i2 < device->NumSpeakers;i2++)
         {
-            if(SpeakerAngle[i2] < SpeakerAngle[min])
+            if(device->Speaker[i2].Angle < device->Speaker[min].Angle)
                 min = i2;
         }
 
@@ -130,13 +129,13 @@ static void SetSpeakerArrangement(const char *name, ALfloat SpeakerAngle[MaxChan
             ALfloat tmpf;
             enum Channel tmpc;
 
-            tmpf = SpeakerAngle[i];
-            SpeakerAngle[i] = SpeakerAngle[min];
-            SpeakerAngle[min] = tmpf;
+            tmpf = device->Speaker[i].Angle;
+            device->Speaker[i].Angle = device->Speaker[min].Angle;
+            device->Speaker[min].Angle = tmpf;
 
-            tmpc = Speaker2Chan[i];
-            Speaker2Chan[i] = Speaker2Chan[min];
-            Speaker2Chan[min] = tmpc;
+            tmpc = device->Speaker[i].ChanName;
+            device->Speaker[i].ChanName = device->Speaker[min].ChanName;
+            device->Speaker[min].ChanName = tmpc;
         }
     }
 }
@@ -151,18 +150,18 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, A
     ALfloat a;
     ALuint i;
 
-    for(i = 0;i < device->NumChan;i++)
-        Speaker2Chan[i] = device->Speaker2Chan[i];
-    for(i = 0;i < device->NumChan;i++)
-        SpeakerAngle[i] = device->SpeakerAngle[i];
+    for(i = 0;i < device->NumSpeakers;i++)
+        Speaker2Chan[i] = device->Speaker[i].ChanName;
+    for(i = 0;i < device->NumSpeakers;i++)
+        SpeakerAngle[i] = device->Speaker[i].Angle;
 
     /* Some easy special-cases first... */
-    if(device->NumChan <= 1 || hwidth >= F_PI)
+    if(device->NumSpeakers <= 1 || hwidth >= F_PI)
     {
         /* Full coverage for all speakers. */
         for(i = 0;i < MaxChannels;i++)
             gains[i] = 0.0f;
-        for(i = 0;i < device->NumChan;i++)
+        for(i = 0;i < device->NumSpeakers;i++)
         {
             enum Channel chan = Speaker2Chan[i];
             gains[chan] = ingain;
@@ -174,7 +173,7 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, A
         /* Infinitely small sound point. */
         for(i = 0;i < MaxChannels;i++)
             gains[i] = 0.0f;
-        for(i = 0;i < device->NumChan-1;i++)
+        for(i = 0;i < device->NumSpeakers-1;i++)
         {
             if(angle >= SpeakerAngle[i] && angle < SpeakerAngle[i+1])
             {
@@ -205,18 +204,18 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, A
         {
             ALuint done;
             ALuint i = 0;
-            while(i < device->NumChan && device->SpeakerAngle[i]-angle < -F_PI)
+            while(i < device->NumSpeakers && device->Speaker[i].Angle-angle < -F_PI)
                 i++;
-            for(done = 0;i < device->NumChan;done++)
+            for(done = 0;i < device->NumSpeakers;done++)
             {
-                SpeakerAngle[done] = device->SpeakerAngle[i]-angle;
-                Speaker2Chan[done] = device->Speaker2Chan[i];
+                SpeakerAngle[done] = device->Speaker[i].Angle-angle;
+                Speaker2Chan[done] = device->Speaker[i].ChanName;
                 i++;
             }
-            for(i = 0;done < device->NumChan;i++)
+            for(i = 0;done < device->NumSpeakers;i++)
             {
-                SpeakerAngle[done] = device->SpeakerAngle[i]-angle + F_2PI;
-                Speaker2Chan[done] = device->Speaker2Chan[i];
+                SpeakerAngle[done] = device->Speaker[i].Angle-angle + F_2PI;
+                Speaker2Chan[done] = device->Speaker[i].ChanName;
                 done++;
             }
         }
@@ -227,19 +226,19 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, A
              * they'll underflow and wrap to become 0xFFFFFFFF, which will
              * break as expected. */
             ALuint done;
-            ALuint i = device->NumChan-1;
-            while(i < device->NumChan && device->SpeakerAngle[i]-angle > F_PI)
+            ALuint i = device->NumSpeakers-1;
+            while(i < device->NumSpeakers && device->Speaker[i].Angle-angle > F_PI)
                 i--;
-            for(done = device->NumChan-1;i < device->NumChan;done--)
+            for(done = device->NumSpeakers-1;i < device->NumSpeakers;done--)
             {
-                SpeakerAngle[done] = device->SpeakerAngle[i]-angle;
-                Speaker2Chan[done] = device->Speaker2Chan[i];
+                SpeakerAngle[done] = device->Speaker[i].Angle-angle;
+                Speaker2Chan[done] = device->Speaker[i].ChanName;
                 i--;
             }
-            for(i = device->NumChan-1;done < device->NumChan;i--)
+            for(i = device->NumSpeakers-1;done < device->NumSpeakers;i--)
             {
-                SpeakerAngle[done] = device->SpeakerAngle[i]-angle - F_2PI;
-                Speaker2Chan[done] = device->Speaker2Chan[i];
+                SpeakerAngle[done] = device->Speaker[i].Angle-angle - F_2PI;
+                Speaker2Chan[done] = device->Speaker[i].ChanName;
                 done--;
             }
         }
@@ -251,7 +250,7 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, A
     /* First speaker */
     i = 0;
     do {
-        ALuint last = device->NumChan-1;
+        ALuint last = device->NumSpeakers-1;
         enum Channel chan = Speaker2Chan[i];
 
         if(SpeakerAngle[i] >= langle && SpeakerAngle[i] <= rangle)
@@ -280,7 +279,7 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, A
         }
     } while(0);
 
-    for(i = 1;i < device->NumChan-1;i++)
+    for(i = 1;i < device->NumSpeakers-1;i++)
     {
         enum Channel chan = Speaker2Chan[i];
         if(SpeakerAngle[i] >= langle && SpeakerAngle[i] <= rangle)
@@ -304,7 +303,7 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, A
     }
 
     /* Last speaker */
-    i = device->NumChan-1;
+    i = device->NumSpeakers-1;
     do {
         enum Channel chan = Speaker2Chan[i];
         if(SpeakerAngle[i] >= langle && SpeakerAngle[i] <= rangle)
@@ -332,119 +331,115 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, A
         }
     } while(0);
 
-    for(i = 0;i < device->NumChan;i++)
+    for(i = 0;i < device->NumSpeakers;i++)
     {
-        enum Channel chan = device->Speaker2Chan[i];
+        enum Channel chan = device->Speaker[i].ChanName;
         gains[chan] = sqrtf(tmpgains[chan]) * ingain;
     }
 }
 
 
-ALvoid aluInitPanning(ALCdevice *Device)
+ALvoid aluInitPanning(ALCdevice *device)
 {
     const char *layoutname = NULL;
-    enum Channel *Speaker2Chan;
-    ALfloat *SpeakerAngle;
 
-    Speaker2Chan = Device->Speaker2Chan;
-    SpeakerAngle = Device->SpeakerAngle;
-    switch(Device->FmtChans)
+    switch(device->FmtChans)
     {
         case DevFmtMono:
-            Device->NumChan = 1;
-            Speaker2Chan[0] = FrontCenter;
-            SpeakerAngle[0] = DEG2RAD(0.0f);
+            device->NumSpeakers = 1;
+            device->Speaker[0].ChanName = FrontCenter;
+            device->Speaker[0].Angle = DEG2RAD(0.0f);
             layoutname = NULL;
             break;
 
         case DevFmtStereo:
-            Device->NumChan = 2;
-            Speaker2Chan[0] = FrontLeft;
-            Speaker2Chan[1] = FrontRight;
-            SpeakerAngle[0] = DEG2RAD(-90.0f);
-            SpeakerAngle[1] = DEG2RAD( 90.0f);
+            device->NumSpeakers = 2;
+            device->Speaker[0].ChanName = FrontLeft;
+            device->Speaker[1].ChanName = FrontRight;
+            device->Speaker[0].Angle = DEG2RAD(-90.0f);
+            device->Speaker[1].Angle = DEG2RAD( 90.0f);
             layoutname = "layout_stereo";
             break;
 
         case DevFmtQuad:
-            Device->NumChan = 4;
-            Speaker2Chan[0] = BackLeft;
-            Speaker2Chan[1] = FrontLeft;
-            Speaker2Chan[2] = FrontRight;
-            Speaker2Chan[3] = BackRight;
-            SpeakerAngle[0] = DEG2RAD(-135.0f);
-            SpeakerAngle[1] = DEG2RAD( -45.0f);
-            SpeakerAngle[2] = DEG2RAD(  45.0f);
-            SpeakerAngle[3] = DEG2RAD( 135.0f);
+            device->NumSpeakers = 4;
+            device->Speaker[0].ChanName = BackLeft;
+            device->Speaker[1].ChanName = FrontLeft;
+            device->Speaker[2].ChanName = FrontRight;
+            device->Speaker[3].ChanName = BackRight;
+            device->Speaker[0].Angle = DEG2RAD(-135.0f);
+            device->Speaker[1].Angle = DEG2RAD( -45.0f);
+            device->Speaker[2].Angle = DEG2RAD(  45.0f);
+            device->Speaker[3].Angle = DEG2RAD( 135.0f);
             layoutname = "layout_quad";
             break;
 
         case DevFmtX51:
-            Device->NumChan = 5;
-            Speaker2Chan[0] = BackLeft;
-            Speaker2Chan[1] = FrontLeft;
-            Speaker2Chan[2] = FrontCenter;
-            Speaker2Chan[3] = FrontRight;
-            Speaker2Chan[4] = BackRight;
-            SpeakerAngle[0] = DEG2RAD(-110.0f);
-            SpeakerAngle[1] = DEG2RAD( -30.0f);
-            SpeakerAngle[2] = DEG2RAD(   0.0f);
-            SpeakerAngle[3] = DEG2RAD(  30.0f);
-            SpeakerAngle[4] = DEG2RAD( 110.0f);
+            device->NumSpeakers = 5;
+            device->Speaker[0].ChanName = BackLeft;
+            device->Speaker[1].ChanName = FrontLeft;
+            device->Speaker[2].ChanName = FrontCenter;
+            device->Speaker[3].ChanName = FrontRight;
+            device->Speaker[4].ChanName = BackRight;
+            device->Speaker[0].Angle = DEG2RAD(-110.0f);
+            device->Speaker[1].Angle = DEG2RAD( -30.0f);
+            device->Speaker[2].Angle = DEG2RAD(   0.0f);
+            device->Speaker[3].Angle = DEG2RAD(  30.0f);
+            device->Speaker[4].Angle = DEG2RAD( 110.0f);
             layoutname = "layout_surround51";
             break;
 
         case DevFmtX51Side:
-            Device->NumChan = 5;
-            Speaker2Chan[0] = SideLeft;
-            Speaker2Chan[1] = FrontLeft;
-            Speaker2Chan[2] = FrontCenter;
-            Speaker2Chan[3] = FrontRight;
-            Speaker2Chan[4] = SideRight;
-            SpeakerAngle[0] = DEG2RAD(-90.0f);
-            SpeakerAngle[1] = DEG2RAD(-30.0f);
-            SpeakerAngle[2] = DEG2RAD(  0.0f);
-            SpeakerAngle[3] = DEG2RAD( 30.0f);
-            SpeakerAngle[4] = DEG2RAD( 90.0f);
+            device->NumSpeakers = 5;
+            device->Speaker[0].ChanName = SideLeft;
+            device->Speaker[1].ChanName = FrontLeft;
+            device->Speaker[2].ChanName = FrontCenter;
+            device->Speaker[3].ChanName = FrontRight;
+            device->Speaker[4].ChanName = SideRight;
+            device->Speaker[0].Angle = DEG2RAD(-90.0f);
+            device->Speaker[1].Angle = DEG2RAD(-30.0f);
+            device->Speaker[2].Angle = DEG2RAD(  0.0f);
+            device->Speaker[3].Angle = DEG2RAD( 30.0f);
+            device->Speaker[4].Angle = DEG2RAD( 90.0f);
             layoutname = "layout_side51";
             break;
 
         case DevFmtX61:
-            Device->NumChan = 6;
-            Speaker2Chan[0] = SideLeft;
-            Speaker2Chan[1] = FrontLeft;
-            Speaker2Chan[2] = FrontCenter;
-            Speaker2Chan[3] = FrontRight;
-            Speaker2Chan[4] = SideRight;
-            Speaker2Chan[5] = BackCenter;
-            SpeakerAngle[0] = DEG2RAD(-90.0f);
-            SpeakerAngle[1] = DEG2RAD(-30.0f);
-            SpeakerAngle[2] = DEG2RAD(  0.0f);
-            SpeakerAngle[3] = DEG2RAD( 30.0f);
-            SpeakerAngle[4] = DEG2RAD( 90.0f);
-            SpeakerAngle[5] = DEG2RAD(180.0f);
+            device->NumSpeakers = 6;
+            device->Speaker[0].ChanName = SideLeft;
+            device->Speaker[1].ChanName = FrontLeft;
+            device->Speaker[2].ChanName = FrontCenter;
+            device->Speaker[3].ChanName = FrontRight;
+            device->Speaker[4].ChanName = SideRight;
+            device->Speaker[5].ChanName = BackCenter;
+            device->Speaker[0].Angle = DEG2RAD(-90.0f);
+            device->Speaker[1].Angle = DEG2RAD(-30.0f);
+            device->Speaker[2].Angle = DEG2RAD(  0.0f);
+            device->Speaker[3].Angle = DEG2RAD( 30.0f);
+            device->Speaker[4].Angle = DEG2RAD( 90.0f);
+            device->Speaker[5].Angle = DEG2RAD(180.0f);
             layoutname = "layout_surround61";
             break;
 
         case DevFmtX71:
-            Device->NumChan = 7;
-            Speaker2Chan[0] = BackLeft;
-            Speaker2Chan[1] = SideLeft;
-            Speaker2Chan[2] = FrontLeft;
-            Speaker2Chan[3] = FrontCenter;
-            Speaker2Chan[4] = FrontRight;
-            Speaker2Chan[5] = SideRight;
-            Speaker2Chan[6] = BackRight;
-            SpeakerAngle[0] = DEG2RAD(-150.0f);
-            SpeakerAngle[1] = DEG2RAD( -90.0f);
-            SpeakerAngle[2] = DEG2RAD( -30.0f);
-            SpeakerAngle[3] = DEG2RAD(   0.0f);
-            SpeakerAngle[4] = DEG2RAD(  30.0f);
-            SpeakerAngle[5] = DEG2RAD(  90.0f);
-            SpeakerAngle[6] = DEG2RAD( 150.0f);
+            device->NumSpeakers = 7;
+            device->Speaker[0].ChanName = BackLeft;
+            device->Speaker[1].ChanName = SideLeft;
+            device->Speaker[2].ChanName = FrontLeft;
+            device->Speaker[3].ChanName = FrontCenter;
+            device->Speaker[4].ChanName = FrontRight;
+            device->Speaker[5].ChanName = SideRight;
+            device->Speaker[6].ChanName = BackRight;
+            device->Speaker[0].Angle = DEG2RAD(-150.0f);
+            device->Speaker[1].Angle = DEG2RAD( -90.0f);
+            device->Speaker[2].Angle = DEG2RAD( -30.0f);
+            device->Speaker[3].Angle = DEG2RAD(   0.0f);
+            device->Speaker[4].Angle = DEG2RAD(  30.0f);
+            device->Speaker[5].Angle = DEG2RAD(  90.0f);
+            device->Speaker[6].Angle = DEG2RAD( 150.0f);
             layoutname = "layout_surround71";
             break;
     }
-    if(layoutname && Device->Type != Loopback)
-        SetSpeakerArrangement(layoutname, SpeakerAngle, Speaker2Chan, Device->NumChan);
+    if(layoutname && device->Type != Loopback)
+        SetSpeakerArrangement(layoutname, device);
 }

@@ -82,7 +82,7 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, ALCdevice *Devi
     ALfilterState_setParams(&state->bandpass, ALfilterType_BandPass, 1.0f,
                             cutoff / (frequency*4.0f), bandwidth);
 
-    gain = sqrtf(1.0f / Device->NumChan) * Slot->Gain;
+    gain = sqrtf(1.0f / Device->NumSpeakers) * Slot->Gain;
     SetGains(Device, gain, state->Gain);
 }
 

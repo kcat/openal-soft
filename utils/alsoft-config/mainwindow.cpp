@@ -33,6 +33,32 @@ static const struct {
     { "", "" }
 };
 
+static const struct {
+    const char name[32];
+    const char value[16];
+} speakerModeList[] = {
+    { "Autodetect", "" },
+    { "Mono", "mono" },
+    { "Stereo", "stereo" },
+    { "Quadrophonic", "quad" },
+    { "5.1 Surround Sound", "surround51" },
+    { "6.1 Surround Sound", "surround61" },
+    { "7.1 Surround Sound", "surround71" },
+
+    { "", "" }
+}, sampleTypeList[] = {
+    { "Autodetect", "" },
+    { "8-bit int", "int8" },
+    { "8-bit uint", "uint8" },
+    { "16-bit int", "int16" },
+    { "16-bit uint", "uint16" },
+    { "32-bit int", "int32" },
+    { "32-bit uint", "uint32" },
+    { "32-bit float", "float32" },
+
+    { "", "" }
+};
+
 static QString getDefaultConfigName()
 {
 #ifdef Q_OS_WIN32
@@ -109,6 +135,13 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    for(int i = 0;speakerModeList[i].name[0];i++)
+        ui->channelConfigCombo->addItem(speakerModeList[i].name);
+    ui->channelConfigCombo->adjustSize();
+    for(int i = 0;sampleTypeList[i].name[0];i++)
+        ui->sampleFormatCombo->addItem(sampleTypeList[i].name);
+    ui->sampleFormatCombo->adjustSize();
+
     mPeriodSizeValidator = new QIntValidator(64, 8192, this);
     ui->periodSizeEdit->setValidator(mPeriodSizeValidator);
     mPeriodCountValidator = new QIntValidator(2, 16, this);
@@ -179,12 +212,19 @@ void MainWindow::loadConfig(const QString &fname)
     ui->sampleFormatCombo->setCurrentIndex(0);
     if(sampletype.isEmpty() == false)
     {
-        for(int i = 1;i < ui->sampleFormatCombo->count();i++)
+        for(int i = 0;sampleTypeList[i].name[i];i++)
         {
-            QString item = ui->sampleFormatCombo->itemText(i);
-            if(item.startsWith(sampletype))
+            if(sampletype == sampleTypeList[i].value)
             {
-                ui->sampleFormatCombo->setCurrentIndex(i);
+                for(int j = 1;j < ui->sampleFormatCombo->count();j++)
+                {
+                    QString item = ui->sampleFormatCombo->itemText(j);
+                    if(item == sampleTypeList[i].name)
+                    {
+                        ui->sampleFormatCombo->setCurrentIndex(j);
+                        break;
+                    }
+                }
                 break;
             }
         }
@@ -194,12 +234,19 @@ void MainWindow::loadConfig(const QString &fname)
     ui->channelConfigCombo->setCurrentIndex(0);
     if(channelconfig.isEmpty() == false)
     {
-        for(int i = 1;i < ui->channelConfigCombo->count();i++)
+        for(int i = 0;speakerModeList[i].name[i];i++)
         {
-            QString item = ui->channelConfigCombo->itemText(i);
-            if(item.startsWith(channelconfig))
+            if(channelconfig == speakerModeList[i].value)
             {
-                ui->channelConfigCombo->setCurrentIndex(i);
+                for(int j = 1;j < ui->channelConfigCombo->count();j++)
+                {
+                    QString item = ui->channelConfigCombo->itemText(j);
+                    if(item == speakerModeList[i].name)
+                    {
+                        ui->channelConfigCombo->setCurrentIndex(j);
+                        break;
+                    }
+                }
                 break;
             }
         }
@@ -371,15 +418,27 @@ void MainWindow::saveConfig(const QString &fname) const
     }
 
     QString str = ui->sampleFormatCombo->currentText();
-    str.truncate(str.indexOf('-'));
-    settings.setValue("sample-type", str.trimmed());
+    for(int i = 0;sampleTypeList[i].name[0];i++)
+    {
+        if(str == sampleTypeList[i].name)
+        {
+            settings.setValue("sample-type", sampleTypeList[i].value);
+            break;
+        }
+    }
 
     str = ui->channelConfigCombo->currentText();
-    str.truncate(str.indexOf('-'));
-    settings.setValue("channels", str.trimmed());
+    for(int i = 0;speakerModeList[i].name[0];i++)
+    {
+        if(str == speakerModeList[i].name)
+        {
+            settings.setValue("channels", speakerModeList[i].value);
+            break;
+        }
+    }
 
     uint rate = ui->sampleRateCombo->currentText().toUInt();
-    if(rate == 0)
+    if(!(rate > 0))
         settings.setValue("frequency", QString());
     else
         settings.setValue("frequency", rate);

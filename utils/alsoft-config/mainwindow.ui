@@ -57,8 +57,8 @@
       <property name="geometry">
        <rect>
         <x>120</x>
-        <y>20</y>
-        <width>188</width>
+        <y>50</y>
+        <width>78</width>
         <height>22</height>
        </rect>
       </property>
@@ -69,52 +69,12 @@ float and converted to the output sample type as needed.</string>
       <property name="sizeAdjustPolicy">
        <enum>QComboBox::AdjustToContents</enum>
       </property>
-      <item>
-       <property name="text">
-        <string>- Autodetect -</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>int8 - signed 8-bit int</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>uint8 - unsigned 8-bit int</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>int16 - signed 16-bit int</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>uint16 - unsigned 16-bit int</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>int32 - signed 32-bit int</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>uint32 - unsigned 32-bit int</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>float32 - 32-bit float</string>
-       </property>
-      </item>
      </widget>
      <widget class="QLabel" name="label_5">
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>20</y>
+        <y>50</y>
         <width>101</width>
         <height>21</height>
        </rect>
@@ -130,7 +90,7 @@ float and converted to the output sample type as needed.</string>
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>50</y>
+        <y>20</y>
         <width>101</width>
         <height>21</height>
        </rect>
@@ -146,8 +106,8 @@ float and converted to the output sample type as needed.</string>
       <property name="geometry">
        <rect>
         <x>120</x>
-        <y>50</y>
-        <width>227</width>
+        <y>20</y>
+        <width>78</width>
         <height>22</height>
        </rect>
       </property>
@@ -159,48 +119,13 @@ to stereo output.</string>
       <property name="sizeAdjustPolicy">
        <enum>QComboBox::AdjustToContents</enum>
       </property>
-      <item>
-       <property name="text">
-        <string>- Autodetect -</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>mono - 1-channel Mono</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>stereo - 2-channel Stereo</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>quad - 4-channel Quadraphonic</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>surround51 - 5.1 Surround Sound</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>surround61 - 6.1 Surround Sound</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>surround71 - 7.1 Surround Sound</string>
-       </property>
-      </item>
      </widget>
      <widget class="QComboBox" name="sampleRateCombo">
       <property name="geometry">
        <rect>
         <x>120</x>
         <y>80</y>
-        <width>111</width>
+        <width>96</width>
         <height>22</height>
        </rect>
       </property>
@@ -218,7 +143,7 @@ to stereo output.</string>
       </property>
       <item>
        <property name="text">
-        <string>- Autodetect -</string>
+        <string>Autodetect</string>
        </property>
       </item>
       <item>

@@ -662,7 +662,7 @@ value currently possible is 4.</string>
        <rect>
         <x>110</x>
         <y>120</y>
-        <width>185</width>
+        <width>78</width>
         <height>22</height>
        </rect>
       </property>
@@ -672,26 +672,6 @@ value currently possible is 4.</string>
       <property name="sizeAdjustPolicy">
        <enum>QComboBox::AdjustToContents</enum>
       </property>
-      <item>
-       <property name="text">
-        <string>- Default -</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>Point (low quality, fast)</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>Linear (basic quality, fast)</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>Cubic Spline (good quality)</string>
-       </property>
-      </item>
      </widget>
      <widget class="QGroupBox" name="groupBox_2">
       <property name="geometry">

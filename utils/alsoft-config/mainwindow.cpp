@@ -57,6 +57,13 @@ static const struct {
     { "32-bit float", "float32" },
 
     { "", "" }
+}, resamplerList[] = {
+    { "Default", "" },
+    { "Point (low quality, fast)", "point" },
+    { "Linear (basic quality, fast)", "linear" },
+    { "Cubic Spline (good quality)", "cubic" },
+
+    { "", "" }
 };
 
 static QString getDefaultConfigName()
@@ -141,6 +148,9 @@ MainWindow::MainWindow(QWidget *parent) :
     for(int i = 0;sampleTypeList[i].name[0];i++)
         ui->sampleFormatCombo->addItem(sampleTypeList[i].name);
     ui->sampleFormatCombo->adjustSize();
+    for(int i = 0;resamplerList[i].name[0];i++)
+        ui->resamplerComboBox->addItem(resamplerList[i].name);
+    ui->resamplerComboBox->adjustSize();
 
     mPeriodSizeValidator = new QIntValidator(64, 8192, this);
     ui->periodSizeEdit->setValidator(mPeriodSizeValidator);
@@ -269,18 +279,22 @@ void MainWindow::loadConfig(const QString &fname)
     ui->srcSendLineEdit->insert(settings.value("sends").toString());
 
     QString resampler = settings.value("resampler").toString().trimmed();
-    if(resampler.isEmpty())
-        ui->resamplerComboBox->setCurrentIndex(0);
-    else
+    ui->resamplerComboBox->setCurrentIndex(0);
+    if(resampler.isEmpty() == false)
     {
-        for(int i = 1;i < ui->resamplerComboBox->count();i++)
+        for(int i = 0;resamplerList[i].name[i];i++)
         {
-            QString item = ui->resamplerComboBox->itemText(i);
-            int end = item.indexOf(' ');
-            if(end < 0) end = item.size();
-            if(resampler.size() == end && resampler.compare(item.leftRef(end), Qt::CaseInsensitive) == 0)
+            if(resampler == resamplerList[i].value)
             {
-                ui->resamplerComboBox->setCurrentIndex(i);
+                for(int j = 1;j < ui->resamplerComboBox->count();j++)
+                {
+                    QString item = ui->resamplerComboBox->itemText(j);
+                    if(item == resamplerList[i].name)
+                    {
+                        ui->resamplerComboBox->setCurrentIndex(j);
+                        break;
+                    }
+                }
                 break;
             }
         }
@@ -449,12 +463,14 @@ void MainWindow::saveConfig(const QString &fname) const
     settings.setValue("sources", ui->srcCountLineEdit->text());
     settings.setValue("slots", ui->effectSlotLineEdit->text());
 
-    if(ui->resamplerComboBox->currentIndex() == 0)
-        settings.setValue("resampler", QString());
-    else
+    str = ui->resamplerComboBox->currentText();
+    for(int i = 0;resamplerList[i].name[0];i++)
     {
-        str = ui->resamplerComboBox->currentText();
-        settings.setValue("resampler", str.split(' ').first().toLower());
+        if(str == resamplerList[i].name)
+        {
+            settings.setValue("resampler", resamplerList[i].value);
+            break;
+        }
     }
 
     QStringList strlist;

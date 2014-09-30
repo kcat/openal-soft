@@ -33,111 +33,51 @@
 
 extern inline void SetGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MaxChannels]);
 
-static void SetSpeakerArrangement(const char *name, ALCdevice *device)
+
+static inline void Set0thOrder(ALfloat coeffs[16], ALfloat w)
 {
-    char *confkey, *next;
-    char *layout_str;
-    char *sep, *end;
-    enum Channel val;
-    const char *str;
-    ALuint i;
+    coeffs[0] = w;
+}
 
-    if(!ConfigValueStr(NULL, name, &str) && !ConfigValueStr(NULL, "layout", &str))
-        return;
+static inline void Set1stOrder(ALfloat coeffs[16], ALfloat w, ALfloat x, ALfloat y, ALfloat z)
+{
+    coeffs[0] = w;
+    coeffs[1] = x;
+    coeffs[2] = y;
+    coeffs[3] = z;
+}
 
-    layout_str = strdup(str);
-    next = confkey = layout_str;
-    while(next && *next)
-    {
-        confkey = next;
-        next = strchr(confkey, ',');
-        if(next)
-        {
-            *next = 0;
-            do {
-                next++;
-            } while(isspace(*next) || *next == ',');
-        }
+static inline void Set2ndOrder(ALfloat coeffs[16], ALfloat w, ALfloat x, ALfloat y, ALfloat z, ALfloat r, ALfloat s, ALfloat t, ALfloat u, ALfloat v)
+{
+    coeffs[0] = w;
+    coeffs[1] = x;
+    coeffs[2] = y;
+    coeffs[3] = z;
+    coeffs[4] = r;
+    coeffs[5] = s;
+    coeffs[6] = t;
+    coeffs[7] = u;
+    coeffs[8] = v;
+}
 
-        sep = strchr(confkey, '=');
-        if(!sep || confkey == sep)
-        {
-            ERR("Malformed speaker key: %s\n", confkey);
-            continue;
-        }
-
-        end = sep - 1;
-        while(isspace(*end) && end != confkey)
-            end--;
-        *(++end) = 0;
-
-        if(strcmp(confkey, "fl") == 0 || strcmp(confkey, "front-left") == 0)
-            val = FrontLeft;
-        else if(strcmp(confkey, "fr") == 0 || strcmp(confkey, "front-right") == 0)
-            val = FrontRight;
-        else if(strcmp(confkey, "fc") == 0 || strcmp(confkey, "front-center") == 0)
-            val = FrontCenter;
-        else if(strcmp(confkey, "bl") == 0 || strcmp(confkey, "back-left") == 0)
-            val = BackLeft;
-        else if(strcmp(confkey, "br") == 0 || strcmp(confkey, "back-right") == 0)
-            val = BackRight;
-        else if(strcmp(confkey, "bc") == 0 || strcmp(confkey, "back-center") == 0)
-            val = BackCenter;
-        else if(strcmp(confkey, "sl") == 0 || strcmp(confkey, "side-left") == 0)
-            val = SideLeft;
-        else if(strcmp(confkey, "sr") == 0 || strcmp(confkey, "side-right") == 0)
-            val = SideRight;
-        else
-        {
-            ERR("Unknown speaker for %s: \"%s\"\n", name, confkey);
-            continue;
-        }
-
-        *(sep++) = 0;
-        while(isspace(*sep))
-            sep++;
-
-        for(i = 0;i < device->NumSpeakers;i++)
-        {
-            if(device->Speaker[i].ChanName == val)
-            {
-                long angle = strtol(sep, NULL, 10);
-                if(angle >= -180 && angle <= 180)
-                    device->Speaker[i].Angle = DEG2RAD(angle);
-                else
-                    ERR("Invalid angle for speaker \"%s\": %ld\n", confkey, angle);
-                break;
-            }
-        }
-    }
-    free(layout_str);
-    layout_str = NULL;
-
-    for(i = 0;i < device->NumSpeakers;i++)
-    {
-        ALuint min = i;
-        ALuint i2;
-
-        for(i2 = i+1;i2 < device->NumSpeakers;i2++)
-        {
-            if(device->Speaker[i2].Angle < device->Speaker[min].Angle)
-                min = i2;
-        }
-
-        if(min != i)
-        {
-            ALfloat tmpf;
-            enum Channel tmpc;
-
-            tmpf = device->Speaker[i].Angle;
-            device->Speaker[i].Angle = device->Speaker[min].Angle;
-            device->Speaker[min].Angle = tmpf;
-
-            tmpc = device->Speaker[i].ChanName;
-            device->Speaker[i].ChanName = device->Speaker[min].ChanName;
-            device->Speaker[min].ChanName = tmpc;
-        }
-    }
+static inline void Set3rdOrder(ALfloat coeffs[16], ALfloat w, ALfloat x, ALfloat y, ALfloat z, ALfloat r, ALfloat s, ALfloat t, ALfloat u, ALfloat v, ALfloat k, ALfloat l, ALfloat m, ALfloat n, ALfloat o, ALfloat p, ALfloat q)
+{
+    coeffs[0] = w;
+    coeffs[1] = x;
+    coeffs[2] = y;
+    coeffs[3] = z;
+    coeffs[4] = r;
+    coeffs[5] = s;
+    coeffs[6] = t;
+    coeffs[7] = u;
+    coeffs[8] = v;
+    coeffs[9] = k;
+    coeffs[10] = l;
+    coeffs[11] = m;
+    coeffs[12] = n;
+    coeffs[13] = o;
+    coeffs[14] = p;
+    coeffs[15] = q;
 }
 
 
@@ -155,12 +95,13 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, A
     for(i = 0;i < device->NumSpeakers;i++)
         SpeakerAngle[i] = device->Speaker[i].Angle;
 
+    for(i = 0;i < MaxChannels;i++)
+        gains[i] = 0.0f;
+
     /* Some easy special-cases first... */
     if(device->NumSpeakers <= 1 || hwidth >= F_PI)
     {
         /* Full coverage for all speakers. */
-        for(i = 0;i < MaxChannels;i++)
-            gains[i] = 0.0f;
         for(i = 0;i < device->NumSpeakers;i++)
         {
             enum Channel chan = Speaker2Chan[i];
@@ -171,8 +112,6 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, A
     if(hwidth <= 0.0f)
     {
         /* Infinitely small sound point. */
-        for(i = 0;i < MaxChannels;i++)
-            gains[i] = 0.0f;
         for(i = 0;i < device->NumSpeakers-1;i++)
         {
             if(angle >= SpeakerAngle[i] && angle < SpeakerAngle[i+1])
@@ -338,10 +277,45 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, A
     }
 }
 
+void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfloat ingain, ALfloat gains[MaxChannels])
+{
+    ALfloat coeffs[MAX_AMBI_COEFFS];
+    ALuint i, j;
+
+    /* Convert from OpenAL coords to Ambisonics. */
+    coeffs[0] = 0.7071f; /* sqrt(1.0 / 2.0) */
+    coeffs[1] = -dir[2]; /* X */
+    coeffs[2] = -dir[0]; /* Y */
+    coeffs[3] =  dir[1]; /* Z */
+    coeffs[4] = 0.5f * (3.0f*dir[1]*dir[1] - 1.0f); /* 0.5 * (3*Z*Z - 1) */
+    coeffs[5] = 2.0f *  dir[1] * -dir[2]; /* 2*Z*X */
+    coeffs[6] = 2.0f * -dir[0] *  dir[1]; /* 2*Y*Z */
+    coeffs[7] = dir[2]*dir[2] - dir[0]*dir[0]; /* X*X - Y*Y */
+    coeffs[8] = 2.0f * -dir[2] * -dir[0]; /* 2*X*Y */
+    coeffs[9] = 0.5f *  dir[1] * (5.0f*dir[1]*dir[1] - 3.0f); /* 0.5 * Z * (5*Z*Z - 3) */
+    coeffs[10] = 0.7262f * -dir[2] * (5.0f*dir[1]*dir[1] - 1.0f); /* sqrt(135.0 / 256.0) * X * (5*Z*Z - 1) */
+    coeffs[11] = 0.7262f * -dir[0] * (5.0f*dir[1]*dir[1] - 1.0f); /* sqrt(135.0 / 256.0) * Y * (5*Z*Z - 1) */
+    coeffs[12] = 2.5981f *  dir[1] * (dir[2]*dir[2] - dir[0]*dir[0]); /* sqrt(27.0 / 4.0) * Z * (X*X - Y*Y) */
+    coeffs[13] = 5.1962f * -dir[2] * -dir[0] * dir[1]; /* sqrt(27) * X * Y * Z */
+    coeffs[14] = -dir[2] * (dir[2]*dir[2] - 3.0f*dir[0]*dir[0]); /* X * (X*X - 3*Y*Y) */
+    coeffs[15] = -dir[0] * (3.0f*dir[2]*dir[2] - dir[0]*dir[0]); /* Y * (3*X*X - Y*Y) */
+
+    for(i = 0;i < MaxChannels;i++)
+        gains[i] = 0.0f;
+    for(i = 0;i < device->NumSpeakers;i++)
+    {
+        enum Channel chan = device->Speaker[i].ChanName;
+        for(j = 0;j < MAX_AMBI_COEFFS;j++)
+            gains[chan] += device->Speaker[i].Coeff[j]*coeffs[j];
+        gains[chan] = maxf(gains[chan], 0.0f) * ingain;
+    }
+}
+
 
 ALvoid aluInitPanning(ALCdevice *device)
 {
-    const char *layoutname = NULL;
+    memset(device->Speaker, 0, sizeof(device->Speaker));
+    device->NumSpeakers = 0;
 
     switch(device->FmtChans)
     {
@@ -349,7 +323,7 @@ ALvoid aluInitPanning(ALCdevice *device)
             device->NumSpeakers = 1;
             device->Speaker[0].ChanName = FrontCenter;
             device->Speaker[0].Angle = DEG2RAD(0.0f);
-            layoutname = NULL;
+            Set0thOrder(device->Speaker[0].Coeff, 1.4142f);
             break;
 
         case DevFmtStereo:
@@ -358,7 +332,8 @@ ALvoid aluInitPanning(ALCdevice *device)
             device->Speaker[1].ChanName = FrontRight;
             device->Speaker[0].Angle = DEG2RAD(-90.0f);
             device->Speaker[1].Angle = DEG2RAD( 90.0f);
-            layoutname = "layout_stereo";
+            Set1stOrder(device->Speaker[0].Coeff, 0.7071f, -0.5f, 0.0f, 0.0f);
+            Set1stOrder(device->Speaker[1].Coeff, 0.7071f,  0.5f, 0.0f, 0.0f);
             break;
 
         case DevFmtQuad:
@@ -371,7 +346,10 @@ ALvoid aluInitPanning(ALCdevice *device)
             device->Speaker[1].Angle = DEG2RAD( -45.0f);
             device->Speaker[2].Angle = DEG2RAD(  45.0f);
             device->Speaker[3].Angle = DEG2RAD( 135.0f);
-            layoutname = "layout_quad";
+            Set2ndOrder(device->Speaker[0].Coeff, 0.353543f, -0.306192f,  0.306181f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.117193f);
+            Set2ndOrder(device->Speaker[1].Coeff, 0.353558f,  0.306181f,  0.306192f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.117183f);
+            Set2ndOrder(device->Speaker[2].Coeff, 0.353543f,  0.306181f, -0.306192f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.117193f);
+            Set2ndOrder(device->Speaker[3].Coeff, 0.353558f, -0.306192f, -0.306181f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.117183f);
             break;
 
         case DevFmtX51:
@@ -386,7 +364,11 @@ ALvoid aluInitPanning(ALCdevice *device)
             device->Speaker[2].Angle = DEG2RAD(   0.0f);
             device->Speaker[3].Angle = DEG2RAD(  30.0f);
             device->Speaker[4].Angle = DEG2RAD( 110.0f);
-            layoutname = "layout_surround51";
+            Set3rdOrder(device->Speaker[0].Coeff, 0.470934f, -0.369630f,  0.349383f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031379f, -0.058143f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007116f, -0.043968f);
+            Set3rdOrder(device->Speaker[1].Coeff, 0.208954f,  0.212846f,  0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017738f,  0.204014f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f,  0.047490f);
+            Set3rdOrder(device->Speaker[2].Coeff, 0.109403f,  0.179490f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f);
+            Set3rdOrder(device->Speaker[3].Coeff, 0.208950f,  0.212842f, -0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017740f, -0.204011f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051022f, -0.047489f);
+            Set3rdOrder(device->Speaker[4].Coeff, 0.470936f, -0.369626f, -0.349386f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031375f,  0.058144f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f,  0.043968f);
             break;
 
         case DevFmtX51Side:
@@ -401,7 +383,11 @@ ALvoid aluInitPanning(ALCdevice *device)
             device->Speaker[2].Angle = DEG2RAD(  0.0f);
             device->Speaker[3].Angle = DEG2RAD( 30.0f);
             device->Speaker[4].Angle = DEG2RAD( 90.0f);
-            layoutname = "layout_side51";
+            Set3rdOrder(device->Speaker[0].Coeff, 0.289151f, -0.081301f,  0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f, -0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f, -0.032897f);
+            Set3rdOrder(device->Speaker[1].Coeff, 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f);
+            Set3rdOrder(device->Speaker[2].Coeff, 0.109403f,  0.179490f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f);
+            Set3rdOrder(device->Speaker[3].Coeff, 0.167058f,  0.200580f, -0.172701f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029846f, -0.186405f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068904f);
+            Set3rdOrder(device->Speaker[4].Coeff, 0.289157f, -0.081298f, -0.401295f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f,  0.071419f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f,  0.032897f);
             break;
 
         case DevFmtX61:
@@ -418,7 +404,12 @@ ALvoid aluInitPanning(ALCdevice *device)
             device->Speaker[3].Angle = DEG2RAD( 30.0f);
             device->Speaker[4].Angle = DEG2RAD( 90.0f);
             device->Speaker[5].Angle = DEG2RAD(180.0f);
-            layoutname = "layout_surround61";
+            Set3rdOrder(device->Speaker[0].Coeff, 0.289151f, -0.081301f,  0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f, -0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f, -0.032897f);
+            Set3rdOrder(device->Speaker[1].Coeff, 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f);
+            Set3rdOrder(device->Speaker[2].Coeff, 0.109403f,  0.179490f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f);
+            Set3rdOrder(device->Speaker[3].Coeff, 0.167058f,  0.200580f, -0.172701f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029846f, -0.186405f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068904f);
+            Set3rdOrder(device->Speaker[4].Coeff, 0.289157f, -0.081298f, -0.401295f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f,  0.071419f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f,  0.032897f);
+            Set3rdOrder(device->Speaker[5].Coeff, 0.353556f, -0.461940f, -0.000006f, 0.0f, 0.0f, 0.0f, 0.0f,  0.165723f, -0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.000005f);
             break;
 
         case DevFmtX71:
@@ -437,9 +428,13 @@ ALvoid aluInitPanning(ALCdevice *device)
             device->Speaker[4].Angle = DEG2RAD(  30.0f);
             device->Speaker[5].Angle = DEG2RAD(  90.0f);
             device->Speaker[6].Angle = DEG2RAD( 150.0f);
-            layoutname = "layout_surround71";
+            Set3rdOrder(device->Speaker[0].Coeff, 0.224752f, -0.295009f,  0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f, -0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.000000f,  0.065799f);
+            Set3rdOrder(device->Speaker[1].Coeff, 0.224739f,  0.000002f,  0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.000000f, -0.065795f);
+            Set3rdOrder(device->Speaker[2].Coeff, 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f);
+            Set3rdOrder(device->Speaker[3].Coeff, 0.109403f,  0.179490f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f);
+            Set3rdOrder(device->Speaker[4].Coeff, 0.167058f,  0.200580f, -0.172701f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029846f, -0.186405f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068904f);
+            Set3rdOrder(device->Speaker[5].Coeff, 0.224754f,  0.000004f, -0.340647f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f, -0.000004f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.000000f,  0.065796f);
+            Set3rdOrder(device->Speaker[6].Coeff, 0.224739f, -0.295005f, -0.170331f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105342f,  0.182470f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.000000f, -0.065792f);
             break;
     }
-    if(layoutname && device->Type != Loopback)
-        SetSpeakerArrangement(layoutname, device);
 }

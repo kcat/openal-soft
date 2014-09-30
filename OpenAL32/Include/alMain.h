@@ -585,6 +585,10 @@ enum DeviceType {
  */
 #define BUFFERSIZE (2048u)
 
+/* The maximum number of Ambisonics coefficients. For a given order (o), the
+ * size needed will be (o+1)**2, thus zero-order has 1, first-order has 4,
+ * second-order has 9, and third-order has 16. */
+#define MAX_AMBI_COEFFS 16
 
 struct ALCdevice_struct
 {
@@ -652,6 +656,7 @@ struct ALCdevice_struct
     struct {
         enum Channel ChanName;
         ALfloat Angle;
+        ALfloat Coeff[MAX_AMBI_COEFFS];
     } Speaker[MaxChannels];
     ALuint NumSpeakers;
 

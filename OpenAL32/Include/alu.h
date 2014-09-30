@@ -202,6 +202,14 @@ inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALf
 ALvoid aluInitPanning(ALCdevice *Device);
 
 /**
+ * ComputeDirectionalGains
+ *
+ * Sets channel gains based on the given source's direction. The direction must
+ * be a 3-component vector no longer than 1 unit.
+ */
+void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfloat ingain, ALfloat gains[MaxChannels]);
+
+/**
  * ComputeAngleGains
  *
  * Sets channel gains based on a given source's angle and its half-width. The

@@ -959,14 +959,21 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     else
     {
         MixGains *gains = voice->Direct.Mix.Gains[0];
-        ALfloat DirGain = 0.0f;
-        ALfloat AmbientGain;
 
         for(j = 0;j < MaxChannels;j++)
             gains[j].Target = 0.0f;
 
         /* Normalize the length, and compute panned gains. */
-        if(Distance > FLT_EPSILON)
+        if(!(Distance > FLT_EPSILON))
+        {
+            ALfloat gain = 1.0f / sqrtf(Device->NumSpeakers);
+            for(i = 0;i < (ALint)Device->NumSpeakers;i++)
+            {
+                enum Channel chan = Device->Speaker[i].ChanName;
+                gains[chan].Target = gain;
+            }
+        }
+        else
         {
             ALfloat radius = ALSource->Radius;
             ALfloat Target[MaxChannels];
@@ -975,20 +982,9 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             Position[1] *= invlen;
             Position[2] *= invlen;
 
-            DirGain = sqrtf(Position[0]*Position[0] + Position[2]*Position[2]);
-            ComputeAngleGains(Device, atan2f(Position[0], -Position[2]*ZScale), 0.0f,
-                              DryGain*DirGain, Target);
+            ComputeDirectionalGains(Device, Position, DryGain, Target);
             for(j = 0;j < MaxChannels;j++)
                 gains[j].Target = Target[j];
-        }
-
-        /* Adjustment for vertical offsets. Not the greatest, but simple
-         * enough. */
-        AmbientGain = DryGain * sqrtf(1.0f/Device->NumSpeakers) * (1.0f-DirGain);
-        for(i = 0;i < (ALint)Device->NumSpeakers;i++)
-        {
-            enum Channel chan = Device->Speaker[i].ChanName;
-            gains[chan].Target = maxf(gains[chan].Target, AmbientGain);
         }
 
         if(!voice->Direct.Moving)

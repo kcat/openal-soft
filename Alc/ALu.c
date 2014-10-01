@@ -966,7 +966,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         /* Normalize the length, and compute panned gains. */
         if(!(Distance > FLT_EPSILON))
         {
-            ALfloat gain = 1.0f / sqrtf(Device->NumSpeakers);
+            ALfloat gain = 1.0f / sqrtf((float)Device->NumSpeakers);
             for(i = 0;i < (ALint)Device->NumSpeakers;i++)
             {
                 enum Channel chan = Device->Speaker[i].ChanName;

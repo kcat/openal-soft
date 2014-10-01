@@ -1266,10 +1266,7 @@ static void AppendDevice(const ALCchar *name, al_string *devnames)
 {
     size_t len = strlen(name);
     if(len > 0)
-    {
-        al_string_append_range(devnames, name, name+len);
-        al_string_append_char(devnames, '\0');
-    }
+        al_string_append_range(devnames, name, name+len+1);
 }
 void AppendAllDevicesList(const ALCchar *name)
 { AppendDevice(name, &alcAllDevicesList); }

@@ -638,11 +638,9 @@ void SetRTPriority(void)
 }
 
 
-ALboolean vector_reserve(char *ptr, size_t base_size, size_t obj_size, ALsizei obj_count, ALboolean exact)
+ALboolean vector_reserve(char *ptr, size_t base_size, size_t obj_size, size_t obj_count, ALboolean exact)
 {
     vector_ *vecptr = (vector_*)ptr;
-    if(obj_count < 0)
-        return AL_FALSE;
     if((*vecptr ? (*vecptr)->Capacity : 0) < obj_count)
     {
         ALsizei old_size = (*vecptr ? (*vecptr)->Size : 0);
@@ -652,11 +650,8 @@ ALboolean vector_reserve(char *ptr, size_t base_size, size_t obj_size, ALsizei o
          * amount. This is preferred when regularly increasing the vector since
          * it means fewer reallocations. Though it means it also wastes some
          * memory. */
-        if(exact == AL_FALSE)
-        {
+        if(exact == AL_FALSE && obj_count < INT_MAX)
             obj_count = NextPowerOf2((ALuint)obj_count);
-            if(obj_count < 0) return AL_FALSE;
-        }
 
         /* Need to be explicit with the caller type's base size, because it
          * could have extra padding before the start of the array (that is,
@@ -671,11 +666,9 @@ ALboolean vector_reserve(char *ptr, size_t base_size, size_t obj_size, ALsizei o
     return AL_TRUE;
 }
 
-ALboolean vector_resize(char *ptr, size_t base_size, size_t obj_size, ALsizei obj_count)
+ALboolean vector_resize(char *ptr, size_t base_size, size_t obj_size, size_t obj_count)
 {
     vector_ *vecptr = (vector_*)ptr;
-    if(obj_count < 0)
-        return AL_FALSE;
     if(*vecptr || obj_count > 0)
     {
         if(!vector_reserve((char*)vecptr, base_size, obj_size, obj_count, AL_TRUE))
@@ -696,12 +689,12 @@ ALboolean vector_insert(char *ptr, size_t base_size, size_t obj_size, void *ins_
         ptrdiff_t numins = ((const char*)datend - (const char*)datstart) / obj_size;
 
         assert(numins > 0);
-        if(INT_MAX-VECTOR_SIZE(*vecptr) <= numins ||
+        if((size_t)numins + VECTOR_SIZE(*vecptr) < (size_t)numins ||
            !vector_reserve((char*)vecptr, base_size, obj_size, VECTOR_SIZE(*vecptr)+numins, AL_TRUE))
             return AL_FALSE;
 
         /* NOTE: ins_pos may have been invalidated if *vecptr moved. Use ins_elem instead. */
-        if(ins_elem < (*vecptr)->Size)
+        if((size_t)ins_elem < (*vecptr)->Size)
         {
             memmove((char*)(*vecptr) + base_size + ((ins_elem+numins)*obj_size),
                     (char*)(*vecptr) + base_size + ((ins_elem       )*obj_size),
@@ -709,14 +702,14 @@ ALboolean vector_insert(char *ptr, size_t base_size, size_t obj_size, void *ins_
         }
         memcpy((char*)(*vecptr) + base_size + (ins_elem*obj_size),
                datstart, numins*obj_size);
-        (*vecptr)->Size += (ALsizei)numins;
+        (*vecptr)->Size += numins;
     }
     return AL_TRUE;
 }
 
 
 extern inline void al_string_deinit(al_string *str);
-extern inline ALsizei al_string_length(const_al_string str);
+extern inline size_t al_string_length(const_al_string str);
 extern inline ALboolean al_string_empty(const_al_string str);
 extern inline const al_string_char_type *al_string_get_cstr(const_al_string str);
 
@@ -730,10 +723,10 @@ void al_string_clear(al_string *str)
     *VECTOR_ITER_END(*str) = 0;
 }
 
-static inline int al_string_compare(const al_string_char_type *str1, ALsizei str1len,
-                                    const al_string_char_type *str2, ALsizei str2len)
+static inline int al_string_compare(const al_string_char_type *str1, size_t str1len,
+                                    const al_string_char_type *str2, size_t str2len)
 {
-    ALsizei complen = mini(str1len, str2len);
+    size_t complen = (str1len > str2len) ? str1len : str2len;
     int ret = memcmp(str1, str2, complen);
     if(ret == 0)
     {

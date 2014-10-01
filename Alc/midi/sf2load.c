@@ -364,7 +364,7 @@ static void GenModList_insertGen(GenModList *self, const Generator *gen, ALboole
 
     if(VECTOR_PUSH_BACK(self->gens, *gen) == AL_FALSE)
     {
-        ERR("Failed to insert generator (from %d elements)\n", VECTOR_SIZE(self->gens));
+        ERR("Failed to insert generator (from %lu elements)\n", VECTOR_SIZE(self->gens));
         return;
     }
 }
@@ -393,7 +393,7 @@ static void GenModList_accumGen(GenModList *self, const Generator *gen)
 
     if(VECTOR_PUSH_BACK(self->gens, *gen) == AL_FALSE)
     {
-        ERR("Failed to insert generator (from %d elements)\n", VECTOR_SIZE(self->gens));
+        ERR("Failed to insert generator (from %lu elements)\n", VECTOR_SIZE(self->gens));
         return;
     }
     if(gen->mGenerator < 60)
@@ -416,7 +416,7 @@ static void GenModList_insertMod(GenModList *self, const Modulator *mod)
 
     if(VECTOR_PUSH_BACK(self->mods, *mod) == AL_FALSE)
     {
-        ERR("Failed to insert modulator (from %d elements)\n", VECTOR_SIZE(self->mods));
+        ERR("Failed to insert modulator (from %lu elements)\n", VECTOR_SIZE(self->mods));
         return;
     }
 }
@@ -436,7 +436,7 @@ static void GenModList_accumMod(GenModList *self, const Modulator *mod)
 
     if(VECTOR_PUSH_BACK(self->mods, *mod) == AL_FALSE)
     {
-        ERR("Failed to insert modulator (from %d elements)\n", VECTOR_SIZE(self->mods));
+        ERR("Failed to insert modulator (from %lu elements)\n", VECTOR_SIZE(self->mods));
         return;
     }
 

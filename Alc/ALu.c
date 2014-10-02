@@ -118,6 +118,69 @@ static inline ALvoid aluMatrixVector(ALfloat *vector, ALfloat w, ALfloat (*restr
 }
 
 
+static void UpdateDryStepping(DirectParams *params, ALuint num_chans)
+{
+    ALuint i, j;
+
+    if(!params->Moving)
+    {
+        for(i = 0;i < num_chans;i++)
+        {
+            MixGains *gains = params->Mix.Gains[i];
+            for(j = 0;j < MaxChannels;j++)
+            {
+                gains[j].Current = gains[j].Target;
+                gains[j].Step = 1.0f;
+            }
+        }
+        params->Moving = AL_TRUE;
+        params->Counter = 0;
+        return;
+    }
+
+    for(i = 0;i < num_chans;i++)
+    {
+        MixGains *gains = params->Mix.Gains[i];
+        for(j = 0;j < MaxChannels;j++)
+        {
+            ALfloat cur = maxf(gains[j].Current, FLT_EPSILON);
+            ALfloat trg = maxf(gains[j].Target, FLT_EPSILON);
+            if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
+                gains[j].Step = powf(trg/cur, 1.0f/64.0f);
+            else
+                gains[j].Step = 1.0f;
+            gains[j].Current = cur;
+        }
+    }
+    params->Counter = 64;
+}
+
+static void UpdateWetStepping(SendParams *params)
+{
+    ALfloat cur, trg;
+
+    if(!params->Moving)
+    {
+        params->Gain.Current = params->Gain.Target;
+        params->Gain.Step = 1.0f;
+
+        params->Moving = AL_TRUE;
+        params->Counter = 0;
+        return;
+    }
+
+    cur = maxf(params->Gain.Current, FLT_EPSILON);
+    trg = maxf(params->Gain.Target, FLT_EPSILON);
+    if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
+        params->Gain.Step = powf(trg/cur, 1.0f/64.0f);
+    else
+        params->Gain.Step = 1.0f;
+    params->Gain.Current = cur;
+
+    params->Counter = 64;
+}
+
+
 static ALvoid CalcListenerParams(ALlistener *Listener)
 {
     ALfloat N[3], V[3], U[3], P[3];
@@ -351,13 +414,9 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         for(c = 0;c < num_channels;c++)
         {
             MixGains *gains = voice->Direct.Mix.Gains[c];
+
             for(j = 0;j < MaxChannels;j++)
                 gains[j].Target = 0.0f;
-        }
-
-        for(c = 0;c < num_channels;c++)
-        {
-            MixGains *gains = voice->Direct.Mix.Gains[c];
             for(i = 0;i < (ALint)Device->NumSpeakers;i++)
             {
                 enum Channel chan = Device->Speaker[i].ChanName;
@@ -368,39 +427,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                 }
             }
         }
-
-        if(!voice->Direct.Moving)
-        {
-            for(i = 0;i < num_channels;i++)
-            {
-                MixGains *gains = voice->Direct.Mix.Gains[i];
-                for(j = 0;j < MaxChannels;j++)
-                {
-                    gains[j].Current = gains[j].Target;
-                    gains[j].Step = 1.0f;
-                }
-            }
-            voice->Direct.Counter = 0;
-            voice->Direct.Moving  = AL_TRUE;
-        }
-        else
-        {
-            for(i = 0;i < num_channels;i++)
-            {
-                MixGains *gains = voice->Direct.Mix.Gains[i];
-                for(j = 0;j < MaxChannels;j++)
-                {
-                    ALfloat cur = maxf(gains[j].Current, FLT_EPSILON);
-                    ALfloat trg = maxf(gains[j].Target, FLT_EPSILON);
-                    if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
-                        gains[j].Step = powf(trg/cur, 1.0f/64.0f);
-                    else
-                        gains[j].Step = 1.0f;
-                    gains[j].Current = cur;
-                }
-            }
-            voice->Direct.Counter = 64;
-        }
+        UpdateDryStepping(&voice->Direct, num_channels);
 
         voice->IsHrtf = AL_FALSE;
     }
@@ -437,13 +464,6 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     }
     else
     {
-        for(i = 0;i < num_channels;i++)
-        {
-            MixGains *gains = voice->Direct.Mix.Gains[i];
-            for(j = 0;j < MaxChannels;j++)
-                gains[j].Target = 0.0f;
-        }
-
         DryGain *= lerp(1.0f, 1.0f/sqrtf((float)Device->NumSpeakers), hwidth/F_PI);
         for(c = 0;c < num_channels;c++)
         {
@@ -453,6 +473,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
             /* Special-case LFE */
             if(chans[c].channel == LFE)
             {
+                for(j = 0;j < MaxChannels;j++)
+                    gains[j].Target = 0.0f;
                 gains[chans[c].channel].Target = DryGain;
                 continue;
             }
@@ -460,63 +482,14 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
             for(i = 0;i < MaxChannels;i++)
                 gains[i].Target = Target[i];
         }
-
-        if(!voice->Direct.Moving)
-        {
-            for(i = 0;i < num_channels;i++)
-            {
-                MixGains *gains = voice->Direct.Mix.Gains[i];
-                for(j = 0;j < MaxChannels;j++)
-                {
-                    gains[j].Current = gains[j].Target;
-                    gains[j].Step = 1.0f;
-                }
-            }
-            voice->Direct.Counter = 0;
-            voice->Direct.Moving  = AL_TRUE;
-        }
-        else
-        {
-            for(i = 0;i < num_channels;i++)
-            {
-                MixGains *gains = voice->Direct.Mix.Gains[i];
-                for(j = 0;j < MaxChannels;j++)
-                {
-                    ALfloat trg = maxf(gains[j].Target, FLT_EPSILON);
-                    ALfloat cur = maxf(gains[j].Current, FLT_EPSILON);
-                    if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
-                        gains[j].Step = powf(trg/cur, 1.0f/64.0f);
-                    else
-                        gains[j].Step = 1.0f;
-                    gains[j].Current = cur;
-                }
-            }
-            voice->Direct.Counter = 64;
-        }
+        UpdateDryStepping(&voice->Direct, num_channels);
 
         voice->IsHrtf = AL_FALSE;
     }
     for(i = 0;i < NumSends;i++)
     {
         voice->Send[i].Gain.Target = WetGain[i];
-        if(!voice->Send[i].Moving)
-        {
-            voice->Send[i].Gain.Current = voice->Send[i].Gain.Target;
-            voice->Send[i].Gain.Step = 1.0f;
-            voice->Send[i].Counter = 0;
-            voice->Send[i].Moving  = AL_TRUE;
-        }
-        else
-        {
-            ALfloat cur = maxf(voice->Send[i].Gain.Current, FLT_EPSILON);
-            ALfloat trg = maxf(voice->Send[i].Gain.Target, FLT_EPSILON);
-            if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
-                voice->Send[i].Gain.Step = powf(trg/cur, 1.0f/64.0f);
-            else
-                voice->Send[i].Gain.Step = 1.0f;
-            voice->Send[i].Gain.Current = cur;
-            voice->Send[i].Counter = 64;
-        }
+        UpdateWetStepping(&voice->Send[i]);
     }
 
     {
@@ -960,13 +933,12 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     {
         MixGains *gains = voice->Direct.Mix.Gains[0];
 
-        for(j = 0;j < MaxChannels;j++)
-            gains[j].Target = 0.0f;
-
         /* Normalize the length, and compute panned gains. */
         if(!(Distance > FLT_EPSILON))
         {
             ALfloat gain = 1.0f / sqrtf((float)Device->NumSpeakers);
+            for(j = 0;j < MaxChannels;j++)
+                gains[j].Target = 0.0f;
             for(i = 0;i < (ALint)Device->NumSpeakers;i++)
             {
                 enum Channel chan = Device->Speaker[i].ChanName;
@@ -986,55 +958,14 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             for(j = 0;j < MaxChannels;j++)
                 gains[j].Target = Target[j];
         }
-
-        if(!voice->Direct.Moving)
-        {
-            for(j = 0;j < MaxChannels;j++)
-            {
-                gains[j].Current = gains[j].Target;
-                gains[j].Step = 1.0f;
-            }
-            voice->Direct.Counter = 0;
-            voice->Direct.Moving  = AL_TRUE;
-        }
-        else
-        {
-            for(j = 0;j < MaxChannels;j++)
-            {
-                ALfloat cur = maxf(gains[j].Current, FLT_EPSILON);
-                ALfloat trg = maxf(gains[j].Target, FLT_EPSILON);
-                if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
-                    gains[j].Step = powf(trg/cur, 1.0f/64.0f);
-                else
-                    gains[j].Step = 1.0f;
-                gains[j].Current = cur;
-            }
-            voice->Direct.Counter = 64;
-        }
+        UpdateDryStepping(&voice->Direct, 1);
 
         voice->IsHrtf = AL_FALSE;
     }
     for(i = 0;i < NumSends;i++)
     {
         voice->Send[i].Gain.Target = WetGain[i];
-        if(!voice->Send[i].Moving)
-        {
-            voice->Send[i].Gain.Current = voice->Send[i].Gain.Target;
-            voice->Send[i].Gain.Step = 1.0f;
-            voice->Send[i].Counter = 0;
-            voice->Send[i].Moving  = AL_TRUE;
-        }
-        else
-        {
-            ALfloat cur = maxf(voice->Send[i].Gain.Current, FLT_EPSILON);
-            ALfloat trg = maxf(voice->Send[i].Gain.Target, FLT_EPSILON);
-            if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
-                voice->Send[i].Gain.Step = powf(trg/cur, 1.0f/64.0f);
-            else
-                voice->Send[i].Gain.Step = 1.0f;
-            voice->Send[i].Gain.Current = cur;
-            voice->Send[i].Counter = 64;
-        }
+        UpdateWetStepping(&voice->Send[i]);
     }
 
     {

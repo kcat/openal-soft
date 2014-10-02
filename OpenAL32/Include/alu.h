@@ -224,7 +224,11 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, A
  */
 inline void SetGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MaxChannels])
 {
-    ComputeAngleGains(device, 0.0f, F_PI, ingain, gains);
+    ALuint i;
+    for(i = 0;i < MaxChannels;i++)
+        gains[i] = 0.0f;
+    for(i = 0;i < device->NumSpeakers;i++)
+        gains[device->Speaker[i].ChanName] = ingain;
 }
 
 

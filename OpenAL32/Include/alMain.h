@@ -656,6 +656,7 @@ struct ALCdevice_struct
     struct {
         enum Channel ChanName;
         ALfloat Angle;
+        ALfloat Elevation;
         ALfloat Coeff[MAX_AMBI_COEFFS];
     } Speaker[MaxChannels];
     ALuint NumSpeakers;

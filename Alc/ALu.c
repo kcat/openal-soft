@@ -45,6 +45,7 @@ static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,
 struct ChanMap {
     enum Channel channel;
     ALfloat angle;
+    ALfloat elevation;
 };
 
 /* Cone scalar */
@@ -231,51 +232,51 @@ static ALvoid CalcListenerParams(ALlistener *Listener)
 
 ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCcontext *ALContext)
 {
-    static const struct ChanMap MonoMap[1] = { { FrontCenter, 0.0f } };
+    static const struct ChanMap MonoMap[1] = { { FrontCenter, 0.0f, 0.0f } };
     static const struct ChanMap StereoMap[2] = {
-        { FrontLeft,  DEG2RAD(-30.0f) },
-        { FrontRight, DEG2RAD( 30.0f) }
+        { FrontLeft,  DEG2RAD(-30.0f), DEG2RAD(0.0f) },
+        { FrontRight, DEG2RAD( 30.0f), DEG2RAD(0.0f) }
     };
     static const struct ChanMap StereoWideMap[2] = {
-        { FrontLeft,  DEG2RAD(-90.0f) },
-        { FrontRight, DEG2RAD( 90.0f) }
+        { FrontLeft,  DEG2RAD(-90.0f), DEG2RAD(0.0f) },
+        { FrontRight, DEG2RAD( 90.0f), DEG2RAD(0.0f) }
     };
     static const struct ChanMap RearMap[2] = {
-        { BackLeft,  DEG2RAD(-150.0f) },
-        { BackRight, DEG2RAD( 150.0f) }
+        { BackLeft,  DEG2RAD(-150.0f), DEG2RAD(0.0f) },
+        { BackRight, DEG2RAD( 150.0f), DEG2RAD(0.0f) }
     };
     static const struct ChanMap QuadMap[4] = {
-        { FrontLeft,  DEG2RAD( -45.0f) },
-        { FrontRight, DEG2RAD(  45.0f) },
-        { BackLeft,   DEG2RAD(-135.0f) },
-        { BackRight,  DEG2RAD( 135.0f) }
+        { FrontLeft,  DEG2RAD( -45.0f), DEG2RAD(0.0f) },
+        { FrontRight, DEG2RAD(  45.0f), DEG2RAD(0.0f) },
+        { BackLeft,   DEG2RAD(-135.0f), DEG2RAD(0.0f) },
+        { BackRight,  DEG2RAD( 135.0f), DEG2RAD(0.0f) }
     };
     static const struct ChanMap X51Map[6] = {
-        { FrontLeft,   DEG2RAD( -30.0f) },
-        { FrontRight,  DEG2RAD(  30.0f) },
-        { FrontCenter, DEG2RAD(   0.0f) },
-        { LFE, 0.0f },
-        { BackLeft,    DEG2RAD(-110.0f) },
-        { BackRight,   DEG2RAD( 110.0f) }
+        { FrontLeft,   DEG2RAD( -30.0f), DEG2RAD(0.0f) },
+        { FrontRight,  DEG2RAD(  30.0f), DEG2RAD(0.0f) },
+        { FrontCenter, DEG2RAD(   0.0f), DEG2RAD(0.0f) },
+        { LFE, 0.0f, 0.0f },
+        { BackLeft,    DEG2RAD(-110.0f), DEG2RAD(0.0f) },
+        { BackRight,   DEG2RAD( 110.0f), DEG2RAD(0.0f) }
     };
     static const struct ChanMap X61Map[7] = {
-        { FrontLeft,    DEG2RAD(-30.0f) },
-        { FrontRight,   DEG2RAD( 30.0f) },
-        { FrontCenter,  DEG2RAD(  0.0f) },
-        { LFE, 0.0f },
-        { BackCenter,   DEG2RAD(180.0f) },
-        { SideLeft,     DEG2RAD(-90.0f) },
-        { SideRight,    DEG2RAD( 90.0f) }
+        { FrontLeft,    DEG2RAD(-30.0f), DEG2RAD(0.0f) },
+        { FrontRight,   DEG2RAD( 30.0f), DEG2RAD(0.0f) },
+        { FrontCenter,  DEG2RAD(  0.0f), DEG2RAD(0.0f) },
+        { LFE, 0.0f, 0.0f },
+        { BackCenter,   DEG2RAD(180.0f), DEG2RAD(0.0f) },
+        { SideLeft,     DEG2RAD(-90.0f), DEG2RAD(0.0f) },
+        { SideRight,    DEG2RAD( 90.0f), DEG2RAD(0.0f) }
     };
     static const struct ChanMap X71Map[8] = {
-        { FrontLeft,   DEG2RAD( -30.0f) },
-        { FrontRight,  DEG2RAD(  30.0f) },
-        { FrontCenter, DEG2RAD(   0.0f) },
-        { LFE, 0.0f },
-        { BackLeft,    DEG2RAD(-150.0f) },
-        { BackRight,   DEG2RAD( 150.0f) },
-        { SideLeft,    DEG2RAD( -90.0f) },
-        { SideRight,   DEG2RAD(  90.0f) }
+        { FrontLeft,   DEG2RAD( -30.0f), DEG2RAD(0.0f) },
+        { FrontRight,  DEG2RAD(  30.0f), DEG2RAD(0.0f) },
+        { FrontCenter, DEG2RAD(   0.0f), DEG2RAD(0.0f) },
+        { LFE, 0.0f, 0.0f },
+        { BackLeft,    DEG2RAD(-150.0f), DEG2RAD(0.0f) },
+        { BackRight,   DEG2RAD( 150.0f), DEG2RAD(0.0f) },
+        { SideLeft,    DEG2RAD( -90.0f), DEG2RAD(0.0f) },
+        { SideRight,   DEG2RAD(  90.0f), DEG2RAD(0.0f) }
     };
 
     ALCdevice *Device = ALContext->Device;
@@ -290,7 +291,6 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     const struct ChanMap *chans = NULL;
     ALint num_channels = 0;
     ALboolean DirectChannels;
-    ALfloat hwidth = 0.0f;
     ALfloat Pitch;
     ALint i, j, c;
 
@@ -365,21 +365,13 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         break;
 
     case FmtStereo:
-        if(!(Device->Flags&DEVICE_WIDE_STEREO))
-        {
-            /* HACK: Place the stereo channels at +/-90 degrees when using non-
-             * HRTF stereo output. This helps reduce the "monoization" caused
-             * by them panning towards the center. */
-            if(Device->FmtChans == DevFmtStereo && !Device->Hrtf)
-                chans = StereoWideMap;
-            else
-                chans = StereoMap;
-        }
-        else
-        {
+        /* HACK: Place the stereo channels at +/-90 degrees when using non-
+         * HRTF stereo output. This helps reduce the "monoization" caused
+         * by them panning towards the center. */
+        if(Device->FmtChans == DevFmtStereo && !Device->Hrtf)
             chans = StereoWideMap;
-            hwidth = DEG2RAD(60.0f);
-        }
+        else
+            chans = StereoMap;
         num_channels = 2;
         break;
 
@@ -451,7 +443,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                 /* Get the static HRIR coefficients and delays for this
                  * channel. */
                 GetLerpedHrtfCoeffs(Device->Hrtf,
-                                    0.0f, chans[c].angle, 1.0f, DryGain,
+                                    chans[c].elevation, chans[c].angle, 1.0f, DryGain,
                                     voice->Direct.Mix.Hrtf.Params[c].Coeffs,
                                     voice->Direct.Mix.Hrtf.Params[c].Delay);
             }
@@ -464,21 +456,40 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     }
     else
     {
-        DryGain *= lerp(1.0f, 1.0f/sqrtf((float)Device->NumSpeakers), hwidth/F_PI);
         for(c = 0;c < num_channels;c++)
         {
             MixGains *gains = voice->Direct.Mix.Gains[c];
             ALfloat Target[MaxChannels];
+            bool ok = false;
 
             /* Special-case LFE */
             if(chans[c].channel == LFE)
             {
-                for(j = 0;j < MaxChannels;j++)
-                    gains[j].Target = 0.0f;
-                gains[chans[c].channel].Target = DryGain;
-                continue;
+                for(i = 0;i < MaxChannels;i++)
+                    Target[i] = 0.0f;
+                Target[chans[c].channel] = DryGain;
+                ok = true;
             }
-            ComputeAngleGains(Device, chans[c].angle, hwidth, DryGain, Target);
+            else for(i = 0;i < (ALint)Device->NumSpeakers;i++)
+            {
+                /* Attempt to match the input channel to an output based on its
+                 * location. */
+                if(Device->Speaker[i].Angle == chans[c].angle &&
+                   Device->Speaker[i].Elevation == chans[c].elevation)
+                {
+                    for(j = 0;j < MaxChannels;j++)
+                        Target[j] = 0.0f;
+                    Target[Device->Speaker[i].ChanName] = DryGain;
+                    ok = true;
+                    break;
+                }
+            }
+            if(!ok)
+            {
+                /* All else fails, virtualize it. */
+                ComputeAngleGains(Device, chans[c].angle, chans[c].elevation, DryGain, Target);
+            }
+
             for(i = 0;i < MaxChannels;i++)
                 gains[i].Target = Target[i];
         }

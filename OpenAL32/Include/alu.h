@@ -204,18 +204,18 @@ ALvoid aluInitPanning(ALCdevice *Device);
 /**
  * ComputeDirectionalGains
  *
- * Sets channel gains based on the given source's direction. The direction must
- * be a 3-component vector no longer than 1 unit.
+ * Sets channel gains based on a direction. The direction must be a 3-component
+ * vector no longer than 1 unit.
  */
 void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfloat ingain, ALfloat gains[MaxChannels]);
 
 /**
  * ComputeAngleGains
  *
- * Sets channel gains based on a given source's angle and its half-width. The
- * angle and hwidth parameters are in radians.
+ * Sets channel gains based on angle and elevation. The angle and elevation
+ * parameters are in radians, going right and up respectively.
  */
-void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, ALfloat ingain, ALfloat gains[MaxChannels]);
+void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation, ALfloat ingain, ALfloat gains[MaxChannels]);
 
 /**
  * SetGains

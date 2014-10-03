@@ -81,200 +81,14 @@ static inline void Set3rdOrder(ALfloat coeffs[16], ALfloat w, ALfloat x, ALfloat
 }
 
 
-void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, ALfloat ingain, ALfloat gains[MaxChannels])
+void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation, ALfloat ingain, ALfloat gains[MaxChannels])
 {
-    ALfloat tmpgains[MaxChannels] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
-    enum Channel Speaker2Chan[MaxChannels];
-    ALfloat SpeakerAngle[MaxChannels];
-    ALfloat langle, rangle;
-    ALfloat a;
-    ALuint i;
-
-    for(i = 0;i < device->NumSpeakers;i++)
-        Speaker2Chan[i] = device->Speaker[i].ChanName;
-    for(i = 0;i < device->NumSpeakers;i++)
-        SpeakerAngle[i] = device->Speaker[i].Angle;
-
-    for(i = 0;i < MaxChannels;i++)
-        gains[i] = 0.0f;
-
-    /* Some easy special-cases first... */
-    if(device->NumSpeakers <= 1 || hwidth >= F_PI)
-    {
-        /* Full coverage for all speakers. */
-        for(i = 0;i < device->NumSpeakers;i++)
-        {
-            enum Channel chan = Speaker2Chan[i];
-            gains[chan] = ingain;
-        }
-        return;
-    }
-    if(hwidth <= 0.0f)
-    {
-        /* Infinitely small sound point. */
-        for(i = 0;i < device->NumSpeakers-1;i++)
-        {
-            if(angle >= SpeakerAngle[i] && angle < SpeakerAngle[i+1])
-            {
-                /* Sound is between speakers i and i+1 */
-                a =             (angle-SpeakerAngle[i]) /
-                    (SpeakerAngle[i+1]-SpeakerAngle[i]);
-                gains[Speaker2Chan[i]]   = sqrtf(1.0f-a) * ingain;
-                gains[Speaker2Chan[i+1]] = sqrtf(     a) * ingain;
-                return;
-            }
-        }
-        /* Sound is between last and first speakers */
-        if(angle < SpeakerAngle[0])
-            angle += F_2PI;
-        a =                   (angle-SpeakerAngle[i]) /
-            (F_2PI + SpeakerAngle[0]-SpeakerAngle[i]);
-        gains[Speaker2Chan[i]] = sqrtf(1.0f-a) * ingain;
-        gains[Speaker2Chan[0]] = sqrtf(     a) * ingain;
-        return;
-    }
-
-    if(fabsf(angle)+hwidth > F_PI)
-    {
-        /* The coverage area would go outside of -pi...+pi. Instead, rotate the
-         * speaker angles so it would be as if angle=0, and keep them wrapped
-         * within -pi...+pi. */
-        if(angle > 0.0f)
-        {
-            ALuint done;
-            ALuint i = 0;
-            while(i < device->NumSpeakers && device->Speaker[i].Angle-angle < -F_PI)
-                i++;
-            for(done = 0;i < device->NumSpeakers;done++)
-            {
-                SpeakerAngle[done] = device->Speaker[i].Angle-angle;
-                Speaker2Chan[done] = device->Speaker[i].ChanName;
-                i++;
-            }
-            for(i = 0;done < device->NumSpeakers;i++)
-            {
-                SpeakerAngle[done] = device->Speaker[i].Angle-angle + F_2PI;
-                Speaker2Chan[done] = device->Speaker[i].ChanName;
-                done++;
-            }
-        }
-        else
-        {
-            /* NOTE: '< device->NumChan' on the iterators is correct here since
-             * we need to handle index 0. Because the iterators are unsigned,
-             * they'll underflow and wrap to become 0xFFFFFFFF, which will
-             * break as expected. */
-            ALuint done;
-            ALuint i = device->NumSpeakers-1;
-            while(i < device->NumSpeakers && device->Speaker[i].Angle-angle > F_PI)
-                i--;
-            for(done = device->NumSpeakers-1;i < device->NumSpeakers;done--)
-            {
-                SpeakerAngle[done] = device->Speaker[i].Angle-angle;
-                Speaker2Chan[done] = device->Speaker[i].ChanName;
-                i--;
-            }
-            for(i = device->NumSpeakers-1;done < device->NumSpeakers;i--)
-            {
-                SpeakerAngle[done] = device->Speaker[i].Angle-angle - F_2PI;
-                Speaker2Chan[done] = device->Speaker[i].ChanName;
-                done--;
-            }
-        }
-        angle = 0.0f;
-    }
-    langle = angle - hwidth;
-    rangle = angle + hwidth;
-
-    /* First speaker */
-    i = 0;
-    do {
-        ALuint last = device->NumSpeakers-1;
-        enum Channel chan = Speaker2Chan[i];
-
-        if(SpeakerAngle[i] >= langle && SpeakerAngle[i] <= rangle)
-        {
-            tmpgains[chan] = 1.0f;
-            continue;
-        }
-
-        if(SpeakerAngle[i] < langle && SpeakerAngle[i+1] > langle)
-        {
-            a =            (langle-SpeakerAngle[i]) /
-                (SpeakerAngle[i+1]-SpeakerAngle[i]);
-            tmpgains[chan] = lerp(tmpgains[chan], 1.0f, 1.0f-a);
-        }
-        if(SpeakerAngle[i] > rangle)
-        {
-            a =          (F_2PI + rangle-SpeakerAngle[last]) /
-                (F_2PI + SpeakerAngle[i]-SpeakerAngle[last]);
-            tmpgains[chan] = lerp(tmpgains[chan], 1.0f, a);
-        }
-        else if(SpeakerAngle[last] < rangle)
-        {
-            a =                  (rangle-SpeakerAngle[last]) /
-                (F_2PI + SpeakerAngle[i]-SpeakerAngle[last]);
-            tmpgains[chan] = lerp(tmpgains[chan], 1.0f, a);
-        }
-    } while(0);
-
-    for(i = 1;i < device->NumSpeakers-1;i++)
-    {
-        enum Channel chan = Speaker2Chan[i];
-        if(SpeakerAngle[i] >= langle && SpeakerAngle[i] <= rangle)
-        {
-            tmpgains[chan] = 1.0f;
-            continue;
-        }
-
-        if(SpeakerAngle[i] < langle && SpeakerAngle[i+1] > langle)
-        {
-            a =            (langle-SpeakerAngle[i]) /
-                (SpeakerAngle[i+1]-SpeakerAngle[i]);
-            tmpgains[chan] = lerp(tmpgains[chan], 1.0f, 1.0f-a);
-        }
-        if(SpeakerAngle[i] > rangle && SpeakerAngle[i-1] < rangle)
-        {
-            a =          (rangle-SpeakerAngle[i-1]) /
-                (SpeakerAngle[i]-SpeakerAngle[i-1]);
-            tmpgains[chan] = lerp(tmpgains[chan], 1.0f, a);
-        }
-    }
-
-    /* Last speaker */
-    i = device->NumSpeakers-1;
-    do {
-        enum Channel chan = Speaker2Chan[i];
-        if(SpeakerAngle[i] >= langle && SpeakerAngle[i] <= rangle)
-        {
-            tmpgains[Speaker2Chan[i]] = 1.0f;
-            continue;
-        }
-        if(SpeakerAngle[i] > rangle && SpeakerAngle[i-1] < rangle)
-        {
-            a =          (rangle-SpeakerAngle[i-1]) /
-                (SpeakerAngle[i]-SpeakerAngle[i-1]);
-            tmpgains[chan] = lerp(tmpgains[chan], 1.0f, a);
-        }
-        if(SpeakerAngle[i] < langle)
-        {
-            a =                  (langle-SpeakerAngle[i]) /
-                (F_2PI + SpeakerAngle[0]-SpeakerAngle[i]);
-            tmpgains[chan] = lerp(tmpgains[chan], 1.0f, 1.0f-a);
-        }
-        else if(SpeakerAngle[0] > langle)
-        {
-            a =          (F_2PI + langle-SpeakerAngle[i]) /
-                (F_2PI + SpeakerAngle[0]-SpeakerAngle[i]);
-            tmpgains[chan] = lerp(tmpgains[chan], 1.0f, 1.0f-a);
-        }
-    } while(0);
-
-    for(i = 0;i < device->NumSpeakers;i++)
-    {
-        enum Channel chan = device->Speaker[i].ChanName;
-        gains[chan] = sqrtf(tmpgains[chan]) * ingain;
-    }
+    ALfloat dir[3] = {
+        -sinf(angle) * cosf(elevation),
+        sinf(elevation),
+        -cosf(angle) * cosf(elevation)
+    };
+    ComputeDirectionalGains(device, dir, ingain, gains);
 }
 
 void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfloat ingain, ALfloat gains[MaxChannels])
@@ -323,6 +137,7 @@ ALvoid aluInitPanning(ALCdevice *device)
             device->NumSpeakers = 1;
             device->Speaker[0].ChanName = FrontCenter;
             device->Speaker[0].Angle = DEG2RAD(0.0f);
+            device->Speaker[0].Elevation = DEG2RAD(0.0f);
             Set0thOrder(device->Speaker[0].Coeff, 1.4142f);
             break;
 
@@ -332,6 +147,8 @@ ALvoid aluInitPanning(ALCdevice *device)
             device->Speaker[1].ChanName = FrontRight;
             device->Speaker[0].Angle = DEG2RAD(-90.0f);
             device->Speaker[1].Angle = DEG2RAD( 90.0f);
+            device->Speaker[0].Elevation = DEG2RAD(0.0f);
+            device->Speaker[1].Elevation = DEG2RAD(0.0f);
             Set1stOrder(device->Speaker[0].Coeff, 0.7071f, -0.5f, 0.0f, 0.0f);
             Set1stOrder(device->Speaker[1].Coeff, 0.7071f,  0.5f, 0.0f, 0.0f);
             break;
@@ -346,6 +163,10 @@ ALvoid aluInitPanning(ALCdevice *device)
             device->Speaker[1].Angle = DEG2RAD( -45.0f);
             device->Speaker[2].Angle = DEG2RAD(  45.0f);
             device->Speaker[3].Angle = DEG2RAD( 135.0f);
+            device->Speaker[0].Elevation = DEG2RAD(0.0f);
+            device->Speaker[1].Elevation = DEG2RAD(0.0f);
+            device->Speaker[2].Elevation = DEG2RAD(0.0f);
+            device->Speaker[3].Elevation = DEG2RAD(0.0f);
             Set2ndOrder(device->Speaker[0].Coeff, 0.353543f, -0.306192f,  0.306181f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.117193f);
             Set2ndOrder(device->Speaker[1].Coeff, 0.353558f,  0.306181f,  0.306192f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.117183f);
             Set2ndOrder(device->Speaker[2].Coeff, 0.353543f,  0.306181f, -0.306192f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.117193f);
@@ -364,6 +185,11 @@ ALvoid aluInitPanning(ALCdevice *device)
             device->Speaker[2].Angle = DEG2RAD(   0.0f);
             device->Speaker[3].Angle = DEG2RAD(  30.0f);
             device->Speaker[4].Angle = DEG2RAD( 110.0f);
+            device->Speaker[0].Elevation = DEG2RAD(0.0f);
+            device->Speaker[1].Elevation = DEG2RAD(0.0f);
+            device->Speaker[2].Elevation = DEG2RAD(0.0f);
+            device->Speaker[3].Elevation = DEG2RAD(0.0f);
+            device->Speaker[4].Elevation = DEG2RAD(0.0f);
             Set3rdOrder(device->Speaker[0].Coeff, 0.470934f, -0.369630f,  0.349383f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031379f, -0.058143f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007116f, -0.043968f);
             Set3rdOrder(device->Speaker[1].Coeff, 0.208954f,  0.212846f,  0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017738f,  0.204014f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f,  0.047490f);
             Set3rdOrder(device->Speaker[2].Coeff, 0.109403f,  0.179490f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f);
@@ -383,6 +209,11 @@ ALvoid aluInitPanning(ALCdevice *device)
             device->Speaker[2].Angle = DEG2RAD(  0.0f);
             device->Speaker[3].Angle = DEG2RAD( 30.0f);
             device->Speaker[4].Angle = DEG2RAD( 90.0f);
+            device->Speaker[0].Elevation = DEG2RAD(0.0f);
+            device->Speaker[1].Elevation = DEG2RAD(0.0f);
+            device->Speaker[2].Elevation = DEG2RAD(0.0f);
+            device->Speaker[3].Elevation = DEG2RAD(0.0f);
+            device->Speaker[4].Elevation = DEG2RAD(0.0f);
             Set3rdOrder(device->Speaker[0].Coeff, 0.289151f, -0.081301f,  0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f, -0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f, -0.032897f);
             Set3rdOrder(device->Speaker[1].Coeff, 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f);
             Set3rdOrder(device->Speaker[2].Coeff, 0.109403f,  0.179490f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f);
@@ -404,6 +235,12 @@ ALvoid aluInitPanning(ALCdevice *device)
             device->Speaker[3].Angle = DEG2RAD( 30.0f);
             device->Speaker[4].Angle = DEG2RAD( 90.0f);
             device->Speaker[5].Angle = DEG2RAD(180.0f);
+            device->Speaker[0].Elevation = DEG2RAD(0.0f);
+            device->Speaker[1].Elevation = DEG2RAD(0.0f);
+            device->Speaker[2].Elevation = DEG2RAD(0.0f);
+            device->Speaker[3].Elevation = DEG2RAD(0.0f);
+            device->Speaker[4].Elevation = DEG2RAD(0.0f);
+            device->Speaker[5].Elevation = DEG2RAD(0.0f);
             Set3rdOrder(device->Speaker[0].Coeff, 0.289151f, -0.081301f,  0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f, -0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f, -0.032897f);
             Set3rdOrder(device->Speaker[1].Coeff, 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f);
             Set3rdOrder(device->Speaker[2].Coeff, 0.109403f,  0.179490f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f);
@@ -428,6 +265,13 @@ ALvoid aluInitPanning(ALCdevice *device)
             device->Speaker[4].Angle = DEG2RAD(  30.0f);
             device->Speaker[5].Angle = DEG2RAD(  90.0f);
             device->Speaker[6].Angle = DEG2RAD( 150.0f);
+            device->Speaker[0].Elevation = DEG2RAD(0.0f);
+            device->Speaker[1].Elevation = DEG2RAD(0.0f);
+            device->Speaker[2].Elevation = DEG2RAD(0.0f);
+            device->Speaker[3].Elevation = DEG2RAD(0.0f);
+            device->Speaker[4].Elevation = DEG2RAD(0.0f);
+            device->Speaker[5].Elevation = DEG2RAD(0.0f);
+            device->Speaker[6].Elevation = DEG2RAD(0.0f);
             Set3rdOrder(device->Speaker[0].Coeff, 0.224752f, -0.295009f,  0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f, -0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.000000f,  0.065799f);
             Set3rdOrder(device->Speaker[1].Coeff, 0.224739f,  0.000002f,  0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.000000f, -0.065795f);
             Set3rdOrder(device->Speaker[2].Coeff, 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f);

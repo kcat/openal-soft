@@ -48,16 +48,32 @@ static ALboolean ALdedicatedState_deviceUpdate(ALdedicatedState *UNUSED(state), 
 static ALvoid ALdedicatedState_update(ALdedicatedState *state, ALCdevice *device, const ALeffectslot *Slot)
 {
     ALfloat Gain;
-    ALsizei s;
+    ALuint i;
+
+    for(i = 0;i < MaxChannels;i++)
+        state->gains[i] = 0.0f;
 
     Gain = Slot->Gain * Slot->EffectProps.Dedicated.Gain;
-    if(Slot->EffectType == AL_EFFECT_DEDICATED_DIALOGUE)
-        ComputeAngleGains(device, atan2f(0.0f, 1.0f), 0.0f, Gain, state->gains);
-    else if(Slot->EffectType == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
-    {
-        for(s = 0;s < MaxChannels;s++)
-            state->gains[s] = 0.0f;
+    if(Slot->EffectType == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
         state->gains[LFE] = Gain;
+    else if(Slot->EffectType == AL_EFFECT_DEDICATED_DIALOGUE)
+    {
+        ALboolean done = AL_FALSE;
+        /* Dialog goes to the front-center speaker if it exists, otherwise it
+         * plays from the front-center location. */
+        for(i = 0;i < device->NumSpeakers;i++)
+        {
+            if(device->Speaker[i].ChanName == FrontCenter)
+            {
+                state->gains[FrontCenter] = Gain;
+                done = AL_TRUE;
+            }
+        }
+        if(!done)
+        {
+            static const ALfloat front_dir[3] = { 0.0f, 0.0f, -1.0f };
+            ComputeDirectionalGains(device, front_dir, Gain, state->gains);
+        }
     }
 }
 

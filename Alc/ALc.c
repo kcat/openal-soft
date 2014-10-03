@@ -1535,6 +1535,8 @@ void SetDefaultChannelOrder(ALCdevice *device)
     }
 }
 
+extern inline ALint GetChannelIdxByName(const ALCdevice *device, enum Channel chan);
+
 
 /* alcSetError
  *

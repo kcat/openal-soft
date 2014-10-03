@@ -409,15 +409,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
 
             for(j = 0;j < MaxChannels;j++)
                 gains[j].Target = 0.0f;
-            for(i = 0;i < (ALint)Device->NumSpeakers;i++)
-            {
-                enum Channel chan = Device->Speaker[i].ChanName;
-                if(chan == chans[c].channel)
-                {
-                    gains[chan].Target = DryGain;
-                    break;
-                }
-            }
+            if(GetChannelIdxByName(Device, chans[c].channel) != -1)
+                gains[chans[c].channel].Target = DryGain;
         }
         UpdateDryStepping(&voice->Direct, num_channels);
 
@@ -467,7 +460,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
             {
                 for(i = 0;i < MaxChannels;i++)
                     Target[i] = 0.0f;
-                Target[chans[c].channel] = DryGain;
+                if(GetChannelIdxByName(Device, chans[c].channel) != -1)
+                    Target[chans[c].channel] = DryGain;
                 ok = true;
             }
             else for(i = 0;i < (ALint)Device->NumSpeakers;i++)

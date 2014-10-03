@@ -828,6 +828,23 @@ void SetDefaultWFXChannelOrder(ALCdevice *device);
 const ALCchar *DevFmtTypeString(enum DevFmtType type) DECL_CONST;
 const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans) DECL_CONST;
 
+/**
+ * GetChannelIdxByName
+ *
+ * Returns the device's channel index given a channel name (e.g. FrontCenter),
+ * or -1 if it doesn't exist.
+ */
+inline ALint GetChannelIdxByName(const ALCdevice *device, enum Channel chan)
+{
+    ALint i = 0;
+    for(i = 0;i < MaxChannels;i++)
+    {
+        if(device->ChannelName[i] == chan)
+            return i;
+    }
+    return -1;
+}
+
 
 extern FILE *LogFile;
 

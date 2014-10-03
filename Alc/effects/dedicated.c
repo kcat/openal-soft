@@ -55,21 +55,17 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, ALCdevice *device
 
     Gain = Slot->Gain * Slot->EffectProps.Dedicated.Gain;
     if(Slot->EffectType == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
-        state->gains[LFE] = Gain;
+    {
+        if(GetChannelIdxByName(device, LFE) != -1)
+            state->gains[LFE] = Gain;
+    }
     else if(Slot->EffectType == AL_EFFECT_DEDICATED_DIALOGUE)
     {
-        ALboolean done = AL_FALSE;
         /* Dialog goes to the front-center speaker if it exists, otherwise it
          * plays from the front-center location. */
-        for(i = 0;i < device->NumSpeakers;i++)
-        {
-            if(device->Speaker[i].ChanName == FrontCenter)
-            {
-                state->gains[FrontCenter] = Gain;
-                done = AL_TRUE;
-            }
-        }
-        if(!done)
+        if(GetChannelIdxByName(device, FrontCenter) != -1)
+            state->gains[FrontCenter] = Gain;
+        else
         {
             static const ALfloat front_dir[3] = { 0.0f, 0.0f, -1.0f };
             ComputeDirectionalGains(device, front_dir, Gain, state->gains);

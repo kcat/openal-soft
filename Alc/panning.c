@@ -34,53 +34,6 @@
 extern inline void SetGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MaxChannels]);
 
 
-static inline void Set0thOrder(ALfloat coeffs[16], ALfloat w)
-{
-    coeffs[0] = w;
-}
-
-static inline void Set1stOrder(ALfloat coeffs[16], ALfloat w, ALfloat x, ALfloat y, ALfloat z)
-{
-    coeffs[0] = w;
-    coeffs[1] = x;
-    coeffs[2] = y;
-    coeffs[3] = z;
-}
-
-static inline void Set2ndOrder(ALfloat coeffs[16], ALfloat w, ALfloat x, ALfloat y, ALfloat z, ALfloat r, ALfloat s, ALfloat t, ALfloat u, ALfloat v)
-{
-    coeffs[0] = w;
-    coeffs[1] = x;
-    coeffs[2] = y;
-    coeffs[3] = z;
-    coeffs[4] = r;
-    coeffs[5] = s;
-    coeffs[6] = t;
-    coeffs[7] = u;
-    coeffs[8] = v;
-}
-
-static inline void Set3rdOrder(ALfloat coeffs[16], ALfloat w, ALfloat x, ALfloat y, ALfloat z, ALfloat r, ALfloat s, ALfloat t, ALfloat u, ALfloat v, ALfloat k, ALfloat l, ALfloat m, ALfloat n, ALfloat o, ALfloat p, ALfloat q)
-{
-    coeffs[0] = w;
-    coeffs[1] = x;
-    coeffs[2] = y;
-    coeffs[3] = z;
-    coeffs[4] = r;
-    coeffs[5] = s;
-    coeffs[6] = t;
-    coeffs[7] = u;
-    coeffs[8] = v;
-    coeffs[9] = k;
-    coeffs[10] = l;
-    coeffs[11] = m;
-    coeffs[12] = n;
-    coeffs[13] = o;
-    coeffs[14] = p;
-    coeffs[15] = q;
-}
-
-
 void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation, ALfloat ingain, ALfloat gains[MaxChannels])
 {
     ALfloat dir[3] = {
@@ -95,24 +48,27 @@ void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfl
 {
     ALfloat coeffs[MAX_AMBI_COEFFS];
     ALuint i, j;
-
     /* Convert from OpenAL coords to Ambisonics. */
+    ALfloat x = -dir[2];
+    ALfloat y = -dir[0];
+    ALfloat z =  dir[1];
+
     coeffs[0] = 0.7071f; /* sqrt(1.0 / 2.0) */
-    coeffs[1] = -dir[2]; /* X */
-    coeffs[2] = -dir[0]; /* Y */
-    coeffs[3] =  dir[1]; /* Z */
-    coeffs[4] = 0.5f * (3.0f*dir[1]*dir[1] - 1.0f); /* 0.5 * (3*Z*Z - 1) */
-    coeffs[5] = 2.0f *  dir[1] * -dir[2]; /* 2*Z*X */
-    coeffs[6] = 2.0f * -dir[0] *  dir[1]; /* 2*Y*Z */
-    coeffs[7] = dir[2]*dir[2] - dir[0]*dir[0]; /* X*X - Y*Y */
-    coeffs[8] = 2.0f * -dir[2] * -dir[0]; /* 2*X*Y */
-    coeffs[9] = 0.5f *  dir[1] * (5.0f*dir[1]*dir[1] - 3.0f); /* 0.5 * Z * (5*Z*Z - 3) */
-    coeffs[10] = 0.7262f * -dir[2] * (5.0f*dir[1]*dir[1] - 1.0f); /* sqrt(135.0 / 256.0) * X * (5*Z*Z - 1) */
-    coeffs[11] = 0.7262f * -dir[0] * (5.0f*dir[1]*dir[1] - 1.0f); /* sqrt(135.0 / 256.0) * Y * (5*Z*Z - 1) */
-    coeffs[12] = 2.5981f *  dir[1] * (dir[2]*dir[2] - dir[0]*dir[0]); /* sqrt(27.0 / 4.0) * Z * (X*X - Y*Y) */
-    coeffs[13] = 5.1962f * -dir[2] * -dir[0] * dir[1]; /* sqrt(27) * X * Y * Z */
-    coeffs[14] = -dir[2] * (dir[2]*dir[2] - 3.0f*dir[0]*dir[0]); /* X * (X*X - 3*Y*Y) */
-    coeffs[15] = -dir[0] * (3.0f*dir[2]*dir[2] - dir[0]*dir[0]); /* Y * (3*X*X - Y*Y) */
+    coeffs[1] = x; /* X */
+    coeffs[2] = y; /* Y */
+    coeffs[3] = z; /* Z */
+    coeffs[4] = 0.5f * (3.0f*z*z - 1.0f); /* 0.5 * (3*Z*Z - 1) */
+    coeffs[5] = 2.0f * z * x; /* 2*Z*X */
+    coeffs[6] = 2.0f * y * z; /* 2*Y*Z */
+    coeffs[7] = x*x - y*y; /* X*X - Y*Y */
+    coeffs[8] = 2.0f * x * y; /* 2*X*Y */
+    coeffs[9] = 0.5f * z * (5.0f*z*z - 3.0f); /* 0.5 * Z * (5*Z*Z - 3) */
+    coeffs[10] = 0.7262f * x * (5.0f*z*z - 1.0f); /* sqrt(135.0 / 256.0) * X * (5*Z*Z - 1) */
+    coeffs[11] = 0.7262f * y * (5.0f*z*z - 1.0f); /* sqrt(135.0 / 256.0) * Y * (5*Z*Z - 1) */
+    coeffs[12] = 2.5981f * z * (x*x - y*y); /* sqrt(27.0 / 4.0) * Z * (X*X - Y*Y) */
+    coeffs[13] = 5.1962f * x * y * z; /* sqrt(27) * X * Y * Z */
+    coeffs[14] = x * (x*x - 3.0f*y*y); /* X * (X*X - 3*Y*Y) */
+    coeffs[15] = y * (3.0f*x*x - y*y); /* Y * (3*X*X - Y*Y) */
 
     for(i = 0;i < MaxChannels;i++)
         gains[i] = 0.0f;
@@ -128,6 +84,47 @@ void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfl
 
 ALvoid aluInitPanning(ALCdevice *device)
 {
+    static const ChannelConfig MonoCfg[1] = {
+        { FrontCenter, DEG2RAD(0.0f), DEG2RAD(0.0f), { 1.4142f } }
+    }, StereoCfg[2] = {
+        { FrontLeft, DEG2RAD(-90.0f), DEG2RAD(0.0f), { 0.7071f, -0.5f, 0.0f, 0.0f } },
+        { FrontLeft, DEG2RAD( 90.0f), DEG2RAD(0.0f), { 0.7071f,  0.5f, 0.0f, 0.0f } }
+    }, QuadCfg[4] = {
+        { FrontLeft,  DEG2RAD( -45.0f), DEG2RAD(0.0f), { 0.353558f,  0.306181f,  0.306192f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.117183f } },
+        { FrontRight, DEG2RAD(  45.0f), DEG2RAD(0.0f), { 0.353543f,  0.306181f, -0.306192f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.117193f } },
+        { BackLeft,   DEG2RAD(-135.0f), DEG2RAD(0.0f), { 0.353543f, -0.306192f,  0.306181f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.117193f } },
+        { BackRight,  DEG2RAD( 135.0f), DEG2RAD(0.0f), { 0.353558f, -0.306192f, -0.306181f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.117183f } }
+    }, X51Cfg[5] = {
+        { FrontLeft,   DEG2RAD( -30.0f), DEG2RAD(0.0f), { 0.208954f,  0.212846f,  0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017738f,  0.204014f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f,  0.047490f } },
+        { FrontRight,  DEG2RAD(  30.0f), DEG2RAD(0.0f), { 0.208950f,  0.212842f, -0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017740f, -0.204011f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051022f, -0.047489f } },
+        { FrontCenter, DEG2RAD(   0.0f), DEG2RAD(0.0f), { 0.109403f,  0.179490f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f } },
+        { BackLeft,    DEG2RAD(-110.0f), DEG2RAD(0.0f), { 0.470934f, -0.369630f,  0.349383f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031379f, -0.058143f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007116f, -0.043968f } },
+        { BackRight,   DEG2RAD( 110.0f), DEG2RAD(0.0f), { 0.470936f, -0.369626f, -0.349386f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031375f,  0.058144f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f,  0.043968f } }
+    }, X51SideCfg[5] = {
+        { FrontLeft,   DEG2RAD(-30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f } },
+        { FrontRight,  DEG2RAD( 30.0f), DEG2RAD(0.0f), { 0.167058f,  0.200580f, -0.172701f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029846f, -0.186405f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068904f } },
+        { FrontCenter, DEG2RAD(  0.0f), DEG2RAD(0.0f), { 0.109403f,  0.179490f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f } },
+        { SideLeft,    DEG2RAD(-90.0f), DEG2RAD(0.0f), { 0.289151f, -0.081301f,  0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f, -0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f, -0.032897f } },
+        { SideRight,   DEG2RAD( 90.0f), DEG2RAD(0.0f), { 0.289157f, -0.081298f, -0.401295f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f,  0.071419f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f,  0.032897f } }
+    }, X61Cfg[6] = {
+        { FrontLeft,   DEG2RAD(-30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f } },
+        { FrontRight,  DEG2RAD( 30.0f), DEG2RAD(0.0f), { 0.167058f,  0.200580f, -0.172701f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029846f, -0.186405f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068904f } },
+        { FrontCenter, DEG2RAD(  0.0f), DEG2RAD(0.0f), { 0.109403f,  0.179490f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f } },
+        { BackCenter,  DEG2RAD(180.0f), DEG2RAD(0.0f), { 0.353556f, -0.461940f, -0.000006f, 0.0f, 0.0f, 0.0f, 0.0f,  0.165723f, -0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.000005f } },
+        { SideLeft,    DEG2RAD(-90.0f), DEG2RAD(0.0f), { 0.289151f, -0.081301f,  0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f, -0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f, -0.032897f } },
+        { SideRight,   DEG2RAD( 90.0f), DEG2RAD(0.0f), { 0.289157f, -0.081298f, -0.401295f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f,  0.071419f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f,  0.032897f } }
+    }, X71Cfg[7] = {
+        { FrontLeft,   DEG2RAD( -30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f } },
+        { FrontRight,  DEG2RAD(  30.0f), DEG2RAD(0.0f), { 0.167058f,  0.200580f, -0.172701f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029846f, -0.186405f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068904f } },
+        { FrontCenter, DEG2RAD(   0.0f), DEG2RAD(0.0f), { 0.109403f,  0.179490f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f } },
+        { BackLeft,    DEG2RAD(-150.0f), DEG2RAD(0.0f), { 0.224752f, -0.295009f,  0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f, -0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.000000f,  0.065799f } },
+        { BackRight,   DEG2RAD( 150.0f), DEG2RAD(0.0f), { 0.224739f, -0.295005f, -0.170331f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105342f,  0.182470f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.000000f, -0.065792f } },
+        { SideLeft,    DEG2RAD( -90.0f), DEG2RAD(0.0f), { 0.224739f,  0.000002f,  0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.000000f, -0.065795f } },
+        { SideRight,   DEG2RAD(  90.0f), DEG2RAD(0.0f), { 0.224754f,  0.000004f, -0.340647f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f, -0.000004f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.000000f,  0.065796f } }
+    };
+    const ChannelConfig *config;
+    ALuint i;
+
     memset(device->Speaker, 0, sizeof(device->Speaker));
     device->NumSpeakers = 0;
 
@@ -135,150 +132,39 @@ ALvoid aluInitPanning(ALCdevice *device)
     {
         case DevFmtMono:
             device->NumSpeakers = 1;
-            device->Speaker[0].ChanName = FrontCenter;
-            device->Speaker[0].Angle = DEG2RAD(0.0f);
-            device->Speaker[0].Elevation = DEG2RAD(0.0f);
-            Set0thOrder(device->Speaker[0].Coeff, 1.4142f);
+            config = MonoCfg;
             break;
 
         case DevFmtStereo:
             device->NumSpeakers = 2;
-            device->Speaker[0].ChanName = FrontLeft;
-            device->Speaker[1].ChanName = FrontRight;
-            device->Speaker[0].Angle = DEG2RAD(-90.0f);
-            device->Speaker[1].Angle = DEG2RAD( 90.0f);
-            device->Speaker[0].Elevation = DEG2RAD(0.0f);
-            device->Speaker[1].Elevation = DEG2RAD(0.0f);
-            Set1stOrder(device->Speaker[0].Coeff, 0.7071f, -0.5f, 0.0f, 0.0f);
-            Set1stOrder(device->Speaker[1].Coeff, 0.7071f,  0.5f, 0.0f, 0.0f);
+            config = StereoCfg;
             break;
 
         case DevFmtQuad:
             device->NumSpeakers = 4;
-            device->Speaker[0].ChanName = BackLeft;
-            device->Speaker[1].ChanName = FrontLeft;
-            device->Speaker[2].ChanName = FrontRight;
-            device->Speaker[3].ChanName = BackRight;
-            device->Speaker[0].Angle = DEG2RAD(-135.0f);
-            device->Speaker[1].Angle = DEG2RAD( -45.0f);
-            device->Speaker[2].Angle = DEG2RAD(  45.0f);
-            device->Speaker[3].Angle = DEG2RAD( 135.0f);
-            device->Speaker[0].Elevation = DEG2RAD(0.0f);
-            device->Speaker[1].Elevation = DEG2RAD(0.0f);
-            device->Speaker[2].Elevation = DEG2RAD(0.0f);
-            device->Speaker[3].Elevation = DEG2RAD(0.0f);
-            Set2ndOrder(device->Speaker[0].Coeff, 0.353543f, -0.306192f,  0.306181f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.117193f);
-            Set2ndOrder(device->Speaker[1].Coeff, 0.353558f,  0.306181f,  0.306192f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.117183f);
-            Set2ndOrder(device->Speaker[2].Coeff, 0.353543f,  0.306181f, -0.306192f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.117193f);
-            Set2ndOrder(device->Speaker[3].Coeff, 0.353558f, -0.306192f, -0.306181f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.117183f);
+            config = QuadCfg;
             break;
 
         case DevFmtX51:
             device->NumSpeakers = 5;
-            device->Speaker[0].ChanName = BackLeft;
-            device->Speaker[1].ChanName = FrontLeft;
-            device->Speaker[2].ChanName = FrontCenter;
-            device->Speaker[3].ChanName = FrontRight;
-            device->Speaker[4].ChanName = BackRight;
-            device->Speaker[0].Angle = DEG2RAD(-110.0f);
-            device->Speaker[1].Angle = DEG2RAD( -30.0f);
-            device->Speaker[2].Angle = DEG2RAD(   0.0f);
-            device->Speaker[3].Angle = DEG2RAD(  30.0f);
-            device->Speaker[4].Angle = DEG2RAD( 110.0f);
-            device->Speaker[0].Elevation = DEG2RAD(0.0f);
-            device->Speaker[1].Elevation = DEG2RAD(0.0f);
-            device->Speaker[2].Elevation = DEG2RAD(0.0f);
-            device->Speaker[3].Elevation = DEG2RAD(0.0f);
-            device->Speaker[4].Elevation = DEG2RAD(0.0f);
-            Set3rdOrder(device->Speaker[0].Coeff, 0.470934f, -0.369630f,  0.349383f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031379f, -0.058143f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007116f, -0.043968f);
-            Set3rdOrder(device->Speaker[1].Coeff, 0.208954f,  0.212846f,  0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017738f,  0.204014f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f,  0.047490f);
-            Set3rdOrder(device->Speaker[2].Coeff, 0.109403f,  0.179490f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f);
-            Set3rdOrder(device->Speaker[3].Coeff, 0.208950f,  0.212842f, -0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017740f, -0.204011f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051022f, -0.047489f);
-            Set3rdOrder(device->Speaker[4].Coeff, 0.470936f, -0.369626f, -0.349386f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031375f,  0.058144f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f,  0.043968f);
+            config = X51Cfg;
             break;
 
         case DevFmtX51Side:
             device->NumSpeakers = 5;
-            device->Speaker[0].ChanName = SideLeft;
-            device->Speaker[1].ChanName = FrontLeft;
-            device->Speaker[2].ChanName = FrontCenter;
-            device->Speaker[3].ChanName = FrontRight;
-            device->Speaker[4].ChanName = SideRight;
-            device->Speaker[0].Angle = DEG2RAD(-90.0f);
-            device->Speaker[1].Angle = DEG2RAD(-30.0f);
-            device->Speaker[2].Angle = DEG2RAD(  0.0f);
-            device->Speaker[3].Angle = DEG2RAD( 30.0f);
-            device->Speaker[4].Angle = DEG2RAD( 90.0f);
-            device->Speaker[0].Elevation = DEG2RAD(0.0f);
-            device->Speaker[1].Elevation = DEG2RAD(0.0f);
-            device->Speaker[2].Elevation = DEG2RAD(0.0f);
-            device->Speaker[3].Elevation = DEG2RAD(0.0f);
-            device->Speaker[4].Elevation = DEG2RAD(0.0f);
-            Set3rdOrder(device->Speaker[0].Coeff, 0.289151f, -0.081301f,  0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f, -0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f, -0.032897f);
-            Set3rdOrder(device->Speaker[1].Coeff, 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f);
-            Set3rdOrder(device->Speaker[2].Coeff, 0.109403f,  0.179490f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f);
-            Set3rdOrder(device->Speaker[3].Coeff, 0.167058f,  0.200580f, -0.172701f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029846f, -0.186405f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068904f);
-            Set3rdOrder(device->Speaker[4].Coeff, 0.289157f, -0.081298f, -0.401295f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f,  0.071419f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f,  0.032897f);
+            config = X51SideCfg;
             break;
 
         case DevFmtX61:
             device->NumSpeakers = 6;
-            device->Speaker[0].ChanName = SideLeft;
-            device->Speaker[1].ChanName = FrontLeft;
-            device->Speaker[2].ChanName = FrontCenter;
-            device->Speaker[3].ChanName = FrontRight;
-            device->Speaker[4].ChanName = SideRight;
-            device->Speaker[5].ChanName = BackCenter;
-            device->Speaker[0].Angle = DEG2RAD(-90.0f);
-            device->Speaker[1].Angle = DEG2RAD(-30.0f);
-            device->Speaker[2].Angle = DEG2RAD(  0.0f);
-            device->Speaker[3].Angle = DEG2RAD( 30.0f);
-            device->Speaker[4].Angle = DEG2RAD( 90.0f);
-            device->Speaker[5].Angle = DEG2RAD(180.0f);
-            device->Speaker[0].Elevation = DEG2RAD(0.0f);
-            device->Speaker[1].Elevation = DEG2RAD(0.0f);
-            device->Speaker[2].Elevation = DEG2RAD(0.0f);
-            device->Speaker[3].Elevation = DEG2RAD(0.0f);
-            device->Speaker[4].Elevation = DEG2RAD(0.0f);
-            device->Speaker[5].Elevation = DEG2RAD(0.0f);
-            Set3rdOrder(device->Speaker[0].Coeff, 0.289151f, -0.081301f,  0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f, -0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f, -0.032897f);
-            Set3rdOrder(device->Speaker[1].Coeff, 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f);
-            Set3rdOrder(device->Speaker[2].Coeff, 0.109403f,  0.179490f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f);
-            Set3rdOrder(device->Speaker[3].Coeff, 0.167058f,  0.200580f, -0.172701f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029846f, -0.186405f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068904f);
-            Set3rdOrder(device->Speaker[4].Coeff, 0.289157f, -0.081298f, -0.401295f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f,  0.071419f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f,  0.032897f);
-            Set3rdOrder(device->Speaker[5].Coeff, 0.353556f, -0.461940f, -0.000006f, 0.0f, 0.0f, 0.0f, 0.0f,  0.165723f, -0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.000005f);
+            config = X61Cfg;
             break;
 
         case DevFmtX71:
             device->NumSpeakers = 7;
-            device->Speaker[0].ChanName = BackLeft;
-            device->Speaker[1].ChanName = SideLeft;
-            device->Speaker[2].ChanName = FrontLeft;
-            device->Speaker[3].ChanName = FrontCenter;
-            device->Speaker[4].ChanName = FrontRight;
-            device->Speaker[5].ChanName = SideRight;
-            device->Speaker[6].ChanName = BackRight;
-            device->Speaker[0].Angle = DEG2RAD(-150.0f);
-            device->Speaker[1].Angle = DEG2RAD( -90.0f);
-            device->Speaker[2].Angle = DEG2RAD( -30.0f);
-            device->Speaker[3].Angle = DEG2RAD(   0.0f);
-            device->Speaker[4].Angle = DEG2RAD(  30.0f);
-            device->Speaker[5].Angle = DEG2RAD(  90.0f);
-            device->Speaker[6].Angle = DEG2RAD( 150.0f);
-            device->Speaker[0].Elevation = DEG2RAD(0.0f);
-            device->Speaker[1].Elevation = DEG2RAD(0.0f);
-            device->Speaker[2].Elevation = DEG2RAD(0.0f);
-            device->Speaker[3].Elevation = DEG2RAD(0.0f);
-            device->Speaker[4].Elevation = DEG2RAD(0.0f);
-            device->Speaker[5].Elevation = DEG2RAD(0.0f);
-            device->Speaker[6].Elevation = DEG2RAD(0.0f);
-            Set3rdOrder(device->Speaker[0].Coeff, 0.224752f, -0.295009f,  0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f, -0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.000000f,  0.065799f);
-            Set3rdOrder(device->Speaker[1].Coeff, 0.224739f,  0.000002f,  0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.000000f, -0.065795f);
-            Set3rdOrder(device->Speaker[2].Coeff, 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f);
-            Set3rdOrder(device->Speaker[3].Coeff, 0.109403f,  0.179490f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f);
-            Set3rdOrder(device->Speaker[4].Coeff, 0.167058f,  0.200580f, -0.172701f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029846f, -0.186405f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068904f);
-            Set3rdOrder(device->Speaker[5].Coeff, 0.224754f,  0.000004f, -0.340647f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f, -0.000004f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.000000f,  0.065796f);
-            Set3rdOrder(device->Speaker[6].Coeff, 0.224739f, -0.295005f, -0.170331f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105342f,  0.182470f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.000000f, -0.065792f);
+            config = X71Cfg;
             break;
     }
+    for(i = 0;i < device->NumSpeakers;i++)
+        device->Speaker[i] = config[i];
 }

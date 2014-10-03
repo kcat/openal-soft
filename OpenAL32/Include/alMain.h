@@ -578,17 +578,25 @@ enum DeviceType {
 };
 
 
+/* The maximum number of Ambisonics coefficients. For a given order (o), the
+ * size needed will be (o+1)**2, thus zero-order has 1, first-order has 4,
+ * second-order has 9, and third-order has 16. */
+#define MAX_AMBI_COEFFS 16
+
+typedef struct ChannelConfig {
+    enum Channel ChanName;
+    ALfloat Angle;
+    ALfloat Elevation;
+    ALfloat Coeff[MAX_AMBI_COEFFS];
+} ChannelConfig;
+
+
 /* Size for temporary storage of buffer data, in ALfloats. Larger values need
  * more memory, while smaller values may need more iterations. The value needs
  * to be a sensible size, however, as it constrains the max stepping value used
  * for mixing, as well as the maximum number of samples per mixing iteration.
  */
 #define BUFFERSIZE (2048u)
-
-/* The maximum number of Ambisonics coefficients. For a given order (o), the
- * size needed will be (o+1)**2, thus zero-order has 1, first-order has 4,
- * second-order has 9, and third-order has 16. */
-#define MAX_AMBI_COEFFS 16
 
 struct ALCdevice_struct
 {
@@ -653,12 +661,7 @@ struct ALCdevice_struct
     enum Channel ChannelName[MaxChannels];
 
     /* This only counts positional speakers, i.e. not including LFE. */
-    struct {
-        enum Channel ChanName;
-        ALfloat Angle;
-        ALfloat Elevation;
-        ALfloat Coeff[MAX_AMBI_COEFFS];
-    } Speaker[MaxChannels];
+    ChannelConfig Speaker[MaxChannels];
     ALuint NumSpeakers;
 
     ALuint64 ClockBase;

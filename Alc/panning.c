@@ -87,8 +87,8 @@ ALvoid aluInitPanning(ALCdevice *device)
     static const ChannelConfig MonoCfg[1] = {
         { FrontCenter, DEG2RAD(0.0f), DEG2RAD(0.0f), { 1.4142f } }
     }, StereoCfg[2] = {
-        { FrontLeft, DEG2RAD(-90.0f), DEG2RAD(0.0f), { 0.7071f, -0.5f, 0.0f, 0.0f } },
-        { FrontLeft, DEG2RAD( 90.0f), DEG2RAD(0.0f), { 0.7071f,  0.5f, 0.0f, 0.0f } }
+        { FrontLeft,  DEG2RAD(-90.0f), DEG2RAD(0.0f), { 0.7071f, 0.0f,  0.5f, 0.0f } },
+        { FrontRight, DEG2RAD( 90.0f), DEG2RAD(0.0f), { 0.7071f, 0.0f, -0.5f, 0.0f } }
     }, QuadCfg[4] = {
         { FrontLeft,  DEG2RAD( -45.0f), DEG2RAD(0.0f), { 0.353558f,  0.306181f,  0.306192f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.117183f } },
         { FrontRight, DEG2RAD(  45.0f), DEG2RAD(0.0f), { 0.353543f,  0.306181f, -0.306192f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.117193f } },

@@ -61,7 +61,7 @@ static ALvoid ALcompressorState_update(ALcompressorState *state, ALCdevice *Devi
 
     state->Enabled = Slot->EffectProps.Compressor.OnOff;
 
-    gain = sqrtf(1.0f / Device->NumSpeakers) * Slot->Gain;
+    gain = 1.0f/Device->NumSpeakers * Slot->Gain;
     SetGains(Device, gain, state->Gain);
 }
 

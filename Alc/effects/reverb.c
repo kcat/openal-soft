@@ -1033,52 +1033,31 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
 {
     ALfloat earlyPan[3] = { ReflectionsPan[0], ReflectionsPan[1], ReflectionsPan[2] };
     ALfloat latePan[3] = { LateReverbPan[0], LateReverbPan[1], LateReverbPan[2] };
-    ALfloat earlyLen = 0.0f;
-    ALfloat lateLen = 0.0f;
     ALfloat length, invlen;
-    ALfloat ambientGain;
-    ALuint i;
-
-    Gain *= ReverbBoost;
-
-    /* Attenuate reverb according to its coverage (len=0 will give
-     * ambientGain, and len>=1 will be fully panned using Gain). */
-    ambientGain = minf(sqrtf(2.0f/Device->NumSpeakers), 1.0f) * Gain;
 
     length = earlyPan[0]*earlyPan[0] + earlyPan[1]*earlyPan[1] + earlyPan[2]*earlyPan[2];
-    if(length > FLT_EPSILON)
+    if(!(length > FLT_EPSILON))
+        earlyPan[0] = earlyPan[1] = earlyPan[2] = 0.0f;
+    else
     {
-        length = sqrtf(length);
-
-        invlen = 1.0f / length;
+        invlen = 1.0f / sqrtf(length);
         earlyPan[0] *= invlen;
         earlyPan[1] *= invlen;
         earlyPan[2] *= invlen;
-
-        earlyLen = minf(1.0f, length);
-        ComputeDirectionalGains(Device, earlyPan, Gain, State->Early.PanGain);
     }
+    ComputeDirectionalGains(Device, earlyPan, Gain, State->Early.PanGain);
 
     length = latePan[0]*latePan[0] + latePan[1]*latePan[1] + latePan[2]*latePan[2];
-    if(length > FLT_EPSILON)
+    if(!(length > FLT_EPSILON))
+        latePan[0] = latePan[1] = latePan[2] = 0.0f;
+    else
     {
-        length = sqrtf(length);
-
-        invlen = 1.0f / length;
+        invlen = 1.0f / sqrtf(length);
         latePan[0] *= invlen;
         latePan[1] *= invlen;
         latePan[2] *= invlen;
-
-        lateLen = minf(1.0f, length);
-        ComputeDirectionalGains(Device, latePan, Gain, State->Late.PanGain);
     }
-
-    for(i = 0;i < Device->NumSpeakers;i++)
-    {
-        enum Channel chan = Device->Speaker[i].ChanName;
-        State->Early.PanGain[chan] = lerp(ambientGain, State->Early.PanGain[chan], earlyLen);
-        State->Late.PanGain[chan] = lerp(ambientGain, State->Late.PanGain[chan], lateLen);
-    }
+    ComputeDirectionalGains(Device, latePan, Gain, State->Late.PanGain);
 }
 
 static ALvoid ALreverbState_update(ALreverbState *State, ALCdevice *Device, const ALeffectslot *Slot)
@@ -1163,12 +1142,13 @@ static ALvoid ALreverbState_update(ALreverbState *State, ALCdevice *Device, cons
 
         // Update early and late 3D panning.
         Update3DPanning(Device, Slot->EffectProps.Reverb.ReflectionsPan,
-                        Slot->EffectProps.Reverb.LateReverbPan, Slot->Gain, State);
+                        Slot->EffectProps.Reverb.LateReverbPan,
+                        Slot->Gain * ReverbBoost, State);
     }
     else
     {
         /* Update channel gains */
-        ALfloat gain = sqrtf(2.0f/Device->NumSpeakers) * ReverbBoost * Slot->Gain;
+        ALfloat gain = 2.0f/Device->NumSpeakers * Slot->Gain * ReverbBoost;
         SetGains(Device, gain, State->Gain);
     }
 }

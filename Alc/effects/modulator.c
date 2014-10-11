@@ -149,7 +149,7 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, ALCdevice *Device
     state->Filter.a[1] = -a;
     state->Filter.a[2] = 0.0f;
 
-    gain = sqrtf(1.0f/Device->NumSpeakers) * Slot->Gain;
+    gain = 1.0f/Device->NumSpeakers * Slot->Gain;
     SetGains(Device, gain, state->Gain);
 }
 

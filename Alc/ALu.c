@@ -287,12 +287,12 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
     ALfloat WetGainLF[MAX_SENDS];
-    ALint NumSends, Frequency;
+    ALuint NumSends, Frequency;
     const struct ChanMap *chans = NULL;
-    ALint num_channels = 0;
+    ALuint num_channels = 0;
     ALboolean DirectChannels;
     ALfloat Pitch;
-    ALint i, j, c;
+    ALuint i, j, c;
 
     /* Get device properties */
     NumSends  = Device->NumAuxSends;
@@ -464,7 +464,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                     Target[chans[c].channel] = DryGain;
                 ok = true;
             }
-            else for(i = 0;i < (ALint)Device->NumSpeakers;i++)
+            else for(i = 0;i < Device->NumSpeakers;i++)
             {
                 /* Attempt to match the input channel to an output based on its
                  * location. */
@@ -937,32 +937,21 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     else
     {
         MixGains *gains = voice->Direct.Mix.Gains[0];
+        ALfloat Target[MaxChannels];
 
         /* Normalize the length, and compute panned gains. */
-        if(!(Distance > FLT_EPSILON))
-        {
-            ALfloat gain = 1.0f / sqrtf((float)Device->NumSpeakers);
-            for(j = 0;j < MaxChannels;j++)
-                gains[j].Target = 0.0f;
-            for(i = 0;i < (ALint)Device->NumSpeakers;i++)
-            {
-                enum Channel chan = Device->Speaker[i].ChanName;
-                gains[chan].Target = gain;
-            }
-        }
-        else
+        if(Distance > FLT_EPSILON)
         {
             ALfloat radius = ALSource->Radius;
-            ALfloat Target[MaxChannels];
             ALfloat invlen = 1.0f/maxf(Distance, radius);
             Position[0] *= invlen;
             Position[1] *= invlen;
             Position[2] *= invlen;
-
-            ComputeDirectionalGains(Device, Position, DryGain, Target);
-            for(j = 0;j < MaxChannels;j++)
-                gains[j].Target = Target[j];
         }
+        ComputeDirectionalGains(Device, Position, DryGain, Target);
+
+        for(j = 0;j < MaxChannels;j++)
+            gains[j].Target = Target[j];
         UpdateDryStepping(&voice->Direct, 1);
 
         voice->IsHrtf = AL_FALSE;

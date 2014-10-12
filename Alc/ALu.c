@@ -453,37 +453,18 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         {
             MixGains *gains = voice->Direct.Mix.Gains[c];
             ALfloat Target[MaxChannels];
-            bool ok = false;
 
             /* Special-case LFE */
             if(chans[c].channel == LFE)
             {
                 for(i = 0;i < MaxChannels;i++)
-                    Target[i] = 0.0f;
+                    gains[i].Target = 0.0f;
                 if(GetChannelIdxByName(Device, chans[c].channel) != -1)
-                    Target[chans[c].channel] = DryGain;
-                ok = true;
-            }
-            else for(i = 0;i < Device->NumSpeakers;i++)
-            {
-                /* Attempt to match the input channel to an output based on its
-                 * location. */
-                if(Device->Speaker[i].Angle == chans[c].angle &&
-                   Device->Speaker[i].Elevation == chans[c].elevation)
-                {
-                    for(j = 0;j < MaxChannels;j++)
-                        Target[j] = 0.0f;
-                    Target[Device->Speaker[i].ChanName] = DryGain;
-                    ok = true;
-                    break;
-                }
-            }
-            if(!ok)
-            {
-                /* All else fails, virtualize it. */
-                ComputeAngleGains(Device, chans[c].angle, chans[c].elevation, DryGain, Target);
+                    gains[chans[c].channel].Target = DryGain;
+                continue;
             }
 
+            ComputeAngleGains(Device, chans[c].angle, chans[c].elevation, DryGain, Target);
             for(i = 0;i < MaxChannels;i++)
                 gains[i].Target = Target[i];
         }
@@ -940,7 +921,9 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         ALfloat Target[MaxChannels];
 
         /* Normalize the length, and compute panned gains. */
-        if(Distance > FLT_EPSILON)
+        if(!(Distance > FLT_EPSILON))
+            Position[0] = Position[1] = Position[2] = 0.0f;
+        else
         {
             ALfloat radius = ALSource->Radius;
             ALfloat invlen = 1.0f/maxf(Distance, radius);

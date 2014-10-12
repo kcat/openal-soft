@@ -69,3 +69,13 @@ sound (i.e., sounds that are supposed to be behind you sound like they're in
 front, and vice-versa). Setting this to "true" or "1" will negate the localized
 Z coordinate to attempt to fix output for apps that have incorrect front/back
 panning.
+
+__ALSOFT_SUSPEND_CONTEXT
+Due to the OpenAL spec not being very clear about them, behavior of the
+alcSuspendContext and alcProcessContext methods has varied, and because of
+that, previous versions of OpenAL Soft had them no-op. Creative's hardware
+drivers and the Rapture3D driver, however, use these methods to batch changes
+and protect against partial updates, which some applications make use of. In an
+attempt to standardize on that behavior, OpenAL Soft has changed those methods
+accordingly. Setting this to "ignore" restores the previous no-op behavior for
+applications that interact poorly with the new behavior.

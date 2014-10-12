@@ -748,6 +748,11 @@ static alonce_flag alc_config_once = AL_ONCE_FLAG_INIT;
 /* Default effect that applies to sources that don't have an effect on send 0 */
 static ALeffect DefaultEffect;
 
+/* Flag to specify if alcSuspendContext/alcProcessContext should defer/process
+ * updates.
+ */
+static ALCboolean SuspendDefers = ALC_TRUE;
+
 
 /************************************************
  * ALC information
@@ -907,6 +912,18 @@ static void alc_initconfig(void)
         TRACE("Supported backends: %s\n", buf);
     }
     ReadALConfig();
+
+    str = getenv("__ALSOFT_SUSPEND_CONTEXT");
+    if(str && *str)
+    {
+        if(strcasecmp(str, "ignore") == 0)
+        {
+            SuspendDefers = ALC_FALSE;
+            TRACE("Selected context suspend behavior, \"ignore\"\n");
+        }
+        else
+            ERR("Unhandled context suspend behavior setting: \"%s\"\n", str);
+    }
 
     capfilter = 0;
 #if defined(HAVE_SSE4_1)
@@ -1536,6 +1553,98 @@ void SetDefaultChannelOrder(ALCdevice *device)
 }
 
 extern inline ALint GetChannelIdxByName(const ALCdevice *device, enum Channel chan);
+
+
+/* ALCcontext_DeferUpdates
+ *
+ * Defers/suspends updates for the given context's listener and sources. This
+ * does *NOT* stop mixing, but rather prevents certain property changes from
+ * taking effect.
+ */
+void ALCcontext_DeferUpdates(ALCcontext *context)
+{
+    ALCdevice *device = context->Device;
+    FPUCtl oldMode;
+
+    SetMixerFPUMode(&oldMode);
+
+    V0(device->Backend,lock)();
+    if(!ExchangeInt(&context->DeferUpdates, AL_TRUE))
+    {
+        ALboolean UpdateSources;
+        ALvoice *voice, *voice_end;
+        ALeffectslot **slot, **slot_end;
+        /* Make sure all pending updates are performed */
+        UpdateSources = ATOMIC_EXCHANGE(ALenum, &context->UpdateSources, AL_FALSE);
+
+        voice = context->Voices;
+        voice_end = voice + context->VoiceCount;
+        while(voice != voice_end)
+        {
+            ALsource *source = voice->Source;
+            if(!source) goto next;
+
+            if(source->state != AL_PLAYING && source->state != AL_PAUSED)
+            {
+                voice->Source = NULL;
+                continue;
+            }
+
+            if(ATOMIC_EXCHANGE(ALenum, &source->NeedsUpdate, AL_FALSE) || UpdateSources)
+                voice->Update(voice, source, context);
+        next:
+            voice++;
+        }
+
+        slot = VECTOR_ITER_BEGIN(context->ActiveAuxSlots);
+        slot_end = VECTOR_ITER_END(context->ActiveAuxSlots);
+        while(slot != slot_end)
+        {
+            if(ATOMIC_EXCHANGE(ALenum, &(*slot)->NeedsUpdate, AL_FALSE))
+                V((*slot)->EffectState,update)(context->Device, *slot);
+            slot++;
+        }
+    }
+    V0(device->Backend,unlock)();
+
+    RestoreFPUMode(&oldMode);
+}
+
+/* ALCcontext_ProcessUpdates
+ *
+ * Resumes update processing after being deferred.
+ */
+void ALCcontext_ProcessUpdates(ALCcontext *context)
+{
+    ALCdevice *device = context->Device;
+
+    V0(device->Backend,lock)();
+    if(ExchangeInt(&context->DeferUpdates, AL_FALSE))
+    {
+        ALsizei pos;
+
+        LockUIntMapRead(&context->SourceMap);
+        for(pos = 0;pos < context->SourceMap.size;pos++)
+        {
+            ALsource *Source = context->SourceMap.array[pos].value;
+            ALenum new_state;
+
+            if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
+               Source->Offset >= 0.0)
+            {
+                ReadLock(&Source->queue_lock);
+                ApplyOffset(Source);
+                ReadUnlock(&Source->queue_lock);
+            }
+
+            new_state = ExchangeInt(&Source->new_state, AL_NONE);
+            if(new_state)
+                SetSourceState(Source, context, new_state);
+        }
+        UnlockUIntMapRead(&context->SourceMap);
+    }
+    V0(device->Backend,unlock)();
+}
 
 
 /* alcSetError
@@ -2307,18 +2416,40 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
 
 /* alcSuspendContext
  *
- * Not functional
+ * Suspends updates for the given context
  */
-ALC_API ALCvoid ALC_APIENTRY alcSuspendContext(ALCcontext *UNUSED(context))
+ALC_API ALCvoid ALC_APIENTRY alcSuspendContext(ALCcontext *context)
 {
+    if(!SuspendDefers)
+        return;
+
+    context = VerifyContext(context);
+    if(!context)
+        alcSetError(NULL, ALC_INVALID_CONTEXT);
+    else
+    {
+        ALCcontext_DeferUpdates(context);
+        ALCcontext_DecRef(context);
+    }
 }
 
 /* alcProcessContext
  *
- * Not functional
+ * Resumes processing updates for the given context
  */
-ALC_API ALCvoid ALC_APIENTRY alcProcessContext(ALCcontext *UNUSED(context))
+ALC_API ALCvoid ALC_APIENTRY alcProcessContext(ALCcontext *context)
 {
+    if(!SuspendDefers)
+        return;
+
+    context = VerifyContext(context);
+    if(!context)
+        alcSetError(NULL, ALC_INVALID_CONTEXT);
+    else
+    {
+        ALCcontext_ProcessUpdates(context);
+        ALCcontext_DecRef(context);
+    }
 }
 
 

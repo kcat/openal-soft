@@ -726,7 +726,7 @@ void al_string_clear(al_string *str)
 static inline int al_string_compare(const al_string_char_type *str1, size_t str1len,
                                     const al_string_char_type *str2, size_t str2len)
 {
-    size_t complen = (str1len > str2len) ? str1len : str2len;
+    size_t complen = (str1len < str2len) ? str1len : str2len;
     int ret = memcmp(str1, str2, complen);
     if(ret == 0)
     {

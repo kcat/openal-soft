@@ -93,7 +93,7 @@ static ALboolean ALequalizerState_deviceUpdate(ALequalizerState *UNUSED(state), 
 static ALvoid ALequalizerState_update(ALequalizerState *state, ALCdevice *device, const ALeffectslot *slot)
 {
     ALfloat frequency = (ALfloat)device->Frequency;
-    ALfloat gain = sqrtf(1.0f / device->NumChan) * slot->Gain;
+    ALfloat gain = 1.0f/device->NumSpeakers * slot->Gain;
 
     SetGains(device, gain, state->Gain);
 

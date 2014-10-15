@@ -44,18 +44,6 @@ static const ALubyte SUBTYPE_FLOAT[] = {
     0x00, 0x38, 0x9b, 0x71
 };
 
-static const ALuint channel_masks[] = {
-    0, /* invalid */
-    0x4, /* Mono */
-    0x1 | 0x2, /* Stereo */
-    0, /* 3 channel */
-    0x1 | 0x2 | 0x10 | 0x20, /* Quad */
-    0, /* 5 channel */
-    0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20, /* 5.1 */
-    0x1 | 0x2 | 0x4 | 0x8 | 0x100 | 0x200 | 0x400, /* 6.1 */
-    0x1 | 0x2 | 0x4 | 0x8 | 0x10 | 0x20 | 0x200 | 0x400, /* 7.1 */
-};
-
 
 static void fwrite16le(ALushort val, FILE *f)
 {
@@ -244,7 +232,7 @@ static void ALCwaveBackend_close(ALCwaveBackend *self)
 static ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    ALuint channels=0, bits=0;
+    ALuint channels=0, bits=0, chanmask=0;
     size_t val;
 
     fseek(self->mFile, 0, SEEK_SET);
@@ -266,6 +254,16 @@ static ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
         case DevFmtInt:
         case DevFmtFloat:
             break;
+    }
+    switch(device->FmtChans)
+    {
+        case DevFmtMono:   chanmask = 0x04; break;
+        case DevFmtStereo: chanmask = 0x01 | 0x02; break;
+        case DevFmtQuad:   chanmask = 0x01 | 0x02 | 0x10 | 0x20; break;
+        case DevFmtX51Side: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x200 | 0x400; break;
+        case DevFmtX51: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x010 | 0x020; break;
+        case DevFmtX61: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x100 | 0x200 | 0x400; break;
+        case DevFmtX71: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x010 | 0x020 | 0x200 | 0x400; break;
     }
     bits = BytesFromDevFmt(device->FmtType) * 8;
     channels = ChannelsFromDevFmt(device->FmtChans);
@@ -295,7 +293,7 @@ static ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
     // 16-bit val, valid bits per sample
     fwrite16le(bits, self->mFile);
     // 32-bit val, channel mask
-    fwrite32le(channel_masks[channels], self->mFile);
+    fwrite32le(chanmask, self->mFile);
     // 16 byte GUID, sub-type format
     val = fwrite(((bits==32) ? SUBTYPE_FLOAT : SUBTYPE_PCM), 1, 16, self->mFile);
     (void)val;

@@ -15,7 +15,7 @@ inline void al_string_deinit(al_string *str)
 #define AL_STRING_INIT_STATIC()  ((al_string)NULL)
 #define AL_STRING_DEINIT(_x)     al_string_deinit(&(_x))
 
-inline ALsizei al_string_length(const_al_string str)
+inline size_t al_string_length(const_al_string str)
 { return VECTOR_SIZE(str); }
 
 inline ALboolean al_string_empty(const_al_string str)

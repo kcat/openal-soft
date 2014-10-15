@@ -748,6 +748,11 @@ static alonce_flag alc_config_once = AL_ONCE_FLAG_INIT;
 /* Default effect that applies to sources that don't have an effect on send 0 */
 static ALeffect DefaultEffect;
 
+/* Flag to specify if alcSuspendContext/alcProcessContext should defer/process
+ * updates.
+ */
+static ALCboolean SuspendDefers = ALC_TRUE;
+
 
 /************************************************
  * ALC information
@@ -907,6 +912,18 @@ static void alc_initconfig(void)
         TRACE("Supported backends: %s\n", buf);
     }
     ReadALConfig();
+
+    str = getenv("__ALSOFT_SUSPEND_CONTEXT");
+    if(str && *str)
+    {
+        if(strcasecmp(str, "ignore") == 0)
+        {
+            SuspendDefers = ALC_FALSE;
+            TRACE("Selected context suspend behavior, \"ignore\"\n");
+        }
+        else
+            ERR("Unhandled context suspend behavior setting: \"%s\"\n", str);
+    }
 
     capfilter = 0;
 #if defined(HAVE_SSE4_1)
@@ -1266,10 +1283,7 @@ static void AppendDevice(const ALCchar *name, al_string *devnames)
 {
     size_t len = strlen(name);
     if(len > 0)
-    {
-        al_string_append_range(devnames, name, name+len);
-        al_string_append_char(devnames, '\0');
-    }
+        al_string_append_range(devnames, name, name+len+1);
 }
 void AppendAllDevicesList(const ALCchar *name)
 { AppendDevice(name, &alcAllDevicesList); }
@@ -1449,50 +1463,50 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
     ALuint i;
 
     for(i = 0;i < MaxChannels;i++)
-        device->ChannelOffsets[i] = INVALID_OFFSET;
+        device->ChannelName[i] = InvalidChannel;
 
     switch(device->FmtChans)
     {
-    case DevFmtMono: device->ChannelOffsets[FrontCenter] = 0;
+    case DevFmtMono: device->ChannelName[0] = FrontCenter;
                      break;
-    case DevFmtStereo: device->ChannelOffsets[FrontLeft]  = 0;
-                       device->ChannelOffsets[FrontRight] = 1;
+    case DevFmtStereo: device->ChannelName[0] = FrontLeft;
+                       device->ChannelName[1] = FrontRight;
                        break;
-    case DevFmtQuad: device->ChannelOffsets[FrontLeft]  = 0;
-                     device->ChannelOffsets[FrontRight] = 1;
-                     device->ChannelOffsets[BackLeft]   = 2;
-                     device->ChannelOffsets[BackRight]  = 3;
+    case DevFmtQuad: device->ChannelName[0] = FrontLeft;
+                     device->ChannelName[1] = FrontRight;
+                     device->ChannelName[2] = BackLeft;
+                     device->ChannelName[3] = BackRight;
                      break;
-    case DevFmtX51: device->ChannelOffsets[FrontLeft]   = 0;
-                    device->ChannelOffsets[FrontRight]  = 1;
-                    device->ChannelOffsets[FrontCenter] = 2;
-                    device->ChannelOffsets[LFE]         = 3;
-                    device->ChannelOffsets[BackLeft]    = 4;
-                    device->ChannelOffsets[BackRight]   = 5;
+    case DevFmtX51: device->ChannelName[0] = FrontLeft;
+                    device->ChannelName[1] = FrontRight;
+                    device->ChannelName[2] = FrontCenter;
+                    device->ChannelName[3] = LFE;
+                    device->ChannelName[4] = BackLeft;
+                    device->ChannelName[5] = BackRight;
                     break;
-    case DevFmtX51Side: device->ChannelOffsets[FrontLeft]   = 0;
-                        device->ChannelOffsets[FrontRight]  = 1;
-                        device->ChannelOffsets[FrontCenter] = 2;
-                        device->ChannelOffsets[LFE]         = 3;
-                        device->ChannelOffsets[SideLeft]    = 4;
-                        device->ChannelOffsets[SideRight]   = 5;
+    case DevFmtX51Side: device->ChannelName[0] = FrontLeft;
+                        device->ChannelName[1] = FrontRight;
+                        device->ChannelName[2] = FrontCenter;
+                        device->ChannelName[3] = LFE;
+                        device->ChannelName[4] = SideLeft;
+                        device->ChannelName[5] = SideRight;
                         break;
-    case DevFmtX61: device->ChannelOffsets[FrontLeft]   = 0;
-                    device->ChannelOffsets[FrontRight]  = 1;
-                    device->ChannelOffsets[FrontCenter] = 2;
-                    device->ChannelOffsets[LFE]         = 3;
-                    device->ChannelOffsets[BackCenter]  = 4;
-                    device->ChannelOffsets[SideLeft]    = 5;
-                    device->ChannelOffsets[SideRight]   = 6;
+    case DevFmtX61: device->ChannelName[0] = FrontLeft;
+                    device->ChannelName[1] = FrontRight;
+                    device->ChannelName[2] = FrontCenter;
+                    device->ChannelName[3] = LFE;
+                    device->ChannelName[4] = BackCenter;
+                    device->ChannelName[5] = SideLeft;
+                    device->ChannelName[6] = SideRight;
                     break;
-    case DevFmtX71: device->ChannelOffsets[FrontLeft]   = 0;
-                    device->ChannelOffsets[FrontRight]  = 1;
-                    device->ChannelOffsets[FrontCenter] = 2;
-                    device->ChannelOffsets[LFE]         = 3;
-                    device->ChannelOffsets[BackLeft]    = 4;
-                    device->ChannelOffsets[BackRight]   = 5;
-                    device->ChannelOffsets[SideLeft]    = 6;
-                    device->ChannelOffsets[SideRight]   = 7;
+    case DevFmtX71: device->ChannelName[0] = FrontLeft;
+                    device->ChannelName[1] = FrontRight;
+                    device->ChannelName[2] = FrontCenter;
+                    device->ChannelName[3] = LFE;
+                    device->ChannelName[4] = BackLeft;
+                    device->ChannelName[5] = BackRight;
+                    device->ChannelName[6] = SideLeft;
+                    device->ChannelName[7] = SideRight;
                     break;
     }
 }
@@ -1506,25 +1520,25 @@ void SetDefaultChannelOrder(ALCdevice *device)
     ALuint i;
 
     for(i = 0;i < MaxChannels;i++)
-        device->ChannelOffsets[i] = INVALID_OFFSET;
+        device->ChannelName[i] = InvalidChannel;
 
     switch(device->FmtChans)
     {
-    case DevFmtX51: device->ChannelOffsets[FrontLeft]   = 0;
-                    device->ChannelOffsets[FrontRight]  = 1;
-                    device->ChannelOffsets[BackLeft]    = 2;
-                    device->ChannelOffsets[BackRight]   = 3;
-                    device->ChannelOffsets[FrontCenter] = 4;
-                    device->ChannelOffsets[LFE]         = 5;
+    case DevFmtX51: device->ChannelName[0] = FrontLeft;
+                    device->ChannelName[1] = FrontRight;
+                    device->ChannelName[2] = BackLeft;
+                    device->ChannelName[3] = BackRight;
+                    device->ChannelName[4] = FrontCenter;
+                    device->ChannelName[5] = LFE;
                     return;
-    case DevFmtX71: device->ChannelOffsets[FrontLeft]   = 0;
-                    device->ChannelOffsets[FrontRight]  = 1;
-                    device->ChannelOffsets[BackLeft]    = 2;
-                    device->ChannelOffsets[BackRight]   = 3;
-                    device->ChannelOffsets[FrontCenter] = 4;
-                    device->ChannelOffsets[LFE]         = 5;
-                    device->ChannelOffsets[SideLeft]    = 6;
-                    device->ChannelOffsets[SideRight]   = 7;
+    case DevFmtX71: device->ChannelName[0] = FrontLeft;
+                    device->ChannelName[1] = FrontRight;
+                    device->ChannelName[2] = BackLeft;
+                    device->ChannelName[3] = BackRight;
+                    device->ChannelName[4] = FrontCenter;
+                    device->ChannelName[5] = LFE;
+                    device->ChannelName[6] = SideLeft;
+                    device->ChannelName[7] = SideRight;
                     return;
 
     /* Same as WFX order */
@@ -1533,9 +1547,103 @@ void SetDefaultChannelOrder(ALCdevice *device)
     case DevFmtQuad:
     case DevFmtX51Side:
     case DevFmtX61:
+        SetDefaultWFXChannelOrder(device);
         break;
     }
-    SetDefaultWFXChannelOrder(device);
+}
+
+extern inline ALint GetChannelIdxByName(const ALCdevice *device, enum Channel chan);
+
+
+/* ALCcontext_DeferUpdates
+ *
+ * Defers/suspends updates for the given context's listener and sources. This
+ * does *NOT* stop mixing, but rather prevents certain property changes from
+ * taking effect.
+ */
+void ALCcontext_DeferUpdates(ALCcontext *context)
+{
+    ALCdevice *device = context->Device;
+    FPUCtl oldMode;
+
+    SetMixerFPUMode(&oldMode);
+
+    V0(device->Backend,lock)();
+    if(!ExchangeInt(&context->DeferUpdates, AL_TRUE))
+    {
+        ALboolean UpdateSources;
+        ALvoice *voice, *voice_end;
+        ALeffectslot **slot, **slot_end;
+        /* Make sure all pending updates are performed */
+        UpdateSources = ATOMIC_EXCHANGE(ALenum, &context->UpdateSources, AL_FALSE);
+
+        voice = context->Voices;
+        voice_end = voice + context->VoiceCount;
+        while(voice != voice_end)
+        {
+            ALsource *source = voice->Source;
+            if(!source) goto next;
+
+            if(source->state != AL_PLAYING && source->state != AL_PAUSED)
+            {
+                voice->Source = NULL;
+                continue;
+            }
+
+            if(ATOMIC_EXCHANGE(ALenum, &source->NeedsUpdate, AL_FALSE) || UpdateSources)
+                voice->Update(voice, source, context);
+        next:
+            voice++;
+        }
+
+        slot = VECTOR_ITER_BEGIN(context->ActiveAuxSlots);
+        slot_end = VECTOR_ITER_END(context->ActiveAuxSlots);
+        while(slot != slot_end)
+        {
+            if(ATOMIC_EXCHANGE(ALenum, &(*slot)->NeedsUpdate, AL_FALSE))
+                V((*slot)->EffectState,update)(context->Device, *slot);
+            slot++;
+        }
+    }
+    V0(device->Backend,unlock)();
+
+    RestoreFPUMode(&oldMode);
+}
+
+/* ALCcontext_ProcessUpdates
+ *
+ * Resumes update processing after being deferred.
+ */
+void ALCcontext_ProcessUpdates(ALCcontext *context)
+{
+    ALCdevice *device = context->Device;
+
+    V0(device->Backend,lock)();
+    if(ExchangeInt(&context->DeferUpdates, AL_FALSE))
+    {
+        ALsizei pos;
+
+        LockUIntMapRead(&context->SourceMap);
+        for(pos = 0;pos < context->SourceMap.size;pos++)
+        {
+            ALsource *Source = context->SourceMap.array[pos].value;
+            ALenum new_state;
+
+            if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
+               Source->Offset >= 0.0)
+            {
+                ReadLock(&Source->queue_lock);
+                ApplyOffset(Source);
+                ReadUnlock(&Source->queue_lock);
+            }
+
+            new_state = ExchangeInt(&Source->new_state, AL_NONE);
+            if(new_state)
+                SetSourceState(Source, context, new_state);
+        }
+        UnlockUIntMapRead(&context->SourceMap);
+    }
+    V0(device->Backend,unlock)();
 }
 
 
@@ -2308,18 +2416,40 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
 
 /* alcSuspendContext
  *
- * Not functional
+ * Suspends updates for the given context
  */
-ALC_API ALCvoid ALC_APIENTRY alcSuspendContext(ALCcontext *UNUSED(context))
+ALC_API ALCvoid ALC_APIENTRY alcSuspendContext(ALCcontext *context)
 {
+    if(!SuspendDefers)
+        return;
+
+    context = VerifyContext(context);
+    if(!context)
+        alcSetError(NULL, ALC_INVALID_CONTEXT);
+    else
+    {
+        ALCcontext_DeferUpdates(context);
+        ALCcontext_DecRef(context);
+    }
 }
 
 /* alcProcessContext
  *
- * Not functional
+ * Resumes processing updates for the given context
  */
-ALC_API ALCvoid ALC_APIENTRY alcProcessContext(ALCcontext *UNUSED(context))
+ALC_API ALCvoid ALC_APIENTRY alcProcessContext(ALCcontext *context)
 {
+    if(!SuspendDefers)
+        return;
+
+    context = VerifyContext(context);
+    if(!context)
+        alcSetError(NULL, ALC_INVALID_CONTEXT);
+    else
+    {
+        ALCcontext_ProcessUpdates(context);
+        ALCcontext_DecRef(context);
+    }
 }
 
 

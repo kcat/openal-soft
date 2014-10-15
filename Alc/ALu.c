@@ -45,6 +45,7 @@ static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,
 struct ChanMap {
     enum Channel channel;
     ALfloat angle;
+    ALfloat elevation;
 };
 
 /* Cone scalar */
@@ -118,6 +119,69 @@ static inline ALvoid aluMatrixVector(ALfloat *vector, ALfloat w, ALfloat (*restr
 }
 
 
+static void UpdateDryStepping(DirectParams *params, ALuint num_chans)
+{
+    ALuint i, j;
+
+    if(!params->Moving)
+    {
+        for(i = 0;i < num_chans;i++)
+        {
+            MixGains *gains = params->Mix.Gains[i];
+            for(j = 0;j < MaxChannels;j++)
+            {
+                gains[j].Current = gains[j].Target;
+                gains[j].Step = 1.0f;
+            }
+        }
+        params->Moving = AL_TRUE;
+        params->Counter = 0;
+        return;
+    }
+
+    for(i = 0;i < num_chans;i++)
+    {
+        MixGains *gains = params->Mix.Gains[i];
+        for(j = 0;j < MaxChannels;j++)
+        {
+            ALfloat cur = maxf(gains[j].Current, FLT_EPSILON);
+            ALfloat trg = maxf(gains[j].Target, FLT_EPSILON);
+            if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
+                gains[j].Step = powf(trg/cur, 1.0f/64.0f);
+            else
+                gains[j].Step = 1.0f;
+            gains[j].Current = cur;
+        }
+    }
+    params->Counter = 64;
+}
+
+static void UpdateWetStepping(SendParams *params)
+{
+    ALfloat cur, trg;
+
+    if(!params->Moving)
+    {
+        params->Gain.Current = params->Gain.Target;
+        params->Gain.Step = 1.0f;
+
+        params->Moving = AL_TRUE;
+        params->Counter = 0;
+        return;
+    }
+
+    cur = maxf(params->Gain.Current, FLT_EPSILON);
+    trg = maxf(params->Gain.Target, FLT_EPSILON);
+    if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
+        params->Gain.Step = powf(trg/cur, 1.0f/64.0f);
+    else
+        params->Gain.Step = 1.0f;
+    params->Gain.Current = cur;
+
+    params->Counter = 64;
+}
+
+
 static ALvoid CalcListenerParams(ALlistener *Listener)
 {
     ALfloat N[3], V[3], U[3], P[3];
@@ -168,51 +232,51 @@ static ALvoid CalcListenerParams(ALlistener *Listener)
 
 ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCcontext *ALContext)
 {
-    static const struct ChanMap MonoMap[1] = { { FrontCenter, 0.0f } };
+    static const struct ChanMap MonoMap[1] = { { FrontCenter, 0.0f, 0.0f } };
     static const struct ChanMap StereoMap[2] = {
-        { FrontLeft,  DEG2RAD(-30.0f) },
-        { FrontRight, DEG2RAD( 30.0f) }
+        { FrontLeft,  DEG2RAD(-30.0f), DEG2RAD(0.0f) },
+        { FrontRight, DEG2RAD( 30.0f), DEG2RAD(0.0f) }
     };
     static const struct ChanMap StereoWideMap[2] = {
-        { FrontLeft,  DEG2RAD(-90.0f) },
-        { FrontRight, DEG2RAD( 90.0f) }
+        { FrontLeft,  DEG2RAD(-90.0f), DEG2RAD(0.0f) },
+        { FrontRight, DEG2RAD( 90.0f), DEG2RAD(0.0f) }
     };
     static const struct ChanMap RearMap[2] = {
-        { BackLeft,  DEG2RAD(-150.0f) },
-        { BackRight, DEG2RAD( 150.0f) }
+        { BackLeft,  DEG2RAD(-150.0f), DEG2RAD(0.0f) },
+        { BackRight, DEG2RAD( 150.0f), DEG2RAD(0.0f) }
     };
     static const struct ChanMap QuadMap[4] = {
-        { FrontLeft,  DEG2RAD( -45.0f) },
-        { FrontRight, DEG2RAD(  45.0f) },
-        { BackLeft,   DEG2RAD(-135.0f) },
-        { BackRight,  DEG2RAD( 135.0f) }
+        { FrontLeft,  DEG2RAD( -45.0f), DEG2RAD(0.0f) },
+        { FrontRight, DEG2RAD(  45.0f), DEG2RAD(0.0f) },
+        { BackLeft,   DEG2RAD(-135.0f), DEG2RAD(0.0f) },
+        { BackRight,  DEG2RAD( 135.0f), DEG2RAD(0.0f) }
     };
     static const struct ChanMap X51Map[6] = {
-        { FrontLeft,   DEG2RAD( -30.0f) },
-        { FrontRight,  DEG2RAD(  30.0f) },
-        { FrontCenter, DEG2RAD(   0.0f) },
-        { LFE, 0.0f },
-        { BackLeft,    DEG2RAD(-110.0f) },
-        { BackRight,   DEG2RAD( 110.0f) }
+        { FrontLeft,   DEG2RAD( -30.0f), DEG2RAD(0.0f) },
+        { FrontRight,  DEG2RAD(  30.0f), DEG2RAD(0.0f) },
+        { FrontCenter, DEG2RAD(   0.0f), DEG2RAD(0.0f) },
+        { LFE, 0.0f, 0.0f },
+        { BackLeft,    DEG2RAD(-110.0f), DEG2RAD(0.0f) },
+        { BackRight,   DEG2RAD( 110.0f), DEG2RAD(0.0f) }
     };
     static const struct ChanMap X61Map[7] = {
-        { FrontLeft,    DEG2RAD(-30.0f) },
-        { FrontRight,   DEG2RAD( 30.0f) },
-        { FrontCenter,  DEG2RAD(  0.0f) },
-        { LFE, 0.0f },
-        { BackCenter,   DEG2RAD(180.0f) },
-        { SideLeft,     DEG2RAD(-90.0f) },
-        { SideRight,    DEG2RAD( 90.0f) }
+        { FrontLeft,    DEG2RAD(-30.0f), DEG2RAD(0.0f) },
+        { FrontRight,   DEG2RAD( 30.0f), DEG2RAD(0.0f) },
+        { FrontCenter,  DEG2RAD(  0.0f), DEG2RAD(0.0f) },
+        { LFE, 0.0f, 0.0f },
+        { BackCenter,   DEG2RAD(180.0f), DEG2RAD(0.0f) },
+        { SideLeft,     DEG2RAD(-90.0f), DEG2RAD(0.0f) },
+        { SideRight,    DEG2RAD( 90.0f), DEG2RAD(0.0f) }
     };
     static const struct ChanMap X71Map[8] = {
-        { FrontLeft,   DEG2RAD( -30.0f) },
-        { FrontRight,  DEG2RAD(  30.0f) },
-        { FrontCenter, DEG2RAD(   0.0f) },
-        { LFE, 0.0f },
-        { BackLeft,    DEG2RAD(-150.0f) },
-        { BackRight,   DEG2RAD( 150.0f) },
-        { SideLeft,    DEG2RAD( -90.0f) },
-        { SideRight,   DEG2RAD(  90.0f) }
+        { FrontLeft,   DEG2RAD( -30.0f), DEG2RAD(0.0f) },
+        { FrontRight,  DEG2RAD(  30.0f), DEG2RAD(0.0f) },
+        { FrontCenter, DEG2RAD(   0.0f), DEG2RAD(0.0f) },
+        { LFE, 0.0f, 0.0f },
+        { BackLeft,    DEG2RAD(-150.0f), DEG2RAD(0.0f) },
+        { BackRight,   DEG2RAD( 150.0f), DEG2RAD(0.0f) },
+        { SideLeft,    DEG2RAD( -90.0f), DEG2RAD(0.0f) },
+        { SideRight,   DEG2RAD(  90.0f), DEG2RAD(0.0f) }
     };
 
     ALCdevice *Device = ALContext->Device;
@@ -223,13 +287,12 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
     ALfloat WetGainLF[MAX_SENDS];
-    ALint NumSends, Frequency;
+    ALuint NumSends, Frequency;
     const struct ChanMap *chans = NULL;
-    ALint num_channels = 0;
+    ALuint num_channels = 0;
     ALboolean DirectChannels;
-    ALfloat hwidth = 0.0f;
     ALfloat Pitch;
-    ALint i, j, c;
+    ALuint i, j, c;
 
     /* Get device properties */
     NumSends  = Device->NumAuxSends;
@@ -302,21 +365,13 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         break;
 
     case FmtStereo:
-        if(!(Device->Flags&DEVICE_WIDE_STEREO))
-        {
-            /* HACK: Place the stereo channels at +/-90 degrees when using non-
-             * HRTF stereo output. This helps reduce the "monoization" caused
-             * by them panning towards the center. */
-            if(Device->FmtChans == DevFmtStereo && !Device->Hrtf)
-                chans = StereoWideMap;
-            else
-                chans = StereoMap;
-        }
-        else
-        {
+        /* HACK: Place the stereo channels at +/-90 degrees when using non-
+         * HRTF stereo output. This helps reduce the "monoization" caused
+         * by them panning towards the center. */
+        if(Device->FmtChans == DevFmtStereo && !Device->Hrtf)
             chans = StereoWideMap;
-            hwidth = DEG2RAD(60.0f);
-        }
+        else
+            chans = StereoMap;
         num_channels = 2;
         break;
 
@@ -351,56 +406,13 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         for(c = 0;c < num_channels;c++)
         {
             MixGains *gains = voice->Direct.Mix.Gains[c];
+
             for(j = 0;j < MaxChannels;j++)
                 gains[j].Target = 0.0f;
+            if(GetChannelIdxByName(Device, chans[c].channel) != -1)
+                gains[chans[c].channel].Target = DryGain;
         }
-
-        for(c = 0;c < num_channels;c++)
-        {
-            MixGains *gains = voice->Direct.Mix.Gains[c];
-            for(i = 0;i < (ALint)Device->NumChan;i++)
-            {
-                enum Channel chan = Device->Speaker2Chan[i];
-                if(chan == chans[c].channel)
-                {
-                    gains[chan].Target = DryGain;
-                    break;
-                }
-            }
-        }
-
-        if(!voice->Direct.Moving)
-        {
-            for(i = 0;i < num_channels;i++)
-            {
-                MixGains *gains = voice->Direct.Mix.Gains[i];
-                for(j = 0;j < MaxChannels;j++)
-                {
-                    gains[j].Current = gains[j].Target;
-                    gains[j].Step = 1.0f;
-                }
-            }
-            voice->Direct.Counter = 0;
-            voice->Direct.Moving  = AL_TRUE;
-        }
-        else
-        {
-            for(i = 0;i < num_channels;i++)
-            {
-                MixGains *gains = voice->Direct.Mix.Gains[i];
-                for(j = 0;j < MaxChannels;j++)
-                {
-                    ALfloat cur = maxf(gains[j].Current, FLT_EPSILON);
-                    ALfloat trg = maxf(gains[j].Target, FLT_EPSILON);
-                    if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
-                        gains[j].Step = powf(trg/cur, 1.0f/64.0f);
-                    else
-                        gains[j].Step = 1.0f;
-                    gains[j].Current = cur;
-                }
-            }
-            voice->Direct.Counter = 64;
-        }
+        UpdateDryStepping(&voice->Direct, num_channels);
 
         voice->IsHrtf = AL_FALSE;
     }
@@ -424,7 +436,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                 /* Get the static HRIR coefficients and delays for this
                  * channel. */
                 GetLerpedHrtfCoeffs(Device->Hrtf,
-                                    0.0f, chans[c].angle, 1.0f, DryGain,
+                                    chans[c].elevation, chans[c].angle, 1.0f, DryGain,
                                     voice->Direct.Mix.Hrtf.Params[c].Coeffs,
                                     voice->Direct.Mix.Hrtf.Params[c].Delay);
             }
@@ -437,14 +449,6 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     }
     else
     {
-        for(i = 0;i < num_channels;i++)
-        {
-            MixGains *gains = voice->Direct.Mix.Gains[i];
-            for(j = 0;j < MaxChannels;j++)
-                gains[j].Target = 0.0f;
-        }
-
-        DryGain *= lerp(1.0f, 1.0f/sqrtf((float)Device->NumChan), hwidth/F_PI);
         for(c = 0;c < num_channels;c++)
         {
             MixGains *gains = voice->Direct.Mix.Gains[c];
@@ -453,70 +457,25 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
             /* Special-case LFE */
             if(chans[c].channel == LFE)
             {
-                gains[chans[c].channel].Target = DryGain;
+                for(i = 0;i < MaxChannels;i++)
+                    gains[i].Target = 0.0f;
+                if(GetChannelIdxByName(Device, chans[c].channel) != -1)
+                    gains[chans[c].channel].Target = DryGain;
                 continue;
             }
-            ComputeAngleGains(Device, chans[c].angle, hwidth, DryGain, Target);
+
+            ComputeAngleGains(Device, chans[c].angle, chans[c].elevation, DryGain, Target);
             for(i = 0;i < MaxChannels;i++)
                 gains[i].Target = Target[i];
         }
-
-        if(!voice->Direct.Moving)
-        {
-            for(i = 0;i < num_channels;i++)
-            {
-                MixGains *gains = voice->Direct.Mix.Gains[i];
-                for(j = 0;j < MaxChannels;j++)
-                {
-                    gains[j].Current = gains[j].Target;
-                    gains[j].Step = 1.0f;
-                }
-            }
-            voice->Direct.Counter = 0;
-            voice->Direct.Moving  = AL_TRUE;
-        }
-        else
-        {
-            for(i = 0;i < num_channels;i++)
-            {
-                MixGains *gains = voice->Direct.Mix.Gains[i];
-                for(j = 0;j < MaxChannels;j++)
-                {
-                    ALfloat trg = maxf(gains[j].Target, FLT_EPSILON);
-                    ALfloat cur = maxf(gains[j].Current, FLT_EPSILON);
-                    if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
-                        gains[j].Step = powf(trg/cur, 1.0f/64.0f);
-                    else
-                        gains[j].Step = 1.0f;
-                    gains[j].Current = cur;
-                }
-            }
-            voice->Direct.Counter = 64;
-        }
+        UpdateDryStepping(&voice->Direct, num_channels);
 
         voice->IsHrtf = AL_FALSE;
     }
     for(i = 0;i < NumSends;i++)
     {
         voice->Send[i].Gain.Target = WetGain[i];
-        if(!voice->Send[i].Moving)
-        {
-            voice->Send[i].Gain.Current = voice->Send[i].Gain.Target;
-            voice->Send[i].Gain.Step = 1.0f;
-            voice->Send[i].Counter = 0;
-            voice->Send[i].Moving  = AL_TRUE;
-        }
-        else
-        {
-            ALfloat cur = maxf(voice->Send[i].Gain.Current, FLT_EPSILON);
-            ALfloat trg = maxf(voice->Send[i].Gain.Target, FLT_EPSILON);
-            if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
-                voice->Send[i].Gain.Step = powf(trg/cur, 1.0f/64.0f);
-            else
-                voice->Send[i].Gain.Step = 1.0f;
-            voice->Send[i].Gain.Current = cur;
-            voice->Send[i].Counter = 64;
-        }
+        UpdateWetStepping(&voice->Send[i]);
     }
 
     {
@@ -959,86 +918,31 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     else
     {
         MixGains *gains = voice->Direct.Mix.Gains[0];
-        ALfloat DirGain = 0.0f;
-        ALfloat AmbientGain;
-
-        for(j = 0;j < MaxChannels;j++)
-            gains[j].Target = 0.0f;
+        ALfloat Target[MaxChannels];
 
         /* Normalize the length, and compute panned gains. */
-        if(Distance > FLT_EPSILON)
+        if(!(Distance > FLT_EPSILON))
+            Position[0] = Position[1] = Position[2] = 0.0f;
+        else
         {
             ALfloat radius = ALSource->Radius;
-            ALfloat Target[MaxChannels];
             ALfloat invlen = 1.0f/maxf(Distance, radius);
             Position[0] *= invlen;
             Position[1] *= invlen;
             Position[2] *= invlen;
+        }
+        ComputeDirectionalGains(Device, Position, DryGain, Target);
 
-            DirGain = sqrtf(Position[0]*Position[0] + Position[2]*Position[2]);
-            ComputeAngleGains(Device, atan2f(Position[0], -Position[2]*ZScale), 0.0f,
-                              DryGain*DirGain, Target);
-            for(j = 0;j < MaxChannels;j++)
-                gains[j].Target = Target[j];
-        }
-
-        /* Adjustment for vertical offsets. Not the greatest, but simple
-         * enough. */
-        AmbientGain = DryGain * sqrtf(1.0f/Device->NumChan) * (1.0f-DirGain);
-        for(i = 0;i < (ALint)Device->NumChan;i++)
-        {
-            enum Channel chan = Device->Speaker2Chan[i];
-            gains[chan].Target = maxf(gains[chan].Target, AmbientGain);
-        }
-
-        if(!voice->Direct.Moving)
-        {
-            for(j = 0;j < MaxChannels;j++)
-            {
-                gains[j].Current = gains[j].Target;
-                gains[j].Step = 1.0f;
-            }
-            voice->Direct.Counter = 0;
-            voice->Direct.Moving  = AL_TRUE;
-        }
-        else
-        {
-            for(j = 0;j < MaxChannels;j++)
-            {
-                ALfloat cur = maxf(gains[j].Current, FLT_EPSILON);
-                ALfloat trg = maxf(gains[j].Target, FLT_EPSILON);
-                if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
-                    gains[j].Step = powf(trg/cur, 1.0f/64.0f);
-                else
-                    gains[j].Step = 1.0f;
-                gains[j].Current = cur;
-            }
-            voice->Direct.Counter = 64;
-        }
+        for(j = 0;j < MaxChannels;j++)
+            gains[j].Target = Target[j];
+        UpdateDryStepping(&voice->Direct, 1);
 
         voice->IsHrtf = AL_FALSE;
     }
     for(i = 0;i < NumSends;i++)
     {
         voice->Send[i].Gain.Target = WetGain[i];
-        if(!voice->Send[i].Moving)
-        {
-            voice->Send[i].Gain.Current = voice->Send[i].Gain.Target;
-            voice->Send[i].Gain.Step = 1.0f;
-            voice->Send[i].Counter = 0;
-            voice->Send[i].Moving  = AL_TRUE;
-        }
-        else
-        {
-            ALfloat cur = maxf(voice->Send[i].Gain.Current, FLT_EPSILON);
-            ALfloat trg = maxf(voice->Send[i].Gain.Target, FLT_EPSILON);
-            if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
-                voice->Send[i].Gain.Step = powf(trg/cur, 1.0f/64.0f);
-            else
-                voice->Send[i].Gain.Step = 1.0f;
-            voice->Send[i].Gain.Current = cur;
-            voice->Send[i].Counter = 64;
-        }
+        UpdateWetStepping(&voice->Send[i]);
     }
 
     {
@@ -1108,19 +1012,22 @@ static void Write_##T(ALCdevice *device, ALvoid **buffer, ALuint SamplesToDo) \
 {                                                                             \
     ALfloat (*restrict DryBuffer)[BUFFERSIZE] = device->DryBuffer;            \
     const ALuint numchans = ChannelsFromDevFmt(device->FmtChans);             \
-    const ALuint *offsets = device->ChannelOffsets;                           \
+    const enum Channel *chans = device->ChannelName;                          \
     ALuint i, j;                                                              \
                                                                               \
     for(j = 0;j < MaxChannels;j++)                                            \
     {                                                                         \
+        const enum Channel c = chans[j];                                      \
+        const ALfloat *in;                                                    \
         T *restrict out;                                                      \
                                                                               \
-        if(offsets[j] == INVALID_OFFSET)                                      \
+        if(c == InvalidChannel)                                               \
             continue;                                                         \
                                                                               \
-        out = (T*)(*buffer) + offsets[j];                                     \
+        in = DryBuffer[c];                                                    \
+        out = (T*)(*buffer) + j;                                              \
         for(i = 0;i < SamplesToDo;i++)                                        \
-            out[i*numchans] = func(DryBuffer[j][i]);                          \
+            out[i*numchans] = func(in[i]);                                    \
     }                                                                         \
     *buffer = (char*)(*buffer) + SamplesToDo*numchans*sizeof(T);              \
 }

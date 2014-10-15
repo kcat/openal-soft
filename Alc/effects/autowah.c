@@ -31,8 +31,8 @@
 /* Auto-wah is simply a low-pass filter with a cutoff frequency that shifts up
  * or down depending on the input signal, and a resonant peak at the cutoff.
  *
- * Currently, we assume a cutoff frequency range of 500hz (no amplitude) to
- * 3khz (peak gain). Peak gain is assumed to be in normalized scale.
+ * Currently, we assume a cutoff frequency range of 20hz (no amplitude) to
+ * 20khz (peak gain). Peak gain is assumed to be in normalized scale.
  */
 
 typedef struct ALautowahState {
@@ -76,7 +76,7 @@ static ALvoid ALautowahState_update(ALautowahState *state, ALCdevice *device, co
     state->PeakGain = slot->EffectProps.Autowah.PeakGain;
     state->Resonance = slot->EffectProps.Autowah.Resonance;
 
-    gain = sqrtf(1.0f / device->NumChan) * slot->Gain;
+    gain = 1.0f/device->NumSpeakers * slot->Gain;
     SetGains(device, gain, state->Gain);
 }
 

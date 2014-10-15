@@ -393,6 +393,16 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device);
 #endif
 #endif
 
+#ifndef AL_EXT_BFORMAT
+#define AL_EXT_BFORMAT 1
+#define AL_FORMAT_BFORMAT2D_8                    0x20021
+#define AL_FORMAT_BFORMAT2D_16                   0x20022
+#define AL_FORMAT_BFORMAT2D_FLOAT32              0x20023
+#define AL_FORMAT_BFORMAT3D_8                    0x20031
+#define AL_FORMAT_BFORMAT3D_16                   0x20032
+#define AL_FORMAT_BFORMAT3D_FLOAT32              0x20033
+#endif
+
 #ifdef __cplusplus
 }
 #endif

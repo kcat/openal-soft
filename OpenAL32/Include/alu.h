@@ -202,12 +202,20 @@ inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALf
 ALvoid aluInitPanning(ALCdevice *Device);
 
 /**
+ * ComputeDirectionalGains
+ *
+ * Sets channel gains based on a direction. The direction must be a 3-component
+ * vector no longer than 1 unit.
+ */
+void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfloat ingain, ALfloat gains[MaxChannels]);
+
+/**
  * ComputeAngleGains
  *
- * Sets channel gains based on a given source's angle and its half-width. The
- * angle and hwidth parameters are in radians.
+ * Sets channel gains based on angle and elevation. The angle and elevation
+ * parameters are in radians, going right and up respectively.
  */
-void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, ALfloat ingain, ALfloat gains[MaxChannels]);
+void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation, ALfloat ingain, ALfloat gains[MaxChannels]);
 
 /**
  * SetGains
@@ -216,7 +224,11 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat hwidth, A
  */
 inline void SetGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MaxChannels])
 {
-    ComputeAngleGains(device, 0.0f, F_PI, ingain, gains);
+    ALuint i;
+    for(i = 0;i < MaxChannels;i++)
+        gains[i] = 0.0f;
+    for(i = 0;i < device->NumSpeakers;i++)
+        gains[device->Speaker[i].ChanName] = ingain;
 }
 
 

@@ -525,6 +525,7 @@ enum Channel {
     SideRight,
 
     MaxChannels,
+    InvalidChannel = MaxChannels
 };
 
 
@@ -577,13 +578,25 @@ enum DeviceType {
 };
 
 
+/* The maximum number of Ambisonics coefficients. For a given order (o), the
+ * size needed will be (o+1)**2, thus zero-order has 1, first-order has 4,
+ * second-order has 9, and third-order has 16. */
+#define MAX_AMBI_COEFFS 16
+
+typedef struct ChannelConfig {
+    enum Channel ChanName;
+    ALfloat Angle;
+    ALfloat Elevation;
+    ALfloat Coeff[MAX_AMBI_COEFFS];
+} ChannelConfig;
+
+
 /* Size for temporary storage of buffer data, in ALfloats. Larger values need
  * more memory, while smaller values may need more iterations. The value needs
  * to be a sensible size, however, as it constrains the max stepping value used
  * for mixing, as well as the maximum number of samples per mixing iteration.
  */
 #define BUFFERSIZE (2048u)
-
 
 struct ALCdevice_struct
 {
@@ -645,11 +658,11 @@ struct ALCdevice_struct
     // Device flags
     ALuint       Flags;
 
-    ALuint ChannelOffsets[MaxChannels];
+    enum Channel ChannelName[MaxChannels];
 
-    enum Channel Speaker2Chan[MaxChannels];
-    ALfloat SpeakerAngle[MaxChannels];
-    ALuint  NumChan;
+    /* This only counts positional speakers, i.e. not including LFE. */
+    ChannelConfig Speaker[MaxChannels];
+    ALuint NumSpeakers;
 
     ALuint64 ClockBase;
     ALuint SamplesDone;
@@ -764,6 +777,9 @@ void ALCdevice_Lock(ALCdevice *device);
 void ALCdevice_Unlock(ALCdevice *device);
 ALint64 ALCdevice_GetLatency(ALCdevice *device);
 
+void ALCcontext_DeferUpdates(ALCcontext *context);
+void ALCcontext_ProcessUpdates(ALCcontext *context);
+
 inline void LockContext(ALCcontext *context)
 { ALCdevice_Lock(context->Device); }
 
@@ -814,6 +830,23 @@ void SetDefaultWFXChannelOrder(ALCdevice *device);
 
 const ALCchar *DevFmtTypeString(enum DevFmtType type) DECL_CONST;
 const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans) DECL_CONST;
+
+/**
+ * GetChannelIdxByName
+ *
+ * Returns the device's channel index given a channel name (e.g. FrontCenter),
+ * or -1 if it doesn't exist.
+ */
+inline ALint GetChannelIdxByName(const ALCdevice *device, enum Channel chan)
+{
+    ALint i = 0;
+    for(i = 0;i < MaxChannels;i++)
+    {
+        if(device->ChannelName[i] == chan)
+            return i;
+    }
+    return -1;
+}
 
 
 extern FILE *LogFile;

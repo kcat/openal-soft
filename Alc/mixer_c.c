@@ -118,7 +118,7 @@ void Mix_C(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[B
             Gains[c].Current = gain;
         }
 
-        if(!(gain > GAIN_SILENCE_THRESHOLD))
+        if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
         for(;pos < BufferSize;pos++)
             OutBuffer[c][OutPos+pos] += data[pos]*gain;

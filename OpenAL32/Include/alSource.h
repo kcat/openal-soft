@@ -60,6 +60,7 @@ typedef struct ALsource {
     volatile ALfloat   Position[3];
     volatile ALfloat   Velocity[3];
     volatile ALfloat   Direction[3];
+    volatile ALfloat   Orientation[2][3];
     volatile ALboolean HeadRelative;
     volatile ALboolean Looping;
     volatile enum DistanceModel DistanceModel;

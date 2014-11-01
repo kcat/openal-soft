@@ -81,16 +81,18 @@ void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfl
     }
 }
 
-void ComputeBFormatGains(const ALCdevice *device, ALuint channum, ALfloat ingain, ALfloat gains[MaxChannels])
+void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MaxChannels])
 {
-    ALuint i;
+    ALuint i, j;
 
     for(i = 0;i < MaxChannels;i++)
         gains[i] = 0.0f;
     for(i = 0;i < device->NumSpeakers;i++)
     {
         enum Channel chan = device->Speaker[i].ChanName;
-        gains[chan] = device->Speaker[i].FOACoeff[channum] * ingain;
+        for(j = 0;j < 4;j++)
+            gains[chan] += device->Speaker[i].FOACoeff[j] * mtx[j];
+        gains[chan] *= ingain;
     }
 }
 

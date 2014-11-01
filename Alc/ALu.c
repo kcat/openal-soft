@@ -288,6 +288,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     ALfloat WetGainHF[MAX_SENDS];
     ALfloat WetGainLF[MAX_SENDS];
     ALuint NumSends, Frequency;
+    ALboolean Relative;
     const struct ChanMap *chans = NULL;
     ALuint num_channels = 0;
     ALboolean DirectChannels;
@@ -307,6 +308,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     MinVolume       = ALSource->MinGain;
     MaxVolume       = ALSource->MaxGain;
     Pitch           = ALSource->Pitch;
+    Relative        = ALSource->HeadRelative;
     DirectChannels  = ALSource->DirectChannels;
 
     voice->Direct.OutBuffer = Device->DryBuffer;
@@ -414,12 +416,51 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
 
     if(isbformat)
     {
+        ALfloat N[3], V[3], U[3];
+        ALfloat matrix[4][4];
+
+        /* AT then UP */
+        N[0] = ALSource->Orientation[0][0];
+        N[1] = ALSource->Orientation[0][1];
+        N[2] = ALSource->Orientation[0][2];
+        aluNormalize(N);
+        V[0] = ALSource->Orientation[1][0];
+        V[1] = ALSource->Orientation[1][1];
+        V[2] = ALSource->Orientation[1][2];
+        aluNormalize(V);
+        if(!Relative)
+        {
+            ALfloat (*restrict lmatrix)[4] = ALContext->Listener->Params.Matrix;
+            aluMatrixVector(N, 0.0f, lmatrix);
+            aluMatrixVector(V, 0.0f, lmatrix);
+        }
+        /* Build and normalize right-vector */
+        aluCrossproduct(N, V, U);
+        aluNormalize(U);
+
+        matrix[0][0] =  1.0f;
+        matrix[0][1] =  0.0f;
+        matrix[0][2] =  0.0f;
+        matrix[0][3] =  0.0f;
+        matrix[1][0] =  0.0f;
+        matrix[1][1] = -N[2];
+        matrix[1][2] = -N[0];
+        matrix[1][3] =  N[1];
+        matrix[2][0] =  0.0f;
+        matrix[2][1] =  U[2];
+        matrix[2][2] =  U[0];
+        matrix[2][3] = -U[1];
+        matrix[3][0] =  0.0f;
+        matrix[3][1] = -V[2];
+        matrix[3][2] = -V[0];
+        matrix[3][3] =  V[1];
+
         for(c = 0;c < num_channels;c++)
         {
             MixGains *gains = voice->Direct.Mix.Gains[c];
             ALfloat Target[MaxChannels];
 
-            ComputeBFormatGains(Device, c, DryGain, Target);
+            ComputeBFormatGains(Device, matrix[c], DryGain, Target);
             for(i = 0;i < MaxChannels;i++)
                 gains[i].Target = Target[i];
         }

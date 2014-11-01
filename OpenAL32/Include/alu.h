@@ -220,10 +220,11 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation
 /**
  * ComputeBFormatGains
  *
- * Sets channel gains for a given (first-order) B-Format channel. The channel
- * number must not be greater than 4, and the resulting gains may be negative.
+ * Sets channel gains for a given (first-order) B-Format channel. The matrix is
+ * a 1x4 'slice' of the rotation matrix for a given channel used to orient the
+ * coefficients.
  */
-void ComputeBFormatGains(const ALCdevice *device, ALuint channum, ALfloat ingain, ALfloat gains[MaxChannels]);
+void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MaxChannels]);
 
 /**
  * SetGains

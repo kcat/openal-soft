@@ -523,9 +523,9 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SrcFloatProp
             CHECKVAL(isfinite(values[0]) && isfinite(values[1]) && isfinite(values[2]));
 
             LockContext(Context);
-            Source->Orientation[0] = values[0];
-            Source->Orientation[1] = values[1];
-            Source->Orientation[2] = values[2];
+            Source->Direction[0] = values[0];
+            Source->Direction[1] = values[1];
+            Source->Direction[2] = values[2];
             UnlockContext(Context);
             ATOMIC_STORE(&Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
@@ -1019,9 +1019,9 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SrcFloatProp
 
         case AL_DIRECTION:
             LockContext(Context);
-            values[0] = Source->Orientation[0];
-            values[1] = Source->Orientation[1];
-            values[2] = Source->Orientation[2];
+            values[0] = Source->Direction[0];
+            values[1] = Source->Direction[1];
+            values[2] = Source->Direction[2];
             UnlockContext(Context);
             return AL_TRUE;
 
@@ -2381,9 +2381,9 @@ static ALvoid InitSourceParams(ALsource *Source)
     Source->Position[0] = 0.0f;
     Source->Position[1] = 0.0f;
     Source->Position[2] = 0.0f;
-    Source->Orientation[0] = 0.0f;
-    Source->Orientation[1] = 0.0f;
-    Source->Orientation[2] = 0.0f;
+    Source->Direction[0] = 0.0f;
+    Source->Direction[1] = 0.0f;
+    Source->Direction[2] = 0.0f;
     Source->Velocity[0] = 0.0f;
     Source->Velocity[1] = 0.0f;
     Source->Velocity[2] = 0.0f;

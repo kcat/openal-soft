@@ -609,9 +609,9 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     Position[0]    = ALSource->Position[0];
     Position[1]    = ALSource->Position[1];
     Position[2]    = ALSource->Position[2];
-    Direction[0]   = ALSource->Orientation[0];
-    Direction[1]   = ALSource->Orientation[1];
-    Direction[2]   = ALSource->Orientation[2];
+    Direction[0]   = ALSource->Direction[0];
+    Direction[1]   = ALSource->Direction[1];
+    Direction[2]   = ALSource->Direction[2];
     Velocity[0]    = ALSource->Velocity[0];
     Velocity[1]    = ALSource->Velocity[1];
     Velocity[2]    = ALSource->Velocity[2];

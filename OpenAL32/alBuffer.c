@@ -1115,10 +1115,12 @@ static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans,
         { AL_FORMAT_BFORMAT2D_8,       UserFmtBFormat2D, UserFmtUByte },
         { AL_FORMAT_BFORMAT2D_16,      UserFmtBFormat2D, UserFmtShort },
         { AL_FORMAT_BFORMAT2D_FLOAT32, UserFmtBFormat2D, UserFmtFloat },
+        { AL_FORMAT_BFORMAT2D_MULAW,   UserFmtBFormat2D, UserFmtMulaw },
 
         { AL_FORMAT_BFORMAT3D_8,       UserFmtBFormat3D, UserFmtUByte },
         { AL_FORMAT_BFORMAT3D_16,      UserFmtBFormat3D, UserFmtShort },
         { AL_FORMAT_BFORMAT3D_FLOAT32, UserFmtBFormat3D, UserFmtFloat },
+        { AL_FORMAT_BFORMAT3D_MULAW,   UserFmtBFormat3D, UserFmtMulaw },
     };
     ALuint i;
 

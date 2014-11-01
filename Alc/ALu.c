@@ -36,6 +36,7 @@
 #include "hrtf.h"
 #include "static_assert.h"
 
+#include "backends/base.h"
 #include "midi/base.h"
 
 
@@ -1134,7 +1135,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         for(c = 0;c < MaxChannels;c++)
             memset(device->DryBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
 
-        ALCdevice_Lock(device);
+        V0(device->Backend,lock)();
         V(device->Synth,process)(SamplesToDo, device->DryBuffer);
 
         ctx = ATOMIC_LOAD(&device->ContextList);
@@ -1213,7 +1214,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         device->SamplesDone += SamplesToDo;
         device->ClockBase += (device->SamplesDone/device->Frequency) * DEVICE_CLOCK_RES;
         device->SamplesDone %= device->Frequency;
-        ALCdevice_Unlock(device);
+        V0(device->Backend,unlock)();
 
         if(device->Bs2b)
         {

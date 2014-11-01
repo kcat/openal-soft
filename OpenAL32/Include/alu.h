@@ -218,6 +218,14 @@ void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfl
 void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation, ALfloat ingain, ALfloat gains[MaxChannels]);
 
 /**
+ * ComputeBFormatGains
+ *
+ * Sets channel gains for a given (first-order) B-Format channel. The channel
+ * number must not be greater than 4, and the resulting gains may be negative.
+ */
+void ComputeBFormatGains(const ALCdevice *device, ALuint channum, ALfloat ingain, ALfloat gains[MaxChannels]);
+
+/**
  * SetGains
  *
  * Helper to set the appropriate channels to the specified gain.

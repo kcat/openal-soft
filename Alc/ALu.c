@@ -291,6 +291,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     const struct ChanMap *chans = NULL;
     ALuint num_channels = 0;
     ALboolean DirectChannels;
+    ALboolean isbformat = AL_FALSE;
     ALfloat Pitch;
     ALuint i, j, c;
 
@@ -399,9 +400,39 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         chans = X71Map;
         num_channels = 8;
         break;
+
+    case FmtBFormat2D:
+        num_channels = 3;
+        isbformat = AL_TRUE;
+        DirectChannels = AL_FALSE;
+
+    case FmtBFormat3D:
+        num_channels = 4;
+        isbformat = AL_TRUE;
+        DirectChannels = AL_FALSE;
     }
 
-    if(DirectChannels != AL_FALSE)
+    if(isbformat)
+    {
+        for(c = 0;c < num_channels;c++)
+        {
+            MixGains *gains = voice->Direct.Mix.Gains[c];
+            ALfloat Target[MaxChannels];
+
+            ComputeBFormatGains(Device, c, DryGain, Target);
+            for(i = 0;i < MaxChannels;i++)
+                gains[i].Target = Target[i];
+        }
+        /* B-Format cannot handle logarithmic gain stepping, since the gain can
+         * switch between positive and negative values. */
+        voice->Direct.Moving = AL_FALSE;
+        UpdateDryStepping(&voice->Direct, num_channels);
+
+        voice->IsHrtf = AL_FALSE;
+        for(i = 0;i < NumSends;i++)
+            WetGain[i] *= 1.4142f;
+    }
+    else if(DirectChannels != AL_FALSE)
     {
         for(c = 0;c < num_channels;c++)
         {

@@ -189,6 +189,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
                 case UserFmtX51: newformat = AL_FORMAT_51CHN32; break;
                 case UserFmtX61: newformat = AL_FORMAT_61CHN32; break;
                 case UserFmtX71: newformat = AL_FORMAT_71CHN32; break;
+                case UserFmtBFormat2D: newformat = AL_FORMAT_BFORMAT2D_FLOAT32; break;
+                case UserFmtBFormat3D: newformat = AL_FORMAT_BFORMAT3D_FLOAT32; break;
             }
             err = LoadData(albuf, freq, newformat, size/framesize*align,
                            srcchannels, srctype, data, align, AL_TRUE);
@@ -211,6 +213,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
                 case UserFmtX51: newformat = AL_FORMAT_51CHN16; break;
                 case UserFmtX61: newformat = AL_FORMAT_61CHN16; break;
                 case UserFmtX71: newformat = AL_FORMAT_71CHN16; break;
+                case UserFmtBFormat2D: newformat = AL_FORMAT_BFORMAT2D_16; break;
+                case UserFmtBFormat3D: newformat = AL_FORMAT_BFORMAT3D_16; break;
             }
             err = LoadData(albuf, freq, newformat, size/framesize*align,
                            srcchannels, srctype, data, align, AL_TRUE);
@@ -233,6 +237,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
                 case UserFmtX51: newformat = AL_FORMAT_51CHN16; break;
                 case UserFmtX61: newformat = AL_FORMAT_61CHN16; break;
                 case UserFmtX71: newformat = AL_FORMAT_71CHN16; break;
+                case UserFmtBFormat2D: newformat = AL_FORMAT_BFORMAT2D_16; break;
+                case UserFmtBFormat3D: newformat = AL_FORMAT_BFORMAT3D_16; break;
             }
             err = LoadData(albuf, freq, newformat, size/framesize*align,
                            srcchannels, srctype, data, align, AL_TRUE);
@@ -255,6 +261,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
                 case UserFmtX51: newformat = AL_FORMAT_51CHN16; break;
                 case UserFmtX61: newformat = AL_FORMAT_61CHN16; break;
                 case UserFmtX71: newformat = AL_FORMAT_71CHN16; break;
+                case UserFmtBFormat2D: newformat = AL_FORMAT_BFORMAT2D_16; break;
+                case UserFmtBFormat3D: newformat = AL_FORMAT_BFORMAT3D_16; break;
             }
             err = LoadData(albuf, freq, newformat, size/framesize*align,
                            srcchannels, srctype, data, align, AL_TRUE);
@@ -1045,6 +1053,8 @@ ALuint ChannelsFromUserFmt(enum UserFmtChannels chans)
     case UserFmtX51: return 6;
     case UserFmtX61: return 7;
     case UserFmtX71: return 8;
+    case UserFmtBFormat2D: return 3;
+    case UserFmtBFormat3D: return 4;
     }
     return 0;
 }
@@ -1101,6 +1111,14 @@ static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans,
         { AL_FORMAT_71CHN16,     UserFmtX71, UserFmtShort },
         { AL_FORMAT_71CHN32,     UserFmtX71, UserFmtFloat },
         { AL_FORMAT_71CHN_MULAW, UserFmtX71, UserFmtMulaw },
+
+        { AL_FORMAT_BFORMAT2D_8,       UserFmtBFormat2D, UserFmtUByte },
+        { AL_FORMAT_BFORMAT2D_16,      UserFmtBFormat2D, UserFmtShort },
+        { AL_FORMAT_BFORMAT2D_FLOAT32, UserFmtBFormat2D, UserFmtFloat },
+
+        { AL_FORMAT_BFORMAT3D_8,       UserFmtBFormat3D, UserFmtUByte },
+        { AL_FORMAT_BFORMAT3D_16,      UserFmtBFormat3D, UserFmtShort },
+        { AL_FORMAT_BFORMAT3D_FLOAT32, UserFmtBFormat3D, UserFmtFloat },
     };
     ALuint i;
 
@@ -1138,6 +1156,8 @@ ALuint ChannelsFromFmt(enum FmtChannels chans)
     case FmtX51: return 6;
     case FmtX61: return 7;
     case FmtX71: return 8;
+    case FmtBFormat2D: return 3;
+    case FmtBFormat3D: return 4;
     }
     return 0;
 }
@@ -1178,6 +1198,14 @@ static ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum Fm
         { AL_7POINT1_8_SOFT,   FmtX71, FmtByte  },
         { AL_7POINT1_16_SOFT,  FmtX71, FmtShort },
         { AL_7POINT1_32F_SOFT, FmtX71, FmtFloat },
+
+        { AL_FORMAT_BFORMAT2D_8,       FmtBFormat2D, FmtByte },
+        { AL_FORMAT_BFORMAT2D_16,      FmtBFormat2D, FmtShort },
+        { AL_FORMAT_BFORMAT2D_FLOAT32, FmtBFormat2D, FmtFloat },
+
+        { AL_FORMAT_BFORMAT3D_8,       FmtBFormat3D, FmtByte },
+        { AL_FORMAT_BFORMAT3D_16,      FmtBFormat3D, FmtShort },
+        { AL_FORMAT_BFORMAT3D_FLOAT32, FmtBFormat3D, FmtFloat },
     };
     ALuint i;
 

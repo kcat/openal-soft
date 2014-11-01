@@ -185,6 +185,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
     ResamplerFunc Resample;
     ALbufferlistitem *BufferListItem;
     ALuint DataPosInt, DataPosFrac;
+    ALboolean isbformat = AL_FALSE;
     ALboolean Looping;
     ALuint increment;
     enum Resampler Resampler;
@@ -205,6 +206,18 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
     Resampler      = (increment==FRACTIONONE) ? PointResampler : Source->Resampler;
     NumChannels    = Source->NumChannels;
     SampleSize     = Source->SampleSize;
+
+    while(BufferListItem)
+    {
+        ALbuffer *buffer;
+        if((buffer=BufferListItem->buffer) != NULL)
+        {
+            isbformat = (buffer->FmtChannels == FmtBFormat2D ||
+                         buffer->FmtChannels == FmtBFormat3D);
+            break;
+        }
+        BufferListItem = BufferListItem->next;
+    }
 
     Mix = SelectMixer();
     HrtfMix = SelectHrtfMixer();
@@ -428,6 +441,10 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                             &parms->Mix.Hrtf.State[chan], DstBufferSize);
             }
 
+            /* Only the first channel for B-Format buffers (W channel) goes to
+             * the send paths. */
+            if(chan > 0 && isbformat)
+                continue;
             for(j = 0;j < Device->NumAuxSends;j++)
             {
                 SendParams *parms = &voice->Send[j];

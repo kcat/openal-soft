@@ -408,11 +408,13 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         num_channels = 3;
         isbformat = AL_TRUE;
         DirectChannels = AL_FALSE;
+        break;
 
     case FmtBFormat3D:
         num_channels = 4;
         isbformat = AL_TRUE;
         DirectChannels = AL_FALSE;
+        break;
     }
 
     if(isbformat)

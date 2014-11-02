@@ -69,11 +69,9 @@ static inline MixerFunc SelectMixer(void)
     return Mix_C;
 }
 
-static inline ResamplerFunc SelectResampler(enum Resampler Resampler, ALuint increment)
+static inline ResamplerFunc SelectResampler(enum Resampler resampler)
 {
-    if(increment == FRACTIONONE)
-        return Resample_copy32_C;
-    switch(Resampler)
+    switch(resampler)
     {
         case PointResampler:
             return Resample_point32_C;
@@ -202,10 +200,10 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
     DataPosInt     = Source->position;
     DataPosFrac    = Source->position_fraction;
     Looping        = Source->Looping;
-    increment      = voice->Step;
-    Resampler      = (increment==FRACTIONONE) ? PointResampler : Source->Resampler;
+    Resampler      = Source->Resampler;
     NumChannels    = Source->NumChannels;
     SampleSize     = Source->SampleSize;
+    increment      = voice->Step;
 
     while(BufferListItem)
     {
@@ -221,7 +219,8 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
 
     Mix = SelectMixer();
     HrtfMix = SelectHrtfMixer();
-    Resample = SelectResampler(Resampler, increment);
+    Resample = ((increment == FRACTIONONE && DataPosFrac == 0) ?
+                Resample_copy32_C : SelectResampler(Resampler));
 
     OutPos = 0;
     do {

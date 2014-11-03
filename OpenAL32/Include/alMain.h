@@ -587,7 +587,8 @@ typedef struct ChannelConfig {
     enum Channel ChanName;
     ALfloat Angle;
     ALfloat Elevation;
-    ALfloat Coeff[MAX_AMBI_COEFFS];
+    ALfloat HOACoeff[MAX_AMBI_COEFFS];
+    ALfloat FOACoeff[4];
 } ChannelConfig;
 
 

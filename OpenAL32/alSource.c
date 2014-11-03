@@ -108,6 +108,9 @@ typedef enum SrcFloatProp {
 
     /* AL_SOFT_source_latency */
     sfSecOffsetLatencySOFT = AL_SEC_OFFSET_LATENCY_SOFT,
+
+    /* AL_EXT_BFORMAT */
+    sfOrientation = AL_ORIENTATION,
 } SrcFloatProp;
 
 typedef enum SrcIntProp {
@@ -153,6 +156,9 @@ typedef enum SrcIntProp {
 
     /* AL_SOFT_source_latency */
     siSampleOffsetLatencySOFT = AL_SAMPLE_OFFSET_LATENCY_SOFT,
+
+    /* AL_EXT_BFORMAT */
+    siOrientation = AL_ORIENTATION,
 } SrcIntProp;
 
 static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SrcFloatProp prop, const ALfloat *values);
@@ -210,6 +216,9 @@ static ALint FloatValsByProp(ALenum prop)
         case sfDirection:
             return 3;
 
+        case sfOrientation:
+            return 6;
+
         case sfSecOffsetLatencySOFT:
             break; /* Double only */
     }
@@ -262,6 +271,9 @@ static ALint DoubleValsByProp(ALenum prop)
         case sfVelocity:
         case sfDirection:
             return 3;
+
+        case sfOrientation:
+            return 6;
     }
     return 0;
 }
@@ -307,6 +319,9 @@ static ALint IntValsByProp(ALenum prop)
         case siDirection:
         case siAuxSendFilter:
             return 3;
+
+        case siOrientation:
+            return 6;
 
         case siSampleOffsetLatencySOFT:
             break; /* i64 only */
@@ -355,6 +370,9 @@ static ALint Int64ValsByProp(ALenum prop)
         case siDirection:
         case siAuxSendFilter:
             return 3;
+
+        case siOrientation:
+            return 6;
     }
     return 0;
 }
@@ -523,13 +541,27 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SrcFloatProp
             CHECKVAL(isfinite(values[0]) && isfinite(values[1]) && isfinite(values[2]));
 
             LockContext(Context);
-            Source->Orientation[0] = values[0];
-            Source->Orientation[1] = values[1];
-            Source->Orientation[2] = values[2];
+            Source->Direction[0] = values[0];
+            Source->Direction[1] = values[1];
+            Source->Direction[2] = values[2];
             UnlockContext(Context);
             ATOMIC_STORE(&Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
+        case AL_ORIENTATION:
+            CHECKVAL(isfinite(values[0]) && isfinite(values[1]) && isfinite(values[2]) &&
+                     isfinite(values[3]) && isfinite(values[4]) && isfinite(values[5]));
+
+            LockContext(Context);
+            Source->Orientation[0][0] = values[0];
+            Source->Orientation[0][1] = values[1];
+            Source->Orientation[0][2] = values[2];
+            Source->Orientation[1][0] = values[3];
+            Source->Orientation[1][1] = values[4];
+            Source->Orientation[1][2] = values[5];
+            UnlockContext(Context);
+            ATOMIC_STORE(&Source->NeedsUpdate, AL_TRUE);
+            return AL_TRUE;
 
         case sfSampleRWOffsetsSOFT:
         case sfByteRWOffsetsSOFT:
@@ -567,7 +599,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
     ALeffectslot *slot = NULL;
     ALbufferlistitem *oldlist;
     ALbufferlistitem *newlist;
-    ALfloat fvals[3];
+    ALfloat fvals[6];
 
     switch(prop)
     {
@@ -791,6 +823,15 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
             fvals[2] = (ALfloat)values[2];
             return SetSourcefv(Source, Context, (int)prop, fvals);
 
+        case AL_ORIENTATION:
+            fvals[0] = (ALfloat)values[0];
+            fvals[1] = (ALfloat)values[1];
+            fvals[2] = (ALfloat)values[2];
+            fvals[3] = (ALfloat)values[3];
+            fvals[4] = (ALfloat)values[4];
+            fvals[5] = (ALfloat)values[5];
+            return SetSourcefv(Source, Context, (int)prop, fvals);
+
         case siSampleOffsetLatencySOFT:
             /* i64 only */
             break;
@@ -802,7 +843,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
 
 static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SrcIntProp prop, const ALint64SOFT *values)
 {
-    ALfloat fvals[3];
+    ALfloat fvals[6];
     ALint   ivals[3];
 
     switch(prop)
@@ -872,6 +913,16 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SrcIntProp
             fvals[0] = (ALfloat)values[0];
             fvals[1] = (ALfloat)values[1];
             fvals[2] = (ALfloat)values[2];
+            return SetSourcefv(Source, Context, (int)prop, fvals);
+
+        /* 6x float */
+        case AL_ORIENTATION:
+            fvals[0] = (ALfloat)values[0];
+            fvals[1] = (ALfloat)values[1];
+            fvals[2] = (ALfloat)values[2];
+            fvals[3] = (ALfloat)values[3];
+            fvals[4] = (ALfloat)values[4];
+            fvals[5] = (ALfloat)values[5];
             return SetSourcefv(Source, Context, (int)prop, fvals);
     }
 
@@ -1019,9 +1070,20 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SrcFloatProp
 
         case AL_DIRECTION:
             LockContext(Context);
-            values[0] = Source->Orientation[0];
-            values[1] = Source->Orientation[1];
-            values[2] = Source->Orientation[2];
+            values[0] = Source->Direction[0];
+            values[1] = Source->Direction[1];
+            values[2] = Source->Direction[2];
+            UnlockContext(Context);
+            return AL_TRUE;
+
+        case AL_ORIENTATION:
+            LockContext(Context);
+            values[0] = Source->Orientation[0][0];
+            values[1] = Source->Orientation[0][1];
+            values[2] = Source->Orientation[0][2];
+            values[3] = Source->Orientation[1][0];
+            values[4] = Source->Orientation[1][1];
+            values[5] = Source->Orientation[1][2];
             UnlockContext(Context);
             return AL_TRUE;
 
@@ -1049,7 +1111,7 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SrcFloatProp
 static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp prop, ALint *values)
 {
     ALbufferlistitem *BufferList;
-    ALdouble dvals[3];
+    ALdouble dvals[6];
     ALboolean err;
 
     switch(prop)
@@ -1224,6 +1286,18 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
             }
             return err;
 
+        case AL_ORIENTATION:
+            if((err=GetSourcedv(Source, Context, (int)prop, dvals)) != AL_FALSE)
+            {
+                values[0] = (ALint)dvals[0];
+                values[1] = (ALint)dvals[1];
+                values[2] = (ALint)dvals[2];
+                values[3] = (ALint)dvals[3];
+                values[4] = (ALint)dvals[4];
+                values[5] = (ALint)dvals[5];
+            }
+            return err;
+
         case siSampleOffsetLatencySOFT:
             /* i64 only */
             break;
@@ -1240,7 +1314,7 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
 
 static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SrcIntProp prop, ALint64 *values)
 {
-    ALdouble dvals[3];
+    ALdouble dvals[6];
     ALint ivals[3];
     ALboolean err;
 
@@ -1285,6 +1359,18 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SrcIntProp
                 values[0] = (ALint64)dvals[0];
                 values[1] = (ALint64)dvals[1];
                 values[2] = (ALint64)dvals[2];
+            }
+            return err;
+
+        case AL_ORIENTATION:
+            if((err=GetSourcedv(Source, Context, (int)prop, dvals)) != AL_FALSE)
+            {
+                values[0] = (ALint64)dvals[0];
+                values[1] = (ALint64)dvals[1];
+                values[2] = (ALint64)dvals[2];
+                values[3] = (ALint64)dvals[3];
+                values[4] = (ALint64)dvals[4];
+                values[5] = (ALint64)dvals[5];
             }
             return err;
 
@@ -2381,12 +2467,18 @@ static ALvoid InitSourceParams(ALsource *Source)
     Source->Position[0] = 0.0f;
     Source->Position[1] = 0.0f;
     Source->Position[2] = 0.0f;
-    Source->Orientation[0] = 0.0f;
-    Source->Orientation[1] = 0.0f;
-    Source->Orientation[2] = 0.0f;
     Source->Velocity[0] = 0.0f;
     Source->Velocity[1] = 0.0f;
     Source->Velocity[2] = 0.0f;
+    Source->Direction[0] = 0.0f;
+    Source->Direction[1] = 0.0f;
+    Source->Direction[2] = 0.0f;
+    Source->Orientation[0][0] =  0.0f;
+    Source->Orientation[0][1] =  0.0f;
+    Source->Orientation[0][2] = -1.0f;
+    Source->Orientation[1][0] =  0.0f;
+    Source->Orientation[1][1] =  1.0f;
+    Source->Orientation[1][2] =  0.0f;
     Source->RefDistance = 1.0f;
     Source->MaxDistance = FLT_MAX;
     Source->RollOffFactor = 1.0f;

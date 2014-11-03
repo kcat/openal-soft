@@ -403,6 +403,12 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device);
 #define AL_FORMAT_BFORMAT3D_FLOAT32              0x20033
 #endif
 
+#ifndef AL_EXT_MULAW_BFORMAT
+#define AL_EXT_MULAW_BFORMAT 1
+#define AL_FORMAT_BFORMAT2D_MULAW                0x10031
+#define AL_FORMAT_BFORMAT3D_MULAW                0x10032
+#endif
+
 #ifdef __cplusplus
 }
 #endif

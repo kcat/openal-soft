@@ -643,7 +643,7 @@ ALboolean vector_reserve(char *ptr, size_t base_size, size_t obj_size, size_t ob
     vector_ *vecptr = (vector_*)ptr;
     if((*vecptr ? (*vecptr)->Capacity : 0) < obj_count)
     {
-        ALsizei old_size = (*vecptr ? (*vecptr)->Size : 0);
+        size_t old_size = (*vecptr ? (*vecptr)->Size : 0);
         void *temp;
 
         /* Use the next power-of-2 size if we don't need to allocate the exact
@@ -726,7 +726,7 @@ void al_string_clear(al_string *str)
 static inline int al_string_compare(const al_string_char_type *str1, size_t str1len,
                                     const al_string_char_type *str2, size_t str2len)
 {
-    size_t complen = (str1len > str2len) ? str1len : str2len;
+    size_t complen = (str1len < str2len) ? str1len : str2len;
     int ret = memcmp(str1, str2, complen);
     if(ret == 0)
     {
@@ -743,12 +743,12 @@ int al_string_cmp(const_al_string str1, const_al_string str2)
 int al_string_cmp_cstr(const_al_string str1, const al_string_char_type *str2)
 {
     return al_string_compare(&VECTOR_FRONT(str1), al_string_length(str1),
-                             str2, (ALsizei)strlen(str2));
+                             str2, strlen(str2));
 }
 
 void al_string_copy(al_string *str, const_al_string from)
 {
-    ALsizei len = VECTOR_SIZE(from);
+    size_t len = al_string_length(from);
     VECTOR_RESERVE(*str, len+1);
     VECTOR_RESIZE(*str, 0);
     VECTOR_INSERT(*str, VECTOR_ITER_END(*str), VECTOR_ITER_BEGIN(from), VECTOR_ITER_BEGIN(from)+len);

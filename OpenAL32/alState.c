@@ -30,6 +30,7 @@
 #include "alAuxEffectSlot.h"
 #include "alMidi.h"
 
+#include "backends/base.h"
 #include "midi/base.h"
 
 
@@ -346,9 +347,9 @@ AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname)
 
     case AL_MIDI_CLOCK_SOFT:
         device = context->Device;
-        ALCdevice_Lock(device);
+        V0(device->Backend,lock)();
         value = MidiSynth_getTime(device->Synth);
-        ALCdevice_Unlock(device);
+        V0(device->Backend,unlock)();
         break;
 
     case AL_SOUNDFONTS_SIZE_SOFT:

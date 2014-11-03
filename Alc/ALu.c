@@ -36,6 +36,7 @@
 #include "hrtf.h"
 #include "static_assert.h"
 
+#include "backends/base.h"
 #include "midi/base.h"
 
 
@@ -288,9 +289,11 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     ALfloat WetGainHF[MAX_SENDS];
     ALfloat WetGainLF[MAX_SENDS];
     ALuint NumSends, Frequency;
+    ALboolean Relative;
     const struct ChanMap *chans = NULL;
     ALuint num_channels = 0;
     ALboolean DirectChannels;
+    ALboolean isbformat = AL_FALSE;
     ALfloat Pitch;
     ALuint i, j, c;
 
@@ -306,6 +309,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     MinVolume       = ALSource->MinGain;
     MaxVolume       = ALSource->MaxGain;
     Pitch           = ALSource->Pitch;
+    Relative        = ALSource->HeadRelative;
     DirectChannels  = ALSource->DirectChannels;
 
     voice->Direct.OutBuffer = Device->DryBuffer;
@@ -399,9 +403,80 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         chans = X71Map;
         num_channels = 8;
         break;
+
+    case FmtBFormat2D:
+        num_channels = 3;
+        isbformat = AL_TRUE;
+        DirectChannels = AL_FALSE;
+        break;
+
+    case FmtBFormat3D:
+        num_channels = 4;
+        isbformat = AL_TRUE;
+        DirectChannels = AL_FALSE;
+        break;
     }
 
-    if(DirectChannels != AL_FALSE)
+    if(isbformat)
+    {
+        ALfloat N[3], V[3], U[3];
+        ALfloat matrix[4][4];
+
+        /* AT then UP */
+        N[0] = ALSource->Orientation[0][0];
+        N[1] = ALSource->Orientation[0][1];
+        N[2] = ALSource->Orientation[0][2];
+        aluNormalize(N);
+        V[0] = ALSource->Orientation[1][0];
+        V[1] = ALSource->Orientation[1][1];
+        V[2] = ALSource->Orientation[1][2];
+        aluNormalize(V);
+        if(!Relative)
+        {
+            ALfloat (*restrict lmatrix)[4] = ALContext->Listener->Params.Matrix;
+            aluMatrixVector(N, 0.0f, lmatrix);
+            aluMatrixVector(V, 0.0f, lmatrix);
+        }
+        /* Build and normalize right-vector */
+        aluCrossproduct(N, V, U);
+        aluNormalize(U);
+
+        matrix[0][0] =  1.0f;
+        matrix[0][1] =  0.0f;
+        matrix[0][2] =  0.0f;
+        matrix[0][3] =  0.0f;
+        matrix[1][0] =  0.0f;
+        matrix[1][1] = -N[2];
+        matrix[1][2] = -N[0];
+        matrix[1][3] =  N[1];
+        matrix[2][0] =  0.0f;
+        matrix[2][1] =  U[2];
+        matrix[2][2] =  U[0];
+        matrix[2][3] = -U[1];
+        matrix[3][0] =  0.0f;
+        matrix[3][1] = -V[2];
+        matrix[3][2] = -V[0];
+        matrix[3][3] =  V[1];
+
+        for(c = 0;c < num_channels;c++)
+        {
+            MixGains *gains = voice->Direct.Mix.Gains[c];
+            ALfloat Target[MaxChannels];
+
+            ComputeBFormatGains(Device, matrix[c], DryGain, Target);
+            for(i = 0;i < MaxChannels;i++)
+                gains[i].Target = Target[i];
+        }
+        /* B-Format cannot handle logarithmic gain stepping, since the gain can
+         * switch between positive and negative values. */
+        voice->Direct.Moving = AL_FALSE;
+        UpdateDryStepping(&voice->Direct, num_channels);
+
+        voice->IsHrtf = AL_FALSE;
+        for(i = 0;i < NumSends;i++)
+            WetGain[i] *= 1.4142f;
+    }
+    else if(DirectChannels != AL_FALSE)
     {
         for(c = 0;c < num_channels;c++)
         {
@@ -578,9 +653,9 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     Position[0]    = ALSource->Position[0];
     Position[1]    = ALSource->Position[1];
     Position[2]    = ALSource->Position[2];
-    Direction[0]   = ALSource->Orientation[0];
-    Direction[1]   = ALSource->Orientation[1];
-    Direction[2]   = ALSource->Orientation[2];
+    Direction[0]   = ALSource->Direction[0];
+    Direction[1]   = ALSource->Direction[1];
+    Direction[2]   = ALSource->Direction[2];
     Velocity[0]    = ALSource->Velocity[0];
     Velocity[1]    = ALSource->Velocity[1];
     Velocity[2]    = ALSource->Velocity[2];
@@ -1062,7 +1137,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         for(c = 0;c < MaxChannels;c++)
             memset(device->DryBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
 
-        ALCdevice_Lock(device);
+        V0(device->Backend,lock)();
         V(device->Synth,process)(SamplesToDo, device->DryBuffer);
 
         ctx = ATOMIC_LOAD(&device->ContextList);
@@ -1141,7 +1216,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         device->SamplesDone += SamplesToDo;
         device->ClockBase += (device->SamplesDone/device->Frequency) * DEVICE_CLOCK_RES;
         device->SamplesDone %= device->Frequency;
-        ALCdevice_Unlock(device);
+        V0(device->Backend,unlock)();
 
         if(device->Bs2b)
         {

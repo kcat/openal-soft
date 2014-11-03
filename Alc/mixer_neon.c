@@ -102,7 +102,7 @@ void Mix_Neon(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer
                 OutBuffer[c][OutPos+pos] += data[pos]*gain;
         }
 
-        if(!(gain > GAIN_SILENCE_THRESHOLD))
+        if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
         gain4 = vdupq_n_f32(gain);
         for(;BufferSize-pos > 3;pos += 4)

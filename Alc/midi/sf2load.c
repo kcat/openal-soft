@@ -363,7 +363,7 @@ static void GenModList_insertGen(GenModList *self, const Generator *gen, ALboole
 
     if(VECTOR_PUSH_BACK(self->gens, *gen) == AL_FALSE)
     {
-        ERR("Failed to insert generator (from %lu elements)\n", VECTOR_SIZE(self->gens));
+        ERR("Failed to insert generator (from %zu elements)\n", VECTOR_SIZE(self->gens));
         return;
     }
 }
@@ -391,7 +391,7 @@ static void GenModList_accumGen(GenModList *self, const Generator *gen)
 
     if(VECTOR_PUSH_BACK(self->gens, *gen) == AL_FALSE)
     {
-        ERR("Failed to insert generator (from %lu elements)\n", VECTOR_SIZE(self->gens));
+        ERR("Failed to insert generator (from %zu elements)\n", VECTOR_SIZE(self->gens));
         return;
     }
     if(gen->mGenerator < 60)
@@ -413,7 +413,7 @@ static void GenModList_insertMod(GenModList *self, const Modulator *mod)
 
     if(VECTOR_PUSH_BACK(self->mods, *mod) == AL_FALSE)
     {
-        ERR("Failed to insert modulator (from %lu elements)\n", VECTOR_SIZE(self->mods));
+        ERR("Failed to insert modulator (from %zu elements)\n", VECTOR_SIZE(self->mods));
         return;
     }
 }
@@ -432,7 +432,7 @@ static void GenModList_accumMod(GenModList *self, const Modulator *mod)
 
     if(VECTOR_PUSH_BACK(self->mods, *mod) == AL_FALSE)
     {
-        ERR("Failed to insert modulator (from %lu elements)\n", VECTOR_SIZE(self->mods));
+        ERR("Failed to insert modulator (from %zu elements)\n", VECTOR_SIZE(self->mods));
         return;
     }
 
@@ -949,15 +949,15 @@ static void processInstrument(ALfontsound ***sounds, ALsizei *sounds_size, ALCco
     GenModList_Destruct(&gzone);
 }
 
-static size_t printStringChunk(Reader *stream, const RiffHdr *chnk, const char *title)
+static ALuint printStringChunk(Reader *stream, const RiffHdr *chnk, const char *title)
 {
-    size_t len = 0;
+    ALuint len = 0;
     if(chnk->mSize == 0 || (chnk->mSize&1))
         ERR("Invalid "FOURCCFMT" size: %d\n", FOURCCARGS(chnk->mCode), chnk->mSize);
     else
     {
         char *str = calloc(1, chnk->mSize+1);
-        len = Reader_read(stream, str, chnk->mSize);
+        len = (ALuint)Reader_read(stream, str, chnk->mSize);
 
         TRACE("%s: %s\n", title, str);
         free(str);
@@ -1112,7 +1112,7 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
 
         ptr = buffer->data;
         if(IS_LITTLE_ENDIAN)
-            smpl.mSize -= Reader_read(stream, ptr, smpl.mSize);
+            smpl.mSize -= (ALuint)Reader_read(stream, ptr, smpl.mSize);
         else
         {
             ALuint total = 0;
@@ -1122,7 +1122,7 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
                 ALuint todo = minu(smpl.mSize-total, sizeof(buf));
                 ALuint i;
 
-                smpl.mSize -= Reader_read(stream, buf, todo);
+                smpl.mSize -= (ALuint)Reader_read(stream, buf, todo);
                 for(i = 0;i < todo;i++)
                     ptr[total+i] = buf[i^1];
 

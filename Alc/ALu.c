@@ -997,7 +997,10 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
 
         /* Normalize the length, and compute panned gains. */
         if(!(Distance > FLT_EPSILON))
+        {
             Position[0] = Position[1] = Position[2] = 0.0f;
+            ComputeAmbientGains(Device, DryGain, Target);
+        }
         else
         {
             ALfloat radius = ALSource->Radius;
@@ -1005,8 +1008,8 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             Position[0] *= invlen;
             Position[1] *= invlen;
             Position[2] *= invlen;
+            ComputeDirectionalGains(Device, Position, DryGain, Target);
         }
-        ComputeDirectionalGains(Device, Position, DryGain, Target);
 
         for(j = 0;j < MaxChannels;j++)
             gains[j].Target = Target[j];

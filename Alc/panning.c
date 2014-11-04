@@ -31,8 +31,6 @@
 #include "AL/alc.h"
 #include "alu.h"
 
-extern inline void SetGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MaxChannels]);
-
 
 void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation, ALfloat ingain, ALfloat gains[MaxChannels])
 {
@@ -78,6 +76,19 @@ void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfl
         for(j = 0;j < MAX_AMBI_COEFFS;j++)
             gains[chan] += device->Speaker[i].HOACoeff[j]*coeffs[j];
         gains[chan] = maxf(gains[chan], 0.0f) * ingain;
+    }
+}
+
+void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MaxChannels])
+{
+    ALuint i;
+
+    for(i = 0;i < MaxChannels;i++)
+        gains[i] = 0.0f;
+    for(i = 0;i < device->NumSpeakers;i++)
+    {
+        enum Channel chan = device->Speaker[i].ChanName;
+        gains[chan] = device->Speaker[i].HOACoeff[0] * ingain;
     }
 }
 

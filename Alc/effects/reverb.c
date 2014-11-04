@@ -1148,8 +1148,7 @@ static ALvoid ALreverbState_update(ALreverbState *State, ALCdevice *Device, cons
     else
     {
         /* Update channel gains */
-        ALfloat gain = 2.0f/Device->NumSpeakers * Slot->Gain * ReverbBoost;
-        SetGains(Device, gain, State->Gain);
+        ComputeAmbientGains(Device, Slot->Gain*2.0f, State->Gain);
     }
 }
 

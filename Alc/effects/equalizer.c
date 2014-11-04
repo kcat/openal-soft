@@ -93,9 +93,8 @@ static ALboolean ALequalizerState_deviceUpdate(ALequalizerState *UNUSED(state), 
 static ALvoid ALequalizerState_update(ALequalizerState *state, ALCdevice *device, const ALeffectslot *slot)
 {
     ALfloat frequency = (ALfloat)device->Frequency;
-    ALfloat gain = 1.0f/device->NumSpeakers * slot->Gain;
 
-    SetGains(device, gain, state->Gain);
+    ComputeAmbientGains(device, slot->Gain, state->Gain);
 
     /* Calculate coefficients for the each type of filter */
     ALfilterState_setParams(&state->filter[0], ALfilterType_LowShelf,

@@ -146,37 +146,37 @@ ALvoid aluInitPanning(ALCdevice *device)
     switch(device->FmtChans)
     {
         case DevFmtMono:
-            device->NumSpeakers = 1;
+            device->NumSpeakers = COUNTOF(MonoCfg);
             config = MonoCfg;
             break;
 
         case DevFmtStereo:
-            device->NumSpeakers = 2;
+            device->NumSpeakers = COUNTOF(StereoCfg);
             config = StereoCfg;
             break;
 
         case DevFmtQuad:
-            device->NumSpeakers = 4;
+            device->NumSpeakers = COUNTOF(QuadCfg);
             config = QuadCfg;
             break;
 
         case DevFmtX51:
-            device->NumSpeakers = 5;
+            device->NumSpeakers = COUNTOF(X51Cfg);
             config = X51Cfg;
             break;
 
         case DevFmtX51Side:
-            device->NumSpeakers = 5;
+            device->NumSpeakers = COUNTOF(X51SideCfg);
             config = X51SideCfg;
             break;
 
         case DevFmtX61:
-            device->NumSpeakers = 6;
+            device->NumSpeakers = COUNTOF(X61Cfg);
             config = X61Cfg;
             break;
 
         case DevFmtX71:
-            device->NumSpeakers = 7;
+            device->NumSpeakers = COUNTOF(X71Cfg);
             config = X71Cfg;
             break;
     }

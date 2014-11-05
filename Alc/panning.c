@@ -35,7 +35,7 @@
 void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation, ALfloat ingain, ALfloat gains[MaxChannels])
 {
     ALfloat dir[3] = {
-        -sinf(angle) * cosf(elevation),
+        sinf(angle) * cosf(elevation),
         sinf(elevation),
         -cosf(angle) * cosf(elevation)
     };

@@ -481,11 +481,12 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         for(c = 0;c < num_channels;c++)
         {
             MixGains *gains = voice->Direct.Mix.Gains[c];
+            int idx;
 
             for(j = 0;j < MaxChannels;j++)
                 gains[j].Target = 0.0f;
-            if(GetChannelIdxByName(Device, chans[c].channel) != -1)
-                gains[chans[c].channel].Target = DryGain;
+            if((idx=GetChannelIdxByName(Device, chans[c].channel)) != -1)
+                gains[idx].Target = DryGain;
         }
         UpdateDryStepping(&voice->Direct, num_channels);
 
@@ -532,10 +533,11 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
             /* Special-case LFE */
             if(chans[c].channel == LFE)
             {
+                int idx;
                 for(i = 0;i < MaxChannels;i++)
                     gains[i].Target = 0.0f;
-                if(GetChannelIdxByName(Device, chans[c].channel) != -1)
-                    gains[chans[c].channel].Target = DryGain;
+                if((idx=GetChannelIdxByName(Device, chans[c].channel)) != -1)
+                    gains[idx].Target = DryGain;
                 continue;
             }
 
@@ -1089,21 +1091,13 @@ static inline ALubyte aluF2UB(ALfloat val)
 static void Write_##T(ALCdevice *device, ALvoid **buffer, ALuint SamplesToDo) \
 {                                                                             \
     ALfloat (*restrict DryBuffer)[BUFFERSIZE] = device->DryBuffer;            \
-    const ALuint numchans = ChannelsFromDevFmt(device->FmtChans);             \
-    const enum Channel *chans = device->ChannelName;                          \
+    const ALuint numchans = device->NumSpeakers;                              \
     ALuint i, j;                                                              \
                                                                               \
-    for(j = 0;j < MaxChannels;j++)                                            \
+    for(j = 0;j < numchans;j++)                                               \
     {                                                                         \
-        const enum Channel c = chans[j];                                      \
-        const ALfloat *in;                                                    \
-        T *restrict out;                                                      \
-                                                                              \
-        if(c == InvalidChannel)                                               \
-            continue;                                                         \
-                                                                              \
-        in = DryBuffer[c];                                                    \
-        out = (T*)(*buffer) + j;                                              \
+        const ALfloat *in = DryBuffer[j];                                     \
+        T *restrict out = (T*)(*buffer) + j;                                  \
         for(i = 0;i < SamplesToDo;i++)                                        \
             out[i*numchans] = func(in[i]);                                    \
     }                                                                         \

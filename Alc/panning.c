@@ -72,10 +72,9 @@ void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfl
         gains[i] = 0.0f;
     for(i = 0;i < device->NumSpeakers;i++)
     {
-        enum Channel chan = device->Speaker[i].ChanName;
         for(j = 0;j < MAX_AMBI_COEFFS;j++)
-            gains[chan] += device->Speaker[i].HOACoeff[j]*coeffs[j];
-        gains[chan] = maxf(gains[chan], 0.0f) * ingain;
+            gains[i] += device->Speaker[i].HOACoeff[j]*coeffs[j];
+        gains[i] = maxf(gains[i], 0.0f) * ingain;
     }
 }
 
@@ -86,10 +85,7 @@ void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[
     for(i = 0;i < MaxChannels;i++)
         gains[i] = 0.0f;
     for(i = 0;i < device->NumSpeakers;i++)
-    {
-        enum Channel chan = device->Speaker[i].ChanName;
-        gains[chan] = device->Speaker[i].HOACoeff[0] * ingain;
-    }
+        gains[i] = device->Speaker[i].HOACoeff[0] * ingain;
 }
 
 void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MaxChannels])
@@ -100,10 +96,9 @@ void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat 
         gains[i] = 0.0f;
     for(i = 0;i < device->NumSpeakers;i++)
     {
-        enum Channel chan = device->Speaker[i].ChanName;
         for(j = 0;j < 4;j++)
-            gains[chan] += device->Speaker[i].FOACoeff[j] * mtx[j];
-        gains[chan] *= ingain;
+            gains[i] += device->Speaker[i].FOACoeff[j] * mtx[j];
+        gains[i] *= ingain;
     }
 }
 
@@ -153,7 +148,8 @@ ALvoid aluInitPanning(ALCdevice *device)
         { SideRight,   DEG2RAD(  90.0f), DEG2RAD(0.0f), { 0.224739f,  0.000002f, -0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.065795f }, { 0.224739f,  0.000000f, -0.260717f, 0.0f } }
     };
     const ChannelConfig *config;
-    ALuint i;
+    size_t count;
+    ALuint i, j;
 
     memset(device->Speaker, 0, sizeof(device->Speaker));
     device->NumSpeakers = 0;
@@ -161,40 +157,53 @@ ALvoid aluInitPanning(ALCdevice *device)
     switch(device->FmtChans)
     {
         case DevFmtMono:
-            device->NumSpeakers = COUNTOF(MonoCfg);
+            count = COUNTOF(MonoCfg);
             config = MonoCfg;
             break;
 
         case DevFmtStereo:
-            device->NumSpeakers = COUNTOF(StereoCfg);
+            count = COUNTOF(StereoCfg);
             config = StereoCfg;
             break;
 
         case DevFmtQuad:
-            device->NumSpeakers = COUNTOF(QuadCfg);
+            count = COUNTOF(QuadCfg);
             config = QuadCfg;
             break;
 
         case DevFmtX51:
-            device->NumSpeakers = COUNTOF(X51Cfg);
+            count = COUNTOF(X51Cfg);
             config = X51Cfg;
             break;
 
         case DevFmtX51Side:
-            device->NumSpeakers = COUNTOF(X51SideCfg);
+            count = COUNTOF(X51SideCfg);
             config = X51SideCfg;
             break;
 
         case DevFmtX61:
-            device->NumSpeakers = COUNTOF(X61Cfg);
+            count = COUNTOF(X61Cfg);
             config = X61Cfg;
             break;
 
         case DevFmtX71:
-            device->NumSpeakers = COUNTOF(X71Cfg);
+            count = COUNTOF(X71Cfg);
             config = X71Cfg;
             break;
     }
-    for(i = 0;i < device->NumSpeakers;i++)
-        device->Speaker[i] = config[i];
+    for(i = 0;i < MaxChannels && device->ChannelName[i] != InvalidChannel;i++)
+    {
+        device->Speaker[i].ChanName = InvalidChannel;
+        for(j = 0;j < count;j++)
+        {
+            if(device->ChannelName[i] == config[j].ChanName)
+            {
+                device->Speaker[i] = config[j];
+                break;
+            }
+        }
+        if(j == count)
+            ERR("Failed to match channel %u (label %d) in config\n", i, device->ChannelName[i]);
+    }
+    device->NumSpeakers = i;
 }

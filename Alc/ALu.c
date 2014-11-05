@@ -1218,11 +1218,11 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             for(i = 0;i < SamplesToDo;i++)
             {
                 float samples[2];
-                samples[0] = device->DryBuffer[FrontLeft][i];
-                samples[1] = device->DryBuffer[FrontRight][i];
+                samples[0] = device->DryBuffer[0][i];
+                samples[1] = device->DryBuffer[1][i];
                 bs2b_cross_feed(device->Bs2b, samples);
-                device->DryBuffer[FrontLeft][i] = samples[0];
-                device->DryBuffer[FrontRight][i] = samples[1];
+                device->DryBuffer[0][i] = samples[0];
+                device->DryBuffer[1][i] = samples[1];
             }
         }
 

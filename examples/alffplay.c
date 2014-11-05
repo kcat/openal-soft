@@ -548,6 +548,7 @@ static int audio_thread(void *userdata)
     MovieState *movState = (MovieState*)userdata;
     uint8_t *samples = NULL;
     ALsizei buffer_len;
+    ALenum fmt;
 
     alGenBuffers(AUDIO_BUFFER_QUEUE_SIZE, movState->audio.buffer);
     alGenSources(1, &movState->audio.source);
@@ -557,20 +558,37 @@ static int audio_thread(void *userdata)
 
     av_new_packet(&movState->audio.pkt, 0);
 
-    /* Find a suitable format for OpenAL. Currently does not handle surround
-     * sound (everything non-mono becomes stereo). */
+    /* Find a suitable format for OpenAL. */
+    movState->audio.format = AL_NONE;
     if(movState->audio.st->codec->sample_fmt == AV_SAMPLE_FMT_U8 ||
        movState->audio.st->codec->sample_fmt == AV_SAMPLE_FMT_U8P)
     {
         movState->audio.dst_sample_fmt = AV_SAMPLE_FMT_U8;
         movState->audio.frame_size = 1;
+        if(movState->audio.st->codec->channel_layout == AV_CH_LAYOUT_7POINT1 &&
+           alIsExtensionPresent("AL_EXT_MCFORMATS") &&
+           (fmt=alGetEnumValue("AL_FORMAT_71CHN8")) != AL_NONE && fmt != -1)
+        {
+            movState->audio.dst_ch_layout = movState->audio.st->codec->channel_layout;
+            movState->audio.frame_size *= 8;
+            movState->audio.format = fmt;
+        }
+        if((movState->audio.st->codec->channel_layout == AV_CH_LAYOUT_5POINT1 ||
+            movState->audio.st->codec->channel_layout == AV_CH_LAYOUT_5POINT1_BACK) &&
+           alIsExtensionPresent("AL_EXT_MCFORMATS") &&
+           (fmt=alGetEnumValue("AL_FORMAT_51CHN8")) != AL_NONE && fmt != -1)
+        {
+            movState->audio.dst_ch_layout = movState->audio.st->codec->channel_layout;
+            movState->audio.frame_size *= 6;
+            movState->audio.format = fmt;
+        }
         if(movState->audio.st->codec->channel_layout == AV_CH_LAYOUT_MONO)
         {
             movState->audio.dst_ch_layout = AV_CH_LAYOUT_MONO;
             movState->audio.frame_size *= 1;
             movState->audio.format = AL_FORMAT_MONO8;
         }
-        else
+        if(movState->audio.format == AL_NONE)
         {
             movState->audio.dst_ch_layout = AV_CH_LAYOUT_STEREO;
             movState->audio.frame_size *= 2;
@@ -583,13 +601,30 @@ static int audio_thread(void *userdata)
     {
         movState->audio.dst_sample_fmt = AV_SAMPLE_FMT_FLT;
         movState->audio.frame_size = 4;
+        if(movState->audio.st->codec->channel_layout == AV_CH_LAYOUT_7POINT1 &&
+           alIsExtensionPresent("AL_EXT_MCFORMATS") &&
+           (fmt=alGetEnumValue("AL_FORMAT_71CHN32")) != AL_NONE && fmt != -1)
+        {
+            movState->audio.dst_ch_layout = movState->audio.st->codec->channel_layout;
+            movState->audio.frame_size *= 8;
+            movState->audio.format = fmt;
+        }
+        if((movState->audio.st->codec->channel_layout == AV_CH_LAYOUT_5POINT1 ||
+            movState->audio.st->codec->channel_layout == AV_CH_LAYOUT_5POINT1_BACK) &&
+           alIsExtensionPresent("AL_EXT_MCFORMATS") &&
+           (fmt=alGetEnumValue("AL_FORMAT_51CHN32")) != AL_NONE && fmt != -1)
+        {
+            movState->audio.dst_ch_layout = movState->audio.st->codec->channel_layout;
+            movState->audio.frame_size *= 6;
+            movState->audio.format = fmt;
+        }
         if(movState->audio.st->codec->channel_layout == AV_CH_LAYOUT_MONO)
         {
             movState->audio.dst_ch_layout = AV_CH_LAYOUT_MONO;
             movState->audio.frame_size *= 1;
             movState->audio.format = AL_FORMAT_MONO_FLOAT32;
         }
-        else
+        if(movState->audio.format == AL_NONE)
         {
             movState->audio.dst_ch_layout = AV_CH_LAYOUT_STEREO;
             movState->audio.frame_size *= 2;
@@ -600,13 +635,30 @@ static int audio_thread(void *userdata)
     {
         movState->audio.dst_sample_fmt = AV_SAMPLE_FMT_S16;
         movState->audio.frame_size = 2;
+        if(movState->audio.st->codec->channel_layout == AV_CH_LAYOUT_7POINT1 &&
+           alIsExtensionPresent("AL_EXT_MCFORMATS") &&
+           (fmt=alGetEnumValue("AL_FORMAT_71CHN16")) != AL_NONE && fmt != -1)
+        {
+            movState->audio.dst_ch_layout = movState->audio.st->codec->channel_layout;
+            movState->audio.frame_size *= 8;
+            movState->audio.format = fmt;
+        }
+        if((movState->audio.st->codec->channel_layout == AV_CH_LAYOUT_5POINT1 ||
+            movState->audio.st->codec->channel_layout == AV_CH_LAYOUT_5POINT1_BACK) &&
+           alIsExtensionPresent("AL_EXT_MCFORMATS") &&
+           (fmt=alGetEnumValue("AL_FORMAT_51CHN16")) != AL_NONE && fmt != -1)
+        {
+            movState->audio.dst_ch_layout = movState->audio.st->codec->channel_layout;
+            movState->audio.frame_size *= 6;
+            movState->audio.format = fmt;
+        }
         if(movState->audio.st->codec->channel_layout == AV_CH_LAYOUT_MONO)
         {
             movState->audio.dst_ch_layout = AV_CH_LAYOUT_MONO;
             movState->audio.frame_size *= 1;
             movState->audio.format = AL_FORMAT_MONO16;
         }
-        else
+        if(movState->audio.format == AL_NONE)
         {
             movState->audio.dst_ch_layout = AV_CH_LAYOUT_STEREO;
             movState->audio.frame_size *= 2;

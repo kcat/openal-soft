@@ -995,17 +995,17 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     else
     {
         MixGains *gains = voice->Direct.Mix.Gains[0];
+        ALfloat radius = ALSource->Radius;
         ALfloat Target[MaxChannels];
 
         /* Normalize the length, and compute panned gains. */
-        if(!(Distance > FLT_EPSILON))
+        if(!(Distance > FLT_EPSILON) && !(radius > FLT_EPSILON))
         {
-            Position[0] = Position[1] = Position[2] = 0.0f;
-            ComputeAmbientGains(Device, DryGain, Target);
+            const ALfloat front[3] = { 0.0f, 0.0f, -1.0f };
+            ComputeDirectionalGains(Device, front, DryGain, Target);
         }
         else
         {
-            ALfloat radius = ALSource->Radius;
             ALfloat invlen = 1.0f/maxf(Distance, radius);
             Position[0] *= invlen;
             Position[1] *= invlen;

@@ -584,7 +584,6 @@ enum DeviceType {
 #define MAX_AMBI_COEFFS 16
 
 typedef struct ChannelConfig {
-    enum Channel ChanName;
     ALfloat Angle;
     ALfloat Elevation;
     ALfloat HOACoeff[MAX_AMBI_COEFFS];

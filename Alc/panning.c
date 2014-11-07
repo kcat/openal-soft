@@ -152,8 +152,8 @@ ALvoid aluInitPanning(ALCdevice *device)
         { SideLeft,    { DEG2RAD( -90.0f), DEG2RAD(0.0f), { 0.224739f,  0.000002f,  0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065795f }, { 0.224739f,  0.000000f,  0.260717f, 0.0f } } },
         { SideRight,   { DEG2RAD(  90.0f), DEG2RAD(0.0f), { 0.224739f,  0.000002f, -0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.065795f }, { 0.224739f,  0.000000f, -0.260717f, 0.0f } } },
     };
-    const ChannelMap *chanmap;
-    size_t count;
+    const ChannelMap *chanmap = NULL;
+    size_t count = 0;
     ALuint i, j;
 
     memset(device->Speaker, 0, sizeof(device->Speaker));

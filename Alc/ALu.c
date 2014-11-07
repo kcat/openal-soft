@@ -1231,32 +1231,32 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             switch(device->FmtType)
             {
                 case DevFmtByte:
-                    Write_ALbyte(device->DryBuffer, buffer, SamplesToDo, device->NumSpeakers);
-                    buffer = (char*)buffer + SamplesToDo*device->NumSpeakers*sizeof(ALbyte);
+                    Write_ALbyte(device->DryBuffer, buffer, SamplesToDo, device->NumChannels);
+                    buffer = (char*)buffer + SamplesToDo*device->NumChannels*sizeof(ALbyte);
                     break;
                 case DevFmtUByte:
-                    Write_ALubyte(device->DryBuffer, buffer, SamplesToDo, device->NumSpeakers);
-                    buffer = (char*)buffer + SamplesToDo*device->NumSpeakers*sizeof(ALubyte);
+                    Write_ALubyte(device->DryBuffer, buffer, SamplesToDo, device->NumChannels);
+                    buffer = (char*)buffer + SamplesToDo*device->NumChannels*sizeof(ALubyte);
                     break;
                 case DevFmtShort:
-                    Write_ALshort(device->DryBuffer, buffer, SamplesToDo, device->NumSpeakers);
-                    buffer = (char*)buffer + SamplesToDo*device->NumSpeakers*sizeof(ALshort);
+                    Write_ALshort(device->DryBuffer, buffer, SamplesToDo, device->NumChannels);
+                    buffer = (char*)buffer + SamplesToDo*device->NumChannels*sizeof(ALshort);
                     break;
                 case DevFmtUShort:
-                    Write_ALushort(device->DryBuffer, buffer, SamplesToDo, device->NumSpeakers);
-                    buffer = (char*)buffer + SamplesToDo*device->NumSpeakers*sizeof(ALushort);
+                    Write_ALushort(device->DryBuffer, buffer, SamplesToDo, device->NumChannels);
+                    buffer = (char*)buffer + SamplesToDo*device->NumChannels*sizeof(ALushort);
                     break;
                 case DevFmtInt:
-                    Write_ALint(device->DryBuffer, buffer, SamplesToDo, device->NumSpeakers);
-                    buffer = (char*)buffer + SamplesToDo*device->NumSpeakers*sizeof(ALint);
+                    Write_ALint(device->DryBuffer, buffer, SamplesToDo, device->NumChannels);
+                    buffer = (char*)buffer + SamplesToDo*device->NumChannels*sizeof(ALint);
                     break;
                 case DevFmtUInt:
-                    Write_ALuint(device->DryBuffer, buffer, SamplesToDo, device->NumSpeakers);
-                    buffer = (char*)buffer + SamplesToDo*device->NumSpeakers*sizeof(ALuint);
+                    Write_ALuint(device->DryBuffer, buffer, SamplesToDo, device->NumChannels);
+                    buffer = (char*)buffer + SamplesToDo*device->NumChannels*sizeof(ALuint);
                     break;
                 case DevFmtFloat:
-                    Write_ALfloat(device->DryBuffer, buffer, SamplesToDo, device->NumSpeakers);
-                    buffer = (char*)buffer + SamplesToDo*device->NumSpeakers*sizeof(ALfloat);
+                    Write_ALfloat(device->DryBuffer, buffer, SamplesToDo, device->NumChannels);
+                    buffer = (char*)buffer + SamplesToDo*device->NumChannels*sizeof(ALfloat);
                     break;
             }
         }

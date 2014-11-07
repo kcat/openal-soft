@@ -432,7 +432,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     parms->Filters[chan].ActiveType
                 );
                 if(!voice->IsHrtf)
-                    Mix(samples, Device->NumSpeakers, parms->OutBuffer, parms->Mix.Gains[chan],
+                    Mix(samples, Device->NumChannels, parms->OutBuffer, parms->Mix.Gains[chan],
                         parms->Counter, OutPos, DstBufferSize);
                 else
                     HrtfMix(parms->OutBuffer, samples, parms->Counter, voice->Offset,

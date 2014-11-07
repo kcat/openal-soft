@@ -70,10 +70,10 @@ void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfl
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
         gains[i] = 0.0f;
-    for(i = 0;i < device->NumSpeakers;i++)
+    for(i = 0;i < device->NumChannels;i++)
     {
         for(j = 0;j < MAX_AMBI_COEFFS;j++)
-            gains[i] += device->Speaker[i].HOACoeff[j]*coeffs[j];
+            gains[i] += device->Channel[i].HOACoeff[j]*coeffs[j];
         gains[i] = maxf(gains[i], 0.0f) * ingain;
     }
 }
@@ -84,8 +84,8 @@ void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
         gains[i] = 0.0f;
-    for(i = 0;i < device->NumSpeakers;i++)
-        gains[i] = device->Speaker[i].HOACoeff[0] * ingain;
+    for(i = 0;i < device->NumChannels;i++)
+        gains[i] = device->Channel[i].HOACoeff[0] * ingain;
 }
 
 void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
@@ -94,10 +94,10 @@ void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat 
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
         gains[i] = 0.0f;
-    for(i = 0;i < device->NumSpeakers;i++)
+    for(i = 0;i < device->NumChannels;i++)
     {
         for(j = 0;j < 4;j++)
-            gains[i] += device->Speaker[i].FOACoeff[j] * mtx[j];
+            gains[i] += device->Channel[i].FOACoeff[j] * mtx[j];
         gains[i] *= ingain;
     }
 }
@@ -156,8 +156,8 @@ ALvoid aluInitPanning(ALCdevice *device)
     size_t count = 0;
     ALuint i, j;
 
-    memset(device->Speaker, 0, sizeof(device->Speaker));
-    device->NumSpeakers = 0;
+    memset(device->Channel, 0, sizeof(device->Channel));
+    device->NumChannels = 0;
 
     switch(device->FmtChans)
     {
@@ -202,12 +202,12 @@ ALvoid aluInitPanning(ALCdevice *device)
         {
             if(device->ChannelName[i] == chanmap[j].ChanName)
             {
-                device->Speaker[i] = chanmap[j].Config;
+                device->Channel[i] = chanmap[j].Config;
                 break;
             }
         }
         if(j == count)
             ERR("Failed to match channel %u (label %d) in config\n", i, device->ChannelName[i]);
     }
-    device->NumSpeakers = i;
+    device->NumChannels = i;
 }

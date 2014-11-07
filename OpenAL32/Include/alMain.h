@@ -658,10 +658,8 @@ struct ALCdevice_struct
     ALuint       Flags;
 
     enum Channel ChannelName[MAX_OUTPUT_CHANNELS];
-
-    /* This only counts positional speakers, i.e. not including LFE. */
-    ChannelConfig Speaker[MAX_OUTPUT_CHANNELS];
-    ALuint NumSpeakers;
+    ChannelConfig Channel[MAX_OUTPUT_CHANNELS];
+    ALuint NumChannels;
 
     ALuint64 ClockBase;
     ALuint SamplesDone;

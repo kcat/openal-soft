@@ -257,8 +257,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         { FrontRight,  DEG2RAD(  30.0f), DEG2RAD(0.0f) },
         { FrontCenter, DEG2RAD(   0.0f), DEG2RAD(0.0f) },
         { LFE, 0.0f, 0.0f },
-        { BackLeft,    DEG2RAD(-110.0f), DEG2RAD(0.0f) },
-        { BackRight,   DEG2RAD( 110.0f), DEG2RAD(0.0f) }
+        { SideLeft,    DEG2RAD(-110.0f), DEG2RAD(0.0f) },
+        { SideRight,   DEG2RAD( 110.0f), DEG2RAD(0.0f) }
     };
     static const struct ChanMap X61Map[7] = {
         { FrontLeft,    DEG2RAD(-30.0f), DEG2RAD(0.0f) },

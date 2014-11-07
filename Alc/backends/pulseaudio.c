@@ -671,10 +671,10 @@ static void ALCpulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const
           DevFmtX71 },
         { "front-left,front-right,front-center,lfe,rear-center,side-left,side-right",
           DevFmtX61 },
-        { "front-left,front-right,front-center,lfe,rear-left,rear-right",
-          DevFmtX51 },
         { "front-left,front-right,front-center,lfe,side-left,side-right",
-          DevFmtX51Side },
+          DevFmtX51 },
+        { "front-left,front-right,front-center,lfe,rear-left,rear-right",
+          DevFmtX51Rear },
         { "front-left,front-right,rear-left,rear-right", DevFmtQuad },
         { "front-left,front-right", DevFmtStereo },
         { "mono", DevFmtMono },
@@ -994,10 +994,10 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
             mapname = "front-left,front-right,rear-left,rear-right";
             break;
         case DevFmtX51:
-            mapname = "front-left,front-right,front-center,lfe,rear-left,rear-right";
-            break;
-        case DevFmtX51Side:
             mapname = "front-left,front-right,front-center,lfe,side-left,side-right";
+            break;
+        case DevFmtX51Rear:
+            mapname = "front-left,front-right,front-center,lfe,rear-left,rear-right";
             break;
         case DevFmtX61:
             mapname = "front-left,front-right,front-center,lfe,rear-center,side-left,side-right";

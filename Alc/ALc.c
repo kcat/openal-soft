@@ -1470,7 +1470,7 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
 {
     ALuint i;
 
-    for(i = 0;i < MaxChannels;i++)
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
         device->ChannelName[i] = InvalidChannel;
 
     switch(device->FmtChans)
@@ -1534,7 +1534,7 @@ void SetDefaultChannelOrder(ALCdevice *device)
 {
     ALuint i;
 
-    for(i = 0;i < MaxChannels;i++)
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
         device->ChannelName[i] = InvalidChannel;
 
     switch(device->FmtChans)

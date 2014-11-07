@@ -42,7 +42,7 @@ typedef struct ALmodulatorState {
     ALuint index;
     ALuint step;
 
-    ALfloat Gain[MaxChannels];
+    ALfloat Gain[MAX_OUTPUT_CHANNELS];
 
     ALfilterState Filter;
 } ALmodulatorState;
@@ -92,7 +92,7 @@ static void Process##func(ALmodulatorState *state, ALuint SamplesToDo,        \
             temps[i] = samp * func(index);                                    \
         }                                                                     \
                                                                               \
-        for(k = 0;k < MaxChannels;k++)                                        \
+        for(k = 0;k < MAX_OUTPUT_CHANNELS;k++)                                \
         {                                                                     \
             ALfloat gain = state->Gain[k];                                    \
             if(!(gain > GAIN_SILENCE_THRESHOLD))                              \

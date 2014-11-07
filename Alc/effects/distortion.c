@@ -34,7 +34,7 @@ typedef struct ALdistortionState {
     DERIVE_FROM_TYPE(ALeffectState);
 
     /* Effect gains for each channel */
-    ALfloat Gain[MaxChannels];
+    ALfloat Gain[MAX_OUTPUT_CHANNELS];
 
     /* Effect parameters */
     ALfilterState lowpass;
@@ -154,7 +154,7 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint Samples
             temps[it] = oversample_buffer[it][0] * state->attenuation;
         }
 
-        for(kt = 0;kt < MaxChannels;kt++)
+        for(kt = 0;kt < MAX_OUTPUT_CHANNELS;kt++)
         {
             ALfloat gain = state->Gain[kt];
             if(!(gain > GAIN_SILENCE_THRESHOLD))

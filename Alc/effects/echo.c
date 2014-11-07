@@ -43,7 +43,7 @@ typedef struct ALechoState {
     } Tap[2];
     ALuint Offset;
     /* The panning gains for the two taps */
-    ALfloat Gain[2][MaxChannels];
+    ALfloat Gain[2][MAX_OUTPUT_CHANNELS];
 
     ALfloat FeedGain;
 
@@ -138,7 +138,7 @@ static ALvoid ALechoState_process(ALechoState *state, ALuint SamplesToDo, const 
             offset++;
         }
 
-        for(k = 0;k < MaxChannels;k++)
+        for(k = 0;k < MAX_OUTPUT_CHANNELS;k++)
         {
             ALfloat gain = state->Gain[0][k];
             if(gain > GAIN_SILENCE_THRESHOLD)

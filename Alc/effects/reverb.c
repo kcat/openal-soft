@@ -86,7 +86,7 @@ typedef struct ALreverbState {
 
         // The gain for each output channel based on 3D panning (only for the
         // EAX path).
-        ALfloat   PanGain[MaxChannels];
+        ALfloat   PanGain[MAX_OUTPUT_CHANNELS];
     } Early;
 
     // Decorrelator delay line.
@@ -125,7 +125,7 @@ typedef struct ALreverbState {
 
         // The gain for each output channel based on 3D panning (only for the
         // EAX path).
-        ALfloat   PanGain[MaxChannels];
+        ALfloat   PanGain[MAX_OUTPUT_CHANNELS];
     } Late;
 
     struct {
@@ -565,7 +565,7 @@ static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint Samples
     for(index = 0;index < SamplesToDo;index++)
         VerbPass(State, SamplesIn[index], out[index]);
 
-    for(c = 0;c < MaxChannels;c++)
+    for(c = 0;c < MAX_OUTPUT_CHANNELS;c++)
     {
         ALfloat gain = State->Gain[c];
         if(!(gain > GAIN_SILENCE_THRESHOLD))
@@ -586,7 +586,7 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo,
     for(index = 0;index < SamplesToDo;index++)
         EAXVerbPass(State, SamplesIn[index], early[index], late[index]);
 
-    for(c = 0;c < MaxChannels;c++)
+    for(c = 0;c < MAX_OUTPUT_CHANNELS;c++)
     {
         ALfloat earlyGain, lateGain;
 
@@ -1231,7 +1231,7 @@ static ALeffectState *ALreverbStateFactory_create(ALreverbStateFactory* UNUSED(f
         state->Late.LpSample[index] = 0.0f;
     }
 
-    for(index = 0;index < MaxChannels;index++)
+    for(index = 0;index < MAX_OUTPUT_CHANNELS;index++)
     {
         state->Early.PanGain[index] = 0.0f;
         state->Late.PanGain[index] = 0.0f;

@@ -129,7 +129,7 @@ static void UpdateDryStepping(DirectParams *params, ALuint num_chans)
         for(i = 0;i < num_chans;i++)
         {
             MixGains *gains = params->Mix.Gains[i];
-            for(j = 0;j < MaxChannels;j++)
+            for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
             {
                 gains[j].Current = gains[j].Target;
                 gains[j].Step = 1.0f;
@@ -143,7 +143,7 @@ static void UpdateDryStepping(DirectParams *params, ALuint num_chans)
     for(i = 0;i < num_chans;i++)
     {
         MixGains *gains = params->Mix.Gains[i];
-        for(j = 0;j < MaxChannels;j++)
+        for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
         {
             ALfloat cur = maxf(gains[j].Current, FLT_EPSILON);
             ALfloat trg = maxf(gains[j].Target, FLT_EPSILON);
@@ -461,10 +461,10 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         for(c = 0;c < num_channels;c++)
         {
             MixGains *gains = voice->Direct.Mix.Gains[c];
-            ALfloat Target[MaxChannels];
+            ALfloat Target[MAX_OUTPUT_CHANNELS];
 
             ComputeBFormatGains(Device, matrix[c], DryGain, Target);
-            for(i = 0;i < MaxChannels;i++)
+            for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
                 gains[i].Target = Target[i];
         }
         /* B-Format cannot handle logarithmic gain stepping, since the gain can
@@ -483,7 +483,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
             MixGains *gains = voice->Direct.Mix.Gains[c];
             int idx;
 
-            for(j = 0;j < MaxChannels;j++)
+            for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
                 gains[j].Target = 0.0f;
             if((idx=GetChannelIdxByName(Device, chans[c].channel)) != -1)
                 gains[idx].Target = DryGain;
@@ -528,13 +528,13 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         for(c = 0;c < num_channels;c++)
         {
             MixGains *gains = voice->Direct.Mix.Gains[c];
-            ALfloat Target[MaxChannels];
+            ALfloat Target[MAX_OUTPUT_CHANNELS];
 
             /* Special-case LFE */
             if(chans[c].channel == LFE)
             {
                 int idx;
-                for(i = 0;i < MaxChannels;i++)
+                for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
                     gains[i].Target = 0.0f;
                 if((idx=GetChannelIdxByName(Device, chans[c].channel)) != -1)
                     gains[idx].Target = DryGain;
@@ -542,7 +542,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
             }
 
             ComputeAngleGains(Device, chans[c].angle, chans[c].elevation, DryGain, Target);
-            for(i = 0;i < MaxChannels;i++)
+            for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
                 gains[i].Target = Target[i];
         }
         UpdateDryStepping(&voice->Direct, num_channels);
@@ -996,7 +996,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     {
         MixGains *gains = voice->Direct.Mix.Gains[0];
         ALfloat radius = ALSource->Radius;
-        ALfloat Target[MaxChannels];
+        ALfloat Target[MAX_OUTPUT_CHANNELS];
 
         /* Normalize the length, and compute panned gains. */
         if(!(Distance > FLT_EPSILON) && !(radius > FLT_EPSILON))
@@ -1013,7 +1013,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             ComputeDirectionalGains(Device, Position, DryGain, Target);
         }
 
-        for(j = 0;j < MaxChannels;j++)
+        for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
             gains[j].Target = Target[j];
         UpdateDryStepping(&voice->Direct, 1);
 
@@ -1128,7 +1128,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         IncrementRef(&device->MixCount);
 
         SamplesToDo = minu(size, BUFFERSIZE);
-        for(c = 0;c < MaxChannels;c++)
+        for(c = 0;c < MAX_OUTPUT_CHANNELS;c++)
             memset(device->DryBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
 
         V0(device->Backend,lock)();

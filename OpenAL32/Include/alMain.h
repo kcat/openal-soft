@@ -524,10 +524,9 @@ enum Channel {
     SideLeft,
     SideRight,
 
-    MaxChannels,
-    InvalidChannel = MaxChannels
+    InvalidChannel
 };
-
+#define MAX_OUTPUT_CHANNELS  (8)
 
 /* Device formats */
 enum DevFmtType {
@@ -658,10 +657,10 @@ struct ALCdevice_struct
     // Device flags
     ALuint       Flags;
 
-    enum Channel ChannelName[MaxChannels];
+    enum Channel ChannelName[MAX_OUTPUT_CHANNELS];
 
     /* This only counts positional speakers, i.e. not including LFE. */
-    ChannelConfig Speaker[MaxChannels];
+    ChannelConfig Speaker[MAX_OUTPUT_CHANNELS];
     ALuint NumSpeakers;
 
     ALuint64 ClockBase;
@@ -673,7 +672,7 @@ struct ALCdevice_struct
     alignas(16) ALfloat FilteredData[BUFFERSIZE];
 
     // Dry path buffer mix
-    alignas(16) ALfloat DryBuffer[MaxChannels][BUFFERSIZE];
+    alignas(16) ALfloat DryBuffer[MAX_OUTPUT_CHANNELS][BUFFERSIZE];
 
     /* Running count of the mixer invocations, in 31.1 fixed point. This
      * actually increments *twice* when mixing, first at the start and then at
@@ -840,7 +839,7 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans) DECL_CONST;
 inline ALint GetChannelIdxByName(const ALCdevice *device, enum Channel chan)
 {
     ALint i = 0;
-    for(i = 0;i < MaxChannels;i++)
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
     {
         if(device->ChannelName[i] == chan)
             return i;

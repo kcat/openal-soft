@@ -32,7 +32,7 @@
 #include "alu.h"
 
 
-void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation, ALfloat ingain, ALfloat gains[MaxChannels])
+void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     ALfloat dir[3] = {
         sinf(angle) * cosf(elevation),
@@ -42,7 +42,7 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation
     ComputeDirectionalGains(device, dir, ingain, gains);
 }
 
-void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfloat ingain, ALfloat gains[MaxChannels])
+void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     ALfloat coeffs[MAX_AMBI_COEFFS];
     ALuint i, j;
@@ -68,7 +68,7 @@ void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfl
     coeffs[14] = x * (x*x - 3.0f*y*y); /* X * (X*X - 3*Y*Y) */
     coeffs[15] = y * (3.0f*x*x - y*y); /* Y * (3*X*X - Y*Y) */
 
-    for(i = 0;i < MaxChannels;i++)
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
         gains[i] = 0.0f;
     for(i = 0;i < device->NumSpeakers;i++)
     {
@@ -78,21 +78,21 @@ void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfl
     }
 }
 
-void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MaxChannels])
+void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     ALuint i;
 
-    for(i = 0;i < MaxChannels;i++)
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
         gains[i] = 0.0f;
     for(i = 0;i < device->NumSpeakers;i++)
         gains[i] = device->Speaker[i].HOACoeff[0] * ingain;
 }
 
-void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MaxChannels])
+void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     ALuint i, j;
 
-    for(i = 0;i < MaxChannels;i++)
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
         gains[i] = 0.0f;
     for(i = 0;i < device->NumSpeakers;i++)
     {
@@ -196,7 +196,7 @@ ALvoid aluInitPanning(ALCdevice *device)
             chanmap = X71Cfg;
             break;
     }
-    for(i = 0;i < MaxChannels && device->ChannelName[i] != InvalidChannel;i++)
+    for(i = 0;i < MAX_OUTPUT_CHANNELS && device->ChannelName[i] != InvalidChannel;i++)
     {
         for(j = 0;j < count;j++)
         {

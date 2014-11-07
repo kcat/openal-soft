@@ -96,7 +96,7 @@ typedef struct DirectParams {
             ALfloat Dir[3];
         } Hrtf;
 
-        MixGains Gains[MAX_INPUT_CHANNELS][MaxChannels];
+        MixGains Gains[MAX_INPUT_CHANNELS][MAX_OUTPUT_CHANNELS];
     } Mix;
 } DirectParams;
 
@@ -207,7 +207,7 @@ ALvoid aluInitPanning(ALCdevice *Device);
  * Sets channel gains based on a direction. The direction must be a 3-component
  * vector no longer than 1 unit.
  */
-void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfloat ingain, ALfloat gains[MaxChannels]);
+void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 /**
  * ComputeAngleGains
@@ -215,14 +215,14 @@ void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfl
  * Sets channel gains based on angle and elevation. The angle and elevation
  * parameters are in radians, going right and up respectively.
  */
-void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation, ALfloat ingain, ALfloat gains[MaxChannels]);
+void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 /**
  * ComputeAmbientGains
  *
  * Sets channel gains for ambient, omni-directional sounds.
  */
-void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MaxChannels]);
+void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 /**
  * ComputeBFormatGains
@@ -231,7 +231,7 @@ void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[
  * a 1x4 'slice' of the rotation matrix for a given channel used to orient the
  * coefficients.
  */
-void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MaxChannels]);
+void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 
 ALvoid CalcSourceParams(struct ALvoice *voice, const struct ALsource *source, const ALCcontext *ALContext);

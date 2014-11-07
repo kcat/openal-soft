@@ -46,7 +46,7 @@ typedef struct ALflangerState {
     ALint lfo_disp;
 
     /* Gains for left and right sides */
-    ALfloat Gain[2][MaxChannels];
+    ALfloat Gain[2][MAX_OUTPUT_CHANNELS];
 
     /* effect parameters */
     enum FlangerWaveForm waveform;
@@ -223,7 +223,7 @@ static ALvoid ALflangerState_process(ALflangerState *state, ALuint SamplesToDo, 
                 break;
         }
 
-        for(kt = 0;kt < MaxChannels;kt++)
+        for(kt = 0;kt < MAX_OUTPUT_CHANNELS;kt++)
         {
             ALfloat gain = state->Gain[0][kt];
             if(gain > GAIN_SILENCE_THRESHOLD)

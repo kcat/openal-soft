@@ -1179,7 +1179,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                     V((*slot)->EffectState,update)(device, *slot);
 
                 V((*slot)->EffectState,process)(SamplesToDo, (*slot)->WetBuffer[0],
-                                                device->DryBuffer);
+                                                device->DryBuffer, device->NumChannels);
 
                 for(i = 0;i < SamplesToDo;i++)
                     (*slot)->WetBuffer[0][i] = 0.0f;
@@ -1197,7 +1197,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 V((*slot)->EffectState,update)(device, *slot);
 
             V((*slot)->EffectState,process)(SamplesToDo, (*slot)->WetBuffer[0],
-                                            device->DryBuffer);
+                                            device->DryBuffer, device->NumChannels);
 
             for(i = 0;i < SamplesToDo;i++)
                 (*slot)->WetBuffer[0][i] = 0.0f;

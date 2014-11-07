@@ -203,7 +203,7 @@ DECL_TEMPLATE(Sinusoid)
 
 #undef DECL_TEMPLATE
 
-static ALvoid ALchorusState_process(ALchorusState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
+static ALvoid ALchorusState_process(ALchorusState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     ALuint it, kt;
     ALuint base;
@@ -223,17 +223,17 @@ static ALvoid ALchorusState_process(ALchorusState *state, ALuint SamplesToDo, co
                 break;
         }
 
-        for(kt = 0;kt < MAX_OUTPUT_CHANNELS;kt++)
+        for(kt = 0;kt < NumChannels;kt++)
         {
             ALfloat gain = state->Gain[0][kt];
-            if(gain > GAIN_SILENCE_THRESHOLD)
+            if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
             {
                 for(it = 0;it < td;it++)
                     SamplesOut[kt][it+base] += temps[it][0] * gain;
             }
 
             gain = state->Gain[1][kt];
-            if(gain > GAIN_SILENCE_THRESHOLD)
+            if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
             {
                 for(it = 0;it < td;it++)
                     SamplesOut[kt][it+base] += temps[it][1] * gain;

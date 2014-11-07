@@ -556,7 +556,7 @@ static inline ALvoid EAXVerbPass(ALreverbState *State, ALfloat in, ALfloat *rest
     State->Offset++;
 }
 
-static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
+static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     ALfloat (*restrict out)[4] = State->ReverbSamples;
     ALuint index, c;
@@ -565,10 +565,10 @@ static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint Samples
     for(index = 0;index < SamplesToDo;index++)
         VerbPass(State, SamplesIn[index], out[index]);
 
-    for(c = 0;c < MAX_OUTPUT_CHANNELS;c++)
+    for(c = 0;c < NumChannels;c++)
     {
         ALfloat gain = State->Gain[c];
-        if(!(gain > GAIN_SILENCE_THRESHOLD))
+        if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
 
         for(index = 0;index < SamplesToDo;index++)
@@ -576,7 +576,7 @@ static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint Samples
     }
 }
 
-static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
+static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     ALfloat (*restrict early)[4] = State->EarlySamples;
     ALfloat (*restrict late)[4] = State->ReverbSamples;
@@ -586,18 +586,18 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo,
     for(index = 0;index < SamplesToDo;index++)
         EAXVerbPass(State, SamplesIn[index], early[index], late[index]);
 
-    for(c = 0;c < MAX_OUTPUT_CHANNELS;c++)
+    for(c = 0;c < NumChannels;c++)
     {
         ALfloat earlyGain, lateGain;
 
         earlyGain = State->Early.PanGain[c];
-        if(earlyGain > GAIN_SILENCE_THRESHOLD)
+        if(fabsf(earlyGain) > GAIN_SILENCE_THRESHOLD)
         {
             for(index = 0;index < SamplesToDo;index++)
                 SamplesOut[c][index] += earlyGain*early[index][c&3];
         }
         lateGain = State->Late.PanGain[c];
-        if(lateGain > GAIN_SILENCE_THRESHOLD)
+        if(fabsf(lateGain) > GAIN_SILENCE_THRESHOLD)
         {
             for(index = 0;index < SamplesToDo;index++)
                 SamplesOut[c][index] += lateGain*late[index][c&3];
@@ -605,12 +605,12 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo,
     }
 }
 
-static ALvoid ALreverbState_process(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
+static ALvoid ALreverbState_process(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     if(State->IsEax)
-        ALreverbState_processEax(State, SamplesToDo, SamplesIn, SamplesOut);
+        ALreverbState_processEax(State, SamplesToDo, SamplesIn, SamplesOut, NumChannels);
     else
-        ALreverbState_processStandard(State, SamplesToDo, SamplesIn, SamplesOut);
+        ALreverbState_processStandard(State, SamplesToDo, SamplesIn, SamplesOut, NumChannels);
 }
 
 // Given the allocated sample buffer, this function updates each delay line

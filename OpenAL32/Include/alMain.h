@@ -382,6 +382,10 @@ static rettype T1##_##T2##_##func(T2 *obj, argtype1 a, argtype2 b)            \
 static rettype T1##_##T2##_##func(T2 *obj, argtype1 a, argtype2 b, argtype3 c) \
 { return T1##_##func(STATIC_UPCAST(T1, T2, obj), a, b, c); }
 
+#define DECLARE_THUNK4(T1, T2, rettype, func, argtype1, argtype2, argtype3, argtype4) \
+static rettype T1##_##T2##_##func(T2 *obj, argtype1 a, argtype2 b, argtype3 c, argtype4 d) \
+{ return T1##_##func(STATIC_UPCAST(T1, T2, obj), a, b, c, d); }
+
 #define DECLARE_DEFAULT_ALLOCATORS(T)                                         \
 static void* T##_New(size_t size) { return al_malloc(16, size); }             \
 static void T##_Delete(void *ptr) { al_free(ptr); }

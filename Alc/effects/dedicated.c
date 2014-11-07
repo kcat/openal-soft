@@ -75,14 +75,14 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, ALCdevice *device
     }
 }
 
-static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
+static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     const ALfloat *gains = state->gains;
     ALuint i, c;
 
-    for(c = 0;c < MAX_OUTPUT_CHANNELS;c++)
+    for(c = 0;c < NumChannels;c++)
     {
-        if(!(gains[c] > GAIN_SILENCE_THRESHOLD))
+        if(!(fabsf(gains[c]) > GAIN_SILENCE_THRESHOLD))
             continue;
 
         for(i = 0;i < SamplesToDo;i++)

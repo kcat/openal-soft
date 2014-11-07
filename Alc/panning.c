@@ -31,13 +31,11 @@
 #include "AL/alc.h"
 #include "alu.h"
 
-extern inline void SetGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MaxChannels]);
-
 
 void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation, ALfloat ingain, ALfloat gains[MaxChannels])
 {
     ALfloat dir[3] = {
-        -sinf(angle) * cosf(elevation),
+        sinf(angle) * cosf(elevation),
         sinf(elevation),
         -cosf(angle) * cosf(elevation)
     };
@@ -74,11 +72,20 @@ void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfl
         gains[i] = 0.0f;
     for(i = 0;i < device->NumSpeakers;i++)
     {
-        enum Channel chan = device->Speaker[i].ChanName;
         for(j = 0;j < MAX_AMBI_COEFFS;j++)
-            gains[chan] += device->Speaker[i].HOACoeff[j]*coeffs[j];
-        gains[chan] = maxf(gains[chan], 0.0f) * ingain;
+            gains[i] += device->Speaker[i].HOACoeff[j]*coeffs[j];
+        gains[i] = maxf(gains[i], 0.0f) * ingain;
     }
+}
+
+void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MaxChannels])
+{
+    ALuint i;
+
+    for(i = 0;i < MaxChannels;i++)
+        gains[i] = 0.0f;
+    for(i = 0;i < device->NumSpeakers;i++)
+        gains[i] = device->Speaker[i].HOACoeff[0] * ingain;
 }
 
 void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MaxChannels])
@@ -89,56 +96,65 @@ void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat 
         gains[i] = 0.0f;
     for(i = 0;i < device->NumSpeakers;i++)
     {
-        enum Channel chan = device->Speaker[i].ChanName;
         for(j = 0;j < 4;j++)
-            gains[chan] += device->Speaker[i].FOACoeff[j] * mtx[j];
-        gains[chan] *= ingain;
+            gains[i] += device->Speaker[i].FOACoeff[j] * mtx[j];
+        gains[i] *= ingain;
     }
 }
 
 
+typedef struct ChannelMap {
+    enum Channel ChanName;
+    ChannelConfig Config;
+} ChannelMap;
+
 ALvoid aluInitPanning(ALCdevice *device)
 {
-    static const ChannelConfig MonoCfg[1] = {
-        { FrontCenter, DEG2RAD(0.0f), DEG2RAD(0.0f), { 1.4142f }, { 1.4142f } }
+    static const ChannelMap MonoCfg[1] = {
+        { FrontCenter, { DEG2RAD(0.0f), DEG2RAD(0.0f), { 1.4142f }, { 1.4142f } } },
     }, StereoCfg[2] = {
-        { FrontLeft,  DEG2RAD(-90.0f), DEG2RAD(0.0f), { 0.7071f, 0.0f,  0.5f, 0.0f }, { 0.7071f, 0.0f,  0.5f, 0.0f } },
-        { FrontRight, DEG2RAD( 90.0f), DEG2RAD(0.0f), { 0.7071f, 0.0f, -0.5f, 0.0f }, { 0.7071f, 0.0f, -0.5f, 0.0f } }
+        { FrontLeft,  { DEG2RAD(-90.0f), DEG2RAD(0.0f), { 0.7071f, 0.0f,  0.5f, 0.0f }, { 0.7071f, 0.0f,  0.5f, 0.0f } } },
+        { FrontRight, { DEG2RAD( 90.0f), DEG2RAD(0.0f), { 0.7071f, 0.0f, -0.5f, 0.0f }, { 0.7071f, 0.0f, -0.5f, 0.0f } } },
     }, QuadCfg[4] = {
-        { FrontLeft,  DEG2RAD( -45.0f), DEG2RAD(0.0f), { 0.353558f,  0.306181f,  0.306192f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.117183f }, { 0.353553f,  0.250000f,  0.250000f, 0.0f  } },
-        { FrontRight, DEG2RAD(  45.0f), DEG2RAD(0.0f), { 0.353543f,  0.306181f, -0.306192f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.117193f }, { 0.353553f,  0.250000f, -0.250000f, 0.0f  } },
-        { BackLeft,   DEG2RAD(-135.0f), DEG2RAD(0.0f), { 0.353543f, -0.306192f,  0.306181f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.117193f }, { 0.353553f, -0.250000f,  0.250000f, 0.0f  } },
-        { BackRight,  DEG2RAD( 135.0f), DEG2RAD(0.0f), { 0.353558f, -0.306192f, -0.306181f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.117183f }, { 0.353553f, -0.250000f, -0.250000f, 0.0f  } }
-    }, X51Cfg[5] = {
-        { FrontLeft,   DEG2RAD( -30.0f), DEG2RAD(0.0f), { 0.208954f,  0.212846f,  0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017738f,  0.204014f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f,  0.047490f }, { 0.208954f,  0.162905f,  0.182425f, 0.0f } },
-        { FrontRight,  DEG2RAD(  30.0f), DEG2RAD(0.0f), { 0.208954f,  0.212846f, -0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017738f, -0.204014f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f, -0.047490f }, { 0.208954f,  0.162905f, -0.182425f, 0.0f } },
-        { FrontCenter, DEG2RAD(   0.0f), DEG2RAD(0.0f), { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f }, { 0.109403f,  0.137375f,  0.000000f, 0.0f } },
-        { BackLeft,    DEG2RAD(-110.0f), DEG2RAD(0.0f), { 0.470936f, -0.369626f,  0.349386f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031375f, -0.058144f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f, -0.043968f }, { 0.470934f, -0.282903f,  0.267406f, 0.0f } },
-        { BackRight,   DEG2RAD( 110.0f), DEG2RAD(0.0f), { 0.470936f, -0.369626f, -0.349386f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031375f,  0.058144f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f,  0.043968f }, { 0.470934f, -0.282903f, -0.267406f, 0.0f } }
-    }, X51SideCfg[5] = {
-        { FrontLeft,   DEG2RAD(-30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f }, { 0.167065f,  0.153519f,  0.132175f, 0.0f } },
-        { FrontRight,  DEG2RAD( 30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f, -0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068910f }, { 0.167065f,  0.153519f, -0.132175f, 0.0f } },
-        { FrontCenter, DEG2RAD(  0.0f), DEG2RAD(0.0f), { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f,  0.000000f }, { 0.109403f,  0.137375f,  0.000000f, 0.0f } },
-        { SideLeft,    DEG2RAD(-90.0f), DEG2RAD(0.0f), { 0.289151f, -0.081301f,  0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f, -0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f, -0.032897f }, { 0.289151f, -0.062225f,  0.307136f, 0.0f } },
-        { SideRight,   DEG2RAD( 90.0f), DEG2RAD(0.0f), { 0.289151f, -0.081301f, -0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f,  0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f,  0.032897f }, { 0.289151f, -0.062225f, -0.307136f, 0.0f } }
-    }, X61Cfg[6] = {
-        { FrontLeft,   DEG2RAD(-30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f }, { 0.167065f,  0.153519f,  0.132175f, 0.0f } },
-        { FrontRight,  DEG2RAD( 30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f, -0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068910f }, { 0.167065f,  0.153519f, -0.132175f, 0.0f } },
-        { FrontCenter, DEG2RAD(  0.0f), DEG2RAD(0.0f), { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f }, { 0.109403f,  0.137375f,  0.000000f, 0.0f } },
-        { BackCenter,  DEG2RAD(180.0f), DEG2RAD(0.0f), { 0.353556f, -0.461940f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.165723f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.000005f }, { 0.353556f, -0.353554f,  0.000000f, 0.0f } },
-        { SideLeft,    DEG2RAD(-90.0f), DEG2RAD(0.0f), { 0.289151f, -0.081301f,  0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f, -0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f, -0.032897f }, { 0.289151f, -0.062225f,  0.307136f, 0.0f } },
-        { SideRight,   DEG2RAD( 90.0f), DEG2RAD(0.0f), { 0.289151f, -0.081301f, -0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f,  0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f,  0.032897f }, { 0.289151f, -0.062225f, -0.307136f, 0.0f } }
-    }, X71Cfg[7] = {
-        { FrontLeft,   DEG2RAD( -30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f }, { 0.167065f,  0.153519f,  0.132175f, 0.0f } },
-        { FrontRight,  DEG2RAD(  30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f, -0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068910f }, { 0.167065f,  0.153519f, -0.132175f, 0.0f } },
-        { FrontCenter, DEG2RAD(   0.0f), DEG2RAD(0.0f), { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f,  0.000000f }, { 0.109403f,  0.137375f,  0.000000f, 0.0f } },
-        { BackLeft,    DEG2RAD(-150.0f), DEG2RAD(0.0f), { 0.224752f, -0.295009f,  0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f, -0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.065799f }, { 0.224752f, -0.225790f,  0.130361f, 0.0f } },
-        { BackRight,   DEG2RAD( 150.0f), DEG2RAD(0.0f), { 0.224752f, -0.295009f, -0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f,  0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065799f }, { 0.224752f, -0.225790f, -0.130361f, 0.0f } },
-        { SideLeft,    DEG2RAD( -90.0f), DEG2RAD(0.0f), { 0.224739f,  0.000002f,  0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065795f }, { 0.224739f,  0.000000f,  0.260717f, 0.0f } },
-        { SideRight,   DEG2RAD(  90.0f), DEG2RAD(0.0f), { 0.224739f,  0.000002f, -0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.065795f }, { 0.224739f,  0.000000f, -0.260717f, 0.0f } }
+        { FrontLeft,  { DEG2RAD( -45.0f), DEG2RAD(0.0f), { 0.353558f,  0.306181f,  0.306192f, 0.0f, 0.0f, 0.0f, 0.0f, 0.000000f,  0.117183f }, { 0.353553f,  0.250000f,  0.250000f, 0.0f  } } },
+        { FrontRight, { DEG2RAD(  45.0f), DEG2RAD(0.0f), { 0.353543f,  0.306181f, -0.306192f, 0.0f, 0.0f, 0.0f, 0.0f, 0.000000f, -0.117193f }, { 0.353553f,  0.250000f, -0.250000f, 0.0f  } } },
+        { BackLeft,   { DEG2RAD(-135.0f), DEG2RAD(0.0f), { 0.353543f, -0.306192f,  0.306181f, 0.0f, 0.0f, 0.0f, 0.0f, 0.000000f, -0.117193f }, { 0.353553f, -0.250000f,  0.250000f, 0.0f  } } },
+        { BackRight,  { DEG2RAD( 135.0f), DEG2RAD(0.0f), { 0.353558f, -0.306192f, -0.306181f, 0.0f, 0.0f, 0.0f, 0.0f, 0.000000f,  0.117183f }, { 0.353553f, -0.250000f, -0.250000f, 0.0f  } } },
+    }, X51Cfg[6] = {
+        { FrontLeft,   { DEG2RAD( -30.0f), DEG2RAD(0.0f), { 0.208954f,  0.212846f,  0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017738f,  0.204014f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f,  0.047490f }, { 0.208954f,  0.162905f,  0.182425f, 0.0f } } },
+        { FrontRight,  { DEG2RAD(  30.0f), DEG2RAD(0.0f), { 0.208954f,  0.212846f, -0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017738f, -0.204014f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f, -0.047490f }, { 0.208954f,  0.162905f, -0.182425f, 0.0f } } },
+        { FrontCenter, { DEG2RAD(   0.0f), DEG2RAD(0.0f), { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f }, { 0.109403f,  0.137375f,  0.000000f, 0.0f } } },
+        { LFE,         { 0.0f, 0.0f, { 0.0f }, { 0.0f } } },
+        { BackLeft,    { DEG2RAD(-110.0f), DEG2RAD(0.0f), { 0.470936f, -0.369626f,  0.349386f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031375f, -0.058144f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f, -0.043968f }, { 0.470934f, -0.282903f,  0.267406f, 0.0f } } },
+        { BackRight,   { DEG2RAD( 110.0f), DEG2RAD(0.0f), { 0.470936f, -0.369626f, -0.349386f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031375f,  0.058144f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f,  0.043968f }, { 0.470934f, -0.282903f, -0.267406f, 0.0f } } },
+    }, X51SideCfg[6] = {
+        { FrontLeft,   { DEG2RAD(-30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f }, { 0.167065f,  0.153519f,  0.132175f, 0.0f } } },
+        { FrontRight,  { DEG2RAD( 30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f, -0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068910f }, { 0.167065f,  0.153519f, -0.132175f, 0.0f } } },
+        { FrontCenter, { DEG2RAD(  0.0f), DEG2RAD(0.0f), { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f,  0.000000f }, { 0.109403f,  0.137375f,  0.000000f, 0.0f } } },
+        { LFE,         { 0.0f, 0.0f, { 0.0f }, { 0.0f } } },
+        { SideLeft,    { DEG2RAD(-90.0f), DEG2RAD(0.0f), { 0.289151f, -0.081301f,  0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f, -0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f, -0.032897f }, { 0.289151f, -0.062225f,  0.307136f, 0.0f } } },
+        { SideRight,   { DEG2RAD( 90.0f), DEG2RAD(0.0f), { 0.289151f, -0.081301f, -0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f,  0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f,  0.032897f }, { 0.289151f, -0.062225f, -0.307136f, 0.0f } } },
+    }, X61Cfg[7] = {
+        { FrontLeft,   { DEG2RAD(-30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f }, { 0.167065f,  0.153519f,  0.132175f, 0.0f } } },
+        { FrontRight,  { DEG2RAD( 30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f, -0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068910f }, { 0.167065f,  0.153519f, -0.132175f, 0.0f } } },
+        { FrontCenter, { DEG2RAD(  0.0f), DEG2RAD(0.0f), { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f }, { 0.109403f,  0.137375f,  0.000000f, 0.0f } } },
+        { LFE,         { 0.0f, 0.0f, { 0.0f }, { 0.0f } } },
+        { BackCenter,  { DEG2RAD(180.0f), DEG2RAD(0.0f), { 0.353556f, -0.461940f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.165723f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.000005f }, { 0.353556f, -0.353554f,  0.000000f, 0.0f } } },
+        { SideLeft,    { DEG2RAD(-90.0f), DEG2RAD(0.0f), { 0.289151f, -0.081301f,  0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f, -0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f, -0.032897f }, { 0.289151f, -0.062225f,  0.307136f, 0.0f } } },
+        { SideRight,   { DEG2RAD( 90.0f), DEG2RAD(0.0f), { 0.289151f, -0.081301f, -0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f,  0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f,  0.032897f }, { 0.289151f, -0.062225f, -0.307136f, 0.0f } } },
+    }, X71Cfg[8] = {
+        { FrontLeft,   { DEG2RAD( -30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f }, { 0.167065f,  0.153519f,  0.132175f, 0.0f } } },
+        { FrontRight,  { DEG2RAD(  30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f, -0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068910f }, { 0.167065f,  0.153519f, -0.132175f, 0.0f } } },
+        { FrontCenter, { DEG2RAD(   0.0f), DEG2RAD(0.0f), { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f,  0.000000f }, { 0.109403f,  0.137375f,  0.000000f, 0.0f } } },
+        { LFE,         { 0.0f, 0.0f, { 0.0f }, { 0.0f } } },
+        { BackLeft,    { DEG2RAD(-150.0f), DEG2RAD(0.0f), { 0.224752f, -0.295009f,  0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f, -0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.065799f }, { 0.224752f, -0.225790f,  0.130361f, 0.0f } } },
+        { BackRight,   { DEG2RAD( 150.0f), DEG2RAD(0.0f), { 0.224752f, -0.295009f, -0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f,  0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065799f }, { 0.224752f, -0.225790f, -0.130361f, 0.0f } } },
+        { SideLeft,    { DEG2RAD( -90.0f), DEG2RAD(0.0f), { 0.224739f,  0.000002f,  0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065795f }, { 0.224739f,  0.000000f,  0.260717f, 0.0f } } },
+        { SideRight,   { DEG2RAD(  90.0f), DEG2RAD(0.0f), { 0.224739f,  0.000002f, -0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.065795f }, { 0.224739f,  0.000000f, -0.260717f, 0.0f } } },
     };
-    const ChannelConfig *config;
-    ALuint i;
+    const ChannelMap *chanmap;
+    size_t count;
+    ALuint i, j;
 
     memset(device->Speaker, 0, sizeof(device->Speaker));
     device->NumSpeakers = 0;
@@ -146,40 +162,52 @@ ALvoid aluInitPanning(ALCdevice *device)
     switch(device->FmtChans)
     {
         case DevFmtMono:
-            device->NumSpeakers = 1;
-            config = MonoCfg;
+            count = COUNTOF(MonoCfg);
+            chanmap = MonoCfg;
             break;
 
         case DevFmtStereo:
-            device->NumSpeakers = 2;
-            config = StereoCfg;
+            count = COUNTOF(StereoCfg);
+            chanmap = StereoCfg;
             break;
 
         case DevFmtQuad:
-            device->NumSpeakers = 4;
-            config = QuadCfg;
+            count = COUNTOF(QuadCfg);
+            chanmap = QuadCfg;
             break;
 
         case DevFmtX51:
-            device->NumSpeakers = 5;
-            config = X51Cfg;
+            count = COUNTOF(X51Cfg);
+            chanmap = X51Cfg;
             break;
 
         case DevFmtX51Side:
-            device->NumSpeakers = 5;
-            config = X51SideCfg;
+            count = COUNTOF(X51SideCfg);
+            chanmap = X51SideCfg;
             break;
 
         case DevFmtX61:
-            device->NumSpeakers = 6;
-            config = X61Cfg;
+            count = COUNTOF(X61Cfg);
+            chanmap = X61Cfg;
             break;
 
         case DevFmtX71:
-            device->NumSpeakers = 7;
-            config = X71Cfg;
+            count = COUNTOF(X71Cfg);
+            chanmap = X71Cfg;
             break;
     }
-    for(i = 0;i < device->NumSpeakers;i++)
-        device->Speaker[i] = config[i];
+    for(i = 0;i < MaxChannels && device->ChannelName[i] != InvalidChannel;i++)
+    {
+        for(j = 0;j < count;j++)
+        {
+            if(device->ChannelName[i] == chanmap[j].ChanName)
+            {
+                device->Speaker[i] = chanmap[j].Config;
+                break;
+            }
+        }
+        if(j == count)
+            ERR("Failed to match channel %u (label %d) in config\n", i, device->ChannelName[i]);
+    }
+    device->NumSpeakers = i;
 }

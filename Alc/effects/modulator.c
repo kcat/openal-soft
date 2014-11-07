@@ -125,7 +125,7 @@ static ALboolean ALmodulatorState_deviceUpdate(ALmodulatorState *UNUSED(state), 
 
 static ALvoid ALmodulatorState_update(ALmodulatorState *state, ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALfloat gain, cw, a;
+    ALfloat cw, a;
 
     if(Slot->EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SINUSOID)
         state->Waveform = SINUSOID;
@@ -149,8 +149,7 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, ALCdevice *Device
     state->Filter.a[1] = -a;
     state->Filter.a[2] = 0.0f;
 
-    gain = 1.0f/Device->NumSpeakers * Slot->Gain;
-    SetGains(Device, gain, state->Gain);
+    ComputeAmbientGains(Device, Slot->Gain, state->Gain);
 }
 
 static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])

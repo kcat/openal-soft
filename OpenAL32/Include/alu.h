@@ -218,6 +218,13 @@ void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfl
 void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation, ALfloat ingain, ALfloat gains[MaxChannels]);
 
 /**
+ * ComputeAmbientGains
+ *
+ * Sets channel gains for ambient, omni-directional sounds.
+ */
+void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MaxChannels]);
+
+/**
  * ComputeBFormatGains
  *
  * Sets channel gains for a given (first-order) B-Format channel. The matrix is
@@ -225,20 +232,6 @@ void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation
  * coefficients.
  */
 void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MaxChannels]);
-
-/**
- * SetGains
- *
- * Helper to set the appropriate channels to the specified gain.
- */
-inline void SetGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MaxChannels])
-{
-    ALuint i;
-    for(i = 0;i < MaxChannels;i++)
-        gains[i] = 0.0f;
-    for(i = 0;i < device->NumSpeakers;i++)
-        gains[device->Speaker[i].ChanName] = ingain;
-}
 
 
 ALvoid CalcSourceParams(struct ALvoice *voice, const struct ALsource *source, const ALCcontext *ALContext);

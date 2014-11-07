@@ -481,11 +481,12 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         for(c = 0;c < num_channels;c++)
         {
             MixGains *gains = voice->Direct.Mix.Gains[c];
+            int idx;
 
             for(j = 0;j < MaxChannels;j++)
                 gains[j].Target = 0.0f;
-            if(GetChannelIdxByName(Device, chans[c].channel) != -1)
-                gains[chans[c].channel].Target = DryGain;
+            if((idx=GetChannelIdxByName(Device, chans[c].channel)) != -1)
+                gains[idx].Target = DryGain;
         }
         UpdateDryStepping(&voice->Direct, num_channels);
 
@@ -532,10 +533,11 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
             /* Special-case LFE */
             if(chans[c].channel == LFE)
             {
+                int idx;
                 for(i = 0;i < MaxChannels;i++)
                     gains[i].Target = 0.0f;
-                if(GetChannelIdxByName(Device, chans[c].channel) != -1)
-                    gains[chans[c].channel].Target = DryGain;
+                if((idx=GetChannelIdxByName(Device, chans[c].channel)) != -1)
+                    gains[idx].Target = DryGain;
                 continue;
             }
 
@@ -993,20 +995,23 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     else
     {
         MixGains *gains = voice->Direct.Mix.Gains[0];
+        ALfloat radius = ALSource->Radius;
         ALfloat Target[MaxChannels];
 
         /* Normalize the length, and compute panned gains. */
-        if(!(Distance > FLT_EPSILON))
-            Position[0] = Position[1] = Position[2] = 0.0f;
+        if(!(Distance > FLT_EPSILON) && !(radius > FLT_EPSILON))
+        {
+            const ALfloat front[3] = { 0.0f, 0.0f, -1.0f };
+            ComputeDirectionalGains(Device, front, DryGain, Target);
+        }
         else
         {
-            ALfloat radius = ALSource->Radius;
             ALfloat invlen = 1.0f/maxf(Distance, radius);
             Position[0] *= invlen;
             Position[1] *= invlen;
             Position[2] *= invlen;
+            ComputeDirectionalGains(Device, Position, DryGain, Target);
         }
-        ComputeDirectionalGains(Device, Position, DryGain, Target);
 
         for(j = 0;j < MaxChannels;j++)
             gains[j].Target = Target[j];
@@ -1083,28 +1088,17 @@ static inline ALubyte aluF2UB(ALfloat val)
 { return aluF2B(val)+128; }
 
 #define DECL_TEMPLATE(T, func)                                                \
-static void Write_##T(ALCdevice *device, ALvoid **buffer, ALuint SamplesToDo) \
+static void Write_##T(const ALfloatBUFFERSIZE *DryBuffer, ALvoid *buffer,     \
+                      ALuint SamplesToDo, ALuint numchans)                    \
 {                                                                             \
-    ALfloat (*restrict DryBuffer)[BUFFERSIZE] = device->DryBuffer;            \
-    const ALuint numchans = ChannelsFromDevFmt(device->FmtChans);             \
-    const enum Channel *chans = device->ChannelName;                          \
     ALuint i, j;                                                              \
-                                                                              \
-    for(j = 0;j < MaxChannels;j++)                                            \
+    for(j = 0;j < numchans;j++)                                               \
     {                                                                         \
-        const enum Channel c = chans[j];                                      \
-        const ALfloat *in;                                                    \
-        T *restrict out;                                                      \
-                                                                              \
-        if(c == InvalidChannel)                                               \
-            continue;                                                         \
-                                                                              \
-        in = DryBuffer[c];                                                    \
-        out = (T*)(*buffer) + j;                                              \
+        const ALfloat *in = DryBuffer[j];                                     \
+        T *restrict out = (T*)buffer + j;                                     \
         for(i = 0;i < SamplesToDo;i++)                                        \
             out[i*numchans] = func(in[i]);                                    \
     }                                                                         \
-    *buffer = (char*)(*buffer) + SamplesToDo*numchans*sizeof(T);              \
 }
 
 DECL_TEMPLATE(ALfloat, aluF2F)
@@ -1224,11 +1218,11 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             for(i = 0;i < SamplesToDo;i++)
             {
                 float samples[2];
-                samples[0] = device->DryBuffer[FrontLeft][i];
-                samples[1] = device->DryBuffer[FrontRight][i];
+                samples[0] = device->DryBuffer[0][i];
+                samples[1] = device->DryBuffer[1][i];
                 bs2b_cross_feed(device->Bs2b, samples);
-                device->DryBuffer[FrontLeft][i] = samples[0];
-                device->DryBuffer[FrontRight][i] = samples[1];
+                device->DryBuffer[0][i] = samples[0];
+                device->DryBuffer[1][i] = samples[1];
             }
         }
 
@@ -1237,25 +1231,32 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             switch(device->FmtType)
             {
                 case DevFmtByte:
-                    Write_ALbyte(device, &buffer, SamplesToDo);
+                    Write_ALbyte(device->DryBuffer, buffer, SamplesToDo, device->NumSpeakers);
+                    buffer = (char*)buffer + SamplesToDo*device->NumSpeakers*sizeof(ALbyte);
                     break;
                 case DevFmtUByte:
-                    Write_ALubyte(device, &buffer, SamplesToDo);
+                    Write_ALubyte(device->DryBuffer, buffer, SamplesToDo, device->NumSpeakers);
+                    buffer = (char*)buffer + SamplesToDo*device->NumSpeakers*sizeof(ALubyte);
                     break;
                 case DevFmtShort:
-                    Write_ALshort(device, &buffer, SamplesToDo);
+                    Write_ALshort(device->DryBuffer, buffer, SamplesToDo, device->NumSpeakers);
+                    buffer = (char*)buffer + SamplesToDo*device->NumSpeakers*sizeof(ALshort);
                     break;
                 case DevFmtUShort:
-                    Write_ALushort(device, &buffer, SamplesToDo);
+                    Write_ALushort(device->DryBuffer, buffer, SamplesToDo, device->NumSpeakers);
+                    buffer = (char*)buffer + SamplesToDo*device->NumSpeakers*sizeof(ALushort);
                     break;
                 case DevFmtInt:
-                    Write_ALint(device, &buffer, SamplesToDo);
+                    Write_ALint(device->DryBuffer, buffer, SamplesToDo, device->NumSpeakers);
+                    buffer = (char*)buffer + SamplesToDo*device->NumSpeakers*sizeof(ALint);
                     break;
                 case DevFmtUInt:
-                    Write_ALuint(device, &buffer, SamplesToDo);
+                    Write_ALuint(device->DryBuffer, buffer, SamplesToDo, device->NumSpeakers);
+                    buffer = (char*)buffer + SamplesToDo*device->NumSpeakers*sizeof(ALuint);
                     break;
                 case DevFmtFloat:
-                    Write_ALfloat(device, &buffer, SamplesToDo);
+                    Write_ALfloat(device->DryBuffer, buffer, SamplesToDo, device->NumSpeakers);
+                    buffer = (char*)buffer + SamplesToDo*device->NumSpeakers*sizeof(ALfloat);
                     break;
             }
         }

@@ -530,7 +530,7 @@ enum Channel {
 
     InvalidChannel
 };
-#define MAX_OUTPUT_CHANNELS  (8)
+
 
 /* Device formats */
 enum DevFmtType {
@@ -557,6 +557,7 @@ enum DevFmtChannels {
 
     DevFmtChannelsDefault = DevFmtStereo
 };
+#define MAX_OUTPUT_CHANNELS  (8)
 
 ALuint BytesFromDevFmt(enum DevFmtType type) DECL_CONST;
 ALuint ChannelsFromDevFmt(enum DevFmtChannels chans) DECL_CONST;

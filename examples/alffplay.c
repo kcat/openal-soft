@@ -595,9 +595,9 @@ static int audio_thread(void *userdata)
             movState->audio.format = AL_FORMAT_STEREO8;
         }
     }
-    else if((movState->audio.st->codec->sample_fmt == AV_SAMPLE_FMT_FLT ||
-             movState->audio.st->codec->sample_fmt == AV_SAMPLE_FMT_FLTP) &&
-            alIsExtensionPresent("AL_EXT_FLOAT32"))
+    if((movState->audio.st->codec->sample_fmt == AV_SAMPLE_FMT_FLT ||
+        movState->audio.st->codec->sample_fmt == AV_SAMPLE_FMT_FLTP) &&
+       alIsExtensionPresent("AL_EXT_FLOAT32"))
     {
         movState->audio.dst_sample_fmt = AV_SAMPLE_FMT_FLT;
         movState->audio.frame_size = 4;
@@ -631,7 +631,7 @@ static int audio_thread(void *userdata)
             movState->audio.format = AL_FORMAT_STEREO_FLOAT32;
         }
     }
-    else
+    if(movState->audio.format == AL_NONE)
     {
         movState->audio.dst_sample_fmt = AV_SAMPLE_FMT_S16;
         movState->audio.frame_size = 2;

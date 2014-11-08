@@ -118,14 +118,6 @@
 #  Specifying other values will result in using the default (linear).
 #resampler = linear
 
-## wide-stereo:
-#  Specifies that stereo sources are given a width of about 120 degrees on each
-#  channel, centering on -90 (left) and +90 (right), as opposed to being points
-#  placed at -30 (left) and +30 (right). This can be useful for surround-sound
-#  to give stereo sources a more encompassing sound. Note that the sound's
-#  overall volume will be slightly reduced to account for the extra output.
-#wide-stereo = false
-
 ## rt-prio:
 #  Sets real-time priority for the mixing thread. Not all drivers may use this
 #  (eg. PortAudio) as they already control the priority of the mixing thread.

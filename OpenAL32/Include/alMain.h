@@ -709,9 +709,6 @@ struct ALCdevice_struct
 // HRTF was requested by the app
 #define DEVICE_HRTF_REQUEST                      (1<<4)
 
-// Stereo sources cover 120-degree angles around +/-90
-#define DEVICE_WIDE_STEREO                       (1<<16)
-
 // Specifies if the DSP is paused at user request
 #define DEVICE_PAUSED                            (1<<30)
 

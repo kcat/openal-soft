@@ -1988,10 +1988,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         TRACE("BS2B disabled\n");
     }
 
-    device->Flags &= ~DEVICE_WIDE_STEREO;
-    if(device->Type != Loopback && !device->Hrtf && GetConfigValueBool(NULL, "wide-stereo", AL_FALSE))
-        device->Flags |= DEVICE_WIDE_STEREO;
-
     if(!device->Hrtf && (device->UpdateSize&3))
     {
         if((CPUCapFlags&CPU_CAP_SSE))

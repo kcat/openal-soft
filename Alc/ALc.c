@@ -1604,7 +1604,7 @@ void ALCcontext_DeferUpdates(ALCcontext *context)
             if(source->state != AL_PLAYING && source->state != AL_PAUSED)
             {
                 voice->Source = NULL;
-                continue;
+                goto next;
             }
 
             if(ATOMIC_EXCHANGE(ALenum, &source->NeedsUpdate, AL_FALSE) || UpdateSources)

@@ -33,7 +33,7 @@
 ## channels:
 #  Sets the output channel configuration. If left unspecified, one will try to
 #  be detected from the system, and defaulting to stereo. The available values
-#  are: mono, stereo, quad, surround51, surround61, surround71
+#  are: mono, stereo, quad, surround51, surround51rear, surround61, surround71
 #channels =
 
 ## sample-type:

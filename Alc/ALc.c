@@ -3320,55 +3320,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         if(i == COUNTOF(typelist))
             ERR("Unsupported sample-type: %s\n", fmt);
     }
-#define DEVICE_FORMAT_REQUEST (DEVICE_CHANNELS_REQUEST|DEVICE_SAMPLE_TYPE_REQUEST)
-    if((device->Flags&DEVICE_FORMAT_REQUEST) != DEVICE_FORMAT_REQUEST &&
-       ConfigValueStr(NULL, "format", &fmt))
-    {
-        static const struct {
-            const char name[32];
-            enum DevFmtChannels channels;
-            enum DevFmtType type;
-        } formats[] = {
-            { "AL_FORMAT_MONO32",   DevFmtMono,   DevFmtFloat },
-            { "AL_FORMAT_STEREO32", DevFmtStereo, DevFmtFloat },
-            { "AL_FORMAT_QUAD32",   DevFmtQuad,   DevFmtFloat },
-            { "AL_FORMAT_51CHN32",  DevFmtX51,    DevFmtFloat },
-            { "AL_FORMAT_61CHN32",  DevFmtX61,    DevFmtFloat },
-            { "AL_FORMAT_71CHN32",  DevFmtX71,    DevFmtFloat },
-
-            { "AL_FORMAT_MONO16",   DevFmtMono,   DevFmtShort },
-            { "AL_FORMAT_STEREO16", DevFmtStereo, DevFmtShort },
-            { "AL_FORMAT_QUAD16",   DevFmtQuad,   DevFmtShort },
-            { "AL_FORMAT_51CHN16",  DevFmtX51,    DevFmtShort },
-            { "AL_FORMAT_61CHN16",  DevFmtX61,    DevFmtShort },
-            { "AL_FORMAT_71CHN16",  DevFmtX71,    DevFmtShort },
-
-            { "AL_FORMAT_MONO8",   DevFmtMono,   DevFmtByte },
-            { "AL_FORMAT_STEREO8", DevFmtStereo, DevFmtByte },
-            { "AL_FORMAT_QUAD8",   DevFmtQuad,   DevFmtByte },
-            { "AL_FORMAT_51CHN8",  DevFmtX51,    DevFmtByte },
-            { "AL_FORMAT_61CHN8",  DevFmtX61,    DevFmtByte },
-            { "AL_FORMAT_71CHN8",  DevFmtX71,    DevFmtByte }
-        };
-        size_t i;
-
-        ERR("Option 'format' is deprecated, please use 'channels' and 'sample-type'\n");
-        for(i = 0;i < COUNTOF(formats);i++)
-        {
-            if(strcasecmp(fmt, formats[i].name) == 0)
-            {
-                if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
-                    device->FmtChans = formats[i].channels;
-                if(!(device->Flags&DEVICE_SAMPLE_TYPE_REQUEST))
-                    device->FmtType = formats[i].type;
-                device->Flags |= DEVICE_FORMAT_REQUEST;
-                break;
-            }
-        }
-        if(i == COUNTOF(formats))
-            ERR("Unsupported format: %s\n", fmt);
-    }
-#undef DEVICE_FORMAT_REQUEST
 
     if(ConfigValueUInt(NULL, "frequency", &device->Frequency))
     {

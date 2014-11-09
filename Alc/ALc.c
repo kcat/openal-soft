@@ -1997,7 +1997,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
 
     SetMixerFPUMode(&oldMode);
-    ALCdevice_Lock(device);
+    V0(device->Backend,lock)();
     context = ATOMIC_LOAD(&device->ContextList);
     while(context)
     {
@@ -2012,7 +2012,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(V(slot->EffectState,deviceUpdate)(device) == AL_FALSE)
             {
                 UnlockUIntMapRead(&context->EffectSlotMap);
-                ALCdevice_Unlock(device);
+                V0(device->Backend,unlock)();
                 RestoreFPUMode(&oldMode);
                 return ALC_INVALID_DEVICE;
             }
@@ -2067,14 +2067,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         if(V(slot->EffectState,deviceUpdate)(device) == AL_FALSE)
         {
-            ALCdevice_Unlock(device);
+            V0(device->Backend,unlock)();
             RestoreFPUMode(&oldMode);
             return ALC_INVALID_DEVICE;
         }
         ATOMIC_STORE(&slot->NeedsUpdate, AL_FALSE);
         V(slot->EffectState,update)(device, slot);
     }
-    ALCdevice_Unlock(device);
+    V0(device->Backend,unlock)();
     RestoreFPUMode(&oldMode);
 
     if(!(device->Flags&DEVICE_PAUSED))

@@ -30,6 +30,7 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "alu.h"
+#include "bool.h"
 
 
 void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
@@ -108,6 +109,188 @@ typedef struct ChannelMap {
     ChannelConfig Config;
 } ChannelMap;
 
+static bool LoadChannelSetup(ALCdevice *device)
+{
+    static const char *mono_names[1] = {
+        "front-center"
+    }, *stereo_names[2] = {
+        "front-left", "front-right"
+    }, *quad_names[4] = {
+        "front-left", "front-right",
+        "back-left", "back-right"
+    }, *surround51_names[6] = {
+        "front-left", "front-right",
+        "front-center", "lfe",
+        "side-left", "side-right"
+    }, *surround51rear_names[6] = {
+        "front-left", "front-right",
+        "front-center", "lfe",
+        "back-left", "back-right"
+    }, *surround61_names[7] = {
+        "front-left", "front-right",
+        "front-center", "lfe", "back-center",
+        "side-left", "side-right"
+    }, *surround71_names[8] = {
+        "front-left", "front-right",
+        "front-center", "lfe",
+        "back-left", "back-right",
+        "side-left", "side-right"
+    };
+    ChannelMap chanmap[MAX_OUTPUT_CHANNELS] = {};
+    const char **channames = NULL;
+    const char *layout = NULL;
+    size_t count = 0;
+    size_t i;
+
+    switch(device->FmtChans)
+    {
+        case DevFmtMono:
+            channames = mono_names;
+            layout = "mono";
+            count = 1;
+            break;
+        case DevFmtStereo:
+            channames = stereo_names;
+            layout = "stereo";
+            count = 2;
+            break;
+        case DevFmtQuad:
+            channames = quad_names;
+            layout = "quad";
+            count = 4;
+            break;
+        case DevFmtX51:
+            channames = surround51_names;
+            layout = "surround51";
+            count = 6;
+            break;
+        case DevFmtX51Rear:
+            channames = surround51rear_names;
+            layout = "surround51rear";
+            count = 6;
+            break;
+        case DevFmtX61:
+            channames = surround61_names;
+            layout = "surround61";
+            count = 7;
+            break;
+        case DevFmtX71:
+            channames = surround71_names;
+            layout = "surround71";
+            count = 8;
+            break;
+    }
+
+    if(!layout)
+        return false;
+    else
+    {
+        char name[32];
+        snprintf(name, sizeof(name), "%s/enable", layout);
+        if(!GetConfigValueBool("layouts", name, 0))
+            return false;
+    }
+
+    for(i = 0;i < count;i++)
+    {
+        const char *channame = channames[i];
+        char chanlayout[32];
+        const char *value;
+        int props;
+        size_t j;
+
+        snprintf(chanlayout, sizeof(chanlayout), "%s/%s", layout, channame);
+        if(!ConfigValueStr("layouts", chanlayout, &value))
+        {
+            ERR("Missing channel %s\n", channame);
+            return false;
+        }
+        props = sscanf(value, " %f %f ; %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f ; %f %f %f %f",
+            &chanmap[i].Config.Angle, &chanmap[i].Config.Elevation,
+            &chanmap[i].Config.HOACoeff[0], &chanmap[i].Config.HOACoeff[1], &chanmap[i].Config.HOACoeff[2],
+            &chanmap[i].Config.HOACoeff[3], &chanmap[i].Config.HOACoeff[4], &chanmap[i].Config.HOACoeff[5],
+            &chanmap[i].Config.HOACoeff[6], &chanmap[i].Config.HOACoeff[7], &chanmap[i].Config.HOACoeff[8],
+            &chanmap[i].Config.HOACoeff[9], &chanmap[i].Config.HOACoeff[10], &chanmap[i].Config.HOACoeff[11],
+            &chanmap[i].Config.HOACoeff[12], &chanmap[i].Config.HOACoeff[13], &chanmap[i].Config.HOACoeff[14],
+            &chanmap[i].Config.HOACoeff[15], &chanmap[i].Config.FOACoeff[0], &chanmap[i].Config.FOACoeff[1],
+            &chanmap[i].Config.FOACoeff[2], &chanmap[i].Config.FOACoeff[3]);
+        if(props == 0)
+        {
+            ERR("Failed to parse channel "SZFMT" properties\n", i);
+            return false;
+        }
+
+        if(strcmp(channame, "front-left") == 0)
+            chanmap[i].ChanName = FrontLeft;
+        else if(strcmp(channame, "front-right") == 0)
+            chanmap[i].ChanName = FrontRight;
+        else if(strcmp(channame, "front-center") == 0)
+            chanmap[i].ChanName = FrontCenter;
+        else if(strcmp(channame, "lfe") == 0)
+            chanmap[i].ChanName = LFE;
+        else if(strcmp(channame, "back-left") == 0)
+            chanmap[i].ChanName = BackLeft;
+        else if(strcmp(channame, "back-right") == 0)
+            chanmap[i].ChanName = BackRight;
+        else if(strcmp(channame, "back-center") == 0)
+            chanmap[i].ChanName = BackCenter;
+        else if(strcmp(channame, "side-left") == 0)
+            chanmap[i].ChanName = SideLeft;
+        else if(strcmp(channame, "side-right") == 0)
+            chanmap[i].ChanName = SideRight;
+
+        if(chanmap[i].ChanName == LFE && props < 22)
+        {
+            if(props > 1 || chanmap[i].Config.Angle != 0.0f)
+                WARN("Unexpected elements for LFE channel\n");
+            chanmap[i].Config.Angle = 0.0f;
+            chanmap[i].Config.Elevation = 0.0f;
+            for(j = 0;j < MAX_AMBI_COEFFS;j++)
+                chanmap[i].Config.HOACoeff[j] = 0.0f;
+            for(j = 0;j < 4;j++)
+                chanmap[i].Config.FOACoeff[j] = 0.0f;
+        }
+        else if(props < 22)
+        {
+            ERR("Failed to parse channel %s elements (expected 22, got %d\n", channame, props);
+            return false;
+        }
+        else
+        {
+            if(!(chanmap[i].Config.Angle >= -180.0f && chanmap[i].Config.Angle <= 180.0f))
+            {
+                ERR("Channel %s angle is out of range (%f not within -180...+180 degrees)\n", channame, chanmap[i].Config.Angle);
+                return false;
+            }
+            chanmap[i].Config.Angle = DEG2RAD(chanmap[i].Config.Angle);
+
+            if(!(chanmap[i].Config.Elevation >= -180.0f && chanmap[i].Config.Elevation <= 180.0f))
+            {
+                ERR("Channel %s elevation is out of range (%f not within -180...+180 degrees)\n", channame, chanmap[i].Config.Angle);
+                return false;
+            }
+            chanmap[i].Config.Elevation = DEG2RAD(chanmap[i].Config.Elevation);
+        }
+    }
+
+    for(i = 0;i < MAX_OUTPUT_CHANNELS && device->ChannelName[i] != InvalidChannel;i++)
+    {
+        size_t j;
+        for(j = 0;j < count;j++)
+        {
+            if(device->ChannelName[i] == chanmap[j].ChanName)
+            {
+                device->Channel[i] = chanmap[j].Config;
+                break;
+            }
+        }
+        if(j == count)
+            ERR("Failed to match channel "SZFMT" (label %d) in config\n", i, device->ChannelName[i]);
+    }
+    device->NumChannels = i;
+    return true;
+}
+
 ALvoid aluInitPanning(ALCdevice *device)
 {
     static const ChannelMap MonoCfg[1] = {
@@ -158,6 +341,9 @@ ALvoid aluInitPanning(ALCdevice *device)
 
     memset(device->Channel, 0, sizeof(device->Channel));
     device->NumChannels = 0;
+
+    if(LoadChannelSetup(device))
+        return;
 
     switch(device->FmtChans)
     {

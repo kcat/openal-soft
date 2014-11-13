@@ -109,6 +109,37 @@ typedef struct ChannelMap {
     ChannelConfig Config;
 } ChannelMap;
 
+static void SetChannelMap(ALCdevice *device, const ChannelMap *chanmap, size_t count)
+{
+    size_t i, j;
+
+    for(i = 0;i < MAX_OUTPUT_CHANNELS && device->ChannelName[i] != InvalidChannel;i++)
+    {
+        if(device->ChannelName[i] == LFE)
+        {
+            device->Channel[i].Angle = 0.0f;
+            device->Channel[i].Elevation = 0.0f;
+            for(j = 0;j < MAX_AMBI_COEFFS;j++)
+                device->Channel[i].HOACoeff[j] = 0.0f;
+            for(j = 0;j < 4;j++)
+                device->Channel[i].FOACoeff[j] = 0.0f;
+            continue;
+        }
+
+        for(j = 0;j < count;j++)
+        {
+            if(device->ChannelName[i] == chanmap[j].ChanName)
+            {
+                device->Channel[i] = chanmap[j].Config;
+                break;
+            }
+        }
+        if(j == count)
+            ERR("Failed to match channel "SZFMT" (label %d) in config\n", i, device->ChannelName[i]);
+    }
+    device->NumChannels = i;
+}
+
 static bool LoadChannelSetup(ALCdevice *device)
 {
     static const char *mono_names[1] = {
@@ -118,25 +149,25 @@ static bool LoadChannelSetup(ALCdevice *device)
     }, *quad_names[4] = {
         "front-left", "front-right",
         "back-left", "back-right"
-    }, *surround51_names[6] = {
+    }, *surround51_names[5] = {
         "front-left", "front-right",
-        "front-center", "lfe",
+        "front-center",
         "side-left", "side-right"
-    }, *surround51rear_names[6] = {
+    }, *surround51rear_names[5] = {
         "front-left", "front-right",
-        "front-center", "lfe",
+        "front-center",
         "back-left", "back-right"
-    }, *surround61_names[7] = {
+    }, *surround61_names[6] = {
         "front-left", "front-right",
-        "front-center", "lfe", "back-center",
+        "front-center", "back-center",
         "side-left", "side-right"
-    }, *surround71_names[8] = {
+    }, *surround71_names[7] = {
         "front-left", "front-right",
-        "front-center", "lfe",
+        "front-center",
         "back-left", "back-right",
         "side-left", "side-right"
     };
-    ChannelMap chanmap[MAX_OUTPUT_CHANNELS] = {};
+    ChannelMap chanmap[MAX_OUTPUT_CHANNELS];
     const char **channames = NULL;
     const char *layout = NULL;
     size_t count = 0;
@@ -145,39 +176,39 @@ static bool LoadChannelSetup(ALCdevice *device)
     switch(device->FmtChans)
     {
         case DevFmtMono:
-            channames = mono_names;
             layout = "mono";
-            count = 1;
+            channames = mono_names;
+            count = COUNTOF(mono_names);
             break;
         case DevFmtStereo:
-            channames = stereo_names;
             layout = "stereo";
-            count = 2;
+            channames = stereo_names;
+            count = COUNTOF(stereo_names);
             break;
         case DevFmtQuad:
-            channames = quad_names;
             layout = "quad";
-            count = 4;
+            channames = quad_names;
+            count = COUNTOF(quad_names);
             break;
         case DevFmtX51:
-            channames = surround51_names;
             layout = "surround51";
-            count = 6;
+            channames = surround51_names;
+            count = COUNTOF(surround51_names);
             break;
         case DevFmtX51Rear:
-            channames = surround51rear_names;
             layout = "surround51rear";
-            count = 6;
+            channames = surround51rear_names;
+            count = COUNTOF(surround51rear_names);
             break;
         case DevFmtX61:
-            channames = surround61_names;
             layout = "surround61";
-            count = 7;
+            channames = surround61_names;
+            count = COUNTOF(surround61_names);
             break;
         case DevFmtX71:
-            channames = surround71_names;
             layout = "surround71";
-            count = 8;
+            channames = surround71_names;
+            count = COUNTOF(surround71_names);
             break;
     }
 
@@ -197,7 +228,6 @@ static bool LoadChannelSetup(ALCdevice *device)
         char chanlayout[32];
         const char *value;
         int props;
-        size_t j;
 
         snprintf(chanlayout, sizeof(chanlayout), "%s/%s", layout, channame);
         if(!ConfigValueStr("layouts", chanlayout, &value))
@@ -226,8 +256,6 @@ static bool LoadChannelSetup(ALCdevice *device)
             chanmap[i].ChanName = FrontRight;
         else if(strcmp(channame, "front-center") == 0)
             chanmap[i].ChanName = FrontCenter;
-        else if(strcmp(channame, "lfe") == 0)
-            chanmap[i].ChanName = LFE;
         else if(strcmp(channame, "back-left") == 0)
             chanmap[i].ChanName = BackLeft;
         else if(strcmp(channame, "back-right") == 0)
@@ -239,18 +267,7 @@ static bool LoadChannelSetup(ALCdevice *device)
         else if(strcmp(channame, "side-right") == 0)
             chanmap[i].ChanName = SideRight;
 
-        if(chanmap[i].ChanName == LFE && props < 22)
-        {
-            if(props > 1 || chanmap[i].Config.Angle != 0.0f)
-                WARN("Unexpected elements for LFE channel\n");
-            chanmap[i].Config.Angle = 0.0f;
-            chanmap[i].Config.Elevation = 0.0f;
-            for(j = 0;j < MAX_AMBI_COEFFS;j++)
-                chanmap[i].Config.HOACoeff[j] = 0.0f;
-            for(j = 0;j < 4;j++)
-                chanmap[i].Config.FOACoeff[j] = 0.0f;
-        }
-        else if(props < 22)
+        if(props < 22)
         {
             ERR("Failed to parse channel %s elements (expected 22, got %d\n", channame, props);
             return false;
@@ -272,64 +289,45 @@ static bool LoadChannelSetup(ALCdevice *device)
             chanmap[i].Config.Elevation = DEG2RAD(chanmap[i].Config.Elevation);
         }
     }
-
-    for(i = 0;i < MAX_OUTPUT_CHANNELS && device->ChannelName[i] != InvalidChannel;i++)
-    {
-        size_t j;
-        for(j = 0;j < count;j++)
-        {
-            if(device->ChannelName[i] == chanmap[j].ChanName)
-            {
-                device->Channel[i] = chanmap[j].Config;
-                break;
-            }
-        }
-        if(j == count)
-            ERR("Failed to match channel "SZFMT" (label %d) in config\n", i, device->ChannelName[i]);
-    }
-    device->NumChannels = i;
+    SetChannelMap(device, chanmap, count);
     return true;
 }
 
 ALvoid aluInitPanning(ALCdevice *device)
 {
     static const ChannelMap MonoCfg[1] = {
-        { FrontCenter, { DEG2RAD(0.0f), DEG2RAD(0.0f), { 1.4142f }, { 1.4142f } } },
+        { FrontCenter, { DEG2RAD(   0.0f), DEG2RAD(0.0f), { 1.4142f }, { 1.4142f } } },
     }, StereoCfg[2] = {
-        { FrontLeft,  { DEG2RAD(-90.0f), DEG2RAD(0.0f), { 0.7071f, 0.0f,  0.5f, 0.0f }, { 0.7071f, 0.0f,  0.5f, 0.0f } } },
-        { FrontRight, { DEG2RAD( 90.0f), DEG2RAD(0.0f), { 0.7071f, 0.0f, -0.5f, 0.0f }, { 0.7071f, 0.0f, -0.5f, 0.0f } } },
+        { FrontLeft,   { DEG2RAD( -90.0f), DEG2RAD(0.0f), { 0.7071f, 0.0f,  0.5f, 0.0f }, { 0.7071f, 0.0f,  0.5f, 0.0f } } },
+        { FrontRight,  { DEG2RAD(  90.0f), DEG2RAD(0.0f), { 0.7071f, 0.0f, -0.5f, 0.0f }, { 0.7071f, 0.0f, -0.5f, 0.0f } } },
     }, QuadCfg[4] = {
-        { FrontLeft,  { DEG2RAD( -45.0f), DEG2RAD(0.0f), { 0.353558f,  0.306181f,  0.306192f, 0.0f, 0.0f, 0.0f, 0.0f, 0.000000f,  0.117183f }, { 0.353553f,  0.250000f,  0.250000f, 0.0f  } } },
-        { FrontRight, { DEG2RAD(  45.0f), DEG2RAD(0.0f), { 0.353543f,  0.306181f, -0.306192f, 0.0f, 0.0f, 0.0f, 0.0f, 0.000000f, -0.117193f }, { 0.353553f,  0.250000f, -0.250000f, 0.0f  } } },
-        { BackLeft,   { DEG2RAD(-135.0f), DEG2RAD(0.0f), { 0.353543f, -0.306192f,  0.306181f, 0.0f, 0.0f, 0.0f, 0.0f, 0.000000f, -0.117193f }, { 0.353553f, -0.250000f,  0.250000f, 0.0f  } } },
-        { BackRight,  { DEG2RAD( 135.0f), DEG2RAD(0.0f), { 0.353558f, -0.306192f, -0.306181f, 0.0f, 0.0f, 0.0f, 0.0f, 0.000000f,  0.117183f }, { 0.353553f, -0.250000f, -0.250000f, 0.0f  } } },
-    }, X51SideCfg[6] = {
+        { FrontLeft,   { DEG2RAD( -45.0f), DEG2RAD(0.0f), { 0.353558f,  0.306181f,  0.306192f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.117183f }, { 0.353553f,  0.250000f,  0.250000f, 0.0f  } } },
+        { FrontRight,  { DEG2RAD(  45.0f), DEG2RAD(0.0f), { 0.353543f,  0.306181f, -0.306192f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.117193f }, { 0.353553f,  0.250000f, -0.250000f, 0.0f  } } },
+        { BackLeft,    { DEG2RAD(-135.0f), DEG2RAD(0.0f), { 0.353543f, -0.306192f,  0.306181f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.117193f }, { 0.353553f, -0.250000f,  0.250000f, 0.0f  } } },
+        { BackRight,   { DEG2RAD( 135.0f), DEG2RAD(0.0f), { 0.353558f, -0.306192f, -0.306181f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.117183f }, { 0.353553f, -0.250000f, -0.250000f, 0.0f  } } },
+    }, X51SideCfg[5] = {
         { FrontLeft,   { DEG2RAD( -30.0f), DEG2RAD(0.0f), { 0.208954f,  0.212846f,  0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017738f,  0.204014f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f,  0.047490f }, { 0.208954f,  0.162905f,  0.182425f, 0.0f } } },
         { FrontRight,  { DEG2RAD(  30.0f), DEG2RAD(0.0f), { 0.208954f,  0.212846f, -0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017738f, -0.204014f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f, -0.047490f }, { 0.208954f,  0.162905f, -0.182425f, 0.0f } } },
         { FrontCenter, { DEG2RAD(   0.0f), DEG2RAD(0.0f), { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f }, { 0.109403f,  0.137375f,  0.000000f, 0.0f } } },
-        { LFE,         { 0.0f, 0.0f, { 0.0f }, { 0.0f } } },
         { SideLeft,    { DEG2RAD(-110.0f), DEG2RAD(0.0f), { 0.470936f, -0.369626f,  0.349386f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031375f, -0.058144f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f, -0.043968f }, { 0.470934f, -0.282903f,  0.267406f, 0.0f } } },
         { SideRight,   { DEG2RAD( 110.0f), DEG2RAD(0.0f), { 0.470936f, -0.369626f, -0.349386f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031375f,  0.058144f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f,  0.043968f }, { 0.470934f, -0.282903f, -0.267406f, 0.0f } } },
-    }, X51RearCfg[6] = {
+    }, X51RearCfg[5] = {
         { FrontLeft,   { DEG2RAD( -30.0f), DEG2RAD(0.0f), { 0.208954f,  0.212846f,  0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017738f,  0.204014f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f,  0.047490f }, { 0.208954f,  0.162905f,  0.182425f, 0.0f } } },
         { FrontRight,  { DEG2RAD(  30.0f), DEG2RAD(0.0f), { 0.208954f,  0.212846f, -0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017738f, -0.204014f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f, -0.047490f }, { 0.208954f,  0.162905f, -0.182425f, 0.0f } } },
         { FrontCenter, { DEG2RAD(   0.0f), DEG2RAD(0.0f), { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f }, { 0.109403f,  0.137375f,  0.000000f, 0.0f } } },
-        { LFE,         { 0.0f, 0.0f, { 0.0f }, { 0.0f } } },
         { BackLeft,    { DEG2RAD(-110.0f), DEG2RAD(0.0f), { 0.470936f, -0.369626f,  0.349386f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031375f, -0.058144f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f, -0.043968f }, { 0.470934f, -0.282903f,  0.267406f, 0.0f } } },
         { BackRight,   { DEG2RAD( 110.0f), DEG2RAD(0.0f), { 0.470936f, -0.369626f, -0.349386f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031375f,  0.058144f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f,  0.043968f }, { 0.470934f, -0.282903f, -0.267406f, 0.0f } } },
-    }, X61Cfg[7] = {
-        { FrontLeft,   { DEG2RAD(-30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f }, { 0.167065f,  0.153519f,  0.132175f, 0.0f } } },
-        { FrontRight,  { DEG2RAD( 30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f, -0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068910f }, { 0.167065f,  0.153519f, -0.132175f, 0.0f } } },
-        { FrontCenter, { DEG2RAD(  0.0f), DEG2RAD(0.0f), { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f }, { 0.109403f,  0.137375f,  0.000000f, 0.0f } } },
-        { LFE,         { 0.0f, 0.0f, { 0.0f }, { 0.0f } } },
-        { BackCenter,  { DEG2RAD(180.0f), DEG2RAD(0.0f), { 0.353556f, -0.461940f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.165723f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.000005f }, { 0.353556f, -0.353554f,  0.000000f, 0.0f } } },
-        { SideLeft,    { DEG2RAD(-90.0f), DEG2RAD(0.0f), { 0.289151f, -0.081301f,  0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f, -0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f, -0.032897f }, { 0.289151f, -0.062225f,  0.307136f, 0.0f } } },
-        { SideRight,   { DEG2RAD( 90.0f), DEG2RAD(0.0f), { 0.289151f, -0.081301f, -0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f,  0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f,  0.032897f }, { 0.289151f, -0.062225f, -0.307136f, 0.0f } } },
-    }, X71Cfg[8] = {
+    }, X61Cfg[6] = {
+        { FrontLeft,   { DEG2RAD( -30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f }, { 0.167065f,  0.153519f,  0.132175f, 0.0f } } },
+        { FrontRight,  { DEG2RAD(  30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f, -0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068910f }, { 0.167065f,  0.153519f, -0.132175f, 0.0f } } },
+        { FrontCenter, { DEG2RAD(   0.0f), DEG2RAD(0.0f), { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f, -0.000001f }, { 0.109403f,  0.137375f,  0.000000f, 0.0f } } },
+        { BackCenter,  { DEG2RAD( 180.0f), DEG2RAD(0.0f), { 0.353556f, -0.461940f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.165723f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.000005f }, { 0.353556f, -0.353554f,  0.000000f, 0.0f } } },
+        { SideLeft,    { DEG2RAD( -90.0f), DEG2RAD(0.0f), { 0.289151f, -0.081301f,  0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f, -0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f, -0.032897f }, { 0.289151f, -0.062225f,  0.307136f, 0.0f } } },
+        { SideRight,   { DEG2RAD(  90.0f), DEG2RAD(0.0f), { 0.289151f, -0.081301f, -0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f,  0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f,  0.032897f }, { 0.289151f, -0.062225f, -0.307136f, 0.0f } } },
+    }, X71Cfg[7] = {
         { FrontLeft,   { DEG2RAD( -30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f }, { 0.167065f,  0.153519f,  0.132175f, 0.0f } } },
         { FrontRight,  { DEG2RAD(  30.0f), DEG2RAD(0.0f), { 0.167065f,  0.200583f, -0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068910f }, { 0.167065f,  0.153519f, -0.132175f, 0.0f } } },
         { FrontCenter, { DEG2RAD(   0.0f), DEG2RAD(0.0f), { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f,  0.000000f }, { 0.109403f,  0.137375f,  0.000000f, 0.0f } } },
-        { LFE,         { 0.0f, 0.0f, { 0.0f }, { 0.0f } } },
         { BackLeft,    { DEG2RAD(-150.0f), DEG2RAD(0.0f), { 0.224752f, -0.295009f,  0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f, -0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.065799f }, { 0.224752f, -0.225790f,  0.130361f, 0.0f } } },
         { BackRight,   { DEG2RAD( 150.0f), DEG2RAD(0.0f), { 0.224752f, -0.295009f, -0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f,  0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065799f }, { 0.224752f, -0.225790f, -0.130361f, 0.0f } } },
         { SideLeft,    { DEG2RAD( -90.0f), DEG2RAD(0.0f), { 0.224739f,  0.000002f,  0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065795f }, { 0.224739f,  0.000000f,  0.260717f, 0.0f } } },
@@ -337,7 +335,6 @@ ALvoid aluInitPanning(ALCdevice *device)
     };
     const ChannelMap *chanmap = NULL;
     size_t count = 0;
-    ALuint i, j;
 
     memset(device->Channel, 0, sizeof(device->Channel));
     device->NumChannels = 0;
@@ -382,18 +379,6 @@ ALvoid aluInitPanning(ALCdevice *device)
             chanmap = X71Cfg;
             break;
     }
-    for(i = 0;i < MAX_OUTPUT_CHANNELS && device->ChannelName[i] != InvalidChannel;i++)
-    {
-        for(j = 0;j < count;j++)
-        {
-            if(device->ChannelName[i] == chanmap[j].ChanName)
-            {
-                device->Channel[i] = chanmap[j].Config;
-                break;
-            }
-        }
-        if(j == count)
-            ERR("Failed to match channel %u (label %d) in config\n", i, device->ChannelName[i]);
-    }
-    device->NumChannels = i;
+
+    SetChannelMap(device, chanmap, count);
 }

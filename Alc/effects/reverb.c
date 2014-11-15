@@ -1033,31 +1033,50 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
 {
     ALfloat earlyPan[3] = { ReflectionsPan[0], ReflectionsPan[1], ReflectionsPan[2] };
     ALfloat latePan[3] = { LateReverbPan[0], LateReverbPan[1], LateReverbPan[2] };
+    ALfloat AmbientGains[MAX_OUTPUT_CHANNELS];
+    ALfloat DirGains[MAX_OUTPUT_CHANNELS];
     ALfloat length, invlen;
+    ALuint i;
+
+    ComputeAmbientGains(Device, 1.0f, AmbientGains);
 
     length = earlyPan[0]*earlyPan[0] + earlyPan[1]*earlyPan[1] + earlyPan[2]*earlyPan[2];
     if(!(length > FLT_EPSILON))
-        earlyPan[0] = earlyPan[1] = earlyPan[2] = 0.0f;
+    {
+        for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+            State->Early.PanGain[i] = AmbientGains[i] * Gain;
+    }
     else
     {
         invlen = 1.0f / sqrtf(length);
         earlyPan[0] *= invlen;
         earlyPan[1] *= invlen;
         earlyPan[2] *= invlen;
+
+        length = minf(length, 1.0f);
+        ComputeDirectionalGains(Device, earlyPan, 1.0f, DirGains);
+        for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+            State->Early.PanGain[i] = lerp(AmbientGains[i], DirGains[i], length) * Gain;
     }
-    ComputeDirectionalGains(Device, earlyPan, Gain, State->Early.PanGain);
 
     length = latePan[0]*latePan[0] + latePan[1]*latePan[1] + latePan[2]*latePan[2];
     if(!(length > FLT_EPSILON))
-        latePan[0] = latePan[1] = latePan[2] = 0.0f;
+    {
+        for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+            State->Late.PanGain[i] = AmbientGains[i] * Gain;
+    }
     else
     {
         invlen = 1.0f / sqrtf(length);
         latePan[0] *= invlen;
         latePan[1] *= invlen;
         latePan[2] *= invlen;
+
+        length = minf(length, 1.0f);
+        ComputeDirectionalGains(Device, latePan, 1.0f, DirGains);
+        for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+            State->Late.PanGain[i] = lerp(AmbientGains[i], DirGains[i], length) * Gain;
     }
-    ComputeDirectionalGains(Device, latePan, Gain, State->Late.PanGain);
 }
 
 static ALvoid ALreverbState_update(ALreverbState *State, ALCdevice *Device, const ALeffectslot *Slot)

@@ -86,7 +86,14 @@ void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
         gains[i] = 0.0f;
     for(i = 0;i < device->NumChannels;i++)
-        gains[i] = device->Channel[i].HOACoeff[0] * ingain;
+    {
+        // The W coefficients are based on a mathematical average of the
+        // output, scaled by sqrt(2) to compensate for FuMa-style Ambisonics
+        // scaling the W channel input by sqrt(0.5). The square root of the
+        // base average provides for a more perceptual average volume, better
+        // suited to non-directional gains.
+        gains[i] = sqrtf(device->Channel[i].HOACoeff[0]/1.4142f)*1.4142f * ingain;
+    }
 }
 
 void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])

@@ -104,6 +104,25 @@ void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat 
 }
 
 
+static inline const char *GetLabelFromChannel(enum Channel channel)
+{
+    switch(channel)
+    {
+        case FrontLeft: return "front-left";
+        case FrontRight: return "front-right";
+        case FrontCenter: return "front-center";
+        case LFE: return "lfe";
+        case BackLeft: return "back-left";
+        case BackRight: return "back-right";
+        case BackCenter: return "back-center";
+        case SideLeft: return "side-left";
+        case SideRight: return "side-right";
+        case InvalidChannel: break;
+    }
+    return "(unknown)";
+}
+
+
 typedef struct ChannelMap {
     enum Channel ChanName;
     ChannelConfig Config;
@@ -135,40 +154,37 @@ static void SetChannelMap(ALCdevice *device, const ChannelMap *chanmap, size_t c
             }
         }
         if(j == count)
-            ERR("Failed to match channel "SZFMT" (label %d) in config\n", i, device->ChannelName[i]);
+            ERR("Failed to match %s channel ("SZFMT") in config\n", GetLabelFromChannel(device->ChannelName[i]), i);
     }
     device->NumChannels = i;
 }
 
 static bool LoadChannelSetup(ALCdevice *device)
 {
-    static const char *mono_names[1] = {
-        "front-center"
-    }, *stereo_names[2] = {
-        "front-left", "front-right"
-    }, *quad_names[4] = {
-        "front-left", "front-right",
-        "back-left", "back-right"
-    }, *surround51_names[5] = {
-        "front-left", "front-right",
-        "front-center",
-        "side-left", "side-right"
-    }, *surround51rear_names[5] = {
-        "front-left", "front-right",
-        "front-center",
-        "back-left", "back-right"
-    }, *surround61_names[6] = {
-        "front-left", "front-right",
-        "front-center", "back-center",
-        "side-left", "side-right"
-    }, *surround71_names[7] = {
-        "front-left", "front-right",
-        "front-center",
-        "back-left", "back-right",
-        "side-left", "side-right"
+    static const enum Channel mono_chans[1] = {
+        FrontCenter
+    }, stereo_chans[2] = {
+        FrontLeft, FrontRight
+    }, quad_chans[4] = {
+        FrontLeft, FrontRight,
+        BackLeft, BackRight
+    }, surround51_chans[5] = {
+        FrontLeft, FrontRight, FrontCenter,
+        SideLeft, SideRight
+    }, surround51rear_chans[5] = {
+        FrontLeft, FrontRight, FrontCenter,
+        BackLeft, BackRight
+    }, surround61_chans[6] = {
+        FrontLeft, FrontRight,
+        FrontCenter, BackCenter,
+        SideLeft, SideRight
+    }, surround71_chans[7] = {
+        FrontLeft, FrontRight, FrontCenter,
+        BackLeft, BackRight,
+        SideLeft, SideRight
     };
     ChannelMap chanmap[MAX_OUTPUT_CHANNELS];
-    const char **channames = NULL;
+    const enum Channel *channels = NULL;
     const char *layout = NULL;
     size_t count = 0;
     size_t i;
@@ -177,38 +193,38 @@ static bool LoadChannelSetup(ALCdevice *device)
     {
         case DevFmtMono:
             layout = "mono";
-            channames = mono_names;
-            count = COUNTOF(mono_names);
+            channels = mono_chans;
+            count = COUNTOF(mono_chans);
             break;
         case DevFmtStereo:
             layout = "stereo";
-            channames = stereo_names;
-            count = COUNTOF(stereo_names);
+            channels = stereo_chans;
+            count = COUNTOF(stereo_chans);
             break;
         case DevFmtQuad:
             layout = "quad";
-            channames = quad_names;
-            count = COUNTOF(quad_names);
+            channels = quad_chans;
+            count = COUNTOF(quad_chans);
             break;
         case DevFmtX51:
             layout = "surround51";
-            channames = surround51_names;
-            count = COUNTOF(surround51_names);
+            channels = surround51_chans;
+            count = COUNTOF(surround51_chans);
             break;
         case DevFmtX51Rear:
             layout = "surround51rear";
-            channames = surround51rear_names;
-            count = COUNTOF(surround51rear_names);
+            channels = surround51rear_chans;
+            count = COUNTOF(surround51rear_chans);
             break;
         case DevFmtX61:
             layout = "surround61";
-            channames = surround61_names;
-            count = COUNTOF(surround61_names);
+            channels = surround61_chans;
+            count = COUNTOF(surround61_chans);
             break;
         case DevFmtX71:
             layout = "surround71";
-            channames = surround71_names;
-            count = COUNTOF(surround71_names);
+            channels = surround71_chans;
+            count = COUNTOF(surround71_chans);
             break;
     }
 
@@ -224,10 +240,13 @@ static bool LoadChannelSetup(ALCdevice *device)
 
     for(i = 0;i < count;i++)
     {
-        const char *channame = channames[i];
+        const char *channame;
         char chanlayout[32];
         const char *value;
         int props;
+
+        chanmap[i].ChanName = channels[i];
+        channame = GetLabelFromChannel(channels[i]);
 
         snprintf(chanlayout, sizeof(chanlayout), "%s/%s", layout, channame);
         if(!ConfigValueStr("layouts", chanlayout, &value))
@@ -246,44 +265,27 @@ static bool LoadChannelSetup(ALCdevice *device)
             &chanmap[i].Config.FOACoeff[2], &chanmap[i].Config.FOACoeff[3]);
         if(props == 0)
         {
-            ERR("Failed to parse channel "SZFMT" properties\n", i);
+            ERR("Failed to parse %s channel's properties\n", channame);
             return false;
         }
 
-        if(strcmp(channame, "front-left") == 0)
-            chanmap[i].ChanName = FrontLeft;
-        else if(strcmp(channame, "front-right") == 0)
-            chanmap[i].ChanName = FrontRight;
-        else if(strcmp(channame, "front-center") == 0)
-            chanmap[i].ChanName = FrontCenter;
-        else if(strcmp(channame, "back-left") == 0)
-            chanmap[i].ChanName = BackLeft;
-        else if(strcmp(channame, "back-right") == 0)
-            chanmap[i].ChanName = BackRight;
-        else if(strcmp(channame, "back-center") == 0)
-            chanmap[i].ChanName = BackCenter;
-        else if(strcmp(channame, "side-left") == 0)
-            chanmap[i].ChanName = SideLeft;
-        else if(strcmp(channame, "side-right") == 0)
-            chanmap[i].ChanName = SideRight;
-
         if(props < 22)
         {
-            ERR("Failed to parse channel %s elements (expected 22, got %d\n", channame, props);
+            ERR("Failed to parse %s channel's elements (expected 22, got %d)\n", channame, props);
             return false;
         }
         else
         {
             if(!(chanmap[i].Config.Angle >= -180.0f && chanmap[i].Config.Angle <= 180.0f))
             {
-                ERR("Channel %s angle is out of range (%f not within -180...+180 degrees)\n", channame, chanmap[i].Config.Angle);
+                ERR("%s channel angle is out of range (%f not within -180...+180 degrees)\n", channame, chanmap[i].Config.Angle);
                 return false;
             }
             chanmap[i].Config.Angle = DEG2RAD(chanmap[i].Config.Angle);
 
             if(!(chanmap[i].Config.Elevation >= -180.0f && chanmap[i].Config.Elevation <= 180.0f))
             {
-                ERR("Channel %s elevation is out of range (%f not within -180...+180 degrees)\n", channame, chanmap[i].Config.Angle);
+                ERR("%s channel elevation is out of range (%f not within -180...+180 degrees)\n", channame, chanmap[i].Config.Elevation);
                 return false;
             }
             chanmap[i].Config.Elevation = DEG2RAD(chanmap[i].Config.Elevation);

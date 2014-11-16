@@ -111,7 +111,7 @@ void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat 
 }
 
 
-static inline const char *GetLabelFromChannel(enum Channel channel)
+DECL_CONST static inline const char *GetLabelFromChannel(enum Channel channel)
 {
     switch(channel)
     {

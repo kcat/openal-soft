@@ -662,7 +662,6 @@ static void ALCpulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const
 {
     ALCpulsePlayback *self = pdata;
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
-    char chanmap_str[256] = "";
     const struct {
         const char *str;
         enum DevFmtChannels chans;
@@ -701,13 +700,18 @@ static void ALCpulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const
 #endif
             )
         {
-            device->FmtChans = chanmaps[i].chans;
-            return;
+            if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
+                device->FmtChans = chanmaps[i].chans;
+            break;
         }
     }
 
-    pa_channel_map_snprint(chanmap_str, sizeof(chanmap_str), &info->channel_map);
-    ERR("Failed to find format for channel map:\n    %s\n", chanmap_str);
+    if(!chanmaps[i].str)
+    {
+        char chanmap_str[PA_CHANNEL_MAP_SNPRINT_MAX] = "";
+        pa_channel_map_snprint(chanmap_str, sizeof(chanmap_str), &info->channel_map);
+        WARN("Failed to find format for channel map:\n    %s\n", chanmap_str);
+    }
 }
 
 static void ALCpulsePlayback_sinkNameCallback(pa_context *UNUSED(context), const pa_sink_info *info, int eol, void *pdata)
@@ -915,6 +919,7 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
     pa_stream_flags_t flags = 0;
     const char *mapname = NULL;
     pa_channel_map chanmap;
+    pa_operation *o;
     ALuint len;
 
     pa_threaded_mainloop_lock(self->loop);
@@ -931,17 +936,12 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
         self->stream = NULL;
     }
 
-    if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
-    {
-        pa_operation *o;
-        o = pa_context_get_sink_info_by_name(self->context,
-                                             al_string_get_cstr(self->device_name),
-                                             ALCpulsePlayback_sinkInfoCallback, self);
-        wait_for_operation(o, self->loop);
-    }
+    o = pa_context_get_sink_info_by_name(self->context, al_string_get_cstr(self->device_name),
+                                         ALCpulsePlayback_sinkInfoCallback, self);
+    wait_for_operation(o, self->loop);
+
     if(!(device->Flags&DEVICE_FREQUENCY_REQUEST))
         flags |= PA_STREAM_FIX_RATE;
-
     flags |= PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE;
     flags |= PA_STREAM_ADJUST_LATENCY;
     flags |= PA_STREAM_START_CORKED;
@@ -1035,8 +1035,6 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
     self->spec = *(pa_stream_get_sample_spec(self->stream));
     if(device->Frequency != self->spec.rate)
     {
-        pa_operation *o;
-
         /* Server updated our playback rate, so modify the buffer attribs
          * accordingly. */
         device->NumUpdates = (ALuint)((ALdouble)device->NumUpdates / device->Frequency *

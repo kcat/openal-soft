@@ -1058,8 +1058,6 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
     ALCpulsePlayback_bufferAttrCallback(self->stream, self);
 
     len = self->attr.minreq / pa_frame_size(&self->spec);
-    if((CPUCapFlags&CPU_CAP_SSE))
-        len = (len+3)&~3;
     device->NumUpdates = (ALuint)((ALdouble)device->NumUpdates/len*device->UpdateSize + 0.5);
     device->NumUpdates = clampu(device->NumUpdates, 2, 16);
     device->UpdateSize = len;

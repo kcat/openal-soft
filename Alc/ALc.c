@@ -3331,7 +3331,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     ConfigValueUInt(NULL, "period_size", &device->UpdateSize);
     device->UpdateSize = clampu(device->UpdateSize, 64, 8192);
-    if((CPUCapFlags&CPU_CAP_SSE))
+    if((CPUCapFlags&(CPU_CAP_SSE|CPU_CAP_NEON)) != 0)
         device->UpdateSize = (device->UpdateSize+3)&~3;
 
     ConfigValueUInt(NULL, "sources", &device->MaxNoOfSources);

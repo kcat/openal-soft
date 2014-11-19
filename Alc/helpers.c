@@ -498,7 +498,6 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
         TRACE("Opened %s\n", fname);
         return f;
     }
-    WARN("Could not open %s\n", fname);
 
     wname = FromUTF8(fname);
     wsubdir = FromUTF8(subdir);
@@ -531,8 +530,8 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
             TRACE("Opened %ls\n", buffer);
             return f;
         }
-        WARN("Could not open %ls\n", buffer);
     }
+    WARN("Could not open %ls\\%ls\n", wsubdir, wname);
     free(wname);
     free(wsubdir);
 
@@ -561,7 +560,6 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
         TRACE("Opened %s\n", fname);
         return f;
     }
-    WARN("Could not open %s\n", fname);
 
     if((str=getenv("XDG_DATA_HOME")) != NULL && str[0] != '\0')
         snprintf(buffer, sizeof(buffer), "%s/%s/%s", str, subdir, fname);
@@ -574,7 +572,6 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
             TRACE("Opened %s\n", buffer);
             return f;
         }
-        WARN("Could not open %s\n", buffer);
     }
 
     if((str=getenv("XDG_DATA_DIRS")) == NULL || str[0] == '\0')
@@ -605,8 +602,8 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
             TRACE("Opened %s\n", buffer);
             return f;
         }
-        WARN("Could not open %s\n", buffer);
     }
+    WARN("Could not open %s/%s\n", subdir, fname);
 
     return NULL;
 }

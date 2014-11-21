@@ -1956,10 +1956,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
           DevFmtTypeString(device->FmtType), device->Frequency,
           device->UpdateSize, device->NumUpdates);
 
-    aluInitPanning(device);
-
-    V(device->Synth,update)(device);
-
     device->Hrtf = NULL;
     if((device->Flags&DEVICE_HRTF_REQUEST))
     {
@@ -1996,13 +1992,17 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             WARN("NEON performs best with multiple of 4 update sizes (%u)\n", device->UpdateSize);
     }
 
+    aluInitPanning(device);
+
     al_free(device->DryBuffer);
     device->DryBuffer = al_calloc(16, sizeof(device->DryBuffer[0]) * device->NumChannels);
     if(!device->DryBuffer)
     {
-        ERR("Failed to allocate "SZFMT"-byte mix buffer\n", sizeof(device->DryBuffer[0]) * device->NumChannels);
+        ERR("Failed to allocate "SZFMT" bytes for mix buffer\n", sizeof(device->DryBuffer[0]) * device->NumChannels);
         return ALC_INVALID_DEVICE;
     }
+
+    V(device->Synth,update)(device);
 
     SetMixerFPUMode(&oldMode);
     V0(device->Backend,lock)();

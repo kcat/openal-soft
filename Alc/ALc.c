@@ -1922,13 +1922,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     oldType  = device->FmtType;
 
     TRACE("Pre-reset: %s%s, %s%s, %s%uhz, %u update size x%d\n",
-          (device->Flags&DEVICE_CHANNELS_REQUEST)?"*":"",
-          DevFmtChannelsString(device->FmtChans),
-          (device->Flags&DEVICE_SAMPLE_TYPE_REQUEST)?"*":"",
-          DevFmtTypeString(device->FmtType),
-          (device->Flags&DEVICE_FREQUENCY_REQUEST)?"*":"",
-          device->Frequency,
-          device->UpdateSize, device->NumUpdates);
+        (device->Flags&DEVICE_CHANNELS_REQUEST)?"*":"", DevFmtChannelsString(device->FmtChans),
+        (device->Flags&DEVICE_SAMPLE_TYPE_REQUEST)?"*":"", DevFmtTypeString(device->FmtType),
+        (device->Flags&DEVICE_FREQUENCY_REQUEST)?"*":"", device->Frequency,
+        device->UpdateSize, device->NumUpdates
+    );
 
     if(V0(device->Backend,reset)() == ALC_FALSE)
         return ALC_INVALID_DEVICE;
@@ -1952,9 +1950,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
 
     TRACE("Post-reset: %s, %s, %uhz, %u update size x%d\n",
-          DevFmtChannelsString(device->FmtChans),
-          DevFmtTypeString(device->FmtType), device->Frequency,
-          device->UpdateSize, device->NumUpdates);
+        DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
+        device->Frequency, device->UpdateSize, device->NumUpdates
+    );
 
     device->Hrtf = NULL;
     if((device->Flags&DEVICE_HRTF_REQUEST))

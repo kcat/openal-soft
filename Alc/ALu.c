@@ -1128,7 +1128,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         IncrementRef(&device->MixCount);
 
         SamplesToDo = minu(size, BUFFERSIZE);
-        for(c = 0;c < MAX_OUTPUT_CHANNELS;c++)
+        for(c = 0;c < device->NumChannels;c++)
             memset(device->DryBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
 
         V0(device->Backend,lock)();

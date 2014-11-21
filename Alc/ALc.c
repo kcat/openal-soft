@@ -1996,6 +1996,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             WARN("NEON performs best with multiple of 4 update sizes (%u)\n", device->UpdateSize);
     }
 
+    al_free(device->DryBuffer);
+    device->DryBuffer = al_calloc(16, sizeof(device->DryBuffer[0]) * device->NumChannels);
+    if(!device->DryBuffer)
+    {
+        ERR("Failed to allocate "SZFMT"-byte mix buffer\n", sizeof(device->DryBuffer[0]) * device->NumChannels);
+        return ALC_INVALID_DEVICE;
+    }
+
     SetMixerFPUMode(&oldMode);
     V0(device->Backend,lock)();
     context = ATOMIC_LOAD(&device->ContextList);
@@ -2160,6 +2168,9 @@ static ALCvoid FreeDevice(ALCdevice *device)
     device->Bs2b = NULL;
 
     AL_STRING_DEINIT(device->DeviceName);
+
+    al_free(device->DryBuffer);
+    device->DryBuffer = NULL;
 
     al_free(device);
 }
@@ -3221,6 +3232,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->Bs2b = NULL;
     device->Bs2bLevel = 0;
     AL_STRING_INIT(device->DeviceName);
+    device->DryBuffer = NULL;
 
     ATOMIC_INIT(&device->ContextList, NULL);
 
@@ -3484,6 +3496,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->Type = Capture;
 
     AL_STRING_INIT(device->DeviceName);
+    device->DryBuffer = NULL;
 
     InitUIntMap(&device->BufferMap, ~0);
     InitUIntMap(&device->EffectMap, ~0);
@@ -3666,6 +3679,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->Bs2b = NULL;
     device->Bs2bLevel = 0;
     AL_STRING_INIT(device->DeviceName);
+    device->DryBuffer = NULL;
 
     ATOMIC_INIT(&device->ContextList, NULL);
 

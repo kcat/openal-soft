@@ -673,7 +673,7 @@ struct ALCdevice_struct
     alignas(16) ALfloat FilteredData[BUFFERSIZE];
 
     // Dry path buffer mix
-    alignas(16) ALfloat DryBuffer[MAX_OUTPUT_CHANNELS][BUFFERSIZE];
+    alignas(16) ALfloat (*DryBuffer)[BUFFERSIZE];
 
     /* Running count of the mixer invocations, in 31.1 fixed point. This
      * actually increments *twice* when mixing, first at the start and then at

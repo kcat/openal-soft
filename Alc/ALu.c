@@ -145,7 +145,7 @@ static void UpdateDryStepping(DirectParams *params, ALuint num_chans)
     {
         for(i = 0;i < num_chans;i++)
         {
-            MixGains *gains = params->Mix.Gains[i];
+            MixGains *gains = params->Gains[i];
             for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
             {
                 gains[j].Current = gains[j].Target;
@@ -159,7 +159,7 @@ static void UpdateDryStepping(DirectParams *params, ALuint num_chans)
 
     for(i = 0;i < num_chans;i++)
     {
-        MixGains *gains = params->Mix.Gains[i];
+        MixGains *gains = params->Gains[i];
         for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
         {
             ALfloat cur = maxf(gains[j].Current, FLT_EPSILON);
@@ -477,7 +477,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
 
         for(c = 0;c < num_channels;c++)
         {
-            MixGains *gains = voice->Direct.Mix.Gains[c];
+            MixGains *gains = voice->Direct.Gains[c];
             ALfloat Target[MAX_OUTPUT_CHANNELS];
 
             ComputeBFormatGains(Device, matrix[c], DryGain, Target);
@@ -497,7 +497,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     {
         for(c = 0;c < num_channels;c++)
         {
-            MixGains *gains = voice->Direct.Mix.Gains[c];
+            MixGains *gains = voice->Direct.Gains[c];
             int idx;
 
             for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
@@ -513,7 +513,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     {
         for(c = 0;c < num_channels;c++)
         {
-            MixGains *gains = voice->Direct.Mix.Gains[c];
+            MixGains *gains = voice->Direct.Gains[c];
             ALfloat Target[MAX_OUTPUT_CHANNELS];
 
             /* Special-case LFE */
@@ -916,7 +916,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     }
 
     {
-        MixGains *gains = voice->Direct.Mix.Gains[0];
+        MixGains *gains = voice->Direct.Gains[0];
         ALfloat radius = ALSource->Radius;
         ALfloat Target[MAX_OUTPUT_CHANNELS];
 

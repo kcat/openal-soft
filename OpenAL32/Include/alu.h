@@ -70,9 +70,7 @@ typedef struct DirectParams {
         ALfilterState HighPass;
     } Filters[MAX_INPUT_CHANNELS];
 
-    union {
-        MixGains Gains[MAX_INPUT_CHANNELS][MAX_OUTPUT_CHANNELS];
-    } Mix;
+    MixGains Gains[MAX_INPUT_CHANNELS][MAX_OUTPUT_CHANNELS];
 } DirectParams;
 
 typedef struct SendParams {

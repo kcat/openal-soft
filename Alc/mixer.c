@@ -415,7 +415,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     Device->FilteredData, ResampledData, DstBufferSize,
                     parms->Filters[chan].ActiveType
                 );
-                Mix(samples, Device->NumChannels, parms->OutBuffer, parms->Mix.Gains[chan],
+                Mix(samples, Device->NumChannels, parms->OutBuffer, parms->Gains[chan],
                     parms->Counter, OutPos, DstBufferSize);
             }
 

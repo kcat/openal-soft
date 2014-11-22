@@ -146,7 +146,7 @@ static void UpdateDryStepping(DirectParams *params, ALuint num_chans)
         for(i = 0;i < num_chans;i++)
         {
             MixGains *gains = params->Gains[i];
-            for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
+            for(j = 0;j < params->NumChannels;j++)
             {
                 gains[j].Current = gains[j].Target;
                 gains[j].Step = 1.0f;
@@ -160,7 +160,7 @@ static void UpdateDryStepping(DirectParams *params, ALuint num_chans)
     for(i = 0;i < num_chans;i++)
     {
         MixGains *gains = params->Gains[i];
-        for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
+        for(j = 0;j < params->NumChannels;j++)
         {
             ALfloat cur = maxf(gains[j].Current, FLT_EPSILON);
             ALfloat trg = maxf(gains[j].Target, FLT_EPSILON);

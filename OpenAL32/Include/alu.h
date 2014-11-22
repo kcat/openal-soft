@@ -30,10 +30,6 @@
 #define RAD2DEG(x)  ((ALfloat)(x) * (180.0f/F_PI))
 
 
-#define SRC_HISTORY_BITS   (6)
-#define SRC_HISTORY_LENGTH (1<<SRC_HISTORY_BITS)
-#define SRC_HISTORY_MASK   (SRC_HISTORY_LENGTH-1)
-
 #define MAX_PITCH  (10)
 
 
@@ -51,19 +47,6 @@ enum ActiveFilters {
     AF_HighPass = 2,
     AF_BandPass = AF_LowPass | AF_HighPass
 };
-
-
-typedef struct HrtfState {
-    alignas(16) ALfloat History[SRC_HISTORY_LENGTH];
-    alignas(16) ALfloat Values[HRIR_LENGTH][2];
-} HrtfState;
-
-typedef struct HrtfParams {
-    alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
-    alignas(16) ALfloat CoeffStep[HRIR_LENGTH][2];
-    ALuint Delay[2];
-    ALint DelayStep[2];
-} HrtfParams;
 
 
 typedef struct MixGains {
@@ -88,14 +71,6 @@ typedef struct DirectParams {
     } Filters[MAX_INPUT_CHANNELS];
 
     union {
-        struct {
-            HrtfParams Params[MAX_INPUT_CHANNELS];
-            HrtfState State[MAX_INPUT_CHANNELS];
-            ALuint IrSize;
-            ALfloat Gain;
-            ALfloat Dir[3];
-        } Hrtf;
-
         MixGains Gains[MAX_INPUT_CHANNELS][MAX_OUTPUT_CHANNELS];
     } Mix;
 } DirectParams;
@@ -125,8 +100,7 @@ typedef void (*MixerFunc)(const ALfloat *data, ALuint OutChans,
                           ALfloat (*restrict OutBuffer)[BUFFERSIZE], struct MixGains *Gains,
                           ALuint Counter, ALuint OutPos, ALuint BufferSize);
 typedef void (*HrtfMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-                              ALuint Counter, ALuint Offset, ALuint OutPos,
-                              const ALuint IrSize, const HrtfParams *hrtfparams,
+                              ALuint Offset, const ALuint IrSize, const HrtfParams *hrtfparams,
                               HrtfState *hrtfstate, ALuint BufferSize);
 
 

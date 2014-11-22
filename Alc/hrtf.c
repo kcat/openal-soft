@@ -58,10 +58,6 @@ struct Hrtf {
 static const ALchar magicMarker00[8] = "MinPHR00";
 static const ALchar magicMarker01[8] = "MinPHR01";
 
-/* First value for pass-through coefficients (remaining are 0), used for omni-
- * directional sounds. */
-static const ALfloat PassthruCoeff = 32767.0f * 0.707106781187f/*sqrt(0.5)*/;
-
 static struct Hrtf *LoadedHrtfs = NULL;
 
 /* Calculate the elevation indices given the polar elevation in radians.
@@ -88,45 +84,12 @@ static void CalcAzIndices(ALuint azcount, ALfloat az, ALuint *azidx, ALfloat *az
     *azmu = az - floorf(az);
 }
 
-/* Calculates the normalized HRTF transition factor (delta) from the changes
- * in gain and listener to source angle between updates.  The result is a
- * normalized delta factor that can be used to calculate moving HRIR stepping
- * values.
- */
-ALfloat CalcHrtfDelta(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3], const ALfloat newdir[3])
-{
-    ALfloat gainChange, angleChange, change;
-
-    // Calculate the normalized dB gain change.
-    newGain = maxf(newGain, 0.0001f);
-    oldGain = maxf(oldGain, 0.0001f);
-    gainChange = fabsf(log10f(newGain / oldGain) / log10f(0.0001f));
-
-    // Calculate the angle change only when there is enough gain to notice it.
-    angleChange = 0.0f;
-    if(gainChange > 0.0001f || newGain > 0.0001f)
-    {
-        // No angle change when the directions are equal or degenerate (when
-        // both have zero length).
-        if(newdir[0] != olddir[0] || newdir[1] != olddir[1] || newdir[2] != olddir[2])
-        {
-            ALfloat dotp = olddir[0]*newdir[0] + olddir[1]*newdir[1] + olddir[2]*newdir[2];
-            angleChange = acosf(clampf(dotp, -1.0f, 1.0f)) / F_PI;
-        }
-    }
-
-    // Use the largest of the two changes for the delta factor, and apply a
-    // significance shaping function to it.
-    change = maxf(angleChange * 25.0f, gainChange) * 2.0f;
-    return minf(change, 1.0f);
-}
-
 /* Calculates static HRIR coefficients and delays for the given polar
  * elevation and azimuth in radians.  Linear interpolation is used to
  * increase the apparent resolution of the HRIR data set.  The coefficients
  * are also normalized and attenuated by the specified gain.
  */
-void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat dirfact, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays)
+void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat (*coeffs)[2], ALuint *delays)
 {
     ALuint evidx[2], lidx[4], ridx[4];
     ALfloat mu[3], blend[4];
@@ -158,12 +121,12 @@ void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azi
     blend[3] = (     mu[1]) * (     mu[2]);
 
     /* Calculate the HRIR delays using linear interpolation. */
-    delays[0] = fastf2u((Hrtf->delays[lidx[0]]*blend[0] + Hrtf->delays[lidx[1]]*blend[1] +
-                         Hrtf->delays[lidx[2]]*blend[2] + Hrtf->delays[lidx[3]]*blend[3]) *
-                        dirfact + 0.5f) << HRTFDELAY_BITS;
-    delays[1] = fastf2u((Hrtf->delays[ridx[0]]*blend[0] + Hrtf->delays[ridx[1]]*blend[1] +
-                         Hrtf->delays[ridx[2]]*blend[2] + Hrtf->delays[ridx[3]]*blend[3]) *
-                        dirfact + 0.5f) << HRTFDELAY_BITS;
+    delays[0] = fastf2u(Hrtf->delays[lidx[0]]*blend[0] + Hrtf->delays[lidx[1]]*blend[1] +
+                        Hrtf->delays[lidx[2]]*blend[2] + Hrtf->delays[lidx[3]]*blend[3] +
+                        0.5f);
+    delays[1] = fastf2u(Hrtf->delays[ridx[0]]*blend[0] + Hrtf->delays[ridx[1]]*blend[1] +
+                        Hrtf->delays[ridx[2]]*blend[2] + Hrtf->delays[ridx[3]]*blend[3] +
+                        0.5f);
 
     /* Calculate the sample offsets for the HRIR indices. */
     lidx[0] *= Hrtf->irSize;
@@ -175,183 +138,22 @@ void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azi
     ridx[2] *= Hrtf->irSize;
     ridx[3] *= Hrtf->irSize;
 
-    /* Calculate the normalized and attenuated HRIR coefficients using linear
-     * interpolation when there is enough gain to warrant it.  Zero the
-     * coefficients if gain is too low.
-     */
-    if(gain > 0.0001f)
+    for(i = 0;i < Hrtf->irSize;i++)
     {
         ALfloat c;
-
-        gain *= 1.0f/32767.0f;
-
-        i = 0;
         c = (Hrtf->coeffs[lidx[0]+i]*blend[0] + Hrtf->coeffs[lidx[1]+i]*blend[1] +
              Hrtf->coeffs[lidx[2]+i]*blend[2] + Hrtf->coeffs[lidx[3]+i]*blend[3]);
-        coeffs[i][0] = lerp(PassthruCoeff, c, dirfact) * gain;
+        coeffs[i][0] = c * (1.0f/32767.0f);
         c = (Hrtf->coeffs[ridx[0]+i]*blend[0] + Hrtf->coeffs[ridx[1]+i]*blend[1] +
              Hrtf->coeffs[ridx[2]+i]*blend[2] + Hrtf->coeffs[ridx[3]+i]*blend[3]);
-        coeffs[i][1] = lerp(PassthruCoeff, c, dirfact) * gain;
-
-        for(i = 1;i < Hrtf->irSize;i++)
-        {
-            c = (Hrtf->coeffs[lidx[0]+i]*blend[0] + Hrtf->coeffs[lidx[1]+i]*blend[1] +
-                 Hrtf->coeffs[lidx[2]+i]*blend[2] + Hrtf->coeffs[lidx[3]+i]*blend[3]);
-            coeffs[i][0] = lerp(0.0f, c, dirfact) * gain;
-            c = (Hrtf->coeffs[ridx[0]+i]*blend[0] + Hrtf->coeffs[ridx[1]+i]*blend[1] +
-                 Hrtf->coeffs[ridx[2]+i]*blend[2] + Hrtf->coeffs[ridx[3]+i]*blend[3]);
-            coeffs[i][1] = lerp(0.0f, c, dirfact) * gain;
-        }
+        coeffs[i][1] = c * (1.0f/32767.0f);
     }
-    else
-    {
-        for(i = 0;i < Hrtf->irSize;i++)
-        {
-            coeffs[i][0] = 0.0f;
-            coeffs[i][1] = 0.0f;
-        }
-    }
-}
-
-/* Calculates the moving HRIR target coefficients, target delays, and
- * stepping values for the given polar elevation and azimuth in radians.
- * Linear interpolation is used to increase the apparent resolution of the
- * HRIR data set.  The coefficients are also normalized and attenuated by the
- * specified gain.  Stepping resolution and count is determined using the
- * given delta factor between 0.0 and 1.0.
- */
-ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat dirfact, ALfloat gain, ALfloat delta, ALint counter, ALfloat (*coeffs)[2], ALuint *delays, ALfloat (*coeffStep)[2], ALint *delayStep)
-{
-    ALuint evidx[2], lidx[4], ridx[4];
-    ALfloat mu[3], blend[4];
-    ALfloat left, right;
-    ALfloat step;
-    ALuint i;
-
-    /* Claculate elevation indices and interpolation factor. */
-    CalcEvIndices(Hrtf->evCount, elevation, evidx, &mu[2]);
-
-    for(i = 0;i < 2;i++)
-    {
-        ALuint azcount = Hrtf->azCount[evidx[i]];
-        ALuint evoffset = Hrtf->evOffset[evidx[i]];
-        ALuint azidx[2];
-
-        /* Calculate azimuth indices and interpolation factor for this elevation. */
-        CalcAzIndices(azcount, azimuth, azidx, &mu[i]);
-
-        /* Calculate a set of linear HRIR indices for left and right channels. */
-        lidx[i*2 + 0] = evoffset + azidx[0];
-        lidx[i*2 + 1] = evoffset + azidx[1];
-        ridx[i*2 + 0] = evoffset + ((azcount-azidx[0]) % azcount);
-        ridx[i*2 + 1] = evoffset + ((azcount-azidx[1]) % azcount);
-    }
-
-    // Calculate the stepping parameters.
-    delta = maxf(floorf(delta*(Hrtf->sampleRate*0.015f) + 0.5f), 1.0f);
-    step = 1.0f / delta;
-
-    /* Calculate 4 blending weights for 2D bilinear interpolation. */
-    blend[0] = (1.0f-mu[0]) * (1.0f-mu[2]);
-    blend[1] = (     mu[0]) * (1.0f-mu[2]);
-    blend[2] = (1.0f-mu[1]) * (     mu[2]);
-    blend[3] = (     mu[1]) * (     mu[2]);
-
-    /* Calculate the HRIR delays using linear interpolation.  Then calculate
-     * the delay stepping values using the target and previous running
-     * delays.
-     */
-    left = (ALfloat)(delays[0] - (delayStep[0] * counter));
-    right = (ALfloat)(delays[1] - (delayStep[1] * counter));
-
-    delays[0] = fastf2u((Hrtf->delays[lidx[0]]*blend[0] + Hrtf->delays[lidx[1]]*blend[1] +
-                         Hrtf->delays[lidx[2]]*blend[2] + Hrtf->delays[lidx[3]]*blend[3]) *
-                        dirfact + 0.5f) << HRTFDELAY_BITS;
-    delays[1] = fastf2u((Hrtf->delays[ridx[0]]*blend[0] + Hrtf->delays[ridx[1]]*blend[1] +
-                         Hrtf->delays[ridx[2]]*blend[2] + Hrtf->delays[ridx[3]]*blend[3]) *
-                        dirfact + 0.5f) << HRTFDELAY_BITS;
-
-    delayStep[0] = fastf2i(step * (delays[0] - left));
-    delayStep[1] = fastf2i(step * (delays[1] - right));
-
-    /* Calculate the sample offsets for the HRIR indices. */
-    lidx[0] *= Hrtf->irSize;
-    lidx[1] *= Hrtf->irSize;
-    lidx[2] *= Hrtf->irSize;
-    lidx[3] *= Hrtf->irSize;
-    ridx[0] *= Hrtf->irSize;
-    ridx[1] *= Hrtf->irSize;
-    ridx[2] *= Hrtf->irSize;
-    ridx[3] *= Hrtf->irSize;
-
-    /* Calculate the normalized and attenuated target HRIR coefficients using
-     * linear interpolation when there is enough gain to warrant it.  Zero
-     * the target coefficients if gain is too low.  Then calculate the
-     * coefficient stepping values using the target and previous running
-     * coefficients.
-     */
-    if(gain > 0.0001f)
-    {
-        ALfloat c;
-
-        gain *= 1.0f/32767.0f;
-
-        i = 0;
-        left = coeffs[i][0] - (coeffStep[i][0] * counter);
-        right = coeffs[i][1] - (coeffStep[i][1] * counter);
-
-        c = (Hrtf->coeffs[lidx[0]+i]*blend[0] + Hrtf->coeffs[lidx[1]+i]*blend[1] +
-             Hrtf->coeffs[lidx[2]+i]*blend[2] + Hrtf->coeffs[lidx[3]+i]*blend[3]);
-        coeffs[i][0] = lerp(PassthruCoeff, c, dirfact) * gain;
-        c = (Hrtf->coeffs[ridx[0]+i]*blend[0] + Hrtf->coeffs[ridx[1]+i]*blend[1] +
-             Hrtf->coeffs[ridx[2]+i]*blend[2] + Hrtf->coeffs[ridx[3]+i]*blend[3]);
-        coeffs[i][1] = lerp(PassthruCoeff, c, dirfact) * gain;
-
-        coeffStep[i][0] = step * (coeffs[i][0] - left);
-        coeffStep[i][1] = step * (coeffs[i][1] - right);
-
-        for(i = 1;i < Hrtf->irSize;i++)
-        {
-            left = coeffs[i][0] - (coeffStep[i][0] * counter);
-            right = coeffs[i][1] - (coeffStep[i][1] * counter);
-
-            c = (Hrtf->coeffs[lidx[0]+i]*blend[0] + Hrtf->coeffs[lidx[1]+i]*blend[1] +
-                 Hrtf->coeffs[lidx[2]+i]*blend[2] + Hrtf->coeffs[lidx[3]+i]*blend[3]);
-            coeffs[i][0] = lerp(0.0f, c, dirfact) * gain;
-            c = (Hrtf->coeffs[ridx[0]+i]*blend[0] + Hrtf->coeffs[ridx[1]+i]*blend[1] +
-                 Hrtf->coeffs[ridx[2]+i]*blend[2] + Hrtf->coeffs[ridx[3]+i]*blend[3]);
-            coeffs[i][1] = lerp(0.0f, c, dirfact) * gain;
-
-            coeffStep[i][0] = step * (coeffs[i][0] - left);
-            coeffStep[i][1] = step * (coeffs[i][1] - right);
-        }
-    }
-    else
-    {
-        for(i = 0;i < Hrtf->irSize;i++)
-        {
-            left = coeffs[i][0] - (coeffStep[i][0] * counter);
-            right = coeffs[i][1] - (coeffStep[i][1] * counter);
-
-            coeffs[i][0] = 0.0f;
-            coeffs[i][1] = 0.0f;
-
-            coeffStep[i][0] = step * -left;
-            coeffStep[i][1] = step * -right;
-        }
-    }
-
-    /* The stepping count is the number of samples necessary for the HRIR to
-     * complete its transition.  The mixer will only apply stepping for this
-     * many samples.
-     */
-    return fastf2u(delta);
 }
 
 
 static struct Hrtf *LoadHrtf00(FILE *f, ALuint deviceRate)
 {
-    const ALubyte maxDelay = SRC_HISTORY_LENGTH-1;
+    const ALubyte maxDelay = HRTF_HISTORY_LENGTH-1;
     struct Hrtf *Hrtf = NULL;
     ALboolean failed = AL_FALSE;
     ALuint rate = 0, irCount = 0;
@@ -518,7 +320,7 @@ static struct Hrtf *LoadHrtf00(FILE *f, ALuint deviceRate)
 
 static struct Hrtf *LoadHrtf01(FILE *f, ALuint deviceRate)
 {
-    const ALubyte maxDelay = SRC_HISTORY_LENGTH-1;
+    const ALubyte maxDelay = HRTF_HISTORY_LENGTH-1;
     struct Hrtf *Hrtf = NULL;
     ALboolean failed = AL_FALSE;
     ALuint rate = 0, irCount = 0;

@@ -37,6 +37,8 @@
 #include "vector.h"
 #include "alstring.h"
 
+#include "hrtf.h"
+
 #ifndef ALC_SOFT_HRTF
 #define ALC_SOFT_HRTF 1
 #define ALC_HRTF_SOFT                            0x1992
@@ -528,6 +530,17 @@ enum Channel {
     SideLeft,
     SideRight,
 
+    TopCenter,
+    BottomCenter,
+    TopFrontLeft,
+    TopFrontRight,
+    TopBackLeft,
+    TopBackRight,
+    BottomFrontLeft,
+    BottomFrontRight,
+    BottomBackLeft,
+    BottomBackRight,
+
     InvalidChannel
 };
 
@@ -557,7 +570,7 @@ enum DevFmtChannels {
 
     DevFmtChannelsDefault = DevFmtStereo
 };
-#define MAX_OUTPUT_CHANNELS  (8)
+#define MAX_OUTPUT_CHANNELS  (14)
 
 ALuint BytesFromDevFmt(enum DevFmtType type) DECL_CONST;
 ALuint ChannelsFromDevFmt(enum DevFmtChannels chans) DECL_CONST;
@@ -591,6 +604,21 @@ typedef struct ChannelConfig {
     ALfloat HOACoeff[MAX_AMBI_COEFFS];
     ALfloat FOACoeff[4];
 } ChannelConfig;
+
+
+#define HRTF_HISTORY_BITS   (6)
+#define HRTF_HISTORY_LENGTH (1<<HRTF_HISTORY_BITS)
+#define HRTF_HISTORY_MASK   (HRTF_HISTORY_LENGTH-1)
+
+typedef struct HrtfState {
+    alignas(16) ALfloat History[HRTF_HISTORY_LENGTH];
+    alignas(16) ALfloat Values[HRIR_LENGTH][2];
+} HrtfState;
+
+typedef struct HrtfParams {
+    alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
+    ALuint Delay[2];
+} HrtfParams;
 
 
 /* Size for temporary storage of buffer data, in ALfloats. Larger values need
@@ -652,6 +680,9 @@ struct ALCdevice_struct
 
     /* HRTF filter tables */
     const struct Hrtf *Hrtf;
+    HrtfState Hrtf_State[MAX_OUTPUT_CHANNELS];
+    HrtfParams Hrtf_Params[MAX_OUTPUT_CHANNELS];
+    ALuint Hrtf_Offset;
 
     // Stereo-to-binaural filter
     struct bs2b *Bs2b;

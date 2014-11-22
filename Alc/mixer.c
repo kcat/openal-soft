@@ -41,20 +41,6 @@
 extern inline void InitiatePositionArrays(ALuint frac, ALuint increment, ALuint *frac_arr, ALuint *pos_arr, ALuint size);
 
 
-static inline HrtfMixerFunc SelectHrtfMixer(void)
-{
-#ifdef HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
-        return MixHrtf_SSE;
-#endif
-#ifdef HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
-        return MixHrtf_Neon;
-#endif
-
-    return MixHrtf_C;
-}
-
 static inline MixerFunc SelectMixer(void)
 {
 #ifdef HAVE_SSE
@@ -179,7 +165,6 @@ static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter
 ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 {
     MixerFunc Mix;
-    HrtfMixerFunc HrtfMix;
     ResamplerFunc Resample;
     ALbufferlistitem *BufferListItem;
     ALuint DataPosInt, DataPosFrac;
@@ -218,7 +203,6 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
     }
 
     Mix = SelectMixer();
-    HrtfMix = SelectHrtfMixer();
     Resample = ((increment == FRACTIONONE && DataPosFrac == 0) ?
                 Resample_copy32_C : SelectResampler(Resampler));
 
@@ -431,13 +415,8 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     Device->FilteredData, ResampledData, DstBufferSize,
                     parms->Filters[chan].ActiveType
                 );
-                if(!voice->IsHrtf)
-                    Mix(samples, Device->NumChannels, parms->OutBuffer, parms->Mix.Gains[chan],
-                        parms->Counter, OutPos, DstBufferSize);
-                else
-                    HrtfMix(parms->OutBuffer, samples, parms->Counter, voice->Offset,
-                            OutPos, parms->Mix.Hrtf.IrSize, &parms->Mix.Hrtf.Params[chan],
-                            &parms->Mix.Hrtf.State[chan], DstBufferSize);
+                Mix(samples, Device->NumChannels, parms->OutBuffer, parms->Mix.Gains[chan],
+                    parms->Counter, OutPos, DstBufferSize);
             }
 
             /* Only the first channel for B-Format buffers (W channel) goes to

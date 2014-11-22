@@ -36,6 +36,8 @@
 #include "hrtf.h"
 #include "static_assert.h"
 
+#include "mixer_defs.h"
+
 #include "backends/base.h"
 #include "midi/base.h"
 
@@ -81,6 +83,21 @@ extern inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max);
 
 extern inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu);
 extern inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALfloat mu);
+
+
+static inline HrtfMixerFunc SelectHrtfMixer(void)
+{
+#ifdef HAVE_SSE
+    if((CPUCapFlags&CPU_CAP_SSE))
+        return MixHrtf_SSE;
+#endif
+#ifdef HAVE_NEON
+    if((CPUCapFlags&CPU_CAP_NEON))
+        return MixHrtf_Neon;
+#endif
+
+    return MixHrtf_C;
+}
 
 
 static inline void aluCrossproduct(const ALfloat *inVector1, const ALfloat *inVector2, ALfloat *outVector)
@@ -492,37 +509,6 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
 
         voice->IsHrtf = AL_FALSE;
     }
-    else if(Device->Hrtf)
-    {
-        for(c = 0;c < num_channels;c++)
-        {
-            if(chans[c].channel == LFE)
-            {
-                /* Skip LFE */
-                voice->Direct.Mix.Hrtf.Params[c].Delay[0] = 0;
-                voice->Direct.Mix.Hrtf.Params[c].Delay[1] = 0;
-                for(i = 0;i < HRIR_LENGTH;i++)
-                {
-                    voice->Direct.Mix.Hrtf.Params[c].Coeffs[i][0] = 0.0f;
-                    voice->Direct.Mix.Hrtf.Params[c].Coeffs[i][1] = 0.0f;
-                }
-            }
-            else
-            {
-                /* Get the static HRIR coefficients and delays for this
-                 * channel. */
-                GetLerpedHrtfCoeffs(Device->Hrtf,
-                                    chans[c].elevation, chans[c].angle, 1.0f, DryGain,
-                                    voice->Direct.Mix.Hrtf.Params[c].Coeffs,
-                                    voice->Direct.Mix.Hrtf.Params[c].Delay);
-            }
-        }
-        voice->Direct.Counter = 0;
-        voice->Direct.Moving  = AL_TRUE;
-        voice->Direct.Mix.Hrtf.IrSize = GetHrtfIrSize(Device->Hrtf);
-
-        voice->IsHrtf = AL_TRUE;
-    }
     else
     {
         for(c = 0;c < num_channels;c++)
@@ -929,70 +915,6 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         BufferListItem = BufferListItem->next;
     }
 
-    if(Device->Hrtf)
-    {
-        /* Use a binaural HRTF algorithm for stereo headphone playback */
-        ALfloat delta, ev = 0.0f, az = 0.0f;
-        ALfloat radius = ALSource->Radius;
-        ALfloat dirfact = 1.0f;
-
-        if(Distance > FLT_EPSILON)
-        {
-            ALfloat invlen = 1.0f/Distance;
-            Position[0] *= invlen;
-            Position[1] *= invlen;
-            Position[2] *= invlen;
-
-            /* Calculate elevation and azimuth only when the source is not at
-             * the listener. This prevents +0 and -0 Z from producing
-             * inconsistent panning. Also, clamp Y in case FP precision errors
-             * cause it to land outside of -1..+1. */
-            ev = asinf(clampf(Position[1], -1.0f, 1.0f));
-            az = atan2f(Position[0], -Position[2]*ZScale);
-        }
-        if(radius > Distance)
-            dirfact *= Distance / radius;
-
-        /* Check to see if the HRIR is already moving. */
-        if(voice->Direct.Moving)
-        {
-            /* Calculate the normalized HRTF transition factor (delta). */
-            delta = CalcHrtfDelta(voice->Direct.Mix.Hrtf.Gain, DryGain,
-                                  voice->Direct.Mix.Hrtf.Dir, Position);
-            /* If the delta is large enough, get the moving HRIR target
-             * coefficients, target delays, steppping values, and counter. */
-            if(delta > 0.001f)
-            {
-                ALuint counter = GetMovingHrtfCoeffs(Device->Hrtf,
-                    ev, az, dirfact, DryGain, delta, voice->Direct.Counter,
-                    voice->Direct.Mix.Hrtf.Params[0].Coeffs, voice->Direct.Mix.Hrtf.Params[0].Delay,
-                    voice->Direct.Mix.Hrtf.Params[0].CoeffStep, voice->Direct.Mix.Hrtf.Params[0].DelayStep
-                );
-                voice->Direct.Counter = counter;
-                voice->Direct.Mix.Hrtf.Gain = DryGain;
-                voice->Direct.Mix.Hrtf.Dir[0] = Position[0];
-                voice->Direct.Mix.Hrtf.Dir[1] = Position[1];
-                voice->Direct.Mix.Hrtf.Dir[2] = Position[2];
-            }
-        }
-        else
-        {
-            /* Get the initial (static) HRIR coefficients and delays. */
-            GetLerpedHrtfCoeffs(Device->Hrtf, ev, az, dirfact, DryGain,
-                                voice->Direct.Mix.Hrtf.Params[0].Coeffs,
-                                voice->Direct.Mix.Hrtf.Params[0].Delay);
-            voice->Direct.Counter = 0;
-            voice->Direct.Moving  = AL_TRUE;
-            voice->Direct.Mix.Hrtf.Gain = DryGain;
-            voice->Direct.Mix.Hrtf.Dir[0] = Position[0];
-            voice->Direct.Mix.Hrtf.Dir[1] = Position[1];
-            voice->Direct.Mix.Hrtf.Dir[2] = Position[2];
-        }
-        voice->Direct.Mix.Hrtf.IrSize = GetHrtfIrSize(Device->Hrtf);
-
-        voice->IsHrtf = AL_TRUE;
-    }
-    else
     {
         MixGains *gains = voice->Direct.Mix.Gains[0];
         ALfloat radius = ALSource->Radius;
@@ -1125,14 +1047,24 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
     while(size > 0)
     {
+        ALuint outchanoffset = 0;
+        ALuint outchancount = device->NumChannels;
+
         IncrementRef(&device->MixCount);
 
         SamplesToDo = minu(size, BUFFERSIZE);
         for(c = 0;c < device->NumChannels;c++)
             memset(device->DryBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
+        if(device->Hrtf)
+        {
+            outchanoffset = device->NumChannels;
+            outchancount = 2;
+            for(c = 0;c < outchancount;c++)
+                memset(device->DryBuffer[outchanoffset+c], 0, SamplesToDo*sizeof(ALfloat));
+        }
 
         V0(device->Backend,lock)();
-        V(device->Synth,process)(SamplesToDo, device->DryBuffer);
+        V(device->Synth,process)(SamplesToDo, &device->DryBuffer[outchanoffset]);
 
         ctx = ATOMIC_LOAD(&device->ContextList);
         while(ctx)
@@ -1212,7 +1144,16 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         device->SamplesDone %= device->Frequency;
         V0(device->Backend,unlock)();
 
-        if(device->Bs2b)
+        if(device->Hrtf)
+        {
+            HrtfMixerFunc HrtfMix = SelectHrtfMixer();
+            ALuint irsize = GetHrtfIrSize(device->Hrtf);
+            for(c = 0;c < device->NumChannels;c++)
+                HrtfMix(&device->DryBuffer[outchanoffset], device->DryBuffer[c], device->Hrtf_Offset, irsize,
+                        &device->Hrtf_Params[c], &device->Hrtf_State[c], SamplesToDo);
+            device->Hrtf_Offset += SamplesToDo;
+        }
+        else if(device->Bs2b)
         {
             /* Apply binaural/crossfeed filter */
             for(i = 0;i < SamplesToDo;i++)
@@ -1231,32 +1172,32 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             switch(device->FmtType)
             {
                 case DevFmtByte:
-                    Write_ALbyte(device->DryBuffer, buffer, SamplesToDo, device->NumChannels);
-                    buffer = (char*)buffer + SamplesToDo*device->NumChannels*sizeof(ALbyte);
+                    Write_ALbyte(&device->DryBuffer[outchanoffset], buffer, SamplesToDo, outchancount);
+                    buffer = (char*)buffer + SamplesToDo*outchancount*sizeof(ALbyte);
                     break;
                 case DevFmtUByte:
-                    Write_ALubyte(device->DryBuffer, buffer, SamplesToDo, device->NumChannels);
-                    buffer = (char*)buffer + SamplesToDo*device->NumChannels*sizeof(ALubyte);
+                    Write_ALubyte(&device->DryBuffer[outchanoffset], buffer, SamplesToDo, outchancount);
+                    buffer = (char*)buffer + SamplesToDo*outchancount*sizeof(ALubyte);
                     break;
                 case DevFmtShort:
-                    Write_ALshort(device->DryBuffer, buffer, SamplesToDo, device->NumChannels);
-                    buffer = (char*)buffer + SamplesToDo*device->NumChannels*sizeof(ALshort);
+                    Write_ALshort(&device->DryBuffer[outchanoffset], buffer, SamplesToDo, outchancount);
+                    buffer = (char*)buffer + SamplesToDo*outchancount*sizeof(ALshort);
                     break;
                 case DevFmtUShort:
-                    Write_ALushort(device->DryBuffer, buffer, SamplesToDo, device->NumChannels);
-                    buffer = (char*)buffer + SamplesToDo*device->NumChannels*sizeof(ALushort);
+                    Write_ALushort(&device->DryBuffer[outchanoffset], buffer, SamplesToDo, outchancount);
+                    buffer = (char*)buffer + SamplesToDo*outchancount*sizeof(ALushort);
                     break;
                 case DevFmtInt:
-                    Write_ALint(device->DryBuffer, buffer, SamplesToDo, device->NumChannels);
-                    buffer = (char*)buffer + SamplesToDo*device->NumChannels*sizeof(ALint);
+                    Write_ALint(&device->DryBuffer[outchanoffset], buffer, SamplesToDo, outchancount);
+                    buffer = (char*)buffer + SamplesToDo*outchancount*sizeof(ALint);
                     break;
                 case DevFmtUInt:
-                    Write_ALuint(device->DryBuffer, buffer, SamplesToDo, device->NumChannels);
-                    buffer = (char*)buffer + SamplesToDo*device->NumChannels*sizeof(ALuint);
+                    Write_ALuint(&device->DryBuffer[outchanoffset], buffer, SamplesToDo, outchancount);
+                    buffer = (char*)buffer + SamplesToDo*outchancount*sizeof(ALuint);
                     break;
                 case DevFmtFloat:
-                    Write_ALfloat(device->DryBuffer, buffer, SamplesToDo, device->NumChannels);
-                    buffer = (char*)buffer + SamplesToDo*device->NumChannels*sizeof(ALfloat);
+                    Write_ALfloat(&device->DryBuffer[outchanoffset], buffer, SamplesToDo, outchancount);
+                    buffer = (char*)buffer + SamplesToDo*outchancount*sizeof(ALfloat);
                     break;
             }
         }

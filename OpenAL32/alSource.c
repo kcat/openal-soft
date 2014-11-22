@@ -2597,23 +2597,12 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             voice->Source = Source;
         }
 
-        voice->Direct.Moving = AL_FALSE;
+        voice->Direct.Moving  = AL_FALSE;
         voice->Direct.Counter = 0;
-        for(i = 0;i < MAX_INPUT_CHANNELS;i++)
-        {
-            ALsizei j;
-            for(j = 0;j < SRC_HISTORY_LENGTH;j++)
-                voice->Direct.Mix.Hrtf.State[i].History[j] = 0.0f;
-            for(j = 0;j < HRIR_LENGTH;j++)
-            {
-                voice->Direct.Mix.Hrtf.State[i].Values[j][0] = 0.0f;
-                voice->Direct.Mix.Hrtf.State[i].Values[j][1] = 0.0f;
-            }
-        }
         for(i = 0;i < (ALsizei)device->NumAuxSends;i++)
         {
-            voice->Send[i].Counter = 0;
             voice->Send[i].Moving  = AL_FALSE;
+            voice->Send[i].Counter = 0;
         }
 
         if(BufferList->buffer->FmtChannels == FmtMono)

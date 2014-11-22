@@ -1712,6 +1712,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     enum DevFmtType oldType;
     ALCuint oldFreq;
     FPUCtl oldMode;
+    size_t size;
 
     // Check for attributes
     if(device->Type == Loopback)
@@ -1885,6 +1886,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     if((device->Flags&DEVICE_RUNNING))
         return ALC_NO_ERROR;
 
+    al_free(device->DryBuffer);
+    device->DryBuffer = NULL;
+
     UpdateClockBase(device);
 
     if(device->Type != Loopback)
@@ -1992,11 +1996,15 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     aluInitPanning(device);
 
-    al_free(device->DryBuffer);
-    device->DryBuffer = al_calloc(16, sizeof(device->DryBuffer[0]) * device->NumChannels);
+    /* With HRTF enabled, the channels are virtual and get positioned around
+     * the virtual listener. Two extra channels are allocated for the actual
+     * HRTF-filtered output.
+     */
+    size = sizeof(device->DryBuffer[0]) * (device->NumChannels + (device->Hrtf ? 2 : 0));
+    device->DryBuffer = al_calloc(16, size);
     if(!device->DryBuffer)
     {
-        ERR("Failed to allocate "SZFMT" bytes for mix buffer\n", sizeof(device->DryBuffer[0]) * device->NumChannels);
+        ERR("Failed to allocate "SZFMT" bytes for mix buffer\n", size);
         return ALC_INVALID_DEVICE;
     }
 

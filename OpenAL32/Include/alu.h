@@ -58,6 +58,7 @@ typedef struct MixGains {
 
 typedef struct DirectParams {
     ALfloat (*OutBuffer)[BUFFERSIZE];
+    ALuint NumChannels;
 
     /* If not 'moving', gain/coefficients are set directly without fading. */
     ALboolean Moving;

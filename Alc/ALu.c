@@ -330,6 +330,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     DirectChannels  = ALSource->DirectChannels;
 
     voice->Direct.OutBuffer = Device->DryBuffer;
+    voice->Direct.NumChannels = Device->NumChannels;
     for(i = 0;i < NumSends;i++)
     {
         ALeffectslot *Slot = ALSource->Send[i].Slot;
@@ -659,6 +660,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     RoomRolloffBase = ALSource->RoomRolloffFactor;
 
     voice->Direct.OutBuffer = Device->DryBuffer;
+    voice->Direct.NumChannels = Device->NumChannels;
     for(i = 0;i < NumSends;i++)
     {
         ALeffectslot *Slot = ALSource->Send[i].Slot;

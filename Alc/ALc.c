@@ -1958,6 +1958,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->Frequency, device->UpdateSize, device->NumUpdates
     );
 
+    if((device->UpdateSize&3) != 0)
+    {
+        if((CPUCapFlags&CPU_CAP_SSE))
+            WARN("SSE performs best with multiple of 4 update sizes (%u)\n", device->UpdateSize);
+        if((CPUCapFlags&CPU_CAP_NEON))
+            WARN("NEON performs best with multiple of 4 update sizes (%u)\n", device->UpdateSize);
+    }
+
     device->Hrtf = NULL;
     if((device->Flags&DEVICE_HRTF_REQUEST))
     {
@@ -1984,14 +1992,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         free(device->Bs2b);
         device->Bs2b = NULL;
         TRACE("BS2B disabled\n");
-    }
-
-    if(!device->Hrtf && (device->UpdateSize&3))
-    {
-        if((CPUCapFlags&CPU_CAP_SSE))
-            WARN("SSE performs best with multiple of 4 update sizes (%u)\n", device->UpdateSize);
-        if((CPUCapFlags&CPU_CAP_NEON))
-            WARN("NEON performs best with multiple of 4 update sizes (%u)\n", device->UpdateSize);
     }
 
     aluInitPanning(device);

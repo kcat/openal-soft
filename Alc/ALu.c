@@ -496,7 +496,24 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     }
     else if(DirectChannels != AL_FALSE)
     {
-        for(c = 0;c < num_channels;c++)
+        if(Device->Hrtf)
+        {
+            voice->Direct.OutBuffer = &voice->Direct.OutBuffer[voice->Direct.NumChannels];
+            voice->Direct.NumChannels = 2;
+            for(c = 0;c < num_channels;c++)
+            {
+                MixGains *gains = voice->Direct.Gains[c];
+
+                for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
+                    gains[j].Target = 0.0f;
+
+                if(chans[c].channel == FrontLeft)
+                    gains[0].Target = DryGain;
+                else if(chans[c].channel == FrontRight)
+                    gains[1].Target = DryGain;
+            }
+        }
+        else for(c = 0;c < num_channels;c++)
         {
             MixGains *gains = voice->Direct.Gains[c];
             int idx;

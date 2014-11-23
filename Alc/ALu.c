@@ -146,7 +146,7 @@ static void UpdateDryStepping(DirectParams *params, ALuint num_chans)
         for(i = 0;i < num_chans;i++)
         {
             MixGains *gains = params->Gains[i];
-            for(j = 0;j < params->NumChannels;j++)
+            for(j = 0;j < params->OutChannels;j++)
             {
                 gains[j].Current = gains[j].Target;
                 gains[j].Step = 1.0f;
@@ -160,7 +160,7 @@ static void UpdateDryStepping(DirectParams *params, ALuint num_chans)
     for(i = 0;i < num_chans;i++)
     {
         MixGains *gains = params->Gains[i];
-        for(j = 0;j < params->NumChannels;j++)
+        for(j = 0;j < params->OutChannels;j++)
         {
             ALfloat cur = maxf(gains[j].Current, FLT_EPSILON);
             ALfloat trg = maxf(gains[j].Target, FLT_EPSILON);
@@ -330,7 +330,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     DirectChannels  = ALSource->DirectChannels;
 
     voice->Direct.OutBuffer = Device->DryBuffer;
-    voice->Direct.NumChannels = Device->NumChannels;
+    voice->Direct.OutChannels = Device->NumChannels;
     for(i = 0;i < NumSends;i++)
     {
         ALeffectslot *Slot = ALSource->Send[i].Slot;
@@ -498,8 +498,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     {
         if(Device->Hrtf)
         {
-            voice->Direct.OutBuffer = &voice->Direct.OutBuffer[voice->Direct.NumChannels];
-            voice->Direct.NumChannels = 2;
+            voice->Direct.OutBuffer = &voice->Direct.OutBuffer[voice->Direct.OutChannels];
+            voice->Direct.OutChannels = 2;
             for(c = 0;c < num_channels;c++)
             {
                 MixGains *gains = voice->Direct.Gains[c];
@@ -677,7 +677,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     RoomRolloffBase = ALSource->RoomRolloffFactor;
 
     voice->Direct.OutBuffer = Device->DryBuffer;
-    voice->Direct.NumChannels = Device->NumChannels;
+    voice->Direct.OutChannels = Device->NumChannels;
     for(i = 0;i < NumSends;i++)
     {
         ALeffectslot *Slot = ALSource->Send[i].Slot;

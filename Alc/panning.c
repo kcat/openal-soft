@@ -343,21 +343,6 @@ ALvoid aluInitPanning(ALCdevice *device)
         { BottomFrontRight, { { 0.353553f,  0.250000f, -0.250000f, -0.250000f }, { 0.353553f,  0.250000f, -0.250000f, -0.250000f } } },
         { BottomBackLeft,   { { 0.353553f, -0.250000f,  0.250000f, -0.250000f }, { 0.353553f, -0.250000f,  0.250000f, -0.250000f } } },
         { BottomBackRight,  { { 0.353553f, -0.250000f, -0.250000f, -0.250000f }, { 0.353553f, -0.250000f, -0.250000f, -0.250000f } } },
-    }, CubeDiamond[14] = {
-        { SideLeft,         { { 0.213980f,  0.000000f,  0.410206f,  0.000000f, 0.0f, 0.0f, 0.0f, -0.211830f,  0.000000f }, { 0.267261f, -0.000000f,  0.381881f, -0.000000f } } },
-        { FrontCenter,      { { 0.213980f,  0.410206f,  0.000000f, -0.000000f, 0.0f, 0.0f, 0.0f,  0.211830f, -0.000000f }, { 0.267261f,  0.381881f,  0.000000f,  0.000000f } } },
-        { SideRight,        { { 0.213980f,  0.000000f, -0.410206f, -0.000000f, 0.0f, 0.0f, 0.0f, -0.211830f, -0.000000f }, { 0.267261f, -0.000000f, -0.381881f, -0.000000f } } },
-        { BackCenter,       { { 0.213980f, -0.410206f,  0.000000f, -0.000000f, 0.0f, 0.0f, 0.0f,  0.211830f, -0.000000f }, { 0.267261f, -0.381881f,  0.000000f, -0.000000f } } },
-        { TopCenter,        { { 0.213980f, -0.000000f,  0.000000f,  0.273471f, 0.0f, 0.0f, 0.0f, -0.000000f,  0.000000f }, { 0.267261f, -0.000000f,  0.000000f,  0.254588f } } },
-        { BottomCenter,     { { 0.213980f, -0.000000f, -0.000000f, -0.273471f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.000000f }, { 0.267261f, -0.000000f, -0.000000f, -0.254588f } } },
-        { TopFrontLeft,     { { 0.213980f,  0.205103f,  0.205103f,  0.193373f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.211830f }, { 0.267261f,  0.190941f,  0.190941f,  0.180021f } } },
-        { TopFrontRight,    { { 0.213980f,  0.205103f, -0.205103f,  0.193373f, 0.0f, 0.0f, 0.0f, -0.000000f, -0.211830f }, { 0.267261f,  0.190941f, -0.190941f,  0.180021f } } },
-        { TopBackLeft,      { { 0.213980f, -0.205103f,  0.205103f,  0.193373f, 0.0f, 0.0f, 0.0f, -0.000000f, -0.211830f }, { 0.267261f, -0.190941f,  0.190941f,  0.180021f } } },
-        { TopBackRight,     { { 0.213980f, -0.205103f, -0.205103f,  0.193373f, 0.0f, 0.0f, 0.0f, -0.000000f,  0.211830f }, { 0.267261f, -0.190941f, -0.190941f,  0.180021f } } },
-        { BottomFrontLeft,  { { 0.213980f,  0.205103f,  0.205103f, -0.193373f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.211830f }, { 0.267261f,  0.190941f,  0.190941f, -0.180021f } } },
-        { BottomFrontRight, { { 0.213980f,  0.205103f, -0.205103f, -0.193373f, 0.0f, 0.0f, 0.0f, -0.000000f, -0.211830f }, { 0.267261f,  0.190941f, -0.190941f, -0.180021f } } },
-        { BottomBackLeft,   { { 0.213980f, -0.205103f,  0.205103f, -0.193373f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.211830f }, { 0.267261f, -0.190941f,  0.190941f, -0.180021f } } },
-        { BottomBackRight,  { { 0.213980f, -0.205103f, -0.205103f, -0.193373f, 0.0f, 0.0f, 0.0f, -0.000000f,  0.211830f }, { 0.267261f, -0.190941f, -0.190941f, -0.180021f } } },
     };
     const ChannelMap *chanmap = NULL;
     size_t count = 0;
@@ -367,11 +352,11 @@ ALvoid aluInitPanning(ALCdevice *device)
 
     if(device->Hrtf)
     {
-        const struct {
+        static const struct {
             enum Channel channel;
             ALfloat elevation;
             ALfloat angle;
-        } VirtualChansSimple[8] = {
+        } VirtualChans[8] = {
             { TopFrontLeft,     DEG2RAD( 45.0f), DEG2RAD( -45.0f) },
             { TopFrontRight,    DEG2RAD( 45.0f), DEG2RAD(  45.0f) },
             { TopBackLeft,      DEG2RAD( 45.0f), DEG2RAD(-135.0f) },
@@ -380,47 +365,18 @@ ALvoid aluInitPanning(ALCdevice *device)
             { BottomFrontRight, DEG2RAD(-45.0f), DEG2RAD(  45.0f) },
             { BottomBackLeft,   DEG2RAD(-45.0f), DEG2RAD(-135.0f) },
             { BottomBackRight,  DEG2RAD(-45.0f), DEG2RAD( 135.0f) },
-        }, VirtualChans[14] = {
-            { FrontCenter,      DEG2RAD(  0.0f), DEG2RAD(   0.0f) },
-            { BackCenter,       DEG2RAD(  0.0f), DEG2RAD(-180.0f) },
-            { SideLeft,         DEG2RAD(  0.0f), DEG2RAD( -90.0f) },
-            { SideRight,        DEG2RAD(  0.0f), DEG2RAD(  90.0f) },
-            { TopFrontLeft,     DEG2RAD( 45.0f), DEG2RAD( -45.0f) },
-            { TopFrontRight,    DEG2RAD( 45.0f), DEG2RAD(  45.0f) },
-            { TopBackLeft,      DEG2RAD( 45.0f), DEG2RAD(-135.0f) },
-            { TopBackRight,     DEG2RAD( 45.0f), DEG2RAD( 135.0f) },
-            { BottomFrontLeft,  DEG2RAD(-45.0f), DEG2RAD( -45.0f) },
-            { BottomFrontRight, DEG2RAD(-45.0f), DEG2RAD(  45.0f) },
-            { BottomBackLeft,   DEG2RAD(-45.0f), DEG2RAD(-135.0f) },
-            { BottomBackRight,  DEG2RAD(-45.0f), DEG2RAD( 135.0f) },
-            { TopCenter,        DEG2RAD( 90.0f), DEG2RAD(   0.0f) },
-            { BottomCenter,     DEG2RAD(-90.0f), DEG2RAD(   0.0f) },
-        }, *virtchans;
-        const char *mode = "simple";
+        };
         ALuint i;
 
-        ConfigValueStr(NULL, "hrtf/mode", &mode);
-        if(strcasecmp(mode, "complex") == 0)
-        {
-            virtchans = VirtualChans;
-            count = COUNTOF(CubeDiamond);
-            chanmap = CubeDiamond;
-        }
-        else
-        {
-            if(strcasecmp(mode, "simple") != 0)
-                ERR("Unhandled HRTF mode: %s\n", mode);
-            virtchans = VirtualChansSimple;
-            count = COUNTOF(Cube8);
-            chanmap = Cube8;
-        }
+        count = COUNTOF(Cube8);
+        chanmap = Cube8;
 
         for(i = 0;i < count;i++)
-            device->ChannelName[i] = virtchans[i].channel;
+            device->ChannelName[i] = VirtualChans[i].channel;
         SetChannelMap(device, chanmap, count);
         for(i = 0;i < count;i++)
             GetLerpedHrtfCoeffs(
-                device->Hrtf, virtchans[i].elevation, virtchans[i].angle, 1.0f, 1.0f,
+                device->Hrtf, VirtualChans[i].elevation, VirtualChans[i].angle, 1.0f, 1.0f,
                 device->Hrtf_Params[i].Coeffs, device->Hrtf_Params[i].Delay
             );
 

@@ -1891,26 +1891,23 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     UpdateClockBase(device);
 
-    if((device->Flags&DEVICE_HRTF_REQUEST))
+    if(device->Type != Loopback && ((device->Flags&DEVICE_HRTF_REQUEST) || GetConfigValueBool(NULL, "hrtf", 0)))
     {
-        if(device->Type != Loopback)
-        {
-            if(!FindHrtfFormat(&device->FmtChans, &device->Frequency))
-                device->Flags &= ~DEVICE_HRTF_REQUEST;
-            else
-                device->Flags |= DEVICE_CHANNELS_REQUEST |
-                                 DEVICE_FREQUENCY_REQUEST;
-        }
+        if(!FindHrtfFormat(&device->FmtChans, &device->Frequency))
+            device->Flags &= ~DEVICE_HRTF_REQUEST;
         else
+            device->Flags |= DEVICE_CHANNELS_REQUEST | DEVICE_FREQUENCY_REQUEST |
+                             DEVICE_HRTF_REQUEST;
+    }
+    if(device->Type == Loopback && (device->Flags&DEVICE_HRTF_REQUEST))
+    {
+        enum DevFmtChannels chans = device->FmtChans;
+        ALCuint freq = device->Frequency;
+        if(!FindHrtfFormat(&chans, &freq) || chans != device->FmtChans || freq != device->Frequency)
         {
-            enum DevFmtChannels chans = device->FmtChans;
-            ALCuint freq = device->Frequency;
-            if(!FindHrtfFormat(&chans, &freq) || chans != device->FmtChans || freq != device->Frequency)
-            {
-                ERR("Requested format not HRTF compatible: %s, %uhz\n",
-                    DevFmtChannelsString(device->FmtChans), device->Frequency);
-                device->Flags &= ~DEVICE_HRTF_REQUEST;
-            }
+            ERR("Requested format not HRTF compatible: %s, %uhz\n",
+                DevFmtChannelsString(device->FmtChans), device->Frequency);
+            device->Flags &= ~DEVICE_HRTF_REQUEST;
         }
     }
 
@@ -1972,7 +1969,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         int bs2blevel;
         int usehrtf;
 
-        if(ConfigValueStr(NULL, "stereo-mode", &mode))
+        if(device->Type != Loopback && ConfigValueStr(NULL, "stereo-mode", &mode))
         {
             if(strcasecmp(mode, "headphones") == 0)
                 headphones = true;
@@ -1982,7 +1979,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 ERR("Unexpected stereo-mode: %s\n", mode);
         }
 
-        if(!ConfigValueBool(NULL, "hrtf", &usehrtf))
+        if(device->Type == Loopback || !ConfigValueBool(NULL, "hrtf", &usehrtf))
             usehrtf = ((device->Flags&DEVICE_HRTF_REQUEST) || headphones);
 
         if(usehrtf)
@@ -1995,7 +1992,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             TRACE("HRTF disabled\n");
 
             bs2blevel = (headphones ? 5 : 0);
-            ConfigValueInt(NULL, "cf_level", &bs2blevel);
+            if(device->Type != Loopback)
+                ConfigValueInt(NULL, "cf_level", &bs2blevel);
             if(bs2blevel > 0 && bs2blevel <= 6)
             {
                 if(!device->Bs2b)

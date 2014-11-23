@@ -1962,10 +1962,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     device->Hrtf = NULL;
     if(device->FmtChans != DevFmtStereo)
     {
-        TRACE("HRTF %s\n", "disabled");
         free(device->Bs2b);
         device->Bs2b = NULL;
-        TRACE("BS2B disabled\n");
     }
     else
     {

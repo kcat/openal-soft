@@ -74,6 +74,11 @@
 #  range between 2 and 16.
 #periods = 4
 
+## stereo-mode
+#  Specifies if stereo output is treated as being headphones or speakers. With
+#  headphones, HRTF or crossfeed filters may be used for better audio quality.
+#stereo-mode = auto
+
 ## hrtf:
 #  Enables HRTF filters. These filters provide for better sound spatialization
 #  while using headphones. The default filter will only work when output is

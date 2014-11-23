@@ -530,8 +530,6 @@ enum Channel {
     SideLeft,
     SideRight,
 
-    TopCenter,
-    BottomCenter,
     TopFrontLeft,
     TopFrontRight,
     TopBackLeft,

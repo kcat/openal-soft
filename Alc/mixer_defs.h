@@ -20,15 +20,17 @@ const ALfloat *Resample_cubic32_C(const ALfloat *src, ALuint frac, ALuint increm
 
 /* C mixers */
 void MixHrtf_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-               ALuint Offset, const ALuint IrSize, const struct HrtfParams *hrtfparams,
-               struct HrtfState *hrtfstate, ALuint BufferSize);
+               ALuint Counter, ALuint Offset, ALuint OutPos, const ALuint IrSize,
+               const struct HrtfParams *hrtfparams, struct HrtfState *hrtfstate,
+               ALuint BufferSize);
 void Mix_C(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
                  struct MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize);
 
 /* SSE mixers */
 void MixHrtf_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-                 ALuint Offset, const ALuint IrSize, const struct HrtfParams *hrtfparams,
-                 struct HrtfState *hrtfstate, ALuint BufferSize);
+                 ALuint Counter, ALuint Offset, ALuint OutPos, const ALuint IrSize,
+                 const struct HrtfParams *hrtfparams, struct HrtfState *hrtfstate,
+                 ALuint BufferSize);
 void Mix_SSE(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
              struct MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize);
 
@@ -54,8 +56,9 @@ const ALfloat *Resample_lerp32_SSE41(const ALfloat *src, ALuint frac, ALuint inc
 
 /* Neon mixers */
 void MixHrtf_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-                  ALuint Offset, const ALuint IrSize, const struct HrtfParams *hrtfparams,
-                  struct HrtfState *hrtfstate, ALuint BufferSize);
+                  ALuint Counter, ALuint Offset, ALuint OutPos, const ALuint IrSize,
+                  const struct HrtfParams *hrtfparams, struct HrtfState *hrtfstate,
+                  ALuint BufferSize);
 void Mix_Neon(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
               struct MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize);
 

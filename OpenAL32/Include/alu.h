@@ -71,6 +71,13 @@ typedef struct DirectParams {
         ALfilterState HighPass;
     } Filters[MAX_INPUT_CHANNELS];
 
+    struct {
+        HrtfParams Params[MAX_INPUT_CHANNELS];
+        HrtfState State[MAX_INPUT_CHANNELS];
+        ALuint IrSize;
+        ALfloat Gain;
+        ALfloat Dir[3];
+    } Hrtf;
     MixGains Gains[MAX_INPUT_CHANNELS][MAX_OUTPUT_CHANNELS];
 } DirectParams;
 
@@ -99,7 +106,8 @@ typedef void (*MixerFunc)(const ALfloat *data, ALuint OutChans,
                           ALfloat (*restrict OutBuffer)[BUFFERSIZE], struct MixGains *Gains,
                           ALuint Counter, ALuint OutPos, ALuint BufferSize);
 typedef void (*HrtfMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-                              ALuint Offset, const ALuint IrSize, const HrtfParams *hrtfparams,
+                              ALuint Counter, ALuint Offset, ALuint OutPos,
+                              const ALuint IrSize, const HrtfParams *hrtfparams,
                               HrtfState *hrtfstate, ALuint BufferSize);
 
 

@@ -387,8 +387,10 @@ ALvoid aluInitPanning(ALCdevice *device)
             device->ChannelName[i] = VirtualChans[i].channel;
         SetChannelMap(device, chanmap, count);
         for(i = 0;i < count;i++)
-            GetLerpedHrtfCoeffs(device->Hrtf, VirtualChans[i].elevation, VirtualChans[i].angle,
-                                device->Hrtf_Params[i].Coeffs, device->Hrtf_Params[i].Delay);
+            GetLerpedHrtfCoeffs(
+                device->Hrtf, VirtualChans[i].elevation, VirtualChans[i].angle, 1.0f, 1.0f,
+                device->Hrtf_Params[i].Coeffs, device->Hrtf_Params[i].Delay
+            );
 
         return;
     }

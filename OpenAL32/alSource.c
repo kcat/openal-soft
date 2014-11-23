@@ -2599,6 +2599,17 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
 
         voice->Direct.Moving  = AL_FALSE;
         voice->Direct.Counter = 0;
+        for(i = 0;i < MAX_INPUT_CHANNELS;i++)
+        {
+            ALsizei j;
+            for(j = 0;j < HRTF_HISTORY_LENGTH;j++)
+                voice->Direct.Hrtf.State[i].History[j] = 0.0f;
+            for(j = 0;j < HRIR_LENGTH;j++)
+            {
+                voice->Direct.Hrtf.State[i].Values[j][0] = 0.0f;
+                voice->Direct.Hrtf.State[i].Values[j][1] = 0.0f;
+            }
+        }
         for(i = 0;i < (ALsizei)device->NumAuxSends;i++)
         {
             voice->Send[i].Moving  = AL_FALSE;

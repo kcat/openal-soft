@@ -527,6 +527,39 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
 
         voice->IsHrtf = AL_FALSE;
     }
+    else if(Device->Hrtf)
+    {
+        voice->Direct.OutBuffer = &voice->Direct.OutBuffer[voice->Direct.OutChannels];
+        voice->Direct.OutChannels = 2;
+        for(c = 0;c < num_channels;c++)
+        {
+            if(chans[c].channel == LFE)
+            {
+                /* Skip LFE */
+                voice->Direct.Hrtf.Params[c].Delay[0] = 0;
+                voice->Direct.Hrtf.Params[c].Delay[1] = 0;
+                for(i = 0;i < HRIR_LENGTH;i++)
+                {
+                    voice->Direct.Hrtf.Params[c].Coeffs[i][0] = 0.0f;
+                    voice->Direct.Hrtf.Params[c].Coeffs[i][1] = 0.0f;
+                }
+            }
+            else
+            {
+                /* Get the static HRIR coefficients and delays for this
+                 * channel. */
+                GetLerpedHrtfCoeffs(Device->Hrtf,
+                                    chans[c].elevation, chans[c].angle, 1.0f, DryGain,
+                                    voice->Direct.Hrtf.Params[c].Coeffs,
+                                    voice->Direct.Hrtf.Params[c].Delay);
+            }
+        }
+        voice->Direct.Counter = 0;
+        voice->Direct.Moving  = AL_TRUE;
+        voice->Direct.Hrtf.IrSize = GetHrtfIrSize(Device->Hrtf);
+
+        voice->IsHrtf = AL_TRUE;
+    }
     else
     {
         for(c = 0;c < num_channels;c++)
@@ -934,6 +967,73 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         BufferListItem = BufferListItem->next;
     }
 
+    if(Device->Hrtf)
+    {
+        /* Use a binaural HRTF algorithm for stereo headphone playback */
+        ALfloat delta, ev = 0.0f, az = 0.0f;
+        ALfloat radius = ALSource->Radius;
+        ALfloat dirfact = 1.0f;
+
+        voice->Direct.OutBuffer = &voice->Direct.OutBuffer[voice->Direct.OutChannels];
+        voice->Direct.OutChannels = 2;
+
+        if(Distance > FLT_EPSILON)
+        {
+            ALfloat invlen = 1.0f/Distance;
+            Position[0] *= invlen;
+            Position[1] *= invlen;
+            Position[2] *= invlen;
+
+            /* Calculate elevation and azimuth only when the source is not at
+             * the listener. This prevents +0 and -0 Z from producing
+             * inconsistent panning. Also, clamp Y in case FP precision errors
+             * cause it to land outside of -1..+1. */
+            ev = asinf(clampf(Position[1], -1.0f, 1.0f));
+            az = atan2f(Position[0], -Position[2]*ZScale);
+        }
+        if(radius > Distance)
+            dirfact *= Distance / radius;
+
+        /* Check to see if the HRIR is already moving. */
+        if(voice->Direct.Moving)
+        {
+            /* Calculate the normalized HRTF transition factor (delta). */
+            delta = CalcHrtfDelta(voice->Direct.Hrtf.Gain, DryGain,
+                                  voice->Direct.Hrtf.Dir, Position);
+            /* If the delta is large enough, get the moving HRIR target
+             * coefficients, target delays, steppping values, and counter. */
+            if(delta > 0.001f)
+            {
+                ALuint counter = GetMovingHrtfCoeffs(Device->Hrtf,
+                    ev, az, dirfact, DryGain, delta, voice->Direct.Counter,
+                    voice->Direct.Hrtf.Params[0].Coeffs, voice->Direct.Hrtf.Params[0].Delay,
+                    voice->Direct.Hrtf.Params[0].CoeffStep, voice->Direct.Hrtf.Params[0].DelayStep
+                );
+                voice->Direct.Counter = counter;
+                voice->Direct.Hrtf.Gain = DryGain;
+                voice->Direct.Hrtf.Dir[0] = Position[0];
+                voice->Direct.Hrtf.Dir[1] = Position[1];
+                voice->Direct.Hrtf.Dir[2] = Position[2];
+            }
+        }
+        else
+        {
+            /* Get the initial (static) HRIR coefficients and delays. */
+            GetLerpedHrtfCoeffs(Device->Hrtf, ev, az, dirfact, DryGain,
+                                voice->Direct.Hrtf.Params[0].Coeffs,
+                                voice->Direct.Hrtf.Params[0].Delay);
+            voice->Direct.Counter = 0;
+            voice->Direct.Moving  = AL_TRUE;
+            voice->Direct.Hrtf.Gain = DryGain;
+            voice->Direct.Hrtf.Dir[0] = Position[0];
+            voice->Direct.Hrtf.Dir[1] = Position[1];
+            voice->Direct.Hrtf.Dir[2] = Position[2];
+        }
+        voice->Direct.Hrtf.IrSize = GetHrtfIrSize(Device->Hrtf);
+
+        voice->IsHrtf = AL_TRUE;
+    }
+    else
     {
         MixGains *gains = voice->Direct.Gains[0];
         ALfloat radius = ALSource->Radius;
@@ -1168,8 +1268,10 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             HrtfMixerFunc HrtfMix = SelectHrtfMixer();
             ALuint irsize = GetHrtfIrSize(device->Hrtf);
             for(c = 0;c < device->NumChannels;c++)
-                HrtfMix(&device->DryBuffer[outchanoffset], device->DryBuffer[c], device->Hrtf_Offset, irsize,
-                        &device->Hrtf_Params[c], &device->Hrtf_State[c], SamplesToDo);
+                HrtfMix(&device->DryBuffer[outchanoffset], device->DryBuffer[c], 0.0f,
+                    device->Hrtf_Offset, 0.0f, irsize, &device->Hrtf_Params[c],
+                    &device->Hrtf_State[c], SamplesToDo
+                );
             device->Hrtf_Offset += SamplesToDo;
         }
         else if(device->Bs2b)

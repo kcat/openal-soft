@@ -686,7 +686,6 @@ struct ALCdevice_struct
 
     // Stereo-to-binaural filter
     struct bs2b *Bs2b;
-    ALCint       Bs2bLevel;
 
     // Device flags
     ALuint       Flags;

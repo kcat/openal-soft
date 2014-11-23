@@ -1971,6 +1971,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     {
         bool headphones = false;
         const char *mode;
+        int bs2blevel;
         int usehrtf;
 
         if(ConfigValueStr(NULL, "stereo-mode", &mode))
@@ -1988,26 +1989,32 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         if(usehrtf)
             device->Hrtf = GetHrtf(device->FmtChans, device->Frequency);
-        if(!device->Hrtf)
-            device->Flags &= ~DEVICE_HRTF_REQUEST;
-        TRACE("HRTF %s\n", device->Hrtf?"enabled":"disabled");
-
-        if(!device->Hrtf && device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)
-        {
-            if(!device->Bs2b)
-            {
-                device->Bs2b = calloc(1, sizeof(*device->Bs2b));
-                bs2b_clear(device->Bs2b);
-            }
-            bs2b_set_srate(device->Bs2b, device->Frequency);
-            bs2b_set_level(device->Bs2b, device->Bs2bLevel);
-            TRACE("BS2B level %d\n", device->Bs2bLevel);
-        }
+        if(device->Hrtf)
+            TRACE("HRTF enabled\n");
         else
         {
-            free(device->Bs2b);
-            device->Bs2b = NULL;
-            TRACE("BS2B disabled\n");
+            device->Flags &= ~DEVICE_HRTF_REQUEST;
+            TRACE("HRTF disabled\n");
+
+            bs2blevel = (headphones ? 5 : 0);
+            ConfigValueInt(NULL, "cf_level", &bs2blevel);
+            if(bs2blevel > 0 && bs2blevel <= 6)
+            {
+                if(!device->Bs2b)
+                {
+                    device->Bs2b = calloc(1, sizeof(*device->Bs2b));
+                    bs2b_clear(device->Bs2b);
+                }
+                bs2b_set_srate(device->Bs2b, device->Frequency);
+                bs2b_set_level(device->Bs2b, bs2blevel);
+                TRACE("BS2B enabled\n");
+            }
+            else
+            {
+                free(device->Bs2b);
+                device->Bs2b = NULL;
+                TRACE("BS2B disabled\n");
+            }
         }
     }
 
@@ -3253,7 +3260,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     device->Flags = 0;
     device->Bs2b = NULL;
-    device->Bs2bLevel = 0;
     AL_STRING_INIT(device->DeviceName);
     device->DryBuffer = NULL;
 
@@ -3377,8 +3383,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     ConfigValueUInt(NULL, "sends", &device->NumAuxSends);
     if(device->NumAuxSends > MAX_SENDS) device->NumAuxSends = MAX_SENDS;
-
-    ConfigValueInt(NULL, "cf_level", &device->Bs2bLevel);
 
     device->NumStereoSources = 1;
     device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
@@ -3700,7 +3704,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
 
     device->Flags = 0;
     device->Bs2b = NULL;
-    device->Bs2bLevel = 0;
     AL_STRING_INIT(device->DeviceName);
     device->DryBuffer = NULL;
 

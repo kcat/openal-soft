@@ -744,9 +744,6 @@ struct ALCdevice_struct
 // Specifies if the device is currently running
 #define DEVICE_RUNNING                           (1<<31)
 
-/* Invalid channel offset */
-#define INVALID_OFFSET                           (~0u)
-
 
 /* Nanosecond resolution for the device clock time. */
 #define DEVICE_CLOCK_RES  U64(1000000000)

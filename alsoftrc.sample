@@ -77,14 +77,17 @@
 ## stereo-mode
 #  Specifies if stereo output is treated as being headphones or speakers. With
 #  headphones, HRTF or crossfeed filters may be used for better audio quality.
+#  Valid settings are auto, speakers, and headphones.
 #stereo-mode = auto
 
 ## hrtf:
-#  Enables HRTF filters. These filters provide for better sound spatialization
-#  while using headphones. The default filter will only work when output is
-#  44100hz stereo. While HRTF is active, the cf_level option is disabled.
-#  Default is disabled since stereo speaker output quality may suffer.
-#hrtf = false
+#  Controls HRTF processing. These filters provide better spatialization of
+#  sounds while using headphones, but do require a bit more CPU power. The
+#  default filters will only work with 44100hz or 48000hz stereo output. While
+#  HRTF is in use, the cf_level option is ignored. Setting this to true or
+#  false will forcefully enable or disable HRTF, otherwise HRTF will be enabled
+#  when using headphones.
+#hrtf =
 
 ## hrtf_tables
 #  Specifies a comma-separated list of files containing HRTF data sets. The

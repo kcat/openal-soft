@@ -514,6 +514,16 @@ int ConfigValueFloat(const char *blockName, const char *keyName, float *ret)
     return 1;
 }
 
+int ConfigValueBool(const char *blockName, const char *keyName, int *ret)
+{
+    const char *val = GetConfigValue(blockName, keyName, "");
+    if(!val[0]) return 0;
+
+    *ret = (strcasecmp(val, "true") == 0 || strcasecmp(val, "yes") == 0 ||
+            strcasecmp(val, "on") == 0 || atoi(val) != 0);
+    return 1;
+}
+
 int GetConfigValueBool(const char *blockName, const char *keyName, int def)
 {
     const char *val = GetConfigValue(blockName, keyName, "");

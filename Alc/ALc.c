@@ -1891,28 +1891,21 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     UpdateClockBase(device);
 
-    if(device->Type != Loopback)
-    {
-        bool usehrtf = !!(device->Flags&DEVICE_HRTF_REQUEST);
-        if(GetConfigValueBool(NULL, "hrtf", usehrtf))
-            device->Flags |= DEVICE_HRTF_REQUEST;
-        else
-            device->Flags &= ~DEVICE_HRTF_REQUEST;
-    }
     if((device->Flags&DEVICE_HRTF_REQUEST))
     {
-        enum DevFmtChannels chans = device->FmtChans;
-        ALCuint freq = device->Frequency;
-        if(FindHrtfFormat(&chans, &freq))
+        if(device->Type != Loopback)
         {
-            if(device->Type != Loopback)
-            {
-                device->Frequency = freq;
-                device->FmtChans = chans;
+            if(!FindHrtfFormat(&device->FmtChans, &device->Frequency))
+                device->Flags &= ~DEVICE_HRTF_REQUEST;
+            else
                 device->Flags |= DEVICE_CHANNELS_REQUEST |
                                  DEVICE_FREQUENCY_REQUEST;
-            }
-            else if(device->Frequency != freq || device->FmtChans != chans)
+        }
+        else
+        {
+            enum DevFmtChannels chans = device->FmtChans;
+            ALCuint freq = device->Frequency;
+            if(!FindHrtfFormat(&chans, &freq) || chans != device->FmtChans || freq != device->Frequency)
             {
                 ERR("Requested format not HRTF compatible: %s, %uhz\n",
                     DevFmtChannelsString(device->FmtChans), device->Frequency);
@@ -1967,31 +1960,55 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
 
     device->Hrtf = NULL;
-    if((device->Flags&DEVICE_HRTF_REQUEST))
+    if(device->FmtChans != DevFmtStereo)
     {
-        device->Hrtf = GetHrtf(device->FmtChans, device->Frequency);
-        if(!device->Hrtf)
-            device->Flags &= ~DEVICE_HRTF_REQUEST;
-    }
-    TRACE("HRTF %s\n", device->Hrtf?"enabled":"disabled");
-
-    if(!device->Hrtf && device->Bs2bLevel > 0 && device->Bs2bLevel <= 6 &&
-       device->FmtChans == DevFmtStereo)
-    {
-        if(!device->Bs2b)
-        {
-            device->Bs2b = calloc(1, sizeof(*device->Bs2b));
-            bs2b_clear(device->Bs2b);
-        }
-        bs2b_set_srate(device->Bs2b, device->Frequency);
-        bs2b_set_level(device->Bs2b, device->Bs2bLevel);
-        TRACE("BS2B level %d\n", device->Bs2bLevel);
-    }
-    else
-    {
+        TRACE("HRTF %s\n", "disabled");
         free(device->Bs2b);
         device->Bs2b = NULL;
         TRACE("BS2B disabled\n");
+    }
+    else
+    {
+        bool headphones = false;
+        const char *mode;
+        int usehrtf;
+
+        if(ConfigValueStr(NULL, "stereo-mode", &mode))
+        {
+            if(strcasecmp(mode, "headphones") == 0)
+                headphones = true;
+            else if(strcasecmp(mode, "speakers") == 0)
+                headphones = false;
+            else if(strcasecmp(mode, "auto") != 0)
+                ERR("Unexpected stereo-mode: %s\n", mode);
+        }
+
+        if(!ConfigValueBool(NULL, "hrtf", &usehrtf))
+            usehrtf = ((device->Flags&DEVICE_HRTF_REQUEST) || headphones);
+
+        if(usehrtf)
+            device->Hrtf = GetHrtf(device->FmtChans, device->Frequency);
+        if(!device->Hrtf)
+            device->Flags &= ~DEVICE_HRTF_REQUEST;
+        TRACE("HRTF %s\n", device->Hrtf?"enabled":"disabled");
+
+        if(!device->Hrtf && device->Bs2bLevel > 0 && device->Bs2bLevel <= 6)
+        {
+            if(!device->Bs2b)
+            {
+                device->Bs2b = calloc(1, sizeof(*device->Bs2b));
+                bs2b_clear(device->Bs2b);
+            }
+            bs2b_set_srate(device->Bs2b, device->Frequency);
+            bs2b_set_level(device->Bs2b, device->Bs2bLevel);
+            TRACE("BS2B level %d\n", device->Bs2bLevel);
+        }
+        else
+        {
+            free(device->Bs2b);
+            device->Bs2b = NULL;
+            TRACE("BS2B disabled\n");
+        }
     }
 
     aluInitPanning(device);

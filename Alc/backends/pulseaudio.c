@@ -706,6 +706,9 @@ static void ALCpulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const
         }
     }
 
+    device->IsHeadphones = (device->FmtChans == DevFmtStereo && info->active_port &&
+                            strcmp(info->active_port->name, "analog-output-headphones") == 0);
+
     if(!chanmaps[i].str)
     {
         char chanmap_str[PA_CHANNEL_MAP_SNPRINT_MAX] = "";

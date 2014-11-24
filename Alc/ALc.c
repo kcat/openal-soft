@@ -2016,9 +2016,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     aluInitPanning(device);
 
-    /* With HRTF enabled, the channels are virtual and get positioned around
-     * the virtual listener. Two extra channels are allocated for the actual
-     * HRTF-filtered output.
+    /* With HRTF enabled, virtual channels are allocated for B-Format and
+     * effects renfering. Two extra channels are allocated for the actual HRTF-
+     * filtered output.
      */
     size = sizeof(device->DryBuffer[0]) * (device->NumChannels + (device->Hrtf ? 2 : 0));
     device->DryBuffer = al_calloc(16, size);

@@ -223,7 +223,7 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
     ALuint evidx[2], lidx[4], ridx[4];
     ALfloat mu[3], blend[4];
     ALfloat left, right;
-    ALfloat step;
+    ALfloat steps;
     ALuint i;
 
     /* Claculate elevation indices and interpolation factor. */
@@ -246,8 +246,8 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
     }
 
     // Calculate the stepping parameters.
-    step = maxf(floorf(delta*(Hrtf->sampleRate*0.015f) + 0.5f), 1.0f);
-    delta = 1.0f / step;
+    steps = maxf(floorf(delta*(Hrtf->sampleRate*0.015f) + 0.5f), 1.0f);
+    delta = 1.0f / steps;
 
     /* Calculate 4 blending weights for 2D bilinear interpolation. */
     blend[0] = (1.0f-mu[0]) * (1.0f-mu[2]);
@@ -341,7 +341,7 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
      * complete its transition.  The mixer will only apply stepping for this
      * many samples.
      */
-    return fastf2u(step);
+    return fastf2u(steps);
 }
 
 

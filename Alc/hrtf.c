@@ -246,8 +246,8 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
     }
 
     // Calculate the stepping parameters.
-    delta = maxf(floorf(delta*(Hrtf->sampleRate*0.015f) + 0.5f), 1.0f);
-    step = 1.0f / delta;
+    step = maxf(floorf(delta*(Hrtf->sampleRate*0.015f) + 0.5f), 1.0f);
+    delta = 1.0f / step;
 
     /* Calculate 4 blending weights for 2D bilinear interpolation. */
     blend[0] = (1.0f-mu[0]) * (1.0f-mu[2]);
@@ -269,8 +269,8 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
                          Hrtf->delays[ridx[2]]*blend[2] + Hrtf->delays[ridx[3]]*blend[3]) *
                         dirfact + 0.5f) << HRTFDELAY_BITS;
 
-    delayStep[0] = fastf2i(step * (delays[0] - left));
-    delayStep[1] = fastf2i(step * (delays[1] - right));
+    delayStep[0] = fastf2i(delta * (delays[0] - left));
+    delayStep[1] = fastf2i(delta * (delays[1] - right));
 
     /* Calculate the sample offsets for the HRIR indices. */
     lidx[0] *= Hrtf->irSize;
@@ -298,13 +298,13 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
 
         c = (Hrtf->coeffs[lidx[0]+i]*blend[0] + Hrtf->coeffs[lidx[1]+i]*blend[1] +
              Hrtf->coeffs[lidx[2]+i]*blend[2] + Hrtf->coeffs[lidx[3]+i]*blend[3]);
-        coeffs[i][0] = lerp(PassthruCoeff, c, dirfact) * gain * (1.0f/32767.0f);;
+        coeffs[i][0] = lerp(PassthruCoeff, c, dirfact) * gain * (1.0f/32767.0f);
         c = (Hrtf->coeffs[ridx[0]+i]*blend[0] + Hrtf->coeffs[ridx[1]+i]*blend[1] +
              Hrtf->coeffs[ridx[2]+i]*blend[2] + Hrtf->coeffs[ridx[3]+i]*blend[3]);
-        coeffs[i][1] = lerp(PassthruCoeff, c, dirfact) * gain * (1.0f/32767.0f);;
+        coeffs[i][1] = lerp(PassthruCoeff, c, dirfact) * gain * (1.0f/32767.0f);
 
-        coeffStep[i][0] = step * (coeffs[i][0] - left);
-        coeffStep[i][1] = step * (coeffs[i][1] - right);
+        coeffStep[i][0] = delta * (coeffs[i][0] - left);
+        coeffStep[i][1] = delta * (coeffs[i][1] - right);
 
         for(i = 1;i < Hrtf->irSize;i++)
         {
@@ -313,13 +313,13 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
 
             c = (Hrtf->coeffs[lidx[0]+i]*blend[0] + Hrtf->coeffs[lidx[1]+i]*blend[1] +
                  Hrtf->coeffs[lidx[2]+i]*blend[2] + Hrtf->coeffs[lidx[3]+i]*blend[3]);
-            coeffs[i][0] = lerp(0.0f, c, dirfact) * gain * (1.0f/32767.0f);;
+            coeffs[i][0] = lerp(0.0f, c, dirfact) * gain * (1.0f/32767.0f);
             c = (Hrtf->coeffs[ridx[0]+i]*blend[0] + Hrtf->coeffs[ridx[1]+i]*blend[1] +
                  Hrtf->coeffs[ridx[2]+i]*blend[2] + Hrtf->coeffs[ridx[3]+i]*blend[3]);
-            coeffs[i][1] = lerp(0.0f, c, dirfact) * gain * (1.0f/32767.0f);;
+            coeffs[i][1] = lerp(0.0f, c, dirfact) * gain * (1.0f/32767.0f);
 
-            coeffStep[i][0] = step * (coeffs[i][0] - left);
-            coeffStep[i][1] = step * (coeffs[i][1] - right);
+            coeffStep[i][0] = delta * (coeffs[i][0] - left);
+            coeffStep[i][1] = delta * (coeffs[i][1] - right);
         }
     }
     else
@@ -332,8 +332,8 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
             coeffs[i][0] = 0.0f;
             coeffs[i][1] = 0.0f;
 
-            coeffStep[i][0] = step * -left;
-            coeffStep[i][1] = step * -right;
+            coeffStep[i][0] = delta * -left;
+            coeffStep[i][1] = delta * -right;
         }
     }
 
@@ -341,7 +341,7 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
      * complete its transition.  The mixer will only apply stepping for this
      * many samples.
      */
-    return fastf2u(delta);
+    return fastf2u(step);
 }
 
 

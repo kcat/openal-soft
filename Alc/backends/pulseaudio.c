@@ -34,13 +34,6 @@
 
 #if PA_API_VERSION == 12
 
-#ifndef PA_CHECK_VERSION
-#define PA_CHECK_VERSION(major,minor,micro)                             \
-    ((PA_MAJOR > (major)) ||                                            \
-     (PA_MAJOR == (major) && PA_MINOR > (minor)) ||                     \
-     (PA_MAJOR == (major) && PA_MINOR == (minor) && PA_MICRO >= (micro)))
-#endif
-
 #ifdef HAVE_DYNLOAD
 static void *pa_handle;
 #define MAKE_FUNC(x) static __typeof(x) * p##x
@@ -108,13 +101,9 @@ MAKE_FUNC(pa_operation_unref);
 MAKE_FUNC(pa_proplist_new);
 MAKE_FUNC(pa_proplist_free);
 MAKE_FUNC(pa_proplist_set);
-#if PA_CHECK_VERSION(0,9,15)
 MAKE_FUNC(pa_channel_map_superset);
 MAKE_FUNC(pa_stream_set_buffer_attr_callback);
-#endif
-#if PA_CHECK_VERSION(0,9,16)
 MAKE_FUNC(pa_stream_begin_write);
-#endif
 #undef MAKE_FUNC
 
 #define pa_context_unref ppa_context_unref
@@ -181,13 +170,9 @@ MAKE_FUNC(pa_stream_begin_write);
 #define pa_proplist_new ppa_proplist_new
 #define pa_proplist_free ppa_proplist_free
 #define pa_proplist_set ppa_proplist_set
-#if PA_CHECK_VERSION(0,9,15)
 #define pa_channel_map_superset ppa_channel_map_superset
 #define pa_stream_set_buffer_attr_callback ppa_stream_set_buffer_attr_callback
-#endif
-#if PA_CHECK_VERSION(0,9,16)
 #define pa_stream_begin_write ppa_stream_begin_write
-#endif
 
 #endif
 
@@ -278,18 +263,10 @@ static ALCboolean pulse_load(void)
         LOAD_FUNC(pa_proplist_new);
         LOAD_FUNC(pa_proplist_free);
         LOAD_FUNC(pa_proplist_set);
+        LOAD_FUNC(pa_channel_map_superset);
+        LOAD_FUNC(pa_stream_set_buffer_attr_callback);
+        LOAD_FUNC(pa_stream_begin_write);
 #undef LOAD_FUNC
-#define LOAD_OPTIONAL_FUNC(x) do {                                            \
-    p##x = GetSymbol(pa_handle, #x);                                          \
-} while(0)
-#if PA_CHECK_VERSION(0,9,15)
-        LOAD_OPTIONAL_FUNC(pa_channel_map_superset);
-        LOAD_OPTIONAL_FUNC(pa_stream_set_buffer_attr_callback);
-#endif
-#if PA_CHECK_VERSION(0,9,16)
-        LOAD_OPTIONAL_FUNC(pa_stream_begin_write);
-#endif
-#undef LOAD_OPTIONAL_FUNC
 
         if(ret == ALC_FALSE)
         {
@@ -438,10 +415,7 @@ static void pulse_close(pa_threaded_mainloop *loop, pa_context *context,
         pa_stream_set_state_callback(stream, NULL, NULL);
         pa_stream_set_moved_callback(stream, NULL, NULL);
         pa_stream_set_write_callback(stream, NULL, NULL);
-#if PA_CHECK_VERSION(0,9,15)
-        if(pa_stream_set_buffer_attr_callback)
-            pa_stream_set_buffer_attr_callback(stream, NULL, NULL);
-#endif
+        pa_stream_set_buffer_attr_callback(stream, NULL, NULL);
         pa_stream_disconnect(stream);
         pa_stream_unref(stream);
     }
@@ -693,12 +667,7 @@ static void ALCpulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const
         if(!pa_channel_map_parse(&map, chanmaps[i].str))
             continue;
 
-        if(pa_channel_map_equal(&info->channel_map, &map)
-#if PA_CHECK_VERSION(0,9,15)
-           || (pa_channel_map_superset &&
-               pa_channel_map_superset(&info->channel_map, &map))
-#endif
-            )
+        if(pa_channel_map_superset(&info->channel_map, &map))
         {
             if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
                 device->FmtChans = chanmaps[i].chans;
@@ -828,10 +797,7 @@ static int ALCpulsePlayback_mixerProc(void *ptr)
             void *buf;
             pa_free_cb_t free_func = NULL;
 
-#if PA_CHECK_VERSION(0,9,16)
-            if(!pa_stream_begin_write ||
-               pa_stream_begin_write(self->stream, &buf, &newlen) < 0)
-#endif
+            if(pa_stream_begin_write(self->stream, &buf, &newlen) < 0)
             {
                 buf = pa_xmalloc(newlen);
                 free_func = pa_xfree;
@@ -933,10 +899,7 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
     if(self->stream)
     {
         pa_stream_set_moved_callback(self->stream, NULL, NULL);
-#if PA_CHECK_VERSION(0,9,15)
-        if(pa_stream_set_buffer_attr_callback)
-            pa_stream_set_buffer_attr_callback(self->stream, NULL, NULL);
-#endif
+        pa_stream_set_buffer_attr_callback(self->stream, NULL, NULL);
         pa_stream_disconnect(self->stream);
         pa_stream_unref(self->stream);
         self->stream = NULL;
@@ -1057,10 +1020,7 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
         device->Frequency = self->spec.rate;
     }
 
-#if PA_CHECK_VERSION(0,9,15)
-    if(pa_stream_set_buffer_attr_callback)
-        pa_stream_set_buffer_attr_callback(self->stream, ALCpulsePlayback_bufferAttrCallback, self);
-#endif
+    pa_stream_set_buffer_attr_callback(self->stream, ALCpulsePlayback_bufferAttrCallback, self);
     ALCpulsePlayback_bufferAttrCallback(self->stream, self);
 
     len = self->attr.minreq / pa_frame_size(&self->spec);

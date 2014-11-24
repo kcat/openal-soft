@@ -640,6 +640,7 @@ struct ALCdevice_struct
     ALuint       NumUpdates;
     enum DevFmtChannels FmtChans;
     enum DevFmtType     FmtType;
+    ALboolean    IsHeadphones;
 
     al_string DeviceName;
 

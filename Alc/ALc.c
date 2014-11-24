@@ -1964,7 +1964,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
     else
     {
-        bool headphones = false;
+        bool headphones = device->IsHeadphones;
         const char *mode;
         int bs2blevel;
         int usehrtf;
@@ -3279,6 +3279,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->FmtChans = DevFmtChannelsDefault;
     device->FmtType = DevFmtTypeDefault;
     device->Frequency = DEFAULT_OUTPUT_RATE;
+    device->IsHeadphones = AL_FALSE;
     device->NumUpdates = 4;
     device->UpdateSize = 1024;
 
@@ -3553,6 +3554,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         alcSetError(NULL, ALC_INVALID_ENUM);
         return NULL;
     }
+    device->IsHeadphones = AL_FALSE;
 
     device->UpdateSize = samples;
     device->NumUpdates = 1;
@@ -3735,6 +3737,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->Frequency = DEFAULT_OUTPUT_RATE;
     device->FmtChans = DevFmtChannelsDefault;
     device->FmtType = DevFmtTypeDefault;
+    device->IsHeadphones = AL_FALSE;
 
     ConfigValueUInt(NULL, "sources", &device->MaxNoOfSources);
     if(device->MaxNoOfSources == 0) device->MaxNoOfSources = 256;

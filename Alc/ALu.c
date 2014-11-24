@@ -1290,37 +1290,35 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
         if(buffer)
         {
+#define WRITE(T, a, b, c, d) do {               \
+    Write_##T((a), (b), (c), (d));              \
+    buffer = (char*)buffer + (c)*(d)*sizeof(T); \
+} while(0)
             switch(device->FmtType)
             {
                 case DevFmtByte:
-                    Write_ALbyte(&device->DryBuffer[outchanoffset], buffer, SamplesToDo, outchancount);
-                    buffer = (char*)buffer + SamplesToDo*outchancount*sizeof(ALbyte);
+                    WRITE(ALbyte, device->DryBuffer+outchanoffset, buffer, SamplesToDo, outchancount);
                     break;
                 case DevFmtUByte:
-                    Write_ALubyte(&device->DryBuffer[outchanoffset], buffer, SamplesToDo, outchancount);
-                    buffer = (char*)buffer + SamplesToDo*outchancount*sizeof(ALubyte);
+                    WRITE(ALubyte, device->DryBuffer+outchanoffset, buffer, SamplesToDo, outchancount);
                     break;
                 case DevFmtShort:
-                    Write_ALshort(&device->DryBuffer[outchanoffset], buffer, SamplesToDo, outchancount);
-                    buffer = (char*)buffer + SamplesToDo*outchancount*sizeof(ALshort);
+                    WRITE(ALshort, device->DryBuffer+outchanoffset, buffer, SamplesToDo, outchancount);
                     break;
                 case DevFmtUShort:
-                    Write_ALushort(&device->DryBuffer[outchanoffset], buffer, SamplesToDo, outchancount);
-                    buffer = (char*)buffer + SamplesToDo*outchancount*sizeof(ALushort);
+                    WRITE(ALushort, device->DryBuffer+outchanoffset, buffer, SamplesToDo, outchancount);
                     break;
                 case DevFmtInt:
-                    Write_ALint(&device->DryBuffer[outchanoffset], buffer, SamplesToDo, outchancount);
-                    buffer = (char*)buffer + SamplesToDo*outchancount*sizeof(ALint);
+                    WRITE(ALint, device->DryBuffer+outchanoffset, buffer, SamplesToDo, outchancount);
                     break;
                 case DevFmtUInt:
-                    Write_ALuint(&device->DryBuffer[outchanoffset], buffer, SamplesToDo, outchancount);
-                    buffer = (char*)buffer + SamplesToDo*outchancount*sizeof(ALuint);
+                    WRITE(ALuint, device->DryBuffer+outchanoffset, buffer, SamplesToDo, outchancount);
                     break;
                 case DevFmtFloat:
-                    Write_ALfloat(&device->DryBuffer[outchanoffset], buffer, SamplesToDo, outchancount);
-                    buffer = (char*)buffer + SamplesToDo*outchancount*sizeof(ALfloat);
+                    WRITE(ALfloat, device->DryBuffer+outchanoffset, buffer, SamplesToDo, outchancount);
                     break;
             }
+#undef WRITE
         }
 
         size -= SamplesToDo;

@@ -88,39 +88,6 @@ static void CalcAzIndices(ALuint azcount, ALfloat az, ALuint *azidx, ALfloat *az
     *azmu = az - floorf(az);
 }
 
-/* Calculates the normalized HRTF transition factor (delta) from the changes
- * in gain and listener to source angle between updates.  The result is a
- * normalized delta factor that can be used to calculate moving HRIR stepping
- * values.
- */
-ALfloat CalcHrtfDelta(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3], const ALfloat newdir[3])
-{
-    ALfloat gainChange, angleChange, change;
-
-    // Calculate the normalized dB gain change.
-    newGain = maxf(newGain, 0.0001f);
-    oldGain = maxf(oldGain, 0.0001f);
-    gainChange = fabsf(log10f(newGain / oldGain) / log10f(0.0001f));
-
-    // Calculate the angle change only when there is enough gain to notice it.
-    angleChange = 0.0f;
-    if(gainChange > 0.0001f || newGain > 0.0001f)
-    {
-        // No angle change when the directions are equal or degenerate (when
-        // both have zero length).
-        if(newdir[0] != olddir[0] || newdir[1] != olddir[1] || newdir[2] != olddir[2])
-        {
-            ALfloat dotp = olddir[0]*newdir[0] + olddir[1]*newdir[1] + olddir[2]*newdir[2];
-            angleChange = acosf(clampf(dotp, -1.0f, 1.0f)) / F_PI;
-        }
-    }
-
-    // Use the largest of the two changes for the delta factor, and apply a
-    // significance shaping function to it.
-    change = maxf(angleChange * 25.0f, gainChange) * 2.0f;
-    return minf(change, 1.0f);
-}
-
 /* Calculates static HRIR coefficients and delays for the given polar
  * elevation and azimuth in radians.  Linear interpolation is used to
  * increase the apparent resolution of the HRIR data set.  The coefficients
@@ -246,7 +213,7 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
     }
 
     // Calculate the stepping parameters.
-    steps = maxf(floorf(delta*(Hrtf->sampleRate*0.015f) + 0.5f), 1.0f);
+    steps = maxf(floorf(delta*Hrtf->sampleRate + 0.5f), 1.0f);
     delta = 1.0f / steps;
 
     /* Calculate 4 blending weights for 2D bilinear interpolation. */

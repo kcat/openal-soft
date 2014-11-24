@@ -137,6 +137,42 @@ static inline ALvoid aluMatrixVector(ALfloat *vector, ALfloat w, ALfloat (*restr
 }
 
 
+/* Calculates the fade time from the changes in gain and listener to source
+ * angle between updates. The result is a the time, in seconds, for the
+ * transition to complete.
+ */
+static ALfloat CalcFadeTime(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3], const ALfloat newdir[3])
+{
+    ALfloat gainChange, angleChange, change;
+
+    /* Calculate the normalized dB gain change. */
+    newGain = maxf(newGain, 0.0001f);
+    oldGain = maxf(oldGain, 0.0001f);
+    gainChange = fabsf(log10f(newGain / oldGain) / log10f(0.0001f));
+
+    /* Calculate the angle change only when there is enough gain to notice it. */
+    angleChange = 0.0f;
+    if(gainChange > 0.0001f || newGain > 0.0001f)
+    {
+        /* No angle change when the directions are equal or degenerate (when
+         * both have zero length).
+         */
+        if(newdir[0] != olddir[0] || newdir[1] != olddir[1] || newdir[2] != olddir[2])
+        {
+            ALfloat dotp = aluDotproduct(olddir, newdir);
+            angleChange = acosf(clampf(dotp, -1.0f, 1.0f)) / F_PI;
+        }
+    }
+
+    /* Use the largest of the two changes, and apply a significance shaping
+     * function to it. The result is then scaled to cover a 15ms transition
+     * range.
+     */
+    change = maxf(angleChange * 25.0f, gainChange) * 2.0f;
+    return minf(change, 1.0f) * 0.015f;
+}
+
+
 static void UpdateDryStepping(DirectParams *params, ALuint num_chans)
 {
     ALuint i, j;
@@ -997,12 +1033,11 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         /* Check to see if the HRIR is already moving. */
         if(voice->Direct.Moving)
         {
-            /* Calculate the normalized HRTF transition factor (delta). */
-            delta = CalcHrtfDelta(voice->Direct.LastGain, DryGain,
-                                  voice->Direct.LastDir, Position);
+            delta = CalcFadeTime(voice->Direct.LastGain, DryGain,
+                                 voice->Direct.LastDir, Position);
             /* If the delta is large enough, get the moving HRIR target
              * coefficients, target delays, steppping values, and counter. */
-            if(delta > 0.001f)
+            if(delta > 0.000015f)
             {
                 ALuint counter = GetMovingHrtfCoeffs(Device->Hrtf,
                     ev, az, dirfact, DryGain, delta, voice->Direct.Counter,

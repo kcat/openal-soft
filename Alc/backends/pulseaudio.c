@@ -706,8 +706,11 @@ static void ALCpulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const
         }
     }
 
-    device->IsHeadphones = (device->FmtChans == DevFmtStereo && info->active_port &&
-                            strcmp(info->active_port->name, "analog-output-headphones") == 0);
+    if(info->active_port)
+        TRACE("Active port: %s (%s)\n", info->active_port->name, info->active_port->description);
+    device->IsHeadphones = (info->active_port &&
+                            strcmp(info->active_port->name, "analog-output-headphones") == 0 &&
+                            device->FmtChans == DevFmtStereo);
 
     if(!chanmaps[i].str)
     {

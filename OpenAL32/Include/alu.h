@@ -64,6 +64,9 @@ typedef struct DirectParams {
     ALboolean Moving;
     /* Stepping counter for gain/coefficient fading. */
     ALuint Counter;
+    /* Last direction (relative to listener) and gain of a moving source. */
+    ALfloat LastDir[3];
+    ALfloat LastGain;
 
     struct {
         enum ActiveFilters ActiveType;
@@ -75,8 +78,6 @@ typedef struct DirectParams {
         HrtfParams Params[MAX_INPUT_CHANNELS];
         HrtfState State[MAX_INPUT_CHANNELS];
         ALuint IrSize;
-        ALfloat Gain;
-        ALfloat Dir[3];
     } Hrtf;
     MixGains Gains[MAX_INPUT_CHANNELS][MAX_OUTPUT_CHANNELS];
 } DirectParams;

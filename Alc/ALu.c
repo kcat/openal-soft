@@ -998,8 +998,8 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         if(voice->Direct.Moving)
         {
             /* Calculate the normalized HRTF transition factor (delta). */
-            delta = CalcHrtfDelta(voice->Direct.Hrtf.Gain, DryGain,
-                                  voice->Direct.Hrtf.Dir, Position);
+            delta = CalcHrtfDelta(voice->Direct.LastGain, DryGain,
+                                  voice->Direct.LastDir, Position);
             /* If the delta is large enough, get the moving HRIR target
              * coefficients, target delays, steppping values, and counter. */
             if(delta > 0.001f)
@@ -1010,10 +1010,10 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
                     voice->Direct.Hrtf.Params[0].CoeffStep, voice->Direct.Hrtf.Params[0].DelayStep
                 );
                 voice->Direct.Counter = counter;
-                voice->Direct.Hrtf.Gain = DryGain;
-                voice->Direct.Hrtf.Dir[0] = Position[0];
-                voice->Direct.Hrtf.Dir[1] = Position[1];
-                voice->Direct.Hrtf.Dir[2] = Position[2];
+                voice->Direct.LastGain = DryGain;
+                voice->Direct.LastDir[0] = Position[0];
+                voice->Direct.LastDir[1] = Position[1];
+                voice->Direct.LastDir[2] = Position[2];
             }
         }
         else
@@ -1024,10 +1024,10 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
                                 voice->Direct.Hrtf.Params[0].Delay);
             voice->Direct.Counter = 0;
             voice->Direct.Moving  = AL_TRUE;
-            voice->Direct.Hrtf.Gain = DryGain;
-            voice->Direct.Hrtf.Dir[0] = Position[0];
-            voice->Direct.Hrtf.Dir[1] = Position[1];
-            voice->Direct.Hrtf.Dir[2] = Position[2];
+            voice->Direct.LastGain = DryGain;
+            voice->Direct.LastDir[0] = Position[0];
+            voice->Direct.LastDir[1] = Position[1];
+            voice->Direct.LastDir[2] = Position[2];
         }
         voice->Direct.Hrtf.IrSize = GetHrtfIrSize(Device->Hrtf);
 

@@ -2670,9 +2670,9 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
         switch(param)
         {
             case ALC_CAPTURE_SAMPLES:
-                ALCdevice_Lock(device);
+                V0(device->Backend,lock)();
                 values[0] = V0(device->Backend,availableSamples)();
-                ALCdevice_Unlock(device);
+                V0(device->Backend,unlock)();
                 return 1;
 
             case ALC_CONNECTED:
@@ -3043,9 +3043,9 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         alcSetError(device, err);
         if(err == ALC_INVALID_DEVICE)
         {
-            ALCdevice_Lock(device);
+            V0(device->Backend,lock)();
             aluHandleDisconnect(device);
-            ALCdevice_Unlock(device);
+            V0(device->Backend,unlock)();
         }
         ALCdevice_DecRef(device);
         return NULL;
@@ -3616,14 +3616,14 @@ ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
         alcSetError(device, ALC_INVALID_DEVICE);
     else
     {
-        ALCdevice_Lock(device);
+        V0(device->Backend,lock)();
         if(device->Connected)
         {
             if(!(device->Flags&DEVICE_RUNNING))
                 V0(device->Backend,start)();
             device->Flags |= DEVICE_RUNNING;
         }
-        ALCdevice_Unlock(device);
+        V0(device->Backend,unlock)();
     }
 
     if(device) ALCdevice_DecRef(device);
@@ -3635,11 +3635,11 @@ ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
         alcSetError(device, ALC_INVALID_DEVICE);
     else
     {
-        ALCdevice_Lock(device);
+        V0(device->Backend,lock)();
         if((device->Flags&DEVICE_RUNNING))
             V0(device->Backend,stop)();
         device->Flags &= ~DEVICE_RUNNING;
-        ALCdevice_Unlock(device);
+        V0(device->Backend,unlock)();
     }
 
     if(device) ALCdevice_DecRef(device);
@@ -3653,10 +3653,10 @@ ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, 
     {
         ALCenum err = ALC_INVALID_VALUE;
 
-        ALCdevice_Lock(device);
+        V0(device->Backend,lock)();
         if(samples >= 0 && V0(device->Backend,availableSamples)() >= (ALCuint)samples)
             err = V(device->Backend,captureSamples)(buffer, samples);
-        ALCdevice_Unlock(device);
+        V0(device->Backend,unlock)();
 
         if(err != ALC_NO_ERROR)
             alcSetError(device, err);
@@ -3860,9 +3860,9 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device)
                 else
                 {
                     alcSetError(device, ALC_INVALID_DEVICE);
-                    ALCdevice_Lock(device);
+                    V0(device->Backend,lock)();
                     aluHandleDisconnect(device);
-                    ALCdevice_Unlock(device);
+                    V0(device->Backend,unlock)();
                 }
             }
         }

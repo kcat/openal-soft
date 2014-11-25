@@ -167,23 +167,23 @@ void Mix_SSE(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)
         ALuint pos = 0;
         gain = Gains[c].Current;
         step = Gains[c].Step;
-        if(step != 1.0f && Counter > 0)
+        if(step != 0.0f && Counter > 0)
         {
             /* Mix with applying gain steps in aligned multiples of 4. */
             if(BufferSize-pos > 3 && Counter-pos > 3)
             {
                 gain4 = _mm_setr_ps(
                     gain,
-                    gain * step,
-                    gain * step * step,
-                    gain * step * step * step
+                    gain + step,
+                    gain + step + step,
+                    gain + step + step + step
                 );
-                step4 = _mm_set1_ps(step * step * step * step);
+                step4 = _mm_set1_ps(step + step + step + step);
                 do {
                     const __m128 val4 = _mm_load_ps(&data[pos]);
                     __m128 dry4 = _mm_load_ps(&OutBuffer[c][OutPos+pos]);
                     dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain4));
-                    gain4 = _mm_mul_ps(gain4, step4);
+                    gain4 = _mm_add_ps(gain4, step4);
                     _mm_store_ps(&OutBuffer[c][OutPos+pos], dry4);
                     pos += 4;
                 } while(BufferSize-pos > 3 && Counter-pos > 3);
@@ -193,7 +193,7 @@ void Mix_SSE(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)
             for(;pos < BufferSize && pos < Counter;pos++)
             {
                 OutBuffer[c][OutPos+pos] += data[pos]*gain;
-                gain *= step;
+                gain += step;
             }
             if(pos == Counter)
                 gain = Gains[c].Target;

@@ -106,12 +106,12 @@ void Mix_Neon(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer
         ALuint pos = 0;
         gain = Gains[c].Current;
         step = Gains[c].Step;
-        if(step != 1.0f && Counter > 0)
+        if(step != 0.0f && Counter > 0)
         {
             for(;pos < BufferSize && pos < Counter;pos++)
             {
                 OutBuffer[c][OutPos+pos] += data[pos]*gain;
-                gain *= step;
+                gain += step;
             }
             if(pos == Counter)
                 gain = Gains[c].Target;

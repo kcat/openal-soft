@@ -178,7 +178,7 @@ static void UpdateDryStepping(DirectParams *params, ALuint num_chans, ALuint ste
     ALfloat delta;
     ALuint i, j;
 
-    if(steps == 0)
+    if(steps < 2)
     {
         for(i = 0;i < num_chans;i++)
         {
@@ -186,7 +186,7 @@ static void UpdateDryStepping(DirectParams *params, ALuint num_chans, ALuint ste
             for(j = 0;j < params->OutChannels;j++)
             {
                 gains[j].Current = gains[j].Target;
-                gains[j].Step = 1.0f;
+                gains[j].Step = 0.0f;
             }
         }
         params->Counter = 0;
@@ -199,13 +199,11 @@ static void UpdateDryStepping(DirectParams *params, ALuint num_chans, ALuint ste
         MixGains *gains = params->Gains[i];
         for(j = 0;j < params->OutChannels;j++)
         {
-            ALfloat cur = maxf(gains[j].Current, FLT_EPSILON);
-            ALfloat trg = maxf(gains[j].Target, FLT_EPSILON);
-            if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
-                gains[j].Step = powf(trg/cur, delta);
+            ALfloat diff = gains[j].Target - gains[j].Current;
+            if(fabs(diff) >= GAIN_SILENCE_THRESHOLD)
+                gains[j].Step = diff * delta;
             else
-                gains[j].Step = 1.0f;
-            gains[j].Current = cur;
+                gains[j].Step = 0.0f;
         }
     }
     params->Counter = steps;
@@ -215,10 +213,10 @@ static void UpdateWetStepping(SendParams *params, ALuint steps)
 {
     ALfloat delta;
 
-    if(steps == 0)
+    if(steps < 2)
     {
         params->Gain.Current = params->Gain.Target;
-        params->Gain.Step = 1.0f;
+        params->Gain.Step = 0.0f;
 
         params->Counter = 0;
         return;
@@ -226,14 +224,11 @@ static void UpdateWetStepping(SendParams *params, ALuint steps)
 
     delta = 1.0f / (ALfloat)steps;
     {
-        ALfloat cur, trg;
-        cur = maxf(params->Gain.Current, FLT_EPSILON);
-        trg = maxf(params->Gain.Target, FLT_EPSILON);
-        if(fabs(trg - cur) >= GAIN_SILENCE_THRESHOLD)
-            params->Gain.Step = powf(trg/cur, delta);
+        ALfloat diff = params->Gain.Target - params->Gain.Current;
+        if(fabs(diff) >= GAIN_SILENCE_THRESHOLD)
+            params->Gain.Step = diff * delta;
         else
-            params->Gain.Step = 1.0f;
-        params->Gain.Current = cur;
+            params->Gain.Step = 0.0f;
     }
     params->Counter = steps;
 }
@@ -524,9 +519,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
             for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
                 gains[i].Target = Target[i];
         }
-        /* B-Format cannot handle logarithmic gain stepping, since the gain can
-         * switch between positive and negative values. */
-        UpdateDryStepping(&voice->Direct, num_channels, 0);
+        UpdateDryStepping(&voice->Direct, num_channels, (voice->Direct.Moving ? 64 : 0));
+        voice->Direct.Moving = AL_TRUE;
 
         voice->IsHrtf = AL_FALSE;
         for(i = 0;i < NumSends;i++)

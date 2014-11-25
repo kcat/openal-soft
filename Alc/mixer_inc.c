@@ -14,6 +14,9 @@
 #define MixHrtf MERGE(MixHrtf_,SUFFIX)
 
 
+static inline void SetupCoeffs(ALfloat (*restrict OutCoeffs)[2],
+                               const HrtfParams *hrtfparams,
+                               ALuint IrSize, ALuint Counter);
 static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
                                    const ALuint irSize,
                                    ALfloat (*restrict Coeffs)[2],
@@ -33,13 +36,8 @@ void MixHrtf(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
     ALuint Delay[2];
     ALfloat left, right;
     ALuint pos;
-    ALuint c;
 
-    for(c = 0;c < IrSize;c++)
-    {
-        Coeffs[c][0] = hrtfparams->Coeffs[c][0] - (hrtfparams->CoeffStep[c][0]*Counter);
-        Coeffs[c][1] = hrtfparams->Coeffs[c][1] - (hrtfparams->CoeffStep[c][1]*Counter);
-    }
+    SetupCoeffs(Coeffs, hrtfparams, IrSize, Counter);
     Delay[0] = hrtfparams->Delay[0] - (hrtfparams->DelayStep[0]*Counter);
     Delay[1] = hrtfparams->Delay[1] - (hrtfparams->DelayStep[1]*Counter);
 

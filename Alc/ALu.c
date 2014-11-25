@@ -1006,7 +1006,8 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     if(Device->Hrtf)
     {
         /* Use a binaural HRTF algorithm for stereo headphone playback */
-        ALfloat delta, ev = 0.0f, az = 0.0f;
+        ALfloat dir[3] = { 0.0f, 0.0f, -1.0f };
+        ALfloat ev = 0.0f, az = 0.0f;
         ALfloat radius = ALSource->Radius;
         ALfloat dirfact = 1.0f;
 
@@ -1016,16 +1017,16 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         if(Distance > FLT_EPSILON)
         {
             ALfloat invlen = 1.0f/Distance;
-            Position[0] *= invlen;
-            Position[1] *= invlen;
-            Position[2] *= invlen;
+            dir[0] = Position[0] * invlen;
+            dir[1] = Position[1] * invlen;
+            dir[2] = Position[2] * invlen * ZScale;
 
             /* Calculate elevation and azimuth only when the source is not at
              * the listener. This prevents +0 and -0 Z from producing
              * inconsistent panning. Also, clamp Y in case FP precision errors
              * cause it to land outside of -1..+1. */
-            ev = asinf(clampf(Position[1], -1.0f, 1.0f));
-            az = atan2f(Position[0], -Position[2]*ZScale);
+            ev = asinf(clampf(dir[1], -1.0f, 1.0f));
+            az = atan2f(dir[0], -dir[2]);
         }
         if(radius > Distance)
             dirfact *= Distance / radius;
@@ -1033,8 +1034,9 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         /* Check to see if the HRIR is already moving. */
         if(voice->Direct.Moving)
         {
+            ALfloat delta;
             delta = CalcFadeTime(voice->Direct.LastGain, DryGain,
-                                 voice->Direct.LastDir, Position);
+                                 voice->Direct.LastDir, dir);
             /* If the delta is large enough, get the moving HRIR target
              * coefficients, target delays, steppping values, and counter. */
             if(delta > 0.000015f)
@@ -1046,9 +1048,9 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
                 );
                 voice->Direct.Counter = counter;
                 voice->Direct.LastGain = DryGain;
-                voice->Direct.LastDir[0] = Position[0];
-                voice->Direct.LastDir[1] = Position[1];
-                voice->Direct.LastDir[2] = Position[2];
+                voice->Direct.LastDir[0] = dir[0];
+                voice->Direct.LastDir[1] = dir[1];
+                voice->Direct.LastDir[2] = dir[2];
             }
         }
         else
@@ -1060,9 +1062,9 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             voice->Direct.Counter = 0;
             voice->Direct.Moving  = AL_TRUE;
             voice->Direct.LastGain = DryGain;
-            voice->Direct.LastDir[0] = Position[0];
-            voice->Direct.LastDir[1] = Position[1];
-            voice->Direct.LastDir[2] = Position[2];
+            voice->Direct.LastDir[0] = dir[0];
+            voice->Direct.LastDir[1] = dir[1];
+            voice->Direct.LastDir[2] = dir[2];
         }
         voice->Direct.Hrtf.IrSize = GetHrtfIrSize(Device->Hrtf);
 
@@ -1071,23 +1073,19 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     else
     {
         MixGains *gains = voice->Direct.Gains[0];
+        ALfloat dir[3] = { 0.0f, 0.0f, -1.0f };
         ALfloat radius = ALSource->Radius;
         ALfloat Target[MAX_OUTPUT_CHANNELS];
 
         /* Normalize the length, and compute panned gains. */
-        if(!(Distance > FLT_EPSILON) && !(radius > FLT_EPSILON))
-        {
-            const ALfloat front[3] = { 0.0f, 0.0f, -1.0f };
-            ComputeDirectionalGains(Device, front, DryGain, Target);
-        }
-        else
+        if(Distance > FLT_EPSILON || radius > FLT_EPSILON)
         {
             ALfloat invlen = 1.0f/maxf(Distance, radius);
-            Position[0] *= invlen;
-            Position[1] *= invlen;
-            Position[2] *= invlen;
-            ComputeDirectionalGains(Device, Position, DryGain, Target);
+            dir[0] = Position[0] * invlen;
+            dir[1] = Position[1] * invlen;
+            dir[2] = Position[2] * invlen * ZScale;
         }
+        ComputeDirectionalGains(Device, dir, DryGain, Target);
 
         for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
             gains[j].Target = Target[j];

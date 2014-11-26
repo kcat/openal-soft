@@ -1327,6 +1327,7 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans)
     case DevFmtX51Rear: return "5.1 Surround (Rear)";
     case DevFmtX61: return "6.1 Surround";
     case DevFmtX71: return "7.1 Surround";
+    case DevFmtBFormat3D: return "B-Format 3D";
     }
     return "(unknown channels)";
 }
@@ -1357,6 +1358,7 @@ ALuint ChannelsFromDevFmt(enum DevFmtChannels chans)
     case DevFmtX51Rear: return 6;
     case DevFmtX61: return 7;
     case DevFmtX71: return 8;
+    case DevFmtBFormat3D: return 4;
     }
     return 0;
 }
@@ -1523,6 +1525,12 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
         device->ChannelName[6] = SideLeft;
         device->ChannelName[7] = SideRight;
         break;
+    case DevFmtBFormat3D:
+        device->ChannelName[0] = Aux0;
+        device->ChannelName[1] = Aux1;
+        device->ChannelName[2] = Aux2;
+        device->ChannelName[3] = Aux3;
+        break;
     }
 }
 
@@ -1564,6 +1572,7 @@ void SetDefaultChannelOrder(ALCdevice *device)
     case DevFmtQuad:
     case DevFmtX51:
     case DevFmtX61:
+    case DevFmtBFormat3D:
         SetDefaultWFXChannelOrder(device);
         break;
     }

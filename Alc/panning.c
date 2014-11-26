@@ -75,7 +75,7 @@ void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfl
     {
         for(j = 0;j < MAX_AMBI_COEFFS;j++)
             gains[i] += device->Channel[i].HOACoeff[j]*coeffs[j];
-        gains[i] = maxf(gains[i], 0.0f) * ingain;
+        gains[i] *= ingain;
     }
 }
 
@@ -133,6 +133,11 @@ DECL_CONST static inline const char *GetLabelFromChannel(enum Channel channel)
         case BottomFrontRight: return "bottom-front-right";
         case BottomBackLeft: return "bottom-back-left";
         case BottomBackRight: return "bottom-back-right";
+
+        case Aux0: return "aux-0";
+        case Aux1: return "aux-1";
+        case Aux2: return "aux-2";
+        case Aux3: return "aux-3";
 
         case InvalidChannel: break;
     }
@@ -241,6 +246,8 @@ static bool LoadChannelSetup(ALCdevice *device)
             channels = surround71_chans;
             count = COUNTOF(surround71_chans);
             break;
+        case DevFmtBFormat3D:
+            break;
     }
 
     if(!layout)
@@ -341,6 +348,11 @@ ALvoid aluInitPanning(ALCdevice *device)
         { BottomFrontRight, { { 0.176777f,  0.125000f, -0.125000f, -0.125000f }, { 0.176777f,  0.125000f, -0.125000f, -0.125000f } } },
         { BottomBackLeft,   { { 0.176777f, -0.125000f,  0.125000f, -0.125000f }, { 0.176777f, -0.125000f,  0.125000f, -0.125000f } } },
         { BottomBackRight,  { { 0.176777f, -0.125000f, -0.125000f, -0.125000f }, { 0.176777f, -0.125000f, -0.125000f, -0.125000f } } },
+    }, BFormat3D[4] = {
+        { Aux0, { { 1.0f, 0.0f, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 0.0f } } },
+        { Aux1, { { 0.0f, 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f, 0.0f } } },
+        { Aux2, { { 0.0f, 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 0.0f } } },
+        { Aux3, { { 0.0f, 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f, 1.0f } } },
     };
     const ChannelMap *chanmap = NULL;
     size_t count = 0;
@@ -419,6 +431,11 @@ ALvoid aluInitPanning(ALCdevice *device)
         case DevFmtX71:
             count = COUNTOF(X71Cfg);
             chanmap = X71Cfg;
+            break;
+
+        case DevFmtBFormat3D:
+            count = COUNTOF(BFormat3D);
+            chanmap = BFormat3D;
             break;
     }
 

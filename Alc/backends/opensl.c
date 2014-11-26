@@ -79,6 +79,7 @@ static SLuint32 GetChannelMask(enum DevFmtChannels chans)
                                SL_SPEAKER_FRONT_CENTER|SL_SPEAKER_LOW_FREQUENCY|
                                SL_SPEAKER_BACK_LEFT|SL_SPEAKER_BACK_RIGHT|
                                SL_SPEAKER_SIDE_LEFT|SL_SPEAKER_SIDE_RIGHT;
+        case DevFmtBFormat3D: break;
     }
     return 0;
 }

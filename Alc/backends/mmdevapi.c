@@ -816,6 +816,9 @@ static HRESULT ALCmmdevPlayback_resetProxy(ALCmmdevPlayback *self)
             OutputType.Format.nChannels = 1;
             OutputType.dwChannelMask = MONO;
             break;
+        case DevFmtBFormat3D:
+            device->FmtChans = DevFmtStereo;
+            /*fall-through*/
         case DevFmtStereo:
             OutputType.Format.nChannels = 2;
             OutputType.dwChannelMask = STEREO;

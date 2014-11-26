@@ -539,6 +539,11 @@ enum Channel {
     BottomBackLeft,
     BottomBackRight,
 
+    Aux0,
+    Aux1,
+    Aux2,
+    Aux3,
+
     InvalidChannel
 };
 
@@ -565,6 +570,8 @@ enum DevFmtChannels {
 
     /* Similar to 5.1, except using rear channels instead of sides */
     DevFmtX51Rear = 0x80000000,
+
+    DevFmtBFormat3D,
 
     DevFmtChannelsDefault = DevFmtStereo
 };

@@ -530,7 +530,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     {
         if(Device->Hrtf)
         {
-            voice->Direct.OutBuffer = &voice->Direct.OutBuffer[voice->Direct.OutChannels];
+            voice->Direct.OutBuffer += voice->Direct.OutChannels;
             voice->Direct.OutChannels = 2;
             for(c = 0;c < num_channels;c++)
             {
@@ -562,7 +562,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     }
     else if(Device->Hrtf)
     {
-        voice->Direct.OutBuffer = &voice->Direct.OutBuffer[voice->Direct.OutChannels];
+        voice->Direct.OutBuffer += voice->Direct.OutChannels;
         voice->Direct.OutChannels = 2;
         for(c = 0;c < num_channels;c++)
         {
@@ -1010,7 +1010,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         ALfloat radius = ALSource->Radius;
         ALfloat dirfact = 1.0f;
 
-        voice->Direct.OutBuffer = &voice->Direct.OutBuffer[voice->Direct.OutChannels];
+        voice->Direct.OutBuffer += voice->Direct.OutChannels;
         voice->Direct.OutChannels = 2;
 
         if(Distance > FLT_EPSILON)

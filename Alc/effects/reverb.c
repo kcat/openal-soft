@@ -1038,7 +1038,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     ALfloat length, invlen;
     ALuint i;
 
-    ComputeAmbientGains(Device, 1.0f, AmbientGains);
+    ComputeAmbientGains(Device, 1.4142f, AmbientGains);
 
     length = earlyPan[0]*earlyPan[0] + earlyPan[1]*earlyPan[1] + earlyPan[2]*earlyPan[2];
     if(!(length > FLT_EPSILON))
@@ -1054,7 +1054,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
         earlyPan[2] *= invlen;
 
         length = minf(length, 1.0f);
-        ComputeDirectionalGains(Device, earlyPan, 1.0f, DirGains);
+        ComputeDirectionalGains(Device, earlyPan, 1.4142f, DirGains);
         for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
             State->Early.PanGain[i] = lerp(AmbientGains[i], DirGains[i], length) * Gain;
     }
@@ -1073,7 +1073,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
         latePan[2] *= invlen;
 
         length = minf(length, 1.0f);
-        ComputeDirectionalGains(Device, latePan, 1.0f, DirGains);
+        ComputeDirectionalGains(Device, latePan, 1.4142f, DirGains);
         for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
             State->Late.PanGain[i] = lerp(AmbientGains[i], DirGains[i], length) * Gain;
     }
@@ -1167,7 +1167,7 @@ static ALvoid ALreverbState_update(ALreverbState *State, ALCdevice *Device, cons
     else
     {
         /* Update channel gains */
-        ComputeAmbientGains(Device, Slot->Gain*2.0f, State->Gain);
+        ComputeAmbientGains(Device, Slot->Gain*1.4142f, State->Gain);
     }
 }
 

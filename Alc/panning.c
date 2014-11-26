@@ -92,7 +92,7 @@ void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[
         // scaling the W channel input by sqrt(0.5). The square root of the
         // base average provides for a more perceptual average volume, better
         // suited to non-directional gains.
-        gains[i] = sqrtf(device->Channel[i].HOACoeff[0]/1.4142f)*1.4142f * ingain;
+        gains[i] = sqrtf(device->Channel[i].HOACoeff[0]/1.4142f) * ingain;
     }
 }
 

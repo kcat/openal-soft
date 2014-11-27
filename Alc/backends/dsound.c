@@ -444,9 +444,9 @@ static ALCboolean ALCdsoundPlayback_reset(ALCdsoundPlayback *self)
     hr = IDirectSound_GetSpeakerConfig(self->DS, &speakers);
     if(SUCCEEDED(hr))
     {
+        speakers = DSSPEAKER_CONFIG(speakers);
         if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
         {
-            speakers = DSSPEAKER_CONFIG(speakers);
             if(speakers == DSSPEAKER_MONO)
                 device->FmtChans = DevFmtMono;
             else if(speakers == DSSPEAKER_STEREO || speakers == DSSPEAKER_HEADPHONE)
@@ -462,6 +462,8 @@ static ALCboolean ALCdsoundPlayback_reset(ALCdsoundPlayback *self)
             else
                 ERR("Unknown system speaker config: 0x%lx\n", speakers);
         }
+        device->IsHeadphones = (device->FmtChans == DevFmtStereo &&
+                                speakers == DSSPEAKER_HEADPHONE);
 
         switch(device->FmtChans)
         {

@@ -500,9 +500,9 @@ FORCE_ALIGN static int ALCmmdevPlayback_mixerProc(void *arg)
     if(FAILED(hr))
     {
         ERR("CoInitialize(NULL) failed: 0x%08lx\n", hr);
-        ALCdevice_Lock(device);
+        V0(device->Backend,lock)();
         aluHandleDisconnect(device);
-        ALCdevice_Unlock(device);
+        V0(device->Backend,unlock)();
         return 1;
     }
 
@@ -517,9 +517,9 @@ FORCE_ALIGN static int ALCmmdevPlayback_mixerProc(void *arg)
         if(FAILED(hr))
         {
             ERR("Failed to get padding: 0x%08lx\n", hr);
-            ALCdevice_Lock(device);
+            V0(device->Backend,lock)();
             aluHandleDisconnect(device);
-            ALCdevice_Unlock(device);
+            V0(device->Backend,unlock)();
             break;
         }
         self->Padding = written;
@@ -538,18 +538,18 @@ FORCE_ALIGN static int ALCmmdevPlayback_mixerProc(void *arg)
         hr = IAudioRenderClient_GetBuffer(self->render, len, &buffer);
         if(SUCCEEDED(hr))
         {
-            ALCdevice_Lock(device);
+            V0(device->Backend,lock)();
             aluMixData(device, buffer, len);
             self->Padding = written + len;
-            ALCdevice_Unlock(device);
+            V0(device->Backend,unlock)();
             hr = IAudioRenderClient_ReleaseBuffer(self->render, len, 0);
         }
         if(FAILED(hr))
         {
             ERR("Failed to buffer data: 0x%08lx\n", hr);
-            ALCdevice_Lock(device);
+            V0(device->Backend,lock)();
             aluHandleDisconnect(device);
-            ALCdevice_Unlock(device);
+            V0(device->Backend,unlock)();
             break;
         }
     }

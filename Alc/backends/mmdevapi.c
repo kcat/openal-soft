@@ -51,6 +51,7 @@ DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
 
 DEFINE_DEVPROPKEY(DEVPKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80,0x20, 0x67,0xd1,0x46,0xa8,0x50,0xe0, 14);
+DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_FormFactor, 0x1da5d803, 0xd492, 0x4edd, 0x8c,0x23, 0xe0,0xc0,0xff,0xee,0x7f,0x0e, 0);
 
 #define MONO SPEAKER_FRONT_CENTER
 #define STEREO (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT)
@@ -134,13 +135,39 @@ static void get_device_name(IMMDevice *device, al_string *name)
 
     hr = IPropertyStore_GetValue(ps, (const PROPERTYKEY*)&DEVPKEY_Device_FriendlyName, &pvname);
     if(FAILED(hr))
-        WARN("GetValue failed: 0x%08lx\n", hr);
+        WARN("GetValue Device_FriendlyName failed: 0x%08lx\n", hr);
     else
         al_string_copy_wcstr(name, pvname.pwszVal);
 
     PropVariantClear(&pvname);
     IPropertyStore_Release(ps);
 }
+
+static void get_device_formfactor(IMMDevice *device, EndpointFormFactor *formfactor)
+{
+    IPropertyStore *ps;
+    PROPVARIANT pvform;
+    HRESULT hr;
+
+    hr = IMMDevice_OpenPropertyStore(device, STGM_READ, &ps);
+    if(FAILED(hr))
+    {
+        WARN("OpenPropertyStore failed: 0x%08lx\n", hr);
+        return;
+    }
+
+    PropVariantInit(&pvform);
+
+    hr = IPropertyStore_GetValue(ps, &PKEY_AudioEndpoint_FormFactor, &pvform);
+    if(FAILED(hr))
+        WARN("GetValue AudioEndpoint_FormFactor failed: 0x%08lx\n", hr);
+    else
+        *formfactor = pvform.ulVal;
+
+    PropVariantClear(&pvform);
+    IPropertyStore_Release(ps);
+}
+
 
 static void add_device(IMMDevice *device, LPCWSTR devid, vector_DevMap *list)
 {
@@ -751,6 +778,7 @@ static ALCboolean ALCmmdevPlayback_reset(ALCmmdevPlayback *self)
 static HRESULT ALCmmdevPlayback_resetProxy(ALCmmdevPlayback *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    EndpointFormFactor formfactor = UnknownFormFactor;
     WAVEFORMATEXTENSIBLE OutputType;
     WAVEFORMATEX *wfx = NULL;
     REFERENCE_TIME min_per, buf_time;
@@ -956,6 +984,8 @@ static HRESULT ALCmmdevPlayback_resetProxy(ALCmmdevPlayback *self)
         }
         OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
     }
+    get_device_formfactor(self->mmdev, &formfactor);
+    device->IsHeadphones = (device->FmtChans == DevFmtStereo && formfactor == Headphones);
 
     SetDefaultWFXChannelOrder(device);
 

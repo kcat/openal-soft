@@ -589,7 +589,6 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         }
         voice->Direct.Counter = 0;
         voice->Direct.Moving  = AL_TRUE;
-        voice->Direct.Hrtf.IrSize = GetHrtfIrSize(Device->Hrtf);
 
         voice->IsHrtf = AL_TRUE;
     }
@@ -1065,7 +1064,6 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             voice->Direct.LastDir[1] = dir[1];
             voice->Direct.LastDir[2] = dir[2];
         }
-        voice->Direct.Hrtf.IrSize = GetHrtfIrSize(Device->Hrtf);
 
         voice->IsHrtf = AL_TRUE;
     }

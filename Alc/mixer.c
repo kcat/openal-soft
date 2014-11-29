@@ -192,6 +192,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
     ALuint NumChannels;
     ALuint SampleSize;
     ALint64 DataSize64;
+    ALuint IrSize;
     ALuint chan, j;
 
     /* Get source info */
@@ -216,6 +217,8 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
         }
         BufferListItem = BufferListItem->next;
     }
+
+    IrSize = (Device->Hrtf ? GetHrtfIrSize(Device->Hrtf) : 0);
 
     Mix = SelectMixer();
     HrtfMix = SelectHrtfMixer();
@@ -436,7 +439,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                         parms->Counter, OutPos, DstBufferSize);
                 else
                     HrtfMix(parms->OutBuffer, samples, parms->Counter, voice->Offset,
-                            OutPos, parms->Hrtf.IrSize, &parms->Hrtf.Params[chan],
+                            OutPos, IrSize, &parms->Hrtf.Params[chan],
                             &parms->Hrtf.State[chan], DstBufferSize);
             }
 

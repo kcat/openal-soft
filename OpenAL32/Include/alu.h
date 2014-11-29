@@ -77,7 +77,6 @@ typedef struct DirectParams {
     struct {
         HrtfParams Params[MAX_INPUT_CHANNELS];
         HrtfState State[MAX_INPUT_CHANNELS];
-        ALuint IrSize;
     } Hrtf;
     MixGains Gains[MAX_INPUT_CHANNELS][MAX_OUTPUT_CHANNELS];
 } DirectParams;

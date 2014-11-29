@@ -887,7 +887,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     /* Distance-based air absorption */
     if(AirAbsorptionFactor > 0.0f && ClampedDist > MinDist)
     {
-        ALfloat meters = maxf(ClampedDist-MinDist, 0.0f) * MetersPerUnit;
+        ALfloat meters = (ClampedDist-MinDist) * MetersPerUnit;
         DryGainHF *= powf(AIRABSORBGAINHF, AirAbsorptionFactor*meters);
         for(i = 0;i < NumSends;i++)
             WetGainHF[i] *= powf(RoomAirAbsorption[i], AirAbsorptionFactor*meters);

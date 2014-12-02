@@ -530,6 +530,8 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
         if((f=_wfopen(buffer, L"rb")) != NULL)
         {
             TRACE("Opened %ls\n", buffer);
+            free(wname);
+            free(wsubdir);
             return f;
         }
     }

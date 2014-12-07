@@ -1300,8 +1300,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             HrtfMixerFunc HrtfMix = SelectHrtfMixer();
             ALuint irsize = GetHrtfIrSize(device->Hrtf);
             for(c = 0;c < device->NumChannels;c++)
-                HrtfMix(&device->DryBuffer[outchanoffset], device->DryBuffer[c], 0.0f,
-                    device->Hrtf_Offset, 0.0f, irsize, &device->Hrtf_Params[c],
+                HrtfMix(&device->DryBuffer[outchanoffset], device->DryBuffer[c], 0,
+                    device->Hrtf_Offset, 0, irsize, &device->Hrtf_Params[c],
                     &device->Hrtf_State[c], SamplesToDo
                 );
             device->Hrtf_Offset += SamplesToDo;

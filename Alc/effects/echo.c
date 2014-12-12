@@ -43,7 +43,7 @@ typedef struct ALechoState {
     } Tap[2];
     ALuint Offset;
     /* The panning gains for the two taps */
-    ALfloat Gain[2][MaxChannels];
+    ALfloat Gain[2][MAX_OUTPUT_CHANNELS];
 
     ALfloat FeedGain;
 
@@ -109,7 +109,7 @@ static ALvoid ALechoState_update(ALechoState *state, ALCdevice *Device, const AL
     ComputeDirectionalGains(Device, pandir, gain, state->Gain[1]);
 }
 
-static ALvoid ALechoState_process(ALechoState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
+static ALvoid ALechoState_process(ALechoState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     const ALuint mask = state->BufferLength-1;
     const ALuint tap1 = state->Tap[0].delay;
@@ -138,17 +138,17 @@ static ALvoid ALechoState_process(ALechoState *state, ALuint SamplesToDo, const 
             offset++;
         }
 
-        for(k = 0;k < MaxChannels;k++)
+        for(k = 0;k < NumChannels;k++)
         {
             ALfloat gain = state->Gain[0][k];
-            if(gain > GAIN_SILENCE_THRESHOLD)
+            if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
             {
                 for(i = 0;i < td;i++)
                     SamplesOut[k][i+base] += temps[i][0] * gain;
             }
 
             gain = state->Gain[1][k];
-            if(gain > GAIN_SILENCE_THRESHOLD)
+            if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
             {
                 for(i = 0;i < td;i++)
                     SamplesOut[k][i+base] += temps[i][1] * gain;

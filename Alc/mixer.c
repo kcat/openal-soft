@@ -432,12 +432,12 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     parms->Filters[chan].ActiveType
                 );
                 if(!voice->IsHrtf)
-                    Mix(samples, MaxChannels, parms->OutBuffer, parms->Mix.Gains[chan],
+                    Mix(samples, parms->OutChannels, parms->OutBuffer, parms->Gains[chan],
                         parms->Counter, OutPos, DstBufferSize);
                 else
                     HrtfMix(parms->OutBuffer, samples, parms->Counter, voice->Offset,
-                            OutPos, parms->Mix.Hrtf.IrSize, &parms->Mix.Hrtf.Params[chan],
-                            &parms->Mix.Hrtf.State[chan], DstBufferSize);
+                            OutPos, parms->Hrtf.IrSize, &parms->Hrtf.Params[chan],
+                            &parms->Hrtf.State[chan], DstBufferSize);
             }
 
             /* Only the first channel for B-Format buffers (W channel) goes to

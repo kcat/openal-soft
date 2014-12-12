@@ -30,10 +30,6 @@
 #define RAD2DEG(x)  ((ALfloat)(x) * (180.0f/F_PI))
 
 
-#define SRC_HISTORY_BITS   (6)
-#define SRC_HISTORY_LENGTH (1<<SRC_HISTORY_BITS)
-#define SRC_HISTORY_MASK   (SRC_HISTORY_LENGTH-1)
-
 #define MAX_PITCH  (10)
 
 
@@ -53,19 +49,6 @@ enum ActiveFilters {
 };
 
 
-typedef struct HrtfState {
-    alignas(16) ALfloat History[SRC_HISTORY_LENGTH];
-    alignas(16) ALfloat Values[HRIR_LENGTH][2];
-} HrtfState;
-
-typedef struct HrtfParams {
-    alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
-    alignas(16) ALfloat CoeffStep[HRIR_LENGTH][2];
-    ALuint Delay[2];
-    ALint DelayStep[2];
-} HrtfParams;
-
-
 typedef struct MixGains {
     ALfloat Current;
     ALfloat Step;
@@ -75,11 +58,15 @@ typedef struct MixGains {
 
 typedef struct DirectParams {
     ALfloat (*OutBuffer)[BUFFERSIZE];
+    ALuint OutChannels;
 
     /* If not 'moving', gain/coefficients are set directly without fading. */
     ALboolean Moving;
     /* Stepping counter for gain/coefficient fading. */
     ALuint Counter;
+    /* Last direction (relative to listener) and gain of a moving source. */
+    ALfloat LastDir[3];
+    ALfloat LastGain;
 
     struct {
         enum ActiveFilters ActiveType;
@@ -87,17 +74,12 @@ typedef struct DirectParams {
         ALfilterState HighPass;
     } Filters[MAX_INPUT_CHANNELS];
 
-    union {
-        struct {
-            HrtfParams Params[MAX_INPUT_CHANNELS];
-            HrtfState State[MAX_INPUT_CHANNELS];
-            ALuint IrSize;
-            ALfloat Gain;
-            ALfloat Dir[3];
-        } Hrtf;
-
-        MixGains Gains[MAX_INPUT_CHANNELS][MaxChannels];
-    } Mix;
+    struct {
+        HrtfParams Params[MAX_INPUT_CHANNELS];
+        HrtfState State[MAX_INPUT_CHANNELS];
+        ALuint IrSize;
+    } Hrtf;
+    MixGains Gains[MAX_INPUT_CHANNELS][MAX_OUTPUT_CHANNELS];
 } DirectParams;
 
 typedef struct SendParams {
@@ -207,7 +189,7 @@ ALvoid aluInitPanning(ALCdevice *Device);
  * Sets channel gains based on a direction. The direction must be a 3-component
  * vector no longer than 1 unit.
  */
-void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfloat ingain, ALfloat gains[MaxChannels]);
+void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 /**
  * ComputeAngleGains
@@ -215,14 +197,14 @@ void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfl
  * Sets channel gains based on angle and elevation. The angle and elevation
  * parameters are in radians, going right and up respectively.
  */
-void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation, ALfloat ingain, ALfloat gains[MaxChannels]);
+void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 /**
  * ComputeAmbientGains
  *
  * Sets channel gains for ambient, omni-directional sounds.
  */
-void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MaxChannels]);
+void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 /**
  * ComputeBFormatGains
@@ -231,7 +213,7 @@ void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[
  * a 1x4 'slice' of the rotation matrix for a given channel used to orient the
  * coefficients.
  */
-void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MaxChannels]);
+void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 
 ALvoid CalcSourceParams(struct ALvoice *voice, const struct ALsource *source, const ALCcontext *ALContext);

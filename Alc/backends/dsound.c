@@ -43,6 +43,9 @@
 #ifndef DSSPEAKER_5POINT1
 #   define DSSPEAKER_5POINT1          0x00000006
 #endif
+#ifndef DSSPEAKER_5POINT1_BACK
+#   define DSSPEAKER_5POINT1_BACK     0x00000006
+#endif
 #ifndef DSSPEAKER_7POINT1
 #   define DSSPEAKER_7POINT1          0x00000007
 #endif
@@ -441,28 +444,35 @@ static ALCboolean ALCdsoundPlayback_reset(ALCdsoundPlayback *self)
     hr = IDirectSound_GetSpeakerConfig(self->DS, &speakers);
     if(SUCCEEDED(hr))
     {
+        speakers = DSSPEAKER_CONFIG(speakers);
         if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
         {
-            speakers = DSSPEAKER_CONFIG(speakers);
             if(speakers == DSSPEAKER_MONO)
                 device->FmtChans = DevFmtMono;
             else if(speakers == DSSPEAKER_STEREO || speakers == DSSPEAKER_HEADPHONE)
                 device->FmtChans = DevFmtStereo;
             else if(speakers == DSSPEAKER_QUAD)
                 device->FmtChans = DevFmtQuad;
-            else if(speakers == DSSPEAKER_5POINT1 || speakers == DSSPEAKER_5POINT1_SURROUND)
+            else if(speakers == DSSPEAKER_5POINT1_SURROUND)
                 device->FmtChans = DevFmtX51;
+            else if(speakers == DSSPEAKER_5POINT1_BACK)
+                device->FmtChans = DevFmtX51Rear;
             else if(speakers == DSSPEAKER_7POINT1 || speakers == DSSPEAKER_7POINT1_SURROUND)
                 device->FmtChans = DevFmtX71;
             else
                 ERR("Unknown system speaker config: 0x%lx\n", speakers);
         }
+        device->IsHeadphones = (device->FmtChans == DevFmtStereo &&
+                                speakers == DSSPEAKER_HEADPHONE);
 
         switch(device->FmtChans)
         {
             case DevFmtMono:
                 OutputType.dwChannelMask = SPEAKER_FRONT_CENTER;
                 break;
+            case DevFmtBFormat3D:
+                device->FmtChans = DevFmtStereo;
+                /*fall-through*/
             case DevFmtStereo:
                 OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
                                            SPEAKER_FRONT_RIGHT;
@@ -478,16 +488,16 @@ static ALCboolean ALCdsoundPlayback_reset(ALCdsoundPlayback *self)
                                            SPEAKER_FRONT_RIGHT |
                                            SPEAKER_FRONT_CENTER |
                                            SPEAKER_LOW_FREQUENCY |
-                                           SPEAKER_BACK_LEFT |
-                                           SPEAKER_BACK_RIGHT;
+                                           SPEAKER_SIDE_LEFT |
+                                           SPEAKER_SIDE_RIGHT;
                 break;
-            case DevFmtX51Side:
+            case DevFmtX51Rear:
                 OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
                                            SPEAKER_FRONT_RIGHT |
                                            SPEAKER_FRONT_CENTER |
                                            SPEAKER_LOW_FREQUENCY |
-                                           SPEAKER_SIDE_LEFT |
-                                           SPEAKER_SIDE_RIGHT;
+                                           SPEAKER_BACK_LEFT |
+                                           SPEAKER_BACK_RIGHT;
                 break;
             case DevFmtX61:
                 OutputType.dwChannelMask = SPEAKER_FRONT_LEFT |
@@ -745,16 +755,16 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
                                           SPEAKER_FRONT_RIGHT |
                                           SPEAKER_FRONT_CENTER |
                                           SPEAKER_LOW_FREQUENCY |
-                                          SPEAKER_BACK_LEFT |
-                                          SPEAKER_BACK_RIGHT;
+                                          SPEAKER_SIDE_LEFT |
+                                          SPEAKER_SIDE_RIGHT;
                 break;
-            case DevFmtX51Side:
+            case DevFmtX51Rear:
                 InputType.dwChannelMask = SPEAKER_FRONT_LEFT |
                                           SPEAKER_FRONT_RIGHT |
                                           SPEAKER_FRONT_CENTER |
                                           SPEAKER_LOW_FREQUENCY |
-                                          SPEAKER_SIDE_LEFT |
-                                          SPEAKER_SIDE_RIGHT;
+                                          SPEAKER_BACK_LEFT |
+                                          SPEAKER_BACK_RIGHT;
                 break;
             case DevFmtX61:
                 InputType.dwChannelMask = SPEAKER_FRONT_LEFT |
@@ -774,6 +784,8 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
                                           SPEAKER_BACK_RIGHT |
                                           SPEAKER_SIDE_LEFT |
                                           SPEAKER_SIDE_RIGHT;
+                break;
+            case DevFmtBFormat3D:
                 break;
         }
 

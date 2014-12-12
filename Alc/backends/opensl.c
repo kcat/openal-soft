@@ -67,7 +67,10 @@ static SLuint32 GetChannelMask(enum DevFmtChannels chans)
                                 SL_SPEAKER_BACK_LEFT|SL_SPEAKER_BACK_RIGHT;
         case DevFmtX51: return SL_SPEAKER_FRONT_LEFT|SL_SPEAKER_FRONT_RIGHT|
                                SL_SPEAKER_FRONT_CENTER|SL_SPEAKER_LOW_FREQUENCY|
-                               SL_SPEAKER_BACK_LEFT|SL_SPEAKER_BACK_RIGHT;
+                               SL_SPEAKER_SIDE_LEFT|SL_SPEAKER_SIDE_RIGHT;
+        case DevFmtX51Rear: return SL_SPEAKER_FRONT_LEFT|SL_SPEAKER_FRONT_RIGHT|
+                                   SL_SPEAKER_FRONT_CENTER|SL_SPEAKER_LOW_FREQUENCY|
+                                   SL_SPEAKER_BACK_LEFT|SL_SPEAKER_BACK_RIGHT;
         case DevFmtX61: return SL_SPEAKER_FRONT_LEFT|SL_SPEAKER_FRONT_RIGHT|
                                SL_SPEAKER_FRONT_CENTER|SL_SPEAKER_LOW_FREQUENCY|
                                SL_SPEAKER_BACK_CENTER|
@@ -76,9 +79,7 @@ static SLuint32 GetChannelMask(enum DevFmtChannels chans)
                                SL_SPEAKER_FRONT_CENTER|SL_SPEAKER_LOW_FREQUENCY|
                                SL_SPEAKER_BACK_LEFT|SL_SPEAKER_BACK_RIGHT|
                                SL_SPEAKER_SIDE_LEFT|SL_SPEAKER_SIDE_RIGHT;
-        case DevFmtX51Side: return SL_SPEAKER_FRONT_LEFT|SL_SPEAKER_FRONT_RIGHT|
-                                   SL_SPEAKER_FRONT_CENTER|SL_SPEAKER_LOW_FREQUENCY|
-                                   SL_SPEAKER_SIDE_LEFT|SL_SPEAKER_SIDE_RIGHT;
+        case DevFmtBFormat3D: break;
     }
     return 0;
 }

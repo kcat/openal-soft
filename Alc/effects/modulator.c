@@ -42,7 +42,7 @@ typedef struct ALmodulatorState {
     ALuint index;
     ALuint step;
 
-    ALfloat Gain[MaxChannels];
+    ALfloat Gain[MAX_OUTPUT_CHANNELS];
 
     ALfilterState Filter;
 } ALmodulatorState;
@@ -69,7 +69,7 @@ static inline ALfloat Square(ALuint index)
 #define DECL_TEMPLATE(func)                                                   \
 static void Process##func(ALmodulatorState *state, ALuint SamplesToDo,        \
   const ALfloat *restrict SamplesIn,                                          \
-  ALfloat (*restrict SamplesOut)[BUFFERSIZE])                                 \
+  ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)             \
 {                                                                             \
     const ALuint step = state->step;                                          \
     ALuint index = state->index;                                              \
@@ -92,10 +92,10 @@ static void Process##func(ALmodulatorState *state, ALuint SamplesToDo,        \
             temps[i] = samp * func(index);                                    \
         }                                                                     \
                                                                               \
-        for(k = 0;k < MaxChannels;k++)                                        \
+        for(k = 0;k < NumChannels;k++)                                        \
         {                                                                     \
             ALfloat gain = state->Gain[k];                                    \
-            if(!(gain > GAIN_SILENCE_THRESHOLD))                              \
+            if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))                       \
                 continue;                                                     \
                                                                               \
             for(i = 0;i < td;i++)                                             \
@@ -152,20 +152,20 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, ALCdevice *Device
     ComputeAmbientGains(Device, Slot->Gain, state->Gain);
 }
 
-static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
+static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     switch(state->Waveform)
     {
         case SINUSOID:
-            ProcessSin(state, SamplesToDo, SamplesIn, SamplesOut);
+            ProcessSin(state, SamplesToDo, SamplesIn, SamplesOut, NumChannels);
             break;
 
         case SAWTOOTH:
-            ProcessSaw(state, SamplesToDo, SamplesIn, SamplesOut);
+            ProcessSaw(state, SamplesToDo, SamplesIn, SamplesOut, NumChannels);
             break;
 
         case SQUARE:
-            ProcessSquare(state, SamplesToDo, SamplesIn, SamplesOut);
+            ProcessSquare(state, SamplesToDo, SamplesIn, SamplesOut, NumChannels);
             break;
     }
 }

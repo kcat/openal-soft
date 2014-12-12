@@ -37,6 +37,8 @@
 #include "vector.h"
 #include "alstring.h"
 
+#include "hrtf.h"
+
 #ifndef ALC_SOFT_HRTF
 #define ALC_SOFT_HRTF 1
 #define ALC_HRTF_SOFT                            0x1992
@@ -382,6 +384,10 @@ static rettype T1##_##T2##_##func(T2 *obj, argtype1 a, argtype2 b)            \
 static rettype T1##_##T2##_##func(T2 *obj, argtype1 a, argtype2 b, argtype3 c) \
 { return T1##_##func(STATIC_UPCAST(T1, T2, obj), a, b, c); }
 
+#define DECLARE_THUNK4(T1, T2, rettype, func, argtype1, argtype2, argtype3, argtype4) \
+static rettype T1##_##T2##_##func(T2 *obj, argtype1 a, argtype2 b, argtype3 c, argtype4 d) \
+{ return T1##_##func(STATIC_UPCAST(T1, T2, obj), a, b, c, d); }
+
 #define DECLARE_DEFAULT_ALLOCATORS(T)                                         \
 static void* T##_New(size_t size) { return al_malloc(16, size); }             \
 static void T##_Delete(void *ptr) { al_free(ptr); }
@@ -524,8 +530,21 @@ enum Channel {
     SideLeft,
     SideRight,
 
-    MaxChannels,
-    InvalidChannel = MaxChannels
+    TopFrontLeft,
+    TopFrontRight,
+    TopBackLeft,
+    TopBackRight,
+    BottomFrontLeft,
+    BottomFrontRight,
+    BottomBackLeft,
+    BottomBackRight,
+
+    Aux0,
+    Aux1,
+    Aux2,
+    Aux3,
+
+    InvalidChannel
 };
 
 
@@ -549,11 +568,14 @@ enum DevFmtChannels {
     DevFmtX61    = ALC_6POINT1_SOFT,
     DevFmtX71    = ALC_7POINT1_SOFT,
 
-    /* Similar to 5.1, except using the side channels instead of back */
-    DevFmtX51Side = 0x80000000,
+    /* Similar to 5.1, except using rear channels instead of sides */
+    DevFmtX51Rear = 0x80000000,
+
+    DevFmtBFormat3D,
 
     DevFmtChannelsDefault = DevFmtStereo
 };
+#define MAX_OUTPUT_CHANNELS  (8)
 
 ALuint BytesFromDevFmt(enum DevFmtType type) DECL_CONST;
 ALuint ChannelsFromDevFmt(enum DevFmtChannels chans) DECL_CONST;
@@ -584,11 +606,26 @@ enum DeviceType {
 #define MAX_AMBI_COEFFS 16
 
 typedef struct ChannelConfig {
-    ALfloat Angle;
-    ALfloat Elevation;
     ALfloat HOACoeff[MAX_AMBI_COEFFS];
     ALfloat FOACoeff[4];
 } ChannelConfig;
+
+
+#define HRTF_HISTORY_BITS   (6)
+#define HRTF_HISTORY_LENGTH (1<<HRTF_HISTORY_BITS)
+#define HRTF_HISTORY_MASK   (HRTF_HISTORY_LENGTH-1)
+
+typedef struct HrtfState {
+    alignas(16) ALfloat History[HRTF_HISTORY_LENGTH];
+    alignas(16) ALfloat Values[HRIR_LENGTH][2];
+} HrtfState;
+
+typedef struct HrtfParams {
+    alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
+    alignas(16) ALfloat CoeffStep[HRIR_LENGTH][2];
+    ALuint Delay[2];
+    ALint DelayStep[2];
+} HrtfParams;
 
 
 /* Size for temporary storage of buffer data, in ALfloats. Larger values need
@@ -610,6 +647,7 @@ struct ALCdevice_struct
     ALuint       NumUpdates;
     enum DevFmtChannels FmtChans;
     enum DevFmtType     FmtType;
+    ALboolean    IsHeadphones;
 
     al_string DeviceName;
 
@@ -650,19 +688,19 @@ struct ALCdevice_struct
 
     /* HRTF filter tables */
     const struct Hrtf *Hrtf;
+    HrtfState Hrtf_State[MAX_OUTPUT_CHANNELS];
+    HrtfParams Hrtf_Params[MAX_OUTPUT_CHANNELS];
+    ALuint Hrtf_Offset;
 
     // Stereo-to-binaural filter
     struct bs2b *Bs2b;
-    ALCint       Bs2bLevel;
 
     // Device flags
     ALuint       Flags;
 
-    enum Channel ChannelName[MaxChannels];
-
-    /* This only counts positional speakers, i.e. not including LFE. */
-    ChannelConfig Speaker[MaxChannels];
-    ALuint NumSpeakers;
+    enum Channel ChannelName[MAX_OUTPUT_CHANNELS];
+    ChannelConfig Channel[MAX_OUTPUT_CHANNELS];
+    ALuint NumChannels;
 
     ALuint64 ClockBase;
     ALuint SamplesDone;
@@ -673,7 +711,7 @@ struct ALCdevice_struct
     alignas(16) ALfloat FilteredData[BUFFERSIZE];
 
     // Dry path buffer mix
-    alignas(16) ALfloat DryBuffer[MaxChannels][BUFFERSIZE];
+    alignas(16) ALfloat (*DryBuffer)[BUFFERSIZE];
 
     /* Running count of the mixer invocations, in 31.1 fixed point. This
      * actually increments *twice* when mixing, first at the start and then at
@@ -707,17 +745,11 @@ struct ALCdevice_struct
 // HRTF was requested by the app
 #define DEVICE_HRTF_REQUEST                      (1<<4)
 
-// Stereo sources cover 120-degree angles around +/-90
-#define DEVICE_WIDE_STEREO                       (1<<16)
-
 // Specifies if the DSP is paused at user request
 #define DEVICE_PAUSED                            (1<<30)
 
 // Specifies if the device is currently running
 #define DEVICE_RUNNING                           (1<<31)
-
-/* Invalid channel offset */
-#define INVALID_OFFSET                           (~0u)
 
 
 /* Nanosecond resolution for the device clock time. */
@@ -822,6 +854,7 @@ int ConfigValueStr(const char *blockName, const char *keyName, const char **ret)
 int ConfigValueInt(const char *blockName, const char *keyName, int *ret);
 int ConfigValueUInt(const char *blockName, const char *keyName, unsigned int *ret);
 int ConfigValueFloat(const char *blockName, const char *keyName, float *ret);
+int ConfigValueBool(const char *blockName, const char *keyName, int *ret);
 
 void SetRTPriority(void);
 
@@ -840,7 +873,7 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans) DECL_CONST;
 inline ALint GetChannelIdxByName(const ALCdevice *device, enum Channel chan)
 {
     ALint i = 0;
-    for(i = 0;i < MaxChannels;i++)
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
     {
         if(device->ChannelName[i] == chan)
             return i;

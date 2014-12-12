@@ -34,13 +34,6 @@
 
 #if PA_API_VERSION == 12
 
-#ifndef PA_CHECK_VERSION
-#define PA_CHECK_VERSION(major,minor,micro)                             \
-    ((PA_MAJOR > (major)) ||                                            \
-     (PA_MAJOR == (major) && PA_MINOR > (minor)) ||                     \
-     (PA_MAJOR == (major) && PA_MINOR == (minor) && PA_MICRO >= (micro)))
-#endif
-
 #ifdef HAVE_DYNLOAD
 static void *pa_handle;
 #define MAKE_FUNC(x) static __typeof(x) * p##x
@@ -108,13 +101,9 @@ MAKE_FUNC(pa_operation_unref);
 MAKE_FUNC(pa_proplist_new);
 MAKE_FUNC(pa_proplist_free);
 MAKE_FUNC(pa_proplist_set);
-#if PA_CHECK_VERSION(0,9,15)
 MAKE_FUNC(pa_channel_map_superset);
 MAKE_FUNC(pa_stream_set_buffer_attr_callback);
-#endif
-#if PA_CHECK_VERSION(0,9,16)
 MAKE_FUNC(pa_stream_begin_write);
-#endif
 #undef MAKE_FUNC
 
 #define pa_context_unref ppa_context_unref
@@ -181,13 +170,9 @@ MAKE_FUNC(pa_stream_begin_write);
 #define pa_proplist_new ppa_proplist_new
 #define pa_proplist_free ppa_proplist_free
 #define pa_proplist_set ppa_proplist_set
-#if PA_CHECK_VERSION(0,9,15)
 #define pa_channel_map_superset ppa_channel_map_superset
 #define pa_stream_set_buffer_attr_callback ppa_stream_set_buffer_attr_callback
-#endif
-#if PA_CHECK_VERSION(0,9,16)
 #define pa_stream_begin_write ppa_stream_begin_write
-#endif
 
 #endif
 
@@ -278,18 +263,10 @@ static ALCboolean pulse_load(void)
         LOAD_FUNC(pa_proplist_new);
         LOAD_FUNC(pa_proplist_free);
         LOAD_FUNC(pa_proplist_set);
+        LOAD_FUNC(pa_channel_map_superset);
+        LOAD_FUNC(pa_stream_set_buffer_attr_callback);
+        LOAD_FUNC(pa_stream_begin_write);
 #undef LOAD_FUNC
-#define LOAD_OPTIONAL_FUNC(x) do {                                            \
-    p##x = GetSymbol(pa_handle, #x);                                          \
-} while(0)
-#if PA_CHECK_VERSION(0,9,15)
-        LOAD_OPTIONAL_FUNC(pa_channel_map_superset);
-        LOAD_OPTIONAL_FUNC(pa_stream_set_buffer_attr_callback);
-#endif
-#if PA_CHECK_VERSION(0,9,16)
-        LOAD_OPTIONAL_FUNC(pa_stream_begin_write);
-#endif
-#undef LOAD_OPTIONAL_FUNC
 
         if(ret == ALC_FALSE)
         {
@@ -438,10 +415,7 @@ static void pulse_close(pa_threaded_mainloop *loop, pa_context *context,
         pa_stream_set_state_callback(stream, NULL, NULL);
         pa_stream_set_moved_callback(stream, NULL, NULL);
         pa_stream_set_write_callback(stream, NULL, NULL);
-#if PA_CHECK_VERSION(0,9,15)
-        if(pa_stream_set_buffer_attr_callback)
-            pa_stream_set_buffer_attr_callback(stream, NULL, NULL);
-#endif
+        pa_stream_set_buffer_attr_callback(stream, NULL, NULL);
         pa_stream_disconnect(stream);
         pa_stream_unref(stream);
     }
@@ -662,7 +636,6 @@ static void ALCpulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const
 {
     ALCpulsePlayback *self = pdata;
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
-    char chanmap_str[256] = "";
     const struct {
         const char *str;
         enum DevFmtChannels chans;
@@ -671,10 +644,10 @@ static void ALCpulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const
           DevFmtX71 },
         { "front-left,front-right,front-center,lfe,rear-center,side-left,side-right",
           DevFmtX61 },
-        { "front-left,front-right,front-center,lfe,rear-left,rear-right",
-          DevFmtX51 },
         { "front-left,front-right,front-center,lfe,side-left,side-right",
-          DevFmtX51Side },
+          DevFmtX51 },
+        { "front-left,front-right,front-center,lfe,rear-left,rear-right",
+          DevFmtX51Rear },
         { "front-left,front-right,rear-left,rear-right", DevFmtQuad },
         { "front-left,front-right", DevFmtStereo },
         { "mono", DevFmtMono },
@@ -694,20 +667,26 @@ static void ALCpulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const
         if(!pa_channel_map_parse(&map, chanmaps[i].str))
             continue;
 
-        if(pa_channel_map_equal(&info->channel_map, &map)
-#if PA_CHECK_VERSION(0,9,15)
-           || (pa_channel_map_superset &&
-               pa_channel_map_superset(&info->channel_map, &map))
-#endif
-            )
+        if(pa_channel_map_superset(&info->channel_map, &map))
         {
-            device->FmtChans = chanmaps[i].chans;
-            return;
+            if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
+                device->FmtChans = chanmaps[i].chans;
+            break;
         }
     }
 
-    pa_channel_map_snprint(chanmap_str, sizeof(chanmap_str), &info->channel_map);
-    ERR("Failed to find format for channel map:\n    %s\n", chanmap_str);
+    if(info->active_port)
+        TRACE("Active port: %s (%s)\n", info->active_port->name, info->active_port->description);
+    device->IsHeadphones = (info->active_port &&
+                            strcmp(info->active_port->name, "analog-output-headphones") == 0 &&
+                            device->FmtChans == DevFmtStereo);
+
+    if(!chanmaps[i].str)
+    {
+        char chanmap_str[PA_CHANNEL_MAP_SNPRINT_MAX] = "";
+        pa_channel_map_snprint(chanmap_str, sizeof(chanmap_str), &info->channel_map);
+        WARN("Failed to find format for channel map:\n    %s\n", chanmap_str);
+    }
 }
 
 static void ALCpulsePlayback_sinkNameCallback(pa_context *UNUSED(context), const pa_sink_info *info, int eol, void *pdata)
@@ -818,10 +797,7 @@ static int ALCpulsePlayback_mixerProc(void *ptr)
             void *buf;
             pa_free_cb_t free_func = NULL;
 
-#if PA_CHECK_VERSION(0,9,16)
-            if(!pa_stream_begin_write ||
-               pa_stream_begin_write(self->stream, &buf, &newlen) < 0)
-#endif
+            if(pa_stream_begin_write(self->stream, &buf, &newlen) < 0)
             {
                 buf = pa_xmalloc(newlen);
                 free_func = pa_xfree;
@@ -915,6 +891,7 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
     pa_stream_flags_t flags = 0;
     const char *mapname = NULL;
     pa_channel_map chanmap;
+    pa_operation *o;
     ALuint len;
 
     pa_threaded_mainloop_lock(self->loop);
@@ -922,26 +899,18 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
     if(self->stream)
     {
         pa_stream_set_moved_callback(self->stream, NULL, NULL);
-#if PA_CHECK_VERSION(0,9,15)
-        if(pa_stream_set_buffer_attr_callback)
-            pa_stream_set_buffer_attr_callback(self->stream, NULL, NULL);
-#endif
+        pa_stream_set_buffer_attr_callback(self->stream, NULL, NULL);
         pa_stream_disconnect(self->stream);
         pa_stream_unref(self->stream);
         self->stream = NULL;
     }
 
-    if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
-    {
-        pa_operation *o;
-        o = pa_context_get_sink_info_by_name(self->context,
-                                             al_string_get_cstr(self->device_name),
-                                             ALCpulsePlayback_sinkInfoCallback, self);
-        wait_for_operation(o, self->loop);
-    }
+    o = pa_context_get_sink_info_by_name(self->context, al_string_get_cstr(self->device_name),
+                                         ALCpulsePlayback_sinkInfoCallback, self);
+    wait_for_operation(o, self->loop);
+
     if(!(device->Flags&DEVICE_FREQUENCY_REQUEST))
         flags |= PA_STREAM_FIX_RATE;
-
     flags |= PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE;
     flags |= PA_STREAM_ADJUST_LATENCY;
     flags |= PA_STREAM_START_CORKED;
@@ -987,6 +956,9 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
         case DevFmtMono:
             mapname = "mono";
             break;
+        case DevFmtBFormat3D:
+            device->FmtChans = DevFmtStereo;
+            /*fall-through*/
         case DevFmtStereo:
             mapname = "front-left,front-right";
             break;
@@ -994,10 +966,10 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
             mapname = "front-left,front-right,rear-left,rear-right";
             break;
         case DevFmtX51:
-            mapname = "front-left,front-right,front-center,lfe,rear-left,rear-right";
-            break;
-        case DevFmtX51Side:
             mapname = "front-left,front-right,front-center,lfe,side-left,side-right";
+            break;
+        case DevFmtX51Rear:
+            mapname = "front-left,front-right,front-center,lfe,rear-left,rear-right";
             break;
         case DevFmtX61:
             mapname = "front-left,front-right,front-center,lfe,rear-center,side-left,side-right";
@@ -1035,8 +1007,6 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
     self->spec = *(pa_stream_get_sample_spec(self->stream));
     if(device->Frequency != self->spec.rate)
     {
-        pa_operation *o;
-
         /* Server updated our playback rate, so modify the buffer attribs
          * accordingly. */
         device->NumUpdates = (ALuint)((ALdouble)device->NumUpdates / device->Frequency *
@@ -1053,15 +1023,10 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
         device->Frequency = self->spec.rate;
     }
 
-#if PA_CHECK_VERSION(0,9,15)
-    if(pa_stream_set_buffer_attr_callback)
-        pa_stream_set_buffer_attr_callback(self->stream, ALCpulsePlayback_bufferAttrCallback, self);
-#endif
+    pa_stream_set_buffer_attr_callback(self->stream, ALCpulsePlayback_bufferAttrCallback, self);
     ALCpulsePlayback_bufferAttrCallback(self->stream, self);
 
     len = self->attr.minreq / pa_frame_size(&self->spec);
-    if((CPUCapFlags&CPU_CAP_SSE))
-        len = (len+3)&~3;
     device->NumUpdates = (ALuint)((ALdouble)device->NumUpdates/len*device->UpdateSize + 0.5);
     device->NumUpdates = clampu(device->NumUpdates, 2, 16);
     device->UpdateSize = len;

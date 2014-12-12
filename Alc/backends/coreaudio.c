@@ -519,9 +519,10 @@ static ALCenum ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
 
         case DevFmtQuad:
         case DevFmtX51:
-        case DevFmtX51Side:
+        case DevFmtX51Rear:
         case DevFmtX61:
         case DevFmtX71:
+        case DevFmtBFormat3D:
             ERR("%s not supported\n", DevFmtChannelsString(device->FmtChans));
             goto error;
     }

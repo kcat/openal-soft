@@ -59,6 +59,18 @@ void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const 
 }
 
 
+static inline void SetupCoeffs(ALfloat (*restrict OutCoeffs)[2],
+                               const HrtfParams *hrtfparams,
+                               ALuint IrSize, ALuint Counter)
+{
+    ALuint c;
+    for(c = 0;c < IrSize;c++)
+    {
+        OutCoeffs[c][0] = hrtfparams->Coeffs[c][0] - (hrtfparams->CoeffStep[c][0]*Counter);
+        OutCoeffs[c][1] = hrtfparams->Coeffs[c][1] - (hrtfparams->CoeffStep[c][1]*Counter);
+    }
+}
+
 static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
                                    const ALuint IrSize,
                                    ALfloat (*restrict Coeffs)[2],
@@ -106,12 +118,12 @@ void Mix_C(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[B
         ALuint pos = 0;
         gain = Gains[c].Current;
         step = Gains[c].Step;
-        if(step != 1.0f && Counter > 0)
+        if(step != 0.0f && Counter > 0)
         {
             for(;pos < BufferSize && pos < Counter;pos++)
             {
                 OutBuffer[c][OutPos+pos] += data[pos]*gain;
-                gain *= step;
+                gain += step;
             }
             if(pos == Counter)
                 gain = Gains[c].Target;

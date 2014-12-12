@@ -41,9 +41,10 @@ static const struct {
     { "Mono", "mono" },
     { "Stereo", "stereo" },
     { "Quadrophonic", "quad" },
-    { "5.1 Surround Sound", "surround51" },
-    { "6.1 Surround Sound", "surround61" },
-    { "7.1 Surround Sound", "surround71" },
+    { "5.1 Surround (Side)", "surround51" },
+    { "5.1 Surround (Rear)", "surround51rear" },
+    { "6.1 Surround", "surround61" },
+    { "7.1 Surround", "surround71" },
 
     { "", "" }
 }, sampleTypeList[] = {

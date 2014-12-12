@@ -31,7 +31,7 @@ typedef struct ALcompressorState {
     DERIVE_FROM_TYPE(ALeffectState);
 
     /* Effect gains for each channel */
-    ALfloat Gain[MaxChannels];
+    ALfloat Gain[MAX_OUTPUT_CHANNELS];
 
     /* Effect parameters */
     ALboolean Enabled;
@@ -62,7 +62,7 @@ static ALvoid ALcompressorState_update(ALcompressorState *state, ALCdevice *devi
     ComputeAmbientGains(device, slot->Gain, state->Gain);
 }
 
-static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[BUFFERSIZE])
+static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     ALuint it, kt;
     ALuint base;
@@ -116,10 +116,10 @@ static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint Samples
         }
 
 
-        for(kt = 0;kt < MaxChannels;kt++)
+        for(kt = 0;kt < NumChannels;kt++)
         {
             ALfloat gain = state->Gain[kt];
-            if(!(gain > GAIN_SILENCE_THRESHOLD))
+            if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
                 continue;
 
             for(it = 0;it < td;it++)

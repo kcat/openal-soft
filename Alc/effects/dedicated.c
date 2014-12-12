@@ -32,7 +32,7 @@
 typedef struct ALdedicatedState {
     DERIVE_FROM_TYPE(ALeffectState);
 
-    ALfloat gains[MaxChannels];
+    ALfloat gains[MAX_OUTPUT_CHANNELS];
 } ALdedicatedState;
 
 
@@ -50,7 +50,7 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, ALCdevice *device
     ALfloat Gain;
     ALuint i;
 
-    for(i = 0;i < MaxChannels;i++)
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
         state->gains[i] = 0.0f;
 
     Gain = Slot->Gain * Slot->EffectProps.Dedicated.Gain;
@@ -75,14 +75,14 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, ALCdevice *device
     }
 }
 
-static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
+static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     const ALfloat *gains = state->gains;
     ALuint i, c;
 
-    for(c = 0;c < MaxChannels;c++)
+    for(c = 0;c < NumChannels;c++)
     {
-        if(!(gains[c] > GAIN_SILENCE_THRESHOLD))
+        if(!(fabsf(gains[c]) > GAIN_SILENCE_THRESHOLD))
             continue;
 
         for(i = 0;i < SamplesToDo;i++)
@@ -108,7 +108,7 @@ ALeffectState *ALdedicatedStateFactory_create(ALdedicatedStateFactory *UNUSED(fa
     if(!state) return NULL;
     SET_VTABLE2(ALdedicatedState, ALeffectState, state);
 
-    for(s = 0;s < MaxChannels;s++)
+    for(s = 0;s < MAX_OUTPUT_CHANNELS;s++)
         state->gains[s] = 0.0f;
 
     return STATIC_CAST(ALeffectState, state);

@@ -853,8 +853,8 @@ static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict 
         return;
     if(state != AL_PLAYING)
     {
-        fluid_synth_write_float(self->Synth, SamplesToDo, DryBuffer[FrontLeft], 0, 1,
-                                                          DryBuffer[FrontRight], 0, 1);
+        fluid_synth_write_float(self->Synth, SamplesToDo, DryBuffer[0], 0, 1,
+                                                          DryBuffer[1], 0, 1);
         return;
     }
 
@@ -882,8 +882,8 @@ static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict 
         if(tonext > 0)
         {
             ALuint todo = minu(tonext, SamplesToDo-total);
-            fluid_synth_write_float(self->Synth, todo, DryBuffer[FrontLeft], total, 1,
-                                                       DryBuffer[FrontRight], total, 1);
+            fluid_synth_write_float(self->Synth, todo, DryBuffer[0], total, 1,
+                                                       DryBuffer[1], total, 1);
             total += todo;
             tonext -= todo;
         }

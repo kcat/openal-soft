@@ -30,10 +30,19 @@
 #  'all' disables use of all such specialized methods.
 #disable-cpu-exts =
 
+## drivers:
+#  Sets the backend driver list order, comma-seperated. Unknown backends and
+#  duplicated names are ignored. Unlisted backends won't be considered for use
+#  unless the list is ended with a comma (e.g. 'oss,' will try OSS first before
+#  other backends, while 'oss' will try OSS only). Backends prepended with -
+#  won't be considered for use (e.g. '-oss,' will try all available backends
+#  except OSS). An empty list means to try all backends.
+#drivers =
+
 ## channels:
 #  Sets the output channel configuration. If left unspecified, one will try to
 #  be detected from the system, and defaulting to stereo. The available values
-#  are: mono, stereo, quad, surround51, surround61, surround71
+#  are: mono, stereo, quad, surround51, surround51rear, surround61, surround71
 #channels =
 
 ## sample-type:
@@ -48,12 +57,37 @@
 #  float32 - 32-bit float
 #sample-type = float32
 
+## frequency:
+#  Sets the output frequency. If left unspecified it will try to detect a
+#  default from the system, otherwise it will default to 44100.
+#frequency =
+
+## period_size:
+#  Sets the update period size, in frames. This is the number of frames needed
+#  for each mixing update. Acceptable values range between 64 and 8192.
+#period_size = 1024
+
+## periods:
+#  Sets the number of update periods. Higher values create a larger mix ahead,
+#  which helps protect against skips when the CPU is under load, but increases
+#  the delay between a sound getting mixed and being heard. Acceptable values
+#  range between 2 and 16.
+#periods = 4
+
+## stereo-mode
+#  Specifies if stereo output is treated as being headphones or speakers. With
+#  headphones, HRTF or crossfeed filters may be used for better audio quality.
+#  Valid settings are auto, speakers, and headphones.
+#stereo-mode = auto
+
 ## hrtf:
-#  Enables HRTF filters. These filters provide for better sound spatialization
-#  while using headphones. The default filter will only work when output is
-#  44100hz stereo. While HRTF is active, the cf_level option is disabled.
-#  Default is disabled since stereo speaker output quality may suffer.
-#hrtf = false
+#  Controls HRTF processing. These filters provide better spatialization of
+#  sounds while using headphones, but do require a bit more CPU power. The
+#  default filters will only work with 44100hz or 48000hz stereo output. While
+#  HRTF is in use, the cf_level option is ignored. Setting this to true or
+#  false will forcefully enable or disable HRTF, otherwise HRTF will be enabled
+#  when using headphones.
+#hrtf =
 
 ## hrtf_tables
 #  Specifies a comma-separated list of files containing HRTF data sets. The
@@ -84,19 +118,6 @@
 #  stereo modes.
 #cf_level = 0
 
-## wide-stereo:
-#  Specifies that stereo sources are given a width of about 120 degrees on each
-#  channel, centering on -90 (left) and +90 (right), as opposed to being points
-#  placed at -30 (left) and +30 (right). This can be useful for surround-sound
-#  to give stereo sources a more encompassing sound. Note that the sound's
-#  overall volume will be slightly reduced to account for the extra output.
-#wide-stereo = false
-
-## frequency:
-#  Sets the output frequency. If left unspecified it will try to detect a
-#  default from the system, otherwise it will default to 44100.
-#frequency =
-
 ## resampler:
 #  Selects the resampler used when mixing sources. Valid values are:
 #  point - nearest sample, no interpolation
@@ -114,38 +135,10 @@
 #  disabled.
 #rt-prio = 0
 
-## period_size:
-#  Sets the update period size, in frames. This is the number of frames needed
-#  for each mixing update. Acceptable values range between 64 and 8192.
-#period_size = 1024
-
-## periods:
-#  Sets the number of update periods. Higher values create a larger mix ahead,
-#  which helps protect against skips when the CPU is under load, but increases
-#  the delay between a sound getting mixed and being heard. Acceptable values
-#  range between 2 and 16.
-#periods = 4
-
 ## sources:
 #  Sets the maximum number of allocatable sources. Lower values may help for
 #  systems with apps that try to play more sounds than the CPU can handle.
 #sources = 256
-
-## drivers:
-#  Sets the backend driver list order, comma-seperated. Unknown backends and
-#  duplicated names are ignored. Unlisted backends won't be considered for use
-#  unless the list is ended with a comma (e.g. 'oss,' will try OSS first before
-#  other backends, while 'oss' will try OSS only). Backends prepended with -
-#  won't be considered for use (e.g. '-oss,' will try all available backends
-#  except OSS). An empty list means to try all backends.
-#drivers =
-
-## excludefx:
-#  Sets which effects to exclude, preventing apps from using them. This can
-#  help for apps that try to use effects which are too CPU intensive for the
-#  system to handle. Available effects are: eaxreverb,reverb,autowah,chorus,
-#  compressor,distortion,echo,equalizer,flanger,modulator,dedicated
-#excludefx =
 
 ## slots:
 #  Sets the maximum number of Auxiliary Effect Slots an app can create. A slot
@@ -160,24 +153,12 @@
 #  possible is 4.
 #sends =
 
-## layout:
-#  Sets the virtual speaker layout. Values are specified in degrees, where 0 is
-#  straight in front, negative goes left, and positive goes right. Unspecified
-#  speakers will remain at their default positions (which are dependant on the
-#  output format). Available speakers are back-left(bl), side-left(sl), front-
-#  left(fl), front-center(fc), front-right(fr), side-right(sr), back-right(br),
-#  and back-center(bc).
-#layout =
-
-## layout_*:
-#  Channel-specific layouts may be specified to override the layout option. The
-#  same speakers as the layout option are available, and the default settings
-#  are shown below.
-#layout_stereo     = fl=-90, fr=90
-#layout_quad       = fl=-45, fr=45, bl=-135, br=135
-#layout_surround51 = fl=-30, fr=30, fc=0, bl=-110, br=110
-#layout_surround61 = fl=-30, fr=30, fc=0, sl=-90, sr=90, bc=180
-#layout_surround71 = fl=-30, fr=30, fc=0, sl=-90, sr=90, bl=-150, br=150
+## excludefx:
+#  Sets which effects to exclude, preventing apps from using them. This can
+#  help for apps that try to use effects which are too CPU intensive for the
+#  system to handle. Available effects are: eaxreverb,reverb,autowah,chorus,
+#  compressor,distortion,echo,equalizer,flanger,modulator,dedicated
+#excludefx =
 
 ## default-reverb:
 #  A reverb preset that applies by default to all sources on send 0

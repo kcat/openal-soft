@@ -75,7 +75,7 @@ typedef struct ALequalizerState {
     DERIVE_FROM_TYPE(ALeffectState);
 
     /* Effect gains for each channel */
-    ALfloat Gain[MaxChannels];
+    ALfloat Gain[MAX_OUTPUT_CHANNELS];
 
     /* Effect parameters */
     ALfilterState filter[4];
@@ -118,7 +118,7 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, ALCdevice *device
                             0.0f);
 }
 
-static ALvoid ALequalizerState_process(ALequalizerState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
+static ALvoid ALequalizerState_process(ALequalizerState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     ALuint base;
     ALuint it;
@@ -140,10 +140,10 @@ static ALvoid ALequalizerState_process(ALequalizerState *state, ALuint SamplesTo
             temps[it] = smp;
         }
 
-        for(kt = 0;kt < MaxChannels;kt++)
+        for(kt = 0;kt < NumChannels;kt++)
         {
             ALfloat gain = state->Gain[kt];
-            if(!(gain > GAIN_SILENCE_THRESHOLD))
+            if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
                 continue;
 
             for(it = 0;it < td;it++)

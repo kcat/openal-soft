@@ -34,7 +34,7 @@ typedef struct ALdistortionState {
     DERIVE_FROM_TYPE(ALeffectState);
 
     /* Effect gains for each channel */
-    ALfloat Gain[MaxChannels];
+    ALfloat Gain[MAX_OUTPUT_CHANNELS];
 
     /* Effect parameters */
     ALfilterState lowpass;
@@ -84,7 +84,7 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, ALCdevice *Devi
     ComputeAmbientGains(Device, Slot->Gain, state->Gain);
 }
 
-static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE])
+static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     const ALfloat fc = state->edge_coeff;
     float oversample_buffer[64][4];
@@ -154,10 +154,10 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint Samples
             temps[it] = oversample_buffer[it][0] * state->attenuation;
         }
 
-        for(kt = 0;kt < MaxChannels;kt++)
+        for(kt = 0;kt < NumChannels;kt++)
         {
             ALfloat gain = state->Gain[kt];
-            if(!(gain > GAIN_SILENCE_THRESHOLD))
+            if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
                 continue;
 
             for(it = 0;it < td;it++)

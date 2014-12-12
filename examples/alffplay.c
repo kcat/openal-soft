@@ -684,7 +684,9 @@ static int audio_thread(void *userdata)
         movState->audio.dst_ch_layout,
         movState->audio.dst_sample_fmt,
         movState->audio.st->codec->sample_rate,
-        movState->audio.st->codec->channel_layout,
+        movState->audio.st->codec->channel_layout ?
+            movState->audio.st->codec->channel_layout :
+            av_get_default_channel_layout(movState->audio.st->codec->channels),
         movState->audio.st->codec->sample_fmt,
         movState->audio.st->codec->sample_rate,
         0, NULL

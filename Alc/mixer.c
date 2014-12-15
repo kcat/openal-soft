@@ -103,6 +103,14 @@ static inline ResamplerFunc SelectResampler(enum Resampler resampler)
 #endif
             return Resample_lerp32_C;
         case CubicResampler:
+#ifdef HAVE_SSE4_1
+            if((CPUCapFlags&CPU_CAP_SSE4_1))
+                return Resample_cubic32_SSE41;
+#endif
+#ifdef HAVE_SSE2
+            if((CPUCapFlags&CPU_CAP_SSE2))
+                return Resample_cubic32_SSE2;
+#endif
             return Resample_cubic32_C;
         case ResamplerMax:
             /* Shouldn't happen */

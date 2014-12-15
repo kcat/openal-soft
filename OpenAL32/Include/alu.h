@@ -170,13 +170,13 @@ inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu)
 }
 inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALfloat mu)
 {
-    ALfloat mu2 = mu*mu;
-    ALfloat a0 = -0.5f*val0 +  1.5f*val1 + -1.5f*val2 +  0.5f*val3;
-    ALfloat a1 =       val0 + -2.5f*val1 +  2.0f*val2 + -0.5f*val3;
-    ALfloat a2 = -0.5f*val0              +  0.5f*val2;
-    ALfloat a3 =                    val1;
+    ALfloat mu2 = mu*mu, mu3 = mu*mu*mu;
+    ALfloat a0 = -0.5f*mu3 +       mu2 + -0.5f*mu;
+    ALfloat a1 =  1.5f*mu3 + -2.5f*mu2            + 1.0f;
+    ALfloat a2 = -1.5f*mu3 +  2.0f*mu2 +  0.5f*mu;
+    ALfloat a3 =  0.5f*mu3 + -0.5f*mu2;
 
-    return a0*mu*mu2 + a1*mu2 + a2*mu + a3;
+    return a0*val0 + a1*val1 + a2*val2 + a3*val3;
 }
 
 

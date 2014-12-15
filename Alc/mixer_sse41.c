@@ -100,16 +100,17 @@ const ALfloat *Resample_cubic32_SSE41(const ALfloat *src, ALuint frac, ALuint in
     --src;
     for(i = 0;numsamples-i > 3;i += 4)
     {
-        const __m128 val0 = _mm_setr_ps(src[pos_.i[0]  ], src[pos_.i[1]  ], src[pos_.i[2]  ], src[pos_.i[3]  ]);
-        const __m128 val1 = _mm_setr_ps(src[pos_.i[0]+1], src[pos_.i[1]+1], src[pos_.i[2]+1], src[pos_.i[3]+1]);
-        const __m128 val2 = _mm_setr_ps(src[pos_.i[0]+2], src[pos_.i[1]+2], src[pos_.i[2]+2], src[pos_.i[3]+2]);
-        const __m128 val3 = _mm_setr_ps(src[pos_.i[0]+3], src[pos_.i[1]+3], src[pos_.i[2]+3], src[pos_.i[3]+3]);
+        __m128 val0 = _mm_loadu_ps(&src[pos_.i[0]]);
+        __m128 val1 = _mm_loadu_ps(&src[pos_.i[1]]);
+        __m128 val2 = _mm_loadu_ps(&src[pos_.i[2]]);
+        __m128 val3 = _mm_loadu_ps(&src[pos_.i[3]]);
         __m128 k0 = _mm_load_ps(CubicLUT[frac_.i[0]]);
         __m128 k1 = _mm_load_ps(CubicLUT[frac_.i[1]]);
         __m128 k2 = _mm_load_ps(CubicLUT[frac_.i[2]]);
         __m128 k3 = _mm_load_ps(CubicLUT[frac_.i[3]]);
         __m128 out;
 
+        _MM_TRANSPOSE4_PS(val0, val1, val2, val3);
         _MM_TRANSPOSE4_PS(k0, k1, k2, k3);
 
         /* k0*val0 + k1*val1 + k2*val2 + k3*val3 */

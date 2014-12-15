@@ -116,7 +116,7 @@ typedef void (*HrtfMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const A
 #define SPEEDOFSOUNDMETRESPERSEC  (343.3f)
 #define AIRABSORBGAINHF           (0.99426f) /* -0.05dB */
 
-#define FRACTIONBITS (14)
+#define FRACTIONBITS (12)
 #define FRACTIONONE  (1<<FRACTIONBITS)
 #define FRACTIONMASK (FRACTIONONE-1)
 
@@ -164,21 +164,21 @@ inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max)
 { return minu64(max, maxu64(min, val)); }
 
 
+extern ALfloat CubicLUT[FRACTIONONE][4];
+
+
 inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu)
 {
     return val1 + (val2-val1)*mu;
 }
-inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALfloat mu)
+inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALuint frac)
 {
-    ALfloat mu2 = mu*mu, mu3 = mu*mu*mu;
-    ALfloat a0 = -0.5f*mu3 +       mu2 + -0.5f*mu;
-    ALfloat a1 =  1.5f*mu3 + -2.5f*mu2            + 1.0f;
-    ALfloat a2 = -1.5f*mu3 +  2.0f*mu2 +  0.5f*mu;
-    ALfloat a3 =  0.5f*mu3 + -0.5f*mu2;
-
-    return a0*val0 + a1*val1 + a2*val2 + a3*val3;
+    const ALfloat *k = CubicLUT[frac];
+    return k[0]*val0 + k[1]*val1 + k[2]*val2 + k[3]*val3;
 }
 
+
+void aluInitResamplers(void);
 
 ALvoid aluInitPanning(ALCdevice *Device);
 

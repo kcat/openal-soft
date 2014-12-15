@@ -40,6 +40,23 @@
 
 extern inline void InitiatePositionArrays(ALuint frac, ALuint increment, ALuint *frac_arr, ALuint *pos_arr, ALuint size);
 
+alignas(16) ALfloat CubicLUT[FRACTIONONE][4];
+
+
+void aluInitResamplers(void)
+{
+    ALuint i;
+    for(i = 0;i < FRACTIONONE;i++)
+    {
+        ALfloat mu = (ALfloat)i / FRACTIONONE;
+        ALfloat mu2 = mu*mu, mu3 = mu*mu*mu;
+        CubicLUT[i][0] = -0.5f*mu3 +       mu2 + -0.5f*mu;
+        CubicLUT[i][1] =  1.5f*mu3 + -2.5f*mu2            + 1.0f;
+        CubicLUT[i][2] = -1.5f*mu3 +  2.0f*mu2 +  0.5f*mu;
+        CubicLUT[i][3] =  0.5f*mu3 + -0.5f*mu2;
+    }
+}
+
 
 static inline HrtfMixerFunc SelectHrtfMixer(void)
 {

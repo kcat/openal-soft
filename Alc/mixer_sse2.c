@@ -106,14 +106,15 @@ const ALfloat *Resample_cubic32_SSE2(const ALfloat *src, ALuint frac, ALuint inc
         __m128 k3 = _mm_load_ps(CubicLUT[frac_.i[3]]);
         __m128 out;
 
+        val0 = _mm_mul_ps(val0, k0);
+        val1 = _mm_mul_ps(val1, k1);
+        val2 = _mm_mul_ps(val2, k2);
+        val3 = _mm_mul_ps(val3, k3);
         _MM_TRANSPOSE4_PS(val0, val1, val2, val3);
-        _MM_TRANSPOSE4_PS(k0, k1, k2, k3);
+        out = _mm_add_ps(val0, val1);
+        out = _mm_add_ps(out, val2);
+        out = _mm_add_ps(out, val3);
 
-        /* k0*val0 + k1*val1 + k2*val2 + k3*val3 */
-        out = _mm_mul_ps(k0, val0);
-        out = _mm_add_ps(out, _mm_mul_ps(k1, val1));
-        out = _mm_add_ps(out, _mm_mul_ps(k2, val2));
-        out = _mm_add_ps(out, _mm_mul_ps(k3, val3));
         _mm_store_ps(&dst[i], out);
 
         frac4 = _mm_add_epi32(frac4, increment4);

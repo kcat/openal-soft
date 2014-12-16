@@ -134,15 +134,14 @@ static inline void aluNormalize(ALfloat *inVector)
     }
 }
 
-static inline ALvoid aluMatrixVector(ALfloat *vec, ALfloat w, const aluMatrix *mtx)
+static inline ALvoid aluMatrixVector(aluVector *vec, const aluMatrix *mtx)
 {
-    ALfloat v[4] = {
-        vec[0], vec[1], vec[2], w
-    };
+    aluVector v = *vec;
 
-    vec[0] = v[0]*mtx->m[0][0] + v[1]*mtx->m[1][0] + v[2]*mtx->m[2][0] + v[3]*mtx->m[3][0];
-    vec[1] = v[0]*mtx->m[0][1] + v[1]*mtx->m[1][1] + v[2]*mtx->m[2][1] + v[3]*mtx->m[3][1];
-    vec[2] = v[0]*mtx->m[0][2] + v[1]*mtx->m[1][2] + v[2]*mtx->m[2][2] + v[3]*mtx->m[3][2];
+    vec->v[0] = v.v[0]*mtx->m[0][0] + v.v[1]*mtx->m[1][0] + v.v[2]*mtx->m[2][0] + v.v[3]*mtx->m[3][0];
+    vec->v[1] = v.v[0]*mtx->m[0][1] + v.v[1]*mtx->m[1][1] + v.v[2]*mtx->m[2][1] + v.v[3]*mtx->m[3][1];
+    vec->v[2] = v.v[0]*mtx->m[0][2] + v.v[1]*mtx->m[1][2] + v.v[2]*mtx->m[2][2] + v.v[3]*mtx->m[3][2];
+    vec->v[3] = v.v[0]*mtx->m[0][3] + v.v[1]*mtx->m[1][3] + v.v[2]*mtx->m[2][3] + v.v[3]*mtx->m[3][3];
 }
 
 
@@ -245,7 +244,8 @@ static void UpdateWetStepping(SendParams *params, ALuint steps)
 
 static ALvoid CalcListenerParams(ALlistener *Listener)
 {
-    ALfloat N[3], V[3], U[3], P[3];
+    ALfloat N[3], V[3], U[3];
+    aluVector P;
 
     /* AT then UP */
     N[0] = Listener->Forward[0];
@@ -260,9 +260,7 @@ static ALvoid CalcListenerParams(ALlistener *Listener)
     aluCrossproduct(N, V, U);
     aluNormalize(U);
 
-    P[0] = Listener->Position.v[0];
-    P[1] = Listener->Position.v[1];
-    P[2] = Listener->Position.v[2];
+    P = Listener->Position;
 
     aluMatrixSet(&Listener->Params.Matrix,
         U[0], V[0], -N[0], 0.0f,
@@ -270,11 +268,11 @@ static ALvoid CalcListenerParams(ALlistener *Listener)
         U[2], V[2], -N[2], 0.0f,
         0.0f, 0.0f,  0.0f, 1.0f
     );
-    aluMatrixVector(P, 1.0f, &Listener->Params.Matrix);
-    aluMatrixSetRow(&Listener->Params.Matrix, 3, -P[0], -P[1], -P[2], 1.0f);
+    aluMatrixVector(&P, &Listener->Params.Matrix);
+    aluMatrixSetRow(&Listener->Params.Matrix, 3, -P.v[0], -P.v[1], -P.v[2], 1.0f);
 
     Listener->Params.Velocity = Listener->Velocity;
-    aluMatrixVector(Listener->Params.Velocity.v, 0.0f, &Listener->Params.Matrix);
+    aluMatrixVector(&Listener->Params.Velocity, &Listener->Params.Matrix);
 }
 
 ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCcontext *ALContext)
@@ -481,8 +479,13 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         if(!Relative)
         {
             const aluMatrix *lmatrix = &ALContext->Listener->Params.Matrix;
-            aluMatrixVector(N, 0.0f, lmatrix);
-            aluMatrixVector(V, 0.0f, lmatrix);
+            aluVector at, up;
+            aluVectorSet(&at, N[0], N[1], N[2], 0.0f);
+            aluVectorSet(&up, V[0], V[1], V[2], 0.0f);
+            aluMatrixVector(&at, lmatrix);
+            aluMatrixVector(&up, lmatrix);
+            N[0] = at.v[0]; N[1] = at.v[1]; N[2] = at.v[2];
+            V[0] = up.v[0]; V[1] = up.v[1]; V[2] = up.v[2];
         }
         /* Build and normalize right-vector */
         aluCrossproduct(N, V, U);
@@ -783,9 +786,9 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     {
         const aluMatrix *Matrix = &ALContext->Listener->Params.Matrix;
         /* Transform source vectors */
-        aluMatrixVector(Position.v, 1.0f, Matrix);
-        aluMatrixVector(Direction.v, 0.0f, Matrix);
-        aluMatrixVector(Velocity.v, 0.0f, Matrix);
+        aluMatrixVector(&Position, Matrix);
+        aluMatrixVector(&Velocity, Matrix);
+        aluMatrixVector(&Direction, Matrix);
     }
     else
     {
@@ -799,7 +802,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     SourceToListener.v[0] = -Position.v[0];
     SourceToListener.v[1] = -Position.v[1];
     SourceToListener.v[2] = -Position.v[2];
-    SourceToListener.v[2] = 0.0f;
+    SourceToListener.v[3] = 0.0f;
     aluNormalize(SourceToListener.v);
     aluNormalize(Direction.v);
 

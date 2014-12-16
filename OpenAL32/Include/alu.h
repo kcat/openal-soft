@@ -103,7 +103,7 @@ typedef struct DirectParams {
     /* Stepping counter for gain/coefficient fading. */
     ALuint Counter;
     /* Last direction (relative to listener) and gain of a moving source. */
-    ALfloat LastDir[3];
+    aluVector LastDir;
     ALfloat LastGain;
 
     struct {

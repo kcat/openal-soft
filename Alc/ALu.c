@@ -116,21 +116,20 @@ static inline void aluCrossproduct(const ALfloat *inVector1, const ALfloat *inVe
     outVector[2] = inVector1[0]*inVector2[1] - inVector1[1]*inVector2[0];
 }
 
-static inline ALfloat aluDotproduct(const ALfloat *inVector1, const ALfloat *inVector2)
+static inline ALfloat aluDotproduct(const aluVector *vec1, const aluVector *vec2)
 {
-    return inVector1[0]*inVector2[0] + inVector1[1]*inVector2[1] +
-           inVector1[2]*inVector2[2];
+    return vec1->v[0]*vec2->v[0] + vec1->v[1]*vec2->v[1] + vec1->v[2]*vec2->v[2];
 }
 
-static inline void aluNormalize(ALfloat *inVector)
+static inline void aluNormalize(ALfloat *vec)
 {
-    ALfloat lengthsqr = aluDotproduct(inVector, inVector);
+    ALfloat lengthsqr = vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2];
     if(lengthsqr > 0.0f)
     {
         ALfloat inv_length = 1.0f/sqrtf(lengthsqr);
-        inVector[0] *= inv_length;
-        inVector[1] *= inv_length;
-        inVector[2] *= inv_length;
+        vec[0] *= inv_length;
+        vec[1] *= inv_length;
+        vec[2] *= inv_length;
     }
 }
 
@@ -149,7 +148,7 @@ static inline ALvoid aluMatrixVector(aluVector *vec, const aluMatrix *mtx)
  * angle between updates. The result is a the time, in seconds, for the
  * transition to complete.
  */
-static ALfloat CalcFadeTime(ALfloat oldGain, ALfloat newGain, const ALfloat olddir[3], const ALfloat newdir[3])
+static ALfloat CalcFadeTime(ALfloat oldGain, ALfloat newGain, const aluVector *olddir, const aluVector *newdir)
 {
     ALfloat gainChange, angleChange, change;
 
@@ -165,7 +164,7 @@ static ALfloat CalcFadeTime(ALfloat oldGain, ALfloat newGain, const ALfloat oldd
         /* No angle change when the directions are equal or degenerate (when
          * both have zero length).
          */
-        if(newdir[0] != olddir[0] || newdir[1] != olddir[1] || newdir[2] != olddir[2])
+        if(newdir->v[0] != olddir->v[0] || newdir->v[1] != olddir->v[1] || newdir->v[2] != olddir->v[2])
         {
             ALfloat dotp = aluDotproduct(olddir, newdir);
             angleChange = acosf(clampf(dotp, -1.0f, 1.0f)) / F_PI;
@@ -465,7 +464,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     if(isbformat)
     {
         ALfloat N[3], V[3], U[3];
-        ALfloat matrix[4][4];
+        aluMatrix matrix;
 
         /* AT then UP */
         N[0] = ALSource->Orientation[0][0];
@@ -491,29 +490,19 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         aluCrossproduct(N, V, U);
         aluNormalize(U);
 
-        matrix[0][0] =  1.0f;
-        matrix[0][1] =  0.0f;
-        matrix[0][2] =  0.0f;
-        matrix[0][3] =  0.0f;
-        matrix[1][0] =  0.0f;
-        matrix[1][1] = -N[2];
-        matrix[1][2] = -N[0];
-        matrix[1][3] =  N[1];
-        matrix[2][0] =  0.0f;
-        matrix[2][1] =  U[2];
-        matrix[2][2] =  U[0];
-        matrix[2][3] = -U[1];
-        matrix[3][0] =  0.0f;
-        matrix[3][1] = -V[2];
-        matrix[3][2] = -V[0];
-        matrix[3][3] =  V[1];
+        aluMatrixSet(&matrix,
+            1.0f,  0.0f,  0.0f,  0.0f,
+            0.0f, -N[2], -N[0],  N[1],
+            0.0f,  U[2],  U[0], -U[1],
+            0.0f, -V[2], -V[0],  V[1]
+        );
 
         for(c = 0;c < num_channels;c++)
         {
             MixGains *gains = voice->Direct.Gains[c];
             ALfloat Target[MAX_OUTPUT_CHANNELS];
 
-            ComputeBFormatGains(Device, matrix[c], DryGain, Target);
+            ComputeBFormatGains(Device, matrix.m[c], DryGain, Target);
             for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
                 gains[i].Target = Target[i];
         }
@@ -807,7 +796,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     aluNormalize(Direction.v);
 
     /* Calculate distance attenuation */
-    Distance = sqrtf(aluDotproduct(Position.v, Position.v));
+    Distance = sqrtf(aluDotproduct(&Position, &Position));
     ClampedDist = Distance;
 
     Attenuation = 1.0f;
@@ -904,7 +893,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     }
 
     /* Calculate directional soundcones */
-    Angle = RAD2DEG(acosf(aluDotproduct(Direction.v,SourceToListener.v)) * ConeScale) * 2.0f;
+    Angle = RAD2DEG(acosf(aluDotproduct(&Direction, &SourceToListener)) * ConeScale) * 2.0f;
     if(Angle > InnerAngle && Angle <= OuterAngle)
     {
         ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);
@@ -964,8 +953,8 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             SpeedOfSound   = 1.0f;
         }
 
-        VSS = aluDotproduct(Velocity.v, SourceToListener.v) * DopplerFactor;
-        VLS = aluDotproduct(lvelocity->v, SourceToListener.v) * DopplerFactor;
+        VSS = aluDotproduct(&Velocity, &SourceToListener) * DopplerFactor;
+        VLS = aluDotproduct(lvelocity, &SourceToListener) * DopplerFactor;
 
         Pitch *= clampf(SpeedOfSound-VLS, 1.0f, SpeedOfSound*2.0f - 1.0f) /
                  clampf(SpeedOfSound-VSS, 1.0f, SpeedOfSound*2.0f - 1.0f);
@@ -997,7 +986,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     if(Device->Hrtf)
     {
         /* Use a binaural HRTF algorithm for stereo headphone playback */
-        ALfloat dir[3] = { 0.0f, 0.0f, -1.0f };
+        aluVector dir = {{ 0.0f, 0.0f, -1.0f, 0.0f }};
         ALfloat ev = 0.0f, az = 0.0f;
         ALfloat radius = ALSource->Radius;
         ALfloat dirfact = 1.0f;
@@ -1008,16 +997,16 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         if(Distance > FLT_EPSILON)
         {
             ALfloat invlen = 1.0f/Distance;
-            dir[0] = Position.v[0] * invlen;
-            dir[1] = Position.v[1] * invlen;
-            dir[2] = Position.v[2] * invlen * ZScale;
+            dir.v[0] = Position.v[0] * invlen;
+            dir.v[1] = Position.v[1] * invlen;
+            dir.v[2] = Position.v[2] * invlen * ZScale;
 
             /* Calculate elevation and azimuth only when the source is not at
              * the listener. This prevents +0 and -0 Z from producing
              * inconsistent panning. Also, clamp Y in case FP precision errors
              * cause it to land outside of -1..+1. */
-            ev = asinf(clampf(dir[1], -1.0f, 1.0f));
-            az = atan2f(dir[0], -dir[2]);
+            ev = asinf(clampf(dir.v[1], -1.0f, 1.0f));
+            az = atan2f(dir.v[0], -dir.v[2]);
         }
         if(radius > Distance)
             dirfact *= Distance / radius;
@@ -1027,7 +1016,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         {
             ALfloat delta;
             delta = CalcFadeTime(voice->Direct.LastGain, DryGain,
-                                 voice->Direct.LastDir, dir);
+                                 &voice->Direct.LastDir, &dir);
             /* If the delta is large enough, get the moving HRIR target
              * coefficients, target delays, steppping values, and counter. */
             if(delta > 0.000015f)
@@ -1039,9 +1028,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
                 );
                 voice->Direct.Counter = counter;
                 voice->Direct.LastGain = DryGain;
-                voice->Direct.LastDir[0] = dir[0];
-                voice->Direct.LastDir[1] = dir[1];
-                voice->Direct.LastDir[2] = dir[2];
+                voice->Direct.LastDir = dir;
             }
         }
         else
@@ -1053,9 +1040,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             voice->Direct.Counter = 0;
             voice->Direct.Moving  = AL_TRUE;
             voice->Direct.LastGain = DryGain;
-            voice->Direct.LastDir[0] = dir[0];
-            voice->Direct.LastDir[1] = dir[1];
-            voice->Direct.LastDir[2] = dir[2];
+            voice->Direct.LastDir = dir;
         }
 
         voice->IsHrtf = AL_TRUE;

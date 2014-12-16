@@ -260,9 +260,9 @@ static ALvoid CalcListenerParams(ALlistener *Listener)
     aluCrossproduct(N, V, U);
     aluNormalize(U);
 
-    P[0] = Listener->Position[0];
-    P[1] = Listener->Position[1];
-    P[2] = Listener->Position[2];
+    P[0] = Listener->Position.v[0];
+    P[1] = Listener->Position.v[1];
+    P[2] = Listener->Position.v[2];
 
     aluMatrixSet(&Listener->Params.Matrix,
         U[0], V[0], -N[0], 0.0f,
@@ -273,9 +273,7 @@ static ALvoid CalcListenerParams(ALlistener *Listener)
     aluMatrixVector(P, 1.0f, &Listener->Params.Matrix);
     aluMatrixSetRow(&Listener->Params.Matrix, 3, -P[0], -P[1], -P[2], 1.0f);
 
-    aluVectorSet(&Listener->Params.Velocity,
-        Listener->Velocity[0], Listener->Velocity[1], Listener->Velocity[2], 0.0f
-    );
+    Listener->Params.Velocity = Listener->Velocity;
     aluMatrixVector(Listener->Params.Velocity.v, 0.0f, &Listener->Params.Matrix);
 }
 
@@ -669,7 +667,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
 ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCcontext *ALContext)
 {
     ALCdevice *Device = ALContext->Device;
-    ALfloat Velocity[3],Direction[3],Position[3],SourceToListener[3];
+    aluVector Position, Velocity, Direction, SourceToListener;
     ALfloat InnerAngle,OuterAngle,Angle,Distance,ClampedDist;
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff;
     ALfloat ConeVolume,ConeHF,SourceVolume,ListenerGain;
@@ -720,15 +718,9 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     MinVolume      = ALSource->MinGain;
     MaxVolume      = ALSource->MaxGain;
     Pitch          = ALSource->Pitch;
-    Position[0]    = ALSource->Position[0];
-    Position[1]    = ALSource->Position[1];
-    Position[2]    = ALSource->Position[2];
-    Direction[0]   = ALSource->Direction[0];
-    Direction[1]   = ALSource->Direction[1];
-    Direction[2]   = ALSource->Direction[2];
-    Velocity[0]    = ALSource->Velocity[0];
-    Velocity[1]    = ALSource->Velocity[1];
-    Velocity[2]    = ALSource->Velocity[2];
+    Position       = ALSource->Position;
+    Direction      = ALSource->Direction;
+    Velocity       = ALSource->Velocity;
     MinDist        = ALSource->RefDistance;
     MaxDist        = ALSource->MaxDistance;
     Rolloff        = ALSource->RollOffFactor;
@@ -791,27 +783,28 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     {
         const aluMatrix *Matrix = &ALContext->Listener->Params.Matrix;
         /* Transform source vectors */
-        aluMatrixVector(Position, 1.0f, Matrix);
-        aluMatrixVector(Direction, 0.0f, Matrix);
-        aluMatrixVector(Velocity, 0.0f, Matrix);
+        aluMatrixVector(Position.v, 1.0f, Matrix);
+        aluMatrixVector(Direction.v, 0.0f, Matrix);
+        aluMatrixVector(Velocity.v, 0.0f, Matrix);
     }
     else
     {
         const aluVector *lvelocity = &ALContext->Listener->Params.Velocity;
         /* Offset the source velocity to be relative of the listener velocity */
-        Velocity[0] += lvelocity->v[0];
-        Velocity[1] += lvelocity->v[1];
-        Velocity[2] += lvelocity->v[2];
+        Velocity.v[0] += lvelocity->v[0];
+        Velocity.v[1] += lvelocity->v[1];
+        Velocity.v[2] += lvelocity->v[2];
     }
 
-    SourceToListener[0] = -Position[0];
-    SourceToListener[1] = -Position[1];
-    SourceToListener[2] = -Position[2];
-    aluNormalize(SourceToListener);
-    aluNormalize(Direction);
+    SourceToListener.v[0] = -Position.v[0];
+    SourceToListener.v[1] = -Position.v[1];
+    SourceToListener.v[2] = -Position.v[2];
+    SourceToListener.v[2] = 0.0f;
+    aluNormalize(SourceToListener.v);
+    aluNormalize(Direction.v);
 
     /* Calculate distance attenuation */
-    Distance = sqrtf(aluDotproduct(Position, Position));
+    Distance = sqrtf(aluDotproduct(Position.v, Position.v));
     ClampedDist = Distance;
 
     Attenuation = 1.0f;
@@ -908,7 +901,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     }
 
     /* Calculate directional soundcones */
-    Angle = RAD2DEG(acosf(aluDotproduct(Direction,SourceToListener)) * ConeScale) * 2.0f;
+    Angle = RAD2DEG(acosf(aluDotproduct(Direction.v,SourceToListener.v)) * ConeScale) * 2.0f;
     if(Angle > InnerAngle && Angle <= OuterAngle)
     {
         ALfloat scale = (Angle-InnerAngle) / (OuterAngle-InnerAngle);
@@ -968,8 +961,8 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             SpeedOfSound   = 1.0f;
         }
 
-        VSS = aluDotproduct(Velocity, SourceToListener) * DopplerFactor;
-        VLS = aluDotproduct(lvelocity->v, SourceToListener) * DopplerFactor;
+        VSS = aluDotproduct(Velocity.v, SourceToListener.v) * DopplerFactor;
+        VLS = aluDotproduct(lvelocity->v, SourceToListener.v) * DopplerFactor;
 
         Pitch *= clampf(SpeedOfSound-VLS, 1.0f, SpeedOfSound*2.0f - 1.0f) /
                  clampf(SpeedOfSound-VSS, 1.0f, SpeedOfSound*2.0f - 1.0f);
@@ -1012,9 +1005,9 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         if(Distance > FLT_EPSILON)
         {
             ALfloat invlen = 1.0f/Distance;
-            dir[0] = Position[0] * invlen;
-            dir[1] = Position[1] * invlen;
-            dir[2] = Position[2] * invlen * ZScale;
+            dir[0] = Position.v[0] * invlen;
+            dir[1] = Position.v[1] * invlen;
+            dir[2] = Position.v[2] * invlen * ZScale;
 
             /* Calculate elevation and azimuth only when the source is not at
              * the listener. This prevents +0 and -0 Z from producing
@@ -1075,9 +1068,9 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         if(Distance > FLT_EPSILON || radius > FLT_EPSILON)
         {
             ALfloat invlen = 1.0f/maxf(Distance, radius);
-            dir[0] = Position[0] * invlen;
-            dir[1] = Position[1] * invlen;
-            dir[2] = Position[2] * invlen * ZScale;
+            dir[0] = Position.v[0] * invlen;
+            dir[1] = Position.v[1] * invlen;
+            dir[2] = Position.v[2] * invlen * ZScale;
         }
         ComputeDirectionalGains(Device, dir, DryGain, Target);
 

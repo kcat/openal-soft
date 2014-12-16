@@ -2259,12 +2259,8 @@ static ALvoid InitContext(ALCcontext *Context)
     //Initialise listener
     Context->Listener->Gain = 1.0f;
     Context->Listener->MetersPerUnit = 1.0f;
-    Context->Listener->Position[0] = 0.0f;
-    Context->Listener->Position[1] = 0.0f;
-    Context->Listener->Position[2] = 0.0f;
-    Context->Listener->Velocity[0] = 0.0f;
-    Context->Listener->Velocity[1] = 0.0f;
-    Context->Listener->Velocity[2] = 0.0f;
+    aluVectorSet(&Context->Listener->Position, 0.0f, 0.0f, 0.0f, 1.0f);
+    aluVectorSet(&Context->Listener->Velocity, 0.0f, 0.0f, 0.0f, 0.0f);
     Context->Listener->Forward[0] = 0.0f;
     Context->Listener->Forward[1] = 0.0f;
     Context->Listener->Forward[2] = -1.0f;

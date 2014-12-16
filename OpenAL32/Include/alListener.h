@@ -9,8 +9,8 @@ extern "C" {
 #endif
 
 typedef struct ALlistener {
-    volatile ALfloat Position[3];
-    volatile ALfloat Velocity[3];
+    aluVector Position;
+    aluVector Velocity;
     volatile ALfloat Forward[3];
     volatile ALfloat Up[3];
     volatile ALfloat Gain;

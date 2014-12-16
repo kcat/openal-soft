@@ -84,6 +84,15 @@ extern inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max);
 extern inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu);
 extern inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALuint frac);
 
+extern inline void aluVectorSet(aluVector *restrict vector, ALfloat x, ALfloat y, ALfloat z, ALfloat w);
+
+extern inline void aluMatrixSetRow(aluMatrix *restrict matrix, ALuint row,
+                                   ALfloat m0, ALfloat m1, ALfloat m2, ALfloat m3);
+extern inline void aluMatrixSet(aluMatrix *restrict matrix, ALfloat m00, ALfloat m01, ALfloat m02, ALfloat m03,
+                                                            ALfloat m10, ALfloat m11, ALfloat m12, ALfloat m13,
+                                                            ALfloat m20, ALfloat m21, ALfloat m22, ALfloat m23,
+                                                            ALfloat m30, ALfloat m31, ALfloat m32, ALfloat m33);
+
 
 static inline HrtfMixerFunc SelectHrtfMixer(void)
 {
@@ -125,15 +134,15 @@ static inline void aluNormalize(ALfloat *inVector)
     }
 }
 
-static inline ALvoid aluMatrixVector(ALfloat *vector, ALfloat w, ALfloat (*restrict matrix)[4])
+static inline ALvoid aluMatrixVector(ALfloat *vec, ALfloat w, const aluMatrix *mtx)
 {
-    ALfloat temp[4] = {
-        vector[0], vector[1], vector[2], w
+    ALfloat v[4] = {
+        vec[0], vec[1], vec[2], w
     };
 
-    vector[0] = temp[0]*matrix[0][0] + temp[1]*matrix[1][0] + temp[2]*matrix[2][0] + temp[3]*matrix[3][0];
-    vector[1] = temp[0]*matrix[0][1] + temp[1]*matrix[1][1] + temp[2]*matrix[2][1] + temp[3]*matrix[3][1];
-    vector[2] = temp[0]*matrix[0][2] + temp[1]*matrix[1][2] + temp[2]*matrix[2][2] + temp[3]*matrix[3][2];
+    vec[0] = v[0]*mtx->m[0][0] + v[1]*mtx->m[1][0] + v[2]*mtx->m[2][0] + v[3]*mtx->m[3][0];
+    vec[1] = v[0]*mtx->m[0][1] + v[1]*mtx->m[1][1] + v[2]*mtx->m[2][1] + v[3]*mtx->m[3][1];
+    vec[2] = v[0]*mtx->m[0][2] + v[1]*mtx->m[1][2] + v[2]*mtx->m[2][2] + v[3]*mtx->m[3][2];
 }
 
 
@@ -251,35 +260,23 @@ static ALvoid CalcListenerParams(ALlistener *Listener)
     aluCrossproduct(N, V, U);
     aluNormalize(U);
 
-    Listener->Params.Matrix[0][0] =  U[0];
-    Listener->Params.Matrix[0][1] =  V[0];
-    Listener->Params.Matrix[0][2] = -N[0];
-    Listener->Params.Matrix[0][3] =  0.0f;
-    Listener->Params.Matrix[1][0] =  U[1];
-    Listener->Params.Matrix[1][1] =  V[1];
-    Listener->Params.Matrix[1][2] = -N[1];
-    Listener->Params.Matrix[1][3] =  0.0f;
-    Listener->Params.Matrix[2][0] =  U[2];
-    Listener->Params.Matrix[2][1] =  V[2];
-    Listener->Params.Matrix[2][2] = -N[2];
-    Listener->Params.Matrix[2][3] =  0.0f;
-    Listener->Params.Matrix[3][0] =  0.0f;
-    Listener->Params.Matrix[3][1] =  0.0f;
-    Listener->Params.Matrix[3][2] =  0.0f;
-    Listener->Params.Matrix[3][3] =  1.0f;
-
     P[0] = Listener->Position[0];
     P[1] = Listener->Position[1];
     P[2] = Listener->Position[2];
-    aluMatrixVector(P, 1.0f, Listener->Params.Matrix);
-    Listener->Params.Matrix[3][0] = -P[0];
-    Listener->Params.Matrix[3][1] = -P[1];
-    Listener->Params.Matrix[3][2] = -P[2];
 
-    Listener->Params.Velocity[0] = Listener->Velocity[0];
-    Listener->Params.Velocity[1] = Listener->Velocity[1];
-    Listener->Params.Velocity[2] = Listener->Velocity[2];
-    aluMatrixVector(Listener->Params.Velocity, 0.0f, Listener->Params.Matrix);
+    aluMatrixSet(&Listener->Params.Matrix,
+        U[0], V[0], -N[0], 0.0f,
+        U[1], V[1], -N[1], 0.0f,
+        U[2], V[2], -N[2], 0.0f,
+        0.0f, 0.0f,  0.0f, 1.0f
+    );
+    aluMatrixVector(P, 1.0f, &Listener->Params.Matrix);
+    aluMatrixSetRow(&Listener->Params.Matrix, 3, -P[0], -P[1], -P[2], 1.0f);
+
+    aluVectorSet(&Listener->Params.Velocity,
+        Listener->Velocity[0], Listener->Velocity[1], Listener->Velocity[2], 0.0f
+    );
+    aluMatrixVector(Listener->Params.Velocity.v, 0.0f, &Listener->Params.Matrix);
 }
 
 ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCcontext *ALContext)
@@ -485,7 +482,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         aluNormalize(V);
         if(!Relative)
         {
-            ALfloat (*restrict lmatrix)[4] = ALContext->Listener->Params.Matrix;
+            const aluMatrix *lmatrix = &ALContext->Listener->Params.Matrix;
             aluMatrixVector(N, 0.0f, lmatrix);
             aluMatrixVector(V, 0.0f, lmatrix);
         }
@@ -792,7 +789,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     /* Transform source to listener space (convert to head relative) */
     if(ALSource->HeadRelative == AL_FALSE)
     {
-        ALfloat (*restrict Matrix)[4] = ALContext->Listener->Params.Matrix;
+        const aluMatrix *Matrix = &ALContext->Listener->Params.Matrix;
         /* Transform source vectors */
         aluMatrixVector(Position, 1.0f, Matrix);
         aluMatrixVector(Direction, 0.0f, Matrix);
@@ -800,11 +797,11 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     }
     else
     {
-        const ALfloat *ListenerVel = ALContext->Listener->Params.Velocity;
+        const aluVector *lvelocity = &ALContext->Listener->Params.Velocity;
         /* Offset the source velocity to be relative of the listener velocity */
-        Velocity[0] += ListenerVel[0];
-        Velocity[1] += ListenerVel[1];
-        Velocity[2] += ListenerVel[2];
+        Velocity[0] += lvelocity->v[0];
+        Velocity[1] += lvelocity->v[1];
+        Velocity[2] += lvelocity->v[2];
     }
 
     SourceToListener[0] = -Position[0];
@@ -962,7 +959,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     /* Calculate velocity-based doppler effect */
     if(DopplerFactor > 0.0f)
     {
-        const ALfloat *ListenerVel = ALContext->Listener->Params.Velocity;
+        const aluVector *lvelocity = &ALContext->Listener->Params.Velocity;
         ALfloat VSS, VLS;
 
         if(SpeedOfSound < 1.0f)
@@ -972,7 +969,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         }
 
         VSS = aluDotproduct(Velocity, SourceToListener) * DopplerFactor;
-        VLS = aluDotproduct(ListenerVel, SourceToListener) * DopplerFactor;
+        VLS = aluDotproduct(lvelocity->v, SourceToListener) * DopplerFactor;
 
         Pitch *= clampf(SpeedOfSound-VLS, 1.0f, SpeedOfSound*2.0f - 1.0f) /
                  clampf(SpeedOfSound-VSS, 1.0f, SpeedOfSound*2.0f - 1.0f);

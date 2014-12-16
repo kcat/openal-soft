@@ -2256,8 +2256,6 @@ static ALCdevice *VerifyDevice(ALCdevice *device)
  */
 static ALvoid InitContext(ALCcontext *Context)
 {
-    ALint i, j;
-
     //Initialise listener
     Context->Listener->Gain = 1.0f;
     Context->Listener->MetersPerUnit = 1.0f;
@@ -2273,13 +2271,13 @@ static ALvoid InitContext(ALCcontext *Context)
     Context->Listener->Up[0] = 0.0f;
     Context->Listener->Up[1] = 1.0f;
     Context->Listener->Up[2] = 0.0f;
-    for(i = 0;i < 4;i++)
-    {
-        for(j = 0;j < 4;j++)
-            Context->Listener->Params.Matrix[i][j] = ((i==j) ? 1.0f : 0.0f);
-    }
-    for(i = 0;i < 3;i++)
-        Context->Listener->Params.Velocity[i] = 0.0f;
+    aluMatrixSet(&Context->Listener->Params.Matrix,
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f
+    );
+    aluVectorSet(&Context->Listener->Params.Velocity, 0.0f, 0.0f, 0.0f, 0.0f);
 
     //Validate Context
     ATOMIC_INIT(&Context->LastError, AL_NO_ERROR);

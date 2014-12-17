@@ -1048,7 +1048,7 @@ static void ALCpulsePlayback_stop(ALCpulsePlayback *self)
     pa_operation *o;
     int res;
 
-    if(!self->stream)
+    if(!self->stream || self->killNow)
         return;
 
     self->killNow = AL_TRUE;

@@ -405,8 +405,7 @@ error:
     return ALC_FALSE;
 }
 
-static void pulse_close(pa_threaded_mainloop *loop, pa_context *context,
-                        pa_stream *stream)
+static void pulse_close(pa_threaded_mainloop *loop, pa_context *context, pa_stream *stream)
 {
     pa_threaded_mainloop_lock(loop);
 
@@ -898,7 +897,9 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
 
     if(self->stream)
     {
+        pa_stream_set_state_callback(self->stream, NULL, NULL);
         pa_stream_set_moved_callback(self->stream, NULL, NULL);
+        pa_stream_set_write_callback(self->stream, NULL, NULL);
         pa_stream_set_buffer_attr_callback(self->stream, NULL, NULL);
         pa_stream_disconnect(self->stream);
         pa_stream_unref(self->stream);
@@ -1572,11 +1573,6 @@ static void ALCpulseCapture_unlock(ALCpulseCapture *self)
 }
 
 
-static inline void AppendAllDevicesList2(const DevMap *entry)
-{ AppendAllDevicesList(al_string_get_cstr(entry->name)); }
-static inline void AppendCaptureDeviceList2(const DevMap *entry)
-{ AppendCaptureDeviceList(al_string_get_cstr(entry->name)); }
-
 typedef struct ALCpulseBackendFactory {
     DERIVE_FROM_TYPE(ALCbackendFactory);
 } ALCpulseBackendFactory;
@@ -1666,12 +1662,16 @@ static void ALCpulseBackendFactory_probe(ALCpulseBackendFactory* UNUSED(self), e
     {
         case ALL_DEVICE_PROBE:
             ALCpulsePlayback_probeDevices();
-            VECTOR_FOR_EACH(const DevMap, PlaybackDevices, AppendAllDevicesList2);
+#define APPEND_ALL_DEVICES_LIST(e)  AppendAllDevicesList(al_string_get_cstr((e)->name))
+            VECTOR_FOR_EACH(const DevMap, PlaybackDevices, APPEND_ALL_DEVICES_LIST);
+#undef APPEND_ALL_DEVICES_LIST
             break;
 
         case CAPTURE_DEVICE_PROBE:
             ALCpulseCapture_probeDevices();
-            VECTOR_FOR_EACH(const DevMap, CaptureDevices, AppendCaptureDeviceList2);
+#define APPEND_CAPTURE_DEVICE_LIST(e) AppendCaptureDeviceList(al_string_get_cstr((e)->name))
+            VECTOR_FOR_EACH(const DevMap, CaptureDevices, APPEND_CAPTURE_DEVICE_LIST);
+#undef APPEND_CAPTURE_DEVICE_LIST
             break;
     }
 }

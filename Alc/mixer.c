@@ -242,6 +242,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
         }
         BufferListItem = BufferListItem->next;
     }
+    assert(BufferListItem != NULL);
 
     IrSize = (Device->Hrtf ? GetHrtfIrSize(Device->Hrtf) : 0);
 

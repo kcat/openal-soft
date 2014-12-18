@@ -293,6 +293,9 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                 ALuint DataSize;
                 ALuint pos;
 
+                /* Offset to current channel */
+                Data += chan*SampleSize;
+
                 /* If current pos is beyond the loop range, do not loop */
                 if(Looping == AL_FALSE || DataPosInt >= (ALuint)ALBuffer->LoopEnd)
                 {
@@ -315,7 +318,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                      * rest of the temp buffer */
                     DataSize = minu(SrcBufferSize - SrcDataSize, ALBuffer->SampleLen - pos);
 
-                    LoadSamples(&SrcData[SrcDataSize], &Data[(pos*NumChannels + chan)*SampleSize],
+                    LoadSamples(&SrcData[SrcDataSize], &Data[pos * NumChannels*SampleSize],
                                 NumChannels, ALBuffer->FmtType, DataSize);
                     SrcDataSize += DataSize;
 
@@ -353,7 +356,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     DataSize = LoopEnd - pos;
                     DataSize = minu(SrcBufferSize - SrcDataSize, DataSize);
 
-                    LoadSamples(&SrcData[SrcDataSize], &Data[(pos*NumChannels + chan)*SampleSize],
+                    LoadSamples(&SrcData[SrcDataSize], &Data[pos * NumChannels*SampleSize],
                                 NumChannels, ALBuffer->FmtType, DataSize);
                     SrcDataSize += DataSize;
 
@@ -362,7 +365,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     {
                         DataSize = minu(SrcBufferSize - SrcDataSize, DataSize);
 
-                        LoadSamples(&SrcData[SrcDataSize], &Data[(LoopStart*NumChannels + chan)*SampleSize],
+                        LoadSamples(&SrcData[SrcDataSize], &Data[LoopStart * NumChannels*SampleSize],
                                     NumChannels, ALBuffer->FmtType, DataSize);
                         SrcDataSize += DataSize;
                     }

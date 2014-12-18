@@ -813,12 +813,12 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         case InverseDistance:
             if(MinDist > 0.0f)
             {
-                if((MinDist + (Rolloff * (ClampedDist - MinDist))) > 0.0f)
-                    Attenuation = MinDist / (MinDist + (Rolloff * (ClampedDist - MinDist)));
+                ALfloat dist = lerp(MinDist, ClampedDist, Rolloff);
+                if(dist > 0.0f) Attenuation = MinDist / dist;
                 for(i = 0;i < NumSends;i++)
                 {
-                    if((MinDist + (RoomRolloff[i] * (ClampedDist - MinDist))) > 0.0f)
-                        RoomAttenuation[i] = MinDist / (MinDist + (RoomRolloff[i] * (ClampedDist - MinDist)));
+                    dist = lerp(MinDist, ClampedDist, RoomRolloff[i]);
+                    if(dist > 0.0f) RoomAttenuation[i] = MinDist / dist;
                 }
             }
             break;

@@ -188,8 +188,8 @@ static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter
         case AF_BandPass:
             for(i = 0;i < numsamples;)
             {
-                ALfloat temp[64];
-                ALuint todo = minu(64, numsamples-i);
+                ALfloat temp[256];
+                ALuint todo = minu(256, numsamples-i);
 
                 ALfilterState_process(lpfilter, temp, src+i, todo);
                 ALfilterState_process(hpfilter, dst+i, temp, todo);

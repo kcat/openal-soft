@@ -85,8 +85,8 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALuint SamplesToDo, 
 
     for(base = 0;base < SamplesToDo;)
     {
-        ALfloat temps[64];
-        ALuint td = minu(SamplesToDo-base, 64);
+        ALfloat temps[256];
+        ALuint td = minu(256, SamplesToDo-base);
         ALfloat gain = state->GainCtrl;
 
         for(it = 0;it < td;it++)

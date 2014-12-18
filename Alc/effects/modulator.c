@@ -77,8 +77,8 @@ static void Process##func(ALmodulatorState *state, ALuint SamplesToDo,        \
                                                                               \
     for(base = 0;base < SamplesToDo;)                                         \
     {                                                                         \
-        ALfloat temps[64];                                                    \
-        ALuint td = minu(SamplesToDo-base, 64);                               \
+        ALfloat temps[256];                                                   \
+        ALuint td = minu(256, SamplesToDo-base);                              \
         ALuint i, k;                                                          \
                                                                               \
         for(i = 0;i < td;i++)                                                 \

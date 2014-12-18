@@ -210,8 +210,8 @@ static ALvoid ALflangerState_process(ALflangerState *state, ALuint SamplesToDo, 
 
     for(base = 0;base < SamplesToDo;)
     {
-        ALfloat temps[64][2];
-        ALuint td = minu(SamplesToDo-base, 64);
+        ALfloat temps[128][2];
+        ALuint td = minu(128, SamplesToDo-base);
 
         switch(state->waveform)
         {

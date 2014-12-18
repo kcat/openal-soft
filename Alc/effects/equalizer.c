@@ -127,8 +127,8 @@ static ALvoid ALequalizerState_process(ALequalizerState *state, ALuint SamplesTo
 
     for(base = 0;base < SamplesToDo;)
     {
-        ALfloat temps[64];
-        ALuint td = minu(SamplesToDo-base, 64);
+        ALfloat temps[256];
+        ALuint td = minu(256, SamplesToDo-base);
 
         for(it = 0;it < td;it++)
         {

@@ -121,8 +121,8 @@ static ALvoid ALechoState_process(ALechoState *state, ALuint SamplesToDo, const 
 
     for(base = 0;base < SamplesToDo;)
     {
-        ALfloat temps[64][2];
-        ALuint td = minu(SamplesToDo-base, 64);
+        ALfloat temps[128][2];
+        ALuint td = minu(128, SamplesToDo-base);
 
         for(i = 0;i < td;i++)
         {

@@ -423,55 +423,31 @@ FILE *al_fopen(const char *fname, const char *mode)
     return file;
 }
 
-#else
-
-#ifdef HAVE_DLFCN_H
-
-void *LoadLib(const char *name)
-{
-    const char *err;
-    void *handle;
-
-    dlerror();
-    handle = dlopen(name, RTLD_NOW);
-    if((err=dlerror()) != NULL)
-        handle = NULL;
-    return handle;
-}
-void CloseLib(void *handle)
-{ dlclose(handle); }
-void *GetSymbol(void *handle, const char *name)
-{
-    const char *err;
-    void *sym;
-
-    dlerror();
-    sym = dlsym(handle, name);
-    if((err=dlerror()) != NULL)
-    {
-        WARN("Failed to load %s: %s\n", name, err);
-        sym = NULL;
-    }
-    return sym;
-}
-
-#endif
-#endif
-
 
 void al_print(const char *type, const char *func, const char *fmt, ...)
 {
+    char str[1024];
+    WCHAR *wstr;
     va_list ap;
 
     va_start(ap, fmt);
-    fprintf(LogFile, "AL lib: %s %s: ", type, func);
-    vfprintf(LogFile, fmt, ap);
+    vsnprintf(str, sizeof(str), fmt, ap);
     va_end(ap);
 
+    str[sizeof(str)-1] = 0;
+    wstr = FromUTF8(str);
+    if(!wstr)
+        fputs(str, LogFile);
+    else
+    {
+        fwprintf(LogFile, L"AL lib: %s %s: %ls", type, func, wstr);
+        free(wstr);
+        wstr = NULL;
+    }
     fflush(LogFile);
 }
 
-#ifdef _WIN32
+
 static inline int is_slash(int c)
 { return (c == '\\' || c == '/'); }
 
@@ -541,7 +517,54 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
 
     return NULL;
 }
+
 #else
+
+#ifdef HAVE_DLFCN_H
+
+void *LoadLib(const char *name)
+{
+    const char *err;
+    void *handle;
+
+    dlerror();
+    handle = dlopen(name, RTLD_NOW);
+    if((err=dlerror()) != NULL)
+        handle = NULL;
+    return handle;
+}
+void CloseLib(void *handle)
+{ dlclose(handle); }
+void *GetSymbol(void *handle, const char *name)
+{
+    const char *err;
+    void *sym;
+
+    dlerror();
+    sym = dlsym(handle, name);
+    if((err=dlerror()) != NULL)
+    {
+        WARN("Failed to load %s: %s\n", name, err);
+        sym = NULL;
+    }
+    return sym;
+}
+
+#endif /* HAVE_DLFCN_H */
+
+void al_print(const char *type, const char *func, const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start(ap, fmt);
+    fprintf(LogFile, "AL lib: %s %s: ", type, func);
+    vfprintf(LogFile, fmt, ap);
+    va_end(ap);
+
+    fflush(LogFile);
+}
+
+
 FILE *OpenDataFile(const char *fname, const char *subdir)
 {
     char buffer[PATH_MAX] = "";
@@ -611,6 +634,7 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
 
     return NULL;
 }
+
 #endif
 
 

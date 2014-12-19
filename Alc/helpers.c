@@ -200,13 +200,13 @@ void FillCPUCaps(ALuint capfilter)
     /* Assume support for whatever's supported if we can't check for it */
 #if defined(HAVE_SSE4_1)
 #warning "Assuming SSE 4.1 run-time support!"
-    capfilter |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE4_1;
+    caps |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE4_1;
 #elif defined(HAVE_SSE2)
 #warning "Assuming SSE 2 run-time support!"
-    capfilter |= CPU_CAP_SSE | CPU_CAP_SSE2;
+    caps |= CPU_CAP_SSE | CPU_CAP_SSE2;
 #elif defined(HAVE_SSE)
 #warning "Assuming SSE run-time support!"
-    capfilter |= CPU_CAP_SSE;
+    caps |= CPU_CAP_SSE;
 #endif
 #endif
 #ifdef HAVE_NEON

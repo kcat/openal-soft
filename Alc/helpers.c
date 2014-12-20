@@ -438,10 +438,10 @@ void al_print(const char *type, const char *func, const char *fmt, ...)
     str[sizeof(str)-1] = 0;
     wstr = FromUTF8(str);
     if(!wstr)
-        fputs(str, LogFile);
+        fprintf(LogFile, "AL lib: %s %s: <UTF-8 error> %s", type, func, str);
     else
     {
-        fwprintf(LogFile, L"AL lib: %s %s: %ls", type, func, wstr);
+        fprintf(LogFile, "AL lib: %s %s: %ls", type, func, wstr);
         free(wstr);
         wstr = NULL;
     }

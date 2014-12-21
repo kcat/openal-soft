@@ -134,8 +134,10 @@ static void get_device_name(IMMDevice *device, al_string *name)
     hr = IPropertyStore_GetValue(ps, (const PROPERTYKEY*)&DEVPKEY_Device_FriendlyName, &pvname);
     if(FAILED(hr))
         WARN("GetValue Device_FriendlyName failed: 0x%08lx\n", hr);
-    else
+    else if(pvname.vt == VT_LPWSTR)
         al_string_copy_wcstr(name, pvname.pwszVal);
+    else
+        WARN("Unexpected PROPVARIANT type: 0x%04x\n", pvname.vt);
 
     PropVariantClear(&pvname);
     IPropertyStore_Release(ps);
@@ -159,8 +161,12 @@ static void get_device_formfactor(IMMDevice *device, EndpointFormFactor *formfac
     hr = IPropertyStore_GetValue(ps, &PKEY_AudioEndpoint_FormFactor, &pvform);
     if(FAILED(hr))
         WARN("GetValue AudioEndpoint_FormFactor failed: 0x%08lx\n", hr);
-    else
+    else if(pvform.vt == VT_UI4)
         *formfactor = pvform.ulVal;
+    else if(pvform.vt == VT_EMPTY)
+        *formfactor = UnknownFormFactor;
+    else
+        WARN("Unexpected PROPVARIANT type: 0x%04x\n", pvform.vt);
 
     PropVariantClear(&pvform);
     IPropertyStore_Release(ps);

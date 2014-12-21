@@ -1302,7 +1302,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         {
 #define WRITE(T, a, b, c, d) do {               \
     Write_##T((a), (b), (c), (d));              \
-    buffer = (char*)buffer + (c)*(d)*sizeof(T); \
+    buffer = (T*)buffer + (c)*(d);              \
 } while(0)
             switch(device->FmtType)
             {

@@ -3621,11 +3621,17 @@ ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
     else
     {
         V0(device->Backend,lock)();
-        if(device->Connected)
+        if(!device->Connected)
+            alcSetError(device, ALC_INVALID_DEVICE);
+        else if(!(device->Flags&DEVICE_RUNNING))
         {
-            if(!(device->Flags&DEVICE_RUNNING))
-                V0(device->Backend,start)();
-            device->Flags |= DEVICE_RUNNING;
+            if(V0(device->Backend,start)())
+                device->Flags |= DEVICE_RUNNING;
+            else
+            {
+                aluHandleDisconnect(device);
+                alcSetError(device, ALC_INVALID_DEVICE);
+            }
         }
         V0(device->Backend,unlock)();
     }

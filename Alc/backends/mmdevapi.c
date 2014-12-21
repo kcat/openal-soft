@@ -1206,7 +1206,7 @@ FORCE_ALIGN int ALCmmdevCapture_recordProc(void *arg)
         return 1;
     }
 
-    althrd_setname(althrd_current(), "alsoft-record");
+    althrd_setname(althrd_current(), RECORD_THREAD_NAME);
 
     while(!self->killNow)
     {

@@ -760,6 +760,8 @@ struct ALCdevice_struct
  * compatibility with pthread_setname_np limitations. */
 #define MIXER_THREAD_NAME "alsoft-mixer"
 
+#define RECORD_THREAD_NAME "alsoft-record"
+
 
 struct ALCcontext_struct
 {

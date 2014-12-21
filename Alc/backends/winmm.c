@@ -503,7 +503,7 @@ static int ALCwinmmCapture_captureProc(void *arg)
     WAVEHDR *WaveHdr;
     MSG msg;
 
-    althrd_setname(althrd_current(), "alsoft-record");
+    althrd_setname(althrd_current(), RECORD_THREAD_NAME);
 
     while(GetMessage(&msg, NULL, 0, 0))
     {

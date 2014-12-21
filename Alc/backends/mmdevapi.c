@@ -342,7 +342,7 @@ static DWORD CALLBACK ALCmmdevProxy_messageHandler(void *ptr)
     TRACE("Starting message loop\n");
     while(GetMessage(&msg, NULL, WM_USER_First, WM_USER_Last))
     {
-        TRACE("Got message %u\n", msg.message);
+        TRACE("Got message %u (lparam=%p, wparam=%p)\n", msg.message, (void*)msg.lParam, (void*)msg.wParam);
         switch(msg.message)
         {
         case WM_USER_OpenDevice:

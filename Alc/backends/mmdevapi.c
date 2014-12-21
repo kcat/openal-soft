@@ -70,16 +70,14 @@ TYPEDEF_VECTOR(DevMap, vector_DevMap)
 
 static void clear_devlist(vector_DevMap *list)
 {
-    DevMap *iter, *end;
-
-    iter = VECTOR_ITER_BEGIN(*list);
-    end = VECTOR_ITER_END(*list);
-    for(;iter != end;iter++)
-    {
-        AL_STRING_DEINIT(iter->name);
-        free(iter->devid);
-    }
+#define CLEAR_DEVMAP(i) do {     \
+    AL_STRING_DEINIT((i)->name); \
+    free((i)->devid);            \
+    (i)->devid = NULL;           \
+} while(0)
+    VECTOR_FOR_EACH(DevMap, *list, CLEAR_DEVMAP);
     VECTOR_RESIZE(*list, 0);
+#undef CLEAR_DEVMAP
 }
 
 static vector_DevMap PlaybackDevices;

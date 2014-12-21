@@ -64,6 +64,9 @@
 /* Define if we have the PulseAudio backend */
 #cmakedefine HAVE_PULSEAUDIO
 
+/* Define if we have the JACK backend */
+#cmakedefine HAVE_JACK
+
 /* Define if we have the CoreAudio backend */
 #cmakedefine HAVE_COREAUDIO
 

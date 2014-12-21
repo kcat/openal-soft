@@ -82,6 +82,9 @@ static struct BackendInfo BackendList[] = {
 #ifdef HAVE_QSA
     { "qsa", NULL, alc_qsa_init, alc_qsa_deinit, alc_qsa_probe, EmptyFuncs },
 #endif
+#ifdef HAVE_JACK
+    { "jack", ALCjackBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
+#endif
 #ifdef HAVE_MMDEVAPI
     { "mmdevapi", ALCmmdevBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
 #endif

@@ -314,6 +314,20 @@
 [qsa]
 
 ##
+## JACK backend stuff
+##
+[jack]
+
+## buffer-size:
+#  Sets the update buffer size, in samples, that the backend will keep buffered
+#  to handle the server's real-time processing requests. This value must be a
+#  power of 2, or else it will be rounded up to the next power of 2. If it is
+#  less than JACK's buffer update size, it will be clamped. This option may
+#  be useful in case the server's update size is too small and doesn't give the
+#  mixer time to keep enough audio available for the processing requests.
+#buffer-size = 0
+
+##
 ## MMDevApi backend stuff
 ##
 [mmdevapi]

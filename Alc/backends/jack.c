@@ -211,9 +211,13 @@ static int ALCjackPlayback_bufferSizeNotify(jack_nframes_t numframes, void *arg)
 {
     ALCjackPlayback *self = arg;
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+    ALuint bufsize;
 
     ALCjackPlayback_lock(self);
-    device->UpdateSize = numframes;
+    if(ConfigValueUInt("jack", "buffer-size", &bufsize))
+        device->UpdateSize = maxu(numframes, NextPowerOf2(bufsize));
+    else
+        device->UpdateSize = numframes;
     TRACE("%u update size x%u\n", device->UpdateSize, device->NumUpdates);
 
     jack_ringbuffer_free(self->Ring);
@@ -372,6 +376,7 @@ static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     ALuint numchans, i;
+    ALuint bufsize;
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
     {
@@ -386,7 +391,10 @@ static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
      * because there's one byte less of it that's writeable, and we only write
      * in update-sized chunks. */
     device->Frequency = jack_get_sample_rate(self->Client);
-    device->UpdateSize = jack_get_buffer_size(self->Client);
+    if(ConfigValueUInt("jack", "buffer-size", &bufsize))
+        device->UpdateSize = maxu(jack_get_buffer_size(self->Client), NextPowerOf2(bufsize));
+    else
+        device->UpdateSize = jack_get_buffer_size(self->Client);
     device->NumUpdates = 2;
 
     /* FIXME: Force stereo, 32-bit float output. */

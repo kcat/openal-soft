@@ -253,8 +253,6 @@ static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
     for(c = 0;c < MAX_OUTPUT_CHANNELS && self->Port[c];c++)
         out[c] = jack_port_get_buffer(self->Port[c], numframes);
     numchans = c;
-    for(;c < MAX_OUTPUT_CHANNELS;c++)
-        out[c] = NULL;
 
     todo = minu(numframes, data[0].len/frame_size);
     for(c = 0;c < numchans;c++)
@@ -266,13 +264,16 @@ static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
     total += todo;
 
     todo = minu(numframes-total, data[1].len/frame_size);
-    for(c = 0;c < numchans;c++)
+    if(todo > 0)
     {
-        for(i = 0;i < todo;i++)
-            out[c][i] = ((ALfloat*)data[1].buf)[i*numchans + c];
-        out[c] += todo;
+        for(c = 0;c < numchans;c++)
+        {
+            for(i = 0;i < todo;i++)
+                out[c][i] = ((ALfloat*)data[1].buf)[i*numchans + c];
+            out[c] += todo;
+        }
+        total += todo;
     }
-    total += todo;
 
     jack_ringbuffer_read_advance(self->Ring, total*frame_size);
     alcnd_signal(&self->Cond);

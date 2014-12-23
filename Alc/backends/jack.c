@@ -59,6 +59,7 @@ static const ALCchar jackDevice[] = "JACK Default";
     MAGIC(jack_ringbuffer_get_read_vector); \
     MAGIC(jack_ringbuffer_get_write_vector); \
     MAGIC(jack_ringbuffer_read_advance); \
+    MAGIC(jack_ringbuffer_read_space); \
     MAGIC(jack_ringbuffer_write_advance); \
     MAGIC(jack_ringbuffer_write_space); \
     MAGIC(jack_set_process_callback); \
@@ -90,6 +91,7 @@ JACK_FUNCS(MAKE_FUNC);
 #define jack_ringbuffer_get_read_vector pjack_ringbuffer_get_read_vector
 #define jack_ringbuffer_get_write_vector pjack_ringbuffer_get_write_vector
 #define jack_ringbuffer_read_advance pjack_ringbuffer_read_advance
+#define jack_ringbuffer_read_space pjack_ringbuffer_read_space
 #define jack_ringbuffer_write_advance pjack_ringbuffer_write_advance
 #define jack_ringbuffer_write_space pjack_ringbuffer_write_space
 #define jack_set_process_callback pjack_set_process_callback
@@ -162,7 +164,7 @@ static ALCboolean ALCjackPlayback_start(ALCjackPlayback *self);
 static void ALCjackPlayback_stop(ALCjackPlayback *self);
 static DECLARE_FORWARD2(ALCjackPlayback, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
 static DECLARE_FORWARD(ALCjackPlayback, ALCbackend, ALCuint, availableSamples)
-static DECLARE_FORWARD(ALCjackPlayback, ALCbackend, ALint64, getLatency)
+static ALint64 ALCjackPlayback_getLatency(ALCjackPlayback *self);
 static void ALCjackPlayback_lock(ALCjackPlayback *self);
 static void ALCjackPlayback_unlock(ALCjackPlayback *self);
 DECLARE_DEFAULT_ALLOCATORS(ALCjackPlayback)
@@ -485,6 +487,20 @@ static void ALCjackPlayback_stop(ALCjackPlayback *self)
     althrd_join(self->thread, &res);
 
     jack_deactivate(self->Client);
+}
+
+
+static ALint64 ALCjackPlayback_getLatency(ALCjackPlayback *self)
+{
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALint64 latency;
+
+    ALCjackPlayback_lock(self);
+    latency = jack_ringbuffer_read_space(self->Ring) /
+              FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    ALCjackPlayback_unlock(self);
+
+    return latency * 1000000000 / device->Frequency;
 }
 
 

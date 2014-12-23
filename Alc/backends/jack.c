@@ -99,6 +99,8 @@ JACK_FUNCS(MAKE_FUNC);
 #endif
 
 
+static jack_options_t ClientOptions = JackNullOption;
+
 static ALCboolean jack_load(void)
 {
     ALCboolean error = ALC_FALSE;
@@ -336,7 +338,7 @@ static ALCenum ALCjackPlayback_open(ALCjackPlayback *self, const ALCchar *name)
     else if(strcmp(name, jackDevice) != 0)
         return ALC_INVALID_VALUE;
 
-    self->Client = jack_client_open(client_name, 0, &status, NULL);
+    self->Client = jack_client_open(client_name, ClientOptions, &status, NULL);
     if(self->Client == NULL)
     {
         ERR("jack_client_open() failed, status = 0x%02x\n", status);
@@ -510,7 +512,9 @@ static ALCboolean ALCjackBackendFactory_init(ALCjackBackendFactory* UNUSED(self)
     if(!jack_load())
         return ALC_FALSE;
 
-    client = jack_client_open("alsoft", 0, &status, NULL);
+    if(!GetConfigValueBool("jack", "spawn-server", 1))
+        ClientOptions |= JackNoStartServer;
+    client = jack_client_open("alsoft", ClientOptions, &status, NULL);
     if(client == NULL)
     {
         WARN("jack_client_open() failed, 0x%02x\n", status);

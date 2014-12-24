@@ -395,21 +395,23 @@ static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
         if(self->Port[i] == NULL)
         {
             ERR("Not enough JACK ports available for %s output\n", DevFmtChannelsString(device->FmtChans));
-            if(i == 0)
-                return ALC_FALSE;
+            if(i == 0) return ALC_FALSE;
             break;
         }
     }
-    if(i == 1)
-        device->FmtChans = DevFmtMono;
-    else if(i < numchans)
+    if(i < numchans)
     {
-        for(--i;i >= 2;i--)
+        if(i == 1)
+            device->FmtChans = DevFmtMono;
+        else
         {
-            jack_port_unregister(self->Client, self->Port[i]);
-            self->Port[i] = NULL;
+            for(--i;i >= 2;i--)
+            {
+                jack_port_unregister(self->Client, self->Port[i]);
+                self->Port[i] = NULL;
+            }
+            device->FmtChans = DevFmtStereo;
         }
-        device->FmtChans = DevFmtStereo;
     }
 
     ll_ringbuffer_free(self->Ring);

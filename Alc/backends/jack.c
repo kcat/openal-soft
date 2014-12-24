@@ -54,14 +54,6 @@ static const ALCchar jackDevice[] = "JACK Default";
     MAGIC(jack_get_ports);         \
     MAGIC(jack_free);              \
     MAGIC(jack_get_sample_rate);   \
-    MAGIC(jack_ringbuffer_create); \
-    MAGIC(jack_ringbuffer_free);   \
-    MAGIC(jack_ringbuffer_get_read_vector); \
-    MAGIC(jack_ringbuffer_get_write_vector); \
-    MAGIC(jack_ringbuffer_read_advance); \
-    MAGIC(jack_ringbuffer_read_space); \
-    MAGIC(jack_ringbuffer_write_advance); \
-    MAGIC(jack_ringbuffer_write_space); \
     MAGIC(jack_set_process_callback); \
     MAGIC(jack_set_buffer_size_callback); \
     MAGIC(jack_set_buffer_size);   \
@@ -86,14 +78,6 @@ JACK_FUNCS(MAKE_FUNC);
 #define jack_get_ports pjack_get_ports
 #define jack_free pjack_free
 #define jack_get_sample_rate pjack_get_sample_rate
-#define jack_ringbuffer_create pjack_ringbuffer_create
-#define jack_ringbuffer_free pjack_ringbuffer_free
-#define jack_ringbuffer_get_read_vector pjack_ringbuffer_get_read_vector
-#define jack_ringbuffer_get_write_vector pjack_ringbuffer_get_write_vector
-#define jack_ringbuffer_read_advance pjack_ringbuffer_read_advance
-#define jack_ringbuffer_read_space pjack_ringbuffer_read_space
-#define jack_ringbuffer_write_advance pjack_ringbuffer_write_advance
-#define jack_ringbuffer_write_space pjack_ringbuffer_write_space
 #define jack_set_process_callback pjack_set_process_callback
 #define jack_set_buffer_size_callback pjack_set_buffer_size_callback
 #define jack_set_buffer_size pjack_set_buffer_size
@@ -143,7 +127,7 @@ typedef struct ALCjackPlayback {
     jack_client_t *Client;
     jack_port_t *Port[MAX_OUTPUT_CHANNELS];
 
-    jack_ringbuffer_t *Ring;
+    ll_ringbuffer_t *Ring;
     alcnd_t Cond;
 
     volatile int killNow;
@@ -224,9 +208,9 @@ static int ALCjackPlayback_bufferSizeNotify(jack_nframes_t numframes, void *arg)
         device->UpdateSize = numframes;
     TRACE("%u update size x%u\n", device->UpdateSize, device->NumUpdates);
 
-    jack_ringbuffer_free(self->Ring);
-    self->Ring = jack_ringbuffer_create(device->UpdateSize * device->NumUpdates *
-                                        FrameSizeFromDevFmt(device->FmtChans, device->FmtType));
+    ll_ringbuffer_free(self->Ring);
+    self->Ring = ll_ringbuffer_create(device->UpdateSize * device->NumUpdates,
+                                      FrameSizeFromDevFmt(device->FmtChans, device->FmtType));
     if(!self->Ring)
     {
         ERR("Failed to reallocate ringbuffer\n");
@@ -240,21 +224,19 @@ static int ALCjackPlayback_bufferSizeNotify(jack_nframes_t numframes, void *arg)
 static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
 {
     ALCjackPlayback *self = arg;
-    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
-    ALuint frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
     jack_default_audio_sample_t *out[MAX_OUTPUT_CHANNELS];
-    jack_ringbuffer_data_t data[2];
+    ll_ringbuffer_data_t data[2];
     jack_nframes_t total = 0;
     jack_nframes_t todo;
     ALuint i, c, numchans;
 
-    jack_ringbuffer_get_read_vector(self->Ring, data);
+    ll_ringbuffer_get_read_vector(self->Ring, data);
 
     for(c = 0;c < MAX_OUTPUT_CHANNELS && self->Port[c];c++)
         out[c] = jack_port_get_buffer(self->Port[c], numframes);
     numchans = c;
 
-    todo = minu(numframes, data[0].len/frame_size);
+    todo = minu(numframes, data[0].len);
     for(c = 0;c < numchans;c++)
     {
         for(i = 0;i < todo;i++)
@@ -263,7 +245,7 @@ static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
     }
     total += todo;
 
-    todo = minu(numframes-total, data[1].len/frame_size);
+    todo = minu(numframes-total, data[1].len);
     if(todo > 0)
     {
         for(c = 0;c < numchans;c++)
@@ -275,7 +257,7 @@ static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
         total += todo;
     }
 
-    jack_ringbuffer_read_advance(self->Ring, total*frame_size);
+    ll_ringbuffer_read_advance(self->Ring, total);
     alcnd_signal(&self->Cond);
 
     if(numframes > total)
@@ -295,8 +277,7 @@ static int ALCjackPlayback_mixerProc(void *arg)
 {
     ALCjackPlayback *self = arg;
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
-    ALuint frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
-    jack_ringbuffer_data_t data[2];
+    ll_ringbuffer_data_t data[2];
 
     SetRTPriority();
     althrd_setname(althrd_current(), MIXER_THREAD_NAME);
@@ -306,23 +287,23 @@ static int ALCjackPlayback_mixerProc(void *arg)
     {
         ALuint todo, len1, len2;
 
-        if(jack_ringbuffer_write_space(self->Ring)/frame_size < device->UpdateSize)
+        if(ll_ringbuffer_write_space(self->Ring) < device->UpdateSize)
         {
             alcnd_wait(&self->Cond, &STATIC_CAST(ALCbackend,self)->mMutex);
             continue;
         }
 
-        jack_ringbuffer_get_write_vector(self->Ring, data);
-        todo  = (data[0].len+data[1].len)/frame_size;
+        ll_ringbuffer_get_write_vector(self->Ring, data);
+        todo  = data[0].len + data[1].len;
         todo -= todo%device->UpdateSize;
 
-        len1 = minu(data[0].len/frame_size, todo);
-        len2 = minu(data[1].len/frame_size, todo-len1);
+        len1 = minu(data[0].len, todo);
+        len2 = minu(data[1].len, todo-len1);
 
         aluMixData(device, data[0].buf, len1);
         if(len2 > 0)
             aluMixData(device, data[1].buf, len2);
-        jack_ringbuffer_write_advance(self->Ring, todo*frame_size);
+        ll_ringbuffer_write_advance(self->Ring, todo);
     }
     ALCjackPlayback_unlock(self);
 
@@ -419,10 +400,9 @@ static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
         }
     }
 
-    if(self->Ring)
-        jack_ringbuffer_free(self->Ring);
-    self->Ring = jack_ringbuffer_create(device->UpdateSize * device->NumUpdates *
-                                        FrameSizeFromDevFmt(device->FmtChans, device->FmtType));
+    ll_ringbuffer_free(self->Ring);
+    self->Ring = ll_ringbuffer_create(device->UpdateSize * device->NumUpdates,
+                                      FrameSizeFromDevFmt(device->FmtChans, device->FmtType));
     if(!self->Ring)
     {
         ERR("Failed to allocate ringbuffer\n");
@@ -497,8 +477,7 @@ static ALint64 ALCjackPlayback_getLatency(ALCjackPlayback *self)
     ALint64 latency;
 
     ALCjackPlayback_lock(self);
-    latency = jack_ringbuffer_read_space(self->Ring) /
-              FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    latency = ll_ringbuffer_read_space(self->Ring);
     ALCjackPlayback_unlock(self);
 
     return latency * 1000000000 / device->Frequency;

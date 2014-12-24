@@ -374,8 +374,8 @@ static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
     /* Ignore the requested buffer metrics and just keep one JACK-sized buffer
      * ready for when requested. Note that even though the ringbuffer will have
      * 2 periods worth of space, only half of it will be filled at a given time
-     * because there's one byte less of it that's writeable, and we only write
-     * in update-sized chunks. */
+     * because there's one element less of it that's writeable, and we only
+     * write in update-sized chunks. */
     device->Frequency = jack_get_sample_rate(self->Client);
     if(ConfigValueUInt("jack", "buffer-size", &bufsize))
         device->UpdateSize = maxu(jack_get_buffer_size(self->Client), NextPowerOf2(bufsize));

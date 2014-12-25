@@ -132,7 +132,7 @@ void ReadRingBuffer(RingBuffer *ring, ALubyte *data, ALsizei len)
 /* NOTE: This lockless ringbuffer implementation is copied from JACK, extended
  * to include an element size. Consequently, parameters and return values for a
  * size or count is in 'elements', not bytes. Additionally, it only supports
- * single-consumer/single-provider opreation. */
+ * single-consumer/single-provider operation. */
 struct ll_ringbuffer {
     volatile size_t write_ptr;
     volatile size_t read_ptr;
@@ -216,8 +216,8 @@ size_t ll_ringbuffer_write_space(const ll_ringbuffer_t *rb)
     return (rb->size+r-w-1) & rb->size_mask;
 }
 
-/* The copying data reader. Copy at most `cnt' bytes from `rb' to `dest'.
- * Returns the actual number of bytes copied. */
+/* The copying data reader. Copy at most `cnt' elements from `rb' to `dest'.
+ * Returns the actual number of elements copied. */
 size_t ll_ringbuffer_read(ll_ringbuffer_t *rb, char *dest, size_t cnt)
 {
     size_t free_cnt;
@@ -251,8 +251,9 @@ size_t ll_ringbuffer_read(ll_ringbuffer_t *rb, char *dest, size_t cnt)
     return to_read;
 }
 
-/* The copying data reader w/o read pointer advance. Copy at most `cnt' bytes
- * from `rb' to `dest'. Returns the actual number of bytes copied. */
+/* The copying data reader w/o read pointer advance. Copy at most `cnt'
+ * elements from `rb' to `dest'. Returns the actual number of elements copied.
+ */
 size_t ll_ringbuffer_peek(ll_ringbuffer_t *rb, char *dest, size_t cnt)
 {
     size_t free_cnt;
@@ -285,8 +286,8 @@ size_t ll_ringbuffer_peek(ll_ringbuffer_t *rb, char *dest, size_t cnt)
     return to_read;
 }
 
-/* The copying data writer. Copy at most `cnt' bytes to `rb' from `src'.
- * Returns the actual number of bytes copied. */
+/* The copying data writer. Copy at most `cnt' elements to `rb' from `src'.
+ * Returns the actual number of elements copied. */
 size_t ll_ringbuffer_write(ll_ringbuffer_t *rb, const char *src, size_t cnt)
 {
     size_t free_cnt;

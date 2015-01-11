@@ -1222,7 +1222,8 @@ FORCE_ALIGN int ALCmmdevCapture_recordProc(void *arg)
             ERR("Failed to get next packet size: 0x%08lx\n", hr);
         else while(avail > 0 && SUCCEEDED(hr))
         {
-            UINT32 flags, numsamples;
+            UINT32 numsamples;
+            DWORD flags;
             BYTE *data;
 
             hr = IAudioCaptureClient_GetBuffer(self->capture,

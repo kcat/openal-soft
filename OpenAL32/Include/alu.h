@@ -202,7 +202,7 @@ inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max)
 { return minu64(max, maxu64(min, val)); }
 
 
-extern ALfloat CubicLUT[FRACTIONONE][4];
+extern alignas(16) ALfloat CubicLUT[FRACTIONONE][4];
 
 
 inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu)

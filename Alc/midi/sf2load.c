@@ -750,7 +750,7 @@ static void fillZone(ALfontsound *sound, ALCcontext *context, const GenModList *
            dst == AL_BASE_KEY_SOFT)
             ERR("Unhandled modulator destination: %d\n", mod->mDstOp);
         else if(src0in != AL_INVALID && src0form != AL_INVALID && src0type != AL_INVALID &&
-                src1in != AL_INVALID && src1form != AL_INVALID && src0type != AL_INVALID &&
+                src1in != AL_INVALID && src1form != AL_INVALID && src1type != AL_INVALID &&
                 trans != AL_INVALID)
         {
             ALsizei idx = (ALsizei)(mod - VECTOR_ITER_BEGIN(zone->mods));

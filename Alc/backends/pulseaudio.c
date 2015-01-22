@@ -1053,6 +1053,14 @@ static void ALCpulsePlayback_stop(ALCpulsePlayback *self)
         return;
 
     self->killNow = AL_TRUE;
+    /* Signal the main loop in case PulseAudio isn't sending us audio requests
+     * (e.g. if the device is suspended). We need to lock the mainloop in case
+     * the mixer is between checking the killNow flag but before waiting for
+     * the signal.
+     */
+    pa_threaded_mainloop_lock(self->loop);
+    pa_threaded_mainloop_unlock(self->loop);
+    pa_threaded_mainloop_signal(self->loop, 0);
     althrd_join(self->thread, &res);
 
     pa_threaded_mainloop_lock(self->loop);

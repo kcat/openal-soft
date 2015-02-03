@@ -374,10 +374,10 @@ static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
     }
 
     /* Ignore the requested buffer metrics and just keep one JACK-sized buffer
-     * ready for when requested. Note that even though the ringbuffer will have
-     * 2 periods worth of space, only half of it will be filled at a given time
-     * because there's one element less of it that's writeable, and we only
-     * write in update-sized chunks. */
+     * ready for when requested. Note that one period's worth of audio in the
+     * ring buffer will always be left unfilled because one element of the ring
+     * buffer will not be writeable, and we only write in period-sized chunks.
+     */
     device->Frequency = jack_get_sample_rate(self->Client);
     device->UpdateSize = jack_get_buffer_size(self->Client);
     device->NumUpdates = 2;
@@ -525,13 +525,13 @@ static ALCboolean ALCjackBackendFactory_init(ALCjackBackendFactory* UNUSED(self)
     if(!jack_load())
         return ALC_FALSE;
 
-    if(!GetConfigValueBool("jack", "spawn-server", 1))
+    if(!GetConfigValueBool("jack", "spawn-server", 0))
         ClientOptions |= JackNoStartServer;
     client = jack_client_open("alsoft", ClientOptions, &status, NULL);
     if(client == NULL)
     {
         WARN("jack_client_open() failed, 0x%02x\n", status);
-        if((status&JackServerFailed))
+        if((status&JackServerFailed) && !(ClientOptions&JackNoStartServer))
             ERR("Unable to connect to JACK server\n");
         return ALC_FALSE;
     }

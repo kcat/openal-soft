@@ -202,15 +202,17 @@ static int ALCjackPlayback_bufferSizeNotify(jack_nframes_t numframes, void *arg)
     ALuint bufsize;
 
     ALCjackPlayback_lock(self);
-    if(ConfigValueUInt("jack", "buffer-size", &bufsize))
-        device->UpdateSize = maxu(numframes, NextPowerOf2(bufsize));
-    else
-        device->UpdateSize = numframes;
+    device->UpdateSize = numframes;
+    device->NumUpdates = 2;
     TRACE("%u update size x%u\n", device->UpdateSize, device->NumUpdates);
 
+    bufsize = device->UpdateSize;
+    if(ConfigValueUInt("jack", "buffer-size", &bufsize))
+        bufsize = maxu(NextPowerOf2(bufsize), device->UpdateSize);
+    bufsize += device->UpdateSize;
+
     ll_ringbuffer_free(self->Ring);
-    self->Ring = ll_ringbuffer_create(device->UpdateSize * device->NumUpdates,
-                                      FrameSizeFromDevFmt(device->FmtChans, device->FmtType));
+    self->Ring = ll_ringbuffer_create(bufsize, FrameSizeFromDevFmt(device->FmtChans, device->FmtType));
     if(!self->Ring)
     {
         ERR("Failed to reallocate ringbuffer\n");
@@ -377,11 +379,13 @@ static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
      * because there's one element less of it that's writeable, and we only
      * write in update-sized chunks. */
     device->Frequency = jack_get_sample_rate(self->Client);
-    if(ConfigValueUInt("jack", "buffer-size", &bufsize))
-        device->UpdateSize = maxu(jack_get_buffer_size(self->Client), NextPowerOf2(bufsize));
-    else
-        device->UpdateSize = jack_get_buffer_size(self->Client);
+    device->UpdateSize = jack_get_buffer_size(self->Client);
     device->NumUpdates = 2;
+
+    bufsize = device->UpdateSize;
+    if(ConfigValueUInt("jack", "buffer-size", &bufsize))
+        bufsize = maxu(NextPowerOf2(bufsize), device->UpdateSize);
+    bufsize += device->UpdateSize;
 
     /* Force 32-bit float output. */
     device->FmtType = DevFmtFloat;
@@ -415,8 +419,7 @@ static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
     }
 
     ll_ringbuffer_free(self->Ring);
-    self->Ring = ll_ringbuffer_create(device->UpdateSize * device->NumUpdates,
-                                      FrameSizeFromDevFmt(device->FmtChans, device->FmtType));
+    self->Ring = ll_ringbuffer_create(bufsize, FrameSizeFromDevFmt(device->FmtChans, device->FmtType));
     if(!self->Ring)
     {
         ERR("Failed to allocate ringbuffer\n");

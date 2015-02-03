@@ -479,9 +479,13 @@ static void ALCjackPlayback_stop(ALCjackPlayback *self)
         return;
 
     self->killNow = 1;
+    /* Lock the backend to ensure we don't flag the mixer to die and signal the
+     * mixer to wake up in between it checking the flag and going to sleep and
+     * wait for a wakeup (potentially leading to it never waking back up to see
+     * the flag). */
     ALCjackPlayback_lock(self);
-    alcnd_signal(&self->Cond);
     ALCjackPlayback_unlock(self);
+    alcnd_signal(&self->Cond);
     althrd_join(self->thread, &res);
 
     jack_deactivate(self->Client);

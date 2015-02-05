@@ -1599,11 +1599,14 @@ void ALCcontext_DeferUpdates(ALCcontext *context)
     SetMixerFPUMode(&oldMode);
 
     V0(device->Backend,lock)();
-    if(!ExchangeInt(&context->DeferUpdates, AL_TRUE))
+    if(!context->DeferUpdates)
     {
         ALboolean UpdateSources;
         ALvoice *voice, *voice_end;
         ALeffectslot **slot, **slot_end;
+
+        context->DeferUpdates = AL_TRUE;
+
         /* Make sure all pending updates are performed */
         UpdateSources = ATOMIC_EXCHANGE(ALenum, &context->UpdateSources, AL_FALSE);
 
@@ -1649,9 +1652,11 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
     ALCdevice *device = context->Device;
 
     V0(device->Backend,lock)();
-    if(ExchangeInt(&context->DeferUpdates, AL_FALSE))
+    if(context->DeferUpdates)
     {
         ALsizei pos;
+
+        context->DeferUpdates = AL_FALSE;
 
         LockUIntMapRead(&context->SourceMap);
         for(pos = 0;pos < context->SourceMap.size;pos++)
@@ -1667,7 +1672,8 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
                 ReadUnlock(&Source->queue_lock);
             }
 
-            new_state = ExchangeInt(&Source->new_state, AL_NONE);
+            new_state = Source->new_state;
+            Source->new_state = AL_NONE;
             if(new_state)
                 SetSourceState(Source, context, new_state);
         }

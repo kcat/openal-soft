@@ -716,8 +716,10 @@ static ALenum FSynth_selectSoundfonts(FSynth *self, ALCcontext *context, ALsizei
     else
     {
         ERR("Failed to allocate space for %d font IDs!\n", count);
-        fontid = ExchangePtr((XchgPtr*)&self->FontIDs, NULL);
-        count = ExchangeInt(&self->NumFontIDs, 0);
+        fontid = self->FontIDs;
+        count = self->NumFontIDs;
+        self->FontIDs = NULL;
+        self->NumFontIDs = 0;
     }
 
     for(i = 0;i < count;i++)

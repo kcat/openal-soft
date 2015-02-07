@@ -457,34 +457,42 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
     static const int ids[2] = { CSIDL_APPDATA, CSIDL_COMMON_APPDATA };
     WCHAR *wname=NULL, *wsubdir=NULL;
     FILE *f;
-    int i;
+    size_t i;
 
-    /* If the path is absolute, open it directly. */
-    if(fname[0] != '\0' && fname[1] == ':' && is_slash(fname[2]))
+    wname = FromUTF8(fname);
+    if(!wname)
     {
-        if((f=al_fopen(fname, "rb")) != NULL)
-        {
-            TRACE("Opened %s\n", fname);
-            return f;
-        }
-        WARN("Could not open %s\n", fname);
+        ERR("Failed to convert UTF-8 filename: \"%s\"\n", fname);
         return NULL;
     }
 
-    /* If it's relative, try the current directory first before the data directories. */
-    if((f=al_fopen(fname, "rb")) != NULL)
+    /* If the path is absolute, open it directly. */
+    if(wname[0] != '\0' && wname[1] == ':' && is_slash(wname[2]))
     {
-        TRACE("Opened %s\n", fname);
+        f = _wfopen(wname, L"rb");
+        if(f) TRACE("Opened %s\n", fname);
+        else WARN("Could not open %s\n", fname);
+        free(wname);
         return f;
     }
 
-    wname = FromUTF8(fname);
+    /* Try the current directory first before the data directories. */
+    if((f=_wfopen(wname, L"rb")) != NULL)
+    {
+        TRACE("Opened %s\n", fname);
+        free(wname);
+        return f;
+    }
+
     wsubdir = FromUTF8(subdir);
-    if(!wname)
-        ERR("Failed to convert UTF-8 filename: \"%s\"\n", fname);
-    else if(!wsubdir)
+    if(!wsubdir)
+    {
         ERR("Failed to convert UTF-8 subdir: \"%s\"\n", subdir);
-    else for(i = 0;i < 2;i++)
+        free(wname);
+        return NULL;
+    }
+
+    for(i = 0;i < COUNTOF(ids);i++)
     {
         WCHAR buffer[PATH_MAX];
         size_t len;
@@ -506,16 +514,18 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
 
         if((f=_wfopen(buffer, L"rb")) != NULL)
         {
-            TRACE("Opened %ls\n", buffer);
-            free(wname);
-            free(wsubdir);
-            return f;
+            al_string filepath = AL_STRING_INIT_STATIC();
+            al_string_copy_wcstr(&filepath, buffer);
+            TRACE("Opened %s\n", al_string_get_cstr(filepath));
+            al_string_deinit(&filepath);
+            break;
         }
     }
-    WARN("Could not open %ls\\%ls\n", wsubdir, wname);
     free(wname);
     free(wsubdir);
 
+    if(f == NULL)
+        WARN("Could not open %s\\%s\n", subdir, fname);
     return NULL;
 }
 

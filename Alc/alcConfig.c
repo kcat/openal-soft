@@ -305,27 +305,33 @@ void ReadALConfig(void)
 
     if(SHGetSpecialFolderPathW(NULL, buffer, CSIDL_APPDATA, FALSE) != FALSE)
     {
-        size_t p = lstrlenW(buffer);
-        _snwprintf(buffer+p, PATH_MAX-p, L"\\alsoft.ini");
+        al_string filepath = AL_STRING_INIT_STATIC();
+        al_string_copy_wcstr(&filepath, buffer);
+        al_string_append_cstr(&filepath, "\\alsoft.ini");
 
-        TRACE("Loading config %ls...\n", buffer);
-        f = _wfopen(buffer, L"rt");
+        TRACE("Loading config %s...\n", al_string_get_cstr(filepath));
+        f = al_fopen(al_string_get_cstr(filepath), "rt");
         if(f)
         {
             LoadConfigFromFile(f);
             fclose(f);
         }
+        al_string_deinit(&filepath);
     }
 
     if((str=_wgetenv(L"ALSOFT_CONF")) != NULL && *str)
     {
-        TRACE("Loading config %ls...\n", str);
-        f = _wfopen(str, L"rt");
+        al_string filepath = AL_STRING_INIT_STATIC();
+        al_string_copy_wcstr(&filepath, str);
+
+        TRACE("Loading config %s...\n", al_string_get_cstr(filepath));
+        f = al_fopen(al_string_get_cstr(filepath), "rt");
         if(f)
         {
             LoadConfigFromFile(f);
             fclose(f);
         }
+        al_string_deinit(&filepath);
     }
 }
 #else

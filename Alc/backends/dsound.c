@@ -121,15 +121,14 @@ static void clear_devlist(vector_DevMap *list)
 {
 #define DEINIT_STR(i) AL_STRING_DEINIT((i)->name)
     VECTOR_FOR_EACH(DevMap, *list, DEINIT_STR);
-#undef DEINIT_STR
     VECTOR_RESIZE(*list, 0);
+#undef DEINIT_STR
 }
 
 static BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR* UNUSED(drvname), void *data)
 {
     vector_DevMap *devices = data;
     OLECHAR *guidstr = NULL;
-    DevMap *iter, *end;
     DevMap entry;
     HRESULT hr;
     int count;
@@ -140,7 +139,10 @@ static BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHA
     AL_STRING_INIT(entry.name);
 
     count = 0;
-    do {
+    while(1)
+    {
+        const DevMap *iter;
+
         al_string_copy_wcstr(&entry.name, desc);
         if(count != 0)
         {
@@ -148,16 +150,14 @@ static BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHA
             snprintf(str, sizeof(str), " #%d", count+1);
             al_string_append_cstr(&entry.name, str);
         }
-        count++;
 
-        iter = VECTOR_ITER_BEGIN(*devices);
-        end = VECTOR_ITER_END(*devices);
-        for(;iter != end;++iter)
-        {
-            if(al_string_cmp(entry.name, iter->name) == 0)
-                break;
-        }
-    } while(iter != end);
+#define MATCH_ENTRY(i) (al_string_cmp(entry.name, (i)->name) == 0)
+        VECTOR_FIND_IF(iter, const DevMap, *devices, MATCH_ENTRY);
+        if(iter == VECTOR_ITER_END(*devices))
+            break;
+#undef MATCH_ENTRY
+        count++;
+    }
     entry.guid = *guid;
 
     hr = StringFromCLSID(guid, &guidstr);

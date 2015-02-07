@@ -289,6 +289,20 @@ static int ALCjackPlayback_mixerProc(void *arg)
     {
         ALuint todo, len1, len2;
 
+        /* NOTE: Unfortunately, there is an unavoidable race condition here.
+         * It's possible for the process() method to run, updating the read
+         * pointer and signaling the condition variable, in between the mixer
+         * loop checking the write size and waiting for the condition variable.
+         * This will cause the mixer loop to wait until the *next* process()
+         * invocation, most likely writing silence for it.
+         *
+         * However, this should only happen if the mixer is running behind
+         * anyway (as ideally we'll be asleep in alcnd_wait by the time the
+         * process() method is invoked), so this behavior is not unwarranted.
+         * It's unfortunate since it'll be wasting time sleeping that could be
+         * used to catch up, but there's no way around it without blocking in
+         * the process() method.
+         */
         if(ll_ringbuffer_write_space(self->Ring) < device->UpdateSize)
         {
             alcnd_wait(&self->Cond, &STATIC_CAST(ALCbackend,self)->mMutex);

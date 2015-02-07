@@ -199,16 +199,16 @@ void ll_ringbuffer_reset(ll_ringbuffer_t *rb)
     memset(rb->buf, 0, rb->size*rb->elem_size);
 }
 
-/* Return the number of bytes available for reading. This is the number of
- * bytes in front of the read pointer and behind the write pointer. */
+/* Return the number of elements available for reading. This is the number of
+ * elements in front of the read pointer and behind the write pointer. */
 size_t ll_ringbuffer_read_space(const ll_ringbuffer_t *rb)
 {
     size_t w = rb->write_ptr;
     size_t r = rb->read_ptr;
     return (rb->size+w-r) & rb->size_mask;
 }
-/* Return the number of bytes available for writing. This is the number of
- * bytes in front of the write pointer and behind the read pointer. */
+/* Return the number of elements available for writing. This is the number of
+ * elements in front of the write pointer and behind the read pointer. */
 size_t ll_ringbuffer_write_space(const ll_ringbuffer_t *rb)
 {
     size_t w = rb->write_ptr;

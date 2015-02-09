@@ -93,6 +93,27 @@ extern inline void aluMatrixSet(aluMatrix *restrict matrix, ALfloat m00, ALfloat
                                                             ALfloat m20, ALfloat m21, ALfloat m22, ALfloat m23,
                                                             ALfloat m30, ALfloat m31, ALfloat m32, ALfloat m33);
 
+/* NOTE: HRTF is set up a bit special in the device. By default, the device's
+ * DryBuffer, NumChannels, ChannelName, and Channel fields correspond to the
+ * output mixing format, and the DryBuffer is then converted and written to the
+ * backend's audio buffer.
+ *
+ * With HRTF, these fields correspond to a virtual format (typically 8-channel
+ * cube), and the actual output is stored in DryBuffer[NumChannels] for the
+ * left channel and DryBuffer[NumChannels+1] for the right. As a final output
+ * step, the virtual channels will have HRTF applied and written to the actual
+ * output. Things like effects and B-Format decoding will want to write to the
+ * virtual channels so that they can be mixed with HRTF in full 3D.
+ *
+ * Sources that get mixed using HRTF directly will need to offset the output
+ * buffer so that they skip the virtual output and write to the actual output
+ * channels. This is the reason you'll see
+ *
+ * voice->Direct.OutBuffer += voice->Direct.OutChannels;
+ * voice->Direct.OutChannels = 2;
+ *
+ * at various points in the code where HRTF is explicitly used or bypassed.
+ */
 
 static inline HrtfMixerFunc SelectHrtfMixer(void)
 {
@@ -1176,24 +1197,29 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
     while(size > 0)
     {
-        ALuint outchanoffset = 0;
-        ALuint outchancount = device->NumChannels;
+        ALfloat (*OutBuffer)[BUFFERSIZE];
+        ALuint OutChannels;
 
         IncrementRef(&device->MixCount);
 
+        OutBuffer = device->DryBuffer;
+        OutChannels = device->NumChannels;
+
         SamplesToDo = minu(size, BUFFERSIZE);
-        for(c = 0;c < device->NumChannels;c++)
-            memset(device->DryBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
+        for(c = 0;c < OutChannels;c++)
+            memset(OutBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
         if(device->Hrtf)
         {
-            outchanoffset = device->NumChannels;
-            outchancount = 2;
-            for(c = 0;c < outchancount;c++)
-                memset(device->DryBuffer[outchanoffset+c], 0, SamplesToDo*sizeof(ALfloat));
+            /* Set OutBuffer/OutChannels to correspond to the actual output
+             * with HRTF. Make sure to clear them too. */
+            OutBuffer += OutChannels;
+            OutChannels = 2;
+            for(c = 0;c < OutChannels;c++)
+                memset(OutBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
         }
 
         V0(device->Backend,lock)();
-        V(device->Synth,process)(SamplesToDo, &device->DryBuffer[outchanoffset]);
+        V(device->Synth,process)(SamplesToDo, OutBuffer);
 
         ctx = ATOMIC_LOAD(&device->ContextList);
         while(ctx)
@@ -1278,9 +1304,9 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             HrtfMixerFunc HrtfMix = SelectHrtfMixer();
             ALuint irsize = GetHrtfIrSize(device->Hrtf);
             for(c = 0;c < device->NumChannels;c++)
-                HrtfMix(&device->DryBuffer[outchanoffset], device->DryBuffer[c], 0,
-                    device->Hrtf_Offset, 0, irsize, &device->Hrtf_Params[c],
-                    &device->Hrtf_State[c], SamplesToDo
+                HrtfMix(OutBuffer, device->DryBuffer[c], 0, device->Hrtf_Offset,
+                    0, irsize, &device->Hrtf_Params[c], &device->Hrtf_State[c],
+                    SamplesToDo
                 );
             device->Hrtf_Offset += SamplesToDo;
         }
@@ -1307,25 +1333,25 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             switch(device->FmtType)
             {
                 case DevFmtByte:
-                    WRITE(ALbyte, device->DryBuffer+outchanoffset, buffer, SamplesToDo, outchancount);
+                    WRITE(ALbyte, OutBuffer, buffer, SamplesToDo, OutChannels);
                     break;
                 case DevFmtUByte:
-                    WRITE(ALubyte, device->DryBuffer+outchanoffset, buffer, SamplesToDo, outchancount);
+                    WRITE(ALubyte, OutBuffer, buffer, SamplesToDo, OutChannels);
                     break;
                 case DevFmtShort:
-                    WRITE(ALshort, device->DryBuffer+outchanoffset, buffer, SamplesToDo, outchancount);
+                    WRITE(ALshort, OutBuffer, buffer, SamplesToDo, OutChannels);
                     break;
                 case DevFmtUShort:
-                    WRITE(ALushort, device->DryBuffer+outchanoffset, buffer, SamplesToDo, outchancount);
+                    WRITE(ALushort, OutBuffer, buffer, SamplesToDo, OutChannels);
                     break;
                 case DevFmtInt:
-                    WRITE(ALint, device->DryBuffer+outchanoffset, buffer, SamplesToDo, outchancount);
+                    WRITE(ALint, OutBuffer, buffer, SamplesToDo, OutChannels);
                     break;
                 case DevFmtUInt:
-                    WRITE(ALuint, device->DryBuffer+outchanoffset, buffer, SamplesToDo, outchancount);
+                    WRITE(ALuint, OutBuffer, buffer, SamplesToDo, OutChannels);
                     break;
                 case DevFmtFloat:
-                    WRITE(ALfloat, device->DryBuffer+outchanoffset, buffer, SamplesToDo, outchancount);
+                    WRITE(ALfloat, OutBuffer, buffer, SamplesToDo, OutChannels);
                     break;
             }
 #undef WRITE

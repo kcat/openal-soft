@@ -2004,7 +2004,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(usehrtf)
             device->Hrtf = GetHrtf(device->FmtChans, device->Frequency);
         if(device->Hrtf)
+        {
             TRACE("HRTF enabled\n");
+            free(device->Bs2b);
+            device->Bs2b = NULL;
+        }
         else
         {
             device->Flags &= ~DEVICE_HRTF_REQUEST;

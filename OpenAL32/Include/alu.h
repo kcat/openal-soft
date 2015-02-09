@@ -113,9 +113,9 @@ typedef struct DirectParams {
     } Filters[MAX_INPUT_CHANNELS];
 
     struct {
-        HrtfParams Params[MAX_INPUT_CHANNELS];
-        HrtfState State[MAX_INPUT_CHANNELS];
-    } Hrtf;
+        HrtfParams Params;
+        HrtfState State;
+    } Hrtf[MAX_INPUT_CHANNELS];
     MixGains Gains[MAX_INPUT_CHANNELS][MAX_OUTPUT_CHANNELS];
 } DirectParams;
 

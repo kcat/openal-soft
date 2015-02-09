@@ -2591,11 +2591,11 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         {
             ALsizei j;
             for(j = 0;j < HRTF_HISTORY_LENGTH;j++)
-                voice->Direct.Hrtf.State[i].History[j] = 0.0f;
+                voice->Direct.Hrtf[i].State.History[j] = 0.0f;
             for(j = 0;j < HRIR_LENGTH;j++)
             {
-                voice->Direct.Hrtf.State[i].Values[j][0] = 0.0f;
-                voice->Direct.Hrtf.State[i].Values[j][1] = 0.0f;
+                voice->Direct.Hrtf[i].State.Values[j][0] = 0.0f;
+                voice->Direct.Hrtf[i].State.Values[j][1] = 0.0f;
             }
         }
         for(i = 0;i < (ALsizei)device->NumAuxSends;i++)

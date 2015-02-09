@@ -468,8 +468,8 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                         parms->Counter, OutPos, DstBufferSize);
                 else
                     HrtfMix(parms->OutBuffer, samples, parms->Counter, voice->Offset,
-                            OutPos, IrSize, &parms->Hrtf.Params[chan],
-                            &parms->Hrtf.State[chan], DstBufferSize);
+                            OutPos, IrSize, &parms->Hrtf[chan].Params,
+                            &parms->Hrtf[chan].State, DstBufferSize);
             }
 
             /* Only the first channel for B-Format buffers (W channel) goes to

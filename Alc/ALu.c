@@ -556,12 +556,12 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
             if(chans[c].channel == LFE)
             {
                 /* Skip LFE */
-                voice->Direct.Hrtf.Params[c].Delay[0] = 0;
-                voice->Direct.Hrtf.Params[c].Delay[1] = 0;
+                voice->Direct.Hrtf[c].Params.Delay[0] = 0;
+                voice->Direct.Hrtf[c].Params.Delay[1] = 0;
                 for(i = 0;i < HRIR_LENGTH;i++)
                 {
-                    voice->Direct.Hrtf.Params[c].Coeffs[i][0] = 0.0f;
-                    voice->Direct.Hrtf.Params[c].Coeffs[i][1] = 0.0f;
+                    voice->Direct.Hrtf[c].Params.Coeffs[i][0] = 0.0f;
+                    voice->Direct.Hrtf[c].Params.Coeffs[i][1] = 0.0f;
                 }
             }
             else
@@ -570,8 +570,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                  * channel. */
                 GetLerpedHrtfCoeffs(Device->Hrtf,
                                     chans[c].elevation, chans[c].angle, 1.0f, DryGain,
-                                    voice->Direct.Hrtf.Params[c].Coeffs,
-                                    voice->Direct.Hrtf.Params[c].Delay);
+                                    voice->Direct.Hrtf[c].Params.Coeffs,
+                                    voice->Direct.Hrtf[c].Params.Delay);
             }
         }
         voice->Direct.Counter = 0;
@@ -1023,8 +1023,8 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             {
                 ALuint counter = GetMovingHrtfCoeffs(Device->Hrtf,
                     ev, az, dirfact, DryGain, delta, voice->Direct.Counter,
-                    voice->Direct.Hrtf.Params[0].Coeffs, voice->Direct.Hrtf.Params[0].Delay,
-                    voice->Direct.Hrtf.Params[0].CoeffStep, voice->Direct.Hrtf.Params[0].DelayStep
+                    voice->Direct.Hrtf[0].Params.Coeffs, voice->Direct.Hrtf[0].Params.Delay,
+                    voice->Direct.Hrtf[0].Params.CoeffStep, voice->Direct.Hrtf[0].Params.DelayStep
                 );
                 voice->Direct.Counter = counter;
                 voice->Direct.LastGain = DryGain;
@@ -1035,8 +1035,8 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         {
             /* Get the initial (static) HRIR coefficients and delays. */
             GetLerpedHrtfCoeffs(Device->Hrtf, ev, az, dirfact, DryGain,
-                                voice->Direct.Hrtf.Params[0].Coeffs,
-                                voice->Direct.Hrtf.Params[0].Delay);
+                                voice->Direct.Hrtf[0].Params.Coeffs,
+                                voice->Direct.Hrtf[0].Params.Delay);
             voice->Direct.Counter = 0;
             voice->Direct.Moving  = AL_TRUE;
             voice->Direct.LastGain = DryGain;

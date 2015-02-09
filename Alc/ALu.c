@@ -1219,7 +1219,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         }
 
         V0(device->Backend,lock)();
-        V(device->Synth,process)(SamplesToDo, OutBuffer);
+        V(device->Synth,process)(SamplesToDo, OutBuffer, OutChannels);
 
         ctx = ATOMIC_LOAD(&device->ContextList);
         while(ctx)

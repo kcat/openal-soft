@@ -579,7 +579,7 @@ static void FSynth_stop(FSynth *self);
 static void FSynth_reset(FSynth *self);
 static void FSynth_update(FSynth *self, ALCdevice *device);
 static void FSynth_processQueue(FSynth *self, ALuint64 time);
-static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE]);
+static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE], ALuint NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(FSynth)
 DEFINE_MIDISYNTH_VTABLE(FSynth);
 
@@ -844,9 +844,11 @@ static void FSynth_processQueue(FSynth *self, ALuint64 time)
     }
 }
 
-static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE])
+static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE], ALuint NumChannels)
 {
     MidiSynth *synth = STATIC_CAST(MidiSynth, self);
+    ALfloat *LeftBuffer = DryBuffer[0];
+    ALfloat *RightBuffer = DryBuffer[(NumChannels > 1) ? 1 : 0];
     ALenum state = synth->State;
     ALuint64 curtime;
     ALuint total = 0;
@@ -855,8 +857,8 @@ static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict 
         return;
     if(state != AL_PLAYING)
     {
-        fluid_synth_write_float(self->Synth, SamplesToDo, DryBuffer[0], 0, 1,
-                                                          DryBuffer[1], 0, 1);
+        fluid_synth_write_float(self->Synth, SamplesToDo, LeftBuffer, 0, 1,
+                                                          RightBuffer, 0, 1);
         return;
     }
 
@@ -884,8 +886,8 @@ static void FSynth_process(FSynth *self, ALuint SamplesToDo, ALfloat (*restrict 
         if(tonext > 0)
         {
             ALuint todo = minu(tonext, SamplesToDo-total);
-            fluid_synth_write_float(self->Synth, todo, DryBuffer[0], total, 1,
-                                                       DryBuffer[1], total, 1);
+            fluid_synth_write_float(self->Synth, todo, LeftBuffer, total, 1,
+                                                       RightBuffer, total, 1);
             total += todo;
             tonext -= todo;
         }

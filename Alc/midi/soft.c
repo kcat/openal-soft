@@ -18,7 +18,7 @@ typedef struct SSynth {
     DERIVE_FROM_TYPE(MidiSynth);
 } SSynth;
 
-static void SSynth_mixSamples(SSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE]);
+static void SSynth_mixSamples(SSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE], ALuint NumChannels);
 
 static void SSynth_Construct(SSynth *self, ALCdevice *device);
 static void SSynth_Destruct(SSynth *self);
@@ -27,7 +27,7 @@ static DECLARE_FORWARD1(SSynth, MidiSynth, void, setGain, ALfloat)
 static DECLARE_FORWARD(SSynth, MidiSynth, void, stop)
 static DECLARE_FORWARD(SSynth, MidiSynth, void, reset)
 static void SSynth_update(SSynth *self, ALCdevice *device);
-static void SSynth_process(SSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE]);
+static void SSynth_process(SSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE], ALuint NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(SSynth)
 DEFINE_MIDISYNTH_VTABLE(SSynth);
 
@@ -48,7 +48,7 @@ static void SSynth_update(SSynth* UNUSED(self), ALCdevice* UNUSED(device))
 }
 
 
-static void SSynth_mixSamples(SSynth* UNUSED(self), ALuint UNUSED(SamplesToDo), ALfloatBUFFERSIZE *restrict UNUSED(DryBuffer))
+static void SSynth_mixSamples(SSynth* UNUSED(self), ALuint UNUSED(SamplesToDo), ALfloatBUFFERSIZE *restrict UNUSED(DryBuffer), ALuint UNUSED(NumChannels))
 {
 }
 
@@ -61,7 +61,7 @@ static void SSynth_processQueue(SSynth *self, ALuint64 time)
         queue->pos++;
 }
 
-static void SSynth_process(SSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE])
+static void SSynth_process(SSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE], ALuint NumChannels)
 {
     MidiSynth *synth = STATIC_CAST(MidiSynth, self);
     ALenum state = synth->State;
@@ -72,7 +72,7 @@ static void SSynth_process(SSynth *self, ALuint SamplesToDo, ALfloat (*restrict 
         return;
     if(state != AL_PLAYING)
     {
-        SSynth_mixSamples(self, SamplesToDo, DryBuffer);
+        SSynth_mixSamples(self, SamplesToDo, DryBuffer, NumChannels);
         return;
     }
 
@@ -103,7 +103,7 @@ static void SSynth_process(SSynth *self, ALuint SamplesToDo, ALfloat (*restrict 
         if(tonext > 0)
         {
             ALuint todo = mini(tonext, SamplesToDo-total);
-            SSynth_mixSamples(self, todo, DryBuffer);
+            SSynth_mixSamples(self, todo, DryBuffer, NumChannels);
             total += todo;
             tonext -= todo;
         }

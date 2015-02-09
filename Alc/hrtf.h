@@ -23,5 +23,6 @@ void FreeHrtfs(void);
 ALuint GetHrtfIrSize(const struct Hrtf *Hrtf);
 void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat dirfact, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays);
 ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat dirfact, ALfloat gain, ALfloat delta, ALint counter, ALfloat (*coeffs)[2], ALuint *delays, ALfloat (*coeffStep)[2], ALint *delayStep);
+void GetBFormatHrtfCoeffs(const struct Hrtf *Hrtf, const ALfloat ambi_coeffs[4], ALfloat (*coeffs)[2], ALuint *delays);
 
 #endif /* ALC_HRTF_H */

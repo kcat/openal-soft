@@ -339,15 +339,6 @@ ALvoid aluInitPanning(ALCdevice *device)
         { BackRight,   { { 0.224752f, -0.295009f, -0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f,  0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065799f }, { 0.224752f, -0.225790f, -0.130361f, 0.0f } } },
         { SideLeft,    { { 0.224739f,  0.000002f,  0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065795f }, { 0.224739f,  0.000000f,  0.260717f, 0.0f } } },
         { SideRight,   { { 0.224739f,  0.000002f, -0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f, -0.000002f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.065795f }, { 0.224739f,  0.000000f, -0.260717f, 0.0f } } },
-    }, Cube8[8] = {
-        { TopFrontLeft,     { { 0.176777f,  0.125000f,  0.125000f,  0.125000f }, { 0.176777f,  0.125000f,  0.125000f,  0.125000f } } },
-        { TopFrontRight,    { { 0.176777f,  0.125000f, -0.125000f,  0.125000f }, { 0.176777f,  0.125000f, -0.125000f,  0.125000f } } },
-        { TopBackLeft,      { { 0.176777f, -0.125000f,  0.125000f,  0.125000f }, { 0.176777f, -0.125000f,  0.125000f,  0.125000f } } },
-        { TopBackRight,     { { 0.176777f, -0.125000f, -0.125000f,  0.125000f }, { 0.176777f, -0.125000f, -0.125000f,  0.125000f } } },
-        { BottomFrontLeft,  { { 0.176777f,  0.125000f,  0.125000f, -0.125000f }, { 0.176777f,  0.125000f,  0.125000f, -0.125000f } } },
-        { BottomFrontRight, { { 0.176777f,  0.125000f, -0.125000f, -0.125000f }, { 0.176777f,  0.125000f, -0.125000f, -0.125000f } } },
-        { BottomBackLeft,   { { 0.176777f, -0.125000f,  0.125000f, -0.125000f }, { 0.176777f, -0.125000f,  0.125000f, -0.125000f } } },
-        { BottomBackRight,  { { 0.176777f, -0.125000f, -0.125000f, -0.125000f }, { 0.176777f, -0.125000f, -0.125000f, -0.125000f } } },
     }, BFormat3D[4] = {
         { Aux0, { { 1.0f, 0.0f, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 0.0f } } },
         { Aux1, { { 0.0f, 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f, 0.0f } } },
@@ -362,33 +353,23 @@ ALvoid aluInitPanning(ALCdevice *device)
 
     if(device->Hrtf)
     {
-        static const struct {
-            enum Channel channel;
-            ALfloat elevation;
-            ALfloat angle;
-        } VirtualChans[8] = {
-            { TopFrontLeft,     DEG2RAD( 45.0f), DEG2RAD( -45.0f) },
-            { TopFrontRight,    DEG2RAD( 45.0f), DEG2RAD(  45.0f) },
-            { TopBackLeft,      DEG2RAD( 45.0f), DEG2RAD(-135.0f) },
-            { TopBackRight,     DEG2RAD( 45.0f), DEG2RAD( 135.0f) },
-            { BottomFrontLeft,  DEG2RAD(-45.0f), DEG2RAD( -45.0f) },
-            { BottomFrontRight, DEG2RAD(-45.0f), DEG2RAD(  45.0f) },
-            { BottomBackLeft,   DEG2RAD(-45.0f), DEG2RAD(-135.0f) },
-            { BottomBackRight,  DEG2RAD(-45.0f), DEG2RAD( 135.0f) },
-        };
         ALuint i;
 
-        count = COUNTOF(Cube8);
-        chanmap = Cube8;
+        count = COUNTOF(BFormat3D);
+        chanmap = BFormat3D;
 
         for(i = 0;i < count;i++)
-            device->ChannelName[i] = VirtualChans[i].channel;
+            device->ChannelName[i] = chanmap[i].ChanName;
+        for(;i < MAX_OUTPUT_CHANNELS;i++)
+            device->ChannelName[i] = InvalidChannel;
+
         SetChannelMap(device, chanmap, count);
         for(i = 0;i < count;i++)
-            GetLerpedHrtfCoeffs(
-                device->Hrtf, VirtualChans[i].elevation, VirtualChans[i].angle, 1.0f, 1.0f,
+        {
+            GetBFormatHrtfCoeffs(device->Hrtf, chanmap[i].Config.FOACoeff,
                 device->Hrtf_Params[i].Coeffs, device->Hrtf_Params[i].Delay
             );
+        }
 
         return;
     }

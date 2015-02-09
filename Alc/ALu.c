@@ -98,10 +98,10 @@ extern inline void aluMatrixSet(aluMatrix *restrict matrix, ALfloat m00, ALfloat
  * output mixing format, and the DryBuffer is then converted and written to the
  * backend's audio buffer.
  *
- * With HRTF, these fields correspond to a virtual format (typically 8-channel
- * cube), and the actual output is stored in DryBuffer[NumChannels] for the
- * left channel and DryBuffer[NumChannels+1] for the right. As a final output
- * step, the virtual channels will have HRTF applied and written to the actual
+ * With HRTF, these fields correspond to a virtual format (typically B-Format),
+ * and the actual output is stored in DryBuffer[NumChannels] for the left
+ * channel and DryBuffer[NumChannels+1] for the right. As a final output step,
+ * the virtual channels will have HRTF applied and written to the actual
  * output. Things like effects and B-Format decoding will want to write to the
  * virtual channels so that they can be mixed with HRTF in full 3D.
  *

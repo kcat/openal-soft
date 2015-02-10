@@ -313,7 +313,7 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
 
 
 /* Calculates HRTF coefficients for a B-Format channel (first order only). */
-void GetBFormatHrtfCoeffs(const struct Hrtf *Hrtf, const ALfloat ambi_coeffs[4], ALfloat (*coeffs)[2], ALuint *delays)
+void GetBFormatHrtfCoeffs(const struct Hrtf *Hrtf, const ALuint chan_num, ALfloat (*coeffs)[2], ALuint *delays)
 {
     ALuint elev_idx, azi_idx;
     ALfloat scale;
@@ -345,6 +345,7 @@ void GetBFormatHrtfCoeffs(const struct Hrtf *Hrtf, const ALfloat ambi_coeffs[4],
         {
             ALuint lidx, ridx;
             ALfloat az;
+            ALfloat ambi_coeffs[4];
             ALfloat x, y, z;
             ALfloat gain;
 
@@ -363,12 +364,12 @@ void GetBFormatHrtfCoeffs(const struct Hrtf *Hrtf, const ALfloat ambi_coeffs[4],
             y = sinf(-az) * cosf(elev);
             z = sinf(elev);
 
-            gain = 0.0f;
-            gain += ambi_coeffs[0]*0.7071f; /* sqrt(1.0 / 2.0) */
-            gain += ambi_coeffs[1]*x; /* X */
-            gain += ambi_coeffs[2]*y; /* Y */
-            gain += ambi_coeffs[3]*z; /* Z */
+            ambi_coeffs[0] = 0.7071f; /* sqrt(1.0 / 2.0) */
+            ambi_coeffs[1] = x; /* X */
+            ambi_coeffs[2] = y; /* Y */
+            ambi_coeffs[3] = z; /* Z */
 
+            gain = ambi_coeffs[chan_num];
             if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
                 continue;
 

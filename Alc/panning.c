@@ -366,9 +366,8 @@ ALvoid aluInitPanning(ALCdevice *device)
         SetChannelMap(device, chanmap, count);
         for(i = 0;i < count;i++)
         {
-            GetBFormatHrtfCoeffs(device->Hrtf, chanmap[i].Config.FOACoeff,
-                device->Hrtf_Params[i].Coeffs, device->Hrtf_Params[i].Delay
-            );
+            GetBFormatHrtfCoeffs(device->Hrtf, i, device->Hrtf_Params[i].Coeffs,
+                                 device->Hrtf_Params[i].Delay);
         }
 
         return;

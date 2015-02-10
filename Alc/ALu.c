@@ -297,34 +297,30 @@ static ALvoid CalcListenerParams(ALlistener *Listener)
 
 ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCcontext *ALContext)
 {
-    static const struct ChanMap MonoMap[1] = { { FrontCenter, 0.0f, 0.0f } };
-    static const struct ChanMap StereoMap[2] = {
+    static const struct ChanMap MonoMap[1] = {
+        { FrontCenter, 0.0f, 0.0f }
+    }, StereoMap[2] = {
         { FrontLeft,  DEG2RAD(-30.0f), DEG2RAD(0.0f) },
         { FrontRight, DEG2RAD( 30.0f), DEG2RAD(0.0f) }
-    };
-    static const struct ChanMap StereoWideMap[2] = {
+    }, StereoWideMap[2] = {
         { FrontLeft,  DEG2RAD(-90.0f), DEG2RAD(0.0f) },
         { FrontRight, DEG2RAD( 90.0f), DEG2RAD(0.0f) }
-    };
-    static const struct ChanMap RearMap[2] = {
+    }, RearMap[2] = {
         { BackLeft,  DEG2RAD(-150.0f), DEG2RAD(0.0f) },
         { BackRight, DEG2RAD( 150.0f), DEG2RAD(0.0f) }
-    };
-    static const struct ChanMap QuadMap[4] = {
+    }, QuadMap[4] = {
         { FrontLeft,  DEG2RAD( -45.0f), DEG2RAD(0.0f) },
         { FrontRight, DEG2RAD(  45.0f), DEG2RAD(0.0f) },
         { BackLeft,   DEG2RAD(-135.0f), DEG2RAD(0.0f) },
         { BackRight,  DEG2RAD( 135.0f), DEG2RAD(0.0f) }
-    };
-    static const struct ChanMap X51Map[6] = {
+    }, X51Map[6] = {
         { FrontLeft,   DEG2RAD( -30.0f), DEG2RAD(0.0f) },
         { FrontRight,  DEG2RAD(  30.0f), DEG2RAD(0.0f) },
         { FrontCenter, DEG2RAD(   0.0f), DEG2RAD(0.0f) },
         { LFE, 0.0f, 0.0f },
         { SideLeft,    DEG2RAD(-110.0f), DEG2RAD(0.0f) },
         { SideRight,   DEG2RAD( 110.0f), DEG2RAD(0.0f) }
-    };
-    static const struct ChanMap X61Map[7] = {
+    }, X61Map[7] = {
         { FrontLeft,    DEG2RAD(-30.0f), DEG2RAD(0.0f) },
         { FrontRight,   DEG2RAD( 30.0f), DEG2RAD(0.0f) },
         { FrontCenter,  DEG2RAD(  0.0f), DEG2RAD(0.0f) },
@@ -332,8 +328,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         { BackCenter,   DEG2RAD(180.0f), DEG2RAD(0.0f) },
         { SideLeft,     DEG2RAD(-90.0f), DEG2RAD(0.0f) },
         { SideRight,    DEG2RAD( 90.0f), DEG2RAD(0.0f) }
-    };
-    static const struct ChanMap X71Map[8] = {
+    }, X71Map[8] = {
         { FrontLeft,   DEG2RAD( -30.0f), DEG2RAD(0.0f) },
         { FrontRight,  DEG2RAD(  30.0f), DEG2RAD(0.0f) },
         { FrontCenter, DEG2RAD(   0.0f), DEG2RAD(0.0f) },

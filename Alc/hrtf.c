@@ -359,9 +359,9 @@ void GetBFormatHrtfCoeffs(const struct Hrtf *Hrtf, const ALfloat ambi_coeffs[4],
             az = (ALfloat)azi_idx / (ALfloat)azcount * F_2PI;
             if(az > F_PI) az -= F_2PI;
 
-            x =  cosf(az) * cosf(elev);
-            y = -sinf(az) * cosf(elev);
-            z =  sinf(elev);
+            x = cosf(-az) * cosf(elev);
+            y = sinf(-az) * cosf(elev);
+            z = sinf(elev);
 
             gain = 0.0f;
             gain += ambi_coeffs[0]*0.7071f; /* sqrt(1.0 / 2.0) */

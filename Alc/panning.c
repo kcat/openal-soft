@@ -362,12 +362,18 @@ ALvoid aluInitPanning(ALCdevice *device)
             device->ChannelName[i] = chanmap[i].ChanName;
         for(;i < MAX_OUTPUT_CHANNELS;i++)
             device->ChannelName[i] = InvalidChannel;
-
         SetChannelMap(device, chanmap, count);
-        for(i = 0;i < count;i++)
+
         {
-            GetBFormatHrtfCoeffs(device->Hrtf, i, device->Hrtf_Params[i].Coeffs,
-                                 device->Hrtf_Params[i].Delay);
+            ALfloat (*coeffs_list[4])[2] = {
+                device->Hrtf_Params[0].Coeffs, device->Hrtf_Params[1].Coeffs,
+                device->Hrtf_Params[2].Coeffs, device->Hrtf_Params[3].Coeffs
+            };
+            ALuint *delay_list[4] = {
+                device->Hrtf_Params[0].Delay, device->Hrtf_Params[1].Delay,
+                device->Hrtf_Params[2].Delay, device->Hrtf_Params[3].Delay
+            };
+            GetBFormatHrtfCoeffs(device->Hrtf, 4, coeffs_list, delay_list);
         }
 
         return;

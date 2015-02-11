@@ -1976,6 +1976,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
 
     device->Hrtf = NULL;
+    device->Hrtf_Mode = DisabledHrtf;
     if(device->FmtChans != DevFmtStereo)
     {
         free(device->Bs2b);
@@ -1984,19 +1985,34 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     else
     {
         bool headphones = device->IsHeadphones;
+        enum HrtfMode hrtf_mode = FullHrtf;
         const char *mode;
         int bs2blevel;
         int usehrtf;
 
-        if(device->Type != Loopback && ConfigValueStr(NULL, "stereo-mode", &mode))
+        if(device->Type != Loopback)
         {
-            if(strcasecmp(mode, "headphones") == 0)
-                headphones = true;
-            else if(strcasecmp(mode, "speakers") == 0)
-                headphones = false;
-            else if(strcasecmp(mode, "auto") != 0)
-                ERR("Unexpected stereo-mode: %s\n", mode);
+            if(ConfigValueStr(NULL, "stereo-mode", &mode))
+            {
+                if(strcasecmp(mode, "headphones") == 0)
+                    headphones = true;
+                else if(strcasecmp(mode, "speakers") == 0)
+                    headphones = false;
+                else if(strcasecmp(mode, "auto") != 0)
+                    ERR("Unexpected stereo-mode: %s\n", mode);
+            }
+
+            if(ConfigValueStr(NULL, "hrtf-mode", &mode))
+            {
+                if(strcasecmp(mode, "full") == 0)
+                    hrtf_mode = FullHrtf;
+                else if(strcasecmp(mode, "basic") == 0)
+                    hrtf_mode = BasicHrtf;
+                else
+                    ERR("Unexpected hrtf-mode: %s\n", mode);
+            }
         }
+
 
         if(device->Type == Loopback || !ConfigValueBool(NULL, "hrtf", &usehrtf))
             usehrtf = ((device->Flags&DEVICE_HRTF_REQUEST) || headphones);
@@ -2005,6 +2021,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             device->Hrtf = GetHrtf(device->FmtChans, device->Frequency);
         if(device->Hrtf)
         {
+            device->Hrtf_Mode = hrtf_mode;
             TRACE("HRTF enabled\n");
             free(device->Bs2b);
             device->Bs2b = NULL;
@@ -3273,6 +3290,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     device->Flags = 0;
     device->Bs2b = NULL;
+    device->Hrtf_Mode = DisabledHrtf;
     AL_STRING_INIT(device->DeviceName);
     device->DryBuffer = NULL;
 
@@ -3725,6 +3743,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
 
     device->Flags = 0;
     device->Bs2b = NULL;
+    device->Hrtf_Mode = DisabledHrtf;
     AL_STRING_INIT(device->DeviceName);
     device->DryBuffer = NULL;
 

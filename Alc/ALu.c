@@ -563,7 +563,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
 
         voice->IsHrtf = AL_FALSE;
     }
-    else if(Device->Hrtf)
+    else if(Device->Hrtf_Mode == FullHrtf)
     {
         voice->Direct.OutBuffer += voice->Direct.OutChannels;
         voice->Direct.OutChannels = 2;
@@ -999,7 +999,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         BufferListItem = BufferListItem->next;
     }
 
-    if(Device->Hrtf)
+    if(Device->Hrtf_Mode == FullHrtf)
     {
         /* Use a binaural HRTF algorithm for stereo headphone playback */
         aluVector dir = {{ 0.0f, 0.0f, -1.0f, 0.0f }};

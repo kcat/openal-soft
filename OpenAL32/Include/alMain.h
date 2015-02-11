@@ -593,6 +593,13 @@ enum DeviceType {
 };
 
 
+enum HrtfMode {
+    DisabledHrtf,
+    BasicHrtf,
+    FullHrtf
+};
+
+
 /* The maximum number of Ambisonics coefficients. For a given order (o), the
  * size needed will be (o+1)**2, thus zero-order has 1, first-order has 4,
  * second-order has 9, and third-order has 16. */
@@ -681,6 +688,7 @@ struct ALCdevice_struct
 
     /* HRTF filter tables */
     const struct Hrtf *Hrtf;
+    enum HrtfMode Hrtf_Mode;
     HrtfState Hrtf_State[MAX_OUTPUT_CHANNELS];
     HrtfParams Hrtf_Params[MAX_OUTPUT_CHANNELS];
     ALuint Hrtf_Offset;

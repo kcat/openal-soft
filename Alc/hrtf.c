@@ -312,14 +312,14 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
 }
 
 
-/* Calculates HRTF coefficients for B-Format channels. */
+/* Calculates HRTF coefficients for B-Format channels (only up to first-order). */
 void GetBFormatHrtfCoeffs(const struct Hrtf *Hrtf, const ALuint num_chans, ALfloat (**coeffs_list)[2], ALuint **delay_list)
 {
     ALuint elev_idx, azi_idx;
     ALfloat scale;
     ALuint i, c;
 
-    assert(num_chans <= MAX_AMBI_COEFFS);
+    assert(num_chans <= 4);
 
     for(c = 0;c < num_chans;c++)
     {
@@ -352,10 +352,9 @@ void GetBFormatHrtfCoeffs(const struct Hrtf *Hrtf, const ALuint num_chans, ALflo
         for(azi_idx = 0;azi_idx < azcount;azi_idx++)
         {
             ALuint lidx, ridx;
-            ALfloat az;
-            ALfloat ambi_coeffs[MAX_AMBI_COEFFS];
+            ALfloat ambi_coeffs[4];
+            ALfloat az, gain;
             ALfloat x, y, z;
-            ALfloat gain;
 
             lidx = evoffset + azi_idx;
             ridx = evoffset + ((azcount-azi_idx) % azcount);
@@ -367,22 +366,10 @@ void GetBFormatHrtfCoeffs(const struct Hrtf *Hrtf, const ALuint num_chans, ALflo
             y = sinf(-az) * cosf(elev);
             z = sinf(elev);
 
-            ambi_coeffs[0] = 0.7071f; /* sqrt(1.0 / 2.0) */
+            ambi_coeffs[0] = 1.4142f;
             ambi_coeffs[1] = x; /* X */
             ambi_coeffs[2] = y; /* Y */
             ambi_coeffs[3] = z; /* Z */
-            ambi_coeffs[4] = 0.5f * (3.0f*z*z - 1.0f); /* 0.5 * (3*Z*Z - 1) */
-            ambi_coeffs[5] = 2.0f * z * x; /* 2*Z*X */
-            ambi_coeffs[6] = 2.0f * y * z; /* 2*Y*Z */
-            ambi_coeffs[7] = x*x - y*y; /* X*X - Y*Y */
-            ambi_coeffs[8] = 2.0f * x * y; /* 2*X*Y */
-            ambi_coeffs[9] = 0.5f * z * (5.0f*z*z - 3.0f); /* 0.5 * Z * (5*Z*Z - 3) */
-            ambi_coeffs[10] = 0.7262f * x * (5.0f*z*z - 1.0f); /* sqrt(135.0 / 256.0) * X * (5*Z*Z - 1) */
-            ambi_coeffs[11] = 0.7262f * y * (5.0f*z*z - 1.0f); /* sqrt(135.0 / 256.0) * Y * (5*Z*Z - 1) */
-            ambi_coeffs[12] = 2.5981f * z * (x*x - y*y); /* sqrt(27.0 / 4.0) * Z * (X*X - Y*Y) */
-            ambi_coeffs[13] = 5.1962f * x * y * z; /* sqrt(27) * X * Y * Z */
-            ambi_coeffs[14] = x * (x*x - 3.0f*y*y); /* X * (X*X - 3*Y*Y) */
-            ambi_coeffs[15] = y * (3.0f*x*x - y*y); /* Y * (3*X*X - Y*Y) */
 
             for(c = 0;c < num_chans;c++)
             {

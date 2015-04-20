@@ -216,6 +216,7 @@ static void opensl_close_playback(ALCdevice *Device)
     data->engineObject = NULL;
     data->engine = NULL;
 
+    free(data->buffer);
     free(data);
     Device->ExtraData = NULL;
 }
@@ -309,6 +310,7 @@ static ALCboolean opensl_start_playback(ALCdevice *Device)
     }
     if(SL_RESULT_SUCCESS == result)
     {
+        free(data->buffer);
         data->frameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
         data->bufferSize = Device->UpdateSize * data->frameSize;
         data->buffer = calloc(Device->NumUpdates, data->bufferSize);
@@ -379,10 +381,6 @@ static void opensl_stop_playback(ALCdevice *Device)
         result = VCALL0(bufferQueue,Clear)();
         PRINTERR(result, "bufferQueue->Clear");
     }
-
-    free(data->buffer);
-    data->buffer = NULL;
-    data->bufferSize = 0;
 }
 
 

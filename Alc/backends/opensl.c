@@ -331,6 +331,7 @@ static ALCboolean opensl_start_playback(ALCdevice *Device)
         if(SL_RESULT_SUCCESS == result)
         {
             ALvoid *buf = (ALbyte*)data->buffer + i*data->bufferSize;
+            memset(buf, 0, data->bufferSize);
             result = VCALL(bufferQueue,Enqueue)(buf, data->bufferSize);
             PRINTERR(result, "bufferQueue->Enqueue");
         }

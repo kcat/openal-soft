@@ -280,12 +280,29 @@ static ALCboolean opensl_reset_playback(ALCdevice *Device)
         result = VCALL(data->bufferQueueObject,Realize)(SL_BOOLEAN_FALSE);
         PRINTERR(result, "bufferQueue->Realize");
     }
+    
+    if(SL_RESULT_SUCCESS == result)
+    {
+        free(data->buffer);
+        data->frameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
+        data->bufferSize = Device->UpdateSize * data->frameSize;
+        data->buffer = calloc(Device->NumUpdates, data->bufferSize);
+        if(!data->buffer)
+        {
+            result = SL_RESULT_MEMORY_FAILURE;
+            PRINTERR(result, "calloc");
+        }
+    }
 
     if(SL_RESULT_SUCCESS != result)
     {
         if(data->bufferQueueObject != NULL)
             VCALL0(data->bufferQueueObject,Destroy)();
         data->bufferQueueObject = NULL;
+
+        free(data->buffer);
+        data->buffer = NULL;
+        data->bufferSize = 0;
 
         return ALC_FALSE;
     }
@@ -307,18 +324,6 @@ static ALCboolean opensl_start_playback(ALCdevice *Device)
     {
         result = VCALL(bufferQueue,RegisterCallback)(opensl_callback, Device);
         PRINTERR(result, "bufferQueue->RegisterCallback");
-    }
-    if(SL_RESULT_SUCCESS == result)
-    {
-        free(data->buffer);
-        data->frameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
-        data->bufferSize = Device->UpdateSize * data->frameSize;
-        data->buffer = calloc(Device->NumUpdates, data->bufferSize);
-        if(!data->buffer)
-        {
-            result = SL_RESULT_MEMORY_FAILURE;
-            PRINTERR(result, "calloc");
-        }
     }
     /* enqueue the first buffer to kick off the callbacks */
     for(i = 0;i < Device->NumUpdates;i++)
@@ -347,10 +352,6 @@ static ALCboolean opensl_start_playback(ALCdevice *Device)
         if(data->bufferQueueObject != NULL)
             VCALL0(data->bufferQueueObject,Destroy)();
         data->bufferQueueObject = NULL;
-
-        free(data->buffer);
-        data->buffer = NULL;
-        data->bufferSize = 0;
 
         return ALC_FALSE;
     }

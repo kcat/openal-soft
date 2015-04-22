@@ -25,7 +25,7 @@ static DECLARE_FORWARD1(DSynth, MidiSynth, void, setGain, ALfloat)
 static DECLARE_FORWARD(DSynth, MidiSynth, void, stop)
 static DECLARE_FORWARD(DSynth, MidiSynth, void, reset)
 static DECLARE_FORWARD1(DSynth, MidiSynth, void, update, ALCdevice*)
-static void DSynth_process(DSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE]);
+static void DSynth_process(DSynth *self, ALuint SamplesToDo, ALfloat (*restrict DryBuffer)[BUFFERSIZE], ALuint NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(DSynth)
 DEFINE_MIDISYNTH_VTABLE(DSynth);
 
@@ -45,7 +45,7 @@ static void DSynth_processQueue(DSynth *self, ALuint64 time)
         queue->pos++;
 }
 
-static void DSynth_process(DSynth *self, ALuint SamplesToDo, ALfloatBUFFERSIZE*restrict UNUSED(DryBuffer))
+static void DSynth_process(DSynth *self, ALuint SamplesToDo, ALfloatBUFFERSIZE*restrict UNUSED(DryBuffer), ALuint UNUSED(NumChannels))
 {
     MidiSynth *synth = STATIC_CAST(MidiSynth, self);
     ALuint64 curtime;

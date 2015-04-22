@@ -41,6 +41,44 @@ struct ALsource;
 struct ALvoice;
 
 
+typedef union aluVector {
+    alignas(16) ALfloat v[4];
+} aluVector;
+
+inline void aluVectorSet(aluVector *vector, ALfloat x, ALfloat y, ALfloat z, ALfloat w)
+{
+    vector->v[0] = x;
+    vector->v[1] = y;
+    vector->v[2] = z;
+    vector->v[3] = w;
+}
+
+
+typedef union aluMatrix {
+    alignas(16) ALfloat m[4][4];
+} aluMatrix;
+
+inline void aluMatrixSetRow(aluMatrix *matrix, ALuint row,
+                            ALfloat m0, ALfloat m1, ALfloat m2, ALfloat m3)
+{
+    matrix->m[row][0] = m0;
+    matrix->m[row][1] = m1;
+    matrix->m[row][2] = m2;
+    matrix->m[row][3] = m3;
+}
+
+inline void aluMatrixSet(aluMatrix *matrix, ALfloat m00, ALfloat m01, ALfloat m02, ALfloat m03,
+                                            ALfloat m10, ALfloat m11, ALfloat m12, ALfloat m13,
+                                            ALfloat m20, ALfloat m21, ALfloat m22, ALfloat m23,
+                                            ALfloat m30, ALfloat m31, ALfloat m32, ALfloat m33)
+{
+    aluMatrixSetRow(matrix, 0, m00, m01, m02, m03);
+    aluMatrixSetRow(matrix, 1, m10, m11, m12, m13);
+    aluMatrixSetRow(matrix, 2, m20, m21, m22, m23);
+    aluMatrixSetRow(matrix, 3, m30, m31, m32, m33);
+}
+
+
 enum ActiveFilters {
     AF_None = 0,
     AF_LowPass = 1,
@@ -65,7 +103,7 @@ typedef struct DirectParams {
     /* Stepping counter for gain/coefficient fading. */
     ALuint Counter;
     /* Last direction (relative to listener) and gain of a moving source. */
-    ALfloat LastDir[3];
+    aluVector LastDir;
     ALfloat LastGain;
 
     struct {
@@ -75,10 +113,9 @@ typedef struct DirectParams {
     } Filters[MAX_INPUT_CHANNELS];
 
     struct {
-        HrtfParams Params[MAX_INPUT_CHANNELS];
-        HrtfState State[MAX_INPUT_CHANNELS];
-        ALuint IrSize;
-    } Hrtf;
+        HrtfParams Params;
+        HrtfState State;
+    } Hrtf[MAX_INPUT_CHANNELS];
     MixGains Gains[MAX_INPUT_CHANNELS][MAX_OUTPUT_CHANNELS];
 } DirectParams;
 
@@ -117,7 +154,7 @@ typedef void (*HrtfMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const A
 #define SPEEDOFSOUNDMETRESPERSEC  (343.3f)
 #define AIRABSORBGAINHF           (0.99426f) /* -0.05dB */
 
-#define FRACTIONBITS (14)
+#define FRACTIONBITS (12)
 #define FRACTIONONE  (1<<FRACTIONBITS)
 #define FRACTIONMASK (FRACTIONONE-1)
 
@@ -165,21 +202,21 @@ inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max)
 { return minu64(max, maxu64(min, val)); }
 
 
+extern alignas(16) ALfloat CubicLUT[FRACTIONONE][4];
+
+
 inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu)
 {
     return val1 + (val2-val1)*mu;
 }
-inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALfloat mu)
+inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALuint frac)
 {
-    ALfloat mu2 = mu*mu;
-    ALfloat a0 = -0.5f*val0 +  1.5f*val1 + -1.5f*val2 +  0.5f*val3;
-    ALfloat a1 =       val0 + -2.5f*val1 +  2.0f*val2 + -0.5f*val3;
-    ALfloat a2 = -0.5f*val0              +  0.5f*val2;
-    ALfloat a3 =                    val1;
-
-    return a0*mu*mu2 + a1*mu2 + a2*mu + a3;
+    const ALfloat *k = CubicLUT[frac];
+    return k[0]*val0 + k[1]*val1 + k[2]*val2 + k[3]*val3;
 }
 
+
+void aluInitResamplers(void);
 
 ALvoid aluInitPanning(ALCdevice *Device);
 
@@ -233,4 +270,3 @@ extern ALfloat ZScale;
 #endif
 
 #endif
-

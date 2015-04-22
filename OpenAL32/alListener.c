@@ -74,9 +74,7 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
             SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
         LockContext(context);
-        context->Listener->Position[0] = value1;
-        context->Listener->Position[1] = value2;
-        context->Listener->Position[2] = value3;
+        aluVectorSet(&context->Listener->Position, value1, value2, value3, 1.0f);
         ATOMIC_STORE(&context->UpdateSources, AL_TRUE);
         UnlockContext(context);
         break;
@@ -86,9 +84,7 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
             SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
         LockContext(context);
-        context->Listener->Velocity[0] = value1;
-        context->Listener->Velocity[1] = value2;
-        context->Listener->Velocity[2] = value3;
+        aluVectorSet(&context->Listener->Velocity, value1, value2, value3, 0.0f);
         ATOMIC_STORE(&context->UpdateSources, AL_TRUE);
         UnlockContext(context);
         break;
@@ -282,17 +278,17 @@ AL_API ALvoid AL_APIENTRY alGetListener3f(ALenum param, ALfloat *value1, ALfloat
     {
     case AL_POSITION:
         LockContext(context);
-        *value1 = context->Listener->Position[0];
-        *value2 = context->Listener->Position[1];
-        *value3 = context->Listener->Position[2];
+        *value1 = context->Listener->Position.v[0];
+        *value2 = context->Listener->Position.v[1];
+        *value3 = context->Listener->Position.v[2];
         UnlockContext(context);
         break;
 
     case AL_VELOCITY:
         LockContext(context);
-        *value1 = context->Listener->Velocity[0];
-        *value2 = context->Listener->Velocity[1];
-        *value3 = context->Listener->Velocity[2];
+        *value1 = context->Listener->Velocity.v[0];
+        *value2 = context->Listener->Velocity.v[1];
+        *value3 = context->Listener->Velocity.v[2];
         UnlockContext(context);
         break;
 
@@ -383,17 +379,17 @@ AL_API void AL_APIENTRY alGetListener3i(ALenum param, ALint *value1, ALint *valu
     {
     case AL_POSITION:
         LockContext(context);
-        *value1 = (ALint)context->Listener->Position[0];
-        *value2 = (ALint)context->Listener->Position[1];
-        *value3 = (ALint)context->Listener->Position[2];
+        *value1 = (ALint)context->Listener->Position.v[0];
+        *value2 = (ALint)context->Listener->Position.v[1];
+        *value3 = (ALint)context->Listener->Position.v[2];
         UnlockContext(context);
         break;
 
     case AL_VELOCITY:
         LockContext(context);
-        *value1 = (ALint)context->Listener->Velocity[0];
-        *value2 = (ALint)context->Listener->Velocity[1];
-        *value3 = (ALint)context->Listener->Velocity[2];
+        *value1 = (ALint)context->Listener->Velocity.v[0];
+        *value2 = (ALint)context->Listener->Velocity.v[1];
+        *value3 = (ALint)context->Listener->Velocity.v[2];
         UnlockContext(context);
         break;
 

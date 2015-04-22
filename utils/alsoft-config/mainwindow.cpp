@@ -26,6 +26,7 @@ static const struct {
     { "sndio", "Add SndIO" },
     { "qsa", "Add QSA" },
 #endif
+    { "jack", "Add JACK" },
     { "port", "Add PortAudio" },
     { "opensl", "Add OpenSL" },
     { "null", "Add Null Output" },

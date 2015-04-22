@@ -405,8 +405,7 @@ error:
     return ALC_FALSE;
 }
 
-static void pulse_close(pa_threaded_mainloop *loop, pa_context *context,
-                        pa_stream *stream)
+static void pulse_close(pa_threaded_mainloop *loop, pa_context *context, pa_stream *stream)
 {
     pa_threaded_mainloop_lock(loop);
 
@@ -898,7 +897,9 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
 
     if(self->stream)
     {
+        pa_stream_set_state_callback(self->stream, NULL, NULL);
         pa_stream_set_moved_callback(self->stream, NULL, NULL);
+        pa_stream_set_write_callback(self->stream, NULL, NULL);
         pa_stream_set_buffer_attr_callback(self->stream, NULL, NULL);
         pa_stream_disconnect(self->stream);
         pa_stream_unref(self->stream);
@@ -1048,10 +1049,18 @@ static void ALCpulsePlayback_stop(ALCpulsePlayback *self)
     pa_operation *o;
     int res;
 
-    if(!self->stream)
+    if(!self->stream || self->killNow)
         return;
 
     self->killNow = AL_TRUE;
+    /* Signal the main loop in case PulseAudio isn't sending us audio requests
+     * (e.g. if the device is suspended). We need to lock the mainloop in case
+     * the mixer is between checking the killNow flag but before waiting for
+     * the signal.
+     */
+    pa_threaded_mainloop_lock(self->loop);
+    pa_threaded_mainloop_unlock(self->loop);
+    pa_threaded_mainloop_signal(self->loop, 0);
     althrd_join(self->thread, &res);
 
     pa_threaded_mainloop_lock(self->loop);
@@ -1572,11 +1581,6 @@ static void ALCpulseCapture_unlock(ALCpulseCapture *self)
 }
 
 
-static inline void AppendAllDevicesList2(const DevMap *entry)
-{ AppendAllDevicesList(al_string_get_cstr(entry->name)); }
-static inline void AppendCaptureDeviceList2(const DevMap *entry)
-{ AppendCaptureDeviceList(al_string_get_cstr(entry->name)); }
-
 typedef struct ALCpulseBackendFactory {
     DERIVE_FROM_TYPE(ALCbackendFactory);
 } ALCpulseBackendFactory;
@@ -1666,12 +1670,16 @@ static void ALCpulseBackendFactory_probe(ALCpulseBackendFactory* UNUSED(self), e
     {
         case ALL_DEVICE_PROBE:
             ALCpulsePlayback_probeDevices();
-            VECTOR_FOR_EACH(const DevMap, PlaybackDevices, AppendAllDevicesList2);
+#define APPEND_ALL_DEVICES_LIST(e)  AppendAllDevicesList(al_string_get_cstr((e)->name))
+            VECTOR_FOR_EACH(const DevMap, PlaybackDevices, APPEND_ALL_DEVICES_LIST);
+#undef APPEND_ALL_DEVICES_LIST
             break;
 
         case CAPTURE_DEVICE_PROBE:
             ALCpulseCapture_probeDevices();
-            VECTOR_FOR_EACH(const DevMap, CaptureDevices, AppendCaptureDeviceList2);
+#define APPEND_CAPTURE_DEVICE_LIST(e) AppendCaptureDeviceList(al_string_get_cstr((e)->name))
+            VECTOR_FOR_EACH(const DevMap, CaptureDevices, APPEND_CAPTURE_DEVICE_LIST);
+#undef APPEND_CAPTURE_DEVICE_LIST
             break;
     }
 }

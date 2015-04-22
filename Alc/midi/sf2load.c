@@ -750,7 +750,7 @@ static void fillZone(ALfontsound *sound, ALCcontext *context, const GenModList *
            dst == AL_BASE_KEY_SOFT)
             ERR("Unhandled modulator destination: %d\n", mod->mDstOp);
         else if(src0in != AL_INVALID && src0form != AL_INVALID && src0type != AL_INVALID &&
-                src1in != AL_INVALID && src1form != AL_INVALID && src0type != AL_INVALID &&
+                src1in != AL_INVALID && src1form != AL_INVALID && src1type != AL_INVALID &&
                 trans != AL_INVALID)
         {
             ALsizei idx = (ALsizei)(mod - VECTOR_ITER_BEGIN(zone->mods));
@@ -1331,7 +1331,7 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
             for(j = 0;j < sounds_size;j++)
                 IncrementRef(&sounds[j]->ref);
             sounds = ExchangePtr((XchgPtr*)&presets[presets_size]->Sounds, sounds);
-            ExchangeInt(&presets[presets_size]->NumSounds, sounds_size);
+            presets[presets_size]->NumSounds = sounds_size;
             presets_size++;
         }
         free(sounds);
@@ -1342,7 +1342,7 @@ ALboolean loadSf2(Reader *stream, ALsoundfont *soundfont, ALCcontext *context)
     for(i = soundfont->NumPresets;i < presets_size;i++)
         IncrementRef(&presets[i]->ref);
     presets = ExchangePtr((XchgPtr*)&soundfont->Presets, presets);
-    ExchangeInt(&soundfont->NumPresets, presets_size);
+    soundfont->NumPresets = presets_size;
 
     free(presets);
 

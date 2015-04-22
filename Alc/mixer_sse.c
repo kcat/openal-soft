@@ -1,12 +1,5 @@
 #include "config.h"
 
-#ifdef IN_IDE_PARSER
-/* KDevelop's parser won't recognize these defines that get added by the -msse
- * switch used to compile this source. Without them, xmmintrin.h fails to
- * declare anything. */
-#define __MMX__
-#define __SSE__
-#endif
 #include <xmmintrin.h>
 
 #include "AL/al.h"

@@ -69,8 +69,8 @@ static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint Samples
 
     for(base = 0;base < SamplesToDo;)
     {
-        ALfloat temps[64];
-        ALuint td = minu(SamplesToDo-base, 64);
+        ALfloat temps[256];
+        ALuint td = minu(256, SamplesToDo-base);
 
         if(state->Enabled)
         {

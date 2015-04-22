@@ -87,7 +87,6 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, ALCdevice *Devi
 static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     const ALfloat fc = state->edge_coeff;
-    float oversample_buffer[64][4];
     ALuint base;
     ALuint it;
     ALuint ot;
@@ -95,8 +94,8 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint Samples
 
     for(base = 0;base < SamplesToDo;)
     {
-        ALfloat temps[64];
-        ALuint td = minu(SamplesToDo-base, 64);
+        float oversample_buffer[64][4];
+        ALuint td = minu(64, SamplesToDo-base);
 
         /* Perform 4x oversampling to avoid aliasing.   */
         /* Oversampling greatly improves distortion     */
@@ -148,20 +147,19 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint Samples
                 smp = ALfilterState_processSingle(&state->bandpass, smp);
                 oversample_buffer[it][ot] = smp;
             }
-
-            /* Fourth step, final, do attenuation and perform decimation, */
-            /* store only one sample out of 4.                            */
-            temps[it] = oversample_buffer[it][0] * state->attenuation;
         }
 
         for(kt = 0;kt < NumChannels;kt++)
         {
-            ALfloat gain = state->Gain[kt];
+            /* Fourth step, final, do attenuation and perform decimation,
+             * store only one sample out of 4.
+             */
+            ALfloat gain = state->Gain[kt] * state->attenuation;
             if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
                 continue;
 
             for(it = 0;it < td;it++)
-                SamplesOut[kt][base+it] += gain * temps[it];
+                SamplesOut[kt][base+it] += gain * oversample_buffer[it][0];
         }
 
         base += td;

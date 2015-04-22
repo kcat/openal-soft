@@ -9,7 +9,7 @@
 /* KDevelop's parser doesn't recognize the C99-standard restrict keyword, but
  * recent versions (at least 4.5.1) do recognize GCC's __restrict. */
 #define restrict __restrict
-#endif 
+#endif
 
 /* Define any available alignment declaration */
 #define ALIGN(x) ${ALIGN_DECL}
@@ -63,6 +63,9 @@
 
 /* Define if we have the PulseAudio backend */
 #cmakedefine HAVE_PULSEAUDIO
+
+/* Define if we have the JACK backend */
+#cmakedefine HAVE_JACK
 
 /* Define if we have the CoreAudio backend */
 #cmakedefine HAVE_COREAUDIO

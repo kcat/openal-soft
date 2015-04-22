@@ -255,13 +255,6 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
 #endif
 
 
-#ifdef IN_IDE_PARSER
-/* KDevelop's parser doesn't recognize the C99-standard restrict keyword, but
- * recent versions (at least 4.5.1) do recognize GCC's __restrict. */
-#define restrict __restrict
-#endif
-
-
 typedef ALint64SOFT ALint64;
 typedef ALuint64SOFT ALuint64;
 
@@ -600,6 +593,13 @@ enum DeviceType {
 };
 
 
+enum HrtfMode {
+    DisabledHrtf,
+    BasicHrtf,
+    FullHrtf
+};
+
+
 /* The maximum number of Ambisonics coefficients. For a given order (o), the
  * size needed will be (o+1)**2, thus zero-order has 1, first-order has 4,
  * second-order has 9, and third-order has 16. */
@@ -688,6 +688,7 @@ struct ALCdevice_struct
 
     /* HRTF filter tables */
     const struct Hrtf *Hrtf;
+    enum HrtfMode Hrtf_Mode;
     HrtfState Hrtf_State[MAX_OUTPUT_CHANNELS];
     HrtfParams Hrtf_Params[MAX_OUTPUT_CHANNELS];
     ALuint Hrtf_Offset;
@@ -759,6 +760,8 @@ struct ALCdevice_struct
 /* Must be less than 15 characters (16 including terminating null) for
  * compatibility with pthread_setname_np limitations. */
 #define MIXER_THREAD_NAME "alsoft-mixer"
+
+#define RECORD_THREAD_NAME "alsoft-record"
 
 
 struct ALCcontext_struct
@@ -845,6 +848,25 @@ ALsizei RingBufferSize(RingBuffer *ring);
 void WriteRingBuffer(RingBuffer *ring, const ALubyte *data, ALsizei len);
 void ReadRingBuffer(RingBuffer *ring, ALubyte *data, ALsizei len);
 
+typedef struct ll_ringbuffer ll_ringbuffer_t;
+typedef struct ll_ringbuffer_data {
+    char *buf;
+    size_t len;
+} ll_ringbuffer_data_t;
+ll_ringbuffer_t *ll_ringbuffer_create(size_t sz, size_t elem_sz);
+void ll_ringbuffer_free(ll_ringbuffer_t *rb);
+void ll_ringbuffer_get_read_vector(const ll_ringbuffer_t *rb, ll_ringbuffer_data_t *vec);
+void ll_ringbuffer_get_write_vector(const ll_ringbuffer_t *rb, ll_ringbuffer_data_t *vec);
+size_t ll_ringbuffer_read(ll_ringbuffer_t *rb, char *dest, size_t cnt);
+size_t ll_ringbuffer_peek(ll_ringbuffer_t *rb, char *dest, size_t cnt);
+void ll_ringbuffer_read_advance(ll_ringbuffer_t *rb, size_t cnt);
+size_t ll_ringbuffer_read_space(const ll_ringbuffer_t *rb);
+int ll_ringbuffer_mlock(ll_ringbuffer_t *rb);
+void ll_ringbuffer_reset(ll_ringbuffer_t *rb);
+size_t ll_ringbuffer_write(ll_ringbuffer_t *rb, const char *src, size_t cnt);
+void ll_ringbuffer_write_advance(ll_ringbuffer_t *rb, size_t cnt);
+size_t ll_ringbuffer_write_space(const ll_ringbuffer_t *rb);
+
 void ReadALConfig(void);
 void FreeALConfig(void);
 int ConfigValueExists(const char *blockName, const char *keyName);
@@ -884,7 +906,7 @@ inline ALint GetChannelIdxByName(const ALCdevice *device, enum Channel chan)
 
 extern FILE *LogFile;
 
-#if defined(__GNUC__) && !defined(IN_IDE_PARSER)
+#if defined(__GNUC__) && !defined(_WIN32) && !defined(IN_IDE_PARSER)
 #define AL_PRINT(T, MSG, ...) fprintf(LogFile, "AL lib: %s %s: "MSG, T, __FUNCTION__ , ## __VA_ARGS__)
 #else
 void al_print(const char *type, const char *func, const char *fmt, ...) DECL_FORMAT(printf, 3,4);

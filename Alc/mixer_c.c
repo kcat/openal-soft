@@ -13,12 +13,11 @@ static inline ALfloat point32(const ALfloat *vals, ALuint UNUSED(frac))
 static inline ALfloat lerp32(const ALfloat *vals, ALuint frac)
 { return lerp(vals[0], vals[1], frac * (1.0f/FRACTIONONE)); }
 static inline ALfloat cubic32(const ALfloat *vals, ALuint frac)
-{ return cubic(vals[-1], vals[0], vals[1], vals[2], frac * (1.0f/FRACTIONONE)); }
+{ return cubic(vals[-1], vals[0], vals[1], vals[2], frac); }
 
 const ALfloat *Resample_copy32_C(const ALfloat *src, ALuint UNUSED(frac),
-  ALuint increment, ALfloat *restrict dst, ALuint numsamples)
+  ALuint UNUSED(increment), ALfloat *restrict dst, ALuint numsamples)
 {
-    assert(increment==FRACTIONONE);
 #if defined(HAVE_SSE) || defined(HAVE_NEON)
     /* Avoid copying the source data if it's aligned like the destination. */
     if((((intptr_t)src)&15) == (((intptr_t)dst)&15))

@@ -345,7 +345,7 @@ static int ALCcaptureOSS_recordProc(void *ptr)
     int amt;
 
     SetRTPriority();
-    althrd_setname(althrd_current(), "alsoft-record");
+    althrd_setname(althrd_current(), RECORD_THREAD_NAME);
 
     frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
 

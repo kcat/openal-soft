@@ -60,7 +60,7 @@ void MidiSynth_Destruct(MidiSynth *self);
 ALenum MidiSynth_selectSoundfonts(MidiSynth *self, ALCcontext *context, ALsizei count, const ALuint *ids);
 inline void MidiSynth_setGain(MidiSynth *self, ALfloat gain) { self->Gain = gain; }
 inline ALfloat MidiSynth_getGain(const MidiSynth *self) { return self->Gain; }
-inline void MidiSynth_setState(MidiSynth *self, ALenum state) { ExchangeInt(&self->State, state); }
+inline void MidiSynth_setState(MidiSynth *self, ALenum state) { self->State = state; }
 inline ALenum MidiSynth_getState(const MidiSynth *self) { return self->State; }
 void MidiSynth_stop(MidiSynth *self);
 inline void MidiSynth_reset(MidiSynth *self) { MidiSynth_stop(self); }
@@ -90,7 +90,7 @@ struct MidiSynthVtable {
     void (*const reset)(MidiSynth *self);
 
     void (*const update)(MidiSynth *self, ALCdevice *device);
-    void (*const process)(MidiSynth *self, ALuint samples, ALfloat (*restrict DryBuffer)[BUFFERSIZE]);
+    void (*const process)(MidiSynth *self, ALuint samples, ALfloat (*restrict DryBuffer)[BUFFERSIZE], ALuint NumChannels);
 
     void (*const Delete)(void *ptr);
 };
@@ -102,7 +102,7 @@ DECLARE_THUNK1(T, MidiSynth, void, setGain, ALfloat)                          \
 DECLARE_THUNK(T, MidiSynth, void, stop)                                       \
 DECLARE_THUNK(T, MidiSynth, void, reset)                                      \
 DECLARE_THUNK1(T, MidiSynth, void, update, ALCdevice*)                        \
-DECLARE_THUNK2(T, MidiSynth, void, process, ALuint, ALfloatBUFFERSIZE*restrict) \
+DECLARE_THUNK3(T, MidiSynth, void, process, ALuint, ALfloatBUFFERSIZE*restrict, ALuint) \
 static void T##_MidiSynth_Delete(void *ptr)                                   \
 { T##_Delete(STATIC_UPCAST(T, MidiSynth, (MidiSynth*)ptr)); }                 \
                                                                               \

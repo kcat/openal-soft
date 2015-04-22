@@ -519,9 +519,7 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SrcFloatProp
             CHECKVAL(isfinite(values[0]) && isfinite(values[1]) && isfinite(values[2]));
 
             LockContext(Context);
-            Source->Position[0] = values[0];
-            Source->Position[1] = values[1];
-            Source->Position[2] = values[2];
+            aluVectorSet(&Source->Position, values[0], values[1], values[2], 1.0f);
             UnlockContext(Context);
             ATOMIC_STORE(&Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
@@ -530,9 +528,7 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SrcFloatProp
             CHECKVAL(isfinite(values[0]) && isfinite(values[1]) && isfinite(values[2]));
 
             LockContext(Context);
-            Source->Velocity[0] = values[0];
-            Source->Velocity[1] = values[1];
-            Source->Velocity[2] = values[2];
+            aluVectorSet(&Source->Velocity, values[0], values[1], values[2], 0.0f);
             UnlockContext(Context);
             ATOMIC_STORE(&Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
@@ -541,9 +537,7 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SrcFloatProp
             CHECKVAL(isfinite(values[0]) && isfinite(values[1]) && isfinite(values[2]));
 
             LockContext(Context);
-            Source->Direction[0] = values[0];
-            Source->Direction[1] = values[1];
-            Source->Direction[2] = values[2];
+            aluVectorSet(&Source->Direction, values[0], values[1], values[2], 0.0f);
             UnlockContext(Context);
             ATOMIC_STORE(&Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
@@ -1054,25 +1048,25 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SrcFloatProp
 
         case AL_POSITION:
             LockContext(Context);
-            values[0] = Source->Position[0];
-            values[1] = Source->Position[1];
-            values[2] = Source->Position[2];
+            values[0] = Source->Position.v[0];
+            values[1] = Source->Position.v[1];
+            values[2] = Source->Position.v[2];
             UnlockContext(Context);
             return AL_TRUE;
 
         case AL_VELOCITY:
             LockContext(Context);
-            values[0] = Source->Velocity[0];
-            values[1] = Source->Velocity[1];
-            values[2] = Source->Velocity[2];
+            values[0] = Source->Velocity.v[0];
+            values[1] = Source->Velocity.v[1];
+            values[2] = Source->Velocity.v[2];
             UnlockContext(Context);
             return AL_TRUE;
 
         case AL_DIRECTION:
             LockContext(Context);
-            values[0] = Source->Direction[0];
-            values[1] = Source->Direction[1];
-            values[2] = Source->Direction[2];
+            values[0] = Source->Direction.v[0];
+            values[1] = Source->Direction.v[1];
+            values[2] = Source->Direction.v[2];
             UnlockContext(Context);
             return AL_TRUE;
 
@@ -2464,15 +2458,9 @@ static ALvoid InitSourceParams(ALsource *Source)
     Source->InnerAngle = 360.0f;
     Source->OuterAngle = 360.0f;
     Source->Pitch = 1.0f;
-    Source->Position[0] = 0.0f;
-    Source->Position[1] = 0.0f;
-    Source->Position[2] = 0.0f;
-    Source->Velocity[0] = 0.0f;
-    Source->Velocity[1] = 0.0f;
-    Source->Velocity[2] = 0.0f;
-    Source->Direction[0] = 0.0f;
-    Source->Direction[1] = 0.0f;
-    Source->Direction[2] = 0.0f;
+    aluVectorSet(&Source->Position, 0.0f, 0.0f, 0.0f, 1.0f);
+    aluVectorSet(&Source->Velocity, 0.0f, 0.0f, 0.0f, 0.0f);
+    aluVectorSet(&Source->Direction, 0.0f, 0.0f, 0.0f, 0.0f);
     Source->Orientation[0][0] =  0.0f;
     Source->Orientation[0][1] =  0.0f;
     Source->Orientation[0][2] = -1.0f;
@@ -2603,11 +2591,11 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         {
             ALsizei j;
             for(j = 0;j < HRTF_HISTORY_LENGTH;j++)
-                voice->Direct.Hrtf.State[i].History[j] = 0.0f;
+                voice->Direct.Hrtf[i].State.History[j] = 0.0f;
             for(j = 0;j < HRIR_LENGTH;j++)
             {
-                voice->Direct.Hrtf.State[i].Values[j][0] = 0.0f;
-                voice->Direct.Hrtf.State[i].Values[j][1] = 0.0f;
+                voice->Direct.Hrtf[i].State.Values[j][0] = 0.0f;
+                voice->Direct.Hrtf[i].State.Values[j][1] = 0.0f;
             }
         }
         for(i = 0;i < (ALsizei)device->NumAuxSends;i++)

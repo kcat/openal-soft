@@ -54,6 +54,11 @@ const ALfloat *Resample_lerp32_SSE2(const ALfloat *src, ALuint frac, ALuint incr
 const ALfloat *Resample_lerp32_SSE41(const ALfloat *src, ALuint frac, ALuint increment,
                                      ALfloat *restrict dst, ALuint numsamples);
 
+const ALfloat *Resample_cubic32_SSE2(const ALfloat *src, ALuint frac, ALuint increment,
+                                     ALfloat *restrict dst, ALuint numsamples);
+const ALfloat *Resample_cubic32_SSE41(const ALfloat *src, ALuint frac, ALuint increment,
+                                      ALfloat *restrict dst, ALuint numsamples);
+
 /* Neon mixers */
 void MixHrtf_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
                   ALuint Counter, ALuint Offset, ALuint OutPos, const ALuint IrSize,

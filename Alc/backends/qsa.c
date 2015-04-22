@@ -112,7 +112,6 @@ static void deviceList(int type, vector_DevMap *devmap)
     DevMap entry;
     char name[1024];
     struct snd_ctl_hw_info info;
-    void* temp;
 
     max_cards = snd_cards();
     if(max_cards < 0)
@@ -889,8 +888,6 @@ void alc_qsa_deinit(void)
 
 void alc_qsa_probe(enum DevProbe type)
 {
-    ALuint i;
-
     switch (type)
     {
         case ALL_DEVICE_PROBE:

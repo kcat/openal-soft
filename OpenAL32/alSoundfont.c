@@ -360,26 +360,26 @@ ALsoundfont *ALsoundfont_getDefSoundfont(ALCcontext *context)
 
 void ALsoundfont_deleteSoundfont(ALsoundfont *self, ALCdevice *device)
 {
-    ALsfpreset **presets;
-    ALsizei num_presets;
+    ALsfpreset **presets = self->Presets;
+    ALsizei num_presets = self->NumPresets;
     VECTOR(ALbuffer*) buffers;
     ALsizei i;
 
     VECTOR_INIT(buffers);
-    presets = ExchangePtr((XchgPtr*)&self->Presets, NULL);
-    num_presets = ExchangeInt(&self->NumPresets, 0);
+
+    self->Presets = NULL;
+    self->NumPresets = 0;
 
     for(i = 0;i < num_presets;i++)
     {
         ALsfpreset *preset = presets[i];
-        ALfontsound **sounds;
-        ALsizei num_sounds;
+        ALfontsound **sounds = preset->Sounds;
+        ALsizei num_sounds = preset->NumSounds;
         ALboolean deleting;
         ALsizei j;
 
-        sounds = ExchangePtr((XchgPtr*)&preset->Sounds, NULL);
-        num_sounds = ExchangeInt(&preset->NumSounds, 0);
-
+        preset->Sounds = NULL;
+        preset->NumSounds = 0;
         DeletePreset(device, preset);
         preset = NULL;
 

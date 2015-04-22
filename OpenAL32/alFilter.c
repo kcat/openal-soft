@@ -388,12 +388,12 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
             break;
         case ALfilterType_HighPass:
             alpha = sinf(w0) * sinhf(logf(2.0f) / 2.0f * bandwidth * w0 / sinf(w0));
-            filter->b[0] = (1.0f + cosf(w0)) / 2.0f;
-            filter->b[1] =  1.0f + cosf(w0);
-            filter->b[2] = (1.0f + cosf(w0)) / 2.0f;
-            filter->a[0] =  1.0f + alpha;
-            filter->a[1] = -2.0f * cosf(w0);
-            filter->a[2] =  1.0f - alpha;
+            filter->b[0] =  (1.0f + cosf(w0)) / 2.0f;
+            filter->b[1] = -(1.0f + cosf(w0));
+            filter->b[2] =  (1.0f + cosf(w0)) / 2.0f;
+            filter->a[0] =   1.0f + alpha;
+            filter->a[1] =  -2.0f * cosf(w0);
+            filter->a[2] =   1.0f - alpha;
             break;
         case ALfilterType_BandPass:
             alpha = sinf(w0) * sinhf(logf(2.0f) / 2.0f * bandwidth * w0 / sinf(w0));

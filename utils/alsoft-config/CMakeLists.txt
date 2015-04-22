@@ -4,7 +4,7 @@ include_directories("${alsoft-config_BINARY_DIR}")
 
 # Need Qt 4.8.0 or newer for the iconset theme attribute to work
 find_package(Qt4 4.8.0 COMPONENTS QtCore QtGui)
-if(QT4_FOUND)
+if(QT4_FOUND AND NOT ANDROID)
     include(${QT_USE_FILE})
 
     set(alsoft-config_SRCS  main.cpp

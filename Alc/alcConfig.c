@@ -33,6 +33,7 @@
 #include <ctype.h>
 #include <string.h>
 #ifdef _WIN32_IE
+#include <windows.h>
 #include <shlobj.h>
 #endif
 

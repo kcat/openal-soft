@@ -1910,10 +1910,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     UpdateClockBase(device);
 
+    device->Hrtf_Status = ALC_HRTF_DISABLED_SOFT;
     if(device->Type != Loopback && ((device->Flags&DEVICE_HRTF_REQUEST) || GetConfigValueBool(NULL, "hrtf", 0)))
     {
         if(!FindHrtfFormat(&device->FmtChans, &device->Frequency))
+        {
             device->Flags &= ~DEVICE_HRTF_REQUEST;
+            device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
+        }
         else
             device->Flags |= DEVICE_CHANNELS_REQUEST | DEVICE_FREQUENCY_REQUEST |
                              DEVICE_HRTF_REQUEST;
@@ -1927,6 +1931,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             ERR("Requested format not HRTF compatible: %s, %uhz\n",
                 DevFmtChannelsString(device->FmtChans), device->Frequency);
             device->Flags &= ~DEVICE_HRTF_REQUEST;
+            device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
         }
     }
 
@@ -2018,10 +2023,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             usehrtf = ((device->Flags&DEVICE_HRTF_REQUEST) || headphones);
 
         if(usehrtf)
+        {
+            device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
             device->Hrtf = GetHrtf(device->FmtChans, device->Frequency);
+        }
         if(device->Hrtf)
         {
             device->Hrtf_Mode = hrtf_mode;
+            device->Hrtf_Status = ALC_HRTF_ENABLED_SOFT;
             TRACE("HRTF enabled\n");
             free(device->Bs2b);
             device->Bs2b = NULL;
@@ -2740,11 +2749,11 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             return 1;
 
         case ALC_ATTRIBUTES_SIZE:
-            values[0] = 15;
+            values[0] = 17;
             return 1;
 
         case ALC_ALL_ATTRIBUTES:
-            if(size < 15)
+            if(size < 17)
             {
                 alcSetError(device, ALC_INVALID_VALUE);
                 return 0;
@@ -2782,6 +2791,9 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
 
             values[i++] = ALC_HRTF_SOFT;
             values[i++] = (device->Hrtf ? ALC_TRUE : ALC_FALSE);
+
+            values[i++] = ALC_HRTF_STATUS_SOFT;
+            values[i++] = device->Hrtf_Status;
 
             values[i++] = 0;
             return i;
@@ -2846,6 +2858,10 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             values[0] = (device->Hrtf ? ALC_TRUE : ALC_FALSE);
             return 1;
 
+        case ALC_HRTF_STATUS_SOFT:
+            values[0] = device->Hrtf_Status;
+            break;
+
         default:
             alcSetError(device, ALC_INVALID_ENUM);
             return 0;
@@ -2888,11 +2904,11 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
         switch(pname)
         {
             case ALC_ATTRIBUTES_SIZE:
-                *values = 17;
+                *values = 19;
                 break;
 
             case ALC_ALL_ATTRIBUTES:
-                if(size < 17)
+                if(size < 19)
                     alcSetError(device, ALC_INVALID_VALUE);
                 else
                 {
@@ -2930,6 +2946,9 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
 
                     values[i++] = ALC_HRTF_SOFT;
                     values[i++] = (device->Hrtf ? ALC_TRUE : ALC_FALSE);
+
+                    values[i++] = ALC_HRTF_STATUS_SOFT;
+                    values[i++] = device->Hrtf_Status;
 
                     values[i++] = ALC_DEVICE_CLOCK_SOFT;
                     values[i++] = device->ClockBase +

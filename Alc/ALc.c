@@ -162,6 +162,8 @@ static const ALCfunction alcFunctions[] = {
 
     DECL(alcGetInteger64vSOFT),
 
+    DECL(alcResetDeviceSOFT),
+
     DECL(alEnable),
     DECL(alDisable),
     DECL(alIsEnabled),
@@ -3288,6 +3290,42 @@ ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *Context)
     return Device;
 }
 
+
+/* alcResetDeviceSOFT
+ *
+ * Resets the given device output, using the specified attribute list.
+ */
+ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCint *attribs)
+{
+    ALCenum err;
+
+    LockLists();
+    if(!(device=VerifyDevice(device)) || device->Type == Capture || !device->Connected)
+    {
+        UnlockLists();
+        alcSetError(device, ALC_INVALID_DEVICE);
+        if(device) ALCdevice_DecRef(device);
+        return ALC_FALSE;
+    }
+
+    if((err=UpdateDeviceParams(device, attribs)) != ALC_NO_ERROR)
+    {
+        UnlockLists();
+        alcSetError(device, err);
+        if(err == ALC_INVALID_DEVICE)
+        {
+            V0(device->Backend,lock)();
+            aluHandleDisconnect(device);
+            V0(device->Backend,unlock)();
+        }
+        ALCdevice_DecRef(device);
+        return ALC_FALSE;
+    }
+    UnlockLists();
+    ALCdevice_DecRef(device);
+
+    return ALC_TRUE;
+}
 
 /* alcOpenDevice
  *

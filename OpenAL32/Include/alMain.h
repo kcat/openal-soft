@@ -49,6 +49,10 @@
 #define ALC_HRTF_REQUIRED_SOFT                   0x0003
 #define ALC_HRTF_HEADPHONES_DETECTED_SOFT        0x0004
 #define ALC_HRTF_UNSUPPORTED_FORMAT_SOFT         0x0005
+typedef ALCboolean (ALC_APIENTRY*LPALCRESETDEVICESOFT)(ALCdevice *device, const ALCint *attribs);
+#ifdef AL_ALEXT_PROTOTYPES
+ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCint *attribs);
+#endif
 #endif
 
 #ifndef ALC_SOFT_midi_interface

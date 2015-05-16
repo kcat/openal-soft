@@ -1991,6 +1991,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     {
         bool headphones = device->IsHeadphones;
         enum HrtfMode hrtf_mode = FullHrtf;
+        ALCenum hrtf_status = device->Hrtf_Status;
         const char *mode;
         int bs2blevel;
         int usehrtf;
@@ -2020,9 +2021,24 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
 
         if(device->Type == Loopback || !ConfigValueBool(NULL, "hrtf", &usehrtf))
-            usehrtf = ((device->Flags&DEVICE_HRTF_REQUEST) || headphones);
+        {
+            usehrtf = (headphones || (device->Flags&DEVICE_HRTF_REQUEST));
+            if(headphones)
+                hrtf_status = ALC_HRTF_HEADPHONES_DETECTED_SOFT;
+            else if(usehrtf)
+                hrtf_status = ALC_HRTF_ENABLED_SOFT;
+        }
+        else
+        {
+            if(!usehrtf)
+                hrtf_status = ALC_HRTF_DENIED_SOFT;
+            else
+                hrtf_status = ALC_HRTF_REQUIRED_SOFT;
+        }
 
-        if(usehrtf)
+        if(!usehrtf)
+            device->Hrtf_Status = hrtf_status;
+        else
         {
             device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
             device->Hrtf = GetHrtf(device->FmtChans, device->Frequency);
@@ -2030,7 +2046,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(device->Hrtf)
         {
             device->Hrtf_Mode = hrtf_mode;
-            device->Hrtf_Status = ALC_HRTF_ENABLED_SOFT;
+            device->Hrtf_Status = hrtf_status;
             TRACE("HRTF enabled\n");
             free(device->Bs2b);
             device->Bs2b = NULL;

@@ -592,13 +592,8 @@ static ALCbackend* ALCjackBackendFactory_createBackend(ALCjackBackendFactory* UN
     if(type == ALCbackend_Playback)
     {
         ALCjackPlayback *backend;
-
-        backend = ALCjackPlayback_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCjackPlayback)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCjackPlayback_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
 

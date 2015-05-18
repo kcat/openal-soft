@@ -1039,26 +1039,16 @@ static ALCbackend* ALCdsoundBackendFactory_createBackend(ALCdsoundBackendFactory
     if(type == ALCbackend_Playback)
     {
         ALCdsoundPlayback *backend;
-
-        backend = ALCdsoundPlayback_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCdsoundPlayback)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCdsoundPlayback_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
 
     if(type == ALCbackend_Capture)
     {
         ALCdsoundCapture *backend;
-
-        backend = ALCdsoundCapture_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCdsoundCapture)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCdsoundCapture_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
 

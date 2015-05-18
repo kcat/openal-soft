@@ -433,30 +433,10 @@ static ALCbackend* ALCwaveBackendFactory_createBackend(ALCwaveBackendFactory* UN
     if(type == ALCbackend_Playback)
     {
         ALCwaveBackend *backend;
-
-        backend = ALCwaveBackend_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCwaveBackend)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCwaveBackend_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
 
     return NULL;
-}
-
-void alc_wave_probe(enum DevProbe type)
-{
-    if(!ConfigValueExists("wave", "file"))
-        return;
-
-    switch(type)
-    {
-        case ALL_DEVICE_PROBE:
-            AppendAllDevicesList(waveDevice);
-            break;
-        case CAPTURE_DEVICE_PROBE:
-            break;
-    }
 }

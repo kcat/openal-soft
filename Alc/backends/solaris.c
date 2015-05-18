@@ -329,13 +329,8 @@ ALCbackend* ALCsolarisBackendFactory_createBackend(ALCsolarisBackendFactory* UNU
     if(type == ALCbackend_Playback)
     {
         ALCsolarisBackend *backend;
-
-        backend = ALCsolarisBackend_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCsolarisBackend)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCsolarisBackend_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
 

@@ -606,25 +606,15 @@ ALCbackend* ALCossBackendFactory_createBackend(ALCossBackendFactory* UNUSED(self
     if(type == ALCbackend_Playback)
     {
         ALCplaybackOSS *backend;
-
-        backend = ALCplaybackOSS_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCplaybackOSS)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCplaybackOSS_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
     if(type == ALCbackend_Capture)
     {
         ALCcaptureOSS *backend;
-
-        backend = ALCcaptureOSS_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCcaptureOSS)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCcaptureOSS_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
 

@@ -214,13 +214,8 @@ static ALCbackend* ALCnullBackendFactory_createBackend(ALCnullBackendFactory* UN
     if(type == ALCbackend_Playback)
     {
         ALCnullBackend *backend;
-
-        backend = ALCnullBackend_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCnullBackend)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCnullBackend_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
 

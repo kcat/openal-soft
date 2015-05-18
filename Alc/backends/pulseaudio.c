@@ -1689,25 +1689,15 @@ static ALCbackend* ALCpulseBackendFactory_createBackend(ALCpulseBackendFactory* 
     if(type == ALCbackend_Playback)
     {
         ALCpulsePlayback *backend;
-
-        backend = ALCpulsePlayback_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCpulsePlayback)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCpulsePlayback_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
     if(type == ALCbackend_Capture)
     {
         ALCpulseCapture *backend;
-
-        backend = ALCpulseCapture_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCpulseCapture)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCpulseCapture_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
 

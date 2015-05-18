@@ -413,6 +413,18 @@ static void T##_Delete(void *ptr) { al_free(ptr); }
 } while(0)
 
 
+#define EXTRACT_NEW_ARGS(...)  __VA_ARGS__);                                  \
+    }                                                                         \
+} while(0)
+
+#define NEW_OBJ(_ptr, T) do {                                                 \
+    _ptr = T##_New(sizeof(*_ptr));                                            \
+    if(_ptr)                                                                  \
+    {                                                                         \
+        memset(_ptr, 0, sizeof(*_ptr));                                       \
+        T##_Construct(_ptr, EXTRACT_NEW_ARGS
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif

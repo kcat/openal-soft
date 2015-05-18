@@ -1352,25 +1352,15 @@ static ALCbackend* ALCalsaBackendFactory_createBackend(ALCalsaBackendFactory* UN
     if(type == ALCbackend_Playback)
     {
         ALCplaybackAlsa *backend;
-
-        backend = ALCplaybackAlsa_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCplaybackAlsa)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCplaybackAlsa_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
     if(type == ALCbackend_Capture)
     {
         ALCcaptureAlsa *backend;
-
-        backend = ALCcaptureAlsa_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCcaptureAlsa)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCcaptureAlsa_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
 

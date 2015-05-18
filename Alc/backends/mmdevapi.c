@@ -1756,25 +1756,15 @@ static ALCbackend* ALCmmdevBackendFactory_createBackend(ALCmmdevBackendFactory* 
     if(type == ALCbackend_Playback)
     {
         ALCmmdevPlayback *backend;
-
-        backend = ALCmmdevPlayback_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCmmdevPlayback)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCmmdevPlayback_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
     if(type == ALCbackend_Capture)
     {
         ALCmmdevCapture *backend;
-
-        backend = ALCmmdevCapture_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCmmdevCapture)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCmmdevCapture_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
 

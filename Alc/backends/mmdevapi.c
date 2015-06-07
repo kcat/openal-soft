@@ -1427,6 +1427,7 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     WAVEFORMATEXTENSIBLE OutputType;
+    WAVEFORMATEX *wfx = NULL;
     REFERENCE_TIME buf_time;
     UINT32 buffer_len;
     void *ptr = NULL;
@@ -1519,13 +1520,34 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
                                         OutputType.Format.nBlockAlign;
 
     hr = IAudioClient_IsFormatSupported(self->client,
-        AUDCLNT_SHAREMODE_SHARED, &OutputType.Format, NULL
+        AUDCLNT_SHAREMODE_SHARED, &OutputType.Format, &wfx
     );
     if(FAILED(hr))
     {
         ERR("Failed to check format support: 0x%08lx\n", hr);
         return hr;
     }
+
+    /* FIXME: We should do conversion/resampling if we didn't get a matching format. */
+    if(wfx->nSamplesPerSec != OutputType.Format.nSamplesPerSec ||
+       wfx->wBitsPerSample != OutputType.Format.wBitsPerSample ||
+       wfx->nChannels != OutputType.Format.nChannels ||
+       wfx->nBlockAlign != OutputType.Format.nBlockAlign)
+    {
+        ERR("Did not get matching format, wanted: %s %s %uhz, got: %d channel(s) %d-bit %luhz\n",
+            DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType), device->Frequency,
+            wfx->nChannels, wfx->wBitsPerSample, wfx->nSamplesPerSec);
+        CoTaskMemFree(wfx);
+        return E_FAIL;
+    }
+
+    if(!MakeExtensible(&OutputType, wfx))
+    {
+        CoTaskMemFree(wfx);
+        return E_FAIL;
+    }
+    CoTaskMemFree(wfx);
+    wfx = NULL;
 
     hr = IAudioClient_Initialize(self->client,
         AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,

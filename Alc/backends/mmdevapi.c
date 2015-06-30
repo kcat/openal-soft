@@ -176,14 +176,40 @@ static void get_device_formfactor(IMMDevice *device, EndpointFormFactor *formfac
 
 static void add_device(IMMDevice *device, LPCWSTR devid, vector_DevMap *list)
 {
+    int count = 0;
+    al_string tmpname;
     DevMap entry;
 
+    AL_STRING_INIT(tmpname);
     AL_STRING_INIT(entry.name);
+
     entry.devid = strdupW(devid);
-    get_device_name(device, &entry.name);
+    get_device_name(device, &tmpname);
+
+    while(1)
+    {
+        const DevMap *iter;
+
+        al_string_copy(&entry.name, tmpname);
+        if(count != 0)
+        {
+            char str[64];
+            snprintf(str, sizeof(str), " #%d", count+1);
+            al_string_append_cstr(&entry.name, str);
+        }
+
+#define MATCH_ENTRY(i) (al_string_cmp(entry.name, (i)->name) == 0)
+        VECTOR_FIND_IF(iter, const DevMap, *list, MATCH_ENTRY);
+        if(iter == VECTOR_ITER_END(*list))
+            break;
+#undef MATCH_ENTRY
+        count++;
+    }
 
     TRACE("Got device \"%s\", \"%ls\"\n", al_string_get_cstr(entry.name), entry.devid);
     VECTOR_PUSH_BACK(*list, entry);
+
+    AL_STRING_DEINIT(tmpname);
 }
 
 static LPWSTR get_device_id(IMMDevice *device)

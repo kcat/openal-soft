@@ -1123,7 +1123,7 @@ typedef struct ALCmmdevCapture {
 
     HANDLE MsgEvent;
 
-    RingBuffer *Ring;
+    ll_ringbuffer_t *Ring;
 
     volatile int killNow;
     althrd_t thread;
@@ -1177,7 +1177,7 @@ static void ALCmmdevCapture_Construct(ALCmmdevCapture *self, ALCdevice *device)
 
 static void ALCmmdevCapture_Destruct(ALCmmdevCapture *self)
 {
-    DestroyRingBuffer(self->Ring);
+    ll_ringbuffer_free(self->Ring);
     self->Ring = NULL;
 
     if(self->NotifyEvent != NULL)
@@ -1236,7 +1236,7 @@ FORCE_ALIGN int ALCmmdevCapture_recordProc(void *arg)
                 break;
             }
 
-            WriteRingBuffer(self->Ring, data, numsamples);
+            ll_ringbuffer_write(self->Ring, (char*)data, numsamples);
 
             hr = IAudioCaptureClient_ReleaseBuffer(self->capture, numsamples);
             if(FAILED(hr))
@@ -1398,7 +1398,7 @@ static void ALCmmdevCapture_close(ALCmmdevCapture *self)
     if(PostThreadMessage(ThreadID, WM_USER_CloseDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCmmdevProxy, self)))
         (void)WaitForResponse(&req);
 
-    DestroyRingBuffer(self->Ring);
+    ll_ringbuffer_free(self->Ring);
     self->Ring = NULL;
 
     CloseHandle(self->MsgEvent);
@@ -1566,8 +1566,9 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
         return hr;
     }
 
-    buffer_len = maxu(device->UpdateSize*device->NumUpdates, buffer_len);
-    self->Ring = CreateRingBuffer(OutputType.Format.nBlockAlign, buffer_len);
+    buffer_len = maxu(device->UpdateSize*device->NumUpdates + 1, buffer_len);
+    ll_ringbuffer_free(self->Ring);
+    self->Ring = ll_ringbuffer_create(buffer_len, OutputType.Format.nBlockAlign);
     if(!self->Ring)
     {
         ERR("Failed to allocate capture ring buffer\n");
@@ -1659,14 +1660,14 @@ static void ALCmmdevCapture_stopProxy(ALCmmdevCapture *self)
 
 ALuint ALCmmdevCapture_availableSamples(ALCmmdevCapture *self)
 {
-    return RingBufferSize(self->Ring);
+    return ll_ringbuffer_read_space(self->Ring);
 }
 
 ALCenum ALCmmdevCapture_captureSamples(ALCmmdevCapture *self, ALCvoid *buffer, ALCuint samples)
 {
     if(ALCmmdevCapture_availableSamples(self) < samples)
         return ALC_INVALID_VALUE;
-    ReadRingBuffer(self->Ring, buffer, samples);
+    ll_ringbuffer_read(self->Ring, buffer, samples);
     return ALC_NO_ERROR;
 }
 

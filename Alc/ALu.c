@@ -105,9 +105,10 @@ extern inline void aluMatrixSet(aluMatrix *restrict matrix, ALfloat m00, ALfloat
  * output. Things like effects and B-Format decoding will want to write to the
  * virtual channels so that they can be mixed with HRTF in full 3D.
  *
- * Sources that get mixed using HRTF directly will need to offset the output
- * buffer so that they skip the virtual output and write to the actual output
- * channels. This is the reason you'll see
+ * Sources that get mixed using HRTF directly (or that want to skip HRTF
+ * completely) will need to offset the output buffer so that they skip the
+ * virtual output and write to the actual output channels. This is the reason
+ * you'll see
  *
  * voice->Direct.OutBuffer += voice->Direct.OutChannels;
  * voice->Direct.OutChannels = 2;

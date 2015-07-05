@@ -143,16 +143,17 @@ static inline ALfloat aluDotproduct(const aluVector *vec1, const aluVector *vec2
     return vec1->v[0]*vec2->v[0] + vec1->v[1]*vec2->v[1] + vec1->v[2]*vec2->v[2];
 }
 
-static inline void aluNormalize(ALfloat *vec)
+static inline ALfloat aluNormalize(ALfloat *vec)
 {
-    ALfloat lengthsqr = vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2];
-    if(lengthsqr > 0.0f)
+    ALfloat length = sqrtf(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
+    if(length > 0.0f)
     {
-        ALfloat inv_length = 1.0f/sqrtf(lengthsqr);
+        ALfloat inv_length = 1.0f/length;
         vec[0] *= inv_length;
         vec[1] *= inv_length;
         vec[2] *= inv_length;
     }
+    return length;
 }
 
 static inline ALvoid aluMatrixVector(aluVector *vec, const aluMatrix *mtx)
@@ -805,15 +806,14 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         Velocity.v[2] += lvelocity->v[2];
     }
 
+    aluNormalize(Direction.v);
     SourceToListener.v[0] = -Position.v[0];
     SourceToListener.v[1] = -Position.v[1];
     SourceToListener.v[2] = -Position.v[2];
     SourceToListener.v[3] = 0.0f;
-    aluNormalize(SourceToListener.v);
-    aluNormalize(Direction.v);
+    Distance = aluNormalize(SourceToListener.v);
 
     /* Calculate distance attenuation */
-    Distance = sqrtf(aluDotproduct(&Position, &Position));
     ClampedDist = Distance;
 
     Attenuation = 1.0f;
@@ -1013,10 +1013,9 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
 
         if(Distance > FLT_EPSILON)
         {
-            ALfloat invlen = 1.0f/Distance;
-            dir.v[0] = Position.v[0] * invlen;
-            dir.v[1] = Position.v[1] * invlen;
-            dir.v[2] = Position.v[2] * invlen * ZScale;
+            dir.v[0] = -SourceToListener.v[0];
+            dir.v[1] = -SourceToListener.v[1];
+            dir.v[2] = -SourceToListener.v[2] * ZScale;
 
             /* Calculate elevation and azimuth only when the source is not at
              * the listener. This prevents +0 and -0 Z from producing
@@ -1025,8 +1024,13 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             ev = asinf(clampf(dir.v[1], -1.0f, 1.0f));
             az = atan2f(dir.v[0], -dir.v[2]);
         }
-        if(radius > Distance)
-            dirfact *= Distance / radius;
+        if(radius > 0.0f)
+        {
+            if(radius >= Distance)
+                dirfact *= Distance / radius * 0.5f;
+            else
+                dirfact *= 1.0f - (asinf(radius / Distance) / F_PI);
+        }
 
         /* Check to see if the HRIR is already moving. */
         if(voice->Direct.Moving)
@@ -1069,13 +1073,23 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         ALfloat radius = ALSource->Radius;
         ALfloat Target[MAX_OUTPUT_CHANNELS];
 
-        /* Normalize the length, and compute panned gains. */
-        if(Distance > FLT_EPSILON || radius > FLT_EPSILON)
+        /* Get the localized direction, and compute panned gains. */
+        if(Distance > FLT_EPSILON)
         {
-            ALfloat invlen = 1.0f/maxf(Distance, radius);
-            dir[0] = Position.v[0] * invlen;
-            dir[1] = Position.v[1] * invlen;
-            dir[2] = Position.v[2] * invlen * ZScale;
+            dir[0] = -SourceToListener.v[0];
+            dir[1] = -SourceToListener.v[1];
+            dir[2] = -SourceToListener.v[2] * ZScale;
+        }
+        if(radius > 0.0f)
+        {
+            ALfloat dirfact;
+            if(radius >= Distance)
+                dirfact = Distance / radius * 0.5f;
+            else
+                dirfact = 1.0f - (asinf(radius / Distance) / F_PI);
+            dir[0] *= dirfact;
+            dir[1] *= dirfact;
+            dir[2] *= dirfact;
         }
         ComputeDirectionalGains(Device, dir, DryGain, Target);
 

@@ -42,6 +42,7 @@
 #ifndef ALC_SOFT_HRTF
 #define ALC_SOFT_HRTF 1
 #define ALC_HRTF_SOFT                            0x1992
+#define ALC_DONT_CARE_SOFT                       0x0002
 #define ALC_HRTF_STATUS_SOFT                     0x1993
 #define ALC_HRTF_DISABLED_SOFT                   0x0000
 #define ALC_HRTF_ENABLED_SOFT                    0x0001
@@ -764,8 +765,13 @@ struct ALCdevice_struct
 #define DEVICE_CHANNELS_REQUEST                  (1<<2)
 // Sample type was requested by the config file
 #define DEVICE_SAMPLE_TYPE_REQUEST               (1<<3)
-// HRTF was requested by the app
-#define DEVICE_HRTF_REQUEST                      (1<<4)
+// Mask and flags to indicate HRTF mode requested
+#define DEVICE_HRTF_REQUEST_MASK                 ((1<<4) | (1<<5))
+enum HrtfRequestMode {
+    Hrtf_Default = 0,
+    Hrtf_Enable = 1<<4,
+    Hrtf_Disable = 2<<4,
+};
 
 // Specifies if the DSP is paused at user request
 #define DEVICE_PAUSED                            (1<<30)

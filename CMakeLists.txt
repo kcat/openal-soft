@@ -37,6 +37,7 @@ OPTION(ALSOFT_EXAMPLES  "Build and install example programs"  ON)
 
 OPTION(ALSOFT_CONFIG "Install alsoft.conf sample configuration file" ON)
 OPTION(ALSOFT_HRTF_DEFS "Install HRTF definition files" ON)
+OPTION(ALSOFT_INSTALL "Install headers and libraries" ON)
 
 
 IF(WIN32)
@@ -1111,22 +1112,24 @@ ENDIF()
 
 TARGET_LINK_LIBRARIES(${LIBNAME} common ${EXTRA_LIBS})
 
-# Add an install target here
-INSTALL(TARGETS ${LIBNAME}
-        RUNTIME DESTINATION bin
-        LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-        ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
-)
-INSTALL(FILES include/AL/al.h
-              include/AL/alc.h
-              include/AL/alext.h
-              include/AL/efx.h
-              include/AL/efx-creative.h
-              include/AL/efx-presets.h
-        DESTINATION include/AL
-)
-INSTALL(FILES "${OpenAL_BINARY_DIR}/openal.pc"
-        DESTINATION "lib${LIB_SUFFIX}/pkgconfig")
+IF(ALSOFT_INSTALL)
+    # Add an install target here
+    INSTALL(TARGETS ${LIBNAME}
+            RUNTIME DESTINATION bin
+            LIBRARY DESTINATION "lib${LIB_SUFFIX}"
+            ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+    )
+    INSTALL(FILES include/AL/al.h
+                  include/AL/alc.h
+                  include/AL/alext.h
+                  include/AL/efx.h
+                  include/AL/efx-creative.h
+                  include/AL/efx-presets.h
+            DESTINATION include/AL
+    )
+    INSTALL(FILES "${OpenAL_BINARY_DIR}/openal.pc"
+            DESTINATION "lib${LIB_SUFFIX}/pkgconfig")
+ENDIF()
 
 
 MESSAGE(STATUS "")
@@ -1177,11 +1180,13 @@ IF(ALSOFT_UTILS)
         TARGET_LINK_LIBRARIES(makehrtf m)
     ENDIF()
 
-    INSTALL(TARGETS openal-info makehrtf
-            RUNTIME DESTINATION bin
-            LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-            ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
-    )
+    IF(ALSOFT_INSTALL)
+        INSTALL(TARGETS openal-info makehrtf
+                RUNTIME DESTINATION bin
+                LIBRARY DESTINATION "lib${LIB_SUFFIX}"
+                ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+        )
+    ENDIF()
 
     MESSAGE(STATUS "Building utility programs")
     IF(TARGET alsoft-config)
@@ -1217,11 +1222,13 @@ IF(ALSOFT_EXAMPLES)
         SET_PROPERTY(TARGET alloopback APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
                                                                            ${SDL_SOUND_INCLUDE_DIR})
 
-        INSTALL(TARGETS alstream alreverb allatency alloopback
-                RUNTIME DESTINATION bin
-                LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-                ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
-        )
+        IF(ALSOFT_INSTALL)
+            INSTALL(TARGETS alstream alreverb allatency alloopback
+                    RUNTIME DESTINATION bin
+                    LIBRARY DESTINATION "lib${LIB_SUFFIX}"
+                    ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+            )
+        ENDIF()
 
         SET(FFVER_OK FALSE)
         IF(FFMPEG_FOUND)
@@ -1253,11 +1260,13 @@ IF(ALSOFT_EXAMPLES)
             SET_PROPERTY(TARGET alffplay APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
                                                                              ${FFMPEG_INCLUDE_DIRS})
 
-            INSTALL(TARGETS alffplay
-                    RUNTIME DESTINATION bin
-                    LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-                    ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
-            )
+            IF(ALSOFT_INSTALL)
+                INSTALL(TARGETS alffplay
+                        RUNTIME DESTINATION bin
+                        LIBRARY DESTINATION "lib${LIB_SUFFIX}"
+                        ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+                )
+            ENDIF()
             MESSAGE(STATUS "Building SDL and FFmpeg example programs")
         ELSE()
             MESSAGE(STATUS "Building SDL example programs")

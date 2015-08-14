@@ -3349,7 +3349,14 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         return NULL;
     }
 
-    if(deviceName && (!deviceName[0] || strcasecmp(deviceName, alcDefaultName) == 0 || strcasecmp(deviceName, "openal-soft") == 0))
+    if(deviceName && (!deviceName[0] || strcasecmp(deviceName, alcDefaultName) == 0 || strcasecmp(deviceName, "openal-soft") == 0
+#ifdef _WIN32
+        /* Some old Windows apps hardcode this expecting hardware-accelerated
+         * OpenAL, even when it's not enumerated.
+         */
+        || strcasecmp(deviceName, "DirectSound3D") == 0
+#endif
+    ))
         deviceName = NULL;
 
     device = al_calloc(16, sizeof(ALCdevice)+sizeof(ALeffectslot));

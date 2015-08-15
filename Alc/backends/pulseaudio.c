@@ -517,6 +517,7 @@ static void ALCpulsePlayback_deviceCallback(pa_context *UNUSED(context), const p
     pa_threaded_mainloop *loop = pdata;
     const DevMap *iter;
     DevMap entry;
+    int count;
 
     if(eol)
     {
@@ -526,17 +527,33 @@ static void ALCpulsePlayback_deviceCallback(pa_context *UNUSED(context), const p
 
 #define MATCH_INFO_NAME(iter) (al_string_cmp_cstr((iter)->device_name, info->name) == 0)
     VECTOR_FIND_IF(iter, const DevMap, PlaybackDevices, MATCH_INFO_NAME);
+    if(iter != VECTOR_ITER_END(PlaybackDevices)) return;
 #undef MATCH_INFO_NAME
-    if(iter != VECTOR_ITER_END(PlaybackDevices))
-        return;
-
-    TRACE("Got device \"%s\", \"%s\"\n", info->description, info->name);
 
     AL_STRING_INIT(entry.name);
     AL_STRING_INIT(entry.device_name);
 
-    al_string_copy_cstr(&entry.name, info->description);
     al_string_copy_cstr(&entry.device_name, info->name);
+
+    count = 0;
+    while(1)
+    {
+        al_string_copy_cstr(&entry.name, info->description);
+        if(count != 0)
+        {
+            char str[64];
+            snprintf(str, sizeof(str), " #%d", count+1);
+            al_string_append_cstr(&entry.name, str);
+        }
+
+#define MATCH_ENTRY(i) (al_string_cmp(entry.name, (i)->name) == 0)
+        VECTOR_FIND_IF(iter, const DevMap, PlaybackDevices, MATCH_ENTRY);
+        if(iter == VECTOR_ITER_END(PlaybackDevices)) break;
+#undef MATCH_ENTRY
+        count++;
+    }
+
+    TRACE("Got device \"%s\", \"%s\"\n", al_string_get_cstr(entry.name), al_string_get_cstr(entry.device_name));
 
     VECTOR_PUSH_BACK(PlaybackDevices, entry);
 }
@@ -1173,6 +1190,7 @@ static void ALCpulseCapture_deviceCallback(pa_context *UNUSED(context), const pa
     pa_threaded_mainloop *loop = pdata;
     const DevMap *iter;
     DevMap entry;
+    int count;
 
     if(eol)
     {
@@ -1182,17 +1200,33 @@ static void ALCpulseCapture_deviceCallback(pa_context *UNUSED(context), const pa
 
 #define MATCH_INFO_NAME(iter) (al_string_cmp_cstr((iter)->device_name, info->name) == 0)
     VECTOR_FIND_IF(iter, const DevMap, CaptureDevices, MATCH_INFO_NAME);
+    if(iter != VECTOR_ITER_END(CaptureDevices)) return;
 #undef MATCH_INFO_NAME
-    if(iter != VECTOR_ITER_END(CaptureDevices))
-        return;
-
-    TRACE("Got device \"%s\", \"%s\"\n", info->description, info->name);
 
     AL_STRING_INIT(entry.name);
     AL_STRING_INIT(entry.device_name);
 
-    al_string_copy_cstr(&entry.name, info->description);
     al_string_copy_cstr(&entry.device_name, info->name);
+
+    count = 0;
+    while(1)
+    {
+        al_string_copy_cstr(&entry.name, info->description);
+        if(count != 0)
+        {
+            char str[64];
+            snprintf(str, sizeof(str), " #%d", count+1);
+            al_string_append_cstr(&entry.name, str);
+        }
+
+#define MATCH_ENTRY(i) (al_string_cmp(entry.name, (i)->name) == 0)
+        VECTOR_FIND_IF(iter, const DevMap, CaptureDevices, MATCH_ENTRY);
+        if(iter == VECTOR_ITER_END(CaptureDevices)) break;
+#undef MATCH_ENTRY
+        count++;
+    }
+
+    TRACE("Got device \"%s\", \"%s\"\n", al_string_get_cstr(entry.name), al_string_get_cstr(entry.device_name));
 
     VECTOR_PUSH_BACK(CaptureDevices, entry);
 }

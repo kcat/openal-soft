@@ -101,9 +101,9 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
     }
 }
 
-#define SUFFIX C
+#define MixHrtf MixHrtf_C
 #include "mixer_inc.c"
-#undef SUFFIX
+#undef MixHrtf
 
 
 void Mix_C(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],

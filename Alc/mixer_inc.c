@@ -8,12 +8,6 @@
 #include "align.h"
 
 
-#define REAL_MERGE(a,b) a##b
-#define MERGE(a,b) REAL_MERGE(a,b)
-
-#define MixHrtf MERGE(MixHrtf_,SUFFIX)
-
-
 static inline void SetupCoeffs(ALfloat (*restrict OutCoeffs)[2],
                                const HrtfParams *hrtfparams,
                                ALuint IrSize, ALuint Counter);
@@ -83,9 +77,3 @@ void MixHrtf(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
         OutPos++;
     }
 }
-
-
-#undef MixHrtf
-
-#undef MERGE
-#undef REAL_MERGE

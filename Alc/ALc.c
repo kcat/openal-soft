@@ -3351,10 +3351,12 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     if(deviceName && (!deviceName[0] || strcasecmp(deviceName, alcDefaultName) == 0 || strcasecmp(deviceName, "openal-soft") == 0
 #ifdef _WIN32
-        /* Some old Windows apps hardcode this expecting hardware-accelerated
-         * OpenAL, even when it's not enumerated.
+        /* Some old Windows apps hardcode these expecting OpenAL to use a
+         * specific audio API, even when they're not enumerated. Creative's
+         * router effectively ignores them too.
          */
-        || strcasecmp(deviceName, "DirectSound3D") == 0
+        || strcasecmp(deviceName, "DirectSound3D") == 0 || strcasecmp(deviceName, "DirectSound") == 0
+        || strcasecmp(deviceName, "MMSYSTEM") == 0
 #endif
     ))
         deviceName = NULL;

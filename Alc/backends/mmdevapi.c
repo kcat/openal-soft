@@ -1544,6 +1544,7 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
                                     OutputType.Format.wBitsPerSample / 8;
     OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec *
                                         OutputType.Format.nBlockAlign;
+    OutputType.Format.cbSize = sizeof(OutputType) - sizeof(OutputType.Format);
 
     hr = IAudioClient_IsFormatSupported(self->client,
         AUDCLNT_SHAREMODE_SHARED, &OutputType.Format, &wfx

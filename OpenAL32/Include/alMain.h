@@ -626,10 +626,7 @@ enum HrtfMode {
  * second-order has 9, and third-order has 16. */
 #define MAX_AMBI_COEFFS 16
 
-typedef struct ChannelConfig {
-    ALfloat HOACoeff[MAX_AMBI_COEFFS];
-    ALfloat FOACoeff[4];
-} ChannelConfig;
+typedef ALfloat ChannelConfig[MAX_AMBI_COEFFS];
 
 
 #define HRTF_HISTORY_BITS   (6)
@@ -722,7 +719,8 @@ struct ALCdevice_struct
     ALuint       Flags;
 
     enum Channel ChannelName[MAX_OUTPUT_CHANNELS];
-    ChannelConfig Channel[MAX_OUTPUT_CHANNELS];
+    ChannelConfig AmbiCoeffs[MAX_OUTPUT_CHANNELS];
+    ALfloat AmbiScale; /* Scale for first-order XYZ inputs using AmbCoeffs. */
     ALuint NumChannels;
 
     ALuint64 ClockBase;

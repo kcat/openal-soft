@@ -38,6 +38,24 @@
 #define SECOND_ORDER_SCALE  (1.0f / 1.22474f)
 #define THIRD_ORDER_SCALE   (1.0f / 1.30657f)
 
+
+void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+{
+    ALuint i;
+
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+        gains[i] = 0.0f;
+    for(i = 0;i < device->NumChannels;i++)
+    {
+        // The W coefficients are based on a mathematical average of the
+        // output, scaled by sqrt(2) to compensate for FuMa-style Ambisonics
+        // scaling the W channel input by sqrt(0.5). The square root of the
+        // base average provides for a more perceptual average volume, better
+        // suited to non-directional gains.
+        gains[i] = sqrtf(device->AmbiCoeffs[i][0]/1.4142f) * ingain;
+    }
+}
+
 void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     ALfloat dir[3] = {
@@ -78,26 +96,10 @@ void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfl
         gains[i] = 0.0f;
     for(i = 0;i < device->NumChannels;i++)
     {
+        float gain = 0.0f;
         for(j = 0;j < MAX_AMBI_COEFFS;j++)
-            gains[i] += device->AmbiCoeffs[i][j]*coeffs[j];
-        gains[i] *= ingain;
-    }
-}
-
-void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
-{
-    ALuint i;
-
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-        gains[i] = 0.0f;
-    for(i = 0;i < device->NumChannels;i++)
-    {
-        // The W coefficients are based on a mathematical average of the
-        // output, scaled by sqrt(2) to compensate for FuMa-style Ambisonics
-        // scaling the W channel input by sqrt(0.5). The square root of the
-        // base average provides for a more perceptual average volume, better
-        // suited to non-directional gains.
-        gains[i] = sqrtf(device->AmbiCoeffs[i][0]/1.4142f) * ingain;
+            gain += device->AmbiCoeffs[i][j]*coeffs[j];
+        gains[i] = gain * ingain;
     }
 }
 
@@ -159,7 +161,7 @@ typedef struct ChannelMap {
 
 static void SetChannelMap(ALCdevice *device, const ChannelMap *chanmap, size_t count, ALfloat ambiscale)
 {
-    size_t i, j;
+    size_t i, j, k;
 
     device->AmbiScale = ambiscale;
     for(i = 0;i < MAX_OUTPUT_CHANNELS && device->ChannelName[i] != InvalidChannel;i++)
@@ -175,7 +177,6 @@ static void SetChannelMap(ALCdevice *device, const ChannelMap *chanmap, size_t c
         {
             if(device->ChannelName[i] == chanmap[j].ChanName)
             {
-                size_t k;
                 for(k = 0;k < MAX_AMBI_COEFFS;++k)
                     device->AmbiCoeffs[i][k] = chanmap[j].Config[k];
                 break;
@@ -303,12 +304,11 @@ static bool LoadChannelSetup(ALCdevice *device)
         }
         if(order == 3)
             props = sscanf(value, " %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %c",
-                &chanmap[i].Config[0], &chanmap[i].Config[1], &chanmap[i].Config[2],
-                &chanmap[i].Config[3], &chanmap[i].Config[4], &chanmap[i].Config[5],
-                &chanmap[i].Config[6], &chanmap[i].Config[7], &chanmap[i].Config[8],
-                &chanmap[i].Config[9], &chanmap[i].Config[10], &chanmap[i].Config[11],
-                &chanmap[i].Config[12], &chanmap[i].Config[13], &chanmap[i].Config[14],
-                &chanmap[i].Config[15], &eol
+                &chanmap[i].Config[0],  &chanmap[i].Config[1],  &chanmap[i].Config[2],  &chanmap[i].Config[3],
+                &chanmap[i].Config[4],  &chanmap[i].Config[5],  &chanmap[i].Config[6],  &chanmap[i].Config[7],
+                &chanmap[i].Config[8],  &chanmap[i].Config[9],  &chanmap[i].Config[10], &chanmap[i].Config[11],
+                &chanmap[i].Config[12], &chanmap[i].Config[13], &chanmap[i].Config[14], &chanmap[i].Config[15],
+                &eol
             );
         else if(order == 2)
             props = sscanf(value, " %f %f %f %f %f %f %f %f %f %c",
@@ -319,20 +319,21 @@ static bool LoadChannelSetup(ALCdevice *device)
             );
         else if(order == 1)
             props = sscanf(value, " %f %f %f %f %c",
-                &chanmap[i].Config[0], &chanmap[i].Config[1], &chanmap[i].Config[2],
-                &chanmap[i].Config[3], &eol
+                &chanmap[i].Config[0], &chanmap[i].Config[1],
+                &chanmap[i].Config[2], &chanmap[i].Config[3],
+                &eol
             );
         else if(order == 0)
             props = sscanf(value, " %f %c", &chanmap[i].Config[0], &eol);
         if(props == 0)
         {
-            ERR("Failed to parse %s channel's properties\n", channame);
+            ERR("Failed to parse option %s properties\n", chanlayout);
             return false;
         }
 
         if(props > (order+1)*(order+1))
         {
-            ERR("Excess elements in %s channel %s (expected %d)\n", layout, channame, (order+1)*(order+1));
+            ERR("Excess elements in option %s (expected %d)\n", chanlayout, (order+1)*(order+1));
             return false;
         }
 

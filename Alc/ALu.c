@@ -510,9 +510,9 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
 
         aluMatrixSet(&matrix,
             1.0f,  0.0f,  0.0f,  0.0f,
-            0.0f, -N[2], -N[0],  N[1],
-            0.0f,  U[2],  U[0], -U[1],
-            0.0f, -V[2], -V[0],  V[1]
+            0.0f, -N[2],  U[2], -V[2],
+            0.0f, -N[0],  U[0], -V[0],
+            0.0f,  N[1], -U[1],  V[1]
         );
 
         for(c = 0;c < num_channels;c++)

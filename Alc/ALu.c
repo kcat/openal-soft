@@ -156,6 +156,15 @@ static inline ALfloat aluNormalize(ALfloat *vec)
     return length;
 }
 
+static inline ALvoid aluMatrixFloat3(ALfloat *vec, ALfloat w, const aluMatrix *mtx)
+{
+    aluVector v = {{ vec[0], vec[1], vec[2], w }};
+
+    vec[0] = v.v[0]*mtx->m[0][0] + v.v[1]*mtx->m[1][0] + v.v[2]*mtx->m[2][0] + v.v[3]*mtx->m[3][0];
+    vec[1] = v.v[0]*mtx->m[0][1] + v.v[1]*mtx->m[1][1] + v.v[2]*mtx->m[2][1] + v.v[3]*mtx->m[3][1];
+    vec[2] = v.v[0]*mtx->m[0][2] + v.v[1]*mtx->m[1][2] + v.v[2]*mtx->m[2][2] + v.v[3]*mtx->m[3][2];
+}
+
 static inline ALvoid aluMatrixVector(aluVector *vec, const aluMatrix *mtx)
 {
     aluVector v = *vec;
@@ -282,14 +291,14 @@ static ALvoid CalcListenerParams(ALlistener *Listener)
     aluCrossproduct(N, V, U);
     aluNormalize(U);
 
-    P = Listener->Position;
-
     aluMatrixSet(&Listener->Params.Matrix,
         U[0], V[0], -N[0], 0.0f,
         U[1], V[1], -N[1], 0.0f,
         U[2], V[2], -N[2], 0.0f,
         0.0f, 0.0f,  0.0f, 1.0f
     );
+
+    P = Listener->Position;
     aluMatrixVector(&P, &Listener->Params.Matrix);
     aluMatrixSetRow(&Listener->Params.Matrix, 3, -P.v[0], -P.v[1], -P.v[2], 1.0f);
 
@@ -496,13 +505,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         if(!Relative)
         {
             const aluMatrix *lmatrix = &ALContext->Listener->Params.Matrix;
-            aluVector at, up;
-            aluVectorSet(&at, N[0], N[1], N[2], 0.0f);
-            aluVectorSet(&up, V[0], V[1], V[2], 0.0f);
-            aluMatrixVector(&at, lmatrix);
-            aluMatrixVector(&up, lmatrix);
-            N[0] = at.v[0]; N[1] = at.v[1]; N[2] = at.v[2];
-            V[0] = up.v[0]; V[1] = up.v[1]; V[2] = up.v[2];
+            aluMatrixFloat3(N, 0.0f, lmatrix);
+            aluMatrixFloat3(V, 0.0f, lmatrix);
         }
         /* Build and normalize right-vector */
         aluCrossproduct(N, V, U);

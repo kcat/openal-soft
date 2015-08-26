@@ -321,7 +321,7 @@
 ## spawn-server:
 #  Attempts to autospawn a JACK server whenever needed (initializing the
 #  backend, opening devices, etc).
-#spawn-server = true
+#spawn-server = false
 
 ## buffer-size:
 #  Sets the update buffer size, in samples, that the backend will keep buffered

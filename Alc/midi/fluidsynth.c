@@ -628,7 +628,7 @@ static ALboolean FSynth_init(FSynth *self, ALCdevice *device)
 {
     ALfloat vol;
 
-    if(ConfigValueFloat("midi", "volume", &vol))
+    if(ConfigValueFloat(NULL, "midi", "volume", &vol))
     {
         if(!(vol <= 0.0f))
         {

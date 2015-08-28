@@ -123,7 +123,7 @@ MidiSynth *SSynth_create(ALCdevice *device)
 
     /* This option is temporary. Once this synth is in a more usable state, a
      * more generic selector should be used. */
-    if(!GetConfigValueBool("midi", "internal-synth", 0))
+    if(!GetConfigValueBool(NULL, "midi", "internal-synth", 0))
     {
         TRACE("Not using internal MIDI synth\n");
         return NULL;

@@ -949,7 +949,7 @@ static void alc_initconfig(void)
 #ifdef HAVE_NEON
     capfilter |= CPU_CAP_NEON;
 #endif
-    if(ConfigValueStr(NULL, "disable-cpu-exts", &str))
+    if(ConfigValueStr(NULL, NULL, "disable-cpu-exts", &str))
     {
         if(strcasecmp(str, "all") == 0)
             capfilter = 0;
@@ -990,9 +990,9 @@ static void alc_initconfig(void)
 #else
     RTPrioLevel = 0;
 #endif
-    ConfigValueInt(NULL, "rt-prio", &RTPrioLevel);
+    ConfigValueInt(NULL, NULL, "rt-prio", &RTPrioLevel);
 
-    if(ConfigValueStr(NULL, "resampler", &str))
+    if(ConfigValueStr(NULL, NULL, "resampler", &str))
     {
         if(strcasecmp(str, "point") == 0 || strcasecmp(str, "none") == 0)
             DefaultResampler = PointResampler;
@@ -1024,21 +1024,21 @@ static void alc_initconfig(void)
         str = getenv("ALSOFT_TRAP_AL_ERROR");
         if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
             TrapALError = AL_TRUE;
-        TrapALError = GetConfigValueBool(NULL, "trap-al-error", TrapALError);
+        TrapALError = GetConfigValueBool(NULL, NULL, "trap-al-error", TrapALError);
 
         str = getenv("ALSOFT_TRAP_ALC_ERROR");
         if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
             TrapALCError = ALC_TRUE;
-        TrapALCError = GetConfigValueBool(NULL, "trap-alc-error", TrapALCError);
+        TrapALCError = GetConfigValueBool(NULL, NULL, "trap-alc-error", TrapALCError);
     }
 
-    if(ConfigValueFloat("reverb", "boost", &valf))
+    if(ConfigValueFloat(NULL, "reverb", "boost", &valf))
         ReverbBoost *= powf(10.0f, valf / 20.0f);
 
-    EmulateEAXReverb = GetConfigValueBool("reverb", "emulate-eax", AL_FALSE);
+    EmulateEAXReverb = GetConfigValueBool(NULL, "reverb", "emulate-eax", AL_FALSE);
 
     if(((devs=getenv("ALSOFT_DRIVERS")) && devs[0]) ||
-       ConfigValueStr(NULL, "drivers", &devs))
+       ConfigValueStr(NULL, NULL, "drivers", &devs))
     {
         int n;
         size_t len;
@@ -1153,7 +1153,7 @@ static void alc_initconfig(void)
         V0(factory,init)();
     }
 
-    if(ConfigValueStr(NULL, "excludefx", &str))
+    if(ConfigValueStr(NULL, NULL, "excludefx", &str))
     {
         size_t len;
         const char *next = str;
@@ -1179,7 +1179,7 @@ static void alc_initconfig(void)
 
     InitEffect(&DefaultEffect);
     str = getenv("ALSOFT_DEFAULT_REVERB");
-    if((str && str[0]) || ConfigValueStr(NULL, "default-reverb", &str))
+    if((str && str[0]) || ConfigValueStr(NULL, NULL, "default-reverb", &str))
         LoadReverbPreset(str, &DefaultEffect);
 }
 #define DO_INITCONFIG() alcall_once(&alc_config_once, alc_initconfig)
@@ -1824,7 +1824,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             return ALC_INVALID_VALUE;
         }
 
-        ConfigValueUInt(NULL, "sends", &numSends);
+        ConfigValueUInt(NULL, NULL, "sends", &numSends);
         numSends = minu(MAX_SENDS, numSends);
 
         if((device->Flags&DEVICE_RUNNING))
@@ -1890,10 +1890,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             attrIdx += 2;
         }
 
-        ConfigValueUInt(NULL, "frequency", &freq);
+        ConfigValueUInt(al_string_get_cstr(device->DeviceName), NULL, "frequency", &freq);
         freq = maxu(freq, MIN_OUTPUT_RATE);
 
-        ConfigValueUInt(NULL, "sends", &numSends);
+        ConfigValueUInt(al_string_get_cstr(device->DeviceName), NULL, "sends", &numSends);
         numSends = minu(MAX_SENDS, numSends);
 
         UpdateClockBase(device);
@@ -1919,7 +1919,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     UpdateClockBase(device);
 
     device->Hrtf_Status = ALC_HRTF_DISABLED_SOFT;
-    if(device->Type != Loopback && ((device->Flags&DEVICE_HRTF_REQUEST_MASK) == Hrtf_Enable || GetConfigValueBool(NULL, "hrtf", 0)))
+    if(device->Type != Loopback && ((device->Flags&DEVICE_HRTF_REQUEST_MASK) == Hrtf_Enable ||
+                                    GetConfigValueBool(al_string_get_cstr(device->DeviceName), NULL, "hrtf", 0)))
     {
         if(!FindHrtfFormat(&device->FmtChans, &device->Frequency))
         {
@@ -2005,7 +2006,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         if(device->Type != Loopback)
         {
-            if(ConfigValueStr(NULL, "stereo-mode", &mode))
+            if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "stereo-mode", &mode))
             {
                 if(strcasecmp(mode, "headphones") == 0)
                     headphones = true;
@@ -2015,7 +2016,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                     ERR("Unexpected stereo-mode: %s\n", mode);
             }
 
-            if(ConfigValueStr(NULL, "hrtf-mode", &mode))
+            if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "hrtf-mode", &mode))
             {
                 if(strcasecmp(mode, "full") == 0)
                     hrtf_mode = FullHrtf;
@@ -2027,7 +2028,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
 
 
-        if(device->Type == Loopback || !ConfigValueBool(NULL, "hrtf", &usehrtf))
+        if(device->Type == Loopback || !ConfigValueBool(al_string_get_cstr(device->DeviceName), NULL, "hrtf", &usehrtf))
         {
             usehrtf = (headphones && (device->Flags&DEVICE_HRTF_REQUEST_MASK) != Hrtf_Disable) ||
                       ((device->Flags&DEVICE_HRTF_REQUEST_MASK) == Hrtf_Enable);
@@ -2067,7 +2068,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             bs2blevel = ((headphones && (device->Flags&DEVICE_HRTF_REQUEST_MASK) != Hrtf_Disable) ||
                          ((device->Flags&DEVICE_HRTF_REQUEST_MASK) == Hrtf_Enable)) ? 5 : 0;
             if(device->Type != Loopback)
-                ConfigValueInt(NULL, "cf_level", &bs2blevel);
+                ConfigValueInt(al_string_get_cstr(device->DeviceName), NULL, "cf_level", &bs2blevel);
             if(bs2blevel > 0 && bs2blevel <= 6)
             {
                 if(!device->Bs2b)
@@ -3420,7 +3421,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     }
 
 
-    if(ConfigValueStr(NULL, "channels", &fmt))
+    if(ConfigValueStr(deviceName, NULL, "channels", &fmt))
     {
         static const struct {
             const char name[16];
@@ -3448,7 +3449,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         if(i == COUNTOF(chanlist))
             ERR("Unsupported channels: %s\n", fmt);
     }
-    if(ConfigValueStr(NULL, "sample-type", &fmt))
+    if(ConfigValueStr(deviceName, NULL, "sample-type", &fmt))
     {
         static const struct {
             const char name[16];
@@ -3477,7 +3478,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
             ERR("Unsupported sample-type: %s\n", fmt);
     }
 
-    if(ConfigValueUInt(NULL, "frequency", &device->Frequency))
+    if(ConfigValueUInt(deviceName, NULL, "frequency", &device->Frequency))
     {
         device->Flags |= DEVICE_FREQUENCY_REQUEST;
         if(device->Frequency < MIN_OUTPUT_RATE)
@@ -3485,21 +3486,21 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         device->Frequency = maxu(device->Frequency, MIN_OUTPUT_RATE);
     }
 
-    ConfigValueUInt(NULL, "periods", &device->NumUpdates);
+    ConfigValueUInt(deviceName, NULL, "periods", &device->NumUpdates);
     device->NumUpdates = clampu(device->NumUpdates, 2, 16);
 
-    ConfigValueUInt(NULL, "period_size", &device->UpdateSize);
+    ConfigValueUInt(deviceName, NULL, "period_size", &device->UpdateSize);
     device->UpdateSize = clampu(device->UpdateSize, 64, 8192);
     if((CPUCapFlags&(CPU_CAP_SSE|CPU_CAP_NEON)) != 0)
         device->UpdateSize = (device->UpdateSize+3)&~3;
 
-    ConfigValueUInt(NULL, "sources", &device->MaxNoOfSources);
+    ConfigValueUInt(deviceName, NULL, "sources", &device->MaxNoOfSources);
     if(device->MaxNoOfSources == 0) device->MaxNoOfSources = 256;
 
-    ConfigValueUInt(NULL, "slots", &device->AuxiliaryEffectSlotMax);
+    ConfigValueUInt(deviceName, NULL, "slots", &device->AuxiliaryEffectSlotMax);
     if(device->AuxiliaryEffectSlotMax == 0) device->AuxiliaryEffectSlotMax = 4;
 
-    ConfigValueUInt(NULL, "sends", &device->NumAuxSends);
+    ConfigValueUInt(deviceName, NULL, "sends", &device->NumAuxSends);
     if(device->NumAuxSends > MAX_SENDS) device->NumAuxSends = MAX_SENDS;
 
     device->NumStereoSources = 1;
@@ -3867,13 +3868,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->FmtType = DevFmtTypeDefault;
     device->IsHeadphones = AL_FALSE;
 
-    ConfigValueUInt(NULL, "sources", &device->MaxNoOfSources);
+    ConfigValueUInt(NULL, NULL, "sources", &device->MaxNoOfSources);
     if(device->MaxNoOfSources == 0) device->MaxNoOfSources = 256;
 
-    ConfigValueUInt(NULL, "slots", &device->AuxiliaryEffectSlotMax);
+    ConfigValueUInt(NULL, NULL, "slots", &device->AuxiliaryEffectSlotMax);
     if(device->AuxiliaryEffectSlotMax == 0) device->AuxiliaryEffectSlotMax = 4;
 
-    ConfigValueUInt(NULL, "sends", &device->NumAuxSends);
+    ConfigValueUInt(NULL, NULL, "sends", &device->NumAuxSends);
     if(device->NumAuxSends > MAX_SENDS) device->NumAuxSends = MAX_SENDS;
 
     device->NumStereoSources = 1;

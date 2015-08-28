@@ -318,7 +318,7 @@ ALsoundfont *ALsoundfont_getDefSoundfont(ALCcontext *context)
 
     namelist = getenv("ALSOFT_SOUNDFONT");
     if(!namelist || !namelist[0])
-        ConfigValueStr("midi", "soundfont", &namelist);
+        ConfigValueStr(al_string_get_cstr(device->DeviceName), "midi", "soundfont", &namelist);
     while(namelist && namelist[0])
     {
         const char *next, *end;

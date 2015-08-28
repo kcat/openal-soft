@@ -273,14 +273,14 @@ static void probe_devices(snd_pcm_stream_t stream, vector_DevMap *DeviceList)
     AL_STRING_INIT(entry.name);
     AL_STRING_INIT(entry.device_name);
     al_string_copy_cstr(&entry.name, alsaDevice);
-    al_string_copy_cstr(&entry.device_name, GetConfigValue("alsa", (stream==SND_PCM_STREAM_PLAYBACK) ?
+    al_string_copy_cstr(&entry.device_name, GetConfigValue(NULL, "alsa", (stream==SND_PCM_STREAM_PLAYBACK) ?
                                                            "device" : "capture", "default"));
     VECTOR_PUSH_BACK(*DeviceList, entry);
 
     card = -1;
     if((err=snd_card_next(&card)) < 0)
         ERR("Failed to find a card: %s\n", snd_strerror(err));
-    ConfigValueStr("alsa", prefix_name(stream), &main_prefix);
+    ConfigValueStr(NULL, "alsa", prefix_name(stream), &main_prefix);
     while(card >= 0)
     {
         const char *card_prefix = main_prefix;
@@ -304,7 +304,7 @@ static void probe_devices(snd_pcm_stream_t stream, vector_DevMap *DeviceList)
         cardid = snd_ctl_card_info_get_id(info);
 
         snprintf(name, sizeof(name), "%s-%s", prefix_name(stream), cardid);
-        ConfigValueStr("alsa", name, &card_prefix);
+        ConfigValueStr(NULL, "alsa", name, &card_prefix);
 
         dev = -1;
         while(1)
@@ -330,7 +330,7 @@ static void probe_devices(snd_pcm_stream_t stream, vector_DevMap *DeviceList)
             devname = snd_pcm_info_get_name(pcminfo);
 
             snprintf(name, sizeof(name), "%s-%s-%d", prefix_name(stream), cardid, dev);
-            ConfigValueStr("alsa", name, &device_prefix);
+            ConfigValueStr(NULL, "alsa", name, &device_prefix);
 
             snprintf(name, sizeof(name), "%s, %s (CARD=%s,DEV=%d)",
                         cardname, devname, cardid, dev);
@@ -640,7 +640,7 @@ static ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name)
     else
     {
         name = alsaDevice;
-        driver = GetConfigValue("alsa", "device", "default");
+        driver = GetConfigValue(NULL, "alsa", "device", "default");
     }
 
     TRACE("Opening device \"%s\"\n", driver);
@@ -704,7 +704,7 @@ static ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
             break;
     }
 
-    allowmmap = GetConfigValueBool("alsa", "mmap", 1);
+    allowmmap = GetConfigValueBool(al_string_get_cstr(device->DeviceName), "alsa", "mmap", 1);
     periods = device->NumUpdates;
     periodLen = (ALuint64)device->UpdateSize * 1000000 / device->Frequency;
     bufferLen = periodLen * periods;
@@ -965,7 +965,7 @@ static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
     else
     {
         name = alsaDevice;
-        driver = GetConfigValue("alsa", "capture", "default");
+        driver = GetConfigValue(NULL, "alsa", "capture", "default");
     }
 
     TRACE("Opening device \"%s\"\n", driver);

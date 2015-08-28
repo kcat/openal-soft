@@ -167,7 +167,7 @@ static ALCenum pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
     data->update_size = device->UpdateSize;
 
     data->params.device = -1;
-    if(!ConfigValueInt("port", "device", &data->params.device) ||
+    if(!ConfigValueInt(NULL, "port", "device", &data->params.device) ||
        data->params.device < 0)
         data->params.device = Pa_GetDefaultOutputDevice();
     data->params.suggestedLatency = (device->UpdateSize*device->NumUpdates) /
@@ -319,7 +319,7 @@ static ALCenum pa_open_capture(ALCdevice *device, const ALCchar *deviceName)
         goto error;
 
     data->params.device = -1;
-    if(!ConfigValueInt("port", "capture", &data->params.device) ||
+    if(!ConfigValueInt(NULL, "port", "capture", &data->params.device) ||
        data->params.device < 0)
         data->params.device = Pa_GetDefaultInputDevice();
     data->params.suggestedLatency = 0.0f;

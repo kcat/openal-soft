@@ -294,7 +294,7 @@ ALCbackendFactory *ALCsolarisBackendFactory_getFactory(void)
 
 static ALCboolean ALCsolarisBackendFactory_init(ALCsolarisBackendFactory* UNUSED(self))
 {
-    ConfigValueStr("solaris", "device", &solaris_driver);
+    ConfigValueStr(NULL, "solaris", "device", &solaris_driver);
     return ALC_TRUE;
 }
 

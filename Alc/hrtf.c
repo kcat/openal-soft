@@ -730,7 +730,7 @@ static struct Hrtf *LoadHrtf(ALuint deviceRate)
 {
     const char *fnamelist = "default-%r.mhr";
 
-    ConfigValueStr(NULL, "hrtf_tables", &fnamelist);
+    ConfigValueStr(NULL, NULL, "hrtf_tables", &fnamelist);
     while(*fnamelist != '\0')
     {
         struct Hrtf *Hrtf = NULL;
@@ -879,7 +879,7 @@ void FreeHrtfs(void)
     }
 }
 
-ALuint GetHrtfIrSize (const struct Hrtf *Hrtf)
+ALuint GetHrtfIrSize(const struct Hrtf *Hrtf)
 {
     return Hrtf->irSize;
 }

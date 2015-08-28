@@ -562,8 +562,8 @@ ALCbackendFactory *ALCossBackendFactory_getFactory(void)
 
 ALCboolean ALCossBackendFactory_init(ALCossBackendFactory* UNUSED(self))
 {
-    ConfigValueStr("oss", "device", &oss_driver);
-    ConfigValueStr("oss", "capture", &oss_capture);
+    ConfigValueStr(NULL, "oss", "device", &oss_driver);
+    ConfigValueStr(NULL, "oss", "capture", &oss_capture);
 
     return ALC_TRUE;
 }

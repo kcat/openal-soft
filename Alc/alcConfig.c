@@ -444,7 +444,7 @@ void FreeALConfig(void)
     free(cfgBlock.entries);
 }
 
-const char *GetConfigValue(const char *blockName, const char *keyName, const char *def)
+const char *GetConfigValue(const char *devName, const char *blockName, const char *keyName, const char *def)
 {
     unsigned int i;
     char key[256];
@@ -453,11 +453,21 @@ const char *GetConfigValue(const char *blockName, const char *keyName, const cha
         return def;
 
     if(blockName && strcasecmp(blockName, "general") != 0)
-        snprintf(key, sizeof(key), "%s/%s", blockName, keyName);
+    {
+        if(devName)
+            snprintf(key, sizeof(key), "%s/%s/%s", devName, blockName, keyName);
+        else
+            snprintf(key, sizeof(key), "%s/%s", blockName, keyName);
+    }
     else
     {
-        strncpy(key, keyName, sizeof(key)-1);
-        key[sizeof(key)-1] = 0;
+        if(devName)
+            snprintf(key, sizeof(key), "%s/%s", devName, keyName);
+        else
+        {
+            strncpy(key, keyName, sizeof(key)-1);
+            key[sizeof(key)-1] = 0;
+        }
     }
 
     for(i = 0;i < cfgBlock.entryCount;i++)
@@ -471,46 +481,50 @@ const char *GetConfigValue(const char *blockName, const char *keyName, const cha
         }
     }
 
-    TRACE("Key %s not found\n", key);
-    return def;
+    if(!devName)
+    {
+        TRACE("Key %s not found\n", key);
+        return def;
+    }
+    return GetConfigValue(NULL, blockName, keyName, def);
 }
 
-int ConfigValueExists(const char *blockName, const char *keyName)
+int ConfigValueExists(const char *devName, const char *blockName, const char *keyName)
 {
-    const char *val = GetConfigValue(blockName, keyName, "");
+    const char *val = GetConfigValue(devName, blockName, keyName, "");
     return !!val[0];
 }
 
-int ConfigValueStr(const char *blockName, const char *keyName, const char **ret)
+int ConfigValueStr(const char *devName, const char *blockName, const char *keyName, const char **ret)
 {
-    const char *val = GetConfigValue(blockName, keyName, "");
+    const char *val = GetConfigValue(devName, blockName, keyName, "");
     if(!val[0]) return 0;
 
     *ret = val;
     return 1;
 }
 
-int ConfigValueInt(const char *blockName, const char *keyName, int *ret)
+int ConfigValueInt(const char *devName, const char *blockName, const char *keyName, int *ret)
 {
-    const char *val = GetConfigValue(blockName, keyName, "");
+    const char *val = GetConfigValue(devName, blockName, keyName, "");
     if(!val[0]) return 0;
 
     *ret = strtol(val, NULL, 0);
     return 1;
 }
 
-int ConfigValueUInt(const char *blockName, const char *keyName, unsigned int *ret)
+int ConfigValueUInt(const char *devName, const char *blockName, const char *keyName, unsigned int *ret)
 {
-    const char *val = GetConfigValue(blockName, keyName, "");
+    const char *val = GetConfigValue(devName, blockName, keyName, "");
     if(!val[0]) return 0;
 
     *ret = strtoul(val, NULL, 0);
     return 1;
 }
 
-int ConfigValueFloat(const char *blockName, const char *keyName, float *ret)
+int ConfigValueFloat(const char *devName, const char *blockName, const char *keyName, float *ret)
 {
-    const char *val = GetConfigValue(blockName, keyName, "");
+    const char *val = GetConfigValue(devName, blockName, keyName, "");
     if(!val[0]) return 0;
 
 #ifdef HAVE_STRTOF
@@ -521,9 +535,9 @@ int ConfigValueFloat(const char *blockName, const char *keyName, float *ret)
     return 1;
 }
 
-int ConfigValueBool(const char *blockName, const char *keyName, int *ret)
+int ConfigValueBool(const char *devName, const char *blockName, const char *keyName, int *ret)
 {
-    const char *val = GetConfigValue(blockName, keyName, "");
+    const char *val = GetConfigValue(devName, blockName, keyName, "");
     if(!val[0]) return 0;
 
     *ret = (strcasecmp(val, "true") == 0 || strcasecmp(val, "yes") == 0 ||
@@ -531,9 +545,9 @@ int ConfigValueBool(const char *blockName, const char *keyName, int *ret)
     return 1;
 }
 
-int GetConfigValueBool(const char *blockName, const char *keyName, int def)
+int GetConfigValueBool(const char *devName, const char *blockName, const char *keyName, int def)
 {
-    const char *val = GetConfigValue(blockName, keyName, "");
+    const char *val = GetConfigValue(devName, blockName, keyName, "");
 
     if(!val[0]) return !!def;
     return (strcasecmp(val, "true") == 0 || strcasecmp(val, "yes") == 0 ||

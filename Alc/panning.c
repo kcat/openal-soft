@@ -312,7 +312,7 @@ static bool LoadChannelSetup(ALCdevice *device)
         char eol;
 
         snprintf(name, sizeof(name), "%s/type", layout);
-        if(!ConfigValueStr("layouts", name, &type))
+        if(!ConfigValueStr(al_string_get_cstr(device->DeviceName), "layouts", name, &type))
             return false;
 
         if(sscanf(type, " %31[^: ] : %d%c", name, &order, &eol) != 2)
@@ -360,7 +360,7 @@ static bool LoadChannelSetup(ALCdevice *device)
         channame = GetLabelFromChannel(channels[i]);
 
         snprintf(chanlayout, sizeof(chanlayout), "%s/%s", layout, channame);
-        if(!ConfigValueStr("layouts", chanlayout, &value))
+        if(!ConfigValueStr(al_string_get_cstr(device->DeviceName), "layouts", chanlayout, &value))
         {
             ERR("Missing channel %s\n", channame);
             return false;

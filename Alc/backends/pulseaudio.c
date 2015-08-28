@@ -860,7 +860,7 @@ static ALCenum ALCpulsePlayback_open(ALCpulsePlayback *self, const ALCchar *name
 
     flags = PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE |
             PA_STREAM_FIX_CHANNELS;
-    if(!GetConfigValueBool("pulse", "allow-moves", 0))
+    if(!GetConfigValueBool(NULL, "pulse", "allow-moves", 0))
         flags |= PA_STREAM_DONT_MOVE;
 
     spec.format = PA_SAMPLE_S16NE;
@@ -932,7 +932,7 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
     flags |= PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE;
     flags |= PA_STREAM_ADJUST_LATENCY;
     flags |= PA_STREAM_START_CORKED;
-    if(!GetConfigValueBool("pulse", "allow-moves", 0))
+    if(!GetConfigValueBool(NULL, "pulse", "allow-moves", 0))
         flags |= PA_STREAM_DONT_MOVE;
 
     switch(device->FmtType)
@@ -1453,7 +1453,7 @@ static ALCenum ALCpulseCapture_open(ALCpulseCapture *self, const ALCchar *name)
                           pa_frame_size(&self->spec);
 
     flags |= PA_STREAM_START_CORKED|PA_STREAM_ADJUST_LATENCY;
-    if(!GetConfigValueBool("pulse", "allow-moves", 0))
+    if(!GetConfigValueBool(NULL, "pulse", "allow-moves", 0))
         flags |= PA_STREAM_DONT_MOVE;
 
     TRACE("Connecting to \"%s\"\n", pulse_name ? pulse_name : "(default)");
@@ -1641,7 +1641,7 @@ static ALCboolean ALCpulseBackendFactory_init(ALCpulseBackendFactory* UNUSED(sel
         pa_threaded_mainloop *loop;
 
         pulse_ctx_flags = 0;
-        if(!GetConfigValueBool("pulse", "spawn-server", 1))
+        if(!GetConfigValueBool(NULL, "pulse", "spawn-server", 1))
             pulse_ctx_flags |= PA_CONTEXT_NOAUTOSPAWN;
 
         if((loop=pa_threaded_mainloop_new()) &&

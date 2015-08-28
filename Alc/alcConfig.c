@@ -202,12 +202,8 @@ static void LoadConfigFromFile(FILE *f)
         char key[256] = "";
         char value[256] = "";
 
-        comment = strchr(buffer, '#');
-        if(comment) *(comment++) = 0;
-
         line = rstrip(lstrip(buffer));
-        if(!line[0])
-            continue;
+        if(!line[0]) continue;
 
         if(line[0] == '[')
         {
@@ -215,10 +211,21 @@ static void LoadConfigFromFile(FILE *f)
             char *endsection;
 
             endsection = strchr(section, ']');
-            if(!endsection || section == endsection || endsection[1] != 0)
+            if(!endsection || section == endsection)
             {
-                 ERR("config parse error: bad line \"%s\"\n", line);
-                 continue;
+                ERR("config parse error: bad line \"%s\"\n", line);
+                continue;
+            }
+            if(endsection[1] != 0)
+            {
+                char *end = endsection+1;
+                while(isspace(*end))
+                    ++end;
+                if(*end != 0 && *end != '#')
+                {
+                    ERR("config parse error: bad line \"%s\"\n", line);
+                    continue;
+                }
             }
             *endsection = 0;
 
@@ -232,6 +239,10 @@ static void LoadConfigFromFile(FILE *f)
 
             continue;
         }
+
+        comment = strchr(line, '#');
+        if(comment) *(comment++) = 0;
+        if(!line[0]) continue;
 
         if(sscanf(line, "%255[^=] = \"%255[^\"]\"", key, value) == 2 ||
            sscanf(line, "%255[^=] = '%255[^\']'", key, value) == 2 ||

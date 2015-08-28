@@ -378,3 +378,8 @@
 #  backend from opening, even when explicitly requested.
 #  THIS WILL OVERWRITE EXISTING FILES WITHOUT QUESTION!
 #file =
+
+## bformat: (global)
+#  Creates AMB format files using first-order ambisonics instead of a standard
+#  single- or multi-channel .wav file.
+#bformat = false

@@ -39,6 +39,45 @@
 #define THIRD_ORDER_SCALE   (1.0f / 1.30657f)
 
 
+static const ALuint FuMa2ACN[MAX_AMBI_COEFFS] = {
+    0,  /* W */
+    3,  /* X */
+    1,  /* Y */
+    2,  /* Z */
+    6,  /* R */
+    7,  /* S */
+    5,  /* T */
+    8,  /* U */
+    4,  /* V */
+    12, /* K */
+    13, /* L */
+    11, /* M */
+    14, /* N */
+    10, /* O */
+    15, /* P */
+    9,  /* Q */
+};
+
+static const ALfloat N3D2FuMaScale[MAX_AMBI_COEFFS] = {
+    0.7071f, /* ACN  0 (W), sqrt(1/2) */
+    0.5774f, /* ACN  1 (Y), sqrt(1/3) */
+    0.5774f, /* ACN  2 (Z), sqrt(1/3) */
+    0.5774f, /* ACN  3 (X), sqrt(1/3) */
+    0.5164f, /* ACN  4 (V), 2/sqrt(15) */
+    0.5164f, /* ACN  5 (T), 2/sqrt(15) */
+    0.4472f, /* ACN  6 (R), sqrt(1/5) */
+    0.5164f, /* ACN  7 (S), 2/sqrt(15) */
+    0.5164f, /* ACN  8 (U), 2/sqrt(15) */
+    0.4781f, /* ACN  9 (Q), sqrt(8/35) */
+    0.5071f, /* ACN 10 (O), 3/sqrt(35) */
+    0.4482f, /* ACN 11 (M), sqrt(45/224) */
+    0.3780f, /* ACN 12 (K), sqrt(1/7) */
+    0.4482f, /* ACN 13 (L), sqrt(45/224) */
+    0.5071f, /* ACN 14 (N), 3/sqrt(35) */
+    0.4781f, /* ACN 15 (P), sqrt(8/35) */
+};
+
+
 void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     ALuint i;
@@ -75,22 +114,26 @@ void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfl
     ALfloat y = -dir[0];
     ALfloat z =  dir[1];
 
-    coeffs[0] = 0.7071f; /* sqrt(1.0 / 2.0) */
-    coeffs[1] = x; /* X */
-    coeffs[2] = y; /* Y */
-    coeffs[3] = z; /* Z */
-    coeffs[4] = 0.5f * (3.0f*z*z - 1.0f); /* 0.5 * (3*Z*Z - 1) */
-    coeffs[5] = 2.0f * z * x; /* 2*Z*X */
-    coeffs[6] = 2.0f * y * z; /* 2*Y*Z */
-    coeffs[7] = x*x - y*y; /* X*X - Y*Y */
-    coeffs[8] = 2.0f * x * y; /* 2*X*Y */
-    coeffs[9] = 0.5f * z * (5.0f*z*z - 3.0f); /* 0.5 * Z * (5*Z*Z - 3) */
-    coeffs[10] = 0.7262f * x * (5.0f*z*z - 1.0f); /* sqrt(135.0 / 256.0) * X * (5*Z*Z - 1) */
-    coeffs[11] = 0.7262f * y * (5.0f*z*z - 1.0f); /* sqrt(135.0 / 256.0) * Y * (5*Z*Z - 1) */
-    coeffs[12] = 2.5981f * z * (x*x - y*y); /* sqrt(27.0 / 4.0) * Z * (X*X - Y*Y) */
-    coeffs[13] = 5.1962f * x * y * z; /* sqrt(27) * X * Y * Z */
-    coeffs[14] = x * (x*x - 3.0f*y*y); /* X * (X*X - 3*Y*Y) */
-    coeffs[15] = y * (3.0f*x*x - y*y); /* Y * (3*X*X - Y*Y) */
+    /* Zeroth-order */
+    coeffs[0] = 0.7071f; /* W = sqrt(1.0 / 2.0) */
+    /* First-order */
+    coeffs[1] = y; /* Y = Y */
+    coeffs[2] = z; /* Z = Z */
+    coeffs[3] = x; /* X = X */
+    /* Second-order */
+    coeffs[4] = 2.0f * x * y;             /* V = 2*X*Y */
+    coeffs[5] = 2.0f * y * z;             /* T = 2*Y*Z */
+    coeffs[6] = 0.5f * (3.0f*z*z - 1.0f); /* R = 0.5 * (3*Z*Z - 1) */
+    coeffs[7] = 2.0f * z * x;             /* S = 2*Z*X */
+    coeffs[8] = x*x - y*y;                /* U = X*X - Y*Y */
+    /* Third-order */
+    coeffs[9] = y * (3.0f*x*x - y*y);             /* Q = Y * (3*X*X - Y*Y) */
+    coeffs[10] = 5.1962f * x * y * z;             /* O = sqrt(27) * X * Y * Z */
+    coeffs[11] = 0.7262f * y * (5.0f*z*z - 1.0f); /* M = sqrt(135.0 / 256.0) * Y * (5*Z*Z - 1) */
+    coeffs[12] = 0.5f * z * (5.0f*z*z - 3.0f);    /* K = 0.5 * Z * (5*Z*Z - 3) */
+    coeffs[13] = 0.7262f * x * (5.0f*z*z - 1.0f); /* L = sqrt(135.0 / 256.0) * X * (5*Z*Z - 1) */
+    coeffs[14] = 2.5981f * z * (x*x - y*y);       /* N = sqrt(27.0 / 4.0) * Z * (X*X - Y*Y) */
+    coeffs[15] = x * (x*x - 3.0f*y*y);            /* P = X * (X*X - 3*Y*Y) */
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
         gains[i] = 0.0f;
@@ -111,10 +154,8 @@ void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat 
         gains[i] = 0.0f;
     for(i = 0;i < device->NumChannels;i++)
     {
-        float scale = device->AmbiScale;
-        gains[i] += device->AmbiCoeffs[i][0] * mtx[0];
-        for(j = 1;j < 4;j++)
-            gains[i] += device->AmbiCoeffs[i][j] * scale * mtx[j];
+        for(j = 0;j < 4;j++)
+            gains[i] += device->AmbiCoeffs[i][j] * mtx[j];
         gains[i] *= ingain;
     }
 }
@@ -143,10 +184,10 @@ DECL_CONST static inline const char *GetLabelFromChannel(enum Channel channel)
         case BottomBackLeft: return "bottom-back-left";
         case BottomBackRight: return "bottom-back-right";
 
-        case Aux0: return "aux-0";
-        case Aux1: return "aux-1";
-        case Aux2: return "aux-2";
-        case Aux3: return "aux-3";
+        case BFormatW: return "bformat-w";
+        case BFormatX: return "bformat-x";
+        case BFormatY: return "bformat-y";
+        case BFormatZ: return "bformat-z";
 
         case InvalidChannel: break;
     }
@@ -217,6 +258,7 @@ static bool LoadChannelSetup(ALCdevice *device)
     const char *layout = NULL;
     ALfloat ambiscale = 1.0f;
     size_t count = 0;
+    int isfuma;
     int order;
     size_t i;
 
@@ -265,10 +307,30 @@ static bool LoadChannelSetup(ALCdevice *device)
         return false;
     else
     {
-        char name[32];
-        snprintf(name, sizeof(name), "%s/order", layout);
-        if(!ConfigValueInt("layouts", name, &order))
+        char name[32] = {0};
+        const char *type;
+        char eol;
+
+        snprintf(name, sizeof(name), "%s/type", layout);
+        if(!ConfigValueStr("layouts", name, &type))
             return false;
+
+        if(sscanf(type, " %31[^: ] : %d%c", name, &order, &eol) != 2)
+        {
+            ERR("Invalid type value '%s' (expected name:order) for layout %s\n", type, layout);
+            return false;
+        }
+
+        if(strcasecmp(name, "fuma") == 0)
+            isfuma = 1;
+        else if(strcasecmp(name, "n3d") == 0)
+            isfuma = 0;
+        else
+        {
+            ERR("Unhandled type name '%s' (expected FuMa or N3D) for layout %s\n", name, layout);
+            return false;
+        }
+
         if(order == 3)
             ambiscale = THIRD_ORDER_SCALE;
         else if(order == 2)
@@ -279,13 +341,14 @@ static bool LoadChannelSetup(ALCdevice *device)
             ambiscale = ZERO_ORDER_SCALE;
         else
         {
-            ERR("Unhandled order value %d (expected 0, 1, 2, or 3) for layout %s\n", order, name);
+            ERR("Unhandled type order %d (expected 0, 1, 2, or 3) for layout %s\n", order, layout);
             return false;
         }
     }
 
     for(i = 0;i < count;i++)
     {
+        float coeffs[MAX_AMBI_COEFFS] = {0.0f};
         const char *channame;
         char chanlayout[32];
         const char *value;
@@ -304,27 +367,27 @@ static bool LoadChannelSetup(ALCdevice *device)
         }
         if(order == 3)
             props = sscanf(value, " %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %c",
-                &chanmap[i].Config[0],  &chanmap[i].Config[1],  &chanmap[i].Config[2],  &chanmap[i].Config[3],
-                &chanmap[i].Config[4],  &chanmap[i].Config[5],  &chanmap[i].Config[6],  &chanmap[i].Config[7],
-                &chanmap[i].Config[8],  &chanmap[i].Config[9],  &chanmap[i].Config[10], &chanmap[i].Config[11],
-                &chanmap[i].Config[12], &chanmap[i].Config[13], &chanmap[i].Config[14], &chanmap[i].Config[15],
+                &coeffs[0],  &coeffs[1],  &coeffs[2],  &coeffs[3],
+                &coeffs[4],  &coeffs[5],  &coeffs[6],  &coeffs[7],
+                &coeffs[8],  &coeffs[9],  &coeffs[10], &coeffs[11],
+                &coeffs[12], &coeffs[13], &coeffs[14], &coeffs[15],
                 &eol
             );
         else if(order == 2)
             props = sscanf(value, " %f %f %f %f %f %f %f %f %f %c",
-                &chanmap[i].Config[0], &chanmap[i].Config[1], &chanmap[i].Config[2],
-                &chanmap[i].Config[3], &chanmap[i].Config[4], &chanmap[i].Config[5],
-                &chanmap[i].Config[6], &chanmap[i].Config[7], &chanmap[i].Config[8],
+                &coeffs[0], &coeffs[1], &coeffs[2],
+                &coeffs[3], &coeffs[4], &coeffs[5],
+                &coeffs[6], &coeffs[7], &coeffs[8],
                 &eol
             );
         else if(order == 1)
             props = sscanf(value, " %f %f %f %f %c",
-                &chanmap[i].Config[0], &chanmap[i].Config[1],
-                &chanmap[i].Config[2], &chanmap[i].Config[3],
+                &coeffs[0], &coeffs[1],
+                &coeffs[2], &coeffs[3],
                 &eol
             );
         else if(order == 0)
-            props = sscanf(value, " %f %c", &chanmap[i].Config[0], &eol);
+            props = sscanf(value, " %f %c", &coeffs[0], &eol);
         if(props == 0)
         {
             ERR("Failed to parse option %s properties\n", chanlayout);
@@ -337,8 +400,18 @@ static bool LoadChannelSetup(ALCdevice *device)
             return false;
         }
 
-        for(j = props;j < 16;++j)
-            chanmap[i].Config[j] = 0.0f;
+        if(isfuma)
+        {
+            /* Reorder FuMa -> ACN */
+            for(j = 0;j < MAX_AMBI_COEFFS;++j)
+                chanmap[i].Config[FuMa2ACN[j]] = coeffs[j];
+        }
+        else
+        {
+            /* Rescale N3D -> FuMa */
+            for(j = 0;j < MAX_AMBI_COEFFS;++j)
+                chanmap[i].Config[j] = coeffs[j] * N3D2FuMaScale[j];
+        }
     }
     SetChannelMap(device, chanmap, count, ambiscale);
     return true;
@@ -349,45 +422,45 @@ ALvoid aluInitPanning(ALCdevice *device)
     static const ChannelMap MonoCfg[1] = {
         { FrontCenter, { 1.4142f } },
     }, StereoCfg[2] = {
-        { FrontLeft,   { 0.7071f, 0.0f,  0.5f, 0.0f } },
-        { FrontRight,  { 0.7071f, 0.0f, -0.5f, 0.0f } },
+        { FrontLeft,   { 0.7071f,  0.5f, 0.0f, 0.0f } },
+        { FrontRight,  { 0.7071f, -0.5f, 0.0f, 0.0f } },
     }, QuadCfg[4] = {
-        { FrontLeft,   { 0.353553f,  0.306184f,  0.306184f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.117186f } },
-        { FrontRight,  { 0.353553f,  0.306184f, -0.306184f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.117186f } },
-        { BackLeft,    { 0.353553f, -0.306184f,  0.306184f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.117186f } },
-        { BackRight,   { 0.353553f, -0.306184f, -0.306184f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.117186f } },
+        { FrontLeft,   { 0.353553f,  0.306184f, 0.0f,  0.306184f,  0.117186f, 0.0f, 0.0f, 0.0f,  0.000000f } },
+        { FrontRight,  { 0.353553f, -0.306184f, 0.0f,  0.306184f, -0.117186f, 0.0f, 0.0f, 0.0f,  0.000000f } },
+        { BackLeft,    { 0.353553f,  0.306184f, 0.0f, -0.306184f, -0.117186f, 0.0f, 0.0f, 0.0f,  0.000000f } },
+        { BackRight,   { 0.353553f, -0.306184f, 0.0f, -0.306184f,  0.117186f, 0.0f, 0.0f, 0.0f,  0.000000f } },
     }, X51SideCfg[5] = {
-        { FrontLeft,   { 0.208954f,  0.212846f,  0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017738f,  0.204014f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f,  0.047490f } },
-        { FrontRight,  { 0.208954f,  0.212846f, -0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017738f, -0.204014f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f, -0.047490f } },
-        { FrontCenter, { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f,  0.000000f } },
-        { SideLeft,    { 0.470936f, -0.369626f,  0.349386f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031375f, -0.058144f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f, -0.043968f } },
-        { SideRight,   { 0.470936f, -0.369626f, -0.349386f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031375f,  0.058144f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f,  0.043968f } },
+        { FrontLeft,   { 0.208954f,  0.238350f, 0.0f,  0.212846f,  0.204014f, 0.0f, 0.0f, 0.0f, -0.017738f,  0.047490f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f } },
+        { FrontRight,  { 0.208954f, -0.238350f, 0.0f,  0.212846f, -0.204014f, 0.0f, 0.0f, 0.0f, -0.017738f, -0.047490f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f } },
+        { FrontCenter, { 0.109403f,  0.000000f, 0.0f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f } },
+        { SideLeft,    { 0.470936f,  0.349386f, 0.0f, -0.369626f, -0.058144f, 0.0f, 0.0f, 0.0f, -0.031375f, -0.043968f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f } },
+        { SideRight,   { 0.470936f, -0.349386f, 0.0f, -0.369626f,  0.058144f, 0.0f, 0.0f, 0.0f, -0.031375f,  0.043968f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f } },
     }, X51RearCfg[5] = {
-        { FrontLeft,   { 0.208954f,  0.212846f,  0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017738f,  0.204014f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f,  0.047490f } },
-        { FrontRight,  { 0.208954f,  0.212846f, -0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017738f, -0.204014f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f, -0.047490f } },
-        { FrontCenter, { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f,  0.000000f } },
-        { BackLeft,    { 0.470936f, -0.369626f,  0.349386f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031375f, -0.058144f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f, -0.043968f } },
-        { BackRight,   { 0.470936f, -0.369626f, -0.349386f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031375f,  0.058144f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f,  0.043968f } },
+        { FrontLeft,   { 0.208954f,  0.238350f, 0.0f,  0.212846f,  0.204014f, 0.0f, 0.0f, 0.0f, -0.017738f,  0.047490f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f } },
+        { FrontRight,  { 0.208954f, -0.238350f, 0.0f,  0.212846f, -0.204014f, 0.0f, 0.0f, 0.0f, -0.017738f, -0.047490f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f } },
+        { FrontCenter, { 0.109403f,  0.000000f, 0.0f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f } },
+        { BackLeft,    { 0.470936f,  0.349386f, 0.0f, -0.369626f, -0.058144f, 0.0f, 0.0f, 0.0f, -0.031375f, -0.043968f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f } },
+        { BackRight,   { 0.470936f, -0.349386f, 0.0f, -0.369626f,  0.058144f, 0.0f, 0.0f, 0.0f, -0.031375f,  0.043968f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f } },
     }, X61Cfg[6] = {
-        { FrontLeft,   { 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f } },
-        { FrontRight,  { 0.167065f,  0.200583f, -0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068910f } },
-        { FrontCenter, { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f,  0.000000f } },
-        { BackCenter,  { 0.353556f, -0.461940f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.165723f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.000000f } },
-        { SideLeft,    { 0.289151f, -0.081301f,  0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f, -0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f, -0.032897f } },
-        { SideRight,   { 0.289151f, -0.081301f, -0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f,  0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f,  0.032897f } },
+        { FrontLeft,   { 0.167065f,  0.172695f, 0.0f,  0.200583f,  0.186407f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.068910f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f } },
+        { FrontRight,  { 0.167065f, -0.172695f, 0.0f,  0.200583f, -0.186407f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.068910f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f } },
+        { FrontCenter, { 0.109403f,  0.000000f, 0.0f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f } },
+        { BackCenter,  { 0.353556f,  0.000000f, 0.0f, -0.461940f,  0.000000f, 0.0f, 0.0f, 0.0f,  0.165723f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f } },
+        { SideLeft,    { 0.289151f,  0.401292f, 0.0f, -0.081301f, -0.071420f, 0.0f, 0.0f, 0.0f, -0.188208f, -0.032897f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f } },
+        { SideRight,   { 0.289151f, -0.401292f, 0.0f, -0.081301f,  0.071420f, 0.0f, 0.0f, 0.0f, -0.188208f,  0.032897f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f } },
     }, X71Cfg[7] = {
-        { FrontLeft,   { 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f } },
-        { FrontRight,  { 0.167065f,  0.200583f, -0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068910f } },
-        { FrontCenter, { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f,  0.000000f } },
-        { BackLeft,    { 0.224752f, -0.295009f,  0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f, -0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.065799f } },
-        { BackRight,   { 0.224752f, -0.295009f, -0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f,  0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065799f } },
-        { SideLeft,    { 0.224739f,  0.000000f,  0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065795f } },
-        { SideRight,   { 0.224739f,  0.000000f, -0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.065795f } },
+        { FrontLeft,   { 0.167065f,  0.172695f, 0.0f,  0.200583f,  0.186407f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.068910f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f } },
+        { FrontRight,  { 0.167065f, -0.172695f, 0.0f,  0.200583f, -0.186407f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.068910f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f } },
+        { FrontCenter, { 0.109403f,  0.000000f, 0.0f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f } },
+        { BackLeft,    { 0.224752f,  0.170325f, 0.0f, -0.295009f, -0.182473f, 0.0f, 0.0f, 0.0f,  0.105349f,  0.065799f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f } },
+        { BackRight,   { 0.224752f, -0.170325f, 0.0f, -0.295009f,  0.182473f, 0.0f, 0.0f, 0.0f,  0.105349f, -0.065799f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f } },
+        { SideLeft,    { 0.224739f,  0.340644f, 0.0f,  0.000000f,  0.000000f, 0.0f, 0.0f, 0.0f, -0.210697f, -0.065795f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f } },
+        { SideRight,   { 0.224739f, -0.340644f, 0.0f,  0.000000f,  0.000000f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.065795f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f } },
     }, BFormat3D[4] = {
-        { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f } },
-        { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f } },
-        { Aux2, { 0.0f, 0.0f, 1.0f, 0.0f } },
-        { Aux3, { 0.0f, 0.0f, 0.0f, 1.0f } },
+        { BFormatW, { 1.0f, 0.0f, 0.0f, 0.0f } },
+        { BFormatX, { 0.0f, 0.0f, 0.0f, 1.0f } },
+        { BFormatY, { 0.0f, 1.0f, 0.0f, 0.0f } },
+        { BFormatZ, { 0.0f, 0.0f, 1.0f, 0.0f } },
     };
     const ChannelMap *chanmap = NULL;
     ALfloat ambiscale = 1.0f;
@@ -399,6 +472,8 @@ ALvoid aluInitPanning(ALCdevice *device)
 
     if(device->Hrtf)
     {
+        ALfloat (*coeffs_list[4])[2];
+        ALuint *delay_list[4];
         ALuint i;
 
         count = COUNTOF(BFormat3D);
@@ -411,17 +486,14 @@ ALvoid aluInitPanning(ALCdevice *device)
             device->ChannelName[i] = InvalidChannel;
         SetChannelMap(device, chanmap, count, ambiscale);
 
+        for(i = 0;i < 4;++i)
         {
-            ALfloat (*coeffs_list[4])[2] = {
-                device->Hrtf_Params[0].Coeffs, device->Hrtf_Params[1].Coeffs,
-                device->Hrtf_Params[2].Coeffs, device->Hrtf_Params[3].Coeffs
-            };
-            ALuint *delay_list[4] = {
-                device->Hrtf_Params[0].Delay, device->Hrtf_Params[1].Delay,
-                device->Hrtf_Params[2].Delay, device->Hrtf_Params[3].Delay
-            };
-            GetBFormatHrtfCoeffs(device->Hrtf, 4, coeffs_list, delay_list);
+            static const enum Channel inputs[4] = { BFormatW, BFormatY, BFormatZ, BFormatX };
+            int chan = GetChannelIdxByName(device, inputs[i]);
+            coeffs_list[i] = device->Hrtf_Params[chan].Coeffs;
+            delay_list[i] = device->Hrtf_Params[chan].Delay;
         }
+        GetBFormatHrtfCoeffs(device->Hrtf, 4, coeffs_list, delay_list);
 
         return;
     }

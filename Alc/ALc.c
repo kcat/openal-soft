@@ -1532,10 +1532,10 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
         device->ChannelName[7] = SideRight;
         break;
     case DevFmtBFormat3D:
-        device->ChannelName[0] = Aux0;
-        device->ChannelName[1] = Aux1;
-        device->ChannelName[2] = Aux2;
-        device->ChannelName[3] = Aux3;
+        device->ChannelName[0] = BFormatW;
+        device->ChannelName[1] = BFormatX;
+        device->ChannelName[2] = BFormatY;
+        device->ChannelName[3] = BFormatZ;
         break;
     }
 }

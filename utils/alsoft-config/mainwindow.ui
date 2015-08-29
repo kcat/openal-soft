@@ -123,8 +123,8 @@ to stereo output.</string>
      <widget class="QComboBox" name="sampleRateCombo">
       <property name="geometry">
        <rect>
-        <x>120</x>
-        <y>80</y>
+        <x>370</x>
+        <y>20</y>
         <width>96</width>
         <height>22</height>
        </rect>
@@ -148,32 +148,7 @@ to stereo output.</string>
       </item>
       <item>
        <property name="text">
-        <string>96000</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>48000</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>44100</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>32000</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>22050</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>16000</string>
+        <string>8000</string>
        </property>
       </item>
       <item>
@@ -183,16 +158,41 @@ to stereo output.</string>
       </item>
       <item>
        <property name="text">
-        <string>8000</string>
+        <string>16000</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>22050</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>32000</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>44100</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>48000</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>96000</string>
        </property>
       </item>
      </widget>
      <widget class="QLabel" name="label_7">
       <property name="geometry">
        <rect>
-        <x>10</x>
-        <y>80</y>
-        <width>101</width>
+        <x>280</x>
+        <y>20</y>
+        <width>81</width>
         <height>21</height>
        </rect>
       </property>
@@ -207,9 +207,9 @@ to stereo output.</string>
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>200</y>
+        <y>180</y>
         <width>511</width>
-        <height>161</height>
+        <height>181</height>
        </rect>
       </property>
       <property name="title">
@@ -274,7 +274,7 @@ sample rate.</string>
          <x>110</x>
          <y>30</y>
          <width>301</width>
-         <height>121</height>
+         <height>141</height>
         </rect>
        </property>
        <property name="toolTip">
@@ -344,7 +344,7 @@ contain these markers, which will be replaced as needed:
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>110</y>
+        <y>90</y>
         <width>511</width>
         <height>91</height>
        </rect>
@@ -514,6 +514,37 @@ frames needed for each mixing update.</string>
         </property>
        </widget>
       </widget>
+     </widget>
+     <widget class="QLabel" name="label_14">
+      <property name="geometry">
+       <rect>
+        <x>280</x>
+        <y>50</y>
+        <width>81</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Stereo Mode:</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+     <widget class="QComboBox" name="stereoModeCombo">
+      <property name="geometry">
+       <rect>
+        <x>370</x>
+        <y>50</y>
+        <width>78</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string>How to treat stereo output. As headphones, HRTF or crossfeed
+filters may be used to improve binaural quality, which may not
+otherwise be suitable for speakers.</string>
+      </property>
      </widget>
     </widget>
     <widget class="QWidget" name="tab_2">

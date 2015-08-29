@@ -66,6 +66,12 @@ static const struct {
     { "Cubic Spline (good quality)", "cubic" },
 
     { "", "" }
+}, stereoModeList[] = {
+    { "Autodetect", "" },
+    { "Speakers", "speakers" },
+    { "Headphones", "headphones" },
+
+    { "", "" }
 };
 
 static QString getDefaultConfigName()
@@ -153,6 +159,9 @@ MainWindow::MainWindow(QWidget *parent) :
     for(int i = 0;resamplerList[i].name[0];i++)
         ui->resamplerComboBox->addItem(resamplerList[i].name);
     ui->resamplerComboBox->adjustSize();
+    for(int i = 0;stereoModeList[i].name[0];i++)
+        ui->stereoModeCombo->addItem(stereoModeList[i].name);
+    ui->stereoModeCombo->adjustSize();
 
     mPeriodSizeValidator = new QIntValidator(64, 8192, this);
     ui->periodSizeEdit->setValidator(mPeriodSizeValidator);
@@ -294,6 +303,28 @@ void MainWindow::loadConfig(const QString &fname)
                     if(item == resamplerList[i].name)
                     {
                         ui->resamplerComboBox->setCurrentIndex(j);
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    QString stereomode = settings.value("stereo-mode").toString().trimmed();
+    ui->stereoModeCombo->setCurrentIndex(0);
+    if(stereomode.isEmpty() == false)
+    {
+        for(int i = 0;stereoModeList[i].name[i];i++)
+        {
+            if(stereomode == stereoModeList[i].value)
+            {
+                for(int j = 1;j < ui->stereoModeCombo->count();j++)
+                {
+                    QString item = ui->stereoModeCombo->itemText(j);
+                    if(item == stereoModeList[i].name)
+                    {
+                        ui->stereoModeCombo->setCurrentIndex(j);
                         break;
                     }
                 }
@@ -471,6 +502,16 @@ void MainWindow::saveConfig(const QString &fname) const
         if(str == resamplerList[i].name)
         {
             settings.setValue("resampler", resamplerList[i].value);
+            break;
+        }
+    }
+
+    str = ui->stereoModeCombo->currentText();
+    for(int i = 0;stereoModeList[i].name[0];i++)
+    {
+        if(str == stereoModeList[i].name)
+        {
+            settings.setValue("stereo-mode", stereoModeList[i].value);
             break;
         }
     }

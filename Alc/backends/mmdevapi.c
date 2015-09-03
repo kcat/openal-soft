@@ -674,7 +674,7 @@ static ALCenum ALCmmdevPlayback_open(ALCmmdevPlayback *self, const ALCchar *devi
     {
         if(deviceName)
         {
-            const DevMap *iter, *end;
+            const DevMap *iter;
 
             if(VECTOR_SIZE(PlaybackDevices) == 0)
             {
@@ -684,21 +684,18 @@ static ALCenum ALCmmdevPlayback_open(ALCmmdevPlayback *self, const ALCchar *devi
             }
 
             hr = E_FAIL;
-            iter = VECTOR_ITER_BEGIN(PlaybackDevices);
-            end = VECTOR_ITER_END(PlaybackDevices);
-            for(;iter != end;iter++)
-            {
-                if(al_string_cmp_cstr(iter->name, deviceName) == 0)
-                {
-                    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
-                    self->devid = strdupW(iter->devid);
-                    al_string_copy(&device->DeviceName, iter->name);
-                    hr = S_OK;
-                    break;
-                }
-            }
-            if(FAILED(hr))
+#define MATCH_NAME(i) (al_string_cmp_cstr((i)->name, deviceName) == 0)
+            VECTOR_FIND_IF(iter, const DevMap, PlaybackDevices, MATCH_NAME);
+            if(iter == VECTOR_ITER_END(PlaybackDevices))
                 WARN("Failed to find device name matching \"%s\"\n", deviceName);
+            else
+            {
+                ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+                self->devid = strdupW(iter->devid);
+                al_string_copy(&device->DeviceName, iter->name);
+                hr = S_OK;
+            }
+#undef MATCH_NAME
         }
     }
 

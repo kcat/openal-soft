@@ -690,7 +690,9 @@ static ALCenum ALCmmdevPlayback_open(ALCmmdevPlayback *self, const ALCchar *devi
             {
                 if(al_string_cmp_cstr(iter->name, deviceName) == 0)
                 {
+                    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
                     self->devid = strdupW(iter->devid);
+                    al_string_copy(&device->DeviceName, iter->name);
                     hr = S_OK;
                     break;
                 }
@@ -752,7 +754,8 @@ static HRESULT ALCmmdevPlayback_openProxy(ALCmmdevPlayback *self)
     if(SUCCEEDED(hr))
     {
         self->client = ptr;
-        get_device_name(self->mmdev, &device->DeviceName);
+        if(al_string_empty(device->DeviceName))
+            get_device_name(self->mmdev, &device->DeviceName);
     }
 
     if(FAILED(hr))
@@ -1326,7 +1329,9 @@ static ALCenum ALCmmdevCapture_open(ALCmmdevCapture *self, const ALCchar *device
                 WARN("Failed to find device name matching \"%s\"\n", deviceName);
             else
             {
+                ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
                 self->devid = strdupW(iter->devid);
+                al_string_copy(&device->DeviceName, iter->name);
                 hr = S_OK;
             }
 #undef MATCH_NAME
@@ -1403,7 +1408,8 @@ static HRESULT ALCmmdevCapture_openProxy(ALCmmdevCapture *self)
     if(SUCCEEDED(hr))
     {
         self->client = ptr;
-        get_device_name(self->mmdev, &device->DeviceName);
+        if(al_string_empty(device->DeviceName))
+            get_device_name(self->mmdev, &device->DeviceName);
     }
 
     if(FAILED(hr))

@@ -833,10 +833,10 @@ static int ALCpulsePlayback_mixerProc(void *ptr)
 
 static ALCenum ALCpulsePlayback_open(ALCpulsePlayback *self, const ALCchar *name)
 {
+    const_al_string dev_name = AL_STRING_INIT_STATIC();
     const char *pulse_name = NULL;
     pa_stream_flags_t flags;
     pa_sample_spec spec;
-    pa_operation *o;
 
     if(name)
     {
@@ -851,6 +851,7 @@ static ALCenum ALCpulsePlayback_open(ALCpulsePlayback *self, const ALCchar *name
         if(iter == VECTOR_ITER_END(PlaybackDevices))
             return ALC_INVALID_VALUE;
         pulse_name = al_string_get_cstr(iter->device_name);
+        dev_name = iter->name;
     }
 
     if(!pulse_open(&self->loop, &self->context, ALCpulsePlayback_contextStateCallback, self))
@@ -881,10 +882,19 @@ static ALCenum ALCpulsePlayback_open(ALCpulsePlayback *self, const ALCchar *name
     pa_stream_set_moved_callback(self->stream, ALCpulsePlayback_streamMovedCallback, self);
 
     al_string_copy_cstr(&self->device_name, pa_stream_get_device_name(self->stream));
-    o = pa_context_get_sink_info_by_name(self->context,
-                                         al_string_get_cstr(self->device_name),
-                                         ALCpulsePlayback_sinkNameCallback, self);
-    wait_for_operation(o, self->loop);
+    if(al_string_empty(dev_name))
+    {
+        pa_operation *o = pa_context_get_sink_info_by_name(
+            self->context, al_string_get_cstr(self->device_name),
+            ALCpulsePlayback_sinkNameCallback, self
+        );
+        wait_for_operation(o, self->loop);
+    }
+    else
+    {
+        ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+        al_string_copy(&device->DeviceName, dev_name);
+    }
 
     pa_threaded_mainloop_unlock(self->loop);
 
@@ -1380,7 +1390,6 @@ static ALCenum ALCpulseCapture_open(ALCpulseCapture *self, const ALCchar *name)
     const char *pulse_name = NULL;
     pa_stream_flags_t flags = 0;
     pa_channel_map chanmap;
-    pa_operation *o;
     ALuint samples;
 
     if(name)
@@ -1396,6 +1405,7 @@ static ALCenum ALCpulseCapture_open(ALCpulseCapture *self, const ALCchar *name)
         if(iter == VECTOR_ITER_END(CaptureDevices))
             return ALC_INVALID_VALUE;
         pulse_name = al_string_get_cstr(iter->device_name);
+        al_string_copy(&device->DeviceName, iter->name);
     }
 
     if(!pulse_open(&self->loop, &self->context, ALCpulseCapture_contextStateCallback, self))
@@ -1469,10 +1479,14 @@ static ALCenum ALCpulseCapture_open(ALCpulseCapture *self, const ALCchar *name)
     pa_stream_set_state_callback(self->stream, ALCpulseCapture_streamStateCallback, self);
 
     al_string_copy_cstr(&self->device_name, pa_stream_get_device_name(self->stream));
-    o = pa_context_get_source_info_by_name(self->context,
-                                           al_string_get_cstr(self->device_name),
-                                           ALCpulseCapture_sourceNameCallback, self);
-    wait_for_operation(o, self->loop);
+    if(al_string_empty(device->DeviceName))
+    {
+        pa_operation *o = pa_context_get_source_info_by_name(
+            self->context, al_string_get_cstr(self->device_name),
+            ALCpulseCapture_sourceNameCallback, self
+        );
+        wait_for_operation(o, self->loop);
+    }
 
     pa_threaded_mainloop_unlock(self->loop);
     return ALC_NO_ERROR;

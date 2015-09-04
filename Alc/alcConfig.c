@@ -483,7 +483,7 @@ const char *GetConfigValue(const char *devName, const char *blockName, const cha
 
     for(i = 0;i < cfgBlock.entryCount;i++)
     {
-        if(strcasecmp(cfgBlock.entries[i].key, key) == 0)
+        if(strcmp(cfgBlock.entries[i].key, key) == 0)
         {
             TRACE("Found %s = \"%s\"\n", key, cfgBlock.entries[i].value);
             if(cfgBlock.entries[i].value[0])

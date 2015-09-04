@@ -18,8 +18,8 @@
 # specific override settings in $HOME/.alsoftrc.
 # For Windows, these settings should go into $AppData\alsoft.ini
 #
-# Option and block names are case-insenstive. The supplied values are only
-# hints and may not be honored (though generally it'll try to get as close as
+# Option and block names are case-senstive. The supplied values are only hints
+# and may not be honored (though generally it'll try to get as close as
 # possible). Note: options that are left unset may default to app- or system-
 # specified values. These are the current available settings:
 

@@ -466,7 +466,7 @@ const char *GetConfigValue(const char *devName, const char *blockName, const cha
     if(blockName && strcasecmp(blockName, "general") != 0)
     {
         if(devName)
-            snprintf(key, sizeof(key), "%s/%s/%s", devName, blockName, keyName);
+            snprintf(key, sizeof(key), "%s/%s/%s", blockName, devName, keyName);
         else
             snprintf(key, sizeof(key), "%s/%s", blockName, keyName);
     }

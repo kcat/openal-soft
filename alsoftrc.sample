@@ -11,7 +11,7 @@
 # Device-specific values may be specified by including the device name in the
 # block name, with "general" replaced by the device name. That is, general
 # options for the device "Name of Device" would be in the [Name of Device]
-# block, while ALSA options would be in the [Name of Device/alsa] block.
+# block, while ALSA options would be in the [alsa/Name of Device] block.
 # Options marked as "(global)" are not influenced by the device.
 #
 # The system-wide settings can be put in /etc/openal/alsoft.conf and user-

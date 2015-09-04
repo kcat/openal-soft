@@ -18,6 +18,7 @@ static const struct {
 #ifdef Q_OS_MAC
     { "core", "Add CoreAudio" },
 #endif
+    { "jack", "Add JACK" },
     { "pulse", "Add PulseAudio" },
 #ifdef Q_OS_UNIX
     { "alsa", "Add ALSA" },
@@ -26,7 +27,6 @@ static const struct {
     { "sndio", "Add SndIO" },
     { "qsa", "Add QSA" },
 #endif
-    { "jack", "Add JACK" },
     { "port", "Add PortAudio" },
     { "opensl", "Add OpenSL" },
     { "null", "Add Null Output" },

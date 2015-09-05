@@ -2006,6 +2006,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     device->Hrtf_Mode = DisabledHrtf;
     if(device->FmtChans != DevFmtStereo)
     {
+        if((device->Flags&DEVICE_HRTF_REQUEST_MASK) == Hrtf_Enable)
+            device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
+        device->Flags &= ~DEVICE_HRTF_REQUEST_MASK;
+
         free(device->Bs2b);
         device->Bs2b = NULL;
     }

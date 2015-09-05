@@ -650,26 +650,44 @@ static void ALCpulsePlayback_streamWriteCallback(pa_stream* UNUSED(p), size_t UN
 
 static void ALCpulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const pa_sink_info *info, int eol, void *pdata)
 {
+    static const struct {
+        enum DevFmtChannels chans;
+        pa_channel_map map;
+    } chanmaps[] = {
+        { DevFmtX71, { 8, {
+            PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
+            PA_CHANNEL_POSITION_FRONT_CENTER, PA_CHANNEL_POSITION_LFE,
+            PA_CHANNEL_POSITION_REAR_LEFT, PA_CHANNEL_POSITION_REAR_RIGHT,
+            PA_CHANNEL_POSITION_SIDE_LEFT, PA_CHANNEL_POSITION_SIDE_RIGHT
+        } } },
+        { DevFmtX61, { 7, {
+            PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
+            PA_CHANNEL_POSITION_FRONT_CENTER, PA_CHANNEL_POSITION_LFE,
+            PA_CHANNEL_POSITION_REAR_CENTER,
+            PA_CHANNEL_POSITION_SIDE_LEFT, PA_CHANNEL_POSITION_SIDE_RIGHT
+        } } },
+        { DevFmtX51, { 6, {
+            PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
+            PA_CHANNEL_POSITION_FRONT_CENTER, PA_CHANNEL_POSITION_LFE,
+            PA_CHANNEL_POSITION_SIDE_LEFT, PA_CHANNEL_POSITION_SIDE_RIGHT
+        } } },
+        { DevFmtX51Rear, { 6, {
+            PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
+            PA_CHANNEL_POSITION_FRONT_CENTER, PA_CHANNEL_POSITION_LFE,
+            PA_CHANNEL_POSITION_REAR_LEFT, PA_CHANNEL_POSITION_REAR_RIGHT
+        } } },
+        { DevFmtQuad, { 4, {
+            PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
+            PA_CHANNEL_POSITION_REAR_LEFT, PA_CHANNEL_POSITION_REAR_RIGHT
+        } } },
+        { DevFmtStereo, { 2, {
+            PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT
+        } } },
+        { DevFmtMono, { 1, {PA_CHANNEL_POSITION_MONO} } }
+    };
     ALCpulsePlayback *self = pdata;
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
-    const struct {
-        const char *str;
-        enum DevFmtChannels chans;
-    } chanmaps[] = {
-        { "front-left,front-right,front-center,lfe,rear-left,rear-right,side-left,side-right",
-          DevFmtX71 },
-        { "front-left,front-right,front-center,lfe,rear-center,side-left,side-right",
-          DevFmtX61 },
-        { "front-left,front-right,front-center,lfe,side-left,side-right",
-          DevFmtX51 },
-        { "front-left,front-right,front-center,lfe,rear-left,rear-right",
-          DevFmtX51Rear },
-        { "front-left,front-right,rear-left,rear-right", DevFmtQuad },
-        { "front-left,front-right", DevFmtStereo },
-        { "mono", DevFmtMono },
-        { NULL, 0 }
-    };
-    int i;
+    size_t i;
 
     if(eol)
     {
@@ -677,18 +695,20 @@ static void ALCpulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const
         return;
     }
 
-    for(i = 0;chanmaps[i].str;i++)
+    for(i = 0;i < COUNTOF(chanmaps);i++)
     {
-        pa_channel_map map;
-        if(!pa_channel_map_parse(&map, chanmaps[i].str))
-            continue;
-
-        if(pa_channel_map_superset(&info->channel_map, &map))
+        if(pa_channel_map_superset(&info->channel_map, &chanmaps[i].map))
         {
             if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
                 device->FmtChans = chanmaps[i].chans;
             break;
         }
+    }
+    if(i == COUNTOF(chanmaps))
+    {
+        char chanmap_str[PA_CHANNEL_MAP_SNPRINT_MAX] = "";
+        pa_channel_map_snprint(chanmap_str, sizeof(chanmap_str), &info->channel_map);
+        WARN("Failed to find format for channel map:\n    %s\n", chanmap_str);
     }
 
     if(info->active_port)
@@ -696,13 +716,6 @@ static void ALCpulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const
     device->IsHeadphones = (info->active_port &&
                             strcmp(info->active_port->name, "analog-output-headphones") == 0 &&
                             device->FmtChans == DevFmtStereo);
-
-    if(!chanmaps[i].str)
-    {
-        char chanmap_str[PA_CHANNEL_MAP_SNPRINT_MAX] = "";
-        pa_channel_map_snprint(chanmap_str, sizeof(chanmap_str), &info->channel_map);
-        WARN("Failed to find format for channel map:\n    %s\n", chanmap_str);
-    }
 }
 
 static void ALCpulsePlayback_sinkNameCallback(pa_context *UNUSED(context), const pa_sink_info *info, int eol, void *pdata)

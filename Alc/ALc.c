@@ -1451,6 +1451,12 @@ DECL_CONST static ALCboolean IsValidALCChannels(ALCenum channels)
 /************************************************
  * Miscellaneous ALC helpers
  ************************************************/
+enum HrtfRequestMode {
+    Hrtf_Default = 0,
+    Hrtf_Enable = 1,
+    Hrtf_Disable = 2,
+};
+
 extern inline void LockContext(ALCcontext *context);
 extern inline void UnlockContext(ALCcontext *context);
 
@@ -1729,7 +1735,8 @@ static inline void UpdateClockBase(ALCdevice *device)
 static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 {
     ALCcontext *context;
-    ALCenum hrtf_val = ALC_DONT_CARE_SOFT;
+    enum HrtfRequestMode hrtf_appreq = Hrtf_Default;
+    enum HrtfRequestMode hrtf_userreq = Hrtf_Default;
     enum DevFmtChannels oldChans;
     enum DevFmtType oldType;
     ALCuint oldFreq;
@@ -1745,7 +1752,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             GotType  = 1<<2,
             GotAll   = GotFreq|GotChans|GotType
         };
-        ALCuint freq, numMono, numStereo, numSends, flags;
+        ALCuint freq, numMono, numStereo, numSends;
         enum DevFmtChannels schans;
         enum DevFmtType stype;
         ALCuint attrIdx = 0;
@@ -1763,7 +1770,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         schans = device->FmtChans;
         stype = device->FmtType;
         freq = device->Frequency;
-        flags = device->Flags;
 
         while(attrList[attrIdx])
         {
@@ -1807,13 +1813,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
             if(attrList[attrIdx] == ALC_HRTF_SOFT)
             {
-                flags &= ~DEVICE_HRTF_REQUEST_MASK;
                 if(attrList[attrIdx + 1] == ALC_FALSE)
-                    flags |= Hrtf_Disable;
+                    hrtf_appreq = Hrtf_Disable;
                 else if(attrList[attrIdx + 1] == ALC_TRUE)
-                    flags |= Hrtf_Enable;
+                    hrtf_appreq = Hrtf_Enable;
                 else
-                    flags |= Hrtf_Default;
+                    hrtf_appreq = Hrtf_Default;
             }
 
             attrIdx += 2;
@@ -1830,7 +1835,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         if((device->Flags&DEVICE_RUNNING))
             V0(device->Backend,stop)();
-        device->Flags = (flags & ~DEVICE_RUNNING);
+        device->Flags &= ~DEVICE_RUNNING;
 
         UpdateClockBase(device);
 
@@ -1879,13 +1884,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
             if(attrList[attrIdx] == ALC_HRTF_SOFT)
             {
-                device->Flags &= ~DEVICE_HRTF_REQUEST_MASK;
                 if(attrList[attrIdx + 1] == ALC_FALSE)
-                    device->Flags |= Hrtf_Disable;
+                    hrtf_appreq = Hrtf_Disable;
                 else if(attrList[attrIdx + 1] == ALC_TRUE)
-                    device->Flags |= Hrtf_Enable;
+                    hrtf_appreq = Hrtf_Enable;
                 else
-                    device->Flags |= Hrtf_Default;
+                    hrtf_appreq = Hrtf_Default;
             }
 
             attrIdx += 2;
@@ -1926,25 +1930,25 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "hrtf", &hrtf))
         {
             if(strcasecmp(hrtf, "true") == 0)
-                hrtf_val = ALC_TRUE;
+                hrtf_userreq = Hrtf_Enable;
             else if(strcasecmp(hrtf, "false") == 0)
-                hrtf_val = ALC_FALSE;
+                hrtf_userreq = Hrtf_Disable;
             else if(strcasecmp(hrtf, "auto") != 0)
                 ERR("Unexpected hrtf value: %s\n", hrtf);
         }
 
-        if(hrtf_val == ALC_TRUE || (device->Flags&DEVICE_HRTF_REQUEST_MASK) == Hrtf_Enable)
+        if(hrtf_userreq == Hrtf_Enable || hrtf_appreq == Hrtf_Enable)
         {
             if(!FindHrtfFormat(&device->FmtChans, &device->Frequency))
             {
-                device->Flags &= ~DEVICE_HRTF_REQUEST_MASK;
+                hrtf_userreq = hrtf_appreq = Hrtf_Default;
                 device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
             }
             else
                 device->Flags |= DEVICE_CHANNELS_REQUEST | DEVICE_FREQUENCY_REQUEST;
         }
     }
-    else if((device->Flags&DEVICE_HRTF_REQUEST_MASK) == Hrtf_Enable)
+    else if(hrtf_appreq == Hrtf_Enable)
     {
         enum DevFmtChannels chans = device->FmtChans;
         ALCuint freq = device->Frequency;
@@ -1952,7 +1956,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         {
             ERR("Requested format not HRTF compatible: %s, %uhz\n",
                 DevFmtChannelsString(device->FmtChans), device->Frequency);
-            device->Flags &= ~DEVICE_HRTF_REQUEST_MASK;
+            hrtf_appreq = Hrtf_Default;
             device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
         }
     }
@@ -2006,9 +2010,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     device->Hrtf_Mode = DisabledHrtf;
     if(device->FmtChans != DevFmtStereo)
     {
-        if((device->Flags&DEVICE_HRTF_REQUEST_MASK) == Hrtf_Enable)
+        if(hrtf_appreq == Hrtf_Enable)
             device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
-        device->Flags &= ~DEVICE_HRTF_REQUEST_MASK;
 
         free(device->Bs2b);
         device->Bs2b = NULL;
@@ -2046,19 +2049,18 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
 
 
-        if(hrtf_val == ALC_DONT_CARE_SOFT)
+        if(hrtf_userreq == Hrtf_Default)
         {
-            usehrtf = (headphones && (device->Flags&DEVICE_HRTF_REQUEST_MASK) != Hrtf_Disable) ||
-                      ((device->Flags&DEVICE_HRTF_REQUEST_MASK) == Hrtf_Enable);
-            if(headphones && (device->Flags&DEVICE_HRTF_REQUEST_MASK) != Hrtf_Disable)
+            usehrtf = (headphones && hrtf_appreq != Hrtf_Disable) ||
+                      (hrtf_appreq == Hrtf_Enable);
+            if(headphones && hrtf_appreq != Hrtf_Disable)
                 hrtf_status = ALC_HRTF_HEADPHONES_DETECTED_SOFT;
             else if(usehrtf)
                 hrtf_status = ALC_HRTF_ENABLED_SOFT;
         }
         else
         {
-            device->Flags &= ~DEVICE_HRTF_REQUEST_MASK;
-            usehrtf = (hrtf_val == ALC_TRUE);
+            usehrtf = (hrtf_userreq == Hrtf_Enable);
             if(!usehrtf)
                 hrtf_status = ALC_HRTF_DENIED_SOFT;
             else
@@ -2084,8 +2086,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         {
             TRACE("HRTF disabled\n");
 
-            bs2blevel = ((headphones && (device->Flags&DEVICE_HRTF_REQUEST_MASK) != Hrtf_Disable) ||
-                         ((device->Flags&DEVICE_HRTF_REQUEST_MASK) == Hrtf_Enable)) ? 5 : 0;
+            bs2blevel = ((headphones && hrtf_appreq != Hrtf_Disable) ||
+                         (hrtf_appreq == Hrtf_Enable)) ? 5 : 0;
             if(device->Type != Loopback)
                 ConfigValueInt(al_string_get_cstr(device->DeviceName), NULL, "cf_level", &bs2blevel);
             if(bs2blevel > 0 && bs2blevel <= 6)

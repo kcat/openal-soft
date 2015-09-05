@@ -1937,15 +1937,15 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 ERR("Unexpected hrtf value: %s\n", hrtf);
         }
 
-        if(hrtf_userreq == Hrtf_Enable || hrtf_appreq == Hrtf_Enable)
+        if(hrtf_userreq == Hrtf_Enable || (hrtf_userreq != Hrtf_Disable && hrtf_appreq == Hrtf_Enable))
         {
-            if(!FindHrtfFormat(&device->FmtChans, &device->Frequency))
+            if(FindHrtfFormat(&device->FmtChans, &device->Frequency))
+                device->Flags |= DEVICE_CHANNELS_REQUEST | DEVICE_FREQUENCY_REQUEST;
+            else
             {
                 hrtf_userreq = hrtf_appreq = Hrtf_Default;
                 device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
             }
-            else
-                device->Flags |= DEVICE_CHANNELS_REQUEST | DEVICE_FREQUENCY_REQUEST;
         }
     }
     else if(hrtf_appreq == Hrtf_Enable)

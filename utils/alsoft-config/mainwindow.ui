@@ -215,7 +215,7 @@ to stereo output.</string>
       <property name="title">
        <string>HRTF (Stereo only)</string>
       </property>
-      <widget class="QRadioButton" name="hrtfEnableButton">
+      <widget class="QRadioButton" name="hrtfAutoButton">
        <property name="geometry">
         <rect>
          <x>20</x>
@@ -225,10 +225,11 @@ to stereo output.</string>
         </rect>
        </property>
        <property name="toolTip">
-        <string>Allows applications to request HRTF mixing.</string>
+        <string>Allows applications to request HRTF mixing, or for HRTF
+mixing to be enabled when headphones are detected.</string>
        </property>
        <property name="text">
-        <string>Enable</string>
+        <string>Auto</string>
        </property>
        <property name="checked">
         <bool>true</bool>
@@ -238,7 +239,7 @@ to stereo output.</string>
        <property name="geometry">
         <rect>
          <x>20</x>
-         <y>50</y>
+         <y>70</y>
          <width>71</width>
          <height>21</height>
         </rect>
@@ -254,7 +255,7 @@ to stereo output.</string>
        <property name="geometry">
         <rect>
          <x>20</x>
-         <y>70</y>
+         <y>50</y>
          <width>71</width>
          <height>21</height>
         </rect>

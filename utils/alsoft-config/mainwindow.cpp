@@ -360,7 +360,7 @@ void MainWindow::loadConfig(const QString &fname)
     ui->enableNeonCheckBox->setChecked(!disabledCpuExts.contains("neon", Qt::CaseInsensitive));
 
     if(settings.value("hrtf").toString() == QString())
-        ui->hrtfEnableButton->setChecked(true);
+        ui->hrtfAutoButton->setChecked(true);
     else
     {
         if(settings.value("hrtf", true).toBool())

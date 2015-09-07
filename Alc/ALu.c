@@ -1153,27 +1153,34 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
 }
 
 
-static inline ALint aluF2I25(ALfloat val)
+/* Specialized function to clamp to [-1, +1] with only one branch. This also
+ * converts NaN to 0. */
+static inline ALfloat aluClampf(ALfloat val)
 {
-    /* Clamp the value between -1 and +1. This handles that with only a single branch. */
-    if(fabsf(val) > 1.0f)
-        val = (ALfloat)((0.0f < val) - (val < 0.0f));
-    /* Convert to a signed integer, between -16777215 and +16777215. */
-    return fastf2i(val*16777215.0f);
+    if(fabsf(val) <= 1.0f) return val;
+    return (ALfloat)((0.0f < val) - (val < 0.0f));
 }
 
 static inline ALfloat aluF2F(ALfloat val)
 { return val; }
+
 static inline ALint aluF2I(ALfloat val)
-{ return aluF2I25(val)<<7; }
+{
+    /* Floats only have a 24-bit mantissa, so [-16777215, +16777215] is the max
+     * integer range normalized floats can be safely converted to.
+     */
+    return fastf2i(aluClampf(val)*16777215.0f)<<7;
+}
 static inline ALuint aluF2UI(ALfloat val)
 { return aluF2I(val)+2147483648u; }
+
 static inline ALshort aluF2S(ALfloat val)
-{ return aluF2I25(val)>>9; }
+{ return fastf2i(aluClampf(val)*32767.0f); }
 static inline ALushort aluF2US(ALfloat val)
 { return aluF2S(val)+32768; }
+
 static inline ALbyte aluF2B(ALfloat val)
-{ return aluF2I25(val)>>17; }
+{ return fastf2i(aluClampf(val)*127.0f); }
 static inline ALubyte aluF2UB(ALfloat val)
 { return aluF2B(val)+128; }
 

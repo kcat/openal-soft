@@ -65,13 +65,13 @@ void SDLCALL RenderSDLSamples(void *userdata, Uint8 *stream, int len)
  * buffer ID. */
 static ALuint CreateSineWave(void)
 {
-    ALshort data[44100];
+    ALshort data[44100*4];
     ALuint buffer;
     ALenum err;
     ALuint i;
 
-    for(i = 0;i < 44100;i++)
-        data[i] = (ALshort)(sin(i * 441.0 / 44100.0 * 2.0*M_PI)*32767.0);
+    for(i = 0;i < 44100*4;i++)
+        data[i] = (ALshort)(sin(i/44100.0 * 1000.0 * 2.0*M_PI) * 32767.0);
 
     /* Buffer the audio data into a new buffer object. */
     buffer = 0;

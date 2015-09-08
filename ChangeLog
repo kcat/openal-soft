@@ -21,7 +21,7 @@ openal-soft-1.17.0:
     Fixed handling of PulseAudio and MMDevAPI devices that have identical
     descriptions.
 
-    Fixed stopping playback of suspended PulseAudio devices.
+    Fixed a potential lockup when stopping playback of suspended PulseAudio devices.
 
     Fixed logging of Unicode characters on Windows.
 

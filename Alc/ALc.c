@@ -2097,8 +2097,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                     device->Bs2b = calloc(1, sizeof(*device->Bs2b));
                     bs2b_clear(device->Bs2b);
                 }
-                bs2b_set_srate(device->Bs2b, device->Frequency);
-                bs2b_set_level(device->Bs2b, bs2blevel);
+                bs2b_set_params(device->Bs2b, bs2blevel, device->Frequency);
                 TRACE("BS2B enabled\n");
             }
             else

@@ -60,6 +60,8 @@
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
 
+#define DEVNAME_TAIL " on OpenAL Soft"
+
 
 #ifdef HAVE_DYNLOAD
 static void *ds_handle;
@@ -144,17 +146,18 @@ static BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHA
         const DevMap *iter;
 
         al_string_copy_wcstr(&entry.name, desc);
-        if(count != 0)
+        if(count == 0)
+            al_string_append_cstr(&entry.name, DEVNAME_TAIL);
+        else
         {
             char str[64];
-            snprintf(str, sizeof(str), " #%d", count+1);
+            snprintf(str, sizeof(str), " #%d"DEVNAME_TAIL, count+1);
             al_string_append_cstr(&entry.name, str);
         }
 
 #define MATCH_ENTRY(i) (al_string_cmp(entry.name, (i)->name) == 0)
         VECTOR_FIND_IF(iter, const DevMap, *devices, MATCH_ENTRY);
-        if(iter == VECTOR_ITER_END(*devices))
-            break;
+        if(iter == VECTOR_ITER_END(*devices)) break;
 #undef MATCH_ENTRY
         count++;
     }

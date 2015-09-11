@@ -37,6 +37,8 @@
 #define WAVE_FORMAT_IEEE_FLOAT  0x0003
 #endif
 
+#define DEVNAME_TAIL " on OpenAL Soft"
+
 
 TYPEDEF_VECTOR(al_string, vector_al_string)
 static vector_al_string PlaybackDevices;
@@ -51,7 +53,6 @@ static void clear_devlist(vector_al_string *list)
 
 static void ProbePlaybackDevices(void)
 {
-    al_string *iter, *end;
     ALuint numdevs;
     ALuint i;
 
@@ -62,30 +63,31 @@ static void ProbePlaybackDevices(void)
     for(i = 0;i < numdevs;i++)
     {
         WAVEOUTCAPSW WaveCaps;
+        const al_string *iter;
         al_string dname;
 
         AL_STRING_INIT(dname);
         if(waveOutGetDevCapsW(i, &WaveCaps, sizeof(WaveCaps)) == MMSYSERR_NOERROR)
         {
             ALuint count = 0;
-            do {
+            while(1)
+            {
                 al_string_copy_wcstr(&dname, WaveCaps.szPname);
-                if(count != 0)
+                if(count == 0)
+                    al_string_append_cstr(&dname, DEVNAME_TAIL);
+                else
                 {
                     char str[64];
-                    snprintf(str, sizeof(str), " #%d", count+1);
+                    snprintf(str, sizeof(str), " #%d"DEVNAME_TAIL, count+1);
                     al_string_append_cstr(&dname, str);
                 }
                 count++;
 
-                iter = VECTOR_ITER_BEGIN(PlaybackDevices);
-                end = VECTOR_ITER_END(PlaybackDevices);
-                for(;iter != end;iter++)
-                {
-                    if(al_string_cmp(*iter, dname) == 0)
-                        break;
-                }
-            } while(iter != end);
+#define MATCH_ENTRY(i) (al_string_cmp(dname, *(i)) == 0)
+                VECTOR_FIND_IF(iter, const al_string, PlaybackDevices, MATCH_ENTRY);
+                if(iter == VECTOR_ITER_END(PlaybackDevices)) break;
+#undef MATCH_ENTRY
+            }
 
             TRACE("Got device \"%s\", ID %u\n", al_string_get_cstr(dname), i);
         }
@@ -95,7 +97,6 @@ static void ProbePlaybackDevices(void)
 
 static void ProbeCaptureDevices(void)
 {
-    al_string *iter, *end;
     ALuint numdevs;
     ALuint i;
 
@@ -106,30 +107,31 @@ static void ProbeCaptureDevices(void)
     for(i = 0;i < numdevs;i++)
     {
         WAVEINCAPSW WaveCaps;
+        const al_string *iter;
         al_string dname;
 
         AL_STRING_INIT(dname);
         if(waveInGetDevCapsW(i, &WaveCaps, sizeof(WaveCaps)) == MMSYSERR_NOERROR)
         {
             ALuint count = 0;
-            do {
+            while(1)
+            {
                 al_string_copy_wcstr(&dname, WaveCaps.szPname);
-                if(count != 0)
+                if(count == 0)
+                    al_string_append_cstr(&dname, DEVNAME_TAIL);
+                else
                 {
                     char str[64];
-                    snprintf(str, sizeof(str), " #%d", count+1);
+                    snprintf(str, sizeof(str), " #%d"DEVNAME_TAIL, count+1);
                     al_string_append_cstr(&dname, str);
                 }
                 count++;
 
-                iter = VECTOR_ITER_BEGIN(CaptureDevices);
-                end = VECTOR_ITER_END(CaptureDevices);
-                for(;iter != end;iter++)
-                {
-                    if(al_string_cmp(*iter, dname) == 0)
-                        break;
-                }
-            } while(iter != end);
+#define MATCH_ENTRY(i) (al_string_cmp(dname, *(i)) == 0)
+                VECTOR_FIND_IF(iter, const al_string, CaptureDevices, MATCH_ENTRY);
+                if(iter == VECTOR_ITER_END(CaptureDevices)) break;
+#undef MATCH_ENTRY
+            }
 
             TRACE("Got device \"%s\", ID %u\n", al_string_get_cstr(dname), i);
         }

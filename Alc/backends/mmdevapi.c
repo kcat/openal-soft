@@ -62,6 +62,8 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_FormFactor, 0x1da5d803, 0xd492, 0x4edd, 0x
 #define X7DOT1 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT)
 #define X7DOT1_WIDE (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_FRONT_LEFT_OF_CENTER|SPEAKER_FRONT_RIGHT_OF_CENTER)
 
+#define DEVNAME_TAIL " on OpenAL Soft"
+
 
 typedef struct {
     al_string name;
@@ -191,17 +193,18 @@ static void add_device(IMMDevice *device, LPCWSTR devid, vector_DevMap *list)
         const DevMap *iter;
 
         al_string_copy(&entry.name, tmpname);
-        if(count != 0)
+        if(count == 0)
+            al_string_append_cstr(&entry.name, DEVNAME_TAIL);
+        else
         {
             char str[64];
-            snprintf(str, sizeof(str), " #%d", count+1);
+            snprintf(str, sizeof(str), " #%d"DEVNAME_TAIL, count+1);
             al_string_append_cstr(&entry.name, str);
         }
 
 #define MATCH_ENTRY(i) (al_string_cmp(entry.name, (i)->name) == 0)
         VECTOR_FIND_IF(iter, const DevMap, *list, MATCH_ENTRY);
-        if(iter == VECTOR_ITER_END(*list))
-            break;
+        if(iter == VECTOR_ITER_END(*list)) break;
 #undef MATCH_ENTRY
         count++;
     }
@@ -752,7 +755,10 @@ static HRESULT ALCmmdevPlayback_openProxy(ALCmmdevPlayback *self)
     {
         self->client = ptr;
         if(al_string_empty(device->DeviceName))
+        {
             get_device_name(self->mmdev, &device->DeviceName);
+            al_string_append_cstr(&device->DeviceName, DEVNAME_TAIL);
+        }
     }
 
     if(FAILED(hr))
@@ -1406,7 +1412,10 @@ static HRESULT ALCmmdevCapture_openProxy(ALCmmdevCapture *self)
     {
         self->client = ptr;
         if(al_string_empty(device->DeviceName))
+        {
             get_device_name(self->mmdev, &device->DeviceName);
+            al_string_append_cstr(&device->DeviceName, DEVNAME_TAIL);
+        }
     }
 
     if(FAILED(hr))

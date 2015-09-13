@@ -1212,8 +1212,9 @@ DECL_TEMPLATE(ALbyte, aluF2B)
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 {
     ALuint SamplesToDo;
-    ALeffectslot **slot, **slot_end;
     ALvoice *voice, *voice_end;
+    ALeffectslot *slot;
+    ALsource *source;
     ALCcontext *ctx;
     FPUCtl oldMode;
     ALuint i, c;
@@ -1244,76 +1245,92 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         }
 
         V0(device->Backend,lock)();
-        V(device->Synth,process)(SamplesToDo, OutBuffer, OutChannels);
+
+        if((slot=device->DefaultSlot) != NULL)
+        {
+            if(ATOMIC_EXCHANGE(ALenum, &slot->NeedsUpdate, AL_FALSE))
+                V(slot->EffectState,update)(device, slot);
+            memset(slot->WetBuffer[0], 0, SamplesToDo*sizeof(ALfloat));
+        }
 
         ctx = ATOMIC_LOAD(&device->ContextList);
         while(ctx)
         {
-            ALenum DeferUpdates = ctx->DeferUpdates;
-            ALenum UpdateSources = AL_FALSE;
+            if(!ctx->DeferUpdates)
+            {
+                if(ATOMIC_EXCHANGE(ALenum, &ctx->UpdateSources, AL_FALSE))
+                {
+                    CalcListenerParams(ctx->Listener);
 
-            if(!DeferUpdates)
-                UpdateSources = ATOMIC_EXCHANGE(ALenum, &ctx->UpdateSources, AL_FALSE);
+                    voice = ctx->Voices;
+                    voice_end = voice + ctx->VoiceCount;
+                    for(;voice != voice_end;++voice)
+                    {
+                        if(!(source=voice->Source)) continue;
+                        if(source->state != AL_PLAYING && source->state != AL_PAUSED)
+                            voice->Source = NULL;
+                        else
+                        {
+                            ATOMIC_STORE(&source->NeedsUpdate, AL_FALSE);
+                            voice->Update(voice, source, ctx);
+                        }
+                    }
+                }
+                else
+                {
+                    voice = ctx->Voices;
+                    voice_end = voice + ctx->VoiceCount;
+                    for(;voice != voice_end;++voice)
+                    {
+                        if(!(source=voice->Source)) continue;
+                        if(source->state != AL_PLAYING && source->state != AL_PAUSED)
+                            voice->Source = NULL;
+                        else if(ATOMIC_EXCHANGE(ALenum, &source->NeedsUpdate, AL_FALSE))
+                            voice->Update(voice, source, ctx);
+                    }
+                }
 
-            if(UpdateSources)
-                CalcListenerParams(ctx->Listener);
+#define UPDATE_SLOT(iter) do {                                     \
+    if(ATOMIC_EXCHANGE(ALenum, &(*iter)->NeedsUpdate, AL_FALSE))   \
+        V((*iter)->EffectState,update)(device, *iter);             \
+    memset((*iter)->WetBuffer[0], 0, SamplesToDo*sizeof(ALfloat)); \
+} while(0)
+                VECTOR_FOR_EACH(ALeffectslot*, ctx->ActiveAuxSlots, UPDATE_SLOT);
+#undef UPDATE_SLOT
+            }
+            else
+            {
+#define CLEAR_WET_BUFFER(iter)  memset((*iter)->WetBuffer[0], 0, SamplesToDo*sizeof(ALfloat))
+                VECTOR_FOR_EACH(ALeffectslot*, ctx->ActiveAuxSlots, CLEAR_WET_BUFFER);
+#undef CLEAR_WET_BUFFER
+            }
 
             /* source processing */
             voice = ctx->Voices;
             voice_end = voice + ctx->VoiceCount;
-            while(voice != voice_end)
+            for(;voice != voice_end;++voice)
             {
-                ALsource *source = voice->Source;
-                if(!source) goto next;
-
-                if(source->state != AL_PLAYING && source->state != AL_PAUSED)
-                {
-                    voice->Source = NULL;
-                    goto next;
-                }
-
-                if(!DeferUpdates && (ATOMIC_EXCHANGE(ALenum, &source->NeedsUpdate, AL_FALSE) ||
-                                     UpdateSources))
-                    voice->Update(voice, source, ctx);
-
-                if(source->state != AL_PAUSED)
+                source = voice->Source;
+                if(source && source->state == AL_PLAYING)
                     MixSource(voice, source, device, SamplesToDo);
-            next:
-                voice++;
             }
 
             /* effect slot processing */
-            slot = VECTOR_ITER_BEGIN(ctx->ActiveAuxSlots);
-            slot_end = VECTOR_ITER_END(ctx->ActiveAuxSlots);
-            while(slot != slot_end)
-            {
-                if(!DeferUpdates && ATOMIC_EXCHANGE(ALenum, &(*slot)->NeedsUpdate, AL_FALSE))
-                    V((*slot)->EffectState,update)(device, *slot);
-
-                V((*slot)->EffectState,process)(SamplesToDo, (*slot)->WetBuffer[0],
-                                                device->DryBuffer, device->NumChannels);
-
-                for(i = 0;i < SamplesToDo;i++)
-                    (*slot)->WetBuffer[0][i] = 0.0f;
-
-                slot++;
-            }
+#define PROCESS_SLOT(iter)  V((*iter)->EffectState,process)(                   \
+    SamplesToDo, (*iter)->WetBuffer[0], device->DryBuffer, device->NumChannels \
+);
+            VECTOR_FOR_EACH(ALeffectslot*, ctx->ActiveAuxSlots, PROCESS_SLOT);
+#undef PROCESS_SLOT
 
             ctx = ctx->next;
         }
 
-        slot = &device->DefaultSlot;
-        if(*slot != NULL)
-        {
-            if(ATOMIC_EXCHANGE(ALenum, &(*slot)->NeedsUpdate, AL_FALSE))
-                V((*slot)->EffectState,update)(device, *slot);
+        V(device->Synth,process)(SamplesToDo, OutBuffer, OutChannels);
 
-            V((*slot)->EffectState,process)(SamplesToDo, (*slot)->WetBuffer[0],
-                                            device->DryBuffer, device->NumChannels);
-
-            for(i = 0;i < SamplesToDo;i++)
-                (*slot)->WetBuffer[0][i] = 0.0f;
-        }
+        if((slot=device->DefaultSlot) != NULL)
+            V(slot->EffectState,process)(
+                SamplesToDo, slot->WetBuffer[0], device->DryBuffer, device->NumChannels
+            );
 
         /* Increment the clock time. Every second's worth of samples is
          * converted and added to clock base so that large sample counts don't

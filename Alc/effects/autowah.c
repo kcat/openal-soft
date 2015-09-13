@@ -112,7 +112,7 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALuint SamplesToDo, 
              * ALfilterType_LowPass. However, instead of passing a bandwidth,
              * we use the resonance property for Q. This also inlines the call.
              */
-            w0 = F_2PI * cutoff / state->Frequency;
+            w0 = F_TAU * cutoff / state->Frequency;
 
             /* FIXME: Resonance controls the resonant peak, or Q. How? Not sure
              * that Q = resonance*0.1. */

@@ -134,7 +134,7 @@ static ALvoid ALchorusState_update(ALchorusState *state, ALCdevice *Device, cons
                 state->lfo_scale = 4.0f / state->lfo_range;
                 break;
             case CWF_Sinusoid:
-                state->lfo_scale = F_2PI / state->lfo_range;
+                state->lfo_scale = F_TAU / state->lfo_range;
                 break;
         }
 

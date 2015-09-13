@@ -82,7 +82,7 @@ static void CalcEvIndices(ALuint evcount, ALfloat ev, ALuint *evidx, ALfloat *ev
  */
 static void CalcAzIndices(ALuint azcount, ALfloat az, ALuint *azidx, ALfloat *azmu)
 {
-    az = (F_2PI + az) * azcount / F_2PI;
+    az = (F_TAU + az) * azcount / F_TAU;
     azidx[0] = fastf2u(az) % azcount;
     azidx[1] = (azidx[0] + 1) % azcount;
     *azmu = az - floorf(az);
@@ -359,8 +359,8 @@ void GetBFormatHrtfCoeffs(const struct Hrtf *Hrtf, const ALuint num_chans, ALflo
             lidx = evoffset + azi_idx;
             ridx = evoffset + ((azcount-azi_idx) % azcount);
 
-            az = (ALfloat)azi_idx / (ALfloat)azcount * F_2PI;
-            if(az > F_PI) az -= F_2PI;
+            az = (ALfloat)azi_idx / (ALfloat)azcount * F_TAU;
+            if(az > F_PI) az -= F_TAU;
 
             x = cosf(-az) * cosf(elev);
             y = sinf(-az) * cosf(elev);

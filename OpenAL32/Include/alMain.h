@@ -418,12 +418,12 @@ static void T##_Delete(void *ptr) { al_free(ptr); }
     }                                                                         \
 } while(0)
 
-#define NEW_OBJ(_ptr, T) do {                                                 \
-    _ptr = T##_New(sizeof(*_ptr));                                            \
-    if(_ptr)                                                                  \
+#define NEW_OBJ(_res, T) do {                                                 \
+    _res = T##_New(sizeof(T));                                                \
+    if(_res)                                                                  \
     {                                                                         \
-        memset(_ptr, 0, sizeof(*_ptr));                                       \
-        T##_Construct(_ptr, EXTRACT_NEW_ARGS
+        memset(_res, 0, sizeof(T));                                           \
+        T##_Construct(_res, EXTRACT_NEW_ARGS
 
 
 #ifdef __cplusplus

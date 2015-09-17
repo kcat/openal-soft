@@ -526,7 +526,7 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
 
     if(f == NULL)
         WARN("Could not open %s\\%s\n", subdir, fname);
-    return NULL;
+    return f;
 }
 
 #else

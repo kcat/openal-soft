@@ -1153,6 +1153,45 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
 }
 
 
+void UpdateContextSources(ALCcontext *ctx)
+{
+    ALvoice *voice, *voice_end;
+    ALsource *source;
+
+    if(ATOMIC_EXCHANGE(ALenum, &ctx->UpdateSources, AL_FALSE))
+    {
+        CalcListenerParams(ctx->Listener);
+
+        voice = ctx->Voices;
+        voice_end = voice + ctx->VoiceCount;
+        for(;voice != voice_end;++voice)
+        {
+            if(!(source=voice->Source)) continue;
+            if(source->state != AL_PLAYING && source->state != AL_PAUSED)
+                voice->Source = NULL;
+            else
+            {
+                ATOMIC_STORE(&source->NeedsUpdate, AL_FALSE);
+                voice->Update(voice, source, ctx);
+            }
+        }
+    }
+    else
+    {
+        voice = ctx->Voices;
+        voice_end = voice + ctx->VoiceCount;
+        for(;voice != voice_end;++voice)
+        {
+            if(!(source=voice->Source)) continue;
+            if(source->state != AL_PLAYING && source->state != AL_PAUSED)
+                voice->Source = NULL;
+            else if(ATOMIC_EXCHANGE(ALenum, &source->NeedsUpdate, AL_FALSE))
+                voice->Update(voice, source, ctx);
+        }
+    }
+}
+
+
 /* Specialized function to clamp to [-1, +1] with only one branch. This also
  * converts NaN to 0. */
 static inline ALfloat aluClampf(ALfloat val)
@@ -1258,38 +1297,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         {
             if(!ctx->DeferUpdates)
             {
-                if(ATOMIC_EXCHANGE(ALenum, &ctx->UpdateSources, AL_FALSE))
-                {
-                    CalcListenerParams(ctx->Listener);
-
-                    voice = ctx->Voices;
-                    voice_end = voice + ctx->VoiceCount;
-                    for(;voice != voice_end;++voice)
-                    {
-                        if(!(source=voice->Source)) continue;
-                        if(source->state != AL_PLAYING && source->state != AL_PAUSED)
-                            voice->Source = NULL;
-                        else
-                        {
-                            ATOMIC_STORE(&source->NeedsUpdate, AL_FALSE);
-                            voice->Update(voice, source, ctx);
-                        }
-                    }
-                }
-                else
-                {
-                    voice = ctx->Voices;
-                    voice_end = voice + ctx->VoiceCount;
-                    for(;voice != voice_end;++voice)
-                    {
-                        if(!(source=voice->Source)) continue;
-                        if(source->state != AL_PLAYING && source->state != AL_PAUSED)
-                            voice->Source = NULL;
-                        else if(ATOMIC_EXCHANGE(ALenum, &source->NeedsUpdate, AL_FALSE))
-                            voice->Update(voice, source, ctx);
-                    }
-                }
-
+                UpdateContextSources(ctx);
 #define UPDATE_SLOT(iter) do {                                     \
     if(ATOMIC_EXCHANGE(ALenum, &(*iter)->NeedsUpdate, AL_FALSE))   \
         V((*iter)->EffectState,update)(device, *iter);             \

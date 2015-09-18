@@ -253,6 +253,8 @@ void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[
 void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 
+ALvoid UpdateContextSources(ALCcontext *context);
+
 ALvoid CalcSourceParams(struct ALvoice *voice, const struct ALsource *source, const ALCcontext *ALContext);
 ALvoid CalcNonAttnSourceParams(struct ALvoice *voice, const struct ALsource *source, const ALCcontext *ALContext);
 

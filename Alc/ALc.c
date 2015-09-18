@@ -1620,42 +1620,16 @@ void ALCcontext_DeferUpdates(ALCcontext *context)
     V0(device->Backend,lock)();
     if(!context->DeferUpdates)
     {
-        ALboolean UpdateSources;
-        ALvoice *voice, *voice_end;
-        ALeffectslot **slot, **slot_end;
-
         context->DeferUpdates = AL_TRUE;
 
         /* Make sure all pending updates are performed */
-        UpdateSources = ATOMIC_EXCHANGE(ALenum, &context->UpdateSources, AL_FALSE);
-
-        voice = context->Voices;
-        voice_end = voice + context->VoiceCount;
-        while(voice != voice_end)
-        {
-            ALsource *source = voice->Source;
-            if(!source) goto next;
-
-            if(source->state != AL_PLAYING && source->state != AL_PAUSED)
-            {
-                voice->Source = NULL;
-                goto next;
-            }
-
-            if(ATOMIC_EXCHANGE(ALenum, &source->NeedsUpdate, AL_FALSE) || UpdateSources)
-                voice->Update(voice, source, context);
-        next:
-            voice++;
-        }
-
-        slot = VECTOR_ITER_BEGIN(context->ActiveAuxSlots);
-        slot_end = VECTOR_ITER_END(context->ActiveAuxSlots);
-        while(slot != slot_end)
-        {
-            if(ATOMIC_EXCHANGE(ALenum, &(*slot)->NeedsUpdate, AL_FALSE))
-                V((*slot)->EffectState,update)(context->Device, *slot);
-            slot++;
-        }
+        UpdateContextSources(context);
+#define UPDATE_SLOT(iter) do {                                   \
+    if(ATOMIC_EXCHANGE(ALenum, &(*iter)->NeedsUpdate, AL_FALSE)) \
+        V((*iter)->EffectState,update)(device, *iter);           \
+} while(0)
+        VECTOR_FOR_EACH(ALeffectslot*, context->ActiveAuxSlots, UPDATE_SLOT);
+#undef UPDATE_SLOT
     }
     V0(device->Backend,unlock)();
 

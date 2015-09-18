@@ -11,8 +11,6 @@ openal-soft-1.17.0:
     Implemented B-Format output support for the wave file writer. This creates
     FuMa-style first-order Ambisonics wave files (AMB format).
 
-    Implemented capture support for the MMDevAPI backend.
-
     Implemented a stereo-mode config option for treating stereo modes as either
     speakers or headphones.
 
@@ -34,6 +32,8 @@ openal-soft-1.17.0:
     Fixed detecting MMDevAPI's default device.
 
     Fixed returning the default capture device name.
+
+    Fixed mixing property calculations when deferring context updates.
 
     Altered the behavior of alcSuspendContext and alcProcessContext to better
     match certain Windows drivers.

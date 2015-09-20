@@ -4,6 +4,8 @@
 #include "AL/al.h"
 #include "AL/alc.h"
 
+#include "alstring.h"
+
 enum DevFmtChannels;
 
 struct Hrtf;
@@ -15,8 +17,8 @@ struct Hrtf;
 #define HRTFDELAY_FRACONE (1<<HRTFDELAY_BITS)
 #define HRTFDELAY_MASK    (HRTFDELAY_FRACONE-1)
 
-const struct Hrtf *GetHrtf(enum DevFmtChannels chans, ALCuint srate);
-ALCboolean FindHrtfFormat(enum DevFmtChannels *chans, ALCuint *srate);
+const struct Hrtf *GetHrtf(const_al_string devname, enum DevFmtChannels chans, ALCuint srate);
+ALCboolean FindHrtfFormat(const_al_string devname, enum DevFmtChannels *chans, ALCuint *srate);
 
 void FreeHrtfs(void);
 

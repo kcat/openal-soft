@@ -96,7 +96,7 @@
 #  respectively.
 #hrtf = auto
 
-## hrtf_tables: (global)
+## hrtf_tables:
 #  Specifies a comma-separated list of files containing HRTF data sets. The
 #  format of the files are described in hrtf.txt. The filenames may contain
 #  these markers, which will be replaced as needed:

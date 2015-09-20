@@ -726,11 +726,11 @@ static struct Hrtf *LoadHrtf01(FILE *f, ALuint deviceRate)
 }
 
 
-static struct Hrtf *LoadHrtf(ALuint deviceRate)
+static struct Hrtf *LoadHrtf(const_al_string devname, ALuint deviceRate)
 {
     const char *fnamelist = "default-%r.mhr";
 
-    ConfigValueStr(NULL, NULL, "hrtf_tables", &fnamelist);
+    ConfigValueStr(al_string_get_cstr(devname), NULL, "hrtf_tables", &fnamelist);
     while(*fnamelist != '\0')
     {
         struct Hrtf *Hrtf = NULL;
@@ -823,7 +823,7 @@ static struct Hrtf *LoadHrtf(ALuint deviceRate)
     return NULL;
 }
 
-const struct Hrtf *GetHrtf(enum DevFmtChannels chans, ALCuint srate)
+const struct Hrtf *GetHrtf(const_al_string devname, enum DevFmtChannels chans, ALCuint srate)
 {
     if(chans == DevFmtStereo)
     {
@@ -835,15 +835,14 @@ const struct Hrtf *GetHrtf(enum DevFmtChannels chans, ALCuint srate)
             Hrtf = Hrtf->next;
         }
 
-        Hrtf = LoadHrtf(srate);
-        if(Hrtf != NULL)
-            return Hrtf;
+        Hrtf = LoadHrtf(devname, srate);
+        if(Hrtf != NULL) return Hrtf;
     }
     ERR("Incompatible format: %s %uhz\n", DevFmtChannelsString(chans), srate);
     return NULL;
 }
 
-ALCboolean FindHrtfFormat(enum DevFmtChannels *chans, ALCuint *srate)
+ALCboolean FindHrtfFormat(const_al_string devname, enum DevFmtChannels *chans, ALCuint *srate)
 {
     const struct Hrtf *hrtf = LoadedHrtfs;
     while(hrtf != NULL)
@@ -855,7 +854,7 @@ ALCboolean FindHrtfFormat(enum DevFmtChannels *chans, ALCuint *srate)
 
     if(hrtf == NULL)
     {
-        hrtf = LoadHrtf(*srate);
+        hrtf = LoadHrtf(devname, *srate);
         if(hrtf == NULL) return ALC_FALSE;
     }
 

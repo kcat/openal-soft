@@ -1924,7 +1924,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         if(hrtf_userreq == Hrtf_Enable || (hrtf_userreq != Hrtf_Disable && hrtf_appreq == Hrtf_Enable))
         {
-            if(FindHrtfFormat(&device->FmtChans, &device->Frequency))
+            if(FindHrtfFormat(device->DeviceName, &device->FmtChans, &device->Frequency))
                 device->Flags |= DEVICE_CHANNELS_REQUEST | DEVICE_FREQUENCY_REQUEST;
             else
             {
@@ -1937,7 +1937,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     {
         enum DevFmtChannels chans = device->FmtChans;
         ALCuint freq = device->Frequency;
-        if(!FindHrtfFormat(&chans, &freq) || chans != device->FmtChans || freq != device->Frequency)
+        if(!FindHrtfFormat(device->DeviceName, &chans, &freq) ||
+           chans != device->FmtChans || freq != device->Frequency)
         {
             ERR("Requested format not HRTF compatible: %s, %uhz\n",
                 DevFmtChannelsString(device->FmtChans), device->Frequency);
@@ -2057,7 +2058,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         else
         {
             device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
-            device->Hrtf = GetHrtf(device->FmtChans, device->Frequency);
+            device->Hrtf = GetHrtf(device->DeviceName, device->FmtChans, device->Frequency);
         }
         if(device->Hrtf)
         {

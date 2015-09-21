@@ -1648,11 +1648,11 @@ AL_API ALvoid AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdo
         alSetError(Context, AL_INVALID_NAME);
     else if(!values)
         alSetError(Context, AL_INVALID_VALUE);
-    else if(!((count=DoubleValsByProp(param)) > 0 && count <= 3))
+    else if(!((count=DoubleValsByProp(param)) > 0 && count <= 6))
         alSetError(Context, AL_INVALID_ENUM);
     else
     {
-        ALfloat fvals[3];
+        ALfloat fvals[6];
         ALint i;
 
         for(i = 0;i < count;i++)
@@ -1851,11 +1851,11 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *va
         alSetError(Context, AL_INVALID_NAME);
     else if(!values)
         alSetError(Context, AL_INVALID_VALUE);
-    else if(!((count=FloatValsByProp(param)) > 0 && count <= 3))
+    else if(!((count=FloatValsByProp(param)) > 0 && count <= 6))
         alSetError(Context, AL_INVALID_ENUM);
     else
     {
-        ALdouble dvals[3];
+        ALdouble dvals[6];
         if(GetSourcedv(Source, Context, param, dvals))
         {
             ALint i;

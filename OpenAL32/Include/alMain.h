@@ -828,7 +828,6 @@ void AppendCaptureDeviceList(const ALCchar *name);
 
 void ALCdevice_Lock(ALCdevice *device);
 void ALCdevice_Unlock(ALCdevice *device);
-ALint64 ALCdevice_GetLatency(ALCdevice *device);
 
 void ALCcontext_DeferUpdates(ALCcontext *context);
 void ALCcontext_ProcessUpdates(ALCcontext *context);

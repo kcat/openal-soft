@@ -1471,11 +1471,6 @@ enum HrtfRequestMode {
 extern inline void LockContext(ALCcontext *context);
 extern inline void UnlockContext(ALCcontext *context);
 
-ALint64 ALCdevice_GetLatency(ALCdevice *device)
-{
-    return V0(device->Backend,getLatency)();
-}
-
 void ALCdevice_Lock(ALCdevice *device)
 {
     V0(device->Backend,lock)();

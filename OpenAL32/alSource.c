@@ -33,6 +33,8 @@
 #include "alThunk.h"
 #include "alAuxEffectSlot.h"
 
+#include "backends/base.h"
+
 #include "threads.h"
 
 
@@ -929,6 +931,7 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SrcIntProp
 
 static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SrcFloatProp prop, ALdouble *values)
 {
+    ALCdevice *device = Context->Device;
     ALbufferlistitem *BufferList;
     ALdouble offsets[2];
     ALdouble updateLen;
@@ -1041,7 +1044,7 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SrcFloatProp
             ReadLock(&Source->queue_lock);
             values[0] = GetSourceSecOffset(Source);
             ReadUnlock(&Source->queue_lock);
-            values[1] = (ALdouble)ALCdevice_GetLatency(Context->Device) /
+            values[1] = (ALdouble)(V0(device->Backend,getLatency)()) /
                         1000000000.0;
             UnlockContext(Context);
             return AL_TRUE;
@@ -1308,6 +1311,7 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp p
 
 static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SrcIntProp prop, ALint64 *values)
 {
+    ALCdevice *device = Context->Device;
     ALdouble dvals[6];
     ALint ivals[3];
     ALboolean err;
@@ -1319,7 +1323,7 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SrcIntProp
             ReadLock(&Source->queue_lock);
             values[0] = GetSourceOffset(Source);
             ReadUnlock(&Source->queue_lock);
-            values[1] = ALCdevice_GetLatency(Context->Device);
+            values[1] = V0(device->Backend,getLatency)();
             UnlockContext(Context);
             return AL_TRUE;
 

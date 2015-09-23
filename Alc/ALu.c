@@ -513,14 +513,14 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         aluCrossproduct(N, V, U);
         aluNormalize(U);
 
-        /* Build a rotate + channel reorder matrix (B-Format -> ACN), and
-         * include scaling for first-order content. */
-        scale = Device->AmbiScale;
+        /* Build a rotate + conversion matrix (B-Format -> N3D), and include
+         * scaling for first-order content. */
+        scale = Device->AmbiScale * 1.7321f;
         aluMatrixSet(&matrix,
-            1.0f,        0.0f,        0.0f,        0.0f,
-            0.0f, -N[0]*scale,  N[1]*scale, -N[2]*scale,
-            0.0f,  U[0]*scale, -U[1]*scale,  U[2]*scale,
-            0.0f, -V[0]*scale,  V[1]*scale, -V[2]*scale
+            1.4142f,        0.0f,        0.0f,        0.0f,
+               0.0f, -N[0]*scale,  N[1]*scale, -N[2]*scale,
+               0.0f,  U[0]*scale, -U[1]*scale,  U[2]*scale,
+               0.0f, -V[0]*scale,  V[1]*scale, -V[2]*scale
         );
 
         for(c = 0;c < num_channels;c++)

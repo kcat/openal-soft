@@ -58,23 +58,27 @@ static const ALuint FuMa2ACN[MAX_AMBI_COEFFS] = {
     9,  /* Q */
 };
 
-static const ALfloat N3D2FuMaScale[MAX_AMBI_COEFFS] = {
-    0.7071f, /* ACN  0 (W), sqrt(1/2) */
-    0.5774f, /* ACN  1 (Y), sqrt(1/3) */
-    0.5774f, /* ACN  2 (Z), sqrt(1/3) */
-    0.5774f, /* ACN  3 (X), sqrt(1/3) */
-    0.5164f, /* ACN  4 (V), 2/sqrt(15) */
-    0.5164f, /* ACN  5 (T), 2/sqrt(15) */
-    0.4472f, /* ACN  6 (R), sqrt(1/5) */
-    0.5164f, /* ACN  7 (S), 2/sqrt(15) */
-    0.5164f, /* ACN  8 (U), 2/sqrt(15) */
-    0.4781f, /* ACN  9 (Q), sqrt(8/35) */
-    0.5071f, /* ACN 10 (O), 3/sqrt(35) */
-    0.4482f, /* ACN 11 (M), sqrt(45/224) */
-    0.3780f, /* ACN 12 (K), sqrt(1/7) */
-    0.4482f, /* ACN 13 (L), sqrt(45/224) */
-    0.5071f, /* ACN 14 (N), 3/sqrt(35) */
-    0.4781f, /* ACN 15 (P), sqrt(8/35) */
+/* NOTE: These are scale factors as applied to Ambisonics content. FuMa
+ * decoder coefficients should be divided by these values to get N3D decoder
+ * coefficients.
+ */
+static const ALfloat FuMa2N3DScale[MAX_AMBI_COEFFS] = {
+    1.4142f, /* ACN  0 (W), sqrt(2) */
+    1.7321f, /* ACN  1 (Y), sqrt(3) */
+    1.7321f, /* ACN  2 (Z), sqrt(3) */
+    1.7321f, /* ACN  3 (X), sqrt(3) */
+    1.9365f, /* ACN  4 (V), sqrt(15)/2 */
+    1.9365f, /* ACN  5 (T), sqrt(15)/2 */
+    2.2361f, /* ACN  6 (R), sqrt(5) */
+    1.9365f, /* ACN  7 (S), sqrt(15)/2 */
+    1.9365f, /* ACN  8 (U), sqrt(15)/2 */
+    2.0917f, /* ACN  9 (Q), sqrt(35/8) */
+    1.9720f, /* ACN 10 (O), sqrt(35)/3 */
+    2.2311f, /* ACN 11 (M), sqrt(224/45) */
+    2.6458f, /* ACN 12 (K), sqrt(7) */
+    2.2311f, /* ACN 13 (L), sqrt(224/45) */
+    1.9720f, /* ACN 14 (N), sqrt(35)/3 */
+    2.0917f, /* ACN 15 (P), sqrt(35/8) */
 };
 
 
@@ -87,11 +91,9 @@ void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[
     for(i = 0;i < device->NumChannels;i++)
     {
         // The W coefficients are based on a mathematical average of the
-        // output, scaled by sqrt(2) to compensate for FuMa-style Ambisonics
-        // scaling the W channel input by sqrt(0.5). The square root of the
-        // base average provides for a more perceptual average volume, better
-        // suited to non-directional gains.
-        gains[i] = sqrtf(device->AmbiCoeffs[i][0]/1.4142f) * ingain;
+        // output. The square root of the base average provides for a more
+        // perceptual average volume, better suited to non-directional gains.
+        gains[i] = sqrtf(device->AmbiCoeffs[i][0]) * ingain;
     }
 }
 
@@ -115,25 +117,25 @@ void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfl
     ALfloat z =  dir[1];
 
     /* Zeroth-order */
-    coeffs[0] = 0.7071f; /* W = sqrt(1.0 / 2.0) */
+    coeffs[0]  = 1.0f; /* ACN 0 = 1 */
     /* First-order */
-    coeffs[1] = y; /* Y = Y */
-    coeffs[2] = z; /* Z = Z */
-    coeffs[3] = x; /* X = X */
+    coeffs[1]  = 1.7321f * y; /* ACN 1 = sqrt(3) * Y */
+    coeffs[2]  = 1.7321f * z; /* ACN 2 = sqrt(3) * Z */
+    coeffs[3]  = 1.7321f * x; /* ACN 3 = sqrt(3) * X */
     /* Second-order */
-    coeffs[4] = 2.0f * x * y;             /* V = 2*X*Y */
-    coeffs[5] = 2.0f * y * z;             /* T = 2*Y*Z */
-    coeffs[6] = 0.5f * (3.0f*z*z - 1.0f); /* R = 0.5 * (3*Z*Z - 1) */
-    coeffs[7] = 2.0f * z * x;             /* S = 2*Z*X */
-    coeffs[8] = x*x - y*y;                /* U = X*X - Y*Y */
+    coeffs[4]  = 3.8730f * x * y;             /* ACN 4 = sqrt(15) * X * Y */
+    coeffs[5]  = 3.8730f * y * z;             /* ACN 5 = sqrt(15) * Y * Z */
+    coeffs[6]  = 1.1180f * (3.0f*z*z - 1.0f); /* ACN 6 = sqrt(5)/2 * (3*Z*Z - 1) */
+    coeffs[7]  = 3.8730f * x * z;             /* ACN 7 = sqrt(15) * X * Z */
+    coeffs[8]  = 1.9365f * (x*x - y*y);       /* ACN 8 = sqrt(15)/2 * (X*X - Y*Y) */
     /* Third-order */
-    coeffs[9] = y * (3.0f*x*x - y*y);             /* Q = Y * (3*X*X - Y*Y) */
-    coeffs[10] = 5.1962f * x * y * z;             /* O = sqrt(27) * X * Y * Z */
-    coeffs[11] = 0.7262f * y * (5.0f*z*z - 1.0f); /* M = sqrt(135.0 / 256.0) * Y * (5*Z*Z - 1) */
-    coeffs[12] = 0.5f * z * (5.0f*z*z - 3.0f);    /* K = 0.5 * Z * (5*Z*Z - 3) */
-    coeffs[13] = 0.7262f * x * (5.0f*z*z - 1.0f); /* L = sqrt(135.0 / 256.0) * X * (5*Z*Z - 1) */
-    coeffs[14] = 2.5981f * z * (x*x - y*y);       /* N = sqrt(27.0 / 4.0) * Z * (X*X - Y*Y) */
-    coeffs[15] = x * (x*x - 3.0f*y*y);            /* P = X * (X*X - 3*Y*Y) */
+    coeffs[9]  =  2.0917f * y * (3.0f*x*x - y*y);  /* ACN  9 = sqrt(35/8) * Y * (3*X*X - Y*Y) */
+    coeffs[10] = 10.2470f * z * x * y;             /* ACN 10 = sqrt(105) * Z * X * Y */
+    coeffs[11] =  1.6292f * y * (5.0f*z*z - 1.0f); /* ACN 11 = sqrt(21/8) * Y * (5*Z*Z - 1) */
+    coeffs[12] =  1.3229f * z * (5.0f*z*z - 3.0f); /* ACN 12 = sqrt(7)/2 * Z * (5*Z*Z - 3) */
+    coeffs[13] =  1.6292f * x * (5.0f*z*z - 1.0f); /* ACN 13 = sqrt(21/8) * X * (5*Z*Z - 1) */
+    coeffs[14] =  5.1235f * z * (x*x - y*y);       /* ACN 14 = sqrt(105)/2 * Z * (X*X - Y*Y) */
+    coeffs[15] =  2.0917f * x * (x*x - 3.0f*y*y);  /* ACN 15 = sqrt(35/8) * X * (X*X - 3*Y*Y) */
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
         gains[i] = 0.0f;
@@ -200,7 +202,7 @@ typedef struct ChannelMap {
     ChannelConfig Config;
 } ChannelMap;
 
-static void SetChannelMap(ALCdevice *device, const ChannelMap *chanmap, size_t count, ALfloat ambiscale)
+static void SetChannelMap(ALCdevice *device, const ChannelMap *chanmap, size_t count, ALfloat ambiscale, ALboolean isfuma)
 {
     size_t i, j, k;
 
@@ -218,8 +220,20 @@ static void SetChannelMap(ALCdevice *device, const ChannelMap *chanmap, size_t c
         {
             if(device->ChannelName[i] == chanmap[j].ChanName)
             {
-                for(k = 0;k < MAX_AMBI_COEFFS;++k)
-                    device->AmbiCoeffs[i][k] = chanmap[j].Config[k];
+                if(isfuma)
+                {
+                    /* Reformat FuMa -> ACN/N3D */
+                    for(k = 0;k < MAX_AMBI_COEFFS;++k)
+                    {
+                        ALuint acn = FuMa2ACN[k];
+                        device->AmbiCoeffs[i][acn] = chanmap[j].Config[k] / FuMa2N3DScale[acn];
+                    }
+                }
+                else
+                {
+                    for(k = 0;k < MAX_AMBI_COEFFS;++k)
+                        device->AmbiCoeffs[i][k] = chanmap[j].Config[k];
+                }
                 break;
             }
         }
@@ -400,67 +414,61 @@ static bool LoadChannelSetup(ALCdevice *device)
             return false;
         }
 
-        if(isfuma)
-        {
-            /* Reorder FuMa -> ACN */
-            for(j = 0;j < MAX_AMBI_COEFFS;++j)
-                chanmap[i].Config[FuMa2ACN[j]] = coeffs[j];
-        }
-        else
-        {
-            /* Rescale N3D -> FuMa */
-            for(j = 0;j < MAX_AMBI_COEFFS;++j)
-                chanmap[i].Config[j] = coeffs[j] * N3D2FuMaScale[j];
-        }
+        for(j = 0;j < MAX_AMBI_COEFFS;++j)
+            chanmap[i].Config[j] = coeffs[j];
     }
-    SetChannelMap(device, chanmap, count, ambiscale);
+    SetChannelMap(device, chanmap, count, ambiscale, isfuma);
     return true;
 }
 
 ALvoid aluInitPanning(ALCdevice *device)
 {
+    /* NOTE: These decoder coefficients are using FuMa channel ordering and
+     * normalization, since that's what was produced by the Ambisonic Decoder
+     * Toolbox. SetChannelMap will convert them to N3D.
+     */
     static const ChannelMap MonoCfg[1] = {
         { FrontCenter, { 1.4142f } },
     }, StereoCfg[2] = {
-        { FrontLeft,   { 0.7071f,  0.5f, 0.0f, 0.0f } },
-        { FrontRight,  { 0.7071f, -0.5f, 0.0f, 0.0f } },
+        { FrontLeft,   { 0.7071f, 0.0f,  0.5f, 0.0f } },
+        { FrontRight,  { 0.7071f, 0.0f, -0.5f, 0.0f } },
     }, QuadCfg[4] = {
-        { FrontLeft,   { 0.353553f,  0.306184f, 0.0f,  0.306184f,  0.117186f, 0.0f, 0.0f, 0.0f,  0.000000f } },
-        { FrontRight,  { 0.353553f, -0.306184f, 0.0f,  0.306184f, -0.117186f, 0.0f, 0.0f, 0.0f,  0.000000f } },
-        { BackLeft,    { 0.353553f,  0.306184f, 0.0f, -0.306184f, -0.117186f, 0.0f, 0.0f, 0.0f,  0.000000f } },
-        { BackRight,   { 0.353553f, -0.306184f, 0.0f, -0.306184f,  0.117186f, 0.0f, 0.0f, 0.0f,  0.000000f } },
+        { FrontLeft,   { 0.353553f,  0.306184f,  0.306184f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.117186f } },
+        { FrontRight,  { 0.353553f,  0.306184f, -0.306184f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.117186f } },
+        { BackLeft,    { 0.353553f, -0.306184f,  0.306184f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.117186f } },
+        { BackRight,   { 0.353553f, -0.306184f, -0.306184f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.117186f } },
     }, X51SideCfg[5] = {
-        { FrontLeft,   { 0.208954f,  0.238350f, 0.0f,  0.212846f,  0.204014f, 0.0f, 0.0f, 0.0f, -0.017738f,  0.047490f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f } },
-        { FrontRight,  { 0.208954f, -0.238350f, 0.0f,  0.212846f, -0.204014f, 0.0f, 0.0f, 0.0f, -0.017738f, -0.047490f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f } },
-        { FrontCenter, { 0.109403f,  0.000000f, 0.0f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f } },
-        { SideLeft,    { 0.470936f,  0.349386f, 0.0f, -0.369626f, -0.058144f, 0.0f, 0.0f, 0.0f, -0.031375f, -0.043968f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f } },
-        { SideRight,   { 0.470936f, -0.349386f, 0.0f, -0.369626f,  0.058144f, 0.0f, 0.0f, 0.0f, -0.031375f,  0.043968f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f } },
+        { FrontLeft,   { 0.208954f,  0.212846f,  0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017738f,  0.204014f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f,  0.047490f } },
+        { FrontRight,  { 0.208954f,  0.212846f, -0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017738f, -0.204014f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f, -0.047490f } },
+        { FrontCenter, { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f,  0.000000f } },
+        { SideLeft,    { 0.470936f, -0.369626f,  0.349386f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031375f, -0.058144f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f, -0.043968f } },
+        { SideRight,   { 0.470936f, -0.369626f, -0.349386f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031375f,  0.058144f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f,  0.043968f } },
     }, X51RearCfg[5] = {
-        { FrontLeft,   { 0.208954f,  0.238350f, 0.0f,  0.212846f,  0.204014f, 0.0f, 0.0f, 0.0f, -0.017738f,  0.047490f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f } },
-        { FrontRight,  { 0.208954f, -0.238350f, 0.0f,  0.212846f, -0.204014f, 0.0f, 0.0f, 0.0f, -0.017738f, -0.047490f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f } },
-        { FrontCenter, { 0.109403f,  0.000000f, 0.0f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f } },
-        { BackLeft,    { 0.470936f,  0.349386f, 0.0f, -0.369626f, -0.058144f, 0.0f, 0.0f, 0.0f, -0.031375f, -0.043968f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f } },
-        { BackRight,   { 0.470936f, -0.349386f, 0.0f, -0.369626f,  0.058144f, 0.0f, 0.0f, 0.0f, -0.031375f,  0.043968f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f } },
+        { FrontLeft,   { 0.208954f,  0.212846f,  0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017738f,  0.204014f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f,  0.047490f } },
+        { FrontRight,  { 0.208954f,  0.212846f, -0.238350f, 0.0f, 0.0f, 0.0f, 0.0f, -0.017738f, -0.204014f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.051023f, -0.047490f } },
+        { FrontCenter, { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f,  0.000000f } },
+        { BackLeft,    { 0.470936f, -0.369626f,  0.349386f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031375f, -0.058144f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f, -0.043968f } },
+        { BackRight,   { 0.470936f, -0.369626f, -0.349386f, 0.0f, 0.0f, 0.0f, 0.0f, -0.031375f,  0.058144f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.007119f,  0.043968f } },
     }, X61Cfg[6] = {
-        { FrontLeft,   { 0.167065f,  0.172695f, 0.0f,  0.200583f,  0.186407f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.068910f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f } },
-        { FrontRight,  { 0.167065f, -0.172695f, 0.0f,  0.200583f, -0.186407f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.068910f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f } },
-        { FrontCenter, { 0.109403f,  0.000000f, 0.0f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f } },
-        { BackCenter,  { 0.353556f,  0.000000f, 0.0f, -0.461940f,  0.000000f, 0.0f, 0.0f, 0.0f,  0.165723f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f } },
-        { SideLeft,    { 0.289151f,  0.401292f, 0.0f, -0.081301f, -0.071420f, 0.0f, 0.0f, 0.0f, -0.188208f, -0.032897f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f } },
-        { SideRight,   { 0.289151f, -0.401292f, 0.0f, -0.081301f,  0.071420f, 0.0f, 0.0f, 0.0f, -0.188208f,  0.032897f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f } },
+        { FrontLeft,   { 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f } },
+        { FrontRight,  { 0.167065f,  0.200583f, -0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068910f } },
+        { FrontCenter, { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f,  0.000000f } },
+        { BackCenter,  { 0.353556f, -0.461940f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.165723f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.000000f } },
+        { SideLeft,    { 0.289151f, -0.081301f,  0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f, -0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f, -0.032897f } },
+        { SideRight,   { 0.289151f, -0.081301f, -0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f,  0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f,  0.032897f } },
     }, X71Cfg[7] = {
-        { FrontLeft,   { 0.167065f,  0.172695f, 0.0f,  0.200583f,  0.186407f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.068910f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f } },
-        { FrontRight,  { 0.167065f, -0.172695f, 0.0f,  0.200583f, -0.186407f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.068910f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f } },
-        { FrontCenter, { 0.109403f,  0.000000f, 0.0f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f } },
-        { BackLeft,    { 0.224752f,  0.170325f, 0.0f, -0.295009f, -0.182473f, 0.0f, 0.0f, 0.0f,  0.105349f,  0.065799f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f } },
-        { BackRight,   { 0.224752f, -0.170325f, 0.0f, -0.295009f,  0.182473f, 0.0f, 0.0f, 0.0f,  0.105349f, -0.065799f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f } },
-        { SideLeft,    { 0.224739f,  0.340644f, 0.0f,  0.000000f,  0.000000f, 0.0f, 0.0f, 0.0f, -0.210697f, -0.065795f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f } },
-        { SideRight,   { 0.224739f, -0.340644f, 0.0f,  0.000000f,  0.000000f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.065795f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f } },
+        { FrontLeft,   { 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f } },
+        { FrontRight,  { 0.167065f,  0.200583f, -0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068910f } },
+        { FrontCenter, { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f,  0.000000f } },
+        { BackLeft,    { 0.224752f, -0.295009f,  0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f, -0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.065799f } },
+        { BackRight,   { 0.224752f, -0.295009f, -0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f,  0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065799f } },
+        { SideLeft,    { 0.224739f,  0.000000f,  0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065795f } },
+        { SideRight,   { 0.224739f,  0.000000f, -0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.065795f } },
     }, BFormat3D[4] = {
         { BFormatW, { 1.0f, 0.0f, 0.0f, 0.0f } },
-        { BFormatX, { 0.0f, 0.0f, 0.0f, 1.0f } },
-        { BFormatY, { 0.0f, 1.0f, 0.0f, 0.0f } },
-        { BFormatZ, { 0.0f, 0.0f, 1.0f, 0.0f } },
+        { BFormatX, { 0.0f, 1.0f, 0.0f, 0.0f } },
+        { BFormatY, { 0.0f, 0.0f, 1.0f, 0.0f } },
+        { BFormatZ, { 0.0f, 0.0f, 0.0f, 1.0f } },
     };
     const ChannelMap *chanmap = NULL;
     ALfloat ambiscale = 1.0f;
@@ -484,7 +492,7 @@ ALvoid aluInitPanning(ALCdevice *device)
             device->ChannelName[i] = chanmap[i].ChanName;
         for(;i < MAX_OUTPUT_CHANNELS;i++)
             device->ChannelName[i] = InvalidChannel;
-        SetChannelMap(device, chanmap, count, ambiscale);
+        SetChannelMap(device, chanmap, count, ambiscale, AL_TRUE);
 
         for(i = 0;i < 4;++i)
         {
@@ -552,5 +560,5 @@ ALvoid aluInitPanning(ALCdevice *device)
             break;
     }
 
-    SetChannelMap(device, chanmap, count, ambiscale);
+    SetChannelMap(device, chanmap, count, ambiscale, AL_TRUE);
 }

@@ -496,7 +496,7 @@ ALvoid aluInitPanning(ALCdevice *device)
 
         for(i = 0;i < 4;++i)
         {
-            static const enum Channel inputs[4] = { BFormatW, BFormatY, BFormatZ, BFormatX };
+            static const enum Channel inputs[4] = { BFormatW, BFormatX, BFormatY, BFormatZ };
             int chan = GetChannelIdxByName(device, inputs[i]);
             coeffs_list[i] = device->Hrtf_Params[chan].Coeffs;
             delay_list[i] = device->Hrtf_Params[chan].Delay;

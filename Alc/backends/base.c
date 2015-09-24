@@ -195,10 +195,8 @@ ALCbackend *create_backend_wrapper(ALCdevice *device, const BackendFuncs *funcs,
     {
         PlaybackWrapper *backend;
 
-        backend = PlaybackWrapper_New(sizeof(*backend));
+        NEW_OBJ(backend, PlaybackWrapper)(device, funcs);
         if(!backend) return NULL;
-
-        PlaybackWrapper_Construct(backend, device, funcs);
 
         return STATIC_CAST(ALCbackend, backend);
     }
@@ -207,10 +205,8 @@ ALCbackend *create_backend_wrapper(ALCdevice *device, const BackendFuncs *funcs,
     {
         CaptureWrapper *backend;
 
-        backend = CaptureWrapper_New(sizeof(*backend));
+        NEW_OBJ(backend, CaptureWrapper)(device, funcs);
         if(!backend) return NULL;
-
-        CaptureWrapper_Construct(backend, device, funcs);
 
         return STATIC_CAST(ALCbackend, backend);
     }

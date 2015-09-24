@@ -86,8 +86,6 @@ void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[
 {
     ALuint i;
 
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-        gains[i] = 0.0f;
     for(i = 0;i < device->NumChannels;i++)
     {
         // The W coefficients are based on a mathematical average of the
@@ -95,6 +93,8 @@ void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[
         // perceptual average volume, better suited to non-directional gains.
         gains[i] = sqrtf(device->AmbiCoeffs[i][0]) * ingain;
     }
+    for(;i < MAX_OUTPUT_CHANNELS;i++)
+        gains[i] = 0.0f;
 }
 
 void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
@@ -137,8 +137,6 @@ void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfl
     coeffs[14] =  5.1235f * z * (x*x - y*y);       /* ACN 14 = sqrt(105)/2 * Z * (X*X - Y*Y) */
     coeffs[15] =  2.0917f * x * (x*x - 3.0f*y*y);  /* ACN 15 = sqrt(35/8) * X * (X*X - 3*Y*Y) */
 
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-        gains[i] = 0.0f;
     for(i = 0;i < device->NumChannels;i++)
     {
         float gain = 0.0f;
@@ -146,20 +144,23 @@ void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfl
             gain += device->AmbiCoeffs[i][j]*coeffs[j];
         gains[i] = gain * ingain;
     }
+    for(;i < MAX_OUTPUT_CHANNELS;i++)
+        gains[i] = 0.0f;
 }
 
 void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     ALuint i, j;
 
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-        gains[i] = 0.0f;
     for(i = 0;i < device->NumChannels;i++)
     {
+        float gain = 0.0f;
         for(j = 0;j < 4;j++)
-            gains[i] += device->AmbiCoeffs[i][j] * mtx[j];
-        gains[i] *= ingain;
+            gain += device->AmbiCoeffs[i][j] * mtx[j];
+        gains[i] = gain * ingain;
     }
+    for(;i < MAX_OUTPUT_CHANNELS;i++)
+        gains[i] = 0.0f;
 }
 
 

@@ -2885,7 +2885,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
 
         case ALC_HRTF_STATUS_SOFT:
             values[0] = device->Hrtf_Status;
-            break;
+            return 1;
 
         default:
             alcSetError(device, ALC_INVALID_ENUM);

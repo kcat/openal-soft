@@ -2319,24 +2319,25 @@ static ALCdevice *VerifyDevice(ALCdevice *device)
  */
 static ALvoid InitContext(ALCcontext *Context)
 {
+    ALlistener *listener = Context->Listener;
     //Initialise listener
-    Context->Listener->Gain = 1.0f;
-    Context->Listener->MetersPerUnit = 1.0f;
-    aluVectorSet(&Context->Listener->Position, 0.0f, 0.0f, 0.0f, 1.0f);
-    aluVectorSet(&Context->Listener->Velocity, 0.0f, 0.0f, 0.0f, 0.0f);
-    Context->Listener->Forward[0] = 0.0f;
-    Context->Listener->Forward[1] = 0.0f;
-    Context->Listener->Forward[2] = -1.0f;
-    Context->Listener->Up[0] = 0.0f;
-    Context->Listener->Up[1] = 1.0f;
-    Context->Listener->Up[2] = 0.0f;
-    aluMatrixSet(&Context->Listener->Params.Matrix,
+    listener->Gain = 1.0f;
+    listener->MetersPerUnit = 1.0f;
+    aluVectorSet(&listener->Position, 0.0f, 0.0f, 0.0f, 1.0f);
+    aluVectorSet(&listener->Velocity, 0.0f, 0.0f, 0.0f, 0.0f);
+    listener->Forward[0] = 0.0f;
+    listener->Forward[1] = 0.0f;
+    listener->Forward[2] = -1.0f;
+    listener->Up[0] = 0.0f;
+    listener->Up[1] = 1.0f;
+    listener->Up[2] = 0.0f;
+    aluMatrixSet(&listener->Params.Matrix,
         1.0f, 0.0f, 0.0f, 0.0f,
         0.0f, 1.0f, 0.0f, 0.0f,
         0.0f, 0.0f, 1.0f, 0.0f,
         0.0f, 0.0f, 0.0f, 1.0f
     );
-    aluVectorSet(&Context->Listener->Params.Velocity, 0.0f, 0.0f, 0.0f, 0.0f);
+    aluVectorSet(&listener->Params.Velocity, 0.0f, 0.0f, 0.0f, 0.0f);
 
     //Validate Context
     ATOMIC_INIT(&Context->LastError, AL_NO_ERROR);

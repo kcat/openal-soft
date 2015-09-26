@@ -42,9 +42,6 @@
 #include "midi/base.h"
 
 
-static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,
-              "MAX_PITCH and/or BUFFERSIZE are too large for FRACTIONBITS!");
-
 struct ChanMap {
     enum Channel channel;
     ALfloat angle;

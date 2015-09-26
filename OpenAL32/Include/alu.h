@@ -30,7 +30,7 @@
 #define RAD2DEG(x)  ((ALfloat)(x) * (180.0f/F_PI))
 
 
-#define MAX_PITCH  (10)
+#define MAX_PITCH  (255)
 
 
 #ifdef __cplusplus

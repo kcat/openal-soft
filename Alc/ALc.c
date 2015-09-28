@@ -1022,7 +1022,7 @@ static void alc_initconfig(void)
                 WARN("Invalid resampler: %s\n", str);
         }
     }
-    aluInitResamplers();
+    aluInitMixer();
 
     str = getenv("ALSOFT_TRAP_ERROR");
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))

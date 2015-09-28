@@ -2549,8 +2549,6 @@ static ALvoid InitSourceParams(ALsource *Source)
 
     Source->DistanceModel = DefaultDistanceModel;
 
-    Source->Resampler = DefaultResampler;
-
     Source->state = AL_INITIAL;
     Source->new_state = AL_NONE;
     Source->SourceType = AL_UNDETERMINED;

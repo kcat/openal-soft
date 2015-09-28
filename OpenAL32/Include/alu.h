@@ -216,7 +216,7 @@ inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALu
 }
 
 
-void aluInitResamplers(void);
+void aluInitMixer(void);
 
 ALvoid aluInitPanning(ALCdevice *Device);
 

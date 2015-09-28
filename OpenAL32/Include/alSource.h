@@ -77,8 +77,6 @@ typedef struct ALsource {
 
     volatile ALfloat Radius;
 
-    enum Resampler Resampler;
-
     /**
      * Last user-specified offset, and the offset type (bytes, samples, or
      * seconds).

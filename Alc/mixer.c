@@ -46,20 +46,9 @@ extern inline void InitiatePositionArrays(ALuint frac, ALuint increment, ALuint 
 alignas(16) ALfloat CubicLUT[FRACTIONONE][4];
 
 
-void aluInitResamplers(void)
-{
-    ALuint i;
-    for(i = 0;i < FRACTIONONE;i++)
-    {
-        ALfloat mu = (ALfloat)i / FRACTIONONE;
-        ALfloat mu2 = mu*mu, mu3 = mu*mu*mu;
-        CubicLUT[i][0] = -0.5f*mu3 +       mu2 + -0.5f*mu;
-        CubicLUT[i][1] =  1.5f*mu3 + -2.5f*mu2            + 1.0f;
-        CubicLUT[i][2] = -1.5f*mu3 +  2.0f*mu2 +  0.5f*mu;
-        CubicLUT[i][3] =  0.5f*mu3 + -0.5f*mu2;
-    }
-}
-
+static HrtfMixerFunc MixHrtfSamples = MixHrtf_C;
+static MixerFunc MixSamples = Mix_C;
+static ResamplerFunc ResampleSamples = Resample_point32_C;
 
 static inline HrtfMixerFunc SelectHrtfMixer(void)
 {
@@ -121,6 +110,25 @@ static inline ResamplerFunc SelectResampler(enum Resampler resampler)
     }
 
     return Resample_point32_C;
+}
+
+
+void aluInitMixer(void)
+{
+    ALuint i;
+    for(i = 0;i < FRACTIONONE;i++)
+    {
+        ALfloat mu = (ALfloat)i / FRACTIONONE;
+        ALfloat mu2 = mu*mu, mu3 = mu*mu*mu;
+        CubicLUT[i][0] = -0.5f*mu3 +       mu2 + -0.5f*mu;
+        CubicLUT[i][1] =  1.5f*mu3 + -2.5f*mu2            + 1.0f;
+        CubicLUT[i][2] = -1.5f*mu3 +  2.0f*mu2 +  0.5f*mu;
+        CubicLUT[i][3] =  0.5f*mu3 + -0.5f*mu2;
+    }
+
+    MixHrtfSamples = SelectHrtfMixer();
+    MixSamples = SelectMixer();
+    ResampleSamples = SelectResampler(DefaultResampler);
 }
 
 
@@ -206,15 +214,12 @@ static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter
 
 ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
 {
-    MixerFunc Mix;
-    HrtfMixerFunc HrtfMix;
     ResamplerFunc Resample;
     ALbufferlistitem *BufferListItem;
     ALuint DataPosInt, DataPosFrac;
     ALboolean isbformat = AL_FALSE;
     ALboolean Looping;
     ALuint increment;
-    enum Resampler Resampler;
     ALenum State;
     ALuint OutPos;
     ALuint NumChannels;
@@ -229,7 +234,6 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
     DataPosInt     = Source->position;
     DataPosFrac    = Source->position_fraction;
     Looping        = Source->Looping;
-    Resampler      = Source->Resampler;
     NumChannels    = Source->NumChannels;
     SampleSize     = Source->SampleSize;
     increment      = voice->Step;
@@ -249,15 +253,13 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
 
     IrSize = (Device->Hrtf ? GetHrtfIrSize(Device->Hrtf) : 0);
 
-    Mix = SelectMixer();
-    HrtfMix = SelectHrtfMixer();
     Resample = ((increment == FRACTIONONE && DataPosFrac == 0) ?
-                Resample_copy32_C : SelectResampler(Resampler));
+                Resample_copy32_C : ResampleSamples);
 
     OutPos = 0;
     do {
-        const ALuint BufferPrePadding = ResamplerPrePadding[Resampler];
-        const ALuint BufferPadding = ResamplerPadding[Resampler];
+        const ALuint BufferPrePadding = ResamplerPrePadding[DefaultResampler];
+        const ALuint BufferPadding = ResamplerPadding[DefaultResampler];
         ALuint SrcBufferSize, DstBufferSize;
 
         /* Figure out how many buffer samples will be needed */
@@ -467,12 +469,12 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     parms->Filters[chan].ActiveType
                 );
                 if(!voice->IsHrtf)
-                    Mix(samples, parms->OutChannels, parms->OutBuffer, parms->Gains[chan],
-                        parms->Counter, OutPos, DstBufferSize);
+                    MixSamples(samples, parms->OutChannels, parms->OutBuffer, parms->Gains[chan],
+                               parms->Counter, OutPos, DstBufferSize);
                 else
-                    HrtfMix(parms->OutBuffer, samples, parms->Counter, voice->Offset,
-                            OutPos, IrSize, &parms->Hrtf[chan].Params,
-                            &parms->Hrtf[chan].State, DstBufferSize);
+                    MixHrtfSamples(parms->OutBuffer, samples, parms->Counter, voice->Offset,
+                                   OutPos, IrSize, &parms->Hrtf[chan].Params,
+                                   &parms->Hrtf[chan].State, DstBufferSize);
             }
 
             /* Only the first channel for B-Format buffers (W channel) goes to
@@ -492,8 +494,8 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     Device->FilteredData, ResampledData, DstBufferSize,
                     parms->Filters[chan].ActiveType
                 );
-                Mix(samples, 1, parms->OutBuffer, &parms->Gain,
-                    parms->Counter, OutPos, DstBufferSize);
+                MixSamples(samples, 1, parms->OutBuffer, &parms->Gain,
+                           parms->Counter, OutPos, DstBufferSize);
             }
         }
         /* Update positions */

@@ -1009,14 +1009,18 @@ static void alc_initconfig(void)
             DefaultResampler = PointResampler;
         else if(strcasecmp(str, "linear") == 0)
             DefaultResampler = LinearResampler;
+        else if(strcasecmp(str, "sinc4") == 0)
+            DefaultResampler = FIR4Resampler;
         else if(strcasecmp(str, "cubic") == 0)
-            DefaultResampler = CubicResampler;
+        {
+            ERR("Resampler option \"cubic\" is deprecated, using sinc4\n");
+            DefaultResampler = FIR4Resampler;
+        }
         else
         {
             char *end;
-
             n = strtol(str, &end, 0);
-            if(*end == '\0' && (n == PointResampler || n == LinearResampler || n == CubicResampler))
+            if(*end == '\0' && (n == PointResampler || n == LinearResampler || n == FIR4Resampler))
                 DefaultResampler = n;
             else
                 WARN("Invalid resampler: %s\n", str);

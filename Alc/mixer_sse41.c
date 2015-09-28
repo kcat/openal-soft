@@ -81,7 +81,7 @@ const ALfloat *Resample_lerp32_SSE41(const ALfloat *src, ALuint frac, ALuint inc
     return dst;
 }
 
-const ALfloat *Resample_cubic32_SSE41(const ALfloat *src, ALuint frac, ALuint increment,
+const ALfloat *Resample_fir4_32_SSE41(const ALfloat *src, ALuint frac, ALuint increment,
                                       ALfloat *restrict dst, ALuint numsamples)
 {
     const __m128i increment4 = _mm_set1_epi32(increment*4);
@@ -104,10 +104,10 @@ const ALfloat *Resample_cubic32_SSE41(const ALfloat *src, ALuint frac, ALuint in
         const __m128 val1 = _mm_loadu_ps(&src[pos_.i[1]]);
         const __m128 val2 = _mm_loadu_ps(&src[pos_.i[2]]);
         const __m128 val3 = _mm_loadu_ps(&src[pos_.i[3]]);
-        __m128 k0 = _mm_load_ps(CubicLUT[frac_.i[0]]);
-        __m128 k1 = _mm_load_ps(CubicLUT[frac_.i[1]]);
-        __m128 k2 = _mm_load_ps(CubicLUT[frac_.i[2]]);
-        __m128 k3 = _mm_load_ps(CubicLUT[frac_.i[3]]);
+        __m128 k0 = _mm_load_ps(ResampleCoeffs[frac_.i[0]]);
+        __m128 k1 = _mm_load_ps(ResampleCoeffs[frac_.i[1]]);
+        __m128 k2 = _mm_load_ps(ResampleCoeffs[frac_.i[2]]);
+        __m128 k3 = _mm_load_ps(ResampleCoeffs[frac_.i[3]]);
         __m128 out;
 
         k0 = _mm_mul_ps(k0, val0);
@@ -140,7 +140,7 @@ const ALfloat *Resample_cubic32_SSE41(const ALfloat *src, ALuint frac, ALuint in
 
     for(;i < numsamples;i++)
     {
-        dst[i] = cubic(src[pos], src[pos+1], src[pos+2], src[pos+3], frac);
+        dst[i] = resample_fir4(src[pos], src[pos+1], src[pos+2], src[pos+3], frac);
 
         frac += increment;
         pos  += frac>>FRACTIONBITS;

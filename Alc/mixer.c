@@ -43,7 +43,7 @@ static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,
 
 extern inline void InitiatePositionArrays(ALuint frac, ALuint increment, ALuint *frac_arr, ALuint *pos_arr, ALuint size);
 
-alignas(16) ALfloat CubicLUT[FRACTIONONE][4];
+alignas(16) ALfloat ResampleCoeffs[FRACTIONONE][4];
 
 
 static HrtfMixerFunc MixHrtfSamples = MixHrtf_C;
@@ -94,16 +94,16 @@ static inline ResamplerFunc SelectResampler(enum Resampler resampler)
                 return Resample_lerp32_SSE2;
 #endif
             return Resample_lerp32_C;
-        case CubicResampler:
+        case FIR4Resampler:
 #ifdef HAVE_SSE4_1
             if((CPUCapFlags&CPU_CAP_SSE4_1))
-                return Resample_cubic32_SSE41;
+                return Resample_fir4_32_SSE41;
 #endif
 #ifdef HAVE_SSE2
             if((CPUCapFlags&CPU_CAP_SSE2))
-                return Resample_cubic32_SSE2;
+                return Resample_fir4_32_SSE2;
 #endif
-            return Resample_cubic32_C;
+            return Resample_fir4_32_C;
         case ResamplerMax:
             /* Shouldn't happen */
             break;
@@ -113,17 +113,26 @@ static inline ResamplerFunc SelectResampler(enum Resampler resampler)
 }
 
 
+static float lanc2(float x)
+{
+    if(x == 0.0f)
+        return 1.0f;
+    if(fabsf(x) >= 2.0f)
+        return 0.0f;
+    return 2.0f*sinf(x*F_PI)*sinf(x*F_PI/2.0f) /
+           (F_PI*F_PI * x*x);
+}
+
 void aluInitMixer(void)
 {
     ALuint i;
     for(i = 0;i < FRACTIONONE;i++)
     {
         ALfloat mu = (ALfloat)i / FRACTIONONE;
-        ALfloat mu2 = mu*mu, mu3 = mu*mu*mu;
-        CubicLUT[i][0] = -0.5f*mu3 +       mu2 + -0.5f*mu;
-        CubicLUT[i][1] =  1.5f*mu3 + -2.5f*mu2            + 1.0f;
-        CubicLUT[i][2] = -1.5f*mu3 +  2.0f*mu2 +  0.5f*mu;
-        CubicLUT[i][3] =  0.5f*mu3 + -0.5f*mu2;
+        ResampleCoeffs[i][0] = lanc2(mu - -1.0f);
+        ResampleCoeffs[i][1] = lanc2(mu -  0.0f);
+        ResampleCoeffs[i][2] = lanc2(mu -  1.0f);
+        ResampleCoeffs[i][3] = lanc2(mu -  2.0f);
     }
 
     MixHrtfSamples = SelectHrtfMixer();

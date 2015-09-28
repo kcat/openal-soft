@@ -202,16 +202,16 @@ inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max)
 { return minu64(max, maxu64(min, val)); }
 
 
-extern alignas(16) ALfloat CubicLUT[FRACTIONONE][4];
+extern alignas(16) ALfloat ResampleCoeffs[FRACTIONONE][4];
 
 
 inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu)
 {
     return val1 + (val2-val1)*mu;
 }
-inline ALfloat cubic(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALuint frac)
+inline ALfloat resample_fir4(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALuint frac)
 {
-    const ALfloat *k = CubicLUT[frac];
+    const ALfloat *k = ResampleCoeffs[frac];
     return k[0]*val0 + k[1]*val1 + k[2]*val2 + k[3]*val3;
 }
 

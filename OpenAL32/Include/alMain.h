@@ -528,7 +528,7 @@ enum DistanceModel {
 enum Resampler {
     PointResampler,
     LinearResampler,
-    CubicResampler,
+    FIR4Resampler,
 
     ResamplerMax,
 };

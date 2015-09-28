@@ -42,12 +42,12 @@ enum Resampler DefaultResampler = LinearResampler;
 const ALsizei ResamplerPadding[ResamplerMax] = {
     0, /* Point */
     1, /* Linear */
-    2, /* Cubic */
+    2, /* FIR4 */
 };
 const ALsizei ResamplerPrePadding[ResamplerMax] = {
     0, /* Point */
     0, /* Linear */
-    1, /* Cubic */
+    1, /* FIR4 */
 };
 
 

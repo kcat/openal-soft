@@ -12,8 +12,8 @@ static inline ALfloat point32(const ALfloat *vals, ALuint UNUSED(frac))
 { return vals[0]; }
 static inline ALfloat lerp32(const ALfloat *vals, ALuint frac)
 { return lerp(vals[0], vals[1], frac * (1.0f/FRACTIONONE)); }
-static inline ALfloat cubic32(const ALfloat *vals, ALuint frac)
-{ return cubic(vals[-1], vals[0], vals[1], vals[2], frac); }
+static inline ALfloat fir4_32(const ALfloat *vals, ALuint frac)
+{ return resample_fir4(vals[-1], vals[0], vals[1], vals[2], frac); }
 
 const ALfloat *Resample_copy32_C(const ALfloat *src, ALuint UNUSED(frac),
   ALuint UNUSED(increment), ALfloat *restrict dst, ALuint numsamples)
@@ -45,7 +45,7 @@ const ALfloat *Resample_##Sampler##_C(const ALfloat *src, ALuint frac,        \
 
 DECL_TEMPLATE(point32)
 DECL_TEMPLATE(lerp32)
-DECL_TEMPLATE(cubic32)
+DECL_TEMPLATE(fir4_32)
 
 #undef DECL_TEMPLATE
 

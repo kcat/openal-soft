@@ -63,7 +63,7 @@ static const struct {
     { "Default", "" },
     { "Point (low quality, fast)", "point" },
     { "Linear (basic quality, fast)", "linear" },
-    { "Cubic Spline (good quality)", "cubic" },
+    { "Sinc/Lanczos (good quality)", "sinc4" },
 
     { "", "" }
 }, stereoModeList[] = {

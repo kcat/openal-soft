@@ -6,7 +6,7 @@ openal-soft-1.17.0:
 
     Implemented the ALC_SOFT_HRTF extension.
 
-    Implemented SSE2 and SSE4.1 cubic resamplers.
+    Implemented C, SSE2, and SSE4.1 based sinc/lanczos 4-point resamplers.
 
     Implemented B-Format output support for the wave file writer. This creates
     FuMa-style first-order Ambisonics wave files (AMB format).

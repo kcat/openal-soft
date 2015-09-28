@@ -63,7 +63,7 @@ static const struct {
     { "Default", "" },
     { "Point (low quality, fast)", "point" },
     { "Linear (basic quality, fast)", "linear" },
-    { "Sinc/Lanczos (good quality)", "sinc4" },
+    { "Sinc-Lanczos (good quality)", "sinc4" },
 
     { "", "" }
 }, stereoModeList[] = {
@@ -293,6 +293,11 @@ void MainWindow::loadConfig(const QString &fname)
     ui->resamplerComboBox->setCurrentIndex(0);
     if(resampler.isEmpty() == false)
     {
+        /* The "cubic" resampler is no longer supported. It's been replaced by
+         * "sinc4" (4-point Sinc-Lanczos). */
+        if(resampler == "cubic")
+            resampler = "sinc4";
+
         for(int i = 0;resamplerList[i].name[i];i++)
         {
             if(resampler == resamplerList[i].value)

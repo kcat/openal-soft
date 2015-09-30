@@ -127,7 +127,7 @@ void Mix_Neon(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer
         {
             const float32x4_t val4 = vld1q_f32(&data[pos]);
             float32x4_t dry4 = vld1q_f32(&OutBuffer[c][OutPos+pos]);
-            dry4 = vaddq_f32(dry4, vmulq_f32(val4, gain4));
+            dry4 = vmlaq_f32(dry4, val4, gain4);
             vst1q_f32(&OutBuffer[c][OutPos+pos], dry4);
         }
         for(;pos < BufferSize;pos++)

@@ -35,7 +35,7 @@ static const struct {
 };
 
 static const struct {
-    const char name[32];
+    const char name[48];
     const char value[16];
 } speakerModeList[] = {
     { "Autodetect", "" },
@@ -63,7 +63,8 @@ static const struct {
     { "Default", "" },
     { "Point (low quality, fast)", "point" },
     { "Linear (basic quality, fast)", "linear" },
-    { "Sinc-Lanczos (good quality)", "sinc4" },
+    { "Sinc-Lanczos 4pt (good quality)", "sinc4" },
+    { "Sinc-Lanczos 6pt (high quality, slow)", "sinc6" },
 
     { "", "" }
 }, stereoModeList[] = {

@@ -529,6 +529,7 @@ enum Resampler {
     PointResampler,
     LinearResampler,
     FIR4Resampler,
+    FIR6Resampler,
 
     ResamplerMax,
 };

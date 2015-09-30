@@ -16,6 +16,7 @@ const ALfloat *Resample_copy32_C(const ALfloat *src, ALuint frac, ALuint increme
 const ALfloat *Resample_point32_C(const ALfloat *src, ALuint frac, ALuint increment, ALfloat *restrict dst, ALuint dstlen);
 const ALfloat *Resample_lerp32_C(const ALfloat *src, ALuint frac, ALuint increment, ALfloat *restrict dst, ALuint dstlen);
 const ALfloat *Resample_fir4_32_C(const ALfloat *src, ALuint frac, ALuint increment, ALfloat *restrict dst, ALuint dstlen);
+const ALfloat *Resample_fir6_32_C(const ALfloat *src, ALuint frac, ALuint increment, ALfloat *restrict dst, ALuint dstlen);
 
 
 /* C mixers */

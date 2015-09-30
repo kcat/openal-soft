@@ -1011,9 +1011,11 @@ static void alc_initconfig(void)
             DefaultResampler = LinearResampler;
         else if(strcasecmp(str, "sinc4") == 0)
             DefaultResampler = FIR4Resampler;
+        else if(strcasecmp(str, "sinc6") == 0)
+            DefaultResampler = FIR6Resampler;
         else if(strcasecmp(str, "cubic") == 0)
         {
-            ERR("Resampler option \"cubic\" is deprecated, using sinc4\n");
+            WARN("Resampler option \"cubic\" is deprecated, using sinc4\n");
             DefaultResampler = FIR4Resampler;
         }
         else

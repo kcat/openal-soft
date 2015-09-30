@@ -43,11 +43,13 @@ const ALsizei ResamplerPadding[ResamplerMax] = {
     0, /* Point */
     1, /* Linear */
     2, /* FIR4 */
+    3, /* FIR6 */
 };
 const ALsizei ResamplerPrePadding[ResamplerMax] = {
     0, /* Point */
     0, /* Linear */
     1, /* FIR4 */
+    2, /* FIR6 */
 };
 
 

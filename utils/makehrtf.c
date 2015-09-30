@@ -227,8 +227,7 @@ enum HeadModelT {
 // Desired output format from the command line.
 enum OutputFormatT {
   OF_NONE  = 0,
-  OF_MHR      ,   // OpenAL Soft MHR data set file.
-  OF_TABLE        // OpenAL Soft built-in table file (used when compiling).
+  OF_MHR          // OpenAL Soft MHR data set file.
 };
 
 // Unsigned integer type.
@@ -2089,84 +2088,6 @@ static int StoreMhr (const HrirDataT * hData, const char * filename) {
   return (1);
 }
 
-// Store the OpenAL Soft built-in table.
-static int StoreTable (const HrirDataT * hData, const char * filename) {
-  FILE * fp = NULL;
-  uint step, end, n, j, i;
-  int hpHist, v;
-  char text [128 + 1];
-
-  if ((fp = fopen (filename, "wb")) == NULL) {
-     fprintf (stderr, "Error:  Could not open table file '%s'.\n", filename);
-     return (0);
-  }
-  snprintf (text, 128, "/* Elevation metrics */\n"
-                       "static const ALubyte defaultAzCount[%u] = { ", hData -> mEvCount);
-  if (! WriteAscii (text, fp, filename))
-     return (0);
-  for (i = 0; i < hData -> mEvCount; i ++) {
-      snprintf (text, 128, "%u, ", hData -> mAzCount [i]);
-      if (! WriteAscii (text, fp, filename))
-         return (0);
-  }
-  snprintf (text, 128, "};\n"
-                       "static const ALushort defaultEvOffset[%u] = { ", hData -> mEvCount);
-  if (! WriteAscii (text, fp, filename))
-     return (0);
-  for (i = 0; i < hData -> mEvCount; i ++) {
-      snprintf (text, 128, "%u, ", hData -> mEvOffset [i]);
-      if (! WriteAscii (text, fp, filename))
-         return (0);
-  }
-  step = hData -> mIrSize;
-  end = hData -> mIrCount * step;
-  n = hData -> mIrPoints;
-  snprintf (text, 128, "};\n\n"
-                       "/* HRIR Coefficients */\n"
-                       "static const ALshort defaultCoeffs[%u] =\n{\n", hData -> mIrCount * n);
-  if (! WriteAscii (text, fp, filename))
-     return (0);
-  srand (0x31DF840C);
-  for (j = 0; j < end; j += step) {
-      if (! WriteAscii ("   ", fp, filename))
-         return (0);
-      hpHist = 0;
-      for (i = 0; i < n; i ++) {
-          v = HpTpdfDither (32767.0 * hData -> mHrirs [j + i], & hpHist);
-          snprintf (text, 128, " %+d,", v);
-          if (! WriteAscii (text, fp, filename))
-             return (0);
-      }
-      if (! WriteAscii ("\n", fp, filename))
-         return (0);
-  }
-  snprintf (text, 128, "};\n\n"
-                       "/* HRIR Delays */\n"
-                       "static const ALubyte defaultDelays[%u] =\n{\n"
-                       "   ", hData -> mIrCount);
-  if (! WriteAscii (text, fp, filename))
-     return (0);
-  for (j = 0; j < hData -> mIrCount; j ++) {
-      v = (int) fmin (round (hData -> mIrRate * hData -> mHrtds [j]), MAX_HRTD);
-      snprintf (text, 128, " %d,", v);
-      if (! WriteAscii (text, fp, filename))
-         return (0);
-  }
-  if (! WriteAscii ("\n};\n\n"
-                    "/* Default HRTF Definition */\n", fp, filename))
-     return (0);
-  snprintf (text, 128, "static const struct Hrtf DefaultHrtf = {\n"
-                       "    %u, %u, %u, defaultAzCount, defaultEvOffset,\n",
-                       hData -> mIrRate, hData -> mIrPoints, hData -> mEvCount);
-  if (! WriteAscii (text, fp, filename))
-     return (0);
-  if (! WriteAscii ("    defaultCoeffs, defaultDelays, NULL\n"
-                    "};\n", fp, filename))
-     return (0);
-  fclose (fp);
-  return (1);
-}
-
 // Process the data set definition to read and validate the data set metrics.
 static int ProcessMetrics (TokenReaderT * tr, const uint fftSize, const uint truncSize, HrirDataT * hData) {
   char ident [MAX_IDENT_LEN + 1];
@@ -2583,11 +2504,6 @@ static int ProcessDefinition (const char * inName, const uint outRate, const uin
       if (! StoreMhr (& hData, expName))
          return (0);
     break;
-    case OF_TABLE :
-      fprintf (stderr, "Creating OpenAL Soft table file...\n");
-      if (! StoreTable (& hData, expName))
-         return (0);
-    break;
     default :
     break;
   }
@@ -2619,8 +2535,6 @@ int main (const int argc, const char * argv []) {
      fprintf (stdout, "Commands:\n");
      fprintf (stdout, " -m, --make-mhr  Makes an OpenAL Soft compatible HRTF data set.\n");
      fprintf (stdout, "                 Defaults output to: ./oalsoft_hrtf_%%r.mhr\n");
-     fprintf (stdout, " -t, --make-tab  Makes the built-in table used when compiling OpenAL Soft.\n");
-     fprintf (stdout, "                 Defaults output to: ./hrtf_tables.inc\n");
      fprintf (stdout, " -h, --help      Displays this help information.\n\n");
      fprintf (stdout, "Options:\n");
      fprintf (stdout, " -r=<rate>       Change the data set sample rate to the specified value and\n");
@@ -2647,12 +2561,6 @@ int main (const int argc, const char * argv []) {
      else
         outName = "./oalsoft_hrtf_%r.mhr";
      outFormat = OF_MHR;
-  } else if ((strcmp (argv [1], "--make-tab") == 0) || (strcmp (argv [1], "-t") == 0)) {
-     if (argc > 3)
-        outName = argv [3];
-     else
-        outName = "./hrtf_tables.inc";
-     outFormat = OF_TABLE;
   } else {
      fprintf (stderr, "Error:  Invalid command '%s'.\n", argv [1]);
      return (-1);

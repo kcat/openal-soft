@@ -152,7 +152,7 @@ void Mix_SSE(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)
              MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize)
 {
     ALfloat gain, step;
-    __m128 gain4, step4;
+    __m128 gain4;
     ALuint c;
 
     for(c = 0;c < OutChans;c++)
@@ -162,9 +162,11 @@ void Mix_SSE(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)
         step = Gains[c].Step;
         if(step != 0.0f && Counter > 0)
         {
+            ALuint minsize = minu(BufferSize, Counter);
             /* Mix with applying gain steps in aligned multiples of 4. */
-            if(BufferSize-pos > 3 && Counter-pos > 3)
+            if(minsize-pos > 3)
             {
+                __m128 step4;
                 gain4 = _mm_setr_ps(
                     gain,
                     gain + step,
@@ -179,11 +181,11 @@ void Mix_SSE(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)
                     gain4 = _mm_add_ps(gain4, step4);
                     _mm_store_ps(&OutBuffer[c][OutPos+pos], dry4);
                     pos += 4;
-                } while(BufferSize-pos > 3 && Counter-pos > 3);
+                } while(minsize-pos > 3);
                 gain = _mm_cvtss_f32(gain4);
             }
             /* Mix with applying left over gain steps that aren't aligned multiples of 4. */
-            for(;pos < BufferSize && pos < Counter;pos++)
+            for(;pos < minsize;pos++)
             {
                 OutBuffer[c][OutPos+pos] += data[pos]*gain;
                 gain += step;
@@ -191,8 +193,10 @@ void Mix_SSE(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)
             if(pos == Counter)
                 gain = Gains[c].Target;
             Gains[c].Current = gain;
+
             /* Mix until pos is aligned with 4 or the mix is done. */
-            for(;pos < BufferSize && (pos&3) != 0;pos++)
+            minsize = minu(BufferSize, (pos+3)&3);
+            for(;pos < minsize;pos++)
                 OutBuffer[c][OutPos+pos] += data[pos]*gain;
         }
 

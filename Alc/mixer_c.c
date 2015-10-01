@@ -122,7 +122,8 @@ void Mix_C(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[B
         step = Gains[c].Step;
         if(step != 0.0f && Counter > 0)
         {
-            for(;pos < BufferSize && pos < Counter;pos++)
+            ALuint minsize = minu(BufferSize, Counter);
+            for(;pos < minsize;pos++)
             {
                 OutBuffer[c][OutPos+pos] += data[pos]*gain;
                 gain += step;

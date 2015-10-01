@@ -57,17 +57,15 @@ enum Resampler {
 
 static enum Resampler DefaultResampler = LinearResampler;
 
-static const ALsizei ResamplerPadding[ResamplerMax] = {
-    0, /* Point */
-    1, /* Linear */
-    2, /* FIR4 */
-    3, /* FIR6 */
-};
-static const ALsizei ResamplerPrePadding[ResamplerMax] = {
-    0, /* Point */
-    0, /* Linear */
-    1, /* FIR4 */
-    2, /* FIR6 */
+/* Each entry is a pair, where the first is the number of samples needed before
+ * the current position, and the second is the number of samples needed after
+ * (not including) the current position, for the given resampler.
+ */
+static const ALsizei ResamplerPadding[ResamplerMax][2] = {
+    {0, 0}, /* Point */
+    {0, 1}, /* Linear */
+    {1, 2}, /* FIR4 */
+    {2, 3}, /* FIR6 */
 };
 
 
@@ -334,8 +332,8 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
 
     OutPos = 0;
     do {
-        const ALuint BufferPrePadding = ResamplerPrePadding[DefaultResampler];
-        const ALuint BufferPadding = ResamplerPadding[DefaultResampler];
+        const ALuint BufferPrePadding = ResamplerPadding[DefaultResampler][0];
+        const ALuint BufferPadding = ResamplerPadding[DefaultResampler][1];
         ALuint SrcBufferSize, DstBufferSize;
 
         /* Figure out how many buffer samples will be needed */

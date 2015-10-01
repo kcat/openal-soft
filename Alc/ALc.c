@@ -1003,31 +1003,6 @@ static void alc_initconfig(void)
 #endif
     ConfigValueInt(NULL, NULL, "rt-prio", &RTPrioLevel);
 
-    if(ConfigValueStr(NULL, NULL, "resampler", &str))
-    {
-        if(strcasecmp(str, "point") == 0 || strcasecmp(str, "none") == 0)
-            DefaultResampler = PointResampler;
-        else if(strcasecmp(str, "linear") == 0)
-            DefaultResampler = LinearResampler;
-        else if(strcasecmp(str, "sinc4") == 0)
-            DefaultResampler = FIR4Resampler;
-        else if(strcasecmp(str, "sinc6") == 0)
-            DefaultResampler = FIR6Resampler;
-        else if(strcasecmp(str, "cubic") == 0)
-        {
-            WARN("Resampler option \"cubic\" is deprecated, using sinc4\n");
-            DefaultResampler = FIR4Resampler;
-        }
-        else
-        {
-            char *end;
-            n = strtol(str, &end, 0);
-            if(*end == '\0' && (n == PointResampler || n == LinearResampler || n == FIR4Resampler))
-                DefaultResampler = n;
-            else
-                WARN("Invalid resampler: %s\n", str);
-        }
-    }
     aluInitMixer();
 
     str = getenv("ALSOFT_TRAP_ERROR");

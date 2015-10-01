@@ -525,15 +525,6 @@ enum DistanceModel {
     DefaultDistanceModel = InverseDistanceClamped
 };
 
-enum Resampler {
-    PointResampler,
-    LinearResampler,
-    FIR4Resampler,
-    FIR6Resampler,
-
-    ResamplerMax,
-};
-
 enum Channel {
     FrontLeft = 0,
     FrontRight,

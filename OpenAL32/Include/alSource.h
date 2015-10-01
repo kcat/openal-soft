@@ -14,11 +14,6 @@ extern "C" {
 struct ALbuffer;
 struct ALsource;
 
-extern enum Resampler DefaultResampler;
-
-extern const ALsizei ResamplerPadding[ResamplerMax];
-extern const ALsizei ResamplerPrePadding[ResamplerMax];
-
 
 typedef struct ALbufferlistitem {
     struct ALbuffer *buffer;

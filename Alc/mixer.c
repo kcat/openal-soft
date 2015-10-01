@@ -46,6 +46,31 @@ extern inline void InitiatePositionArrays(ALuint frac, ALuint increment, ALuint 
 alignas(16) union ResamplerCoeffs ResampleCoeffs;
 
 
+enum Resampler {
+    PointResampler,
+    LinearResampler,
+    FIR4Resampler,
+    FIR6Resampler,
+
+    ResamplerMax,
+};
+
+static enum Resampler DefaultResampler = LinearResampler;
+
+static const ALsizei ResamplerPadding[ResamplerMax] = {
+    0, /* Point */
+    1, /* Linear */
+    2, /* FIR4 */
+    3, /* FIR6 */
+};
+static const ALsizei ResamplerPrePadding[ResamplerMax] = {
+    0, /* Point */
+    0, /* Linear */
+    1, /* FIR4 */
+    2, /* FIR6 */
+};
+
+
 static HrtfMixerFunc MixHrtfSamples = MixHrtf_C;
 static MixerFunc MixSamples = Mix_C;
 static ResamplerFunc ResampleSamples = Resample_point32_C;
@@ -127,7 +152,35 @@ static float lanc(float r, float x)
 
 void aluInitMixer(void)
 {
+    const char *str;
     ALuint i;
+
+    if(ConfigValueStr(NULL, NULL, "resampler", &str))
+    {
+        if(strcasecmp(str, "point") == 0 || strcasecmp(str, "none") == 0)
+            DefaultResampler = PointResampler;
+        else if(strcasecmp(str, "linear") == 0)
+            DefaultResampler = LinearResampler;
+        else if(strcasecmp(str, "sinc4") == 0)
+            DefaultResampler = FIR4Resampler;
+        else if(strcasecmp(str, "sinc6") == 0)
+            DefaultResampler = FIR6Resampler;
+        else if(strcasecmp(str, "cubic") == 0)
+        {
+            WARN("Resampler option \"cubic\" is deprecated, using sinc4\n");
+            DefaultResampler = FIR4Resampler;
+        }
+        else
+        {
+            char *end;
+            long n = strtol(str, &end, 0);
+            if(*end == '\0' && (n == PointResampler || n == LinearResampler || n == FIR4Resampler))
+                DefaultResampler = n;
+            else
+                WARN("Invalid resampler: %s\n", str);
+        }
+    }
+
     if(DefaultResampler == FIR6Resampler)
         for(i = 0;i < FRACTIONONE;i++)
         {

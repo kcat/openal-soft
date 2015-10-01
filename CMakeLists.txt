@@ -1006,15 +1006,12 @@ IF(ALSOFT_UTILS AND NOT ALSOFT_NO_CONFIG_UTIL)
     add_subdirectory(utils/alsoft-config)
 ENDIF()
 IF(ALSOFT_EXAMPLES)
-    FIND_PACKAGE(SDL)
-    IF(SDL_FOUND)
-        FIND_PACKAGE(SDL_sound)
-        IF(SDL_SOUND_FOUND AND CMAKE_VERSION VERSION_LESS "2.8.8")
-            INCLUDE_DIRECTORIES(${SDL_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
-        ENDIF()
-    ENDIF()
     FIND_PACKAGE(SDL2)
     IF(SDL2_FOUND)
+        FIND_PACKAGE(SDL_sound)
+        IF(SDL_SOUND_FOUND AND CMAKE_VERSION VERSION_LESS "2.8.8")
+            INCLUDE_DIRECTORIES(${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
+        ENDIF()
         FIND_PACKAGE(FFmpeg COMPONENTS AVFORMAT AVCODEC AVUTIL SWSCALE SWRESAMPLE)
         IF(FFMPEG_FOUND AND CMAKE_VERSION VERSION_LESS "2.8.8")
             INCLUDE_DIRECTORIES(${FFMPEG_INCLUDE_DIRS})
@@ -1205,30 +1202,30 @@ IF(ALSOFT_UTILS)
 ENDIF()
 
 IF(ALSOFT_EXAMPLES)
-    IF(SDL_FOUND AND SDL_SOUND_FOUND)
+    IF(SDL2_FOUND AND SDL_SOUND_FOUND)
         ADD_LIBRARY(ex-common STATIC examples/common/alhelpers.c
                                      examples/common/sdl_sound.c)
-        SET_PROPERTY(TARGET ex-common APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL_INCLUDE_DIR}
+        SET_PROPERTY(TARGET ex-common APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
                                                                           ${SDL_SOUND_INCLUDE_DIR})
 
         ADD_EXECUTABLE(alstream examples/alstream.c)
-        TARGET_LINK_LIBRARIES(alstream ex-common ${SDL_SOUND_LIBRARIES} ${SDL_LIBRARY} ${LIBNAME})
-        SET_PROPERTY(TARGET alstream APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL_INCLUDE_DIR}
+        TARGET_LINK_LIBRARIES(alstream ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ${LIBNAME})
+        SET_PROPERTY(TARGET alstream APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
                                                                          ${SDL_SOUND_INCLUDE_DIR})
 
         ADD_EXECUTABLE(alreverb examples/alreverb.c)
-        TARGET_LINK_LIBRARIES(alreverb ex-common ${SDL_SOUND_LIBRARIES} ${SDL_LIBRARY} ${LIBNAME})
-        SET_PROPERTY(TARGET alreverb APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL_INCLUDE_DIR}
+        TARGET_LINK_LIBRARIES(alreverb ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ${LIBNAME})
+        SET_PROPERTY(TARGET alreverb APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
                                                                          ${SDL_SOUND_INCLUDE_DIR})
 
         ADD_EXECUTABLE(allatency examples/allatency.c)
-        TARGET_LINK_LIBRARIES(allatency ex-common ${SDL_SOUND_LIBRARIES} ${SDL_LIBRARY} ${LIBNAME})
-        SET_PROPERTY(TARGET allatency APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL_INCLUDE_DIR}
+        TARGET_LINK_LIBRARIES(allatency ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ${LIBNAME})
+        SET_PROPERTY(TARGET allatency APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
                                                                           ${SDL_SOUND_INCLUDE_DIR})
 
         ADD_EXECUTABLE(alloopback examples/alloopback.c)
-        TARGET_LINK_LIBRARIES(alloopback ex-common ${SDL_SOUND_LIBRARIES} ${SDL_LIBRARY} ${LIBNAME})
-        SET_PROPERTY(TARGET alloopback APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL_INCLUDE_DIR}
+        TARGET_LINK_LIBRARIES(alloopback ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ${LIBNAME})
+        SET_PROPERTY(TARGET alloopback APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
                                                                            ${SDL_SOUND_INCLUDE_DIR})
 
         IF(ALSOFT_INSTALL)
@@ -1239,10 +1236,6 @@ IF(ALSOFT_EXAMPLES)
             )
         ENDIF()
 
-        MESSAGE(STATUS "Building SDL example programs")
-    ENDIF()
-
-    IF(SDL2_FOUND)
         SET(FFVER_OK FALSE)
         IF(FFMPEG_FOUND)
             SET(FFVER_OK TRUE)
@@ -1269,7 +1262,7 @@ IF(ALSOFT_EXAMPLES)
         ENDIF()
         IF(FFVER_OK AND NOT MSVC)
             ADD_EXECUTABLE(alffplay examples/alffplay.c)
-            TARGET_LINK_LIBRARIES(alffplay common ${SDL2_LIBRARY} ${LIBNAME} ${FFMPEG_LIBRARIES})
+            TARGET_LINK_LIBRARIES(alffplay common ex-common ${SDL2_LIBRARY} ${LIBNAME} ${FFMPEG_LIBRARIES})
             SET_PROPERTY(TARGET alffplay APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
                                                                              ${FFMPEG_INCLUDE_DIRS})
 
@@ -1280,8 +1273,10 @@ IF(ALSOFT_EXAMPLES)
                         ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
                 )
             ENDIF()
-            MESSAGE(STATUS "Building FFmpeg example programs")
+            MESSAGE(STATUS "Building SDL and FFmpeg example programs")
+        ELSE()
+            MESSAGE(STATUS "Building SDL example programs")
         ENDIF()
+        MESSAGE(STATUS "")
     ENDIF()
-    MESSAGE(STATUS "")
 ENDIF()

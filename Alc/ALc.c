@@ -162,6 +162,7 @@ static const ALCfunction alcFunctions[] = {
 
     DECL(alcGetInteger64vSOFT),
 
+    DECL(alcGetStringiSOFT),
     DECL(alcResetDeviceSOFT),
 
     DECL(alEnable),
@@ -389,6 +390,8 @@ static const ALCenums enumeration[] = {
     DECL(ALC_HRTF_REQUIRED_SOFT),
     DECL(ALC_HRTF_HEADPHONES_DETECTED_SOFT),
     DECL(ALC_HRTF_UNSUPPORTED_FORMAT_SOFT),
+    DECL(ALC_NUM_HRTF_SPECIFIER_SOFT),
+    DECL(ALC_HRTF_SPECIFIER_SOFT),
 
     DECL(ALC_NO_ERROR),
     DECL(ALC_INVALID_DEVICE),
@@ -2662,6 +2665,17 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
         }
         break;
 
+    case ALC_HRTF_SPECIFIER_SOFT:
+        if(!VerifyDevice(Device))
+            alcSetError(NULL, ALC_INVALID_DEVICE);
+        else
+        {
+            LockLists();
+            value = (Device->Hrtf ? "Preset 0" : "");
+            UnlockLists();
+        }
+        break;
+
     default:
         Device = VerifyDevice(Device);
         alcSetError(Device, ALC_INVALID_ENUM);
@@ -2866,6 +2880,10 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
 
         case ALC_HRTF_STATUS_SOFT:
             values[0] = device->Hrtf_Status;
+            return 1;
+
+        case ALC_NUM_HRTF_SPECIFIER_SOFT:
+            values[0] = 1;
             return 1;
 
         default:
@@ -3278,42 +3296,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *Context)
     return Device;
 }
 
-
-/* alcResetDeviceSOFT
- *
- * Resets the given device output, using the specified attribute list.
- */
-ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCint *attribs)
-{
-    ALCenum err;
-
-    LockLists();
-    if(!(device=VerifyDevice(device)) || device->Type == Capture || !device->Connected)
-    {
-        UnlockLists();
-        alcSetError(device, ALC_INVALID_DEVICE);
-        if(device) ALCdevice_DecRef(device);
-        return ALC_FALSE;
-    }
-
-    if((err=UpdateDeviceParams(device, attribs)) != ALC_NO_ERROR)
-    {
-        UnlockLists();
-        alcSetError(device, err);
-        if(err == ALC_INVALID_DEVICE)
-        {
-            V0(device->Backend,lock)();
-            aluHandleDisconnect(device);
-            V0(device->Backend,unlock)();
-        }
-        ALCdevice_DecRef(device);
-        return ALC_FALSE;
-    }
-    UnlockLists();
-    ALCdevice_DecRef(device);
-
-    return ALC_TRUE;
-}
 
 /* alcOpenDevice
  *
@@ -3981,4 +3963,73 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device)
         UnlockLists();
     }
     if(device) ALCdevice_DecRef(device);
+}
+
+
+/************************************************
+ * ALC HRTF functions
+ ************************************************/
+
+/* alcGetStringiSOFT
+ *
+ * Gets a string parameter at the given index.
+ */
+ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALenum paramName, ALsizei index)
+{
+    const ALCchar *str = NULL;
+
+    if(!(device=VerifyDevice(device)) || device->Type == Capture)
+        alcSetError(device, ALC_INVALID_DEVICE);
+    else switch(paramName)
+    {
+        case ALC_HRTF_SPECIFIER_SOFT:
+            if(index < 0 || index > 0)
+                alcSetError(device, ALC_INVALID_VALUE);
+            else
+                str = "Preset 0";
+            break;
+
+        default:
+            alcSetError(device, ALC_INVALID_ENUM);
+            break;
+    }
+    if(device) ALCdevice_DecRef(device);
+
+    return str;
+}
+
+/* alcResetDeviceSOFT
+ *
+ * Resets the given device output, using the specified attribute list.
+ */
+ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCint *attribs)
+{
+    ALCenum err;
+
+    LockLists();
+    if(!(device=VerifyDevice(device)) || device->Type == Capture || !device->Connected)
+    {
+        UnlockLists();
+        alcSetError(device, ALC_INVALID_DEVICE);
+        if(device) ALCdevice_DecRef(device);
+        return ALC_FALSE;
+    }
+
+    if((err=UpdateDeviceParams(device, attribs)) != ALC_NO_ERROR)
+    {
+        UnlockLists();
+        alcSetError(device, err);
+        if(err == ALC_INVALID_DEVICE)
+        {
+            V0(device->Backend,lock)();
+            aluHandleDisconnect(device);
+            V0(device->Backend,unlock)();
+        }
+        ALCdevice_DecRef(device);
+        return ALC_FALSE;
+    }
+    UnlockLists();
+    ALCdevice_DecRef(device);
+
+    return ALC_TRUE;
 }

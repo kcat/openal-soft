@@ -35,6 +35,9 @@
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #endif
+#ifdef HAVE_DIRENT_H
+#include <dirent.h>
+#endif
 
 #ifndef AL_NO_UID_DEFS
 #if defined(HAVE_GUIDDEF_H) || defined(HAVE_INITGUID_H)
@@ -529,6 +532,22 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
     return f;
 }
 
+
+vector_al_string SearchDataFiles(const char *match, const char *subdir)
+{
+    static RefCount search_lock;
+    vector_al_string results = VECTOR_INIT_STATIC();
+
+    while(ATOMIC_EXCHANGE(uint, &search_lock, 1) == 1)
+        althrd_yield();
+
+    ERR("FIXME\n");
+
+    ATOMIC_LOAD(&search_lock, 0);
+
+    return results;
+}
+
 #else
 
 #ifdef HAVE_DLFCN_H
@@ -644,6 +663,198 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
     WARN("Could not open %s/%s\n", subdir, fname);
 
     return NULL;
+}
+
+
+static const char *MatchString;
+static int MatchFilter(const struct dirent *dir)
+{
+    const char *match = MatchString;
+    const char *name = dir->d_name;
+    int ret = 1;
+
+    do {
+        char *p = strchr(match, '%');
+        if(!p)
+            ret = strcmp(match, name) == 0;
+        else
+        {
+            size_t len = p-match;
+            ret = strncmp(match, name, len) == 0;
+            if(ret)
+            {
+                match += len;
+                name += len;
+
+                ++p;
+                if(*p == 'r')
+                {
+                    char *end;
+                    ret = strtoul(name, &end, 10) > 0;
+                    if(ret) name = end;
+                    ++p;
+                }
+            }
+        }
+
+        match = p;
+    } while(ret && match && *match);
+
+    return ret;
+}
+
+static void RecurseDirectorySearch(const char *path, const char *match, vector_al_string *results)
+{
+    struct dirent **namelist;
+    char *sep, *p;
+    int n, i;
+
+    if(!match[0])
+        return;
+
+    sep = strrchr(match, '/');
+    p = strchr(match, '%');
+
+    if(!sep)
+    {
+        MatchString = match;
+        TRACE("Searching %s for %s\n", path?path:"/", match);
+        n = scandir(path?path:"/", &namelist, MatchFilter, alphasort);
+        if(n >= 0)
+        {
+            for(i = 0;i < n;++i)
+            {
+                al_string str = AL_STRING_INIT_STATIC();
+                if(path) al_string_copy_cstr(&str, path);
+                al_string_append_char(&str, '/');
+                al_string_append_cstr(&str, namelist[i]->d_name);
+                TRACE("Got result %s\n", al_string_get_cstr(str));
+                VECTOR_PUSH_BACK(*results, str);
+                free(namelist[i]);
+            }
+            free(namelist);
+        }
+
+        return;
+    }
+
+    if(!p || p-sep >= 0)
+    {
+        al_string npath = AL_STRING_INIT_STATIC();
+        if(path) al_string_append_cstr(&npath, path);
+        al_string_append_char(&npath, '/');
+        al_string_append_range(&npath, match, sep);
+
+        TRACE("Recursing into %s with %s\n", al_string_get_cstr(npath), sep+1);
+        RecurseDirectorySearch(al_string_get_cstr(npath), sep+1, results);
+
+        al_string_deinit(&npath);
+        return;
+    }
+
+    sep = strchr(match, '/');
+    while(sep)
+    {
+        char *next = strchr(sep+1, '/');
+        if(next-p < 0)
+        {
+            al_string npath = AL_STRING_INIT_STATIC();
+            al_string nmatch = AL_STRING_INIT_STATIC();
+
+            if(path) al_string_append_cstr(&npath, path);
+            al_string_append_char(&npath, '/');
+            al_string_append_range(&npath, match, sep);
+
+            al_string_append_range(&nmatch, sep+1, next);
+
+            MatchString = al_string_get_cstr(nmatch);
+            TRACE("Searching %s for %s\n", al_string_get_cstr(npath), MatchString);
+            n = scandir(al_string_get_cstr(npath), &namelist, MatchFilter, alphasort);
+            if(n >= 0)
+            {
+                al_string ndir = AL_STRING_INIT_STATIC();
+                for(i = 0;i < n;++i)
+                {
+                    al_string_copy(&ndir, npath);
+                    al_string_append_char(&ndir, '/');
+                    al_string_append_cstr(&ndir, namelist[i]->d_name);
+                    free(namelist[i]);
+                    TRACE("Recursing %s with %s\n", al_string_get_cstr(ndir), next+1);
+                    RecurseDirectorySearch(al_string_get_cstr(ndir), next+1, results);
+                }
+                al_string_deinit(&ndir);
+                free(namelist);
+            }
+
+            al_string_deinit(&nmatch);
+            al_string_deinit(&npath);
+            break;
+        }
+    }
+}
+
+vector_al_string SearchDataFiles(const char *match, const char *subdir)
+{
+    static RefCount search_lock;
+    vector_al_string results = VECTOR_INIT_STATIC();
+
+    while(ATOMIC_EXCHANGE(uint, &search_lock, 1) == 1)
+        althrd_yield();
+
+    if(match[0] == '/')
+        RecurseDirectorySearch(NULL, match+1, &results);
+    else
+    {
+        al_string path = AL_STRING_INIT_STATIC();
+        const char *str, *next;
+
+        // Search CWD
+        RecurseDirectorySearch(".", match, &results);
+
+        // Search local data dir
+        if((str=getenv("XDG_DATA_HOME")) != NULL && str[0] != '\0')
+        {
+            al_string_append_cstr(&path, str);
+            al_string_append_char(&path, '/');
+            al_string_append_cstr(&path, subdir);
+        }
+        else if((str=getenv("HOME")) != NULL && str[0] != '\0')
+        {
+            al_string_append_cstr(&path, str);
+            al_string_append_cstr(&path, "/.local/share/");
+            al_string_append_cstr(&path, subdir);
+        }
+        if(!al_string_empty(path))
+            RecurseDirectorySearch(al_string_get_cstr(path), match, &results);
+
+        // Search global data dirs
+        if((str=getenv("XDG_DATA_DIRS")) == NULL || str[0] == '\0')
+            str = "/usr/local/share/:/usr/share/";
+
+        next = str;
+        while((str=next) != NULL && str[0] != '\0')
+        {
+            next = strchr(str, ':');
+            if(!next)
+                al_string_copy_cstr(&path, str);
+            else
+            {
+                al_string_clear(&path);
+                al_string_append_range(&path, str, next);
+                ++next;
+            }
+            al_string_append_char(&path, '/');
+            al_string_append_cstr(&path, subdir);
+
+            RecurseDirectorySearch(al_string_get_cstr(path), match, &results);
+        }
+
+        al_string_deinit(&path);
+    }
+
+    ATOMIC_LOAD(&search_lock, 0);
+
+    return results;
 }
 
 #endif

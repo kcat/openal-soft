@@ -40,7 +40,6 @@
 #define DEVNAME_TAIL " on OpenAL Soft"
 
 
-TYPEDEF_VECTOR(al_string, vector_al_string)
 static vector_al_string PlaybackDevices;
 static vector_al_string CaptureDevices;
 

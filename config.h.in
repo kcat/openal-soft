@@ -139,8 +139,8 @@
 /* Define if we have malloc.h */
 #cmakedefine HAVE_MALLOC_H
 
-/* Define if we have ftw.h */
-#cmakedefine HAVE_FTW_H
+/* Define if we have dirent.h */
+#cmakedefine HAVE_DIRENT_H
 
 /* Define if we have io.h */
 #cmakedefine HAVE_IO_H

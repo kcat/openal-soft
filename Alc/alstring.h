@@ -8,6 +8,7 @@
 
 typedef char al_string_char_type;
 TYPEDEF_VECTOR(al_string_char_type, al_string)
+TYPEDEF_VECTOR(al_string, vector_al_string)
 
 inline void al_string_deinit(al_string *str)
 { VECTOR_DEINIT(*str); }

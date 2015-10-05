@@ -1102,10 +1102,13 @@ vector_al_string SearchDataFiles(const char *match, const char *subdir)
                 al_string_append_range(&path, str, next);
                 ++next;
             }
-            al_string_append_char(&path, '/');
-            al_string_append_cstr(&path, subdir);
+            if(!al_string_empty(path))
+            {
+                al_string_append_char(&path, '/');
+                al_string_append_cstr(&path, subdir);
 
-            RecurseDirectorySearch(al_string_get_cstr(path), match, &results);
+                RecurseDirectorySearch(al_string_get_cstr(path), match, &results);
+            }
         }
 
         al_string_deinit(&path);

@@ -88,7 +88,9 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_FormFactor, 0x1da5d803, 0xd492, 0x4edd, 0x
 #include <ieeefp.h>
 #endif
 
-#ifdef _WIN32_IE
+#ifndef _WIN32
+#include <unistd.h>
+#elif defined(_WIN32_IE)
 #include <shlobj.h>
 #endif
 
@@ -764,8 +766,23 @@ vector_al_string SearchDataFiles(const char *match, const char *subdir)
     }
     else
     {
+        al_string path = AL_STRING_INIT_STATIC();
+        WCHAR *cwdbuf;
+
         /* Search the CWD. */
-        RecurseDirectorySearch(".", wmatch, &results);
+        if(!(cwdbuf=_wgetcwd(NULL, 0)))
+            al_string_copy_cstr(&path, ".");
+        else
+        {
+            al_string_copy_wcstr(&path, cwdbuf);
+            if(is_slash(VECTOR_BACK(path)))
+            {
+                VECTOR_POP_BACK(path);
+                *VECTOR_ITER_END(path) = 0;
+            }
+            free(cwdbuf);
+        }
+        RecurseDirectorySearch(al_string_get_cstr(path), wmatch, &results);
 
         /* Search the local and global data dirs. */
         for(i = 0;i < COUNTOF(ids);i++)
@@ -773,21 +790,19 @@ vector_al_string SearchDataFiles(const char *match, const char *subdir)
             WCHAR buffer[PATH_MAX];
             if(SHGetSpecialFolderPathW(NULL, buffer, ids[i], FALSE) != FALSE)
             {
-                al_string path = AL_STRING_INIT_STATIC();
                 al_string_copy_wcstr(&path, buffer);
                 if(!is_slash(VECTOR_BACK(path)))
                     al_string_append_char(&path, '\\');
                 al_string_append_cstr(&path, subdir);
-#define FIX_SLASH(i) do {        \
-    if(*(i) == '/') *(i) = '\\'; \
-} while(0)
+#define FIX_SLASH(i) do { if(*(i) == '/') *(i) = '\\'; } while(0)
                 VECTOR_FOR_EACH(char, path, FIX_SLASH);
 #undef FIX_SLASH
 
                 RecurseDirectorySearch(al_string_get_cstr(path), wmatch, &results);
-                al_string_deinit(&path);
             }
         }
+
+        al_string_deinit(&path);
     }
 
     free(wmatch);
@@ -1066,9 +1081,12 @@ vector_al_string SearchDataFiles(const char *match, const char *subdir)
     {
         al_string path = AL_STRING_INIT_STATIC();
         const char *str, *next;
+        char cwdbuf[PATH_MAX];
 
         // Search CWD
-        RecurseDirectorySearch(".", match, &results);
+        if(!getcwd(cwdbuf, sizeof(cwdbuf)))
+            strcpy(cwdbuf, ".");
+        RecurseDirectorySearch(cwdbuf, match, &results);
 
         // Search local data dir
         if((str=getenv("XDG_DATA_HOME")) != NULL && str[0] != '\0')

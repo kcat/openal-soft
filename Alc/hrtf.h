@@ -10,12 +10,21 @@ enum DevFmtChannels;
 
 struct Hrtf;
 
+typedef struct HrtfEntry {
+    al_string name;
+    al_string filename;
+} HrtfEntry;
+TYPEDEF_VECTOR(HrtfEntry, vector_HrtfEntry)
+
 #define HRIR_BITS        (7)
 #define HRIR_LENGTH      (1<<HRIR_BITS)
 #define HRIR_MASK        (HRIR_LENGTH-1)
 #define HRTFDELAY_BITS    (20)
 #define HRTFDELAY_FRACONE (1<<HRTFDELAY_BITS)
 #define HRTFDELAY_MASK    (HRTFDELAY_FRACONE-1)
+
+vector_HrtfEntry EnumerateHrtf(const_al_string devname);
+void FreeHrtfList(vector_HrtfEntry *list);
 
 const struct Hrtf *GetHrtf(const_al_string devname, enum DevFmtChannels chans, ALCuint srate);
 ALCboolean FindHrtfFormat(const_al_string devname, enum DevFmtChannels *chans, ALCuint *srate);

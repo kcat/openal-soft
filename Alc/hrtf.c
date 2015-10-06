@@ -729,6 +729,97 @@ static struct Hrtf *LoadHrtf01(FILE *f, ALuint deviceRate)
 }
 
 
+static void AddFileEntry(vector_HrtfEntry *list, al_string *filename)
+{
+    HrtfEntry entry = { AL_STRING_INIT_STATIC(), *filename };
+    HrtfEntry *iter;
+    const char *name;
+    int i = 0;
+
+    name = strrchr(al_string_get_cstr(entry.filename), '/');
+    if(!name) name = strrchr(al_string_get_cstr(entry.filename), '\\');
+    if(!name) name = al_string_get_cstr(entry.filename);
+    else ++name;
+
+    /* TODO: Open the file, and get a human-readable name (possibly coming in a
+     * format update). */
+
+    do {
+        al_string_copy_cstr(&entry.name, name);
+        if(i != 0)
+        {
+            char str[64];
+            snprintf(str, sizeof(str), " #%d", i+1);
+            al_string_append_cstr(&entry.name, str);
+        }
+        ++i;
+
+#define MATCH_NAME(i)  (al_string_cmp(entry.name, (i)->name) == 0)
+        VECTOR_FIND_IF(iter, HrtfEntry, *list, MATCH_NAME);
+#undef MATCH_NAME
+    } while(iter != VECTOR_ITER_END(*list));
+
+    TRACE("Adding entry \"%s\" from file \"%s\"\n", al_string_get_cstr(entry.name),
+          al_string_get_cstr(entry.filename));
+    VECTOR_PUSH_BACK(*list, entry);
+}
+
+void FreeHrtfList(vector_HrtfEntry *list)
+{
+#define CLEAR_ENTRY(i) do {           \
+    al_string_deinit(&(i)->name);     \
+    al_string_deinit(&(i)->filename); \
+} while(0)
+    VECTOR_FOR_EACH(HrtfEntry, *list, CLEAR_ENTRY);
+    VECTOR_DEINIT(*list);
+#undef CLEAR_ENTRY
+}
+
+
+vector_HrtfEntry EnumerateHrtf(const_al_string devname)
+{
+    vector_HrtfEntry list = VECTOR_INIT_STATIC();
+    const char *fnamelist = "default-%r.mhr";
+
+    ConfigValueStr(al_string_get_cstr(devname), NULL, "hrtf_tables", &fnamelist);
+    while(fnamelist && *fnamelist)
+    {
+        while(isspace(*fnamelist) || *fnamelist == ',')
+            fnamelist++;
+        if(*fnamelist != '\0')
+        {
+            const char *next, *end;
+
+            next = strchr(fnamelist, ',');
+            if(!next)
+                end = fnamelist + strlen(fnamelist);
+            else
+                end = next++;
+
+            while(end != fnamelist && isspace(*(end-1)))
+                --end;
+            if(end != fnamelist)
+            {
+                al_string fname = AL_STRING_INIT_STATIC();
+                vector_al_string flist;
+
+                al_string_append_range(&fname, fnamelist, end);
+
+                flist = SearchDataFiles(al_string_get_cstr(fname), "openal/hrtf");
+                VECTOR_FOR_EACH_PARAMS(al_string, flist, AddFileEntry, &list);
+                VECTOR_DEINIT(flist);
+
+                al_string_deinit(&fname);
+            }
+
+            fnamelist = next;
+        }
+    }
+
+    return list;
+}
+
+
 static struct Hrtf *LoadHrtf(const_al_string devname, ALuint deviceRate)
 {
     const char *fnamelist = "default-%r.mhr";

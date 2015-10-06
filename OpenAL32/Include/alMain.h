@@ -701,6 +701,7 @@ struct ALCdevice_struct
     struct MidiSynth *Synth;
 
     /* HRTF filter tables */
+    vector_HrtfEntry Hrtf_List;
     const struct Hrtf *Hrtf;
     ALCenum Hrtf_Status;
     enum HrtfMode Hrtf_Mode;

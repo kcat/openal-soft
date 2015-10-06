@@ -2247,6 +2247,8 @@ static ALCvoid FreeDevice(ALCdevice *device)
     }
     ResetUIntMap(&device->FontsoundMap);
 
+    FreeHrtfList(&device->Hrtf_List);
+
     free(device->Bs2b);
     device->Bs2b = NULL;
 
@@ -2883,7 +2885,9 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             return 1;
 
         case ALC_NUM_HRTF_SPECIFIER_SOFT:
-            values[0] = 1;
+            FreeHrtfList(&device->Hrtf_List);
+            device->Hrtf_List = EnumerateHrtf(device->DeviceName);
+            values[0] = VECTOR_SIZE(device->Hrtf_List);
             return 1;
 
         default:
@@ -3342,6 +3346,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     device->Flags = 0;
     device->Bs2b = NULL;
+    VECTOR_INIT(device->Hrtf_List);
     device->Hrtf_Mode = DisabledHrtf;
     AL_STRING_INIT(device->DeviceName);
     device->DryBuffer = NULL;
@@ -3606,6 +3611,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->Connected = ALC_TRUE;
     device->Type = Capture;
 
+    VECTOR_INIT(device->Hrtf_List);
+
     AL_STRING_INIT(device->DeviceName);
     device->DryBuffer = NULL;
 
@@ -3794,6 +3801,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     ATOMIC_INIT(&device->LastError, ALC_NO_ERROR);
 
     device->Flags = 0;
+    VECTOR_INIT(device->Hrtf_List);
     device->Bs2b = NULL;
     device->Hrtf_Mode = DisabledHrtf;
     AL_STRING_INIT(device->DeviceName);
@@ -3983,10 +3991,10 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALenum 
     else switch(paramName)
     {
         case ALC_HRTF_SPECIFIER_SOFT:
-            if(index < 0 || index > 0)
-                alcSetError(device, ALC_INVALID_VALUE);
+            if(index >= 0 && (size_t)index < VECTOR_SIZE(device->Hrtf_List))
+                str = al_string_get_cstr(VECTOR_ELEM(device->Hrtf_List, index).name);
             else
-                str = "Preset 0";
+                alcSetError(device, ALC_INVALID_VALUE);
             break;
 
         default:

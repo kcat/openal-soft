@@ -30,6 +30,8 @@
 #include "alu.h"
 #include "hrtf.h"
 
+#include "compat.h"
+
 
 /* Current data set limits defined by the makehrtf utility. */
 #define MIN_IR_SIZE                  (8)
@@ -52,6 +54,7 @@ struct Hrtf {
     const ALshort *coeffs;
     const ALubyte *delays;
 
+    al_string filename;
     struct Hrtf *next;
 };
 
@@ -444,7 +447,7 @@ static struct Hrtf *LoadHrtf00(FILE *f, ALuint deviceRate)
 
     evCount = fgetc(f);
 
-    if(rate != deviceRate)
+    if(deviceRate && rate != deviceRate)
     {
         ERR("HRIR rate does not match device rate: rate=%d (%d)\n",
             rate, deviceRate);
@@ -572,6 +575,7 @@ static struct Hrtf *LoadHrtf00(FILE *f, ALuint deviceRate)
         Hrtf->evOffset = evOffset;
         Hrtf->coeffs = coeffs;
         Hrtf->delays = delays;
+        AL_STRING_INIT(Hrtf->filename);
         Hrtf->next = NULL;
         return Hrtf;
     }
@@ -606,7 +610,7 @@ static struct Hrtf *LoadHrtf01(FILE *f, ALuint deviceRate)
 
     evCount = fgetc(f);
 
-    if(rate != deviceRate)
+    if(deviceRate && rate != deviceRate)
     {
         ERR("HRIR rate does not match device rate: rate=%d (%d)\n",
                 rate, deviceRate);
@@ -717,6 +721,7 @@ static struct Hrtf *LoadHrtf01(FILE *f, ALuint deviceRate)
         Hrtf->evOffset = evOffset;
         Hrtf->coeffs = coeffs;
         Hrtf->delays = delays;
+        AL_STRING_INIT(Hrtf->filename);
         Hrtf->next = NULL;
         return Hrtf;
     }
@@ -731,19 +736,75 @@ static struct Hrtf *LoadHrtf01(FILE *f, ALuint deviceRate)
 
 static void AddFileEntry(vector_HrtfEntry *list, al_string *filename)
 {
-    HrtfEntry entry = { AL_STRING_INIT_STATIC(), *filename };
+    HrtfEntry entry = { AL_STRING_INIT_STATIC(), *filename, NULL };
     HrtfEntry *iter;
     const char *name;
-    int i = 0;
+    int i;
 
     name = strrchr(al_string_get_cstr(entry.filename), '/');
     if(!name) name = strrchr(al_string_get_cstr(entry.filename), '\\');
     if(!name) name = al_string_get_cstr(entry.filename);
     else ++name;
 
-    /* TODO: Open the file, and get a human-readable name (possibly coming in a
+    entry.hrtf = LoadedHrtfs;
+    while(entry.hrtf)
+    {
+        if(al_string_cmp(entry.filename, entry.hrtf->filename) == 0)
+            break;
+        entry.hrtf = entry.hrtf->next;
+    }
+
+    if(!entry.hrtf)
+    {
+        struct Hrtf *hrtf = NULL;
+        ALchar magic[8];
+        FILE *f;
+
+        TRACE("Loading %s...\n", al_string_get_cstr(entry.filename));
+        f = al_fopen(al_string_get_cstr(entry.filename), "rb");
+        if(f == NULL)
+        {
+            ERR("Could not open %s\n", al_string_get_cstr(entry.filename));
+            goto error;
+        }
+
+        if(fread(magic, 1, sizeof(magic), f) != sizeof(magic))
+            ERR("Failed to read header from %s\n", al_string_get_cstr(entry.filename));
+        else
+        {
+            if(memcmp(magic, magicMarker00, sizeof(magicMarker00)) == 0)
+            {
+                TRACE("Detected data set format v0\n");
+                hrtf = LoadHrtf00(f, 0);
+            }
+            else if(memcmp(magic, magicMarker01, sizeof(magicMarker01)) == 0)
+            {
+                TRACE("Detected data set format v1\n");
+                hrtf = LoadHrtf01(f, 0);
+            }
+            else
+                ERR("Invalid header in %s: \"%.8s\"\n", al_string_get_cstr(entry.filename), magic);
+        }
+        fclose(f);
+
+        if(!hrtf)
+        {
+            ERR("Failed to load %s\n", al_string_get_cstr(entry.filename));
+            goto error;
+        }
+
+        al_string_copy(&hrtf->filename, entry.filename);
+        hrtf->next = LoadedHrtfs;
+        LoadedHrtfs = hrtf;
+        TRACE("Loaded HRTF support for format: %s %uhz\n",
+                DevFmtChannelsString(DevFmtStereo), hrtf->sampleRate);
+        entry.hrtf = hrtf;
+    }
+
+    /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
      * format update). */
 
+    i = 0;
     do {
         al_string_copy_cstr(&entry.name, name);
         if(i != 0)
@@ -762,19 +823,11 @@ static void AddFileEntry(vector_HrtfEntry *list, al_string *filename)
     TRACE("Adding entry \"%s\" from file \"%s\"\n", al_string_get_cstr(entry.name),
           al_string_get_cstr(entry.filename));
     VECTOR_PUSH_BACK(*list, entry);
-}
+    return;
 
-void FreeHrtfList(vector_HrtfEntry *list)
-{
-#define CLEAR_ENTRY(i) do {           \
-    al_string_deinit(&(i)->name);     \
-    al_string_deinit(&(i)->filename); \
-} while(0)
-    VECTOR_FOR_EACH(HrtfEntry, *list, CLEAR_ENTRY);
-    VECTOR_DEINIT(*list);
-#undef CLEAR_ENTRY
+error:
+    al_string_deinit(&entry.filename);
 }
-
 
 vector_HrtfEntry EnumerateHrtf(const_al_string devname)
 {
@@ -817,6 +870,17 @@ vector_HrtfEntry EnumerateHrtf(const_al_string devname)
     }
 
     return list;
+}
+
+void FreeHrtfList(vector_HrtfEntry *list)
+{
+#define CLEAR_ENTRY(i) do {           \
+    al_string_deinit(&(i)->name);     \
+    al_string_deinit(&(i)->filename); \
+} while(0)
+    VECTOR_FOR_EACH(HrtfEntry, *list, CLEAR_ENTRY);
+    VECTOR_DEINIT(*list);
+#undef CLEAR_ENTRY
 }
 
 
@@ -968,6 +1032,7 @@ void FreeHrtfs(void)
         free((void*)Hrtf->evOffset);
         free((void*)Hrtf->coeffs);
         free((void*)Hrtf->delays);
+        al_string_deinit(&Hrtf->filename);
         free(Hrtf);
     }
 }

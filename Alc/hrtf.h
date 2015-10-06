@@ -13,6 +13,8 @@ struct Hrtf;
 typedef struct HrtfEntry {
     al_string name;
     al_string filename;
+
+    const struct Hrtf *hrtf;
 } HrtfEntry;
 TYPEDEF_VECTOR(HrtfEntry, vector_HrtfEntry)
 

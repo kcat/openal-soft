@@ -1903,8 +1903,17 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         if(hrtf_userreq == Hrtf_Enable || (hrtf_userreq != Hrtf_Disable && hrtf_appreq == Hrtf_Enable))
         {
-            if(FindHrtfFormat(device->DeviceName, &device->FmtChans, &device->Frequency))
+            if(VECTOR_SIZE(device->Hrtf_List) == 0)
+            {
+                VECTOR_DEINIT(device->Hrtf_List);
+                device->Hrtf_List = EnumerateHrtf(device->DeviceName);
+            }
+            if(VECTOR_SIZE(device->Hrtf_List) > 0)
+            {
+                device->FmtChans = DevFmtStereo;
+                device->Frequency = GetHrtfSampleRate(VECTOR_ELEM(device->Hrtf_List, 0).hrtf);
                 device->Flags |= DEVICE_CHANNELS_REQUEST | DEVICE_FREQUENCY_REQUEST;
+            }
             else
             {
                 hrtf_userreq = hrtf_appreq = Hrtf_Default;
@@ -1914,10 +1923,19 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
     else if(hrtf_appreq == Hrtf_Enable)
     {
-        enum DevFmtChannels chans = device->FmtChans;
-        ALCuint freq = device->Frequency;
-        if(!FindHrtfFormat(device->DeviceName, &chans, &freq) ||
-           chans != device->FmtChans || freq != device->Frequency)
+        size_t i;
+        if(VECTOR_SIZE(device->Hrtf_List) == 0)
+        {
+            VECTOR_DEINIT(device->Hrtf_List);
+            device->Hrtf_List = EnumerateHrtf(device->DeviceName);
+        }
+        for(i = 0;i < VECTOR_SIZE(device->Hrtf_List);i++)
+        {
+            const struct Hrtf *hrtf = VECTOR_ELEM(device->Hrtf_List, i).hrtf;
+            if(GetHrtfSampleRate(hrtf) == device->Frequency)
+                break;
+        }
+        if(i == VECTOR_SIZE(device->Hrtf_List))
         {
             ERR("Requested format not HRTF compatible: %s, %uhz\n",
                 DevFmtChannelsString(device->FmtChans), device->Frequency);
@@ -1973,6 +1991,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     device->Hrtf = NULL;
     device->Hrtf_Mode = DisabledHrtf;
+    al_string_clear(&device->Hrtf_Name);
     if(device->FmtChans != DevFmtStereo)
     {
         if(hrtf_appreq == Hrtf_Enable)
@@ -2036,14 +2055,30 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             device->Hrtf_Status = hrtf_status;
         else
         {
+            size_t i;
+
             device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
-            device->Hrtf = GetHrtf(device->DeviceName, device->FmtChans, device->Frequency);
+            if(VECTOR_SIZE(device->Hrtf_List) == 0)
+            {
+                VECTOR_DEINIT(device->Hrtf_List);
+                device->Hrtf_List = EnumerateHrtf(device->DeviceName);
+            }
+            for(i = 0;i < VECTOR_SIZE(device->Hrtf_List);i++)
+            {
+                const HrtfEntry *entry = &VECTOR_ELEM(device->Hrtf_List, i);
+                if(GetHrtfSampleRate(entry->hrtf) == device->Frequency)
+                {
+                    device->Hrtf = entry->hrtf;
+                    al_string_copy(&device->Hrtf_Name, entry->name);
+                    break;
+                }
+            }
         }
         if(device->Hrtf)
         {
             device->Hrtf_Mode = hrtf_mode;
             device->Hrtf_Status = hrtf_status;
-            TRACE("HRTF enabled\n");
+            TRACE("HRTF enabled, using \"%s\"\n", al_string_get_cstr(device->Hrtf_Name));
             free(device->Bs2b);
             device->Bs2b = NULL;
         }
@@ -2247,6 +2282,7 @@ static ALCvoid FreeDevice(ALCdevice *device)
     }
     ResetUIntMap(&device->FontsoundMap);
 
+    AL_STRING_DEINIT(device->Hrtf_Name);
     FreeHrtfList(&device->Hrtf_List);
 
     free(device->Bs2b);
@@ -2673,8 +2709,9 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
         else
         {
             LockLists();
-            value = (Device->Hrtf ? "Preset 0" : "");
+            value = (Device->Hrtf ? al_string_get_cstr(Device->Hrtf_Name) : "");
             UnlockLists();
+            ALCdevice_DecRef(Device);
         }
         break;
 
@@ -3347,6 +3384,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->Flags = 0;
     device->Bs2b = NULL;
     VECTOR_INIT(device->Hrtf_List);
+    AL_STRING_INIT(device->Hrtf_Name);
     device->Hrtf_Mode = DisabledHrtf;
     AL_STRING_INIT(device->DeviceName);
     device->DryBuffer = NULL;
@@ -3612,6 +3650,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->Type = Capture;
 
     VECTOR_INIT(device->Hrtf_List);
+    AL_STRING_INIT(device->Hrtf_Name);
 
     AL_STRING_INIT(device->DeviceName);
     device->DryBuffer = NULL;
@@ -3802,6 +3841,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
 
     device->Flags = 0;
     VECTOR_INIT(device->Hrtf_List);
+    AL_STRING_INIT(device->Hrtf_Name);
     device->Bs2b = NULL;
     device->Hrtf_Mode = DisabledHrtf;
     AL_STRING_INIT(device->DeviceName);

@@ -702,6 +702,7 @@ struct ALCdevice_struct
 
     /* HRTF filter tables */
     vector_HrtfEntry Hrtf_List;
+    al_string Hrtf_Name;
     const struct Hrtf *Hrtf;
     ALCenum Hrtf_Status;
     enum HrtfMode Hrtf_Mode;

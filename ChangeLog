@@ -40,8 +40,8 @@ openal-soft-1.17.0:
     Altered the behavior of alcSuspendContext and alcProcessContext to better
     match certain Windows drivers.
 
-    Altered the panning algorithm for better side and back positioning cues
-    with surround sound output.
+    Altered the panning algorithm, utilizing Ambisonics for better side and
+    back positioning cues with surround sound output.
 
     Improved support for certain older Windows apps.
 

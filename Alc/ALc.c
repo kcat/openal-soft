@@ -392,6 +392,7 @@ static const ALCenums enumeration[] = {
     DECL(ALC_HRTF_UNSUPPORTED_FORMAT_SOFT),
     DECL(ALC_NUM_HRTF_SPECIFIER_SOFT),
     DECL(ALC_HRTF_SPECIFIER_SOFT),
+    DECL(ALC_HRTF_ID_SOFT),
 
     DECL(ALC_NO_ERROR),
     DECL(ALC_INVALID_DEVICE),
@@ -1705,6 +1706,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     enum DevFmtType oldType;
     ALCuint oldFreq;
     FPUCtl oldMode;
+    ALCsizei hrtf_id = -1;
     size_t size;
 
     // Check for attributes
@@ -1785,6 +1787,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                     hrtf_appreq = Hrtf_Default;
             }
 
+            if(attrList[attrIdx] == ALC_HRTF_ID_SOFT)
+                hrtf_id = attrList[attrIdx + 1];
+
             attrIdx += 2;
         }
 
@@ -1856,6 +1861,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                     hrtf_appreq = Hrtf_Default;
             }
 
+            if(attrList[attrIdx] == ALC_HRTF_ID_SOFT)
+                hrtf_id = attrList[attrIdx + 1];
+
             attrIdx += 2;
         }
 
@@ -1911,7 +1919,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(VECTOR_SIZE(device->Hrtf_List) > 0)
             {
                 device->FmtChans = DevFmtStereo;
-                device->Frequency = GetHrtfSampleRate(VECTOR_ELEM(device->Hrtf_List, 0).hrtf);
+                if(hrtf_id >= 0 && (size_t)hrtf_id < VECTOR_SIZE(device->Hrtf_List))
+                    device->Frequency = GetHrtfSampleRate(VECTOR_ELEM(device->Hrtf_List, hrtf_id).hrtf);
+                else
+                    device->Frequency = GetHrtfSampleRate(VECTOR_ELEM(device->Hrtf_List, 0).hrtf);
                 device->Flags |= DEVICE_CHANNELS_REQUEST | DEVICE_FREQUENCY_REQUEST;
             }
             else
@@ -1924,16 +1935,24 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     else if(hrtf_appreq == Hrtf_Enable)
     {
         size_t i;
-        if(VECTOR_SIZE(device->Hrtf_List) == 0)
+        /* Loopback device. We don't need to match to a specific HRTF entry
+         * here. If the requested ID matches, we'll pick that later, if not,
+         * we'll try to auto-select one anyway. */
+        if(device->FmtChans != DevFmtStereo)
+            i = VECTOR_SIZE(device->Hrtf_List);
+        else
         {
-            VECTOR_DEINIT(device->Hrtf_List);
-            device->Hrtf_List = EnumerateHrtf(device->DeviceName);
-        }
-        for(i = 0;i < VECTOR_SIZE(device->Hrtf_List);i++)
-        {
-            const struct Hrtf *hrtf = VECTOR_ELEM(device->Hrtf_List, i).hrtf;
-            if(GetHrtfSampleRate(hrtf) == device->Frequency)
-                break;
+            if(VECTOR_SIZE(device->Hrtf_List) == 0)
+            {
+                VECTOR_DEINIT(device->Hrtf_List);
+                device->Hrtf_List = EnumerateHrtf(device->DeviceName);
+            }
+            for(i = 0;i < VECTOR_SIZE(device->Hrtf_List);i++)
+            {
+                const struct Hrtf *hrtf = VECTOR_ELEM(device->Hrtf_List, i).hrtf;
+                if(GetHrtfSampleRate(hrtf) == device->Frequency)
+                    break;
+            }
         }
         if(i == VECTOR_SIZE(device->Hrtf_List))
         {
@@ -2063,14 +2082,27 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 VECTOR_DEINIT(device->Hrtf_List);
                 device->Hrtf_List = EnumerateHrtf(device->DeviceName);
             }
-            for(i = 0;i < VECTOR_SIZE(device->Hrtf_List);i++)
+
+            if(hrtf_id >= 0 && (size_t)hrtf_id < VECTOR_SIZE(device->Hrtf_List))
             {
-                const HrtfEntry *entry = &VECTOR_ELEM(device->Hrtf_List, i);
+                const HrtfEntry *entry = &VECTOR_ELEM(device->Hrtf_List, hrtf_id);
                 if(GetHrtfSampleRate(entry->hrtf) == device->Frequency)
                 {
                     device->Hrtf = entry->hrtf;
                     al_string_copy(&device->Hrtf_Name, entry->name);
-                    break;
+                }
+            }
+            if(!device->Hrtf)
+            {
+                for(i = 0;i < VECTOR_SIZE(device->Hrtf_List);i++)
+                {
+                    const HrtfEntry *entry = &VECTOR_ELEM(device->Hrtf_List, i);
+                    if(GetHrtfSampleRate(entry->hrtf) == device->Frequency)
+                    {
+                        device->Hrtf = entry->hrtf;
+                        al_string_copy(&device->Hrtf_Name, entry->name);
+                        break;
+                    }
                 }
             }
         }
@@ -2078,7 +2110,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         {
             device->Hrtf_Mode = hrtf_mode;
             device->Hrtf_Status = hrtf_status;
-            TRACE("HRTF enabled, using \"%s\"\n", al_string_get_cstr(device->Hrtf_Name));
+            TRACE("HRTF enabled, \"%s\"\n", al_string_get_cstr(device->Hrtf_Name));
             free(device->Bs2b);
             device->Bs2b = NULL;
         }
@@ -4022,7 +4054,7 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device)
  *
  * Gets a string parameter at the given index.
  */
-ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALenum paramName, ALsizei index)
+ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum paramName, ALCsizei index)
 {
     const ALCchar *str = NULL;
 

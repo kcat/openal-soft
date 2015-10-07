@@ -52,10 +52,11 @@
 #define ALC_HRTF_UNSUPPORTED_FORMAT_SOFT         0x0005
 #define ALC_NUM_HRTF_SPECIFIER_SOFT              0x1994
 #define ALC_HRTF_SPECIFIER_SOFT                  0x1995
-typedef const ALCchar* (ALC_APIENTRY*LPALCGETSTRINGISOFT)(ALCdevice *device, ALenum paramName, ALsizei index);
+#define ALC_HRTF_ID_SOFT                         0x1996
+typedef const ALCchar* (ALC_APIENTRY*LPALCGETSTRINGISOFT)(ALCdevice *device, ALCenum paramName, ALCsizei index);
 typedef ALCboolean (ALC_APIENTRY*LPALCRESETDEVICESOFT)(ALCdevice *device, const ALCint *attribs);
 #ifdef AL_ALEXT_PROTOTYPES
-ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALenum paramName, ALsizei index);
+ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum paramName, ALCsizei index);
 ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCint *attribs);
 #endif
 #endif

@@ -137,15 +137,15 @@ static inline ResamplerFunc SelectResampler(enum Resampler resampler)
     return Resample_point32_C;
 }
 
-
-static float lanc(float r, float x)
+#ifndef M_PI
+#define M_PI                         (3.14159265358979323846)
+#endif
+static float lanc(double r, double x)
 {
-    if(x == 0.0f)
-        return 1.0f;
-    if(fabsf(x) >= r)
-        return 0.0f;
-    return r*sinf(x*F_PI)*sinf(x*F_PI/r) /
-           (F_PI*F_PI * x*x);
+    if(x == 0.0) return 1.0f;
+    if(fabs(x) >= r) return 0.0f;
+    return (float)(r*sin(x*M_PI)*sin(x*M_PI/r) /
+                   (M_PI*M_PI * x*x));
 }
 
 void aluInitMixer(void)
@@ -182,22 +182,22 @@ void aluInitMixer(void)
     if(DefaultResampler == FIR6Resampler)
         for(i = 0;i < FRACTIONONE;i++)
         {
-            ALfloat mu = (ALfloat)i / FRACTIONONE;
-            ResampleCoeffs.FIR6[i][0] = lanc(3.0f, mu - -2.0f);
-            ResampleCoeffs.FIR6[i][1] = lanc(3.0f, mu - -1.0f);
-            ResampleCoeffs.FIR6[i][2] = lanc(3.0f, mu -  0.0f);
-            ResampleCoeffs.FIR6[i][3] = lanc(3.0f, mu -  1.0f);
-            ResampleCoeffs.FIR6[i][4] = lanc(3.0f, mu -  2.0f);
-            ResampleCoeffs.FIR6[i][5] = lanc(3.0f, mu -  3.0f);
+            ALdouble mu = (ALdouble)i / FRACTIONONE;
+            ResampleCoeffs.FIR6[i][0] = lanc(3.0, mu - -2.0);
+            ResampleCoeffs.FIR6[i][1] = lanc(3.0, mu - -1.0);
+            ResampleCoeffs.FIR6[i][2] = lanc(3.0, mu -  0.0);
+            ResampleCoeffs.FIR6[i][3] = lanc(3.0, mu -  1.0);
+            ResampleCoeffs.FIR6[i][4] = lanc(3.0, mu -  2.0);
+            ResampleCoeffs.FIR6[i][5] = lanc(3.0, mu -  3.0);
         }
     else if(DefaultResampler == FIR4Resampler)
         for(i = 0;i < FRACTIONONE;i++)
         {
-            ALfloat mu = (ALfloat)i / FRACTIONONE;
-            ResampleCoeffs.FIR4[i][0] = lanc(2.0f, mu - -1.0f);
-            ResampleCoeffs.FIR4[i][1] = lanc(2.0f, mu -  0.0f);
-            ResampleCoeffs.FIR4[i][2] = lanc(2.0f, mu -  1.0f);
-            ResampleCoeffs.FIR4[i][3] = lanc(2.0f, mu -  2.0f);
+            ALdouble mu = (ALdouble)i / FRACTIONONE;
+            ResampleCoeffs.FIR4[i][0] = lanc(2.0, mu - -1.0);
+            ResampleCoeffs.FIR4[i][1] = lanc(2.0, mu -  0.0);
+            ResampleCoeffs.FIR4[i][2] = lanc(2.0, mu -  1.0);
+            ResampleCoeffs.FIR4[i][3] = lanc(2.0, mu -  2.0);
         }
 
     MixHrtfSamples = SelectHrtfMixer();

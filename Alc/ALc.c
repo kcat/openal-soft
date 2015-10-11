@@ -955,7 +955,9 @@ static void alc_initconfig(void)
 
     capfilter = 0;
 #if defined(HAVE_SSE4_1)
-    capfilter |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE4_1;
+    capfilter |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE3 | CPU_CAP_SSE4_1;
+#elif defined(HAVE_SSE3)
+    capfilter |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE3;
 #elif defined(HAVE_SSE2)
     capfilter |= CPU_CAP_SSE | CPU_CAP_SSE2;
 #elif defined(HAVE_SSE)
@@ -989,6 +991,8 @@ static void alc_initconfig(void)
                     capfilter &= ~CPU_CAP_SSE;
                 else if(len == 4 && strncasecmp(str, "sse2", len) == 0)
                     capfilter &= ~CPU_CAP_SSE2;
+                else if(len == 4 && strncasecmp(str, "sse3", len) == 0)
+                    capfilter &= ~CPU_CAP_SSE3;
                 else if(len == 6 && strncasecmp(str, "sse4.1", len) == 0)
                     capfilter &= ~CPU_CAP_SSE4_1;
                 else if(len == 4 && strncasecmp(str, "neon", len) == 0)

@@ -362,6 +362,7 @@ void MainWindow::loadConfig(const QString &fname)
                    disabledCpuExts.begin(), std::mem_fun_ref(&QString::trimmed));
     ui->enableSSECheckBox->setChecked(!disabledCpuExts.contains("sse", Qt::CaseInsensitive));
     ui->enableSSE2CheckBox->setChecked(!disabledCpuExts.contains("sse2", Qt::CaseInsensitive));
+    ui->enableSSE3CheckBox->setChecked(!disabledCpuExts.contains("sse3", Qt::CaseInsensitive));
     ui->enableSSE41CheckBox->setChecked(!disabledCpuExts.contains("sse4.1", Qt::CaseInsensitive));
     ui->enableNeonCheckBox->setChecked(!disabledCpuExts.contains("neon", Qt::CaseInsensitive));
 
@@ -527,6 +528,8 @@ void MainWindow::saveConfig(const QString &fname) const
         strlist.append("sse");
     if(!ui->enableSSE2CheckBox->isChecked())
         strlist.append("sse2");
+    if(!ui->enableSSE3CheckBox->isChecked())
+        strlist.append("sse3");
     if(!ui->enableSSE41CheckBox->isChecked())
         strlist.append("sse4.1");
     if(!ui->enableNeonCheckBox->isChecked())

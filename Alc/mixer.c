@@ -122,9 +122,9 @@ static inline ResamplerFunc SelectResampler(enum Resampler resampler)
             if((CPUCapFlags&CPU_CAP_SSE4_1))
                 return Resample_fir4_32_SSE41;
 #endif
-#ifdef HAVE_SSE2
-            if((CPUCapFlags&CPU_CAP_SSE2))
-                return Resample_fir4_32_SSE2;
+#ifdef HAVE_SSE3
+            if((CPUCapFlags&CPU_CAP_SSE3))
+                return Resample_fir4_32_SSE3;
 #endif
             return Resample_fir4_32_C;
         case FIR6Resampler:

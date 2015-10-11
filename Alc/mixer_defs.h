@@ -55,7 +55,7 @@ const ALfloat *Resample_lerp32_SSE2(const ALfloat *src, ALuint frac, ALuint incr
 const ALfloat *Resample_lerp32_SSE41(const ALfloat *src, ALuint frac, ALuint increment,
                                      ALfloat *restrict dst, ALuint numsamples);
 
-const ALfloat *Resample_fir4_32_SSE2(const ALfloat *src, ALuint frac, ALuint increment,
+const ALfloat *Resample_fir4_32_SSE3(const ALfloat *src, ALuint frac, ALuint increment,
                                      ALfloat *restrict dst, ALuint numsamples);
 const ALfloat *Resample_fir4_32_SSE41(const ALfloat *src, ALuint frac, ALuint increment,
                                       ALfloat *restrict dst, ALuint numsamples);

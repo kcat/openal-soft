@@ -711,7 +711,7 @@ value currently possible is 4.</string>
         <x>10</x>
         <y>150</y>
         <width>511</width>
-        <height>91</height>
+        <height>121</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -757,8 +757,8 @@ be useful for preventing those extensions from being used.</string>
       <widget class="QCheckBox" name="enableNeonCheckBox">
        <property name="geometry">
         <rect>
-         <x>260</x>
-         <y>50</y>
+         <x>180</x>
+         <y>80</y>
          <width>71</width>
          <height>31</height>
         </rect>
@@ -781,6 +781,22 @@ be useful for preventing those extensions from being used.</string>
        </property>
        <property name="text">
         <string>SSE4.1</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="enableSSE3CheckBox">
+       <property name="geometry">
+        <rect>
+         <x>260</x>
+         <y>50</y>
+         <width>71</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>SSE3</string>
        </property>
        <property name="checked">
         <bool>true</bool>

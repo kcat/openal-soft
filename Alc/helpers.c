@@ -152,8 +152,12 @@ void FillCPUCaps(ALuint capfilter)
                 if((cpuinf[0].regs[3]&(1<<26)))
                 {
                     caps |= CPU_CAP_SSE2;
-                    if((cpuinf[0].regs[2]&(1<<19)))
-                        caps |= CPU_CAP_SSE4_1;
+                    if((cpuinf[0].regs[2]&(1<<0)))
+                    {
+                        caps |= CPU_CAP_SSE3;
+                        if((cpuinf[0].regs[2]&(1<<19)))
+                            caps |= CPU_CAP_SSE4_1;
+                    }
                 }
             }
         }
@@ -196,8 +200,12 @@ void FillCPUCaps(ALuint capfilter)
                 if((cpuinf[0].regs[3]&(1<<26)))
                 {
                     caps |= CPU_CAP_SSE2;
-                    if((cpuinf[0].regs[2]&(1<<19)))
-                        caps |= CPU_CAP_SSE4_1;
+                    if((cpuinf[0].regs[2]&(1<<0)))
+                    {
+                        caps |= CPU_CAP_SSE3;
+                        if((cpuinf[0].regs[2]&(1<<19)))
+                            caps |= CPU_CAP_SSE4_1;
+                    }
                 }
             }
         }
@@ -206,7 +214,10 @@ void FillCPUCaps(ALuint capfilter)
     /* Assume support for whatever's supported if we can't check for it */
 #if defined(HAVE_SSE4_1)
 #warning "Assuming SSE 4.1 run-time support!"
-    caps |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE4_1;
+    caps |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE3 | CPU_CAP_SSE4_1;
+#elif defined(HAVE_SSE3)
+#warning "Assuming SSE 3 run-time support!"
+    caps |= CPU_CAP_SSE | CPU_CAP_SSE2 | CPU_CAP_SSE3;
 #elif defined(HAVE_SSE2)
 #warning "Assuming SSE 2 run-time support!"
     caps |= CPU_CAP_SSE | CPU_CAP_SSE2;
@@ -220,9 +231,10 @@ void FillCPUCaps(ALuint capfilter)
     caps |= CPU_CAP_NEON;
 #endif
 
-    TRACE("Extensions:%s%s%s%s%s\n",
+    TRACE("Extensions:%s%s%s%s%s%s\n",
         ((capfilter&CPU_CAP_SSE)    ? ((caps&CPU_CAP_SSE)    ? " +SSE"    : " -SSE")    : ""),
         ((capfilter&CPU_CAP_SSE2)   ? ((caps&CPU_CAP_SSE2)   ? " +SSE2"   : " -SSE2")   : ""),
+        ((capfilter&CPU_CAP_SSE3)   ? ((caps&CPU_CAP_SSE3)   ? " +SSE3"   : " -SSE3")   : ""),
         ((capfilter&CPU_CAP_SSE4_1) ? ((caps&CPU_CAP_SSE4_1) ? " +SSE4.1" : " -SSE4.1") : ""),
         ((capfilter&CPU_CAP_NEON)   ? ((caps&CPU_CAP_NEON)   ? " +Neon"   : " -Neon")   : ""),
         ((!capfilter) ? " -none-" : "")

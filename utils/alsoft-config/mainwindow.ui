@@ -725,7 +725,7 @@ be useful for preventing those extensions from being used.</string>
       <widget class="QCheckBox" name="enableSSECheckBox">
        <property name="geometry">
         <rect>
-         <x>180</x>
+         <x>100</x>
          <y>20</y>
          <width>71</width>
          <height>31</height>
@@ -742,7 +742,7 @@ be useful for preventing those extensions from being used.</string>
        <property name="geometry">
         <rect>
          <x>180</x>
-         <y>50</y>
+         <y>20</y>
          <width>71</width>
          <height>31</height>
         </rect>
@@ -757,8 +757,8 @@ be useful for preventing those extensions from being used.</string>
       <widget class="QCheckBox" name="enableNeonCheckBox">
        <property name="geometry">
         <rect>
-         <x>180</x>
-         <y>80</y>
+         <x>220</x>
+         <y>50</y>
          <width>71</width>
          <height>31</height>
         </rect>
@@ -773,7 +773,7 @@ be useful for preventing those extensions from being used.</string>
       <widget class="QCheckBox" name="enableSSE41CheckBox">
        <property name="geometry">
         <rect>
-         <x>260</x>
+         <x>340</x>
          <y>20</y>
          <width>71</width>
          <height>31</height>
@@ -790,7 +790,7 @@ be useful for preventing those extensions from being used.</string>
        <property name="geometry">
         <rect>
          <x>260</x>
-         <y>50</y>
+         <y>20</y>
          <width>71</width>
          <height>31</height>
         </rect>

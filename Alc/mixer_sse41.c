@@ -114,10 +114,9 @@ const ALfloat *Resample_fir4_32_SSE41(const ALfloat *src, ALuint frac, ALuint in
         k1 = _mm_mul_ps(k1, val1);
         k2 = _mm_mul_ps(k2, val2);
         k3 = _mm_mul_ps(k3, val3);
-        _MM_TRANSPOSE4_PS(k0, k1, k2, k3);
-        out = _mm_add_ps(k0, k1);
-        out = _mm_add_ps(out, k2);
-        out = _mm_add_ps(out, k3);
+        k0 = _mm_hadd_ps(k0, k1);
+        k2 = _mm_hadd_ps(k2, k3);
+        out = _mm_hadd_ps(k0, k2);
 
         _mm_store_ps(&dst[i], out);
 

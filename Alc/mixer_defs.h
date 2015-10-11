@@ -16,7 +16,7 @@ const ALfloat *Resample_copy32_C(const ALfloat *src, ALuint frac, ALuint increme
 const ALfloat *Resample_point32_C(const ALfloat *src, ALuint frac, ALuint increment, ALfloat *restrict dst, ALuint dstlen);
 const ALfloat *Resample_lerp32_C(const ALfloat *src, ALuint frac, ALuint increment, ALfloat *restrict dst, ALuint dstlen);
 const ALfloat *Resample_fir4_32_C(const ALfloat *src, ALuint frac, ALuint increment, ALfloat *restrict dst, ALuint dstlen);
-const ALfloat *Resample_fir6_32_C(const ALfloat *src, ALuint frac, ALuint increment, ALfloat *restrict dst, ALuint dstlen);
+const ALfloat *Resample_fir8_32_C(const ALfloat *src, ALuint frac, ALuint increment, ALfloat *restrict dst, ALuint dstlen);
 
 
 /* C mixers */
@@ -58,6 +58,11 @@ const ALfloat *Resample_lerp32_SSE41(const ALfloat *src, ALuint frac, ALuint inc
 const ALfloat *Resample_fir4_32_SSE3(const ALfloat *src, ALuint frac, ALuint increment,
                                      ALfloat *restrict dst, ALuint numsamples);
 const ALfloat *Resample_fir4_32_SSE41(const ALfloat *src, ALuint frac, ALuint increment,
+                                      ALfloat *restrict dst, ALuint numsamples);
+
+const ALfloat *Resample_fir8_32_SSE3(const ALfloat *src, ALuint frac, ALuint increment,
+                                     ALfloat *restrict dst, ALuint numsamples);
+const ALfloat *Resample_fir8_32_SSE41(const ALfloat *src, ALuint frac, ALuint increment,
                                       ALfloat *restrict dst, ALuint numsamples);
 
 /* Neon mixers */

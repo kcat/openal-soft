@@ -50,7 +50,7 @@ enum Resampler {
     PointResampler,
     LinearResampler,
     FIR4Resampler,
-    FIR6Resampler,
+    FIR8Resampler,
 
     ResamplerMax,
 };
@@ -65,7 +65,7 @@ static const ALsizei ResamplerPadding[ResamplerMax][2] = {
     {0, 0}, /* Point */
     {0, 1}, /* Linear */
     {1, 2}, /* FIR4 */
-    {2, 3}, /* FIR6 */
+    {3, 4}, /* FIR8 */
 };
 
 
@@ -127,8 +127,16 @@ static inline ResamplerFunc SelectResampler(enum Resampler resampler)
                 return Resample_fir4_32_SSE3;
 #endif
             return Resample_fir4_32_C;
-        case FIR6Resampler:
-            return Resample_fir6_32_C;
+        case FIR8Resampler:
+#ifdef HAVE_SSE4_1
+            if((CPUCapFlags&CPU_CAP_SSE4_1))
+                return Resample_fir8_32_SSE41;
+#endif
+#ifdef HAVE_SSE3
+            if((CPUCapFlags&CPU_CAP_SSE3))
+                return Resample_fir8_32_SSE3;
+#endif
+            return Resample_fir8_32_C;
         case ResamplerMax:
             /* Shouldn't happen */
             break;
@@ -161,8 +169,8 @@ void aluInitMixer(void)
             DefaultResampler = LinearResampler;
         else if(strcasecmp(str, "sinc4") == 0)
             DefaultResampler = FIR4Resampler;
-        else if(strcasecmp(str, "sinc6") == 0)
-            DefaultResampler = FIR6Resampler;
+        else if(strcasecmp(str, "sinc8") == 0)
+            DefaultResampler = FIR8Resampler;
         else if(strcasecmp(str, "cubic") == 0)
         {
             WARN("Resampler option \"cubic\" is deprecated, using sinc4\n");
@@ -179,16 +187,18 @@ void aluInitMixer(void)
         }
     }
 
-    if(DefaultResampler == FIR6Resampler)
+    if(DefaultResampler == FIR8Resampler)
         for(i = 0;i < FRACTIONONE;i++)
         {
             ALdouble mu = (ALdouble)i / FRACTIONONE;
-            ResampleCoeffs.FIR6[i][0] = lanc(3.0, mu - -2.0);
-            ResampleCoeffs.FIR6[i][1] = lanc(3.0, mu - -1.0);
-            ResampleCoeffs.FIR6[i][2] = lanc(3.0, mu -  0.0);
-            ResampleCoeffs.FIR6[i][3] = lanc(3.0, mu -  1.0);
-            ResampleCoeffs.FIR6[i][4] = lanc(3.0, mu -  2.0);
-            ResampleCoeffs.FIR6[i][5] = lanc(3.0, mu -  3.0);
+            ResampleCoeffs.FIR8[i][0] = lanc(4.0, mu - -3.0);
+            ResampleCoeffs.FIR8[i][1] = lanc(4.0, mu - -2.0);
+            ResampleCoeffs.FIR8[i][2] = lanc(4.0, mu - -1.0);
+            ResampleCoeffs.FIR8[i][3] = lanc(4.0, mu -  0.0);
+            ResampleCoeffs.FIR8[i][4] = lanc(4.0, mu -  1.0);
+            ResampleCoeffs.FIR8[i][5] = lanc(4.0, mu -  2.0);
+            ResampleCoeffs.FIR8[i][6] = lanc(4.0, mu -  3.0);
+            ResampleCoeffs.FIR8[i][7] = lanc(4.0, mu -  4.0);
         }
     else if(DefaultResampler == FIR4Resampler)
         for(i = 0;i < FRACTIONONE;i++)

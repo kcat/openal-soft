@@ -204,7 +204,7 @@ inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max)
 
 union ResamplerCoeffs {
     ALfloat FIR4[FRACTIONONE][4];
-    ALfloat FIR6[FRACTIONONE][6];
+    ALfloat FIR8[FRACTIONONE][8];
 };
 extern alignas(16) union ResamplerCoeffs ResampleCoeffs;
 
@@ -218,10 +218,11 @@ inline ALfloat resample_fir4(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat v
     const ALfloat *k = ResampleCoeffs.FIR4[frac];
     return k[0]*val0 + k[1]*val1 + k[2]*val2 + k[3]*val3;
 }
-inline ALfloat resample_fir6(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALfloat val4, ALfloat val5, ALuint frac)
+inline ALfloat resample_fir8(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALfloat val4, ALfloat val5, ALfloat val6, ALfloat val7, ALuint frac)
 {
-    const ALfloat *k = ResampleCoeffs.FIR6[frac];
-    return k[0]*val0 + k[1]*val1 + k[2]*val2 + k[3]*val3 + k[4]*val4 + k[5]*val5;
+    const ALfloat *k = ResampleCoeffs.FIR8[frac];
+    return k[0]*val0 + k[1]*val1 + k[2]*val2 + k[3]*val3 +
+           k[4]*val4 + k[5]*val5 + k[6]*val6 + k[7]*val7;
 }
 
 

@@ -64,7 +64,7 @@ static const struct {
     { "Point (low quality, fast)", "point" },
     { "Linear (basic quality, fast)", "linear" },
     { "Sinc-Lanczos 4pt (good quality)", "sinc4" },
-    { "Sinc-Lanczos 6pt (high quality, slow)", "sinc6" },
+    { "Sinc-Lanczos 8pt (high quality, slow)", "sinc8" },
 
     { "", "" }
 }, stereoModeList[] = {

@@ -181,11 +181,6 @@ to stereo output.</string>
         <string>48000</string>
        </property>
       </item>
-      <item>
-       <property name="text">
-        <string>96000</string>
-       </property>
-      </item>
      </widget>
      <widget class="QLabel" name="label_7">
       <property name="geometry">

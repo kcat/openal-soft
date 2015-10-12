@@ -1,3 +1,6 @@
+
+#include "config.h"
+
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QSettings>
@@ -10,27 +13,50 @@ static const struct {
     char backend_name[16];
     char menu_string[32];
 } backendMenuList[] = {
-#ifdef Q_OS_WIN32
-    { "mmdevapi", "Add MMDevAPI" },
-    { "dsound", "Add DirectSound" },
-    { "winmm", "Add Windows Multimedia" },
+#ifdef HAVE_JACK
+    { "jack", "Add JACK" },
 #endif
-#ifdef Q_OS_MAC
+#ifdef HAVE_PULSEAUDIO
+    { "pulse", "Add PulseAudio" },
+#endif
+#ifdef HAVE_ALSA
+    { "alsa", "Add ALSA" },
+#endif
+#ifdef HAVE_COREAUDIO
     { "core", "Add CoreAudio" },
 #endif
-    { "jack", "Add JACK" },
-    { "pulse", "Add PulseAudio" },
-#ifdef Q_OS_UNIX
-    { "alsa", "Add ALSA" },
+#ifdef HAVE_OSS
     { "oss", "Add OSS" },
+#endif
+#ifdef HAVE_SOLARIS
     { "solaris", "Add Solaris" },
+#endif
+#ifdef HAVE_SNDIO
     { "sndio", "Add SndIO" },
+#endif
+#ifdef HAVE_QSA
     { "qsa", "Add QSA" },
 #endif
+#ifdef HAVE_MMDEVAPI
+    { "mmdevapi", "Add MMDevAPI" },
+#endif
+#ifdef HAVE_DSOUND
+    { "dsound", "Add DirectSound" },
+#endif
+#ifdef HAVE_WINMM
+    { "winmm", "Add Windows Multimedia" },
+#endif
+#ifdef HAVE_PORTAUDIO
     { "port", "Add PortAudio" },
+#endif
+#ifdef HAVE_OPENSL
     { "opensl", "Add OpenSL" },
+#endif
+
     { "null", "Add Null Output" },
+#ifdef HAVE_WAVE
     { "wave", "Add Wave Writer" },
+#endif
     { "", "" }
 };
 
@@ -163,6 +189,46 @@ MainWindow::MainWindow(QWidget *parent) :
     for(int i = 0;stereoModeList[i].name[0];i++)
         ui->stereoModeCombo->addItem(stereoModeList[i].name);
     ui->stereoModeCombo->adjustSize();
+
+#if !defined(HAVE_NEON) && !defined(HAVE_SSE)
+    ui->cpuExtDisabledLabel->move(ui->cpuExtDisabledLabel->x(), ui->cpuExtDisabledLabel->y() - 60);
+#else
+    ui->cpuExtDisabledLabel->setVisible(false);
+#endif
+
+#ifndef HAVE_NEON
+
+#ifndef HAVE_SSE4_1
+#ifndef HAVE_SSE3
+#ifndef HAVE_SSE2
+#ifndef HAVE_SSE
+    ui->enableSSECheckBox->setVisible(false);
+#endif /* !SSE */
+    ui->enableSSE2CheckBox->setVisible(false);
+#endif /* !SSE2 */
+    ui->enableSSE3CheckBox->setVisible(false);
+#endif /* !SSE3 */
+    ui->enableSSE41CheckBox->setVisible(false);
+#endif /* !SSE4.1 */
+    ui->enableNeonCheckBox->setVisible(false);
+
+#else /* !Neon */
+
+#ifndef HAVE_SSE4_1
+#ifndef HAVE_SSE3
+#ifndef HAVE_SSE2
+#ifndef HAVE_SSE
+    ui->enableNeonCheckBox->move(ui->enableNeonCheckBox->x(), ui->enableNeonCheckBox->y() - 30);
+    ui->enableSSECheckBox->setVisible(false);
+#endif /* !SSE */
+    ui->enableSSE2CheckBox->setVisible(false);
+#endif /* !SSE2 */
+    ui->enableSSE3CheckBox->setVisible(false);
+#endif /* !SSE3 */
+    ui->enableSSE41CheckBox->setVisible(false);
+#endif /* !SSE4.1 */
+
+#endif
 
     mPeriodSizeValidator = new QIntValidator(64, 8192, this);
     ui->periodSizeEdit->setValidator(mPeriodSizeValidator);

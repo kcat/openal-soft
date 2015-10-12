@@ -705,7 +705,7 @@ value currently possible is 4.</string>
        <enum>QComboBox::AdjustToContents</enum>
       </property>
      </widget>
-     <widget class="QGroupBox" name="groupBox_2">
+     <widget class="QGroupBox" name="cpuExtGroupBox">
       <property name="geometry">
        <rect>
         <x>10</x>
@@ -757,7 +757,7 @@ be useful for preventing those extensions from being used.</string>
       <widget class="QCheckBox" name="enableNeonCheckBox">
        <property name="geometry">
         <rect>
-         <x>220</x>
+         <x>100</x>
          <y>50</y>
          <width>71</width>
          <height>31</height>
@@ -800,6 +800,19 @@ be useful for preventing those extensions from being used.</string>
        </property>
        <property name="checked">
         <bool>true</bool>
+       </property>
+      </widget>
+      <widget class="QLabel" name="cpuExtDisabledLabel">
+       <property name="geometry">
+        <rect>
+         <x>101</x>
+         <y>80</y>
+         <width>311</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;No support enabled for CPU Extensions&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
       </widget>
      </widget>

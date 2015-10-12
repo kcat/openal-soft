@@ -25,7 +25,7 @@ void MixHrtf_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
                const struct HrtfParams *hrtfparams, struct HrtfState *hrtfstate,
                ALuint BufferSize);
 void Mix_C(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
-                 struct MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize);
+           struct MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize);
 
 /* SSE mixers */
 void MixHrtf_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,

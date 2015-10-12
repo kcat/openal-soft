@@ -190,6 +190,8 @@ MainWindow::MainWindow(QWidget *parent) :
         ui->stereoModeCombo->addItem(stereoModeList[i].name);
     ui->stereoModeCombo->adjustSize();
 
+    ui->hrtfStateComboBox->adjustSize();
+
 #if !defined(HAVE_NEON) && !defined(HAVE_SSE)
     ui->cpuExtDisabledLabel->move(ui->cpuExtDisabledLabel->x(), ui->cpuExtDisabledLabel->y() - 60);
 #else
@@ -433,13 +435,13 @@ void MainWindow::loadConfig(const QString &fname)
     ui->enableNeonCheckBox->setChecked(!disabledCpuExts.contains("neon", Qt::CaseInsensitive));
 
     if(settings.value("hrtf").toString() == QString())
-        ui->hrtfAutoButton->setChecked(true);
+        ui->hrtfStateComboBox->setCurrentIndex(0);
     else
     {
         if(settings.value("hrtf", true).toBool())
-            ui->hrtfForceButton->setChecked(true);
+            ui->hrtfStateComboBox->setCurrentIndex(1);
         else
-            ui->hrtfDisableButton->setChecked(true);
+            ui->hrtfStateComboBox->setCurrentIndex(2);
     }
 
     QStringList hrtf_tables = settings.value("hrtf_tables").toStringList();
@@ -602,9 +604,9 @@ void MainWindow::saveConfig(const QString &fname) const
         strlist.append("neon");
     settings.setValue("disable-cpu-exts", strlist.join(QChar(',')));
 
-    if(ui->hrtfForceButton->isChecked())
+    if(ui->hrtfStateComboBox->currentIndex() == 1)
         settings.setValue("hrtf", "true");
-    else if(ui->hrtfDisableButton->isChecked())
+    else if(ui->hrtfStateComboBox->currentIndex() == 2)
         settings.setValue("hrtf", "false");
     else
         settings.setValue("hrtf", QString());

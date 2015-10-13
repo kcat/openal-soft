@@ -45,7 +45,7 @@ static ALvoid InitSourceParams(ALsource *Source);
 static ALint64 GetSourceSampleOffset(ALsource *Source);
 static ALdouble GetSourceSecOffset(ALsource *Source);
 static ALvoid GetSourceOffsets(ALsource *Source, ALenum name, ALdouble *offsets, ALdouble updateLen);
-static ALint GetSampleOffset(ALsource *Source);
+static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac);
 
 typedef enum SourceProp {
     srcPitch = AL_PITCH,
@@ -2905,12 +2905,11 @@ ALboolean ApplyOffset(ALsource *Source)
 {
     ALbufferlistitem *BufferList;
     const ALbuffer *Buffer;
-    ALint bufferLen, totalBufferLen;
-    ALint offset;
+    ALuint bufferLen, totalBufferLen;
+    ALuint offset, frac;
 
     /* Get sample frame offset */
-    offset = GetSampleOffset(Source);
-    if(offset == -1)
+    if(!GetSampleOffset(Source, &offset, &frac))
         return AL_FALSE;
 
     totalBufferLen = 0;
@@ -2926,7 +2925,7 @@ ALboolean ApplyOffset(ALsource *Source)
             ATOMIC_STORE(&Source->current_buffer, BufferList);
 
             Source->position = offset - totalBufferLen;
-            Source->position_fraction = 0;
+            Source->position_fraction = frac;
             return AL_TRUE;
         }
 
@@ -2942,15 +2941,14 @@ ALboolean ApplyOffset(ALsource *Source)
 
 /* GetSampleOffset
  *
- * Returns the sample offset into the Source's queue (from the Sample, Byte or
- * Second offset supplied by the application). This takes into account the fact
- * that the buffer format may have been modifed since.
+ * Retrieves the sample offset into the Source's queue (from the Sample, Byte
+ * or Second offset supplied by the application). This takes into account the
+ * fact that the buffer format may have been modifed since.
  */
-static ALint GetSampleOffset(ALsource *Source)
+static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac)
 {
     const ALbuffer *Buffer = NULL;
     const ALbufferlistitem *BufferList;
-    ALint Offset = -1;
 
     /* Find the first valid Buffer in the Queue */
     BufferList = ATOMIC_LOAD(&Source->queue);
@@ -2963,45 +2961,47 @@ static ALint GetSampleOffset(ALsource *Source)
         }
         BufferList = BufferList->next;
     }
-
     if(!Buffer)
     {
         Source->Offset = -1.0;
-        return -1;
+        return AL_FALSE;
     }
 
     switch(Source->OffsetType)
     {
     case AL_BYTE_OFFSET:
         /* Determine the ByteOffset (and ensure it is block aligned) */
-        Offset = (ALint)Source->Offset;
+        *offset = (ALuint)Source->Offset;
         if(Buffer->OriginalType == UserFmtIMA4)
         {
             ALsizei align = (Buffer->OriginalAlign-1)/2 + 4;
-            Offset /= align * ChannelsFromUserFmt(Buffer->OriginalChannels);
-            Offset *= Buffer->OriginalAlign;
+            *offset /= align * ChannelsFromUserFmt(Buffer->OriginalChannels);
+            *offset *= Buffer->OriginalAlign;
         }
         else if(Buffer->OriginalType == UserFmtMSADPCM)
         {
             ALsizei align = (Buffer->OriginalAlign-2)/2 + 7;
-            Offset /= align * ChannelsFromUserFmt(Buffer->OriginalChannels);
-            Offset *= Buffer->OriginalAlign;
+            *offset /= align * ChannelsFromUserFmt(Buffer->OriginalChannels);
+            *offset *= Buffer->OriginalAlign;
         }
         else
-            Offset /= FrameSizeFromUserFmt(Buffer->OriginalChannels, Buffer->OriginalType);
+            *offset /= FrameSizeFromUserFmt(Buffer->OriginalChannels, Buffer->OriginalType);
+        *frac = 0;
         break;
 
     case AL_SAMPLE_OFFSET:
-        Offset = (ALint)Source->Offset;
+        *offset = (ALuint)Source->Offset;
+        *frac = (ALuint)((Source->Offset - *offset) * FRACTIONONE);
         break;
 
     case AL_SEC_OFFSET:
-        Offset = (ALint)(Source->Offset * Buffer->Frequency);
+        *offset = (ALuint)(Source->Offset*Buffer->Frequency);
+        *frac = (ALuint)(((Source->Offset*Buffer->Frequency) - *offset) * FRACTIONONE);
         break;
     }
     Source->Offset = -1.0;
 
-    return Offset;
+    return AL_TRUE;
 }
 
 

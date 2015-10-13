@@ -34,6 +34,7 @@ OPTION(ALSOFT_UTILS          "Build and install utility programs"         ON)
 OPTION(ALSOFT_NO_CONFIG_UTIL "Disable building the alsoft-config utility" OFF)
 
 OPTION(ALSOFT_EXAMPLES  "Build and install example programs"  ON)
+OPTION(ALSOFT_TESTS     "Build and install test programs"     ON)
 
 OPTION(ALSOFT_CONFIG "Install alsoft.conf sample configuration file" ON)
 OPTION(ALSOFT_HRTF_DEFS "Install HRTF definition files" ON)
@@ -1224,6 +1225,24 @@ IF(ALSOFT_UTILS)
         MESSAGE(STATUS "Building configuration program")
     ENDIF()
     MESSAGE(STATUS "")
+ENDIF()
+
+IF(ALSOFT_TESTS)
+        ADD_LIBRARY(test-common STATIC examples/common/alhelpers.c)
+
+        ADD_EXECUTABLE(altonegen examples/altonegen.c)
+        TARGET_LINK_LIBRARIES(altonegen test-common ${LIBNAME})
+
+        IF(ALSOFT_INSTALL)
+            INSTALL(TARGETS altonegen
+                    RUNTIME DESTINATION bin
+                    LIBRARY DESTINATION "lib${LIB_SUFFIX}"
+                    ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+            )
+        ENDIF()
+
+        MESSAGE(STATUS "Building test programs")
+        MESSAGE(STATUS "")
 ENDIF()
 
 IF(ALSOFT_EXAMPLES)

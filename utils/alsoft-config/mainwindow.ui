@@ -300,12 +300,12 @@ contain these markers, which will be replaced as needed:
        </item>
        <item>
         <property name="text">
-         <string>On</string>
+         <string>Force on</string>
         </property>
        </item>
        <item>
         <property name="text">
-         <string>Off</string>
+         <string>Force off</string>
         </property>
        </item>
       </widget>

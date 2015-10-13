@@ -2906,7 +2906,7 @@ ALboolean ApplyOffset(ALsource *Source)
     ALbufferlistitem *BufferList;
     const ALbuffer *Buffer;
     ALuint bufferLen, totalBufferLen;
-    ALuint offset, frac;
+    ALuint offset=0, frac=0;
 
     /* Get sample frame offset */
     if(!GetSampleOffset(Source, &offset, &frac))

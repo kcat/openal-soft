@@ -71,7 +71,7 @@ static void ApplySin(ALfloat *data, ALdouble g, ALuint srate, ALuint freq)
     ALdouble smps_per_cycle = (ALdouble)srate / freq;
     ALuint i;
     for(i = 0;i < srate;i++)
-        data[i] += sin(i/smps_per_cycle * 2.0*M_PI) * g;
+        data[i] += (ALfloat)(sin(i/smps_per_cycle * 2.0*M_PI) * g);
 }
 
 /* Generates waveforms using additive synthesis. Each waveform is constructed

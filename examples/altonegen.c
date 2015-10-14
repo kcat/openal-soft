@@ -113,8 +113,9 @@ int main(int argc, char *argv[])
     ALuint source, buffer;
     ALint last_pos, num_loops;
     ALint max_loops = 4;
-    ALint srate = 44100;
+    ALint srate = -1;
     ALint tone_freq = 1000;
+    ALCint dev_rate;
     ALenum state;
     int i;
 
@@ -132,7 +133,7 @@ int main(int argc, char *argv[])
 "  --waveform/-w <type>      Waveform type: sine (default), square, sawtooth,\n"
 "                                triangle\n"
 "  --freq/-f <hz>            Tone frequency (default 1000 hz)\n"
-"  --srate/-s <sample rate>  Sampling rate (default 44100 hz)\n",
+"  --srate/-s <sample rate>  Sampling rate (default output rate)\n",
                 argv[0]
             );
             return 1;
@@ -187,6 +188,14 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    {
+        ALCdevice *device = alcGetContextsDevice(alcGetCurrentContext());
+        alcGetIntegerv(device, ALC_FREQUENCY, 1, &dev_rate);
+        assert(alcGetError(device)==ALC_NO_ERROR && "Failed to get device sample rate");
+    }
+    if(srate < 0)
+        srate = dev_rate;
+
     /* Load the sound into a buffer. */
     buffer = CreateWave(wavetype, tone_freq, srate);
     if(!buffer)
@@ -195,22 +204,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    {
-        ALCdevice *device;
-        ALCint dev_rate;
-        ALint buf_rate;
-
-        device = alcGetContextsDevice(alcGetCurrentContext());
-        alcGetIntegerv(device, ALC_FREQUENCY, 1, &dev_rate);
-        assert(alcGetError(device)==ALC_NO_ERROR && "Failed to get device sample rate");
-
-        alGetBufferi(buffer, AL_FREQUENCY, &buf_rate);
-        assert(alGetError()==AL_NO_ERROR && "Failed to get buffer sample rate");
-
-        printf("Playing %dhz tone with %dhz sample rate and %dhz output, for %d second%s...\n",
-               tone_freq, buf_rate, dev_rate, max_loops+1, max_loops?"s":"");
-        fflush(stdout);
-    }
+    printf("Playing %dhz tone with %dhz sample rate and %dhz output, for %d second%s...\n",
+           tone_freq, srate, dev_rate, max_loops+1, max_loops?"s":"");
+    fflush(stdout);
 
     /* Create the source to play the sound with. */
     source = 0;

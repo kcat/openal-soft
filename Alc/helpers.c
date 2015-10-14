@@ -771,11 +771,13 @@ vector_al_string SearchDataFiles(const char *match, const char *subdir)
     }
 
     /* If the path is absolute, use it directly. */
-    if(wmatch[0] != '\0' && wmatch[1] == ':' && is_slash(wmatch[2]))
+    if(isalpha(wmatch[0]) && wmatch[1] == ':' && is_slash(wmatch[2]))
     {
-        CHAR drv[3] = { wmatch[0], ':', 0 };
+        char drv[3] = { (char)wmatch[0], ':', 0 };
         RecurseDirectorySearch(drv, wmatch+3, &results);
     }
+    else if(wmatch[0] == '\\' && wmatch[1] == '\\' && wmatch[2] == '?' && wmatch[3] == '\\')
+        RecurseDirectorySearch("\\\\?", wmatch+4, &results);
     else
     {
         al_string path = AL_STRING_INIT_STATIC();

@@ -54,6 +54,18 @@ enum WaveType {
     WT_Triangle,
 };
 
+static const char *GetWaveTypeName(enum WaveType type)
+{
+    switch(type)
+    {
+        case WT_Sine: return "sine";
+        case WT_Square: return "square";
+        case WT_Sawtooth: return "sawtooth";
+        case WT_Triangle: return "triangle";
+    }
+    return "(unknown)";
+}
+
 static void ApplySin(ALfloat *data, ALdouble g, ALuint srate, ALuint freq)
 {
     ALdouble smps_per_cycle = (ALdouble)srate / freq;
@@ -204,8 +216,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    printf("Playing %dhz tone with %dhz sample rate and %dhz output, for %d second%s...\n",
-           tone_freq, srate, dev_rate, max_loops+1, max_loops?"s":"");
+    printf("Playing %dhz %s-wave tone with %dhz sample rate and %dhz output, for %d second%s...\n",
+           tone_freq, GetWaveTypeName(wavetype), srate, dev_rate, max_loops+1, max_loops?"s":"");
     fflush(stdout);
 
     /* Create the source to play the sound with. */

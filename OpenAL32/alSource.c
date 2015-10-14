@@ -21,6 +21,7 @@
 #include "config.h"
 
 #include <stdlib.h>
+#include <limits.h>
 #include <math.h>
 #include <float.h>
 
@@ -2949,6 +2950,7 @@ static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac)
 {
     const ALbuffer *Buffer = NULL;
     const ALbufferlistitem *BufferList;
+    ALdouble dbloff, dblfrac;
 
     /* Find the first valid Buffer in the Queue */
     BufferList = ATOMIC_LOAD(&Source->queue);
@@ -2990,13 +2992,15 @@ static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac)
         break;
 
     case AL_SAMPLE_OFFSET:
-        *offset = (ALuint)Source->Offset;
-        *frac = (ALuint)((Source->Offset - *offset) * FRACTIONONE);
+        dbloff = modf(Source->Offset, &dblfrac);
+        *offset = (ALuint)mind(dbloff, UINT_MAX);
+        *frac = (ALuint)mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0);
         break;
 
     case AL_SEC_OFFSET:
-        *offset = (ALuint)(Source->Offset*Buffer->Frequency);
-        *frac = (ALuint)(((Source->Offset*Buffer->Frequency) - *offset) * FRACTIONONE);
+        dbloff = modf(Source->Offset*Buffer->Frequency, &dblfrac);
+        *offset = (ALuint)mind(dbloff, UINT_MAX);
+        *frac = (ALuint)mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0);
         break;
     }
     Source->Offset = -1.0;

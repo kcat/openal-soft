@@ -35,7 +35,7 @@ typedef struct ALvoice {
 
     ALuint Offset; /* Number of output samples mixed since starting. */
 
-    alignas(16) ALfloat PrevSamples[MAX_INPUT_CHANNELS][MAX_PREVIOUS_SAMPLES];
+    alignas(16) ALfloat PrevSamples[MAX_INPUT_CHANNELS][MAX_PRE_SAMPLES];
 
     DirectParams Direct;
     SendParams Send[MAX_SENDS];

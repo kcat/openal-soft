@@ -52,22 +52,12 @@ enum Resampler {
     FIR4Resampler,
     FIR8Resampler,
 
-    ResamplerMax,
+    ResamplerDefault = LinearResampler
 };
 
-static enum Resampler DefaultResampler = LinearResampler;
-
-/* Specifies the number of samples needed after (not including) the current
- * position, for the given resampler.
- */
-static const ALsizei ResamplerPadding[ResamplerMax] = {
-    0, /* Point */
-    1, /* Linear */
-    2, /* FIR4 */
-    4, /* FIR8 */
-};
-/* FIR8 requires 3 extra samples before the current position. */
-static_assert(MAX_PREVIOUS_SAMPLES >= 3, "MAX_PREVIOUS_SAMPLES must be at least 3!");
+/* FIR8 requires 3 extra samples before the current position, and 4 after. */
+static_assert(MAX_PRE_SAMPLES >= 3, "MAX_PRE_SAMPLES must be at least 3!");
+static_assert(MAX_POST_SAMPLES >= 4, "MAX_POST_SAMPLES must be at least 4!");
 
 
 static HrtfMixerFunc MixHrtfSamples = MixHrtf_C;
@@ -138,9 +128,6 @@ static inline ResamplerFunc SelectResampler(enum Resampler resampler)
                 return Resample_fir8_32_SSE3;
 #endif
             return Resample_fir8_32_C;
-        case ResamplerMax:
-            /* Shouldn't happen */
-            break;
     }
 
     return Resample_point32_C;
@@ -159,36 +146,37 @@ static float lanc(double r, double x)
 
 void aluInitMixer(void)
 {
+    enum Resampler resampler = ResamplerDefault;
     const char *str;
     ALuint i;
 
     if(ConfigValueStr(NULL, NULL, "resampler", &str))
     {
         if(strcasecmp(str, "point") == 0 || strcasecmp(str, "none") == 0)
-            DefaultResampler = PointResampler;
+            resampler = PointResampler;
         else if(strcasecmp(str, "linear") == 0)
-            DefaultResampler = LinearResampler;
+            resampler = LinearResampler;
         else if(strcasecmp(str, "sinc4") == 0)
-            DefaultResampler = FIR4Resampler;
+            resampler = FIR4Resampler;
         else if(strcasecmp(str, "sinc8") == 0)
-            DefaultResampler = FIR8Resampler;
+            resampler = FIR8Resampler;
         else if(strcasecmp(str, "cubic") == 0)
         {
             WARN("Resampler option \"cubic\" is deprecated, using sinc4\n");
-            DefaultResampler = FIR4Resampler;
+            resampler = FIR4Resampler;
         }
         else
         {
             char *end;
             long n = strtol(str, &end, 0);
             if(*end == '\0' && (n == PointResampler || n == LinearResampler || n == FIR4Resampler))
-                DefaultResampler = n;
+                resampler = n;
             else
                 WARN("Invalid resampler: %s\n", str);
         }
     }
 
-    if(DefaultResampler == FIR8Resampler)
+    if(resampler == FIR8Resampler)
         for(i = 0;i < FRACTIONONE;i++)
         {
             ALdouble mu = (ALdouble)i / FRACTIONONE;
@@ -201,7 +189,7 @@ void aluInitMixer(void)
             ResampleCoeffs.FIR8[i][6] = lanc(4.0, mu -  3.0);
             ResampleCoeffs.FIR8[i][7] = lanc(4.0, mu -  4.0);
         }
-    else if(DefaultResampler == FIR4Resampler)
+    else if(resampler == FIR4Resampler)
         for(i = 0;i < FRACTIONONE;i++)
         {
             ALdouble mu = (ALdouble)i / FRACTIONONE;
@@ -213,7 +201,7 @@ void aluInitMixer(void)
 
     MixHrtfSamples = SelectHrtfMixer();
     MixSamples = SelectMixer();
-    ResampleSamples = SelectResampler(DefaultResampler);
+    ResampleSamples = SelectResampler(resampler);
 }
 
 
@@ -343,7 +331,6 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
 
     OutPos = 0;
     do {
-        const ALuint BufferPadding = ResamplerPadding[DefaultResampler];
         ALuint SrcBufferSize, DstBufferSize;
 
         /* Figure out how many buffer samples will be needed */
@@ -351,13 +338,13 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
         DataSize64 *= increment;
         DataSize64 += DataPosFrac+FRACTIONMASK;
         DataSize64 >>= FRACTIONBITS;
-        DataSize64 += BufferPadding+MAX_PREVIOUS_SAMPLES;
+        DataSize64 += MAX_POST_SAMPLES+MAX_PRE_SAMPLES;
 
         SrcBufferSize = (ALuint)mini64(DataSize64, BUFFERSIZE);
 
         /* Figure out how many samples we can actually mix from this. */
         DataSize64  = SrcBufferSize;
-        DataSize64 -= BufferPadding+MAX_PREVIOUS_SAMPLES;
+        DataSize64 -= MAX_POST_SAMPLES+MAX_PRE_SAMPLES;
         DataSize64 <<= FRACTIONBITS;
         DataSize64 -= DataPosFrac;
 
@@ -376,8 +363,8 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
             ALuint SrcDataSize;
 
             /* Load the previous samples into the source data first. */
-            memcpy(SrcData, voice->PrevSamples[chan], MAX_PREVIOUS_SAMPLES*sizeof(ALfloat));
-            SrcDataSize = MAX_PREVIOUS_SAMPLES;
+            memcpy(SrcData, voice->PrevSamples[chan], MAX_PRE_SAMPLES*sizeof(ALfloat));
+            SrcDataSize = MAX_PRE_SAMPLES;
 
             if(Source->SourceType == AL_STATIC)
             {
@@ -475,12 +462,12 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
             /* Store the last source samples used for next time. */
             memcpy(voice->PrevSamples[chan],
                 &SrcData[(increment*DstBufferSize + DataPosFrac)>>FRACTIONBITS],
-                MAX_PREVIOUS_SAMPLES*sizeof(ALfloat)
+                MAX_PRE_SAMPLES*sizeof(ALfloat)
             );
 
             /* Now resample, then filter and mix to the appropriate outputs. */
             ResampledData = Resample(
-                &SrcData[MAX_PREVIOUS_SAMPLES], DataPosFrac, increment,
+                &SrcData[MAX_PRE_SAMPLES], DataPosFrac, increment,
                 Device->ResampledData, DstBufferSize
             );
             {

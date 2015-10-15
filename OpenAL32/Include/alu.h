@@ -32,8 +32,11 @@
 
 #define MAX_PITCH  (255)
 
-/* Maximum number of previous buffer samples needed for resampling. */
-#define MAX_PREVIOUS_SAMPLES 4
+/* Maximum number of buffer samples before the current pos needed for resampling. */
+#define MAX_PRE_SAMPLES 4
+
+/* Maximum number of buffer samples after the current pos needed for resampling. */
+#define MAX_POST_SAMPLES 4
 
 
 #ifdef __cplusplus

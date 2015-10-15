@@ -2574,6 +2574,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
     {
         ALCdevice *device = Context->Device;
         ALbufferlistitem *BufferList;
+        ALboolean discontinuity;
         ALvoice *voice = NULL;
         ALsizei i;
 
@@ -2594,13 +2595,20 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             Source->position = 0;
             Source->position_fraction = 0;
             ATOMIC_STORE(&Source->current_buffer, BufferList);
+            discontinuity = AL_TRUE;
         }
         else
+        {
             Source->state = AL_PLAYING;
+            discontinuity = AL_FALSE;
+        }
 
         // Check if an Offset has been set
         if(Source->Offset >= 0.0)
+        {
             ApplyOffset(Source);
+            /* discontinuity = AL_TRUE;??? */
+        }
 
         /* If there's nothing to play, or device is disconnected, go right to
          * stopped */
@@ -2630,6 +2638,10 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             voice = &Context->Voices[Context->VoiceCount++];
             voice->Source = Source;
         }
+
+        /* Clear previous samples if playback is discontinuous. */
+        if(discontinuity)
+            memset(voice->PrevSamples, 0, sizeof(voice->PrevSamples));
 
         voice->Direct.Moving  = AL_FALSE;
         voice->Direct.Counter = 0;

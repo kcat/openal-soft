@@ -57,16 +57,17 @@ enum Resampler {
 
 static enum Resampler DefaultResampler = LinearResampler;
 
-/* Each entry is a pair, where the first is the number of samples needed before
- * the current position, and the second is the number of samples needed after
- * (not including) the current position, for the given resampler.
+/* Specifies the number of samples needed after (not including) the current
+ * position, for the given resampler.
  */
-static const ALsizei ResamplerPadding[ResamplerMax][2] = {
-    {0, 0}, /* Point */
-    {0, 1}, /* Linear */
-    {1, 2}, /* FIR4 */
-    {3, 4}, /* FIR8 */
+static const ALsizei ResamplerPadding[ResamplerMax] = {
+    0, /* Point */
+    1, /* Linear */
+    2, /* FIR4 */
+    4, /* FIR8 */
 };
+/* FIR8 requires 3 extra samples before the current position. */
+static_assert(MAX_PREVIOUS_SAMPLES >= 3, "MAX_PREVIOUS_SAMPLES must be at least 3!");
 
 
 static HrtfMixerFunc MixHrtfSamples = MixHrtf_C;
@@ -342,8 +343,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
 
     OutPos = 0;
     do {
-        const ALuint BufferPrePadding = ResamplerPadding[DefaultResampler][0];
-        const ALuint BufferPadding = ResamplerPadding[DefaultResampler][1];
+        const ALuint BufferPadding = ResamplerPadding[DefaultResampler];
         ALuint SrcBufferSize, DstBufferSize;
 
         /* Figure out how many buffer samples will be needed */
@@ -351,13 +351,13 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
         DataSize64 *= increment;
         DataSize64 += DataPosFrac+FRACTIONMASK;
         DataSize64 >>= FRACTIONBITS;
-        DataSize64 += BufferPadding+BufferPrePadding;
+        DataSize64 += BufferPadding+MAX_PREVIOUS_SAMPLES;
 
         SrcBufferSize = (ALuint)mini64(DataSize64, BUFFERSIZE);
 
         /* Figure out how many samples we can actually mix from this. */
         DataSize64  = SrcBufferSize;
-        DataSize64 -= BufferPadding+BufferPrePadding;
+        DataSize64 -= BufferPadding+MAX_PREVIOUS_SAMPLES;
         DataSize64 <<= FRACTIONBITS;
         DataSize64 -= DataPosFrac;
 
@@ -373,7 +373,11 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
         {
             const ALfloat *ResampledData;
             ALfloat *SrcData = Device->SourceData;
-            ALuint SrcDataSize = 0;
+            ALuint SrcDataSize;
+
+            /* Load the previous samples into the source data first. */
+            memcpy(SrcData, voice->PrevSamples[chan], MAX_PREVIOUS_SAMPLES*sizeof(ALfloat));
+            SrcDataSize = MAX_PREVIOUS_SAMPLES;
 
             if(Source->SourceType == AL_STATIC)
             {
@@ -382,7 +386,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                 ALuint DataSize;
                 ALuint pos;
 
-                /* Offset to current channel */
+                /* Offset buffer data to current channel */
                 Data += chan*SampleSize;
 
                 /* If current pos is beyond the loop range, do not loop */
@@ -390,21 +394,9 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                 {
                     Looping = AL_FALSE;
 
-                    if(DataPosInt >= BufferPrePadding)
-                        pos = DataPosInt - BufferPrePadding;
-                    else
-                    {
-                        DataSize = BufferPrePadding - DataPosInt;
-                        DataSize = minu(SrcBufferSize - SrcDataSize, DataSize);
-
-                        SilenceSamples(&SrcData[SrcDataSize], DataSize);
-                        SrcDataSize += DataSize;
-
-                        pos = 0;
-                    }
-
-                    /* Copy what's left to play in the source buffer, and clear the
-                     * rest of the temp buffer */
+                    /* Load what's left to play from the source buffer, and
+                     * clear the rest of the temp buffer */
+                    pos = DataPosInt;
                     DataSize = minu(SrcBufferSize - SrcDataSize, ALBuffer->SampleLen - pos);
 
                     LoadSamples(&SrcData[SrcDataSize], &Data[pos * NumChannels*SampleSize],
@@ -419,29 +411,9 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     ALuint LoopStart = ALBuffer->LoopStart;
                     ALuint LoopEnd   = ALBuffer->LoopEnd;
 
-                    if(DataPosInt >= LoopStart)
-                    {
-                        pos = DataPosInt-LoopStart;
-                        while(pos < BufferPrePadding)
-                            pos += LoopEnd-LoopStart;
-                        pos -= BufferPrePadding;
-                        pos += LoopStart;
-                    }
-                    else if(DataPosInt >= BufferPrePadding)
-                        pos = DataPosInt - BufferPrePadding;
-                    else
-                    {
-                        DataSize = BufferPrePadding - DataPosInt;
-                        DataSize = minu(SrcBufferSize - SrcDataSize, DataSize);
-
-                        SilenceSamples(&SrcData[SrcDataSize], DataSize);
-                        SrcDataSize += DataSize;
-
-                        pos = 0;
-                    }
-
-                    /* Copy what's left of this loop iteration, then copy repeats
-                     * of the loop section */
+                    /* Load what's left of this loop iteration, then load
+                     * repeats of the loop section */
+                    pos = DataPosInt;
                     DataSize = LoopEnd - pos;
                     DataSize = minu(SrcBufferSize - SrcDataSize, DataSize);
 
@@ -464,45 +436,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
             {
                 /* Crawl the buffer queue to fill in the temp buffer */
                 ALbufferlistitem *tmpiter = BufferListItem;
-                ALuint pos;
-
-                if(DataPosInt >= BufferPrePadding)
-                    pos = DataPosInt - BufferPrePadding;
-                else
-                {
-                    pos = BufferPrePadding - DataPosInt;
-                    while(pos > 0)
-                    {
-                        ALbufferlistitem *prev;
-                        if((prev=tmpiter->prev) != NULL)
-                            tmpiter = prev;
-                        else if(Looping)
-                        {
-                            while(tmpiter->next)
-                                tmpiter = tmpiter->next;
-                        }
-                        else
-                        {
-                            ALuint DataSize = minu(SrcBufferSize - SrcDataSize, pos);
-
-                            SilenceSamples(&SrcData[SrcDataSize], DataSize);
-                            SrcDataSize += DataSize;
-
-                            pos = 0;
-                            break;
-                        }
-
-                        if(tmpiter->buffer)
-                        {
-                            if((ALuint)tmpiter->buffer->SampleLen > pos)
-                            {
-                                pos = tmpiter->buffer->SampleLen - pos;
-                                break;
-                            }
-                            pos -= tmpiter->buffer->SampleLen;
-                        }
-                    }
-                }
+                ALuint pos = DataPosInt;
 
                 while(tmpiter && SrcBufferSize > SrcDataSize)
                 {
@@ -538,9 +472,15 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                 }
             }
 
+            /* Store the last source samples used for next time. */
+            memcpy(voice->PrevSamples[chan],
+                &SrcData[(increment*DstBufferSize + DataPosFrac)>>FRACTIONBITS],
+                MAX_PREVIOUS_SAMPLES*sizeof(ALfloat)
+            );
+
             /* Now resample, then filter and mix to the appropriate outputs. */
             ResampledData = Resample(
-                &SrcData[BufferPrePadding], DataPosFrac, increment,
+                &SrcData[MAX_PREVIOUS_SAMPLES], DataPosFrac, increment,
                 Device->ResampledData, DstBufferSize
             );
             {

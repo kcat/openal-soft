@@ -405,11 +405,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
             if(Pitch > (ALfloat)MAX_PITCH)
                 voice->Step = MAX_PITCH<<FRACTIONBITS;
             else
-            {
-                voice->Step = fastf2i(Pitch*FRACTIONONE);
-                if(voice->Step == 0)
-                    voice->Step = 1;
-            }
+                voice->Step = maxi(fastf2i(Pitch*FRACTIONONE + 0.5f), 1);
 
             Channels = ALBuffer->FmtChannels;
             break;
@@ -991,11 +987,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             if(Pitch > (ALfloat)MAX_PITCH)
                 voice->Step = MAX_PITCH<<FRACTIONBITS;
             else
-            {
-                voice->Step = fastf2i(Pitch*FRACTIONONE);
-                if(voice->Step == 0)
-                    voice->Step = 1;
-            }
+                voice->Step = maxi(fastf2i(Pitch*FRACTIONONE + 0.5f), 1);
 
             break;
         }

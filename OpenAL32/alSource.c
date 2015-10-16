@@ -1283,14 +1283,14 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_ROOM_ROLLOFF_FACTOR:
         case AL_CONE_OUTER_GAINHF:
         case AL_SEC_LENGTH_SOFT:
-            if((err=GetSourcedv(Source, Context, (int)prop, dvals)) != AL_FALSE)
+            if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
                 *values = (ALint)dvals[0];
             return err;
 
         /* 2x float/double */
         case AL_SAMPLE_RW_OFFSETS_SOFT:
         case AL_BYTE_RW_OFFSETS_SOFT:
-            if((err=GetSourcedv(Source, Context, (int)prop, dvals)) != AL_FALSE)
+            if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
             {
                 values[0] = (ALint)dvals[0];
                 values[1] = (ALint)dvals[1];
@@ -1301,7 +1301,7 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_POSITION:
         case AL_VELOCITY:
         case AL_DIRECTION:
-            if((err=GetSourcedv(Source, Context, (int)prop, dvals)) != AL_FALSE)
+            if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
             {
                 values[0] = (ALint)dvals[0];
                 values[1] = (ALint)dvals[1];
@@ -1311,7 +1311,7 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
 
         /* 6x float/double */
         case AL_ORIENTATION:
-            if((err=GetSourcedv(Source, Context, (int)prop, dvals)) != AL_FALSE)
+            if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
             {
                 values[0] = (ALint)dvals[0];
                 values[1] = (ALint)dvals[1];
@@ -1371,14 +1371,14 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
         case AL_ROOM_ROLLOFF_FACTOR:
         case AL_CONE_OUTER_GAINHF:
         case AL_SEC_LENGTH_SOFT:
-            if((err=GetSourcedv(Source, Context, (int)prop, dvals)) != AL_FALSE)
+            if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
                 *values = (ALint64)dvals[0];
             return err;
 
         /* 2x float/double */
         case AL_SAMPLE_RW_OFFSETS_SOFT:
         case AL_BYTE_RW_OFFSETS_SOFT:
-            if((err=GetSourcedv(Source, Context, (int)prop, dvals)) != AL_FALSE)
+            if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
             {
                 values[0] = (ALint64)dvals[0];
                 values[1] = (ALint64)dvals[1];
@@ -1389,7 +1389,7 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
         case AL_POSITION:
         case AL_VELOCITY:
         case AL_DIRECTION:
-            if((err=GetSourcedv(Source, Context, (int)prop, dvals)) != AL_FALSE)
+            if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
             {
                 values[0] = (ALint64)dvals[0];
                 values[1] = (ALint64)dvals[1];
@@ -1399,7 +1399,7 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
 
         /* 6x float/double */
         case AL_ORIENTATION:
-            if((err=GetSourcedv(Source, Context, (int)prop, dvals)) != AL_FALSE)
+            if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
             {
                 values[0] = (ALint64)dvals[0];
                 values[1] = (ALint64)dvals[1];
@@ -1424,20 +1424,20 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
         case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
         case AL_DIRECT_CHANNELS_SOFT:
         case AL_DISTANCE_MODEL:
-            if((err=GetSourceiv(Source, Context, (int)prop, ivals)) != AL_FALSE)
+            if((err=GetSourceiv(Source, Context, prop, ivals)) != AL_FALSE)
                 *values = ivals[0];
             return err;
 
         /* 1x uint */
         case AL_BUFFER:
         case AL_DIRECT_FILTER:
-            if((err=GetSourceiv(Source, Context, (int)prop, ivals)) != AL_FALSE)
+            if((err=GetSourceiv(Source, Context, prop, ivals)) != AL_FALSE)
                 *values = (ALuint)ivals[0];
             return err;
 
         /* 3x uint */
         case AL_AUXILIARY_SEND_FILTER:
-            if((err=GetSourceiv(Source, Context, (int)prop, ivals)) != AL_FALSE)
+            if((err=GetSourceiv(Source, Context, prop, ivals)) != AL_FALSE)
             {
                 values[0] = (ALuint)ivals[0];
                 values[1] = (ALuint)ivals[1];
@@ -2793,7 +2793,7 @@ static ALvoid GetSourceOffsets(ALsource *Source, ALenum name, ALdouble *offset, 
     const ALbufferlistitem *Current;
     const ALbuffer *Buffer = NULL;
     ALboolean readFin = AL_FALSE;
-    ALuint readPos, writePos;
+    ALuint readPos, readPosFrac, writePos;
     ALuint totalBufferLen;
 
     ReadLock(&Source->queue_lock);
@@ -2812,6 +2812,7 @@ static ALvoid GetSourceOffsets(ALsource *Source, ALenum name, ALdouble *offset, 
      * any played buffers */
     totalBufferLen = 0;
     readPos = Source->position;
+    readPosFrac = Source->position_fraction;
     BufferList = ATOMIC_LOAD(&Source->queue);
     Current = ATOMIC_LOAD(&Source->current_buffer);
     while(BufferList != NULL)
@@ -2829,7 +2830,7 @@ static ALvoid GetSourceOffsets(ALsource *Source, ALenum name, ALdouble *offset, 
     assert(Buffer != NULL);
 
     if(Source->state == AL_PLAYING)
-        writePos = readPos + (ALuint)(updateLen*Buffer->Frequency);
+        writePos = readPos + (ALuint)(updateLen*Buffer->Frequency + 0.5f);
     else
         writePos = readPos;
 
@@ -2842,7 +2843,7 @@ static ALvoid GetSourceOffsets(ALsource *Source, ALenum name, ALdouble *offset, 
     {
         /* Wrap positions back to 0 */
         if(readPos >= totalBufferLen)
-            readPos = 0;
+            readPos = readPosFrac = 0;
         if(writePos >= totalBufferLen)
             writePos = 0;
     }
@@ -2850,13 +2851,13 @@ static ALvoid GetSourceOffsets(ALsource *Source, ALenum name, ALdouble *offset, 
     switch(name)
     {
         case AL_SEC_OFFSET:
-            offset[0] = (ALdouble)readPos / Buffer->Frequency;
-            offset[1] = (ALdouble)writePos / Buffer->Frequency;
+            offset[0] = (readPos + (ALdouble)readPosFrac/FRACTIONONE)/Buffer->Frequency;
+            offset[1] = (ALdouble)writePos/Buffer->Frequency;
             break;
 
         case AL_SAMPLE_OFFSET:
         case AL_SAMPLE_RW_OFFSETS_SOFT:
-            offset[0] = (ALdouble)readPos;
+            offset[0] = readPos + (ALdouble)readPosFrac/FRACTIONONE;
             offset[1] = (ALdouble)writePos;
             break;
 

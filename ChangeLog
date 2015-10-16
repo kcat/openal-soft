@@ -47,6 +47,8 @@ openal-soft-1.17.0:
 
     Improved support for building as a sub-project.
 
+    Added a tone generator output test.
+
     Added a toolchain to help with cross-compiling to Android.
 
 openal-soft-1.16.0:

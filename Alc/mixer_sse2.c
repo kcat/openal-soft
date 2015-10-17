@@ -63,7 +63,7 @@ const ALfloat *Resample_lerp32_SSE2(const ALfloat *src, ALuint frac, ALuint incr
         _mm_store_ps(pos_.f, _mm_castsi128_ps(pos4));
     }
 
-    pos = pos_.i[0];
+    pos = pos_.i[3];
     frac = _mm_cvtsi128_si32(frac4);
 
     for(;i < numsamples;i++)

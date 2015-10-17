@@ -61,13 +61,13 @@ const ALfloat *Resample_lerp32_SSE41(const ALfloat *src, ALuint frac, ALuint inc
         pos4 = _mm_add_epi32(pos4, _mm_srli_epi32(frac4, FRACTIONBITS));
         frac4 = _mm_and_si128(frac4, fracMask4);
 
-        pos_.i[0] = _mm_extract_epi32(pos4, 0);
-        pos_.i[1] = _mm_extract_epi32(pos4, 1);
-        pos_.i[2] = _mm_extract_epi32(pos4, 2);
-        pos_.i[3] = _mm_extract_epi32(pos4, 3);
+        pos_.i[0] = _mm_extract_epi32(pos4, 3);
+        pos_.i[1] = _mm_extract_epi32(pos4, 2);
+        pos_.i[2] = _mm_extract_epi32(pos4, 1);
+        pos_.i[3] = _mm_extract_epi32(pos4, 0);
     }
 
-    pos = pos_.i[0];
+    pos = pos_.i[3];
     frac = _mm_cvtsi128_si32(frac4);
 
     for(;i < numsamples;i++)
@@ -124,18 +124,18 @@ const ALfloat *Resample_fir4_32_SSE41(const ALfloat *src, ALuint frac, ALuint in
         pos4 = _mm_add_epi32(pos4, _mm_srli_epi32(frac4, FRACTIONBITS));
         frac4 = _mm_and_si128(frac4, fracMask4);
 
-        pos_.i[0] = _mm_extract_epi32(pos4, 0);
-        pos_.i[1] = _mm_extract_epi32(pos4, 1);
-        pos_.i[2] = _mm_extract_epi32(pos4, 2);
-        pos_.i[3] = _mm_extract_epi32(pos4, 3);
-        frac_.i[0] = _mm_extract_epi32(frac4, 0);
-        frac_.i[1] = _mm_extract_epi32(frac4, 1);
-        frac_.i[2] = _mm_extract_epi32(frac4, 2);
-        frac_.i[3] = _mm_extract_epi32(frac4, 3);
+        pos_.i[0] = _mm_extract_epi32(pos4, 3);
+        pos_.i[1] = _mm_extract_epi32(pos4, 2);
+        pos_.i[2] = _mm_extract_epi32(pos4, 1);
+        pos_.i[3] = _mm_extract_epi32(pos4, 0);
+        frac_.i[0] = _mm_extract_epi32(frac4, 3);
+        frac_.i[1] = _mm_extract_epi32(frac4, 2);
+        frac_.i[2] = _mm_extract_epi32(frac4, 1);
+        frac_.i[3] = _mm_extract_epi32(frac4, 0);
     }
 
-    pos = pos_.i[0];
-    frac = frac_.i[0];
+    pos = pos_.i[3];
+    frac = frac_.i[3];
 
     for(;i < numsamples;i++)
     {
@@ -195,18 +195,18 @@ const ALfloat *Resample_fir8_32_SSE41(const ALfloat *src, ALuint frac, ALuint in
         pos4 = _mm_add_epi32(pos4, _mm_srli_epi32(frac4, FRACTIONBITS));
         frac4 = _mm_and_si128(frac4, fracMask4);
 
-        pos_.i[0] = _mm_extract_epi32(pos4, 0);
-        pos_.i[1] = _mm_extract_epi32(pos4, 1);
-        pos_.i[2] = _mm_extract_epi32(pos4, 2);
-        pos_.i[3] = _mm_extract_epi32(pos4, 3);
-        frac_.i[0] = _mm_extract_epi32(frac4, 0);
-        frac_.i[1] = _mm_extract_epi32(frac4, 1);
-        frac_.i[2] = _mm_extract_epi32(frac4, 2);
-        frac_.i[3] = _mm_extract_epi32(frac4, 3);
+        pos_.i[0] = _mm_extract_epi32(pos4, 3);
+        pos_.i[1] = _mm_extract_epi32(pos4, 2);
+        pos_.i[2] = _mm_extract_epi32(pos4, 1);
+        pos_.i[3] = _mm_extract_epi32(pos4, 0);
+        frac_.i[0] = _mm_extract_epi32(frac4, 3);
+        frac_.i[1] = _mm_extract_epi32(frac4, 2);
+        frac_.i[2] = _mm_extract_epi32(frac4, 1);
+        frac_.i[3] = _mm_extract_epi32(frac4, 0);
     }
 
-    pos = pos_.i[0];
-    frac = frac_.i[0];
+    pos = pos_.i[3];
+    frac = frac_.i[3];
 
     for(;i < numsamples;i++)
     {

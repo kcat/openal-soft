@@ -118,7 +118,7 @@ void Mix_Neon(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer
             Gains[c].Current = gain;
 
             /* Mix until pos is aligned with 4 or the mix is done. */
-            minsize = minu(BufferSize, (pos+3)&3);
+            minsize = minu(BufferSize, (pos+3)&~3);
             for(;pos < minsize;pos++)
                 OutBuffer[c][OutPos+pos] += data[pos]*gain;
         }

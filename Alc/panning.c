@@ -178,15 +178,6 @@ DECL_CONST static inline const char *GetLabelFromChannel(enum Channel channel)
         case SideLeft: return "side-left";
         case SideRight: return "side-right";
 
-        case TopFrontLeft: return "top-front-left";
-        case TopFrontRight: return "top-front-right";
-        case TopBackLeft: return "top-back-left";
-        case TopBackRight: return "top-back-right";
-        case BottomFrontLeft: return "bottom-front-left";
-        case BottomFrontRight: return "bottom-front-right";
-        case BottomBackLeft: return "bottom-back-left";
-        case BottomBackRight: return "bottom-back-right";
-
         case BFormatW: return "bformat-w";
         case BFormatX: return "bformat-x";
         case BFormatY: return "bformat-y";

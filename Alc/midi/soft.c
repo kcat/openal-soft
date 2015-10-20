@@ -129,12 +129,11 @@ MidiSynth *SSynth_create(ALCdevice *device)
         return NULL;
     }
 
-    synth = SSynth_New(sizeof(*synth));
+    NEW_OBJ(synth, SSynth)(device);
     if(!synth)
     {
         ERR("Failed to allocate SSynth\n");
         return NULL;
     }
-    SSynth_Construct(synth, device);
     return STATIC_CAST(MidiSynth, synth);
 }

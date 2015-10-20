@@ -908,14 +908,12 @@ MidiSynth *FSynth_create(ALCdevice *device)
     if(!LoadFSynth())
         return NULL;
 
-    synth = FSynth_New(sizeof(*synth));
+    NEW_OBJ(synth, FSynth)(device);
     if(!synth)
     {
         ERR("Failed to allocate FSynth\n");
         return NULL;
     }
-    memset(synth, 0, sizeof(*synth));
-    FSynth_Construct(synth, device);
 
     if(FSynth_init(synth, device) == AL_FALSE)
     {

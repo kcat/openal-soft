@@ -64,13 +64,13 @@ static void DSynth_process(DSynth *self, ALuint SamplesToDo, ALfloatBUFFERSIZE*r
 
 MidiSynth *DSynth_create(ALCdevice *device)
 {
-    DSynth *synth = DSynth_New(sizeof(*synth));
+    DSynth *synth;
+
+    NEW_OBJ(synth, DSynth)(device);
     if(!synth)
     {
         ERR("Failed to allocate DSynth\n");
         return NULL;
     }
-    memset(synth, 0, sizeof(*synth));
-    DSynth_Construct(synth, device);
     return STATIC_CAST(MidiSynth, synth);
 }

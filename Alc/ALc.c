@@ -2352,22 +2352,26 @@ void ALCdevice_DecRef(ALCdevice *device)
  *
  * Checks if the device handle is valid, and increments its ref count if so.
  */
-static ALCdevice *VerifyDevice(ALCdevice *device)
+static ALCboolean VerifyDevice(ALCdevice **device)
 {
     ALCdevice *tmpDevice;
 
-    if(!device)
-        return NULL;
-
     LockLists();
     tmpDevice = ATOMIC_LOAD(&DeviceList);
-    while(tmpDevice && tmpDevice != device)
+    while(tmpDevice)
+    {
+        if(tmpDevice == *device)
+        {
+            ALCdevice_IncRef(tmpDevice);
+            UnlockLists();
+            return ALC_TRUE;
+        }
         tmpDevice = tmpDevice->next;
-
-    if(tmpDevice)
-        ALCdevice_IncRef(tmpDevice);
+    }
     UnlockLists();
-    return tmpDevice;
+
+    *device = NULL;
+    return ALC_FALSE;
 }
 
 
@@ -2515,7 +2519,7 @@ static void ReleaseThreadCtx(void *ptr)
  *
  * Checks that the given context is valid, and increments its reference count.
  */
-static ALCcontext *VerifyContext(ALCcontext *context)
+static ALCboolean VerifyContext(ALCcontext **context)
 {
     ALCdevice *dev;
 
@@ -2526,11 +2530,11 @@ static ALCcontext *VerifyContext(ALCcontext *context)
         ALCcontext *ctx = ATOMIC_LOAD(&dev->ContextList);
         while(ctx)
         {
-            if(ctx == context)
+            if(ctx == *context)
             {
                 ALCcontext_IncRef(ctx);
                 UnlockLists();
-                return ctx;
+                return ALC_TRUE;
             }
             ctx = ctx->next;
         }
@@ -2538,7 +2542,8 @@ static ALCcontext *VerifyContext(ALCcontext *context)
     }
     UnlockLists();
 
-    return NULL;
+    *context = NULL;
+    return ALC_FALSE;
 }
 
 
@@ -2579,7 +2584,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
 {
     ALCenum errorCode;
 
-    if(VerifyDevice(device))
+    if(VerifyDevice(&device))
     {
         errorCode = ATOMIC_EXCHANGE(ALCenum, &device->LastError, ALC_NO_ERROR);
         ALCdevice_DecRef(device);
@@ -2600,8 +2605,7 @@ ALC_API ALCvoid ALC_APIENTRY alcSuspendContext(ALCcontext *context)
     if(!SuspendDefers)
         return;
 
-    context = VerifyContext(context);
-    if(!context)
+    if(!VerifyContext(&context))
         alcSetError(NULL, ALC_INVALID_CONTEXT);
     else
     {
@@ -2619,8 +2623,7 @@ ALC_API ALCvoid ALC_APIENTRY alcProcessContext(ALCcontext *context)
     if(!SuspendDefers)
         return;
 
-    context = VerifyContext(context);
-    if(!context)
+    if(!VerifyContext(&context))
         alcSetError(NULL, ALC_INVALID_CONTEXT);
     else
     {
@@ -2669,7 +2672,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
         break;
 
     case ALC_ALL_DEVICES_SPECIFIER:
-        if(VerifyDevice(Device))
+        if(VerifyDevice(&Device))
         {
             value = al_string_get_cstr(Device->DeviceName);
             ALCdevice_DecRef(Device);
@@ -2682,7 +2685,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
         break;
 
     case ALC_CAPTURE_DEVICE_SPECIFIER:
-        if(VerifyDevice(Device))
+        if(VerifyDevice(&Device))
         {
             value = al_string_get_cstr(Device->DeviceName);
             ALCdevice_DecRef(Device);
@@ -2703,7 +2706,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
         if(al_string_empty(alcAllDevicesList))
             ProbeAllDevicesList();
 
-        Device = VerifyDevice(Device);
+        VerifyDevice(&Device);
 
         free(alcDefaultAllDevicesSpecifier);
         alcDefaultAllDevicesSpecifier = strdup(al_string_get_cstr(alcAllDevicesList));
@@ -2718,7 +2721,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
         if(al_string_empty(alcCaptureDeviceList))
             ProbeCaptureDeviceList();
 
-        Device = VerifyDevice(Device);
+        VerifyDevice(&Device);
 
         free(alcCaptureDefaultDeviceSpecifier);
         alcCaptureDefaultDeviceSpecifier = strdup(al_string_get_cstr(alcCaptureDeviceList));
@@ -2730,7 +2733,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
         break;
 
     case ALC_EXTENSIONS:
-        if(!VerifyDevice(Device))
+        if(!VerifyDevice(&Device))
             value = alcNoDeviceExtList;
         else
         {
@@ -2740,7 +2743,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
         break;
 
     case ALC_HRTF_SPECIFIER_SOFT:
-        if(!VerifyDevice(Device))
+        if(!VerifyDevice(&Device))
             alcSetError(NULL, ALC_INVALID_DEVICE);
         else
         {
@@ -2752,7 +2755,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
         break;
 
     default:
-        Device = VerifyDevice(Device);
+        VerifyDevice(&Device);
         alcSetError(Device, ALC_INVALID_ENUM);
         if(Device) ALCdevice_DecRef(Device);
         break;
@@ -2976,7 +2979,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
  */
 ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values)
 {
-    device = VerifyDevice(device);
+    VerifyDevice(&device);
     if(size <= 0 || values == NULL)
         alcSetError(device, ALC_INVALID_VALUE);
     else
@@ -2989,7 +2992,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
     ALCint *ivals;
     ALsizei i;
 
-    device = VerifyDevice(device);
+    VerifyDevice(&device);
     if(size <= 0 || values == NULL)
         alcSetError(device, ALC_INVALID_VALUE);
     else if(!device || device->Type == Capture)
@@ -3089,7 +3092,7 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
 {
     ALCboolean bResult = ALC_FALSE;
 
-    device = VerifyDevice(device);
+    VerifyDevice(&device);
 
     if(!extName)
         alcSetError(device, ALC_INVALID_VALUE);
@@ -3129,7 +3132,7 @@ ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar
 
     if(!funcName)
     {
-        device = VerifyDevice(device);
+        VerifyDevice(&device);
         alcSetError(device, ALC_INVALID_VALUE);
         if(device) ALCdevice_DecRef(device);
     }
@@ -3155,7 +3158,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
 
     if(!enumName)
     {
-        device = VerifyDevice(device);
+        VerifyDevice(&device);
         alcSetError(device, ALC_INVALID_VALUE);
         if(device) ALCdevice_DecRef(device);
     }
@@ -3181,7 +3184,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     ALCenum err;
 
     LockLists();
-    if(!(device=VerifyDevice(device)) || device->Type == Capture || !device->Connected)
+    if(!VerifyDevice(&device) || device->Type == Capture || !device->Connected)
     {
         UnlockLists();
         alcSetError(device, ALC_INVALID_DEVICE);
@@ -3313,7 +3316,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
 ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
 {
     /* context must be valid or NULL */
-    if(context && !(context=VerifyContext(context)))
+    if(context && !VerifyContext(&context))
     {
         alcSetError(NULL, ALC_INVALID_CONTEXT);
         return ALC_FALSE;
@@ -3340,7 +3343,7 @@ ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
     ALCcontext *old;
 
     /* context must be valid or NULL */
-    if(context && !(context=VerifyContext(context)))
+    if(context && !VerifyContext(&context))
     {
         alcSetError(NULL, ALC_INVALID_CONTEXT);
         return ALC_FALSE;
@@ -3362,7 +3365,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *Context)
 {
     ALCdevice *Device;
 
-    if(!(Context=VerifyContext(Context)))
+    if(!VerifyContext(&Context))
     {
         alcSetError(NULL, ALC_INVALID_CONTEXT);
         return NULL;
@@ -3781,7 +3784,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device)
 
 ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
 {
-    if(!(device=VerifyDevice(device)) || device->Type != Capture)
+    if(!VerifyDevice(&device) || device->Type != Capture)
         alcSetError(device, ALC_INVALID_DEVICE);
     else
     {
@@ -3806,7 +3809,7 @@ ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
 
 ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
 {
-    if(!(device=VerifyDevice(device)) || device->Type != Capture)
+    if(!VerifyDevice(&device) || device->Type != Capture)
         alcSetError(device, ALC_INVALID_DEVICE);
     else
     {
@@ -3822,7 +3825,7 @@ ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
 
 ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
 {
-    if(!(device=VerifyDevice(device)) || device->Type != Capture)
+    if(!VerifyDevice(&device) || device->Type != Capture)
         alcSetError(device, ALC_INVALID_DEVICE);
     else
     {
@@ -3960,7 +3963,7 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device
 {
     ALCboolean ret = ALC_FALSE;
 
-    if(!(device=VerifyDevice(device)) || device->Type != Loopback)
+    if(!VerifyDevice(&device) || device->Type != Loopback)
         alcSetError(device, ALC_INVALID_DEVICE);
     else if(freq <= 0)
         alcSetError(device, ALC_INVALID_VALUE);
@@ -3983,7 +3986,7 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device
  */
 FORCE_ALIGN ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
 {
-    if(!(device=VerifyDevice(device)) || device->Type != Loopback)
+    if(!VerifyDevice(&device) || device->Type != Loopback)
         alcSetError(device, ALC_INVALID_DEVICE);
     else if(samples < 0 || (samples > 0 && buffer == NULL))
         alcSetError(device, ALC_INVALID_VALUE);
@@ -4003,7 +4006,7 @@ FORCE_ALIGN ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, AL
  */
 ALC_API void ALC_APIENTRY alcDevicePauseSOFT(ALCdevice *device)
 {
-    if(!(device=VerifyDevice(device)) || device->Type != Playback)
+    if(!VerifyDevice(&device) || device->Type != Playback)
         alcSetError(device, ALC_INVALID_DEVICE);
     else
     {
@@ -4023,7 +4026,7 @@ ALC_API void ALC_APIENTRY alcDevicePauseSOFT(ALCdevice *device)
  */
 ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device)
 {
-    if(!(device=VerifyDevice(device)) || device->Type != Playback)
+    if(!VerifyDevice(&device) || device->Type != Playback)
         alcSetError(device, ALC_INVALID_DEVICE);
     else
     {
@@ -4062,7 +4065,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum
 {
     const ALCchar *str = NULL;
 
-    if(!(device=VerifyDevice(device)) || device->Type == Capture)
+    if(!VerifyDevice(&device) || device->Type == Capture)
         alcSetError(device, ALC_INVALID_DEVICE);
     else switch(paramName)
     {
@@ -4091,7 +4094,7 @@ ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCi
     ALCenum err;
 
     LockLists();
-    if(!(device=VerifyDevice(device)) || device->Type == Capture || !device->Connected)
+    if(!VerifyDevice(&device) || device->Type == Capture || !device->Connected)
     {
         UnlockLists();
         alcSetError(device, ALC_INVALID_DEVICE);

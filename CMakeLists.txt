@@ -560,11 +560,7 @@ SET(OPENAL_OBJS  OpenAL32/alAuxEffectSlot.c
                  OpenAL32/alError.c
                  OpenAL32/alExtension.c
                  OpenAL32/alFilter.c
-                 OpenAL32/alFontsound.c
                  OpenAL32/alListener.c
-                 OpenAL32/alMidi.c
-                 OpenAL32/alPreset.c
-                 OpenAL32/alSoundfont.c
                  OpenAL32/alSource.c
                  OpenAL32/alState.c
                  OpenAL32/alThunk.c
@@ -600,8 +596,6 @@ SET(HAVE_SSE2       0)
 SET(HAVE_SSE3       0)
 SET(HAVE_SSE4_1     0)
 SET(HAVE_NEON       0)
-
-SET(HAVE_FLUIDSYNTH 0)
 
 SET(HAVE_ALSA       0)
 SET(HAVE_OSS        0)
@@ -724,32 +718,6 @@ ELSE()
         SET(EXTRA_LIBS ${_LIBS} ${EXTRA_LIBS})
     ENDMACRO()
 ENDIF()
-
-SET(ALC_OBJS  ${ALC_OBJS}
-              Alc/midi/base.c
-              Alc/midi/sf2load.c
-              Alc/midi/dummy.c
-              Alc/midi/fluidsynth.c
-              Alc/midi/soft.c
-)
-
-# Check for FluidSynth support
-OPTION(ALSOFT_REQUIRE_FLUIDSYNTH "Require FluidSynth MIDI" OFF)
-FIND_PACKAGE(FluidSynth)
-IF(FLUIDSYNTH_FOUND)
-    OPTION(ALSOFT_MIDI_FLUIDSYNTH "Enable FluidSynth MIDI" ON)
-    IF(ALSOFT_MIDI_FLUIDSYNTH)
-        SET(HAVE_FLUIDSYNTH 1)
-        ADD_BACKEND_LIBS(${FLUIDSYNTH_LIBRARIES})
-        IF(CMAKE_VERSION VERSION_LESS "2.8.8")
-            INCLUDE_DIRECTORIES(${FLUIDSYNTH_INCLUDE_DIR})
-        ENDIF()
-    ENDIF()
-ENDIF()
-IF(ALSOFT_REQUIRE_FLUIDSYNTH AND NOT HAVE_FLUIDSYNTH)
-    MESSAGE(FATAL_ERROR "Failed to enabled required FluidSynth support")
-ENDIF()
-
 
 SET(BACKENDS "")
 SET(ALC_OBJS  ${ALC_OBJS}
@@ -1084,9 +1052,6 @@ IF(WIN32 AND ALSOFT_NO_UID_DEFS)
     SET_PROPERTY(TARGET ${LIBNAME} APPEND PROPERTY COMPILE_DEFINITIONS AL_NO_UID_DEFS)
 ENDIF()
 SET_PROPERTY(TARGET ${LIBNAME} APPEND PROPERTY INCLUDE_DIRECTORIES "${OpenAL_SOURCE_DIR}/OpenAL32/Include" "${OpenAL_SOURCE_DIR}/Alc")
-IF(FLUIDSYNTH_FOUND)
-    SET_PROPERTY(TARGET ${LIBNAME} APPEND PROPERTY INCLUDE_DIRECTORIES ${FLUIDSYNTH_INCLUDE_DIR})
-ENDIF()
 IF(HAVE_ALSA)
     SET_PROPERTY(TARGET ${LIBNAME} APPEND PROPERTY INCLUDE_DIRECTORIES ${ALSA_INCLUDE_DIRS})
 ENDIF()
@@ -1171,10 +1136,6 @@ MESSAGE(STATUS "")
 MESSAGE(STATUS "Building with support for CPU extensions:")
 MESSAGE(STATUS "    ${CPU_EXTS}")
 MESSAGE(STATUS "")
-IF(HAVE_FLUIDSYNTH)
-    MESSAGE(STATUS "FluidSynth support for ALC_SOFT_midi_interface enabled")
-    MESSAGE(STATUS "")
-ENDIF()
 
 IF(WIN32)
     IF(NOT HAVE_DSOUND)

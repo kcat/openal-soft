@@ -35,7 +35,6 @@
 #include "alBuffer.h"
 #include "alAuxEffectSlot.h"
 #include "alError.h"
-#include "alMidi.h"
 #include "bs2b.h"
 #include "alu.h"
 
@@ -44,7 +43,6 @@
 #include "alstring.h"
 
 #include "backends/base.h"
-#include "midi/base.h"
 
 
 /************************************************
@@ -295,40 +293,6 @@ static const ALCfunction alcFunctions[] = {
     DECL(alGetSourcei64SOFT),
     DECL(alGetSource3i64SOFT),
     DECL(alGetSourcei64vSOFT),
-
-    DECL(alGenSoundfontsSOFT),
-    DECL(alDeleteSoundfontsSOFT),
-    DECL(alIsSoundfontSOFT),
-    DECL(alGetSoundfontivSOFT),
-    DECL(alSoundfontPresetsSOFT),
-    DECL(alGenPresetsSOFT),
-    DECL(alDeletePresetsSOFT),
-    DECL(alIsPresetSOFT),
-    DECL(alPresetiSOFT),
-    DECL(alPresetivSOFT),
-    DECL(alGetPresetivSOFT),
-    DECL(alPresetFontsoundsSOFT),
-    DECL(alGenFontsoundsSOFT),
-    DECL(alDeleteFontsoundsSOFT),
-    DECL(alIsFontsoundSOFT),
-    DECL(alFontsoundiSOFT),
-    DECL(alFontsound2iSOFT),
-    DECL(alFontsoundivSOFT),
-    DECL(alGetFontsoundivSOFT),
-    DECL(alFontsoundModulatoriSOFT),
-    DECL(alGetFontsoundModulatorivSOFT),
-    DECL(alMidiSoundfontSOFT),
-    DECL(alMidiSoundfontvSOFT),
-    DECL(alMidiEventSOFT),
-    DECL(alMidiSysExSOFT),
-    DECL(alMidiPlaySOFT),
-    DECL(alMidiPauseSOFT),
-    DECL(alMidiStopSOFT),
-    DECL(alMidiResetSOFT),
-    DECL(alMidiGainSOFT),
-    DECL(alGetInteger64SOFT),
-    DECL(alGetInteger64vSOFT),
-    DECL(alLoadSoundfontSOFT),
 
     { NULL, NULL }
 };
@@ -792,7 +756,7 @@ static const ALCchar alcExtensionList[] =
     "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE "
     "ALC_EXT_DEDICATED ALC_EXT_disconnect ALC_EXT_EFX "
     "ALC_EXT_thread_local_context ALC_SOFTX_device_clock ALC_SOFTX_HRTF "
-    "ALC_SOFT_loopback ALC_SOFTX_midi_interface ALC_SOFT_pause_device";
+    "ALC_SOFT_loopback ALC_SOFT_pause_device";
 static const ALCint alcMajorVersion = 1;
 static const ALCint alcMinorVersion = 1;
 
@@ -2156,8 +2120,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         return ALC_INVALID_DEVICE;
     }
 
-    V(device->Synth,update)(device);
-
     SetMixerFPUMode(&oldMode);
     V0(device->Backend,lock)();
     context = ATOMIC_LOAD(&device->ContextList);
@@ -2262,19 +2224,12 @@ static ALCvoid FreeDevice(ALCdevice *device)
     DELETE_OBJ(device->Backend);
     device->Backend = NULL;
 
-    DELETE_OBJ(device->Synth);
-    device->Synth = NULL;
-
     if(device->DefaultSlot)
     {
         ALeffectState *state = device->DefaultSlot->EffectState;
         device->DefaultSlot = NULL;
         DELETE_OBJ(state);
     }
-
-    if(device->DefaultSfont)
-        ALsoundfont_deleteSoundfont(device->DefaultSfont, device);
-    device->DefaultSfont = NULL;
 
     if(device->BufferMap.size > 0)
     {
@@ -2296,27 +2251,6 @@ static ALCvoid FreeDevice(ALCdevice *device)
         ReleaseALFilters(device);
     }
     ResetUIntMap(&device->FilterMap);
-
-    if(device->SfontMap.size > 0)
-    {
-        WARN("(%p) Deleting %d Soundfont(s)\n", device, device->SfontMap.size);
-        ReleaseALSoundfonts(device);
-    }
-    ResetUIntMap(&device->SfontMap);
-
-    if(device->PresetMap.size > 0)
-    {
-        WARN("(%p) Deleting %d Preset(s)\n", device, device->PresetMap.size);
-        ReleaseALPresets(device);
-    }
-    ResetUIntMap(&device->PresetMap);
-
-    if(device->FontsoundMap.size > 0)
-    {
-        WARN("(%p) Deleting %d Fontsound(s)\n", device, device->FontsoundMap.size);
-        ReleaseALFontsounds(device);
-    }
-    ResetUIntMap(&device->FontsoundMap);
 
     AL_STRING_DEINIT(device->Hrtf_Name);
     FreeHrtfList(&device->Hrtf_List);
@@ -3440,9 +3374,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     InitUIntMap(&device->BufferMap, ~0);
     InitUIntMap(&device->EffectMap, ~0);
     InitUIntMap(&device->FilterMap, ~0);
-    InitUIntMap(&device->SfontMap, ~0);
-    InitUIntMap(&device->PresetMap, ~0);
-    InitUIntMap(&device->FontsoundMap, ~0);
 
     //Set output format
     device->FmtChans = DevFmtChannelsDefault;
@@ -3553,19 +3484,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->NumStereoSources = 1;
     device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
 
-    device->Synth = SynthCreate(device);
-    if(!device->Synth)
-    {
-        DELETE_OBJ(device->Backend);
-        al_free(device);
-        alcSetError(NULL, ALC_OUT_OF_MEMORY);
-        return NULL;
-    }
-
     // Find a playback device to open
     if((err=V(device->Backend,open)(deviceName)) != ALC_NO_ERROR)
     {
-        DELETE_OBJ(device->Synth);
         DELETE_OBJ(device->Backend);
         al_free(device);
         alcSetError(NULL, err);
@@ -3697,9 +3618,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     InitUIntMap(&device->BufferMap, ~0);
     InitUIntMap(&device->EffectMap, ~0);
     InitUIntMap(&device->FilterMap, ~0);
-    InitUIntMap(&device->SfontMap, ~0);
-    InitUIntMap(&device->PresetMap, ~0);
-    InitUIntMap(&device->FontsoundMap, ~0);
 
     if(!CaptureBackend.getFactory)
         device->Backend = create_backend_wrapper(device, &CaptureBackend.Funcs,
@@ -3898,9 +3816,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     InitUIntMap(&device->BufferMap, ~0);
     InitUIntMap(&device->EffectMap, ~0);
     InitUIntMap(&device->FilterMap, ~0);
-    InitUIntMap(&device->SfontMap, ~0);
-    InitUIntMap(&device->PresetMap, ~0);
-    InitUIntMap(&device->FontsoundMap, ~0);
 
     factory = ALCloopbackFactory_getFactory();
     device->Backend = V(factory,createBackend)(device, ALCbackend_Loopback);
@@ -3931,15 +3846,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
 
     device->NumStereoSources = 1;
     device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
-
-    device->Synth = SynthCreate(device);
-    if(!device->Synth)
-    {
-        DELETE_OBJ(device->Backend);
-        al_free(device);
-        alcSetError(NULL, ALC_OUT_OF_MEMORY);
-        return NULL;
-    }
 
     // Open the "backend"
     V(device->Backend,open)("Loopback");

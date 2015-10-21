@@ -39,7 +39,6 @@
 #include "mixer_defs.h"
 
 #include "backends/base.h"
-#include "midi/base.h"
 
 
 struct ChanMap {
@@ -1314,8 +1313,6 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
             ctx = ctx->next;
         }
-
-        V(device->Synth,process)(SamplesToDo, OutBuffer, OutChannels);
 
         if((slot=device->DefaultSlot) != NULL)
             V(slot->EffectState,process)(

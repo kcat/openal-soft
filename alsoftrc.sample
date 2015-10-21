@@ -190,29 +190,6 @@
 #trap-al-error = false
 
 ##
-## MIDI stuff (EXPERIMENTAL)
-##
-[midi]
-
-## soundfont: (global)
-#  A default soundfont (sf2 format). Used when an app requests the system
-#  default. The listed file is relative to system-dependant data directories.
-#  On Windows this is:
-#  $AppData\openal\soundfonts
-#  And on other systems, it's (in order):
-#  $XDG_DATA_HOME/openal/soundfonts
-#  $XDG_DATA_DIRS/openal/soundfonts
-#  An absolute path may also be specified, if the given file is elsewhere.
-#soundfont =
-
-## volume: (global)
-#  Additional attenuation applied to MIDI output, expressed in decibels. This
-#  is used to help keep the mix from clipping, and so must be 0 or less. The
-#  value is logarithmic, so -6 will be about half amplitude, and -12 about
-#  1/4th. The default is roughly -13.9794 (0.2, or 1/5th).
-#volume =
-
-##
 ## Reverb effect stuff (includes EAX reverb)
 ##
 [reverb]

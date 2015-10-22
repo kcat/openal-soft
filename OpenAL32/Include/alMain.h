@@ -303,9 +303,6 @@ typedef struct {
 ALCboolean alc_sndio_init(BackendFuncs *func_list);
 void alc_sndio_deinit(void);
 void alc_sndio_probe(enum DevProbe type);
-ALCboolean alc_pa_init(BackendFuncs *func_list);
-void alc_pa_deinit(void);
-void alc_pa_probe(enum DevProbe type);
 ALCboolean alc_ca_init(BackendFuncs *func_list);
 void alc_ca_deinit(void);
 void alc_ca_probe(enum DevProbe type);

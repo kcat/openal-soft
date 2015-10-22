@@ -28,6 +28,8 @@
 #include "alu.h"
 #include "compat.h"
 
+#include "backends/base.h"
+
 #include <portaudio.h>
 
 
@@ -122,149 +124,171 @@ static ALCboolean pa_load(void)
 }
 
 
-typedef struct {
+typedef struct ALCportPlayback {
+    DERIVE_FROM_TYPE(ALCbackend);
+
     PaStream *stream;
     PaStreamParameters params;
     ALuint update_size;
+} ALCportPlayback;
 
-    RingBuffer *ring;
-} pa_data;
+static int ALCportPlayback_WriteCallback(const void *inputBuffer, void *outputBuffer,
+    unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
+    const PaStreamCallbackFlags statusFlags, void *userData);
+
+static void ALCportPlayback_Construct(ALCportPlayback *self, ALCdevice *device);
+static void ALCportPlayback_Destruct(ALCportPlayback *self);
+static ALCenum ALCportPlayback_open(ALCportPlayback *self, const ALCchar *name);
+static void ALCportPlayback_close(ALCportPlayback *self);
+static ALCboolean ALCportPlayback_reset(ALCportPlayback *self);
+static ALCboolean ALCportPlayback_start(ALCportPlayback *self);
+static void ALCportPlayback_stop(ALCportPlayback *self);
+static DECLARE_FORWARD2(ALCportPlayback, ALCbackend, ALCenum, captureSamples, ALCvoid*, ALCuint)
+static DECLARE_FORWARD(ALCportPlayback, ALCbackend, ALCuint, availableSamples)
+static DECLARE_FORWARD(ALCportPlayback, ALCbackend, ALint64, getLatency)
+static DECLARE_FORWARD(ALCportPlayback, ALCbackend, void, lock)
+static DECLARE_FORWARD(ALCportPlayback, ALCbackend, void, unlock)
+DECLARE_DEFAULT_ALLOCATORS(ALCportPlayback)
+
+DEFINE_ALCBACKEND_VTABLE(ALCportPlayback);
 
 
-static int pa_callback(const void *UNUSED(inputBuffer), void *outputBuffer,
-                       unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *UNUSED(timeInfo),
-                       const PaStreamCallbackFlags UNUSED(statusFlags), void *userData)
+static void ALCportPlayback_Construct(ALCportPlayback *self, ALCdevice *device)
 {
-    ALCdevice *device = (ALCdevice*)userData;
+    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    SET_VTABLE2(ALCportPlayback, ALCbackend, self);
 
-    aluMixData(device, outputBuffer, framesPerBuffer);
+    self->stream = NULL;
+}
+
+static void ALCportPlayback_Destruct(ALCportPlayback *self)
+{
+    if(self->stream)
+        Pa_CloseStream(self->stream);
+    self->stream = NULL;
+
+    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+}
+
+
+static int ALCportPlayback_WriteCallback(const void *UNUSED(inputBuffer), void *outputBuffer,
+    unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *UNUSED(timeInfo),
+    const PaStreamCallbackFlags UNUSED(statusFlags), void *userData)
+{
+    ALCportPlayback *self = userData;
+
+    aluMixData(STATIC_CAST(ALCbackend, self)->mDevice, outputBuffer, framesPerBuffer);
     return 0;
 }
 
-static int pa_capture_cb(const void *inputBuffer, void *UNUSED(outputBuffer),
-                         unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *UNUSED(timeInfo),
-                         const PaStreamCallbackFlags UNUSED(statusFlags), void *userData)
+
+static ALCenum ALCportPlayback_open(ALCportPlayback *self, const ALCchar *name)
 {
-    ALCdevice *device = (ALCdevice*)userData;
-    pa_data *data = (pa_data*)device->ExtraData;
-
-    WriteRingBuffer(data->ring, inputBuffer, framesPerBuffer);
-    return 0;
-}
-
-
-static ALCenum pa_open_playback(ALCdevice *device, const ALCchar *deviceName)
-{
-    pa_data *data;
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     PaError err;
 
-    if(!deviceName)
-        deviceName = pa_device;
-    else if(strcmp(deviceName, pa_device) != 0)
+    if(!name)
+        name = pa_device;
+    else if(strcmp(name, pa_device) != 0)
         return ALC_INVALID_VALUE;
 
-    data = (pa_data*)calloc(1, sizeof(pa_data));
-    data->update_size = device->UpdateSize;
+    self->update_size = device->UpdateSize;
 
-    data->params.device = -1;
-    if(!ConfigValueInt(NULL, "port", "device", &data->params.device) ||
-       data->params.device < 0)
-        data->params.device = Pa_GetDefaultOutputDevice();
-    data->params.suggestedLatency = (device->UpdateSize*device->NumUpdates) /
+    self->params.device = -1;
+    if(!ConfigValueInt(NULL, "port", "device", &self->params.device) ||
+       self->params.device < 0)
+        self->params.device = Pa_GetDefaultOutputDevice();
+    self->params.suggestedLatency = (device->UpdateSize*device->NumUpdates) /
                                     (float)device->Frequency;
-    data->params.hostApiSpecificStreamInfo = NULL;
+    self->params.hostApiSpecificStreamInfo = NULL;
 
-    data->params.channelCount = ((device->FmtChans == DevFmtMono) ? 1 : 2);
+    self->params.channelCount = ((device->FmtChans == DevFmtMono) ? 1 : 2);
 
     switch(device->FmtType)
     {
         case DevFmtByte:
-            data->params.sampleFormat = paInt8;
+            self->params.sampleFormat = paInt8;
             break;
         case DevFmtUByte:
-            data->params.sampleFormat = paUInt8;
+            self->params.sampleFormat = paUInt8;
             break;
         case DevFmtUShort:
             /* fall-through */
         case DevFmtShort:
-            data->params.sampleFormat = paInt16;
+            self->params.sampleFormat = paInt16;
             break;
         case DevFmtUInt:
             /* fall-through */
         case DevFmtInt:
-            data->params.sampleFormat = paInt32;
+            self->params.sampleFormat = paInt32;
             break;
         case DevFmtFloat:
-            data->params.sampleFormat = paFloat32;
+            self->params.sampleFormat = paFloat32;
             break;
     }
 
 retry_open:
-    err = Pa_OpenStream(&data->stream, NULL, &data->params, device->Frequency,
-                        device->UpdateSize, paNoFlag, pa_callback, device);
+    err = Pa_OpenStream(&self->stream, NULL, &self->params,
+        device->Frequency, device->UpdateSize, paNoFlag,
+        ALCportPlayback_WriteCallback, self
+    );
     if(err != paNoError)
     {
-        if(data->params.sampleFormat == paFloat32)
+        if(self->params.sampleFormat == paFloat32)
         {
-            data->params.sampleFormat = paInt16;
+            self->params.sampleFormat = paInt16;
             goto retry_open;
         }
         ERR("Pa_OpenStream() returned an error: %s\n", Pa_GetErrorText(err));
-        free(data);
         return ALC_INVALID_VALUE;
     }
 
-    device->ExtraData = data;
-    al_string_copy_cstr(&device->DeviceName, deviceName);
+    al_string_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
+
 }
 
-static void pa_close_playback(ALCdevice *device)
+static void ALCportPlayback_close(ALCportPlayback *self)
 {
-    pa_data *data = (pa_data*)device->ExtraData;
-    PaError err;
-
-    err = Pa_CloseStream(data->stream);
+    PaError err = Pa_CloseStream(self->stream);
     if(err != paNoError)
         ERR("Error closing stream: %s\n", Pa_GetErrorText(err));
-
-    free(data);
-    device->ExtraData = NULL;
+    self->stream = NULL;
 }
 
-static ALCboolean pa_reset_playback(ALCdevice *device)
+static ALCboolean ALCportPlayback_reset(ALCportPlayback *self)
 {
-    pa_data *data = (pa_data*)device->ExtraData;
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     const PaStreamInfo *streamInfo;
 
-    streamInfo = Pa_GetStreamInfo(data->stream);
+    streamInfo = Pa_GetStreamInfo(self->stream);
     device->Frequency = streamInfo->sampleRate;
-    device->UpdateSize = data->update_size;
+    device->UpdateSize = self->update_size;
 
-    if(data->params.sampleFormat == paInt8)
+    if(self->params.sampleFormat == paInt8)
         device->FmtType = DevFmtByte;
-    else if(data->params.sampleFormat == paUInt8)
+    else if(self->params.sampleFormat == paUInt8)
         device->FmtType = DevFmtUByte;
-    else if(data->params.sampleFormat == paInt16)
+    else if(self->params.sampleFormat == paInt16)
         device->FmtType = DevFmtShort;
-    else if(data->params.sampleFormat == paInt32)
+    else if(self->params.sampleFormat == paInt32)
         device->FmtType = DevFmtInt;
-    else if(data->params.sampleFormat == paFloat32)
+    else if(self->params.sampleFormat == paFloat32)
         device->FmtType = DevFmtFloat;
     else
     {
-        ERR("Unexpected sample format: 0x%lx\n", data->params.sampleFormat);
+        ERR("Unexpected sample format: 0x%lx\n", self->params.sampleFormat);
         return ALC_FALSE;
     }
 
-    if(data->params.channelCount == 2)
+    if(self->params.channelCount == 2)
         device->FmtChans = DevFmtStereo;
-    else if(data->params.channelCount == 1)
+    else if(self->params.channelCount == 1)
         device->FmtChans = DevFmtMono;
     else
     {
-        ERR("Unexpected channel count: %u\n", data->params.channelCount);
+        ERR("Unexpected channel count: %u\n", self->params.channelCount);
         return ALC_FALSE;
     }
     SetDefaultChannelOrder(device);
@@ -272,12 +296,11 @@ static ALCboolean pa_reset_playback(ALCdevice *device)
     return ALC_TRUE;
 }
 
-static ALCboolean pa_start_playback(ALCdevice *device)
+static ALCboolean ALCportPlayback_start(ALCportPlayback *self)
 {
-    pa_data *data = (pa_data*)device->ExtraData;
     PaError err;
 
-    err = Pa_StartStream(data->stream);
+    err = Pa_StartStream(self->stream);
     if(err != paNoError)
     {
         ERR("Pa_StartStream() returned an error: %s\n", Pa_GetErrorText(err));
@@ -287,160 +310,209 @@ static ALCboolean pa_start_playback(ALCdevice *device)
     return ALC_TRUE;
 }
 
-static void pa_stop_playback(ALCdevice *device)
+static void ALCportPlayback_stop(ALCportPlayback *self)
 {
-    pa_data *data = (pa_data*)device->ExtraData;
-    PaError err;
-
-    err = Pa_StopStream(data->stream);
+    PaError err = Pa_StopStream(self->stream);
     if(err != paNoError)
         ERR("Error stopping stream: %s\n", Pa_GetErrorText(err));
 }
 
 
-static ALCenum pa_open_capture(ALCdevice *device, const ALCchar *deviceName)
+typedef struct ALCportCapture {
+    DERIVE_FROM_TYPE(ALCbackend);
+
+    PaStream *stream;
+    PaStreamParameters params;
+
+    ll_ringbuffer_t *ring;
+} ALCportCapture;
+
+static int ALCportCapture_ReadCallback(const void *inputBuffer, void *outputBuffer,
+    unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
+    const PaStreamCallbackFlags statusFlags, void *userData);
+
+static void ALCportCapture_Construct(ALCportCapture *self, ALCdevice *device);
+static void ALCportCapture_Destruct(ALCportCapture *self);
+static ALCenum ALCportCapture_open(ALCportCapture *self, const ALCchar *name);
+static void ALCportCapture_close(ALCportCapture *self);
+static DECLARE_FORWARD(ALCportCapture, ALCbackend, ALCboolean, reset)
+static ALCboolean ALCportCapture_start(ALCportCapture *self);
+static void ALCportCapture_stop(ALCportCapture *self);
+static ALCenum ALCportCapture_captureSamples(ALCportCapture *self, ALCvoid *buffer, ALCuint samples);
+static ALCuint ALCportCapture_availableSamples(ALCportCapture *self);
+static DECLARE_FORWARD(ALCportCapture, ALCbackend, ALint64, getLatency)
+static DECLARE_FORWARD(ALCportCapture, ALCbackend, void, lock)
+static DECLARE_FORWARD(ALCportCapture, ALCbackend, void, unlock)
+DECLARE_DEFAULT_ALLOCATORS(ALCportCapture)
+
+DEFINE_ALCBACKEND_VTABLE(ALCportCapture);
+
+
+static void ALCportCapture_Construct(ALCportCapture *self, ALCdevice *device)
 {
-    ALuint frame_size;
-    pa_data *data;
+    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    SET_VTABLE2(ALCportCapture, ALCbackend, self);
+
+    self->stream = NULL;
+}
+
+static void ALCportCapture_Destruct(ALCportCapture *self)
+{
+    if(self->stream)
+        Pa_CloseStream(self->stream);
+    self->stream = NULL;
+
+    if(self->ring)
+        ll_ringbuffer_free(self->ring);
+    self->ring = NULL;
+
+    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+}
+
+
+static int ALCportCapture_ReadCallback(const void *inputBuffer, void *UNUSED(outputBuffer),
+    unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *UNUSED(timeInfo),
+    const PaStreamCallbackFlags UNUSED(statusFlags), void *userData)
+{
+    ALCportCapture *self = userData;
+    size_t writable = ll_ringbuffer_write_space(self->ring);
+
+    if(framesPerBuffer > writable)
+        framesPerBuffer = writable;
+    ll_ringbuffer_write(self->ring, inputBuffer, framesPerBuffer);
+    return 0;
+}
+
+
+static ALCenum ALCportCapture_open(ALCportCapture *self, const ALCchar *name)
+{
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALuint samples, frame_size;
     PaError err;
 
-    if(!deviceName)
-        deviceName = pa_device;
-    else if(strcmp(deviceName, pa_device) != 0)
+    if(!name)
+        name = pa_device;
+    else if(strcmp(name, pa_device) != 0)
         return ALC_INVALID_VALUE;
 
-    data = (pa_data*)calloc(1, sizeof(pa_data));
-    if(data == NULL)
-        return ALC_OUT_OF_MEMORY;
-
+    samples = device->UpdateSize * device->NumUpdates;
+    samples = maxu(samples, 100 * device->Frequency / 1000);
     frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
-    data->ring = CreateRingBuffer(frame_size, device->UpdateSize*device->NumUpdates);
-    if(data->ring == NULL)
-        goto error;
 
-    data->params.device = -1;
-    if(!ConfigValueInt(NULL, "port", "capture", &data->params.device) ||
-       data->params.device < 0)
-        data->params.device = Pa_GetDefaultInputDevice();
-    data->params.suggestedLatency = 0.0f;
-    data->params.hostApiSpecificStreamInfo = NULL;
+    self->ring = ll_ringbuffer_create(samples, frame_size);
+    if(self->ring == NULL) return ALC_INVALID_VALUE;
+
+    self->params.device = -1;
+    if(!ConfigValueInt(NULL, "port", "capture", &self->params.device) ||
+       self->params.device < 0)
+        self->params.device = Pa_GetDefaultInputDevice();
+    self->params.suggestedLatency = 0.0f;
+    self->params.hostApiSpecificStreamInfo = NULL;
 
     switch(device->FmtType)
     {
         case DevFmtByte:
-            data->params.sampleFormat = paInt8;
+            self->params.sampleFormat = paInt8;
             break;
         case DevFmtUByte:
-            data->params.sampleFormat = paUInt8;
+            self->params.sampleFormat = paUInt8;
             break;
         case DevFmtShort:
-            data->params.sampleFormat = paInt16;
+            self->params.sampleFormat = paInt16;
             break;
         case DevFmtInt:
-            data->params.sampleFormat = paInt32;
+            self->params.sampleFormat = paInt32;
             break;
         case DevFmtFloat:
-            data->params.sampleFormat = paFloat32;
+            self->params.sampleFormat = paFloat32;
             break;
         case DevFmtUInt:
         case DevFmtUShort:
             ERR("%s samples not supported\n", DevFmtTypeString(device->FmtType));
-            goto error;
+            return ALC_INVALID_VALUE;
     }
-    data->params.channelCount = ChannelsFromDevFmt(device->FmtChans);
+    self->params.channelCount = ChannelsFromDevFmt(device->FmtChans);
 
-    err = Pa_OpenStream(&data->stream, &data->params, NULL, device->Frequency,
-                        paFramesPerBufferUnspecified, paNoFlag, pa_capture_cb, device);
+    err = Pa_OpenStream(&self->stream, &self->params, NULL,
+        device->Frequency, paFramesPerBufferUnspecified, paNoFlag,
+        ALCportCapture_ReadCallback, self
+    );
     if(err != paNoError)
     {
         ERR("Pa_OpenStream() returned an error: %s\n", Pa_GetErrorText(err));
-        goto error;
+        return ALC_INVALID_VALUE;
     }
 
-    al_string_copy_cstr(&device->DeviceName, deviceName);
+    al_string_copy_cstr(&device->DeviceName, name);
 
-    device->ExtraData = data;
     return ALC_NO_ERROR;
-
-error:
-    DestroyRingBuffer(data->ring);
-    free(data);
-    return ALC_INVALID_VALUE;
 }
 
-static void pa_close_capture(ALCdevice *device)
+static void ALCportCapture_close(ALCportCapture *self)
 {
-    pa_data *data = (pa_data*)device->ExtraData;
-    PaError err;
-
-    err = Pa_CloseStream(data->stream);
+    PaError err = Pa_CloseStream(self->stream);
     if(err != paNoError)
         ERR("Error closing stream: %s\n", Pa_GetErrorText(err));
+    self->stream = NULL;
 
-    DestroyRingBuffer(data->ring);
-    data->ring = NULL;
-
-    free(data);
-    device->ExtraData = NULL;
+    ll_ringbuffer_free(self->ring);
+    self->ring = NULL;
 }
 
-static void pa_start_capture(ALCdevice *device)
-{
-    pa_data *data = device->ExtraData;
-    PaError err;
 
-    err = Pa_StartStream(data->stream);
+static ALCboolean ALCportCapture_start(ALCportCapture *self)
+{
+    PaError err = Pa_StartStream(self->stream);
     if(err != paNoError)
+    {
         ERR("Error starting stream: %s\n", Pa_GetErrorText(err));
+        return ALC_FALSE;
+    }
+    return ALC_TRUE;
 }
 
-static void pa_stop_capture(ALCdevice *device)
+static void ALCportCapture_stop(ALCportCapture *self)
 {
-    pa_data *data = (pa_data*)device->ExtraData;
-    PaError err;
-
-    err = Pa_StopStream(data->stream);
+    PaError err = Pa_StopStream(self->stream);
     if(err != paNoError)
         ERR("Error stopping stream: %s\n", Pa_GetErrorText(err));
 }
 
-static ALCenum pa_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint samples)
+
+static ALCuint ALCportCapture_availableSamples(ALCportCapture *self)
 {
-    pa_data *data = device->ExtraData;
-    ReadRingBuffer(data->ring, buffer, samples);
+    return ll_ringbuffer_read_space(self->ring);
+}
+
+static ALCenum ALCportCapture_captureSamples(ALCportCapture *self, ALCvoid *buffer, ALCuint samples)
+{
+    ll_ringbuffer_read(self->ring, buffer, samples);
     return ALC_NO_ERROR;
 }
 
-static ALCuint pa_available_samples(ALCdevice *device)
-{
-    pa_data *data = device->ExtraData;
-    return RingBufferSize(data->ring);
-}
+
+typedef struct ALCportBackendFactory {
+    DERIVE_FROM_TYPE(ALCbackendFactory);
+} ALCportBackendFactory;
+#define ALCPORTBACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCportBackendFactory, ALCbackendFactory) } }
+
+static ALCboolean ALCportBackendFactory_init(ALCportBackendFactory *self);
+static void ALCportBackendFactory_deinit(ALCportBackendFactory *self);
+static ALCboolean ALCportBackendFactory_querySupport(ALCportBackendFactory *self, ALCbackend_Type type);
+static void ALCportBackendFactory_probe(ALCportBackendFactory *self, enum DevProbe type);
+static ALCbackend* ALCportBackendFactory_createBackend(ALCportBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
+
+DEFINE_ALCBACKENDFACTORY_VTABLE(ALCportBackendFactory);
 
 
-static const BackendFuncs pa_funcs = {
-    pa_open_playback,
-    pa_close_playback,
-    pa_reset_playback,
-    pa_start_playback,
-    pa_stop_playback,
-    pa_open_capture,
-    pa_close_capture,
-    pa_start_capture,
-    pa_stop_capture,
-    pa_capture_samples,
-    pa_available_samples
-};
-
-ALCboolean alc_pa_init(BackendFuncs *func_list)
+static ALCboolean ALCportBackendFactory_init(ALCportBackendFactory* UNUSED(self))
 {
     if(!pa_load())
         return ALC_FALSE;
-    *func_list = pa_funcs;
     return ALC_TRUE;
 }
 
-void alc_pa_deinit(void)
+static void ALCportBackendFactory_deinit(ALCportBackendFactory* UNUSED(self))
 {
 #ifdef HAVE_DYNLOAD
     if(pa_handle)
@@ -454,7 +526,14 @@ void alc_pa_deinit(void)
 #endif
 }
 
-void alc_pa_probe(enum DevProbe type)
+static ALCboolean ALCportBackendFactory_querySupport(ALCportBackendFactory* UNUSED(self), ALCbackend_Type type)
+{
+    if(type == ALCbackend_Playback || type == ALCbackend_Capture)
+        return ALC_TRUE;
+    return ALC_FALSE;
+}
+
+static void ALCportBackendFactory_probe(ALCportBackendFactory* UNUSED(self), enum DevProbe type)
 {
     switch(type)
     {
@@ -465,4 +544,30 @@ void alc_pa_probe(enum DevProbe type)
             AppendCaptureDeviceList(pa_device);
             break;
     }
+}
+
+static ALCbackend* ALCportBackendFactory_createBackend(ALCportBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+{
+    if(type == ALCbackend_Playback)
+    {
+        ALCportPlayback *backend;
+        NEW_OBJ(backend, ALCportPlayback)(device);
+        if(!backend) return NULL;
+        return STATIC_CAST(ALCbackend, backend);
+    }
+    if(type == ALCbackend_Capture)
+    {
+        ALCportCapture *backend;
+        NEW_OBJ(backend, ALCportCapture)(device);
+        if(!backend) return NULL;
+        return STATIC_CAST(ALCbackend, backend);
+    }
+
+    return NULL;
+}
+
+ALCbackendFactory *ALCportBackendFactory_getFactory(void)
+{
+    static ALCportBackendFactory factory = ALCPORTBACKENDFACTORY_INITIALIZER;
+    return STATIC_CAST(ALCbackendFactory, &factory);
 }

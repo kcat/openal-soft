@@ -93,7 +93,7 @@ static struct BackendInfo BackendList[] = {
     { "winmm", ALCwinmmBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
 #endif
 #ifdef HAVE_PORTAUDIO
-    { "port", NULL, alc_pa_init, alc_pa_deinit, alc_pa_probe, EmptyFuncs },
+    { "port", ALCportBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
 #endif
 #ifdef HAVE_OPENSL
     { "opensl", NULL, alc_opensl_init, alc_opensl_deinit, alc_opensl_probe, EmptyFuncs },

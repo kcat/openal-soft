@@ -162,14 +162,14 @@ static inline ALvoid aluMatrixFloat3(ALfloat *vec, ALfloat w, const aluMatrix *m
     vec[2] = v.v[0]*mtx->m[0][2] + v.v[1]*mtx->m[1][2] + v.v[2]*mtx->m[2][2] + v.v[3]*mtx->m[3][2];
 }
 
-static inline ALvoid aluMatrixVector(aluVector *vec, const aluMatrix *mtx)
+static inline aluVector aluMatrixVector(const aluMatrix *mtx, const aluVector *vec)
 {
-    aluVector v = *vec;
-
-    vec->v[0] = v.v[0]*mtx->m[0][0] + v.v[1]*mtx->m[1][0] + v.v[2]*mtx->m[2][0] + v.v[3]*mtx->m[3][0];
-    vec->v[1] = v.v[0]*mtx->m[0][1] + v.v[1]*mtx->m[1][1] + v.v[2]*mtx->m[2][1] + v.v[3]*mtx->m[3][1];
-    vec->v[2] = v.v[0]*mtx->m[0][2] + v.v[1]*mtx->m[1][2] + v.v[2]*mtx->m[2][2] + v.v[3]*mtx->m[3][2];
-    vec->v[3] = v.v[0]*mtx->m[0][3] + v.v[1]*mtx->m[1][3] + v.v[2]*mtx->m[2][3] + v.v[3]*mtx->m[3][3];
+    aluVector v;
+    v.v[0] = vec->v[0]*mtx->m[0][0] + vec->v[1]*mtx->m[1][0] + vec->v[2]*mtx->m[2][0] + vec->v[3]*mtx->m[3][0];
+    v.v[1] = vec->v[0]*mtx->m[0][1] + vec->v[1]*mtx->m[1][1] + vec->v[2]*mtx->m[2][1] + vec->v[3]*mtx->m[3][1];
+    v.v[2] = vec->v[0]*mtx->m[0][2] + vec->v[1]*mtx->m[1][2] + vec->v[2]*mtx->m[2][2] + vec->v[3]*mtx->m[3][2];
+    v.v[3] = vec->v[0]*mtx->m[0][3] + vec->v[1]*mtx->m[1][3] + vec->v[2]*mtx->m[2][3] + vec->v[3]*mtx->m[3][3];
+    return v;
 }
 
 
@@ -295,12 +295,10 @@ static ALvoid CalcListenerParams(ALlistener *Listener)
         0.0f, 0.0f,  0.0f, 1.0f
     );
 
-    P = Listener->Position;
-    aluMatrixVector(&P, &Listener->Params.Matrix);
+    P = aluMatrixVector(&Listener->Params.Matrix, &Listener->Position);
     aluMatrixSetRow(&Listener->Params.Matrix, 3, -P.v[0], -P.v[1], -P.v[2], 1.0f);
 
-    Listener->Params.Velocity = Listener->Velocity;
-    aluMatrixVector(&Listener->Params.Velocity, &Listener->Params.Matrix);
+    Listener->Params.Velocity = aluMatrixVector(&Listener->Params.Matrix, &Listener->Velocity);
 }
 
 ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCcontext *ALContext)
@@ -790,9 +788,9 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     {
         const aluMatrix *Matrix = &ALContext->Listener->Params.Matrix;
         /* Transform source vectors */
-        aluMatrixVector(&Position, Matrix);
-        aluMatrixVector(&Velocity, Matrix);
-        aluMatrixVector(&Direction, Matrix);
+        Position = aluMatrixVector(Matrix, &Position);
+        Velocity = aluMatrixVector(Matrix, &Velocity);
+        Direction = aluMatrixVector(Matrix, &Direction);
     }
     else
     {

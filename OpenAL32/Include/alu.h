@@ -139,7 +139,7 @@ typedef struct SendParams {
 
     /* Gain control, which applies to all input channels to a single (mono)
      * output buffer. */
-    MixGains Gain;
+    MixGains Gains[MAX_INPUT_CHANNELS];
 } SendParams;
 
 

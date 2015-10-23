@@ -245,26 +245,30 @@ static void UpdateDryStepping(DirectParams *params, ALuint num_chans, ALuint ste
     params->Counter = steps;
 }
 
-static void UpdateWetStepping(SendParams *params, ALuint steps)
+static void UpdateWetStepping(SendParams *params, ALuint num_chans, ALuint steps)
 {
     ALfloat delta;
+    ALuint i;
 
     if(steps < 2)
     {
-        params->Gain.Current = params->Gain.Target;
-        params->Gain.Step = 0.0f;
-
+        for(i = 0;i < num_chans;i++)
+        {
+            params->Gains[i].Current = params->Gains[i].Target;
+            params->Gains[i].Step = 0.0f;
+        }
         params->Counter = 0;
         return;
     }
 
     delta = 1.0f / (ALfloat)steps;
+    for(i = 0;i < num_chans;i++)
     {
-        ALfloat diff = params->Gain.Target - params->Gain.Current;
+        ALfloat diff = params->Gains[i].Target - params->Gains[i].Current;
         if(fabs(diff) >= GAIN_SILENCE_THRESHOLD)
-            params->Gain.Step = diff * delta;
+            params->Gains[i].Step = diff * delta;
         else
-            params->Gain.Step = 0.0f;
+            params->Gains[i].Step = 0.0f;
     }
     params->Counter = steps;
 }
@@ -625,8 +629,9 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     }
     for(i = 0;i < NumSends;i++)
     {
-        voice->Send[i].Gain.Target = WetGain[i];
-        UpdateWetStepping(&voice->Send[i], (voice->Send[i].Moving ? 64 : 0));
+        for(c = 0;c < num_channels;c++)
+            voice->Send[i].Gains[c].Target = WetGain[i];
+        UpdateWetStepping(&voice->Send[i], num_channels, (voice->Send[i].Moving ? 64 : 0));
         voice->Send[i].Moving = AL_TRUE;
     }
 
@@ -1093,8 +1098,8 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     }
     for(i = 0;i < NumSends;i++)
     {
-        voice->Send[i].Gain.Target = WetGain[i];
-        UpdateWetStepping(&voice->Send[i], (voice->Send[i].Moving ? 64 : 0));
+        voice->Send[i].Gains[0].Target = WetGain[i];
+        UpdateWetStepping(&voice->Send[i], 1, (voice->Send[i].Moving ? 64 : 0));
         voice->Send[i].Moving = AL_TRUE;
     }
 

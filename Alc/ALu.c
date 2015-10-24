@@ -531,108 +531,131 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         voice->Direct.Moving = AL_TRUE;
 
         voice->IsHrtf = AL_FALSE;
+
         for(i = 0;i < NumSends;i++)
-            WetGain[i] *= 1.4142f;
-    }
-    else if(DirectChannels != AL_FALSE)
-    {
-        if(Device->Hrtf)
         {
+            /* Only the first channel of B-Format buffers (W) goes to auxiliary
+             * sends. It also needs to be scaled by sqrt(2) to account for the
+             * signal being scaled by sqrt(1/2).
+             */
+            voice->Send[i].Gains[0].Target = WetGain[i] * 1.4142f;
+            for(c = 1;c < num_channels;c++)
+                voice->Send[i].Gains[c].Target = 0.0f;
+            UpdateWetStepping(&voice->Send[i], num_channels, (voice->Send[i].Moving ? 64 : 0));
+            voice->Send[i].Moving = AL_TRUE;
+        }
+    }
+    else
+    {
+        if(DirectChannels)
+        {
+            if(Device->Hrtf)
+            {
+                /* DirectChannels with HRTF enabled. Skip the virtual channels
+                 * and write FrontLeft and FrontRight inputs to the first and
+                 * second outputs.
+                 */
+                voice->Direct.OutBuffer += voice->Direct.OutChannels;
+                voice->Direct.OutChannels = 2;
+                for(c = 0;c < num_channels;c++)
+                {
+                    MixGains *gains = voice->Direct.Gains[c];
+
+                    for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
+                        gains[j].Target = 0.0f;
+
+                    if(chans[c].channel == FrontLeft)
+                        gains[0].Target = DryGain;
+                    else if(chans[c].channel == FrontRight)
+                        gains[1].Target = DryGain;
+                }
+            }
+            else for(c = 0;c < num_channels;c++)
+            {
+                MixGains *gains = voice->Direct.Gains[c];
+                int idx;
+
+                for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
+                    gains[j].Target = 0.0f;
+                if((idx=GetChannelIdxByName(Device, chans[c].channel)) != -1)
+                    gains[idx].Target = DryGain;
+            }
+            UpdateDryStepping(&voice->Direct, num_channels, (voice->Direct.Moving ? 64 : 0));
+            voice->Direct.Moving = AL_TRUE;
+
+            voice->IsHrtf = AL_FALSE;
+        }
+        else if(Device->Hrtf_Mode == FullHrtf)
+        {
+            /* Full HRTF rendering. Skip the virtual channels and render each
+             * input channel to the real outputs.
+             */
             voice->Direct.OutBuffer += voice->Direct.OutChannels;
             voice->Direct.OutChannels = 2;
             for(c = 0;c < num_channels;c++)
             {
-                MixGains *gains = voice->Direct.Gains[c];
-
-                for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
-                    gains[j].Target = 0.0f;
-
-                if(chans[c].channel == FrontLeft)
-                    gains[0].Target = DryGain;
-                else if(chans[c].channel == FrontRight)
-                    gains[1].Target = DryGain;
-            }
-        }
-        else for(c = 0;c < num_channels;c++)
-        {
-            MixGains *gains = voice->Direct.Gains[c];
-            int idx;
-
-            for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
-                gains[j].Target = 0.0f;
-            if((idx=GetChannelIdxByName(Device, chans[c].channel)) != -1)
-                gains[idx].Target = DryGain;
-        }
-        UpdateDryStepping(&voice->Direct, num_channels, (voice->Direct.Moving ? 64 : 0));
-        voice->Direct.Moving = AL_TRUE;
-
-        voice->IsHrtf = AL_FALSE;
-    }
-    else if(Device->Hrtf_Mode == FullHrtf)
-    {
-        voice->Direct.OutBuffer += voice->Direct.OutChannels;
-        voice->Direct.OutChannels = 2;
-        for(c = 0;c < num_channels;c++)
-        {
-            if(chans[c].channel == LFE)
-            {
-                /* Skip LFE */
-                voice->Direct.Hrtf[c].Params.Delay[0] = 0;
-                voice->Direct.Hrtf[c].Params.Delay[1] = 0;
-                for(i = 0;i < HRIR_LENGTH;i++)
+                if(chans[c].channel == LFE)
                 {
-                    voice->Direct.Hrtf[c].Params.Coeffs[i][0] = 0.0f;
-                    voice->Direct.Hrtf[c].Params.Coeffs[i][1] = 0.0f;
+                    /* Skip LFE */
+                    voice->Direct.Hrtf[c].Params.Delay[0] = 0;
+                    voice->Direct.Hrtf[c].Params.Delay[1] = 0;
+                    for(i = 0;i < HRIR_LENGTH;i++)
+                    {
+                        voice->Direct.Hrtf[c].Params.Coeffs[i][0] = 0.0f;
+                        voice->Direct.Hrtf[c].Params.Coeffs[i][1] = 0.0f;
+                    }
+                }
+                else
+                {
+                    /* Get the static HRIR coefficients and delays for this
+                     * channel. */
+                    GetLerpedHrtfCoeffs(Device->Hrtf,
+                        chans[c].elevation, chans[c].angle, 1.0f, DryGain,
+                        voice->Direct.Hrtf[c].Params.Coeffs,
+                        voice->Direct.Hrtf[c].Params.Delay
+                    );
                 }
             }
-            else
-            {
-                /* Get the static HRIR coefficients and delays for this
-                 * channel. */
-                GetLerpedHrtfCoeffs(Device->Hrtf,
-                                    chans[c].elevation, chans[c].angle, 1.0f, DryGain,
-                                    voice->Direct.Hrtf[c].Params.Coeffs,
-                                    voice->Direct.Hrtf[c].Params.Delay);
-            }
-        }
-        voice->Direct.Counter = 0;
-        voice->Direct.Moving  = AL_TRUE;
+            voice->Direct.Counter = 0;
+            voice->Direct.Moving  = AL_TRUE;
 
-        voice->IsHrtf = AL_TRUE;
-    }
-    else
-    {
-        for(c = 0;c < num_channels;c++)
+            voice->IsHrtf = AL_TRUE;
+        }
+        else
         {
-            MixGains *gains = voice->Direct.Gains[c];
-            ALfloat Target[MAX_OUTPUT_CHANNELS];
-
-            /* Special-case LFE */
-            if(chans[c].channel == LFE)
+            /* Basic or no HRTF rendering. Use normal panning to the output. */
+            for(c = 0;c < num_channels;c++)
             {
-                int idx;
+                MixGains *gains = voice->Direct.Gains[c];
+                ALfloat Target[MAX_OUTPUT_CHANNELS];
+
+                /* Special-case LFE */
+                if(chans[c].channel == LFE)
+                {
+                    int idx;
+                    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+                        gains[i].Target = 0.0f;
+                    if((idx=GetChannelIdxByName(Device, chans[c].channel)) != -1)
+                        gains[idx].Target = DryGain;
+                    continue;
+                }
+
+                ComputeAngleGains(Device, chans[c].angle, chans[c].elevation, DryGain, Target);
                 for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-                    gains[i].Target = 0.0f;
-                if((idx=GetChannelIdxByName(Device, chans[c].channel)) != -1)
-                    gains[idx].Target = DryGain;
-                continue;
+                    gains[i].Target = Target[i];
             }
+            UpdateDryStepping(&voice->Direct, num_channels, (voice->Direct.Moving ? 64 : 0));
+            voice->Direct.Moving = AL_TRUE;
 
-            ComputeAngleGains(Device, chans[c].angle, chans[c].elevation, DryGain, Target);
-            for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-                gains[i].Target = Target[i];
+            voice->IsHrtf = AL_FALSE;
         }
-        UpdateDryStepping(&voice->Direct, num_channels, (voice->Direct.Moving ? 64 : 0));
-        voice->Direct.Moving = AL_TRUE;
-
-        voice->IsHrtf = AL_FALSE;
-    }
-    for(i = 0;i < NumSends;i++)
-    {
-        for(c = 0;c < num_channels;c++)
-            voice->Send[i].Gains[c].Target = WetGain[i];
-        UpdateWetStepping(&voice->Send[i], num_channels, (voice->Send[i].Moving ? 64 : 0));
-        voice->Send[i].Moving = AL_TRUE;
+        for(i = 0;i < NumSends;i++)
+        {
+            for(c = 0;c < num_channels;c++)
+                voice->Send[i].Gains[c].Target = WetGain[i];
+            UpdateWetStepping(&voice->Send[i], num_channels, (voice->Send[i].Moving ? 64 : 0));
+            voice->Send[i].Moving = AL_TRUE;
+        }
     }
 
     {
@@ -998,7 +1021,9 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
 
     if(Device->Hrtf_Mode == FullHrtf)
     {
-        /* Use a binaural HRTF algorithm for stereo headphone playback */
+        /* Full HRTF rendering. Skip the virtual channels and render to the
+         * real outputs.
+         */
         aluVector dir = {{ 0.0f, 0.0f, -1.0f, 0.0f }};
         ALfloat ev = 0.0f, az = 0.0f;
         ALfloat radius = ALSource->Radius;
@@ -1035,7 +1060,8 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             delta = CalcFadeTime(voice->Direct.LastGain, DryGain,
                                  &voice->Direct.LastDir, &dir);
             /* If the delta is large enough, get the moving HRIR target
-             * coefficients, target delays, steppping values, and counter. */
+             * coefficients, target delays, steppping values, and counter.
+             */
             if(delta > 0.000015f)
             {
                 ALuint counter = GetMovingHrtfCoeffs(Device->Hrtf,
@@ -1064,6 +1090,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     }
     else
     {
+        /* Basic or no HRTF rendering. Use normal panning to the output. */
         MixGains *gains = voice->Direct.Gains[0];
         ALfloat dir[3] = { 0.0f, 0.0f, -1.0f };
         ALfloat radius = ALSource->Radius;

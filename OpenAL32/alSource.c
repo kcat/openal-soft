@@ -494,14 +494,14 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
             if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
                !Context->DeferUpdates)
             {
-                ReadLock(&Source->queue_lock);
+                WriteLock(&Source->queue_lock);
                 if(ApplyOffset(Source) == AL_FALSE)
                 {
-                    ReadUnlock(&Source->queue_lock);
+                    WriteUnlock(&Source->queue_lock);
                     UnlockContext(Context);
                     SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_VALUE, AL_FALSE);
                 }
-                ReadUnlock(&Source->queue_lock);
+                WriteUnlock(&Source->queue_lock);
             }
             UnlockContext(Context);
             return AL_TRUE;
@@ -676,14 +676,14 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
                 !Context->DeferUpdates)
             {
-                ReadLock(&Source->queue_lock);
+                WriteLock(&Source->queue_lock);
                 if(ApplyOffset(Source) == AL_FALSE)
                 {
-                    ReadUnlock(&Source->queue_lock);
+                    WriteUnlock(&Source->queue_lock);
                     UnlockContext(Context);
                     SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_VALUE, AL_FALSE);
                 }
-                ReadUnlock(&Source->queue_lock);
+                WriteUnlock(&Source->queue_lock);
             }
             UnlockContext(Context);
             return AL_TRUE;
@@ -2569,7 +2569,7 @@ static ALvoid InitSourceParams(ALsource *Source)
  */
 ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
 {
-    ReadLock(&Source->queue_lock);
+    WriteLock(&Source->queue_lock);
     if(state == AL_PLAYING)
     {
         ALCdevice *device = Context->Device;
@@ -2695,7 +2695,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         }
         Source->Offset = -1.0;
     }
-    ReadUnlock(&Source->queue_lock);
+    WriteUnlock(&Source->queue_lock);
 }
 
 /* GetSourceSampleOffset

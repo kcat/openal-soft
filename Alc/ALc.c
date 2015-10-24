@@ -1608,9 +1608,9 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
             if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
                Source->Offset >= 0.0)
             {
-                ReadLock(&Source->queue_lock);
+                WriteLock(&Source->queue_lock);
                 ApplyOffset(Source);
-                ReadUnlock(&Source->queue_lock);
+                WriteUnlock(&Source->queue_lock);
             }
 
             new_state = Source->new_state;

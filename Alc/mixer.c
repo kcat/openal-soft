@@ -260,12 +260,16 @@ static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter
     switch(type)
     {
         case AF_None:
+            ALfilterState_processPassthru(lpfilter, src, numsamples);
+            ALfilterState_processPassthru(hpfilter, src, numsamples);
             break;
 
         case AF_LowPass:
             ALfilterState_process(lpfilter, dst, src, numsamples);
+            ALfilterState_processPassthru(hpfilter, dst, numsamples);
             return dst;
         case AF_HighPass:
+            ALfilterState_processPassthru(lpfilter, src, numsamples);
             ALfilterState_process(hpfilter, dst, src, numsamples);
             return dst;
 

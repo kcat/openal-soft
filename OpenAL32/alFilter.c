@@ -420,6 +420,24 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
     filter->process = ALfilterState_processC;
 }
 
+void ALfilterState_processPassthru(ALfilterState *filter, const ALfloat *src, ALuint numsamples)
+{
+    if(numsamples >= 2)
+    {
+        filter->x[1] = src[numsamples-2];
+        filter->x[0] = src[numsamples-1];
+        filter->y[1] = src[numsamples-2];
+        filter->y[0] = src[numsamples-1];
+    }
+    else if(numsamples == 1)
+    {
+        filter->x[1] = filter->x[0];
+        filter->x[0] = src[0];
+        filter->y[1] = filter->y[0];
+        filter->y[0] = src[0];
+    }
+}
+
 
 static void lp_SetParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }

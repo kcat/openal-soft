@@ -63,6 +63,8 @@ inline ALfloat ALfilterState_processSingle(ALfilterState *filter, ALfloat sample
 
 void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const ALfloat *src, ALuint numsamples);
 
+void ALfilterState_processPassthru(ALfilterState *filter, const ALfloat *src, ALuint numsamples);
+
 
 typedef struct ALfilter {
     // Filter type (AL_FILTER_NULL, ...)

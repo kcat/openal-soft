@@ -420,7 +420,7 @@ void GetBFormatHrtfCoeffs(const struct Hrtf *Hrtf, const ALuint num_chans, ALflo
 }
 
 
-static struct Hrtf *LoadHrtf00(FILE *f, ALuint deviceRate)
+static struct Hrtf *LoadHrtf00(FILE *f)
 {
     const ALubyte maxDelay = HRTF_HISTORY_LENGTH-1;
     struct Hrtf *Hrtf = NULL;
@@ -447,12 +447,6 @@ static struct Hrtf *LoadHrtf00(FILE *f, ALuint deviceRate)
 
     evCount = fgetc(f);
 
-    if(deviceRate && rate != deviceRate)
-    {
-        ERR("HRIR rate does not match device rate: rate=%d (%d)\n",
-            rate, deviceRate);
-        failed = AL_TRUE;
-    }
     if(irSize < MIN_IR_SIZE || irSize > MAX_IR_SIZE || (irSize%MOD_IR_SIZE))
     {
         ERR("Unsupported HRIR size: irSize=%d (%d to %d by %d)\n",
@@ -588,7 +582,7 @@ static struct Hrtf *LoadHrtf00(FILE *f, ALuint deviceRate)
 }
 
 
-static struct Hrtf *LoadHrtf01(FILE *f, ALuint deviceRate)
+static struct Hrtf *LoadHrtf01(FILE *f)
 {
     const ALubyte maxDelay = HRTF_HISTORY_LENGTH-1;
     struct Hrtf *Hrtf = NULL;
@@ -610,12 +604,6 @@ static struct Hrtf *LoadHrtf01(FILE *f, ALuint deviceRate)
 
     evCount = fgetc(f);
 
-    if(deviceRate && rate != deviceRate)
-    {
-        ERR("HRIR rate does not match device rate: rate=%d (%d)\n",
-                rate, deviceRate);
-        failed = AL_TRUE;
-    }
     if(irSize < MIN_IR_SIZE || irSize > MAX_IR_SIZE || (irSize%MOD_IR_SIZE))
     {
         ERR("Unsupported HRIR size: irSize=%d (%d to %d by %d)\n",
@@ -775,12 +763,12 @@ static void AddFileEntry(vector_HrtfEntry *list, al_string *filename)
             if(memcmp(magic, magicMarker00, sizeof(magicMarker00)) == 0)
             {
                 TRACE("Detected data set format v0\n");
-                hrtf = LoadHrtf00(f, 0);
+                hrtf = LoadHrtf00(f);
             }
             else if(memcmp(magic, magicMarker01, sizeof(magicMarker01)) == 0)
             {
                 TRACE("Detected data set format v1\n");
-                hrtf = LoadHrtf01(f, 0);
+                hrtf = LoadHrtf01(f);
             }
             else
                 ERR("Invalid header in %s: \"%.8s\"\n", al_string_get_cstr(entry.filename), magic);

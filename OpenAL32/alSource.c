@@ -3005,13 +3005,13 @@ static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac)
         break;
 
     case AL_SAMPLE_OFFSET:
-        dbloff = modf(Source->Offset, &dblfrac);
+        dblfrac = modf(Source->Offset, &dbloff);
         *offset = (ALuint)mind(dbloff, UINT_MAX);
         *frac = (ALuint)mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0);
         break;
 
     case AL_SEC_OFFSET:
-        dbloff = modf(Source->Offset*Buffer->Frequency, &dblfrac);
+        dblfrac = modf(Source->Offset*Buffer->Frequency, &dbloff);
         *offset = (ALuint)mind(dbloff, UINT_MAX);
         *frac = (ALuint)mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0);
         break;

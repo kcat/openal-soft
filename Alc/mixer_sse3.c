@@ -78,8 +78,11 @@ const ALfloat *Resample_fir4_32_SSE3(const ALfloat *src, ALuint frac, ALuint inc
         _mm_store_ps(frac_.f, _mm_castsi128_ps(frac4));
     }
 
-    pos = pos_.i[3];
-    frac = frac_.i[3];
+    /* NOTE: These four elements represent the position *after* the last four
+     * samples, so the lowest element is the next position to resample.
+     */
+    pos = pos_.i[0];
+    frac = frac_.i[0];
 
     for(;i < numsamples;i++)
     {
@@ -143,8 +146,8 @@ const ALfloat *Resample_fir8_32_SSE3(const ALfloat *src, ALuint frac, ALuint inc
         _mm_store_ps(frac_.f, _mm_castsi128_ps(frac4));
     }
 
-    pos = pos_.i[3];
-    frac = frac_.i[3];
+    pos = pos_.i[0];
+    frac = frac_.i[0];
 
     for(;i < numsamples;i++)
     {

@@ -182,6 +182,10 @@ void Mix_SSE(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)
                     _mm_store_ps(&OutBuffer[c][OutPos+pos], dry4);
                     pos += 4;
                 } while(minsize-pos > 3);
+                /* NOTE: gain4 now represents the next four gains after the
+                 * last four mixed samples, so the lowest element represents
+                 * the next gain to apply.
+                 */
                 gain = _mm_cvtss_f32(gain4);
             }
             /* Mix with applying left over gain steps that aren't aligned multiples of 4. */

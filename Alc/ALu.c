@@ -236,10 +236,13 @@ static void UpdateDryStepping(DirectParams *params, ALuint num_chans, ALuint ste
         for(j = 0;j < params->OutChannels;j++)
         {
             ALfloat diff = gains[j].Target - gains[j].Current;
-            if(fabs(diff) >= GAIN_SILENCE_THRESHOLD)
+            if(fabsf(diff) >= GAIN_SILENCE_THRESHOLD)
                 gains[j].Step = diff * delta;
             else
+            {
+                gains[j].Current = gains[j].Target;
                 gains[j].Step = 0.0f;
+            }
         }
     }
     params->Counter = steps;
@@ -265,10 +268,13 @@ static void UpdateWetStepping(SendParams *params, ALuint num_chans, ALuint steps
     for(i = 0;i < num_chans;i++)
     {
         ALfloat diff = params->Gains[i].Target - params->Gains[i].Current;
-        if(fabs(diff) >= GAIN_SILENCE_THRESHOLD)
+        if(fabsf(diff) >= GAIN_SILENCE_THRESHOLD)
             params->Gains[i].Step = diff * delta;
         else
+        {
+            params->Gains[i].Current = params->Gains[i].Target;
             params->Gains[i].Step = 0.0f;
+        }
     }
     params->Counter = steps;
 }

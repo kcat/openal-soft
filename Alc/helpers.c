@@ -298,6 +298,8 @@ void SetMixerFPUMode(FPUCtl *ctl)
 #ifdef HAVE_FENV_H
     fegetenv(STATIC_CAST(fenv_t, ctl));
 #if defined(__GNUC__) && defined(HAVE_SSE)
+    /* FIXME: Some fegetenv implementations can get the SSE environment too?
+     * How to tell when it does? */
     if((CPUCapFlags&CPU_CAP_SSE))
         __asm__ __volatile__("stmxcsr %0" : "=m" (*&ctl->sse_state));
 #endif

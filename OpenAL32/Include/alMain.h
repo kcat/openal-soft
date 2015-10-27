@@ -50,7 +50,7 @@
 #define ALC_HRTF_REQUIRED_SOFT                   0x0003
 #define ALC_HRTF_HEADPHONES_DETECTED_SOFT        0x0004
 #define ALC_HRTF_UNSUPPORTED_FORMAT_SOFT         0x0005
-#define ALC_NUM_HRTF_SPECIFIER_SOFT              0x1994
+#define ALC_NUM_HRTF_SPECIFIERS_SOFT             0x1994
 #define ALC_HRTF_SPECIFIER_SOFT                  0x1995
 #define ALC_HRTF_ID_SOFT                         0x1996
 typedef const ALCchar* (ALC_APIENTRY*LPALCGETSTRINGISOFT)(ALCdevice *device, ALCenum paramName, ALCsizei index);

@@ -354,7 +354,7 @@ static const ALCenums enumeration[] = {
     DECL(ALC_HRTF_REQUIRED_SOFT),
     DECL(ALC_HRTF_HEADPHONES_DETECTED_SOFT),
     DECL(ALC_HRTF_UNSUPPORTED_FORMAT_SOFT),
-    DECL(ALC_NUM_HRTF_SPECIFIER_SOFT),
+    DECL(ALC_NUM_HRTF_SPECIFIERS_SOFT),
     DECL(ALC_HRTF_SPECIFIER_SOFT),
     DECL(ALC_HRTF_ID_SOFT),
 
@@ -2894,10 +2894,10 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             values[0] = device->Hrtf_Status;
             return 1;
 
-        case ALC_NUM_HRTF_SPECIFIER_SOFT:
+        case ALC_NUM_HRTF_SPECIFIERS_SOFT:
             FreeHrtfList(&device->Hrtf_List);
             device->Hrtf_List = EnumerateHrtf(device->DeviceName);
-            values[0] = VECTOR_SIZE(device->Hrtf_List);
+            values[0] = (ALCint)VECTOR_SIZE(device->Hrtf_List);
             return 1;
 
         default:

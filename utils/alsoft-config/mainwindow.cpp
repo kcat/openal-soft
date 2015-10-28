@@ -172,8 +172,7 @@ MainWindow::MainWindow(QWidget *parent) :
     mSourceCountValidator(NULL),
     mEffectSlotValidator(NULL),
     mSourceSendValidator(NULL),
-    mSampleRateValidator(NULL),
-    mReverbBoostValidator(NULL)
+    mSampleRateValidator(NULL)
 {
     ui->setupUi(this);
 
@@ -246,9 +245,6 @@ MainWindow::MainWindow(QWidget *parent) :
     mSampleRateValidator = new QIntValidator(8000, 192000, this);
     ui->sampleRateCombo->lineEdit()->setValidator(mSampleRateValidator);
 
-    mReverbBoostValidator = new QDoubleValidator(-12.0, +12.0, 1, this);
-    ui->reverbBoostEdit->setValidator(mReverbBoostValidator);
-
     connect(ui->actionLoad, SIGNAL(triggered()), this, SLOT(loadConfigFromFile()));
     connect(ui->actionSave_As, SIGNAL(triggered()), this, SLOT(saveConfigAsFile()));
 
@@ -269,9 +265,6 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->disabledBackendList->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->disabledBackendList, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(showDisabledBackendMenu(QPoint)));
 
-    connect(ui->reverbBoostSlider, SIGNAL(valueChanged(int)), this, SLOT(updateReverbBoostEdit(int)));
-    connect(ui->reverbBoostEdit, SIGNAL(textEdited(QString)), this, SLOT(updateReverbBoostSlider(QString)));
-
     loadConfig(getDefaultConfigName());
 }
 
@@ -284,7 +277,6 @@ MainWindow::~MainWindow()
     delete mEffectSlotValidator;
     delete mSourceSendValidator;
     delete mSampleRateValidator;
-    delete mReverbBoostValidator;
 }
 
 void MainWindow::loadConfigFromFile()
@@ -492,8 +484,6 @@ void MainWindow::loadConfig(const QString &fname)
     }
 
     ui->emulateEaxCheckBox->setChecked(settings.value("reverb/emulate-eax", false).toBool());
-    ui->reverbBoostEdit->clear();
-    ui->reverbBoostEdit->insert(settings.value("reverb/boost").toString());
 
     QStringList excludefx = settings.value("excludefx").toStringList();
     if(excludefx.size() == 1)
@@ -643,12 +633,6 @@ void MainWindow::saveConfig(const QString &fname) const
         settings.setValue("reverb/emulate-eax", "true");
     else
         settings.setValue("reverb/emulate-eax", QString()/*"false"*/);
-
-    // TODO: Remove check when we can properly match global values.
-    if(ui->reverbBoostSlider->sliderPosition() == 0)
-        settings.setValue("reverb/boost", QString());
-    else
-        settings.setValue("reverb/boost", ui->reverbBoostEdit->text());
 
     strlist.clear();
     if(!ui->enableEaxReverbCheck->isChecked())
@@ -839,17 +823,4 @@ void MainWindow::showDisabledBackendMenu(QPoint pt)
         if(iter != actionMap.end())
             ui->disabledBackendList->addItem(iter.value());
     }
-}
-
-void MainWindow::updateReverbBoostEdit(int value)
-{
-    ui->reverbBoostEdit->clear();
-    if(value != 0)
-        ui->reverbBoostEdit->insert(QString::number(value/10.0, 'f', 1));
-}
-
-void MainWindow::updateReverbBoostSlider(QString value)
-{
-    int pos = int(value.toFloat()*10.0f);
-    ui->reverbBoostSlider->setSliderPosition(pos);
 }

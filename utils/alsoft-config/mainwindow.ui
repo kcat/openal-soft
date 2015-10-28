@@ -904,87 +904,11 @@ some quality.</string>
        <string>Emulate EAX Reverb:</string>
       </property>
      </widget>
-     <widget class="QGroupBox" name="groupBox_4">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>100</y>
-        <width>511</width>
-        <height>61</height>
-       </rect>
-      </property>
-      <property name="toolTip">
-       <string>Global amplification for reverb output, expressed in decibels.
-+6 will be a scale of (approximately) 2x, +12 will be a scale of
-4x, etc. Similarly, -6 will be about half, and -12 about 1/4th. A
-value of 0 means no change.</string>
-      </property>
-      <property name="title">
-       <string>Reverb Boost</string>
-      </property>
-      <widget class="QSlider" name="reverbBoostSlider">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>30</y>
-         <width>391</width>
-         <height>23</height>
-        </rect>
-       </property>
-       <property name="toolTip">
-        <string/>
-       </property>
-       <property name="minimum">
-        <number>-120</number>
-       </property>
-       <property name="maximum">
-        <number>120</number>
-       </property>
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="tickPosition">
-        <enum>QSlider::TicksBelow</enum>
-       </property>
-       <property name="tickInterval">
-        <number>10</number>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="reverbBoostEdit">
-       <property name="geometry">
-        <rect>
-         <x>410</x>
-         <y>30</y>
-         <width>51</width>
-         <height>22</height>
-        </rect>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-       <property name="placeholderText">
-        <string>0.0</string>
-       </property>
-      </widget>
-      <widget class="QLabel" name="label_12">
-       <property name="geometry">
-        <rect>
-         <x>460</x>
-         <y>30</y>
-         <width>31</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>dB</string>
-       </property>
-      </widget>
-     </widget>
      <widget class="QGroupBox" name="groupBox_5">
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>170</y>
+        <y>100</y>
         <width>511</width>
         <height>191</height>
        </rect>

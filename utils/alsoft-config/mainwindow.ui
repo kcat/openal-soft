@@ -321,6 +321,9 @@ contain these markers, which will be replaced as needed:
        <property name="text">
         <string>HRTF Mode:</string>
        </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
       </widget>
      </widget>
      <widget class="QGroupBox" name="groupBox_3">

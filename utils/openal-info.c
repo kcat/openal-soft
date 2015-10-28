@@ -147,6 +147,35 @@ static void printALCInfo(ALCdevice *device)
     }
 }
 
+static void printHRTFInfo(ALCdevice *device)
+{
+    LPALCGETSTRINGISOFT alcGetStringiSOFT;
+    ALCint num_hrtfs;
+
+    if(alcIsExtensionPresent(device, "ALC_SOFT_HRTF") == ALC_FALSE)
+    {
+        printf("HRTF extension not available\n");
+        return;
+    }
+
+    alcGetStringiSOFT = alcGetProcAddress(device, "alcGetStringiSOFT");
+
+    alcGetIntegerv(device, ALC_NUM_HRTF_SPECIFIERS_SOFT, 1, &num_hrtfs);
+    if(!num_hrtfs)
+        printf("No HRTFs found\n");
+    else
+    {
+        ALCint i;
+        printf("Available HRTFs:\n");
+        for(i = 0;i < num_hrtfs;++i)
+        {
+            const ALCchar *name = alcGetStringiSOFT(device, ALC_HRTF_SPECIFIER_SOFT, i);
+            printf("    %s\n", name);
+        }
+    }
+    checkALCErrors(device);
+}
+
 static void printALInfo(void)
 {
     printf("OpenAL vendor string: %s\n", alGetString(AL_VENDOR));
@@ -287,6 +316,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     printALCInfo(device);
+    printHRTFInfo(device);
 
     context = alcCreateContext(device, NULL);
     if(!context || alcMakeContextCurrent(context) == ALC_FALSE)

@@ -1060,13 +1060,16 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     ALfloat length, invlen;
     ALuint i;
 
-    ComputeAmbientGains(Device, 1.4142f, AmbientGains);
+    // Bost gain by sqrt(2)? Seems to better match other implementations....
+    Gain *= 1.4142f;
+
+    ComputeAmbientGains(Device, Gain, AmbientGains);
 
     length = earlyPan[0]*earlyPan[0] + earlyPan[1]*earlyPan[1] + earlyPan[2]*earlyPan[2];
     if(!(length > FLT_EPSILON))
     {
         for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-            State->Early.PanGain[i] = AmbientGains[i] * Gain;
+            State->Early.PanGain[i] = AmbientGains[i];
     }
     else
     {
@@ -1076,16 +1079,16 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
         earlyPan[2] *= invlen;
 
         length = minf(length, 1.0f);
-        ComputeDirectionalGains(Device, earlyPan, 1.4142f, DirGains);
+        ComputeDirectionalGains(Device, earlyPan, Gain, DirGains);
         for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-            State->Early.PanGain[i] = lerp(AmbientGains[i], DirGains[i], length) * Gain;
+            State->Early.PanGain[i] = lerp(AmbientGains[i], DirGains[i], length);
     }
 
     length = latePan[0]*latePan[0] + latePan[1]*latePan[1] + latePan[2]*latePan[2];
     if(!(length > FLT_EPSILON))
     {
         for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-            State->Late.PanGain[i] = AmbientGains[i] * Gain;
+            State->Late.PanGain[i] = AmbientGains[i];
     }
     else
     {
@@ -1095,14 +1098,15 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
         latePan[2] *= invlen;
 
         length = minf(length, 1.0f);
-        ComputeDirectionalGains(Device, latePan, 1.4142f, DirGains);
+        ComputeDirectionalGains(Device, latePan, Gain, DirGains);
         for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-            State->Late.PanGain[i] = lerp(AmbientGains[i], DirGains[i], length) * Gain;
+            State->Late.PanGain[i] = lerp(AmbientGains[i], DirGains[i], length);
     }
 }
 
 static ALvoid ALreverbState_update(ALreverbState *State, ALCdevice *Device, const ALeffectslot *Slot)
 {
+    const ALeffectProps *props = &Slot->EffectProps;
     ALuint frequency = Device->Frequency;
     ALfloat lfscale, hfscale, hfRatio;
     ALfloat cw, x, y;
@@ -1112,85 +1116,57 @@ static ALvoid ALreverbState_update(ALreverbState *State, ALCdevice *Device, cons
     else if(Slot->EffectType == AL_EFFECT_REVERB || EmulateEAXReverb)
         State->IsEax = AL_FALSE;
 
-    // Calculate the master low-pass filter (from the master effect HF gain).
-    if(State->IsEax)
-    {
-        hfscale = Slot->EffectProps.Reverb.HFReference / frequency;
-        ALfilterState_setParams(&State->LpFilter, ALfilterType_HighShelf,
-                                Slot->EffectProps.Reverb.GainHF,
-                                hfscale, 0.0f);
-        lfscale = Slot->EffectProps.Reverb.LFReference / frequency;
-        ALfilterState_setParams(&State->HpFilter, ALfilterType_LowShelf,
-                                Slot->EffectProps.Reverb.GainLF,
-                                lfscale, 0.0f);
-    }
-    else
-    {
-        hfscale = LOWPASSFREQREF / frequency;
-        ALfilterState_setParams(&State->LpFilter, ALfilterType_HighShelf,
-                                Slot->EffectProps.Reverb.GainHF,
-                                hfscale, 0.0f);
-    }
+    // Calculate the master filters
+    hfscale = props->Reverb.HFReference / frequency;
+    ALfilterState_setParams(&State->LpFilter, ALfilterType_HighShelf,
+                            props->Reverb.GainHF, hfscale, 0.0f);
+    lfscale = props->Reverb.LFReference / frequency;
+    ALfilterState_setParams(&State->HpFilter, ALfilterType_LowShelf,
+                            props->Reverb.GainLF, lfscale, 0.0f);
 
-    if(State->IsEax)
-    {
-        // Update the modulator line.
-        UpdateModulator(Slot->EffectProps.Reverb.ModulationTime,
-                        Slot->EffectProps.Reverb.ModulationDepth,
-                        frequency, State);
-    }
+    // Update the modulator line.
+    UpdateModulator(props->Reverb.ModulationTime, props->Reverb.ModulationDepth,
+                    frequency, State);
 
     // Update the initial effect delay.
-    UpdateDelayLine(Slot->EffectProps.Reverb.ReflectionsDelay,
-                    Slot->EffectProps.Reverb.LateReverbDelay,
+    UpdateDelayLine(props->Reverb.ReflectionsDelay, props->Reverb.LateReverbDelay,
                     frequency, State);
 
     // Update the early lines.
-    UpdateEarlyLines(Slot->EffectProps.Reverb.Gain,
-                     Slot->EffectProps.Reverb.ReflectionsGain,
-                     Slot->EffectProps.Reverb.LateReverbDelay, State);
+    UpdateEarlyLines(props->Reverb.Gain, props->Reverb.ReflectionsGain,
+                     props->Reverb.LateReverbDelay, State);
 
     // Update the decorrelator.
-    UpdateDecorrelator(Slot->EffectProps.Reverb.Density, frequency, State);
+    UpdateDecorrelator(props->Reverb.Density, frequency, State);
 
     // Get the mixing matrix coefficients (x and y).
-    CalcMatrixCoeffs(Slot->EffectProps.Reverb.Diffusion, &x, &y);
+    CalcMatrixCoeffs(props->Reverb.Diffusion, &x, &y);
     // Then divide x into y to simplify the matrix calculation.
     State->Late.MixCoeff = y / x;
 
     // If the HF limit parameter is flagged, calculate an appropriate limit
     // based on the air absorption parameter.
-    hfRatio = Slot->EffectProps.Reverb.DecayHFRatio;
-    if(Slot->EffectProps.Reverb.DecayHFLimit &&
-       Slot->EffectProps.Reverb.AirAbsorptionGainHF < 1.0f)
-        hfRatio = CalcLimitedHfRatio(hfRatio,
-                                     Slot->EffectProps.Reverb.AirAbsorptionGainHF,
-                                     Slot->EffectProps.Reverb.DecayTime);
+    hfRatio = props->Reverb.DecayHFRatio;
+    if(props->Reverb.DecayHFLimit && props->Reverb.AirAbsorptionGainHF < 1.0f)
+        hfRatio = CalcLimitedHfRatio(hfRatio, props->Reverb.AirAbsorptionGainHF,
+                                     props->Reverb.DecayTime);
 
     cw = cosf(F_TAU * hfscale);
     // Update the late lines.
-    UpdateLateLines(Slot->EffectProps.Reverb.Gain, Slot->EffectProps.Reverb.LateReverbGain,
-                    x, Slot->EffectProps.Reverb.Density, Slot->EffectProps.Reverb.DecayTime,
-                    Slot->EffectProps.Reverb.Diffusion, hfRatio, cw, frequency, State);
+    UpdateLateLines(props->Reverb.Gain, props->Reverb.LateReverbGain, x,
+                    props->Reverb.Density, props->Reverb.DecayTime,
+                    props->Reverb.Diffusion, hfRatio, cw, frequency, State);
 
-    if(State->IsEax)
-    {
-        // Update the echo line.
-        UpdateEchoLine(Slot->EffectProps.Reverb.Gain, Slot->EffectProps.Reverb.LateReverbGain,
-                       Slot->EffectProps.Reverb.EchoTime, Slot->EffectProps.Reverb.DecayTime,
-                       Slot->EffectProps.Reverb.Diffusion, Slot->EffectProps.Reverb.EchoDepth,
-                       hfRatio, cw, frequency, State);
+    // Update the echo line.
+    UpdateEchoLine(props->Reverb.Gain, props->Reverb.LateReverbGain,
+                   props->Reverb.EchoTime, props->Reverb.DecayTime,
+                   props->Reverb.Diffusion, props->Reverb.EchoDepth,
+                   hfRatio, cw, frequency, State);
 
-        // Update early and late 3D panning.
-        Update3DPanning(Device, Slot->EffectProps.Reverb.ReflectionsPan,
-                        Slot->EffectProps.Reverb.LateReverbPan,
-                        Slot->Gain * ReverbBoost, State);
-    }
-    else
-    {
-        /* Update channel gains */
-        ComputeAmbientGains(Device, Slot->Gain*1.4142f, State->Gain);
-    }
+    // Update early and late 3D panning.
+    Update3DPanning(Device, props->Reverb.ReflectionsPan,
+                    props->Reverb.LateReverbPan,
+                    Slot->Gain * ReverbBoost, State);
 }
 
 

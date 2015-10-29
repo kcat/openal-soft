@@ -47,6 +47,8 @@ openal-soft-1.17.0:
 
     Improved support for building as a sub-project.
 
+    Added an HRTF playback example.
+
     Added a tone generator output test.
 
     Added a toolchain to help with cross-compiling to Android.

@@ -1233,6 +1233,11 @@ IF(ALSOFT_EXAMPLES)
         SET_PROPERTY(TARGET alloopback APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
                                                                            ${SDL_SOUND_INCLUDE_DIR})
 
+        ADD_EXECUTABLE(alhrtf examples/alhrtf.c)
+        TARGET_LINK_LIBRARIES(alhrtf ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ${LIBNAME})
+        SET_PROPERTY(TARGET alhrtf APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
+                                                                       ${SDL_SOUND_INCLUDE_DIR})
+
         IF(ALSOFT_INSTALL)
             INSTALL(TARGETS alstream alreverb allatency alloopback
                     RUNTIME DESTINATION bin

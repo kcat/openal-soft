@@ -152,8 +152,8 @@ typedef struct ALreverbState {
         ALfloat   LpCoeff;
         ALfloat   LpSample;
 
-        // Echo mixing coefficients.
-        ALfloat   MixCoeff[2];
+        // Echo mixing coefficient.
+        ALfloat   MixCoeff;
     } Echo;
 
     // The current read offset for all delay lines.
@@ -464,11 +464,11 @@ static inline ALvoid EAXEcho(ALreverbState *State, ALuint todo, ALfloat (*restri
                State->Echo.Coeff;
 
         // Mix the output into the late reverb channels.
-        out = State->Echo.MixCoeff[0] * feed;
-        late[i][0] = (State->Echo.MixCoeff[1] * late[i][0]) + out;
-        late[i][1] = (State->Echo.MixCoeff[1] * late[i][1]) + out;
-        late[i][2] = (State->Echo.MixCoeff[1] * late[i][2]) + out;
-        late[i][3] = (State->Echo.MixCoeff[1] * late[i][3]) + out;
+        out = State->Echo.MixCoeff * feed;
+        late[i][0] += out;
+        late[i][1] += out;
+        late[i][2] += out;
+        late[i][3] += out;
 
         // Mix the energy-attenuated input with the output and pass it through
         // the echo low-pass filter.
@@ -962,7 +962,7 @@ static ALvoid UpdateDecorrelator(ALfloat density, ALuint frequency, ALreverbStat
 }
 
 // Update the late reverb gains, line lengths, and line coefficients.
-static ALvoid UpdateLateLines(ALfloat reverbGain, ALfloat lateGain, ALfloat xMix, ALfloat density, ALfloat decayTime, ALfloat diffusion, ALfloat hfRatio, ALfloat cw, ALuint frequency, ALreverbState *State)
+static ALvoid UpdateLateLines(ALfloat reverbGain, ALfloat lateGain, ALfloat xMix, ALfloat density, ALfloat decayTime, ALfloat diffusion, ALfloat echoDepth, ALfloat hfRatio, ALfloat cw, ALuint frequency, ALreverbState *State)
 {
     ALfloat length;
     ALuint index;
@@ -970,9 +970,13 @@ static ALvoid UpdateLateLines(ALfloat reverbGain, ALfloat lateGain, ALfloat xMix
     /* Calculate the late reverb gain (from the master effect gain, and late
      * reverb gain parameters).  Since the output is tapped prior to the
      * application of the next delay line coefficients, this gain needs to be
-     * attenuated by the 'x' mixing matrix coefficient as well.
+     * attenuated by the 'x' mixing matrix coefficient as well.  Also attenuate
+     * the late reverb when echo depth is high and diffusion is low, so the
+     * echo is slightly stronger than the decorrelated echos in the reverb
+     * tail.
      */
-    State->Late.Gain = reverbGain * lateGain * xMix;
+    State->Late.Gain = reverbGain * lateGain * xMix *
+                       (1.0f - (echoDepth*0.5f*(1.0f - diffusion)));
 
     /* To compensate for changes in modal density and decay time of the late
      * reverb signal, the input is attenuated based on the maximal energy of
@@ -985,8 +989,9 @@ static ALvoid UpdateLateLines(ALfloat reverbGain, ALfloat lateGain, ALfloat xMix
     length = (LATE_LINE_LENGTH[0] + LATE_LINE_LENGTH[1] +
               LATE_LINE_LENGTH[2] + LATE_LINE_LENGTH[3]) / 4.0f;
     length *= 1.0f + (density * LATE_LINE_MULTIPLIER);
-    State->Late.DensityGain = CalcDensityGain(CalcDecayCoeff(length,
-                                                             decayTime));
+    State->Late.DensityGain = CalcDensityGain(
+        CalcDecayCoeff(length, decayTime)
+    );
 
     // Calculate the all-pass feed-back and feed-forward coefficient.
     State->Late.ApFeedCoeff = 0.5f * powf(diffusion, 2.0f);
@@ -994,12 +999,13 @@ static ALvoid UpdateLateLines(ALfloat reverbGain, ALfloat lateGain, ALfloat xMix
     for(index = 0;index < 4;index++)
     {
         // Calculate the gain (coefficient) for each all-pass line.
-        State->Late.ApCoeff[index] = CalcDecayCoeff(ALLPASS_LINE_LENGTH[index],
-                                                    decayTime);
+        State->Late.ApCoeff[index] = CalcDecayCoeff(
+            ALLPASS_LINE_LENGTH[index], decayTime
+        );
 
         // Calculate the length (in seconds) of each cyclical delay line.
-        length = LATE_LINE_LENGTH[index] * (1.0f + (density *
-                                                    LATE_LINE_MULTIPLIER));
+        length = LATE_LINE_LENGTH[index] *
+                 (1.0f + (density * LATE_LINE_MULTIPLIER));
 
         // Calculate the delay offset for each cyclical delay line.
         State->Late.Offset[index] = fastf2u(length * frequency);
@@ -1008,9 +1014,9 @@ static ALvoid UpdateLateLines(ALfloat reverbGain, ALfloat lateGain, ALfloat xMix
         State->Late.Coeff[index] = CalcDecayCoeff(length, decayTime);
 
         // Calculate the damping coefficient for each low-pass filter.
-        State->Late.LpCoeff[index] =
-            CalcDampingCoeff(hfRatio, length, decayTime,
-                             State->Late.Coeff[index], cw);
+        State->Late.LpCoeff[index] = CalcDampingCoeff(
+            hfRatio, length, decayTime, State->Late.Coeff[index], cw
+        );
 
         // Attenuate the cyclical line coefficients by the mixing coefficient
         // (x).
@@ -1047,8 +1053,7 @@ static ALvoid UpdateEchoLine(ALfloat reverbGain, ALfloat lateGain, ALfloat echoT
      * echo depth is high and diffusion is low, so the echo is slightly
      * stronger than the decorrelated echos in the reverb tail.
      */
-    State->Echo.MixCoeff[0] = reverbGain * lateGain * echoDepth;
-    State->Echo.MixCoeff[1] = 1.0f - (echoDepth * 0.5f * (1.0f - diffusion));
+    State->Echo.MixCoeff = reverbGain * lateGain * echoDepth;
 }
 
 // Update the early and late 3D panning gains.
@@ -1156,7 +1161,8 @@ static ALvoid ALreverbState_update(ALreverbState *State, ALCdevice *Device, cons
     // Update the late lines.
     UpdateLateLines(props->Reverb.Gain, props->Reverb.LateReverbGain, x,
                     props->Reverb.Density, props->Reverb.DecayTime,
-                    props->Reverb.Diffusion, hfRatio, cw, frequency, State);
+                    props->Reverb.Diffusion, props->Reverb.EchoDepth,
+                    hfRatio, cw, frequency, State);
 
     // Update the echo line.
     UpdateEchoLine(props->Reverb.Gain, props->Reverb.LateReverbGain,
@@ -1267,8 +1273,7 @@ static ALeffectState *ALreverbStateFactory_create(ALreverbStateFactory* UNUSED(f
     state->Echo.ApOffset = 0;
     state->Echo.LpCoeff = 0.0f;
     state->Echo.LpSample = 0.0f;
-    state->Echo.MixCoeff[0] = 0.0f;
-    state->Echo.MixCoeff[1] = 0.0f;
+    state->Echo.MixCoeff = 0.0f;
 
     state->Offset = 0;
 

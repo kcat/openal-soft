@@ -34,7 +34,7 @@
 
 /* This is the maximum number of samples processed for each inner loop
  * iteration. */
-#define MAX_UPDATE_SAMPLES  64
+#define MAX_UPDATE_SAMPLES  256
 
 typedef struct DelayLine
 {
@@ -648,7 +648,8 @@ static ALuint CalcLineLength(ALfloat length, ptrdiff_t offset, ALuint frequency,
 
     // All line lengths are powers of 2, calculated from their lengths, with
     // an additional sample in case of rounding errors.
-    samples = NextPowerOf2(fastf2u(length * frequency)+extra + 1);
+    samples = fastf2u(length*frequency) + extra;
+    samples = NextPowerOf2(samples + 1);
     // All lines share a single sample buffer.
     Delay->Mask = samples - 1;
     Delay->Line = (ALfloat*)offset;

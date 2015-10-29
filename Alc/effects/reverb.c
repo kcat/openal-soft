@@ -163,9 +163,9 @@ typedef struct ALreverbState {
     // Late.PanGain)
     ALfloat *Gain;
 
-    /* Temporary storage used when processing, before deinterlacing. */
-    ALfloat ReverbSamples[BUFFERSIZE][4];
-    ALfloat EarlySamples[BUFFERSIZE][4];
+    /* Temporary storage used when processing. */
+    ALfloat ReverbSamples[MAX_UPDATE_SAMPLES][4];
+    ALfloat EarlySamples[MAX_UPDATE_SAMPLES][4];
 } ALreverbState;
 
 /* This is a user config option for modifying the overall output of the reverb
@@ -321,10 +321,10 @@ static inline ALvoid EarlyReflection(ALreverbState *State, ALuint todo, ALfloat 
         DelayLineIn(&State->Early.Delay[3], offset, f[3]);
 
         // Output the results of the junction for all four channels.
-        out[i][0] += State->Early.Gain * f[0];
-        out[i][1] += State->Early.Gain * f[1];
-        out[i][2] += State->Early.Gain * f[2];
-        out[i][3] += State->Early.Gain * f[3];
+        out[i][0] = State->Early.Gain * f[0];
+        out[i][1] = State->Early.Gain * f[1];
+        out[i][2] = State->Early.Gain * f[2];
+        out[i][3] = State->Early.Gain * f[3];
     }
 }
 
@@ -553,6 +553,7 @@ static inline ALvoid EAXVerbPass(ALreverbState *State, ALuint todo, const ALfloa
     }
 
     // Calculate the late reverb from the decorrelator taps.
+    memset(late, 0, sizeof(*late)*todo);
     LateReverb(State, todo, late);
 
     // Calculate and mix in any echo.
@@ -565,27 +566,27 @@ static inline ALvoid EAXVerbPass(ALreverbState *State, ALuint todo, const ALfloa
 static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     ALfloat (*restrict out)[4] = State->ReverbSamples;
-    ALuint index, c;
+    ALuint index, c, i;
 
     memset(out, 0, SamplesToDo*4*sizeof(ALfloat));
 
     /* Process reverb for these samples. */
     for(index = 0;index < SamplesToDo;)
     {
-        ALfloat todo = minu(SamplesToDo, MAX_UPDATE_SAMPLES);
+        ALuint todo = minu(SamplesToDo-index, MAX_UPDATE_SAMPLES);
 
-        VerbPass(State, todo, SamplesIn+index, out+index);
+        VerbPass(State, todo, &SamplesIn[index], out);
+
+        for(c = 0;c < NumChannels;c++)
+        {
+            ALfloat gain = State->Gain[c];
+            if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
+                continue;
+            for(i = 0;i < todo;i++)
+                SamplesOut[c][index+i] += gain*out[i][c&3];
+        }
+
         index += todo;
-    }
-
-    for(c = 0;c < NumChannels;c++)
-    {
-        ALfloat gain = State->Gain[c];
-        if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
-            continue;
-
-        for(index = 0;index < SamplesToDo;index++)
-            SamplesOut[c][index] += gain * out[index][c&3];
     }
 }
 
@@ -593,36 +594,33 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo,
 {
     ALfloat (*restrict early)[4] = State->EarlySamples;
     ALfloat (*restrict late)[4] = State->ReverbSamples;
-    ALuint index, c;
-
-    memset(early, 0, SamplesToDo*4*sizeof(ALfloat));
-    memset(late, 0, SamplesToDo*4*sizeof(ALfloat));
+    ALuint index, c, i;
+    ALfloat gain;
 
     /* Process reverb for these samples. */
     for(index = 0;index < SamplesToDo;)
     {
-        ALfloat todo = minu(SamplesToDo, MAX_UPDATE_SAMPLES);
+        ALuint todo = minu(SamplesToDo-index, MAX_UPDATE_SAMPLES);
 
-        EAXVerbPass(State, todo, SamplesIn+index, early+index, late+index);
+        EAXVerbPass(State, todo, &SamplesIn[index], early, late);
+
+        for(c = 0;c < NumChannels;c++)
+        {
+            gain = State->Early.PanGain[c];
+            if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
+            {
+                for(i = 0;i < todo;i++)
+                    SamplesOut[c][index+i] += gain*early[i][c&3];
+            }
+            gain = State->Late.PanGain[c];
+            if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
+            {
+                for(i = 0;i < todo;i++)
+                    SamplesOut[c][index+i] += gain*late[i][c&3];
+            }
+        }
+
         index += todo;
-    }
-
-    for(c = 0;c < NumChannels;c++)
-    {
-        ALfloat earlyGain, lateGain;
-
-        earlyGain = State->Early.PanGain[c];
-        if(fabsf(earlyGain) > GAIN_SILENCE_THRESHOLD)
-        {
-            for(index = 0;index < SamplesToDo;index++)
-                SamplesOut[c][index] += earlyGain*early[index][c&3];
-        }
-        lateGain = State->Late.PanGain[c];
-        if(fabsf(lateGain) > GAIN_SILENCE_THRESHOLD)
-        {
-            for(index = 0;index < SamplesToDo;index++)
-                SamplesOut[c][index] += lateGain*late[index][c&3];
-        }
     }
 }
 

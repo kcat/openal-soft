@@ -1223,39 +1223,27 @@ static void alc_deinit(void)
 /************************************************
  * Device enumeration
  ************************************************/
-static void ProbeDevices(al_string *list, enum DevProbe type)
+static void ProbeDevices(al_string *list, struct BackendInfo *backendinfo, enum DevProbe type)
 {
     DO_INITCONFIG();
 
     LockLists();
     al_string_clear(list);
 
-    if(type == ALL_DEVICE_PROBE && (PlaybackBackend.Probe || PlaybackBackend.getFactory))
+    if(!backendinfo->getFactory)
+        backendinfo->Probe(type);
+    else
     {
-        if(!PlaybackBackend.getFactory)
-            PlaybackBackend.Probe(type);
-        else
-        {
-            ALCbackendFactory *factory = PlaybackBackend.getFactory();
-            V(factory,probe)(type);
-        }
+        ALCbackendFactory *factory = backendinfo->getFactory();
+        V(factory,probe)(type);
     }
-    else if(type == CAPTURE_DEVICE_PROBE && (CaptureBackend.Probe || CaptureBackend.getFactory))
-    {
-        if(!CaptureBackend.getFactory)
-            CaptureBackend.Probe(type);
-        else
-        {
-            ALCbackendFactory *factory = CaptureBackend.getFactory();
-            V(factory,probe)(type);
-        }
-    }
+
     UnlockLists();
 }
 static void ProbeAllDevicesList(void)
-{ ProbeDevices(&alcAllDevicesList, ALL_DEVICE_PROBE); }
+{ ProbeDevices(&alcAllDevicesList, &PlaybackBackend, ALL_DEVICE_PROBE); }
 static void ProbeCaptureDeviceList(void)
-{ ProbeDevices(&alcCaptureDeviceList, CAPTURE_DEVICE_PROBE); }
+{ ProbeDevices(&alcCaptureDeviceList, &CaptureBackend, CAPTURE_DEVICE_PROBE); }
 
 static void AppendDevice(const ALCchar *name, al_string *devnames)
 {

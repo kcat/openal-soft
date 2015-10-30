@@ -80,6 +80,9 @@
 /* Define if we have the lrintf function */
 #cmakedefine HAVE_LRINTF
 
+/* Define if we have the modff function */
+#cmakedefine HAVE_MODFF
+
 /* Define if we have the strtof function */
 #cmakedefine HAVE_STRTOF
 

@@ -242,7 +242,7 @@ static inline ALvoid DelayLineIn(DelayLine *Delay, ALuint offset, ALfloat in)
 // reverb.
 static inline ALfloat EAXModulation(ALreverbState *State, ALuint offset, ALfloat in)
 {
-    ALfloat sinus, frac;
+    ALfloat sinus, frac, fdelay;
     ALfloat out0, out1;
     ALuint delay;
 
@@ -261,9 +261,8 @@ static inline ALfloat EAXModulation(ALreverbState *State, ALuint offset, ALfloat
                              State->Mod.Coeff);
 
     // Calculate the read offset and fraction between it and the next sample.
-    frac  = (1.0f + (State->Mod.Filter * sinus));
-    delay = fastf2u(frac);
-    frac -= delay;
+    frac = modff(State->Mod.Filter*sinus + 1.0f, &fdelay);
+    delay = fastf2u(fdelay);
 
     // Get the two samples crossed by the offset, and feed the delay line
     // with the next input sample.

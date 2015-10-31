@@ -52,6 +52,7 @@ enum WaveType {
     WT_Square,
     WT_Sawtooth,
     WT_Triangle,
+    WT_Impulse,
 };
 
 static const char *GetWaveTypeName(enum WaveType type)
@@ -62,6 +63,7 @@ static const char *GetWaveTypeName(enum WaveType type)
         case WT_Square: return "square";
         case WT_Sawtooth: return "sawtooth";
         case WT_Triangle: return "triangle";
+        case WT_Impulse: return "impulse";
     }
     return "(unknown)";
 }
@@ -98,6 +100,15 @@ static ALuint CreateWave(enum WaveType type, ALuint freq, ALuint srate)
     else if(type == WT_Triangle)
         for(i = 1;freq*i < srate/2;i+=2)
             ApplySin(data, 8.0/(M_PI*M_PI) * (1.0 - (i&2)) / (i*i), srate, freq*i);
+    else if(type == WT_Impulse)
+    {
+        /* NOTE: Impulse isn't really a waveform, but it can still be useful to
+         * test (other than resampling, the ALSOFT_DEFAULT_REVERB environment
+         * variable can prove useful here to test the reverb response).
+         */
+        for(i = 0;i < srate;i++)
+            data[i] = (i%(srate/freq)) ? 0.0f : 1.0f;
+    }
 
     /* Buffer the audio data into a new buffer object. */
     buffer = 0;
@@ -143,7 +154,7 @@ int main(int argc, char *argv[])
 "  --help/-h                 This help text\n"
 "  -t <seconds>              Time to play a tone (default 5 seconds)\n"
 "  --waveform/-w <type>      Waveform type: sine (default), square, sawtooth,\n"
-"                                triangle\n"
+"                                triangle, impulse\n"
 "  --freq/-f <hz>            Tone frequency (default 1000 hz)\n"
 "  --srate/-s <sample rate>  Sampling rate (default output rate)\n",
                 argv[0]
@@ -166,6 +177,8 @@ int main(int argc, char *argv[])
                 wavetype = WT_Sawtooth;
             else if(strcmp(argv[i], "triangle") == 0)
                 wavetype = WT_Triangle;
+            else if(strcmp(argv[i], "impulse") == 0)
+                wavetype = WT_Impulse;
             else
                 fprintf(stderr, "Unhandled waveform: %s\n", argv[i]);
         }
@@ -173,10 +186,10 @@ int main(int argc, char *argv[])
         {
             i++;
             tone_freq = atoi(argv[i]);
-            if(tone_freq < 20)
+            if(tone_freq < 1)
             {
-                fprintf(stderr, "Invalid tone frequency: %s (min: 20hz)\n", argv[i]);
-                tone_freq = 20;
+                fprintf(stderr, "Invalid tone frequency: %s (min: 1hz)\n", argv[i]);
+                tone_freq = 1;
             }
         }
         else if(i+1 < argc && (strcmp(argv[i], "--srate") == 0 || strcmp(argv[i], "-s") == 0))

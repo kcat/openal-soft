@@ -137,7 +137,7 @@ typedef struct SendParams {
         ALfilterState HighPass;
     } Filters[MAX_INPUT_CHANNELS];
 
-    /* Gain control, which applies to all input channels to a single (mono)
+    /* Gain control, which applies to each input channel to a single (mono)
      * output buffer. */
     MixGains Gains[MAX_INPUT_CHANNELS];
 } SendParams;

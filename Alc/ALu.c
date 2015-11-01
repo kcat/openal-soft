@@ -667,18 +667,20 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     {
         ALfloat hfscale = ALSource->Direct.HFReference / Frequency;
         ALfloat lfscale = ALSource->Direct.LFReference / Frequency;
+        DryGainHF = maxf(DryGainHF, 0.0001f);
+        DryGainLF = maxf(DryGainLF, 0.0001f);
         for(c = 0;c < num_channels;c++)
         {
             voice->Direct.Filters[c].ActiveType = AF_None;
             if(DryGainHF != 1.0f) voice->Direct.Filters[c].ActiveType |= AF_LowPass;
             if(DryGainLF != 1.0f) voice->Direct.Filters[c].ActiveType |= AF_HighPass;
             ALfilterState_setParams(
-                &voice->Direct.Filters[c].LowPass, ALfilterType_HighShelf, DryGainHF,
-                hfscale, 0.0f
+                &voice->Direct.Filters[c].LowPass, ALfilterType_HighShelf,
+                DryGainHF, hfscale, calc_rcpQ_from_slope(DryGainHF, 0.75f)
             );
             ALfilterState_setParams(
-                &voice->Direct.Filters[c].HighPass, ALfilterType_LowShelf, DryGainLF,
-                lfscale, 0.0f
+                &voice->Direct.Filters[c].HighPass, ALfilterType_LowShelf,
+                DryGainLF, lfscale, calc_rcpQ_from_slope(DryGainLF, 0.75f)
             );
         }
     }
@@ -686,18 +688,20 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     {
         ALfloat hfscale = ALSource->Send[i].HFReference / Frequency;
         ALfloat lfscale = ALSource->Send[i].LFReference / Frequency;
+        WetGainHF[i] = maxf(WetGainHF[i], 0.0001f);
+        WetGainLF[i] = maxf(WetGainLF[i], 0.0001f);
         for(c = 0;c < num_channels;c++)
         {
             voice->Send[i].Filters[c].ActiveType = AF_None;
             if(WetGainHF[i] != 1.0f) voice->Send[i].Filters[c].ActiveType |= AF_LowPass;
             if(WetGainLF[i] != 1.0f) voice->Send[i].Filters[c].ActiveType |= AF_HighPass;
             ALfilterState_setParams(
-                &voice->Send[i].Filters[c].LowPass, ALfilterType_HighShelf, WetGainHF[i],
-                hfscale, 0.0f
+                &voice->Send[i].Filters[c].LowPass, ALfilterType_HighShelf,
+                WetGainHF[i], hfscale, calc_rcpQ_from_slope(WetGainHF[i], 0.75f)
             );
             ALfilterState_setParams(
-                &voice->Send[i].Filters[c].HighPass, ALfilterType_LowShelf, WetGainLF[i],
-                lfscale, 0.0f
+                &voice->Send[i].Filters[c].HighPass, ALfilterType_LowShelf,
+                WetGainLF[i], lfscale, calc_rcpQ_from_slope(WetGainLF[i], 0.75f)
             );
         }
     }
@@ -1139,32 +1143,36 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     {
         ALfloat hfscale = ALSource->Direct.HFReference / Frequency;
         ALfloat lfscale = ALSource->Direct.LFReference / Frequency;
+        DryGainHF = maxf(DryGainHF, 0.0001f);
+        DryGainLF = maxf(DryGainLF, 0.0001f);
         voice->Direct.Filters[0].ActiveType = AF_None;
         if(DryGainHF != 1.0f) voice->Direct.Filters[0].ActiveType |= AF_LowPass;
         if(DryGainLF != 1.0f) voice->Direct.Filters[0].ActiveType |= AF_HighPass;
         ALfilterState_setParams(
-            &voice->Direct.Filters[0].LowPass, ALfilterType_HighShelf, DryGainHF,
-            hfscale, 0.0f
+            &voice->Direct.Filters[0].LowPass, ALfilterType_HighShelf,
+            DryGainHF, hfscale, calc_rcpQ_from_slope(DryGainHF, 0.75f)
         );
         ALfilterState_setParams(
-            &voice->Direct.Filters[0].HighPass, ALfilterType_LowShelf, DryGainLF,
-            lfscale, 0.0f
+            &voice->Direct.Filters[0].HighPass, ALfilterType_LowShelf,
+            DryGainLF, lfscale, calc_rcpQ_from_slope(DryGainLF, 0.75f)
         );
     }
     for(i = 0;i < NumSends;i++)
     {
         ALfloat hfscale = ALSource->Send[i].HFReference / Frequency;
         ALfloat lfscale = ALSource->Send[i].LFReference / Frequency;
+        WetGainHF[i] = maxf(WetGainHF[i], 0.0001f);
+        WetGainLF[i] = maxf(WetGainLF[i], 0.0001f);
         voice->Send[i].Filters[0].ActiveType = AF_None;
         if(WetGainHF[i] != 1.0f) voice->Send[i].Filters[0].ActiveType |= AF_LowPass;
         if(WetGainLF[i] != 1.0f) voice->Send[i].Filters[0].ActiveType |= AF_HighPass;
         ALfilterState_setParams(
-            &voice->Send[i].Filters[0].LowPass, ALfilterType_HighShelf, WetGainHF[i],
-            hfscale, 0.0f
+            &voice->Send[i].Filters[0].LowPass, ALfilterType_HighShelf,
+            WetGainHF[i], hfscale, calc_rcpQ_from_slope(WetGainHF[i], 0.75f)
         );
         ALfilterState_setParams(
-            &voice->Send[i].Filters[0].HighPass, ALfilterType_LowShelf, WetGainLF[i],
-            lfscale, 0.0f
+            &voice->Send[i].Filters[0].HighPass, ALfilterType_LowShelf,
+            WetGainLF[i], lfscale, calc_rcpQ_from_slope(WetGainLF[i], 0.75f)
         );
     }
 }

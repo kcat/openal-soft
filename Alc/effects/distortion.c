@@ -72,14 +72,16 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, ALCdevice *Devi
     /* Bandwidth value is constant in octaves */
     bandwidth = (cutoff / 2.0f) / (cutoff * 0.67f);
     ALfilterState_setParams(&state->lowpass, ALfilterType_LowPass, 1.0f,
-                            cutoff / (frequency*4.0f), bandwidth);
+        cutoff / (frequency*4.0f), calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
+    );
 
     /* Bandpass filter */
     cutoff = Slot->EffectProps.Distortion.EQCenter;
     /* Convert bandwidth in Hz to octaves */
     bandwidth = Slot->EffectProps.Distortion.EQBandwidth / (cutoff * 0.67f);
     ALfilterState_setParams(&state->bandpass, ALfilterType_BandPass, 1.0f,
-                            cutoff / (frequency*4.0f), bandwidth);
+        cutoff / (frequency*4.0f), calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
+    );
 
     ComputeAmbientGains(Device, Slot->Gain, state->Gain);
 }

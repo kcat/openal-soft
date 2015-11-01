@@ -1112,6 +1112,7 @@ static ALvoid ALreverbState_update(ALreverbState *State, ALCdevice *Device, cons
     const ALeffectProps *props = &Slot->EffectProps;
     ALuint frequency = Device->Frequency;
     ALfloat lfscale, hfscale, hfRatio;
+    ALfloat gainlf, gainhf;
     ALfloat cw, x, y;
 
     if(Slot->EffectType == AL_EFFECT_EAXREVERB && !EmulateEAXReverb)
@@ -1121,11 +1122,13 @@ static ALvoid ALreverbState_update(ALreverbState *State, ALCdevice *Device, cons
 
     // Calculate the master filters
     hfscale = props->Reverb.HFReference / frequency;
+    gainhf = maxf(props->Reverb.GainHF, 0.0001f);
     ALfilterState_setParams(&State->LpFilter, ALfilterType_HighShelf,
-                            props->Reverb.GainHF, hfscale, 0.0f);
+                            gainhf, hfscale, calc_rcpQ_from_slope(gainhf, 0.75f));
     lfscale = props->Reverb.LFReference / frequency;
+    gainlf = maxf(props->Reverb.GainLF, 0.0001f);
     ALfilterState_setParams(&State->HpFilter, ALfilterType_LowShelf,
-                            props->Reverb.GainLF, lfscale, 0.0f);
+                            gainlf, lfscale, calc_rcpQ_from_slope(gainlf, 0.75f));
 
     // Update the modulator line.
     UpdateModulator(props->Reverb.ModulationTime, props->Reverb.ModulationDepth,

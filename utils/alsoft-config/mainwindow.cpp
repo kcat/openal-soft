@@ -89,8 +89,8 @@ static const struct {
     { "Default", "" },
     { "Point (low quality, fast)", "point" },
     { "Linear (basic quality, fast)", "linear" },
-    { "Sinc-Lanczos 4pt (good quality)", "sinc4" },
-    { "Sinc-Lanczos 8pt (high quality, slow)", "sinc8" },
+    { "4-Point Sinc (good quality)", "sinc4" },
+    { "8-Point Sinc (high quality, slow)", "sinc8" },
 
     { "", "" }
 }, stereoModeList[] = {
@@ -355,7 +355,7 @@ void MainWindow::loadConfig(const QString &fname)
     if(resampler.isEmpty() == false)
     {
         /* The "cubic" resampler is no longer supported. It's been replaced by
-         * "sinc4" (4-point Sinc-Lanczos). */
+         * "sinc4". */
         if(resampler == "cubic")
             resampler = "sinc4";
 

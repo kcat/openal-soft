@@ -133,16 +133,86 @@ static inline ResamplerFunc SelectResampler(enum Resampler resampler)
     return Resample_point32_C;
 }
 
+
+/* The sinc resampler makes use of a Kaiser window to limit the needed sample
+ * points to 4 and 8, respectively.
+ */
+
 #ifndef M_PI
 #define M_PI                         (3.14159265358979323846)
 #endif
-static float lanc(double r, double x)
+static inline double Sinc(double x)
 {
-    if(x == 0.0) return 1.0f;
-    if(fabs(x) >= r) return 0.0f;
-    return (float)(r*sin(x*M_PI)*sin(x*M_PI/r) /
-                   (M_PI*M_PI * x*x));
+    if(x == 0.0) return 1.0;
+    return sin(x*M_PI) / (x*M_PI);
 }
+
+/* The zero-order modified Bessel function of the first kind, used for the
+ * Kaiser window.
+ *
+ *   I_0(x) = sum_{k=0}^inf (1 / k!)^2 (x / 2)^(2 k)
+ *          = sum_{k=0}^inf ((x / 2)^k / k!)^2
+ */
+static double BesselI_0(double x)
+{
+    double term, sum, x2, y, last_sum;
+    int k;
+
+    /* Start at k=1 since k=0 is trivial. */
+    term = 1.0;
+    sum = 1.0;
+    x2 = x / 2.0;
+    k = 1;
+
+    /* Let the integration converge until the term of the sum is no longer
+     * significant.
+     */
+    do {
+        y = x2 / k;
+        k ++;
+        last_sum = sum;
+        term *= y * y;
+        sum += term;
+    } while(sum != last_sum);
+    return sum;
+}
+
+/* Calculate a Kaiser window from the given beta value and a normalized k
+ * [-1, 1].
+ *
+ *   w(k) = { I_0(B sqrt(1 - k^2)) / I_0(B),  -1 <= k <= 1
+ *          { 0,                              elsewhere.
+ *
+ * Where k can be calculated as:
+ *
+ *   k = i / l,         where -l <= i <= l.
+ *
+ * or:
+ *
+ *   k = 2 i / M - 1,   where 0 <= i <= M.
+ */
+static inline double Kaiser(double b, double k)
+{
+    if(k <= -1.0 || k >= 1.0) return 0.0;
+    return BesselI_0(b * sqrt(1.0 - (k*k))) / BesselI_0(b);
+}
+
+static inline double CalcKaiserBeta(double rejection)
+{
+    if(rejection > 50.0)
+        return 0.1102 * (rejection - 8.7);
+    if(rejection >= 21.0)
+        return (0.5842 * pow(rejection - 21.0, 0.4)) +
+               (0.07886 * (rejection - 21.0));
+    return 0.0;
+}
+
+static float SincKaiser(double r, double x)
+{
+    /* Limit rippling to -90dB. */
+    return Kaiser(CalcKaiserBeta(90.0), x / r) * Sinc(x);
+}
+
 
 void aluInitMixer(void)
 {
@@ -180,23 +250,23 @@ void aluInitMixer(void)
         for(i = 0;i < FRACTIONONE;i++)
         {
             ALdouble mu = (ALdouble)i / FRACTIONONE;
-            ResampleCoeffs.FIR8[i][0] = lanc(4.0, mu - -3.0);
-            ResampleCoeffs.FIR8[i][1] = lanc(4.0, mu - -2.0);
-            ResampleCoeffs.FIR8[i][2] = lanc(4.0, mu - -1.0);
-            ResampleCoeffs.FIR8[i][3] = lanc(4.0, mu -  0.0);
-            ResampleCoeffs.FIR8[i][4] = lanc(4.0, mu -  1.0);
-            ResampleCoeffs.FIR8[i][5] = lanc(4.0, mu -  2.0);
-            ResampleCoeffs.FIR8[i][6] = lanc(4.0, mu -  3.0);
-            ResampleCoeffs.FIR8[i][7] = lanc(4.0, mu -  4.0);
+            ResampleCoeffs.FIR8[i][0] = SincKaiser(4.0, mu - -3.0);
+            ResampleCoeffs.FIR8[i][1] = SincKaiser(4.0, mu - -2.0);
+            ResampleCoeffs.FIR8[i][2] = SincKaiser(4.0, mu - -1.0);
+            ResampleCoeffs.FIR8[i][3] = SincKaiser(4.0, mu -  0.0);
+            ResampleCoeffs.FIR8[i][4] = SincKaiser(4.0, mu -  1.0);
+            ResampleCoeffs.FIR8[i][5] = SincKaiser(4.0, mu -  2.0);
+            ResampleCoeffs.FIR8[i][6] = SincKaiser(4.0, mu -  3.0);
+            ResampleCoeffs.FIR8[i][7] = SincKaiser(4.0, mu -  4.0);
         }
     else if(resampler == FIR4Resampler)
         for(i = 0;i < FRACTIONONE;i++)
         {
             ALdouble mu = (ALdouble)i / FRACTIONONE;
-            ResampleCoeffs.FIR4[i][0] = lanc(2.0, mu - -1.0);
-            ResampleCoeffs.FIR4[i][1] = lanc(2.0, mu -  0.0);
-            ResampleCoeffs.FIR4[i][2] = lanc(2.0, mu -  1.0);
-            ResampleCoeffs.FIR4[i][3] = lanc(2.0, mu -  2.0);
+            ResampleCoeffs.FIR4[i][0] = SincKaiser(2.0, mu - -1.0);
+            ResampleCoeffs.FIR4[i][1] = SincKaiser(2.0, mu -  0.0);
+            ResampleCoeffs.FIR4[i][2] = SincKaiser(2.0, mu -  1.0);
+            ResampleCoeffs.FIR4[i][3] = SincKaiser(2.0, mu -  2.0);
         }
 
     MixHrtfSamples = SelectHrtfMixer();

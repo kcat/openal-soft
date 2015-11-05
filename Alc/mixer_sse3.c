@@ -31,7 +31,7 @@
 #include "mixer_defs.h"
 
 
-const ALfloat *Resample_fir4_32_SSE3(const ALfloat *src, ALuint frac, ALuint increment,
+const ALfloat *Resample_fir4_32_SSE3(const BsincState* UNUSED(state), const ALfloat *src, ALuint frac, ALuint increment,
                                      ALfloat *restrict dst, ALuint numsamples)
 {
     const __m128i increment4 = _mm_set1_epi32(increment*4);
@@ -95,7 +95,7 @@ const ALfloat *Resample_fir4_32_SSE3(const ALfloat *src, ALuint frac, ALuint inc
     return dst;
 }
 
-const ALfloat *Resample_fir8_32_SSE3(const ALfloat *src, ALuint frac, ALuint increment,
+const ALfloat *Resample_fir8_32_SSE3(const BsincState* UNUSED(state), const ALfloat *src, ALuint frac, ALuint increment,
                                      ALfloat *restrict dst, ALuint numsamples)
 {
     const __m128i increment4 = _mm_set1_epi32(increment*4);

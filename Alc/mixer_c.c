@@ -17,7 +17,41 @@ static inline ALfloat fir4_32(const ALfloat *vals, ALuint frac)
 static inline ALfloat fir8_32(const ALfloat *vals, ALuint frac)
 { return resample_fir8(vals[-3], vals[-2], vals[-1], vals[0], vals[1], vals[2], vals[3], vals[4], frac); }
 
-const ALfloat *Resample_copy32_C(const ALfloat *src, ALuint UNUSED(frac),
+// Obtain the next sample from the interpolator.
+
+static inline ALfloat bsinc32(const BsincState *state, const ALfloat *vals, const ALuint frac)
+{
+    const ALfloat sf = state->sf;
+    ALfloat pf, r;
+    ALuint pi;
+
+    // Calculate the phase index and factor.
+#define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
+    pi = frac >> FRAC_PHASE_BITDIFF;
+    pf = (frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF));
+#undef FRAC_PHASE_BITDIFF
+
+    r = 0.0f;
+    {
+        const ALuint m = state->m;
+        const ALint l = state->l;
+        const ALfloat *fil = state->coeffs[pi].filter;
+        const ALfloat *scd = state->coeffs[pi].scDelta;
+        const ALfloat *phd = state->coeffs[pi].phDelta;
+        const ALfloat *spd = state->coeffs[pi].spDelta;
+        ALuint j_f;
+        ALint j_s;
+
+        // Apply the scale and phase interpolated filter.
+        for(j_f = 0,j_s = l;j_f < m;j_f++,j_s++)
+            r += (fil[j_f] + sf*scd[j_f] + pf*(phd[j_f] + sf*spd[j_f])) *
+                 vals[j_s];
+    }
+    return r;
+}
+
+
+const ALfloat *Resample_copy32_C(const BsincState* UNUSED(state), const ALfloat *src, ALuint UNUSED(frac),
   ALuint UNUSED(increment), ALfloat *restrict dst, ALuint numsamples)
 {
 #if defined(HAVE_SSE) || defined(HAVE_NEON)
@@ -30,8 +64,9 @@ const ALfloat *Resample_copy32_C(const ALfloat *src, ALuint UNUSED(frac),
 }
 
 #define DECL_TEMPLATE(Sampler)                                                \
-const ALfloat *Resample_##Sampler##_C(const ALfloat *src, ALuint frac,        \
-  ALuint increment, ALfloat *restrict dst, ALuint numsamples)                 \
+const ALfloat *Resample_##Sampler##_C(const BsincState* UNUSED(state),        \
+  const ALfloat *src, ALuint frac, ALuint increment,                          \
+  ALfloat *restrict dst, ALuint numsamples)                                   \
 {                                                                             \
     ALuint i;                                                                 \
     for(i = 0;i < numsamples;i++)                                             \
@@ -49,6 +84,21 @@ DECL_TEMPLATE(point32)
 DECL_TEMPLATE(lerp32)
 DECL_TEMPLATE(fir4_32)
 DECL_TEMPLATE(fir8_32)
+
+const ALfloat *Resample_bsinc32_C(const BsincState *state, const ALfloat *src, ALuint frac,
+                                  ALuint increment, ALfloat *restrict dst, ALuint dstlen)
+{
+    ALuint i;
+    for(i = 0;i < dstlen;i++)
+    {
+        dst[i] = bsinc32(state, src, frac);
+
+        frac += increment;
+        src  += frac>>FRACTIONBITS;
+        frac &= FRACTIONMASK;
+    }
+    return dst;
+}
 
 #undef DECL_TEMPLATE
 

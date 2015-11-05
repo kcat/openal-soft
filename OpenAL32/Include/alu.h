@@ -22,10 +22,10 @@
 #define MAX_PITCH  (255)
 
 /* Maximum number of buffer samples before the current pos needed for resampling. */
-#define MAX_PRE_SAMPLES 4
+#define MAX_PRE_SAMPLES 12
 
 /* Maximum number of buffer samples after the current pos needed for resampling. */
-#define MAX_POST_SAMPLES 4
+#define MAX_POST_SAMPLES 12
 
 
 #ifdef __cplusplus
@@ -34,6 +34,29 @@ extern "C" {
 
 struct ALsource;
 struct ALvoice;
+
+
+/* The number of distinct scale and phase intervals within the filter table. */
+#define BSINC_SCALE_BITS  4
+#define BSINC_SCALE_COUNT (1<<BSINC_SCALE_BITS)
+#define BSINC_PHASE_BITS  4
+#define BSINC_PHASE_COUNT (1<<BSINC_PHASE_BITS)
+
+/* Interpolator state.  Kind of a misnomer since the interpolator itself is
+ * stateless.  This just keeps it from having to recompute scale-related
+ * mappings for every sample.
+ */
+typedef struct BsincState {
+    ALfloat sf; /* Scale interpolation factor. */
+    ALuint m;   /* Coefficient count. */
+    ALint l;    /* Left coefficient offset. */
+    struct {
+        const ALfloat *filter;   /* Filter coefficients. */
+        const ALfloat *scDelta;  /* Scale deltas. */
+        const ALfloat *phDelta;  /* Phase deltas. */
+        const ALfloat *spDelta;  /* Scale-phase deltas. */
+    } coeffs[BSINC_PHASE_COUNT];
+} BsincState;
 
 
 typedef union aluVector {
@@ -132,8 +155,9 @@ typedef struct SendParams {
 } SendParams;
 
 
-typedef const ALfloat* (*ResamplerFunc)(const ALfloat *src, ALuint frac, ALuint increment,
-                                        ALfloat *restrict dst, ALuint dstlen);
+typedef const ALfloat* (*ResamplerFunc)(const BsincState *state,
+    const ALfloat *src, ALuint frac, ALuint increment, ALfloat *restrict dst, ALuint dstlen
+);
 
 typedef void (*MixerFunc)(const ALfloat *data, ALuint OutChans,
                           ALfloat (*restrict OutBuffer)[BUFFERSIZE], struct MixGains *Gains,
@@ -202,6 +226,8 @@ union ResamplerCoeffs {
     ALfloat FIR8[FRACTIONONE][8];
 };
 extern alignas(16) union ResamplerCoeffs ResampleCoeffs;
+
+extern alignas(16) const ALfloat bsincTab[18840];
 
 
 inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu)

@@ -90,7 +90,7 @@ typedef struct ALreverbState {
 
         // The gain for each output channel based on 3D panning (only for the
         // EAX path).
-        ALfloat   PanGain[MAX_OUTPUT_CHANNELS];
+        ALfloat   PanGain[4][MAX_OUTPUT_CHANNELS];
     } Early;
 
     // Decorrelator delay line.
@@ -129,7 +129,7 @@ typedef struct ALreverbState {
 
         // The gain for each output channel based on 3D panning (only for the
         // EAX path).
-        ALfloat   PanGain[MAX_OUTPUT_CHANNELS];
+        ALfloat   PanGain[4][MAX_OUTPUT_CHANNELS];
     } Late;
 
     struct {
@@ -161,7 +161,7 @@ typedef struct ALreverbState {
 
     // The gain for each output channel (non-EAX path only; aliased from
     // Late.PanGain)
-    ALfloat *Gain;
+    ALfloat (*Gain)[MAX_OUTPUT_CHANNELS];
 
     /* Temporary storage used when processing. */
     ALfloat ReverbSamples[MAX_UPDATE_SAMPLES][4];
@@ -565,7 +565,7 @@ static inline ALvoid EAXVerbPass(ALreverbState *State, ALuint todo, const ALfloa
 static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     ALfloat (*restrict out)[4] = State->ReverbSamples;
-    ALuint index, c, i;
+    ALuint index, c, i, l;
 
     /* Process reverb for these samples. */
     for(index = 0;index < SamplesToDo;)
@@ -574,13 +574,16 @@ static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint Samples
 
         VerbPass(State, todo, &SamplesIn[index], out);
 
-        for(c = 0;c < NumChannels;c++)
+        for(l = 0;l < 4;l++)
         {
-            ALfloat gain = State->Gain[c];
-            if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
-                continue;
-            for(i = 0;i < todo;i++)
-                SamplesOut[c][index+i] += gain*out[i][c&3];
+            for(c = 0;c < NumChannels;c++)
+            {
+                ALfloat gain = State->Gain[l][c];
+                if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
+                    continue;
+                for(i = 0;i < todo;i++)
+                    SamplesOut[c][index+i] += gain*out[i][l];
+            }
         }
 
         index += todo;
@@ -591,7 +594,7 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo,
 {
     ALfloat (*restrict early)[4] = State->EarlySamples;
     ALfloat (*restrict late)[4] = State->ReverbSamples;
-    ALuint index, c, i;
+    ALuint index, c, i, l;
     ALfloat gain;
 
     /* Process reverb for these samples. */
@@ -601,19 +604,22 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo,
 
         EAXVerbPass(State, todo, &SamplesIn[index], early, late);
 
-        for(c = 0;c < NumChannels;c++)
+        for(l = 0;l < 4;l++)
         {
-            gain = State->Early.PanGain[c];
-            if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
+            for(c = 0;c < NumChannels;c++)
             {
-                for(i = 0;i < todo;i++)
-                    SamplesOut[c][index+i] += gain*early[i][c&3];
-            }
-            gain = State->Late.PanGain[c];
-            if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
-            {
-                for(i = 0;i < todo;i++)
-                    SamplesOut[c][index+i] += gain*late[i][c&3];
+                gain = State->Early.PanGain[l][c];
+                if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
+                {
+                    for(i = 0;i < todo;i++)
+                        SamplesOut[c][index+i] += gain*early[i][l];
+                }
+                gain = State->Late.PanGain[l][c];
+                if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
+                {
+                    for(i = 0;i < todo;i++)
+                        SamplesOut[c][index+i] += gain*late[i][l];
+                }
             }
         }
 
@@ -1054,54 +1060,59 @@ static ALvoid UpdateEchoLine(ALfloat reverbGain, ALfloat lateGain, ALfloat echoT
 // Update the early and late 3D panning gains.
 static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, ALfloat Gain, ALreverbState *State)
 {
-    ALfloat earlyPan[3] = { ReflectionsPan[0], ReflectionsPan[1], -ReflectionsPan[2] };
-    ALfloat latePan[3] = { LateReverbPan[0], LateReverbPan[1], -LateReverbPan[2] };
-    ALfloat AmbientGains[MAX_OUTPUT_CHANNELS];
-    ALfloat DirGains[MAX_OUTPUT_CHANNELS];
-    ALfloat length, invlen;
+    static const ALfloat EarlyPanAngles[4] = {
+        DEG2RAD(0.0f), DEG2RAD(-90.0f), DEG2RAD(90.0f), DEG2RAD(180.0f)
+    }, LatePanAngles[4] = {
+        DEG2RAD(45.0f), DEG2RAD(-45.0f), DEG2RAD(135.0f), DEG2RAD(-135.0f)
+    };
+    ALfloat length, ev, az;
     ALuint i;
 
-    // Bost gain by sqrt(2)? Seems to better match other implementations....
-    Gain *= 1.4142f;
-
-    ComputeAmbientGains(Device, Gain, AmbientGains);
-
-    length = earlyPan[0]*earlyPan[0] + earlyPan[1]*earlyPan[1] + earlyPan[2]*earlyPan[2];
+    length = sqrtf(ReflectionsPan[0]*ReflectionsPan[0] + ReflectionsPan[1]*ReflectionsPan[1] + ReflectionsPan[2]*ReflectionsPan[2]);
     if(!(length > FLT_EPSILON))
     {
-        for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-            State->Early.PanGain[i] = AmbientGains[i];
+        for(i = 0;i < 4;i++)
+            ComputeAngleGains(Device, EarlyPanAngles[i], 0.0f, Gain, State->Early.PanGain[i]);
     }
     else
     {
-        invlen = 1.0f / sqrtf(length);
-        earlyPan[0] *= invlen;
-        earlyPan[1] *= invlen;
-        earlyPan[2] *= invlen;
+        ev = asinf(clampf(ReflectionsPan[1]/length, -1.0f, 1.0f));
+        az = atan2f(ReflectionsPan[0], ReflectionsPan[2]);
 
         length = minf(length, 1.0f);
-        ComputeDirectionalGains(Device, earlyPan, Gain, DirGains);
-        for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-            State->Early.PanGain[i] = lerp(AmbientGains[i], DirGains[i], length);
+        for(i = 0;i < 4;i++)
+        {
+            /* This is essentially just a lerp, but takes the shortest path
+             * with respect to circular wrapping. e.g.
+             * -135 -> +/-180 -> +135
+             * instead of
+             * -135 -> 0 -> +135 */
+            float offset, naz, nev;
+            naz = EarlyPanAngles[i] + (modff(((az-EarlyPanAngles[i])*length + F_PI + F_TAU)/F_TAU, &offset)*F_TAU) - F_PI;
+            nev =                     (modff(((ev                  )*length + F_PI + F_TAU)/F_TAU, &offset)*F_TAU) - F_PI;
+            ComputeAngleGains(Device, naz, nev, Gain, State->Early.PanGain[i]);
+        }
     }
 
-    length = latePan[0]*latePan[0] + latePan[1]*latePan[1] + latePan[2]*latePan[2];
+    length = sqrtf(LateReverbPan[0]*LateReverbPan[0] + LateReverbPan[1]*LateReverbPan[1] + LateReverbPan[2]*LateReverbPan[2]);
     if(!(length > FLT_EPSILON))
     {
-        for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-            State->Late.PanGain[i] = AmbientGains[i];
+        for(i = 0;i < 4;i++)
+            ComputeAngleGains(Device, LatePanAngles[i], 0.0f, Gain, State->Late.PanGain[i]);
     }
     else
     {
-        invlen = 1.0f / sqrtf(length);
-        latePan[0] *= invlen;
-        latePan[1] *= invlen;
-        latePan[2] *= invlen;
+        ev = asinf(clampf(LateReverbPan[1]/length, -1.0f, 1.0f));
+        az = atan2f(LateReverbPan[0], LateReverbPan[2]);
 
         length = minf(length, 1.0f);
-        ComputeDirectionalGains(Device, latePan, Gain, DirGains);
-        for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-            State->Late.PanGain[i] = lerp(AmbientGains[i], DirGains[i], length);
+        for(i = 0;i < 4;i++)
+        {
+            float offset, naz, nev;
+            naz = LatePanAngles[i] + (modff(((az-LatePanAngles[i])*length + F_PI + F_TAU)/F_TAU, &offset)*F_TAU) - F_PI;
+            nev =                    (modff(((ev                 )*length + F_PI + F_TAU)/F_TAU, &offset)*F_TAU) - F_PI;
+            ComputeAngleGains(Device, naz, nev, Gain, State->Late.PanGain[i]);
+        }
     }
 }
 
@@ -1193,7 +1204,7 @@ typedef struct ALreverbStateFactory {
 static ALeffectState *ALreverbStateFactory_create(ALreverbStateFactory* UNUSED(factory))
 {
     ALreverbState *state;
-    ALuint index;
+    ALuint index, l;
 
     state = ALreverbState_New(sizeof(*state));
     if(!state) return NULL;
@@ -1253,10 +1264,13 @@ static ALeffectState *ALreverbStateFactory_create(ALreverbStateFactory* UNUSED(f
         state->Late.LpSample[index] = 0.0f;
     }
 
-    for(index = 0;index < MAX_OUTPUT_CHANNELS;index++)
+    for(l = 0;l < 4;l++)
     {
-        state->Early.PanGain[index] = 0.0f;
-        state->Late.PanGain[index] = 0.0f;
+        for(index = 0;index < MAX_OUTPUT_CHANNELS;index++)
+        {
+            state->Early.PanGain[l][index] = 0.0f;
+            state->Late.PanGain[l][index] = 0.0f;
+        }
     }
 
     state->Echo.DensityGain = 0.0f;

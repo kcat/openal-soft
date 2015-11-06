@@ -567,8 +567,6 @@ static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint Samples
     ALfloat (*restrict out)[4] = State->ReverbSamples;
     ALuint index, c, i;
 
-    memset(out, 0, SamplesToDo*4*sizeof(ALfloat));
-
     /* Process reverb for these samples. */
     for(index = 0;index < SamplesToDo;)
     {

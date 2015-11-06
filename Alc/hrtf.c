@@ -372,7 +372,7 @@ void GetBFormatHrtfCoeffs(const struct Hrtf *Hrtf, const ALuint num_chans, ALflo
             y = sinf(-az) * cosf(elev);
             z = sinf(elev);
 
-            ambi_coeffs[0] = 1.4142f;
+            ambi_coeffs[0] = 1.414213562f;
             ambi_coeffs[1] = x;
             ambi_coeffs[2] = y;
             ambi_coeffs[3] = z;

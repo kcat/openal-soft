@@ -586,8 +586,8 @@ static int MatchFilter(const WCHAR *match, const WIN32_FIND_DATAW *fdata)
                                  match, -1, name, -1) == CSTR_EQUAL;
         else
         {
-            size_t len = p-match;
-            ret = (size_t)lstrlenW(name) >= len;
+            int len = p-match;
+            ret = lstrlenW(name) >= len;
             if(ret)
                 ret = CompareStringW(GetThreadLocale(), NORM_IGNORECASE,
                                      match, len, name, len) == CSTR_EQUAL;

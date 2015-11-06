@@ -26,6 +26,7 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <math.h>
 
 #include "AL/al.h"
 #include "AL/alc.h"

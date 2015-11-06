@@ -196,7 +196,8 @@ typedef struct ChannelMap {
 
 static void SetChannelMap(ALCdevice *device, const ChannelMap *chanmap, size_t count, ALfloat ambiscale, ALboolean isfuma)
 {
-    size_t i, j, k;
+    size_t j, k;
+    ALuint i;
 
     device->AmbiScale = ambiscale;
     for(i = 0;i < MAX_OUTPUT_CHANNELS && device->ChannelName[i] != InvalidChannel;i++)
@@ -230,7 +231,7 @@ static void SetChannelMap(ALCdevice *device, const ChannelMap *chanmap, size_t c
             }
         }
         if(j == count)
-            ERR("Failed to match %s channel ("SZFMT") in config\n", GetLabelFromChannel(device->ChannelName[i]), i);
+            ERR("Failed to match %s channel (%u) in config\n", GetLabelFromChannel(device->ChannelName[i]), i);
     }
     device->NumChannels = i;
 }

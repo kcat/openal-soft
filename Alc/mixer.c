@@ -217,7 +217,7 @@ static inline double CalcKaiserBeta(double rejection)
 static float SincKaiser(double r, double x)
 {
     /* Limit rippling to -60dB. */
-    return Kaiser(CalcKaiserBeta(60.0), x / r) * Sinc(x);
+    return (float)(Kaiser(CalcKaiserBeta(60.0), x / r) * Sinc(x));
 }
 
 

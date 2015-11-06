@@ -1699,7 +1699,7 @@ static void ALCmmdevCapture_stopProxy(ALCmmdevCapture *self)
 
 ALuint ALCmmdevCapture_availableSamples(ALCmmdevCapture *self)
 {
-    return ll_ringbuffer_read_space(self->Ring);
+    return (ALuint)ll_ringbuffer_read_space(self->Ring);
 }
 
 ALCenum ALCmmdevCapture_captureSamples(ALCmmdevCapture *self, ALCvoid *buffer, ALCuint samples)

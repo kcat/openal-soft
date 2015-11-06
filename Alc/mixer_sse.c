@@ -12,63 +12,56 @@
 #include "mixer_defs.h"
 
 
-// Obtain the next sample from the interpolator (SSE version).
-static inline ALfloat bsinc32_sse(const BsincState *state, const ALfloat *in, const ALuint frac)
-{
-    const __m128 sf4 = _mm_set1_ps(state->sf);
-    ALfloat pf, r;
-    ALuint pi;
-
-    // Calculate the phase index and factor.
-#define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
-    pi = frac >> FRAC_PHASE_BITDIFF;
-    pf = (frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF));
-#undef FRAC_PHASE_BITDIFF
-
-    {
-        const ALuint m = state->m;
-        const ALint l = state->l;
-        const ALfloat *fil = state->coeffs[pi].filter;
-        const ALfloat *scd = state->coeffs[pi].scDelta;
-        const ALfloat *phd = state->coeffs[pi].phDelta;
-        const ALfloat *spd = state->coeffs[pi].spDelta;
-        const __m128 pf4 = _mm_set1_ps(pf);
-        __m128 r4 = _mm_setzero_ps();
-        ALuint j_f;
-        ALint j_s;
-
-        // Apply the scale and phase interpolated filter.
-        for(j_f = 0,j_s = l;j_f < m;j_f+=4,j_s+=4)
-        {
-            const __m128 f4 = _mm_add_ps(
-                _mm_add_ps(
-                    _mm_load_ps(&fil[j_f]),
-                    _mm_mul_ps(sf4, _mm_load_ps(&scd[j_f]))
-                ),
-                _mm_mul_ps(
-                    pf4,
-                    _mm_add_ps(
-                        _mm_load_ps(&phd[j_f]),
-                        _mm_mul_ps(sf4, _mm_load_ps(&spd[j_f]))
-                    )
-                )
-            );
-            r4 = _mm_add_ps(r4, _mm_mul_ps(f4, _mm_loadu_ps(&in[j_s])));
-        }
-        r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));
-        r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
-        r = _mm_cvtss_f32(r4);
-    }
-    return r;
-}
-
 const ALfloat *Resample_bsinc32_SSE(const BsincState *state, const ALfloat *src, ALuint frac,
                                     ALuint increment, ALfloat *restrict dst, ALuint dstlen)
 {
-    ALuint i;
+    const __m128 sf4 = _mm_set1_ps(state->sf);
+    const ALuint m = state->m;
+    const ALint l = state->l;
+    const ALfloat *fil, *scd, *phd, *spd;
+    ALuint pi, j_f, i;
+    ALfloat pf;
+    ALint j_s;
+    __m128 r4;
+
     for(i = 0;i < dstlen;i++)
     {
-        dst[i] = bsinc32_sse(state, src, frac);
+        // Calculate the phase index and factor.
+#define FRAC_PHASE_BITDIFF (FRACTIONBITS-BSINC_PHASE_BITS)
+        pi = frac >> FRAC_PHASE_BITDIFF;
+        pf = (frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF));
+#undef FRAC_PHASE_BITDIFF
+
+        fil = state->coeffs[pi].filter;
+        scd = state->coeffs[pi].scDelta;
+        phd = state->coeffs[pi].phDelta;
+        spd = state->coeffs[pi].spDelta;
+
+        // Apply the scale and phase interpolated filter.
+        r4 = _mm_setzero_ps();
+        {
+            const __m128 pf4 = _mm_set1_ps(pf);
+            for(j_f = 0,j_s = l;j_f < m;j_f+=4,j_s+=4)
+            {
+                const __m128 f4 = _mm_add_ps(
+                    _mm_add_ps(
+                        _mm_load_ps(&fil[j_f]),
+                        _mm_mul_ps(sf4, _mm_load_ps(&scd[j_f]))
+                    ),
+                    _mm_mul_ps(
+                        pf4,
+                        _mm_add_ps(
+                            _mm_load_ps(&phd[j_f]),
+                            _mm_mul_ps(sf4, _mm_load_ps(&spd[j_f]))
+                        )
+                    )
+                );
+                r4 = _mm_add_ps(r4, _mm_mul_ps(f4, _mm_loadu_ps(&src[j_s])));
+            }
+        }
+        r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));
+        r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
+        dst[i] = _mm_cvtss_f32(r4);
 
         frac += increment;
         src  += frac>>FRACTIONBITS;

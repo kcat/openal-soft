@@ -1364,12 +1364,12 @@ void al_string_append_wcstr(al_string *str, const wchar_t *from)
 void al_string_append_wrange(al_string *str, const wchar_t *from, const wchar_t *to)
 {
     int len;
-    if((len=WideCharToMultiByte(CP_UTF8, 0, from, to-from, NULL, 0, NULL, NULL)) > 0)
+    if((len=WideCharToMultiByte(CP_UTF8, 0, from, (int)(to-from), NULL, 0, NULL, NULL)) > 0)
     {
         size_t strlen = al_string_length(*str);
         VECTOR_RESERVE(*str, strlen+len+1);
         VECTOR_RESIZE(*str, strlen+len);
-        WideCharToMultiByte(CP_UTF8, 0, from, to-from, &VECTOR_FRONT(*str) + strlen, len+1, NULL, NULL);
+        WideCharToMultiByte(CP_UTF8, 0, from, (int)(to-from), &VECTOR_FRONT(*str) + strlen, len+1, NULL, NULL);
         *VECTOR_ITER_END(*str) = 0;
     }
 }

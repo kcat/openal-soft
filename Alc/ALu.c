@@ -1323,7 +1323,7 @@ static inline ALubyte aluF2UB(ALfloat val)
 { return aluF2B(val)+128; }
 
 #define DECL_TEMPLATE(T, func)                                                \
-static void Write_##T(const ALfloatBUFFERSIZE *InBuffer, ALvoid *OutBuffer,   \
+static void Write_##T(ALfloatBUFFERSIZE *InBuffer, ALvoid *OutBuffer,         \
                       ALuint SamplesToDo, ALuint numchans)                    \
 {                                                                             \
     ALuint i, j;                                                              \

@@ -9,8 +9,7 @@ openal-soft-1.17.0:
     Implemented C, SSE3, and SSE4.1 based 4- and 8-point Sinc resamplers.
 
     Implemented a C and SSE based band-limited Sinc resampler. This does 12- to
-    24-point Sinc resampling, and performs anti-aliasing when increasing the
-    sample rate above the output.
+    24-point Sinc resampling, and performs anti-aliasing.
 
     Implemented B-Format output support for the wave file writer. This creates
     FuMa-style first-order Ambisonics wave files (AMB format).

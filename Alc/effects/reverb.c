@@ -1088,8 +1088,8 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
              * instead of
              * -135 -> 0 -> +135 */
             float offset, naz, nev;
-            naz = EarlyPanAngles[i] + (modff(((az-EarlyPanAngles[i])*length + F_PI + F_TAU)/F_TAU, &offset)*F_TAU) - F_PI;
-            nev =                     (modff(((ev                  )*length + F_PI + F_TAU)/F_TAU, &offset)*F_TAU) - F_PI;
+            naz = EarlyPanAngles[i] + (modff((az-EarlyPanAngles[i])*length/F_TAU + 1.5f, &offset)-0.5f)*F_TAU;
+            nev =                     (modff((ev                  )*length/F_TAU + 1.5f, &offset)-0.5f)*F_TAU;
             ComputeAngleGains(Device, naz, nev, Gain, State->Early.PanGain[i]);
         }
     }
@@ -1109,8 +1109,8 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
         for(i = 0;i < 4;i++)
         {
             float offset, naz, nev;
-            naz = LatePanAngles[i] + (modff(((az-LatePanAngles[i])*length + F_PI + F_TAU)/F_TAU, &offset)*F_TAU) - F_PI;
-            nev =                    (modff(((ev                 )*length + F_PI + F_TAU)/F_TAU, &offset)*F_TAU) - F_PI;
+            naz = LatePanAngles[i] + (modff((az-LatePanAngles[i])*length/F_TAU + 1.5f, &offset)-0.5f)*F_TAU;
+            nev =                    (modff((ev                 )*length/F_TAU + 1.5f, &offset)-0.5f)*F_TAU;
             ComputeAngleGains(Device, naz, nev, Gain, State->Late.PanGain[i]);
         }
     }

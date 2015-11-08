@@ -132,7 +132,7 @@
 #  sinc4 - extrapolates samples using a 4-point Sinc filter
 #  sinc8 - extrapolates samples using an 8-point Sinc filter
 #  bsinc - extrapolates samples using a band-limited Sinc filter (varying
-#          between 12 and 24 points)
+#          between 12 and 24 points, with anti-aliasing)
 #  Specifying other values will result in using the default (linear).
 #resampler = linear
 
@@ -227,6 +227,13 @@
 #  etc).
 #allow-moves = false
 
+## fix-rate:
+#  Specifies whether to match the playback device's sample rate to the hardware
+#  device's sample rate. Enabling this allows OpenAL Soft to resample sources
+#  directly to the actual output rate, avoiding a second resample pass by the
+#  PulseAudio server.
+#fix-rate = false
+
 ##
 ## ALSA backend stuff
 ##
@@ -272,6 +279,13 @@
 #  non-mmap mode. True, yes, on, and non-0 values will attempt to use mmap. 0
 #  and anything else will force mmap off.
 #mmap = true
+
+## allow-resampler:
+#  Specifies whether to allow ALSA's built-in resampler. Enabling this will
+#  allow the playback device to be set to a different sample rate than the
+#  actual output, causing ALSA to apply its own resampling pass after OpenAL
+#  Soft resamples and mixes the sources and effects for output.
+#allow-resampler = false
 
 ##
 ## OSS backend stuff

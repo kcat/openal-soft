@@ -770,8 +770,11 @@ static ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
     }
     CHECK(snd_pcm_hw_params_set_channels(self->pcmHandle, hp, ChannelsFromDevFmt(device->FmtChans)));
     /* set rate (implicitly constrains period/buffer parameters) */
-    if(snd_pcm_hw_params_set_rate_resample(self->pcmHandle, hp, 0) < 0)
-        ERR("Failed to disable ALSA resampler\n");
+    if(GetConfigValueBool(al_string_get_cstr(device->DeviceName), "alsa", "allow-resampler", 0))
+    {
+        if(snd_pcm_hw_params_set_rate_resample(self->pcmHandle, hp, 0) < 0)
+            ERR("Failed to disable ALSA resampler\n");
+    }
     CHECK(snd_pcm_hw_params_set_rate_near(self->pcmHandle, hp, &rate, NULL));
     /* set buffer time (implicitly constrains period/buffer parameters) */
     if((err=snd_pcm_hw_params_set_buffer_time_near(self->pcmHandle, hp, &bufferLen, NULL)) < 0)

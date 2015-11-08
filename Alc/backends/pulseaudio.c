@@ -950,7 +950,8 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
                                          ALCpulsePlayback_sinkInfoCallback, self);
     wait_for_operation(o, self->loop);
 
-    if(!(device->Flags&DEVICE_FREQUENCY_REQUEST))
+    if(GetConfigValueBool(al_string_get_cstr(device->DeviceName), "pulse", "fix-rate", 0) ||
+       !(device->Flags&DEVICE_FREQUENCY_REQUEST))
         flags |= PA_STREAM_FIX_RATE;
     flags |= PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE;
     flags |= PA_STREAM_ADJUST_LATENCY;

@@ -185,12 +185,6 @@
 /* Define if we have __control87_2() */
 #cmakedefine HAVE___CONTROL87_2
 
-/* Define if we have ftw() */
-#cmakedefine HAVE_FTW
-
-/* Define if we have _wfindfirst() */
-#cmakedefine HAVE__WFINDFIRST
-
 /* Define if we have pthread_setschedparam() */
 #cmakedefine HAVE_PTHREAD_SETSCHEDPARAM
 

@@ -166,8 +166,8 @@
 ## excludefx: (global)
 #  Sets which effects to exclude, preventing apps from using them. This can
 #  help for apps that try to use effects which are too CPU intensive for the
-#  system to handle. Available effects are: eaxreverb,reverb,autowah,chorus,
-#  compressor,distortion,echo,equalizer,flanger,modulator,dedicated
+#  system to handle. Available effects are: eaxreverb,reverb,chorus,compressor,
+#  distortion,echo,equalizer,flanger,modulator,dedicated
 #excludefx =
 
 ## default-reverb: (global)

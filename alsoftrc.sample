@@ -228,8 +228,8 @@
 #allow-moves = false
 
 ## fix-rate:
-#  Specifies whether to match the playback device's sample rate to the hardware
-#  device's sample rate. Enabling this allows OpenAL Soft to resample sources
+#  Specifies whether to match the playback stream's sample rate to the device's
+#  sample rate. Enabling this forces OpenAL Soft to mix sources and effects
 #  directly to the actual output rate, avoiding a second resample pass by the
 #  PulseAudio server.
 #fix-rate = false

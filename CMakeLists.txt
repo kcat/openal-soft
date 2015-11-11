@@ -583,6 +583,7 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/effects/null.c
               Alc/effects/reverb.c
               Alc/helpers.c
+              Alc/bsinc.c
               Alc/hrtf.c
               Alc/panning.c
               Alc/mixer.c

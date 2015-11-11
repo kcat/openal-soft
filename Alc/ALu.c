@@ -183,15 +183,17 @@ static inline aluVector aluMatrixVector(const aluMatrix *mtx, const aluVector *v
  */
 static ALboolean BsincPrepare(const ALuint increment, BsincState *state)
 {
-    static const ALfloat scaleBase = 0.1510579f, scaleRange = 1.177937f;
+    static const ALfloat scaleBase = 1.510578918e-01f, scaleRange = 1.177936623e+00f;
     static const ALuint m[BSINC_SCALE_COUNT] = { 24, 24, 24, 24, 24, 24, 24, 20, 20, 20, 16, 16, 16, 12, 12, 12 };
-    static const ALuint to[4][BSINC_SCALE_COUNT] = {
+    static const ALuint to[4][BSINC_SCALE_COUNT] =
+    {
         { 0, 24, 408, 792, 1176, 1560, 1944, 2328, 2648, 2968, 3288, 3544, 3800, 4056, 4248, 4440 },
         { 4632, 5016, 5400, 5784, 6168, 6552, 6936, 7320, 7640, 7960, 8280, 8536, 8792, 9048, 9240, 0 },
         { 0, 9432, 9816, 10200, 10584, 10968, 11352, 11736, 12056, 12376, 12696, 12952, 13208, 13464, 13656, 13848 },
         { 14040, 14424, 14808, 15192, 15576, 15960, 16344, 16728, 17048, 17368, 17688, 17944, 18200, 18456, 18648, 0 }
     };
-    static const ALuint tm[2][BSINC_SCALE_COUNT] = {
+    static const ALuint tm[2][BSINC_SCALE_COUNT] =
+    {
         { 0, 24, 24, 24, 24, 24, 24, 20, 20, 20, 16, 16, 16, 12, 12, 12 },
         { 24, 24, 24, 24, 24, 24, 24, 20, 20, 20, 16, 16, 16, 12, 12, 0 }
     };

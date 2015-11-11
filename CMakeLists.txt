@@ -1173,8 +1173,13 @@ IF(ALSOFT_UTILS)
         TARGET_LINK_LIBRARIES(makehrtf m)
     ENDIF()
 
+    ADD_EXECUTABLE(bsincgen utils/bsincgen.c)
+    IF(HAVE_LIBM)
+        TARGET_LINK_LIBRARIES(bsincgen m)
+    ENDIF()
+
     IF(ALSOFT_INSTALL)
-        INSTALL(TARGETS openal-info makehrtf
+        INSTALL(TARGETS openal-info makehrtf bsincgen
                 RUNTIME DESTINATION bin
                 LIBRARY DESTINATION "lib${LIB_SUFFIX}"
                 ARCHIVE DESTINATION "lib${LIB_SUFFIX}"

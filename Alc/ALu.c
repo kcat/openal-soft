@@ -83,12 +83,22 @@ extern inline ALfloat resample_fir8(ALfloat val0, ALfloat val1, ALfloat val2, AL
 
 extern inline void aluVectorSet(aluVector *restrict vector, ALfloat x, ALfloat y, ALfloat z, ALfloat w);
 
-extern inline void aluMatrixSetRow(aluMatrix *restrict matrix, ALuint row,
-                                   ALfloat m0, ALfloat m1, ALfloat m2, ALfloat m3);
-extern inline void aluMatrixSet(aluMatrix *restrict matrix, ALfloat m00, ALfloat m01, ALfloat m02, ALfloat m03,
-                                                            ALfloat m10, ALfloat m11, ALfloat m12, ALfloat m13,
-                                                            ALfloat m20, ALfloat m21, ALfloat m22, ALfloat m23,
-                                                            ALfloat m30, ALfloat m31, ALfloat m32, ALfloat m33);
+extern inline void aluMatrixfSetRow(aluMatrixf *matrix, ALuint row,
+                                    ALfloat m0, ALfloat m1, ALfloat m2, ALfloat m3);
+extern inline void aluMatrixfSet(aluMatrixf *matrix,
+                                 ALfloat m00, ALfloat m01, ALfloat m02, ALfloat m03,
+                                 ALfloat m10, ALfloat m11, ALfloat m12, ALfloat m13,
+                                 ALfloat m20, ALfloat m21, ALfloat m22, ALfloat m23,
+                                 ALfloat m30, ALfloat m31, ALfloat m32, ALfloat m33);
+
+extern inline void aluMatrixdSetRow(aluMatrixd *matrix, ALuint row,
+                                    ALdouble m0, ALdouble m1, ALdouble m2, ALdouble m3);
+extern inline void aluMatrixdSet(aluMatrixd *matrix,
+                                 ALdouble m00, ALdouble m01, ALdouble m02, ALdouble m03,
+                                 ALdouble m10, ALdouble m11, ALdouble m12, ALdouble m13,
+                                 ALdouble m20, ALdouble m21, ALdouble m22, ALdouble m23,
+                                 ALdouble m30, ALdouble m31, ALdouble m32, ALdouble m33);
+
 
 /* NOTE: HRTF is set up a bit special in the device. By default, the device's
  * DryBuffer, NumChannels, ChannelName, and Channel fields correspond to the
@@ -153,22 +163,52 @@ static inline ALfloat aluNormalize(ALfloat *vec)
     return length;
 }
 
-static inline ALvoid aluMatrixFloat3(ALfloat *vec, ALfloat w, const aluMatrix *mtx)
-{
-    aluVector v = {{ vec[0], vec[1], vec[2], w }};
 
-    vec[0] = v.v[0]*mtx->m[0][0] + v.v[1]*mtx->m[1][0] + v.v[2]*mtx->m[2][0] + v.v[3]*mtx->m[3][0];
-    vec[1] = v.v[0]*mtx->m[0][1] + v.v[1]*mtx->m[1][1] + v.v[2]*mtx->m[2][1] + v.v[3]*mtx->m[3][1];
-    vec[2] = v.v[0]*mtx->m[0][2] + v.v[1]*mtx->m[1][2] + v.v[2]*mtx->m[2][2] + v.v[3]*mtx->m[3][2];
+static inline void aluCrossproductd(const ALdouble *inVector1, const ALdouble *inVector2, ALdouble *outVector)
+{
+    outVector[0] = inVector1[1]*inVector2[2] - inVector1[2]*inVector2[1];
+    outVector[1] = inVector1[2]*inVector2[0] - inVector1[0]*inVector2[2];
+    outVector[2] = inVector1[0]*inVector2[1] - inVector1[1]*inVector2[0];
 }
 
-static inline aluVector aluMatrixVector(const aluMatrix *mtx, const aluVector *vec)
+static inline ALdouble aluNormalized(ALdouble *vec)
+{
+    ALdouble length = sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
+    if(length > 0.0)
+    {
+        ALdouble inv_length = 1.0/length;
+        vec[0] *= inv_length;
+        vec[1] *= inv_length;
+        vec[2] *= inv_length;
+    }
+    return length;
+}
+
+static inline ALvoid aluMatrixdFloat3(ALfloat *vec, ALfloat w, const aluMatrixd *mtx)
+{
+    ALdouble v[4] = { vec[0], vec[1], vec[2], w };
+
+    vec[0] = (ALfloat)(v[0]*mtx->m[0][0] + v[1]*mtx->m[1][0] + v[2]*mtx->m[2][0] + v[3]*mtx->m[3][0]);
+    vec[1] = (ALfloat)(v[0]*mtx->m[0][1] + v[1]*mtx->m[1][1] + v[2]*mtx->m[2][1] + v[3]*mtx->m[3][1]);
+    vec[2] = (ALfloat)(v[0]*mtx->m[0][2] + v[1]*mtx->m[1][2] + v[2]*mtx->m[2][2] + v[3]*mtx->m[3][2]);
+}
+
+static inline ALvoid aluMatrixdDouble3(ALdouble *vec, ALdouble w, const aluMatrixd *mtx)
+{
+    ALdouble v[4] = { vec[0], vec[1], vec[2], w };
+
+    vec[0] = v[0]*mtx->m[0][0] + v[1]*mtx->m[1][0] + v[2]*mtx->m[2][0] + v[3]*mtx->m[3][0];
+    vec[1] = v[0]*mtx->m[0][1] + v[1]*mtx->m[1][1] + v[2]*mtx->m[2][1] + v[3]*mtx->m[3][1];
+    vec[2] = v[0]*mtx->m[0][2] + v[1]*mtx->m[1][2] + v[2]*mtx->m[2][2] + v[3]*mtx->m[3][2];
+}
+
+static inline aluVector aluMatrixdVector(const aluMatrixd *mtx, const aluVector *vec)
 {
     aluVector v;
-    v.v[0] = vec->v[0]*mtx->m[0][0] + vec->v[1]*mtx->m[1][0] + vec->v[2]*mtx->m[2][0] + vec->v[3]*mtx->m[3][0];
-    v.v[1] = vec->v[0]*mtx->m[0][1] + vec->v[1]*mtx->m[1][1] + vec->v[2]*mtx->m[2][1] + vec->v[3]*mtx->m[3][1];
-    v.v[2] = vec->v[0]*mtx->m[0][2] + vec->v[1]*mtx->m[1][2] + vec->v[2]*mtx->m[2][2] + vec->v[3]*mtx->m[3][2];
-    v.v[3] = vec->v[0]*mtx->m[0][3] + vec->v[1]*mtx->m[1][3] + vec->v[2]*mtx->m[2][3] + vec->v[3]*mtx->m[3][3];
+    v.v[0] = (ALfloat)(vec->v[0]*mtx->m[0][0] + vec->v[1]*mtx->m[1][0] + vec->v[2]*mtx->m[2][0] + vec->v[3]*mtx->m[3][0]);
+    v.v[1] = (ALfloat)(vec->v[0]*mtx->m[0][1] + vec->v[1]*mtx->m[1][1] + vec->v[2]*mtx->m[2][1] + vec->v[3]*mtx->m[3][1]);
+    v.v[2] = (ALfloat)(vec->v[0]*mtx->m[0][2] + vec->v[1]*mtx->m[1][2] + vec->v[2]*mtx->m[2][2] + vec->v[3]*mtx->m[3][2]);
+    v.v[3] = (ALfloat)(vec->v[0]*mtx->m[0][3] + vec->v[1]*mtx->m[1][3] + vec->v[2]*mtx->m[2][3] + vec->v[3]*mtx->m[3][3]);
     return v;
 }
 
@@ -356,33 +396,35 @@ static void UpdateWetStepping(SendParams *params, ALuint num_chans, ALuint steps
 
 static ALvoid CalcListenerParams(ALlistener *Listener)
 {
-    ALfloat N[3], V[3], U[3];
-    aluVector P;
+    ALdouble N[3], V[3], U[3], P[3];
 
     /* AT then UP */
     N[0] = Listener->Forward[0];
     N[1] = Listener->Forward[1];
     N[2] = Listener->Forward[2];
-    aluNormalize(N);
+    aluNormalized(N);
     V[0] = Listener->Up[0];
     V[1] = Listener->Up[1];
     V[2] = Listener->Up[2];
-    aluNormalize(V);
+    aluNormalized(V);
     /* Build and normalize right-vector */
-    aluCrossproduct(N, V, U);
-    aluNormalize(U);
+    aluCrossproductd(N, V, U);
+    aluNormalized(U);
 
-    aluMatrixSet(&Listener->Params.Matrix,
-        U[0], V[0], -N[0], 0.0f,
-        U[1], V[1], -N[1], 0.0f,
-        U[2], V[2], -N[2], 0.0f,
-        0.0f, 0.0f,  0.0f, 1.0f
+    aluMatrixdSet(&Listener->Params.Matrix,
+        U[0], V[0], -N[0], 0.0,
+        U[1], V[1], -N[1], 0.0,
+        U[2], V[2], -N[2], 0.0,
+         0.0,  0.0,   0.0, 1.0
     );
 
-    P = aluMatrixVector(&Listener->Params.Matrix, &Listener->Position);
-    aluMatrixSetRow(&Listener->Params.Matrix, 3, -P.v[0], -P.v[1], -P.v[2], 1.0f);
+    P[0] = Listener->Position.v[0];
+    P[1] = Listener->Position.v[1];
+    P[2] = Listener->Position.v[2];
+    aluMatrixdDouble3(P, 1.0, &Listener->Params.Matrix);
+    aluMatrixdSetRow(&Listener->Params.Matrix, 3, -P[0], -P[1], -P[2], 1.0f);
 
-    Listener->Params.Velocity = aluMatrixVector(&Listener->Params.Matrix, &Listener->Velocity);
+    Listener->Params.Velocity = aluMatrixdVector(&Listener->Params.Matrix, &Listener->Velocity);
 }
 
 ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCcontext *ALContext)
@@ -567,7 +609,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     if(isbformat)
     {
         ALfloat N[3], V[3], U[3];
-        aluMatrix matrix;
+        aluMatrixf matrix;
         ALfloat scale;
 
         /* AT then UP */
@@ -581,9 +623,9 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         aluNormalize(V);
         if(!Relative)
         {
-            const aluMatrix *lmatrix = &ALContext->Listener->Params.Matrix;
-            aluMatrixFloat3(N, 0.0f, lmatrix);
-            aluMatrixFloat3(V, 0.0f, lmatrix);
+            const aluMatrixd *lmatrix = &ALContext->Listener->Params.Matrix;
+            aluMatrixdFloat3(N, 0.0f, lmatrix);
+            aluMatrixdFloat3(V, 0.0f, lmatrix);
         }
         /* Build and normalize right-vector */
         aluCrossproduct(N, V, U);
@@ -592,7 +634,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         /* Build a rotate + conversion matrix (B-Format -> N3D), and include
          * scaling for first-order content. */
         scale = Device->AmbiScale * 1.732050808f;
-        aluMatrixSet(&matrix,
+        aluMatrixfSet(&matrix,
             1.414213562f,        0.0f,        0.0f,        0.0f,
                     0.0f, -N[0]*scale,  N[1]*scale, -N[2]*scale,
                     0.0f,  U[0]*scale, -U[1]*scale,  U[2]*scale,
@@ -899,11 +941,11 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     /* Transform source to listener space (convert to head relative) */
     if(ALSource->HeadRelative == AL_FALSE)
     {
-        const aluMatrix *Matrix = &ALContext->Listener->Params.Matrix;
+        const aluMatrixd *Matrix = &ALContext->Listener->Params.Matrix;
         /* Transform source vectors */
-        Position = aluMatrixVector(Matrix, &Position);
-        Velocity = aluMatrixVector(Matrix, &Velocity);
-        Direction = aluMatrixVector(Matrix, &Direction);
+        Position = aluMatrixdVector(Matrix, &Position);
+        Velocity = aluMatrixdVector(Matrix, &Velocity);
+        Direction = aluMatrixdVector(Matrix, &Direction);
     }
     else
     {

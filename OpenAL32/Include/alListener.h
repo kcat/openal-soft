@@ -17,8 +17,8 @@ typedef struct ALlistener {
     volatile ALfloat MetersPerUnit;
 
     struct {
-        aluMatrix Matrix;
-        aluVector Velocity;
+        aluMatrixd Matrix;
+        aluVector  Velocity;
     } Params;
 } ALlistener;
 

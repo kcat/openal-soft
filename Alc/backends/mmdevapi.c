@@ -62,7 +62,7 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_FormFactor, 0x1da5d803, 0xd492, 0x4edd, 0x
 #define X7DOT1 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT)
 #define X7DOT1_WIDE (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_FRONT_LEFT_OF_CENTER|SPEAKER_FRONT_RIGHT_OF_CENTER)
 
-#define DEVNAME_TAIL " on OpenAL Soft"
+#define DEVNAME_HEAD "OpenAL Soft on "
 
 
 typedef struct {
@@ -125,10 +125,13 @@ static void get_device_name(IMMDevice *device, al_string *name)
     PROPVARIANT pvname;
     HRESULT hr;
 
+    al_string_copy_cstr(name, DEVNAME_HEAD);
+
     hr = IMMDevice_OpenPropertyStore(device, STGM_READ, &ps);
     if(FAILED(hr))
     {
         WARN("OpenPropertyStore failed: 0x%08lx\n", hr);
+        al_string_append_cstr(name, "Unknown Device Name");
         return;
     }
 
@@ -136,11 +139,17 @@ static void get_device_name(IMMDevice *device, al_string *name)
 
     hr = IPropertyStore_GetValue(ps, (const PROPERTYKEY*)&DEVPKEY_Device_FriendlyName, &pvname);
     if(FAILED(hr))
+    {
         WARN("GetValue Device_FriendlyName failed: 0x%08lx\n", hr);
+        al_string_append_cstr(name, "Unknown Device Name");
+    }
     else if(pvname.vt == VT_LPWSTR)
-        al_string_copy_wcstr(name, pvname.pwszVal);
+        al_string_append_wcstr(name, pvname.pwszVal);
     else
+    {
         WARN("Unexpected PROPVARIANT type: 0x%04x\n", pvname.vt);
+        al_string_append_cstr(name, "Unknown Device Name");
+    }
 
     PropVariantClear(&pvname);
     IPropertyStore_Release(ps);
@@ -193,12 +202,10 @@ static void add_device(IMMDevice *device, LPCWSTR devid, vector_DevMap *list)
         const DevMap *iter;
 
         al_string_copy(&entry.name, tmpname);
-        if(count == 0)
-            al_string_append_cstr(&entry.name, DEVNAME_TAIL);
-        else
+        if(count != 0)
         {
             char str[64];
-            snprintf(str, sizeof(str), " #%d"DEVNAME_TAIL, count+1);
+            snprintf(str, sizeof(str), " #%d", count+1);
             al_string_append_cstr(&entry.name, str);
         }
 
@@ -755,10 +762,7 @@ static HRESULT ALCmmdevPlayback_openProxy(ALCmmdevPlayback *self)
     {
         self->client = ptr;
         if(al_string_empty(device->DeviceName))
-        {
             get_device_name(self->mmdev, &device->DeviceName);
-            al_string_append_cstr(&device->DeviceName, DEVNAME_TAIL);
-        }
     }
 
     if(FAILED(hr))
@@ -1412,10 +1416,7 @@ static HRESULT ALCmmdevCapture_openProxy(ALCmmdevCapture *self)
     {
         self->client = ptr;
         if(al_string_empty(device->DeviceName))
-        {
             get_device_name(self->mmdev, &device->DeviceName);
-            al_string_append_cstr(&device->DeviceName, DEVNAME_TAIL);
-        }
     }
 
     if(FAILED(hr))

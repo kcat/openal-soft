@@ -37,7 +37,7 @@
 #define WAVE_FORMAT_IEEE_FLOAT  0x0003
 #endif
 
-#define DEVNAME_TAIL " on OpenAL Soft"
+#define DEVNAME_HEAD "OpenAL Soft on "
 
 
 static vector_al_string PlaybackDevices;
@@ -71,13 +71,12 @@ static void ProbePlaybackDevices(void)
             ALuint count = 0;
             while(1)
             {
-                al_string_copy_wcstr(&dname, WaveCaps.szPname);
-                if(count == 0)
-                    al_string_append_cstr(&dname, DEVNAME_TAIL);
-                else
+                al_string_copy_cstr(&dname, DEVNAME_HEAD);
+                al_string_append_wcstr(&dname, WaveCaps.szPname);
+                if(count != 0)
                 {
                     char str[64];
-                    snprintf(str, sizeof(str), " #%d"DEVNAME_TAIL, count+1);
+                    snprintf(str, sizeof(str), " #%d", count+1);
                     al_string_append_cstr(&dname, str);
                 }
                 count++;
@@ -115,13 +114,12 @@ static void ProbeCaptureDevices(void)
             ALuint count = 0;
             while(1)
             {
-                al_string_copy_wcstr(&dname, WaveCaps.szPname);
-                if(count == 0)
-                    al_string_append_cstr(&dname, DEVNAME_TAIL);
-                else
+                al_string_copy_cstr(&dname, DEVNAME_HEAD);
+                al_string_append_wcstr(&dname, WaveCaps.szPname);
+                if(count != 0)
                 {
                     char str[64];
-                    snprintf(str, sizeof(str), " #%d"DEVNAME_TAIL, count+1);
+                    snprintf(str, sizeof(str), " #%d", count+1);
                     al_string_append_cstr(&dname, str);
                 }
                 count++;

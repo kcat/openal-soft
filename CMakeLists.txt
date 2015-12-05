@@ -1260,7 +1260,7 @@ IF(ALSOFT_EXAMPLES)
                                                                        ${SDL_SOUND_INCLUDE_DIR})
 
         IF(ALSOFT_INSTALL)
-            INSTALL(TARGETS alstream alreverb allatency alloopback
+            INSTALL(TARGETS alstream alreverb allatency alloopback alhrtf
                     RUNTIME DESTINATION bin
                     LIBRARY DESTINATION "lib${LIB_SUFFIX}"
                     ARCHIVE DESTINATION "lib${LIB_SUFFIX}"

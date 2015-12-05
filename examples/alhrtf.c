@@ -227,7 +227,7 @@ int main(int argc, char **argv)
     angle = 0.0;
     alSourcePlay(source);
     do {
-        Sleep(10);
+        al_nssleep(10000000);
 
         /* Rotate the source around the listener by about 1/4 cycle per second.
          * Only affects mono sounds.

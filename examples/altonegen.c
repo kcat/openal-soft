@@ -246,7 +246,7 @@ int main(int argc, char *argv[])
     alSourcePlay(source);
     do {
         ALint pos;
-        Sleep(10);
+        al_nssleep(10000000);
         alGetSourcei(source, AL_SAMPLE_OFFSET, &pos);
         alGetSourcei(source, AL_SOURCE_STATE, &state);
         if(pos < last_pos && state == AL_PLAYING)

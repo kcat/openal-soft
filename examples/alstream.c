@@ -318,7 +318,7 @@ int main(int argc, char **argv)
         }
 
         while(UpdatePlayer(player))
-            Sleep(10);
+            al_nssleep(10000000);
 
         /* All done with this file. Close it and go to the next */
         ClosePlayerFile(player);

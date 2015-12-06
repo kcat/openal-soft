@@ -820,7 +820,7 @@ error:
 vector_HrtfEntry EnumerateHrtf(const_al_string devname)
 {
     vector_HrtfEntry list = VECTOR_INIT_STATIC();
-    const char *fnamelist = "default-%r.mhr";
+    const char *fnamelist = "%s.mhr";
 
     ConfigValueStr(al_string_get_cstr(devname), NULL, "hrtf_tables", &fnamelist);
     while(fnamelist && *fnamelist)

@@ -2,6 +2,8 @@ openal-soft-1.17.1:
 
     Fixed building with JACK and without PulseAudio.
 
+    Fixed building on FreeBSD.
+
     Fixed the ALSA backend's allow-resampler option.
 
     Improved handling of inexact ALSA period counts.

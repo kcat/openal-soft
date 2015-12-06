@@ -549,6 +549,13 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
 }
 
 
+static size_t strlenW(const WCHAR *str)
+{
+    const WCHAR *end = str;
+    while(*end) ++end;
+    return end-str;
+}
+
 static const WCHAR *strchrW(const WCHAR *str, WCHAR ch)
 {
     for(;*str != 0;++str)
@@ -570,9 +577,27 @@ static const WCHAR *strrchrW(const WCHAR *str, WCHAR ch)
     return ret;
 }
 
+static const WCHAR *strstrW(const WCHAR *haystack, const WCHAR *needle)
+{
+    size_t len = strlenW(needle);
+    while(*haystack != 0)
+    {
+        if(CompareStringW(GetThreadLocale(), NORM_IGNORECASE,
+                          haystack, len, needle, len) == CSTR_EQUAL)
+            return haystack;
+
+        do {
+            ++haystack;
+        } while(((*haystack)&0xC000) == 0x8000);
+    }
+    return NULL;
+}
+
+
 /* Compares the filename in the find data with the match string. The match
  * string may contain the "%r" marker to signifiy a sample rate (really any
- * positive integer), or "%%" to signify a single '%'.
+ * positive integer), "%%" to signify a single '%', or "%s" for a (non-greedy)
+ * string.
  */
 static int MatchFilter(const WCHAR *match, const WIN32_FIND_DATAW *fdata)
 {
@@ -607,6 +632,40 @@ static int MatchFilter(const WCHAR *match, const WIN32_FIND_DATAW *fdata)
                     }
                     ret = l > 0;
                     ++p;
+                }
+                else if(*p == 's')
+                {
+                    const WCHAR *next = p+1;
+                    if(*next != '\0' && *next != '%')
+                    {
+                        const WCHAR *next_p = strchrW(next, '%');
+                        const WCHAR *m;
+
+                        if(!next_p)
+                            m = strstrW(name, next);
+                        else
+                        {
+                            WCHAR *tmp = malloc((next_p - next + 1) * 2);
+                            memcpy(tmp, next, (next_p - next) * 2);
+                            tmp[next_p - next] = 0;
+
+                            m = strstrW(name, tmp);
+
+                            free(tmp);
+                        }
+
+                        ret = !!m;
+                        if(ret)
+                        {
+                            size_t l;
+                            if(next_p) l = next_p - next;
+                            else l = strlenW(next);
+
+                            name = m + l;
+                            next += l;
+                        }
+                    }
+                    p = next;
                 }
             }
         }
@@ -972,6 +1031,40 @@ static int MatchFilter(const struct dirent *dir)
                     ret = strtoul(name, &end, 10) > 0;
                     if(ret) name = end;
                     ++p;
+                }
+                else if(*p == 's')
+                {
+                    const char *next = p+1;
+                    if(*next != '\0' && *next != '%')
+                    {
+                        const char *next_p = strchr(next, '%');
+                        const char *m;
+
+                        if(!next_p)
+                            m = strstr(name, next);
+                        else
+                        {
+                            char *tmp = malloc(next_p - next + 1);
+                            memcpy(tmp, next, next_p - next);
+                            tmp[next_p - next] = 0;
+
+                            m = strstr(name, tmp);
+
+                            free(tmp);
+                        }
+
+                        ret = !!m;
+                        if(ret)
+                        {
+                            size_t l;
+                            if(next_p) l = next_p - next;
+                            else l = strlen(next);
+
+                            name = m + l;
+                            next += l;
+                        }
+                    }
+                    p = next;
                 }
             }
         }

@@ -866,6 +866,9 @@ vector_al_string SearchDataFiles(const char *match, const char *subdir)
             }
             free(cwdbuf);
         }
+#define FIX_SLASH(i) do { if(*(i) == '/') *(i) = '\\'; } while(0)
+        VECTOR_FOR_EACH(char, path, FIX_SLASH);
+#undef FIX_SLASH
         RecurseDirectorySearch(al_string_get_cstr(path), wmatch, &results);
 
         /* Search the local and global data dirs. */

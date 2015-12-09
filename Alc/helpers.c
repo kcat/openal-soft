@@ -844,8 +844,17 @@ vector_al_string SearchDataFiles(const char *match, const char *subdir)
         al_string path = AL_STRING_INIT_STATIC();
         WCHAR *cwdbuf;
 
-        /* Search the CWD. */
-        if(!(cwdbuf=_wgetcwd(NULL, 0)))
+        /* Search the app-local directory. */
+        if((cwdbuf=_wgetenv(L"ALSOFT_LOCAL_PATH")) && *cwdbuf != '\0')
+        {
+            al_string_copy_wcstr(&path, cwdbuf);
+            if(is_slash(VECTOR_BACK(path)))
+            {
+                VECTOR_POP_BACK(path);
+                *VECTOR_ITER_END(path) = 0;
+            }
+        }
+        else if(!(cwdbuf=_wgetcwd(NULL, 0)))
             al_string_copy_cstr(&path, ".");
         else
         {
@@ -1192,8 +1201,13 @@ vector_al_string SearchDataFiles(const char *match, const char *subdir)
         const char *str, *next;
         char cwdbuf[PATH_MAX];
 
-        // Search CWD
-        if(!getcwd(cwdbuf, sizeof(cwdbuf)))
+        /* Search the app-local directory. */
+        if((str=getenv("ALSOFT_LOCAL_PATH")) && *str != '\0')
+        {
+            strncpy(cwdbuf, str, sizeof(cwdbuf)-1);
+            cwdbuf[sizeof(cwdbuf)-1] = '\0';
+        }
+        else if(!getcwd(cwdbuf, sizeof(cwdbuf)))
             strcpy(cwdbuf, ".");
         RecurseDirectorySearch(cwdbuf, match, &results);
 

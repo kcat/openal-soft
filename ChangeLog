@@ -6,12 +6,12 @@ openal-soft-1.17.1:
 
     Fixed the ALSA backend's allow-resampler option.
 
-    Improved handling of inexact ALSA period counts.
+    Fixed handling of inexact ALSA period counts.
 
     Altered device naming scheme on Windows backends to better match other
     drivers.
 
-    Updated the CoreAudio backend to use the AudioComponent API. This fixes
+    Updated the CoreAudio backend to use the AudioComponent API. This clears up
     deprecation warnings for OSX 10.11, although requires OSX 10.6 or newer.
 
 openal-soft-1.17.0:

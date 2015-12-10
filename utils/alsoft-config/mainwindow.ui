@@ -224,6 +224,7 @@ to stereo output.</string>
 are used in place of the default sets. The filenames may
 contain these markers, which will be replaced as needed:
 %r - Device sampling rate
+%s - Non-greedy string (up to the following matching characters)
 %% - Percent sign (%)</string>
        </property>
        <property name="dragEnabled">

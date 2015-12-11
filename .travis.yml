@@ -1,0 +1,2 @@
+language: c
+script: cmake . && make -j2

@@ -8,6 +8,7 @@
 
 typedef char al_string_char_type;
 TYPEDEF_VECTOR(al_string_char_type, al_string)
+TYPEDEF_VECTOR(al_string, vector_al_string)
 
 inline void al_string_deinit(al_string *str)
 { VECTOR_DEINIT(*str); }
@@ -40,6 +41,8 @@ void al_string_append_range(al_string *str, const al_string_char_type *from, con
 #include <wchar.h>
 /* Windows-only methods to deal with WideChar strings. */
 void al_string_copy_wcstr(al_string *str, const wchar_t *from);
+void al_string_append_wcstr(al_string *str, const wchar_t *from);
+void al_string_append_wrange(al_string *str, const wchar_t *from, const wchar_t *to);
 #endif
 
 #endif /* ALSTRING_H */

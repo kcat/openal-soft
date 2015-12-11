@@ -14,7 +14,7 @@ sides.
 
 The default data set is based on the KEMAR HRTF data provided by MIT, which can
 be found at <http://sound.media.mit.edu/resources/KEMAR.html>. It's only
-available when using 44100hz playback.
+available when using 44100hz or 48000hz playback.
 
 
 Custom HRTF Data Sets

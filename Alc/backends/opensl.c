@@ -25,7 +25,7 @@
 
 #include "alMain.h"
 #include "alu.h"
-
+#include "threads.h"
 
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
@@ -378,6 +378,15 @@ static void opensl_stop_playback(ALCdevice *Device)
     {
         result = VCALL0(bufferQueue,Clear)();
         PRINTERR(result, "bufferQueue->Clear");
+    }
+    if(SL_RESULT_SUCCESS == result)
+    {
+        SLAndroidSimpleBufferQueueState state;
+        do {
+            althrd_yield();
+            result = VCALL(bufferQueue,GetState)(&state);
+        } while(SL_RESULT_SUCCESS == result && state.count > 0);
+        PRINTERR(result, "bufferQueue->GetState");
     }
 
     free(data->buffer);

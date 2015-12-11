@@ -34,12 +34,16 @@ OPTION(ALSOFT_UTILS          "Build and install utility programs"         ON)
 OPTION(ALSOFT_NO_CONFIG_UTIL "Disable building the alsoft-config utility" OFF)
 
 OPTION(ALSOFT_EXAMPLES  "Build and install example programs"  ON)
+OPTION(ALSOFT_TESTS     "Build and install test programs"     ON)
 
 OPTION(ALSOFT_CONFIG "Install alsoft.conf sample configuration file" ON)
 OPTION(ALSOFT_HRTF_DEFS "Install HRTF definition files" ON)
+OPTION(ALSOFT_INSTALL "Install headers and libraries" ON)
 
 
-IF(WIN32)
+IF(NOT WIN32)
+    SET(LIBNAME openal)
+ELSE()
     SET(LIBNAME OpenAL32)
     ADD_DEFINITIONS("-D_WIN32 -D_WIN32_WINNT=0x0502")
 
@@ -58,22 +62,7 @@ IF(WIN32)
             ENDIF()
         ENDIF()
     ENDIF()
-ELSE()
-    SET(LIBNAME openal)
-
-    # These are needed on non-Windows systems for extra features
-    ADD_DEFINITIONS(-D_GNU_SOURCE=1 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700)
-    SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_GNU_SOURCE=1 -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700")
 ENDIF()
-
-# Set defines for large file support
-CHECK_FILE_OFFSET_BITS()
-IF(_FILE_OFFSET_BITS)
-    ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=${_FILE_OFFSET_BITS})
-    SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_FILE_OFFSET_BITS=${_FILE_OFFSET_BITS}")
-ENDIF()
-ADD_DEFINITIONS(-D_LARGEFILE_SOURCE -D_LARGE_FILES)
-SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_LARGEFILE_SOURCE -D_LARGE_FILES")
 
 
 # QNX's gcc do not uses /usr/include and /usr/lib pathes by default
@@ -87,8 +76,8 @@ IF(NOT LIBTYPE)
 ENDIF()
 
 SET(LIB_MAJOR_VERSION "1")
-SET(LIB_MINOR_VERSION "16")
-SET(LIB_REVISION "0")
+SET(LIB_MINOR_VERSION "17")
+SET(LIB_REVISION "1")
 SET(LIB_VERSION "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_REVISION}")
 
 SET(EXPORT_DECL "")
@@ -99,10 +88,38 @@ CHECK_TYPE_SIZE("long" SIZEOF_LONG)
 CHECK_TYPE_SIZE("long long" SIZEOF_LONG_LONG)
 
 
-CHECK_C_COMPILER_FLAG(-std=c99 HAVE_STD_C99)
-IF(HAVE_STD_C99)
-    SET(CMAKE_C_FLAGS "-std=c99 ${CMAKE_C_FLAGS}")
+CHECK_C_COMPILER_FLAG(-std=c11 HAVE_STD_C11)
+IF(HAVE_STD_C11)
+    SET(CMAKE_C_FLAGS "-std=c11 ${CMAKE_C_FLAGS}")
+ELSE()
+    CHECK_C_COMPILER_FLAG(-std=c99 HAVE_STD_C99)
+    IF(HAVE_STD_C99)
+        SET(CMAKE_C_FLAGS "-std=c99 ${CMAKE_C_FLAGS}")
+    ENDIF()
 ENDIF()
+
+# Check if _POSIX_C_SOURCE needs to be set for POSIX functions
+CHECK_SYMBOL_EXISTS(posix_memalign stdlib.h HAVE_POSIX_MEMALIGN_DEFAULT)
+IF(NOT HAVE_POSIX_MEMALIGN_DEFAULT)
+    SET(OLD_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+    SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_POSIX_C_SOURCE=200809L")
+    CHECK_SYMBOL_EXISTS(posix_memalign stdlib.h HAVE_POSIX_MEMALIGN_POSIX)
+    IF(NOT HAVE_POSIX_MEMALIGN_POSIX)
+        SET(CMAKE_REQUIRED_FLAGS ${OLD_REQUIRED_FLAGS})
+    ELSE()
+        ADD_DEFINITIONS(-D_POSIX_C_SOURCE=200809L)
+    ENDIF()
+    UNSET(OLD_REQUIRED_FLAGS)
+ENDIF()
+
+# Set defines for large file support
+CHECK_FILE_OFFSET_BITS()
+IF(_FILE_OFFSET_BITS)
+    ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=${_FILE_OFFSET_BITS})
+    SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_FILE_OFFSET_BITS=${_FILE_OFFSET_BITS}")
+ENDIF()
+ADD_DEFINITIONS(-D_LARGEFILE_SOURCE -D_LARGE_FILES)
+SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_LARGEFILE_SOURCE -D_LARGE_FILES")
 
 # MSVC may need workarounds for C99 restrict and inline
 IF(MSVC)
@@ -324,6 +341,10 @@ IF(NOT MSVC)
     IF(HAVE_MSSE2_SWITCH)
         SET(SSE2_SWITCH "-msse2")
     ENDIF()
+    CHECK_C_COMPILER_FLAG(-msse3 HAVE_MSSE3_SWITCH)
+    IF(HAVE_MSSE3_SWITCH)
+        SET(SSE3_SWITCH "-msse3")
+    ENDIF()
     CHECK_C_COMPILER_FLAG(-msse4.1 HAVE_MSSE4_1_SWITCH)
     IF(HAVE_MSSE4_1_SWITCH)
         SET(SSE4_1_SWITCH "-msse4.1")
@@ -336,7 +357,7 @@ CHECK_C_SOURCE_COMPILES("int foo(const char *str, ...) __attribute__((format(pri
 CHECK_INCLUDE_FILE(stdbool.h HAVE_STDBOOL_H)
 CHECK_INCLUDE_FILE(stdalign.h HAVE_STDALIGN_H)
 CHECK_INCLUDE_FILE(malloc.h HAVE_MALLOC_H)
-CHECK_INCLUDE_FILE(ftw.h HAVE_FTW_H)
+CHECK_INCLUDE_FILE(dirent.h HAVE_DIRENT_H)
 CHECK_INCLUDE_FILE(io.h HAVE_IO_H)
 CHECK_INCLUDE_FILE(strings.h HAVE_STRINGS_H)
 CHECK_INCLUDE_FILE(cpuid.h HAVE_CPUID_H)
@@ -381,6 +402,7 @@ CHECK_SYMBOL_EXISTS(aligned_alloc    stdlib.h HAVE_ALIGNED_ALLOC)
 CHECK_SYMBOL_EXISTS(posix_memalign   stdlib.h HAVE_POSIX_MEMALIGN)
 CHECK_SYMBOL_EXISTS(_aligned_malloc  malloc.h HAVE__ALIGNED_MALLOC)
 CHECK_SYMBOL_EXISTS(lrintf math.h HAVE_LRINTF)
+CHECK_SYMBOL_EXISTS(modff  math.h HAVE_MODFF)
 IF(NOT HAVE_C99_VLA)
     CHECK_SYMBOL_EXISTS(alloca malloc.h HAVE_ALLOCA)
     IF(NOT HAVE_ALLOCA)
@@ -391,12 +413,6 @@ ENDIF()
 IF(HAVE_FLOAT_H)
     CHECK_SYMBOL_EXISTS(_controlfp float.h HAVE__CONTROLFP)
     CHECK_SYMBOL_EXISTS(__control87_2 float.h HAVE___CONTROL87_2)
-ENDIF()
-IF(HAVE_FTW_H)
-    CHECK_SYMBOL_EXISTS(ftw ftw.h HAVE_FTW)
-ENDIF()
-IF(HAVE_IO_H)
-    CHECK_SYMBOL_EXISTS(_wfindfirst io.h HAVE__WFINDFIRST)
 ENDIF()
 
 CHECK_FUNCTION_EXISTS(strtof HAVE_STRTOF)
@@ -421,7 +437,7 @@ IF(NOT HAVE_STRNCASECMP)
     ADD_DEFINITIONS(-Dstrncasecmp=_strnicmp)
 ENDIF()
 
-CHECK_FUNCTION_EXISTS(snprintf HAVE_SNPRINTF)
+CHECK_SYMBOL_EXISTS(snprintf stdio.h HAVE_SNPRINTF)
 IF(NOT HAVE_SNPRINTF)
     CHECK_FUNCTION_EXISTS(_snprintf HAVE__SNPRINTF)
     IF(NOT HAVE__SNPRINTF)
@@ -470,12 +486,12 @@ ENDIF()
 # Check if we have Windows headers
 CHECK_INCLUDE_FILE(windows.h HAVE_WINDOWS_H -D_WIN32_WINNT=0x0502)
 IF(NOT HAVE_WINDOWS_H)
-    CHECK_FUNCTION_EXISTS(gettimeofday HAVE_GETTIMEOFDAY)
+    CHECK_SYMBOL_EXISTS(gettimeofday sys/time.h HAVE_GETTIMEOFDAY)
     IF(NOT HAVE_GETTIMEOFDAY)
         MESSAGE(FATAL_ERROR "No timing function found!")
     ENDIF()
 
-    CHECK_FUNCTION_EXISTS(nanosleep HAVE_NANOSLEEP)
+    CHECK_SYMBOL_EXISTS(nanosleep time.h HAVE_NANOSLEEP)
     IF(NOT HAVE_NANOSLEEP)
         MESSAGE(FATAL_ERROR "No sleep function found!")
     ENDIF()
@@ -502,12 +518,18 @@ IF(NOT HAVE_WINDOWS_H)
 
     CHECK_SYMBOL_EXISTS(pthread_setschedparam pthread.h HAVE_PTHREAD_SETSCHEDPARAM)
 
-    CHECK_SYMBOL_EXISTS(pthread_setname_np pthread.h HAVE_PTHREAD_SETNAME_NP)
-    IF(NOT HAVE_PTHREAD_SETNAME_NP)
-        CHECK_SYMBOL_EXISTS(pthread_set_name_np pthread.h HAVE_PTHREAD_SET_NAME_NP)
-    ENDIF()
     IF(HAVE_PTHREAD_NP_H)
+        CHECK_SYMBOL_EXISTS(pthread_setname_np "pthread.h;pthread_np.h" HAVE_PTHREAD_SETNAME_NP)
+        IF(NOT HAVE_PTHREAD_SETNAME_NP)
+            CHECK_SYMBOL_EXISTS(pthread_set_name_np "pthread.h;pthread_np.h" HAVE_PTHREAD_SET_NAME_NP)
+        ENDIF()
         CHECK_SYMBOL_EXISTS(pthread_mutexattr_setkind_np "pthread.h;pthread_np.h" HAVE_PTHREAD_MUTEXATTR_SETKIND_NP)
+    ELSE()
+        CHECK_SYMBOL_EXISTS(pthread_setname_np pthread.h HAVE_PTHREAD_SETNAME_NP)
+        IF(NOT HAVE_PTHREAD_SETNAME_NP)
+            CHECK_SYMBOL_EXISTS(pthread_set_name_np pthread.h HAVE_PTHREAD_SET_NAME_NP)
+        ENDIF()
+        CHECK_SYMBOL_EXISTS(pthread_mutexattr_setkind_np pthread.h HAVE_PTHREAD_MUTEXATTR_SETKIND_NP)
     ENDIF()
 
     CHECK_SYMBOL_EXISTS(pthread_mutex_timedlock pthread.h HAVE_PTHREAD_MUTEX_TIMEDLOCK)
@@ -548,11 +570,7 @@ SET(OPENAL_OBJS  OpenAL32/alAuxEffectSlot.c
                  OpenAL32/alError.c
                  OpenAL32/alExtension.c
                  OpenAL32/alFilter.c
-                 OpenAL32/alFontsound.c
                  OpenAL32/alListener.c
-                 OpenAL32/alMidi.c
-                 OpenAL32/alPreset.c
-                 OpenAL32/alSoundfont.c
                  OpenAL32/alSource.c
                  OpenAL32/alState.c
                  OpenAL32/alThunk.c
@@ -575,6 +593,7 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/effects/null.c
               Alc/effects/reverb.c
               Alc/helpers.c
+              Alc/bsinc.c
               Alc/hrtf.c
               Alc/panning.c
               Alc/mixer.c
@@ -585,10 +604,9 @@ SET(ALC_OBJS  Alc/ALc.c
 SET(CPU_EXTS "Default")
 SET(HAVE_SSE        0)
 SET(HAVE_SSE2       0)
+SET(HAVE_SSE3       0)
 SET(HAVE_SSE4_1     0)
 SET(HAVE_NEON       0)
-
-SET(HAVE_FLUIDSYNTH 0)
 
 SET(HAVE_ALSA       0)
 SET(HAVE_OSS        0)
@@ -645,6 +663,26 @@ IF(ALSOFT_REQUIRE_SSE2 AND NOT HAVE_SSE2)
     MESSAGE(FATAL_ERROR "Failed to enable required SSE2 CPU extensions")
 ENDIF()
 
+OPTION(ALSOFT_REQUIRE_SSE2 "Require SSE3 support" OFF)
+CHECK_INCLUDE_FILE(pmmintrin.h HAVE_PMMINTRIN_H "${SSE3_SWITCH}")
+IF(HAVE_EMMINTRIN_H)
+    OPTION(ALSOFT_CPUEXT_SSE3 "Enable SSE3 support" ON)
+    IF(HAVE_SSE2 AND ALSOFT_CPUEXT_SSE3)
+        IF(ALIGN_DECL OR HAVE_C11_ALIGNAS)
+            SET(HAVE_SSE3 1)
+            SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer_sse3.c)
+            IF(SSE2_SWITCH)
+                SET_SOURCE_FILES_PROPERTIES(Alc/mixer_sse3.c PROPERTIES
+                                            COMPILE_FLAGS "${SSE3_SWITCH}")
+            ENDIF()
+            SET(CPU_EXTS "${CPU_EXTS}, SSE3")
+        ENDIF()
+    ENDIF()
+ENDIF()
+IF(ALSOFT_REQUIRE_SSE3 AND NOT HAVE_SSE3)
+    MESSAGE(FATAL_ERROR "Failed to enable required SSE3 CPU extensions")
+ENDIF()
+
 OPTION(ALSOFT_REQUIRE_SSE4_1 "Require SSE4.1 support" OFF)
 CHECK_INCLUDE_FILE(smmintrin.h HAVE_SMMINTRIN_H "${SSE4_1_SWITCH}")
 IF(HAVE_SMMINTRIN_H)
@@ -691,32 +729,6 @@ ELSE()
         SET(EXTRA_LIBS ${_LIBS} ${EXTRA_LIBS})
     ENDMACRO()
 ENDIF()
-
-SET(ALC_OBJS  ${ALC_OBJS}
-              Alc/midi/base.c
-              Alc/midi/sf2load.c
-              Alc/midi/dummy.c
-              Alc/midi/fluidsynth.c
-              Alc/midi/soft.c
-)
-
-# Check for FluidSynth support
-OPTION(ALSOFT_REQUIRE_FLUIDSYNTH "Require FluidSynth MIDI" OFF)
-FIND_PACKAGE(FluidSynth)
-IF(FLUIDSYNTH_FOUND)
-    OPTION(ALSOFT_MIDI_FLUIDSYNTH "Enable FluidSynth MIDI" ON)
-    IF(ALSOFT_MIDI_FLUIDSYNTH)
-        SET(HAVE_FLUIDSYNTH 1)
-        ADD_BACKEND_LIBS(${FLUIDSYNTH_LIBRARIES})
-        IF(CMAKE_VERSION VERSION_LESS "2.8.8")
-            INCLUDE_DIRECTORIES(${FLUIDSYNTH_INCLUDE_DIR})
-        ENDIF()
-    ENDIF()
-ENDIF()
-IF(ALSOFT_REQUIRE_FLUIDSYNTH AND NOT HAVE_FLUIDSYNTH)
-    MESSAGE(FATAL_ERROR "Failed to enabled required FluidSynth support")
-ENDIF()
-
 
 SET(BACKENDS "")
 SET(ALC_OBJS  ${ALC_OBJS}
@@ -922,7 +934,7 @@ IF(JACK_FOUND)
         SET(HAVE_JACK 1)
         SET(BACKENDS  "${BACKENDS} JACK${IS_LINKED},")
         SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/jack.c)
-        ADD_BACKEND_LIBS(${PULSEAUDIO_LIBRARIES})
+        ADD_BACKEND_LIBS(${JACK_LIBRARIES})
         IF(CMAKE_VERSION VERSION_LESS "2.8.8")
             INCLUDE_DIRECTORIES(${JACK_INCLUDE_DIRS})
         ENDIF()
@@ -1052,9 +1064,6 @@ IF(WIN32 AND ALSOFT_NO_UID_DEFS)
     SET_PROPERTY(TARGET ${LIBNAME} APPEND PROPERTY COMPILE_DEFINITIONS AL_NO_UID_DEFS)
 ENDIF()
 SET_PROPERTY(TARGET ${LIBNAME} APPEND PROPERTY INCLUDE_DIRECTORIES "${OpenAL_SOURCE_DIR}/OpenAL32/Include" "${OpenAL_SOURCE_DIR}/Alc")
-IF(FLUIDSYNTH_FOUND)
-    SET_PROPERTY(TARGET ${LIBNAME} APPEND PROPERTY INCLUDE_DIRECTORIES ${FLUIDSYNTH_INCLUDE_DIR})
-ENDIF()
 IF(HAVE_ALSA)
     SET_PROPERTY(TARGET ${LIBNAME} APPEND PROPERTY INCLUDE_DIRECTORIES ${ALSA_INCLUDE_DIRS})
 ENDIF()
@@ -1112,22 +1121,24 @@ ENDIF()
 
 TARGET_LINK_LIBRARIES(${LIBNAME} common ${EXTRA_LIBS})
 
-# Add an install target here
-INSTALL(TARGETS ${LIBNAME}
-        RUNTIME DESTINATION bin
-        LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-        ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
-)
-INSTALL(FILES include/AL/al.h
-              include/AL/alc.h
-              include/AL/alext.h
-              include/AL/efx.h
-              include/AL/efx-creative.h
-              include/AL/efx-presets.h
-        DESTINATION include/AL
-)
-INSTALL(FILES "${OpenAL_BINARY_DIR}/openal.pc"
-        DESTINATION "lib${LIB_SUFFIX}/pkgconfig")
+IF(ALSOFT_INSTALL)
+    # Add an install target here
+    INSTALL(TARGETS ${LIBNAME}
+            RUNTIME DESTINATION bin
+            LIBRARY DESTINATION "lib${LIB_SUFFIX}"
+            ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+    )
+    INSTALL(FILES include/AL/al.h
+                  include/AL/alc.h
+                  include/AL/alext.h
+                  include/AL/efx.h
+                  include/AL/efx-creative.h
+                  include/AL/efx-presets.h
+            DESTINATION include/AL
+    )
+    INSTALL(FILES "${OpenAL_BINARY_DIR}/openal.pc"
+            DESTINATION "lib${LIB_SUFFIX}/pkgconfig")
+ENDIF()
 
 
 MESSAGE(STATUS "")
@@ -1137,10 +1148,6 @@ MESSAGE(STATUS "")
 MESSAGE(STATUS "Building with support for CPU extensions:")
 MESSAGE(STATUS "    ${CPU_EXTS}")
 MESSAGE(STATUS "")
-IF(HAVE_FLUIDSYNTH)
-    MESSAGE(STATUS "FluidSynth support for ALC_SOFT_midi_interface enabled")
-    MESSAGE(STATUS "")
-ENDIF()
 
 IF(WIN32)
     IF(NOT HAVE_DSOUND)
@@ -1178,17 +1185,42 @@ IF(ALSOFT_UTILS)
         TARGET_LINK_LIBRARIES(makehrtf m)
     ENDIF()
 
-    INSTALL(TARGETS openal-info makehrtf
-            RUNTIME DESTINATION bin
-            LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-            ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
-    )
+    ADD_EXECUTABLE(bsincgen utils/bsincgen.c)
+    IF(HAVE_LIBM)
+        TARGET_LINK_LIBRARIES(bsincgen m)
+    ENDIF()
+
+    IF(ALSOFT_INSTALL)
+        INSTALL(TARGETS openal-info makehrtf bsincgen
+                RUNTIME DESTINATION bin
+                LIBRARY DESTINATION "lib${LIB_SUFFIX}"
+                ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+        )
+    ENDIF()
 
     MESSAGE(STATUS "Building utility programs")
     IF(TARGET alsoft-config)
         MESSAGE(STATUS "Building configuration program")
     ENDIF()
     MESSAGE(STATUS "")
+ENDIF()
+
+IF(ALSOFT_TESTS)
+        ADD_LIBRARY(test-common STATIC examples/common/alhelpers.c)
+
+        ADD_EXECUTABLE(altonegen examples/altonegen.c)
+        TARGET_LINK_LIBRARIES(altonegen test-common ${LIBNAME})
+
+        IF(ALSOFT_INSTALL)
+            INSTALL(TARGETS altonegen
+                    RUNTIME DESTINATION bin
+                    LIBRARY DESTINATION "lib${LIB_SUFFIX}"
+                    ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+            )
+        ENDIF()
+
+        MESSAGE(STATUS "Building test programs")
+        MESSAGE(STATUS "")
 ENDIF()
 
 IF(ALSOFT_EXAMPLES)
@@ -1199,30 +1231,42 @@ IF(ALSOFT_EXAMPLES)
                                                                           ${SDL_SOUND_INCLUDE_DIR})
 
         ADD_EXECUTABLE(alstream examples/alstream.c)
-        TARGET_LINK_LIBRARIES(alstream ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ${LIBNAME})
+        TARGET_LINK_LIBRARIES(alstream ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
+                                       common ${LIBNAME})
         SET_PROPERTY(TARGET alstream APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
                                                                          ${SDL_SOUND_INCLUDE_DIR})
 
         ADD_EXECUTABLE(alreverb examples/alreverb.c)
-        TARGET_LINK_LIBRARIES(alreverb ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ${LIBNAME})
+        TARGET_LINK_LIBRARIES(alreverb ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
+                                       common ${LIBNAME})
         SET_PROPERTY(TARGET alreverb APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
                                                                          ${SDL_SOUND_INCLUDE_DIR})
 
         ADD_EXECUTABLE(allatency examples/allatency.c)
-        TARGET_LINK_LIBRARIES(allatency ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ${LIBNAME})
+        TARGET_LINK_LIBRARIES(allatency ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
+                                        common ${LIBNAME})
         SET_PROPERTY(TARGET allatency APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
                                                                           ${SDL_SOUND_INCLUDE_DIR})
 
         ADD_EXECUTABLE(alloopback examples/alloopback.c)
-        TARGET_LINK_LIBRARIES(alloopback ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ${LIBNAME})
+        TARGET_LINK_LIBRARIES(alloopback ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
+                                         common ${LIBNAME})
         SET_PROPERTY(TARGET alloopback APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
                                                                            ${SDL_SOUND_INCLUDE_DIR})
 
-        INSTALL(TARGETS alstream alreverb allatency alloopback
-                RUNTIME DESTINATION bin
-                LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-                ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
-        )
+        ADD_EXECUTABLE(alhrtf examples/alhrtf.c)
+        TARGET_LINK_LIBRARIES(alhrtf ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
+                                     common ${LIBNAME})
+        SET_PROPERTY(TARGET alhrtf APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
+                                                                       ${SDL_SOUND_INCLUDE_DIR})
+
+        IF(ALSOFT_INSTALL)
+            INSTALL(TARGETS alstream alreverb allatency alloopback alhrtf
+                    RUNTIME DESTINATION bin
+                    LIBRARY DESTINATION "lib${LIB_SUFFIX}"
+                    ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+            )
+        ENDIF()
 
         SET(FFVER_OK FALSE)
         IF(FFMPEG_FOUND)
@@ -1254,11 +1298,13 @@ IF(ALSOFT_EXAMPLES)
             SET_PROPERTY(TARGET alffplay APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
                                                                              ${FFMPEG_INCLUDE_DIRS})
 
-            INSTALL(TARGETS alffplay
-                    RUNTIME DESTINATION bin
-                    LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-                    ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
-            )
+            IF(ALSOFT_INSTALL)
+                INSTALL(TARGETS alffplay
+                        RUNTIME DESTINATION bin
+                        LIBRARY DESTINATION "lib${LIB_SUFFIX}"
+                        ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+                )
+            ENDIF()
             MESSAGE(STATUS "Building SDL and FFmpeg example programs")
         ELSE()
             MESSAGE(STATUS "Building SDL example programs")

@@ -409,6 +409,28 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device);
 #define AL_FORMAT_BFORMAT3D_MULAW                0x10032
 #endif
 
+#ifndef ALC_SOFT_HRTF
+#define ALC_SOFT_HRTF 1
+#define ALC_HRTF_SOFT                            0x1992
+#define ALC_DONT_CARE_SOFT                       0x0002
+#define ALC_HRTF_STATUS_SOFT                     0x1993
+#define ALC_HRTF_DISABLED_SOFT                   0x0000
+#define ALC_HRTF_ENABLED_SOFT                    0x0001
+#define ALC_HRTF_DENIED_SOFT                     0x0002
+#define ALC_HRTF_REQUIRED_SOFT                   0x0003
+#define ALC_HRTF_HEADPHONES_DETECTED_SOFT        0x0004
+#define ALC_HRTF_UNSUPPORTED_FORMAT_SOFT         0x0005
+#define ALC_NUM_HRTF_SPECIFIERS_SOFT             0x1994
+#define ALC_HRTF_SPECIFIER_SOFT                  0x1995
+#define ALC_HRTF_ID_SOFT                         0x1996
+typedef const ALCchar* (ALC_APIENTRY*LPALCGETSTRINGISOFT)(ALCdevice *device, ALCenum paramName, ALCsizei index);
+typedef ALCboolean (ALC_APIENTRY*LPALCRESETDEVICESOFT)(ALCdevice *device, const ALCint *attribs);
+#ifdef AL_ALEXT_PROTOTYPES
+ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum paramName, ALCsizei index);
+ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCint *attribs);
+#endif
+#endif
+
 #ifdef __cplusplus
 }
 #endif

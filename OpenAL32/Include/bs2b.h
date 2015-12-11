@@ -69,18 +69,15 @@ struct bs2b {
     } last_sample;
 };
 
-/* Clear buffers and set new coefficients with new crossfeed level value.
+/* Clear buffers and set new coefficients with new crossfeed level and sample
+ * rate values.
  * level - crossfeed level of *LEVEL values.
+ * srate - sample rate by Hz.
  */
-void bs2b_set_level(struct bs2b *bs2b, int level);
+void bs2b_set_params(struct bs2b *bs2b, int level, int srate);
 
 /* Return current crossfeed level value */
 int bs2b_get_level(struct bs2b *bs2b);
-
-/* Clear buffers and set new coefficients with new sample rate value.
- * srate - sample rate by Hz.
- */
-void bs2b_set_srate(struct bs2b *bs2b, int srate);
 
 /* Return current sample rate value */
 int bs2b_get_srate(struct bs2b *bs2b);

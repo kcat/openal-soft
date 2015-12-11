@@ -36,14 +36,14 @@
 #include "threads.h"
 #include "compat.h"
 
+#include "backends/base.h"
+
 #include <sys/audioio.h>
 
 
-static const ALCchar solaris_device[] = "Solaris Default";
+typedef struct ALCsolarisBackend {
+    DERIVE_FROM_TYPE(ALCbackend);
 
-static const char *solaris_driver = "/dev/audio";
-
-typedef struct {
     int fd;
 
     ALubyte *mix_data;
@@ -51,13 +51,58 @@ typedef struct {
 
     volatile int killNow;
     althrd_t thread;
-} solaris_data;
+} ALCsolarisBackend;
+
+static int ALCsolarisBackend_mixerProc(void *ptr);
+
+static void ALCsolarisBackend_Construct(ALCsolarisBackend *self, ALCdevice *device);
+static void ALCsolarisBackend_Destruct(ALCsolarisBackend *self);
+static ALCenum ALCsolarisBackend_open(ALCsolarisBackend *self, const ALCchar *name);
+static void ALCsolarisBackend_close(ALCsolarisBackend *self);
+static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self);
+static ALCboolean ALCsolarisBackend_start(ALCsolarisBackend *self);
+static void ALCsolarisBackend_stop(ALCsolarisBackend *self);
+static DECLARE_FORWARD2(ALCsolarisBackend, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
+static DECLARE_FORWARD(ALCsolarisBackend, ALCbackend, ALCuint, availableSamples)
+static DECLARE_FORWARD(ALCsolarisBackend, ALCbackend, ALint64, getLatency)
+static DECLARE_FORWARD(ALCsolarisBackend, ALCbackend, void, lock)
+static DECLARE_FORWARD(ALCsolarisBackend, ALCbackend, void, unlock)
+DECLARE_DEFAULT_ALLOCATORS(ALCsolarisBackend)
+
+DEFINE_ALCBACKEND_VTABLE(ALCsolarisBackend);
 
 
-static int SolarisProc(void *ptr)
+static const ALCchar solaris_device[] = "Solaris Default";
+
+static const char *solaris_driver = "/dev/audio";
+
+
+static void ALCsolarisBackend_Construct(ALCsolarisBackend *self, ALCdevice *device)
 {
-    ALCdevice *Device = (ALCdevice*)ptr;
-    solaris_data *data = (solaris_data*)Device->ExtraData;
+    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    SET_VTABLE2(ALCsolarisBackend, ALCbackend, self);
+
+    self->fd = -1;
+}
+
+static void ALCsolarisBackend_Destruct(ALCsolarisBackend *self)
+{
+    if(self->fd != -1)
+        close(self->fd);
+    self->fd = -1;
+
+    free(self->mix_data);
+    self->mix_data = NULL;
+    self->data_size = 0;
+
+    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+}
+
+
+static int ALCsolarisBackend_mixerProc(void *ptr)
+{
+    ALCsolarisBackend *self = ptr;
+    ALCdevice *Device = STATIC_CAST(ALCbackend,self)->mDevice;
     ALint frameSize;
     int wrote;
 
@@ -66,23 +111,23 @@ static int SolarisProc(void *ptr)
 
     frameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
 
-    while(!data->killNow && Device->Connected)
+    while(!self->killNow && Device->Connected)
     {
-        ALint len = data->data_size;
-        ALubyte *WritePtr = data->mix_data;
+        ALint len = self->data_size;
+        ALubyte *WritePtr = self->mix_data;
 
         aluMixData(Device, WritePtr, len/frameSize);
-        while(len > 0 && !data->killNow)
+        while(len > 0 && !self->killNow)
         {
-            wrote = write(data->fd, WritePtr, len);
+            wrote = write(self->fd, WritePtr, len);
             if(wrote < 0)
             {
                 if(errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
                 {
                     ERR("write failed: %s\n", strerror(errno));
-                    ALCdevice_Lock(Device);
+                    ALCsolarisBackend_lock(self);
                     aluHandleDisconnect(Device);
-                    ALCdevice_Unlock(Device);
+                    ALCsolarisBackend_unlock(self);
                     break;
                 }
 
@@ -99,43 +144,37 @@ static int SolarisProc(void *ptr)
 }
 
 
-static ALCenum solaris_open_playback(ALCdevice *device, const ALCchar *deviceName)
+static ALCenum ALCsolarisBackend_open(ALCsolarisBackend *self, const ALCchar *name)
 {
-    solaris_data *data;
+    ALCdevice *device;
 
-    if(!deviceName)
-        deviceName = solaris_device;
-    else if(strcmp(deviceName, solaris_device) != 0)
+    if(!name)
+        name = solaris_device;
+    else if(strcmp(name, solaris_device) != 0)
         return ALC_INVALID_VALUE;
 
-    data = (solaris_data*)calloc(1, sizeof(solaris_data));
-    data->killNow = 0;
-
-    data->fd = open(solaris_driver, O_WRONLY);
-    if(data->fd == -1)
+    self->fd = open(solaris_driver, O_WRONLY);
+    if(self->fd == -1)
     {
-        free(data);
         ERR("Could not open %s: %s\n", solaris_driver, strerror(errno));
         return ALC_INVALID_VALUE;
     }
 
-    al_string_copy_cstr(&device->DeviceName, deviceName);
-    device->ExtraData = data;
+    device = STATIC_CAST(ALCbackend,self)->mDevice;
+    al_string_copy_cstr(&device->DeviceName, name);
+
     return ALC_NO_ERROR;
 }
 
-static void solaris_close_playback(ALCdevice *device)
+static void ALCsolarisBackend_close(ALCsolarisBackend *self)
 {
-    solaris_data *data = (solaris_data*)device->ExtraData;
-
-    close(data->fd);
-    free(data);
-    device->ExtraData = NULL;
+    close(self->fd);
+    self->fd = -1;
 }
 
-static ALCboolean solaris_reset_playback(ALCdevice *device)
+static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
 {
-    solaris_data *data = (solaris_data*)device->ExtraData;
+    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
     audio_info_t info;
     ALuint frameSize;
     int numChannels;
@@ -174,7 +213,7 @@ static ALCboolean solaris_reset_playback(ALCdevice *device)
     frameSize = numChannels * BytesFromDevFmt(device->FmtType);
     info.play.buffer_size = device->UpdateSize*device->NumUpdates * frameSize;
 
-    if(ioctl(data->fd, AUDIO_SETINFO, &info) < 0)
+    if(ioctl(self->fd, AUDIO_SETINFO, &info) < 0)
     {
         ERR("ioctl failed: %s\n", strerror(errno));
         return ALC_FALSE;
@@ -201,73 +240,72 @@ static ALCboolean solaris_reset_playback(ALCdevice *device)
 
     SetDefaultChannelOrder(device);
 
+    free(self->mix_data);
+    self->data_size = device->UpdateSize * FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    self->mix_data = calloc(1, self->data_size);
+
     return ALC_TRUE;
 }
 
-static ALCboolean solaris_start_playback(ALCdevice *device)
+static ALCboolean ALCsolarisBackend_start(ALCsolarisBackend *self)
 {
-    solaris_data *data = (solaris_data*)device->ExtraData;
-
-    data->data_size = device->UpdateSize * FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
-    data->mix_data = calloc(1, data->data_size);
-
-    data->killNow = 0;
-    if(althrd_create(&data->thread, SolarisProc, device) != althrd_success)
-    {
-        free(data->mix_data);
-        data->mix_data = NULL;
+    self->killNow = 0;
+    if(althrd_create(&self->thread, ALCsolarisBackend_mixerProc, self) != althrd_success)
         return ALC_FALSE;
-    }
-
     return ALC_TRUE;
 }
 
-static void solaris_stop_playback(ALCdevice *device)
+static void ALCsolarisBackend_stop(ALCsolarisBackend *self)
 {
-    solaris_data *data = (solaris_data*)device->ExtraData;
     int res;
 
-    if(data->killNow)
+    if(self->killNow)
         return;
 
-    data->killNow = 1;
-    althrd_join(data->thread, &res);
+    self->killNow = 1;
+    althrd_join(self->thread, &res);
 
-    if(ioctl(data->fd, AUDIO_DRAIN) < 0)
+    if(ioctl(self->fd, AUDIO_DRAIN) < 0)
         ERR("Error draining device: %s\n", strerror(errno));
-
-    free(data->mix_data);
-    data->mix_data = NULL;
 }
 
 
-static const BackendFuncs solaris_funcs = {
-    solaris_open_playback,
-    solaris_close_playback,
-    solaris_reset_playback,
-    solaris_start_playback,
-    solaris_stop_playback,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL
-};
+typedef struct ALCsolarisBackendFactory {
+    DERIVE_FROM_TYPE(ALCbackendFactory);
+} ALCsolarisBackendFactory;
+#define ALCSOLARISBACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCsolarisBackendFactory, ALCbackendFactory) } }
 
-ALCboolean alc_solaris_init(BackendFuncs *func_list)
+ALCbackendFactory *ALCsolarisBackendFactory_getFactory(void);
+
+static ALCboolean ALCsolarisBackendFactory_init(ALCsolarisBackendFactory *self);
+static DECLARE_FORWARD(ALCsolarisBackendFactory, ALCbackendFactory, void, deinit)
+static ALCboolean ALCsolarisBackendFactory_querySupport(ALCsolarisBackendFactory *self, ALCbackend_Type type);
+static void ALCsolarisBackendFactory_probe(ALCsolarisBackendFactory *self, enum DevProbe type);
+static ALCbackend* ALCsolarisBackendFactory_createBackend(ALCsolarisBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
+DEFINE_ALCBACKENDFACTORY_VTABLE(ALCsolarisBackendFactory);
+
+
+ALCbackendFactory *ALCsolarisBackendFactory_getFactory(void)
 {
-    ConfigValueStr("solaris", "device", &solaris_driver);
+    static ALCsolarisBackendFactory factory = ALCSOLARISBACKENDFACTORY_INITIALIZER;
+    return STATIC_CAST(ALCbackendFactory, &factory);
+}
 
-    *func_list = solaris_funcs;
+
+static ALCboolean ALCsolarisBackendFactory_init(ALCsolarisBackendFactory* UNUSED(self))
+{
+    ConfigValueStr(NULL, "solaris", "device", &solaris_driver);
     return ALC_TRUE;
 }
 
-void alc_solaris_deinit(void)
+static ALCboolean ALCsolarisBackendFactory_querySupport(ALCsolarisBackendFactory* UNUSED(self), ALCbackend_Type type)
 {
+    if(type == ALCbackend_Playback)
+        return ALC_TRUE;
+    return ALC_FALSE;
 }
 
-void alc_solaris_probe(enum DevProbe type)
+static void ALCsolarisBackendFactory_probe(ALCsolarisBackendFactory* UNUSED(self), enum DevProbe type)
 {
     switch(type)
     {
@@ -284,4 +322,17 @@ void alc_solaris_probe(enum DevProbe type)
         case CAPTURE_DEVICE_PROBE:
             break;
     }
+}
+
+ALCbackend* ALCsolarisBackendFactory_createBackend(ALCsolarisBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+{
+    if(type == ALCbackend_Playback)
+    {
+        ALCsolarisBackend *backend;
+        NEW_OBJ(backend, ALCsolarisBackend)(device);
+        if(!backend) return NULL;
+        return STATIC_CAST(ALCbackend, backend);
+    }
+
+    return NULL;
 }

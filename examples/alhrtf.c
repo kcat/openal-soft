@@ -1,7 +1,7 @@
 /*
- * OpenAL Source Latency Example
+ * OpenAL HRTF Example
  *
- * Copyright (c) 2012 by Chris Robinson <chris.kcat@gmail.com>
+ * Copyright (c) 2015 by Chris Robinson <chris.kcat@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,10 +22,11 @@
  * THE SOFTWARE.
  */
 
-/* This file contains an example for checking the latency of a sound. */
+/* This file contains an example for selecting an HRTF. */
 
 #include <stdio.h>
 #include <assert.h>
+#include <math.h>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -35,21 +36,12 @@
 #include "common/sdl_sound.h"
 
 
-static LPALBUFFERSAMPLESSOFT alBufferSamplesSOFT = wrap_BufferSamples;
-static LPALISBUFFERFORMATSUPPORTEDSOFT alIsBufferFormatSupportedSOFT;
+#ifndef M_PI
+#define M_PI                         (3.14159265358979323846)
+#endif
 
-static LPALSOURCEDSOFT alSourcedSOFT;
-static LPALSOURCE3DSOFT alSource3dSOFT;
-static LPALSOURCEDVSOFT alSourcedvSOFT;
-static LPALGETSOURCEDSOFT alGetSourcedSOFT;
-static LPALGETSOURCE3DSOFT alGetSource3dSOFT;
-static LPALGETSOURCEDVSOFT alGetSourcedvSOFT;
-static LPALSOURCEI64SOFT alSourcei64SOFT;
-static LPALSOURCE3I64SOFT alSource3i64SOFT;
-static LPALSOURCEI64VSOFT alSourcei64vSOFT;
-static LPALGETSOURCEI64SOFT alGetSourcei64SOFT;
-static LPALGETSOURCE3I64SOFT alGetSource3i64SOFT;
-static LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
+static LPALCGETSTRINGISOFT alcGetStringiSOFT;
+static LPALCRESETDEVICESOFT alcResetDeviceSOFT;
 
 /* LoadBuffer loads the named audio file into an OpenAL buffer object, and
  * returns the new buffer ID. */
@@ -78,7 +70,7 @@ static ALuint LoadSound(const char *filename)
         return 0;
     }
 
-    format = GetFormat(channels, type, alIsBufferFormatSupportedSOFT);
+    format = GetFormat(channels, type, NULL);
     if(format == AL_NONE)
     {
         fprintf(stderr, "Unsupported format (%s, %s) for %s\n",
@@ -100,8 +92,7 @@ static ALuint LoadSound(const char *filename)
      * close the file. */
     buffer = 0;
     alGenBuffers(1, &buffer);
-    alBufferSamplesSOFT(buffer, rate, format, BytesToFrames(datalen, channels, type),
-                        channels, type, data);
+    alBufferData(buffer, format, data, datalen, rate);
     free(data);
     closeAudioFile(sound);
 
@@ -110,7 +101,7 @@ static ALuint LoadSound(const char *filename)
     if(err != AL_NO_ERROR)
     {
         fprintf(stderr, "OpenAL Error: %s\n", alGetString(err));
-        if(alIsBuffer(buffer))
+        if(buffer && alIsBuffer(buffer))
             alDeleteBuffers(1, &buffer);
         return 0;
     }
@@ -121,52 +112,103 @@ static ALuint LoadSound(const char *filename)
 
 int main(int argc, char **argv)
 {
+    ALCdevice *device;
     ALuint source, buffer;
-    ALdouble offsets[2];
+    const char *soundname;
+    const char *hrtfname;
+    ALCint hrtf_state;
+    ALCint num_hrtf;
+    ALdouble angle;
     ALenum state;
 
     /* Print out usage if no file was specified */
-    if(argc < 2)
+    if(argc < 2 || (strcmp(argv[1], "-hrtf") == 0 && argc < 4))
     {
-        fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
+        fprintf(stderr, "Usage: %s [-hrtf <name>] <soundfile>\n", argv[0]);
         return 1;
     }
 
-    /* Initialize OpenAL with the default device, and check for EFX support. */
+    /* Initialize OpenAL with the default device, and check for HRTF support. */
     if(InitAL() != 0)
         return 1;
 
-    if(!alIsExtensionPresent("AL_SOFT_source_latency"))
+    if(strcmp(argv[1], "-hrtf") == 0)
     {
-        fprintf(stderr, "Error: AL_SOFT_source_latency not supported\n");
+        hrtfname = argv[2];
+        soundname = argv[3];
+    }
+    else
+    {
+        hrtfname = NULL;
+        soundname = argv[1];
+    }
+
+    device = alcGetContextsDevice(alcGetCurrentContext());
+    if(!alcIsExtensionPresent(device, "ALC_SOFT_HRTF"))
+    {
+        fprintf(stderr, "Error: ALC_SOFT_HRTF not supported\n");
         CloseAL();
         return 1;
     }
 
     /* Define a macro to help load the function pointers. */
-#define LOAD_PROC(x)  ((x) = alGetProcAddress(#x))
-    LOAD_PROC(alSourcedSOFT);
-    LOAD_PROC(alSource3dSOFT);
-    LOAD_PROC(alSourcedvSOFT);
-    LOAD_PROC(alGetSourcedSOFT);
-    LOAD_PROC(alGetSource3dSOFT);
-    LOAD_PROC(alGetSourcedvSOFT);
-    LOAD_PROC(alSourcei64SOFT);
-    LOAD_PROC(alSource3i64SOFT);
-    LOAD_PROC(alSourcei64vSOFT);
-    LOAD_PROC(alGetSourcei64SOFT);
-    LOAD_PROC(alGetSource3i64SOFT);
-    LOAD_PROC(alGetSourcei64vSOFT);
-
-    if(alIsExtensionPresent("AL_SOFT_buffer_samples"))
-    {
-        LOAD_PROC(alBufferSamplesSOFT);
-        LOAD_PROC(alIsBufferFormatSupportedSOFT);
-    }
+#define LOAD_PROC(d, x)  ((x) = alcGetProcAddress((d), #x))
+    LOAD_PROC(device, alcGetStringiSOFT);
+    LOAD_PROC(device, alcResetDeviceSOFT);
 #undef LOAD_PROC
 
+    /* Enumerate available HRTFs, and reset the device using one. */
+    alcGetIntegerv(device, ALC_NUM_HRTF_SPECIFIERS_SOFT, 1, &num_hrtf);
+    if(!num_hrtf)
+        printf("No HRTFs found\n");
+    else
+    {
+        ALCint attr[5];
+        ALCint index = -1;
+        ALCint i;
+
+        printf("Available HRTFs:\n");
+        for(i = 0;i < num_hrtf;i++)
+        {
+            const ALCchar *name = alcGetStringiSOFT(device, ALC_HRTF_SPECIFIER_SOFT, i);
+            printf("    %d: %s\n", i, name);
+
+            /* Check if this is the HRTF the user requested. */
+            if(hrtfname && strcmp(name, hrtfname) == 0)
+                index = i;
+        }
+
+        if(index == -1)
+        {
+            if(hrtfname)
+                printf("HRTF \"%s\" not found\n", hrtfname);
+            index = 0;
+        }
+        printf("Selecting HRTF %d...\n", index);
+
+        attr[0] = ALC_HRTF_SOFT;
+        attr[1] = ALC_TRUE;
+        attr[2] = ALC_HRTF_ID_SOFT;
+        attr[3] = index;
+        attr[4] = 0;
+
+        if(!alcResetDeviceSOFT(device, attr))
+            printf("Failed to reset device: %s\n", alcGetString(device, alcGetError(device)));
+    }
+
+    /* Check if HRTF is enabled, and show which is being used. */
+    alcGetIntegerv(device, ALC_HRTF_SOFT, 1, &hrtf_state);
+    if(!hrtf_state)
+        printf("HRTF not enabled!\n");
+    else
+    {
+        const ALchar *name = alcGetString(device, ALC_HRTF_SPECIFIER_SOFT);
+        printf("HRTF enabled, using %s\n", name);
+    }
+    fflush(stdout);
+
     /* Load the sound into a buffer. */
-    buffer = LoadSound(argv[1]);
+    buffer = LoadSound(soundname);
     if(!buffer)
     {
         CloseAL();
@@ -176,23 +218,25 @@ int main(int argc, char **argv)
     /* Create the source to play the sound with. */
     source = 0;
     alGenSources(1, &source);
+    alSourcei(source, AL_SOURCE_RELATIVE, AL_TRUE);
+    alSource3f(source, AL_POSITION, 0.0f, 0.0f, -1.0f);
     alSourcei(source, AL_BUFFER, buffer);
     assert(alGetError()==AL_NO_ERROR && "Failed to setup sound source");
 
     /* Play the sound until it finishes. */
+    angle = 0.0;
     alSourcePlay(source);
     do {
         al_nssleep(10000000);
-        alGetSourcei(source, AL_SOURCE_STATE, &state);
 
-        /* Get the source offset and latency. AL_SEC_OFFSET_LATENCY_SOFT will
-         * place the offset (in seconds) in offsets[0], and the time until that
-         * offset will be heard (in seconds) in offsets[1]. */
-        alGetSourcedvSOFT(source, AL_SEC_OFFSET_LATENCY_SOFT, offsets);
-        printf("\rOffset: %f - Latency:%3u ms  ", offsets[0], (ALuint)(offsets[1]*1000));
-        fflush(stdout);
+        /* Rotate the source around the listener by about 1/4 cycle per second.
+         * Only affects mono sounds.
+         */
+        angle += 0.01 * M_PI * 0.5;
+        alSource3f(source, AL_POSITION, (ALfloat)sin(angle), 0.0f, -(ALfloat)cos(angle));
+
+        alGetSourcei(source, AL_SOURCE_STATE, &state);
     } while(alGetError() == AL_NO_ERROR && state == AL_PLAYING);
-    printf("\n");
 
     /* All done. Delete resources, and close OpenAL. */
     alDeleteSources(1, &source);

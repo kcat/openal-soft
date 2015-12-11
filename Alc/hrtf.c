@@ -30,6 +30,8 @@
 #include "alu.h"
 #include "hrtf.h"
 
+#include "compat.h"
+
 
 /* Current data set limits defined by the makehrtf utility. */
 #define MIN_IR_SIZE                  (8)
@@ -52,6 +54,7 @@ struct Hrtf {
     const ALshort *coeffs;
     const ALubyte *delays;
 
+    al_string filename;
     struct Hrtf *next;
 };
 
@@ -82,7 +85,7 @@ static void CalcEvIndices(ALuint evcount, ALfloat ev, ALuint *evidx, ALfloat *ev
  */
 static void CalcAzIndices(ALuint azcount, ALfloat az, ALuint *azidx, ALfloat *azmu)
 {
-    az = (F_2PI + az) * azcount / F_2PI;
+    az = (F_TAU + az) * azcount / F_TAU;
     azidx[0] = fastf2u(az) % azcount;
     azidx[1] = (azidx[0] + 1) % azcount;
     *azmu = az - floorf(az);
@@ -312,7 +315,10 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
 }
 
 
-/* Calculates HRTF coefficients for B-Format channels (only up to first-order). */
+/* Calculates HRTF coefficients for B-Format channels (only up to first-order).
+ * Note that these will decode a B-Format output mix, which uses FuMa ordering
+ * and scaling, not N3D!
+ */
 void GetBFormatHrtfCoeffs(const struct Hrtf *Hrtf, const ALuint num_chans, ALfloat (**coeffs_list)[2], ALuint **delay_list)
 {
     ALuint elev_idx, azi_idx;
@@ -359,17 +365,17 @@ void GetBFormatHrtfCoeffs(const struct Hrtf *Hrtf, const ALuint num_chans, ALflo
             lidx = evoffset + azi_idx;
             ridx = evoffset + ((azcount-azi_idx) % azcount);
 
-            az = (ALfloat)azi_idx / (ALfloat)azcount * F_2PI;
-            if(az > F_PI) az -= F_2PI;
+            az = (ALfloat)azi_idx / (ALfloat)azcount * F_TAU;
+            if(az > F_PI) az -= F_TAU;
 
             x = cosf(-az) * cosf(elev);
             y = sinf(-az) * cosf(elev);
             z = sinf(elev);
 
-            ambi_coeffs[0] = 1.4142f;
-            ambi_coeffs[1] = x; /* X */
-            ambi_coeffs[2] = y; /* Y */
-            ambi_coeffs[3] = z; /* Z */
+            ambi_coeffs[0] = 1.414213562f;
+            ambi_coeffs[1] = x;
+            ambi_coeffs[2] = y;
+            ambi_coeffs[3] = z;
 
             for(c = 0;c < num_chans;c++)
             {
@@ -414,7 +420,7 @@ void GetBFormatHrtfCoeffs(const struct Hrtf *Hrtf, const ALuint num_chans, ALflo
 }
 
 
-static struct Hrtf *LoadHrtf00(FILE *f, ALuint deviceRate)
+static struct Hrtf *LoadHrtf00(FILE *f)
 {
     const ALubyte maxDelay = HRTF_HISTORY_LENGTH-1;
     struct Hrtf *Hrtf = NULL;
@@ -441,12 +447,6 @@ static struct Hrtf *LoadHrtf00(FILE *f, ALuint deviceRate)
 
     evCount = fgetc(f);
 
-    if(rate != deviceRate)
-    {
-        ERR("HRIR rate does not match device rate: rate=%d (%d)\n",
-            rate, deviceRate);
-        failed = AL_TRUE;
-    }
     if(irSize < MIN_IR_SIZE || irSize > MAX_IR_SIZE || (irSize%MOD_IR_SIZE))
     {
         ERR("Unsupported HRIR size: irSize=%d (%d to %d by %d)\n",
@@ -569,6 +569,7 @@ static struct Hrtf *LoadHrtf00(FILE *f, ALuint deviceRate)
         Hrtf->evOffset = evOffset;
         Hrtf->coeffs = coeffs;
         Hrtf->delays = delays;
+        AL_STRING_INIT(Hrtf->filename);
         Hrtf->next = NULL;
         return Hrtf;
     }
@@ -581,7 +582,7 @@ static struct Hrtf *LoadHrtf00(FILE *f, ALuint deviceRate)
 }
 
 
-static struct Hrtf *LoadHrtf01(FILE *f, ALuint deviceRate)
+static struct Hrtf *LoadHrtf01(FILE *f)
 {
     const ALubyte maxDelay = HRTF_HISTORY_LENGTH-1;
     struct Hrtf *Hrtf = NULL;
@@ -603,12 +604,6 @@ static struct Hrtf *LoadHrtf01(FILE *f, ALuint deviceRate)
 
     evCount = fgetc(f);
 
-    if(rate != deviceRate)
-    {
-        ERR("HRIR rate does not match device rate: rate=%d (%d)\n",
-                rate, deviceRate);
-        failed = AL_TRUE;
-    }
     if(irSize < MIN_IR_SIZE || irSize > MAX_IR_SIZE || (irSize%MOD_IR_SIZE))
     {
         ERR("Unsupported HRIR size: irSize=%d (%d to %d by %d)\n",
@@ -714,6 +709,7 @@ static struct Hrtf *LoadHrtf01(FILE *f, ALuint deviceRate)
         Hrtf->evOffset = evOffset;
         Hrtf->coeffs = coeffs;
         Hrtf->delays = delays;
+        AL_STRING_INIT(Hrtf->filename);
         Hrtf->next = NULL;
         return Hrtf;
     }
@@ -726,143 +722,166 @@ static struct Hrtf *LoadHrtf01(FILE *f, ALuint deviceRate)
 }
 
 
-static struct Hrtf *LoadHrtf(ALuint deviceRate)
+static void AddFileEntry(vector_HrtfEntry *list, al_string *filename)
 {
-    const char *fnamelist = "default-%r.mhr";
+    HrtfEntry entry = { AL_STRING_INIT_STATIC(), *filename, NULL };
+    HrtfEntry *iter;
+    const char *name;
+    int i;
 
-    ConfigValueStr(NULL, "hrtf_tables", &fnamelist);
-    while(*fnamelist != '\0')
+    name = strrchr(al_string_get_cstr(entry.filename), '/');
+    if(!name) name = strrchr(al_string_get_cstr(entry.filename), '\\');
+    if(!name) name = al_string_get_cstr(entry.filename);
+    else ++name;
+
+    entry.hrtf = LoadedHrtfs;
+    while(entry.hrtf)
     {
-        struct Hrtf *Hrtf = NULL;
-        char fname[PATH_MAX];
-        const char *next;
+        if(al_string_cmp(entry.filename, entry.hrtf->filename) == 0)
+            break;
+        entry.hrtf = entry.hrtf->next;
+    }
+
+    if(!entry.hrtf)
+    {
+        struct Hrtf *hrtf = NULL;
         ALchar magic[8];
-        ALuint i;
         FILE *f;
 
-        i = 0;
-        while(isspace(*fnamelist) || *fnamelist == ',')
-            fnamelist++;
-        next = fnamelist;
-        while(*(fnamelist=next) != '\0' && *fnamelist != ',')
-        {
-            next = strpbrk(fnamelist, "%,");
-            while(fnamelist != next && *fnamelist && i < sizeof(fname))
-                fname[i++] = *(fnamelist++);
-
-            if(!next || *next == ',')
-                break;
-
-            /* *next == '%' */
-            next++;
-            if(*next == 'r')
-            {
-                int wrote = snprintf(&fname[i], sizeof(fname)-i, "%u", deviceRate);
-                i += minu(wrote, sizeof(fname)-i);
-                next++;
-            }
-            else if(*next == '%')
-            {
-                if(i < sizeof(fname))
-                    fname[i++] = '%';
-                next++;
-            }
-            else
-                ERR("Invalid marker '%%%c'\n", *next);
-        }
-        i = minu(i, sizeof(fname)-1);
-        fname[i] = '\0';
-        while(i > 0 && isspace(fname[i-1]))
-            i--;
-        fname[i] = '\0';
-
-        if(fname[0] == '\0')
-            continue;
-
-        TRACE("Loading %s...\n", fname);
-        f = OpenDataFile(fname, "openal/hrtf");
+        TRACE("Loading %s...\n", al_string_get_cstr(entry.filename));
+        f = al_fopen(al_string_get_cstr(entry.filename), "rb");
         if(f == NULL)
         {
-            ERR("Could not open %s\n", fname);
-            continue;
+            ERR("Could not open %s\n", al_string_get_cstr(entry.filename));
+            goto error;
         }
 
         if(fread(magic, 1, sizeof(magic), f) != sizeof(magic))
-            ERR("Failed to read header from %s\n", fname);
+            ERR("Failed to read header from %s\n", al_string_get_cstr(entry.filename));
         else
         {
             if(memcmp(magic, magicMarker00, sizeof(magicMarker00)) == 0)
             {
                 TRACE("Detected data set format v0\n");
-                Hrtf = LoadHrtf00(f, deviceRate);
+                hrtf = LoadHrtf00(f);
             }
             else if(memcmp(magic, magicMarker01, sizeof(magicMarker01)) == 0)
             {
                 TRACE("Detected data set format v1\n");
-                Hrtf = LoadHrtf01(f, deviceRate);
+                hrtf = LoadHrtf01(f);
             }
             else
-                ERR("Invalid header in %s: \"%.8s\"\n", fname, magic);
+                ERR("Invalid header in %s: \"%.8s\"\n", al_string_get_cstr(entry.filename), magic);
         }
-
         fclose(f);
-        f = NULL;
 
-        if(Hrtf)
+        if(!hrtf)
         {
-            Hrtf->next = LoadedHrtfs;
-            LoadedHrtfs = Hrtf;
-            TRACE("Loaded HRTF support for format: %s %uhz\n",
-                  DevFmtChannelsString(DevFmtStereo), Hrtf->sampleRate);
-            return Hrtf;
+            ERR("Failed to load %s\n", al_string_get_cstr(entry.filename));
+            goto error;
         }
 
-        ERR("Failed to load %s\n", fname);
+        al_string_copy(&hrtf->filename, entry.filename);
+        hrtf->next = LoadedHrtfs;
+        LoadedHrtfs = hrtf;
+        TRACE("Loaded HRTF support for format: %s %uhz\n",
+                DevFmtChannelsString(DevFmtStereo), hrtf->sampleRate);
+        entry.hrtf = hrtf;
     }
 
-    return NULL;
-}
+    /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
+     * format update). */
 
-const struct Hrtf *GetHrtf(enum DevFmtChannels chans, ALCuint srate)
-{
-    if(chans == DevFmtStereo)
-    {
-        struct Hrtf *Hrtf = LoadedHrtfs;
-        while(Hrtf != NULL)
+    i = 0;
+    do {
+        al_string_copy_cstr(&entry.name, name);
+        if(i != 0)
         {
-            if(srate == Hrtf->sampleRate)
-                return Hrtf;
-            Hrtf = Hrtf->next;
+            char str[64];
+            snprintf(str, sizeof(str), " #%d", i+1);
+            al_string_append_cstr(&entry.name, str);
         }
+        ++i;
 
-        Hrtf = LoadHrtf(srate);
-        if(Hrtf != NULL)
-            return Hrtf;
-    }
-    ERR("Incompatible format: %s %uhz\n", DevFmtChannelsString(chans), srate);
-    return NULL;
+#define MATCH_NAME(i)  (al_string_cmp(entry.name, (i)->name) == 0)
+        VECTOR_FIND_IF(iter, HrtfEntry, *list, MATCH_NAME);
+#undef MATCH_NAME
+    } while(iter != VECTOR_ITER_END(*list));
+
+    TRACE("Adding entry \"%s\" from file \"%s\"\n", al_string_get_cstr(entry.name),
+          al_string_get_cstr(entry.filename));
+    VECTOR_PUSH_BACK(*list, entry);
+    return;
+
+error:
+    al_string_deinit(&entry.filename);
 }
 
-ALCboolean FindHrtfFormat(enum DevFmtChannels *chans, ALCuint *srate)
+vector_HrtfEntry EnumerateHrtf(const_al_string devname)
 {
-    const struct Hrtf *hrtf = LoadedHrtfs;
-    while(hrtf != NULL)
+    vector_HrtfEntry list = VECTOR_INIT_STATIC();
+    const char *fnamelist = "%s.mhr";
+
+    ConfigValueStr(al_string_get_cstr(devname), NULL, "hrtf_tables", &fnamelist);
+    while(fnamelist && *fnamelist)
     {
-        if(*srate == hrtf->sampleRate)
-            break;
-        hrtf = hrtf->next;
+        while(isspace(*fnamelist) || *fnamelist == ',')
+            fnamelist++;
+        if(*fnamelist != '\0')
+        {
+            const char *next, *end;
+
+            next = strchr(fnamelist, ',');
+            if(!next)
+                end = fnamelist + strlen(fnamelist);
+            else
+                end = next++;
+
+            while(end != fnamelist && isspace(*(end-1)))
+                --end;
+            if(end != fnamelist)
+            {
+                al_string fname = AL_STRING_INIT_STATIC();
+                vector_al_string flist;
+
+                al_string_append_range(&fname, fnamelist, end);
+
+                flist = SearchDataFiles(al_string_get_cstr(fname), "openal/hrtf");
+                VECTOR_FOR_EACH_PARAMS(al_string, flist, AddFileEntry, &list);
+                VECTOR_DEINIT(flist);
+
+                al_string_deinit(&fname);
+            }
+
+            fnamelist = next;
+        }
     }
 
-    if(hrtf == NULL)
-    {
-        hrtf = LoadHrtf(*srate);
-        if(hrtf == NULL) return ALC_FALSE;
-    }
-
-    *chans = DevFmtStereo;
-    *srate = hrtf->sampleRate;
-    return ALC_TRUE;
+    return list;
 }
+
+void FreeHrtfList(vector_HrtfEntry *list)
+{
+#define CLEAR_ENTRY(i) do {           \
+    al_string_deinit(&(i)->name);     \
+    al_string_deinit(&(i)->filename); \
+} while(0)
+    VECTOR_FOR_EACH(HrtfEntry, *list, CLEAR_ENTRY);
+    VECTOR_DEINIT(*list);
+#undef CLEAR_ENTRY
+}
+
+
+ALuint GetHrtfSampleRate(const struct Hrtf *Hrtf)
+{
+    return Hrtf->sampleRate;
+}
+
+ALuint GetHrtfIrSize(const struct Hrtf *Hrtf)
+{
+    return Hrtf->irSize;
+}
+
 
 void FreeHrtfs(void)
 {
@@ -875,11 +894,7 @@ void FreeHrtfs(void)
         free((void*)Hrtf->evOffset);
         free((void*)Hrtf->coeffs);
         free((void*)Hrtf->delays);
+        al_string_deinit(&Hrtf->filename);
         free(Hrtf);
     }
-}
-
-ALuint GetHrtfIrSize (const struct Hrtf *Hrtf)
-{
-    return Hrtf->irSize;
 }

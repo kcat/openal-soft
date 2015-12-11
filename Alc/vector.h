@@ -73,12 +73,30 @@ ALboolean vector_insert(char *ptr, size_t base_size, size_t obj_size, void *ins_
         _f(_iter);                                                            \
 } while(0)
 
+#define VECTOR_FOR_EACH_PARAMS(_t, _x, _f, ...)  do {                         \
+    _t *_iter = VECTOR_ITER_BEGIN((_x));                                      \
+    _t *_end = VECTOR_ITER_END((_x));                                         \
+    for(;_iter != _end;++_iter)                                               \
+        _f(__VA_ARGS__, _iter);                                               \
+} while(0)
+
 #define VECTOR_FIND_IF(_i, _t, _x, _f)  do {                                  \
     _t *_iter = VECTOR_ITER_BEGIN((_x));                                      \
     _t *_end = VECTOR_ITER_END((_x));                                         \
     for(;_iter != _end;++_iter)                                               \
     {                                                                         \
         if(_f(_iter))                                                         \
+            break;                                                            \
+    }                                                                         \
+    (_i) = _iter;                                                             \
+} while(0)
+
+#define VECTOR_FIND_IF_PARMS(_i, _t, _x, _f, ...)  do {                       \
+    _t *_iter = VECTOR_ITER_BEGIN((_x));                                      \
+    _t *_end = VECTOR_ITER_END((_x));                                         \
+    for(;_iter != _end;++_iter)                                               \
+    {                                                                         \
+        if(_f(__VA_ARGS__, _iter))                                            \
             break;                                                            \
     }                                                                         \
     (_i) = _iter;                                                             \

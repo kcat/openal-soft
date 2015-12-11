@@ -29,9 +29,6 @@
 #include "bs2b.h"
 #include "alu.h"
 
-#ifndef M_PI
-#define M_PI  3.14159265358979323846
-#endif
 
 /* Set up all data. */
 static void init(struct bs2b *bs2b)
@@ -39,8 +36,6 @@ static void init(struct bs2b *bs2b)
     float Fc_lo, Fc_hi;
     float G_lo,  G_hi;
     float x, g;
-
-    bs2b->srate = clampi(bs2b->srate, 2000, 192000);
 
     switch(bs2b->level)
     {
@@ -105,30 +100,24 @@ static void init(struct bs2b *bs2b)
     bs2b->a1_hi = -x * g;
 } /* init */
 
+
 /* Exported functions.
  * See descriptions in "bs2b.h"
  */
 
-void bs2b_set_level(struct bs2b *bs2b, int level)
+void bs2b_set_params(struct bs2b *bs2b, int level, int srate)
 {
-    if(level == bs2b->level)
-        return;
+    if(srate <= 0) srate = 1;
+
     bs2b->level = level;
+    bs2b->srate = srate;
     init(bs2b);
-} /* bs2b_set_level */
+} /* bs2b_set_params */
 
 int bs2b_get_level(struct bs2b *bs2b)
 {
     return bs2b->level;
 } /* bs2b_get_level */
-
-void bs2b_set_srate(struct bs2b *bs2b, int srate)
-{
-    if (srate == bs2b->srate)
-        return;
-    bs2b->srate = srate;
-    init(bs2b);
-} /* bs2b_set_srate */
 
 int bs2b_get_srate(struct bs2b *bs2b)
 {

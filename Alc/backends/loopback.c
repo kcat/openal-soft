@@ -124,13 +124,8 @@ static ALCbackend* ALCloopbackFactory_createBackend(ALCloopbackFactory* UNUSED(s
     if(type == ALCbackend_Loopback)
     {
         ALCloopback *backend;
-
-        backend = ALCloopback_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCloopback)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCloopback_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
 

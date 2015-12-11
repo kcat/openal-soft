@@ -517,6 +517,7 @@ static void ALCpulsePlayback_deviceCallback(pa_context *UNUSED(context), const p
     pa_threaded_mainloop *loop = pdata;
     const DevMap *iter;
     DevMap entry;
+    int count;
 
     if(eol)
     {
@@ -526,17 +527,33 @@ static void ALCpulsePlayback_deviceCallback(pa_context *UNUSED(context), const p
 
 #define MATCH_INFO_NAME(iter) (al_string_cmp_cstr((iter)->device_name, info->name) == 0)
     VECTOR_FIND_IF(iter, const DevMap, PlaybackDevices, MATCH_INFO_NAME);
+    if(iter != VECTOR_ITER_END(PlaybackDevices)) return;
 #undef MATCH_INFO_NAME
-    if(iter != VECTOR_ITER_END(PlaybackDevices))
-        return;
-
-    TRACE("Got device \"%s\", \"%s\"\n", info->description, info->name);
 
     AL_STRING_INIT(entry.name);
     AL_STRING_INIT(entry.device_name);
 
-    al_string_copy_cstr(&entry.name, info->description);
     al_string_copy_cstr(&entry.device_name, info->name);
+
+    count = 0;
+    while(1)
+    {
+        al_string_copy_cstr(&entry.name, info->description);
+        if(count != 0)
+        {
+            char str[64];
+            snprintf(str, sizeof(str), " #%d", count+1);
+            al_string_append_cstr(&entry.name, str);
+        }
+
+#define MATCH_ENTRY(i) (al_string_cmp(entry.name, (i)->name) == 0)
+        VECTOR_FIND_IF(iter, const DevMap, PlaybackDevices, MATCH_ENTRY);
+        if(iter == VECTOR_ITER_END(PlaybackDevices)) break;
+#undef MATCH_ENTRY
+        count++;
+    }
+
+    TRACE("Got device \"%s\", \"%s\"\n", al_string_get_cstr(entry.name), al_string_get_cstr(entry.device_name));
 
     VECTOR_PUSH_BACK(PlaybackDevices, entry);
 }
@@ -633,26 +650,44 @@ static void ALCpulsePlayback_streamWriteCallback(pa_stream* UNUSED(p), size_t UN
 
 static void ALCpulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const pa_sink_info *info, int eol, void *pdata)
 {
+    static const struct {
+        enum DevFmtChannels chans;
+        pa_channel_map map;
+    } chanmaps[] = {
+        { DevFmtX71, { 8, {
+            PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
+            PA_CHANNEL_POSITION_FRONT_CENTER, PA_CHANNEL_POSITION_LFE,
+            PA_CHANNEL_POSITION_REAR_LEFT, PA_CHANNEL_POSITION_REAR_RIGHT,
+            PA_CHANNEL_POSITION_SIDE_LEFT, PA_CHANNEL_POSITION_SIDE_RIGHT
+        } } },
+        { DevFmtX61, { 7, {
+            PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
+            PA_CHANNEL_POSITION_FRONT_CENTER, PA_CHANNEL_POSITION_LFE,
+            PA_CHANNEL_POSITION_REAR_CENTER,
+            PA_CHANNEL_POSITION_SIDE_LEFT, PA_CHANNEL_POSITION_SIDE_RIGHT
+        } } },
+        { DevFmtX51, { 6, {
+            PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
+            PA_CHANNEL_POSITION_FRONT_CENTER, PA_CHANNEL_POSITION_LFE,
+            PA_CHANNEL_POSITION_SIDE_LEFT, PA_CHANNEL_POSITION_SIDE_RIGHT
+        } } },
+        { DevFmtX51Rear, { 6, {
+            PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
+            PA_CHANNEL_POSITION_FRONT_CENTER, PA_CHANNEL_POSITION_LFE,
+            PA_CHANNEL_POSITION_REAR_LEFT, PA_CHANNEL_POSITION_REAR_RIGHT
+        } } },
+        { DevFmtQuad, { 4, {
+            PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT,
+            PA_CHANNEL_POSITION_REAR_LEFT, PA_CHANNEL_POSITION_REAR_RIGHT
+        } } },
+        { DevFmtStereo, { 2, {
+            PA_CHANNEL_POSITION_FRONT_LEFT, PA_CHANNEL_POSITION_FRONT_RIGHT
+        } } },
+        { DevFmtMono, { 1, {PA_CHANNEL_POSITION_MONO} } }
+    };
     ALCpulsePlayback *self = pdata;
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
-    const struct {
-        const char *str;
-        enum DevFmtChannels chans;
-    } chanmaps[] = {
-        { "front-left,front-right,front-center,lfe,rear-left,rear-right,side-left,side-right",
-          DevFmtX71 },
-        { "front-left,front-right,front-center,lfe,rear-center,side-left,side-right",
-          DevFmtX61 },
-        { "front-left,front-right,front-center,lfe,side-left,side-right",
-          DevFmtX51 },
-        { "front-left,front-right,front-center,lfe,rear-left,rear-right",
-          DevFmtX51Rear },
-        { "front-left,front-right,rear-left,rear-right", DevFmtQuad },
-        { "front-left,front-right", DevFmtStereo },
-        { "mono", DevFmtMono },
-        { NULL, 0 }
-    };
-    int i;
+    size_t i;
 
     if(eol)
     {
@@ -660,18 +695,20 @@ static void ALCpulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const
         return;
     }
 
-    for(i = 0;chanmaps[i].str;i++)
+    for(i = 0;i < COUNTOF(chanmaps);i++)
     {
-        pa_channel_map map;
-        if(!pa_channel_map_parse(&map, chanmaps[i].str))
-            continue;
-
-        if(pa_channel_map_superset(&info->channel_map, &map))
+        if(pa_channel_map_superset(&info->channel_map, &chanmaps[i].map))
         {
             if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
                 device->FmtChans = chanmaps[i].chans;
             break;
         }
+    }
+    if(i == COUNTOF(chanmaps))
+    {
+        char chanmap_str[PA_CHANNEL_MAP_SNPRINT_MAX] = "";
+        pa_channel_map_snprint(chanmap_str, sizeof(chanmap_str), &info->channel_map);
+        WARN("Failed to find format for channel map:\n    %s\n", chanmap_str);
     }
 
     if(info->active_port)
@@ -679,13 +716,6 @@ static void ALCpulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const
     device->IsHeadphones = (info->active_port &&
                             strcmp(info->active_port->name, "analog-output-headphones") == 0 &&
                             device->FmtChans == DevFmtStereo);
-
-    if(!chanmaps[i].str)
-    {
-        char chanmap_str[PA_CHANNEL_MAP_SNPRINT_MAX] = "";
-        pa_channel_map_snprint(chanmap_str, sizeof(chanmap_str), &info->channel_map);
-        WARN("Failed to find format for channel map:\n    %s\n", chanmap_str);
-    }
 }
 
 static void ALCpulsePlayback_sinkNameCallback(pa_context *UNUSED(context), const pa_sink_info *info, int eol, void *pdata)
@@ -816,10 +846,10 @@ static int ALCpulsePlayback_mixerProc(void *ptr)
 
 static ALCenum ALCpulsePlayback_open(ALCpulsePlayback *self, const ALCchar *name)
 {
+    const_al_string dev_name = AL_STRING_INIT_STATIC();
     const char *pulse_name = NULL;
     pa_stream_flags_t flags;
     pa_sample_spec spec;
-    pa_operation *o;
 
     if(name)
     {
@@ -834,6 +864,7 @@ static ALCenum ALCpulsePlayback_open(ALCpulsePlayback *self, const ALCchar *name
         if(iter == VECTOR_ITER_END(PlaybackDevices))
             return ALC_INVALID_VALUE;
         pulse_name = al_string_get_cstr(iter->device_name);
+        dev_name = iter->name;
     }
 
     if(!pulse_open(&self->loop, &self->context, ALCpulsePlayback_contextStateCallback, self))
@@ -843,7 +874,7 @@ static ALCenum ALCpulsePlayback_open(ALCpulsePlayback *self, const ALCchar *name
 
     flags = PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE |
             PA_STREAM_FIX_CHANNELS;
-    if(!GetConfigValueBool("pulse", "allow-moves", 0))
+    if(!GetConfigValueBool(NULL, "pulse", "allow-moves", 0))
         flags |= PA_STREAM_DONT_MOVE;
 
     spec.format = PA_SAMPLE_S16NE;
@@ -864,10 +895,19 @@ static ALCenum ALCpulsePlayback_open(ALCpulsePlayback *self, const ALCchar *name
     pa_stream_set_moved_callback(self->stream, ALCpulsePlayback_streamMovedCallback, self);
 
     al_string_copy_cstr(&self->device_name, pa_stream_get_device_name(self->stream));
-    o = pa_context_get_sink_info_by_name(self->context,
-                                         al_string_get_cstr(self->device_name),
-                                         ALCpulsePlayback_sinkNameCallback, self);
-    wait_for_operation(o, self->loop);
+    if(al_string_empty(dev_name))
+    {
+        pa_operation *o = pa_context_get_sink_info_by_name(
+            self->context, al_string_get_cstr(self->device_name),
+            ALCpulsePlayback_sinkNameCallback, self
+        );
+        wait_for_operation(o, self->loop);
+    }
+    else
+    {
+        ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+        al_string_copy(&device->DeviceName, dev_name);
+    }
 
     pa_threaded_mainloop_unlock(self->loop);
 
@@ -910,12 +950,13 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
                                          ALCpulsePlayback_sinkInfoCallback, self);
     wait_for_operation(o, self->loop);
 
-    if(!(device->Flags&DEVICE_FREQUENCY_REQUEST))
+    if(GetConfigValueBool(al_string_get_cstr(device->DeviceName), "pulse", "fix-rate", 0) ||
+       !(device->Flags&DEVICE_FREQUENCY_REQUEST))
         flags |= PA_STREAM_FIX_RATE;
     flags |= PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE;
     flags |= PA_STREAM_ADJUST_LATENCY;
     flags |= PA_STREAM_START_CORKED;
-    if(!GetConfigValueBool("pulse", "allow-moves", 0))
+    if(!GetConfigValueBool(NULL, "pulse", "allow-moves", 0))
         flags |= PA_STREAM_DONT_MOVE;
 
     switch(device->FmtType)
@@ -1173,6 +1214,7 @@ static void ALCpulseCapture_deviceCallback(pa_context *UNUSED(context), const pa
     pa_threaded_mainloop *loop = pdata;
     const DevMap *iter;
     DevMap entry;
+    int count;
 
     if(eol)
     {
@@ -1182,17 +1224,33 @@ static void ALCpulseCapture_deviceCallback(pa_context *UNUSED(context), const pa
 
 #define MATCH_INFO_NAME(iter) (al_string_cmp_cstr((iter)->device_name, info->name) == 0)
     VECTOR_FIND_IF(iter, const DevMap, CaptureDevices, MATCH_INFO_NAME);
+    if(iter != VECTOR_ITER_END(CaptureDevices)) return;
 #undef MATCH_INFO_NAME
-    if(iter != VECTOR_ITER_END(CaptureDevices))
-        return;
-
-    TRACE("Got device \"%s\", \"%s\"\n", info->description, info->name);
 
     AL_STRING_INIT(entry.name);
     AL_STRING_INIT(entry.device_name);
 
-    al_string_copy_cstr(&entry.name, info->description);
     al_string_copy_cstr(&entry.device_name, info->name);
+
+    count = 0;
+    while(1)
+    {
+        al_string_copy_cstr(&entry.name, info->description);
+        if(count != 0)
+        {
+            char str[64];
+            snprintf(str, sizeof(str), " #%d", count+1);
+            al_string_append_cstr(&entry.name, str);
+        }
+
+#define MATCH_ENTRY(i) (al_string_cmp(entry.name, (i)->name) == 0)
+        VECTOR_FIND_IF(iter, const DevMap, CaptureDevices, MATCH_ENTRY);
+        if(iter == VECTOR_ITER_END(CaptureDevices)) break;
+#undef MATCH_ENTRY
+        count++;
+    }
+
+    TRACE("Got device \"%s\", \"%s\"\n", al_string_get_cstr(entry.name), al_string_get_cstr(entry.device_name));
 
     VECTOR_PUSH_BACK(CaptureDevices, entry);
 }
@@ -1346,7 +1404,6 @@ static ALCenum ALCpulseCapture_open(ALCpulseCapture *self, const ALCchar *name)
     const char *pulse_name = NULL;
     pa_stream_flags_t flags = 0;
     pa_channel_map chanmap;
-    pa_operation *o;
     ALuint samples;
 
     if(name)
@@ -1362,6 +1419,7 @@ static ALCenum ALCpulseCapture_open(ALCpulseCapture *self, const ALCchar *name)
         if(iter == VECTOR_ITER_END(CaptureDevices))
             return ALC_INVALID_VALUE;
         pulse_name = al_string_get_cstr(iter->device_name);
+        al_string_copy(&device->DeviceName, iter->name);
     }
 
     if(!pulse_open(&self->loop, &self->context, ALCpulseCapture_contextStateCallback, self))
@@ -1419,7 +1477,7 @@ static ALCenum ALCpulseCapture_open(ALCpulseCapture *self, const ALCchar *name)
                           pa_frame_size(&self->spec);
 
     flags |= PA_STREAM_START_CORKED|PA_STREAM_ADJUST_LATENCY;
-    if(!GetConfigValueBool("pulse", "allow-moves", 0))
+    if(!GetConfigValueBool(NULL, "pulse", "allow-moves", 0))
         flags |= PA_STREAM_DONT_MOVE;
 
     TRACE("Connecting to \"%s\"\n", pulse_name ? pulse_name : "(default)");
@@ -1435,10 +1493,14 @@ static ALCenum ALCpulseCapture_open(ALCpulseCapture *self, const ALCchar *name)
     pa_stream_set_state_callback(self->stream, ALCpulseCapture_streamStateCallback, self);
 
     al_string_copy_cstr(&self->device_name, pa_stream_get_device_name(self->stream));
-    o = pa_context_get_source_info_by_name(self->context,
-                                           al_string_get_cstr(self->device_name),
-                                           ALCpulseCapture_sourceNameCallback, self);
-    wait_for_operation(o, self->loop);
+    if(al_string_empty(device->DeviceName))
+    {
+        pa_operation *o = pa_context_get_source_info_by_name(
+            self->context, al_string_get_cstr(self->device_name),
+            ALCpulseCapture_sourceNameCallback, self
+        );
+        wait_for_operation(o, self->loop);
+    }
 
     pa_threaded_mainloop_unlock(self->loop);
     return ALC_NO_ERROR;
@@ -1607,7 +1669,7 @@ static ALCboolean ALCpulseBackendFactory_init(ALCpulseBackendFactory* UNUSED(sel
         pa_threaded_mainloop *loop;
 
         pulse_ctx_flags = 0;
-        if(!GetConfigValueBool("pulse", "spawn-server", 1))
+        if(!GetConfigValueBool(NULL, "pulse", "spawn-server", 1))
             pulse_ctx_flags |= PA_CONTEXT_NOAUTOSPAWN;
 
         if((loop=pa_threaded_mainloop_new()) &&
@@ -1689,25 +1751,15 @@ static ALCbackend* ALCpulseBackendFactory_createBackend(ALCpulseBackendFactory* 
     if(type == ALCbackend_Playback)
     {
         ALCpulsePlayback *backend;
-
-        backend = ALCpulsePlayback_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCpulsePlayback)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCpulsePlayback_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
     if(type == ALCbackend_Capture)
     {
         ALCpulseCapture *backend;
-
-        backend = ALCpulseCapture_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCpulseCapture)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCpulseCapture_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
 

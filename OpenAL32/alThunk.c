@@ -62,6 +62,19 @@ ALenum NewThunkEntry(ALuint *index)
     ReadUnlock(&ThunkLock);
 
     WriteLock(&ThunkLock);
+    /* Double-check that there's still no free entries, in case another
+     * invocation just came through and increased the size of the array.
+     */
+    for(;i < ThunkArraySize;i++)
+    {
+        if(ATOMIC_EXCHANGE(ALenum, &ThunkArray[i], AL_TRUE) == AL_FALSE)
+        {
+            WriteUnlock(&ThunkLock);
+            *index = i+1;
+            return AL_NO_ERROR;
+        }
+    }
+
     NewList = al_calloc(16, ThunkArraySize*2 * sizeof(*ThunkArray));
     if(!NewList)
     {

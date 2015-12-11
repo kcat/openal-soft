@@ -1,17 +1,11 @@
 #ifndef ALHELPERS_H
 #define ALHELPERS_H
 
-#ifndef _WIN32
-#include <unistd.h>
-#define Sleep(x) usleep((x)*1000)
-#else
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#endif
-
 #include "AL/alc.h"
 #include "AL/al.h"
 #include "AL/alext.h"
+
+#include "threads.h"
 
 #ifdef __cplusplus
 extern "C" {

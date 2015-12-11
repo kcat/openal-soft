@@ -35,9 +35,6 @@ private slots:
     void showEnabledBackendMenu(QPoint pt);
     void showDisabledBackendMenu(QPoint pt);
 
-    void updateReverbBoostEdit(int size);
-    void updateReverbBoostSlider(QString value);
-
 private:
     Ui::MainWindow *ui;
 
@@ -47,7 +44,6 @@ private:
     QValidator *mEffectSlotValidator;
     QValidator *mSourceSendValidator;
     QValidator *mSampleRateValidator;
-    QValidator *mReverbBoostValidator;
 
     void loadConfig(const QString &fname);
     void saveConfig(const QString &fname) const;

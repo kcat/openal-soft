@@ -210,7 +210,7 @@ static ALCenum ALCwaveBackend_open(ALCwaveBackend *self, const ALCchar *name)
     ALCdevice *device;
     const char *fname;
 
-    fname = GetConfigValue("wave", "file", "");
+    fname = GetConfigValue(NULL, "wave", "file", "");
     if(!fname[0]) return ALC_INVALID_VALUE;
 
     if(!name)
@@ -248,7 +248,7 @@ static ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
     fseek(self->mFile, 0, SEEK_SET);
     clearerr(self->mFile);
 
-    if(GetConfigValueBool("wave", "bformat", 0))
+    if(GetConfigValueBool(NULL, "wave", "bformat", 0))
         device->FmtChans = DevFmtBFormat3D;
 
     switch(device->FmtType)
@@ -412,7 +412,7 @@ static ALCboolean ALCwaveBackendFactory_init(ALCwaveBackendFactory* UNUSED(self)
 static ALCboolean ALCwaveBackendFactory_querySupport(ALCwaveBackendFactory* UNUSED(self), ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
-        return !!ConfigValueExists("wave", "file");
+        return !!ConfigValueExists(NULL, "wave", "file");
     return ALC_FALSE;
 }
 
@@ -433,30 +433,10 @@ static ALCbackend* ALCwaveBackendFactory_createBackend(ALCwaveBackendFactory* UN
     if(type == ALCbackend_Playback)
     {
         ALCwaveBackend *backend;
-
-        backend = ALCwaveBackend_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCwaveBackend)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCwaveBackend_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
 
     return NULL;
-}
-
-void alc_wave_probe(enum DevProbe type)
-{
-    if(!ConfigValueExists("wave", "file"))
-        return;
-
-    switch(type)
-    {
-        case ALL_DEVICE_PROBE:
-            AppendAllDevicesList(waveDevice);
-            break;
-        case CAPTURE_DEVICE_PROBE:
-            break;
-    }
 }

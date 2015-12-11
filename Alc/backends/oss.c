@@ -562,8 +562,8 @@ ALCbackendFactory *ALCossBackendFactory_getFactory(void)
 
 ALCboolean ALCossBackendFactory_init(ALCossBackendFactory* UNUSED(self))
 {
-    ConfigValueStr("oss", "device", &oss_driver);
-    ConfigValueStr("oss", "capture", &oss_capture);
+    ConfigValueStr(NULL, "oss", "device", &oss_driver);
+    ConfigValueStr(NULL, "oss", "capture", &oss_capture);
 
     return ALC_TRUE;
 }
@@ -606,25 +606,15 @@ ALCbackend* ALCossBackendFactory_createBackend(ALCossBackendFactory* UNUSED(self
     if(type == ALCbackend_Playback)
     {
         ALCplaybackOSS *backend;
-
-        backend = ALCplaybackOSS_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCplaybackOSS)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCplaybackOSS_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
     if(type == ALCbackend_Capture)
     {
         ALCcaptureOSS *backend;
-
-        backend = ALCcaptureOSS_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCcaptureOSS)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCcaptureOSS_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
 

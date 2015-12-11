@@ -132,7 +132,6 @@ typedef union ALeffectProps {
     } Echo;
 
     struct {
-        ALfloat Delay;
         ALfloat LowCutoff;
         ALfloat LowGain;
         ALfloat Mid1Center;

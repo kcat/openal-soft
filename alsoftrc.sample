@@ -8,12 +8,18 @@
 # specifying "$HOME/file.ext" would typically result in something like
 # "/home/user/file.ext". To specify an actual "$" character, use "$$".
 #
+# Device-specific values may be specified by including the device name in the
+# block name, with "general" replaced by the device name. That is, general
+# options for the device "Name of Device" would be in the [Name of Device]
+# block, while ALSA options would be in the [alsa/Name of Device] block.
+# Options marked as "(global)" are not influenced by the device.
+#
 # The system-wide settings can be put in /etc/openal/alsoft.conf and user-
 # specific override settings in $HOME/.alsoftrc.
 # For Windows, these settings should go into $AppData\alsoft.ini
 #
-# Option and block names are case-insenstive. The supplied values are only
-# hints and may not be honored (though generally it'll try to get as close as
+# Option and block names are case-senstive. The supplied values are only hints
+# and may not be honored (though generally it'll try to get as close as
 # possible). Note: options that are left unset may default to app- or system-
 # specified values. These are the current available settings:
 
@@ -22,15 +28,15 @@
 ##
 [general]
 
-## disable-cpu-exts:
+## disable-cpu-exts: (global)
 #  Disables use of specialized methods that use specific CPU intrinsics.
 #  Certain methods may utilize CPU extensions for improved performance, and
 #  this option is useful for preventing some or all of those methods from being
-#  used. The available extensions are: sse, sse2, sse4.1, and neon. Specifying
-#  'all' disables use of all such specialized methods.
+#  used. The available extensions are: sse, sse2, sse3, sse4.1, and neon.
+#  Specifying 'all' disables use of all such specialized methods.
 #disable-cpu-exts =
 
-## drivers:
+## drivers: (global)
 #  Sets the backend driver list order, comma-seperated. Unknown backends and
 #  duplicated names are ignored. Unlisted backends won't be considered for use
 #  unless the list is ended with a comma (e.g. 'oss,' will try OSS first before
@@ -74,7 +80,7 @@
 #  range between 2 and 16.
 #periods = 4
 
-## stereo-mode
+## stereo-mode:
 #  Specifies if stereo output is treated as being headphones or speakers. With
 #  headphones, HRTF or crossfeed filters may be used for better audio quality.
 #  Valid settings are auto, speakers, and headphones.
@@ -84,16 +90,18 @@
 #  Controls HRTF processing. These filters provide better spatialization of
 #  sounds while using headphones, but do require a bit more CPU power. The
 #  default filters will only work with 44100hz or 48000hz stereo output. While
-#  HRTF is in use, the cf_level option is ignored. Setting this to true or
-#  false will forcefully enable or disable HRTF, otherwise HRTF will be enabled
-#  when using headphones.
-#hrtf =
+#  HRTF is used, the cf_level option is ignored. Setting this to auto (default)
+#  will allow HRTF to be used when headphones are detected or the app requests
+#  it, while setting true or false will forcefully enable or disable HRTF
+#  respectively.
+#hrtf = auto
 
-## hrtf_tables
+## hrtf_tables:
 #  Specifies a comma-separated list of files containing HRTF data sets. The
 #  format of the files are described in hrtf.txt. The filenames may contain
 #  these markers, which will be replaced as needed:
 #  %r - Device sampling rate
+#  %s - Non-greedy string (up to the following matching characters)
 #  %% - Percent sign (%)
 #  The listed files are relative to system-dependant data directories. On
 #  Windows this is:
@@ -103,7 +111,7 @@
 #  $XDG_DATA_DIRS/openal/hrtf  (defaults to /usr/local/share/openal/hrtf and
 #                               /usr/share/openal/hrtf)
 #  An absolute path may also be specified, if the given file is elsewhere.
-#hrtf_tables = default-%r.mhr
+#hrtf_tables = %s.mhr
 
 ## cf_level:
 #  Sets the crossfeed level for stereo output. Valid values are:
@@ -118,15 +126,18 @@
 #  stereo modes.
 #cf_level = 0
 
-## resampler:
+## resampler: (global)
 #  Selects the resampler used when mixing sources. Valid values are:
 #  point - nearest sample, no interpolation
 #  linear - extrapolates samples using a linear slope between samples
-#  cubic - extrapolates samples using a Catmull-Rom spline
+#  sinc4 - extrapolates samples using a 4-point Sinc filter
+#  sinc8 - extrapolates samples using an 8-point Sinc filter
+#  bsinc - extrapolates samples using a band-limited Sinc filter (varying
+#          between 12 and 24 points, with anti-aliasing)
 #  Specifying other values will result in using the default (linear).
 #resampler = linear
 
-## rt-prio:
+## rt-prio: (global)
 #  Sets real-time priority for the mixing thread. Not all drivers may use this
 #  (eg. PortAudio) as they already control the priority of the mixing thread.
 #  0 and negative values will disable it. Note that this may constitute a
@@ -153,14 +164,14 @@
 #  possible is 4.
 #sends =
 
-## excludefx:
+## excludefx: (global)
 #  Sets which effects to exclude, preventing apps from using them. This can
 #  help for apps that try to use effects which are too CPU intensive for the
-#  system to handle. Available effects are: eaxreverb,reverb,autowah,chorus,
-#  compressor,distortion,echo,equalizer,flanger,modulator,dedicated
+#  system to handle. Available effects are: eaxreverb,reverb,chorus,compressor,
+#  distortion,echo,equalizer,flanger,modulator,dedicated
 #excludefx =
 
-## default-reverb:
+## default-reverb: (global)
 #  A reverb preset that applies by default to all sources on send 0
 #  (applications that set their own slots on send 0 will override this).
 #  Available presets are: None, Generic, PaddedCell, Room, Bathroom,
@@ -169,54 +180,31 @@
 #  Quarry, Plain, ParkingLot, SewerPipe, Underwater, Drugged, Dizzy, Psychotic.
 #default-reverb =
 
-## trap-alc-error:
+## trap-alc-error: (global)
 #  Generates a SIGTRAP signal when an ALC device error is generated, on systems
 #  that support it. This helps when debugging, while trying to find the cause
 #  of a device error. On Windows, a breakpoint exception is generated.
 #trap-alc-error = false
 
-## trap-al-error:
+## trap-al-error: (global)
 #  Generates a SIGTRAP signal when an AL context error is generated, on systems
 #  that support it. This helps when debugging, while trying to find the cause
 #  of a context error. On Windows, a breakpoint exception is generated.
 #trap-al-error = false
 
 ##
-## MIDI stuff (EXPERIMENTAL)
-##
-[midi]
-
-## soundfont:
-#  A default soundfont (sf2 format). Used when an app requests the system
-#  default. The listed file is relative to system-dependant data directories.
-#  On Windows this is:
-#  $AppData\openal\soundfonts
-#  And on other systems, it's (in order):
-#  $XDG_DATA_HOME/openal/soundfonts
-#  $XDG_DATA_DIRS/openal/soundfonts
-#  An absolute path may also be specified, if the given file is elsewhere.
-#soundfont =
-
-## volume:
-#  Additional attenuation applied to MIDI output, expressed in decibels. This
-#  is used to help keep the mix from clipping, and so must be 0 or less. The
-#  value is logarithmic, so -6 will be about half amplitude, and -12 about
-#  1/4th. The default is roughly -13.9794 (0.2, or 1/5th).
-#volume =
-
-##
 ## Reverb effect stuff (includes EAX reverb)
 ##
 [reverb]
 
-## boost:
+## boost: (global)
 #  A global amplification for reverb output, expressed in decibels. The value
 #  is logarithmic, so +6 will be a scale of (approximately) 2x, +12 will be a
 #  scale of 4x, etc. Similarly, -6 will be about half, and -12 about 1/4th. A
 #  value of 0 means no change.
 #boost = 0
 
-## emulate-eax:
+## emulate-eax: (global)
 #  Allows the standard reverb effect to be used in place of EAX reverb. EAX
 #  reverb processing is a bit more CPU intensive than standard, so this option
 #  allows a simpler effect to be used at the loss of some quality.
@@ -227,52 +215,59 @@
 ##
 [pulse]
 
-## spawn-server:
+## spawn-server: (global)
 #  Attempts to autospawn a PulseAudio server whenever needed (initializing the
 #  backend, enumerating devices, etc). Setting autospawn to false in Pulse's
 #  client.conf will still prevent autospawning even if this is set to true.
 #spawn-server = true
 
-## allow-moves:
+## allow-moves: (global)
 #  Allows PulseAudio to move active streams to different devices. Note that the
 #  device specifier (seen by applications) will not be updated when this
 #  occurs, and neither will the AL device configuration (sample rate, format,
 #  etc).
 #allow-moves = false
 
+## fix-rate:
+#  Specifies whether to match the playback stream's sample rate to the device's
+#  sample rate. Enabling this forces OpenAL Soft to mix sources and effects
+#  directly to the actual output rate, avoiding a second resample pass by the
+#  PulseAudio server.
+#fix-rate = false
+
 ##
 ## ALSA backend stuff
 ##
 [alsa]
 
-## device:
+## device: (global)
 #  Sets the device name for the default playback device.
 #device = default
 
-## device-prefix:
+## device-prefix: (global)
 #  Sets the prefix used by the discovered (non-default) playback devices. This
 #  will be appended with "CARD=c,DEV=d", where c is the card id and d is the
 #  device index for the requested device name.
 #device-prefix = plughw:
 
-## device-prefix-*:
+## device-prefix-*: (global)
 #  Card- and device-specific prefixes may be used to override the device-prefix
 #  option. The option may specify the card id (eg, device-prefix-NVidia), or
 #  the card id and device index (eg, device-prefix-NVidia-0). The card id is
 #  case-sensitive.
 #device-prefix- =
 
-## capture:
+## capture: (global)
 #  Sets the device name for the default capture device.
 #capture = default
 
-## capture-prefix:
+## capture-prefix: (global)
 #  Sets the prefix used by the discovered (non-default) capture devices. This
 #  will be appended with "CARD=c,DEV=d", where c is the card id and d is the
 #  device number for the requested device name.
 #capture-prefix = plughw:
 
-## capture-prefix-*:
+## capture-prefix-*: (global)
 #  Card- and device-specific prefixes may be used to override the
 #  capture-prefix option. The option may specify the card id (eg,
 #  capture-prefix-NVidia), or the card id and device index (eg,
@@ -286,16 +281,23 @@
 #  and anything else will force mmap off.
 #mmap = true
 
+## allow-resampler:
+#  Specifies whether to allow ALSA's built-in resampler. Enabling this will
+#  allow the playback device to be set to a different sample rate than the
+#  actual output, causing ALSA to apply its own resampling pass after OpenAL
+#  Soft resamples and mixes the sources and effects for output.
+#allow-resampler = false
+
 ##
 ## OSS backend stuff
 ##
 [oss]
 
-## device:
+## device: (global)
 #  Sets the device name for OSS output.
 #device = /dev/dsp
 
-## capture:
+## capture: (global)
 #  Sets the device name for OSS capture.
 #capture = /dev/dsp
 
@@ -304,7 +306,7 @@
 ##
 [solaris]
 
-## device:
+## device: (global)
 #  Sets the device name for Solaris output.
 #device = /dev/audio
 
@@ -318,10 +320,10 @@
 ##
 [jack]
 
-## spawn-server:
+## spawn-server: (global)
 #  Attempts to autospawn a JACK server whenever needed (initializing the
 #  backend, opening devices, etc).
-#spawn-server = true
+#spawn-server = false
 
 ## buffer-size:
 #  Sets the update buffer size, in samples, that the backend will keep buffered
@@ -352,12 +354,12 @@
 ##
 [port]
 
-## device:
+## device: (global)
 #  Sets the device index for output. Negative values will use the default as
 #  given by PortAudio itself.
 #device = -1
 
-## capture:
+## capture: (global)
 #  Sets the device index for capture. Negative values will use the default as
 #  given by PortAudio itself.
 #capture = -1
@@ -367,8 +369,13 @@
 ##
 [wave]
 
-## file:
+## file: (global)
 #  Sets the filename of the wave file to write to. An empty name prevents the
 #  backend from opening, even when explicitly requested.
 #  THIS WILL OVERWRITE EXISTING FILES WITHOUT QUESTION!
 #file =
+
+## bformat: (global)
+#  Creates AMB format files using first-order ambisonics instead of a standard
+#  single- or multi-channel .wav file.
+#bformat = false

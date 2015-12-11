@@ -207,7 +207,7 @@ static int ALCjackPlayback_bufferSizeNotify(jack_nframes_t numframes, void *arg)
     TRACE("%u update size x%u\n", device->UpdateSize, device->NumUpdates);
 
     bufsize = device->UpdateSize;
-    if(ConfigValueUInt("jack", "buffer-size", &bufsize))
+    if(ConfigValueUInt(al_string_get_cstr(device->DeviceName), "jack", "buffer-size", &bufsize))
         bufsize = maxu(NextPowerOf2(bufsize), device->UpdateSize);
     bufsize += device->UpdateSize;
 
@@ -397,7 +397,7 @@ static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
     device->NumUpdates = 2;
 
     bufsize = device->UpdateSize;
-    if(ConfigValueUInt("jack", "buffer-size", &bufsize))
+    if(ConfigValueUInt(al_string_get_cstr(device->DeviceName), "jack", "buffer-size", &bufsize))
         bufsize = maxu(NextPowerOf2(bufsize), device->UpdateSize);
     bufsize += device->UpdateSize;
 
@@ -543,7 +543,7 @@ static ALCboolean ALCjackBackendFactory_init(ALCjackBackendFactory* UNUSED(self)
     if(!jack_load())
         return ALC_FALSE;
 
-    if(!GetConfigValueBool("jack", "spawn-server", 0))
+    if(!GetConfigValueBool(NULL, "jack", "spawn-server", 0))
         ClientOptions |= JackNoStartServer;
     client = jack_client_open("alsoft", ClientOptions, &status, NULL);
     if(client == NULL)
@@ -592,13 +592,8 @@ static ALCbackend* ALCjackBackendFactory_createBackend(ALCjackBackendFactory* UN
     if(type == ALCbackend_Playback)
     {
         ALCjackPlayback *backend;
-
-        backend = ALCjackPlayback_New(sizeof(*backend));
+        NEW_OBJ(backend, ALCjackPlayback)(device);
         if(!backend) return NULL;
-        memset(backend, 0, sizeof(*backend));
-
-        ALCjackPlayback_Construct(backend, device);
-
         return STATIC_CAST(ALCbackend, backend);
     }
 

@@ -497,11 +497,11 @@ extern inline void alcall_once(alonce_flag *once, void (*callback)(void));
 void althrd_setname(althrd_t thr, const char *name)
 {
 #if defined(HAVE_PTHREAD_SETNAME_NP)
-#if defined(__GNUC__)
-    pthread_setname_np(thr, name);
-#elif defined(__APPLE__)
+#if defined(__APPLE__)
     if(althrd_equal(thr, althrd_current())
         pthread_setname_np(name);
+#elif defined(__GNUC__)
+    pthread_setname_np(thr, name);
 #endif
 #elif defined(HAVE_PTHREAD_SET_NAME_NP)
     pthread_set_name_np(thr, name);

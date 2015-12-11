@@ -1224,6 +1224,9 @@ IF(ALSOFT_TESTS)
 ENDIF()
 
 IF(ALSOFT_EXAMPLES)
+    ADD_EXECUTABLE(alsmplayer examples/alsmplayer.c)
+    TARGET_LINK_LIBRARIES(alsmplayer ${LIBNAME})
+
     IF(SDL2_FOUND AND SDL_SOUND_FOUND)
         ADD_LIBRARY(ex-common STATIC examples/common/alhelpers.c
                                      examples/common/sdl_sound.c)

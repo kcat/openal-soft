@@ -498,7 +498,7 @@ void althrd_setname(althrd_t thr, const char *name)
 {
 #if defined(HAVE_PTHREAD_SETNAME_NP)
 #if defined(__APPLE__)
-    if(althrd_equal(thr, althrd_current())
+    if(althrd_equal(thr, althrd_current()))
         pthread_setname_np(name);
 #elif defined(__GNUC__)
     pthread_setname_np(thr, name);

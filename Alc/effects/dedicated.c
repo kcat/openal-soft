@@ -86,7 +86,7 @@ static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALuint SamplesTo
             continue;
 
         for(i = 0;i < SamplesToDo;i++)
-            SamplesOut[c][i] = SamplesIn[i] * gains[c];
+            SamplesOut[c][i] += SamplesIn[i] * gains[c];
     }
 }
 

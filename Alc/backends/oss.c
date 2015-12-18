@@ -104,7 +104,7 @@ static void ALCossListAppend(struct oss_device *list, char *handle, size_t hlen,
     struct oss_device *p;
     void *m;
     size_t i;
-    if (list == NULL || handle == NULL || path == NULL)
+    if (list == NULL || handle == NULL || path == NULL || plen == 0 || path[0] == '\0')
         return;
     /* skip the first item "OSS Default" */
     p = list;
@@ -118,7 +118,7 @@ static void ALCossListAppend(struct oss_device *list, char *handle, size_t hlen,
             plen = i;
         }
 #endif
-    if (handle == NULL || hlen == 0 || *handle == '\0') {
+    if (handle == NULL || hlen == 0 || handle[0] == '\0') {
         handle = path;
         hlen = plen;
     }

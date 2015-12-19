@@ -52,11 +52,158 @@
 #define SOUND_MIXER_WRITE MIXER_WRITE
 #endif
 
+#if defined(SOUND_VERSION) && (SOUND_VERSION) < 0x040000
+#define ALC_OSS_COMPAT
+#endif
+#ifndef SNDCTL_AUDIOINFO
+#define ALC_OSS_COMPAT
+#endif
 
-static const ALCchar oss_device[] = "OSS Default";
+/*
+ * FreeBSD strongly discourages the use of specific devices,
+ * such as those returned in oss_audioinfo.devnode
+ */
+#ifdef __FreeBSD__
+#define ALC_OSS_DEVNODE_TRUC
+#endif
 
-static const char *oss_driver = "/dev/dsp";
-static const char *oss_capture = "/dev/dsp";
+struct oss_device {
+    const ALCchar *handle;
+    const char *path;
+    struct oss_device *next;
+};
+
+static struct oss_device oss_playback = {
+    "OSS Default",
+    "/dev/dsp",
+    NULL
+};
+
+static struct oss_device oss_capture = {
+    "OSS Default",
+    "/dev/dsp",
+    NULL
+};
+
+#ifdef ALC_OSS_COMPAT 
+
+static void ALCossListPopulate(struct oss_device *playback, struct oss_device *capture)
+{
+    ; /* Stub */
+}
+
+static void ALCossListFree(struct oss_device *list)
+{
+    ; /* Stub */
+}
+
+#else
+
+static void ALCossListAppend(struct oss_device *list, char *handle, size_t hlen, char *path, size_t plen) {
+    struct oss_device *t;
+    struct oss_device *p;
+    void *m;
+    size_t i;
+    if (list == NULL || handle == NULL || path == NULL || plen == 0 || path[0] == '\0')
+        return;
+    /* skip the first item "OSS Default" */
+    p = list;
+    t = list->next;
+#ifdef ALC_OSS_DEVNODE_TRUC
+    for (i = 0; i < plen; i++)
+        if (path[i] == '.')
+        {
+            if (strncmp(path + i, handle + hlen + i - plen, plen - i) == 0)
+                hlen = hlen + i - plen;
+            plen = i;
+        }
+#endif
+    if (handle == NULL || hlen == 0 || handle[0] == '\0') {
+        handle = path;
+        hlen = plen;
+    }
+    while (t != NULL && strncmp(t->path, path, plen) != 0) {
+        p = t;
+        t = t->next;
+    }
+    if (t != NULL)
+        return;
+    m = malloc(sizeof(struct oss_device) + hlen + plen + 2);
+    t = (struct oss_device *)m;
+    t->handle = (char *)((uintptr_t)m + sizeof(struct oss_device));
+    t->path = stpncpy((char *)t->handle, handle, hlen) + 1;
+    ((char *)t->handle)[hlen] = '\0';
+    strncpy((char *)t->path, path, plen);
+    ((char *)t->path)[plen] = '\0';
+    t->next = NULL;
+    p->next = t;
+}
+
+static void ALCossListPopulate(struct oss_device *playback, struct oss_device *capture)
+{
+    struct oss_sysinfo si;
+    struct oss_audioinfo ai;
+    int fd;
+    int i;
+    if ((fd = open("/dev/mixer", O_RDONLY)) < 0)
+    {
+        ERR("Could not open /dev/mixer\n");
+        return;
+    }
+    if (ioctl(fd, SNDCTL_SYSINFO, &si) == -1)
+    {
+        ERR("SNDCTL_SYSINFO\n");
+        goto err;
+    }
+    for (i = 0; i < si.numaudios; i++)
+    {
+        char *handle;
+        size_t len;
+        ai.dev = i;
+        if (ioctl(fd, SNDCTL_AUDIOINFO, &ai) == -1)
+        {
+            ERR("SNDCTL_SYSINFO\n");
+            continue;
+        }
+        if (ai.handle[0] == '\0')
+        {
+            len = strnlen(ai.name, sizeof(ai.name));
+            handle = ai.name;
+        }
+        else
+        {
+            len = strnlen(ai.handle, sizeof(ai.handle));
+            handle = ai.handle;
+        }
+        if ((ai.caps & DSP_CAP_INPUT) && capture != NULL)
+            ALCossListAppend(capture, handle, len, ai.devnode, strnlen(ai.devnode, sizeof(ai.devnode)));
+        if ((ai.caps & DSP_CAP_OUTPUT) && playback != NULL)
+            ALCossListAppend(playback, handle, len, ai.devnode, strnlen(ai.devnode, sizeof(ai.devnode)));
+    }
+    close(fd);
+    return;
+err:
+    if (fd >= 0)
+        close(fd);
+    return;
+}
+
+static void ALCossListFree(struct oss_device *list)
+{
+    struct oss_device *cur, *t;
+    if (list == NULL)
+        return;
+    cur = list->next;
+    list->next = NULL;
+    while (cur != NULL)
+    {
+        t = cur->next;
+        free(cur);
+        cur = t;
+    }
+}
+
+#endif
 
 static int log2i(ALCuint x)
 {
@@ -68,7 +215,6 @@ static int log2i(ALCuint x)
     }
     return y;
 }
-
 
 typedef struct ALCplaybackOSS {
     DERIVE_FROM_TYPE(ALCbackend);
@@ -153,19 +299,29 @@ static void ALCplaybackOSS_Construct(ALCplaybackOSS *self, ALCdevice *device)
 
 static ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name)
 {
+    struct oss_device *dev = &oss_playback;
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
     if(!name)
-        name = oss_device;
-    else if(strcmp(name, oss_device) != 0)
-        return ALC_INVALID_VALUE;
+        name = dev->handle;
+    else
+    {
+        while (dev != NULL)
+        {
+            if (strcmp(dev->handle, name) == 0)
+                break;
+            dev = dev->next;
+        }
+        if (dev == NULL)
+            return ALC_INVALID_VALUE;
+    }
 
     self->killNow = 0;
 
-    self->fd = open(oss_driver, O_WRONLY);
+    self->fd = open(dev->path, O_WRONLY);
     if(self->fd == -1)
     {
-        ERR("Could not open %s: %s\n", oss_driver, strerror(errno));
+        ERR("Could not open %s: %s\n", dev->path, strerror(errno));
         return ALC_INVALID_VALUE;
     }
 
@@ -383,6 +539,7 @@ static void ALCcaptureOSS_Construct(ALCcaptureOSS *self, ALCdevice *device)
 static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    struct oss_device *dev = &oss_capture;
     int numFragmentsLogSize;
     int log2FragmentSize;
     unsigned int periods;
@@ -394,14 +551,23 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
     char *err;
 
     if(!name)
-        name = oss_device;
-    else if(strcmp(name, oss_device) != 0)
-        return ALC_INVALID_VALUE;
+        name = dev->handle;
+    else
+    {
+        while (dev != NULL)
+        {
+            if (strcmp(dev->handle, name) == 0)
+                break;
+            dev = dev->next;
+        }
+        if (dev == NULL)
+            return ALC_INVALID_VALUE;
+    }
 
-    self->fd = open(oss_capture, O_RDONLY);
+    self->fd = open(dev->path, O_RDONLY);
     if(self->fd == -1)
     {
-        ERR("Could not open %s: %s\n", oss_capture, strerror(errno));
+        ERR("Could not open %s: %s\n", dev->path, strerror(errno));
         return ALC_INVALID_VALUE;
     }
 
@@ -547,7 +713,7 @@ typedef struct ALCossBackendFactory {
 ALCbackendFactory *ALCossBackendFactory_getFactory(void);
 
 static ALCboolean ALCossBackendFactory_init(ALCossBackendFactory *self);
-static DECLARE_FORWARD(ALCossBackendFactory, ALCbackendFactory, void, deinit)
+static void ALCossBackendFactory_deinit(ALCossBackendFactory *self);
 static ALCboolean ALCossBackendFactory_querySupport(ALCossBackendFactory *self, ALCbackend_Type type);
 static void ALCossBackendFactory_probe(ALCossBackendFactory *self, enum DevProbe type);
 static ALCbackend* ALCossBackendFactory_createBackend(ALCossBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
@@ -563,11 +729,18 @@ ALCbackendFactory *ALCossBackendFactory_getFactory(void)
 
 ALCboolean ALCossBackendFactory_init(ALCossBackendFactory* UNUSED(self))
 {
-    ConfigValueStr(NULL, "oss", "device", &oss_driver);
-    ConfigValueStr(NULL, "oss", "capture", &oss_capture);
+    ConfigValueStr(NULL, "oss", "device", &oss_playback.path);
+    ConfigValueStr(NULL, "oss", "capture", &oss_capture.path);
 
     return ALC_TRUE;
 }
+
+void  ALCossBackendFactory_deinit(ALCossBackendFactory* UNUSED(self))
+{
+    ALCossListFree(&oss_playback);
+    ALCossListFree(&oss_capture);
+}
+
 
 ALCboolean ALCossBackendFactory_querySupport(ALCossBackendFactory* UNUSED(self), ALCbackend_Type type)
 {
@@ -582,21 +755,27 @@ void ALCossBackendFactory_probe(ALCossBackendFactory* UNUSED(self), enum DevProb
     {
         case ALL_DEVICE_PROBE:
         {
-#ifdef HAVE_STAT
-            struct stat buf;
-            if(stat(oss_driver, &buf) == 0)
-#endif
-                AppendAllDevicesList(oss_device);
+            struct oss_device *cur = &oss_playback;
+            ALCossListFree(cur);
+            ALCossListPopulate(cur, NULL);
+            while (cur != NULL)
+            {
+                AppendAllDevicesList(cur->handle);
+                cur = cur->next;
+            }
         }
         break;
 
         case CAPTURE_DEVICE_PROBE:
         {
-#ifdef HAVE_STAT
-            struct stat buf;
-            if(stat(oss_capture, &buf) == 0)
-#endif
-                AppendCaptureDeviceList(oss_device);
+            struct oss_device *cur = &oss_capture;
+            ALCossListFree(cur);
+            ALCossListPopulate(NULL, cur);
+            while (cur != NULL)
+            {
+                AppendCaptureDeviceList(cur->handle);
+                cur = cur->next;
+            }
         }
         break;
     }

@@ -41,6 +41,9 @@ OPTION(ALSOFT_HRTF_DEFS "Install HRTF definition files" ON)
 OPTION(ALSOFT_INSTALL "Install headers and libraries" ON)
 
 
+set(SHARE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share" CACHE STRING "The share install dir")
+
+
 IF(NOT WIN32)
     SET(LIBNAME openal)
 ELSE()
@@ -1174,7 +1177,7 @@ ENDIF()
 # Install alsoft.conf configuration file
 IF(ALSOFT_CONFIG)
     INSTALL(FILES alsoftrc.sample
-            DESTINATION share/openal
+            DESTINATION ${SHARE_INSTALL_DIR}/openal
     )
     MESSAGE(STATUS "Installing sample configuration")
     MESSAGE(STATUS "")
@@ -1184,7 +1187,7 @@ ENDIF()
 IF(ALSOFT_HRTF_DEFS)
     INSTALL(FILES hrtf/default-44100.mhr
                   hrtf/default-48000.mhr
-            DESTINATION share/openal/hrtf
+            DESTINATION ${SHARE_INSTALL_DIR}/openal/hrtf
     )
     MESSAGE(STATUS "Installing HRTF definitions")
     MESSAGE(STATUS "")

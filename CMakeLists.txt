@@ -304,6 +304,25 @@ ELSE()
 
     CHECK_C_SOURCE_COMPILES("int foo() __attribute__((destructor));
                              int main() {return 0;}" HAVE_GCC_DESTRUCTOR)
+
+    option(ALSOFT_STATIC_LIBGCC "Force -static-libgcc for static GCC runtimes" OFF)
+    if(ALSOFT_STATIC_LIBGCC)
+        set(OLD_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
+        set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} -static-libgcc)
+        check_c_source_compiles(
+"#include <stdlib.h>
+int main()
+{
+    return 0;
+}"
+            HAVE_STATIC_LIBGCC_SWITCH
+        )
+        if(HAVE_STATIC_LIBGCC_SWITCH)
+            set(EXTRA_LIBS ${EXTRA_LIBS} -static-libgcc)
+        endif()
+        set(CMAKE_REQUIRED_LIBRARIES ${OLD_REQUIRED_LIBRARIES})
+        unset(OLD_REQUIRED_LIBRARIES)
+    endif()
 ENDIF()
 
 # Set visibility/export options if available

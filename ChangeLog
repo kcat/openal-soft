@@ -1,3 +1,17 @@
+openal-soft-1.17.2:
+
+    Implemented device enumeration for OSSv4.
+
+    Fixed building on OSX.
+
+    Fixed building on non-Windows systems without POSIX-2008.
+
+    Fixed Dedicated Dialog and Dedicated LFE effect output.
+
+    Added a build option to override the share install dir.
+
+    Added a build option to static-link libgcc for MinGW.
+
 openal-soft-1.17.1:
 
     Fixed building with JACK and without PulseAudio.

@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <memory.h>
 #include <unistd.h>
 #include <errno.h>
@@ -93,14 +94,20 @@ static void ALCossListPopulate(struct oss_device *UNUSED(playback), struct oss_d
 
 #else
 
+#ifndef HAVE_STRNLEN
+static size_t strnlen(const char *str, size_t maxlen)
+{
+    const char *end = memchr(str, 0, maxlen);
+    if(!end) return maxlen;
+    return end - str;
+}
+#endif
+
 static void ALCossListAppend(struct oss_device *list, const char *handle, size_t hlen, const char *path, size_t plen)
 {
     struct oss_device *next;
     struct oss_device *last;
     size_t i;
-
-    if(plen == 0 || path[0] == '\0')
-        return;
 
     /* skip the first item "OSS Default" */
     last = list;
@@ -173,7 +180,10 @@ static void ALCossListPopulate(struct oss_device *playback, struct oss_device *c
             ERR("SNDCTL_AUDIOINFO (%d) failed: %s\n", i, strerror(errno));
             continue;
         }
-        if(ai.handle[0])
+        if(ai.devnode[0] == '\0')
+            continue;
+
+        if(ai.handle[0] != '\0')
         {
             len = strnlen(ai.handle, sizeof(ai.handle));
             handle = ai.handle;

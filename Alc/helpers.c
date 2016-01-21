@@ -364,6 +364,11 @@ void RestoreFPUMode(const FPUCtl *ctl)
 }
 
 
+static int StringSortCompare(const void *str1, const void *str2)
+{
+    return al_string_cmp(*(const_al_string*)str1, *(const_al_string*)str2);
+}
+
 #ifdef _WIN32
 
 static WCHAR *FromUTF8(const char *str)
@@ -706,6 +711,7 @@ static void RecurseDirectorySearch(const char *path, const WCHAR *match, vector_
         hdl = FindFirstFileW(wpath, &fdata);
         if(hdl != INVALID_HANDLE_VALUE)
         {
+            size_t base = VECTOR_SIZE(*results);
             do {
                 if(MatchFilter(match, &fdata))
                 {
@@ -718,6 +724,10 @@ static void RecurseDirectorySearch(const char *path, const WCHAR *match, vector_
                 }
             } while(FindNextFileW(hdl, &fdata));
             FindClose(hdl);
+
+            if(VECTOR_SIZE(*results) > base)
+                qsort(VECTOR_ITER_BEGIN(*results)+base, VECTOR_SIZE(*results)-base,
+                      sizeof(VECTOR_FRONT(*results)), StringSortCompare);
         }
 
         free(wpath);
@@ -1016,11 +1026,8 @@ FILE *OpenDataFile(const char *fname, const char *subdir)
 }
 
 
-static const char *MatchString;
-static int MatchFilter(const struct dirent *dir)
+static int MatchFilter(const char *name, const char *match)
 {
-    const char *match = MatchString;
-    const char *name = dir->d_name;
     int ret = 1;
 
     do {
@@ -1089,9 +1096,7 @@ static int MatchFilter(const struct dirent *dir)
 
 static void RecurseDirectorySearch(const char *path, const char *match, vector_al_string *results)
 {
-    struct dirent **namelist;
     char *sep, *p;
-    int n, i;
 
     if(!match[0])
         return;
@@ -1101,22 +1106,33 @@ static void RecurseDirectorySearch(const char *path, const char *match, vector_a
 
     if(!sep)
     {
-        MatchString = match;
+        DIR *dir;
+
         TRACE("Searching %s for %s\n", path?path:"/", match);
-        n = scandir(path?path:"/", &namelist, MatchFilter, alphasort);
-        if(n >= 0)
+        dir = opendir(path?path:"/");
+        if(dir != NULL)
         {
-            for(i = 0;i < n;++i)
+            size_t base = VECTOR_SIZE(*results);
+            struct dirent *dirent;
+            while((dirent=readdir(dir)) != NULL)
             {
-                al_string str = AL_STRING_INIT_STATIC();
+                al_string str;
+                if(strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0 ||
+                   !MatchFilter(dirent->d_name, match))
+                    continue;
+
+                AL_STRING_INIT(str);
                 if(path) al_string_copy_cstr(&str, path);
                 al_string_append_char(&str, '/');
-                al_string_append_cstr(&str, namelist[i]->d_name);
+                al_string_append_cstr(&str, dirent->d_name);
                 TRACE("Got result %s\n", al_string_get_cstr(str));
                 VECTOR_PUSH_BACK(*results, str);
-                free(namelist[i]);
             }
-            free(namelist);
+            closedir(dir);
+
+            if(VECTOR_SIZE(*results) > base)
+                qsort(VECTOR_ITER_BEGIN(*results)+base, VECTOR_SIZE(*results)-base,
+                      sizeof(VECTOR_FRONT(*results)), StringSortCompare);
         }
 
         return;
@@ -1145,11 +1161,13 @@ static void RecurseDirectorySearch(const char *path, const char *match, vector_a
         {
             al_string npath = AL_STRING_INIT_STATIC();
             al_string nmatch = AL_STRING_INIT_STATIC();
+            const char *tomatch;
+            DIR *dir;
 
             if(!sep)
             {
                 al_string_append_cstr(&npath, path?path:"/.");
-                MatchString = match;
+                tomatch = match;
             }
             else
             {
@@ -1158,25 +1176,30 @@ static void RecurseDirectorySearch(const char *path, const char *match, vector_a
                 al_string_append_range(&npath, match, sep);
 
                 al_string_append_range(&nmatch, sep+1, next);
-                MatchString = al_string_get_cstr(nmatch);
+                tomatch = al_string_get_cstr(nmatch);
             }
 
-            TRACE("Searching %s for %s\n", al_string_get_cstr(npath), MatchString);
-            n = scandir(al_string_get_cstr(npath), &namelist, MatchFilter, alphasort);
-            if(n >= 0)
+            TRACE("Searching %s for %s\n", al_string_get_cstr(npath), tomatch);
+            dir = opendir(path?path:"/");
+            if(dir != NULL)
             {
                 al_string ndir = AL_STRING_INIT_STATIC();
-                for(i = 0;i < n;++i)
+                struct dirent *dirent;
+
+                while((dirent=readdir(dir)) != NULL)
                 {
+                    if(strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0 ||
+                       !MatchFilter(dirent->d_name, tomatch))
+                        continue;
                     al_string_copy(&ndir, npath);
                     al_string_append_char(&ndir, '/');
-                    al_string_append_cstr(&ndir, namelist[i]->d_name);
-                    free(namelist[i]);
+                    al_string_append_cstr(&ndir, dirent->d_name);
                     TRACE("Recursing %s with %s\n", al_string_get_cstr(ndir), next+1);
                     RecurseDirectorySearch(al_string_get_cstr(ndir), next+1, results);
                 }
+                closedir(dir);
+
                 al_string_deinit(&ndir);
-                free(namelist);
             }
 
             al_string_deinit(&nmatch);

@@ -561,12 +561,33 @@ IF(NOT HAVE_WINDOWS_H)
         CHECK_SYMBOL_EXISTS(pthread_setname_np "pthread.h;pthread_np.h" HAVE_PTHREAD_SETNAME_NP)
         IF(NOT HAVE_PTHREAD_SETNAME_NP)
             CHECK_SYMBOL_EXISTS(pthread_set_name_np "pthread.h;pthread_np.h" HAVE_PTHREAD_SET_NAME_NP)
+        ELSE()
+            CHECK_C_SOURCE_COMPILES("
+#include <pthread.h>
+#include <pthread_np.h>
+int main()
+{
+    pthread_setname_np(\"testname\");
+    return 0;
+}"
+                PTHREAD_SETNAME_NP_ONE_PARAM
+            )
         ENDIF()
         CHECK_SYMBOL_EXISTS(pthread_mutexattr_setkind_np "pthread.h;pthread_np.h" HAVE_PTHREAD_MUTEXATTR_SETKIND_NP)
     ELSE()
         CHECK_SYMBOL_EXISTS(pthread_setname_np pthread.h HAVE_PTHREAD_SETNAME_NP)
         IF(NOT HAVE_PTHREAD_SETNAME_NP)
             CHECK_SYMBOL_EXISTS(pthread_set_name_np pthread.h HAVE_PTHREAD_SET_NAME_NP)
+        ELSE()
+            CHECK_C_SOURCE_COMPILES("
+#include <pthread.h>
+int main()
+{
+    pthread_setname_np(\"testname\");
+    return 0;
+}"
+                PTHREAD_SETNAME_NP_ONE_PARAM
+            )
         ENDIF()
         CHECK_SYMBOL_EXISTS(pthread_mutexattr_setkind_np pthread.h HAVE_PTHREAD_MUTEXATTR_SETKIND_NP)
     ENDIF()

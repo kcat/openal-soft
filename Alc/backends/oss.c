@@ -52,7 +52,7 @@
 #define SOUND_MIXER_WRITE MIXER_WRITE
 #endif
 
-#if defined(SOUND_VERSION) && (SOUND_VERSION) < 0x040000
+#if defined(SOUND_VERSION) && (SOUND_VERSION < 0x040000)
 #define ALC_OSS_COMPAT
 #endif
 #ifndef SNDCTL_AUDIOINFO
@@ -85,125 +85,133 @@ static struct oss_device oss_capture = {
     NULL
 };
 
-#ifdef ALC_OSS_COMPAT 
+#ifdef ALC_OSS_COMPAT
 
-static void ALCossListPopulate(struct oss_device *playback, struct oss_device *capture)
+static void ALCossListPopulate(struct oss_device *UNUSED(playback), struct oss_device *UNUSED(capture))
 {
-    ; /* Stub */
-}
-
-static void ALCossListFree(struct oss_device *list)
-{
-    ; /* Stub */
 }
 
 #else
 
-static void ALCossListAppend(struct oss_device *list, char *handle, size_t hlen, char *path, size_t plen) {
-    struct oss_device *t;
-    struct oss_device *p;
-    void *m;
+static void ALCossListAppend(struct oss_device *list, const char *handle, size_t hlen, const char *path, size_t plen)
+{
+    struct oss_device *next;
+    struct oss_device *last;
     size_t i;
-    if (list == NULL || handle == NULL || path == NULL || plen == 0 || path[0] == '\0')
+
+    if(plen == 0 || path[0] == '\0')
         return;
+
     /* skip the first item "OSS Default" */
-    p = list;
-    t = list->next;
+    last = list;
+    next = list->next;
 #ifdef ALC_OSS_DEVNODE_TRUC
-    for (i = 0; i < plen; i++)
-        if (path[i] == '.')
+    for(i = 0;i < plen;i++)
+    {
+        if(path[i] == '.')
         {
-            if (strncmp(path + i, handle + hlen + i - plen, plen - i) == 0)
+            if(strncmp(path + i, handle + hlen + i - plen, plen - i) == 0)
                 hlen = hlen + i - plen;
             plen = i;
         }
+    }
+#else
+    (void)i;
 #endif
-    if (handle == NULL || hlen == 0 || handle[0] == '\0') {
+    if(handle[0] == '\0')
+    {
         handle = path;
         hlen = plen;
     }
-    while (t != NULL && strncmp(t->path, path, plen) != 0) {
-        p = t;
-        t = t->next;
+
+    while(next != NULL)
+    {
+        if(strncmp(next->path, path, plen) == 0)
+            return;
+        last = next;
+        next = next->next;
     }
-    if (t != NULL)
-        return;
-    m = malloc(sizeof(struct oss_device) + hlen + plen + 2);
-    t = (struct oss_device *)m;
-    t->handle = (char *)((uintptr_t)m + sizeof(struct oss_device));
-    t->path = stpncpy((char *)t->handle, handle, hlen) + 1;
-    ((char *)t->handle)[hlen] = '\0';
-    strncpy((char *)t->path, path, plen);
-    ((char *)t->path)[plen] = '\0';
-    t->next = NULL;
-    p->next = t;
+
+    next = (struct oss_device*)malloc(sizeof(struct oss_device) + hlen + plen + 2);
+    next->handle = (char*)(next + 1);
+    next->path = next->handle + hlen + 1;
+    next->next = NULL;
+    last->next = next;
+
+    strncpy((char*)next->handle, handle, hlen);
+    ((char*)next->handle)[hlen] = '\0';
+    strncpy((char*)next->path, path, plen);
+    ((char*)next->path)[plen] = '\0';
+
+    TRACE("Got device \"%s\", \"%s\"\n", next->handle, next->path);
 }
 
 static void ALCossListPopulate(struct oss_device *playback, struct oss_device *capture)
 {
     struct oss_sysinfo si;
     struct oss_audioinfo ai;
-    int fd;
-    int i;
-    if ((fd = open("/dev/mixer", O_RDONLY)) < 0)
+    int fd, i;
+
+    if((fd=open("/dev/mixer", O_RDONLY)) < 0)
     {
         ERR("Could not open /dev/mixer\n");
         return;
     }
-    if (ioctl(fd, SNDCTL_SYSINFO, &si) == -1)
+    if(ioctl(fd, SNDCTL_SYSINFO, &si) == -1)
     {
-        ERR("SNDCTL_SYSINFO\n");
-        goto err;
+        ERR("SNDCTL_SYSINFO failed: %s\n", strerror(errno));
+        goto done;
     }
-    for (i = 0; i < si.numaudios; i++)
+    for(i = 0;i < si.numaudios;i++)
     {
-        char *handle;
+        const char *handle;
         size_t len;
+
         ai.dev = i;
-        if (ioctl(fd, SNDCTL_AUDIOINFO, &ai) == -1)
+        if(ioctl(fd, SNDCTL_AUDIOINFO, &ai) == -1)
         {
-            ERR("SNDCTL_SYSINFO\n");
+            ERR("SNDCTL_AUDIOINFO (%d) failed: %s\n", i, strerror(errno));
             continue;
         }
-        if (ai.handle[0] == '\0')
-        {
-            len = strnlen(ai.name, sizeof(ai.name));
-            handle = ai.name;
-        }
-        else
+        if(ai.handle[0])
         {
             len = strnlen(ai.handle, sizeof(ai.handle));
             handle = ai.handle;
         }
-        if ((ai.caps & DSP_CAP_INPUT) && capture != NULL)
+        else
+        {
+            len = strnlen(ai.name, sizeof(ai.name));
+            handle = ai.name;
+        }
+        if((ai.caps&DSP_CAP_INPUT) && capture != NULL)
             ALCossListAppend(capture, handle, len, ai.devnode, strnlen(ai.devnode, sizeof(ai.devnode)));
-        if ((ai.caps & DSP_CAP_OUTPUT) && playback != NULL)
+        if((ai.caps&DSP_CAP_OUTPUT) && playback != NULL)
             ALCossListAppend(playback, handle, len, ai.devnode, strnlen(ai.devnode, sizeof(ai.devnode)));
     }
-    close(fd);
-    return;
-err:
-    if (fd >= 0)
-        close(fd);
-    return;
-}
 
-static void ALCossListFree(struct oss_device *list)
-{
-    struct oss_device *cur, *t;
-    if (list == NULL)
-        return;
-    cur = list->next;
-    list->next = NULL;
-    while (cur != NULL)
-    {
-        t = cur->next;
-        free(cur);
-        cur = t;
-    }
+done:
+    close(fd);
 }
 
 #endif
+
+static void ALCossListFree(struct oss_device *list)
+{
+    struct oss_device *cur;
+    if(list == NULL)
+        return;
+
+    /* skip the first item "OSS Default" */
+    cur = list->next;
+    list->next = NULL;
+
+    while(cur != NULL)
+    {
+        struct oss_device *next = cur->next;
+        free(cur);
+        cur = next;
+    }
+}
 
 static int log2i(ALCuint x)
 {

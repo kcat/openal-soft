@@ -398,6 +398,25 @@ IF(NOT HAVE_GUIDDEF_H)
     CHECK_INCLUDE_FILE(initguid.h HAVE_INITGUID_H)
 ENDIF()
 
+# Some systems need libm for some of the following math functions to work
+CHECK_LIBRARY_EXISTS(m pow "" HAVE_LIBM)
+IF(HAVE_LIBM)
+    SET(EXTRA_LIBS m ${EXTRA_LIBS})
+    SET(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} m)
+ENDIF()
+
+# Check for the dlopen API (for dynamicly loading backend libs)
+IF(ALSOFT_DLOPEN)
+    CHECK_LIBRARY_EXISTS(dl dlopen "" HAVE_LIBDL)
+    IF(HAVE_LIBDL)
+        SET(EXTRA_LIBS dl ${EXTRA_LIBS})
+        SET(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} dl)
+    ENDIF()
+
+    CHECK_INCLUDE_FILE(dlfcn.h HAVE_DLFCN_H)
+ENDIF()
+
+# Check for a cpuid intrinsic
 IF(HAVE_CPUID_H)
     CHECK_C_SOURCE_COMPILES("#include <cpuid.h>
         int main()
@@ -406,7 +425,6 @@ IF(HAVE_CPUID_H)
             return __get_cpuid(0, &eax, &ebx, &ecx, &edx);
         }" HAVE_GCC_GET_CPUID)
 ENDIF()
-
 IF(HAVE_INTRIN_H)
     CHECK_C_SOURCE_COMPILES("#include <intrin.h>
         int main()
@@ -416,14 +434,6 @@ IF(HAVE_INTRIN_H)
             return regs[0];
         }" HAVE_CPUID_INTRINSIC)
 ENDIF()
-
-# Some systems need libm for some of the following math functions to work
-CHECK_LIBRARY_EXISTS(m pow "" HAVE_LIBM)
-IF(HAVE_LIBM)
-    SET(EXTRA_LIBS m ${EXTRA_LIBS})
-    SET(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} m)
-ENDIF()
-
 
 CHECK_SYMBOL_EXISTS(aligned_alloc    stdlib.h HAVE_ALIGNED_ALLOC)
 CHECK_SYMBOL_EXISTS(posix_memalign   stdlib.h HAVE_POSIX_MEMALIGN)
@@ -499,17 +509,6 @@ IF(NOT HAVE_ISNAN)
     ADD_DEFINITIONS(-Disnan=_isnan)
 ENDIF()
 
-
-# Check for the dlopen API (for dynamicly loading backend libs)
-IF(ALSOFT_DLOPEN)
-    CHECK_INCLUDE_FILE(dlfcn.h HAVE_DLFCN_H)
-    IF(HAVE_DLFCN_H)
-        CHECK_LIBRARY_EXISTS(dl dlopen "" HAVE_LIBDL)
-        IF(HAVE_LIBDL)
-            SET(EXTRA_LIBS dl ${EXTRA_LIBS})
-        ENDIF()
-    ENDIF()
-ENDIF()
 
 # Check if we have Windows headers
 CHECK_INCLUDE_FILE(windows.h HAVE_WINDOWS_H -D_WIN32_WINNT=0x0502)

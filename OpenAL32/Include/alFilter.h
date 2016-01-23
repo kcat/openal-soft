@@ -68,7 +68,14 @@ inline ALfloat calc_rcpQ_from_bandwidth(ALfloat freq_mult, ALfloat bandwidth)
     return 2.0f*sinhf(logf(2.0f)/2.0f*bandwidth*w0/sinf(w0));
 }
 
-void ALfilterState_clear(ALfilterState *filter);
+inline void ALfilterState_clear(ALfilterState *filter)
+{
+    filter->x[0] = 0.0f;
+    filter->x[1] = 0.0f;
+    filter->y[0] = 0.0f;
+    filter->y[1] = 0.0f;
+}
+
 void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat gain, ALfloat freq_mult, ALfloat rcpQ);
 
 inline ALfloat ALfilterState_processSingle(ALfilterState *filter, ALfloat sample)
@@ -90,7 +97,23 @@ inline ALfloat ALfilterState_processSingle(ALfilterState *filter, ALfloat sample
 
 void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const ALfloat *src, ALuint numsamples);
 
-void ALfilterState_processPassthru(ALfilterState *filter, const ALfloat *src, ALuint numsamples);
+inline void ALfilterState_processPassthru(ALfilterState *filter, const ALfloat *src, ALuint numsamples)
+{
+    if(numsamples >= 2)
+    {
+        filter->x[1] = src[numsamples-2];
+        filter->x[0] = src[numsamples-1];
+        filter->y[1] = src[numsamples-2];
+        filter->y[0] = src[numsamples-1];
+    }
+    else if(numsamples == 1)
+    {
+        filter->x[1] = filter->x[0];
+        filter->x[0] = src[0];
+        filter->y[1] = filter->y[0];
+        filter->y[0] = src[0];
+    }
+}
 
 
 typedef struct ALfilter {

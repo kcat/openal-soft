@@ -330,13 +330,8 @@ AL_API ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *va
 }
 
 
-void ALfilterState_clear(ALfilterState *filter)
-{
-    filter->x[0] = 0.0f;
-    filter->x[1] = 0.0f;
-    filter->y[0] = 0.0f;
-    filter->y[1] = 0.0f;
-}
+extern inline void ALfilterState_clear(ALfilterState *filter);
+extern inline void ALfilterState_processPassthru(ALfilterState *filter, const ALfloat *src, ALuint numsamples);
 
 void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat gain, ALfloat freq_mult, ALfloat rcpQ)
 {
@@ -416,24 +411,6 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
     filter->a[0] /= filter->a[0];
 
     filter->process = ALfilterState_processC;
-}
-
-void ALfilterState_processPassthru(ALfilterState *filter, const ALfloat *src, ALuint numsamples)
-{
-    if(numsamples >= 2)
-    {
-        filter->x[1] = src[numsamples-2];
-        filter->x[0] = src[numsamples-1];
-        filter->y[1] = src[numsamples-2];
-        filter->y[0] = src[numsamples-1];
-    }
-    else if(numsamples == 1)
-    {
-        filter->x[1] = filter->x[0];
-        filter->x[0] = src[0];
-        filter->y[1] = filter->y[0];
-        filter->y[0] = src[0];
-    }
 }
 
 

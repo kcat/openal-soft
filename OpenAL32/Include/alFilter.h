@@ -42,8 +42,9 @@ typedef enum ALfilterType {
 typedef struct ALfilterState {
     ALfloat x[2]; /* History of two last input samples  */
     ALfloat y[2]; /* History of two last output samples */
-    ALfloat a[3]; /* Transfer function coefficients "a" */
-    ALfloat b[3]; /* Transfer function coefficients "b" */
+    ALfloat a1, a2; /* Transfer function coefficients "a" (a0 is pre-applied) */
+    ALfloat b1, b2; /* Transfer function coefficients "b" (b0 is input_gain) */
+    ALfloat input_gain;
 
     void (*process)(struct ALfilterState *self, ALfloat *restrict dst, const ALfloat *src, ALuint numsamples);
 } ALfilterState;
@@ -82,11 +83,11 @@ inline ALfloat ALfilterState_processSingle(ALfilterState *filter, ALfloat sample
 {
     ALfloat outsmp;
 
-    outsmp = filter->b[0] * sample +
-             filter->b[1] * filter->x[0] +
-             filter->b[2] * filter->x[1] -
-             filter->a[1] * filter->y[0] -
-             filter->a[2] * filter->y[1];
+    outsmp = filter->input_gain * sample +
+             filter->b1 * filter->x[0] +
+             filter->b2 * filter->x[1] -
+             filter->a1 * filter->y[0] -
+             filter->a2 * filter->y[1];
     filter->x[1] = filter->x[0];
     filter->x[0] = sample;
     filter->y[1] = filter->y[0];

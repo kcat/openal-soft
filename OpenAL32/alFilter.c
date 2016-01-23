@@ -337,6 +337,8 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
 {
     ALfloat alpha, sqrtgain_alpha_2;
     ALfloat w0, sin_w0, cos_w0;
+    ALfloat a[3] = { 1.0f, 0.0f, 0.0f };
+    ALfloat b[3] = { 1.0f, 0.0f, 0.0f };
 
     // Limit gain to -100dB
     gain = maxf(gain, 0.00001f);
@@ -351,64 +353,63 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
     {
         case ALfilterType_HighShelf:
             sqrtgain_alpha_2 = 2.0f * sqrtf(gain) * alpha;
-            filter->b[0] =       gain*((gain+1.0f) + (gain-1.0f)*cos_w0 + sqrtgain_alpha_2);
-            filter->b[1] = -2.0f*gain*((gain-1.0f) + (gain+1.0f)*cos_w0                   );
-            filter->b[2] =       gain*((gain+1.0f) + (gain-1.0f)*cos_w0 - sqrtgain_alpha_2);
-            filter->a[0] =             (gain+1.0f) - (gain-1.0f)*cos_w0 + sqrtgain_alpha_2;
-            filter->a[1] =  2.0f*     ((gain-1.0f) - (gain+1.0f)*cos_w0                   );
-            filter->a[2] =             (gain+1.0f) - (gain-1.0f)*cos_w0 - sqrtgain_alpha_2;
+            b[0] =       gain*((gain+1.0f) + (gain-1.0f)*cos_w0 + sqrtgain_alpha_2);
+            b[1] = -2.0f*gain*((gain-1.0f) + (gain+1.0f)*cos_w0                   );
+            b[2] =       gain*((gain+1.0f) + (gain-1.0f)*cos_w0 - sqrtgain_alpha_2);
+            a[0] =             (gain+1.0f) - (gain-1.0f)*cos_w0 + sqrtgain_alpha_2;
+            a[1] =  2.0f*     ((gain-1.0f) - (gain+1.0f)*cos_w0                   );
+            a[2] =             (gain+1.0f) - (gain-1.0f)*cos_w0 - sqrtgain_alpha_2;
             break;
         case ALfilterType_LowShelf:
             sqrtgain_alpha_2 = 2.0f * sqrtf(gain) * alpha;
-            filter->b[0] =       gain*((gain+1.0f) - (gain-1.0f)*cos_w0 + sqrtgain_alpha_2);
-            filter->b[1] =  2.0f*gain*((gain-1.0f) - (gain+1.0f)*cos_w0                   );
-            filter->b[2] =       gain*((gain+1.0f) - (gain-1.0f)*cos_w0 - sqrtgain_alpha_2);
-            filter->a[0] =             (gain+1.0f) + (gain-1.0f)*cos_w0 + sqrtgain_alpha_2;
-            filter->a[1] = -2.0f*     ((gain-1.0f) + (gain+1.0f)*cos_w0                   );
-            filter->a[2] =             (gain+1.0f) + (gain-1.0f)*cos_w0 - sqrtgain_alpha_2;
+            b[0] =       gain*((gain+1.0f) - (gain-1.0f)*cos_w0 + sqrtgain_alpha_2);
+            b[1] =  2.0f*gain*((gain-1.0f) - (gain+1.0f)*cos_w0                   );
+            b[2] =       gain*((gain+1.0f) - (gain-1.0f)*cos_w0 - sqrtgain_alpha_2);
+            a[0] =             (gain+1.0f) + (gain-1.0f)*cos_w0 + sqrtgain_alpha_2;
+            a[1] = -2.0f*     ((gain-1.0f) + (gain+1.0f)*cos_w0                   );
+            a[2] =             (gain+1.0f) + (gain-1.0f)*cos_w0 - sqrtgain_alpha_2;
             break;
         case ALfilterType_Peaking:
             gain = sqrtf(gain);
-            filter->b[0] =  1.0f + alpha * gain;
-            filter->b[1] = -2.0f * cos_w0;
-            filter->b[2] =  1.0f - alpha * gain;
-            filter->a[0] =  1.0f + alpha / gain;
-            filter->a[1] = -2.0f * cos_w0;
-            filter->a[2] =  1.0f - alpha / gain;
+            b[0] =  1.0f + alpha * gain;
+            b[1] = -2.0f * cos_w0;
+            b[2] =  1.0f - alpha * gain;
+            a[0] =  1.0f + alpha / gain;
+            a[1] = -2.0f * cos_w0;
+            a[2] =  1.0f - alpha / gain;
             break;
 
         case ALfilterType_LowPass:
-            filter->b[0] = (1.0f - cos_w0) / 2.0f;
-            filter->b[1] =  1.0f - cos_w0;
-            filter->b[2] = (1.0f - cos_w0) / 2.0f;
-            filter->a[0] =  1.0f + alpha;
-            filter->a[1] = -2.0f * cos_w0;
-            filter->a[2] =  1.0f - alpha;
+            b[0] = (1.0f - cos_w0) / 2.0f;
+            b[1] =  1.0f - cos_w0;
+            b[2] = (1.0f - cos_w0) / 2.0f;
+            a[0] =  1.0f + alpha;
+            a[1] = -2.0f * cos_w0;
+            a[2] =  1.0f - alpha;
             break;
         case ALfilterType_HighPass:
-            filter->b[0] =  (1.0f + cos_w0) / 2.0f;
-            filter->b[1] = -(1.0f + cos_w0);
-            filter->b[2] =  (1.0f + cos_w0) / 2.0f;
-            filter->a[0] =   1.0f + alpha;
-            filter->a[1] =  -2.0f * cos_w0;
-            filter->a[2] =   1.0f - alpha;
+            b[0] =  (1.0f + cos_w0) / 2.0f;
+            b[1] = -(1.0f + cos_w0);
+            b[2] =  (1.0f + cos_w0) / 2.0f;
+            a[0] =   1.0f + alpha;
+            a[1] =  -2.0f * cos_w0;
+            a[2] =   1.0f - alpha;
             break;
         case ALfilterType_BandPass:
-            filter->b[0] =  alpha;
-            filter->b[1] =  0;
-            filter->b[2] = -alpha;
-            filter->a[0] =  1.0f + alpha;
-            filter->a[1] = -2.0f * cos_w0;
-            filter->a[2] =  1.0f - alpha;
+            b[0] =  alpha;
+            b[1] =  0;
+            b[2] = -alpha;
+            a[0] =  1.0f + alpha;
+            a[1] = -2.0f * cos_w0;
+            a[2] =  1.0f - alpha;
             break;
     }
 
-    filter->b[2] /= filter->a[0];
-    filter->b[1] /= filter->a[0];
-    filter->b[0] /= filter->a[0];
-    filter->a[2] /= filter->a[0];
-    filter->a[1] /= filter->a[0];
-    filter->a[0] /= filter->a[0];
+    filter->a1 = a[1] / a[0];
+    filter->a2 = a[2] / a[0];
+    filter->b1 = b[1] / a[0];
+    filter->b2 = b[2] / a[0];
+    filter->input_gain = b[0] / a[0];
 
     filter->process = ALfilterState_processC;
 }

@@ -142,12 +142,11 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, ALCdevice *Device
     cw = cosf(F_TAU * Slot->EffectProps.Modulator.HighPassCutoff / Device->Frequency);
     a = (2.0f-cw) - sqrtf(powf(2.0f-cw, 2.0f) - 1.0f);
 
-    state->Filter.b[0] = a;
-    state->Filter.b[1] = -a;
-    state->Filter.b[2] = 0.0f;
-    state->Filter.a[0] = 1.0f;
-    state->Filter.a[1] = -a;
-    state->Filter.a[2] = 0.0f;
+    state->Filter.a1 = -a;
+    state->Filter.a2 = 0.0f;
+    state->Filter.b1 = -a;
+    state->Filter.b2 = 0.0f;
+    state->Filter.input_gain = a;
 
     ComputeAmbientGains(Device, Slot->Gain, state->Gain);
 }

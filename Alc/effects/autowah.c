@@ -92,6 +92,7 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALuint SamplesToDo, 
         for(it = 0;it < td;it++)
         {
             ALfloat smp = SamplesIn[it+base];
+            ALfloat a[3], b[3];
             ALfloat alpha, w0;
             ALfloat amplitude;
             ALfloat cutoff;
@@ -117,19 +118,18 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALuint SamplesToDo, 
             /* FIXME: Resonance controls the resonant peak, or Q. How? Not sure
              * that Q = resonance*0.1. */
             alpha = sinf(w0) / (2.0f * state->Resonance*0.1f);
-            state->LowPass.b[0] = (1.0f - cosf(w0)) / 2.0f;
-            state->LowPass.b[1] =  1.0f - cosf(w0);
-            state->LowPass.b[2] = (1.0f - cosf(w0)) / 2.0f;
-            state->LowPass.a[0] =  1.0f + alpha;
-            state->LowPass.a[1] = -2.0f * cosf(w0);
-            state->LowPass.a[2] =  1.0f - alpha;
+            b[0] = (1.0f - cosf(w0)) / 2.0f;
+            b[1] =  1.0f - cosf(w0);
+            b[2] = (1.0f - cosf(w0)) / 2.0f;
+            a[0] =  1.0f + alpha;
+            a[1] = -2.0f * cosf(w0);
+            a[2] =  1.0f - alpha;
 
-            state->LowPass.b[2] /= state->LowPass.a[0];
-            state->LowPass.b[1] /= state->LowPass.a[0];
-            state->LowPass.b[0] /= state->LowPass.a[0];
-            state->LowPass.a[2] /= state->LowPass.a[0];
-            state->LowPass.a[1] /= state->LowPass.a[0];
-            state->LowPass.a[0] /= state->LowPass.a[0];
+            state->LowPass.a1 = a[1] / a[0];
+            state->LowPass.a2 = a[2] / a[0];
+            state->LowPass.b1 = b[1] / a[0];
+            state->LowPass.b2 = b[2] / a[0];
+            state->LowPass.input_gain = b[0] / a[0];
 
             temps[it] = ALfilterState_processSingle(&state->LowPass, smp);
         }

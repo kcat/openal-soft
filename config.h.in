@@ -146,9 +146,6 @@
 /* Define if we have dirent.h */
 #cmakedefine HAVE_DIRENT_H
 
-/* Define if we have io.h */
-#cmakedefine HAVE_IO_H
-
 /* Define if we have strings.h */
 #cmakedefine HAVE_STRINGS_H
 

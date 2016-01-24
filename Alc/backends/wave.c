@@ -56,16 +56,14 @@ static const ALubyte SUBTYPE_BFORMAT_FLOAT[] = {
 
 static void fwrite16le(ALushort val, FILE *f)
 {
-    fputc(val&0xff, f);
-    fputc((val>>8)&0xff, f);
+    ALubyte data[2] = { val&0xff, (val>>8)&0xff };
+    fwrite(data, 1, 2, f);
 }
 
 static void fwrite32le(ALuint val, FILE *f)
 {
-    fputc(val&0xff, f);
-    fputc((val>>8)&0xff, f);
-    fputc((val>>16)&0xff, f);
-    fputc((val>>24)&0xff, f);
+    ALubyte data[4] = { val&0xff, (val>>8)&0xff, (val>>16)&0xff, (val>>24)&0xff };
+    fwrite(data, 1, 4, f);
 }
 
 

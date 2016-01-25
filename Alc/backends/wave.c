@@ -163,31 +163,33 @@ static int ALCwaveBackend_mixerProc(void *ptr)
             if(!IS_LITTLE_ENDIAN)
             {
                 ALuint bytesize = BytesFromDevFmt(device->FmtType);
-                ALubyte *bytes = self->mBuffer;
                 ALuint i;
 
-                if(bytesize == 1)
+                if(bytesize == 2)
                 {
-                    for(i = 0;i < self->mSize;i++)
-                        fputc(bytes[i], self->mFile);
-                }
-                else if(bytesize == 2)
-                {
-                    for(i = 0;i < self->mSize;i++)
-                        fputc(bytes[i^1], self->mFile);
+                    ALushort *samples = self->mBuffer;
+                    ALuint len = self->mSize / 2;
+                    for(i = 0;i < len;i++)
+                    {
+                        ALushort samp = samples[i];
+                        samples[i] = (samp>>8) | (samp<<8);
+                    }
                 }
                 else if(bytesize == 4)
                 {
-                    for(i = 0;i < self->mSize;i++)
-                        fputc(bytes[i^3], self->mFile);
+                    ALuint *samples = self->mBuffer;
+                    ALuint len = self->mSize / 4;
+                    for(i = 0;i < len;i++)
+                    {
+                        ALuint samp = samples[i];
+                        samples[i] = (samp>>24) | ((samp>>8)&0x0000ff00) |
+                                     ((samp<<8)&0x00ff0000) | (samp<<24);
+                    }
                 }
             }
-            else
-            {
-                fs = fwrite(self->mBuffer, frameSize, device->UpdateSize,
-                            self->mFile);
-                (void)fs;
-            }
+
+            fs = fwrite(self->mBuffer, frameSize, device->UpdateSize, self->mFile);
+            (void)fs;
             if(ferror(self->mFile))
             {
                 ERR("Error writing to file\n");

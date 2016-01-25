@@ -55,11 +55,11 @@ static ALboolean ALcompressorState_deviceUpdate(ALcompressorState *state, ALCdev
     return AL_TRUE;
 }
 
-static ALvoid ALcompressorState_update(ALcompressorState *state, ALCdevice *device, const ALeffectslot *slot)
+static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCdevice *device, const ALeffectslot *slot)
 {
     state->Enabled = slot->EffectProps.Compressor.OnOff;
 
-    ComputeAmbientGains(device, slot->Gain, state->Gain);
+    ComputeAmbientGains(device->AmbiCoeffs, device->NumChannels, slot->Gain, state->Gain);
 }
 
 static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[BUFFERSIZE], ALuint NumChannels)

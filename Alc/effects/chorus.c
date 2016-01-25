@@ -91,11 +91,10 @@ static ALboolean ALchorusState_deviceUpdate(ALchorusState *state, ALCdevice *Dev
     return AL_TRUE;
 }
 
-static ALvoid ALchorusState_update(ALchorusState *state, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALchorusState_update(ALchorusState *state, const ALCdevice *Device, const ALeffectslot *Slot)
 {
-    static const ALfloat left_dir[3] = { -1.0f, 0.0f, 0.0f };
-    static const ALfloat right_dir[3] = { 1.0f, 0.0f, 0.0f };
     ALfloat frequency = (ALfloat)Device->Frequency;
+    ALfloat coeffs[MAX_AMBI_COEFFS];
     ALfloat rate;
     ALint phase;
 
@@ -113,8 +112,10 @@ static ALvoid ALchorusState_update(ALchorusState *state, ALCdevice *Device, cons
     state->delay = fastf2i(Slot->EffectProps.Chorus.Delay * frequency);
 
     /* Gains for left and right sides */
-    ComputeDirectionalGains(Device, left_dir, Slot->Gain, state->Gain[0]);
-    ComputeDirectionalGains(Device, right_dir, Slot->Gain, state->Gain[1]);
+    CalcXYZCoeffs(-1.0f, 0.0f, 0.0f, coeffs);
+    ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Slot->Gain, state->Gain[0]);
+    CalcXYZCoeffs( 1.0f, 0.0f, 0.0f, coeffs);
+    ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Slot->Gain, state->Gain[1]);
 
     phase = Slot->EffectProps.Chorus.Phase;
     rate = Slot->EffectProps.Chorus.Rate;

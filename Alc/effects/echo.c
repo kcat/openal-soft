@@ -81,10 +81,10 @@ static ALboolean ALechoState_deviceUpdate(ALechoState *state, ALCdevice *Device)
     return AL_TRUE;
 }
 
-static ALvoid ALechoState_update(ALechoState *state, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALechoState_update(ALechoState *state, const ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALfloat pandir[3] = { 0.0f, 0.0f, 0.0f };
     ALuint frequency = Device->Frequency;
+    ALfloat coeffs[MAX_AMBI_COEFFS];
     ALfloat gain, lrpan;
 
     state->Tap[0].delay = fastf2u(Slot->EffectProps.Echo.Delay * frequency) + 1;
@@ -103,12 +103,12 @@ static ALvoid ALechoState_update(ALechoState *state, ALCdevice *Device, const AL
     gain = Slot->Gain;
 
     /* First tap panning */
-    pandir[0] = -lrpan;
-    ComputeDirectionalGains(Device, pandir, gain, state->Gain[0]);
+    CalcXYZCoeffs(-lrpan, 0.0f, 0.0f, coeffs);
+    ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, gain, state->Gain[0]);
 
     /* Second tap panning */
-    pandir[0] = +lrpan;
-    ComputeDirectionalGains(Device, pandir, gain, state->Gain[1]);
+    CalcXYZCoeffs( lrpan, 0.0f, 0.0f, coeffs);
+    ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, gain, state->Gain[1]);
 }
 
 static ALvoid ALechoState_process(ALechoState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)

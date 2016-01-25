@@ -123,7 +123,7 @@ static ALboolean ALmodulatorState_deviceUpdate(ALmodulatorState *UNUSED(state), 
     return AL_TRUE;
 }
 
-static ALvoid ALmodulatorState_update(ALmodulatorState *state, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *Device, const ALeffectslot *Slot)
 {
     ALfloat cw, a;
 
@@ -148,7 +148,7 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, ALCdevice *Device
     state->Filter.b2 = 0.0f;
     state->Filter.input_gain = a;
 
-    ComputeAmbientGains(Device, Slot->Gain, state->Gain);
+    ComputeAmbientGains(Device->AmbiCoeffs, Device->NumChannels, Slot->Gain, state->Gain);
 }
 
 static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)

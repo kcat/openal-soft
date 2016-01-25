@@ -277,36 +277,56 @@ void aluInitMixer(void);
 ALvoid aluInitPanning(ALCdevice *Device);
 
 /**
- * ComputeDirectionalGains
+ * CalcDirectionCoeffs
  *
- * Sets channel gains based on a direction. The direction must be a 3-component
- * vector no longer than 1 unit.
+ * Calculates ambisonic coefficients based on a direction vector. The vector
+ * must not be longer than 1 unit.
  */
-void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat coeffs[MAX_AMBI_COEFFS]);
 
 /**
- * ComputeAngleGains
+ * CalcXYZCoeffs
  *
- * Sets channel gains based on angle and elevation. The angle and elevation
- * parameters are in radians, going right and up respectively.
+ * Same as CalcDirectionCoeffs except the direction is specified as separate x,
+ * y, and z parameters instead of an array.
  */
-void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+inline void CalcXYZCoeffs(ALfloat x, ALfloat y, ALfloat z, ALfloat coeffs[MAX_AMBI_COEFFS])
+{
+    ALfloat dir[3] = { x, y, z };
+    CalcDirectionCoeffs(dir, coeffs);
+}
+
+/**
+ * CalcAngleCoeffs
+ *
+ * Calculates ambisonic coefficients based on angle and elevation. The angle
+ * and elevation parameters are in radians, going right and up respectively.
+ */
+void CalcAngleCoeffs(ALfloat angle, ALfloat elevation, ALfloat coeffs[MAX_AMBI_COEFFS]);
 
 /**
  * ComputeAmbientGains
  *
- * Sets channel gains for ambient, omni-directional sounds.
+ * Computes channel gains for ambient, omni-directional sounds.
  */
-void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+void ComputeAmbientGains(const ChannelConfig *chancoeffs, ALuint numchans, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+
+/**
+ * ComputePanningGains
+ *
+ * Computes panning gains using the given channel decoder coefficients and the
+ * pre-calculated direction or angle coefficients.
+ */
+void ComputePanningGains(const ChannelConfig *chancoeffs, ALuint numchans, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 /**
  * ComputeBFormatGains
  *
- * Sets channel gains for a given (first-order) B-Format channel. The matrix is
- * a 1x4 'slice' of the rotation matrix for a given channel used to orient the
- * coefficients.
+ * Sets channel gains for a given (first-order) B-Format input channel. The
+ * matrix is a 1x4 'slice' of the rotation matrix for the given channel used to
+ * orient the soundfield.
  */
-void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+void ComputeBFormatGains(const ChannelConfig *chancoeffs, ALuint numchans, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 
 ALvoid UpdateContextSources(ALCcontext *context);

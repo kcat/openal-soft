@@ -33,6 +33,9 @@
 #include "bool.h"
 
 
+extern inline void CalcXYZCoeffs(ALfloat x, ALfloat y, ALfloat z, ALfloat coeffs[MAX_AMBI_COEFFS]);
+
+
 #define ZERO_ORDER_SCALE    0.0f
 #define FIRST_ORDER_SCALE   1.0f
 #define SECOND_ORDER_SCALE  (1.0f / 1.22474f)
@@ -82,35 +85,8 @@ static const ALfloat FuMa2N3DScale[MAX_AMBI_COEFFS] = {
 };
 
 
-void ComputeAmbientGains(const ALCdevice *device, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat coeffs[MAX_AMBI_COEFFS])
 {
-    ALuint i;
-
-    for(i = 0;i < device->NumChannels;i++)
-    {
-        // The W coefficients are based on a mathematical average of the
-        // output. The square root of the base average provides for a more
-        // perceptual average volume, better suited to non-directional gains.
-        gains[i] = sqrtf(device->AmbiCoeffs[i][0]) * ingain;
-    }
-    for(;i < MAX_OUTPUT_CHANNELS;i++)
-        gains[i] = 0.0f;
-}
-
-void ComputeAngleGains(const ALCdevice *device, ALfloat angle, ALfloat elevation, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
-{
-    ALfloat dir[3] = {
-        sinf(angle) * cosf(elevation),
-        sinf(elevation),
-        -cosf(angle) * cosf(elevation)
-    };
-    ComputeDirectionalGains(device, dir, ingain, gains);
-}
-
-void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
-{
-    ALfloat coeffs[MAX_AMBI_COEFFS];
-    ALuint i, j;
     /* Convert from OpenAL coords to Ambisonics. */
     ALfloat x = -dir[2];
     ALfloat y = -dir[0];
@@ -136,27 +112,58 @@ void ComputeDirectionalGains(const ALCdevice *device, const ALfloat dir[3], ALfl
     coeffs[13] =  1.620185175f * x * (5.0f*z*z - 1.0f); /* ACN 13 = sqrt(21/8) * X * (5*Z*Z - 1) */
     coeffs[14] =  5.123475383f * z * (x*x - y*y);       /* ACN 14 = sqrt(105)/2 * Z * (X*X - Y*Y) */
     coeffs[15] =  2.091650066f * x * (x*x - 3.0f*y*y);  /* ACN 15 = sqrt(35/8) * X * (X*X - 3*Y*Y) */
+}
 
-    for(i = 0;i < device->NumChannels;i++)
+void CalcAngleCoeffs(ALfloat angle, ALfloat elevation, ALfloat coeffs[MAX_AMBI_COEFFS])
+{
+    ALfloat dir[3] = {
+        sinf(angle) * cosf(elevation),
+        sinf(elevation),
+        -cosf(angle) * cosf(elevation)
+    };
+    CalcDirectionCoeffs(dir, coeffs);
+}
+
+
+void ComputeAmbientGains(const ChannelConfig *chancoeffs, ALuint numchans, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+{
+    ALuint i;
+
+    for(i = 0;i < numchans;i++)
+    {
+        // The W coefficients are based on a mathematical average of the
+        // output. The square root of the base average provides for a more
+        // perceptual average volume, better suited to non-directional gains.
+        gains[i] = sqrtf(chancoeffs[i][0]) * ingain;
+    }
+    for(;i < MAX_OUTPUT_CHANNELS;i++)
+        gains[i] = 0.0f;
+}
+
+void ComputePanningGains(const ChannelConfig *chancoeffs, ALuint numchans, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+{
+    ALuint i, j;
+
+    for(i = 0;i < numchans;i++)
     {
         float gain = 0.0f;
         for(j = 0;j < MAX_AMBI_COEFFS;j++)
-            gain += device->AmbiCoeffs[i][j]*coeffs[j];
+            gain += chancoeffs[i][j]*coeffs[j];
         gains[i] = gain * ingain;
     }
     for(;i < MAX_OUTPUT_CHANNELS;i++)
         gains[i] = 0.0f;
 }
 
-void ComputeBFormatGains(const ALCdevice *device, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+void ComputeBFormatGains(const ChannelConfig *chancoeffs, ALuint numchans, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     ALuint i, j;
 
-    for(i = 0;i < device->NumChannels;i++)
+    for(i = 0;i < numchans;i++)
     {
         float gain = 0.0f;
         for(j = 0;j < 4;j++)
-            gain += device->AmbiCoeffs[i][j] * mtx[j];
+            gain += chancoeffs[i][j] * mtx[j];
         gains[i] = gain * ingain;
     }
     for(;i < MAX_OUTPUT_CHANNELS;i++)

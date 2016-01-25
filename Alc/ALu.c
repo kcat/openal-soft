@@ -471,7 +471,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         { SideRight,   DEG2RAD(  90.0f), DEG2RAD(0.0f) }
     };
 
-    ALCdevice *Device = ALContext->Device;
+    const ALCdevice *Device = ALContext->Device;
     ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
     ALbufferlistitem *BufferListItem;
     enum FmtChannels Channels;
@@ -646,7 +646,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
             MixGains *gains = voice->Direct.Gains[c];
             ALfloat Target[MAX_OUTPUT_CHANNELS];
 
-            ComputeBFormatGains(Device, matrix.m[c], DryGain, Target);
+            ComputeBFormatGains(Device->AmbiCoeffs, Device->NumChannels, matrix.m[c], DryGain, Target);
             for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
                 gains[i].Target = Target[i];
         }
@@ -751,6 +751,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
             {
                 MixGains *gains = voice->Direct.Gains[c];
                 ALfloat Target[MAX_OUTPUT_CHANNELS];
+                ALfloat coeffs[MAX_AMBI_COEFFS];
 
                 /* Special-case LFE */
                 if(chans[c].channel == LFE)
@@ -763,7 +764,9 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                     continue;
                 }
 
-                ComputeAngleGains(Device, chans[c].angle, chans[c].elevation, DryGain, Target);
+                CalcAngleCoeffs(chans[c].angle, chans[c].elevation, coeffs);
+
+                ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, DryGain, Target);
                 for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
                     gains[i].Target = Target[i];
             }
@@ -826,7 +829,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
 
 ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCcontext *ALContext)
 {
-    ALCdevice *Device = ALContext->Device;
+    const ALCdevice *Device = ALContext->Device;
     aluVector Position, Velocity, Direction, SourceToListener;
     ALfloat InnerAngle,OuterAngle,Angle,Distance,ClampedDist;
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff;
@@ -1223,6 +1226,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         ALfloat dir[3] = { 0.0f, 0.0f, -1.0f };
         ALfloat radius = ALSource->Radius;
         ALfloat Target[MAX_OUTPUT_CHANNELS];
+        ALfloat coeffs[MAX_AMBI_COEFFS];
 
         /* Get the localized direction, and compute panned gains. */
         if(Distance > FLT_EPSILON)
@@ -1242,10 +1246,12 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             dir[1] *= dirfact;
             dir[2] *= dirfact;
         }
-        ComputeDirectionalGains(Device, dir, DryGain, Target);
+        CalcDirectionCoeffs(dir, coeffs);
 
+        ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, DryGain, Target);
         for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
             gains[j].Target = Target[j];
+
         UpdateDryStepping(&voice->Direct, 1, (voice->Direct.Moving ? 64 : 0));
         voice->Direct.Moving = AL_TRUE;
 

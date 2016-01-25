@@ -45,7 +45,7 @@ static ALboolean ALdedicatedState_deviceUpdate(ALdedicatedState *UNUSED(state), 
     return AL_TRUE;
 }
 
-static ALvoid ALdedicatedState_update(ALdedicatedState *state, ALCdevice *device, const ALeffectslot *Slot)
+static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCdevice *device, const ALeffectslot *Slot)
 {
     ALfloat Gain;
     ALuint i;
@@ -69,8 +69,9 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, ALCdevice *device
             state->gains[idx] = Gain;
         else
         {
-            static const ALfloat front_dir[3] = { 0.0f, 0.0f, -1.0f };
-            ComputeDirectionalGains(device, front_dir, Gain, state->gains);
+            ALfloat coeffs[MAX_AMBI_COEFFS];
+            CalcXYZCoeffs(0.0f, 0.0f, -1.0f, coeffs);
+            ComputePanningGains(device->AmbiCoeffs, device->NumChannels, coeffs, Gain, state->gains);
         }
     }
 }

@@ -63,7 +63,7 @@ static ALboolean ALautowahState_deviceUpdate(ALautowahState *state, ALCdevice *d
     return AL_TRUE;
 }
 
-static ALvoid ALautowahState_update(ALautowahState *state, ALCdevice *device, const ALeffectslot *slot)
+static ALvoid ALautowahState_update(ALautowahState *state, const ALCdevice *device, const ALeffectslot *slot)
 {
     ALfloat attackTime, releaseTime;
 
@@ -75,7 +75,7 @@ static ALvoid ALautowahState_update(ALautowahState *state, ALCdevice *device, co
     state->PeakGain = slot->EffectProps.Autowah.PeakGain;
     state->Resonance = slot->EffectProps.Autowah.Resonance;
 
-    ComputeAmbientGains(device, slot->Gain, state->Gain);
+    ComputeAmbientGains(device->AmbiCoeffs, device->NumChannels, slot->Gain, state->Gain);
 }
 
 static ALvoid ALautowahState_process(ALautowahState *state, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[BUFFERSIZE], ALuint NumChannels)

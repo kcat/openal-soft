@@ -1065,6 +1065,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     }, LatePanAngles[4] = {
         DEG2RAD(45.0f), DEG2RAD(-45.0f), DEG2RAD(135.0f), DEG2RAD(-135.0f)
     };
+    ALfloat coeffs[MAX_AMBI_COEFFS];
     ALfloat length, ev, az;
     ALuint i;
 
@@ -1072,7 +1073,10 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     if(!(length > FLT_EPSILON))
     {
         for(i = 0;i < 4;i++)
-            ComputeAngleGains(Device, EarlyPanAngles[i], 0.0f, Gain, State->Early.PanGain[i]);
+        {
+            CalcAngleCoeffs(EarlyPanAngles[i], 0.0f, coeffs);
+            ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain, State->Early.PanGain[i]);
+        }
     }
     else
     {
@@ -1090,7 +1094,8 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
             float offset, naz, nev;
             naz = EarlyPanAngles[i] + (modff((az-EarlyPanAngles[i])*length/F_TAU + 1.5f, &offset)-0.5f)*F_TAU;
             nev =                     (modff((ev                  )*length/F_TAU + 1.5f, &offset)-0.5f)*F_TAU;
-            ComputeAngleGains(Device, naz, nev, Gain, State->Early.PanGain[i]);
+            CalcAngleCoeffs(naz, nev, coeffs);
+            ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain, State->Early.PanGain[i]);
         }
     }
 
@@ -1098,7 +1103,10 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     if(!(length > FLT_EPSILON))
     {
         for(i = 0;i < 4;i++)
-            ComputeAngleGains(Device, LatePanAngles[i], 0.0f, Gain, State->Late.PanGain[i]);
+        {
+            CalcAngleCoeffs(LatePanAngles[i], 0.0f, coeffs);
+            ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain, State->Late.PanGain[i]);
+        }
     }
     else
     {
@@ -1111,12 +1119,13 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
             float offset, naz, nev;
             naz = LatePanAngles[i] + (modff((az-LatePanAngles[i])*length/F_TAU + 1.5f, &offset)-0.5f)*F_TAU;
             nev =                    (modff((ev                 )*length/F_TAU + 1.5f, &offset)-0.5f)*F_TAU;
-            ComputeAngleGains(Device, naz, nev, Gain, State->Late.PanGain[i]);
+            CalcAngleCoeffs(naz, nev, coeffs);
+            ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain, State->Late.PanGain[i]);
         }
     }
 }
 
-static ALvoid ALreverbState_update(ALreverbState *State, ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device, const ALeffectslot *Slot)
 {
     const ALeffectProps *props = &Slot->EffectProps;
     ALuint frequency = Device->Frequency;

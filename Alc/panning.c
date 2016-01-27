@@ -201,46 +201,47 @@ typedef struct ChannelMap {
     ChannelConfig Config;
 } ChannelMap;
 
-static void SetChannelMap(ALCdevice *device, const ChannelMap *chanmap, size_t count, ALfloat ambiscale, ALboolean isfuma)
+static void SetChannelMap(const enum Channel *devchans, ChannelConfig *ambicoeffs,
+                          const ChannelMap *chanmap, size_t count, ALuint *outcount,
+                          ALboolean isfuma)
 {
     size_t j, k;
     ALuint i;
 
-    device->AmbiScale = ambiscale;
-    for(i = 0;i < MAX_OUTPUT_CHANNELS && device->ChannelName[i] != InvalidChannel;i++)
+    for(i = 0;i < MAX_OUTPUT_CHANNELS && devchans[i] != InvalidChannel;i++)
     {
-        if(device->ChannelName[i] == LFE)
+        if(devchans[i] == LFE)
         {
             for(j = 0;j < MAX_AMBI_COEFFS;j++)
-                device->AmbiCoeffs[i][j] = 0.0f;
+                ambicoeffs[i][j] = 0.0f;
             continue;
         }
 
         for(j = 0;j < count;j++)
         {
-            if(device->ChannelName[i] == chanmap[j].ChanName)
+            if(devchans[i] != chanmap[j].ChanName)
+                continue;
+
+            if(isfuma)
             {
-                if(isfuma)
+                /* Reformat FuMa -> ACN/N3D */
+                for(k = 0;k < MAX_AMBI_COEFFS;++k)
                 {
-                    /* Reformat FuMa -> ACN/N3D */
-                    for(k = 0;k < MAX_AMBI_COEFFS;++k)
-                    {
-                        ALuint acn = FuMa2ACN[k];
-                        device->AmbiCoeffs[i][acn] = chanmap[j].Config[k] / FuMa2N3DScale[acn];
-                    }
+                    ALuint acn = FuMa2ACN[k];
+                    ambicoeffs[i][acn] = chanmap[j].Config[k] / FuMa2N3DScale[acn];
                 }
-                else
-                {
-                    for(k = 0;k < MAX_AMBI_COEFFS;++k)
-                        device->AmbiCoeffs[i][k] = chanmap[j].Config[k];
-                }
-                break;
             }
+            else
+            {
+                for(k = 0;k < MAX_AMBI_COEFFS;++k)
+                    ambicoeffs[i][k] = chanmap[j].Config[k];
+            }
+            break;
         }
         if(j == count)
-            ERR("Failed to match %s channel (%u) in config\n", GetLabelFromChannel(device->ChannelName[i]), i);
+            ERR("Failed to match %s channel (%u) in channel map\n", GetLabelFromChannel(devchans[i]), i);
     }
-    device->NumChannels = i;
+    *outcount = i;
 }
 
 static bool LoadChannelSetup(ALCdevice *device)
@@ -417,7 +418,9 @@ static bool LoadChannelSetup(ALCdevice *device)
         for(j = 0;j < MAX_AMBI_COEFFS;++j)
             chanmap[i].Config[j] = coeffs[j];
     }
-    SetChannelMap(device, chanmap, count, ambiscale, isfuma);
+    SetChannelMap(device->ChannelName, device->AmbiCoeffs, chanmap, count,
+                  &device->NumChannels, isfuma);
+    device->AmbiScale = ambiscale;
     return true;
 }
 
@@ -492,7 +495,9 @@ ALvoid aluInitPanning(ALCdevice *device)
             device->ChannelName[i] = chanmap[i].ChanName;
         for(;i < MAX_OUTPUT_CHANNELS;i++)
             device->ChannelName[i] = InvalidChannel;
-        SetChannelMap(device, chanmap, count, ambiscale, AL_TRUE);
+        SetChannelMap(device->ChannelName, device->AmbiCoeffs, chanmap, count,
+                      &device->NumChannels, AL_TRUE);
+        device->AmbiScale = ambiscale;
 
         for(i = 0;i < 4;++i)
         {
@@ -560,5 +565,7 @@ ALvoid aluInitPanning(ALCdevice *device)
             break;
     }
 
-    SetChannelMap(device, chanmap, count, ambiscale, AL_TRUE);
+    SetChannelMap(device->ChannelName, device->AmbiCoeffs, chanmap, count,
+                  &device->NumChannels, AL_TRUE);
+    device->AmbiScale = ambiscale;
 }

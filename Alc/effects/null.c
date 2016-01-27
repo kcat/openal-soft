@@ -41,7 +41,7 @@ static ALvoid ALnullState_update(ALnullState* UNUSED(state), const ALCdevice* UN
  * input to the output buffer. The result should be added to the output buffer,
  * not replace it.
  */
-static ALvoid ALnullState_process(ALnullState* UNUSED(state), ALuint UNUSED(samplesToDo), const ALfloat *restrict UNUSED(samplesIn), ALfloatBUFFERSIZE*restrict UNUSED(samplesOut), ALuint UNUSED(NumChannels))
+static ALvoid ALnullState_process(ALnullState* UNUSED(state), ALuint UNUSED(samplesToDo), const ALfloatBUFFERSIZE*restrict UNUSED(samplesIn), ALfloatBUFFERSIZE*restrict UNUSED(samplesOut), ALuint UNUSED(NumChannels))
 {
 }
 

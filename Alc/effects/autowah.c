@@ -78,7 +78,7 @@ static ALvoid ALautowahState_update(ALautowahState *state, const ALCdevice *devi
     ComputeAmbientGains(device->AmbiCoeffs, device->NumChannels, slot->Gain, state->Gain);
 }
 
-static ALvoid ALautowahState_process(ALautowahState *state, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[BUFFERSIZE], ALuint NumChannels)
+static ALvoid ALautowahState_process(ALautowahState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     ALuint it, kt;
     ALuint base;
@@ -91,7 +91,7 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALuint SamplesToDo, 
 
         for(it = 0;it < td;it++)
         {
-            ALfloat smp = SamplesIn[it+base];
+            ALfloat smp = SamplesIn[0][it+base];
             ALfloat a[3], b[3];
             ALfloat alpha, w0;
             ALfloat amplitude;

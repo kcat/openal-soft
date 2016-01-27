@@ -111,7 +111,7 @@ static ALvoid ALechoState_update(ALechoState *state, const ALCdevice *Device, co
     ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, gain, state->Gain[1]);
 }
 
-static ALvoid ALechoState_process(ALechoState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
+static ALvoid ALechoState_process(ALechoState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     const ALuint mask = state->BufferLength-1;
     const ALuint tap1 = state->Tap[0].delay;
@@ -135,7 +135,7 @@ static ALvoid ALechoState_process(ALechoState *state, ALuint SamplesToDo, const 
 
             // Apply damping and feedback gain to the second tap, and mix in the
             // new sample
-            smp = ALfilterState_processSingle(&state->Filter, temps[i][1]+SamplesIn[i+base]);
+            smp = ALfilterState_processSingle(&state->Filter, temps[i][1]+SamplesIn[0][i+base]);
             state->SampleBuffer[offset&mask] = smp * state->FeedGain;
             offset++;
         }

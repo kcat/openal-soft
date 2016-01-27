@@ -62,7 +62,7 @@ static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCdevice
     ComputeAmbientGains(device->AmbiCoeffs, device->NumChannels, slot->Gain, state->Gain);
 }
 
-static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint SamplesToDo, const ALfloat *SamplesIn, ALfloat (*SamplesOut)[BUFFERSIZE], ALuint NumChannels)
+static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     ALuint it, kt;
     ALuint base;
@@ -79,7 +79,7 @@ static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint Samples
 
             for(it = 0;it < td;it++)
             {
-                smp = SamplesIn[it+base];
+                smp = SamplesIn[0][it+base];
 
                 amplitude = fabsf(smp);
                 if(amplitude > gain)
@@ -100,7 +100,7 @@ static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint Samples
 
             for(it = 0;it < td;it++)
             {
-                smp = SamplesIn[it+base];
+                smp = SamplesIn[0][it+base];
 
                 amplitude = 1.0f;
                 if(amplitude > gain)

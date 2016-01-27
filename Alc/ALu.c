@@ -1473,19 +1473,25 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             }
 
             /* effect slot processing */
-#define PROCESS_SLOT(iter)  V((*iter)->EffectState,process)(                   \
-    SamplesToDo, (*iter)->WetBuffer[0], device->DryBuffer, device->NumChannels \
-);
-            VECTOR_FOR_EACH(ALeffectslot*, ctx->ActiveAuxSlots, PROCESS_SLOT);
-#undef PROCESS_SLOT
+            c = VECTOR_SIZE(ctx->ActiveAuxSlots);
+            for(i = 0;i < c;i++)
+            {
+                const ALeffectslot *slot = VECTOR_ELEM(ctx->ActiveAuxSlots, i);
+                ALeffectState *state = slot->EffectState;
+                V(state,process)(SamplesToDo, slot->WetBuffer, device->DryBuffer,
+                                 device->NumChannels);
+            }
 
             ctx = ctx->next;
         }
 
-        if((slot=device->DefaultSlot) != NULL)
-            V(slot->EffectState,process)(
-                SamplesToDo, slot->WetBuffer[0], device->DryBuffer, device->NumChannels
-            );
+        if(device->DefaultSlot != NULL)
+        {
+            const ALeffectslot *slot = device->DefaultSlot;
+            ALeffectState *state = slot->EffectState;
+            V(state,process)(SamplesToDo, slot->WetBuffer, device->DryBuffer,
+                             device->NumChannels);
+        }
 
         /* Increment the clock time. Every second's worth of samples is
          * converted and added to clock base so that large sample counts don't

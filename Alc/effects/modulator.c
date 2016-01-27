@@ -151,20 +151,20 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *
     ComputeAmbientGains(Device->AmbiCoeffs, Device->NumChannels, Slot->Gain, state->Gain);
 }
 
-static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
+static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     switch(state->Waveform)
     {
         case SINUSOID:
-            ProcessSin(state, SamplesToDo, SamplesIn, SamplesOut, NumChannels);
+            ProcessSin(state, SamplesToDo, SamplesIn[0], SamplesOut, NumChannels);
             break;
 
         case SAWTOOTH:
-            ProcessSaw(state, SamplesToDo, SamplesIn, SamplesOut, NumChannels);
+            ProcessSaw(state, SamplesToDo, SamplesIn[0], SamplesOut, NumChannels);
             break;
 
         case SQUARE:
-            ProcessSquare(state, SamplesToDo, SamplesIn, SamplesOut, NumChannels);
+            ProcessSquare(state, SamplesToDo, SamplesIn[0], SamplesOut, NumChannels);
             break;
     }
 }

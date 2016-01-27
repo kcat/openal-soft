@@ -627,12 +627,12 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo,
     }
 }
 
-static ALvoid ALreverbState_process(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
+static ALvoid ALreverbState_process(ALreverbState *State, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     if(State->IsEax)
-        ALreverbState_processEax(State, SamplesToDo, SamplesIn, SamplesOut, NumChannels);
+        ALreverbState_processEax(State, SamplesToDo, SamplesIn[0], SamplesOut, NumChannels);
     else
-        ALreverbState_processStandard(State, SamplesToDo, SamplesIn, SamplesOut, NumChannels);
+        ALreverbState_processStandard(State, SamplesToDo, SamplesIn[0], SamplesOut, NumChannels);
 }
 
 // Given the allocated sample buffer, this function updates each delay line

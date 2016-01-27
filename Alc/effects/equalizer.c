@@ -126,7 +126,7 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *
     );
 }
 
-static ALvoid ALequalizerState_process(ALequalizerState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
+static ALvoid ALequalizerState_process(ALequalizerState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     ALuint base;
     ALuint it;
@@ -140,7 +140,7 @@ static ALvoid ALequalizerState_process(ALequalizerState *state, ALuint SamplesTo
 
         for(it = 0;it < td;it++)
         {
-            ALfloat smp = SamplesIn[base+it];
+            ALfloat smp = SamplesIn[0][base+it];
 
             for(ft = 0;ft < 4;ft++)
                 smp = ALfilterState_processSingle(&state->filter[ft], smp);

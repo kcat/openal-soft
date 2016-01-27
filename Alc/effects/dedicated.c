@@ -76,7 +76,7 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCdevice *
     }
 }
 
-static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
+static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     const ALfloat *gains = state->gains;
     ALuint i, c;
@@ -87,7 +87,7 @@ static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALuint SamplesTo
             continue;
 
         for(i = 0;i < SamplesToDo;i++)
-            SamplesOut[c][i] += SamplesIn[i] * gains[c];
+            SamplesOut[c][i] += SamplesIn[0][i] * gains[c];
     }
 }
 

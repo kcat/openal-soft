@@ -31,7 +31,7 @@ typedef struct ALcompressorState {
     DERIVE_FROM_TYPE(ALeffectState);
 
     /* Effect gains for each channel */
-    ALfloat Gain[MAX_OUTPUT_CHANNELS];
+    ALfloat Gain[MAX_EFFECT_CHANNELS][MAX_OUTPUT_CHANNELS];
 
     /* Effect parameters */
     ALboolean Enabled;
@@ -57,73 +57,106 @@ static ALboolean ALcompressorState_deviceUpdate(ALcompressorState *state, ALCdev
 
 static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCdevice *device, const ALeffectslot *slot)
 {
+    aluMatrixf matrix;
+    ALfloat scale;
+    ALuint i;
+
     state->Enabled = slot->EffectProps.Compressor.OnOff;
 
-    ComputeAmbientGains(device->AmbiCoeffs, device->NumChannels, slot->Gain, state->Gain);
+    scale = device->AmbiScale;
+    aluMatrixfSet(&matrix,
+        1.0f,  0.0f,  0.0f,  0.0f,
+        0.0f, scale,  0.0f,  0.0f,
+        0.0f,  0.0f, scale,  0.0f,
+        0.0f,  0.0f,  0.0f, scale
+    );
+    for(i = 0;i < 4;i++)
+        ComputeBFormatGains(device->AmbiCoeffs, device->NumChannels,
+                            matrix.m[i], slot->Gain, state->Gain[i]);
 }
 
 static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
-    ALuint it, kt;
+    ALuint i, j, k;
     ALuint base;
 
     for(base = 0;base < SamplesToDo;)
     {
-        ALfloat temps[256];
-        ALuint td = minu(256, SamplesToDo-base);
+        ALfloat temps[64][4];
+        ALuint td = minu(64, SamplesToDo-base);
+
+        /* Load samples into the temp buffer first. */
+        for(j = 0;j < 4;j++)
+        {
+            for(i = 0;i < td;i++)
+                temps[i][j] = SamplesIn[j][i+base];
+        }
 
         if(state->Enabled)
         {
-            ALfloat output, smp, amplitude;
             ALfloat gain = state->GainCtrl;
+            ALfloat output, amplitude;
 
-            for(it = 0;it < td;it++)
+            for(i = 0;i < td;i++)
             {
-                smp = SamplesIn[0][it+base];
-
-                amplitude = fabsf(smp);
+                /* Roughly calculate the maximum amplitude from the 4-channel
+                 * signal, and attack or release the gain control to reach it.
+                 */
+                amplitude = fabsf(temps[i][0]);
+                amplitude = maxf(amplitude + fabsf(temps[i][1]),
+                                 maxf(amplitude + fabsf(temps[i][2]),
+                                      amplitude + fabsf(temps[i][3])));
                 if(amplitude > gain)
                     gain = minf(gain+state->AttackRate, amplitude);
                 else if(amplitude < gain)
                     gain = maxf(gain-state->ReleaseRate, amplitude);
-                output = 1.0f / clampf(gain, 0.5f, 2.0f);
 
-                temps[it] = smp * output;
+                /* Apply the inverse of the gain control to normalize/compress
+                 * the volume. */
+                output = 1.0f / clampf(gain, 0.5f, 2.0f);
+                for(j = 0;j < 4;j++)
+                    temps[i][j] *= output;
             }
 
             state->GainCtrl = gain;
         }
         else
         {
-            ALfloat output, smp, amplitude;
             ALfloat gain = state->GainCtrl;
+            ALfloat output, amplitude;
 
-            for(it = 0;it < td;it++)
+            for(i = 0;i < td;i++)
             {
-                smp = SamplesIn[0][it+base];
-
+                /* Same as above, except the amplitude is forced to 1. This
+                 * helps ensure smooth gain changes when the compressor is
+                 * turned on and off.
+                 */
                 amplitude = 1.0f;
                 if(amplitude > gain)
                     gain = minf(gain+state->AttackRate, amplitude);
                 else if(amplitude < gain)
                     gain = maxf(gain-state->ReleaseRate, amplitude);
-                output = 1.0f / clampf(gain, 0.5f, 2.0f);
 
-                temps[it] = smp * output;
+                output = 1.0f / clampf(gain, 0.5f, 2.0f);
+                for(j = 0;j < 4;j++)
+                    temps[i][j] *= output;
             }
 
             state->GainCtrl = gain;
         }
 
-
-        for(kt = 0;kt < NumChannels;kt++)
+        /* Now mix to the output. */
+        for(j = 0;j < 4;j++)
         {
-            ALfloat gain = state->Gain[kt];
-            if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
-                continue;
+            for(k = 0;k < NumChannels;k++)
+            {
+                ALfloat gain = state->Gain[j][k];
+                if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
+                    continue;
 
-            for(it = 0;it < td;it++)
-                SamplesOut[kt][base+it] += gain * temps[it];
+                for(i = 0;i < td;i++)
+                    SamplesOut[k][base+i] += gain * temps[i][j];
+            }
         }
 
         base += td;

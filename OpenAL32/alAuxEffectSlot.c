@@ -90,6 +90,8 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
             SET_ERROR_AND_GOTO(context, err, done);
         }
 
+        aluInitEffectPanning(slot);
+
         VECTOR_PUSH_BACK(slotvec, slot);
 
         effectslots[cur] = slot->id;

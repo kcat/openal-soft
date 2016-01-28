@@ -27,8 +27,7 @@
 #include <assert.h>
 
 #include "alMain.h"
-#include "AL/al.h"
-#include "AL/alc.h"
+#include "alAuxEffectSlot.h"
 #include "alu.h"
 #include "bool.h"
 
@@ -568,4 +567,23 @@ ALvoid aluInitPanning(ALCdevice *device)
     SetChannelMap(device->ChannelName, device->AmbiCoeffs, chanmap, count,
                   &device->NumChannels, AL_TRUE);
     device->AmbiScale = ambiscale;
+}
+
+void aluInitEffectPanning(ALeffectslot *slot)
+{
+    static const ChannelMap FirstOrderN3D[4] = {
+        { BFormatW, { 1.0f, 0.0f, 0.0f, 0.0f } },
+        { BFormatY, { 0.0f, 1.0f, 0.0f, 0.0f } },
+        { BFormatZ, { 0.0f, 0.0f, 1.0f, 0.0f } },
+        { BFormatX, { 0.0f, 0.0f, 0.0f, 1.0f } },
+    };
+    static const enum Channel AmbiChannels[MAX_OUTPUT_CHANNELS] = {
+        BFormatW, BFormatY, BFormatZ, BFormatX, InvalidChannel
+    };
+
+    memset(slot->AmbiCoeffs, 0, sizeof(slot->AmbiCoeffs));
+    slot->NumChannels = 0;
+
+    SetChannelMap(AmbiChannels, slot->AmbiCoeffs, FirstOrderN3D, COUNTOF(FirstOrderN3D),
+                  &slot->NumChannels, AL_FALSE);
 }

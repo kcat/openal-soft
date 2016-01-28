@@ -64,6 +64,9 @@ static const struct ALeffectStateFactoryVtable T##_ALeffectStateFactory_vtable =
 }
 
 
+#define MAX_EFFECT_CHANNELS (4)
+
+
 typedef struct ALeffectslot {
     ALenum EffectType;
     ALeffectProps EffectProps;
@@ -74,12 +77,24 @@ typedef struct ALeffectslot {
     ATOMIC(ALenum) NeedsUpdate;
     ALeffectState *EffectState;
 
-    alignas(16) ALfloat WetBuffer[1][BUFFERSIZE];
-
     RefCount ref;
 
     /* Self ID */
     ALuint id;
+
+    ALuint NumChannels;
+    ChannelConfig AmbiCoeffs[MAX_EFFECT_CHANNELS];
+    /* Wet buffer configuration is ACN channel order with N3D scaling:
+     * * Channel 0 is the unattenuated mono signal.
+     * * Channel 1 is OpenAL -X
+     * * Channel 2 is OpenAL Y
+     * * Channel 3 is OpenAL -Z
+     * Consequently, effects that only want to work with mono input can use
+     * channel 0 by itself. Effects that want multichannel can process the
+     * ambisonics signal and create a B-Format pan (ComputeBFormatGains) for
+     * the device output.
+     */
+    alignas(16) ALfloat WetBuffer[MAX_EFFECT_CHANNELS][BUFFERSIZE];
 } ALeffectslot;
 
 inline struct ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id)

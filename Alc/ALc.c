@@ -3496,6 +3496,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
             DELETE_OBJ(state);
             ERR("Failed to initialize the default effect\n");
         }
+        else
+            aluInitEffectPanning(device->DefaultSlot);
     }
 
     {

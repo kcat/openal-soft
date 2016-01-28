@@ -13,6 +13,7 @@
 #include "alMain.h"
 #include "alBuffer.h"
 #include "alFilter.h"
+#include "alAuxEffectSlot.h"
 
 #include "hrtf.h"
 #include "align.h"
@@ -34,6 +35,7 @@ extern "C" {
 
 struct ALsource;
 struct ALvoice;
+struct ALeffectslot;
 
 
 /* The number of distinct scale and phase intervals within the filter table. */
@@ -164,6 +166,7 @@ typedef struct DirectParams {
 
 typedef struct SendParams {
     ALfloat (*OutBuffer)[BUFFERSIZE];
+    ALuint OutChannels;
 
     ALboolean Moving;
     ALuint Counter;
@@ -173,10 +176,7 @@ typedef struct SendParams {
         ALfilterState LowPass;
         ALfilterState HighPass;
     } Filters[MAX_INPUT_CHANNELS];
-
-    /* Gain control, which applies to each input channel to a single (mono)
-     * output buffer. */
-    MixGains Gains[MAX_INPUT_CHANNELS];
+    MixGains Gains[MAX_INPUT_CHANNELS][MAX_EFFECT_CHANNELS];
 } SendParams;
 
 
@@ -275,6 +275,8 @@ inline ALfloat resample_fir8(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat v
 void aluInitMixer(void);
 
 ALvoid aluInitPanning(ALCdevice *Device);
+
+void aluInitEffectPanning(struct ALeffectslot *slot);
 
 /**
  * CalcDirectionCoeffs

@@ -71,14 +71,20 @@
  * filter coefficients" by Robert Bristow-Johnson                        *
  * http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt                   */
 
+
+/* The maximum number of sample frames per update. */
+#define MAX_UPDATE_SAMPLES 256
+
 typedef struct ALequalizerState {
     DERIVE_FROM_TYPE(ALeffectState);
 
     /* Effect gains for each channel */
-    ALfloat Gain[MAX_OUTPUT_CHANNELS];
+    ALfloat Gain[MAX_EFFECT_CHANNELS][MAX_OUTPUT_CHANNELS];
 
     /* Effect parameters */
-    ALfilterState filter[4];
+    ALfilterState filter[4][MAX_EFFECT_CHANNELS];
+
+    ALfloat SampleBuffer[4][MAX_EFFECT_CHANNELS][MAX_UPDATE_SAMPLES];
 } ALequalizerState;
 
 static ALvoid ALequalizerState_Destruct(ALequalizerState *UNUSED(state))
@@ -94,8 +100,19 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *
 {
     ALfloat frequency = (ALfloat)device->Frequency;
     ALfloat gain, freq_mult;
+    aluMatrixf matrix;
+    ALuint i;
 
-    ComputeAmbientGains(device->AmbiCoeffs, device->NumChannels, slot->Gain, state->Gain);
+    gain = device->AmbiScale;
+    aluMatrixfSet(&matrix,
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, gain, 0.0f, 0.0f,
+        0.0f, 0.0f, gain, 0.0f,
+        0.0f, 0.0f, 0.0f, gain
+    );
+    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
+        ComputeBFormatGains(device->AmbiCoeffs, device->NumChannels,
+                            matrix.m[i], slot->Gain, state->Gain[i]);
 
     /* Calculate coefficients for the each type of filter. Note that the shelf
      * filters' gain is for the reference frequency, which is the centerpoint
@@ -103,59 +120,96 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *
      */
     gain = sqrtf(slot->EffectProps.Equalizer.LowGain);
     freq_mult = slot->EffectProps.Equalizer.LowCutoff/frequency;
-    ALfilterState_setParams(&state->filter[0], ALfilterType_LowShelf,
+    ALfilterState_setParams(&state->filter[0][0], ALfilterType_LowShelf,
         gain, freq_mult, calc_rcpQ_from_slope(gain, 0.75f)
     );
+    /* Copy the filter coefficients for the other input channels. */
+    for(i = 1;i < MAX_EFFECT_CHANNELS;i++)
+    {
+        state->filter[0][i].a1 = state->filter[0][0].a1;
+        state->filter[0][i].a2 = state->filter[0][0].a2;
+        state->filter[0][i].b1 = state->filter[0][0].b1;
+        state->filter[0][i].b2 = state->filter[0][0].b2;
+        state->filter[0][i].input_gain = state->filter[0][0].input_gain;
+        state->filter[0][i].process = state->filter[0][0].process;
+    }
 
     gain = slot->EffectProps.Equalizer.Mid1Gain;
     freq_mult = slot->EffectProps.Equalizer.Mid1Center/frequency;
-    ALfilterState_setParams(&state->filter[1], ALfilterType_Peaking,
+    ALfilterState_setParams(&state->filter[1][0], ALfilterType_Peaking,
         gain, freq_mult, calc_rcpQ_from_bandwidth(freq_mult, slot->EffectProps.Equalizer.Mid1Width)
     );
+    for(i = 1;i < MAX_EFFECT_CHANNELS;i++)
+    {
+        state->filter[1][i].a1 = state->filter[1][0].a1;
+        state->filter[1][i].a2 = state->filter[1][0].a2;
+        state->filter[1][i].b1 = state->filter[1][0].b1;
+        state->filter[1][i].b2 = state->filter[1][0].b2;
+        state->filter[1][i].input_gain = state->filter[1][0].input_gain;
+        state->filter[1][i].process = state->filter[1][0].process;
+    }
 
     gain = slot->EffectProps.Equalizer.Mid2Gain;
     freq_mult = slot->EffectProps.Equalizer.Mid2Center/frequency;
-    ALfilterState_setParams(&state->filter[2], ALfilterType_Peaking,
+    ALfilterState_setParams(&state->filter[2][0], ALfilterType_Peaking,
         gain, freq_mult, calc_rcpQ_from_bandwidth(freq_mult, slot->EffectProps.Equalizer.Mid2Width)
     );
+    for(i = 1;i < MAX_EFFECT_CHANNELS;i++)
+    {
+        state->filter[2][i].a1 = state->filter[2][0].a1;
+        state->filter[2][i].a2 = state->filter[2][0].a2;
+        state->filter[2][i].b1 = state->filter[2][0].b1;
+        state->filter[2][i].b2 = state->filter[2][0].b2;
+        state->filter[2][i].input_gain = state->filter[2][0].input_gain;
+        state->filter[2][i].process = state->filter[2][0].process;
+    }
 
     gain = sqrtf(slot->EffectProps.Equalizer.HighGain);
     freq_mult = slot->EffectProps.Equalizer.HighCutoff/frequency;
-    ALfilterState_setParams(&state->filter[3], ALfilterType_HighShelf,
+    ALfilterState_setParams(&state->filter[3][0], ALfilterType_HighShelf,
         gain, freq_mult, calc_rcpQ_from_slope(gain, 0.75f)
     );
+    for(i = 1;i < MAX_EFFECT_CHANNELS;i++)
+    {
+        state->filter[3][i].a1 = state->filter[3][0].a1;
+        state->filter[3][i].a2 = state->filter[3][0].a2;
+        state->filter[3][i].b1 = state->filter[3][0].b1;
+        state->filter[3][i].b2 = state->filter[3][0].b2;
+        state->filter[3][i].input_gain = state->filter[3][0].input_gain;
+        state->filter[3][i].process = state->filter[3][0].process;
+    }
 }
 
 static ALvoid ALequalizerState_process(ALequalizerState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
+    ALfloat (*Samples)[MAX_EFFECT_CHANNELS][MAX_UPDATE_SAMPLES] = state->SampleBuffer;
+    ALuint it, kt, ft;
     ALuint base;
-    ALuint it;
-    ALuint kt;
-    ALuint ft;
 
     for(base = 0;base < SamplesToDo;)
     {
-        ALfloat temps[256];
-        ALuint td = minu(256, SamplesToDo-base);
+        ALuint td = minu(MAX_UPDATE_SAMPLES, SamplesToDo-base);
 
-        for(it = 0;it < td;it++)
+        for(ft = 0;ft < MAX_EFFECT_CHANNELS;ft++)
+            ALfilterState_process(&state->filter[0][ft], Samples[0][ft], &SamplesIn[ft][base], td);
+        for(ft = 0;ft < MAX_EFFECT_CHANNELS;ft++)
+            ALfilterState_process(&state->filter[1][ft], Samples[1][ft], Samples[0][ft], td);
+        for(ft = 0;ft < MAX_EFFECT_CHANNELS;ft++)
+            ALfilterState_process(&state->filter[2][ft], Samples[2][ft], Samples[1][ft], td);
+        for(ft = 0;ft < MAX_EFFECT_CHANNELS;ft++)
+            ALfilterState_process(&state->filter[3][ft], Samples[3][ft], Samples[2][ft], td);
+
+        for(ft = 0;ft < MAX_EFFECT_CHANNELS;ft++)
         {
-            ALfloat smp = SamplesIn[0][base+it];
+            for(kt = 0;kt < NumChannels;kt++)
+            {
+                ALfloat gain = state->Gain[ft][kt];
+                if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
+                    continue;
 
-            for(ft = 0;ft < 4;ft++)
-                smp = ALfilterState_processSingle(&state->filter[ft], smp);
-
-            temps[it] = smp;
-        }
-
-        for(kt = 0;kt < NumChannels;kt++)
-        {
-            ALfloat gain = state->Gain[kt];
-            if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
-                continue;
-
-            for(it = 0;it < td;it++)
-                SamplesOut[kt][base+it] += gain * temps[it];
+                for(it = 0;it < td;it++)
+                    SamplesOut[kt][base+it] += gain * Samples[3][ft][it];
+            }
         }
 
         base += td;
@@ -174,7 +228,7 @@ typedef struct ALequalizerStateFactory {
 ALeffectState *ALequalizerStateFactory_create(ALequalizerStateFactory *UNUSED(factory))
 {
     ALequalizerState *state;
-    int it;
+    int it, ft;
 
     state = ALequalizerState_New(sizeof(*state));
     if(!state) return NULL;
@@ -183,7 +237,10 @@ ALeffectState *ALequalizerStateFactory_create(ALequalizerStateFactory *UNUSED(fa
     /* Initialize sample history only on filter creation to avoid */
     /* sound clicks if filter settings were changed in runtime.   */
     for(it = 0; it < 4; it++)
-        ALfilterState_clear(&state->filter[it]);
+    {
+        for(ft = 0;ft < MAX_EFFECT_CHANNELS;ft++)
+            ALfilterState_clear(&state->filter[it][ft]);
+    }
 
     return STATIC_CAST(ALeffectState, state);
 }

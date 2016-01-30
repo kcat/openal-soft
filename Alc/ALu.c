@@ -872,6 +872,14 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                         gains[i].Target = 0.0f;
                     if((idx=GetChannelIdxByName(Device, chans[c].channel)) != -1)
                         gains[idx].Target = DryGain;
+
+                    for(i = 0;i < NumSends;i++)
+                    {
+                        MixGains *gains = voice->Send[i].Gains[c];
+                        ALuint j;
+                        for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
+                            gains[j].Target = 0.0f;
+                    }
                     continue;
                 }
 

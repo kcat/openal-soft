@@ -38,9 +38,9 @@ typedef struct ALmodulatorState {
     ALuint index;
     ALuint step;
 
-    ALfloat Gain[MAX_OUTPUT_CHANNELS];
+    ALfloat Gain[MAX_EFFECT_CHANNELS][MAX_OUTPUT_CHANNELS];
 
-    ALfilterState Filter;
+    ALfilterState Filter[MAX_EFFECT_CHANNELS];
 } ALmodulatorState;
 
 #define WAVEFORM_FRACBITS  24
@@ -93,7 +93,9 @@ static ALboolean ALmodulatorState_deviceUpdate(ALmodulatorState *UNUSED(state), 
 
 static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALfloat cw, a;
+    ALfloat scale, cw, a;
+    aluMatrixf matrix;
+    ALuint i;
 
     if(Slot->EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SINUSOID)
         state->Process = ModulateSin;
@@ -110,14 +112,26 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *
     cw = cosf(F_TAU * Slot->EffectProps.Modulator.HighPassCutoff / Device->Frequency);
     a = (2.0f-cw) - sqrtf(powf(2.0f-cw, 2.0f) - 1.0f);
 
-    state->Filter.a1 = -a;
-    state->Filter.a2 = 0.0f;
-    state->Filter.b1 = -a;
-    state->Filter.b2 = 0.0f;
-    state->Filter.input_gain = a;
-    state->Filter.process = ALfilterState_processC;
+    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
+    {
+        state->Filter[i].a1 = -a;
+        state->Filter[i].a2 = 0.0f;
+        state->Filter[i].b1 = -a;
+        state->Filter[i].b2 = 0.0f;
+        state->Filter[i].input_gain = a;
+        state->Filter[i].process = ALfilterState_processC;
+    }
 
-    ComputeAmbientGains(Device->AmbiCoeffs, Device->NumChannels, Slot->Gain, state->Gain);
+    scale = Device->AmbiScale;
+    aluMatrixfSet(&matrix,
+        1.0f,  0.0f,  0.0f,  0.0f,
+        0.0f, scale,  0.0f,  0.0f,
+        0.0f,  0.0f, scale,  0.0f,
+        0.0f,  0.0f,  0.0f, scale
+    );
+    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
+        ComputeBFormatGains(Device->AmbiCoeffs, Device->NumChannels,
+                            matrix.m[i], Slot->Gain, state->Gain[i]);
 }
 
 static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
@@ -130,19 +144,22 @@ static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALuint SamplesTo
     {
         ALfloat temps[2][128];
         ALuint td = minu(128, SamplesToDo-base);
-        ALuint i, k;
+        ALuint i, j, k;
 
-        ALfilterState_process(&state->Filter, temps[0], &SamplesIn[0][base], td);
-        state->Process(temps[1], temps[0], index, step, td);
-
-        for(k = 0;k < NumChannels;k++)
+        for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
         {
-            ALfloat gain = state->Gain[k];
-            if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
-                continue;
+            ALfilterState_process(&state->Filter[j], temps[0], &SamplesIn[j][base], td);
+            state->Process(temps[1], temps[0], index, step, td);
 
-            for(i = 0;i < td;i++)
-                SamplesOut[k][base+i] += gain * temps[1][i];
+            for(k = 0;k < NumChannels;k++)
+            {
+                ALfloat gain = state->Gain[j][k];
+                if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
+                    continue;
+
+                for(i = 0;i < td;i++)
+                    SamplesOut[k][base+i] += gain * temps[1][i];
+            }
         }
 
         for(i = 0;i < td;i++)
@@ -167,6 +184,7 @@ typedef struct ALmodulatorStateFactory {
 static ALeffectState *ALmodulatorStateFactory_create(ALmodulatorStateFactory *UNUSED(factory))
 {
     ALmodulatorState *state;
+    ALuint i;
 
     state = ALmodulatorState_New(sizeof(*state));
     if(!state) return NULL;
@@ -175,7 +193,8 @@ static ALeffectState *ALmodulatorStateFactory_create(ALmodulatorStateFactory *UN
     state->index = 0;
     state->step = 1;
 
-    ALfilterState_clear(&state->Filter);
+    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
+        ALfilterState_clear(&state->Filter[i]);
 
     return STATIC_CAST(ALeffectState, state);
 }

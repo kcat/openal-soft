@@ -33,11 +33,7 @@
 typedef struct ALmodulatorState {
     DERIVE_FROM_TYPE(ALeffectState);
 
-    enum {
-        SINUSOID,
-        SAWTOOTH,
-        SQUARE
-    } Waveform;
+    void (*Process)(ALfloat*, const ALfloat*, ALuint, const ALuint, ALuint);
 
     ALuint index;
     ALuint step;
@@ -67,44 +63,16 @@ static inline ALfloat Square(ALuint index)
 }
 
 #define DECL_TEMPLATE(func)                                                   \
-static void Process##func(ALmodulatorState *state, ALuint SamplesToDo,        \
-  const ALfloat *restrict SamplesIn,                                          \
-  ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)             \
+static void Modulate##func(ALfloat *restrict dst, const ALfloat *restrict src,\
+                           ALuint index, const ALuint step, ALuint todo)      \
 {                                                                             \
-    const ALuint step = state->step;                                          \
-    ALuint index = state->index;                                              \
-    ALuint base;                                                              \
-                                                                              \
-    for(base = 0;base < SamplesToDo;)                                         \
+    ALuint i;                                                                 \
+    for(i = 0;i < todo;i++)                                                   \
     {                                                                         \
-        ALfloat temps[256];                                                   \
-        ALuint td = minu(256, SamplesToDo-base);                              \
-        ALuint i, k;                                                          \
-                                                                              \
-        for(i = 0;i < td;i++)                                                 \
-        {                                                                     \
-            ALfloat samp;                                                     \
-            samp = SamplesIn[base+i];                                         \
-            samp = ALfilterState_processSingle(&state->Filter, samp);         \
-                                                                              \
-            index += step;                                                    \
-            index &= WAVEFORM_FRACMASK;                                       \
-            temps[i] = samp * func(index);                                    \
-        }                                                                     \
-                                                                              \
-        for(k = 0;k < NumChannels;k++)                                        \
-        {                                                                     \
-            ALfloat gain = state->Gain[k];                                    \
-            if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))                       \
-                continue;                                                     \
-                                                                              \
-            for(i = 0;i < td;i++)                                             \
-                SamplesOut[k][base+i] += gain * temps[i];                     \
-        }                                                                     \
-                                                                              \
-        base += td;                                                           \
+        index += step;                                                        \
+        index &= WAVEFORM_FRACMASK;                                           \
+        dst[i] = src[i] * func(index);                                        \
     }                                                                         \
-    state->index = index;                                                     \
 }
 
 DECL_TEMPLATE(Sin)
@@ -128,11 +96,11 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *
     ALfloat cw, a;
 
     if(Slot->EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SINUSOID)
-        state->Waveform = SINUSOID;
+        state->Process = ModulateSin;
     else if(Slot->EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SAWTOOTH)
-        state->Waveform = SAWTOOTH;
-    else if(Slot->EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SQUARE)
-        state->Waveform = SQUARE;
+        state->Process = ModulateSaw;
+    else /*if(Slot->EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SQUARE)*/
+        state->Process = ModulateSquare;
 
     state->step = fastf2u(Slot->EffectProps.Modulator.Frequency*WAVEFORM_FRACONE /
                           Device->Frequency);
@@ -147,26 +115,44 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *
     state->Filter.b1 = -a;
     state->Filter.b2 = 0.0f;
     state->Filter.input_gain = a;
+    state->Filter.process = ALfilterState_processC;
 
     ComputeAmbientGains(Device->AmbiCoeffs, Device->NumChannels, Slot->Gain, state->Gain);
 }
 
 static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
-    switch(state->Waveform)
+    const ALuint step = state->step;
+    ALuint index = state->index;
+    ALuint base;
+
+    for(base = 0;base < SamplesToDo;)
     {
-        case SINUSOID:
-            ProcessSin(state, SamplesToDo, SamplesIn[0], SamplesOut, NumChannels);
-            break;
+        ALfloat temps[2][128];
+        ALuint td = minu(128, SamplesToDo-base);
+        ALuint i, k;
 
-        case SAWTOOTH:
-            ProcessSaw(state, SamplesToDo, SamplesIn[0], SamplesOut, NumChannels);
-            break;
+        ALfilterState_process(&state->Filter, temps[0], &SamplesIn[0][base], td);
+        state->Process(temps[1], temps[0], index, step, td);
 
-        case SQUARE:
-            ProcessSquare(state, SamplesToDo, SamplesIn[0], SamplesOut, NumChannels);
-            break;
+        for(k = 0;k < NumChannels;k++)
+        {
+            ALfloat gain = state->Gain[k];
+            if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
+                continue;
+
+            for(i = 0;i < td;i++)
+                SamplesOut[k][base+i] += gain * temps[1][i];
+        }
+
+        for(i = 0;i < td;i++)
+        {
+            index += step;
+            index &= WAVEFORM_FRACMASK;
+        }
+        base += td;
     }
+    state->index = index;
 }
 
 DECLARE_DEFAULT_ALLOCATORS(ALmodulatorState)

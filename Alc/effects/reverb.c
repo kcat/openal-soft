@@ -1049,10 +1049,8 @@ static ALvoid UpdateEchoLine(ALfloat reverbGain, ALfloat lateGain, ALfloat echoT
     State->Echo.LpCoeff = CalcDampingCoeff(hfRatio, echoTime, decayTime,
                                            State->Echo.Coeff, cw);
 
-    /* Calculate the echo mixing coefficients.  The first is applied to the
-     * echo itself.  The second is used to attenuate the late reverb when
-     * echo depth is high and diffusion is low, so the echo is slightly
-     * stronger than the decorrelated echos in the reverb tail.
+    /* Calculate the echo mixing coefficient. This is applied to the output mix
+     * only, not the feedback.
      */
     State->Echo.MixCoeff = reverbGain * lateGain * echoDepth;
 }

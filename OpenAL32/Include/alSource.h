@@ -18,7 +18,6 @@ struct ALsource;
 typedef struct ALbufferlistitem {
     struct ALbuffer *buffer;
     struct ALbufferlistitem *volatile next;
-    struct ALbufferlistitem *volatile prev;
 } ALbufferlistitem;
 
 

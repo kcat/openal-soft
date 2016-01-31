@@ -631,7 +631,6 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 newlist = malloc(sizeof(ALbufferlistitem));
                 newlist->buffer = buffer;
                 newlist->next = NULL;
-                newlist->prev = NULL;
                 IncrementRef(&buffer->ref);
 
                 /* Source is now Static */
@@ -2334,19 +2333,15 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         if(!BufferListStart)
         {
             BufferListStart = malloc(sizeof(ALbufferlistitem));
-            BufferListStart->buffer = buffer;
-            BufferListStart->next = NULL;
-            BufferListStart->prev = NULL;
             BufferList = BufferListStart;
         }
         else
         {
             BufferList->next = malloc(sizeof(ALbufferlistitem));
-            BufferList->next->buffer = buffer;
-            BufferList->next->next = NULL;
-            BufferList->next->prev = BufferList;
             BufferList = BufferList->next;
         }
+        BufferList->buffer = buffer;
+        BufferList->next = NULL;
         if(!buffer) continue;
 
         /* Hold a read lock on each buffer being queued while checking all
@@ -2372,26 +2367,27 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         buffer_error:
             /* A buffer failed (invalid ID or format), so unlock and release
              * each buffer we had. */
-            while(BufferList != NULL)
+            while(BufferListStart)
             {
-                ALbufferlistitem *prev = BufferList->prev;
-                if((buffer=BufferList->buffer) != NULL)
+                ALbufferlistitem *next = BufferListStart->next;
+                if((buffer=BufferListStart->buffer) != NULL)
                 {
                     DecrementRef(&buffer->ref);
                     ReadUnlock(&buffer->lock);
                 }
-                free(BufferList);
-                BufferList = prev;
+                free(BufferListStart);
+                BufferListStart = next;
             }
             goto done;
         }
     }
     /* All buffers good, unlock them now. */
+    BufferList = BufferListStart;
     while(BufferList != NULL)
     {
         ALbuffer *buffer = BufferList->buffer;
         if(buffer) ReadUnlock(&buffer->lock);
-        BufferList = BufferList->prev;
+        BufferList = BufferList->next;
     }
 
     /* Source is now streaming */
@@ -2403,10 +2399,11 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         /* Queue head is not NULL, append to the end of the queue */
         while(BufferList->next != NULL)
             BufferList = BufferList->next;
-
-        BufferListStart->prev = BufferList;
         BufferList->next = BufferListStart;
     }
+    /* If the current buffer was at the end (NULL), put it at the start of the newly queued
+     * buffers.
+     */
     BufferList = NULL;
     ATOMIC_COMPARE_EXCHANGE_STRONG(ALbufferlistitem*, &source->current_buffer, &BufferList, BufferListStart);
     WriteUnlock(&source->queue_lock);
@@ -2419,10 +2416,10 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
 {
     ALCcontext *context;
     ALsource *source;
-    ALbufferlistitem *NewHead;
     ALbufferlistitem *OldHead;
+    ALbufferlistitem *OldTail;
     ALbufferlistitem *Current;
-    ALsizei i;
+    ALsizei i = 0;
 
     if(nb == 0)
         return;
@@ -2438,13 +2435,16 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
 
     WriteLock(&source->queue_lock);
     /* Find the new buffer queue head */
-    NewHead = ATOMIC_LOAD(&source->queue);
+    OldTail = ATOMIC_LOAD(&source->queue);
     Current = ATOMIC_LOAD(&source->current_buffer);
-    for(i = 0;i < nb && NewHead;i++)
+    if(OldTail != Current)
     {
-        if(NewHead == Current)
-            break;
-        NewHead = NewHead->next;
+        for(i = 1;i < nb;i++)
+        {
+            ALbufferlistitem *next = OldTail->next;
+            if(!next || next == Current) break;
+            OldTail = next;
+        }
     }
     if(source->Looping || source->SourceType != AL_STREAMING || i != nb)
     {
@@ -2454,18 +2454,15 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
     }
 
     /* Swap it, and cut the new head from the old. */
-    OldHead = ATOMIC_EXCHANGE(ALbufferlistitem*, &source->queue, NewHead);
-    if(NewHead)
+    OldHead = ATOMIC_EXCHANGE(ALbufferlistitem*, &source->queue, OldTail->next);
+    if(OldTail->next)
     {
         ALCdevice *device = context->Device;
-        ALbufferlistitem *OldTail = NewHead->prev;
         uint count;
 
-        /* Cut the new head's link back to the old body. The mixer is robust
-         * enough to handle the link back going away. Once the active mix (if
-         * any) is complete, it's safe to finish cutting the old tail from the
-         * new head. */
-        NewHead->prev = NULL;
+        /* Once the active mix (if any) is done, it's safe to cut the old tail
+         * from the new head.
+         */
         if(((count=ReadRef(&device->MixCount))&1) != 0)
         {
             while(count == ReadRef(&device->MixCount))

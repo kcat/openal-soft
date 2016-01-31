@@ -130,8 +130,8 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *
         0.0f,  0.0f,  0.0f, scale
     );
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputeBFormatGains(Device->AmbiCoeffs, Device->NumChannels,
-                            matrix.m[i], Slot->Gain, state->Gain[i]);
+        ComputeFirstOrderGains(Device->AmbiCoeffs, Device->NumChannels,
+                               matrix.m[i], Slot->Gain, state->Gain[i]);
 }
 
 static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)

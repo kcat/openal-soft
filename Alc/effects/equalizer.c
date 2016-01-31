@@ -111,8 +111,8 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *
         0.0f, 0.0f, 0.0f, gain
     );
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputeBFormatGains(device->AmbiCoeffs, device->NumChannels,
-                            matrix.m[i], slot->Gain, state->Gain[i]);
+        ComputeFirstOrderGains(device->AmbiCoeffs, device->NumChannels,
+                               matrix.m[i], slot->Gain, state->Gain[i]);
 
     /* Calculate coefficients for the each type of filter. Note that the shelf
      * filters' gain is for the reference frequency, which is the centerpoint

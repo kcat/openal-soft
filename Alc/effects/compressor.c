@@ -71,8 +71,8 @@ static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCdevice
         0.0f,  0.0f,  0.0f, scale
     );
     for(i = 0;i < 4;i++)
-        ComputeBFormatGains(device->AmbiCoeffs, device->NumChannels,
-                            matrix.m[i], slot->Gain, state->Gain[i]);
+        ComputeFirstOrderGains(device->AmbiCoeffs, device->NumChannels,
+                               matrix.m[i], slot->Gain, state->Gain[i]);
 }
 
 static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)

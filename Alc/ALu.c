@@ -663,7 +663,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
             MixGains *gains = voice->Direct.Gains[c];
             ALfloat Target[MAX_OUTPUT_CHANNELS];
 
-            ComputeBFormatGains(Device->AmbiCoeffs, Device->NumChannels, matrix.m[c], DryGain, Target);
+            ComputeFirstOrderGains(Device->AmbiCoeffs, Device->NumChannels, matrix.m[c], DryGain, Target);
             for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
                 gains[i].Target = Target[i];
         }
@@ -698,8 +698,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                     ALfloat Target[MAX_OUTPUT_CHANNELS];
                     ALuint j;
 
-                    ComputeBFormatGains(Slot->AmbiCoeffs, Slot->NumChannels,
-                                        matrix.m[c], WetGain[i], Target);
+                    ComputeFirstOrderGains(Slot->AmbiCoeffs, Slot->NumChannels,
+                                           matrix.m[c], WetGain[i], Target);
                     for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
                         gains[j].Target = Target[j];
                 }

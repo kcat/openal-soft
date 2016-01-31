@@ -322,13 +322,13 @@ void ComputeAmbientGains(const ChannelConfig *chancoeffs, ALuint numchans, ALflo
 void ComputePanningGains(const ChannelConfig *chancoeffs, ALuint numchans, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 /**
- * ComputeBFormatGains
+ * ComputeFirstOrderGains
  *
- * Sets channel gains for a given (first-order) B-Format input channel. The
- * matrix is a 1x4 'slice' of the rotation matrix for the given channel used to
- * orient the soundfield.
+ * Sets channel gains for a first-order ambisonics input channel. The matrix is
+ * a 1x4 'slice' of a transform matrix for the input channel, used to scale and
+ * orient the sound samples.
  */
-void ComputeBFormatGains(const ChannelConfig *chancoeffs, ALuint numchans, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+void ComputeFirstOrderGains(const ChannelConfig *chancoeffs, ALuint numchans, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 
 ALvoid UpdateContextSources(ALCcontext *context);

@@ -154,7 +154,7 @@ void ComputePanningGains(const ChannelConfig *chancoeffs, ALuint numchans, const
         gains[i] = 0.0f;
 }
 
-void ComputeBFormatGains(const ChannelConfig *chancoeffs, ALuint numchans, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+void ComputeFirstOrderGains(const ChannelConfig *chancoeffs, ALuint numchans, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     ALuint i, j;
 

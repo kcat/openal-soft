@@ -925,13 +925,13 @@ static ALvoid UpdateDelayLine(ALfloat earlyDelay, ALfloat lateDelay, ALuint freq
 }
 
 // Update the early reflections gain and line coefficients.
-static ALvoid UpdateEarlyLines(ALfloat reverbGain, ALfloat earlyGain, ALfloat lateDelay, ALreverbState *State)
+static ALvoid UpdateEarlyLines(ALfloat earlyGain, ALfloat lateDelay, ALreverbState *State)
 {
     ALuint index;
 
     // Calculate the early reflections gain (from the master effect gain, and
     // reflections gain parameters) with a constant attenuation of 0.5.
-    State->Early.Gain = 0.5f * reverbGain * earlyGain;
+    State->Early.Gain = 0.5f * earlyGain;
 
     // Calculate the gain (coefficient) for each early delay line using the
     // late delay time.  This expands the early reflections to the start of
@@ -963,7 +963,7 @@ static ALvoid UpdateDecorrelator(ALfloat density, ALuint frequency, ALreverbStat
 }
 
 // Update the late reverb gains, line lengths, and line coefficients.
-static ALvoid UpdateLateLines(ALfloat reverbGain, ALfloat lateGain, ALfloat xMix, ALfloat density, ALfloat decayTime, ALfloat diffusion, ALfloat echoDepth, ALfloat hfRatio, ALfloat cw, ALuint frequency, ALreverbState *State)
+static ALvoid UpdateLateLines(ALfloat lateGain, ALfloat xMix, ALfloat density, ALfloat decayTime, ALfloat diffusion, ALfloat echoDepth, ALfloat hfRatio, ALfloat cw, ALuint frequency, ALreverbState *State)
 {
     ALfloat length;
     ALuint index;
@@ -976,8 +976,7 @@ static ALvoid UpdateLateLines(ALfloat reverbGain, ALfloat lateGain, ALfloat xMix
      * echo is slightly stronger than the decorrelated echos in the reverb
      * tail.
      */
-    State->Late.Gain = reverbGain * lateGain * xMix *
-                       (1.0f - (echoDepth*0.5f*(1.0f - diffusion)));
+    State->Late.Gain = lateGain * xMix * (1.0f - (echoDepth*0.5f*(1.0f - diffusion)));
 
     /* To compensate for changes in modal density and decay time of the late
      * reverb signal, the input is attenuated based on the maximal energy of
@@ -1027,7 +1026,7 @@ static ALvoid UpdateLateLines(ALfloat reverbGain, ALfloat lateGain, ALfloat xMix
 
 // Update the echo gain, line offset, line coefficients, and mixing
 // coefficients.
-static ALvoid UpdateEchoLine(ALfloat reverbGain, ALfloat lateGain, ALfloat echoTime, ALfloat decayTime, ALfloat diffusion, ALfloat echoDepth, ALfloat hfRatio, ALfloat cw, ALuint frequency, ALreverbState *State)
+static ALvoid UpdateEchoLine(ALfloat lateGain, ALfloat echoTime, ALfloat decayTime, ALfloat diffusion, ALfloat echoDepth, ALfloat hfRatio, ALfloat cw, ALuint frequency, ALreverbState *State)
 {
     // Update the offset and coefficient for the echo delay line.
     State->Echo.Offset = fastf2u(echoTime * frequency);
@@ -1052,7 +1051,7 @@ static ALvoid UpdateEchoLine(ALfloat reverbGain, ALfloat lateGain, ALfloat echoT
     /* Calculate the echo mixing coefficient. This is applied to the output mix
      * only, not the feedback.
      */
-    State->Echo.MixCoeff = reverbGain * lateGain * echoDepth;
+    State->Echo.MixCoeff = lateGain * echoDepth;
 }
 
 // Update the early and late 3D panning gains.
@@ -1128,7 +1127,7 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
     const ALeffectProps *props = &Slot->EffectProps;
     ALuint frequency = Device->Frequency;
     ALfloat lfscale, hfscale, hfRatio;
-    ALfloat gainlf, gainhf;
+    ALfloat gain, gainlf, gainhf;
     ALfloat cw, x, y;
 
     if(Slot->EffectType == AL_EFFECT_EAXREVERB && !EmulateEAXReverb)
@@ -1155,7 +1154,7 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
                     frequency, State);
 
     // Update the early lines.
-    UpdateEarlyLines(props->Reverb.Gain, props->Reverb.ReflectionsGain,
+    UpdateEarlyLines(props->Reverb.ReflectionsGain,
                      props->Reverb.LateReverbDelay, State);
 
     // Update the decorrelator.
@@ -1175,21 +1174,21 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
 
     cw = cosf(F_TAU * hfscale);
     // Update the late lines.
-    UpdateLateLines(props->Reverb.Gain, props->Reverb.LateReverbGain, x,
+    UpdateLateLines(props->Reverb.LateReverbGain, x,
                     props->Reverb.Density, props->Reverb.DecayTime,
                     props->Reverb.Diffusion, props->Reverb.EchoDepth,
                     hfRatio, cw, frequency, State);
 
     // Update the echo line.
-    UpdateEchoLine(props->Reverb.Gain, props->Reverb.LateReverbGain,
+    UpdateEchoLine(props->Reverb.LateReverbGain,
                    props->Reverb.EchoTime, props->Reverb.DecayTime,
                    props->Reverb.Diffusion, props->Reverb.EchoDepth,
                    hfRatio, cw, frequency, State);
 
+    gain = props->Reverb.Gain * Slot->Gain * ReverbBoost;
     // Update early and late 3D panning.
     Update3DPanning(Device, props->Reverb.ReflectionsPan,
-                    props->Reverb.LateReverbPan,
-                    Slot->Gain * ReverbBoost, State);
+                    props->Reverb.LateReverbPan, gain, State);
 }
 
 

@@ -210,14 +210,17 @@ CHECK_C_SOURCE_COMPILES(
 HAVE_C11_ALIGNAS)
 
 # Check if we have C11 _Atomic
+set(OLD_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
+set(CMAKE_REQUIRED_LIBRARIES ${EXTRA_LIBS})
 CHECK_C_SOURCE_COMPILES(
 "#include <stdatomic.h>
- const int _Atomic foo = ATOMIC_VAR_INIT(~0);
+ int _Atomic foo = ATOMIC_VAR_INIT(~0);
  int main()
  {
-     return atomic_load(&foo);
+     return atomic_fetch_add(&foo, 2);
  }"
 HAVE_C11_ATOMIC)
+set(CMAKE_REQUIRED_LIBRARIES ${OLD_REQUIRED_LIBRARIES})
 
 # Add definitions, compiler switches, etc.
 INCLUDE_DIRECTORIES("${OpenAL_SOURCE_DIR}/include" "${OpenAL_BINARY_DIR}")

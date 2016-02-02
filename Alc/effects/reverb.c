@@ -1055,6 +1055,77 @@ static ALvoid UpdateEchoLine(ALfloat lateGain, ALfloat echoTime, ALfloat decayTi
 }
 
 // Update the early and late 3D panning gains.
+static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, ALfloat Gain, ALreverbState *State)
+{
+    ALfloat AmbientGains[MAX_OUTPUT_CHANNELS];
+    ALfloat DirGains[MAX_OUTPUT_CHANNELS];
+    ALfloat coeffs[MAX_AMBI_COEFFS];
+    ALfloat length;
+    ALuint i;
+
+    ComputeAmbientGains(Device->AmbiCoeffs, Device->NumChannels, Gain, AmbientGains);
+
+    memset(State->Early.PanGain, 0, sizeof(State->Early.PanGain));
+    length = sqrtf(ReflectionsPan[0]*ReflectionsPan[0] + ReflectionsPan[1]*ReflectionsPan[1] + ReflectionsPan[2]*ReflectionsPan[2]);
+    if(!(length > FLT_EPSILON))
+    {
+        for(i = 0;i < MAX_OUTPUT_CHANNELS && Device->ChannelName[i] != InvalidChannel;i++)
+        {
+            if(Device->ChannelName[i] == LFE)
+                continue;
+            State->Early.PanGain[i&3][i] = AmbientGains[i];
+        }
+    }
+    else
+    {
+        ALfloat pan[3] = {
+             ReflectionsPan[0] / length,
+             ReflectionsPan[1] / length,
+            -ReflectionsPan[2] / length,
+        };
+        length = minf(length, 1.0f);
+
+        CalcDirectionCoeffs(pan, coeffs);
+        ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain, DirGains);
+        for(i = 0;i < MAX_OUTPUT_CHANNELS && Device->ChannelName[i] != InvalidChannel;i++)
+        {
+            if(Device->ChannelName[i] == LFE)
+                continue;
+            State->Early.PanGain[i&3][i] = lerp(AmbientGains[i], DirGains[i], length);
+        }
+    }
+
+    memset(State->Late.PanGain, 0, sizeof(State->Late.PanGain));
+    length = sqrtf(LateReverbPan[0]*LateReverbPan[0] + LateReverbPan[1]*LateReverbPan[1] + LateReverbPan[2]*LateReverbPan[2]);
+    if(!(length > FLT_EPSILON))
+    {
+        for(i = 0;i < MAX_OUTPUT_CHANNELS && Device->ChannelName[i] != InvalidChannel;i++)
+        {
+            if(Device->ChannelName[i] == LFE)
+                continue;
+            State->Late.PanGain[i&3][i] = AmbientGains[i];
+        }
+    }
+    else
+    {
+        ALfloat pan[3] = {
+             LateReverbPan[0] / length,
+             LateReverbPan[1] / length,
+            -LateReverbPan[2] / length,
+        };
+        length = minf(length, 1.0f);
+
+        CalcDirectionCoeffs(pan, coeffs);
+        ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain, DirGains);
+        for(i = 0;i < MAX_OUTPUT_CHANNELS && Device->ChannelName[i] != InvalidChannel;i++)
+        {
+            if(Device->ChannelName[i] == LFE)
+                continue;
+            State->Late.PanGain[i&3][i] = lerp(AmbientGains[i], DirGains[i], length);
+        }
+    }
+}
+
 static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, ALfloat Gain, ALreverbState *State)
 {
     static const ALfloat EarlyPanAngles[4] = {
@@ -1187,8 +1258,12 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
 
     gain = props->Reverb.Gain * Slot->Gain * ReverbBoost;
     // Update early and late 3D panning.
-    Update3DPanning(Device, props->Reverb.ReflectionsPan,
-                    props->Reverb.LateReverbPan, gain, State);
+    if(Device->Hrtf || Device->FmtChans == DevFmtBFormat3D)
+        Update3DPanning(Device, props->Reverb.ReflectionsPan,
+                        props->Reverb.LateReverbPan, gain, State);
+    else
+        UpdateDirectPanning(Device, props->Reverb.ReflectionsPan,
+                            props->Reverb.LateReverbPan, gain, State);
 }
 
 

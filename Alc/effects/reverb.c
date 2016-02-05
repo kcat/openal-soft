@@ -679,11 +679,7 @@ static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *Reflec
     if(!(length > FLT_EPSILON))
     {
         for(i = 0;i < Device->NumChannels;i++)
-        {
-            if(Device->ChannelName[i] == LFE)
-                continue;
             State->Early.PanGain[i&3][i] = AmbientGains[i] * EarlyGain;
-        }
     }
     else
     {
@@ -701,11 +697,7 @@ static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *Reflec
         CalcDirectionCoeffs(pan, coeffs);
         ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain, DirGains);
         for(i = 0;i < Device->NumChannels;i++)
-        {
-            if(Device->ChannelName[i] == LFE)
-                continue;
             State->Early.PanGain[i&3][i] = lerp(AmbientGains[i], DirGains[i], length) * EarlyGain;
-        }
     }
 
     memset(State->Late.PanGain, 0, sizeof(State->Late.PanGain));
@@ -713,11 +705,7 @@ static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *Reflec
     if(!(length > FLT_EPSILON))
     {
         for(i = 0;i < Device->NumChannels;i++)
-        {
-            if(Device->ChannelName[i] == LFE)
-                continue;
             State->Late.PanGain[i&3][i] = AmbientGains[i] * LateGain;
-        }
     }
     else
     {
@@ -731,11 +719,7 @@ static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *Reflec
         CalcDirectionCoeffs(pan, coeffs);
         ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain, DirGains);
         for(i = 0;i < Device->NumChannels;i++)
-        {
-            if(Device->ChannelName[i] == LFE)
-                continue;
             State->Late.PanGain[i&3][i] = lerp(AmbientGains[i], DirGains[i], length) * LateGain;
-        }
     }
 }
 

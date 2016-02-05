@@ -1069,7 +1069,7 @@ static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *Reflec
     length = sqrtf(ReflectionsPan[0]*ReflectionsPan[0] + ReflectionsPan[1]*ReflectionsPan[1] + ReflectionsPan[2]*ReflectionsPan[2]);
     if(!(length > FLT_EPSILON))
     {
-        for(i = 0;i < MAX_OUTPUT_CHANNELS && Device->ChannelName[i] != InvalidChannel;i++)
+        for(i = 0;i < Device->NumChannels;i++)
         {
             if(Device->ChannelName[i] == LFE)
                 continue;
@@ -1078,6 +1078,10 @@ static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *Reflec
     }
     else
     {
+        /* Note that EAX Reverb's panning vectors are using right-handed
+         * coordinates, rather that the OpenAL's left-handed coordinates.
+         * Negate Z to fix this.
+         */
         ALfloat pan[3] = {
              ReflectionsPan[0] / length,
              ReflectionsPan[1] / length,
@@ -1087,7 +1091,7 @@ static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *Reflec
 
         CalcDirectionCoeffs(pan, coeffs);
         ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain, DirGains);
-        for(i = 0;i < MAX_OUTPUT_CHANNELS && Device->ChannelName[i] != InvalidChannel;i++)
+        for(i = 0;i < Device->NumChannels;i++)
         {
             if(Device->ChannelName[i] == LFE)
                 continue;
@@ -1099,7 +1103,7 @@ static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *Reflec
     length = sqrtf(LateReverbPan[0]*LateReverbPan[0] + LateReverbPan[1]*LateReverbPan[1] + LateReverbPan[2]*LateReverbPan[2]);
     if(!(length > FLT_EPSILON))
     {
-        for(i = 0;i < MAX_OUTPUT_CHANNELS && Device->ChannelName[i] != InvalidChannel;i++)
+        for(i = 0;i < Device->NumChannels;i++)
         {
             if(Device->ChannelName[i] == LFE)
                 continue;
@@ -1117,7 +1121,7 @@ static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *Reflec
 
         CalcDirectionCoeffs(pan, coeffs);
         ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain, DirGains);
-        for(i = 0;i < MAX_OUTPUT_CHANNELS && Device->ChannelName[i] != InvalidChannel;i++)
+        for(i = 0;i < Device->NumChannels;i++)
         {
             if(Device->ChannelName[i] == LFE)
                 continue;
@@ -1128,68 +1132,86 @@ static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *Reflec
 
 static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, ALfloat Gain, ALreverbState *State)
 {
-    static const ALfloat EarlyPanAngles[4] = {
-        DEG2RAD(0.0f), DEG2RAD(-90.0f), DEG2RAD(90.0f), DEG2RAD(180.0f)
-    }, LatePanAngles[4] = {
-        DEG2RAD(45.0f), DEG2RAD(-45.0f), DEG2RAD(135.0f), DEG2RAD(-135.0f)
+    static const ALfloat PanDirs[4][3] = {
+        { -0.707106781f, 0.0f, -0.707106781f }, /* Front left */
+        {  0.707106781f, 0.0f, -0.707106781f }, /* Front right */
+        {  0.707106781f, 0.0f,  0.707106781f }, /* Back right */
+        { -0.707106781f, 0.0f,  0.707106781f }  /* Back left */
     };
     ALfloat coeffs[MAX_AMBI_COEFFS];
-    ALfloat length, ev, az;
+    ALfloat gain[4];
+    ALfloat length;
     ALuint i;
 
+    /* 0.5 would be the gain scaling when the panning vector is 0. This also
+     * equals sqrt(1/4), a nice gain scaling for the four virtual points
+     * producing an "ambient" response.
+     */
+    gain[0] = 0.5f;
+    gain[1] = 0.5f;
+    gain[2] = 0.5f;
+    gain[3] = 0.5f;
     length = sqrtf(ReflectionsPan[0]*ReflectionsPan[0] + ReflectionsPan[1]*ReflectionsPan[1] + ReflectionsPan[2]*ReflectionsPan[2]);
-    if(!(length > FLT_EPSILON))
+    if(length > 1.0f)
+    {
+        ALfloat pan[3] = {
+             ReflectionsPan[0] / length,
+             ReflectionsPan[1] / length,
+            -ReflectionsPan[2] / length,
+        };
+        for(i = 0;i < 4;i++)
+        {
+            ALfloat dotp = pan[0]*PanDirs[i][0] + pan[1]*PanDirs[i][1] + pan[2]*PanDirs[i][2];
+            gain[i] = dotp*0.5f + 0.5f;
+        }
+    }
+    else if(length > FLT_EPSILON)
     {
         for(i = 0;i < 4;i++)
         {
-            CalcAngleCoeffs(EarlyPanAngles[i], 0.0f, coeffs);
-            ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain, State->Early.PanGain[i]);
+            ALfloat dotp = ReflectionsPan[0]*PanDirs[i][0] + ReflectionsPan[1]*PanDirs[i][1] +
+                           -ReflectionsPan[2]*PanDirs[i][2];
+            gain[i] = dotp*0.5f + 0.5f;
         }
     }
-    else
+    for(i = 0;i < 4;i++)
     {
-        ev = asinf(clampf(ReflectionsPan[1]/length, -1.0f, 1.0f));
-        az = atan2f(ReflectionsPan[0], ReflectionsPan[2]);
-
-        length = minf(length, 1.0f);
-        for(i = 0;i < 4;i++)
-        {
-            /* This is essentially just a lerp, but takes the shortest path
-             * with respect to circular wrapping. e.g.
-             * -135 -> +/-180 -> +135
-             * instead of
-             * -135 -> 0 -> +135 */
-            float offset, naz, nev;
-            naz = EarlyPanAngles[i] + (modff((az-EarlyPanAngles[i])*length/F_TAU + 1.5f, &offset)-0.5f)*F_TAU;
-            nev =                     (modff((ev                  )*length/F_TAU + 1.5f, &offset)-0.5f)*F_TAU;
-            CalcAngleCoeffs(naz, nev, coeffs);
-            ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain, State->Early.PanGain[i]);
-        }
+        CalcDirectionCoeffs(PanDirs[i], coeffs);
+        ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain*gain[i], State->Early.PanGain[i]);
     }
 
+    gain[0] = 0.5f;
+    gain[1] = 0.5f;
+    gain[2] = 0.5f;
+    gain[3] = 0.5f;
     length = sqrtf(LateReverbPan[0]*LateReverbPan[0] + LateReverbPan[1]*LateReverbPan[1] + LateReverbPan[2]*LateReverbPan[2]);
-    if(!(length > FLT_EPSILON))
+    if(length > 1.0f)
     {
+        ALfloat pan[3] = {
+             LateReverbPan[0] / length,
+             LateReverbPan[1] / length,
+            -LateReverbPan[2] / length,
+        };
+        length = 1.0f;
         for(i = 0;i < 4;i++)
         {
-            CalcAngleCoeffs(LatePanAngles[i], 0.0f, coeffs);
-            ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain, State->Late.PanGain[i]);
+            ALfloat dotp = pan[0]*PanDirs[i][0] + pan[1]*PanDirs[i][1] + pan[2]*PanDirs[i][2];
+            gain[i] = dotp*0.5f + 0.5f;
         }
     }
-    else
+    else if(length > FLT_EPSILON)
     {
-        ev = asinf(clampf(LateReverbPan[1]/length, -1.0f, 1.0f));
-        az = atan2f(LateReverbPan[0], LateReverbPan[2]);
-
-        length = minf(length, 1.0f);
         for(i = 0;i < 4;i++)
         {
-            float offset, naz, nev;
-            naz = LatePanAngles[i] + (modff((az-LatePanAngles[i])*length/F_TAU + 1.5f, &offset)-0.5f)*F_TAU;
-            nev =                    (modff((ev                 )*length/F_TAU + 1.5f, &offset)-0.5f)*F_TAU;
-            CalcAngleCoeffs(naz, nev, coeffs);
-            ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain, State->Late.PanGain[i]);
+            ALfloat dotp = LateReverbPan[0]*PanDirs[i][0] + LateReverbPan[1]*PanDirs[i][1] +
+                           -LateReverbPan[2]*PanDirs[i][2];
+            gain[i] = dotp*0.5f + 0.5f;
         }
+    }
+    for(i = 0;i < 4;i++)
+    {
+        CalcDirectionCoeffs(PanDirs[i], coeffs);
+        ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain*gain[i], State->Late.PanGain[i]);
     }
 }
 

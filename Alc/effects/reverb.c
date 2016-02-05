@@ -576,8 +576,7 @@ static ALvoid UpdateLateLines(ALfloat xMix, ALfloat density, ALfloat decayTime, 
     ALfloat length;
     ALuint index;
 
-    /* Calculate the late reverb gain (from the master effect gain, and late
-     * reverb gain parameters).  Since the output is tapped prior to the
+    /* Calculate the late reverb gain. Since the output is tapped prior to the
      * application of the next delay line coefficients, this gain needs to be
      * attenuated by the 'x' mixing matrix coefficient as well.  Also attenuate
      * the late reverb when echo depth is high and diffusion is low, so the
@@ -1104,7 +1103,6 @@ static inline ALvoid LateReverb(ALreverbState *State, ALuint todo, ALfloat (*res
 
         // Output the results of the matrix for all four channels, attenuated by
         // the late reverb gain (which is attenuated by the 'x' mix coefficient).
-        // Mix early reflections and late reverb.
         out[i][0] = State->Late.Gain * f[0];
         out[i][1] = State->Late.Gain * f[1];
         out[i][2] = State->Late.Gain * f[2];

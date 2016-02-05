@@ -71,7 +71,7 @@ typedef struct ALreverbState {
         ALfloat   Depth;
         ALfloat   Coeff;
         ALfloat   Filter;
-    } Mod;
+    } Mod; // EAX only
 
     // Initial effect delay.
     DelayLine Delay;
@@ -80,9 +80,6 @@ typedef struct ALreverbState {
     ALuint    DelayTap[2];
 
     struct {
-        // Output gain for early reflections.
-        ALfloat   Gain;
-
         // Early reflections are done with 4 delay lines.
         ALfloat   Coeff[4];
         DelayLine Delay[4];
@@ -152,7 +149,7 @@ typedef struct ALreverbState {
 
         // Echo mixing coefficient.
         ALfloat   MixCoeff;
-    } Echo;
+    } Echo; // EAX only
 
     // The current read offset for all delay lines.
     ALuint Offset;
@@ -537,9 +534,6 @@ static ALvoid UpdateDelayLine(ALfloat earlyDelay, ALfloat lateDelay, ALuint freq
 static ALvoid UpdateEarlyLines(ALfloat lateDelay, ALreverbState *State)
 {
     ALuint index;
-
-    // Calculate the early reflections with a constant attenuation of 0.5.
-    State->Early.Gain = 0.5f;
 
     // Calculate the gain (coefficient) for each early delay line using the
     // late delay time.  This expands the early reflections to the start of
@@ -975,11 +969,13 @@ static inline ALvoid EarlyReflection(ALreverbState *State, ALuint todo, ALfloat 
         DelayLineIn(&State->Early.Delay[2], offset, f[2]);
         DelayLineIn(&State->Early.Delay[3], offset, f[3]);
 
-        // Output the results of the junction for all four channels.
-        out[i][0] = State->Early.Gain * f[0];
-        out[i][1] = State->Early.Gain * f[1];
-        out[i][2] = State->Early.Gain * f[2];
-        out[i][3] = State->Early.Gain * f[3];
+        /* Output the results of the junction for all four channels with a
+         * constant attenuation of 0.5.
+         */
+        out[i][0] = f[0] * 0.5f;
+        out[i][1] = f[1] * 0.5f;
+        out[i][2] = f[2] * 0.5f;
+        out[i][3] = f[3] * 0.5f;
     }
 }
 
@@ -1022,18 +1018,29 @@ static inline ALvoid LateReverb(ALreverbState *State, ALuint todo, ALfloat (*res
     ALfloat d[4], f[4];
     ALuint i;
 
+    // Feed the decorrelator from the energy-attenuated output of the second
+    // delay tap.
+    for(i = 0;i < todo;i++)
+    {
+        ALuint offset = State->Offset+i;
+        ALfloat sample = DelayLineOut(&State->Delay, offset - State->DelayTap[1]) *
+                         State->Late.DensityGain;
+        DelayLineIn(&State->Decorrelator, offset, sample);
+    }
+
     for(i = 0;i < todo;i++)
     {
         ALuint offset = State->Offset+i;
 
+        /* Obtain four decorrelated input samples. */
         f[0] = DelayLineOut(&State->Decorrelator, offset);
         f[1] = DelayLineOut(&State->Decorrelator, offset-State->DecoTap[0]);
         f[2] = DelayLineOut(&State->Decorrelator, offset-State->DecoTap[1]);
         f[3] = DelayLineOut(&State->Decorrelator, offset-State->DecoTap[2]);
 
-        // Obtain the decayed results of the cyclical delay lines, and add the
-        // corresponding input channels.  Then pass the results through the
-        // low-pass filters.
+        /* Add the decayed results of the cyclical delay lines, then pass the
+         * results through the low-pass filters.
+         */
         f[0] += DelayLineOut(&State->Late.Delay[0], offset-State->Late.Offset[0]) * State->Late.Coeff[0];
         f[1] += DelayLineOut(&State->Late.Delay[1], offset-State->Late.Offset[1]) * State->Late.Coeff[1];
         f[2] += DelayLineOut(&State->Late.Delay[2], offset-State->Late.Offset[2]) * State->Late.Coeff[2];
@@ -1156,16 +1163,6 @@ static inline ALvoid VerbPass(ALreverbState *State, ALuint todo, const ALfloat *
     // Calculate the early reflection from the first delay tap.
     EarlyReflection(State, todo, early);
 
-    // Feed the decorrelator from the energy-attenuated output of the second
-    // delay tap.
-    for(i = 0;i < todo;i++)
-    {
-        ALuint offset = State->Offset+i;
-        ALfloat sample = DelayLineOut(&State->Delay, offset - State->DelayTap[1]) *
-                         State->Late.DensityGain;
-        DelayLineIn(&State->Decorrelator, offset, sample);
-    }
-
     // Calculate the late reverb from the decorrelator taps.
     LateReverb(State, todo, late);
 
@@ -1195,16 +1192,6 @@ static inline ALvoid EAXVerbPass(ALreverbState *State, ALuint todo, const ALfloa
 
     // Calculate the early reflection from the first delay tap.
     EarlyReflection(State, todo, early);
-
-    // Feed the decorrelator from the energy-attenuated output of the second
-    // delay tap.
-    for(i = 0;i < todo;i++)
-    {
-        ALuint offset = State->Offset+i;
-        ALfloat sample = DelayLineOut(&State->Delay, offset - State->DelayTap[1]) *
-                         State->Late.DensityGain;
-        DelayLineIn(&State->Decorrelator, offset, sample);
-    }
 
     // Calculate the late reverb from the decorrelator taps.
     LateReverb(State, todo, late);
@@ -1331,7 +1318,6 @@ static ALeffectState *ALreverbStateFactory_create(ALreverbStateFactory* UNUSED(f
     state->DelayTap[0] = 0;
     state->DelayTap[1] = 0;
 
-    state->Early.Gain = 0.0f;
     for(index = 0;index < 4;index++)
     {
         state->Early.Coeff[index] = 0.0f;

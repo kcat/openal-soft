@@ -911,14 +911,16 @@ static inline ALfloat EAXModulation(ALreverbState *State, ALuint offset, ALfloat
                              State->Mod.Coeff);
 
     // Calculate the read offset and fraction between it and the next sample.
-    frac = modff(State->Mod.Filter*sinus + 1.0f, &fdelay);
+    frac = modff(State->Mod.Filter*sinus, &fdelay);
     delay = fastf2u(fdelay);
 
-    // Get the two samples crossed by the offset, and feed the delay line
-    // with the next input sample.
+    /* Add the incoming sample to the delay line first, so a 0 delay gets the
+     * incoming sample.
+     */
+    DelayLineIn(&State->Mod.Delay, offset, in);
+    /* Get the two samples crossed by the offset delay */
     out0 = DelayLineOut(&State->Mod.Delay, offset - delay);
     out1 = DelayLineOut(&State->Mod.Delay, offset - delay - 1);
-    DelayLineIn(&State->Mod.Delay, offset, in);
 
     // The output is obtained by linearly interpolating the two samples that
     // were acquired above.

@@ -88,8 +88,7 @@ typedef struct ALreverbState {
         DelayLine Delay[4];
         ALuint    Offset[4];
 
-        // The gain for each output channel based on 3D panning (only for the
-        // EAX path).
+        // The gain for each output channel based on 3D panning.
         ALfloat   PanGain[4][MAX_OUTPUT_CHANNELS];
     } Early;
 
@@ -127,8 +126,7 @@ typedef struct ALreverbState {
         ALfloat   LpCoeff[4];
         ALfloat   LpSample[4];
 
-        // The gain for each output channel based on 3D panning (only for the
-        // EAX path).
+        // The gain for each output channel based on 3D panning.
         ALfloat   PanGain[4][MAX_OUTPUT_CHANNELS];
     } Late;
 
@@ -158,10 +156,6 @@ typedef struct ALreverbState {
 
     // The current read offset for all delay lines.
     ALuint Offset;
-
-    // The gain for each output channel (non-EAX path only; aliased from
-    // Late.PanGain)
-    ALfloat (*Gain)[MAX_OUTPUT_CHANNELS];
 
     /* Temporary storage used when processing. */
     ALfloat ReverbSamples[MAX_UPDATE_SAMPLES][4];
@@ -434,10 +428,10 @@ static inline ALvoid LateReverb(ALreverbState *State, ALuint todo, ALfloat (*res
         // Output the results of the matrix for all four channels, attenuated by
         // the late reverb gain (which is attenuated by the 'x' mix coefficient).
         // Mix early reflections and late reverb.
-        out[i][0] += State->Late.Gain * f[0];
-        out[i][1] += State->Late.Gain * f[1];
-        out[i][2] += State->Late.Gain * f[2];
-        out[i][3] += State->Late.Gain * f[3];
+        out[i][0] = State->Late.Gain * f[0];
+        out[i][1] = State->Late.Gain * f[1];
+        out[i][2] = State->Late.Gain * f[2];
+        out[i][3] = State->Late.Gain * f[3];
 
         // Re-feed the cyclical delay lines.
         DelayLineIn(&State->Late.Delay[0], offset, f[0]);
@@ -488,7 +482,7 @@ static inline ALvoid EAXEcho(ALreverbState *State, ALuint todo, ALfloat (*restri
 
 // Perform the non-EAX reverb pass on a given input sample, resulting in
 // four-channel output.
-static inline ALvoid VerbPass(ALreverbState *State, ALuint todo, const ALfloat *in, ALfloat (*restrict out)[4])
+static inline ALvoid VerbPass(ALreverbState *State, ALuint todo, const ALfloat *in, ALfloat (*restrict early)[4], ALfloat (*restrict late)[4])
 {
     ALuint i;
 
@@ -499,7 +493,7 @@ static inline ALvoid VerbPass(ALreverbState *State, ALuint todo, const ALfloat *
         );
 
     // Calculate the early reflection from the first delay tap.
-    EarlyReflection(State, todo, out);
+    EarlyReflection(State, todo, early);
 
     // Feed the decorrelator from the energy-attenuated output of the second
     // delay tap.
@@ -512,7 +506,7 @@ static inline ALvoid VerbPass(ALreverbState *State, ALuint todo, const ALfloat *
     }
 
     // Calculate the late reverb from the decorrelator taps.
-    LateReverb(State, todo, out);
+    LateReverb(State, todo, late);
 
     // Step all delays forward one sample.
     State->Offset += todo;
@@ -552,7 +546,6 @@ static inline ALvoid EAXVerbPass(ALreverbState *State, ALuint todo, const ALfloa
     }
 
     // Calculate the late reverb from the decorrelator taps.
-    memset(late, 0, sizeof(*late)*todo);
     LateReverb(State, todo, late);
 
     // Calculate and mix in any echo.
@@ -564,25 +557,34 @@ static inline ALvoid EAXVerbPass(ALreverbState *State, ALuint todo, const ALfloa
 
 static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
-    ALfloat (*restrict out)[4] = State->ReverbSamples;
+    ALfloat (*restrict early)[4] = State->EarlySamples;
+    ALfloat (*restrict late)[4] = State->ReverbSamples;
     ALuint index, c, i, l;
+    ALfloat gain;
 
     /* Process reverb for these samples. */
     for(index = 0;index < SamplesToDo;)
     {
         ALuint todo = minu(SamplesToDo-index, MAX_UPDATE_SAMPLES);
 
-        VerbPass(State, todo, &SamplesIn[index], out);
+        VerbPass(State, todo, &SamplesIn[index], early, late);
 
         for(l = 0;l < 4;l++)
         {
             for(c = 0;c < NumChannels;c++)
             {
-                ALfloat gain = State->Gain[l][c];
-                if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
-                    continue;
-                for(i = 0;i < todo;i++)
-                    SamplesOut[c][index+i] += gain*out[i][l];
+                gain = State->Early.PanGain[l][c];
+                if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
+                {
+                    for(i = 0;i < todo;i++)
+                        SamplesOut[c][index+i] += gain*early[i][l];
+                }
+                gain = State->Late.PanGain[l][c];
+                if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
+                {
+                    for(i = 0;i < todo;i++)
+                        SamplesOut[c][index+i] += gain*late[i][l];
+                }
             }
         }
 
@@ -1147,10 +1149,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
      * equals sqrt(1/4), a nice gain scaling for the four virtual points
      * producing an "ambient" response.
      */
-    gain[0] = 0.5f;
-    gain[1] = 0.5f;
-    gain[2] = 0.5f;
-    gain[3] = 0.5f;
+    gain[0] = gain[1] = gain[2] = gain[3] = 0.5f;
     length = sqrtf(ReflectionsPan[0]*ReflectionsPan[0] + ReflectionsPan[1]*ReflectionsPan[1] + ReflectionsPan[2]*ReflectionsPan[2]);
     if(length > 1.0f)
     {
@@ -1180,10 +1179,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
         ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain*gain[i], State->Early.PanGain[i]);
     }
 
-    gain[0] = 0.5f;
-    gain[1] = 0.5f;
-    gain[2] = 0.5f;
-    gain[3] = 0.5f;
+    gain[0] = gain[1] = gain[2] = gain[3] = 0.5f;
     length = sqrtf(LateReverbPan[0]*LateReverbPan[0] + LateReverbPan[1]*LateReverbPan[1] + LateReverbPan[2]*LateReverbPan[2]);
     if(length > 1.0f)
     {
@@ -1391,8 +1387,6 @@ static ALeffectState *ALreverbStateFactory_create(ALreverbStateFactory* UNUSED(f
     state->Echo.MixCoeff = 0.0f;
 
     state->Offset = 0;
-
-    state->Gain = state->Late.PanGain;
 
     return STATIC_CAST(ALeffectState, state);
 }

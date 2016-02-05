@@ -533,14 +533,13 @@ static ALvoid UpdateDelayLine(ALfloat earlyDelay, ALfloat lateDelay, ALuint freq
     State->DelayTap[1] = fastf2u((earlyDelay + lateDelay) * frequency);
 }
 
-// Update the early reflections gain and line coefficients.
-static ALvoid UpdateEarlyLines(ALfloat earlyGain, ALfloat lateDelay, ALreverbState *State)
+// Update the early reflections mix and line coefficients.
+static ALvoid UpdateEarlyLines(ALfloat lateDelay, ALreverbState *State)
 {
     ALuint index;
 
-    // Calculate the early reflections gain (from the master effect gain, and
-    // reflections gain parameters) with a constant attenuation of 0.5.
-    State->Early.Gain = 0.5f * earlyGain;
+    // Calculate the early reflections with a constant attenuation of 0.5.
+    State->Early.Gain = 0.5f;
 
     // Calculate the gain (coefficient) for each early delay line using the
     // late delay time.  This expands the early reflections to the start of
@@ -571,8 +570,8 @@ static ALvoid UpdateDecorrelator(ALfloat density, ALuint frequency, ALreverbStat
     }
 }
 
-// Update the late reverb gains, line lengths, and line coefficients.
-static ALvoid UpdateLateLines(ALfloat lateGain, ALfloat xMix, ALfloat density, ALfloat decayTime, ALfloat diffusion, ALfloat echoDepth, ALfloat hfRatio, ALfloat cw, ALuint frequency, ALreverbState *State)
+// Update the late reverb mix, line lengths, and line coefficients.
+static ALvoid UpdateLateLines(ALfloat xMix, ALfloat density, ALfloat decayTime, ALfloat diffusion, ALfloat echoDepth, ALfloat hfRatio, ALfloat cw, ALuint frequency, ALreverbState *State)
 {
     ALfloat length;
     ALuint index;
@@ -585,7 +584,7 @@ static ALvoid UpdateLateLines(ALfloat lateGain, ALfloat xMix, ALfloat density, A
      * echo is slightly stronger than the decorrelated echos in the reverb
      * tail.
      */
-    State->Late.Gain = lateGain * xMix * (1.0f - (echoDepth*0.5f*(1.0f - diffusion)));
+    State->Late.Gain = xMix * (1.0f - (echoDepth*0.5f*(1.0f - diffusion)));
 
     /* To compensate for changes in modal density and decay time of the late
      * reverb signal, the input is attenuated based on the maximal energy of
@@ -635,7 +634,7 @@ static ALvoid UpdateLateLines(ALfloat lateGain, ALfloat xMix, ALfloat density, A
 
 // Update the echo gain, line offset, line coefficients, and mixing
 // coefficients.
-static ALvoid UpdateEchoLine(ALfloat lateGain, ALfloat echoTime, ALfloat decayTime, ALfloat diffusion, ALfloat echoDepth, ALfloat hfRatio, ALfloat cw, ALuint frequency, ALreverbState *State)
+static ALvoid UpdateEchoLine(ALfloat echoTime, ALfloat decayTime, ALfloat diffusion, ALfloat echoDepth, ALfloat hfRatio, ALfloat cw, ALuint frequency, ALreverbState *State)
 {
     // Update the offset and coefficient for the echo delay line.
     State->Echo.Offset = fastf2u(echoTime * frequency);
@@ -660,11 +659,11 @@ static ALvoid UpdateEchoLine(ALfloat lateGain, ALfloat echoTime, ALfloat decayTi
     /* Calculate the echo mixing coefficient. This is applied to the output mix
      * only, not the feedback.
      */
-    State->Echo.MixCoeff = lateGain * echoDepth;
+    State->Echo.MixCoeff = echoDepth;
 }
 
 // Update the early and late 3D panning gains.
-static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, ALfloat Gain, ALreverbState *State)
+static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, ALfloat Gain, ALfloat EarlyGain, ALfloat LateGain, ALreverbState *State)
 {
     ALfloat AmbientGains[MAX_OUTPUT_CHANNELS];
     ALfloat DirGains[MAX_OUTPUT_CHANNELS];
@@ -682,7 +681,7 @@ static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *Reflec
         {
             if(Device->ChannelName[i] == LFE)
                 continue;
-            State->Early.PanGain[i&3][i] = AmbientGains[i];
+            State->Early.PanGain[i&3][i] = AmbientGains[i] * EarlyGain;
         }
     }
     else
@@ -704,7 +703,7 @@ static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *Reflec
         {
             if(Device->ChannelName[i] == LFE)
                 continue;
-            State->Early.PanGain[i&3][i] = lerp(AmbientGains[i], DirGains[i], length);
+            State->Early.PanGain[i&3][i] = lerp(AmbientGains[i], DirGains[i], length) * EarlyGain;
         }
     }
 
@@ -716,7 +715,7 @@ static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *Reflec
         {
             if(Device->ChannelName[i] == LFE)
                 continue;
-            State->Late.PanGain[i&3][i] = AmbientGains[i];
+            State->Late.PanGain[i&3][i] = AmbientGains[i] * LateGain;
         }
     }
     else
@@ -734,12 +733,12 @@ static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *Reflec
         {
             if(Device->ChannelName[i] == LFE)
                 continue;
-            State->Late.PanGain[i&3][i] = lerp(AmbientGains[i], DirGains[i], length);
+            State->Late.PanGain[i&3][i] = lerp(AmbientGains[i], DirGains[i], length) * LateGain;
         }
     }
 }
 
-static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, ALfloat Gain, ALreverbState *State)
+static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, ALfloat Gain, ALfloat EarlyGain, ALfloat LateGain, ALreverbState *State)
 {
     static const ALfloat PanDirs[4][3] = {
         { -0.707106781f, 0.0f, -0.707106781f }, /* Front left */
@@ -783,7 +782,8 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     for(i = 0;i < 4;i++)
     {
         CalcDirectionCoeffs(PanDirs[i], coeffs);
-        ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain*gain[i], State->Early.PanGain[i]);
+        ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs,
+                            Gain*EarlyGain*gain[i], State->Early.PanGain[i]);
     }
 
     gain[0] = gain[1] = gain[2] = gain[3] = 0.5f;
@@ -814,7 +814,8 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     for(i = 0;i < 4;i++)
     {
         CalcDirectionCoeffs(PanDirs[i], coeffs);
-        ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain*gain[i], State->Late.PanGain[i]);
+        ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs,
+                            Gain*LateGain*gain[i], State->Late.PanGain[i]);
     }
 }
 
@@ -850,8 +851,7 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
                     frequency, State);
 
     // Update the early lines.
-    UpdateEarlyLines(props->Reverb.ReflectionsGain,
-                     props->Reverb.LateReverbDelay, State);
+    UpdateEarlyLines(props->Reverb.LateReverbDelay, State);
 
     // Update the decorrelator.
     UpdateDecorrelator(props->Reverb.Density, frequency, State);
@@ -870,14 +870,12 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
 
     cw = cosf(F_TAU * hfscale);
     // Update the late lines.
-    UpdateLateLines(props->Reverb.LateReverbGain, x,
-                    props->Reverb.Density, props->Reverb.DecayTime,
+    UpdateLateLines(x, props->Reverb.Density, props->Reverb.DecayTime,
                     props->Reverb.Diffusion, props->Reverb.EchoDepth,
                     hfRatio, cw, frequency, State);
 
     // Update the echo line.
-    UpdateEchoLine(props->Reverb.LateReverbGain,
-                   props->Reverb.EchoTime, props->Reverb.DecayTime,
+    UpdateEchoLine(props->Reverb.EchoTime, props->Reverb.DecayTime,
                    props->Reverb.Diffusion, props->Reverb.EchoDepth,
                    hfRatio, cw, frequency, State);
 
@@ -885,10 +883,14 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
     // Update early and late 3D panning.
     if(Device->Hrtf || Device->FmtChans == DevFmtBFormat3D)
         Update3DPanning(Device, props->Reverb.ReflectionsPan,
-                        props->Reverb.LateReverbPan, gain, State);
+                        props->Reverb.LateReverbPan, gain,
+                        props->Reverb.ReflectionsGain,
+                        props->Reverb.LateReverbGain, State);
     else
         UpdateDirectPanning(Device, props->Reverb.ReflectionsPan,
-                            props->Reverb.LateReverbPan, gain, State);
+                            props->Reverb.LateReverbPan, gain,
+                            props->Reverb.ReflectionsGain,
+                            props->Reverb.LateReverbGain, State);
 }
 
 

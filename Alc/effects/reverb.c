@@ -48,6 +48,7 @@ typedef struct ALreverbState {
     DERIVE_FROM_TYPE(ALeffectState);
 
     ALboolean IsEax;
+    ALuint ExtraChannels; // For HRTF
 
     // All delay lines are allocated as a single buffer to reduce memory
     // fragmentation and management code.
@@ -363,6 +364,8 @@ static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Dev
     if(!AllocLines(frequency, State))
         return AL_FALSE;
 
+    State->ExtraChannels = (Device->Hrtf ? 2 : 0);
+
     // Calculate the modulation filter coefficient.  Notice that the exponent
     // is calculated given the current sample rate.  This ensures that the
     // resulting filter response over time is consistent across all sample
@@ -656,6 +659,70 @@ static ALvoid UpdateEchoLine(ALfloat echoTime, ALfloat decayTime, ALfloat diffus
 }
 
 // Update the early and late 3D panning gains.
+static ALvoid UpdateHrtfPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, ALfloat Gain, ALfloat EarlyGain, ALfloat LateGain, ALreverbState *State)
+{
+    ALfloat DirGains[MAX_OUTPUT_CHANNELS];
+    ALfloat coeffs[MAX_AMBI_COEFFS];
+    ALfloat length;
+    ALuint i;
+
+    /* With HRTF, the normal output provides a panned reverb channel when a
+     * non-0-length vector is specified, while the real stereo output provides
+     * two other "direct" non-panned reverb channels.
+     */
+    memset(State->Early.PanGain, 0, sizeof(State->Early.PanGain));
+    length = sqrtf(ReflectionsPan[0]*ReflectionsPan[0] + ReflectionsPan[1]*ReflectionsPan[1] + ReflectionsPan[2]*ReflectionsPan[2]);
+    if(!(length > FLT_EPSILON))
+    {
+        for(i = 0;i < 2;i++)
+            State->Early.PanGain[i&3][Device->NumChannels+i] = Gain * EarlyGain;
+    }
+    else
+    {
+        /* Note that EAX Reverb's panning vectors are using right-handed
+         * coordinates, rather that the OpenAL's left-handed coordinates.
+         * Negate Z to fix this.
+         */
+        ALfloat pan[3] = {
+             ReflectionsPan[0] / length,
+             ReflectionsPan[1] / length,
+            -ReflectionsPan[2] / length,
+        };
+        length = minf(length, 1.0f);
+
+        CalcDirectionCoeffs(pan, coeffs);
+        ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain, DirGains);
+        for(i = 0;i < Device->NumChannels;i++)
+            State->Early.PanGain[3][i] = DirGains[i] * EarlyGain * length;
+        for(i = 0;i < 2;i++)
+            State->Early.PanGain[i&3][Device->NumChannels+i] = Gain * EarlyGain * (1.0f-length);
+    }
+
+    memset(State->Late.PanGain, 0, sizeof(State->Late.PanGain));
+    length = sqrtf(LateReverbPan[0]*LateReverbPan[0] + LateReverbPan[1]*LateReverbPan[1] + LateReverbPan[2]*LateReverbPan[2]);
+    if(!(length > FLT_EPSILON))
+    {
+        for(i = 0;i < 2;i++)
+            State->Late.PanGain[i&3][Device->NumChannels+i] = Gain * LateGain;
+    }
+    else
+    {
+        ALfloat pan[3] = {
+             LateReverbPan[0] / length,
+             LateReverbPan[1] / length,
+            -LateReverbPan[2] / length,
+        };
+        length = minf(length, 1.0f);
+
+        CalcDirectionCoeffs(pan, coeffs);
+        ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain, DirGains);
+        for(i = 0;i < Device->NumChannels;i++)
+            State->Late.PanGain[3][i] = DirGains[i] * LateGain * length;
+        for(i = 0;i < 2;i++)
+            State->Late.PanGain[i&3][Device->NumChannels+i] = Gain * LateGain * (1.0f-length);
+    }
+}
+
 static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, ALfloat Gain, ALfloat EarlyGain, ALfloat LateGain, ALreverbState *State)
 {
     ALfloat AmbientGains[MAX_OUTPUT_CHANNELS];
@@ -859,7 +926,12 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
 
     gain = props->Reverb.Gain * Slot->Gain * ReverbBoost;
     // Update early and late 3D panning.
-    if(Device->Hrtf || Device->FmtChans == DevFmtBFormat3D)
+    if(Device->Hrtf)
+        UpdateHrtfPanning(Device, props->Reverb.ReflectionsPan,
+                          props->Reverb.LateReverbPan, gain,
+                          props->Reverb.ReflectionsGain,
+                          props->Reverb.LateReverbGain, State);
+    else if(Device->FmtChans == DevFmtBFormat3D)
         Update3DPanning(Device, props->Reverb.ReflectionsPan,
                         props->Reverb.LateReverbPan, gain,
                         props->Reverb.ReflectionsGain,
@@ -1280,6 +1352,7 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo,
 
 static ALvoid ALreverbState_process(ALreverbState *State, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
+    NumChannels += State->ExtraChannels;
     if(State->IsEax)
         ALreverbState_processEax(State, SamplesToDo, SamplesIn[0], SamplesOut, NumChannels);
     else
@@ -1299,6 +1372,9 @@ static ALeffectState *ALreverbStateFactory_create(ALreverbStateFactory* UNUSED(f
     state = ALreverbState_New(sizeof(*state));
     if(!state) return NULL;
     SET_VTABLE2(ALreverbState, ALeffectState, state);
+
+    state->IsEax = AL_FALSE;
+    state->ExtraChannels = 0;
 
     state->TotalSamples = 0;
     state->SampleBuffer = NULL;

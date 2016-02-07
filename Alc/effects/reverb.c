@@ -665,8 +665,7 @@ static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *Reflec
     ALuint i;
 
     /* Apply a boost of about 3dB to better match the expected stereo output volume. */
-    Gain *= 1.414213562f;
-    ComputeAmbientGains(Device->AmbiCoeffs, Device->NumChannels, Gain, AmbientGains);
+    ComputeAmbientGains(Device->AmbiCoeffs, Device->NumChannels, Gain*1.414213562f, AmbientGains);
 
     memset(State->Early.PanGain, 0, sizeof(State->Early.PanGain));
     length = sqrtf(ReflectionsPan[0]*ReflectionsPan[0] + ReflectionsPan[1]*ReflectionsPan[1] + ReflectionsPan[2]*ReflectionsPan[2]);

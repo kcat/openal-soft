@@ -357,7 +357,7 @@ static ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *de
     }
 
     hr = DS_OK;
-    self->NotifyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+    self->NotifyEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
     if(self->NotifyEvent == NULL)
         hr = E_FAIL;
 

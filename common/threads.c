@@ -306,8 +306,8 @@ int alcnd_init(alcnd_t *cond)
 
     InitRef(&icond->wait_count, 0);
 
-    icond->events[SIGNAL] = CreateEvent(NULL, FALSE, FALSE, NULL);
-    icond->events[BROADCAST] = CreateEvent(NULL, TRUE, FALSE, NULL);
+    icond->events[SIGNAL] = CreateEventW(NULL, FALSE, FALSE, NULL);
+    icond->events[BROADCAST] = CreateEventW(NULL, TRUE, FALSE, NULL);
     if(!icond->events[SIGNAL] || !icond->events[BROADCAST])
     {
         if(icond->events[SIGNAL])

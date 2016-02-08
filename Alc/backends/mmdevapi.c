@@ -672,8 +672,8 @@ static ALCenum ALCmmdevPlayback_open(ALCmmdevPlayback *self, const ALCchar *devi
 {
     HRESULT hr = S_OK;
 
-    self->NotifyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    self->MsgEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+    self->NotifyEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
+    self->MsgEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
     if(self->NotifyEvent == NULL || self->MsgEvent == NULL)
     {
         ERR("Failed to create message events: %lu\n", GetLastError());
@@ -1308,8 +1308,8 @@ static ALCenum ALCmmdevCapture_open(ALCmmdevCapture *self, const ALCchar *device
 {
     HRESULT hr = S_OK;
 
-    self->NotifyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    self->MsgEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+    self->NotifyEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
+    self->MsgEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
     if(self->NotifyEvent == NULL || self->MsgEvent == NULL)
     {
         ERR("Failed to create message events: %lu\n", GetLastError());
@@ -1739,7 +1739,7 @@ static BOOL MMDevApiLoad(void)
         ThreadRequest req;
         InitResult = E_FAIL;
 
-        req.FinishedEvt = CreateEvent(NULL, FALSE, FALSE, NULL);
+        req.FinishedEvt = CreateEventW(NULL, FALSE, FALSE, NULL);
         if(req.FinishedEvt == NULL)
             ERR("Failed to create event: %lu\n", GetLastError());
         else
@@ -1796,7 +1796,7 @@ static void ALCmmdevBackendFactory_probe(ALCmmdevBackendFactory* UNUSED(self), e
 {
     ThreadRequest req = { NULL, 0 };
 
-    req.FinishedEvt = CreateEvent(NULL, FALSE, FALSE, NULL);
+    req.FinishedEvt = CreateEventW(NULL, FALSE, FALSE, NULL);
     if(req.FinishedEvt == NULL)
         ERR("Failed to create event: %lu\n", GetLastError());
     else

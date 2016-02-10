@@ -319,15 +319,13 @@ ALuint GetMovingHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat a
  * Note that these will decode a B-Format output mix, which uses FuMa ordering
  * and scaling, not N3D!
  */
-void GetBFormatHrtfCoeffs(const struct Hrtf *Hrtf, const ALuint num_chans, ALfloat (**coeffs_list)[2], ALuint **delay_list)
+void GetBFormatHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat (*coeffs_list[4])[2], ALuint *delay_list[4])
 {
     ALuint elev_idx, azi_idx;
     ALfloat scale;
     ALuint i, c;
 
-    assert(num_chans <= 4);
-
-    for(c = 0;c < num_chans;c++)
+    for(c = 0;c < 4;c++)
     {
         ALfloat (*coeffs)[2] = coeffs_list[c];
         ALuint *delay = delay_list[c];
@@ -377,7 +375,7 @@ void GetBFormatHrtfCoeffs(const struct Hrtf *Hrtf, const ALuint num_chans, ALflo
             ambi_coeffs[2] = y;
             ambi_coeffs[3] = z;
 
-            for(c = 0;c < num_chans;c++)
+            for(c = 0;c < 4;c++)
             {
                 ALfloat (*coeffs)[2] = coeffs_list[c];
                 ALuint *delay = delay_list[c];
@@ -402,7 +400,7 @@ void GetBFormatHrtfCoeffs(const struct Hrtf *Hrtf, const ALuint num_chans, ALflo
 
     scale = 1.0f/scale;
 
-    for(c = 0;c < num_chans;c++)
+    for(c = 0;c < 4;c++)
     {
         ALfloat (*coeffs)[2] = coeffs_list[c];
         ALuint *delay = delay_list[c];

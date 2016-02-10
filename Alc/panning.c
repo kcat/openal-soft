@@ -505,7 +505,7 @@ ALvoid aluInitPanning(ALCdevice *device)
             coeffs_list[i] = device->Hrtf_Params[chan].Coeffs;
             delay_list[i] = device->Hrtf_Params[chan].Delay;
         }
-        GetBFormatHrtfCoeffs(device->Hrtf, 4, coeffs_list, delay_list);
+        GetBFormatHrtfCoeffs(device->Hrtf, coeffs_list, delay_list);
 
         return;
     }

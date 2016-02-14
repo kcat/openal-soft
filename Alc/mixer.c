@@ -618,7 +618,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     {
                         ALfloat coeffdiff;
                         ALint delaydiff;
-                        for(j = 0;j < HRIR_LENGTH;j++)
+                        for(j = 0;j < IrSize;j++)
                         {
                             coeffdiff = parms->Hrtf[chan].Target.Coeffs[j][0] - parms->Hrtf[chan].Current.Coeffs[j][0];
                             hrtfparams.Steps.Coeffs[j][0] = coeffdiff * Delta;

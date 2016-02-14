@@ -2155,14 +2155,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         {
             ALvoice *voice = &context->Voices[pos];
             ALsource *source = voice->Source;
-            ALuint s = device->NumAuxSends;
-
-            while(s < MAX_SENDS)
-            {
-                voice->Send[s].Moving = AL_FALSE;
-                voice->Send[s].Counter = 0;
-                s++;
-            }
 
             if(source)
             {

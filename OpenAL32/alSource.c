@@ -2640,8 +2640,8 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         if(discontinuity)
             memset(voice->PrevSamples, 0, sizeof(voice->PrevSamples));
 
-        voice->Direct.Moving  = AL_FALSE;
-        voice->Direct.Counter = 0;
+        voice->Moving = AL_FALSE;
+        voice->Direct.HrtfCounter = 0;
         for(i = 0;i < MAX_INPUT_CHANNELS;i++)
         {
             ALsizei j;
@@ -2652,11 +2652,6 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
                 voice->Direct.Hrtf[i].State.Values[j][0] = 0.0f;
                 voice->Direct.Hrtf[i].State.Values[j][1] = 0.0f;
             }
-        }
-        for(i = 0;i < (ALsizei)device->NumAuxSends;i++)
-        {
-            voice->Send[i].Moving  = AL_FALSE;
-            voice->Send[i].Counter = 0;
         }
 
         if(BufferList->buffer->FmtChannels == FmtMono)

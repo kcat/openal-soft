@@ -323,85 +323,6 @@ static ALfloat CalcFadeTime(ALfloat oldGain, ALfloat newGain, const aluVector *o
 }
 
 
-static void UpdateDryStepping(DirectParams *params, ALuint num_chans, ALuint steps)
-{
-    ALfloat delta;
-    ALuint i, j;
-
-    if(steps < 2)
-    {
-        for(i = 0;i < num_chans;i++)
-        {
-            MixGains *gains = params->Gains[i];
-            for(j = 0;j < params->OutChannels;j++)
-            {
-                gains[j].Current = gains[j].Target;
-                gains[j].Step = 0.0f;
-            }
-        }
-        params->Counter = 0;
-        return;
-    }
-
-    delta = 1.0f / (ALfloat)steps;
-    for(i = 0;i < num_chans;i++)
-    {
-        MixGains *gains = params->Gains[i];
-        for(j = 0;j < params->OutChannels;j++)
-        {
-            ALfloat diff = gains[j].Target - gains[j].Current;
-            if(fabsf(diff) >= GAIN_SILENCE_THRESHOLD)
-                gains[j].Step = diff * delta;
-            else
-            {
-                gains[j].Current = gains[j].Target;
-                gains[j].Step = 0.0f;
-            }
-        }
-    }
-    params->Counter = steps;
-}
-
-static void UpdateWetStepping(SendParams *params, ALuint num_chans, ALuint steps)
-{
-    ALfloat delta;
-    ALuint i, j;
-
-    if(steps < 2)
-    {
-        for(i = 0;i < num_chans;i++)
-        {
-            MixGains *gains = params->Gains[i];
-            for(j = 0;j < params->OutChannels;j++)
-            {
-                gains[j].Current = gains[j].Target;
-                gains[j].Step = 0.0f;
-            }
-        }
-        params->Counter = 0;
-        return;
-    }
-
-    delta = 1.0f / (ALfloat)steps;
-    for(i = 0;i < num_chans;i++)
-    {
-        MixGains *gains = params->Gains[i];
-        for(j = 0;j < params->OutChannels;j++)
-        {
-            ALfloat diff = gains[j].Target - gains[j].Current;
-            if(fabsf(diff) >= GAIN_SILENCE_THRESHOLD)
-                gains[j].Step = diff * delta;
-            else
-            {
-                gains[j].Current = gains[j].Target;
-                gains[j].Step = 0.0f;
-            }
-        }
-    }
-    params->Counter = steps;
-}
-
-
 static ALvoid CalcListenerParams(ALlistener *Listener)
 {
     ALdouble N[3], V[3], U[3], P[3];
@@ -659,16 +580,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         );
 
         for(c = 0;c < num_channels;c++)
-        {
-            MixGains *gains = voice->Direct.Gains[c];
-            ALfloat Target[MAX_OUTPUT_CHANNELS];
-
-            ComputeFirstOrderGains(Device->AmbiCoeffs, Device->NumChannels, matrix.m[c], DryGain, Target);
-            for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-                gains[i].Target = Target[i];
-        }
-        UpdateDryStepping(&voice->Direct, num_channels, (voice->Direct.Moving ? 64 : 0));
-        voice->Direct.Moving = AL_TRUE;
+            ComputeFirstOrderGains(Device->AmbiCoeffs, Device->NumChannels, matrix.m[c], DryGain,
+                                   voice->Direct.Gains[c].Target);
 
         /* Rebuild the matrix, without the second- or third-order output
          * scaling (effects take first-order content, and will do the scaling
@@ -684,9 +597,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
             {
                 for(c = 0;c < num_channels;c++)
                 {
-                    MixGains *gains = voice->Send[i].Gains[c];
                     for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                        gains[j].Target = 0.0f;
+                        voice->Send[i].Gains[c].Target[j] = 0.0f;
                 }
             }
             else
@@ -694,24 +606,18 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                 for(c = 0;c < num_channels;c++)
                 {
                     const ALeffectslot *Slot = SendSlots[i];
-                    MixGains *gains = voice->Send[i].Gains[c];
-                    ALfloat Target[MAX_OUTPUT_CHANNELS];
-                    ALuint j;
-
-                    ComputeFirstOrderGains(Slot->AmbiCoeffs, Slot->NumChannels,
-                                           matrix.m[c], WetGain[i], Target);
-                    for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                        gains[j].Target = Target[j];
+                    ComputeFirstOrderGains(Slot->AmbiCoeffs, Slot->NumChannels, matrix.m[c],
+                                           WetGain[i], voice->Send[i].Gains[c].Target);
                 }
             }
-            UpdateWetStepping(&voice->Send[i], num_channels, (voice->Send[i].Moving ? 64 : 0));
-            voice->Send[i].Moving = AL_TRUE;
         }
 
         voice->IsHrtf = AL_FALSE;
     }
     else
     {
+        ALfloat coeffs[MAX_AMBI_COEFFS];
+
         if(DirectChannels)
         {
             if(Device->Hrtf)
@@ -724,63 +630,44 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                 voice->Direct.OutChannels = 2;
                 for(c = 0;c < num_channels;c++)
                 {
-                    MixGains *gains = voice->Direct.Gains[c];
                     for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
-                        gains[j].Target = 0.0f;
+                        voice->Direct.Gains[c].Target[j] = 0.0f;
 
                     if(chans[c].channel == FrontLeft)
-                        gains[0].Target = DryGain;
+                        voice->Direct.Gains[c].Target[0] = DryGain;
                     else if(chans[c].channel == FrontRight)
-                        gains[1].Target = DryGain;
+                        voice->Direct.Gains[c].Target[1] = DryGain;
                 }
             }
             else for(c = 0;c < num_channels;c++)
             {
-                MixGains *gains = voice->Direct.Gains[c];
                 int idx;
-
                 for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
-                    gains[j].Target = 0.0f;
+                    voice->Direct.Gains[c].Target[j] = 0.0f;
                 if((idx=GetChannelIdxByName(Device, chans[c].channel)) != -1)
-                    gains[idx].Target = DryGain;
+                    voice->Direct.Gains[c].Target[idx] = DryGain;
             }
 
             /* Auxiliary sends still use normal panning since they mix to B-Format, which can't
              * channel-match. */
             for(c = 0;c < num_channels;c++)
             {
-                ALfloat coeffs[MAX_AMBI_COEFFS];
-
                 CalcAngleCoeffs(chans[c].angle, chans[c].elevation, coeffs);
 
                 for(i = 0;i < NumSends;i++)
                 {
-                    MixGains *gains = voice->Send[i].Gains[c];
                     if(!SendSlots[i])
                     {
                         for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                            gains[j].Target = 0.0f;
+                            voice->Send[i].Gains[c].Target[j] = 0.0f;
                     }
                     else
                     {
                         const ALeffectslot *Slot = SendSlots[i];
-                        ALfloat Target[MAX_OUTPUT_CHANNELS];
-                        ALuint j;
-
-                        ComputePanningGains(Slot->AmbiCoeffs, Slot->NumChannels,
-                                            coeffs, WetGain[i], Target);
-                        for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                            gains[j].Target = Target[j];
+                        ComputePanningGains(Slot->AmbiCoeffs, Slot->NumChannels, coeffs,
+                                            WetGain[i], voice->Send[i].Gains[c].Target);
                     }
                 }
-            }
-
-            UpdateDryStepping(&voice->Direct, num_channels, (voice->Direct.Moving ? 64 : 0));
-            voice->Direct.Moving = AL_TRUE;
-            for(i = 0;i < NumSends;i++)
-            {
-                UpdateWetStepping(&voice->Send[i], num_channels, (voice->Send[i].Moving ? 64 : 0));
-                voice->Send[i].Moving = AL_TRUE;
             }
 
             voice->IsHrtf = AL_FALSE;
@@ -804,54 +691,42 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                         voice->Direct.Hrtf[c].Params.Coeffs[i][0] = 0.0f;
                         voice->Direct.Hrtf[c].Params.Coeffs[i][1] = 0.0f;
                     }
-                }
-                else
-                {
-                    /* Get the static HRIR coefficients and delays for this
-                     * channel. */
-                    GetLerpedHrtfCoeffs(Device->Hrtf,
-                        chans[c].elevation, chans[c].angle, 1.0f, DryGain,
-                        voice->Direct.Hrtf[c].Params.Coeffs,
-                        voice->Direct.Hrtf[c].Params.Delay
-                    );
-                }
-            }
-            voice->Direct.Counter = 0;
-            voice->Direct.Moving  = AL_TRUE;
 
-            /* Normal panning for auxiliary sends. */
-            for(c = 0;c < num_channels;c++)
-            {
-                ALfloat coeffs[MAX_AMBI_COEFFS];
+                    for(i = 0;i < NumSends;i++)
+                    {
+                        for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
+                            voice->Send[i].Gains[c].Target[j] = 0.0f;
+                    }
 
+                    continue;
+                }
+
+                /* Get the static HRIR coefficients and delays for this channel. */
+                GetLerpedHrtfCoeffs(Device->Hrtf,
+                    chans[c].elevation, chans[c].angle, 1.0f, DryGain,
+                    voice->Direct.Hrtf[c].Params.Coeffs,
+                    voice->Direct.Hrtf[c].Params.Delay
+                );
+
+                /* Normal panning for auxiliary sends. */
                 CalcAngleCoeffs(chans[c].angle, chans[c].elevation, coeffs);
 
                 for(i = 0;i < NumSends;i++)
                 {
-                    MixGains *gains = voice->Send[i].Gains[c];
                     if(!SendSlots[i])
                     {
                         for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                            gains[j].Target = 0.0f;
+                            voice->Send[i].Gains[c].Target[j] = 0.0f;
                     }
                     else
                     {
                         const ALeffectslot *Slot = SendSlots[i];
-                        ALfloat Target[MAX_OUTPUT_CHANNELS];
-                        ALuint j;
-
-                        ComputePanningGains(Slot->AmbiCoeffs, Slot->NumChannels,
-                                            coeffs, WetGain[i], Target);
-                        for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                            gains[j].Target = Target[j];
+                        ComputePanningGains(Slot->AmbiCoeffs, Slot->NumChannels, coeffs,
+                                            WetGain[i], voice->Send[i].Gains[c].Target);
                     }
                 }
             }
-            for(i = 0;i < NumSends;i++)
-            {
-                UpdateWetStepping(&voice->Send[i], num_channels, (voice->Send[i].Moving ? 64 : 0));
-                voice->Send[i].Moving = AL_TRUE;
-            }
+            voice->Direct.HrtfCounter = 0;
 
             voice->IsHrtf = AL_TRUE;
         }
@@ -860,62 +735,43 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
             /* Basic or no HRTF rendering. Use normal panning to the output. */
             for(c = 0;c < num_channels;c++)
             {
-                MixGains *gains = voice->Direct.Gains[c];
-                ALfloat Target[MAX_OUTPUT_CHANNELS];
-                ALfloat coeffs[MAX_AMBI_COEFFS];
-
                 /* Special-case LFE */
                 if(chans[c].channel == LFE)
                 {
                     int idx;
-                    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-                        gains[i].Target = 0.0f;
+                    for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
+                        voice->Direct.Gains[c].Target[j] = 0.0f;
                     if((idx=GetChannelIdxByName(Device, chans[c].channel)) != -1)
-                        gains[idx].Target = DryGain;
+                        voice->Direct.Gains[c].Target[idx] = DryGain;
 
                     for(i = 0;i < NumSends;i++)
                     {
-                        MixGains *gains = voice->Send[i].Gains[c];
                         ALuint j;
                         for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                            gains[j].Target = 0.0f;
+                            voice->Send[i].Gains[c].Target[j] = 0.0f;
                     }
                     continue;
                 }
 
                 CalcAngleCoeffs(chans[c].angle, chans[c].elevation, coeffs);
 
-                ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, DryGain, Target);
-                for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-                    gains[i].Target = Target[i];
+                ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, DryGain, voice->Direct.Gains[c].Target);
 
                 for(i = 0;i < NumSends;i++)
                 {
-                    MixGains *gains = voice->Send[i].Gains[c];
-                    ALuint j;
-
                     if(!SendSlots[i])
                     {
+                        ALuint j;
                         for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                            gains[j].Target = 0.0f;
+                            voice->Send[i].Gains[c].Target[j] = 0.0f;
                     }
                     else
                     {
                         const ALeffectslot *Slot = SendSlots[i];
-                        ComputePanningGains(Slot->AmbiCoeffs, Slot->NumChannels,
-                                            coeffs, WetGain[i], Target);
-                        for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                            gains[j].Target = Target[j];
+                        ComputePanningGains(Slot->AmbiCoeffs, Slot->NumChannels, coeffs,
+                                            WetGain[i], voice->Send[i].Gains[c].Target);
                     }
                 }
-            }
-
-            UpdateDryStepping(&voice->Direct, num_channels, (voice->Direct.Moving ? 64 : 0));
-            voice->Direct.Moving = AL_TRUE;
-            for(i = 0;i < NumSends;i++)
-            {
-                UpdateWetStepping(&voice->Send[i], num_channels, (voice->Send[i].Moving ? 64 : 0));
-                voice->Send[i].Moving = AL_TRUE;
             }
 
             voice->IsHrtf = AL_FALSE;
@@ -995,7 +851,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     ALfloat Pitch;
     ALuint Frequency;
     ALint NumSends;
-    ALint i, j;
+    ALint i;
 
     DryGainHF = 1.0f;
     DryGainLF = 1.0f;
@@ -1304,7 +1160,6 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         ALfloat ev = 0.0f, az = 0.0f;
         ALfloat radius = ALSource->Radius;
         ALfloat dirfact = 1.0f;
-        ALfloat Target[MAX_OUTPUT_CHANNELS];
         ALfloat coeffs[MAX_AMBI_COEFFS];
 
         voice->Direct.OutBuffer += voice->Direct.OutChannels;
@@ -1332,7 +1187,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         }
 
         /* Check to see if the HRIR is already moving. */
-        if(voice->Direct.Moving)
+        if(voice->Moving)
         {
             ALfloat delta;
             delta = CalcFadeTime(voice->Direct.LastGain, DryGain,
@@ -1343,11 +1198,11 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             if(delta > 0.000015f)
             {
                 ALuint counter = GetMovingHrtfCoeffs(Device->Hrtf,
-                    ev, az, dirfact, DryGain, delta, voice->Direct.Counter,
+                    ev, az, dirfact, DryGain, delta, voice->Direct.HrtfCounter,
                     voice->Direct.Hrtf[0].Params.Coeffs, voice->Direct.Hrtf[0].Params.Delay,
                     voice->Direct.Hrtf[0].Params.CoeffStep, voice->Direct.Hrtf[0].Params.DelayStep
                 );
-                voice->Direct.Counter = counter;
+                voice->Direct.HrtfCounter = counter;
                 voice->Direct.LastGain = DryGain;
                 voice->Direct.LastDir = dir;
             }
@@ -1358,8 +1213,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             GetLerpedHrtfCoeffs(Device->Hrtf, ev, az, dirfact, DryGain,
                                 voice->Direct.Hrtf[0].Params.Coeffs,
                                 voice->Direct.Hrtf[0].Params.Delay);
-            voice->Direct.Counter = 0;
-            voice->Direct.Moving  = AL_TRUE;
+            voice->Direct.HrtfCounter = 0;
             voice->Direct.LastGain = DryGain;
             voice->Direct.LastDir = dir;
         }
@@ -1371,25 +1225,18 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
 
         for(i = 0;i < NumSends;i++)
         {
-            MixGains *gains = voice->Send[i].Gains[0];
-            ALuint j;
-
             if(!SendSlots[i])
             {
+                ALuint j;
                 for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                    gains[j].Target = 0.0f;
+                    voice->Send[i].Gains[0].Target[j] = 0.0f;
             }
             else
             {
                 const ALeffectslot *Slot = SendSlots[i];
-                ComputePanningGains(Slot->AmbiCoeffs, Slot->NumChannels,
-                                    coeffs, WetGain[i], Target);
-                for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                    gains[j].Target = Target[j];
+                ComputePanningGains(Slot->AmbiCoeffs, Slot->NumChannels, coeffs,
+                                    WetGain[i], voice->Send[i].Gains[0].Target);
             }
-
-            UpdateWetStepping(&voice->Send[i], 1, (voice->Send[i].Moving ? 64 : 0));
-            voice->Send[i].Moving = AL_TRUE;
         }
 
         voice->IsHrtf = AL_TRUE;
@@ -1397,10 +1244,8 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     else
     {
         /* Basic or no HRTF rendering. Use normal panning to the output. */
-        MixGains *gains = voice->Direct.Gains[0];
         ALfloat dir[3] = { 0.0f, 0.0f, -1.0f };
         ALfloat radius = ALSource->Radius;
-        ALfloat Target[MAX_OUTPUT_CHANNELS];
         ALfloat coeffs[MAX_AMBI_COEFFS];
 
         /* Get the localized direction, and compute panned gains. */
@@ -1423,34 +1268,23 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         }
         CalcDirectionCoeffs(dir, coeffs);
 
-        ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, DryGain, Target);
-        for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
-            gains[j].Target = Target[j];
-
-        UpdateDryStepping(&voice->Direct, 1, (voice->Direct.Moving ? 64 : 0));
-        voice->Direct.Moving = AL_TRUE;
+        ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, DryGain,
+                            voice->Direct.Gains[0].Target);
 
         for(i = 0;i < NumSends;i++)
         {
-            MixGains *gains = voice->Send[i].Gains[0];
-            ALuint j;
-
             if(!SendSlots[i])
             {
+                ALuint j;
                 for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                    gains[j].Target = 0.0f;
+                    voice->Send[i].Gains[0].Target[j] = 0.0f;
             }
             else
             {
                 const ALeffectslot *Slot = SendSlots[i];
-                ComputePanningGains(Slot->AmbiCoeffs, Slot->NumChannels,
-                                    coeffs, WetGain[i], Target);
-                for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                    gains[j].Target = Target[j];
+                ComputePanningGains(Slot->AmbiCoeffs, Slot->NumChannels, coeffs,
+                                    WetGain[i], voice->Send[i].Gains[0].Target);
             }
-
-            UpdateWetStepping(&voice->Send[i], 1, (voice->Send[i].Moving ? 64 : 0));
-            voice->Send[i].Moving = AL_TRUE;
         }
 
         voice->IsHrtf = AL_FALSE;

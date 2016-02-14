@@ -30,6 +30,9 @@ typedef struct ALvoice {
     /** Current target parameters used for mixing. */
     ALint Step;
 
+    /* If not 'moving', gain/coefficients are set directly without fading. */
+    ALboolean Moving;
+
     ALboolean IsHrtf;
 
     ALuint Offset; /* Number of output samples mixed since starting. */

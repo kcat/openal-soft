@@ -404,9 +404,7 @@ typedef struct HrtfState {
 
 typedef struct HrtfParams {
     alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
-    alignas(16) ALfloat CoeffStep[HRIR_LENGTH][2];
     ALuint Delay[2];
-    ALint DelayStep[2];
 } HrtfParams;
 
 

@@ -9,25 +9,6 @@
 #include "hrtf.h"
 
 
-static inline void SetupCoeffs(ALfloat (*restrict OutCoeffs)[2],
-                               const HrtfParams *hrtfparams,
-                               ALuint IrSize, ALuint Counter)
-{
-    ALuint c;
-    float32x4_t counter4;
-    {
-        float32x2_t counter2 = vdup_n_f32(-(float)Counter);
-        counter4 = vcombine_f32(counter2, counter2);
-    }
-    for(c = 0;c < IrSize;c += 2)
-    {
-        float32x4_t step4 = vld1q_f32((float32_t*)hrtfparams->CoeffStep[c]);
-        float32x4_t coeffs = vld1q_f32((float32_t*)hrtfparams->Coeffs[c]);
-        coeffs = vmlaq_f32(coeffs, step4, counter4);
-        vst1q_f32((float32_t*)OutCoeffs[c], coeffs);
-    }
-}
-
 static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
                                    const ALuint IrSize,
                                    ALfloat (*restrict Coeffs)[2],

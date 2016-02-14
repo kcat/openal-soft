@@ -601,9 +601,42 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                         currents[j] = gains[j].Current;
                 }
                 else
-                    MixHrtfSamples(parms->OutBuffer, samples, parms->HrtfCounter, voice->Offset,
-                                   OutPos, IrSize, &parms->Hrtf[chan].Params,
-                                   &parms->Hrtf[chan].State, DstBufferSize);
+                {
+                    MixHrtfParams hrtfparams;
+                    if(!Counter)
+                    {
+                        parms->Hrtf[chan].Current = parms->Hrtf[chan].Target;
+                        for(j = 0;j < HRIR_LENGTH;j++)
+                        {
+                            hrtfparams.Steps.Coeffs[j][0] = 0.0f;
+                            hrtfparams.Steps.Coeffs[j][1] = 0.0f;
+                        }
+                        hrtfparams.Steps.Delay[0] = 0;
+                        hrtfparams.Steps.Delay[1] = 0;
+                    }
+                    else
+                    {
+                        ALfloat coeffdiff;
+                        ALint delaydiff;
+                        for(j = 0;j < HRIR_LENGTH;j++)
+                        {
+                            coeffdiff = parms->Hrtf[chan].Target.Coeffs[j][0] - parms->Hrtf[chan].Current.Coeffs[j][0];
+                            hrtfparams.Steps.Coeffs[j][0] = coeffdiff * Delta;
+                            coeffdiff = parms->Hrtf[chan].Target.Coeffs[j][1] - parms->Hrtf[chan].Current.Coeffs[j][1];
+                            hrtfparams.Steps.Coeffs[j][1] = coeffdiff * Delta;
+                        }
+                        delaydiff = (ALint)(parms->Hrtf[chan].Target.Delay[0] - parms->Hrtf[chan].Current.Delay[0]);
+                        hrtfparams.Steps.Delay[0] = fastf2i((ALfloat)delaydiff * Delta);
+                        delaydiff = (ALint)(parms->Hrtf[chan].Target.Delay[1] - parms->Hrtf[chan].Current.Delay[1]);
+                        hrtfparams.Steps.Delay[1] = fastf2i((ALfloat)delaydiff * Delta);
+                    }
+                    hrtfparams.Target = &parms->Hrtf[chan].Target;
+                    hrtfparams.Current = &parms->Hrtf[chan].Current;
+
+                    MixHrtfSamples(parms->OutBuffer, samples, Counter, voice->Offset,
+                                   OutPos, IrSize, &hrtfparams, &parms->Hrtf[chan].State,
+                                   DstBufferSize);
+                }
             }
 
             for(j = 0;j < Device->NumAuxSends;j++)
@@ -664,7 +697,6 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
 
         OutPos += DstBufferSize;
         voice->Offset += DstBufferSize;
-        voice->Direct.HrtfCounter = maxu(voice->Direct.HrtfCounter, DstBufferSize) - DstBufferSize;
 
         /* Handle looping sources */
         while(1)

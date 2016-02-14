@@ -287,42 +287,6 @@ static ALboolean BsincPrepare(const ALuint increment, BsincState *state)
 }
 
 
-/* Calculates the fade time from the changes in gain and listener to source
- * angle between updates. The result is a the time, in seconds, for the
- * transition to complete.
- */
-static ALfloat CalcFadeTime(ALfloat oldGain, ALfloat newGain, const aluVector *olddir, const aluVector *newdir)
-{
-    ALfloat gainChange, angleChange, change;
-
-    /* Calculate the normalized dB gain change. */
-    newGain = maxf(newGain, 0.0001f);
-    oldGain = maxf(oldGain, 0.0001f);
-    gainChange = fabsf(log10f(newGain / oldGain) / log10f(0.0001f));
-
-    /* Calculate the angle change only when there is enough gain to notice it. */
-    angleChange = 0.0f;
-    if(gainChange > 0.0001f || newGain > 0.0001f)
-    {
-        /* No angle change when the directions are equal or degenerate (when
-         * both have zero length).
-         */
-        if(newdir->v[0] != olddir->v[0] || newdir->v[1] != olddir->v[1] || newdir->v[2] != olddir->v[2])
-        {
-            ALfloat dotp = aluDotproduct(olddir, newdir);
-            angleChange = acosf(clampf(dotp, -1.0f, 1.0f)) / F_PI;
-        }
-    }
-
-    /* Use the largest of the two changes, and apply a significance shaping
-     * function to it. The result is then scaled to cover a 15ms transition
-     * range.
-     */
-    change = maxf(angleChange * 25.0f, gainChange) * 2.0f;
-    return minf(change, 1.0f) * 0.015f;
-}
-
-
 static ALvoid CalcListenerParams(ALlistener *Listener)
 {
     ALdouble N[3], V[3], U[3], P[3];
@@ -684,12 +648,12 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                 if(chans[c].channel == LFE)
                 {
                     /* Skip LFE */
-                    voice->Direct.Hrtf[c].Params.Delay[0] = 0;
-                    voice->Direct.Hrtf[c].Params.Delay[1] = 0;
+                    voice->Direct.Hrtf[c].Target.Delay[0] = 0;
+                    voice->Direct.Hrtf[c].Target.Delay[1] = 0;
                     for(i = 0;i < HRIR_LENGTH;i++)
                     {
-                        voice->Direct.Hrtf[c].Params.Coeffs[i][0] = 0.0f;
-                        voice->Direct.Hrtf[c].Params.Coeffs[i][1] = 0.0f;
+                        voice->Direct.Hrtf[c].Target.Coeffs[i][0] = 0.0f;
+                        voice->Direct.Hrtf[c].Target.Coeffs[i][1] = 0.0f;
                     }
 
                     for(i = 0;i < NumSends;i++)
@@ -704,8 +668,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                 /* Get the static HRIR coefficients and delays for this channel. */
                 GetLerpedHrtfCoeffs(Device->Hrtf,
                     chans[c].elevation, chans[c].angle, 1.0f, DryGain,
-                    voice->Direct.Hrtf[c].Params.Coeffs,
-                    voice->Direct.Hrtf[c].Params.Delay
+                    voice->Direct.Hrtf[c].Target.Coeffs,
+                    voice->Direct.Hrtf[c].Target.Delay
                 );
 
                 /* Normal panning for auxiliary sends. */
@@ -726,7 +690,6 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                     }
                 }
             }
-            voice->Direct.HrtfCounter = 0;
 
             voice->IsHrtf = AL_TRUE;
         }
@@ -1186,37 +1149,10 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
                 dirfact *= 1.0f - (asinf(radius / Distance) / F_PI);
         }
 
-        /* Check to see if the HRIR is already moving. */
-        if(voice->Moving)
-        {
-            ALfloat delta;
-            delta = CalcFadeTime(voice->Direct.LastGain, DryGain,
-                                 &voice->Direct.LastDir, &dir);
-            /* If the delta is large enough, get the moving HRIR target
-             * coefficients, target delays, steppping values, and counter.
-             */
-            if(delta > 0.000015f)
-            {
-                ALuint counter = GetMovingHrtfCoeffs(Device->Hrtf,
-                    ev, az, dirfact, DryGain, delta, voice->Direct.HrtfCounter,
-                    voice->Direct.Hrtf[0].Params.Coeffs, voice->Direct.Hrtf[0].Params.Delay,
-                    voice->Direct.Hrtf[0].Params.CoeffStep, voice->Direct.Hrtf[0].Params.DelayStep
-                );
-                voice->Direct.HrtfCounter = counter;
-                voice->Direct.LastGain = DryGain;
-                voice->Direct.LastDir = dir;
-            }
-        }
-        else
-        {
-            /* Get the initial (static) HRIR coefficients and delays. */
-            GetLerpedHrtfCoeffs(Device->Hrtf, ev, az, dirfact, DryGain,
-                                voice->Direct.Hrtf[0].Params.Coeffs,
-                                voice->Direct.Hrtf[0].Params.Delay);
-            voice->Direct.HrtfCounter = 0;
-            voice->Direct.LastGain = DryGain;
-            voice->Direct.LastDir = dir;
-        }
+        /* Get the HRIR coefficients and delays. */
+        GetLerpedHrtfCoeffs(Device->Hrtf, ev, az, dirfact, DryGain,
+                            voice->Direct.Hrtf[0].Target.Coeffs,
+                            voice->Direct.Hrtf[0].Target.Delay);
 
         dir.v[0] *= dirfact;
         dir.v[1] *= dirfact;
@@ -1537,11 +1473,16 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         {
             HrtfMixerFunc HrtfMix = SelectHrtfMixer();
             ALuint irsize = GetHrtfIrSize(device->Hrtf);
+            MixHrtfParams hrtfparams;
+            memset(&hrtfparams, 0, sizeof(hrtfparams));
             for(c = 0;c < device->NumChannels;c++)
+            {
+                hrtfparams.Current = &device->Hrtf_Params[c];
+                hrtfparams.Target = &device->Hrtf_Params[c];
                 HrtfMix(OutBuffer, device->DryBuffer[c], 0, device->Hrtf_Offset,
-                    0, irsize, &device->Hrtf_Params[c], &device->Hrtf_State[c],
-                    SamplesToDo
+                    0, irsize, &hrtfparams, &device->Hrtf_State[c], SamplesToDo
                 );
+            }
             device->Hrtf_Offset += SamplesToDo;
         }
         else if(device->Bs2b)

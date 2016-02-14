@@ -2641,7 +2641,6 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             memset(voice->PrevSamples, 0, sizeof(voice->PrevSamples));
 
         voice->Moving = AL_FALSE;
-        voice->Direct.HrtfCounter = 0;
         for(i = 0;i < MAX_INPUT_CHANNELS;i++)
         {
             ALsizei j;

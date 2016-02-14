@@ -138,15 +138,18 @@ typedef struct MixGains {
     ALfloat Target;
 } MixGains;
 
+typedef struct MixHrtfParams {
+    const HrtfParams *Target;
+    HrtfParams *Current;
+    struct {
+        alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
+        ALint Delay[2];
+    } Steps;
+} MixHrtfParams;
 
 typedef struct DirectParams {
     ALfloat (*OutBuffer)[BUFFERSIZE];
     ALuint OutChannels;
-
-    /* Last direction (relative to listener) and gain of a moving source. */
-    aluVector LastDir;
-    ALfloat LastGain;
-    ALuint HrtfCounter;
 
     struct {
         enum ActiveFilters ActiveType;
@@ -155,7 +158,8 @@ typedef struct DirectParams {
     } Filters[MAX_INPUT_CHANNELS];
 
     struct {
-        HrtfParams Params;
+        HrtfParams Current;
+        HrtfParams Target;
         HrtfState State;
     } Hrtf[MAX_INPUT_CHANNELS];
 
@@ -191,7 +195,7 @@ typedef void (*MixerFunc)(const ALfloat *data, ALuint OutChans,
                           ALuint Counter, ALuint OutPos, ALuint BufferSize);
 typedef void (*HrtfMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
                               ALuint Counter, ALuint Offset, ALuint OutPos,
-                              const ALuint IrSize, const HrtfParams *hrtfparams,
+                              const ALuint IrSize, const MixHrtfParams *hrtfparams,
                               HrtfState *hrtfstate, ALuint BufferSize);
 
 

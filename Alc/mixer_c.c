@@ -101,18 +101,6 @@ void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const 
 }
 
 
-static inline void SetupCoeffs(ALfloat (*restrict OutCoeffs)[2],
-                               const HrtfParams *hrtfparams,
-                               ALuint IrSize, ALuint Counter)
-{
-    ALuint c;
-    for(c = 0;c < IrSize;c++)
-    {
-        OutCoeffs[c][0] = hrtfparams->Coeffs[c][0] - (hrtfparams->CoeffStep[c][0]*Counter);
-        OutCoeffs[c][1] = hrtfparams->Coeffs[c][1] - (hrtfparams->CoeffStep[c][1]*Counter);
-    }
-}
-
 static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
                                    const ALuint IrSize,
                                    ALfloat (*restrict Coeffs)[2],

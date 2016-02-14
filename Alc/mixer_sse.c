@@ -71,23 +71,6 @@ const ALfloat *Resample_bsinc32_SSE(const BsincState *state, const ALfloat *src,
 }
 
 
-static inline void SetupCoeffs(ALfloat (*restrict OutCoeffs)[2],
-                               const HrtfParams *hrtfparams,
-                               ALuint IrSize, ALuint Counter)
-{
-    const __m128 counter4 = _mm_set1_ps((float)Counter);
-    __m128 coeffs, step4;
-    ALuint i;
-
-    for(i = 0;i < IrSize;i += 2)
-    {
-        step4  = _mm_load_ps(&hrtfparams->CoeffStep[i][0]);
-        coeffs = _mm_load_ps(&hrtfparams->Coeffs[i][0]);
-        coeffs = _mm_sub_ps(coeffs, _mm_mul_ps(step4, counter4));
-        _mm_store_ps(&OutCoeffs[i][0], coeffs);
-    }
-}
-
 static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
                                    const ALuint IrSize,
                                    ALfloat (*restrict Coeffs)[2],

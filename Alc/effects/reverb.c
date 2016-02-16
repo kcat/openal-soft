@@ -840,7 +840,6 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
              LateReverbPan[1] / length,
             -LateReverbPan[2] / length,
         };
-        length = 1.0f;
         for(i = 0;i < 4;i++)
         {
             ALfloat dotp = pan[0]*PanDirs[i][0] + pan[1]*PanDirs[i][1] + pan[2]*PanDirs[i][2];

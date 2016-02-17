@@ -416,7 +416,13 @@ static struct Hrtf *LoadHrtf00(FILE *f)
 
     if(!failed)
     {
-        Hrtf = malloc(sizeof(struct Hrtf));
+        size_t total = sizeof(struct Hrtf);
+        total += sizeof(azCount[0])*evCount;
+        total += sizeof(evOffset[0])*evCount;
+        total += sizeof(coeffs[0])*irSize*irCount;
+        total += sizeof(delays[0])*irCount;
+
+        Hrtf = malloc(total);
         if(Hrtf == NULL)
         {
             ERR("Out of memory.\n");
@@ -429,20 +435,24 @@ static struct Hrtf *LoadHrtf00(FILE *f)
         Hrtf->sampleRate = rate;
         Hrtf->irSize = irSize;
         Hrtf->evCount = evCount;
-        Hrtf->azCount = azCount;
-        Hrtf->evOffset = evOffset;
-        Hrtf->coeffs = coeffs;
-        Hrtf->delays = delays;
+        Hrtf->azCount = ((ALubyte*)(Hrtf+1));
+        Hrtf->evOffset = ((ALushort*)(Hrtf->azCount + evCount));
+        Hrtf->coeffs = ((ALshort*)(Hrtf->evOffset + evCount));
+        Hrtf->delays = ((ALubyte*)(Hrtf->coeffs + irSize*irCount));
         AL_STRING_INIT(Hrtf->filename);
         Hrtf->next = NULL;
-        return Hrtf;
+
+        memcpy((void*)Hrtf->azCount, azCount, sizeof(azCount[0])*evCount);
+        memcpy((void*)Hrtf->evOffset, evOffset, sizeof(evOffset[0])*evCount);
+        memcpy((void*)Hrtf->coeffs, coeffs, sizeof(coeffs[0])*irSize*irCount);
+        memcpy((void*)Hrtf->delays, delays, sizeof(delays[0])*irCount);
     }
 
     free(azCount);
     free(evOffset);
     free(coeffs);
     free(delays);
-    return NULL;
+    return Hrtf;
 }
 
 
@@ -556,7 +566,13 @@ static struct Hrtf *LoadHrtf01(FILE *f)
 
     if(!failed)
     {
-        Hrtf = malloc(sizeof(struct Hrtf));
+        size_t total = sizeof(struct Hrtf);
+        total += sizeof(azCount[0])*evCount;
+        total += sizeof(evOffset[0])*evCount;
+        total += sizeof(coeffs[0])*irSize*irCount;
+        total += sizeof(delays[0])*irCount;
+
+        Hrtf = malloc(total);
         if(Hrtf == NULL)
         {
             ERR("Out of memory.\n");
@@ -569,20 +585,24 @@ static struct Hrtf *LoadHrtf01(FILE *f)
         Hrtf->sampleRate = rate;
         Hrtf->irSize = irSize;
         Hrtf->evCount = evCount;
-        Hrtf->azCount = azCount;
-        Hrtf->evOffset = evOffset;
-        Hrtf->coeffs = coeffs;
-        Hrtf->delays = delays;
+        Hrtf->azCount = ((ALubyte*)(Hrtf+1));
+        Hrtf->evOffset = ((ALushort*)(Hrtf->azCount + evCount));
+        Hrtf->coeffs = ((ALshort*)(Hrtf->evOffset + evCount));
+        Hrtf->delays = ((ALubyte*)(Hrtf->coeffs + irSize*irCount));
         AL_STRING_INIT(Hrtf->filename);
         Hrtf->next = NULL;
-        return Hrtf;
+
+        memcpy((void*)Hrtf->azCount, azCount, sizeof(azCount[0])*evCount);
+        memcpy((void*)Hrtf->evOffset, evOffset, sizeof(evOffset[0])*evCount);
+        memcpy((void*)Hrtf->coeffs, coeffs, sizeof(coeffs[0])*irSize*irCount);
+        memcpy((void*)Hrtf->delays, delays, sizeof(delays[0])*irCount);
     }
 
     free(azCount);
     free(evOffset);
     free(coeffs);
     free(delays);
-    return NULL;
+    return Hrtf;
 }
 
 
@@ -749,16 +769,14 @@ ALuint GetHrtfIrSize(const struct Hrtf *Hrtf)
 
 void FreeHrtfs(void)
 {
-    struct Hrtf *Hrtf = NULL;
+    struct Hrtf *Hrtf = LoadedHrtfs;
+    LoadedHrtfs = NULL;
 
-    while((Hrtf=LoadedHrtfs) != NULL)
+    while(Hrtf != NULL)
     {
-        LoadedHrtfs = Hrtf->next;
-        free((void*)Hrtf->azCount);
-        free((void*)Hrtf->evOffset);
-        free((void*)Hrtf->coeffs);
-        free((void*)Hrtf->delays);
+        struct Hrtf *next = Hrtf->next;
         al_string_deinit(&Hrtf->filename);
         free(Hrtf);
+        Hrtf = next;
     }
 }

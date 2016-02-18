@@ -2512,146 +2512,176 @@ static int ProcessDefinition (const char * inName, const uint outRate, const uin
   return (1);
 }
 
-// Standard command line dispatch.
-int main (const int argc, const char * argv []) {
-  const char * inName = NULL, * outName = NULL;
-  OutputFormatT outFormat;
-  int argi;
-  uint outRate, fftSize;
-  int equalize, surface;
-  double limit;
-  uint truncSize;
-  HeadModelT model;
-  double radius;
-  char * end = NULL;
-
-  if (argc < 2) {
-     fprintf (stderr, "Error:  No command specified.  See '%s -h' for help.\n", argv [0]);
-     return (-1);
-  }
-  if ((strcmp (argv [1], "--help") == 0) || (strcmp (argv [1], "-h") == 0)) {
-     fprintf (stdout, "HRTF Processing and Composition Utility\n\n");
-     fprintf (stdout, "Usage:  %s <command> [<option>...]\n\n", argv [0]);
-     fprintf (stdout, "Commands:\n");
-     fprintf (stdout, " -m, --make-mhr  Makes an OpenAL Soft compatible HRTF data set.\n");
-     fprintf (stdout, "                 Defaults output to: ./oalsoft_hrtf_%%r.mhr\n");
-     fprintf (stdout, " -h, --help      Displays this help information.\n\n");
-     fprintf (stdout, "Options:\n");
-     fprintf (stdout, " -r=<rate>       Change the data set sample rate to the specified value and\n");
-     fprintf (stdout, "                 resample the HRIRs accordingly.\n");
-     fprintf (stdout, " -f=<points>     Override the FFT window size (defaults to the first power-\n");
-     fprintf (stdout, "                 of-two that fits four times the number of HRIR points).\n");
-     fprintf (stdout, " -e={on|off}     Toggle diffuse-field equalization (default: %s).\n", (DEFAULT_EQUALIZE ? "on" : "off"));
-     fprintf (stdout, " -s={on|off}     Toggle surface-weighted diffuse-field average (default: %s).\n", (DEFAULT_SURFACE ? "on" : "off"));
-     fprintf (stdout, " -l={<dB>|none}  Specify a limit to the magnitude range of the diffuse-field\n");
-     fprintf (stdout, "                 average (default: %.2f).\n", DEFAULT_LIMIT);
-     fprintf (stdout, " -w=<points>     Specify the size of the truncation window that's applied\n");
-     fprintf (stdout, "                 after minimum-phase reconstruction (default: %u).\n", DEFAULT_TRUNCSIZE);
-     fprintf (stdout, " -d={dataset|    Specify the model used for calculating the head-delay timing\n");
-     fprintf (stdout, "     sphere}     values (default: %s).\n", ((DEFAULT_HEAD_MODEL == HM_DATASET) ? "dataset" : "sphere"));
-     fprintf (stdout, " -c=<size>       Use a customized head radius measured ear-to-ear in meters.\n");
-     fprintf (stdout, " -i=<filename>   Specify an HRIR definition file to use (defaults to stdin).\n");
-     fprintf (stdout, " -o=<filename>   Specify an output file.  Overrides command-selected default.\n");
-     fprintf (stdout, "                 Use of '%%r' will be substituted with the data set sample rate.\n");
-     return (0);
-  }
-  if ((strcmp (argv [1], "--make-mhr") == 0) || (strcmp (argv [1], "-m") == 0)) {
-     if (argc > 3)
-        outName = argv [3];
-     else
-        outName = "./oalsoft_hrtf_%r.mhr";
-     outFormat = OF_MHR;
-  } else {
-     fprintf (stderr, "Error:  Invalid command '%s'.\n", argv [1]);
-     return (-1);
-  }
-  argi = 2;
-  outRate = 0;
-  fftSize = 0;
-  equalize = DEFAULT_EQUALIZE;
-  surface = DEFAULT_SURFACE;
-  limit = DEFAULT_LIMIT;
-  truncSize = DEFAULT_TRUNCSIZE;
-  model = DEFAULT_HEAD_MODEL;
-  radius = DEFAULT_CUSTOM_RADIUS;
-  while (argi < argc) {
-    if (strncmp (argv [argi], "-r=", 3) == 0) {
-       outRate = strtoul (& argv [argi] [3], & end, 10);
-       if ((end [0] != '\0') || (outRate < MIN_RATE) || (outRate > MAX_RATE)) {
-          fprintf (stderr, "Error:  Expected a value from %u to %u for '-r'.\n", MIN_RATE, MAX_RATE);
-          return (-1);
-       }
-    } else if (strncmp (argv [argi], "-f=", 3) == 0) {
-       fftSize = strtoul (& argv [argi] [3], & end, 10);
-       if ((end [0] != '\0') || (fftSize & (fftSize - 1)) || (fftSize < MIN_FFTSIZE) || (fftSize > MAX_FFTSIZE)) {
-          fprintf (stderr, "Error:  Expected a power-of-two value from %u to %u for '-f'.\n", MIN_FFTSIZE, MAX_FFTSIZE);
-          return (-1);
-       }
-    } else if (strncmp (argv [argi], "-e=", 3) == 0) {
-       if (strcmp (& argv [argi] [3], "on") == 0) {
-          equalize = 1;
-       } else if (strcmp (& argv [argi] [3], "off") == 0) {
-          equalize = 0;
-       } else {
-          fprintf (stderr, "Error:  Expected 'on' or 'off' for '-e'.\n");
-          return (-1);
-       }
-    } else if (strncmp (argv [argi], "-s=", 3) == 0) {
-       if (strcmp (& argv [argi] [3], "on") == 0) {
-          surface = 1;
-       } else if (strcmp (& argv [argi] [3], "off") == 0) {
-          surface = 0;
-       } else {
-          fprintf (stderr, "Error:  Expected 'on' or 'off' for '-s'.\n");
-          return (-1);
-       }
-    } else if (strncmp (argv [argi], "-l=", 3) == 0) {
-       if (strcmp (& argv [argi] [3], "none") == 0) {
-          limit = 0.0;
-       } else {
-          limit = strtod (& argv [argi] [3], & end);
-          if ((end [0] != '\0') || (limit < MIN_LIMIT) || (limit > MAX_LIMIT)) {
-             fprintf (stderr, "Error:  Expected 'none' or a value from %.2f to %.2f for '-l'.\n", MIN_LIMIT, MAX_LIMIT);
-             return (-1);
-          }
-       }
-    } else if (strncmp (argv [argi], "-w=", 3) == 0) {
-       truncSize = strtoul (& argv [argi] [3], & end, 10);
-       if ((end [0] != '\0') || (truncSize < MIN_TRUNCSIZE) || (truncSize > MAX_TRUNCSIZE) || (truncSize % MOD_TRUNCSIZE)) {
-          fprintf (stderr, "Error:  Expected a value from %u to %u in multiples of %u for '-w'.\n", MIN_TRUNCSIZE, MAX_TRUNCSIZE, MOD_TRUNCSIZE);
-          return (-1);
-       }
-    } else if (strncmp (argv [argi], "-d=", 3) == 0) {
-       if (strcmp (& argv [argi] [3], "dataset") == 0) {
-          model = HM_DATASET;
-       } else if (strcmp (& argv [argi] [3], "sphere") == 0) {
-          model = HM_SPHERE;
-       } else {
-          fprintf (stderr, "Error:  Expected 'dataset' or 'sphere' for '-d'.\n");
-          return (-1);
-       }
-    } else if (strncmp (argv [argi], "-c=", 3) == 0) {
-       radius = strtod (& argv [argi] [3], & end);
-       if ((end [0] != '\0') || (radius < MIN_CUSTOM_RADIUS) || (radius > MAX_CUSTOM_RADIUS)) {
-          fprintf (stderr, "Error:  Expected a value from %.2f to %.2f for '-c'.\n", MIN_CUSTOM_RADIUS, MAX_CUSTOM_RADIUS);
-          return (-1);
-       }
-    } else if (strncmp (argv [argi], "-i=", 3) == 0) {
-       inName = & argv [argi] [3];
-    } else if (strncmp (argv [argi], "-o=", 3) == 0) {
-       outName = & argv [argi] [3];
-    } else {
-       fprintf (stderr, "Error:  Invalid option '%s'.\n", argv [argi]);
-       return (-1);
-    }
-    argi ++;
-  }
-  if (! ProcessDefinition (inName, outRate, fftSize, equalize, surface, limit, truncSize, model, radius, outFormat, outName))
-     return (-1);
-  fprintf (stdout, "Operation completed.\n");
-  return (0);
+static void PrintHelp(const char *argv0, FILE *ofile)
+{
+    fprintf(ofile, "Usage:  %s <command> [<option>...]\n\n", argv0);
+    fprintf(ofile, "Commands:\n");
+    fprintf(ofile, " -m, --make-mhr  Makes an OpenAL Soft compatible HRTF data set.\n");
+    fprintf(ofile, "                 Defaults output to: ./oalsoft_hrtf_%%r.mhr\n");
+    fprintf(ofile, " -h, --help      Displays this help information.\n\n");
+    fprintf(ofile, "Options:\n");
+    fprintf(ofile, " -r=<rate>       Change the data set sample rate to the specified value and\n");
+    fprintf(ofile, "                 resample the HRIRs accordingly.\n");
+    fprintf(ofile, " -f=<points>     Override the FFT window size (defaults to the first power-\n");
+    fprintf(ofile, "                 of-two that fits four times the number of HRIR points).\n");
+    fprintf(ofile, " -e={on|off}     Toggle diffuse-field equalization (default: %s).\n", (DEFAULT_EQUALIZE ? "on" : "off"));
+    fprintf(ofile, " -s={on|off}     Toggle surface-weighted diffuse-field average (default: %s).\n", (DEFAULT_SURFACE ? "on" : "off"));
+    fprintf(ofile, " -l={<dB>|none}  Specify a limit to the magnitude range of the diffuse-field\n");
+    fprintf(ofile, "                 average (default: %.2f).\n", DEFAULT_LIMIT);
+    fprintf(ofile, " -w=<points>     Specify the size of the truncation window that's applied\n");
+    fprintf(ofile, "                 after minimum-phase reconstruction (default: %u).\n", DEFAULT_TRUNCSIZE);
+    fprintf(ofile, " -d={dataset|    Specify the model used for calculating the head-delay timing\n");
+    fprintf(ofile, "     sphere}     values (default: %s).\n", ((DEFAULT_HEAD_MODEL == HM_DATASET) ? "dataset" : "sphere"));
+    fprintf(ofile, " -c=<size>       Use a customized head radius measured ear-to-ear in meters.\n");
+    fprintf(ofile, " -i=<filename>   Specify an HRIR definition file to use (defaults to stdin).\n");
+    fprintf(ofile, " -o=<filename>   Specify an output file.  Overrides command-selected default.\n");
+    fprintf(ofile, "                 Use of '%%r' will be substituted with the data set sample rate.\n");
 }
 
+// Standard command line dispatch.
+int main(const int argc, const char *argv[])
+{
+    const char *inName = NULL, *outName = NULL;
+    OutputFormatT outFormat;
+    uint outRate, fftSize;
+    int equalize, surface;
+    char *end = NULL;
+    HeadModelT model;
+    uint truncSize;
+    double radius;
+    double limit;
+    int argi;
 
+    if(argc < 2 || strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)
+    {
+        fprintf(stdout, "HRTF Processing and Composition Utility\n\n");
+        PrintHelp(argv[0], stdout);
+        return 0;
+    }
 
+    if(strcmp(argv[1], "--make-mhr") == 0 || strcmp(argv[1], "-m") == 0)
+    {
+        outName = "./oalsoft_hrtf_%r.mhr";
+        outFormat = OF_MHR;
+    }
+    else
+    {
+        fprintf(stderr, "Error: Invalid command '%s'.\n\n", argv[1]);
+        PrintHelp(argv[0], stderr);
+        return -1;
+    }
 
+    outRate = 0;
+    fftSize = 0;
+    equalize = DEFAULT_EQUALIZE;
+    surface = DEFAULT_SURFACE;
+    limit = DEFAULT_LIMIT;
+    truncSize = DEFAULT_TRUNCSIZE;
+    model = DEFAULT_HEAD_MODEL;
+    radius = DEFAULT_CUSTOM_RADIUS;
+
+    argi = 2;
+    while(argi < argc)
+    {
+        if(strncmp(argv[argi], "-r=", 3) == 0)
+        {
+            outRate = strtoul(&argv[argi][3], &end, 10);
+            if(end[0] != '\0' || outRate < MIN_RATE || outRate > MAX_RATE)
+            {
+                fprintf(stderr, "Error:  Expected a value from %u to %u for '-r'.\n", MIN_RATE, MAX_RATE);
+                return -1;
+            }
+        }
+        else if(strncmp(argv[argi], "-f=", 3) == 0)
+        {
+            fftSize = strtoul(&argv[argi][3], &end, 10);
+            if(end[0] != '\0' || (fftSize&(fftSize-1)) || fftSize < MIN_FFTSIZE || fftSize > MAX_FFTSIZE)
+            {
+                fprintf(stderr, "Error:  Expected a power-of-two value from %u to %u for '-f'.\n", MIN_FFTSIZE, MAX_FFTSIZE);
+                return -1;
+            }
+        }
+        else if(strncmp(argv[argi], "-e=", 3) == 0)
+        {
+            if(strcmp(&argv[argi][3], "on") == 0)
+                equalize = 1;
+            else if(strcmp(&argv[argi][3], "off") == 0)
+                equalize = 0;
+            else
+            {
+                fprintf(stderr, "Error:  Expected 'on' or 'off' for '-e'.\n");
+                return -1;
+            }
+        }
+        else if(strncmp(argv[argi], "-s=", 3) == 0)
+        {
+            if(strcmp(&argv[argi][3], "on") == 0)
+                surface = 1;
+            else if(strcmp(&argv[argi][3], "off") == 0)
+                surface = 0;
+            else
+            {
+                fprintf(stderr, "Error:  Expected 'on' or 'off' for '-s'.\n");
+                return -1;
+            }
+        }
+        else if(strncmp(argv[argi], "-l=", 3) == 0)
+        {
+            if(strcmp(&argv[argi][3], "none") == 0)
+                limit = 0.0;
+            else
+            {
+                limit = strtod(&argv[argi] [3], &end);
+                if(end[0] != '\0' || limit < MIN_LIMIT || limit > MAX_LIMIT)
+                {
+                    fprintf(stderr, "Error:  Expected 'none' or a value from %.2f to %.2f for '-l'.\n", MIN_LIMIT, MAX_LIMIT);
+                    return -1;
+                }
+            }
+        }
+        else if(strncmp(argv[argi], "-w=", 3) == 0)
+        {
+            truncSize = strtoul(&argv[argi][3], &end, 10);
+            if(end[0] != '\0' || truncSize < MIN_TRUNCSIZE || truncSize > MAX_TRUNCSIZE || (truncSize%MOD_TRUNCSIZE))
+            {
+                fprintf(stderr, "Error:  Expected a value from %u to %u in multiples of %u for '-w'.\n", MIN_TRUNCSIZE, MAX_TRUNCSIZE, MOD_TRUNCSIZE);
+                return -1;
+            }
+        }
+        else if(strncmp(argv[argi], "-d=", 3) == 0)
+        {
+            if(strcmp(&argv[argi][3], "dataset") == 0)
+                model = HM_DATASET;
+            else if(strcmp(&argv[argi][3], "sphere") == 0)
+                model = HM_SPHERE;
+            else
+            {
+                fprintf(stderr, "Error:  Expected 'dataset' or 'sphere' for '-d'.\n");
+                return -1;
+            }
+        }
+        else if(strncmp(argv[argi], "-c=", 3) == 0)
+        {
+            radius = strtod(&argv[argi][3], &end);
+            if(end[0] != '\0' || radius < MIN_CUSTOM_RADIUS || radius > MAX_CUSTOM_RADIUS)
+            {
+                fprintf(stderr, "Error:  Expected a value from %.2f to %.2f for '-c'.\n", MIN_CUSTOM_RADIUS, MAX_CUSTOM_RADIUS);
+                return -1;
+            }
+        }
+        else if(strncmp(argv[argi], "-i=", 3) == 0)
+            inName = &argv[argi][3];
+        else if(strncmp(argv[argi], "-o=", 3) == 0)
+            outName = &argv[argi][3];
+        else
+        {
+            fprintf(stderr, "Error:  Invalid option '%s'.\n", argv[argi]);
+            return -1;
+        }
+        argi++;
+    }
+    if(!ProcessDefinition(inName, outRate, fftSize, equalize, surface, limit, truncSize, model, radius, outFormat, outName))
+        return -1;
+    fprintf(stdout, "Operation completed.\n");
+    return 0;
+}

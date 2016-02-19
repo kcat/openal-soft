@@ -195,112 +195,97 @@
 #define MHR_FORMAT                   ("MinPHR01")
 
 // Byte order for the serialization routines.
-enum ByteOrderT {
-  BO_NONE   = 0,
-  BO_LITTLE    ,
-  BO_BIG
-};
+typedef enum ByteOrderT {
+    BO_NONE,
+    BO_LITTLE,
+    BO_BIG
+} ByteOrderT;
 
 // Source format for the references listed in the data set definition.
-enum SourceFormatT {
-  SF_NONE   = 0,
-  SF_WAVE      ,  // RIFF/RIFX WAVE file.
-  SF_BIN_LE    ,  // Little-endian binary file.
-  SF_BIN_BE    ,  // Big-endian binary file.
-  SF_ASCII        // ASCII text file.
-};
+typedef enum SourceFormatT {
+    SF_NONE,
+    SF_WAVE,   // RIFF/RIFX WAVE file.
+    SF_BIN_LE, // Little-endian binary file.
+    SF_BIN_BE, // Big-endian binary file.
+    SF_ASCII   // ASCII text file.
+} SourceFormatT;
 
 // Element types for the references listed in the data set definition.
-enum ElementTypeT {
-  ET_NONE = 0,
-  ET_INT     ,    // Integer elements.
-  ET_FP           // Floating-point elements.
-};
+typedef enum ElementTypeT {
+    ET_NONE,
+    ET_INT,   // Integer elements.
+    ET_FP    // Floating-point elements.
+} ElementTypeT;
 
 // Head model used for calculating the impulse delays.
-enum HeadModelT {
-  HM_NONE    = 0,
-  HM_DATASET    , // Measure the onset from the dataset.
-  HM_SPHERE       // Calculate the onset using a spherical head model.
-};
+typedef enum HeadModelT {
+    HM_NONE0,
+    HM_DATASET, // Measure the onset from the dataset.
+    HM_SPHERE   // Calculate the onset using a spherical head model.
+} HeadModelT;
 
 // Desired output format from the command line.
-enum OutputFormatT {
-  OF_NONE  = 0,
-  OF_MHR          // OpenAL Soft MHR data set file.
-};
+typedef enum OutputFormatT {
+    OF_NONE,
+    OF_MHR   // OpenAL Soft MHR data set file.
+} OutputFormatT;
 
 // Unsigned integer type.
-typedef unsigned int                 uint;
+typedef unsigned int uint;
 
 // Serialization types.  The trailing digit indicates the number of bits.
-typedef ALubyte                      uint8;
-
-typedef ALint                        int32;
-typedef ALuint                       uint32;
-typedef ALuint64SOFT                 uint64;
-
-typedef enum ByteOrderT              ByteOrderT;
-typedef enum SourceFormatT           SourceFormatT;
-typedef enum ElementTypeT            ElementTypeT;
-typedef enum HeadModelT              HeadModelT;
-typedef enum OutputFormatT           OutputFormatT;
-
-typedef struct TokenReaderT          TokenReaderT;
-typedef struct SourceRefT            SourceRefT;
-typedef struct HrirDataT             HrirDataT;
-typedef struct ResamplerT            ResamplerT;
+typedef ALubyte      uint8;
+typedef ALint        int32;
+typedef ALuint       uint32;
+typedef ALuint64SOFT uint64;
 
 // Token reader state for parsing the data set definition.
-struct TokenReaderT {
-  FILE                             * mFile;
-  const char                       * mName;
-  uint                               mLine,
-                                     mColumn;
-  char                               mRing [TR_RING_SIZE];
-  size_t                             mIn,
-                                     mOut;
-};
+typedef struct TokenReaderT {
+    FILE *mFile;
+    const char *mName;
+    uint        mLine;
+    uint        mColumn;
+    char   mRing[TR_RING_SIZE];
+    size_t mIn;
+    size_t mOut;
+} TokenReaderT;
 
 // Source reference state used when loading sources.
-struct SourceRefT {
-  SourceFormatT                      mFormat;
-  ElementTypeT                       mType;
-  uint                               mSize;
-  int                                mBits;
-  uint                               mChannel,
-                                     mSkip,
-                                     mOffset;
-  char                               mPath [MAX_PATH_LEN + 1];
-};
+typedef struct SourceRefT {
+    SourceFormatT mFormat;
+    ElementTypeT  mType;
+    uint mSize;
+    int  mBits;
+    uint mChannel;
+    uint mSkip;
+    uint mOffset;
+    char mPath[MAX_PATH_LEN+1];
+} SourceRefT;
 
 // The HRIR metrics and data set used when loading, processing, and storing
 // the resulting HRTF.
-struct HrirDataT {
-  uint                               mIrRate,
-                                     mIrCount,
-                                     mIrSize,
-                                     mIrPoints,
-                                     mFftSize,
-                                     mEvCount,
-                                     mEvStart,
-                                     mAzCount [MAX_EV_COUNT],
-                                     mEvOffset [MAX_EV_COUNT];
-  double                             mRadius,
-                                     mDistance,
-                                   * mHrirs,
-                                   * mHrtds,
-                                     mMaxHrtd;
-};
+typedef struct HrirDataT {
+    uint mIrRate;
+    uint mIrCount;
+    uint mIrSize;
+    uint mIrPoints;
+    uint mFftSize;
+    uint mEvCount;
+    uint mEvStart;
+    uint mAzCount[MAX_EV_COUNT];
+    uint mEvOffset[MAX_EV_COUNT];
+    double mRadius;
+    double mDistance;
+    double *mHrirs;
+    double *mHrtds;
+    double  mMaxHrtd;
+} HrirDataT;
 
 // The resampler metrics and FIR filter.
-struct ResamplerT {
-  uint                               mP,
-                                     mQ,
-                                     mM,
-                                     mL;
-  double                           * mF;
-};
+typedef struct ResamplerT {
+    uint mP, mQ, mM, mL;
+    double *mF;
+} ResamplerT;
 
 /* Token reader routines for parsing text files.  Whitespace is not
  * significant.  It can process tokens as identifiers, numbers (integer and

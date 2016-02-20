@@ -184,6 +184,15 @@ DECL_CONST static inline const char *GetLabelFromChannel(enum Channel channel)
         case SideLeft: return "side-left";
         case SideRight: return "side-right";
 
+        case UpperFrontLeft: return "upper-front-left";
+        case UpperFrontRight: return "upper-front-right";
+        case UpperBackLeft: return "upper-back-left";
+        case UpperBackRight: return "upper-back-right";
+        case LowerFrontLeft: return "lower-front-left";
+        case LowerFrontRight: return "lower-front-right";
+        case LowerBackLeft: return "lower-back-left";
+        case LowerBackRight: return "lower-back-right";
+
         case BFormatW: return "bformat-w";
         case BFormatX: return "bformat-x";
         case BFormatY: return "bformat-y";
@@ -466,6 +475,15 @@ ALvoid aluInitPanning(ALCdevice *device)
         { BackRight,   { 0.224752f, -0.295009f, -0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f,  0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065799f } },
         { SideLeft,    { 0.224739f,  0.000000f,  0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065795f } },
         { SideRight,   { 0.224739f,  0.000000f, -0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.065795f } },
+    }, Cube8Cfg[8] = {
+        { UpperFrontLeft,  { 0.176776695f,  0.072168784f,  0.072168784f,  0.072168784f } },
+        { UpperFrontRight, { 0.176776695f,  0.072168784f, -0.072168784f,  0.072168784f } },
+        { UpperBackLeft,   { 0.176776695f, -0.072168784f,  0.072168784f,  0.072168784f } },
+        { UpperBackRight,  { 0.176776695f, -0.072168784f, -0.072168784f,  0.072168784f } },
+        { LowerFrontLeft,  { 0.176776695f,  0.072168784f,  0.072168784f, -0.072168784f } },
+        { LowerFrontRight, { 0.176776695f,  0.072168784f, -0.072168784f, -0.072168784f } },
+        { LowerBackLeft,   { 0.176776695f, -0.072168784f,  0.072168784f, -0.072168784f } },
+        { LowerBackRight,  { 0.176776695f, -0.072168784f, -0.072168784f, -0.072168784f } },
     }, BFormat3D[4] = {
         { BFormatW, { 1.0f, 0.0f, 0.0f, 0.0f } },
         { BFormatX, { 0.0f, 1.0f, 0.0f, 0.0f } },
@@ -482,13 +500,25 @@ ALvoid aluInitPanning(ALCdevice *device)
 
     if(device->Hrtf)
     {
-        ALfloat (*coeffs_list[4])[2];
-        ALuint *delay_list[4];
+        static const struct {
+            enum Channel Channel;
+            ALfloat Angle;
+            ALfloat Elevation;
+        } CubeInfo[8] = {
+            { UpperFrontLeft,  DEG2RAD( -45.0f), DEG2RAD( 45.0f) },
+            { UpperFrontRight, DEG2RAD(  45.0f), DEG2RAD( 45.0f) },
+            { UpperBackLeft,   DEG2RAD(-135.0f), DEG2RAD( 45.0f) },
+            { UpperBackRight,  DEG2RAD( 135.0f), DEG2RAD( 45.0f) },
+            { LowerFrontLeft,  DEG2RAD( -45.0f), DEG2RAD(-45.0f) },
+            { LowerFrontRight, DEG2RAD(  45.0f), DEG2RAD(-45.0f) },
+            { LowerBackLeft,   DEG2RAD(-135.0f), DEG2RAD(-45.0f) },
+            { LowerBackRight,  DEG2RAD( 135.0f), DEG2RAD(-45.0f) },
+        };
         ALuint i;
 
-        count = COUNTOF(BFormat3D);
-        chanmap = BFormat3D;
-        ambiscale = 1.0f;
+        count = COUNTOF(Cube8Cfg);
+        chanmap = Cube8Cfg;
+        ambiscale = FIRST_ORDER_SCALE;
 
         for(i = 0;i < count;i++)
             device->ChannelName[i] = chanmap[i].ChanName;
@@ -498,15 +528,12 @@ ALvoid aluInitPanning(ALCdevice *device)
                       &device->NumChannels, AL_TRUE);
         device->AmbiScale = ambiscale;
 
-        for(i = 0;i < 4;++i)
+        for(i = 0;i < device->NumChannels;i++)
         {
-            static const enum Channel inputs[4] = { BFormatW, BFormatX, BFormatY, BFormatZ };
-            int chan = GetChannelIdxByName(device, inputs[i]);
-            coeffs_list[i] = device->Hrtf_Params[chan].Coeffs;
-            delay_list[i] = device->Hrtf_Params[chan].Delay;
+            int chan = GetChannelIdxByName(device, CubeInfo[i].Channel);
+            GetLerpedHrtfCoeffs(device->Hrtf, CubeInfo[i].Elevation, CubeInfo[i].Angle, 1.0f, 1.0f,
+                                device->Hrtf_Params[chan].Coeffs, device->Hrtf_Params[chan].Delay);
         }
-        GetBFormatHrtfCoeffs(device->Hrtf, coeffs_list, delay_list);
-
         return;
     }
 

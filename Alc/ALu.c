@@ -100,14 +100,14 @@ extern inline void aluMatrixdSet(aluMatrixd *matrix,
                                  ALdouble m30, ALdouble m31, ALdouble m32, ALdouble m33);
 
 
-/* NOTE: HRTF is set up a bit special in the device. By default, the device's
- * DryBuffer, NumChannels, ChannelName, and Channel fields correspond to the
- * output mixing format, and the DryBuffer is then converted and written to the
- * backend's audio buffer.
+/* NOTE: HRTF is set up a bit special in the device. By default, without HRTF,
+ * the device's DryBuffer, NumChannels, ChannelName, and Channel fields
+ * correspond to the output format, and the DryBuffer is then converted and
+ * written to the backend's audio buffer.
  *
- * With HRTF, these fields correspond to a virtual format (typically B-Format),
- * and the actual output is stored in DryBuffer[NumChannels] for the left
- * channel and DryBuffer[NumChannels+1] for the right. As a final output step,
+ * With HRTF, these fields correspond to a virtual format, and the actual
+ * output is stored in DryBuffer[NumChannels] for the left channel and
+ * DryBuffer[NumChannels+1] for the right. As a final output step,
  * the virtual channels will have HRTF applied and written to the actual
  * output. Things like effects and B-Format decoding will want to write to the
  * virtual channels so that they can be mixed with HRTF in full 3D.

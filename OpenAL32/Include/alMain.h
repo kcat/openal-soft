@@ -317,6 +317,15 @@ enum Channel {
     SideLeft,
     SideRight,
 
+    UpperFrontLeft,
+    UpperFrontRight,
+    UpperBackLeft,
+    UpperBackRight,
+    LowerFrontLeft,
+    LowerFrontRight,
+    LowerBackLeft,
+    LowerBackRight,
+
     BFormatW,
     BFormatX,
     BFormatY,

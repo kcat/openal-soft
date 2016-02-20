@@ -34,6 +34,5 @@ ALuint GetHrtfSampleRate(const struct Hrtf *Hrtf);
 ALuint GetHrtfIrSize(const struct Hrtf *Hrtf);
 
 void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat dirfact, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays);
-void GetBFormatHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat (*coeffs_list[4])[2], ALuint *delay_list[4]);
 
 #endif /* ALC_HRTF_H */

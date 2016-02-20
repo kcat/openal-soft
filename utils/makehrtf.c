@@ -219,7 +219,7 @@ typedef enum ElementTypeT {
 
 // Head model used for calculating the impulse delays.
 typedef enum HeadModelT {
-    HM_NONE0,
+    HM_NONE,
     HM_DATASET, // Measure the onset from the dataset.
     HM_SPHERE   // Calculate the onset using a spherical head model.
 } HeadModelT;
@@ -287,9 +287,11 @@ typedef struct ResamplerT {
     double *mF;
 } ResamplerT;
 
+
 /*****************************
  *** Token reader routines ***
  *****************************/
+
 /* Whitespace is not significant. It can process tokens as identifiers, numbers
  * (integer and floating-point), strings, and operators. Strings must be
  * encapsulated by double-quotes and cannot span multiple lines.
@@ -1341,6 +1343,10 @@ static void ResamplerRun(ResamplerT *rs, const uint inN, const double *in, const
     }
 }
 
+/*************************
+ *** File source input ***
+ *************************/
+
 // Read a binary value of the specified byte order and byte size from a file,
 // storing it as a 32-bit unsigned integer.
 static int ReadBin4(FILE *fp, const char *filename, const ByteOrderT order, const uint bytes, uint32 *out)
@@ -1400,49 +1406,6 @@ static int ReadBin8(FILE *fp, const char *filename, const ByteOrderT order, uint
             break;
     }
     *out = accum;
-    return 1;
-}
-
-// Write an ASCII string to a file.
-static int WriteAscii(const char *out, FILE *fp, const char *filename)
-{
-    size_t len;
-
-    len = strlen(out);
-    if(fwrite(out, 1, len, fp) != len)
-    {
-        fclose(fp);
-        fprintf(stderr, "Error: Bad write to file '%s'.\n", filename);
-        return 0;
-    }
-    return 1;
-}
-
-// Write a binary value of the given byte order and byte size to a file,
-// loading it from a 32-bit unsigned integer.
-static int WriteBin4(const ByteOrderT order, const uint bytes, const uint32 in, FILE *fp, const char *filename)
-{
-    uint8 out[4];
-    uint i;
-
-    switch(order)
-    {
-        case BO_LITTLE:
-            for(i = 0;i < bytes;i++)
-                out[i] = (in>>(i*8)) & 0x000000FF;
-            break;
-        case BO_BIG:
-            for(i = 0;i < bytes;i++)
-                out[bytes - i - 1] = (in>>(i*8)) & 0x000000FF;
-            break;
-        default:
-            break;
-    }
-    if(fwrite(out, 1, bytes, fp) != bytes)
-    {
-        fprintf(stderr, "Error: Bad write to file '%s'.\n", filename);
-        return 0;
-    }
     return 1;
 }
 
@@ -1856,6 +1819,108 @@ static int LoadSource(SourceRefT *src, const uint hrirRate, const uint n, double
     return result;
 }
 
+
+/***************************
+ *** File storage output ***
+ ***************************/
+
+// Write an ASCII string to a file.
+static int WriteAscii(const char *out, FILE *fp, const char *filename)
+{
+    size_t len;
+
+    len = strlen(out);
+    if(fwrite(out, 1, len, fp) != len)
+    {
+        fclose(fp);
+        fprintf(stderr, "Error: Bad write to file '%s'.\n", filename);
+        return 0;
+    }
+    return 1;
+}
+
+// Write a binary value of the given byte order and byte size to a file,
+// loading it from a 32-bit unsigned integer.
+static int WriteBin4(const ByteOrderT order, const uint bytes, const uint32 in, FILE *fp, const char *filename)
+{
+    uint8 out[4];
+    uint i;
+
+    switch(order)
+    {
+        case BO_LITTLE:
+            for(i = 0;i < bytes;i++)
+                out[i] = (in>>(i*8)) & 0x000000FF;
+            break;
+        case BO_BIG:
+            for(i = 0;i < bytes;i++)
+                out[bytes - i - 1] = (in>>(i*8)) & 0x000000FF;
+            break;
+        default:
+            break;
+    }
+    if(fwrite(out, 1, bytes, fp) != bytes)
+    {
+        fprintf(stderr, "Error: Bad write to file '%s'.\n", filename);
+        return 0;
+    }
+    return 1;
+}
+
+// Store the OpenAL Soft HRTF data set.
+static int StoreMhr(const HrirDataT *hData, const char *filename)
+{
+    uint e, step, end, n, j, i;
+    int hpHist, v;
+    FILE *fp;
+
+    if((fp=fopen(filename, "wb")) == NULL)
+    {
+        fprintf(stderr, "Error: Could not open MHR file '%s'.\n", filename);
+        return 0;
+    }
+    if(!WriteAscii(MHR_FORMAT, fp, filename))
+        return 0;
+    if(!WriteBin4(BO_LITTLE, 4, (uint32)hData->mIrRate, fp, filename))
+        return 0;
+    if(!WriteBin4(BO_LITTLE, 1, (uint32)hData->mIrPoints, fp, filename))
+        return 0;
+    if(!WriteBin4(BO_LITTLE, 1, (uint32)hData->mEvCount, fp, filename))
+        return 0;
+    for(e = 0;e < hData->mEvCount;e++)
+    {
+        if(!WriteBin4(BO_LITTLE, 1, (uint32)hData->mAzCount[e], fp, filename))
+            return 0;
+    }
+    step = hData->mIrSize;
+    end = hData->mIrCount * step;
+    n = hData->mIrPoints;
+    srand(0x31DF840C);
+    for(j = 0;j < end;j += step)
+    {
+        hpHist = 0;
+        for(i = 0;i < n;i++)
+        {
+            v = HpTpdfDither(32767.0 * hData->mHrirs[j+i], &hpHist);
+            if(!WriteBin4(BO_LITTLE, 2, (uint32)v, fp, filename))
+                return 0;
+        }
+    }
+    for(j = 0;j < hData->mIrCount;j++)
+    {
+        v = (int)fmin(round(hData->mIrRate * hData->mHrtds[j]), MAX_HRTD);
+        if(!WriteBin4(BO_LITTLE, 1, (uint32)v, fp, filename))
+            return 0;
+    }
+    fclose(fp);
+    return 1;
+}
+
+
+/***********************
+ *** HRTF processing ***
+ ***********************/
+
 // Calculate the onset time of an HRIR and average it with any existing
 // timing for its elevation and azimuth.
 static void AverageHrirOnset(const double *hrir, const double f, const uint ei, const uint ai, const HrirDataT *hData)
@@ -2242,54 +2307,6 @@ static void CalculateHrtds (const HeadModelT model, const double radius, HrirDat
     hData->mMaxHrtd = maxHrtd;
 }
 
-// Store the OpenAL Soft HRTF data set.
-static int StoreMhr(const HrirDataT *hData, const char *filename)
-{
-    uint e, step, end, n, j, i;
-    int hpHist, v;
-    FILE *fp;
-
-    if((fp=fopen(filename, "wb")) == NULL)
-    {
-        fprintf(stderr, "Error: Could not open MHR file '%s'.\n", filename);
-        return 0;
-    }
-    if(!WriteAscii(MHR_FORMAT, fp, filename))
-        return 0;
-    if(!WriteBin4(BO_LITTLE, 4, (uint32)hData->mIrRate, fp, filename))
-        return 0;
-    if(!WriteBin4(BO_LITTLE, 1, (uint32)hData->mIrPoints, fp, filename))
-        return 0;
-    if(!WriteBin4(BO_LITTLE, 1, (uint32)hData->mEvCount, fp, filename))
-        return 0;
-    for(e = 0;e < hData->mEvCount;e++)
-    {
-        if(!WriteBin4(BO_LITTLE, 1, (uint32)hData->mAzCount[e], fp, filename))
-            return 0;
-    }
-    step = hData->mIrSize;
-    end = hData->mIrCount * step;
-    n = hData->mIrPoints;
-    srand(0x31DF840C);
-    for(j = 0;j < end;j += step)
-    {
-        hpHist = 0;
-        for(i = 0;i < n;i++)
-        {
-            v = HpTpdfDither(32767.0 * hData->mHrirs[j+i], &hpHist);
-            if(!WriteBin4(BO_LITTLE, 2, (uint32)v, fp, filename))
-                return 0;
-        }
-    }
-    for(j = 0;j < hData->mIrCount;j++)
-    {
-        v = (int)fmin(round(hData->mIrRate * hData->mHrtds[j]), MAX_HRTD);
-        if(!WriteBin4(BO_LITTLE, 1, (uint32)v, fp, filename))
-            return 0;
-    }
-    fclose(fp);
-    return 1;
-}
 
 // Process the data set definition to read and validate the data set metrics.
 static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize, HrirDataT *hData)

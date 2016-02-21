@@ -6,8 +6,6 @@
 
 #include "alstring.h"
 
-enum DevFmtChannels;
-
 struct Hrtf;
 
 typedef struct HrtfEntry {

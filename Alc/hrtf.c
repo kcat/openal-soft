@@ -605,6 +605,7 @@ vector_HrtfEntry EnumerateHrtf(const_al_string devname)
 {
     vector_HrtfEntry list = VECTOR_INIT_STATIC();
     const char *fnamelist = "%s.mhr";
+    const char *defaulthrtf = "";
 
     ConfigValueStr(al_string_get_cstr(devname), NULL, "hrtf_tables", &fnamelist);
     while(fnamelist && *fnamelist)
@@ -639,6 +640,24 @@ vector_HrtfEntry EnumerateHrtf(const_al_string devname)
 
             fnamelist = next;
         }
+    }
+
+    if(VECTOR_SIZE(list) > 1 && ConfigValueStr(al_string_get_cstr(devname), NULL, "default_hrtf", &defaulthrtf))
+    {
+        const HrtfEntry *iter;
+        /* Find the preferred HRTF and move it to the front of the list. */
+#define FIND_ENTRY(i)  (al_string_cmp_cstr((i)->name, defaulthrtf) == 0)
+        VECTOR_FIND_IF(iter, const HrtfEntry, list, FIND_ENTRY);
+        if(iter != VECTOR_ITER_END(list) && iter != VECTOR_ITER_BEGIN(list))
+        {
+            HrtfEntry entry = *iter;
+            memmove(&VECTOR_ELEM(list,1), &VECTOR_ELEM(list,0),
+                    (iter-VECTOR_ITER_BEGIN(list))*sizeof(HrtfEntry));
+            VECTOR_ELEM(list,0) = entry;
+        }
+        else
+            WARN("Failed to find default HRTF \"%s\"\n", defaulthrtf);
+#undef FIND_ENTRY
     }
 
     return list;

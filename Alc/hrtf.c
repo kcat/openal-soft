@@ -511,8 +511,11 @@ static struct Hrtf *LoadHrtf01(FILE *f, const_al_string filename)
 static void AddFileEntry(vector_HrtfEntry *list, al_string *filename)
 {
     HrtfEntry entry = { AL_STRING_INIT_STATIC(), NULL };
-    HrtfEntry *iter;
+    struct Hrtf *hrtf = NULL;
+    const HrtfEntry *iter;
     const char *name;
+    ALchar magic[8];
+    FILE *f;
     int i;
 
     name = strrchr(al_string_get_cstr(*filename), '/');
@@ -524,55 +527,51 @@ static void AddFileEntry(vector_HrtfEntry *list, al_string *filename)
     while(entry.hrtf)
     {
         if(al_string_cmp_cstr(*filename, entry.hrtf->filename) == 0)
-            break;
+        {
+            TRACE("Skipping duplicate file entry %s\n", al_string_get_cstr(*filename));
+            goto done;
+        }
         entry.hrtf = entry.hrtf->next;
     }
 
-    if(!entry.hrtf)
+    TRACE("Loading %s...\n", al_string_get_cstr(*filename));
+    f = al_fopen(al_string_get_cstr(*filename), "rb");
+    if(f == NULL)
     {
-        struct Hrtf *hrtf = NULL;
-        ALchar magic[8];
-        FILE *f;
-
-        TRACE("Loading %s...\n", al_string_get_cstr(*filename));
-        f = al_fopen(al_string_get_cstr(*filename), "rb");
-        if(f == NULL)
-        {
-            ERR("Could not open %s\n", al_string_get_cstr(*filename));
-            goto error;
-        }
-
-        if(fread(magic, 1, sizeof(magic), f) != sizeof(magic))
-            ERR("Failed to read header from %s\n", al_string_get_cstr(*filename));
-        else
-        {
-            if(memcmp(magic, magicMarker00, sizeof(magicMarker00)) == 0)
-            {
-                TRACE("Detected data set format v0\n");
-                hrtf = LoadHrtf00(f, *filename);
-            }
-            else if(memcmp(magic, magicMarker01, sizeof(magicMarker01)) == 0)
-            {
-                TRACE("Detected data set format v1\n");
-                hrtf = LoadHrtf01(f, *filename);
-            }
-            else
-                ERR("Invalid header in %s: \"%.8s\"\n", al_string_get_cstr(*filename), magic);
-        }
-        fclose(f);
-
-        if(!hrtf)
-        {
-            ERR("Failed to load %s\n", al_string_get_cstr(*filename));
-            goto error;
-        }
-
-        hrtf->next = LoadedHrtfs;
-        LoadedHrtfs = hrtf;
-        TRACE("Loaded HRTF support for format: %s %uhz\n",
-              DevFmtChannelsString(DevFmtStereo), hrtf->sampleRate);
-        entry.hrtf = hrtf;
+        ERR("Could not open %s\n", al_string_get_cstr(*filename));
+        goto done;
     }
+
+    if(fread(magic, 1, sizeof(magic), f) != sizeof(magic))
+        ERR("Failed to read header from %s\n", al_string_get_cstr(*filename));
+    else
+    {
+        if(memcmp(magic, magicMarker00, sizeof(magicMarker00)) == 0)
+        {
+            TRACE("Detected data set format v0\n");
+            hrtf = LoadHrtf00(f, *filename);
+        }
+        else if(memcmp(magic, magicMarker01, sizeof(magicMarker01)) == 0)
+        {
+            TRACE("Detected data set format v1\n");
+            hrtf = LoadHrtf01(f, *filename);
+        }
+        else
+            ERR("Invalid header in %s: \"%.8s\"\n", al_string_get_cstr(*filename), magic);
+    }
+    fclose(f);
+
+    if(!hrtf)
+    {
+        ERR("Failed to load %s\n", al_string_get_cstr(*filename));
+        goto done;
+    }
+
+    hrtf->next = LoadedHrtfs;
+    LoadedHrtfs = hrtf;
+    TRACE("Loaded HRTF support for format: %s %uhz\n",
+            DevFmtChannelsString(DevFmtStereo), hrtf->sampleRate);
+    entry.hrtf = hrtf;
 
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
      * format update). */
@@ -589,7 +588,7 @@ static void AddFileEntry(vector_HrtfEntry *list, al_string *filename)
         ++i;
 
 #define MATCH_NAME(i)  (al_string_cmp(entry.name, (i)->name) == 0)
-        VECTOR_FIND_IF(iter, HrtfEntry, *list, MATCH_NAME);
+        VECTOR_FIND_IF(iter, const HrtfEntry, *list, MATCH_NAME);
 #undef MATCH_NAME
     } while(iter != VECTOR_ITER_END(*list));
 
@@ -597,7 +596,7 @@ static void AddFileEntry(vector_HrtfEntry *list, al_string *filename)
           al_string_get_cstr(*filename));
     VECTOR_PUSH_BACK(*list, entry);
 
-error:
+done:
     al_string_deinit(filename);
 }
 

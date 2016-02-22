@@ -1375,6 +1375,22 @@ added by the ALC_EXT_DEDICATED extension.</string>
      </widget>
     </widget>
    </widget>
+   <widget class="QPushButton" name="closeCancelButton">
+    <property name="geometry">
+     <rect>
+      <x>370</x>
+      <y>405</y>
+      <width>91</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Cancel</string>
+    </property>
+    <property name="icon">
+     <iconset theme="window-close"/>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">

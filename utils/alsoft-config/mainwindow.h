@@ -17,10 +17,14 @@ public:
     ~MainWindow();
 
 private slots:
+    void cancelCloseAction();
+
     void saveCurrentConfig();
 
     void saveConfigAsFile();
     void loadConfigFromFile();
+
+    void enableApplyButton();
 
     void updateResamplerLabel(int num);
 
@@ -46,6 +50,10 @@ private:
     QValidator *mEffectSlotValidator;
     QValidator *mSourceSendValidator;
     QValidator *mSampleRateValidator;
+
+    bool mNeedsSave;
+
+    void closeEvent(QCloseEvent *event);
 
     void loadConfig(const QString &fname);
     void saveConfig(const QString &fname) const;

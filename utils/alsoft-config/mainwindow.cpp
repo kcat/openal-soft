@@ -3,6 +3,7 @@
 
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QCloseEvent>
 #include <QSettings>
 #include <QtGlobal>
 #include "mainwindow.h"
@@ -173,7 +174,8 @@ MainWindow::MainWindow(QWidget *parent) :
     mSourceCountValidator(NULL),
     mEffectSlotValidator(NULL),
     mSourceSendValidator(NULL),
-    mSampleRateValidator(NULL)
+    mSampleRateValidator(NULL),
+    mNeedsSave(false)
 {
     ui->setupUi(this);
 
@@ -251,7 +253,14 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionLoad, SIGNAL(triggered()), this, SLOT(loadConfigFromFile()));
     connect(ui->actionSave_As, SIGNAL(triggered()), this, SLOT(saveConfigAsFile()));
 
+    connect(ui->closeCancelButton, SIGNAL(clicked()), this, SLOT(cancelCloseAction()));
     connect(ui->applyButton, SIGNAL(clicked()), this, SLOT(saveCurrentConfig()));
+
+    connect(ui->channelConfigCombo, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(enableApplyButton()));
+    connect(ui->sampleFormatCombo, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(enableApplyButton()));
+    connect(ui->stereoModeCombo, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(enableApplyButton()));
+    connect(ui->sampleRateCombo, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(enableApplyButton()));
+    connect(ui->sampleRateCombo, SIGNAL(editTextChanged(const QString&)), this, SLOT(enableApplyButton()));
 
     connect(ui->resamplerSlider, SIGNAL(valueChanged(int)), this, SLOT(updateResamplerLabel(int)));
 
@@ -260,15 +269,41 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->periodCountSlider, SIGNAL(valueChanged(int)), this, SLOT(updatePeriodCountEdit(int)));
     connect(ui->periodCountEdit, SIGNAL(editingFinished()), this, SLOT(updatePeriodCountSlider()));
 
+    connect(ui->hrtfStateComboBox, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(enableApplyButton()));
     connect(ui->hrtfAddButton, SIGNAL(clicked()), this, SLOT(addHrtfFile()));
     connect(ui->hrtfRemoveButton, SIGNAL(clicked()), this, SLOT(removeHrtfFile()));
     connect(ui->hrtfFileList, SIGNAL(itemSelectionChanged()), this, SLOT(updateHrtfRemoveButton()));
+    connect(ui->defaultHrtfPathsCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+
+    connect(ui->srcCountLineEdit, SIGNAL(editingFinished()), this, SLOT(enableApplyButton()));
+    connect(ui->srcSendLineEdit, SIGNAL(editingFinished()), this, SLOT(enableApplyButton()));
+    connect(ui->effectSlotLineEdit, SIGNAL(editingFinished()), this, SLOT(enableApplyButton()));
+
+    connect(ui->enableSSECheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->enableSSE2CheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->enableSSE3CheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->enableSSE41CheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->enableNeonCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
 
     ui->enabledBackendList->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->enabledBackendList, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(showEnabledBackendMenu(QPoint)));
 
     ui->disabledBackendList->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->disabledBackendList, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(showDisabledBackendMenu(QPoint)));
+    connect(ui->backendCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+
+    connect(ui->defaultReverbComboBox, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(enableApplyButton()));
+    connect(ui->emulateEaxCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->enableEaxReverbCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->enableStdReverbCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->enableChorusCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->enableCompressorCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->enableDistortionCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->enableEchoCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->enableEqualizerCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->enableFlangerCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->enableModulatorCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->enableDedicatedCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
 
     loadConfig(getDefaultConfigName());
 }
@@ -283,6 +318,32 @@ MainWindow::~MainWindow()
     delete mSourceSendValidator;
     delete mSampleRateValidator;
 }
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    if(!mNeedsSave)
+        event->accept();
+    else
+    {
+        QMessageBox::StandardButton btn = QMessageBox::warning(this,
+            tr("Apply changes?"), tr("Save changes before quitting?"),
+            QMessageBox::Save | QMessageBox::No | QMessageBox::Cancel
+        );
+        if(btn == QMessageBox::Save)
+            saveCurrentConfig();
+        if(btn == QMessageBox::Cancel)
+            event->ignore();
+        else
+            event->accept();
+    }
+}
+
+void MainWindow::cancelCloseAction()
+{
+    mNeedsSave = false;
+    close();
+}
+
 
 void MainWindow::loadConfigFromFile()
 {
@@ -501,11 +562,18 @@ void MainWindow::loadConfig(const QString &fname)
     ui->enableFlangerCheck->setChecked(!excludefx.contains("flanger", Qt::CaseInsensitive));
     ui->enableModulatorCheck->setChecked(!excludefx.contains("modulator", Qt::CaseInsensitive));
     ui->enableDedicatedCheck->setChecked(!excludefx.contains("dedicated", Qt::CaseInsensitive));
+
+    ui->applyButton->setEnabled(false);
+    ui->closeCancelButton->setText(tr("Close"));
+    mNeedsSave = false;
 }
 
 void MainWindow::saveCurrentConfig()
 {
     saveConfig(getDefaultConfigName());
+    ui->applyButton->setEnabled(false);
+    ui->closeCancelButton->setText(tr("Close"));
+    mNeedsSave = false;
     QMessageBox::information(this, tr("Information"),
                              tr("Applications using OpenAL need to be restarted for changes to take effect."));
 }
@@ -514,7 +582,11 @@ void MainWindow::saveConfigAsFile()
 {
     QString fname = QFileDialog::getOpenFileName(this, tr("Select Files"));
     if(fname.isEmpty() == false)
+    {
         saveConfig(fname);
+        ui->applyButton->setEnabled(false);
+        mNeedsSave = false;
+    }
 }
 
 void MainWindow::saveConfig(const QString &fname) const
@@ -665,9 +737,19 @@ void MainWindow::saveConfig(const QString &fname) const
 }
 
 
+void MainWindow::enableApplyButton()
+{
+    if(!mNeedsSave)
+        ui->applyButton->setEnabled(true);
+    mNeedsSave = true;
+    ui->closeCancelButton->setText(tr("Cancel"));
+}
+
+
 void MainWindow::updateResamplerLabel(int num)
 {
     ui->resamplerLabel->setText(resamplerList[num].name);
+    enableApplyButton();
 }
 
 
@@ -679,6 +761,7 @@ void MainWindow::updatePeriodSizeEdit(int size)
         size = (size+32)&~0x3f;
         ui->periodSizeEdit->insert(QString::number(size));
     }
+    enableApplyButton();
 }
 
 void MainWindow::updatePeriodSizeSlider()
@@ -690,6 +773,7 @@ void MainWindow::updatePeriodSizeSlider()
             pos = 8192;
         ui->periodSizeSlider->setSliderPosition(pos);
     }
+    enableApplyButton();
 }
 
 void MainWindow::updatePeriodCountEdit(int count)
@@ -697,6 +781,7 @@ void MainWindow::updatePeriodCountEdit(int count)
     ui->periodCountEdit->clear();
     if(count >= 2)
         ui->periodCountEdit->insert(QString::number(count));
+    enableApplyButton();
 }
 
 void MainWindow::updatePeriodCountSlider()
@@ -707,6 +792,7 @@ void MainWindow::updatePeriodCountSlider()
     else if(pos > 16)
         pos = 16;
     ui->periodCountSlider->setSliderPosition(pos);
+    enableApplyButton();
 }
 
 
@@ -719,36 +805,20 @@ void MainWindow::addHrtfFile()
     if(fnames.isEmpty() == false)
     {
         for(QStringList::iterator iter = fnames.begin();iter != fnames.end();iter++)
-        {
-            QStringList::const_iterator path = datapaths.constBegin();
-            for(;path != datapaths.constEnd();path++)
-            {
-                QDir hrtfdir(*path);
-                if(!hrtfdir.isAbsolute())
-                    continue;
-
-                const QString relname = hrtfdir.relativeFilePath(*iter);
-                if(!relname.startsWith(".."))
-                {
-                    // If filename is within this path, use the relative pathname
-                    ui->hrtfFileList->addItem(relname);
-                    break;
-                }
-            }
-            if(path == datapaths.constEnd())
-            {
-                // Filename is not within any data path, use the absolute pathname
-                ui->hrtfFileList->addItem(*iter);
-            }
-        }
+            ui->hrtfFileList->addItem(*iter);
+        enableApplyButton();
     }
 }
 
 void MainWindow::removeHrtfFile()
 {
     QList<QListWidgetItem*> selected = ui->hrtfFileList->selectedItems();
-    foreach(QListWidgetItem *item, selected)
-        delete item;
+    if(!selected.isEmpty())
+    {
+        foreach(QListWidgetItem *item, selected)
+            delete item;
+        enableApplyButton();
+    }
 }
 
 void MainWindow::updateHrtfRemoveButton()
@@ -782,12 +852,14 @@ void MainWindow::showEnabledBackendMenu(QPoint pt)
         QList<QListWidgetItem*> selected = ui->enabledBackendList->selectedItems();
         foreach(QListWidgetItem *item, selected)
             delete item;
+        enableApplyButton();
     }
     else if(gotAction != NULL)
     {
         QMap<QAction*,QString>::const_iterator iter = actionMap.find(gotAction);
         if(iter != actionMap.end())
             ui->enabledBackendList->addItem(iter.value());
+        enableApplyButton();
     }
 }
 
@@ -817,11 +889,13 @@ void MainWindow::showDisabledBackendMenu(QPoint pt)
         QList<QListWidgetItem*> selected = ui->disabledBackendList->selectedItems();
         foreach(QListWidgetItem *item, selected)
             delete item;
+        enableApplyButton();
     }
     else if(gotAction != NULL)
     {
         QMap<QAction*,QString>::const_iterator iter = actionMap.find(gotAction);
         if(iter != actionMap.end())
             ui->disabledBackendList->addItem(iter.value());
+        enableApplyButton();
     }
 }

@@ -22,6 +22,8 @@ private slots:
     void saveConfigAsFile();
     void loadConfigFromFile();
 
+    void updateResamplerLabel(int num);
+
     void updatePeriodSizeEdit(int size);
     void updatePeriodSizeSlider();
     void updatePeriodCountEdit(int size);

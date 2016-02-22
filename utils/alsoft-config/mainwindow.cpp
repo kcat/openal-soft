@@ -86,12 +86,12 @@ static const struct {
 
     { "", "" }
 }, resamplerList[] = {
-    { "Default", "" },
-    { "Point (low quality, very fast)", "point" },
-    { "Linear (basic quality, fast)", "linear" },
-    { "4-Point Sinc (good quality)", "sinc4" },
-    { "8-Point Sinc (high quality, slow)", "sinc8" },
-    { "Band-limited Sinc (very high quality, very slow)", "bsinc" },
+    { "Point", "point" },
+    { "Linear", "linear" },
+    { "Default (Linear)", "" },
+    { "4-Point Sinc", "sinc4" },
+    { "8-Point Sinc", "sinc8" },
+    { "Band-limited Sinc", "bsinc" },
 
     { "", "" }
 }, stereoModeList[] = {
@@ -183,12 +183,14 @@ MainWindow::MainWindow(QWidget *parent) :
     for(int i = 0;sampleTypeList[i].name[0];i++)
         ui->sampleFormatCombo->addItem(sampleTypeList[i].name);
     ui->sampleFormatCombo->adjustSize();
-    for(int i = 0;resamplerList[i].name[0];i++)
-        ui->resamplerComboBox->addItem(resamplerList[i].name);
-    ui->resamplerComboBox->adjustSize();
     for(int i = 0;stereoModeList[i].name[0];i++)
         ui->stereoModeCombo->addItem(stereoModeList[i].name);
     ui->stereoModeCombo->adjustSize();
+
+    int count;
+    for(count = 0;resamplerList[count].name[0];count++) {
+    }
+    ui->resamplerSlider->setRange(0, count-1);
 
     ui->hrtfStateComboBox->adjustSize();
 
@@ -250,6 +252,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSave_As, SIGNAL(triggered()), this, SLOT(saveConfigAsFile()));
 
     connect(ui->applyButton, SIGNAL(clicked()), this, SLOT(saveCurrentConfig()));
+
+    connect(ui->resamplerSlider, SIGNAL(valueChanged(int)), this, SLOT(updateResamplerLabel(int)));
 
     connect(ui->periodSizeSlider, SIGNAL(valueChanged(int)), this, SLOT(updatePeriodSizeEdit(int)));
     connect(ui->periodSizeEdit, SIGNAL(editingFinished()), this, SLOT(updatePeriodSizeSlider()));
@@ -352,29 +356,17 @@ void MainWindow::loadConfig(const QString &fname)
     ui->srcSendLineEdit->insert(settings.value("sends").toString());
 
     QString resampler = settings.value("resampler").toString().trimmed();
-    ui->resamplerComboBox->setCurrentIndex(0);
-    if(resampler.isEmpty() == false)
+    ui->resamplerSlider->setValue(0);
+    /* The "cubic" resampler is no longer supported. It's been replaced by
+     * "sinc4". */
+    if(resampler == "cubic")
+        resampler = "sinc4";
+    for(int i = 0;resamplerList[i].name[i];i++)
     {
-        /* The "cubic" resampler is no longer supported. It's been replaced by
-         * "sinc4". */
-        if(resampler == "cubic")
-            resampler = "sinc4";
-
-        for(int i = 0;resamplerList[i].name[i];i++)
+        if(resampler == resamplerList[i].value)
         {
-            if(resampler == resamplerList[i].value)
-            {
-                for(int j = 1;j < ui->resamplerComboBox->count();j++)
-                {
-                    QString item = ui->resamplerComboBox->itemText(j);
-                    if(item == resamplerList[i].name)
-                    {
-                        ui->resamplerComboBox->setCurrentIndex(j);
-                        break;
-                    }
-                }
-                break;
-            }
+            ui->resamplerSlider->setValue(i);
+            break;
         }
     }
 
@@ -442,6 +434,14 @@ void MainWindow::loadConfig(const QString &fname)
         hrtf_tables = hrtf_tables[0].split(QChar(','));
     std::transform(hrtf_tables.begin(), hrtf_tables.end(),
                    hrtf_tables.begin(), std::mem_fun_ref(&QString::trimmed));
+    hrtf_tables.removeDuplicates();
+    if(!hrtf_tables.empty() && !hrtf_tables.contains("%s.mhr"))
+        ui->defaultHrtfPathsCheckBox->setCheckState(Qt::Unchecked);
+    else
+    {
+        hrtf_tables.removeOne("%s.mhr");
+        ui->defaultHrtfPathsCheckBox->setCheckState(Qt::Checked);
+    }
     ui->hrtfFileList->clear();
     ui->hrtfFileList->addItems(hrtf_tables);
     updateHrtfRemoveButton();
@@ -562,15 +562,7 @@ void MainWindow::saveConfig(const QString &fname) const
     settings.setValue("sources", ui->srcCountLineEdit->text());
     settings.setValue("slots", ui->effectSlotLineEdit->text());
 
-    str = ui->resamplerComboBox->currentText();
-    for(int i = 0;resamplerList[i].name[0];i++)
-    {
-        if(str == resamplerList[i].name)
-        {
-            settings.setValue("resampler", resamplerList[i].value);
-            break;
-        }
-    }
+    settings.setValue("resampler", resamplerList[ui->resamplerSlider->value()].value);
 
     str = ui->stereoModeCombo->currentText();
     for(int i = 0;stereoModeList[i].name[0];i++)
@@ -606,6 +598,8 @@ void MainWindow::saveConfig(const QString &fname) const
     QList<QListWidgetItem*> items = ui->hrtfFileList->findItems("*", Qt::MatchWildcard);
     foreach(const QListWidgetItem *item, items)
         strlist.append(item->text());
+    if(!strlist.empty() && ui->defaultHrtfPathsCheckBox->isChecked())
+        strlist.append("%s.mhr");
     settings.setValue("hrtf_tables", strlist.join(QChar(',')));
 
     strlist.clear();
@@ -668,6 +662,12 @@ void MainWindow::saveConfig(const QString &fname) const
         if(str == QString())
             settings.remove(key);
     }
+}
+
+
+void MainWindow::updateResamplerLabel(int num)
+{
+    ui->resamplerLabel->setText(resamplerList[num].name);
 }
 
 

@@ -588,7 +588,9 @@ static int ALCplaybackAlsa_mixerNoMMapProc(void *ptr)
             {
             case -EAGAIN:
                 continue;
+#if ESTRPIPE != EPIPE
             case -ESTRPIPE:
+#endif
             case -EPIPE:
             case -EINTR:
                 ret = snd_pcm_recover(self->pcmHandle, ret, 1);

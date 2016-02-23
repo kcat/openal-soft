@@ -494,21 +494,21 @@ void MainWindow::loadConfig(const QString &fname)
     ui->enableSSE41CheckBox->setChecked(!disabledCpuExts.contains("sse4.1", Qt::CaseInsensitive));
     ui->enableNeonCheckBox->setChecked(!disabledCpuExts.contains("neon", Qt::CaseInsensitive));
 
-    QStringList hrtf_tables = settings.value("hrtf_tables").toStringList();
-    if(hrtf_tables.size() == 1)
-        hrtf_tables = hrtf_tables[0].split(QChar(','));
-    std::transform(hrtf_tables.begin(), hrtf_tables.end(),
-                   hrtf_tables.begin(), std::mem_fun_ref(&QString::trimmed));
-    hrtf_tables.removeDuplicates();
-    if(!hrtf_tables.empty() && !hrtf_tables.contains("%s.mhr"))
+    QStringList hrtf_paths = settings.value("hrtf-paths").toStringList();
+    if(hrtf_paths.size() == 1)
+        hrtf_paths = hrtf_paths[0].split(QChar(','));
+    std::transform(hrtf_paths.begin(), hrtf_paths.end(),
+                   hrtf_paths.begin(), std::mem_fun_ref(&QString::trimmed));
+    if(!hrtf_paths.empty() && !hrtf_paths.back().isEmpty())
         ui->defaultHrtfPathsCheckBox->setCheckState(Qt::Unchecked);
     else
     {
-        hrtf_tables.removeOne("%s.mhr");
+        hrtf_paths.removeAll(QString());
         ui->defaultHrtfPathsCheckBox->setCheckState(Qt::Checked);
     }
+    hrtf_paths.removeDuplicates();
     ui->hrtfFileList->clear();
-    ui->hrtfFileList->addItems(hrtf_tables);
+    ui->hrtfFileList->addItems(hrtf_paths);
     updateHrtfRemoveButton();
 
     QString hrtfstate = settings.value("hrtf").toString().toLower();
@@ -712,20 +712,17 @@ void MainWindow::saveConfig(const QString &fname) const
     }
 
     strlist.clear();
-    QList<QListWidgetItem*> items = ui->hrtfFileList->findItems("*", Qt::MatchWildcard);
-    foreach(const QListWidgetItem *item, items)
-        strlist.append(item->text());
+    for(int i = 0;i < ui->hrtfFileList->count();i++)
+        strlist.append(ui->hrtfFileList->item(i)->text());
     if(!strlist.empty() && ui->defaultHrtfPathsCheckBox->isChecked())
-        strlist.append("%s.mhr");
-    settings.setValue("hrtf_tables", strlist.join(QChar(',')));
+        strlist.append(QString());
+    settings.setValue("hrtf-paths", strlist.join(QChar(',')));
 
     strlist.clear();
-    items = ui->enabledBackendList->findItems("*", Qt::MatchWildcard);
-    foreach(const QListWidgetItem *item, items)
-        strlist.append(item->text());
-    items = ui->disabledBackendList->findItems("*", Qt::MatchWildcard);
-    foreach(const QListWidgetItem *item, items)
-        strlist.append(QChar('-')+item->text());
+    for(int i = 0;i < ui->enabledBackendList->count();i++)
+        strlist.append(ui->enabledBackendList->item(i)->text());
+    for(int i = 0;i < ui->disabledBackendList->count();i++)
+        strlist.append(QChar('-')+ui->disabledBackendList->item(i)->text());
     if(strlist.size() == 0 && !ui->backendCheckBox->isChecked())
         strlist.append("-all");
     else if(ui->backendCheckBox->isChecked())
@@ -843,14 +840,10 @@ void MainWindow::updatePeriodCountSlider()
 
 void MainWindow::addHrtfFile()
 {
-    const QStringList datapaths = getAllDataPaths("/openal/hrtf");
-    QStringList fnames = QFileDialog::getOpenFileNames(this, tr("Select Files"),
-                                                       datapaths.empty() ? QString() : datapaths[0],
-                                                       "HRTF Datasets(*.mhr);;All Files(*.*)");
-    if(fnames.isEmpty() == false)
+    QString path = QFileDialog::getExistingDirectory(this, tr("Select HRTF Path"));
+    if(path.isEmpty() == false && !getAllDataPaths("/openal/hrtf").contains(path))
     {
-        for(QStringList::iterator iter = fnames.begin();iter != fnames.end();iter++)
-            ui->hrtfFileList->addItem(*iter);
+        ui->hrtfFileList->addItem(path);
         enableApplyButton();
     }
 }

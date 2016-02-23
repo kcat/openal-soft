@@ -603,42 +603,57 @@ done:
 vector_HrtfEntry EnumerateHrtf(const_al_string devname)
 {
     vector_HrtfEntry list = VECTOR_INIT_STATIC();
-    const char *fnamelist = "%s.mhr";
     const char *defaulthrtf = "";
+    const char *pathlist = "";
+    bool usedefaults = true;
 
-    ConfigValueStr(al_string_get_cstr(devname), NULL, "hrtf_tables", &fnamelist);
-    while(fnamelist && *fnamelist)
+    if(ConfigValueStr(al_string_get_cstr(devname), NULL, "hrtf-paths", &pathlist))
     {
-        while(isspace(*fnamelist) || *fnamelist == ',')
-            fnamelist++;
-        if(*fnamelist != '\0')
+        while(pathlist && *pathlist)
         {
             const char *next, *end;
 
-            next = strchr(fnamelist, ',');
-            if(!next)
-                end = fnamelist + strlen(fnamelist);
-            else
-                end = next++;
+            while(isspace(*pathlist) || *pathlist == ',')
+                pathlist++;
+            if(*pathlist == '\0')
+                continue;
 
-            while(end != fnamelist && isspace(*(end-1)))
-                --end;
-            if(end != fnamelist)
+            next = strchr(pathlist, ',');
+            if(next)
+                end = next++;
+            else
             {
-                al_string fname = AL_STRING_INIT_STATIC();
+                end = pathlist + strlen(pathlist);
+                usedefaults = false;
+            }
+
+            while(end != pathlist && isspace(*(end-1)))
+                --end;
+            if(end != pathlist)
+            {
+                al_string pname = AL_STRING_INIT_STATIC();
                 vector_al_string flist;
 
-                al_string_append_range(&fname, fnamelist, end);
+                al_string_append_range(&pname, pathlist, end);
 
-                flist = SearchDataFiles(al_string_get_cstr(fname), "openal/hrtf");
+                flist = SearchDataFiles(".mhr", al_string_get_cstr(pname));
                 VECTOR_FOR_EACH_PARAMS(al_string, flist, AddFileEntry, &list);
                 VECTOR_DEINIT(flist);
 
-                al_string_deinit(&fname);
+                al_string_deinit(&pname);
             }
 
-            fnamelist = next;
+            pathlist = next;
         }
+    }
+    else if(ConfigValueExists(al_string_get_cstr(devname), NULL, "hrtf_tables"))
+        ERR("The hrtf_tables option is deprecated, please use hrtf-paths instead.\n");
+
+    if(usedefaults)
+    {
+        vector_al_string flist = SearchDataFiles(".mhr", "openal/hrtf");
+        VECTOR_FOR_EACH_PARAMS(al_string, flist, AddFileEntry, &list);
+        VECTOR_DEINIT(flist);
     }
 
     if(VECTOR_SIZE(list) > 1 && ConfigValueStr(al_string_get_cstr(devname), NULL, "default-hrtf", &defaulthrtf))

@@ -102,22 +102,18 @@
 #  that this is the enumerated HRTF name, not necessarily the filename.
 #default-hrtf =
 
-## hrtf_tables:
-#  Specifies a comma-separated list of files containing HRTF data sets. The
-#  format of the files are described in hrtf.txt. The filenames may contain
-#  these markers, which will be replaced as needed:
-#  %r - Device sampling rate
-#  %s - Non-greedy string (up to the following matching characters)
-#  %% - Percent sign (%)
-#  The listed files are relative to system-dependant data directories. On
-#  Windows this is:
+## hrtf-paths:
+#  Specifies a comma-separated list of paths containing HRTF data sets. The
+#  format of the files are described in hrtf.txt. The files within the
+#  directories must have the .mhr file extension to be recognized. By default,
+#  OS-dependent data paths will be used. They will also be used if the list
+#  ends with a comma. On Windows this is:
 #  $AppData\openal\hrtf
 #  And on other systems, it's (in order):
 #  $XDG_DATA_HOME/openal/hrtf  (defaults to $HOME/.local/share/openal/hrtf)
 #  $XDG_DATA_DIRS/openal/hrtf  (defaults to /usr/local/share/openal/hrtf and
 #                               /usr/share/openal/hrtf)
-#  An absolute path may also be specified, if the given file is elsewhere.
-#hrtf_tables = %s.mhr
+#hrtf-paths =
 
 ## cf_level:
 #  Sets the crossfeed level for stereo output. Valid values are:

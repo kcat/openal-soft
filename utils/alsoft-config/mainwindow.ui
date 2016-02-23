@@ -510,7 +510,7 @@ frames needed for each mixing update.</string>
         </rect>
        </property>
        <property name="title">
-        <string>HRTF Profiles</string>
+        <string>HRTF Profile Paths</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>

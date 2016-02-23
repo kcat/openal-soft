@@ -346,13 +346,13 @@ void MainWindow::cancelCloseAction()
 }
 
 
-QStringList MainWindow::collectDefaultHrtfs()
+QStringList MainWindow::collectHrtfs()
 {
     QStringList ret;
-    QStringList paths = getAllDataPaths("/openal/hrtf");
-    foreach(const QString &name, paths)
+
+    for(int i = 0;i < ui->hrtfFileList->count();i++)
     {
-        QDir dir(name);
+        QDir dir(ui->hrtfFileList->item(i)->text());
         QStringList fnames = dir.entryList(QDir::Files | QDir::Readable);
         foreach(const QString &fname, fnames)
         {
@@ -372,6 +372,37 @@ QStringList MainWindow::collectDefaultHrtfs()
                         }
                         ++i;
                     } while(1);
+                }
+            }
+        }
+    }
+
+    if(ui->defaultHrtfPathsCheckBox->isChecked())
+    {
+        QStringList paths = getAllDataPaths("/openal/hrtf");
+        foreach(const QString &name, paths)
+        {
+            QDir dir(name);
+            QStringList fnames = dir.entryList(QDir::Files | QDir::Readable);
+            foreach(const QString &fname, fnames)
+            {
+                if(fname.endsWith(".mhr", Qt::CaseInsensitive))
+                {
+                    if(!ret.contains(fname))
+                        ret.push_back(fname);
+                    else
+                    {
+                        size_t i = 1;
+                        do {
+                            QString s = fname+" #"+QString::number(i);
+                            if(!ret.contains(s))
+                            {
+                                ret.push_back(s);
+                                break;
+                            }
+                            ++i;
+                        } while(1);
+                    }
                 }
             }
         }
@@ -523,7 +554,7 @@ void MainWindow::loadConfig(const QString &fname)
     ui->preferredHrtfComboBox->addItem("- Any -");
     if(ui->defaultHrtfPathsCheckBox->isChecked())
     {
-        QStringList hrtfs = collectDefaultHrtfs();
+        QStringList hrtfs = collectHrtfs();
         foreach(const QString &name, hrtfs)
             ui->preferredHrtfComboBox->addItem(name);
     }

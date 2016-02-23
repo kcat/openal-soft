@@ -299,7 +299,7 @@ mixed and being heard.</string>
         <widget class="QSlider" name="periodCountSlider">
          <property name="geometry">
           <rect>
-           <x>70</x>
+           <x>80</x>
            <y>20</y>
            <width>160</width>
            <height>23</height>
@@ -416,7 +416,7 @@ frames needed for each mixing update.</string>
         <widget class="QLineEdit" name="periodSizeEdit">
          <property name="geometry">
           <rect>
-           <x>10</x>
+           <x>0</x>
            <y>20</y>
            <width>51</width>
            <height>22</height>
@@ -432,9 +432,9 @@ frames needed for each mixing update.</string>
      <widget class="QGroupBox" name="groupBox_4">
       <property name="geometry">
        <rect>
-        <x>90</x>
+        <x>60</x>
         <y>80</y>
-        <width>351</width>
+        <width>421</width>
         <height>81</height>
        </rect>
       </property>
@@ -447,9 +447,9 @@ frames needed for each mixing update.</string>
       <widget class="QLabel" name="resamplerLabel">
        <property name="geometry">
         <rect>
-         <x>20</x>
+         <x>50</x>
          <y>50</y>
-         <width>311</width>
+         <width>321</width>
          <height>21</height>
         </rect>
        </property>
@@ -463,14 +463,43 @@ frames needed for each mixing update.</string>
       <widget class="QSlider" name="resamplerSlider">
        <property name="geometry">
         <rect>
-         <x>20</x>
+         <x>80</x>
          <y>30</y>
-         <width>311</width>
+         <width>251</width>
          <height>23</height>
         </rect>
        </property>
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_9">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>30</y>
+         <width>51</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Speed</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_15">
+       <property name="geometry">
+        <rect>
+         <x>340</x>
+         <y>30</y>
+         <width>51</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Quality</string>
        </property>
       </widget>
      </widget>

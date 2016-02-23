@@ -96,11 +96,11 @@
 #  respectively.
 #hrtf = auto
 
-## default_hrtf:
+## default-hrtf:
 #  Specifies the default HRTF to use. When multiple HRTFs are available, this
 #  determines the preferred one to use if none are specifically requested. Note
 #  that this is the enumerated HRTF name, not necessarily the filename.
-#default_hrtf =
+#default-hrtf =
 
 ## hrtf_tables:
 #  Specifies a comma-separated list of files containing HRTF data sets. The

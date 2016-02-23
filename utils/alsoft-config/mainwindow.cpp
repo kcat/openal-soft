@@ -269,6 +269,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->periodCountSlider, SIGNAL(valueChanged(int)), this, SLOT(updatePeriodCountEdit(int)));
     connect(ui->periodCountEdit, SIGNAL(editingFinished()), this, SLOT(updatePeriodCountSlider()));
 
+    connect(ui->preferredHrtfComboBox, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(enableApplyButton()));
     connect(ui->hrtfStateComboBox, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(enableApplyButton()));
     connect(ui->hrtfAddButton, SIGNAL(clicked()), this, SLOT(addHrtfFile()));
     connect(ui->hrtfRemoveButton, SIGNAL(clicked()), this, SLOT(removeHrtfFile()));
@@ -345,6 +346,24 @@ void MainWindow::cancelCloseAction()
 }
 
 
+QStringList MainWindow::collectDefaultHrtfs()
+{
+    QStringList ret;
+    QStringList paths = getAllDataPaths("/openal/hrtf");
+    foreach(const QString &name, paths)
+    {
+        QDir dir(name);
+        QStringList fnames = dir.entryList(QDir::Files | QDir::Readable);
+        foreach(const QString &fname, fnames)
+        {
+            if(fname.endsWith(".mhr", Qt::CaseInsensitive))
+                ret.push_back(fname);
+        }
+    }
+    return ret;
+}
+
+
 void MainWindow::loadConfigFromFile()
 {
     QString fname = QFileDialog::getOpenFileName(this, tr("Select Files"));
@@ -364,15 +383,8 @@ void MainWindow::loadConfig(const QString &fname)
         {
             if(sampletype == sampleTypeList[i].value)
             {
-                for(int j = 1;j < ui->sampleFormatCombo->count();j++)
-                {
-                    QString item = ui->sampleFormatCombo->itemText(j);
-                    if(item == sampleTypeList[i].name)
-                    {
-                        ui->sampleFormatCombo->setCurrentIndex(j);
-                        break;
-                    }
-                }
+                int j = ui->sampleFormatCombo->findText(sampleTypeList[i].name);
+                if(j > 0) ui->sampleFormatCombo->setCurrentIndex(j);
                 break;
             }
         }
@@ -386,15 +398,8 @@ void MainWindow::loadConfig(const QString &fname)
         {
             if(channelconfig == speakerModeList[i].value)
             {
-                for(int j = 1;j < ui->channelConfigCombo->count();j++)
-                {
-                    QString item = ui->channelConfigCombo->itemText(j);
-                    if(item == speakerModeList[i].name)
-                    {
-                        ui->channelConfigCombo->setCurrentIndex(j);
-                        break;
-                    }
-                }
+                int j = ui->channelConfigCombo->findText(speakerModeList[i].name);
+                if(j > 0) ui->channelConfigCombo->setCurrentIndex(j);
                 break;
             }
         }
@@ -439,15 +444,8 @@ void MainWindow::loadConfig(const QString &fname)
         {
             if(stereomode == stereoModeList[i].value)
             {
-                for(int j = 1;j < ui->stereoModeCombo->count();j++)
-                {
-                    QString item = ui->stereoModeCombo->itemText(j);
-                    if(item == stereoModeList[i].name)
-                    {
-                        ui->stereoModeCombo->setCurrentIndex(j);
-                        break;
-                    }
-                }
+                int j = ui->stereoModeCombo->findText(stereoModeList[i].name);
+                if(j > 0) ui->stereoModeCombo->setCurrentIndex(j);
                 break;
             }
         }
@@ -480,16 +478,6 @@ void MainWindow::loadConfig(const QString &fname)
     ui->enableSSE41CheckBox->setChecked(!disabledCpuExts.contains("sse4.1", Qt::CaseInsensitive));
     ui->enableNeonCheckBox->setChecked(!disabledCpuExts.contains("neon", Qt::CaseInsensitive));
 
-    if(settings.value("hrtf").toString() == QString())
-        ui->hrtfStateComboBox->setCurrentIndex(0);
-    else
-    {
-        if(settings.value("hrtf", true).toBool())
-            ui->hrtfStateComboBox->setCurrentIndex(1);
-        else
-            ui->hrtfStateComboBox->setCurrentIndex(2);
-    }
-
     QStringList hrtf_tables = settings.value("hrtf_tables").toStringList();
     if(hrtf_tables.size() == 1)
         hrtf_tables = hrtf_tables[0].split(QChar(','));
@@ -506,6 +494,39 @@ void MainWindow::loadConfig(const QString &fname)
     ui->hrtfFileList->clear();
     ui->hrtfFileList->addItems(hrtf_tables);
     updateHrtfRemoveButton();
+
+    QString hrtfstate = settings.value("hrtf").toString().toLower();
+    if(hrtfstate == "true")
+        ui->hrtfStateComboBox->setCurrentIndex(1);
+    else if(hrtfstate == "false")
+        ui->hrtfStateComboBox->setCurrentIndex(2);
+    else
+        ui->hrtfStateComboBox->setCurrentIndex(0);
+
+    ui->preferredHrtfComboBox->clear();
+    ui->preferredHrtfComboBox->addItem("- Any -");
+    if(ui->defaultHrtfPathsCheckBox->isChecked())
+    {
+        QStringList hrtfs = collectDefaultHrtfs();
+        foreach(const QString &name, hrtfs)
+            ui->preferredHrtfComboBox->addItem(name);
+    }
+
+    QString defaulthrtf = settings.value("default-hrtf").toString();
+    ui->preferredHrtfComboBox->setCurrentIndex(0);
+    if(defaulthrtf.isEmpty() == false)
+    {
+        int i = ui->preferredHrtfComboBox->findText(defaulthrtf);
+        if(i > 0)
+            ui->preferredHrtfComboBox->setCurrentIndex(i);
+        else
+        {
+            i = ui->preferredHrtfComboBox->count();
+            ui->preferredHrtfComboBox->addItem(defaulthrtf);
+            ui->preferredHrtfComboBox->setCurrentIndex(i);
+        }
+    }
+    ui->preferredHrtfComboBox->adjustSize();
 
     ui->enabledBackendList->clear();
     ui->disabledBackendList->clear();
@@ -665,6 +686,14 @@ void MainWindow::saveConfig(const QString &fname) const
         settings.setValue("hrtf", "false");
     else
         settings.setValue("hrtf", QString());
+
+    if(ui->preferredHrtfComboBox->currentIndex() == 0)
+        settings.setValue("default-hrtf", QString());
+    else
+    {
+        str = ui->preferredHrtfComboBox->currentText();
+        settings.setValue("default-hrtf", str);
+    }
 
     strlist.clear();
     QList<QListWidgetItem*> items = ui->hrtfFileList->findItems("*", Qt::MatchWildcard);

@@ -641,7 +641,7 @@ vector_HrtfEntry EnumerateHrtf(const_al_string devname)
         }
     }
 
-    if(VECTOR_SIZE(list) > 1 && ConfigValueStr(al_string_get_cstr(devname), NULL, "default_hrtf", &defaulthrtf))
+    if(VECTOR_SIZE(list) > 1 && ConfigValueStr(al_string_get_cstr(devname), NULL, "default-hrtf", &defaulthrtf))
     {
         const HrtfEntry *iter;
         /* Find the preferred HRTF and move it to the front of the list. */

@@ -55,6 +55,8 @@ private:
 
     void closeEvent(QCloseEvent *event);
 
+    QStringList collectDefaultHrtfs();
+
     void loadConfig(const QString &fname);
     void saveConfig(const QString &fname) const;
 };

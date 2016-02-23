@@ -357,7 +357,23 @@ QStringList MainWindow::collectDefaultHrtfs()
         foreach(const QString &fname, fnames)
         {
             if(fname.endsWith(".mhr", Qt::CaseInsensitive))
-                ret.push_back(fname);
+            {
+                if(!ret.contains(fname))
+                    ret.push_back(fname);
+                else
+                {
+                    size_t i = 1;
+                    do {
+                        QString s = fname+" #"+QString::number(i);
+                        if(!ret.contains(s))
+                        {
+                            ret.push_back(s);
+                            break;
+                        }
+                        ++i;
+                    } while(1);
+                }
+            }
         }
     }
     return ret;

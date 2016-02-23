@@ -16,12 +16,6 @@
     <height>454</height>
    </size>
   </property>
-  <property name="maximumSize">
-   <size>
-    <width>564</width>
-    <height>454</height>
-   </size>
-  </property>
   <property name="windowTitle">
    <string>OpenAL Soft Configuration</string>
   </property>

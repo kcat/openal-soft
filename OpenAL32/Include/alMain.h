@@ -732,8 +732,6 @@ enum {
 
 void FillCPUCaps(ALuint capfilter);
 
-FILE *OpenDataFile(const char *fname, const char *subdir);
-
 vector_al_string SearchDataFiles(const char *match, const char *subdir);
 
 /* Small hack to use a pointer-to-array type as a normal argument type.

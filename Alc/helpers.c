@@ -735,8 +735,7 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
                 al_string_copy_cstr(&path, str);
             else
             {
-                al_string_clear(&path);
-                al_string_append_range(&path, str, next);
+                al_string_copy_range(&path, str, next);
                 ++next;
             }
             if(!al_string_empty(path))
@@ -861,12 +860,16 @@ extern inline const al_string_char_type *al_string_get_cstr(const_al_string str)
 
 void al_string_clear(al_string *str)
 {
-    /* Reserve one more character than the total size of the string. This is to
-     * ensure we have space to add a null terminator in the string data so it
-     * can be used as a C-style string. */
-    VECTOR_RESERVE(*str, 1);
-    VECTOR_RESIZE(*str, 0);
-    *VECTOR_ITER_END(*str) = 0;
+    if(!al_string_empty(*str))
+    {
+        /* Reserve one more character than the total size of the string. This
+         * is to ensure we have space to add a null terminator in the string
+         * data so it can be used as a C-style string.
+         */
+        VECTOR_RESERVE(*str, 1);
+        VECTOR_RESIZE(*str, 0);
+        *VECTOR_ITER_END(*str) = 0;
+    }
 }
 
 static inline int al_string_compare(const al_string_char_type *str1, size_t str1len,
@@ -907,6 +910,15 @@ void al_string_copy_cstr(al_string *str, const al_string_char_type *from)
     VECTOR_RESERVE(*str, len+1);
     VECTOR_RESIZE(*str, 0);
     VECTOR_INSERT(*str, VECTOR_ITER_END(*str), from, from+len);
+    *VECTOR_ITER_END(*str) = 0;
+}
+
+void al_string_copy_range(al_string *str, const al_string_char_type *from, const al_string_char_type *to)
+{
+    size_t len = to - from;
+    VECTOR_RESERVE(*str, len+1);
+    VECTOR_RESIZE(*str, 0);
+    VECTOR_INSERT(*str, VECTOR_ITER_END(*str), from, to);
     *VECTOR_ITER_END(*str) = 0;
 }
 

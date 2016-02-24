@@ -583,10 +583,7 @@ static void AddFileEntry(vector_HrtfEntry *list, al_string *filename)
         if(!ext)
             al_string_copy_cstr(&entry.name, name);
         else
-        {
-            al_string_clear(&entry.name);
-            al_string_append_range(&entry.name, name, ext);
-        }
+            al_string_copy_range(&entry.name, name, ext);
         if(i != 0)
         {
             char str[64];

@@ -359,12 +359,12 @@ QStringList MainWindow::collectHrtfs()
             if(fname.endsWith(".mhr", Qt::CaseInsensitive))
             {
                 if(!ret.contains(fname))
-                    ret.push_back(fname);
+                    ret.push_back(fname.left(fname.length()-4));
                 else
                 {
                     size_t i = 1;
                     do {
-                        QString s = fname+" #"+QString::number(i);
+                        QString s = fname.left(fname.length()-4)+" #"+QString::number(i);
                         if(!ret.contains(s))
                         {
                             ret.push_back(s);
@@ -389,12 +389,12 @@ QStringList MainWindow::collectHrtfs()
                 if(fname.endsWith(".mhr", Qt::CaseInsensitive))
                 {
                     if(!ret.contains(fname))
-                        ret.push_back(fname);
+                        ret.push_back(fname.left(fname.length()-4));
                     else
                     {
                         size_t i = 1;
                         do {
-                            QString s = fname+" #"+QString::number(i);
+                            QString s = fname.left(fname.length()-4)+" #"+QString::number(i);
                             if(!ret.contains(s))
                             {
                                 ret.push_back(s);

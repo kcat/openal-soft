@@ -514,6 +514,7 @@ static void AddFileEntry(vector_HrtfEntry *list, al_string *filename)
     struct Hrtf *hrtf = NULL;
     const HrtfEntry *iter;
     const char *name;
+    const char *ext;
     ALchar magic[8];
     FILE *f;
     int i;
@@ -575,10 +576,17 @@ static void AddFileEntry(vector_HrtfEntry *list, al_string *filename)
 
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
      * format update). */
+    ext = strrchr(name, '.');
 
     i = 0;
     do {
-        al_string_copy_cstr(&entry.name, name);
+        if(!ext)
+            al_string_copy_cstr(&entry.name, name);
+        else
+        {
+            al_string_clear(&entry.name);
+            al_string_append_range(&entry.name, name, ext);
+        }
         if(i != 0)
         {
             char str[64];

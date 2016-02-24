@@ -554,15 +554,7 @@ frames needed for each mixing update.</string>
          </rect>
         </property>
         <property name="toolTip">
-         <string>A list of files containing HRTF data sets. The listed data sets
-are used in place of the default sets. The filenames may
-contain these markers, which will be replaced as needed:
-%r - Device sampling rate
-%s - Non-greedy string (up to the following matching characters)
-%% - Percent sign (%)</string>
-        </property>
-        <property name="dragEnabled">
-         <bool>false</bool>
+         <string>A list of additional paths containing HRTF data sets.</string>
         </property>
         <property name="dragDropMode">
          <enum>QAbstractItemView::InternalMove</enum>
@@ -606,6 +598,10 @@ contain these markers, which will be replaced as needed:
           <width>151</width>
           <height>21</height>
          </rect>
+        </property>
+        <property name="toolTip">
+         <string>Include the default system paths in addition to any
+listed above.</string>
         </property>
         <property name="text">
          <string>Include Default Paths</string>
@@ -659,6 +655,10 @@ contain these markers, which will be replaced as needed:
         <height>22</height>
        </rect>
       </property>
+      <property name="toolTip">
+       <string>Forces HRTF processing on or off, or leaves it to the
+application or system to determine if it should be used.</string>
+      </property>
       <property name="sizeAdjustPolicy">
        <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
       </property>
@@ -702,6 +702,9 @@ contain these markers, which will be replaced as needed:
         <width>161</width>
         <height>22</height>
        </rect>
+      </property>
+      <property name="toolTip">
+       <string>The default HRTF to use if the application doesn't request one.</string>
       </property>
      </widget>
     </widget>

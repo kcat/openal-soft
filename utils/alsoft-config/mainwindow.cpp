@@ -353,7 +353,7 @@ QStringList MainWindow::collectHrtfs()
     for(int i = 0;i < ui->hrtfFileList->count();i++)
     {
         QDir dir(ui->hrtfFileList->item(i)->text());
-        QStringList fnames = dir.entryList(QDir::Files | QDir::Readable);
+        QStringList fnames = dir.entryList(QDir::Files | QDir::Readable, QDir::Name);
         foreach(const QString &fname, fnames)
         {
             if(fname.endsWith(".mhr", Qt::CaseInsensitive))
@@ -383,7 +383,7 @@ QStringList MainWindow::collectHrtfs()
         foreach(const QString &name, paths)
         {
             QDir dir(name);
-            QStringList fnames = dir.entryList(QDir::Files | QDir::Readable);
+            QStringList fnames = dir.entryList(QDir::Files | QDir::Readable, QDir::Name);
             foreach(const QString &fname, fnames)
             {
                 if(fname.endsWith(".mhr", Qt::CaseInsensitive))

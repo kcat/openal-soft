@@ -643,6 +643,7 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/helpers.c
               Alc/bsinc.c
               Alc/hrtf.c
+              Alc/uhjfilter.c
               Alc/panning.c
               Alc/mixer.c
               Alc/mixer_c.c

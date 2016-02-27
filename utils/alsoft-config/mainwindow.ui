@@ -708,6 +708,86 @@ application or system to determine if it should be used.</string>
       </property>
      </widget>
     </widget>
+    <widget class="QWidget" name="tab">
+     <attribute name="title">
+      <string>Backends</string>
+     </attribute>
+     <widget class="QCheckBox" name="backendCheckBox">
+      <property name="geometry">
+       <rect>
+        <x>170</x>
+        <y>200</y>
+        <width>161</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string>When checked, allows all other available backends not listed in the priority or disabled lists.</string>
+      </property>
+      <property name="text">
+       <string>Allow Other Backends</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QListWidget" name="enabledBackendList">
+      <property name="geometry">
+       <rect>
+        <x>40</x>
+        <y>40</y>
+        <width>191</width>
+        <height>151</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string>The backend driver list order. Unknown backends and
+duplicated names are ignored.</string>
+      </property>
+      <property name="dragDropMode">
+       <enum>QAbstractItemView::InternalMove</enum>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label">
+      <property name="geometry">
+       <rect>
+        <x>40</x>
+        <y>20</y>
+        <width>191</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Priority Backends:</string>
+      </property>
+     </widget>
+     <widget class="QListWidget" name="disabledBackendList">
+      <property name="geometry">
+       <rect>
+        <x>270</x>
+        <y>40</y>
+        <width>191</width>
+        <height>151</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string>Disabled backend driver list.</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_2">
+      <property name="geometry">
+       <rect>
+        <x>270</x>
+        <y>20</y>
+        <width>191</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Disabled Backends:</string>
+      </property>
+     </widget>
+    </widget>
     <widget class="QWidget" name="tab_2">
      <attribute name="title">
       <string>Resources</string>
@@ -946,86 +1026,6 @@ be useful for preventing those extensions from being used.</string>
         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;No support enabled for CPU Extensions&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
       </widget>
-     </widget>
-    </widget>
-    <widget class="QWidget" name="tab">
-     <attribute name="title">
-      <string>Backends</string>
-     </attribute>
-     <widget class="QCheckBox" name="backendCheckBox">
-      <property name="geometry">
-       <rect>
-        <x>170</x>
-        <y>200</y>
-        <width>161</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="toolTip">
-       <string>When checked, allows all other available backends not listed in the priority or disabled lists.</string>
-      </property>
-      <property name="text">
-       <string>Allow Other Backends</string>
-      </property>
-      <property name="checked">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QListWidget" name="enabledBackendList">
-      <property name="geometry">
-       <rect>
-        <x>40</x>
-        <y>40</y>
-        <width>191</width>
-        <height>151</height>
-       </rect>
-      </property>
-      <property name="toolTip">
-       <string>The backend driver list order. Unknown backends and
-duplicated names are ignored.</string>
-      </property>
-      <property name="dragDropMode">
-       <enum>QAbstractItemView::InternalMove</enum>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label">
-      <property name="geometry">
-       <rect>
-        <x>40</x>
-        <y>20</y>
-        <width>191</width>
-        <height>20</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Priority Backends:</string>
-      </property>
-     </widget>
-     <widget class="QListWidget" name="disabledBackendList">
-      <property name="geometry">
-       <rect>
-        <x>270</x>
-        <y>40</y>
-        <width>191</width>
-        <height>151</height>
-       </rect>
-      </property>
-      <property name="toolTip">
-       <string>Disabled backend driver list.</string>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_2">
-      <property name="geometry">
-       <rect>
-        <x>270</x>
-        <y>20</y>
-        <width>191</width>
-        <height>20</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Disabled Backends:</string>
-      </property>
      </widget>
     </widget>
     <widget class="QWidget" name="tab_4">

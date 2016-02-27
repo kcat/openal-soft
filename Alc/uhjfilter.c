@@ -22,8 +22,8 @@ void EncodeUhj2(Uhj2Encoder *enc, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALf
 
     for(base = 0;base < SamplesToDo;)
     {
-        ALfloat D[MAX_UPDATE_SAMPLES], S;
-        ALuint todo = minu(SamplesToDo - base, MAX_UPDATE_SAMPLES);
+        ALfloat D[MAX_UPDATE_SAMPLES/2], S[MAX_UPDATE_SAMPLES/2];
+        ALuint todo = minu(SamplesToDo - base, MAX_UPDATE_SAMPLES/2);
 
         /* D = 0.6554516*Y */
         for(i = 0;i < todo;i++)
@@ -63,10 +63,7 @@ void EncodeUhj2(Uhj2Encoder *enc, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALf
             D[i] += enc->Filter2_WX[3].y[0];
         }
 
-        /* S = 0.9396926*W' + 0.1855740*X
-         * Left = (S + D)/2.0
-         * Right = (S - D)/2.0
-         */
+        /* S = 0.9396926*W' + 0.1855740*X */
         for(i = 0;i < todo;i++)
         {
             ALfloat in = 0.9396926f*1.414213562f*InSamples[0][base+i] +
@@ -81,10 +78,16 @@ void EncodeUhj2(Uhj2Encoder *enc, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALf
                 enc->Filter1_WX[c].y[0] = out;
                 in = out;
             }
-            S = enc->Filter1_WX[3].y[1];
-            OutBuffer[0][base + i] += (S + D[i]) * 0.5f;
-            OutBuffer[1][base + i] += (S - D[i]) * 0.5f;
+            S[i] = enc->Filter1_WX[3].y[1];
         }
+
+        /* Left = (S + D)/2.0
+         * Right = (S - D)/2.0
+         */
+        for(i = 0;i < todo;i++)
+            OutBuffer[0][base + i] += (S[i] + D[i]) * 0.5f;
+        for(i = 0;i < todo;i++)
+            OutBuffer[1][base + i] += (S[i] - D[i]) * 0.5f;
 
         base += todo;
     }

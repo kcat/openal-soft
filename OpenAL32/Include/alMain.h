@@ -470,6 +470,9 @@ struct ALCdevice_struct
     HrtfParams Hrtf_Params[MAX_OUTPUT_CHANNELS];
     ALuint Hrtf_Offset;
 
+    /* UHJ encoder state */
+    struct Uhj2Encoder *Uhj_Encoder;
+
     // Stereo-to-binaural filter
     struct bs2b *Bs2b;
 

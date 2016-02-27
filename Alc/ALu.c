@@ -34,6 +34,7 @@
 #include "alu.h"
 #include "bs2b.h"
 #include "hrtf.h"
+#include "uhjfilter.h"
 #include "static_assert.h"
 
 #include "mixer_defs.h"
@@ -100,19 +101,18 @@ extern inline void aluMatrixdSet(aluMatrixd *matrix,
                                  ALdouble m30, ALdouble m31, ALdouble m32, ALdouble m33);
 
 
-/* NOTE: HRTF is set up a bit special in the device. By default, without HRTF,
- * the device's DryBuffer, NumChannels, ChannelName, and Channel fields
- * correspond to the output format, and the DryBuffer is then converted and
- * written to the backend's audio buffer.
+/* NOTE: HRTF and UHJ are set up a bit special in the device. Normally the
+ * device's DryBuffer, NumChannels, ChannelName, and Channel fields correspond
+ * to the output format, and the DryBuffer is then converted and written to the
+ * backend's audio buffer.
  *
- * With HRTF, these fields correspond to a virtual format, and the actual
- * output is stored in DryBuffer[NumChannels] for the left channel and
+ * With HRTF or UHJ, these fields correspond to a virtual format, and the
+ * actual output is stored in DryBuffer[NumChannels] for the left channel and
  * DryBuffer[NumChannels+1] for the right. As a final output step,
- * the virtual channels will have HRTF applied and written to the actual
- * output. Things like effects and B-Format decoding will want to write to the
- * virtual channels so that they can be mixed with HRTF in full 3D.
+ * the virtual channels will have HRTF filters or UHJ encoding applied and
+ * written to the actual output.
  *
- * Sources that get mixed using HRTF directly (or that want to skip HRTF
+ * Sources that get mixed using HRTF directly (or that want to skip HRTF or UHJ
  * completely) will need to offset the output buffer so that they skip the
  * virtual output and write to the actual output channels. This is the reason
  * you'll see
@@ -327,9 +327,6 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     }, StereoMap[2] = {
         { FrontLeft,  DEG2RAD(-30.0f), DEG2RAD(0.0f) },
         { FrontRight, DEG2RAD( 30.0f), DEG2RAD(0.0f) }
-    }, StereoWideMap[2] = {
-        { FrontLeft,  DEG2RAD(-90.0f), DEG2RAD(0.0f) },
-        { FrontRight, DEG2RAD( 90.0f), DEG2RAD(0.0f) }
     }, RearMap[2] = {
         { BackLeft,  DEG2RAD(-150.0f), DEG2RAD(0.0f) },
         { BackRight, DEG2RAD( 150.0f), DEG2RAD(0.0f) }
@@ -459,13 +456,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         break;
 
     case FmtStereo:
-        /* HACK: Place the stereo channels at +/-90 degrees when using non-
-         * HRTF stereo output. This helps reduce the "monoization" caused
-         * by them panning towards the center. */
-        if(Device->FmtChans == DevFmtStereo && !Device->Hrtf)
-            chans = StereoWideMap;
-        else
-            chans = StereoMap;
+        chans = StereoMap;
         num_channels = 2;
         break;
 
@@ -584,7 +575,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
 
         if(DirectChannels)
         {
-            if(Device->Hrtf)
+            if(Device->Hrtf || Device->Uhj_Encoder)
             {
                 /* DirectChannels with HRTF enabled. Skip the virtual channels
                  * and write FrontLeft and FrontRight inputs to the first and
@@ -1384,7 +1375,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         SamplesToDo = minu(size, BUFFERSIZE);
         for(c = 0;c < OutChannels;c++)
             memset(OutBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
-        if(device->Hrtf)
+        if(device->Hrtf || device->Uhj_Encoder)
         {
             /* Set OutBuffer/OutChannels to correspond to the actual output
              * with HRTF. Make sure to clear them too. */
@@ -1485,17 +1476,25 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             }
             device->Hrtf_Offset += SamplesToDo;
         }
-        else if(device->Bs2b)
+        else
         {
-            /* Apply binaural/crossfeed filter */
-            for(i = 0;i < SamplesToDo;i++)
+            if(device->Uhj_Encoder)
             {
-                float samples[2];
-                samples[0] = device->DryBuffer[0][i];
-                samples[1] = device->DryBuffer[1][i];
-                bs2b_cross_feed(device->Bs2b, samples);
-                device->DryBuffer[0][i] = samples[0];
-                device->DryBuffer[1][i] = samples[1];
+                /* Encode to stereo-compatible 2-channel UHJ output. */
+                EncodeUhj2(device->Uhj_Encoder, OutBuffer, device->DryBuffer, SamplesToDo);
+            }
+            if(device->Bs2b)
+            {
+                /* Apply binaural/crossfeed filter */
+                for(i = 0;i < SamplesToDo;i++)
+                {
+                    float samples[2];
+                    samples[0] = OutBuffer[0][i];
+                    samples[1] = OutBuffer[1][i];
+                    bs2b_cross_feed(device->Bs2b, samples);
+                    OutBuffer[0][i] = samples[0];
+                    OutBuffer[1][i] = samples[1];
+                }
             }
         }
 

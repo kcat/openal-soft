@@ -36,6 +36,7 @@
 #include "alAuxEffectSlot.h"
 #include "alError.h"
 #include "bs2b.h"
+#include "uhjfilter.h"
 #include "alu.h"
 
 #include "compat.h"
@@ -1846,6 +1847,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     if((device->Flags&DEVICE_RUNNING))
         return ALC_NO_ERROR;
 
+    al_free(device->Uhj_Encoder);
+    device->Uhj_Encoder = NULL;
+
+    al_free(device->Bs2b);
+    device->Bs2b = NULL;
+
     al_free(device->DryBuffer);
     device->DryBuffer = NULL;
 
@@ -1971,9 +1978,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     {
         if(hrtf_appreq == Hrtf_Enable)
             device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
-
-        free(device->Bs2b);
-        device->Bs2b = NULL;
     }
     else
     {
@@ -2067,8 +2071,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             device->Hrtf_Mode = hrtf_mode;
             device->Hrtf_Status = hrtf_status;
             TRACE("HRTF enabled, \"%s\"\n", al_string_get_cstr(device->Hrtf_Name));
-            free(device->Bs2b);
-            device->Bs2b = NULL;
         }
         else
         {
@@ -2080,27 +2082,25 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 ConfigValueInt(al_string_get_cstr(device->DeviceName), NULL, "cf_level", &bs2blevel);
             if(bs2blevel > 0 && bs2blevel <= 6)
             {
-                if(!device->Bs2b)
-                {
-                    device->Bs2b = calloc(1, sizeof(*device->Bs2b));
-                    bs2b_clear(device->Bs2b);
-                }
+                device->Bs2b = al_calloc(16, sizeof(*device->Bs2b));
                 bs2b_set_params(device->Bs2b, bs2blevel, device->Frequency);
                 TRACE("BS2B enabled\n");
             }
             else
             {
-                free(device->Bs2b);
-                device->Bs2b = NULL;
                 TRACE("BS2B disabled\n");
             }
+
+            device->Uhj_Encoder = al_calloc(16, sizeof(Uhj2Encoder));
         }
     }
 
     aluInitPanning(device);
 
     /* With HRTF, allocate two extra channels for the post-filter output. */
-    size = sizeof(device->DryBuffer[0]) * (device->NumChannels + (device->Hrtf ? 2 : 0));
+    size = device->NumChannels * sizeof(device->DryBuffer[0]);
+    if(device->Hrtf || device->Uhj_Encoder)
+        size += 2 * sizeof(device->DryBuffer[0]);
     device->DryBuffer = al_calloc(16, size);
     if(!device->DryBuffer)
     {
@@ -2235,8 +2235,11 @@ static ALCvoid FreeDevice(ALCdevice *device)
     AL_STRING_DEINIT(device->Hrtf_Name);
     FreeHrtfList(&device->Hrtf_List);
 
-    free(device->Bs2b);
+    al_free(device->Bs2b);
     device->Bs2b = NULL;
+
+    al_free(device->Uhj_Encoder);
+    device->Uhj_Encoder = NULL;
 
     AL_STRING_DEINIT(device->DeviceName);
 
@@ -3336,6 +3339,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     device->Flags = 0;
     device->Bs2b = NULL;
+    device->Uhj_Encoder = NULL;
     VECTOR_INIT(device->Hrtf_List);
     AL_STRING_INIT(device->Hrtf_Name);
     device->Hrtf_Mode = DisabledHrtf;
@@ -3782,6 +3786,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     VECTOR_INIT(device->Hrtf_List);
     AL_STRING_INIT(device->Hrtf_Name);
     device->Bs2b = NULL;
+    device->Uhj_Encoder = NULL;
     device->Hrtf_Mode = DisabledHrtf;
     AL_STRING_INIT(device->DeviceName);
     device->DryBuffer = NULL;

@@ -659,7 +659,7 @@ static ALvoid UpdateEchoLine(ALfloat echoTime, ALfloat decayTime, ALfloat diffus
 }
 
 // Update the early and late 3D panning gains.
-static ALvoid UpdateHrtfPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, ALfloat Gain, ALfloat EarlyGain, ALfloat LateGain, ALreverbState *State)
+static ALvoid UpdateMixedPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, ALfloat Gain, ALfloat EarlyGain, ALfloat LateGain, ALreverbState *State)
 {
     ALfloat DirGains[MAX_OUTPUT_CHANNELS];
     ALfloat coeffs[MAX_AMBI_COEFFS];
@@ -925,11 +925,11 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
 
     gain = props->Reverb.Gain * Slot->Gain * ReverbBoost;
     // Update early and late 3D panning.
-    if(Device->Hrtf)
-        UpdateHrtfPanning(Device, props->Reverb.ReflectionsPan,
-                          props->Reverb.LateReverbPan, gain,
-                          props->Reverb.ReflectionsGain,
-                          props->Reverb.LateReverbGain, State);
+    if(Device->Hrtf || Device->Uhj_Encoder)
+        UpdateMixedPanning(Device, props->Reverb.ReflectionsPan,
+                           props->Reverb.LateReverbPan, gain,
+                           props->Reverb.ReflectionsGain,
+                           props->Reverb.LateReverbGain, State);
     else if(Device->FmtChans == DevFmtBFormat3D)
         Update3DPanning(Device, props->Reverb.ReflectionsPan,
                         props->Reverb.LateReverbPan, gain,

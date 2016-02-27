@@ -484,6 +484,10 @@ ALvoid aluInitPanning(ALCdevice *device)
         { LowerFrontRight, { 0.176776695f,  0.072168784f, -0.072168784f, -0.072168784f } },
         { LowerBackLeft,   { 0.176776695f, -0.072168784f,  0.072168784f, -0.072168784f } },
         { LowerBackRight,  { 0.176776695f, -0.072168784f, -0.072168784f, -0.072168784f } },
+    }, BFormat2D[3] = {
+        { BFormatW, { 1.0f, 0.0f, 0.0f, 0.0f } },
+        { BFormatX, { 0.0f, 1.0f, 0.0f, 0.0f } },
+        { BFormatY, { 0.0f, 0.0f, 1.0f, 0.0f } },
     }, BFormat3D[4] = {
         { BFormatW, { 1.0f, 0.0f, 0.0f, 0.0f } },
         { BFormatX, { 0.0f, 1.0f, 0.0f, 0.0f } },
@@ -493,6 +497,7 @@ ALvoid aluInitPanning(ALCdevice *device)
     const ChannelMap *chanmap = NULL;
     ALfloat ambiscale = 1.0f;
     size_t count = 0;
+    ALuint i;
 
     device->AmbiScale = 1.0f;
     memset(device->AmbiCoeffs, 0, sizeof(device->AmbiCoeffs));
@@ -514,7 +519,6 @@ ALvoid aluInitPanning(ALCdevice *device)
             { LowerBackLeft,   DEG2RAD(-135.0f), DEG2RAD(-45.0f) },
             { LowerBackRight,  DEG2RAD( 135.0f), DEG2RAD(-45.0f) },
         };
-        ALuint i;
 
         count = COUNTOF(Cube8Cfg);
         chanmap = Cube8Cfg;
@@ -534,6 +538,22 @@ ALvoid aluInitPanning(ALCdevice *device)
             GetLerpedHrtfCoeffs(device->Hrtf, CubeInfo[i].Elevation, CubeInfo[i].Angle, 1.0f, 1.0f,
                                 device->Hrtf_Params[chan].Coeffs, device->Hrtf_Params[chan].Delay);
         }
+        return;
+    }
+    if(device->Uhj_Encoder)
+    {
+        count = COUNTOF(BFormat2D);
+        chanmap = BFormat2D;
+        ambiscale = FIRST_ORDER_SCALE;
+
+        for(i = 0;i < count;i++)
+            device->ChannelName[i] = chanmap[i].ChanName;
+        for(;i < MAX_OUTPUT_CHANNELS;i++)
+            device->ChannelName[i] = InvalidChannel;
+        SetChannelMap(device->ChannelName, device->AmbiCoeffs, chanmap, count,
+                      &device->NumChannels, AL_TRUE);
+        device->AmbiScale = ambiscale;
+
         return;
     }
 

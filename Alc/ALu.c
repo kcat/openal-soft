@@ -577,9 +577,9 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         {
             if(Device->Hrtf || Device->Uhj_Encoder)
             {
-                /* DirectChannels with HRTF enabled. Skip the virtual channels
-                 * and write FrontLeft and FrontRight inputs to the first and
-                 * second outputs.
+                /* DirectChannels with HRTF or UHJ enabled. Skip the virtual
+                 * channels and write FrontLeft and FrontRight inputs to the
+                 * first and second outputs.
                  */
                 voice->Direct.OutBuffer += voice->Direct.OutChannels;
                 voice->Direct.OutChannels = 2;
@@ -627,7 +627,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
 
             voice->IsHrtf = AL_FALSE;
         }
-        else if(Device->Hrtf_Mode == FullHrtf)
+        else if(Device->Render_Mode == HrtfRender)
         {
             /* Full HRTF rendering. Skip the virtual channels and render each
              * input channel to the real outputs.
@@ -686,7 +686,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         }
         else
         {
-            /* Basic or no HRTF rendering. Use normal panning to the output. */
+            /* Non-HRTF rendering. Use normal panning to the output. */
             for(c = 0;c < num_channels;c++)
             {
                 /* Special-case LFE */
@@ -707,9 +707,24 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                     continue;
                 }
 
-                CalcAngleCoeffs(chans[c].angle, chans[c].elevation, coeffs);
+                if(Device->Render_Mode == StereoPair)
+                {
+                    /* Clamp X so it remains within 30 degrees of 0 or 180 degree azimuth. */
+                    ALfloat x = sinf(chans[c].angle) * cosf(chans[c].elevation);
+                    coeffs[0] = clampf(-x, -0.5f, 0.5f) + 0.5;
+                    voice->Direct.Gains[c].Target[0] = coeffs[0] * DryGain;
+                    voice->Direct.Gains[c].Target[1] = (1.0f-coeffs[0]) * DryGain;
+                    for(j = 2;j < MAX_OUTPUT_CHANNELS;j++)
+                        voice->Direct.Gains[c].Target[j] = 0.0f;
 
-                ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, DryGain, voice->Direct.Gains[c].Target);
+                    CalcAngleCoeffs(chans[c].angle, chans[c].elevation, coeffs);
+                }
+                else
+                {
+                    CalcAngleCoeffs(chans[c].angle, chans[c].elevation, coeffs);
+                    ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, DryGain,
+                                        voice->Direct.Gains[c].Target);
+                }
 
                 for(i = 0;i < NumSends;i++)
                 {
@@ -1105,7 +1120,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         BufferListItem = BufferListItem->next;
     }
 
-    if(Device->Hrtf_Mode == FullHrtf)
+    if(Device->Render_Mode == HrtfRender)
     {
         /* Full HRTF rendering. Skip the virtual channels and render to the
          * real outputs.
@@ -1170,7 +1185,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     }
     else
     {
-        /* Basic or no HRTF rendering. Use normal panning to the output. */
+        /* Non-HRTF rendering. */
         ALfloat dir[3] = { 0.0f, 0.0f, -1.0f };
         ALfloat radius = ALSource->Radius;
         ALfloat coeffs[MAX_AMBI_COEFFS];
@@ -1193,10 +1208,24 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             dir[1] *= dirfact;
             dir[2] *= dirfact;
         }
-        CalcDirectionCoeffs(dir, coeffs);
 
-        ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, DryGain,
-                            voice->Direct.Gains[0].Target);
+        if(Device->Render_Mode == StereoPair)
+        {
+            /* Clamp X so it remains within 30 degrees of 0 or 180 degree azimuth. */
+            coeffs[0] = clampf(-dir[0], -0.5f, 0.5f) + 0.5;
+            voice->Direct.Gains[0].Target[0] = coeffs[0] * DryGain;
+            voice->Direct.Gains[0].Target[1] = (1.0f-coeffs[0]) * DryGain;
+            for(i = 2;i < MAX_OUTPUT_CHANNELS;i++)
+                voice->Direct.Gains[0].Target[i] = 0.0f;
+
+            CalcDirectionCoeffs(dir, coeffs);
+        }
+        else
+        {
+            CalcDirectionCoeffs(dir, coeffs);
+            ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, DryGain,
+                                voice->Direct.Gains[0].Target);
+        }
 
         for(i = 0;i < NumSends;i++)
         {

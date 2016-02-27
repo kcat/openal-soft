@@ -86,6 +86,14 @@
 #  Valid settings are auto, speakers, and headphones.
 #stereo-mode = auto
 
+## stereo-panning:
+#  Specifies the panning method for non-HRTF stereo output. uhj (default)
+#  creates stereo-compatible two-channel UHJ output, which encodes some
+#  surround sound information, while paired uses standard pair-wise panning
+#  between -30 and +30 degrees. If crossfeed filters are used, uhj panning is
+#  disabled.
+#stereo-panning = uhj
+
 ## hrtf:
 #  Controls HRTF processing. These filters provide better spatialization of
 #  sounds while using headphones, but do require a bit more CPU power. The

@@ -1972,8 +1972,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
 
     device->Hrtf = NULL;
-    device->Hrtf_Mode = DisabledHrtf;
     al_string_clear(&device->Hrtf_Name);
+    device->Render_Mode = NormalRender;
     if(device->FmtChans != DevFmtStereo)
     {
         if(hrtf_appreq == Hrtf_Enable)
@@ -1982,7 +1982,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     else
     {
         bool headphones = device->IsHeadphones;
-        enum HrtfMode hrtf_mode = FullHrtf;
+        enum RenderMode render_mode = HrtfRender;
         ALCenum hrtf_status = device->Hrtf_Status;
         const char *mode;
         int bs2blevel;
@@ -2003,9 +2003,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "hrtf-mode", &mode))
             {
                 if(strcasecmp(mode, "full") == 0)
-                    hrtf_mode = FullHrtf;
+                    render_mode = HrtfRender;
                 else if(strcasecmp(mode, "basic") == 0)
-                    hrtf_mode = BasicHrtf;
+                    render_mode = NormalRender;
                 else
                     ERR("Unexpected hrtf-mode: %s\n", mode);
             }
@@ -2068,8 +2068,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
         if(device->Hrtf)
         {
-            device->Hrtf_Mode = hrtf_mode;
             device->Hrtf_Status = hrtf_status;
+            device->Render_Mode = render_mode;
             TRACE("HRTF enabled, \"%s\"\n", al_string_get_cstr(device->Hrtf_Name));
         }
         else
@@ -2084,14 +2084,30 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             {
                 device->Bs2b = al_calloc(16, sizeof(*device->Bs2b));
                 bs2b_set_params(device->Bs2b, bs2blevel, device->Frequency);
+                device->Render_Mode = StereoPair;
                 TRACE("BS2B enabled\n");
             }
             else
             {
                 TRACE("BS2B disabled\n");
-            }
 
-            device->Uhj_Encoder = al_calloc(16, sizeof(Uhj2Encoder));
+                render_mode = NormalRender;
+                if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "stereo-panning", &mode))
+                {
+                    if(strcasecmp(mode, "paired") == 0)
+                        render_mode = StereoPair;
+                    else if(strcasecmp(mode, "uhj") != 0)
+                        ERR("Unexpected stereo-panning: %s\n", mode);
+                }
+                device->Render_Mode = render_mode;
+                if(render_mode == NormalRender)
+                {
+                    device->Uhj_Encoder = al_calloc(16, sizeof(Uhj2Encoder));
+                    TRACE("UHJ enabled\n");
+                }
+                else
+                    TRACE("UHJ disabled\n");
+            }
         }
     }
 
@@ -3342,7 +3358,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->Uhj_Encoder = NULL;
     VECTOR_INIT(device->Hrtf_List);
     AL_STRING_INIT(device->Hrtf_Name);
-    device->Hrtf_Mode = DisabledHrtf;
+    device->Render_Mode = NormalRender;
     AL_STRING_INIT(device->DeviceName);
     device->DryBuffer = NULL;
 
@@ -3787,7 +3803,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     AL_STRING_INIT(device->Hrtf_Name);
     device->Bs2b = NULL;
     device->Uhj_Encoder = NULL;
-    device->Hrtf_Mode = DisabledHrtf;
+    device->Render_Mode = NormalRender;
     AL_STRING_INIT(device->DeviceName);
     device->DryBuffer = NULL;
 

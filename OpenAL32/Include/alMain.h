@@ -387,10 +387,10 @@ enum DeviceType {
 };
 
 
-enum HrtfMode {
-    DisabledHrtf,
-    BasicHrtf,
-    FullHrtf
+enum RenderMode {
+    NormalRender,
+    StereoPair,
+    HrtfRender
 };
 
 
@@ -465,7 +465,6 @@ struct ALCdevice_struct
     al_string Hrtf_Name;
     const struct Hrtf *Hrtf;
     ALCenum Hrtf_Status;
-    enum HrtfMode Hrtf_Mode;
     HrtfState Hrtf_State[MAX_OUTPUT_CHANNELS];
     HrtfParams Hrtf_Params[MAX_OUTPUT_CHANNELS];
     ALuint Hrtf_Offset;
@@ -475,6 +474,9 @@ struct ALCdevice_struct
 
     // Stereo-to-binaural filter
     struct bs2b *Bs2b;
+
+    /* Rendering mode. */
+    enum RenderMode Render_Mode;
 
     // Device flags
     ALuint Flags;

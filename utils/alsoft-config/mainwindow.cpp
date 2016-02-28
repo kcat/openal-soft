@@ -310,6 +310,11 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->pulseAllowMovesCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->pulseFixRateCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
 
+    connect(ui->alsaDefaultDeviceLine, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
+    connect(ui->alsaDefaultCaptureLine, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
+    connect(ui->alsaResamplerCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->alsaMmapCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+
     ui->backendListWidget->setCurrentRow(0);
     ui->tabWidget->setCurrentIndex(0);
 
@@ -672,6 +677,11 @@ void MainWindow::loadConfig(const QString &fname)
     ui->pulseAllowMovesCheckBox->setChecked(settings.value("pulse/allow-moves", false).toBool());
     ui->pulseFixRateCheckBox->setChecked(settings.value("pulse/fix-rate", false).toBool());
 
+    ui->alsaDefaultDeviceLine->setText(settings.value("alsa/device", QString()).toString());
+    ui->alsaDefaultCaptureLine->setText(settings.value("alsa/capture", QString()).toString());
+    ui->alsaResamplerCheckBox->setChecked(settings.value("alsa/allow-resampler", false).toBool());
+    ui->alsaMmapCheckBox->setChecked(settings.value("alsa/mmap", true).toBool());
+
     ui->applyButton->setEnabled(false);
     ui->closeCancelButton->setText(tr("Close"));
     mNeedsSave = false;
@@ -881,6 +891,23 @@ void MainWindow::saveConfig(const QString &fname) const
         settings.setValue("pulse/fix-rate", "true");
     else
         settings.remove("pulse/fix-rate"/*, "false"*/);
+
+    str = ui->alsaDefaultDeviceLine->text();
+    if(str.isEmpty()) settings.remove("alsa/device");
+    else settings.setValue("alsa/device", str);
+
+    str = ui->alsaDefaultCaptureLine->text();
+    if(str.isEmpty()) settings.remove("alsa/capture");
+    else settings.setValue("alsa/capture", str);
+
+    if(ui->alsaResamplerCheckBox->isChecked())
+        settings.setValue("alsa/allow-resampler", "true");
+    else
+        settings.remove("alsa/allow-resampler");
+    if(ui->alsaMmapCheckBox->isChecked())
+        settings.remove("alsa/mmap");
+    else
+        settings.setValue("alsa/mmap", "false");
 }
 
 

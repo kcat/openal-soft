@@ -734,13 +734,18 @@ application or system to determine if it should be used.</string>
         <string>PulseAudio</string>
        </property>
       </item>
+      <item>
+       <property name="text">
+        <string>ALSA</string>
+       </property>
+      </item>
      </widget>
      <widget class="QStackedWidget" name="backendStackedWidget">
       <property name="geometry">
        <rect>
         <x>110</x>
         <y>10</y>
-        <width>411</width>
+        <width>421</width>
         <height>361</height>
        </rect>
       </property>
@@ -879,6 +884,106 @@ rate to match the PulseAudio device.</string>
         </property>
         <property name="text">
          <string>Fix Sample Rate</string>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QWidget" name="page_3">
+       <widget class="QLabel" name="label_17">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>30</y>
+          <width>141</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Default Playback Device:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="alsaDefaultDeviceLine">
+        <property name="geometry">
+         <rect>
+          <x>160</x>
+          <y>30</y>
+          <width>231</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="placeholderText">
+         <string>default</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_18">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>60</y>
+          <width>141</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Default Capture Device:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="alsaDefaultCaptureLine">
+        <property name="geometry">
+         <rect>
+          <x>160</x>
+          <y>60</y>
+          <width>231</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="placeholderText">
+         <string>default</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="alsaResamplerCheckBox">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>100</y>
+          <width>191</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Allow use of ALSA's software resampler. This lets
+the OpenAL device to be set to a different sample
+rate than the backend device, but incurs another
+resample pass on top of OpenAL's resampler.</string>
+        </property>
+        <property name="text">
+         <string>Allow Resampler</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="alsaMmapCheckBox">
+        <property name="geometry">
+         <rect>
+          <x>210</x>
+          <y>100</y>
+          <width>191</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Accesses the audio device buffer through an mmap,
+potentially avoiding an extra sample buffer copy
+during updates.</string>
+        </property>
+        <property name="text">
+         <string>MMap Buffer</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
         </property>
        </widget>
       </widget>

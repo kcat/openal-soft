@@ -598,10 +598,29 @@ void MainWindow::loadConfig(const QString &fname)
         foreach(const QString &backend, drivers)
         {
             lastWasEmpty = backend.isEmpty();
-            if(!backend.startsWith(QChar('-')) && !lastWasEmpty)
-                ui->enabledBackendList->addItem(backend);
+            if(lastWasEmpty) continue;
+
+            if(!backend.startsWith(QChar('-')))
+                for(int j = 0;backendList[j].backend_name[0];j++)
+                {
+                    if(backend == backendList[j].backend_name)
+                    {
+                        ui->enabledBackendList->addItem(backendList[j].full_string);
+                        break;
+                    }
+                }
             else if(backend.size() > 1)
-                ui->disabledBackendList->addItem(backend.right(backend.size()-1));
+            {
+                QStringRef backendref = backend.rightRef(backend.size()-1);
+                for(int j = 0;backendList[j].backend_name[0];j++)
+                {
+                    if(backendref == backendList[j].backend_name)
+                    {
+                        ui->disabledBackendList->addItem(backendList[j].full_string);
+                        break;
+                    }
+                }
+            }
         }
         ui->backendCheckBox->setChecked(lastWasEmpty);
     }
@@ -762,9 +781,29 @@ void MainWindow::saveConfig(const QString &fname) const
 
     strlist.clear();
     for(int i = 0;i < ui->enabledBackendList->count();i++)
-        strlist.append(ui->enabledBackendList->item(i)->text());
+    {
+        QString label = ui->enabledBackendList->item(i)->text();
+        for(int j = 0;backendList[j].backend_name[0];j++)
+        {
+            if(label == backendList[j].full_string)
+            {
+                strlist.append(backendList[j].backend_name);
+                break;
+            }
+        }
+    }
     for(int i = 0;i < ui->disabledBackendList->count();i++)
-        strlist.append(QChar('-')+ui->disabledBackendList->item(i)->text());
+    {
+        QString label = ui->disabledBackendList->item(i)->text();
+        for(int j = 0;backendList[j].backend_name[0];j++)
+        {
+            if(label == backendList[j].full_string)
+            {
+                strlist.append(QChar('-')+QString(backendList[j].backend_name));
+                break;
+            }
+        }
+    }
     if(strlist.size() == 0 && !ui->backendCheckBox->isChecked())
         strlist.append("-all");
     else if(ui->backendCheckBox->isChecked())
@@ -932,10 +971,11 @@ void MainWindow::showEnabledBackendMenu(QPoint pt)
     ctxmenu.addSeparator();
     for(size_t i = 0;backendList[i].backend_name[0];i++)
     {
-        QAction *action = ctxmenu.addAction(QString("Add ")+backendList[i].full_string);
-        actionMap[action] = backendList[i].backend_name;
-        if(ui->enabledBackendList->findItems(backendList[i].backend_name, Qt::MatchFixedString).size() != 0 ||
-           ui->disabledBackendList->findItems(backendList[i].backend_name, Qt::MatchFixedString).size() != 0)
+        QString backend = backendList[i].full_string;
+        QAction *action = ctxmenu.addAction(QString("Add ")+backend);
+        actionMap[action] = backend;
+        if(ui->enabledBackendList->findItems(backend, Qt::MatchFixedString).size() != 0 ||
+           ui->disabledBackendList->findItems(backend, Qt::MatchFixedString).size() != 0)
             action->setEnabled(false);
     }
 
@@ -969,10 +1009,11 @@ void MainWindow::showDisabledBackendMenu(QPoint pt)
     ctxmenu.addSeparator();
     for(size_t i = 0;backendList[i].backend_name[0];i++)
     {
-        QAction *action = ctxmenu.addAction(QString("Add ")+backendList[i].full_string);
-        actionMap[action] = backendList[i].backend_name;
-        if(ui->disabledBackendList->findItems(backendList[i].backend_name, Qt::MatchFixedString).size() != 0 ||
-           ui->enabledBackendList->findItems(backendList[i].backend_name, Qt::MatchFixedString).size() != 0)
+        QString backend = backendList[i].full_string;
+        QAction *action = ctxmenu.addAction(QString("Add ")+backend);
+        actionMap[action] = backend;
+        if(ui->disabledBackendList->findItems(backend, Qt::MatchFixedString).size() != 0 ||
+           ui->enabledBackendList->findItems(backend, Qt::MatchFixedString).size() != 0)
             action->setEnabled(false);
     }
 

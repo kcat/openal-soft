@@ -712,80 +712,176 @@ application or system to determine if it should be used.</string>
      <attribute name="title">
       <string>Backends</string>
      </attribute>
-     <widget class="QCheckBox" name="backendCheckBox">
+     <widget class="QListWidget" name="backendListWidget">
       <property name="geometry">
        <rect>
-        <x>170</x>
-        <y>200</y>
-        <width>161</width>
-        <height>21</height>
+        <x>0</x>
+        <y>11</y>
+        <width>111</width>
+        <height>361</height>
        </rect>
       </property>
-      <property name="toolTip">
-       <string>When checked, allows all other available backends not listed in the priority or disabled lists.</string>
-      </property>
-      <property name="text">
-       <string>Allow Other Backends</string>
-      </property>
-      <property name="checked">
+      <property name="alternatingRowColors">
        <bool>true</bool>
       </property>
+      <item>
+       <property name="text">
+        <string>General</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>PulseAudio</string>
+       </property>
+      </item>
      </widget>
-     <widget class="QListWidget" name="enabledBackendList">
+     <widget class="QStackedWidget" name="backendStackedWidget">
       <property name="geometry">
        <rect>
-        <x>40</x>
-        <y>40</y>
-        <width>191</width>
-        <height>151</height>
+        <x>110</x>
+        <y>10</y>
+        <width>411</width>
+        <height>361</height>
        </rect>
       </property>
-      <property name="toolTip">
-       <string>The backend driver list order. Unknown backends and
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="QWidget" name="page">
+       <widget class="QCheckBox" name="backendCheckBox">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>190</y>
+          <width>391</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>When checked, allows all other available backends not listed in the priority or disabled lists.</string>
+        </property>
+        <property name="text">
+         <string>Allow Other Backends</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QListWidget" name="disabledBackendList">
+        <property name="geometry">
+         <rect>
+          <x>220</x>
+          <y>30</y>
+          <width>191</width>
+          <height>151</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Disabled backend driver list.</string>
+        </property>
+       </widget>
+       <widget class="QListWidget" name="enabledBackendList">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>30</y>
+          <width>191</width>
+          <height>151</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>The backend driver list order. Unknown backends and
 duplicated names are ignored.</string>
-      </property>
-      <property name="dragDropMode">
-       <enum>QAbstractItemView::InternalMove</enum>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label">
-      <property name="geometry">
-       <rect>
-        <x>40</x>
-        <y>20</y>
-        <width>191</width>
-        <height>20</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Priority Backends:</string>
-      </property>
-     </widget>
-     <widget class="QListWidget" name="disabledBackendList">
-      <property name="geometry">
-       <rect>
-        <x>270</x>
-        <y>40</y>
-        <width>191</width>
-        <height>151</height>
-       </rect>
-      </property>
-      <property name="toolTip">
-       <string>Disabled backend driver list.</string>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_2">
-      <property name="geometry">
-       <rect>
-        <x>270</x>
-        <y>20</y>
-        <width>191</width>
-        <height>20</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Disabled Backends:</string>
-      </property>
+        </property>
+        <property name="dragDropMode">
+         <enum>QAbstractItemView::InternalMove</enum>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_2">
+        <property name="geometry">
+         <rect>
+          <x>230</x>
+          <y>10</y>
+          <width>171</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Disabled Backends:</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label">
+        <property name="geometry">
+         <rect>
+          <x>30</x>
+          <y>10</y>
+          <width>171</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Priority Backends:</string>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QWidget" name="page_2">
+       <widget class="QCheckBox" name="pulseAutospawnCheckBox">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>10</y>
+          <width>141</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Automatically spawn a PulseAudio server if one
+is not already running.</string>
+        </property>
+        <property name="text">
+         <string>AutoSpawn Server</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="pulseAllowMovesCheckBox">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>40</y>
+          <width>161</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Allows moving PulseAudio streams to different
+devices during playback or capture. Note that the
+device specifier and device format will not change
+to match the new device.</string>
+        </property>
+        <property name="text">
+         <string>Allow Moving Streams</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="pulseFixRateCheckBox">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>70</y>
+          <width>121</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>When checked, fix the OpenAL device's sample
+rate to match the PulseAudio device.</string>
+        </property>
+        <property name="text">
+         <string>Fix Sample Rate</string>
+        </property>
+       </widget>
+      </widget>
      </widget>
     </widget>
     <widget class="QWidget" name="tab_2">
@@ -1491,6 +1587,22 @@ added by the ALC_EXT_DEDICATED extension.</string>
     <hint type="destinationlabel">
      <x>267</x>
      <y>181</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>backendListWidget</sender>
+   <signal>currentRowChanged(int)</signal>
+   <receiver>backendStackedWidget</receiver>
+   <slot>setCurrentIndex(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>69</x>
+     <y>233</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>329</x>
+     <y>232</y>
     </hint>
    </hints>
   </connection>

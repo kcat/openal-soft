@@ -306,6 +306,13 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->enableModulatorCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->enableDedicatedCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
 
+    connect(ui->pulseAutospawnCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->pulseAllowMovesCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->pulseFixRateCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+
+    ui->backendListWidget->setCurrentRow(0);
+    ui->tabWidget->setCurrentIndex(0);
+
     loadConfig(getDefaultConfigName());
 }
 
@@ -631,6 +638,10 @@ void MainWindow::loadConfig(const QString &fname)
     ui->enableModulatorCheck->setChecked(!excludefx.contains("modulator", Qt::CaseInsensitive));
     ui->enableDedicatedCheck->setChecked(!excludefx.contains("dedicated", Qt::CaseInsensitive));
 
+    ui->pulseAutospawnCheckBox->setChecked(settings.value("pulse/spawn-server", true).toBool());
+    ui->pulseAllowMovesCheckBox->setChecked(settings.value("pulse/allow-moves", false).toBool());
+    ui->pulseFixRateCheckBox->setChecked(settings.value("pulse/fix-rate", false).toBool());
+
     ui->applyButton->setEnabled(false);
     ui->closeCancelButton->setText(tr("Close"));
     mNeedsSave = false;
@@ -772,7 +783,7 @@ void MainWindow::saveConfig(const QString &fname) const
     if(ui->emulateEaxCheckBox->isChecked())
         settings.setValue("reverb/emulate-eax", "true");
     else
-        settings.setValue("reverb/emulate-eax", QString()/*"false"*/);
+        settings.remove("reverb/emulate-eax"/*, "false"*/);
 
     strlist.clear();
     if(!ui->enableEaxReverbCheck->isChecked())
@@ -807,6 +818,19 @@ void MainWindow::saveConfig(const QString &fname) const
         if(str == QString())
             settings.remove(key);
     }
+
+    if(ui->pulseAutospawnCheckBox->isChecked())
+        settings.remove("pulse/spawn-server"/*, "true"*/);
+    else
+        settings.setValue("pulse/spawn-server", "false");
+    if(ui->pulseAllowMovesCheckBox->isChecked())
+        settings.setValue("pulse/allow-moves", "true");
+    else
+        settings.remove("pulse/allow-moves"/*, "false"*/);
+    if(ui->pulseFixRateCheckBox->isChecked())
+        settings.setValue("pulse/fix-rate", "true");
+    else
+        settings.remove("pulse/fix-rate"/*, "false"*/);
 }
 
 

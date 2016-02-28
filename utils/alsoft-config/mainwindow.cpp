@@ -12,51 +12,51 @@
 namespace {
 static const struct {
     char backend_name[16];
-    char menu_string[32];
-} backendMenuList[] = {
+    char full_string[32];
+} backendList[] = {
 #ifdef HAVE_JACK
-    { "jack", "Add JACK" },
+    { "jack", "JACK" },
 #endif
 #ifdef HAVE_PULSEAUDIO
-    { "pulse", "Add PulseAudio" },
+    { "pulse", "PulseAudio" },
 #endif
 #ifdef HAVE_ALSA
-    { "alsa", "Add ALSA" },
+    { "alsa", "ALSA" },
 #endif
 #ifdef HAVE_COREAUDIO
-    { "core", "Add CoreAudio" },
+    { "core", "CoreAudio" },
 #endif
 #ifdef HAVE_OSS
-    { "oss", "Add OSS" },
+    { "oss", "OSS" },
 #endif
 #ifdef HAVE_SOLARIS
-    { "solaris", "Add Solaris" },
+    { "solaris", "Solaris" },
 #endif
 #ifdef HAVE_SNDIO
-    { "sndio", "Add SndIO" },
+    { "sndio", "SoundIO" },
 #endif
 #ifdef HAVE_QSA
-    { "qsa", "Add QSA" },
+    { "qsa", "QSA" },
 #endif
 #ifdef HAVE_MMDEVAPI
-    { "mmdevapi", "Add MMDevAPI" },
+    { "mmdevapi", "MMDevAPI" },
 #endif
 #ifdef HAVE_DSOUND
-    { "dsound", "Add DirectSound" },
+    { "dsound", "DirectSound" },
 #endif
 #ifdef HAVE_WINMM
-    { "winmm", "Add Windows Multimedia" },
+    { "winmm", "Windows Multimedia" },
 #endif
 #ifdef HAVE_PORTAUDIO
-    { "port", "Add PortAudio" },
+    { "port", "PortAudio" },
 #endif
 #ifdef HAVE_OPENSL
-    { "opensl", "Add OpenSL" },
+    { "opensl", "OpenSL" },
 #endif
 
-    { "null", "Add Null Output" },
+    { "null", "Null Output" },
 #ifdef HAVE_WAVE
-    { "wave", "Add Wave Writer" },
+    { "wave", "Wave Writer" },
 #endif
     { "", "" }
 };
@@ -930,12 +930,12 @@ void MainWindow::showEnabledBackendMenu(QPoint pt)
     if(ui->enabledBackendList->selectedItems().size() == 0)
         removeAction->setEnabled(false);
     ctxmenu.addSeparator();
-    for(size_t i = 0;backendMenuList[i].backend_name[0];i++)
+    for(size_t i = 0;backendList[i].backend_name[0];i++)
     {
-        QAction *action = ctxmenu.addAction(backendMenuList[i].menu_string);
-        actionMap[action] = backendMenuList[i].backend_name;
-        if(ui->enabledBackendList->findItems(backendMenuList[i].backend_name, Qt::MatchFixedString).size() != 0 ||
-           ui->disabledBackendList->findItems(backendMenuList[i].backend_name, Qt::MatchFixedString).size() != 0)
+        QAction *action = ctxmenu.addAction(QString("Add ")+backendList[i].full_string);
+        actionMap[action] = backendList[i].backend_name;
+        if(ui->enabledBackendList->findItems(backendList[i].backend_name, Qt::MatchFixedString).size() != 0 ||
+           ui->disabledBackendList->findItems(backendList[i].backend_name, Qt::MatchFixedString).size() != 0)
             action->setEnabled(false);
     }
 
@@ -967,12 +967,12 @@ void MainWindow::showDisabledBackendMenu(QPoint pt)
     if(ui->disabledBackendList->selectedItems().size() == 0)
         removeAction->setEnabled(false);
     ctxmenu.addSeparator();
-    for(size_t i = 0;backendMenuList[i].backend_name[0];i++)
+    for(size_t i = 0;backendList[i].backend_name[0];i++)
     {
-        QAction *action = ctxmenu.addAction(backendMenuList[i].menu_string);
-        actionMap[action] = backendMenuList[i].backend_name;
-        if(ui->disabledBackendList->findItems(backendMenuList[i].backend_name, Qt::MatchFixedString).size() != 0 ||
-           ui->enabledBackendList->findItems(backendMenuList[i].backend_name, Qt::MatchFixedString).size() != 0)
+        QAction *action = ctxmenu.addAction(QString("Add ")+backendList[i].full_string);
+        actionMap[action] = backendList[i].backend_name;
+        if(ui->disabledBackendList->findItems(backendList[i].backend_name, Qt::MatchFixedString).size() != 0 ||
+           ui->enabledBackendList->findItems(backendList[i].backend_name, Qt::MatchFixedString).size() != 0)
             action->setEnabled(false);
     }
 

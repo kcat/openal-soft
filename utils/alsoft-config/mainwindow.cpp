@@ -313,6 +313,17 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->backendListWidget->setCurrentRow(0);
     ui->tabWidget->setCurrentIndex(0);
 
+    for(int i = 1;i < ui->backendListWidget->count();i++)
+        ui->backendListWidget->setRowHidden(i, true);
+    for(int i = 0;backendList[i].backend_name[0];i++)
+    {
+        QList<QListWidgetItem*> items = ui->backendListWidget->findItems(
+            backendList[i].full_string, Qt::MatchFixedString
+        );
+        foreach(const QListWidgetItem *item, items)
+            ui->backendListWidget->setItemHidden(item, false);
+    }
+
     loadConfig(getDefaultConfigName());
 }
 

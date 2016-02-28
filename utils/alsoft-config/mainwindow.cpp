@@ -379,23 +379,24 @@ QStringList MainWindow::collectHrtfs()
         QStringList fnames = dir.entryList(QDir::Files | QDir::Readable, QDir::Name);
         foreach(const QString &fname, fnames)
         {
-            if(fname.endsWith(".mhr", Qt::CaseInsensitive))
+            if(!fname.endsWith(".mhr", Qt::CaseInsensitive))
+                continue;
+
+            QString name = fname.left(fname.length()-4);
+            if(!ret.contains(name))
+                ret.push_back(name);
+            else
             {
-                if(!ret.contains(fname))
-                    ret.push_back(fname.left(fname.length()-4));
-                else
-                {
-                    size_t i = 1;
-                    do {
-                        QString s = fname.left(fname.length()-4)+" #"+QString::number(i);
-                        if(!ret.contains(s))
-                        {
-                            ret.push_back(s);
-                            break;
-                        }
-                        ++i;
-                    } while(1);
-                }
+                size_t i = 1;
+                do {
+                    QString s = name+" #"+QString::number(i);
+                    if(!ret.contains(s))
+                    {
+                        ret.push_back(s);
+                        break;
+                    }
+                    ++i;
+                } while(1);
             }
         }
     }
@@ -409,23 +410,24 @@ QStringList MainWindow::collectHrtfs()
             QStringList fnames = dir.entryList(QDir::Files | QDir::Readable, QDir::Name);
             foreach(const QString &fname, fnames)
             {
-                if(fname.endsWith(".mhr", Qt::CaseInsensitive))
+                if(!fname.endsWith(".mhr", Qt::CaseInsensitive))
+                    continue;
+
+                QString name = fname.left(fname.length()-4);
+                if(!ret.contains(name))
+                    ret.push_back(name);
+                else
                 {
-                    if(!ret.contains(fname))
-                        ret.push_back(fname.left(fname.length()-4));
-                    else
-                    {
-                        size_t i = 1;
-                        do {
-                            QString s = fname.left(fname.length()-4)+" #"+QString::number(i);
-                            if(!ret.contains(s))
-                            {
-                                ret.push_back(s);
-                                break;
-                            }
-                            ++i;
-                        } while(1);
-                    }
+                    size_t i = 1;
+                    do {
+                        QString s = name+" #"+QString::number(i);
+                        if(!ret.contains(s))
+                        {
+                            ret.push_back(s);
+                            break;
+                        }
+                        ++i;
+                    } while(1);
                 }
             }
         }

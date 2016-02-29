@@ -887,6 +887,25 @@ void MainWindow::saveConfig(const QString &fname) const
         strlist.append("dedicated");
     settings.setValue("excludefx", strlist.join(QChar(',')));
 
+    settings.setValue("pulse/spawn-server",
+        ui->pulseAutospawnCheckBox->isChecked() ? QString(/*"true"*/) : QString("false")
+    );
+    settings.setValue("pulse/allow-moves",
+        ui->pulseAllowMovesCheckBox->isChecked() ? QString("true") : QString(/*"false"*/)
+    );
+    settings.setValue("pulse/fix-rate",
+        ui->pulseFixRateCheckBox->isChecked() ? QString("true") : QString(/*"false"*/)
+    );
+
+    settings.setValue("alsa/device", ui->alsaDefaultDeviceLine->text());
+    settings.setValue("alsa/capture", ui->alsaDefaultCaptureLine->text());
+    settings.setValue("alsa/allow-resampler",
+        ui->alsaResamplerCheckBox->isChecked() ? QString("true") : QString(/*"false"*/)
+    );
+    settings.setValue("alsa/mmap",
+        ui->alsaMmapCheckBox->isChecked() ? QString(/*"true"*/) : QString("false")
+    );
+
     /* Remove empty keys
      * FIXME: Should only remove keys whose value matches the globally-specified value.
      */
@@ -897,36 +916,6 @@ void MainWindow::saveConfig(const QString &fname) const
         if(str == QString())
             settings.remove(key);
     }
-
-    if(ui->pulseAutospawnCheckBox->isChecked())
-        settings.remove("pulse/spawn-server"/*, "true"*/);
-    else
-        settings.setValue("pulse/spawn-server", "false");
-    if(ui->pulseAllowMovesCheckBox->isChecked())
-        settings.setValue("pulse/allow-moves", "true");
-    else
-        settings.remove("pulse/allow-moves"/*, "false"*/);
-    if(ui->pulseFixRateCheckBox->isChecked())
-        settings.setValue("pulse/fix-rate", "true");
-    else
-        settings.remove("pulse/fix-rate"/*, "false"*/);
-
-    str = ui->alsaDefaultDeviceLine->text();
-    if(str.isEmpty()) settings.remove("alsa/device");
-    else settings.setValue("alsa/device", str);
-
-    str = ui->alsaDefaultCaptureLine->text();
-    if(str.isEmpty()) settings.remove("alsa/capture");
-    else settings.setValue("alsa/capture", str);
-
-    if(ui->alsaResamplerCheckBox->isChecked())
-        settings.setValue("alsa/allow-resampler", "true");
-    else
-        settings.remove("alsa/allow-resampler");
-    if(ui->alsaMmapCheckBox->isChecked())
-        settings.remove("alsa/mmap");
-    else
-        settings.setValue("alsa/mmap", "false");
 }
 
 

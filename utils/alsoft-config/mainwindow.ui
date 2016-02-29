@@ -428,6 +428,54 @@ frames needed for each mixing update.</string>
         </widget>
        </widget>
       </widget>
+      <widget class="QComboBox" name="stereoPanningComboBox">
+       <property name="geometry">
+        <rect>
+         <x>130</x>
+         <y>130</y>
+         <width>131</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="toolTip">
+        <string>Selects the panning method for non-HRTF stereo
+mixing. UHJ creates stereo-compatible two-channel
+output, which encodes some surround information.
+Pair-Wise uses standard pair-wise panning between
+-30 and +30 degrees. The default is UHJ.</string>
+       </property>
+       <item>
+        <property name="text">
+         <string>Default</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>UHJ</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Pair-Wise</string>
+        </property>
+       </item>
+      </widget>
+      <widget class="QLabel" name="label_19">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>130</y>
+         <width>101</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Stereo Panning:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
      </widget>
      <widget class="QGroupBox" name="groupBox_4">
       <property name="geometry">

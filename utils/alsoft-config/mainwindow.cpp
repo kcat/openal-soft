@@ -269,6 +269,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->periodCountSlider, SIGNAL(valueChanged(int)), this, SLOT(updatePeriodCountEdit(int)));
     connect(ui->periodCountEdit, SIGNAL(editingFinished()), this, SLOT(updatePeriodCountSlider()));
 
+    connect(ui->stereoPanningComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(enableApplyButton()));
+
     connect(ui->preferredHrtfComboBox, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(enableApplyButton()));
     connect(ui->hrtfStateComboBox, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(enableApplyButton()));
     connect(ui->hrtfAddButton, SIGNAL(clicked()), this, SLOT(addHrtfFile()));
@@ -539,6 +541,14 @@ void MainWindow::loadConfig(const QString &fname)
         updatePeriodCountSlider();
     }
 
+    QString stereopan = settings.value("stereo-panning").toString();
+    if(stereopan == "uhj")
+        ui->stereoPanningComboBox->setCurrentIndex(1);
+    else if(stereopan == "paired")
+        ui->stereoPanningComboBox->setCurrentIndex(2);
+    else
+        ui->stereoPanningComboBox->setCurrentIndex(0);
+
     QStringList disabledCpuExts = settings.value("disable-cpu-exts").toStringList();
     if(disabledCpuExts.size() == 1)
         disabledCpuExts = disabledCpuExts[0].split(QChar(','));
@@ -766,6 +776,13 @@ void MainWindow::saveConfig(const QString &fname) const
             break;
         }
     }
+
+    if(ui->stereoPanningComboBox->currentIndex() == 1)
+        settings.setValue("stereo-panning", "uhj");
+    else if(ui->stereoPanningComboBox->currentIndex() == 2)
+        settings.setValue("stereo-panning", "paired");
+    else
+        settings.remove("stereo-panning");
 
     QStringList strlist;
     if(!ui->enableSSECheckBox->isChecked())

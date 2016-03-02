@@ -41,6 +41,11 @@ private slots:
     void showEnabledBackendMenu(QPoint pt);
     void showDisabledBackendMenu(QPoint pt);
 
+    void selectOSSPlayback();
+    void selectOSSCapture();
+
+    void selectSolarisPlayback();
+
 private:
     Ui::MainWindow *ui;
 

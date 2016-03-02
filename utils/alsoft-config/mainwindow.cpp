@@ -317,6 +317,14 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->alsaResamplerCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->alsaMmapCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
 
+    connect(ui->ossDefaultDeviceLine, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
+    connect(ui->ossPlaybackPushButton, SIGNAL(pressed()), this, SLOT(selectOSSPlayback()));
+    connect(ui->ossDefaultCaptureLine, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
+    connect(ui->ossCapturePushButton, SIGNAL(pressed()), this, SLOT(selectOSSCapture()));
+
+    connect(ui->solarisDefaultDeviceLine, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
+    connect(ui->solarisPlaybackPushButton, SIGNAL(pressed()), this, SLOT(selectSolarisPlayback()));
+
     ui->backendListWidget->setCurrentRow(0);
     ui->tabWidget->setCurrentIndex(0);
 
@@ -694,6 +702,11 @@ void MainWindow::loadConfig(const QString &fname)
     ui->alsaResamplerCheckBox->setChecked(settings.value("alsa/allow-resampler", false).toBool());
     ui->alsaMmapCheckBox->setChecked(settings.value("alsa/mmap", true).toBool());
 
+    ui->ossDefaultDeviceLine->setText(settings.value("oss/device", QString()).toString());
+    ui->ossDefaultCaptureLine->setText(settings.value("oss/capture", QString()).toString());
+
+    ui->solarisDefaultDeviceLine->setText(settings.value("solaris/device", QString()).toString());
+
     ui->applyButton->setEnabled(false);
     ui->closeCancelButton->setText(tr("Close"));
     mNeedsSave = false;
@@ -906,6 +919,11 @@ void MainWindow::saveConfig(const QString &fname) const
         ui->alsaMmapCheckBox->isChecked() ? QString(/*"true"*/) : QString("false")
     );
 
+    settings.setValue("oss/device", ui->ossDefaultDeviceLine->text());
+    settings.setValue("oss/capture", ui->ossDefaultCaptureLine->text());
+
+    settings.setValue("solaris/device", ui->solarisDefaultDeviceLine->text());
+
     /* Remove empty keys
      * FIXME: Should only remove keys whose value matches the globally-specified value.
      */
@@ -1076,6 +1094,36 @@ void MainWindow::showDisabledBackendMenu(QPoint pt)
         QMap<QAction*,QString>::const_iterator iter = actionMap.find(gotAction);
         if(iter != actionMap.end())
             ui->disabledBackendList->addItem(iter.value());
+        enableApplyButton();
+    }
+}
+
+void MainWindow::selectOSSPlayback()
+{
+    QString fname = QFileDialog::getOpenFileName(this, tr("Select Playback Device"));
+    if(!fname.isEmpty())
+    {
+        ui->ossDefaultDeviceLine->setText(fname);
+        enableApplyButton();
+    }
+}
+
+void MainWindow::selectOSSCapture()
+{
+    QString fname = QFileDialog::getOpenFileName(this, tr("Select Capture Device"));
+    if(!fname.isEmpty())
+    {
+        ui->ossDefaultCaptureLine->setText(fname);
+        enableApplyButton();
+    }
+}
+
+void MainWindow::selectSolarisPlayback()
+{
+    QString fname = QFileDialog::getOpenFileName(this, tr("Select Playback Device"));
+    if(!fname.isEmpty())
+    {
+        ui->solarisDefaultDeviceLine->setText(fname);
         enableApplyButton();
     }
 }

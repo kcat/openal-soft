@@ -318,15 +318,15 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->alsaMmapCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
 
     connect(ui->ossDefaultDeviceLine, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
-    connect(ui->ossPlaybackPushButton, SIGNAL(pressed()), this, SLOT(selectOSSPlayback()));
+    connect(ui->ossPlaybackPushButton, SIGNAL(clicked(bool)), this, SLOT(selectOSSPlayback()));
     connect(ui->ossDefaultCaptureLine, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
-    connect(ui->ossCapturePushButton, SIGNAL(pressed()), this, SLOT(selectOSSCapture()));
+    connect(ui->ossCapturePushButton, SIGNAL(clicked(bool)), this, SLOT(selectOSSCapture()));
 
     connect(ui->solarisDefaultDeviceLine, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
-    connect(ui->solarisPlaybackPushButton, SIGNAL(pressed()), this, SLOT(selectSolarisPlayback()));
+    connect(ui->solarisPlaybackPushButton, SIGNAL(clicked(bool)), this, SLOT(selectSolarisPlayback()));
 
     connect(ui->waveOutputLine, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
-    connect(ui->waveOutputButton, SIGNAL(pressed()), this, SLOT(selectWaveOutput()));
+    connect(ui->waveOutputButton, SIGNAL(clicked(bool)), this, SLOT(selectWaveOutput()));
     connect(ui->waveBFormatCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
 
     ui->backendListWidget->setCurrentRow(0);

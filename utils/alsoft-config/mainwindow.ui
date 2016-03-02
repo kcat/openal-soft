@@ -797,6 +797,11 @@ application or system to determine if it should be used.</string>
         <string>Solaris</string>
        </property>
       </item>
+      <item>
+       <property name="text">
+        <string>Wave Writer</string>
+       </property>
+      </item>
      </widget>
      <widget class="QStackedWidget" name="backendStackedWidget">
       <property name="geometry">
@@ -1172,6 +1177,73 @@ during updates.</string>
         </property>
         <property name="text">
          <string>Browse...</string>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QWidget" name="page_6">
+       <widget class="QLabel" name="label_23">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>30</y>
+          <width>71</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Output File:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="waveOutputLine">
+        <property name="geometry">
+         <rect>
+          <x>90</x>
+          <y>30</y>
+          <width>221</width>
+          <height>21</height>
+         </rect>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_24">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>90</y>
+          <width>421</width>
+          <height>71</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Warning: The specified output file will be OVERWRITTEN WITHOUT&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;QUESTION when the Wave Writer device is opened.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="waveOutputButton">
+        <property name="geometry">
+         <rect>
+          <x>320</x>
+          <y>30</y>
+          <width>91</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Browse...</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="waveBFormatCheckBox">
+        <property name="geometry">
+         <rect>
+          <x>120</x>
+          <y>60</y>
+          <width>191</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Create .amb (B-Format) files</string>
         </property>
        </widget>
       </widget>

@@ -46,6 +46,8 @@ private slots:
 
     void selectSolarisPlayback();
 
+    void selectWaveOutput();
+
 private:
     Ui::MainWindow *ui;
 

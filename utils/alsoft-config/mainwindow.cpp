@@ -325,6 +325,10 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->solarisDefaultDeviceLine, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
     connect(ui->solarisPlaybackPushButton, SIGNAL(pressed()), this, SLOT(selectSolarisPlayback()));
 
+    connect(ui->waveOutputLine, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
+    connect(ui->waveOutputButton, SIGNAL(pressed()), this, SLOT(selectWaveOutput()));
+    connect(ui->waveBFormatCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+
     ui->backendListWidget->setCurrentRow(0);
     ui->tabWidget->setCurrentIndex(0);
 
@@ -707,6 +711,9 @@ void MainWindow::loadConfig(const QString &fname)
 
     ui->solarisDefaultDeviceLine->setText(settings.value("solaris/device", QString()).toString());
 
+    ui->waveOutputLine->setText(settings.value("wave/file", QString()).toString());
+    ui->waveBFormatCheckBox->setChecked(settings.value("wave/bformat", false).toBool());
+
     ui->applyButton->setEnabled(false);
     ui->closeCancelButton->setText(tr("Close"));
     mNeedsSave = false;
@@ -924,6 +931,11 @@ void MainWindow::saveConfig(const QString &fname) const
 
     settings.setValue("solaris/device", ui->solarisDefaultDeviceLine->text());
 
+    settings.setValue("wave/file", ui->waveOutputLine->text());
+    settings.setValue("wave/bformat",
+        ui->waveBFormatCheckBox->isChecked() ? QString("true") : QString(/*"false"*/)
+    );
+
     /* Remove empty keys
      * FIXME: Should only remove keys whose value matches the globally-specified value.
      */
@@ -1124,6 +1136,18 @@ void MainWindow::selectSolarisPlayback()
     if(!fname.isEmpty())
     {
         ui->solarisDefaultDeviceLine->setText(fname);
+        enableApplyButton();
+    }
+}
+
+void MainWindow::selectWaveOutput()
+{
+    QString fname = QFileDialog::getSaveFileName(this, tr("Select Wave File Output"),
+        ui->waveOutputLine->text(), tr("Wave Files (*.wav *.amb);;All Files (*.*)")
+    );
+    if(!fname.isEmpty())
+    {
+        ui->waveOutputLine->setText(fname);
         enableApplyButton();
     }
 }

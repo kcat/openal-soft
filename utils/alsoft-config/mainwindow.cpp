@@ -1,6 +1,8 @@
 
 #include "config.h"
 
+#include <cmath>
+
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QCloseEvent>
@@ -10,6 +12,7 @@
 #include "ui_mainwindow.h"
 
 namespace {
+
 static const struct {
     char backend_name[16];
     char full_string[32];
@@ -164,6 +167,7 @@ static QStringList getAllDataPaths(QString append=QString())
     }
     return list;
 }
+
 }
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -175,6 +179,7 @@ MainWindow::MainWindow(QWidget *parent) :
     mEffectSlotValidator(NULL),
     mSourceSendValidator(NULL),
     mSampleRateValidator(NULL),
+    mJackBufferValidator(NULL),
     mNeedsSave(false)
 {
     ui->setupUi(this);
@@ -250,6 +255,9 @@ MainWindow::MainWindow(QWidget *parent) :
     mSampleRateValidator = new QIntValidator(8000, 192000, this);
     ui->sampleRateCombo->lineEdit()->setValidator(mSampleRateValidator);
 
+    mJackBufferValidator = new QIntValidator(0, 8192, this);
+    ui->jackBufferSizeLine->setValidator(mJackBufferValidator);
+
     connect(ui->actionLoad, SIGNAL(triggered()), this, SLOT(loadConfigFromFile()));
     connect(ui->actionSave_As, SIGNAL(triggered()), this, SLOT(saveConfigAsFile()));
 
@@ -312,6 +320,10 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->pulseAllowMovesCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->pulseFixRateCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
 
+    connect(ui->jackAutospawnCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->jackBufferSizeSlider, SIGNAL(valueChanged(int)), this, SLOT(updateJackBufferSizeEdit(int)));
+    connect(ui->jackBufferSizeLine, SIGNAL(editingFinished()), this, SLOT(updateJackBufferSizeSlider()));
+
     connect(ui->alsaDefaultDeviceLine, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
     connect(ui->alsaDefaultCaptureLine, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
     connect(ui->alsaResamplerCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
@@ -355,6 +367,7 @@ MainWindow::~MainWindow()
     delete mEffectSlotValidator;
     delete mSourceSendValidator;
     delete mSampleRateValidator;
+    delete mJackBufferValidator;
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -701,6 +714,10 @@ void MainWindow::loadConfig(const QString &fname)
     ui->pulseAllowMovesCheckBox->setChecked(settings.value("pulse/allow-moves", false).toBool());
     ui->pulseFixRateCheckBox->setChecked(settings.value("pulse/fix-rate", false).toBool());
 
+    ui->jackAutospawnCheckBox->setChecked(settings.value("jack/spawn-server", false).toBool());
+    ui->jackBufferSizeLine->setText(settings.value("jack/buffer-size", QString()).toString());
+    updateJackBufferSizeSlider();
+
     ui->alsaDefaultDeviceLine->setText(settings.value("alsa/device", QString()).toString());
     ui->alsaDefaultCaptureLine->setText(settings.value("alsa/capture", QString()).toString());
     ui->alsaResamplerCheckBox->setChecked(settings.value("alsa/allow-resampler", false).toBool());
@@ -917,6 +934,11 @@ void MainWindow::saveConfig(const QString &fname) const
         ui->pulseFixRateCheckBox->isChecked() ? QString("true") : QString(/*"false"*/)
     );
 
+    settings.setValue("jack/spawn-server",
+        ui->jackAutospawnCheckBox->isChecked() ? QString("true") : QString(/*"false"*/)
+    );
+    settings.setValue("jack/buffer-size", ui->jackBufferSizeLine->text());
+
     settings.setValue("alsa/device", ui->alsaDefaultDeviceLine->text());
     settings.setValue("alsa/capture", ui->alsaDefaultCaptureLine->text());
     settings.setValue("alsa/allow-resampler",
@@ -1004,6 +1026,23 @@ void MainWindow::updatePeriodCountSlider()
     else if(pos > 16)
         pos = 16;
     ui->periodCountSlider->setSliderPosition(pos);
+    enableApplyButton();
+}
+
+
+void MainWindow::updateJackBufferSizeEdit(int size)
+{
+    ui->jackBufferSizeLine->clear();
+    if(size > 0)
+        ui->jackBufferSizeLine->insert(QString::number(1<<size));
+    enableApplyButton();
+}
+
+void MainWindow::updateJackBufferSizeSlider()
+{
+    int value = ui->jackBufferSizeLine->text().toInt();
+    int pos = (int)floor(log2(value) + 0.5);
+    ui->jackBufferSizeSlider->setSliderPosition(pos);
     enableApplyButton();
 }
 

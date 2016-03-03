@@ -33,6 +33,9 @@ private slots:
     void updatePeriodCountEdit(int size);
     void updatePeriodCountSlider();
 
+    void updateJackBufferSizeEdit(int size);
+    void updateJackBufferSizeSlider();
+
     void addHrtfFile();
     void removeHrtfFile();
 
@@ -57,6 +60,7 @@ private:
     QValidator *mEffectSlotValidator;
     QValidator *mSourceSendValidator;
     QValidator *mSampleRateValidator;
+    QValidator *mJackBufferValidator;
 
     bool mNeedsSave;
 

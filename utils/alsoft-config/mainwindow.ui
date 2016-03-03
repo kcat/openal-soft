@@ -784,6 +784,11 @@ application or system to determine if it should be used.</string>
       </item>
       <item>
        <property name="text">
+        <string>JACK</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
         <string>ALSA</string>
        </property>
       </item>
@@ -948,6 +953,83 @@ rate to match the PulseAudio device.</string>
         <property name="text">
          <string>Fix Sample Rate</string>
         </property>
+       </widget>
+      </widget>
+      <widget class="QWidget" name="page_7">
+       <widget class="QCheckBox" name="jackAutospawnCheckBox">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>10</y>
+          <width>141</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>AutoSpawn Server</string>
+        </property>
+       </widget>
+       <widget class="QGroupBox" name="groupBox_7">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>40</y>
+          <width>401</width>
+          <height>80</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>The update buffer size, in samples, that the backend
+will keep buffered to handle the server's real-time
+processing requests. Must be a power of 2.</string>
+        </property>
+        <property name="title">
+         <string>Buffer Size</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+        <widget class="QLineEdit" name="jackBufferSizeLine">
+         <property name="geometry">
+          <rect>
+           <x>320</x>
+           <y>30</y>
+           <width>71</width>
+           <height>21</height>
+          </rect>
+         </property>
+         <property name="placeholderText">
+          <string>0</string>
+         </property>
+        </widget>
+        <widget class="QSlider" name="jackBufferSizeSlider">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>30</y>
+           <width>301</width>
+           <height>23</height>
+          </rect>
+         </property>
+         <property name="maximum">
+          <number>13</number>
+         </property>
+         <property name="singleStep">
+          <number>1</number>
+         </property>
+         <property name="pageStep">
+          <number>4</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="tickPosition">
+          <enum>QSlider::TicksBelow</enum>
+         </property>
+         <property name="tickInterval">
+          <number>1</number>
+         </property>
+        </widget>
        </widget>
       </widget>
       <widget class="QWidget" name="page_3">

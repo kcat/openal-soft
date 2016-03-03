@@ -364,7 +364,7 @@ static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Dev
     if(!AllocLines(frequency, State))
         return AL_FALSE;
 
-    State->ExtraChannels = (Device->Hrtf ? 2 : 0);
+    State->ExtraChannels = (Device->Hrtf || Device->Uhj_Encoder) ? 2 : 0;
 
     // Calculate the modulation filter coefficient.  Notice that the exponent
     // is calculated given the current sample rate.  This ensures that the

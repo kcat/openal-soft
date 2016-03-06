@@ -64,7 +64,7 @@ static const struct {
     { "", "" }
 };
 
-static const struct {
+static const struct NameValuePair {
     const char name[64];
     const char value[16];
 } speakerModeList[] = {
@@ -172,6 +172,28 @@ static QStringList getAllDataPaths(QString append=QString())
         }
     }
     return list;
+}
+
+template<size_t N>
+static QString getValueFromName(const NameValuePair (&list)[N], const QString &str)
+{
+    for(size_t i = 0;i < N-1;i++)
+    {
+        if(str == list[i].name)
+            return list[i].value;
+    }
+    return QString();
+}
+
+template<size_t N>
+static QString getNameFromValue(const NameValuePair (&list)[N], const QString &str)
+{
+    for(size_t i = 0;i < N-1;i++)
+    {
+        if(str == list[i].value)
+            return list[i].name;
+    }
+    return QString();
 }
 
 }
@@ -487,14 +509,11 @@ void MainWindow::loadConfig(const QString &fname)
     ui->sampleFormatCombo->setCurrentIndex(0);
     if(sampletype.isEmpty() == false)
     {
-        for(int i = 0;sampleTypeList[i].name[0];i++)
+        QString str = getNameFromValue(sampleTypeList, sampletype);
+        if(!str.isEmpty())
         {
-            if(sampletype == sampleTypeList[i].value)
-            {
-                int j = ui->sampleFormatCombo->findText(sampleTypeList[i].name);
-                if(j > 0) ui->sampleFormatCombo->setCurrentIndex(j);
-                break;
-            }
+            int j = ui->sampleFormatCombo->findText(str);
+            if(j > 0) ui->sampleFormatCombo->setCurrentIndex(j);
         }
     }
 
@@ -502,14 +521,11 @@ void MainWindow::loadConfig(const QString &fname)
     ui->channelConfigCombo->setCurrentIndex(0);
     if(channelconfig.isEmpty() == false)
     {
-        for(int i = 0;speakerModeList[i].name[0];i++)
+        QString str = getNameFromValue(speakerModeList, channelconfig);
+        if(!str.isEmpty())
         {
-            if(channelconfig == speakerModeList[i].value)
-            {
-                int j = ui->channelConfigCombo->findText(speakerModeList[i].name);
-                if(j > 0) ui->channelConfigCombo->setCurrentIndex(j);
-                break;
-            }
+            int j = ui->channelConfigCombo->findText(str);
+            if(j > 0) ui->channelConfigCombo->setCurrentIndex(j);
         }
     }
 
@@ -548,14 +564,11 @@ void MainWindow::loadConfig(const QString &fname)
     ui->stereoModeCombo->setCurrentIndex(0);
     if(stereomode.isEmpty() == false)
     {
-        for(int i = 0;stereoModeList[i].name[0];i++)
+        QString str = getNameFromValue(stereoModeList, stereomode);
+        if(!str.isEmpty())
         {
-            if(stereomode == stereoModeList[i].value)
-            {
-                int j = ui->stereoModeCombo->findText(stereoModeList[i].name);
-                if(j > 0) ui->stereoModeCombo->setCurrentIndex(j);
-                break;
-            }
+            int j = ui->stereoModeCombo->findText(str);
+            if(j > 0) ui->stereoModeCombo->setCurrentIndex(j);
         }
     }
 
@@ -579,14 +592,11 @@ void MainWindow::loadConfig(const QString &fname)
     ui->stereoPanningComboBox->setCurrentIndex(0);
     if(stereopan.isEmpty() == false)
     {
-        for(int i = 0;stereoPanList[i].name[0];i++)
+        QString str = getNameFromValue(stereoPanList, stereopan);
+        if(!str.isEmpty())
         {
-            if(stereopan == stereoPanList[i].value)
-            {
-                int j = ui->stereoPanningComboBox->findText(stereoPanList[i].name);
-                if(j > 0) ui->stereoPanningComboBox->setCurrentIndex(j);
-                break;
-            }
+            int j = ui->stereoPanningComboBox->findText(str);
+            if(j > 0) ui->stereoPanningComboBox->setCurrentIndex(j);
         }
     }
 
@@ -786,25 +796,8 @@ void MainWindow::saveConfig(const QString &fname) const
             settings.setValue(key, vals.join(QChar(',')));
     }
 
-    QString str = ui->sampleFormatCombo->currentText();
-    for(int i = 0;sampleTypeList[i].name[0];i++)
-    {
-        if(str == sampleTypeList[i].name)
-        {
-            settings.setValue("sample-type", sampleTypeList[i].value);
-            break;
-        }
-    }
-
-    str = ui->channelConfigCombo->currentText();
-    for(int i = 0;speakerModeList[i].name[0];i++)
-    {
-        if(str == speakerModeList[i].name)
-        {
-            settings.setValue("channels", speakerModeList[i].value);
-            break;
-        }
-    }
+    settings.setValue("sample-type", getValueFromName(sampleTypeList, ui->sampleFormatCombo->currentText()));
+    settings.setValue("channels", getValueFromName(speakerModeList, ui->channelConfigCombo->currentText()));
 
     uint rate = ui->sampleRateCombo->currentText().toUInt();
     if(!(rate > 0))
@@ -820,25 +813,8 @@ void MainWindow::saveConfig(const QString &fname) const
 
     settings.setValue("resampler", resamplerList[ui->resamplerSlider->value()].value);
 
-    str = ui->stereoModeCombo->currentText();
-    for(int i = 0;stereoModeList[i].name[0];i++)
-    {
-        if(str == stereoModeList[i].name)
-        {
-            settings.setValue("stereo-mode", stereoModeList[i].value);
-            break;
-        }
-    }
-
-    str = ui->stereoPanningComboBox->currentText();
-    for(int i = 0;stereoPanList[i].name[0];i++)
-    {
-        if(str == stereoPanList[i].name)
-        {
-            settings.setValue("stereo-panning", stereoPanList[i].value);
-            break;
-        }
-    }
+    settings.setValue("stereo-mode", getValueFromName(stereoModeList, ui->stereoModeCombo->currentText()));
+    settings.setValue("stereo-panning", getValueFromName(stereoPanList, ui->stereoPanningComboBox->currentText()));
 
     QStringList strlist;
     if(!ui->enableSSECheckBox->isChecked())
@@ -864,7 +840,7 @@ void MainWindow::saveConfig(const QString &fname) const
         settings.setValue("default-hrtf", QString());
     else
     {
-        str = ui->preferredHrtfComboBox->currentText();
+        QString str = ui->preferredHrtfComboBox->currentText();
         settings.setValue("default-hrtf", str);
     }
 
@@ -911,7 +887,7 @@ void MainWindow::saveConfig(const QString &fname) const
         settings.setValue("default-reverb", QString());
     else
     {
-        str = ui->defaultReverbComboBox->currentText().toLower();
+        QString str = ui->defaultReverbComboBox->currentText().toLower();
         settings.setValue("default-reverb", str);
     }
 
@@ -983,7 +959,7 @@ void MainWindow::saveConfig(const QString &fname) const
     allkeys = settings.allKeys();
     foreach(const QString &key, allkeys)
     {
-        str = settings.value(key).toString();
+        QString str = settings.value(key).toString();
         if(str == QString())
             settings.remove(key);
     }

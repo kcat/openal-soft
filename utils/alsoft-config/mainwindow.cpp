@@ -1156,7 +1156,9 @@ void MainWindow::showDisabledBackendMenu(QPoint pt)
 
 void MainWindow::selectOSSPlayback()
 {
-    QString fname = QFileDialog::getOpenFileName(this, tr("Select Playback Device"));
+    QString current = ui->ossDefaultDeviceLine->text();
+    if(current.isEmpty()) current = ui->ossDefaultDeviceLine->placeholderText();
+    QString fname = QFileDialog::getOpenFileName(this, tr("Select Playback Device"), current);
     if(!fname.isEmpty())
     {
         ui->ossDefaultDeviceLine->setText(fname);
@@ -1166,7 +1168,9 @@ void MainWindow::selectOSSPlayback()
 
 void MainWindow::selectOSSCapture()
 {
-    QString fname = QFileDialog::getOpenFileName(this, tr("Select Capture Device"));
+    QString current = ui->ossDefaultCaptureLine->text();
+    if(current.isEmpty()) current = ui->ossDefaultCaptureLine->placeholderText();
+    QString fname = QFileDialog::getOpenFileName(this, tr("Select Capture Device"), current);
     if(!fname.isEmpty())
     {
         ui->ossDefaultCaptureLine->setText(fname);
@@ -1176,7 +1180,9 @@ void MainWindow::selectOSSCapture()
 
 void MainWindow::selectSolarisPlayback()
 {
-    QString fname = QFileDialog::getOpenFileName(this, tr("Select Playback Device"));
+    QString current = ui->solarisDefaultDeviceLine->text();
+    if(current.isEmpty()) current = ui->solarisDefaultDeviceLine->placeholderText();
+    QString fname = QFileDialog::getOpenFileName(this, tr("Select Playback Device"), current);
     if(!fname.isEmpty())
     {
         ui->solarisDefaultDeviceLine->setText(fname);

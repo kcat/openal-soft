@@ -493,7 +493,7 @@ void MainWindow::loadConfig(const QString &fname)
     ui->channelConfigCombo->setCurrentIndex(0);
     if(channelconfig.isEmpty() == false)
     {
-        for(int i = 0;speakerModeList[i].name[i];i++)
+        for(int i = 0;speakerModeList[i].name[0];i++)
         {
             if(channelconfig == speakerModeList[i].value)
             {
@@ -526,7 +526,7 @@ void MainWindow::loadConfig(const QString &fname)
      * "sinc4". */
     if(resampler == "cubic")
         resampler = "sinc4";
-    for(int i = 0;resamplerList[i].name[i];i++)
+    for(int i = 0;resamplerList[i].name[0];i++)
     {
         if(resampler == resamplerList[i].value)
         {

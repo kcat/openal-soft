@@ -444,21 +444,6 @@ output, which encodes some surround information.
 Pair-Wise uses standard pair-wise panning between
 -30 and +30 degrees. The default is UHJ.</string>
        </property>
-       <item>
-        <property name="text">
-         <string>Default</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>UHJ</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Pair-Wise</string>
-        </property>
-       </item>
       </widget>
       <widget class="QLabel" name="label_19">
        <property name="geometry">

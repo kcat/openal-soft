@@ -104,6 +104,12 @@ static const struct {
     { "Headphones", "headphones" },
 
     { "", "" }
+}, stereoPanList[] = {
+    { "Default", "" },
+    { "UHJ", "uhj" },
+    { "Pair-Wise", "paired" },
+
+    { "", "" }
 };
 
 static QString getDefaultConfigName()
@@ -193,6 +199,9 @@ MainWindow::MainWindow(QWidget *parent) :
     for(int i = 0;stereoModeList[i].name[0];i++)
         ui->stereoModeCombo->addItem(stereoModeList[i].name);
     ui->stereoModeCombo->adjustSize();
+    for(int i = 0;stereoPanList[i].name[0];i++)
+        ui->stereoPanningComboBox->addItem(stereoPanList[i].name);
+    ui->stereoPanningComboBox->adjustSize();
 
     int count;
     for(count = 0;resamplerList[count].name[0];count++) {
@@ -478,7 +487,7 @@ void MainWindow::loadConfig(const QString &fname)
     ui->sampleFormatCombo->setCurrentIndex(0);
     if(sampletype.isEmpty() == false)
     {
-        for(int i = 0;sampleTypeList[i].name[i];i++)
+        for(int i = 0;sampleTypeList[i].name[0];i++)
         {
             if(sampletype == sampleTypeList[i].value)
             {
@@ -539,7 +548,7 @@ void MainWindow::loadConfig(const QString &fname)
     ui->stereoModeCombo->setCurrentIndex(0);
     if(stereomode.isEmpty() == false)
     {
-        for(int i = 0;stereoModeList[i].name[i];i++)
+        for(int i = 0;stereoModeList[i].name[0];i++)
         {
             if(stereomode == stereoModeList[i].value)
             {
@@ -567,12 +576,19 @@ void MainWindow::loadConfig(const QString &fname)
     }
 
     QString stereopan = settings.value("stereo-panning").toString();
-    if(stereopan == "uhj")
-        ui->stereoPanningComboBox->setCurrentIndex(1);
-    else if(stereopan == "paired")
-        ui->stereoPanningComboBox->setCurrentIndex(2);
-    else
-        ui->stereoPanningComboBox->setCurrentIndex(0);
+    ui->stereoPanningComboBox->setCurrentIndex(0);
+    if(stereopan.isEmpty() == false)
+    {
+        for(int i = 0;stereoPanList[i].name[0];i++)
+        {
+            if(stereopan == stereoPanList[i].value)
+            {
+                int j = ui->stereoPanningComboBox->findText(stereoPanList[i].name);
+                if(j > 0) ui->stereoPanningComboBox->setCurrentIndex(j);
+                break;
+            }
+        }
+    }
 
     QStringList disabledCpuExts = settings.value("disable-cpu-exts").toStringList();
     if(disabledCpuExts.size() == 1)
@@ -814,12 +830,15 @@ void MainWindow::saveConfig(const QString &fname) const
         }
     }
 
-    if(ui->stereoPanningComboBox->currentIndex() == 1)
-        settings.setValue("stereo-panning", "uhj");
-    else if(ui->stereoPanningComboBox->currentIndex() == 2)
-        settings.setValue("stereo-panning", "paired");
-    else
-        settings.remove("stereo-panning");
+    str = ui->stereoPanningComboBox->currentText();
+    for(int i = 0;stereoPanList[i].name[0];i++)
+    {
+        if(str == stereoPanList[i].name)
+        {
+            settings.setValue("stereo-panning", stereoPanList[i].value);
+            break;
+        }
+    }
 
     QStringList strlist;
     if(!ui->enableSSECheckBox->isChecked())

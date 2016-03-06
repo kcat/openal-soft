@@ -292,6 +292,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionLoad, SIGNAL(triggered()), this, SLOT(loadConfigFromFile()));
     connect(ui->actionSave_As, SIGNAL(triggered()), this, SLOT(saveConfigAsFile()));
 
+    connect(ui->actionAbout, SIGNAL(triggered()), this, SLOT(showAboutPage()));
+
     connect(ui->closeCancelButton, SIGNAL(clicked()), this, SLOT(cancelCloseAction()));
     connect(ui->applyButton, SIGNAL(clicked()), this, SLOT(saveCurrentConfig()));
 
@@ -424,6 +426,14 @@ void MainWindow::cancelCloseAction()
 {
     mNeedsSave = false;
     close();
+}
+
+
+void MainWindow::showAboutPage()
+{
+    QMessageBox::information(this, tr("About"),
+        tr("OpenAL Soft Configuration Utility.\nBuilt for OpenAL Soft library version ")+(ALSOFT_VERSION ".")
+    );
 }
 
 

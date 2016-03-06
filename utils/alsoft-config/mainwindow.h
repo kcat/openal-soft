@@ -24,6 +24,8 @@ private slots:
     void saveConfigAsFile();
     void loadConfigFromFile();
 
+    void showAboutPage();
+
     void enableApplyButton();
 
     void updateResamplerLabel(int num);

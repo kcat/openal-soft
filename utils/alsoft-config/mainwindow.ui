@@ -1964,7 +1964,14 @@ added by the ALC_EXT_DEDICATED extension.</string>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>&amp;Help</string>
+    </property>
+    <addaction name="actionAbout"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuHelp"/>
   </widget>
   <action name="actionQuit">
    <property name="icon">
@@ -2000,6 +2007,11 @@ added by the ALC_EXT_DEDICATED extension.</string>
    </property>
    <property name="toolTip">
     <string>Load Configuration File</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>&amp;About...</string>
    </property>
   </action>
  </widget>

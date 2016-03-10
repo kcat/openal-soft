@@ -63,7 +63,7 @@ static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCdevice
 
     state->Enabled = slot->EffectProps.Compressor.OnOff;
 
-    scale = device->AmbiScale;
+    scale = device->Dry.AmbiScale;
     aluMatrixfSet(&matrix,
         1.0f,  0.0f,  0.0f,  0.0f,
         0.0f, scale,  0.0f,  0.0f,
@@ -71,7 +71,7 @@ static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCdevice
         0.0f,  0.0f,  0.0f, scale
     );
     for(i = 0;i < 4;i++)
-        ComputeFirstOrderGains(device->AmbiCoeffs, device->NumChannels,
+        ComputeFirstOrderGains(device->Dry.AmbiCoeffs, device->Dry.NumChannels,
                                matrix.m[i], slot->Gain, state->Gain[i]);
 }
 

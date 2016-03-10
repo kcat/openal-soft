@@ -122,7 +122,7 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *
         state->Filter[i].process = ALfilterState_processC;
     }
 
-    scale = Device->AmbiScale;
+    scale = Device->Dry.AmbiScale;
     aluMatrixfSet(&matrix,
         1.0f,  0.0f,  0.0f,  0.0f,
         0.0f, scale,  0.0f,  0.0f,
@@ -130,7 +130,7 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *
         0.0f,  0.0f,  0.0f, scale
     );
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputeFirstOrderGains(Device->AmbiCoeffs, Device->NumChannels,
+        ComputeFirstOrderGains(Device->Dry.AmbiCoeffs, Device->Dry.NumChannels,
                                matrix.m[i], Slot->Gain, state->Gain[i]);
 }
 

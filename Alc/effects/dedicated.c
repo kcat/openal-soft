@@ -71,7 +71,8 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCdevice *
         {
             ALfloat coeffs[MAX_AMBI_COEFFS];
             CalcXYZCoeffs(0.0f, 0.0f, -1.0f, coeffs);
-            ComputePanningGains(device->AmbiCoeffs, device->NumChannels, coeffs, Gain, state->gains);
+            ComputePanningGains(device->Dry.AmbiCoeffs, device->Dry.NumChannels,
+                                coeffs, Gain, state->gains);
         }
     }
 }

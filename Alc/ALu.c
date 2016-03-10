@@ -394,8 +394,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     Relative        = ALSource->HeadRelative;
     DirectChannels  = ALSource->DirectChannels;
 
-    voice->Direct.OutBuffer = Device->DryBuffer;
-    voice->Direct.OutChannels = Device->NumChannels;
+    voice->Direct.OutBuffer = Device->Dry.Buffer;
+    voice->Direct.OutChannels = Device->Dry.NumChannels;
     for(i = 0;i < NumSends;i++)
     {
         SendSlots[i] = ALSource->Send[i].Slot;
@@ -526,7 +526,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         /* Build a rotate + conversion matrix (B-Format -> N3D), and include
          * scaling for first-order content on second- or third-order output.
          */
-        scale = Device->AmbiScale * 1.732050808f;
+        scale = Device->Dry.AmbiScale * 1.732050808f;
         aluMatrixfSet(&matrix,
             1.414213562f,        0.0f,        0.0f,        0.0f,
                     0.0f, -N[0]*scale,  N[1]*scale, -N[2]*scale,
@@ -535,8 +535,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         );
 
         for(c = 0;c < num_channels;c++)
-            ComputeFirstOrderGains(Device->AmbiCoeffs, Device->NumChannels, matrix.m[c], DryGain,
-                                   voice->Direct.Gains[c].Target);
+            ComputeFirstOrderGains(Device->Dry.AmbiCoeffs, Device->Dry.NumChannels, matrix.m[c],
+                                   DryGain, voice->Direct.Gains[c].Target);
 
         /* Rebuild the matrix, without the second- or third-order output
          * scaling (effects take first-order content, and will do the scaling
@@ -722,8 +722,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                 else
                 {
                     CalcAngleCoeffs(chans[c].angle, chans[c].elevation, coeffs);
-                    ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, DryGain,
-                                        voice->Direct.Gains[c].Target);
+                    ComputePanningGains(Device->Dry.AmbiCoeffs, Device->Dry.NumChannels, coeffs,
+                                        DryGain, voice->Direct.Gains[c].Target);
                 }
 
                 for(i = 0;i < NumSends;i++)
@@ -859,8 +859,8 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     WetGainHFAuto   = ALSource->WetGainHFAuto;
     RoomRolloffBase = ALSource->RoomRolloffFactor;
 
-    voice->Direct.OutBuffer = Device->DryBuffer;
-    voice->Direct.OutChannels = Device->NumChannels;
+    voice->Direct.OutBuffer = Device->Dry.Buffer;
+    voice->Direct.OutChannels = Device->Dry.NumChannels;
     for(i = 0;i < NumSends;i++)
     {
         SendSlots[i] = ALSource->Send[i].Slot;
@@ -1223,8 +1223,8 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         else
         {
             CalcDirectionCoeffs(dir, coeffs);
-            ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, DryGain,
-                                voice->Direct.Gains[0].Target);
+            ComputePanningGains(Device->Dry.AmbiCoeffs, Device->Dry.NumChannels, coeffs,
+                                DryGain, voice->Direct.Gains[0].Target);
         }
 
         for(i = 0;i < NumSends;i++)
@@ -1452,8 +1452,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             {
                 const ALeffectslot *slot = VECTOR_ELEM(ctx->ActiveAuxSlots, i);
                 ALeffectState *state = slot->EffectState;
-                V(state,process)(SamplesToDo, slot->WetBuffer, device->DryBuffer,
-                                 device->NumChannels);
+                V(state,process)(SamplesToDo, slot->WetBuffer, device->Dry.Buffer,
+                                 device->Dry.NumChannels);
             }
 
             ctx = ctx->next;
@@ -1463,8 +1463,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         {
             const ALeffectslot *slot = device->DefaultSlot;
             ALeffectState *state = slot->EffectState;
-            V(state,process)(SamplesToDo, slot->WetBuffer, device->DryBuffer,
-                             device->NumChannels);
+            V(state,process)(SamplesToDo, slot->WetBuffer, device->Dry.Buffer,
+                             device->Dry.NumChannels);
         }
 
         /* Increment the clock time. Every second's worth of samples is

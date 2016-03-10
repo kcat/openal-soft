@@ -426,9 +426,9 @@ static bool LoadChannelSetup(ALCdevice *device)
         for(j = 0;j < MAX_AMBI_COEFFS;++j)
             chanmap[i].Config[j] = coeffs[j];
     }
-    SetChannelMap(device->ChannelName, device->AmbiCoeffs, chanmap, count,
-                  &device->NumChannels, isfuma);
-    device->AmbiScale = ambiscale;
+    SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
+                  &device->Dry.NumChannels, isfuma);
+    device->Dry.AmbiScale = ambiscale;
     return true;
 }
 
@@ -499,9 +499,9 @@ ALvoid aluInitPanning(ALCdevice *device)
     size_t count = 0;
     ALuint i;
 
-    device->AmbiScale = 1.0f;
-    memset(device->AmbiCoeffs, 0, sizeof(device->AmbiCoeffs));
-    device->NumChannels = 0;
+    device->Dry.AmbiScale = 1.0f;
+    memset(device->Dry.AmbiCoeffs, 0, sizeof(device->Dry.AmbiCoeffs));
+    device->Dry.NumChannels = 0;
 
     if(device->Hrtf)
     {
@@ -525,14 +525,14 @@ ALvoid aluInitPanning(ALCdevice *device)
         ambiscale = FIRST_ORDER_SCALE;
 
         for(i = 0;i < count;i++)
-            device->ChannelName[i] = chanmap[i].ChanName;
+            device->Dry.ChannelName[i] = chanmap[i].ChanName;
         for(;i < MAX_OUTPUT_CHANNELS;i++)
-            device->ChannelName[i] = InvalidChannel;
-        SetChannelMap(device->ChannelName, device->AmbiCoeffs, chanmap, count,
-                      &device->NumChannels, AL_TRUE);
-        device->AmbiScale = ambiscale;
+            device->Dry.ChannelName[i] = InvalidChannel;
+        SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
+                      &device->Dry.NumChannels, AL_TRUE);
+        device->Dry.AmbiScale = ambiscale;
 
-        for(i = 0;i < device->NumChannels;i++)
+        for(i = 0;i < device->Dry.NumChannels;i++)
         {
             int chan = GetChannelIdxByName(device, CubeInfo[i].Channel);
             GetLerpedHrtfCoeffs(device->Hrtf, CubeInfo[i].Elevation, CubeInfo[i].Angle, 1.0f, 1.0f,
@@ -547,12 +547,12 @@ ALvoid aluInitPanning(ALCdevice *device)
         ambiscale = FIRST_ORDER_SCALE;
 
         for(i = 0;i < count;i++)
-            device->ChannelName[i] = chanmap[i].ChanName;
+            device->Dry.ChannelName[i] = chanmap[i].ChanName;
         for(;i < MAX_OUTPUT_CHANNELS;i++)
-            device->ChannelName[i] = InvalidChannel;
-        SetChannelMap(device->ChannelName, device->AmbiCoeffs, chanmap, count,
-                      &device->NumChannels, AL_TRUE);
-        device->AmbiScale = ambiscale;
+            device->Dry.ChannelName[i] = InvalidChannel;
+        SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
+                      &device->Dry.NumChannels, AL_TRUE);
+        device->Dry.AmbiScale = ambiscale;
 
         return;
     }
@@ -611,9 +611,9 @@ ALvoid aluInitPanning(ALCdevice *device)
             break;
     }
 
-    SetChannelMap(device->ChannelName, device->AmbiCoeffs, chanmap, count,
-                  &device->NumChannels, AL_TRUE);
-    device->AmbiScale = ambiscale;
+    SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
+                  &device->Dry.NumChannels, AL_TRUE);
+    device->Dry.AmbiScale = ambiscale;
 }
 
 void aluInitEffectPanning(ALeffectslot *slot)

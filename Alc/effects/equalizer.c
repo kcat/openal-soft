@@ -103,7 +103,7 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *
     aluMatrixf matrix;
     ALuint i;
 
-    gain = device->AmbiScale;
+    gain = device->Dry.AmbiScale;
     aluMatrixfSet(&matrix,
         1.0f, 0.0f, 0.0f, 0.0f,
         0.0f, gain, 0.0f, 0.0f,
@@ -111,7 +111,7 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *
         0.0f, 0.0f, 0.0f, gain
     );
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputeFirstOrderGains(device->AmbiCoeffs, device->NumChannels,
+        ComputeFirstOrderGains(device->Dry.AmbiCoeffs, device->Dry.NumChannels,
                                matrix.m[i], slot->Gain, state->Gain[i]);
 
     /* Calculate coefficients for the each type of filter. Note that the shelf

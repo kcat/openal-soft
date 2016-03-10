@@ -431,25 +431,25 @@ struct ALCdevice_struct
     ALCboolean Connected;
     enum DeviceType Type;
 
-    ALuint       Frequency;
-    ALuint       UpdateSize;
-    ALuint       NumUpdates;
+    ALuint Frequency;
+    ALuint UpdateSize;
+    ALuint NumUpdates;
     enum DevFmtChannels FmtChans;
     enum DevFmtType     FmtType;
-    ALboolean    IsHeadphones;
+    ALboolean IsHeadphones;
 
     al_string DeviceName;
 
     ATOMIC(ALCenum) LastError;
 
     // Maximum number of sources that can be created
-    ALuint       MaxNoOfSources;
+    ALuint MaxNoOfSources;
     // Maximum number of slots that can be created
-    ALuint       AuxiliaryEffectSlotMax;
+    ALuint AuxiliaryEffectSlotMax;
 
-    ALCuint      NumMonoSources;
-    ALCuint      NumStereoSources;
-    ALuint       NumAuxSends;
+    ALCuint NumMonoSources;
+    ALCuint NumStereoSources;
+    ALuint  NumAuxSends;
 
     // Map of Buffers for this device
     UIntMap BufferMap;
@@ -481,11 +481,6 @@ struct ALCdevice_struct
     // Device flags
     ALuint Flags;
 
-    enum Channel ChannelName[MAX_OUTPUT_CHANNELS];
-    ChannelConfig AmbiCoeffs[MAX_OUTPUT_CHANNELS];
-    ALfloat AmbiScale; /* Scale for first-order XYZ inputs using AmbCoeffs. */
-    ALuint NumChannels;
-
     ALuint64 ClockBase;
     ALuint SamplesDone;
 
@@ -494,8 +489,19 @@ struct ALCdevice_struct
     alignas(16) ALfloat ResampledData[BUFFERSIZE];
     alignas(16) ALfloat FilteredData[BUFFERSIZE];
 
-    /* Dry path buffer mix (will be aliased by the virtual or real output). */
-    alignas(16) ALfloat (*DryBuffer)[BUFFERSIZE];
+    /* The "dry" path corresponds to the main output. */
+    struct {
+        /* Channel names for the dry buffer mix. */
+        enum Channel ChannelName[MAX_OUTPUT_CHANNELS];
+        /* Ambisonic coefficients for mixing to the dry buffer. */
+        ChannelConfig AmbiCoeffs[MAX_OUTPUT_CHANNELS];
+        /* Scale for first-order XYZ inputs using AmbiCoeffs. */
+        ALfloat AmbiScale;
+
+        /* Dry buffer will be aliased by the virtual or real output. */
+        ALfloat (*Buffer)[BUFFERSIZE];
+        ALuint NumChannels;
+    } Dry;
 
     /* Virtual output, to be post-processed to the real output. */
     struct {
@@ -680,15 +686,15 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans) DECL_CONST;
 /**
  * GetChannelIdxByName
  *
- * Returns the device's channel index given a channel name (e.g. FrontCenter),
- * or -1 if it doesn't exist.
+ * Returns the dry buffer's channel index for the given channel name (e.g.
+ * FrontCenter), or -1 if it doesn't exist.
  */
 inline ALint GetChannelIdxByName(const ALCdevice *device, enum Channel chan)
 {
     ALint i = 0;
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
     {
-        if(device->ChannelName[i] == chan)
+        if(device->Dry.ChannelName[i] == chan)
             return i;
     }
     return -1;

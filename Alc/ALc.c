@@ -1433,63 +1433,63 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
     ALuint i;
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-        device->ChannelName[i] = InvalidChannel;
+        device->Dry.ChannelName[i] = InvalidChannel;
 
     switch(device->FmtChans)
     {
     case DevFmtMono:
-        device->ChannelName[0] = FrontCenter;
+        device->Dry.ChannelName[0] = FrontCenter;
         break;
     case DevFmtStereo:
-        device->ChannelName[0] = FrontLeft;
-        device->ChannelName[1] = FrontRight;
+        device->Dry.ChannelName[0] = FrontLeft;
+        device->Dry.ChannelName[1] = FrontRight;
         break;
     case DevFmtQuad:
-        device->ChannelName[0] = FrontLeft;
-        device->ChannelName[1] = FrontRight;
-        device->ChannelName[2] = BackLeft;
-        device->ChannelName[3] = BackRight;
+        device->Dry.ChannelName[0] = FrontLeft;
+        device->Dry.ChannelName[1] = FrontRight;
+        device->Dry.ChannelName[2] = BackLeft;
+        device->Dry.ChannelName[3] = BackRight;
         break;
     case DevFmtX51:
-        device->ChannelName[0] = FrontLeft;
-        device->ChannelName[1] = FrontRight;
-        device->ChannelName[2] = FrontCenter;
-        device->ChannelName[3] = LFE;
-        device->ChannelName[4] = SideLeft;
-        device->ChannelName[5] = SideRight;
+        device->Dry.ChannelName[0] = FrontLeft;
+        device->Dry.ChannelName[1] = FrontRight;
+        device->Dry.ChannelName[2] = FrontCenter;
+        device->Dry.ChannelName[3] = LFE;
+        device->Dry.ChannelName[4] = SideLeft;
+        device->Dry.ChannelName[5] = SideRight;
         break;
     case DevFmtX51Rear:
-        device->ChannelName[0] = FrontLeft;
-        device->ChannelName[1] = FrontRight;
-        device->ChannelName[2] = FrontCenter;
-        device->ChannelName[3] = LFE;
-        device->ChannelName[4] = BackLeft;
-        device->ChannelName[5] = BackRight;
+        device->Dry.ChannelName[0] = FrontLeft;
+        device->Dry.ChannelName[1] = FrontRight;
+        device->Dry.ChannelName[2] = FrontCenter;
+        device->Dry.ChannelName[3] = LFE;
+        device->Dry.ChannelName[4] = BackLeft;
+        device->Dry.ChannelName[5] = BackRight;
         break;
     case DevFmtX61:
-        device->ChannelName[0] = FrontLeft;
-        device->ChannelName[1] = FrontRight;
-        device->ChannelName[2] = FrontCenter;
-        device->ChannelName[3] = LFE;
-        device->ChannelName[4] = BackCenter;
-        device->ChannelName[5] = SideLeft;
-        device->ChannelName[6] = SideRight;
+        device->Dry.ChannelName[0] = FrontLeft;
+        device->Dry.ChannelName[1] = FrontRight;
+        device->Dry.ChannelName[2] = FrontCenter;
+        device->Dry.ChannelName[3] = LFE;
+        device->Dry.ChannelName[4] = BackCenter;
+        device->Dry.ChannelName[5] = SideLeft;
+        device->Dry.ChannelName[6] = SideRight;
         break;
     case DevFmtX71:
-        device->ChannelName[0] = FrontLeft;
-        device->ChannelName[1] = FrontRight;
-        device->ChannelName[2] = FrontCenter;
-        device->ChannelName[3] = LFE;
-        device->ChannelName[4] = BackLeft;
-        device->ChannelName[5] = BackRight;
-        device->ChannelName[6] = SideLeft;
-        device->ChannelName[7] = SideRight;
+        device->Dry.ChannelName[0] = FrontLeft;
+        device->Dry.ChannelName[1] = FrontRight;
+        device->Dry.ChannelName[2] = FrontCenter;
+        device->Dry.ChannelName[3] = LFE;
+        device->Dry.ChannelName[4] = BackLeft;
+        device->Dry.ChannelName[5] = BackRight;
+        device->Dry.ChannelName[6] = SideLeft;
+        device->Dry.ChannelName[7] = SideRight;
         break;
     case DevFmtBFormat3D:
-        device->ChannelName[0] = BFormatW;
-        device->ChannelName[1] = BFormatX;
-        device->ChannelName[2] = BFormatY;
-        device->ChannelName[3] = BFormatZ;
+        device->Dry.ChannelName[0] = BFormatW;
+        device->Dry.ChannelName[1] = BFormatX;
+        device->Dry.ChannelName[2] = BFormatY;
+        device->Dry.ChannelName[3] = BFormatZ;
         break;
     }
 }
@@ -1503,27 +1503,27 @@ void SetDefaultChannelOrder(ALCdevice *device)
     ALuint i;
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-        device->ChannelName[i] = InvalidChannel;
+        device->Dry.ChannelName[i] = InvalidChannel;
 
     switch(device->FmtChans)
     {
     case DevFmtX51Rear:
-        device->ChannelName[0] = FrontLeft;
-        device->ChannelName[1] = FrontRight;
-        device->ChannelName[2] = BackLeft;
-        device->ChannelName[3] = BackRight;
-        device->ChannelName[4] = FrontCenter;
-        device->ChannelName[5] = LFE;
+        device->Dry.ChannelName[0] = FrontLeft;
+        device->Dry.ChannelName[1] = FrontRight;
+        device->Dry.ChannelName[2] = BackLeft;
+        device->Dry.ChannelName[3] = BackRight;
+        device->Dry.ChannelName[4] = FrontCenter;
+        device->Dry.ChannelName[5] = LFE;
         return;
     case DevFmtX71:
-        device->ChannelName[0] = FrontLeft;
-        device->ChannelName[1] = FrontRight;
-        device->ChannelName[2] = BackLeft;
-        device->ChannelName[3] = BackRight;
-        device->ChannelName[4] = FrontCenter;
-        device->ChannelName[5] = LFE;
-        device->ChannelName[6] = SideLeft;
-        device->ChannelName[7] = SideRight;
+        device->Dry.ChannelName[0] = FrontLeft;
+        device->Dry.ChannelName[1] = FrontRight;
+        device->Dry.ChannelName[2] = BackLeft;
+        device->Dry.ChannelName[3] = BackRight;
+        device->Dry.ChannelName[4] = FrontCenter;
+        device->Dry.ChannelName[5] = LFE;
+        device->Dry.ChannelName[6] = SideLeft;
+        device->Dry.ChannelName[7] = SideRight;
         return;
 
     /* Same as WFX order */
@@ -1853,8 +1853,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     al_free(device->Bs2b);
     device->Bs2b = NULL;
 
-    al_free(device->DryBuffer);
-    device->DryBuffer = NULL;
+    al_free(device->Dry.Buffer);
+    device->Dry.Buffer = NULL;
+    device->Dry.NumChannels = 0;
     device->VirtOut.Buffer = NULL;
     device->VirtOut.NumChannels = 0;
     device->RealOut.Buffer = NULL;
@@ -2118,11 +2119,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     aluInitPanning(device);
 
     /* With HRTF, allocate two extra channels for the post-filter output. */
-    size = device->NumChannels * sizeof(device->DryBuffer[0]);
+    size = device->Dry.NumChannels * sizeof(device->Dry.Buffer[0]);
     if(device->Hrtf || device->Uhj_Encoder)
-        size += 2 * sizeof(device->DryBuffer[0]);
-    device->DryBuffer = al_calloc(16, size);
-    if(!device->DryBuffer)
+        size += 2 * sizeof(device->Dry.Buffer[0]);
+    device->Dry.Buffer = al_calloc(16, size);
+    if(!device->Dry.Buffer)
     {
         ERR("Failed to allocate "SZFMT" bytes for mix buffer\n", size);
         return ALC_INVALID_DEVICE;
@@ -2130,17 +2131,17 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     if(device->Hrtf || device->Uhj_Encoder)
     {
-        device->VirtOut.Buffer = device->DryBuffer;
-        device->VirtOut.NumChannels = device->NumChannels;
-        device->RealOut.Buffer = device->DryBuffer + device->NumChannels;
+        device->VirtOut.Buffer = device->Dry.Buffer;
+        device->VirtOut.NumChannels = device->Dry.NumChannels;
+        device->RealOut.Buffer = device->Dry.Buffer + device->Dry.NumChannels;
         device->RealOut.NumChannels = 2;
     }
     else
     {
         device->VirtOut.Buffer = NULL;
         device->VirtOut.NumChannels = 0;
-        device->RealOut.Buffer = device->DryBuffer;
-        device->RealOut.NumChannels = device->NumChannels;
+        device->RealOut.Buffer = device->Dry.Buffer;
+        device->RealOut.NumChannels = device->Dry.NumChannels;
     }
 
     SetMixerFPUMode(&oldMode);
@@ -2278,8 +2279,9 @@ static ALCvoid FreeDevice(ALCdevice *device)
 
     AL_STRING_DEINIT(device->DeviceName);
 
-    al_free(device->DryBuffer);
-    device->DryBuffer = NULL;
+    al_free(device->Dry.Buffer);
+    device->Dry.Buffer = NULL;
+    device->Dry.NumChannels = 0;
     device->VirtOut.Buffer = NULL;
     device->VirtOut.NumChannels = 0;
     device->RealOut.Buffer = NULL;
@@ -3383,7 +3385,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     AL_STRING_INIT(device->Hrtf_Name);
     device->Render_Mode = NormalRender;
     AL_STRING_INIT(device->DeviceName);
-    device->DryBuffer = NULL;
+    device->Dry.Buffer = NULL;
+    device->Dry.NumChannels = 0;
     device->VirtOut.Buffer = NULL;
     device->VirtOut.NumChannels = 0;
     device->RealOut.Buffer = NULL;
@@ -3642,7 +3645,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     AL_STRING_INIT(device->Hrtf_Name);
 
     AL_STRING_INIT(device->DeviceName);
-    device->DryBuffer = NULL;
+    device->Dry.Buffer = NULL;
+    device->Dry.NumChannels = 0;
     device->VirtOut.Buffer = NULL;
     device->VirtOut.NumChannels = 0;
     device->RealOut.Buffer = NULL;
@@ -3836,7 +3840,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->Uhj_Encoder = NULL;
     device->Render_Mode = NormalRender;
     AL_STRING_INIT(device->DeviceName);
-    device->DryBuffer = NULL;
+    device->Dry.Buffer = NULL;
+    device->Dry.NumChannels = 0;
     device->VirtOut.Buffer = NULL;
     device->VirtOut.NumChannels = 0;
     device->RealOut.Buffer = NULL;

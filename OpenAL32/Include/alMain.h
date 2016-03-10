@@ -510,6 +510,8 @@ struct ALCdevice_struct
     } VirtOut;
     /* "Real" output, which will be written to the device buffer. */
     struct {
+        enum Channel ChannelName[MAX_OUTPUT_CHANNELS];
+
         ALfloat (*Buffer)[BUFFERSIZE];
         ALuint NumChannels;
     } RealOut;

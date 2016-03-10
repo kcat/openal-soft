@@ -101,28 +101,6 @@ extern inline void aluMatrixdSet(aluMatrixd *matrix,
                                  ALdouble m30, ALdouble m31, ALdouble m32, ALdouble m33);
 
 
-/* NOTE: HRTF and UHJ are set up a bit special in the device. Normally the
- * device's DryBuffer, NumChannels, ChannelName, and Channel fields correspond
- * to the output format, and the DryBuffer is then converted and written to the
- * backend's audio buffer.
- *
- * With HRTF or UHJ, these fields correspond to a virtual format, and the
- * actual output is stored in DryBuffer[NumChannels] for the left channel and
- * DryBuffer[NumChannels+1] for the right. As a final output step,
- * the virtual channels will have HRTF filters or UHJ encoding applied and
- * written to the actual output.
- *
- * Sources that get mixed using HRTF directly (or that want to skip HRTF or UHJ
- * completely) will need to offset the output buffer so that they skip the
- * virtual output and write to the actual output channels. This is the reason
- * you'll see
- *
- * voice->Direct.OutBuffer += voice->Direct.OutChannels;
- * voice->Direct.OutChannels = 2;
- *
- * at various points in the code where HRTF is explicitly used or bypassed.
- */
-
 static inline HrtfMixerFunc SelectHrtfMixer(void)
 {
 #ifdef HAVE_SSE
@@ -587,11 +565,14 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                 {
                     for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
                         voice->Direct.Gains[c].Target[j] = 0.0f;
-
-                    if(chans[c].channel == FrontLeft)
-                        voice->Direct.Gains[c].Target[0] = DryGain;
-                    else if(chans[c].channel == FrontRight)
-                        voice->Direct.Gains[c].Target[1] = DryGain;
+                    for(j = 0;j < Device->RealOut.NumChannels;j++)
+                    {
+                        if(chans[c].channel == Device->RealOut.ChannelName[j])
+                        {
+                            voice->Direct.Gains[c].Target[j] = DryGain;
+                            break;
+                        }
+                    }
                 }
             }
             else for(c = 0;c < num_channels;c++)

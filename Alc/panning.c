@@ -557,6 +557,9 @@ ALvoid aluInitPanning(ALCdevice *device)
         return;
     }
 
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+        device->Dry.ChannelName[i] = device->RealOut.ChannelName[i];
+
     if(LoadChannelSetup(device))
         return;
 

@@ -1433,63 +1433,63 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
     ALuint i;
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-        device->Dry.ChannelName[i] = InvalidChannel;
+        device->RealOut.ChannelName[i] = InvalidChannel;
 
     switch(device->FmtChans)
     {
     case DevFmtMono:
-        device->Dry.ChannelName[0] = FrontCenter;
+        device->RealOut.ChannelName[0] = FrontCenter;
         break;
     case DevFmtStereo:
-        device->Dry.ChannelName[0] = FrontLeft;
-        device->Dry.ChannelName[1] = FrontRight;
+        device->RealOut.ChannelName[0] = FrontLeft;
+        device->RealOut.ChannelName[1] = FrontRight;
         break;
     case DevFmtQuad:
-        device->Dry.ChannelName[0] = FrontLeft;
-        device->Dry.ChannelName[1] = FrontRight;
-        device->Dry.ChannelName[2] = BackLeft;
-        device->Dry.ChannelName[3] = BackRight;
+        device->RealOut.ChannelName[0] = FrontLeft;
+        device->RealOut.ChannelName[1] = FrontRight;
+        device->RealOut.ChannelName[2] = BackLeft;
+        device->RealOut.ChannelName[3] = BackRight;
         break;
     case DevFmtX51:
-        device->Dry.ChannelName[0] = FrontLeft;
-        device->Dry.ChannelName[1] = FrontRight;
-        device->Dry.ChannelName[2] = FrontCenter;
-        device->Dry.ChannelName[3] = LFE;
-        device->Dry.ChannelName[4] = SideLeft;
-        device->Dry.ChannelName[5] = SideRight;
+        device->RealOut.ChannelName[0] = FrontLeft;
+        device->RealOut.ChannelName[1] = FrontRight;
+        device->RealOut.ChannelName[2] = FrontCenter;
+        device->RealOut.ChannelName[3] = LFE;
+        device->RealOut.ChannelName[4] = SideLeft;
+        device->RealOut.ChannelName[5] = SideRight;
         break;
     case DevFmtX51Rear:
-        device->Dry.ChannelName[0] = FrontLeft;
-        device->Dry.ChannelName[1] = FrontRight;
-        device->Dry.ChannelName[2] = FrontCenter;
-        device->Dry.ChannelName[3] = LFE;
-        device->Dry.ChannelName[4] = BackLeft;
-        device->Dry.ChannelName[5] = BackRight;
+        device->RealOut.ChannelName[0] = FrontLeft;
+        device->RealOut.ChannelName[1] = FrontRight;
+        device->RealOut.ChannelName[2] = FrontCenter;
+        device->RealOut.ChannelName[3] = LFE;
+        device->RealOut.ChannelName[4] = BackLeft;
+        device->RealOut.ChannelName[5] = BackRight;
         break;
     case DevFmtX61:
-        device->Dry.ChannelName[0] = FrontLeft;
-        device->Dry.ChannelName[1] = FrontRight;
-        device->Dry.ChannelName[2] = FrontCenter;
-        device->Dry.ChannelName[3] = LFE;
-        device->Dry.ChannelName[4] = BackCenter;
-        device->Dry.ChannelName[5] = SideLeft;
-        device->Dry.ChannelName[6] = SideRight;
+        device->RealOut.ChannelName[0] = FrontLeft;
+        device->RealOut.ChannelName[1] = FrontRight;
+        device->RealOut.ChannelName[2] = FrontCenter;
+        device->RealOut.ChannelName[3] = LFE;
+        device->RealOut.ChannelName[4] = BackCenter;
+        device->RealOut.ChannelName[5] = SideLeft;
+        device->RealOut.ChannelName[6] = SideRight;
         break;
     case DevFmtX71:
-        device->Dry.ChannelName[0] = FrontLeft;
-        device->Dry.ChannelName[1] = FrontRight;
-        device->Dry.ChannelName[2] = FrontCenter;
-        device->Dry.ChannelName[3] = LFE;
-        device->Dry.ChannelName[4] = BackLeft;
-        device->Dry.ChannelName[5] = BackRight;
-        device->Dry.ChannelName[6] = SideLeft;
-        device->Dry.ChannelName[7] = SideRight;
+        device->RealOut.ChannelName[0] = FrontLeft;
+        device->RealOut.ChannelName[1] = FrontRight;
+        device->RealOut.ChannelName[2] = FrontCenter;
+        device->RealOut.ChannelName[3] = LFE;
+        device->RealOut.ChannelName[4] = BackLeft;
+        device->RealOut.ChannelName[5] = BackRight;
+        device->RealOut.ChannelName[6] = SideLeft;
+        device->RealOut.ChannelName[7] = SideRight;
         break;
     case DevFmtBFormat3D:
-        device->Dry.ChannelName[0] = BFormatW;
-        device->Dry.ChannelName[1] = BFormatX;
-        device->Dry.ChannelName[2] = BFormatY;
-        device->Dry.ChannelName[3] = BFormatZ;
+        device->RealOut.ChannelName[0] = BFormatW;
+        device->RealOut.ChannelName[1] = BFormatX;
+        device->RealOut.ChannelName[2] = BFormatY;
+        device->RealOut.ChannelName[3] = BFormatZ;
         break;
     }
 }
@@ -1503,27 +1503,27 @@ void SetDefaultChannelOrder(ALCdevice *device)
     ALuint i;
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-        device->Dry.ChannelName[i] = InvalidChannel;
+        device->RealOut.ChannelName[i] = InvalidChannel;
 
     switch(device->FmtChans)
     {
     case DevFmtX51Rear:
-        device->Dry.ChannelName[0] = FrontLeft;
-        device->Dry.ChannelName[1] = FrontRight;
-        device->Dry.ChannelName[2] = BackLeft;
-        device->Dry.ChannelName[3] = BackRight;
-        device->Dry.ChannelName[4] = FrontCenter;
-        device->Dry.ChannelName[5] = LFE;
+        device->RealOut.ChannelName[0] = FrontLeft;
+        device->RealOut.ChannelName[1] = FrontRight;
+        device->RealOut.ChannelName[2] = BackLeft;
+        device->RealOut.ChannelName[3] = BackRight;
+        device->RealOut.ChannelName[4] = FrontCenter;
+        device->RealOut.ChannelName[5] = LFE;
         return;
     case DevFmtX71:
-        device->Dry.ChannelName[0] = FrontLeft;
-        device->Dry.ChannelName[1] = FrontRight;
-        device->Dry.ChannelName[2] = BackLeft;
-        device->Dry.ChannelName[3] = BackRight;
-        device->Dry.ChannelName[4] = FrontCenter;
-        device->Dry.ChannelName[5] = LFE;
-        device->Dry.ChannelName[6] = SideLeft;
-        device->Dry.ChannelName[7] = SideRight;
+        device->RealOut.ChannelName[0] = FrontLeft;
+        device->RealOut.ChannelName[1] = FrontRight;
+        device->RealOut.ChannelName[2] = BackLeft;
+        device->RealOut.ChannelName[3] = BackRight;
+        device->RealOut.ChannelName[4] = FrontCenter;
+        device->RealOut.ChannelName[5] = LFE;
+        device->RealOut.ChannelName[6] = SideLeft;
+        device->RealOut.ChannelName[7] = SideRight;
         return;
 
     /* Same as WFX order */

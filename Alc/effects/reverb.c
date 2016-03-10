@@ -87,7 +87,10 @@ typedef struct ALreverbState {
         ALuint    Offset[4];
 
         // The gain for each output channel based on 3D panning.
-        ALfloat   PanGain[4][MAX_OUTPUT_CHANNELS];
+        // NOTE: With HRTF, we may be rendering to the dry buffer and the
+        // "real" buffer. The dry buffer may be using all 8 output channels, so
+        // we need two extra for the real stereo output.
+        ALfloat   PanGain[4][MAX_OUTPUT_CHANNELS+2];
     } Early;
 
     // Decorrelator delay line.
@@ -125,7 +128,8 @@ typedef struct ALreverbState {
         ALfloat   LpSample[4];
 
         // The gain for each output channel based on 3D panning.
-        ALfloat   PanGain[4][MAX_OUTPUT_CHANNELS];
+        // NOTE: Add two in case of HRTF (see note about early pan).
+        ALfloat   PanGain[4][MAX_OUTPUT_CHANNELS+2];
     } Late;
 
     struct {

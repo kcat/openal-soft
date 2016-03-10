@@ -581,8 +581,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                  * channels and write FrontLeft and FrontRight inputs to the
                  * first and second outputs.
                  */
-                voice->Direct.OutBuffer += voice->Direct.OutChannels;
-                voice->Direct.OutChannels = 2;
+                voice->Direct.OutBuffer = Device->RealOut.Buffer;
+                voice->Direct.OutChannels = Device->RealOut.NumChannels;
                 for(c = 0;c < num_channels;c++)
                 {
                     for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
@@ -632,8 +632,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
             /* Full HRTF rendering. Skip the virtual channels and render each
              * input channel to the real outputs.
              */
-            voice->Direct.OutBuffer += voice->Direct.OutChannels;
-            voice->Direct.OutChannels = 2;
+            voice->Direct.OutBuffer = Device->RealOut.Buffer;
+            voice->Direct.OutChannels = Device->RealOut.NumChannels;
             for(c = 0;c < num_channels;c++)
             {
                 if(chans[c].channel == LFE)
@@ -1131,8 +1131,8 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         ALfloat dirfact = 1.0f;
         ALfloat coeffs[MAX_AMBI_COEFFS];
 
-        voice->Direct.OutBuffer += voice->Direct.OutChannels;
-        voice->Direct.OutChannels = 2;
+        voice->Direct.OutBuffer = Device->RealOut.Buffer;
+        voice->Direct.OutChannels = Device->RealOut.NumChannels;
 
         if(Distance > FLT_EPSILON)
         {
@@ -1393,26 +1393,13 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
     while(size > 0)
     {
-        ALfloat (*OutBuffer)[BUFFERSIZE];
-        ALuint OutChannels;
-
         IncrementRef(&device->MixCount);
 
-        OutBuffer = device->DryBuffer;
-        OutChannels = device->NumChannels;
-
         SamplesToDo = minu(size, BUFFERSIZE);
-        for(c = 0;c < OutChannels;c++)
-            memset(OutBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
-        if(device->Hrtf || device->Uhj_Encoder)
-        {
-            /* Set OutBuffer/OutChannels to correspond to the actual output
-             * with HRTF. Make sure to clear them too. */
-            OutBuffer += OutChannels;
-            OutChannels = 2;
-            for(c = 0;c < OutChannels;c++)
-                memset(OutBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
-        }
+        for(c = 0;c < device->VirtOut.NumChannels;c++)
+            memset(device->VirtOut.Buffer[c], 0, SamplesToDo*sizeof(ALfloat));
+        for(c = 0;c < device->RealOut.NumChannels;c++)
+            memset(device->RealOut.Buffer[c], 0, SamplesToDo*sizeof(ALfloat));
 
         V0(device->Backend,lock)();
 
@@ -1495,12 +1482,13 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             ALuint irsize = GetHrtfIrSize(device->Hrtf);
             MixHrtfParams hrtfparams;
             memset(&hrtfparams, 0, sizeof(hrtfparams));
-            for(c = 0;c < device->NumChannels;c++)
+            for(c = 0;c < device->VirtOut.NumChannels;c++)
             {
                 hrtfparams.Current = &device->Hrtf_Params[c];
                 hrtfparams.Target = &device->Hrtf_Params[c];
-                HrtfMix(OutBuffer, device->DryBuffer[c], 0, device->Hrtf_Offset,
-                    0, irsize, &hrtfparams, &device->Hrtf_State[c], SamplesToDo
+                HrtfMix(device->RealOut.Buffer, device->VirtOut.Buffer[c], 0,
+                    device->Hrtf_Offset, 0, irsize, &hrtfparams,
+                    &device->Hrtf_State[c], SamplesToDo
                 );
             }
             device->Hrtf_Offset += SamplesToDo;
@@ -1510,7 +1498,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             if(device->Uhj_Encoder)
             {
                 /* Encode to stereo-compatible 2-channel UHJ output. */
-                EncodeUhj2(device->Uhj_Encoder, OutBuffer, device->DryBuffer, SamplesToDo);
+                EncodeUhj2(device->Uhj_Encoder, device->RealOut.Buffer,
+                           device->VirtOut.Buffer, SamplesToDo);
             }
             if(device->Bs2b)
             {
@@ -1518,17 +1507,20 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 for(i = 0;i < SamplesToDo;i++)
                 {
                     float samples[2];
-                    samples[0] = OutBuffer[0][i];
-                    samples[1] = OutBuffer[1][i];
+                    samples[0] = device->RealOut.Buffer[0][i];
+                    samples[1] = device->RealOut.Buffer[1][i];
                     bs2b_cross_feed(device->Bs2b, samples);
-                    OutBuffer[0][i] = samples[0];
-                    OutBuffer[1][i] = samples[1];
+                    device->RealOut.Buffer[0][i] = samples[0];
+                    device->RealOut.Buffer[1][i] = samples[1];
                 }
             }
         }
 
         if(buffer)
         {
+            ALfloat (*OutBuffer)[BUFFERSIZE] = device->RealOut.Buffer;
+            ALuint OutChannels = device->RealOut.NumChannels;;
+
 #define WRITE(T, a, b, c, d) do {               \
     Write_##T((a), (b), (c), (d));              \
     buffer = (T*)buffer + (c)*(d);              \

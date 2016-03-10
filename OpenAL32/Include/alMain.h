@@ -494,8 +494,19 @@ struct ALCdevice_struct
     alignas(16) ALfloat ResampledData[BUFFERSIZE];
     alignas(16) ALfloat FilteredData[BUFFERSIZE];
 
-    /* Dry path buffer mix. */
+    /* Dry path buffer mix (will be aliased by the virtual or real output). */
     alignas(16) ALfloat (*DryBuffer)[BUFFERSIZE];
+
+    /* Virtual output, to be post-processed to the real output. */
+    struct {
+        ALfloat (*Buffer)[BUFFERSIZE];
+        ALuint NumChannels;
+    } VirtOut;
+    /* "Real" output, which will be written to the device buffer. */
+    struct {
+        ALfloat (*Buffer)[BUFFERSIZE];
+        ALuint NumChannels;
+    } RealOut;
 
     /* Running count of the mixer invocations, in 31.1 fixed point. This
      * actually increments *twice* when mixing, first at the start and then at

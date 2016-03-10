@@ -364,6 +364,9 @@ static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Dev
     if(!AllocLines(frequency, State))
         return AL_FALSE;
 
+    /* WARNING: This assumes the real output follows the virtual output in the
+     * device's DryBuffer.
+     */
     State->ExtraChannels = (Device->Hrtf || Device->Uhj_Encoder) ? 2 : 0;
 
     // Calculate the modulation filter coefficient.  Notice that the exponent
@@ -666,16 +669,19 @@ static ALvoid UpdateMixedPanning(const ALCdevice *Device, const ALfloat *Reflect
     ALfloat length;
     ALuint i;
 
-    /* With HRTF, the normal output provides a panned reverb channel when a
-     * non-0-length vector is specified, while the real stereo output provides
-     * two other "direct" non-panned reverb channels.
+    /* With HRTF or UHJ, the normal output provides a panned reverb channel
+     * when a non-0-length vector is specified, while the real stereo output
+     * provides two other "direct" non-panned reverb channels.
+     *
+     * WARNING: This assumes the real output follows the virtual output in the
+     * device's DryBuffer.
      */
     memset(State->Early.PanGain, 0, sizeof(State->Early.PanGain));
     length = sqrtf(ReflectionsPan[0]*ReflectionsPan[0] + ReflectionsPan[1]*ReflectionsPan[1] + ReflectionsPan[2]*ReflectionsPan[2]);
     if(!(length > FLT_EPSILON))
     {
-        for(i = 0;i < 2;i++)
-            State->Early.PanGain[i&3][Device->NumChannels+i] = Gain * EarlyGain;
+        for(i = 0;i < Device->RealOut.NumChannels;i++)
+            State->Early.PanGain[i&3][Device->VirtOut.NumChannels+i] = Gain * EarlyGain;
     }
     else
     {
@@ -691,19 +697,19 @@ static ALvoid UpdateMixedPanning(const ALCdevice *Device, const ALfloat *Reflect
         length = minf(length, 1.0f);
 
         CalcDirectionCoeffs(pan, coeffs);
-        ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain, DirGains);
-        for(i = 0;i < Device->NumChannels;i++)
+        ComputePanningGains(Device->AmbiCoeffs, Device->VirtOut.NumChannels, coeffs, Gain, DirGains);
+        for(i = 0;i < Device->VirtOut.NumChannels;i++)
             State->Early.PanGain[3][i] = DirGains[i] * EarlyGain * length;
-        for(i = 0;i < 2;i++)
-            State->Early.PanGain[i&3][Device->NumChannels+i] = Gain * EarlyGain * (1.0f-length);
+        for(i = 0;i < Device->RealOut.NumChannels;i++)
+            State->Early.PanGain[i&3][Device->VirtOut.NumChannels+i] = Gain * EarlyGain * (1.0f-length);
     }
 
     memset(State->Late.PanGain, 0, sizeof(State->Late.PanGain));
     length = sqrtf(LateReverbPan[0]*LateReverbPan[0] + LateReverbPan[1]*LateReverbPan[1] + LateReverbPan[2]*LateReverbPan[2]);
     if(!(length > FLT_EPSILON))
     {
-        for(i = 0;i < 2;i++)
-            State->Late.PanGain[i&3][Device->NumChannels+i] = Gain * LateGain;
+        for(i = 0;i < Device->RealOut.NumChannels;i++)
+            State->Late.PanGain[i&3][Device->VirtOut.NumChannels+i] = Gain * LateGain;
     }
     else
     {
@@ -715,11 +721,11 @@ static ALvoid UpdateMixedPanning(const ALCdevice *Device, const ALfloat *Reflect
         length = minf(length, 1.0f);
 
         CalcDirectionCoeffs(pan, coeffs);
-        ComputePanningGains(Device->AmbiCoeffs, Device->NumChannels, coeffs, Gain, DirGains);
-        for(i = 0;i < Device->NumChannels;i++)
+        ComputePanningGains(Device->AmbiCoeffs, Device->VirtOut.NumChannels, coeffs, Gain, DirGains);
+        for(i = 0;i < Device->VirtOut.NumChannels;i++)
             State->Late.PanGain[3][i] = DirGains[i] * LateGain * length;
-        for(i = 0;i < 2;i++)
-            State->Late.PanGain[i&3][Device->NumChannels+i] = Gain * LateGain * (1.0f-length);
+        for(i = 0;i < Device->RealOut.NumChannels;i++)
+            State->Late.PanGain[i&3][Device->VirtOut.NumChannels+i] = Gain * LateGain * (1.0f-length);
     }
 }
 

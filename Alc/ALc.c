@@ -1855,6 +1855,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     al_free(device->DryBuffer);
     device->DryBuffer = NULL;
+    device->VirtOut.Buffer = NULL;
+    device->VirtOut.NumChannels = 0;
+    device->RealOut.Buffer = NULL;
+    device->RealOut.NumChannels = 0;
 
     UpdateClockBase(device);
 
@@ -2124,6 +2128,21 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         return ALC_INVALID_DEVICE;
     }
 
+    if(device->Hrtf || device->Uhj_Encoder)
+    {
+        device->VirtOut.Buffer = device->DryBuffer;
+        device->VirtOut.NumChannels = device->NumChannels;
+        device->RealOut.Buffer = device->DryBuffer + device->NumChannels;
+        device->RealOut.NumChannels = 2;
+    }
+    else
+    {
+        device->VirtOut.Buffer = NULL;
+        device->VirtOut.NumChannels = 0;
+        device->RealOut.Buffer = device->DryBuffer;
+        device->RealOut.NumChannels = device->NumChannels;
+    }
+
     SetMixerFPUMode(&oldMode);
     V0(device->Backend,lock)();
     context = ATOMIC_LOAD(&device->ContextList);
@@ -2261,6 +2280,10 @@ static ALCvoid FreeDevice(ALCdevice *device)
 
     al_free(device->DryBuffer);
     device->DryBuffer = NULL;
+    device->VirtOut.Buffer = NULL;
+    device->VirtOut.NumChannels = 0;
+    device->RealOut.Buffer = NULL;
+    device->RealOut.NumChannels = 0;
 
     al_free(device);
 }
@@ -3361,6 +3384,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->Render_Mode = NormalRender;
     AL_STRING_INIT(device->DeviceName);
     device->DryBuffer = NULL;
+    device->VirtOut.Buffer = NULL;
+    device->VirtOut.NumChannels = 0;
+    device->RealOut.Buffer = NULL;
+    device->RealOut.NumChannels = 0;
 
     ATOMIC_INIT(&device->ContextList, NULL);
 
@@ -3616,6 +3643,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
 
     AL_STRING_INIT(device->DeviceName);
     device->DryBuffer = NULL;
+    device->VirtOut.Buffer = NULL;
+    device->VirtOut.NumChannels = 0;
+    device->RealOut.Buffer = NULL;
+    device->RealOut.NumChannels = 0;
 
     InitUIntMap(&device->BufferMap, ~0);
     InitUIntMap(&device->EffectMap, ~0);
@@ -3806,6 +3837,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->Render_Mode = NormalRender;
     AL_STRING_INIT(device->DeviceName);
     device->DryBuffer = NULL;
+    device->VirtOut.Buffer = NULL;
+    device->VirtOut.NumChannels = 0;
+    device->RealOut.Buffer = NULL;
+    device->RealOut.NumChannels = 0;
 
     ATOMIC_INIT(&device->ContextList, NULL);
 

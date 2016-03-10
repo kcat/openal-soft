@@ -534,7 +534,7 @@ ALvoid aluInitPanning(ALCdevice *device)
 
         for(i = 0;i < device->Dry.NumChannels;i++)
         {
-            int chan = GetChannelIdxByName(device, CubeInfo[i].Channel);
+            int chan = GetChannelIdxByName(device->Dry, CubeInfo[i].Channel);
             GetLerpedHrtfCoeffs(device->Hrtf, CubeInfo[i].Elevation, CubeInfo[i].Angle, 1.0f, 1.0f,
                                 device->Hrtf_Params[chan].Coeffs, device->Hrtf_Params[chan].Delay);
         }

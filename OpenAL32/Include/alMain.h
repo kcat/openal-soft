@@ -688,20 +688,20 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans) DECL_CONST;
 /**
  * GetChannelIdxByName
  *
- * Returns the dry buffer's channel index for the given channel name (e.g.
- * FrontCenter), or -1 if it doesn't exist.
+ * Returns the index for the given channel name (e.g. FrontCenter), or -1 if it
+ * doesn't exist.
  */
-inline ALint GetChannelIdxByName(const ALCdevice *device, enum Channel chan)
+inline ALint GetChannelIndex(const enum Channel names[MAX_OUTPUT_CHANNELS], enum Channel chan)
 {
-    ALint i = 0;
+    ALint i;
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
     {
-        if(device->Dry.ChannelName[i] == chan)
+        if(names[i] == chan)
             return i;
     }
     return -1;
 }
-
+#define GetChannelIdxByName(x, c) GetChannelIndex((x).ChannelName, (c))
 
 extern FILE *LogFile;
 

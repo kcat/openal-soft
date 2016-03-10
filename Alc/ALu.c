@@ -563,16 +563,11 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                 voice->Direct.OutChannels = Device->RealOut.NumChannels;
                 for(c = 0;c < num_channels;c++)
                 {
+                    int idx;
                     for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
                         voice->Direct.Gains[c].Target[j] = 0.0f;
-                    for(j = 0;j < Device->RealOut.NumChannels;j++)
-                    {
-                        if(chans[c].channel == Device->RealOut.ChannelName[j])
-                        {
-                            voice->Direct.Gains[c].Target[j] = DryGain;
-                            break;
-                        }
-                    }
+                    if((idx=GetChannelIdxByName(Device->RealOut, chans[c].channel)) != -1)
+                        voice->Direct.Gains[c].Target[idx] = DryGain;
                 }
             }
             else for(c = 0;c < num_channels;c++)
@@ -580,7 +575,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                 int idx;
                 for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
                     voice->Direct.Gains[c].Target[j] = 0.0f;
-                if((idx=GetChannelIdxByName(Device, chans[c].channel)) != -1)
+                if((idx=GetChannelIdxByName(Device->Dry, chans[c].channel)) != -1)
                     voice->Direct.Gains[c].Target[idx] = DryGain;
             }
 
@@ -676,7 +671,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                     int idx;
                     for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
                         voice->Direct.Gains[c].Target[j] = 0.0f;
-                    if((idx=GetChannelIdxByName(Device, chans[c].channel)) != -1)
+                    if((idx=GetChannelIdxByName(Device->Dry, chans[c].channel)) != -1)
                         voice->Direct.Gains[c].Target[idx] = DryGain;
 
                     for(i = 0;i < NumSends;i++)

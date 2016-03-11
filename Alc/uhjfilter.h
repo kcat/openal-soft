@@ -43,6 +43,6 @@ typedef struct Uhj2Encoder {
 
 /* Encodes a 2-channel UHJ (stereo-compatible) signal from a B-Format input
  * signal. */
-void EncodeUhj2(Uhj2Encoder *enc, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint SamplesToDo);
+void EncodeUhj2(Uhj2Encoder *enc, ALfloat *restrict LeftOut, ALfloat *restrict RightOut, ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint SamplesToDo);
 
 #endif /* UHJFILTER_H */

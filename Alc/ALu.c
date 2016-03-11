@@ -1473,9 +1473,16 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         {
             if(device->Uhj_Encoder)
             {
-                /* Encode to stereo-compatible 2-channel UHJ output. */
-                EncodeUhj2(device->Uhj_Encoder, device->RealOut.Buffer,
-                           device->VirtOut.Buffer, SamplesToDo);
+                int lidx = GetChannelIdxByName(device->RealOut, FrontLeft);
+                int ridx = GetChannelIdxByName(device->RealOut, FrontRight);
+                if(lidx != -1 && ridx != -1)
+                {
+                    /* Encode to stereo-compatible 2-channel UHJ output. */
+                    EncodeUhj2(device->Uhj_Encoder,
+                        device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
+                        device->VirtOut.Buffer, SamplesToDo
+                    );
+                }
             }
             if(device->Bs2b)
             {

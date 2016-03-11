@@ -36,7 +36,7 @@ static const ALfloat Filter2Coeff[4] = {
  * know which is the intended result.
  */
 
-void EncodeUhj2(Uhj2Encoder *enc, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint SamplesToDo)
+void EncodeUhj2(Uhj2Encoder *enc, ALfloat *restrict LeftOut, ALfloat *restrict RightOut, ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint SamplesToDo)
 {
     ALuint base, i, c;
 
@@ -103,10 +103,10 @@ void EncodeUhj2(Uhj2Encoder *enc, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALf
 
         /* Left = (S + D)/2.0 */
         for(i = 0;i < todo;i++)
-            OutBuffer[0][base + i] += (S[i] + D[i]) * 0.5f;
+            *(LeftOut++) += (S[i] + D[i]) * 0.5f;
         /* Right = (S - D)/2.0 */
         for(i = 0;i < todo;i++)
-            OutBuffer[1][base + i] += (S[i] - D[i]) * 0.5f;
+            *(RightOut++) += (S[i] - D[i]) * 0.5f;
 
         base += todo;
     }

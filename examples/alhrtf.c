@@ -178,19 +178,22 @@ int main(int argc, char **argv)
                 index = i;
         }
 
+        i = 0;
+        attr[i++] = ALC_HRTF_SOFT;
+        attr[i++] = ALC_TRUE;
         if(index == -1)
         {
             if(hrtfname)
                 printf("HRTF \"%s\" not found\n", hrtfname);
-            index = 0;
+            printf("Using default HRTF...\n");
         }
-        printf("Selecting HRTF %d...\n", index);
-
-        attr[0] = ALC_HRTF_SOFT;
-        attr[1] = ALC_TRUE;
-        attr[2] = ALC_HRTF_ID_SOFT;
-        attr[3] = index;
-        attr[4] = 0;
+        else
+        {
+            printf("Selecting HRTF %d...\n", index);
+            attr[i++] = ALC_HRTF_ID_SOFT;
+            attr[i++] = index;
+        }
+        attr[i] = 0;
 
         if(!alcResetDeviceSOFT(device, attr))
             printf("Failed to reset device: %s\n", alcGetString(device, alcGetError(device)));

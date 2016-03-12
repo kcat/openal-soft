@@ -193,8 +193,8 @@ typedef const ALfloat* (*ResamplerFunc)(const BsincState *state,
 typedef void (*MixerFunc)(const ALfloat *data, ALuint OutChans,
                           ALfloat (*restrict OutBuffer)[BUFFERSIZE], struct MixGains *Gains,
                           ALuint Counter, ALuint OutPos, ALuint BufferSize);
-typedef void (*HrtfMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-                              ALuint Counter, ALuint Offset, ALuint OutPos,
+typedef void (*HrtfMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, ALuint ridx,
+                              const ALfloat *data, ALuint Counter, ALuint Offset, ALuint OutPos,
                               const ALuint IrSize, const MixHrtfParams *hrtfparams,
                               HrtfState *hrtfstate, ALuint BufferSize);
 

@@ -23,9 +23,10 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
                                ALfloat left, ALfloat right);
 
 
-void MixHrtf(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
-             ALuint Counter, ALuint Offset, ALuint OutPos, const ALuint IrSize,
-             const MixHrtfParams *hrtfparams, HrtfState *hrtfstate, ALuint BufferSize)
+void MixHrtf(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, ALuint ridx,
+             const ALfloat *data, ALuint Counter, ALuint Offset, ALuint OutPos,
+             const ALuint IrSize, const MixHrtfParams *hrtfparams, HrtfState *hrtfstate,
+             ALuint BufferSize)
 {
     ALfloat (*Coeffs)[2] = hrtfparams->Current->Coeffs;
     ALuint Delay[2] = { hrtfparams->Current->Delay[0], hrtfparams->Current->Delay[1] };
@@ -66,9 +67,9 @@ void MixHrtf(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
         }
 
         for(i = 0;i < todo;i++)
-            OutBuffer[0][OutPos+i] += out[i][0];
+            OutBuffer[lidx][OutPos+i] += out[i][0];
         for(i = 0;i < todo;i++)
-            OutBuffer[1][OutPos+i] += out[i][1];
+            OutBuffer[ridx][OutPos+i] += out[i][1];
         OutPos += todo;
     }
 
@@ -107,9 +108,9 @@ skip_stepping:
         }
 
         for(i = 0;i < todo;i++)
-            OutBuffer[0][OutPos+i] += out[i][0];
+            OutBuffer[lidx][OutPos+i] += out[i][0];
         for(i = 0;i < todo;i++)
-            OutBuffer[1][OutPos+i] += out[i][1];
+            OutBuffer[ridx][OutPos+i] += out[i][1];
         OutPos += todo;
     }
 }

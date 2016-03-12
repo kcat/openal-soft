@@ -603,6 +603,8 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                 else
                 {
                     MixHrtfParams hrtfparams;
+                    int lidx, ridx;
+
                     if(!Counter)
                     {
                         parms->Hrtf[chan].Current = parms->Hrtf[chan].Target;
@@ -633,7 +635,11 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     hrtfparams.Target = &parms->Hrtf[chan].Target;
                     hrtfparams.Current = &parms->Hrtf[chan].Current;
 
-                    MixHrtfSamples(parms->OutBuffer, samples, Counter, voice->Offset,
+                    lidx = GetChannelIdxByName(Device->RealOut, FrontLeft);
+                    ridx = GetChannelIdxByName(Device->RealOut, FrontRight);
+                    assert(lidx != -1 && ridx != -1);
+
+                    MixHrtfSamples(parms->OutBuffer, lidx, ridx, samples, Counter, voice->Offset,
                                    OutPos, IrSize, &hrtfparams, &parms->Hrtf[chan].State,
                                    DstBufferSize);
                 }

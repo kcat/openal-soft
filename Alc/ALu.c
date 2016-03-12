@@ -1454,20 +1454,25 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
         if(device->Hrtf)
         {
-            HrtfMixerFunc HrtfMix = SelectHrtfMixer();
-            ALuint irsize = GetHrtfIrSize(device->Hrtf);
-            MixHrtfParams hrtfparams;
-            memset(&hrtfparams, 0, sizeof(hrtfparams));
-            for(c = 0;c < device->VirtOut.NumChannels;c++)
+            int lidx = GetChannelIdxByName(device->RealOut, FrontLeft);
+            int ridx = GetChannelIdxByName(device->RealOut, FrontRight);
+            if(lidx != -1 && ridx != -1)
             {
-                hrtfparams.Current = &device->Hrtf_Params[c];
-                hrtfparams.Target = &device->Hrtf_Params[c];
-                HrtfMix(device->RealOut.Buffer, device->VirtOut.Buffer[c], 0,
-                    device->Hrtf_Offset, 0, irsize, &hrtfparams,
-                    &device->Hrtf_State[c], SamplesToDo
-                );
+                HrtfMixerFunc HrtfMix = SelectHrtfMixer();
+                ALuint irsize = GetHrtfIrSize(device->Hrtf);
+                MixHrtfParams hrtfparams;
+                memset(&hrtfparams, 0, sizeof(hrtfparams));
+                for(c = 0;c < device->VirtOut.NumChannels;c++)
+                {
+                    hrtfparams.Current = &device->Hrtf_Params[c];
+                    hrtfparams.Target = &device->Hrtf_Params[c];
+                    HrtfMix(device->RealOut.Buffer, lidx, ridx,
+                        device->VirtOut.Buffer[c], 0, device->Hrtf_Offset, 0,
+                        irsize, &hrtfparams, &device->Hrtf_State[c], SamplesToDo
+                    );
+                }
+                device->Hrtf_Offset += SamplesToDo;
             }
-            device->Hrtf_Offset += SamplesToDo;
         }
         else
         {

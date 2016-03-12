@@ -61,6 +61,11 @@ void MixHrtf(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat *data,
             Delay[0] = hrtfparams->Target->Delay[0];
             Delay[1] = hrtfparams->Target->Delay[1];
         }
+        else
+        {
+            hrtfparams->Current->Delay[0] = Delay[0];
+            hrtfparams->Current->Delay[1] = Delay[1];
+        }
     }
 
     Delay[0] >>= HRTFDELAY_BITS;

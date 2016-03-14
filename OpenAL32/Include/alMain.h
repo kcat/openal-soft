@@ -397,7 +397,8 @@ enum RenderMode {
 /* The maximum number of Ambisonics coefficients. For a given order (o), the
  * size needed will be (o+1)**2, thus zero-order has 1, first-order has 4,
  * second-order has 9, and third-order has 16. */
-#define MAX_AMBI_COEFFS 16
+#define MAX_AMBI_ORDER  3
+#define MAX_AMBI_COEFFS ((MAX_AMBI_ORDER+1) * (MAX_AMBI_ORDER+1))
 
 typedef ALfloat ChannelConfig[MAX_AMBI_COEFFS];
 

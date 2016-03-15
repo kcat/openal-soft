@@ -154,15 +154,15 @@ static int load_speakers(AmbDecConf *conf, FILE *f, char **buffer, size_t *maxle
             const char *elev = my_strtok_r(NULL, " \t", saveptr);
             const char *conn = my_strtok_r(NULL, " \t", saveptr);
 
-            if(!name) ERR("Name not specified for speaker %u\n", cur+1);
+            if(!name) WARN("Name not specified for speaker %u\n", cur+1);
             else al_string_copy_cstr(&conf->Speakers[cur].Name, name);
-            if(!dist) ERR("Distance not specified for speaker %u\n", cur+1);
+            if(!dist) WARN("Distance not specified for speaker %u\n", cur+1);
             else read_float(&conf->Speakers[cur].Distance, dist);
-            if(!az) ERR("Azimuth not specified for speaker %u\n", cur+1);
+            if(!az) WARN("Azimuth not specified for speaker %u\n", cur+1);
             else read_float(&conf->Speakers[cur].Azimuth, az);
-            if(!elev) ERR("Elevation not specified for speaker %u\n", cur+1);
+            if(!elev) WARN("Elevation not specified for speaker %u\n", cur+1);
             else read_float(&conf->Speakers[cur].Elevation, elev);
-            if(!conn) ERR("Connection not specified for speaker %u\n", cur+1);
+            if(!conn) TRACE("Connection not specified for speaker %u\n", cur+1);
             else al_string_copy_cstr(&conf->Speakers[cur].Connection, conn);
             cur++;
         }
@@ -296,6 +296,7 @@ int ambdec_load(AmbDecConf *conf, const char *fname)
 {
     char *buffer = NULL;
     size_t maxlen = 0;
+    char *line;
     FILE *f;
 
     f = al_fopen(fname, "r");
@@ -305,12 +306,12 @@ int ambdec_load(AmbDecConf *conf, const char *fname)
         return 0;
     }
 
-    while(read_clipped_line(f, &buffer, &maxlen))
+    while((line=read_clipped_line(f, &buffer, &maxlen)) != NULL)
     {
-        char *line, *saveptr;
+        char *saveptr;
         char *command;
 
-        command = my_strtok_r(buffer, "/ \t", &saveptr);
+        command = my_strtok_r(line, "/ \t", &saveptr);
         if(!command)
         {
             ERR("Malformed line: %s\n", line);

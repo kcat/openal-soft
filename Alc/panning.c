@@ -62,10 +62,31 @@ static const ALuint FuMa2ACN[MAX_AMBI_COEFFS] = {
     9,  /* Q */
 };
 
-/* NOTE: These are scale factors as applied to Ambisonics content. FuMa
- * decoder coefficients should be divided by these values to get N3D decoder
- * coefficients.
+/* NOTE: These are scale factors as applied to Ambisonics content. Decoder
+ * coefficients should be divided by these values to get proper N3D scalings.
  */
+static const ALfloat UnitScale[MAX_AMBI_COEFFS] = {
+    1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+    1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
+};
+static const ALfloat SN3D2N3DScale[MAX_AMBI_COEFFS] = {
+    1.000000000f, /* ACN  0 (W), sqrt(1) */
+    1.732050808f, /* ACN  1 (Y), sqrt(3) */
+    1.732050808f, /* ACN  2 (Z), sqrt(3) */
+    1.732050808f, /* ACN  3 (X), sqrt(3) */
+    2.236067978f, /* ACN  4 (V), sqrt(5) */
+    2.236067978f, /* ACN  5 (T), sqrt(5) */
+    2.236067978f, /* ACN  6 (R), sqrt(5) */
+    2.236067978f, /* ACN  7 (S), sqrt(5) */
+    2.236067978f, /* ACN  8 (U), sqrt(5) */
+    2.645751311f, /* ACN  9 (Q), sqrt(7) */
+    2.645751311f, /* ACN 10 (O), sqrt(7) */
+    2.645751311f, /* ACN 11 (M), sqrt(7) */
+    2.645751311f, /* ACN 12 (K), sqrt(7) */
+    2.645751311f, /* ACN 13 (L), sqrt(7) */
+    2.645751311f, /* ACN 14 (N), sqrt(7) */
+    2.645751311f, /* ACN 15 (P), sqrt(7) */
+};
 static const ALfloat FuMa2N3DScale[MAX_AMBI_COEFFS] = {
     1.414213562f, /* ACN  0 (W), sqrt(2) */
     1.732050808f, /* ACN  1 (Y), sqrt(3) */
@@ -338,73 +359,37 @@ static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALuint spe
 
 static bool LoadChannelSetup(ALCdevice *device)
 {
-    static const enum Channel mono_chans[1] = {
-        FrontCenter
-    }, stereo_chans[2] = {
-        FrontLeft, FrontRight
-    }, quad_chans[4] = {
-        FrontLeft, FrontRight,
-        BackLeft, BackRight
-    }, surround51_chans[5] = {
-        FrontLeft, FrontRight, FrontCenter,
-        SideLeft, SideRight
-    }, surround51rear_chans[5] = {
-        FrontLeft, FrontRight, FrontCenter,
-        BackLeft, BackRight
-    }, surround61_chans[6] = {
-        FrontLeft, FrontRight,
-        FrontCenter, BackCenter,
-        SideLeft, SideRight
-    }, surround71_chans[7] = {
-        FrontLeft, FrontRight, FrontCenter,
-        BackLeft, BackRight,
-        SideLeft, SideRight
-    };
     ChannelMap chanmap[MAX_OUTPUT_CHANNELS];
-    const enum Channel *channels = NULL;
+    ALuint speakermap[MAX_OUTPUT_CHANNELS];
+    const ALfloat *coeff_scale = UnitScale;
     const char *layout = NULL;
     ALfloat ambiscale = 1.0f;
-    size_t count = 0;
-    int isfuma;
-    int order;
+    const char *fname;
+    AmbDecConf conf;
     size_t i;
 
     switch(device->FmtChans)
     {
         case DevFmtMono:
             layout = "mono";
-            channels = mono_chans;
-            count = COUNTOF(mono_chans);
             break;
         case DevFmtStereo:
             layout = "stereo";
-            channels = stereo_chans;
-            count = COUNTOF(stereo_chans);
             break;
         case DevFmtQuad:
             layout = "quad";
-            channels = quad_chans;
-            count = COUNTOF(quad_chans);
             break;
         case DevFmtX51:
             layout = "surround51";
-            channels = surround51_chans;
-            count = COUNTOF(surround51_chans);
             break;
         case DevFmtX51Rear:
             layout = "surround51rear";
-            channels = surround51rear_chans;
-            count = COUNTOF(surround51rear_chans);
             break;
         case DevFmtX61:
             layout = "surround61";
-            channels = surround61_chans;
-            count = COUNTOF(surround61_chans);
             break;
         case DevFmtX71:
             layout = "surround71";
-            channels = surround71_chans;
-            count = COUNTOF(surround71_chans);
             break;
         case DevFmtBFormat3D:
             break;
@@ -412,108 +397,81 @@ static bool LoadChannelSetup(ALCdevice *device)
 
     if(!layout)
         return false;
+
+    if(!ConfigValueStr(al_string_get_cstr(device->DeviceName), "layouts", layout, &fname))
+        return false;
+
+    ambdec_init(&conf);
+    if(!ambdec_load(&conf, fname))
+    {
+        ERR("Failed to load layout file %s\n", fname);
+        goto fail;
+    }
+
+    if(conf.FreqBands != 1)
+    {
+        ERR("AmbDec layout file must be single-band (freq_bands = %u)\n", conf.FreqBands);
+        goto fail;
+    }
+
+    if(!MakeSpeakerMap(device, &conf, speakermap))
+        goto fail;
+
+    if(conf.ChanMask > 0x1ff)
+        ambiscale = THIRD_ORDER_SCALE;
+    else if(conf.ChanMask > 0xf)
+        ambiscale = SECOND_ORDER_SCALE;
+    else if(conf.ChanMask > 0x1)
+        ambiscale = FIRST_ORDER_SCALE;
     else
+        ambiscale = 0.0f;
+
+    if(conf.CoeffScale == ADS_SN3D)
+        coeff_scale = SN3D2N3DScale;
+    else if(conf.CoeffScale == ADS_FuMa)
+        coeff_scale = FuMa2N3DScale;
+
+    for(i = 0;i < conf.NumSpeakers;i++)
     {
-        char name[32] = {0};
-        const char *type;
-        char eol;
+        ALuint chan = speakermap[i];
+        ALuint j, k = 0;
 
-        snprintf(name, sizeof(name), "%s/type", layout);
-        if(!ConfigValueStr(al_string_get_cstr(device->DeviceName), "layouts", name, &type))
-            return false;
+        for(j = 0;j < MAX_AMBI_COEFFS;j++)
+            chanmap[i].Config[j] = 0.0f;
 
-        if(sscanf(type, " %31[^: ] : %d%c", name, &order, &eol) != 2)
+        chanmap[i].ChanName = device->RealOut.ChannelName[chan];
+        for(j = 0;j < 1;j++)
         {
-            ERR("Invalid type value '%s' (expected name:order) for layout %s\n", type, layout);
-            return false;
+            if((conf.ChanMask&(1<<j)))
+                chanmap[i].Config[j] = conf.HFMatrix[i][k++] / coeff_scale[j] * conf.HFOrderGain[0];
         }
-
-        if(strcasecmp(name, "fuma") == 0)
-            isfuma = 1;
-        else if(strcasecmp(name, "n3d") == 0)
-            isfuma = 0;
-        else
+        for(;j < 4;j++)
         {
-            ERR("Unhandled type name '%s' (expected FuMa or N3D) for layout %s\n", name, layout);
-            return false;
+            if((conf.ChanMask&(1<<j)))
+                chanmap[i].Config[j] = conf.HFMatrix[i][k++] / coeff_scale[j] * conf.HFOrderGain[1];
         }
-
-        if(order == 3)
-            ambiscale = THIRD_ORDER_SCALE;
-        else if(order == 2)
-            ambiscale = SECOND_ORDER_SCALE;
-        else if(order == 1)
-            ambiscale = FIRST_ORDER_SCALE;
-        else if(order == 0)
-            ambiscale = ZERO_ORDER_SCALE;
-        else
+        for(;j < 9;j++)
         {
-            ERR("Unhandled type order %d (expected 0, 1, 2, or 3) for layout %s\n", order, layout);
-            return false;
+            if((conf.ChanMask&(1<<j)))
+                chanmap[i].Config[j] = conf.HFMatrix[i][k++] / coeff_scale[j] * conf.HFOrderGain[2];
+        }
+        for(;j < 16;j++)
+        {
+            if((conf.ChanMask&(1<<j)))
+                chanmap[i].Config[j] = conf.HFMatrix[i][k++] / coeff_scale[j] * conf.HFOrderGain[3];
         }
     }
 
-    for(i = 0;i < count;i++)
-    {
-        float coeffs[MAX_AMBI_COEFFS] = {0.0f};
-        const char *channame;
-        char chanlayout[32];
-        const char *value;
-        int props = 0;
-        char eol = 0;
-        int j;
-
-        chanmap[i].ChanName = channels[i];
-        channame = GetLabelFromChannel(channels[i]);
-
-        snprintf(chanlayout, sizeof(chanlayout), "%s/%s", layout, channame);
-        if(!ConfigValueStr(al_string_get_cstr(device->DeviceName), "layouts", chanlayout, &value))
-        {
-            ERR("Missing channel %s\n", channame);
-            return false;
-        }
-        if(order == 3)
-            props = sscanf(value, " %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %c",
-                &coeffs[0],  &coeffs[1],  &coeffs[2],  &coeffs[3],
-                &coeffs[4],  &coeffs[5],  &coeffs[6],  &coeffs[7],
-                &coeffs[8],  &coeffs[9],  &coeffs[10], &coeffs[11],
-                &coeffs[12], &coeffs[13], &coeffs[14], &coeffs[15],
-                &eol
-            );
-        else if(order == 2)
-            props = sscanf(value, " %f %f %f %f %f %f %f %f %f %c",
-                &coeffs[0], &coeffs[1], &coeffs[2],
-                &coeffs[3], &coeffs[4], &coeffs[5],
-                &coeffs[6], &coeffs[7], &coeffs[8],
-                &eol
-            );
-        else if(order == 1)
-            props = sscanf(value, " %f %f %f %f %c",
-                &coeffs[0], &coeffs[1],
-                &coeffs[2], &coeffs[3],
-                &eol
-            );
-        else if(order == 0)
-            props = sscanf(value, " %f %c", &coeffs[0], &eol);
-        if(props == 0)
-        {
-            ERR("Failed to parse option %s properties\n", chanlayout);
-            return false;
-        }
-
-        if(props > (order+1)*(order+1))
-        {
-            ERR("Excess elements in option %s (expected %d)\n", chanlayout, (order+1)*(order+1));
-            return false;
-        }
-
-        for(j = 0;j < MAX_AMBI_COEFFS;++j)
-            chanmap[i].Config[j] = coeffs[j];
-    }
-    SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
-                  &device->Dry.NumChannels, isfuma);
+    SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, conf.NumSpeakers,
+                  &device->Dry.NumChannels, AL_FALSE);
     device->Dry.AmbiScale = ambiscale;
+
+    ambdec_deinit(&conf);
     return true;
+
+fail:
+    ambdec_deinit(&conf);
+    return false;
 }
 
 ALvoid aluInitPanning(ALCdevice *device, const AmbDecConf *conf)

@@ -33,6 +33,7 @@
 extern "C" {
 #endif
 
+struct AmbDecConf;
 struct ALsource;
 struct ALvoice;
 struct ALeffectslot;
@@ -280,7 +281,7 @@ inline ALfloat resample_fir8(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat v
 
 void aluInitMixer(void);
 
-ALvoid aluInitPanning(ALCdevice *Device);
+ALvoid aluInitPanning(ALCdevice *Device, const struct AmbDecConf *conf);
 
 void aluInitEffectPanning(struct ALeffectslot *slot);
 

@@ -87,10 +87,11 @@ typedef struct ALreverbState {
         ALuint    Offset[4];
 
         // The gain for each output channel based on 3D panning.
-        // NOTE: With HRTF, we may be rendering to the dry buffer and the
-        // "real" buffer. The dry buffer may be using all 8 output channels, so
-        // we need two extra for the real stereo output.
-        ALfloat   PanGain[4][MAX_OUTPUT_CHANNELS+2];
+        // NOTE: With certain output modes, we may be rendering to the dry
+        // buffer and the "real" buffer. The two combined may be using more
+        // than 8 output channels, so we need some extra for the real output
+        // too.
+        ALfloat PanGain[4][MAX_OUTPUT_CHANNELS+4];
     } Early;
 
     // Decorrelator delay line.
@@ -128,8 +129,8 @@ typedef struct ALreverbState {
         ALfloat   LpSample[4];
 
         // The gain for each output channel based on 3D panning.
-        // NOTE: Add two in case of HRTF (see note about early pan).
-        ALfloat   PanGain[4][MAX_OUTPUT_CHANNELS+2];
+        // NOTE: Add some extra in case (see note about early pan).
+        ALfloat PanGain[4][MAX_OUTPUT_CHANNELS+4];
     } Late;
 
     struct {
@@ -371,7 +372,10 @@ static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Dev
     /* WARNING: This assumes the real output follows the virtual output in the
      * device's DryBuffer.
      */
-    State->ExtraChannels = (Device->Hrtf || Device->Uhj_Encoder) ? 2 : 0;
+    if(Device->Hrtf || Device->Uhj_Encoder || Device->AmbiDecoder)
+        State->ExtraChannels = ChannelsFromDevFmt(Device->FmtChans);
+    else
+        State->ExtraChannels = 0;
 
     // Calculate the modulation filter coefficient.  Notice that the exponent
     // is calculated given the current sample rate.  This ensures that the
@@ -938,7 +942,7 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
 
     gain = props->Reverb.Gain * Slot->Gain * ReverbBoost;
     // Update early and late 3D panning.
-    if(Device->Hrtf || Device->Uhj_Encoder)
+    if(Device->Hrtf || Device->Uhj_Encoder || Device->AmbiDecoder)
         UpdateMixedPanning(Device, props->Reverb.ReflectionsPan,
                            props->Reverb.LateReverbPan, gain,
                            props->Reverb.ReflectionsGain,

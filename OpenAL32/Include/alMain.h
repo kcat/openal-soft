@@ -476,6 +476,9 @@ struct ALCdevice_struct
     // Stereo-to-binaural filter
     struct bs2b *Bs2b;
 
+    /* High quality Ambisonic decoder */
+    struct BFormatDec *AmbiDecoder;
+
     /* Rendering mode. */
     enum RenderMode Render_Mode;
 

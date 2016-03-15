@@ -37,6 +37,8 @@
 #include "alError.h"
 #include "bs2b.h"
 #include "uhjfilter.h"
+#include "bformatdec.h"
+#include "ambdec.h"
 #include "alu.h"
 
 #include "compat.h"
@@ -2116,12 +2118,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
     }
 
-    aluInitPanning(device);
+    aluInitPanning(device, NULL);
 
-    /* With HRTF, allocate two extra channels for the post-filter output. */
+    /* Allocate extra channels for any post-filter output. */
     size = device->Dry.NumChannels * sizeof(device->Dry.Buffer[0]);
-    if(device->Hrtf || device->Uhj_Encoder)
-        size += 2 * sizeof(device->Dry.Buffer[0]);
+    if(device->Hrtf || device->Uhj_Encoder || device->AmbiDecoder)
+        size += ChannelsFromDevFmt(device->FmtChans) * sizeof(device->Dry.Buffer[0]);
     device->Dry.Buffer = al_calloc(16, size);
     if(!device->Dry.Buffer)
     {
@@ -2129,12 +2131,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         return ALC_INVALID_DEVICE;
     }
 
-    if(device->Hrtf || device->Uhj_Encoder)
+    if(device->Hrtf || device->Uhj_Encoder || device->AmbiDecoder)
     {
         device->VirtOut.Buffer = device->Dry.Buffer;
         device->VirtOut.NumChannels = device->Dry.NumChannels;
         device->RealOut.Buffer = device->Dry.Buffer + device->Dry.NumChannels;
-        device->RealOut.NumChannels = 2;
+        device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans);
     }
     else
     {
@@ -2276,6 +2278,9 @@ static ALCvoid FreeDevice(ALCdevice *device)
 
     al_free(device->Uhj_Encoder);
     device->Uhj_Encoder = NULL;
+
+    bformatdec_free(device->AmbiDecoder);
+    device->AmbiDecoder = NULL;
 
     AL_STRING_DEINIT(device->DeviceName);
 

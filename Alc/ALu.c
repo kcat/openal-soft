@@ -35,6 +35,7 @@
 #include "bs2b.h"
 #include "hrtf.h"
 #include "uhjfilter.h"
+#include "bformatdec.h"
 #include "static_assert.h"
 
 #include "mixer_defs.h"
@@ -1461,6 +1462,13 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 }
                 device->Hrtf_Offset += SamplesToDo;
             }
+        }
+        else if(device->AmbiDecoder)
+        {
+            bformatdec_process(device->AmbiDecoder,
+                device->RealOut.Buffer, device->RealOut.NumChannels,
+                device->VirtOut.Buffer, SamplesToDo
+            );
         }
         else
         {

@@ -30,6 +30,8 @@
 #include "alAuxEffectSlot.h"
 #include "alu.h"
 #include "bool.h"
+#include "ambdec.h"
+#include "bformatdec.h"
 
 
 extern inline void CalcXYZCoeffs(ALfloat x, ALfloat y, ALfloat z, ALfloat coeffs[MAX_AMBI_COEFFS]);
@@ -252,6 +254,88 @@ static void SetChannelMap(const enum Channel *devchans, ChannelConfig *ambicoeff
     *outcount = i;
 }
 
+static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALuint speakermap[MAX_OUTPUT_CHANNELS])
+{
+    ALuint i;
+
+    for(i = 0;i < conf->NumSpeakers;i++)
+    {
+        int c = -1;
+
+        /* NOTE: AmbDec does not define any standard speaker names, however
+         * for this to work we have to by able to find the output channel
+         * the speaker definition corresponds to. Therefore, OpenAL Soft
+         * requires these channel labels to be recognized:
+         *
+         * LF = Front left
+         * RF = Front right
+         * LS = Side left
+         * RS = Side right
+         * LB = Back left
+         * RB = Back right
+         * CE = Front center
+         * CB = Back center
+         *
+         * Additionally, surround51 will acknowledge back speakers for side
+         * channels, and surround51rear will acknowledge side speakers for
+         * back channels, to avoid issues with an ambdec expecting 5.1 to
+         * use the side channels when the device is configured for back,
+         * and vice-versa.
+         */
+        if(al_string_cmp_cstr(conf->Speakers[i].Name, "LF") == 0)
+            c = GetChannelIdxByName(device->RealOut, FrontLeft);
+        else if(al_string_cmp_cstr(conf->Speakers[i].Name, "RF") == 0)
+            c = GetChannelIdxByName(device->RealOut, FrontRight);
+        else if(al_string_cmp_cstr(conf->Speakers[i].Name, "CE") == 0)
+            c = GetChannelIdxByName(device->RealOut, FrontCenter);
+        else if(al_string_cmp_cstr(conf->Speakers[i].Name, "LS") == 0)
+        {
+            if(device->FmtChans == DevFmtX51Rear)
+                c = GetChannelIdxByName(device->RealOut, BackLeft);
+            else
+                c = GetChannelIdxByName(device->RealOut, SideLeft);
+        }
+        else if(al_string_cmp_cstr(conf->Speakers[i].Name, "RS") == 0)
+        {
+            if(device->FmtChans == DevFmtX51Rear)
+                c = GetChannelIdxByName(device->RealOut, BackRight);
+            else
+                c = GetChannelIdxByName(device->RealOut, SideRight);
+        }
+        else if(al_string_cmp_cstr(conf->Speakers[i].Name, "LB") == 0)
+        {
+            if(device->FmtChans == DevFmtX51)
+                c = GetChannelIdxByName(device->RealOut, SideLeft);
+            else
+                c = GetChannelIdxByName(device->RealOut, BackLeft);
+        }
+        else if(al_string_cmp_cstr(conf->Speakers[i].Name, "RB") == 0)
+        {
+            if(device->FmtChans == DevFmtX51)
+                c = GetChannelIdxByName(device->RealOut, SideRight);
+            else
+                c = GetChannelIdxByName(device->RealOut, BackRight);
+        }
+        else if(al_string_cmp_cstr(conf->Speakers[i].Name, "CB") == 0)
+            c = GetChannelIdxByName(device->RealOut, BackCenter);
+        else
+        {
+            ERR("AmbDec speaker label \"%s\" not recognized\n",
+                al_string_get_cstr(conf->Speakers[i].Name));
+            return false;
+        }
+        if(c == -1)
+        {
+            ERR("Failed to lookup AmbDec speaker label %s\n",
+                al_string_get_cstr(conf->Speakers[i].Name));
+            return false;
+        }
+        speakermap[i] = c;
+    }
+
+    return true;
+}
+
 static bool LoadChannelSetup(ALCdevice *device)
 {
     static const enum Channel mono_chans[1] = {
@@ -432,7 +516,7 @@ static bool LoadChannelSetup(ALCdevice *device)
     return true;
 }
 
-ALvoid aluInitPanning(ALCdevice *device)
+ALvoid aluInitPanning(ALCdevice *device, const AmbDecConf *conf)
 {
     /* NOTE: These decoder coefficients are using FuMa channel ordering and
      * normalization, since that's what was produced by the Ambisonic Decoder
@@ -555,6 +639,51 @@ ALvoid aluInitPanning(ALCdevice *device)
         device->Dry.AmbiScale = ambiscale;
 
         return;
+    }
+    if(device->AmbiDecoder)
+    {
+        /* NOTE: This is ACN/N3D ordering and scaling, rather than FuMa. */
+        static const ChannelMap Ambi3D[4] = {
+            { BFormatW, { 1.0f, 0.0f, 0.0f, 0.0f } },
+            { BFormatY, { 0.0f, 1.0f, 0.0f, 0.0f } },
+            { BFormatZ, { 0.0f, 0.0f, 1.0f, 0.0f } },
+            { BFormatX, { 0.0f, 0.0f, 0.0f, 1.0f } },
+        };
+        ALuint speakermap[MAX_OUTPUT_CHANNELS];
+
+        if(conf->ChanMask > 0xffff)
+        {
+            ERR("Unsupported channel mask 0x%04x (max 0xffff)\n", conf->ChanMask);
+            goto ambi_fail;
+        }
+        if(conf->ChanMask > 0xf)
+        {
+            ERR("Only first-order is supported for HQ decoding (mask 0x%04x, max 0xf)\n",
+                conf->ChanMask);
+            goto ambi_fail;
+        }
+
+        if(!MakeSpeakerMap(device, conf, speakermap))
+            goto ambi_fail;
+        bformatdec_reset(device->AmbiDecoder, conf, count, device->Frequency, speakermap);
+
+        count = COUNTOF(Ambi3D);
+        chanmap = Ambi3D;
+        ambiscale = FIRST_ORDER_SCALE;
+
+        for(i = 0;i < count;i++)
+            device->Dry.ChannelName[i] = chanmap[i].ChanName;
+        for(;i < MAX_OUTPUT_CHANNELS;i++)
+            device->Dry.ChannelName[i] = InvalidChannel;
+        SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
+                      &device->Dry.NumChannels, AL_FALSE);
+        device->Dry.AmbiScale = ambiscale;
+
+        return;
+
+    ambi_fail:
+        bformatdec_free(device->AmbiDecoder);
+        device->AmbiDecoder = NULL;
     }
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)

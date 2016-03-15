@@ -553,29 +553,17 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
 
         if(DirectChannels)
         {
-            if(Device->Hrtf || Device->Uhj_Encoder)
-            {
-                /* DirectChannels with HRTF or UHJ enabled. Skip the virtual
-                 * channels and write FrontLeft and FrontRight inputs to the
-                 * first and second outputs.
-                 */
-                voice->Direct.OutBuffer = Device->RealOut.Buffer;
-                voice->Direct.OutChannels = Device->RealOut.NumChannels;
-                for(c = 0;c < num_channels;c++)
-                {
-                    int idx;
-                    for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
-                        voice->Direct.Gains[c].Target[j] = 0.0f;
-                    if((idx=GetChannelIdxByName(Device->RealOut, chans[c].channel)) != -1)
-                        voice->Direct.Gains[c].Target[idx] = DryGain;
-                }
-            }
-            else for(c = 0;c < num_channels;c++)
+            /* Skip the virtual channels and write FrontLeft and FrontRight
+             * inputs to the real output.
+             */
+            voice->Direct.OutBuffer = Device->RealOut.Buffer;
+            voice->Direct.OutChannels = Device->RealOut.NumChannels;
+            for(c = 0;c < num_channels;c++)
             {
                 int idx;
                 for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
                     voice->Direct.Gains[c].Target[j] = 0.0f;
-                if((idx=GetChannelIdxByName(Device->Dry, chans[c].channel)) != -1)
+                if((idx=GetChannelIdxByName(Device->RealOut, chans[c].channel)) != -1)
                     voice->Direct.Gains[c].Target[idx] = DryGain;
             }
 

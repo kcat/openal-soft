@@ -129,7 +129,7 @@ char *read_clipped_line(FILE *f, char **buffer, size_t *maxlen)
     return NULL;
 }
 
-static int load_speakers(AmbDecConf *conf, FILE *f, char **buffer, size_t *maxlen, char **saveptr)
+static int load_ambdec_speakers(AmbDecConf *conf, FILE *f, char **buffer, size_t *maxlen, char **saveptr)
 {
     ALuint cur = 0;
     while(cur < conf->NumSpeakers)
@@ -164,6 +164,7 @@ static int load_speakers(AmbDecConf *conf, FILE *f, char **buffer, size_t *maxle
             else read_float(&conf->Speakers[cur].Elevation, elev);
             if(!conn) TRACE("Connection not specified for speaker %u\n", cur+1);
             else al_string_copy_cstr(&conf->Speakers[cur].Connection, conn);
+
             cur++;
         }
         else
@@ -183,7 +184,7 @@ static int load_speakers(AmbDecConf *conf, FILE *f, char **buffer, size_t *maxle
     return 1;
 }
 
-static int load_matrix(ALfloat *gains, ALfloat (*matrix)[MAX_AMBI_COEFFS], ALuint maxrow, FILE *f, char **buffer, size_t *maxlen, char **saveptr)
+static int load_ambdec_matrix(ALfloat *gains, ALfloat (*matrix)[MAX_AMBI_COEFFS], ALuint maxrow, FILE *f, char **buffer, size_t *maxlen, char **saveptr)
 {
     int gotgains = 0;
     ALuint cur = 0;
@@ -445,7 +446,7 @@ int ambdec_load(AmbDecConf *conf, const char *fname)
                 ERR("Expected { after speakers command, got %s\n", value);
                 goto fail;
             }
-            if(!load_speakers(conf, f, &buffer, &maxlen, &saveptr))
+            if(!load_ambdec_speakers(conf, f, &buffer, &maxlen, &saveptr))
                 goto fail;
             value = my_strtok_r(NULL, "/ \t", &saveptr);
             if(!value)
@@ -480,22 +481,22 @@ int ambdec_load(AmbDecConf *conf, const char *fname)
                     ERR("Unexpected \"%s\" type for a single-band decoder\n", command);
                     goto fail;
                 }
-                if(!load_matrix(conf->HFOrderGain, conf->HFMatrix, conf->NumSpeakers,
-                                f, &buffer, &maxlen, &saveptr))
+                if(!load_ambdec_matrix(conf->HFOrderGain, conf->HFMatrix, conf->NumSpeakers,
+                                       f, &buffer, &maxlen, &saveptr))
                     goto fail;
             }
             else
             {
                 if(strcmp(command, "lfmatrix") == 0)
                 {
-                    if(!load_matrix(conf->LFOrderGain, conf->LFMatrix, conf->NumSpeakers,
-                                    f, &buffer, &maxlen, &saveptr))
+                    if(!load_ambdec_matrix(conf->LFOrderGain, conf->LFMatrix, conf->NumSpeakers,
+                                           f, &buffer, &maxlen, &saveptr))
                         goto fail;
                 }
                 else if(strcmp(command, "hfmatrix") == 0)
                 {
-                    if(!load_matrix(conf->HFOrderGain, conf->HFMatrix, conf->NumSpeakers,
-                                    f, &buffer, &maxlen, &saveptr))
+                    if(!load_ambdec_matrix(conf->HFOrderGain, conf->HFMatrix, conf->NumSpeakers,
+                                           f, &buffer, &maxlen, &saveptr))
                         goto fail;
                 }
                 else

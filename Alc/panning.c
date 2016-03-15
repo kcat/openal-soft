@@ -623,7 +623,6 @@ ALvoid aluInitPanning(ALCdevice *device, const AmbDecConf *conf)
 
         if(!MakeSpeakerMap(device, conf, speakermap))
             goto ambi_fail;
-        bformatdec_reset(device->AmbiDecoder, conf, count, device->Frequency, speakermap);
 
         count = COUNTOF(Ambi3D);
         chanmap = Ambi3D;
@@ -637,6 +636,7 @@ ALvoid aluInitPanning(ALCdevice *device, const AmbDecConf *conf)
                       &device->Dry.NumChannels, AL_FALSE);
         device->Dry.AmbiScale = ambiscale;
 
+        bformatdec_reset(device->AmbiDecoder, conf, count, device->Frequency, speakermap);
         return;
 
     ambi_fail:

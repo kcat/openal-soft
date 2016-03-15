@@ -252,7 +252,7 @@ static void apply_row(ALfloat *out, const ALfloat *mtx, ALfloat (*restrict in)[B
     for(c = 0;c < inchans;c++)
     {
         ALfloat gain = mtx[c];
-        if(!(gain > GAIN_SILENCE_THRESHOLD))
+        if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
         for(i = 0;i < todo;i++)
             out[i] += in[c][i] * gain;

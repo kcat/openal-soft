@@ -326,10 +326,10 @@ enum Channel {
     LowerBackLeft,
     LowerBackRight,
 
-    BFormatW,
-    BFormatX,
-    BFormatY,
-    BFormatZ,
+    Aux0,
+    Aux1,
+    Aux2,
+    Aux3,
 
     InvalidChannel
 };

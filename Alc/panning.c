@@ -216,10 +216,10 @@ DECL_CONST static inline const char *GetLabelFromChannel(enum Channel channel)
         case LowerBackLeft: return "lower-back-left";
         case LowerBackRight: return "lower-back-right";
 
-        case BFormatW: return "bformat-w";
-        case BFormatX: return "bformat-x";
-        case BFormatY: return "bformat-y";
-        case BFormatZ: return "bformat-z";
+        case Aux0: return "aux-0";
+        case Aux1: return "aux-1";
+        case Aux2: return "aux-2";
+        case Aux3: return "aux-3";
 
         case InvalidChannel: break;
     }
@@ -517,14 +517,14 @@ ALvoid aluInitPanning(ALCdevice *device)
         { LowerBackLeft,   { 0.176776695f, -0.072168784f,  0.072168784f, -0.072168784f } },
         { LowerBackRight,  { 0.176776695f, -0.072168784f, -0.072168784f, -0.072168784f } },
     }, BFormat2D[3] = {
-        { BFormatW, { 1.0f, 0.0f, 0.0f, 0.0f } },
-        { BFormatX, { 0.0f, 1.0f, 0.0f, 0.0f } },
-        { BFormatY, { 0.0f, 0.0f, 1.0f, 0.0f } },
+        { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f } },
+        { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f } },
+        { Aux2, { 0.0f, 0.0f, 1.0f, 0.0f } },
     }, BFormat3D[4] = {
-        { BFormatW, { 1.0f, 0.0f, 0.0f, 0.0f } },
-        { BFormatX, { 0.0f, 1.0f, 0.0f, 0.0f } },
-        { BFormatY, { 0.0f, 0.0f, 1.0f, 0.0f } },
-        { BFormatZ, { 0.0f, 0.0f, 0.0f, 1.0f } },
+        { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f } },
+        { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f } },
+        { Aux2, { 0.0f, 0.0f, 1.0f, 0.0f } },
+        { Aux3, { 0.0f, 0.0f, 0.0f, 1.0f } },
     };
     const ChannelMap *chanmap = NULL;
     ALfloat ambiscale = 1.0f;
@@ -592,10 +592,10 @@ ALvoid aluInitPanning(ALCdevice *device)
     {
         /* NOTE: This is ACN/N3D ordering and scaling, rather than FuMa. */
         static const ChannelMap Ambi3D[4] = {
-            { BFormatW, { 1.0f, 0.0f, 0.0f, 0.0f } },
-            { BFormatY, { 0.0f, 1.0f, 0.0f, 0.0f } },
-            { BFormatZ, { 0.0f, 0.0f, 1.0f, 0.0f } },
-            { BFormatX, { 0.0f, 0.0f, 0.0f, 1.0f } },
+            { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f } },
+            { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f } },
+            { Aux2, { 0.0f, 0.0f, 1.0f, 0.0f } },
+            { Aux3, { 0.0f, 0.0f, 0.0f, 1.0f } },
         };
         ALuint speakermap[MAX_OUTPUT_CHANNELS];
         const char *fname = "";
@@ -719,13 +719,13 @@ ALvoid aluInitPanning(ALCdevice *device)
 void aluInitEffectPanning(ALeffectslot *slot)
 {
     static const ChannelMap FirstOrderN3D[4] = {
-        { BFormatW, { 1.0f, 0.0f, 0.0f, 0.0f } },
-        { BFormatY, { 0.0f, 1.0f, 0.0f, 0.0f } },
-        { BFormatZ, { 0.0f, 0.0f, 1.0f, 0.0f } },
-        { BFormatX, { 0.0f, 0.0f, 0.0f, 1.0f } },
+        { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f } },
+        { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f } },
+        { Aux2, { 0.0f, 0.0f, 1.0f, 0.0f } },
+        { Aux3, { 0.0f, 0.0f, 0.0f, 1.0f } },
     };
     static const enum Channel AmbiChannels[MAX_OUTPUT_CHANNELS] = {
-        BFormatW, BFormatY, BFormatZ, BFormatX, InvalidChannel
+        Aux0, Aux1, Aux2, Aux3, InvalidChannel
     };
 
     memset(slot->AmbiCoeffs, 0, sizeof(slot->AmbiCoeffs));

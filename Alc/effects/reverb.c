@@ -89,9 +89,9 @@ typedef struct ALreverbState {
         // The gain for each output channel based on 3D panning.
         // NOTE: With certain output modes, we may be rendering to the dry
         // buffer and the "real" buffer. The two combined may be using more
-        // than 8 output channels, so we need some extra for the real output
-        // too.
-        ALfloat PanGain[4][MAX_OUTPUT_CHANNELS+4];
+        // than the max output channels, so we need some extra for the real
+        // output too.
+        ALfloat PanGain[4][MAX_OUTPUT_CHANNELS*2];
     } Early;
 
     // Decorrelator delay line.
@@ -130,7 +130,7 @@ typedef struct ALreverbState {
 
         // The gain for each output channel based on 3D panning.
         // NOTE: Add some extra in case (see note about early pan).
-        ALfloat PanGain[4][MAX_OUTPUT_CHANNELS+4];
+        ALfloat PanGain[4][MAX_OUTPUT_CHANNELS*2];
     } Late;
 
     struct {

@@ -2118,7 +2118,18 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
     }
 
-    aluInitPanning(device, NULL);
+    if(!device->Hrtf && !device->Uhj_Encoder &&
+       GetConfigValueBool(al_string_get_cstr(device->DeviceName), "ambisonics", "hq-mode", 1))
+    {
+        if(!device->AmbiDecoder)
+            device->AmbiDecoder = bformatdec_alloc();
+    }
+    else
+    {
+        bformatdec_free(device->AmbiDecoder);
+        device->AmbiDecoder = NULL;
+    }
+    aluInitPanning(device);
 
     /* Allocate extra channels for any post-filter output. */
     size = device->Dry.NumChannels * sizeof(device->Dry.Buffer[0]);

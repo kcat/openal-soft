@@ -227,6 +227,23 @@ DECL_CONST static inline const char *GetLabelFromChannel(enum Channel channel)
 }
 
 
+DECL_CONST static const char *GetChannelLayoutName(enum DevFmtChannels chans)
+{
+    switch(chans)
+    {
+        case DevFmtMono: return "mono";
+        case DevFmtStereo: return "stereo";
+        case DevFmtQuad: return "quad";
+        case DevFmtX51: return "surround51";
+        case DevFmtX51Rear: return "surround51rear";
+        case DevFmtX61: return "surround61";
+        case DevFmtX71: return "surround71";
+        case DevFmtBFormat3D:
+            break;
+    }
+    return NULL;
+}
+
 typedef struct ChannelMap {
     enum Channel ChanName;
     ChannelConfig Config;
@@ -368,35 +385,8 @@ static bool LoadChannelSetup(ALCdevice *device)
     AmbDecConf conf;
     size_t i;
 
-    switch(device->FmtChans)
-    {
-        case DevFmtMono:
-            layout = "mono";
-            break;
-        case DevFmtStereo:
-            layout = "stereo";
-            break;
-        case DevFmtQuad:
-            layout = "quad";
-            break;
-        case DevFmtX51:
-            layout = "surround51";
-            break;
-        case DevFmtX51Rear:
-            layout = "surround51rear";
-            break;
-        case DevFmtX61:
-            layout = "surround61";
-            break;
-        case DevFmtX71:
-            layout = "surround71";
-            break;
-        case DevFmtBFormat3D:
-            break;
-    }
-
-    if(!layout)
-        return false;
+    layout = GetChannelLayoutName(device->FmtChans);
+    if(!layout) return false;
 
     if(!ConfigValueStr(al_string_get_cstr(device->DeviceName), "layouts", layout, &fname))
         return false;
@@ -474,7 +464,7 @@ fail:
     return false;
 }
 
-ALvoid aluInitPanning(ALCdevice *device, const AmbDecConf *conf)
+ALvoid aluInitPanning(ALCdevice *device)
 {
     /* NOTE: These decoder coefficients are using FuMa channel ordering and
      * normalization, since that's what was produced by the Ambisonic Decoder
@@ -608,20 +598,37 @@ ALvoid aluInitPanning(ALCdevice *device, const AmbDecConf *conf)
             { BFormatX, { 0.0f, 0.0f, 0.0f, 1.0f } },
         };
         ALuint speakermap[MAX_OUTPUT_CHANNELS];
+        const char *fname = "";
+        const char *layout;
+        AmbDecConf conf;
 
-        if(conf->ChanMask > 0xffff)
+        ambdec_init(&conf);
+
+        layout = GetChannelLayoutName(device->FmtChans);
+        if(!layout) goto ambi_fail;
+
+        if(!ConfigValueStr(al_string_get_cstr(device->DeviceName), "ambisonics", layout, &fname))
+            goto ambi_fail;
+
+        if(!ambdec_load(&conf, fname))
         {
-            ERR("Unsupported channel mask 0x%04x (max 0xffff)\n", conf->ChanMask);
+            ERR("Failed to load %s\n", fname);
             goto ambi_fail;
         }
-        if(conf->ChanMask > 0xf)
+
+        if(conf.ChanMask > 0xffff)
+        {
+            ERR("Unsupported channel mask 0x%04x (max 0xffff)\n", conf.ChanMask);
+            goto ambi_fail;
+        }
+        if(conf.ChanMask > 0xf)
         {
             ERR("Only first-order is supported for HQ decoding (mask 0x%04x, max 0xf)\n",
-                conf->ChanMask);
+                conf.ChanMask);
             goto ambi_fail;
         }
 
-        if(!MakeSpeakerMap(device, conf, speakermap))
+        if(!MakeSpeakerMap(device, &conf, speakermap))
             goto ambi_fail;
 
         count = COUNTOF(Ambi3D);
@@ -636,10 +643,13 @@ ALvoid aluInitPanning(ALCdevice *device, const AmbDecConf *conf)
                       &device->Dry.NumChannels, AL_FALSE);
         device->Dry.AmbiScale = ambiscale;
 
-        bformatdec_reset(device->AmbiDecoder, conf, count, device->Frequency, speakermap);
+        TRACE("Enabling %s-band ambisonic decoder\n", (conf.FreqBands==1)?"single":"dual");
+        bformatdec_reset(device->AmbiDecoder, &conf, count, device->Frequency, speakermap);
+        ambdec_deinit(&conf);
         return;
 
     ambi_fail:
+        ambdec_deinit(&conf);
         bformatdec_free(device->AmbiDecoder);
         device->AmbiDecoder = NULL;
     }

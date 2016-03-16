@@ -4669,10 +4669,10 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum
 ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCint *attribs)
 {
     ALCenum err;
+    enum DeviceConnect Connected;
 
     LockLists();
-    if(!VerifyDevice(&device) || device->Type == Capture ||
-       ATOMIC_LOAD(&device->Connected, almemory_order_relaxed) != DeviceConnect_Connected)
+    if(!VerifyDevice(&device) || device->Type == Capture)
     {
         UnlockLists();
         alcSetError(device, ALC_INVALID_DEVICE);
@@ -4680,9 +4680,22 @@ ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCi
         return ALC_FALSE;
     }
     almtx_lock(&device->BackendLock);
+    Connected = ATOMIC_LOAD(&device->Connected, almemory_order_relaxed);
     UnlockLists();
+    if (Connected == DeviceConnect_Disconnected)
+    {
+        // try reconnect..
+        Connected = DeviceConnect_Connecting;
+        ATOMIC_STORE(&device->Connected, DeviceConnect_Connecting, almemory_order_release);
+    }
 
     err = UpdateDeviceParams(device, attribs);
+
+    if (err == ALC_NO_ERROR)
+    {
+        ATOMIC_COMPARE_EXCHANGE_STRONG(&device->Connected, &Connected, DeviceConnect_Connected, almemory_order_acq_rel, almemory_order_acquire);
+    }
+
     almtx_unlock(&device->BackendLock);
 
     if(err != ALC_NO_ERROR)

@@ -15,6 +15,9 @@ struct ALeffectslot;
 
 typedef struct ALeffectState {
     const struct ALeffectStateVtable *vtbl;
+
+    ALfloat (*OutBuffer)[BUFFERSIZE];
+    ALuint OutChannels;
 } ALeffectState;
 
 struct ALeffectStateVtable {

@@ -1417,8 +1417,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             {
                 const ALeffectslot *slot = VECTOR_ELEM(ctx->ActiveAuxSlots, i);
                 ALeffectState *state = slot->EffectState;
-                V(state,process)(SamplesToDo, slot->WetBuffer, device->Dry.Buffer,
-                                 device->Dry.NumChannels);
+                V(state,process)(SamplesToDo, slot->WetBuffer, state->OutBuffer,
+                                 state->OutChannels);
             }
 
             ctx = ctx->next;
@@ -1428,8 +1428,8 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         {
             const ALeffectslot *slot = device->DefaultSlot;
             ALeffectState *state = slot->EffectState;
-            V(state,process)(SamplesToDo, slot->WetBuffer, device->Dry.Buffer,
-                             device->Dry.NumChannels);
+            V(state,process)(SamplesToDo, slot->WetBuffer, state->OutBuffer,
+                             state->OutChannels);
         }
 
         /* Increment the clock time. Every second's worth of samples is
@@ -1503,7 +1503,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         if(buffer)
         {
             ALfloat (*OutBuffer)[BUFFERSIZE] = device->RealOut.Buffer;
-            ALuint OutChannels = device->RealOut.NumChannels;;
+            ALuint OutChannels = device->RealOut.NumChannels;
 
 #define WRITE(T, a, b, c, d) do {               \
     Write_##T((a), (b), (c), (d));              \

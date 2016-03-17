@@ -2170,6 +2170,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         {
             ALeffectslot *slot = context->EffectSlotMap.array[pos].value;
 
+            slot->EffectState->OutBuffer = device->Dry.Buffer;
+            slot->EffectState->OutChannels = device->Dry.NumChannels;
             if(V(slot->EffectState,deviceUpdate)(device) == AL_FALSE)
             {
                 UnlockUIntMapRead(&context->EffectSlotMap);
@@ -2217,8 +2219,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     if(device->DefaultSlot)
     {
         ALeffectslot *slot = device->DefaultSlot;
+        ALeffectState *state = slot->EffectState;
 
-        if(V(slot->EffectState,deviceUpdate)(device) == AL_FALSE)
+        state->OutBuffer = device->Dry.Buffer;
+        state->OutChannels = device->Dry.NumChannels;
+        if(V(state,deviceUpdate)(device) == AL_FALSE)
         {
             V0(device->Backend,unlock)();
             RestoreFPUMode(&oldMode);

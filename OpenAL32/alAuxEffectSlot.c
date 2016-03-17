@@ -464,6 +464,8 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
         SetMixerFPUMode(&oldMode);
 
         ALCdevice_Lock(Device);
+        State->OutBuffer = Device->Dry.Buffer;
+        State->OutChannels = Device->Dry.NumChannels;
         if(V(State,deviceUpdate)(Device) == AL_FALSE)
         {
             ALCdevice_Unlock(Device);

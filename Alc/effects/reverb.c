@@ -241,6 +241,21 @@ static const ALfloat LATE_LINE_LENGTH[4] =
 static const ALfloat LATE_LINE_MULTIPLIER = 4.0f;
 
 
+#if defined(_WIN32) && !defined (_M_X64) && !defined(_M_ARM)
+/* HACK: Workaround for a modff bug in 32-bit Windows, which attempts to write
+ * a 64-bit double to the 32-bit float parameter.
+ */
+static inline float hack_modff(float x, float *y)
+{
+    double di;
+    double df = modf((double)x, &di);
+    *y = (float)di;
+    return (float)df;
+}
+#define modff hack_modff
+#endif
+
+
 /**************************************
  *  Device Update                     *
  **************************************/

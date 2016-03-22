@@ -183,30 +183,16 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
         {
             ALuint chan = chanmap[i];
             ALuint j, k = 0;
+            ALfloat gain;
 
-            for(j = 0;j < 1;j++)
+            for(j = 0;j < MAX_AMBI_COEFFS;j++)
             {
+                if(j == 0) gain = conf->LFOrderGain[0] / ratio;
+                else if(j == 1) gain = conf->LFOrderGain[1] / ratio;
+                else if(j == 4) gain = conf->LFOrderGain[2] / ratio;
+                else if(j == 9) gain = conf->LFOrderGain[3] / ratio;
                 if((conf->ChanMask&(1<<j)))
-                    dec->MatrixLF[chan][j] = conf->LFMatrix[i][k++] / coeff_scale[j] *
-                                             conf->LFOrderGain[0] / ratio;
-            }
-            for(;j < 4;j++)
-            {
-                if((conf->ChanMask&(1<<j)))
-                    dec->MatrixLF[chan][j] = conf->LFMatrix[i][k++] / coeff_scale[j] *
-                                             conf->LFOrderGain[1] / ratio;
-            }
-            for(;j < 9;j++)
-            {
-                if((conf->ChanMask&(1<<j)))
-                    dec->MatrixLF[chan][j] = conf->LFMatrix[i][k++] / coeff_scale[j] *
-                                             conf->LFOrderGain[2] / ratio;
-            }
-            for(;j < 16;j++)
-            {
-                if((conf->ChanMask&(1<<j)))
-                    dec->MatrixLF[chan][j] = conf->LFMatrix[i][k++] / coeff_scale[j] *
-                                             conf->LFOrderGain[3] / ratio;
+                    dec->MatrixLF[chan][j] = conf->LFMatrix[i][k++] / coeff_scale[j] * gain;
             }
         }
     }
@@ -216,30 +202,16 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
     {
         ALuint chan = chanmap[i];
         ALuint j, k = 0;
+        ALfloat gain;
 
-        for(j = 0;j < 1;j++)
+        for(j = 0;j < MAX_AMBI_COEFFS;j++)
         {
+            if(j == 0) gain = conf->HFOrderGain[0] * ratio;
+            else if(j == 1) gain = conf->HFOrderGain[1] * ratio;
+            else if(j == 4) gain = conf->HFOrderGain[2] * ratio;
+            else if(j == 9) gain = conf->HFOrderGain[3] * ratio;
             if((conf->ChanMask&(1<<j)))
-                dec->MatrixHF[chan][j] = conf->HFMatrix[i][k++] / coeff_scale[j] *
-                                         conf->HFOrderGain[0] * ratio;
-        }
-        for(;j < 4;j++)
-        {
-            if((conf->ChanMask&(1<<j)))
-                dec->MatrixHF[chan][j] = conf->HFMatrix[i][k++] / coeff_scale[j] *
-                                         conf->HFOrderGain[1] * ratio;
-        }
-        for(;j < 9;j++)
-        {
-            if((conf->ChanMask&(1<<j)))
-                dec->MatrixHF[chan][j] = conf->HFMatrix[i][k++] / coeff_scale[j] *
-                                         conf->HFOrderGain[2] * ratio;
-        }
-        for(;j < 16;j++)
-        {
-            if((conf->ChanMask&(1<<j)))
-                dec->MatrixHF[chan][j] = conf->HFMatrix[i][k++] / coeff_scale[j] *
-                                         conf->HFOrderGain[3] * ratio;
+                dec->MatrixHF[chan][j] = conf->HFMatrix[i][k++] / coeff_scale[j] * gain;
         }
     }
 }

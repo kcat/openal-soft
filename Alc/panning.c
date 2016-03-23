@@ -430,30 +430,20 @@ static bool LoadChannelSetup(ALCdevice *device)
     {
         ALuint chan = speakermap[i];
         ALuint j, k = 0;
+        ALfloat gain;
 
         for(j = 0;j < MAX_AMBI_COEFFS;j++)
             chanmap[i].Config[j] = 0.0f;
 
         chanmap[i].ChanName = device->RealOut.ChannelName[chan];
-        for(j = 0;j < 1;j++)
+        for(j = 0;j < MAX_AMBI_COEFFS;j++)
         {
+            if(j == 0) gain = conf.HFOrderGain[0];
+            else if(j == 1) gain = conf.HFOrderGain[1];
+            else if(j == 4) gain = conf.HFOrderGain[2];
+            else if(j == 9) gain = conf.HFOrderGain[3];
             if((conf.ChanMask&(1<<j)))
-                chanmap[i].Config[j] = conf.HFMatrix[i][k++] / coeff_scale[j] * conf.HFOrderGain[0];
-        }
-        for(;j < 4;j++)
-        {
-            if((conf.ChanMask&(1<<j)))
-                chanmap[i].Config[j] = conf.HFMatrix[i][k++] / coeff_scale[j] * conf.HFOrderGain[1];
-        }
-        for(;j < 9;j++)
-        {
-            if((conf.ChanMask&(1<<j)))
-                chanmap[i].Config[j] = conf.HFMatrix[i][k++] / coeff_scale[j] * conf.HFOrderGain[2];
-        }
-        for(;j < 16;j++)
-        {
-            if((conf.ChanMask&(1<<j)))
-                chanmap[i].Config[j] = conf.HFMatrix[i][k++] / coeff_scale[j] * conf.HFOrderGain[3];
+                chanmap[i].Config[j] = conf.HFMatrix[i][k++] / coeff_scale[j] * gain;
         }
     }
 

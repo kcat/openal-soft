@@ -643,7 +643,10 @@ ALvoid aluInitPanning(ALCdevice *device)
                       &device->Dry.NumChannels, AL_FALSE);
         device->Dry.AmbiScale = ambiscale;
 
-        TRACE("Enabling %s-band ambisonic decoder\n", (conf.FreqBands==1)?"single":"dual");
+        TRACE("Enabling %s-band %s-order ambisonic decoder\n",
+            (conf.FreqBands == 1) ? "single" : "dual",
+            (conf.ChanMask > 0x1ff) ? "third" : (conf.ChanMask > 0xf) ? "second" : "first"
+        );
         bformatdec_reset(device->AmbiDecoder, &conf, count, device->Frequency, speakermap);
         ambdec_deinit(&conf);
 

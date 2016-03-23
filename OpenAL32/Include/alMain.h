@@ -330,6 +330,11 @@ enum Channel {
     Aux1,
     Aux2,
     Aux3,
+    Aux4,
+    Aux5,
+    Aux6,
+    Aux7,
+    Aux8,
 
     InvalidChannel
 };
@@ -362,7 +367,7 @@ enum DevFmtChannels {
 
     DevFmtChannelsDefault = DevFmtStereo
 };
-#define MAX_OUTPUT_CHANNELS  (8)
+#define MAX_OUTPUT_CHANNELS  (9)
 
 ALuint BytesFromDevFmt(enum DevFmtType type) DECL_CONST;
 ALuint ChannelsFromDevFmt(enum DevFmtChannels chans) DECL_CONST;

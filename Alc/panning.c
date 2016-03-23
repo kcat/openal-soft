@@ -220,6 +220,11 @@ DECL_CONST static inline const char *GetLabelFromChannel(enum Channel channel)
         case Aux1: return "aux-1";
         case Aux2: return "aux-2";
         case Aux3: return "aux-3";
+        case Aux4: return "aux-4";
+        case Aux5: return "aux-5";
+        case Aux6: return "aux-6";
+        case Aux7: return "aux-7";
+        case Aux8: return "aux-8";
 
         case InvalidChannel: break;
     }
@@ -591,11 +596,16 @@ ALvoid aluInitPanning(ALCdevice *device)
     if(device->AmbiDecoder)
     {
         /* NOTE: This is ACN/N3D ordering and scaling, rather than FuMa. */
-        static const ChannelMap Ambi3D[4] = {
-            { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f } },
-            { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f } },
-            { Aux2, { 0.0f, 0.0f, 1.0f, 0.0f } },
-            { Aux3, { 0.0f, 0.0f, 0.0f, 1.0f } },
+        static const ChannelMap Ambi3D[9] = {
+            { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+            { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+            { Aux2, { 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+            { Aux3, { 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+            { Aux4, { 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+            { Aux5, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f } },
+            { Aux6, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f } },
+            { Aux7, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f } },
+            { Aux8, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f } },
         };
         ALuint speakermap[MAX_OUTPUT_CHANNELS];
         const char *fname = "";
@@ -621,9 +631,9 @@ ALvoid aluInitPanning(ALCdevice *device)
             ERR("Unsupported channel mask 0x%04x (max 0xffff)\n", conf.ChanMask);
             goto ambi_fail;
         }
-        if(conf.ChanMask > 0xf)
+        if(conf.ChanMask > 0x1ff)
         {
-            ERR("Only first-order is supported for HQ decoding (mask 0x%04x, max 0xf)\n",
+            ERR("Only first- and second-order is supported for HQ decoding (mask 0x%04x, max 0x1ff)\n",
                 conf.ChanMask);
             goto ambi_fail;
         }
@@ -631,9 +641,11 @@ ALvoid aluInitPanning(ALCdevice *device)
         if(!MakeSpeakerMap(device, &conf, speakermap))
             goto ambi_fail;
 
-        count = COUNTOF(Ambi3D);
+        if(conf.ChanMask > 0xf)
+            ERR("Second-order HQ decoding does not currently handle first-order sources\n");
+        count = (conf.ChanMask > 0xf) ? COUNTOF(Ambi3D) : 4;
         chanmap = Ambi3D;
-        ambiscale = FIRST_ORDER_SCALE;
+        ambiscale = 1.0f;
 
         for(i = 0;i < count;i++)
             device->Dry.ChannelName[i] = chanmap[i].ChanName;

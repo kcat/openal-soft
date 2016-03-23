@@ -110,8 +110,11 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *
         0.0f, 0.0f, gain, 0.0f,
         0.0f, 0.0f, 0.0f, gain
     );
+
+    STATIC_CAST(ALeffectState,state)->OutBuffer = device->FOAOut.Buffer;
+    STATIC_CAST(ALeffectState,state)->OutChannels = device->FOAOut.NumChannels;
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputeFirstOrderGains(device->Dry.AmbiCoeffs, device->Dry.NumChannels,
+        ComputeFirstOrderGains(device->FOAOut.AmbiCoeffs, device->FOAOut.NumChannels,
                                matrix.m[i], slot->Gain, state->Gain[i]);
 
     /* Calculate coefficients for the each type of filter. Note that the shelf

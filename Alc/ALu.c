@@ -513,8 +513,10 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                     0.0f, -V[0]*scale,  V[1]*scale, -V[2]*scale
         );
 
+        voice->Direct.OutBuffer = Device->FOAOut.Buffer;
+        voice->Direct.OutChannels = Device->FOAOut.NumChannels;
         for(c = 0;c < num_channels;c++)
-            ComputeFirstOrderGains(Device->Dry.AmbiCoeffs, Device->Dry.NumChannels, matrix.m[c],
+            ComputeFirstOrderGains(Device->FOAOut.AmbiCoeffs, Device->FOAOut.NumChannels, matrix.m[c],
                                    DryGain, voice->Direct.Gains[c].Target);
 
         /* Rebuild the matrix, without the second- or third-order output

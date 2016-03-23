@@ -2133,7 +2133,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     /* Allocate extra channels for any post-filter output. */
     size = device->Dry.NumChannels * sizeof(device->Dry.Buffer[0]);
-    if(device->Hrtf || device->Uhj_Encoder || device->AmbiDecoder)
+    if(device->AmbiDecoder && bformatdec_getOrder(device->AmbiDecoder) >= 2)
+        size += (ChannelsFromDevFmt(device->FmtChans)+4) * sizeof(device->Dry.Buffer[0]);
+    else if(device->Hrtf || device->Uhj_Encoder || device->AmbiDecoder)
         size += ChannelsFromDevFmt(device->FmtChans) * sizeof(device->Dry.Buffer[0]);
     device->Dry.Buffer = al_calloc(16, size);
     if(!device->Dry.Buffer)
@@ -2155,6 +2157,22 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->VirtOut.NumChannels = 0;
         device->RealOut.Buffer = device->Dry.Buffer;
         device->RealOut.NumChannels = device->Dry.NumChannels;
+    }
+
+    if(device->AmbiDecoder && bformatdec_getOrder(device->AmbiDecoder) >= 2)
+    {
+        /* Higher-order high quality decoding requires upsampling first-order
+         * content, so make sure to mix it separately.
+         */
+        device->FOAOut.Buffer = device->RealOut.Buffer + device->RealOut.NumChannels;
+        device->FOAOut.NumChannels = 4;
+    }
+    else
+    {
+        device->FOAOut.Buffer = device->Dry.Buffer;
+        device->FOAOut.NumChannels = device->Dry.NumChannels;
+        memcpy(device->FOAOut.AmbiCoeffs, device->Dry.AmbiCoeffs,
+               sizeof(device->FOAOut.AmbiCoeffs));
     }
 
     SetMixerFPUMode(&oldMode);

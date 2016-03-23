@@ -142,6 +142,14 @@ void bformatdec_free(BFormatDec *dec)
     }
 }
 
+int bformatdec_getOrder(const struct BFormatDec *dec)
+{
+    if(dec->NumChannels > 9) return 3;
+    if(dec->NumChannels > 4) return 2;
+    if(dec->NumChannels > 1) return 1;
+    return 0;
+}
+
 void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount, ALuint srate, const ALuint chanmap[MAX_OUTPUT_CHANNELS])
 {
     const ALfloat *coeff_scale = UnitScale;

@@ -507,6 +507,15 @@ struct ALCdevice_struct
         ALuint NumChannels;
     } Dry;
 
+    /* First-order ambisonics output, to be upsampled to the dry buffer if different. */
+    struct {
+        /* Ambisonic coefficients for mixing. */
+        ChannelConfig AmbiCoeffs[MAX_OUTPUT_CHANNELS];
+
+        ALfloat (*Buffer)[BUFFERSIZE];
+        ALuint NumChannels;
+    } FOAOut;
+
     /* Virtual output, to be post-processed to the real output. */
     struct {
         ALfloat (*Buffer)[BUFFERSIZE];

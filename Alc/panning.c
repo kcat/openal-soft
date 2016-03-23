@@ -646,6 +646,16 @@ ALvoid aluInitPanning(ALCdevice *device)
         TRACE("Enabling %s-band ambisonic decoder\n", (conf.FreqBands==1)?"single":"dual");
         bformatdec_reset(device->AmbiDecoder, &conf, count, device->Frequency, speakermap);
         ambdec_deinit(&conf);
+
+        if(bformatdec_getOrder(device->AmbiDecoder) >= 2)
+        {
+            memset(device->FOAOut.AmbiCoeffs, 0, sizeof(device->FOAOut.AmbiCoeffs));
+            device->FOAOut.AmbiCoeffs[0][0] = 1.0f;
+            device->FOAOut.AmbiCoeffs[1][1] = 1.0f;
+            device->FOAOut.AmbiCoeffs[2][2] = 1.0f;
+            device->FOAOut.AmbiCoeffs[3][3] = 1.0f;
+        }
+
         return;
 
     ambi_fail:

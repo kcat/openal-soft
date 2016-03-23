@@ -5,6 +5,8 @@
 #include "ambdec.h"
 #include "alu.h"
 
+#include "threads.h"
+
 
 typedef struct BandSplitter {
     ALfloat coeff;
@@ -105,6 +107,46 @@ static const ALfloat FuMa2N3DScale[MAX_AMBI_COEFFS] = {
 };
 
 
+static const ALfloat SquareMatrixHF[4][MAX_AMBI_COEFFS] = {
+    { 0.353553f,  0.204094f,  0.0f,  0.204094f },
+    { 0.353553f, -0.204094f,  0.0f,  0.204094f },
+    { 0.353553f,  0.204094f,  0.0f, -0.204094f },
+    { 0.353553f, -0.204094f,  0.0f, -0.204094f },
+};
+static ALfloat SquareEncoder[4][MAX_AMBI_COEFFS];
+
+static const ALfloat CubeMatrixHF[8][MAX_AMBI_COEFFS] = {
+    { 0.25f,  0.14425f,  0.14425f,  0.14425f },
+    { 0.25f, -0.14425f,  0.14425f,  0.14425f },
+    { 0.25f,  0.14425f,  0.14425f, -0.14425f },
+    { 0.25f, -0.14425f,  0.14425f, -0.14425f },
+    { 0.25f,  0.14425f, -0.14425f,  0.14425f },
+    { 0.25f, -0.14425f, -0.14425f,  0.14425f },
+    { 0.25f,  0.14425f, -0.14425f, -0.14425f },
+    { 0.25f, -0.14425f, -0.14425f, -0.14425f },
+};
+static ALfloat CubeEncoder[8][MAX_AMBI_COEFFS];
+
+static alonce_flag encoder_inited = AL_ONCE_FLAG_INIT;
+
+static void init_encoder(void)
+{
+    CalcXYZCoeffs(-0.577350269f,  0.577350269f, -0.577350269f, CubeEncoder[0]);
+    CalcXYZCoeffs( 0.577350269f,  0.577350269f, -0.577350269f, CubeEncoder[1]);
+    CalcXYZCoeffs(-0.577350269f,  0.577350269f,  0.577350269f, CubeEncoder[2]);
+    CalcXYZCoeffs( 0.577350269f,  0.577350269f,  0.577350269f, CubeEncoder[3]);
+    CalcXYZCoeffs(-0.577350269f, -0.577350269f, -0.577350269f, CubeEncoder[4]);
+    CalcXYZCoeffs( 0.577350269f, -0.577350269f, -0.577350269f, CubeEncoder[5]);
+    CalcXYZCoeffs(-0.577350269f, -0.577350269f,  0.577350269f, CubeEncoder[6]);
+    CalcXYZCoeffs( 0.577350269f, -0.577350269f,  0.577350269f, CubeEncoder[7]);
+
+    CalcXYZCoeffs(-0.707106781f,  0.0f, -0.707106781f, SquareEncoder[0]);
+    CalcXYZCoeffs( 0.707106781f,  0.0f, -0.707106781f, SquareEncoder[1]);
+    CalcXYZCoeffs(-0.707106781f,  0.0f,  0.707106781f, SquareEncoder[2]);
+    CalcXYZCoeffs( 0.707106781f,  0.0f,  0.707106781f, SquareEncoder[3]);
+}
+
+
 /* NOTE: Low-frequency (LF) fields and BandSplitter filters are unused with
  * single-band decoding
  */
@@ -119,12 +161,19 @@ typedef struct BFormatDec {
     ALfloat (*SamplesHF)[BUFFERSIZE];
     ALfloat (*SamplesLF)[BUFFERSIZE];
 
+    struct {
+        const ALfloat (*restrict MatrixHF)[MAX_AMBI_COEFFS];
+        const ALfloat (*restrict Encoder)[MAX_AMBI_COEFFS];
+        ALuint NumChannels;
+    } UpSampler;
+
     ALuint NumChannels;
     ALboolean DualBand;
 } BFormatDec;
 
 BFormatDec *bformatdec_alloc()
 {
+    alcall_once(&encoder_inited, init_encoder);
     return al_calloc(16, sizeof(BFormatDec));
 }
 
@@ -171,6 +220,19 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
         coeff_scale = SN3D2N3DScale;
     else if(conf->CoeffScale == ADS_FuMa)
         coeff_scale = FuMa2N3DScale;
+
+    if((conf->ChanMask & ~0x831b))
+    {
+        dec->UpSampler.MatrixHF = CubeMatrixHF;
+        dec->UpSampler.Encoder = (const ALfloat(*)[MAX_AMBI_COEFFS])CubeEncoder;
+        dec->UpSampler.NumChannels = 8;
+    }
+    else
+    {
+        dec->UpSampler.MatrixHF = SquareMatrixHF;
+        dec->UpSampler.Encoder = (const ALfloat(*)[MAX_AMBI_COEFFS])SquareEncoder;
+        dec->UpSampler.NumChannels = 4;
+    }
 
     if(conf->FreqBands == 1)
     {
@@ -262,5 +324,31 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
         for(chan = 0;chan < OutChannels;chan++)
             apply_row(OutBuffer[chan], dec->MatrixHF[chan], InSamples,
                       dec->NumChannels, SamplesToDo);
+    }
+}
+
+
+void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint InChannels, ALuint SamplesToDo)
+{
+    ALuint i, j, k;
+
+    /* This up-sampler is very simplistic. It essentially decodes the first-
+     * order content to a square channel array (or cube if height is desired),
+     * then encodes those points onto the higher order soundfield.
+     */
+    for(k = 0;k < dec->UpSampler.NumChannels;k++)
+    {
+        memset(dec->Samples[0], 0, SamplesToDo*sizeof(ALfloat));
+        apply_row(dec->Samples[0], dec->UpSampler.MatrixHF[k], InSamples,
+                  InChannels, SamplesToDo);
+
+        for(j = 0;j < dec->NumChannels;j++)
+        {
+            ALfloat gain = dec->UpSampler.Encoder[k][j];
+            if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
+                continue;
+            for(i = 0;i < SamplesToDo;i++)
+                OutBuffer[j][i] += dec->Samples[0][i] * gain;
+        }
     }
 }

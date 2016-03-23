@@ -641,8 +641,6 @@ ALvoid aluInitPanning(ALCdevice *device)
         if(!MakeSpeakerMap(device, &conf, speakermap))
             goto ambi_fail;
 
-        if(conf.ChanMask > 0xf)
-            ERR("Second-order HQ decoding does not currently handle first-order sources\n");
         count = (conf.ChanMask > 0xf) ? COUNTOF(Ambi3D) : 4;
         chanmap = Ambi3D;
         ambiscale = 1.0f;

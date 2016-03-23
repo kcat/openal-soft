@@ -1367,6 +1367,9 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             memset(device->VirtOut.Buffer[c], 0, SamplesToDo*sizeof(ALfloat));
         for(c = 0;c < device->RealOut.NumChannels;c++)
             memset(device->RealOut.Buffer[c], 0, SamplesToDo*sizeof(ALfloat));
+        if(device->Dry.Buffer != device->FOAOut.Buffer)
+            for(c = 0;c < device->FOAOut.NumChannels;c++)
+                memset(device->FOAOut.Buffer[c], 0, SamplesToDo*sizeof(ALfloat));
 
         V0(device->Backend,lock)();
 
@@ -1467,6 +1470,11 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         }
         else if(device->AmbiDecoder)
         {
+            if(device->VirtOut.Buffer != device->FOAOut.Buffer)
+                bformatdec_upSample(device->AmbiDecoder,
+                    device->VirtOut.Buffer, device->FOAOut.Buffer,
+                    device->FOAOut.NumChannels, SamplesToDo
+                );
             bformatdec_process(device->AmbiDecoder,
                 device->RealOut.Buffer, device->RealOut.NumChannels,
                 device->VirtOut.Buffer, SamplesToDo

@@ -678,7 +678,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                 {
                     /* Clamp X so it remains within 30 degrees of 0 or 180 degree azimuth. */
                     ALfloat x = sinf(chans[c].angle) * cosf(chans[c].elevation);
-                    coeffs[0] = clampf(-x, -0.5f, 0.5f) + 0.5;
+                    coeffs[0] = clampf(-x, -0.5f, 0.5f) + 0.5f;
                     voice->Direct.Gains[c].Target[0] = coeffs[0] * DryGain;
                     voice->Direct.Gains[c].Target[1] = (1.0f-coeffs[0]) * DryGain;
                     for(j = 2;j < MAX_OUTPUT_CHANNELS;j++)
@@ -1179,7 +1179,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         if(Device->Render_Mode == StereoPair)
         {
             /* Clamp X so it remains within 30 degrees of 0 or 180 degree azimuth. */
-            coeffs[0] = clampf(-dir[0], -0.5f, 0.5f) + 0.5;
+            coeffs[0] = clampf(-dir[0], -0.5f, 0.5f) + 0.5f;
             voice->Direct.Gains[0].Target[0] = coeffs[0] * DryGain;
             voice->Direct.Gains[0].Target[1] = (1.0f-coeffs[0]) * DryGain;
             for(i = 2;i < MAX_OUTPUT_CHANNELS;i++)

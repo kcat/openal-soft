@@ -105,7 +105,7 @@ static char *read_float(ALfloat *num, const char *line)
 #ifdef HAVE_STRTOF
     *num = strtof(line, &end);
 #else
-    *num = strtod(line, &end);
+    *num = (ALfloat)strtod(line, &end);
 #endif
     if(end && *end != '\0')
         end = lstrip(end);

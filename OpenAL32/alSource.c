@@ -104,6 +104,9 @@ typedef enum SourceProp {
     srcSampleOffsetLatencySOFT = AL_SAMPLE_OFFSET_LATENCY_SOFT,
     srcSecOffsetLatencySOFT = AL_SEC_OFFSET_LATENCY_SOFT,
 
+    /* AL_EXT_STEREO_ANGLES */
+    srcAngles = AL_STEREO_ANGLES,
+
     /* AL_EXT_BFORMAT */
     srcOrientation = AL_ORIENTATION,
 } SourceProp;
@@ -157,6 +160,7 @@ static ALint FloatValsByProp(ALenum prop)
 
         case AL_SAMPLE_RW_OFFSETS_SOFT:
         case AL_BYTE_RW_OFFSETS_SOFT:
+        case AL_STEREO_ANGLES:
             return 2;
 
         case AL_POSITION:
@@ -221,6 +225,7 @@ static ALint DoubleValsByProp(ALenum prop)
         case AL_SAMPLE_RW_OFFSETS_SOFT:
         case AL_BYTE_RW_OFFSETS_SOFT:
         case AL_SEC_OFFSET_LATENCY_SOFT:
+        case AL_STEREO_ANGLES:
             return 2;
 
         case AL_POSITION:
@@ -299,6 +304,8 @@ static ALint IntValsByProp(ALenum prop)
             break; /* i64 only */
         case AL_SEC_OFFSET_LATENCY_SOFT:
             break; /* Double only */
+        case AL_STEREO_ANGLES:
+            break; /* Float/double only */
     }
     return 0;
 }
@@ -359,6 +366,8 @@ static ALint Int64ValsByProp(ALenum prop)
 
         case AL_SEC_OFFSET_LATENCY_SOFT:
             break; /* Double only */
+        case AL_STEREO_ANGLES:
+            break; /* Float/double only */
     }
     return 0;
 }
@@ -504,6 +513,17 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
                 WriteUnlock(&Source->queue_lock);
             }
             UnlockContext(Context);
+            return AL_TRUE;
+
+
+        case AL_STEREO_ANGLES:
+            CHECKVAL(isfinite(values[0]) && isfinite(values[1]));
+
+            LockContext(Context);
+            Source->StereoPan[0] = values[0];
+            Source->StereoPan[1] = values[1];
+            UnlockContext(Context);
+            ATOMIC_STORE(&Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
 
@@ -830,6 +850,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
 
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
         case AL_SEC_OFFSET_LATENCY_SOFT:
+        case AL_STEREO_ANGLES:
             break;
     }
 
@@ -931,6 +952,7 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
             return SetSourcefv(Source, Context, (int)prop, fvals);
 
         case AL_SEC_OFFSET_LATENCY_SOFT:
+        case AL_STEREO_ANGLES:
             break;
     }
 
@@ -1051,6 +1073,13 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
             values[0] = GetSourceSecOffset(Source);
             values[1] = (ALdouble)(V0(device->Backend,getLatency)()) /
                         1000000000.0;
+            UnlockContext(Context);
+            return AL_TRUE;
+
+        case AL_STEREO_ANGLES:
+            LockContext(Context);
+            values[0] = Source->StereoPan[0];
+            values[1] = Source->StereoPan[1];
             UnlockContext(Context);
             return AL_TRUE;
 
@@ -1325,6 +1354,8 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             break; /* i64 only */
         case AL_SEC_OFFSET_LATENCY_SOFT:
             break; /* Double only */
+        case AL_STEREO_ANGLES:
+            break; /* Float/double only */
 
         case AL_DIRECT_FILTER:
         case AL_AUXILIARY_SEND_FILTER:
@@ -1446,6 +1477,8 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
 
         case AL_SEC_OFFSET_LATENCY_SOFT:
             break; /* Double only */
+        case AL_STEREO_ANGLES:
+            break; /* Float/double only */
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);
@@ -2529,6 +2562,9 @@ static ALvoid InitSourceParams(ALsource *Source)
     Source->RoomRolloffFactor = 0.0f;
     Source->DopplerFactor = 1.0f;
     Source->DirectChannels = AL_FALSE;
+
+    Source->StereoPan[0] = DEG2RAD( 30.0f);
+    Source->StereoPan[1] = DEG2RAD(-30.0f);
 
     Source->Radius = 0.0f;
 

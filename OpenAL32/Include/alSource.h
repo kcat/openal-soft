@@ -76,6 +76,11 @@ typedef struct ALsource {
     volatile ALfloat RoomRolloffFactor;
     volatile ALfloat DopplerFactor;
 
+    /* NOTE: Stereo pan angles are specified in radians, counter-clockwise
+     * rather than clockwise.
+     */
+    volatile ALfloat StereoPan[2];
+
     volatile ALfloat Radius;
 
     /**

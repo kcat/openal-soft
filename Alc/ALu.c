@@ -303,9 +303,6 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
 {
     static const struct ChanMap MonoMap[1] = {
         { FrontCenter, 0.0f, 0.0f }
-    }, StereoMap[2] = {
-        { FrontLeft,  DEG2RAD(-30.0f), DEG2RAD(0.0f) },
-        { FrontRight, DEG2RAD( 30.0f), DEG2RAD(0.0f) }
     }, RearMap[2] = {
         { BackLeft,  DEG2RAD(-150.0f), DEG2RAD(0.0f) },
         { BackRight, DEG2RAD( 150.0f), DEG2RAD(0.0f) }
@@ -352,6 +349,10 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     ALuint NumSends, Frequency;
     ALboolean Relative;
     const struct ChanMap *chans = NULL;
+    struct ChanMap StereoMap[2] = {
+        { FrontLeft,  DEG2RAD(-30.0f), DEG2RAD(0.0f) },
+        { FrontRight, DEG2RAD( 30.0f), DEG2RAD(0.0f) }
+    };
     ALuint num_channels = 0;
     ALboolean DirectChannels;
     ALboolean isbformat = AL_FALSE;
@@ -372,6 +373,10 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     Pitch           = ALSource->Pitch;
     Relative        = ALSource->HeadRelative;
     DirectChannels  = ALSource->DirectChannels;
+
+    /* Convert counter-clockwise to clockwise. */
+    StereoMap[0].angle = -ALSource->StereoPan[0];
+    StereoMap[1].angle = -ALSource->StereoPan[1];
 
     voice->Direct.OutBuffer = Device->Dry.Buffer;
     voice->Direct.OutChannels = Device->Dry.NumChannels;

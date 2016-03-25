@@ -2119,7 +2119,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
 
     if(!device->Hrtf && !device->Uhj_Encoder &&
-       GetConfigValueBool(al_string_get_cstr(device->DeviceName), "ambisonics", "hq-mode", 1))
+       GetConfigValueBool(al_string_get_cstr(device->DeviceName), "decoder", "hq-mode", 1))
     {
         if(!device->AmbiDecoder)
             device->AmbiDecoder = bformatdec_alloc();

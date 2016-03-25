@@ -607,7 +607,7 @@ ALvoid aluInitPanning(ALCdevice *device)
         layout = GetChannelLayoutName(device->FmtChans);
         if(!layout) goto ambi_fail;
 
-        if(!ConfigValueStr(al_string_get_cstr(device->DeviceName), "ambisonics", layout, &fname))
+        if(!ConfigValueStr(al_string_get_cstr(device->DeviceName), "decoder", layout, &fname))
             goto ambi_fail;
 
         if(!ambdec_load(&conf, fname))

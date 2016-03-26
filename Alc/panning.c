@@ -596,6 +596,12 @@ ALvoid aluInitPanning(ALCdevice *device)
             { Aux6, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f } },
             { Aux7, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f } },
             { Aux8, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f } },
+        }, Ambi2D[5] = {
+            { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+            { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+            { Aux2, { 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+            { Aux3, { 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+            { Aux4, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f } },
         };
         ALuint speakermap[MAX_OUTPUT_CHANNELS];
         const char *fname = "";
@@ -631,8 +637,16 @@ ALvoid aluInitPanning(ALCdevice *device)
         if(!MakeSpeakerMap(device, &conf, speakermap))
             goto ambi_fail;
 
-        count = (conf.ChanMask > 0xf) ? COUNTOF(Ambi3D) : 4;
-        chanmap = Ambi3D;
+        if((conf.ChanMask & ~0x831b))
+        {
+            count = (conf.ChanMask > 0xf) ? COUNTOF(Ambi3D) : 4;
+            chanmap = Ambi3D;
+        }
+        else
+        {
+            count = (conf.ChanMask > 0xf) ? COUNTOF(Ambi2D) : 3;
+            chanmap = Ambi2D;
+        }
         ambiscale = 1.0f;
 
         for(i = 0;i < count;i++)

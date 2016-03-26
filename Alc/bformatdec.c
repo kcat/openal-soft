@@ -131,6 +131,8 @@ static alonce_flag encoder_inited = AL_ONCE_FLAG_INIT;
 
 static void init_encoder(void)
 {
+    ALuint i, j;
+
     CalcXYZCoeffs(-0.577350269f,  0.577350269f, -0.577350269f, CubeEncoder[0]);
     CalcXYZCoeffs( 0.577350269f,  0.577350269f, -0.577350269f, CubeEncoder[1]);
     CalcXYZCoeffs(-0.577350269f,  0.577350269f,  0.577350269f, CubeEncoder[2]);
@@ -144,6 +146,18 @@ static void init_encoder(void)
     CalcXYZCoeffs( 0.707106781f,  0.0f, -0.707106781f, SquareEncoder[1]);
     CalcXYZCoeffs(-0.707106781f,  0.0f,  0.707106781f, SquareEncoder[2]);
     CalcXYZCoeffs( 0.707106781f,  0.0f,  0.707106781f, SquareEncoder[3]);
+
+    for(i = 0;i < 4;i++)
+    {
+        /* Remove the skipped height-related coefficients for 2D rendering. */
+        SquareEncoder[i][2] = SquareEncoder[i][3];
+        SquareEncoder[i][3] = SquareEncoder[i][4];
+        SquareEncoder[i][4] = SquareEncoder[i][8];
+        SquareEncoder[i][5] = SquareEncoder[i][9];
+        SquareEncoder[i][6] = SquareEncoder[i][15];
+        for(j = 7;j < MAX_AMBI_COEFFS;j++)
+            SquareEncoder[i][j] = 0.0f;
+    }
 }
 
 
@@ -169,6 +183,7 @@ typedef struct BFormatDec {
 
     ALuint NumChannels;
     ALboolean DualBand;
+    ALboolean Periphonic;
 } BFormatDec;
 
 BFormatDec *bformatdec_alloc()
@@ -193,14 +208,26 @@ void bformatdec_free(BFormatDec *dec)
 
 int bformatdec_getOrder(const struct BFormatDec *dec)
 {
-    if(dec->NumChannels > 9) return 3;
-    if(dec->NumChannels > 4) return 2;
-    if(dec->NumChannels > 1) return 1;
+    if(dec->Periphonic)
+    {
+        if(dec->NumChannels > 9) return 3;
+        if(dec->NumChannels > 4) return 2;
+        if(dec->NumChannels > 1) return 1;
+    }
+    else
+    {
+        if(dec->NumChannels > 5) return 3;
+        if(dec->NumChannels > 3) return 2;
+        if(dec->NumChannels > 1) return 1;
+    }
     return 0;
 }
 
 void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount, ALuint srate, const ALuint chanmap[MAX_OUTPUT_CHANNELS])
 {
+    static const ALuint map2DTo3D[7] = {
+        0,  1, 3,  4, 8,  9, 15
+    };
     const ALfloat *coeff_scale = UnitScale;
     ALfloat ratio;
     ALuint i;
@@ -226,12 +253,14 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
         dec->UpSampler.MatrixHF = CubeMatrixHF;
         dec->UpSampler.Encoder = (const ALfloat(*)[MAX_AMBI_COEFFS])CubeEncoder;
         dec->UpSampler.NumChannels = 8;
+        dec->Periphonic = AL_TRUE;
     }
     else
     {
         dec->UpSampler.MatrixHF = SquareMatrixHF;
         dec->UpSampler.Encoder = (const ALfloat(*)[MAX_AMBI_COEFFS])SquareEncoder;
         dec->UpSampler.NumChannels = 4;
+        dec->Periphonic = AL_FALSE;
     }
 
     if(conf->FreqBands == 1)
@@ -255,14 +284,30 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
             ALuint j, k = 0;
             ALfloat gain;
 
-            for(j = 0;j < MAX_AMBI_COEFFS;j++)
+            if(!dec->Periphonic)
             {
-                if(j == 0) gain = conf->LFOrderGain[0] / ratio;
-                else if(j == 1) gain = conf->LFOrderGain[1] / ratio;
-                else if(j == 4) gain = conf->LFOrderGain[2] / ratio;
-                else if(j == 9) gain = conf->LFOrderGain[3] / ratio;
-                if((conf->ChanMask&(1<<j)))
-                    dec->MatrixLF[chan][j] = conf->LFMatrix[i][k++] / coeff_scale[j] * gain;
+                for(j = 0;j < 7;j++)
+                {
+                    ALuint l = map2DTo3D[j];
+                    if(j == 0) gain = conf->LFOrderGain[0] / ratio;
+                    else if(j == 1) gain = conf->LFOrderGain[1] / ratio;
+                    else if(j == 3) gain = conf->LFOrderGain[2] / ratio;
+                    else if(j == 5) gain = conf->LFOrderGain[3] / ratio;
+                    if((conf->ChanMask&(1<<l)))
+                        dec->MatrixLF[chan][j] = conf->LFMatrix[i][k++] / coeff_scale[l] * gain;
+                }
+            }
+            else
+            {
+                for(j = 0;j < MAX_AMBI_COEFFS;j++)
+                {
+                    if(j == 0) gain = conf->LFOrderGain[0] / ratio;
+                    else if(j == 1) gain = conf->LFOrderGain[1] / ratio;
+                    else if(j == 4) gain = conf->LFOrderGain[2] / ratio;
+                    else if(j == 9) gain = conf->LFOrderGain[3] / ratio;
+                    if((conf->ChanMask&(1<<j)))
+                        dec->MatrixLF[chan][j] = conf->LFMatrix[i][k++] / coeff_scale[j] * gain;
+                }
             }
         }
     }
@@ -274,14 +319,30 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
         ALuint j, k = 0;
         ALfloat gain;
 
-        for(j = 0;j < MAX_AMBI_COEFFS;j++)
+        if(!dec->Periphonic)
         {
-            if(j == 0) gain = conf->HFOrderGain[0] * ratio;
-            else if(j == 1) gain = conf->HFOrderGain[1] * ratio;
-            else if(j == 4) gain = conf->HFOrderGain[2] * ratio;
-            else if(j == 9) gain = conf->HFOrderGain[3] * ratio;
-            if((conf->ChanMask&(1<<j)))
-                dec->MatrixHF[chan][j] = conf->HFMatrix[i][k++] / coeff_scale[j] * gain;
+            for(j = 0;j < 7;j++)
+            {
+                ALuint l = map2DTo3D[j];
+                if(j == 0) gain = conf->HFOrderGain[0] * ratio;
+                else if(j == 1) gain = conf->HFOrderGain[1] * ratio;
+                else if(j == 3) gain = conf->HFOrderGain[2] * ratio;
+                else if(j == 5) gain = conf->HFOrderGain[3] * ratio;
+                if((conf->ChanMask&(1<<l)))
+                    dec->MatrixHF[chan][j] = conf->HFMatrix[i][k++] / coeff_scale[l] * gain;
+            }
+        }
+        else
+        {
+            for(j = 0;j < MAX_AMBI_COEFFS;j++)
+            {
+                if(j == 0) gain = conf->HFOrderGain[0] * ratio;
+                else if(j == 1) gain = conf->HFOrderGain[1] * ratio;
+                else if(j == 4) gain = conf->HFOrderGain[2] * ratio;
+                else if(j == 9) gain = conf->HFOrderGain[3] * ratio;
+                if((conf->ChanMask&(1<<j)))
+                    dec->MatrixHF[chan][j] = conf->HFMatrix[i][k++] / coeff_scale[j] * gain;
+            }
         }
     }
 }

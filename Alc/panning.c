@@ -595,21 +595,30 @@ ALvoid aluInitPanning(ALCdevice *device)
     {
         /* NOTE: This is ACN/N3D ordering and scaling, rather than FuMa. */
         static const ChannelMap Ambi3D[9] = {
+            /* Zeroth order */
             { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+            /* First order */
             { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
             { Aux2, { 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
             { Aux3, { 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+            /* Second order */
             { Aux4, { 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
             { Aux5, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f } },
             { Aux6, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f } },
             { Aux7, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f } },
             { Aux8, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f } },
-        }, Ambi2D[5] = {
-            { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-            { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-            { Aux2, { 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-            { Aux3, { 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-            { Aux4, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f } },
+        }, Ambi2D[7] = {
+            /* Zeroth order */
+            { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+            /* First order */
+            { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+            { Aux2, { 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+            /* Second order */
+            { Aux3, { 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+            { Aux4, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+            /* Third order */
+            { Aux5, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+            { Aux6, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f } },
         };
         ALuint speakermap[MAX_OUTPUT_CHANNELS];
         const char *fname = "";
@@ -635,24 +644,24 @@ ALvoid aluInitPanning(ALCdevice *device)
             ERR("Unsupported channel mask 0x%04x (max 0xffff)\n", conf.ChanMask);
             goto ambi_fail;
         }
-        if(conf.ChanMask > 0x1ff)
-        {
-            ERR("Only first- and second-order is supported for HQ decoding (mask 0x%04x, max 0x1ff)\n",
-                conf.ChanMask);
-            goto ambi_fail;
-        }
 
         if(!MakeSpeakerMap(device, &conf, speakermap))
             goto ambi_fail;
 
         if((conf.ChanMask & ~0x831b))
         {
-            count = (conf.ChanMask > 0xf) ? COUNTOF(Ambi3D) : 4;
+            if(conf.ChanMask > 0x1ff)
+            {
+                ERR("Third-order is unsupported for periphonic HQ decoding (mask 0x%04x)\n",
+                    conf.ChanMask);
+                goto ambi_fail;
+            }
+            count = (conf.ChanMask > 0xf) ? 9 : 4;
             chanmap = Ambi3D;
         }
         else
         {
-            count = (conf.ChanMask > 0xf) ? COUNTOF(Ambi2D) : 3;
+            count = (conf.ChanMask > 0xf) ? (conf.ChanMask > 0x1ff) ? 7 : 5 : 3;
             chanmap = Ambi2D;
         }
 
@@ -663,9 +672,10 @@ ALvoid aluInitPanning(ALCdevice *device)
         SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
                       &device->Dry.NumChannels, AL_FALSE);
 
-        TRACE("Enabling %s-band %s-order ambisonic decoder\n",
+        TRACE("Enabling %s-band %s-order%s ambisonic decoder\n",
             (conf.FreqBands == 1) ? "single" : "dual",
-            (conf.ChanMask > 0x1ff) ? "third" : (conf.ChanMask > 0xf) ? "second" : "first"
+            (conf.ChanMask > 0xf) ? (conf.ChanMask > 0x1ff) ? "third" : "second" : "first",
+            (conf.ChanMask & ~0x831b) ? " periphonic" : ""
         );
         bformatdec_reset(device->AmbiDecoder, &conf, count, device->Frequency, speakermap);
         ambdec_deinit(&conf);

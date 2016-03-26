@@ -507,10 +507,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         aluCrossproduct(N, V, U);
         aluNormalize(U);
 
-        /* Build a rotate + conversion matrix (B-Format -> N3D), and include
-         * scaling for first-order content on second- or third-order output.
-         */
-        scale = Device->Dry.AmbiScale * 1.732050808f;
+        /* Build a rotate + conversion matrix (B-Format -> N3D). */
+        scale = 1.732050808f;
         aluMatrixfSet(&matrix,
             1.414213562f,        0.0f,        0.0f,        0.0f,
                     0.0f, -N[0]*scale,  N[1]*scale, -N[2]*scale,
@@ -524,14 +522,6 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
             ComputeFirstOrderGains(Device->FOAOut.AmbiCoeffs, Device->FOAOut.NumChannels, matrix.m[c],
                                    DryGain, voice->Direct.Gains[c].Target);
 
-        /* Rebuild the matrix, without the second- or third-order output
-         * scaling (effects take first-order content, and will do the scaling
-         * themselves when mixing to the output).
-         */
-        scale = 1.732050808f;
-        aluMatrixfSetRow(&matrix, 1, 0.0f, -N[0]*scale,  N[1]*scale, -N[2]*scale);
-        aluMatrixfSetRow(&matrix, 2, 0.0f,  U[0]*scale, -U[1]*scale,  U[2]*scale);
-        aluMatrixfSetRow(&matrix, 3, 0.0f, -V[0]*scale,  V[1]*scale, -V[2]*scale);
         for(i = 0;i < NumSends;i++)
         {
             if(!SendSlots[i])

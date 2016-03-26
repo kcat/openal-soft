@@ -504,8 +504,6 @@ struct ALCdevice_struct
         enum Channel ChannelName[MAX_OUTPUT_CHANNELS];
         /* Ambisonic coefficients for mixing to the dry buffer. */
         ChannelConfig AmbiCoeffs[MAX_OUTPUT_CHANNELS];
-        /* Scale for first-order XYZ inputs using AmbiCoeffs. */
-        ALfloat AmbiScale;
 
         /* Dry buffer will be aliased by the virtual or real output. */
         ALfloat (*Buffer)[BUFFERSIZE];

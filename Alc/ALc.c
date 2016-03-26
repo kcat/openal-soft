@@ -2173,8 +2173,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     {
         device->FOAOut.Buffer = device->Dry.Buffer;
         device->FOAOut.NumChannels = device->Dry.NumChannels;
-        memcpy(device->FOAOut.AmbiCoeffs, device->Dry.AmbiCoeffs,
-               sizeof(device->FOAOut.AmbiCoeffs));
     }
 
     SetMixerFPUMode(&oldMode);

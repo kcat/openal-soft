@@ -58,17 +58,15 @@ static ALboolean ALcompressorState_deviceUpdate(ALcompressorState *state, ALCdev
 static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCdevice *device, const ALeffectslot *slot)
 {
     aluMatrixf matrix;
-    ALfloat scale;
     ALuint i;
 
     state->Enabled = slot->EffectProps.Compressor.OnOff;
 
-    scale = device->Dry.AmbiScale;
     aluMatrixfSet(&matrix,
-        1.0f,  0.0f,  0.0f,  0.0f,
-        0.0f, scale,  0.0f,  0.0f,
-        0.0f,  0.0f, scale,  0.0f,
-        0.0f,  0.0f,  0.0f, scale
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f
     );
 
     STATIC_CAST(ALeffectState,state)->OutBuffer = device->FOAOut.Buffer;

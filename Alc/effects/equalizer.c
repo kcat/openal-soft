@@ -103,12 +103,11 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *
     aluMatrixf matrix;
     ALuint i;
 
-    gain = device->Dry.AmbiScale;
     aluMatrixfSet(&matrix,
         1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, gain, 0.0f, 0.0f,
-        0.0f, 0.0f, gain, 0.0f,
-        0.0f, 0.0f, 0.0f, gain
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f
     );
 
     STATIC_CAST(ALeffectState,state)->OutBuffer = device->FOAOut.Buffer;

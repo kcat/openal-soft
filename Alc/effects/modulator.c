@@ -93,8 +93,8 @@ static ALboolean ALmodulatorState_deviceUpdate(ALmodulatorState *UNUSED(state), 
 
 static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *Device, const ALeffectslot *Slot)
 {
-    ALfloat scale, cw, a;
     aluMatrixf matrix;
+    ALfloat cw, a;
     ALuint i;
 
     if(Slot->EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SINUSOID)
@@ -122,12 +122,11 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *
         state->Filter[i].process = ALfilterState_processC;
     }
 
-    scale = Device->Dry.AmbiScale;
     aluMatrixfSet(&matrix,
-        1.0f,  0.0f,  0.0f,  0.0f,
-        0.0f, scale,  0.0f,  0.0f,
-        0.0f,  0.0f, scale,  0.0f,
-        0.0f,  0.0f,  0.0f, scale
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f
     );
 
     STATIC_CAST(ALeffectState,state)->OutBuffer = Device->FOAOut.Buffer;

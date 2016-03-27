@@ -233,7 +233,7 @@ int bformatdec_getOrder(const struct BFormatDec *dec)
     return 0;
 }
 
-void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount, ALuint srate, const ALuint chanmap[MAX_OUTPUT_CHANNELS])
+void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount, ALuint srate, const ALuint chanmap[MAX_OUTPUT_CHANNELS], int flags)
 {
     static const ALuint map2DTo3D[7] = {
         0,  1, 3,  4, 8,  9, 15
@@ -362,7 +362,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
         maxdist = maxf(maxdist, conf->Speakers[i].Distance);
 
     memset(dec->Delay, 0, sizeof(dec->Delay));
-    if(maxdist > 0.0f)
+    if((flags&BFDF_DistanceComp) && maxdist > 0.0f)
     {
         for(i = 0;i < conf->NumSpeakers;i++)
         {

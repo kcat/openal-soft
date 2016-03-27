@@ -620,9 +620,11 @@ ALvoid aluInitPanning(ALCdevice *device)
             { Aux5, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
             { Aux6, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f } },
         };
+        const char *devname = al_string_get_cstr(device->DeviceName);
         ALuint speakermap[MAX_OUTPUT_CHANNELS];
         const char *fname = "";
         const char *layout;
+        int decflags = 0;
         AmbDecConf conf;
 
         ambdec_init(&conf);
@@ -630,8 +632,11 @@ ALvoid aluInitPanning(ALCdevice *device)
         layout = GetChannelLayoutName(device->FmtChans);
         if(!layout) goto ambi_fail;
 
-        if(!ConfigValueStr(al_string_get_cstr(device->DeviceName), "decoder", layout, &fname))
+        if(!ConfigValueStr(devname, "decoder", layout, &fname))
             goto ambi_fail;
+
+        if(GetConfigValueBool(devname, "decoder", "distance-comp", 1))
+            decflags |= BFDF_DistanceComp;
 
         if(!ambdec_load(&conf, fname))
         {
@@ -677,7 +682,8 @@ ALvoid aluInitPanning(ALCdevice *device)
             (conf.ChanMask > 0xf) ? (conf.ChanMask > 0x1ff) ? "third" : "second" : "first",
             (conf.ChanMask & ~0x831b) ? " periphonic" : ""
         );
-        bformatdec_reset(device->AmbiDecoder, &conf, count, device->Frequency, speakermap);
+        bformatdec_reset(device->AmbiDecoder, &conf, count, device->Frequency,
+                         speakermap, decflags);
         ambdec_deinit(&conf);
 
         if(bformatdec_getOrder(device->AmbiDecoder) < 2)

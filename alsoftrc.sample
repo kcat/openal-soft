@@ -203,6 +203,52 @@
 #trap-al-error = false
 
 ##
+## Ambisonic decoder stuff
+##
+[decoder]
+
+## hq-mode:
+#  Enables a high-quality ambisonic decoder. This mode is capable of frequency-
+#  dependent processing, creating a better reproduction of 3D sound rendering
+#  over surround sound speakers. Enabling this also requires specifying decoder
+#  configuration files for the appropriate speaker configuration you intend to
+#  use (see the quad, surround51, etc options below). Currently, periphonic
+#  (with height) configurations support up to second-order, and horizontal
+#  configurations support up to third-order.
+hq-mode = false
+
+## distance-comp:
+#  Enables compensation for the speakers' relative distances to the listener.
+#  This applies the necessary delays and attenuation to make the speakers
+#  behave as though they are all equidistant, which is important for proper
+#  playback of 3D sound rendering. Requires the high-quality ambisonic decoder,
+#  as well as the proper distances to be specified in the decoder configuration
+#  file.
+distance-comp = true
+
+## quad:
+#  Decoder configuration file for Quadrophonic channel output.
+quad =
+
+## surround51:
+#  Decoder configuration file for 5.1 Surround (Side) channel output.
+surround51 =
+
+## surround51rear:
+#  Decoder configuration file for 5.1 Surround (Rear) channel output.
+surround51rear =
+
+## surround61:
+#  Decoder configuration file for 6.1 Surround channel output.
+surround61 =
+
+## surround71:
+#  Decoder configuration file for 7.1 Surround channel output. Note: This can
+#  be used to enable 3D7.1 with the appropriate configuration file and speaker
+#  placement.
+surround71 =
+
+##
 ## Reverb effect stuff (includes EAX reverb)
 ##
 [reverb]

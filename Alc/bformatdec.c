@@ -185,7 +185,6 @@ typedef struct BFormatDec {
 
     struct {
         alignas(16) ALfloat Buffer[MAX_DELAY_LENGTH];
-        ALfloat Gain;
         ALuint Length; /* Valid range is [0...MAX_DELAY_LENGTH). */
     } Delay[MAX_OUTPUT_CHANNELS];
 
@@ -239,6 +238,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
         0,  1, 3,  4, 8,  9, 15
     };
     const ALfloat *coeff_scale = UnitScale;
+    ALfloat distgain[MAX_OUTPUT_CHANNELS];
     ALfloat maxdist, ratio;
     ALuint i;
 
@@ -273,6 +273,41 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
         dec->Periphonic = AL_FALSE;
     }
 
+    maxdist = 0.0f;
+    for(i = 0;i < conf->NumSpeakers;i++)
+    {
+        maxdist = maxf(maxdist, conf->Speakers[i].Distance);
+        distgain[i] = 1.0f;
+    }
+
+    memset(dec->Delay, 0, sizeof(dec->Delay));
+    if((flags&BFDF_DistanceComp) && maxdist > 0.0f)
+    {
+        for(i = 0;i < conf->NumSpeakers;i++)
+        {
+            ALuint chan = chanmap[i];
+            ALfloat delay;
+
+            /* Distance compensation only delays in steps of the sample rate.
+             * This is a bit less accurate since the delay time falls to the
+             * nearest sample time, but it's far simpler as it doesn't have to
+             * deal with phase offsets. This means at 48khz, for instance, the
+             * distance delay will be in steps of about 7 millimeters.
+             */
+            delay = floorf((maxdist-conf->Speakers[i].Distance) / SPEEDOFSOUNDMETRESPERSEC *
+                           (ALfloat)srate + 0.5f);
+            if(delay >= (ALfloat)MAX_DELAY_LENGTH)
+                ERR("Delay for speaker \"%s\" exceeds buffer length (%f >= %u)\n",
+                    al_string_get_cstr(conf->Speakers[i].Name), delay, MAX_DELAY_LENGTH);
+
+            dec->Delay[chan].Length = (ALuint)clampf(delay, 0.0f, (ALfloat)(MAX_DELAY_LENGTH-1));
+            distgain[i] = conf->Speakers[i].Distance / maxdist;
+            TRACE("Channel %u \"%s\" distance compensation: %u samples, %f gain\n", chan,
+                al_string_get_cstr(conf->Speakers[i].Name), dec->Delay[chan].Length, distgain[i]
+            );
+        }
+    }
+
     if(conf->FreqBands == 1)
     {
         dec->DualBand = AL_FALSE;
@@ -304,7 +339,8 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
                     else if(j == 3) gain = conf->LFOrderGain[2] / ratio;
                     else if(j == 5) gain = conf->LFOrderGain[3] / ratio;
                     if((conf->ChanMask&(1<<l)))
-                        dec->MatrixLF[chan][j] = conf->LFMatrix[i][k++] / coeff_scale[l] * gain;
+                        dec->MatrixLF[chan][j] = conf->LFMatrix[i][k++] / coeff_scale[l] *
+                                                 gain * distgain[i];
                 }
             }
             else
@@ -316,7 +352,8 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
                     else if(j == 4) gain = conf->LFOrderGain[2] / ratio;
                     else if(j == 9) gain = conf->LFOrderGain[3] / ratio;
                     if((conf->ChanMask&(1<<j)))
-                        dec->MatrixLF[chan][j] = conf->LFMatrix[i][k++] / coeff_scale[j] * gain;
+                        dec->MatrixLF[chan][j] = conf->LFMatrix[i][k++] / coeff_scale[j] *
+                                                 gain * distgain[i];
                 }
             }
         }
@@ -339,7 +376,8 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
                 else if(j == 3) gain = conf->HFOrderGain[2] * ratio;
                 else if(j == 5) gain = conf->HFOrderGain[3] * ratio;
                 if((conf->ChanMask&(1<<l)))
-                    dec->MatrixHF[chan][j] = conf->HFMatrix[i][k++] / coeff_scale[l] * gain;
+                    dec->MatrixHF[chan][j] = conf->HFMatrix[i][k++] / coeff_scale[l] *
+                                             gain * distgain[i];
             }
         }
         else
@@ -351,48 +389,10 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
                 else if(j == 4) gain = conf->HFOrderGain[2] * ratio;
                 else if(j == 9) gain = conf->HFOrderGain[3] * ratio;
                 if((conf->ChanMask&(1<<j)))
-                    dec->MatrixHF[chan][j] = conf->HFMatrix[i][k++] / coeff_scale[j] * gain;
+                    dec->MatrixHF[chan][j] = conf->HFMatrix[i][k++] / coeff_scale[j] *
+                                             gain * distgain[i];
             }
         }
-    }
-
-
-    maxdist = 0.0f;
-    for(i = 0;i < conf->NumSpeakers;i++)
-        maxdist = maxf(maxdist, conf->Speakers[i].Distance);
-
-    memset(dec->Delay, 0, sizeof(dec->Delay));
-    if((flags&BFDF_DistanceComp) && maxdist > 0.0f)
-    {
-        for(i = 0;i < conf->NumSpeakers;i++)
-        {
-            ALuint chan = chanmap[i];
-            ALfloat delay;
-
-            /* Distance compensation only delays in steps of the sample rate.
-             * This is a bit less accurate since the delay time falls to the
-             * nearest sample time, but it's far simpler as it doesn't have to
-             * deal with phase offsets. This means at 48khz, for instance, the
-             * distance delay will be in steps of about 7 millimeters.
-             */
-            delay = floorf((maxdist-conf->Speakers[i].Distance) / SPEEDOFSOUNDMETRESPERSEC *
-                           (ALfloat)srate + 0.5f);
-            if(delay >= (ALfloat)MAX_DELAY_LENGTH)
-                ERR("Delay for speaker \"%s\" exceeds buffer length (%f >= %u)\n",
-                    al_string_get_cstr(conf->Speakers[i].Name), delay, MAX_DELAY_LENGTH);
-
-            dec->Delay[chan].Length = (ALuint)clampf(delay, 0.0f, (ALfloat)(MAX_DELAY_LENGTH-1));
-            dec->Delay[chan].Gain = conf->Speakers[i].Distance / maxdist;
-            TRACE("Channel %u \"%s\" distance compensation: %u samples, %f gain\n", chan,
-                al_string_get_cstr(conf->Speakers[i].Name), dec->Delay[chan].Length,
-                dec->Delay[chan].Gain
-            );
-        }
-    }
-    else
-    {
-        for(i = 0;i < conf->NumSpeakers;i++)
-            dec->Delay[chanmap[i]].Gain = 1.0f;
     }
 }
 
@@ -435,24 +435,24 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
                 if(SamplesToDo >= base)
                 {
                     for(i = 0;i < base;i++)
-                        OutBuffer[chan][i] += dec->Delay[chan].Buffer[i] * dec->Delay[chan].Gain;
+                        OutBuffer[chan][i] += dec->Delay[chan].Buffer[i];
                     for(;i < SamplesToDo;i++)
-                        OutBuffer[chan][i] += dec->ChannelMix[i-base] * dec->Delay[chan].Gain;
+                        OutBuffer[chan][i] += dec->ChannelMix[i-base];
                     memcpy(dec->Delay[chan].Buffer, &dec->ChannelMix[SamplesToDo-base],
-                        base*sizeof(ALfloat));
+                           base*sizeof(ALfloat));
                 }
                 else
                 {
                     for(i = 0;i < SamplesToDo;i++)
-                        OutBuffer[chan][i] += dec->Delay[chan].Buffer[i] * dec->Delay[chan].Gain;
+                        OutBuffer[chan][i] += dec->Delay[chan].Buffer[i];
                     memmove(dec->Delay[chan].Buffer, dec->Delay[chan].Buffer+SamplesToDo,
                             base - SamplesToDo);
                     memcpy(dec->Delay[chan].Buffer+base-SamplesToDo, dec->ChannelMix,
-                        SamplesToDo*sizeof(ALfloat));
+                           SamplesToDo*sizeof(ALfloat));
                 }
             }
             else for(i = 0;i < SamplesToDo;i++)
-                OutBuffer[chan][i] += dec->ChannelMix[i] * dec->Delay[chan].Gain;
+                OutBuffer[chan][i] += dec->ChannelMix[i];
         }
     }
     else
@@ -469,24 +469,24 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
                 if(SamplesToDo >= base)
                 {
                     for(i = 0;i < base;i++)
-                        OutBuffer[chan][i] += dec->Delay[chan].Buffer[i] * dec->Delay[chan].Gain;
+                        OutBuffer[chan][i] += dec->Delay[chan].Buffer[i];
                     for(;i < SamplesToDo;i++)
-                        OutBuffer[chan][i] += dec->ChannelMix[i-base] * dec->Delay[chan].Gain;
+                        OutBuffer[chan][i] += dec->ChannelMix[i-base];
                     memcpy(dec->Delay[chan].Buffer, &dec->ChannelMix[SamplesToDo-base],
-                        base*sizeof(ALfloat));
+                           base*sizeof(ALfloat));
                 }
                 else
                 {
                     for(i = 0;i < SamplesToDo;i++)
-                        OutBuffer[chan][i] += dec->Delay[chan].Buffer[i] * dec->Delay[chan].Gain;
+                        OutBuffer[chan][i] += dec->Delay[chan].Buffer[i];
                     memmove(dec->Delay[chan].Buffer, dec->Delay[chan].Buffer+SamplesToDo,
                             base - SamplesToDo);
                     memcpy(dec->Delay[chan].Buffer+base-SamplesToDo, dec->ChannelMix,
-                        SamplesToDo*sizeof(ALfloat));
+                           SamplesToDo*sizeof(ALfloat));
                 }
             }
             else for(i = 0;i < SamplesToDo;i++)
-                OutBuffer[chan][i] += dec->ChannelMix[i] * dec->Delay[chan].Gain;
+                OutBuffer[chan][i] += dec->ChannelMix[i];
         }
     }
 }

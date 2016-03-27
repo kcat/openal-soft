@@ -177,18 +177,18 @@ typedef struct BFormatDec {
     ALfloat (*SamplesHF)[BUFFERSIZE];
     ALfloat (*SamplesLF)[BUFFERSIZE];
 
-    struct {
-        const ALfloat (*restrict MatrixHF)[MAX_AMBI_COEFFS];
-        const ALfloat (*restrict Encoder)[MAX_AMBI_COEFFS];
-        ALuint NumChannels;
-    } UpSampler;
+    alignas(16) ALfloat ChannelMix[BUFFERSIZE];
 
     struct {
         alignas(16) ALfloat Buffer[MAX_DELAY_LENGTH];
         ALuint Length; /* Valid range is [0...MAX_DELAY_LENGTH). */
     } Delay[MAX_OUTPUT_CHANNELS];
 
-    ALfloat ChannelMix[BUFFERSIZE];
+    struct {
+        const ALfloat (*restrict MatrixHF)[MAX_AMBI_COEFFS];
+        const ALfloat (*restrict Encoder)[MAX_AMBI_COEFFS];
+        ALuint NumChannels;
+    } UpSampler;
 
     ALuint NumChannels;
     ALboolean DualBand;
@@ -502,8 +502,8 @@ void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[B
      */
     for(k = 0;k < dec->UpSampler.NumChannels;k++)
     {
-        memset(dec->Samples[0], 0, SamplesToDo*sizeof(ALfloat));
-        apply_row(dec->Samples[0], dec->UpSampler.MatrixHF[k], InSamples,
+        memset(dec->ChannelMix, 0, SamplesToDo*sizeof(ALfloat));
+        apply_row(dec->ChannelMix, dec->UpSampler.MatrixHF[k], InSamples,
                   InChannels, SamplesToDo);
 
         for(j = 0;j < dec->NumChannels;j++)
@@ -512,7 +512,7 @@ void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[B
             if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
                 continue;
             for(i = 0;i < SamplesToDo;i++)
-                OutBuffer[j][i] += dec->Samples[0][i] * gain;
+                OutBuffer[j][i] += dec->ChannelMix[i] * gain;
         }
     }
 }

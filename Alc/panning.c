@@ -400,7 +400,7 @@ static bool LoadChannelSetup(ALCdevice *device)
     layout = GetChannelLayoutName(device->FmtChans);
     if(!layout) return false;
 
-    if(!ConfigValueStr(al_string_get_cstr(device->DeviceName), "layouts", layout, &fname))
+    if(!ConfigValueStr(al_string_get_cstr(device->DeviceName), "decoder", layout, &fname))
         return false;
 
     ambdec_init(&conf);
@@ -410,6 +410,10 @@ static bool LoadChannelSetup(ALCdevice *device)
         goto fail;
     }
 
+    /* TODO: Perhaps just use the high-frequency matrix, even if both are
+     * present? The recommendation seems to be to use an energy decode (rE,
+     * aka high-frequency) if frequency-dependent processing is not available.
+     */
     if(conf.FreqBands != 1)
     {
         ERR("AmbDec layout file must be single-band (freq_bands = %u)\n", conf.FreqBands);

@@ -390,6 +390,13 @@ static bool LoadChannelSetup(ALCdevice *device)
     AmbDecConf conf;
     ALuint i, j;
 
+    /* Don't use custom decoders with mono or stereo output (stereo is using
+     * UHJ or pair-wise panning, thus ignores the custom coefficients anyway,
+     * and mono would realistically only specify attenuation on the output).
+     */
+    if(device->FmtChans == DevFmtMono || device->FmtChans == DevFmtStereo)
+        return false;
+
     layout = GetChannelLayoutName(device->FmtChans);
     if(!layout) return false;
 
@@ -628,6 +635,12 @@ ALvoid aluInitPanning(ALCdevice *device)
         AmbDecConf conf;
 
         ambdec_init(&conf);
+
+        /* Don't do HQ ambisonic decoding with mono or stereo output. Same
+         * reasons as in LoadChannelSetup.
+         */
+        if(device->FmtChans == DevFmtMono || device->FmtChans == DevFmtStereo)
+            goto ambi_fail;
 
         layout = GetChannelLayoutName(device->FmtChans);
         if(!layout) goto ambi_fail;

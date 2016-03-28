@@ -35,6 +35,14 @@ private slots:
     void updatePeriodCountEdit(int size);
     void updatePeriodCountSlider();
 
+    void toggleHqState(int state);
+
+    void selectQuadDecoderFile();
+    void select51DecoderFile();
+    void select51RearDecoderFile();
+    void select61DecoderFile();
+    void select71DecoderFile();
+
     void updateJackBufferSizeEdit(int size);
     void updateJackBufferSizeSlider();
 
@@ -67,6 +75,8 @@ private:
     bool mNeedsSave;
 
     void closeEvent(QCloseEvent *event);
+
+    void selectDecoderFile(QLineEdit *line, const char *name);
 
     QStringList collectHrtfs();
 

@@ -312,6 +312,19 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->stereoPanningComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(enableApplyButton()));
 
+    connect(ui->decoderHQModeCheckBox, SIGNAL(stateChanged(int)), this, SLOT(toggleHqState(int)));
+    connect(ui->decoderDistCompCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->decoderQuadLineEdit, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
+    connect(ui->decoderQuadButton, SIGNAL(clicked()), this, SLOT(selectQuadDecoderFile()));
+    connect(ui->decoder51LineEdit, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
+    connect(ui->decoder51Button, SIGNAL(clicked()), this, SLOT(select51DecoderFile()));
+    connect(ui->decoder51RearLineEdit, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
+    connect(ui->decoder51RearButton, SIGNAL(clicked()), this, SLOT(select51RearDecoderFile()));
+    connect(ui->decoder61LineEdit, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
+    connect(ui->decoder61Button, SIGNAL(clicked()), this, SLOT(select71DecoderFile()));
+    connect(ui->decoder71LineEdit, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
+    connect(ui->decoder71Button, SIGNAL(clicked()), this, SLOT(select61DecoderFile()));
+
     connect(ui->preferredHrtfComboBox, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(enableApplyButton()));
     connect(ui->hrtfStateComboBox, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(enableApplyButton()));
     connect(ui->hrtfAddButton, SIGNAL(clicked()), this, SLOT(addHrtfFile()));
@@ -610,6 +623,18 @@ void MainWindow::loadConfig(const QString &fname)
         }
     }
 
+    bool hqmode = settings.value("decoder/hq-mode", false).toBool();
+    ui->decoderHQModeCheckBox->setChecked(hqmode);
+    bool distcomp = settings.value("decoder/distance-comp", true).toBool();
+    ui->decoderDistCompCheckBox->setChecked(distcomp);
+    ui->decoderDistCompCheckBox->setEnabled(hqmode);
+
+    ui->decoderQuadLineEdit->setText(settings.value("decoder/quad").toString());
+    ui->decoder51LineEdit->setText(settings.value("decoder/surround51").toString());
+    ui->decoder51RearLineEdit->setText(settings.value("decoder/surround51rear").toString());
+    ui->decoder61LineEdit->setText(settings.value("decoder/surround61").toString());
+    ui->decoder71LineEdit->setText(settings.value("decoder/surround71").toString());
+
     QStringList disabledCpuExts = settings.value("disable-cpu-exts").toStringList();
     if(disabledCpuExts.size() == 1)
         disabledCpuExts = disabledCpuExts[0].split(QChar(','));
@@ -826,6 +851,19 @@ void MainWindow::saveConfig(const QString &fname) const
     settings.setValue("stereo-mode", getValueFromName(stereoModeList, ui->stereoModeCombo->currentText()));
     settings.setValue("stereo-panning", getValueFromName(stereoPanList, ui->stereoPanningComboBox->currentText()));
 
+    settings.setValue("decoder/hq-mode",
+        ui->decoderHQModeCheckBox->isChecked() ? QString("true") : QString(/*"false"*/)
+    );
+    settings.setValue("decoder/distance-comp",
+        ui->decoderDistCompCheckBox->isChecked() ? QString(/*"true"*/) : QString("false")
+    );
+
+    settings.setValue("decoder/quad", ui->decoderQuadLineEdit->text());
+    settings.setValue("decoder/surround51", ui->decoder51LineEdit->text());
+    settings.setValue("decoder/surround51rear", ui->decoder51RearLineEdit->text());
+    settings.setValue("decoder/surround61", ui->decoder61LineEdit->text());
+    settings.setValue("decoder/surround71", ui->decoder71LineEdit->text());
+
     QStringList strlist;
     if(!ui->enableSSECheckBox->isChecked())
         strlist.append("sse");
@@ -1032,6 +1070,35 @@ void MainWindow::updatePeriodCountSlider()
         pos = 16;
     ui->periodCountSlider->setSliderPosition(pos);
     enableApplyButton();
+}
+
+
+void MainWindow::toggleHqState(int state)
+{
+    ui->decoderDistCompCheckBox->setEnabled(state);
+    enableApplyButton();
+}
+
+void MainWindow::selectQuadDecoderFile()
+{ selectDecoderFile(ui->decoderQuadLineEdit, "Select Quadrophonic Decoder");}
+void MainWindow::select51DecoderFile()
+{ selectDecoderFile(ui->decoder51LineEdit, "Select 5.1 Surround (Side) Decoder");}
+void MainWindow::select51RearDecoderFile()
+{ selectDecoderFile(ui->decoder51RearLineEdit, "Select 5.1 Surround (Rear) Decoder");}
+void MainWindow::select61DecoderFile()
+{ selectDecoderFile(ui->decoder61LineEdit, "Select 6.1 Surround Decoder");}
+void MainWindow::select71DecoderFile()
+{ selectDecoderFile(ui->decoder71LineEdit, "Select 7.1 Surround Decoder");}
+void MainWindow::selectDecoderFile(QLineEdit *line, const char *caption)
+{
+    QString fname = QFileDialog::getOpenFileName(this, tr(caption),
+        line->text(), tr("AmbDec Files (*.ambdec);;All Files (*.*)")
+    );
+    if(!fname.isEmpty())
+    {
+        line->setText(fname);
+        enableApplyButton();
+    }
 }
 
 

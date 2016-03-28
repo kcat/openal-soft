@@ -167,6 +167,8 @@ static void init_encoder(void)
  * single-band decoding
  */
 typedef struct BFormatDec {
+    ALboolean Enabled[MAX_OUTPUT_CHANNELS];
+
     alignas(16) ALfloat MatrixHF[MAX_OUTPUT_CHANNELS][MAX_AMBI_COEFFS];
     alignas(16) ALfloat MatrixLF[MAX_OUTPUT_CHANNELS][MAX_AMBI_COEFFS];
 
@@ -252,6 +254,11 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
                                  sizeof(dec->Samples[0]));
     dec->SamplesHF = dec->Samples;
     dec->SamplesLF = dec->SamplesHF + dec->NumChannels;
+
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+        dec->Enabled[i] = AL_FALSE;
+    for(i = 0;i < conf->NumSpeakers;i++)
+        dec->Enabled[chanmap[i]] = AL_TRUE;
 
     if(conf->CoeffScale == ADS_SN3D)
         coeff_scale = SN3D2N3DScale;
@@ -423,6 +430,9 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
 
         for(chan = 0;chan < OutChannels;chan++)
         {
+            if(!dec->Enabled[chan])
+                continue;
+
             memset(dec->ChannelMix, 0, SamplesToDo*sizeof(ALfloat));
             apply_row(dec->ChannelMix, dec->MatrixHF[chan], dec->SamplesHF,
                       dec->NumChannels, SamplesToDo);
@@ -459,6 +469,9 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
     {
         for(chan = 0;chan < OutChannels;chan++)
         {
+            if(!dec->Enabled[chan])
+                continue;
+
             memset(dec->ChannelMix, 0, SamplesToDo*sizeof(ALfloat));
             apply_row(dec->ChannelMix, dec->MatrixHF[chan], InSamples,
                       dec->NumChannels, SamplesToDo);

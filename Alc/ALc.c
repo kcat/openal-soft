@@ -44,6 +44,7 @@
 #include "compat.h"
 #include "threads.h"
 #include "alstring.h"
+#include "almalloc.h"
 
 #include "backends/base.h"
 

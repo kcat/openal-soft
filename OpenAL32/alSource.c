@@ -37,6 +37,7 @@
 #include "backends/base.h"
 
 #include "threads.h"
+#include "almalloc.h"
 
 
 extern inline struct ALsource *LookupSource(ALCcontext *context, ALuint id);

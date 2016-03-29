@@ -607,7 +607,8 @@ IF(NOT HAVE_STDINT_H)
 ENDIF()
 
 
-SET(COMMON_OBJS  common/atomic.c
+SET(COMMON_OBJS  common/almalloc.c
+                 common/atomic.c
                  common/rwlock.c
                  common/threads.c
                  common/uintmap.c

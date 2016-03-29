@@ -6,6 +6,7 @@
 #include "alu.h"
 
 #include "threads.h"
+#include "almalloc.h"
 
 
 typedef struct BandSplitter {

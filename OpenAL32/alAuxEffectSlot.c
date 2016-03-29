@@ -31,6 +31,8 @@
 #include "alError.h"
 #include "alSource.h"
 
+#include "almalloc.h"
+
 
 extern inline struct ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id);
 extern inline struct ALeffectslot *RemoveEffectSlot(ALCcontext *context, ALuint id);

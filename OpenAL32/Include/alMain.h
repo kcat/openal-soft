@@ -36,6 +36,7 @@
 #include "uintmap.h"
 #include "vector.h"
 #include "alstring.h"
+#include "almalloc.h"
 
 #include "hrtf.h"
 
@@ -635,11 +636,6 @@ inline void LockContext(ALCcontext *context)
 
 inline void UnlockContext(ALCcontext *context)
 { ALCdevice_Unlock(context->Device); }
-
-
-void *al_malloc(size_t alignment, size_t size);
-void *al_calloc(size_t alignment, size_t size);
-void al_free(void *ptr);
 
 
 typedef struct {

@@ -25,6 +25,8 @@
 #include "alMain.h"
 #include "alThunk.h"
 
+#include "almalloc.h"
+
 
 static ATOMIC(ALenum) *ThunkArray;
 static ALuint          ThunkArraySize;

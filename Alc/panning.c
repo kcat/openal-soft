@@ -410,15 +410,9 @@ static bool LoadChannelSetup(ALCdevice *device)
         goto fail;
     }
 
-    /* TODO: Perhaps just use the high-frequency matrix, even if both are
-     * present? The recommendation seems to be to use an energy decode (rE,
-     * aka high-frequency) if frequency-dependent processing is not available.
-     */
     if(conf.FreqBands != 1)
-    {
-        ERR("AmbDec layout file must be single-band (freq_bands = %u)\n", conf.FreqBands);
-        goto fail;
-    }
+        ERR("Basic renderer uses the high-frequency matrix as single-band (xover_freq = %.0fhz)\n",
+            conf.XOverFreq);
 
     if(!MakeSpeakerMap(device, &conf, speakermap))
         goto fail;

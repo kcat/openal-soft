@@ -915,7 +915,7 @@ typedef struct ALCcaptureAlsa {
     ALsizei size;
 
     ALboolean doCapture;
-    RingBuffer *ring;
+    ll_ringbuffer_t *ring;
 
     snd_pcm_sframes_t last_avail;
 } ALCcaptureAlsa;
@@ -1047,19 +1047,13 @@ static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
 
     if(needring)
     {
-        self->ring = CreateRingBuffer(FrameSizeFromDevFmt(device->FmtChans, device->FmtType),
-                                      device->UpdateSize*device->NumUpdates);
+        self->ring = ll_ringbuffer_create(
+            device->UpdateSize*device->NumUpdates + 1,
+            FrameSizeFromDevFmt(device->FmtChans, device->FmtType)
+        );
         if(!self->ring)
         {
             ERR("ring buffer create failed\n");
-            goto error2;
-        }
-
-        self->size = snd_pcm_frames_to_bytes(self->pcmHandle, periodSizeInFrames);
-        self->buffer = malloc(self->size);
-        if(!self->buffer)
-        {
-            ERR("buffer malloc failed\n");
             goto error2;
         }
     }
@@ -1075,7 +1069,7 @@ error:
 error2:
     free(self->buffer);
     self->buffer = NULL;
-    DestroyRingBuffer(self->ring);
+    ll_ringbuffer_free(self->ring);
     self->ring = NULL;
     snd_pcm_close(self->pcmHandle);
 
@@ -1085,7 +1079,7 @@ error2:
 static void ALCcaptureAlsa_close(ALCcaptureAlsa *self)
 {
     snd_pcm_close(self->pcmHandle);
-    DestroyRingBuffer(self->ring);
+    ll_ringbuffer_free(self->ring);
 
     free(self->buffer);
     self->buffer = NULL;
@@ -1143,7 +1137,7 @@ static ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buff
 
     if(self->ring)
     {
-        ReadRingBuffer(self->ring, buffer, samples);
+        ll_ringbuffer_read(self->ring, buffer, samples);
         return ALC_NO_ERROR;
     }
 
@@ -1246,12 +1240,15 @@ static ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self)
 
     while(avail > 0)
     {
+        ll_ringbuffer_data_t vec[2];
         snd_pcm_sframes_t amt;
 
-        amt = snd_pcm_bytes_to_frames(self->pcmHandle, self->size);
-        if(avail < amt) amt = avail;
+        ll_ringbuffer_get_write_vector(self->ring, vec);
+        if(vec[0].len == 0) break;
 
-        amt = snd_pcm_readi(self->pcmHandle, self->buffer, amt);
+        amt = (vec[0].len < (snd_pcm_uframes_t)avail) ?
+              vec[0].len : (snd_pcm_uframes_t)avail;
+        amt = snd_pcm_readi(self->pcmHandle, vec[0].buf, amt);
         if(amt < 0)
         {
             ERR("read error: %s\n", snd_strerror(amt));
@@ -1275,11 +1272,11 @@ static ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self)
             continue;
         }
 
-        WriteRingBuffer(self->ring, self->buffer, amt);
+        ll_ringbuffer_write_advance(self->ring, amt);
         avail -= amt;
     }
 
-    return RingBufferSize(self->ring);
+    return ll_ringbuffer_read_space(self->ring);
 }
 
 static ALint64 ALCcaptureAlsa_getLatency(ALCcaptureAlsa *self)

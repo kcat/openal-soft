@@ -430,7 +430,7 @@ typedef struct ALCwinmmCapture {
 
     HWAVEIN InHdl;
 
-    RingBuffer *Ring;
+    ll_ringbuffer_t *Ring;
 
     WAVEFORMATEX Format;
 
@@ -514,8 +514,9 @@ static int ALCwinmmCapture_captureProc(void *arg)
             break;
 
         WaveHdr = ((WAVEHDR*)msg.lParam);
-        WriteRingBuffer(self->Ring, (ALubyte*)WaveHdr->lpData,
-                        WaveHdr->dwBytesRecorded/self->Format.nBlockAlign);
+        ll_ringbuffer_write(self->Ring, WaveHdr->lpData,
+            WaveHdr->dwBytesRecorded / self->Format.nBlockAlign
+        );
 
         // Send buffer back to capture more data
         waveInAddBuffer(self->InHdl, WaveHdr, sizeof(WAVEHDR));
@@ -603,7 +604,7 @@ static ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *name)
     if(CapturedDataSize < (self->Format.nSamplesPerSec / 10))
         CapturedDataSize = self->Format.nSamplesPerSec / 10;
 
-    self->Ring = CreateRingBuffer(self->Format.nBlockAlign, CapturedDataSize);
+    self->Ring = ll_ringbuffer_create(CapturedDataSize+1, self->Format.nBlockAlign);
     if(!self->Ring) goto failure;
 
     InitRef(&self->WaveBuffersCommitted, 0);
@@ -644,8 +645,7 @@ failure:
         free(BufferData);
     }
 
-    if(self->Ring)
-        DestroyRingBuffer(self->Ring);
+    ll_ringbuffer_free(self->Ring);
     self->Ring = NULL;
 
     if(self->InHdl)
@@ -678,7 +678,7 @@ static void ALCwinmmCapture_close(ALCwinmmCapture *self)
     }
     free(buffer);
 
-    DestroyRingBuffer(self->Ring);
+    ll_ringbuffer_free(self->Ring);
     self->Ring = NULL;
 
     // Close the Wave device
@@ -699,13 +699,13 @@ static void ALCwinmmCapture_stop(ALCwinmmCapture *self)
 
 static ALCenum ALCwinmmCapture_captureSamples(ALCwinmmCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    ReadRingBuffer(self->Ring, buffer, samples);
+    ll_ringbuffer_read(self->Ring, buffer, samples);
     return ALC_NO_ERROR;
 }
 
 static ALCuint ALCwinmmCapture_availableSamples(ALCwinmmCapture *self)
 {
-    return RingBufferSize(self->Ring);
+    return ll_ringbuffer_read_space(self->Ring);
 }
 
 

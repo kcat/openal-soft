@@ -653,7 +653,8 @@ typedef struct ALCdsoundCapture {
     IDirectSoundCaptureBuffer *DSCbuffer;
     DWORD BufferBytes;
     DWORD Cursor;
-    RingBuffer *Ring;
+
+    ll_ringbuffer_t *Ring;
 } ALCdsoundCapture;
 
 static void ALCdsoundCapture_Construct(ALCdsoundCapture *self, ALCdevice *device);
@@ -823,7 +824,8 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
     }
     if(SUCCEEDED(hr))
     {
-         self->Ring = CreateRingBuffer(InputType.Format.nBlockAlign, device->UpdateSize * device->NumUpdates);
+         self->Ring = ll_ringbuffer_create(device->UpdateSize*device->NumUpdates + 1,
+                                           InputType.Format.nBlockAlign);
          if(self->Ring == NULL)
              hr = DSERR_OUTOFMEMORY;
     }
@@ -832,7 +834,7 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
     {
         ERR("Device init failed: 0x%08lx\n", hr);
 
-        DestroyRingBuffer(self->Ring);
+        ll_ringbuffer_free(self->Ring);
         self->Ring = NULL;
         if(self->DSCbuffer != NULL)
             IDirectSoundCaptureBuffer_Release(self->DSCbuffer);
@@ -854,7 +856,7 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
 
 static void ALCdsoundCapture_close(ALCdsoundCapture *self)
 {
-    DestroyRingBuffer(self->Ring);
+    ll_ringbuffer_free(self->Ring);
     self->Ring = NULL;
 
     if(self->DSCbuffer != NULL)
@@ -897,7 +899,7 @@ static void ALCdsoundCapture_stop(ALCdsoundCapture *self)
 
 static ALCenum ALCdsoundCapture_captureSamples(ALCdsoundCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    ReadRingBuffer(self->Ring, buffer, samples);
+    ll_ringbuffer_read(self->Ring, buffer, samples);
     return ALC_NO_ERROR;
 }
 
@@ -929,9 +931,9 @@ static ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
     }
     if(SUCCEEDED(hr))
     {
-        WriteRingBuffer(self->Ring, ReadPtr1, ReadCnt1/FrameSize);
+        ll_ringbuffer_write(self->Ring, ReadPtr1, ReadCnt1/FrameSize);
         if(ReadPtr2 != NULL)
-            WriteRingBuffer(self->Ring, ReadPtr2, ReadCnt2/FrameSize);
+            ll_ringbuffer_write(self->Ring, ReadPtr2, ReadCnt2/FrameSize);
         hr = IDirectSoundCaptureBuffer_Unlock(self->DSCbuffer,
                                               ReadPtr1, ReadCnt1,
                                               ReadPtr2, ReadCnt2);
@@ -945,7 +947,7 @@ static ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
     }
 
 done:
-    return RingBufferSize(self->Ring);
+    return ll_ringbuffer_read_space(self->Ring);
 }
 
 

@@ -484,10 +484,7 @@ typedef struct ALCcaptureOSS {
 
     int fd;
 
-    ALubyte *read_data;
-    int data_size;
-
-    RingBuffer *ring;
+    ll_ringbuffer_t *ring;
     int doCapture;
 
     volatile int killNow;
@@ -517,7 +514,7 @@ static int ALCcaptureOSS_recordProc(void *ptr)
     ALCcaptureOSS *self = (ALCcaptureOSS*)ptr;
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     int frameSize;
-    int amt;
+    ssize_t amt;
 
     SetRTPriority();
     althrd_setname(althrd_current(), RECORD_THREAD_NAME);
@@ -526,22 +523,31 @@ static int ALCcaptureOSS_recordProc(void *ptr)
 
     while(!self->killNow)
     {
-        amt = read(self->fd, self->read_data, self->data_size);
-        if(amt < 0)
+        ll_ringbuffer_data_t vec[2];
+
+        amt = 0;
+        if(self->doCapture)
         {
-            ERR("read failed: %s\n", strerror(errno));
-            ALCcaptureOSS_lock(self);
-            aluHandleDisconnect(device);
-            ALCcaptureOSS_unlock(self);
-            break;
+            ll_ringbuffer_get_write_vector(self->ring, vec);
+            if(vec[0].len > 0)
+            {
+                amt = read(self->fd, vec[0].buf, vec[0].len*frameSize);
+                if(amt < 0)
+                {
+                    ERR("read failed: %s\n", strerror(errno));
+                    ALCcaptureOSS_lock(self);
+                    aluHandleDisconnect(device);
+                    ALCcaptureOSS_unlock(self);
+                    break;
+                }
+                ll_ringbuffer_write_advance(self->ring, amt/frameSize);
+            }
         }
         if(amt == 0)
         {
             al_nssleep(1000000);
             continue;
         }
-        if(self->doCapture)
-            WriteRingBuffer(self->ring, self->read_data, amt/frameSize);
     }
 
     return 0;
@@ -657,7 +663,7 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
         return ALC_INVALID_VALUE;
     }
 
-    self->ring = CreateRingBuffer(frameSize, device->UpdateSize * device->NumUpdates);
+    self->ring = ll_ringbuffer_create(device->UpdateSize*device->NumUpdates + 1, frameSize);
     if(!self->ring)
     {
         ERR("Ring buffer create failed\n");
@@ -666,13 +672,11 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
         return ALC_OUT_OF_MEMORY;
     }
 
-    self->data_size = info.fragsize;
-    self->read_data = calloc(1, self->data_size);
-
     self->killNow = 0;
     if(althrd_create(&self->thread, ALCcaptureOSS_recordProc, self) != althrd_success)
     {
-        device->ExtraData = NULL;
+        ll_ringbuffer_free(self->ring);
+        self->ring = NULL;
         close(self->fd);
         self->fd = -1;
         return ALC_OUT_OF_MEMORY;
@@ -693,11 +697,8 @@ static void ALCcaptureOSS_close(ALCcaptureOSS *self)
     close(self->fd);
     self->fd = -1;
 
-    DestroyRingBuffer(self->ring);
+    ll_ringbuffer_free(self->ring);
     self->ring = NULL;
-
-    free(self->read_data);
-    self->read_data = NULL;
 }
 
 static ALCboolean ALCcaptureOSS_start(ALCcaptureOSS *self)
@@ -713,13 +714,13 @@ static void ALCcaptureOSS_stop(ALCcaptureOSS *self)
 
 static ALCenum ALCcaptureOSS_captureSamples(ALCcaptureOSS *self, ALCvoid *buffer, ALCuint samples)
 {
-    ReadRingBuffer(self->ring, buffer, samples);
+    ll_ringbuffer_read(self->ring, buffer, samples);
     return ALC_NO_ERROR;
 }
 
 static ALCuint ALCcaptureOSS_availableSamples(ALCcaptureOSS *self)
 {
-    return RingBufferSize(self->ring);
+    return ll_ringbuffer_read_space(self->ring);
 }
 
 

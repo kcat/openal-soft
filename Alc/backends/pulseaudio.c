@@ -1051,10 +1051,12 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
     {
         /* Server updated our playback rate, so modify the buffer attribs
          * accordingly. */
-        device->NumUpdates = (ALuint)((ALdouble)device->NumUpdates / device->Frequency *
-                                      self->spec.rate + 0.5);
+        device->NumUpdates = (ALuint)clampd(
+            (ALdouble)device->NumUpdates/device->Frequency*self->spec.rate + 0.5, 2.0, 16.0
+        );
+
         self->attr.minreq  = device->UpdateSize * pa_frame_size(&self->spec);
-        self->attr.tlength = self->attr.minreq * clampu(device->NumUpdates, 2, 16);
+        self->attr.tlength = self->attr.minreq * device->NumUpdates;
         self->attr.maxlength = -1;
         self->attr.prebuf  = 0;
 
@@ -1069,9 +1071,30 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
     ALCpulsePlayback_bufferAttrCallback(self->stream, self);
 
     len = self->attr.minreq / pa_frame_size(&self->spec);
-    device->NumUpdates = (ALuint)((ALdouble)device->NumUpdates/len*device->UpdateSize + 0.5);
-    device->NumUpdates = clampu(device->NumUpdates, 2, 16);
+    device->NumUpdates = (ALuint)clampd(
+        (ALdouble)device->NumUpdates/len*device->UpdateSize + 0.5, 2.0, 16.0
+    );
     device->UpdateSize = len;
+
+    /* HACK: prebuf should be 0 as that's what we set it to. However on some
+     * systems it comes back as non-0, so we have to make sure the device will
+     * write enough audio to start playback. The lack of manual start control
+     * may have unintended consequences, but it's better than not starting at
+     * all.
+     */
+    if(self->attr.prebuf != 0)
+    {
+        len = self->attr.prebuf / pa_frame_size(&self->spec);
+        if(len <= device->UpdateSize*device->NumUpdates)
+            ERR("Non-0 prebuf, %u samples (%u bytes), device has %u samples\n",
+                len, self->attr.prebuf, device->UpdateSize*device->NumUpdates);
+        else
+        {
+            ERR("Large prebuf, %u samples (%u bytes), increasing device from %u samples",
+                len, self->attr.prebuf, device->UpdateSize*device->NumUpdates);
+            device->NumUpdates = (len+device->UpdateSize-1) / device->UpdateSize;
+        }
+    }
 
     pa_threaded_mainloop_unlock(self->loop);
     return ALC_TRUE;

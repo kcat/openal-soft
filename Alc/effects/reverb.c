@@ -387,7 +387,7 @@ static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Dev
     /* WARNING: This assumes the real output follows the virtual output in the
      * device's DryBuffer.
      */
-    if(Device->Hrtf || Device->Uhj_Encoder || Device->AmbiDecoder)
+    if(Device->Hrtf || Device->Uhj_Encoder)
         State->ExtraChannels = ChannelsFromDevFmt(Device->FmtChans);
     else
         State->ExtraChannels = 0;
@@ -957,12 +957,12 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
 
     gain = props->Reverb.Gain * Slot->Gain * ReverbBoost;
     // Update early and late 3D panning.
-    if(Device->Hrtf || Device->Uhj_Encoder || Device->AmbiDecoder)
+    if(Device->Hrtf || Device->Uhj_Encoder)
         UpdateMixedPanning(Device, props->Reverb.ReflectionsPan,
                            props->Reverb.LateReverbPan, gain,
                            props->Reverb.ReflectionsGain,
                            props->Reverb.LateReverbGain, State);
-    else if(Device->FmtChans == DevFmtBFormat3D)
+    else if(Device->FmtChans == DevFmtBFormat3D || Device->AmbiDecoder)
         Update3DPanning(Device, props->Reverb.ReflectionsPan,
                         props->Reverb.LateReverbPan, gain,
                         props->Reverb.ReflectionsGain,

@@ -845,7 +845,7 @@ static ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self)
     self->size = snd_pcm_frames_to_bytes(self->pcmHandle, device->UpdateSize);
     if(access == SND_PCM_ACCESS_RW_INTERLEAVED)
     {
-        self->buffer = malloc(self->size);
+        self->buffer = al_malloc(16, self->size);
         if(!self->buffer)
         {
             ERR("buffer malloc failed\n");
@@ -867,7 +867,7 @@ static ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self)
     if(althrd_create(&self->thread, thread_func, self) != althrd_success)
     {
         ERR("Could not create playback thread\n");
-        free(self->buffer);
+        al_free(self->buffer);
         self->buffer = NULL;
         return ALC_FALSE;
     }
@@ -890,7 +890,7 @@ static void ALCplaybackAlsa_stop(ALCplaybackAlsa *self)
     self->killNow = 1;
     althrd_join(self->thread, &res);
 
-    free(self->buffer);
+    al_free(self->buffer);
     self->buffer = NULL;
 }
 
@@ -1070,8 +1070,6 @@ error:
     if(hp) snd_pcm_hw_params_free(hp);
 
 error2:
-    free(self->buffer);
-    self->buffer = NULL;
     ll_ringbuffer_free(self->ring);
     self->ring = NULL;
     snd_pcm_close(self->pcmHandle);
@@ -1084,7 +1082,7 @@ static void ALCcaptureAlsa_close(ALCcaptureAlsa *self)
     snd_pcm_close(self->pcmHandle);
     ll_ringbuffer_free(self->ring);
 
-    free(self->buffer);
+    al_free(self->buffer);
     self->buffer = NULL;
 }
 
@@ -1119,11 +1117,11 @@ static void ALCcaptureAlsa_stop(ALCcaptureAlsa *self)
         void *ptr;
 
         size = snd_pcm_frames_to_bytes(self->pcmHandle, avail);
-        ptr = malloc(size);
+        ptr = al_malloc(16, size);
         if(ptr)
         {
             ALCcaptureAlsa_captureSamples(self, ptr, avail);
-            free(self->buffer);
+            al_free(self->buffer);
             self->buffer = ptr;
             self->size = size;
         }
@@ -1165,7 +1163,7 @@ static ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buff
             }
             else
             {
-                free(self->buffer);
+                al_free(self->buffer);
                 self->buffer = NULL;
                 self->size = 0;
             }

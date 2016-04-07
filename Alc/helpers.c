@@ -620,7 +620,8 @@ static void DirectorySearch(const char *path, const char *ext, vector_al_string 
 
             AL_STRING_INIT(str);
             al_string_copy_cstr(&str, path);
-            al_string_append_char(&str, '/');
+            if(VECTOR_BACK(str) != '/')
+                al_string_append_char(&str, '/');
             al_string_append_cstr(&str, dirent->d_name);
             TRACE("Got result %s\n", al_string_get_cstr(str));
             VECTOR_PUSH_BACK(*results, str);
@@ -661,13 +662,19 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
         if((str=getenv("XDG_DATA_HOME")) != NULL && str[0] != '\0')
         {
             al_string_copy_cstr(&path, str);
-            al_string_append_char(&path, '/');
+            if(VECTOR_BACK(path) != '/')
+                al_string_append_char(&path, '/');
             al_string_append_cstr(&path, subdir);
             DirectorySearch(al_string_get_cstr(path), ext, &results);
         }
         else if((str=getenv("HOME")) != NULL && str[0] != '\0')
         {
             al_string_copy_cstr(&path, str);
+            if(VECTOR_BACK(path) == '/')
+            {
+                VECTOR_POP_BACK(path);
+                *VECTOR_ITER_END(path) = 0;
+            }
             al_string_append_cstr(&path, "/.local/share/");
             al_string_append_cstr(&path, subdir);
             DirectorySearch(al_string_get_cstr(path), ext, &results);
@@ -690,7 +697,8 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
             }
             if(!al_string_empty(path))
             {
-                al_string_append_char(&path, '/');
+                if(VECTOR_BACK(path) != '/')
+                    al_string_append_char(&path, '/');
                 al_string_append_cstr(&path, subdir);
 
                 DirectorySearch(al_string_get_cstr(path), ext, &results);

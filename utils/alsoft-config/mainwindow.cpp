@@ -321,9 +321,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->decoder51RearLineEdit, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
     connect(ui->decoder51RearButton, SIGNAL(clicked()), this, SLOT(select51RearDecoderFile()));
     connect(ui->decoder61LineEdit, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
-    connect(ui->decoder61Button, SIGNAL(clicked()), this, SLOT(select71DecoderFile()));
+    connect(ui->decoder61Button, SIGNAL(clicked()), this, SLOT(select61DecoderFile()));
     connect(ui->decoder71LineEdit, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
-    connect(ui->decoder71Button, SIGNAL(clicked()), this, SLOT(select61DecoderFile()));
+    connect(ui->decoder71Button, SIGNAL(clicked()), this, SLOT(select71DecoderFile()));
 
     connect(ui->preferredHrtfComboBox, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(enableApplyButton()));
     connect(ui->hrtfStateComboBox, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(enableApplyButton()));

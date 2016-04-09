@@ -114,6 +114,12 @@ static const ALfloat SquareMatrixHF[4][MAX_AMBI_COEFFS] = {
     { 0.353553f,  0.204094f,  0.0f, -0.204094f },
     { 0.353553f, -0.204094f,  0.0f, -0.204094f },
 };
+static const ALfloat SquareMatrixLF[4][MAX_AMBI_COEFFS] = {
+    { 0.25f,  0.204094f,  0.0f,  0.204094f },
+    { 0.25f, -0.204094f,  0.0f,  0.204094f },
+    { 0.25f,  0.204094f,  0.0f, -0.204094f },
+    { 0.25f, -0.204094f,  0.0f, -0.204094f },
+};
 static ALfloat SquareEncoder[4][MAX_AMBI_COEFFS];
 
 static const ALfloat CubeMatrixHF[8][MAX_AMBI_COEFFS] = {
@@ -125,6 +131,16 @@ static const ALfloat CubeMatrixHF[8][MAX_AMBI_COEFFS] = {
     { 0.25f, -0.14425f, -0.14425f,  0.14425f },
     { 0.25f,  0.14425f, -0.14425f, -0.14425f },
     { 0.25f, -0.14425f, -0.14425f, -0.14425f },
+};
+static const ALfloat CubeMatrixLF[8][MAX_AMBI_COEFFS] = {
+    { 0.125f,  0.125f,  0.125f,  0.125f },
+    { 0.125f, -0.125f,  0.125f,  0.125f },
+    { 0.125f,  0.125f,  0.125f, -0.125f },
+    { 0.125f, -0.125f,  0.125f, -0.125f },
+    { 0.125f,  0.125f, -0.125f,  0.125f },
+    { 0.125f, -0.125f, -0.125f,  0.125f },
+    { 0.125f,  0.125f, -0.125f, -0.125f },
+    { 0.125f, -0.125f, -0.125f, -0.125f },
 };
 static ALfloat CubeEncoder[8][MAX_AMBI_COEFFS];
 
@@ -188,7 +204,10 @@ typedef struct BFormatDec {
     } Delay[MAX_OUTPUT_CHANNELS];
 
     struct {
+        BandSplitter XOver[4];
+
         const ALfloat (*restrict MatrixHF)[MAX_AMBI_COEFFS];
+        const ALfloat (*restrict MatrixLF)[MAX_AMBI_COEFFS];
         const ALfloat (*restrict Encoder)[MAX_AMBI_COEFFS];
         ALuint NumChannels;
     } UpSampler;
@@ -251,8 +270,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
     dec->SamplesLF = NULL;
 
     dec->NumChannels = chancount;
-    dec->Samples = al_calloc(16, dec->NumChannels * conf->FreqBands *
-                                 sizeof(dec->Samples[0]));
+    dec->Samples = al_calloc(16, dec->NumChannels*2 * sizeof(dec->Samples[0]));
     dec->SamplesHF = dec->Samples;
     dec->SamplesLF = dec->SamplesHF + dec->NumChannels;
 
@@ -266,9 +284,13 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
     else if(conf->CoeffScale == ADS_FuMa)
         coeff_scale = FuMa2N3DScale;
 
+    ratio = 400.0f / (ALfloat)srate;
+    for(i = 0;i < 4;i++)
+        bandsplit_init(&dec->UpSampler.XOver[i], ratio);
     if((conf->ChanMask & ~0x831b))
     {
         dec->UpSampler.MatrixHF = CubeMatrixHF;
+        dec->UpSampler.MatrixLF = CubeMatrixLF;
         dec->UpSampler.Encoder = (const ALfloat(*)[MAX_AMBI_COEFFS])CubeEncoder;
         dec->UpSampler.NumChannels = 8;
         dec->Periphonic = AL_TRUE;
@@ -276,6 +298,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
     else
     {
         dec->UpSampler.MatrixHF = SquareMatrixHF;
+        dec->UpSampler.MatrixLF = SquareMatrixLF;
         dec->UpSampler.Encoder = (const ALfloat(*)[MAX_AMBI_COEFFS])SquareEncoder;
         dec->UpSampler.NumChannels = 4;
         dec->Periphonic = AL_FALSE;
@@ -510,6 +533,15 @@ void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[B
 {
     ALuint i, j, k;
 
+    /* First, split the first-order components into low and high frequency
+     * bands. This assumes SamplesHF and SamplesLF have enough space for first-
+     * order content (to which, this up-sampler is only used with second-order
+     * or higher decoding, so it will).
+     */
+    for(i = 0;i < InChannels;i++)
+        bandsplit_process(&dec->UpSampler.XOver[i], dec->SamplesHF[i], dec->SamplesLF[i],
+                          InSamples[i], SamplesToDo);
+
     /* This up-sampler is very simplistic. It essentially decodes the first-
      * order content to a square channel array (or cube if height is desired),
      * then encodes those points onto the higher order soundfield.
@@ -517,7 +549,9 @@ void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[B
     for(k = 0;k < dec->UpSampler.NumChannels;k++)
     {
         memset(dec->ChannelMix, 0, SamplesToDo*sizeof(ALfloat));
-        apply_row(dec->ChannelMix, dec->UpSampler.MatrixHF[k], InSamples,
+        apply_row(dec->ChannelMix, dec->UpSampler.MatrixHF[k], dec->SamplesHF,
+                  InChannels, SamplesToDo);
+        apply_row(dec->ChannelMix, dec->UpSampler.MatrixLF[k], dec->SamplesLF,
                   InChannels, SamplesToDo);
 
         for(j = 0;j < dec->NumChannels;j++)

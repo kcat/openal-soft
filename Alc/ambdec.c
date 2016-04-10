@@ -443,7 +443,7 @@ int ambdec_load(AmbDecConf *conf, const char *fname)
             const char *value = my_strtok_r(NULL, "/ \t", &saveptr);
             if(strcmp(value, "{") != 0)
             {
-                ERR("Expected { after speakers command, got %s\n", value);
+                ERR("Expected { after %s command, got %s\n", command, value);
                 goto fail;
             }
             if(!load_ambdec_speakers(conf, f, &buffer, &maxlen, &saveptr))
@@ -471,7 +471,7 @@ int ambdec_load(AmbDecConf *conf, const char *fname)
             const char *value = my_strtok_r(NULL, "/ \t", &saveptr);
             if(strcmp(value, "{") != 0)
             {
-                ERR("Expected { after speakers command, got %s\n", value);
+                ERR("Expected { after %s command, got %s\n", command, value);
                 goto fail;
             }
             if(conf->FreqBands == 1)

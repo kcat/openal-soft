@@ -20,7 +20,7 @@ may be any amount of whitespace in between the option and parameter values.
 Strings are *not* enclosed in quotation marks.
 
 /description <desc:string>
-Specifies a text description of the configuration. Ingored by OpenAL Soft.
+Specifies a text description of the configuration. Ignored by OpenAL Soft.
 
 /version <ver:int>
 Declares the format version used by the configuration file. OpenAL Soft
@@ -65,7 +65,7 @@ Specifies whether gain compensation is applied for output. This is used to
 correct for volume variations caused by different speaker distances. As OpenAL
 Soft has its own config option for this, this is ignored.
 
-/opt/xover_freq <freq:int>
+/opt/xover_freq <freq:float>
 Specifies the crossover frequency for dual-band decoders. Frequencies less than
 this are fed to the low-frequency matrix, and frequencies greater than this are
 fed to the high-freqyency matrix. Unused for single-band decoders.

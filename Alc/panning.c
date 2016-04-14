@@ -381,190 +381,6 @@ static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALuint spe
     return true;
 }
 
-static bool LoadChannelSetup(ALCdevice *device)
-{
-    ALuint speakermap[MAX_OUTPUT_CHANNELS];
-    const char *fname = "";
-    const char *devname;
-    const char *layout;
-    AmbDecConf conf;
-    ALuint i, j;
-
-    layout = GetChannelLayoutName(device->FmtChans);
-    if(!layout) return false;
-
-    devname = al_string_get_cstr(device->DeviceName);
-    if(!ConfigValueStr(devname, "decoder", layout, &fname))
-        return false;
-
-    ambdec_init(&conf);
-    if(!ambdec_load(&conf, fname))
-    {
-        ERR("Failed to load layout file %s\n", fname);
-        goto fail;
-    }
-
-    if(conf.ChanMask > 0xffff)
-    {
-        ERR("Unsupported channel mask 0x%04x (max 0xffff)\n", conf.ChanMask);
-        goto fail;
-    }
-
-    if(!MakeSpeakerMap(device, &conf, speakermap))
-        goto fail;
-
-    if(device->AmbiDecoder && (conf.ChanMask & ~0x831b) && conf.ChanMask > 0x1ff)
-    {
-        ERR("Third-order is unsupported for periphonic HQ decoding (mask 0x%04x)\n",
-            conf.ChanMask);
-        bformatdec_free(device->AmbiDecoder);
-        device->AmbiDecoder = NULL;
-    }
-
-    if(device->AmbiDecoder)
-    {
-        /* NOTE: This is ACN/N3D ordering and scaling, rather than FuMa. */
-        static const ChannelMap Ambi3D[9] = {
-            /* Zeroth order */
-            { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-            /* First order */
-            { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-            { Aux2, { 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-            { Aux3, { 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-            /* Second order */
-            { Aux4, { 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-            { Aux5, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f } },
-            { Aux6, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f } },
-            { Aux7, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f } },
-            { Aux8, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f } },
-        }, Ambi2D[7] = {
-            /* Zeroth order */
-            { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-            /* First order */
-            { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-            { Aux2, { 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-            /* Second order */
-            { Aux3, { 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-            { Aux4, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-            /* Third order */
-            { Aux5, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-            { Aux6, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f } },
-        };
-        const ChannelMap *chanmap = NULL;
-        const char *devname;
-        int decflags = 0;
-        size_t count;
-
-        if((conf.ChanMask & ~0x831b))
-        {
-            count = (conf.ChanMask > 0xf) ? (conf.ChanMask > 0x1ff) ? 16 : 9 : 4;
-            chanmap = Ambi3D;
-        }
-        else
-        {
-            count = (conf.ChanMask > 0xf) ? (conf.ChanMask > 0x1ff) ? 7 : 5 : 3;
-            chanmap = Ambi2D;
-        }
-
-        devname = al_string_get_cstr(device->DeviceName);
-        if(GetConfigValueBool(devname, "decoder", "distance-comp", 1))
-            decflags |= BFDF_DistanceComp;
-
-        for(i = 0;i < count;i++)
-            device->Dry.ChannelName[i] = chanmap[i].ChanName;
-        for(;i < MAX_OUTPUT_CHANNELS;i++)
-            device->Dry.ChannelName[i] = InvalidChannel;
-        SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
-                      &device->Dry.NumChannels, AL_FALSE);
-
-        TRACE("Enabling %s-band %s-order%s ambisonic decoder\n",
-            (conf.FreqBands == 1) ? "single" : "dual",
-            (conf.ChanMask > 0xf) ? (conf.ChanMask > 0x1ff) ? "third" : "second" : "first",
-            (conf.ChanMask & ~0x831b) ? " periphonic" : ""
-        );
-        bformatdec_reset(device->AmbiDecoder, &conf, count, device->Frequency,
-                         speakermap, decflags);
-
-        if(bformatdec_getOrder(device->AmbiDecoder) < 2)
-            memcpy(device->FOAOut.AmbiCoeffs, device->Dry.AmbiCoeffs,
-                   sizeof(device->FOAOut.AmbiCoeffs));
-        else
-        {
-            memset(device->FOAOut.AmbiCoeffs, 0, sizeof(device->FOAOut.AmbiCoeffs));
-            device->FOAOut.AmbiCoeffs[0][0] = 1.0f;
-            device->FOAOut.AmbiCoeffs[1][1] = 1.0f;
-            device->FOAOut.AmbiCoeffs[2][2] = 1.0f;
-            device->FOAOut.AmbiCoeffs[3][3] = 1.0f;
-        }
-    }
-    else
-    {
-        ChannelMap chanmap[MAX_OUTPUT_CHANNELS];
-        const ALfloat *coeff_scale = UnitScale;
-        ALfloat ambiscale = 1.0f;
-
-        for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-            device->Dry.ChannelName[i] = device->RealOut.ChannelName[i];
-
-        if(conf.FreqBands != 1)
-            ERR("Basic renderer uses the high-frequency matrix as single-band (xover_freq = %.0fhz)\n",
-                conf.XOverFreq);
-
-        if(conf.ChanMask > 0x1ff)
-            ambiscale = THIRD_ORDER_SCALE;
-        else if(conf.ChanMask > 0xf)
-            ambiscale = SECOND_ORDER_SCALE;
-        else if(conf.ChanMask > 0x1)
-            ambiscale = FIRST_ORDER_SCALE;
-        else
-            ambiscale = 0.0f;
-
-        if(conf.CoeffScale == ADS_SN3D)
-            coeff_scale = SN3D2N3DScale;
-        else if(conf.CoeffScale == ADS_FuMa)
-            coeff_scale = FuMa2N3DScale;
-
-        for(i = 0;i < conf.NumSpeakers;i++)
-        {
-            ALuint chan = speakermap[i];
-            ALfloat gain;
-            ALuint k = 0;
-
-            for(j = 0;j < MAX_AMBI_COEFFS;j++)
-                chanmap[i].Config[j] = 0.0f;
-
-            chanmap[i].ChanName = device->RealOut.ChannelName[chan];
-            for(j = 0;j < MAX_AMBI_COEFFS;j++)
-            {
-                if(j == 0) gain = conf.HFOrderGain[0];
-                else if(j == 1) gain = conf.HFOrderGain[1];
-                else if(j == 4) gain = conf.HFOrderGain[2];
-                else if(j == 9) gain = conf.HFOrderGain[3];
-                if((conf.ChanMask&(1<<j)))
-                    chanmap[i].Config[j] = conf.HFMatrix[i][k++] / coeff_scale[j] * gain;
-            }
-        }
-
-        SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap,
-                      conf.NumSpeakers, &device->Dry.NumChannels, AL_FALSE);
-
-        memset(device->FOAOut.AmbiCoeffs, 0, sizeof(device->FOAOut.AmbiCoeffs));
-        for(i = 0;i < device->Dry.NumChannels;i++)
-        {
-            device->FOAOut.AmbiCoeffs[i][0] = device->Dry.AmbiCoeffs[i][0];
-            for(j = 1;j < 4;j++)
-                device->FOAOut.AmbiCoeffs[i][j] = device->Dry.AmbiCoeffs[i][j] * ambiscale;
-        }
-    }
-
-    ambdec_deinit(&conf);
-    return true;
-
-fail:
-    ambdec_deinit(&conf);
-    return false;
-}
-
 
 /* NOTE: These decoder coefficients are using FuMa channel ordering and
  * normalization, since that's what was produced by the Ambisonic Decoder
@@ -637,19 +453,6 @@ static void InitPanning(ALCdevice *device)
     memset(device->Dry.AmbiCoeffs, 0, sizeof(device->Dry.AmbiCoeffs));
     device->Dry.NumChannels = 0;
 
-    /* Don't use custom decoders or HQ decoding with mono or stereo output.
-     * Mono only has one channel, and stereo doesn't have enough speakers to
-     * really be specified this way.
-     */
-    if(device->FmtChans != DevFmtMono && device->FmtChans != DevFmtStereo)
-    {
-        if(LoadChannelSetup(device))
-            return;
-    }
-
-    bformatdec_free(device->AmbiDecoder);
-    device->AmbiDecoder = NULL;
-
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
         device->Dry.ChannelName[i] = device->RealOut.ChannelName[i];
 
@@ -714,6 +517,151 @@ static void InitPanning(ALCdevice *device)
         device->FOAOut.AmbiCoeffs[i][0] = device->Dry.AmbiCoeffs[i][0];
         for(j = 1;j < 4;j++)
             device->FOAOut.AmbiCoeffs[i][j] = device->Dry.AmbiCoeffs[i][j] * ambiscale;
+    }
+}
+
+static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALuint speakermap[MAX_OUTPUT_CHANNELS])
+{
+    ChannelMap chanmap[MAX_OUTPUT_CHANNELS];
+    const ALfloat *coeff_scale = UnitScale;
+    ALfloat ambiscale = 1.0f;
+    ALuint i, j;
+
+    memset(device->Dry.AmbiCoeffs, 0, sizeof(device->Dry.AmbiCoeffs));
+    device->Dry.NumChannels = 0;
+
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+        device->Dry.ChannelName[i] = device->RealOut.ChannelName[i];
+
+    if(conf->FreqBands != 1)
+        ERR("Basic renderer uses the high-frequency matrix as single-band (xover_freq = %.0fhz)\n",
+            conf->XOverFreq);
+
+    if(conf->ChanMask > 0x1ff)
+        ambiscale = THIRD_ORDER_SCALE;
+    else if(conf->ChanMask > 0xf)
+        ambiscale = SECOND_ORDER_SCALE;
+    else if(conf->ChanMask > 0x1)
+        ambiscale = FIRST_ORDER_SCALE;
+    else
+        ambiscale = 0.0f;
+
+    if(conf->CoeffScale == ADS_SN3D)
+        coeff_scale = SN3D2N3DScale;
+    else if(conf->CoeffScale == ADS_FuMa)
+        coeff_scale = FuMa2N3DScale;
+
+    for(i = 0;i < conf->NumSpeakers;i++)
+    {
+        ALuint chan = speakermap[i];
+        ALfloat gain;
+        ALuint k = 0;
+
+        for(j = 0;j < MAX_AMBI_COEFFS;j++)
+            chanmap[i].Config[j] = 0.0f;
+
+        chanmap[i].ChanName = device->RealOut.ChannelName[chan];
+        for(j = 0;j < MAX_AMBI_COEFFS;j++)
+        {
+            if(j == 0) gain = conf->HFOrderGain[0];
+            else if(j == 1) gain = conf->HFOrderGain[1];
+            else if(j == 4) gain = conf->HFOrderGain[2];
+            else if(j == 9) gain = conf->HFOrderGain[3];
+            if((conf->ChanMask&(1<<j)))
+                chanmap[i].Config[j] = conf->HFMatrix[i][k++] / coeff_scale[j] * gain;
+        }
+    }
+
+    SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap,
+                    conf->NumSpeakers, &device->Dry.NumChannels, AL_FALSE);
+
+    memset(device->FOAOut.AmbiCoeffs, 0, sizeof(device->FOAOut.AmbiCoeffs));
+    for(i = 0;i < device->Dry.NumChannels;i++)
+    {
+        device->FOAOut.AmbiCoeffs[i][0] = device->Dry.AmbiCoeffs[i][0];
+        for(j = 1;j < 4;j++)
+            device->FOAOut.AmbiCoeffs[i][j] = device->Dry.AmbiCoeffs[i][j] * ambiscale;
+    }
+}
+
+static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuint speakermap[MAX_OUTPUT_CHANNELS])
+{
+    /* NOTE: This is ACN/N3D ordering and scaling, rather than FuMa. */
+    static const ChannelMap Ambi3D[9] = {
+        /* Zeroth order */
+        { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+        /* First order */
+        { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+        { Aux2, { 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+        { Aux3, { 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+        /* Second order */
+        { Aux4, { 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+        { Aux5, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f } },
+        { Aux6, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f } },
+        { Aux7, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f } },
+        { Aux8, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f } },
+    }, Ambi2D[7] = {
+        /* Zeroth order */
+        { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+        /* First order */
+        { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+        { Aux2, { 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+        /* Second order */
+        { Aux3, { 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+        { Aux4, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+        /* Third order */
+        { Aux5, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
+        { Aux6, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f } },
+    };
+    const ChannelMap *chanmap = NULL;
+    const char *devname;
+    int decflags = 0;
+    size_t count;
+    ALuint i;
+
+    memset(device->Dry.AmbiCoeffs, 0, sizeof(device->Dry.AmbiCoeffs));
+    device->Dry.NumChannels = 0;
+
+    if((conf->ChanMask & ~0x831b))
+    {
+        count = (conf->ChanMask > 0xf) ? (conf->ChanMask > 0x1ff) ? 16 : 9 : 4;
+        chanmap = Ambi3D;
+    }
+    else
+    {
+        count = (conf->ChanMask > 0xf) ? (conf->ChanMask > 0x1ff) ? 7 : 5 : 3;
+        chanmap = Ambi2D;
+    }
+
+    devname = al_string_get_cstr(device->DeviceName);
+    if(GetConfigValueBool(devname, "decoder", "distance-comp", 1))
+        decflags |= BFDF_DistanceComp;
+
+    for(i = 0;i < count;i++)
+        device->Dry.ChannelName[i] = chanmap[i].ChanName;
+    for(;i < MAX_OUTPUT_CHANNELS;i++)
+        device->Dry.ChannelName[i] = InvalidChannel;
+    SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
+                    &device->Dry.NumChannels, AL_FALSE);
+
+    TRACE("Enabling %s-band %s-order%s ambisonic decoder\n",
+        (conf->FreqBands == 1) ? "single" : "dual",
+        (conf->ChanMask > 0xf) ? (conf->ChanMask > 0x1ff) ? "third" : "second" : "first",
+        (conf->ChanMask & ~0x831b) ? " periphonic" : ""
+    );
+    bformatdec_reset(device->AmbiDecoder, conf, count, device->Frequency,
+                     speakermap, decflags);
+
+    if(bformatdec_getOrder(device->AmbiDecoder) < 2)
+        memcpy(device->FOAOut.AmbiCoeffs, device->Dry.AmbiCoeffs,
+               sizeof(device->FOAOut.AmbiCoeffs));
+    else
+    {
+        memset(device->FOAOut.AmbiCoeffs, 0, sizeof(device->FOAOut.AmbiCoeffs));
+        device->FOAOut.AmbiCoeffs[0][0] = 1.0f;
+        device->FOAOut.AmbiCoeffs[1][1] = 1.0f;
+        device->FOAOut.AmbiCoeffs[2][2] = 1.0f;
+        device->FOAOut.AmbiCoeffs[3][3] = 1.0f;
     }
 }
 
@@ -793,12 +741,50 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
 
     if(device->FmtChans != DevFmtStereo)
     {
+        ALuint speakermap[MAX_OUTPUT_CHANNELS];
+        const char *devname, *layout;
+        AmbDecConf conf, *pconf;
+
         if(hrtf_appreq == Hrtf_Enable)
             device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
 
-        if(GetConfigValueBool(al_string_get_cstr(device->DeviceName), "decoder", "hq-mode", 0))
+        pconf = NULL;
+        ambdec_init(&conf);
+
+        devname = al_string_get_cstr(device->DeviceName);
+        layout = NULL;
+        if(device->FmtChans != DevFmtMono)
+            layout = GetChannelLayoutName(device->FmtChans);
+        if(layout)
         {
-            if(!device->AmbiDecoder)
+            const char *fname;
+            if(ConfigValueStr(devname, "decoder", layout, &fname))
+            {
+                if(!ambdec_load(&conf, fname))
+                    ERR("Failed to load layout file %s\n", fname);
+                else
+                {
+                    if(conf.ChanMask > 0xffff)
+                        ERR("Unsupported channel mask 0x%04x (max 0xffff)\n", conf.ChanMask);
+                    else
+                    {
+                        if(MakeSpeakerMap(device, &conf, speakermap))
+                            pconf = &conf;
+                    }
+                }
+            }
+        }
+
+        if(pconf && GetConfigValueBool(devname, "decoder", "hq-mode", 0))
+        {
+            if((conf.ChanMask & ~0x831b) && conf.ChanMask > 0x1ff)
+            {
+                ERR("Third-order is unsupported for periphonic HQ decoding (mask 0x%04x)\n",
+                    conf.ChanMask);
+                bformatdec_free(device->AmbiDecoder);
+                device->AmbiDecoder = NULL;
+            }
+            else if(!device->AmbiDecoder)
                 device->AmbiDecoder = bformatdec_alloc();
         }
         else
@@ -807,7 +793,14 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
             device->AmbiDecoder = NULL;
         }
 
-        InitPanning(device);
+        if(!pconf)
+            InitPanning(device);
+        else if(device->AmbiDecoder)
+            InitHQPanning(device, pconf, speakermap);
+        else
+            InitCustomPanning(device, pconf, speakermap);
+
+        ambdec_deinit(&conf);
         return;
     }
 

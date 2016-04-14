@@ -1654,6 +1654,173 @@ static inline void UpdateClockBase(ALCdevice *device)
     device->SamplesDone = 0;
 }
 
+/* InitRenderer
+ *
+ * Set up the appropriate panning method and mixing method given the device
+ * properties.
+ */
+static void InitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf_appreq, enum HrtfRequestMode hrtf_userreq)
+{
+    ALCenum hrtf_status;
+    const char *mode;
+    bool headphones;
+    int bs2blevel;
+    int usehrtf;
+    size_t i;
+
+    device->Hrtf = NULL;
+    al_string_clear(&device->Hrtf_Name);
+    device->Render_Mode = NormalRender;
+
+    if(device->FmtChans != DevFmtStereo)
+    {
+        if(hrtf_appreq == Hrtf_Enable)
+            device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
+
+        if(GetConfigValueBool(al_string_get_cstr(device->DeviceName), "decoder", "hq-mode", 0))
+        {
+            if(!device->AmbiDecoder)
+                device->AmbiDecoder = bformatdec_alloc();
+        }
+        else
+        {
+            bformatdec_free(device->AmbiDecoder);
+            device->AmbiDecoder = NULL;
+        }
+
+        aluInitPanning(device);
+        return;
+    }
+
+    bformatdec_free(device->AmbiDecoder);
+    device->AmbiDecoder = NULL;
+
+    hrtf_status = device->Hrtf_Status;
+    headphones = device->IsHeadphones;
+
+    if(device->Type != Loopback)
+    {
+        const char *mode;
+        if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "stereo-mode", &mode))
+        {
+            if(strcasecmp(mode, "headphones") == 0)
+                headphones = true;
+            else if(strcasecmp(mode, "speakers") == 0)
+                headphones = false;
+            else if(strcasecmp(mode, "auto") != 0)
+                ERR("Unexpected stereo-mode: %s\n", mode);
+        }
+    }
+
+    if(hrtf_userreq == Hrtf_Default)
+    {
+        usehrtf = (headphones && hrtf_appreq != Hrtf_Disable) ||
+                  (hrtf_appreq == Hrtf_Enable);
+        if(headphones && hrtf_appreq != Hrtf_Disable)
+            hrtf_status = ALC_HRTF_HEADPHONES_DETECTED_SOFT;
+        else if(usehrtf)
+            hrtf_status = ALC_HRTF_ENABLED_SOFT;
+    }
+    else
+    {
+        usehrtf = (hrtf_userreq == Hrtf_Enable);
+        if(!usehrtf)
+            hrtf_status = ALC_HRTF_DENIED_SOFT;
+        else
+            hrtf_status = ALC_HRTF_REQUIRED_SOFT;
+    }
+
+    if(!usehrtf)
+    {
+        device->Hrtf_Status = hrtf_status;
+        goto no_hrtf;
+    }
+
+    device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
+    if(VECTOR_SIZE(device->Hrtf_List) == 0)
+    {
+        VECTOR_DEINIT(device->Hrtf_List);
+        device->Hrtf_List = EnumerateHrtf(device->DeviceName);
+    }
+
+    if(hrtf_id >= 0 && (size_t)hrtf_id < VECTOR_SIZE(device->Hrtf_List))
+    {
+        const HrtfEntry *entry = &VECTOR_ELEM(device->Hrtf_List, hrtf_id);
+        if(GetHrtfSampleRate(entry->hrtf) == device->Frequency)
+        {
+            device->Hrtf = entry->hrtf;
+            al_string_copy(&device->Hrtf_Name, entry->name);
+        }
+    }
+
+    for(i = 0;!device->Hrtf && i < VECTOR_SIZE(device->Hrtf_List);i++)
+    {
+        const HrtfEntry *entry = &VECTOR_ELEM(device->Hrtf_List, i);
+        if(GetHrtfSampleRate(entry->hrtf) == device->Frequency)
+        {
+            device->Hrtf = entry->hrtf;
+            al_string_copy(&device->Hrtf_Name, entry->name);
+        }
+    }
+
+    if(device->Hrtf)
+    {
+        device->Hrtf_Status = hrtf_status;
+        device->Render_Mode = NormalRender;
+        if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "hrtf-mode", &mode))
+        {
+            if(strcasecmp(mode, "full") == 0)
+                device->Render_Mode = HrtfRender;
+            else if(strcasecmp(mode, "basic") == 0)
+                device->Render_Mode = NormalRender;
+            else
+                ERR("Unexpected hrtf-mode: %s\n", mode);
+        }
+
+        TRACE("HRTF enabled, \"%s\"\n", al_string_get_cstr(device->Hrtf_Name));
+        aluInitHrtfPanning(device);
+        return;
+    }
+
+no_hrtf:
+    TRACE("HRTF disabled\n");
+
+    bs2blevel = ((headphones && hrtf_appreq != Hrtf_Disable) ||
+                 (hrtf_appreq == Hrtf_Enable)) ? 5 : 0;
+    if(device->Type != Loopback)
+        ConfigValueInt(al_string_get_cstr(device->DeviceName), NULL, "cf_level", &bs2blevel);
+    if(bs2blevel > 0 && bs2blevel <= 6)
+    {
+        device->Bs2b = al_calloc(16, sizeof(*device->Bs2b));
+        bs2b_set_params(device->Bs2b, bs2blevel, device->Frequency);
+        device->Render_Mode = StereoPair;
+        TRACE("BS2B enabled\n");
+        aluInitPanning(device);
+        return;
+    }
+
+    TRACE("BS2B disabled\n");
+
+    device->Render_Mode = NormalRender;
+    if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "stereo-panning", &mode))
+    {
+        if(strcasecmp(mode, "paired") == 0)
+            device->Render_Mode = StereoPair;
+        else if(strcasecmp(mode, "uhj") != 0)
+            ERR("Unexpected stereo-panning: %s\n", mode);
+    }
+    if(device->Render_Mode == NormalRender)
+    {
+        device->Uhj_Encoder = al_calloc(16, sizeof(Uhj2Encoder));
+        TRACE("UHJ enabled\n");
+        aluInitUhjPanning(device);
+        return;
+    }
+
+    TRACE("UHJ disabled\n");
+    aluInitPanning(device);
+}
+
 /* UpdateDeviceParams
  *
  * Updates device parameters according to the attribute list (caller is
@@ -1868,6 +2035,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     UpdateClockBase(device);
 
+    /*************************************************************************
+     * Update device format request if HRTF is requested
+     */
     device->Hrtf_Status = ALC_HRTF_DISABLED_SOFT;
     if(device->Type != Loopback)
     {
@@ -1900,20 +2070,21 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             }
             else
             {
-                hrtf_userreq = hrtf_appreq = Hrtf_Default;
+                hrtf_userreq = Hrtf_Default;
+                hrtf_appreq = Hrtf_Disable;
                 device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
             }
         }
     }
     else if(hrtf_appreq == Hrtf_Enable)
     {
-        size_t i;
+        size_t i = VECTOR_SIZE(device->Hrtf_List);
         /* Loopback device. We don't need to match to a specific HRTF entry
          * here. If the requested ID matches, we'll pick that later, if not,
-         * we'll try to auto-select one anyway. */
-        if(device->FmtChans != DevFmtStereo)
-            i = VECTOR_SIZE(device->Hrtf_List);
-        else
+         * we'll try to auto-select one anyway. Just make sure one exists
+         * that'll work.
+         */
+        if(device->FmtChans == DevFmtStereo)
         {
             if(VECTOR_SIZE(device->Hrtf_List) == 0)
             {
@@ -1931,7 +2102,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         {
             ERR("Requested format not HRTF compatible: %s, %uhz\n",
                 DevFmtChannelsString(device->FmtChans), device->Frequency);
-            hrtf_appreq = Hrtf_Default;
+            hrtf_appreq = Hrtf_Disable;
             device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
         }
     }
@@ -1981,163 +2152,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             WARN("NEON performs best with multiple of 4 update sizes (%u)\n", device->UpdateSize);
     }
 
-    device->Hrtf = NULL;
-    al_string_clear(&device->Hrtf_Name);
-    device->Render_Mode = NormalRender;
-    if(device->FmtChans != DevFmtStereo)
-    {
-        if(hrtf_appreq == Hrtf_Enable)
-            device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
-    }
-    else
-    {
-        bool headphones = device->IsHeadphones;
-        enum RenderMode render_mode = HrtfRender;
-        ALCenum hrtf_status = device->Hrtf_Status;
-        const char *mode;
-        int bs2blevel;
-        int usehrtf;
-
-        if(device->Type != Loopback)
-        {
-            if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "stereo-mode", &mode))
-            {
-                if(strcasecmp(mode, "headphones") == 0)
-                    headphones = true;
-                else if(strcasecmp(mode, "speakers") == 0)
-                    headphones = false;
-                else if(strcasecmp(mode, "auto") != 0)
-                    ERR("Unexpected stereo-mode: %s\n", mode);
-            }
-
-            if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "hrtf-mode", &mode))
-            {
-                if(strcasecmp(mode, "full") == 0)
-                    render_mode = HrtfRender;
-                else if(strcasecmp(mode, "basic") == 0)
-                    render_mode = NormalRender;
-                else
-                    ERR("Unexpected hrtf-mode: %s\n", mode);
-            }
-        }
-
-
-        if(hrtf_userreq == Hrtf_Default)
-        {
-            usehrtf = (headphones && hrtf_appreq != Hrtf_Disable) ||
-                      (hrtf_appreq == Hrtf_Enable);
-            if(headphones && hrtf_appreq != Hrtf_Disable)
-                hrtf_status = ALC_HRTF_HEADPHONES_DETECTED_SOFT;
-            else if(usehrtf)
-                hrtf_status = ALC_HRTF_ENABLED_SOFT;
-        }
-        else
-        {
-            usehrtf = (hrtf_userreq == Hrtf_Enable);
-            if(!usehrtf)
-                hrtf_status = ALC_HRTF_DENIED_SOFT;
-            else
-                hrtf_status = ALC_HRTF_REQUIRED_SOFT;
-        }
-
-        if(!usehrtf)
-            device->Hrtf_Status = hrtf_status;
-        else
-        {
-            size_t i;
-
-            device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
-            if(VECTOR_SIZE(device->Hrtf_List) == 0)
-            {
-                VECTOR_DEINIT(device->Hrtf_List);
-                device->Hrtf_List = EnumerateHrtf(device->DeviceName);
-            }
-
-            if(hrtf_id >= 0 && (size_t)hrtf_id < VECTOR_SIZE(device->Hrtf_List))
-            {
-                const HrtfEntry *entry = &VECTOR_ELEM(device->Hrtf_List, hrtf_id);
-                if(GetHrtfSampleRate(entry->hrtf) == device->Frequency)
-                {
-                    device->Hrtf = entry->hrtf;
-                    al_string_copy(&device->Hrtf_Name, entry->name);
-                }
-            }
-            if(!device->Hrtf)
-            {
-                for(i = 0;i < VECTOR_SIZE(device->Hrtf_List);i++)
-                {
-                    const HrtfEntry *entry = &VECTOR_ELEM(device->Hrtf_List, i);
-                    if(GetHrtfSampleRate(entry->hrtf) == device->Frequency)
-                    {
-                        device->Hrtf = entry->hrtf;
-                        al_string_copy(&device->Hrtf_Name, entry->name);
-                        break;
-                    }
-                }
-            }
-        }
-        if(device->Hrtf)
-        {
-            device->Hrtf_Status = hrtf_status;
-            device->Render_Mode = render_mode;
-            TRACE("HRTF enabled, \"%s\"\n", al_string_get_cstr(device->Hrtf_Name));
-        }
-        else
-        {
-            TRACE("HRTF disabled\n");
-
-            bs2blevel = ((headphones && hrtf_appreq != Hrtf_Disable) ||
-                         (hrtf_appreq == Hrtf_Enable)) ? 5 : 0;
-            if(device->Type != Loopback)
-                ConfigValueInt(al_string_get_cstr(device->DeviceName), NULL, "cf_level", &bs2blevel);
-            if(bs2blevel > 0 && bs2blevel <= 6)
-            {
-                device->Bs2b = al_calloc(16, sizeof(*device->Bs2b));
-                bs2b_set_params(device->Bs2b, bs2blevel, device->Frequency);
-                device->Render_Mode = StereoPair;
-                TRACE("BS2B enabled\n");
-            }
-            else
-            {
-                TRACE("BS2B disabled\n");
-
-                render_mode = NormalRender;
-                if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "stereo-panning", &mode))
-                {
-                    if(strcasecmp(mode, "paired") == 0)
-                        render_mode = StereoPair;
-                    else if(strcasecmp(mode, "uhj") != 0)
-                        ERR("Unexpected stereo-panning: %s\n", mode);
-                }
-                device->Render_Mode = render_mode;
-                if(render_mode == NormalRender)
-                {
-                    device->Uhj_Encoder = al_calloc(16, sizeof(Uhj2Encoder));
-                    TRACE("UHJ enabled\n");
-                }
-                else
-                    TRACE("UHJ disabled\n");
-            }
-        }
-    }
-
-    if(!device->Hrtf && !device->Uhj_Encoder &&
-       GetConfigValueBool(al_string_get_cstr(device->DeviceName), "decoder", "hq-mode", 0))
-    {
-        if(!device->AmbiDecoder)
-            device->AmbiDecoder = bformatdec_alloc();
-    }
-    else
-    {
-        bformatdec_free(device->AmbiDecoder);
-        device->AmbiDecoder = NULL;
-    }
-    if(device->Hrtf)
-        aluInitHrtfPanning(device);
-    else if(device->Uhj_Encoder)
-        aluInitUhjPanning(device);
-    else
-        aluInitPanning(device);
+    InitRenderer(device, hrtf_id, hrtf_appreq, hrtf_userreq);
 
     /* Allocate extra channels for any post-filter output. */
     size = device->Dry.NumChannels * sizeof(device->Dry.Buffer[0]);

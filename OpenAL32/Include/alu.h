@@ -278,11 +278,21 @@ inline ALfloat resample_fir8(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat v
 }
 
 
+enum HrtfRequestMode {
+    Hrtf_Default = 0,
+    Hrtf_Enable = 1,
+    Hrtf_Disable = 2,
+};
+
+
 void aluInitMixer(void);
 
-ALvoid aluInitPanning(ALCdevice *Device);
-ALvoid aluInitHrtfPanning(ALCdevice *device);
-ALvoid aluInitUhjPanning(ALCdevice *device);
+/* aluInitRenderer
+ *
+ * Set up the appropriate panning method and mixing method given the device
+ * properties.
+ */
+void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf_appreq, enum HrtfRequestMode hrtf_userreq);
 
 void aluInitEffectPanning(struct ALeffectslot *slot);
 

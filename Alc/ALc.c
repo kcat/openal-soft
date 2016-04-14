@@ -2132,7 +2132,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         bformatdec_free(device->AmbiDecoder);
         device->AmbiDecoder = NULL;
     }
-    aluInitPanning(device);
+    if(device->Hrtf)
+        aluInitHrtfPanning(device);
+    else if(device->Uhj_Encoder)
+        aluInitUhjPanning(device);
+    else
+        aluInitPanning(device);
 
     /* Allocate extra channels for any post-filter output. */
     size = device->Dry.NumChannels * sizeof(device->Dry.Buffer[0]);

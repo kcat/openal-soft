@@ -472,6 +472,8 @@ struct ALCdevice_struct
     al_string Hrtf_Name;
     const struct Hrtf *Hrtf;
     ALCenum Hrtf_Status;
+
+    /* HRTF filter state for dry buffer content */
     HrtfState Hrtf_State[MAX_OUTPUT_CHANNELS];
     HrtfParams Hrtf_Params[MAX_OUTPUT_CHANNELS];
     ALuint Hrtf_Offset;
@@ -479,11 +481,11 @@ struct ALCdevice_struct
     /* UHJ encoder state */
     struct Uhj2Encoder *Uhj_Encoder;
 
-    // Stereo-to-binaural filter
-    struct bs2b *Bs2b;
-
     /* High quality Ambisonic decoder */
     struct BFormatDec *AmbiDecoder;
+
+    // Stereo-to-binaural filter
+    struct bs2b *Bs2b;
 
     /* Rendering mode. */
     enum RenderMode Render_Mode;

@@ -381,26 +381,18 @@ static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALuint spe
 
 static bool LoadChannelSetup(ALCdevice *device)
 {
-    ChannelMap chanmap[MAX_OUTPUT_CHANNELS];
     ALuint speakermap[MAX_OUTPUT_CHANNELS];
-    const ALfloat *coeff_scale = UnitScale;
-    const char *layout = NULL;
-    ALfloat ambiscale = 1.0f;
-    const char *fname;
+    const char *fname = "";
+    const char *devname;
+    const char *layout;
     AmbDecConf conf;
     ALuint i, j;
-
-    /* Don't use custom decoders with mono or stereo output (stereo is using
-     * UHJ or pair-wise panning, thus ignores the custom coefficients anyway,
-     * and mono would realistically only specify attenuation on the output).
-     */
-    if(device->FmtChans == DevFmtMono || device->FmtChans == DevFmtStereo)
-        return false;
 
     layout = GetChannelLayoutName(device->FmtChans);
     if(!layout) return false;
 
-    if(!ConfigValueStr(al_string_get_cstr(device->DeviceName), "decoder", layout, &fname))
+    devname = al_string_get_cstr(device->DeviceName);
+    if(!ConfigValueStr(devname, "decoder", layout, &fname))
         return false;
 
     ambdec_init(&conf);
@@ -410,192 +402,23 @@ static bool LoadChannelSetup(ALCdevice *device)
         goto fail;
     }
 
-    if(conf.FreqBands != 1)
-        ERR("Basic renderer uses the high-frequency matrix as single-band (xover_freq = %.0fhz)\n",
-            conf.XOverFreq);
+    if(conf.ChanMask > 0xffff)
+    {
+        ERR("Unsupported channel mask 0x%04x (max 0xffff)\n", conf.ChanMask);
+        goto fail;
+    }
 
     if(!MakeSpeakerMap(device, &conf, speakermap))
         goto fail;
 
-    if(conf.ChanMask > 0x1ff)
-        ambiscale = THIRD_ORDER_SCALE;
-    else if(conf.ChanMask > 0xf)
-        ambiscale = SECOND_ORDER_SCALE;
-    else if(conf.ChanMask > 0x1)
-        ambiscale = FIRST_ORDER_SCALE;
-    else
-        ambiscale = 0.0f;
-
-    if(conf.CoeffScale == ADS_SN3D)
-        coeff_scale = SN3D2N3DScale;
-    else if(conf.CoeffScale == ADS_FuMa)
-        coeff_scale = FuMa2N3DScale;
-
-    for(i = 0;i < conf.NumSpeakers;i++)
+    if(device->AmbiDecoder && (conf.ChanMask & ~0x831b) && conf.ChanMask > 0x1ff)
     {
-        ALuint chan = speakermap[i];
-        ALfloat gain;
-        ALuint k = 0;
-
-        for(j = 0;j < MAX_AMBI_COEFFS;j++)
-            chanmap[i].Config[j] = 0.0f;
-
-        chanmap[i].ChanName = device->RealOut.ChannelName[chan];
-        for(j = 0;j < MAX_AMBI_COEFFS;j++)
-        {
-            if(j == 0) gain = conf.HFOrderGain[0];
-            else if(j == 1) gain = conf.HFOrderGain[1];
-            else if(j == 4) gain = conf.HFOrderGain[2];
-            else if(j == 9) gain = conf.HFOrderGain[3];
-            if((conf.ChanMask&(1<<j)))
-                chanmap[i].Config[j] = conf.HFMatrix[i][k++] / coeff_scale[j] * gain;
-        }
+        ERR("Third-order is unsupported for periphonic HQ decoding (mask 0x%04x)\n",
+            conf.ChanMask);
+        bformatdec_free(device->AmbiDecoder);
+        device->AmbiDecoder = NULL;
     }
 
-    SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, conf.NumSpeakers,
-                  &device->Dry.NumChannels, AL_FALSE);
-
-    memset(device->FOAOut.AmbiCoeffs, 0, sizeof(device->FOAOut.AmbiCoeffs));
-    for(i = 0;i < device->Dry.NumChannels;i++)
-    {
-        device->FOAOut.AmbiCoeffs[i][0] = device->Dry.AmbiCoeffs[i][0];
-        for(j = 1;j < 4;j++)
-            device->FOAOut.AmbiCoeffs[i][j] = device->Dry.AmbiCoeffs[i][j] * ambiscale;
-    }
-
-    ambdec_deinit(&conf);
-    return true;
-
-fail:
-    ambdec_deinit(&conf);
-    return false;
-}
-
-ALvoid aluInitPanning(ALCdevice *device)
-{
-    /* NOTE: These decoder coefficients are using FuMa channel ordering and
-     * normalization, since that's what was produced by the Ambisonic Decoder
-     * Toolbox. SetChannelMap will convert them to N3D.
-     */
-    static const ChannelMap MonoCfg[1] = {
-        { FrontCenter, { 1.414213562f } },
-    }, StereoCfg[2] = {
-        { FrontLeft,   { 0.707106781f, 0.0f,  0.5f, 0.0f } },
-        { FrontRight,  { 0.707106781f, 0.0f, -0.5f, 0.0f } },
-    }, QuadCfg[4] = {
-        { FrontLeft,   { 0.353553f,  0.306184f,  0.306184f, 0.0f,  0.0f, 0.0f, 0.0f,  0.000000f,  0.117186f } },
-        { FrontRight,  { 0.353553f,  0.306184f, -0.306184f, 0.0f,  0.0f, 0.0f, 0.0f,  0.000000f, -0.117186f } },
-        { BackLeft,    { 0.353553f, -0.306184f,  0.306184f, 0.0f,  0.0f, 0.0f, 0.0f,  0.000000f, -0.117186f } },
-        { BackRight,   { 0.353553f, -0.306184f, -0.306184f, 0.0f,  0.0f, 0.0f, 0.0f,  0.000000f,  0.117186f } },
-    }, X51SideCfg[5] = {
-        { FrontLeft,   { 0.208954f,  0.199518f,  0.223424f, 0.0f,  0.0f, 0.0f, 0.0f, -0.012543f,  0.144260f } },
-        { FrontRight,  { 0.208950f,  0.199514f, -0.223425f, 0.0f,  0.0f, 0.0f, 0.0f, -0.012544f, -0.144258f } },
-        { FrontCenter, { 0.109403f,  0.168250f, -0.000002f, 0.0f,  0.0f, 0.0f, 0.0f,  0.100431f, -0.000001f } },
-        { SideLeft,    { 0.470934f, -0.346484f,  0.327504f, 0.0f,  0.0f, 0.0f, 0.0f, -0.022188f, -0.041113f } },
-        { SideRight,   { 0.470936f, -0.346480f, -0.327507f, 0.0f,  0.0f, 0.0f, 0.0f, -0.022186f,  0.041114f } },
-    }, X51RearCfg[5] = {
-        { FrontLeft,   { 0.208954f,  0.199518f,  0.223424f, 0.0f,  0.0f, 0.0f, 0.0f, -0.012543f,  0.144260f } },
-        { FrontRight,  { 0.208950f,  0.199514f, -0.223425f, 0.0f,  0.0f, 0.0f, 0.0f, -0.012544f, -0.144258f } },
-        { FrontCenter, { 0.109403f,  0.168250f, -0.000002f, 0.0f,  0.0f, 0.0f, 0.0f,  0.100431f, -0.000001f } },
-        { BackLeft,    { 0.470934f, -0.346484f,  0.327504f, 0.0f,  0.0f, 0.0f, 0.0f, -0.022188f, -0.041113f } },
-        { BackRight,   { 0.470936f, -0.346480f, -0.327507f, 0.0f,  0.0f, 0.0f, 0.0f, -0.022186f,  0.041114f } },
-    }, X61Cfg[6] = {
-        { FrontLeft,   { 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f } },
-        { FrontRight,  { 0.167065f,  0.200583f, -0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068910f } },
-        { FrontCenter, { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f,  0.000000f } },
-        { BackCenter,  { 0.353556f, -0.461940f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.165723f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.000000f } },
-        { SideLeft,    { 0.289151f, -0.081301f,  0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f, -0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f, -0.032897f } },
-        { SideRight,   { 0.289151f, -0.081301f, -0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f,  0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f,  0.032897f } },
-    }, X71Cfg[7] = {
-        { FrontLeft,   { 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f } },
-        { FrontRight,  { 0.167065f,  0.200583f, -0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068910f } },
-        { FrontCenter, { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f,  0.000000f } },
-        { BackLeft,    { 0.224752f, -0.295009f,  0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f, -0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.065799f } },
-        { BackRight,   { 0.224752f, -0.295009f, -0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f,  0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065799f } },
-        { SideLeft,    { 0.224739f,  0.000000f,  0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065795f } },
-        { SideRight,   { 0.224739f,  0.000000f, -0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.065795f } },
-    }, Cube8Cfg[8] = {
-        { UpperFrontLeft,  { 0.176776695f,  0.072168784f,  0.072168784f,  0.072168784f } },
-        { UpperFrontRight, { 0.176776695f,  0.072168784f, -0.072168784f,  0.072168784f } },
-        { UpperBackLeft,   { 0.176776695f, -0.072168784f,  0.072168784f,  0.072168784f } },
-        { UpperBackRight,  { 0.176776695f, -0.072168784f, -0.072168784f,  0.072168784f } },
-        { LowerFrontLeft,  { 0.176776695f,  0.072168784f,  0.072168784f, -0.072168784f } },
-        { LowerFrontRight, { 0.176776695f,  0.072168784f, -0.072168784f, -0.072168784f } },
-        { LowerBackLeft,   { 0.176776695f, -0.072168784f,  0.072168784f, -0.072168784f } },
-        { LowerBackRight,  { 0.176776695f, -0.072168784f, -0.072168784f, -0.072168784f } },
-    }, BFormat2D[3] = {
-        { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f } },
-        { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f } },
-        { Aux2, { 0.0f, 0.0f, 1.0f, 0.0f } },
-    }, BFormat3D[4] = {
-        { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f } },
-        { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f } },
-        { Aux2, { 0.0f, 0.0f, 1.0f, 0.0f } },
-        { Aux3, { 0.0f, 0.0f, 0.0f, 1.0f } },
-    };
-    const ChannelMap *chanmap = NULL;
-    ALfloat ambiscale;
-    size_t count = 0;
-    ALuint i, j;
-
-    memset(device->Dry.AmbiCoeffs, 0, sizeof(device->Dry.AmbiCoeffs));
-    device->Dry.NumChannels = 0;
-
-    if(device->Hrtf)
-    {
-        static const struct {
-            enum Channel Channel;
-            ALfloat Angle;
-            ALfloat Elevation;
-        } CubeInfo[8] = {
-            { UpperFrontLeft,  DEG2RAD( -45.0f), DEG2RAD( 45.0f) },
-            { UpperFrontRight, DEG2RAD(  45.0f), DEG2RAD( 45.0f) },
-            { UpperBackLeft,   DEG2RAD(-135.0f), DEG2RAD( 45.0f) },
-            { UpperBackRight,  DEG2RAD( 135.0f), DEG2RAD( 45.0f) },
-            { LowerFrontLeft,  DEG2RAD( -45.0f), DEG2RAD(-45.0f) },
-            { LowerFrontRight, DEG2RAD(  45.0f), DEG2RAD(-45.0f) },
-            { LowerBackLeft,   DEG2RAD(-135.0f), DEG2RAD(-45.0f) },
-            { LowerBackRight,  DEG2RAD( 135.0f), DEG2RAD(-45.0f) },
-        };
-
-        count = COUNTOF(Cube8Cfg);
-        chanmap = Cube8Cfg;
-
-        for(i = 0;i < count;i++)
-            device->Dry.ChannelName[i] = chanmap[i].ChanName;
-        for(;i < MAX_OUTPUT_CHANNELS;i++)
-            device->Dry.ChannelName[i] = InvalidChannel;
-        SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
-                      &device->Dry.NumChannels, AL_TRUE);
-
-        memcpy(device->FOAOut.AmbiCoeffs, device->Dry.AmbiCoeffs,
-               sizeof(device->FOAOut.AmbiCoeffs));
-
-        for(i = 0;i < device->Dry.NumChannels;i++)
-        {
-            int chan = GetChannelIdxByName(device->Dry, CubeInfo[i].Channel);
-            GetLerpedHrtfCoeffs(device->Hrtf, CubeInfo[i].Elevation, CubeInfo[i].Angle, 1.0f, 1.0f,
-                                device->Hrtf_Params[chan].Coeffs, device->Hrtf_Params[chan].Delay);
-        }
-        return;
-    }
-    if(device->Uhj_Encoder)
-    {
-        count = COUNTOF(BFormat2D);
-        chanmap = BFormat2D;
-
-        for(i = 0;i < count;i++)
-            device->Dry.ChannelName[i] = chanmap[i].ChanName;
-        for(;i < MAX_OUTPUT_CHANNELS;i++)
-            device->Dry.ChannelName[i] = InvalidChannel;
-        SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
-                      &device->Dry.NumChannels, AL_TRUE);
-
-        memcpy(device->FOAOut.AmbiCoeffs, device->Dry.AmbiCoeffs,
-               sizeof(device->FOAOut.AmbiCoeffs));
-
-        return;
-    }
     if(device->AmbiDecoder)
     {
         /* NOTE: This is ACN/N3D ordering and scaling, rather than FuMa. */
@@ -625,54 +448,14 @@ ALvoid aluInitPanning(ALCdevice *device)
             { Aux5, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
             { Aux6, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f } },
         };
-        const char *devname = al_string_get_cstr(device->DeviceName);
-        ALuint speakermap[MAX_OUTPUT_CHANNELS];
-        const char *fname = "";
-        const char *layout;
+        const ChannelMap *chanmap = NULL;
+        const char *devname;
         int decflags = 0;
-        AmbDecConf conf;
-
-        ambdec_init(&conf);
-
-        /* Don't do HQ ambisonic decoding with mono or stereo output. Same
-         * reasons as in LoadChannelSetup.
-         */
-        if(device->FmtChans == DevFmtMono || device->FmtChans == DevFmtStereo)
-            goto ambi_fail;
-
-        layout = GetChannelLayoutName(device->FmtChans);
-        if(!layout) goto ambi_fail;
-
-        if(!ConfigValueStr(devname, "decoder", layout, &fname))
-            goto ambi_fail;
-
-        if(GetConfigValueBool(devname, "decoder", "distance-comp", 1))
-            decflags |= BFDF_DistanceComp;
-
-        if(!ambdec_load(&conf, fname))
-        {
-            ERR("Failed to load %s\n", fname);
-            goto ambi_fail;
-        }
-
-        if(conf.ChanMask > 0xffff)
-        {
-            ERR("Unsupported channel mask 0x%04x (max 0xffff)\n", conf.ChanMask);
-            goto ambi_fail;
-        }
-
-        if(!MakeSpeakerMap(device, &conf, speakermap))
-            goto ambi_fail;
+        size_t count;
 
         if((conf.ChanMask & ~0x831b))
         {
-            if(conf.ChanMask > 0x1ff)
-            {
-                ERR("Third-order is unsupported for periphonic HQ decoding (mask 0x%04x)\n",
-                    conf.ChanMask);
-                goto ambi_fail;
-            }
-            count = (conf.ChanMask > 0xf) ? 9 : 4;
+            count = (conf.ChanMask > 0xf) ? (conf.ChanMask > 0x1ff) ? 16 : 9 : 4;
             chanmap = Ambi3D;
         }
         else
@@ -680,6 +463,10 @@ ALvoid aluInitPanning(ALCdevice *device)
             count = (conf.ChanMask > 0xf) ? (conf.ChanMask > 0x1ff) ? 7 : 5 : 3;
             chanmap = Ambi2D;
         }
+
+        devname = al_string_get_cstr(device->DeviceName);
+        if(GetConfigValueBool(devname, "decoder", "distance-comp", 1))
+            decflags |= BFDF_DistanceComp;
 
         for(i = 0;i < count;i++)
             device->Dry.ChannelName[i] = chanmap[i].ChanName;
@@ -695,7 +482,6 @@ ALvoid aluInitPanning(ALCdevice *device)
         );
         bformatdec_reset(device->AmbiDecoder, &conf, count, device->Frequency,
                          speakermap, decflags);
-        ambdec_deinit(&conf);
 
         if(bformatdec_getOrder(device->AmbiDecoder) < 2)
             memcpy(device->FOAOut.AmbiCoeffs, device->Dry.AmbiCoeffs,
@@ -708,20 +494,162 @@ ALvoid aluInitPanning(ALCdevice *device)
             device->FOAOut.AmbiCoeffs[2][2] = 1.0f;
             device->FOAOut.AmbiCoeffs[3][3] = 1.0f;
         }
-
-        return;
-
-    ambi_fail:
-        ambdec_deinit(&conf);
-        bformatdec_free(device->AmbiDecoder);
-        device->AmbiDecoder = NULL;
     }
+    else
+    {
+        ChannelMap chanmap[MAX_OUTPUT_CHANNELS];
+        const ALfloat *coeff_scale = UnitScale;
+        ALfloat ambiscale = 1.0f;
+
+        for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+            device->Dry.ChannelName[i] = device->RealOut.ChannelName[i];
+
+        if(conf.FreqBands != 1)
+            ERR("Basic renderer uses the high-frequency matrix as single-band (xover_freq = %.0fhz)\n",
+                conf.XOverFreq);
+
+        if(conf.ChanMask > 0x1ff)
+            ambiscale = THIRD_ORDER_SCALE;
+        else if(conf.ChanMask > 0xf)
+            ambiscale = SECOND_ORDER_SCALE;
+        else if(conf.ChanMask > 0x1)
+            ambiscale = FIRST_ORDER_SCALE;
+        else
+            ambiscale = 0.0f;
+
+        if(conf.CoeffScale == ADS_SN3D)
+            coeff_scale = SN3D2N3DScale;
+        else if(conf.CoeffScale == ADS_FuMa)
+            coeff_scale = FuMa2N3DScale;
+
+        for(i = 0;i < conf.NumSpeakers;i++)
+        {
+            ALuint chan = speakermap[i];
+            ALfloat gain;
+            ALuint k = 0;
+
+            for(j = 0;j < MAX_AMBI_COEFFS;j++)
+                chanmap[i].Config[j] = 0.0f;
+
+            chanmap[i].ChanName = device->RealOut.ChannelName[chan];
+            for(j = 0;j < MAX_AMBI_COEFFS;j++)
+            {
+                if(j == 0) gain = conf.HFOrderGain[0];
+                else if(j == 1) gain = conf.HFOrderGain[1];
+                else if(j == 4) gain = conf.HFOrderGain[2];
+                else if(j == 9) gain = conf.HFOrderGain[3];
+                if((conf.ChanMask&(1<<j)))
+                    chanmap[i].Config[j] = conf.HFMatrix[i][k++] / coeff_scale[j] * gain;
+            }
+        }
+
+        SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap,
+                      conf.NumSpeakers, &device->Dry.NumChannels, AL_FALSE);
+
+        memset(device->FOAOut.AmbiCoeffs, 0, sizeof(device->FOAOut.AmbiCoeffs));
+        for(i = 0;i < device->Dry.NumChannels;i++)
+        {
+            device->FOAOut.AmbiCoeffs[i][0] = device->Dry.AmbiCoeffs[i][0];
+            for(j = 1;j < 4;j++)
+                device->FOAOut.AmbiCoeffs[i][j] = device->Dry.AmbiCoeffs[i][j] * ambiscale;
+        }
+    }
+
+    ambdec_deinit(&conf);
+    return true;
+
+fail:
+    ambdec_deinit(&conf);
+    return false;
+}
+
+
+/* NOTE: These decoder coefficients are using FuMa channel ordering and
+ * normalization, since that's what was produced by the Ambisonic Decoder
+ * Toolbox. SetChannelMap will convert them to N3D.
+ */
+static const ChannelMap MonoCfg[1] = {
+    { FrontCenter, { 1.414213562f } },
+}, StereoCfg[2] = {
+    { FrontLeft,   { 0.707106781f, 0.0f,  0.5f, 0.0f } },
+    { FrontRight,  { 0.707106781f, 0.0f, -0.5f, 0.0f } },
+}, QuadCfg[4] = {
+    { FrontLeft,   { 0.353553f,  0.306184f,  0.306184f, 0.0f,  0.0f, 0.0f, 0.0f,  0.000000f,  0.117186f } },
+    { FrontRight,  { 0.353553f,  0.306184f, -0.306184f, 0.0f,  0.0f, 0.0f, 0.0f,  0.000000f, -0.117186f } },
+    { BackLeft,    { 0.353553f, -0.306184f,  0.306184f, 0.0f,  0.0f, 0.0f, 0.0f,  0.000000f, -0.117186f } },
+    { BackRight,   { 0.353553f, -0.306184f, -0.306184f, 0.0f,  0.0f, 0.0f, 0.0f,  0.000000f,  0.117186f } },
+}, X51SideCfg[5] = {
+    { FrontLeft,   { 0.208954f,  0.199518f,  0.223424f, 0.0f,  0.0f, 0.0f, 0.0f, -0.012543f,  0.144260f } },
+    { FrontRight,  { 0.208950f,  0.199514f, -0.223425f, 0.0f,  0.0f, 0.0f, 0.0f, -0.012544f, -0.144258f } },
+    { FrontCenter, { 0.109403f,  0.168250f, -0.000002f, 0.0f,  0.0f, 0.0f, 0.0f,  0.100431f, -0.000001f } },
+    { SideLeft,    { 0.470934f, -0.346484f,  0.327504f, 0.0f,  0.0f, 0.0f, 0.0f, -0.022188f, -0.041113f } },
+    { SideRight,   { 0.470936f, -0.346480f, -0.327507f, 0.0f,  0.0f, 0.0f, 0.0f, -0.022186f,  0.041114f } },
+}, X51RearCfg[5] = {
+    { FrontLeft,   { 0.208954f,  0.199518f,  0.223424f, 0.0f,  0.0f, 0.0f, 0.0f, -0.012543f,  0.144260f } },
+    { FrontRight,  { 0.208950f,  0.199514f, -0.223425f, 0.0f,  0.0f, 0.0f, 0.0f, -0.012544f, -0.144258f } },
+    { FrontCenter, { 0.109403f,  0.168250f, -0.000002f, 0.0f,  0.0f, 0.0f, 0.0f,  0.100431f, -0.000001f } },
+    { BackLeft,    { 0.470934f, -0.346484f,  0.327504f, 0.0f,  0.0f, 0.0f, 0.0f, -0.022188f, -0.041113f } },
+    { BackRight,   { 0.470936f, -0.346480f, -0.327507f, 0.0f,  0.0f, 0.0f, 0.0f, -0.022186f,  0.041114f } },
+}, X61Cfg[6] = {
+    { FrontLeft,   { 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f } },
+    { FrontRight,  { 0.167065f,  0.200583f, -0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068910f } },
+    { FrontCenter, { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f,  0.000000f } },
+    { BackCenter,  { 0.353556f, -0.461940f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.165723f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.000000f } },
+    { SideLeft,    { 0.289151f, -0.081301f,  0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f, -0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f, -0.032897f } },
+    { SideRight,   { 0.289151f, -0.081301f, -0.401292f, 0.0f, 0.0f, 0.0f, 0.0f, -0.188208f,  0.071420f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.010099f,  0.032897f } },
+}, X71Cfg[7] = {
+    { FrontLeft,   { 0.167065f,  0.200583f,  0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f,  0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f,  0.068910f } },
+    { FrontRight,  { 0.167065f,  0.200583f, -0.172695f, 0.0f, 0.0f, 0.0f, 0.0f,  0.029855f, -0.186407f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.039241f, -0.068910f } },
+    { FrontCenter, { 0.109403f,  0.179490f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f,  0.142031f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.072024f,  0.000000f } },
+    { BackLeft,    { 0.224752f, -0.295009f,  0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f, -0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.065799f } },
+    { BackRight,   { 0.224752f, -0.295009f, -0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f,  0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065799f } },
+    { SideLeft,    { 0.224739f,  0.000000f,  0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065795f } },
+    { SideRight,   { 0.224739f,  0.000000f, -0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.065795f } },
+}, Cube8Cfg[8] = {
+    { UpperFrontLeft,  { 0.176776695f,  0.072168784f,  0.072168784f,  0.072168784f } },
+    { UpperFrontRight, { 0.176776695f,  0.072168784f, -0.072168784f,  0.072168784f } },
+    { UpperBackLeft,   { 0.176776695f, -0.072168784f,  0.072168784f,  0.072168784f } },
+    { UpperBackRight,  { 0.176776695f, -0.072168784f, -0.072168784f,  0.072168784f } },
+    { LowerFrontLeft,  { 0.176776695f,  0.072168784f,  0.072168784f, -0.072168784f } },
+    { LowerFrontRight, { 0.176776695f,  0.072168784f, -0.072168784f, -0.072168784f } },
+    { LowerBackLeft,   { 0.176776695f, -0.072168784f,  0.072168784f, -0.072168784f } },
+    { LowerBackRight,  { 0.176776695f, -0.072168784f, -0.072168784f, -0.072168784f } },
+}, BFormat2D[3] = {
+    { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f } },
+    { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f } },
+    { Aux2, { 0.0f, 0.0f, 1.0f, 0.0f } },
+}, BFormat3D[4] = {
+    { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f } },
+    { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f } },
+    { Aux2, { 0.0f, 0.0f, 1.0f, 0.0f } },
+    { Aux3, { 0.0f, 0.0f, 0.0f, 1.0f } },
+};
+
+ALvoid aluInitPanning(ALCdevice *device)
+{
+    const ChannelMap *chanmap = NULL;
+    ALfloat ambiscale;
+    size_t count = 0;
+    ALuint i, j;
+
+    memset(device->Dry.AmbiCoeffs, 0, sizeof(device->Dry.AmbiCoeffs));
+    device->Dry.NumChannels = 0;
+
+    /* Don't use custom decoders or HQ decoding with mono or stereo output.
+     * Mono only has one channel, and stereo doesn't have enough speakers to
+     * really be specified this way.
+     */
+    if(device->FmtChans != DevFmtMono && device->FmtChans != DevFmtStereo)
+    {
+        if(LoadChannelSetup(device))
+            return;
+    }
+
+    bformatdec_free(device->AmbiDecoder);
+    device->AmbiDecoder = NULL;
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
         device->Dry.ChannelName[i] = device->RealOut.ChannelName[i];
-
-    if(LoadChannelSetup(device))
-        return;
 
     ambiscale = 1.0f;
     switch(device->FmtChans)
@@ -785,6 +713,67 @@ ALvoid aluInitPanning(ALCdevice *device)
         for(j = 1;j < 4;j++)
             device->FOAOut.AmbiCoeffs[i][j] = device->Dry.AmbiCoeffs[i][j] * ambiscale;
     }
+}
+
+ALvoid aluInitHrtfPanning(ALCdevice *device)
+{
+    static const struct {
+        enum Channel Channel;
+        ALfloat Angle;
+        ALfloat Elevation;
+    } CubeInfo[8] = {
+        { UpperFrontLeft,  DEG2RAD( -45.0f), DEG2RAD( 45.0f) },
+        { UpperFrontRight, DEG2RAD(  45.0f), DEG2RAD( 45.0f) },
+        { UpperBackLeft,   DEG2RAD(-135.0f), DEG2RAD( 45.0f) },
+        { UpperBackRight,  DEG2RAD( 135.0f), DEG2RAD( 45.0f) },
+        { LowerFrontLeft,  DEG2RAD( -45.0f), DEG2RAD(-45.0f) },
+        { LowerFrontRight, DEG2RAD(  45.0f), DEG2RAD(-45.0f) },
+        { LowerBackLeft,   DEG2RAD(-135.0f), DEG2RAD(-45.0f) },
+        { LowerBackRight,  DEG2RAD( 135.0f), DEG2RAD(-45.0f) },
+    };
+    const ChannelMap *chanmap = Cube8Cfg;
+    size_t count = COUNTOF(Cube8Cfg);
+    ALuint i;
+
+    memset(device->Dry.AmbiCoeffs, 0, sizeof(device->Dry.AmbiCoeffs));
+    device->Dry.NumChannels = 0;
+
+    for(i = 0;i < count;i++)
+        device->Dry.ChannelName[i] = chanmap[i].ChanName;
+    for(;i < MAX_OUTPUT_CHANNELS;i++)
+        device->Dry.ChannelName[i] = InvalidChannel;
+    SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
+                  &device->Dry.NumChannels, AL_TRUE);
+
+    memcpy(device->FOAOut.AmbiCoeffs, device->Dry.AmbiCoeffs,
+            sizeof(device->FOAOut.AmbiCoeffs));
+
+    for(i = 0;i < device->Dry.NumChannels;i++)
+    {
+        int chan = GetChannelIdxByName(device->Dry, CubeInfo[i].Channel);
+        GetLerpedHrtfCoeffs(device->Hrtf, CubeInfo[i].Elevation, CubeInfo[i].Angle, 1.0f, 1.0f,
+                            device->Hrtf_Params[chan].Coeffs, device->Hrtf_Params[chan].Delay);
+    }
+}
+
+ALvoid aluInitUhjPanning(ALCdevice *device)
+{
+    const ChannelMap *chanmap = BFormat2D;
+    size_t count = COUNTOF(BFormat2D);
+    ALuint i;
+
+    memset(device->Dry.AmbiCoeffs, 0, sizeof(device->Dry.AmbiCoeffs));
+    device->Dry.NumChannels = 0;
+
+    for(i = 0;i < count;i++)
+        device->Dry.ChannelName[i] = chanmap[i].ChanName;
+    for(;i < MAX_OUTPUT_CHANNELS;i++)
+        device->Dry.ChannelName[i] = InvalidChannel;
+    SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
+                  &device->Dry.NumChannels, AL_TRUE);
+
+    memcpy(device->FOAOut.AmbiCoeffs, device->Dry.AmbiCoeffs,
+           sizeof(device->FOAOut.AmbiCoeffs));
 }
 
 void aluInitEffectPanning(ALeffectslot *slot)

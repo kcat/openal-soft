@@ -551,9 +551,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
 
         if(DirectChannels)
         {
-            /* Skip the virtual channels and write FrontLeft and FrontRight
-             * inputs to the real output.
-             */
+            /* Skip the virtual channels and write inputs to the real output. */
             voice->Direct.OutBuffer = Device->RealOut.Buffer;
             voice->Direct.OutChannels = Device->RealOut.NumChannels;
             for(c = 0;c < num_channels;c++)

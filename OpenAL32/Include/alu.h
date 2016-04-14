@@ -281,6 +281,8 @@ inline ALfloat resample_fir8(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat v
 void aluInitMixer(void);
 
 ALvoid aluInitPanning(ALCdevice *Device);
+ALvoid aluInitHrtfPanning(ALCdevice *device);
+ALvoid aluInitUhjPanning(ALCdevice *device);
 
 void aluInitEffectPanning(struct ALeffectslot *slot);
 

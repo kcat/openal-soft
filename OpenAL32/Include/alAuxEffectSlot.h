@@ -94,8 +94,8 @@ typedef struct ALeffectslot {
      * * Channel 3 is OpenAL -Z
      * Consequently, effects that only want to work with mono input can use
      * channel 0 by itself. Effects that want multichannel can process the
-     * ambisonics signal and create a B-Format pan (ComputeBFormatGains) for
-     * the device output.
+     * ambisonics signal and make a B-Format pan (ComputeFirstOrderGains) for
+     * first-order device output (FOAOut).
      */
     alignas(16) ALfloat WetBuffer[MAX_EFFECT_CHANNELS][BUFFERSIZE];
 } ALeffectslot;

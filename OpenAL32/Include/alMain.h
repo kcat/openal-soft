@@ -407,6 +407,10 @@ enum RenderMode {
 #define MAX_AMBI_COEFFS ((MAX_AMBI_ORDER+1) * (MAX_AMBI_ORDER+1))
 
 typedef ALfloat ChannelConfig[MAX_AMBI_COEFFS];
+typedef struct BFChannelConfig {
+    ALfloat Scale;
+    ALuint Index;
+} BFChannelConfig;
 
 
 #define HRTF_HISTORY_BITS   (6)

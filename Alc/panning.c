@@ -179,6 +179,16 @@ void ComputePanningGains(const ChannelConfig *chancoeffs, ALuint numchans, const
         gains[i] = 0.0f;
 }
 
+void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALuint numchans, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+{
+    ALuint i;
+
+    for(i = 0;i < numchans;i++)
+        gains[i] = chanmap[i].Scale * coeffs[chanmap[i].Index] * ingain;
+    for(;i < MAX_OUTPUT_CHANNELS;i++)
+        gains[i] = 0.0f;
+}
+
 void ComputeFirstOrderGains(const ChannelConfig *chancoeffs, ALuint numchans, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     ALuint i, j;
@@ -190,6 +200,16 @@ void ComputeFirstOrderGains(const ChannelConfig *chancoeffs, ALuint numchans, co
             gain += chancoeffs[i][j] * mtx[j];
         gains[i] = gain * ingain;
     }
+    for(;i < MAX_OUTPUT_CHANNELS;i++)
+        gains[i] = 0.0f;
+}
+
+void ComputeFirstOrderGainsBF(const BFChannelConfig *chanmap, ALuint numchans, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+{
+    ALuint i;
+
+    for(i = 0;i < numchans;i++)
+        gains[i] = chanmap[i].Scale * mtx[chanmap[i].Index] * ingain;
     for(;i < MAX_OUTPUT_CHANNELS;i++)
         gains[i] = 0.0f;
 }
@@ -936,19 +956,15 @@ no_hrtf:
 
 void aluInitEffectPanning(ALeffectslot *slot)
 {
-    static const ChannelMap FirstOrderN3D[4] = {
-        { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f } },
-        { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f } },
-        { Aux2, { 0.0f, 0.0f, 1.0f, 0.0f } },
-        { Aux3, { 0.0f, 0.0f, 0.0f, 1.0f } },
-    };
-    static const enum Channel AmbiChannels[MAX_OUTPUT_CHANNELS] = {
-        Aux0, Aux1, Aux2, Aux3, InvalidChannel
-    };
+    ALuint i;
 
-    memset(slot->AmbiCoeffs, 0, sizeof(slot->AmbiCoeffs));
+    memset(slot->ChanMap, 0, sizeof(slot->ChanMap));
     slot->NumChannels = 0;
 
-    SetChannelMap(AmbiChannels, slot->AmbiCoeffs, FirstOrderN3D, COUNTOF(FirstOrderN3D),
-                  &slot->NumChannels, AL_FALSE);
+    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
+    {
+        slot->ChanMap[i].Scale = 1.0f;
+        slot->ChanMap[i].Index = i;
+    }
+    slot->NumChannels = i;
 }

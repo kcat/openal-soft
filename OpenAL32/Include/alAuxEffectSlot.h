@@ -86,7 +86,7 @@ typedef struct ALeffectslot {
     ALuint id;
 
     ALuint NumChannels;
-    ChannelConfig AmbiCoeffs[MAX_EFFECT_CHANNELS];
+    BFChannelConfig ChanMap[MAX_EFFECT_CHANNELS];
     /* Wet buffer configuration is ACN channel order with N3D scaling:
      * * Channel 0 is the unattenuated mono signal.
      * * Channel 1 is OpenAL -X

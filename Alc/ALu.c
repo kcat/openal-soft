@@ -537,8 +537,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                 for(c = 0;c < num_channels;c++)
                 {
                     const ALeffectslot *Slot = SendSlots[i];
-                    ComputeFirstOrderGains(Slot->AmbiCoeffs, Slot->NumChannels, matrix.m[c],
-                                           WetGain[i], voice->Send[i].Gains[c].Target);
+                    ComputeFirstOrderGainsBF(Slot->ChanMap, Slot->NumChannels, matrix.m[c],
+                                             WetGain[i], voice->Send[i].Gains[c].Target);
                 }
             }
         }
@@ -579,8 +579,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                     else
                     {
                         const ALeffectslot *Slot = SendSlots[i];
-                        ComputePanningGains(Slot->AmbiCoeffs, Slot->NumChannels, coeffs,
-                                            WetGain[i], voice->Send[i].Gains[c].Target);
+                        ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, coeffs,
+                                              WetGain[i], voice->Send[i].Gains[c].Target);
                     }
                 }
             }
@@ -636,8 +636,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                     else
                     {
                         const ALeffectslot *Slot = SendSlots[i];
-                        ComputePanningGains(Slot->AmbiCoeffs, Slot->NumChannels, coeffs,
-                                            WetGain[i], voice->Send[i].Gains[c].Target);
+                        ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, coeffs,
+                                              WetGain[i], voice->Send[i].Gains[c].Target);
                     }
                 }
             }
@@ -697,8 +697,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                     else
                     {
                         const ALeffectslot *Slot = SendSlots[i];
-                        ComputePanningGains(Slot->AmbiCoeffs, Slot->NumChannels, coeffs,
-                                            WetGain[i], voice->Send[i].Gains[c].Target);
+                        ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, coeffs,
+                                              WetGain[i], voice->Send[i].Gains[c].Target);
                     }
                 }
             }
@@ -1136,8 +1136,8 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             else
             {
                 const ALeffectslot *Slot = SendSlots[i];
-                ComputePanningGains(Slot->AmbiCoeffs, Slot->NumChannels, coeffs,
-                                    WetGain[i], voice->Send[i].Gains[0].Target);
+                ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, coeffs,
+                                      WetGain[i], voice->Send[i].Gains[0].Target);
             }
         }
 
@@ -1198,8 +1198,8 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             else
             {
                 const ALeffectslot *Slot = SendSlots[i];
-                ComputePanningGains(Slot->AmbiCoeffs, Slot->NumChannels, coeffs,
-                                    WetGain[i], voice->Send[i].Gains[0].Target);
+                ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, coeffs,
+                                      WetGain[i], voice->Send[i].Gains[0].Target);
             }
         }
 

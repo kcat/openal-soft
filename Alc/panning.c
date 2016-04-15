@@ -644,7 +644,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
 
     if((conf->ChanMask & ~0x831b))
     {
-        count = (conf->ChanMask > 0xf) ? (conf->ChanMask > 0x1ff) ? 16 : 9 : 4;
+        count = (conf->ChanMask > 0xf) ? 9 : 4;
         chanmap = Ambi3D;
     }
     else
@@ -662,7 +662,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
     for(;i < MAX_OUTPUT_CHANNELS;i++)
         device->Dry.ChannelName[i] = InvalidChannel;
     SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
-                    &device->Dry.NumChannels, AL_FALSE);
+                  &device->Dry.NumChannels, AL_FALSE);
 
     TRACE("Enabling %s-band %s-order%s ambisonic decoder\n",
         (conf->FreqBands == 1) ? "single" : "dual",

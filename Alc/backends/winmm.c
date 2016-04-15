@@ -83,7 +83,7 @@ static void ProbePlaybackDevices(void)
 
 #define MATCH_ENTRY(i) (al_string_cmp(dname, *(i)) == 0)
                 VECTOR_FIND_IF(iter, const al_string, PlaybackDevices, MATCH_ENTRY);
-                if(iter == VECTOR_ITER_END(PlaybackDevices)) break;
+                if(iter == VECTOR_END(PlaybackDevices)) break;
 #undef MATCH_ENTRY
             }
 
@@ -126,7 +126,7 @@ static void ProbeCaptureDevices(void)
 
 #define MATCH_ENTRY(i) (al_string_cmp(dname, *(i)) == 0)
                 VECTOR_FIND_IF(iter, const al_string, CaptureDevices, MATCH_ENTRY);
-                if(iter == VECTOR_ITER_END(CaptureDevices)) break;
+                if(iter == VECTOR_END(CaptureDevices)) break;
 #undef MATCH_ENTRY
             }
 
@@ -258,11 +258,11 @@ static ALCenum ALCwinmmPlayback_open(ALCwinmmPlayback *self, const ALCchar *devi
 #define MATCH_DEVNAME(iter) (!al_string_empty(*(iter)) && \
                              (!deviceName || al_string_cmp_cstr(*(iter), deviceName) == 0))
     VECTOR_FIND_IF(iter, const al_string, PlaybackDevices, MATCH_DEVNAME);
-    if(iter == VECTOR_ITER_END(PlaybackDevices))
+    if(iter == VECTOR_END(PlaybackDevices))
         return ALC_INVALID_VALUE;
 #undef MATCH_DEVNAME
 
-    DeviceID = (UINT)(iter - VECTOR_ITER_BEGIN(PlaybackDevices));
+    DeviceID = (UINT)(iter - VECTOR_BEGIN(PlaybackDevices));
 
 retry_open:
     memset(&self->Format, 0, sizeof(WAVEFORMATEX));
@@ -544,11 +544,11 @@ static ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *name)
     // Find the Device ID matching the deviceName if valid
 #define MATCH_DEVNAME(iter) (!al_string_empty(*(iter)) &&  (!name || al_string_cmp_cstr(*iter, name) == 0))
     VECTOR_FIND_IF(iter, const al_string, CaptureDevices, MATCH_DEVNAME);
-    if(iter == VECTOR_ITER_END(CaptureDevices))
+    if(iter == VECTOR_END(CaptureDevices))
         return ALC_INVALID_VALUE;
 #undef MATCH_DEVNAME
 
-    DeviceID = (UINT)(iter - VECTOR_ITER_BEGIN(CaptureDevices));
+    DeviceID = (UINT)(iter - VECTOR_BEGIN(CaptureDevices));
 
     switch(device->FmtChans)
     {

@@ -237,16 +237,13 @@ static vector_DevMap CaptureDevices;
 
 static void clear_devlist(vector_DevMap *devlist)
 {
-    DevMap *iter, *end;
-
-    iter = VECTOR_ITER_BEGIN(*devlist);
-    end = VECTOR_ITER_END(*devlist);
-    for(;iter != end;iter++)
-    {
-        AL_STRING_DEINIT(iter->name);
-        AL_STRING_DEINIT(iter->device_name);
-    }
+#define FREE_DEV(i) do {                                                      \
+    AL_STRING_DEINIT((i)->name);                                              \
+    AL_STRING_DEINIT((i)->device_name);                                       \
+} while(0)
+    VECTOR_FOR_EACH(DevMap, *devlist, FREE_DEV);
     VECTOR_RESIZE(*devlist, 0);
+#undef FREE_DEV
 }
 
 
@@ -635,7 +632,7 @@ static ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name)
 #define MATCH_NAME(i)  (al_string_cmp_cstr((i)->name, name) == 0)
         VECTOR_FIND_IF(iter, const DevMap, PlaybackDevices, MATCH_NAME);
 #undef MATCH_NAME
-        if(iter == VECTOR_ITER_END(PlaybackDevices))
+        if(iter == VECTOR_END(PlaybackDevices))
             return ALC_INVALID_VALUE;
         driver = al_string_get_cstr(iter->device_name);
     }
@@ -969,7 +966,7 @@ static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
 #define MATCH_NAME(i)  (al_string_cmp_cstr((i)->name, name) == 0)
         VECTOR_FIND_IF(iter, const DevMap, CaptureDevices, MATCH_NAME);
 #undef MATCH_NAME
-        if(iter == VECTOR_ITER_END(CaptureDevices))
+        if(iter == VECTOR_END(CaptureDevices))
             return ALC_INVALID_VALUE;
         driver = al_string_get_cstr(iter->device_name);
     }

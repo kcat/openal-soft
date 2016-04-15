@@ -456,7 +456,7 @@ static void DirectorySearch(const char *path, const char *ext, vector_al_string 
         FindClose(hdl);
 
         if(VECTOR_SIZE(*results) > base)
-            qsort(VECTOR_ITER_BEGIN(*results)+base, VECTOR_SIZE(*results)-base,
+            qsort(VECTOR_BEGIN(*results)+base, VECTOR_SIZE(*results)-base,
                     sizeof(VECTOR_FRONT(*results)), StringSortCompare);
     }
 
@@ -501,7 +501,7 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
             if(is_slash(VECTOR_BACK(path)))
             {
                 VECTOR_POP_BACK(path);
-                *VECTOR_ITER_END(path) = 0;
+                *VECTOR_END(path) = 0;
             }
         }
         else if(!(cwdbuf=_wgetcwd(NULL, 0)))
@@ -512,7 +512,7 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
             if(is_slash(VECTOR_BACK(path)))
             {
                 VECTOR_POP_BACK(path);
-                *VECTOR_ITER_END(path) = 0;
+                *VECTOR_END(path) = 0;
             }
             free(cwdbuf);
         }
@@ -629,8 +629,8 @@ static void DirectorySearch(const char *path, const char *ext, vector_al_string 
         closedir(dir);
 
         if(VECTOR_SIZE(*results) > base)
-            qsort(VECTOR_ITER_BEGIN(*results)+base, VECTOR_SIZE(*results)-base,
-                    sizeof(VECTOR_FRONT(*results)), StringSortCompare);
+            qsort(VECTOR_BEGIN(*results)+base, VECTOR_SIZE(*results)-base,
+                  sizeof(VECTOR_FRONT(*results)), StringSortCompare);
     }
 }
 
@@ -673,7 +673,7 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
             if(VECTOR_BACK(path) == '/')
             {
                 VECTOR_POP_BACK(path);
-                *VECTOR_ITER_END(path) = 0;
+                *VECTOR_END(path) = 0;
             }
             al_string_append_cstr(&path, "/.local/share/");
             al_string_append_cstr(&path, subdir);
@@ -826,7 +826,7 @@ void al_string_clear(al_string *str)
          */
         VECTOR_RESERVE(*str, 1);
         VECTOR_RESIZE(*str, 0);
-        *VECTOR_ITER_END(*str) = 0;
+        *VECTOR_END(*str) = 0;
     }
 }
 
@@ -858,8 +858,8 @@ void al_string_copy(al_string *str, const_al_string from)
     size_t len = al_string_length(from);
     VECTOR_RESERVE(*str, len+1);
     VECTOR_RESIZE(*str, 0);
-    VECTOR_INSERT(*str, VECTOR_ITER_END(*str), VECTOR_ITER_BEGIN(from), VECTOR_ITER_BEGIN(from)+len);
-    *VECTOR_ITER_END(*str) = 0;
+    VECTOR_INSERT(*str, VECTOR_END(*str), VECTOR_BEGIN(from), VECTOR_BEGIN(from)+len);
+    *VECTOR_END(*str) = 0;
 }
 
 void al_string_copy_cstr(al_string *str, const al_string_char_type *from)
@@ -867,8 +867,8 @@ void al_string_copy_cstr(al_string *str, const al_string_char_type *from)
     size_t len = strlen(from);
     VECTOR_RESERVE(*str, len+1);
     VECTOR_RESIZE(*str, 0);
-    VECTOR_INSERT(*str, VECTOR_ITER_END(*str), from, from+len);
-    *VECTOR_ITER_END(*str) = 0;
+    VECTOR_INSERT(*str, VECTOR_END(*str), from, from+len);
+    *VECTOR_END(*str) = 0;
 }
 
 void al_string_copy_range(al_string *str, const al_string_char_type *from, const al_string_char_type *to)
@@ -876,15 +876,15 @@ void al_string_copy_range(al_string *str, const al_string_char_type *from, const
     size_t len = to - from;
     VECTOR_RESERVE(*str, len+1);
     VECTOR_RESIZE(*str, 0);
-    VECTOR_INSERT(*str, VECTOR_ITER_END(*str), from, to);
-    *VECTOR_ITER_END(*str) = 0;
+    VECTOR_INSERT(*str, VECTOR_END(*str), from, to);
+    *VECTOR_END(*str) = 0;
 }
 
 void al_string_append_char(al_string *str, const al_string_char_type c)
 {
     VECTOR_RESERVE(*str, al_string_length(*str)+2);
     VECTOR_PUSH_BACK(*str, c);
-    *VECTOR_ITER_END(*str) = 0;
+    *VECTOR_END(*str) = 0;
 }
 
 void al_string_append_cstr(al_string *str, const al_string_char_type *from)
@@ -893,8 +893,8 @@ void al_string_append_cstr(al_string *str, const al_string_char_type *from)
     if(len != 0)
     {
         VECTOR_RESERVE(*str, al_string_length(*str)+len+1);
-        VECTOR_INSERT(*str, VECTOR_ITER_END(*str), from, from+len);
-        *VECTOR_ITER_END(*str) = 0;
+        VECTOR_INSERT(*str, VECTOR_END(*str), from, from+len);
+        *VECTOR_END(*str) = 0;
     }
 }
 
@@ -903,8 +903,8 @@ void al_string_append_range(al_string *str, const al_string_char_type *from, con
     if(to != from)
     {
         VECTOR_RESERVE(*str, al_string_length(*str)+(to-from)+1);
-        VECTOR_INSERT(*str, VECTOR_ITER_END(*str), from, to);
-        *VECTOR_ITER_END(*str) = 0;
+        VECTOR_INSERT(*str, VECTOR_END(*str), from, to);
+        *VECTOR_END(*str) = 0;
     }
 }
 
@@ -917,7 +917,7 @@ void al_string_copy_wcstr(al_string *str, const wchar_t *from)
         VECTOR_RESERVE(*str, len);
         VECTOR_RESIZE(*str, len-1);
         WideCharToMultiByte(CP_UTF8, 0, from, -1, &VECTOR_FRONT(*str), len, NULL, NULL);
-        *VECTOR_ITER_END(*str) = 0;
+        *VECTOR_END(*str) = 0;
     }
 }
 
@@ -930,7 +930,7 @@ void al_string_append_wcstr(al_string *str, const wchar_t *from)
         VECTOR_RESERVE(*str, strlen+len);
         VECTOR_RESIZE(*str, strlen+len-1);
         WideCharToMultiByte(CP_UTF8, 0, from, -1, &VECTOR_FRONT(*str) + strlen, len, NULL, NULL);
-        *VECTOR_ITER_END(*str) = 0;
+        *VECTOR_END(*str) = 0;
     }
 }
 
@@ -943,7 +943,7 @@ void al_string_append_wrange(al_string *str, const wchar_t *from, const wchar_t 
         VECTOR_RESERVE(*str, strlen+len+1);
         VECTOR_RESIZE(*str, strlen+len);
         WideCharToMultiByte(CP_UTF8, 0, from, (int)(to-from), &VECTOR_FRONT(*str) + strlen, len+1, NULL, NULL);
-        *VECTOR_ITER_END(*str) = 0;
+        *VECTOR_END(*str) = 0;
     }
 }
 #endif

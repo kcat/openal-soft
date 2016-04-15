@@ -39,8 +39,8 @@ ALboolean vector_resize(char *ptr, size_t base_size, size_t obj_size, size_t obj
 #define VECTOR_CAPACITY(_x) ((_x) ? (_x)->Capacity : 0)
 #define VECTOR_SIZE(_x)     ((_x) ? (_x)->Size : 0)
 
-#define VECTOR_ITER_BEGIN(_x) ((_x) ? (_x)->Data + 0 : NULL)
-#define VECTOR_ITER_END(_x)   ((_x) ? (_x)->Data + (_x)->Size : NULL)
+#define VECTOR_BEGIN(_x) ((_x) ? (_x)->Data + 0 : NULL)
+#define VECTOR_END(_x)   ((_x) ? (_x)->Data + (_x)->Size : NULL)
 
 ALboolean vector_insert(char *ptr, size_t base_size, size_t obj_size, void *ins_pos, const void *datstart, const void *datend);
 #ifdef __GNUC__
@@ -67,22 +67,22 @@ ALboolean vector_insert(char *ptr, size_t base_size, size_t obj_size, void *ins_
 #define VECTOR_ELEM(_x, _o) ((_x)->Data[(_o)])
 
 #define VECTOR_FOR_EACH(_t, _x, _f)  do {                                     \
-    _t *_iter = VECTOR_ITER_BEGIN((_x));                                      \
-    _t *_end = VECTOR_ITER_END((_x));                                         \
+    _t *_iter = VECTOR_BEGIN((_x));                                           \
+    _t *_end = VECTOR_END((_x));                                              \
     for(;_iter != _end;++_iter)                                               \
         _f(_iter);                                                            \
 } while(0)
 
 #define VECTOR_FOR_EACH_PARAMS(_t, _x, _f, ...)  do {                         \
-    _t *_iter = VECTOR_ITER_BEGIN((_x));                                      \
-    _t *_end = VECTOR_ITER_END((_x));                                         \
+    _t *_iter = VECTOR_BEGIN((_x));                                           \
+    _t *_end = VECTOR_END((_x));                                              \
     for(;_iter != _end;++_iter)                                               \
         _f(__VA_ARGS__, _iter);                                               \
 } while(0)
 
 #define VECTOR_FIND_IF(_i, _t, _x, _f)  do {                                  \
-    _t *_iter = VECTOR_ITER_BEGIN((_x));                                      \
-    _t *_end = VECTOR_ITER_END((_x));                                         \
+    _t *_iter = VECTOR_BEGIN((_x));                                           \
+    _t *_end = VECTOR_END((_x));                                              \
     for(;_iter != _end;++_iter)                                               \
     {                                                                         \
         if(_f(_iter))                                                         \
@@ -92,8 +92,8 @@ ALboolean vector_insert(char *ptr, size_t base_size, size_t obj_size, void *ins_
 } while(0)
 
 #define VECTOR_FIND_IF_PARMS(_i, _t, _x, _f, ...)  do {                       \
-    _t *_iter = VECTOR_ITER_BEGIN((_x));                                      \
-    _t *_end = VECTOR_ITER_END((_x));                                         \
+    _t *_iter = VECTOR_BEGIN((_x));                                           \
+    _t *_end = VECTOR_END((_x));                                              \
     for(;_iter != _end;++_iter)                                               \
     {                                                                         \
         if(_f(__VA_ARGS__, _iter))                                            \

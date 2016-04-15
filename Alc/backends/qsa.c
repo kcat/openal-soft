@@ -277,7 +277,7 @@ static ALCenum qsa_open_playback(ALCdevice* device, const ALCchar* deviceName)
 #define MATCH_DEVNAME(iter) ((iter)->name && strcmp(deviceName, (iter)->name)==0)
         VECTOR_FIND_IF(iter, const DevMap, DeviceNameMap, MATCH_DEVNAME);
 #undef MATCH_DEVNAME
-        if(iter == VECTOR_ITER_END(DeviceNameMap))
+        if(iter == VECTOR_END(DeviceNameMap))
         {
             free(data);
             return ALC_INVALID_DEVICE;
@@ -624,7 +624,7 @@ static ALCenum qsa_open_capture(ALCdevice* device, const ALCchar* deviceName)
 #define MATCH_DEVNAME(iter) ((iter)->name && strcmp(deviceName, (iter)->name)==0)
         VECTOR_FIND_IF(iter, const DevMap, CaptureNameMap, MATCH_DEVNAME);
 #undef MATCH_DEVNAME
-        if(iter == VECTOR_ITER_END(CaptureNameMap))
+        if(iter == VECTOR_END(CaptureNameMap))
         {
             free(data);
             return ALC_INVALID_DEVICE;

@@ -156,7 +156,7 @@ static BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHA
 
 #define MATCH_ENTRY(i) (al_string_cmp(entry.name, (i)->name) == 0)
         VECTOR_FIND_IF(iter, const DevMap, *devices, MATCH_ENTRY);
-        if(iter == VECTOR_ITER_END(*devices)) break;
+        if(iter == VECTOR_END(*devices)) break;
 #undef MATCH_ENTRY
         count++;
     }
@@ -351,7 +351,7 @@ static ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *de
 #define MATCH_NAME(i)  (al_string_cmp_cstr((i)->name, deviceName) == 0)
         VECTOR_FIND_IF(iter, const DevMap, PlaybackDevices, MATCH_NAME);
 #undef MATCH_NAME
-        if(iter == VECTOR_ITER_END(PlaybackDevices))
+        if(iter == VECTOR_END(PlaybackDevices))
             return ALC_INVALID_VALUE;
         guid = &iter->guid;
     }
@@ -712,7 +712,7 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
 #define MATCH_NAME(i)  (al_string_cmp_cstr((i)->name, deviceName) == 0)
         VECTOR_FIND_IF(iter, const DevMap, CaptureDevices, MATCH_NAME);
 #undef MATCH_NAME
-        if(iter == VECTOR_ITER_END(CaptureDevices))
+        if(iter == VECTOR_END(CaptureDevices))
             return ALC_INVALID_VALUE;
         guid = &iter->guid;
     }

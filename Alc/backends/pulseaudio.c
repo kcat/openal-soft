@@ -527,7 +527,7 @@ static void ALCpulsePlayback_deviceCallback(pa_context *UNUSED(context), const p
 
 #define MATCH_INFO_NAME(iter) (al_string_cmp_cstr((iter)->device_name, info->name) == 0)
     VECTOR_FIND_IF(iter, const DevMap, PlaybackDevices, MATCH_INFO_NAME);
-    if(iter != VECTOR_ITER_END(PlaybackDevices)) return;
+    if(iter != VECTOR_END(PlaybackDevices)) return;
 #undef MATCH_INFO_NAME
 
     AL_STRING_INIT(entry.name);
@@ -548,7 +548,7 @@ static void ALCpulsePlayback_deviceCallback(pa_context *UNUSED(context), const p
 
 #define MATCH_ENTRY(i) (al_string_cmp(entry.name, (i)->name) == 0)
         VECTOR_FIND_IF(iter, const DevMap, PlaybackDevices, MATCH_ENTRY);
-        if(iter == VECTOR_ITER_END(PlaybackDevices)) break;
+        if(iter == VECTOR_END(PlaybackDevices)) break;
 #undef MATCH_ENTRY
         count++;
     }
@@ -861,7 +861,7 @@ static ALCenum ALCpulsePlayback_open(ALCpulsePlayback *self, const ALCchar *name
 #define MATCH_NAME(iter) (al_string_cmp_cstr((iter)->name, name) == 0)
         VECTOR_FIND_IF(iter, const DevMap, PlaybackDevices, MATCH_NAME);
 #undef MATCH_NAME
-        if(iter == VECTOR_ITER_END(PlaybackDevices))
+        if(iter == VECTOR_END(PlaybackDevices))
             return ALC_INVALID_VALUE;
         pulse_name = al_string_get_cstr(iter->device_name);
         dev_name = iter->name;
@@ -1247,7 +1247,7 @@ static void ALCpulseCapture_deviceCallback(pa_context *UNUSED(context), const pa
 
 #define MATCH_INFO_NAME(iter) (al_string_cmp_cstr((iter)->device_name, info->name) == 0)
     VECTOR_FIND_IF(iter, const DevMap, CaptureDevices, MATCH_INFO_NAME);
-    if(iter != VECTOR_ITER_END(CaptureDevices)) return;
+    if(iter != VECTOR_END(CaptureDevices)) return;
 #undef MATCH_INFO_NAME
 
     AL_STRING_INIT(entry.name);
@@ -1268,7 +1268,7 @@ static void ALCpulseCapture_deviceCallback(pa_context *UNUSED(context), const pa
 
 #define MATCH_ENTRY(i) (al_string_cmp(entry.name, (i)->name) == 0)
         VECTOR_FIND_IF(iter, const DevMap, CaptureDevices, MATCH_ENTRY);
-        if(iter == VECTOR_ITER_END(CaptureDevices)) break;
+        if(iter == VECTOR_END(CaptureDevices)) break;
 #undef MATCH_ENTRY
         count++;
     }
@@ -1439,7 +1439,7 @@ static ALCenum ALCpulseCapture_open(ALCpulseCapture *self, const ALCchar *name)
 #define MATCH_NAME(iter) (al_string_cmp_cstr((iter)->name, name) == 0)
         VECTOR_FIND_IF(iter, const DevMap, CaptureDevices, MATCH_NAME);
 #undef MATCH_NAME
-        if(iter == VECTOR_ITER_END(CaptureDevices))
+        if(iter == VECTOR_END(CaptureDevices))
             return ALC_INVALID_VALUE;
         pulse_name = al_string_get_cstr(iter->device_name);
         al_string_copy(&device->DeviceName, iter->name);

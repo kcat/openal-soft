@@ -164,14 +164,14 @@ void ComputeAmbientGains(const ChannelConfig *chancoeffs, ALuint numchans, ALflo
         gains[i] = 0.0f;
 }
 
-void ComputePanningGains(const ChannelConfig *chancoeffs, ALuint numchans, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+void ComputePanningGains(const ChannelConfig *chancoeffs, ALuint numchans, ALuint numcoeffs, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     ALuint i, j;
 
     for(i = 0;i < numchans;i++)
     {
         float gain = 0.0f;
-        for(j = 0;j < MAX_AMBI_COEFFS;j++)
+        for(j = 0;j < numcoeffs;j++)
             gain += chancoeffs[i][j]*coeffs[j];
         gains[i] = gain * ingain;
     }
@@ -443,15 +443,6 @@ static const ChannelMap MonoCfg[1] = {
     { BackRight,   { 0.224752f, -0.295009f, -0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f,  0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065799f } },
     { SideLeft,    { 0.224739f,  0.000000f,  0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065795f } },
     { SideRight,   { 0.224739f,  0.000000f, -0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.065795f } },
-}, Cube8Cfg[8] = {
-    { UpperFrontLeft,  { 0.176776695f,  0.072168784f,  0.072168784f,  0.072168784f } },
-    { UpperFrontRight, { 0.176776695f,  0.072168784f, -0.072168784f,  0.072168784f } },
-    { UpperBackLeft,   { 0.176776695f, -0.072168784f,  0.072168784f,  0.072168784f } },
-    { UpperBackRight,  { 0.176776695f, -0.072168784f, -0.072168784f,  0.072168784f } },
-    { LowerFrontLeft,  { 0.176776695f,  0.072168784f,  0.072168784f, -0.072168784f } },
-    { LowerFrontRight, { 0.176776695f,  0.072168784f, -0.072168784f, -0.072168784f } },
-    { LowerBackLeft,   { 0.176776695f, -0.072168784f,  0.072168784f, -0.072168784f } },
-    { LowerBackRight,  { 0.176776695f, -0.072168784f, -0.072168784f, -0.072168784f } },
 }, BFormat2D[3] = {
     { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f } },
     { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f } },
@@ -466,15 +457,10 @@ static const ChannelMap MonoCfg[1] = {
 static void InitPanning(ALCdevice *device)
 {
     const ChannelMap *chanmap = NULL;
+    ALuint coeffcount = 0;
     ALfloat ambiscale;
     size_t count = 0;
     ALuint i, j;
-
-    memset(device->Dry.AmbiCoeffs, 0, sizeof(device->Dry.AmbiCoeffs));
-    device->Dry.NumChannels = 0;
-
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-        device->Dry.ChannelName[i] = device->RealOut.ChannelName[i];
 
     ambiscale = 1.0f;
     switch(device->FmtChans)
@@ -483,53 +469,64 @@ static void InitPanning(ALCdevice *device)
             count = COUNTOF(MonoCfg);
             chanmap = MonoCfg;
             ambiscale = ZERO_ORDER_SCALE;
+            coeffcount = 1;
             break;
 
         case DevFmtStereo:
             count = COUNTOF(StereoCfg);
             chanmap = StereoCfg;
             ambiscale = FIRST_ORDER_SCALE;
+            coeffcount = 4;
             break;
 
         case DevFmtQuad:
             count = COUNTOF(QuadCfg);
             chanmap = QuadCfg;
             ambiscale = SECOND_ORDER_SCALE;
+            coeffcount = 9;
             break;
 
         case DevFmtX51:
             count = COUNTOF(X51SideCfg);
             chanmap = X51SideCfg;
             ambiscale = SECOND_ORDER_SCALE;
+            coeffcount = 9;
             break;
 
         case DevFmtX51Rear:
             count = COUNTOF(X51RearCfg);
             chanmap = X51RearCfg;
             ambiscale = SECOND_ORDER_SCALE;
+            coeffcount = 9;
             break;
 
         case DevFmtX61:
             count = COUNTOF(X61Cfg);
             chanmap = X61Cfg;
             ambiscale = THIRD_ORDER_SCALE;
+            coeffcount = 16;
             break;
 
         case DevFmtX71:
             count = COUNTOF(X71Cfg);
             chanmap = X71Cfg;
             ambiscale = THIRD_ORDER_SCALE;
+            coeffcount = 16;
             break;
 
         case DevFmtBFormat3D:
             count = COUNTOF(BFormat3D);
             chanmap = BFormat3D;
             ambiscale = FIRST_ORDER_SCALE;
+            coeffcount = 4;
             break;
     }
 
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+        device->Dry.ChannelName[i] = device->RealOut.ChannelName[i];
     SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
                   &device->Dry.NumChannels, AL_TRUE);
+    device->Dry.CoeffCount = coeffcount;
 
     memset(device->FOAOut.AmbiCoeffs, 0, sizeof(device->FOAOut.AmbiCoeffs));
     for(i = 0;i < device->Dry.NumChannels;i++)
@@ -546,12 +543,6 @@ static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const A
     const ALfloat *coeff_scale = UnitScale;
     ALfloat ambiscale = 1.0f;
     ALuint i, j;
-
-    memset(device->Dry.AmbiCoeffs, 0, sizeof(device->Dry.AmbiCoeffs));
-    device->Dry.NumChannels = 0;
-
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-        device->Dry.ChannelName[i] = device->RealOut.ChannelName[i];
 
     if(conf->FreqBands != 1)
         ERR("Basic renderer uses the high-frequency matrix as single-band (xover_freq = %.0fhz)\n",
@@ -592,8 +583,12 @@ static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const A
         }
     }
 
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+        device->Dry.ChannelName[i] = device->RealOut.ChannelName[i];
     SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap,
-                    conf->NumSpeakers, &device->Dry.NumChannels, AL_FALSE);
+                  conf->NumSpeakers, &device->Dry.NumChannels, AL_FALSE);
+    device->Dry.CoeffCount = (conf->ChanMask > 0x1ff) ? 16 :
+                             (conf->ChanMask > 0xf) ? 9 : 4;
 
     memset(device->FOAOut.AmbiCoeffs, 0, sizeof(device->FOAOut.AmbiCoeffs));
     for(i = 0;i < device->Dry.NumChannels;i++)
@@ -639,9 +634,6 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
     size_t count;
     ALuint i;
 
-    memset(device->Dry.AmbiCoeffs, 0, sizeof(device->Dry.AmbiCoeffs));
-    device->Dry.NumChannels = 0;
-
     if((conf->ChanMask & ~0x831b))
     {
         count = (conf->ChanMask > 0xf) ? 9 : 4;
@@ -663,6 +655,8 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
         device->Dry.ChannelName[i] = InvalidChannel;
     SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
                   &device->Dry.NumChannels, AL_FALSE);
+    device->Dry.CoeffCount = (conf->ChanMask > 0x1ff) ? 16 :
+                             (conf->ChanMask > 0xf) ? 9 : 4;
 
     TRACE("Enabling %s-band %s-order%s ambisonic decoder\n",
         (conf->FreqBands == 1) ? "single" : "dual",
@@ -687,6 +681,16 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
 
 static void InitHrtfPanning(ALCdevice *device)
 {
+    static const ChannelMap Cube8Cfg[8] = {
+        { UpperFrontLeft,  { 0.176776695f,  0.072168784f,  0.072168784f,  0.072168784f } },
+        { UpperFrontRight, { 0.176776695f,  0.072168784f, -0.072168784f,  0.072168784f } },
+        { UpperBackLeft,   { 0.176776695f, -0.072168784f,  0.072168784f,  0.072168784f } },
+        { UpperBackRight,  { 0.176776695f, -0.072168784f, -0.072168784f,  0.072168784f } },
+        { LowerFrontLeft,  { 0.176776695f,  0.072168784f,  0.072168784f, -0.072168784f } },
+        { LowerFrontRight, { 0.176776695f,  0.072168784f, -0.072168784f, -0.072168784f } },
+        { LowerBackLeft,   { 0.176776695f, -0.072168784f,  0.072168784f, -0.072168784f } },
+        { LowerBackRight,  { 0.176776695f, -0.072168784f, -0.072168784f, -0.072168784f } },
+    };
     static const struct {
         enum Channel Channel;
         ALfloat Angle;
@@ -705,18 +709,16 @@ static void InitHrtfPanning(ALCdevice *device)
     size_t count = COUNTOF(Cube8Cfg);
     ALuint i;
 
-    memset(device->Dry.AmbiCoeffs, 0, sizeof(device->Dry.AmbiCoeffs));
-    device->Dry.NumChannels = 0;
-
     for(i = 0;i < count;i++)
         device->Dry.ChannelName[i] = chanmap[i].ChanName;
     for(;i < MAX_OUTPUT_CHANNELS;i++)
         device->Dry.ChannelName[i] = InvalidChannel;
     SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
                   &device->Dry.NumChannels, AL_TRUE);
+    device->Dry.CoeffCount = 4;
 
     memcpy(device->FOAOut.AmbiCoeffs, device->Dry.AmbiCoeffs,
-            sizeof(device->FOAOut.AmbiCoeffs));
+           sizeof(device->FOAOut.AmbiCoeffs));
 
     for(i = 0;i < device->Dry.NumChannels;i++)
     {
@@ -732,15 +734,13 @@ static void InitUhjPanning(ALCdevice *device)
     size_t count = COUNTOF(BFormat2D);
     ALuint i;
 
-    memset(device->Dry.AmbiCoeffs, 0, sizeof(device->Dry.AmbiCoeffs));
-    device->Dry.NumChannels = 0;
-
     for(i = 0;i < count;i++)
         device->Dry.ChannelName[i] = chanmap[i].ChanName;
     for(;i < MAX_OUTPUT_CHANNELS;i++)
         device->Dry.ChannelName[i] = InvalidChannel;
     SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
                   &device->Dry.NumChannels, AL_TRUE);
+    device->Dry.CoeffCount = 4;
 
     memcpy(device->FOAOut.AmbiCoeffs, device->Dry.AmbiCoeffs,
            sizeof(device->FOAOut.AmbiCoeffs));
@@ -758,6 +758,10 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     device->Hrtf = NULL;
     al_string_clear(&device->Hrtf_Name);
     device->Render_Mode = NormalRender;
+
+    memset(device->Dry.AmbiCoeffs, 0, sizeof(device->Dry.AmbiCoeffs));
+    device->Dry.CoeffCount = 0;
+    device->Dry.NumChannels = 0;
 
     if(device->FmtChans != DevFmtStereo)
     {

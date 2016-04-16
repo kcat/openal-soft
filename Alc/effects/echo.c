@@ -104,13 +104,13 @@ static ALvoid ALechoState_update(ALechoState *state, const ALCdevice *Device, co
 
     /* First tap panning */
     CalcXYZCoeffs(-lrpan, 0.0f, 0.0f, coeffs);
-    ComputePanningGains(Device->Dry.AmbiCoeffs, Device->Dry.NumChannels, coeffs,
-                        gain, state->Gain[0]);
+    ComputePanningGains(Device->Dry.AmbiCoeffs, Device->Dry.NumChannels,
+                        Device->Dry.CoeffCount, coeffs, gain, state->Gain[0]);
 
     /* Second tap panning */
     CalcXYZCoeffs( lrpan, 0.0f, 0.0f, coeffs);
-    ComputePanningGains(Device->Dry.AmbiCoeffs, Device->Dry.NumChannels, coeffs,
-                        gain, state->Gain[1]);
+    ComputePanningGains(Device->Dry.AmbiCoeffs, Device->Dry.NumChannels,
+                        Device->Dry.CoeffCount, coeffs, gain, state->Gain[1]);
 }
 
 static ALvoid ALechoState_process(ALechoState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)

@@ -511,6 +511,10 @@ struct ALCdevice_struct
         enum Channel ChannelName[MAX_OUTPUT_CHANNELS];
         /* Ambisonic coefficients for mixing to the dry buffer. */
         ChannelConfig AmbiCoeffs[MAX_OUTPUT_CHANNELS];
+        /* Number of coefficients in each ChannelConfig to mix together (4 for
+         * first-order, 9 for second-order, etc).
+         */
+        ALuint CoeffCount;
 
         /* Dry buffer will be aliased by the virtual or real output. */
         ALfloat (*Buffer)[BUFFERSIZE];

@@ -649,7 +649,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
     if(GetConfigValueBool(devname, "decoder", "distance-comp", 1))
         decflags |= BFDF_DistanceComp;
 
-    for(i = 0;i < count;i++)
+    for(i = 0;i < count && i < MAX_OUTPUT_CHANNELS;i++)
         device->Dry.ChannelName[i] = Aux0 + i;
     for(;i < MAX_OUTPUT_CHANNELS;i++)
         device->Dry.ChannelName[i] = InvalidChannel;

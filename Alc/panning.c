@@ -269,23 +269,6 @@ DECL_CONST static inline const char *GetLabelFromChannel(enum Channel channel)
 }
 
 
-DECL_CONST static const char *GetChannelLayoutName(enum DevFmtChannels chans)
-{
-    switch(chans)
-    {
-        case DevFmtMono: return "mono";
-        case DevFmtStereo: return "stereo";
-        case DevFmtQuad: return "quad";
-        case DevFmtX51: return "surround51";
-        case DevFmtX51Rear: return "surround51rear";
-        case DevFmtX61: return "surround61";
-        case DevFmtX71: return "surround71";
-        case DevFmtBFormat3D:
-            break;
-    }
-    return NULL;
-}
-
 typedef struct ChannelMap {
     enum Channel ChanName;
     ChannelConfig Config;
@@ -772,11 +755,9 @@ static void InitUhjPanning(ALCdevice *device)
 
 void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf_appreq, enum HrtfRequestMode hrtf_userreq)
 {
-    ALCenum hrtf_status;
     const char *mode;
     bool headphones;
     int bs2blevel;
-    int usehrtf;
     size_t i;
 
     device->Hrtf = NULL;
@@ -790,19 +771,28 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     if(device->FmtChans != DevFmtStereo)
     {
         ALuint speakermap[MAX_OUTPUT_CHANNELS];
-        const char *devname, *layout;
-        AmbDecConf conf, *pconf;
+        const char *devname, *layout = NULL;
+        AmbDecConf conf, *pconf = NULL;
 
         if(hrtf_appreq == Hrtf_Enable)
             device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
 
-        pconf = NULL;
         ambdec_init(&conf);
 
         devname = al_string_get_cstr(device->DeviceName);
-        layout = NULL;
-        if(device->FmtChans != DevFmtMono)
-            layout = GetChannelLayoutName(device->FmtChans);
+        switch(device->FmtChans)
+        {
+            case DevFmtQuad: layout = "quad"; break;
+            case DevFmtX51: layout = "surround51"; break;
+            case DevFmtX51Rear: layout = "surround51rear"; break;
+            case DevFmtX61: layout = "surround61"; break;
+            case DevFmtX71: layout = "surround71"; break;
+            /* Mono, Stereo, and B-Fornat output don't use custom decoders. */
+            case DevFmtMono:
+            case DevFmtStereo:
+            case DevFmtBFormat3D:
+                break;
+        }
         if(layout)
         {
             const char *fname;
@@ -855,9 +845,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     bformatdec_free(device->AmbiDecoder);
     device->AmbiDecoder = NULL;
 
-    hrtf_status = device->Hrtf_Status;
     headphones = device->IsHeadphones;
-
     if(device->Type != Loopback)
     {
         const char *mode;
@@ -874,29 +862,25 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
 
     if(hrtf_userreq == Hrtf_Default)
     {
-        usehrtf = (headphones && hrtf_appreq != Hrtf_Disable) ||
-                  (hrtf_appreq == Hrtf_Enable);
+        bool usehrtf = (headphones && hrtf_appreq != Hrtf_Disable) ||
+                       (hrtf_appreq == Hrtf_Enable);
+        if(!usehrtf) goto no_hrtf;
+
+        device->Hrtf_Status = ALC_HRTF_ENABLED_SOFT;
         if(headphones && hrtf_appreq != Hrtf_Disable)
-            hrtf_status = ALC_HRTF_HEADPHONES_DETECTED_SOFT;
-        else if(usehrtf)
-            hrtf_status = ALC_HRTF_ENABLED_SOFT;
+            device->Hrtf_Status = ALC_HRTF_HEADPHONES_DETECTED_SOFT;
     }
     else
     {
-        usehrtf = (hrtf_userreq == Hrtf_Enable);
-        if(!usehrtf)
-            hrtf_status = ALC_HRTF_DENIED_SOFT;
-        else
-            hrtf_status = ALC_HRTF_REQUIRED_SOFT;
+        if(hrtf_userreq != Hrtf_Enable)
+        {
+            if(hrtf_appreq == Hrtf_Enable)
+                device->Hrtf_Status = ALC_HRTF_DENIED_SOFT;
+            goto no_hrtf;
+        }
+        device->Hrtf_Status = ALC_HRTF_REQUIRED_SOFT;
     }
 
-    if(!usehrtf)
-    {
-        device->Hrtf_Status = hrtf_status;
-        goto no_hrtf;
-    }
-
-    device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
     if(VECTOR_SIZE(device->Hrtf_List) == 0)
     {
         VECTOR_DEINIT(device->Hrtf_List);
@@ -925,8 +909,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
 
     if(device->Hrtf)
     {
-        device->Hrtf_Status = hrtf_status;
-        device->Render_Mode = NormalRender;
+        device->Render_Mode = HrtfRender;
         if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "hrtf-mode", &mode))
         {
             if(strcasecmp(mode, "full") == 0)
@@ -941,6 +924,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         InitHrtfPanning(device);
         return;
     }
+    device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
 
 no_hrtf:
     TRACE("HRTF disabled\n");

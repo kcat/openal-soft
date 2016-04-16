@@ -77,16 +77,12 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCdevice *
         }
         else
         {
+            ALfloat coeffs[MAX_AMBI_COEFFS];
+            CalcXYZCoeffs(0.0f, 0.0f, -1.0f, coeffs);
+
             STATIC_CAST(ALeffectState,state)->OutBuffer = device->Dry.Buffer;
             STATIC_CAST(ALeffectState,state)->OutChannels = device->Dry.NumChannels;
-            if((idx=GetChannelIdxByName(device->Dry, FrontCenter)) != -1)
-                state->gains[idx] = Gain;
-            else
-            {
-                ALfloat coeffs[MAX_AMBI_COEFFS];
-                CalcXYZCoeffs(0.0f, 0.0f, -1.0f, coeffs);
-                ComputePanningGains(device->Dry, coeffs, Gain, state->gains);
-            }
+            ComputePanningGains(device->Dry, coeffs, Gain, state->gains);
         }
     }
 }

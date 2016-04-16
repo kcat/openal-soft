@@ -138,12 +138,12 @@ void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat coeffs[MAX_AMBI_COEFFS])
     coeffs[15] =  2.091650066f * x * (x*x - 3.0f*y*y);  /* ACN 15 = sqrt(35/8) * X * (X*X - 3*Y*Y) */
 }
 
-void CalcAngleCoeffs(ALfloat angle, ALfloat elevation, ALfloat coeffs[MAX_AMBI_COEFFS])
+void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat coeffs[MAX_AMBI_COEFFS])
 {
     ALfloat dir[3] = {
-        sinf(angle) * cosf(elevation),
+        sinf(azimuth) * cosf(elevation),
         sinf(elevation),
-        -cosf(angle) * cosf(elevation)
+        -cosf(azimuth) * cosf(elevation)
     };
     CalcDirectionCoeffs(dir, coeffs);
 }

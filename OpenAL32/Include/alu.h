@@ -300,7 +300,7 @@ void aluInitEffectPanning(struct ALeffectslot *slot);
  * CalcDirectionCoeffs
  *
  * Calculates ambisonic coefficients based on a direction vector. The vector
- * must not be longer than 1 unit.
+ * must be normalized (unit length).
  */
 void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat coeffs[MAX_AMBI_COEFFS]);
 
@@ -319,10 +319,11 @@ inline void CalcXYZCoeffs(ALfloat x, ALfloat y, ALfloat z, ALfloat coeffs[MAX_AM
 /**
  * CalcAngleCoeffs
  *
- * Calculates ambisonic coefficients based on angle and elevation. The angle
- * and elevation parameters are in radians, going right and up respectively.
+ * Calculates ambisonic coefficients based on azimuth and elevation. The
+ * azimuth and elevation parameters are in radians, going right and up
+ * respectively.
  */
-void CalcAngleCoeffs(ALfloat angle, ALfloat elevation, ALfloat coeffs[MAX_AMBI_COEFFS]);
+void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat coeffs[MAX_AMBI_COEFFS]);
 
 /**
  * ComputeAmbientGains

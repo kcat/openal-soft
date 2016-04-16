@@ -519,8 +519,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         voice->Direct.OutBuffer = Device->FOAOut.Buffer;
         voice->Direct.OutChannels = Device->FOAOut.NumChannels;
         for(c = 0;c < num_channels;c++)
-            ComputeFirstOrderGains(Device->FOAOut.AmbiCoeffs, Device->FOAOut.NumChannels, matrix.m[c],
-                                   DryGain, voice->Direct.Gains[c].Target);
+            ComputeFirstOrderGains(Device->FOAOut, matrix.m[c], DryGain,
+                                   voice->Direct.Gains[c].Target);
 
         for(i = 0;i < NumSends;i++)
         {
@@ -682,9 +682,8 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                 else
                 {
                     CalcAngleCoeffs(chans[c].angle, chans[c].elevation, coeffs);
-                    ComputePanningGains(Device->Dry.AmbiCoeffs, Device->Dry.NumChannels,
-                        Device->Dry.CoeffCount, coeffs, DryGain, voice->Direct.Gains[c].Target
-                    );
+                    ComputePanningGains(Device->Dry, coeffs, DryGain,
+                                        voice->Direct.Gains[c].Target);
                 }
 
                 for(i = 0;i < NumSends;i++)
@@ -1184,9 +1183,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         else
         {
             CalcDirectionCoeffs(dir, coeffs);
-            ComputePanningGains(Device->Dry.AmbiCoeffs, Device->Dry.NumChannels,
-                Device->Dry.CoeffCount, coeffs, DryGain, voice->Direct.Gains[0].Target
-            );
+            ComputePanningGains(Device->Dry, coeffs, DryGain, voice->Direct.Gains[0].Target);
         }
 
         for(i = 0;i < NumSends;i++)

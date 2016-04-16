@@ -75,7 +75,7 @@ static ALvoid ALautowahState_update(ALautowahState *state, const ALCdevice *devi
     state->PeakGain = slot->EffectProps.Autowah.PeakGain;
     state->Resonance = slot->EffectProps.Autowah.Resonance;
 
-    ComputeAmbientGains(device->Dry.AmbiCoeffs, device->Dry.NumChannels, slot->Gain, state->Gain);
+    ComputeAmbientGains(device->Dry, slot->Gain, state->Gain);
 }
 
 static ALvoid ALautowahState_process(ALautowahState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)

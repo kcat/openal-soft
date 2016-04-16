@@ -149,7 +149,7 @@ void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat coeffs[MAX_AMBI
 }
 
 
-void ComputeAmbientGains(const ChannelConfig *chancoeffs, ALuint numchans, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+void ComputeAmbientGainsMC(const ChannelConfig *chancoeffs, ALuint numchans, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     ALuint i;
 
@@ -164,7 +164,22 @@ void ComputeAmbientGains(const ChannelConfig *chancoeffs, ALuint numchans, ALflo
         gains[i] = 0.0f;
 }
 
-void ComputePanningGains(const ChannelConfig *chancoeffs, ALuint numchans, ALuint numcoeffs, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+void ComputeAmbientGainsBF(const BFChannelConfig *chanmap, ALuint numchans, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+{
+    ALfloat gain = 0.0f;
+    ALuint i;
+
+    for(i = 0;i < numchans;i++)
+    {
+        if(chanmap[i].Index == 0)
+            gain += chanmap[i].Scale;
+    }
+    gains[0] = gain * 1.414213562f * ingain;
+    for(i = 1;i < MAX_OUTPUT_CHANNELS;i++)
+        gains[i] = 0.0f;
+}
+
+void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALuint numchans, ALuint numcoeffs, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     ALuint i, j;
 
@@ -189,7 +204,7 @@ void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALuint numchans, cons
         gains[i] = 0.0f;
 }
 
-void ComputeFirstOrderGains(const ChannelConfig *chancoeffs, ALuint numchans, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+void ComputeFirstOrderGainsMC(const ChannelConfig *chancoeffs, ALuint numchans, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     ALuint i, j;
 
@@ -524,16 +539,34 @@ static void InitPanning(ALCdevice *device)
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
         device->Dry.ChannelName[i] = device->RealOut.ChannelName[i];
-    SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
-                  &device->Dry.NumChannels, AL_TRUE);
-    device->Dry.CoeffCount = coeffcount;
-
-    memset(device->FOAOut.AmbiCoeffs, 0, sizeof(device->FOAOut.AmbiCoeffs));
-    for(i = 0;i < device->Dry.NumChannels;i++)
+    if(device->FmtChans == DevFmtBFormat3D)
     {
-        device->FOAOut.AmbiCoeffs[i][0] = device->Dry.AmbiCoeffs[i][0];
-        for(j = 1;j < 4;j++)
-            device->FOAOut.AmbiCoeffs[i][j] = device->Dry.AmbiCoeffs[i][j] * ambiscale;
+        for(i = 0;i < count;i++)
+        {
+            ALuint acn = FuMa2ACN[i];
+            device->Dry.Ambi.Map[i].Scale = 1.0f/FuMa2N3DScale[acn];
+            device->Dry.Ambi.Map[i].Index = acn;
+        }
+        device->Dry.CoeffCount = 0;
+        device->Dry.NumChannels = count;
+
+        memcpy(&device->FOAOut.Ambi, &device->Dry.Ambi, sizeof(device->FOAOut.Ambi));
+        device->FOAOut.CoeffCount = device->Dry.CoeffCount;
+    }
+    else
+    {
+        SetChannelMap(device->Dry.ChannelName, device->Dry.Ambi.Coeffs, chanmap, count,
+                      &device->Dry.NumChannels, AL_TRUE);
+        device->Dry.CoeffCount = coeffcount;
+
+        memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
+        for(i = 0;i < device->Dry.NumChannels;i++)
+        {
+            device->FOAOut.Ambi.Coeffs[i][0] = device->Dry.Ambi.Coeffs[i][0];
+            for(j = 1;j < 4;j++)
+                device->FOAOut.Ambi.Coeffs[i][j] = device->Dry.Ambi.Coeffs[i][j] * ambiscale;
+        }
+        device->FOAOut.CoeffCount = 4;
     }
 }
 
@@ -585,78 +618,60 @@ static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const A
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
         device->Dry.ChannelName[i] = device->RealOut.ChannelName[i];
-    SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap,
+    SetChannelMap(device->Dry.ChannelName, device->Dry.Ambi.Coeffs, chanmap,
                   conf->NumSpeakers, &device->Dry.NumChannels, AL_FALSE);
     device->Dry.CoeffCount = (conf->ChanMask > 0x1ff) ? 16 :
                              (conf->ChanMask > 0xf) ? 9 : 4;
 
-    memset(device->FOAOut.AmbiCoeffs, 0, sizeof(device->FOAOut.AmbiCoeffs));
+    memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
     for(i = 0;i < device->Dry.NumChannels;i++)
     {
-        device->FOAOut.AmbiCoeffs[i][0] = device->Dry.AmbiCoeffs[i][0];
+        device->FOAOut.Ambi.Coeffs[i][0] = device->Dry.Ambi.Coeffs[i][0];
         for(j = 1;j < 4;j++)
-            device->FOAOut.AmbiCoeffs[i][j] = device->Dry.AmbiCoeffs[i][j] * ambiscale;
+            device->FOAOut.Ambi.Coeffs[i][j] = device->Dry.Ambi.Coeffs[i][j] * ambiscale;
     }
+    device->FOAOut.CoeffCount = 4;
 }
 
 static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuint speakermap[MAX_OUTPUT_CHANNELS])
 {
-    /* NOTE: This is ACN/N3D ordering and scaling, rather than FuMa. */
-    static const ChannelMap Ambi3D[9] = {
-        /* Zeroth order */
-        { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-        /* First order */
-        { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-        { Aux2, { 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-        { Aux3, { 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-        /* Second order */
-        { Aux4, { 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-        { Aux5, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f } },
-        { Aux6, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f } },
-        { Aux7, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f } },
-        { Aux8, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f } },
-    }, Ambi2D[7] = {
-        /* Zeroth order */
-        { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-        /* First order */
-        { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-        { Aux2, { 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-        /* Second order */
-        { Aux3, { 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-        { Aux4, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-        /* Third order */
-        { Aux5, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f } },
-        { Aux6, { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f } },
-    };
-    const ChannelMap *chanmap = NULL;
     const char *devname;
     int decflags = 0;
     size_t count;
     ALuint i;
 
     if((conf->ChanMask & ~0x831b))
-    {
-        count = (conf->ChanMask > 0xf) ? 9 : 4;
-        chanmap = Ambi3D;
-    }
+        count = (conf->ChanMask > 0xf) ? (conf->ChanMask > 0x1ff) ? 16: 9 : 4;
     else
-    {
         count = (conf->ChanMask > 0xf) ? (conf->ChanMask > 0x1ff) ? 7 : 5 : 3;
-        chanmap = Ambi2D;
-    }
 
     devname = al_string_get_cstr(device->DeviceName);
     if(GetConfigValueBool(devname, "decoder", "distance-comp", 1))
         decflags |= BFDF_DistanceComp;
 
     for(i = 0;i < count;i++)
-        device->Dry.ChannelName[i] = chanmap[i].ChanName;
+        device->Dry.ChannelName[i] = Aux0 + i;
     for(;i < MAX_OUTPUT_CHANNELS;i++)
         device->Dry.ChannelName[i] = InvalidChannel;
-    SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
-                  &device->Dry.NumChannels, AL_FALSE);
-    device->Dry.CoeffCount = (conf->ChanMask > 0x1ff) ? 16 :
-                             (conf->ChanMask > 0xf) ? 9 : 4;
+    if((conf->ChanMask & ~0x831b))
+    {
+        for(i = 0;i < count;i++)
+        {
+            device->Dry.Ambi.Map[i].Scale = 1.0f;
+            device->Dry.Ambi.Map[i].Index = i;
+        }
+    }
+    else
+    {
+        static int map[MAX_AMBI_COEFFS] = { 0, 1, 3, 4, 8, 9, 15 };
+        for(i = 0;i < count;i++)
+        {
+            device->Dry.Ambi.Map[i].Scale = 1.0f;
+            device->Dry.Ambi.Map[i].Index = map[i];
+        }
+    }
+    device->Dry.CoeffCount = 0;
+    device->Dry.NumChannels = count;
 
     TRACE("Enabling %s-band %s-order%s ambisonic decoder\n",
         (conf->FreqBands == 1) ? "single" : "dual",
@@ -667,15 +682,19 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
                      speakermap, decflags);
 
     if(bformatdec_getOrder(device->AmbiDecoder) < 2)
-        memcpy(device->FOAOut.AmbiCoeffs, device->Dry.AmbiCoeffs,
-               sizeof(device->FOAOut.AmbiCoeffs));
+    {
+        memcpy(&device->FOAOut.Ambi, &device->Dry.Ambi, sizeof(device->FOAOut.Ambi));
+        device->FOAOut.CoeffCount = device->Dry.CoeffCount;
+    }
     else
     {
-        memset(device->FOAOut.AmbiCoeffs, 0, sizeof(device->FOAOut.AmbiCoeffs));
-        device->FOAOut.AmbiCoeffs[0][0] = 1.0f;
-        device->FOAOut.AmbiCoeffs[1][1] = 1.0f;
-        device->FOAOut.AmbiCoeffs[2][2] = 1.0f;
-        device->FOAOut.AmbiCoeffs[3][3] = 1.0f;
+        memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
+        for(i = 0;i < 4;i++)
+        {
+            device->FOAOut.Ambi.Map[i].Scale = 1.0f;
+            device->FOAOut.Ambi.Map[i].Index = i;
+        }
+        device->FOAOut.CoeffCount = 0;
     }
 }
 
@@ -713,12 +732,12 @@ static void InitHrtfPanning(ALCdevice *device)
         device->Dry.ChannelName[i] = chanmap[i].ChanName;
     for(;i < MAX_OUTPUT_CHANNELS;i++)
         device->Dry.ChannelName[i] = InvalidChannel;
-    SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
+    SetChannelMap(device->Dry.ChannelName, device->Dry.Ambi.Coeffs, chanmap, count,
                   &device->Dry.NumChannels, AL_TRUE);
     device->Dry.CoeffCount = 4;
 
-    memcpy(device->FOAOut.AmbiCoeffs, device->Dry.AmbiCoeffs,
-           sizeof(device->FOAOut.AmbiCoeffs));
+    memcpy(&device->FOAOut.Ambi, &device->Dry.Ambi, sizeof(device->FOAOut.Ambi));
+    device->FOAOut.CoeffCount = device->Dry.CoeffCount;
 
     for(i = 0;i < device->Dry.NumChannels;i++)
     {
@@ -738,12 +757,17 @@ static void InitUhjPanning(ALCdevice *device)
         device->Dry.ChannelName[i] = chanmap[i].ChanName;
     for(;i < MAX_OUTPUT_CHANNELS;i++)
         device->Dry.ChannelName[i] = InvalidChannel;
-    SetChannelMap(device->Dry.ChannelName, device->Dry.AmbiCoeffs, chanmap, count,
-                  &device->Dry.NumChannels, AL_TRUE);
-    device->Dry.CoeffCount = 4;
+    for(i = 0;i < count;i++)
+    {
+        ALuint acn = FuMa2ACN[i];
+        device->Dry.Ambi.Map[i].Scale = 1.0f/FuMa2N3DScale[acn];
+        device->Dry.Ambi.Map[i].Index = acn;
+    }
+    device->Dry.CoeffCount = 0;
+    device->Dry.NumChannels = count;
 
-    memcpy(device->FOAOut.AmbiCoeffs, device->Dry.AmbiCoeffs,
-           sizeof(device->FOAOut.AmbiCoeffs));
+    memcpy(&device->FOAOut.Ambi, &device->Dry.Ambi, sizeof(device->FOAOut.Ambi));
+    device->FOAOut.CoeffCount = device->Dry.CoeffCount;
 }
 
 void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf_appreq, enum HrtfRequestMode hrtf_userreq)
@@ -759,7 +783,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     al_string_clear(&device->Hrtf_Name);
     device->Render_Mode = NormalRender;
 
-    memset(device->Dry.AmbiCoeffs, 0, sizeof(device->Dry.AmbiCoeffs));
+    memset(&device->Dry.Ambi, 0, sizeof(device->Dry.Ambi));
     device->Dry.CoeffCount = 0;
     device->Dry.NumChannels = 0;
 

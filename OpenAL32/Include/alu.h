@@ -330,7 +330,14 @@ void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat coeffs[MAX_AMBI
  *
  * Computes channel gains for ambient, omni-directional sounds.
  */
-void ComputeAmbientGains(const ChannelConfig *chancoeffs, ALuint numchans, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+#define ComputeAmbientGains(b, g, o) do {                                     \
+    if((b).CoeffCount > 0)                                                    \
+        ComputeAmbientGainsMC((b).Ambi.Coeffs, (b).NumChannels, g, o);        \
+    else                                                                      \
+        ComputeAmbientGainsBF((b).Ambi.Map, (b).NumChannels, g, o);           \
+} while (0)
+void ComputeAmbientGainsMC(const ChannelConfig *chancoeffs, ALuint numchans, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+void ComputeAmbientGainsBF(const BFChannelConfig *chanmap, ALuint numchans, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 /**
  * ComputePanningGains
@@ -338,7 +345,13 @@ void ComputeAmbientGains(const ChannelConfig *chancoeffs, ALuint numchans, ALflo
  * Computes panning gains using the given channel decoder coefficients and the
  * pre-calculated direction or angle coefficients.
  */
-void ComputePanningGains(const ChannelConfig *chancoeffs, ALuint numchans, ALuint numcoeffs, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+#define ComputePanningGains(b, c, g, o) do {                                  \
+    if((b).CoeffCount > 0)                                                    \
+        ComputePanningGainsMC((b).Ambi.Coeffs, (b).NumChannels, (b).CoeffCount, c, g, o);\
+    else                                                                      \
+        ComputePanningGainsBF((b).Ambi.Map, (b).NumChannels, c, g, o);        \
+} while (0)
+void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALuint numchans, ALuint numcoeffs, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALuint numchans, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 /**
@@ -348,7 +361,13 @@ void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALuint numchans, cons
  * a 1x4 'slice' of a transform matrix for the input channel, used to scale and
  * orient the sound samples.
  */
-void ComputeFirstOrderGains(const ChannelConfig *chancoeffs, ALuint numchans, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+#define ComputeFirstOrderGains(b, m, g, o) do {                               \
+    if((b).CoeffCount > 0)                                                    \
+        ComputeFirstOrderGainsMC((b).Ambi.Coeffs, (b).NumChannels, m, g, o);  \
+    else                                                                      \
+        ComputeFirstOrderGainsBF((b).Ambi.Map, (b).NumChannels, m, g, o);     \
+} while (0)
+void ComputeFirstOrderGainsMC(const ChannelConfig *chancoeffs, ALuint numchans, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 void ComputeFirstOrderGainsBF(const BFChannelConfig *chanmap, ALuint numchans, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 

@@ -113,13 +113,9 @@ static ALvoid ALflangerState_update(ALflangerState *state, const ALCdevice *Devi
 
     /* Gains for left and right sides */
     CalcXYZCoeffs(-1.0f, 0.0f, 0.0f, coeffs);
-    ComputePanningGains(Device->Dry.AmbiCoeffs, Device->Dry.NumChannels,
-        Device->Dry.CoeffCount, coeffs, Slot->Gain, state->Gain[0]
-    );
+    ComputePanningGains(Device->Dry, coeffs, Slot->Gain, state->Gain[0]);
     CalcXYZCoeffs( 1.0f, 0.0f, 0.0f, coeffs);
-    ComputePanningGains(Device->Dry.AmbiCoeffs, Device->Dry.NumChannels,
-        Device->Dry.CoeffCount, coeffs, Slot->Gain, state->Gain[1]
-    );
+    ComputePanningGains(Device->Dry, coeffs, Slot->Gain, state->Gain[1]);
 
     phase = Slot->EffectProps.Flanger.Phase;
     rate = Slot->EffectProps.Flanger.Rate;

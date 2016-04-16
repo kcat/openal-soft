@@ -83,7 +83,7 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCdevice
         cutoff / (frequency*4.0f), calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
     );
 
-    ComputeAmbientGains(Device->Dry.AmbiCoeffs, Device->Dry.NumChannels, Slot->Gain, state->Gain);
+    ComputeAmbientGains(Device->Dry, Slot->Gain, state->Gain);
 }
 
 static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)

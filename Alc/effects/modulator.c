@@ -132,8 +132,8 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *
     STATIC_CAST(ALeffectState,state)->OutBuffer = Device->FOAOut.Buffer;
     STATIC_CAST(ALeffectState,state)->OutChannels = Device->FOAOut.NumChannels;
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputeFirstOrderGains(Device->FOAOut.AmbiCoeffs, Device->FOAOut.NumChannels,
-                               matrix.m[i], Slot->Gain, state->Gain[i]);
+        ComputeFirstOrderGains(Device->FOAOut, matrix.m[i], Slot->Gain,
+                               state->Gain[i]);
 }
 
 static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)

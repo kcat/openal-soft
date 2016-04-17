@@ -652,11 +652,14 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                 /* Special-case LFE */
                 if(chans[c].channel == LFE)
                 {
-                    int idx;
                     for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
                         voice->Direct.Gains[c].Target[j] = 0.0f;
-                    if((idx=GetChannelIdxByName(Device->Dry, chans[c].channel)) != -1)
-                        voice->Direct.Gains[c].Target[idx] = DryGain;
+                    if(Device->Dry.Buffer == Device->RealOut.Buffer)
+                    {
+                        int idx;
+                        if((idx=GetChannelIdxByName(Device->RealOut, chans[c].channel)) != -1)
+                            voice->Direct.Gains[c].Target[idx] = DryGain;
+                    }
 
                     for(i = 0;i < NumSends;i++)
                     {

@@ -507,8 +507,6 @@ struct ALCdevice_struct
 
     /* The "dry" path corresponds to the main output. */
     struct {
-        /* Channel names for the dry buffer mix. */
-        enum Channel ChannelName[MAX_OUTPUT_CHANNELS];
         union {
             /* Ambisonic coefficients for mixing to the dry buffer. */
             ChannelConfig Coeffs[MAX_OUTPUT_CHANNELS];

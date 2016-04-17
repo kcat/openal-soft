@@ -520,8 +520,6 @@ static void InitPanning(ALCdevice *device)
             break;
     }
 
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-        device->Dry.ChannelName[i] = device->RealOut.ChannelName[i];
     if(device->FmtChans == DevFmtBFormat3D)
     {
         for(i = 0;i < count;i++)
@@ -538,8 +536,8 @@ static void InitPanning(ALCdevice *device)
     }
     else
     {
-        SetChannelMap(device->Dry.ChannelName, device->Dry.Ambi.Coeffs, chanmap, count,
-                      &device->Dry.NumChannels, AL_TRUE);
+        SetChannelMap(device->RealOut.ChannelName, device->Dry.Ambi.Coeffs,
+                      chanmap, count, &device->Dry.NumChannels, AL_TRUE);
         device->Dry.CoeffCount = coeffcount;
 
         memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
@@ -599,9 +597,7 @@ static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const A
         }
     }
 
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-        device->Dry.ChannelName[i] = device->RealOut.ChannelName[i];
-    SetChannelMap(device->Dry.ChannelName, device->Dry.Ambi.Coeffs, chanmap,
+    SetChannelMap(device->RealOut.ChannelName, device->Dry.Ambi.Coeffs, chanmap,
                   conf->NumSpeakers, &device->Dry.NumChannels, AL_FALSE);
     device->Dry.CoeffCount = (conf->ChanMask > 0x1ff) ? 16 :
                              (conf->ChanMask > 0xf) ? 9 : 4;
@@ -632,10 +628,6 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
     if(GetConfigValueBool(devname, "decoder", "distance-comp", 1))
         decflags |= BFDF_DistanceComp;
 
-    for(i = 0;i < count && i < MAX_OUTPUT_CHANNELS;i++)
-        device->Dry.ChannelName[i] = Aux0 + i;
-    for(;i < MAX_OUTPUT_CHANNELS;i++)
-        device->Dry.ChannelName[i] = InvalidChannel;
     if((conf->ChanMask & ~0x831b))
     {
         for(i = 0;i < count;i++)
@@ -683,6 +675,11 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
 
 static void InitHrtfPanning(ALCdevice *device)
 {
+    static const enum Channel CubeChannels[MAX_OUTPUT_CHANNELS] = {
+        UpperFrontLeft, UpperFrontRight, UpperBackLeft, UpperBackRight,
+        LowerFrontLeft, LowerFrontRight, LowerBackLeft, LowerBackRight,
+        InvalidChannel
+    };
     static const ChannelMap Cube8Cfg[8] = {
         { UpperFrontLeft,  { 0.176776695f,  0.072168784f,  0.072168784f,  0.072168784f } },
         { UpperFrontRight, { 0.176776695f,  0.072168784f, -0.072168784f,  0.072168784f } },
@@ -711,11 +708,7 @@ static void InitHrtfPanning(ALCdevice *device)
     size_t count = COUNTOF(Cube8Cfg);
     ALuint i;
 
-    for(i = 0;i < count;i++)
-        device->Dry.ChannelName[i] = chanmap[i].ChanName;
-    for(;i < MAX_OUTPUT_CHANNELS;i++)
-        device->Dry.ChannelName[i] = InvalidChannel;
-    SetChannelMap(device->Dry.ChannelName, device->Dry.Ambi.Coeffs, chanmap, count,
+    SetChannelMap(CubeChannels, device->Dry.Ambi.Coeffs, chanmap, count,
                   &device->Dry.NumChannels, AL_TRUE);
     device->Dry.CoeffCount = 4;
 
@@ -724,7 +717,7 @@ static void InitHrtfPanning(ALCdevice *device)
 
     for(i = 0;i < device->Dry.NumChannels;i++)
     {
-        int chan = GetChannelIdxByName(device->Dry, CubeInfo[i].Channel);
+        int chan = GetChannelIndex(CubeChannels, CubeInfo[i].Channel);
         GetLerpedHrtfCoeffs(device->Hrtf, CubeInfo[i].Elevation, CubeInfo[i].Angle, 1.0f, 1.0f,
                             device->Hrtf_Params[chan].Coeffs, device->Hrtf_Params[chan].Delay);
     }
@@ -732,14 +725,9 @@ static void InitHrtfPanning(ALCdevice *device)
 
 static void InitUhjPanning(ALCdevice *device)
 {
-    const ChannelMap *chanmap = BFormat2D;
     size_t count = COUNTOF(BFormat2D);
     ALuint i;
 
-    for(i = 0;i < count;i++)
-        device->Dry.ChannelName[i] = chanmap[i].ChanName;
-    for(;i < MAX_OUTPUT_CHANNELS;i++)
-        device->Dry.ChannelName[i] = InvalidChannel;
     for(i = 0;i < count;i++)
     {
         ALuint acn = FuMa2ACN[i];

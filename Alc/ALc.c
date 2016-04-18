@@ -1691,11 +1691,13 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         stype = device->FmtType;
         freq = device->Frequency;
 
+#define TRACE_ATTR(a, v) TRACE("Loopback %s = %d\n", #a, v)
         while(attrList[attrIdx])
         {
             if(attrList[attrIdx] == ALC_FORMAT_CHANNELS_SOFT)
             {
                 ALCint val = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_FORMAT_CHANNELS_SOFT, val);
                 if(!IsValidALCChannels(val) || !ChannelsFromDevFmt(val))
                     return ALC_INVALID_VALUE;
                 schans = val;
@@ -1705,6 +1707,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(attrList[attrIdx] == ALC_FORMAT_TYPE_SOFT)
             {
                 ALCint val = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_FORMAT_TYPE_SOFT, val);
                 if(!IsValidALCType(val) || !BytesFromDevFmt(val))
                     return ALC_INVALID_VALUE;
                 stype = val;
@@ -1714,6 +1717,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(attrList[attrIdx] == ALC_FREQUENCY)
             {
                 freq = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_FREQUENCY, freq);
                 if(freq < MIN_OUTPUT_RATE)
                     return ALC_INVALID_VALUE;
                 gotFmt |= GotFreq;
@@ -1722,6 +1726,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(attrList[attrIdx] == ALC_STEREO_SOURCES)
             {
                 numStereo = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_STEREO_SOURCES, numStereo);
                 if(numStereo > device->MaxNoOfSources)
                     numStereo = device->MaxNoOfSources;
 
@@ -1729,10 +1734,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             }
 
             if(attrList[attrIdx] == ALC_MAX_AUXILIARY_SENDS)
+            {
                 numSends = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_MAX_AUXILIARY_SENDS, numSends);
+            }
 
             if(attrList[attrIdx] == ALC_HRTF_SOFT)
             {
+                TRACE_ATTR(ALC_HRTF_SOFT, attrList[attrIdx + 1]);
                 if(attrList[attrIdx + 1] == ALC_FALSE)
                     hrtf_appreq = Hrtf_Disable;
                 else if(attrList[attrIdx + 1] == ALC_TRUE)
@@ -1742,10 +1751,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             }
 
             if(attrList[attrIdx] == ALC_HRTF_ID_SOFT)
+            {
                 hrtf_id = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_HRTF_ID_SOFT, hrtf_id);
+            }
 
             attrIdx += 2;
         }
+#undef TRACE_ATTR
 
         if(gotFmt != GotAll)
         {
@@ -1785,17 +1798,20 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         numStereo = device->NumStereoSources;
         numSends = device->NumAuxSends;
 
+#define TRACE_ATTR(a, v) TRACE("%s = %d\n", #a, v)
         while(attrList[attrIdx])
         {
             if(attrList[attrIdx] == ALC_FREQUENCY)
             {
                 freq = attrList[attrIdx + 1];
                 device->Flags |= DEVICE_FREQUENCY_REQUEST;
+                TRACE_ATTR(ALC_FREQUENCY, freq);
             }
 
             if(attrList[attrIdx] == ALC_STEREO_SOURCES)
             {
                 numStereo = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_STEREO_SOURCES, numStereo);
                 if(numStereo > device->MaxNoOfSources)
                     numStereo = device->MaxNoOfSources;
 
@@ -1803,10 +1819,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             }
 
             if(attrList[attrIdx] == ALC_MAX_AUXILIARY_SENDS)
+            {
                 numSends = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_MAX_AUXILIARY_SENDS, numSends);
+            }
 
             if(attrList[attrIdx] == ALC_HRTF_SOFT)
             {
+                TRACE_ATTR(ALC_HRTF_SOFT, attrList[attrIdx + 1]);
                 if(attrList[attrIdx + 1] == ALC_FALSE)
                     hrtf_appreq = Hrtf_Disable;
                 else if(attrList[attrIdx + 1] == ALC_TRUE)
@@ -1816,10 +1836,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             }
 
             if(attrList[attrIdx] == ALC_HRTF_ID_SOFT)
+            {
                 hrtf_id = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_HRTF_ID_SOFT, hrtf_id);
+            }
 
             attrIdx += 2;
         }
+#undef TRACE_ATTR
 
         ConfigValueUInt(al_string_get_cstr(device->DeviceName), NULL, "frequency", &freq);
         freq = maxu(freq, MIN_OUTPUT_RATE);

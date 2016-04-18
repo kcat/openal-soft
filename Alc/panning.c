@@ -441,15 +441,6 @@ static const ChannelMap MonoCfg[1] = {
     { BackRight,   { 0.224752f, -0.295009f, -0.170325f, 0.0f, 0.0f, 0.0f, 0.0f,  0.105349f,  0.182473f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065799f } },
     { SideLeft,    { 0.224739f,  0.000000f,  0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f, -0.065795f } },
     { SideRight,   { 0.224739f,  0.000000f, -0.340644f, 0.0f, 0.0f, 0.0f, 0.0f, -0.210697f,  0.000000f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.000000f,  0.065795f } },
-}, BFormat2D[3] = {
-    { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f } },
-    { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f } },
-    { Aux2, { 0.0f, 0.0f, 1.0f, 0.0f } },
-}, BFormat3D[4] = {
-    { Aux0, { 1.0f, 0.0f, 0.0f, 0.0f } },
-    { Aux1, { 0.0f, 1.0f, 0.0f, 0.0f } },
-    { Aux2, { 0.0f, 0.0f, 1.0f, 0.0f } },
-    { Aux3, { 0.0f, 0.0f, 0.0f, 1.0f } },
 };
 
 static void InitPanning(ALCdevice *device)
@@ -513,15 +504,12 @@ static void InitPanning(ALCdevice *device)
             break;
 
         case DevFmtBFormat3D:
-            count = COUNTOF(BFormat3D);
-            chanmap = BFormat3D;
-            ambiscale = FIRST_ORDER_SCALE;
-            coeffcount = 4;
             break;
     }
 
     if(device->FmtChans == DevFmtBFormat3D)
     {
+        count = 4;
         for(i = 0;i < count;i++)
         {
             ALuint acn = FuMa2ACN[i];
@@ -725,7 +713,7 @@ static void InitHrtfPanning(ALCdevice *device)
 
 static void InitUhjPanning(ALCdevice *device)
 {
-    size_t count = COUNTOF(BFormat2D);
+    size_t count = 3;
     ALuint i;
 
     for(i = 0;i < count;i++)

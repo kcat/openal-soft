@@ -607,17 +607,13 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
     size_t count;
     ALuint i;
 
-    if((conf->ChanMask & ~0x831b))
-        count = (conf->ChanMask > 0xf) ? (conf->ChanMask > 0x1ff) ? 16: 9 : 4;
-    else
-        count = (conf->ChanMask > 0xf) ? (conf->ChanMask > 0x1ff) ? 7 : 5 : 3;
-
     devname = al_string_get_cstr(device->DeviceName);
     if(GetConfigValueBool(devname, "decoder", "distance-comp", 1))
         decflags |= BFDF_DistanceComp;
 
     if((conf->ChanMask & ~0x831b))
     {
+        count = (conf->ChanMask > 0xf) ? 9 : 4;
         for(i = 0;i < count;i++)
         {
             device->Dry.Ambi.Map[i].Scale = 1.0f;
@@ -627,6 +623,8 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
     else
     {
         static int map[MAX_AMBI_COEFFS] = { 0, 1, 3, 4, 8, 9, 15 };
+
+        count = (conf->ChanMask > 0xf) ? (conf->ChanMask > 0x1ff) ? 7 : 5 : 3;
         for(i = 0;i < count;i++)
         {
             device->Dry.Ambi.Map[i].Scale = 1.0f;

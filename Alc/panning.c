@@ -262,6 +262,13 @@ DECL_CONST static inline const char *GetLabelFromChannel(enum Channel channel)
         case Aux6: return "aux-6";
         case Aux7: return "aux-7";
         case Aux8: return "aux-8";
+        case Aux9: return "aux-9";
+        case Aux10: return "aux-10";
+        case Aux11: return "aux-11";
+        case Aux12: return "aux-12";
+        case Aux13: return "aux-13";
+        case Aux14: return "aux-14";
+        case Aux15: return "aux-15";
 
         case InvalidChannel: break;
     }
@@ -613,7 +620,8 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
 
     if((conf->ChanMask & ~0x831b))
     {
-        count = (conf->ChanMask > 0xf) ? 9 : 4;
+        count = (conf->ChanMask > 0x1ff) ? 16 :
+                (conf->ChanMask > 0xf) ? 9 : 4;
         for(i = 0;i < count;i++)
         {
             device->Dry.Ambi.Map[i].Scale = 1.0f;
@@ -624,7 +632,8 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
     {
         static int map[MAX_AMBI_COEFFS] = { 0, 1, 3, 4, 8, 9, 15 };
 
-        count = (conf->ChanMask > 0xf) ? (conf->ChanMask > 0x1ff) ? 7 : 5 : 3;
+        count = (conf->ChanMask > 0x1ff) ? 7 :
+                (conf->ChanMask > 0xf) ? 5 : 3;
         for(i = 0;i < count;i++)
         {
             device->Dry.Ambi.Map[i].Scale = 1.0f;
@@ -664,7 +673,8 @@ static void InitHrtfPanning(ALCdevice *device)
     static const enum Channel CubeChannels[MAX_OUTPUT_CHANNELS] = {
         UpperFrontLeft, UpperFrontRight, UpperBackLeft, UpperBackRight,
         LowerFrontLeft, LowerFrontRight, LowerBackLeft, LowerBackRight,
-        InvalidChannel
+        InvalidChannel, InvalidChannel, InvalidChannel, InvalidChannel,
+        InvalidChannel, InvalidChannel, InvalidChannel, InvalidChannel
     };
     static const ChannelMap Cube8Cfg[8] = {
         { UpperFrontLeft,  { 0.176776695f,  0.072168784f,  0.072168784f,  0.072168784f } },
@@ -789,14 +799,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
 
         if(pconf && GetConfigValueBool(devname, "decoder", "hq-mode", 0))
         {
-            if((conf.ChanMask & ~0x831b) && conf.ChanMask > 0x1ff)
-            {
-                ERR("Third-order is unsupported for periphonic HQ decoding (mask 0x%04x)\n",
-                    conf.ChanMask);
-                bformatdec_free(device->AmbiDecoder);
-                device->AmbiDecoder = NULL;
-            }
-            else if(!device->AmbiDecoder)
+            if(!device->AmbiDecoder)
                 device->AmbiDecoder = bformatdec_alloc();
         }
         else

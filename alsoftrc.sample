@@ -212,9 +212,8 @@
 #  dependent processing, creating a better reproduction of 3D sound rendering
 #  over surround sound speakers. Enabling this also requires specifying decoder
 #  configuration files for the appropriate speaker configuration you intend to
-#  use (see the quad, surround51, etc options below). Currently, periphonic
-#  (with height) configurations support up to second-order, and horizontal
-#  configurations support up to third-order.
+#  use (see the quad, surround51, etc options below). Currently, up to third-
+#  order decoding is supported.
 hq-mode = false
 
 ## distance-comp:

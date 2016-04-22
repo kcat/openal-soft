@@ -350,7 +350,7 @@ static int synchronize_audio(MovieState *movState)
     ref_clock = get_master_clock(movState);
     diff = ref_clock - get_audio_clock(&movState->audio);
 
-    if(!(diff < AV_NOSYNC_THRESHOLD))
+    if(!(fabs(diff) < AV_NOSYNC_THRESHOLD))
     {
         /* Difference is TOO big; reset diff stuff */
         movState->audio.diff_accum = 0.0;

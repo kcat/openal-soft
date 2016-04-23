@@ -4,6 +4,13 @@ AmbDec Configuration Files
 AmbDec configuration files were developed by Fons Adriaensen as part of the
 AmbDec program <http://kokkinizita.linuxaudio.org/linuxaudio/index.html>.
 
+The file works by specifying a decoder matrix or matrices which transform
+ambisonic channels into speaker feeds. Single-band decoders specify a single
+matrix that transforms all frequencies, while dual-band decoders specifies two
+matrices where one transforms low frequency sounds and the other transforms
+high frequency sounds. See docs/ambisonics.txt for more general information
+about ambisonics.
+
 Starting with OpenAL Soft 1.18, version 3 of the file format is supported as a
 means of specifying custom surround sound speaker layouts. These configuration
 files are also used to enable the high-quality ambisonic decoder.

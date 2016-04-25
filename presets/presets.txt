@@ -20,6 +20,12 @@ width but a little more depth over a basic square setup. Front speakers are
 placed at +30 and -30 degrees, providing a bit more compatibility for existing
 stereo content, with back speakers at +150 and -150 degrees.
 
+itu5.1.ambdec
+Specifies a standard ITU 5.0/5.1 setup for 5.1 Surround output. The front-
+center speaker is placed directly in front at 0 degrees, with the front-left
+and front-right at +30 and -30 degrees, and the surround speakers (side or
+back) at +110 and -110 degrees.
+
 hexagon.ambdec
 Specifies a flat-front hexagonal speaker setup for 7.1 Surround output. The
 front left and right speakers are placed at +30 and -30 degrees, the side

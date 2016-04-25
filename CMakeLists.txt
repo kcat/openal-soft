@@ -1232,6 +1232,7 @@ ENDIF()
 IF(ALSOFT_AMBDEC_PRESETS)
     INSTALL(FILES presets/3D7.1.ambdec
                   presets/hexagon.ambdec
+                  presets/itu5.1.ambdec
                   presets/rectangle.ambdec
                   presets/square.ambdec
                   presets/presets.txt

@@ -97,10 +97,6 @@ typedef enum SourceProp {
     srcSampleLengthSOFT = AL_SAMPLE_LENGTH_SOFT,
     srcSecLengthSOFT = AL_SEC_LENGTH_SOFT,
 
-    /* AL_SOFT_buffer_sub_data / AL_SOFT_buffer_samples */
-    srcSampleRWOffsetsSOFT = AL_SAMPLE_RW_OFFSETS_SOFT,
-    srcByteRWOffsetsSOFT = AL_BYTE_RW_OFFSETS_SOFT,
-
     /* AL_SOFT_source_latency */
     srcSampleOffsetLatencySOFT = AL_SAMPLE_OFFSET_LATENCY_SOFT,
     srcSecOffsetLatencySOFT = AL_SEC_OFFSET_LATENCY_SOFT,
@@ -159,8 +155,6 @@ static ALint FloatValsByProp(ALenum prop)
         case AL_SEC_LENGTH_SOFT:
             return 1;
 
-        case AL_SAMPLE_RW_OFFSETS_SOFT:
-        case AL_BYTE_RW_OFFSETS_SOFT:
         case AL_STEREO_ANGLES:
             return 2;
 
@@ -223,8 +217,6 @@ static ALint DoubleValsByProp(ALenum prop)
         case AL_SEC_LENGTH_SOFT:
             return 1;
 
-        case AL_SAMPLE_RW_OFFSETS_SOFT:
-        case AL_BYTE_RW_OFFSETS_SOFT:
         case AL_SEC_OFFSET_LATENCY_SOFT:
         case AL_STEREO_ANGLES:
             return 2;
@@ -288,10 +280,6 @@ static ALint IntValsByProp(ALenum prop)
         case AL_SEC_LENGTH_SOFT:
             return 1;
 
-        case AL_SAMPLE_RW_OFFSETS_SOFT:
-        case AL_BYTE_RW_OFFSETS_SOFT:
-            return 2;
-
         case AL_POSITION:
         case AL_VELOCITY:
         case AL_DIRECTION:
@@ -351,8 +339,6 @@ static ALint Int64ValsByProp(ALenum prop)
         case AL_SEC_LENGTH_SOFT:
             return 1;
 
-        case AL_SAMPLE_RW_OFFSETS_SOFT:
-        case AL_BYTE_RW_OFFSETS_SOFT:
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
             return 2;
 
@@ -385,8 +371,6 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
 
     switch(prop)
     {
-        case AL_BYTE_RW_OFFSETS_SOFT:
-        case AL_SAMPLE_RW_OFFSETS_SOFT:
         case AL_BYTE_LENGTH_SOFT:
         case AL_SAMPLE_LENGTH_SOFT:
         case AL_SEC_LENGTH_SOFT:
@@ -615,8 +599,6 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_SOURCE_TYPE:
         case AL_BUFFERS_QUEUED:
         case AL_BUFFERS_PROCESSED:
-        case AL_SAMPLE_RW_OFFSETS_SOFT:
-        case AL_BYTE_RW_OFFSETS_SOFT:
         case AL_BYTE_LENGTH_SOFT:
         case AL_SAMPLE_LENGTH_SOFT:
         case AL_SEC_LENGTH_SOFT:
@@ -870,8 +852,6 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
         case AL_BUFFERS_QUEUED:
         case AL_BUFFERS_PROCESSED:
         case AL_SOURCE_STATE:
-        case AL_SAMPLE_RW_OFFSETS_SOFT:
-        case AL_BYTE_RW_OFFSETS_SOFT:
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
         case AL_BYTE_LENGTH_SOFT:
         case AL_SAMPLE_LENGTH_SOFT:
@@ -969,7 +949,6 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
     ALCdevice *device = Context->Device;
     ALbufferlistitem *BufferList;
     ALdouble offsets[2];
-    ALdouble updateLen;
     ALint ivals[3];
     ALboolean err;
 
@@ -1059,14 +1038,6 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
                 *values = (ALdouble)length / (ALdouble)freq;
             }
             ReadUnlock(&Source->queue_lock);
-            return AL_TRUE;
-
-        case AL_SAMPLE_RW_OFFSETS_SOFT:
-        case AL_BYTE_RW_OFFSETS_SOFT:
-            LockContext(Context);
-            updateLen = (ALdouble)device->UpdateSize / device->Frequency;
-            GetSourceOffsets(Source, prop, values, updateLen);
-            UnlockContext(Context);
             return AL_TRUE;
 
         case AL_SEC_OFFSET_LATENCY_SOFT:
@@ -1316,16 +1287,6 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 *values = (ALint)dvals[0];
             return err;
 
-        /* 2x float/double */
-        case AL_SAMPLE_RW_OFFSETS_SOFT:
-        case AL_BYTE_RW_OFFSETS_SOFT:
-            if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
-            {
-                values[0] = (ALint)dvals[0];
-                values[1] = (ALint)dvals[1];
-            }
-            return err;
-
         /* 3x float/double */
         case AL_POSITION:
         case AL_VELOCITY:
@@ -1404,16 +1365,6 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
         case AL_SEC_LENGTH_SOFT:
             if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
                 *values = (ALint64)dvals[0];
-            return err;
-
-        /* 2x float/double */
-        case AL_SAMPLE_RW_OFFSETS_SOFT:
-        case AL_BYTE_RW_OFFSETS_SOFT:
-            if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
-            {
-                values[0] = (ALint64)dvals[0];
-                values[1] = (ALint64)dvals[1];
-            }
             return err;
 
         /* 3x float/double */

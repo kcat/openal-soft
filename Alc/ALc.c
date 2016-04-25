@@ -272,13 +272,6 @@ static const ALCfunction alcFunctions[] = {
     DECL(alGetAuxiliaryEffectSlotf),
     DECL(alGetAuxiliaryEffectSlotfv),
 
-    DECL(alBufferSubDataSOFT),
-
-    DECL(alBufferSamplesSOFT),
-    DECL(alBufferSubSamplesSOFT),
-    DECL(alGetBufferSamplesSOFT),
-    DECL(alIsBufferFormatSupportedSOFT),
-
     DECL(alDeferUpdatesSOFT),
     DECL(alProcessUpdatesSOFT),
 
@@ -391,9 +384,7 @@ static const ALCenums enumeration[] = {
     DECL(AL_MAX_DISTANCE),
     DECL(AL_SEC_OFFSET),
     DECL(AL_SAMPLE_OFFSET),
-    DECL(AL_SAMPLE_RW_OFFSETS_SOFT),
     DECL(AL_BYTE_OFFSET),
-    DECL(AL_BYTE_RW_OFFSETS_SOFT),
     DECL(AL_SOURCE_TYPE),
     DECL(AL_STATIC),
     DECL(AL_STREAMING),
@@ -713,9 +704,9 @@ static const ALchar alExtList[] =
     "AL_EXT_FLOAT32 AL_EXT_IMA4 AL_EXT_LINEAR_DISTANCE AL_EXT_MCFORMATS "
     "AL_EXT_MULAW AL_EXT_MULAW_BFORMAT AL_EXT_MULAW_MCFORMATS AL_EXT_OFFSET "
     "AL_EXT_source_distance_model AL_EXT_STEREO_ANGLES AL_LOKI_quadriphonic "
-    "AL_SOFT_block_alignment AL_SOFT_buffer_samples AL_SOFT_buffer_sub_data "
-    "AL_SOFT_deferred_updates AL_SOFT_direct_channels AL_SOFT_loop_points "
-    "AL_SOFT_MSADPCM AL_SOFT_source_latency AL_SOFT_source_length";
+    "AL_SOFT_block_alignment AL_SOFT_deferred_updates AL_SOFT_direct_channels "
+    "AL_SOFT_loop_points AL_SOFT_MSADPCM AL_SOFT_source_latency "
+    "AL_SOFT_source_length";
 
 static ATOMIC(ALCenum) LastNullDeviceError = ATOMIC_INIT_STATIC(ALC_NO_ERROR);
 

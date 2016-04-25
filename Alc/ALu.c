@@ -1088,7 +1088,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         /* Full HRTF rendering. Skip the virtual channels and render to the
          * real outputs.
          */
-        aluVector dir = {{ 0.0f, 0.0f, -1.0f, 0.0f }};
+        ALfloat dir[3] = { 0.0f, 0.0f, -1.0f };
         ALfloat ev = 0.0f, az = 0.0f;
         ALfloat radius = ALSource->Radius;
         ALfloat coeffs[MAX_AMBI_COEFFS];
@@ -1099,16 +1099,16 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
 
         if(Distance > FLT_EPSILON)
         {
-            dir.v[0] = -SourceToListener.v[0];
-            dir.v[1] = -SourceToListener.v[1];
-            dir.v[2] = -SourceToListener.v[2] * ZScale;
+            dir[0] = -SourceToListener.v[0];
+            dir[1] = -SourceToListener.v[1];
+            dir[2] = -SourceToListener.v[2] * ZScale;
 
             /* Calculate elevation and azimuth only when the source is not at
              * the listener. This prevents +0 and -0 Z from producing
              * inconsistent panning. Also, clamp Y in case FP precision errors
              * cause it to land outside of -1..+1. */
-            ev = asinf(clampf(dir.v[1], -1.0f, 1.0f));
-            az = atan2f(dir.v[0], -dir.v[2]);
+            ev = asinf(clampf(dir[1], -1.0f, 1.0f));
+            az = atan2f(dir[0], -dir[2]);
         }
         if(radius > Distance)
             spread = F_TAU - Distance/radius*F_PI;
@@ -1120,7 +1120,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
                             voice->Direct.Hrtf[0].Target.Coeffs,
                             voice->Direct.Hrtf[0].Target.Delay);
 
-        CalcDirectionCoeffs(dir.v, spread, coeffs);
+        CalcDirectionCoeffs(dir, spread, coeffs);
 
         for(i = 0;i < NumSends;i++)
         {

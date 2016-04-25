@@ -46,7 +46,7 @@ extern inline struct ALsource *RemoveSource(ALCcontext *context, ALuint id);
 static ALvoid InitSourceParams(ALsource *Source);
 static ALint64 GetSourceSampleOffset(ALsource *Source);
 static ALdouble GetSourceSecOffset(ALsource *Source);
-static ALvoid GetSourceOffsets(ALsource *Source, ALenum name, ALdouble *offsets, ALdouble updateLen);
+static ALdouble GetSourceOffset(ALsource *Source, ALenum name);
 static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac);
 
 typedef enum SourceProp {
@@ -963,7 +963,6 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
 {
     ALCdevice *device = Context->Device;
     ALbufferlistitem *BufferList;
-    ALdouble offsets[2];
     ALint ivals[3];
     ALboolean err;
 
@@ -1013,9 +1012,8 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_SAMPLE_OFFSET:
         case AL_BYTE_OFFSET:
             LockContext(Context);
-            GetSourceOffsets(Source, prop, offsets, 0.0);
+            *values = GetSourceOffset(Source, prop);
             UnlockContext(Context);
-            *values = offsets[0];
             return AL_TRUE;
 
         case AL_CONE_OUTER_GAINHF:
@@ -2781,32 +2779,28 @@ static ALdouble GetSourceSecOffset(ALsource *Source)
     return (ALdouble)readPos / (ALdouble)FRACTIONONE / (ALdouble)Buffer->Frequency;
 }
 
-/* GetSourceOffsets
+/* GetSourceOffset
  *
- * Gets the current read and write offsets for the given Source, in the
- * appropriate format (Bytes, Samples or Seconds). The offsets are relative to
- * the start of the queue (not the start of the current buffer).
+ * Gets the current read offset for the given Source, in the appropriate format
+ * (Bytes, Samples or Seconds). The offset is relative to the start of the
+ * queue (not the start of the current buffer).
  */
-static ALvoid GetSourceOffsets(ALsource *Source, ALenum name, ALdouble *offset, ALdouble updateLen)
+static ALdouble GetSourceOffset(ALsource *Source, ALenum name)
 {
     const ALbufferlistitem *BufferList;
     const ALbufferlistitem *Current;
     const ALbuffer *Buffer = NULL;
     ALboolean readFin = AL_FALSE;
-    ALuint readPos, readPosFrac, writePos;
+    ALuint readPos, readPosFrac;
     ALuint totalBufferLen;
+    ALdouble offset = 0.0;
 
     ReadLock(&Source->queue_lock);
     if(Source->state != AL_PLAYING && Source->state != AL_PAUSED)
     {
-        offset[0] = 0.0;
-        offset[1] = 0.0;
         ReadUnlock(&Source->queue_lock);
-        return;
+        return 0.0;
     }
-
-    if(updateLen > 0.0 && updateLen < 0.015)
-        updateLen = 0.015;
 
     /* NOTE: This is the offset into the *current* buffer, so add the length of
      * any played buffers */
@@ -2829,40 +2823,26 @@ static ALvoid GetSourceOffsets(ALsource *Source, ALenum name, ALdouble *offset, 
     }
     assert(Buffer != NULL);
 
-    if(Source->state == AL_PLAYING)
-        writePos = readPos + (ALuint)(updateLen*Buffer->Frequency + 0.5f);
-    else
-        writePos = readPos;
-
     if(Source->Looping)
-    {
         readPos %= totalBufferLen;
-        writePos %= totalBufferLen;
-    }
     else
     {
-        /* Wrap positions back to 0 */
+        /* Wrap back to 0 */
         if(readPos >= totalBufferLen)
             readPos = readPosFrac = 0;
-        if(writePos >= totalBufferLen)
-            writePos = 0;
     }
 
     switch(name)
     {
         case AL_SEC_OFFSET:
-            offset[0] = (readPos + (ALdouble)readPosFrac/FRACTIONONE)/Buffer->Frequency;
-            offset[1] = (ALdouble)writePos/Buffer->Frequency;
+            offset = (readPos + (ALdouble)readPosFrac/FRACTIONONE)/Buffer->Frequency;
             break;
 
         case AL_SAMPLE_OFFSET:
-        case AL_SAMPLE_RW_OFFSETS_SOFT:
-            offset[0] = readPos + (ALdouble)readPosFrac/FRACTIONONE;
-            offset[1] = (ALdouble)writePos;
+            offset = readPos + (ALdouble)readPosFrac/FRACTIONONE;
             break;
 
         case AL_BYTE_OFFSET:
-        case AL_BYTE_RW_OFFSETS_SOFT:
             if(Buffer->OriginalType == UserFmtIMA4)
             {
                 ALsizei align = (Buffer->OriginalAlign-1)/2 + 4;
@@ -2870,15 +2850,7 @@ static ALvoid GetSourceOffsets(ALsource *Source, ALenum name, ALdouble *offset, 
                 ALuint FrameBlockSize = Buffer->OriginalAlign;
 
                 /* Round down to nearest ADPCM block */
-                offset[0] = (ALdouble)(readPos / FrameBlockSize * BlockSize);
-                if(Source->state != AL_PLAYING)
-                    offset[1] = offset[0];
-                else
-                {
-                    /* Round up to nearest ADPCM block */
-                    offset[1] = (ALdouble)((writePos+FrameBlockSize-1) /
-                                           FrameBlockSize * BlockSize);
-                }
+                offset = (ALdouble)(readPos / FrameBlockSize * BlockSize);
             }
             else if(Buffer->OriginalType == UserFmtMSADPCM)
             {
@@ -2887,26 +2859,18 @@ static ALvoid GetSourceOffsets(ALsource *Source, ALenum name, ALdouble *offset, 
                 ALuint FrameBlockSize = Buffer->OriginalAlign;
 
                 /* Round down to nearest ADPCM block */
-                offset[0] = (ALdouble)(readPos / FrameBlockSize * BlockSize);
-                if(Source->state != AL_PLAYING)
-                    offset[1] = offset[0];
-                else
-                {
-                    /* Round up to nearest ADPCM block */
-                    offset[1] = (ALdouble)((writePos+FrameBlockSize-1) /
-                                           FrameBlockSize * BlockSize);
-                }
+                offset = (ALdouble)(readPos / FrameBlockSize * BlockSize);
             }
             else
             {
                 ALuint FrameSize = FrameSizeFromUserFmt(Buffer->OriginalChannels, Buffer->OriginalType);
-                offset[0] = (ALdouble)(readPos * FrameSize);
-                offset[1] = (ALdouble)(writePos * FrameSize);
+                offset = (ALdouble)(readPos * FrameSize);
             }
             break;
     }
 
     ReadUnlock(&Source->queue_lock);
+    return offset;
 }
 
 

@@ -512,6 +512,8 @@ static const ALCenums enumeration[] = {
     DECL(AL_UNPACK_BLOCK_ALIGNMENT_SOFT),
     DECL(AL_PACK_BLOCK_ALIGNMENT_SOFT),
 
+    DECL(AL_SOURCE_RADIUS),
+
     DECL(AL_STEREO_ANGLES),
 
     DECL(AL_UNUSED),
@@ -703,10 +705,10 @@ static const ALchar alExtList[] =
     "AL_EXT_ALAW AL_EXT_BFORMAT AL_EXT_DOUBLE AL_EXT_EXPONENT_DISTANCE "
     "AL_EXT_FLOAT32 AL_EXT_IMA4 AL_EXT_LINEAR_DISTANCE AL_EXT_MCFORMATS "
     "AL_EXT_MULAW AL_EXT_MULAW_BFORMAT AL_EXT_MULAW_MCFORMATS AL_EXT_OFFSET "
-    "AL_EXT_source_distance_model AL_EXT_STEREO_ANGLES AL_LOKI_quadriphonic "
-    "AL_SOFT_block_alignment AL_SOFT_deferred_updates AL_SOFT_direct_channels "
-    "AL_SOFT_loop_points AL_SOFT_MSADPCM AL_SOFT_source_latency "
-    "AL_SOFT_source_length";
+    "AL_EXT_source_distance_model AL_EXT_SOURCE_RADIUS AL_EXT_STEREO_ANGLES "
+    "AL_LOKI_quadriphonic AL_SOFT_block_alignment AL_SOFT_deferred_updates "
+    "AL_SOFT_direct_channels AL_SOFT_loop_points AL_SOFT_MSADPCM "
+    "AL_SOFT_source_latency AL_SOFT_source_length";
 
 static ATOMIC(ALCenum) LastNullDeviceError = ATOMIC_INIT_STATIC(ALC_NO_ERROR);
 

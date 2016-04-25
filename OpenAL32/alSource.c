@@ -104,6 +104,9 @@ typedef enum SourceProp {
     /* AL_EXT_STEREO_ANGLES */
     srcAngles = AL_STEREO_ANGLES,
 
+    /* AL_EXT_SOURCE_RADIUS */
+    srcRadius = AL_SOURCE_RADIUS,
+
     /* AL_EXT_BFORMAT */
     srcOrientation = AL_ORIENTATION,
 } SourceProp;
@@ -153,6 +156,7 @@ static ALint FloatValsByProp(ALenum prop)
         case AL_BYTE_LENGTH_SOFT:
         case AL_SAMPLE_LENGTH_SOFT:
         case AL_SEC_LENGTH_SOFT:
+        case AL_SOURCE_RADIUS:
             return 1;
 
         case AL_STEREO_ANGLES:
@@ -215,6 +219,7 @@ static ALint DoubleValsByProp(ALenum prop)
         case AL_BYTE_LENGTH_SOFT:
         case AL_SAMPLE_LENGTH_SOFT:
         case AL_SEC_LENGTH_SOFT:
+        case AL_SOURCE_RADIUS:
             return 1;
 
         case AL_SEC_OFFSET_LATENCY_SOFT:
@@ -278,6 +283,7 @@ static ALint IntValsByProp(ALenum prop)
         case AL_BYTE_LENGTH_SOFT:
         case AL_SAMPLE_LENGTH_SOFT:
         case AL_SEC_LENGTH_SOFT:
+        case AL_SOURCE_RADIUS:
             return 1;
 
         case AL_POSITION:
@@ -337,6 +343,7 @@ static ALint Int64ValsByProp(ALenum prop)
         case AL_BYTE_LENGTH_SOFT:
         case AL_SAMPLE_LENGTH_SOFT:
         case AL_SEC_LENGTH_SOFT:
+        case AL_SOURCE_RADIUS:
             return 1;
 
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
@@ -500,6 +507,12 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
             UnlockContext(Context);
             return AL_TRUE;
 
+        case AL_SOURCE_RADIUS:
+            CHECKVAL(*values >= 0.0f && isfinite(*values));
+
+            Source->Radius = *values;
+            ATOMIC_STORE(&Source->NeedsUpdate, AL_TRUE);
+            return AL_TRUE;
 
         case AL_STEREO_ANGLES:
             CHECKVAL(isfinite(values[0]) && isfinite(values[1]));
@@ -809,6 +822,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_CONE_OUTER_GAINHF:
         case AL_AIR_ABSORPTION_FACTOR:
         case AL_ROOM_ROLLOFF_FACTOR:
+        case AL_SOURCE_RADIUS:
             fvals[0] = (ALfloat)*values;
             return SetSourcefv(Source, Context, (int)prop, fvals);
 
@@ -910,6 +924,7 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
         case AL_CONE_OUTER_GAINHF:
         case AL_AIR_ABSORPTION_FACTOR:
         case AL_ROOM_ROLLOFF_FACTOR:
+        case AL_SOURCE_RADIUS:
             fvals[0] = (ALfloat)*values;
             return SetSourcefv(Source, Context, (int)prop, fvals);
 
@@ -1040,18 +1055,22 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
             ReadUnlock(&Source->queue_lock);
             return AL_TRUE;
 
-        case AL_SEC_OFFSET_LATENCY_SOFT:
-            LockContext(Context);
-            values[0] = GetSourceSecOffset(Source);
-            values[1] = (ALdouble)(V0(device->Backend,getLatency)()) /
-                        1000000000.0;
-            UnlockContext(Context);
+        case AL_SOURCE_RADIUS:
+            *values = Source->Radius;
             return AL_TRUE;
 
         case AL_STEREO_ANGLES:
             LockContext(Context);
             values[0] = Source->StereoPan[0];
             values[1] = Source->StereoPan[1];
+            UnlockContext(Context);
+            return AL_TRUE;
+
+        case AL_SEC_OFFSET_LATENCY_SOFT:
+            LockContext(Context);
+            values[0] = GetSourceSecOffset(Source);
+            values[1] = (ALdouble)(V0(device->Backend,getLatency)()) /
+                        1000000000.0;
             UnlockContext(Context);
             return AL_TRUE;
 
@@ -1283,6 +1302,7 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_ROOM_ROLLOFF_FACTOR:
         case AL_CONE_OUTER_GAINHF:
         case AL_SEC_LENGTH_SOFT:
+        case AL_SOURCE_RADIUS:
             if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
                 *values = (ALint)dvals[0];
             return err;
@@ -1363,6 +1383,7 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
         case AL_ROOM_ROLLOFF_FACTOR:
         case AL_CONE_OUTER_GAINHF:
         case AL_SEC_LENGTH_SOFT:
+        case AL_SOURCE_RADIUS:
             if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
                 *values = (ALint64)dvals[0];
             return err;

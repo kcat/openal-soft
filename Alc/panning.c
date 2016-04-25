@@ -36,7 +36,7 @@
 #include "bs2b.h"
 
 
-extern inline void CalcXYZCoeffs(ALfloat x, ALfloat y, ALfloat z, ALfloat coeffs[MAX_AMBI_COEFFS]);
+extern inline void CalcXYZCoeffs(ALfloat x, ALfloat y, ALfloat z, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
 
 
 #define ZERO_ORDER_SCALE    0.0f
@@ -109,7 +109,7 @@ static const ALfloat FuMa2N3DScale[MAX_AMBI_COEFFS] = {
 };
 
 
-void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat coeffs[MAX_AMBI_COEFFS])
+void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS])
 {
     /* Convert from OpenAL coords to Ambisonics. */
     ALfloat x = -dir[2];
@@ -136,16 +136,63 @@ void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat coeffs[MAX_AMBI_COEFFS])
     coeffs[13] =  1.620185175f * x * (5.0f*z*z - 1.0f); /* ACN 13 = sqrt(21/8) * X * (5*Z*Z - 1) */
     coeffs[14] =  5.123475383f * z * (x*x - y*y);       /* ACN 14 = sqrt(105)/2 * Z * (X*X - Y*Y) */
     coeffs[15] =  2.091650066f * x * (x*x - 3.0f*y*y);  /* ACN 15 = sqrt(35/8) * X * (X*X - 3*Y*Y) */
+
+    if(spread > 0.0f)
+    {
+        /* Implement the spread by using a spherical source that subtends the
+         * angle spread. See:
+         * http://www.ppsloan.org/publications/StupidSH36.pdf - Appendix A3
+         *
+         * The gain of the source is compensated for size, so that the
+         * loundness doesn't depend on the spread.
+         *
+         * ZH0 = (-sqrt_pi * (-1.f + ca));
+         * ZH1 = ( 0.5f*sqrtf(3.f)*sqrt_pi * sa*sa);
+         * ZH2 = (-0.5f*sqrtf(5.f)*sqrt_pi * ca*(-1.f+ca)*(ca+1.f));
+         * ZH3 = (-0.125f*sqrtf(7.f)*sqrt_pi * (-1.f+ca)*(ca+1.f)*(5.f*ca*ca-1.f));
+         * solidangle = 2.f*F_PI*(1.f-ca)
+         * size_normalisation_coef = 1.f/ZH0;
+         *
+         * This is then adjusted for N3D normalization over SN3D.
+         */
+        ALfloat ca = cosf(spread * 0.5f);
+
+        ALfloat ZH0_norm = 1.0f;
+        ALfloat ZH1_norm = 0.5f * (ca+1.f);
+        ALfloat ZH2_norm = 0.5f * (ca+1.f)*ca;
+        ALfloat ZH3_norm = 0.125f * (ca+1.f)*(5.f*ca*ca-1.f);
+
+        /* Zeroth-order */
+        coeffs[0]  *= ZH0_norm;
+        /* First-order */
+        coeffs[1]  *= ZH1_norm;
+        coeffs[2]  *= ZH1_norm;
+        coeffs[3]  *= ZH1_norm;
+        /* Second-order */
+        coeffs[4]  *= ZH2_norm;
+        coeffs[5]  *= ZH2_norm;
+        coeffs[6]  *= ZH2_norm;
+        coeffs[7]  *= ZH2_norm;
+        coeffs[8]  *= ZH2_norm;
+        /* Third-order */
+        coeffs[9]  *= ZH3_norm;
+        coeffs[10] *= ZH3_norm;
+        coeffs[11] *= ZH3_norm;
+        coeffs[12] *= ZH3_norm;
+        coeffs[13] *= ZH3_norm;
+        coeffs[14] *= ZH3_norm;
+        coeffs[15] *= ZH3_norm;
+    }
 }
 
-void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat coeffs[MAX_AMBI_COEFFS])
+void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS])
 {
     ALfloat dir[3] = {
         sinf(azimuth) * cosf(elevation),
         sinf(elevation),
         -cosf(azimuth) * cosf(elevation)
     };
-    CalcDirectionCoeffs(dir, coeffs);
+    CalcDirectionCoeffs(dir, spread, coeffs);
 }
 
 
@@ -714,7 +761,7 @@ static void InitHrtfPanning(ALCdevice *device)
     for(i = 0;i < device->Dry.NumChannels;i++)
     {
         int chan = GetChannelIndex(CubeChannels, CubeInfo[i].Channel);
-        GetLerpedHrtfCoeffs(device->Hrtf, CubeInfo[i].Elevation, CubeInfo[i].Angle, 1.0f, 1.0f,
+        GetLerpedHrtfCoeffs(device->Hrtf, CubeInfo[i].Elevation, CubeInfo[i].Angle, 1.0f, 0.0f,
                             device->Hrtf_Params[chan].Coeffs, device->Hrtf_Params[chan].Delay);
     }
 }

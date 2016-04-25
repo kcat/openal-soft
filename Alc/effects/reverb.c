@@ -719,7 +719,7 @@ static ALvoid UpdateMixedPanning(const ALCdevice *Device, const ALfloat *Reflect
         };
         length = minf(length, 1.0f);
 
-        CalcDirectionCoeffs(pan, coeffs);
+        CalcDirectionCoeffs(pan, 0.0f, coeffs);
         ComputePanningGains(Device->Dry, coeffs, Gain, DirGains);
         for(i = 0;i < Device->Dry.NumChannels;i++)
             State->Early.PanGain[3][i] = DirGains[i] * EarlyGain * length;
@@ -743,7 +743,7 @@ static ALvoid UpdateMixedPanning(const ALCdevice *Device, const ALfloat *Reflect
         };
         length = minf(length, 1.0f);
 
-        CalcDirectionCoeffs(pan, coeffs);
+        CalcDirectionCoeffs(pan, 0.0f, coeffs);
         ComputePanningGains(Device->Dry, coeffs, Gain, DirGains);
         for(i = 0;i < Device->Dry.NumChannels;i++)
             State->Late.PanGain[3][i] = DirGains[i] * LateGain * length;
@@ -783,7 +783,7 @@ static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *Reflec
         };
         length = minf(length, 1.0f);
 
-        CalcDirectionCoeffs(pan, coeffs);
+        CalcDirectionCoeffs(pan, 0.0f, coeffs);
         ComputePanningGains(Device->Dry, coeffs, Gain, DirGains);
         for(i = 0;i < Device->Dry.NumChannels;i++)
             State->Early.PanGain[i&3][i] = lerp(AmbientGains[i], DirGains[i], length) * EarlyGain;
@@ -805,7 +805,7 @@ static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *Reflec
         };
         length = minf(length, 1.0f);
 
-        CalcDirectionCoeffs(pan, coeffs);
+        CalcDirectionCoeffs(pan, 0.0f, coeffs);
         ComputePanningGains(Device->Dry, coeffs, Gain, DirGains);
         for(i = 0;i < Device->Dry.NumChannels;i++)
             State->Late.PanGain[i&3][i] = lerp(AmbientGains[i], DirGains[i], length) * LateGain;
@@ -855,7 +855,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     }
     for(i = 0;i < 4;i++)
     {
-        CalcDirectionCoeffs(PanDirs[i], coeffs);
+        CalcDirectionCoeffs(PanDirs[i], 0.0f, coeffs);
         ComputePanningGains(Device->Dry, coeffs, Gain*EarlyGain*gain[i],
                             State->Early.PanGain[i]);
     }
@@ -886,7 +886,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     }
     for(i = 0;i < 4;i++)
     {
-        CalcDirectionCoeffs(PanDirs[i], coeffs);
+        CalcDirectionCoeffs(PanDirs[i], 0.0f, coeffs);
         ComputePanningGains(Device->Dry, coeffs, Gain*LateGain*gain[i],
                             State->Late.PanGain[i]);
     }

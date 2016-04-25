@@ -85,13 +85,19 @@ static ALvoid ALechoState_update(ALechoState *state, const ALCdevice *Device, co
 {
     ALuint frequency = Device->Frequency;
     ALfloat coeffs[MAX_AMBI_COEFFS];
-    ALfloat gain, lrpan;
+    ALfloat gain, lrpan, spread;
 
     state->Tap[0].delay = fastf2u(Slot->EffectProps.Echo.Delay * frequency) + 1;
     state->Tap[1].delay = fastf2u(Slot->EffectProps.Echo.LRDelay * frequency);
     state->Tap[1].delay += state->Tap[0].delay;
 
-    lrpan = Slot->EffectProps.Echo.Spread;
+    spread = Slot->EffectProps.Echo.Spread;
+    if(spread < 0.0f) lrpan = -1.0f;
+    else lrpan = 1.0f;
+    /* Convert echo spread (where 0 = omni, +/-1 = directional) to coverage
+     * spread (where 0 = point, tau = omni).
+     */
+    spread = asinf(1.0f - fabsf(spread))*4.0f;
 
     state->FeedGain = Slot->EffectProps.Echo.Feedback;
 
@@ -103,11 +109,11 @@ static ALvoid ALechoState_update(ALechoState *state, const ALCdevice *Device, co
     gain = Slot->Gain;
 
     /* First tap panning */
-    CalcXYZCoeffs(-lrpan, 0.0f, 0.0f, coeffs);
+    CalcXYZCoeffs(-lrpan, 0.0f, 0.0f, spread, coeffs);
     ComputePanningGains(Device->Dry, coeffs, gain, state->Gain[0]);
 
     /* Second tap panning */
-    CalcXYZCoeffs( lrpan, 0.0f, 0.0f, coeffs);
+    CalcXYZCoeffs( lrpan, 0.0f, 0.0f, spread, coeffs);
     ComputePanningGains(Device->Dry, coeffs, gain, state->Gain[1]);
 }
 

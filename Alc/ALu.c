@@ -567,7 +567,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
              * channel-match. */
             for(c = 0;c < num_channels;c++)
             {
-                CalcAngleCoeffs(chans[c].angle, chans[c].elevation, coeffs);
+                CalcAngleCoeffs(chans[c].angle, chans[c].elevation, 0.0f, coeffs);
 
                 for(i = 0;i < NumSends;i++)
                 {
@@ -618,13 +618,13 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
 
                 /* Get the static HRIR coefficients and delays for this channel. */
                 GetLerpedHrtfCoeffs(Device->Hrtf,
-                    chans[c].elevation, chans[c].angle, 1.0f, DryGain,
+                    chans[c].elevation, chans[c].angle, 0.0f, DryGain,
                     voice->Direct.Hrtf[c].Target.Coeffs,
                     voice->Direct.Hrtf[c].Target.Delay
                 );
 
                 /* Normal panning for auxiliary sends. */
-                CalcAngleCoeffs(chans[c].angle, chans[c].elevation, coeffs);
+                CalcAngleCoeffs(chans[c].angle, chans[c].elevation, 0.0f, coeffs);
 
                 for(i = 0;i < NumSends;i++)
                 {
@@ -680,11 +680,11 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
                     for(j = 2;j < MAX_OUTPUT_CHANNELS;j++)
                         voice->Direct.Gains[c].Target[j] = 0.0f;
 
-                    CalcAngleCoeffs(chans[c].angle, chans[c].elevation, coeffs);
+                    CalcAngleCoeffs(chans[c].angle, chans[c].elevation, 0.0f, coeffs);
                 }
                 else
                 {
-                    CalcAngleCoeffs(chans[c].angle, chans[c].elevation, coeffs);
+                    CalcAngleCoeffs(chans[c].angle, chans[c].elevation, 0.0f, coeffs);
                     ComputePanningGains(Device->Dry, coeffs, DryGain,
                                         voice->Direct.Gains[c].Target);
                 }
@@ -1091,8 +1091,8 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         aluVector dir = {{ 0.0f, 0.0f, -1.0f, 0.0f }};
         ALfloat ev = 0.0f, az = 0.0f;
         ALfloat radius = ALSource->Radius;
-        ALfloat dirfact = 1.0f;
         ALfloat coeffs[MAX_AMBI_COEFFS];
+        ALfloat spread = 0.0f;
 
         voice->Direct.OutBuffer = Device->RealOut.Buffer;
         voice->Direct.OutChannels = Device->RealOut.NumChannels;
@@ -1110,23 +1110,17 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             ev = asinf(clampf(dir.v[1], -1.0f, 1.0f));
             az = atan2f(dir.v[0], -dir.v[2]);
         }
-        if(radius > 0.0f)
-        {
-            if(radius >= Distance)
-                dirfact *= Distance / radius * 0.5f;
-            else
-                dirfact *= 1.0f - (asinf(radius / Distance) / F_PI);
-        }
+        if(radius > Distance)
+            spread = F_TAU - Distance/radius*F_PI;
+        else if(Distance > FLT_EPSILON)
+            spread = asinf(radius / Distance) * 2.0f;
 
         /* Get the HRIR coefficients and delays. */
-        GetLerpedHrtfCoeffs(Device->Hrtf, ev, az, dirfact, DryGain,
+        GetLerpedHrtfCoeffs(Device->Hrtf, ev, az, spread, DryGain,
                             voice->Direct.Hrtf[0].Target.Coeffs,
                             voice->Direct.Hrtf[0].Target.Delay);
 
-        dir.v[0] *= dirfact;
-        dir.v[1] *= dirfact;
-        dir.v[2] *= dirfact;
-        CalcDirectionCoeffs(dir.v, coeffs);
+        CalcDirectionCoeffs(dir.v, spread, coeffs);
 
         for(i = 0;i < NumSends;i++)
         {
@@ -1152,6 +1146,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
         ALfloat dir[3] = { 0.0f, 0.0f, -1.0f };
         ALfloat radius = ALSource->Radius;
         ALfloat coeffs[MAX_AMBI_COEFFS];
+        ALfloat spread = 0.0f;
 
         /* Get the localized direction, and compute panned gains. */
         if(Distance > FLT_EPSILON)
@@ -1160,32 +1155,26 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
             dir[1] = -SourceToListener.v[1];
             dir[2] = -SourceToListener.v[2] * ZScale;
         }
-        if(radius > 0.0f)
-        {
-            ALfloat dirfact;
-            if(radius >= Distance)
-                dirfact = Distance / radius * 0.5f;
-            else
-                dirfact = 1.0f - (asinf(radius / Distance) / F_PI);
-            dir[0] *= dirfact;
-            dir[1] *= dirfact;
-            dir[2] *= dirfact;
-        }
+        if(radius > Distance)
+            spread = F_TAU - Distance/radius*F_PI;
+        else if(Distance > FLT_EPSILON)
+            spread = asinf(radius / Distance) * 2.0f;
 
         if(Device->Render_Mode == StereoPair)
         {
             /* Clamp X so it remains within 30 degrees of 0 or 180 degree azimuth. */
-            coeffs[0] = clampf(-dir[0], -0.5f, 0.5f) + 0.5f;
-            voice->Direct.Gains[0].Target[0] = coeffs[0] * DryGain;
-            voice->Direct.Gains[0].Target[1] = (1.0f-coeffs[0]) * DryGain;
+            ALfloat x = -dir[0] * (0.5f * (cosf(spread*0.5f) + 1.0f));
+            x = clampf(x, -0.5f, 0.5f) + 0.5f;
+            voice->Direct.Gains[0].Target[0] = x * DryGain;
+            voice->Direct.Gains[0].Target[1] = (1.0f-x) * DryGain;
             for(i = 2;i < MAX_OUTPUT_CHANNELS;i++)
                 voice->Direct.Gains[0].Target[i] = 0.0f;
 
-            CalcDirectionCoeffs(dir, coeffs);
+            CalcDirectionCoeffs(dir, spread, coeffs);
         }
         else
         {
-            CalcDirectionCoeffs(dir, coeffs);
+            CalcDirectionCoeffs(dir, spread, coeffs);
             ComputePanningGains(Device->Dry, coeffs, DryGain, voice->Direct.Gains[0].Target);
         }
 

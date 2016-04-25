@@ -300,9 +300,10 @@ void aluInitEffectPanning(struct ALeffectslot *slot);
  * CalcDirectionCoeffs
  *
  * Calculates ambisonic coefficients based on a direction vector. The vector
- * must be normalized (unit length).
+ * must be normalized (unit length), and the spread is the angular width of the
+ * sound (0...tau).
  */
-void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat coeffs[MAX_AMBI_COEFFS]);
+void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
 
 /**
  * CalcXYZCoeffs
@@ -310,10 +311,10 @@ void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat coeffs[MAX_AMBI_COEFFS]);
  * Same as CalcDirectionCoeffs except the direction is specified as separate x,
  * y, and z parameters instead of an array.
  */
-inline void CalcXYZCoeffs(ALfloat x, ALfloat y, ALfloat z, ALfloat coeffs[MAX_AMBI_COEFFS])
+inline void CalcXYZCoeffs(ALfloat x, ALfloat y, ALfloat z, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS])
 {
     ALfloat dir[3] = { x, y, z };
-    CalcDirectionCoeffs(dir, coeffs);
+    CalcDirectionCoeffs(dir, spread, coeffs);
 }
 
 /**
@@ -323,7 +324,7 @@ inline void CalcXYZCoeffs(ALfloat x, ALfloat y, ALfloat z, ALfloat coeffs[MAX_AM
  * azimuth and elevation parameters are in radians, going right and up
  * respectively.
  */
-void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat coeffs[MAX_AMBI_COEFFS]);
+void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
 
 /**
  * ComputeAmbientGains

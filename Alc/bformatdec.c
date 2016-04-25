@@ -150,19 +150,19 @@ static void init_encoder(void)
 {
     ALuint i, j;
 
-    CalcXYZCoeffs(-0.577350269f,  0.577350269f, -0.577350269f, CubeEncoder[0]);
-    CalcXYZCoeffs( 0.577350269f,  0.577350269f, -0.577350269f, CubeEncoder[1]);
-    CalcXYZCoeffs(-0.577350269f,  0.577350269f,  0.577350269f, CubeEncoder[2]);
-    CalcXYZCoeffs( 0.577350269f,  0.577350269f,  0.577350269f, CubeEncoder[3]);
-    CalcXYZCoeffs(-0.577350269f, -0.577350269f, -0.577350269f, CubeEncoder[4]);
-    CalcXYZCoeffs( 0.577350269f, -0.577350269f, -0.577350269f, CubeEncoder[5]);
-    CalcXYZCoeffs(-0.577350269f, -0.577350269f,  0.577350269f, CubeEncoder[6]);
-    CalcXYZCoeffs( 0.577350269f, -0.577350269f,  0.577350269f, CubeEncoder[7]);
+    CalcXYZCoeffs(-0.577350269f,  0.577350269f, -0.577350269f, 0.0f, CubeEncoder[0]);
+    CalcXYZCoeffs( 0.577350269f,  0.577350269f, -0.577350269f, 0.0f, CubeEncoder[1]);
+    CalcXYZCoeffs(-0.577350269f,  0.577350269f,  0.577350269f, 0.0f, CubeEncoder[2]);
+    CalcXYZCoeffs( 0.577350269f,  0.577350269f,  0.577350269f, 0.0f, CubeEncoder[3]);
+    CalcXYZCoeffs(-0.577350269f, -0.577350269f, -0.577350269f, 0.0f, CubeEncoder[4]);
+    CalcXYZCoeffs( 0.577350269f, -0.577350269f, -0.577350269f, 0.0f, CubeEncoder[5]);
+    CalcXYZCoeffs(-0.577350269f, -0.577350269f,  0.577350269f, 0.0f, CubeEncoder[6]);
+    CalcXYZCoeffs( 0.577350269f, -0.577350269f,  0.577350269f, 0.0f, CubeEncoder[7]);
 
-    CalcXYZCoeffs(-0.707106781f,  0.0f, -0.707106781f, SquareEncoder[0]);
-    CalcXYZCoeffs( 0.707106781f,  0.0f, -0.707106781f, SquareEncoder[1]);
-    CalcXYZCoeffs(-0.707106781f,  0.0f,  0.707106781f, SquareEncoder[2]);
-    CalcXYZCoeffs( 0.707106781f,  0.0f,  0.707106781f, SquareEncoder[3]);
+    CalcXYZCoeffs(-0.707106781f,  0.0f, -0.707106781f, 0.0f, SquareEncoder[0]);
+    CalcXYZCoeffs( 0.707106781f,  0.0f, -0.707106781f, 0.0f, SquareEncoder[1]);
+    CalcXYZCoeffs(-0.707106781f,  0.0f,  0.707106781f, 0.0f, SquareEncoder[2]);
+    CalcXYZCoeffs( 0.707106781f,  0.0f,  0.707106781f, 0.0f, SquareEncoder[3]);
 
     for(i = 0;i < 4;i++)
     {

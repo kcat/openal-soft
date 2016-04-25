@@ -30,6 +30,6 @@ void FreeHrtfList(vector_HrtfEntry *list);
 ALuint GetHrtfSampleRate(const struct Hrtf *Hrtf);
 ALuint GetHrtfIrSize(const struct Hrtf *Hrtf);
 
-void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat dirfact, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays);
+void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays);
 
 #endif /* ALC_HRTF_H */

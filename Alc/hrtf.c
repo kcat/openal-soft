@@ -96,11 +96,14 @@ static void CalcAzIndices(ALuint azcount, ALfloat az, ALuint *azidx, ALfloat *az
  * increase the apparent resolution of the HRIR data set.  The coefficients
  * are also normalized and attenuated by the specified gain.
  */
-void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat dirfact, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays)
+void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays)
 {
     ALuint evidx[2], lidx[4], ridx[4];
     ALfloat mu[3], blend[4];
+    ALfloat dirfact;
     ALuint i;
+
+    dirfact = 1.0f - (spread / F_TAU);
 
     /* Claculate elevation indices and interpolation factor. */
     CalcEvIndices(Hrtf->evCount, elevation, evidx, &mu[2]);

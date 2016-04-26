@@ -1201,13 +1201,13 @@ static ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum Fm
         { AL_7POINT1_16_SOFT,  FmtX71, FmtShort },
         { AL_7POINT1_32F_SOFT, FmtX71, FmtFloat },
 
-        { AL_FORMAT_BFORMAT2D_8,       FmtBFormat2D, FmtByte },
-        { AL_FORMAT_BFORMAT2D_16,      FmtBFormat2D, FmtShort },
-        { AL_FORMAT_BFORMAT2D_FLOAT32, FmtBFormat2D, FmtFloat },
+        { AL_BFORMAT2D_8_SOFT,   FmtBFormat2D, FmtByte },
+        { AL_BFORMAT2D_16_SOFT,  FmtBFormat2D, FmtShort },
+        { AL_BFORMAT2D_32F_SOFT, FmtBFormat2D, FmtFloat },
 
-        { AL_FORMAT_BFORMAT3D_8,       FmtBFormat3D, FmtByte },
-        { AL_FORMAT_BFORMAT3D_16,      FmtBFormat3D, FmtShort },
-        { AL_FORMAT_BFORMAT3D_FLOAT32, FmtBFormat3D, FmtFloat },
+        { AL_BFORMAT3D_8_SOFT,   FmtBFormat3D, FmtByte },
+        { AL_BFORMAT3D_16_SOFT,  FmtBFormat3D, FmtShort },
+        { AL_BFORMAT3D_32F_SOFT, FmtBFormat3D, FmtFloat },
     };
     ALuint i;
 
@@ -1277,6 +1277,7 @@ static ALboolean IsValidType(ALenum type)
         case AL_DOUBLE_SOFT:
         case AL_BYTE3_SOFT:
         case AL_UNSIGNED_BYTE3_SOFT:
+        case AL_MULAW_SOFT:
             return AL_TRUE;
     }
     return AL_FALSE;
@@ -1293,6 +1294,8 @@ static ALboolean IsValidChannels(ALenum channels)
         case AL_5POINT1_SOFT:
         case AL_6POINT1_SOFT:
         case AL_7POINT1_SOFT:
+        case AL_BFORMAT2D_SOFT:
+        case AL_BFORMAT3D_SOFT:
             return AL_TRUE;
     }
     return AL_FALSE;

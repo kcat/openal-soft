@@ -19,21 +19,21 @@ enum UserFmtType {
     UserFmtDouble = AL_DOUBLE_SOFT,
     UserFmtByte3  = AL_BYTE3_SOFT,
     UserFmtUByte3 = AL_UNSIGNED_BYTE3_SOFT,
-    UserFmtMulaw,
-    UserFmtAlaw,
+    UserFmtMulaw  = AL_MULAW_SOFT,
+    UserFmtAlaw   = 0x10000000,
     UserFmtIMA4,
     UserFmtMSADPCM,
 };
 enum UserFmtChannels {
-    UserFmtMono   = AL_MONO_SOFT,
-    UserFmtStereo = AL_STEREO_SOFT,
-    UserFmtRear   = AL_REAR_SOFT,
-    UserFmtQuad   = AL_QUAD_SOFT,
-    UserFmtX51    = AL_5POINT1_SOFT, /* (WFX order) */
-    UserFmtX61    = AL_6POINT1_SOFT, /* (WFX order) */
-    UserFmtX71    = AL_7POINT1_SOFT, /* (WFX order) */
-    UserFmtBFormat2D = 0x10000000, /* WXY */
-    UserFmtBFormat3D, /* WXYZ */
+    UserFmtMono      = AL_MONO_SOFT,
+    UserFmtStereo    = AL_STEREO_SOFT,
+    UserFmtRear      = AL_REAR_SOFT,
+    UserFmtQuad      = AL_QUAD_SOFT,
+    UserFmtX51       = AL_5POINT1_SOFT, /* (WFX order) */
+    UserFmtX61       = AL_6POINT1_SOFT, /* (WFX order) */
+    UserFmtX71       = AL_7POINT1_SOFT, /* (WFX order) */
+    UserFmtBFormat2D = AL_BFORMAT2D_SOFT, /* WXY */
+    UserFmtBFormat3D = AL_BFORMAT3D_SOFT, /* WXYZ */
 };
 
 ALuint BytesFromUserFmt(enum UserFmtType type) DECL_CONST;

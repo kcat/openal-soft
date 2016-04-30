@@ -1222,12 +1222,20 @@ static void alc_deinit(void)
 static void ProbeDevices(al_string *list, struct BackendInfo *backendinfo, enum DevProbe type)
 {
     DO_INITCONFIG();
-
     LockLists();
     al_string_clear(list);
-
     if(!backendinfo->getFactory)
-        backendinfo->Probe(type);
+    {
+        if(backendinfo->Probe)
+            backendinfo->Probe(type);
+        else
+        {
+            if(type == ALL_DEVICE_PROBE)
+                WARN("Playback Device not found\n");
+            else
+                WARN("Capture Device not found\n");
+        }
+    }
     else
     {
         ALCbackendFactory *factory = backendinfo->getFactory();

@@ -1127,6 +1127,11 @@ static void alc_initconfig(void)
         V0(factory,init)();
     }
 
+    if(!PlaybackBackend.name)
+        WARN("No playback backend available!\n");
+    if(!CaptureBackend.name)
+        WARN("No capture backend available!\n");
+
     if(ConfigValueStr(NULL, NULL, "excludefx", &str))
     {
         size_t len;
@@ -1240,9 +1245,9 @@ static void ProbeDevices(al_string *list, struct BackendInfo *backendinfo, enum 
     LockLists();
     al_string_clear(list);
 
-    if(!backendinfo->getFactory)
+    if(backendinfo->Probe)
         backendinfo->Probe(type);
-    else
+    else if(backendinfo->getFactory)
     {
         ALCbackendFactory *factory = backendinfo->getFactory();
         V(factory,probe)(type);

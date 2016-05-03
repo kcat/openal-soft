@@ -36,8 +36,8 @@ const ALfloat *Resample_fir4_32_SSE3(const BsincState* UNUSED(state), const ALfl
 {
     const __m128i increment4 = _mm_set1_epi32(increment*4);
     const __m128i fracMask4 = _mm_set1_epi32(FRACTIONMASK);
-    alignas(16) union { ALuint i[4]; float f[4]; } pos_;
-    alignas(16) union { ALuint i[4]; float f[4]; } frac_;
+    union { alignas(16) ALuint i[4]; float f[4]; } pos_;
+    union { alignas(16) ALuint i[4]; float f[4]; } frac_;
     __m128i frac4, pos4;
     ALuint pos;
     ALuint i;
@@ -100,8 +100,8 @@ const ALfloat *Resample_fir8_32_SSE3(const BsincState* UNUSED(state), const ALfl
 {
     const __m128i increment4 = _mm_set1_epi32(increment*4);
     const __m128i fracMask4 = _mm_set1_epi32(FRACTIONMASK);
-    alignas(16) union { ALuint i[4]; float f[4]; } pos_;
-    alignas(16) union { ALuint i[4]; float f[4]; } frac_;
+    union { alignas(16) ALuint i[4]; float f[4]; } pos_;
+    union { alignas(16) ALuint i[4]; float f[4]; } frac_;
     __m128i frac4, pos4;
     ALuint pos;
     ALuint i, j;

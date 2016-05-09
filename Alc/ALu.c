@@ -306,7 +306,7 @@ static ALvoid CalcListenerParams(ALCcontext *Context)
     Listener->Params.SpeedOfSound = Context->SpeedOfSound * Context->DopplerVelocity;
 }
 
-ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCcontext *ALContext)
+ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
 {
     static const struct ChanMap MonoMap[1] = {
         { FrontCenter, 0.0f, 0.0f }
@@ -347,8 +347,6 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     const ALCdevice *Device = ALContext->Device;
     const ALlistener *Listener = ALContext->Listener;
     ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
-    ALbufferlistitem *BufferListItem;
-    enum FmtChannels Channels;
     ALfloat DryGain, DryGainHF, DryGainLF;
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
@@ -407,25 +405,12 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     }
 
     /* Calculate the stepping value */
-    Channels = FmtMono;
-    BufferListItem = ATOMIC_LOAD(&ALSource->queue);
-    while(BufferListItem != NULL)
-    {
-        ALbuffer *ALBuffer;
-        if((ALBuffer=BufferListItem->buffer) != NULL)
-        {
-            Pitch = Pitch * ALBuffer->Frequency / Frequency;
-            if(Pitch > (ALfloat)MAX_PITCH)
-                voice->Step = MAX_PITCH<<FRACTIONBITS;
-            else
-                voice->Step = maxi(fastf2i(Pitch*FRACTIONONE + 0.5f), 1);
-            BsincPrepare(voice->Step, &voice->SincState);
-
-            Channels = ALBuffer->FmtChannels;
-            break;
-        }
-        BufferListItem = BufferListItem->next;
-    }
+    Pitch *= (ALfloat)ALBuffer->Frequency / Frequency;
+    if(Pitch > (ALfloat)MAX_PITCH)
+        voice->Step = MAX_PITCH<<FRACTIONBITS;
+    else
+        voice->Step = maxi(fastf2i(Pitch*FRACTIONONE + 0.5f), 1);
+    BsincPrepare(voice->Step, &voice->SincState);
 
     /* Calculate gains */
     DryGain  = clampf(SourceVolume, MinVolume, MaxVolume);
@@ -440,7 +425,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         WetGainLF[i] = ALSource->Send[i].GainLF;
     }
 
-    switch(Channels)
+    switch(ALBuffer->FmtChannels)
     {
     case FmtMono:
         chans = MonoMap;
@@ -761,7 +746,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     }
 }
 
-ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCcontext *ALContext)
+ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
 {
     const ALCdevice *Device = ALContext->Device;
     const ALlistener *Listener = ALContext->Listener;
@@ -772,7 +757,6 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     ALfloat DopplerFactor, SpeedOfSound;
     ALfloat AirAbsorptionFactor;
     ALfloat RoomAirAbsorption[MAX_SENDS];
-    ALbufferlistitem *BufferListItem;
     ALeffectslot *SendSlots[MAX_SENDS];
     ALfloat Attenuation;
     ALfloat RoomAttenuation[MAX_SENDS];
@@ -1072,25 +1056,15 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
                  clampf(SpeedOfSound-VSS, 1.0f, SpeedOfSound*2.0f - 1.0f);
     }
 
-    BufferListItem = ATOMIC_LOAD(&ALSource->queue);
-    while(BufferListItem != NULL)
-    {
-        ALbuffer *ALBuffer;
-        if((ALBuffer=BufferListItem->buffer) != NULL)
-        {
-            /* Calculate fixed-point stepping value, based on the pitch, buffer
-             * frequency, and output frequency. */
-            Pitch = Pitch * ALBuffer->Frequency / Frequency;
-            if(Pitch > (ALfloat)MAX_PITCH)
-                voice->Step = MAX_PITCH<<FRACTIONBITS;
-            else
-                voice->Step = maxi(fastf2i(Pitch*FRACTIONONE + 0.5f), 1);
-            BsincPrepare(voice->Step, &voice->SincState);
-
-            break;
-        }
-        BufferListItem = BufferListItem->next;
-    }
+    /* Calculate fixed-point stepping value, based on the pitch, buffer
+     * frequency, and output frequency.
+     */
+    Pitch *= (ALfloat)ALBuffer->Frequency / Frequency;
+    if(Pitch > (ALfloat)MAX_PITCH)
+        voice->Step = MAX_PITCH<<FRACTIONBITS;
+    else
+        voice->Step = maxi(fastf2i(Pitch*FRACTIONONE + 0.5f), 1);
+    BsincPrepare(voice->Step, &voice->SincState);
 
     if(Device->Render_Mode == HrtfRender)
     {
@@ -1262,8 +1236,19 @@ void UpdateContextSources(ALCcontext *ctx)
                 voice->Source = NULL;
             else
             {
-                ATOMIC_STORE(&source->NeedsUpdate, AL_FALSE);
-                voice->Update(voice, source, ctx);
+                ALbufferlistitem *BufferListItem;
+                BufferListItem = ATOMIC_LOAD(&source->queue);
+                while(BufferListItem != NULL)
+                {
+                    ALbuffer *buffer;
+                    if((buffer=BufferListItem->buffer) != NULL)
+                    {
+                        ATOMIC_STORE(&source->NeedsUpdate, AL_FALSE);
+                        voice->Update(voice, source, buffer, ctx);
+                        break;
+                    }
+                    BufferListItem = BufferListItem->next;
+                }
             }
         }
     }
@@ -1277,7 +1262,20 @@ void UpdateContextSources(ALCcontext *ctx)
             if(source->state != AL_PLAYING && source->state != AL_PAUSED)
                 voice->Source = NULL;
             else if(ATOMIC_EXCHANGE(ALenum, &source->NeedsUpdate, AL_FALSE))
-                voice->Update(voice, source, ctx);
+            {
+                ALbufferlistitem *BufferListItem;
+                BufferListItem = ATOMIC_LOAD(&source->queue);
+                while(BufferListItem != NULL)
+                {
+                    ALbuffer *buffer;
+                    if((buffer=BufferListItem->buffer) != NULL)
+                    {
+                        voice->Update(voice, source, buffer, ctx);
+                        break;
+                    }
+                    BufferListItem = BufferListItem->next;
+                }
+            }
         }
     }
 }

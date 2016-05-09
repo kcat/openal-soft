@@ -25,7 +25,7 @@ typedef struct ALvoice {
     struct ALsource *volatile Source;
 
     /** Method to update mixing parameters. */
-    ALvoid (*Update)(struct ALvoice *self, const struct ALsource *source, const ALCcontext *context);
+    ALvoid (*Update)(struct ALvoice *self, const struct ALsource *source, const struct ALbuffer *ALBuffer, const ALCcontext *context);
 
     /** Current target parameters used for mixing. */
     ALint Step;

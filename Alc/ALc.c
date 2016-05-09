@@ -2106,11 +2106,22 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         {
             ALvoice *voice = &context->Voices[pos];
             ALsource *source = voice->Source;
+            ALbufferlistitem *BufferListItem;
 
-            if(source)
+            if(!source)
+                continue;
+
+            BufferListItem = ATOMIC_LOAD(&source->queue);
+            while(BufferListItem != NULL)
             {
-                ATOMIC_STORE(&source->NeedsUpdate, AL_FALSE);
-                voice->Update(voice, source, context);
+                ALbuffer *buffer;
+                if((buffer=BufferListItem->buffer) != NULL)
+                {
+                    ATOMIC_STORE(&source->NeedsUpdate, AL_FALSE);
+                    voice->Update(voice, source, buffer, context);
+                    break;
+                }
+                BufferListItem = BufferListItem->next;
             }
         }
 

@@ -36,6 +36,7 @@ extern "C" {
 struct ALsource;
 struct ALvoice;
 struct ALeffectslot;
+struct ALbuffer;
 
 
 /* The number of distinct scale and phase intervals within the filter table. */
@@ -374,8 +375,8 @@ void ComputeFirstOrderGainsBF(const BFChannelConfig *chanmap, ALuint numchans, c
 
 ALvoid UpdateContextSources(ALCcontext *context);
 
-ALvoid CalcSourceParams(struct ALvoice *voice, const struct ALsource *source, const ALCcontext *ALContext);
-ALvoid CalcNonAttnSourceParams(struct ALvoice *voice, const struct ALsource *source, const ALCcontext *ALContext);
+ALvoid CalcSourceParams(struct ALvoice *voice, const struct ALsource *source, const struct ALbuffer *buffer, const ALCcontext *ALContext);
+ALvoid CalcNonAttnSourceParams(struct ALvoice *voice, const struct ALsource *source, const struct ALbuffer *buffer, const ALCcontext *ALContext);
 
 ALvoid MixSource(struct ALvoice *voice, struct ALsource *source, ALCdevice *Device, ALuint SamplesToDo);
 

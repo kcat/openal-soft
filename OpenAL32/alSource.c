@@ -2544,7 +2544,8 @@ static ALvoid InitSourceParams(ALsource *Source)
     Source->state = AL_INITIAL;
     Source->new_state = AL_NONE;
     Source->SourceType = AL_UNDETERMINED;
-    Source->Offset = -1.0;
+    Source->OffsetType = AL_NONE;
+    Source->Offset = 0.0;
 
     ATOMIC_INIT(&Source->queue, NULL);
     ATOMIC_INIT(&Source->current_buffer, NULL);
@@ -2608,7 +2609,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         }
 
         // Check if an Offset has been set
-        if(Source->Offset >= 0.0)
+        if(Source->OffsetType != AL_NONE)
         {
             ApplyOffset(Source);
             /* discontinuity = AL_TRUE;??? */
@@ -2680,7 +2681,8 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             Source->state = AL_STOPPED;
             ATOMIC_STORE(&Source->current_buffer, NULL);
         }
-        Source->Offset = -1.0;
+        Source->OffsetType = AL_NONE;
+        Source->Offset = 0.0;
     }
     else if(state == AL_INITIAL)
     {
@@ -2691,7 +2693,8 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             Source->position_fraction = 0;
             ATOMIC_STORE(&Source->current_buffer, ATOMIC_LOAD(&Source->queue));
         }
-        Source->Offset = -1.0;
+        Source->OffsetType = AL_NONE;
+        Source->Offset = 0.0;
     }
     WriteUnlock(&Source->queue_lock);
 }
@@ -2942,7 +2945,8 @@ static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac)
     }
     if(!Buffer)
     {
-        Source->Offset = -1.0;
+        Source->OffsetType = AL_NONE;
+        Source->Offset = 0.0;
         return AL_FALSE;
     }
 
@@ -2980,7 +2984,8 @@ static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac)
         *frac = (ALuint)mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0);
         break;
     }
-    Source->Offset = -1.0;
+    Source->OffsetType = AL_NONE;
+    Source->Offset = 0.0;
 
     return AL_TRUE;
 }

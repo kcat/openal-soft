@@ -1604,7 +1604,7 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
             ALenum new_state;
 
             if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
-               Source->Offset >= 0.0)
+               Source->OffsetType != AL_NONE)
             {
                 WriteLock(&Source->queue_lock);
                 ApplyOffset(Source);

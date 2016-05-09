@@ -2272,6 +2272,7 @@ static ALvoid InitContext(ALCcontext *Context)
     listener->Up[0] = 0.0f;
     listener->Up[1] = 1.0f;
     listener->Up[2] = 0.0f;
+
     aluMatrixdSet(&listener->Params.Matrix,
         1.0, 0.0, 0.0, 0.0,
         0.0, 1.0, 0.0, 0.0,
@@ -2279,6 +2280,10 @@ static ALvoid InitContext(ALCcontext *Context)
         0.0, 0.0, 0.0, 1.0
     );
     aluVectorSet(&listener->Params.Velocity, 0.0f, 0.0f, 0.0f, 0.0f);
+    listener->Params.Gain = 1.0f;
+    listener->Params.MetersPerUnit = 1.0f;
+    listener->Params.DopplerFactor = 1.0f;
+    listener->Params.SpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
 
     //Validate Context
     ATOMIC_INIT(&Context->LastError, AL_NO_ERROR);

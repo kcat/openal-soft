@@ -19,6 +19,12 @@ typedef struct ALlistener {
     struct {
         aluMatrixd Matrix;
         aluVector  Velocity;
+
+        ALfloat Gain;
+        ALfloat MetersPerUnit;
+
+        ALfloat DopplerFactor;
+        ALfloat SpeedOfSound;
     } Params;
 } ALlistener;
 

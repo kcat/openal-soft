@@ -266,8 +266,9 @@ static ALboolean BsincPrepare(const ALuint increment, BsincState *state)
 }
 
 
-static ALvoid CalcListenerParams(ALlistener *Listener)
+static ALvoid CalcListenerParams(ALCcontext *Context)
 {
+    ALlistener *Listener = Context->Listener;
     ALdouble N[3], V[3], U[3], P[3];
 
     /* AT then UP */
@@ -297,6 +298,12 @@ static ALvoid CalcListenerParams(ALlistener *Listener)
     aluMatrixdSetRow(&Listener->Params.Matrix, 3, -P[0], -P[1], -P[2], 1.0f);
 
     Listener->Params.Velocity = aluMatrixdVector(&Listener->Params.Matrix, &Listener->Velocity);
+
+    Listener->Params.Gain = Listener->Gain;
+    Listener->Params.MetersPerUnit = Listener->MetersPerUnit;
+
+    Listener->Params.DopplerFactor = Context->DopplerFactor;
+    Listener->Params.SpeedOfSound = Context->SpeedOfSound * Context->DopplerVelocity;
 }
 
 ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCcontext *ALContext)
@@ -338,6 +345,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     };
 
     const ALCdevice *Device = ALContext->Device;
+    const ALlistener *Listener = ALContext->Listener;
     ALfloat SourceVolume,ListenerGain,MinVolume,MaxVolume;
     ALbufferlistitem *BufferListItem;
     enum FmtChannels Channels;
@@ -364,7 +372,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
     Frequency = Device->Frequency;
 
     /* Get listener properties */
-    ListenerGain = ALContext->Listener->Gain;
+    ListenerGain = Listener->Params.Gain;
 
     /* Get source properties */
     SourceVolume    = ALSource->Gain;
@@ -499,7 +507,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         aluNormalize(V);
         if(!Relative)
         {
-            const aluMatrixd *lmatrix = &ALContext->Listener->Params.Matrix;
+            const aluMatrixd *lmatrix = &Listener->Params.Matrix;
             aluMatrixdFloat3(N, 0.0f, lmatrix);
             aluMatrixdFloat3(V, 0.0f, lmatrix);
         }
@@ -756,6 +764,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
 ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCcontext *ALContext)
 {
     const ALCdevice *Device = ALContext->Device;
+    const ALlistener *Listener = ALContext->Listener;
     aluVector Position, Velocity, Direction, SourceToListener;
     ALfloat InnerAngle,OuterAngle,Angle,Distance,ClampedDist;
     ALfloat MinVolume,MaxVolume,MinDist,MaxDist,Rolloff;
@@ -794,14 +803,14 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     }
 
     /* Get context/device properties */
-    DopplerFactor = ALContext->DopplerFactor * ALSource->DopplerFactor;
-    SpeedOfSound  = ALContext->SpeedOfSound * ALContext->DopplerVelocity;
+    DopplerFactor = Listener->Params.DopplerFactor * ALSource->DopplerFactor;
+    SpeedOfSound  = Listener->Params.SpeedOfSound;
     NumSends      = Device->NumAuxSends;
     Frequency     = Device->Frequency;
 
     /* Get listener properties */
-    ListenerGain  = ALContext->Listener->Gain;
-    MetersPerUnit = ALContext->Listener->MetersPerUnit;
+    ListenerGain  = Listener->Params.Gain;
+    MetersPerUnit = Listener->Params.MetersPerUnit;
 
     /* Get source properties */
     SourceVolume   = ALSource->Gain;
@@ -877,7 +886,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     /* Transform source to listener space (convert to head relative) */
     if(ALSource->HeadRelative == AL_FALSE)
     {
-        const aluMatrixd *Matrix = &ALContext->Listener->Params.Matrix;
+        const aluMatrixd *Matrix = &Listener->Params.Matrix;
         /* Transform source vectors */
         Position = aluMatrixdVector(Matrix, &Position);
         Velocity = aluMatrixdVector(Matrix, &Velocity);
@@ -885,7 +894,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     }
     else
     {
-        const aluVector *lvelocity = &ALContext->Listener->Params.Velocity;
+        const aluVector *lvelocity = &Listener->Params.Velocity;
         /* Offset the source velocity to be relative of the listener velocity */
         Velocity.v[0] += lvelocity->v[0];
         Velocity.v[1] += lvelocity->v[1];
@@ -1047,7 +1056,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALCconte
     /* Calculate velocity-based doppler effect */
     if(DopplerFactor > 0.0f)
     {
-        const aluVector *lvelocity = &ALContext->Listener->Params.Velocity;
+        const aluVector *lvelocity = &Listener->Params.Velocity;
         ALfloat VSS, VLS;
 
         if(SpeedOfSound < 1.0f)
@@ -1242,7 +1251,7 @@ void UpdateContextSources(ALCcontext *ctx)
 
     if(ATOMIC_EXCHANGE(ALenum, &ctx->UpdateSources, AL_FALSE))
     {
-        CalcListenerParams(ctx->Listener);
+        CalcListenerParams(ctx);
 
         voice = ctx->Voices;
         voice_end = voice + ctx->VoiceCount;

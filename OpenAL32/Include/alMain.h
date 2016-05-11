@@ -594,7 +594,9 @@ struct ALCdevice_struct
             BFChannelConfig Map[MAX_OUTPUT_CHANNELS];
         } Ambi;
         /* Number of coefficients in each ChannelConfig to mix together (4 for
-         * first-order, 9 for second-order, etc).
+         * first-order, 9 for second-order, etc). If the count is 0, the
+         * BFChannelConfig is used instead to map each output to a coefficient
+         * index.
          */
         ALuint CoeffCount;
 

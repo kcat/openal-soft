@@ -636,12 +636,18 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             return AL_TRUE;
 
         case AL_BUFFER:
-            CHECKVAL(*values == 0 || (buffer=LookupBuffer(device, *values)) != NULL);
+            LockBuffersRead(device);
+            if(!(*values == 0 || (buffer=LookupBuffer(device, *values)) != NULL))
+            {
+                UnlockBuffersRead(device);
+                SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_VALUE, AL_FALSE);
+            }
 
             WriteLock(&Source->queue_lock);
             if(!(Source->state == AL_STOPPED || Source->state == AL_INITIAL))
             {
                 WriteUnlock(&Source->queue_lock);
+                UnlockBuffersRead(device);
                 SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_OPERATION, AL_FALSE);
             }
 
@@ -670,6 +676,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             oldlist = ATOMIC_EXCHANGE(ALbufferlistitem*, &Source->queue, newlist);
             ATOMIC_STORE(&Source->current_buffer, newlist);
             WriteUnlock(&Source->queue_lock);
+            UnlockBuffersRead(device);
 
             /* Delete all elements in the previous queue */
             while(oldlist != NULL)
@@ -2388,6 +2395,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         BufferList = BufferList->next;
     }
 
+    LockBuffersRead(device);
     BufferListStart = NULL;
     BufferList = NULL;
     for(i = 0;i < nb;i++)
@@ -2447,6 +2455,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
                 free(BufferListStart);
                 BufferListStart = next;
             }
+            UnlockBuffersRead(device);
             goto done;
         }
     }
@@ -2458,6 +2467,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         if(buffer) ReadUnlock(&buffer->lock);
         BufferList = BufferList->next;
     }
+    UnlockBuffersRead(device);
 
     /* Source is now streaming */
     source->SourceType = AL_STREAMING;

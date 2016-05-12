@@ -2064,7 +2064,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     {
         ALsizei pos;
 
-        ATOMIC_STORE(&context->UpdateSources, AL_FALSE);
         LockUIntMapRead(&context->EffectSlotMap);
         for(pos = 0;pos < context->EffectSlotMap.size;pos++)
         {
@@ -2272,11 +2271,16 @@ static ALCboolean VerifyDevice(ALCdevice **device)
 static ALvoid InitContext(ALCcontext *Context)
 {
     ALlistener *listener = Context->Listener;
+
     //Initialise listener
     listener->Gain = 1.0f;
     listener->MetersPerUnit = 1.0f;
-    aluVectorSet(&listener->Position, 0.0f, 0.0f, 0.0f, 1.0f);
-    aluVectorSet(&listener->Velocity, 0.0f, 0.0f, 0.0f, 0.0f);
+    listener->Position[0] = 0.0f;
+    listener->Position[1] = 0.0f;
+    listener->Position[2] = 0.0f;
+    listener->Velocity[0] = 0.0f;
+    listener->Velocity[1] = 0.0f;
+    listener->Velocity[2] = 0.0f;
     listener->Forward[0] = 0.0f;
     listener->Forward[1] = 0.0f;
     listener->Forward[2] = -1.0f;
@@ -2296,9 +2300,12 @@ static ALvoid InitContext(ALCcontext *Context)
     listener->Params.DopplerFactor = 1.0f;
     listener->Params.SpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
 
+    ATOMIC_INIT(&listener->Update, NULL);
+    ATOMIC_INIT(&listener->FreeList, NULL);
+
     //Validate Context
+    RWLockInit(&Context->PropLock);
     ATOMIC_INIT(&Context->LastError, AL_NO_ERROR);
-    ATOMIC_INIT(&Context->UpdateSources, AL_FALSE);
     InitUIntMap(&Context->SourceMap, Context->Device->MaxNoOfSources);
     InitUIntMap(&Context->EffectSlotMap, Context->Device->AuxiliaryEffectSlotMax);
 
@@ -2321,6 +2328,10 @@ static ALvoid InitContext(ALCcontext *Context)
  */
 static void FreeContext(ALCcontext *context)
 {
+    ALlistener *listener = context->Listener;
+    struct ALlistenerProps *lprops;
+    size_t count;
+
     TRACE("%p\n", context);
 
     if(context->SourceMap.size > 0)
@@ -2343,6 +2354,22 @@ static void FreeContext(ALCcontext *context)
     context->MaxVoices = 0;
 
     VECTOR_DEINIT(context->ActiveAuxSlots);
+
+    if((lprops=ATOMIC_LOAD(&listener->Update, almemory_order_acquire)) != NULL)
+    {
+        TRACE("Freed unapplied listener update %p\n", lprops);
+        al_free(lprops);
+    }
+    count = 0;
+    lprops = ATOMIC_LOAD(&listener->FreeList, almemory_order_consume);
+    while(lprops)
+    {
+        struct ALlistenerProps *next = ATOMIC_LOAD(&lprops->next, almemory_order_consume);
+        al_free(lprops);
+        lprops = next;
+        ++count;
+    }
+    TRACE("Freed "SZFMT" listener property object%s\n", count, (count==1)?"":"s");
 
     ALCdevice_DecRef(context->Device);
     context->Device = NULL;

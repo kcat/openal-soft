@@ -29,6 +29,7 @@
 #include "alAuxEffectSlot.h"
 #include "alThunk.h"
 #include "alError.h"
+#include "alListener.h"
 #include "alSource.h"
 
 #include "almalloc.h"
@@ -187,7 +188,6 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
         err = InitializeEffect(device, slot, effect);
         if(err != AL_NO_ERROR)
             SET_ERROR_AND_GOTO(context, err, done);
-        ATOMIC_STORE(&context->UpdateSources, AL_TRUE);
         break;
 
     case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
@@ -195,12 +195,15 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
             SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
         slot->AuxSendAuto = value;
-        ATOMIC_STORE(&context->UpdateSources, AL_TRUE);
         break;
 
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
+    /* HACK: Force sources to update by doing a listener update */
+    ReadLock(&context->PropLock);
+    UpdateListenerProps(context);
+    ReadUnlock(&context->PropLock);
 
 done:
     ALCcontext_DecRef(context);

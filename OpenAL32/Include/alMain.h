@@ -679,8 +679,7 @@ struct ALCdevice_struct
 #define RECORD_THREAD_NAME "alsoft-record"
 
 
-struct ALCcontext_struct
-{
+struct ALCcontext_struct {
     RefCount ref;
 
     struct ALlistener *Listener;
@@ -690,8 +689,6 @@ struct ALCcontext_struct
 
     ATOMIC(ALenum) LastError;
 
-    ATOMIC(ALenum) UpdateSources;
-
     volatile enum DistanceModel DistanceModel;
     volatile ALboolean SourceDistanceModel;
 
@@ -699,6 +696,8 @@ struct ALCcontext_struct
     volatile ALfloat DopplerVelocity;
     volatile ALfloat SpeedOfSound;
     volatile ALenum  DeferUpdates;
+
+    RWLock PropLock;
 
     struct ALvoice *Voices;
     ALsizei VoiceCount;

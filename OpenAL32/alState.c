@@ -26,6 +26,7 @@
 #include "AL/al.h"
 #include "AL/alext.h"
 #include "alError.h"
+#include "alListener.h"
 #include "alSource.h"
 #include "alAuxEffectSlot.h"
 
@@ -55,12 +56,15 @@ AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
         context->SourceDistanceModel = AL_TRUE;
-        ATOMIC_STORE(&context->UpdateSources, AL_TRUE);
         break;
 
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
+    /* HACK: Force sources to update by doing a listener update */
+    ReadLock(&context->PropLock);
+    UpdateListenerProps(context);
+    ReadUnlock(&context->PropLock);
 
 done:
     ALCcontext_DecRef(context);
@@ -77,12 +81,15 @@ AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
         context->SourceDistanceModel = AL_FALSE;
-        ATOMIC_STORE(&context->UpdateSources, AL_TRUE);
         break;
 
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
+    /* HACK: Force sources to update by doing a listener update */
+    ReadLock(&context->PropLock);
+    UpdateListenerProps(context);
+    ReadUnlock(&context->PropLock);
 
 done:
     ALCcontext_DecRef(context);
@@ -547,8 +554,10 @@ AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
     if(!(value >= 0.0f && isfinite(value)))
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
+    WriteLock(&context->PropLock);
     context->DopplerFactor = value;
-    ATOMIC_STORE(&context->UpdateSources, AL_TRUE);
+    UpdateListenerProps(context);
+    WriteUnlock(&context->PropLock);
 
 done:
     ALCcontext_DecRef(context);
@@ -564,8 +573,10 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
     if(!(value >= 0.0f && isfinite(value)))
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
+    WriteLock(&context->PropLock);
     context->DopplerVelocity = value;
-    ATOMIC_STORE(&context->UpdateSources, AL_TRUE);
+    UpdateListenerProps(context);
+    WriteUnlock(&context->PropLock);
 
 done:
     ALCcontext_DecRef(context);
@@ -581,8 +592,10 @@ AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat value)
     if(!(value > 0.0f && isfinite(value)))
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
+    WriteLock(&context->PropLock);
     context->SpeedOfSound = value;
-    ATOMIC_STORE(&context->UpdateSources, AL_TRUE);
+    UpdateListenerProps(context);
+    WriteUnlock(&context->PropLock);
 
 done:
     ALCcontext_DecRef(context);
@@ -601,9 +614,11 @@ AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
          value == AL_NONE))
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
+    WriteLock(&context->PropLock);
     context->DistanceModel = value;
     if(!context->SourceDistanceModel)
-        ATOMIC_STORE(&context->UpdateSources, AL_TRUE);
+        UpdateListenerProps(context);
+    WriteUnlock(&context->PropLock);
 
 done:
     ALCcontext_DecRef(context);

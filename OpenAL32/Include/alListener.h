@@ -8,13 +8,37 @@
 extern "C" {
 #endif
 
+struct ALlistenerProps {
+    ATOMIC(ALfloat) Position[3];
+    ATOMIC(ALfloat) Velocity[3];
+    ATOMIC(ALfloat) Forward[3];
+    ATOMIC(ALfloat) Up[3];
+    ATOMIC(ALfloat) Gain;
+    ATOMIC(ALfloat) MetersPerUnit;
+
+    ATOMIC(ALfloat) DopplerFactor;
+    ATOMIC(ALfloat) DopplerVelocity;
+    ATOMIC(ALfloat) SpeedOfSound;
+
+    ATOMIC(struct ALlistenerProps*) next;
+};
+
 typedef struct ALlistener {
-    aluVector Position;
-    aluVector Velocity;
+    volatile ALfloat Position[3];
+    volatile ALfloat Velocity[3];
     volatile ALfloat Forward[3];
     volatile ALfloat Up[3];
     volatile ALfloat Gain;
     volatile ALfloat MetersPerUnit;
+
+    /* Pointer to the most recent property values that are awaiting an update.
+     */
+    ATOMIC(struct ALlistenerProps*) Update;
+
+    /* A linked list of unused property containers, free to use for future
+     * updates.
+     */
+    ATOMIC(struct ALlistenerProps*) FreeList;
 
     struct {
         aluMatrixd Matrix;
@@ -27,6 +51,8 @@ typedef struct ALlistener {
         ALfloat SpeedOfSound;
     } Params;
 } ALlistener;
+
+void UpdateListenerProps(ALCcontext *context);
 
 #ifdef __cplusplus
 }

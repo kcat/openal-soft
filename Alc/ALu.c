@@ -266,19 +266,25 @@ static ALboolean BsincPrepare(const ALuint increment, BsincState *state)
 }
 
 
-static ALvoid CalcListenerParams(ALCcontext *Context)
+static ALboolean CalcListenerParams(ALCcontext *Context)
 {
     ALlistener *Listener = Context->Listener;
     ALdouble N[3], V[3], U[3], P[3];
+    struct ALlistenerProps *first;
+    struct ALlistenerProps *props;
+    aluVector vel;
+
+    props = ATOMIC_EXCHANGE(struct ALlistenerProps*, &Listener->Update, NULL, almemory_order_acq_rel);
+    if(!props) return AL_FALSE;
 
     /* AT then UP */
-    N[0] = Listener->Forward[0];
-    N[1] = Listener->Forward[1];
-    N[2] = Listener->Forward[2];
+    N[0] = ATOMIC_LOAD(&props->Forward[0], almemory_order_relaxed);
+    N[1] = ATOMIC_LOAD(&props->Forward[1], almemory_order_relaxed);
+    N[2] = ATOMIC_LOAD(&props->Forward[2], almemory_order_relaxed);
     aluNormalized(N);
-    V[0] = Listener->Up[0];
-    V[1] = Listener->Up[1];
-    V[2] = Listener->Up[2];
+    V[0] = ATOMIC_LOAD(&props->Up[0], almemory_order_relaxed);
+    V[1] = ATOMIC_LOAD(&props->Up[1], almemory_order_relaxed);
+    V[2] = ATOMIC_LOAD(&props->Up[2], almemory_order_relaxed);
     aluNormalized(V);
     /* Build and normalize right-vector */
     aluCrossproductd(N, V, U);
@@ -291,19 +297,37 @@ static ALvoid CalcListenerParams(ALCcontext *Context)
          0.0,  0.0,   0.0, 1.0
     );
 
-    P[0] = Listener->Position.v[0];
-    P[1] = Listener->Position.v[1];
-    P[2] = Listener->Position.v[2];
+    P[0] = ATOMIC_LOAD(&props->Position[0], almemory_order_relaxed);
+    P[1] = ATOMIC_LOAD(&props->Position[1], almemory_order_relaxed);
+    P[2] = ATOMIC_LOAD(&props->Position[2], almemory_order_relaxed);
     aluMatrixdDouble3(P, 1.0, &Listener->Params.Matrix);
     aluMatrixdSetRow(&Listener->Params.Matrix, 3, -P[0], -P[1], -P[2], 1.0f);
 
-    Listener->Params.Velocity = aluMatrixdVector(&Listener->Params.Matrix, &Listener->Velocity);
+    aluVectorSet(&vel, ATOMIC_LOAD(&props->Velocity[0], almemory_order_relaxed),
+                       ATOMIC_LOAD(&props->Velocity[1], almemory_order_relaxed),
+                       ATOMIC_LOAD(&props->Velocity[2], almemory_order_relaxed),
+                       0.0f);
+    Listener->Params.Velocity = aluMatrixdVector(&Listener->Params.Matrix, &vel);
 
-    Listener->Params.Gain = Listener->Gain;
-    Listener->Params.MetersPerUnit = Listener->MetersPerUnit;
+    Listener->Params.Gain = ATOMIC_LOAD(&props->Gain, almemory_order_relaxed);
+    Listener->Params.MetersPerUnit = ATOMIC_LOAD(&props->MetersPerUnit, almemory_order_relaxed);
 
-    Listener->Params.DopplerFactor = Context->DopplerFactor;
-    Listener->Params.SpeedOfSound = Context->SpeedOfSound * Context->DopplerVelocity;
+    Listener->Params.DopplerFactor = ATOMIC_LOAD(&props->DopplerFactor, almemory_order_relaxed);
+    Listener->Params.SpeedOfSound = ATOMIC_LOAD(&props->SpeedOfSound, almemory_order_relaxed) *
+                                    ATOMIC_LOAD(&props->DopplerVelocity, almemory_order_relaxed);
+
+    /* WARNING: A livelock is theoretically possible if another thread keeps
+     * changing the freelist head without giving this a chance to actually swap
+     * in the old container (practically impossible with this little code,
+     * but...).
+     */
+    first = ATOMIC_LOAD(&Listener->FreeList);
+    do {
+        ATOMIC_STORE(&props->next, first, almemory_order_relaxed);
+    } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALlistenerProps*,
+            &Listener->FreeList, &first, props) == 0);
+
+    return AL_TRUE;
 }
 
 ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
@@ -1223,10 +1247,8 @@ void UpdateContextSources(ALCcontext *ctx)
     ALvoice *voice, *voice_end;
     ALsource *source;
 
-    if(ATOMIC_EXCHANGE(ALenum, &ctx->UpdateSources, AL_FALSE))
+    if(CalcListenerParams(ctx))
     {
-        CalcListenerParams(ctx);
-
         voice = ctx->Voices;
         voice_end = voice + ctx->VoiceCount;
         for(;voice != voice_end;++voice)

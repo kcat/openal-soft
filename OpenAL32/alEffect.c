@@ -34,6 +34,10 @@
 
 ALboolean DisabledEffects[MAX_EFFECTS];
 
+extern inline void LockEffectsRead(ALCdevice *device);
+extern inline void UnlockEffectsRead(ALCdevice *device);
+extern inline void LockEffectsWrite(ALCdevice *device);
+extern inline void UnlockEffectsWrite(ALCdevice *device);
 extern inline struct ALeffect *LookupEffect(ALCdevice *device, ALuint id);
 extern inline struct ALeffect *RemoveEffect(ALCdevice *device, ALuint id);
 extern inline ALboolean IsReverbEffect(ALenum type);
@@ -95,10 +99,10 @@ AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects)
     context = GetContextRef();
     if(!context) return;
 
+    device = context->Device;
+    LockEffectsWrite(device);
     if(!(n >= 0))
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-
-    device = context->Device;
     for(i = 0;i < n;i++)
     {
         if(effects[i] && LookupEffect(device, effects[i]) == NULL)
@@ -115,6 +119,7 @@ AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects)
     }
 
 done:
+    UnlockEffectsWrite(device);
     ALCcontext_DecRef(context);
 }
 
@@ -126,8 +131,10 @@ AL_API ALboolean AL_APIENTRY alIsEffect(ALuint effect)
     Context = GetContextRef();
     if(!Context) return AL_FALSE;
 
+    LockEffectsRead(Context->Device);
     result = ((!effect || LookupEffect(Context->Device, effect)) ?
               AL_TRUE : AL_FALSE);
+    UnlockEffectsRead(Context->Device);
 
     ALCcontext_DecRef(Context);
 
@@ -144,6 +151,7 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint value)
     if(!Context) return;
 
     Device = Context->Device;
+    LockEffectsWrite(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
         alSetError(Context, AL_INVALID_NAME);
     else
@@ -170,6 +178,7 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint value)
             V(ALEffect,setParami)(Context, param, value);
         }
     }
+    UnlockEffectsWrite(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -191,6 +200,7 @@ AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, const ALint *v
     if(!Context) return;
 
     Device = Context->Device;
+    LockEffectsWrite(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
         alSetError(Context, AL_INVALID_NAME);
     else
@@ -198,6 +208,7 @@ AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, const ALint *v
         /* Call the appropriate handler */
         V(ALEffect,setParamiv)(Context, param, values);
     }
+    UnlockEffectsWrite(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -212,6 +223,7 @@ AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat value)
     if(!Context) return;
 
     Device = Context->Device;
+    LockEffectsWrite(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
         alSetError(Context, AL_INVALID_NAME);
     else
@@ -219,6 +231,7 @@ AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat value)
         /* Call the appropriate handler */
         V(ALEffect,setParamf)(Context, param, value);
     }
+    UnlockEffectsWrite(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -233,6 +246,7 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, const ALfloat 
     if(!Context) return;
 
     Device = Context->Device;
+    LockEffectsWrite(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
         alSetError(Context, AL_INVALID_NAME);
     else
@@ -240,6 +254,7 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, const ALfloat 
         /* Call the appropriate handler */
         V(ALEffect,setParamfv)(Context, param, values);
     }
+    UnlockEffectsWrite(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -254,6 +269,7 @@ AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *value
     if(!Context) return;
 
     Device = Context->Device;
+    LockEffectsRead(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
         alSetError(Context, AL_INVALID_NAME);
     else
@@ -266,6 +282,7 @@ AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *value
             V(ALEffect,getParami)(Context, param, value);
         }
     }
+    UnlockEffectsRead(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -287,6 +304,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *valu
     if(!Context) return;
 
     Device = Context->Device;
+    LockEffectsRead(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
         alSetError(Context, AL_INVALID_NAME);
     else
@@ -294,6 +312,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *valu
         /* Call the appropriate handler */
         V(ALEffect,getParamiv)(Context, param, values);
     }
+    UnlockEffectsRead(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -308,6 +327,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *val
     if(!Context) return;
 
     Device = Context->Device;
+    LockEffectsRead(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
         alSetError(Context, AL_INVALID_NAME);
     else
@@ -315,6 +335,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *val
         /* Call the appropriate handler */
         V(ALEffect,getParamf)(Context, param, value);
     }
+    UnlockEffectsRead(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -329,6 +350,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *va
     if(!Context) return;
 
     Device = Context->Device;
+    LockEffectsRead(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
         alSetError(Context, AL_INVALID_NAME);
     else
@@ -336,6 +358,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *va
         /* Call the appropriate handler */
         V(ALEffect,getParamfv)(Context, param, values);
     }
+    UnlockEffectsRead(Device);
 
     ALCcontext_DecRef(Context);
 }

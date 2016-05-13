@@ -151,10 +151,19 @@ typedef struct ALfilter {
 #define ALfilter_GetParamf(x, c, p, v)  ((x)->GetParamf((x),(c),(p),(v)))
 #define ALfilter_GetParamfv(x, c, p, v) ((x)->GetParamfv((x),(c),(p),(v)))
 
+inline void LockFiltersRead(ALCdevice *device)
+{ LockUIntMapRead(&device->FilterMap); }
+inline void UnlockFiltersRead(ALCdevice *device)
+{ UnlockUIntMapRead(&device->FilterMap); }
+inline void LockFiltersWrite(ALCdevice *device)
+{ LockUIntMapWrite(&device->FilterMap); }
+inline void UnlockFiltersWrite(ALCdevice *device)
+{ UnlockUIntMapWrite(&device->FilterMap); }
+
 inline struct ALfilter *LookupFilter(ALCdevice *device, ALuint id)
-{ return (struct ALfilter*)LookupUIntMapKey(&device->FilterMap, id); }
+{ return (struct ALfilter*)LookupUIntMapKeyNoLock(&device->FilterMap, id); }
 inline struct ALfilter *RemoveFilter(ALCdevice *device, ALuint id)
-{ return (struct ALfilter*)RemoveUIntMapKey(&device->FilterMap, id); }
+{ return (struct ALfilter*)RemoveUIntMapKeyNoLock(&device->FilterMap, id); }
 
 ALvoid ReleaseALFilters(ALCdevice *device);
 

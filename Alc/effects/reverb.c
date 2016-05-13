@@ -1652,20 +1652,16 @@ void ALeaxreverb_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param,
         case AL_EAXREVERB_REFLECTIONS_PAN:
             if(!(isfinite(vals[0]) && isfinite(vals[1]) && isfinite(vals[2])))
                 SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
-            LockContext(context);
             props->Reverb.ReflectionsPan[0] = vals[0];
             props->Reverb.ReflectionsPan[1] = vals[1];
             props->Reverb.ReflectionsPan[2] = vals[2];
-            UnlockContext(context);
             break;
         case AL_EAXREVERB_LATE_REVERB_PAN:
             if(!(isfinite(vals[0]) && isfinite(vals[1]) && isfinite(vals[2])))
                 SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
-            LockContext(context);
             props->Reverb.LateReverbPan[0] = vals[0];
             props->Reverb.LateReverbPan[1] = vals[1];
             props->Reverb.LateReverbPan[2] = vals[2];
-            UnlockContext(context);
             break;
 
         default:
@@ -1786,18 +1782,14 @@ void ALeaxreverb_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum 
     switch(param)
     {
         case AL_EAXREVERB_REFLECTIONS_PAN:
-            LockContext(context);
             vals[0] = props->Reverb.ReflectionsPan[0];
             vals[1] = props->Reverb.ReflectionsPan[1];
             vals[2] = props->Reverb.ReflectionsPan[2];
-            UnlockContext(context);
             break;
         case AL_EAXREVERB_LATE_REVERB_PAN:
-            LockContext(context);
             vals[0] = props->Reverb.LateReverbPan[0];
             vals[1] = props->Reverb.LateReverbPan[1];
             vals[2] = props->Reverb.LateReverbPan[2];
-            UnlockContext(context);
             break;
 
         default:

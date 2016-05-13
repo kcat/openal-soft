@@ -182,11 +182,17 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
     {
     case AL_EFFECTSLOT_EFFECT:
         device = context->Device;
+
+        LockEffectsRead(device);
         effect = (value ? LookupEffect(device, value) : NULL);
         if(!(value == 0 || effect != NULL))
+        {
+            UnlockEffectsRead(device);
             SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-
+        }
         err = InitializeEffect(device, slot, effect);
+        UnlockEffectsRead(device);
+
         if(err != AL_NO_ERROR)
             SET_ERROR_AND_GOTO(context, err, done);
         break;

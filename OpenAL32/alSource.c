@@ -715,7 +715,12 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             return AL_TRUE;
 
         case AL_DIRECT_FILTER:
-            CHECKVAL(*values == 0 || (filter=LookupFilter(device, *values)) != NULL);
+            LockFiltersRead(device);
+            if(!(*values == 0 || (filter=LookupFilter(device, *values)) != NULL))
+            {
+                UnlockFiltersRead(device);
+                SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_VALUE, AL_FALSE);
+            }
 
             LockContext(Context);
             if(!filter)
@@ -735,6 +740,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 Source->Direct.LFReference = filter->LFReference;
             }
             UnlockContext(Context);
+            UnlockFiltersRead(device);
             ATOMIC_STORE(&Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 
@@ -782,12 +788,14 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
 
 
         case AL_AUXILIARY_SEND_FILTER:
+            LockFiltersRead(device);
             LockContext(Context);
             if(!((ALuint)values[1] < device->NumAuxSends &&
                  (values[0] == 0 || (slot=LookupEffectSlot(Context, values[0])) != NULL) &&
                  (values[2] == 0 || (filter=LookupFilter(device, values[2])) != NULL)))
             {
                 UnlockContext(Context);
+                UnlockFiltersRead(device);
                 SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_VALUE, AL_FALSE);
             }
 
@@ -814,6 +822,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 Source->Send[values[1]].LFReference = filter->LFReference;
             }
             UnlockContext(Context);
+            UnlockFiltersRead(device);
             ATOMIC_STORE(&Source->NeedsUpdate, AL_TRUE);
             return AL_TRUE;
 

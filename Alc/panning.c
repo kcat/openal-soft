@@ -437,9 +437,17 @@ static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALuint spe
             c = GetChannelIdxByName(device->RealOut, BackCenter);
         else
         {
-            ERR("AmbDec speaker label \"%s\" not recognized\n",
-                al_string_get_cstr(conf->Speakers[i].Name));
-            return false;
+            const char *name = al_string_get_cstr(conf->Speakers[i].Name);
+            unsigned int n;
+            char ch;
+
+            if(sscanf(name, "AUX%u%c", &n, &ch) == 1 && n < 16)
+                c = GetChannelIdxByName(device->RealOut, Aux0+n);
+            else
+            {
+                ERR("AmbDec speaker label \"%s\" not recognized\n", name);
+                return false;
+            }
         }
         if(c == -1)
         {

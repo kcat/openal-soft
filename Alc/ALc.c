@@ -2066,7 +2066,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             RestoreFPUMode(&oldMode);
             return ALC_INVALID_DEVICE;
         }
-        UpdateEffectSlotProps(slot);
+        UpdateEffectSlotProps(slot, AL_FALSE);
     }
 
     context = ATOMIC_LOAD(&device->ContextList);
@@ -2078,17 +2078,18 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         for(pos = 0;pos < context->EffectSlotMap.size;pos++)
         {
             ALeffectslot *slot = context->EffectSlotMap.array[pos].value;
+            ALeffectState *state = slot->Params.EffectState;
 
-            slot->Params.EffectState->OutBuffer = device->Dry.Buffer;
-            slot->Params.EffectState->OutChannels = device->Dry.NumChannels;
-            if(V(slot->Params.EffectState,deviceUpdate)(device) == AL_FALSE)
+            state->OutBuffer = device->Dry.Buffer;
+            state->OutChannels = device->Dry.NumChannels;
+            if(V(state,deviceUpdate)(device) == AL_FALSE)
             {
                 UnlockUIntMapRead(&context->EffectSlotMap);
                 V0(device->Backend,unlock)();
                 RestoreFPUMode(&oldMode);
                 return ALC_INVALID_DEVICE;
             }
-            UpdateEffectSlotProps(slot);
+            UpdateEffectSlotProps(slot, AL_FALSE);
         }
         UnlockUIntMapRead(&context->EffectSlotMap);
 
@@ -3487,16 +3488,15 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
             device->DefaultSlot = NULL;
             ERR("Failed to initialize the default effect slot\n");
         }
-        else if(InitializeEffect(device, device->DefaultSlot, &DefaultEffect) != AL_NO_ERROR)
-        {
-            DeinitEffectSlot(device->DefaultSlot);
-            device->DefaultSlot = NULL;
-            ERR("Failed to initialize the default effect\n");
-        }
         else
         {
             aluInitEffectPanning(device->DefaultSlot);
-            UpdateEffectSlotProps(device->DefaultSlot);
+            if(InitializeEffect(device, device->DefaultSlot, &DefaultEffect) != AL_NO_ERROR)
+            {
+                DeinitEffectSlot(device->DefaultSlot);
+                device->DefaultSlot = NULL;
+                ERR("Failed to initialize the default effect\n");
+            }
         }
     }
 

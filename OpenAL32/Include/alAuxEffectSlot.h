@@ -79,6 +79,8 @@ struct ALeffectslotProps {
     ATOMIC(ALenum) Type;
     ALeffectProps Props;
 
+    /* Flag indicates if State should be updated. */
+    ATOMIC(ALboolean) UpdateState;
     ATOMIC(ALeffectState*) State;
 
     ATOMIC(struct ALeffectslotProps*) next;
@@ -139,7 +141,7 @@ inline struct ALeffectslot *RemoveEffectSlot(ALCcontext *context, ALuint id)
 
 ALenum InitEffectSlot(ALeffectslot *slot);
 void DeinitEffectSlot(ALeffectslot *slot);
-void UpdateEffectSlotProps(ALeffectslot *slot);
+void UpdateEffectSlotProps(ALeffectslot *slot, ALboolean withstate);
 ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context);
 
 

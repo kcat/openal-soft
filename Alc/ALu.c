@@ -342,14 +342,6 @@ static ALboolean CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
     slot->Params.AuxSendAuto = ATOMIC_LOAD(&props->AuxSendAuto, almemory_order_relaxed);
     slot->Params.EffectType = ATOMIC_LOAD(&props->Type, almemory_order_relaxed);
     memcpy(&slot->Params.EffectProps, &props->Props, sizeof(props->Props));
-    /* If the existing state object is different from the one being set,
-     * exchange it so it remains in the freelist and isn't leaked.
-     */
-    if(slot->Params.EffectState == ATOMIC_LOAD(&props->State, almemory_order_relaxed))
-        slot->Params.EffectState = NULL;
-    slot->Params.EffectState = ATOMIC_EXCHANGE(ALeffectState*,
-        &props->State, slot->Params.EffectState, almemory_order_relaxed
-    );
     if(IsReverbEffect(slot->Params.EffectType))
     {
         slot->Params.RoomRolloff = slot->Params.EffectProps.Reverb.RoomRolloffFactor;
@@ -362,6 +354,13 @@ static ALboolean CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
         slot->Params.DecayTime = 0.0f;
         slot->Params.AirAbsorptionGainHF = 1.0f;
     }
+    /* If the state object is changed, exchange it with the current one so it
+     * remains in the freelist and isn't leaked.
+     */
+    if(ATOMIC_LOAD(&props->UpdateState, almemory_order_relaxed))
+        slot->Params.EffectState = ATOMIC_EXCHANGE(ALeffectState*,
+            &props->State, slot->Params.EffectState, almemory_order_relaxed
+        );
 
     V(slot->Params.EffectState,update)(device, slot);
 

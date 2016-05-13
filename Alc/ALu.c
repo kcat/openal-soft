@@ -362,8 +362,6 @@ static ALboolean CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
             &props->State, slot->Params.EffectState, almemory_order_relaxed
         );
 
-    V(slot->Params.EffectState,update)(device, slot);
-
     /* WARNING: A livelock is theoretically possible if another thread keeps
      * changing the freelist head without giving this a chance to actually swap
      * in the old container (practically impossible with this little code,
@@ -374,6 +372,8 @@ static ALboolean CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
         ATOMIC_STORE(&props->next, first, almemory_order_relaxed);
     } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALeffectslotProps*,
             &slot->FreeList, &first, props) == 0);
+
+    V(slot->Params.EffectState,update)(device, slot);
 
     return AL_TRUE;
 }

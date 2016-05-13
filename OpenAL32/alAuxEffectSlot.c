@@ -552,7 +552,9 @@ void DeinitEffectSlot(ALeffectslot *slot)
     props = ATOMIC_LOAD(&slot->Update);
     if(props)
     {
-        DELETE_OBJ(props->State);
+        ALeffectState *state;
+        state = ATOMIC_LOAD(&props->State, almemory_order_relaxed);
+        DELETE_OBJ(state);
         TRACE("Freed unapplied AuxiliaryEffectSlot update %p\n", props);
         al_free(props);
     }
@@ -560,8 +562,10 @@ void DeinitEffectSlot(ALeffectslot *slot)
     while(props)
     {
         struct ALeffectslotProps *next;
+        ALeffectState *state;
+        state = ATOMIC_LOAD(&props->State, almemory_order_relaxed);
         next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
-        DELETE_OBJ(props->State);
+        DELETE_OBJ(state);
         al_free(props);
         props = next;
         ++count;

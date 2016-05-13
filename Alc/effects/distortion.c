@@ -43,8 +43,9 @@ typedef struct ALdistortionState {
     ALfloat edge_coeff;
 } ALdistortionState;
 
-static ALvoid ALdistortionState_Destruct(ALdistortionState *UNUSED(state))
+static ALvoid ALdistortionState_Destruct(ALdistortionState *state)
 {
+    ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
 }
 
 static ALboolean ALdistortionState_deviceUpdate(ALdistortionState *UNUSED(state), ALCdevice *UNUSED(device))
@@ -60,15 +61,15 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCdevice
     ALfloat edge;
 
     /* Store distorted signal attenuation settings */
-    state->attenuation = Slot->EffectProps.Distortion.Gain;
+    state->attenuation = Slot->Params.EffectProps.Distortion.Gain;
 
     /* Store waveshaper edge settings */
-    edge = sinf(Slot->EffectProps.Distortion.Edge * (F_PI_2));
+    edge = sinf(Slot->Params.EffectProps.Distortion.Edge * (F_PI_2));
     edge = minf(edge, 0.99f);
     state->edge_coeff = 2.0f * edge / (1.0f-edge);
 
     /* Lowpass filter */
-    cutoff = Slot->EffectProps.Distortion.LowpassCutoff;
+    cutoff = Slot->Params.EffectProps.Distortion.LowpassCutoff;
     /* Bandwidth value is constant in octaves */
     bandwidth = (cutoff / 2.0f) / (cutoff * 0.67f);
     ALfilterState_setParams(&state->lowpass, ALfilterType_LowPass, 1.0f,
@@ -76,14 +77,14 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCdevice
     );
 
     /* Bandpass filter */
-    cutoff = Slot->EffectProps.Distortion.EQCenter;
+    cutoff = Slot->Params.EffectProps.Distortion.EQCenter;
     /* Convert bandwidth in Hz to octaves */
-    bandwidth = Slot->EffectProps.Distortion.EQBandwidth / (cutoff * 0.67f);
+    bandwidth = Slot->Params.EffectProps.Distortion.EQBandwidth / (cutoff * 0.67f);
     ALfilterState_setParams(&state->bandpass, ALfilterType_BandPass, 1.0f,
         cutoff / (frequency*4.0f), calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
     );
 
-    ComputeAmbientGains(Device->Dry, Slot->Gain, state->Gain);
+    ComputeAmbientGains(Device->Dry, Slot->Params.Gain, state->Gain);
 }
 
 static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)

@@ -169,6 +169,7 @@ static ALvoid ALreverbState_Destruct(ALreverbState *State)
 {
     free(State->SampleBuffer);
     State->SampleBuffer = NULL;
+    ALeffectState_Destruct(STATIC_CAST(ALeffectState,State));
 }
 
 static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Device);
@@ -894,15 +895,15 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
 
 static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device, const ALeffectslot *Slot)
 {
-    const ALeffectProps *props = &Slot->EffectProps;
+    const ALeffectProps *props = &Slot->Params.EffectProps;
     ALuint frequency = Device->Frequency;
     ALfloat lfscale, hfscale, hfRatio;
     ALfloat gain, gainlf, gainhf;
     ALfloat cw, x, y;
 
-    if(Slot->EffectType == AL_EFFECT_EAXREVERB && !EmulateEAXReverb)
+    if(Slot->Params.EffectType == AL_EFFECT_EAXREVERB && !EmulateEAXReverb)
         State->IsEax = AL_TRUE;
-    else if(Slot->EffectType == AL_EFFECT_REVERB || EmulateEAXReverb)
+    else if(Slot->Params.EffectType == AL_EFFECT_REVERB || EmulateEAXReverb)
         State->IsEax = AL_FALSE;
 
     // Calculate the master filters
@@ -952,7 +953,7 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
                    props->Reverb.Diffusion, props->Reverb.EchoDepth,
                    hfRatio, cw, frequency, State);
 
-    gain = props->Reverb.Gain * Slot->Gain * ReverbBoost;
+    gain = props->Reverb.Gain * Slot->Params.Gain * ReverbBoost;
     // Update early and late 3D panning.
     if(Device->Hrtf || Device->Uhj_Encoder)
         UpdateMixedPanning(Device, props->Reverb.ReflectionsPan,

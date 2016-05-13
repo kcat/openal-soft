@@ -82,8 +82,9 @@ DECL_TEMPLATE(Square)
 #undef DECL_TEMPLATE
 
 
-static ALvoid ALmodulatorState_Destruct(ALmodulatorState *UNUSED(state))
+static ALvoid ALmodulatorState_Destruct(ALmodulatorState *state)
 {
+    ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
 }
 
 static ALboolean ALmodulatorState_deviceUpdate(ALmodulatorState *UNUSED(state), ALCdevice *UNUSED(device))
@@ -97,19 +98,19 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *
     ALfloat cw, a;
     ALuint i;
 
-    if(Slot->EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SINUSOID)
+    if(Slot->Params.EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SINUSOID)
         state->Process = ModulateSin;
-    else if(Slot->EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SAWTOOTH)
+    else if(Slot->Params.EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SAWTOOTH)
         state->Process = ModulateSaw;
-    else /*if(Slot->EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SQUARE)*/
+    else /*if(Slot->Params.EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SQUARE)*/
         state->Process = ModulateSquare;
 
-    state->step = fastf2u(Slot->EffectProps.Modulator.Frequency*WAVEFORM_FRACONE /
+    state->step = fastf2u(Slot->Params.EffectProps.Modulator.Frequency*WAVEFORM_FRACONE /
                           Device->Frequency);
     if(state->step == 0) state->step = 1;
 
     /* Custom filter coeffs, which match the old version instead of a low-shelf. */
-    cw = cosf(F_TAU * Slot->EffectProps.Modulator.HighPassCutoff / Device->Frequency);
+    cw = cosf(F_TAU * Slot->Params.EffectProps.Modulator.HighPassCutoff / Device->Frequency);
     a = (2.0f-cw) - sqrtf(powf(2.0f-cw, 2.0f) - 1.0f);
 
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
@@ -132,7 +133,7 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *
     STATIC_CAST(ALeffectState,state)->OutBuffer = Device->FOAOut.Buffer;
     STATIC_CAST(ALeffectState,state)->OutChannels = Device->FOAOut.NumChannels;
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputeFirstOrderGains(Device->FOAOut, matrix.m[i], Slot->Gain,
+        ComputeFirstOrderGains(Device->FOAOut, matrix.m[i], Slot->Params.Gain,
                                state->Gain[i]);
 }
 

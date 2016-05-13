@@ -54,6 +54,7 @@ static ALvoid ALechoState_Destruct(ALechoState *state)
 {
     free(state->SampleBuffer);
     state->SampleBuffer = NULL;
+    ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
 }
 
 static ALboolean ALechoState_deviceUpdate(ALechoState *state, ALCdevice *Device)
@@ -87,11 +88,11 @@ static ALvoid ALechoState_update(ALechoState *state, const ALCdevice *Device, co
     ALfloat coeffs[MAX_AMBI_COEFFS];
     ALfloat gain, lrpan, spread;
 
-    state->Tap[0].delay = fastf2u(Slot->EffectProps.Echo.Delay * frequency) + 1;
-    state->Tap[1].delay = fastf2u(Slot->EffectProps.Echo.LRDelay * frequency);
+    state->Tap[0].delay = fastf2u(Slot->Params.EffectProps.Echo.Delay * frequency) + 1;
+    state->Tap[1].delay = fastf2u(Slot->Params.EffectProps.Echo.LRDelay * frequency);
     state->Tap[1].delay += state->Tap[0].delay;
 
-    spread = Slot->EffectProps.Echo.Spread;
+    spread = Slot->Params.EffectProps.Echo.Spread;
     if(spread < 0.0f) lrpan = -1.0f;
     else lrpan = 1.0f;
     /* Convert echo spread (where 0 = omni, +/-1 = directional) to coverage
@@ -99,14 +100,14 @@ static ALvoid ALechoState_update(ALechoState *state, const ALCdevice *Device, co
      */
     spread = asinf(1.0f - fabsf(spread))*4.0f;
 
-    state->FeedGain = Slot->EffectProps.Echo.Feedback;
+    state->FeedGain = Slot->Params.EffectProps.Echo.Feedback;
 
-    gain = minf(1.0f - Slot->EffectProps.Echo.Damping, 0.01f);
+    gain = minf(1.0f - Slot->Params.EffectProps.Echo.Damping, 0.01f);
     ALfilterState_setParams(&state->Filter, ALfilterType_HighShelf,
                             gain, LOWPASSFREQREF/frequency,
                             calc_rcpQ_from_slope(gain, 0.75f));
 
-    gain = Slot->Gain;
+    gain = Slot->Params.Gain;
 
     /* First tap panning */
     CalcXYZCoeffs(-lrpan, 0.0f, 0.0f, spread, coeffs);

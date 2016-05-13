@@ -1570,12 +1570,6 @@ void ALCcontext_DeferUpdates(ALCcontext *context)
 
         /* Make sure all pending updates are performed */
         UpdateContextSources(context);
-#define UPDATE_SLOT(iter) do {                                   \
-    if(ATOMIC_EXCHANGE(ALenum, &(*iter)->NeedsUpdate, AL_FALSE)) \
-        V((*iter)->EffectState,update)(device, *iter);           \
-} while(0)
-        VECTOR_FOR_EACH(ALeffectslot*, context->ActiveAuxSlots, UPDATE_SLOT);
-#undef UPDATE_SLOT
     }
     V0(device->Backend,unlock)();
 
@@ -2059,6 +2053,22 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     SetMixerFPUMode(&oldMode);
     V0(device->Backend,lock)();
+    if(device->DefaultSlot)
+    {
+        ALeffectslot *slot = device->DefaultSlot;
+        ALeffectState *state = slot->Params.EffectState;
+
+        state->OutBuffer = device->Dry.Buffer;
+        state->OutChannels = device->Dry.NumChannels;
+        if(V(state,deviceUpdate)(device) == AL_FALSE)
+        {
+            V0(device->Backend,unlock)();
+            RestoreFPUMode(&oldMode);
+            return ALC_INVALID_DEVICE;
+        }
+        UpdateEffectSlotProps(slot);
+    }
+
     context = ATOMIC_LOAD(&device->ContextList);
     while(context)
     {
@@ -2069,17 +2079,16 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         {
             ALeffectslot *slot = context->EffectSlotMap.array[pos].value;
 
-            slot->EffectState->OutBuffer = device->Dry.Buffer;
-            slot->EffectState->OutChannels = device->Dry.NumChannels;
-            if(V(slot->EffectState,deviceUpdate)(device) == AL_FALSE)
+            slot->Params.EffectState->OutBuffer = device->Dry.Buffer;
+            slot->Params.EffectState->OutChannels = device->Dry.NumChannels;
+            if(V(slot->Params.EffectState,deviceUpdate)(device) == AL_FALSE)
             {
                 UnlockUIntMapRead(&context->EffectSlotMap);
                 V0(device->Backend,unlock)();
                 RestoreFPUMode(&oldMode);
                 return ALC_INVALID_DEVICE;
             }
-            ATOMIC_STORE(&slot->NeedsUpdate, AL_FALSE);
-            V(slot->EffectState,update)(device, slot);
+            UpdateEffectSlotProps(slot);
         }
         UnlockUIntMapRead(&context->EffectSlotMap);
 
@@ -2126,22 +2135,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         context = context->next;
     }
-    if(device->DefaultSlot)
-    {
-        ALeffectslot *slot = device->DefaultSlot;
-        ALeffectState *state = slot->EffectState;
-
-        state->OutBuffer = device->Dry.Buffer;
-        state->OutChannels = device->Dry.NumChannels;
-        if(V(state,deviceUpdate)(device) == AL_FALSE)
-        {
-            V0(device->Backend,unlock)();
-            RestoreFPUMode(&oldMode);
-            return ALC_INVALID_DEVICE;
-        }
-        ATOMIC_STORE(&slot->NeedsUpdate, AL_FALSE);
-        V(slot->EffectState,update)(device, slot);
-    }
     V0(device->Backend,unlock)();
     RestoreFPUMode(&oldMode);
 
@@ -2170,9 +2163,8 @@ static ALCvoid FreeDevice(ALCdevice *device)
 
     if(device->DefaultSlot)
     {
-        ALeffectState *state = device->DefaultSlot->EffectState;
+        DeinitEffectSlot(device->DefaultSlot);
         device->DefaultSlot = NULL;
-        DELETE_OBJ(state);
     }
 
     if(device->BufferMap.size > 0)
@@ -3497,13 +3489,15 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         }
         else if(InitializeEffect(device, device->DefaultSlot, &DefaultEffect) != AL_NO_ERROR)
         {
-            ALeffectState *state = device->DefaultSlot->EffectState;
+            DeinitEffectSlot(device->DefaultSlot);
             device->DefaultSlot = NULL;
-            DELETE_OBJ(state);
             ERR("Failed to initialize the default effect\n");
         }
         else
+        {
             aluInitEffectPanning(device->DefaultSlot);
+            UpdateEffectSlotProps(device->DefaultSlot);
+        }
     }
 
     {

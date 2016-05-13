@@ -53,8 +53,9 @@ typedef struct ALautowahState {
     ALfilterState LowPass;
 } ALautowahState;
 
-static ALvoid ALautowahState_Destruct(ALautowahState *UNUSED(state))
+static ALvoid ALautowahState_Destruct(ALautowahState *state)
 {
+    ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
 }
 
 static ALboolean ALautowahState_deviceUpdate(ALautowahState *state, ALCdevice *device)
@@ -67,15 +68,15 @@ static ALvoid ALautowahState_update(ALautowahState *state, const ALCdevice *devi
 {
     ALfloat attackTime, releaseTime;
 
-    attackTime = slot->EffectProps.Autowah.AttackTime * state->Frequency;
-    releaseTime = slot->EffectProps.Autowah.ReleaseTime * state->Frequency;
+    attackTime = slot->Params.EffectProps.Autowah.AttackTime * state->Frequency;
+    releaseTime = slot->Params.EffectProps.Autowah.ReleaseTime * state->Frequency;
 
     state->AttackRate = powf(1.0f/GAIN_SILENCE_THRESHOLD, 1.0f/attackTime);
     state->ReleaseRate = powf(GAIN_SILENCE_THRESHOLD/1.0f, 1.0f/releaseTime);
-    state->PeakGain = slot->EffectProps.Autowah.PeakGain;
-    state->Resonance = slot->EffectProps.Autowah.Resonance;
+    state->PeakGain = slot->Params.EffectProps.Autowah.PeakGain;
+    state->Resonance = slot->Params.EffectProps.Autowah.Resonance;
 
-    ComputeAmbientGains(device->Dry, slot->Gain, state->Gain);
+    ComputeAmbientGains(device->Dry, slot->Params.Gain, state->Gain);
 }
 
 static ALvoid ALautowahState_process(ALautowahState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)

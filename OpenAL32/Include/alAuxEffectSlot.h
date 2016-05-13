@@ -20,6 +20,8 @@ typedef struct ALeffectState {
     ALuint OutChannels;
 } ALeffectState;
 
+void ALeffectState_Destruct(ALeffectState *state);
+
 struct ALeffectStateVtable {
     void (*const Destruct)(ALeffectState *state);
 
@@ -70,17 +72,47 @@ static const struct ALeffectStateFactoryVtable T##_ALeffectStateFactory_vtable =
 #define MAX_EFFECT_CHANNELS (4)
 
 
-typedef struct ALeffectslot {
-    ALenum EffectType;
-    ALeffectProps EffectProps;
+struct ALeffectslotProps {
+    ATOMIC(ALfloat)   Gain;
+    ATOMIC(ALboolean) AuxSendAuto;
 
+    ATOMIC(ALenum) Type;
+    ALeffectProps Props;
+
+    ATOMIC(ALeffectState*) State;
+
+    ATOMIC(struct ALeffectslotProps*) next;
+};
+
+
+typedef struct ALeffectslot {
     volatile ALfloat   Gain;
     volatile ALboolean AuxSendAuto;
 
-    ATOMIC(ALenum) NeedsUpdate;
-    ALeffectState *EffectState;
+    struct {
+        ALenum Type;
+        ALeffectProps Props;
+
+        ALeffectState *State;
+    } Effect;
 
     RefCount ref;
+
+    ATOMIC(struct ALeffectslotProps*) Update;
+    ATOMIC(struct ALeffectslotProps*) FreeList;
+
+    struct {
+        ALfloat   Gain;
+        ALboolean AuxSendAuto;
+
+        ALenum EffectType;
+        ALeffectProps EffectProps;
+        ALeffectState *EffectState;
+
+        ALfloat RoomRolloff; /* Added to the source's room rolloff, not multiplied. */
+        ALfloat DecayTime;
+        ALfloat AirAbsorptionGainHF;
+    } Params;
 
     /* Self ID */
     ALuint id;
@@ -106,6 +138,8 @@ inline struct ALeffectslot *RemoveEffectSlot(ALCcontext *context, ALuint id)
 { return (struct ALeffectslot*)RemoveUIntMapKey(&context->EffectSlotMap, id); }
 
 ALenum InitEffectSlot(ALeffectslot *slot);
+void DeinitEffectSlot(ALeffectslot *slot);
+void UpdateEffectSlotProps(ALeffectslot *slot);
 ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context);
 
 

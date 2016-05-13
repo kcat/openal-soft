@@ -60,6 +60,7 @@ static ALvoid ALchorusState_Destruct(ALchorusState *state)
     free(state->SampleBuffer[0]);
     state->SampleBuffer[0] = NULL;
     state->SampleBuffer[1] = NULL;
+    ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
 }
 
 static ALboolean ALchorusState_deviceUpdate(ALchorusState *state, ALCdevice *Device)
@@ -98,7 +99,7 @@ static ALvoid ALchorusState_update(ALchorusState *state, const ALCdevice *Device
     ALfloat rate;
     ALint phase;
 
-    switch(Slot->EffectProps.Chorus.Waveform)
+    switch(Slot->Params.EffectProps.Chorus.Waveform)
     {
         case AL_CHORUS_WAVEFORM_TRIANGLE:
             state->waveform = CWF_Triangle;
@@ -107,18 +108,18 @@ static ALvoid ALchorusState_update(ALchorusState *state, const ALCdevice *Device
             state->waveform = CWF_Sinusoid;
             break;
     }
-    state->depth = Slot->EffectProps.Chorus.Depth;
-    state->feedback = Slot->EffectProps.Chorus.Feedback;
-    state->delay = fastf2i(Slot->EffectProps.Chorus.Delay * frequency);
+    state->depth = Slot->Params.EffectProps.Chorus.Depth;
+    state->feedback = Slot->Params.EffectProps.Chorus.Feedback;
+    state->delay = fastf2i(Slot->Params.EffectProps.Chorus.Delay * frequency);
 
     /* Gains for left and right sides */
     CalcXYZCoeffs(-1.0f, 0.0f, 0.0f, 0.0f, coeffs);
-    ComputePanningGains(Device->Dry, coeffs, Slot->Gain, state->Gain[0]);
+    ComputePanningGains(Device->Dry, coeffs, Slot->Params.Gain, state->Gain[0]);
     CalcXYZCoeffs( 1.0f, 0.0f, 0.0f, 0.0f, coeffs);
-    ComputePanningGains(Device->Dry, coeffs, Slot->Gain, state->Gain[1]);
+    ComputePanningGains(Device->Dry, coeffs, Slot->Params.Gain, state->Gain[1]);
 
-    phase = Slot->EffectProps.Chorus.Phase;
-    rate = Slot->EffectProps.Chorus.Rate;
+    phase = Slot->Params.EffectProps.Chorus.Phase;
+    rate = Slot->Params.EffectProps.Chorus.Rate;
     if(!(rate > 0.0f))
     {
         state->lfo_scale = 0.0f;

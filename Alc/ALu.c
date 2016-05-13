@@ -330,6 +330,55 @@ static ALboolean CalcListenerParams(ALCcontext *Context)
     return AL_TRUE;
 }
 
+static ALboolean CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
+{
+    struct ALeffectslotProps *first;
+    struct ALeffectslotProps *props;
+
+    props = ATOMIC_EXCHANGE(struct ALeffectslotProps*, &slot->Update, NULL, almemory_order_acq_rel);
+    if(!props) return AL_FALSE;
+
+    slot->Params.Gain = ATOMIC_LOAD(&props->Gain, almemory_order_relaxed);
+    slot->Params.AuxSendAuto = ATOMIC_LOAD(&props->AuxSendAuto, almemory_order_relaxed);
+    slot->Params.EffectType = ATOMIC_LOAD(&props->Type, almemory_order_relaxed);
+    memcpy(&slot->Params.EffectProps, &props->Props, sizeof(props->Props));
+    /* If the existing state object is different from the one being set,
+     * exchange it so it remains in the freelist and isn't leaked.
+     */
+    if(slot->Params.EffectState == ATOMIC_LOAD(&props->State, almemory_order_relaxed))
+        slot->Params.EffectState = NULL;
+    slot->Params.EffectState = ATOMIC_EXCHANGE(ALeffectState*,
+        &props->State, slot->Params.EffectState, almemory_order_relaxed
+    );
+    if(IsReverbEffect(slot->Params.EffectType))
+    {
+        slot->Params.RoomRolloff = slot->Params.EffectProps.Reverb.RoomRolloffFactor;
+        slot->Params.DecayTime = slot->Params.EffectProps.Reverb.DecayTime;
+        slot->Params.AirAbsorptionGainHF = slot->Params.EffectProps.Reverb.AirAbsorptionGainHF;
+    }
+    else
+    {
+        slot->Params.RoomRolloff = 0.0f;
+        slot->Params.DecayTime = 0.0f;
+        slot->Params.AirAbsorptionGainHF = 1.0f;
+    }
+
+    V(slot->Params.EffectState,update)(device, slot);
+
+    /* WARNING: A livelock is theoretically possible if another thread keeps
+     * changing the freelist head without giving this a chance to actually swap
+     * in the old container (practically impossible with this little code,
+     * but...).
+     */
+    first = ATOMIC_LOAD(&slot->FreeList);
+    do {
+        ATOMIC_STORE(&props->next, first, almemory_order_relaxed);
+    } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALeffectslotProps*,
+            &slot->FreeList, &first, props) == 0);
+
+    return AL_TRUE;
+}
+
 ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
 {
     static const struct ChanMap MonoMap[1] = {
@@ -415,7 +464,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const ALsource *ALSource, const A
         SendSlots[i] = ALSource->Send[i].Slot;
         if(!SendSlots[i] && i == 0)
             SendSlots[i] = Device->DefaultSlot;
-        if(!SendSlots[i] || SendSlots[i]->EffectType == AL_EFFECT_NULL)
+        if(!SendSlots[i] || SendSlots[i]->Params.EffectType == AL_EFFECT_NULL)
         {
             SendSlots[i] = NULL;
             voice->Send[i].OutBuffer = NULL;
@@ -847,7 +896,7 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALbuffer
 
         if(!SendSlots[i] && i == 0)
             SendSlots[i] = Device->DefaultSlot;
-        if(!SendSlots[i] || SendSlots[i]->EffectType == AL_EFFECT_NULL)
+        if(!SendSlots[i] || SendSlots[i]->Params.EffectType == AL_EFFECT_NULL)
         {
             SendSlots[i] = NULL;
             RoomRolloff[i] = 0.0f;
@@ -856,19 +905,10 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALbuffer
         }
         else if(SendSlots[i]->AuxSendAuto)
         {
-            RoomRolloff[i] = RoomRolloffBase;
-            if(IsReverbEffect(SendSlots[i]->EffectType))
-            {
-                RoomRolloff[i] += SendSlots[i]->EffectProps.Reverb.RoomRolloffFactor;
-                DecayDistance[i] = SendSlots[i]->EffectProps.Reverb.DecayTime *
-                                   SPEEDOFSOUNDMETRESPERSEC;
-                RoomAirAbsorption[i] = SendSlots[i]->EffectProps.Reverb.AirAbsorptionGainHF;
-            }
-            else
-            {
-                DecayDistance[i] = 0.0f;
-                RoomAirAbsorption[i] = 1.0f;
-            }
+            RoomRolloff[i] = SendSlots[i]->Params.RoomRolloff + RoomRolloffBase;
+            DecayDistance[i] = SendSlots[i]->Params.DecayTime *
+                               SPEEDOFSOUNDMETRESPERSEC;
+            RoomAirAbsorption[i] = SendSlots[i]->Params.AirAbsorptionGainHF;
         }
         else
         {
@@ -1245,9 +1285,18 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALbuffer
 void UpdateContextSources(ALCcontext *ctx)
 {
     ALvoice *voice, *voice_end;
+    ALboolean fullupdate;
     ALsource *source;
 
-    if(CalcListenerParams(ctx))
+    fullupdate = CalcListenerParams(ctx);
+#define UPDATE_SLOT(iter) do {                                         \
+    if(CalcEffectSlotParams(*iter, ctx->Device))                       \
+        fullupdate = AL_TRUE;                                          \
+} while(0)
+    VECTOR_FOR_EACH(ALeffectslot*, ctx->ActiveAuxSlots, UPDATE_SLOT);
+#undef UPDATE_SLOT
+
+    if(fullupdate)
     {
         voice = ctx->Voices;
         voice_end = voice + ctx->VoiceCount;
@@ -1388,8 +1437,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
         if((slot=device->DefaultSlot) != NULL)
         {
-            if(ATOMIC_EXCHANGE(ALenum, &slot->NeedsUpdate, AL_FALSE))
-                V(slot->EffectState,update)(device, slot);
+            CalcEffectSlotParams(device->DefaultSlot, device);
             for(i = 0;i < slot->NumChannels;i++)
                 memset(slot->WetBuffer[i], 0, SamplesToDo*sizeof(ALfloat));
         }
@@ -1398,26 +1446,13 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         while(ctx)
         {
             if(!ctx->DeferUpdates)
-            {
                 UpdateContextSources(ctx);
-#define UPDATE_SLOT(iter) do {                                         \
-    if(ATOMIC_EXCHANGE(ALenum, &(*iter)->NeedsUpdate, AL_FALSE))       \
-        V((*iter)->EffectState,update)(device, *iter);                 \
-    for(i = 0;i < (*iter)->NumChannels;i++)                            \
-        memset((*iter)->WetBuffer[i], 0, SamplesToDo*sizeof(ALfloat)); \
-} while(0)
-                VECTOR_FOR_EACH(ALeffectslot*, ctx->ActiveAuxSlots, UPDATE_SLOT);
-#undef UPDATE_SLOT
-            }
-            else
-            {
 #define CLEAR_WET_BUFFER(iter) do {                                    \
     for(i = 0;i < (*iter)->NumChannels;i++)                            \
         memset((*iter)->WetBuffer[i], 0, SamplesToDo*sizeof(ALfloat)); \
 } while(0)
-                VECTOR_FOR_EACH(ALeffectslot*, ctx->ActiveAuxSlots, CLEAR_WET_BUFFER);
+            VECTOR_FOR_EACH(ALeffectslot*, ctx->ActiveAuxSlots, CLEAR_WET_BUFFER);
 #undef CLEAR_WET_BUFFER
-            }
 
             /* source processing */
             voice = ctx->Voices;
@@ -1434,7 +1469,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             for(i = 0;i < c;i++)
             {
                 const ALeffectslot *slot = VECTOR_ELEM(ctx->ActiveAuxSlots, i);
-                ALeffectState *state = slot->EffectState;
+                ALeffectState *state = slot->Params.EffectState;
                 V(state,process)(SamplesToDo, slot->WetBuffer, state->OutBuffer,
                                  state->OutChannels);
             }
@@ -1445,7 +1480,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         if(device->DefaultSlot != NULL)
         {
             const ALeffectslot *slot = device->DefaultSlot;
-            ALeffectState *state = slot->EffectState;
+            ALeffectState *state = slot->Params.EffectState;
             V(state,process)(SamplesToDo, slot->WetBuffer, state->OutBuffer,
                              state->OutChannels);
         }

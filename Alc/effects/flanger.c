@@ -60,6 +60,7 @@ static ALvoid ALflangerState_Destruct(ALflangerState *state)
     free(state->SampleBuffer[0]);
     state->SampleBuffer[0] = NULL;
     state->SampleBuffer[1] = NULL;
+    ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
 }
 
 static ALboolean ALflangerState_deviceUpdate(ALflangerState *state, ALCdevice *Device)
@@ -98,7 +99,7 @@ static ALvoid ALflangerState_update(ALflangerState *state, const ALCdevice *Devi
     ALfloat rate;
     ALint phase;
 
-    switch(Slot->EffectProps.Flanger.Waveform)
+    switch(Slot->Params.EffectProps.Flanger.Waveform)
     {
         case AL_FLANGER_WAVEFORM_TRIANGLE:
             state->waveform = FWF_Triangle;
@@ -107,18 +108,18 @@ static ALvoid ALflangerState_update(ALflangerState *state, const ALCdevice *Devi
             state->waveform = FWF_Sinusoid;
             break;
     }
-    state->depth = Slot->EffectProps.Flanger.Depth;
-    state->feedback = Slot->EffectProps.Flanger.Feedback;
-    state->delay = fastf2i(Slot->EffectProps.Flanger.Delay * frequency);
+    state->depth = Slot->Params.EffectProps.Flanger.Depth;
+    state->feedback = Slot->Params.EffectProps.Flanger.Feedback;
+    state->delay = fastf2i(Slot->Params.EffectProps.Flanger.Delay * frequency);
 
     /* Gains for left and right sides */
     CalcXYZCoeffs(-1.0f, 0.0f, 0.0f, 0.0f, coeffs);
-    ComputePanningGains(Device->Dry, coeffs, Slot->Gain, state->Gain[0]);
+    ComputePanningGains(Device->Dry, coeffs, Slot->Params.Gain, state->Gain[0]);
     CalcXYZCoeffs( 1.0f, 0.0f, 0.0f, 0.0f, coeffs);
-    ComputePanningGains(Device->Dry, coeffs, Slot->Gain, state->Gain[1]);
+    ComputePanningGains(Device->Dry, coeffs, Slot->Params.Gain, state->Gain[1]);
 
-    phase = Slot->EffectProps.Flanger.Phase;
-    rate = Slot->EffectProps.Flanger.Rate;
+    phase = Slot->Params.EffectProps.Flanger.Phase;
+    rate = Slot->Params.EffectProps.Flanger.Rate;
     if(!(rate > 0.0f))
     {
         state->lfo_scale = 0.0f;

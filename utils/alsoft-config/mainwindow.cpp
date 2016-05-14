@@ -278,7 +278,7 @@ MainWindow::MainWindow(QWidget *parent) :
     mPeriodCountValidator = new QIntValidator(2, 16, this);
     ui->periodCountEdit->setValidator(mPeriodCountValidator);
 
-    mSourceCountValidator = new QIntValidator(0, 256, this);
+    mSourceCountValidator = new QIntValidator(0, 4096, this);
     ui->srcCountLineEdit->setValidator(mSourceCountValidator);
     mEffectSlotValidator = new QIntValidator(0, 16, this);
     ui->effectSlotLineEdit->setValidator(mEffectSlotValidator);

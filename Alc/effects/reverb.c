@@ -173,7 +173,7 @@ static ALvoid ALreverbState_Destruct(ALreverbState *State)
 }
 
 static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Device);
-static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device, const ALeffectslot *Slot);
+static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props);
 static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels);
 static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels);
 static ALvoid ALreverbState_process(ALreverbState *State, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels);
@@ -893,9 +893,8 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     }
 }
 
-static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props)
 {
-    const ALeffectProps *props = &Slot->Params.EffectProps;
     ALuint frequency = Device->Frequency;
     ALfloat lfscale, hfscale, hfRatio;
     ALfloat gain, gainlf, gainhf;

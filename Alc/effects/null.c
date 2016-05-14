@@ -35,7 +35,7 @@ static ALboolean ALnullState_deviceUpdate(ALnullState* UNUSED(state), ALCdevice*
 /* This updates the effect state. This is called any time the effect is
  * (re)loaded into a slot.
  */
-static ALvoid ALnullState_update(ALnullState* UNUSED(state), const ALCdevice* UNUSED(device), const ALeffectslot* UNUSED(slot))
+static ALvoid ALnullState_update(ALnullState* UNUSED(state), const ALCdevice* UNUSED(device), const ALeffectslot* UNUSED(slot), const ALeffectProps* UNUSED(props))
 {
 }
 

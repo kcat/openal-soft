@@ -46,7 +46,7 @@ static ALboolean ALdedicatedState_deviceUpdate(ALdedicatedState *UNUSED(state), 
     return AL_TRUE;
 }
 
-static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCdevice *device, const ALeffectslot *Slot)
+static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCdevice *device, const ALeffectslot *Slot, const ALeffectProps *props)
 {
     ALfloat Gain;
     ALuint i;
@@ -54,7 +54,7 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCdevice *
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
         state->gains[i] = 0.0f;
 
-    Gain = Slot->Params.Gain * Slot->Params.EffectProps.Dedicated.Gain;
+    Gain = Slot->Params.Gain * props->Dedicated.Gain;
     if(Slot->Params.EffectType == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
     {
         int idx;

@@ -56,12 +56,12 @@ static ALboolean ALcompressorState_deviceUpdate(ALcompressorState *state, ALCdev
     return AL_TRUE;
 }
 
-static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCdevice *device, const ALeffectslot *slot)
+static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCdevice *device, const ALeffectslot *slot, const ALeffectProps *props)
 {
     aluMatrixf matrix;
     ALuint i;
 
-    state->Enabled = slot->Params.EffectProps.Compressor.OnOff;
+    state->Enabled = props->Compressor.OnOff;
 
     aluMatrixfSet(&matrix,
         1.0f, 0.0f, 0.0f, 0.0f,

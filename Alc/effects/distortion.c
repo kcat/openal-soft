@@ -53,7 +53,7 @@ static ALboolean ALdistortionState_deviceUpdate(ALdistortionState *UNUSED(state)
     return AL_TRUE;
 }
 
-static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCdevice *Device, const ALeffectslot *Slot)
+static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props)
 {
     ALfloat frequency = (ALfloat)Device->Frequency;
     ALfloat bandwidth;
@@ -61,15 +61,15 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCdevice
     ALfloat edge;
 
     /* Store distorted signal attenuation settings */
-    state->attenuation = Slot->Params.EffectProps.Distortion.Gain;
+    state->attenuation = props->Distortion.Gain;
 
     /* Store waveshaper edge settings */
-    edge = sinf(Slot->Params.EffectProps.Distortion.Edge * (F_PI_2));
+    edge = sinf(props->Distortion.Edge * (F_PI_2));
     edge = minf(edge, 0.99f);
     state->edge_coeff = 2.0f * edge / (1.0f-edge);
 
     /* Lowpass filter */
-    cutoff = Slot->Params.EffectProps.Distortion.LowpassCutoff;
+    cutoff = props->Distortion.LowpassCutoff;
     /* Bandwidth value is constant in octaves */
     bandwidth = (cutoff / 2.0f) / (cutoff * 0.67f);
     ALfilterState_setParams(&state->lowpass, ALfilterType_LowPass, 1.0f,
@@ -77,9 +77,9 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCdevice
     );
 
     /* Bandpass filter */
-    cutoff = Slot->Params.EffectProps.Distortion.EQCenter;
+    cutoff = props->Distortion.EQCenter;
     /* Convert bandwidth in Hz to octaves */
-    bandwidth = Slot->Params.EffectProps.Distortion.EQBandwidth / (cutoff * 0.67f);
+    bandwidth = props->Distortion.EQBandwidth / (cutoff * 0.67f);
     ALfilterState_setParams(&state->bandpass, ALfilterType_BandPass, 1.0f,
         cutoff / (frequency*4.0f), calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
     );

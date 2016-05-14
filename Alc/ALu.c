@@ -341,12 +341,11 @@ static ALboolean CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
     slot->Params.Gain = ATOMIC_LOAD(&props->Gain, almemory_order_relaxed);
     slot->Params.AuxSendAuto = ATOMIC_LOAD(&props->AuxSendAuto, almemory_order_relaxed);
     slot->Params.EffectType = ATOMIC_LOAD(&props->Type, almemory_order_relaxed);
-    memcpy(&slot->Params.EffectProps, &props->Props, sizeof(props->Props));
     if(IsReverbEffect(slot->Params.EffectType))
     {
-        slot->Params.RoomRolloff = slot->Params.EffectProps.Reverb.RoomRolloffFactor;
-        slot->Params.DecayTime = slot->Params.EffectProps.Reverb.DecayTime;
-        slot->Params.AirAbsorptionGainHF = slot->Params.EffectProps.Reverb.AirAbsorptionGainHF;
+        slot->Params.RoomRolloff = props->Props.Reverb.RoomRolloffFactor;
+        slot->Params.DecayTime = props->Props.Reverb.DecayTime;
+        slot->Params.AirAbsorptionGainHF = props->Props.Reverb.AirAbsorptionGainHF;
     }
     else
     {
@@ -362,6 +361,8 @@ static ALboolean CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
             &props->State, slot->Params.EffectState, almemory_order_relaxed
         );
 
+    V(slot->Params.EffectState,update)(device, slot, &props->Props);
+
     /* WARNING: A livelock is theoretically possible if another thread keeps
      * changing the freelist head without giving this a chance to actually swap
      * in the old container (practically impossible with this little code,
@@ -372,8 +373,6 @@ static ALboolean CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
         ATOMIC_STORE(&props->next, first, almemory_order_relaxed);
     } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALeffectslotProps*,
             &slot->FreeList, &first, props) == 0);
-
-    V(slot->Params.EffectState,update)(device, slot);
 
     return AL_TRUE;
 }

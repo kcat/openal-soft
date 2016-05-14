@@ -20,6 +20,9 @@ struct ALlistenerProps {
     ATOMIC(ALfloat) DopplerVelocity;
     ATOMIC(ALfloat) SpeedOfSound;
 
+    ATOMIC(ALboolean) SourceDistanceModel;
+    ATOMIC(enum DistanceModel) DistanceModel;
+
     ATOMIC(struct ALlistenerProps*) next;
 };
 
@@ -49,6 +52,9 @@ typedef struct ALlistener {
 
         ALfloat DopplerFactor;
         ALfloat SpeedOfSound;
+
+        ALboolean SourceDistanceModel;
+        enum DistanceModel DistanceModel;
     } Params;
 } ALlistener;
 

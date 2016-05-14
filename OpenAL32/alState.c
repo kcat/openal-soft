@@ -52,6 +52,7 @@ AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
     context = GetContextRef();
     if(!context) return;
 
+    WriteLock(&context->PropLock);
     switch(capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
@@ -61,12 +62,10 @@ AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
-    /* HACK: Force sources to update by doing a listener update */
-    ReadLock(&context->PropLock);
     UpdateListenerProps(context);
-    ReadUnlock(&context->PropLock);
 
 done:
+    WriteUnlock(&context->PropLock);
     ALCcontext_DecRef(context);
 }
 
@@ -77,6 +76,7 @@ AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
     context = GetContextRef();
     if(!context) return;
 
+    WriteLock(&context->PropLock);
     switch(capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
@@ -86,12 +86,10 @@ AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
-    /* HACK: Force sources to update by doing a listener update */
-    ReadLock(&context->PropLock);
     UpdateListenerProps(context);
-    ReadUnlock(&context->PropLock);
 
 done:
+    WriteUnlock(&context->PropLock);
     ALCcontext_DecRef(context);
 }
 

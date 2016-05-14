@@ -316,6 +316,10 @@ static ALboolean CalcListenerParams(ALCcontext *Context)
     Listener->Params.SpeedOfSound = ATOMIC_LOAD(&props->SpeedOfSound, almemory_order_relaxed) *
                                     ATOMIC_LOAD(&props->DopplerVelocity, almemory_order_relaxed);
 
+    Listener->Params.SourceDistanceModel = ATOMIC_LOAD(&props->SourceDistanceModel,
+                                                       almemory_order_relaxed);
+    Listener->Params.DistanceModel = ATOMIC_LOAD(&props->DistanceModel, almemory_order_relaxed);
+
     /* WARNING: A livelock is theoretically possible if another thread keeps
      * changing the freelist head without giving this a chance to actually swap
      * in the old container (practically impossible with this little code,
@@ -960,8 +964,8 @@ ALvoid CalcSourceParams(ALvoice *voice, const ALsource *ALSource, const ALbuffer
     Attenuation = 1.0f;
     for(i = 0;i < NumSends;i++)
         RoomAttenuation[i] = 1.0f;
-    switch(ALContext->SourceDistanceModel ? ALSource->DistanceModel :
-                                            ALContext->DistanceModel)
+    switch(Listener->Params.SourceDistanceModel ? ALSource->DistanceModel :
+                                                  Listener->Params.DistanceModel)
     {
         case InverseDistanceClamped:
             ClampedDist = clampf(ClampedDist, MinDist, MaxDist);

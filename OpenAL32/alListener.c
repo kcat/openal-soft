@@ -490,6 +490,10 @@ void UpdateListenerProps(ALCcontext *context)
     ATOMIC_STORE(&props->DopplerVelocity, context->DopplerVelocity, almemory_order_relaxed);
     ATOMIC_STORE(&props->SpeedOfSound, context->SpeedOfSound, almemory_order_relaxed);
 
+    ATOMIC_STORE(&props->SourceDistanceModel, context->SourceDistanceModel,
+                 almemory_order_relaxed);
+    ATOMIC_STORE(&props->DistanceModel, context->DistanceModel, almemory_order_relaxed);
+
     /* Set the new container for updating internal parameters. */
     props = ATOMIC_EXCHANGE(struct ALlistenerProps*, &listener->Update, props, almemory_order_acq_rel);
     if(props)

@@ -695,7 +695,7 @@ struct ALCcontext_struct {
     volatile ALfloat DopplerFactor;
     volatile ALfloat DopplerVelocity;
     volatile ALfloat SpeedOfSound;
-    volatile ALenum  DeferUpdates;
+    ATOMIC(ALenum) DeferUpdates;
 
     RWLock PropLock;
 

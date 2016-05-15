@@ -1558,22 +1558,7 @@ extern inline ALint GetChannelIndex(const enum Channel names[MAX_OUTPUT_CHANNELS
  */
 void ALCcontext_DeferUpdates(ALCcontext *context)
 {
-    ALCdevice *device = context->Device;
-    FPUCtl oldMode;
-
-    SetMixerFPUMode(&oldMode);
-
-    V0(device->Backend,lock)();
-    if(!context->DeferUpdates)
-    {
-        context->DeferUpdates = AL_TRUE;
-
-        /* Make sure all pending updates are performed */
-        UpdateContextSources(context);
-    }
-    V0(device->Backend,unlock)();
-
-    RestoreFPUMode(&oldMode);
+    ATOMIC_STORE(&context->DeferUpdates, AL_TRUE);
 }
 
 /* ALCcontext_ProcessUpdates
@@ -1584,14 +1569,15 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
 {
     ALCdevice *device = context->Device;
 
-    V0(device->Backend,lock)();
-    if(context->DeferUpdates)
+    ReadLock(&context->PropLock);
+    if(ATOMIC_EXCHANGE(ALenum, &context->DeferUpdates, AL_FALSE))
     {
         ALsizei pos;
 
-        context->DeferUpdates = AL_FALSE;
+        UpdateListenerProps(context);
 
         LockUIntMapRead(&context->SourceMap);
+        V0(device->Backend,lock)();
         for(pos = 0;pos < context->SourceMap.size;pos++)
         {
             ALsource *Source = context->SourceMap.array[pos].value;
@@ -1610,9 +1596,11 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
             if(new_state)
                 SetSourceState(Source, context, new_state);
         }
+        V0(device->Backend,unlock)();
         UnlockUIntMapRead(&context->SourceMap);
+        UpdateAllSourceProps(context);
     }
-    V0(device->Backend,unlock)();
+    ReadUnlock(&context->PropLock);
 }
 
 
@@ -2052,7 +2040,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
 
     SetMixerFPUMode(&oldMode);
-    V0(device->Backend,lock)();
     if(device->DefaultSlot)
     {
         ALeffectslot *slot = device->DefaultSlot;
@@ -2062,7 +2049,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         state->OutChannels = device->Dry.NumChannels;
         if(V(state,deviceUpdate)(device) == AL_FALSE)
         {
-            V0(device->Backend,unlock)();
             RestoreFPUMode(&oldMode);
             return ALC_INVALID_DEVICE;
         }
@@ -2074,6 +2060,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     {
         ALsizei pos;
 
+        ReadLock(&context->PropLock);
         LockUIntMapRead(&context->EffectSlotMap);
         for(pos = 0;pos < context->EffectSlotMap.size;pos++)
         {
@@ -2085,10 +2072,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(V(state,deviceUpdate)(device) == AL_FALSE)
             {
                 UnlockUIntMapRead(&context->EffectSlotMap);
-                V0(device->Backend,unlock)();
+                ReadUnlock(&context->PropLock);
                 RestoreFPUMode(&oldMode);
                 return ALC_INVALID_DEVICE;
             }
+
             UpdateEffectSlotProps(slot, AL_FALSE);
         }
         UnlockUIntMapRead(&context->EffectSlotMap);
@@ -2105,38 +2093,19 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 source->Send[s].Slot = NULL;
                 source->Send[s].Gain = 1.0f;
                 source->Send[s].GainHF = 1.0f;
+                source->Send[s].HFReference = LOWPASSFREQREF;
+                source->Send[s].GainLF = 1.0f;
+                source->Send[s].LFReference = HIGHPASSFREQREF;
                 s++;
             }
-            ATOMIC_STORE(&source->NeedsUpdate, AL_TRUE);
         }
         UnlockUIntMapRead(&context->SourceMap);
 
-        for(pos = 0;pos < context->VoiceCount;pos++)
-        {
-            ALvoice *voice = &context->Voices[pos];
-            ALsource *source = voice->Source;
-            ALbufferlistitem *BufferListItem;
-
-            if(!source)
-                continue;
-
-            BufferListItem = ATOMIC_LOAD(&source->queue);
-            while(BufferListItem != NULL)
-            {
-                ALbuffer *buffer;
-                if((buffer=BufferListItem->buffer) != NULL)
-                {
-                    ATOMIC_STORE(&source->NeedsUpdate, AL_FALSE);
-                    voice->Update(voice, source, buffer, context);
-                    break;
-                }
-                BufferListItem = BufferListItem->next;
-            }
-        }
+        UpdateAllSourceProps(context);
+        ReadUnlock(&context->PropLock);
 
         context = context->next;
     }
-    V0(device->Backend,unlock)();
     RestoreFPUMode(&oldMode);
 
     if(!(device->Flags&DEVICE_PAUSED))
@@ -2308,7 +2277,7 @@ static ALvoid InitContext(ALCcontext *Context)
     Context->DopplerFactor = 1.0f;
     Context->DopplerVelocity = 1.0f;
     Context->SpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
-    Context->DeferUpdates = AL_FALSE;
+    ATOMIC_INIT(&Context->DeferUpdates, AL_FALSE);
 
     Context->ExtensionList = alExtList;
 }

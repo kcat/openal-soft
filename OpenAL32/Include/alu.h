@@ -34,6 +34,7 @@ extern "C" {
 #endif
 
 struct ALsource;
+struct ALsourceProps;
 struct ALvoice;
 struct ALeffectslot;
 struct ALbuffer;
@@ -375,8 +376,8 @@ void ComputeFirstOrderGainsBF(const BFChannelConfig *chanmap, ALuint numchans, c
 
 ALvoid UpdateContextSources(ALCcontext *context);
 
-ALvoid CalcSourceParams(struct ALvoice *voice, const struct ALsource *source, const struct ALbuffer *buffer, const ALCcontext *ALContext);
-ALvoid CalcNonAttnSourceParams(struct ALvoice *voice, const struct ALsource *source, const struct ALbuffer *buffer, const ALCcontext *ALContext);
+ALvoid CalcAttnSourceParams(struct ALvoice *voice, const struct ALsourceProps *props, const struct ALbuffer *buffer, const ALCcontext *ALContext);
+ALvoid CalcNonAttnSourceParams(struct ALvoice *voice, const struct ALsourceProps *props, const struct ALbuffer *buffer, const ALCcontext *ALContext);
 
 ALvoid MixSource(struct ALvoice *voice, struct ALsource *source, ALCdevice *Device, ALuint SamplesToDo);
 

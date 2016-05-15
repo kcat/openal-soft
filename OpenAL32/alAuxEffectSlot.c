@@ -202,6 +202,8 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
             SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
         slot->AuxSendAuto = value;
         UpdateEffectSlotProps(slot, AL_FALSE);
+        if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
+            UpdateAllSourceProps(context);
         break;
 
     default:

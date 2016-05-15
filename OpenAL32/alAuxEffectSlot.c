@@ -549,12 +549,12 @@ ALenum InitEffectSlot(ALeffectslot *slot)
 void DeinitEffectSlot(ALeffectslot *slot)
 {
     struct ALeffectslotProps *props;
+    ALeffectState *state;
     size_t count = 0;
 
     props = ATOMIC_LOAD(&slot->Update);
     if(props)
     {
-        ALeffectState *state;
         state = ATOMIC_LOAD(&props->State, almemory_order_relaxed);
         if(state != slot->Params.EffectState)
             DELETE_OBJ(state);
@@ -565,7 +565,6 @@ void DeinitEffectSlot(ALeffectslot *slot)
     while(props)
     {
         struct ALeffectslotProps *next;
-        ALeffectState *state;
         state = ATOMIC_LOAD(&props->State, almemory_order_relaxed);
         next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
         DELETE_OBJ(state);
@@ -583,18 +582,32 @@ void UpdateEffectSlotProps(ALeffectslot *slot)
     struct ALeffectslotProps *props;
     ALeffectState *oldstate;
 
-    /* Get an unused property container, or allocate a new one as needed. */
-    props = ATOMIC_LOAD(&slot->FreeList, almemory_order_acquire);
-    if(!props)
-        props = al_calloc(16, sizeof(*props));
+    props = ATOMIC_EXCHANGE(struct ALeffectslotProps*, &slot->Update, NULL);
+    if(props)
+    {
+        /* If there was an unapplied update, check if its state object is the
+         * same as the current in-use one, or the one that will be set. If
+         * neither, delete it.
+         */
+        oldstate = ATOMIC_EXCHANGE(ALeffectState*, &props->State, NULL, almemory_order_relaxed);
+        if(oldstate != slot->Params.EffectState && oldstate != slot->Effect.State)
+            DELETE_OBJ(oldstate);
+    }
     else
     {
-        struct ALeffectslotProps *next;
-        do {
-            next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
-        } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALeffectslotProps*,
-                &slot->FreeList, &props, next, almemory_order_seq_cst,
-                almemory_order_consume) == 0);
+        /* Get an unused property container, or allocate a new one as needed. */
+        props = ATOMIC_LOAD(&slot->FreeList, almemory_order_relaxed);
+        if(!props)
+            props = al_calloc(16, sizeof(*props));
+        else
+        {
+            struct ALeffectslotProps *next;
+            do {
+                next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
+            } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALeffectslotProps*,
+                    &slot->FreeList, &props, next, almemory_order_seq_cst,
+                    almemory_order_consume) == 0);
+        }
     }
 
     /* Copy in current property values. */

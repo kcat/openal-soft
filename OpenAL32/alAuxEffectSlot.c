@@ -201,7 +201,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
         if(!(value == AL_TRUE || value == AL_FALSE))
             SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
         slot->AuxSendAuto = value;
-        UpdateEffectSlotProps(slot, AL_FALSE);
+        UpdateEffectSlotProps(slot);
         if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
             UpdateAllSourceProps(context);
         break;
@@ -264,7 +264,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
-    UpdateEffectSlotProps(slot, AL_FALSE);
+    UpdateEffectSlotProps(slot);
 
 done:
     WriteUnlock(&context->PropLock);
@@ -502,12 +502,12 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
         }
 
         EffectSlot->Effect.State = State;
-        UpdateEffectSlotProps(EffectSlot, AL_TRUE);
+        UpdateEffectSlotProps(EffectSlot);
     }
     else if(effect)
     {
         memcpy(&EffectSlot->Effect.Props, &effect->Props, sizeof(EffectSlot->Effect.Props));
-        UpdateEffectSlotProps(EffectSlot, AL_FALSE);
+        UpdateEffectSlotProps(EffectSlot);
     }
 
     return AL_NO_ERROR;
@@ -556,7 +556,8 @@ void DeinitEffectSlot(ALeffectslot *slot)
     {
         ALeffectState *state;
         state = ATOMIC_LOAD(&props->State, almemory_order_relaxed);
-        DELETE_OBJ(state);
+        if(state != slot->Params.EffectState)
+            DELETE_OBJ(state);
         TRACE("Freed unapplied AuxiliaryEffectSlot update %p\n", props);
         al_free(props);
     }
@@ -577,7 +578,7 @@ void DeinitEffectSlot(ALeffectslot *slot)
     DELETE_OBJ(slot->Params.EffectState);
 }
 
-void UpdateEffectSlotProps(ALeffectslot *slot, ALboolean withstate)
+void UpdateEffectSlotProps(ALeffectslot *slot)
 {
     struct ALeffectslotProps *props;
     ALeffectState *oldstate;
@@ -605,10 +606,8 @@ void UpdateEffectSlotProps(ALeffectslot *slot, ALboolean withstate)
     /* Swap out any stale effect state object there may be in the container, to
      * delete it.
      */
-    ATOMIC_STORE(&props->UpdateState, withstate, almemory_order_relaxed);
-    oldstate = ATOMIC_EXCHANGE(ALeffectState*, &props->State,
-        withstate ? slot->Effect.State : NULL, almemory_order_relaxed
-    );
+    oldstate = ATOMIC_EXCHANGE(ALeffectState*, &props->State, slot->Effect.State,
+                               almemory_order_relaxed);
 
     /* Set the new container for updating internal parameters. */
     props = ATOMIC_EXCHANGE(struct ALeffectslotProps*, &slot->Update, props,

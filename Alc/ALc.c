@@ -2052,7 +2052,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             RestoreFPUMode(&oldMode);
             return ALC_INVALID_DEVICE;
         }
-        UpdateEffectSlotProps(slot, AL_FALSE);
+        UpdateEffectSlotProps(slot);
     }
 
     context = ATOMIC_LOAD(&device->ContextList);
@@ -2077,7 +2077,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 return ALC_INVALID_DEVICE;
             }
 
-            UpdateEffectSlotProps(slot, AL_FALSE);
+            UpdateEffectSlotProps(slot);
         }
         UnlockUIntMapRead(&context->EffectSlotMap);
 

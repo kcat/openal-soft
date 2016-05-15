@@ -336,6 +336,7 @@ static void CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
 {
     struct ALeffectslotProps *first;
     struct ALeffectslotProps *props;
+    ALeffectState *state;
 
     props = ATOMIC_EXCHANGE(struct ALeffectslotProps*, &slot->Update, NULL, almemory_order_acq_rel);
     if(!props) return;
@@ -355,13 +356,16 @@ static void CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
         slot->Params.DecayTime = 0.0f;
         slot->Params.AirAbsorptionGainHF = 1.0f;
     }
+    state = ATOMIC_EXCHANGE(ALeffectState*, &props->State, NULL, almemory_order_relaxed);
+
     /* If the state object is changed, exchange it with the current one so it
      * remains in the freelist and isn't leaked.
      */
-    if(ATOMIC_LOAD(&props->UpdateState, almemory_order_relaxed))
-        slot->Params.EffectState = ATOMIC_EXCHANGE(ALeffectState*,
-            &props->State, slot->Params.EffectState, almemory_order_relaxed
-        );
+    if(state != slot->Params.EffectState)
+    {
+        ATOMIC_STORE(&props->State, slot->Params.EffectState, almemory_order_relaxed);
+        slot->Params.EffectState = state;
+    }
 
     V(slot->Params.EffectState,update)(device, slot, &props->Props);
 

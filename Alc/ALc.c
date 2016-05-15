@@ -3078,20 +3078,6 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
     ATOMIC_STORE(&device->LastError, ALC_NO_ERROR);
 
-    if((err=UpdateDeviceParams(device, attrList)) != ALC_NO_ERROR)
-    {
-        UnlockLists();
-        alcSetError(device, err);
-        if(err == ALC_INVALID_DEVICE)
-        {
-            V0(device->Backend,lock)();
-            aluHandleDisconnect(device);
-            V0(device->Backend,unlock)();
-        }
-        ALCdevice_DecRef(device);
-        return NULL;
-    }
-
     ALContext = al_calloc(16, sizeof(ALCcontext)+sizeof(ALlistener));
     if(ALContext)
     {
@@ -3106,11 +3092,6 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     }
     if(!ALContext || !ALContext->Voices)
     {
-        if(!ATOMIC_LOAD(&device->ContextList))
-        {
-            V0(device->Backend,stop)();
-            device->Flags &= ~DEVICE_RUNNING;
-        }
         UnlockLists();
 
         if(ALContext)
@@ -3125,6 +3106,29 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         }
 
         alcSetError(device, ALC_OUT_OF_MEMORY);
+        ALCdevice_DecRef(device);
+        return NULL;
+    }
+
+    if((err=UpdateDeviceParams(device, attrList)) != ALC_NO_ERROR)
+    {
+        UnlockLists();
+
+        al_free(ALContext->Voices);
+        ALContext->Voices = NULL;
+
+        VECTOR_DEINIT(ALContext->ActiveAuxSlots);
+
+        al_free(ALContext);
+        ALContext = NULL;
+
+        alcSetError(device, err);
+        if(err == ALC_INVALID_DEVICE)
+        {
+            V0(device->Backend,lock)();
+            aluHandleDisconnect(device);
+            V0(device->Backend,unlock)();
+        }
         ALCdevice_DecRef(device);
         return NULL;
     }

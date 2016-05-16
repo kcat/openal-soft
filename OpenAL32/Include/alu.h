@@ -374,9 +374,6 @@ void ComputeFirstOrderGainsMC(const ChannelConfig *chancoeffs, ALuint numchans, 
 void ComputeFirstOrderGainsBF(const BFChannelConfig *chanmap, ALuint numchans, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 
-ALvoid CalcAttnSourceParams(struct ALvoice *voice, const struct ALsourceProps *props, const struct ALbuffer *buffer, const ALCcontext *ALContext);
-ALvoid CalcNonAttnSourceParams(struct ALvoice *voice, const struct ALsourceProps *props, const struct ALbuffer *buffer, const ALCcontext *ALContext);
-
 ALvoid MixSource(struct ALvoice *voice, struct ALsource *source, ALCdevice *Device, ALuint SamplesToDo);
 
 ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size);

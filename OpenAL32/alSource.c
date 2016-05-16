@@ -2965,10 +2965,6 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             }
         }
 
-        if(BufferList->buffer->FmtChannels == FmtMono)
-            voice->Update = CalcAttnSourceParams;
-        else
-            voice->Update = CalcNonAttnSourceParams;
         UpdateSourceProps(Source, device->NumAuxSends);
     }
     else if(state == AL_PAUSED)

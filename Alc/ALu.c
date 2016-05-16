@@ -129,7 +129,7 @@ static inline ALfloat aluDotproduct(const aluVector *vec1, const aluVector *vec2
     return vec1->v[0]*vec2->v[0] + vec1->v[1]*vec2->v[1] + vec1->v[2]*vec2->v[2];
 }
 
-static inline ALfloat aluNormalize(ALfloat *vec)
+static ALfloat aluNormalize(ALfloat *vec)
 {
     ALfloat length = sqrtf(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
     if(length > 0.0f)
@@ -163,7 +163,7 @@ static inline ALdouble aluNormalized(ALdouble *vec)
     return length;
 }
 
-static inline ALvoid aluMatrixdFloat3(ALfloat *vec, ALfloat w, const aluMatrixd *mtx)
+static void aluMatrixdFloat3(ALfloat *vec, ALfloat w, const aluMatrixd *mtx)
 {
     ALdouble v[4] = { vec[0], vec[1], vec[2], w };
 
@@ -181,7 +181,7 @@ static inline ALvoid aluMatrixdDouble3(ALdouble *vec, ALdouble w, const aluMatri
     vec[2] = v[0]*mtx->m[0][2] + v[1]*mtx->m[1][2] + v[2]*mtx->m[2][2] + v[3]*mtx->m[3][2];
 }
 
-static inline aluVector aluMatrixdVector(const aluMatrixd *mtx, const aluVector *vec)
+static aluVector aluMatrixdVector(const aluMatrixd *mtx, const aluVector *vec)
 {
     aluVector v;
     v.v[0] = (ALfloat)(vec->v[0]*mtx->m[0][0] + vec->v[1]*mtx->m[1][0] + vec->v[2]*mtx->m[2][0] + vec->v[3]*mtx->m[3][0]);
@@ -381,41 +381,8 @@ static void CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
             &slot->FreeList, &first, props) == 0);
 }
 
-static void CalcSourceParams(ALvoice *voice, ALCcontext *context)
-{
-    ALsource *source = voice->Source;
-    ALbufferlistitem *BufferListItem;
-    struct ALsourceProps *first;
-    struct ALsourceProps *props;
 
-    props = ATOMIC_EXCHANGE(struct ALsourceProps*, &source->Update, NULL, almemory_order_acq_rel);
-    if(!props) return;
-
-    BufferListItem = ATOMIC_LOAD(&source->queue, almemory_order_relaxed);
-    while(BufferListItem != NULL)
-    {
-        ALbuffer *buffer;
-        if((buffer=BufferListItem->buffer) != NULL)
-        {
-            voice->Update(voice, props, buffer, context);
-            break;
-        }
-        BufferListItem = BufferListItem->next;
-    }
-
-    /* WARNING: A livelock is theoretically possible if another thread keeps
-     * changing the freelist head without giving this a chance to actually swap
-     * in the old container (practically impossible with this little code,
-     * but...).
-     */
-    first = ATOMIC_LOAD(&source->FreeList);
-    do {
-        ATOMIC_STORE(&props->next, first, almemory_order_relaxed);
-    } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALsourceProps*,
-            &source->FreeList, &first, props) == 0);
-}
-
-ALvoid CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
+static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
 {
     static const struct ChanMap MonoMap[1] = {
         { FrontCenter, 0.0f, 0.0f }
@@ -859,7 +826,7 @@ ALvoid CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *props
     }
 }
 
-ALvoid CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
+static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
 {
     const ALCdevice *Device = ALContext->Device;
     const ALlistener *Listener = ALContext->Listener;
@@ -1336,6 +1303,43 @@ ALvoid CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *props, c
             WetGainLF[i], lfscale, calc_rcpQ_from_slope(WetGainLF[i], 0.75f)
         );
     }
+}
+
+static void CalcSourceParams(ALvoice *voice, ALCcontext *context)
+{
+    ALsource *source = voice->Source;
+    ALbufferlistitem *BufferListItem;
+    struct ALsourceProps *first;
+    struct ALsourceProps *props;
+
+    props = ATOMIC_EXCHANGE(struct ALsourceProps*, &source->Update, NULL, almemory_order_acq_rel);
+    if(!props) return;
+
+    BufferListItem = ATOMIC_LOAD(&source->queue, almemory_order_relaxed);
+    while(BufferListItem != NULL)
+    {
+        ALbuffer *buffer;
+        if((buffer=BufferListItem->buffer) != NULL)
+        {
+            if(buffer->FmtChannels == FmtMono)
+                CalcAttnSourceParams(voice, props, buffer, context);
+            else
+                CalcNonAttnSourceParams(voice, props, buffer, context);
+            break;
+        }
+        BufferListItem = BufferListItem->next;
+    }
+
+    /* WARNING: A livelock is theoretically possible if another thread keeps
+     * changing the freelist head without giving this a chance to actually swap
+     * in the old container (practically impossible with this little code,
+     * but...).
+     */
+    first = ATOMIC_LOAD(&source->FreeList);
+    do {
+        ATOMIC_STORE(&props->next, first, almemory_order_relaxed);
+    } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALsourceProps*,
+            &source->FreeList, &first, props) == 0);
 }
 
 

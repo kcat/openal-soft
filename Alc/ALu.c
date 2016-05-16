@@ -1339,26 +1339,31 @@ ALvoid CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *props, c
 }
 
 
-void UpdateContextSources(ALCcontext *ctx)
+static void UpdateContextSources(ALCcontext *ctx)
 {
     ALvoice *voice, *voice_end;
     ALsource *source;
 
-    CalcListenerParams(ctx);
+    IncrementRef(&ctx->UpdateCount);
+    if(!ATOMIC_LOAD(&ctx->HoldUpdates))
+    {
+        CalcListenerParams(ctx);
 #define UPDATE_SLOT(iter) CalcEffectSlotParams(*iter, ctx->Device)
-    VECTOR_FOR_EACH(ALeffectslot*, ctx->ActiveAuxSlots, UPDATE_SLOT);
+        VECTOR_FOR_EACH(ALeffectslot*, ctx->ActiveAuxSlots, UPDATE_SLOT);
 #undef UPDATE_SLOT
 
-    voice = ctx->Voices;
-    voice_end = voice + ctx->VoiceCount;
-    for(;voice != voice_end;++voice)
-    {
-        if(!(source=voice->Source)) continue;
-        if(source->state != AL_PLAYING && source->state != AL_PAUSED)
-            voice->Source = NULL;
-        else
-            CalcSourceParams(voice, ctx);
+        voice = ctx->Voices;
+        voice_end = voice + ctx->VoiceCount;
+        for(;voice != voice_end;++voice)
+        {
+            if(!(source=voice->Source)) continue;
+            if(source->state != AL_PLAYING && source->state != AL_PAUSED)
+                voice->Source = NULL;
+            else
+                CalcSourceParams(voice, ctx);
+        }
     }
+    IncrementRef(&ctx->UpdateCount);
 }
 
 

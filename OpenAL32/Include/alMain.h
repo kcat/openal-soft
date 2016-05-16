@@ -699,6 +699,12 @@ struct ALCcontext_struct {
 
     RWLock PropLock;
 
+    /* Counter for the pre-mixing updates, in 31.1 fixed point (lowest bit
+     * indicates if updates are currently happening).
+     */
+    RefCount UpdateCount;
+    ATOMIC(ALenum) HoldUpdates;
+
     struct ALvoice *Voices;
     ALsizei VoiceCount;
     ALsizei MaxVoices;

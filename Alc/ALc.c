@@ -2266,6 +2266,8 @@ static ALvoid InitContext(ALCcontext *Context)
     ATOMIC_INIT(&listener->FreeList, NULL);
 
     //Validate Context
+    InitRef(&Context->UpdateCount, 0);
+    ATOMIC_INIT(&Context->HoldUpdates, AL_FALSE);
     RWLockInit(&Context->PropLock);
     ATOMIC_INIT(&Context->LastError, AL_NO_ERROR);
     InitUIntMap(&Context->SourceMap, Context->Device->MaxNoOfSources);

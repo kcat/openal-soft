@@ -101,31 +101,6 @@ inline void aluMatrixfSet(aluMatrixf *matrix, ALfloat m00, ALfloat m01, ALfloat 
 }
 
 
-typedef union aluMatrixd {
-    alignas(16) ALdouble m[4][4];
-} aluMatrixd;
-
-inline void aluMatrixdSetRow(aluMatrixd *matrix, ALuint row,
-                             ALdouble m0, ALdouble m1, ALdouble m2, ALdouble m3)
-{
-    matrix->m[row][0] = m0;
-    matrix->m[row][1] = m1;
-    matrix->m[row][2] = m2;
-    matrix->m[row][3] = m3;
-}
-
-inline void aluMatrixdSet(aluMatrixd *matrix, ALdouble m00, ALdouble m01, ALdouble m02, ALdouble m03,
-                                              ALdouble m10, ALdouble m11, ALdouble m12, ALdouble m13,
-                                              ALdouble m20, ALdouble m21, ALdouble m22, ALdouble m23,
-                                              ALdouble m30, ALdouble m31, ALdouble m32, ALdouble m33)
-{
-    aluMatrixdSetRow(matrix, 0, m00, m01, m02, m03);
-    aluMatrixdSetRow(matrix, 1, m10, m11, m12, m13);
-    aluMatrixdSetRow(matrix, 2, m20, m21, m22, m23);
-    aluMatrixdSetRow(matrix, 3, m30, m31, m32, m33);
-}
-
-
 enum ActiveFilters {
     AF_None = 0,
     AF_LowPass = 1,

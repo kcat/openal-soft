@@ -93,14 +93,6 @@ extern inline void aluMatrixfSet(aluMatrixf *matrix,
                                  ALfloat m20, ALfloat m21, ALfloat m22, ALfloat m23,
                                  ALfloat m30, ALfloat m31, ALfloat m32, ALfloat m33);
 
-extern inline void aluMatrixdSetRow(aluMatrixd *matrix, ALuint row,
-                                    ALdouble m0, ALdouble m1, ALdouble m2, ALdouble m3);
-extern inline void aluMatrixdSet(aluMatrixd *matrix,
-                                 ALdouble m00, ALdouble m01, ALdouble m02, ALdouble m03,
-                                 ALdouble m10, ALdouble m11, ALdouble m12, ALdouble m13,
-                                 ALdouble m20, ALdouble m21, ALdouble m22, ALdouble m23,
-                                 ALdouble m30, ALdouble m31, ALdouble m32, ALdouble m33);
-
 
 static inline HrtfMixerFunc SelectHrtfMixer(void)
 {
@@ -142,52 +134,22 @@ static ALfloat aluNormalize(ALfloat *vec)
     return length;
 }
 
-
-static inline void aluCrossproductd(const ALdouble *inVector1, const ALdouble *inVector2, ALdouble *outVector)
+static void aluMatrixfFloat3(ALfloat *vec, ALfloat w, const aluMatrixf *mtx)
 {
-    outVector[0] = inVector1[1]*inVector2[2] - inVector1[2]*inVector2[1];
-    outVector[1] = inVector1[2]*inVector2[0] - inVector1[0]*inVector2[2];
-    outVector[2] = inVector1[0]*inVector2[1] - inVector1[1]*inVector2[0];
-}
-
-static inline ALdouble aluNormalized(ALdouble *vec)
-{
-    ALdouble length = sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
-    if(length > 0.0)
-    {
-        ALdouble inv_length = 1.0/length;
-        vec[0] *= inv_length;
-        vec[1] *= inv_length;
-        vec[2] *= inv_length;
-    }
-    return length;
-}
-
-static void aluMatrixdFloat3(ALfloat *vec, ALfloat w, const aluMatrixd *mtx)
-{
-    ALdouble v[4] = { vec[0], vec[1], vec[2], w };
-
-    vec[0] = (ALfloat)(v[0]*mtx->m[0][0] + v[1]*mtx->m[1][0] + v[2]*mtx->m[2][0] + v[3]*mtx->m[3][0]);
-    vec[1] = (ALfloat)(v[0]*mtx->m[0][1] + v[1]*mtx->m[1][1] + v[2]*mtx->m[2][1] + v[3]*mtx->m[3][1]);
-    vec[2] = (ALfloat)(v[0]*mtx->m[0][2] + v[1]*mtx->m[1][2] + v[2]*mtx->m[2][2] + v[3]*mtx->m[3][2]);
-}
-
-static inline ALvoid aluMatrixdDouble3(ALdouble *vec, ALdouble w, const aluMatrixd *mtx)
-{
-    ALdouble v[4] = { vec[0], vec[1], vec[2], w };
+    ALfloat v[4] = { vec[0], vec[1], vec[2], w };
 
     vec[0] = v[0]*mtx->m[0][0] + v[1]*mtx->m[1][0] + v[2]*mtx->m[2][0] + v[3]*mtx->m[3][0];
     vec[1] = v[0]*mtx->m[0][1] + v[1]*mtx->m[1][1] + v[2]*mtx->m[2][1] + v[3]*mtx->m[3][1];
     vec[2] = v[0]*mtx->m[0][2] + v[1]*mtx->m[1][2] + v[2]*mtx->m[2][2] + v[3]*mtx->m[3][2];
 }
 
-static aluVector aluMatrixdVector(const aluMatrixd *mtx, const aluVector *vec)
+static aluVector aluMatrixfVector(const aluMatrixf *mtx, const aluVector *vec)
 {
     aluVector v;
-    v.v[0] = (ALfloat)(vec->v[0]*mtx->m[0][0] + vec->v[1]*mtx->m[1][0] + vec->v[2]*mtx->m[2][0] + vec->v[3]*mtx->m[3][0]);
-    v.v[1] = (ALfloat)(vec->v[0]*mtx->m[0][1] + vec->v[1]*mtx->m[1][1] + vec->v[2]*mtx->m[2][1] + vec->v[3]*mtx->m[3][1]);
-    v.v[2] = (ALfloat)(vec->v[0]*mtx->m[0][2] + vec->v[1]*mtx->m[1][2] + vec->v[2]*mtx->m[2][2] + vec->v[3]*mtx->m[3][2]);
-    v.v[3] = (ALfloat)(vec->v[0]*mtx->m[0][3] + vec->v[1]*mtx->m[1][3] + vec->v[2]*mtx->m[2][3] + vec->v[3]*mtx->m[3][3]);
+    v.v[0] = vec->v[0]*mtx->m[0][0] + vec->v[1]*mtx->m[1][0] + vec->v[2]*mtx->m[2][0] + vec->v[3]*mtx->m[3][0];
+    v.v[1] = vec->v[0]*mtx->m[0][1] + vec->v[1]*mtx->m[1][1] + vec->v[2]*mtx->m[2][1] + vec->v[3]*mtx->m[3][1];
+    v.v[2] = vec->v[0]*mtx->m[0][2] + vec->v[1]*mtx->m[1][2] + vec->v[2]*mtx->m[2][2] + vec->v[3]*mtx->m[3][2];
+    v.v[3] = vec->v[0]*mtx->m[0][3] + vec->v[1]*mtx->m[1][3] + vec->v[2]*mtx->m[2][3] + vec->v[3]*mtx->m[3][3];
     return v;
 }
 
@@ -269,7 +231,7 @@ static ALboolean BsincPrepare(const ALuint increment, BsincState *state)
 static void CalcListenerParams(ALCcontext *Context)
 {
     ALlistener *Listener = Context->Listener;
-    ALdouble N[3], V[3], U[3], P[3];
+    ALfloat N[3], V[3], U[3], P[3];
     struct ALlistenerProps *first;
     struct ALlistenerProps *props;
     aluVector vel;
@@ -281,16 +243,16 @@ static void CalcListenerParams(ALCcontext *Context)
     N[0] = ATOMIC_LOAD(&props->Forward[0], almemory_order_relaxed);
     N[1] = ATOMIC_LOAD(&props->Forward[1], almemory_order_relaxed);
     N[2] = ATOMIC_LOAD(&props->Forward[2], almemory_order_relaxed);
-    aluNormalized(N);
+    aluNormalize(N);
     V[0] = ATOMIC_LOAD(&props->Up[0], almemory_order_relaxed);
     V[1] = ATOMIC_LOAD(&props->Up[1], almemory_order_relaxed);
     V[2] = ATOMIC_LOAD(&props->Up[2], almemory_order_relaxed);
-    aluNormalized(V);
+    aluNormalize(V);
     /* Build and normalize right-vector */
-    aluCrossproductd(N, V, U);
-    aluNormalized(U);
+    aluCrossproduct(N, V, U);
+    aluNormalize(U);
 
-    aluMatrixdSet(&Listener->Params.Matrix,
+    aluMatrixfSet(&Listener->Params.Matrix,
         U[0], V[0], -N[0], 0.0,
         U[1], V[1], -N[1], 0.0,
         U[2], V[2], -N[2], 0.0,
@@ -300,14 +262,14 @@ static void CalcListenerParams(ALCcontext *Context)
     P[0] = ATOMIC_LOAD(&props->Position[0], almemory_order_relaxed);
     P[1] = ATOMIC_LOAD(&props->Position[1], almemory_order_relaxed);
     P[2] = ATOMIC_LOAD(&props->Position[2], almemory_order_relaxed);
-    aluMatrixdDouble3(P, 1.0, &Listener->Params.Matrix);
-    aluMatrixdSetRow(&Listener->Params.Matrix, 3, -P[0], -P[1], -P[2], 1.0f);
+    aluMatrixfFloat3(P, 1.0, &Listener->Params.Matrix);
+    aluMatrixfSetRow(&Listener->Params.Matrix, 3, -P[0], -P[1], -P[2], 1.0f);
 
     aluVectorSet(&vel, ATOMIC_LOAD(&props->Velocity[0], almemory_order_relaxed),
                        ATOMIC_LOAD(&props->Velocity[1], almemory_order_relaxed),
                        ATOMIC_LOAD(&props->Velocity[2], almemory_order_relaxed),
                        0.0f);
-    Listener->Params.Velocity = aluMatrixdVector(&Listener->Params.Matrix, &vel);
+    Listener->Params.Velocity = aluMatrixfVector(&Listener->Params.Matrix, &vel);
 
     Listener->Params.Gain = ATOMIC_LOAD(&props->Gain, almemory_order_relaxed);
     Listener->Params.MetersPerUnit = ATOMIC_LOAD(&props->MetersPerUnit, almemory_order_relaxed);
@@ -568,9 +530,9 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
         aluNormalize(V);
         if(!Relative)
         {
-            const aluMatrixd *lmatrix = &Listener->Params.Matrix;
-            aluMatrixdFloat3(N, 0.0f, lmatrix);
-            aluMatrixdFloat3(V, 0.0f, lmatrix);
+            const aluMatrixf *lmatrix = &Listener->Params.Matrix;
+            aluMatrixfFloat3(N, 0.0f, lmatrix);
+            aluMatrixfFloat3(V, 0.0f, lmatrix);
         }
         /* Build and normalize right-vector */
         aluCrossproduct(N, V, U);
@@ -951,11 +913,11 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
     /* Transform source to listener space (convert to head relative) */
     if(ATOMIC_LOAD(&props->HeadRelative, almemory_order_relaxed) == AL_FALSE)
     {
-        const aluMatrixd *Matrix = &Listener->Params.Matrix;
+        const aluMatrixf *Matrix = &Listener->Params.Matrix;
         /* Transform source vectors */
-        Position = aluMatrixdVector(Matrix, &Position);
-        Velocity = aluMatrixdVector(Matrix, &Velocity);
-        Direction = aluMatrixdVector(Matrix, &Direction);
+        Position = aluMatrixfVector(Matrix, &Position);
+        Velocity = aluMatrixfVector(Matrix, &Velocity);
+        Direction = aluMatrixfVector(Matrix, &Direction);
     }
     else
     {

@@ -2250,11 +2250,11 @@ static ALvoid InitContext(ALCcontext *Context)
     listener->Up[1] = 1.0f;
     listener->Up[2] = 0.0f;
 
-    aluMatrixdSet(&listener->Params.Matrix,
-        1.0, 0.0, 0.0, 0.0,
-        0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 1.0
+    aluMatrixfSet(&listener->Params.Matrix,
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f
     );
     aluVectorSet(&listener->Params.Velocity, 0.0f, 0.0f, 0.0f, 0.0f);
     listener->Params.Gain = 1.0f;

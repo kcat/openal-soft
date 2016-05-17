@@ -44,7 +44,7 @@ typedef struct ALlistener {
     ATOMIC(struct ALlistenerProps*) FreeList;
 
     struct {
-        aluMatrixd Matrix;
+        aluMatrixf Matrix;
         aluVector  Velocity;
 
         ALfloat Gain;

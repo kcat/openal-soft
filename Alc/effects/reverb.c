@@ -48,7 +48,10 @@ typedef struct ALreverbState {
     DERIVE_FROM_TYPE(ALeffectState);
 
     ALboolean IsEax;
-    ALuint ExtraChannels; // For HRTF
+
+    // For HRTF and UHJ
+    ALfloat (*ExtraOut)[BUFFERSIZE];
+    ALuint ExtraChannels;
 
     // All delay lines are allocated as a single buffer to reduce memory
     // fragmentation and management code.
@@ -385,13 +388,17 @@ static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Dev
     if(!AllocLines(frequency, State))
         return AL_FALSE;
 
-    /* WARNING: This assumes the real output follows the virtual output in the
-     * device's DryBuffer.
-     */
+    /* HRTF and UHJ will mix to the real output for ambient output. */
     if(Device->Hrtf || Device->Uhj_Encoder)
-        State->ExtraChannels = ChannelsFromDevFmt(Device->FmtChans);
+    {
+        State->ExtraOut = Device->RealOut.Buffer;
+        State->ExtraChannels = Device->RealOut.NumChannels;
+    }
     else
+    {
+        State->ExtraOut = NULL;
         State->ExtraChannels = 0;
+    }
 
     // Calculate the modulation filter coefficient.  Notice that the exponent
     // is calculated given the current sample rate.  This ensures that the
@@ -696,9 +703,6 @@ static ALvoid UpdateMixedPanning(const ALCdevice *Device, const ALfloat *Reflect
     /* With HRTF or UHJ, the normal output provides a panned reverb channel
      * when a non-0-length vector is specified, while the real stereo output
      * provides two other "direct" non-panned reverb channels.
-     *
-     * WARNING: This assumes the real output follows the virtual output in the
-     * device's DryBuffer.
      */
     memset(State->Early.PanGain, 0, sizeof(State->Early.PanGain));
     length = sqrtf(ReflectionsPan[0]*ReflectionsPan[0] + ReflectionsPan[1]*ReflectionsPan[1] + ReflectionsPan[2]*ReflectionsPan[2]);
@@ -710,8 +714,8 @@ static ALvoid UpdateMixedPanning(const ALCdevice *Device, const ALfloat *Reflect
     else
     {
         /* Note that EAX Reverb's panning vectors are using right-handed
-         * coordinates, rather that the OpenAL's left-handed coordinates.
-         * Negate Z to fix this.
+         * coordinates, rather than OpenAL's left-handed coordinates. Negate Z
+         * to fix this.
          */
         ALfloat pan[3] = {
              ReflectionsPan[0] / length,
@@ -773,10 +777,6 @@ static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *Reflec
     }
     else
     {
-        /* Note that EAX Reverb's panning vectors are using right-handed
-         * coordinates, rather that the OpenAL's left-handed coordinates.
-         * Negate Z to fix this.
-         */
         ALfloat pan[3] = {
              ReflectionsPan[0] / length,
              ReflectionsPan[1] / length,
@@ -1335,6 +1335,21 @@ static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint Samples
                         SamplesOut[c][index+i] += gain*late[i][l];
                 }
             }
+            for(c = 0;c < State->ExtraChannels;c++)
+            {
+                gain = State->Early.PanGain[l][NumChannels+c];
+                if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
+                {
+                    for(i = 0;i < todo;i++)
+                        State->ExtraOut[c][index+i] += gain*early[i][l];
+                }
+                gain = State->Late.PanGain[l][NumChannels+c];
+                if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
+                {
+                    for(i = 0;i < todo;i++)
+                        State->ExtraOut[c][index+i] += gain*late[i][l];
+                }
+            }
         }
 
         index += todo;
@@ -1372,6 +1387,21 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo,
                         SamplesOut[c][index+i] += gain*late[i][l];
                 }
             }
+            for(c = 0;c < State->ExtraChannels;c++)
+            {
+                gain = State->Early.PanGain[l][NumChannels+c];
+                if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
+                {
+                    for(i = 0;i < todo;i++)
+                        State->ExtraOut[c][index+i] += gain*early[i][l];
+                }
+                gain = State->Late.PanGain[l][NumChannels+c];
+                if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
+                {
+                    for(i = 0;i < todo;i++)
+                        State->ExtraOut[c][index+i] += gain*late[i][l];
+                }
+            }
         }
 
         index += todo;
@@ -1380,7 +1410,6 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo,
 
 static ALvoid ALreverbState_process(ALreverbState *State, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
-    NumChannels += State->ExtraChannels;
     if(State->IsEax)
         ALreverbState_processEax(State, SamplesToDo, SamplesIn[0], SamplesOut, NumChannels);
     else

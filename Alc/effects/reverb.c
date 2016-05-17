@@ -826,11 +826,11 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     ALfloat length;
     ALuint i;
 
-    /* 0.5 would be the gain scaling when the panning vector is 0. This also
-     * equals sqrt(1/4), a nice gain scaling for the four virtual points
+    /* sqrt(0.5) would be the gain scaling when the panning vector is 0. This
+     * also equals sqrt(2/4), a nice gain scaling for the four virtual points
      * producing an "ambient" response.
      */
-    gain[0] = gain[1] = gain[2] = gain[3] = 0.5f;
+    gain[0] = gain[1] = gain[2] = gain[3] = 0.707106781f;
     length = sqrtf(ReflectionsPan[0]*ReflectionsPan[0] + ReflectionsPan[1]*ReflectionsPan[1] + ReflectionsPan[2]*ReflectionsPan[2]);
     if(length > 1.0f)
     {
@@ -842,7 +842,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
         for(i = 0;i < 4;i++)
         {
             ALfloat dotp = pan[0]*PanDirs[i][0] + pan[1]*PanDirs[i][1] + pan[2]*PanDirs[i][2];
-            gain[i] = dotp*0.5f + 0.5f;
+            gain[i] = sqrtf(clampf(dotp*0.5f + 0.5f, 0.0f, 1.0f));
         }
     }
     else if(length > FLT_EPSILON)
@@ -851,7 +851,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
         {
             ALfloat dotp = ReflectionsPan[0]*PanDirs[i][0] + ReflectionsPan[1]*PanDirs[i][1] +
                            -ReflectionsPan[2]*PanDirs[i][2];
-            gain[i] = dotp*0.5f + 0.5f;
+            gain[i] = sqrtf(clampf(dotp*0.5f + 0.5f, 0.0f, 1.0f));
         }
     }
     for(i = 0;i < 4;i++)
@@ -861,7 +861,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
                             State->Early.PanGain[i]);
     }
 
-    gain[0] = gain[1] = gain[2] = gain[3] = 0.5f;
+    gain[0] = gain[1] = gain[2] = gain[3] = 0.707106781f;
     length = sqrtf(LateReverbPan[0]*LateReverbPan[0] + LateReverbPan[1]*LateReverbPan[1] + LateReverbPan[2]*LateReverbPan[2]);
     if(length > 1.0f)
     {
@@ -873,7 +873,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
         for(i = 0;i < 4;i++)
         {
             ALfloat dotp = pan[0]*PanDirs[i][0] + pan[1]*PanDirs[i][1] + pan[2]*PanDirs[i][2];
-            gain[i] = dotp*0.5f + 0.5f;
+            gain[i] = sqrtf(clampf(dotp*0.5f + 0.5f, 0.0f, 1.0f));
         }
     }
     else if(length > FLT_EPSILON)
@@ -882,7 +882,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
         {
             ALfloat dotp = LateReverbPan[0]*PanDirs[i][0] + LateReverbPan[1]*PanDirs[i][1] +
                            -LateReverbPan[2]*PanDirs[i][2];
-            gain[i] = dotp*0.5f + 0.5f;
+            gain[i] = sqrtf(clampf(dotp*0.5f + 0.5f, 0.0f, 1.0f));
         }
     }
     for(i = 0;i < 4;i++)

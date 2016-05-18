@@ -2043,7 +2043,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     if(device->DefaultSlot)
     {
         ALeffectslot *slot = device->DefaultSlot;
-        ALeffectState *state = slot->Params.EffectState;
+        ALeffectState *state = slot->Effect.State;
 
         state->OutBuffer = device->Dry.Buffer;
         state->OutChannels = device->Dry.NumChannels;
@@ -2065,7 +2065,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         for(pos = 0;pos < context->EffectSlotMap.size;pos++)
         {
             ALeffectslot *slot = context->EffectSlotMap.array[pos].value;
-            ALeffectState *state = slot->Params.EffectState;
+            ALeffectState *state = slot->Effect.State;
 
             state->OutBuffer = device->Dry.Buffer;
             state->OutChannels = device->Dry.NumChannels;

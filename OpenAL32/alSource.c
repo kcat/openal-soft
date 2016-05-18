@@ -385,7 +385,7 @@ static ALint Int64ValsByProp(ALenum prop)
 
 #define DO_UPDATEPROPS() do {                                                 \
     if(SourceShouldUpdate(Source, Context))                                   \
-        UpdateSourceProps(Source, device->NumAuxSends);                       \
+        UpdateSourceProps(Source, device->NumAuxSends, Context);              \
 } while(0)
 
 static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALfloat *values)
@@ -834,7 +834,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 /* We must force an update if the auxiliary slot changed on a
                  * playing source, in case the slot is about to be deleted.
                  */
-                UpdateSourceProps(Source, device->NumAuxSends);
+                UpdateSourceProps(Source, device->NumAuxSends, Context);
             }
             else
             {
@@ -2750,7 +2750,7 @@ static ALvoid DeinitSource(ALsource *source)
     }
 }
 
-void UpdateSourceProps(ALsource *source, ALuint num_sends)
+void UpdateSourceProps(ALsource *source, ALuint num_sends, ALCcontext *context)
 {
     struct ALsourceProps *props;
     size_t i;
@@ -2795,7 +2795,10 @@ void UpdateSourceProps(ALsource *source, ALuint num_sends)
     }
     ATOMIC_STORE(&props->HeadRelative, source->HeadRelative, almemory_order_relaxed);
     ATOMIC_STORE(&props->Looping, source->Looping, almemory_order_relaxed);
-    ATOMIC_STORE(&props->DistanceModel, source->DistanceModel, almemory_order_relaxed);
+    ATOMIC_STORE(&props->DistanceModel,
+        context->SourceDistanceModel ?  source->DistanceModel : context->DistanceModel,
+        almemory_order_relaxed
+    );
     ATOMIC_STORE(&props->DirectChannels, source->DirectChannels, almemory_order_relaxed);
 
     ATOMIC_STORE(&props->DryGainHFAuto, source->DryGainHFAuto, almemory_order_relaxed);
@@ -2863,7 +2866,7 @@ void UpdateAllSourceProps(ALCcontext *context)
         ALsource *source = voice->Source;
         if(source != NULL && (source->state == AL_PLAYING ||
                               source->state == AL_PAUSED))
-            UpdateSourceProps(source, num_sends);
+            UpdateSourceProps(source, num_sends, context);
     }
     /* Now with all updates declared, let the mixer continue applying them so
      * they all happen at once.
@@ -2965,7 +2968,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             }
         }
 
-        UpdateSourceProps(Source, device->NumAuxSends);
+        UpdateSourceProps(Source, device->NumAuxSends, Context);
     }
     else if(state == AL_PAUSED)
     {

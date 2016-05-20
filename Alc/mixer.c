@@ -384,10 +384,10 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
     ALuint chan, j;
 
     /* Get source info */
-    State          = Source->state;
+    State          = AL_PLAYING; /* Only called while playing. */
     BufferListItem = ATOMIC_LOAD(&Source->current_buffer);
-    DataPosInt     = Source->position;
-    DataPosFrac    = Source->position_fraction;
+    DataPosInt     = ATOMIC_LOAD(&Source->position, almemory_order_relaxed);
+    DataPosFrac    = ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed);
     NumChannels    = Source->NumChannels;
     SampleSize     = Source->SampleSize;
     Looping        = voice->Looping;
@@ -752,8 +752,8 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
     voice->Moving = AL_TRUE;
 
     /* Update source info */
-    Source->state             = State;
-    ATOMIC_STORE(&Source->current_buffer, BufferListItem);
-    Source->position          = DataPosInt;
-    Source->position_fraction = DataPosFrac;
+    Source->state = State;
+    ATOMIC_STORE(&Source->current_buffer,    BufferListItem, almemory_order_relaxed);
+    ATOMIC_STORE(&Source->position,          DataPosInt, almemory_order_relaxed);
+    ATOMIC_STORE(&Source->position_fraction, DataPosFrac);
 }

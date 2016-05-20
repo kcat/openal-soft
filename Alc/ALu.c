@@ -1619,8 +1619,8 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
             {
                 source->state = AL_STOPPED;
                 ATOMIC_STORE(&source->current_buffer, NULL);
-                source->position = 0;
-                source->position_fraction = 0;
+                ATOMIC_STORE(&source->position, 0);
+                ATOMIC_STORE(&source->position_fraction, 0);
             }
 
             voice++;

@@ -2904,8 +2904,8 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         if(Source->state != AL_PAUSED)
         {
             Source->state = AL_PLAYING;
-            Source->position = 0;
-            Source->position_fraction = 0;
+            ATOMIC_STORE(&Source->position, 0, almemory_order_relaxed);
+            ATOMIC_STORE(&Source->position_fraction, 0, almemory_order_relaxed);
             ATOMIC_STORE(&Source->current_buffer, BufferList);
             discontinuity = AL_TRUE;
         }
@@ -2991,8 +2991,8 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         if(Source->state != AL_INITIAL)
         {
             Source->state = AL_INITIAL;
-            Source->position = 0;
-            Source->position_fraction = 0;
+            ATOMIC_STORE(&Source->position, 0, almemory_order_relaxed);
+            ATOMIC_STORE(&Source->position_fraction, 0, almemory_order_relaxed);
             ATOMIC_STORE(&Source->current_buffer, ATOMIC_LOAD(&Source->queue));
         }
         Source->OffsetType = AL_NONE;
@@ -3022,10 +3022,11 @@ ALint64 GetSourceSampleOffset(ALsource *Source)
 
     /* NOTE: This is the offset into the *current* buffer, so add the length of
      * any played buffers */
-    readPos  = (ALuint64)Source->position << 32;
-    readPos |= (ALuint64)Source->position_fraction << (32-FRACTIONBITS);
-    BufferList = ATOMIC_LOAD(&Source->queue);
-    Current = ATOMIC_LOAD(&Source->current_buffer);
+    readPos  = (ALuint64)ATOMIC_LOAD(&Source->position) << 32;
+    readPos |= (ALuint64)ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed) <<
+                         (32-FRACTIONBITS);
+    BufferList = ATOMIC_LOAD(&Source->queue, almemory_order_relaxed);
+    Current = ATOMIC_LOAD(&Source->current_buffer, almemory_order_relaxed);
     while(BufferList && BufferList != Current)
     {
         if(BufferList->buffer)
@@ -3058,10 +3059,10 @@ static ALdouble GetSourceSecOffset(ALsource *Source)
 
     /* NOTE: This is the offset into the *current* buffer, so add the length of
      * any played buffers */
-    readPos  = (ALuint64)Source->position << FRACTIONBITS;
-    readPos |= (ALuint64)Source->position_fraction;
-    BufferList = ATOMIC_LOAD(&Source->queue);
-    Current = ATOMIC_LOAD(&Source->current_buffer);
+    readPos  = (ALuint64)ATOMIC_LOAD(&Source->position) << FRACTIONBITS;
+    readPos |= (ALuint64)ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed);
+    BufferList = ATOMIC_LOAD(&Source->queue, almemory_order_relaxed);
+    Current = ATOMIC_LOAD(&Source->current_buffer, almemory_order_relaxed);
     while(BufferList && BufferList != Current)
     {
         const ALbuffer *buffer = BufferList->buffer;
@@ -3110,10 +3111,10 @@ static ALdouble GetSourceOffset(ALsource *Source, ALenum name)
     /* NOTE: This is the offset into the *current* buffer, so add the length of
      * any played buffers */
     totalBufferLen = 0;
-    readPos = Source->position;
-    readPosFrac = Source->position_fraction;
-    BufferList = ATOMIC_LOAD(&Source->queue);
-    Current = ATOMIC_LOAD(&Source->current_buffer);
+    readPos = ATOMIC_LOAD(&Source->position);
+    readPosFrac = ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed);
+    BufferList = ATOMIC_LOAD(&Source->queue, almemory_order_relaxed);
+    Current = ATOMIC_LOAD(&Source->current_buffer, almemory_order_relaxed);
     while(BufferList != NULL)
     {
         const ALbuffer *buffer;
@@ -3205,10 +3206,10 @@ ALboolean ApplyOffset(ALsource *Source)
         if(bufferLen > offset-totalBufferLen)
         {
             /* Offset is in this buffer */
-            ATOMIC_STORE(&Source->current_buffer, BufferList);
+            ATOMIC_STORE(&Source->current_buffer, BufferList, almemory_order_relaxed);
 
-            Source->position = offset - totalBufferLen;
-            Source->position_fraction = frac;
+            ATOMIC_STORE(&Source->position, offset - totalBufferLen, almemory_order_relaxed);
+            ATOMIC_STORE(&Source->position_fraction, frac);
             return AL_TRUE;
         }
 

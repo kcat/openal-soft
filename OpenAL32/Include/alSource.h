@@ -172,8 +172,8 @@ typedef struct ALsource {
      * the whole queue, and the fractional (fixed-point) offset to the next
      * sample.
      */
-    ALuint position;
-    ALuint position_fraction;
+    ATOMIC(ALuint) position;
+    ATOMIC(ALuint) position_fraction;
 
     /** Source Buffer Queue info. */
     ATOMIC(ALbufferlistitem*) queue;

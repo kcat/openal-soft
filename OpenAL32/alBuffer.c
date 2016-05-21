@@ -985,7 +985,6 @@ ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, 
     enum FmtChannels DstChannels;
     enum FmtType DstType;
     ALuint64 newsize;
-    ALvoid *temp;
 
     if(DecomposeFormat(NewFormat, &DstChannels, &DstType) == AL_FALSE ||
        (long)SrcChannels != (long)DstChannels)
@@ -1007,13 +1006,25 @@ ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, 
         return AL_INVALID_OPERATION;
     }
 
-    temp = realloc(ALBuf->data, (size_t)newsize);
-    if(!temp && newsize)
+    /* Round up to the next 16-byte multiple. This could reallocate only when
+     * increasing or the new size is less than half the current, but then the
+     * buffer's AL_SIZE would not be very reliable for accounting buffer memory
+     * usage, and reporting the real size could cause problems for apps that
+     * use AL_SIZE to try to get the buffer's play length.
+     */
+    newsize = (newsize+15) & ~0xf;
+    if(newsize != ALBuf->BytesAlloc)
     {
-        WriteUnlock(&ALBuf->lock);
-        return AL_OUT_OF_MEMORY;
+        void *temp = al_calloc(16, (size_t)newsize);
+        if(!temp && newsize)
+        {
+            WriteUnlock(&ALBuf->lock);
+            return AL_OUT_OF_MEMORY;
+        }
+        al_free(ALBuf->data);
+        ALBuf->data = temp;
+        ALBuf->BytesAlloc = (ALuint)newsize;
     }
-    ALBuf->data = temp;
 
     if(data != NULL)
         ConvertData(ALBuf->data, (enum UserFmtType)DstType, data, SrcType, NewChannels, frames, align);
@@ -1349,7 +1360,7 @@ ALbuffer *NewBuffer(ALCcontext *context)
     ALbuffer *buffer;
     ALenum err;
 
-    buffer = calloc(1, sizeof(ALbuffer));
+    buffer = al_calloc(16, sizeof(ALbuffer));
     if(!buffer)
         SET_ERROR_AND_RETURN_VALUE(context, AL_OUT_OF_MEMORY, NULL);
     RWLockInit(&buffer->lock);
@@ -1361,7 +1372,7 @@ ALbuffer *NewBuffer(ALCcontext *context)
     {
         FreeThunkEntry(buffer->id);
         memset(buffer, 0, sizeof(ALbuffer));
-        free(buffer);
+        al_free(buffer);
 
         SET_ERROR_AND_RETURN_VALUE(context, err, NULL);
     }
@@ -1374,10 +1385,10 @@ void DeleteBuffer(ALCdevice *device, ALbuffer *buffer)
     RemoveBuffer(device, buffer->id);
     FreeThunkEntry(buffer->id);
 
-    free(buffer->data);
+    al_free(buffer->data);
 
     memset(buffer, 0, sizeof(*buffer));
-    free(buffer);
+    al_free(buffer);
 }
 
 
@@ -1394,10 +1405,10 @@ ALvoid ReleaseALBuffers(ALCdevice *device)
         ALbuffer *temp = device->BufferMap.array[i].value;
         device->BufferMap.array[i].value = NULL;
 
-        free(temp->data);
+        al_free(temp->data);
 
         FreeThunkEntry(temp->id);
         memset(temp, 0, sizeof(ALbuffer));
-        free(temp);
+        al_free(temp);
     }
 }

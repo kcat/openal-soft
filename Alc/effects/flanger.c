@@ -57,7 +57,7 @@ typedef struct ALflangerState {
 
 static ALvoid ALflangerState_Destruct(ALflangerState *state)
 {
-    free(state->SampleBuffer[0]);
+    al_free(state->SampleBuffer[0]);
     state->SampleBuffer[0] = NULL;
     state->SampleBuffer[1] = NULL;
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
@@ -73,10 +73,10 @@ static ALboolean ALflangerState_deviceUpdate(ALflangerState *state, ALCdevice *D
 
     if(maxlen != state->BufferLength)
     {
-        void *temp;
-
-        temp = realloc(state->SampleBuffer[0], maxlen * sizeof(ALfloat) * 2);
+        void *temp = al_calloc(16, maxlen * sizeof(ALfloat) * 2);
         if(!temp) return AL_FALSE;
+
+        al_free(state->SampleBuffer[0]);
         state->SampleBuffer[0] = temp;
         state->SampleBuffer[1] = state->SampleBuffer[0] + maxlen;
 

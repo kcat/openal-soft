@@ -5,6 +5,8 @@
 
 #include <AL/al.h>
 
+#include "almalloc.h"
+
 /* "Base" vector type, designed to alias with the actual vector types. */
 typedef struct vector__s {
     size_t Capacity;
@@ -27,7 +29,7 @@ typedef const _##N* const_##N;
 
 #define VECTOR_INIT(_x)       do { (_x) = NULL; } while(0)
 #define VECTOR_INIT_STATIC()  NULL
-#define VECTOR_DEINIT(_x)     do { free((_x)); (_x) = NULL; } while(0)
+#define VECTOR_DEINIT(_x)     do { al_free((_x)); (_x) = NULL; } while(0)
 
 /* Helper to increase a vector's reserve. Do not call directly. */
 ALboolean vector_reserve(char *ptr, size_t base_size, size_t obj_size, size_t obj_count, ALboolean exact);

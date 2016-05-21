@@ -2268,14 +2268,16 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 
         newcount = context->MaxVoices << 1;
         if(newcount > 0)
-            temp = realloc(context->Voices, newcount * sizeof(context->Voices[0]));
+            temp = al_malloc(16, newcount * sizeof(context->Voices[0]));
         if(!temp)
         {
             UnlockContext(context);
             SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
         }
+        memcpy(temp, context->Voices, context->MaxVoices * sizeof(temp[0]));
         memset(&temp[context->MaxVoices], 0, (newcount-context->MaxVoices) * sizeof(temp[0]));
 
+        al_free(context->Voices);
         context->Voices = temp;
         context->MaxVoices = newcount;
     }

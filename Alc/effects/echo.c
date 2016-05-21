@@ -52,7 +52,7 @@ typedef struct ALechoState {
 
 static ALvoid ALechoState_Destruct(ALechoState *state)
 {
-    free(state->SampleBuffer);
+    al_free(state->SampleBuffer);
     state->SampleBuffer = NULL;
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
 }
@@ -69,10 +69,10 @@ static ALboolean ALechoState_deviceUpdate(ALechoState *state, ALCdevice *Device)
 
     if(maxlen != state->BufferLength)
     {
-        void *temp;
-
-        temp = realloc(state->SampleBuffer, maxlen * sizeof(ALfloat));
+        void *temp = al_calloc(16, maxlen * sizeof(ALfloat));
         if(!temp) return AL_FALSE;
+
+        al_free(state->SampleBuffer);
         state->SampleBuffer = temp;
         state->BufferLength = maxlen;
     }

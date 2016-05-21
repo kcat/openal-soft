@@ -80,6 +80,7 @@ typedef struct ALbuffer {
 
     enum FmtChannels FmtChannels;
     enum FmtType     FmtType;
+    ALuint BytesAlloc;
 
     enum UserFmtChannels OriginalChannels;
     enum UserFmtType     OriginalType;

@@ -759,9 +759,12 @@ ALboolean vector_reserve(char *ptr, size_t base_size, size_t obj_size, size_t ob
         /* Need to be explicit with the caller type's base size, because it
          * could have extra padding before the start of the array (that is,
          * sizeof(*vector_) may not equal base_size). */
-        temp = realloc(*vecptr, base_size + obj_size*obj_count);
+        temp = al_calloc(16, base_size + obj_size*obj_count);
         if(temp == NULL) return AL_FALSE;
+        memcpy(((ALubyte*)temp)+base_size, ((ALubyte*)*vecptr)+base_size,
+               obj_size*old_size);
 
+        al_free(*vecptr);
         *vecptr = temp;
         (*vecptr)->Capacity = obj_count;
         (*vecptr)->Size = old_size;

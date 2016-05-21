@@ -170,7 +170,7 @@ typedef struct ALreverbState {
 
 static ALvoid ALreverbState_Destruct(ALreverbState *State)
 {
-    free(State->SampleBuffer);
+    al_free(State->SampleBuffer);
     State->SampleBuffer = NULL;
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,State));
 }
@@ -295,7 +295,6 @@ static ALboolean AllocLines(ALuint frequency, ALreverbState *State)
 {
     ALuint totalSamples, index;
     ALfloat length;
-    ALfloat *newBuffer = NULL;
 
     // All delay line lengths are calculated to accomodate the full range of
     // lengths given their respective paramters.
@@ -352,10 +351,13 @@ static ALboolean AllocLines(ALuint frequency, ALreverbState *State)
 
     if(totalSamples != State->TotalSamples)
     {
+        ALfloat *newBuffer;
+
         TRACE("New reverb buffer length: %u samples (%f sec)\n", totalSamples, totalSamples/(float)frequency);
-        newBuffer = realloc(State->SampleBuffer, sizeof(ALfloat) * totalSamples);
-        if(newBuffer == NULL)
-            return AL_FALSE;
+        newBuffer = al_calloc(16, sizeof(ALfloat) * totalSamples);
+        if(!newBuffer) return AL_FALSE;
+
+        al_free(State->SampleBuffer);
         State->SampleBuffer = newBuffer;
         State->TotalSamples = totalSamples;
     }

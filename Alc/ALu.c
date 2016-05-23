@@ -1418,8 +1418,6 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
     while(size > 0)
     {
-        IncrementRef(&device->MixCount);
-
         SamplesToDo = minu(size, BUFFERSIZE);
         for(c = 0;c < device->VirtOut.NumChannels;c++)
             memset(device->VirtOut.Buffer[c], 0, SamplesToDo*sizeof(ALfloat));
@@ -1429,6 +1427,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             for(c = 0;c < device->FOAOut.NumChannels;c++)
                 memset(device->FOAOut.Buffer[c], 0, SamplesToDo*sizeof(ALfloat));
 
+        IncrementRef(&device->MixCount);
         V0(device->Backend,lock)();
 
         if((slot=device->DefaultSlot) != NULL)
@@ -1488,6 +1487,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         device->ClockBase += (device->SamplesDone/device->Frequency) * DEVICE_CLOCK_RES;
         device->SamplesDone %= device->Frequency;
         V0(device->Backend,unlock)();
+        IncrementRef(&device->MixCount);
 
         if(device->Hrtf)
         {
@@ -1590,7 +1590,6 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         }
 
         size -= SamplesToDo;
-        IncrementRef(&device->MixCount);
     }
 
     RestoreFPUMode(&oldMode);

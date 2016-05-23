@@ -2139,21 +2139,24 @@ static ALCvoid FreeDevice(ALCdevice *device)
 
     if(device->BufferMap.size > 0)
     {
-        WARN("(%p) Deleting %d Buffer(s)\n", device, device->BufferMap.size);
+        WARN("(%p) Deleting %d Buffer%s\n", device, device->BufferMap.size,
+             (device->BufferMap.size==1)?"":"s");
         ReleaseALBuffers(device);
     }
     ResetUIntMap(&device->BufferMap);
 
     if(device->EffectMap.size > 0)
     {
-        WARN("(%p) Deleting %d Effect(s)\n", device, device->EffectMap.size);
+        WARN("(%p) Deleting %d Effect%s\n", device, device->EffectMap.size,
+             (device->EffectMap.size==1)?"":"s");
         ReleaseALEffects(device);
     }
     ResetUIntMap(&device->EffectMap);
 
     if(device->FilterMap.size > 0)
     {
-        WARN("(%p) Deleting %d Filter(s)\n", device, device->FilterMap.size);
+        WARN("(%p) Deleting %d Filter%s\n", device, device->FilterMap.size,
+             (device->FilterMap.size==1)?"":"s");
         ReleaseALFilters(device);
     }
     ResetUIntMap(&device->FilterMap);
@@ -2300,14 +2303,16 @@ static void FreeContext(ALCcontext *context)
 
     if(context->SourceMap.size > 0)
     {
-        WARN("(%p) Deleting %d Source(s)\n", context, context->SourceMap.size);
+        WARN("(%p) Deleting %d Source%s\n", context, context->SourceMap.size,
+             (context->SourceMap.size==1)?"":"s");
         ReleaseALSources(context);
     }
     ResetUIntMap(&context->SourceMap);
 
     if(context->EffectSlotMap.size > 0)
     {
-        WARN("(%p) Deleting %d AuxiliaryEffectSlot(s)\n", context, context->EffectSlotMap.size);
+        WARN("(%p) Deleting %d AuxiliaryEffectSlot%s\n", context, context->EffectSlotMap.size,
+             (context->EffectSlotMap.size==1)?"":"s");
         ReleaseALAuxiliaryEffectSlots(context);
     }
     ResetUIntMap(&context->EffectSlotMap);

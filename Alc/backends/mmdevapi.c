@@ -1574,9 +1574,10 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
        wfx->nChannels != OutputType.Format.nChannels ||
        wfx->nBlockAlign != OutputType.Format.nBlockAlign)
     {
-        ERR("Did not get matching format, wanted: %s %s %uhz, got: %d channel(s) %d-bit %luhz\n",
-            DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType), device->Frequency,
-            wfx->nChannels, wfx->wBitsPerSample, wfx->nSamplesPerSec);
+        ERR("Failed to get matching format, wanted: %s %s %uhz, got: %d channel%s %d-bit %luhz\n",
+            DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
+            device->Frequency, wfx->nChannels, (wfx->nChannels==1)?"":"s", wfx->wBitsPerSample,
+            wfx->nSamplesPerSec);
         CoTaskMemFree(wfx);
         return E_FAIL;
     }

@@ -2744,6 +2744,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             }
 
             i = 0;
+            LockLists();
             values[i++] = ALC_FREQUENCY;
             values[i++] = device->Frequency;
 
@@ -2778,6 +2779,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
 
             values[i++] = ALC_HRTF_STATUS_SOFT;
             values[i++] = device->Hrtf_Status;
+            UnlockLists();
 
             values[i++] = 0;
             return i;
@@ -2792,7 +2794,9 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
                 alcSetError(device, ALC_INVALID_DEVICE);
                 return 0;
             }
+            LockLists();
             values[0] = device->Frequency / device->UpdateSize;
+            UnlockLists();
             return 1;
 
         case ALC_SYNC:
@@ -2847,9 +2851,11 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             return 1;
 
         case ALC_NUM_HRTF_SPECIFIERS_SOFT:
+            LockLists();
             FreeHrtfList(&device->Hrtf_List);
             device->Hrtf_List = EnumerateHrtf(device->DeviceName);
             values[0] = (ALCint)VECTOR_SIZE(device->Hrtf_List);
+            UnlockLists();
             return 1;
 
         default:
@@ -2891,6 +2897,10 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
     }
     else /* render device */
     {
+        ALuint64 basecount;
+        ALuint samplecount;
+        ALuint refcount;
+
         switch(pname)
         {
             case ALC_ATTRIBUTES_SIZE:
@@ -2904,7 +2914,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                 {
                     int i = 0;
 
-                    V0(device->Backend,lock)();
+                    LockLists();
                     values[i++] = ALC_FREQUENCY;
                     values[i++] = device->Frequency;
 
@@ -2941,19 +2951,29 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                     values[i++] = device->Hrtf_Status;
 
                     values[i++] = ALC_DEVICE_CLOCK_SOFT;
-                    values[i++] = device->ClockBase +
-                                  (device->SamplesDone * DEVICE_CLOCK_RES / device->Frequency);
+                    do {
+                        while(((refcount=ReadRef(&device->MixCount))&1) != 0)
+                            althrd_yield();
+                        basecount = device->ClockBase;
+                        samplecount = device->SamplesDone;
+                    } while(refcount != ReadRef(&device->MixCount));
+                    values[i++] = basecount + (samplecount*DEVICE_CLOCK_RES/device->Frequency);
+                    UnlockLists();
 
                     values[i++] = 0;
-                    V0(device->Backend,unlock)();
                 }
                 break;
 
             case ALC_DEVICE_CLOCK_SOFT:
-                V0(device->Backend,lock)();
-                *values = device->ClockBase +
-                          (device->SamplesDone * DEVICE_CLOCK_RES / device->Frequency);
-                V0(device->Backend,unlock)();
+                LockLists();
+                do {
+                    while(((refcount=ReadRef(&device->MixCount))&1) != 0)
+                        althrd_yield();
+                    basecount = device->ClockBase;
+                    samplecount = device->SamplesDone;
+                } while(refcount != ReadRef(&device->MixCount));
+                *values = basecount + (samplecount*DEVICE_CLOCK_RES/device->Frequency);
+                UnlockLists();
                 break;
 
             default:

@@ -305,23 +305,6 @@ inline uint DecrementRef(RefCount *ptr)
 { return ATOMIC_SUB(uint, ptr, 1)-1; }
 
 
-/* NOTE: Not atomic! */
-inline int ExchangeInt(volatile int *ptr, int newval)
-{
-    int old = *ptr;
-    *ptr = newval;
-    return old;
-}
-
-typedef void *volatile XchgPtr;
-/* NOTE: Not atomic! */
-inline void *ExchangePtr(XchgPtr *ptr, void *newval)
-{
-    void *old = *ptr;
-    *ptr = newval;
-    return old;
-}
-
 /* This is *NOT* atomic, but is a handy utility macro to compare-and-swap non-
  * atomic variables. */
 #define COMPARE_EXCHANGE(_val, _oldval, _newval)  ((*(_val) == *(_oldval)) ? ((*(_val)=(_newval)),true) : ((*(_oldval)=*(_val)),false))

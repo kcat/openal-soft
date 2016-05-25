@@ -829,8 +829,10 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             {
                 /* Add refcount on the new slot, and release the previous slot */
                 if(slot) IncrementRef(&slot->ref);
-                slot = ExchangePtr((XchgPtr*)&Source->Send[values[1]].Slot, slot);
-                if(slot) DecrementRef(&slot->ref);
+                if(Source->Send[values[1]].Slot)
+                    DecrementRef(&Source->Send[values[1]].Slot->ref);
+                Source->Send[values[1]].Slot = slot;
+
                 /* We must force an update if the auxiliary slot changed on a
                  * playing source, in case the slot is about to be deleted.
                  */
@@ -839,8 +841,9 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             else
             {
                 if(slot) IncrementRef(&slot->ref);
-                slot = ExchangePtr((XchgPtr*)&Source->Send[values[1]].Slot, slot);
-                if(slot) DecrementRef(&slot->ref);
+                if(Source->Send[values[1]].Slot)
+                    DecrementRef(&Source->Send[values[1]].Slot->ref);
+                Source->Send[values[1]].Slot = slot;
                 DO_UPDATEPROPS();
             }
 

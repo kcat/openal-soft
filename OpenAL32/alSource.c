@@ -49,8 +49,8 @@ extern inline struct ALsource *RemoveSource(ALCcontext *context, ALuint id);
 
 static ALvoid InitSourceParams(ALsource *Source);
 static ALvoid DeinitSource(ALsource *source);
-static ALint64 GetSourceSampleOffset(ALsource *Source);
-static ALdouble GetSourceSecOffset(ALsource *Source);
+static ALint64 GetSourceSampleOffset(ALsource *Source, ALCdevice *device, ALuint64 *clocktime);
+static ALdouble GetSourceSecOffset(ALsource *Source, ALCdevice *device, ALuint64 *clocktime);
 static ALdouble GetSourceOffset(ALsource *Source, ALenum name);
 static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac);
 
@@ -1007,6 +1007,7 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
     ALCdevice *device = Context->Device;
     ALbufferlistitem *BufferList;
     ClockLatency clocktime;
+    ALuint64 srcclock;
     ALint ivals[3];
     ALboolean err;
 
@@ -1107,12 +1108,23 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
             return AL_TRUE;
 
         case AL_SEC_OFFSET_LATENCY_SOFT:
-            LockContext(Context);
+            /* Get the source offset with the clock time first. Then get the
+             * clock time with the device latency. Order is important.
+             */
+            values[0] = GetSourceSecOffset(Source, device, &srcclock);
             clocktime = V0(device->Backend,getClockLatency)();
-
-            values[0] = GetSourceSecOffset(Source);
-            values[1] = (ALdouble)clocktime.Latency / 1000000000.0;
-            UnlockContext(Context);
+            if(srcclock == (ALuint64)clocktime.ClockTime)
+                values[1] = (ALdouble)clocktime.Latency / 1000000000.0;
+            else
+            {
+                /* If the clock time incremented, reduce the latency by that
+                 * much since it's that much closer to the source offset it got
+                 * earlier.
+                 */
+                ALuint64 diff = clocktime.ClockTime - srcclock;
+                values[1] = (ALdouble)(clocktime.Latency - minu64(clocktime.Latency, diff)) /
+                            1000000000.0;
+            }
             return AL_TRUE;
 
         case AL_POSITION:
@@ -1385,6 +1397,7 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
 {
     ALCdevice *device = Context->Device;
     ClockLatency clocktime;
+    ALuint64 srcclock;
     ALdouble dvals[6];
     ALint ivals[3];
     ALboolean err;
@@ -1392,12 +1405,22 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
     switch(prop)
     {
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
-            LockContext(Context);
+            /* Get the source offset with the clock time first. Then get the
+             * clock time with the device latency. Order is important.
+             */
+            values[0] = GetSourceSampleOffset(Source, device, &srcclock);
             clocktime = V0(device->Backend,getClockLatency)();
-
-            values[0] = GetSourceSampleOffset(Source);
-            values[1] = clocktime.Latency;
-            UnlockContext(Context);
+            if(srcclock == (ALuint64)clocktime.ClockTime)
+                values[1] = clocktime.Latency;
+            else
+            {
+                /* If the clock time incremented, reduce the latency by that
+                 * much since it's that much closer to the source offset it got
+                 * earlier.
+                 */
+                ALuint64 diff = clocktime.ClockTime - srcclock;
+                values[1] = clocktime.Latency - minu64(clocktime.Latency, diff);
+            }
             return AL_TRUE;
 
         /* 1x float/double */
@@ -3017,26 +3040,37 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
  * samples. The offset is relative to the start of the queue (not the start of
  * the current buffer).
  */
-ALint64 GetSourceSampleOffset(ALsource *Source)
+ALint64 GetSourceSampleOffset(ALsource *Source, ALCdevice *device, ALuint64 *clocktime)
 {
     const ALbufferlistitem *BufferList;
     const ALbufferlistitem *Current;
     ALuint64 readPos;
+    ALuint refcount;
 
     ReadLock(&Source->queue_lock);
     if(Source->state != AL_PLAYING && Source->state != AL_PAUSED)
     {
         ReadUnlock(&Source->queue_lock);
+        do {
+            while(((refcount=ReadRef(&device->MixCount))&1))
+                althrd_yield();
+            *clocktime = GetDeviceClockTime(device);
+        } while(refcount != ReadRef(&device->MixCount));
         return 0;
     }
 
-    /* NOTE: This is the offset into the *current* buffer, so add the length of
-     * any played buffers */
-    readPos  = (ALuint64)ATOMIC_LOAD(&Source->position) << 32;
-    readPos |= (ALuint64)ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed) <<
-                         (32-FRACTIONBITS);
-    BufferList = ATOMIC_LOAD(&Source->queue, almemory_order_relaxed);
-    Current = ATOMIC_LOAD(&Source->current_buffer, almemory_order_relaxed);
+    do {
+        while(((refcount=ReadRef(&device->MixCount))&1))
+            althrd_yield();
+        *clocktime = GetDeviceClockTime(device);
+        /* NOTE: This is the offset into the *current* buffer, so add the length of
+         * any played buffers */
+        readPos  = (ALuint64)ATOMIC_LOAD(&Source->position, almemory_order_relaxed) << 32;
+        readPos |= (ALuint64)ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed) <<
+                   (32-FRACTIONBITS);
+        BufferList = ATOMIC_LOAD(&Source->queue, almemory_order_relaxed);
+        Current = ATOMIC_LOAD(&Source->current_buffer, almemory_order_relaxed);
+    } while(refcount != ReadRef(&device->MixCount));
     while(BufferList && BufferList != Current)
     {
         if(BufferList->buffer)
@@ -3053,26 +3087,37 @@ ALint64 GetSourceSampleOffset(ALsource *Source)
  * Gets the current read offset for the given Source, in seconds. The offset is
  * relative to the start of the queue (not the start of the current buffer).
  */
-static ALdouble GetSourceSecOffset(ALsource *Source)
+static ALdouble GetSourceSecOffset(ALsource *Source, ALCdevice *device, ALuint64 *clocktime)
 {
     const ALbufferlistitem *BufferList;
     const ALbufferlistitem *Current;
     const ALbuffer *Buffer = NULL;
     ALuint64 readPos;
+    ALuint refcount;
 
     ReadLock(&Source->queue_lock);
     if(Source->state != AL_PLAYING && Source->state != AL_PAUSED)
     {
         ReadUnlock(&Source->queue_lock);
+        do {
+            while(((refcount=ReadRef(&device->MixCount))&1))
+                althrd_yield();
+            *clocktime = GetDeviceClockTime(device);
+        } while(refcount != ReadRef(&device->MixCount));
         return 0.0;
     }
 
-    /* NOTE: This is the offset into the *current* buffer, so add the length of
-     * any played buffers */
-    readPos  = (ALuint64)ATOMIC_LOAD(&Source->position) << FRACTIONBITS;
-    readPos |= (ALuint64)ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed);
-    BufferList = ATOMIC_LOAD(&Source->queue, almemory_order_relaxed);
-    Current = ATOMIC_LOAD(&Source->current_buffer, almemory_order_relaxed);
+    do {
+        while(((refcount=ReadRef(&device->MixCount))&1))
+            althrd_yield();
+        *clocktime = GetDeviceClockTime(device);
+        /* NOTE: This is the offset into the *current* buffer, so add the length of
+         * any played buffers */
+        readPos  = (ALuint64)ATOMIC_LOAD(&Source->position, almemory_order_relaxed) << FRACTIONBITS;
+        readPos |= (ALuint64)ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed);
+        BufferList = ATOMIC_LOAD(&Source->queue, almemory_order_relaxed);
+        Current = ATOMIC_LOAD(&Source->current_buffer, almemory_order_relaxed);
+    } while(refcount != ReadRef(&device->MixCount));
     while(BufferList && BufferList != Current)
     {
         const ALbuffer *buffer = BufferList->buffer;

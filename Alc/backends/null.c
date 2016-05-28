@@ -51,7 +51,7 @@ static ALCboolean ALCnullBackend_start(ALCnullBackend *self);
 static void ALCnullBackend_stop(ALCnullBackend *self);
 static DECLARE_FORWARD2(ALCnullBackend, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
 static DECLARE_FORWARD(ALCnullBackend, ALCbackend, ALCuint, availableSamples)
-static DECLARE_FORWARD(ALCnullBackend, ALCbackend, ALint64, getLatency)
+static DECLARE_FORWARD(ALCnullBackend, ALCbackend, ClockLatency, getClockLatency)
 static DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCnullBackend)

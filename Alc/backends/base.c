@@ -8,6 +8,8 @@
 #include "backends/base.h"
 
 
+extern inline ALuint64 GetDeviceClockTime(ALCdevice *device);
+
 /* Base ALCbackend method implementations. */
 void ALCbackend_Construct(ALCbackend *self, ALCdevice *device)
 {
@@ -37,9 +39,18 @@ ALCuint ALCbackend_availableSamples(ALCbackend* UNUSED(self))
     return 0;
 }
 
-ALint64 ALCbackend_getLatency(ALCbackend* UNUSED(self))
+ClockLatency ALCbackend_getClockLatency(ALCbackend *self)
 {
-    return 0;
+    ALCdevice *device = self->mDevice;
+    ClockLatency ret;
+
+    almtx_lock(&self->mMutex);
+    ret.ClockTime = GetDeviceClockTime(device);
+    // TODO: Perhaps should be NumUpdates-1 worth of UpdateSize?
+    ret.Latency = 0;
+    almtx_unlock(&self->mMutex);
+
+    return ret;
 }
 
 void ALCbackend_lock(ALCbackend *self)
@@ -77,7 +88,7 @@ static ALCboolean PlaybackWrapper_start(PlaybackWrapper *self);
 static void PlaybackWrapper_stop(PlaybackWrapper *self);
 static DECLARE_FORWARD2(PlaybackWrapper, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
 static DECLARE_FORWARD(PlaybackWrapper, ALCbackend, ALCuint, availableSamples)
-static DECLARE_FORWARD(PlaybackWrapper, ALCbackend, ALint64, getLatency)
+static DECLARE_FORWARD(PlaybackWrapper, ALCbackend, ClockLatency, getClockLatency)
 static DECLARE_FORWARD(PlaybackWrapper, ALCbackend, void, lock)
 static DECLARE_FORWARD(PlaybackWrapper, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(PlaybackWrapper)
@@ -137,7 +148,7 @@ static ALCboolean CaptureWrapper_start(CaptureWrapper *self);
 static void CaptureWrapper_stop(CaptureWrapper *self);
 static ALCenum CaptureWrapper_captureSamples(CaptureWrapper *self, void *buffer, ALCuint samples);
 static ALCuint CaptureWrapper_availableSamples(CaptureWrapper *self);
-static DECLARE_FORWARD(CaptureWrapper, ALCbackend, ALint64, getLatency)
+static DECLARE_FORWARD(CaptureWrapper, ALCbackend, ClockLatency, getClockLatency)
 static DECLARE_FORWARD(CaptureWrapper, ALCbackend, void, lock)
 static DECLARE_FORWARD(CaptureWrapper, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(CaptureWrapper)

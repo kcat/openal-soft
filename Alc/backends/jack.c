@@ -148,7 +148,7 @@ static ALCboolean ALCjackPlayback_start(ALCjackPlayback *self);
 static void ALCjackPlayback_stop(ALCjackPlayback *self);
 static DECLARE_FORWARD2(ALCjackPlayback, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
 static DECLARE_FORWARD(ALCjackPlayback, ALCbackend, ALCuint, availableSamples)
-static ALint64 ALCjackPlayback_getLatency(ALCjackPlayback *self);
+static ClockLatency ALCjackPlayback_getClockLatency(ALCjackPlayback *self);
 static void ALCjackPlayback_lock(ALCjackPlayback *self);
 static void ALCjackPlayback_unlock(ALCjackPlayback *self);
 DECLARE_DEFAULT_ALLOCATORS(ALCjackPlayback)
@@ -506,16 +506,18 @@ static void ALCjackPlayback_stop(ALCjackPlayback *self)
 }
 
 
-static ALint64 ALCjackPlayback_getLatency(ALCjackPlayback *self)
+static ClockLatency ALCjackPlayback_getClockLatency(ALCjackPlayback *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    ALint64 latency;
+    ClockLatency ret;
 
     ALCjackPlayback_lock(self);
-    latency = ll_ringbuffer_read_space(self->Ring);
+    ret.ClockTime = GetDeviceClockTime(device);
+    ret.Latency = ll_ringbuffer_read_space(self->Ring) * DEVICE_CLOCK_RES /
+                  device->Frequency;
     ALCjackPlayback_unlock(self);
 
-    return latency * 1000000000 / device->Frequency;
+    return ret;
 }
 
 

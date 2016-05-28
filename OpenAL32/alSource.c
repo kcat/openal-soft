@@ -1006,6 +1006,7 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
 {
     ALCdevice *device = Context->Device;
     ALbufferlistitem *BufferList;
+    ClockLatency clocktime;
     ALint ivals[3];
     ALboolean err;
 
@@ -1107,9 +1108,10 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
 
         case AL_SEC_OFFSET_LATENCY_SOFT:
             LockContext(Context);
+            clocktime = V0(device->Backend,getClockLatency)();
+
             values[0] = GetSourceSecOffset(Source);
-            values[1] = (ALdouble)(V0(device->Backend,getLatency)()) /
-                        1000000000.0;
+            values[1] = (ALdouble)clocktime.Latency / 1000000000.0;
             UnlockContext(Context);
             return AL_TRUE;
 
@@ -1382,6 +1384,7 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
 static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, ALint64 *values)
 {
     ALCdevice *device = Context->Device;
+    ClockLatency clocktime;
     ALdouble dvals[6];
     ALint ivals[3];
     ALboolean err;
@@ -1390,8 +1393,10 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
     {
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
             LockContext(Context);
+            clocktime = V0(device->Backend,getClockLatency)();
+
             values[0] = GetSourceSampleOffset(Source);
-            values[1] = V0(device->Backend,getLatency)();
+            values[1] = clocktime.Latency;
             UnlockContext(Context);
             return AL_TRUE;
 

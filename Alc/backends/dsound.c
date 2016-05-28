@@ -199,7 +199,7 @@ static ALCboolean ALCdsoundPlayback_start(ALCdsoundPlayback *self);
 static void ALCdsoundPlayback_stop(ALCdsoundPlayback *self);
 static DECLARE_FORWARD2(ALCdsoundPlayback, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
 static DECLARE_FORWARD(ALCdsoundPlayback, ALCbackend, ALCuint, availableSamples)
-static DECLARE_FORWARD(ALCdsoundPlayback, ALCbackend, ALint64, getLatency)
+static DECLARE_FORWARD(ALCdsoundPlayback, ALCbackend, ClockLatency, getClockLatency)
 static DECLARE_FORWARD(ALCdsoundPlayback, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCdsoundPlayback, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCdsoundPlayback)
@@ -666,7 +666,7 @@ static ALCboolean ALCdsoundCapture_start(ALCdsoundCapture *self);
 static void ALCdsoundCapture_stop(ALCdsoundCapture *self);
 static ALCenum ALCdsoundCapture_captureSamples(ALCdsoundCapture *self, ALCvoid *buffer, ALCuint samples);
 static ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self);
-static DECLARE_FORWARD(ALCdsoundCapture, ALCbackend, ALint64, getLatency)
+static DECLARE_FORWARD(ALCdsoundCapture, ALCbackend, ClockLatency, getClockLatency)
 static DECLARE_FORWARD(ALCdsoundCapture, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCdsoundCapture, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCdsoundCapture)

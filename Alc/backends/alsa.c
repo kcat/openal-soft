@@ -410,7 +410,7 @@ static ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self);
 static void ALCplaybackAlsa_stop(ALCplaybackAlsa *self);
 static DECLARE_FORWARD2(ALCplaybackAlsa, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
 static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, ALCuint, availableSamples)
-static ALint64 ALCplaybackAlsa_getLatency(ALCplaybackAlsa *self);
+static ClockLatency ALCplaybackAlsa_getClockLatency(ALCplaybackAlsa *self);
 static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCplaybackAlsa)
@@ -891,18 +891,25 @@ static void ALCplaybackAlsa_stop(ALCplaybackAlsa *self)
     self->buffer = NULL;
 }
 
-static ALint64 ALCplaybackAlsa_getLatency(ALCplaybackAlsa *self)
+static ClockLatency ALCplaybackAlsa_getClockLatency(ALCplaybackAlsa *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     snd_pcm_sframes_t delay = 0;
+    ClockLatency ret;
     int err;
 
+    ALCplaybackAlsa_lock(self);
+    ret.ClockTime = GetDeviceClockTime(device);
     if((err=snd_pcm_delay(self->pcmHandle, &delay)) < 0)
     {
         ERR("Failed to get pcm delay: %s\n", snd_strerror(err));
-        return 0;
+        delay = 0;
     }
-    return maxi64((ALint64)delay*1000000000/device->Frequency, 0);
+    if(delay < 0) delay = 0;
+    ret.Latency = delay * DEVICE_CLOCK_RES / device->Frequency;
+    ALCplaybackAlsa_unlock(self);
+
+    return ret;
 }
 
 
@@ -929,7 +936,7 @@ static ALCboolean ALCcaptureAlsa_start(ALCcaptureAlsa *self);
 static void ALCcaptureAlsa_stop(ALCcaptureAlsa *self);
 static ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buffer, ALCuint samples);
 static ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self);
-static ALint64 ALCcaptureAlsa_getLatency(ALCcaptureAlsa *self);
+static ClockLatency ALCcaptureAlsa_getClockLatency(ALCcaptureAlsa *self);
 static DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCcaptureAlsa)
@@ -1277,18 +1284,25 @@ static ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self)
     return ll_ringbuffer_read_space(self->ring);
 }
 
-static ALint64 ALCcaptureAlsa_getLatency(ALCcaptureAlsa *self)
+static ClockLatency ALCcaptureAlsa_getClockLatency(ALCcaptureAlsa *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     snd_pcm_sframes_t delay = 0;
+    ClockLatency ret;
     int err;
 
+    ALCcaptureAlsa_lock(self);
+    ret.ClockTime = GetDeviceClockTime(device);
     if((err=snd_pcm_delay(self->pcmHandle, &delay)) < 0)
     {
         ERR("Failed to get pcm delay: %s\n", snd_strerror(err));
-        return 0;
+        delay = 0;
     }
-    return maxi64((ALint64)delay*1000000000/device->Frequency, 0);
+    if(delay < 0) delay = 0;
+    ret.Latency = delay * DEVICE_CLOCK_RES / device->Frequency;
+    ALCcaptureAlsa_unlock(self);
+
+    return ret;
 }
 
 

@@ -257,7 +257,7 @@ static ALCboolean ALCplaybackOSS_start(ALCplaybackOSS *self);
 static void ALCplaybackOSS_stop(ALCplaybackOSS *self);
 static DECLARE_FORWARD2(ALCplaybackOSS, ALCbackend, ALCenum, captureSamples, ALCvoid*, ALCuint)
 static DECLARE_FORWARD(ALCplaybackOSS, ALCbackend, ALCuint, availableSamples)
-static DECLARE_FORWARD(ALCplaybackOSS, ALCbackend, ALint64, getLatency)
+static DECLARE_FORWARD(ALCplaybackOSS, ALCbackend, ClockLatency, getClockLatency)
 static DECLARE_FORWARD(ALCplaybackOSS, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCplaybackOSS, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCplaybackOSS)
@@ -502,7 +502,7 @@ static ALCboolean ALCcaptureOSS_start(ALCcaptureOSS *self);
 static void ALCcaptureOSS_stop(ALCcaptureOSS *self);
 static ALCenum ALCcaptureOSS_captureSamples(ALCcaptureOSS *self, ALCvoid *buffer, ALCuint samples);
 static ALCuint ALCcaptureOSS_availableSamples(ALCcaptureOSS *self);
-static DECLARE_FORWARD(ALCcaptureOSS, ALCbackend, ALint64, getLatency)
+static DECLARE_FORWARD(ALCcaptureOSS, ALCbackend, ClockLatency, getClockLatency)
 static DECLARE_FORWARD(ALCcaptureOSS, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCcaptureOSS, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCcaptureOSS)

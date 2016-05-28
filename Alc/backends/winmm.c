@@ -164,7 +164,7 @@ static ALCboolean ALCwinmmPlayback_start(ALCwinmmPlayback *self);
 static void ALCwinmmPlayback_stop(ALCwinmmPlayback *self);
 static DECLARE_FORWARD2(ALCwinmmPlayback, ALCbackend, ALCenum, captureSamples, ALCvoid*, ALCuint)
 static DECLARE_FORWARD(ALCwinmmPlayback, ALCbackend, ALCuint, availableSamples)
-static DECLARE_FORWARD(ALCwinmmPlayback, ALCbackend, ALint64, getLatency)
+static DECLARE_FORWARD(ALCwinmmPlayback, ALCbackend, ClockLatency, getClockLatency)
 static DECLARE_FORWARD(ALCwinmmPlayback, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCwinmmPlayback, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCwinmmPlayback)
@@ -451,7 +451,7 @@ static ALCboolean ALCwinmmCapture_start(ALCwinmmCapture *self);
 static void ALCwinmmCapture_stop(ALCwinmmCapture *self);
 static ALCenum ALCwinmmCapture_captureSamples(ALCwinmmCapture *self, ALCvoid *buffer, ALCuint samples);
 static ALCuint ALCwinmmCapture_availableSamples(ALCwinmmCapture *self);
-static DECLARE_FORWARD(ALCwinmmCapture, ALCbackend, ALint64, getLatency)
+static DECLARE_FORWARD(ALCwinmmCapture, ALCbackend, ClockLatency, getClockLatency)
 static DECLARE_FORWARD(ALCwinmmCapture, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCwinmmCapture, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCwinmmCapture)

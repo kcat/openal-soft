@@ -489,7 +489,7 @@ static ALCboolean ALCpulsePlayback_start(ALCpulsePlayback *self);
 static void ALCpulsePlayback_stop(ALCpulsePlayback *self);
 static DECLARE_FORWARD2(ALCpulsePlayback, ALCbackend, ALCenum, captureSamples, ALCvoid*, ALCuint)
 static DECLARE_FORWARD(ALCpulsePlayback, ALCbackend, ALCuint, availableSamples)
-static ALint64 ALCpulsePlayback_getLatency(ALCpulsePlayback *self);
+static ClockLatency ALCpulsePlayback_getClockLatency(ALCpulsePlayback *self);
 static void ALCpulsePlayback_lock(ALCpulsePlayback *self);
 static void ALCpulsePlayback_unlock(ALCpulsePlayback *self);
 DECLARE_DEFAULT_ALLOCATORS(ALCpulsePlayback)
@@ -1136,11 +1136,14 @@ static void ALCpulsePlayback_stop(ALCpulsePlayback *self)
 }
 
 
-static ALint64 ALCpulsePlayback_getLatency(ALCpulsePlayback *self)
+static ClockLatency ALCpulsePlayback_getClockLatency(ALCpulsePlayback *self)
 {
     pa_usec_t latency = 0;
+    ClockLatency ret;
     int neg, err;
 
+    pa_threaded_mainloop_lock(self->loop);
+    ret.ClockTime = GetDeviceClockTime(STATIC_CAST(ALCbackend,self)->mDevice);
     if((err=pa_stream_get_latency(self->stream, &latency, &neg)) != 0)
     {
         /* FIXME: if err = -PA_ERR_NODATA, it means we were called too soon
@@ -1149,11 +1152,14 @@ static ALint64 ALCpulsePlayback_getLatency(ALCpulsePlayback *self)
          * dummy value? Either way, it shouldn't be 0. */
         if(err != -PA_ERR_NODATA)
             ERR("Failed to get stream latency: 0x%x\n", err);
-        return 0;
+        latency = 0;
+        neg = 0;
     }
-
     if(neg) latency = 0;
-    return (ALint64)minu64(latency, U64(0x7fffffffffffffff)/1000) * 1000;
+    ret.Latency = minu64(latency, U64(0xffffffffffffffff)/1000) * 1000;
+    pa_threaded_mainloop_unlock(self->loop);
+
+    return ret;
 }
 
 
@@ -1209,7 +1215,7 @@ static ALCboolean ALCpulseCapture_start(ALCpulseCapture *self);
 static void ALCpulseCapture_stop(ALCpulseCapture *self);
 static ALCenum ALCpulseCapture_captureSamples(ALCpulseCapture *self, ALCvoid *buffer, ALCuint samples);
 static ALCuint ALCpulseCapture_availableSamples(ALCpulseCapture *self);
-static ALint64 ALCpulseCapture_getLatency(ALCpulseCapture *self);
+static ClockLatency ALCpulseCapture_getClockLatency(ALCpulseCapture *self);
 static void ALCpulseCapture_lock(ALCpulseCapture *self);
 static void ALCpulseCapture_unlock(ALCpulseCapture *self);
 DECLARE_DEFAULT_ALLOCATORS(ALCpulseCapture)
@@ -1639,19 +1645,25 @@ static ALCuint ALCpulseCapture_availableSamples(ALCpulseCapture *self)
 }
 
 
-static ALint64 ALCpulseCapture_getLatency(ALCpulseCapture *self)
+static ClockLatency ALCpulseCapture_getClockLatency(ALCpulseCapture *self)
 {
     pa_usec_t latency = 0;
-    int neg;
+    ClockLatency ret;
+    int neg, err;
 
-    if(pa_stream_get_latency(self->stream, &latency, &neg) != 0)
+    pa_threaded_mainloop_lock(self->loop);
+    ret.ClockTime = GetDeviceClockTime(STATIC_CAST(ALCbackend,self)->mDevice);
+    if((err=pa_stream_get_latency(self->stream, &latency, &neg)) != 0)
     {
-        ERR("Failed to get stream latency!\n");
-        return 0;
+        ERR("Failed to get stream latency: 0x%x\n", err);
+        latency = 0;
+        neg = 0;
     }
-
     if(neg) latency = 0;
-    return (ALint64)minu64(latency, U64(0x7fffffffffffffff)/1000) * 1000;
+    ret.Latency = minu64(latency, U64(0xffffffffffffffff)/1000) * 1000;
+    pa_threaded_mainloop_unlock(self->loop);
+
+    return ret;
 }
 
 

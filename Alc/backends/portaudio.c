@@ -145,7 +145,7 @@ static ALCboolean ALCportPlayback_start(ALCportPlayback *self);
 static void ALCportPlayback_stop(ALCportPlayback *self);
 static DECLARE_FORWARD2(ALCportPlayback, ALCbackend, ALCenum, captureSamples, ALCvoid*, ALCuint)
 static DECLARE_FORWARD(ALCportPlayback, ALCbackend, ALCuint, availableSamples)
-static DECLARE_FORWARD(ALCportPlayback, ALCbackend, ALint64, getLatency)
+static DECLARE_FORWARD(ALCportPlayback, ALCbackend, ClockLatency, getClockLatency)
 static DECLARE_FORWARD(ALCportPlayback, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCportPlayback, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCportPlayback)
@@ -340,7 +340,7 @@ static ALCboolean ALCportCapture_start(ALCportCapture *self);
 static void ALCportCapture_stop(ALCportCapture *self);
 static ALCenum ALCportCapture_captureSamples(ALCportCapture *self, ALCvoid *buffer, ALCuint samples);
 static ALCuint ALCportCapture_availableSamples(ALCportCapture *self);
-static DECLARE_FORWARD(ALCportCapture, ALCbackend, ALint64, getLatency)
+static DECLARE_FORWARD(ALCportCapture, ALCbackend, ClockLatency, getClockLatency)
 static DECLARE_FORWARD(ALCportCapture, ALCbackend, void, lock)
 static DECLARE_FORWARD(ALCportCapture, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCportCapture)

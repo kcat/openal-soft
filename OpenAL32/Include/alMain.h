@@ -37,6 +37,7 @@
 #include "vector.h"
 #include "alstring.h"
 #include "almalloc.h"
+#include "threads.h"
 
 #include "hrtf.h"
 
@@ -644,6 +645,7 @@ struct ALCdevice_struct
     // Contexts created on this device
     ATOMIC(ALCcontext*) ContextList;
 
+    almtx_t BackendLock;
     struct ALCbackend *Backend;
 
     void *ExtraData; // For the backend's use

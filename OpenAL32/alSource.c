@@ -51,7 +51,7 @@ static ALvoid InitSourceParams(ALsource *Source);
 static ALvoid DeinitSource(ALsource *source);
 static ALint64 GetSourceSampleOffset(ALsource *Source, ALCdevice *device, ALuint64 *clocktime);
 static ALdouble GetSourceSecOffset(ALsource *Source, ALCdevice *device, ALuint64 *clocktime);
-static ALdouble GetSourceOffset(ALsource *Source, ALenum name);
+static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCdevice *device);
 static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac);
 
 typedef enum SourceProp {
@@ -1056,9 +1056,7 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_SEC_OFFSET:
         case AL_SAMPLE_OFFSET:
         case AL_BYTE_OFFSET:
-            LockContext(Context);
-            *values = GetSourceOffset(Source, prop);
-            UnlockContext(Context);
+            *values = GetSourceOffset(Source, prop, device);
             return AL_TRUE;
 
         case AL_CONE_OUTER_GAINHF:
@@ -3146,7 +3144,7 @@ static ALdouble GetSourceSecOffset(ALsource *Source, ALCdevice *device, ALuint64
  * (Bytes, Samples or Seconds). The offset is relative to the start of the
  * queue (not the start of the current buffer).
  */
-static ALdouble GetSourceOffset(ALsource *Source, ALenum name)
+static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCdevice *device)
 {
     const ALbufferlistitem *BufferList;
     const ALbufferlistitem *Current;
@@ -3155,6 +3153,7 @@ static ALdouble GetSourceOffset(ALsource *Source, ALenum name)
     ALuint readPos, readPosFrac;
     ALuint totalBufferLen;
     ALdouble offset = 0.0;
+    ALuint refcount;
 
     ReadLock(&Source->queue_lock);
     if(Source->state != AL_PLAYING && Source->state != AL_PAUSED)
@@ -3163,13 +3162,18 @@ static ALdouble GetSourceOffset(ALsource *Source, ALenum name)
         return 0.0;
     }
 
-    /* NOTE: This is the offset into the *current* buffer, so add the length of
-     * any played buffers */
     totalBufferLen = 0;
-    readPos = ATOMIC_LOAD(&Source->position);
-    readPosFrac = ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed);
-    BufferList = ATOMIC_LOAD(&Source->queue, almemory_order_relaxed);
-    Current = ATOMIC_LOAD(&Source->current_buffer, almemory_order_relaxed);
+    do {
+        while(((refcount=ReadRef(&device->MixCount))&1))
+            althrd_yield();
+        /* NOTE: This is the offset into the *current* buffer, so add the length of
+         * any played buffers */
+        readPos = ATOMIC_LOAD(&Source->position, almemory_order_relaxed);
+        readPosFrac = ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed);
+        BufferList = ATOMIC_LOAD(&Source->queue, almemory_order_relaxed);
+        Current = ATOMIC_LOAD(&Source->current_buffer, almemory_order_relaxed);
+    } while(refcount != ReadRef(&device->MixCount));
+
     while(BufferList != NULL)
     {
         const ALbuffer *buffer;

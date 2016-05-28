@@ -470,24 +470,20 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
             return AL_INVALID_ENUM;
         }
         State = V0(factory,create)();
-        if(!State)
-            return AL_OUT_OF_MEMORY;
+        if(!State) return AL_OUT_OF_MEMORY;
 
         SetMixerFPUMode(&oldMode);
-        /* FIXME: This just needs to prevent the device from being reset during
-         * the state's device update, so the list lock in ALc.c should do here.
-         */
-        ALCdevice_Lock(Device);
+        almtx_lock(&Device->BackendLock);
         State->OutBuffer = Device->Dry.Buffer;
         State->OutChannels = Device->Dry.NumChannels;
         if(V(State,deviceUpdate)(Device) == AL_FALSE)
         {
-            ALCdevice_Unlock(Device);
+            almtx_unlock(&Device->BackendLock);
             RestoreFPUMode(&oldMode);
             DELETE_OBJ(State);
             return AL_OUT_OF_MEMORY;
         }
-        ALCdevice_Unlock(Device);
+        almtx_unlock(&Device->BackendLock);
         RestoreFPUMode(&oldMode);
 
         if(!effect)

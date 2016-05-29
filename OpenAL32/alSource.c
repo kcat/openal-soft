@@ -796,12 +796,14 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
 
 
         case AL_AUXILIARY_SEND_FILTER:
+            LockEffectSlotsRead(Context);
             LockFiltersRead(device);
             if(!((ALuint)values[1] < device->NumAuxSends &&
                  (values[0] == 0 || (slot=LookupEffectSlot(Context, values[0])) != NULL) &&
                  (values[2] == 0 || (filter=LookupFilter(device, values[2])) != NULL)))
             {
                 UnlockFiltersRead(device);
+                UnlockEffectSlotsRead(Context);
                 SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_VALUE, AL_FALSE);
             }
 
@@ -846,6 +848,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 Source->Send[values[1]].Slot = slot;
                 DO_UPDATEPROPS();
             }
+            UnlockEffectSlotsRead(Context);
 
             return AL_TRUE;
 

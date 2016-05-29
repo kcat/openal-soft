@@ -711,7 +711,7 @@ struct ALCcontext_struct {
     ALsizei VoiceCount;
     ALsizei MaxVoices;
 
-    VECTOR(struct ALeffectslot*) ActiveAuxSlots;
+    ATOMIC(struct ALeffectslot*) ActiveAuxSlotList;
 
     ALCdevice  *Device;
     const ALCchar *ExtensionList;

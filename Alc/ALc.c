@@ -2324,8 +2324,6 @@ static void FreeContext(ALCcontext *context)
     context->VoiceCount = 0;
     context->MaxVoices = 0;
 
-    VECTOR_DEINIT(context->ActiveAuxSlots);
-
     if((lprops=ATOMIC_LOAD(&listener->Update, almemory_order_acquire)) != NULL)
     {
         TRACE("Freed unapplied listener update %p\n", lprops);
@@ -3115,7 +3113,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         InitRef(&ALContext->ref, 1);
         ALContext->Listener = (ALlistener*)ALContext->_listener_mem;
 
-        VECTOR_INIT(ALContext->ActiveAuxSlots);
+        ATOMIC_INIT(&ALContext->ActiveAuxSlotList, NULL);
 
         ALContext->VoiceCount = 0;
         ALContext->MaxVoices = 256;
@@ -3129,8 +3127,6 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         {
             al_free(ALContext->Voices);
             ALContext->Voices = NULL;
-
-            VECTOR_DEINIT(ALContext->ActiveAuxSlots);
 
             al_free(ALContext);
             ALContext = NULL;
@@ -3147,8 +3143,6 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
         al_free(ALContext->Voices);
         ALContext->Voices = NULL;
-
-        VECTOR_DEINIT(ALContext->ActiveAuxSlots);
 
         al_free(ALContext);
         ALContext = NULL;

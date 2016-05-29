@@ -38,8 +38,8 @@
 extern inline struct ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id);
 extern inline struct ALeffectslot *RemoveEffectSlot(ALCcontext *context, ALuint id);
 
-static ALenum AddEffectSlotArray(ALCcontext *Context, ALeffectslot **start, ALsizei count);
-static void RemoveEffectSlotArray(ALCcontext *Context, const ALeffectslot *slot);
+static void AddEffectSlotList(ALCcontext *Context, ALeffectslot *first, ALeffectslot *last);
+static void RemoveEffectSlotList(ALCcontext *Context, const ALeffectslot *slot);
 
 
 static UIntMap EffectStateFactoryMap;
@@ -55,20 +55,17 @@ static inline ALeffectStateFactory *getFactoryByType(ALenum type)
 AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 {
     ALCcontext *context;
-    VECTOR(ALeffectslot*) slotvec;
+    ALeffectslot *first, *last;
     ALsizei cur;
     ALenum err;
 
     context = GetContextRef();
     if(!context) return;
 
-    VECTOR_INIT(slotvec);
-
     if(!(n >= 0))
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-    if(!VECTOR_RESERVE(slotvec, n))
-        SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
 
+    first = last = NULL;
     for(cur = 0;cur < n;cur++)
     {
         ALeffectslot *slot = al_calloc(16, sizeof(ALeffectslot));
@@ -95,20 +92,15 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
 
         aluInitEffectPanning(slot);
 
-        VECTOR_PUSH_BACK(slotvec, slot);
+        if(!first) first = slot;
+        if(last) ATOMIC_STORE(&last->next, slot);
+        last = slot;
 
         effectslots[cur] = slot->id;
     }
-    err = AddEffectSlotArray(context, VECTOR_BEGIN(slotvec), n);
-    if(err != AL_NO_ERROR)
-    {
-        alDeleteAuxiliaryEffectSlots(cur, effectslots);
-        SET_ERROR_AND_GOTO(context, err, done);
-    }
+    AddEffectSlotList(context, first, last);
 
 done:
-    VECTOR_DEINIT(slotvec);
-
     ALCcontext_DecRef(context);
 }
 
@@ -138,7 +130,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *
             continue;
         FreeThunkEntry(slot->id);
 
-        RemoveEffectSlotArray(context, slot);
+        RemoveEffectSlotList(context, slot);
         DeinitEffectSlot(slot);
 
         memset(slot, 0, sizeof(*slot));
@@ -399,32 +391,33 @@ done:
 }
 
 
-static ALenum AddEffectSlotArray(ALCcontext *context, ALeffectslot **start, ALsizei count)
+static void AddEffectSlotList(ALCcontext *context, ALeffectslot *start, ALeffectslot *last)
 {
-    ALenum err = AL_NO_ERROR;
-
-    LockContext(context);
-    if(!VECTOR_INSERT(context->ActiveAuxSlots, VECTOR_END(context->ActiveAuxSlots), start, start+count))
-        err = AL_OUT_OF_MEMORY;
-    UnlockContext(context);
-
-    return err;
+    ALeffectslot *root = ATOMIC_LOAD(&context->ActiveAuxSlotList);
+    do {
+        ATOMIC_STORE(&last->next, root, almemory_order_relaxed);
+    } while(!ATOMIC_COMPARE_EXCHANGE_WEAK(ALeffectslot*, &context->ActiveAuxSlotList,
+                                          &root, start));
 }
 
-static void RemoveEffectSlotArray(ALCcontext *context, const ALeffectslot *slot)
+static void RemoveEffectSlotList(ALCcontext *context, const ALeffectslot *slot)
 {
-    ALeffectslot **iter;
+    ALCdevice *device = context->Device;
+    const ALeffectslot *root, *next;
 
-    LockContext(context);
-#define MATCH_SLOT(_i)  (slot == *(_i))
-    VECTOR_FIND_IF(iter, ALeffectslot*, context->ActiveAuxSlots, MATCH_SLOT);
-    if(iter != VECTOR_END(context->ActiveAuxSlots))
+    root = slot;
+    next = ATOMIC_LOAD(&slot->next);
+    if(!ATOMIC_COMPARE_EXCHANGE_STRONG(ALeffectslot*, &context->ActiveAuxSlotList, &root, next))
     {
-        *iter = VECTOR_BACK(context->ActiveAuxSlots);
-        VECTOR_POP_BACK(context->ActiveAuxSlots);
+        const ALeffectslot *cur;
+        do {
+            cur = root;
+            root = slot;
+        } while(!ATOMIC_COMPARE_EXCHANGE_STRONG(ALeffectslot*, &cur->next, &root, next));
     }
-#undef MATCH_SLOT
-    UnlockContext(context);
+    /* Wait for any mix that may be using these effect slots to finish. */
+    while((ReadRef(&device->MixCount)&1) != 0)
+        althrd_yield();
 }
 
 
@@ -538,6 +531,8 @@ ALenum InitEffectSlot(ALeffectslot *slot)
     slot->Params.RoomRolloff = 0.0f;
     slot->Params.DecayTime = 0.0f;
     slot->Params.AirAbsorptionGainHF = 1.0f;
+
+    ATOMIC_INIT(&slot->next, NULL);
 
     return AL_NO_ERROR;
 }

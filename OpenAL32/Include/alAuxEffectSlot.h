@@ -129,6 +129,8 @@ typedef struct ALeffectslot {
      * first-order device output (FOAOut).
      */
     alignas(16) ALfloat WetBuffer[MAX_EFFECT_CHANNELS][BUFFERSIZE];
+
+    ATOMIC(struct ALeffectslot*) next;
 } ALeffectslot;
 
 inline struct ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id)

@@ -1320,7 +1320,7 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context)
 }
 
 
-static void UpdateContextSources(ALCcontext *ctx)
+static void UpdateContextSources(ALCcontext *ctx, ALeffectslot *slot)
 {
     ALvoice *voice, *voice_end;
     ALsource *source;
@@ -1329,9 +1329,11 @@ static void UpdateContextSources(ALCcontext *ctx)
     if(!ATOMIC_LOAD(&ctx->HoldUpdates))
     {
         CalcListenerParams(ctx);
-#define UPDATE_SLOT(iter) CalcEffectSlotParams(*iter, ctx->Device)
-        VECTOR_FOR_EACH(ALeffectslot*, ctx->ActiveAuxSlots, UPDATE_SLOT);
-#undef UPDATE_SLOT
+        while(slot)
+        {
+            CalcEffectSlotParams(slot, ctx->Device);
+            slot = ATOMIC_LOAD(&slot->next, almemory_order_relaxed);
+        }
 
         voice = ctx->Voices;
         voice_end = voice + ctx->VoiceCount;
@@ -1440,13 +1442,18 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         ctx = ATOMIC_LOAD(&device->ContextList);
         while(ctx)
         {
-            UpdateContextSources(ctx);
-#define CLEAR_WET_BUFFER(iter) do {                                    \
-    for(i = 0;i < (*iter)->NumChannels;i++)                            \
-        memset((*iter)->WetBuffer[i], 0, SamplesToDo*sizeof(ALfloat)); \
-} while(0)
-            VECTOR_FOR_EACH(ALeffectslot*, ctx->ActiveAuxSlots, CLEAR_WET_BUFFER);
-#undef CLEAR_WET_BUFFER
+            ALeffectslot *slotroot;
+
+            slotroot = ATOMIC_LOAD(&ctx->ActiveAuxSlotList);
+            UpdateContextSources(ctx, slotroot);
+
+            slot = slotroot;
+            while(slot)
+            {
+                for(i = 0;i < slot->NumChannels;i++)
+                    memset(slot->WetBuffer[i], 0, SamplesToDo*sizeof(ALfloat));
+                slot = ATOMIC_LOAD(&slot->next, almemory_order_relaxed);
+            }
 
             /* source processing */
             voice = ctx->Voices;
@@ -1459,13 +1466,14 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             }
 
             /* effect slot processing */
-            c = VECTOR_SIZE(ctx->ActiveAuxSlots);
-            for(i = 0;i < c;i++)
+            slot = slotroot;
+            while(slot)
             {
-                const ALeffectslot *slot = VECTOR_ELEM(ctx->ActiveAuxSlots, i);
-                ALeffectState *state = slot->Params.EffectState;
-                V(state,process)(SamplesToDo, slot->WetBuffer, state->OutBuffer,
+                const ALeffectslot *cslot = slot;
+                ALeffectState *state = cslot->Params.EffectState;
+                V(state,process)(SamplesToDo, cslot->WetBuffer, state->OutBuffer,
                                  state->OutChannels);
+                slot = ATOMIC_LOAD(&slot->next, almemory_order_relaxed);
             }
 
             ctx = ctx->next;

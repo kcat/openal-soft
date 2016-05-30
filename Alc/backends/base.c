@@ -13,10 +13,9 @@ extern inline ALuint64 GetDeviceClockTime(ALCdevice *device);
 /* Base ALCbackend method implementations. */
 void ALCbackend_Construct(ALCbackend *self, ALCdevice *device)
 {
-    int ret;
-    self->mDevice = device;
-    ret = almtx_init(&self->mMutex, almtx_recursive);
+    int ret = almtx_init(&self->mMutex, almtx_recursive);
     assert(ret == althrd_success);
+    self->mDevice = device;
 }
 
 void ALCbackend_Destruct(ALCbackend *self)

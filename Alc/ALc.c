@@ -782,13 +782,13 @@ static ATOMIC(ALCdevice*) DeviceList = ATOMIC_INIT_STATIC(NULL);
 static almtx_t ListLock;
 static inline void LockLists(void)
 {
-    int lockret = almtx_lock(&ListLock);
-    assert(lockret == althrd_success);
+    int ret = almtx_lock(&ListLock);
+    assert(ret == althrd_success);
 }
 static inline void UnlockLists(void)
 {
-    int unlockret = almtx_unlock(&ListLock);
-    assert(unlockret == althrd_success);
+    int ret = almtx_unlock(&ListLock);
+    assert(ret == althrd_success);
 }
 
 /************************************************

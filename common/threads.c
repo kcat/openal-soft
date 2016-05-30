@@ -194,7 +194,8 @@ int althrd_sleep(const struct timespec *ts, struct timespec* UNUSED(rem))
 int almtx_init(almtx_t *mtx, int type)
 {
     if(!mtx) return althrd_error;
-    type &= ~(almtx_recursive|almtx_timed);
+
+    type &= ~almtx_recursive;
     if(type != almtx_plain)
         return althrd_error;
 
@@ -207,27 +208,10 @@ void almtx_destroy(almtx_t *mtx)
     DeleteCriticalSection(mtx);
 }
 
-int almtx_timedlock(almtx_t *mtx, const struct timespec *ts)
+int almtx_timedlock(almtx_t* UNUSED(mtx), const struct timespec* UNUSED(ts))
 {
-    int ret;
-
-    if(!mtx || !ts)
-        return althrd_error;
-
-    while((ret=almtx_trylock(mtx)) == althrd_busy)
-    {
-        struct timespec now;
-
-        if(ts->tv_sec < 0 || ts->tv_nsec < 0 || ts->tv_nsec >= 1000000000 ||
-           altimespec_get(&now, AL_TIME_UTC) != AL_TIME_UTC)
-            return althrd_error;
-        if(now.tv_sec > ts->tv_sec || (now.tv_sec == ts->tv_sec && now.tv_nsec >= ts->tv_nsec))
-            return althrd_timedout;
-
-        althrd_yield();
-    }
-
-    return ret;
+    /* Windows CRITICAL_SECTIONs don't seem to have a timedlock method. */
+    return althrd_error;
 }
 
 #if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x0600
@@ -600,8 +584,13 @@ int almtx_init(almtx_t *mtx, int type)
     int ret;
 
     if(!mtx) return althrd_error;
+#ifdef HAVE_PTHREAD_MUTEX_TIMEDLOCK
     if((type&~(almtx_recursive|almtx_timed)) != 0)
         return althrd_error;
+#else
+    if((type&~almtx_recursive) != 0)
+        return althrd_error;
+#endif
 
     type &= ~almtx_timed;
     if(type == almtx_plain)
@@ -637,36 +626,16 @@ void almtx_destroy(almtx_t *mtx)
 
 int almtx_timedlock(almtx_t *mtx, const struct timespec *ts)
 {
-    int ret;
-
 #ifdef HAVE_PTHREAD_MUTEX_TIMEDLOCK
-    ret = pthread_mutex_timedlock(mtx, ts);
+    int ret = pthread_mutex_timedlock(mtx, ts);
     switch(ret)
     {
         case 0: return althrd_success;
         case ETIMEDOUT: return althrd_timedout;
         case EBUSY: return althrd_busy;
     }
-    return althrd_error;
-#else
-    if(!mtx || !ts)
-        return althrd_error;
-
-    while((ret=almtx_trylock(mtx)) == althrd_busy)
-    {
-        struct timespec now;
-
-        if(ts->tv_sec < 0 || ts->tv_nsec < 0 || ts->tv_nsec >= 1000000000 ||
-           altimespec_get(&now, AL_TIME_UTC) != AL_TIME_UTC)
-            return althrd_error;
-        if(now.tv_sec > ts->tv_sec || (now.tv_sec == ts->tv_sec && now.tv_nsec >= ts->tv_nsec))
-            return althrd_timedout;
-
-        althrd_yield();
-    }
-
-    return ret;
 #endif
+    return althrd_error;
 }
 
 int alcnd_init(alcnd_t *cond)

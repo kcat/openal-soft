@@ -784,35 +784,6 @@ ALboolean vector_resize(char *ptr, size_t base_size, size_t obj_size, size_t obj
     return AL_TRUE;
 }
 
-ALboolean vector_insert(char *ptr, size_t base_size, size_t obj_size, void *ins_pos, const void *datstart, const void *datend)
-{
-    vector_ *vecptr = (vector_*)ptr;
-    if(datstart != datend)
-    {
-        ptrdiff_t ins_elem = (*vecptr ? ((char*)ins_pos - ((char*)(*vecptr) + base_size)) :
-                                        ((char*)ins_pos - (char*)NULL)) /
-                             obj_size;
-        ptrdiff_t numins = ((const char*)datend - (const char*)datstart) / obj_size;
-
-        assert(numins > 0);
-        if((size_t)numins + VECTOR_SIZE(*vecptr) < (size_t)numins ||
-           !vector_reserve((char*)vecptr, base_size, obj_size, VECTOR_SIZE(*vecptr)+numins, AL_TRUE))
-            return AL_FALSE;
-
-        /* NOTE: ins_pos may have been invalidated if *vecptr moved. Use ins_elem instead. */
-        if((size_t)ins_elem < (*vecptr)->Size)
-        {
-            memmove((char*)(*vecptr) + base_size + ((ins_elem+numins)*obj_size),
-                    (char*)(*vecptr) + base_size + ((ins_elem       )*obj_size),
-                    ((*vecptr)->Size-ins_elem)*obj_size);
-        }
-        memcpy((char*)(*vecptr) + base_size + (ins_elem*obj_size),
-               datstart, numins*obj_size);
-        (*vecptr)->Size += numins;
-    }
-    return AL_TRUE;
-}
-
 
 extern inline void al_string_deinit(al_string *str);
 extern inline size_t al_string_length(const_al_string str);
@@ -859,27 +830,36 @@ int al_string_cmp_cstr(const_al_string str1, const al_string_char_type *str2)
 void al_string_copy(al_string *str, const_al_string from)
 {
     size_t len = al_string_length(from);
+    size_t i;
+
     VECTOR_RESERVE(*str, len+1);
-    VECTOR_RESIZE(*str, 0);
-    VECTOR_INSERT(*str, VECTOR_END(*str), VECTOR_BEGIN(from), VECTOR_BEGIN(from)+len);
+    VECTOR_RESIZE(*str, len);
+    for(i = 0;i < len;i++)
+        VECTOR_ELEM(*str, i) = VECTOR_ELEM(from, i);
     *VECTOR_END(*str) = 0;
 }
 
 void al_string_copy_cstr(al_string *str, const al_string_char_type *from)
 {
     size_t len = strlen(from);
+    size_t i;
+
     VECTOR_RESERVE(*str, len+1);
-    VECTOR_RESIZE(*str, 0);
-    VECTOR_INSERT(*str, VECTOR_END(*str), from, from+len);
+    VECTOR_RESIZE(*str, len);
+    for(i = 0;i < len;i++)
+        VECTOR_ELEM(*str, i) = from[i];
     *VECTOR_END(*str) = 0;
 }
 
 void al_string_copy_range(al_string *str, const al_string_char_type *from, const al_string_char_type *to)
 {
     size_t len = to - from;
+    size_t i;
+
     VECTOR_RESERVE(*str, len+1);
-    VECTOR_RESIZE(*str, 0);
-    VECTOR_INSERT(*str, VECTOR_END(*str), from, to);
+    VECTOR_RESIZE(*str, len);
+    for(i = 0;i < len;i++)
+        VECTOR_ELEM(*str, i) = from[i];
     *VECTOR_END(*str) = 0;
 }
 
@@ -895,8 +875,13 @@ void al_string_append_cstr(al_string *str, const al_string_char_type *from)
     size_t len = strlen(from);
     if(len != 0)
     {
-        VECTOR_RESERVE(*str, al_string_length(*str)+len+1);
-        VECTOR_INSERT(*str, VECTOR_END(*str), from, from+len);
+        size_t base = al_string_length(*str);
+        size_t i;
+
+        VECTOR_RESERVE(*str, base+len+1);
+        VECTOR_RESIZE(*str, base+len);
+        for(i = 0;i < len;i++)
+            VECTOR_ELEM(*str, base+i) = from[i];
         *VECTOR_END(*str) = 0;
     }
 }
@@ -905,8 +890,14 @@ void al_string_append_range(al_string *str, const al_string_char_type *from, con
 {
     if(to != from)
     {
-        VECTOR_RESERVE(*str, al_string_length(*str)+(to-from)+1);
-        VECTOR_INSERT(*str, VECTOR_END(*str), from, to);
+        size_t base = al_string_length(*str);
+        size_t len = to - from;
+        size_t i;
+
+        VECTOR_RESERVE(*str, base+len+1);
+        VECTOR_RESIZE(*str, base+len);
+        for(i = 0;i < len;i++)
+            VECTOR_ELEM(*str, base+i) = from[i];
         *VECTOR_END(*str) = 0;
     }
 }

@@ -34,35 +34,42 @@ static void bandsplit_process(BandSplitter *splitter, ALfloat *restrict hpout, A
                               const ALfloat *input, ALuint count)
 {
     ALfloat coeff, d, x;
+    ALfloat z1, z2;
     ALuint i;
 
     coeff = splitter->coeff*0.5f + 0.5f;
+    z1 = splitter->lp_z1;
+    z2 = splitter->lp_z2;
     for(i = 0;i < count;i++)
     {
         x = input[i];
 
-        d = (x - splitter->lp_z1) * coeff;
-        x = splitter->lp_z1 + d;
-        splitter->lp_z1 = x + d;
+        d = (x - z1) * coeff;
+        x = z1 + d;
+        z1 = x + d;
 
-        d = (x - splitter->lp_z2) * coeff;
-        x = splitter->lp_z2 + d;
-        splitter->lp_z2 = x + d;
+        d = (x - z2) * coeff;
+        x = z2 + d;
+        z2 = x + d;
 
         lpout[i] = x;
     }
+    splitter->lp_z1 = z1;
+    splitter->lp_z2 = z2;
 
     coeff = splitter->coeff;
+    z1 = splitter->hp_z1;
     for(i = 0;i < count;i++)
     {
         x = input[i];
 
-        d = x - coeff*splitter->hp_z1;
-        x = splitter->hp_z1 + coeff*d;
-        splitter->hp_z1 = d;
+        d = x - coeff*z1;
+        x = z1 + coeff*d;
+        z1 = d;
 
         hpout[i] = x - lpout[i];
     }
+    splitter->hp_z1 = z1;
 }
 
 

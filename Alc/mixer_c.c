@@ -167,3 +167,24 @@ void Mix_C(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[B
             OutBuffer[c][OutPos+pos] += data[pos]*gain;
     }
 }
+
+/* Basically the inverse of the above. Rather than one input going to multiple
+ * outputs (each with its own gain), it's multiple inputs (each with its own
+ * gain) going to one output. This applies one row (vs one column) of a matrix
+ * transform. And as the matrices are more or less static once set up, no
+ * stepping is necessary.
+ */
+void MixRow_C(ALfloat *OutBuffer, const ALfloat *Mtx, ALfloat (*restrict data)[BUFFERSIZE], ALuint InChans, ALuint BufferSize)
+{
+    ALuint c, i;
+
+    for(c = 0;c < InChans;c++)
+    {
+        ALfloat gain = Mtx[c];
+        if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
+            continue;
+
+        for(i = 0;i < BufferSize;i++)
+            OutBuffer[i] += data[c][i] * gain;
+    }
+}

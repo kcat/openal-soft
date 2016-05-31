@@ -3,6 +3,7 @@
 
 #include "bformatdec.h"
 #include "ambdec.h"
+#include "mixer_defs.h"
 #include "alu.h"
 
 #include "threads.h"
@@ -151,11 +152,26 @@ static const ALfloat CubeMatrixLF[8][MAX_AMBI_COEFFS] = {
 };
 static ALfloat CubeEncoder[8][MAX_AMBI_COEFFS];
 
-static alonce_flag encoder_inited = AL_ONCE_FLAG_INIT;
 
-static void init_encoder(void)
+static inline MatrixMixerFunc SelectMixer(void)
+{
+#ifdef HAVE_SSE
+    if((CPUCapFlags&CPU_CAP_SSE))
+        return MixRow_SSE;
+#endif
+    return MixRow_C;
+}
+
+static MatrixMixerFunc MixMatrixRow = MixRow_C;
+
+
+static alonce_flag bformatdec_inited = AL_ONCE_FLAG_INIT;
+
+static void init_bformatdec(void)
 {
     ALuint i, j;
+
+    MixMatrixRow = SelectMixer();
 
     CalcXYZCoeffs(-0.577350269f,  0.577350269f, -0.577350269f, 0.0f, CubeEncoder[0]);
     CalcXYZCoeffs( 0.577350269f,  0.577350269f, -0.577350269f, 0.0f, CubeEncoder[1]);
@@ -226,7 +242,7 @@ typedef struct BFormatDec {
 
 BFormatDec *bformatdec_alloc()
 {
-    alcall_once(&encoder_inited, init_encoder);
+    alcall_once(&bformatdec_inited, init_bformatdec);
     return al_calloc(16, sizeof(BFormatDec));
 }
 
@@ -435,20 +451,6 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
 }
 
 
-static void apply_row(ALfloat *out, const ALfloat *mtx, ALfloat (*restrict in)[BUFFERSIZE], ALuint inchans, ALuint todo)
-{
-    ALuint c, i;
-
-    for(c = 0;c < inchans;c++)
-    {
-        ALfloat gain = mtx[c];
-        if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
-            continue;
-        for(i = 0;i < todo;i++)
-            out[i] += in[c][i] * gain;
-    }
-}
-
 void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint OutChannels, ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint SamplesToDo)
 {
     ALuint chan, i;
@@ -465,10 +467,10 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
                 continue;
 
             memset(dec->ChannelMix, 0, SamplesToDo*sizeof(ALfloat));
-            apply_row(dec->ChannelMix, dec->MatrixHF[chan], dec->SamplesHF,
-                      dec->NumChannels, SamplesToDo);
-            apply_row(dec->ChannelMix, dec->MatrixLF[chan], dec->SamplesLF,
-                      dec->NumChannels, SamplesToDo);
+            MixMatrixRow(dec->ChannelMix, dec->MatrixHF[chan], dec->SamplesHF,
+                         dec->NumChannels, SamplesToDo);
+            MixMatrixRow(dec->ChannelMix, dec->MatrixLF[chan], dec->SamplesLF,
+                         dec->NumChannels, SamplesToDo);
 
             if(dec->Delay[chan].Length > 0)
             {
@@ -504,8 +506,8 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
                 continue;
 
             memset(dec->ChannelMix, 0, SamplesToDo*sizeof(ALfloat));
-            apply_row(dec->ChannelMix, dec->MatrixHF[chan], InSamples,
-                      dec->NumChannels, SamplesToDo);
+            MixMatrixRow(dec->ChannelMix, dec->MatrixHF[chan], InSamples,
+                         dec->NumChannels, SamplesToDo);
 
             if(dec->Delay[chan].Length > 0)
             {
@@ -556,10 +558,10 @@ void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[B
     for(k = 0;k < dec->UpSampler.NumChannels;k++)
     {
         memset(dec->ChannelMix, 0, SamplesToDo*sizeof(ALfloat));
-        apply_row(dec->ChannelMix, dec->UpSampler.MatrixHF[k], dec->SamplesHF,
-                  InChannels, SamplesToDo);
-        apply_row(dec->ChannelMix, dec->UpSampler.MatrixLF[k], dec->SamplesLF,
-                  InChannels, SamplesToDo);
+        MixMatrixRow(dec->ChannelMix, dec->UpSampler.MatrixHF[k], dec->SamplesHF,
+                     InChannels, SamplesToDo);
+        MixMatrixRow(dec->ChannelMix, dec->UpSampler.MatrixLF[k], dec->SamplesLF,
+                     InChannels, SamplesToDo);
 
         for(j = 0;j < dec->NumChannels;j++)
         {

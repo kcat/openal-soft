@@ -310,7 +310,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
     ratio = 400.0f / (ALfloat)srate;
     for(i = 0;i < 4;i++)
         bandsplit_init(&dec->UpSampler.XOver[i], ratio);
-    if((conf->ChanMask & ~0x831b))
+    if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
         dec->UpSampler.MatrixHF = CubeMatrixHF;
         dec->UpSampler.MatrixLF = CubeMatrixLF;

@@ -673,7 +673,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
     if(GetConfigValueBool(devname, "decoder", "distance-comp", 1))
         decflags |= BFDF_DistanceComp;
 
-    if((conf->ChanMask & ~0x831b))
+    if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
         count = (conf->ChanMask > 0x1ff) ? 16 :
                 (conf->ChanMask > 0xf) ? 9 : 4;
@@ -701,7 +701,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
     TRACE("Enabling %s-band %s-order%s ambisonic decoder\n",
         (conf->FreqBands == 1) ? "single" : "dual",
         (conf->ChanMask > 0xf) ? (conf->ChanMask > 0x1ff) ? "third" : "second" : "first",
-        (conf->ChanMask & ~0x831b) ? " periphonic" : ""
+        (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? " periphonic" : ""
     );
     bformatdec_reset(device->AmbiDecoder, conf, count, device->Frequency,
                      speakermap, decflags);

@@ -483,9 +483,18 @@ enum RenderMode {
 
 /* The maximum number of Ambisonics coefficients. For a given order (o), the
  * size needed will be (o+1)**2, thus zero-order has 1, first-order has 4,
- * second-order has 9, and third-order has 16. */
+ * second-order has 9, third-order has 16, and fourth-order has 25. */
 #define MAX_AMBI_ORDER  3
 #define MAX_AMBI_COEFFS ((MAX_AMBI_ORDER+1) * (MAX_AMBI_ORDER+1))
+
+/* A bitmask of ambisonic channels with height information. If none of these
+ * channels are used/needed, there's no height (e.g. with most surround sound
+ * speaker setups). This only specifies up to 4th order, which is the highest
+ * order a 32-bit mask value can specify (a 64-bit mask could handle up to 7th
+ * order). This is ACN ordering, with bit 0 being ACN 0, etc.
+ */
+#define AMBI_PERIPHONIC_MASK (0xfe7ce4)
+
 
 typedef ALfloat ChannelConfig[MAX_AMBI_COEFFS];
 typedef struct BFChannelConfig {

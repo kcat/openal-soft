@@ -205,7 +205,6 @@ inline struct ALsource *LookupSource(ALCcontext *context, ALuint id)
 inline struct ALsource *RemoveSource(ALCcontext *context, ALuint id)
 { return (struct ALsource*)RemoveUIntMapKeyNoLock(&context->SourceMap, id); }
 
-void UpdateSourceProps(ALsource *source, ALuint num_sends, ALCcontext *context);
 void UpdateAllSourceProps(ALCcontext *context);
 ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state);
 ALboolean ApplyOffset(ALsource *Source);

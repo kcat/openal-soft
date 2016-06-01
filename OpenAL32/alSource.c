@@ -47,8 +47,9 @@ extern inline void UnlockSourcesWrite(ALCcontext *context);
 extern inline struct ALsource *LookupSource(ALCcontext *context, ALuint id);
 extern inline struct ALsource *RemoveSource(ALCcontext *context, ALuint id);
 
-static ALvoid InitSourceParams(ALsource *Source);
-static ALvoid DeinitSource(ALsource *source);
+static void InitSourceParams(ALsource *Source);
+static void DeinitSource(ALsource *source);
+static void UpdateSourceProps(ALsource *source, ALuint num_sends, ALCcontext *context);
 static ALint64 GetSourceSampleOffset(ALsource *Source, ALCdevice *device, ALuint64 *clocktime);
 static ALdouble GetSourceSecOffset(ALsource *Source, ALCdevice *device, ALuint64 *clocktime);
 static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCdevice *device);
@@ -2665,7 +2666,7 @@ done:
 }
 
 
-static ALvoid InitSourceParams(ALsource *Source)
+static void InitSourceParams(ALsource *Source)
 {
     ALuint i;
 
@@ -2741,7 +2742,7 @@ static ALvoid InitSourceParams(ALsource *Source)
     ATOMIC_INIT(&Source->FreeList, NULL);
 }
 
-static ALvoid DeinitSource(ALsource *source)
+static void DeinitSource(ALsource *source)
 {
     ALbufferlistitem *BufferList;
     struct ALsourceProps *props;
@@ -2784,7 +2785,7 @@ static ALvoid DeinitSource(ALsource *source)
     }
 }
 
-void UpdateSourceProps(ALsource *source, ALuint num_sends, ALCcontext *context)
+static void UpdateSourceProps(ALsource *source, ALuint num_sends, ALCcontext *context)
 {
     struct ALsourceProps *props;
     size_t i;
@@ -2825,7 +2826,7 @@ void UpdateSourceProps(ALsource *source, ALuint num_sends, ALCcontext *context)
         size_t j;
         for(j = 0;j < 3;j++)
             ATOMIC_STORE(&props->Orientation[i][j], source->Orientation[i][j],
-                        almemory_order_relaxed);
+                         almemory_order_relaxed);
     }
     ATOMIC_STORE(&props->HeadRelative, source->HeadRelative, almemory_order_relaxed);
     ATOMIC_STORE(&props->Looping, source->Looping, almemory_order_relaxed);

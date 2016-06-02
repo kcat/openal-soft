@@ -159,6 +159,10 @@ static inline MatrixMixerFunc SelectMixer(void)
     if((CPUCapFlags&CPU_CAP_SSE))
         return MixRow_SSE;
 #endif
+#ifdef HAVE_NEON
+    if((CPUCapFlags&CPU_CAP_NEON))
+        return MixRow_Neon;
+#endif
     return MixRow_C;
 }
 

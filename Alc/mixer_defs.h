@@ -80,5 +80,7 @@ void MixHrtf_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, ALuint
                   struct HrtfState *hrtfstate, ALuint BufferSize);
 void Mix_Neon(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
               struct MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize);
+void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Mtx, ALfloat (*restrict data)[BUFFERSIZE],
+                 ALuint InChans, ALuint BufferSize);
 
 #endif /* MIXER_DEFS_H */

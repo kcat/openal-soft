@@ -96,8 +96,41 @@ const ALfloat *Resample_bsinc32_C(const BsincState *state, const ALfloat *src, A
 void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const ALfloat *src, ALuint numsamples)
 {
     ALuint i;
-    for(i = 0;i < numsamples;i++)
-        *(dst++) = ALfilterState_processSingle(filter, *(src++));
+    if(numsamples > 1)
+    {
+        dst[0] = filter->input_gain * src[0] +
+                 filter->b1 * filter->x[0] +
+                 filter->b2 * filter->x[1] -
+                 filter->a1 * filter->y[0] -
+                 filter->a2 * filter->y[1];
+        dst[1] = filter->input_gain * src[1] +
+                 filter->b1 * src[0] +
+                 filter->b2 * filter->x[0] -
+                 filter->a1 * dst[0] -
+                 filter->a2 * filter->y[0];
+        for(i = 2;i < numsamples;i++)
+            dst[i] = filter->input_gain * src[i] +
+                     filter->b1 * src[i-1] +
+                     filter->b2 * src[i-2] -
+                     filter->a1 * dst[i-1] -
+                     filter->a2 * dst[i-2];
+        filter->x[0] = src[i-1];
+        filter->x[1] = src[i-2];
+        filter->y[0] = dst[i-1];
+        filter->y[1] = dst[i-2];
+    }
+    else if(numsamples == 1)
+    {
+        dst[0] = filter->input_gain * src[0] +
+                 filter->b1 * filter->x[0] +
+                 filter->b2 * filter->x[1] -
+                 filter->a1 * filter->y[0] -
+                 filter->a2 * filter->y[1];
+        filter->x[1] = filter->x[0];
+        filter->x[0] = src[0];
+        filter->y[1] = filter->y[0];
+        filter->y[0] = dst[0];
+    }
 }
 
 

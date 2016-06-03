@@ -46,6 +46,8 @@
 typedef int64_t ALCint64SOFT;
 typedef uint64_t ALCuint64SOFT;
 #define ALC_DEVICE_CLOCK_SOFT                    0x1600
+#define ALC_DEVICE_LATENCY_SOFT                  0x1601
+#define ALC_DEVICE_CLOCK_LATENCY_SOFT            0x1602
 typedef void (ALC_APIENTRY*LPALCGETINTEGER64VSOFT)(ALCdevice *device, ALCenum pname, ALsizei size, ALCint64SOFT *values);
 #ifdef AL_ALEXT_PROTOTYPES
 ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname, ALsizei size, ALCint64SOFT *values);

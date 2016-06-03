@@ -2902,6 +2902,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
     }
     else /* render device */
     {
+        ClockLatency clock;
         ALuint64 basecount;
         ALuint samplecount;
         ALuint refcount;
@@ -2909,16 +2910,15 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
         switch(pname)
         {
             case ALC_ATTRIBUTES_SIZE:
-                *values = 19;
+                *values = 21;
                 break;
 
             case ALC_ALL_ATTRIBUTES:
-                if(size < 19)
+                if(size < 21)
                     alcSetError(device, ALC_INVALID_VALUE);
                 else
                 {
-                    int i = 0;
-
+                    i = 0;
                     almtx_lock(&device->BackendLock);
                     values[i++] = ALC_FREQUENCY;
                     values[i++] = device->Frequency;
@@ -2955,14 +2955,12 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                     values[i++] = ALC_HRTF_STATUS_SOFT;
                     values[i++] = device->Hrtf_Status;
 
+                    clock = V0(device->Backend,getClockLatency)();
                     values[i++] = ALC_DEVICE_CLOCK_SOFT;
-                    do {
-                        while(((refcount=ReadRef(&device->MixCount))&1) != 0)
-                            althrd_yield();
-                        basecount = device->ClockBase;
-                        samplecount = device->SamplesDone;
-                    } while(refcount != ReadRef(&device->MixCount));
-                    values[i++] = basecount + (samplecount*DEVICE_CLOCK_RES/device->Frequency);
+                    values[i++] = clock.ClockTime;
+
+                    values[i++] = ALC_DEVICE_LATENCY_SOFT;
+                    values[i++] = clock.Latency;
                     almtx_unlock(&device->BackendLock);
 
                     values[i++] = 0;
@@ -2979,6 +2977,29 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                 } while(refcount != ReadRef(&device->MixCount));
                 *values = basecount + (samplecount*DEVICE_CLOCK_RES/device->Frequency);
                 almtx_unlock(&device->BackendLock);
+                break;
+
+            case ALC_DEVICE_LATENCY_SOFT:
+                {
+                    almtx_lock(&device->BackendLock);
+                    clock = V0(device->Backend,getClockLatency)();
+                    almtx_unlock(&device->BackendLock);
+                    *values = clock.Latency;
+                }
+                break;
+
+            case ALC_DEVICE_CLOCK_LATENCY_SOFT:
+                if(size < 2)
+                    alcSetError(device, ALC_INVALID_VALUE);
+                else
+                {
+                    ClockLatency clock;
+                    almtx_lock(&device->BackendLock);
+                    clock = V0(device->Backend,getClockLatency)();
+                    almtx_unlock(&device->BackendLock);
+                    values[0] = clock.ClockTime;
+                    values[1] = clock.Latency;
+                }
                 break;
 
             default:

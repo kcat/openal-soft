@@ -86,8 +86,8 @@ struct ALeffectslotProps {
 
 
 typedef struct ALeffectslot {
-    volatile ALfloat   Gain;
-    volatile ALboolean AuxSendAuto;
+    ALfloat   Gain;
+    ALboolean AuxSendAuto;
 
     struct {
         ALenum Type;

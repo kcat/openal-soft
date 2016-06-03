@@ -101,40 +101,40 @@ struct ALsourceProps {
 
 typedef struct ALsource {
     /** Source properties. */
-    volatile ALfloat   Pitch;
-    volatile ALfloat   Gain;
-    volatile ALfloat   OuterGain;
-    volatile ALfloat   MinGain;
-    volatile ALfloat   MaxGain;
-    volatile ALfloat   InnerAngle;
-    volatile ALfloat   OuterAngle;
-    volatile ALfloat   RefDistance;
-    volatile ALfloat   MaxDistance;
-    volatile ALfloat   RollOffFactor;
-    volatile ALfloat   Position[3];
-    volatile ALfloat   Velocity[3];
-    volatile ALfloat   Direction[3];
-    volatile ALfloat   Orientation[2][3];
-    volatile ALboolean HeadRelative;
-    volatile ALboolean Looping;
-    volatile enum DistanceModel DistanceModel;
-    volatile ALboolean DirectChannels;
+    ALfloat   Pitch;
+    ALfloat   Gain;
+    ALfloat   OuterGain;
+    ALfloat   MinGain;
+    ALfloat   MaxGain;
+    ALfloat   InnerAngle;
+    ALfloat   OuterAngle;
+    ALfloat   RefDistance;
+    ALfloat   MaxDistance;
+    ALfloat   RollOffFactor;
+    ALfloat   Position[3];
+    ALfloat   Velocity[3];
+    ALfloat   Direction[3];
+    ALfloat   Orientation[2][3];
+    ALboolean HeadRelative;
+    ALboolean Looping;
+    enum DistanceModel DistanceModel;
+    ALboolean DirectChannels;
 
-    volatile ALboolean DryGainHFAuto;
-    volatile ALboolean WetGainAuto;
-    volatile ALboolean WetGainHFAuto;
-    volatile ALfloat   OuterGainHF;
+    ALboolean DryGainHFAuto;
+    ALboolean WetGainAuto;
+    ALboolean WetGainHFAuto;
+    ALfloat   OuterGainHF;
 
-    volatile ALfloat AirAbsorptionFactor;
-    volatile ALfloat RoomRolloffFactor;
-    volatile ALfloat DopplerFactor;
+    ALfloat AirAbsorptionFactor;
+    ALfloat RoomRolloffFactor;
+    ALfloat DopplerFactor;
 
     /* NOTE: Stereo pan angles are specified in radians, counter-clockwise
      * rather than clockwise.
      */
-    volatile ALfloat StereoPan[2];
+    ALfloat StereoPan[2];
 
-    volatile ALfloat Radius;
+    ALfloat Radius;
 
     /** Direct filter and auxiliary send info. */
     struct {
@@ -161,10 +161,10 @@ typedef struct ALsource {
     ALenum   OffsetType;
 
     /** Source type (static, streaming, or undetermined) */
-    volatile ALint SourceType;
+    ALint SourceType;
 
     /** Source state (initial, playing, paused, or stopped) */
-    volatile ALenum state;
+    ALenum state;
     ALenum new_state;
 
     /**

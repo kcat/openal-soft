@@ -1,6 +1,8 @@
 #ifndef AL_COMPAT_H
 #define AL_COMPAT_H
 
+#include "alstring.h"
+
 #ifdef _WIN32
 
 #define WIN32_LEAN_AND_MEAN
@@ -22,6 +24,8 @@ FILE *al_fopen(const char *fname, const char *mode);
 #endif
 
 #endif
+
+al_string GetProcPath(void);
 
 #ifdef HAVE_DYNLOAD
 void *LoadLib(const char *name);

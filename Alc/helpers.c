@@ -321,6 +321,57 @@ static int StringSortCompare(const void *str1, const void *str2)
 
 #ifdef _WIN32
 
+static WCHAR *strrchrW(WCHAR *str, WCHAR ch)
+{
+    WCHAR *ret = NULL;
+    while(*str)
+    {
+        if(*str == ch)
+            ret = str;
+        ++str;
+    }
+    return ret;
+}
+
+al_string GetProcPath(void)
+{
+    al_string ret = AL_STRING_INIT_STATIC();
+    WCHAR *pathname, *sep;
+    DWORD pathlen;
+    DWORD len;
+
+    pathlen = 256;
+    pathname = malloc(pathlen * sizeof(pathname[0]));
+    while(pathlen > 0 && (len=GetModuleFileNameW(NULL, pathname, pathlen)) == pathlen)
+    {
+        free(pathname);
+        pathlen <<= 1;
+        pathname = malloc(pathlen * sizeof(pathname[0]));
+    }
+    if(len == 0)
+    {
+        free(pathname);
+        ERR("Failed to get process name: error %lu\n", GetLastError());
+        return ret;
+    }
+
+    pathname[len] = 0;
+    if((sep = strrchrW(pathname, '\\')))
+    {
+        WCHAR *sep2 = strrchrW(pathname, '/');
+        if(sep2) *sep2 = 0;
+        else *sep = 0;
+    }
+    else if((sep = strrchrW(pathname, '/')))
+        *sep = 0;
+    al_string_copy_wcstr(&ret, pathname);
+    free(pathname);
+
+    TRACE("Got: %s\n", al_string_get_cstr(ret));
+    return ret;
+}
+
+
 static WCHAR *FromUTF8(const char *str)
 {
     WCHAR *out = NULL;
@@ -548,6 +599,52 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
 }
 
 #else
+
+al_string GetProcPath(void)
+{
+    al_string ret = AL_STRING_INIT_STATIC();
+    const char *fname;
+    char *pathname, *sep;
+    size_t pathlen;
+    ssize_t len;
+
+    pathlen = 256;
+    pathname = malloc(pathlen);
+
+    fname = "/proc/self/exe";
+    len = readlink(fname, pathname, pathlen);
+    if(len == -1 && errno == ENOENT)
+    {
+        fname = "/proc/self/file";
+        len = readlink(fname, pathname, pathlen);
+    }
+
+    while(len > 0 && (size_t)len == pathlen)
+    {
+        free(pathname);
+        pathlen <<= 1;
+        pathname = malloc(pathlen);
+        len = readlink(fname, pathname, pathlen);
+    }
+    if(len <= 0)
+    {
+        free(pathname);
+        ERR("Failed to link %s: %s\n", fname, strerror(errno));
+        return ret;
+    }
+
+    pathname[len] = 0;
+    sep = strrchr(pathname, '/');
+    if(sep)
+        al_string_copy_range(&ret, pathname, sep);
+    else
+        al_string_copy_cstr(&ret, pathname);
+    free(pathname);
+
+    TRACE("Got: %s\n", al_string_get_cstr(ret));
+    return ret;
+}
+
 
 #ifdef HAVE_DLFCN_H
 

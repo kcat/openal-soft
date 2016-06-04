@@ -313,6 +313,7 @@ void ReadALConfig(void)
 {
     WCHAR buffer[PATH_MAX];
     const WCHAR *str;
+    al_string ppath;
     FILE *f;
 
     if(SHGetSpecialFolderPathW(NULL, buffer, CSIDL_APPDATA, FALSE) != FALSE)
@@ -331,6 +332,19 @@ void ReadALConfig(void)
         al_string_deinit(&filepath);
     }
 
+    ppath = GetProcPath();
+    if(!al_string_empty(ppath))
+    {
+        al_string_append_cstr(&ppath, "\\alsoft.ini");
+        TRACE("Loading config %s...\n", al_string_get_cstr(ppath));
+        f = al_fopen(al_string_get_cstr(ppath), "r");
+        if(f)
+        {
+            LoadConfigFromFile(f);
+            fclose(f);
+        }
+    }
+
     if((str=_wgetenv(L"ALSOFT_CONF")) != NULL && *str)
     {
         al_string filepath = AL_STRING_INIT_STATIC();
@@ -345,12 +359,15 @@ void ReadALConfig(void)
         }
         al_string_deinit(&filepath);
     }
+
+    al_string_deinit(&ppath);
 }
 #else
 void ReadALConfig(void)
 {
     char buffer[PATH_MAX];
     const char *str;
+    al_string ppath;
     FILE *f;
 
     str = "/etc/openal/alsoft.conf";
@@ -430,6 +447,19 @@ void ReadALConfig(void)
         }
     }
 
+    ppath = GetProcPath();
+    if(!al_string_empty(ppath))
+    {
+        al_string_append_cstr(&ppath, "/alsoft.conf");
+        TRACE("Loading config %s...\n", al_string_get_cstr(ppath));
+        f = al_fopen(al_string_get_cstr(ppath), "r");
+        if(f)
+        {
+            LoadConfigFromFile(f);
+            fclose(f);
+        }
+    }
+
     if((str=getenv("ALSOFT_CONF")) != NULL && *str)
     {
         TRACE("Loading config %s...\n", str);
@@ -440,6 +470,8 @@ void ReadALConfig(void)
             fclose(f);
         }
     }
+
+    al_string_deinit(&ppath);
 }
 #endif
 

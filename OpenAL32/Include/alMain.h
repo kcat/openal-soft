@@ -570,8 +570,8 @@ struct ALCdevice_struct
     ALCenum Hrtf_Status;
 
     /* HRTF filter state for dry buffer content */
-    HrtfState Hrtf_State[MAX_OUTPUT_CHANNELS];
-    HrtfParams Hrtf_Params[MAX_OUTPUT_CHANNELS];
+    HrtfState Hrtf_State[8];
+    HrtfParams Hrtf_Params[8];
     ALuint Hrtf_Offset;
 
     /* UHJ encoder state */

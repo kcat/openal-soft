@@ -5,12 +5,6 @@
 /* Define to the library version */
 #define ALSOFT_VERSION "${LIB_VERSION}"
 
-#ifdef IN_IDE_PARSER
-/* KDevelop's parser doesn't recognize the C99-standard restrict keyword, but
- * recent versions (at least 4.5.1) do recognize GCC's __restrict. */
-#define restrict __restrict
-#endif
-
 /* Define any available alignment declaration */
 #define ALIGN(x) ${ALIGN_DECL}
 

@@ -546,7 +546,7 @@ struct ALCdevice_struct
     ATOMIC(ALCenum) LastError;
 
     // Maximum number of sources that can be created
-    ALuint MaxNoOfSources;
+    ALuint SourcesMax;
     // Maximum number of slots that can be created
     ALuint AuxiliaryEffectSlotMax;
 

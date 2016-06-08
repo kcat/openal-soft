@@ -1721,10 +1721,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             {
                 numStereo = attrList[attrIdx + 1];
                 TRACE_ATTR(ALC_STEREO_SOURCES, numStereo);
-                if(numStereo > device->MaxNoOfSources)
-                    numStereo = device->MaxNoOfSources;
+                if(numStereo > device->SourcesMax)
+                    numStereo = device->SourcesMax;
 
-                numMono = device->MaxNoOfSources - numStereo;
+                numMono = device->SourcesMax - numStereo;
             }
 
             if(attrList[attrIdx] == ALC_MAX_AUXILIARY_SENDS)
@@ -1806,10 +1806,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             {
                 numStereo = attrList[attrIdx + 1];
                 TRACE_ATTR(ALC_STEREO_SOURCES, numStereo);
-                if(numStereo > device->MaxNoOfSources)
-                    numStereo = device->MaxNoOfSources;
+                if(numStereo > device->SourcesMax)
+                    numStereo = device->SourcesMax;
 
-                numMono = device->MaxNoOfSources - numStereo;
+                numMono = device->SourcesMax - numStereo;
             }
 
             if(attrList[attrIdx] == ALC_MAX_AUXILIARY_SENDS)
@@ -2275,7 +2275,7 @@ static ALvoid InitContext(ALCcontext *Context)
     ATOMIC_INIT(&Context->HoldUpdates, AL_FALSE);
     RWLockInit(&Context->PropLock);
     ATOMIC_INIT(&Context->LastError, AL_NO_ERROR);
-    InitUIntMap(&Context->SourceMap, Context->Device->MaxNoOfSources);
+    InitUIntMap(&Context->SourceMap, Context->Device->SourcesMax);
     InitUIntMap(&Context->EffectSlotMap, Context->Device->AuxiliaryEffectSlotMax);
 
     //Set globals
@@ -3375,7 +3375,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->ClockBase = 0;
     device->SamplesDone = 0;
 
-    device->MaxNoOfSources = 256;
+    device->SourcesMax = 256;
     device->AuxiliaryEffectSlotMax = 4;
     device->NumAuxSends = MAX_SENDS;
 
@@ -3480,8 +3480,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     if((CPUCapFlags&(CPU_CAP_SSE|CPU_CAP_NEON)) != 0)
         device->UpdateSize = (device->UpdateSize+3)&~3;
 
-    ConfigValueUInt(deviceName, NULL, "sources", &device->MaxNoOfSources);
-    if(device->MaxNoOfSources == 0) device->MaxNoOfSources = 256;
+    ConfigValueUInt(deviceName, NULL, "sources", &device->SourcesMax);
+    if(device->SourcesMax == 0) device->SourcesMax = 256;
 
     ConfigValueUInt(deviceName, NULL, "slots", &device->AuxiliaryEffectSlotMax);
     if(device->AuxiliaryEffectSlotMax == 0) device->AuxiliaryEffectSlotMax = 4;
@@ -3490,7 +3490,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     if(device->NumAuxSends > MAX_SENDS) device->NumAuxSends = MAX_SENDS;
 
     device->NumStereoSources = 1;
-    device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
+    device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
 
     // Find a playback device to open
     if((err=V(device->Backend,open)(deviceName)) != ALC_NO_ERROR)
@@ -3835,7 +3835,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->ClockBase = 0;
     device->SamplesDone = 0;
 
-    device->MaxNoOfSources = 256;
+    device->SourcesMax = 256;
     device->AuxiliaryEffectSlotMax = 4;
     device->NumAuxSends = MAX_SENDS;
 
@@ -3862,8 +3862,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->FmtType = DevFmtTypeDefault;
     device->IsHeadphones = AL_FALSE;
 
-    ConfigValueUInt(NULL, NULL, "sources", &device->MaxNoOfSources);
-    if(device->MaxNoOfSources == 0) device->MaxNoOfSources = 256;
+    ConfigValueUInt(NULL, NULL, "sources", &device->SourcesMax);
+    if(device->SourcesMax == 0) device->SourcesMax = 256;
 
     ConfigValueUInt(NULL, NULL, "slots", &device->AuxiliaryEffectSlotMax);
     if(device->AuxiliaryEffectSlotMax == 0) device->AuxiliaryEffectSlotMax = 4;
@@ -3872,7 +3872,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     if(device->NumAuxSends > MAX_SENDS) device->NumAuxSends = MAX_SENDS;
 
     device->NumStereoSources = 1;
-    device->NumMonoSources = device->MaxNoOfSources - device->NumStereoSources;
+    device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
 
     // Open the "backend"
     V(device->Backend,open)("Loopback");

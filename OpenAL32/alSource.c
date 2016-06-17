@@ -2986,9 +2986,16 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             voice->Source = Source;
         }
 
-        /* Clear previous samples if playback is discontinuous. */
         if(discontinuity)
+        {
+            /* Clear previous samples if playback is discontinuous. */
             memset(voice->PrevSamples, 0, sizeof(voice->PrevSamples));
+
+            /* Clear the stepping value so the mixer knows not to mix this
+             * until the update gets applied.
+             */
+            voice->Step = 0;
+        }
 
         voice->Moving = AL_FALSE;
         for(i = 0;i < MAX_INPUT_CHANNELS;i++)

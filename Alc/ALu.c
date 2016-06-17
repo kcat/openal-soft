@@ -1460,8 +1460,9 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             voice_end = voice + ctx->VoiceCount;
             for(;voice != voice_end;++voice)
             {
+                ALboolean IsVoiceInit = (voice->Step > 0);
                 source = voice->Source;
-                if(source && source->state == AL_PLAYING)
+                if(source && source->state == AL_PLAYING && IsVoiceInit)
                     MixSource(voice, source, device, SamplesToDo);
             }
 

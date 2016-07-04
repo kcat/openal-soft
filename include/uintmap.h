@@ -14,7 +14,7 @@ typedef struct UIntMap {
         ALvoid *value;
     } *array;
     ALsizei size;
-    ALsizei maxsize;
+    ALsizei capacity;
     ALsizei limit;
     RWLock lock;
 } UIntMap;

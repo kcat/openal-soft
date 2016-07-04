@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "almalloc.h"
+
 
 extern inline void LockUIntMapRead(UIntMap *map);
 extern inline void UnlockUIntMapRead(UIntMap *map);
@@ -17,7 +19,7 @@ void InitUIntMap(UIntMap *map, ALsizei limit)
 {
     map->array = NULL;
     map->size = 0;
-    map->maxsize = 0;
+    map->capacity = 0;
     map->limit = limit;
     RWLockInit(&map->lock);
 }
@@ -25,10 +27,10 @@ void InitUIntMap(UIntMap *map, ALsizei limit)
 void ResetUIntMap(UIntMap *map)
 {
     WriteLock(&map->lock);
-    free(map->array);
+    al_free(map->array);
     map->array = NULL;
     map->size = 0;
-    map->maxsize = 0;
+    map->capacity = 0;
     WriteUnlock(&map->lock);
 }
 
@@ -62,21 +64,27 @@ ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value)
             return AL_OUT_OF_MEMORY;
         }
 
-        if(map->size == map->maxsize)
+        if(map->size == map->capacity)
         {
             ALvoid *temp = NULL;
             ALsizei newsize;
 
-            newsize = (map->maxsize ? (map->maxsize<<1) : 4);
-            if(newsize >= map->maxsize)
-                temp = realloc(map->array, newsize*sizeof(map->array[0]));
+            newsize = (map->capacity ? (map->capacity<<1) : 4);
+            if(map->limit > 0 && newsize > map->limit)
+                newsize = map->limit;
+            if(newsize > map->capacity)
+                temp = al_malloc(16, newsize * sizeof(map->array[0]));
             if(!temp)
             {
                 WriteUnlock(&map->lock);
                 return AL_OUT_OF_MEMORY;
             }
+
+            if(map->array)
+                memcpy(temp, map->array, map->size*sizeof(map->array[0]));
+            al_free(map->array);
             map->array = temp;
-            map->maxsize = newsize;
+            map->capacity = newsize;
         }
 
         if(pos < map->size)

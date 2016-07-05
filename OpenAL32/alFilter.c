@@ -636,8 +636,8 @@ ALvoid ReleaseALFilters(ALCdevice *device)
     ALsizei i;
     for(i = 0;i < device->FilterMap.size;i++)
     {
-        ALfilter *temp = device->FilterMap.array[i].value;
-        device->FilterMap.array[i].value = NULL;
+        ALfilter *temp = device->FilterMap.values[i];
+        device->FilterMap.values[i] = NULL;
 
         // Release filter structure
         FreeThunkEntry(temp->id);

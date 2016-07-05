@@ -660,8 +660,8 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context)
     ALsizei pos;
     for(pos = 0;pos < Context->EffectSlotMap.size;pos++)
     {
-        ALeffectslot *temp = Context->EffectSlotMap.array[pos].value;
-        Context->EffectSlotMap.array[pos].value = NULL;
+        ALeffectslot *temp = Context->EffectSlotMap.values[pos];
+        Context->EffectSlotMap.values[pos] = NULL;
 
         DeinitEffectSlot(temp);
 

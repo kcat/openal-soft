@@ -1402,8 +1402,8 @@ ALvoid ReleaseALBuffers(ALCdevice *device)
     ALsizei i;
     for(i = 0;i < device->BufferMap.size;i++)
     {
-        ALbuffer *temp = device->BufferMap.array[i].value;
-        device->BufferMap.array[i].value = NULL;
+        ALbuffer *temp = device->BufferMap.values[i];
+        device->BufferMap.values[i] = NULL;
 
         al_free(temp->data);
 

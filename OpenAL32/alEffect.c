@@ -375,8 +375,8 @@ ALvoid ReleaseALEffects(ALCdevice *device)
     ALsizei i;
     for(i = 0;i < device->EffectMap.size;i++)
     {
-        ALeffect *temp = device->EffectMap.array[i].value;
-        device->EffectMap.array[i].value = NULL;
+        ALeffect *temp = device->EffectMap.values[i];
+        device->EffectMap.values[i] = NULL;
 
         // Release effect structure
         FreeThunkEntry(temp->id);

@@ -9,16 +9,16 @@ extern "C" {
 #endif
 
 typedef struct UIntMap {
-    struct {
-        ALuint key;
-        ALvoid *value;
-    } *array;
+    ALuint *keys;
+    /* Shares memory with keys. */
+    ALvoid **values;
+
     ALsizei size;
     ALsizei capacity;
     ALsizei limit;
     RWLock lock;
 } UIntMap;
-#define UINTMAP_STATIC_INITIALIZE_N(_n) { NULL, 0, 0, (_n), RWLOCK_STATIC_INITIALIZE }
+#define UINTMAP_STATIC_INITIALIZE_N(_n) { NULL, NULL, 0, 0, (_n), RWLOCK_STATIC_INITIALIZE }
 #define UINTMAP_STATIC_INITIALIZE UINTMAP_STATIC_INITIALIZE_N(~0)
 
 void InitUIntMap(UIntMap *map, ALsizei limit);

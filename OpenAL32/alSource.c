@@ -3373,8 +3373,8 @@ ALvoid ReleaseALSources(ALCcontext *Context)
     ALsizei pos;
     for(pos = 0;pos < Context->SourceMap.size;pos++)
     {
-        ALsource *temp = Context->SourceMap.array[pos].value;
-        Context->SourceMap.array[pos].value = NULL;
+        ALsource *temp = Context->SourceMap.values[pos];
+        Context->SourceMap.values[pos] = NULL;
 
         DeinitSource(temp);
 

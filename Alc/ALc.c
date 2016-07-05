@@ -1580,7 +1580,7 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
         V0(device->Backend,lock)();
         for(pos = 0;pos < context->SourceMap.size;pos++)
         {
-            ALsource *Source = context->SourceMap.array[pos].value;
+            ALsource *Source = context->SourceMap.values[pos];
             ALenum new_state;
 
             if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
@@ -2064,7 +2064,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         LockUIntMapRead(&context->EffectSlotMap);
         for(pos = 0;pos < context->EffectSlotMap.size;pos++)
         {
-            ALeffectslot *slot = context->EffectSlotMap.array[pos].value;
+            ALeffectslot *slot = context->EffectSlotMap.values[pos];
             ALeffectState *state = slot->Effect.State;
 
             state->OutBuffer = device->Dry.Buffer;
@@ -2084,7 +2084,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         LockUIntMapRead(&context->SourceMap);
         for(pos = 0;pos < context->SourceMap.size;pos++)
         {
-            ALsource *source = context->SourceMap.array[pos].value;
+            ALsource *source = context->SourceMap.values[pos];
             ALuint s = device->NumAuxSends;
             while(s < MAX_SENDS)
             {

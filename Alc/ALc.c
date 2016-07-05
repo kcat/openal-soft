@@ -1871,8 +1871,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     al_free(device->Dry.Buffer);
     device->Dry.Buffer = NULL;
     device->Dry.NumChannels = 0;
-    device->VirtOut.Buffer = NULL;
-    device->VirtOut.NumChannels = 0;
+    device->FOAOut.Buffer = NULL;
+    device->FOAOut.NumChannels = 0;
     device->RealOut.Buffer = NULL;
     device->RealOut.NumChannels = 0;
 
@@ -2012,15 +2012,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     if(device->Hrtf || device->Uhj_Encoder || device->AmbiDecoder)
     {
-        device->VirtOut.Buffer = device->Dry.Buffer;
-        device->VirtOut.NumChannels = device->Dry.NumChannels;
         device->RealOut.Buffer = device->Dry.Buffer + device->Dry.NumChannels;
         device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans);
     }
     else
     {
-        device->VirtOut.Buffer = NULL;
-        device->VirtOut.NumChannels = 0;
         device->RealOut.Buffer = device->Dry.Buffer;
         device->RealOut.NumChannels = device->Dry.NumChannels;
     }
@@ -2180,8 +2176,8 @@ static ALCvoid FreeDevice(ALCdevice *device)
     al_free(device->Dry.Buffer);
     device->Dry.Buffer = NULL;
     device->Dry.NumChannels = 0;
-    device->VirtOut.Buffer = NULL;
-    device->VirtOut.NumChannels = 0;
+    device->FOAOut.Buffer = NULL;
+    device->FOAOut.NumChannels = 0;
     device->RealOut.Buffer = NULL;
     device->RealOut.NumChannels = 0;
 
@@ -3365,8 +3361,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     AL_STRING_INIT(device->DeviceName);
     device->Dry.Buffer = NULL;
     device->Dry.NumChannels = 0;
-    device->VirtOut.Buffer = NULL;
-    device->VirtOut.NumChannels = 0;
+    device->FOAOut.Buffer = NULL;
+    device->FOAOut.NumChannels = 0;
     device->RealOut.Buffer = NULL;
     device->RealOut.NumChannels = 0;
 
@@ -3629,8 +3625,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     AL_STRING_INIT(device->DeviceName);
     device->Dry.Buffer = NULL;
     device->Dry.NumChannels = 0;
-    device->VirtOut.Buffer = NULL;
-    device->VirtOut.NumChannels = 0;
+    device->FOAOut.Buffer = NULL;
+    device->FOAOut.NumChannels = 0;
     device->RealOut.Buffer = NULL;
     device->RealOut.NumChannels = 0;
 
@@ -3825,8 +3821,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     AL_STRING_INIT(device->DeviceName);
     device->Dry.Buffer = NULL;
     device->Dry.NumChannels = 0;
-    device->VirtOut.Buffer = NULL;
-    device->VirtOut.NumChannels = 0;
+    device->FOAOut.Buffer = NULL;
+    device->FOAOut.NumChannels = 0;
     device->RealOut.Buffer = NULL;
     device->RealOut.NumChannels = 0;
 

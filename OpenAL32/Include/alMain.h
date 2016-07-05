@@ -630,12 +630,9 @@ struct ALCdevice_struct
         ALuint NumChannels;
     } FOAOut;
 
-    /* Virtual output, to be post-processed to the real output. */
-    struct {
-        ALfloat (*Buffer)[BUFFERSIZE];
-        ALuint NumChannels;
-    } VirtOut;
-    /* "Real" output, which will be written to the device buffer. */
+    /* "Real" output, which will be written to the device buffer. May alias the
+     * dry buffer.
+     */
     struct {
         enum Channel ChannelName[MAX_OUTPUT_CHANNELS];
 

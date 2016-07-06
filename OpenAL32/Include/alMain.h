@@ -612,7 +612,6 @@ struct ALCdevice_struct
          */
         ALuint CoeffCount;
 
-        /* Dry buffer will be aliased by the virtual or real output. */
         ALfloat (*Buffer)[BUFFERSIZE];
         ALuint NumChannels;
     } Dry;

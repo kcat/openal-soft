@@ -504,6 +504,13 @@ typedef struct BFChannelConfig {
     ALuint Index;
 } BFChannelConfig;
 
+typedef union AmbiConfig {
+    /* Ambisonic coefficients for mixing to the dry buffer. */
+    ChannelConfig Coeffs[MAX_OUTPUT_CHANNELS];
+    /* Coefficient channel mapping for mixing to the dry buffer. */
+    BFChannelConfig Map[MAX_OUTPUT_CHANNELS];
+} AmbiConfig;
+
 
 #define HRTF_HISTORY_BITS   (6)
 #define HRTF_HISTORY_LENGTH (1<<HRTF_HISTORY_BITS)
@@ -599,16 +606,10 @@ struct ALCdevice_struct
 
     /* The "dry" path corresponds to the main output. */
     struct {
-        union {
-            /* Ambisonic coefficients for mixing to the dry buffer. */
-            ChannelConfig Coeffs[MAX_OUTPUT_CHANNELS];
-            /* Coefficient channel mapping for mixing to the dry buffer. */
-            BFChannelConfig Map[MAX_OUTPUT_CHANNELS];
-        } Ambi;
-        /* Number of coefficients in each ChannelConfig to mix together (4 for
-         * first-order, 9 for second-order, etc). If the count is 0, the
-         * BFChannelConfig is used instead to map each output to a coefficient
-         * index.
+        AmbiConfig Ambi;
+        /* Number of coefficients in each Ambi.Coeffs to mix together (4 for
+         * first-order, 9 for second-order, etc). If the count is 0, Ambi.Map
+         * is used instead to map each output to a coefficient index.
          */
         ALuint CoeffCount;
 
@@ -618,10 +619,7 @@ struct ALCdevice_struct
 
     /* First-order ambisonics output, to be upsampled to the dry buffer if different. */
     struct {
-        union {
-            ChannelConfig Coeffs[MAX_OUTPUT_CHANNELS];
-            BFChannelConfig Map[MAX_OUTPUT_CHANNELS];
-        } Ambi;
+        AmbiConfig Ambi;
         /* Will only be 4 or 0. */
         ALuint CoeffCount;
 

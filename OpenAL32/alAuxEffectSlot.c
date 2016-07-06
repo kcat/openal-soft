@@ -511,7 +511,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
         else
         {
             EffectSlot->Effect.Type = effect->type;
-            memcpy(&EffectSlot->Effect.Props, &effect->Props, sizeof(EffectSlot->Effect.Props));
+            EffectSlot->Effect.Props = effect->Props;
         }
 
         EffectSlot->Effect.State = State;
@@ -519,7 +519,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
     }
     else if(effect)
     {
-        memcpy(&EffectSlot->Effect.Props, &effect->Props, sizeof(EffectSlot->Effect.Props));
+        EffectSlot->Effect.Props = effect->Props;
         UpdateEffectSlotProps(EffectSlot);
     }
 
@@ -630,7 +630,7 @@ void UpdateEffectSlotProps(ALeffectslot *slot)
     ATOMIC_STORE(&props->AuxSendAuto, slot->AuxSendAuto, almemory_order_relaxed);
 
     ATOMIC_STORE(&props->Type, slot->Effect.Type, almemory_order_relaxed);
-    memcpy(&props->Props, &slot->Effect.Props, sizeof(props->Props));
+    props->Props = slot->Effect.Props;
     /* Swap out any stale effect state object there may be in the container, to
      * delete it.
      */

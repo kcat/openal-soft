@@ -581,7 +581,7 @@ static void InitPanning(ALCdevice *device)
         device->Dry.CoeffCount = 0;
         device->Dry.NumChannels = count;
 
-        memcpy(&device->FOAOut.Ambi, &device->Dry.Ambi, sizeof(device->FOAOut.Ambi));
+        device->FOAOut.Ambi = device->Dry.Ambi;
         device->FOAOut.CoeffCount = device->Dry.CoeffCount;
     }
     else
@@ -708,7 +708,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
 
     if(bformatdec_getOrder(device->AmbiDecoder) < 2)
     {
-        memcpy(&device->FOAOut.Ambi, &device->Dry.Ambi, sizeof(device->FOAOut.Ambi));
+        device->FOAOut.Ambi = device->Dry.Ambi;
         device->FOAOut.CoeffCount = device->Dry.CoeffCount;
     }
     else
@@ -763,7 +763,7 @@ static void InitHrtfPanning(ALCdevice *device)
                   &device->Dry.NumChannels, AL_TRUE);
     device->Dry.CoeffCount = 4;
 
-    memcpy(&device->FOAOut.Ambi, &device->Dry.Ambi, sizeof(device->FOAOut.Ambi));
+    device->FOAOut.Ambi = device->Dry.Ambi;
     device->FOAOut.CoeffCount = device->Dry.CoeffCount;
 
     for(i = 0;i < device->Dry.NumChannels;i++)
@@ -788,7 +788,7 @@ static void InitUhjPanning(ALCdevice *device)
     device->Dry.CoeffCount = 0;
     device->Dry.NumChannels = count;
 
-    memcpy(&device->FOAOut.Ambi, &device->Dry.Ambi, sizeof(device->FOAOut.Ambi));
+    device->FOAOut.Ambi = device->Dry.Ambi;
     device->FOAOut.CoeffCount = device->Dry.CoeffCount;
 }
 

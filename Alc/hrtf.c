@@ -44,20 +44,6 @@
 #define MIN_AZ_COUNT                 (1)
 #define MAX_AZ_COUNT                 (128)
 
-struct Hrtf {
-    ALuint sampleRate;
-    ALuint irSize;
-    ALubyte evCount;
-
-    const ALubyte *azCount;
-    const ALushort *evOffset;
-    const ALshort *coeffs;
-    const ALubyte *delays;
-
-    const char *filename;
-    struct Hrtf *next;
-};
-
 static const ALchar magicMarker00[8] = "MinPHR00";
 static const ALchar magicMarker01[8] = "MinPHR01";
 
@@ -693,17 +679,6 @@ void FreeHrtfList(vector_HrtfEntry *list)
     VECTOR_FOR_EACH(HrtfEntry, *list, CLEAR_ENTRY);
     VECTOR_DEINIT(*list);
 #undef CLEAR_ENTRY
-}
-
-
-ALuint GetHrtfSampleRate(const struct Hrtf *Hrtf)
-{
-    return Hrtf->sampleRate;
-}
-
-ALuint GetHrtfIrSize(const struct Hrtf *Hrtf)
-{
-    return Hrtf->irSize;
 }
 
 

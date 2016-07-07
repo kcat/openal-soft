@@ -6,7 +6,20 @@
 
 #include "alstring.h"
 
-struct Hrtf;
+
+struct Hrtf {
+    ALuint sampleRate;
+    ALuint irSize;
+    ALubyte evCount;
+
+    const ALubyte *azCount;
+    const ALushort *evOffset;
+    const ALshort *coeffs;
+    const ALubyte *delays;
+
+    const char *filename;
+    struct Hrtf *next;
+};
 
 typedef struct HrtfEntry {
     al_string name;
@@ -26,9 +39,6 @@ void FreeHrtfs(void);
 
 vector_HrtfEntry EnumerateHrtf(const_al_string devname);
 void FreeHrtfList(vector_HrtfEntry *list);
-
-ALuint GetHrtfSampleRate(const struct Hrtf *Hrtf);
-ALuint GetHrtfIrSize(const struct Hrtf *Hrtf);
 
 void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays);
 

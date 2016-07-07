@@ -1906,9 +1906,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             {
                 device->FmtChans = DevFmtStereo;
                 if(hrtf_id >= 0 && (size_t)hrtf_id < VECTOR_SIZE(device->Hrtf_List))
-                    device->Frequency = GetHrtfSampleRate(VECTOR_ELEM(device->Hrtf_List, hrtf_id).hrtf);
+                    device->Frequency = VECTOR_ELEM(device->Hrtf_List, hrtf_id).hrtf->sampleRate;
                 else
-                    device->Frequency = GetHrtfSampleRate(VECTOR_ELEM(device->Hrtf_List, 0).hrtf);
+                    device->Frequency = VECTOR_ELEM(device->Hrtf_List, 0).hrtf->sampleRate;
                 device->Flags |= DEVICE_CHANNELS_REQUEST | DEVICE_FREQUENCY_REQUEST;
             }
             else
@@ -1937,7 +1937,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             for(i = 0;i < VECTOR_SIZE(device->Hrtf_List);i++)
             {
                 const struct Hrtf *hrtf = VECTOR_ELEM(device->Hrtf_List, i).hrtf;
-                if(GetHrtfSampleRate(hrtf) == device->Frequency)
+                if(hrtf->sampleRate == device->Frequency)
                     break;
             }
         }

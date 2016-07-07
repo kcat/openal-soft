@@ -31,6 +31,7 @@
 #include "hrtf.h"
 
 #include "compat.h"
+#include "almalloc.h"
 
 
 /* Current data set limits defined by the makehrtf utility. */
@@ -310,7 +311,7 @@ static struct Hrtf *LoadHrtf00(FILE *f, const_al_string filename)
         total += sizeof(delays[0])*irCount;
         total += al_string_length(filename)+1;
 
-        Hrtf = malloc(total);
+        Hrtf = al_calloc(16, total);
         if(Hrtf == NULL)
         {
             ERR("Out of memory.\n");
@@ -462,7 +463,7 @@ static struct Hrtf *LoadHrtf01(FILE *f, const_al_string filename)
         total += sizeof(delays[0])*irCount;
         total += al_string_length(filename)+1;
 
-        Hrtf = malloc(total);
+        Hrtf = al_calloc(16, total);
         if(Hrtf == NULL)
         {
             ERR("Out of memory.\n");
@@ -690,7 +691,7 @@ void FreeHrtfs(void)
     while(Hrtf != NULL)
     {
         struct Hrtf *next = Hrtf->next;
-        free(Hrtf);
+        al_free(Hrtf);
         Hrtf = next;
     }
 }

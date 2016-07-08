@@ -167,6 +167,11 @@ typedef struct ALsource {
     ALenum state;
     ALenum new_state;
 
+    /** Source Buffer Queue info. */
+    RWLock queue_lock;
+    ATOMIC(ALbufferlistitem*) queue;
+    ATOMIC(ALbufferlistitem*) current_buffer;
+
     /**
      * Source offset in samples, relative to the currently playing buffer, NOT
      * the whole queue, and the fractional (fixed-point) offset to the next
@@ -174,11 +179,6 @@ typedef struct ALsource {
      */
     ATOMIC(ALuint) position;
     ATOMIC(ALuint) position_fraction;
-
-    /** Source Buffer Queue info. */
-    ATOMIC(ALbufferlistitem*) queue;
-    ATOMIC(ALbufferlistitem*) current_buffer;
-    RWLock queue_lock;
 
     /** Current buffer sample info. */
     ALuint NumChannels;

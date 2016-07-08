@@ -2729,14 +2729,17 @@ static void InitSourceParams(ALsource *Source)
         Source->Send[i].LFReference = HIGHPASSFREQREF;
     }
 
+    Source->Offset = 0.0;
+    Source->OffsetType = AL_NONE;
+    Source->SourceType = AL_UNDETERMINED;
     Source->state = AL_INITIAL;
     Source->new_state = AL_NONE;
-    Source->SourceType = AL_UNDETERMINED;
-    Source->OffsetType = AL_NONE;
-    Source->Offset = 0.0;
 
     ATOMIC_INIT(&Source->queue, NULL);
     ATOMIC_INIT(&Source->current_buffer, NULL);
+
+    ATOMIC_INIT(&Source->position, 0);
+    ATOMIC_INIT(&Source->position_fraction, 0);
 
     ATOMIC_INIT(&Source->Update, NULL);
     ATOMIC_INIT(&Source->FreeList, NULL);
@@ -2939,9 +2942,9 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         if(Source->state != AL_PAUSED)
         {
             Source->state = AL_PLAYING;
+            ATOMIC_STORE(&Source->current_buffer, BufferList, almemory_order_relaxed);
             ATOMIC_STORE(&Source->position, 0, almemory_order_relaxed);
-            ATOMIC_STORE(&Source->position_fraction, 0, almemory_order_relaxed);
-            ATOMIC_STORE(&Source->current_buffer, BufferList);
+            ATOMIC_STORE(&Source->position_fraction, 0);
             discontinuity = AL_TRUE;
         }
         else
@@ -3033,9 +3036,10 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         if(Source->state != AL_INITIAL)
         {
             Source->state = AL_INITIAL;
+            ATOMIC_STORE(&Source->current_buffer, ATOMIC_LOAD(&Source->queue),
+                         almemory_order_relaxed);
             ATOMIC_STORE(&Source->position, 0, almemory_order_relaxed);
-            ATOMIC_STORE(&Source->position_fraction, 0, almemory_order_relaxed);
-            ATOMIC_STORE(&Source->current_buffer, ATOMIC_LOAD(&Source->queue));
+            ATOMIC_STORE(&Source->position_fraction, 0);
         }
         Source->OffsetType = AL_NONE;
         Source->Offset = 0.0;
@@ -3072,13 +3076,13 @@ ALint64 GetSourceSampleOffset(ALsource *Source, ALCdevice *device, ALuint64 *clo
         while(((refcount=ReadRef(&device->MixCount))&1))
             althrd_yield();
         *clocktime = GetDeviceClockTime(device);
-        /* NOTE: This is the offset into the *current* buffer, so add the length of
-         * any played buffers */
+
+        BufferList = ATOMIC_LOAD(&Source->queue, almemory_order_relaxed);
+        Current = ATOMIC_LOAD(&Source->current_buffer, almemory_order_relaxed);
+
         readPos  = (ALuint64)ATOMIC_LOAD(&Source->position, almemory_order_relaxed) << 32;
         readPos |= (ALuint64)ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed) <<
                    (32-FRACTIONBITS);
-        BufferList = ATOMIC_LOAD(&Source->queue, almemory_order_relaxed);
-        Current = ATOMIC_LOAD(&Source->current_buffer, almemory_order_relaxed);
     } while(refcount != ReadRef(&device->MixCount));
     while(BufferList && BufferList != Current)
     {
@@ -3120,12 +3124,12 @@ static ALdouble GetSourceSecOffset(ALsource *Source, ALCdevice *device, ALuint64
         while(((refcount=ReadRef(&device->MixCount))&1))
             althrd_yield();
         *clocktime = GetDeviceClockTime(device);
-        /* NOTE: This is the offset into the *current* buffer, so add the length of
-         * any played buffers */
-        readPos  = (ALuint64)ATOMIC_LOAD(&Source->position, almemory_order_relaxed) << FRACTIONBITS;
-        readPos |= (ALuint64)ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed);
+
         BufferList = ATOMIC_LOAD(&Source->queue, almemory_order_relaxed);
         Current = ATOMIC_LOAD(&Source->current_buffer, almemory_order_relaxed);
+
+        readPos  = (ALuint64)ATOMIC_LOAD(&Source->position, almemory_order_relaxed)<<FRACTIONBITS;
+        readPos |= (ALuint64)ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed);
     } while(refcount != ReadRef(&device->MixCount));
     while(BufferList && BufferList != Current)
     {
@@ -3177,12 +3181,11 @@ static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCdevice *device
     do {
         while(((refcount=ReadRef(&device->MixCount))&1))
             althrd_yield();
-        /* NOTE: This is the offset into the *current* buffer, so add the length of
-         * any played buffers */
-        readPos = ATOMIC_LOAD(&Source->position, almemory_order_relaxed);
-        readPosFrac = ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed);
         BufferList = ATOMIC_LOAD(&Source->queue, almemory_order_relaxed);
         Current = ATOMIC_LOAD(&Source->current_buffer, almemory_order_relaxed);
+
+        readPos = ATOMIC_LOAD(&Source->position, almemory_order_relaxed);
+        readPosFrac = ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed);
     } while(refcount != ReadRef(&device->MixCount));
 
     while(BufferList != NULL)

@@ -413,8 +413,8 @@ static void NTAPI altss_callback(void* UNUSED(handle), DWORD reason, void* UNUSE
     LockUIntMapRead(&TlsDestructors);
     for(i = 0;i < TlsDestructors.size;i++)
     {
-        void *ptr = altss_get(TlsDestructors.array[i].key);
-        altss_dtor_t callback = (altss_dtor_t)TlsDestructors.array[i].value;
+        void *ptr = altss_get(TlsDestructors.keys[i]);
+        altss_dtor_t callback = (altss_dtor_t)TlsDestructors.values[i];
         if(ptr && callback)
             callback(ptr);
     }

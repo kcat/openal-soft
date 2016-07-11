@@ -143,17 +143,26 @@ void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat spread, ALfloat coeffs[MA
          * angle spread. See:
          * http://www.ppsloan.org/publications/StupidSH36.pdf - Appendix A3
          *
+         * When adjusted for N3D normalization instead of SN3D, these
+         * calculations are:
+         *
+         * ZH0 = -sqrt(pi) * (-1+ca);
+         * ZH1 =  0.5*sqrt(pi) * sa*sa;
+         * ZH2 = -0.5*sqrt(pi) * ca*(-1+ca)*(ca+1);
+         * ZH3 = -0.125*sqrt(pi) * (-1+ca)*(ca+1)*(5*ca*ca - 1);
+         * ZH4 = -0.125*sqrt(pi) * ca*(-1+ca)*(ca+1)*(7*ca*ca - 3);
+         * ZH5 = -0.0625*sqrt(pi) * (-1+ca)*(ca+1)*(21*ca*ca*ca*ca - 14*ca*ca + 1);
+         *
          * The gain of the source is compensated for size, so that the
-         * loundness doesn't depend on the spread.
+         * loundness doesn't depend on the spread. That is, the factors are
+         * scaled so that ZH0 remains 1 regardless of the spread. Thus:
          *
-         * ZH0 = (-sqrt_pi * (-1.f + ca));
-         * ZH1 = ( 0.5f*sqrtf(3.f)*sqrt_pi * sa*sa);
-         * ZH2 = (-0.5f*sqrtf(5.f)*sqrt_pi * ca*(-1.f+ca)*(ca+1.f));
-         * ZH3 = (-0.125f*sqrtf(7.f)*sqrt_pi * (-1.f+ca)*(ca+1.f)*(5.f*ca*ca-1.f));
-         * solidangle = 2.f*F_PI*(1.f-ca)
-         * size_normalisation_coef = 1.f/ZH0;
-         *
-         * This is then adjusted for N3D normalization over SN3D.
+         * ZH0 = 1.0f;
+         * ZH1 = 0.5f * (ca+1.0f);
+         * ZH2 = 0.5f * (ca+1.0f)*ca;
+         * ZH3 = 0.125f * (ca+1.0f)*(5.0f*ca*ca - 1.0f);
+         * ZH4 = 0.125f * (ca+1.0f)*(7.0f*ca*ca - 3.0f)*ca;
+         * ZH5 = 0.0625f * (ca+1.0f)*(21.0f*ca*ca*ca*ca - 14.0f*ca*ca + 1.0f);
          */
         ALfloat ca = cosf(spread * 0.5f);
 

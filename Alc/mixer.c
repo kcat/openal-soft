@@ -569,7 +569,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
 
                     if(!Counter)
                     {
-                        for(j = 0;j < parms->OutChannels;j++)
+                        for(j = 0;j < voice->DirectOut.Channels;j++)
                         {
                             gains[j].Target = targets[j];
                             gains[j].Current = gains[j].Target;
@@ -578,7 +578,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     }
                     else
                     {
-                        for(j = 0;j < parms->OutChannels;j++)
+                        for(j = 0;j < voice->DirectOut.Channels;j++)
                         {
                             ALfloat diff;
                             gains[j].Target = targets[j];
@@ -594,10 +594,10 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                         }
                     }
 
-                    MixSamples(samples, parms->OutChannels, parms->OutBuffer, gains,
-                               Counter, OutPos, DstBufferSize);
+                    MixSamples(samples, voice->DirectOut.Channels, voice->DirectOut.Buffer,
+                               gains, Counter, OutPos, DstBufferSize);
 
-                    for(j = 0;j < parms->OutChannels;j++)
+                    for(j = 0;j < voice->DirectOut.Channels;j++)
                         currents[j] = gains[j].Current;
                 }
                 else
@@ -639,9 +639,9 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     ridx = GetChannelIdxByName(Device->RealOut, FrontRight);
                     assert(lidx != -1 && ridx != -1);
 
-                    MixHrtfSamples(parms->OutBuffer, lidx, ridx, samples, Counter, voice->Offset,
-                                   OutPos, IrSize, &hrtfparams, &parms->Hrtf[chan].State,
-                                   DstBufferSize);
+                    MixHrtfSamples(voice->DirectOut.Buffer, lidx, ridx, samples, Counter,
+                                   voice->Offset, OutPos, IrSize, &hrtfparams,
+                                   &parms->Hrtf[chan].State, DstBufferSize);
                 }
             }
 
@@ -653,7 +653,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                 MixGains gains[MAX_OUTPUT_CHANNELS];
                 const ALfloat *samples;
 
-                if(!parms->OutBuffer)
+                if(!voice->SendOut[j].Buffer)
                     continue;
 
                 samples = DoFilters(
@@ -664,7 +664,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
 
                 if(!Counter)
                 {
-                    for(j = 0;j < parms->OutChannels;j++)
+                    for(j = 0;j < voice->SendOut[j].Channels;j++)
                     {
                         gains[j].Target = targets[j];
                         gains[j].Current = gains[j].Target;
@@ -673,7 +673,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                 }
                 else
                 {
-                    for(j = 0;j < parms->OutChannels;j++)
+                    for(j = 0;j < voice->SendOut[j].Channels;j++)
                     {
                         ALfloat diff;
                         gains[j].Target = targets[j];
@@ -689,10 +689,10 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     }
                 }
 
-                MixSamples(samples, parms->OutChannels, parms->OutBuffer, gains,
-                           Counter, OutPos, DstBufferSize);
+                MixSamples(samples, voice->SendOut[j].Channels, voice->SendOut[j].Buffer,
+                           gains, Counter, OutPos, DstBufferSize);
 
-                for(j = 0;j < parms->OutChannels;j++)
+                for(j = 0;j < voice->SendOut[j].Channels;j++)
                     currents[j] = gains[j].Current;
             }
         }

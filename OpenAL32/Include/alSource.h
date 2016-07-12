@@ -41,6 +41,16 @@ typedef struct ALvoice {
 
     BsincState SincState;
 
+    struct {
+        ALfloat (*Buffer)[BUFFERSIZE];
+        ALuint Channels;
+    } DirectOut;
+
+    struct {
+        ALfloat (*Buffer)[BUFFERSIZE];
+        ALuint Channels;
+    } SendOut[MAX_SENDS];
+
     DirectParams Direct;
     SendParams Send[MAX_SENDS];
 } ALvoice;

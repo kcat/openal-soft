@@ -125,9 +125,6 @@ typedef struct MixHrtfParams {
 } MixHrtfParams;
 
 typedef struct DirectParams {
-    ALfloat (*OutBuffer)[BUFFERSIZE];
-    ALuint OutChannels;
-
     struct {
         enum ActiveFilters ActiveType;
         ALfilterState LowPass;
@@ -147,9 +144,6 @@ typedef struct DirectParams {
 } DirectParams;
 
 typedef struct SendParams {
-    ALfloat (*OutBuffer)[BUFFERSIZE];
-    ALuint OutChannels;
-
     struct {
         enum ActiveFilters ActiveType;
         ALfilterState LowPass;

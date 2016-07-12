@@ -418,8 +418,8 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
     StereoMap[0].angle = -ATOMIC_LOAD(&props->StereoPan[0], almemory_order_relaxed);
     StereoMap[1].angle = -ATOMIC_LOAD(&props->StereoPan[1], almemory_order_relaxed);
 
-    voice->Direct.OutBuffer = Device->Dry.Buffer;
-    voice->Direct.OutChannels = Device->Dry.NumChannels;
+    voice->DirectOut.Buffer = Device->Dry.Buffer;
+    voice->DirectOut.Channels = Device->Dry.NumChannels;
     for(i = 0;i < NumSends;i++)
     {
         SendSlots[i] = ATOMIC_LOAD(&props->Send[i].Slot, almemory_order_relaxed);
@@ -428,13 +428,13 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
         if(!SendSlots[i] || SendSlots[i]->Params.EffectType == AL_EFFECT_NULL)
         {
             SendSlots[i] = NULL;
-            voice->Send[i].OutBuffer = NULL;
-            voice->Send[i].OutChannels = 0;
+            voice->SendOut[i].Buffer = NULL;
+            voice->SendOut[i].Channels = 0;
         }
         else
         {
-            voice->Send[i].OutBuffer = SendSlots[i]->WetBuffer;
-            voice->Send[i].OutChannels = SendSlots[i]->NumChannels;
+            voice->SendOut[i].Buffer = SendSlots[i]->WetBuffer;
+            voice->SendOut[i].Channels = SendSlots[i]->NumChannels;
         }
     }
     voice->Looping = ATOMIC_LOAD(&props->Looping, almemory_order_relaxed);
@@ -544,8 +544,8 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
                     0.0f, -V[0]*scale,  V[1]*scale, -V[2]*scale
         );
 
-        voice->Direct.OutBuffer = Device->FOAOut.Buffer;
-        voice->Direct.OutChannels = Device->FOAOut.NumChannels;
+        voice->DirectOut.Buffer = Device->FOAOut.Buffer;
+        voice->DirectOut.Channels = Device->FOAOut.NumChannels;
         for(c = 0;c < num_channels;c++)
             ComputeFirstOrderGains(Device->FOAOut, matrix.m[c], DryGain,
                                    voice->Direct.Gains[c].Target);
@@ -580,8 +580,8 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
         if(DirectChannels)
         {
             /* Skip the virtual channels and write inputs to the real output. */
-            voice->Direct.OutBuffer = Device->RealOut.Buffer;
-            voice->Direct.OutChannels = Device->RealOut.NumChannels;
+            voice->DirectOut.Buffer = Device->RealOut.Buffer;
+            voice->DirectOut.Channels = Device->RealOut.NumChannels;
             for(c = 0;c < num_channels;c++)
             {
                 int idx;
@@ -620,8 +620,8 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
             /* Full HRTF rendering. Skip the virtual channels and render each
              * input channel to the real outputs.
              */
-            voice->Direct.OutBuffer = Device->RealOut.Buffer;
-            voice->Direct.OutChannels = Device->RealOut.NumChannels;
+            voice->DirectOut.Buffer = Device->RealOut.Buffer;
+            voice->DirectOut.Channels = Device->RealOut.NumChannels;
             for(c = 0;c < num_channels;c++)
             {
                 if(chans[c].channel == LFE)
@@ -864,8 +864,8 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
     WetGainHFAuto   = ATOMIC_LOAD(&props->WetGainHFAuto, almemory_order_relaxed);
     RoomRolloffBase = ATOMIC_LOAD(&props->RoomRolloffFactor, almemory_order_relaxed);
 
-    voice->Direct.OutBuffer = Device->Dry.Buffer;
-    voice->Direct.OutChannels = Device->Dry.NumChannels;
+    voice->DirectOut.Buffer = Device->Dry.Buffer;
+    voice->DirectOut.Channels = Device->Dry.NumChannels;
     for(i = 0;i < NumSends;i++)
     {
         SendSlots[i] = ATOMIC_LOAD(&props->Send[i].Slot, almemory_order_relaxed);
@@ -897,13 +897,13 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
 
         if(!SendSlots[i])
         {
-            voice->Send[i].OutBuffer = NULL;
-            voice->Send[i].OutChannels = 0;
+            voice->SendOut[i].Buffer = NULL;
+            voice->SendOut[i].Channels = 0;
         }
         else
         {
-            voice->Send[i].OutBuffer = SendSlots[i]->WetBuffer;
-            voice->Send[i].OutChannels = SendSlots[i]->NumChannels;
+            voice->SendOut[i].Buffer = SendSlots[i]->WetBuffer;
+            voice->SendOut[i].Channels = SendSlots[i]->NumChannels;
         }
     }
     voice->Looping = ATOMIC_LOAD(&props->Looping, almemory_order_relaxed);
@@ -1138,8 +1138,8 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
         ALfloat coeffs[MAX_AMBI_COEFFS];
         ALfloat spread = 0.0f;
 
-        voice->Direct.OutBuffer = Device->RealOut.Buffer;
-        voice->Direct.OutChannels = Device->RealOut.NumChannels;
+        voice->DirectOut.Buffer = Device->RealOut.Buffer;
+        voice->DirectOut.Channels = Device->RealOut.NumChannels;
 
         if(Distance > FLT_EPSILON)
         {

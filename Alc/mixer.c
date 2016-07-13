@@ -553,18 +553,17 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                 Device->ResampledData, DstBufferSize
             );
             {
-                DirectParams *parms = &voice->Direct;
+                DirectParams *parms = &voice->Chan[chan].Direct;
                 const ALfloat *samples;
 
                 samples = DoFilters(
-                    &parms->Filters[chan].LowPass, &parms->Filters[chan].HighPass,
-                    Device->FilteredData, ResampledData, DstBufferSize,
-                    parms->Filters[chan].ActiveType
+                    &parms->LowPass, &parms->HighPass, Device->FilteredData,
+                    ResampledData, DstBufferSize, parms->FilterType
                 );
                 if(!voice->IsHrtf)
                 {
-                    ALfloat *restrict currents = parms->Gains[chan].Current;
-                    const ALfloat *targets = parms->Gains[chan].Target;
+                    ALfloat *restrict currents = parms->Gains.Current;
+                    const ALfloat *targets = parms->Gains.Target;
                     MixGains gains[MAX_OUTPUT_CHANNELS];
 
                     if(!Counter)
@@ -607,7 +606,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
 
                     if(!Counter)
                     {
-                        parms->Hrtf[chan].Current = parms->Hrtf[chan].Target;
+                        parms->Hrtf.Current = parms->Hrtf.Target;
                         for(j = 0;j < HRIR_LENGTH;j++)
                         {
                             hrtfparams.Steps.Coeffs[j][0] = 0.0f;
@@ -622,18 +621,18 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                         ALint delaydiff;
                         for(j = 0;j < IrSize;j++)
                         {
-                            coeffdiff = parms->Hrtf[chan].Target.Coeffs[j][0] - parms->Hrtf[chan].Current.Coeffs[j][0];
+                            coeffdiff = parms->Hrtf.Target.Coeffs[j][0] - parms->Hrtf.Current.Coeffs[j][0];
                             hrtfparams.Steps.Coeffs[j][0] = coeffdiff * Delta;
-                            coeffdiff = parms->Hrtf[chan].Target.Coeffs[j][1] - parms->Hrtf[chan].Current.Coeffs[j][1];
+                            coeffdiff = parms->Hrtf.Target.Coeffs[j][1] - parms->Hrtf.Current.Coeffs[j][1];
                             hrtfparams.Steps.Coeffs[j][1] = coeffdiff * Delta;
                         }
-                        delaydiff = (ALint)(parms->Hrtf[chan].Target.Delay[0] - parms->Hrtf[chan].Current.Delay[0]);
+                        delaydiff = (ALint)(parms->Hrtf.Target.Delay[0] - parms->Hrtf.Current.Delay[0]);
                         hrtfparams.Steps.Delay[0] = fastf2i((ALfloat)delaydiff * Delta);
-                        delaydiff = (ALint)(parms->Hrtf[chan].Target.Delay[1] - parms->Hrtf[chan].Current.Delay[1]);
+                        delaydiff = (ALint)(parms->Hrtf.Target.Delay[1] - parms->Hrtf.Current.Delay[1]);
                         hrtfparams.Steps.Delay[1] = fastf2i((ALfloat)delaydiff * Delta);
                     }
-                    hrtfparams.Target = &parms->Hrtf[chan].Target;
-                    hrtfparams.Current = &parms->Hrtf[chan].Current;
+                    hrtfparams.Target = &parms->Hrtf.Target;
+                    hrtfparams.Current = &parms->Hrtf.Current;
 
                     lidx = GetChannelIdxByName(Device->RealOut, FrontLeft);
                     ridx = GetChannelIdxByName(Device->RealOut, FrontRight);
@@ -641,15 +640,15 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
 
                     MixHrtfSamples(voice->DirectOut.Buffer, lidx, ridx, samples, Counter,
                                    voice->Offset, OutPos, IrSize, &hrtfparams,
-                                   &parms->Hrtf[chan].State, DstBufferSize);
+                                   &parms->Hrtf.State, DstBufferSize);
                 }
             }
 
             for(j = 0;j < Device->NumAuxSends;j++)
             {
-                SendParams *parms = &voice->Send[j];
-                ALfloat *restrict currents = parms->Gains[chan].Current;
-                const ALfloat *targets = parms->Gains[chan].Target;
+                SendParams *parms = &voice->Chan[chan].Send[j];
+                ALfloat *restrict currents = parms->Gains.Current;
+                const ALfloat *targets = parms->Gains.Target;
                 MixGains gains[MAX_OUTPUT_CHANNELS];
                 const ALfloat *samples;
 
@@ -657,9 +656,8 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     continue;
 
                 samples = DoFilters(
-                    &parms->Filters[chan].LowPass, &parms->Filters[chan].HighPass,
-                    Device->FilteredData, ResampledData, DstBufferSize,
-                    parms->Filters[chan].ActiveType
+                    &parms->LowPass, &parms->HighPass, Device->FilteredData,
+                    ResampledData, DstBufferSize, parms->FilterType
                 );
 
                 if(!Counter)

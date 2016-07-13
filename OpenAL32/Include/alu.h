@@ -125,35 +125,31 @@ typedef struct MixHrtfParams {
 } MixHrtfParams;
 
 typedef struct DirectParams {
-    struct {
-        enum ActiveFilters ActiveType;
-        ALfilterState LowPass;
-        ALfilterState HighPass;
-    } Filters[MAX_INPUT_CHANNELS];
+    enum ActiveFilters FilterType;
+    ALfilterState LowPass;
+    ALfilterState HighPass;
 
     struct {
         HrtfParams Current;
         HrtfParams Target;
         HrtfState State;
-    } Hrtf[MAX_INPUT_CHANNELS];
+    } Hrtf;
 
     struct {
         ALfloat Current[MAX_OUTPUT_CHANNELS];
         ALfloat Target[MAX_OUTPUT_CHANNELS];
-    } Gains[MAX_INPUT_CHANNELS];
+    } Gains;
 } DirectParams;
 
 typedef struct SendParams {
-    struct {
-        enum ActiveFilters ActiveType;
-        ALfilterState LowPass;
-        ALfilterState HighPass;
-    } Filters[MAX_INPUT_CHANNELS];
+    enum ActiveFilters FilterType;
+    ALfilterState LowPass;
+    ALfilterState HighPass;
 
     struct {
         ALfloat Current[MAX_OUTPUT_CHANNELS];
         ALfloat Target[MAX_OUTPUT_CHANNELS];
-    } Gains[MAX_INPUT_CHANNELS];
+    } Gains;
 } SendParams;
 
 

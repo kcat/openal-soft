@@ -51,8 +51,10 @@ typedef struct ALvoice {
         ALuint Channels;
     } SendOut[MAX_SENDS];
 
-    DirectParams Direct;
-    SendParams Send[MAX_SENDS];
+    struct {
+        DirectParams Direct;
+        SendParams Send[MAX_SENDS];
+    } Chan[MAX_INPUT_CHANNELS];
 } ALvoice;
 
 

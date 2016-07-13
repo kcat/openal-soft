@@ -1272,7 +1272,7 @@ IF(ALSOFT_AMBDEC_PRESETS)
                   presets/presets.txt
             DESTINATION ${SHARE_INSTALL_DIR}/openal/presets
     )
-    MESSAGE(STATUS "Installing HRTF definitions")
+    MESSAGE(STATUS "Installing AmbDec presets")
     MESSAGE(STATUS "")
 ENDIF()
 

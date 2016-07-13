@@ -1309,23 +1309,23 @@ IF(ALSOFT_UTILS)
 ENDIF()
 
 IF(ALSOFT_TESTS)
-        ADD_LIBRARY(test-common STATIC examples/common/alhelpers.c)
-        SET_PROPERTY(TARGET test-common APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
+    ADD_LIBRARY(test-common STATIC examples/common/alhelpers.c)
+    SET_PROPERTY(TARGET test-common APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
 
-        ADD_EXECUTABLE(altonegen examples/altonegen.c)
-        TARGET_LINK_LIBRARIES(altonegen test-common ${LIBNAME})
-        SET_PROPERTY(TARGET altonegen APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
+    ADD_EXECUTABLE(altonegen examples/altonegen.c)
+    TARGET_LINK_LIBRARIES(altonegen test-common ${LIBNAME})
+    SET_PROPERTY(TARGET altonegen APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
 
-        IF(ALSOFT_INSTALL)
-            INSTALL(TARGETS altonegen
-                    RUNTIME DESTINATION bin
-                    LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-                    ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
-            )
-        ENDIF()
+    IF(ALSOFT_INSTALL)
+        INSTALL(TARGETS altonegen
+                RUNTIME DESTINATION bin
+                LIBRARY DESTINATION "lib${LIB_SUFFIX}"
+                ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+        )
+    ENDIF()
 
-        MESSAGE(STATUS "Building test programs")
-        MESSAGE(STATUS "")
+    MESSAGE(STATUS "Building test programs")
+    MESSAGE(STATUS "")
 ENDIF()
 
 IF(ALSOFT_EXAMPLES)

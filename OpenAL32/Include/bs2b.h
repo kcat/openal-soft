@@ -63,10 +63,10 @@ struct bs2b {
      * [0] - first channel, [1] - second channel
      */
     struct t_last_sample {
-        float asis[2];
-        float lo[2];
-        float hi[2];
-    } last_sample;
+        float asis;
+        float lo;
+        float hi;
+    } last_sample[2];
 };
 
 /* Clear buffers and set new coefficients with new crossfeed level and sample
@@ -85,38 +85,7 @@ int bs2b_get_srate(struct bs2b *bs2b);
 /* Clear buffer */
 void bs2b_clear(struct bs2b *bs2b);
 
-/* Crossfeeds one stereo sample that are pointed by sample.
- * [0] - first channel, [1] - second channel.
- * Returns crossfided sample by sample pointer.
- */
-inline void bs2b_cross_feed(struct bs2b *bs2b, float *restrict sample)
-{
-/* Single pole IIR filter.
- * O[n] = a0*I[n] + a1*I[n-1] + b1*O[n-1]
- */
-
-/* Lowpass filter */
-#define lo_filter(in, out_1) (bs2b->a0_lo*(in) + bs2b->b1_lo*(out_1))
-
-/* Highboost filter */
-#define hi_filter(in, in_1, out_1) (bs2b->a0_hi*(in) + bs2b->a1_hi*(in_1) + bs2b->b1_hi*(out_1))
-
-    /* Lowpass filter */
-    bs2b->last_sample.lo[0] = lo_filter(sample[0], bs2b->last_sample.lo[0]);
-    bs2b->last_sample.lo[1] = lo_filter(sample[1], bs2b->last_sample.lo[1]);
-
-    /* Highboost filter */
-    bs2b->last_sample.hi[0] = hi_filter(sample[0], bs2b->last_sample.asis[0], bs2b->last_sample.hi[0]);
-    bs2b->last_sample.hi[1] = hi_filter(sample[1], bs2b->last_sample.asis[1], bs2b->last_sample.hi[1]);
-    bs2b->last_sample.asis[0] = sample[0];
-    bs2b->last_sample.asis[1] = sample[1];
-
-    /* Crossfeed */
-    sample[0] = bs2b->last_sample.hi[0] + bs2b->last_sample.lo[1];
-    sample[1] = bs2b->last_sample.hi[1] + bs2b->last_sample.lo[0];
-#undef hi_filter
-#undef lo_filter
-} /* bs2b_cross_feed */
+void bs2b_cross_feed(struct bs2b *bs2b, float *restrict Left, float *restrict Right, unsigned int SamplesToDo);
 
 #ifdef __cplusplus
 }    /* extern "C" */

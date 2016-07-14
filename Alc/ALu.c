@@ -1534,33 +1534,28 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 device->Dry.Buffer, SamplesToDo
             );
         }
-        else
+        else if(device->Uhj_Encoder)
         {
-            if(device->Uhj_Encoder)
+            int lidx = GetChannelIdxByName(device->RealOut, FrontLeft);
+            int ridx = GetChannelIdxByName(device->RealOut, FrontRight);
+            if(lidx != -1 && ridx != -1)
             {
-                int lidx = GetChannelIdxByName(device->RealOut, FrontLeft);
-                int ridx = GetChannelIdxByName(device->RealOut, FrontRight);
-                if(lidx != -1 && ridx != -1)
-                {
-                    /* Encode to stereo-compatible 2-channel UHJ output. */
-                    EncodeUhj2(device->Uhj_Encoder,
-                        device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
-                        device->Dry.Buffer, SamplesToDo
-                    );
-                }
+                /* Encode to stereo-compatible 2-channel UHJ output. */
+                EncodeUhj2(device->Uhj_Encoder,
+                    device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
+                    device->Dry.Buffer, SamplesToDo
+                );
             }
-            if(device->Bs2b)
+        }
+        else if(device->Bs2b)
+        {
+            int lidx = GetChannelIdxByName(device->RealOut, FrontLeft);
+            int ridx = GetChannelIdxByName(device->RealOut, FrontRight);
+            if(lidx != -1 && ridx != -1)
             {
                 /* Apply binaural/crossfeed filter */
-                for(i = 0;i < SamplesToDo;i++)
-                {
-                    float samples[2];
-                    samples[0] = device->RealOut.Buffer[0][i];
-                    samples[1] = device->RealOut.Buffer[1][i];
-                    bs2b_cross_feed(device->Bs2b, samples);
-                    device->RealOut.Buffer[0][i] = samples[0];
-                    device->RealOut.Buffer[1][i] = samples[1];
-                }
+                bs2b_cross_feed(device->Bs2b, device->RealOut.Buffer[lidx],
+                                device->RealOut.Buffer[ridx], SamplesToDo);
             }
         }
 

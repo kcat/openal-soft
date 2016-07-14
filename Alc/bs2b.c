@@ -129,4 +129,59 @@ void bs2b_clear(struct bs2b *bs2b)
     memset(&bs2b->last_sample, 0, sizeof(bs2b->last_sample));
 } /* bs2b_clear */
 
-extern inline void bs2b_cross_feed(struct bs2b *bs2b, float *restrict samples);
+void bs2b_cross_feed(struct bs2b *bs2b, float *restrict Left, float *restrict Right, unsigned int SamplesToDo)
+{
+    float lsamples[128][2];
+    float rsamples[128][2];
+    unsigned int base;
+
+    for(base = 0;base < SamplesToDo;)
+    {
+        unsigned int todo = minu(128, SamplesToDo-base);
+        unsigned int i;
+
+        /* Process left input */
+        lsamples[0][0] = bs2b->a0_lo*Left[0] +
+                         bs2b->b1_lo*bs2b->last_sample[0].lo;
+        lsamples[0][1] = bs2b->a0_hi*Left[0] +
+                         bs2b->a1_hi*bs2b->last_sample[0].asis +
+                         bs2b->b1_hi*bs2b->last_sample[0].hi;
+        for(i = 1;i < todo;i++)
+        {
+            lsamples[i][0] = bs2b->a0_lo*Left[i] +
+                             bs2b->b1_lo*lsamples[i-1][0];
+            lsamples[i][1] = bs2b->a0_hi*Left[i] +
+                             bs2b->a1_hi*Left[i-1] +
+                             bs2b->b1_hi*lsamples[i-1][1];
+        }
+        bs2b->last_sample[0].asis = Left[i-1];
+        bs2b->last_sample[0].lo = lsamples[i-1][0];
+        bs2b->last_sample[0].hi = lsamples[i-1][1];
+
+        /* Process right input */
+        rsamples[0][0] = bs2b->a0_lo*Right[0] +
+                         bs2b->b1_lo*bs2b->last_sample[1].lo;
+        rsamples[0][1] = bs2b->a0_hi*Right[0] +
+                         bs2b->a1_hi*bs2b->last_sample[1].asis +
+                         bs2b->b1_hi*bs2b->last_sample[1].hi;
+        for(i = 1;i < todo;i++)
+        {
+            rsamples[i][0] = bs2b->a0_lo*Right[i] +
+                             bs2b->b1_lo*rsamples[i-1][0];
+            rsamples[i][1] = bs2b->a0_hi*Right[i] +
+                             bs2b->a1_hi*Right[i-1] +
+                             bs2b->b1_hi*rsamples[i-1][1];
+        }
+        bs2b->last_sample[1].asis = Right[i-1];
+        bs2b->last_sample[1].lo = rsamples[i-1][0];
+        bs2b->last_sample[1].hi = rsamples[i-1][1];
+
+        /* Crossfeed */
+        for(i = 0;i < todo;i++)
+            *(Left++) = lsamples[i][1] + rsamples[i][0];
+        for(i = 0;i < todo;i++)
+            *(Right++) = rsamples[i][1] + lsamples[i][0];
+
+        base += todo;
+    }
+} /* bs2b_cross_feed */

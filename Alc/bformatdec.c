@@ -272,7 +272,7 @@ int bformatdec_getOrder(const struct BFormatDec *dec)
 
 void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount, ALuint srate, const ALuint chanmap[MAX_OUTPUT_CHANNELS], int flags)
 {
-    static const ALuint map2DTo3D[7] = {
+    static const ALuint map2DTo3D[MAX_AMBI2D_COEFFS] = {
         0,  1, 3,  4, 8,  9, 15
     };
     const ALfloat *coeff_scale = UnitScale;
@@ -365,7 +365,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
 
             if(!dec->Periphonic)
             {
-                for(j = 0,k = 0;j < 7;j++)
+                for(j = 0,k = 0;j < MAX_AMBI2D_COEFFS;j++)
                 {
                     ALuint l = map2DTo3D[j];
                     if(j == 0) gain = conf->HFOrderGain[0];
@@ -409,7 +409,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
 
             if(!dec->Periphonic)
             {
-                for(j = 0,k = 0;j < 7;j++)
+                for(j = 0,k = 0;j < MAX_AMBI2D_COEFFS;j++)
                 {
                     ALuint l = map2DTo3D[j];
                     if(j == 0) gain = conf->HFOrderGain[0] * ratio;
@@ -421,7 +421,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
                                                                  coeff_scale[l] * gain *
                                                                  distgain[i];
                 }
-                for(j = 0,k = 0;j < 7;j++)
+                for(j = 0,k = 0;j < MAX_AMBI2D_COEFFS;j++)
                 {
                     ALuint l = map2DTo3D[j];
                     if(j == 0) gain = conf->LFOrderGain[0] / ratio;

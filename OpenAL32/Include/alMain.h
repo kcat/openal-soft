@@ -485,7 +485,8 @@ enum RenderMode {
 
 /* The maximum number of Ambisonics coefficients. For a given order (o), the
  * size needed will be (o+1)**2, thus zero-order has 1, first-order has 4,
- * second-order has 9, third-order has 16, and fourth-order has 25. */
+ * second-order has 9, third-order has 16, and fourth-order has 25.
+ */
 #define MAX_AMBI_ORDER  3
 #define MAX_AMBI_COEFFS ((MAX_AMBI_ORDER+1) * (MAX_AMBI_ORDER+1))
 
@@ -496,6 +497,12 @@ enum RenderMode {
  * order). This is ACN ordering, with bit 0 being ACN 0, etc.
  */
 #define AMBI_PERIPHONIC_MASK (0xfe7ce4)
+
+/* The maximum number of Ambisonic coefficients for 2D (non-periphonic)
+ * representation. This is 2 per each order above zero-order, plus 1 for zero-
+ * order. Or simply, o*2 + 1.
+ */
+#define MAX_AMBI2D_COEFFS (MAX_AMBI_ORDER*2 + 1)
 
 
 typedef ALfloat ChannelConfig[MAX_AMBI_COEFFS];

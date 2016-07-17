@@ -694,7 +694,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
     }
     else
     {
-        static int map[MAX_AMBI_COEFFS] = { 0, 1, 3, 4, 8, 9, 15 };
+        static const int map[MAX_AMBI2D_COEFFS] = { 0, 1, 3, 4, 8, 9, 15 };
 
         count = (conf->ChanMask > 0x1ff) ? 7 :
                 (conf->ChanMask > 0xf) ? 5 : 3;

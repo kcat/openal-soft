@@ -942,7 +942,7 @@ static void update_picture(MovieState *movState, bool *first_update, SDL_Window 
         void *pixels = NULL;
         int pitch = 0;
 
-        if(movState->video.st->codec->pix_fmt == PIX_FMT_YUV420P)
+        if(movState->video.st->codec->pix_fmt == AV_PIX_FMT_YUV420P)
             SDL_UpdateYUVTexture(vp->bmp, NULL,
                 frame->data[0], frame->linesize[0],
                 frame->data[1], frame->linesize[1],
@@ -960,7 +960,7 @@ static void update_picture(MovieState *movState, bool *first_update, SDL_Window 
             if(!movState->video.swscale_ctx)
                 movState->video.swscale_ctx = sws_getContext(
                     w, h, movState->video.st->codec->pix_fmt,
-                    w, h, PIX_FMT_YUV420P, SWS_X, NULL, NULL, NULL
+                    w, h, AV_PIX_FMT_YUV420P, SWS_X, NULL, NULL, NULL
                 );
 
             /* point pict at the queue */

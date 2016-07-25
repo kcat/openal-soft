@@ -512,13 +512,22 @@ static void AddFileEntry(vector_HrtfEntry *list, al_string *filename)
     if(!name) name = al_string_get_cstr(*filename);
     else ++name;
 
+#define MATCH_FNAME(i) (al_string_cmp_cstr(*filename, (i)->hrtf->filename) == 0)
+    VECTOR_FIND_IF(iter, const HrtfEntry, *list, MATCH_FNAME);
+    if(iter != VECTOR_END(*list))
+    {
+        TRACE("Skipping duplicate file entry %s\n", al_string_get_cstr(*filename));
+        goto done;
+    }
+#undef MATCH_FNAME
+
     entry.hrtf = LoadedHrtfs;
     while(entry.hrtf)
     {
         if(al_string_cmp_cstr(*filename, entry.hrtf->filename) == 0)
         {
-            TRACE("Skipping duplicate file entry %s\n", al_string_get_cstr(*filename));
-            goto done;
+            TRACE("Skipping load of already-loaded file %s\n", al_string_get_cstr(*filename));
+            goto skip_load;
         }
         entry.hrtf = entry.hrtf->next;
     }
@@ -562,6 +571,7 @@ static void AddFileEntry(vector_HrtfEntry *list, al_string *filename)
             DevFmtChannelsString(DevFmtStereo), hrtf->sampleRate);
     entry.hrtf = hrtf;
 
+skip_load:
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
      * format update). */
     ext = strrchr(name, '.');
@@ -784,13 +794,22 @@ static void AddBuiltInEntry(vector_HrtfEntry *list, const ALubyte *data, size_t 
     const HrtfEntry *iter;
     int i;
 
+#define MATCH_FNAME(i) (al_string_cmp_cstr(*filename, (i)->hrtf->filename) == 0)
+    VECTOR_FIND_IF(iter, const HrtfEntry, *list, MATCH_FNAME);
+    if(iter != VECTOR_END(*list))
+    {
+        TRACE("Skipping duplicate file entry %s\n", al_string_get_cstr(*filename));
+        goto done;
+    }
+#undef MATCH_FNAME
+
     entry.hrtf = LoadedHrtfs;
     while(entry.hrtf)
     {
         if(al_string_cmp_cstr(*filename, entry.hrtf->filename) == 0)
         {
-            TRACE("Skipping duplicate file entry %s\n", al_string_get_cstr(*filename));
-            goto done;
+            TRACE("Skipping load of already-loaded file %s\n", al_string_get_cstr(*filename));
+            goto skip_load;
         }
         entry.hrtf = entry.hrtf->next;
     }
@@ -825,6 +844,7 @@ static void AddBuiltInEntry(vector_HrtfEntry *list, const ALubyte *data, size_t 
             DevFmtChannelsString(DevFmtStereo), hrtf->sampleRate);
     entry.hrtf = hrtf;
 
+skip_load:
     i = 0;
     do {
         al_string_copy(&entry.name, *filename);

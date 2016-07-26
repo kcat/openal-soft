@@ -97,7 +97,7 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint Samples
 
     for(base = 0;base < SamplesToDo;)
     {
-        float oversample_buffer[64][4];
+        float buffer[2][64 * 4];
         ALuint td = minu(64, SamplesToDo-base);
 
         /* Perform 4x oversampling to avoid aliasing.   */
@@ -109,10 +109,10 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint Samples
         /* Fill oversample buffer using zero stuffing */
         for(it = 0;it < td;it++)
         {
-            oversample_buffer[it][0] = SamplesIn[0][it+base];
-            oversample_buffer[it][1] = 0.0f;
-            oversample_buffer[it][2] = 0.0f;
-            oversample_buffer[it][3] = 0.0f;
+            buffer[0][it*4 + 0] = SamplesIn[0][it+base];
+            buffer[0][it*4 + 1] = 0.0f;
+            buffer[0][it*4 + 2] = 0.0f;
+            buffer[0][it*4 + 3] = 0.0f;
         }
 
         /* First step, do lowpass filtering of original signal,  */
@@ -120,37 +120,29 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint Samples
         /* cutoff for oversampling (which is fortunately first   */
         /* step of distortion). So combine three operations into */
         /* the one.                                              */
+        ALfilterState_process(&state->lowpass, buffer[1], buffer[0], td*4);
+
+        /* Second step, do distortion using waveshaper function  */
+        /* to emulate signal processing during tube overdriving. */
+        /* Three steps of waveshaping are intended to modify     */
+        /* waveform without boost/clipping/attenuation process.  */
         for(it = 0;it < td;it++)
         {
             for(ot = 0;ot < 4;ot++)
             {
-                ALfloat smp;
-                smp = ALfilterState_processSingle(&state->lowpass, oversample_buffer[it][ot]);
-
                 /* Restore signal power by multiplying sample by amount of oversampling */
-                oversample_buffer[it][ot] = smp * 4.0f;
-            }
-        }
-
-        for(it = 0;it < td;it++)
-        {
-            /* Second step, do distortion using waveshaper function  */
-            /* to emulate signal processing during tube overdriving. */
-            /* Three steps of waveshaping are intended to modify     */
-            /* waveform without boost/clipping/attenuation process.  */
-            for(ot = 0;ot < 4;ot++)
-            {
-                ALfloat smp = oversample_buffer[it][ot];
+                ALfloat smp = buffer[1][it*4 + ot] * 4.0f;
 
                 smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp));
                 smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp)) * -1.0f;
                 smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp));
 
-                /* Third step, do bandpass filtering of distorted signal */
-                smp = ALfilterState_processSingle(&state->bandpass, smp);
-                oversample_buffer[it][ot] = smp;
+                buffer[1][it*4 + ot] = smp;
             }
         }
+
+        /* Third step, do bandpass filtering of distorted signal */
+        ALfilterState_process(&state->bandpass, buffer[0], buffer[1], td*4);
 
         for(kt = 0;kt < NumChannels;kt++)
         {
@@ -162,7 +154,7 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint Samples
                 continue;
 
             for(it = 0;it < td;it++)
-                SamplesOut[kt][base+it] += gain * oversample_buffer[it][0];
+                SamplesOut[kt][base+it] += gain * buffer[0][it*4];
         }
 
         base += td;

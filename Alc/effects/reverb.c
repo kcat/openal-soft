@@ -1253,15 +1253,14 @@ static inline ALvoid EAXEcho(ALreverbState *State, ALuint todo, ALfloat (*restri
 
 // Perform the non-EAX reverb pass on a given input sample, resulting in
 // four-channel output.
-static inline ALvoid VerbPass(ALreverbState *State, ALuint todo, const ALfloat *in, ALfloat (*restrict early)[4], ALfloat (*restrict late)[4])
+static inline ALvoid VerbPass(ALreverbState *State, ALuint todo, const ALfloat *input, ALfloat (*restrict early)[4], ALfloat (*restrict late)[4])
 {
     ALuint i;
 
-    // Low-pass filter the incoming samples.
+    // Low-pass filter the incoming samples (use the early buffer as temp storage).
+    ALfilterState_process(&State->LpFilter, &early[0][0], input, todo);
     for(i = 0;i < todo;i++)
-        DelayLineIn(&State->Delay, State->Offset+i,
-            ALfilterState_processSingle(&State->LpFilter, in[i])
-        );
+        DelayLineIn(&State->Delay, State->Offset+i, early[i>>2][i&3]);
 
     // Calculate the early reflection from the first delay tap.
     EarlyReflection(State, todo, early);
@@ -1279,12 +1278,13 @@ static inline ALvoid EAXVerbPass(ALreverbState *State, ALuint todo, const ALfloa
 {
     ALuint i;
 
-    // Band-pass and modulate the incoming samples.
+    // Band-pass and modulate the incoming samples (use the early buffer as temp storage).
+    ALfilterState_process(&State->LpFilter, &early[0][0], input, todo);
+    ALfilterState_process(&State->HpFilter, &early[MAX_UPDATE_SAMPLES/4][0], &early[0][0], todo);
+
     for(i = 0;i < todo;i++)
     {
-        ALfloat sample = input[i];
-        sample = ALfilterState_processSingle(&State->LpFilter, sample);
-        sample = ALfilterState_processSingle(&State->HpFilter, sample);
+        ALfloat sample = early[(MAX_UPDATE_SAMPLES/4)+(i>>2)][i&3];
 
         // Perform any modulation on the input.
         sample = EAXModulation(State, State->Offset+i, sample);

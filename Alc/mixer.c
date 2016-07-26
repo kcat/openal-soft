@@ -381,7 +381,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
     ALuint SampleSize;
     ALint64 DataSize64;
     ALuint IrSize;
-    ALuint chan, j;
+    ALuint chan, send, j;
 
     /* Get source info */
     State          = AL_PLAYING; /* Only called while playing. */
@@ -644,15 +644,15 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                 }
             }
 
-            for(j = 0;j < Device->NumAuxSends;j++)
+            for(send = 0;send < Device->NumAuxSends;send++)
             {
-                SendParams *parms = &voice->Chan[chan].Send[j];
+                SendParams *parms = &voice->Chan[chan].Send[send];
                 ALfloat *restrict currents = parms->Gains.Current;
                 const ALfloat *targets = parms->Gains.Target;
                 MixGains gains[MAX_OUTPUT_CHANNELS];
                 const ALfloat *samples;
 
-                if(!voice->SendOut[j].Buffer)
+                if(!voice->SendOut[send].Buffer)
                     continue;
 
                 samples = DoFilters(
@@ -662,7 +662,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
 
                 if(!Counter)
                 {
-                    for(j = 0;j < voice->SendOut[j].Channels;j++)
+                    for(j = 0;j < voice->SendOut[send].Channels;j++)
                     {
                         gains[j].Target = targets[j];
                         gains[j].Current = gains[j].Target;
@@ -671,7 +671,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                 }
                 else
                 {
-                    for(j = 0;j < voice->SendOut[j].Channels;j++)
+                    for(j = 0;j < voice->SendOut[send].Channels;j++)
                     {
                         ALfloat diff;
                         gains[j].Target = targets[j];
@@ -687,10 +687,12 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     }
                 }
 
-                MixSamples(samples, voice->SendOut[j].Channels, voice->SendOut[j].Buffer,
-                           gains, Counter, OutPos, DstBufferSize);
+                MixSamples(samples,
+                    voice->SendOut[send].Channels, voice->SendOut[send].Buffer,
+                    gains, Counter, OutPos, DstBufferSize
+                );
 
-                for(j = 0;j < voice->SendOut[j].Channels;j++)
+                for(j = 0;j < voice->SendOut[send].Channels;j++)
                     currents[j] = gains[j].Current;
             }
         }

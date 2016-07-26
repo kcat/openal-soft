@@ -42,7 +42,6 @@ extern inline void UnlockEffectSlotsWrite(ALCcontext *context);
 extern inline struct ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id);
 extern inline struct ALeffectslot *RemoveEffectSlot(ALCcontext *context, ALuint id);
 
-static void AddEffectSlotList(ALCcontext *Context, ALeffectslot *first, ALeffectslot *last);
 static void RemoveEffectSlotList(ALCcontext *Context, const ALeffectslot *slot);
 
 
@@ -97,12 +96,19 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
         aluInitEffectPanning(slot);
 
         if(!first) first = slot;
-        if(last) ATOMIC_STORE(&last->next, slot);
+        if(last) ATOMIC_STORE(&last->next, slot, almemory_order_relaxed);
         last = slot;
 
         effectslots[cur] = slot->id;
     }
-    AddEffectSlotList(context, first, last);
+    if(last != NULL)
+    {
+        ALeffectslot *root = ATOMIC_LOAD(&context->ActiveAuxSlotList);
+        do {
+            ATOMIC_STORE(&last->next, root, almemory_order_relaxed);
+        } while(!ATOMIC_COMPARE_EXCHANGE_WEAK(ALeffectslot*, &context->ActiveAuxSlotList,
+                                              &root, first));
+    }
 
 done:
     ALCcontext_DecRef(context);
@@ -414,15 +420,6 @@ done:
     ALCcontext_DecRef(context);
 }
 
-
-static void AddEffectSlotList(ALCcontext *context, ALeffectslot *start, ALeffectslot *last)
-{
-    ALeffectslot *root = ATOMIC_LOAD(&context->ActiveAuxSlotList);
-    do {
-        ATOMIC_STORE(&last->next, root, almemory_order_relaxed);
-    } while(!ATOMIC_COMPARE_EXCHANGE_WEAK(ALeffectslot*, &context->ActiveAuxSlotList,
-                                          &root, start));
-}
 
 static void RemoveEffectSlotList(ALCcontext *context, const ALeffectslot *slot)
 {

@@ -78,23 +78,6 @@ inline void ALfilterState_clear(ALfilterState *filter)
 
 void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat gain, ALfloat freq_mult, ALfloat rcpQ);
 
-inline ALfloat ALfilterState_processSingle(ALfilterState *filter, ALfloat sample)
-{
-    ALfloat outsmp;
-
-    outsmp = filter->b0 * sample +
-             filter->b1 * filter->x[0] +
-             filter->b2 * filter->x[1] -
-             filter->a1 * filter->y[0] -
-             filter->a2 * filter->y[1];
-    filter->x[1] = filter->x[0];
-    filter->x[0] = sample;
-    filter->y[1] = filter->y[0];
-    filter->y[0] = outsmp;
-
-    return outsmp;
-}
-
 void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const ALfloat *restrict src, ALuint numsamples);
 
 inline void ALfilterState_processPassthru(ALfilterState *filter, const ALfloat *src, ALuint numsamples)

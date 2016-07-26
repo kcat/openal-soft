@@ -124,10 +124,14 @@ static ALvoid ALechoState_process(ALechoState *state, ALuint SamplesToDo, const 
     const ALuint tap1 = state->Tap[0].delay;
     const ALuint tap2 = state->Tap[1].delay;
     ALuint offset = state->Offset;
-    ALfloat smp;
+    ALfloat x[2], y[2], in, out;
     ALuint base;
     ALuint i, k;
 
+    x[0] = state->Filter.x[0];
+    x[1] = state->Filter.x[1];
+    y[0] = state->Filter.y[0];
+    y[1] = state->Filter.y[1];
     for(base = 0;base < SamplesToDo;)
     {
         ALfloat temps[128][2];
@@ -142,8 +146,14 @@ static ALvoid ALechoState_process(ALechoState *state, ALuint SamplesToDo, const 
 
             // Apply damping and feedback gain to the second tap, and mix in the
             // new sample
-            smp = ALfilterState_processSingle(&state->Filter, temps[i][1]+SamplesIn[0][i+base]);
-            state->SampleBuffer[offset&mask] = smp * state->FeedGain;
+            in = temps[i][1] + SamplesIn[0][i+base];
+            out = in*state->Filter.b0 +
+                  x[0]*state->Filter.b1 + x[1]*state->Filter.b2 -
+                  y[0]*state->Filter.a1 - y[1]*state->Filter.a2;
+            x[1] = x[0]; x[0] = in;
+            y[1] = y[0]; y[0] = out;
+
+            state->SampleBuffer[offset&mask] = out * state->FeedGain;
             offset++;
         }
 
@@ -166,6 +176,10 @@ static ALvoid ALechoState_process(ALechoState *state, ALuint SamplesToDo, const 
 
         base += td;
     }
+    state->Filter.x[0] = x[0];
+    state->Filter.x[1] = x[1];
+    state->Filter.y[0] = y[0];
+    state->Filter.y[1] = y[1];
 
     state->Offset = offset;
 }

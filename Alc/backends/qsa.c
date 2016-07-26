@@ -117,8 +117,7 @@ static void deviceList(int type, vector_DevMap *devmap)
     if(max_cards < 0)
         return;
 
-    VECTOR_RESERVE(*devmap, max_cards+1);
-    VECTOR_RESIZE(*devmap, 0);
+    VECTOR_RESIZE(*devmap, 0, max_cards+1);
 
     entry.name = strdup(qsaDevice);
     entry.card = 0;
@@ -893,8 +892,8 @@ void alc_qsa_probe(enum DevProbe type)
         case ALL_DEVICE_PROBE:
 #define FREE_NAME(iter) free((iter)->name)
             VECTOR_FOR_EACH(DevMap, DeviceNameMap, FREE_NAME);
+            VECTOR_RESIZE(DeviceNameMap, 0, 0);
 #undef FREE_NAME
-            VECTOR_RESIZE(DeviceNameMap, 0);
 
             deviceList(SND_PCM_CHANNEL_PLAYBACK, &DeviceNameMap);
 #define APPEND_DEVICE(iter) AppendAllDevicesList((iter)->name)
@@ -905,8 +904,8 @@ void alc_qsa_probe(enum DevProbe type)
         case CAPTURE_DEVICE_PROBE:
 #define FREE_NAME(iter) free((iter)->name)
             VECTOR_FOR_EACH(DevMap, CaptureNameMap, FREE_NAME);
+            VECTOR_RESIZE(CaptureNameMap, 0, 0);
 #undef FREE_NAME
-            VECTOR_RESIZE(CaptureNameMap, 0);
 
             deviceList(SND_PCM_CHANNEL_CAPTURE, &CaptureNameMap);
 #define APPEND_DEVICE(iter) AppendCaptureDeviceList((iter)->name)

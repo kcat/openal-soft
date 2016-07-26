@@ -242,7 +242,7 @@ static void clear_devlist(vector_DevMap *devlist)
     AL_STRING_DEINIT((i)->device_name);                                       \
 } while(0)
     VECTOR_FOR_EACH(DevMap, *devlist, FREE_DEV);
-    VECTOR_RESIZE(*devlist, 0);
+    VECTOR_RESIZE(*devlist, 0, 0);
 #undef FREE_DEV
 }
 

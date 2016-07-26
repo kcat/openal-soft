@@ -79,7 +79,7 @@ static void clear_devlist(vector_DevMap *list)
     (i)->devid = NULL;           \
 } while(0)
     VECTOR_FOR_EACH(DevMap, *list, CLEAR_DEVMAP);
-    VECTOR_RESIZE(*list, 0);
+    VECTOR_RESIZE(*list, 0, 0);
 #undef CLEAR_DEVMAP
 }
 
@@ -258,11 +258,7 @@ static HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ve
     if(SUCCEEDED(hr) && count > 0)
     {
         clear_devlist(list);
-        if(!VECTOR_RESERVE(*list, count))
-        {
-            IMMDeviceCollection_Release(coll);
-            return E_OUTOFMEMORY;
-        }
+        VECTOR_RESIZE(*list, 0, count);
 
         hr = IMMDeviceEnumerator_GetDefaultAudioEndpoint(devenum, flowdir,
                                                          eMultimedia, &defdev);

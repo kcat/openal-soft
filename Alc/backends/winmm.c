@@ -46,7 +46,7 @@ static vector_al_string CaptureDevices;
 static void clear_devlist(vector_al_string *list)
 {
     VECTOR_FOR_EACH(al_string, *list, al_string_deinit);
-    VECTOR_RESIZE(*list, 0);
+    VECTOR_RESIZE(*list, 0, 0);
 }
 
 
@@ -58,7 +58,7 @@ static void ProbePlaybackDevices(void)
     clear_devlist(&PlaybackDevices);
 
     numdevs = waveOutGetNumDevs();
-    VECTOR_RESERVE(PlaybackDevices, numdevs);
+    VECTOR_RESIZE(PlaybackDevices, 0, numdevs);
     for(i = 0;i < numdevs;i++)
     {
         WAVEOUTCAPSW WaveCaps;
@@ -101,7 +101,7 @@ static void ProbeCaptureDevices(void)
     clear_devlist(&CaptureDevices);
 
     numdevs = waveInGetNumDevs();
-    VECTOR_RESERVE(CaptureDevices, numdevs);
+    VECTOR_RESIZE(CaptureDevices, 0, numdevs);
     for(i = 0;i < numdevs;i++)
     {
         WAVEINCAPSW WaveCaps;

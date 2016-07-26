@@ -31,12 +31,32 @@ typedef const _##N* const_##N;
 #define VECTOR_INIT_STATIC()  NULL
 #define VECTOR_DEINIT(_x)     do { al_free((_x)); (_x) = NULL; } while(0)
 
-/* Helper to increase a vector's reserve. Do not call directly. */
-ALboolean vector_reserve(char *ptr, size_t base_size, size_t obj_size, size_t obj_count, ALboolean exact);
-#define VECTOR_RESERVE(_x, _c) (vector_reserve((char*)&(_x), sizeof(*(_x)), sizeof((_x)->Data[0]), (_c), AL_TRUE))
-
-ALboolean vector_resize(char *ptr, size_t base_size, size_t obj_size, size_t obj_count);
-#define VECTOR_RESIZE(_x, _c) (vector_resize((char*)&(_x), sizeof(*(_x)), sizeof((_x)->Data[0]), (_c)))
+#define VECTOR_RESIZE(_x, _s, _c) do {                                        \
+    size_t _size = (_s);                                                      \
+    size_t _cap = (_c);                                                       \
+    if(_size > _cap)                                                          \
+        _cap = _size;                                                         \
+                                                                              \
+    if(!(_x) && _cap == 0)                                                    \
+        break;                                                                \
+                                                                              \
+    if(((_x) ? (_x)->Capacity : 0) < _cap)                                    \
+    {                                                                         \
+        size_t old_size = ((_x) ? (_x)->Size : 0);                            \
+        void *temp;                                                           \
+                                                                              \
+        temp = al_calloc(16, sizeof(*(_x)) + sizeof((_x)->Data[0])*_cap);     \
+        assert(temp != NULL);                                                 \
+        if((_x))                                                              \
+            memcpy(((ALubyte*)temp)+sizeof(*(_x)), (_x)->Data,                \
+                   sizeof((_x)->Data[0])*old_size);                           \
+                                                                              \
+        al_free((_x));                                                        \
+        (_x) = temp;                                                          \
+        (_x)->Capacity = _cap;                                                \
+    }                                                                         \
+    (_x)->Size = _size;                                                       \
+} while(0)                                                                    \
 
 #define VECTOR_CAPACITY(_x) ((_x) ? (_x)->Capacity : 0)
 #define VECTOR_SIZE(_x)     ((_x) ? (_x)->Size : 0)
@@ -44,8 +64,11 @@ ALboolean vector_resize(char *ptr, size_t base_size, size_t obj_size, size_t obj
 #define VECTOR_BEGIN(_x) ((_x) ? (_x)->Data + 0 : NULL)
 #define VECTOR_END(_x)   ((_x) ? (_x)->Data + (_x)->Size : NULL)
 
-#define VECTOR_PUSH_BACK(_x, _obj) (vector_reserve((char*)&(_x), sizeof(*(_x)), sizeof((_x)->Data[0]), VECTOR_SIZE(_x)+1, AL_FALSE) && \
-                                    (((_x)->Data[(_x)->Size++] = (_obj)),AL_TRUE))
+#define VECTOR_PUSH_BACK(_x, _obj) do {      \
+    size_t _pbsize = VECTOR_SIZE(_x)+1;      \
+    VECTOR_RESIZE(_x, _pbsize, _pbsize);     \
+    (_x)->Data[(_x)->Size-1] = (_obj);       \
+} while(0)
 #define VECTOR_POP_BACK(_x) ((void)((_x)->Size--))
 
 #define VECTOR_BACK(_x)  ((_x)->Data[(_x)->Size-1])

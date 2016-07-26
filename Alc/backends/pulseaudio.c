@@ -443,7 +443,7 @@ static void clear_devlist(vector_DevMap *list)
 #define DEINIT_STRS(i)  (AL_STRING_DEINIT((i)->name),AL_STRING_DEINIT((i)->device_name))
     VECTOR_FOR_EACH(DevMap, *list, DEINIT_STRS);
 #undef DEINIT_STRS
-    VECTOR_RESIZE(*list, 0);
+    VECTOR_RESIZE(*list, 0, 0);
 }
 
 

@@ -838,51 +838,6 @@ void SetRTPriority(void)
 }
 
 
-ALboolean vector_reserve(char *ptr, size_t base_size, size_t obj_size, size_t obj_count, ALboolean exact)
-{
-    vector_ *vecptr = (vector_*)ptr;
-    if((*vecptr ? (*vecptr)->Capacity : 0) < obj_count)
-    {
-        size_t old_size = (*vecptr ? (*vecptr)->Size : 0);
-        void *temp;
-
-        /* Use the next power-of-2 size if we don't need to allocate the exact
-         * amount. This is preferred when regularly increasing the vector since
-         * it means fewer reallocations. Though it means it also wastes some
-         * memory. */
-        if(exact == AL_FALSE && obj_count < INT_MAX)
-            obj_count = NextPowerOf2((ALuint)obj_count);
-
-        /* Need to be explicit with the caller type's base size, because it
-         * could have extra padding before the start of the array (that is,
-         * sizeof(*vector_) may not equal base_size). */
-        temp = al_calloc(16, base_size + obj_size*obj_count);
-        if(temp == NULL) return AL_FALSE;
-        if(*vecptr)
-            memcpy(((ALubyte*)temp)+base_size, ((ALubyte*)*vecptr)+base_size,
-                   obj_size*old_size);
-
-        al_free(*vecptr);
-        *vecptr = temp;
-        (*vecptr)->Capacity = obj_count;
-        (*vecptr)->Size = old_size;
-    }
-    return AL_TRUE;
-}
-
-ALboolean vector_resize(char *ptr, size_t base_size, size_t obj_size, size_t obj_count)
-{
-    vector_ *vecptr = (vector_*)ptr;
-    if(*vecptr || obj_count > 0)
-    {
-        if(!vector_reserve((char*)vecptr, base_size, obj_size, obj_count, AL_TRUE))
-            return AL_FALSE;
-        (*vecptr)->Size = obj_count;
-    }
-    return AL_TRUE;
-}
-
-
 extern inline void al_string_deinit(al_string *str);
 extern inline size_t al_string_length(const_al_string str);
 extern inline ALboolean al_string_empty(const_al_string str);
@@ -896,9 +851,8 @@ void al_string_clear(al_string *str)
          * is to ensure we have space to add a null terminator in the string
          * data so it can be used as a C-style string.
          */
-        VECTOR_RESERVE(*str, 1);
-        VECTOR_RESIZE(*str, 0);
-        *VECTOR_END(*str) = 0;
+        VECTOR_RESIZE(*str, 0, 1);
+        VECTOR_ELEM(*str, 0) = 0;
     }
 }
 
@@ -930,11 +884,10 @@ void al_string_copy(al_string *str, const_al_string from)
     size_t len = al_string_length(from);
     size_t i;
 
-    VECTOR_RESERVE(*str, len+1);
-    VECTOR_RESIZE(*str, len);
+    VECTOR_RESIZE(*str, len, len+1);
     for(i = 0;i < len;i++)
         VECTOR_ELEM(*str, i) = VECTOR_ELEM(from, i);
-    *VECTOR_END(*str) = 0;
+    VECTOR_ELEM(*str, i) = 0;
 }
 
 void al_string_copy_cstr(al_string *str, const al_string_char_type *from)
@@ -942,11 +895,10 @@ void al_string_copy_cstr(al_string *str, const al_string_char_type *from)
     size_t len = strlen(from);
     size_t i;
 
-    VECTOR_RESERVE(*str, len+1);
-    VECTOR_RESIZE(*str, len);
+    VECTOR_RESIZE(*str, len, len+1);
     for(i = 0;i < len;i++)
         VECTOR_ELEM(*str, i) = from[i];
-    *VECTOR_END(*str) = 0;
+    VECTOR_ELEM(*str, i) = 0;
 }
 
 void al_string_copy_range(al_string *str, const al_string_char_type *from, const al_string_char_type *to)
@@ -954,18 +906,18 @@ void al_string_copy_range(al_string *str, const al_string_char_type *from, const
     size_t len = to - from;
     size_t i;
 
-    VECTOR_RESERVE(*str, len+1);
-    VECTOR_RESIZE(*str, len);
+    VECTOR_RESIZE(*str, len, len+1);
     for(i = 0;i < len;i++)
         VECTOR_ELEM(*str, i) = from[i];
-    *VECTOR_END(*str) = 0;
+    VECTOR_ELEM(*str, i) = 0;
 }
 
 void al_string_append_char(al_string *str, const al_string_char_type c)
 {
-    VECTOR_RESERVE(*str, al_string_length(*str)+2);
+    size_t len = al_string_length(*str);
+    VECTOR_RESIZE(*str, len, len+2);
     VECTOR_PUSH_BACK(*str, c);
-    *VECTOR_END(*str) = 0;
+    VECTOR_ELEM(*str, len+1) = 0;
 }
 
 void al_string_append_cstr(al_string *str, const al_string_char_type *from)
@@ -976,27 +928,25 @@ void al_string_append_cstr(al_string *str, const al_string_char_type *from)
         size_t base = al_string_length(*str);
         size_t i;
 
-        VECTOR_RESERVE(*str, base+len+1);
-        VECTOR_RESIZE(*str, base+len);
+        VECTOR_RESIZE(*str, base+len, base+len+1);
         for(i = 0;i < len;i++)
             VECTOR_ELEM(*str, base+i) = from[i];
-        *VECTOR_END(*str) = 0;
+        VECTOR_ELEM(*str, base+i) = 0;
     }
 }
 
 void al_string_append_range(al_string *str, const al_string_char_type *from, const al_string_char_type *to)
 {
-    if(to != from)
+    size_t len = to - from;
+    if(len != 0)
     {
         size_t base = al_string_length(*str);
-        size_t len = to - from;
         size_t i;
 
-        VECTOR_RESERVE(*str, base+len+1);
-        VECTOR_RESIZE(*str, base+len);
+        VECTOR_RESIZE(*str, base+len, base+len+1);
         for(i = 0;i < len;i++)
             VECTOR_ELEM(*str, base+i) = from[i];
-        *VECTOR_END(*str) = 0;
+        VECTOR_ELEM(*str, base+i) = 0;
     }
 }
 
@@ -1006,10 +956,9 @@ void al_string_copy_wcstr(al_string *str, const wchar_t *from)
     int len;
     if((len=WideCharToMultiByte(CP_UTF8, 0, from, -1, NULL, 0, NULL, NULL)) > 0)
     {
-        VECTOR_RESERVE(*str, len);
-        VECTOR_RESIZE(*str, len-1);
+        VECTOR_RESIZE(*str, len-1, len);
         WideCharToMultiByte(CP_UTF8, 0, from, -1, &VECTOR_FRONT(*str), len, NULL, NULL);
-        *VECTOR_END(*str) = 0;
+        VECTOR_ELEM(*str, len-1) = 0;
     }
 }
 
@@ -1018,11 +967,10 @@ void al_string_append_wcstr(al_string *str, const wchar_t *from)
     int len;
     if((len=WideCharToMultiByte(CP_UTF8, 0, from, -1, NULL, 0, NULL, NULL)) > 0)
     {
-        size_t strlen = al_string_length(*str);
-        VECTOR_RESERVE(*str, strlen+len);
-        VECTOR_RESIZE(*str, strlen+len-1);
-        WideCharToMultiByte(CP_UTF8, 0, from, -1, &VECTOR_FRONT(*str) + strlen, len, NULL, NULL);
-        *VECTOR_END(*str) = 0;
+        size_t base = al_string_length(*str);
+        VECTOR_RESIZE(*str, base+len-1, base+len);
+        WideCharToMultiByte(CP_UTF8, 0, from, -1, &VECTOR_ELEM(*str, base), len, NULL, NULL);
+        VECTOR_ELEM(*str, base+len-1) = 0;
     }
 }
 
@@ -1031,11 +979,10 @@ void al_string_append_wrange(al_string *str, const wchar_t *from, const wchar_t 
     int len;
     if((len=WideCharToMultiByte(CP_UTF8, 0, from, (int)(to-from), NULL, 0, NULL, NULL)) > 0)
     {
-        size_t strlen = al_string_length(*str);
-        VECTOR_RESERVE(*str, strlen+len+1);
-        VECTOR_RESIZE(*str, strlen+len);
-        WideCharToMultiByte(CP_UTF8, 0, from, (int)(to-from), &VECTOR_FRONT(*str) + strlen, len+1, NULL, NULL);
-        *VECTOR_END(*str) = 0;
+        size_t base = al_string_length(*str);
+        VECTOR_RESIZE(*str, base+len, base+len+1);
+        WideCharToMultiByte(CP_UTF8, 0, from, (int)(to-from), &VECTOR_ELEM(*str, base), len+1, NULL, NULL);
+        VECTOR_ELEM(*str, base+len) = 0;
     }
 }
 #endif

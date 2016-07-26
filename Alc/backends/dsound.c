@@ -123,7 +123,7 @@ static void clear_devlist(vector_DevMap *list)
 {
 #define DEINIT_STR(i) AL_STRING_DEINIT((i)->name)
     VECTOR_FOR_EACH(DevMap, *list, DEINIT_STR);
-    VECTOR_RESIZE(*list, 0);
+    VECTOR_RESIZE(*list, 0, 0);
 #undef DEINIT_STR
 }
 

@@ -128,9 +128,9 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALuint SamplesToDo, 
 
             state->LowPass.a1 = a[1] / a[0];
             state->LowPass.a2 = a[2] / a[0];
+            state->LowPass.b0 = b[0] / a[0];
             state->LowPass.b1 = b[1] / a[0];
             state->LowPass.b2 = b[2] / a[0];
-            state->LowPass.input_gain = b[0] / a[0];
 
             temps[it] = ALfilterState_processSingle(&state->LowPass, smp);
         }

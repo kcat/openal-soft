@@ -98,18 +98,18 @@ void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const 
     ALuint i;
     if(numsamples > 1)
     {
-        dst[0] = filter->input_gain * src[0] +
+        dst[0] = filter->b0 * src[0] +
                  filter->b1 * filter->x[0] +
                  filter->b2 * filter->x[1] -
                  filter->a1 * filter->y[0] -
                  filter->a2 * filter->y[1];
-        dst[1] = filter->input_gain * src[1] +
+        dst[1] = filter->b0 * src[1] +
                  filter->b1 * src[0] +
                  filter->b2 * filter->x[0] -
                  filter->a1 * dst[0] -
                  filter->a2 * filter->y[0];
         for(i = 2;i < numsamples;i++)
-            dst[i] = filter->input_gain * src[i] +
+            dst[i] = filter->b0 * src[i] +
                      filter->b1 * src[i-1] +
                      filter->b2 * src[i-2] -
                      filter->a1 * dst[i-1] -
@@ -121,7 +121,7 @@ void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const 
     }
     else if(numsamples == 1)
     {
-        dst[0] = filter->input_gain * src[0] +
+        dst[0] = filter->b0 * src[0] +
                  filter->b1 * filter->x[0] +
                  filter->b2 * filter->x[1] -
                  filter->a1 * filter->y[0] -

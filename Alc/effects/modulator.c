@@ -117,9 +117,9 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *
     {
         state->Filter[i].a1 = -a;
         state->Filter[i].a2 = 0.0f;
+        state->Filter[i].b0 = a;
         state->Filter[i].b1 = -a;
         state->Filter[i].b2 = 0.0f;
-        state->Filter[i].input_gain = a;
         state->Filter[i].process = ALfilterState_processC;
     }
 

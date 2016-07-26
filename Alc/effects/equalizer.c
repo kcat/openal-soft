@@ -131,9 +131,9 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *
     {
         state->filter[0][i].a1 = state->filter[0][0].a1;
         state->filter[0][i].a2 = state->filter[0][0].a2;
+        state->filter[0][i].b0 = state->filter[0][0].b0;
         state->filter[0][i].b1 = state->filter[0][0].b1;
         state->filter[0][i].b2 = state->filter[0][0].b2;
-        state->filter[0][i].input_gain = state->filter[0][0].input_gain;
         state->filter[0][i].process = state->filter[0][0].process;
     }
 
@@ -148,9 +148,9 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *
     {
         state->filter[1][i].a1 = state->filter[1][0].a1;
         state->filter[1][i].a2 = state->filter[1][0].a2;
+        state->filter[1][i].b0 = state->filter[1][0].b0;
         state->filter[1][i].b1 = state->filter[1][0].b1;
         state->filter[1][i].b2 = state->filter[1][0].b2;
-        state->filter[1][i].input_gain = state->filter[1][0].input_gain;
         state->filter[1][i].process = state->filter[1][0].process;
     }
 
@@ -165,9 +165,9 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *
     {
         state->filter[2][i].a1 = state->filter[2][0].a1;
         state->filter[2][i].a2 = state->filter[2][0].a2;
+        state->filter[2][i].b0 = state->filter[2][0].b0;
         state->filter[2][i].b1 = state->filter[2][0].b1;
         state->filter[2][i].b2 = state->filter[2][0].b2;
-        state->filter[2][i].input_gain = state->filter[2][0].input_gain;
         state->filter[2][i].process = state->filter[2][0].process;
     }
 
@@ -180,9 +180,9 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *
     {
         state->filter[3][i].a1 = state->filter[3][0].a1;
         state->filter[3][i].a2 = state->filter[3][0].a2;
+        state->filter[3][i].b0 = state->filter[3][0].b0;
         state->filter[3][i].b1 = state->filter[3][0].b1;
         state->filter[3][i].b2 = state->filter[3][0].b2;
-        state->filter[3][i].input_gain = state->filter[3][0].input_gain;
         state->filter[3][i].process = state->filter[3][0].process;
     }
 }

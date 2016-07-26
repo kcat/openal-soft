@@ -45,7 +45,7 @@ typedef struct ALfilterState {
     ALfloat a1, a2; /* Transfer function coefficients "a" (a0 is pre-applied) */
     ALfloat b0, b1, b2; /* Transfer function coefficients "b" */
 
-    void (*process)(struct ALfilterState *self, ALfloat *restrict dst, const ALfloat *src, ALuint numsamples);
+    void (*process)(struct ALfilterState *self, ALfloat *restrict dst, const ALfloat *restrict src, ALuint numsamples);
 } ALfilterState;
 #define ALfilterState_process(a, ...) ((a)->process((a), __VA_ARGS__))
 
@@ -95,7 +95,7 @@ inline ALfloat ALfilterState_processSingle(ALfilterState *filter, ALfloat sample
     return outsmp;
 }
 
-void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const ALfloat *src, ALuint numsamples);
+void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const ALfloat *restrict src, ALuint numsamples);
 
 inline void ALfilterState_processPassthru(ALfilterState *filter, const ALfloat *src, ALuint numsamples)
 {

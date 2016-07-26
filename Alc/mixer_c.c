@@ -93,7 +93,7 @@ const ALfloat *Resample_bsinc32_C(const BsincState *state, const ALfloat *src, A
 }
 
 
-void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const ALfloat *src, ALuint numsamples)
+void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const ALfloat *restrict src, ALuint numsamples)
 {
     ALuint i;
     if(numsamples > 1)

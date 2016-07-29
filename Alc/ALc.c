@@ -2376,23 +2376,23 @@ static void ReleaseContext(ALCcontext *context, ALCdevice *device)
 
 void ALCcontext_IncRef(ALCcontext *context)
 {
-    uint ref;
-    ref = IncrementRef(&context->ref);
+    uint ref = IncrementRef(&context->ref);
     TRACEREF("%p increasing refcount to %u\n", context, ref);
 }
 
 void ALCcontext_DecRef(ALCcontext *context)
 {
-    uint ref;
-    ref = DecrementRef(&context->ref);
+    uint ref = DecrementRef(&context->ref);
     TRACEREF("%p decreasing refcount to %u\n", context, ref);
     if(ref == 0) FreeContext(context);
 }
 
 static void ReleaseThreadCtx(void *ptr)
 {
-    WARN("%p current for thread being destroyed\n", ptr);
-    ALCcontext_DecRef(ptr);
+    ALCcontext *context = ptr;
+    uint ref = DecrementRef(&context->ref);
+    TRACEREF("%p decreasing refcount to %u\n", context, ref);
+    ERR("Context %p current for thread being destroyed, possible leak!\n", context);
 }
 
 /* VerifyContext

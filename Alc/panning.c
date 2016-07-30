@@ -575,6 +575,9 @@ static void InitPanning(ALCdevice *device)
             break;
 
         case DevFmtBFormat3D:
+        case DevFmtAmbi1:
+        case DevFmtAmbi2:
+        case DevFmtAmbi3:
             break;
     }
 
@@ -592,6 +595,40 @@ static void InitPanning(ALCdevice *device)
 
         device->FOAOut.Ambi = device->Dry.Ambi;
         device->FOAOut.CoeffCount = device->Dry.CoeffCount;
+    }
+    else if(device->FmtChans == DevFmtAmbi1)
+    {
+        count = 4;
+        for(i = 0;i < count;i++)
+        {
+            device->Dry.Ambi.Map[i].Scale = 1.0f/SN3D2N3DScale[i];
+            device->Dry.Ambi.Map[i].Index = i;
+        }
+        device->Dry.CoeffCount = 0;
+        device->Dry.NumChannels = count;
+
+        device->FOAOut.Ambi = device->Dry.Ambi;
+        device->FOAOut.CoeffCount = device->Dry.CoeffCount;
+    }
+    else if(device->FmtChans == DevFmtAmbi2 || device->FmtChans == DevFmtAmbi3)
+    {
+        count = (device->FmtChans == DevFmtAmbi3) ? 16 :
+                (device->FmtChans == DevFmtAmbi2) ? 9 : 1;
+        for(i = 0;i < count;i++)
+        {
+            device->Dry.Ambi.Map[i].Scale = 1.0f/SN3D2N3DScale[i];
+            device->Dry.Ambi.Map[i].Index = i;
+        }
+        device->Dry.CoeffCount = 0;
+        device->Dry.NumChannels = count;
+
+        memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
+        for(i = 0;i < 4;i++)
+        {
+            device->FOAOut.Ambi.Map[i].Scale = 1.0f;
+            device->FOAOut.Ambi.Map[i].Index = i;
+        }
+        device->FOAOut.CoeffCount = 0;
     }
     else
     {
@@ -835,10 +872,13 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
             case DevFmtX51Rear: layout = "surround51rear"; break;
             case DevFmtX61: layout = "surround61"; break;
             case DevFmtX71: layout = "surround71"; break;
-            /* Mono, Stereo, and B-Fornat output don't use custom decoders. */
+            /* Mono, Stereo, and Ambisonics output don't use custom decoders. */
             case DevFmtMono:
             case DevFmtStereo:
             case DevFmtBFormat3D:
+            case DevFmtAmbi1:
+            case DevFmtAmbi2:
+            case DevFmtAmbi3:
                 break;
         }
         if(layout)

@@ -999,6 +999,9 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
             mapname = "mono";
             break;
         case DevFmtBFormat3D:
+        case DevFmtAmbi1:
+        case DevFmtAmbi2:
+        case DevFmtAmbi3:
             device->FmtChans = DevFmtStereo;
             /*fall-through*/
         case DevFmtStereo:

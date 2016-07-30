@@ -562,6 +562,9 @@ static ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *name)
         case DevFmtX61:
         case DevFmtX71:
         case DevFmtBFormat3D:
+        case DevFmtAmbi1:
+        case DevFmtAmbi2:
+        case DevFmtAmbi3:
             return ALC_INVALID_ENUM;
     }
 

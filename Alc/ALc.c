@@ -1294,6 +1294,9 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans)
     case DevFmtX61: return "6.1 Surround";
     case DevFmtX71: return "7.1 Surround";
     case DevFmtBFormat3D: return "B-Format 3D";
+    case DevFmtAmbi1: return "Ambisonics (1st Order)";
+    case DevFmtAmbi2: return "Ambisonics (2nd Order)";
+    case DevFmtAmbi3: return "Ambisonics (3rd Order)";
     }
     return "(unknown channels)";
 }
@@ -1325,6 +1328,9 @@ ALuint ChannelsFromDevFmt(enum DevFmtChannels chans)
     case DevFmtX61: return 7;
     case DevFmtX71: return 8;
     case DevFmtBFormat3D: return 4;
+    case DevFmtAmbi1: return 4;
+    case DevFmtAmbi2: return 9;
+    case DevFmtAmbi3: return 16;
     }
     return 0;
 }
@@ -1493,6 +1499,41 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
         device->RealOut.ChannelName[2] = Aux2;
         device->RealOut.ChannelName[3] = Aux3;
         break;
+    case DevFmtAmbi1:
+        device->RealOut.ChannelName[0] = Aux0;
+        device->RealOut.ChannelName[1] = Aux1;
+        device->RealOut.ChannelName[2] = Aux2;
+        device->RealOut.ChannelName[3] = Aux3;
+        break;
+    case DevFmtAmbi2:
+        device->RealOut.ChannelName[0] = Aux0;
+        device->RealOut.ChannelName[1] = Aux1;
+        device->RealOut.ChannelName[2] = Aux2;
+        device->RealOut.ChannelName[3] = Aux3;
+        device->RealOut.ChannelName[4] = Aux4;
+        device->RealOut.ChannelName[5] = Aux5;
+        device->RealOut.ChannelName[6] = Aux6;
+        device->RealOut.ChannelName[7] = Aux7;
+        device->RealOut.ChannelName[8] = Aux8;
+        break;
+    case DevFmtAmbi3:
+        device->RealOut.ChannelName[0] = Aux0;
+        device->RealOut.ChannelName[1] = Aux1;
+        device->RealOut.ChannelName[2] = Aux2;
+        device->RealOut.ChannelName[3] = Aux3;
+        device->RealOut.ChannelName[4] = Aux4;
+        device->RealOut.ChannelName[5] = Aux5;
+        device->RealOut.ChannelName[6] = Aux6;
+        device->RealOut.ChannelName[7] = Aux7;
+        device->RealOut.ChannelName[8] = Aux8;
+        device->RealOut.ChannelName[9] = Aux9;
+        device->RealOut.ChannelName[10] = Aux10;
+        device->RealOut.ChannelName[11] = Aux11;
+        device->RealOut.ChannelName[12] = Aux12;
+        device->RealOut.ChannelName[13] = Aux13;
+        device->RealOut.ChannelName[14] = Aux14;
+        device->RealOut.ChannelName[15] = Aux15;
+        break;
     }
 }
 
@@ -1535,6 +1576,9 @@ void SetDefaultChannelOrder(ALCdevice *device)
     case DevFmtX51:
     case DevFmtX61:
     case DevFmtBFormat3D:
+    case DevFmtAmbi1:
+    case DevFmtAmbi2:
+    case DevFmtAmbi3:
         SetDefaultWFXChannelOrder(device);
         break;
     }
@@ -1992,10 +2036,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     /* Allocate extra channels for any post-filter output. */
     size = device->Dry.NumChannels * sizeof(device->Dry.Buffer[0]);
-    if(device->AmbiDecoder && bformatdec_getOrder(device->AmbiDecoder) >= 2)
+    if((device->AmbiDecoder && bformatdec_getOrder(device->AmbiDecoder) >= 2))
         size += (ChannelsFromDevFmt(device->FmtChans)+4) * sizeof(device->Dry.Buffer[0]);
     else if(device->Hrtf || device->Uhj_Encoder || device->AmbiDecoder)
         size += ChannelsFromDevFmt(device->FmtChans) * sizeof(device->Dry.Buffer[0]);
+    else if(device->FmtChans == DevFmtAmbi2 || device->FmtChans == DevFmtAmbi3)
+        size += 4 * sizeof(device->Dry.Buffer[0]);
     device->Dry.Buffer = al_calloc(16, size);
     if(!device->Dry.Buffer)
     {
@@ -2014,10 +2060,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->RealOut.NumChannels = device->Dry.NumChannels;
     }
 
-    if(device->AmbiDecoder && bformatdec_getOrder(device->AmbiDecoder) >= 2)
+    if((device->AmbiDecoder && bformatdec_getOrder(device->AmbiDecoder) >= 2) ||
+       device->FmtChans == DevFmtAmbi2 || device->FmtChans == DevFmtAmbi3)
     {
-        /* Higher-order high quality decoding requires upsampling first-order
-         * content, so make sure to mix it separately.
+        /* Higher-order rendering requires upsampling first-order content, so
+         * make sure to mix it separately.
          */
         device->FOAOut.Buffer = device->RealOut.Buffer + device->RealOut.NumChannels;
         device->FOAOut.NumChannels = 4;
@@ -3409,6 +3456,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
             { "surround61", DevFmtX61    },
             { "surround71", DevFmtX71    },
             { "surround51rear", DevFmtX51Rear },
+            { "ambisonic1", DevFmtAmbi1 },
+            { "ambisonic2", DevFmtAmbi2 },
+            { "ambisonic3", DevFmtAmbi3 },
         };
         size_t i;
 

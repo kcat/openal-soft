@@ -473,6 +473,9 @@ static ALCboolean ALCdsoundPlayback_reset(ALCdsoundPlayback *self)
                 OutputType.dwChannelMask = SPEAKER_FRONT_CENTER;
                 break;
             case DevFmtBFormat3D:
+            case DevFmtAmbi1:
+            case DevFmtAmbi2:
+            case DevFmtAmbi3:
                 device->FmtChans = DevFmtStereo;
                 /*fall-through*/
             case DevFmtStereo:
@@ -789,6 +792,9 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
                                           SPEAKER_SIDE_RIGHT;
                 break;
             case DevFmtBFormat3D:
+            case DevFmtAmbi1:
+            case DevFmtAmbi2:
+            case DevFmtAmbi3:
                 break;
         }
 

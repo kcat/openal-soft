@@ -448,6 +448,9 @@ enum DevFmtChannels {
     DevFmtX51Rear = 0x80000000,
 
     DevFmtBFormat3D,
+    DevFmtAmbi1,
+    DevFmtAmbi2,
+    DevFmtAmbi3,
 
     DevFmtChannelsDefault = DevFmtStereo
 };

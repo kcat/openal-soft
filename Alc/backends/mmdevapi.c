@@ -882,6 +882,9 @@ static HRESULT ALCmmdevPlayback_resetProxy(ALCmmdevPlayback *self)
             OutputType.dwChannelMask = MONO;
             break;
         case DevFmtBFormat3D:
+        case DevFmtAmbi1:
+        case DevFmtAmbi2:
+        case DevFmtAmbi3:
             device->FmtChans = DevFmtStereo;
             /*fall-through*/
         case DevFmtStereo:
@@ -1523,6 +1526,9 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
             break;
 
         case DevFmtBFormat3D:
+        case DevFmtAmbi1:
+        case DevFmtAmbi2:
+        case DevFmtAmbi3:
             return E_FAIL;
     }
     switch(device->FmtType)

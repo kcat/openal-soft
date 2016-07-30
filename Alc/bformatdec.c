@@ -130,6 +130,16 @@ static const ALfloat SquareMatrix[4][FB_Max][MAX_AMBI_COEFFS] = {
 };
 static ALfloat SquareEncoder[4][MAX_AMBI_COEFFS];
 
+static const ALfloat CubePoints[8][3] = {
+    { -0.577350269f,  0.577350269f, -0.577350269f },
+    {  0.577350269f,  0.577350269f, -0.577350269f },
+    { -0.577350269f,  0.577350269f,  0.577350269f },
+    {  0.577350269f,  0.577350269f,  0.577350269f },
+    { -0.577350269f, -0.577350269f, -0.577350269f },
+    {  0.577350269f, -0.577350269f, -0.577350269f },
+    { -0.577350269f, -0.577350269f,  0.577350269f },
+    {  0.577350269f, -0.577350269f,  0.577350269f },
+};
 static const ALfloat CubeMatrix[8][FB_Max][MAX_AMBI_COEFFS] = {
     { { 0.25f,  0.14425f,  0.14425f,  0.14425f }, { 0.125f,  0.125f,  0.125f,  0.125f } },
     { { 0.25f, -0.14425f,  0.14425f,  0.14425f }, { 0.125f, -0.125f,  0.125f,  0.125f } },
@@ -167,14 +177,8 @@ static void init_bformatdec(void)
 
     MixMatrixRow = SelectMixer();
 
-    CalcXYZCoeffs(-0.577350269f,  0.577350269f, -0.577350269f, 0.0f, CubeEncoder[0]);
-    CalcXYZCoeffs( 0.577350269f,  0.577350269f, -0.577350269f, 0.0f, CubeEncoder[1]);
-    CalcXYZCoeffs(-0.577350269f,  0.577350269f,  0.577350269f, 0.0f, CubeEncoder[2]);
-    CalcXYZCoeffs( 0.577350269f,  0.577350269f,  0.577350269f, 0.0f, CubeEncoder[3]);
-    CalcXYZCoeffs(-0.577350269f, -0.577350269f, -0.577350269f, 0.0f, CubeEncoder[4]);
-    CalcXYZCoeffs( 0.577350269f, -0.577350269f, -0.577350269f, 0.0f, CubeEncoder[5]);
-    CalcXYZCoeffs(-0.577350269f, -0.577350269f,  0.577350269f, 0.0f, CubeEncoder[6]);
-    CalcXYZCoeffs( 0.577350269f, -0.577350269f,  0.577350269f, 0.0f, CubeEncoder[7]);
+    for(i = 0;i < COUNTOF(CubePoints);i++)
+        CalcDirectionCoeffs(CubePoints[i], 0.0f, CubeEncoder[i]);
 
     CalcXYZCoeffs(-0.707106781f,  0.0f, -0.707106781f, 0.0f, SquareEncoder[0]);
     CalcXYZCoeffs( 0.707106781f,  0.0f, -0.707106781f, 0.0f, SquareEncoder[1]);
@@ -585,6 +589,71 @@ void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[B
                 continue;
             for(i = 0;i < SamplesToDo;i++)
                 OutBuffer[j][i] += dec->ChannelMix[i] * gain;
+        }
+    }
+}
+
+
+typedef struct AmbiUpsampler {
+    alignas(16) ALfloat SamplesHF[4][BUFFERSIZE];
+    alignas(16) ALfloat SamplesLF[4][BUFFERSIZE];
+
+    alignas(16) ALfloat ChannelMix[BUFFERSIZE];
+
+    BandSplitter XOver[4];
+
+    ALfloat Gains[8][MAX_OUTPUT_CHANNELS];
+    ALuint NumChannels;
+} AmbiUpsampler;
+
+AmbiUpsampler *ambiup_alloc()
+{
+    alcall_once(&bformatdec_inited, init_bformatdec);
+    return al_calloc(16, sizeof(AmbiUpsampler));
+}
+
+void ambiup_free(struct AmbiUpsampler *ambiup)
+{
+    al_free(ambiup);
+}
+
+void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device)
+{
+    ALfloat ratio;
+    ALuint i;
+
+    ratio = 400.0f / (ALfloat)device->Frequency;
+    for(i = 0;i < 4;i++)
+        bandsplit_init(&ambiup->XOver[i], ratio);
+
+    ambiup->NumChannels = COUNTOF(CubePoints);
+    for(i = 0;i < ambiup->NumChannels;i++)
+        ComputePanningGains(device->Dry, CubeEncoder[i], 1.0f, ambiup->Gains[i]);
+}
+
+void ambiup_process(struct AmbiUpsampler *ambiup, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint OutChannels, ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint SamplesToDo)
+{
+    ALuint i, j, k;
+
+    for(i = 0;i < 4;i++)
+        bandsplit_process(&ambiup->XOver[i], ambiup->SamplesHF[i], ambiup->SamplesLF[i],
+                          InSamples[i], SamplesToDo);
+
+    for(k = 0;k < ambiup->NumChannels;k++)
+    {
+        memset(ambiup->ChannelMix, 0, SamplesToDo*sizeof(ALfloat));
+        MixMatrixRow(ambiup->ChannelMix, CubeMatrix[k][FB_HighFreq],
+                     ambiup->SamplesHF, 4, SamplesToDo);
+        MixMatrixRow(ambiup->ChannelMix, CubeMatrix[k][FB_LowFreq],
+                     ambiup->SamplesLF, 4, SamplesToDo);
+
+        for(j = 0;j < OutChannels;j++)
+        {
+            ALfloat gain = ambiup->Gains[k][j];
+            if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
+                continue;
+            for(i = 0;i < SamplesToDo;i++)
+                OutBuffer[j][i] += ambiup->ChannelMix[i] * gain;
         }
     }
 }

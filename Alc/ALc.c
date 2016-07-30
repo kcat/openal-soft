@@ -2040,7 +2040,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         size += (ChannelsFromDevFmt(device->FmtChans)+4) * sizeof(device->Dry.Buffer[0]);
     else if(device->Hrtf || device->Uhj_Encoder || device->AmbiDecoder)
         size += ChannelsFromDevFmt(device->FmtChans) * sizeof(device->Dry.Buffer[0]);
-    else if(device->FmtChans == DevFmtAmbi2 || device->FmtChans == DevFmtAmbi3)
+    else if(device->FmtChans > DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3)
         size += 4 * sizeof(device->Dry.Buffer[0]);
     device->Dry.Buffer = al_calloc(16, size);
     if(!device->Dry.Buffer)
@@ -2061,7 +2061,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
 
     if((device->AmbiDecoder && bformatdec_getOrder(device->AmbiDecoder) >= 2) ||
-       device->FmtChans == DevFmtAmbi2 || device->FmtChans == DevFmtAmbi3)
+       (device->FmtChans > DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3))
     {
         /* Higher-order rendering requires upsampling first-order content, so
          * make sure to mix it separately.
@@ -2210,6 +2210,9 @@ static ALCvoid FreeDevice(ALCdevice *device)
 
     bformatdec_free(device->AmbiDecoder);
     device->AmbiDecoder = NULL;
+
+    ambiup_free(device->AmbiUp);
+    device->AmbiUp = NULL;
 
     AL_STRING_DEINIT(device->DeviceName);
 

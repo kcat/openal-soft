@@ -622,6 +622,9 @@ static void InitPanning(ALCdevice *device)
         device->Dry.CoeffCount = 0;
         device->Dry.NumChannels = count;
 
+        /* FOA output is always ACN+N3D for higher-order ambisonic output. The
+         * upsampler expects this and will convert it for output.
+         */
         memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
         for(i = 0;i < 4;i++)
         {
@@ -629,6 +632,8 @@ static void InitPanning(ALCdevice *device)
             device->FOAOut.Ambi.Map[i].Index = i;
         }
         device->FOAOut.CoeffCount = 0;
+
+        ambiup_reset(device->AmbiUp, device);
     }
     else
     {
@@ -903,6 +908,8 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
 
         if(pconf && GetConfigValueBool(devname, "decoder", "hq-mode", 0))
         {
+            ambiup_free(device->AmbiUp);
+            device->AmbiUp = NULL;
             if(!device->AmbiDecoder)
                 device->AmbiDecoder = bformatdec_alloc();
         }
@@ -910,6 +917,16 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         {
             bformatdec_free(device->AmbiDecoder);
             device->AmbiDecoder = NULL;
+            if(device->FmtChans > DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3)
+            {
+                if(!device->AmbiUp)
+                    device->AmbiUp = ambiup_alloc();
+            }
+            else
+            {
+                ambiup_free(device->AmbiUp);
+                device->AmbiUp = NULL;
+            }
         }
 
         if(!pconf)
@@ -923,6 +940,8 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         return;
     }
 
+    ambiup_free(device->AmbiUp);
+    device->AmbiUp = NULL;
     bformatdec_free(device->AmbiDecoder);
     device->AmbiDecoder = NULL;
 

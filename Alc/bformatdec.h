@@ -5,6 +5,7 @@
 
 struct AmbDecConf;
 struct BFormatDec;
+struct AmbiUpsampler;
 
 enum BFormatDecFlags {
     BFDF_DistanceComp = 1<<0
@@ -20,5 +21,14 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
 
 /* Up-samples a first-order input to the decoder's configuration. */
 void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint InChannels, ALuint SamplesToDo);
+
+/* Stand-alone first-order upsampler. Kept here because it shares some stuff
+ * with bformatdec.
+ */
+struct AmbiUpsampler *ambiup_alloc();
+void ambiup_free(struct AmbiUpsampler *ambiup);
+void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device);
+
+void ambiup_process(struct AmbiUpsampler *ambiup, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint OutChannels, ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint SamplesToDo);
 
 #endif /* BFORMATDEC_H */

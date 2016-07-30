@@ -1534,6 +1534,13 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 device->Dry.Buffer, SamplesToDo
             );
         }
+        else if(device->AmbiUp)
+        {
+            ambiup_process(device->AmbiUp,
+                device->RealOut.Buffer, device->RealOut.NumChannels,
+                device->FOAOut.Buffer, SamplesToDo
+            );
+        }
         else if(device->Uhj_Encoder)
         {
             int lidx = GetChannelIdxByName(device->RealOut, FrontLeft);

@@ -3459,9 +3459,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
             { "surround61", DevFmtX61    },
             { "surround71", DevFmtX71    },
             { "surround51rear", DevFmtX51Rear },
-            { "ambisonic1", DevFmtAmbi1 },
-            { "ambisonic2", DevFmtAmbi2 },
-            { "ambisonic3", DevFmtAmbi3 },
+            { "ambi1", DevFmtAmbi1 },
+            { "ambi2", DevFmtAmbi2 },
+            { "ambi3", DevFmtAmbi3 },
         };
         size_t i;
 

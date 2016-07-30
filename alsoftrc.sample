@@ -112,7 +112,7 @@
 
 ## hrtf-paths:
 #  Specifies a comma-separated list of paths containing HRTF data sets. The
-#  format of the files are described in hrtf.txt. The files within the
+#  format of the files are described in docs/hrtf.txt. The files within the
 #  directories must have the .mhr file extension to be recognized. By default,
 #  OS-dependent data paths will be used. They will also be used if the list
 #  ends with a comma. On Windows this is:
@@ -227,29 +227,29 @@ distance-comp = true
 
 ## quad:
 #  Decoder configuration file for Quadrophonic channel output. See
-#  alsoft_ambdec.txt for a description of the file format.
+#  docs/ambdec.txt for a description of the file format.
 quad =
 
 ## surround51:
 #  Decoder configuration file for 5.1 Surround (Side) channel output. See
-#  alsoft_ambdec.txt for a description of the file format.
+#  docs/ambdec.txt for a description of the file format.
 surround51 =
 
 ## surround51rear:
 #  Decoder configuration file for 5.1 Surround (Rear) channel output. See
-#  alsoft_ambdec.txt for a description of the file format.
+#  docs/ambdec.txt for a description of the file format.
 surround51rear =
 
 ## surround61:
 #  Decoder configuration file for 6.1 Surround channel output. See
-#  alsoft_ambdec.txt for a description of the file format.
+#  docs/ambdec.txt for a description of the file format.
 surround61 =
 
 ## surround71:
 #  Decoder configuration file for 7.1 Surround channel output. See
-#  alsoft_ambdec.txt for a description of the file format. Note: This can be
-#  used to enable 3D7.1 with the appropriate configuration file and speaker
-#  placement.
+#  docs/ambdec.txt for a description of the file format. Note: This can be used
+#  to enable 3D7.1 with the appropriate configuration and speaker placement,
+#  see docs/3D7.1.txt.
 surround71 =
 
 ##

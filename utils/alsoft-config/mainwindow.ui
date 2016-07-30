@@ -62,7 +62,7 @@
      <widget class="QComboBox" name="sampleFormatCombo">
       <property name="geometry">
        <rect>
-        <x>120</x>
+        <x>110</x>
         <y>50</y>
         <width>78</width>
         <height>22</height>
@@ -79,7 +79,7 @@ float and converted to the output sample type as needed.</string>
      <widget class="QLabel" name="label_5">
       <property name="geometry">
        <rect>
-        <x>10</x>
+        <x>0</x>
         <y>50</y>
         <width>101</width>
         <height>21</height>
@@ -95,7 +95,7 @@ float and converted to the output sample type as needed.</string>
      <widget class="QLabel" name="label_6">
       <property name="geometry">
        <rect>
-        <x>10</x>
+        <x>0</x>
         <y>20</y>
         <width>101</width>
         <height>21</height>
@@ -111,7 +111,7 @@ float and converted to the output sample type as needed.</string>
      <widget class="QComboBox" name="channelConfigCombo">
       <property name="geometry">
        <rect>
-        <x>120</x>
+        <x>110</x>
         <y>20</y>
         <width>78</width>
         <height>22</height>
@@ -129,7 +129,7 @@ to stereo output.</string>
      <widget class="QComboBox" name="sampleRateCombo">
       <property name="geometry">
        <rect>
-        <x>370</x>
+        <x>380</x>
         <y>20</y>
         <width>96</width>
         <height>22</height>
@@ -191,7 +191,7 @@ to stereo output.</string>
      <widget class="QLabel" name="label_7">
       <property name="geometry">
        <rect>
-        <x>280</x>
+        <x>290</x>
         <y>20</y>
         <width>81</width>
         <height>21</height>
@@ -207,7 +207,7 @@ to stereo output.</string>
      <widget class="QLabel" name="label_14">
       <property name="geometry">
        <rect>
-        <x>280</x>
+        <x>290</x>
         <y>50</y>
         <width>81</width>
         <height>21</height>
@@ -223,7 +223,7 @@ to stereo output.</string>
      <widget class="QComboBox" name="stereoModeCombo">
       <property name="geometry">
        <rect>
-        <x>370</x>
+        <x>380</x>
         <y>50</y>
         <width>78</width>
         <height>22</height>

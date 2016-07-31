@@ -998,7 +998,6 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
         case DevFmtMono:
             mapname = "mono";
             break;
-        case DevFmtBFormat3D:
         case DevFmtAmbi1:
         case DevFmtAmbi2:
         case DevFmtAmbi3:

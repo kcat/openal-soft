@@ -249,7 +249,7 @@ static ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
     clearerr(self->mFile);
 
     if(GetConfigValueBool(NULL, "wave", "bformat", 0))
-        device->FmtChans = DevFmtBFormat3D;
+        device->FmtChans = DevFmtAmbi1;
 
     switch(device->FmtType)
     {
@@ -280,9 +280,8 @@ static ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
         case DevFmtAmbi1:
         case DevFmtAmbi2:
         case DevFmtAmbi3:
-            device->FmtChans = DevFmtBFormat3D;
-            /*fall-through*/
-        case DevFmtBFormat3D:
+            /* .amb output requires FuMa */
+            device->AmbiFmt = AmbiFormat_FuMa;
             isbformat = 1;
             chanmask = 0;
             break;

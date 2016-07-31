@@ -578,29 +578,13 @@ static void InitPanning(ALCdevice *device)
             coeffcount = 16;
             break;
 
-        case DevFmtBFormat3D:
         case DevFmtAmbi1:
         case DevFmtAmbi2:
         case DevFmtAmbi3:
             break;
     }
 
-    if(device->FmtChans == DevFmtBFormat3D)
-    {
-        count = 4;
-        for(i = 0;i < count;i++)
-        {
-            ALuint acn = FuMa2ACN[i];
-            device->Dry.Ambi.Map[i].Scale = 1.0f/FuMa2N3DScale[acn];
-            device->Dry.Ambi.Map[i].Index = acn;
-        }
-        device->Dry.CoeffCount = 0;
-        device->Dry.NumChannels = count;
-
-        device->FOAOut.Ambi = device->Dry.Ambi;
-        device->FOAOut.CoeffCount = device->Dry.CoeffCount;
-    }
-    else if(device->FmtChans >= DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3)
+    if(device->FmtChans >= DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3)
     {
         const ALuint *acnmap = (device->AmbiFmt == AmbiFormat_FuMa) ? FuMa2ACN : ACN2ACN;
         const ALfloat *n3dcale = (device->AmbiFmt == AmbiFormat_FuMa) ? FuMa2N3DScale :
@@ -885,7 +869,6 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
             /* Mono, Stereo, and Ambisonics output don't use custom decoders. */
             case DevFmtMono:
             case DevFmtStereo:
-            case DevFmtBFormat3D:
             case DevFmtAmbi1:
             case DevFmtAmbi2:
             case DevFmtAmbi3:

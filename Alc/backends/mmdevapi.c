@@ -881,7 +881,6 @@ static HRESULT ALCmmdevPlayback_resetProxy(ALCmmdevPlayback *self)
             OutputType.Format.nChannels = 1;
             OutputType.dwChannelMask = MONO;
             break;
-        case DevFmtBFormat3D:
         case DevFmtAmbi1:
         case DevFmtAmbi2:
         case DevFmtAmbi3:
@@ -1525,7 +1524,6 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
             OutputType.dwChannelMask = X7DOT1;
             break;
 
-        case DevFmtBFormat3D:
         case DevFmtAmbi1:
         case DevFmtAmbi2:
         case DevFmtAmbi3:

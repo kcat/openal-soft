@@ -1293,7 +1293,6 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans)
     case DevFmtX51Rear: return "5.1 Surround (Rear)";
     case DevFmtX61: return "6.1 Surround";
     case DevFmtX71: return "7.1 Surround";
-    case DevFmtBFormat3D: return "B-Format 3D";
     case DevFmtAmbi1: return "Ambisonics (1st Order)";
     case DevFmtAmbi2: return "Ambisonics (2nd Order)";
     case DevFmtAmbi3: return "Ambisonics (3rd Order)";
@@ -1327,7 +1326,6 @@ ALuint ChannelsFromDevFmt(enum DevFmtChannels chans)
     case DevFmtX51Rear: return 6;
     case DevFmtX61: return 7;
     case DevFmtX71: return 8;
-    case DevFmtBFormat3D: return 4;
     case DevFmtAmbi1: return 4;
     case DevFmtAmbi2: return 9;
     case DevFmtAmbi3: return 16;
@@ -1493,12 +1491,6 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
         device->RealOut.ChannelName[6] = SideLeft;
         device->RealOut.ChannelName[7] = SideRight;
         break;
-    case DevFmtBFormat3D:
-        device->RealOut.ChannelName[0] = Aux0;
-        device->RealOut.ChannelName[1] = Aux1;
-        device->RealOut.ChannelName[2] = Aux2;
-        device->RealOut.ChannelName[3] = Aux3;
-        break;
     case DevFmtAmbi1:
         device->RealOut.ChannelName[0] = Aux0;
         device->RealOut.ChannelName[1] = Aux1;
@@ -1575,7 +1567,6 @@ void SetDefaultChannelOrder(ALCdevice *device)
     case DevFmtQuad:
     case DevFmtX51:
     case DevFmtX61:
-    case DevFmtBFormat3D:
     case DevFmtAmbi1:
     case DevFmtAmbi2:
     case DevFmtAmbi3:

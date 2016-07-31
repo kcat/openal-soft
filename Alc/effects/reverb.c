@@ -961,7 +961,7 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
                            props->Reverb.LateReverbPan, gain,
                            props->Reverb.ReflectionsGain,
                            props->Reverb.LateReverbGain, State);
-    else if(Device->AmbiDecoder || (Device->FmtChans >= DevFmtBFormat3D &&
+    else if(Device->AmbiDecoder || (Device->FmtChans >= DevFmtAmbi1 &&
                                     Device->FmtChans <= DevFmtAmbi3))
         Update3DPanning(Device, props->Reverb.ReflectionsPan,
                         props->Reverb.LateReverbPan, gain,

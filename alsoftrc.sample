@@ -97,6 +97,11 @@
 #  disabled.
 #stereo-panning = uhj
 
+## ambi-format:
+#  Specifies the channel order and normalization for the "ambi*" set of channel
+#  configurations. Valid settings are: fuma, acn+sn3d, acn+n3d
+#ambi-format = acn+sn3d
+
 ## hrtf:
 #  Controls HRTF processing. These filters provide better spatialization of
 #  sounds while using headphones, but do require a bit more CPU power. The

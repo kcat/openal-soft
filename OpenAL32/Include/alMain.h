@@ -463,6 +463,14 @@ inline ALuint FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType typ
     return ChannelsFromDevFmt(chans) * BytesFromDevFmt(type);
 }
 
+enum AmbiFormat {
+    AmbiFormat_FuMa,     /* FuMa channel order and normalization */
+    AmbiFormat_ACN_SN3D, /* ACN channel order and SN3D normalization */
+    AmbiFormat_ACN_N3D,  /* ACN channel order and N3D normalization */
+
+    AmbiFormat_Default = AmbiFormat_ACN_SN3D
+};
+
 
 extern const struct EffectList {
     const char *name;
@@ -557,6 +565,10 @@ struct ALCdevice_struct
     enum DevFmtChannels FmtChans;
     enum DevFmtType     FmtType;
     ALboolean IsHeadphones;
+    /* For DevFmtAmbi* output only, specifies the channel order and
+     * normalization.
+     */
+    enum AmbiFormat AmbiFmt;
 
     al_string DeviceName;
 

@@ -63,6 +63,10 @@ static const ALuint FuMa2ACN[MAX_AMBI_COEFFS] = {
     15, /* P */
     9,  /* Q */
 };
+static const ALuint ACN2ACN[MAX_AMBI_COEFFS] = {
+    0,  1,  2,  3,  4,  5,  6,  7,
+    8,  9, 10, 11, 12, 13, 14, 15
+};
 
 /* NOTE: These are scale factors as applied to Ambisonics content. Decoder
  * coefficients should be divided by these values to get proper N3D scalings.
@@ -596,44 +600,45 @@ static void InitPanning(ALCdevice *device)
         device->FOAOut.Ambi = device->Dry.Ambi;
         device->FOAOut.CoeffCount = device->Dry.CoeffCount;
     }
-    else if(device->FmtChans == DevFmtAmbi1)
+    else if(device->FmtChans >= DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3)
     {
-        count = 4;
-        for(i = 0;i < count;i++)
-        {
-            device->Dry.Ambi.Map[i].Scale = 1.0f/SN3D2N3DScale[i];
-            device->Dry.Ambi.Map[i].Index = i;
-        }
-        device->Dry.CoeffCount = 0;
-        device->Dry.NumChannels = count;
+        const ALuint *acnmap = (device->AmbiFmt == AmbiFormat_FuMa) ? FuMa2ACN : ACN2ACN;
+        const ALfloat *n3dcale = (device->AmbiFmt == AmbiFormat_FuMa) ? FuMa2N3DScale :
+                                 (device->AmbiFmt == AmbiFormat_ACN_SN3D) ? SN3D2N3DScale :
+                                 /*(device->AmbiFmt == AmbiFormat_ACN_N3D) ?*/ UnitScale;
 
-        device->FOAOut.Ambi = device->Dry.Ambi;
-        device->FOAOut.CoeffCount = device->Dry.CoeffCount;
-    }
-    else if(device->FmtChans == DevFmtAmbi2 || device->FmtChans == DevFmtAmbi3)
-    {
         count = (device->FmtChans == DevFmtAmbi3) ? 16 :
-                (device->FmtChans == DevFmtAmbi2) ? 9 : 1;
+                (device->FmtChans == DevFmtAmbi2) ? 9 :
+                (device->FmtChans == DevFmtAmbi1) ? 4 : 1;
         for(i = 0;i < count;i++)
         {
-            device->Dry.Ambi.Map[i].Scale = 1.0f/SN3D2N3DScale[i];
-            device->Dry.Ambi.Map[i].Index = i;
+            ALuint acn = acnmap[i];
+            device->Dry.Ambi.Map[i].Scale = 1.0f/n3dcale[acn];
+            device->Dry.Ambi.Map[i].Index = acn;
         }
         device->Dry.CoeffCount = 0;
         device->Dry.NumChannels = count;
 
-        /* FOA output is always ACN+N3D for higher-order ambisonic output. The
-         * upsampler expects this and will convert it for output.
-         */
-        memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
-        for(i = 0;i < 4;i++)
+        if(device->FmtChans == DevFmtAmbi1)
         {
-            device->FOAOut.Ambi.Map[i].Scale = 1.0f;
-            device->FOAOut.Ambi.Map[i].Index = i;
+            device->FOAOut.Ambi = device->Dry.Ambi;
+            device->FOAOut.CoeffCount = device->Dry.CoeffCount;
         }
-        device->FOAOut.CoeffCount = 0;
+        else
+        {
+            /* FOA output is always ACN+N3D for higher-order ambisonic output.
+             * The upsampler expects this and will convert it for output.
+             */
+            memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
+            for(i = 0;i < 4;i++)
+            {
+                device->FOAOut.Ambi.Map[i].Scale = 1.0f;
+                device->FOAOut.Ambi.Map[i].Index = i;
+            }
+            device->FOAOut.CoeffCount = 0;
 
-        ambiup_reset(device->AmbiUp, device);
+            ambiup_reset(device->AmbiUp, device);
+        }
     }
     else
     {

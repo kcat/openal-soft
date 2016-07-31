@@ -461,6 +461,29 @@ Pair-Wise uses standard pair-wise panning between
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
        </property>
       </widget>
+      <widget class="QLabel" name="label_30">
+       <property name="geometry">
+        <rect>
+         <x>270</x>
+         <y>130</y>
+         <width>111</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Ambisonic Format:</string>
+       </property>
+      </widget>
+      <widget class="QComboBox" name="ambiFormatComboBox">
+       <property name="geometry">
+        <rect>
+         <x>390</x>
+         <y>130</y>
+         <width>131</width>
+         <height>22</height>
+        </rect>
+       </property>
+      </widget>
      </widget>
      <widget class="QGroupBox" name="groupBox_4">
       <property name="geometry">

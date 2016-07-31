@@ -115,6 +115,13 @@ static const struct NameValuePair {
     { "Pair-Wise", "paired" },
 
     { "", "" }
+}, ambiFormatList[] = {
+    { "Default", "" },
+    { "ACN + SN3D", "acn+sn3d" },
+    { "ACN + N3D", "acn+n3d" },
+    { "Furse-Malham", "fuma" },
+
+    { "", "" }
 };
 
 static QString getDefaultConfigName()
@@ -229,6 +236,9 @@ MainWindow::MainWindow(QWidget *parent) :
     for(int i = 0;stereoPanList[i].name[0];i++)
         ui->stereoPanningComboBox->addItem(stereoPanList[i].name);
     ui->stereoPanningComboBox->adjustSize();
+    for(int i = 0;ambiFormatList[i].name[0];i++)
+        ui->ambiFormatComboBox->addItem(ambiFormatList[i].name);
+    ui->ambiFormatComboBox->adjustSize();
 
     int count;
     for(count = 0;resamplerList[count].name[0];count++) {
@@ -316,6 +326,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->periodCountEdit, SIGNAL(editingFinished()), this, SLOT(updatePeriodCountSlider()));
 
     connect(ui->stereoPanningComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(enableApplyButton()));
+    connect(ui->ambiFormatComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(enableApplyButton()));
 
     connect(ui->decoderHQModeCheckBox, SIGNAL(stateChanged(int)), this, SLOT(toggleHqState(int)));
     connect(ui->decoderDistCompCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
@@ -628,6 +639,18 @@ void MainWindow::loadConfig(const QString &fname)
         }
     }
 
+    QString ambiformat = settings.value("ambi-format").toString();
+    ui->ambiFormatComboBox->setCurrentIndex(0);
+    if(ambiformat.isEmpty() == false)
+    {
+        QString str = getNameFromValue(ambiFormatList, ambiformat);
+        if(!str.isEmpty())
+        {
+            int j = ui->ambiFormatComboBox->findText(str);
+            if(j > 0) ui->ambiFormatComboBox->setCurrentIndex(j);
+        }
+    }
+
     bool hqmode = settings.value("decoder/hq-mode", false).toBool();
     ui->decoderHQModeCheckBox->setChecked(hqmode);
     bool distcomp = settings.value("decoder/distance-comp", true).toBool();
@@ -855,6 +878,7 @@ void MainWindow::saveConfig(const QString &fname) const
 
     settings.setValue("stereo-mode", getValueFromName(stereoModeList, ui->stereoModeCombo->currentText()));
     settings.setValue("stereo-panning", getValueFromName(stereoPanList, ui->stereoPanningComboBox->currentText()));
+    settings.setValue("ambi-format", getValueFromName(ambiFormatList, ui->ambiFormatComboBox->currentText()));
 
     settings.setValue("decoder/hq-mode",
         ui->decoderHQModeCheckBox->isChecked() ? QString("true") : QString(/*"false"*/)

@@ -78,9 +78,9 @@ static const struct NameValuePair {
     { "6.1 Surround", "surround61" },
     { "7.1 Surround", "surround71" },
 
-    { "Ambisonics, 1st Order", "ambi1" },
-    { "Ambisonics, 2nd Order", "ambi2" },
-    { "Ambisonics, 3rd Order", "ambi3" },
+    { "Ambisonic, 1st Order", "ambi1" },
+    { "Ambisonic, 2nd Order", "ambi2" },
+    { "Ambisonic, 3rd Order", "ambi3" },
 
     { "", "" }
 }, sampleTypeList[] = {

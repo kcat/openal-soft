@@ -1293,9 +1293,9 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans)
     case DevFmtX51Rear: return "5.1 Surround (Rear)";
     case DevFmtX61: return "6.1 Surround";
     case DevFmtX71: return "7.1 Surround";
-    case DevFmtAmbi1: return "Ambisonics (1st Order)";
-    case DevFmtAmbi2: return "Ambisonics (2nd Order)";
-    case DevFmtAmbi3: return "Ambisonics (3rd Order)";
+    case DevFmtAmbi1: return "Ambisonic (1st Order)";
+    case DevFmtAmbi2: return "Ambisonic (2nd Order)";
+    case DevFmtAmbi3: return "Ambisonic (3rd Order)";
     }
     return "(unknown channels)";
 }

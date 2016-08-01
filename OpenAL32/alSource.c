@@ -642,8 +642,9 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_LOOPING:
             CHECKVAL(*values == AL_FALSE || *values == AL_TRUE);
 
-            Source->Looping = (ALboolean)*values;
-            DO_UPDATEPROPS();
+            WriteLock(&Source->queue_lock);
+            ATOMIC_STORE(&Source->looping, *values);
+            WriteUnlock(&Source->queue_lock);
             return AL_TRUE;
 
         case AL_BUFFER:
@@ -1198,7 +1199,7 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             return AL_TRUE;
 
         case AL_LOOPING:
-            *values = Source->Looping;
+            *values = ATOMIC_LOAD(&Source->looping);
             return AL_TRUE;
 
         case AL_BUFFER:
@@ -1285,7 +1286,7 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
 
         case AL_BUFFERS_PROCESSED:
             ReadLock(&Source->queue_lock);
-            if(Source->Looping || Source->SourceType != AL_STREAMING)
+            if(ATOMIC_LOAD(&Source->looping) || Source->SourceType != AL_STREAMING)
             {
                 /* Buffers on a looping source are in a perpetual state of
                  * PENDING, so don't report any as PROCESSED */
@@ -2605,6 +2606,13 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
 
     WriteLock(&source->queue_lock);
+    if(ATOMIC_LOAD(&source->looping) || source->SourceType != AL_STREAMING)
+    {
+        WriteUnlock(&source->queue_lock);
+        /* Trying to unqueue buffers on a looping or non-streaming source. */
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    }
+
     /* Find the new buffer queue head */
     OldTail = ATOMIC_LOAD(&source->queue);
     Current = ATOMIC_LOAD(&source->current_buffer);
@@ -2617,10 +2625,10 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
             OldTail = next;
         }
     }
-    if(source->Looping || source->SourceType != AL_STREAMING || i != nb)
+    if(i != nb)
     {
         WriteUnlock(&source->queue_lock);
-        /* Trying to unqueue pending buffers, or a buffer that wasn't queued. */
+        /* Trying to unqueue pending buffers. */
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
     }
 
@@ -2693,7 +2701,6 @@ static void InitSourceParams(ALsource *Source)
     Source->RefDistance = 1.0f;
     Source->MaxDistance = FLT_MAX;
     Source->RollOffFactor = 1.0f;
-    Source->Looping = AL_FALSE;
     Source->Gain = 1.0f;
     Source->MinGain = 0.0f;
     Source->MaxGain = 1.0f;
@@ -2740,6 +2747,8 @@ static void InitSourceParams(ALsource *Source)
 
     ATOMIC_INIT(&Source->position, 0);
     ATOMIC_INIT(&Source->position_fraction, 0);
+
+    ATOMIC_INIT(&Source->looping, AL_FALSE);
 
     ATOMIC_INIT(&Source->Update, NULL);
     ATOMIC_INIT(&Source->FreeList, NULL);
@@ -2832,7 +2841,6 @@ static void UpdateSourceProps(ALsource *source, ALuint num_sends, ALCcontext *co
                          almemory_order_relaxed);
     }
     ATOMIC_STORE(&props->HeadRelative, source->HeadRelative, almemory_order_relaxed);
-    ATOMIC_STORE(&props->Looping, source->Looping, almemory_order_relaxed);
     ATOMIC_STORE(&props->DistanceModel,
         context->SourceDistanceModel ?  source->DistanceModel : context->DistanceModel,
         almemory_order_relaxed
@@ -3168,6 +3176,7 @@ static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCdevice *device
     ALuint readPos, readPosFrac;
     ALuint totalBufferLen;
     ALdouble offset = 0.0;
+    ALboolean looping;
     ALuint refcount;
 
     ReadLock(&Source->queue_lock);
@@ -3186,6 +3195,8 @@ static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCdevice *device
 
         readPos = ATOMIC_LOAD(&Source->position, almemory_order_relaxed);
         readPosFrac = ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed);
+
+        looping = ATOMIC_LOAD(&Source->looping, almemory_order_relaxed);
     } while(refcount != ReadRef(&device->MixCount));
 
     while(BufferList != NULL)
@@ -3202,7 +3213,7 @@ static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCdevice *device
     }
     assert(Buffer != NULL);
 
-    if(Source->Looping)
+    if(looping)
         readPos %= totalBufferLen;
     else
     {

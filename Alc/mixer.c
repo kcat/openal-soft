@@ -388,9 +388,9 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
     BufferListItem = ATOMIC_LOAD(&Source->current_buffer);
     DataPosInt     = ATOMIC_LOAD(&Source->position, almemory_order_relaxed);
     DataPosFrac    = ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed);
+    Looping        = ATOMIC_LOAD(&Source->looping, almemory_order_relaxed);
     NumChannels    = Source->NumChannels;
     SampleSize     = Source->SampleSize;
-    Looping        = voice->Looping;
     increment      = voice->Step;
 
     IrSize = (Device->Hrtf ? Device->Hrtf->irSize : 0);

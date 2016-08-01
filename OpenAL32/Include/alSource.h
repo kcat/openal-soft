@@ -28,8 +28,6 @@ typedef struct ALvoice {
     /** Current target parameters used for mixing. */
     ALint Step;
 
-    ALboolean Looping;
-
     /* If not 'moving', gain/coefficients are set directly without fading. */
     ALboolean Moving;
 
@@ -74,7 +72,6 @@ struct ALsourceProps {
     ATOMIC(ALfloat)   Direction[3];
     ATOMIC(ALfloat)   Orientation[2][3];
     ATOMIC(ALboolean) HeadRelative;
-    ATOMIC(ALboolean) Looping;
     ATOMIC(enum DistanceModel) DistanceModel;
     ATOMIC(ALboolean) DirectChannels;
 
@@ -128,7 +125,6 @@ typedef struct ALsource {
     ALfloat   Direction[3];
     ALfloat   Orientation[2][3];
     ALboolean HeadRelative;
-    ALboolean Looping;
     enum DistanceModel DistanceModel;
     ALboolean DirectChannels;
 
@@ -191,6 +187,8 @@ typedef struct ALsource {
      */
     ATOMIC(ALuint) position;
     ATOMIC(ALuint) position_fraction;
+
+    ATOMIC(ALboolean) looping;
 
     /** Current buffer sample info. */
     ALuint NumChannels;

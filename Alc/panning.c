@@ -345,6 +345,8 @@ static void SetChannelMap(const enum Channel *devchans, ChannelConfig *ambicoeff
                           const ChannelMap *chanmap, size_t count, ALuint *outcount,
                           ALboolean isfuma)
 {
+    const ALuint *acnmap = isfuma ? FuMa2ACN : ACN2ACN;
+    const ALfloat *n3dscale = isfuma ? FuMa2N3DScale : UnitScale;
     size_t j, k;
     ALuint i;
 
@@ -362,19 +364,10 @@ static void SetChannelMap(const enum Channel *devchans, ChannelConfig *ambicoeff
             if(devchans[i] != chanmap[j].ChanName)
                 continue;
 
-            if(isfuma)
+            for(k = 0;k < MAX_AMBI_COEFFS;++k)
             {
-                /* Reformat FuMa -> ACN/N3D */
-                for(k = 0;k < MAX_AMBI_COEFFS;++k)
-                {
-                    ALuint acn = FuMa2ACN[k];
-                    ambicoeffs[i][acn] = chanmap[j].Config[k] / FuMa2N3DScale[acn];
-                }
-            }
-            else
-            {
-                for(k = 0;k < MAX_AMBI_COEFFS;++k)
-                    ambicoeffs[i][k] = chanmap[j].Config[k];
+                ALuint acn = acnmap[k];
+                ambicoeffs[i][acn] = chanmap[j].Config[k] / n3dscale[acn];
             }
             break;
         }
@@ -587,9 +580,9 @@ static void InitPanning(ALCdevice *device)
     if(device->FmtChans >= DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3)
     {
         const ALuint *acnmap = (device->AmbiFmt == AmbiFormat_FuMa) ? FuMa2ACN : ACN2ACN;
-        const ALfloat *n3dcale = (device->AmbiFmt == AmbiFormat_FuMa) ? FuMa2N3DScale :
-                                 (device->AmbiFmt == AmbiFormat_ACN_SN3D) ? SN3D2N3DScale :
-                                 /*(device->AmbiFmt == AmbiFormat_ACN_N3D) ?*/ UnitScale;
+        const ALfloat *n3dscale = (device->AmbiFmt == AmbiFormat_FuMa) ? FuMa2N3DScale :
+                                  (device->AmbiFmt == AmbiFormat_ACN_SN3D) ? SN3D2N3DScale :
+                                  /*(device->AmbiFmt == AmbiFormat_ACN_N3D) ?*/ UnitScale;
 
         count = (device->FmtChans == DevFmtAmbi3) ? 16 :
                 (device->FmtChans == DevFmtAmbi2) ? 9 :
@@ -597,7 +590,7 @@ static void InitPanning(ALCdevice *device)
         for(i = 0;i < count;i++)
         {
             ALuint acn = acnmap[i];
-            device->Dry.Ambi.Map[i].Scale = 1.0f/n3dcale[acn];
+            device->Dry.Ambi.Map[i].Scale = 1.0f/n3dscale[acn];
             device->Dry.Ambi.Map[i].Index = acn;
         }
         device->Dry.CoeffCount = 0;

@@ -80,7 +80,7 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
 
 void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const ALfloat *restrict src, ALuint numsamples);
 
-inline void ALfilterState_processPassthru(ALfilterState *filter, const ALfloat *src, ALuint numsamples)
+inline void ALfilterState_processPassthru(ALfilterState *filter, const ALfloat *restrict src, ALuint numsamples)
 {
     if(numsamples >= 2)
     {

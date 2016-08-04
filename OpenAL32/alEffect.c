@@ -60,11 +60,11 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
     device = context->Device;
     for(cur = 0;cur < n;cur++)
     {
-        ALeffect *effect = calloc(1, sizeof(ALeffect));
+        ALeffect *effect = al_calloc(16, sizeof(ALeffect));
         ALenum err = AL_OUT_OF_MEMORY;
         if(!effect || (err=InitEffect(effect)) != AL_NO_ERROR)
         {
-            free(effect);
+            al_free(effect);
             alDeleteEffects(cur, effects);
             SET_ERROR_AND_GOTO(context, err, done);
         }
@@ -76,7 +76,7 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
         {
             FreeThunkEntry(effect->id);
             memset(effect, 0, sizeof(ALeffect));
-            free(effect);
+            al_free(effect);
 
             alDeleteEffects(cur, effects);
             SET_ERROR_AND_GOTO(context, err, done);
@@ -115,7 +115,7 @@ AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects)
         FreeThunkEntry(effect->id);
 
         memset(effect, 0, sizeof(*effect));
-        free(effect);
+        al_free(effect);
     }
 
 done:
@@ -381,7 +381,7 @@ ALvoid ReleaseALEffects(ALCdevice *device)
         // Release effect structure
         FreeThunkEntry(temp->id);
         memset(temp, 0, sizeof(ALeffect));
-        free(temp);
+        al_free(temp);
     }
 }
 

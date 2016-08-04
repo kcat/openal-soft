@@ -94,7 +94,12 @@ static ALCboolean jack_load(void)
 #ifdef HAVE_DYNLOAD
     if(!jack_handle)
     {
-        jack_handle = LoadLib("libjack.so.0");
+#ifdef _WIN32
+#define JACKLIB "libjack.dll"
+#else
+#define JACKLIB "libjack.so.0"
+#endif
+        jack_handle = LoadLib(JACKLIB);
         if(!jack_handle)
             return ALC_FALSE;
 

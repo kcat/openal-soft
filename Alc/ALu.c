@@ -1284,7 +1284,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
 static void CalcSourceParams(ALvoice *voice, ALCcontext *context)
 {
     ALsource *source = voice->Source;
-    ALbufferlistitem *BufferListItem;
+    const ALbufferlistitem *BufferListItem;
     struct ALsourceProps *first;
     struct ALsourceProps *props;
 
@@ -1294,7 +1294,7 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context)
     BufferListItem = ATOMIC_LOAD(&source->queue, almemory_order_relaxed);
     while(BufferListItem != NULL)
     {
-        ALbuffer *buffer;
+        const ALbuffer *buffer;
         if((buffer=BufferListItem->buffer) != NULL)
         {
             if(buffer->FmtChannels == FmtMono)

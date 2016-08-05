@@ -238,7 +238,7 @@ static ALCboolean ca_reset_playback(ALCdevice *device)
 
     if(device->Frequency != streamFormat.mSampleRate)
     {
-        device->UpdateSize = (ALuint)((ALuint64)device->UpdateSize *
+        device->NumUpdates = (ALuint)((ALuint64)device->NumUpdates *
                                       streamFormat.mSampleRate /
                                       device->Frequency);
         device->Frequency = streamFormat.mSampleRate;

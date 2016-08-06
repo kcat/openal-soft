@@ -89,6 +89,30 @@ void Mix_Neon(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer
         if(step != 0.0f && Counter > 0)
         {
             ALuint minsize = minu(BufferSize, Counter);
+            /* Mix with applying gain steps in aligned multiples of 4. */
+            if(minsize-pos > 3)
+            {
+                float32x4_t step4;
+                gain4 = vsetq_lane_f32(gain, gain4, 0);
+                gain4 = vsetq_lane_f32(gain + step, gain4, 1);
+                gain4 = vsetq_lane_f32(gain + step + step, gain4, 2);
+                gain4 = vsetq_lane_f32(gain + step + step + step, gain4, 3);
+                step4 = vdupq_n_f32(step + step + step + step);
+                do {
+                    const float32x4_t val4 = vld1q_f32(&data[pos]);
+                    float32x4_t dry4 = vld1q_f32(&OutBuffer[c][OutPos+pos]);
+                    dry4 = vmlaq_f32(dry4, val4, gain4);
+                    gain4 = vaddq_f32(gain4, step4);
+                    vst1q_f32(&OutBuffer[c][OutPos+pos], dry4);
+                    pos += 4;
+                } while(minsize-pos > 3);
+                /* NOTE: gain4 now represents the next four gains after the
+                 * last four mixed samples, so the lowest element represents
+                 * the next gain to apply.
+                 */
+                gain = vgetq_lane_f32(gain4, 0);
+            }
+            /* Mix with applying left over gain steps that aren't aligned multiples of 4. */
             for(;pos < minsize;pos++)
             {
                 OutBuffer[c][OutPos+pos] += data[pos]*gain;

@@ -2316,13 +2316,21 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         context->MaxVoices = newcount;
     }
 
-    for(i = 0;i < n;i++)
+    if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
     {
-        source = LookupSource(context, sources[i]);
-        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
+        for(i = 0;i < n;i++)
+        {
+            source = LookupSource(context, sources[i]);
             source->new_state = AL_PLAYING;
-        else
+        }
+    }
+    else
+    {
+        for(i = 0;i < n;i++)
+        {
+            source = LookupSource(context, sources[i]);
             SetSourceState(source, context, AL_PLAYING);
+        }
     }
     UnlockContext(context);
 
@@ -2354,13 +2362,21 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     }
 
     LockContext(context);
-    for(i = 0;i < n;i++)
+    if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
     {
-        source = LookupSource(context, sources[i]);
-        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
+        for(i = 0;i < n;i++)
+        {
+            source = LookupSource(context, sources[i]);
             source->new_state = AL_PAUSED;
-        else
+        }
+    }
+    else
+    {
+        for(i = 0;i < n;i++)
+        {
+            source = LookupSource(context, sources[i]);
             SetSourceState(source, context, AL_PAUSED);
+        }
     }
     UnlockContext(context);
 

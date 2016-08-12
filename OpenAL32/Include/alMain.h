@@ -599,9 +599,10 @@ struct ALCdevice_struct
     ALCenum Hrtf_Status;
 
     /* HRTF filter state for dry buffer content */
-    HrtfState Hrtf_State[8];
-    HrtfParams Hrtf_Params[8];
+    HrtfState Hrtf_State[4];
+    HrtfParams Hrtf_Params[4];
     ALuint Hrtf_Offset;
+    ALuint Hrtf_IrSize;
 
     /* UHJ encoder state */
     struct Uhj2Encoder *Uhj_Encoder;

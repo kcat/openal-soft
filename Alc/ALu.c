@@ -1505,7 +1505,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             if(lidx != -1 && ridx != -1)
             {
                 HrtfMixerFunc HrtfMix = SelectHrtfMixer();
-                ALuint irsize = device->Hrtf->irSize;
+                ALuint irsize = device->Hrtf_IrSize;
                 MixHrtfParams hrtfparams;
                 memset(&hrtfparams, 0, sizeof(hrtfparams));
                 for(c = 0;c < device->Dry.NumChannels;c++)

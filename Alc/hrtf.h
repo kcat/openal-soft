@@ -42,4 +42,11 @@ void FreeHrtfList(vector_HrtfEntry *list);
 
 void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays);
 
+/* Produces HRTF filter coefficients for decoding B-Format. The result will
+ * have ACN ordering with N3D normalization. NumChannels must currently be 4,
+ * for first-order. Returns the maximum impulse-response length of the
+ * generated coefficients.
+ */
+ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][2], ALuint NumChannels);
+
 #endif /* ALC_HRTF_H */

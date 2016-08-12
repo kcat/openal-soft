@@ -172,6 +172,82 @@ void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azi
 }
 
 
+ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][2], ALuint NumChannels)
+{
+    ALuint total_hrirs = 0;
+    ALuint max_length = 0;
+    ALuint eidx, aidx, i, j;
+    ALfloat scale;
+
+    assert(NumChannels == 4);
+
+    for(eidx = 0;eidx < Hrtf->evCount;++eidx)
+    {
+        const ALfloat elev = (ALfloat)eidx/(ALfloat)(Hrtf->evCount-1)*F_PI - F_PI_2;
+        const ALuint evoffset = Hrtf->evOffset[eidx];
+        const ALuint azcount = Hrtf->azCount[eidx];
+
+        for(aidx = 0;aidx < azcount;++aidx)
+        {
+            ALfloat ambcoeffs[4];
+            const ALshort *fir;
+            ALuint length, delay;
+            ALuint lidx, ridx;
+            ALfloat x, y, z;
+            ALfloat azi;
+
+            lidx = evoffset + aidx;
+            ridx = evoffset + ((azcount - aidx) % azcount);
+
+            azi = (ALfloat)aidx/(ALfloat)azcount * -F_TAU;
+            x = cosf(azi) * cosf(elev);
+            y = sinf(azi) * cosf(elev);
+            z = sinf(elev);
+
+            ambcoeffs[0] = 1.0f;
+            ambcoeffs[1] = y / 1.732050808f;
+            ambcoeffs[2] = z / 1.732050808f;
+            ambcoeffs[3] = x / 1.732050808f;
+
+            /* Apply left ear response */
+            delay = Hrtf->delays[lidx];
+            fir = &Hrtf->coeffs[lidx * Hrtf->irSize];
+            length = minu(delay + Hrtf->irSize, HRIR_LENGTH);
+            for(i = 0;i < NumChannels;++i)
+            {
+                for(j = delay;j < length;++j)
+                    coeffs[i][j][0] += fir[j-delay]/32767.0f * ambcoeffs[i];
+            }
+            max_length = maxu(max_length, length);
+
+            /* Apply right ear response */
+            delay = Hrtf->delays[ridx];
+            fir = &Hrtf->coeffs[ridx * Hrtf->irSize];
+            length = minu(delay + Hrtf->irSize, HRIR_LENGTH);
+            for(i = 0;i < NumChannels;++i)
+            {
+                for(j = delay;j < length;++j)
+                    coeffs[i][j][1] += fir[j-delay]/32767.0f * ambcoeffs[i];
+            }
+            max_length = maxu(max_length, length);
+
+            total_hrirs++;
+        }
+    }
+
+    scale = (ALfloat)total_hrirs;
+    for(i = 0;i < NumChannels;++i)
+    {
+        for(j = 0;j < max_length;++j)
+        {
+            coeffs[i][j][0] /= scale;
+            coeffs[i][j][1] /= scale;
+        }
+    }
+    return max_length;
+}
+
+
 static struct Hrtf *LoadHrtf00(FILE *f, const_al_string filename)
 {
     const ALubyte maxDelay = HRTF_HISTORY_LENGTH-1;

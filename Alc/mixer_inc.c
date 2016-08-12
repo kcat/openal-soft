@@ -114,3 +114,36 @@ skip_stepping:
         OutPos += todo;
     }
 }
+
+void MixDirectHrtf(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, ALuint ridx,
+                   const ALfloat *data, ALuint Offset, const ALuint IrSize,
+                   ALfloat (*restrict Coeffs)[2], ALfloat (*restrict Values)[2],
+                   ALuint BufferSize)
+{
+    ALfloat out[MAX_UPDATE_SAMPLES][2];
+    ALfloat insample;
+    ALuint pos, i;
+
+    for(pos = 0;pos < BufferSize;)
+    {
+        ALuint todo = minu(BufferSize-pos, MAX_UPDATE_SAMPLES);
+
+        for(i = 0;i < todo;i++)
+        {
+            Values[(Offset+IrSize)&HRIR_MASK][0] = 0.0f;
+            Values[(Offset+IrSize)&HRIR_MASK][1] = 0.0f;
+            Offset++;
+
+            insample = *(data++);
+            ApplyCoeffs(Offset, Values, IrSize, Coeffs, insample, insample);
+            out[i][0] = Values[Offset&HRIR_MASK][0];
+            out[i][1] = Values[Offset&HRIR_MASK][1];
+        }
+
+        for(i = 0;i < todo;i++)
+            OutBuffer[lidx][pos+i] += out[i][0];
+        for(i = 0;i < todo;i++)
+            OutBuffer[ridx][pos+i] += out[i][1];
+        pos += todo;
+    }
+}

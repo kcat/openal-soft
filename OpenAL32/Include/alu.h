@@ -167,6 +167,10 @@ typedef void (*HrtfMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint 
                               const ALfloat *data, ALuint Counter, ALuint Offset, ALuint OutPos,
                               const ALuint IrSize, const MixHrtfParams *hrtfparams,
                               HrtfState *hrtfstate, ALuint BufferSize);
+typedef void (*HrtfDirectMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE],
+                                    ALuint lidx, ALuint ridx, const ALfloat *data, ALuint Offset,
+                                    const ALuint IrSize, ALfloat (*restrict Coeffs)[2],
+                                    ALfloat (*restrict Values)[2], ALuint BufferSize);
 
 
 #define GAIN_SILENCE_THRESHOLD  (0.00001f) /* -100dB */

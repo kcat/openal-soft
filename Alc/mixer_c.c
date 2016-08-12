@@ -166,6 +166,7 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 }
 
 #define MixHrtf MixHrtf_C
+#define MixDirectHrtf MixDirectHrtf_C
 #include "mixer_inc.c"
 #undef MixHrtf
 

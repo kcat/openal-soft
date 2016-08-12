@@ -94,18 +94,18 @@ extern inline void aluMatrixfSet(aluMatrixf *matrix,
                                  ALfloat m30, ALfloat m31, ALfloat m32, ALfloat m33);
 
 
-static inline HrtfMixerFunc SelectHrtfMixer(void)
+static inline HrtfDirectMixerFunc SelectHrtfMixer(void)
 {
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
-        return MixHrtf_SSE;
+        return MixDirectHrtf_SSE;
 #endif
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
-        return MixHrtf_Neon;
+        return MixDirectHrtf_Neon;
 #endif
 
-    return MixHrtf_C;
+    return MixDirectHrtf_C;
 }
 
 
@@ -1504,17 +1504,14 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             int ridx = GetChannelIdxByName(device->RealOut, FrontRight);
             if(lidx != -1 && ridx != -1)
             {
-                HrtfMixerFunc HrtfMix = SelectHrtfMixer();
+                HrtfDirectMixerFunc HrtfMix = SelectHrtfMixer();
                 ALuint irsize = device->Hrtf_IrSize;
-                MixHrtfParams hrtfparams;
-                memset(&hrtfparams, 0, sizeof(hrtfparams));
                 for(c = 0;c < device->Dry.NumChannels;c++)
                 {
-                    hrtfparams.Current = &device->Hrtf_Params[c];
-                    hrtfparams.Target = &device->Hrtf_Params[c];
                     HrtfMix(device->RealOut.Buffer, lidx, ridx,
-                        device->Dry.Buffer[c], 0, device->Hrtf_Offset, 0,
-                        irsize, &hrtfparams, &device->Hrtf_State[c], SamplesToDo
+                        device->Dry.Buffer[c], device->Hrtf_Offset, irsize,
+                        device->Hrtf_Coeffs[c], device->Hrtf_Values[c],
+                        SamplesToDo
                     );
                 }
                 device->Hrtf_Offset += SamplesToDo;

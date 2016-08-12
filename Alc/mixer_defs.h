@@ -25,6 +25,10 @@ void MixHrtf_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, ALuint ri
                const ALfloat *data, ALuint Counter, ALuint Offset, ALuint OutPos,
                const ALuint IrSize, const struct MixHrtfParams *hrtfparams,
                struct HrtfState *hrtfstate, ALuint BufferSize);
+void MixDirectHrtf_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, ALuint ridx,
+                     const ALfloat *data, ALuint Offset, const ALuint IrSize,
+                     ALfloat (*restrict Coeffs)[2], ALfloat (*restrict Values)[2],
+                     ALuint BufferSize);
 void Mix_C(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
            struct MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize);
 void MixRow_C(ALfloat *OutBuffer, const ALfloat *Mtx, ALfloat (*restrict data)[BUFFERSIZE],
@@ -35,6 +39,10 @@ void MixHrtf_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, ALuint 
                  const ALfloat *data, ALuint Counter, ALuint Offset, ALuint OutPos,
                  const ALuint IrSize, const struct MixHrtfParams *hrtfparams,
                  struct HrtfState *hrtfstate, ALuint BufferSize);
+void MixDirectHrtf_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, ALuint ridx,
+                       const ALfloat *data, ALuint Offset, const ALuint IrSize,
+                       ALfloat (*restrict Coeffs)[2], ALfloat (*restrict Values)[2],
+                       ALuint BufferSize);
 void Mix_SSE(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
              struct MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize);
 void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Mtx, ALfloat (*restrict data)[BUFFERSIZE],
@@ -78,6 +86,10 @@ void MixHrtf_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, ALuint
                   const ALfloat *data, ALuint Counter, ALuint Offset, ALuint OutPos,
                   const ALuint IrSize, const struct MixHrtfParams *hrtfparams,
                   struct HrtfState *hrtfstate, ALuint BufferSize);
+void MixDirectHrtf_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, ALuint ridx,
+                        const ALfloat *data, ALuint Offset, const ALuint IrSize,
+                        ALfloat (*restrict Coeffs)[2], ALfloat (*restrict Values)[2],
+                        ALuint BufferSize);
 void Mix_Neon(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
               struct MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize);
 void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Mtx, ALfloat (*restrict data)[BUFFERSIZE],

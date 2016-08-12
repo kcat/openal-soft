@@ -599,8 +599,8 @@ struct ALCdevice_struct
     ALCenum Hrtf_Status;
 
     /* HRTF filter state for dry buffer content */
-    HrtfState Hrtf_State[4];
-    HrtfParams Hrtf_Params[4];
+    alignas(16) ALfloat Hrtf_Values[4][HRIR_LENGTH][2];
+    alignas(16) ALfloat Hrtf_Coeffs[4][HRIR_LENGTH][2];
     ALuint Hrtf_Offset;
     ALuint Hrtf_IrSize;
 

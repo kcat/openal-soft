@@ -758,9 +758,8 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
 
 static void InitHrtfPanning(ALCdevice *device)
 {
-    ALfloat hrtf_coeffs[4][HRIR_LENGTH][2];
     size_t count = 4;
-    ALuint i, j;
+    ALuint i;
 
     for(i = 0;i < count;i++)
     {
@@ -773,21 +772,12 @@ static void InitHrtfPanning(ALCdevice *device)
     device->FOAOut.Ambi = device->Dry.Ambi;
     device->FOAOut.CoeffCount = device->Dry.CoeffCount;
 
-    memset(hrtf_coeffs, 0, sizeof(hrtf_coeffs));
-    device->Hrtf_IrSize = BuildBFormatHrtf(device->Hrtf, hrtf_coeffs, device->Dry.NumChannels);
+    memset(device->Hrtf_Coeffs, 0, sizeof(device->Hrtf_Coeffs));
+    device->Hrtf_IrSize = BuildBFormatHrtf(device->Hrtf, device->Hrtf_Coeffs,
+                                           device->Dry.NumChannels);
 
     /* Round up to the nearest multiple of 8 */
     device->Hrtf_IrSize = (device->Hrtf_IrSize+7)&~7;
-    for(i = 0;i < device->Dry.NumChannels;i++)
-    {
-        for(j = 0;j < HRIR_LENGTH;j++)
-        {
-            device->Hrtf_Params[i].Coeffs[j][0] = hrtf_coeffs[i][j][0];
-            device->Hrtf_Params[i].Coeffs[j][1] = hrtf_coeffs[i][j][1];
-        }
-        device->Hrtf_Params[i].Delay[0] = 0;
-        device->Hrtf_Params[i].Delay[1] = 0;
-    }
 }
 
 static void InitUhjPanning(ALCdevice *device)

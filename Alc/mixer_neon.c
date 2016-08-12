@@ -70,6 +70,7 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 }
 
 #define MixHrtf MixHrtf_Neon
+#define MixDirectHrtf MixDirectHrtf_Neon
 #include "mixer_inc.c"
 #undef MixHrtf
 

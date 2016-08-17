@@ -174,76 +174,92 @@ void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azi
 
 ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][2], ALuint NumChannels)
 {
-    ALuint total_hrirs = 0;
+    static const struct {
+        ALfloat elevation;
+        ALfloat azimuth;
+    } CubePoints[8] = {
+        { DEG2RAD( 35.0f), DEG2RAD( -45.0f) },
+        { DEG2RAD( 35.0f), DEG2RAD(  45.0f) },
+        { DEG2RAD( 35.0f), DEG2RAD(-135.0f) },
+        { DEG2RAD( 35.0f), DEG2RAD( 135.0f) },
+        { DEG2RAD(-35.0f), DEG2RAD( -45.0f) },
+        { DEG2RAD(-35.0f), DEG2RAD(  45.0f) },
+        { DEG2RAD(-35.0f), DEG2RAD(-135.0f) },
+        { DEG2RAD(-35.0f), DEG2RAD( 135.0f) },
+    };
+    static const ALfloat CubeMatrix[8][MAX_AMBI_COEFFS] = {
+        { 0.25f,  0.14425f,  0.14425f,  0.14425f },
+        { 0.25f, -0.14425f,  0.14425f,  0.14425f },
+        { 0.25f,  0.14425f,  0.14425f, -0.14425f },
+        { 0.25f, -0.14425f,  0.14425f, -0.14425f },
+        { 0.25f,  0.14425f, -0.14425f,  0.14425f },
+        { 0.25f, -0.14425f, -0.14425f,  0.14425f },
+        { 0.25f,  0.14425f, -0.14425f, -0.14425f },
+        { 0.25f, -0.14425f, -0.14425f, -0.14425f },
+    };
+    ALuint lidx[8], ridx[8];
+    ALuint min_delay = HRTF_HISTORY_LENGTH;
     ALuint max_length = 0;
-    ALuint eidx, aidx, i, j;
-    ALfloat scale;
+    ALuint i, j, c;
 
     assert(NumChannels == 4);
 
-    for(eidx = 0;eidx < Hrtf->evCount;++eidx)
+    for(c = 0;c < 8;c++)
     {
-        const ALfloat elev = (ALfloat)eidx/(ALfloat)(Hrtf->evCount-1)*F_PI - F_PI_2;
-        const ALuint evoffset = Hrtf->evOffset[eidx];
-        const ALuint azcount = Hrtf->azCount[eidx];
+        ALuint evidx[2];
+        ALuint evoffset;
+        ALuint azidx[2];
+        ALuint azcount;
+        ALfloat mu;
 
-        for(aidx = 0;aidx < azcount;++aidx)
-        {
-            ALfloat ambcoeffs[4];
-            const ALshort *fir;
-            ALuint length, delay;
-            ALuint lidx, ridx;
-            ALfloat x, y, z;
-            ALfloat azi;
+        /* Calculate elevation index. */
+        CalcEvIndices(Hrtf->evCount, CubePoints[c].elevation, evidx, &mu);
+        if(mu >= 0.5f) evidx[0] = evidx[1];
 
-            lidx = evoffset + aidx;
-            ridx = evoffset + ((azcount - aidx) % azcount);
+        azcount = Hrtf->azCount[evidx[0]];
+        evoffset = Hrtf->evOffset[evidx[0]];
 
-            azi = (ALfloat)aidx/(ALfloat)azcount * -F_TAU;
-            x = cosf(azi) * cosf(elev);
-            y = sinf(azi) * cosf(elev);
-            z = sinf(elev);
+        /* Calculate azimuth index for this elevation. */
+        CalcAzIndices(azcount, CubePoints[c].azimuth, azidx, &mu);
+        if(mu >= 0.5f) azidx[0] = azidx[1];
 
-            ambcoeffs[0] = 1.0f;
-            ambcoeffs[1] = y / 1.732050808f;
-            ambcoeffs[2] = z / 1.732050808f;
-            ambcoeffs[3] = x / 1.732050808f;
+        /* Calculate indices for left and right channels. */
+        lidx[c] = evoffset + azidx[0];
+        ridx[c] = evoffset + ((azcount-azidx[0]) % azcount);
 
-            /* Apply left ear response */
-            delay = Hrtf->delays[lidx];
-            fir = &Hrtf->coeffs[lidx * Hrtf->irSize];
-            length = minu(delay + Hrtf->irSize, HRIR_LENGTH);
-            for(i = 0;i < NumChannels;++i)
-            {
-                for(j = delay;j < length;++j)
-                    coeffs[i][j][0] += fir[j-delay]/32767.0f * ambcoeffs[i];
-            }
-            max_length = maxu(max_length, length);
-
-            /* Apply right ear response */
-            delay = Hrtf->delays[ridx];
-            fir = &Hrtf->coeffs[ridx * Hrtf->irSize];
-            length = minu(delay + Hrtf->irSize, HRIR_LENGTH);
-            for(i = 0;i < NumChannels;++i)
-            {
-                for(j = delay;j < length;++j)
-                    coeffs[i][j][1] += fir[j-delay]/32767.0f * ambcoeffs[i];
-            }
-            max_length = maxu(max_length, length);
-
-            total_hrirs++;
-        }
+        min_delay = minu(min_delay, minu(Hrtf->delays[lidx[c]], Hrtf->delays[ridx[c]]));
     }
 
-    scale = (ALfloat)total_hrirs;
-    for(i = 0;i < NumChannels;++i)
+    for(c = 0;c < 8;c++)
     {
-        for(j = 0;j < max_length;++j)
+        const ALshort *fir;
+        ALuint length;
+        ALuint delay;
+
+        fir = &Hrtf->coeffs[lidx[c] * Hrtf->irSize];
+        delay = Hrtf->delays[lidx[c]] - min_delay;
+        length = minu(delay + Hrtf->irSize, HRIR_LENGTH);
+        for(i = 0;i < NumChannels;++i)
         {
-            coeffs[i][j][0] /= scale;
-            coeffs[i][j][1] /= scale;
+            ALuint k = 0;
+            for(j = delay;j < length;++j)
+                coeffs[i][j][0] += fir[k++]/32767.0f * CubeMatrix[c][i];
         }
+        max_length = maxu(max_length, length);
+
+        fir = &Hrtf->coeffs[ridx[c] * Hrtf->irSize];
+        delay = Hrtf->delays[ridx[c]] - min_delay;
+        length = minu(delay + Hrtf->irSize, HRIR_LENGTH);
+        for(i = 0;i < NumChannels;++i)
+        {
+            ALuint k = 0;
+            for(j = delay;j < length;++j)
+                coeffs[i][j][1] += fir[k++]/32767.0f * CubeMatrix[c][i];
+        }
+        max_length = maxu(max_length, length);
     }
+    TRACE("Skipped min delay: %u, new combined length: %u\n", min_delay, max_length);
+
     return max_length;
 }
 

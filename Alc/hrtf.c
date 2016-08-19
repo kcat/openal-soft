@@ -206,26 +206,25 @@ ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][
 
     for(c = 0;c < 8;c++)
     {
-        ALuint evidx[2];
+        ALuint evidx, azidx;
         ALuint evoffset;
-        ALuint azidx[2];
         ALuint azcount;
-        ALfloat mu;
 
         /* Calculate elevation index. */
-        CalcEvIndices(Hrtf->evCount, CubePoints[c].elevation, evidx, &mu);
-        if(mu >= 0.5f) evidx[0] = evidx[1];
+        evidx = (ALuint)floorf((F_PI_2 + CubePoints[c].elevation) *
+                               (Hrtf->evCount-1)/F_PI + 0.5f);
+        evidx = minu(evidx, Hrtf->evCount-1);
 
-        azcount = Hrtf->azCount[evidx[0]];
-        evoffset = Hrtf->evOffset[evidx[0]];
+        azcount = Hrtf->azCount[evidx];
+        evoffset = Hrtf->evOffset[evidx];
 
         /* Calculate azimuth index for this elevation. */
-        CalcAzIndices(azcount, CubePoints[c].azimuth, azidx, &mu);
-        if(mu >= 0.5f) azidx[0] = azidx[1];
+        azidx = (ALuint)floorf((F_TAU+CubePoints[c].azimuth) *
+                               azcount/F_TAU + 0.5f) % azcount;
 
         /* Calculate indices for left and right channels. */
-        lidx[c] = evoffset + azidx[0];
-        ridx[c] = evoffset + ((azcount-azidx[0]) % azcount);
+        lidx[c] = evoffset + azidx;
+        ridx[c] = evoffset + ((azcount-azidx) % azcount);
 
         min_delay = minu(min_delay, minu(Hrtf->delays[lidx[c]], Hrtf->delays[ridx[c]]));
     }

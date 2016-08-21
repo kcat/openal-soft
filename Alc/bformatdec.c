@@ -10,14 +10,7 @@
 #include "almalloc.h"
 
 
-typedef struct BandSplitter {
-    ALfloat coeff;
-    ALfloat lp_z1;
-    ALfloat lp_z2;
-    ALfloat hp_z1;
-} BandSplitter;
-
-static void bandsplit_init(BandSplitter *splitter, ALfloat freq_mult)
+void bandsplit_init(BandSplitter *splitter, ALfloat freq_mult)
 {
     ALfloat w = freq_mult * F_TAU;
     ALfloat cw = cosf(w);
@@ -31,8 +24,15 @@ static void bandsplit_init(BandSplitter *splitter, ALfloat freq_mult)
     splitter->hp_z1 = 0.0f;
 }
 
-static void bandsplit_process(BandSplitter *splitter, ALfloat *restrict hpout, ALfloat *restrict lpout,
-                              const ALfloat *input, ALuint count)
+void bandsplit_clear(BandSplitter *splitter)
+{
+    splitter->lp_z1 = 0.0f;
+    splitter->lp_z2 = 0.0f;
+    splitter->hp_z1 = 0.0f;
+}
+
+void bandsplit_process(BandSplitter *splitter, ALfloat *restrict hpout, ALfloat *restrict lpout,
+                       const ALfloat *input, ALuint count)
 {
     ALfloat coeff, d, x;
     ALfloat z1, z2;

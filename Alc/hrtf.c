@@ -28,6 +28,7 @@
 #include "alMain.h"
 #include "alSource.h"
 #include "alu.h"
+#include "bformatdec.h"
 #include "hrtf.h"
 
 #include "compat.h"
@@ -187,20 +188,22 @@ ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][
         { DEG2RAD(-35.0f), DEG2RAD(-135.0f) },
         { DEG2RAD(-35.0f), DEG2RAD( 135.0f) },
     };
-    static const ALfloat CubeMatrix[8][MAX_AMBI_COEFFS] = {
-        { 0.25f,  0.14425f,  0.14425f,  0.14425f },
-        { 0.25f, -0.14425f,  0.14425f,  0.14425f },
-        { 0.25f,  0.14425f,  0.14425f, -0.14425f },
-        { 0.25f, -0.14425f,  0.14425f, -0.14425f },
-        { 0.25f,  0.14425f, -0.14425f,  0.14425f },
-        { 0.25f, -0.14425f, -0.14425f,  0.14425f },
-        { 0.25f,  0.14425f, -0.14425f, -0.14425f },
-        { 0.25f, -0.14425f, -0.14425f, -0.14425f },
+    static const ALfloat CubeMatrix[8][2][MAX_AMBI_COEFFS] = {
+        { { 0.25f,  0.14425f,  0.14425f,  0.14425f }, { 0.125f,  0.125f,  0.125f,  0.125f } },
+        { { 0.25f, -0.14425f,  0.14425f,  0.14425f }, { 0.125f, -0.125f,  0.125f,  0.125f } },
+        { { 0.25f,  0.14425f,  0.14425f, -0.14425f }, { 0.125f,  0.125f,  0.125f, -0.125f } },
+        { { 0.25f, -0.14425f,  0.14425f, -0.14425f }, { 0.125f, -0.125f,  0.125f, -0.125f } },
+        { { 0.25f,  0.14425f, -0.14425f,  0.14425f }, { 0.125f,  0.125f, -0.125f,  0.125f } },
+        { { 0.25f, -0.14425f, -0.14425f,  0.14425f }, { 0.125f, -0.125f, -0.125f,  0.125f } },
+        { { 0.25f,  0.14425f, -0.14425f, -0.14425f }, { 0.125f,  0.125f, -0.125f, -0.125f } },
+        { { 0.25f, -0.14425f, -0.14425f, -0.14425f }, { 0.125f, -0.125f, -0.125f, -0.125f } },
     };
+    BandSplitter splitter;
+    ALfloat temps[3][HRIR_LENGTH];
     ALuint lidx[8], ridx[8];
     ALuint min_delay = HRTF_HISTORY_LENGTH;
     ALuint max_length = 0;
-    ALuint i, j, c;
+    ALuint i, j, c, b;
 
     assert(NumChannels == 4);
 
@@ -229,33 +232,52 @@ ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][
         min_delay = minu(min_delay, minu(Hrtf->delays[lidx[c]], Hrtf->delays[ridx[c]]));
     }
 
+    memset(temps, 0, sizeof(temps));
+    bandsplit_init(&splitter, 400.0f / (ALfloat)Hrtf->sampleRate);
     for(c = 0;c < 8;c++)
     {
         const ALshort *fir;
-        ALuint length;
         ALuint delay;
 
+        /* Band-split left HRIR into low and high frequency responses. */
+        bandsplit_clear(&splitter);
         fir = &Hrtf->coeffs[lidx[c] * Hrtf->irSize];
-        delay = Hrtf->delays[lidx[c]] - min_delay;
-        length = minu(delay + Hrtf->irSize, HRIR_LENGTH);
-        for(i = 0;i < NumChannels;++i)
-        {
-            ALuint k = 0;
-            for(j = delay;j < length;++j)
-                coeffs[i][j][0] += fir[k++]/32767.0f * CubeMatrix[c][i];
-        }
-        max_length = maxu(max_length, length);
+        for(i = 0;i < Hrtf->irSize;i++)
+            temps[2][i] = fir[i] / 32767.0f;
+        bandsplit_process(&splitter, temps[0], temps[1], temps[2], HRIR_LENGTH);
 
-        fir = &Hrtf->coeffs[ridx[c] * Hrtf->irSize];
-        delay = Hrtf->delays[ridx[c]] - min_delay;
-        length = minu(delay + Hrtf->irSize, HRIR_LENGTH);
+        /* Add to the left output coefficients with the specified delay. */
+        delay = Hrtf->delays[lidx[c]] - min_delay;
         for(i = 0;i < NumChannels;++i)
         {
-            ALuint k = 0;
-            for(j = delay;j < length;++j)
-                coeffs[i][j][1] += fir[k++]/32767.0f * CubeMatrix[c][i];
+            for(b = 0;b < 2;b++)
+            {
+                ALuint k = 0;
+                for(j = delay;j < HRIR_LENGTH;++j)
+                    coeffs[i][j][0] += temps[b][k++] * CubeMatrix[c][b][i];
+            }
         }
-        max_length = maxu(max_length, length);
+        max_length = maxu(max_length, minu(delay + Hrtf->irSize, HRIR_LENGTH));
+
+        /* Band-split right HRIR into low and high frequency responses. */
+        bandsplit_clear(&splitter);
+        fir = &Hrtf->coeffs[ridx[c] * Hrtf->irSize];
+        for(i = 0;i < Hrtf->irSize;i++)
+            temps[2][i] = fir[i] / 32767.0f;
+        bandsplit_process(&splitter, temps[0], temps[1], temps[2], HRIR_LENGTH);
+
+        /* Add to the right output coefficients with the specified delay. */
+        delay = Hrtf->delays[ridx[c]] - min_delay;
+        for(i = 0;i < NumChannels;++i)
+        {
+            for(b = 0;b < 2;b++)
+            {
+                ALuint k = 0;
+                for(j = delay;j < HRIR_LENGTH;++j)
+                    coeffs[i][j][1] += temps[b][k++] * CubeMatrix[c][b][i];
+            }
+        }
+        max_length = maxu(max_length, minu(delay + Hrtf->irSize, HRIR_LENGTH));
     }
     TRACE("Skipped min delay: %u, new combined length: %u\n", min_delay, max_length);
 

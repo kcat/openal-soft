@@ -7,11 +7,6 @@
 
 #include "almalloc.h"
 
-/* "Base" vector type, designed to alias with the actual vector types. */
-typedef struct vector__s {
-    size_t Capacity;
-    size_t Size;
-} *vector_;
 
 #define TYPEDEF_VECTOR(T, N) typedef struct {                                 \
     size_t Capacity;                                                          \

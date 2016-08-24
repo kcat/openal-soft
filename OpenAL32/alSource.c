@@ -3063,7 +3063,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
  * samples. The offset is relative to the start of the queue (not the start of
  * the current buffer).
  */
-ALint64 GetSourceSampleOffset(ALsource *Source, ALCdevice *device, ALuint64 *clocktime)
+static ALint64 GetSourceSampleOffset(ALsource *Source, ALCdevice *device, ALuint64 *clocktime)
 {
     const ALbufferlistitem *BufferList;
     const ALbufferlistitem *Current;

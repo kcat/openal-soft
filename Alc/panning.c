@@ -772,12 +772,13 @@ static void InitHrtfPanning(ALCdevice *device)
     device->FOAOut.Ambi = device->Dry.Ambi;
     device->FOAOut.CoeffCount = device->Dry.CoeffCount;
 
-    memset(device->Hrtf_Coeffs, 0, sizeof(device->Hrtf_Coeffs));
-    device->Hrtf_IrSize = BuildBFormatHrtf(device->Hrtf, device->Hrtf_Coeffs,
-                                           device->Dry.NumChannels);
+    memset(device->Hrtf.Coeffs, 0, sizeof(device->Hrtf.Coeffs));
+    device->Hrtf.IrSize = BuildBFormatHrtf(device->Hrtf.Handle,
+        device->Hrtf.Coeffs, device->Dry.NumChannels
+    );
 
     /* Round up to the nearest multiple of 8 */
-    device->Hrtf_IrSize = (device->Hrtf_IrSize+7)&~7;
+    device->Hrtf.IrSize = (device->Hrtf.IrSize+7)&~7;
 }
 
 static void InitUhjPanning(ALCdevice *device)
@@ -805,8 +806,8 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     int bs2blevel;
     size_t i;
 
-    device->Hrtf = NULL;
-    al_string_clear(&device->Hrtf_Name);
+    device->Hrtf.Handle = NULL;
+    al_string_clear(&device->Hrtf.Name);
     device->Render_Mode = NormalRender;
 
     memset(&device->Dry.Ambi, 0, sizeof(device->Dry.Ambi));
@@ -820,7 +821,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         AmbDecConf conf, *pconf = NULL;
 
         if(hrtf_appreq == Hrtf_Enable)
-            device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
+            device->Hrtf.Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
 
         ambdec_init(&conf);
 
@@ -920,48 +921,48 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
                        (hrtf_appreq == Hrtf_Enable);
         if(!usehrtf) goto no_hrtf;
 
-        device->Hrtf_Status = ALC_HRTF_ENABLED_SOFT;
+        device->Hrtf.Status = ALC_HRTF_ENABLED_SOFT;
         if(headphones && hrtf_appreq != Hrtf_Disable)
-            device->Hrtf_Status = ALC_HRTF_HEADPHONES_DETECTED_SOFT;
+            device->Hrtf.Status = ALC_HRTF_HEADPHONES_DETECTED_SOFT;
     }
     else
     {
         if(hrtf_userreq != Hrtf_Enable)
         {
             if(hrtf_appreq == Hrtf_Enable)
-                device->Hrtf_Status = ALC_HRTF_DENIED_SOFT;
+                device->Hrtf.Status = ALC_HRTF_DENIED_SOFT;
             goto no_hrtf;
         }
-        device->Hrtf_Status = ALC_HRTF_REQUIRED_SOFT;
+        device->Hrtf.Status = ALC_HRTF_REQUIRED_SOFT;
     }
 
-    if(VECTOR_SIZE(device->Hrtf_List) == 0)
+    if(VECTOR_SIZE(device->Hrtf.List) == 0)
     {
-        VECTOR_DEINIT(device->Hrtf_List);
-        device->Hrtf_List = EnumerateHrtf(device->DeviceName);
+        VECTOR_DEINIT(device->Hrtf.List);
+        device->Hrtf.List = EnumerateHrtf(device->DeviceName);
     }
 
-    if(hrtf_id >= 0 && (size_t)hrtf_id < VECTOR_SIZE(device->Hrtf_List))
+    if(hrtf_id >= 0 && (size_t)hrtf_id < VECTOR_SIZE(device->Hrtf.List))
     {
-        const HrtfEntry *entry = &VECTOR_ELEM(device->Hrtf_List, hrtf_id);
+        const HrtfEntry *entry = &VECTOR_ELEM(device->Hrtf.List, hrtf_id);
         if(entry->hrtf->sampleRate == device->Frequency)
         {
-            device->Hrtf = entry->hrtf;
-            al_string_copy(&device->Hrtf_Name, entry->name);
+            device->Hrtf.Handle = entry->hrtf;
+            al_string_copy(&device->Hrtf.Name, entry->name);
         }
     }
 
-    for(i = 0;!device->Hrtf && i < VECTOR_SIZE(device->Hrtf_List);i++)
+    for(i = 0;!device->Hrtf.Handle && i < VECTOR_SIZE(device->Hrtf.List);i++)
     {
-        const HrtfEntry *entry = &VECTOR_ELEM(device->Hrtf_List, i);
+        const HrtfEntry *entry = &VECTOR_ELEM(device->Hrtf.List, i);
         if(entry->hrtf->sampleRate == device->Frequency)
         {
-            device->Hrtf = entry->hrtf;
-            al_string_copy(&device->Hrtf_Name, entry->name);
+            device->Hrtf.Handle = entry->hrtf;
+            al_string_copy(&device->Hrtf.Name, entry->name);
         }
     }
 
-    if(device->Hrtf)
+    if(device->Hrtf.Handle)
     {
         device->Render_Mode = HrtfRender;
         if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "hrtf-mode", &mode))
@@ -974,11 +975,11 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
                 ERR("Unexpected hrtf-mode: %s\n", mode);
         }
 
-        TRACE("HRTF enabled, \"%s\"\n", al_string_get_cstr(device->Hrtf_Name));
+        TRACE("HRTF enabled, \"%s\"\n", al_string_get_cstr(device->Hrtf.Name));
         InitHrtfPanning(device);
         return;
     }
-    device->Hrtf_Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
+    device->Hrtf.Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
 
 no_hrtf:
     TRACE("HRTF disabled\n");

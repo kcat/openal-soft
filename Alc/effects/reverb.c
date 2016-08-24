@@ -391,7 +391,7 @@ static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Dev
         return AL_FALSE;
 
     /* HRTF and UHJ will mix to the real output for ambient output. */
-    if(Device->Hrtf || Device->Uhj_Encoder)
+    if(Device->Hrtf.Handle || Device->Uhj_Encoder)
     {
         State->ExtraOut = Device->RealOut.Buffer;
         State->ExtraChannels = Device->RealOut.NumChannels;
@@ -956,7 +956,7 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
 
     gain = props->Reverb.Gain * Slot->Params.Gain * ReverbBoost;
     // Update early and late 3D panning.
-    if(Device->Hrtf || Device->Uhj_Encoder)
+    if(Device->Hrtf.Handle || Device->Uhj_Encoder)
         UpdateMixedPanning(Device, props->Reverb.ReflectionsPan,
                            props->Reverb.LateReverbPan, gain,
                            props->Reverb.ReflectionsGain,

@@ -593,16 +593,18 @@ struct ALCdevice_struct
     UIntMap FilterMap;
 
     /* HRTF filter tables */
-    vector_HrtfEntry Hrtf_List;
-    al_string Hrtf_Name;
-    const struct Hrtf *Hrtf;
-    ALCenum Hrtf_Status;
+    struct {
+        vector_HrtfEntry List;
+        al_string Name;
+        ALCenum Status;
+        const struct Hrtf *Handle;
 
-    /* HRTF filter state for dry buffer content */
-    alignas(16) ALfloat Hrtf_Values[4][HRIR_LENGTH][2];
-    alignas(16) ALfloat Hrtf_Coeffs[4][HRIR_LENGTH][2];
-    ALuint Hrtf_Offset;
-    ALuint Hrtf_IrSize;
+        /* HRTF filter state for dry buffer content */
+        alignas(16) ALfloat Values[4][HRIR_LENGTH][2];
+        alignas(16) ALfloat Coeffs[4][HRIR_LENGTH][2];
+        ALuint Offset;
+        ALuint IrSize;
+    } Hrtf;
 
     /* UHJ encoder state */
     struct Uhj2Encoder *Uhj_Encoder;

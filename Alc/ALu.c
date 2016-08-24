@@ -649,7 +649,7 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
                 }
 
                 /* Get the static HRIR coefficients and delays for this channel. */
-                GetLerpedHrtfCoeffs(Device->Hrtf,
+                GetLerpedHrtfCoeffs(Device->Hrtf.Handle,
                     chans[c].elevation, chans[c].angle, 0.0f, DryGain,
                     voice->Chan[c].Direct.Hrtf.Target.Coeffs,
                     voice->Chan[c].Direct.Hrtf.Target.Delay
@@ -1165,7 +1165,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
             spread = asinf(radius / Distance) * 2.0f;
 
         /* Get the HRIR coefficients and delays. */
-        GetLerpedHrtfCoeffs(Device->Hrtf, ev, az, spread, DryGain,
+        GetLerpedHrtfCoeffs(Device->Hrtf.Handle, ev, az, spread, DryGain,
                             voice->Chan[0].Direct.Hrtf.Target.Coeffs,
                             voice->Chan[0].Direct.Hrtf.Target.Delay);
 
@@ -1526,23 +1526,23 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         V0(device->Backend,unlock)();
         IncrementRef(&device->MixCount);
 
-        if(device->Hrtf)
+        if(device->Hrtf.Handle)
         {
             int lidx = GetChannelIdxByName(device->RealOut, FrontLeft);
             int ridx = GetChannelIdxByName(device->RealOut, FrontRight);
             if(lidx != -1 && ridx != -1)
             {
                 HrtfDirectMixerFunc HrtfMix = SelectHrtfMixer();
-                ALuint irsize = device->Hrtf_IrSize;
+                ALuint irsize = device->Hrtf.IrSize;
                 for(c = 0;c < device->Dry.NumChannels;c++)
                 {
                     HrtfMix(device->RealOut.Buffer, lidx, ridx,
-                        device->Dry.Buffer[c], device->Hrtf_Offset, irsize,
-                        device->Hrtf_Coeffs[c], device->Hrtf_Values[c],
+                        device->Dry.Buffer[c], device->Hrtf.Offset, irsize,
+                        device->Hrtf.Coeffs[c], device->Hrtf.Values[c],
                         SamplesToDo
                     );
                 }
-                device->Hrtf_Offset += SamplesToDo;
+                device->Hrtf.Offset += SamplesToDo;
             }
         }
         else if(device->AmbiDecoder)

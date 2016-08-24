@@ -393,7 +393,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
     SampleSize     = Source->SampleSize;
     increment      = voice->Step;
 
-    IrSize = (Device->Hrtf ? Device->Hrtf->irSize : 0);
+    IrSize = (Device->Hrtf.Handle ? Device->Hrtf.Handle->irSize : 0);
 
     Resample = ((increment == FRACTIONONE && DataPosFrac == 0) ?
                 Resample_copy32_C : ResampleSamples);

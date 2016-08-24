@@ -1296,53 +1296,37 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context, ALboolean forc
     struct ALsourceProps *props;
 
     props = ATOMIC_EXCHANGE(struct ALsourceProps*, &source->Update, NULL, almemory_order_acq_rel);
-    if(!props)
+    if(!props && !force) return;
+
+    if(props)
     {
-        if(!force)
-            return;
-        BufferListItem = ATOMIC_LOAD(&source->queue, almemory_order_relaxed);
-        while(BufferListItem != NULL)
-        {
-            const ALbuffer *buffer;
-            if((buffer=BufferListItem->buffer) != NULL)
-            {
-                if(buffer->FmtChannels == FmtMono)
-                    CalcAttnSourceParams(voice, &voice->Props, buffer, context);
-                else
-                    CalcNonAttnSourceParams(voice, &voice->Props, buffer, context);
-                break;
-            }
-            BufferListItem = BufferListItem->next;
-        }
-    }
-    else
-    {
-        BufferListItem = ATOMIC_LOAD(&source->queue, almemory_order_relaxed);
-        while(BufferListItem != NULL)
-        {
-            const ALbuffer *buffer;
-            if((buffer=BufferListItem->buffer) != NULL)
-            {
-                if(buffer->FmtChannels == FmtMono)
-                    CalcAttnSourceParams(voice, props, buffer, context);
-                else
-                    CalcNonAttnSourceParams(voice, props, buffer, context);
-                break;
-            }
-            BufferListItem = BufferListItem->next;
-        }
         voice->Props = *props;
 
-        /* WARNING: A livelock is theoretically possible if another thread keeps
-        * changing the freelist head without giving this a chance to actually swap
-        * in the old container (practically impossible with this little code,
-        * but...).
-        */
+        /* WARNING: A livelock is theoretically possible if another thread
+         * keeps changing the freelist head without giving this a chance to
+         * actually swap in the old container (practically impossible with this
+         * little code, but...).
+         */
         first = ATOMIC_LOAD(&source->FreeList);
         do {
             ATOMIC_STORE(&props->next, first, almemory_order_relaxed);
         } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALsourceProps*,
                 &source->FreeList, &first, props) == 0);
+    }
+
+    BufferListItem = ATOMIC_LOAD(&source->queue, almemory_order_relaxed);
+    while(BufferListItem != NULL)
+    {
+        const ALbuffer *buffer;
+        if((buffer=BufferListItem->buffer) != NULL)
+        {
+            if(buffer->FmtChannels == FmtMono)
+                CalcAttnSourceParams(voice, &voice->Props, buffer, context);
+            else
+                CalcNonAttnSourceParams(voice, &voice->Props, buffer, context);
+            break;
+        }
+        BufferListItem = BufferListItem->next;
     }
 }
 

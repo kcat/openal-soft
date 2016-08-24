@@ -1601,6 +1601,16 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
     if(ATOMIC_EXCHANGE(ALenum, &context->DeferUpdates, AL_FALSE))
     {
         ALsizei pos;
+        uint updates;
+
+        /* Tell the mixer to stop applying updates, then wait for any active
+         * updating to finish, before providing updates.
+         */
+        ATOMIC_STORE(&context->HoldUpdates, AL_TRUE);
+        while(((updates=ReadRef(&context->UpdateCount))&1) != 0)
+            althrd_yield();
+
+        UpdateListenerProps(context);
 
         LockUIntMapRead(&context->SourceMap);
         V0(device->Backend,lock)();
@@ -1625,8 +1635,12 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
         V0(device->Backend,unlock)();
         UnlockUIntMapRead(&context->SourceMap);
 
-        UpdateListenerProps(context);
         UpdateAllSourceProps(context);
+
+        /* Now with all updates declared, let the mixer continue applying them
+         * so they all happen at once.
+         */
+        ATOMIC_STORE(&context->HoldUpdates, AL_FALSE);
     }
     ReadUnlock(&context->PropLock);
 }

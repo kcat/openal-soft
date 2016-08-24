@@ -2910,15 +2910,8 @@ static void UpdateSourceProps(ALsource *source, ALuint num_sends)
 void UpdateAllSourceProps(ALCcontext *context)
 {
     ALuint num_sends = context->Device->NumAuxSends;
-    uint updates;
     ALsizei pos;
 
-    /* Tell the mixer to stop applying updates, then wait for any active
-     * updating to finish, before providing source updates.
-     */
-    ATOMIC_STORE(&context->HoldUpdates, AL_TRUE);
-    while(((updates=ReadRef(&context->UpdateCount))&1) != 0)
-        althrd_yield();
     for(pos = 0;pos < context->VoiceCount;pos++)
     {
         ALvoice *voice = &context->Voices[pos];
@@ -2927,10 +2920,6 @@ void UpdateAllSourceProps(ALCcontext *context)
                               source->state == AL_PAUSED))
             UpdateSourceProps(source, num_sends);
     }
-    /* Now with all updates declared, let the mixer continue applying them so
-     * they all happen at once.
-     */
-    ATOMIC_STORE(&context->HoldUpdates, AL_FALSE);
 }
 
 

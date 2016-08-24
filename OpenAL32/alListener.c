@@ -52,10 +52,7 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-    {
         UpdateListenerProps(context);
-        UpdateAllSourceProps(context);
-    }
 
 done:
     WriteUnlock(&context->PropLock);
@@ -93,10 +90,7 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-    {
         UpdateListenerProps(context);
-        UpdateAllSourceProps(context);
-    }
 
 done:
     WriteUnlock(&context->PropLock);
@@ -149,10 +143,7 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-    {
         UpdateListenerProps(context);
-        UpdateAllSourceProps(context);
-    }
 
 done:
     WriteUnlock(&context->PropLock);
@@ -174,10 +165,7 @@ AL_API ALvoid AL_APIENTRY alListeneri(ALenum param, ALint UNUSED(value))
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-    {
         UpdateListenerProps(context);
-        UpdateAllSourceProps(context);
-    }
 
 done:
     WriteUnlock(&context->PropLock);
@@ -207,10 +195,7 @@ AL_API void AL_APIENTRY alListener3i(ALenum param, ALint value1, ALint value2, A
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-    {
         UpdateListenerProps(context);
-        UpdateAllSourceProps(context);
-    }
 
 done:
     WriteUnlock(&context->PropLock);
@@ -256,10 +241,7 @@ AL_API void AL_APIENTRY alListeneriv(ALenum param, const ALint *values)
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-    {
         UpdateListenerProps(context);
-        UpdateAllSourceProps(context);
-    }
 
 done:
     WriteUnlock(&context->PropLock);

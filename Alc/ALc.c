@@ -1602,8 +1602,6 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
     {
         ALsizei pos;
 
-        UpdateListenerProps(context);
-
         LockUIntMapRead(&context->SourceMap);
         V0(device->Backend,lock)();
         for(pos = 0;pos < context->SourceMap.size;pos++)
@@ -1626,6 +1624,8 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
         }
         V0(device->Backend,unlock)();
         UnlockUIntMapRead(&context->SourceMap);
+
+        UpdateListenerProps(context);
         UpdateAllSourceProps(context);
     }
     ReadUnlock(&context->PropLock);

@@ -228,7 +228,7 @@ static ALboolean BsincPrepare(const ALuint increment, BsincState *state)
 }
 
 
-static void CalcListenerParams(ALCcontext *Context)
+static ALboolean CalcListenerParams(ALCcontext *Context)
 {
     ALlistener *Listener = Context->Listener;
     ALfloat N[3], V[3], U[3], P[3];
@@ -237,7 +237,7 @@ static void CalcListenerParams(ALCcontext *Context)
     aluVector vel;
 
     props = ATOMIC_EXCHANGE(struct ALlistenerProps*, &Listener->Update, NULL, almemory_order_acq_rel);
-    if(!props) return;
+    if(!props) return AL_FALSE;
 
     /* AT then UP */
     N[0] = ATOMIC_LOAD(&props->Forward[0], almemory_order_relaxed);
@@ -288,6 +288,8 @@ static void CalcListenerParams(ALCcontext *Context)
         ATOMIC_STORE(&props->next, first, almemory_order_relaxed);
     } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALlistenerProps*,
             &Listener->FreeList, &first, props) == 0);
+
+    return AL_TRUE;
 }
 
 static void CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
@@ -1281,7 +1283,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
     }
 }
 
-static void CalcSourceParams(ALvoice *voice, ALCcontext *context)
+static void CalcSourceParams(ALvoice *voice, ALCcontext *context, ALboolean force)
 {
     ALsource *source = voice->Source;
     const ALbufferlistitem *BufferListItem;
@@ -1289,33 +1291,54 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context)
     struct ALsourceProps *props;
 
     props = ATOMIC_EXCHANGE(struct ALsourceProps*, &source->Update, NULL, almemory_order_acq_rel);
-    if(!props) return;
-
-    BufferListItem = ATOMIC_LOAD(&source->queue, almemory_order_relaxed);
-    while(BufferListItem != NULL)
+    if(!props)
     {
-        const ALbuffer *buffer;
-        if((buffer=BufferListItem->buffer) != NULL)
+        if(!force)
+            return;
+        BufferListItem = ATOMIC_LOAD(&source->queue, almemory_order_relaxed);
+        while(BufferListItem != NULL)
         {
-            if(buffer->FmtChannels == FmtMono)
-                CalcAttnSourceParams(voice, props, buffer, context);
-            else
-                CalcNonAttnSourceParams(voice, props, buffer, context);
-            break;
+            const ALbuffer *buffer;
+            if((buffer=BufferListItem->buffer) != NULL)
+            {
+                if(buffer->FmtChannels == FmtMono)
+                    CalcAttnSourceParams(voice, &voice->Props, buffer, context);
+                else
+                    CalcNonAttnSourceParams(voice, &voice->Props, buffer, context);
+                break;
+            }
+            BufferListItem = BufferListItem->next;
         }
-        BufferListItem = BufferListItem->next;
     }
+    else
+    {
+        BufferListItem = ATOMIC_LOAD(&source->queue, almemory_order_relaxed);
+        while(BufferListItem != NULL)
+        {
+            const ALbuffer *buffer;
+            if((buffer=BufferListItem->buffer) != NULL)
+            {
+                if(buffer->FmtChannels == FmtMono)
+                    CalcAttnSourceParams(voice, props, buffer, context);
+                else
+                    CalcNonAttnSourceParams(voice, props, buffer, context);
+                break;
+            }
+            BufferListItem = BufferListItem->next;
+        }
+        voice->Props = *props;
 
-    /* WARNING: A livelock is theoretically possible if another thread keeps
-     * changing the freelist head without giving this a chance to actually swap
-     * in the old container (practically impossible with this little code,
-     * but...).
-     */
-    first = ATOMIC_LOAD(&source->FreeList);
-    do {
-        ATOMIC_STORE(&props->next, first, almemory_order_relaxed);
-    } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALsourceProps*,
-            &source->FreeList, &first, props) == 0);
+        /* WARNING: A livelock is theoretically possible if another thread keeps
+        * changing the freelist head without giving this a chance to actually swap
+        * in the old container (practically impossible with this little code,
+        * but...).
+        */
+        first = ATOMIC_LOAD(&source->FreeList);
+        do {
+            ATOMIC_STORE(&props->next, first, almemory_order_relaxed);
+        } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALsourceProps*,
+                &source->FreeList, &first, props) == 0);
+    }
 }
 
 
@@ -1327,7 +1350,7 @@ static void UpdateContextSources(ALCcontext *ctx, ALeffectslot *slot)
     IncrementRef(&ctx->UpdateCount);
     if(!ATOMIC_LOAD(&ctx->HoldUpdates))
     {
-        CalcListenerParams(ctx);
+        ALboolean force = CalcListenerParams(ctx);
         while(slot)
         {
             CalcEffectSlotParams(slot, ctx->Device);
@@ -1342,7 +1365,7 @@ static void UpdateContextSources(ALCcontext *ctx, ALeffectslot *slot)
             if(source->state != AL_PLAYING && source->state != AL_PAUSED)
                 voice->Source = NULL;
             else
-                CalcSourceParams(voice, ctx);
+                CalcSourceParams(voice, ctx, force);
         }
     }
     IncrementRef(&ctx->UpdateCount);

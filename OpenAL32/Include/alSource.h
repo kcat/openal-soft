@@ -22,40 +22,6 @@ typedef struct ALbufferlistitem {
 } ALbufferlistitem;
 
 
-typedef struct ALvoice {
-    struct ALsource *volatile Source;
-
-    /** Current target parameters used for mixing. */
-    ALint Step;
-
-    /* If not 'moving', gain/coefficients are set directly without fading. */
-    ALboolean Moving;
-
-    ALboolean IsHrtf;
-
-    ALuint Offset; /* Number of output samples mixed since starting. */
-
-    alignas(16) ALfloat PrevSamples[MAX_INPUT_CHANNELS][MAX_PRE_SAMPLES];
-
-    BsincState SincState;
-
-    struct {
-        ALfloat (*Buffer)[BUFFERSIZE];
-        ALuint Channels;
-    } DirectOut;
-
-    struct {
-        ALfloat (*Buffer)[BUFFERSIZE];
-        ALuint Channels;
-    } SendOut[MAX_SENDS];
-
-    struct {
-        DirectParams Direct;
-        SendParams Send[MAX_SENDS];
-    } Chan[MAX_INPUT_CHANNELS];
-} ALvoice;
-
-
 struct ALsourceProps {
     ATOMIC(ALfloat)   Pitch;
     ATOMIC(ALfloat)   Gain;
@@ -107,6 +73,43 @@ struct ALsourceProps {
 
     ATOMIC(struct ALsourceProps*) next;
 };
+
+
+typedef struct ALvoice {
+    struct ALsourceProps Props;
+
+    struct ALsource *volatile Source;
+
+    /** Current target parameters used for mixing. */
+    ALint Step;
+
+    /* If not 'moving', gain/coefficients are set directly without fading. */
+    ALboolean Moving;
+
+    ALboolean IsHrtf;
+
+    ALuint Offset; /* Number of output samples mixed since starting. */
+
+    alignas(16) ALfloat PrevSamples[MAX_INPUT_CHANNELS][MAX_PRE_SAMPLES];
+
+    BsincState SincState;
+
+    struct {
+        ALfloat (*Buffer)[BUFFERSIZE];
+        ALuint Channels;
+    } DirectOut;
+
+    struct {
+        ALfloat (*Buffer)[BUFFERSIZE];
+        ALuint Channels;
+    } SendOut[MAX_SENDS];
+
+    struct {
+        DirectParams Direct;
+        SendParams Send[MAX_SENDS];
+    } Chan[MAX_INPUT_CHANNELS];
+} ALvoice;
+
 
 typedef struct ALsource {
     /** Source properties. */

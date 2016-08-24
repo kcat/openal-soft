@@ -210,7 +210,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
         slot->AuxSendAuto = value;
         UpdateEffectSlotProps(slot);
         if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-            UpdateAllSourceProps(context);
+            UpdateListenerProps(context);
         break;
 
     default:

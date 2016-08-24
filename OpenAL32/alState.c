@@ -557,10 +557,7 @@ AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
     WriteLock(&context->PropLock);
     context->DopplerFactor = value;
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-    {
         UpdateListenerProps(context);
-        UpdateAllSourceProps(context);
-    }
     WriteUnlock(&context->PropLock);
 
 done:
@@ -580,10 +577,7 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
     WriteLock(&context->PropLock);
     context->DopplerVelocity = value;
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-    {
         UpdateListenerProps(context);
-        UpdateAllSourceProps(context);
-    }
     WriteUnlock(&context->PropLock);
 
 done:
@@ -603,10 +597,7 @@ AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat value)
     WriteLock(&context->PropLock);
     context->SpeedOfSound = value;
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-    {
         UpdateListenerProps(context);
-        UpdateAllSourceProps(context);
-    }
     WriteUnlock(&context->PropLock);
 
 done:

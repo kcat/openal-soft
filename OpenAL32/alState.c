@@ -63,7 +63,7 @@ AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-        UpdateAllSourceProps(context);
+        UpdateListenerProps(context);
 
 done:
     WriteUnlock(&context->PropLock);
@@ -88,7 +88,7 @@ AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-        UpdateAllSourceProps(context);
+        UpdateListenerProps(context);
 
 done:
     WriteUnlock(&context->PropLock);
@@ -622,7 +622,7 @@ AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
     if(!context->SourceDistanceModel)
     {
         if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-            UpdateAllSourceProps(context);
+            UpdateListenerProps(context);
     }
     WriteUnlock(&context->PropLock);
 

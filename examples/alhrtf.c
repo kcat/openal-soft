@@ -113,6 +113,7 @@ static ALuint LoadSound(const char *filename)
 int main(int argc, char **argv)
 {
     ALCdevice *device;
+    ALboolean has_angle_ext;
     ALuint source, buffer;
     const char *soundname;
     const char *hrtfname;
@@ -156,6 +157,12 @@ int main(int argc, char **argv)
     LOAD_PROC(device, alcGetStringiSOFT);
     LOAD_PROC(device, alcResetDeviceSOFT);
 #undef LOAD_PROC
+
+    /* Check for the AL_EXT_STEREO_ANGLES extension to be able to also rotate
+     * stereo sources.
+     */
+    has_angle_ext = alIsExtensionPresent("AL_EXT_STEREO_ANGLES");
+    printf("AL_EXT_STEREO_ANGLES%s found\n", has_angle_ext?"":" not");
 
     /* Enumerate available HRTFs, and reset the device using one. */
     alcGetIntegerv(device, ALC_NUM_HRTF_SPECIFIERS_SOFT, 1, &num_hrtf);
@@ -232,11 +239,24 @@ int main(int argc, char **argv)
     do {
         al_nssleep(10000000);
 
-        /* Rotate the source around the listener by about 1/4 cycle per second.
-         * Only affects mono sounds.
+        /* Rotate the source around the listener by about 1/4 cycle per second,
+         * and keep it within -pi...+pi.
          */
         angle += 0.01 * M_PI * 0.5;
+        if(angle > M_PI)
+            angle -= M_PI*2.0;
+
+        /* This only rotates mono sounds. */
         alSource3f(source, AL_POSITION, (ALfloat)sin(angle), 0.0f, -(ALfloat)cos(angle));
+
+        if(has_angle_ext)
+        {
+            /* This rotates stereo sounds with the AL_EXT_STEREO_ANGLES
+             * extension. Angles are specified counter-clockwise in radians.
+             */
+            ALfloat angles[2] = { (ALfloat)(M_PI/6.0 - angle), (ALfloat)(-M_PI/6.0 - angle) };
+            alSourcefv(source, AL_STEREO_ANGLES, angles);
+        }
 
         alGetSourcei(source, AL_SOURCE_STATE, &state);
     } while(alGetError() == AL_NO_ERROR && state == AL_PLAYING);

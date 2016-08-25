@@ -319,18 +319,15 @@ static void CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
         slot->Params.DecayTime = 0.0f;
         slot->Params.AirAbsorptionGainHF = 1.0f;
     }
-    state = ATOMIC_EXCHANGE(ALeffectState*, &props->State, NULL, almemory_order_relaxed);
 
-    /* If the state object is changed, exchange it with the current one so it
-     * remains in the freelist and isn't leaked.
+    /* Swap effect states. No need to play with the ref counts since they keep
+     * the same number of refs.
      */
-    if(state != slot->Params.EffectState)
-    {
-        ATOMIC_STORE(&props->State, slot->Params.EffectState, almemory_order_relaxed);
-        slot->Params.EffectState = state;
-    }
+    state = ATOMIC_EXCHANGE(ALeffectState*, &props->State, slot->Params.EffectState,
+                            almemory_order_relaxed);
+    slot->Params.EffectState = state;
 
-    V(slot->Params.EffectState,update)(device, slot, &props->Props);
+    V(state,update)(device, slot, &props->Props);
 
     /* WARNING: A livelock is theoretically possible if another thread keeps
      * changing the freelist head without giving this a chance to actually swap

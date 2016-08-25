@@ -88,6 +88,8 @@ struct ALeffectslotProps {
 
 
 typedef struct ALeffectslot {
+    ALboolean NeedsUpdate;
+
     ALfloat   Gain;
     ALboolean AuxSendAuto;
 
@@ -152,6 +154,7 @@ inline struct ALeffectslot *RemoveEffectSlot(ALCcontext *context, ALuint id)
 ALenum InitEffectSlot(ALeffectslot *slot);
 void DeinitEffectSlot(ALeffectslot *slot);
 void UpdateEffectSlotProps(ALeffectslot *slot);
+void UpdateAllEffectSlotProps(ALCcontext *context);
 ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context);
 
 

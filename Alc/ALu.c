@@ -295,14 +295,14 @@ static ALboolean CalcListenerParams(ALCcontext *Context)
     return AL_TRUE;
 }
 
-static void CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
+static ALboolean CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
 {
     struct ALeffectslotProps *first;
     struct ALeffectslotProps *props;
     ALeffectState *state;
 
     props = ATOMIC_EXCHANGE(struct ALeffectslotProps*, &slot->Update, NULL, almemory_order_acq_rel);
-    if(!props) return;
+    if(!props) return AL_FALSE;
 
     slot->Params.Gain = ATOMIC_LOAD(&props->Gain, almemory_order_relaxed);
     slot->Params.AuxSendAuto = ATOMIC_LOAD(&props->AuxSendAuto, almemory_order_relaxed);
@@ -339,6 +339,8 @@ static void CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
         ATOMIC_STORE(&props->next, first, almemory_order_relaxed);
     } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALeffectslotProps*,
             &slot->FreeList, &first, props) == 0);
+
+    return AL_TRUE;
 }
 
 
@@ -1339,7 +1341,7 @@ static void UpdateContextSources(ALCcontext *ctx, ALeffectslot *slot)
         ALboolean force = CalcListenerParams(ctx);
         while(slot)
         {
-            CalcEffectSlotParams(slot, ctx->Device);
+            force |= CalcEffectSlotParams(slot, ctx->Device);
             slot = ATOMIC_LOAD(&slot->next, almemory_order_relaxed);
         }
 

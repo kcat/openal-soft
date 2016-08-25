@@ -56,6 +56,13 @@ static inline ALeffectStateFactory *getFactoryByType(ALenum type)
 static void ALeffectState_IncRef(ALeffectState *state);
 static void ALeffectState_DecRef(ALeffectState *state);
 
+#define DO_UPDATEPROPS() do {                                                 \
+    if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))          \
+        UpdateEffectSlotProps(slot);                                          \
+    else                                                                      \
+        slot->NeedsUpdate = AL_TRUE;                                          \
+} while(0)
+
 
 AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 {
@@ -212,14 +219,12 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
         if(!(value == AL_TRUE || value == AL_FALSE))
             SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
         slot->AuxSendAuto = value;
-        UpdateEffectSlotProps(slot);
-        if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-            UpdateListenerProps(context);
         break;
 
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
+    DO_UPDATEPROPS();
 
 done:
     UnlockEffectSlotsRead(context);
@@ -279,7 +284,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
-    UpdateEffectSlotProps(slot);
+    DO_UPDATEPROPS();
 
 done:
     UnlockEffectSlotsRead(context);
@@ -517,13 +522,9 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
 
         ALeffectState_DecRef(EffectSlot->Effect.State);
         EffectSlot->Effect.State = State;
-        UpdateEffectSlotProps(EffectSlot);
     }
     else if(effect)
-    {
         EffectSlot->Effect.Props = effect->Props;
-        UpdateEffectSlotProps(EffectSlot);
-    }
 
     /* Remove state references from old effect slot property updates. */
     props = ATOMIC_LOAD(&EffectSlot->FreeList);
@@ -531,7 +532,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
     {
         State = ATOMIC_EXCHANGE(ALeffectState*, &props->State, NULL, almemory_order_relaxed);
         if(State) ALeffectState_DecRef(State);
-        ATOMIC_LOAD(&props->next, almemory_order_relaxed);
+        props = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
     }
 
     return AL_NO_ERROR;
@@ -577,6 +578,7 @@ ALenum InitEffectSlot(ALeffectslot *slot)
     if(!(slot->Effect.State=V0(factory,create)()))
         return AL_OUT_OF_MEMORY;
 
+    slot->NeedsUpdate = AL_FALSE;
     slot->Gain = 1.0;
     slot->AuxSendAuto = AL_TRUE;
     InitRef(&slot->ref, 0);
@@ -661,8 +663,7 @@ void UpdateEffectSlotProps(ALeffectslot *slot)
     /* Swap out any stale effect state object there may be in the container, to
      * delete it.
      */
-    if(slot->Effect.State)
-        ALeffectState_IncRef(slot->Effect.State);
+    ALeffectState_IncRef(slot->Effect.State);
     oldstate = ATOMIC_EXCHANGE(ALeffectState*, &props->State, slot->Effect.State,
                                almemory_order_relaxed);
 
@@ -683,6 +684,22 @@ void UpdateEffectSlotProps(ALeffectslot *slot)
 
     if(oldstate)
         ALeffectState_DecRef(oldstate);
+}
+
+void UpdateAllEffectSlotProps(ALCcontext *context)
+{
+    ALeffectslot *slot;
+
+    LockEffectSlotsRead(context);
+    slot = ATOMIC_LOAD(&context->ActiveAuxSlotList);
+    while(slot)
+    {
+        if(slot->NeedsUpdate)
+            UpdateEffectSlotProps(slot);
+        slot->NeedsUpdate = AL_FALSE;
+        slot = ATOMIC_LOAD(&slot->next, almemory_order_relaxed);
+    }
+    UnlockEffectSlotsRead(context);
 }
 
 ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context)

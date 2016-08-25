@@ -1611,6 +1611,7 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
             althrd_yield();
 
         UpdateListenerProps(context);
+        UpdateAllEffectSlotProps(context);
 
         LockUIntMapRead(&context->SourceMap);
         V0(device->Backend,lock)();

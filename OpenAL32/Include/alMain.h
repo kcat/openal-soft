@@ -285,6 +285,12 @@ static void T##_Delete(void *ptr) { al_free(ptr); }
     {                                                                         \
         memset(_res, 0, sizeof(T));                                           \
         T##_Construct(_res, EXTRACT_NEW_ARGS
+#define NEW_OBJ0(_res, T) do {                                                \
+    _res = T##_New(sizeof(T));                                                \
+    if(_res)                                                                  \
+    {                                                                         \
+        memset(_res, 0, sizeof(T));                                           \
+        T##_Construct(_res EXTRACT_NEW_ARGS
 
 
 #ifdef __cplusplus

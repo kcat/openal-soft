@@ -50,6 +50,30 @@ typedef struct ALechoState {
     ALfilterState Filter;
 } ALechoState;
 
+static ALvoid ALechoState_Destruct(ALechoState *state);
+static ALboolean ALechoState_deviceUpdate(ALechoState *state, ALCdevice *Device);
+static ALvoid ALechoState_update(ALechoState *state, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props);
+static ALvoid ALechoState_process(ALechoState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels);
+DECLARE_DEFAULT_ALLOCATORS(ALechoState)
+
+DEFINE_ALEFFECTSTATE_VTABLE(ALechoState);
+
+
+static void ALechoState_Construct(ALechoState *state)
+{
+    ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
+    SET_VTABLE2(ALechoState, ALeffectState, state);
+
+    state->BufferLength = 0;
+    state->SampleBuffer = NULL;
+
+    state->Tap[0].delay = 0;
+    state->Tap[1].delay = 0;
+    state->Offset = 0;
+
+    ALfilterState_clear(&state->Filter);
+}
+
 static ALvoid ALechoState_Destruct(ALechoState *state)
 {
     al_free(state->SampleBuffer);
@@ -184,10 +208,6 @@ static ALvoid ALechoState_process(ALechoState *state, ALuint SamplesToDo, const 
     state->Offset = offset;
 }
 
-DECLARE_DEFAULT_ALLOCATORS(ALechoState)
-
-DEFINE_ALEFFECTSTATE_VTABLE(ALechoState);
-
 
 typedef struct ALechoStateFactory {
     DERIVE_FROM_TYPE(ALeffectStateFactory);
@@ -197,18 +217,8 @@ ALeffectState *ALechoStateFactory_create(ALechoStateFactory *UNUSED(factory))
 {
     ALechoState *state;
 
-    state = ALechoState_New(sizeof(*state));
+    NEW_OBJ0(state, ALechoState)();
     if(!state) return NULL;
-    SET_VTABLE2(ALechoState, ALeffectState, state);
-
-    state->BufferLength = 0;
-    state->SampleBuffer = NULL;
-
-    state->Tap[0].delay = 0;
-    state->Tap[1].delay = 0;
-    state->Offset = 0;
-
-    ALfilterState_clear(&state->Filter);
 
     return STATIC_CAST(ALeffectState, state);
 }

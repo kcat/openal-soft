@@ -55,11 +55,34 @@ typedef struct ALchorusState {
     ALfloat feedback;
 } ALchorusState;
 
+static ALvoid ALchorusState_Destruct(ALchorusState *state);
+static ALboolean ALchorusState_deviceUpdate(ALchorusState *state, ALCdevice *Device);
+static ALvoid ALchorusState_update(ALchorusState *state, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props);
+static ALvoid ALchorusState_process(ALchorusState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels);
+DECLARE_DEFAULT_ALLOCATORS(ALchorusState)
+
+DEFINE_ALEFFECTSTATE_VTABLE(ALchorusState);
+
+
+static void ALchorusState_Construct(ALchorusState *state)
+{
+    ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
+    SET_VTABLE2(ALchorusState, ALeffectState, state);
+
+    state->BufferLength = 0;
+    state->SampleBuffer[0] = NULL;
+    state->SampleBuffer[1] = NULL;
+    state->offset = 0;
+    state->lfo_range = 1;
+    state->waveform = CWF_Triangle;
+}
+
 static ALvoid ALchorusState_Destruct(ALchorusState *state)
 {
     al_free(state->SampleBuffer[0]);
     state->SampleBuffer[0] = NULL;
     state->SampleBuffer[1] = NULL;
+
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
 }
 
@@ -246,10 +269,6 @@ static ALvoid ALchorusState_process(ALchorusState *state, ALuint SamplesToDo, co
     }
 }
 
-DECLARE_DEFAULT_ALLOCATORS(ALchorusState)
-
-DEFINE_ALEFFECTSTATE_VTABLE(ALchorusState);
-
 
 typedef struct ALchorusStateFactory {
     DERIVE_FROM_TYPE(ALeffectStateFactory);
@@ -259,16 +278,8 @@ static ALeffectState *ALchorusStateFactory_create(ALchorusStateFactory *UNUSED(f
 {
     ALchorusState *state;
 
-    state = ALchorusState_New(sizeof(*state));
+    NEW_OBJ0(state, ALchorusState)();
     if(!state) return NULL;
-    SET_VTABLE2(ALchorusState, ALeffectState, state);
-
-    state->BufferLength = 0;
-    state->SampleBuffer[0] = NULL;
-    state->SampleBuffer[1] = NULL;
-    state->offset = 0;
-    state->lfo_range = 1;
-    state->waveform = CWF_Triangle;
 
     return STATIC_CAST(ALeffectState, state);
 }

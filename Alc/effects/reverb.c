@@ -168,21 +168,111 @@ typedef struct ALreverbState {
     ALfloat EarlySamples[MAX_UPDATE_SAMPLES][4];
 } ALreverbState;
 
-static ALvoid ALreverbState_Destruct(ALreverbState *State)
-{
-    al_free(State->SampleBuffer);
-    State->SampleBuffer = NULL;
-    ALeffectState_Destruct(STATIC_CAST(ALeffectState,State));
-}
-
+static ALvoid ALreverbState_Destruct(ALreverbState *State);
 static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Device);
 static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props);
-static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels);
-static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels);
 static ALvoid ALreverbState_process(ALreverbState *State, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ALreverbState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALreverbState);
+
+
+static void ALreverbState_Construct(ALreverbState *state)
+{
+    ALuint index, l;
+
+    ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
+    SET_VTABLE2(ALreverbState, ALeffectState, state);
+
+    state->IsEax = AL_FALSE;
+    state->ExtraChannels = 0;
+
+    state->TotalSamples = 0;
+    state->SampleBuffer = NULL;
+
+    ALfilterState_clear(&state->LpFilter);
+    ALfilterState_clear(&state->HpFilter);
+
+    state->Mod.Delay.Mask = 0;
+    state->Mod.Delay.Line = NULL;
+    state->Mod.Index = 0;
+    state->Mod.Range = 1;
+    state->Mod.Depth = 0.0f;
+    state->Mod.Coeff = 0.0f;
+    state->Mod.Filter = 0.0f;
+
+    state->Delay.Mask = 0;
+    state->Delay.Line = NULL;
+    state->DelayTap[0] = 0;
+    state->DelayTap[1] = 0;
+
+    for(index = 0;index < 4;index++)
+    {
+        state->Early.Coeff[index] = 0.0f;
+        state->Early.Delay[index].Mask = 0;
+        state->Early.Delay[index].Line = NULL;
+        state->Early.Offset[index] = 0;
+    }
+
+    state->Decorrelator.Mask = 0;
+    state->Decorrelator.Line = NULL;
+    state->DecoTap[0] = 0;
+    state->DecoTap[1] = 0;
+    state->DecoTap[2] = 0;
+
+    state->Late.Gain = 0.0f;
+    state->Late.DensityGain = 0.0f;
+    state->Late.ApFeedCoeff = 0.0f;
+    state->Late.MixCoeff = 0.0f;
+    for(index = 0;index < 4;index++)
+    {
+        state->Late.ApCoeff[index] = 0.0f;
+        state->Late.ApDelay[index].Mask = 0;
+        state->Late.ApDelay[index].Line = NULL;
+        state->Late.ApOffset[index] = 0;
+
+        state->Late.Coeff[index] = 0.0f;
+        state->Late.Delay[index].Mask = 0;
+        state->Late.Delay[index].Line = NULL;
+        state->Late.Offset[index] = 0;
+
+        state->Late.LpCoeff[index] = 0.0f;
+        state->Late.LpSample[index] = 0.0f;
+    }
+
+    for(l = 0;l < 4;l++)
+    {
+        for(index = 0;index < MAX_OUTPUT_CHANNELS;index++)
+        {
+            state->Early.PanGain[l][index] = 0.0f;
+            state->Late.PanGain[l][index] = 0.0f;
+        }
+    }
+
+    state->Echo.DensityGain = 0.0f;
+    state->Echo.Delay.Mask = 0;
+    state->Echo.Delay.Line = NULL;
+    state->Echo.ApDelay.Mask = 0;
+    state->Echo.ApDelay.Line = NULL;
+    state->Echo.Coeff = 0.0f;
+    state->Echo.ApFeedCoeff = 0.0f;
+    state->Echo.ApCoeff = 0.0f;
+    state->Echo.Offset = 0;
+    state->Echo.ApOffset = 0;
+    state->Echo.LpCoeff = 0.0f;
+    state->Echo.LpSample = 0.0f;
+    state->Echo.MixCoeff = 0.0f;
+
+    state->Offset = 0;
+}
+
+static ALvoid ALreverbState_Destruct(ALreverbState *State)
+{
+    al_free(State->SampleBuffer);
+    State->SampleBuffer = NULL;
+
+    ALeffectState_Destruct(STATIC_CAST(ALeffectState,State));
+}
 
 /* This is a user config option for modifying the overall output of the reverb
  * effect.
@@ -1427,92 +1517,9 @@ typedef struct ALreverbStateFactory {
 static ALeffectState *ALreverbStateFactory_create(ALreverbStateFactory* UNUSED(factory))
 {
     ALreverbState *state;
-    ALuint index, l;
 
-    state = ALreverbState_New(sizeof(*state));
+    NEW_OBJ0(state, ALreverbState)();
     if(!state) return NULL;
-    SET_VTABLE2(ALreverbState, ALeffectState, state);
-
-    state->IsEax = AL_FALSE;
-    state->ExtraChannels = 0;
-
-    state->TotalSamples = 0;
-    state->SampleBuffer = NULL;
-
-    ALfilterState_clear(&state->LpFilter);
-    ALfilterState_clear(&state->HpFilter);
-
-    state->Mod.Delay.Mask = 0;
-    state->Mod.Delay.Line = NULL;
-    state->Mod.Index = 0;
-    state->Mod.Range = 1;
-    state->Mod.Depth = 0.0f;
-    state->Mod.Coeff = 0.0f;
-    state->Mod.Filter = 0.0f;
-
-    state->Delay.Mask = 0;
-    state->Delay.Line = NULL;
-    state->DelayTap[0] = 0;
-    state->DelayTap[1] = 0;
-
-    for(index = 0;index < 4;index++)
-    {
-        state->Early.Coeff[index] = 0.0f;
-        state->Early.Delay[index].Mask = 0;
-        state->Early.Delay[index].Line = NULL;
-        state->Early.Offset[index] = 0;
-    }
-
-    state->Decorrelator.Mask = 0;
-    state->Decorrelator.Line = NULL;
-    state->DecoTap[0] = 0;
-    state->DecoTap[1] = 0;
-    state->DecoTap[2] = 0;
-
-    state->Late.Gain = 0.0f;
-    state->Late.DensityGain = 0.0f;
-    state->Late.ApFeedCoeff = 0.0f;
-    state->Late.MixCoeff = 0.0f;
-    for(index = 0;index < 4;index++)
-    {
-        state->Late.ApCoeff[index] = 0.0f;
-        state->Late.ApDelay[index].Mask = 0;
-        state->Late.ApDelay[index].Line = NULL;
-        state->Late.ApOffset[index] = 0;
-
-        state->Late.Coeff[index] = 0.0f;
-        state->Late.Delay[index].Mask = 0;
-        state->Late.Delay[index].Line = NULL;
-        state->Late.Offset[index] = 0;
-
-        state->Late.LpCoeff[index] = 0.0f;
-        state->Late.LpSample[index] = 0.0f;
-    }
-
-    for(l = 0;l < 4;l++)
-    {
-        for(index = 0;index < MAX_OUTPUT_CHANNELS;index++)
-        {
-            state->Early.PanGain[l][index] = 0.0f;
-            state->Late.PanGain[l][index] = 0.0f;
-        }
-    }
-
-    state->Echo.DensityGain = 0.0f;
-    state->Echo.Delay.Mask = 0;
-    state->Echo.Delay.Line = NULL;
-    state->Echo.ApDelay.Mask = 0;
-    state->Echo.ApDelay.Line = NULL;
-    state->Echo.Coeff = 0.0f;
-    state->Echo.ApFeedCoeff = 0.0f;
-    state->Echo.ApCoeff = 0.0f;
-    state->Echo.Offset = 0;
-    state->Echo.ApOffset = 0;
-    state->Echo.LpCoeff = 0.0f;
-    state->Echo.LpSample = 0.0f;
-    state->Echo.MixCoeff = 0.0f;
-
-    state->Offset = 0;
 
     return STATIC_CAST(ALeffectState, state);
 }

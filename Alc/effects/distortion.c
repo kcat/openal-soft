@@ -43,6 +43,24 @@ typedef struct ALdistortionState {
     ALfloat edge_coeff;
 } ALdistortionState;
 
+static ALvoid ALdistortionState_Destruct(ALdistortionState *state);
+static ALboolean ALdistortionState_deviceUpdate(ALdistortionState *state, ALCdevice *device);
+static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props);
+static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels);
+DECLARE_DEFAULT_ALLOCATORS(ALdistortionState)
+
+DEFINE_ALEFFECTSTATE_VTABLE(ALdistortionState);
+
+
+static void ALdistortionState_Construct(ALdistortionState *state)
+{
+    ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
+    SET_VTABLE2(ALdistortionState, ALeffectState, state);
+
+    ALfilterState_clear(&state->lowpass);
+    ALfilterState_clear(&state->bandpass);
+}
+
 static ALvoid ALdistortionState_Destruct(ALdistortionState *state)
 {
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
@@ -161,10 +179,6 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint Samples
     }
 }
 
-DECLARE_DEFAULT_ALLOCATORS(ALdistortionState)
-
-DEFINE_ALEFFECTSTATE_VTABLE(ALdistortionState);
-
 
 typedef struct ALdistortionStateFactory {
     DERIVE_FROM_TYPE(ALeffectStateFactory);
@@ -174,12 +188,8 @@ static ALeffectState *ALdistortionStateFactory_create(ALdistortionStateFactory *
 {
     ALdistortionState *state;
 
-    state = ALdistortionState_New(sizeof(*state));
+    NEW_OBJ0(state, ALdistortionState)();
     if(!state) return NULL;
-    SET_VTABLE2(ALdistortionState, ALeffectState, state);
-
-    ALfilterState_clear(&state->lowpass);
-    ALfilterState_clear(&state->bandpass);
 
     return STATIC_CAST(ALeffectState, state);
 }

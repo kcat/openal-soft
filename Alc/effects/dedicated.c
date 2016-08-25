@@ -35,6 +35,25 @@ typedef struct ALdedicatedState {
     ALfloat gains[MAX_OUTPUT_CHANNELS];
 } ALdedicatedState;
 
+static ALvoid ALdedicatedState_Destruct(ALdedicatedState *state);
+static ALboolean ALdedicatedState_deviceUpdate(ALdedicatedState *state, ALCdevice *device);
+static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCdevice *device, const ALeffectslot *Slot, const ALeffectProps *props);
+static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels);
+DECLARE_DEFAULT_ALLOCATORS(ALdedicatedState)
+
+DEFINE_ALEFFECTSTATE_VTABLE(ALdedicatedState);
+
+
+static void ALdedicatedState_Construct(ALdedicatedState *state)
+{
+    ALsizei s;
+
+    ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
+    SET_VTABLE2(ALdedicatedState, ALeffectState, state);
+
+    for(s = 0;s < MAX_OUTPUT_CHANNELS;s++)
+        state->gains[s] = 0.0f;
+}
 
 static ALvoid ALdedicatedState_Destruct(ALdedicatedState *state)
 {
@@ -103,10 +122,6 @@ static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALuint SamplesTo
     }
 }
 
-DECLARE_DEFAULT_ALLOCATORS(ALdedicatedState)
-
-DEFINE_ALEFFECTSTATE_VTABLE(ALdedicatedState);
-
 
 typedef struct ALdedicatedStateFactory {
     DERIVE_FROM_TYPE(ALeffectStateFactory);
@@ -115,14 +130,9 @@ typedef struct ALdedicatedStateFactory {
 ALeffectState *ALdedicatedStateFactory_create(ALdedicatedStateFactory *UNUSED(factory))
 {
     ALdedicatedState *state;
-    ALsizei s;
 
-    state = ALdedicatedState_New(sizeof(*state));
+    NEW_OBJ0(state, ALdedicatedState)();
     if(!state) return NULL;
-    SET_VTABLE2(ALdedicatedState, ALeffectState, state);
-
-    for(s = 0;s < MAX_OUTPUT_CHANNELS;s++)
-        state->gains[s] = 0.0f;
 
     return STATIC_CAST(ALeffectState, state);
 }

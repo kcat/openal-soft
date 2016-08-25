@@ -43,6 +43,15 @@ typedef struct ALmodulatorState {
     ALfilterState Filter[MAX_EFFECT_CHANNELS];
 } ALmodulatorState;
 
+static ALvoid ALmodulatorState_Destruct(ALmodulatorState *state);
+static ALboolean ALmodulatorState_deviceUpdate(ALmodulatorState *state, ALCdevice *device);
+static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props);
+static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels);
+DECLARE_DEFAULT_ALLOCATORS(ALmodulatorState)
+
+DEFINE_ALEFFECTSTATE_VTABLE(ALmodulatorState);
+
+
 #define WAVEFORM_FRACBITS  24
 #define WAVEFORM_FRACONE   (1<<WAVEFORM_FRACBITS)
 #define WAVEFORM_FRACMASK  (WAVEFORM_FRACONE-1)
@@ -81,6 +90,20 @@ DECL_TEMPLATE(Square)
 
 #undef DECL_TEMPLATE
 
+
+static void ALmodulatorState_Construct(ALmodulatorState *state)
+{
+    ALuint i;
+
+    ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
+    SET_VTABLE2(ALmodulatorState, ALeffectState, state);
+
+    state->index = 0;
+    state->step = 1;
+
+    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
+        ALfilterState_clear(&state->Filter[i]);
+}
 
 static ALvoid ALmodulatorState_Destruct(ALmodulatorState *state)
 {
@@ -175,10 +198,6 @@ static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALuint SamplesTo
     state->index = index;
 }
 
-DECLARE_DEFAULT_ALLOCATORS(ALmodulatorState)
-
-DEFINE_ALEFFECTSTATE_VTABLE(ALmodulatorState);
-
 
 typedef struct ALmodulatorStateFactory {
     DERIVE_FROM_TYPE(ALeffectStateFactory);
@@ -187,17 +206,9 @@ typedef struct ALmodulatorStateFactory {
 static ALeffectState *ALmodulatorStateFactory_create(ALmodulatorStateFactory *UNUSED(factory))
 {
     ALmodulatorState *state;
-    ALuint i;
 
-    state = ALmodulatorState_New(sizeof(*state));
+    NEW_OBJ0(state, ALmodulatorState)();
     if(!state) return NULL;
-    SET_VTABLE2(ALmodulatorState, ALeffectState, state);
-
-    state->index = 0;
-    state->step = 1;
-
-    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ALfilterState_clear(&state->Filter[i]);
 
     return STATIC_CAST(ALeffectState, state);
 }

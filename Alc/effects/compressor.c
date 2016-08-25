@@ -40,6 +40,26 @@ typedef struct ALcompressorState {
     ALfloat GainCtrl;
 } ALcompressorState;
 
+static ALvoid ALcompressorState_Destruct(ALcompressorState *state);
+static ALboolean ALcompressorState_deviceUpdate(ALcompressorState *state, ALCdevice *device);
+static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCdevice *device, const ALeffectslot *slot, const ALeffectProps *props);
+static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels);
+DECLARE_DEFAULT_ALLOCATORS(ALcompressorState)
+
+DEFINE_ALEFFECTSTATE_VTABLE(ALcompressorState);
+
+
+static void ALcompressorState_Construct(ALcompressorState *state)
+{
+    ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
+    SET_VTABLE2(ALcompressorState, ALeffectState, state);
+
+    state->Enabled = AL_TRUE;
+    state->AttackRate = 0.0f;
+    state->ReleaseRate = 0.0f;
+    state->GainCtrl = 1.0f;
+}
+
 static ALvoid ALcompressorState_Destruct(ALcompressorState *state)
 {
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
@@ -165,10 +185,6 @@ static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint Samples
     }
 }
 
-DECLARE_DEFAULT_ALLOCATORS(ALcompressorState)
-
-DEFINE_ALEFFECTSTATE_VTABLE(ALcompressorState);
-
 
 typedef struct ALcompressorStateFactory {
     DERIVE_FROM_TYPE(ALeffectStateFactory);
@@ -178,14 +194,8 @@ static ALeffectState *ALcompressorStateFactory_create(ALcompressorStateFactory *
 {
     ALcompressorState *state;
 
-    state = ALcompressorState_New(sizeof(*state));
+    NEW_OBJ0(state, ALcompressorState)();
     if(!state) return NULL;
-    SET_VTABLE2(ALcompressorState, ALeffectState, state);
-
-    state->Enabled = AL_TRUE;
-    state->AttackRate = 0.0f;
-    state->ReleaseRate = 0.0f;
-    state->GainCtrl = 1.0f;
 
     return STATIC_CAST(ALeffectState, state);
 }

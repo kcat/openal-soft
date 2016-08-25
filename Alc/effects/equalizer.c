@@ -87,6 +87,31 @@ typedef struct ALequalizerState {
     ALfloat SampleBuffer[4][MAX_EFFECT_CHANNELS][MAX_UPDATE_SAMPLES];
 } ALequalizerState;
 
+static ALvoid ALequalizerState_Destruct(ALequalizerState *state);
+static ALboolean ALequalizerState_deviceUpdate(ALequalizerState *state, ALCdevice *device);
+static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *device, const ALeffectslot *slot, const ALeffectProps *props);
+static ALvoid ALequalizerState_process(ALequalizerState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels);
+DECLARE_DEFAULT_ALLOCATORS(ALequalizerState)
+
+DEFINE_ALEFFECTSTATE_VTABLE(ALequalizerState);
+
+
+static void ALequalizerState_Construct(ALequalizerState *state)
+{
+    int it, ft;
+
+    ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
+    SET_VTABLE2(ALequalizerState, ALeffectState, state);
+
+    /* Initialize sample history only on filter creation to avoid */
+    /* sound clicks if filter settings were changed in runtime.   */
+    for(it = 0; it < 4; it++)
+    {
+        for(ft = 0;ft < MAX_EFFECT_CHANNELS;ft++)
+            ALfilterState_clear(&state->filter[it][ft]);
+    }
+}
+
 static ALvoid ALequalizerState_Destruct(ALequalizerState *state)
 {
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
@@ -223,10 +248,6 @@ static ALvoid ALequalizerState_process(ALequalizerState *state, ALuint SamplesTo
     }
 }
 
-DECLARE_DEFAULT_ALLOCATORS(ALequalizerState)
-
-DEFINE_ALEFFECTSTATE_VTABLE(ALequalizerState);
-
 
 typedef struct ALequalizerStateFactory {
     DERIVE_FROM_TYPE(ALeffectStateFactory);
@@ -235,19 +256,9 @@ typedef struct ALequalizerStateFactory {
 ALeffectState *ALequalizerStateFactory_create(ALequalizerStateFactory *UNUSED(factory))
 {
     ALequalizerState *state;
-    int it, ft;
 
-    state = ALequalizerState_New(sizeof(*state));
+    NEW_OBJ0(state, ALequalizerState)();
     if(!state) return NULL;
-    SET_VTABLE2(ALequalizerState, ALeffectState, state);
-
-    /* Initialize sample history only on filter creation to avoid */
-    /* sound clicks if filter settings were changed in runtime.   */
-    for(it = 0; it < 4; it++)
-    {
-        for(ft = 0;ft < MAX_EFFECT_CHANNELS;ft++)
-            ALfilterState_clear(&state->filter[it][ft]);
-    }
 
     return STATIC_CAST(ALeffectState, state);
 }

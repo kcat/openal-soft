@@ -523,6 +523,14 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
 }
 
 
+void ALeffectState_Construct(ALeffectState *state)
+{
+    InitRef(&state->Ref, 1);
+
+    state->OutBuffer = NULL;
+    state->OutChannels = 0;
+}
+
 void ALeffectState_Destruct(ALeffectState *UNUSED(state))
 {
 }

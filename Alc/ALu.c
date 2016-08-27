@@ -452,13 +452,15 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
 
     /* Calculate gains */
     DryGain  = clampf(SourceVolume, MinVolume, MaxVolume);
-    DryGain  *= ATOMIC_LOAD(&props->Direct.Gain, almemory_order_relaxed) * ListenerGain;
+    DryGain *= ATOMIC_LOAD(&props->Direct.Gain, almemory_order_relaxed) * ListenerGain;
+    DryGain  = minf(DryGain, GAIN_MIX_MAX);
     DryGainHF = ATOMIC_LOAD(&props->Direct.GainHF, almemory_order_relaxed);
     DryGainLF = ATOMIC_LOAD(&props->Direct.GainLF, almemory_order_relaxed);
     for(i = 0;i < NumSends;i++)
     {
-        WetGain[i] = clampf(SourceVolume, MinVolume, MaxVolume);
-        WetGain[i]  *= ATOMIC_LOAD(&props->Send[i].Gain, almemory_order_relaxed) * ListenerGain;
+        WetGain[i]  = clampf(SourceVolume, MinVolume, MaxVolume);
+        WetGain[i] *= ATOMIC_LOAD(&props->Send[i].Gain, almemory_order_relaxed) * ListenerGain;
+        WetGain[i]  = minf(WetGain[i], GAIN_MIX_MAX);
         WetGainHF[i] = ATOMIC_LOAD(&props->Send[i].GainHF, almemory_order_relaxed);
         WetGainLF[i] = ATOMIC_LOAD(&props->Send[i].GainLF, almemory_order_relaxed);
     }
@@ -1086,18 +1088,17 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
         }
     }
 
-    /* Clamp to Min/Max Gain */
-    DryGain = clampf(DryGain, MinVolume, MaxVolume);
-    for(i = 0;i < NumSends;i++)
-        WetGain[i] = clampf(WetGain[i], MinVolume, MaxVolume);
-
     /* Apply gain and frequency filters */
-    DryGain   *= ATOMIC_LOAD(&props->Direct.Gain, almemory_order_relaxed) * ListenerGain;
+    DryGain  = clampf(DryGain, MinVolume, MaxVolume);
+    DryGain *= ATOMIC_LOAD(&props->Direct.Gain, almemory_order_relaxed) * ListenerGain;
+    DryGain  = minf(DryGain, GAIN_MIX_MAX);
     DryGainHF *= ATOMIC_LOAD(&props->Direct.GainHF, almemory_order_relaxed);
     DryGainLF *= ATOMIC_LOAD(&props->Direct.GainLF, almemory_order_relaxed);
     for(i = 0;i < NumSends;i++)
     {
-        WetGain[i]   *= ATOMIC_LOAD(&props->Send[i].Gain, almemory_order_relaxed) * ListenerGain;
+        WetGain[i]  = clampf(WetGain[i], MinVolume, MaxVolume);
+        WetGain[i] *= ATOMIC_LOAD(&props->Send[i].Gain, almemory_order_relaxed) * ListenerGain;
+        WetGain[i]  = minf(WetGain[i], GAIN_MIX_MAX);
         WetGainHF[i] *= ATOMIC_LOAD(&props->Send[i].GainHF, almemory_order_relaxed);
         WetGainLF[i] *= ATOMIC_LOAD(&props->Send[i].GainLF, almemory_order_relaxed);
     }

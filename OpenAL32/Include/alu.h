@@ -173,6 +173,8 @@ typedef void (*HrtfDirectMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE],
                                     ALfloat (*restrict Values)[2], ALuint BufferSize);
 
 
+#define GAIN_MIX_MAX  (16.0f) /* +24dB */
+
 #define GAIN_SILENCE_THRESHOLD  (0.00001f) /* -100dB */
 
 #define SPEEDOFSOUNDMETRESPERSEC  (343.3f)

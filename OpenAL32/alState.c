@@ -150,7 +150,8 @@ AL_API ALboolean AL_APIENTRY alGetBoolean(ALenum pname)
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        value = ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire);
+        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire) == DeferAll)
+            value = AL_TRUE;
         break;
 
     default:
@@ -190,7 +191,8 @@ AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        value = (ALdouble)ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire);
+        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire) == DeferAll)
+            value = (ALdouble)AL_TRUE;
         break;
 
     default:
@@ -230,7 +232,8 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        value = (ALfloat)ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire);
+        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire) == DeferAll)
+            value = (ALfloat)AL_TRUE;
         break;
 
     default:
@@ -270,7 +273,8 @@ AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        value = (ALint)ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire);
+        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire) == DeferAll)
+            value = (ALint)AL_TRUE;
         break;
 
     default:
@@ -310,7 +314,8 @@ AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname)
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        value = (ALint64SOFT)ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire);
+        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire) == DeferAll)
+            value = (ALint64SOFT)AL_TRUE;
         break;
 
     default:
@@ -638,7 +643,7 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
     context = GetContextRef();
     if(!context) return;
 
-    ALCcontext_DeferUpdates(context);
+    ALCcontext_DeferUpdates(context, DeferAll);
 
     ALCcontext_DecRef(context);
 }

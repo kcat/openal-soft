@@ -1584,9 +1584,9 @@ extern inline ALint GetChannelIndex(const enum Channel names[MAX_OUTPUT_CHANNELS
  * does *NOT* stop mixing, but rather prevents certain property changes from
  * taking effect.
  */
-void ALCcontext_DeferUpdates(ALCcontext *context)
+void ALCcontext_DeferUpdates(ALCcontext *context, ALenum type)
 {
-    ATOMIC_STORE(&context->DeferUpdates, AL_TRUE);
+    ATOMIC_STORE(&context->DeferUpdates, type);
 }
 
 /* ALCcontext_ProcessUpdates
@@ -2545,7 +2545,7 @@ ALC_API ALCvoid ALC_APIENTRY alcSuspendContext(ALCcontext *context)
         alcSetError(NULL, ALC_INVALID_CONTEXT);
     else
     {
-        ALCcontext_DeferUpdates(context);
+        ALCcontext_DeferUpdates(context, DeferAllowPlay);
         ALCcontext_DecRef(context);
     }
 }

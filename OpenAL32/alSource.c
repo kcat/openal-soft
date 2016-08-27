@@ -2316,7 +2316,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         context->MaxVoices = newcount;
     }
 
-    if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
+    if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire) == DeferAll)
     {
         for(i = 0;i < n;i++)
         {

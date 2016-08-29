@@ -453,14 +453,14 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
             return AL_TRUE;
 
         case AL_MIN_GAIN:
-            CHECKVAL(*values >= 0.0f && *values <= 1.0f);
+            CHECKVAL(*values >= 0.0f);
 
             Source->MinGain = *values;
             DO_UPDATEPROPS();
             return AL_TRUE;
 
         case AL_MAX_GAIN:
-            CHECKVAL(*values >= 0.0f && *values <= 1.0f);
+            CHECKVAL(*values >= 0.0f);
 
             Source->MaxGain = *values;
             DO_UPDATEPROPS();

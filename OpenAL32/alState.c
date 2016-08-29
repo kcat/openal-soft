@@ -154,6 +154,11 @@ AL_API ALboolean AL_APIENTRY alGetBoolean(ALenum pname)
             value = AL_TRUE;
         break;
 
+    case AL_GAIN_LIMIT_SOFT:
+        if(GAIN_MIX_MAX != 0.0f)
+            value = AL_TRUE;
+        break;
+
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
@@ -193,6 +198,10 @@ AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
     case AL_DEFERRED_UPDATES_SOFT:
         if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire) == DeferAll)
             value = (ALdouble)AL_TRUE;
+        break;
+
+    case AL_GAIN_LIMIT_SOFT:
+        value = (ALdouble)GAIN_MIX_MAX;
         break;
 
     default:
@@ -236,6 +245,10 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
             value = (ALfloat)AL_TRUE;
         break;
 
+    case AL_GAIN_LIMIT_SOFT:
+        value = GAIN_MIX_MAX;
+        break;
+
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
@@ -275,6 +288,10 @@ AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
     case AL_DEFERRED_UPDATES_SOFT:
         if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire) == DeferAll)
             value = (ALint)AL_TRUE;
+        break;
+
+    case AL_GAIN_LIMIT_SOFT:
+        value = (ALint)GAIN_MIX_MAX;
         break;
 
     default:
@@ -318,6 +335,10 @@ AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname)
             value = (ALint64SOFT)AL_TRUE;
         break;
 
+    case AL_GAIN_LIMIT_SOFT:
+        value = (ALint64SOFT)GAIN_MIX_MAX;
+        break;
+
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
@@ -341,6 +362,7 @@ AL_API ALvoid AL_APIENTRY alGetBooleanv(ALenum pname, ALboolean *values)
             case AL_DISTANCE_MODEL:
             case AL_SPEED_OF_SOUND:
             case AL_DEFERRED_UPDATES_SOFT:
+            case AL_GAIN_LIMIT_SOFT:
                 values[0] = alGetBoolean(pname);
                 return;
         }
@@ -374,6 +396,7 @@ AL_API ALvoid AL_APIENTRY alGetDoublev(ALenum pname, ALdouble *values)
             case AL_DISTANCE_MODEL:
             case AL_SPEED_OF_SOUND:
             case AL_DEFERRED_UPDATES_SOFT:
+            case AL_GAIN_LIMIT_SOFT:
                 values[0] = alGetDouble(pname);
                 return;
         }
@@ -407,6 +430,7 @@ AL_API ALvoid AL_APIENTRY alGetFloatv(ALenum pname, ALfloat *values)
             case AL_DISTANCE_MODEL:
             case AL_SPEED_OF_SOUND:
             case AL_DEFERRED_UPDATES_SOFT:
+            case AL_GAIN_LIMIT_SOFT:
                 values[0] = alGetFloat(pname);
                 return;
         }
@@ -440,6 +464,7 @@ AL_API ALvoid AL_APIENTRY alGetIntegerv(ALenum pname, ALint *values)
             case AL_DISTANCE_MODEL:
             case AL_SPEED_OF_SOUND:
             case AL_DEFERRED_UPDATES_SOFT:
+            case AL_GAIN_LIMIT_SOFT:
                 values[0] = alGetInteger(pname);
                 return;
         }
@@ -471,6 +496,7 @@ AL_API void AL_APIENTRY alGetInteger64vSOFT(ALenum pname, ALint64SOFT *values)
             case AL_DISTANCE_MODEL:
             case AL_SPEED_OF_SOUND:
             case AL_DEFERRED_UPDATES_SOFT:
+            case AL_GAIN_LIMIT_SOFT:
                 values[0] = alGetInteger64SOFT(pname);
                 return;
         }

@@ -383,6 +383,11 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void);
 /*#define AL_SEC_LENGTH_SOFT                       0x200B*/
 #endif
 
+#ifndef AL_SOFT_source_gain_clamp_ex
+#define AL_SOFT_source_gain_clamp_ex 1
+#define AL_MAX_GAIN_LIMIT_SOFT                   0x200E
+#endif
+
 #ifndef ALC_SOFT_pause_device
 #define ALC_SOFT_pause_device 1
 typedef void (ALC_APIENTRY*LPALCDEVICEPAUSESOFT)(ALCdevice *device);

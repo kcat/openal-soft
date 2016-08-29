@@ -33,6 +33,7 @@
 #include "AL/alext.h"
 
 
+static bool has_direct_out = false;
 static bool has_latency_check = false;
 static LPALGETSOURCEDVSOFT alGetSourcedvSOFT;
 
@@ -140,6 +141,7 @@ typedef struct MovieState {
 
     volatile bool seek_req;
     int64_t       seek_pos;
+    volatile bool direct_req;
 
     int av_sync_type;
 
@@ -749,6 +751,17 @@ static int audio_thread(void *userdata)
             if(queued > 0) alSourcePlay(movState->audio.source);
         }
         SDL_Delay(AUDIO_BUFFER_TIME);
+
+        if(movState->direct_req)
+        {
+            if(has_direct_out)
+            {
+                alGetSourcei(movState->audio.source, AL_DIRECT_CHANNELS_SOFT, &state);
+                alSourcei(movState->audio.source, AL_DIRECT_CHANNELS_SOFT,
+                          state ? AL_FALSE : AL_TRUE);
+            }
+            movState->direct_req = false;
+        }
 
         almtx_lock(&movState->audio.src_mutex);
     }
@@ -1397,6 +1410,11 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    if(!alIsExtensionPresent("AL_SOFT_direct_channels"))
+        fprintf(stderr, "AL_SOFT_direct_channels not supported.\n");
+    else
+        has_direct_out = true;
+
     if(!alIsExtensionPresent("AL_SOFT_source_latency"))
         fprintf(stderr, "AL_SOFT_source_latency not supported, audio may be a bit laggy.\n");
     else
@@ -1473,6 +1491,10 @@ int main(int argc, char *argv[])
                         break;
                     case SDLK_DOWN:
                         stream_seek(movState, -30.0);
+                        break;
+
+                    case SDLK_d:
+                        movState->direct_req = true;
                         break;
 
                     default:

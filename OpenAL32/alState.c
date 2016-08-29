@@ -236,6 +236,9 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
             value = (ALfloat)AL_TRUE;
         break;
 
+    case AL_MAX_GAIN_LIMIT_SOFT:
+        value = (ALfloat)FLT_MAX;
+
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }

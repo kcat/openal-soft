@@ -757,8 +757,11 @@ static int audio_thread(void *userdata)
             if(has_direct_out)
             {
                 alGetSourcei(movState->audio.source, AL_DIRECT_CHANNELS_SOFT, &state);
+                state = !state;
                 alSourcei(movState->audio.source, AL_DIRECT_CHANNELS_SOFT,
-                          state ? AL_FALSE : AL_TRUE);
+                          state ? AL_TRUE : AL_FALSE);
+                printf("Direct channels %s\n", state ? "on" : "off");
+                fflush(stdout);
             }
             movState->direct_req = false;
         }

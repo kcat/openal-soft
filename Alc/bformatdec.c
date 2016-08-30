@@ -122,6 +122,12 @@ enum FreqBand {
     FB_Max
 };
 
+static const ALfloat SquarePoints[4][3] = {
+    { -0.707106781f,  0.0f, -0.707106781f },
+    {  0.707106781f,  0.0f, -0.707106781f },
+    { -0.707106781f,  0.0f,  0.707106781f },
+    {  0.707106781f,  0.0f,  0.707106781f },
+};
 static const ALfloat SquareMatrix[4][FB_Max][MAX_AMBI_COEFFS] = {
     { { 0.353553f,  0.204094f, 0.0f,  0.204094f }, { 0.25f,  0.204094f, 0.0f,  0.204094f } },
     { { 0.353553f, -0.204094f, 0.0f,  0.204094f }, { 0.25f, -0.204094f, 0.0f,  0.204094f } },
@@ -180,12 +186,9 @@ static void init_bformatdec(void)
     for(i = 0;i < COUNTOF(CubePoints);i++)
         CalcDirectionCoeffs(CubePoints[i], 0.0f, CubeEncoder[i]);
 
-    CalcXYZCoeffs(-0.707106781f,  0.0f, -0.707106781f, 0.0f, SquareEncoder[0]);
-    CalcXYZCoeffs( 0.707106781f,  0.0f, -0.707106781f, 0.0f, SquareEncoder[1]);
-    CalcXYZCoeffs(-0.707106781f,  0.0f,  0.707106781f, 0.0f, SquareEncoder[2]);
-    CalcXYZCoeffs( 0.707106781f,  0.0f,  0.707106781f, 0.0f, SquareEncoder[3]);
-
-    for(i = 0;i < 4;i++)
+    for(i = 0;i < COUNTOF(SquarePoints);i++)
+        CalcDirectionCoeffs(SquarePoints[i], 0.0f, SquareEncoder[i]);
+    for(i = 0;i < COUNTOF(SquarePoints);i++)
     {
         /* Remove the skipped height-related coefficients for 2D rendering. */
         SquareEncoder[i][2] = SquareEncoder[i][3];
@@ -227,9 +230,7 @@ typedef struct BFormatDec {
     struct {
         BandSplitter XOver[4];
 
-        const ALfloat (*restrict Matrix)[FB_Max][MAX_AMBI_COEFFS];
-        const ALfloat (*restrict Encoder)[MAX_AMBI_COEFFS];
-        ALuint NumChannels;
+        ALfloat Gains[4][MAX_OUTPUT_CHANNELS][FB_Max];
     } UpSampler;
 
     ALuint NumChannels;
@@ -282,7 +283,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
     const ALfloat *coeff_scale = UnitScale;
     ALfloat distgain[MAX_OUTPUT_CHANNELS];
     ALfloat maxdist, ratio;
-    ALuint i;
+    ALuint i, j, k;
 
     al_free(dec->Samples);
     dec->Samples = NULL;
@@ -307,18 +308,42 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
     ratio = 400.0f / (ALfloat)srate;
     for(i = 0;i < 4;i++)
         bandsplit_init(&dec->UpSampler.XOver[i], ratio);
+    memset(dec->UpSampler.Gains, 0, sizeof(dec->UpSampler.Gains));
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
-        dec->UpSampler.Matrix = CubeMatrix;
-        dec->UpSampler.Encoder = (const ALfloat(*)[MAX_AMBI_COEFFS])CubeEncoder;
-        dec->UpSampler.NumChannels = 8;
+        /* Combine the matrices that do the in->virt and virt->out conversions
+         * so we get a single in->out conversion.
+         */
+        for(i = 0;i < 4;i++)
+        {
+            for(j = 0;j < dec->NumChannels;j++)
+            {
+                ALfloat *gains = dec->UpSampler.Gains[i][j];
+                for(k = 0;k < COUNTOF(CubeMatrix);k++)
+                {
+                    gains[FB_HighFreq] += CubeMatrix[k][FB_HighFreq][i]*CubeEncoder[k][j];
+                    gains[FB_LowFreq] += CubeMatrix[k][FB_LowFreq][i]*CubeEncoder[k][j];
+                }
+            }
+        }
+
         dec->Periphonic = AL_TRUE;
     }
     else
     {
-        dec->UpSampler.Matrix = SquareMatrix;
-        dec->UpSampler.Encoder = (const ALfloat(*)[MAX_AMBI_COEFFS])SquareEncoder;
-        dec->UpSampler.NumChannels = 4;
+        for(i = 0;i < 4;i++)
+        {
+            for(j = 0;j < dec->NumChannels;j++)
+            {
+                ALfloat *gains = dec->UpSampler.Gains[i][j];
+                for(k = 0;k < COUNTOF(SquareMatrix);k++)
+                {
+                    gains[FB_HighFreq] += SquareMatrix[k][FB_HighFreq][i]*SquareEncoder[k][j];
+                    gains[FB_LowFreq] += SquareMatrix[k][FB_LowFreq][i]*SquareEncoder[k][j];
+                }
+            }
+        }
+
         dec->Periphonic = AL_FALSE;
     }
 
@@ -559,51 +584,48 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
 
 void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint InChannels, ALuint SamplesToDo)
 {
-    ALuint i, j, k;
-
-    /* First, split the first-order components into low and high frequency
-     * bands. This assumes SamplesHF and SamplesLF have enough space for first-
-     * order content (to which, this up-sampler is only used with second-order
-     * or higher decoding, so it will).
-     */
-    for(i = 0;i < InChannels;i++)
-        bandsplit_process(&dec->UpSampler.XOver[i], dec->SamplesHF[i], dec->SamplesLF[i],
-                          InSamples[i], SamplesToDo);
+    ALuint in, i, j, k;
 
     /* This up-sampler is very simplistic. It essentially decodes the first-
      * order content to a square channel array (or cube if height is desired),
-     * then encodes those points onto the higher order soundfield.
+     * then encodes those points onto the higher order soundfield. The decoder
+     * and encoder matrices have been combined to directly convert each input
+     * channel to the output, without the need for storing the virtual channel
+     * array.
      */
-    for(k = 0;k < dec->UpSampler.NumChannels;k++)
+    for(in = 0;in < InChannels;in++)
     {
-        memset(dec->ChannelMix, 0, SamplesToDo*sizeof(ALfloat));
-        MixMatrixRow(dec->ChannelMix, dec->UpSampler.Matrix[k][FB_HighFreq],
-                     dec->SamplesHF, InChannels, SamplesToDo);
-        MixMatrixRow(dec->ChannelMix, dec->UpSampler.Matrix[k][FB_LowFreq],
-                     dec->SamplesLF, InChannels, SamplesToDo);
+        /* First, split the first-order components into low and high frequency
+         * bands.
+         */
+        bandsplit_process(&dec->UpSampler.XOver[in],
+            dec->Samples[FB_HighFreq], dec->Samples[FB_LowFreq],
+            InSamples[in], SamplesToDo
+        );
 
+        /* Now write each band to the output. */
         for(j = 0;j < dec->NumChannels;j++)
         {
-            ALfloat gain = dec->UpSampler.Encoder[k][j];
-            if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
-                continue;
-            for(i = 0;i < SamplesToDo;i++)
-                OutBuffer[j][i] += dec->ChannelMix[i] * gain;
+            for(k = 0;k < FB_Max;k++)
+            {
+                ALfloat gain = dec->UpSampler.Gains[in][j][k];
+                if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
+                    continue;
+
+                for(i = 0;i < SamplesToDo;i++)
+                    OutBuffer[j][i] += dec->Samples[k][i] * gain;
+            }
         }
     }
 }
 
 
 typedef struct AmbiUpsampler {
-    alignas(16) ALfloat SamplesHF[4][BUFFERSIZE];
-    alignas(16) ALfloat SamplesLF[4][BUFFERSIZE];
-
-    alignas(16) ALfloat ChannelMix[BUFFERSIZE];
+    alignas(16) ALfloat Samples[FB_Max][BUFFERSIZE];
 
     BandSplitter XOver[4];
 
-    ALfloat Gains[8][MAX_OUTPUT_CHANNELS];
-    ALuint NumChannels;
+    ALfloat Gains[4][MAX_OUTPUT_CHANNELS][FB_Max];
 } AmbiUpsampler;
 
 AmbiUpsampler *ambiup_alloc()
@@ -619,41 +641,53 @@ void ambiup_free(struct AmbiUpsampler *ambiup)
 
 void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device)
 {
+    ALfloat gains[8][MAX_OUTPUT_CHANNELS];
     ALfloat ratio;
-    ALuint i;
+    ALuint i, j, k;
 
     ratio = 400.0f / (ALfloat)device->Frequency;
     for(i = 0;i < 4;i++)
         bandsplit_init(&ambiup->XOver[i], ratio);
 
-    ambiup->NumChannels = COUNTOF(CubePoints);
-    for(i = 0;i < ambiup->NumChannels;i++)
-        ComputePanningGains(device->Dry, CubeEncoder[i], 1.0f, ambiup->Gains[i]);
+    for(i = 0;i < COUNTOF(CubePoints);i++)
+        ComputePanningGains(device->Dry, CubeEncoder[i], 1.0f, gains[i]);
+
+    memset(ambiup->Gains, 0, sizeof(ambiup->Gains));
+    for(i = 0;i < 4;i++)
+    {
+        for(j = 0;j < device->Dry.NumChannels;j++)
+        {
+            for(k = 0;k < COUNTOF(CubePoints);k++)
+            {
+                ambiup->Gains[i][j][FB_HighFreq] += CubeMatrix[k][FB_HighFreq][i]*gains[k][j];
+                ambiup->Gains[i][j][FB_LowFreq] += CubeMatrix[k][FB_LowFreq][i]*gains[k][j];
+            }
+        }
+    }
 }
 
 void ambiup_process(struct AmbiUpsampler *ambiup, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint OutChannels, ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint SamplesToDo)
 {
-    ALuint i, j, k;
+    ALuint in, i, j, k;
 
-    for(i = 0;i < 4;i++)
-        bandsplit_process(&ambiup->XOver[i], ambiup->SamplesHF[i], ambiup->SamplesLF[i],
-                          InSamples[i], SamplesToDo);
-
-    for(k = 0;k < ambiup->NumChannels;k++)
+    for(in = 0;in < 4;in++)
     {
-        memset(ambiup->ChannelMix, 0, SamplesToDo*sizeof(ALfloat));
-        MixMatrixRow(ambiup->ChannelMix, CubeMatrix[k][FB_HighFreq],
-                     ambiup->SamplesHF, 4, SamplesToDo);
-        MixMatrixRow(ambiup->ChannelMix, CubeMatrix[k][FB_LowFreq],
-                     ambiup->SamplesLF, 4, SamplesToDo);
+        bandsplit_process(&ambiup->XOver[in],
+            ambiup->Samples[FB_HighFreq], ambiup->Samples[FB_LowFreq],
+            InSamples[in], SamplesToDo
+        );
 
         for(j = 0;j < OutChannels;j++)
         {
-            ALfloat gain = ambiup->Gains[k][j];
-            if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
-                continue;
-            for(i = 0;i < SamplesToDo;i++)
-                OutBuffer[j][i] += ambiup->ChannelMix[i] * gain;
+            for(k = 0;k < FB_Max;k++)
+            {
+                ALfloat gain = ambiup->Gains[in][j][k];
+                if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
+                    continue;
+
+                for(i = 0;i < SamplesToDo;i++)
+                    OutBuffer[j][i] += ambiup->Samples[k][i] * gain;
+            }
         }
     }
 }

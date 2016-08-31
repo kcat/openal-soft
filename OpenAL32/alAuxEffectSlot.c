@@ -42,7 +42,7 @@ extern inline void UnlockEffectSlotsWrite(ALCcontext *context);
 extern inline struct ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id);
 extern inline struct ALeffectslot *RemoveEffectSlot(ALCcontext *context, ALuint id);
 
-static void RemoveEffectSlotList(ALCcontext *Context, const ALeffectslot *slot);
+static void RemoveEffectSlotList(ALCcontext *Context, ALeffectslot *slot);
 
 static UIntMap EffectStateFactoryMap;
 static inline ALeffectStateFactory *getFactoryByType(ALenum type)
@@ -430,16 +430,16 @@ done:
 }
 
 
-static void RemoveEffectSlotList(ALCcontext *context, const ALeffectslot *slot)
+static void RemoveEffectSlotList(ALCcontext *context, ALeffectslot *slot)
 {
     ALCdevice *device = context->Device;
-    const ALeffectslot *root, *next;
+    ALeffectslot *root, *next;
 
     root = slot;
     next = ATOMIC_LOAD(&slot->next);
     if(!ATOMIC_COMPARE_EXCHANGE_STRONG(ALeffectslot*, &context->ActiveAuxSlotList, &root, next))
     {
-        const ALeffectslot *cur;
+        ALeffectslot *cur;
         do {
             cur = root;
             root = slot;

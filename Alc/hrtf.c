@@ -309,7 +309,7 @@ ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][
 }
 
 
-static struct Hrtf *LoadHrtf00(FILE *f, const_al_string filename)
+static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const_al_string filename)
 {
     const ALubyte maxDelay = HRTF_HISTORY_LENGTH-1;
     struct Hrtf *Hrtf = NULL;
@@ -320,21 +320,32 @@ static struct Hrtf *LoadHrtf00(FILE *f, const_al_string filename)
     ALubyte *azCount = NULL;
     ALushort *evOffset = NULL;
     ALshort *coeffs = NULL;
-    ALubyte *delays = NULL;
+    const ALubyte *delays = NULL;
     ALuint i, j;
 
-    rate  = fgetc(f);
-    rate |= fgetc(f)<<8;
-    rate |= fgetc(f)<<16;
-    rate |= fgetc(f)<<24;
+    if(datalen < 9)
+    {
+        ERR("Unexpected end of %s data (req %d, rem "SZFMT")\n",
+            al_string_get_cstr(filename), 9, datalen);
+        return NULL;
+    }
 
-    irCount  = fgetc(f);
-    irCount |= fgetc(f)<<8;
+    rate  = *(data++);
+    rate |= *(data++)<<8;
+    rate |= *(data++)<<16;
+    rate |= *(data++)<<24;
+    datalen -= 4;
 
-    irSize  = fgetc(f);
-    irSize |= fgetc(f)<<8;
+    irCount  = *(data++);
+    irCount |= *(data++)<<8;
+    datalen -= 2;
 
-    evCount = fgetc(f);
+    irSize  = *(data++);
+    irSize |= *(data++)<<8;
+    datalen -= 2;
+
+    evCount = *(data++);
+    datalen -= 1;
 
     if(irSize < MIN_IR_SIZE || irSize > MAX_IR_SIZE || (irSize%MOD_IR_SIZE))
     {
@@ -348,9 +359,15 @@ static struct Hrtf *LoadHrtf00(FILE *f, const_al_string filename)
             evCount, MIN_EV_COUNT, MAX_EV_COUNT);
         failed = AL_TRUE;
     }
-
     if(failed)
         return NULL;
+
+    if(datalen < evCount*2)
+    {
+        ERR("Unexpected end of %s data (req %d, rem "SZFMT")\n",
+            al_string_get_cstr(filename), evCount*2, datalen);
+        return NULL;
+    }
 
     azCount = malloc(sizeof(azCount[0])*evCount);
     evOffset = malloc(sizeof(evOffset[0])*evCount);
@@ -362,12 +379,14 @@ static struct Hrtf *LoadHrtf00(FILE *f, const_al_string filename)
 
     if(!failed)
     {
-        evOffset[0]  = fgetc(f);
-        evOffset[0] |= fgetc(f)<<8;
+        evOffset[0]  = *(data++);
+        evOffset[0] |= *(data++)<<8;
+        datalen -= 2;
         for(i = 1;i < evCount;i++)
         {
-            evOffset[i]  = fgetc(f);
-            evOffset[i] |= fgetc(f)<<8;
+            evOffset[i]  = *(data++);
+            evOffset[i] |= *(data++)<<8;
+            datalen -= 2;
             if(evOffset[i] <= evOffset[i-1])
             {
                 ERR("Invalid evOffset: evOffset[%d]=%d (last=%d)\n",
@@ -402,10 +421,20 @@ static struct Hrtf *LoadHrtf00(FILE *f, const_al_string filename)
     if(!failed)
     {
         coeffs = malloc(sizeof(coeffs[0])*irSize*irCount);
-        delays = malloc(sizeof(delays[0])*irCount);
-        if(coeffs == NULL || delays == NULL)
+        if(coeffs == NULL)
         {
             ERR("Out of memory.\n");
+            failed = AL_TRUE;
+        }
+    }
+
+    if(!failed)
+    {
+        size_t reqsize = 2*irSize*irCount + irCount;
+        if(datalen < reqsize)
+        {
+            ERR("Unexpected end of %s data (req "SZFMT", rem "SZFMT")\n",
+                al_string_get_cstr(filename), reqsize, datalen);
             failed = AL_TRUE;
         }
     }
@@ -416,26 +445,22 @@ static struct Hrtf *LoadHrtf00(FILE *f, const_al_string filename)
         {
             for(j = 0;j < irSize;j++)
             {
-                ALshort coeff;
-                coeff  = fgetc(f);
-                coeff |= fgetc(f)<<8;
-                coeffs[i+j] = coeff;
+                coeffs[i+j]  = *(data++);
+                coeffs[i+j] |= *(data++)<<8;
+                datalen -= 2;
             }
         }
+
+        delays = data;
+        data += irCount;
+        datalen -= irCount;
         for(i = 0;i < irCount;i++)
         {
-            delays[i] = fgetc(f);
             if(delays[i] > maxDelay)
             {
                 ERR("Invalid delays[%d]: %d (%d)\n", i, delays[i], maxDelay);
                 failed = AL_TRUE;
             }
-        }
-
-        if(feof(f))
-        {
-            ERR("Premature end of data\n");
-            failed = AL_TRUE;
         }
     }
 
@@ -478,275 +503,10 @@ static struct Hrtf *LoadHrtf00(FILE *f, const_al_string filename)
     free(azCount);
     free(evOffset);
     free(coeffs);
-    free(delays);
     return Hrtf;
 }
 
-static struct Hrtf *LoadHrtf01(FILE *f, const_al_string filename)
-{
-    const ALubyte maxDelay = HRTF_HISTORY_LENGTH-1;
-    struct Hrtf *Hrtf = NULL;
-    ALboolean failed = AL_FALSE;
-    ALuint rate = 0, irCount = 0;
-    ALubyte irSize = 0, evCount = 0;
-    ALubyte *azCount = NULL;
-    ALushort *evOffset = NULL;
-    ALshort *coeffs = NULL;
-    ALubyte *delays = NULL;
-    ALuint i, j;
-
-    rate  = fgetc(f);
-    rate |= fgetc(f)<<8;
-    rate |= fgetc(f)<<16;
-    rate |= fgetc(f)<<24;
-
-    irSize = fgetc(f);
-
-    evCount = fgetc(f);
-
-    if(irSize < MIN_IR_SIZE || irSize > MAX_IR_SIZE || (irSize%MOD_IR_SIZE))
-    {
-        ERR("Unsupported HRIR size: irSize=%d (%d to %d by %d)\n",
-            irSize, MIN_IR_SIZE, MAX_IR_SIZE, MOD_IR_SIZE);
-        failed = AL_TRUE;
-    }
-    if(evCount < MIN_EV_COUNT || evCount > MAX_EV_COUNT)
-    {
-        ERR("Unsupported elevation count: evCount=%d (%d to %d)\n",
-            evCount, MIN_EV_COUNT, MAX_EV_COUNT);
-        failed = AL_TRUE;
-    }
-
-    if(failed)
-        return NULL;
-
-    azCount = malloc(sizeof(azCount[0])*evCount);
-    evOffset = malloc(sizeof(evOffset[0])*evCount);
-    if(azCount == NULL || evOffset == NULL)
-    {
-        ERR("Out of memory.\n");
-        failed = AL_TRUE;
-    }
-
-    if(!failed)
-    {
-        for(i = 0;i < evCount;i++)
-        {
-            azCount[i] = fgetc(f);
-            if(azCount[i] < MIN_AZ_COUNT || azCount[i] > MAX_AZ_COUNT)
-            {
-                ERR("Unsupported azimuth count: azCount[%d]=%d (%d to %d)\n",
-                    i, azCount[i], MIN_AZ_COUNT, MAX_AZ_COUNT);
-                failed = AL_TRUE;
-            }
-        }
-    }
-
-    if(!failed)
-    {
-        evOffset[0] = 0;
-        irCount = azCount[0];
-        for(i = 1;i < evCount;i++)
-        {
-            evOffset[i] = evOffset[i-1] + azCount[i-1];
-            irCount += azCount[i];
-        }
-
-        coeffs = malloc(sizeof(coeffs[0])*irSize*irCount);
-        delays = malloc(sizeof(delays[0])*irCount);
-        if(coeffs == NULL || delays == NULL)
-        {
-            ERR("Out of memory.\n");
-            failed = AL_TRUE;
-        }
-    }
-
-    if(!failed)
-    {
-        for(i = 0;i < irCount*irSize;i+=irSize)
-        {
-            for(j = 0;j < irSize;j++)
-            {
-                ALshort coeff;
-                coeff  = fgetc(f);
-                coeff |= fgetc(f)<<8;
-                coeffs[i+j] = coeff;
-            }
-        }
-        for(i = 0;i < irCount;i++)
-        {
-            delays[i] = fgetc(f);
-            if(delays[i] > maxDelay)
-            {
-                ERR("Invalid delays[%d]: %d (%d)\n", i, delays[i], maxDelay);
-                failed = AL_TRUE;
-            }
-        }
-
-        if(feof(f))
-        {
-            ERR("Premature end of data\n");
-            failed = AL_TRUE;
-        }
-    }
-
-    if(!failed)
-    {
-        size_t total = sizeof(struct Hrtf);
-        total += sizeof(azCount[0])*evCount;
-        total += sizeof(evOffset[0])*evCount;
-        total += sizeof(coeffs[0])*irSize*irCount;
-        total += sizeof(delays[0])*irCount;
-        total += al_string_length(filename)+1;
-
-        Hrtf = al_calloc(16, total);
-        if(Hrtf == NULL)
-        {
-            ERR("Out of memory.\n");
-            failed = AL_TRUE;
-        }
-    }
-
-    if(!failed)
-    {
-        Hrtf->sampleRate = rate;
-        Hrtf->irSize = irSize;
-        Hrtf->evCount = evCount;
-        Hrtf->azCount = ((ALubyte*)(Hrtf+1));
-        Hrtf->evOffset = ((ALushort*)(Hrtf->azCount + evCount));
-        Hrtf->coeffs = ((ALshort*)(Hrtf->evOffset + evCount));
-        Hrtf->delays = ((ALubyte*)(Hrtf->coeffs + irSize*irCount));
-        Hrtf->filename = ((char*)(Hrtf->delays + irCount));
-        Hrtf->next = NULL;
-
-        memcpy((void*)Hrtf->azCount, azCount, sizeof(azCount[0])*evCount);
-        memcpy((void*)Hrtf->evOffset, evOffset, sizeof(evOffset[0])*evCount);
-        memcpy((void*)Hrtf->coeffs, coeffs, sizeof(coeffs[0])*irSize*irCount);
-        memcpy((void*)Hrtf->delays, delays, sizeof(delays[0])*irCount);
-        memcpy((void*)Hrtf->filename, al_string_get_cstr(filename), al_string_length(filename)+1);
-    }
-
-    free(azCount);
-    free(evOffset);
-    free(coeffs);
-    free(delays);
-    return Hrtf;
-}
-
-static void AddFileEntry(vector_HrtfEntry *list, al_string *filename)
-{
-    HrtfEntry entry = { AL_STRING_INIT_STATIC(), NULL };
-    struct Hrtf *hrtf = NULL;
-    const HrtfEntry *iter;
-    const char *name;
-    const char *ext;
-    ALchar magic[8];
-    FILE *f;
-    int i;
-
-    name = strrchr(al_string_get_cstr(*filename), '/');
-    if(!name) name = strrchr(al_string_get_cstr(*filename), '\\');
-    if(!name) name = al_string_get_cstr(*filename);
-    else ++name;
-
-#define MATCH_FNAME(i) (al_string_cmp_cstr(*filename, (i)->hrtf->filename) == 0)
-    VECTOR_FIND_IF(iter, const HrtfEntry, *list, MATCH_FNAME);
-    if(iter != VECTOR_END(*list))
-    {
-        TRACE("Skipping duplicate file entry %s\n", al_string_get_cstr(*filename));
-        goto done;
-    }
-#undef MATCH_FNAME
-
-    entry.hrtf = LoadedHrtfs;
-    while(entry.hrtf)
-    {
-        if(al_string_cmp_cstr(*filename, entry.hrtf->filename) == 0)
-        {
-            TRACE("Skipping load of already-loaded file %s\n", al_string_get_cstr(*filename));
-            goto skip_load;
-        }
-        entry.hrtf = entry.hrtf->next;
-    }
-
-    TRACE("Loading %s...\n", al_string_get_cstr(*filename));
-    f = al_fopen(al_string_get_cstr(*filename), "rb");
-    if(f == NULL)
-    {
-        ERR("Could not open %s\n", al_string_get_cstr(*filename));
-        goto done;
-    }
-
-    if(fread(magic, 1, sizeof(magic), f) != sizeof(magic))
-        ERR("Failed to read header from %s\n", al_string_get_cstr(*filename));
-    else
-    {
-        if(memcmp(magic, magicMarker00, sizeof(magicMarker00)) == 0)
-        {
-            TRACE("Detected data set format v0\n");
-            hrtf = LoadHrtf00(f, *filename);
-        }
-        else if(memcmp(magic, magicMarker01, sizeof(magicMarker01)) == 0)
-        {
-            TRACE("Detected data set format v1\n");
-            hrtf = LoadHrtf01(f, *filename);
-        }
-        else
-            ERR("Invalid header in %s: \"%.8s\"\n", al_string_get_cstr(*filename), magic);
-    }
-    fclose(f);
-
-    if(!hrtf)
-    {
-        ERR("Failed to load %s\n", al_string_get_cstr(*filename));
-        goto done;
-    }
-
-    hrtf->next = LoadedHrtfs;
-    LoadedHrtfs = hrtf;
-    TRACE("Loaded HRTF support for format: %s %uhz\n",
-            DevFmtChannelsString(DevFmtStereo), hrtf->sampleRate);
-    entry.hrtf = hrtf;
-
-skip_load:
-    /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
-     * format update). */
-    ext = strrchr(name, '.');
-
-    i = 0;
-    do {
-        if(!ext)
-            al_string_copy_cstr(&entry.name, name);
-        else
-            al_string_copy_range(&entry.name, name, ext);
-        if(i != 0)
-        {
-            char str[64];
-            snprintf(str, sizeof(str), " #%d", i+1);
-            al_string_append_cstr(&entry.name, str);
-        }
-        ++i;
-
-#define MATCH_NAME(i)  (al_string_cmp(entry.name, (i)->name) == 0)
-        VECTOR_FIND_IF(iter, const HrtfEntry, *list, MATCH_NAME);
-#undef MATCH_NAME
-    } while(iter != VECTOR_END(*list));
-
-    TRACE("Adding entry \"%s\" from file \"%s\"\n", al_string_get_cstr(entry.name),
-          al_string_get_cstr(*filename));
-    VECTOR_PUSH_BACK(*list, entry);
-
-done:
-    al_string_deinit(filename);
-}
-
-
-/* Unfortunate that we have to duplicate LoadHrtf01 like this, to take a memory
- * buffer for input instead of a FILE*, but there's no portable way to access a
- * memory buffer through the standard FILE* I/O API (POSIX 2008 has fmemopen,
- * and Windows doesn't seem to have anything).
- */
-static struct Hrtf *LoadBuiltInHrtf01(const ALubyte *data, size_t datalen, const_al_string filename)
+static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const_al_string filename)
 {
     const ALubyte maxDelay = HRTF_HISTORY_LENGTH-1;
     struct Hrtf *Hrtf = NULL;
@@ -921,8 +681,115 @@ static struct Hrtf *LoadBuiltInHrtf01(const ALubyte *data, size_t datalen, const
     return Hrtf;
 }
 
-/* Another unfortunate duplication, this time of AddFileEntry to take a memory
- * buffer for input instead of opening the given filename.
+static void AddFileEntry(vector_HrtfEntry *list, al_string *filename)
+{
+    HrtfEntry entry = { AL_STRING_INIT_STATIC(), NULL };
+    struct Hrtf *hrtf = NULL;
+    const HrtfEntry *iter;
+    struct FileMapping fmap;
+    const char *name;
+    const char *ext;
+    int i;
+
+    name = strrchr(al_string_get_cstr(*filename), '/');
+    if(!name) name = strrchr(al_string_get_cstr(*filename), '\\');
+    if(!name) name = al_string_get_cstr(*filename);
+    else ++name;
+
+#define MATCH_FNAME(i) (al_string_cmp_cstr(*filename, (i)->hrtf->filename) == 0)
+    VECTOR_FIND_IF(iter, const HrtfEntry, *list, MATCH_FNAME);
+    if(iter != VECTOR_END(*list))
+    {
+        TRACE("Skipping duplicate file entry %s\n", al_string_get_cstr(*filename));
+        goto done;
+    }
+#undef MATCH_FNAME
+
+    entry.hrtf = LoadedHrtfs;
+    while(entry.hrtf)
+    {
+        if(al_string_cmp_cstr(*filename, entry.hrtf->filename) == 0)
+        {
+            TRACE("Skipping load of already-loaded file %s\n", al_string_get_cstr(*filename));
+            goto skip_load;
+        }
+        entry.hrtf = entry.hrtf->next;
+    }
+
+    TRACE("Loading %s...\n", al_string_get_cstr(*filename));
+    fmap = MapFileToMem(al_string_get_cstr(*filename));
+    if(fmap.ptr == NULL)
+    {
+        ERR("Could not open %s\n", al_string_get_cstr(*filename));
+        goto done;
+    }
+
+    if(fmap.len < sizeof(magicMarker01))
+        ERR("%s data is too short ("SZFMT" bytes)\n", al_string_get_cstr(*filename), fmap.len);
+    else if(memcmp(fmap.ptr, magicMarker01, sizeof(magicMarker01)) == 0)
+    {
+        TRACE("Detected data set format v1\n");
+        hrtf = LoadHrtf01((const ALubyte*)fmap.ptr+sizeof(magicMarker01),
+            fmap.len-sizeof(magicMarker01), *filename
+        );
+    }
+    else if(memcmp(fmap.ptr, magicMarker00, sizeof(magicMarker00)) == 0)
+    {
+        TRACE("Detected data set format v0\n");
+        hrtf = LoadHrtf00((const ALubyte*)fmap.ptr+sizeof(magicMarker00),
+            fmap.len-sizeof(magicMarker00), *filename
+        );
+    }
+    else
+        ERR("Invalid header in %s: \"%.8s\"\n", al_string_get_cstr(*filename), (const char*)fmap.ptr);
+    UnmapFileMem(&fmap);
+
+    if(!hrtf)
+    {
+        ERR("Failed to load %s\n", al_string_get_cstr(*filename));
+        goto done;
+    }
+
+    hrtf->next = LoadedHrtfs;
+    LoadedHrtfs = hrtf;
+    TRACE("Loaded HRTF support for format: %s %uhz\n",
+            DevFmtChannelsString(DevFmtStereo), hrtf->sampleRate);
+    entry.hrtf = hrtf;
+
+skip_load:
+    /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
+     * format update). */
+    ext = strrchr(name, '.');
+
+    i = 0;
+    do {
+        if(!ext)
+            al_string_copy_cstr(&entry.name, name);
+        else
+            al_string_copy_range(&entry.name, name, ext);
+        if(i != 0)
+        {
+            char str[64];
+            snprintf(str, sizeof(str), " #%d", i+1);
+            al_string_append_cstr(&entry.name, str);
+        }
+        ++i;
+
+#define MATCH_NAME(i)  (al_string_cmp(entry.name, (i)->name) == 0)
+        VECTOR_FIND_IF(iter, const HrtfEntry, *list, MATCH_NAME);
+#undef MATCH_NAME
+    } while(iter != VECTOR_END(*list));
+
+    TRACE("Adding entry \"%s\" from file \"%s\"\n", al_string_get_cstr(entry.name),
+          al_string_get_cstr(*filename));
+    VECTOR_PUSH_BACK(*list, entry);
+
+done:
+    al_string_deinit(filename);
+}
+
+/* Unfortunate that we have to duplicate AddFileEntry to take a memory buffer
+ * for input instead of opening the given filename.
  */
 static void AddBuiltInEntry(vector_HrtfEntry *list, const ALubyte *data, size_t datalen, al_string *filename)
 {
@@ -961,9 +828,15 @@ static void AddBuiltInEntry(vector_HrtfEntry *list, const ALubyte *data, size_t 
     if(memcmp(data, magicMarker01, sizeof(magicMarker01)) == 0)
     {
         TRACE("Detected data set format v1\n");
-        hrtf = LoadBuiltInHrtf01(
-            data+sizeof(magicMarker01), datalen-sizeof(magicMarker01),
-            *filename
+        hrtf = LoadHrtf01(data+sizeof(magicMarker01),
+            datalen-sizeof(magicMarker01), *filename
+        );
+    }
+    else if(memcmp(data, magicMarker00, sizeof(magicMarker00)) == 0)
+    {
+        TRACE("Detected data set format v0\n");
+        hrtf = LoadHrtf00(data+sizeof(magicMarker00),
+            datalen-sizeof(magicMarker00), *filename
         );
     }
     else

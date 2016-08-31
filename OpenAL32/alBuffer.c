@@ -139,8 +139,8 @@ AL_API ALboolean AL_APIENTRY alIsBuffer(ALuint buffer)
 
 AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq)
 {
-    enum UserFmtChannels srcchannels;
-    enum UserFmtType srctype;
+    enum UserFmtChannels srcchannels = UserFmtMono;
+    enum UserFmtType srctype = UserFmtByte;
     ALCdevice *device;
     ALCcontext *context;
     ALbuffer *albuf;
@@ -288,8 +288,8 @@ done:
 
 AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, const ALvoid *data, ALsizei offset, ALsizei length)
 {
-    enum UserFmtChannels srcchannels;
-    enum UserFmtType srctype;
+    enum UserFmtChannels srcchannels = UserFmtMono;
+    enum UserFmtType srctype = UserFmtByte;
     ALCdevice *device;
     ALCcontext *context;
     ALbuffer *albuf;
@@ -981,13 +981,14 @@ done:
  */
 ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALsizei align, ALboolean storesrc)
 {
+    enum FmtChannels DstChannels = FmtMono;
+    enum FmtType DstType = FmtByte;
     ALuint NewChannels, NewBytes;
-    enum FmtChannels DstChannels;
-    enum FmtType DstType;
     ALuint64 newsize;
 
-    if(DecomposeFormat(NewFormat, &DstChannels, &DstType) == AL_FALSE ||
-       (long)SrcChannels != (long)DstChannels)
+    if(DecomposeFormat(NewFormat, &DstChannels, &DstType) == AL_FALSE)
+        return AL_INVALID_ENUM;
+    if((long)SrcChannels != (long)DstChannels)
         return AL_INVALID_ENUM;
 
     NewChannels = ChannelsFromFmt(DstChannels);

@@ -584,7 +584,7 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
 
 void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint InChannels, ALuint SamplesToDo)
 {
-    ALuint in, i, j, k;
+    ALuint i, j;
 
     /* This up-sampler is very simplistic. It essentially decodes the first-
      * order content to a square channel array (or cube if height is desired),
@@ -593,29 +593,20 @@ void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[B
      * channel to the output, without the need for storing the virtual channel
      * array.
      */
-    for(in = 0;in < InChannels;in++)
+    for(i = 0;i < InChannels;i++)
     {
         /* First, split the first-order components into low and high frequency
          * bands.
          */
-        bandsplit_process(&dec->UpSampler.XOver[in],
+        bandsplit_process(&dec->UpSampler.XOver[i],
             dec->Samples[FB_HighFreq], dec->Samples[FB_LowFreq],
-            InSamples[in], SamplesToDo
+            InSamples[i], SamplesToDo
         );
 
         /* Now write each band to the output. */
         for(j = 0;j < dec->NumChannels;j++)
-        {
-            for(k = 0;k < FB_Max;k++)
-            {
-                ALfloat gain = dec->UpSampler.Gains[in][j][k];
-                if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
-                    continue;
-
-                for(i = 0;i < SamplesToDo;i++)
-                    OutBuffer[j][i] += dec->Samples[k][i] * gain;
-            }
-        }
+            MixMatrixRow(OutBuffer[j], dec->UpSampler.Gains[i][j],
+                         dec->Samples, FB_Max, SamplesToDo);
     }
 }
 
@@ -668,26 +659,17 @@ void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device)
 
 void ambiup_process(struct AmbiUpsampler *ambiup, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint OutChannels, ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint SamplesToDo)
 {
-    ALuint in, i, j, k;
+    ALuint i, j;
 
-    for(in = 0;in < 4;in++)
+    for(i = 0;i < 4;i++)
     {
-        bandsplit_process(&ambiup->XOver[in],
+        bandsplit_process(&ambiup->XOver[i],
             ambiup->Samples[FB_HighFreq], ambiup->Samples[FB_LowFreq],
-            InSamples[in], SamplesToDo
+            InSamples[i], SamplesToDo
         );
 
         for(j = 0;j < OutChannels;j++)
-        {
-            for(k = 0;k < FB_Max;k++)
-            {
-                ALfloat gain = ambiup->Gains[in][j][k];
-                if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
-                    continue;
-
-                for(i = 0;i < SamplesToDo;i++)
-                    OutBuffer[j][i] += ambiup->Samples[k][i] * gain;
-            }
-        }
+            MixMatrixRow(OutBuffer[j], ambiup->Gains[i][j],
+                         ambiup->Samples, FB_Max, SamplesToDo);
     }
 }

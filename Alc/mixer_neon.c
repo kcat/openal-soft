@@ -144,7 +144,7 @@ void Mix_Neon(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer
     }
 }
 
-void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Mtx, ALfloat (*restrict data)[BUFFERSIZE], ALuint InChans, ALuint BufferSize)
+void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Gains, ALfloat (*restrict data)[BUFFERSIZE], ALuint InChans, ALuint BufferSize)
 {
     float32x4_t gain4;
     ALuint c;
@@ -152,7 +152,7 @@ void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Mtx, ALfloat (*restrict data
     for(c = 0;c < InChans;c++)
     {
         ALuint pos = 0;
-        ALfloat gain = Mtx[c];
+        ALfloat gain = Gains[c];
         if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
 

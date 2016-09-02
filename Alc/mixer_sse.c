@@ -262,7 +262,7 @@ void Mix_SSE(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)
     }
 }
 
-void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Mtx, ALfloat (*restrict data)[BUFFERSIZE], ALuint InChans, ALuint BufferSize)
+void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, ALfloat (*restrict data)[BUFFERSIZE], ALuint InChans, ALuint BufferSize)
 {
     __m128 gain4;
     ALuint c;
@@ -270,7 +270,7 @@ void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Mtx, ALfloat (*restrict data)
     for(c = 0;c < InChans;c++)
     {
         ALuint pos = 0;
-        ALfloat gain = Mtx[c];
+        ALfloat gain = Gains[c];
         if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
 

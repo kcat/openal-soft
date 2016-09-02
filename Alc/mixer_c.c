@@ -208,13 +208,13 @@ void Mix_C(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[B
  * transform. And as the matrices are more or less static once set up, no
  * stepping is necessary.
  */
-void MixRow_C(ALfloat *OutBuffer, const ALfloat *Mtx, ALfloat (*restrict data)[BUFFERSIZE], ALuint InChans, ALuint BufferSize)
+void MixRow_C(ALfloat *OutBuffer, const ALfloat *Gains, ALfloat (*restrict data)[BUFFERSIZE], ALuint InChans, ALuint BufferSize)
 {
     ALuint c, i;
 
     for(c = 0;c < InChans;c++)
     {
-        ALfloat gain = Mtx[c];
+        ALfloat gain = Gains[c];
         if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
 

@@ -31,7 +31,7 @@ void MixDirectHrtf_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, ALu
                      ALuint BufferSize);
 void Mix_C(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
            struct MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize);
-void MixRow_C(ALfloat *OutBuffer, const ALfloat *Mtx, ALfloat (*restrict data)[BUFFERSIZE],
+void MixRow_C(ALfloat *OutBuffer, const ALfloat *Gains, ALfloat (*restrict data)[BUFFERSIZE],
               ALuint InChans, ALuint BufferSize);
 
 /* SSE mixers */
@@ -45,7 +45,7 @@ void MixDirectHrtf_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, A
                        ALuint BufferSize);
 void Mix_SSE(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
              struct MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize);
-void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Mtx, ALfloat (*restrict data)[BUFFERSIZE],
+void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, ALfloat (*restrict data)[BUFFERSIZE],
                 ALuint InChans, ALuint BufferSize);
 
 /* SSE resamplers */
@@ -92,7 +92,7 @@ void MixDirectHrtf_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, 
                         ALuint BufferSize);
 void Mix_Neon(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
               struct MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize);
-void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Mtx, ALfloat (*restrict data)[BUFFERSIZE],
+void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Gains, ALfloat (*restrict data)[BUFFERSIZE],
                  ALuint InChans, ALuint BufferSize);
 
 #endif /* MIXER_DEFS_H */

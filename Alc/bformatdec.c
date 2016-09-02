@@ -159,7 +159,7 @@ static const ALfloat CubeMatrix[8][FB_Max][MAX_AMBI_COEFFS] = {
 static ALfloat CubeEncoder[8][MAX_AMBI_COEFFS];
 
 
-static inline MatrixMixerFunc SelectMixer(void)
+static inline RowMixerFunc SelectMixer(void)
 {
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
@@ -172,7 +172,7 @@ static inline MatrixMixerFunc SelectMixer(void)
     return MixRow_C;
 }
 
-static MatrixMixerFunc MixMatrixRow = MixRow_C;
+static RowMixerFunc MixMatrixRow = MixRow_C;
 
 
 static alonce_flag bformatdec_inited = AL_ONCE_FLAG_INIT;

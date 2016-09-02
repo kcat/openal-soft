@@ -691,11 +691,6 @@ static void AddFileEntry(vector_HrtfEntry *list, al_string *filename)
     const char *ext;
     int i;
 
-    name = strrchr(al_string_get_cstr(*filename), '/');
-    if(!name) name = strrchr(al_string_get_cstr(*filename), '\\');
-    if(!name) name = al_string_get_cstr(*filename);
-    else ++name;
-
 #define MATCH_FNAME(i) (al_string_cmp_cstr(*filename, (i)->hrtf->filename) == 0)
     VECTOR_FIND_IF(iter, const HrtfEntry, *list, MATCH_FNAME);
     if(iter != VECTOR_END(*list))
@@ -759,6 +754,11 @@ static void AddFileEntry(vector_HrtfEntry *list, al_string *filename)
 skip_load:
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
      * format update). */
+    name = strrchr(al_string_get_cstr(*filename), '/');
+    if(!name) name = strrchr(al_string_get_cstr(*filename), '\\');
+    if(!name) name = al_string_get_cstr(*filename);
+    else ++name;
+
     ext = strrchr(name, '.');
 
     i = 0;

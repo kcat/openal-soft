@@ -78,23 +78,15 @@ static ALboolean ALcompressorState_deviceUpdate(ALcompressorState *state, ALCdev
 
 static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCdevice *device, const ALeffectslot *slot, const ALeffectProps *props)
 {
-    aluMatrixf matrix;
     ALuint i;
 
     state->Enabled = props->Compressor.OnOff;
 
-    aluMatrixfSet(&matrix,
-        1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f
-    );
-
     STATIC_CAST(ALeffectState,state)->OutBuffer = device->FOAOut.Buffer;
     STATIC_CAST(ALeffectState,state)->OutChannels = device->FOAOut.NumChannels;
     for(i = 0;i < 4;i++)
-        ComputeFirstOrderGains(device->FOAOut, matrix.m[i], slot->Params.Gain,
-                               state->Gain[i]);
+        ComputeFirstOrderGains(device->FOAOut, IdentityMatrixf.m[i],
+                               slot->Params.Gain, state->Gain[i]);
 }
 
 static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)

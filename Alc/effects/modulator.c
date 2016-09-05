@@ -117,7 +117,6 @@ static ALboolean ALmodulatorState_deviceUpdate(ALmodulatorState *UNUSED(state), 
 
 static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props)
 {
-    aluMatrixf matrix;
     ALfloat cw, a;
     ALuint i;
 
@@ -146,18 +145,11 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *
         state->Filter[i].process = ALfilterState_processC;
     }
 
-    aluMatrixfSet(&matrix,
-        1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f
-    );
-
     STATIC_CAST(ALeffectState,state)->OutBuffer = Device->FOAOut.Buffer;
     STATIC_CAST(ALeffectState,state)->OutChannels = Device->FOAOut.NumChannels;
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputeFirstOrderGains(Device->FOAOut, matrix.m[i], Slot->Params.Gain,
-                               state->Gain[i]);
+        ComputeFirstOrderGains(Device->FOAOut, IdentityMatrixf.m[i],
+                               Slot->Params.Gain, state->Gain[i]);
 }
 
 static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)

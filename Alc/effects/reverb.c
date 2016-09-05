@@ -1080,43 +1080,52 @@ static inline ALvoid DelayLineIn(DelayLine *Delay, ALuint offset, ALfloat in)
     Delay->Line[offset&Delay->Mask] = in;
 }
 
-// Given an input sample, this function produces modulation for the late
+// Given some input samples, this function produces modulation for the late
 // reverb.
-static inline ALfloat EAXModulation(ALreverbState *State, ALuint offset, ALfloat in)
+static void EAXModulation(ALreverbState *State, ALuint offset, ALfloat*restrict dst, const ALfloat*restrict src, ALuint todo)
 {
     ALfloat sinus, frac, fdelay;
     ALfloat out0, out1;
-    ALuint delay;
+    ALuint delay, i;
 
-    // Calculate the sinus rythm (dependent on modulation time and the
-    // sampling rate).  The center of the sinus is moved to reduce the delay
-    // of the effect when the time or depth are low.
-    sinus = 1.0f - cosf(F_TAU * State->Mod.Index / State->Mod.Range);
+    for(i = 0;i < todo;i++)
+    {
+        /* Calculate the sinus rythm (dependent on modulation time and the
+         * sampling rate).  The center of the sinus is moved to reduce the
+         * delay of the effect when the time or depth are low.
+         */
+        sinus = 1.0f - cosf(F_TAU * State->Mod.Index / State->Mod.Range);
 
-    // Step the modulation index forward, keeping it bound to its range.
-    State->Mod.Index = (State->Mod.Index + 1) % State->Mod.Range;
+        /* Step the modulation index forward, keeping it bound to its range. */
+        State->Mod.Index = (State->Mod.Index + 1) % State->Mod.Range;
 
-    // The depth determines the range over which to read the input samples
-    // from, so it must be filtered to reduce the distortion caused by even
-    // small parameter changes.
-    State->Mod.Filter = lerp(State->Mod.Filter, State->Mod.Depth,
-                             State->Mod.Coeff);
+        /* The depth determines the range over which to read the input samples
+         * from, so it must be filtered to reduce the distortion caused by even
+         * small parameter changes.
+         */
+        State->Mod.Filter = lerp(State->Mod.Filter, State->Mod.Depth,
+                                 State->Mod.Coeff);
 
-    // Calculate the read offset and fraction between it and the next sample.
-    frac = modff(State->Mod.Filter*sinus, &fdelay);
-    delay = fastf2u(fdelay);
+        /* Calculate the read offset and fraction between it and the next
+         * sample.
+         */
+        frac = modff(State->Mod.Filter*sinus, &fdelay);
+        delay = fastf2u(fdelay);
 
-    /* Add the incoming sample to the delay line first, so a 0 delay gets the
-     * incoming sample.
-     */
-    DelayLineIn(&State->Mod.Delay, offset, in);
-    /* Get the two samples crossed by the offset delay */
-    out0 = DelayLineOut(&State->Mod.Delay, offset - delay);
-    out1 = DelayLineOut(&State->Mod.Delay, offset - delay - 1);
+        /* Add the incoming sample to the delay line first, so a 0 delay gets
+         * the incoming sample.
+         */
+        DelayLineIn(&State->Mod.Delay, offset, src[i]);
+        /* Get the two samples crossed by the offset delay */
+        out0 = DelayLineOut(&State->Mod.Delay, offset - delay);
+        out1 = DelayLineOut(&State->Mod.Delay, offset - delay - 1);
+        offset++;
 
-    // The output is obtained by linearly interpolating the two samples that
-    // were acquired above.
-    return lerp(out0, out1, frac);
+        /* The output is obtained by linearly interpolating the two samples
+         * that were acquired above.
+         */
+        dst[i] = lerp(out0, out1, frac);
+    }
 }
 
 // Given some input sample, this function produces four-channel outputs for the
@@ -1371,18 +1380,20 @@ static inline ALvoid EAXVerbPass(ALreverbState *State, ALuint todo, const ALfloa
 
     // Band-pass and modulate the incoming samples (use the early buffer as temp storage).
     ALfilterState_process(&State->LpFilter, &early[0][0], input, todo);
-    ALfilterState_process(&State->HpFilter, &early[MAX_UPDATE_SAMPLES/4][0], &early[0][0], todo);
+    ALfilterState_process(&State->HpFilter,
+        &early[MAX_UPDATE_SAMPLES/4][0], &early[0][0], todo
+    );
+    // Perform any modulation on the input.
+    EAXModulation(State, State->Offset,
+        &early[MAX_UPDATE_SAMPLES*2/4][0], &early[MAX_UPDATE_SAMPLES/4][0],
+        todo
+    );
 
+    // Feed the initial delay line.
     for(i = 0;i < todo;i++)
-    {
-        ALfloat sample = early[(MAX_UPDATE_SAMPLES/4)+(i>>2)][i&3];
-
-        // Perform any modulation on the input.
-        sample = EAXModulation(State, State->Offset+i, sample);
-
-        // Feed the initial delay line.
-        DelayLineIn(&State->Delay, State->Offset+i, sample);
-    }
+        DelayLineIn(&State->Delay, State->Offset+i,
+            early[(MAX_UPDATE_SAMPLES*2/4)+(i>>2)][i&3]
+        );
 
     // Calculate the early reflection from the first delay tap.
     EarlyReflection(State, todo, early);

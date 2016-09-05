@@ -540,7 +540,7 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
         aluCrossproduct(N, V, U);
         aluNormalize(U);
 
-        /* Build a rotate + conversion matrix (B-Format -> N3D). */
+        /* Build a rotate + conversion matrix (FuMa -> ACN+N3D). */
         scale = 1.732050808f;
         aluMatrixfSet(&matrix,
             1.414213562f,        0.0f,        0.0f,        0.0f,

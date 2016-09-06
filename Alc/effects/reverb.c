@@ -1378,15 +1378,14 @@ static inline ALvoid EAXVerbPass(ALreverbState *State, ALuint todo, const ALfloa
 {
     ALuint i;
 
-    // Band-pass and modulate the incoming samples (use the early buffer as temp storage).
-    ALfilterState_process(&State->LpFilter, &early[0][0], input, todo);
-    ALfilterState_process(&State->HpFilter,
+    /* Perform any modulation on the input (use the early buffer as temp storage). */
+    EAXModulation(State, State->Offset, &early[0][0], input, todo);
+    /* Band-pass the incoming samples */
+    ALfilterState_process(&State->LpFilter,
         &early[MAX_UPDATE_SAMPLES/4][0], &early[0][0], todo
     );
-    // Perform any modulation on the input.
-    EAXModulation(State, State->Offset,
-        &early[MAX_UPDATE_SAMPLES*2/4][0], &early[MAX_UPDATE_SAMPLES/4][0],
-        todo
+    ALfilterState_process(&State->HpFilter,
+        &early[MAX_UPDATE_SAMPLES*2/4][0], &early[MAX_UPDATE_SAMPLES/4][0], todo
     );
 
     // Feed the initial delay line.

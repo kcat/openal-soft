@@ -122,21 +122,23 @@ enum FreqBand {
     FB_Max
 };
 
-static const ALfloat SquarePoints[4][3] = {
+/* These points are in AL coordinates! */
+static const ALfloat Ambi2DPoints[4][3] = {
     { -0.707106781f,  0.0f, -0.707106781f },
     {  0.707106781f,  0.0f, -0.707106781f },
     { -0.707106781f,  0.0f,  0.707106781f },
     {  0.707106781f,  0.0f,  0.707106781f },
 };
-static const ALfloat SquareMatrix[4][FB_Max][MAX_AMBI_COEFFS] = {
+static const ALfloat Ambi2DDecoder[4][FB_Max][MAX_AMBI_COEFFS] = {
     { { 0.353553f,  0.204094f, 0.0f,  0.204094f }, { 0.25f,  0.204094f, 0.0f,  0.204094f } },
     { { 0.353553f, -0.204094f, 0.0f,  0.204094f }, { 0.25f, -0.204094f, 0.0f,  0.204094f } },
     { { 0.353553f,  0.204094f, 0.0f, -0.204094f }, { 0.25f,  0.204094f, 0.0f, -0.204094f } },
     { { 0.353553f, -0.204094f, 0.0f, -0.204094f }, { 0.25f, -0.204094f, 0.0f, -0.204094f } },
 };
-static ALfloat SquareEncoder[4][MAX_AMBI_COEFFS];
+static ALfloat Ambi2DEncoder[4][MAX_AMBI_COEFFS];
 
-static const ALfloat CubePoints[8][3] = {
+/* These points are in AL coordinates! */
+static const ALfloat Ambi3DPoints[8][3] = {
     { -0.577350269f,  0.577350269f, -0.577350269f },
     {  0.577350269f,  0.577350269f, -0.577350269f },
     { -0.577350269f,  0.577350269f,  0.577350269f },
@@ -146,7 +148,7 @@ static const ALfloat CubePoints[8][3] = {
     { -0.577350269f, -0.577350269f,  0.577350269f },
     {  0.577350269f, -0.577350269f,  0.577350269f },
 };
-static const ALfloat CubeMatrix[8][FB_Max][MAX_AMBI_COEFFS] = {
+static const ALfloat Ambi3DDecoder[8][FB_Max][MAX_AMBI_COEFFS] = {
     { { 0.25f,  0.1443375672f,  0.1443375672f,  0.1443375672f }, { 0.125f,  0.125f,  0.125f,  0.125f } },
     { { 0.25f, -0.1443375672f,  0.1443375672f,  0.1443375672f }, { 0.125f, -0.125f,  0.125f,  0.125f } },
     { { 0.25f,  0.1443375672f,  0.1443375672f, -0.1443375672f }, { 0.125f,  0.125f,  0.125f, -0.125f } },
@@ -156,7 +158,7 @@ static const ALfloat CubeMatrix[8][FB_Max][MAX_AMBI_COEFFS] = {
     { { 0.25f,  0.1443375672f, -0.1443375672f, -0.1443375672f }, { 0.125f,  0.125f, -0.125f, -0.125f } },
     { { 0.25f, -0.1443375672f, -0.1443375672f, -0.1443375672f }, { 0.125f, -0.125f, -0.125f, -0.125f } },
 };
-static ALfloat CubeEncoder[8][MAX_AMBI_COEFFS];
+static ALfloat Ambi3DEncoder[8][MAX_AMBI_COEFFS];
 
 
 static inline RowMixerFunc SelectMixer(void)
@@ -183,21 +185,21 @@ static void init_bformatdec(void)
 
     MixMatrixRow = SelectMixer();
 
-    for(i = 0;i < COUNTOF(CubePoints);i++)
-        CalcDirectionCoeffs(CubePoints[i], 0.0f, CubeEncoder[i]);
+    for(i = 0;i < COUNTOF(Ambi3DPoints);i++)
+        CalcDirectionCoeffs(Ambi3DPoints[i], 0.0f, Ambi3DEncoder[i]);
 
-    for(i = 0;i < COUNTOF(SquarePoints);i++)
-        CalcDirectionCoeffs(SquarePoints[i], 0.0f, SquareEncoder[i]);
-    for(i = 0;i < COUNTOF(SquarePoints);i++)
+    for(i = 0;i < COUNTOF(Ambi2DPoints);i++)
     {
+        CalcDirectionCoeffs(Ambi2DPoints[i], 0.0f, Ambi2DEncoder[i]);
+
         /* Remove the skipped height-related coefficients for 2D rendering. */
-        SquareEncoder[i][2] = SquareEncoder[i][3];
-        SquareEncoder[i][3] = SquareEncoder[i][4];
-        SquareEncoder[i][4] = SquareEncoder[i][8];
-        SquareEncoder[i][5] = SquareEncoder[i][9];
-        SquareEncoder[i][6] = SquareEncoder[i][15];
+        Ambi2DEncoder[i][2] = Ambi2DEncoder[i][3];
+        Ambi2DEncoder[i][3] = Ambi2DEncoder[i][4];
+        Ambi2DEncoder[i][4] = Ambi2DEncoder[i][8];
+        Ambi2DEncoder[i][5] = Ambi2DEncoder[i][9];
+        Ambi2DEncoder[i][6] = Ambi2DEncoder[i][15];
         for(j = 7;j < MAX_AMBI_COEFFS;j++)
-            SquareEncoder[i][j] = 0.0f;
+            Ambi2DEncoder[i][j] = 0.0f;
     }
 }
 
@@ -319,10 +321,10 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
             for(j = 0;j < dec->NumChannels;j++)
             {
                 ALfloat *gains = dec->UpSampler.Gains[i][j];
-                for(k = 0;k < COUNTOF(CubeMatrix);k++)
+                for(k = 0;k < COUNTOF(Ambi3DDecoder);k++)
                 {
-                    gains[FB_HighFreq] += CubeMatrix[k][FB_HighFreq][i]*CubeEncoder[k][j];
-                    gains[FB_LowFreq] += CubeMatrix[k][FB_LowFreq][i]*CubeEncoder[k][j];
+                    gains[FB_HighFreq] += Ambi3DDecoder[k][FB_HighFreq][i]*Ambi3DEncoder[k][j];
+                    gains[FB_LowFreq] += Ambi3DDecoder[k][FB_LowFreq][i]*Ambi3DEncoder[k][j];
                 }
             }
         }
@@ -336,10 +338,10 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
             for(j = 0;j < dec->NumChannels;j++)
             {
                 ALfloat *gains = dec->UpSampler.Gains[i][j];
-                for(k = 0;k < COUNTOF(SquareMatrix);k++)
+                for(k = 0;k < COUNTOF(Ambi2DDecoder);k++)
                 {
-                    gains[FB_HighFreq] += SquareMatrix[k][FB_HighFreq][i]*SquareEncoder[k][j];
-                    gains[FB_LowFreq] += SquareMatrix[k][FB_LowFreq][i]*SquareEncoder[k][j];
+                    gains[FB_HighFreq] += Ambi2DDecoder[k][FB_HighFreq][i]*Ambi2DEncoder[k][j];
+                    gains[FB_LowFreq] += Ambi2DDecoder[k][FB_LowFreq][i]*Ambi2DEncoder[k][j];
                 }
             }
         }
@@ -640,18 +642,18 @@ void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device)
     for(i = 0;i < 4;i++)
         bandsplit_init(&ambiup->XOver[i], ratio);
 
-    for(i = 0;i < COUNTOF(CubePoints);i++)
-        ComputePanningGains(device->Dry, CubeEncoder[i], 1.0f, gains[i]);
+    for(i = 0;i < COUNTOF(Ambi3DEncoder);i++)
+        ComputePanningGains(device->Dry, Ambi3DEncoder[i], 1.0f, gains[i]);
 
     memset(ambiup->Gains, 0, sizeof(ambiup->Gains));
     for(i = 0;i < 4;i++)
     {
         for(j = 0;j < device->Dry.NumChannels;j++)
         {
-            for(k = 0;k < COUNTOF(CubePoints);k++)
+            for(k = 0;k < COUNTOF(Ambi3DDecoder);k++)
             {
-                ambiup->Gains[i][j][FB_HighFreq] += CubeMatrix[k][FB_HighFreq][i]*gains[k][j];
-                ambiup->Gains[i][j][FB_LowFreq] += CubeMatrix[k][FB_LowFreq][i]*gains[k][j];
+                ambiup->Gains[i][j][FB_HighFreq] += Ambi3DDecoder[k][FB_HighFreq][i]*gains[k][j];
+                ambiup->Gains[i][j][FB_LowFreq] += Ambi3DDecoder[k][FB_LowFreq][i]*gains[k][j];
             }
         }
     }

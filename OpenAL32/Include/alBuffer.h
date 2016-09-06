@@ -36,8 +36,8 @@ enum UserFmtChannels {
     UserFmtBFormat3D = AL_BFORMAT3D_SOFT, /* WXYZ */
 };
 
-ALuint BytesFromUserFmt(enum UserFmtType type) DECL_CONST;
-ALuint ChannelsFromUserFmt(enum UserFmtChannels chans) DECL_CONST;
+ALuint BytesFromUserFmt(enum UserFmtType type);
+ALuint ChannelsFromUserFmt(enum UserFmtChannels chans);
 inline ALuint FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType type)
 {
     return ChannelsFromUserFmt(chans) * BytesFromUserFmt(type);
@@ -63,8 +63,8 @@ enum FmtChannels {
 };
 #define MAX_INPUT_CHANNELS  (8)
 
-ALuint BytesFromFmt(enum FmtType type) DECL_CONST;
-ALuint ChannelsFromFmt(enum FmtChannels chans) DECL_CONST;
+ALuint BytesFromFmt(enum FmtType type);
+ALuint ChannelsFromFmt(enum FmtChannels chans);
 inline ALuint FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type)
 {
     return ChannelsFromFmt(chans) * BytesFromFmt(type);

@@ -45,10 +45,10 @@ extern inline struct ALbuffer *RemoveBuffer(ALCdevice *device, ALuint id);
 extern inline ALuint FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType type);
 extern inline ALuint FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type);
 
-static ALboolean IsValidType(ALenum type) DECL_CONST;
-static ALboolean IsValidChannels(ALenum channels) DECL_CONST;
-static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans, enum UserFmtType *type) DECL_CONST;
-static ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *type) DECL_CONST;
+static ALboolean IsValidType(ALenum type);
+static ALboolean IsValidChannels(ALenum channels);
+static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans, enum UserFmtType *type);
+static ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *type);
 static ALboolean SanitizeAlignment(enum UserFmtType type, ALsizei *align);
 
 

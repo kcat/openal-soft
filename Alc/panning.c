@@ -290,7 +290,7 @@ void ComputeFirstOrderGainsBF(const BFChannelConfig *chanmap, ALuint numchans, c
 }
 
 
-DECL_CONST static inline const char *GetLabelFromChannel(enum Channel channel)
+static inline const char *GetLabelFromChannel(enum Channel channel)
 {
     switch(channel)
     {

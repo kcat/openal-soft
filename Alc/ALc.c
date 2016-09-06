@@ -1334,8 +1334,8 @@ ALuint ChannelsFromDevFmt(enum DevFmtChannels chans)
     return 0;
 }
 
-DECL_CONST static ALboolean DecomposeDevFormat(ALenum format,
-  enum DevFmtChannels *chans, enum DevFmtType *type)
+static ALboolean DecomposeDevFormat(ALenum format, enum DevFmtChannels *chans,
+                                    enum DevFmtType *type)
 {
     static const struct {
         ALenum format;
@@ -1381,7 +1381,7 @@ DECL_CONST static ALboolean DecomposeDevFormat(ALenum format,
     return AL_FALSE;
 }
 
-DECL_CONST static ALCboolean IsValidALCType(ALCenum type)
+static ALCboolean IsValidALCType(ALCenum type)
 {
     switch(type)
     {
@@ -1397,7 +1397,7 @@ DECL_CONST static ALCboolean IsValidALCType(ALCenum type)
     return ALC_FALSE;
 }
 
-DECL_CONST static ALCboolean IsValidALCChannels(ALCenum channels)
+static ALCboolean IsValidALCChannels(ALCenum channels)
 {
     switch(channels)
     {

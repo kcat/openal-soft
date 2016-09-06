@@ -163,10 +163,8 @@ typedef ALuint64SOFT ALuint64;
 #endif
 
 #ifdef __GNUC__
-#define DECL_CONST __attribute__((const))
 #define DECL_FORMAT(x, y, z) __attribute__((format(x, (y), (z))))
 #else
-#define DECL_CONST
 #define DECL_FORMAT(x, y, z)
 #endif
 
@@ -467,8 +465,8 @@ enum DevFmtChannels {
 };
 #define MAX_OUTPUT_CHANNELS  (16)
 
-ALuint BytesFromDevFmt(enum DevFmtType type) DECL_CONST;
-ALuint ChannelsFromDevFmt(enum DevFmtChannels chans) DECL_CONST;
+ALuint BytesFromDevFmt(enum DevFmtType type);
+ALuint ChannelsFromDevFmt(enum DevFmtChannels chans);
 inline ALuint FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType type)
 {
     return ChannelsFromDevFmt(chans) * BytesFromDevFmt(type);
@@ -842,8 +840,8 @@ void SetRTPriority(void);
 void SetDefaultChannelOrder(ALCdevice *device);
 void SetDefaultWFXChannelOrder(ALCdevice *device);
 
-const ALCchar *DevFmtTypeString(enum DevFmtType type) DECL_CONST;
-const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans) DECL_CONST;
+const ALCchar *DevFmtTypeString(enum DevFmtType type);
+const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans);
 
 /**
  * GetChannelIdxByName

@@ -30,11 +30,36 @@
 #include "alEffect.h"
 #include "alFilter.h"
 #include "alError.h"
+#include "mixer_defs.h"
 
 
 /* This is the maximum number of samples processed for each inner loop
  * iteration. */
 #define MAX_UPDATE_SAMPLES  256
+
+static MixerFunc MixSamples = Mix_C;
+
+static inline MixerFunc SelectMixer(void)
+{
+#ifdef HAVE_SSE
+    if((CPUCapFlags&CPU_CAP_SSE))
+        return Mix_SSE;
+#endif
+#ifdef HAVE_NEON
+    if((CPUCapFlags&CPU_CAP_NEON))
+        return Mix_Neon;
+#endif
+
+    return Mix_C;
+}
+
+
+static alonce_flag mixfunc_inited = AL_ONCE_FLAG_INIT;
+static void init_mixfunc(void)
+{
+    MixSamples = SelectMixer();
+}
+
 
 typedef struct DelayLine
 {
@@ -90,11 +115,8 @@ typedef struct ALreverbState {
         ALuint    Offset[4];
 
         // The gain for each output channel based on 3D panning.
-        // NOTE: With certain output modes, we may be rendering to the dry
-        // buffer and the "real" buffer. The two combined may be using more
-        // than the max output channels, so we need some extra for the real
-        // output too.
-        ALfloat PanGain[4][MAX_OUTPUT_CHANNELS*2];
+        ALfloat CurrentGain[4][MAX_OUTPUT_CHANNELS+2];
+        ALfloat PanGain[4][MAX_OUTPUT_CHANNELS+2];
     } Early;
 
     // Decorrelator delay line.
@@ -132,8 +154,8 @@ typedef struct ALreverbState {
         ALfloat   LpSample[4];
 
         // The gain for each output channel based on 3D panning.
-        // NOTE: Add some extra in case (see note about early pan).
-        ALfloat PanGain[4][MAX_OUTPUT_CHANNELS*2];
+        ALfloat CurrentGain[4][MAX_OUTPUT_CHANNELS+2];
+        ALfloat PanGain[4][MAX_OUTPUT_CHANNELS+2];
     } Late;
 
     struct {
@@ -164,8 +186,8 @@ typedef struct ALreverbState {
     ALuint Offset;
 
     /* Temporary storage used when processing. */
-    ALfloat ReverbSamples[4][MAX_UPDATE_SAMPLES];
-    ALfloat EarlySamples[4][MAX_UPDATE_SAMPLES];
+    alignas(16) ALfloat ReverbSamples[4][MAX_UPDATE_SAMPLES];
+    alignas(16) ALfloat EarlySamples[4][MAX_UPDATE_SAMPLES];
 } ALreverbState;
 
 static ALvoid ALreverbState_Destruct(ALreverbState *State);
@@ -1425,55 +1447,74 @@ static inline ALvoid EAXVerbPass(ALreverbState *State, ALuint todo, const ALfloa
     State->Offset += todo;
 }
 
+static void DoMix(const ALfloat *restrict src, ALfloat (*dst)[BUFFERSIZE], ALuint num_chans,
+                  const ALfloat *restrict target_gains, ALfloat *restrict current_gains,
+                  ALfloat delta, ALuint offset, ALuint total_rem, ALuint todo)
+{
+    MixGains gains[MAX_OUTPUT_CHANNELS];
+    ALuint c;
+
+    for(c = 0;c < num_chans;c++)
+    {
+        ALfloat diff;
+        gains[c].Target = target_gains[c];
+        gains[c].Current = current_gains[c];
+        diff = gains[c].Target - gains[c].Current;
+        if(fabsf(diff) >= GAIN_SILENCE_THRESHOLD)
+            gains[c].Step = diff * delta;
+        else
+        {
+            gains[c].Current = gains[c].Target;
+            gains[c].Step = 0.0f;
+        }
+    }
+
+    MixSamples(src, num_chans, dst, gains, total_rem, offset, todo);
+
+    for(c = 0;c < num_chans;c++)
+        current_gains[c] = gains[c].Current;
+}
+
 static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     ALfloat (*restrict early)[MAX_UPDATE_SAMPLES] = State->EarlySamples;
     ALfloat (*restrict late)[MAX_UPDATE_SAMPLES] = State->ReverbSamples;
-    ALuint index, c, i, l;
-    ALfloat gain;
+    ALuint base, c;
 
     /* Process reverb for these samples. */
-    for(index = 0;index < SamplesToDo;)
+    for(base = 0;base < SamplesToDo;)
     {
-        ALuint todo = minu(SamplesToDo-index, MAX_UPDATE_SAMPLES);
+        const ALfloat delta = 1.0f / (ALfloat)(SamplesToDo-base);
+        ALuint todo = minu(SamplesToDo-base, MAX_UPDATE_SAMPLES);
 
-        VerbPass(State, todo, &SamplesIn[index], early, late);
+        VerbPass(State, todo, &SamplesIn[base], early, late);
 
-        for(l = 0;l < 4;l++)
+        for(c = 0;c < 4;c++)
         {
-            for(c = 0;c < NumChannels;c++)
-            {
-                gain = State->Early.PanGain[l][c];
-                if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
-                {
-                    for(i = 0;i < todo;i++)
-                        SamplesOut[c][index+i] += gain*early[l][i];
-                }
-                gain = State->Late.PanGain[l][c];
-                if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
-                {
-                    for(i = 0;i < todo;i++)
-                        SamplesOut[c][index+i] += gain*late[l][i];
-                }
-            }
-            for(c = 0;c < State->ExtraChannels;c++)
-            {
-                gain = State->Early.PanGain[l][NumChannels+c];
-                if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
-                {
-                    for(i = 0;i < todo;i++)
-                        State->ExtraOut[c][index+i] += gain*early[l][i];
-                }
-                gain = State->Late.PanGain[l][NumChannels+c];
-                if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
-                {
-                    for(i = 0;i < todo;i++)
-                        State->ExtraOut[c][index+i] += gain*late[l][i];
-                }
-            }
+            DoMix(early[c], SamplesOut, NumChannels, State->Early.PanGain[c],
+                State->Early.CurrentGain[c], delta, base, SamplesToDo-base, todo
+            );
+            if(State->ExtraChannels > 0)
+                DoMix(early[c], SamplesOut, State->ExtraChannels,
+                    State->Early.PanGain[c]+NumChannels,
+                    State->Early.CurrentGain[c]+NumChannels, delta, base,
+                    SamplesToDo-base, todo
+                );
+        }
+        for(c = 0;c < 4;c++)
+        {
+            DoMix(late[c], SamplesOut, NumChannels, State->Late.PanGain[c],
+                State->Late.CurrentGain[c], delta, base, SamplesToDo, todo
+            );
+            if(State->ExtraChannels > 0)
+                DoMix(late[c], SamplesOut, State->ExtraChannels,
+                    State->Late.PanGain[c]+NumChannels,
+                    State->Late.CurrentGain[c]+NumChannels, delta, base,
+                    SamplesToDo-base, todo
+                );
         }
 
-        index += todo;
+        base += todo;
     }
 }
 
@@ -1481,51 +1522,42 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo,
 {
     ALfloat (*restrict early)[MAX_UPDATE_SAMPLES] = State->EarlySamples;
     ALfloat (*restrict late)[MAX_UPDATE_SAMPLES] = State->ReverbSamples;
-    ALuint index, c, i, l;
-    ALfloat gain;
+    ALuint base, c;
 
     /* Process reverb for these samples. */
-    for(index = 0;index < SamplesToDo;)
+    for(base = 0;base < SamplesToDo;)
     {
-        ALuint todo = minu(SamplesToDo-index, MAX_UPDATE_SAMPLES);
+        const ALfloat delta = 1.0f / (ALfloat)(SamplesToDo-base);
+        ALuint todo = minu(SamplesToDo-base, MAX_UPDATE_SAMPLES);
 
-        EAXVerbPass(State, todo, &SamplesIn[index], early, late);
+        EAXVerbPass(State, todo, &SamplesIn[base], early, late);
 
-        for(l = 0;l < 4;l++)
+        for(c = 0;c < 4;c++)
         {
-            for(c = 0;c < NumChannels;c++)
-            {
-                gain = State->Early.PanGain[l][c];
-                if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
-                {
-                    for(i = 0;i < todo;i++)
-                        SamplesOut[c][index+i] += gain*early[l][i];
-                }
-                gain = State->Late.PanGain[l][c];
-                if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
-                {
-                    for(i = 0;i < todo;i++)
-                        SamplesOut[c][index+i] += gain*late[l][i];
-                }
-            }
-            for(c = 0;c < State->ExtraChannels;c++)
-            {
-                gain = State->Early.PanGain[l][NumChannels+c];
-                if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
-                {
-                    for(i = 0;i < todo;i++)
-                        State->ExtraOut[c][index+i] += gain*early[l][i];
-                }
-                gain = State->Late.PanGain[l][NumChannels+c];
-                if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
-                {
-                    for(i = 0;i < todo;i++)
-                        State->ExtraOut[c][index+i] += gain*late[l][i];
-                }
-            }
+            DoMix(early[c], SamplesOut, NumChannels, State->Early.PanGain[c],
+                State->Early.CurrentGain[c], delta, base, SamplesToDo-base, todo
+            );
+            if(State->ExtraChannels > 0)
+                DoMix(early[c], SamplesOut, State->ExtraChannels,
+                    State->Early.PanGain[c]+NumChannels,
+                    State->Early.CurrentGain[c]+NumChannels, delta, base,
+                    SamplesToDo-base, todo
+                );
+        }
+        for(c = 0;c < 4;c++)
+        {
+            DoMix(late[c], SamplesOut, NumChannels, State->Late.PanGain[c],
+                State->Late.CurrentGain[c], delta, base, SamplesToDo, todo
+            );
+            if(State->ExtraChannels > 0)
+                DoMix(late[c], SamplesOut, State->ExtraChannels,
+                    State->Late.PanGain[c]+NumChannels,
+                    State->Late.CurrentGain[c]+NumChannels, delta, base,
+                    SamplesToDo-base, todo
+                );
         }
 
-        index += todo;
+        base += todo;
     }
 }
 
@@ -1545,6 +1577,8 @@ typedef struct ALreverbStateFactory {
 static ALeffectState *ALreverbStateFactory_create(ALreverbStateFactory* UNUSED(factory))
 {
     ALreverbState *state;
+
+    alcall_once(&mixfunc_inited, init_mixfunc);
 
     NEW_OBJ0(state, ALreverbState)();
     if(!state) return NULL;

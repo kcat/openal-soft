@@ -264,6 +264,8 @@ enum HrtfRequestMode {
 
 void aluInitMixer(void);
 
+MixerFunc SelectMixer(void);
+
 /* aluInitRenderer
  *
  * Set up the appropriate panning method and mixing method given the device

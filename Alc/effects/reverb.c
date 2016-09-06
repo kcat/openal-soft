@@ -37,22 +37,8 @@
  * iteration. */
 #define MAX_UPDATE_SAMPLES  256
 
+
 static MixerFunc MixSamples = Mix_C;
-
-static inline MixerFunc SelectMixer(void)
-{
-#ifdef HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
-        return Mix_SSE;
-#endif
-#ifdef HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
-        return Mix_Neon;
-#endif
-
-    return Mix_C;
-}
-
 
 static alonce_flag mixfunc_inited = AL_ONCE_FLAG_INIT;
 static void init_mixfunc(void)

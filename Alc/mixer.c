@@ -61,9 +61,23 @@ static_assert(MAX_PRE_SAMPLES >= 3, "MAX_PRE_SAMPLES must be at least 3!");
 static_assert(MAX_POST_SAMPLES >= 4, "MAX_POST_SAMPLES must be at least 4!");
 
 
-static HrtfMixerFunc MixHrtfSamples = MixHrtf_C;
 static MixerFunc MixSamples = Mix_C;
+static HrtfMixerFunc MixHrtfSamples = MixHrtf_C;
 static ResamplerFunc ResampleSamples = Resample_point32_C;
+
+MixerFunc SelectMixer(void)
+{
+#ifdef HAVE_SSE
+    if((CPUCapFlags&CPU_CAP_SSE))
+        return Mix_SSE;
+#endif
+#ifdef HAVE_NEON
+    if((CPUCapFlags&CPU_CAP_NEON))
+        return Mix_Neon;
+#endif
+
+    return Mix_C;
+}
 
 static inline HrtfMixerFunc SelectHrtfMixer(void)
 {
@@ -77,20 +91,6 @@ static inline HrtfMixerFunc SelectHrtfMixer(void)
 #endif
 
     return MixHrtf_C;
-}
-
-static inline MixerFunc SelectMixer(void)
-{
-#ifdef HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
-        return Mix_SSE;
-#endif
-#ifdef HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
-        return Mix_Neon;
-#endif
-
-    return Mix_C;
 }
 
 static inline ResamplerFunc SelectResampler(enum Resampler resampler)

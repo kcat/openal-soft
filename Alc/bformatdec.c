@@ -161,7 +161,7 @@ static const ALfloat Ambi3DDecoder[8][FB_Max][MAX_AMBI_COEFFS] = {
 static ALfloat Ambi3DEncoder[8][MAX_AMBI_COEFFS];
 
 
-static inline RowMixerFunc SelectMixer(void)
+static inline RowMixerFunc SelectRowMixer(void)
 {
 #ifdef HAVE_SSE
     if((CPUCapFlags&CPU_CAP_SSE))
@@ -183,7 +183,7 @@ static void init_bformatdec(void)
 {
     ALuint i, j;
 
-    MixMatrixRow = SelectMixer();
+    MixMatrixRow = SelectRowMixer();
 
     for(i = 0;i < COUNTOF(Ambi3DPoints);i++)
         CalcDirectionCoeffs(Ambi3DPoints[i], 0.0f, Ambi3DEncoder[i]);

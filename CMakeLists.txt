@@ -1118,9 +1118,9 @@ ENDIF()
 # Needed for openal.pc.in
 SET(prefix ${CMAKE_INSTALL_PREFIX})
 SET(exec_prefix "\${prefix}")
-SET(libdir "\${exec_prefix}/lib${LIB_SUFFIX}")
-SET(bindir "\${exec_prefix}/bin")
-SET(includedir "\${prefix}/include")
+SET(libdir "\${exec_prefix}/${CMAKE_INSTALL_LIBDIR}")
+SET(bindir "\${exec_prefix}/${CMAKE_INSTALL_BINDIR}")
+SET(includedir "\${prefix}/${CMAKE_INSTALL_INCLUDEDIR}")
 SET(PACKAGE_VERSION "${LIB_VERSION}")
 
 # End configuration

@@ -242,7 +242,7 @@ static void add_device(IMMDevice *device, LPCWSTR devid, vector_DevMap *list)
         count++;
     }
 
-    TRACE("Got device \"%s\", %s, \"%ls\"\n", al_string_get_cstr(entry.name), al_string_get_cstr(entry.endpoint_guid), entry.devid);
+    TRACE("Got device \"%s\", \"%s\", \"%ls\"\n", al_string_get_cstr(entry.name), al_string_get_cstr(entry.endpoint_guid), entry.devid);
     VECTOR_PUSH_BACK(*list, entry);
 
     AL_STRING_DEINIT(tmpname);
@@ -689,18 +689,6 @@ static ALCboolean MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *
     return ALC_TRUE;
 }
 
-  static ALCboolean match_name_or_guid(const DevMap *iter, const ALCchar *deviceName){
-    al_string tmp_id;
-    ALCboolean result;
-    result=AL_FALSE;
-    if (al_string_cmp_cstr(iter->name, deviceName) == 0 || al_string_cmp_cstr(iter->endpoint_guid, deviceName) == 0) return ALC_TRUE;
-    AL_STRING_INIT(tmp_id);
-    al_string_copy_wcstr(&tmp_id, iter->devid);
-    if(al_string_cmp_cstr(tmp_id, deviceName)==0)result=AL_TRUE;
-    AL_STRING_DEINIT(tmp_id);
-    return result;
-}
-
 static ALCenum ALCmmdevPlayback_open(ALCmmdevPlayback *self, const ALCchar *deviceName)
 {
     HRESULT hr = S_OK;
@@ -727,8 +715,23 @@ static ALCenum ALCmmdevPlayback_open(ALCmmdevPlayback *self, const ALCchar *devi
             }
 
             hr = E_FAIL;
-#define MATCH_NAME(i) (match_name_or_guid((i), (deviceName))==ALC_TRUE)
+#define MATCH_NAME(i) (al_string_cmp_cstr((i)->name, deviceName) == 0 ||        \
+                       al_string_cmp_cstr((i)->endpoint_guid, deviceName) == 0)
             VECTOR_FIND_IF(iter, const DevMap, PlaybackDevices, MATCH_NAME);
+#undef MATCH_NAME
+            if(iter == VECTOR_END(PlaybackDevices))
+            {
+                int len;
+                if((len=MultiByteToWideChar(CP_UTF8, 0, deviceName, -1, NULL, 0)) > 0)
+                {
+                    WCHAR *wname = calloc(sizeof(WCHAR), len);
+                    MultiByteToWideChar(CP_UTF8, 0, deviceName, -1, wname, len);
+#define MATCH_NAME(i) (wcscmp((i)->devid, wname) == 0)
+                    VECTOR_FIND_IF(iter, const DevMap, PlaybackDevices, MATCH_NAME);
+#undef MATCH_NAME
+                    free(wname);
+                }
+            }
             if(iter == VECTOR_END(PlaybackDevices))
                 WARN("Failed to find device name matching \"%s\"\n", deviceName);
             else
@@ -738,7 +741,6 @@ static ALCenum ALCmmdevPlayback_open(ALCmmdevPlayback *self, const ALCchar *devi
                 al_string_copy(&device->DeviceName, iter->name);
                 hr = S_OK;
             }
-#undef MATCH_NAME
         }
     }
 
@@ -1372,8 +1374,23 @@ static ALCenum ALCmmdevCapture_open(ALCmmdevCapture *self, const ALCchar *device
             }
 
             hr = E_FAIL;
-#define MATCH_NAME(i) (match_name_or_guid((i), (deviceName))==ALC_TRUE)
+#define MATCH_NAME(i) (al_string_cmp_cstr((i)->name, deviceName) == 0 ||        \
+                       al_string_cmp_cstr((i)->endpoint_guid, deviceName) == 0)
             VECTOR_FIND_IF(iter, const DevMap, CaptureDevices, MATCH_NAME);
+#undef MATCH_NAME
+            if(iter == VECTOR_END(CaptureDevices))
+            {
+                int len;
+                if((len=MultiByteToWideChar(CP_UTF8, 0, deviceName, -1, NULL, 0)) > 0)
+                {
+                    WCHAR *wname = calloc(sizeof(WCHAR), len);
+                    MultiByteToWideChar(CP_UTF8, 0, deviceName, -1, wname, len);
+#define MATCH_NAME(i) (wcscmp((i)->devid, wname) == 0)
+                    VECTOR_FIND_IF(iter, const DevMap, CaptureDevices, MATCH_NAME);
+#undef MATCH_NAME
+                    free(wname);
+                }
+            }
             if(iter == VECTOR_END(CaptureDevices))
                 WARN("Failed to find device name matching \"%s\"\n", deviceName);
             else
@@ -1383,7 +1400,6 @@ static ALCenum ALCmmdevCapture_open(ALCmmdevCapture *self, const ALCchar *device
                 al_string_copy(&device->DeviceName, iter->name);
                 hr = S_OK;
             }
-#undef MATCH_NAME
         }
     }
 

@@ -32,6 +32,7 @@
 #include <time.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <ctype.h>
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #endif
@@ -232,8 +233,37 @@ void FillCPUCaps(ALuint capfilter)
 #endif
 #endif
 #ifdef HAVE_NEON
-    /* Assume Neon support if compiled with it */
-    caps |= CPU_CAP_NEON;
+    FILE *file = fopen("/proc/cpuinfo", "rt");
+    if(file)
+        ERR("Failed to open /proc/cpuinfo, cannot check for NEON support\n");
+    else
+    {
+        char buf[256];
+        while(fgets(buf, sizeof(buf), file) != NULL)
+        {
+            char *str;
+
+            if(strncmp(buf, "Features\t:", 10) != 0)
+                continue;
+
+            TRACE("Got features string:%s\n", buf+10);
+
+            str = buf;
+            while((str=strstr(str, "neon")) != NULL)
+            {
+                if(isspace(*(str-1)) && (str[4] == 0 || isspace(str[4])))
+                {
+                    caps |= CPU_CAP_NEON;
+                    break;
+                }
+                str++;
+            }
+            break;
+        }
+
+        fclose(file);
+        file = NULL;
+    }
 #endif
 
     TRACE("Extensions:%s%s%s%s%s%s\n",

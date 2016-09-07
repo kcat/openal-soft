@@ -468,6 +468,7 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const_al_str
     {
         size_t total = sizeof(struct Hrtf);
         total += sizeof(azCount[0])*evCount;
+        total  = (total+1)&~1; /* Align for (u)short fields */
         total += sizeof(evOffset[0])*evCount;
         total += sizeof(coeffs[0])*irSize*irCount;
         total += sizeof(delays[0])*irCount;
@@ -483,14 +484,18 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const_al_str
 
     if(!failed)
     {
+        char *base = (char*)Hrtf;
+        uintptr_t offset = sizeof(*Hrtf);
+
         Hrtf->sampleRate = rate;
         Hrtf->irSize = irSize;
         Hrtf->evCount = evCount;
-        Hrtf->azCount = ((ALubyte*)(Hrtf+1));
-        Hrtf->evOffset = ((ALushort*)(Hrtf->azCount + evCount));
-        Hrtf->coeffs = ((ALshort*)(Hrtf->evOffset + evCount));
-        Hrtf->delays = ((ALubyte*)(Hrtf->coeffs + irSize*irCount));
-        Hrtf->filename = ((char*)(Hrtf->delays + irCount));
+        Hrtf->azCount = ((ALubyte*)(base + offset)); offset += evCount*sizeof(Hrtf->azCount[0]);
+        offset = (offset+1)&~1; /* Align for (u)short fields */
+        Hrtf->evOffset = ((ALushort*)(base + offset)); offset += evCount*sizeof(Hrtf->evOffset[0]);
+        Hrtf->coeffs = ((ALshort*)(base + offset)); offset += irSize*irCount*sizeof(Hrtf->coeffs[0]);
+        Hrtf->delays = ((ALubyte*)(base + offset)); offset += irCount*sizeof(Hrtf->delays[0]);
+        Hrtf->filename = ((char*)(base + offset));
         Hrtf->next = NULL;
 
         memcpy((void*)Hrtf->azCount, azCount, sizeof(azCount[0])*evCount);
@@ -644,6 +649,7 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const_al_str
     {
         size_t total = sizeof(struct Hrtf);
         total += sizeof(azCount[0])*evCount;
+        total  = (total+1)&~1; /* Align for (u)short fields */
         total += sizeof(evOffset[0])*evCount;
         total += sizeof(coeffs[0])*irSize*irCount;
         total += sizeof(delays[0])*irCount;
@@ -659,14 +665,18 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const_al_str
 
     if(!failed)
     {
+        char *base = (char*)Hrtf;
+        uintptr_t offset = sizeof(*Hrtf);
+
         Hrtf->sampleRate = rate;
         Hrtf->irSize = irSize;
         Hrtf->evCount = evCount;
-        Hrtf->azCount = ((ALubyte*)(Hrtf+1));
-        Hrtf->evOffset = ((ALushort*)(Hrtf->azCount + evCount));
-        Hrtf->coeffs = ((ALshort*)(Hrtf->evOffset + evCount));
-        Hrtf->delays = ((ALubyte*)(Hrtf->coeffs + irSize*irCount));
-        Hrtf->filename = ((char*)(Hrtf->delays + irCount));
+        Hrtf->azCount = ((ALubyte*)(base + offset)); offset += evCount*sizeof(Hrtf->azCount[0]);
+        offset = (offset+1)&~1; /* Align for (u)short fields */
+        Hrtf->evOffset = ((ALushort*)(base + offset)); offset += evCount*sizeof(Hrtf->evOffset[0]);
+        Hrtf->coeffs = ((ALshort*)(base + offset)); offset += irSize*irCount*sizeof(Hrtf->coeffs[0]);
+        Hrtf->delays = ((ALubyte*)(base + offset)); offset += irCount*sizeof(Hrtf->delays[0]);
+        Hrtf->filename = ((char*)(base + offset));
         Hrtf->next = NULL;
 
         memcpy((void*)Hrtf->azCount, azCount, sizeof(azCount[0])*evCount);

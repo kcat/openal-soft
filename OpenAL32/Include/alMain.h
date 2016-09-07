@@ -699,17 +699,17 @@ struct ALCdevice_struct
 };
 
 // Frequency was requested by the app or config file
-#define DEVICE_FREQUENCY_REQUEST                 (1<<1)
+#define DEVICE_FREQUENCY_REQUEST                 (1u<<1)
 // Channel configuration was requested by the config file
-#define DEVICE_CHANNELS_REQUEST                  (1<<2)
+#define DEVICE_CHANNELS_REQUEST                  (1u<<2)
 // Sample type was requested by the config file
-#define DEVICE_SAMPLE_TYPE_REQUEST               (1<<3)
+#define DEVICE_SAMPLE_TYPE_REQUEST               (1u<<3)
 
 // Specifies if the DSP is paused at user request
-#define DEVICE_PAUSED                            (1<<30)
+#define DEVICE_PAUSED                            (1u<<30)
 
 // Specifies if the device is currently running
-#define DEVICE_RUNNING                           (1<<31)
+#define DEVICE_RUNNING                           (1u<<31)
 
 
 /* Nanosecond resolution for the device clock time. */

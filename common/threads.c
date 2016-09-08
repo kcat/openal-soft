@@ -55,7 +55,7 @@ extern inline int altss_set(altss_t tss_id, void *val);
 #endif
 
 
-#define THREAD_STACK_SIZE (1*1024*1024) /* 1MB */
+#define THREAD_STACK_SIZE (2*1024*1024) /* 2MB */
 
 #ifdef _WIN32
 
@@ -531,6 +531,8 @@ int althrd_create(althrd_t *thr, althrd_start_t func, void *arg)
 {
     thread_cntr *cntr;
     pthread_attr_t attr;
+    size_t stackmult = 1;
+    int err;
 
     cntr = malloc(sizeof(*cntr));
     if(!cntr) return althrd_nomem;
@@ -540,7 +542,8 @@ int althrd_create(althrd_t *thr, althrd_start_t func, void *arg)
         free(cntr);
         return althrd_error;
     }
-    if(pthread_attr_setstacksize(&attr, THREAD_STACK_SIZE) != 0)
+retry_stacksize:
+    if(pthread_attr_setstacksize(&attr, THREAD_STACK_SIZE*stackmult) != 0)
     {
         pthread_attr_destroy(&attr);
         free(cntr);
@@ -549,15 +552,30 @@ int althrd_create(althrd_t *thr, althrd_start_t func, void *arg)
 
     cntr->func = func;
     cntr->arg = arg;
-    if(pthread_create(thr, &attr, althrd_starter, cntr) != 0)
+    if((err=pthread_create(thr, &attr, althrd_starter, cntr)) == 0)
     {
         pthread_attr_destroy(&attr);
-        free(cntr);
-        return althrd_error;
+        return althrd_success;
+    }
+
+    if(err == EINVAL)
+    {
+        /* If an invalid stack size, try increasing it (limit x4, 8MB). */
+        if(stackmult < 4)
+        {
+            stackmult *= 2;
+            goto retry_stacksize;
+        }
+        /* If still nothing, try defaults and hope they're good enough. */
+        if(pthread_create(thr, NULL, althrd_starter, cntr) == 0)
+        {
+            pthread_attr_destroy(&attr);
+            return althrd_success;
+        }
     }
     pthread_attr_destroy(&attr);
-
-    return althrd_success;
+    free(cntr);
+    return althrd_error;
 }
 
 int althrd_detach(althrd_t thr)

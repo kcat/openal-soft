@@ -726,7 +726,7 @@ al_string GetProcPath(void)
     if(len <= 0)
     {
         free(pathname);
-        ERR("Failed to link %s: %s\n", fname, strerror(errno));
+        WARN("Failed to readlink %s: %s\n", fname, strerror(errno));
         return ret;
     }
 

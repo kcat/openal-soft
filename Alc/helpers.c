@@ -234,7 +234,7 @@ void FillCPUCaps(ALuint capfilter)
 #endif
 #ifdef HAVE_NEON
     FILE *file = fopen("/proc/cpuinfo", "rt");
-    if(file)
+    if(!file)
         ERR("Failed to open /proc/cpuinfo, cannot check for NEON support\n");
     else
     {

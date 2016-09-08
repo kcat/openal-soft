@@ -270,14 +270,15 @@ int main(int argc, char **argv)
     StreamPlayer *player;
     int i;
 
-    /* Print out usage if no file was specified */
+    /* Print out usage if no arguments were specified */
     if(argc < 2)
     {
-        fprintf(stderr, "Usage: %s <filenames...>\n", argv[0]);
+        fprintf(stderr, "Usage: %s [-device <name>] <filenames...>\n", argv[0]);
         return 1;
     }
 
-    if(InitAL() != 0)
+    argv++; argc--;
+    if(InitAL(&argv, &argc) != 0)
         return 1;
 
     if(alIsExtensionPresent("AL_SOFT_buffer_samples"))
@@ -292,7 +293,7 @@ int main(int argc, char **argv)
     player = NewPlayer();
 
     /* Play each file listed on the command line */
-    for(i = 1;i < argc;i++)
+    for(i = 0;i < argc;i++)
     {
         const char *namepart;
 

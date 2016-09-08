@@ -1332,6 +1332,7 @@ int main(int argc, char *argv[])
     SDL_Renderer *renderer;
     ALCdevice  *device;
     ALCcontext *context;
+    int fileidx;
 
     if(argc < 2)
     {
@@ -1389,7 +1390,17 @@ int main(int argc, char *argv[])
     SDL_RenderPresent(renderer);
 
     /* Open an audio device */
-    device = alcOpenDevice(NULL);
+    fileidx = 1;
+    device = NULL;
+    if(argc > 3 && strcmp(argv[1], "-device") == 0)
+    {
+        fileidx = 3;
+        device = alcOpenDevice(argv[2]);
+        if(!device)
+            fprintf(stderr, "OpenAL: could not open \"%s\" - trying default\n", argv[2]);
+    }
+    if(!device)
+        device = alcOpenDevice(NULL);
     if(!device)
     {
         fprintf(stderr, "OpenAL: could not open device - exiting\n");
@@ -1429,7 +1440,7 @@ int main(int argc, char *argv[])
 
     movState = av_mallocz(sizeof(MovieState));
 
-    av_strlcpy(movState->filename, argv[1], sizeof(movState->filename));
+    av_strlcpy(movState->filename, argv[fileidx], sizeof(movState->filename));
 
     packet_queue_init(&movState->audio.q);
     packet_queue_init(&movState->video.q);

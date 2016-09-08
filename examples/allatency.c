@@ -125,15 +125,16 @@ int main(int argc, char **argv)
     ALdouble offsets[2];
     ALenum state;
 
-    /* Print out usage if no file was specified */
+    /* Print out usage if no arguments were specified */
     if(argc < 2)
     {
-        fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
+        fprintf(stderr, "Usage: %s [-device <name>] <filename>\n", argv[0]);
         return 1;
     }
 
-    /* Initialize OpenAL with the default device, and check for EFX support. */
-    if(InitAL() != 0)
+    /* Initialize OpenAL, and check for source_latency support. */
+    argv++; argc--;
+    if(InitAL(&argv, &argc) != 0)
         return 1;
 
     if(!alIsExtensionPresent("AL_SOFT_source_latency"))
@@ -166,7 +167,7 @@ int main(int argc, char **argv)
 #undef LOAD_PROC
 
     /* Load the sound into a buffer. */
-    buffer = LoadSound(argv[1]);
+    buffer = LoadSound(argv[0]);
     if(!buffer)
     {
         CloseAL();

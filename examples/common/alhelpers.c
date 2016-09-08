@@ -29,6 +29,7 @@
  * channel configs and sample types. */
 
 #include <stdio.h>
+#include <string.h>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -37,15 +38,26 @@
 #include "alhelpers.h"
 
 
-/* InitAL opens the default device and sets up a context using default
- * attributes, making the program ready to call OpenAL functions. */
-int InitAL(void)
+/* InitAL opens a device and sets up a context using default attributes, making
+ * the program ready to call OpenAL functions. */
+int InitAL(char ***argv, int *argc)
 {
+    const ALCchar *name;
     ALCdevice *device;
     ALCcontext *ctx;
 
-    /* Open and initialize a device with default settings */
-    device = alcOpenDevice(NULL);
+    /* Open and initialize a device */
+    device = NULL;
+    if(argc && argv && *argc > 1 && strcmp((*argv)[0], "-device") == 0)
+    {
+        device = alcOpenDevice((*argv)[1]);
+        if(!device)
+            fprintf(stderr, "Failed to open \"%s\", trying default\n", (*argv)[1]);
+        (*argv) += 2;
+        (*argc) -= 2;
+    }
+    if(!device)
+        device = alcOpenDevice(NULL);
     if(!device)
     {
         fprintf(stderr, "Could not open a device!\n");
@@ -62,7 +74,13 @@ int InitAL(void)
         return 1;
     }
 
-    printf("Opened \"%s\"\n", alcGetString(device, ALC_DEVICE_SPECIFIER));
+    name = NULL;
+    if(alcIsExtensionPresent(device, "ALC_ENUMERATE_ALL_EXT"))
+        name = alcGetString(device, ALC_ALL_DEVICES_SPECIFIER);
+    if(!name || alcGetError(device) != AL_NO_ERROR)
+        name = alcGetString(device, ALC_DEVICE_SPECIFIER);
+    printf("Opened \"%s\"\n", name);
+
     return 0;
 }
 

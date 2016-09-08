@@ -122,27 +122,17 @@ int main(int argc, char **argv)
     ALdouble angle;
     ALenum state;
 
-    /* Print out usage if no file was specified */
-    if(argc < 2 || (strcmp(argv[1], "-hrtf") == 0 && argc < 4))
+    /* Print out usage if no arguments were specified */
+    if(argc < 2)
     {
-        fprintf(stderr, "Usage: %s [-hrtf <name>] <soundfile>\n", argv[0]);
+        fprintf(stderr, "Usage: %s [-device <name>] [-hrtf <name>] <soundfile>\n", argv[0]);
         return 1;
     }
 
-    /* Initialize OpenAL with the default device, and check for HRTF support. */
-    if(InitAL() != 0)
+    /* Initialize OpenAL, and check for HRTF support. */
+    argv++; argc--;
+    if(InitAL(&argv, &argc) != 0)
         return 1;
-
-    if(strcmp(argv[1], "-hrtf") == 0)
-    {
-        hrtfname = argv[2];
-        soundname = argv[3];
-    }
-    else
-    {
-        hrtfname = NULL;
-        soundname = argv[1];
-    }
 
     device = alcGetContextsDevice(alcGetCurrentContext());
     if(!alcIsExtensionPresent(device, "ALC_SOFT_HRTF"))
@@ -163,6 +153,18 @@ int main(int argc, char **argv)
      */
     has_angle_ext = alIsExtensionPresent("AL_EXT_STEREO_ANGLES");
     printf("AL_EXT_STEREO_ANGLES%s found\n", has_angle_ext?"":" not");
+
+    /* Check for user-preferred HRTF */
+    if(strcmp(argv[0], "-hrtf") == 0)
+    {
+        hrtfname = argv[1];
+        soundname = argv[2];
+    }
+    else
+    {
+        hrtfname = NULL;
+        soundname = argv[0];
+    }
 
     /* Enumerate available HRTFs, and reset the device using one. */
     alcGetIntegerv(device, ALC_NUM_HRTF_SPECIFIERS_SOFT, 1, &num_hrtf);

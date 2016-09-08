@@ -133,6 +133,7 @@ static ALuint CreateWave(enum WaveType type, ALuint freq, ALuint srate)
 int main(int argc, char *argv[])
 {
     enum WaveType wavetype = WT_Sine;
+    const char *appname = argv[0];
     ALuint source, buffer;
     ALint last_pos, num_loops;
     ALint max_loops = 4;
@@ -142,13 +143,24 @@ int main(int argc, char *argv[])
     ALenum state;
     int i;
 
-    for(i = 1;i < argc;i++)
+    argv++; argc--;
+    if(InitAL(&argv, &argc) != 0)
+        return 1;
+
+    if(!alIsExtensionPresent("AL_EXT_FLOAT32"))
+    {
+        fprintf(stderr, "Required AL_EXT_FLOAT32 extension not supported on this device!\n");
+        CloseAL();
+        return 1;
+    }
+
+    for(i = 0;i < argc;i++)
     {
         if(strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0)
         {
             fprintf(stderr, "OpenAL Tone Generator\n"
 "\n"
-"Usage: %s <options>\n"
+"Usage: %s [-device <name>] <options>\n"
 "\n"
 "Available options:\n"
 "  --help/-h                 This help text\n"
@@ -157,8 +169,9 @@ int main(int argc, char *argv[])
 "                                triangle, impulse\n"
 "  --freq/-f <hz>            Tone frequency (default 1000 hz)\n"
 "  --srate/-s <sample rate>  Sampling rate (default output rate)\n",
-                argv[0]
+                appname
             );
+            CloseAL();
             return 1;
         }
         else if(i+1 < argc && strcmp(argv[i], "-t") == 0)
@@ -202,15 +215,6 @@ int main(int argc, char *argv[])
                 srate = 40;
             }
         }
-    }
-
-    InitAL();
-
-    if(!alIsExtensionPresent("AL_EXT_FLOAT32"))
-    {
-        fprintf(stderr, "Required AL_EXT_FLOAT32 extension not supported on this device!\n");
-        CloseAL();
-        return 1;
     }
 
     {

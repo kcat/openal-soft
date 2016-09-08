@@ -35,7 +35,7 @@ void AL_APIENTRY wrap_BufferSamples(ALuint buffer, ALuint samplerate,
                                     const ALvoid *data);
 
 /* Easy device init/deinit functions. InitAL returns 0 on success. */
-int InitAL(void);
+int InitAL(char ***argv, int *argc);
 void CloseAL(void);
 
 #ifdef __cplusplus

@@ -1051,16 +1051,16 @@ vector_HrtfEntry EnumerateHrtf(const_al_string devname)
         /* Find the preferred HRTF and move it to the front of the list. */
 #define FIND_ENTRY(i)  (al_string_cmp_cstr((i)->name, defaulthrtf) == 0)
         VECTOR_FIND_IF(iter, const HrtfEntry, list, FIND_ENTRY);
-        if(iter != VECTOR_END(list) && iter != VECTOR_BEGIN(list))
+#undef FIND_ENTRY
+        if(iter == VECTOR_END(list))
+            WARN("Failed to find default HRTF \"%s\"\n", defaulthrtf);
+        else if(iter != VECTOR_BEGIN(list))
         {
             HrtfEntry entry = *iter;
             memmove(&VECTOR_ELEM(list,1), &VECTOR_ELEM(list,0),
                     (iter-VECTOR_BEGIN(list))*sizeof(HrtfEntry));
             VECTOR_ELEM(list,0) = entry;
         }
-        else
-            WARN("Failed to find default HRTF \"%s\"\n", defaulthrtf);
-#undef FIND_ENTRY
     }
 
     return list;

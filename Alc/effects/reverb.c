@@ -88,11 +88,16 @@ typedef struct ALreverbState {
         ALfloat   Filter;
     } Mod; // EAX only
 
-    // Initial effect delay.
+    /* Core delay line (early reflections and late reverb tap from this). */
     DelayLine Delay;
-    // The tap points for the initial delay.  First tap goes to early
-    // reflections, the last to late reverb.
+    /* The tap points for the initial delay. First tap goes to early
+     * reflections, second to late reverb.
+     */
     ALuint    DelayTap[2];
+    /* There are actually 4 decorrelator taps, but the first occurs at the late
+     * reverb tap.
+     */
+    ALuint    DecoTap[3];
 
     struct {
         // Early reflections are done with 4 delay lines.
@@ -104,12 +109,6 @@ typedef struct ALreverbState {
         ALfloat CurrentGain[4][MAX_OUTPUT_CHANNELS+2];
         ALfloat PanGain[4][MAX_OUTPUT_CHANNELS+2];
     } Early;
-
-    // Decorrelator delay line.
-    DelayLine Decorrelator;
-    // There are actually 4 decorrelator taps, but the first occurs at the
-    // initial sample.
-    ALuint    DecoTap[3];
 
     struct {
         // Output gain for late reverb.
@@ -213,6 +212,9 @@ static void ALreverbState_Construct(ALreverbState *state)
     state->Delay.Line = NULL;
     state->DelayTap[0] = 0;
     state->DelayTap[1] = 0;
+    state->DecoTap[0] = 0;
+    state->DecoTap[1] = 0;
+    state->DecoTap[2] = 0;
 
     for(index = 0;index < 4;index++)
     {
@@ -221,12 +223,6 @@ static void ALreverbState_Construct(ALreverbState *state)
         state->Early.Delay[index].Line = NULL;
         state->Early.Offset[index] = 0;
     }
-
-    state->Decorrelator.Mask = 0;
-    state->Decorrelator.Line = NULL;
-    state->DecoTap[0] = 0;
-    state->DecoTap[1] = 0;
-    state->DecoTap[2] = 0;
 
     state->Late.Gain = 0.0f;
     state->Late.DensityGain = 0.0f;
@@ -407,11 +403,15 @@ static ALboolean AllocLines(ALuint frequency, ALreverbState *State)
     totalSamples += CalcLineLength(length, totalSamples, frequency, 1,
                                    &State->Mod.Delay);
 
-    // The initial delay is the sum of the reflections and late reverb
-    // delays. This must include space for storing a loop update to feed the
-    // early reflections, decorrelator, and echo.
+    /* The initial delay is the sum of the reflections and late reverb delays.
+     * The decorrelator length is calculated from the lowest reverb density (a
+     * parameter value of 1). This must include space for storing a loop
+     * update.
+     */
     length = AL_EAXREVERB_MAX_REFLECTIONS_DELAY +
              AL_EAXREVERB_MAX_LATE_REVERB_DELAY;
+    length += (DECO_FRACTION * DECO_MULTIPLIER * DECO_MULTIPLIER) *
+              LATE_LINE_LENGTH[0] * (1.0f + LATE_LINE_MULTIPLIER);
     totalSamples += CalcLineLength(length, totalSamples, frequency,
                                    MAX_UPDATE_SAMPLES, &State->Delay);
 
@@ -419,14 +419,6 @@ static ALboolean AllocLines(ALuint frequency, ALreverbState *State)
     for(index = 0;index < 4;index++)
         totalSamples += CalcLineLength(EARLY_LINE_LENGTH[index], totalSamples,
                                        frequency, 0, &State->Early.Delay[index]);
-
-    // The decorrelator line is calculated from the lowest reverb density (a
-    // parameter value of 1). This must include space for storing a loop update
-    // to feed the late reverb.
-    length = (DECO_FRACTION * DECO_MULTIPLIER * DECO_MULTIPLIER) *
-             LATE_LINE_LENGTH[0] * (1.0f + LATE_LINE_MULTIPLIER);
-    totalSamples += CalcLineLength(length, totalSamples, frequency, MAX_UPDATE_SAMPLES,
-                                   &State->Decorrelator);
 
     // The late all-pass lines.
     for(index = 0;index < 4;index++)
@@ -462,7 +454,6 @@ static ALboolean AllocLines(ALuint frequency, ALreverbState *State)
 
     // Update all delays to reflect the new sample buffer.
     RealizeLineOffset(State->SampleBuffer, &State->Delay);
-    RealizeLineOffset(State->SampleBuffer, &State->Decorrelator);
     for(index = 0;index < 4;index++)
     {
         RealizeLineOffset(State->SampleBuffer, &State->Early.Delay[index]);
@@ -697,7 +688,7 @@ static ALvoid UpdateDecorrelator(ALfloat density, ALuint frequency, ALreverbStat
     {
         length = (DECO_FRACTION * powf(DECO_MULTIPLIER, (ALfloat)index)) *
                  LATE_LINE_LENGTH[0] * (1.0f + (density * LATE_LINE_MULTIPLIER));
-        State->DecoTap[index] = fastf2u(length * frequency);
+        State->DecoTap[index] = fastf2u(length * frequency) + State->DelayTap[1];
     }
 }
 
@@ -1023,11 +1014,11 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
     UpdateDelayLine(props->Reverb.ReflectionsDelay, props->Reverb.LateReverbDelay,
                     frequency, State);
 
-    // Update the early lines.
-    UpdateEarlyLines(props->Reverb.LateReverbDelay, State);
-
     // Update the decorrelator.
     UpdateDecorrelator(props->Reverb.Density, frequency, State);
+
+    // Update the early lines.
+    UpdateEarlyLines(props->Reverb.LateReverbDelay, State);
 
     // Get the mixing matrix coefficients (x and y).
     CalcMatrixCoeffs(props->Reverb.Diffusion, &x, &y);
@@ -1230,17 +1221,6 @@ static inline ALvoid LateReverb(ALreverbState *State, ALuint todo, ALfloat (*res
     ALuint offset;
     ALuint base, i;
 
-    // Feed the decorrelator from the energy-attenuated output of the second
-    // delay tap.
-    offset = State->Offset;
-    for(i = 0;i < todo;i++)
-    {
-        ALfloat sample = DelayLineOut(&State->Delay, offset - State->DelayTap[1]) *
-                         State->Late.DensityGain;
-        DelayLineIn(&State->Decorrelator, offset, sample);
-        offset++;
-    }
-
     offset = State->Offset;
     for(base = 0;base < todo;)
     {
@@ -1250,10 +1230,10 @@ static inline ALvoid LateReverb(ALreverbState *State, ALuint todo, ALfloat (*res
         for(i = 0;i < tmp_todo;i++)
         {
             /* Obtain four decorrelated input samples. */
-            f[0] = DelayLineOut(&State->Decorrelator, offset);
-            f[1] = DelayLineOut(&State->Decorrelator, offset-State->DecoTap[0]);
-            f[2] = DelayLineOut(&State->Decorrelator, offset-State->DecoTap[1]);
-            f[3] = DelayLineOut(&State->Decorrelator, offset-State->DecoTap[2]);
+            f[0] = DelayLineOut(&State->Delay, offset-State->DelayTap[1]) * State->Late.DensityGain;
+            f[1] = DelayLineOut(&State->Delay, offset-State->DecoTap[0]) * State->Late.DensityGain;
+            f[2] = DelayLineOut(&State->Delay, offset-State->DecoTap[1]) * State->Late.DensityGain;
+            f[3] = DelayLineOut(&State->Delay, offset-State->DecoTap[2]) * State->Late.DensityGain;
 
             /* Add the decayed results of the cyclical delay lines, then pass
              * the results through the low-pass filters.

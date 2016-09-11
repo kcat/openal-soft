@@ -79,7 +79,7 @@ inline void aluVectorSet(aluVector *vector, ALfloat x, ALfloat y, ALfloat z, ALf
 typedef union aluMatrixf {
     alignas(16) ALfloat m[4][4];
 } aluMatrixf;
-const aluMatrixf IdentityMatrixf;
+extern const aluMatrixf IdentityMatrixf;
 
 inline void aluMatrixfSetRow(aluMatrixf *matrix, ALuint row,
                              ALfloat m0, ALfloat m1, ALfloat m2, ALfloat m3)

@@ -44,10 +44,9 @@ typedef struct ALfilterState {
     ALfloat y[2]; /* History of two last output samples */
     ALfloat a1, a2; /* Transfer function coefficients "a" (a0 is pre-applied) */
     ALfloat b0, b1, b2; /* Transfer function coefficients "b" */
-
-    void (*process)(struct ALfilterState *self, ALfloat *restrict dst, const ALfloat *restrict src, ALuint numsamples);
 } ALfilterState;
-#define ALfilterState_process(a, ...) ((a)->process((a), __VA_ARGS__))
+/* Currently only a C-based filter process method is implemented. */
+#define ALfilterState_process ALfilterState_processC
 
 /* Calculates the rcpQ (i.e. 1/Q) coefficient for shelving filters, using the
  * reference gain and shelf slope parameter.

@@ -431,8 +431,6 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
     filter->b0 = b[0] / a[0];
     filter->b1 = b[1] / a[0];
     filter->b2 = b[2] / a[0];
-
-    filter->process = ALfilterState_processC;
 }
 
 

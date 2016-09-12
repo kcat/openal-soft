@@ -171,6 +171,13 @@ IF(CMAKE_COMPILER_IS_GNUCC)
     SET(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS}")
 ENDIF()
 
+# Some systems may need libatomic for (C11) atomic functions to work
+CHECK_LIBRARY_EXISTS(atomic atomic_fetch_add "" HAVE_LIBATOMIC)
+IF(HAVE_LIBATOMIC)
+    SET(EXTRA_LIBS atomic ${EXTRA_LIBS})
+    SET(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} atomic)
+ENDIF()
+
 # Check if we have C99 variable length arrays
 CHECK_C_SOURCE_COMPILES(
 "int main(int argc, char *argv[])
@@ -213,8 +220,10 @@ HAVE_C11_ALIGNAS)
 CHECK_C_SOURCE_COMPILES(
 "#include <stdatomic.h>
  const int _Atomic foo = ATOMIC_VAR_INIT(~0);
+ int _Atomic bar = ATOMIC_VAR_INIT(0);
  int main()
  {
+     atomic_fetch_add(&bar, 2);
      return atomic_load(&foo);
  }"
 HAVE_C11_ATOMIC)

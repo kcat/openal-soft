@@ -1504,7 +1504,7 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo,
                 State->Early.CurrentGain[c], delta, base, SamplesToDo-base, todo
             );
             if(State->ExtraChannels > 0)
-                DoMix(early[c], SamplesOut, State->ExtraChannels,
+                DoMix(early[c], State->ExtraOut, State->ExtraChannels,
                     State->Early.PanGain[c]+NumChannels,
                     State->Early.CurrentGain[c]+NumChannels, delta, base,
                     SamplesToDo-base, todo
@@ -1516,7 +1516,7 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo,
                 State->Late.CurrentGain[c], delta, base, SamplesToDo, todo
             );
             if(State->ExtraChannels > 0)
-                DoMix(late[c], SamplesOut, State->ExtraChannels,
+                DoMix(late[c], State->ExtraOut, State->ExtraChannels,
                     State->Late.PanGain[c]+NumChannels,
                     State->Late.CurrentGain[c]+NumChannels, delta, base,
                     SamplesToDo-base, todo

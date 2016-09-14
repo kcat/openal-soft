@@ -414,7 +414,11 @@ static int audio_decode_frame(MovieState *movState)
         int got_frame = 0;
         int len1 = avcodec_decode_audio4(movState->audio.st->codec, frame,
                                          &got_frame, pkt);
-        if(len1 < 0) break;
+        if(len1 < 0)
+        {
+            av_shrink_packet(pkt, 0);
+            continue;
+        }
 
         if(len1 <= pkt->size)
         {

@@ -23,8 +23,8 @@ if(QT4_FOUND)
     set_target_properties(alsoft-config PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${OpenAL_BINARY_DIR})
 
     install(TARGETS alsoft-config
-            RUNTIME DESTINATION bin
-            LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-            ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
 endif()

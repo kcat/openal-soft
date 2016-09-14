@@ -1,6 +1,6 @@
 # CMake build file list for OpenAL
 
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.5)
 
 PROJECT(OpenAL)
 
@@ -24,6 +24,7 @@ INCLUDE(CheckCCompilerFlag)
 INCLUDE(CheckCSourceCompiles)
 INCLUDE(CheckTypeSize)
 include(CheckFileOffsetBits)
+include(GNUInstallDirs)
 
 
 SET(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
@@ -44,8 +45,14 @@ OPTION(ALSOFT_HRTF_DEFS "Install HRTF definition files" ON)
 OPTION(ALSOFT_AMBDEC_PRESETS "Install AmbDec preset files" ON)
 OPTION(ALSOFT_INSTALL "Install headers and libraries" ON)
 
+if(DEFINED SHARE_INSTALL_DIR)
+    message(WARNING "SHARE_INSTALL_DIR is deprecated.  Use the variables provided by the GNUInstallDirs module instead")
+    set(CMAKE_INSTALL_DATADIR "${SHARE_INSTALL_DIR}")
+endif()
 
-set(SHARE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share" CACHE STRING "The share install dir")
+if(DEFINED LIB_SUFFIX)
+    message(WARNING "LIB_SUFFIX is deprecated.  Use the variables provided by the GNUInstallDirs module instead")
+endif()
 
 
 IF(NOT WIN32)
@@ -1139,9 +1146,9 @@ ENDIF()
 # Needed for openal.pc.in
 SET(prefix ${CMAKE_INSTALL_PREFIX})
 SET(exec_prefix "\${prefix}")
-SET(libdir "\${exec_prefix}/lib${LIB_SUFFIX}")
-SET(bindir "\${exec_prefix}/bin")
-SET(includedir "\${prefix}/include")
+SET(libdir "\${exec_prefix}/${CMAKE_INSTALL_LIBDIR}")
+SET(bindir "\${exec_prefix}/${CMAKE_INSTALL_BINDIR}")
+SET(includedir "\${prefix}/${CMAKE_INSTALL_INCLUDEDIR}")
 SET(PACKAGE_VERSION "${LIB_VERSION}")
 
 # End configuration
@@ -1232,9 +1239,9 @@ TARGET_LINK_LIBRARIES(${LIBNAME} common ${EXTRA_LIBS})
 IF(ALSOFT_INSTALL)
     # Add an install target here
     INSTALL(TARGETS ${LIBNAME}
-            RUNTIME DESTINATION bin
-            LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-            ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
     INSTALL(FILES include/AL/al.h
                   include/AL/alc.h
@@ -1242,10 +1249,10 @@ IF(ALSOFT_INSTALL)
                   include/AL/efx.h
                   include/AL/efx-creative.h
                   include/AL/efx-presets.h
-            DESTINATION include/AL
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/AL
     )
     INSTALL(FILES "${OpenAL_BINARY_DIR}/openal.pc"
-            DESTINATION "lib${LIB_SUFFIX}/pkgconfig")
+            DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
 ENDIF()
 
 
@@ -1273,7 +1280,7 @@ endif()
 # Install alsoft.conf configuration file
 IF(ALSOFT_CONFIG)
     INSTALL(FILES alsoftrc.sample
-            DESTINATION ${SHARE_INSTALL_DIR}/openal
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/openal
     )
     MESSAGE(STATUS "Installing sample configuration")
     MESSAGE(STATUS "")
@@ -1283,7 +1290,7 @@ ENDIF()
 IF(ALSOFT_HRTF_DEFS)
     INSTALL(FILES hrtf/default-44100.mhr
                   hrtf/default-48000.mhr
-            DESTINATION ${SHARE_INSTALL_DIR}/openal/hrtf
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/openal/hrtf
     )
     MESSAGE(STATUS "Installing HRTF definitions")
     MESSAGE(STATUS "")
@@ -1297,7 +1304,7 @@ IF(ALSOFT_AMBDEC_PRESETS)
                   presets/rectangle.ambdec
                   presets/square.ambdec
                   presets/presets.txt
-            DESTINATION ${SHARE_INSTALL_DIR}/openal/presets
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/openal/presets
     )
     MESSAGE(STATUS "Installing AmbDec presets")
     MESSAGE(STATUS "")
@@ -1322,9 +1329,9 @@ IF(ALSOFT_UTILS)
 
     IF(ALSOFT_INSTALL)
         INSTALL(TARGETS openal-info makehrtf bsincgen
-                RUNTIME DESTINATION bin
-                LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-                ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+                LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         )
     ENDIF()
 
@@ -1345,9 +1352,9 @@ IF(ALSOFT_TESTS)
 
     IF(ALSOFT_INSTALL)
         INSTALL(TARGETS altonegen
-                RUNTIME DESTINATION bin
-                LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-                ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+                LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         )
     ENDIF()
 
@@ -1400,9 +1407,9 @@ IF(ALSOFT_EXAMPLES)
 
         IF(ALSOFT_INSTALL)
             INSTALL(TARGETS alstream alreverb allatency alloopback alhrtf
-                    RUNTIME DESTINATION bin
-                    LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-                    ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+                    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+                    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
             )
         ENDIF()
 
@@ -1439,9 +1446,9 @@ IF(ALSOFT_EXAMPLES)
 
             IF(ALSOFT_INSTALL)
                 INSTALL(TARGETS alffplay
-                        RUNTIME DESTINATION bin
-                        LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-                        ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+                        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+                        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
                 )
             ENDIF()
             MESSAGE(STATUS "Building SDL and FFmpeg example programs")

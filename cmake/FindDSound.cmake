@@ -8,24 +8,30 @@
 #   DSOUND_LIBRARY     - the dsound library
 #
 
+set(_pf86 "ProgramFiles(x86)")
+
 find_path(DSOUND_INCLUDE_DIR
-          NAMES dsound.h
-          PATHS "${DXSDK_DIR}"
-          PATH_SUFFIXES include
-          DOC "The DirectSound include directory"
-)
+    NAMES dsound.h
+    PATHS
+        "${DXSDK_DIR}"
+        "$ENV{${_pf86}}/Microsoft SDKs/Windows/v7.1A"
+    PATH_SUFFIXES include
+    DOC "The DirectSound include directory"
+    )
 
 find_library(DSOUND_LIBRARY
-             NAMES dsound
-             PATHS "${DXSDK_DIR}"
-             PATH_SUFFIXES lib lib/x86 lib/x64
-             DOC "The DirectSound library"
-)
+    NAMES dsound
+    PATHS
+        "${DXSDK_DIR}"
+        "$ENV{${_pf86}}/Microsoft SDKs/Windows/v7.1A"
+    PATH_SUFFIXES lib lib/x86 lib/x64
+    DOC "The DirectSound library"
+    )
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(DSound
     REQUIRED_VARS DSOUND_LIBRARY DSOUND_INCLUDE_DIR
-)
+    )
 
 if(DSOUND_FOUND)
     set(DSOUND_LIBRARIES ${DSOUND_LIBRARY})

@@ -1063,7 +1063,9 @@ static HRESULT ALCmmdevPlayback_resetProxy(ALCmmdevPlayback *self)
         OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
     }
     get_device_formfactor(self->mmdev, &formfactor);
-    device->IsHeadphones = (device->FmtChans == DevFmtStereo && formfactor == Headphones);
+    device->IsHeadphones = (device->FmtChans == DevFmtStereo &&
+                            (formfactor == Headphones || formfactor == Headset)
+                           );
 
     SetDefaultWFXChannelOrder(device);
 

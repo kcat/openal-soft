@@ -733,12 +733,12 @@ struct ALCcontext_struct {
 
     ATOMIC(ALenum) LastError;
 
-    volatile enum DistanceModel DistanceModel;
-    volatile ALboolean SourceDistanceModel;
+    enum DistanceModel DistanceModel;
+    ALboolean SourceDistanceModel;
 
-    volatile ALfloat DopplerFactor;
-    volatile ALfloat DopplerVelocity;
-    volatile ALfloat SpeedOfSound;
+    ALfloat DopplerFactor;
+    ALfloat DopplerVelocity;
+    ALfloat SpeedOfSound;
     ATOMIC(ALenum) DeferUpdates;
 
     RWLock PropLock;

@@ -749,6 +749,8 @@ struct ALCcontext_struct {
     RefCount UpdateCount;
     ATOMIC(ALenum) HoldUpdates;
 
+    ALfloat GainBoost;
+
     struct ALvoice *Voices;
     ALsizei VoiceCount;
     ALsizei MaxVoices;

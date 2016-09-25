@@ -2319,6 +2319,7 @@ static ALvoid InitContext(ALCcontext *Context)
     //Validate Context
     InitRef(&Context->UpdateCount, 0);
     ATOMIC_INIT(&Context->HoldUpdates, AL_FALSE);
+    Context->GainBoost = 1.0f;
     RWLockInit(&Context->PropLock);
     ATOMIC_INIT(&Context->LastError, AL_NO_ERROR);
     InitUIntMap(&Context->SourceMap, Context->Device->SourcesMax);
@@ -3159,6 +3160,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
 ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList)
 {
     ALCcontext *ALContext;
+    ALfloat valf;
     ALCenum err;
 
     LockLists();
@@ -3228,6 +3230,21 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     ALContext->Device = device;
     ALCdevice_IncRef(device);
     InitContext(ALContext);
+
+    if(ConfigValueFloat(al_string_get_cstr(device->DeviceName), NULL, "volume-adjust", &valf))
+    {
+        if(!isfinite(valf))
+            ERR("volume-adjust must be finite: %f\n", valf);
+        else
+        {
+            ALfloat db = clampf(valf, -24.0f, 24.0f);
+            if(db != valf)
+                WARN("volume-adjust clamped: %f, range: +/-%f\n", valf, 24.0f);
+            ALContext->GainBoost = powf(10.0f, db/20.0f);
+            TRACE("volume-adjust gain: %f\n", ALContext->GainBoost);
+        }
+    }
+    UpdateListenerProps(ALContext);
 
     {
         ALCcontext *head = ATOMIC_LOAD(&device->ContextList);

@@ -182,6 +182,13 @@
 #  possible is 4.
 #sends =
 
+## volume-adjust:
+#  A global volume adjustment for source output, expressed in decibels. The
+#  value is logarithmic, so +6 will be a scale of (approximately) 2x, +12 will
+#  be a scale of 4x, etc. Similarly, -6 will be x1/2, and -12 is about x1/4. A
+#  value of 0 means no change.
+#volume-adjust = 0
+
 ## excludefx: (global)
 #  Sets which effects to exclude, preventing apps from using them. This can
 #  help for apps that try to use effects which are too CPU intensive for the

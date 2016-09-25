@@ -278,7 +278,7 @@ static ALboolean CalcListenerParams(ALCcontext *Context)
                        0.0f);
     Listener->Params.Velocity = aluMatrixfVector(&Listener->Params.Matrix, &vel);
 
-    Listener->Params.Gain = ATOMIC_LOAD(&props->Gain, almemory_order_relaxed);
+    Listener->Params.Gain = ATOMIC_LOAD(&props->Gain, almemory_order_relaxed) * Context->GainBoost;
     Listener->Params.MetersPerUnit = ATOMIC_LOAD(&props->MetersPerUnit, almemory_order_relaxed);
 
     Listener->Params.DopplerFactor = ATOMIC_LOAD(&props->DopplerFactor, almemory_order_relaxed);

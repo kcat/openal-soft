@@ -42,6 +42,7 @@ OPTION(ALSOFT_TESTS     "Build and install test programs"     ON)
 
 OPTION(ALSOFT_CONFIG "Install alsoft.conf sample configuration file" ON)
 OPTION(ALSOFT_HRTF_DEFS "Install HRTF definition files" ON)
+OPTION(ALSOFT_HRTF_SOFA "Install HRTF SOFA importer" ON)
 OPTION(ALSOFT_AMBDEC_PRESETS "Install AmbDec preset files" ON)
 OPTION(ALSOFT_INSTALL "Install headers and libraries" ON)
 
@@ -1119,6 +1120,74 @@ if(ALSOFT_EMBED_HRTF_DATA)
         unset(FILENAMES)
     endif()
 endif()
+
+# Install HRTF definitions
+# -lstdc++ -lnetcdf_c++4 -lnetcdf -lhdf5_hl -lhdf5 -lcurl -lm -lz -ldl
+# NDEBUG=1 LINUX=1 __unix__=1 HOST_ENDIAN_LITTLE=1
+FIND_PACKAGE(ZLIB 1.2.8)
+FIND_PACKAGE(CURL 7.35.0)
+FIND_PACKAGE(HDF5 1.8.13)
+# SET(NETCDF_CXX TRUE)  netcdf_cxx in Ubuntu 14.04 does not work. Install it manually
+FIND_PACKAGE(NETCDF 4.3.2)
+
+IF(ZLIB_FOUND AND CURL_FOUND AND HDF5_FOUND AND NETCDF_FOUND AND ALSOFT_HRTF_SOFA)
+
+    SET(ALC_OBJS  ${ALC_OBJS}
+	Alc/sofa/SOFAAPI.cpp
+	Alc/sofa/SOFAAttributes.cpp
+	Alc/sofa/SOFACoordinates.cpp
+	Alc/sofa/SOFADate.cpp
+	Alc/sofa/SOFAEmitter.cpp
+	Alc/sofa/SOFAExceptions.cpp
+	Alc/sofa/SOFAFile.cpp
+	Alc/sofa/SOFAHelper.cpp
+	Alc/sofa/SOFAListener.cpp
+	Alc/sofa/SOFANcFile.cpp
+	Alc/sofa/SOFAPoint3.cpp
+	Alc/sofa/SOFAPosition.cpp
+	Alc/sofa/SOFAReceiver.cpp
+	Alc/sofa/SOFASimpleFreeFieldHRIR.cpp
+	Alc/sofa/SOFASimpleFreeFieldSOS.cpp
+	Alc/sofa/SOFASimpleHeadphoneIR.cpp
+	Alc/sofa/SOFAGeneralTF.cpp
+	Alc/sofa/SOFAGeneralFIR.cpp
+	Alc/sofa/SOFASource.cpp
+	Alc/sofa/SOFAString.cpp
+	Alc/sofa/SOFAUnits.cpp
+   )
+        SET(HAVE_HRTF_SOFA 1)
+
+	set_source_files_properties(Alc/sofa/SOFAAPI.cpp
+	Alc/sofa/SOFAAttributes.cpp
+	Alc/sofa/SOFACoordinates.cpp
+	Alc/sofa/SOFADate.cpp
+	Alc/sofa/SOFAEmitter.cpp
+	Alc/sofa/SOFAExceptions.cpp
+	Alc/sofa/SOFAFile.cpp
+	Alc/sofa/SOFAHelper.cpp
+	Alc/sofa/SOFAListener.cpp
+	Alc/sofa/SOFANcFile.cpp
+	Alc/sofa/SOFAPoint3.cpp
+	Alc/sofa/SOFAPosition.cpp
+	Alc/sofa/SOFAReceiver.cpp
+	Alc/sofa/SOFASimpleFreeFieldHRIR.cpp
+	Alc/sofa/SOFASimpleFreeFieldSOS.cpp
+	Alc/sofa/SOFASimpleHeadphoneIR.cpp
+	Alc/sofa/SOFAGeneralTF.cpp
+	Alc/sofa/SOFAGeneralFIR.cpp
+	Alc/sofa/SOFASource.cpp
+	Alc/sofa/SOFAString.cpp
+	Alc/sofa/SOFAUnits.cpp
+	PROPERTIES COMPILE_FLAGS "-DNDEBUG=1 -DLINUX=1 -D__unix__=1 -DHOST_ENDIAN_LITTLE=1")
+
+        SET(EXTRA_LIBS /usr/local/lib/libnetcdf_c++4.so z netcdf hdf5_hl hdf5 curl ${EXTRA_LIBS})
+	IF(CMAKE_VERSION VERSION_LESS "2.8.8")
+            INCLUDE_DIRECTORIES(${OpenAL_SOURCE_DIR}/Alc/sofa)
+        ENDIF()
+
+    MESSAGE(STATUS "Installing HRTF SOFA importer ${EXTRA_LIBS}")
+    MESSAGE(STATUS "")
+ENDIF()
 
 
 IF(ALSOFT_UTILS AND NOT ALSOFT_NO_CONFIG_UTIL)

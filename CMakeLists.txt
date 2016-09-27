@@ -1121,74 +1121,6 @@ if(ALSOFT_EMBED_HRTF_DATA)
     endif()
 endif()
 
-# Install HRTF definitions
-# -lstdc++ -lnetcdf_c++4 -lnetcdf -lhdf5_hl -lhdf5 -lcurl -lm -lz -ldl
-# NDEBUG=1 LINUX=1 __unix__=1 HOST_ENDIAN_LITTLE=1
-FIND_PACKAGE(ZLIB 1.2.8)
-FIND_PACKAGE(CURL 7.35.0)
-FIND_PACKAGE(HDF5 1.8.13)
-# SET(NETCDF_CXX TRUE)  netcdf_cxx in Ubuntu 14.04 does not work. Install it manually
-FIND_PACKAGE(NETCDF 4.3.2)
-
-IF(ZLIB_FOUND AND CURL_FOUND AND HDF5_FOUND AND NETCDF_FOUND AND ALSOFT_HRTF_SOFA)
-
-    SET(ALC_OBJS  ${ALC_OBJS}
-	Alc/sofa/SOFAAPI.cpp
-	Alc/sofa/SOFAAttributes.cpp
-	Alc/sofa/SOFACoordinates.cpp
-	Alc/sofa/SOFADate.cpp
-	Alc/sofa/SOFAEmitter.cpp
-	Alc/sofa/SOFAExceptions.cpp
-	Alc/sofa/SOFAFile.cpp
-	Alc/sofa/SOFAHelper.cpp
-	Alc/sofa/SOFAListener.cpp
-	Alc/sofa/SOFANcFile.cpp
-	Alc/sofa/SOFAPoint3.cpp
-	Alc/sofa/SOFAPosition.cpp
-	Alc/sofa/SOFAReceiver.cpp
-	Alc/sofa/SOFASimpleFreeFieldHRIR.cpp
-	Alc/sofa/SOFASimpleFreeFieldSOS.cpp
-	Alc/sofa/SOFASimpleHeadphoneIR.cpp
-	Alc/sofa/SOFAGeneralTF.cpp
-	Alc/sofa/SOFAGeneralFIR.cpp
-	Alc/sofa/SOFASource.cpp
-	Alc/sofa/SOFAString.cpp
-	Alc/sofa/SOFAUnits.cpp
-   )
-        SET(HAVE_HRTF_SOFA 1)
-
-	set_source_files_properties(Alc/sofa/SOFAAPI.cpp
-	Alc/sofa/SOFAAttributes.cpp
-	Alc/sofa/SOFACoordinates.cpp
-	Alc/sofa/SOFADate.cpp
-	Alc/sofa/SOFAEmitter.cpp
-	Alc/sofa/SOFAExceptions.cpp
-	Alc/sofa/SOFAFile.cpp
-	Alc/sofa/SOFAHelper.cpp
-	Alc/sofa/SOFAListener.cpp
-	Alc/sofa/SOFANcFile.cpp
-	Alc/sofa/SOFAPoint3.cpp
-	Alc/sofa/SOFAPosition.cpp
-	Alc/sofa/SOFAReceiver.cpp
-	Alc/sofa/SOFASimpleFreeFieldHRIR.cpp
-	Alc/sofa/SOFASimpleFreeFieldSOS.cpp
-	Alc/sofa/SOFASimpleHeadphoneIR.cpp
-	Alc/sofa/SOFAGeneralTF.cpp
-	Alc/sofa/SOFAGeneralFIR.cpp
-	Alc/sofa/SOFASource.cpp
-	Alc/sofa/SOFAString.cpp
-	Alc/sofa/SOFAUnits.cpp
-	PROPERTIES COMPILE_FLAGS "-DNDEBUG=1 -DLINUX=1 -D__unix__=1 -DHOST_ENDIAN_LITTLE=1")
-
-        SET(EXTRA_LIBS /usr/local/lib/libnetcdf_c++4.so z netcdf hdf5_hl hdf5 curl ${EXTRA_LIBS})
-	IF(CMAKE_VERSION VERSION_LESS "2.8.8")
-            INCLUDE_DIRECTORIES(${OpenAL_SOURCE_DIR}/Alc/sofa)
-        ENDIF()
-
-    MESSAGE(STATUS "Installing HRTF SOFA importer ${EXTRA_LIBS}")
-    MESSAGE(STATUS "")
-ENDIF()
-
 
 IF(ALSOFT_UTILS AND NOT ALSOFT_NO_CONFIG_UTIL)
     add_subdirectory(utils/alsoft-config)
@@ -1384,11 +1316,80 @@ IF(ALSOFT_UTILS)
     SET_PROPERTY(TARGET openal-info APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
     TARGET_LINK_LIBRARIES(openal-info ${LIBNAME})
 
-    ADD_EXECUTABLE(makehrtf utils/makehrtf.c)
-    SET_PROPERTY(TARGET makehrtf APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
-    IF(HAVE_LIBM)
-        TARGET_LINK_LIBRARIES(makehrtf m)
+# Install HRTF definitions
+# -lstdc++ -lnetcdf_c++4 -lnetcdf -lhdf5_hl -lhdf5 -lcurl -lm -lz -ldl
+# NDEBUG=1 LINUX=1 __unix__=1 HOST_ENDIAN_LITTLE=1
+	FIND_PACKAGE(ZLIB 1.2.8)
+	FIND_PACKAGE(CURL 7.35.0)
+	FIND_PACKAGE(HDF5 1.8.13)
+	SET(NETCDF_CXX TRUE)  # netcdf_cxx in Ubuntu 14.04 does not work. Install it manually
+	FIND_PACKAGE(NETCDF 4.3.2)
+
+	IF(ZLIB_FOUND AND CURL_FOUND AND HDF5_FOUND AND NETCDF_FOUND AND ALSOFT_HRTF_SOFA)
+
+	    SET(MAKEHRTF_OBJS 
+	utils/sofa/SOFAAPI.cpp
+	utils/sofa/SOFAAttributes.cpp
+	utils/sofa/SOFACoordinates.cpp
+	utils/sofa/SOFADate.cpp
+	utils/sofa/SOFAEmitter.cpp
+	utils/sofa/SOFAExceptions.cpp
+	utils/sofa/SOFAFile.cpp
+	utils/sofa/SOFAHelper.cpp
+	utils/sofa/SOFAListener.cpp
+	utils/sofa/SOFANcFile.cpp
+	utils/sofa/SOFAPoint3.cpp
+	utils/sofa/SOFAPosition.cpp
+	utils/sofa/SOFAReceiver.cpp
+	utils/sofa/SOFASimpleFreeFieldHRIR.cpp
+	utils/sofa/SOFASimpleFreeFieldSOS.cpp
+	utils/sofa/SOFASimpleHeadphoneIR.cpp
+	utils/sofa/SOFAGeneralTF.cpp
+	utils/sofa/SOFAGeneralFIR.cpp
+	utils/sofa/SOFASource.cpp
+	utils/sofa/SOFAString.cpp
+	utils/sofa/SOFAUnits.cpp
+	utils/sofa/SOFAtoOpenAL.cpp
+   )
+        	SET(HAVE_HRTF_SOFA 1)
+
+		set_source_files_properties(utils/sofa/SOFAAPI.cpp
+	utils/sofa/SOFAAttributes.cpp
+	utils/sofa/SOFACoordinates.cpp
+	utils/sofa/SOFADate.cpp
+	utils/sofa/SOFAEmitter.cpp
+	utils/sofa/SOFAExceptions.cpp
+	utils/sofa/SOFAFile.cpp
+	utils/sofa/SOFAHelper.cpp
+	utils/sofa/SOFAListener.cpp
+	utils/sofa/SOFANcFile.cpp
+	utils/sofa/SOFAPoint3.cpp
+	utils/sofa/SOFAPosition.cpp
+	utils/sofa/SOFAReceiver.cpp
+	utils/sofa/SOFASimpleFreeFieldHRIR.cpp
+	utils/sofa/SOFASimpleFreeFieldSOS.cpp
+	utils/sofa/SOFASimpleHeadphoneIR.cpp
+	utils/sofa/SOFAGeneralTF.cpp
+	utils/sofa/SOFAGeneralFIR.cpp
+	utils/sofa/SOFASource.cpp
+	utils/sofa/SOFAString.cpp
+	utils/sofa/SOFAUnits.cpp
+	utils/sofa/SOFAtoOpenAL.cpp
+	PROPERTIES COMPILE_FLAGS "-DNDEBUG=1 -DLINUX=1 -D__unix__=1 -DHOST_ENDIAN_LITTLE=1 -Wno-ignored-qualifiers")
+
+	    ADD_EXECUTABLE(makehrtf utils/makehrtf.c ${MAKEHRTF_OBJS})
+	    SET_PROPERTY(TARGET makehrtf APPEND PROPERTY COMPILE_FLAGS "${EXTRA_CFLAGS} -DHAVE_HRTF_SOFA")
+	    TARGET_LINK_LIBRARIES(makehrtf m /usr/local/lib/libnetcdf_c++4.so z netcdf hdf5_hl hdf5 curl )
+    ELSE()
+	    ADD_EXECUTABLE(makehrtf utils/makehrtf.c)
+	    SET_PROPERTY(TARGET makehrtf APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
     ENDIF()
+    IF(HAVE_LIBM)
+       	TARGET_LINK_LIBRARIES(makehrtf m)
+    ENDIF()
+    
+    MESSAGE(STATUS "Installing HRTF SOFA importer ${EXTRA_LIBS}")
+    MESSAGE(STATUS "")
 
     ADD_EXECUTABLE(bsincgen utils/bsincgen.c)
     SET_PROPERTY(TARGET bsincgen APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})

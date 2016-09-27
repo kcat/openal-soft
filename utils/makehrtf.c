@@ -2753,12 +2753,15 @@ int main(const int argc, const char *argv[])
                 return -1;
             }
         }
-        else if(strncmp(argv[argi], "-i=", 3) == 0)
+        else if(strncmp(argv[argi], "-i=", 3) == 0) {
             inName = &argv[argi][3];
+	    if(strlen(inName)>5 && !strcasecmp(inName+strlen(inName)-5,".sofa"))
+		sofa = 1;
+	}
         else if(strncmp(argv[argi], "-o=", 3) == 0)
             outName = &argv[argi][3];
 #ifdef HAVE_HRTF_SOFA
-        else if(strncmp(argv[argi], "-S", 2) == 0)
+        else if(strcmp(argv[argi], "-S") == 0)
             sofa = 1;
 #endif
         else

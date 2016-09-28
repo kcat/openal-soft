@@ -622,7 +622,7 @@ static int HpTpdfDither(const double in, int *hpHist)
 }
 
 // Allocates an array of doubles.
-static double *CreateArray(size_t n)
+double *CreateArray(size_t n)
 {
     double *a;
 
@@ -637,7 +637,7 @@ static double *CreateArray(size_t n)
 }
 
 // Frees an array of doubles.
-static void DestroyArray(double *a)
+void DestroyArray(double *a)
 { free(a); }
 
 // Complex number routines.  All outputs must be non-NULL.
@@ -2486,16 +2486,67 @@ error:
     return 0;
 }
 
+int doSomeMagic(const uint outRate, const int equalize, const int surface, const double limit, const uint truncSize, const HeadModelT model, const double radius, const OutputFormatT outFormat, const char *outName, HrirDataT *hData)
+{
+    double *dfa;
+    char rateStr[8+1], expName[MAX_PATH_LEN];
+
+    if(equalize)
+    {
+        dfa = CreateArray(1 + (hData->mFftSize/2));
+        fprintf(stdout, "Calculating diffuse-field average...\n");
+        CalculateDiffuseFieldAverage(hData, surface, limit, dfa);
+        fprintf(stdout, "Performing diffuse-field equalization...\n");
+        DiffuseFieldEqualize(dfa, hData);
+        DestroyArray(dfa);
+    }
+    fprintf(stdout, "Performing minimum phase reconstruction...\n");
+    ReconstructHrirs(hData);
+    if(outRate != 0 && outRate != hData->mIrRate)
+    {
+        fprintf(stdout, "Resampling HRIRs...\n");
+        ResampleHrirs(outRate, hData);
+    }
+    fprintf(stdout, "Truncating minimum-phase HRIRs...\n");
+    hData->mIrPoints = truncSize;
+    fprintf(stdout, "Synthesizing missing elevations...\n");
+    if(model == HM_DATASET)
+        SynthesizeOnsets(hData);
+    SynthesizeHrirs(hData);
+    fprintf(stdout, "Normalizing final HRIRs...\n");
+    NormalizeHrirs(hData);
+    fprintf(stdout, "Calculating impulse delays...\n");
+    CalculateHrtds(model, (radius > DEFAULT_CUSTOM_RADIUS) ? radius : hData->mRadius, hData);
+    snprintf(rateStr, 8, "%u", hData->mIrRate);
+    StrSubst(outName, "%r", rateStr, MAX_PATH_LEN, expName);
+    switch(outFormat)
+    {
+        case OF_MHR:
+            fprintf(stdout, "Creating MHR data set file...\n");
+            if(!StoreMhr(hData, expName))
+            {
+                DestroyArray(hData->mHrtds);
+                DestroyArray(hData->mHrirs);
+                return 0;
+            }
+            break;
+        default:
+            break;
+    }
+    
+    DestroyArray(hData->mHrtds);
+    DestroyArray(hData->mHrirs);
+    return 1;
+}
+
 /* Parse the data set definition and process the source data, storing the
  * resulting data set as desired.  If the input name is NULL it will read
  * from standard input.
  */
 static int ProcessDefinition(const char *inName, const uint outRate, const uint fftSize, const int equalize, const int surface, const double limit, const uint truncSize, const HeadModelT model, const double radius, const OutputFormatT outFormat, const char *outName)
 {
-    char rateStr[8+1], expName[MAX_PATH_LEN];
     TokenReaderT tr;
     HrirDataT hData;
-    double *dfa;
     FILE *fp;
 
     hData.mIrRate = 0;
@@ -2540,51 +2591,8 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
     }
     if(inName != NULL)
         fclose(fp);
-    if(equalize)
-    {
-        dfa = CreateArray(1 + (hData.mFftSize/2));
-        fprintf(stdout, "Calculating diffuse-field average...\n");
-        CalculateDiffuseFieldAverage(&hData, surface, limit, dfa);
-        fprintf(stdout, "Performing diffuse-field equalization...\n");
-        DiffuseFieldEqualize(dfa, &hData);
-        DestroyArray(dfa);
-    }
-    fprintf(stdout, "Performing minimum phase reconstruction...\n");
-    ReconstructHrirs(&hData);
-    if(outRate != 0 && outRate != hData.mIrRate)
-    {
-        fprintf(stdout, "Resampling HRIRs...\n");
-        ResampleHrirs(outRate, &hData);
-    }
-    fprintf(stdout, "Truncating minimum-phase HRIRs...\n");
-    hData.mIrPoints = truncSize;
-    fprintf(stdout, "Synthesizing missing elevations...\n");
-    if(model == HM_DATASET)
-        SynthesizeOnsets(&hData);
-    SynthesizeHrirs(&hData);
-    fprintf(stdout, "Normalizing final HRIRs...\n");
-    NormalizeHrirs(&hData);
-    fprintf(stdout, "Calculating impulse delays...\n");
-    CalculateHrtds(model, (radius > DEFAULT_CUSTOM_RADIUS) ? radius : hData.mRadius, &hData);
-    snprintf(rateStr, 8, "%u", hData.mIrRate);
-    StrSubst(outName, "%r", rateStr, MAX_PATH_LEN, expName);
-    switch(outFormat)
-    {
-        case OF_MHR:
-            fprintf(stdout, "Creating MHR data set file...\n");
-            if(!StoreMhr(&hData, expName))
-            {
-                DestroyArray(hData.mHrtds);
-                DestroyArray(hData.mHrirs);
-                return 0;
-            }
-            break;
-        default:
-            break;
-    }
-    DestroyArray(hData.mHrtds);
-    DestroyArray(hData.mHrirs);
-    return 1;
+
+    return doSomeMagic(outRate, equalize, surface, limit, truncSize, model, radius, outFormat, outName, &hData);
 }
 
 static void PrintHelp(const char *argv0, FILE *ofile)

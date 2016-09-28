@@ -216,6 +216,11 @@ typedef struct ResamplerT {
     double *mF;
 } ResamplerT;
 
+double *CreateArray(size_t n);
+void DestroyArray(double *a);
+int doSomeMagic(const uint outRate, const int equalize, const int surface, const double limit, const uint truncSize, 
+	const HeadModelT model, const double radius, const OutputFormatT outFormat, const char *outName, HrirDataT *hData);
+
 #ifdef __cplusplus
 }
 #endif

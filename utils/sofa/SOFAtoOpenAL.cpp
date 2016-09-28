@@ -10,6 +10,8 @@
  *
  */
 /************************************************************************************/
+#include <math.h>
+
 #include "SOFA.h"
 #include "ncDim.h"
 #include "ncVar.h"
@@ -124,243 +126,22 @@ or
 
 */
 
+enum AttributeType { ATTR_TYPE_NONE, ATTR_TYPE_CARTESIAN, ATTR_TYPE_SPHERICAL };
 
 
-/************************************************************************************/
-/*!
- *  @brief          Example for creating a SOFA file with the SimpleFreeFieldHRIR convention
- *
- */
-/************************************************************************************/
-static void CreateSimpleFreeFieldHRIRFile()
+bool iequals(const std::string& a, const char *b)
 {
-    //==============================================================================
-    /// create the file
-    
-    /// for creating a new file
-    const netCDF::NcFile::FileMode mode = netCDF::NcFile::newFile;
-    
-    /// the file format that is used (netCDF4 / HDF5)
-    const netCDF::NcFile::FileFormat format = netCDF::NcFile::nc4;
-    
-    /// the file shall not exist beforehand
-    const std::string filePath = "/Users/tcarpent/Desktop/testwrite.sofa";
-    
-    const netCDF::NcFile theFile( filePath, mode, format );
-    
-    //==============================================================================
-    /// create the attributes
-    sofa::Attributes attributes;
-    attributes.ResetToDefault();
-    
-    /// fill the attributes as you want
-    {
-        attributes.Set( sofa::Attributes::kRoomLocation,   "IRCAM, Paris" );
-        attributes.Set( sofa::Attributes::kRoomShortName,  "IRCAM Anechoic Room" );
-        /// etc.
-    }
-    
-    /// put all the attributes into the file
-    for( unsigned int k = 0; k < sofa::Attributes::kNumAttributes; k++ )
-    {
-        const sofa::Attributes::Type attType = static_cast< sofa::Attributes::Type >(k);
-        
-        const std::string attName  = sofa::Attributes::GetName( attType );
-        const std::string attValue = attributes.Get( attType );
-        
-        theFile.putAtt( attName, attValue );
-    }
-    
-    /// add attribute specific to your convention (e.g. 'DatabaseName' for the 'SimpleFreeFieldHRIR' convention)
-    {
-        const std::string attName  = "DatabaseName";
-        const std::string attValue = "TestDatabase";
-        
-        theFile.putAtt( attName, attValue );
-    }
-    
-    //==============================================================================
-    /// create the dimensions
-    const unsigned int numMeasurements  = 1680;
-    const unsigned int numReceivers     = 2;
-    const unsigned int numEmitters      = 1;
-    const unsigned int numDataSamples   = 941;
-    
-    theFile.addDim( "C", 3 );   ///< this is required by the standard
-    theFile.addDim( "I", 1 );   ///< this is required by the standard
-    theFile.addDim( "M", numMeasurements );
-    theFile.addDim( "R", numReceivers );
-    theFile.addDim( "E", numEmitters );
-    theFile.addDim( "N", numDataSamples );
-    
-    //==============================================================================
-    /// create the variables
-    
-    /// Data.SamplingRate
-    {
-        const std::string varName  = "Data.SamplingRate";
-        const std::string typeName = "double";
-        const std::string dimName  = "I";
-        
-        const netCDF::NcVar var = theFile.addVar( varName, typeName, dimName );
-        
-        const double samplingRate = 48000;
-        
-        var.putVar( &samplingRate );
-        var.putAtt( "Units", "hertz" );
-    }
-    
-    /// Data.Delay
-    {
-        const std::string varName  = "Data.Delay";
-        const std::string typeName = "double";
-        
-        std::vector< std::string > dimNames;
-        dimNames.push_back("I");
-        dimNames.push_back("R");
-        
-        const netCDF::NcVar var = theFile.addVar( varName, typeName, dimNames );
-        
-        ///@todo : fill the variable
-    }
-    
-    /// ListenerPosition
-    {
-        const std::string varName  = "ListenerPosition";
-        const std::string typeName = "double";
-        
-        std::vector< std::string > dimNames;
-        dimNames.push_back("I");
-        dimNames.push_back("C");
-        
-        const netCDF::NcVar var = theFile.addVar( varName, typeName, dimNames );
-        
-        var.putAtt( "Type", "cartesian" );
-        var.putAtt( "Units", "meter" );
-        
-        ///@todo : fill the variable
-    }
-    
-    /// ListenerUp
-    {
-        const std::string varName  = "ListenerUp";
-        const std::string typeName = "double";
-        
-        std::vector< std::string > dimNames;
-        dimNames.push_back("I");
-        dimNames.push_back("C");
-        
-        const netCDF::NcVar var = theFile.addVar( varName, typeName, dimNames );
-        
-        ///@todo : fill the variable
-    }
-    
-    /// ListenerView
-    {
-        const std::string varName  = "ListenerView";
-        const std::string typeName = "double";
-        
-        std::vector< std::string > dimNames;
-        dimNames.push_back("I");
-        dimNames.push_back("C");
-        
-        const netCDF::NcVar var = theFile.addVar( varName, typeName, dimNames );
-        
-        var.putAtt( "Type", "cartesian" );
-        var.putAtt( "Units", "meter" );
-        
-        ///@todo : fill the variable
-    }
-    
-    /// ReceiverPosition
-    {
-        const std::string varName  = "ReceiverPosition";
-        const std::string typeName = "double";
-        
-        std::vector< std::string > dimNames;
-        dimNames.push_back("R");
-        dimNames.push_back("C");
-        dimNames.push_back("I");
-        
-        const netCDF::NcVar var = theFile.addVar( varName, typeName, dimNames );
-        
-        var.putAtt( "Type", "cartesian" );
-        var.putAtt( "Units", "meter" );
-        
-        ///@todo : fill the variable
-    }
-    
-    /// SourcePosition
-    {
-        const std::string varName  = "SourcePosition";
-        const std::string typeName = "double";
-        
-        std::vector< std::string > dimNames;
-        dimNames.push_back("M");
-        dimNames.push_back("C");
-        
-        const netCDF::NcVar var = theFile.addVar( varName, typeName, dimNames );
-        
-        var.putAtt( "Type", "spherical" );
-        var.putAtt( "Units", "degree, degree, meter" );
-        
-        ///@todo : fill the variable
-    }
-    
-    /// EmitterPosition
-    {
-        const std::string varName  = "EmitterPosition";
-        const std::string typeName = "double";
-        
-        std::vector< std::string > dimNames;
-        dimNames.push_back("E");
-        dimNames.push_back("C");
-        dimNames.push_back("I");
-        
-        const netCDF::NcVar var = theFile.addVar( varName, typeName, dimNames );
-        
-        var.putAtt( "Type", "cartesian" );
-        var.putAtt( "Units", "meter" );
-        
-        ///@todo : fill the variable
-        const double fillValue = 0.0;
-        var.setFill( true, fillValue );
-    }
-    
-    /// Data.IR
-    {
-        const std::string varName  = "Data.IR";
-        const std::string typeName = "double";
-        
-        std::vector< std::string > dimNames;
-        dimNames.push_back("M");
-        dimNames.push_back("R");
-        dimNames.push_back("N");
-        
-        const netCDF::NcVar var = theFile.addVar( varName, typeName, dimNames );
-        
-        ///@todo : fill the variable
-    }
-    
-    /// RoomVolume
-    {
-        const std::string varName  = "RoomVolume";
-        const std::string typeName = "double";
-        
-        const std::string dimName  = "I";
-        
-        const netCDF::NcVar var = theFile.addVar( varName, typeName, dimName );
-        
-        var.putAtt( "Units", "cubic meter" );
-        
-        const double roomVolume = 103;
-        var.putVar( &roomVolume );
-    }
-    
-    ///@todo add any other variables, as you need
+    unsigned int sz = a.size();
+    if (strlen(b) != sz)
+        return false;
+    for (unsigned int i = 0; i < sz; ++i)
+        if (tolower(a[i]) != tolower(b[i]))
+            return false;
+    return true;
 }
 
-bool verifyVariable(const sofa::NetCDFFile &file, const char *name, const char *type, const char *dimensions, const double *values)
+bool verifyVariable(const sofa::NetCDFFile &file, const char *name, const char *type, const char *dimensions, 
+	size_t size=0, const double *values=NULL, AttributeType at=ATTR_TYPE_NONE)
 {
 	if(file.GetVariableTypeName( name ).compare(type))
 		return false;
@@ -369,17 +150,70 @@ bool verifyVariable(const sofa::NetCDFFile &file, const char *name, const char *
 		return false;
 
 //            const std::string dims      = file.GetVariableDimensionsAsString( name );
-//            std::vector< std::string > attributeNames;
-//            std::vector< std::string > attributeValues;
-//            file.GetVariablesAttributes( attributeNames, attributeValues, name );
-//          SOFA_ASSERT( attributeNames.size() == attributeValues.size() );
 //                output << sofa::String::PadWith( attributeNames[j] ) << " = " << attributeValues[j] << std::endl;
 
+	std::vector<double> v;
+	file.GetValues(v,name);
+	if(size>0 && v.size()!=size)
+		return false;
+
 	if(values) {
-	    std::vector<double> v;
-	    file.GetValues(v,name);
             for( std::size_t j = 0; j < v.size() ; j++ )
 		if(v[j]!=values[j])
+			return false;
+	}
+
+        std::vector< std::string > attributeNames;
+        std::vector< std::string > attributeValues;
+        file.GetVariablesAttributes( attributeNames, attributeValues, name );
+        SOFA_ASSERT( attributeNames.size() == attributeValues.size() );
+
+	if(at == ATTR_TYPE_CARTESIAN) {
+		bool found=false;
+		for( std::size_t j = 0; j < attributeNames.size() ; j++ ) {
+			if(iequals(attributeNames[j],"Type") && iequals(attributeValues[j],"cartesian")) {
+				found=true;
+				break;
+			}
+		}
+		if(!found)
+			return false;
+
+		found=false;
+		for( std::size_t j = 0; j < attributeNames.size() ; j++ ) {
+			if(iequals(attributeNames[j],"Units") && (iequals(attributeValues[j],"metre") ||
+				iequals(attributeValues[j],"meter") || 
+				iequals(attributeValues[j],"meters") ||
+				iequals(attributeValues[j],"metres") )) {
+				found=true;
+				break;
+			}
+		}
+		if(!found)
+			return false;
+	}
+	else if(at == ATTR_TYPE_CARTESIAN) {
+		bool found=false;
+		for( std::size_t j = 0; j < attributeNames.size() ; j++ ) {
+			if(iequals(attributeNames[j],"Type") && iequals(attributeValues[j],"spherical")) {
+				found=true;
+				break;
+			}
+		}
+		if(!found)
+			return false;
+
+		found=false;
+		for( std::size_t j = 0; j < attributeNames.size() ; j++ ) {
+			if(iequals(attributeNames[j],"Units") && (iequals(attributeValues[j],"metre, metre, degree") ||
+				iequals(attributeValues[j],"meter, meter, degree") || 
+				iequals(attributeValues[j],"meters, meters, degrees") ||
+				iequals(attributeValues[j],"metres, metres, degrees") )) {
+				found=true;
+				break;
+			}
+		}
+		if(!found)
 			return false;
 	}
 
@@ -387,8 +221,123 @@ bool verifyVariable(const sofa::NetCDFFile &file, const char *name, const char *
 }
 
 
+void convertCartesianToSpherical(std::vector< double > &values)
+{
+ 	SOFA_ASSERT( values.size() % 3 == 0 );
+
+	for(size_t i = 0; i < values.size(); i += 3) {
+		double x = values[i];
+		double y = values[i+1];
+		double z = values[i+2];
+		double r = sqrt(x*x + y*y + z*z);
+
+		double theta = atan2(z,sqrt(x*x + y*y));
+		double phi = atan2(y,x);
+
+		values[i] = fmod(phi * 180 / M_PI + 360, 360);
+		values[i+1] = theta * 180 / M_PI;
+		values[i+2] = r;
+
+//		printf("%7.2f %7.2f %7.2f %7.2f %7.2f %7.2f\n", x, y, z, values[i], values[i+1], values[i+2]);
+	}
+}
+
+double getMeanDistance(const std::vector< double > &values)
+{
+ 	SOFA_ASSERT( values.size() % 3 == 0 );
+
+	double distance = 0;
+
+	for(size_t i = 2; i < values.size(); i += 3) {
+		distance += values[i];
+	}
+
+	return distance * 3 / values.size();
+}
+
+/* Comparison function. Receives two generic (void) pointers to the items under comparison. */
+extern "C" int compare_c(const void *p, const void *q) {
+
+    const double *x = (const double *)p;
+    const double *y = (const double *)q;
+
+    /* Avoid return x - y, which can cause undefined behaviour
+       because of signed integer overflow. */
+    if (x[1] < y[1])
+        return -1;  // Return -1 if you want ascending, 1 if you want descending order. 
+    else if (x[1] > y[1])
+        return 1;   // Return 1 if you want ascending, -1 if you want descending order. 
+
+    if (x[0] < y[0])
+        return -1;  // Return -1 if you want ascending, 1 if you want descending order. 
+    else if (x[0] > y[0])
+        return 1;   // Return 1 if you want ascending, -1 if you want descending order. 
+
+    return 0;
+}
+
+void sortSourcePositions(std::vector< double > &values)
+{
+ 	SOFA_ASSERT( values.size() % 3 == 0 );
+
+// round theta values to allow for proper sorting
+	for(size_t i = 0; i < values.size(); i += 3) {
+		values[i+1] = round(values[i+1]*100) / 100;
+		values[i+2] = i/3;		// we do not need the distance anymore, but the index before sorting
+	}
+
+	qsort(&values[0], values.size()/3, sizeof(double)*3, &compare_c);
+
+#ifdef VERBOSE
+	for(size_t i = 0; i < values.size(); i += 3) {
+		printf("%7.2f %7.2f %7.2f\n", values[i], values[i+1], values[i+2]);
+	}
+#endif
+}
 
 
+void countElevationsAndAzimuths(const std::vector< double > &values, HrirDataT &hData)
+{
+	hData.mIrCount = 0;
+	hData.mEvCount = 0;
+	double lastElevation = -100;
+
+	for(size_t i = 0; i < values.size(); i += 3) {
+		if(lastElevation != values[i+1]) {
+		        hData.mEvOffset[hData.mEvCount] = hData.mIrCount;
+			hData.mAzCount[hData.mEvCount] = 0;
+			lastElevation = values[i+1];
+			hData.mEvCount++;
+		}		
+                hData.mAzCount[hData.mEvCount-1]++;
+		hData.mIrCount++;
+	}
+
+#ifdef VERBOSE
+	for(size_t i = 0; i < hData.mEvCount; i++) {
+		std::cout << i << "\t" << hData.mEvOffset[i] << "\t" << hData.mAzCount[i] << std::endl;
+	}
+	std::cout << hData.mIrCount << std::endl;
+#endif
+}
+
+void readData(const std::vector< double > values,const std::vector< double > data, HrirDataT &hData)
+{
+	size_t numMeasurements = values.size() / 3;
+	size_t numDataSamples = data.size() / 2 / numMeasurements;
+	double *p = hData.mHrirs;
+
+	for(size_t i = 0; i < values.size(); i += 3) {
+		size_t offset = values[i+2] * 2 * numDataSamples;		// index before sorting
+		size_t j;
+		for(j=0; j < numDataSamples; j++)
+			*p++ = data[offset+j];
+		for(;j < hData.mIrSize; j++)
+			*p++ = 0;
+	}
+
+       SOFA_ASSERT( (p-hData.mHrirs) == (hData.mIrSize*hData.mIrCount) );
+}
 
 /* Parse the data set definition and process the source data, storing the
  * resulting data set as desired.  If the input name is NULL it will read
@@ -410,6 +359,7 @@ int ProcessDefinitionSofa(const char *inName, const uint outRate, const uint fft
     
     const std::string tabSeparator = "\t";
     
+#ifdef VERBOSE
     //==============================================================================
     // global attributes
     //==============================================================================
@@ -428,6 +378,7 @@ int ProcessDefinitionSofa(const char *inName, const uint outRate, const uint fft
             output << tabSeparator << sofa::String::PadWith( attributeNames[i] ) << " = " << value << std::endl;
         }
     }
+#endif
     
     //==============================================================================
     // dimensions
@@ -447,6 +398,7 @@ int ProcessDefinitionSofa(const char *inName, const uint outRate, const uint fft
 	size_t numMeasurements = file.GetDimension("M");
 	size_t numDataSamples = file.GetDimension("N");
     
+#ifdef VERBOSE
     //==============================================================================
     // variables
     //==============================================================================
@@ -493,294 +445,132 @@ int ProcessDefinitionSofa(const char *inName, const uint outRate, const uint fft
             {
                 output << values[j] << ((j==values.size()-1 || j==9) ? "\n" : ",");
             }
-        }
-        
+        }        
     }
+#endif
 
 	/* verify format */
-	const double array1[] = { 1, 0, 0 };
-	if(!verifyVariable(file,"ListenerView","double","I,C", array1)) {
-		fprintf(stderr, "Error: Expecting ListenerView 1,0,0\n");
-		return 0;
+
+	if(file.HasVariable("ListenerView")) {
+		const double array1[] = { 1, 0, 0 };
+		if(!verifyVariable(file,"ListenerView","double","I,C", 3, array1)) {
+			if(!verifyVariable(file,"ListenerView","double","I,C", 3, array1, ATTR_TYPE_CARTESIAN)) {
+				const double array1b[] = { 0, 0, 1 };
+				if(!verifyVariable(file,"ListenerView","double","I,C", 3, array1b, ATTR_TYPE_SPHERICAL)) {
+					fprintf(stderr, "Error: Expecting ListenerView 1,0,0\n");
+					return 0;
+				}
+			}
+		}
 	}
 
-	const double array2[] = { 0, 0, 1 };
-	if(!verifyVariable(file,"ListenerUp","double","I,C", array2)) {
-		fprintf(stderr, "Error: Expecting ListenerUp 0,0,1\n");
-		return 0;
+	if(file.HasVariable("ListenerUp")) {
+		const double array2[] = { 0, 0, 1 };
+		if(!verifyVariable(file,"ListenerUp","double","I,C", 3, array2)) {
+			if(!verifyVariable(file,"ListenerUp","double","I,C", 3, array2, ATTR_TYPE_CARTESIAN)) {
+				const double array1b[] = { 0, 90, 1 };
+				if(!verifyVariable(file,"ListenerUp","double","I,C", 3, array1b, ATTR_TYPE_SPHERICAL)) {
+					fprintf(stderr, "Error: Expecting ListenerUp 0,0,1\n");
+					return 0;
+				}
+			}
+		}
 	}
 
 	const double array3[] = { 0, 0, 0 };
-	if(!verifyVariable(file,"ListenerPosition","double","I,C", array3)) {
+	if(!verifyVariable(file,"ListenerPosition","double","I,C", 3, array3, ATTR_TYPE_CARTESIAN)) {
 		fprintf(stderr, "Error: Expecting ListenerPosition 0,0,0\n");
 		return 0;
 	}
 
 	const double array4[] = { 0, 0, 0 };
-	if(!verifyVariable(file,"EmitterPosition","double","I,C", array4)) {
+	if(!verifyVariable(file,"EmitterPosition","double","E,C,I", 3, array4, ATTR_TYPE_CARTESIAN)) {
 		fprintf(stderr, "Error: Expecting EmitterPosition 0,0,0\n");
 		return 0;
 	}
+
+// TODO: Support data delays for each measurement and for other values
+	const double array5[] = { 0, 0 };
+	if(!verifyVariable(file,"Data.Delay","double","I,R", 2, array5)) {
+		fprintf(stderr, "Error: Expecting Data.Delay 0,0\n");
+		return 0;
+	}
+
 
 	/* read hrtf */
 	std::vector< double > values;
 	HrirDataT hData;
 
-	hData.mIrRate = 0;
-	hData.mIrPoints = 0;
-	hData.mFftSize = 0;
+	hData.mIrPoints = numDataSamples;
 	hData.mIrSize = 0;
 	hData.mIrCount = 0;
 	hData.mEvCount = 0;
 	hData.mRadius = 0;
 	hData.mDistance = 0;	
 
+	hData.mFftSize = 1;
+	while(hData.mFftSize < numDataSamples*4)
+		hData.mFftSize *= 2;
+        hData.mIrSize = 1 + (hData.mFftSize / 2);
+
+	if(fftSize>hData.mFftSize) {
+                hData.mFftSize = fftSize;
+                hData.mIrSize = 1 + (fftSize / 2);
+	}
+
+	
+
+// TODO: Support different sampling rate per measurement, support default sampling rate of 48000
 	file.GetValues(values, "Data.SamplingRate");
-	if(!verifyVariable(file,"Data.SamplingRate","double","I",NULL) || values.size()!=1) {
+	if(!verifyVariable(file,"Data.SamplingRate","double","I",1)) {
 		fprintf(stderr, "Error: Expecting sampling rate\n");
             	return 0;
 	}
 	hData.mIrRate = values[0];
 
-
 	file.GetValues(values, "ReceiverPosition");
-	if(!verifyVariable(file,"ReceiverPosition","double","R,C,I",NULL) || values.size()!=6) {
-		fprintf(stderr, "Error: Expecting sampling rate\n");
+	if(!verifyVariable(file,"ReceiverPosition","double","R,C,I",6,NULL,ATTR_TYPE_CARTESIAN) ||
+		values[0] != 0 || values[1] >= 0 || values[3] !=0 ||
+		values[3] != 0 || values[4] != -values[1] || values[5] !=0) {
+		fprintf(stderr, "Error: Expecting proper ReceiverPosition\n");
             	return 0;
 	}
-//	hData.mIrRate = values[0]; TODO
+	hData.mRadius = values[4];
+
+	// read source positions
+	file.GetValues(values, "SourcePosition");
+	if(verifyVariable(file,"SourcePosition","double","M,C", numMeasurements*3, NULL,  ATTR_TYPE_CARTESIAN)) {
+		convertCartesianToSpherical(values);
+	}
+	else if(!verifyVariable(file,"SourcePosition","double","M,C", numMeasurements*3, NULL, ATTR_TYPE_SPHERICAL)) {
+		fprintf(stderr, "Error: Expecting SourcePosition\n");
+            	return 0;
+	}
+
+	hData.mDistance = getMeanDistance(values);
+	output << "Mean Distance " << hData.mDistance << std::endl;
+	sortSourcePositions(values);
+	countElevationsAndAzimuths(values, hData);
+        SOFA_ASSERT( hData.mIrCount == numMeasurements  );
+
+	// read FIR filters
+	std::vector< double > data;
+	file.GetValues(data, "Data.IR");
+	if(!verifyVariable(file,"Data.IR","double","M,R,N", numMeasurements*2*numDataSamples)) {
+		fprintf(stderr, "Error: Expecting proper Data.IR\n");
+            	return 0;
+	}
+
+	hData.mHrirs = CreateArray(hData.mIrCount * hData.mIrSize);
+	readData(values,data,hData);
+
+	// TODO consider readed time delays from sofa file
+    	hData.mHrtds = CreateArray(hData.mIrCount);
+	for(size_t i=0;i<hData.mIrCount;i++)
+		hData.mHrtds[i] = 0;
 
 	fprintf(stderr,"\n\nall done\n\n");
-	return 0;
 
-#if 0
-
-
-// Process the data set definition to read and validate the data set metrics.
-static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint truncSize, HrirDataT *hData)
-{
-    int hasRate = 0, hasPoints = 0, hasAzimuths = 0;
-    int hasRadius = 0, hasDistance = 0;
-    char ident[MAX_IDENT_LEN+1];
-    uint line, col;
-    double fpVal;
-    uint points;
-    int intVal;
-
-    while(!(hasRate && hasPoints && hasAzimuths && hasRadius && hasDistance))
-    {
-...
-        else if(strcasecmp(ident, "points") == 0)
-        {
-            if (hasPoints) {
-                TrErrorAt(tr, line, col, "Redefinition of 'points'.\n");
-                return 0;
-            }
-            if(!TrReadOperator(tr, "="))
-                return 0;
-            TrIndication(tr, &line, &col);
-            if(!TrReadInt(tr, MIN_POINTS, MAX_POINTS, &intVal))
-                return 0;
-            points = (uint)intVal;
-            if(fftSize > 0 && points > fftSize)
-            {
-                TrErrorAt(tr, line, col, "Value exceeds the overridden FFT size.\n");
-                return 0;
-            }
-            if(points < truncSize)
-            {
-                TrErrorAt(tr, line, col, "Value is below the truncation size.\n");
-                return 0;
-            }
-            hData->mIrPoints = points;
-            hData->mFftSize = fftSize;
-            if(fftSize <= 0)
-            {
-                points = 1;
-                while(points < (4 * hData->mIrPoints))
-                    points <<= 1;
-                hData->mFftSize = points;
-                hData->mIrSize = 1 + (points / 2);
-            }
-            else
-            {
-                hData->mFftSize = fftSize;
-                hData->mIrSize = 1 + (fftSize / 2);
-                if(points > hData->mIrSize)
-                    hData->mIrSize = points;
-            }
-            hasPoints = 1;
-        }
-        else if(strcasecmp(ident, "azimuths") == 0)
-        {
-            if(hasAzimuths)
-            {
-                TrErrorAt(tr, line, col, "Redefinition of 'azimuths'.\n");
-                return 0;
-            }
-            if(!TrReadOperator(tr, "="))
-                return 0;
-            hData->mIrCount = 0;
-            hData->mEvCount = 0;
-            hData->mEvOffset[0] = 0;
-            for(;;)
-            {
-                if(!TrReadInt(tr, MIN_AZ_COUNT, MAX_AZ_COUNT, &intVal))
-                    return 0;
-                hData->mAzCount[hData->mEvCount] = (uint)intVal;
-                hData->mIrCount += (uint)intVal;
-                hData->mEvCount ++;
-                if(!TrIsOperator(tr, ","))
-                    break;
-                if(hData->mEvCount >= MAX_EV_COUNT)
-                {
-                    TrError(tr, "Exceeded the maximum of %d elevations.\n", MAX_EV_COUNT);
-                    return 0;
-                }
-                hData->mEvOffset[hData->mEvCount] = hData->mEvOffset[hData->mEvCount - 1] + ((uint)intVal);
-                TrReadOperator(tr, ",");
-            }
-            if(hData->mEvCount < MIN_EV_COUNT)
-            {
-                TrErrorAt(tr, line, col, "Did not reach the minimum of %d azimuth counts.\n", MIN_EV_COUNT);
-                return 0;
-            }
-            hasAzimuths = 1;
-        }
-        else if(strcasecmp(ident, "radius") == 0)
-        {
-            if(hasRadius)
-            {
-                TrErrorAt(tr, line, col, "Redefinition of 'radius'.\n");
-                return 0;
-            }
-            if(!TrReadOperator(tr, "="))
-                return 0;
-            if(!TrReadFloat(tr, MIN_RADIUS, MAX_RADIUS, &fpVal))
-                return 0;
-            hData->mRadius = fpVal;
-            hasRadius = 1;
-        }
-        else if(strcasecmp(ident, "distance") == 0)
-        {
-            if(hasDistance)
-            {
-                TrErrorAt(tr, line, col, "Redefinition of 'distance'.\n");
-                return 0;
-            }
-            if(!TrReadOperator(tr, "="))
-                return 0;
-            if(!TrReadFloat(tr, MIN_DISTANCE, MAX_DISTANCE, & fpVal))
-                return 0;
-            hData->mDistance = fpVal;
-            hasDistance = 1;
-        }
-        else
-        {
-            TrErrorAt(tr, line, col, "Expected a metric name.\n");
-            return 0;
-        }
-        TrSkipWhitespace (tr);
-    }
-    return 1;
+    	return doSomeMagic(outRate, equalize, surface, limit, truncSize, model, radius, outFormat, outName, &hData);
 }
-
-
-
-
-    char rateStr[8+1], expName[MAX_PATH_LEN];
-    TokenReaderT tr;
-    HrirDataT hData;
-    double *dfa;
-    FILE *fp;
-
-    hData.mIrRate = 0;
-    hData.mIrPoints = 0;
-    hData.mFftSize = 0;
-    hData.mIrSize = 0;
-    hData.mIrCount = 0;
-    hData.mEvCount = 0;
-    hData.mRadius = 0;
-    hData.mDistance = 0;
-    fprintf(stdout, "Reading HRIR definition...\n");
-    if(inName != NULL)
-    {
-        fp = fopen(inName, "r");
-        if(fp == NULL)
-        {
-            fprintf(stderr, "Error: Could not open definition file '%s'\n", inName);
-            return 0;
-        }
-        TrSetup(fp, inName, &tr);
-    }
-    else
-    {
-        fp = stdin;
-        TrSetup(fp, "<stdin>", &tr);
-    }
-    if(!ProcessMetrics(&tr, fftSize, truncSize, &hData))
-    {
-        if(inName != NULL)
-            fclose(fp);
-        return 0;
-    }
-    hData.mHrirs = CreateArray(hData.mIrCount * hData . mIrSize);
-    hData.mHrtds = CreateArray(hData.mIrCount);
-    if(!ProcessSources(model, &tr, &hData))
-    {
-        DestroyArray(hData.mHrtds);
-        DestroyArray(hData.mHrirs);
-        if(inName != NULL)
-            fclose(fp);
-        return 0;
-    }
-    if(inName != NULL)
-        fclose(fp);
-    if(equalize)
-    {
-        dfa = CreateArray(1 + (hData.mFftSize/2));
-        fprintf(stdout, "Calculating diffuse-field average...\n");
-        CalculateDiffuseFieldAverage(&hData, surface, limit, dfa);
-        fprintf(stdout, "Performing diffuse-field equalization...\n");
-        DiffuseFieldEqualize(dfa, &hData);
-        DestroyArray(dfa);
-    }
-    fprintf(stdout, "Performing minimum phase reconstruction...\n");
-    ReconstructHrirs(&hData);
-    if(outRate != 0 && outRate != hData.mIrRate)
-    {
-        fprintf(stdout, "Resampling HRIRs...\n");
-        ResampleHrirs(outRate, &hData);
-    }
-    fprintf(stdout, "Truncating minimum-phase HRIRs...\n");
-    hData.mIrPoints = truncSize;
-    fprintf(stdout, "Synthesizing missing elevations...\n");
-    if(model == HM_DATASET)
-        SynthesizeOnsets(&hData);
-    SynthesizeHrirs(&hData);
-    fprintf(stdout, "Normalizing final HRIRs...\n");
-    NormalizeHrirs(&hData);
-    fprintf(stdout, "Calculating impulse delays...\n");
-    CalculateHrtds(model, (radius > DEFAULT_CUSTOM_RADIUS) ? radius : hData.mRadius, &hData);
-    snprintf(rateStr, 8, "%u", hData.mIrRate);
-    StrSubst(outName, "%r", rateStr, MAX_PATH_LEN, expName);
-    switch(outFormat)
-    {
-        case OF_MHR:
-            fprintf(stdout, "Creating MHR data set file...\n");
-            if(!StoreMhr(&hData, expName))
-            {
-                DestroyArray(hData.mHrtds);
-                DestroyArray(hData.mHrirs);
-                return 0;
-            }
-            break;
-        default:
-            break;
-    }
-    DestroyArray(hData.mHrtds);
-    DestroyArray(hData.mHrirs);
-#endif
-}
-
 

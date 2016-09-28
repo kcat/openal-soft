@@ -1375,7 +1375,7 @@ IF(ALSOFT_UTILS)
 	utils/sofa/SOFAString.cpp
 	utils/sofa/SOFAUnits.cpp
 	utils/sofa/SOFAtoOpenAL.cpp
-	PROPERTIES COMPILE_FLAGS "-DNDEBUG=1 -DLINUX=1 -D__unix__=1 -DHOST_ENDIAN_LITTLE=1 -Wno-ignored-qualifiers")
+	PROPERTIES COMPILE_FLAGS " -DLINUX=1 -D__unix__=1 -DHOST_ENDIAN_LITTLE=1 -Wno-ignored-qualifiers")
 
 	    ADD_EXECUTABLE(makehrtf utils/makehrtf.c ${MAKEHRTF_OBJS})
 	    SET_PROPERTY(TARGET makehrtf APPEND PROPERTY COMPILE_FLAGS "${EXTRA_CFLAGS} -DHAVE_HRTF_SOFA")

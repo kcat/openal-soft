@@ -2486,7 +2486,7 @@ error:
     return 0;
 }
 
-int doSomeMagic(const uint outRate, const int equalize, const int surface, const double limit, const uint truncSize, const HeadModelT model, const double radius, const OutputFormatT outFormat, const char *outName, HrirDataT *hData)
+int hrtfPostProcessing(const uint outRate, const int equalize, const int surface, const double limit, const uint truncSize, const HeadModelT model, const double radius, const OutputFormatT outFormat, const char *outName, HrirDataT *hData)
 {
     double *dfa;
     char rateStr[8+1], expName[MAX_PATH_LEN];
@@ -2594,7 +2594,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
     if(inName != NULL)
         fclose(fp);
 
-    return doSomeMagic(outRate, equalize, surface, limit, truncSize, model, radius, outFormat, outName, &hData);
+    return hrtfPostProcessing(outRate, equalize, surface, limit, truncSize, model, radius, outFormat, outName, &hData);
 }
 
 static void PrintHelp(const char *argv0, FILE *ofile)

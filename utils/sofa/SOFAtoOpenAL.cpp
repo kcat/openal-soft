@@ -299,6 +299,7 @@ void sortSourcePositions(std::vector< double > &values)
 void countElevationsAndAzimuths(const std::vector< double > &values, HrirDataT &hData)
 {
 	hData.mIrCount = 0;
+	hData.mEvStart = 0;
 	hData.mEvCount = 0;
 	double lastElevation = -100;
 
@@ -613,6 +614,6 @@ int ProcessDefinitionSofa(const char *inName, const uint outRate, const uint fft
 	fprintf(stderr,"\n\nall done\n\n");
 
 
-    	return doSomeMagic(outRate, equalize, surface, limit, truncSize, model, radius, outFormat, outName, &hData);
+    	return hrtfPostProcessing(outRate, equalize, surface, limit, truncSize, model, radius, outFormat, outName, &hData);
 }
 

@@ -325,18 +325,23 @@ void readData(const std::vector< double > values,const std::vector< double > dat
 {
 	size_t numMeasurements = values.size() / 3;
 	size_t numDataSamples = data.size() / 2 / numMeasurements;
-	double *p = hData.mHrirs;
+	double *pL = hData.mHrirs;
+	double *pR = hData.mHrirs + (numMeasurements * hData.mIrSize);
 
 	for(size_t i = 0; i < values.size(); i += 3) {
 		size_t offset = values[i+2] * 2 * numDataSamples;		// index before sorting
 		size_t j;
-		for(j=0; j < numDataSamples; j++)
-			*p++ = data[offset+j];
-		for(;j < hData.mIrSize; j++)
-			*p++ = 0;
+		for(j=0; j < numDataSamples; j++) {
+			*pL++ = data[offset+(j*2)];		
+			*pR++ = data[offset+(j*2)+1];
+		}
+		for(;j < hData.mIrSize; j++) {
+			*pL++ = 0;
+			*pR++ = 0;
+		}
 	}
 
-       SOFA_ASSERT( (p-hData.mHrirs) == (hData.mIrSize*hData.mIrCount) );
+       SOFA_ASSERT( (pL-hData.mHrirs) == (hData.mIrSize*hData.mIrCount) );
 }
 
 /* Parse the data set definition and process the source data, storing the
@@ -559,17 +564,54 @@ int ProcessDefinitionSofa(const char *inName, const uint outRate, const uint fft
 	if(!verifyVariable(file,"Data.IR","double","M,R,N", numMeasurements*2*numDataSamples)) {
 		fprintf(stderr, "Error: Expecting proper Data.IR\n");
             	return 0;
+
 	}
 
-	hData.mHrirs = CreateArray(hData.mIrCount * hData.mIrSize);
+	hData.mStereo = 1;
+	hData.mHrirs = CreateArray(hData.mIrCount * hData.mIrSize * 2);
 	readData(values,data,hData);
 
 	// TODO consider readed time delays from sofa file
-    	hData.mHrtds = CreateArray(hData.mIrCount);
-	for(size_t i=0;i<hData.mIrCount;i++)
+    	hData.mHrtds = CreateArray(hData.mIrCount * 2);
+	for(size_t i=0;i<hData.mIrCount * 2;i++)
 		hData.mHrtds[i] = 0;
 
+	// verify OpenAL parameters
+	if(hData.mIrRate < MIN_RATE || hData.mIrRate > MAX_RATE) {
+		fprintf(stderr, "Error: Sampling rate is not within proper limits: %u vs %d to %d\n",hData.mIrRate, MIN_RATE, MAX_RATE);
+            	return 0;
+	}
+
+	if(hData.mIrPoints < MIN_POINTS || hData.mIrPoints > MAX_POINTS) {
+		fprintf(stderr, "Error: FIR filter length is not within proper limits: %u vs %d to %d\n",hData.mIrPoints, MIN_POINTS, MAX_POINTS);
+            	return 0;
+	}
+
+	if(hData.mEvCount < MIN_EV_COUNT || hData.mEvCount > MAX_EV_COUNT) {
+		fprintf(stderr, "Error: Number of elevations is not within proper limits: %u vs %d to %d\n",hData.mEvCount, MIN_EV_COUNT, MAX_EV_COUNT);
+            	return 0;
+	}
+
+	for(size_t i = 0; i < hData.mEvCount; i++) {
+		if(hData.mAzCount[i] < MIN_AZ_COUNT || hData.mAzCount[i] > MAX_AZ_COUNT) {
+			fprintf(stderr, "Error: Number of azimuths is not within proper limits: %u at %lu vs %d to %d\n", hData.mAzCount[i], i, MIN_AZ_COUNT, MAX_AZ_COUNT);
+	            	return 0;
+		}
+	}
+
+	if(hData.mRadius < MIN_RADIUS || hData.mRadius > MAX_RADIUS) {
+		fprintf(stderr, "Error: Radius is not within proper limits: %f vs %f to %f\n",hData.mRadius, MIN_RADIUS, MAX_RADIUS);
+            	return 0;
+	}
+
+	if(hData.mDistance < MIN_DISTANCE || hData.mDistance > MAX_DISTANCE) {
+		fprintf(stderr, "Error: Distance is not within proper limits: %f vs %f to %f\n",hData.mDistance, MIN_DISTANCE, MAX_DISTANCE);
+            	return 0;
+	}
+
+
 	fprintf(stderr,"\n\nall done\n\n");
+
 
     	return doSomeMagic(outRate, equalize, surface, limit, truncSize, model, radius, outFormat, outName, &hData);
 }

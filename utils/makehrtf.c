@@ -2557,6 +2557,8 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
     hData.mEvCount = 0;
     hData.mRadius = 0;
     hData.mDistance = 0;
+    hData.mStereo = 0;
+
     fprintf(stdout, "Reading HRIR definition...\n");
     if(inName != NULL)
     {
@@ -2579,7 +2581,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
             fclose(fp);
         return 0;
     }
-    hData.mHrirs = CreateArray(hData.mIrCount * hData . mIrSize);
+    hData.mHrirs = CreateArray(hData.mIrCount * hData.mIrSize);
     hData.mHrtds = CreateArray(hData.mIrCount);
     if(!ProcessSources(model, &tr, &hData))
     {

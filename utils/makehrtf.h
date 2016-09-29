@@ -40,11 +40,11 @@ extern "C" {
 
 // The limits to the number of 'azimuths' listed in the data set definition.
 #define MIN_EV_COUNT                 (5)
-#define MAX_EV_COUNT                 (128)
+#define MAX_EV_COUNT                 (256)
 
 // The limits for each of the 'azimuths' listed in the data set definition.
 #define MIN_AZ_COUNT                 (1)
-#define MAX_AZ_COUNT                 (128)
+#define MAX_AZ_COUNT                 (512)
 
 // The limits for the listener's head 'radius' in the data set definition.
 #define MIN_RADIUS                   (0.05)
@@ -203,6 +203,7 @@ typedef struct HrirDataT {
     uint mEvStart;
     uint mAzCount[MAX_EV_COUNT];
     uint mEvOffset[MAX_EV_COUNT];
+    uint mStereo;
     double mRadius;
     double mDistance;
     double *mHrirs;

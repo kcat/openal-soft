@@ -1320,12 +1320,11 @@ IF(ALSOFT_UTILS)
 # -lstdc++ -lnetcdf_c++4 -lnetcdf -lhdf5_hl -lhdf5 -lcurl -lm -lz -ldl
 # NDEBUG=1 LINUX=1 __unix__=1 HOST_ENDIAN_LITTLE=1
 	FIND_PACKAGE(ZLIB 1.2.8)
-	FIND_PACKAGE(CURL 7.35.0)
 	FIND_PACKAGE(HDF5 1.8.13)
 	SET(NETCDF_CXX TRUE)  # netcdf_cxx in Ubuntu 14.04 does not work. Install it manually
 	FIND_PACKAGE(NETCDF 4.3.2)
 
-	IF(ZLIB_FOUND AND CURL_FOUND AND HDF5_FOUND AND NETCDF_FOUND AND ALSOFT_HRTF_SOFA)
+	IF(ZLIB_FOUND AND HDF5_FOUND AND NETCDF_FOUND AND ALSOFT_HRTF_SOFA)
 
 	    SET(MAKEHRTF_OBJS 
 	utils/sofa/SOFAAPI.cpp
@@ -1379,7 +1378,7 @@ IF(ALSOFT_UTILS)
 
 	    ADD_EXECUTABLE(makehrtf utils/makehrtf.c ${MAKEHRTF_OBJS})
 	    SET_PROPERTY(TARGET makehrtf APPEND PROPERTY COMPILE_FLAGS "${EXTRA_CFLAGS} -DHAVE_HRTF_SOFA")
-	    TARGET_LINK_LIBRARIES(makehrtf m /usr/local/lib/libnetcdf_c++4.so z netcdf hdf5_hl hdf5 curl )
+	    TARGET_LINK_LIBRARIES(makehrtf m /usr/local/lib/libnetcdf_c++4.so z netcdf hdf5_hl hdf5 )
     ELSE()
 	    ADD_EXECUTABLE(makehrtf utils/makehrtf.c)
 	    SET_PROPERTY(TARGET makehrtf APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})

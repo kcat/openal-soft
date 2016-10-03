@@ -127,11 +127,6 @@ AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum format);
 #endif
 #endif
 
-#ifndef AL_SOFT_gain_clamp_ex
-#define AL_SOFT_gain_clamp_ex 1
-#define AL_GAIN_LIMIT_SOFT                       0x200E
-#endif
-
 
 typedef ALint64SOFT ALint64;
 typedef ALuint64SOFT ALuint64;

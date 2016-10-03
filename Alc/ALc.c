@@ -715,7 +715,7 @@ static const ALchar alExtList[] =
     "AL_EXT_MULAW AL_EXT_MULAW_BFORMAT AL_EXT_MULAW_MCFORMATS AL_EXT_OFFSET "
     "AL_EXT_source_distance_model AL_EXT_SOURCE_RADIUS AL_EXT_STEREO_ANGLES "
     "AL_LOKI_quadriphonic AL_SOFT_block_alignment AL_SOFT_deferred_updates "
-    "AL_SOFT_direct_channels AL_SOFTX_gain_clamp_ex AL_SOFT_loop_points "
+    "AL_SOFT_direct_channels AL_SOFT_gain_clamp_ex AL_SOFT_loop_points "
     "AL_SOFT_MSADPCM AL_SOFT_source_latency AL_SOFT_source_length";
 
 static ATOMIC(ALCenum) LastNullDeviceError = ATOMIC_INIT_STATIC(ALC_NO_ERROR);

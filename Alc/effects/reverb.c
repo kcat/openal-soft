@@ -60,22 +60,20 @@ typedef struct ALreverbState {
 
     ALboolean IsEax;
 
-    // For HRTF and UHJ
-    ALfloat (*ExtraOut)[BUFFERSIZE];
-    ALuint ExtraChannels;
-
     // All delay lines are allocated as a single buffer to reduce memory
     // fragmentation and management code.
     ALfloat  *SampleBuffer;
     ALuint    TotalSamples;
 
     // Master effect filters
-    ALfilterState LpFilter;
-    ALfilterState HpFilter; // EAX only
+    struct {
+        ALfilterState Lp;
+        ALfilterState Hp; // EAX only
+    } Filter[4];
 
     struct {
         // Modulator delay line.
-        DelayLine Delay;
+        DelayLine Delay[4];
 
         // The vibrato time is tracked with an index over a modulus-wrapped
         // range (in samples).
@@ -97,7 +95,7 @@ typedef struct ALreverbState {
     /* There are actually 4 decorrelator taps, but the first occurs at the late
      * reverb tap.
      */
-    ALuint    DecoTap[3];
+    ALuint    LateDecoTap[3];
 
     struct {
         // Early reflections are done with 4 delay lines.
@@ -106,8 +104,8 @@ typedef struct ALreverbState {
         ALuint    Offset[4];
 
         // The gain for each output channel based on 3D panning.
-        ALfloat CurrentGain[4][MAX_OUTPUT_CHANNELS+2];
-        ALfloat PanGain[4][MAX_OUTPUT_CHANNELS+2];
+        ALfloat CurrentGain[4][MAX_OUTPUT_CHANNELS];
+        ALfloat PanGain[4][MAX_OUTPUT_CHANNELS];
     } Early;
 
     struct {
@@ -139,8 +137,8 @@ typedef struct ALreverbState {
         ALfloat   LpSample[4];
 
         // The gain for each output channel based on 3D panning.
-        ALfloat CurrentGain[4][MAX_OUTPUT_CHANNELS+2];
-        ALfloat PanGain[4][MAX_OUTPUT_CHANNELS+2];
+        ALfloat CurrentGain[4][MAX_OUTPUT_CHANNELS];
+        ALfloat PanGain[4][MAX_OUTPUT_CHANNELS];
     } Late;
 
     struct {
@@ -149,8 +147,10 @@ typedef struct ALreverbState {
         ALfloat   DensityGain;
 
         // Echo delay and all-pass lines.
-        DelayLine Delay;
-        DelayLine ApDelay;
+        struct {
+            DelayLine Feedback;
+            DelayLine Ap;
+        } Delay[4];
 
         ALfloat   Coeff;
         ALfloat   ApFeedCoeff;
@@ -161,7 +161,7 @@ typedef struct ALreverbState {
 
         // The echo line is 1-pole low-pass filtered.
         ALfloat   LpCoeff;
-        ALfloat   LpSample;
+        ALfloat   LpSample[4];
 
         // Echo mixing coefficient.
         ALfloat   MixCoeff;
@@ -171,6 +171,7 @@ typedef struct ALreverbState {
     ALuint Offset;
 
     /* Temporary storage used when processing. */
+    alignas(16) ALfloat AFormatSamples[4][MAX_UPDATE_SAMPLES];
     alignas(16) ALfloat ReverbSamples[4][MAX_UPDATE_SAMPLES];
     alignas(16) ALfloat EarlySamples[4][MAX_UPDATE_SAMPLES];
 } ALreverbState;
@@ -192,16 +193,19 @@ static void ALreverbState_Construct(ALreverbState *state)
     SET_VTABLE2(ALreverbState, ALeffectState, state);
 
     state->IsEax = AL_FALSE;
-    state->ExtraChannels = 0;
 
     state->TotalSamples = 0;
     state->SampleBuffer = NULL;
 
-    ALfilterState_clear(&state->LpFilter);
-    ALfilterState_clear(&state->HpFilter);
+    for(index = 0;index < 4;index++)
+    {
+        ALfilterState_clear(&state->Filter[index].Lp);
+        ALfilterState_clear(&state->Filter[index].Hp);
 
-    state->Mod.Delay.Mask = 0;
-    state->Mod.Delay.Line = NULL;
+        state->Mod.Delay[index].Mask = 0;
+        state->Mod.Delay[index].Line = NULL;
+    }
+
     state->Mod.Index = 0;
     state->Mod.Range = 1;
     state->Mod.Depth = 0.0f;
@@ -212,9 +216,9 @@ static void ALreverbState_Construct(ALreverbState *state)
     state->Delay.Line = NULL;
     state->DelayTap[0] = 0;
     state->DelayTap[1] = 0;
-    state->DecoTap[0] = 0;
-    state->DecoTap[1] = 0;
-    state->DecoTap[2] = 0;
+    state->LateDecoTap[0] = 0;
+    state->LateDecoTap[1] = 0;
+    state->LateDecoTap[2] = 0;
 
     for(index = 0;index < 4;index++)
     {
@@ -248,23 +252,29 @@ static void ALreverbState_Construct(ALreverbState *state)
     {
         for(index = 0;index < MAX_OUTPUT_CHANNELS;index++)
         {
+            state->Early.CurrentGain[l][index] = 0.0f;
             state->Early.PanGain[l][index] = 0.0f;
+            state->Late.CurrentGain[l][index] = 0.0f;
             state->Late.PanGain[l][index] = 0.0f;
         }
     }
 
     state->Echo.DensityGain = 0.0f;
-    state->Echo.Delay.Mask = 0;
-    state->Echo.Delay.Line = NULL;
-    state->Echo.ApDelay.Mask = 0;
-    state->Echo.ApDelay.Line = NULL;
+    for(l = 0;l < 4;l++)
+    {
+        state->Echo.Delay[l].Feedback.Mask = 0;
+        state->Echo.Delay[l].Feedback.Line = NULL;
+        state->Echo.Delay[l].Ap.Mask = 0;
+        state->Echo.Delay[l].Ap.Line = NULL;
+    }
     state->Echo.Coeff = 0.0f;
     state->Echo.ApFeedCoeff = 0.0f;
     state->Echo.ApCoeff = 0.0f;
     state->Echo.Offset = 0;
     state->Echo.ApOffset = 0;
     state->Echo.LpCoeff = 0.0f;
-    state->Echo.LpSample = 0.0f;
+    for(l = 0;l < 4;l++)
+        state->Echo.LpSample[l] = 0.0f;
     state->Echo.MixCoeff = 0.0f;
 
     state->Offset = 0;
@@ -322,16 +332,16 @@ static const ALfloat EARLY_LINE_LENGTH[4] =
     0.0015f, 0.0045f, 0.0135f, 0.0405f
 };
 
-// The lengths of the late all-pass delay lines.
-static const ALfloat ALLPASS_LINE_LENGTH[4] =
-{
-    0.0151f, 0.0167f, 0.0183f, 0.0200f,
-};
-
 // The lengths of the late cyclical delay lines.
 static const ALfloat LATE_LINE_LENGTH[4] =
 {
     0.0211f, 0.0311f, 0.0461f, 0.0680f
+};
+
+// The lengths of the late all-pass delay lines.
+static const ALfloat ALLPASS_LINE_LENGTH[4] =
+{
+    0.0151f, 0.0167f, 0.0183f, 0.0200f,
 };
 
 // The late cyclical delay lines have a variable length dependent on the
@@ -400,8 +410,9 @@ static ALboolean AllocLines(ALuint frequency, ALreverbState *State)
      * modulation.
      */
     length = (AL_EAXREVERB_MAX_MODULATION_TIME*MODULATION_DEPTH_COEFF/2.0f);
-    totalSamples += CalcLineLength(length, totalSamples, frequency, 1,
-                                   &State->Mod.Delay);
+    for(index = 0;index < 4;index++)
+        totalSamples += CalcLineLength(length, totalSamples, frequency, 1,
+                                       &State->Mod.Delay[index]);
 
     /* The initial delay is the sum of the reflections and late reverb delays.
      * The decorrelator length is calculated from the lowest reverb density (a
@@ -412,18 +423,16 @@ static ALboolean AllocLines(ALuint frequency, ALreverbState *State)
              AL_EAXREVERB_MAX_LATE_REVERB_DELAY;
     length += (DECO_FRACTION * DECO_MULTIPLIER * DECO_MULTIPLIER) *
               LATE_LINE_LENGTH[0] * (1.0f + LATE_LINE_MULTIPLIER);
-    totalSamples += CalcLineLength(length, totalSamples, frequency,
-                                   MAX_UPDATE_SAMPLES, &State->Delay);
+    /* Multiply length by 4, since we're storing 4 interleaved channels in the
+     * main delay line.
+     */
+    totalSamples += CalcLineLength(length*4, totalSamples, frequency,
+                                   MAX_UPDATE_SAMPLES*4, &State->Delay);
 
     // The early reflection lines.
     for(index = 0;index < 4;index++)
         totalSamples += CalcLineLength(EARLY_LINE_LENGTH[index], totalSamples,
                                        frequency, 0, &State->Early.Delay[index]);
-
-    // The late all-pass lines.
-    for(index = 0;index < 4;index++)
-        totalSamples += CalcLineLength(ALLPASS_LINE_LENGTH[index], totalSamples,
-                                       frequency, 0, &State->Late.ApDelay[index]);
 
     // The late delay lines are calculated from the lowest reverb density.
     for(index = 0;index < 4;index++)
@@ -433,17 +442,25 @@ static ALboolean AllocLines(ALuint frequency, ALreverbState *State)
                                        &State->Late.Delay[index]);
     }
 
+    // The late all-pass lines.
+    for(index = 0;index < 4;index++)
+        totalSamples += CalcLineLength(ALLPASS_LINE_LENGTH[index], totalSamples,
+                                       frequency, 0, &State->Late.ApDelay[index]);
+
     // The echo all-pass and delay lines.
-    totalSamples += CalcLineLength(ECHO_ALLPASS_LENGTH, totalSamples,
-                                   frequency, 0, &State->Echo.ApDelay);
-    totalSamples += CalcLineLength(AL_EAXREVERB_MAX_ECHO_TIME, totalSamples,
-                                   frequency, 0, &State->Echo.Delay);
+    for(index = 0;index < 4;index++)
+    {
+        totalSamples += CalcLineLength(ECHO_ALLPASS_LENGTH, totalSamples,
+                                       frequency, 0, &State->Echo.Delay[index].Ap);
+        totalSamples += CalcLineLength(AL_EAXREVERB_MAX_ECHO_TIME, totalSamples,
+                                       frequency, 0, &State->Echo.Delay[index].Feedback);
+    }
 
     if(totalSamples != State->TotalSamples)
     {
         ALfloat *newBuffer;
 
-        TRACE("New reverb buffer length: %u samples (%f sec)\n", totalSamples, totalSamples/(float)frequency);
+        TRACE("New reverb buffer length: %u samples\n", totalSamples);
         newBuffer = al_calloc(16, sizeof(ALfloat) * totalSamples);
         if(!newBuffer) return AL_FALSE;
 
@@ -456,13 +473,16 @@ static ALboolean AllocLines(ALuint frequency, ALreverbState *State)
     RealizeLineOffset(State->SampleBuffer, &State->Delay);
     for(index = 0;index < 4;index++)
     {
+        RealizeLineOffset(State->SampleBuffer, &State->Mod.Delay[index]);
+
         RealizeLineOffset(State->SampleBuffer, &State->Early.Delay[index]);
+
         RealizeLineOffset(State->SampleBuffer, &State->Late.ApDelay[index]);
         RealizeLineOffset(State->SampleBuffer, &State->Late.Delay[index]);
+
+        RealizeLineOffset(State->SampleBuffer, &State->Echo.Delay[index].Ap);
+        RealizeLineOffset(State->SampleBuffer, &State->Echo.Delay[index].Feedback);
     }
-    RealizeLineOffset(State->SampleBuffer, &State->Mod.Delay);
-    RealizeLineOffset(State->SampleBuffer, &State->Echo.ApDelay);
-    RealizeLineOffset(State->SampleBuffer, &State->Echo.Delay);
 
     // Clear the sample buffer.
     for(index = 0;index < State->TotalSamples;index++)
@@ -478,18 +498,6 @@ static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Dev
     // Allocate the delay lines.
     if(!AllocLines(frequency, State))
         return AL_FALSE;
-
-    /* HRTF and UHJ will mix to the real output for ambient output. */
-    if(Device->Hrtf.Handle || Device->Uhj_Encoder)
-    {
-        State->ExtraOut = Device->RealOut.Buffer;
-        State->ExtraChannels = Device->RealOut.NumChannels;
-    }
-    else
-    {
-        State->ExtraOut = NULL;
-        State->ExtraChannels = 0;
-    }
 
     // Calculate the modulation filter coefficient.  Notice that the exponent
     // is calculated given the current sample rate.  This ensures that the
@@ -688,7 +696,7 @@ static ALvoid UpdateDecorrelator(ALfloat density, ALuint frequency, ALreverbStat
     {
         length = (DECO_FRACTION * powf(DECO_MULTIPLIER, (ALfloat)index)) *
                  LATE_LINE_LENGTH[0] * (1.0f + (density * LATE_LINE_MULTIPLIER));
-        State->DecoTap[index] = fastf2u(length * frequency) + State->DelayTap[1];
+        State->LateDecoTap[index] = fastf2u(length * frequency) + State->DelayTap[1];
     }
 }
 
@@ -718,7 +726,10 @@ static ALvoid UpdateLateLines(ALfloat xMix, ALfloat density, ALfloat decayTime, 
     length = (LATE_LINE_LENGTH[0] + LATE_LINE_LENGTH[1] +
               LATE_LINE_LENGTH[2] + LATE_LINE_LENGTH[3]) / 4.0f;
     length *= 1.0f + (density * LATE_LINE_MULTIPLIER);
-    State->Late.DensityGain = CalcDensityGain(
+    /* To account for each channel being a discrete input, also multiply by
+     * sqrt(num_channels).
+     */
+    State->Late.DensityGain = 2.0f * CalcDensityGain(
         CalcDecayCoeff(length, decayTime)
     );
 
@@ -783,205 +794,129 @@ static ALvoid UpdateEchoLine(ALfloat echoTime, ALfloat decayTime, ALfloat diffus
     State->Echo.MixCoeff = echoDepth;
 }
 
-// Update the early and late 3D panning gains.
-static ALvoid UpdateMixedPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, ALfloat Gain, ALfloat EarlyGain, ALfloat LateGain, ALreverbState *State)
+/* Creates a transform matrix given a reverb vector. This works by creating a
+ * Z-focus transform, then a rotate transform around X, then Y, to place the
+ * focal point in the direction of the vector, using the vector length as a
+ * focus strength.
+ *
+ * This isn't technically correct since the vector is supposed to define the
+ * aperture and not rotate the perceived soundfield, but in practice it's
+ * probably good enough.
+ */
+static aluMatrixf GetTransformFromVector(const ALfloat *vec)
 {
-    ALfloat DirGains[MAX_OUTPUT_CHANNELS];
-    ALfloat coeffs[MAX_AMBI_COEFFS];
+    aluMatrixf zfocus, xrot, yrot;
+    aluMatrixf tmp1, tmp2;
     ALfloat length;
-    ALuint i;
+    ALfloat sa, a;
 
-    /* With HRTF or UHJ, the normal output provides a panned reverb channel
-     * when a non-0-length vector is specified, while the real stereo output
-     * provides two other "direct" non-panned reverb channels.
+    length = sqrtf(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
+
+    /* Define a Z-focus (X in Ambisonics) transform, given the panning vector
+     * length.
      */
-    memset(State->Early.PanGain, 0, sizeof(State->Early.PanGain));
-    length = sqrtf(ReflectionsPan[0]*ReflectionsPan[0] + ReflectionsPan[1]*ReflectionsPan[1] + ReflectionsPan[2]*ReflectionsPan[2]);
-    if(!(length > FLT_EPSILON))
-    {
-        for(i = 0;i < Device->RealOut.NumChannels;i++)
-            State->Early.PanGain[i&3][Device->Dry.NumChannels+i] = Gain * EarlyGain;
-    }
-    else
-    {
-        /* Note that EAX Reverb's panning vectors are using right-handed
-         * coordinates, rather than OpenAL's left-handed coordinates. Negate Z
-         * to fix this.
-         */
-        ALfloat pan[3] = {
-             ReflectionsPan[0] / length,
-             ReflectionsPan[1] / length,
-            -ReflectionsPan[2] / length,
-        };
-        length = minf(length, 1.0f);
+    sa = sinf(minf(length, 1.0f) * (F_PI/4.0f));
+    aluMatrixfSet(&zfocus,
+                     1.0f/(1.0f+sa),                       0.0f,                       0.0f, (sa/(1.0f+sa))/1.732050808f,
+                               0.0f, sqrtf((1.0f-sa)/(1.0f+sa)),                       0.0f,                        0.0f,
+                               0.0f,                       0.0f, sqrtf((1.0f-sa)/(1.0f+sa)),                        0.0f,
+        (sa/(1.0f+sa))*1.732050808f,                       0.0f,                       0.0f,              1.0f/(1.0f+sa)
+    );
 
-        CalcDirectionCoeffs(pan, 0.0f, coeffs);
-        ComputePanningGains(Device->Dry, coeffs, Gain, DirGains);
-        for(i = 0;i < Device->Dry.NumChannels;i++)
-            State->Early.PanGain[3][i] = DirGains[i] * EarlyGain * length;
-        for(i = 0;i < Device->RealOut.NumChannels;i++)
-            State->Early.PanGain[i&3][Device->Dry.NumChannels+i] = Gain * EarlyGain * (1.0f-length);
-    }
+    /* Define rotation around X (Y in Ambisonics) */
+    a = atan2f(vec[1], sqrtf(vec[0]*vec[0] + vec[2]*vec[2]));
+    aluMatrixfSet(&xrot,
+        1.0f, 0.0f,     0.0f,    0.0f,
+        0.0f, 1.0f,     0.0f,    0.0f,
+        0.0f, 0.0f,  cosf(a), sinf(a),
+        0.0f, 0.0f, -sinf(a), cosf(a)
+    );
 
-    memset(State->Late.PanGain, 0, sizeof(State->Late.PanGain));
-    length = sqrtf(LateReverbPan[0]*LateReverbPan[0] + LateReverbPan[1]*LateReverbPan[1] + LateReverbPan[2]*LateReverbPan[2]);
-    if(!(length > FLT_EPSILON))
-    {
-        for(i = 0;i < Device->RealOut.NumChannels;i++)
-            State->Late.PanGain[i&3][Device->Dry.NumChannels+i] = Gain * LateGain;
-    }
-    else
-    {
-        ALfloat pan[3] = {
-             LateReverbPan[0] / length,
-             LateReverbPan[1] / length,
-            -LateReverbPan[2] / length,
-        };
-        length = minf(length, 1.0f);
+    /* Define rotation around Y (Z in Ambisonics). NOTE: EFX's reverb vectors
+     * use a right-handled coordinate system, compared to the rest of OpenAL
+     * which uses left-handed. This is fixed by negating Z, however it would
+     * need to also be negated to get a proper Ambisonics angle, thus
+     * cancelling it out.
+     */
+    a = atan2f(-vec[0], vec[2]);
+    aluMatrixfSet(&yrot,
+        1.0f,     0.0f, 0.0f,    0.0f,
+        0.0f,  cosf(a), 0.0f, sinf(a),
+        0.0f,     0.0f, 1.0f,    0.0f,
+        0.0f, -sinf(a), 0.0f, cosf(a)
+    );
 
-        CalcDirectionCoeffs(pan, 0.0f, coeffs);
-        ComputePanningGains(Device->Dry, coeffs, Gain, DirGains);
-        for(i = 0;i < Device->Dry.NumChannels;i++)
-            State->Late.PanGain[3][i] = DirGains[i] * LateGain * length;
-        for(i = 0;i < Device->RealOut.NumChannels;i++)
-            State->Late.PanGain[i&3][Device->Dry.NumChannels+i] = Gain * LateGain * (1.0f-length);
-    }
+#define MATRIX_MULT(_res, _m1, _m2) do {                                      \
+    int row, col;                                                             \
+    for(col = 0;col < 4;col++)                                                \
+    {                                                                         \
+        for(row = 0;row < 4;row++)                                            \
+            _res.m[row][col] = _m1.m[row][0]*_m2.m[0][col] + _m1.m[row][1]*_m2.m[1][col] + \
+                               _m1.m[row][2]*_m2.m[2][col] + _m1.m[row][3]*_m2.m[3][col];  \
+    }                                                                         \
+} while(0)
+    /* Define a matrix that first focuses on Z, then rotates around X then Y to
+     * focus the output in the direction of the vector.
+     */
+    MATRIX_MULT(tmp1, xrot, zfocus);
+    MATRIX_MULT(tmp2, yrot, tmp1);
+#undef MATRIX_MULT
+
+    return tmp2;
 }
 
-static ALvoid UpdateDirectPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, ALfloat Gain, ALfloat EarlyGain, ALfloat LateGain, ALreverbState *State)
-{
-    ALfloat AmbientGains[MAX_OUTPUT_CHANNELS];
-    ALfloat DirGains[MAX_OUTPUT_CHANNELS];
-    ALfloat coeffs[MAX_AMBI_COEFFS];
-    ALfloat length;
-    ALuint i;
-
-    /* Apply a boost of about 3dB to better match the expected stereo output volume. */
-    ComputeAmbientGains(Device->Dry, Gain*1.414213562f, AmbientGains);
-
-    memset(State->Early.PanGain, 0, sizeof(State->Early.PanGain));
-    length = sqrtf(ReflectionsPan[0]*ReflectionsPan[0] + ReflectionsPan[1]*ReflectionsPan[1] + ReflectionsPan[2]*ReflectionsPan[2]);
-    if(!(length > FLT_EPSILON))
-    {
-        for(i = 0;i < Device->Dry.NumChannels;i++)
-            State->Early.PanGain[i&3][i] = AmbientGains[i] * EarlyGain;
-    }
-    else
-    {
-        ALfloat pan[3] = {
-             ReflectionsPan[0] / length,
-             ReflectionsPan[1] / length,
-            -ReflectionsPan[2] / length,
-        };
-        length = minf(length, 1.0f);
-
-        CalcDirectionCoeffs(pan, 0.0f, coeffs);
-        ComputePanningGains(Device->Dry, coeffs, Gain, DirGains);
-        for(i = 0;i < Device->Dry.NumChannels;i++)
-            State->Early.PanGain[i&3][i] = lerp(AmbientGains[i], DirGains[i], length) * EarlyGain;
-    }
-
-    memset(State->Late.PanGain, 0, sizeof(State->Late.PanGain));
-    length = sqrtf(LateReverbPan[0]*LateReverbPan[0] + LateReverbPan[1]*LateReverbPan[1] + LateReverbPan[2]*LateReverbPan[2]);
-    if(!(length > FLT_EPSILON))
-    {
-        for(i = 0;i < Device->Dry.NumChannels;i++)
-            State->Late.PanGain[i&3][i] = AmbientGains[i] * LateGain;
-    }
-    else
-    {
-        ALfloat pan[3] = {
-             LateReverbPan[0] / length,
-             LateReverbPan[1] / length,
-            -LateReverbPan[2] / length,
-        };
-        length = minf(length, 1.0f);
-
-        CalcDirectionCoeffs(pan, 0.0f, coeffs);
-        ComputePanningGains(Device->Dry, coeffs, Gain, DirGains);
-        for(i = 0;i < Device->Dry.NumChannels;i++)
-            State->Late.PanGain[i&3][i] = lerp(AmbientGains[i], DirGains[i], length) * LateGain;
-    }
-}
-
+// Update the early and late 3D panning gains.
 static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, ALfloat Gain, ALfloat EarlyGain, ALfloat LateGain, ALreverbState *State)
 {
-    static const ALfloat PanDirs[4][3] = {
-        { -0.707106781f, 0.0f, -0.707106781f }, /* Front left */
-        {  0.707106781f, 0.0f, -0.707106781f }, /* Front right */
-        {  0.707106781f, 0.0f,  0.707106781f }, /* Back right */
-        { -0.707106781f, 0.0f,  0.707106781f }  /* Back left */
-    };
-    ALfloat coeffs[MAX_AMBI_COEFFS];
-    ALfloat gain[4];
-    ALfloat length;
+    /* Converts early reflections A-Format to B-Format (transposed). */
+    static const aluMatrixf EarlyA2B = {{
+        { 0.8660254038f,  0.8660254038f,  0.8660254038f,  0.8660254038f },
+        { 0.8660254038f,  0.8660254038f, -0.8660254038f, -0.8660254038f },
+        { 0.8660254038f, -0.8660254038f,  0.8660254038f, -0.8660254038f },
+        { 0.8660254038f, -0.8660254038f, -0.8660254038f,  0.8660254038f }
+    }};
+    /* Converts late reverb A-Format to B-Format (transposed). */
+    static const aluMatrixf LateA2B = {{
+        { 0.8660254038f, -0.8660254038f,  0.8660254038f,  0.8660254038f },
+        { 0.8660254038f, -0.8660254038f, -0.8660254038f, -0.8660254038f },
+        { 0.8660254038f,  0.8660254038f,  0.8660254038f, -0.8660254038f },
+        { 0.8660254038f,  0.8660254038f, -0.8660254038f,  0.8660254038f }
+/*        { 0.8660254038f,  1.2247448714f,           0.0f,  0.8660254038f },
+        { 0.8660254038f,           0.0f, -1.2247448714f, -0.8660254038f },
+        { 0.8660254038f,           0.0f,  1.2247448714f, -0.8660254038f },
+        { 0.8660254038f, -1.2247448714f,           0.0f,  0.8660254038f }*/
+    }};
+    aluMatrixf transform, rot;
     ALuint i;
 
-    /* sqrt(0.5) would be the gain scaling when the panning vector is 0. This
-     * also equals sqrt(2/4), a nice gain scaling for the four virtual points
-     * producing an "ambient" response.
-     */
-    gain[0] = gain[1] = gain[2] = gain[3] = 0.707106781f;
-    length = sqrtf(ReflectionsPan[0]*ReflectionsPan[0] + ReflectionsPan[1]*ReflectionsPan[1] + ReflectionsPan[2]*ReflectionsPan[2]);
-    if(length > 1.0f)
-    {
-        ALfloat pan[3] = {
-             ReflectionsPan[0] / length,
-             ReflectionsPan[1] / length,
-            -ReflectionsPan[2] / length,
-        };
-        for(i = 0;i < 4;i++)
-        {
-            ALfloat dotp = pan[0]*PanDirs[i][0] + pan[1]*PanDirs[i][1] + pan[2]*PanDirs[i][2];
-            gain[i] = sqrtf(clampf(dotp*0.5f + 0.5f, 0.0f, 1.0f));
-        }
-    }
-    else if(length > FLT_EPSILON)
-    {
-        for(i = 0;i < 4;i++)
-        {
-            ALfloat dotp = ReflectionsPan[0]*PanDirs[i][0] + ReflectionsPan[1]*PanDirs[i][1] +
-                           -ReflectionsPan[2]*PanDirs[i][2];
-            gain[i] = sqrtf(clampf(dotp*0.5f + 0.5f, 0.0f, 1.0f));
-        }
-    }
-    for(i = 0;i < 4;i++)
-    {
-        CalcDirectionCoeffs(PanDirs[i], 0.0f, coeffs);
-        ComputePanningGains(Device->Dry, coeffs, Gain*EarlyGain*gain[i],
-                            State->Early.PanGain[i]);
-    }
+    STATIC_CAST(ALeffectState,State)->OutBuffer = Device->FOAOut.Buffer;
+    STATIC_CAST(ALeffectState,State)->OutChannels = Device->FOAOut.NumChannels;
 
-    gain[0] = gain[1] = gain[2] = gain[3] = 0.707106781f;
-    length = sqrtf(LateReverbPan[0]*LateReverbPan[0] + LateReverbPan[1]*LateReverbPan[1] + LateReverbPan[2]*LateReverbPan[2]);
-    if(length > 1.0f)
-    {
-        ALfloat pan[3] = {
-             LateReverbPan[0] / length,
-             LateReverbPan[1] / length,
-            -LateReverbPan[2] / length,
-        };
-        for(i = 0;i < 4;i++)
-        {
-            ALfloat dotp = pan[0]*PanDirs[i][0] + pan[1]*PanDirs[i][1] + pan[2]*PanDirs[i][2];
-            gain[i] = sqrtf(clampf(dotp*0.5f + 0.5f, 0.0f, 1.0f));
-        }
-    }
-    else if(length > FLT_EPSILON)
-    {
-        for(i = 0;i < 4;i++)
-        {
-            ALfloat dotp = LateReverbPan[0]*PanDirs[i][0] + LateReverbPan[1]*PanDirs[i][1] +
-                           -LateReverbPan[2]*PanDirs[i][2];
-            gain[i] = sqrtf(clampf(dotp*0.5f + 0.5f, 0.0f, 1.0f));
-        }
-    }
-    for(i = 0;i < 4;i++)
-    {
-        CalcDirectionCoeffs(PanDirs[i], 0.0f, coeffs);
-        ComputePanningGains(Device->Dry, coeffs, Gain*LateGain*gain[i],
-                            State->Late.PanGain[i]);
-    }
+    /* Note: Both _m2 and _res are transposed. */
+#define MATRIX_MULT(_res, _m1, _m2) do {                                      \
+    int row, col;                                                             \
+    for(col = 0;col < 4;col++)                                                \
+    {                                                                         \
+        for(row = 0;row < 4;row++)                                            \
+            _res.m[col][row] = _m1.m[row][0]*_m2.m[col][0] + _m1.m[row][1]*_m2.m[col][1] + \
+                               _m1.m[row][2]*_m2.m[col][2] + _m1.m[row][3]*_m2.m[col][3];  \
+    }                                                                         \
+} while(0)
+    /* Create a matrix that first converts A-Format to B-Format, then rotates
+     * the B-Format soundfield according to the panning vector.
+     */
+    rot = GetTransformFromVector(ReflectionsPan);
+    MATRIX_MULT(transform, rot, EarlyA2B);
+    memset(&State->Early.PanGain, 0, sizeof(State->Early.PanGain));
+    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
+        ComputeFirstOrderGains(Device->FOAOut, transform.m[i], Gain*EarlyGain, State->Early.PanGain[i]);
+
+    rot = GetTransformFromVector(LateReverbPan);
+    MATRIX_MULT(transform, rot, LateA2B);
+    memset(&State->Late.PanGain, 0, sizeof(State->Late.PanGain));
+    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
+        ComputeFirstOrderGains(Device->FOAOut, transform.m[i], Gain*LateGain, State->Late.PanGain[i]);
+#undef MATRIX_MULT
 }
 
 static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props)
@@ -990,6 +925,7 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
     ALfloat lfscale, hfscale, hfRatio;
     ALfloat gain, gainlf, gainhf;
     ALfloat cw, x, y;
+    ALuint i;
 
     if(Slot->Params.EffectType == AL_EFFECT_EAXREVERB && !EmulateEAXReverb)
         State->IsEax = AL_TRUE;
@@ -999,12 +935,26 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
     // Calculate the master filters
     hfscale = props->Reverb.HFReference / frequency;
     gainhf = maxf(props->Reverb.GainHF, 0.0001f);
-    ALfilterState_setParams(&State->LpFilter, ALfilterType_HighShelf,
+    ALfilterState_setParams(&State->Filter[0].Lp, ALfilterType_HighShelf,
                             gainhf, hfscale, calc_rcpQ_from_slope(gainhf, 0.75f));
     lfscale = props->Reverb.LFReference / frequency;
     gainlf = maxf(props->Reverb.GainLF, 0.0001f);
-    ALfilterState_setParams(&State->HpFilter, ALfilterType_LowShelf,
+    ALfilterState_setParams(&State->Filter[0].Hp, ALfilterType_LowShelf,
                             gainlf, lfscale, calc_rcpQ_from_slope(gainlf, 0.75f));
+    for(i = 1;i < 4;i++)
+    {
+        State->Filter[i].Lp.a1 = State->Filter[0].Lp.a1;
+        State->Filter[i].Lp.a2 = State->Filter[0].Lp.a2;
+        State->Filter[i].Lp.b0 = State->Filter[0].Lp.b0;
+        State->Filter[i].Lp.b1 = State->Filter[0].Lp.b1;
+        State->Filter[i].Lp.b2 = State->Filter[0].Lp.b2;
+
+        State->Filter[i].Hp.a1 = State->Filter[0].Hp.a1;
+        State->Filter[i].Hp.a2 = State->Filter[0].Hp.a2;
+        State->Filter[i].Hp.b0 = State->Filter[0].Hp.b0;
+        State->Filter[i].Hp.b1 = State->Filter[0].Hp.b1;
+        State->Filter[i].Hp.b2 = State->Filter[0].Hp.b2;
+    }
 
     // Update the modulator line.
     UpdateModulator(props->Reverb.ModulationTime, props->Reverb.ModulationDepth,
@@ -1045,22 +995,10 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
 
     gain = props->Reverb.Gain * Slot->Params.Gain * ReverbBoost;
     // Update early and late 3D panning.
-    if(Device->Hrtf.Handle || Device->Uhj_Encoder)
-        UpdateMixedPanning(Device, props->Reverb.ReflectionsPan,
-                           props->Reverb.LateReverbPan, gain,
-                           props->Reverb.ReflectionsGain,
-                           props->Reverb.LateReverbGain, State);
-    else if(Device->AmbiDecoder || (Device->FmtChans >= DevFmtAmbi1 &&
-                                    Device->FmtChans <= DevFmtAmbi3))
-        Update3DPanning(Device, props->Reverb.ReflectionsPan,
-                        props->Reverb.LateReverbPan, gain,
-                        props->Reverb.ReflectionsGain,
-                        props->Reverb.LateReverbGain, State);
-    else
-        UpdateDirectPanning(Device, props->Reverb.ReflectionsPan,
-                            props->Reverb.LateReverbPan, gain,
-                            props->Reverb.ReflectionsGain,
-                            props->Reverb.LateReverbGain, State);
+    Update3DPanning(Device, props->Reverb.ReflectionsPan,
+                    props->Reverb.LateReverbPan, gain,
+                    props->Reverb.ReflectionsGain,
+                    props->Reverb.LateReverbGain, State);
 }
 
 
@@ -1079,45 +1017,64 @@ static inline ALvoid DelayLineIn(DelayLine *Delay, ALuint offset, ALfloat in)
     Delay->Line[offset&Delay->Mask] = in;
 }
 
-// Given some input samples, this function produces modulation for the late
-// reverb.
-static void EAXModulation(ALreverbState *State, ALuint offset, ALfloat*restrict dst, const ALfloat*restrict src, ALuint todo)
+static inline ALfloat DelayLineInOut(DelayLine *Delay, ALuint offset, ALuint outoffset, ALfloat in)
 {
-    ALfloat sinus, frac, fdelay;
-    ALfloat out0, out1;
-    ALuint delay, i;
+    Delay->Line[offset&Delay->Mask] = in;
+    return Delay->Line[(offset-outoffset)&Delay->Mask];
+}
 
+static void CalcModulationDelays(ALreverbState *State, ALfloat *restrict delays, ALuint todo)
+{
+    ALfloat sinus, range;
+    ALuint index, i;
+
+    index = State->Mod.Index;
+    range = State->Mod.Filter;
     for(i = 0;i < todo;i++)
     {
         /* Calculate the sinus rythm (dependent on modulation time and the
          * sampling rate).  The center of the sinus is moved to reduce the
          * delay of the effect when the time or depth are low.
          */
-        sinus = 1.0f - cosf(F_TAU * State->Mod.Index / State->Mod.Range);
+        sinus = 1.0f - cosf(F_TAU * index / State->Mod.Range);
 
         /* Step the modulation index forward, keeping it bound to its range. */
-        State->Mod.Index = (State->Mod.Index + 1) % State->Mod.Range;
+        index = (index+1) % State->Mod.Range;
 
         /* The depth determines the range over which to read the input samples
          * from, so it must be filtered to reduce the distortion caused by even
          * small parameter changes.
          */
-        State->Mod.Filter = lerp(State->Mod.Filter, State->Mod.Depth,
-                                 State->Mod.Coeff);
+        range = lerp(range, State->Mod.Depth, State->Mod.Coeff);
 
-        /* Calculate the read offset and fraction between it and the next
+        /* Calculate the read offset with fraction. */
+        delays[i] = range*sinus;
+    }
+    State->Mod.Index = index;
+    State->Mod.Filter = range;
+}
+
+// Given some input samples, this function produces modulation for the late
+// reverb.
+static void EAXModulation(DelayLine *ModDelay, ALuint offset, const ALfloat *restrict delays, ALfloat*restrict dst, const ALfloat*restrict src, ALuint todo)
+{
+    ALfloat frac, fdelay;
+    ALfloat out0, out1;
+    ALuint delay, i;
+
+    for(i = 0;i < todo;i++)
+    {
+        /* Separate the integer offset and fraction between it and the next
          * sample.
          */
-        frac = modff(State->Mod.Filter*sinus, &fdelay);
+        frac = modff(delays[i], &fdelay);
         delay = fastf2u(fdelay);
 
-        /* Add the incoming sample to the delay line first, so a 0 delay gets
-         * the incoming sample.
+        /* Add the incoming sample to the delay line, and get the two samples
+         * crossed by the offset delay.
          */
-        DelayLineIn(&State->Mod.Delay, offset, src[i]);
-        /* Get the two samples crossed by the offset delay */
-        out0 = DelayLineOut(&State->Mod.Delay, offset - delay);
-        out1 = DelayLineOut(&State->Mod.Delay, offset - delay - 1);
+        out0 = DelayLineInOut(ModDelay, offset, delay, src[i]);
+        out1 = DelayLineOut(ModDelay, offset - delay - 1);
         offset++;
 
         /* The output is obtained by linearly interpolating the two samples
@@ -1127,9 +1084,10 @@ static void EAXModulation(ALreverbState *State, ALuint offset, ALfloat*restrict 
     }
 }
 
-// Given some input sample, this function produces four-channel outputs for the
-// early reflections.
-static inline ALvoid EarlyReflection(ALreverbState *State, ALuint todo, ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
+/* Given some input samples from the main delay line, this function produces
+ * four-channel outputs for the early reflections.
+ */
+static ALvoid EarlyReflection(ALreverbState *State, ALuint todo, ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
 {
     ALfloat d[4], v, f[4];
     ALuint i;
@@ -1138,11 +1096,11 @@ static inline ALvoid EarlyReflection(ALreverbState *State, ALuint todo, ALfloat 
     {
         ALuint offset = State->Offset+i;
 
-        // Obtain the decayed results of each early delay line.
-        d[0] = DelayLineOut(&State->Early.Delay[0], offset-State->Early.Offset[0]) * State->Early.Coeff[0];
-        d[1] = DelayLineOut(&State->Early.Delay[1], offset-State->Early.Offset[1]) * State->Early.Coeff[1];
-        d[2] = DelayLineOut(&State->Early.Delay[2], offset-State->Early.Offset[2]) * State->Early.Coeff[2];
-        d[3] = DelayLineOut(&State->Early.Delay[3], offset-State->Early.Offset[3]) * State->Early.Coeff[3];
+        /* Obtain the first reflection samples from the main delay line. */
+        f[0] = DelayLineOut(&State->Delay, (offset-State->DelayTap[0])*4 + 0);
+        f[1] = DelayLineOut(&State->Delay, (offset-State->DelayTap[0])*4 + 1);
+        f[2] = DelayLineOut(&State->Delay, (offset-State->DelayTap[0])*4 + 2);
+        f[3] = DelayLineOut(&State->Delay, (offset-State->DelayTap[0])*4 + 3);
 
         /* The following uses a lossless scattering junction from waveguide
          * theory.  It actually amounts to a householder mixing matrix, which
@@ -1155,29 +1113,27 @@ static inline ALvoid EarlyReflection(ALreverbState *State, ALuint todo, ALfloat 
          *         ---
          *         i=1
          */
-        v = (d[0] + d[1] + d[2] + d[3]) * 0.5f;
-        // The junction is loaded with the input here.
-        v += DelayLineOut(&State->Delay, offset-State->DelayTap[0]);
+        v = (f[0] + f[1] + f[2] + f[3]) * 0.5f;
 
-        // Calculate the feed values for the delay lines.
-        f[0] = v - d[0];
-        f[1] = v - d[1];
-        f[2] = v - d[2];
-        f[3] = v - d[3];
+        /* Calculate the feed values for the early delay lines. */
+        d[0] = v - f[0];
+        d[1] = v - f[1];
+        d[2] = v - f[2];
+        d[3] = v - f[3];
 
-        // Re-feed the delay lines.
-        DelayLineIn(&State->Early.Delay[0], offset, f[0]);
-        DelayLineIn(&State->Early.Delay[1], offset, f[1]);
-        DelayLineIn(&State->Early.Delay[2], offset, f[2]);
-        DelayLineIn(&State->Early.Delay[3], offset, f[3]);
+        /* Feed the early delay lines, and load the delayed results. */
+        d[0] = DelayLineInOut(&State->Early.Delay[0], offset, State->Early.Offset[0], d[0]);
+        d[1] = DelayLineInOut(&State->Early.Delay[1], offset, State->Early.Offset[1], d[1]);
+        d[2] = DelayLineInOut(&State->Early.Delay[2], offset, State->Early.Offset[2], d[2]);
+        d[3] = DelayLineInOut(&State->Early.Delay[3], offset, State->Early.Offset[3], d[3]);
 
-        /* Output the results of the junction for all four channels with a
-         * constant attenuation of 0.5.
+        /* Output the initial reflection taps and the results of the delayed
+         * and decayed junction for all four channels.
          */
-        out[0][i] = f[0] * 0.5f;
-        out[1][i] = f[1] * 0.5f;
-        out[2][i] = f[2] * 0.5f;
-        out[3][i] = f[3] * 0.5f;
+        out[0][i] = f[0] + d[0]*State->Early.Coeff[0];
+        out[1][i] = f[1] + d[1]*State->Early.Coeff[1];
+        out[2][i] = f[2] + d[2]*State->Early.Coeff[2];
+        out[3][i] = f[3] + d[3]*State->Early.Coeff[3];
     }
 }
 
@@ -1215,7 +1171,7 @@ static inline ALfloat LateLowPassInOut(ALreverbState *State, ALuint index, ALflo
 
 // Given four decorrelated input samples, this function produces four-channel
 // output for the late reverb.
-static inline ALvoid LateReverb(ALreverbState *State, ALuint todo, ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
+static ALvoid LateReverb(ALreverbState *State, ALuint todo, ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
 {
     ALfloat d[4], f[4];
     ALuint offset;
@@ -1230,10 +1186,10 @@ static inline ALvoid LateReverb(ALreverbState *State, ALuint todo, ALfloat (*res
         for(i = 0;i < tmp_todo;i++)
         {
             /* Obtain four decorrelated input samples. */
-            f[0] = DelayLineOut(&State->Delay, offset-State->DelayTap[1]) * State->Late.DensityGain;
-            f[1] = DelayLineOut(&State->Delay, offset-State->DecoTap[0]) * State->Late.DensityGain;
-            f[2] = DelayLineOut(&State->Delay, offset-State->DecoTap[1]) * State->Late.DensityGain;
-            f[3] = DelayLineOut(&State->Delay, offset-State->DecoTap[2]) * State->Late.DensityGain;
+            f[0] = DelayLineOut(&State->Delay, (offset-State->DelayTap[1])*4 + 0) * State->Late.DensityGain;
+            f[1] = DelayLineOut(&State->Delay, (offset-State->LateDecoTap[0])*4 + 1) * State->Late.DensityGain;
+            f[2] = DelayLineOut(&State->Delay, (offset-State->LateDecoTap[1])*4 + 2) * State->Late.DensityGain;
+            f[3] = DelayLineOut(&State->Delay, (offset-State->LateDecoTap[2])*4 + 3) * State->Late.DensityGain;
 
             /* Add the decayed results of the cyclical delay lines, then pass
              * the results through the low-pass filters.
@@ -1243,13 +1199,13 @@ static inline ALvoid LateReverb(ALreverbState *State, ALuint todo, ALfloat (*res
             f[2] += DelayLineOut(&State->Late.Delay[2], offset-State->Late.Offset[2]) * State->Late.Coeff[2];
             f[3] += DelayLineOut(&State->Late.Delay[3], offset-State->Late.Offset[3]) * State->Late.Coeff[3];
 
-            /* This is where the feed-back cycles from line 0 to 1 to 3 to 2
+            /* This is where the feed-back cycles from line 0 to 3 to 1 to 2
              * and back to 0.
              */
             d[0] = LateLowPassInOut(State, 2, f[2]);
-            d[1] = LateLowPassInOut(State, 0, f[0]);
-            d[2] = LateLowPassInOut(State, 3, f[3]);
-            d[3] = LateLowPassInOut(State, 1, f[1]);
+            d[1] = LateLowPassInOut(State, 3, f[3]);
+            d[2] = LateLowPassInOut(State, 1, f[1]);
+            d[3] = LateLowPassInOut(State, 0, f[0]);
 
             /* To help increase diffusion, run each line through an all-pass
              * filter. When there is no diffusion, the shortest all-pass filter
@@ -1322,57 +1278,58 @@ static inline ALvoid LateReverb(ALreverbState *State, ALuint todo, ALfloat (*res
 
 // Given an input sample, this function mixes echo into the four-channel late
 // reverb.
-static inline ALvoid EAXEcho(ALreverbState *State, ALuint todo, ALfloat (*restrict late)[MAX_UPDATE_SAMPLES])
+static ALvoid EAXEcho(ALreverbState *State, ALuint todo, ALfloat (*restrict late)[MAX_UPDATE_SAMPLES])
 {
-    ALfloat out[MAX_UPDATE_SAMPLES];
     ALfloat feed;
     ALuint offset;
-    ALuint i;
+    ALuint c, i;
 
-    offset = State->Offset;
-    for(i = 0;i < todo;i++)
+    for(c = 0;c < 4;c++)
     {
-        // Get the latest attenuated echo sample for output.
-        feed = DelayLineOut(&State->Echo.Delay, offset-State->Echo.Offset) *
-               State->Echo.Coeff;
+        offset = State->Offset;
+        for(i = 0;i < todo;i++)
+        {
+            // Get the latest attenuated echo sample for output.
+            feed = DelayLineOut(&State->Echo.Delay[c].Feedback, offset-State->Echo.Offset) *
+                   State->Echo.Coeff;
 
-        // Write the output.
-        out[i] = State->Echo.MixCoeff * feed;
+            // Write the output.
+            late[c][i] += State->Echo.MixCoeff * feed;
 
-        // Mix the energy-attenuated input with the output and pass it through
-        // the echo low-pass filter.
-        feed += DelayLineOut(&State->Delay, offset-State->DelayTap[1]) *
-                State->Echo.DensityGain;
-        feed = lerp(feed, State->Echo.LpSample, State->Echo.LpCoeff);
-        State->Echo.LpSample = feed;
+            // Mix the energy-attenuated input with the output and pass it through
+            // the echo low-pass filter.
+            feed += DelayLineOut(&State->Delay, (offset-State->DelayTap[1])*4 + c) *
+                    State->Echo.DensityGain;
+            feed = lerp(feed, State->Echo.LpSample[c], State->Echo.LpCoeff);
+            State->Echo.LpSample[c] = feed;
 
-        // Then the echo all-pass filter.
-        feed = AllpassInOut(&State->Echo.ApDelay, offset-State->Echo.ApOffset,
-                            offset, feed, State->Echo.ApFeedCoeff,
-                            State->Echo.ApCoeff);
+            // Then the echo all-pass filter.
+            feed = AllpassInOut(&State->Echo.Delay[c].Ap, offset-State->Echo.ApOffset,
+                                offset, feed, State->Echo.ApFeedCoeff,
+                                State->Echo.ApCoeff);
 
-        // Feed the delay with the mixed and filtered sample.
-        DelayLineIn(&State->Echo.Delay, offset, feed);
-        offset++;
+            // Feed the delay with the mixed and filtered sample.
+            DelayLineIn(&State->Echo.Delay[c].Feedback, offset, feed);
+            offset++;
+        }
     }
-
-    // Mix the output into the late reverb channels.
-    for(i = 0;i < todo;i++) late[0][i] += out[i];
-    for(i = 0;i < todo;i++) late[1][i] += out[i];
-    for(i = 0;i < todo;i++) late[2][i] += out[i];
-    for(i = 0;i < todo;i++) late[3][i] += out[i];
 }
 
 // Perform the non-EAX reverb pass on a given input sample, resulting in
 // four-channel output.
-static inline ALvoid VerbPass(ALreverbState *State, ALuint todo, const ALfloat *input, ALfloat (*restrict early)[MAX_UPDATE_SAMPLES], ALfloat (*restrict late)[MAX_UPDATE_SAMPLES])
+static ALvoid VerbPass(ALreverbState *State, ALuint todo, ALfloat (*restrict input)[MAX_UPDATE_SAMPLES], ALfloat (*restrict early)[MAX_UPDATE_SAMPLES], ALfloat (*restrict late)[MAX_UPDATE_SAMPLES])
 {
-    ALuint i;
+    ALuint i, c;
 
-    // Low-pass filter the incoming samples (use the early buffer as temp storage).
-    ALfilterState_process(&State->LpFilter, &early[0][0], input, todo);
-    for(i = 0;i < todo;i++)
-        DelayLineIn(&State->Delay, State->Offset+i, early[0][i]);
+    for(c = 0;c < 4;c++)
+    {
+        /* Low-pass filter the incoming samples (use the early buffer as temp
+         * storage).
+         */
+        ALfilterState_process(&State->Filter[c].Lp, &early[0][0], input[c], todo);
+        for(i = 0;i < todo;i++)
+            DelayLineIn(&State->Delay, (State->Offset+i)*4 + c, early[0][i]);
+    }
 
     // Calculate the early reflection from the first delay tap.
     EarlyReflection(State, todo, early);
@@ -1386,19 +1343,27 @@ static inline ALvoid VerbPass(ALreverbState *State, ALuint todo, const ALfloat *
 
 // Perform the EAX reverb pass on a given input sample, resulting in four-
 // channel output.
-static inline ALvoid EAXVerbPass(ALreverbState *State, ALuint todo, const ALfloat *input, ALfloat (*restrict early)[MAX_UPDATE_SAMPLES], ALfloat (*restrict late)[MAX_UPDATE_SAMPLES])
+static ALvoid EAXVerbPass(ALreverbState *State, ALuint todo, ALfloat (*restrict input)[MAX_UPDATE_SAMPLES], ALfloat (*restrict early)[MAX_UPDATE_SAMPLES], ALfloat (*restrict late)[MAX_UPDATE_SAMPLES])
 {
-    ALuint i;
+    ALuint i, c;
 
-    /* Perform any modulation on the input (use the early buffer as temp storage). */
-    EAXModulation(State, State->Offset, &early[0][0], input, todo);
-    /* Band-pass the incoming samples */
-    ALfilterState_process(&State->LpFilter, &early[1][0], &early[0][0], todo);
-    ALfilterState_process(&State->HpFilter, &early[2][0], &early[1][0], todo);
+    /* Perform any modulation on the input (use the early and late buffers as
+     * temp storage).
+     */
+    CalcModulationDelays(State, &late[0][0], todo);
+    for(c = 0;c < 4;c++)
+    {
+        EAXModulation(&State->Mod.Delay[c], State->Offset, &late[0][0],
+                      &early[0][0], input[c], todo);
 
-    // Feed the initial delay line.
-    for(i = 0;i < todo;i++)
-        DelayLineIn(&State->Delay, State->Offset+i, early[2][i]);
+        /* Band-pass the incoming samples */
+        ALfilterState_process(&State->Filter[c].Lp, &early[1][0], &early[0][0], todo);
+        ALfilterState_process(&State->Filter[c].Hp, &early[2][0], &early[1][0], todo);
+
+        /* Feed the initial delay line. */
+        for(i = 0;i < todo;i++)
+            DelayLineIn(&State->Delay, (State->Offset+i)*4 + c, early[2][i]);
+    }
 
     // Calculate the early reflection from the first delay tap.
     EarlyReflection(State, todo, early);
@@ -1441,11 +1406,18 @@ static void DoMix(const ALfloat *restrict src, ALfloat (*dst)[BUFFERSIZE], ALuin
         current_gains[c] = gains[c].Current;
 }
 
-static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
+static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
+    static const aluMatrixf B2A = {{
+        { 0.288675134595f,  0.288675134595f,  0.288675134595f,  0.288675134595f },
+        { 0.288675134595f,  0.288675134595f, -0.288675134595f, -0.288675134595f },
+        { 0.288675134595f, -0.288675134595f,  0.288675134595f, -0.288675134595f },
+        { 0.288675134595f, -0.288675134595f, -0.288675134595f,  0.288675134595f }
+    }};
+    ALfloat (*restrict afmt)[MAX_UPDATE_SAMPLES] = State->AFormatSamples;
     ALfloat (*restrict early)[MAX_UPDATE_SAMPLES] = State->EarlySamples;
     ALfloat (*restrict late)[MAX_UPDATE_SAMPLES] = State->ReverbSamples;
-    ALuint base, c;
+    ALuint base, c, c2, i;
 
     /* Process reverb for these samples. */
     for(base = 0;base < SamplesToDo;)
@@ -1453,42 +1425,53 @@ static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint Samples
         const ALfloat delta = 1.0f / (ALfloat)(SamplesToDo-base);
         ALuint todo = minu(SamplesToDo-base, MAX_UPDATE_SAMPLES);
 
-        VerbPass(State, todo, &SamplesIn[base], early, late);
+        /* Convert B-Foramt to A-Format for processing (could use the row
+         * mixers).
+         */
+        memset(afmt, 0, sizeof(*afmt)*4);
+        for(c = 0;c < 4;c++)
+        {
+            for(c2 = 0;c2 < MAX_EFFECT_CHANNELS;c2++)
+            {
+                for(i = 0;i < todo;i++)
+                    afmt[c][i] += SamplesIn[c2][base+i] * B2A.m[c][c2];
+            }
+        }
 
+        VerbPass(State, todo, afmt, early, late);
+
+        /* Mix the A-Format results to output, implicitly converting back to
+         * B-Format.
+         */
         for(c = 0;c < 4;c++)
         {
             DoMix(early[c], SamplesOut, NumChannels, State->Early.PanGain[c],
                 State->Early.CurrentGain[c], delta, base, SamplesToDo-base, todo
             );
-            if(State->ExtraChannels > 0)
-                DoMix(early[c], State->ExtraOut, State->ExtraChannels,
-                    State->Early.PanGain[c]+NumChannels,
-                    State->Early.CurrentGain[c]+NumChannels, delta, base,
-                    SamplesToDo-base, todo
-                );
         }
         for(c = 0;c < 4;c++)
         {
             DoMix(late[c], SamplesOut, NumChannels, State->Late.PanGain[c],
                 State->Late.CurrentGain[c], delta, base, SamplesToDo, todo
             );
-            if(State->ExtraChannels > 0)
-                DoMix(late[c], State->ExtraOut, State->ExtraChannels,
-                    State->Late.PanGain[c]+NumChannels,
-                    State->Late.CurrentGain[c]+NumChannels, delta, base,
-                    SamplesToDo-base, todo
-                );
         }
 
         base += todo;
     }
 }
 
-static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo, const ALfloat *restrict SamplesIn, ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
+static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
+    static const aluMatrixf B2A = {{
+        { 0.288675134595f,  0.288675134595f,  0.288675134595f,  0.288675134595f },
+        { 0.288675134595f,  0.288675134595f, -0.288675134595f, -0.288675134595f },
+        { 0.288675134595f, -0.288675134595f,  0.288675134595f, -0.288675134595f },
+        { 0.288675134595f, -0.288675134595f, -0.288675134595f,  0.288675134595f }
+    }};
+    ALfloat (*restrict afmt)[MAX_UPDATE_SAMPLES] = State->AFormatSamples;
     ALfloat (*restrict early)[MAX_UPDATE_SAMPLES] = State->EarlySamples;
     ALfloat (*restrict late)[MAX_UPDATE_SAMPLES] = State->ReverbSamples;
-    ALuint base, c;
+    ALuint base, c, c2, i;
 
     /* Process reverb for these samples. */
     for(base = 0;base < SamplesToDo;)
@@ -1496,31 +1479,29 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo,
         const ALfloat delta = 1.0f / (ALfloat)(SamplesToDo-base);
         ALuint todo = minu(SamplesToDo-base, MAX_UPDATE_SAMPLES);
 
-        EAXVerbPass(State, todo, &SamplesIn[base], early, late);
+        memset(afmt, 0, 4*MAX_UPDATE_SAMPLES*sizeof(float));
+        for(c = 0;c < 4;c++)
+        {
+            for(c2 = 0;c2 < MAX_EFFECT_CHANNELS;c2++)
+            {
+                for(i = 0;i < todo;i++)
+                    afmt[c][i] += SamplesIn[c2][base+i] * B2A.m[c][c2];
+            }
+        }
+
+        EAXVerbPass(State, todo, afmt, early, late);
 
         for(c = 0;c < 4;c++)
         {
             DoMix(early[c], SamplesOut, NumChannels, State->Early.PanGain[c],
                 State->Early.CurrentGain[c], delta, base, SamplesToDo-base, todo
             );
-            if(State->ExtraChannels > 0)
-                DoMix(early[c], State->ExtraOut, State->ExtraChannels,
-                    State->Early.PanGain[c]+NumChannels,
-                    State->Early.CurrentGain[c]+NumChannels, delta, base,
-                    SamplesToDo-base, todo
-                );
         }
         for(c = 0;c < 4;c++)
         {
             DoMix(late[c], SamplesOut, NumChannels, State->Late.PanGain[c],
                 State->Late.CurrentGain[c], delta, base, SamplesToDo, todo
             );
-            if(State->ExtraChannels > 0)
-                DoMix(late[c], State->ExtraOut, State->ExtraChannels,
-                    State->Late.PanGain[c]+NumChannels,
-                    State->Late.CurrentGain[c]+NumChannels, delta, base,
-                    SamplesToDo-base, todo
-                );
         }
 
         base += todo;
@@ -1530,9 +1511,9 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo,
 static ALvoid ALreverbState_process(ALreverbState *State, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
     if(State->IsEax)
-        ALreverbState_processEax(State, SamplesToDo, SamplesIn[0], SamplesOut, NumChannels);
+        ALreverbState_processEax(State, SamplesToDo, SamplesIn, SamplesOut, NumChannels);
     else
-        ALreverbState_processStandard(State, SamplesToDo, SamplesIn[0], SamplesOut, NumChannels);
+        ALreverbState_processStandard(State, SamplesToDo, SamplesIn, SamplesOut, NumChannels);
 }
 
 

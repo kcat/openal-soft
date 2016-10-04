@@ -39,11 +39,13 @@
 
 
 static MixerFunc MixSamples = Mix_C;
+static RowMixerFunc MixRowSamples = MixRow_C;
 
 static alonce_flag mixfunc_inited = AL_ONCE_FLAG_INIT;
 static void init_mixfunc(void)
 {
     MixSamples = SelectMixer();
+    MixRowSamples = SelectRowMixer();
 }
 
 
@@ -1417,7 +1419,7 @@ static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint Samples
     ALfloat (*restrict afmt)[MAX_UPDATE_SAMPLES] = State->AFormatSamples;
     ALfloat (*restrict early)[MAX_UPDATE_SAMPLES] = State->EarlySamples;
     ALfloat (*restrict late)[MAX_UPDATE_SAMPLES] = State->ReverbSamples;
-    ALuint base, c, c2, i;
+    ALuint base, c;
 
     /* Process reverb for these samples. */
     for(base = 0;base < SamplesToDo;)
@@ -1430,13 +1432,9 @@ static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint Samples
          */
         memset(afmt, 0, sizeof(*afmt)*4);
         for(c = 0;c < 4;c++)
-        {
-            for(c2 = 0;c2 < MAX_EFFECT_CHANNELS;c2++)
-            {
-                for(i = 0;i < todo;i++)
-                    afmt[c][i] += SamplesIn[c2][base+i] * B2A.m[c][c2];
-            }
-        }
+            MixRowSamples(afmt[c], B2A.m[c],
+                SamplesIn, MAX_EFFECT_CHANNELS, base, todo
+            );
 
         VerbPass(State, todo, afmt, early, late);
 
@@ -1471,7 +1469,7 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo,
     ALfloat (*restrict afmt)[MAX_UPDATE_SAMPLES] = State->AFormatSamples;
     ALfloat (*restrict early)[MAX_UPDATE_SAMPLES] = State->EarlySamples;
     ALfloat (*restrict late)[MAX_UPDATE_SAMPLES] = State->ReverbSamples;
-    ALuint base, c, c2, i;
+    ALuint base, c;
 
     /* Process reverb for these samples. */
     for(base = 0;base < SamplesToDo;)
@@ -1481,13 +1479,9 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo,
 
         memset(afmt, 0, 4*MAX_UPDATE_SAMPLES*sizeof(float));
         for(c = 0;c < 4;c++)
-        {
-            for(c2 = 0;c2 < MAX_EFFECT_CHANNELS;c2++)
-            {
-                for(i = 0;i < todo;i++)
-                    afmt[c][i] += SamplesIn[c2][base+i] * B2A.m[c][c2];
-            }
-        }
+            MixRowSamples(afmt[c], B2A.m[c],
+                SamplesIn, MAX_EFFECT_CHANNELS, base, todo
+            );
 
         EAXVerbPass(State, todo, afmt, early, late);
 

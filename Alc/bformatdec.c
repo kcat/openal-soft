@@ -161,19 +161,6 @@ static const ALfloat Ambi3DDecoder[8][FB_Max][MAX_AMBI_COEFFS] = {
 static ALfloat Ambi3DEncoder[8][MAX_AMBI_COEFFS];
 
 
-static inline RowMixerFunc SelectRowMixer(void)
-{
-#ifdef HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
-        return MixRow_SSE;
-#endif
-#ifdef HAVE_NEON
-    if((CPUCapFlags&CPU_CAP_NEON))
-        return MixRow_Neon;
-#endif
-    return MixRow_C;
-}
-
 static RowMixerFunc MixMatrixRow = MixRow_C;
 
 
@@ -495,7 +482,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
 }
 
 
-void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint OutChannels, ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint SamplesToDo)
+void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint OutChannels, const ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint SamplesToDo)
 {
     ALuint chan, i;
 
@@ -512,10 +499,12 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
 
             memset(dec->ChannelMix, 0, SamplesToDo*sizeof(ALfloat));
             MixMatrixRow(dec->ChannelMix, dec->Matrix.Dual[chan][FB_HighFreq],
-                dec->SamplesHF, dec->NumChannels, SamplesToDo
+                SAFE_CONST(ALfloatBUFFERSIZE*,dec->SamplesHF), dec->NumChannels, 0,
+                SamplesToDo
             );
             MixMatrixRow(dec->ChannelMix, dec->Matrix.Dual[chan][FB_LowFreq],
-                dec->SamplesLF, dec->NumChannels, SamplesToDo
+                SAFE_CONST(ALfloatBUFFERSIZE*,dec->SamplesLF), dec->NumChannels, 0,
+                SamplesToDo
             );
 
             if(dec->Delay[chan].Length > 0)
@@ -553,7 +542,7 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
 
             memset(dec->ChannelMix, 0, SamplesToDo*sizeof(ALfloat));
             MixMatrixRow(dec->ChannelMix, dec->Matrix.Single[chan], InSamples,
-                         dec->NumChannels, SamplesToDo);
+                         dec->NumChannels, 0, SamplesToDo);
 
             if(dec->Delay[chan].Length > 0)
             {
@@ -584,7 +573,7 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
 }
 
 
-void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint InChannels, ALuint SamplesToDo)
+void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint InChannels, ALuint SamplesToDo)
 {
     ALuint i, j;
 
@@ -608,7 +597,9 @@ void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[B
         /* Now write each band to the output. */
         for(j = 0;j < dec->NumChannels;j++)
             MixMatrixRow(OutBuffer[j], dec->UpSampler.Gains[i][j],
-                         dec->Samples, FB_Max, SamplesToDo);
+                SAFE_CONST(ALfloatBUFFERSIZE*,dec->Samples), FB_Max, 0,
+                SamplesToDo
+            );
     }
 }
 
@@ -659,7 +650,7 @@ void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device)
     }
 }
 
-void ambiup_process(struct AmbiUpsampler *ambiup, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint OutChannels, ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint SamplesToDo)
+void ambiup_process(struct AmbiUpsampler *ambiup, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint OutChannels, const ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint SamplesToDo)
 {
     ALuint i, j;
 
@@ -672,6 +663,8 @@ void ambiup_process(struct AmbiUpsampler *ambiup, ALfloat (*restrict OutBuffer)[
 
         for(j = 0;j < OutChannels;j++)
             MixMatrixRow(OutBuffer[j], ambiup->Gains[i][j],
-                         ambiup->Samples, FB_Max, SamplesToDo);
+                SAFE_CONST(ALfloatBUFFERSIZE*,ambiup->Samples), FB_Max, 0,
+                SamplesToDo
+            );
     }
 }

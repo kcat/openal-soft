@@ -1489,10 +1489,9 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             slot = slotroot;
             while(slot)
             {
-                const ALeffectslot *cslot = slot;
-                ALeffectState *state = cslot->Params.EffectState;
-                V(state,process)(SamplesToDo, cslot->WetBuffer, state->OutBuffer,
-                                 state->OutChannels);
+                ALeffectState *state = slot->Params.EffectState;
+                V(state,process)(SamplesToDo, SAFE_CONST(ALfloatBUFFERSIZE*,slot->WetBuffer),
+                                 state->OutBuffer, state->OutChannels);
                 slot = ATOMIC_LOAD(&slot->next, almemory_order_relaxed);
             }
 
@@ -1540,19 +1539,19 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         {
             if(device->Dry.Buffer != device->FOAOut.Buffer)
                 bformatdec_upSample(device->AmbiDecoder,
-                    device->Dry.Buffer, device->FOAOut.Buffer,
+                    device->Dry.Buffer, SAFE_CONST(ALfloatBUFFERSIZE*,device->FOAOut.Buffer),
                     device->FOAOut.NumChannels, SamplesToDo
                 );
             bformatdec_process(device->AmbiDecoder,
                 device->RealOut.Buffer, device->RealOut.NumChannels,
-                device->Dry.Buffer, SamplesToDo
+                SAFE_CONST(ALfloatBUFFERSIZE*,device->Dry.Buffer), SamplesToDo
             );
         }
         else if(device->AmbiUp)
         {
             ambiup_process(device->AmbiUp,
                 device->RealOut.Buffer, device->RealOut.NumChannels,
-                device->FOAOut.Buffer, SamplesToDo
+                SAFE_CONST(ALfloatBUFFERSIZE*,device->FOAOut.Buffer), SamplesToDo
             );
         }
         else if(device->Uhj_Encoder)

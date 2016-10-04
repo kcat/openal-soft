@@ -31,8 +31,9 @@ void MixDirectHrtf_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, ALu
                      ALuint BufferSize);
 void Mix_C(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
            struct MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize);
-void MixRow_C(ALfloat *OutBuffer, const ALfloat *Gains, ALfloat (*restrict data)[BUFFERSIZE],
-              ALuint InChans, ALuint BufferSize);
+void MixRow_C(ALfloat *OutBuffer, const ALfloat *Gains,
+              const ALfloat (*restrict data)[BUFFERSIZE], ALuint InChans,
+              ALuint InPos, ALuint BufferSize);
 
 /* SSE mixers */
 void MixHrtf_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, ALuint ridx,
@@ -45,8 +46,9 @@ void MixDirectHrtf_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, A
                        ALuint BufferSize);
 void Mix_SSE(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
              struct MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize);
-void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, ALfloat (*restrict data)[BUFFERSIZE],
-                ALuint InChans, ALuint BufferSize);
+void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains,
+                const ALfloat (*restrict data)[BUFFERSIZE], ALuint InChans,
+                ALuint InPos, ALuint BufferSize);
 
 /* SSE resamplers */
 inline void InitiatePositionArrays(ALuint frac, ALuint increment, ALuint *frac_arr, ALuint *pos_arr, ALuint size)
@@ -92,7 +94,8 @@ void MixDirectHrtf_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, 
                         ALuint BufferSize);
 void Mix_Neon(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
               struct MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize);
-void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Gains, ALfloat (*restrict data)[BUFFERSIZE],
-                 ALuint InChans, ALuint BufferSize);
+void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Gains,
+                 const ALfloat (*restrict data)[BUFFERSIZE], ALuint InChans,
+                 ALuint InPos, ALuint BufferSize);
 
 #endif /* MIXER_DEFS_H */

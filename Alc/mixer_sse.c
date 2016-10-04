@@ -262,7 +262,7 @@ void Mix_SSE(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)
     }
 }
 
-void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, ALfloat (*restrict data)[BUFFERSIZE], ALuint InChans, ALuint BufferSize)
+void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restrict data)[BUFFERSIZE], ALuint InChans, ALuint InPos, ALuint BufferSize)
 {
     __m128 gain4;
     ALuint c;
@@ -277,12 +277,12 @@ void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, ALfloat (*restrict dat
         gain4 = _mm_set1_ps(gain);
         for(;BufferSize-pos > 3;pos += 4)
         {
-            const __m128 val4 = _mm_load_ps(&data[c][pos]);
+            const __m128 val4 = _mm_load_ps(&data[c][InPos+pos]);
             __m128 dry4 = _mm_load_ps(&OutBuffer[pos]);
             dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain4));
             _mm_store_ps(&OutBuffer[pos], dry4);
         }
         for(;pos < BufferSize;pos++)
-            OutBuffer[pos] += data[c][pos]*gain;
+            OutBuffer[pos] += data[c][InPos+pos]*gain;
     }
 }

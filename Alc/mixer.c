@@ -79,6 +79,19 @@ MixerFunc SelectMixer(void)
     return Mix_C;
 }
 
+RowMixerFunc SelectRowMixer(void)
+{
+#ifdef HAVE_SSE
+    if((CPUCapFlags&CPU_CAP_SSE))
+        return MixRow_SSE;
+#endif
+#ifdef HAVE_NEON
+    if((CPUCapFlags&CPU_CAP_NEON))
+        return MixRow_Neon;
+#endif
+    return MixRow_C;
+}
+
 static inline HrtfMixerFunc SelectHrtfMixer(void)
 {
 #ifdef HAVE_SSE

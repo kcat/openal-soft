@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <memory.h>
 
+#include <wtypes.h>
 #include <mmdeviceapi.h>
 #include <audioclient.h>
 #include <cguid.h>

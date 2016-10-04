@@ -242,6 +242,24 @@ void convertCartesianToSpherical(std::vector< double > &values)
 	}
 }
 
+/**
+OpenAL Soft uses a clockwise azimuth convention while SOFA uses
+counter-clockwise.  Thus, we invert the azimuth of all
+sources.  
+*/
+
+void convertSOFAtoOpenAL(std::vector< double > &values)
+{
+ 	SOFA_ASSERT( values.size() % 3 == 0 );
+
+	for(size_t i = 0; i < values.size(); i += 3) {
+		double phi = values[i];
+		phi = fmod(720 - phi, 360); 
+		values[i] = phi;
+	}
+}
+
+
 double getMeanDistance(const std::vector< double > &values)
 {
  	SOFA_ASSERT( values.size() % 3 == 0 );
@@ -553,6 +571,8 @@ int ProcessDefinitionSofa(const char *inName, const uint outRate, const uint fft
             	return 0;
 	}
 
+	convertSOFAtoOpenAL(values);
+
 	hData.mDistance = getMeanDistance(values);
 	output << "Mean Distance " << hData.mDistance << std::endl;
 	sortSourcePositions(values);
@@ -574,8 +594,12 @@ int ProcessDefinitionSofa(const char *inName, const uint outRate, const uint fft
 
 	// TODO consider readed time delays from sofa file
     	hData.mHrtds = CreateArray(hData.mIrCount * 2);
-	for(size_t i=0;i<hData.mIrCount * 2;i++)
-		hData.mHrtds[i] = 0;
+	for(size_t ei=0;ei<hData.mEvCount;ei++) {
+		for(size_t ai=0;ai<hData.mAzCount[ei];ai++) {
+			AverageHrirOnset(hData.mHrirs + (hData.hDataEvOffet[ei] + ai) * hData.mIrCount, 1, ei, ai, hData);
+			AverageHrirMagnitude(hData.mHrirs + (hData.hDataEvOffet[ei] + ai) * hData.mIrCount, 1.0 / factor, ei, ai, hData);
+		}
+	}
 
 	// verify OpenAL parameters
 	if(hData.mIrRate < MIN_RATE || hData.mIrRate > MAX_RATE) {
@@ -614,6 +638,6 @@ int ProcessDefinitionSofa(const char *inName, const uint outRate, const uint fft
 	fprintf(stderr,"\n\nall done\n\n");
 
 
-    	return hrtfPostProcessing(outRate, equalize, surface, limit, truncSize, model, radius, outFormat, outName, &hData);
+    	return hrtfPostProcessing(outRate, equalize, surface, limit, truncSize, HM_DATASET, radius, outFormat, outName, &hData);
 }
 

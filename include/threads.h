@@ -33,16 +33,10 @@ typedef void (*altss_dtor_t)(void*);
 #include <windows.h>
 
 
-#if !defined(_TIMESPEC_DEFINED) && !(defined(_MSC_VER) && (_MSC_VER >= 1900))
-#define _TIMESPEC_DEFINED
+#ifndef HAVE_STRUCT_TIMESPEC
 struct timespec {
     time_t tv_sec;
     long tv_nsec;
-};
-
-struct itimerspec {
-    struct timespec it_interval;
-    struct timespec it_value;
 };
 #endif
 

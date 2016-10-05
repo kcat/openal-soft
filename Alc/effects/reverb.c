@@ -1431,9 +1431,7 @@ static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint Samples
         const ALfloat delta = 1.0f / (ALfloat)(SamplesToDo-base);
         ALuint todo = minu(SamplesToDo-base, MAX_UPDATE_SAMPLES);
 
-        /* Convert B-Foramt to A-Format for processing (could use the row
-         * mixers).
-         */
+        /* Convert B-Foramt to A-Format for processing. */
         memset(afmt, 0, sizeof(*afmt)*4);
         for(c = 0;c < 4;c++)
             MixRowSamples(afmt[c], B2A.m[c],

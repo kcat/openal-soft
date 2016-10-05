@@ -125,9 +125,11 @@ typedef struct ALreverbState {
         ALfloat   MixCoeff;
 
         // Late reverb has 4 parallel all-pass filters.
-        ALfloat   ApCoeff[4];
-        DelayLine ApDelay[4];
-        ALuint    ApOffset[4];
+        struct {
+            ALfloat   Coeff;
+            DelayLine Delay;
+            ALuint    Offset;
+        } Ap[4];
 
         // In addition to 4 cyclical delay lines.
         ALfloat   Coeff[4];
@@ -135,8 +137,10 @@ typedef struct ALreverbState {
         ALuint    Offset[4];
 
         // The cyclical delay lines are 1-pole low-pass filtered.
-        ALfloat   LpCoeff[4];
-        ALfloat   LpSample[4];
+        struct {
+            ALfloat Sample;
+            ALfloat Coeff;
+        } Lp[4];
 
         // The gain for each output channel based on 3D panning.
         ALfloat CurrentGain[4][MAX_OUTPUT_CHANNELS];
@@ -236,18 +240,18 @@ static void ALreverbState_Construct(ALreverbState *state)
     state->Late.MixCoeff = 0.0f;
     for(index = 0;index < 4;index++)
     {
-        state->Late.ApCoeff[index] = 0.0f;
-        state->Late.ApDelay[index].Mask = 0;
-        state->Late.ApDelay[index].Line = NULL;
-        state->Late.ApOffset[index] = 0;
+        state->Late.Ap[index].Coeff = 0.0f;
+        state->Late.Ap[index].Delay.Mask = 0;
+        state->Late.Ap[index].Delay.Line = NULL;
+        state->Late.Ap[index].Offset = 0;
 
         state->Late.Coeff[index] = 0.0f;
         state->Late.Delay[index].Mask = 0;
         state->Late.Delay[index].Line = NULL;
         state->Late.Offset[index] = 0;
 
-        state->Late.LpCoeff[index] = 0.0f;
-        state->Late.LpSample[index] = 0.0f;
+        state->Late.Lp[index].Sample = 0.0f;
+        state->Late.Lp[index].Coeff = 0.0f;
     }
 
     for(l = 0;l < 4;l++)
@@ -447,7 +451,7 @@ static ALboolean AllocLines(ALuint frequency, ALreverbState *State)
     // The late all-pass lines.
     for(index = 0;index < 4;index++)
         totalSamples += CalcLineLength(ALLPASS_LINE_LENGTH[index], totalSamples,
-                                       frequency, 0, &State->Late.ApDelay[index]);
+                                       frequency, 0, &State->Late.Ap[index].Delay);
 
     // The echo all-pass and delay lines.
     for(index = 0;index < 4;index++)
@@ -479,7 +483,7 @@ static ALboolean AllocLines(ALuint frequency, ALreverbState *State)
 
         RealizeLineOffset(State->SampleBuffer, &State->Early.Delay[index]);
 
-        RealizeLineOffset(State->SampleBuffer, &State->Late.ApDelay[index]);
+        RealizeLineOffset(State->SampleBuffer, &State->Late.Ap[index].Delay);
         RealizeLineOffset(State->SampleBuffer, &State->Late.Delay[index]);
 
         RealizeLineOffset(State->SampleBuffer, &State->Echo.Delay[index].Ap);
@@ -513,7 +517,7 @@ static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Dev
     for(index = 0;index < 4;index++)
     {
         State->Early.Offset[index] = fastf2u(EARLY_LINE_LENGTH[index] * frequency);
-        State->Late.ApOffset[index] = fastf2u(ALLPASS_LINE_LENGTH[index] * frequency);
+        State->Late.Ap[index].Offset = fastf2u(ALLPASS_LINE_LENGTH[index] * frequency);
     }
 
     // The echo all-pass filter line length is static, so its offset only
@@ -741,7 +745,7 @@ static ALvoid UpdateLateLines(ALfloat xMix, ALfloat density, ALfloat decayTime, 
     for(index = 0;index < 4;index++)
     {
         // Calculate the gain (coefficient) for each all-pass line.
-        State->Late.ApCoeff[index] = CalcDecayCoeff(
+        State->Late.Ap[index].Coeff = CalcDecayCoeff(
             ALLPASS_LINE_LENGTH[index], decayTime
         );
 
@@ -756,7 +760,7 @@ static ALvoid UpdateLateLines(ALfloat xMix, ALfloat density, ALfloat decayTime, 
         State->Late.Coeff[index] = CalcDecayCoeff(length, decayTime);
 
         // Calculate the damping coefficient for each low-pass filter.
-        State->Late.LpCoeff[index] = CalcDampingCoeff(
+        State->Late.Lp[index].Coeff = CalcDampingCoeff(
             hfRatio, length, decayTime, State->Late.Coeff[index], cw
         );
 
@@ -1157,17 +1161,17 @@ static inline ALfloat AllpassInOut(DelayLine *Delay, ALuint outOffset, ALuint in
 // All-pass input/output routine for late reverb.
 static inline ALfloat LateAllPassInOut(ALreverbState *State, ALuint offset, ALuint index, ALfloat in)
 {
-    return AllpassInOut(&State->Late.ApDelay[index],
-                        offset - State->Late.ApOffset[index],
+    return AllpassInOut(&State->Late.Ap[index].Delay,
+                        offset - State->Late.Ap[index].Offset,
                         offset, in, State->Late.ApFeedCoeff,
-                        State->Late.ApCoeff[index]);
+                        State->Late.Ap[index].Coeff);
 }
 
 // Low-pass filter input/output routine for late reverb.
 static inline ALfloat LateLowPassInOut(ALreverbState *State, ALuint index, ALfloat in)
 {
-    in = lerp(in, State->Late.LpSample[index], State->Late.LpCoeff[index]);
-    State->Late.LpSample[index] = in;
+    in = lerp(in, State->Late.Lp[index].Sample, State->Late.Lp[index].Coeff);
+    State->Late.Lp[index].Sample = in;
     return in;
 }
 

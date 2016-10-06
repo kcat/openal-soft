@@ -192,18 +192,21 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 
 
 void Mix_SSE(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
-             MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize)
+             ALfloat *CurrentGains, const ALfloat *TargetGains, ALuint Counter, ALuint OutPos,
+             ALuint BufferSize)
 {
-    ALfloat gain, step;
+    ALfloat gain, delta, step;
     __m128 gain4;
     ALuint c;
+
+    delta = (Counter > 0) ? 1.0f/(ALfloat)Counter : 0.0f;
 
     for(c = 0;c < OutChans;c++)
     {
         ALuint pos = 0;
-        gain = Gains[c].Current;
-        step = Gains[c].Step;
-        if(step != 0.0f && Counter > 0)
+        gain = CurrentGains[c];
+        step = (TargetGains[c] - gain) * delta;
+        if(fabsf(step) > FLT_EPSILON)
         {
             ALuint minsize = minu(BufferSize, Counter);
             /* Mix with applying gain steps in aligned multiples of 4. */
@@ -238,8 +241,8 @@ void Mix_SSE(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)
                 gain += step;
             }
             if(pos == Counter)
-                gain = Gains[c].Target;
-            Gains[c].Current = gain;
+                gain = TargetGains[c];
+            CurrentGains[c] = gain;
 
             /* Mix until pos is aligned with 4 or the mix is done. */
             minsize = minu(BufferSize, (pos+3)&~3);

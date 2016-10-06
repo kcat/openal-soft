@@ -30,7 +30,8 @@ void MixDirectHrtf_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, ALu
                      ALfloat (*restrict Coeffs)[2], ALfloat (*restrict Values)[2],
                      ALuint BufferSize);
 void Mix_C(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
-           struct MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize);
+           ALfloat *CurrentGains, const ALfloat *TargetGains, ALuint Counter, ALuint OutPos,
+           ALuint BufferSize);
 void MixRow_C(ALfloat *OutBuffer, const ALfloat *Gains,
               const ALfloat (*restrict data)[BUFFERSIZE], ALuint InChans,
               ALuint InPos, ALuint BufferSize);
@@ -45,7 +46,8 @@ void MixDirectHrtf_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, A
                        ALfloat (*restrict Coeffs)[2], ALfloat (*restrict Values)[2],
                        ALuint BufferSize);
 void Mix_SSE(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
-             struct MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize);
+             ALfloat *CurrentGains, const ALfloat *TargetGains, ALuint Counter, ALuint OutPos,
+             ALuint BufferSize);
 void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains,
                 const ALfloat (*restrict data)[BUFFERSIZE], ALuint InChans,
                 ALuint InPos, ALuint BufferSize);
@@ -93,7 +95,8 @@ void MixDirectHrtf_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, 
                         ALfloat (*restrict Coeffs)[2], ALfloat (*restrict Values)[2],
                         ALuint BufferSize);
 void Mix_Neon(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
-              struct MixGains *Gains, ALuint Counter, ALuint OutPos, ALuint BufferSize);
+              ALfloat *CurrentGains, const ALfloat *TargetGains, ALuint Counter, ALuint OutPos,
+              ALuint BufferSize);
 void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Gains,
                  const ALfloat (*restrict data)[BUFFERSIZE], ALuint InChans,
                  ALuint InPos, ALuint BufferSize);

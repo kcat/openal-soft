@@ -1384,33 +1384,6 @@ static ALvoid EAXVerbPass(ALreverbState *State, ALuint todo, ALfloat (*restrict 
     State->Offset += todo;
 }
 
-static void DoMix(const ALfloat *restrict src, ALfloat (*dst)[BUFFERSIZE], ALuint num_chans,
-                  const ALfloat *restrict target_gains, ALfloat *restrict current_gains,
-                  ALfloat delta, ALuint offset, ALuint total_rem, ALuint todo)
-{
-    MixGains gains[MAX_OUTPUT_CHANNELS];
-    ALuint c;
-
-    for(c = 0;c < num_chans;c++)
-    {
-        ALfloat diff;
-        gains[c].Target = target_gains[c];
-        gains[c].Current = current_gains[c];
-        diff = gains[c].Target - gains[c].Current;
-        if(fabsf(diff) >= GAIN_SILENCE_THRESHOLD)
-            gains[c].Step = diff * delta;
-        else
-        {
-            gains[c].Current = gains[c].Target;
-            gains[c].Step = 0.0f;
-        }
-    }
-
-    MixSamples(src, num_chans, dst, gains, total_rem, offset, todo);
-
-    for(c = 0;c < num_chans;c++)
-        current_gains[c] = gains[c].Current;
-}
 
 static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
@@ -1428,7 +1401,6 @@ static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint Samples
     /* Process reverb for these samples. */
     for(base = 0;base < SamplesToDo;)
     {
-        const ALfloat delta = 1.0f / (ALfloat)(SamplesToDo-base);
         ALuint todo = minu(SamplesToDo-base, MAX_UPDATE_SAMPLES);
 
         /* Convert B-Foramt to A-Format for processing. */
@@ -1444,17 +1416,15 @@ static ALvoid ALreverbState_processStandard(ALreverbState *State, ALuint Samples
          * B-Format.
          */
         for(c = 0;c < 4;c++)
-        {
-            DoMix(early[c], SamplesOut, NumChannels, State->Early.PanGain[c],
-                State->Early.CurrentGain[c], delta, base, SamplesToDo-base, todo
+            MixSamples(early[c], NumChannels, SamplesOut,
+                State->Early.CurrentGain[c], State->Early.PanGain[c],
+                SamplesToDo-base, base, todo
             );
-        }
         for(c = 0;c < 4;c++)
-        {
-            DoMix(late[c], SamplesOut, NumChannels, State->Late.PanGain[c],
-                State->Late.CurrentGain[c], delta, base, SamplesToDo, todo
+            MixSamples(late[c], NumChannels, SamplesOut,
+                State->Late.CurrentGain[c], State->Late.PanGain[c],
+                SamplesToDo-base, base, todo
             );
-        }
 
         base += todo;
     }
@@ -1476,7 +1446,6 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo,
     /* Process reverb for these samples. */
     for(base = 0;base < SamplesToDo;)
     {
-        const ALfloat delta = 1.0f / (ALfloat)(SamplesToDo-base);
         ALuint todo = minu(SamplesToDo-base, MAX_UPDATE_SAMPLES);
 
         memset(afmt, 0, 4*MAX_UPDATE_SAMPLES*sizeof(float));
@@ -1488,17 +1457,15 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, ALuint SamplesToDo,
         EAXVerbPass(State, todo, afmt, early, late);
 
         for(c = 0;c < 4;c++)
-        {
-            DoMix(early[c], SamplesOut, NumChannels, State->Early.PanGain[c],
-                State->Early.CurrentGain[c], delta, base, SamplesToDo-base, todo
+            MixSamples(early[c], NumChannels, SamplesOut,
+                State->Early.CurrentGain[c], State->Early.PanGain[c],
+                SamplesToDo-base, base, todo
             );
-        }
         for(c = 0;c < 4;c++)
-        {
-            DoMix(late[c], SamplesOut, NumChannels, State->Late.PanGain[c],
-                State->Late.CurrentGain[c], delta, base, SamplesToDo, todo
+            MixSamples(late[c], NumChannels, SamplesOut,
+                State->Late.CurrentGain[c], State->Late.PanGain[c],
+                SamplesToDo-base, base, todo
             );
-        }
 
         base += todo;
     }

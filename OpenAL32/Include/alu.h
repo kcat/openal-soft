@@ -159,8 +159,9 @@ typedef const ALfloat* (*ResamplerFunc)(const BsincState *state,
 );
 
 typedef void (*MixerFunc)(const ALfloat *data, ALuint OutChans,
-                          ALfloat (*restrict OutBuffer)[BUFFERSIZE], struct MixGains *Gains,
-                          ALuint Counter, ALuint OutPos, ALuint BufferSize);
+                          ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALfloat *CurrentGains,
+                          const ALfloat *TargetGains, ALuint Counter, ALuint OutPos,
+                          ALuint BufferSize);
 typedef void (*RowMixerFunc)(ALfloat *OutBuffer, const ALfloat *gains,
                              const ALfloat (*restrict data)[BUFFERSIZE], ALuint InChans,
                              ALuint InPos, ALuint BufferSize);

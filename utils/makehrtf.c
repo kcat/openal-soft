@@ -1716,7 +1716,7 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
 
 // Calculate the onset time of an HRIR and average it with any existing
 // timing for its elevation and azimuth.
-static void AverageHrirOnset(const double *hrir, const double f, const uint ei, const uint ai, const HrirDataT *hData)
+void AverageHrirOnset(const double *hrir, const double f, const uint ei, const uint ai, const HrirDataT *hData)
 {
     double mag;
     uint n, i, j;
@@ -1737,7 +1737,7 @@ static void AverageHrirOnset(const double *hrir, const double f, const uint ei, 
 
 // Calculate the magnitude response of an HRIR and average it with any
 // existing responses for its elevation and azimuth.
-static void AverageHrirMagnitude(const double *hrir, const double f, const uint ei, const uint ai, const HrirDataT *hData)
+void AverageHrirMagnitude(const double *hrir, const double f, const uint ei, const uint ai, const HrirDataT *hData)
 {
     double *re, *im;
     uint n, m, i, j;
@@ -2765,8 +2765,10 @@ int main(const int argc, const char *argv[])
         }
         else if(strncmp(argv[argi], "-i=", 3) == 0) {
             inName = &argv[argi][3];
+#ifdef HAVE_HRTF_SOFA
 	    if(strlen(inName)>5 && !strcasecmp(inName+strlen(inName)-5,".sofa"))
 		sofa = 1;
+#endif
 	}
         else if(strncmp(argv[argi], "-o=", 3) == 0)
             outName = &argv[argi][3];

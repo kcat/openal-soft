@@ -596,8 +596,8 @@ int ProcessDefinitionSofa(const char *inName, const uint outRate, const uint fft
     	hData.mHrtds = CreateArray(hData.mIrCount * 2);
 	for(size_t ei=0;ei<hData.mEvCount;ei++) {
 		for(size_t ai=0;ai<hData.mAzCount[ei];ai++) {
-			AverageHrirOnset(hData.mHrirs + (hData.hDataEvOffet[ei] + ai) * hData.mIrCount, 1, ei, ai, hData);
-			AverageHrirMagnitude(hData.mHrirs + (hData.hDataEvOffet[ei] + ai) * hData.mIrCount, 1.0 / factor, ei, ai, hData);
+			AverageHrirOnset(hData.mHrirs + (hData.mEvOffset[ei] + ai) * hData.mIrCount, 1, ei, ai, &hData);
+			AverageHrirMagnitude(hData.mHrirs + (hData.mEvOffset[ei] + ai) * hData.mIrCount, 1, ei, ai, &hData);
 		}
 	}
 

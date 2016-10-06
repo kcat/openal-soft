@@ -221,6 +221,8 @@ double *CreateArray(size_t n);
 void DestroyArray(double *a);
 int hrtfPostProcessing(const uint outRate, const int equalize, const int surface, const double limit, const uint truncSize, 
 	const HeadModelT model, const double radius, const OutputFormatT outFormat, const char *outName, HrirDataT *hData);
+void AverageHrirOnset(const double *hrir, const double f, const uint ei, const uint ai, const HrirDataT *hData);
+void AverageHrirMagnitude(const double *hrir, const double f, const uint ei, const uint ai, const HrirDataT *hData);
 
 #ifdef __cplusplus
 }

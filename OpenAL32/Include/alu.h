@@ -110,12 +110,6 @@ enum ActiveFilters {
 };
 
 
-typedef struct MixGains {
-    ALfloat Current;
-    ALfloat Step;
-    ALfloat Target;
-} MixGains;
-
 typedef struct MixHrtfParams {
     const HrtfParams *Target;
     HrtfParams *Current;

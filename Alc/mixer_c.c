@@ -8,17 +8,17 @@
 #include "alAuxEffectSlot.h"
 
 
-static inline ALfloat point32(const ALfloat *vals, ALuint UNUSED(frac))
+static inline ALfloat point32(const ALfloat *restrict vals, ALuint UNUSED(frac))
 { return vals[0]; }
-static inline ALfloat lerp32(const ALfloat *vals, ALuint frac)
+static inline ALfloat lerp32(const ALfloat *restrict vals, ALuint frac)
 { return lerp(vals[0], vals[1], frac * (1.0f/FRACTIONONE)); }
-static inline ALfloat fir4_32(const ALfloat *vals, ALuint frac)
+static inline ALfloat fir4_32(const ALfloat *restrict vals, ALuint frac)
 { return resample_fir4(vals[-1], vals[0], vals[1], vals[2], frac); }
-static inline ALfloat fir8_32(const ALfloat *vals, ALuint frac)
+static inline ALfloat fir8_32(const ALfloat *restrict vals, ALuint frac)
 { return resample_fir8(vals[-3], vals[-2], vals[-1], vals[0], vals[1], vals[2], vals[3], vals[4], frac); }
 
 
-const ALfloat *Resample_copy32_C(const BsincState* UNUSED(state), const ALfloat *src, ALuint UNUSED(frac),
+const ALfloat *Resample_copy32_C(const BsincState* UNUSED(state), const ALfloat *restrict src, ALuint UNUSED(frac),
   ALuint UNUSED(increment), ALfloat *restrict dst, ALuint numsamples)
 {
 #if defined(HAVE_SSE) || defined(HAVE_NEON)
@@ -32,7 +32,7 @@ const ALfloat *Resample_copy32_C(const BsincState* UNUSED(state), const ALfloat 
 
 #define DECL_TEMPLATE(Sampler)                                                \
 const ALfloat *Resample_##Sampler##_C(const BsincState* UNUSED(state),        \
-  const ALfloat *src, ALuint frac, ALuint increment,                          \
+  const ALfloat *restrict src, ALuint frac, ALuint increment,                 \
   ALfloat *restrict dst, ALuint numsamples)                                   \
 {                                                                             \
     ALuint i;                                                                 \
@@ -54,8 +54,9 @@ DECL_TEMPLATE(fir8_32)
 
 #undef DECL_TEMPLATE
 
-const ALfloat *Resample_bsinc32_C(const BsincState *state, const ALfloat *src, ALuint frac,
-                                  ALuint increment, ALfloat *restrict dst, ALuint dstlen)
+const ALfloat *Resample_bsinc32_C(const BsincState *state, const ALfloat *restrict src,
+                                  ALuint frac, ALuint increment, ALfloat *restrict dst,
+                                  ALuint dstlen)
 {
     const ALfloat *fil, *scd, *phd, *spd;
     const ALfloat sf = state->sf;

@@ -12,8 +12,9 @@
 #include "mixer_defs.h"
 
 
-const ALfloat *Resample_bsinc32_SSE(const BsincState *state, const ALfloat *src, ALuint frac,
-                                    ALuint increment, ALfloat *restrict dst, ALuint dstlen)
+const ALfloat *Resample_bsinc32_SSE(const BsincState *state, const ALfloat *restrict src,
+                                    ALuint frac, ALuint increment, ALfloat *restrict dst,
+                                    ALuint dstlen)
 {
     const __m128 sf4 = _mm_set1_ps(state->sf);
     const ALuint m = state->m;

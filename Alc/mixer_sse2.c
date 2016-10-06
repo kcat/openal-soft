@@ -27,8 +27,9 @@
 #include "mixer_defs.h"
 
 
-const ALfloat *Resample_lerp32_SSE2(const BsincState* UNUSED(state), const ALfloat *src, ALuint frac, ALuint increment,
-                                    ALfloat *restrict dst, ALuint numsamples)
+const ALfloat *Resample_lerp32_SSE2(const BsincState* UNUSED(state), const ALfloat *restrict src,
+                                    ALuint frac, ALuint increment, ALfloat *restrict dst,
+                                    ALuint numsamples)
 {
     const __m128i increment4 = _mm_set1_epi32(increment*4);
     const __m128 fracOne4 = _mm_set1_ps(1.0f/FRACTIONONE);

@@ -97,6 +97,7 @@ typedef struct ALreverbState {
     /* There are actually 4 decorrelator taps, but the first occurs at the late
      * reverb tap.
      */
+    ALuint    EarlyDecoTap[3];
     ALuint    LateDecoTap[3];
 
     struct {
@@ -222,6 +223,9 @@ static void ALreverbState_Construct(ALreverbState *state)
     state->Delay.Line = NULL;
     state->DelayTap[0] = 0;
     state->DelayTap[1] = 0;
+    state->EarlyDecoTap[0] = 0;
+    state->EarlyDecoTap[1] = 0;
+    state->EarlyDecoTap[2] = 0;
     state->LateDecoTap[0] = 0;
     state->LateDecoTap[1] = 0;
     state->LateDecoTap[2] = 0;
@@ -324,9 +328,10 @@ static const ALfloat MODULATION_FILTER_CONST = 100000.0f;
 // the echo effect.  It uses the following line length (in seconds).
 static const ALfloat ECHO_ALLPASS_LENGTH = 0.0133f;
 
-// Input into the late reverb is decorrelated between four channels.  Their
-// timings are dependent on a fraction and multiplier.  See the
-// UpdateDecorrelator() routine for the calculations involved.
+/* Input into the early reflections and late reverb are decorrelated between
+ * four channels. Their timings are dependent on a fraction and multiplier. See
+ * the UpdateDecorrelator() routine for the calculations involved.
+ */
 static const ALfloat DECO_FRACTION = 0.15f;
 static const ALfloat DECO_MULTIPLIER = 2.0f;
 
@@ -691,15 +696,19 @@ static ALvoid UpdateDecorrelator(ALfloat density, ALuint frequency, ALreverbStat
     ALuint index;
     ALfloat length;
 
-    /* The late reverb inputs are decorrelated to smooth the reverb tail and
-     * reduce harsh echos.  The first tap occurs immediately, while the
-     * remaining taps are delayed by multiples of a fraction of the smallest
-     * cyclical delay time.
+    /* The early reflections and late reverb inputs are decorrelated to provide
+     * time-varying reflections, smooth out the reverb tail, and reduce harsh
+     * echos. The first tap occurs immediately, while the remaining taps are
+     * delayed by multiples of a fraction of the smallest cyclical delay time.
      *
      * offset[index] = (FRACTION (MULTIPLIER^index)) smallest_delay
      */
     for(index = 0;index < 3;index++)
     {
+        length = (DECO_FRACTION * powf(DECO_MULTIPLIER, (ALfloat)index)) *
+                 EARLY_LINE_LENGTH[0];
+        State->EarlyDecoTap[index] = fastf2u(length * frequency) + State->DelayTap[0];
+
         length = (DECO_FRACTION * powf(DECO_MULTIPLIER, (ALfloat)index)) *
                  LATE_LINE_LENGTH[0] * (1.0f + (density * LATE_LINE_MULTIPLIER));
         State->LateDecoTap[index] = fastf2u(length * frequency) + State->DelayTap[1];
@@ -1104,9 +1113,9 @@ static ALvoid EarlyReflection(ALreverbState *State, ALuint todo, ALfloat (*restr
 
         /* Obtain the first reflection samples from the main delay line. */
         f[0] = DelayLineOut(&State->Delay, (offset-State->DelayTap[0])*4 + 0);
-        f[1] = DelayLineOut(&State->Delay, (offset-State->DelayTap[0])*4 + 1);
-        f[2] = DelayLineOut(&State->Delay, (offset-State->DelayTap[0])*4 + 2);
-        f[3] = DelayLineOut(&State->Delay, (offset-State->DelayTap[0])*4 + 3);
+        f[1] = DelayLineOut(&State->Delay, (offset-State->EarlyDecoTap[0])*4 + 1);
+        f[2] = DelayLineOut(&State->Delay, (offset-State->EarlyDecoTap[1])*4 + 2);
+        f[3] = DelayLineOut(&State->Delay, (offset-State->EarlyDecoTap[2])*4 + 3);
 
         /* The following uses a lossless scattering junction from waveguide
          * theory.  It actually amounts to a householder mixing matrix, which

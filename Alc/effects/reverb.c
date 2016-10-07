@@ -90,15 +90,11 @@ typedef struct ALreverbState {
 
     /* Core delay line (early reflections and late reverb tap from this). */
     DelayLine Delay;
-    /* The tap points for the initial delay. First tap goes to early
+    /* The tap points for the initial delay. First set go to early
      * reflections, second to late reverb.
      */
-    ALuint    DelayTap[2];
-    /* There are actually 4 decorrelator taps, but the first occurs at the late
-     * reverb tap.
-     */
-    ALuint    EarlyDecoTap[3];
-    ALuint    LateDecoTap[3];
+    ALuint    EarlyDelayTap[4];
+    ALuint    LateDelayTap[4];
 
     struct {
         // Early reflections are done with 4 delay lines.
@@ -221,14 +217,10 @@ static void ALreverbState_Construct(ALreverbState *state)
 
     state->Delay.Mask = 0;
     state->Delay.Line = NULL;
-    state->DelayTap[0] = 0;
-    state->DelayTap[1] = 0;
-    state->EarlyDecoTap[0] = 0;
-    state->EarlyDecoTap[1] = 0;
-    state->EarlyDecoTap[2] = 0;
-    state->LateDecoTap[0] = 0;
-    state->LateDecoTap[1] = 0;
-    state->LateDecoTap[2] = 0;
+    for(index = 0;index < 4;index++)
+        state->EarlyDelayTap[index] = 0;
+    for(index = 0;index < 4;index++)
+        state->LateDelayTap[index] = 0;
 
     for(index = 0;index < 4;index++)
     {
@@ -330,7 +322,7 @@ static const ALfloat ECHO_ALLPASS_LENGTH = 0.0133f;
 
 /* Input into the early reflections and late reverb are decorrelated between
  * four channels. Their timings are dependent on a fraction and multiplier. See
- * the UpdateDecorrelator() routine for the calculations involved.
+ * the UpdateDelayLine() routine for the calculations involved.
  */
 static const ALfloat DECO_FRACTION = 0.15f;
 static const ALfloat DECO_MULTIPLIER = 2.0f;
@@ -669,12 +661,27 @@ static ALvoid UpdateModulator(ALfloat modTime, ALfloat modDepth, ALuint frequenc
                        2.0f * frequency;
 }
 
-// Update the offsets for the initial effect delay line.
-static ALvoid UpdateDelayLine(ALfloat earlyDelay, ALfloat lateDelay, ALuint frequency, ALreverbState *State)
+// Update the offsets for the main effect delay line.
+static ALvoid UpdateDelayLine(ALfloat earlyDelay, ALfloat lateDelay, ALfloat density, ALuint frequency, ALreverbState *State)
 {
-    // Calculate the initial delay taps.
-    State->DelayTap[0] = fastf2u(earlyDelay * frequency);
-    State->DelayTap[1] = fastf2u((earlyDelay + lateDelay) * frequency);
+    ALfloat length;
+    ALuint i;
+
+    State->EarlyDelayTap[0] = fastf2u(earlyDelay * frequency);
+    for(i = 1;i < 4;i++)
+    {
+        length = (DECO_FRACTION * powf(DECO_MULTIPLIER, (ALfloat)i-1.0f)) *
+                 EARLY_LINE_LENGTH[0];
+        State->EarlyDelayTap[i] = fastf2u(length * frequency) + State->EarlyDelayTap[0];
+    }
+
+    State->LateDelayTap[0] = fastf2u((earlyDelay + lateDelay) * frequency);
+    for(i = 1;i < 4;i++)
+    {
+        length = (DECO_FRACTION * powf(DECO_MULTIPLIER, (ALfloat)i-1.0f)) *
+                 LATE_LINE_LENGTH[0] * (1.0f + (density * LATE_LINE_MULTIPLIER));
+        State->LateDelayTap[i] = fastf2u(length * frequency) + State->LateDelayTap[0];
+    }
 }
 
 // Update the early reflections mix and line coefficients.
@@ -688,31 +695,6 @@ static ALvoid UpdateEarlyLines(ALfloat lateDelay, ALreverbState *State)
     for(index = 0;index < 4;index++)
         State->Early.Coeff[index] = CalcDecayCoeff(EARLY_LINE_LENGTH[index],
                                                    lateDelay);
-}
-
-// Update the offsets for the decorrelator line.
-static ALvoid UpdateDecorrelator(ALfloat density, ALuint frequency, ALreverbState *State)
-{
-    ALuint index;
-    ALfloat length;
-
-    /* The early reflections and late reverb inputs are decorrelated to provide
-     * time-varying reflections, smooth out the reverb tail, and reduce harsh
-     * echos. The first tap occurs immediately, while the remaining taps are
-     * delayed by multiples of a fraction of the smallest cyclical delay time.
-     *
-     * offset[index] = (FRACTION (MULTIPLIER^index)) smallest_delay
-     */
-    for(index = 0;index < 3;index++)
-    {
-        length = (DECO_FRACTION * powf(DECO_MULTIPLIER, (ALfloat)index)) *
-                 EARLY_LINE_LENGTH[0];
-        State->EarlyDecoTap[index] = fastf2u(length * frequency) + State->DelayTap[0];
-
-        length = (DECO_FRACTION * powf(DECO_MULTIPLIER, (ALfloat)index)) *
-                 LATE_LINE_LENGTH[0] * (1.0f + (density * LATE_LINE_MULTIPLIER));
-        State->LateDecoTap[index] = fastf2u(length * frequency) + State->DelayTap[1];
-    }
 }
 
 // Update the late reverb mix, line lengths, and line coefficients.
@@ -975,12 +957,9 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
     UpdateModulator(props->Reverb.ModulationTime, props->Reverb.ModulationDepth,
                     frequency, State);
 
-    // Update the initial effect delay.
+    // Update the main effect delay.
     UpdateDelayLine(props->Reverb.ReflectionsDelay, props->Reverb.LateReverbDelay,
-                    frequency, State);
-
-    // Update the decorrelator.
-    UpdateDecorrelator(props->Reverb.Density, frequency, State);
+                    props->Reverb.Density, frequency, State);
 
     // Update the early lines.
     UpdateEarlyLines(props->Reverb.LateReverbDelay, State);
@@ -1112,10 +1091,10 @@ static ALvoid EarlyReflection(ALreverbState *State, ALuint todo, ALfloat (*restr
         ALuint offset = State->Offset+i;
 
         /* Obtain the first reflection samples from the main delay line. */
-        f[0] = DelayLineOut(&State->Delay, (offset-State->DelayTap[0])*4 + 0);
-        f[1] = DelayLineOut(&State->Delay, (offset-State->EarlyDecoTap[0])*4 + 1);
-        f[2] = DelayLineOut(&State->Delay, (offset-State->EarlyDecoTap[1])*4 + 2);
-        f[3] = DelayLineOut(&State->Delay, (offset-State->EarlyDecoTap[2])*4 + 3);
+        f[0] = DelayLineOut(&State->Delay, (offset-State->EarlyDelayTap[0])*4 + 0);
+        f[1] = DelayLineOut(&State->Delay, (offset-State->EarlyDelayTap[1])*4 + 1);
+        f[2] = DelayLineOut(&State->Delay, (offset-State->EarlyDelayTap[2])*4 + 2);
+        f[3] = DelayLineOut(&State->Delay, (offset-State->EarlyDelayTap[3])*4 + 3);
 
         /* The following uses a lossless scattering junction from waveguide
          * theory.  It actually amounts to a householder mixing matrix, which
@@ -1201,10 +1180,10 @@ static ALvoid LateReverb(ALreverbState *State, ALuint todo, ALfloat (*restrict o
         for(i = 0;i < tmp_todo;i++)
         {
             /* Obtain four decorrelated input samples. */
-            f[0] = DelayLineOut(&State->Delay, (offset-State->DelayTap[1])*4 + 0) * State->Late.DensityGain;
-            f[1] = DelayLineOut(&State->Delay, (offset-State->LateDecoTap[0])*4 + 1) * State->Late.DensityGain;
-            f[2] = DelayLineOut(&State->Delay, (offset-State->LateDecoTap[1])*4 + 2) * State->Late.DensityGain;
-            f[3] = DelayLineOut(&State->Delay, (offset-State->LateDecoTap[2])*4 + 3) * State->Late.DensityGain;
+            f[0] = DelayLineOut(&State->Delay, (offset-State->LateDelayTap[0])*4 + 0) * State->Late.DensityGain;
+            f[1] = DelayLineOut(&State->Delay, (offset-State->LateDelayTap[1])*4 + 1) * State->Late.DensityGain;
+            f[2] = DelayLineOut(&State->Delay, (offset-State->LateDelayTap[2])*4 + 2) * State->Late.DensityGain;
+            f[3] = DelayLineOut(&State->Delay, (offset-State->LateDelayTap[3])*4 + 3) * State->Late.DensityGain;
 
             /* Add the decayed results of the cyclical delay lines, then pass
              * the results through the low-pass filters.
@@ -1313,7 +1292,7 @@ static ALvoid EAXEcho(ALreverbState *State, ALuint todo, ALfloat (*restrict late
 
             // Mix the energy-attenuated input with the output and pass it through
             // the echo low-pass filter.
-            feed += DelayLineOut(&State->Delay, (offset-State->DelayTap[1])*4 + c) *
+            feed += DelayLineOut(&State->Delay, (offset-State->LateDelayTap[0])*4 + c) *
                     State->Echo.DensityGain;
             feed = lerp(feed, State->Echo.LpSample[c], State->Echo.LpCoeff);
             State->Echo.LpSample[c] = feed;

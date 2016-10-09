@@ -657,7 +657,7 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
                 }
 
                 /* Get the static HRIR coefficients and delays for this channel. */
-                GetLerpedHrtfCoeffs(Device->Hrtf.Handle,
+                GetHrtfCoeffs(Device->Hrtf.Handle,
                     chans[c].elevation, chans[c].angle, 0.0f, DryGain,
                     voice->Chan[c].Direct.Hrtf.Target.Coeffs,
                     voice->Chan[c].Direct.Hrtf.Target.Delay
@@ -1172,9 +1172,9 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
             spread = asinf(radius / Distance) * 2.0f;
 
         /* Get the HRIR coefficients and delays. */
-        GetLerpedHrtfCoeffs(Device->Hrtf.Handle, ev, az, spread, DryGain,
-                            voice->Chan[0].Direct.Hrtf.Target.Coeffs,
-                            voice->Chan[0].Direct.Hrtf.Target.Delay);
+        GetHrtfCoeffs(Device->Hrtf.Handle, ev, az, spread, DryGain,
+                      voice->Chan[0].Direct.Hrtf.Target.Coeffs,
+                      voice->Chan[0].Direct.Hrtf.Target.Delay);
 
         CalcDirectionCoeffs(dir, spread, coeffs);
 

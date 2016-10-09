@@ -55,111 +55,74 @@ static const ALfloat PassthruCoeff = 32767.0f * 0.707106781187f/*sqrt(0.5)*/;
 
 static struct Hrtf *LoadedHrtfs = NULL;
 
-/* Calculate the elevation indices given the polar elevation in radians.
- * This will return two indices between 0 and (evcount - 1) and an
- * interpolation factor between 0.0 and 1.0.
+
+/* Calculate the elevation index given the polar elevation in radians. This
+ * will return an index between 0 and (evcount - 1). Assumes the FPU is in
+ * round-to-zero mode.
  */
-static void CalcEvIndices(ALuint evcount, ALfloat ev, ALuint *evidx, ALfloat *evmu)
+static ALuint CalcEvIndex(ALuint evcount, ALfloat ev)
 {
     ev = (F_PI_2 + ev) * (evcount-1) / F_PI;
-    evidx[0] = fastf2u(ev);
-    evidx[1] = minu(evidx[0] + 1, evcount-1);
-    *evmu = ev - evidx[0];
+    return minu(fastf2u(ev + 0.5f), evcount-1);
 }
 
-/* Calculate the azimuth indices given the polar azimuth in radians.  This
- * will return two indices between 0 and (azcount - 1) and an interpolation
- * factor between 0.0 and 1.0.
+/* Calculate the azimuth index given the polar azimuth in radians. This will
+ * return an index between 0 and (azcount - 1). Assumes the FPU is in round-to-
+ * zero mode.
  */
-static void CalcAzIndices(ALuint azcount, ALfloat az, ALuint *azidx, ALfloat *azmu)
+static ALuint CalcAzIndex(ALuint azcount, ALfloat az)
 {
     az = (F_TAU + az) * azcount / F_TAU;
-    azidx[0] = fastf2u(az) % azcount;
-    azidx[1] = (azidx[0] + 1) % azcount;
-    *azmu = az - floorf(az);
+    return fastf2u(az + 0.5f) % azcount;
 }
 
-/* Calculates static HRIR coefficients and delays for the given polar
- * elevation and azimuth in radians.  Linear interpolation is used to
- * increase the apparent resolution of the HRIR data set.  The coefficients
- * are also normalized and attenuated by the specified gain.
+/* Calculates static HRIR coefficients and delays for the given polar elevation
+ * and azimuth in radians. The coefficients are normalized and attenuated by
+ * the specified gain.
  */
-void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays)
+void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays)
 {
-    ALuint evidx[2], lidx[4], ridx[4];
-    ALfloat mu[3], blend[4];
+    ALuint evidx, azidx, lidx, ridx;
+    ALuint azcount, evoffset;
     ALfloat dirfact;
     ALuint i;
 
     dirfact = 1.0f - (spread / F_TAU);
 
-    /* Claculate elevation indices and interpolation factor. */
-    CalcEvIndices(Hrtf->evCount, elevation, evidx, &mu[2]);
+    /* Claculate elevation index. */
+    evidx = CalcEvIndex(Hrtf->evCount, elevation);
+    azcount = Hrtf->azCount[evidx];
+    evoffset = Hrtf->evOffset[evidx];
 
-    for(i = 0;i < 2;i++)
-    {
-        ALuint azcount = Hrtf->azCount[evidx[i]];
-        ALuint evoffset = Hrtf->evOffset[evidx[i]];
-        ALuint azidx[2];
+    /* Calculate azimuth index. */
+    azidx = CalcAzIndex(Hrtf->azCount[evidx], azimuth);
 
-        /* Calculate azimuth indices and interpolation factor for this elevation. */
-        CalcAzIndices(azcount, azimuth, azidx, &mu[i]);
+    /* Calculate the HRIR indices for left and right channels. */
+    lidx = evoffset + azidx;
+    ridx = evoffset + ((azcount-azidx) % azcount);
 
-        /* Calculate a set of linear HRIR indices for left and right channels. */
-        lidx[i*2 + 0] = evoffset + azidx[0];
-        lidx[i*2 + 1] = evoffset + azidx[1];
-        ridx[i*2 + 0] = evoffset + ((azcount-azidx[0]) % azcount);
-        ridx[i*2 + 1] = evoffset + ((azcount-azidx[1]) % azcount);
-    }
-
-    /* Calculate 4 blending weights for 2D bilinear interpolation. */
-    blend[0] = (1.0f-mu[0]) * (1.0f-mu[2]);
-    blend[1] = (     mu[0]) * (1.0f-mu[2]);
-    blend[2] = (1.0f-mu[1]) * (     mu[2]);
-    blend[3] = (     mu[1]) * (     mu[2]);
-
-    /* Calculate the HRIR delays using linear interpolation. */
-    delays[0] = fastf2u((Hrtf->delays[lidx[0]]*blend[0] + Hrtf->delays[lidx[1]]*blend[1] +
-                         Hrtf->delays[lidx[2]]*blend[2] + Hrtf->delays[lidx[3]]*blend[3]) *
-                        dirfact + 0.5f) << HRTFDELAY_BITS;
-    delays[1] = fastf2u((Hrtf->delays[ridx[0]]*blend[0] + Hrtf->delays[ridx[1]]*blend[1] +
-                         Hrtf->delays[ridx[2]]*blend[2] + Hrtf->delays[ridx[3]]*blend[3]) *
-                        dirfact + 0.5f) << HRTFDELAY_BITS;
+    /* Calculate the HRIR delays. */
+    delays[0] = fastf2u(Hrtf->delays[lidx]*dirfact + 0.5f) << HRTFDELAY_BITS;
+    delays[1] = fastf2u(Hrtf->delays[ridx]*dirfact + 0.5f) << HRTFDELAY_BITS;
 
     /* Calculate the sample offsets for the HRIR indices. */
-    lidx[0] *= Hrtf->irSize;
-    lidx[1] *= Hrtf->irSize;
-    lidx[2] *= Hrtf->irSize;
-    lidx[3] *= Hrtf->irSize;
-    ridx[0] *= Hrtf->irSize;
-    ridx[1] *= Hrtf->irSize;
-    ridx[2] *= Hrtf->irSize;
-    ridx[3] *= Hrtf->irSize;
+    lidx *= Hrtf->irSize;
+    ridx *= Hrtf->irSize;
 
-    /* Calculate the normalized and attenuated HRIR coefficients using linear
-     * interpolation when there is enough gain to warrant it.  Zero the
+    /* Calculate the normalized and attenuated HRIR coefficients. Zero the
      * coefficients if gain is too low.
      */
     if(gain > 0.0001f)
     {
-        ALfloat c;
+        gain /= 32767.0f;
 
         i = 0;
-        c = (Hrtf->coeffs[lidx[0]+i]*blend[0] + Hrtf->coeffs[lidx[1]+i]*blend[1] +
-             Hrtf->coeffs[lidx[2]+i]*blend[2] + Hrtf->coeffs[lidx[3]+i]*blend[3]);
-        coeffs[i][0] = lerp(PassthruCoeff, c, dirfact) * gain * (1.0f/32767.0f);
-        c = (Hrtf->coeffs[ridx[0]+i]*blend[0] + Hrtf->coeffs[ridx[1]+i]*blend[1] +
-             Hrtf->coeffs[ridx[2]+i]*blend[2] + Hrtf->coeffs[ridx[3]+i]*blend[3]);
-        coeffs[i][1] = lerp(PassthruCoeff, c, dirfact) * gain * (1.0f/32767.0f);
-
+        coeffs[i][0] = lerp(PassthruCoeff, Hrtf->coeffs[lidx+i], dirfact)*gain;
+        coeffs[i][1] = lerp(PassthruCoeff, Hrtf->coeffs[ridx+i], dirfact)*gain;
         for(i = 1;i < Hrtf->irSize;i++)
         {
-            c = (Hrtf->coeffs[lidx[0]+i]*blend[0] + Hrtf->coeffs[lidx[1]+i]*blend[1] +
-                 Hrtf->coeffs[lidx[2]+i]*blend[2] + Hrtf->coeffs[lidx[3]+i]*blend[3]);
-            coeffs[i][0] = lerp(0.0f, c, dirfact) * gain * (1.0f/32767.0f);
-            c = (Hrtf->coeffs[ridx[0]+i]*blend[0] + Hrtf->coeffs[ridx[1]+i]*blend[1] +
-                 Hrtf->coeffs[ridx[2]+i]*blend[2] + Hrtf->coeffs[ridx[3]+i]*blend[3]);
-            coeffs[i][1] = lerp(0.0f, c, dirfact) * gain * (1.0f/32767.0f);
+            coeffs[i][0] = Hrtf->coeffs[lidx+i]*gain * dirfact;
+            coeffs[i][1] = Hrtf->coeffs[ridx+i]*gain * dirfact;
         }
     }
     else

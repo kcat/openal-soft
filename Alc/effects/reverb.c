@@ -667,6 +667,15 @@ static ALvoid UpdateDelayLine(ALfloat earlyDelay, ALfloat lateDelay, ALfloat den
     ALfloat length;
     ALuint i;
 
+    /* The early reflections and late reverb inputs are decorrelated to provide
+     * time-varying reflections, smooth out the reverb tail, and reduce harsh
+     * echoes. The first tap occurs immediately, while the remaining taps are
+     * delayed by multiples of a fraction of the smallest cyclical delay time.
+     *
+     * offset[index] = (FRACTION (MULTIPLIER^(index-1))) smallest_delay
+     *
+     * for index = 1...max_lines
+     */
     State->EarlyDelayTap[0] = fastf2u(earlyDelay * frequency);
     for(i = 1;i < 4;i++)
     {

@@ -592,15 +592,6 @@ int ProcessDefinitionSofa(const char *inName, const uint outRate, const uint fft
 	hData.mHrirs = CreateArray(hData.mIrCount * hData.mIrSize * 2);
 	readData(values,data,hData);
 
-	// TODO consider readed time delays from sofa file
-    	hData.mHrtds = CreateArray(hData.mIrCount * 2);
-	for(size_t ei=0;ei<hData.mEvCount;ei++) {
-		for(size_t ai=0;ai<hData.mAzCount[ei];ai++) {
-			AverageHrirOnset(hData.mHrirs + (hData.mEvOffset[ei] + ai) * hData.mIrCount, 1, ei, ai, &hData);
-			AverageHrirMagnitude(hData.mHrirs + (hData.mEvOffset[ei] + ai) * hData.mIrCount, 1, ei, ai, &hData);
-		}
-	}
-
 	// verify OpenAL parameters
 	if(hData.mIrRate < MIN_RATE || hData.mIrRate > MAX_RATE) {
 		fprintf(stderr, "Error: Sampling rate is not within proper limits: %u vs %d to %d\n",hData.mIrRate, MIN_RATE, MAX_RATE);
@@ -632,6 +623,16 @@ int ProcessDefinitionSofa(const char *inName, const uint outRate, const uint fft
 	if(hData.mDistance < MIN_DISTANCE || hData.mDistance > MAX_DISTANCE) {
 		fprintf(stderr, "Error: Distance is not within proper limits: %f vs %f to %f\n",hData.mDistance, MIN_DISTANCE, MAX_DISTANCE);
             	return 0;
+	}
+
+
+	// TODO consider read time delays from sofa file
+    	hData.mHrtds = CreateArray(hData.mIrCount * 2);
+	for(size_t ei=0;ei<hData.mEvCount;ei++) {
+		for(size_t ai=0;ai<hData.mAzCount[ei];ai++) {
+			AverageHrirOnset(hData.mHrirs + (hData.mEvOffset[ei] + ai) * hData.mIrSize, 1, ei, ai, &hData);
+			AverageHrirMagnitude(hData.mHrirs + (hData.mEvOffset[ei] + ai) * hData.mIrSize, 1, ei, ai, &hData);
+		}
 	}
 
 

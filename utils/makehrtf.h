@@ -1,7 +1,10 @@
 
 #ifdef __cplusplus
 extern "C" {
+
 #endif
+
+#include "../Alc/hrtf.h"
 
 #ifndef M_PI
 #define M_PI                         (3.14159265358979323846)
@@ -38,22 +41,14 @@ extern "C" {
 #define MIN_POINTS                   (16)
 #define MAX_POINTS                   (8192)
 
-// The limits to the number of 'azimuths' listed in the data set definition.
-#define MIN_EV_COUNT                 (5)
-#define MAX_EV_COUNT                 (256)
-
-// The limits for each of the 'azimuths' listed in the data set definition.
-#define MIN_AZ_COUNT                 (1)
-#define MAX_AZ_COUNT                 (512)
-
 // The limits for the listener's head 'radius' in the data set definition.
 #define MIN_RADIUS                   (0.05)
 #define MAX_RADIUS                   (0.15)
 
 // The limits for the 'distance' from source to listener in the definition
 // file.
-#define MIN_DISTANCE                 (0.5)
-#define MAX_DISTANCE                 (2.5)
+#define MIN_DISTANCE                 (0.2)
+#define MAX_DISTANCE                 (4.)
 
 // The maximum number of channels that can be addressed for a WAVE file
 // source listed in the data set definition.

@@ -140,6 +140,11 @@ bool iequals(const std::string& a, const char *b)
     return true;
 }
 
+bool fequals(float a, float b)
+{
+	return fabs(a-b)<0.000001;
+}
+
 bool verifyVariable(const sofa::NetCDFFile &file, const char *name, const char *type, const char *dimensions, 
 	size_t size=0, const double *values=NULL, AttributeType at=ATTR_TYPE_NONE)
 {
@@ -159,7 +164,7 @@ bool verifyVariable(const sofa::NetCDFFile &file, const char *name, const char *
 
 	if(values) {
             for( std::size_t j = 0; j < v.size() ; j++ )
-		if(v[j]!=values[j])
+		if(!fequals(v[j],values[j]))
 			return false;
 	}
 
@@ -481,7 +486,8 @@ int ProcessDefinitionSofa(const char *inName, const uint outRate, const uint fft
 			if(!verifyVariable(file,"ListenerView","double","I,C", 3, array1, ATTR_TYPE_CARTESIAN)) {
 				const double array1b[] = { 0, 0, 1 };
 				if(!verifyVariable(file,"ListenerView","double","I,C", 3, array1b, ATTR_TYPE_SPHERICAL)) {
-					fprintf(stderr, "Error: Expecting ListenerView 1,0,0\n");
+/* TODO some files have M,C */
+					fprintf(stderr, "Error: Expecting a single ListenerView of 1,0,0\n");
 					return 0;
 				}
 			}
@@ -554,9 +560,9 @@ int ProcessDefinitionSofa(const char *inName, const uint outRate, const uint fft
 
 	file.GetValues(values, "ReceiverPosition");
 	if(!verifyVariable(file,"ReceiverPosition","double","R,C,I",6,NULL,ATTR_TYPE_CARTESIAN) ||
-		values[0] != 0 || values[1] >= 0 || values[3] !=0 ||
-		values[3] != 0 || values[4] != -values[1] || values[5] !=0) {
-		fprintf(stderr, "Error: Expecting proper ReceiverPosition\n");
+		!fequals(values[0],0) || values[1] > 0 || !fequals(values[2],0) ||
+		!fequals(values[3],0) || !fequals(values[4],-values[1]) || !fequals(values[5],0)) {
+		fprintf(stderr, "Error: Expecting proper ReceiverPosition: is %f %f %f %f %f %f\n",values[0],values[1],values[2],values[3],-values[4],values[5]);
             	return 0;
 	}
 	hData.mRadius = values[4];
@@ -634,10 +640,6 @@ int ProcessDefinitionSofa(const char *inName, const uint outRate, const uint fft
 			AverageHrirMagnitude(hData.mHrirs + (hData.mEvOffset[ei] + ai) * hData.mIrSize, 1, ei, ai, &hData);
 		}
 	}
-
-
-	fprintf(stderr,"\n\nall done\n\n");
-
 
     	return hrtfPostProcessing(outRate, equalize, surface, limit, truncSize, HM_DATASET, radius, outFormat, outName, &hData);
 }

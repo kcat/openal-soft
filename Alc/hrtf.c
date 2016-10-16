@@ -35,17 +35,6 @@
 #include "almalloc.h"
 
 
-/* Current data set limits defined by the makehrtf utility. */
-#define MIN_IR_SIZE                  (8)
-#define MAX_IR_SIZE                  (128)
-#define MOD_IR_SIZE                  (8)
-
-#define MIN_EV_COUNT                 (5)
-#define MAX_EV_COUNT                 (128)
-
-#define MIN_AZ_COUNT                 (1)
-#define MAX_AZ_COUNT                 (128)
-
 static const ALchar magicMarker00[8] = "MinPHR00";
 static const ALchar magicMarker01[8] = "MinPHR01";
 

@@ -49,4 +49,18 @@ void GetLerpedHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azi
  */
 ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][2], ALuint NumChannels);
 
+
+/* Current data set limits defined by the makehrtf utility. */
+#define MIN_IR_SIZE                  (8)
+#define MAX_IR_SIZE                  (128)
+#define MOD_IR_SIZE                  (8)
+
+// The limits to the number of 'azimuths' listed in the data set definition.
+#define MIN_EV_COUNT                 (1)
+#define MAX_EV_COUNT                 (512)
+
+// The limits for each of the 'azimuths' listed in the data set definition.
+#define MIN_AZ_COUNT                 (1)
+#define MAX_AZ_COUNT                 (1024)
+
 #endif /* ALC_HRTF_H */

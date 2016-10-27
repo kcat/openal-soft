@@ -676,20 +676,20 @@ static ALvoid UpdateDelayLine(ALfloat earlyDelay, ALfloat lateDelay, ALfloat den
      *
      * for index = 1...max_lines
      */
-    State->EarlyDelayTap[0] = fastf2u(earlyDelay * frequency);
+    State->EarlyDelayTap[0] = fastf2u(earlyDelay*frequency + 0.5f);
     for(i = 1;i < 4;i++)
     {
         length = (DECO_FRACTION * powf(DECO_MULTIPLIER, (ALfloat)i-1.0f)) *
                  EARLY_LINE_LENGTH[0];
-        State->EarlyDelayTap[i] = fastf2u(length * frequency) + State->EarlyDelayTap[0];
+        State->EarlyDelayTap[i] = fastf2u(length*frequency + 0.5f) + State->EarlyDelayTap[0];
     }
 
-    State->LateDelayTap[0] = fastf2u((earlyDelay + lateDelay) * frequency);
+    State->LateDelayTap[0] = fastf2u((earlyDelay + lateDelay)*frequency + 0.5f);
     for(i = 1;i < 4;i++)
     {
         length = (DECO_FRACTION * powf(DECO_MULTIPLIER, (ALfloat)i-1.0f)) *
                  LATE_LINE_LENGTH[0] * (1.0f + (density * LATE_LINE_MULTIPLIER));
-        State->LateDelayTap[i] = fastf2u(length * frequency) + State->LateDelayTap[0];
+        State->LateDelayTap[i] = fastf2u(length*frequency + 0.5f) + State->LateDelayTap[0];
     }
 }
 

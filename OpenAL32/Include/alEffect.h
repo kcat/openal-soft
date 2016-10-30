@@ -10,16 +10,16 @@ extern "C" {
 struct ALeffect;
 
 enum {
-    EAXREVERB = 0,
-    REVERB,
-    CHORUS,
-    COMPRESSOR,
-    DISTORTION,
-    ECHO,
-    EQUALIZER,
-    FLANGER,
-    MODULATOR,
-    DEDICATED,
+    AL__EAXREVERB = 0,
+    AL__REVERB,
+    AL__CHORUS,
+    AL__COMPRESSOR,
+    AL__DISTORTION,
+    AL__ECHO,
+    AL__EQUALIZER,
+    AL__FLANGER,
+    AL__MODULATOR,
+    AL__DEDICATED,
 
     MAX_EFFECTS
 };

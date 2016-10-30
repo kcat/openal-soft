@@ -667,9 +667,9 @@ ALvoid LoadReverbPreset(const char *name, ALeffect *effect)
         return;
     }
 
-    if(!DisabledEffects[EAXREVERB])
+    if(!DisabledEffects[AL__EAXREVERB])
         InitEffectParams(effect, AL_EFFECT_EAXREVERB);
-    else if(!DisabledEffects[REVERB])
+    else if(!DisabledEffects[AL__REVERB])
         InitEffectParams(effect, AL_EFFECT_REVERB);
     else
         InitEffectParams(effect, AL_EFFECT_NULL);

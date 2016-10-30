@@ -1,3 +1,68 @@
+openal-soft-1.18.0:
+
+    Implemented the AL_EXT_STEREO_ANGLES and AL_EXT_SOURCE_RADIUS extensions.
+
+    Implemented the AL_SOFT_gain_clamp_ex extension.
+
+    Implemented 3D processing for some effects. Currently implemented for
+    Reverb, Compressor, Equalizer, and Ring Modulator.
+
+    Implemented 2-channel UHJ output encoding. Used by default for stereo playback.
+
+    Implemented dual-band processing for high-quality ambisonic decoding.
+
+    Implemented distance-compensation for high-quality ambisonic decoding.
+
+    Implemented a config option to select a preferred HRTF.
+
+    Implemented a run-time check for NEON extensions using /proc/cpuinfo.
+
+    Fixed building on compilers with NEON support but don't default to having
+    NEON enabled.
+
+    Fixed support for JACK on Windows.
+
+    Fixed starting a source while alcSuspendContext is in effect.
+
+    Fixed detection of headsets as headphones, with MMDevAPI.
+
+    Added support for AmbDec config files, for custom ambisonic decoder
+    configurations. Version 3 files only.
+
+    Added backend-specific options to alsoft-config.
+
+    Added first-, second-, and third-order ambisonic output formats. Currently
+    only works with backends that don't rely on channel labels, like JACK,
+    ALSA, and OSS.
+
+    Added a build option to embed the default HRTFs into the lib.
+
+    Added AmbDec presets to enable high-quality ambisonic decoding.
+
+    Added an AmbDec preset for 3D7.1 speaker setups.
+
+    Added documentation regarding Ambisonics, 3D7.1, AmbDec config files, and
+    the provided ambdec presets.
+
+    Added the ability for MMDevAPI to open devices given a Device ID or GUID
+    string.
+
+    Added an option to the example apps to open a specific device.
+
+    Slightly improved automatic naming for enumerated HRTFs.
+
+    Improved B-Format decoding with HRTF output.
+
+    Improved internal property handling for better batching behavior.
+
+    Improved performance of certain filter uses.
+
+    Altered cone behavior for automatic auxiliary send gain and gainhf
+    management. Now better represents the energy the room receives.
+
+    Removed support for the AL_SOFT_buffer_samples and AL_SOFT_buffer_sub_data
+    extensions. Due to conflicts with AL_EXT_SOURCE_RADIUS.
+
 openal-soft-1.17.2:
 
     Implemented device enumeration for OSSv4.

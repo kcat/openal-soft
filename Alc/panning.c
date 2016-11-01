@@ -975,7 +975,10 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
                 ERR("Unexpected hrtf-mode: %s\n", mode);
         }
 
-        TRACE("HRTF enabled, \"%s\"\n", al_string_get_cstr(device->Hrtf.Name));
+        TRACE("%s HRTF rendering enabled, using \"%s\"\n",
+            ((device->Render_Mode == HrtfRender) ? "Full" : "Basic"),
+            al_string_get_cstr(device->Hrtf.Name)
+        );
         InitHrtfPanning(device);
         return;
     }

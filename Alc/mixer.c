@@ -455,7 +455,6 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                 const ALbuffer *ALBuffer = BufferListItem->buffer;
                 const ALubyte *Data = ALBuffer->data;
                 ALuint DataSize;
-                ALuint pos;
 
                 /* Offset buffer data to current channel */
                 Data += chan*SampleSize;
@@ -467,10 +466,10 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
 
                     /* Load what's left to play from the source buffer, and
                      * clear the rest of the temp buffer */
-                    pos = DataPosInt;
-                    DataSize = minu(SrcBufferSize - SrcDataSize, ALBuffer->SampleLen - pos);
+                    DataSize = minu(SrcBufferSize - SrcDataSize,
+                                    ALBuffer->SampleLen - DataPosInt);
 
-                    LoadSamples(&SrcData[SrcDataSize], &Data[pos * NumChannels*SampleSize],
+                    LoadSamples(&SrcData[SrcDataSize], &Data[DataPosInt * NumChannels*SampleSize],
                                 NumChannels, ALBuffer->FmtType, DataSize);
                     SrcDataSize += DataSize;
 
@@ -484,11 +483,10 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
 
                     /* Load what's left of this loop iteration, then load
                      * repeats of the loop section */
-                    pos = DataPosInt;
-                    DataSize = LoopEnd - pos;
+                    DataSize = LoopEnd - DataPosInt;
                     DataSize = minu(SrcBufferSize - SrcDataSize, DataSize);
 
-                    LoadSamples(&SrcData[SrcDataSize], &Data[pos * NumChannels*SampleSize],
+                    LoadSamples(&SrcData[SrcDataSize], &Data[DataPosInt * NumChannels*SampleSize],
                                 NumChannels, ALBuffer->FmtType, DataSize);
                     SrcDataSize += DataSize;
 

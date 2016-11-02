@@ -27,7 +27,6 @@ include(CheckStructHasMember)
 include(CheckFileOffsetBits)
 include(GNUInstallDirs)
 
-
 SET(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
 
 

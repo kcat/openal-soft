@@ -185,9 +185,17 @@ inline LONG AtomicAdd32(volatile LONG *dest, LONG incr)
 {
     return InterlockedExchangeAdd(dest, incr);
 }
+inline LONGLONG AtomicAdd64(volatile LONGLONG *dest, LONGLONG incr)
+{
+    return InterlockedExchangeAdd64(dest, incr);
+}
 inline LONG AtomicSub32(volatile LONG *dest, LONG decr)
 {
     return InterlockedExchangeAdd(dest, -decr);
+}
+inline LONGLONG AtomicSub64(volatile LONGLONG *dest, LONGLONG decr)
+{
+    return InterlockedExchangeAdd64(dest, -decr);
 }
 
 inline LONG AtomicSwap32(volatile LONG *dest, LONG newval)
@@ -212,7 +220,7 @@ inline bool CompareAndSwap64(volatile LONGLONG *dest, LONGLONG newval, LONGLONG 
     return old == *oldval;
 }
 
-#define WRAP_ADDSUB(T, _func, _ptr, _amnt)  (_func((T volatile*)(_ptr), (_amnt))
+#define WRAP_ADDSUB(T, _func, _ptr, _amnt)  _func((T volatile*)(_ptr), (_amnt))
 #define WRAP_XCHG(T, _func, _ptr, _newval)  ((T(*)(T volatile*,T))_func)((_ptr), (_newval))
 #define WRAP_CMPXCHG(T, _func, _ptr, _newval, _oldval) ((bool(*)(T volatile*,T,T*))_func)((_ptr), (_newval), (_oldval))
 
@@ -240,9 +248,11 @@ int _al_invalid_atomic_size(); /* not defined */
 
 #define ATOMIC_ADD(_val, _incr, ...)                                          \
     ((sizeof((_val)->value)==4) ? WRAP_ADDSUB(LONG, AtomicAdd32, &(_val)->value, (_incr)) : \
+     (sizeof((_val)->value)==8) ? WRAP_ADDSUB(LONGLONG, AtomicAdd64, &(_val)->value, (_incr)) : \
      _al_invalid_atomic_size())
 #define ATOMIC_SUB(_val, _decr, ...)                                          \
     ((sizeof((_val)->value)==4) ? WRAP_ADDSUB(LONG, AtomicSub32, &(_val)->value, (_decr)) : \
+     (sizeof((_val)->value)==8) ? WRAP_ADDSUB(LONGLONG, AtomicSub64, &(_val)->value, (_decr)) : \
      _al_invalid_atomic_size())
 
 #define ATOMIC_EXCHANGE(T, _val, _newval, ...)                                \

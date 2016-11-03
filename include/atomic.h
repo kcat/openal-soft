@@ -33,8 +33,8 @@ extern "C" {
 #define ATOMIC_LOAD(...)   PARAM2(atomic_load_explicit, __VA_ARGS__, memory_order_seq_cst)
 #define ATOMIC_STORE(...)  PARAM3(atomic_store_explicit, __VA_ARGS__, memory_order_seq_cst)
 
-#define ATOMIC_ADD(T, ...) PARAM3(atomic_fetch_add_explicit, __VA_ARGS__, memory_order_seq_cst)
-#define ATOMIC_SUB(T, ...) PARAM3(atomic_fetch_sub_explicit, __VA_ARGS__, memory_order_seq_cst)
+#define ATOMIC_ADD(...) PARAM3(atomic_fetch_add_explicit, __VA_ARGS__, memory_order_seq_cst)
+#define ATOMIC_SUB(...) PARAM3(atomic_fetch_sub_explicit, __VA_ARGS__, memory_order_seq_cst)
 
 #define ATOMIC_EXCHANGE(T, ...) PARAM3(atomic_exchange_explicit, __VA_ARGS__, memory_order_seq_cst)
 #define ATOMIC_COMPARE_EXCHANGE_STRONG(T, ...)                                \
@@ -69,14 +69,8 @@ enum almemory_order {
     (_val)->value = (_newval);                 \
 } while(0)
 
-#define ATOMIC_ADD(T, _val, _incr, ...)  __extension__({                      \
-    static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
-    __sync_fetch_and_add(&(_val)->value, (_incr));                            \
-})
-#define ATOMIC_SUB(T, _val, _decr, ...)  __extension__({                      \
-    static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
-    __sync_fetch_and_sub(&(_val)->value, (_decr));                            \
-})
+#define ATOMIC_ADD(_val, _incr, ...) __sync_fetch_and_add(&(_val)->value, (_incr))
+#define ATOMIC_SUB(_val, _decr, ...) __sync_fetch_and_sub(&(_val)->value, (_decr))
 
 #define ATOMIC_EXCHANGE(T, _val, _newval, ...)  __extension__({               \
     static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
@@ -143,18 +137,14 @@ enum almemory_order {
     (_val)->value = (_newval);                 \
 } while(0)
 
-#define ATOMIC_ADD(T, _val, _incr, ...)  __extension__({                      \
-    static_assert(sizeof(T)==4, "Type "#T" has incorrect size!");             \
-    static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
-    T _r;                                                                     \
-    WRAP_ADD(_r, &(_val)->value, (T)(_incr));                                 \
+#define ATOMIC_ADD(_val, _incr, ...)  __extension__({                         \
+    __typeof((_val)->value) _r;                                               \
+    WRAP_ADD(_r, &(_val)->value, _incr);                                      \
     _r;                                                                       \
 })
-#define ATOMIC_SUB(T, _val, _decr, ...)  __extension__({                      \
-    static_assert(sizeof(T)==4, "Type "#T" has incorrect size!");             \
-    static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
-    T _r;                                                                     \
-    WRAP_SUB(_r, &(_val)->value, (T)(_decr));                                 \
+#define ATOMIC_SUB(_val, _decr, ...)  __extension__({                         \
+    __typeof((_val)->value) _r;                                               \
+    WRAP_SUB(_r, &(_val)->value, _decr);                                      \
     _r;                                                                       \
 })
 
@@ -222,7 +212,7 @@ inline bool CompareAndSwap64(volatile LONGLONG *dest, LONGLONG newval, LONGLONG 
     return old == *oldval;
 }
 
-#define WRAP_ADDSUB(T, _func, _ptr, _amnt)  ((T(*)(T volatile*,T))_func)((_ptr), (_amnt))
+#define WRAP_ADDSUB(T, _func, _ptr, _amnt)  (_func((T volatile*)(_ptr), (_amnt))
 #define WRAP_XCHG(T, _func, _ptr, _newval)  ((T(*)(T volatile*,T))_func)((_ptr), (_newval))
 #define WRAP_CMPXCHG(T, _func, _ptr, _newval, _oldval) ((bool(*)(T volatile*,T,T*))_func)((_ptr), (_newval), (_oldval))
 
@@ -248,12 +238,12 @@ enum almemory_order {
 
 int _al_invalid_atomic_size(); /* not defined */
 
-#define ATOMIC_ADD(T, _val, _incr, ...)                                       \
-    ((sizeof(T)==4) ? WRAP_ADDSUB(T, AtomicAdd32, &(_val)->value, (_incr)) :  \
-     (T)_al_invalid_atomic_size())
-#define ATOMIC_SUB(T, _val, _decr, ...)                                       \
-    ((sizeof(T)==4) ? WRAP_ADDSUB(T, AtomicSub32, &(_val)->value, (_decr)) :  \
-     (T)_al_invalid_atomic_size())
+#define ATOMIC_ADD(_val, _incr, ...)                                          \
+    ((sizeof((_val)->value)==4) ? WRAP_ADDSUB(LONG, AtomicAdd32, &(_val)->value, (_incr)) : \
+     _al_invalid_atomic_size())
+#define ATOMIC_SUB(_val, _decr, ...)                                          \
+    ((sizeof((_val)->value)==4) ? WRAP_ADDSUB(LONG, AtomicSub32, &(_val)->value, (_decr)) : \
+     _al_invalid_atomic_size())
 
 #define ATOMIC_EXCHANGE(T, _val, _newval, ...)                                \
     ((sizeof(T)==4) ? WRAP_XCHG(T, AtomicSwap32, &(_val)->value, (_newval)) : \
@@ -278,8 +268,8 @@ int _al_invalid_atomic_size(); /* not defined */
 #define ATOMIC_LOAD(_val, ...)  (0)
 #define ATOMIC_STORE(_val, _newval, ...)  ((void)0)
 
-#define ATOMIC_ADD(T, _val, _incr, ...)  (0)
-#define ATOMIC_SUB(T, _val, _decr, ...)  (0)
+#define ATOMIC_ADD(_val, _incr, ...)  (0)
+#define ATOMIC_SUB(_val, _decr, ...)  (0)
 
 #define ATOMIC_EXCHANGE(T, _val, _newval, ...)  (0)
 #define ATOMIC_COMPARE_EXCHANGE_STRONG(T, _val, _oldval, _newval, ...) (0)
@@ -300,9 +290,9 @@ inline void InitRef(RefCount *ptr, uint value)
 inline uint ReadRef(RefCount *ptr)
 { return ATOMIC_LOAD(ptr); }
 inline uint IncrementRef(RefCount *ptr)
-{ return ATOMIC_ADD(uint, ptr, 1)+1; }
+{ return ATOMIC_ADD(ptr, 1)+1; }
 inline uint DecrementRef(RefCount *ptr)
-{ return ATOMIC_SUB(uint, ptr, 1)-1; }
+{ return ATOMIC_SUB(ptr, 1)-1; }
 
 
 /* This is *NOT* atomic, but is a handy utility macro to compare-and-swap non-

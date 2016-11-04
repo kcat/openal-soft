@@ -1319,12 +1319,9 @@ add_custom_command(
     VERBATIM
 )
 
-add_custom_target(netcdfcpp4 ALL DEPENDS "netcdf-cxx4-4.2/cxx4/.libs/libnetcdf_c++4.so")
-
-
 IF(ALSOFT_UTILS)
-    ADD_EXECUTABLE(openal-info utils/openal-info.c)
-    SET_PROPERTY(TARGET openal-info APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
+	ADD_EXECUTABLE(openal-info utils/openal-info.c)
+	SET_PROPERTY(TARGET openal-info APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
     TARGET_LINK_LIBRARIES(openal-info ${LIBNAME})
 
 # Install HRTF definitions
@@ -1336,74 +1333,72 @@ IF(ALSOFT_UTILS)
 	FIND_PACKAGE(NETCDF 4.3.2)
 	FIND_LIBRARY(NETCDFC4_LIB NETCDF_C++4 HINTS netcdf_c++4)
 	IF(ZLIB_FOUND AND HDF5_FOUND AND NETCDF_FOUND AND ALSOFT_HRTF_SOFA)
-
-
 	    SET(MAKEHRTF_OBJS 
-	utils/sofa/SOFAAPI.cpp
-	utils/sofa/SOFAAttributes.cpp
-	utils/sofa/SOFACoordinates.cpp
-	utils/sofa/SOFADate.cpp
-	utils/sofa/SOFAEmitter.cpp
-	utils/sofa/SOFAExceptions.cpp
-	utils/sofa/SOFAFile.cpp
-	utils/sofa/SOFAHelper.cpp
-	utils/sofa/SOFAListener.cpp
-	utils/sofa/SOFANcFile.cpp
-	utils/sofa/SOFAPoint3.cpp
-	utils/sofa/SOFAPosition.cpp
-	utils/sofa/SOFAReceiver.cpp
-	utils/sofa/SOFASimpleFreeFieldHRIR.cpp
-	utils/sofa/SOFASimpleFreeFieldSOS.cpp
-	utils/sofa/SOFASimpleHeadphoneIR.cpp
-	utils/sofa/SOFAGeneralTF.cpp
-	utils/sofa/SOFAGeneralFIR.cpp
-	utils/sofa/SOFASource.cpp
-	utils/sofa/SOFAString.cpp
-	utils/sofa/SOFAUnits.cpp
-	utils/sofa/SOFAtoOpenAL.cpp
-   )
-        	SET(HAVE_HRTF_SOFA 1)
+		    utils/sofa/SOFAAPI.cpp
+		    utils/sofa/SOFAAttributes.cpp
+		    utils/sofa/SOFACoordinates.cpp
+		    utils/sofa/SOFADate.cpp
+		    utils/sofa/SOFAEmitter.cpp
+		    utils/sofa/SOFAExceptions.cpp
+		    utils/sofa/SOFAFile.cpp
+		    utils/sofa/SOFAHelper.cpp
+		    utils/sofa/SOFAListener.cpp
+		    utils/sofa/SOFANcFile.cpp
+		    utils/sofa/SOFAPoint3.cpp
+		    utils/sofa/SOFAPosition.cpp
+		    utils/sofa/SOFAReceiver.cpp
+		    utils/sofa/SOFASimpleFreeFieldHRIR.cpp
+		    utils/sofa/SOFASimpleFreeFieldSOS.cpp
+		    utils/sofa/SOFASimpleHeadphoneIR.cpp
+		    utils/sofa/SOFAGeneralTF.cpp
+		    utils/sofa/SOFAGeneralFIR.cpp
+	 	    utils/sofa/SOFASource.cpp
+  		    utils/sofa/SOFAString.cpp
+		    utils/sofa/SOFAUnits.cpp
+		    utils/sofa/SOFAtoOpenAL.cpp)
+        SET(HAVE_HRTF_SOFA 1)
 
-		set_source_files_properties(utils/sofa/SOFAAPI.cpp
-	utils/sofa/SOFAAttributes.cpp
-	utils/sofa/SOFACoordinates.cpp
-	utils/sofa/SOFADate.cpp
-	utils/sofa/SOFAEmitter.cpp
-	utils/sofa/SOFAExceptions.cpp
-	utils/sofa/SOFAFile.cpp
-	utils/sofa/SOFAHelper.cpp
-	utils/sofa/SOFAListener.cpp
-	utils/sofa/SOFANcFile.cpp
-	utils/sofa/SOFAPoint3.cpp
-	utils/sofa/SOFAPosition.cpp
-	utils/sofa/SOFAReceiver.cpp
-	utils/sofa/SOFASimpleFreeFieldHRIR.cpp
-	utils/sofa/SOFASimpleFreeFieldSOS.cpp
-	utils/sofa/SOFASimpleHeadphoneIR.cpp
-	utils/sofa/SOFAGeneralTF.cpp
-	utils/sofa/SOFAGeneralFIR.cpp
-	utils/sofa/SOFASource.cpp
-	utils/sofa/SOFAString.cpp
-	utils/sofa/SOFAUnits.cpp
-	utils/sofa/SOFAtoOpenAL.cpp
-	PROPERTIES COMPILE_FLAGS " -DLINUX=1 -D__unix__=1 -DHOST_ENDIAN_LITTLE=1 -Wno-ignored-qualifiers")
+	    set_source_files_properties(utils/sofa/SOFAAPI.cpp
+		    utils/sofa/SOFAAttributes.cpp
+    		utils/sofa/SOFACoordinates.cpp
+	    	utils/sofa/SOFADate.cpp
+	    	utils/sofa/SOFAEmitter.cpp
+	    	utils/sofa/SOFAExceptions.cpp
+	    	utils/sofa/SOFAFile.cpp
+	    	utils/sofa/SOFAHelper.cpp
+	    	utils/sofa/SOFAListener.cpp
+	    	utils/sofa/SOFANcFile.cpp
+	    	utils/sofa/SOFAPoint3.cpp
+	    	utils/sofa/SOFAPosition.cpp
+	    	utils/sofa/SOFAReceiver.cpp
+	    	utils/sofa/SOFASimpleFreeFieldHRIR.cpp
+	    	utils/sofa/SOFASimpleFreeFieldSOS.cpp
+	    	utils/sofa/SOFASimpleHeadphoneIR.cpp
+	    	utils/sofa/SOFAGeneralTF.cpp
+	    	utils/sofa/SOFAGeneralFIR.cpp
+	    	utils/sofa/SOFASource.cpp
+	    	utils/sofa/SOFAString.cpp
+	    	utils/sofa/SOFAUnits.cpp
+	    	utils/sofa/SOFAtoOpenAL.cpp
+	    	PROPERTIES COMPILE_FLAGS " -DLINUX=1 -D__unix__=1 -DHOST_ENDIAN_LITTLE=1 -Wno-ignored-qualifiers")
 
 	    ADD_EXECUTABLE(makehrtf utils/makehrtf.c ${MAKEHRTF_OBJS})
 	    ADD_DEPENDENCIES(makehrtf netcdfcpp4)
 	    SET_PROPERTY(TARGET makehrtf APPEND PROPERTY COMPILE_FLAGS "${EXTRA_CFLAGS} -DHAVE_HRTF_SOFA")
 	    include_directories(${HDF5_INCLUDE_DIRS}  netcdf-cxx4-4.2/cxx4/)
 	    TARGET_LINK_LIBRARIES(makehrtf ${CMAKE_CURRENT_BINARY_DIR}/netcdf-cxx4-4.2/cxx4/.libs/libnetcdf_c++4.so ${NETCDF_LIBRARIES} ${HDF5_LIBRARIES})
+	    
+	    add_custom_target(netcdfcpp4 ALL DEPENDS "netcdf-cxx4-4.2/cxx4/.libs/libnetcdf_c++4.so")
+
+	    MESSAGE(STATUS "Installing HRTF SOFA importer ${NETCDF_LIBRARIES} ")
     ELSE()
 	    ADD_EXECUTABLE(makehrtf utils/makehrtf.c )
 	    SET_PROPERTY(TARGET makehrtf APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
-    ENDIF()
+	ENDIF()
     IF(HAVE_LIBM)
-       	TARGET_LINK_LIBRARIES(makehrtf m)
+     	TARGET_LINK_LIBRARIES(makehrtf m)
     ENDIF()
     
-    MESSAGE(STATUS "Installing HRTF SOFA importer ${NETCDF_LIBRARIES} ")
-    MESSAGE(STATUS "")
-
     ADD_EXECUTABLE(bsincgen utils/bsincgen.c)
     SET_PROPERTY(TARGET bsincgen APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
     IF(HAVE_LIBM)

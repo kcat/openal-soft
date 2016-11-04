@@ -1,3 +1,5 @@
+/* TODO: Support stereo HRTFs */
+
 /**
  * OpenAL cross platform audio library
  * Copyright (C) 2011 by Chris Robinson

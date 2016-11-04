@@ -2486,6 +2486,8 @@ error:
     return 0;
 }
 
+// TODO extend to support stereo HRTF
+
 int hrtfPostProcessing(const uint outRate, const int equalize, const int surface, const double limit, const uint truncSize, const HeadModelT model, const double radius, const OutputFormatT outFormat, const char *outName, HrirDataT *hData)
 {
     double *dfa;

@@ -519,7 +519,8 @@ int ProcessDefinitionSofa(const char *inName, const uint outRate, const uint fft
 		return 0;
 	}
 
-// TODO: Support data delays for each measurement and for other values
+// TODO: Support data delays for each filter
+// However, so far, I have not seen any sofa files with an format other and I,R
 	const double array5[] = { 0, 0 };
 	if(!verifyVariable(file,"Data.Delay","double","I,R", 2, array5)) {
 		fprintf(stderr, "Error: Expecting Data.Delay 0,0\n");
@@ -551,6 +552,7 @@ int ProcessDefinitionSofa(const char *inName, const uint outRate, const uint fft
 	
 
 // TODO: Support different sampling rate per measurement, support default sampling rate of 48000
+// However, so far, I have not seen any sofa files with an format other and I
 	file.GetValues(values, "Data.SamplingRate");
 	if(!verifyVariable(file,"Data.SamplingRate","double","I",1)) {
 		fprintf(stderr, "Error: Expecting sampling rate\n");
@@ -637,7 +639,10 @@ int ProcessDefinitionSofa(const char *inName, const uint outRate, const uint fft
 	for(size_t ei=0;ei<hData.mEvCount;ei++) {
 		for(size_t ai=0;ai<hData.mAzCount[ei];ai++) {
 			AverageHrirOnset(hData.mHrirs + (hData.mEvOffset[ei] + ai) * hData.mIrSize, 1, ei, ai, &hData);
+			AverageHrirOnset(hData.mHrirs + (hData.mEvOffset[ei] + ai + hData.mIrCount) * hData.mIrSize, 1, ei, ai, &hData);
 			AverageHrirMagnitude(hData.mHrirs + (hData.mEvOffset[ei] + ai) * hData.mIrSize, 1, ei, ai, &hData);
+// TODO: is the following correct for stereo?
+			AverageHrirMagnitude(hData.mHrirs + (hData.mEvOffset[ei] + ai + hData.mIrCount) * hData.mIrSize, 1, ei, ai, &hData);
 		}
 	}
 

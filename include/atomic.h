@@ -86,14 +86,14 @@ enum almemory_order {
 /* Atomics using x86/x86-64 GCC inline assembly */
 #elif defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
 
-#define WRAP_ADD(ret, dest, incr) __asm__ __volatile__(                       \
-    "lock; xaddl %0,(%1)"                                                     \
+#define WRAP_ADD(S, ret, dest, incr) __asm__ __volatile__(                    \
+    "lock; xadd"S" %0,(%1)"                                                   \
     : "=r" (ret)                                                              \
     : "r" (dest), "0" (incr)                                                  \
     : "memory"                                                                \
 )
-#define WRAP_SUB(ret, dest, decr) __asm__ __volatile__(                       \
-    "lock; xaddl %0,(%1)"                                                     \
+#define WRAP_SUB(S, ret, dest, decr) __asm__ __volatile__(                    \
+    "lock; xadd"S" %0,(%1)"                                                   \
     : "=r" (ret)                                                              \
     : "r" (dest), "0" (-(decr))                                               \
     : "memory"                                                                \
@@ -137,14 +137,18 @@ enum almemory_order {
     (_val)->value = (_newval);                 \
 } while(0)
 
-#define ATOMIC_ADD(_val, _incr, ...)  __extension__({                         \
+#define ATOMIC_ADD(_val, _incr, ...) __extension__({                          \
+    static_assert(sizeof((_val)->value)==4 || sizeof((_val)->value)==8, "Unsupported size!"); \
     __typeof((_val)->value) _r;                                               \
-    WRAP_ADD(_r, &(_val)->value, _incr);                                      \
+    if(sizeof((_val)->value) == 4) WRAP_ADD("l", _r, &(_val)->value, _incr);  \
+    else if(sizeof((_val)->value) == 8) WRAP_ADD("q", _r, &(_val)->value, _incr); \
     _r;                                                                       \
 })
-#define ATOMIC_SUB(_val, _decr, ...)  __extension__({                         \
+#define ATOMIC_SUB(_val, _decr, ...) __extension__({                          \
+    static_assert(sizeof((_val)->value)==4 || sizeof((_val)->value)==8, "Unsupported size!"); \
     __typeof((_val)->value) _r;                                               \
-    WRAP_SUB(_r, &(_val)->value, _decr);                                      \
+    if(sizeof((_val)->value) == 4) WRAP_SUB("l", _r, &(_val)->value, _decr);  \
+    else if(sizeof((_val)->value) == 8) WRAP_SUB("q", _r, &(_val)->value, _decr); \
     _r;                                                                       \
 })
 

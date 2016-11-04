@@ -94,7 +94,7 @@ int ll_ringbuffer_mlock(ll_ringbuffer_t *rb)
 /* Reset the read and write pointers to zero. This is not thread safe. */
 void ll_ringbuffer_reset(ll_ringbuffer_t *rb)
 {
-    ATOMIC_STORE(&rb->write_ptr, 0, almemory_order_relaxed);
+    ATOMIC_STORE(&rb->write_ptr, 0, almemory_order_release);
     ATOMIC_STORE(&rb->read_ptr, 0, almemory_order_release);
     memset(rb->buf, 0, rb->size*rb->elem_size);
 }
@@ -103,17 +103,17 @@ void ll_ringbuffer_reset(ll_ringbuffer_t *rb)
  * elements in front of the read pointer and behind the write pointer. */
 size_t ll_ringbuffer_read_space(const ll_ringbuffer_t *rb)
 {
-    size_t w = ATOMIC_LOAD(&rb->write_ptr, almemory_order_acquire);
-    size_t r = ATOMIC_LOAD(&rb->read_ptr, almemory_order_relaxed);
-    return (rb->size+w-r) & rb->size_mask;
+    size_t w = ATOMIC_LOAD(&rb->write_ptr, almemory_order_acquire) & rb->size_mask;
+    size_t r = ATOMIC_LOAD(&rb->read_ptr, almemory_order_acquire) & rb->size_mask;
+    return (w-r) & rb->size_mask;
 }
 /* Return the number of elements available for writing. This is the number of
  * elements in front of the write pointer and behind the read pointer. */
 size_t ll_ringbuffer_write_space(const ll_ringbuffer_t *rb)
 {
-    size_t w = ATOMIC_LOAD(&rb->write_ptr, almemory_order_acquire);
-    size_t r = ATOMIC_LOAD(&rb->read_ptr, almemory_order_relaxed);
-    return (rb->size+r-w-1) & rb->size_mask;
+    size_t w = ATOMIC_LOAD(&rb->write_ptr, almemory_order_acquire) & rb->size_mask;
+    size_t r = ATOMIC_LOAD(&rb->read_ptr, almemory_order_acquire) & rb->size_mask;
+    return (r-w-1) & rb->size_mask;
 }
 
 /* The copying data reader. Copy at most `cnt' elements from `rb' to `dest'.
@@ -145,10 +145,11 @@ size_t ll_ringbuffer_read(ll_ringbuffer_t *rb, char *dest, size_t cnt)
     }
 
     memcpy(dest, &rb->buf[read_ptr*rb->elem_size], n1*rb->elem_size);
-    read_ptr = (read_ptr + n1) & rb->size_mask;
+    read_ptr += n1;
     if(n2)
     {
-        memcpy(dest + n1*rb->elem_size, &rb->buf[read_ptr*rb->elem_size], n2*rb->elem_size);
+        memcpy(dest + n1*rb->elem_size, &rb->buf[(read_ptr&rb->size_mask)*rb->elem_size],
+               n2*rb->elem_size);
         read_ptr += n2;
     }
     ATOMIC_STORE(&rb->read_ptr, read_ptr, almemory_order_release);
@@ -185,9 +186,12 @@ size_t ll_ringbuffer_peek(ll_ringbuffer_t *rb, char *dest, size_t cnt)
     }
 
     memcpy(dest, &rb->buf[read_ptr*rb->elem_size], n1*rb->elem_size);
-    read_ptr = (read_ptr + n1) & rb->size_mask;
     if(n2)
-        memcpy(dest + n1*rb->elem_size, &rb->buf[read_ptr*rb->elem_size], n2*rb->elem_size);
+    {
+        read_ptr += n1;
+        memcpy(dest + n1*rb->elem_size, &rb->buf[(read_ptr&rb->size_mask)*rb->elem_size],
+               n2*rb->elem_size);
+    }
     return to_read;
 }
 
@@ -220,10 +224,11 @@ size_t ll_ringbuffer_write(ll_ringbuffer_t *rb, const char *src, size_t cnt)
     }
 
     memcpy(&rb->buf[write_ptr*rb->elem_size], src, n1*rb->elem_size);
-    write_ptr = (write_ptr + n1) & rb->size_mask;
+    write_ptr += n1;
     if(n2)
     {
-        memcpy(&rb->buf[write_ptr*rb->elem_size], src + n1*rb->elem_size, n2*rb->elem_size);
+        memcpy(&rb->buf[(write_ptr&rb->size_mask)*rb->elem_size], src + n1*rb->elem_size,
+               n2*rb->elem_size);
         write_ptr += n2;
     }
     ATOMIC_STORE(&rb->write_ptr, write_ptr, almemory_order_release);
@@ -252,8 +257,8 @@ void ll_ringbuffer_get_read_vector(const ll_ringbuffer_t *rb, ll_ringbuffer_data
     size_t w, r;
 
     w = ATOMIC_LOAD(&rb->write_ptr, almemory_order_acquire) & rb->size_mask;
-    r = ATOMIC_LOAD(&rb->read_ptr, almemory_order_relaxed) & rb->size_mask;
-    free_cnt = (rb->size+w-r) & rb->size_mask;
+    r = ATOMIC_LOAD(&rb->read_ptr, almemory_order_acquire) & rb->size_mask;
+    free_cnt = (w-r) & rb->size_mask;
 
     cnt2 = r + free_cnt;
     if(cnt2 > rb->size)
@@ -285,8 +290,8 @@ void ll_ringbuffer_get_write_vector(const ll_ringbuffer_t *rb, ll_ringbuffer_dat
     size_t w, r;
 
     w = ATOMIC_LOAD(&rb->write_ptr, almemory_order_acquire) & rb->size_mask;
-    r = ATOMIC_LOAD(&rb->read_ptr, almemory_order_relaxed) & rb->size_mask;
-    free_cnt = (rb->size+r-w-1) & rb->size_mask;
+    r = ATOMIC_LOAD(&rb->read_ptr, almemory_order_acquire) & rb->size_mask;
+    free_cnt = (r-w-1) & rb->size_mask;
 
     cnt2 = w + free_cnt;
     if(cnt2 > rb->size)

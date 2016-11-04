@@ -211,12 +211,14 @@ static int ALCjackPlayback_bufferSizeNotify(jack_nframes_t numframes, void *arg)
     ALCjackPlayback_lock(self);
     device->UpdateSize = numframes;
     device->NumUpdates = 2;
-    TRACE("%u update size x%u\n", device->UpdateSize, device->NumUpdates);
 
     bufsize = device->UpdateSize;
     if(ConfigValueUInt(al_string_get_cstr(device->DeviceName), "jack", "buffer-size", &bufsize))
         bufsize = maxu(NextPowerOf2(bufsize), device->UpdateSize);
     bufsize += device->UpdateSize;
+    device->NumUpdates = bufsize / device->UpdateSize;
+
+    TRACE("%u update size x%u\n", device->UpdateSize, device->NumUpdates);
 
     ll_ringbuffer_free(self->Ring);
     self->Ring = ll_ringbuffer_create(bufsize, FrameSizeFromDevFmt(device->FmtChans, device->FmtType));
@@ -248,8 +250,9 @@ static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
     todo = minu(numframes, data[0].len);
     for(c = 0;c < numchans;c++)
     {
+        const ALfloat *restrict in = ((ALfloat*)data[0].buf) + c;
         for(i = 0;i < todo;i++)
-            out[c][i] = ((ALfloat*)data[0].buf)[i*numchans + c];
+            out[c][i] = in[i*numchans];
         out[c] += todo;
     }
     total += todo;
@@ -259,8 +262,9 @@ static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
     {
         for(c = 0;c < numchans;c++)
         {
+            const ALfloat *restrict in = ((ALfloat*)data[1].buf) + c;
             for(i = 0;i < todo;i++)
-                out[c][i] = ((ALfloat*)data[1].buf)[i*numchans + c];
+                out[c][i] = in[i*numchans];
             out[c] += todo;
         }
         total += todo;
@@ -407,6 +411,7 @@ static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
     if(ConfigValueUInt(al_string_get_cstr(device->DeviceName), "jack", "buffer-size", &bufsize))
         bufsize = maxu(NextPowerOf2(bufsize), device->UpdateSize);
     bufsize += device->UpdateSize;
+    device->NumUpdates = bufsize / device->UpdateSize;
 
     /* Force 32-bit float output. */
     device->FmtType = DevFmtFloat;

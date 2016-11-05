@@ -1311,28 +1311,19 @@ IF(ALSOFT_AMBDEC_PRESETS)
     MESSAGE(STATUS "")
 ENDIF()
 
-add_custom_command(
-    OUTPUT "netcdf-cxx4-4.2/cxx4/.libs/libnetcdf_c++4.so"
-    COMMAND wget -c https://www.unidata.ucar.edu/downloads/netcdf/ftp/netcdf-cxx4-4.2.tar.gz
-    COMMAND tar xzf netcdf-cxx4-4.2.tar.gz
-    COMMAND cd netcdf-cxx4-4.2 && ./configure && make -j4
-    VERBATIM
-)
-
 IF(ALSOFT_UTILS)
 	ADD_EXECUTABLE(openal-info utils/openal-info.c)
 	SET_PROPERTY(TARGET openal-info APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
     TARGET_LINK_LIBRARIES(openal-info ${LIBNAME})
 
-# Install HRTF definitions
-# -lstdc++ -lnetcdf_c++4 -lnetcdf -lhdf5_hl -lhdf5 -lcurl -lm -lz -ldl
-# NDEBUG=1 LINUX=1 __unix__=1 HOST_ENDIAN_LITTLE=1
+# Check for HRTF SOFA libs
 	FIND_PACKAGE(ZLIB 1.2.8)
 	FIND_PACKAGE(HDF5 1.8.13)
-	SET(NETCDF_CXX FALSE)  
+	SET(NETCDF_CXX4 TRUE)
 	FIND_PACKAGE(NETCDF 4.3.2)
-	FIND_LIBRARY(NETCDFC4_LIB NETCDF_C++4 HINTS netcdf_c++4)
 	IF(ZLIB_FOUND AND HDF5_FOUND AND NETCDF_FOUND AND ALSOFT_HRTF_SOFA)
+        SET(HAVE_HRTF_SOFA 1)
+
 	    SET(MAKEHRTF_OBJS 
 		    utils/sofa/SOFAAPI.cpp
 		    utils/sofa/SOFAAttributes.cpp
@@ -1356,7 +1347,6 @@ IF(ALSOFT_UTILS)
   		    utils/sofa/SOFAString.cpp
 		    utils/sofa/SOFAUnits.cpp
 		    utils/sofa/SOFAtoOpenAL.cpp)
-        SET(HAVE_HRTF_SOFA 1)
 
 	    set_source_files_properties(utils/sofa/SOFAAPI.cpp
 		    utils/sofa/SOFAAttributes.cpp
@@ -1380,17 +1370,14 @@ IF(ALSOFT_UTILS)
 	    	utils/sofa/SOFAString.cpp
 	    	utils/sofa/SOFAUnits.cpp
 	    	utils/sofa/SOFAtoOpenAL.cpp
-	    	PROPERTIES COMPILE_FLAGS " -DLINUX=1 -D__unix__=1 -DHOST_ENDIAN_LITTLE=1 -Wno-ignored-qualifiers")
+	    	PROPERTIES COMPILE_FLAGS "-Wno-ignored-qualifiers")
 
 	    ADD_EXECUTABLE(makehrtf utils/makehrtf.c ${MAKEHRTF_OBJS})
 	    ADD_DEPENDENCIES(makehrtf netcdfcpp4)
 	    SET_PROPERTY(TARGET makehrtf APPEND PROPERTY COMPILE_FLAGS "${EXTRA_CFLAGS} -DHAVE_HRTF_SOFA")
-	    include_directories(${HDF5_INCLUDE_DIRS}  netcdf-cxx4-4.2/cxx4/)
-	    TARGET_LINK_LIBRARIES(makehrtf ${CMAKE_CURRENT_BINARY_DIR}/netcdf-cxx4-4.2/cxx4/.libs/libnetcdf_c++4.so ${NETCDF_LIBRARIES} ${HDF5_LIBRARIES})
-	    
-	    add_custom_target(netcdfcpp4 ALL DEPENDS "netcdf-cxx4-4.2/cxx4/.libs/libnetcdf_c++4.so")
-
-	    MESSAGE(STATUS "Installing HRTF SOFA importer ${NETCDF_LIBRARIES} ")
+	    include_directories(${HDF5_INCLUDE_DIRS}  ${NETCDF_C++4_INCLUDE_DIRS})
+	    TARGET_LINK_LIBRARIES(makehrtf ${NETCDF_C++4_LIBRARIES} ${NETCDF_LIBRARIES} ${HDF5_LIBRARIES})
+	    MESSAGE(STATUS "Installing HRTF SOFA importer")
     ELSE()
 	    ADD_EXECUTABLE(makehrtf utils/makehrtf.c )
 	    SET_PROPERTY(TARGET makehrtf APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})

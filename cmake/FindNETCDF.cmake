@@ -8,6 +8,7 @@
 # Your package can require certain interfaces to be FOUND by setting these
 #
 #  NETCDF_CXX         - require the C++ interface and link the C++ library
+#  NETCDF_CXX4        - require the C++ version 4 interface and link the C++ library
 #  NETCDF_F77         - require the F77 interface and link the fortran library
 #  NETCDF_F90         - require the F90 interface and link the fortran library
 #
@@ -16,6 +17,7 @@
 #
 #  NETCDF_LIBRARIES_C    - Just the C interface
 #  NETCDF_LIBRARIES_CXX  - C++ interface, if available
+#  NETCDF_LIBRARIES_CXX4 - C++ version 4 interface, if available
 #  NETCDF_LIBRARIES_F77  - Fortran 77 interface, if available
 #  NETCDF_LIBRARIES_F90  - Fortran 90 interface, if available
 #
@@ -44,9 +46,9 @@ get_filename_component (NetCDF_lib_dirs "${NETCDF_LIBRARIES_C}" PATH)
 macro (NetCDF_check_interface lang header libs)
   if (NETCDF_${lang})
     find_path (NETCDF_INCLUDES_${lang} NAMES ${header}
-      HINTS "${NETCDF_INCLUDES}" NO_DEFAULT_PATH)
+      HINTS ${NETCDF_INCLUDES} )
     find_library (NETCDF_LIBRARIES_${lang} NAMES ${libs}
-      HINTS "${NetCDF_lib_dirs}" NO_DEFAULT_PATH)
+      HINTS ${NetCDF_lib_dirs} )
     mark_as_advanced (NETCDF_INCLUDES_${lang} NETCDF_LIBRARIES_${lang})
     if (NETCDF_INCLUDES_${lang} AND NETCDF_LIBRARIES_${lang})
       list (INSERT NetCDF_libs 0 ${NETCDF_LIBRARIES_${lang}}) # prepend so that -lnetcdf is last
@@ -57,7 +59,8 @@ macro (NetCDF_check_interface lang header libs)
   endif (NETCDF_${lang})
 endmacro (NetCDF_check_interface)
 
-NetCDF_check_interface (CXX netcdfcpp.h netcdf_c++)
+#NetCDF_check_interface (CXX netcdfcpp.h netcdf_c++)
+NetCDF_check_interface (CXX4 netcdf netcdf_c++4)
 NetCDF_check_interface (F77 netcdf.inc  netcdff)
 NetCDF_check_interface (F90 netcdf.mod  netcdff)
 

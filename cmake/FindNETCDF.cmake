@@ -45,10 +45,8 @@ get_filename_component (NetCDF_lib_dirs "${NETCDF_LIBRARIES_C}" PATH)
 
 macro (NetCDF_check_interface lang header libs)
   if (NETCDF_${lang})
-    find_path (NETCDF_INCLUDES_${lang} NAMES ${header}
-      HINTS ${NETCDF_INCLUDES} )
-    find_library (NETCDF_LIBRARIES_${lang} NAMES ${libs}
-      HINTS ${NetCDF_lib_dirs} )
+    find_path (NETCDF_INCLUDES_${lang} NAMES ${header} HINTS ${NETCDF_INCLUDES})
+    find_library (NETCDF_LIBRARIES_${lang} NAMES ${libs} HINTS ${NetCDF_lib_dirs})
     mark_as_advanced (NETCDF_INCLUDES_${lang} NETCDF_LIBRARIES_${lang})
     if (NETCDF_INCLUDES_${lang} AND NETCDF_LIBRARIES_${lang})
       list (INSERT NetCDF_libs 0 ${NETCDF_LIBRARIES_${lang}}) # prepend so that -lnetcdf is last
@@ -59,7 +57,7 @@ macro (NetCDF_check_interface lang header libs)
   endif (NETCDF_${lang})
 endmacro (NetCDF_check_interface)
 
-#NetCDF_check_interface (CXX netcdfcpp.h netcdf_c++)
+NetCDF_check_interface (CXX netcdfcpp.h netcdf_c++)
 NetCDF_check_interface (CXX4 netcdf netcdf_c++4)
 NetCDF_check_interface (F77 netcdf.inc  netcdff)
 NetCDF_check_interface (F90 netcdf.mod  netcdff)

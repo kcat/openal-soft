@@ -39,6 +39,7 @@
 
 static const ALchar magicMarker00[8] = "MinPHR00";
 static const ALchar magicMarker01[8] = "MinPHR01";
+static const ALchar magicMarker01[8] = "MinPHR02";
 
 /* First value for pass-through coefficients (remaining are 0), used for omni-
  * directional sounds. */

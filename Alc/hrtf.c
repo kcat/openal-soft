@@ -878,8 +878,8 @@ done:
 
 
 #ifndef ALSOFT_EMBED_HRTF_DATA
-#define IDR_DEFAULT_44100_MHR 0
-#define IDR_DEFAULT_48000_MHR 1
+#define IDR_DEFAULT_44100_MHR 1
+#define IDR_DEFAULT_48000_MHR 2
 
 static const ALubyte *GetResource(int UNUSED(name), size_t *size)
 {

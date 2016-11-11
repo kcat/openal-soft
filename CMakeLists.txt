@@ -1111,19 +1111,21 @@ if(ALSOFT_EMBED_HRTF_DATA)
     elseif(APPLE)
         macro(add_custom_binary FILENAME BIN_NAME)
             set(outfile ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${FILENAME}${CMAKE_C_OUTPUT_EXTENSION})
+            set(stubsrcfile ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${FILENAME}.stub.c)
             set(stubfile ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${FILENAME}.stub${CMAKE_C_OUTPUT_EXTENSION})
             add_custom_command(OUTPUT ${outfile}
                 DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/hrtf/${FILENAME}"
                 WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/hrtf"
-                COMMAND "${CMAKE_C_COMPILER}" -o "${stubfile}" -c /dev/null
+                COMMAND touch "${stubsrcfile}"
+                COMMAND "${CMAKE_C_COMPILER}" -o "${stubfile}" -c "${stubsrcfile}"
                 COMMAND "${CMAKE_LINKER}" -r -o "${outfile}" -sectcreate binary ${BIN_NAME} ${FILENAME} "${stubfile}"
                 COMMENT "Generating ${FILENAME}${CMAKE_C_OUTPUT_EXTENSION}"
                 VERBATIM
             )
             set(ALC_OBJS  ${ALC_OBJS} ${outfile})
         endmacro()
-        add_custom_binary(default-44100.mhr "default_44100_mhr")
-        add_custom_binary(default-48000.mhr "default_48000_mhr")
+        add_custom_binary(default-44100.mhr "default_44100")
+        add_custom_binary(default-48000.mhr "default_48000")
     else()
         set(FILENAMES default-44100.mhr default-48000.mhr)
         foreach(FILENAME ${FILENAMES})

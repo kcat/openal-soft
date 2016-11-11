@@ -912,22 +912,23 @@ static const ALubyte *GetResource(int name, size_t *size)
 
 #include <Availability.h>
 #include <mach-o/getsect.h>
+#include <mach-o/ldsyms.h>
 
 static const ALubyte *GetResource(int name, size_t *size)
 {
 #if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && (__MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
-    /* NOTE: OSX 10.7 and up need to call getsectiondata(&_mh_execute_header, ...). However, that
+    /* NOTE: OSX 10.7 and up need to call getsectiondata(&_mh_dylib_header, ...). However, that
      * call requires 10.7.
      */
     if(name == IDR_DEFAULT_44100_MHR)
-        return getsectiondata(&_mh_execute_header, "binary", "default_44100_mhr", size);
+        return getsectiondata(&_mh_dylib_header, "binary", "default_44100", size);
     if(name == IDR_DEFAULT_48000_MHR)
-        return getsectiondata(&_mh_execute_header, "binary", "default_48000_mhr", size);
+        return getsectiondata(&_mh_dylib_header, "binary", "default_48000", size);
 #else
     if(name == IDR_DEFAULT_44100_MHR)
-        return getsectdata("binary", "default_44100_mhr", size);
+        return getsectdata("binary", "default_44100", size);
     if(name == IDR_DEFAULT_48000_MHR)
-        return getsectdata("binary", "default_48000_mhr", size);
+        return getsectdata("binary", "default_48000", size);
 #endif
     *size = 0;
     return NULL;

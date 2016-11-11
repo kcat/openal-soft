@@ -1119,6 +1119,7 @@ if(ALSOFT_EMBED_HRTF_DATA)
                 COMMAND touch "${stubsrcfile}"
                 COMMAND "${CMAKE_C_COMPILER}" -o "${stubfile}" -c "${stubsrcfile}"
                 COMMAND "${CMAKE_LINKER}" -r -o "${outfile}" -sectcreate binary ${BIN_NAME} ${FILENAME} "${stubfile}"
+                COMMAND rm "${stubsrcfile}" "${stubfile}"
                 COMMENT "Generating ${FILENAME}${CMAKE_C_OUTPUT_EXTENSION}"
                 VERBATIM
             )

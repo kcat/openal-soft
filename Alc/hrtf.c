@@ -908,6 +908,31 @@ static const ALubyte *GetResource(int name, size_t *size)
     return LockResource(res);
 }
 
+#elif defined(__APPLE__)
+
+#include <Availability.h>
+#include <mach-o/getsect.h>
+
+static const ALubyte *GetResource(int name, size_t *size)
+{
+#if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && (__MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
+    /* NOTE: OSX 10.7 and up need to call getsectiondata(&_mh_execute_header, ...). However, that
+     * call requires 10.7.
+     */
+    if(name == IDR_DEFAULT_44100_MHR)
+        return getsectiondata(&_mh_execute_header, "binary", "default_44100_mhr", size);
+    if(name == IDR_DEFAULT_48000_MHR)
+        return getsectiondata(&_mh_execute_header, "binary", "default_48000_mhr", size);
+#else
+    if(name == IDR_DEFAULT_44100_MHR)
+        return getsectdata("binary", "default_44100_mhr", size);
+    if(name == IDR_DEFAULT_48000_MHR)
+        return getsectdata("binary", "default_48000_mhr", size);
+#endif
+    *size = 0;
+    return NULL;
+}
+
 #else
 
 extern const ALubyte _binary_default_44100_mhr_start[] HIDDEN_DECL;

@@ -10,9 +10,10 @@
 struct Hrtf {
     ALuint sampleRate;
     ALuint irSize;
-    ALubyte evCount;
+    ALushort evCount;
+    ALCboolean sofa;
 
-    const ALubyte *azCount;
+    const ALushort *azCount;
     const ALushort *evOffset;
     const ALshort *coeffs;
     const ALubyte *delays;

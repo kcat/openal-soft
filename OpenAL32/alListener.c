@@ -470,7 +470,7 @@ void UpdateListenerProps(ALCcontext *context)
             next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
         } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALlistenerProps*,
                 &listener->FreeList, &props, next, almemory_order_seq_cst,
-                almemory_order_consume) == 0);
+                almemory_order_acquire) == 0);
     }
 
     /* Copy in current property values. */

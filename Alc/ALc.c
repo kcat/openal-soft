@@ -2377,10 +2377,10 @@ static void FreeContext(ALCcontext *context)
         al_free(lprops);
     }
     count = 0;
-    lprops = ATOMIC_LOAD(&listener->FreeList, almemory_order_consume);
+    lprops = ATOMIC_LOAD(&listener->FreeList, almemory_order_acquire);
     while(lprops)
     {
-        struct ALlistenerProps *next = ATOMIC_LOAD(&lprops->next, almemory_order_consume);
+        struct ALlistenerProps *next = ATOMIC_LOAD(&lprops->next, almemory_order_acquire);
         al_free(lprops);
         lprops = next;
         ++count;

@@ -42,6 +42,8 @@ extern "C" {
 #define ATOMIC_COMPARE_EXCHANGE_WEAK(T, ...)                                  \
     PARAM5(atomic_compare_exchange_weak_explicit, __VA_ARGS__, memory_order_seq_cst, memory_order_seq_cst)
 
+#define ATOMIC_THREAD_FENCE atomic_thread_fence
+
 /* Atomics using GCC intrinsics */
 #elif defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1)) && !defined(__QNXNTO__)
 
@@ -82,6 +84,13 @@ enum almemory_order {
     *(_oldval) = __sync_val_compare_and_swap(&(_val)->value, _o, (_newval));  \
     *(_oldval) == _o;                                                         \
 })
+
+#define ATOMIC_THREAD_FENCE(order) do {        \
+    enum { must_be_constant = (order) };       \
+    const int _o = must_be_constant;           \
+    if(_o > almemory_order_relaxed)            \
+        __asm__ __volatile__("" ::: "memory"); \
+} while(0)
 
 /* Atomics using x86/x86-64 GCC inline assembly */
 #elif defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
@@ -168,6 +177,13 @@ enum almemory_order {
     else if(sizeof(T) == 8) WRAP_CMPXCHG("q", *(_oldval), &(_val)->value, _old, (T)(_newval)); \
     *(_oldval) == _old;                                                       \
 })
+
+#define ATOMIC_THREAD_FENCE(order) do {        \
+    enum { must_be_constant = (order) };       \
+    const int _o = must_be_constant;           \
+    if(_o > almemory_order_relaxed)            \
+        __asm__ __volatile__("" ::: "memory"); \
+} while(0)
 
 /* Atomics using Windows methods */
 #elif defined(_WIN32)
@@ -267,6 +283,13 @@ int _al_invalid_atomic_size(); /* not defined */
     ((sizeof(T)==4) ? WRAP_CMPXCHG(T, CompareAndSwap32, &(_val)->value, (_newval), (_oldval)) : \
      (sizeof(T)==8) ? WRAP_CMPXCHG(T, CompareAndSwap64, &(_val)->value, (_newval), (_oldval)) : \
      (bool)_al_invalid_atomic_size())
+
+#define ATOMIC_THREAD_FENCE(order) do {        \
+    enum { must_be_constant = (order) };       \
+    const int _o = must_be_constant;           \
+    if(_o > almemory_order_relaxed)            \
+        _ReadWriteBarrier();                   \
+} while(0)
 
 #else
 

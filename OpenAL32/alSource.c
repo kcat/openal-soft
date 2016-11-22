@@ -2658,11 +2658,12 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
         /* Once the active mix (if any) is done, it's safe to cut the old tail
          * from the new head.
          */
-        if(((count=ReadRef(&device->MixCount))&1) != 0)
+        if(((count=ATOMIC_LOAD(&device->MixCount, almemory_order_acquire))&1))
         {
-            while(count == ReadRef(&device->MixCount))
+            while(count == ATOMIC_LOAD(&device->MixCount, almemory_order_acquire))
                 althrd_yield();
         }
+        ATOMIC_THREAD_FENCE(almemory_order_acq_rel);
         OldTail->next = NULL;
     }
     WriteUnlock(&source->queue_lock);
@@ -2828,7 +2829,7 @@ static void UpdateSourceProps(ALsource *source, ALuint num_sends)
         do {
             next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
         } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALsourceProps*,
-                &source->FreeList, &props, next, almemory_order_seq_cst,
+                &source->FreeList, &props, next, almemory_order_acq_rel,
                 almemory_order_acquire) == 0);
     }
 
@@ -2903,7 +2904,8 @@ static void UpdateSourceProps(ALsource *source, ALuint num_sends)
         do {
             ATOMIC_STORE(&props->next, first, almemory_order_relaxed);
         } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALsourceProps*,
-                &source->FreeList, &first, props) == 0);
+                &source->FreeList, &first, props, almemory_order_acq_rel,
+                almemory_order_acquire) == 0);
     }
 }
 
@@ -2954,7 +2956,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             Source->state = AL_PLAYING;
             ATOMIC_STORE(&Source->current_buffer, BufferList, almemory_order_relaxed);
             ATOMIC_STORE(&Source->position, 0, almemory_order_relaxed);
-            ATOMIC_STORE(&Source->position_fraction, 0);
+            ATOMIC_STORE(&Source->position_fraction, 0, almemory_order_release);
             discontinuity = AL_TRUE;
         }
         else
@@ -2979,19 +2981,20 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
          * unused active source slot to put it in. */
         for(i = 0;i < Context->VoiceCount;i++)
         {
-            ALsource *old = Source;
-            if(COMPARE_EXCHANGE(&Context->Voices[i].Source, &old, NULL))
+            if(Context->Voices[i].Source == Source)
             {
-                if(voice == NULL)
-                {
+                if(voice != NULL)
+                    Context->Voices[i].Source = NULL;
+                else
                     voice = &Context->Voices[i];
-                    voice->Source = Source;
-                }
                 break;
             }
-            old = NULL;
-            if(voice == NULL && COMPARE_EXCHANGE(&Context->Voices[i].Source, &old, Source))
+
+            if(!voice && !Context->Voices[i].Source)
+            {
                 voice = &Context->Voices[i];
+                voice->Source = Source;
+            }
         }
         if(voice == NULL)
         {
@@ -3075,15 +3078,16 @@ static ALint64 GetSourceSampleOffset(ALsource *Source, ALCdevice *device, ALuint
     {
         ReadUnlock(&Source->queue_lock);
         do {
-            while(((refcount=ReadRef(&device->MixCount))&1))
+            while(((refcount=ATOMIC_LOAD(&device->MixCount, almemory_order_acquire))&1))
                 althrd_yield();
             *clocktime = GetDeviceClockTime(device);
-        } while(refcount != ReadRef(&device->MixCount));
+            ATOMIC_THREAD_FENCE(almemory_order_acquire);
+        } while(refcount != ATOMIC_LOAD(&device->MixCount, almemory_order_relaxed));
         return 0;
     }
 
     do {
-        while(((refcount=ReadRef(&device->MixCount))&1))
+        while(((refcount=ATOMIC_LOAD(&device->MixCount, almemory_order_acquire))&1))
             althrd_yield();
         *clocktime = GetDeviceClockTime(device);
 
@@ -3093,7 +3097,8 @@ static ALint64 GetSourceSampleOffset(ALsource *Source, ALCdevice *device, ALuint
         readPos  = (ALuint64)ATOMIC_LOAD(&Source->position, almemory_order_relaxed) << 32;
         readPos |= (ALuint64)ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed) <<
                    (32-FRACTIONBITS);
-    } while(refcount != ReadRef(&device->MixCount));
+        ATOMIC_THREAD_FENCE(almemory_order_acquire);
+    } while(refcount != ATOMIC_LOAD(&device->MixCount, almemory_order_relaxed));
     while(BufferList && BufferList != Current)
     {
         if(BufferList->buffer)
@@ -3123,15 +3128,16 @@ static ALdouble GetSourceSecOffset(ALsource *Source, ALCdevice *device, ALuint64
     {
         ReadUnlock(&Source->queue_lock);
         do {
-            while(((refcount=ReadRef(&device->MixCount))&1))
+            while(((refcount=ATOMIC_LOAD(&device->MixCount, almemory_order_acquire))&1))
                 althrd_yield();
             *clocktime = GetDeviceClockTime(device);
-        } while(refcount != ReadRef(&device->MixCount));
+            ATOMIC_THREAD_FENCE(almemory_order_acquire);
+        } while(refcount != ATOMIC_LOAD(&device->MixCount, almemory_order_relaxed));
         return 0.0;
     }
 
     do {
-        while(((refcount=ReadRef(&device->MixCount))&1))
+        while(((refcount=ATOMIC_LOAD(&device->MixCount, almemory_order_acquire))&1))
             althrd_yield();
         *clocktime = GetDeviceClockTime(device);
 
@@ -3140,7 +3146,8 @@ static ALdouble GetSourceSecOffset(ALsource *Source, ALCdevice *device, ALuint64
 
         readPos  = (ALuint64)ATOMIC_LOAD(&Source->position, almemory_order_relaxed)<<FRACTIONBITS;
         readPos |= (ALuint64)ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed);
-    } while(refcount != ReadRef(&device->MixCount));
+        ATOMIC_THREAD_FENCE(almemory_order_acquire);
+    } while(refcount != ATOMIC_LOAD(&device->MixCount, almemory_order_relaxed));
     while(BufferList && BufferList != Current)
     {
         const ALbuffer *buffer = BufferList->buffer;
@@ -3190,7 +3197,7 @@ static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCdevice *device
 
     totalBufferLen = 0;
     do {
-        while(((refcount=ReadRef(&device->MixCount))&1))
+        while(((refcount=ATOMIC_LOAD(&device->MixCount, almemory_order_acquire))&1))
             althrd_yield();
         BufferList = ATOMIC_LOAD(&Source->queue, almemory_order_relaxed);
         Current = ATOMIC_LOAD(&Source->current_buffer, almemory_order_relaxed);
@@ -3199,7 +3206,8 @@ static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCdevice *device
         readPosFrac = ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed);
 
         looping = ATOMIC_LOAD(&Source->looping, almemory_order_relaxed);
-    } while(refcount != ReadRef(&device->MixCount));
+        ATOMIC_THREAD_FENCE(almemory_order_acquire);
+    } while(refcount != ATOMIC_LOAD(&device->MixCount, almemory_order_relaxed));
 
     while(BufferList != NULL)
     {
@@ -3295,7 +3303,7 @@ ALboolean ApplyOffset(ALsource *Source)
             ATOMIC_STORE(&Source->current_buffer, BufferList, almemory_order_relaxed);
 
             ATOMIC_STORE(&Source->position, offset - totalBufferLen, almemory_order_relaxed);
-            ATOMIC_STORE(&Source->position_fraction, frac);
+            ATOMIC_STORE(&Source->position_fraction, frac, almemory_order_release);
             return AL_TRUE;
         }
 

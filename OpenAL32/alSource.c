@@ -125,6 +125,18 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
 static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, ALint *values);
 static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, ALint64 *values);
 
+static inline ALvoice *GetSourceVoice(const ALsource *source, const ALCcontext *context)
+{
+    ALvoice *voice = context->Voices;
+    ALvoice *voice_end = voice + context->VoiceCount;
+    while(voice != voice_end)
+    {
+        if(voice->Source == source)
+            return voice;
+    }
+    return NULL;
+}
+
 static inline bool SourceShouldUpdate(const ALsource *source, const ALCcontext *context)
 {
     return (source->state == AL_PLAYING || source->state == AL_PAUSED) &&
@@ -1584,22 +1596,15 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
     }
     for(i = 0;i < n;i++)
     {
-        ALvoice *voice, *voice_end;
+        ALvoice *voice;
 
         if((Source=RemoveSource(context, sources[i])) == NULL)
             continue;
         FreeThunkEntry(Source->id);
 
         LockContext(context);
-        voice = context->Voices;
-        voice_end = voice + context->VoiceCount;
-        while(voice != voice_end)
-        {
-            ALsource *old = Source;
-            if(COMPARE_EXCHANGE(&voice->Source, &old, NULL))
-                break;
-            voice++;
-        }
+        voice = GetSourceVoice(Source, context);
+        if(voice) voice->Source = NULL;
         UnlockContext(context);
 
         DeinitSource(Source);
@@ -2977,29 +2982,27 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         if(!BufferList || !device->Connected)
             goto do_stop;
 
-        /* Make sure this source isn't already active, while looking for an
-         * unused active source slot to put it in. */
-        for(i = 0;i < Context->VoiceCount;i++)
-        {
-            if(Context->Voices[i].Source == Source)
-            {
-                if(voice != NULL)
-                    Context->Voices[i].Source = NULL;
-                else
-                    voice = &Context->Voices[i];
-                break;
-            }
-
-            if(!voice && !Context->Voices[i].Source)
-            {
-                voice = &Context->Voices[i];
-                voice->Source = Source;
-            }
-        }
+        /* Make sure this source isn't already active, and if not, look for an
+         * unused voice to put it in.
+         */
+        voice = GetSourceVoice(Source, Context);
         if(voice == NULL)
         {
-            voice = &Context->Voices[Context->VoiceCount++];
-            voice->Source = Source;
+            for(i = 0;i < Context->VoiceCount;i++)
+            {
+                if(Context->Voices[i].Source == NULL)
+                {
+                    voice = &Context->Voices[i];
+                    voice->Source = Source;
+                    break;
+                }
+            }
+            if(voice == NULL)
+            {
+                voice = &Context->Voices[Context->VoiceCount++];
+                voice->Source = Source;
+            }
+            discontinuity = AL_TRUE;
         }
 
         if(discontinuity)

@@ -332,11 +332,6 @@ inline uint DecrementRef(RefCount *ptr)
 { return ATOMIC_SUB(ptr, 1)-1; }
 
 
-/* This is *NOT* atomic, but is a handy utility macro to compare-and-swap non-
- * atomic variables. */
-#define COMPARE_EXCHANGE(_val, _oldval, _newval)  ((*(_val) == *(_oldval)) ? ((*(_val)=(_newval)),true) : ((*(_oldval)=*(_val)),false))
-
-
 #ifdef __cplusplus
 }
 #endif

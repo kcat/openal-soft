@@ -293,11 +293,12 @@ static ALboolean CalcListenerParams(ALCcontext *Context)
      * in the old container (practically impossible with this little code,
      * but...).
      */
-    first = ATOMIC_LOAD(&Listener->FreeList);
+    first = ATOMIC_LOAD(&Listener->FreeList, almemory_order_acquire);
     do {
         ATOMIC_STORE(&props->next, first, almemory_order_relaxed);
     } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALlistenerProps*,
-            &Listener->FreeList, &first, props) == 0);
+            &Listener->FreeList, &first, props, almemory_order_acq_rel,
+            almemory_order_acquire) == 0);
 
     return AL_TRUE;
 }
@@ -341,11 +342,12 @@ static ALboolean CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
      * in the old container (practically impossible with this little code,
      * but...).
      */
-    first = ATOMIC_LOAD(&slot->FreeList);
+    first = ATOMIC_LOAD(&slot->FreeList, almemory_order_acquire);
     do {
         ATOMIC_STORE(&props->next, first, almemory_order_relaxed);
     } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALeffectslotProps*,
-            &slot->FreeList, &first, props) == 0);
+            &slot->FreeList, &first, props, almemory_order_acq_rel,
+            almemory_order_acquire) == 0);
 
     return AL_TRUE;
 }
@@ -1314,11 +1316,12 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context, ALboolean forc
          * actually swap in the old container (practically impossible with this
          * little code, but...).
          */
-        first = ATOMIC_LOAD(&source->FreeList);
+        first = ATOMIC_LOAD(&source->FreeList, almemory_order_acquire);
         do {
             ATOMIC_STORE(&props->next, first, almemory_order_relaxed);
         } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALsourceProps*,
-                &source->FreeList, &first, props) == 0);
+                &source->FreeList, &first, props, almemory_order_acq_rel,
+                almemory_order_acquire) == 0);
     }
 
     BufferListItem = ATOMIC_LOAD(&source->queue, almemory_order_relaxed);

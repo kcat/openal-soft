@@ -399,6 +399,8 @@ static ALint Int64ValsByProp(ALenum prop)
 #define DO_UPDATEPROPS() do {                                                 \
     if(SourceShouldUpdate(Source, Context))                                   \
         UpdateSourceProps(Source, device->NumAuxSends);                       \
+    else                                                                      \
+        Source->NeedsUpdate = AL_TRUE;                                        \
 } while(0)
 
 static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALfloat *values)
@@ -2772,6 +2774,8 @@ static void InitSourceParams(ALsource *Source)
 
     ATOMIC_INIT(&Source->looping, AL_FALSE);
 
+    Source->NeedsUpdate = AL_TRUE;
+
     ATOMIC_INIT(&Source->Update, NULL);
     ATOMIC_INIT(&Source->FreeList, NULL);
 }
@@ -2924,8 +2928,12 @@ void UpdateAllSourceProps(ALCcontext *context)
         ALvoice *voice = &context->Voices[pos];
         ALsource *source = voice->Source;
         if(source != NULL && (source->state == AL_PLAYING ||
-                              source->state == AL_PAUSED))
+                              source->state == AL_PAUSED) &&
+           source->NeedsUpdate)
+        {
+            source->NeedsUpdate = AL_FALSE;
             UpdateSourceProps(source, num_sends);
+        }
     }
 }
 
@@ -3029,6 +3037,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             }
         }
 
+        Source->NeedsUpdate = AL_FALSE;
         UpdateSourceProps(Source, device->NumAuxSends);
     }
     else if(state == AL_PAUSED)

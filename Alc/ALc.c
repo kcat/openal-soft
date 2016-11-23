@@ -2141,10 +2141,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 source->Send[s].LFReference = HIGHPASSFREQREF;
                 s++;
             }
+            source->NeedsUpdate = AL_TRUE;
         }
         UnlockUIntMapRead(&context->SourceMap);
 
-        UpdateAllSourceProps(context);
+        UpdateListenerProps(context);
         ReadUnlock(&context->PropLock);
 
         context = context->next;

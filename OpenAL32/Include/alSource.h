@@ -197,6 +197,8 @@ typedef struct ALsource {
     ALuint NumChannels;
     ALuint SampleSize;
 
+    ALenum NeedsUpdate;
+
     ATOMIC(struct ALsourceProps*) Update;
     ATOMIC(struct ALsourceProps*) FreeList;
 

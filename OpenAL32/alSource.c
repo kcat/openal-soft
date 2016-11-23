@@ -133,6 +133,7 @@ static inline ALvoice *GetSourceVoice(const ALsource *source, const ALCcontext *
     {
         if(voice->Source == source)
             return voice;
+        ++voice;
     }
     return NULL;
 }

@@ -22,9 +22,11 @@ extern "C" {
 #define almemory_order_seq_cst memory_order_seq_cst
 
 #define ATOMIC(T)  T _Atomic
+#define ATOMIC_FLAG atomic_flag
 
 #define ATOMIC_INIT(_val, _newval)  atomic_init((_val), (_newval))
 #define ATOMIC_INIT_STATIC(_newval) ATOMIC_VAR_INIT(_newval)
+/*#define ATOMIC_FLAG_INIT ATOMIC_FLAG_INIT*/
 
 #define PARAM2(f, a, b, ...)           (f((a), (b)))
 #define PARAM3(f, a, b, c, ...)        (f((a), (b), (c)))
@@ -42,6 +44,11 @@ extern "C" {
 #define ATOMIC_COMPARE_EXCHANGE_WEAK(T, ...)                                  \
     PARAM5(atomic_compare_exchange_weak_explicit, __VA_ARGS__, memory_order_seq_cst, memory_order_seq_cst)
 
+#define ATOMIC_FLAG_TEST_AND_SET(...)                                         \
+    PARAM2(atomic_flag_test_and_set_explicit, __VA_ARGS__, memory_order_seq_cst)
+#define ATOMIC_FLAG_CLEAR(...)                                                \
+    PARAM2(atomic_flag_clear_explicit, __VA_ARGS__, memory_order_seq_cst)
+
 #define ATOMIC_THREAD_FENCE atomic_thread_fence
 
 /* Atomics using GCC intrinsics */
@@ -57,9 +64,11 @@ enum almemory_order {
 };
 
 #define ATOMIC(T)  struct { T volatile value; }
+#define ATOMIC_FLAG  ATOMIC(int)
 
 #define ATOMIC_INIT(_val, _newval)  do { (_val)->value = (_newval); } while(0)
 #define ATOMIC_INIT_STATIC(_newval) {(_newval)}
+#define ATOMIC_FLAG_INIT            ATOMIC_INIT_STATIC(0)
 
 #define ATOMIC_LOAD(_val, ...)  __extension__({ \
     __typeof((_val)->value) _r = (_val)->value; \
@@ -76,6 +85,7 @@ enum almemory_order {
 
 #define ATOMIC_EXCHANGE(T, _val, _newval, ...)  __extension__({               \
     static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
+    __asm__ __volatile__("" ::: "memory");                                    \
     __sync_lock_test_and_set(&(_val)->value, (_newval));                      \
 })
 #define ATOMIC_COMPARE_EXCHANGE_STRONG(T, _val, _oldval, _newval, ...) __extension__({ \
@@ -84,6 +94,16 @@ enum almemory_order {
     *(_oldval) = __sync_val_compare_and_swap(&(_val)->value, _o, (_newval));  \
     *(_oldval) == _o;                                                         \
 })
+
+#define ATOMIC_FLAG_TEST_AND_SET(_val, ...)  __extension__({                  \
+    __asm__ __volatile__("" ::: "memory");                                    \
+    __sync_lock_test_and_set(&(_val)->value, 1);                              \
+})
+#define ATOMIC_FLAG_CLEAR(_val, ...)  __extension__({                         \
+    __sync_lock_release(&(_val)->value);                                      \
+    __asm__ __volatile__("" ::: "memory");                                    \
+})
+
 
 #define ATOMIC_THREAD_FENCE(order) do {        \
     enum { must_be_constant = (order) };       \
@@ -297,25 +317,41 @@ int _al_invalid_atomic_size(); /* not defined */
 
 #define ATOMIC(T)  T
 
+#define ATOMIC_INIT(_val, _newval)  ((void)0)
 #define ATOMIC_INIT_STATIC(_newval) (0)
 
-#define ATOMIC_LOAD_UNSAFE(_val)  (0)
-#define ATOMIC_STORE_UNSAFE(_val, _newval)  ((void)0)
+#define ATOMIC_LOAD(...)   (0)
+#define ATOMIC_STORE(...)  ((void)0)
 
-#define ATOMIC_LOAD(_val, ...)  (0)
-#define ATOMIC_STORE(_val, _newval, ...)  ((void)0)
+#define ATOMIC_ADD(...) (0)
+#define ATOMIC_SUB(...) (0)
 
-#define ATOMIC_ADD(_val, _incr, ...)  (0)
-#define ATOMIC_SUB(_val, _decr, ...)  (0)
+#define ATOMIC_EXCHANGE(T, ...) (0)
+#define ATOMIC_COMPARE_EXCHANGE_STRONG(T, ...) (0)
+#define ATOMIC_COMPARE_EXCHANGE_WEAK(T, ...) (0)
 
-#define ATOMIC_EXCHANGE(T, _val, _newval, ...)  (0)
-#define ATOMIC_COMPARE_EXCHANGE_STRONG(T, _val, _oldval, _newval, ...) (0)
+#define ATOMIC_FLAG_TEST_AND_SET(...) (0)
+#define ATOMIC_FLAG_CLEAR(...) ((void)0)
+
+#define ATOMIC_THREAD_FENCE ((void)0)
 #endif
 
 /* If no weak cmpxchg is provided (not all systems will have one), substitute a
  * strong cmpxchg. */
 #ifndef ATOMIC_COMPARE_EXCHANGE_WEAK
 #define ATOMIC_COMPARE_EXCHANGE_WEAK ATOMIC_COMPARE_EXCHANGE_STRONG
+#endif
+
+/* If no ATOMIC_FLAG is defined, simulate one with an atomic int using exchange
+ * and store ops.
+ */
+#ifndef ATOMIC_FLAG
+#define ATOMIC_FLAG      ATOMIC(int)
+#define ATOMIC_FLAG_INIT ATOMIC_INIT_STATIC(0)
+#define ATOMIC_FLAG_TEST_AND_SET_(_val, ...) ATOMIC_EXCHANGE(int, _val, 1,  __VA_ARGS__)
+#define ATOMIC_FLAG_TEST_AND_SET(...)        ATOMIC_FLAG_TEST_AND_SET_(__VA_ARGS__, almemory_order_seq_cst)
+#define ATOMIC_FLAG_CLEAR_(_val, ...) ATOMIC_STORE(_val, 0, __VA_ARGS__)
+#define ATOMIC_FLAG_CLEAR(...)        ATOMIC_FLAG_CLEAR_(__VA_ARGS__, almemory_order_seq_cst)
 #endif
 
 

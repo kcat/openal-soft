@@ -328,14 +328,17 @@ static ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name)
             ALCossListPopulate(&oss_playback, DSP_CAP_OUTPUT);
             dev = &oss_playback;
         }
-        while (dev != NULL)
+        while(dev != NULL)
         {
             if (strcmp(dev->handle, name) == 0)
                 break;
             dev = dev->next;
         }
-        if (dev == NULL)
+        if(dev == NULL)
+        {
+            WARN("Could not find \"%s\" in device list\n", name);
             return ALC_INVALID_VALUE;
+        }
     }
 
     self->killNow = 0;
@@ -587,14 +590,17 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
             ALCossListPopulate(&oss_capture, DSP_CAP_INPUT);
             dev = &oss_capture;
         }
-        while (dev != NULL)
+        while(dev != NULL)
         {
             if (strcmp(dev->handle, name) == 0)
                 break;
             dev = dev->next;
         }
-        if (dev == NULL)
+        if(dev == NULL)
+        {
+            WARN("Could not find \"%s\" in device list\n", name);
             return ALC_INVALID_VALUE;
+        }
     }
 
     self->fd = open(dev->path, O_RDONLY);

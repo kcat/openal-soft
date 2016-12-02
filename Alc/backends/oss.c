@@ -320,10 +320,15 @@ static ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name)
     struct oss_device *dev = &oss_playback;
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
-    if(!name)
+    if(!name || strcmp(name, dev->handle) == 0)
         name = dev->handle;
     else
     {
+        if(!dev->next)
+        {
+            ALCossListPopulate(&oss_playback, NULL);
+            dev = &oss_playback;
+        }
         while (dev != NULL)
         {
             if (strcmp(dev->handle, name) == 0)
@@ -574,10 +579,15 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
     int ossSpeed;
     char *err;
 
-    if(!name)
+    if(!name || strcmp(name, dev->handle) == 0)
         name = dev->handle;
     else
     {
+        if(!dev->next)
+        {
+            ALCossListPopulate(NULL, &oss_capture);
+            dev = &oss_capture;
+        }
         while (dev != NULL)
         {
             if (strcmp(dev->handle, name) == 0)

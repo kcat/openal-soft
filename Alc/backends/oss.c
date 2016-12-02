@@ -88,7 +88,7 @@ static struct oss_device oss_capture = {
 
 #ifdef ALC_OSS_COMPAT
 
-static void ALCossListPopulate(struct oss_device *UNUSED(playback), struct oss_device *UNUSED(capture))
+static void ALCossListPopulate(struct oss_device *UNUSED(devlist), int UNUSED(type_flag))
 {
 }
 
@@ -153,7 +153,7 @@ static void ALCossListAppend(struct oss_device *list, const char *handle, size_t
     TRACE("Got device \"%s\", \"%s\"\n", next->handle, next->path);
 }
 
-static void ALCossListPopulate(struct oss_device *playback, struct oss_device *capture)
+static void ALCossListPopulate(struct oss_device *devlist, int type_flag)
 {
     struct oss_sysinfo si;
     struct oss_audioinfo ai;
@@ -193,10 +193,9 @@ static void ALCossListPopulate(struct oss_device *playback, struct oss_device *c
             len = strnlen(ai.name, sizeof(ai.name));
             handle = ai.name;
         }
-        if((ai.caps&DSP_CAP_INPUT) && capture != NULL)
-            ALCossListAppend(capture, handle, len, ai.devnode, strnlen(ai.devnode, sizeof(ai.devnode)));
-        if((ai.caps&DSP_CAP_OUTPUT) && playback != NULL)
-            ALCossListAppend(playback, handle, len, ai.devnode, strnlen(ai.devnode, sizeof(ai.devnode)));
+        if((ai.caps&type_flag))
+            ALCossListAppend(devlist, handle, len, ai.devnode,
+                             strnlen(ai.devnode, sizeof(ai.devnode)));
     }
 
 done:
@@ -326,7 +325,7 @@ static ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name)
     {
         if(!dev->next)
         {
-            ALCossListPopulate(&oss_playback, NULL);
+            ALCossListPopulate(&oss_playback, DSP_CAP_OUTPUT);
             dev = &oss_playback;
         }
         while (dev != NULL)
@@ -585,7 +584,7 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
     {
         if(!dev->next)
         {
-            ALCossListPopulate(NULL, &oss_capture);
+            ALCossListPopulate(&oss_capture, DSP_CAP_INPUT);
             dev = &oss_capture;
         }
         while (dev != NULL)
@@ -780,33 +779,30 @@ ALCboolean ALCossBackendFactory_querySupport(ALCossBackendFactory* UNUSED(self),
 
 void ALCossBackendFactory_probe(ALCossBackendFactory* UNUSED(self), enum DevProbe type)
 {
+    struct oss_device *cur;
     switch(type)
     {
         case ALL_DEVICE_PROBE:
-        {
-            struct oss_device *cur = &oss_playback;
-            ALCossListFree(cur);
-            ALCossListPopulate(cur, NULL);
-            while (cur != NULL)
+            ALCossListFree(&oss_playback);
+            ALCossListPopulate(&oss_playback, DSP_CAP_OUTPUT);
+            cur = &oss_playback;
+            while(cur != NULL)
             {
                 AppendAllDevicesList(cur->handle);
                 cur = cur->next;
             }
-        }
-        break;
+            break;
 
         case CAPTURE_DEVICE_PROBE:
-        {
-            struct oss_device *cur = &oss_capture;
-            ALCossListFree(cur);
-            ALCossListPopulate(NULL, cur);
-            while (cur != NULL)
+            ALCossListFree(&oss_capture);
+            ALCossListPopulate(&oss_capture, DSP_CAP_INPUT);
+            cur = &oss_capture;
+            while(cur != NULL)
             {
                 AppendCaptureDeviceList(cur->handle);
                 cur = cur->next;
             }
-        }
-        break;
+            break;
     }
 }
 

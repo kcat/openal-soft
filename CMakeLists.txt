@@ -167,6 +167,8 @@ ENDIF()
 
 # Make sure we have C99-style inline semantics with GCC (4.3 or newer).
 IF(CMAKE_COMPILER_IS_GNUCC)
+    SET(CMAKE_C_FLAGS "-fno-gnu89-inline ${CMAKE_C_FLAGS}")
+
     SET(OLD_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
     # Force no inlining for the next test.
     SET(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS} -fno-inline")

@@ -1,6 +1,8 @@
 
 #include "config.h"
 
+#include "version.h"
+
 #include <iostream>
 #include <cmath>
 
@@ -461,7 +463,8 @@ void MainWindow::cancelCloseAction()
 void MainWindow::showAboutPage()
 {
     QMessageBox::information(this, tr("About"),
-        tr("OpenAL Soft Configuration Utility.\nBuilt for OpenAL Soft library version ")+(ALSOFT_VERSION ".")
+        tr("OpenAL Soft Configuration Utility.\nBuilt for OpenAL Soft library version ")+
+        (ALSOFT_VERSION "-" ALSOFT_GIT_COMMIT_HASH " (" ALSOFT_GIT_BRANCH " branch).")
     );
 }
 

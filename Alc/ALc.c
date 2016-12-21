@@ -20,6 +20,8 @@
 
 #include "config.h"
 
+#include "version.h"
+
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -900,6 +902,8 @@ static void alc_initconfig(void)
         else ERR("Failed to open log file '%s'\n", str);
     }
 
+    TRACE("Initializing library v%s-%s %s\n", ALSOFT_VERSION,
+          ALSOFT_GIT_COMMIT_HASH, ALSOFT_GIT_BRANCH);
     {
         char buf[1024] = "";
         int len = snprintf(buf, sizeof(buf), "%s", BackendList[0].name);

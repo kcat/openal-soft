@@ -20,6 +20,8 @@
 
 #include "config.h"
 
+#include "version.h"
+
 #include <stdlib.h>
 #include "alMain.h"
 #include "AL/alc.h"

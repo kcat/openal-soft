@@ -2,9 +2,6 @@
 #define AL_API  ${EXPORT_DECL}
 #define ALC_API ${EXPORT_DECL}
 
-/* Define to the library version */
-#define ALSOFT_VERSION "${LIB_VERSION}"
-
 /* Define any available alignment declaration */
 #define ALIGN(x) ${ALIGN_DECL}
 

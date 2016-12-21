@@ -1174,6 +1174,25 @@ IF(LIBTYPE STREQUAL "STATIC")
     SET(PKG_CONFIG_CFLAGS -DAL_LIBTYPE_STATIC ${PKG_CONFIG_CFLAGS})
 ENDIF()
 
+IF(EXISTS "${OpenAL_SOURCE_DIR}/.git")
+    # Get the current working branch and its latest abbreviated commit hash
+    EXECUTE_PROCESS(
+        COMMAND git rev-parse --abbrev-ref HEAD
+        WORKING_DIRECTORY "${OpenAL_SOURCE_DIR}"
+        OUTPUT_VARIABLE GIT_BRANCH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    EXECUTE_PROCESS(
+        COMMAND git log -1 --format=%h
+        WORKING_DIRECTORY "${OpenAL_SOURCE_DIR}"
+        OUTPUT_VARIABLE GIT_COMMIT_HASH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+ELSE()
+    SET(GIT_BRANCH "UNKNOWN")
+    SET(GIT_COMMIT_HASH "unknown")
+ENDIF()
+
 # Needed for openal.pc.in
 SET(prefix ${CMAKE_INSTALL_PREFIX})
 SET(exec_prefix "\${prefix}")
@@ -1183,6 +1202,9 @@ SET(includedir "\${prefix}/${CMAKE_INSTALL_INCLUDEDIR}")
 SET(PACKAGE_VERSION "${LIB_VERSION}")
 
 # End configuration
+CONFIGURE_FILE(
+    "${OpenAL_SOURCE_DIR}/version.h.in"
+    "${OpenAL_BINARY_DIR}/version.h")
 CONFIGURE_FILE(
     "${OpenAL_SOURCE_DIR}/config.h.in"
     "${OpenAL_BINARY_DIR}/config.h")

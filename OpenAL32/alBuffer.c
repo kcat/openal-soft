@@ -161,7 +161,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
     if(DecomposeUserFormat(format, &srcchannels, &srctype) == AL_FALSE)
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
 
-    align = ATOMIC_LOAD(&albuf->UnpackAlign);
+    align = ATOMIC_LOAD_SEQ(&albuf->UnpackAlign);
     if(SanitizeAlignment(srctype, &align) == AL_FALSE)
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
     switch(srctype)
@@ -311,7 +311,7 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
 
     WriteLock(&albuf->lock);
-    align = ATOMIC_LOAD(&albuf->UnpackAlign);
+    align = ATOMIC_LOAD_SEQ(&albuf->UnpackAlign);
     if(SanitizeAlignment(srctype, &align) == AL_FALSE)
     {
         WriteUnlock(&albuf->lock);
@@ -390,7 +390,7 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
     if(IsValidType(type) == AL_FALSE || IsValidChannels(channels) == AL_FALSE)
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
 
-    align = ATOMIC_LOAD(&albuf->UnpackAlign);
+    align = ATOMIC_LOAD_SEQ(&albuf->UnpackAlign);
     if(SanitizeAlignment(type, &align) == AL_FALSE)
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
     if((samples%align) != 0)
@@ -428,7 +428,7 @@ AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer,
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
 
     WriteLock(&albuf->lock);
-    align = ATOMIC_LOAD(&albuf->UnpackAlign);
+    align = ATOMIC_LOAD_SEQ(&albuf->UnpackAlign);
     if(SanitizeAlignment(type, &align) == AL_FALSE)
     {
         WriteUnlock(&albuf->lock);
@@ -483,7 +483,7 @@ AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint buffer,
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
 
     ReadLock(&albuf->lock);
-    align = ATOMIC_LOAD(&albuf->PackAlign);
+    align = ATOMIC_LOAD_SEQ(&albuf->PackAlign);
     if(SanitizeAlignment(type, &align) == AL_FALSE)
     {
         ReadUnlock(&albuf->lock);
@@ -630,13 +630,13 @@ AL_API void AL_APIENTRY alBufferi(ALuint buffer, ALenum param, ALint value)
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
         if(!(value >= 0))
             SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-        ATOMIC_STORE(&albuf->UnpackAlign, value);
+        ATOMIC_STORE_SEQ(&albuf->UnpackAlign, value);
         break;
 
     case AL_PACK_BLOCK_ALIGNMENT_SOFT:
         if(!(value >= 0))
             SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-        ATOMIC_STORE(&albuf->PackAlign, value);
+        ATOMIC_STORE_SEQ(&albuf->PackAlign, value);
         break;
 
     default:
@@ -878,11 +878,11 @@ AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum param, ALint *value
         break;
 
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
-        *value = ATOMIC_LOAD(&albuf->UnpackAlign);
+        *value = ATOMIC_LOAD_SEQ(&albuf->UnpackAlign);
         break;
 
     case AL_PACK_BLOCK_ALIGNMENT_SOFT:
-        *value = ATOMIC_LOAD(&albuf->PackAlign);
+        *value = ATOMIC_LOAD_SEQ(&albuf->PackAlign);
         break;
 
     default:

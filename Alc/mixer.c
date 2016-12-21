@@ -532,7 +532,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     }
                     tmpiter = tmpiter->next;
                     if(!tmpiter && Looping)
-                        tmpiter = ATOMIC_LOAD(&Source->queue);
+                        tmpiter = ATOMIC_LOAD(&Source->queue, almemory_order_acquire);
                     else if(!tmpiter)
                     {
                         SilenceSamples(&SrcData[SrcDataSize], SrcBufferSize - SrcDataSize);
@@ -675,7 +675,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
             if(!(BufferListItem=BufferListItem->next))
             {
                 if(Looping)
-                    BufferListItem = ATOMIC_LOAD(&Source->queue);
+                    BufferListItem = ATOMIC_LOAD(&Source->queue, almemory_order_acquire);
                 else
                 {
                     State = AL_STOPPED;

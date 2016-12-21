@@ -1347,7 +1347,7 @@ static void UpdateContextSources(ALCcontext *ctx, ALeffectslot *slot)
     ALsource *source;
 
     IncrementRef(&ctx->UpdateCount);
-    if(!ATOMIC_LOAD(&ctx->HoldUpdates))
+    if(!ATOMIC_LOAD(&ctx->HoldUpdates, almemory_order_acquire))
     {
         ALboolean force = CalcListenerParams(ctx);
         while(slot)
@@ -1461,12 +1461,12 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 memset(slot->WetBuffer[i], 0, SamplesToDo*sizeof(ALfloat));
         }
 
-        ctx = ATOMIC_LOAD(&device->ContextList);
+        ctx = ATOMIC_LOAD(&device->ContextList, almemory_order_acquire);
         while(ctx)
         {
             ALeffectslot *slotroot;
 
-            slotroot = ATOMIC_LOAD(&ctx->ActiveAuxSlotList);
+            slotroot = ATOMIC_LOAD(&ctx->ActiveAuxSlotList, almemory_order_acquire);
             UpdateContextSources(ctx, slotroot);
 
             slot = slotroot;
@@ -1631,7 +1631,7 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
 
     device->Connected = ALC_FALSE;
 
-    Context = ATOMIC_LOAD(&device->ContextList);
+    Context = ATOMIC_LOAD_SEQ(&device->ContextList);
     while(Context)
     {
         ALvoice *voice, *voice_end;
@@ -1646,9 +1646,9 @@ ALvoid aluHandleDisconnect(ALCdevice *device)
             if(source && source->state == AL_PLAYING)
             {
                 source->state = AL_STOPPED;
-                ATOMIC_STORE(&source->current_buffer, NULL);
-                ATOMIC_STORE(&source->position, 0);
-                ATOMIC_STORE(&source->position_fraction, 0);
+                ATOMIC_STORE(&source->current_buffer, NULL, almemory_order_relaxed);
+                ATOMIC_STORE(&source->position, 0, almemory_order_relaxed);
+                ATOMIC_STORE(&source->position_fraction, 0, almemory_order_release);
             }
 
             voice++;

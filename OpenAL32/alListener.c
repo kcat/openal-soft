@@ -506,10 +506,10 @@ void UpdateListenerProps(ALCcontext *context)
         /* If there was an unused update container, put it back in the
          * freelist.
          */
-        struct ALlistenerProps *first = ATOMIC_LOAD(&listener->FreeList);
+        struct ALlistenerProps *first = ATOMIC_LOAD_SEQ(&listener->FreeList);
         do {
             ATOMIC_STORE(&props->next, first, almemory_order_relaxed);
-        } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALlistenerProps*,
+        } while(ATOMIC_COMPARE_EXCHANGE_WEAK_SEQ(struct ALlistenerProps*,
                 &listener->FreeList, &first, props) == 0);
     }
 }

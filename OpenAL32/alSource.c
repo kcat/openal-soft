@@ -658,7 +658,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             CHECKVAL(*values == AL_FALSE || *values == AL_TRUE);
 
             WriteLock(&Source->queue_lock);
-            ATOMIC_STORE(&Source->looping, *values);
+            ATOMIC_STORE_SEQ(&Source->looping, *values);
             WriteUnlock(&Source->queue_lock);
             return AL_TRUE;
 
@@ -700,8 +700,8 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 Source->SourceType = AL_UNDETERMINED;
                 newlist = NULL;
             }
-            oldlist = ATOMIC_EXCHANGE(ALbufferlistitem*, &Source->queue, newlist);
-            ATOMIC_STORE(&Source->current_buffer, newlist);
+            oldlist = ATOMIC_EXCHANGE_SEQ(ALbufferlistitem*, &Source->queue, newlist);
+            ATOMIC_STORE_SEQ(&Source->current_buffer, newlist);
             WriteUnlock(&Source->queue_lock);
             UnlockBuffersRead(device);
 
@@ -1097,7 +1097,7 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
 
         case AL_SEC_LENGTH_SOFT:
             ReadLock(&Source->queue_lock);
-            if(!(BufferList=ATOMIC_LOAD(&Source->queue)))
+            if(!(BufferList=ATOMIC_LOAD_SEQ(&Source->queue)))
                 *values = 0;
             else
             {
@@ -1214,13 +1214,14 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             return AL_TRUE;
 
         case AL_LOOPING:
-            *values = ATOMIC_LOAD(&Source->looping);
+            *values = ATOMIC_LOAD_SEQ(&Source->looping);
             return AL_TRUE;
 
         case AL_BUFFER:
             ReadLock(&Source->queue_lock);
-            BufferList = (Source->SourceType == AL_STATIC) ? ATOMIC_LOAD(&Source->queue) :
-                                                             ATOMIC_LOAD(&Source->current_buffer);
+            BufferList = (Source->SourceType == AL_STATIC) ?
+                         ATOMIC_LOAD_SEQ(&Source->queue) :
+                         ATOMIC_LOAD_SEQ(&Source->current_buffer);
             *values = (BufferList && BufferList->buffer) ? BufferList->buffer->id : 0;
             ReadUnlock(&Source->queue_lock);
             return AL_TRUE;
@@ -1231,7 +1232,7 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
 
         case AL_BYTE_LENGTH_SOFT:
             ReadLock(&Source->queue_lock);
-            if(!(BufferList=ATOMIC_LOAD(&Source->queue)))
+            if(!(BufferList=ATOMIC_LOAD_SEQ(&Source->queue)))
                 *values = 0;
             else
             {
@@ -1270,7 +1271,7 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
 
         case AL_SAMPLE_LENGTH_SOFT:
             ReadLock(&Source->queue_lock);
-            if(!(BufferList=ATOMIC_LOAD(&Source->queue)))
+            if(!(BufferList=ATOMIC_LOAD_SEQ(&Source->queue)))
                 *values = 0;
             else
             {
@@ -1286,7 +1287,7 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
 
         case AL_BUFFERS_QUEUED:
             ReadLock(&Source->queue_lock);
-            if(!(BufferList=ATOMIC_LOAD(&Source->queue)))
+            if(!(BufferList=ATOMIC_LOAD_SEQ(&Source->queue)))
                 *values = 0;
             else
             {
@@ -1301,7 +1302,7 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
 
         case AL_BUFFERS_PROCESSED:
             ReadLock(&Source->queue_lock);
-            if(ATOMIC_LOAD(&Source->looping) || Source->SourceType != AL_STREAMING)
+            if(ATOMIC_LOAD_SEQ(&Source->looping) || Source->SourceType != AL_STREAMING)
             {
                 /* Buffers on a looping source are in a perpetual state of
                  * PENDING, so don't report any as PROCESSED */
@@ -1309,8 +1310,8 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             }
             else
             {
-                const ALbufferlistitem *BufferList = ATOMIC_LOAD(&Source->queue);
-                const ALbufferlistitem *Current = ATOMIC_LOAD(&Source->current_buffer);
+                const ALbufferlistitem *BufferList = ATOMIC_LOAD_SEQ(&Source->queue);
+                const ALbufferlistitem *Current = ATOMIC_LOAD_SEQ(&Source->current_buffer);
                 ALsizei played = 0;
                 while(BufferList && BufferList != Current)
                 {
@@ -2499,7 +2500,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
     }
 
     /* Check for a valid Buffer, for its frequency and format */
-    BufferList = ATOMIC_LOAD(&source->queue);
+    BufferList = ATOMIC_LOAD_SEQ(&source->queue);
     while(BufferList)
     {
         if(BufferList->buffer)
@@ -2588,7 +2589,8 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
     source->SourceType = AL_STREAMING;
 
     BufferList = NULL;
-    if(!ATOMIC_COMPARE_EXCHANGE_STRONG(ALbufferlistitem*, &source->queue, &BufferList, BufferListStart))
+    if(!ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(ALbufferlistitem*, &source->queue,
+                                           &BufferList, BufferListStart))
     {
         /* Queue head is not NULL, append to the end of the queue */
         while(BufferList->next != NULL)
@@ -2599,7 +2601,8 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
      * buffers.
      */
     BufferList = NULL;
-    ATOMIC_COMPARE_EXCHANGE_STRONG(ALbufferlistitem*, &source->current_buffer, &BufferList, BufferListStart);
+    ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(ALbufferlistitem*, &source->current_buffer,
+                                       &BufferList, BufferListStart);
     WriteUnlock(&source->queue_lock);
 
 done:
@@ -2630,7 +2633,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
 
     WriteLock(&source->queue_lock);
-    if(ATOMIC_LOAD(&source->looping) || source->SourceType != AL_STREAMING)
+    if(ATOMIC_LOAD_SEQ(&source->looping) || source->SourceType != AL_STREAMING)
     {
         WriteUnlock(&source->queue_lock);
         /* Trying to unqueue buffers on a looping or non-streaming source. */
@@ -2638,8 +2641,8 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
     }
 
     /* Find the new buffer queue head */
-    OldTail = ATOMIC_LOAD(&source->queue);
-    Current = ATOMIC_LOAD(&source->current_buffer);
+    OldTail = ATOMIC_LOAD_SEQ(&source->queue);
+    Current = ATOMIC_LOAD_SEQ(&source->current_buffer);
     if(OldTail != Current)
     {
         for(i = 1;i < nb;i++)
@@ -2657,7 +2660,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
     }
 
     /* Swap it, and cut the new head from the old. */
-    OldHead = ATOMIC_EXCHANGE(ALbufferlistitem*, &source->queue, OldTail->next);
+    OldHead = ATOMIC_EXCHANGE_SEQ(ALbufferlistitem*, &source->queue, OldTail->next);
     if(OldTail->next)
     {
         ALCdevice *device = context->Device;
@@ -2788,7 +2791,7 @@ static void DeinitSource(ALsource *source)
     size_t count = 0;
     size_t i;
 
-    props = ATOMIC_LOAD(&source->Update);
+    props = ATOMIC_LOAD_SEQ(&source->Update);
     if(props) al_free(props);
 
     props = ATOMIC_LOAD(&source->FreeList, almemory_order_relaxed);
@@ -2806,7 +2809,7 @@ static void DeinitSource(ALsource *source)
     if(count > 3)
         WARN("Freed "SZFMT" Source property objects\n", count);
 
-    BufferList = ATOMIC_EXCHANGE(ALbufferlistitem*, &source->queue, NULL);
+    BufferList = ATOMIC_EXCHANGE_SEQ(ALbufferlistitem*, &source->queue, NULL);
     while(BufferList != NULL)
     {
         ALbufferlistitem *next = BufferList->next;
@@ -2910,7 +2913,7 @@ static void UpdateSourceProps(ALsource *source, ALuint num_sends)
         /* If there was an unused update container, put it back in the
          * freelist.
          */
-        struct ALsourceProps *first = ATOMIC_LOAD(&source->FreeList);
+        struct ALsourceProps *first = ATOMIC_LOAD_SEQ(&source->FreeList);
         do {
             ATOMIC_STORE(&props->next, first, almemory_order_relaxed);
         } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALsourceProps*,
@@ -2956,7 +2959,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
 
         /* Check that there is a queue containing at least one valid, non zero
          * length Buffer. */
-        BufferList = ATOMIC_LOAD(&Source->queue);
+        BufferList = ATOMIC_LOAD_SEQ(&Source->queue);
         while(BufferList)
         {
             ALbuffer *buffer;
@@ -3052,7 +3055,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         if(Source->state != AL_INITIAL)
         {
             Source->state = AL_STOPPED;
-            ATOMIC_STORE(&Source->current_buffer, NULL);
+            ATOMIC_STORE_SEQ(&Source->current_buffer, NULL);
         }
         Source->OffsetType = AL_NONE;
         Source->Offset = 0.0;
@@ -3062,10 +3065,10 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         if(Source->state != AL_INITIAL)
         {
             Source->state = AL_INITIAL;
-            ATOMIC_STORE(&Source->current_buffer, ATOMIC_LOAD(&Source->queue),
+            ATOMIC_STORE(&Source->current_buffer, ATOMIC_LOAD_SEQ(&Source->queue),
                          almemory_order_relaxed);
             ATOMIC_STORE(&Source->position, 0, almemory_order_relaxed);
-            ATOMIC_STORE(&Source->position_fraction, 0);
+            ATOMIC_STORE_SEQ(&Source->position_fraction, 0);
         }
         Source->OffsetType = AL_NONE;
         Source->Offset = 0.0;
@@ -3304,7 +3307,7 @@ ALboolean ApplyOffset(ALsource *Source)
         return AL_FALSE;
 
     totalBufferLen = 0;
-    BufferList = ATOMIC_LOAD(&Source->queue);
+    BufferList = ATOMIC_LOAD_SEQ(&Source->queue);
     while(BufferList && totalBufferLen <= offset)
     {
         Buffer = BufferList->buffer;
@@ -3343,7 +3346,7 @@ static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac)
     ALdouble dbloff, dblfrac;
 
     /* Find the first valid Buffer in the Queue */
-    BufferList = ATOMIC_LOAD(&Source->queue);
+    BufferList = ATOMIC_LOAD_SEQ(&Source->queue);
     while(BufferList)
     {
         if(BufferList->buffer)

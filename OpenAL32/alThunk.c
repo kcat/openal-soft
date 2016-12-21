@@ -54,7 +54,7 @@ ALenum NewThunkEntry(ALuint *index)
     ReadLock(&ThunkLock);
     for(i = 0;i < ThunkArraySize;i++)
     {
-        if(ATOMIC_EXCHANGE(ALenum, &ThunkArray[i], AL_TRUE) == AL_FALSE)
+        if(ATOMIC_EXCHANGE(ALenum, &ThunkArray[i], AL_TRUE, almemory_order_acq_rel) == AL_FALSE)
         {
             ReadUnlock(&ThunkLock);
             *index = i+1;
@@ -69,7 +69,7 @@ ALenum NewThunkEntry(ALuint *index)
      */
     for(;i < ThunkArraySize;i++)
     {
-        if(ATOMIC_EXCHANGE(ALenum, &ThunkArray[i], AL_TRUE) == AL_FALSE)
+        if(ATOMIC_EXCHANGE(ALenum, &ThunkArray[i], AL_TRUE, almemory_order_acq_rel) == AL_FALSE)
         {
             WriteUnlock(&ThunkLock);
             *index = i+1;
@@ -89,7 +89,7 @@ ALenum NewThunkEntry(ALuint *index)
     ThunkArray = NewList;
     ThunkArraySize *= 2;
 
-    ATOMIC_STORE(&ThunkArray[i], AL_TRUE);
+    ATOMIC_STORE_SEQ(&ThunkArray[i], AL_TRUE);
     WriteUnlock(&ThunkLock);
 
     *index = i+1;
@@ -100,6 +100,6 @@ void FreeThunkEntry(ALuint index)
 {
     ReadLock(&ThunkLock);
     if(index > 0 && index <= ThunkArraySize)
-        ATOMIC_STORE(&ThunkArray[index-1], AL_FALSE);
+        ATOMIC_STORE_SEQ(&ThunkArray[index-1], AL_FALSE);
     ReadUnlock(&ThunkLock);
 }

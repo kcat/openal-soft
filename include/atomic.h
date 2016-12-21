@@ -28,26 +28,20 @@ extern "C" {
 #define ATOMIC_INIT_STATIC(_newval) ATOMIC_VAR_INIT(_newval)
 /*#define ATOMIC_FLAG_INIT ATOMIC_FLAG_INIT*/
 
-#define PARAM2(f, a, b, ...)           (f((a), (b)))
-#define PARAM3(f, a, b, c, ...)        (f((a), (b), (c)))
-#define PARAM5(f, a, b, c, d, e, ...)  (f((a), (b), (c), (d), (e)))
+#define ATOMIC_LOAD(_val, _MO)  atomic_load_explicit(_val, _MO)
+#define ATOMIC_STORE(_val, _newval, _MO) atomic_store_explicit(_val, _newval, _MO)
 
-#define ATOMIC_LOAD(...)   PARAM2(atomic_load_explicit, __VA_ARGS__, memory_order_seq_cst)
-#define ATOMIC_STORE(...)  PARAM3(atomic_store_explicit, __VA_ARGS__, memory_order_seq_cst)
+#define ATOMIC_ADD(_val, _incr, _MO) atomic_fetch_add_explicit(_val, _incr, _MO)
+#define ATOMIC_SUB(_val, _decr, _MO) atomic_fetch_sub_explicit(_val, _decr, _MO)
 
-#define ATOMIC_ADD(...) PARAM3(atomic_fetch_add_explicit, __VA_ARGS__, memory_order_seq_cst)
-#define ATOMIC_SUB(...) PARAM3(atomic_fetch_sub_explicit, __VA_ARGS__, memory_order_seq_cst)
+#define ATOMIC_EXCHANGE(T, _val, _newval, _MO) atomic_exchange_explicit(_val, _newval, _MO)
+#define ATOMIC_COMPARE_EXCHANGE_STRONG(T, _val, _orig, _newval, _MO1, _MO2)   \
+    atomic_compare_exchange_strong_explicit(_val, _orig, _newval, _MO1, _MO2)
+#define ATOMIC_COMPARE_EXCHANGE_WEAK(T, _val, _orig, _newval, _MO1, _MO2)   \
+    atomic_compare_exchange_weak_explicit(_val, _orig, _newval, _MO1, _MO2)
 
-#define ATOMIC_EXCHANGE(T, ...) PARAM3(atomic_exchange_explicit, __VA_ARGS__, memory_order_seq_cst)
-#define ATOMIC_COMPARE_EXCHANGE_STRONG(T, ...)                                \
-    PARAM5(atomic_compare_exchange_strong_explicit, __VA_ARGS__, memory_order_seq_cst, memory_order_seq_cst)
-#define ATOMIC_COMPARE_EXCHANGE_WEAK(T, ...)                                  \
-    PARAM5(atomic_compare_exchange_weak_explicit, __VA_ARGS__, memory_order_seq_cst, memory_order_seq_cst)
-
-#define ATOMIC_FLAG_TEST_AND_SET(...)                                         \
-    PARAM2(atomic_flag_test_and_set_explicit, __VA_ARGS__, memory_order_seq_cst)
-#define ATOMIC_FLAG_CLEAR(...)                                                \
-    PARAM2(atomic_flag_clear_explicit, __VA_ARGS__, memory_order_seq_cst)
+#define ATOMIC_FLAG_TEST_AND_SET(_val, _MO) atomic_flag_test_and_set_explicit(_val, _MO)
+#define ATOMIC_FLAG_CLEAR(_val, _MO) atomic_flag_clear_explicit(_val, _MO)
 
 #define ATOMIC_THREAD_FENCE atomic_thread_fence
 
@@ -70,36 +64,36 @@ enum almemory_order {
 #define ATOMIC_INIT_STATIC(_newval) {(_newval)}
 #define ATOMIC_FLAG_INIT            ATOMIC_INIT_STATIC(0)
 
-#define ATOMIC_LOAD(_val, ...)  __extension__({ \
+#define ATOMIC_LOAD(_val, _MO)  __extension__({ \
     __typeof((_val)->value) _r = (_val)->value; \
     __asm__ __volatile__("" ::: "memory");      \
     _r;                                         \
 })
-#define ATOMIC_STORE(_val, _newval, ...)  do { \
+#define ATOMIC_STORE(_val, _newval, _MO)  do { \
     __asm__ __volatile__("" ::: "memory");     \
     (_val)->value = (_newval);                 \
 } while(0)
 
-#define ATOMIC_ADD(_val, _incr, ...) __sync_fetch_and_add(&(_val)->value, (_incr))
-#define ATOMIC_SUB(_val, _decr, ...) __sync_fetch_and_sub(&(_val)->value, (_decr))
+#define ATOMIC_ADD(_val, _incr, _MO) __sync_fetch_and_add(&(_val)->value, (_incr))
+#define ATOMIC_SUB(_val, _decr, _MO) __sync_fetch_and_sub(&(_val)->value, (_decr))
 
-#define ATOMIC_EXCHANGE(T, _val, _newval, ...)  __extension__({               \
+#define ATOMIC_EXCHANGE(T, _val, _newval, _MO)  __extension__({               \
     static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
     __asm__ __volatile__("" ::: "memory");                                    \
     __sync_lock_test_and_set(&(_val)->value, (_newval));                      \
 })
-#define ATOMIC_COMPARE_EXCHANGE_STRONG(T, _val, _oldval, _newval, ...) __extension__({ \
+#define ATOMIC_COMPARE_EXCHANGE_STRONG(T, _val, _oldval, _newval, _MO1, _MO2) __extension__({ \
     static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
     T _o = *(_oldval);                                                        \
     *(_oldval) = __sync_val_compare_and_swap(&(_val)->value, _o, (_newval));  \
     *(_oldval) == _o;                                                         \
 })
 
-#define ATOMIC_FLAG_TEST_AND_SET(_val, ...)  __extension__({                  \
+#define ATOMIC_FLAG_TEST_AND_SET(_val, _MO)  __extension__({                  \
     __asm__ __volatile__("" ::: "memory");                                    \
     __sync_lock_test_and_set(&(_val)->value, 1);                              \
 })
-#define ATOMIC_FLAG_CLEAR(_val, ...)  __extension__({                         \
+#define ATOMIC_FLAG_CLEAR(_val, _MO)  __extension__({                         \
     __sync_lock_release(&(_val)->value);                                      \
     __asm__ __volatile__("" ::: "memory");                                    \
 })
@@ -156,24 +150,24 @@ enum almemory_order {
 #define ATOMIC_INIT(_val, _newval)  do { (_val)->value = (_newval); } while(0)
 #define ATOMIC_INIT_STATIC(_newval) {(_newval)}
 
-#define ATOMIC_LOAD(_val, ...)  __extension__({ \
+#define ATOMIC_LOAD(_val, _MO)  __extension__({ \
     __typeof((_val)->value) _r = (_val)->value; \
     __asm__ __volatile__("" ::: "memory");      \
     _r;                                         \
 })
-#define ATOMIC_STORE(_val, _newval, ...)  do { \
+#define ATOMIC_STORE(_val, _newval, _MO)  do { \
     __asm__ __volatile__("" ::: "memory");     \
     (_val)->value = (_newval);                 \
 } while(0)
 
-#define ATOMIC_ADD(_val, _incr, ...) __extension__({                          \
+#define ATOMIC_ADD(_val, _incr, _MO) __extension__({                          \
     static_assert(sizeof((_val)->value)==4 || sizeof((_val)->value)==8, "Unsupported size!"); \
     __typeof((_val)->value) _r;                                               \
     if(sizeof((_val)->value) == 4) WRAP_ADD("l", _r, &(_val)->value, _incr);  \
     else if(sizeof((_val)->value) == 8) WRAP_ADD("q", _r, &(_val)->value, _incr); \
     _r;                                                                       \
 })
-#define ATOMIC_SUB(_val, _decr, ...) __extension__({                          \
+#define ATOMIC_SUB(_val, _decr, _MO) __extension__({                          \
     static_assert(sizeof((_val)->value)==4 || sizeof((_val)->value)==8, "Unsupported size!"); \
     __typeof((_val)->value) _r;                                               \
     if(sizeof((_val)->value) == 4) WRAP_SUB("l", _r, &(_val)->value, _decr);  \
@@ -181,7 +175,7 @@ enum almemory_order {
     _r;                                                                       \
 })
 
-#define ATOMIC_EXCHANGE(T, _val, _newval, ...)  __extension__({               \
+#define ATOMIC_EXCHANGE(T, _val, _newval, _MO)  __extension__({               \
     static_assert(sizeof(T)==4 || sizeof(T)==8, "Type "#T" has incorrect size!"); \
     static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
     T _r;                                                                     \
@@ -189,7 +183,7 @@ enum almemory_order {
     else if(sizeof(T) == 8) WRAP_XCHG("q", _r, &(_val)->value, (T)(_newval)); \
     _r;                                                                       \
 })
-#define ATOMIC_COMPARE_EXCHANGE_STRONG(T, _val, _oldval, _newval, ...) __extension__({ \
+#define ATOMIC_COMPARE_EXCHANGE_STRONG(T, _val, _oldval, _newval, _MO1, _MO2) __extension__({ \
     static_assert(sizeof(T)==4 || sizeof(T)==8, "Type "#T" has incorrect size!"); \
     static_assert(sizeof(T)==sizeof((_val)->value), "Type "#T" has incorrect size!"); \
     T _old = *(_oldval);                                                      \
@@ -279,27 +273,27 @@ enum almemory_order {
 #define ATOMIC_INIT(_val, _newval)  do { (_val)->value = (_newval); } while(0)
 #define ATOMIC_INIT_STATIC(_newval) {(_newval)}
 
-#define ATOMIC_LOAD(_val, ...)  ((_val)->value)
-#define ATOMIC_STORE(_val, _newval, ...)  do {  \
+#define ATOMIC_LOAD(_val, _MO)  ((_val)->value)
+#define ATOMIC_STORE(_val, _newval, _MO)  do {  \
     (_val)->value = (_newval);                  \
 } while(0)
 
 int _al_invalid_atomic_size(); /* not defined */
 
-#define ATOMIC_ADD(_val, _incr, ...)                                          \
+#define ATOMIC_ADD(_val, _incr, _MO)                                          \
     ((sizeof((_val)->value)==4) ? WRAP_ADDSUB(LONG, AtomicAdd32, &(_val)->value, (_incr)) : \
      (sizeof((_val)->value)==8) ? WRAP_ADDSUB(LONGLONG, AtomicAdd64, &(_val)->value, (_incr)) : \
      _al_invalid_atomic_size())
-#define ATOMIC_SUB(_val, _decr, ...)                                          \
+#define ATOMIC_SUB(_val, _decr, _MO)                                          \
     ((sizeof((_val)->value)==4) ? WRAP_ADDSUB(LONG, AtomicSub32, &(_val)->value, (_decr)) : \
      (sizeof((_val)->value)==8) ? WRAP_ADDSUB(LONGLONG, AtomicSub64, &(_val)->value, (_decr)) : \
      _al_invalid_atomic_size())
 
-#define ATOMIC_EXCHANGE(T, _val, _newval, ...)                                \
+#define ATOMIC_EXCHANGE(T, _val, _newval, _MO)                                \
     ((sizeof(T)==4) ? WRAP_XCHG(T, AtomicSwap32, &(_val)->value, (_newval)) : \
      (sizeof(T)==8) ? WRAP_XCHG(T, AtomicSwap64, &(_val)->value, (_newval)) : \
      (T)_al_invalid_atomic_size())
-#define ATOMIC_COMPARE_EXCHANGE_STRONG(T, _val, _oldval, _newval, ...)        \
+#define ATOMIC_COMPARE_EXCHANGE_STRONG(T, _val, _oldval, _newval, _MO1, _MO2) \
     ((sizeof(T)==4) ? WRAP_CMPXCHG(T, CompareAndSwap32, &(_val)->value, (_newval), (_oldval)) : \
      (sizeof(T)==8) ? WRAP_CMPXCHG(T, CompareAndSwap64, &(_val)->value, (_newval), (_oldval)) : \
      (bool)_al_invalid_atomic_size())
@@ -333,7 +327,7 @@ int _al_invalid_atomic_size(); /* not defined */
 #define ATOMIC_FLAG_TEST_AND_SET(...) (0)
 #define ATOMIC_FLAG_CLEAR(...) ((void)0)
 
-#define ATOMIC_THREAD_FENCE ((void)0)
+#define ATOMIC_THREAD_FENCE(...) ((void)0)
 #endif
 
 /* If no weak cmpxchg is provided (not all systems will have one), substitute a
@@ -348,11 +342,22 @@ int _al_invalid_atomic_size(); /* not defined */
 #ifndef ATOMIC_FLAG
 #define ATOMIC_FLAG      ATOMIC(int)
 #define ATOMIC_FLAG_INIT ATOMIC_INIT_STATIC(0)
-#define ATOMIC_FLAG_TEST_AND_SET_(_val, ...) ATOMIC_EXCHANGE(int, _val, 1,  __VA_ARGS__)
-#define ATOMIC_FLAG_TEST_AND_SET(...)        ATOMIC_FLAG_TEST_AND_SET_(__VA_ARGS__, almemory_order_seq_cst)
-#define ATOMIC_FLAG_CLEAR_(_val, ...) ATOMIC_STORE(_val, 0, __VA_ARGS__)
-#define ATOMIC_FLAG_CLEAR(...)        ATOMIC_FLAG_CLEAR_(__VA_ARGS__, almemory_order_seq_cst)
+#define ATOMIC_FLAG_TEST_AND_SET(_val, _MO) ATOMIC_EXCHANGE(int, _val, 1, _MO)
+#define ATOMIC_FLAG_CLEAR(_val, _MO)        ATOMIC_STORE(_val, 0, _MO)
 #endif
+
+
+#define ATOMIC_LOAD_SEQ(_val) ATOMIC_LOAD(_val, almemory_order_seq_cst)
+#define ATOMIC_STORE_SEQ(_val, _newval) ATOMIC_STORE(_val, _newval, almemory_order_seq_cst)
+
+#define ATOMIC_ADD_SEQ(_val, _incr) ATOMIC_ADD(_val, _incr, almemory_order_seq_cst)
+#define ATOMIC_SUB_SEQ(_val, _decr) ATOMIC_SUB(_val, _decr, almemory_order_seq_cst)
+
+#define ATOMIC_EXCHANGE_SEQ(T, _val, _newval) ATOMIC_EXCHANGE(T, _val, _newval, almemory_order_seq_cst)
+#define ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(T, _val, _oldval, _newval) \
+    ATOMIC_COMPARE_EXCHANGE_STRONG(T, _val, _oldval, _newval, almemory_order_seq_cst, almemory_order_seq_cst)
+#define ATOMIC_COMPARE_EXCHANGE_WEAK_SEQ(T, _val, _oldval, _newval) \
+    ATOMIC_COMPARE_EXCHANGE_WEAK(T, _val, _oldval, _newval, almemory_order_seq_cst, almemory_order_seq_cst)
 
 
 typedef unsigned int uint;
@@ -361,11 +366,11 @@ typedef ATOMIC(uint) RefCount;
 inline void InitRef(RefCount *ptr, uint value)
 { ATOMIC_INIT(ptr, value); }
 inline uint ReadRef(RefCount *ptr)
-{ return ATOMIC_LOAD(ptr); }
+{ return ATOMIC_LOAD_SEQ(ptr); }
 inline uint IncrementRef(RefCount *ptr)
-{ return ATOMIC_ADD(ptr, 1)+1; }
+{ return ATOMIC_ADD_SEQ(ptr, 1)+1; }
 inline uint DecrementRef(RefCount *ptr)
-{ return ATOMIC_SUB(ptr, 1)-1; }
+{ return ATOMIC_SUB_SEQ(ptr, 1)-1; }
 
 
 #ifdef __cplusplus

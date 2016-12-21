@@ -46,7 +46,7 @@ ALvoid alSetError(ALCcontext *Context, ALenum errorCode)
         raise(SIGTRAP);
 #endif
     }
-    ATOMIC_COMPARE_EXCHANGE_STRONG(ALenum, &Context->LastError, &curerr, errorCode);
+    ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(ALenum, &Context->LastError, &curerr, errorCode);
 }
 
 AL_API ALenum AL_APIENTRY alGetError(void)
@@ -69,7 +69,7 @@ AL_API ALenum AL_APIENTRY alGetError(void)
         return AL_INVALID_OPERATION;
     }
 
-    errorCode = ATOMIC_EXCHANGE(ALenum, &Context->LastError, AL_NO_ERROR);
+    errorCode = ATOMIC_EXCHANGE_SEQ(ALenum, &Context->LastError, AL_NO_ERROR);
 
     ALCcontext_DecRef(Context);
 

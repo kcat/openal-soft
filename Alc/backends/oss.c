@@ -88,6 +88,8 @@ static struct oss_device oss_capture = {
 
 #ifdef ALC_OSS_COMPAT
 
+#define DSP_CAP_OUTPUT 0x00020000
+#define DSP_CAP_INPUT 0x00010000
 static void ALCossListPopulate(struct oss_device *UNUSED(devlist), int UNUSED(type_flag))
 {
 }

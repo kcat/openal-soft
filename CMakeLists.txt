@@ -1174,23 +1174,24 @@ IF(LIBTYPE STREQUAL "STATIC")
     SET(PKG_CONFIG_CFLAGS -DAL_LIBTYPE_STATIC ${PKG_CONFIG_CFLAGS})
 ENDIF()
 
-IF(EXISTS "${OpenAL_SOURCE_DIR}/.git")
+FIND_PACKAGE(Git)
+IF(GIT_FOUND AND EXISTS "${OpenAL_SOURCE_DIR}/.git")
     # Get the current working branch and its latest abbreviated commit hash
-    EXECUTE_PROCESS(
-        COMMAND git rev-parse --abbrev-ref HEAD
+    ADD_CUSTOM_TARGET(version
+        ${CMAKE_COMMAND} -D GIT_EXECUTABLE=${GIT_EXECUTABLE}
+                         -D LIB_VERSION=${LIB_VERSION}
+                         -D SRC=${OpenAL_SOURCE_DIR}/version.h.in
+                         -D DST=${OpenAL_BINARY_DIR}/version.h
+                         -P ${OpenAL_SOURCE_DIR}/version.cmake
         WORKING_DIRECTORY "${OpenAL_SOURCE_DIR}"
-        OUTPUT_VARIABLE GIT_BRANCH
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    EXECUTE_PROCESS(
-        COMMAND git log -1 --format=%h
-        WORKING_DIRECTORY "${OpenAL_SOURCE_DIR}"
-        OUTPUT_VARIABLE GIT_COMMIT_HASH
-        OUTPUT_STRIP_TRAILING_WHITESPACE
+        VERBATIM
     )
 ELSE()
     SET(GIT_BRANCH "UNKNOWN")
     SET(GIT_COMMIT_HASH "unknown")
+    CONFIGURE_FILE(
+        "${OpenAL_SOURCE_DIR}/version.h.in"
+        "${OpenAL_BINARY_DIR}/version.h")
 ENDIF()
 
 # Needed for openal.pc.in
@@ -1202,9 +1203,6 @@ SET(includedir "\${prefix}/${CMAKE_INSTALL_INCLUDEDIR}")
 SET(PACKAGE_VERSION "${LIB_VERSION}")
 
 # End configuration
-CONFIGURE_FILE(
-    "${OpenAL_SOURCE_DIR}/version.h.in"
-    "${OpenAL_BINARY_DIR}/version.h")
 CONFIGURE_FILE(
     "${OpenAL_SOURCE_DIR}/config.h.in"
     "${OpenAL_BINARY_DIR}/config.h")
@@ -1296,6 +1294,9 @@ IF(WIN32 AND NOT LIBTYPE STREQUAL "STATIC")
 ENDIF()
 
 TARGET_LINK_LIBRARIES(${LIBNAME} common ${EXTRA_LIBS})
+IF(TARGET version)
+    ADD_DEPENDENCIES(${LIBNAME} version)
+ENDIF()
 
 IF(ALSOFT_INSTALL)
     # Add an install target here

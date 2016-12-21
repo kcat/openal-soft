@@ -472,6 +472,7 @@ void MainWindow::showAboutPage()
 QStringList MainWindow::collectHrtfs()
 {
     QStringList ret;
+    QStringList processed;
 
     for(int i = 0;i < ui->hrtfFileList->count();i++)
     {
@@ -481,13 +482,17 @@ QStringList MainWindow::collectHrtfs()
         {
             if(!fname.endsWith(".mhr", Qt::CaseInsensitive))
                 continue;
+            QString fullname = dir.absoluteFilePath(fname);
+            if(processed.contains(fullname))
+                continue;
+            processed.push_back(fullname);
 
             QString name = fname.left(fname.length()-4);
             if(!ret.contains(name))
                 ret.push_back(name);
             else
             {
-                size_t i = 1;
+                size_t i = 2;
                 do {
                     QString s = name+" #"+QString::number(i);
                     if(!ret.contains(s))
@@ -512,13 +517,17 @@ QStringList MainWindow::collectHrtfs()
             {
                 if(!fname.endsWith(".mhr", Qt::CaseInsensitive))
                     continue;
+                QString fullname = dir.absoluteFilePath(fname);
+                if(processed.contains(fullname))
+                    continue;
+                processed.push_back(fullname);
 
                 QString name = fname.left(fname.length()-4);
                 if(!ret.contains(name))
                     ret.push_back(name);
                 else
                 {
-                    size_t i = 1;
+                    size_t i = 2;
                     do {
                         QString s = name+" #"+QString::number(i);
                         if(!ret.contains(s))

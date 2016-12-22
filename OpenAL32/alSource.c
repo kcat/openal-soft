@@ -2913,12 +2913,7 @@ static void UpdateSourceProps(ALsource *source, ALuint num_sends)
         /* If there was an unused update container, put it back in the
          * freelist.
          */
-        struct ALsourceProps *first = ATOMIC_LOAD_SEQ(&source->FreeList);
-        do {
-            ATOMIC_STORE(&props->next, first, almemory_order_relaxed);
-        } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALsourceProps*,
-                &source->FreeList, &first, props, almemory_order_acq_rel,
-                almemory_order_acquire) == 0);
+        ATOMIC_REPLACE_HEAD(struct ALsourceProps*, &source->FreeList, props);
     }
 }
 

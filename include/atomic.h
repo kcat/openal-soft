@@ -373,6 +373,18 @@ inline uint DecrementRef(RefCount *ptr)
 { return ATOMIC_SUB_SEQ(ptr, 1)-1; }
 
 
+/* WARNING: A livelock is theoretically possible if another thread keeps
+ * changing the head without giving this a chance to actually swap in the new
+ * one (practically impossible with this little code, but...).
+ */
+#define ATOMIC_REPLACE_HEAD(T, _head, _entry) do {                            \
+    T _first = ATOMIC_LOAD(_head, almemory_order_acquire);                    \
+    do {                                                                      \
+        ATOMIC_STORE(&(_entry)->next, _first, almemory_order_relaxed);        \
+    } while(ATOMIC_COMPARE_EXCHANGE_WEAK(T, _head, &_first, _entry,           \
+            almemory_order_acq_rel, almemory_order_acquire) == 0);            \
+} while(0)
+
 #ifdef __cplusplus
 }
 #endif

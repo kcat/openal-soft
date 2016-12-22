@@ -671,11 +671,7 @@ void UpdateEffectSlotProps(ALeffectslot *slot)
         /* If there was an unused update container, put it back in the
          * freelist.
          */
-        struct ALeffectslotProps *first = ATOMIC_LOAD_SEQ(&slot->FreeList);
-        do {
-            ATOMIC_STORE(&props->next, first, almemory_order_relaxed);
-        } while(ATOMIC_COMPARE_EXCHANGE_WEAK_SEQ(struct ALeffectslotProps*,
-                &slot->FreeList, &first, props) == 0);
+        ATOMIC_REPLACE_HEAD(struct ALeffectslotProps*, &slot->FreeList, props);
     }
 
     if(oldstate)

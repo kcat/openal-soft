@@ -137,11 +137,11 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *
 
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
     {
-        state->Filter[i].a1 = -a;
-        state->Filter[i].a2 = 0.0f;
         state->Filter[i].b0 = a;
         state->Filter[i].b1 = -a;
         state->Filter[i].b2 = 0.0f;
+        state->Filter[i].a1 = -a;
+        state->Filter[i].a2 = 0.0f;
     }
 
     STATIC_CAST(ALeffectState,state)->OutBuffer = Device->FOAOut.Buffer;

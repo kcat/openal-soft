@@ -42,8 +42,8 @@ typedef enum ALfilterType {
 typedef struct ALfilterState {
     ALfloat x[2]; /* History of two last input samples  */
     ALfloat y[2]; /* History of two last output samples */
-    ALfloat a1, a2; /* Transfer function coefficients "a" (a0 is pre-applied) */
     ALfloat b0, b1, b2; /* Transfer function coefficients "b" */
+    ALfloat a1, a2; /* Transfer function coefficients "a" (a0 is pre-applied) */
 } ALfilterState;
 /* Currently only a C-based filter process method is implemented. */
 #define ALfilterState_process ALfilterState_processC

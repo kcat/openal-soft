@@ -81,7 +81,7 @@ static struct BackendInfo BackendList[] = {
     { "solaris", ALCsolarisBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
 #endif
 #ifdef HAVE_SNDIO
-    { "sndio", NULL, alc_sndio_init, alc_sndio_deinit, alc_sndio_probe, EmptyFuncs },
+    { "sndio", ALCsndioBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
 #endif
 #ifdef HAVE_QSA
     { "qsa", NULL, alc_qsa_init, alc_qsa_deinit, alc_qsa_probe, EmptyFuncs },

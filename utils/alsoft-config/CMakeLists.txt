@@ -21,8 +21,8 @@ if(QT4_FOUND)
     target_link_libraries(alsoft-config ${QT_LIBRARIES})
     set_property(TARGET alsoft-config APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
     set_target_properties(alsoft-config PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${OpenAL_BINARY_DIR})
-    if(TARGET version)
-        add_dependencies(alsoft-config version)
+    if(TARGET build_version)
+        add_dependencies(alsoft-config build_version)
     endif()
 
     install(TARGETS alsoft-config

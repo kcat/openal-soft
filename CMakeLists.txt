@@ -1177,7 +1177,7 @@ ENDIF()
 FIND_PACKAGE(Git)
 IF(GIT_FOUND AND EXISTS "${OpenAL_SOURCE_DIR}/.git")
     # Get the current working branch and its latest abbreviated commit hash
-    ADD_CUSTOM_TARGET(version
+    ADD_CUSTOM_TARGET(build_version
         ${CMAKE_COMMAND} -D GIT_EXECUTABLE=${GIT_EXECUTABLE}
                          -D LIB_VERSION=${LIB_VERSION}
                          -D SRC=${OpenAL_SOURCE_DIR}/version.h.in
@@ -1294,8 +1294,8 @@ IF(WIN32 AND NOT LIBTYPE STREQUAL "STATIC")
 ENDIF()
 
 TARGET_LINK_LIBRARIES(${LIBNAME} common ${EXTRA_LIBS})
-IF(TARGET version)
-    ADD_DEPENDENCIES(${LIBNAME} version)
+IF(TARGET build_version)
+    ADD_DEPENDENCIES(${LIBNAME} build_version)
 ENDIF()
 
 IF(ALSOFT_INSTALL)

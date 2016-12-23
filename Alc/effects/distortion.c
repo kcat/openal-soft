@@ -78,25 +78,26 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCdevice
     ALfloat cutoff;
     ALfloat edge;
 
-    /* Store distorted signal attenuation settings */
+    /* Store distorted signal attenuation settings. */
     state->attenuation = props->Distortion.Gain;
 
-    /* Store waveshaper edge settings */
+    /* Store waveshaper edge settings. */
     edge = sinf(props->Distortion.Edge * (F_PI_2));
     edge = minf(edge, 0.99f);
     state->edge_coeff = 2.0f * edge / (1.0f-edge);
 
-    /* Lowpass filter */
     cutoff = props->Distortion.LowpassCutoff;
-    /* Bandwidth value is constant in octaves */
+    /* Bandwidth value is constant in octaves. */
     bandwidth = (cutoff / 2.0f) / (cutoff * 0.67f);
+    /* Multiply sampling frequency by the amount of oversampling done during
+     * processing.
+     */
     ALfilterState_setParams(&state->lowpass, ALfilterType_LowPass, 1.0f,
         cutoff / (frequency*4.0f), calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
     );
 
-    /* Bandpass filter */
     cutoff = props->Distortion.EQCenter;
-    /* Convert bandwidth in Hz to octaves */
+    /* Convert bandwidth in Hz to octaves. */
     bandwidth = props->Distortion.EQBandwidth / (cutoff * 0.67f);
     ALfilterState_setParams(&state->bandpass, ALfilterType_BandPass, 1.0f,
         cutoff / (frequency*4.0f), calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
@@ -110,7 +111,6 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint Samples
     const ALfloat fc = state->edge_coeff;
     ALuint base;
     ALuint it;
-    ALuint ot;
     ALuint kt;
 
     for(base = 0;base < SamplesToDo;)
@@ -118,49 +118,49 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint Samples
         float buffer[2][64 * 4];
         ALuint td = minu(64, SamplesToDo-base);
 
-        /* Perform 4x oversampling to avoid aliasing.   */
-        /* Oversampling greatly improves distortion     */
-        /* quality and allows to implement lowpass and  */
-        /* bandpass filters using high frequencies, at  */
-        /* which classic IIR filters became unstable.   */
+        /* Perform 4x oversampling to avoid aliasing. Oversampling greatly
+         * improves distortion quality and allows to implement lowpass and
+         * bandpass filters using high frequencies, at which classic IIR
+         * filters became unstable.
+         */
 
-        /* Fill oversample buffer using zero stuffing */
+        /* Fill oversample buffer using zero stuffing. */
         for(it = 0;it < td;it++)
         {
-            buffer[0][it*4 + 0] = SamplesIn[0][it+base];
+            /* Multiply the sample by the amount of oversampling to maintain
+             * the signal's power.
+             */
+            buffer[0][it*4 + 0] = SamplesIn[0][it+base] * 4.0f;
             buffer[0][it*4 + 1] = 0.0f;
             buffer[0][it*4 + 2] = 0.0f;
             buffer[0][it*4 + 3] = 0.0f;
         }
 
-        /* First step, do lowpass filtering of original signal,  */
-        /* additionally perform buffer interpolation and lowpass */
-        /* cutoff for oversampling (which is fortunately first   */
-        /* step of distortion). So combine three operations into */
-        /* the one.                                              */
+        /* First step, do lowpass filtering of original signal. Additionally
+         * perform buffer interpolation and lowpass cutoff for oversampling
+         * (which is fortunately first step of distortion). So combine three
+         * operations into the one.
+         */
         ALfilterState_process(&state->lowpass, buffer[1], buffer[0], td*4);
 
-        /* Second step, do distortion using waveshaper function  */
-        /* to emulate signal processing during tube overdriving. */
-        /* Three steps of waveshaping are intended to modify     */
-        /* waveform without boost/clipping/attenuation process.  */
-        for(it = 0;it < td;it++)
+        /* Second step, do distortion using waveshaper function to emulate
+         * signal processing during tube overdriving. Three steps of
+         * waveshaping are intended to modify waveform without boost/clipping/
+         * attenuation process.
+         */
+        for(it = 0;it < td*4;it++)
         {
-            for(ot = 0;ot < 4;ot++)
-            {
-                /* Restore signal power by multiplying sample by amount of oversampling */
-                ALfloat smp = buffer[1][it*4 + ot] * 4.0f;
+            ALfloat smp = buffer[1][it];
 
-                smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp));
-                smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp)) * -1.0f;
-                smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp));
+            smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp));
+            smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp)) * -1.0f;
+            smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp));
 
-                buffer[1][it*4 + ot] = smp;
-            }
+            buffer[0][it] = smp;
         }
 
-        /* Third step, do bandpass filtering of distorted signal */
-        ALfilterState_process(&state->bandpass, buffer[0], buffer[1], td*4);
+        /* Third step, do bandpass filtering of distorted signal. */
+        ALfilterState_process(&state->bandpass, buffer[1], buffer[0], td*4);
 
         for(kt = 0;kt < NumChannels;kt++)
         {
@@ -172,7 +172,7 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALuint Samples
                 continue;
 
             for(it = 0;it < td;it++)
-                SamplesOut[kt][base+it] += gain * buffer[0][it*4];
+                SamplesOut[kt][base+it] += gain * buffer[1][it*4];
         }
 
         base += td;

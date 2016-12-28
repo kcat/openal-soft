@@ -1083,6 +1083,7 @@ ENDIF()
 OPTION(ALSOFT_REQUIRE_OPENSL "Require OpenSL backend" OFF)
 CHECK_INCLUDE_FILES("SLES/OpenSLES.h;SLES/OpenSLES_Android.h" HAVE_SLES_OPENSLES_ANDROID_H)
 IF(HAVE_SLES_OPENSLES_ANDROID_H)
+    SET(EXTRA_LIBS m ${EXTRA_LIBS})
     CHECK_SHARED_FUNCTION_EXISTS(slCreateEngine "SLES/OpenSLES.h" OpenSLES "" HAVE_LIBOPENSLES)
     IF(HAVE_LIBOPENSLES)
         OPTION(ALSOFT_BACKEND_OPENSL "Enable OpenSL backend" ON)
@@ -1425,6 +1426,9 @@ IF(ALSOFT_TESTS)
 ENDIF()
 
 IF(ALSOFT_EXAMPLES)
+    ADD_EXECUTABLE(alsmplayer examples/alsmplayer.c)
+    TARGET_LINK_LIBRARIES(alsmplayer ${LIBNAME})
+
     IF(SDL2_FOUND AND SDL_SOUND_FOUND)
         ADD_LIBRARY(ex-common STATIC examples/common/alhelpers.c
                                      examples/common/sdl_sound.c)

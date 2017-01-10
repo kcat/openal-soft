@@ -211,7 +211,7 @@ static void get_device_formfactor(IMMDevice *device, EndpointFormFactor *formfac
 }
 
 
-static void add_device(IMMDevice *device, LPCWSTR devid, vector_DevMap *list)
+static void add_device(IMMDevice *device, const WCHAR *devid, vector_DevMap *list)
 {
     int count = 0;
     al_string tmpname;
@@ -249,9 +249,9 @@ static void add_device(IMMDevice *device, LPCWSTR devid, vector_DevMap *list)
     AL_STRING_DEINIT(tmpname);
 }
 
-static LPWSTR get_device_id(IMMDevice *device)
+static WCHAR *get_device_id(IMMDevice *device)
 {
-    LPWSTR devid;
+    WCHAR *devid;
     HRESULT hr;
 
     hr = IMMDevice_GetId(device, &devid);
@@ -268,7 +268,7 @@ static HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ve
 {
     IMMDeviceCollection *coll;
     IMMDevice *defdev = NULL;
-    LPWSTR defdevid = NULL;
+    WCHAR *defdevid = NULL;
     HRESULT hr;
     UINT count;
     UINT i;
@@ -300,7 +300,7 @@ static HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ve
     for(i = 0;i < count;++i)
     {
         IMMDevice *device;
-        LPWSTR devid;
+        WCHAR *devid;
 
         hr = IMMDeviceCollection_Item(coll, i, &device);
         if(FAILED(hr)) continue;

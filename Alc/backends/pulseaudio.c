@@ -1558,17 +1558,20 @@ static void ALCpulseCapture_close(ALCpulseCapture *self)
 static ALCboolean ALCpulseCapture_start(ALCpulseCapture *self)
 {
     pa_operation *o;
+    pa_threaded_mainloop_lock(self->loop);
     o = pa_stream_cork(self->stream, 0, stream_success_callback, self->loop);
     wait_for_operation(o, self->loop);
-
+    pa_threaded_mainloop_unlock(self->loop);
     return ALC_TRUE;
 }
 
 static void ALCpulseCapture_stop(ALCpulseCapture *self)
 {
     pa_operation *o;
+    pa_threaded_mainloop_lock(self->loop);
     o = pa_stream_cork(self->stream, 1, stream_success_callback, self->loop);
     wait_for_operation(o, self->loop);
+    pa_threaded_mainloop_unlock(self->loop);
 }
 
 static ALCenum ALCpulseCapture_captureSamples(ALCpulseCapture *self, ALCvoid *buffer, ALCuint samples)
@@ -1579,6 +1582,7 @@ static ALCenum ALCpulseCapture_captureSamples(ALCpulseCapture *self, ALCvoid *bu
     /* Capture is done in fragment-sized chunks, so we loop until we get all
      * that's available */
     self->last_readable -= todo;
+    pa_threaded_mainloop_lock(self->loop);
     while(todo > 0)
     {
         size_t rem = todo;
@@ -1618,6 +1622,7 @@ static ALCenum ALCpulseCapture_captureSamples(ALCpulseCapture *self, ALCvoid *bu
             self->cap_len = 0;
         }
     }
+    pa_threaded_mainloop_unlock(self->loop);
     if(todo > 0)
         memset(buffer, ((device->FmtType==DevFmtUByte) ? 0x80 : 0), todo);
 
@@ -1631,7 +1636,9 @@ static ALCuint ALCpulseCapture_availableSamples(ALCpulseCapture *self)
 
     if(device->Connected)
     {
-        ssize_t got = pa_stream_readable_size(self->stream);
+        ssize_t got;
+        pa_threaded_mainloop_lock(self->loop);
+        got = pa_stream_readable_size(self->stream);
         if(got < 0)
         {
             ERR("pa_stream_readable_size() failed: %s\n", pa_strerror(got));
@@ -1639,6 +1646,7 @@ static ALCuint ALCpulseCapture_availableSamples(ALCpulseCapture *self)
         }
         else if((size_t)got > self->cap_len)
             readable += got - self->cap_len;
+        pa_threaded_mainloop_unlock(self->loop);
     }
 
     if(self->last_readable < readable)

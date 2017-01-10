@@ -243,7 +243,7 @@ typedef struct ALCplaybackOSS {
     ALubyte *mix_data;
     int data_size;
 
-    volatile int killNow;
+    ATOMIC(ALenum) killNow;
     althrd_t thread;
 } ALCplaybackOSS;
 
@@ -277,13 +277,13 @@ static int ALCplaybackOSS_mixerProc(void *ptr)
 
     frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
 
-    while(!self->killNow && device->Connected)
+    while(!ATOMIC_LOAD_SEQ(&self->killNow) && device->Connected)
     {
         ALint len = self->data_size;
         ALubyte *WritePtr = self->mix_data;
 
         aluMixData(device, WritePtr, len/frameSize);
-        while(len > 0 && !self->killNow)
+        while(len > 0 && !ATOMIC_LOAD_SEQ(&self->killNow))
         {
             wrote = write(self->fd, WritePtr, len);
             if(wrote < 0)
@@ -314,6 +314,8 @@ static void ALCplaybackOSS_Construct(ALCplaybackOSS *self, ALCdevice *device)
 {
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCplaybackOSS, ALCbackend, self);
+
+    ATOMIC_INIT(&self->killNow, AL_FALSE);
 }
 
 static ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name)
@@ -342,8 +344,6 @@ static ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name)
             return ALC_INVALID_VALUE;
         }
     }
-
-    self->killNow = 0;
 
     self->fd = open(dev->path, O_WRONLY);
     if(self->fd == -1)
@@ -459,7 +459,7 @@ static ALCboolean ALCplaybackOSS_start(ALCplaybackOSS *self)
     self->data_size = device->UpdateSize * FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
     self->mix_data = calloc(1, self->data_size);
 
-    self->killNow = 0;
+    ATOMIC_STORE_SEQ(&self->killNow, AL_FALSE);
     if(althrd_create(&self->thread, ALCplaybackOSS_mixerProc, self) != althrd_success)
     {
         free(self->mix_data);
@@ -474,10 +474,8 @@ static void ALCplaybackOSS_stop(ALCplaybackOSS *self)
 {
     int res;
 
-    if(self->killNow)
+    if(ATOMIC_EXCHANGE_SEQ(ALenum, &self->killNow, AL_TRUE))
         return;
-
-    self->killNow = 1;
     althrd_join(self->thread, &res);
 
     if(ioctl(self->fd, SNDCTL_DSP_RESET) != 0)
@@ -494,9 +492,9 @@ typedef struct ALCcaptureOSS {
     int fd;
 
     ll_ringbuffer_t *ring;
-    int doCapture;
+    ATOMIC(ALenum) doCapture;
 
-    volatile int killNow;
+    ATOMIC(ALenum) killNow;
     althrd_t thread;
 } ALCcaptureOSS;
 
@@ -530,12 +528,12 @@ static int ALCcaptureOSS_recordProc(void *ptr)
 
     frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
 
-    while(!self->killNow)
+    while(!ATOMIC_LOAD_SEQ(&self->killNow))
     {
         ll_ringbuffer_data_t vec[2];
 
         amt = 0;
-        if(self->doCapture)
+        if(ATOMIC_LOAD_SEQ(&self->doCapture))
         {
             ll_ringbuffer_get_write_vector(self->ring, vec);
             if(vec[0].len > 0)
@@ -567,6 +565,9 @@ static void ALCcaptureOSS_Construct(ALCcaptureOSS *self, ALCdevice *device)
 {
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCcaptureOSS, ALCbackend, self);
+
+    ATOMIC_INIT(&self->doCapture, AL_FALSE);
+    ATOMIC_INIT(&self->killNow, AL_FALSE);
 }
 
 static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
@@ -689,7 +690,6 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
         return ALC_OUT_OF_MEMORY;
     }
 
-    self->killNow = 0;
     if(althrd_create(&self->thread, ALCcaptureOSS_recordProc, self) != althrd_success)
     {
         ll_ringbuffer_free(self->ring);
@@ -708,7 +708,7 @@ static void ALCcaptureOSS_close(ALCcaptureOSS *self)
 {
     int res;
 
-    self->killNow = 1;
+    ATOMIC_STORE_SEQ(&self->killNow, AL_TRUE);
     althrd_join(self->thread, &res);
 
     close(self->fd);
@@ -720,13 +720,13 @@ static void ALCcaptureOSS_close(ALCcaptureOSS *self)
 
 static ALCboolean ALCcaptureOSS_start(ALCcaptureOSS *self)
 {
-    self->doCapture = 1;
+    ATOMIC_STORE_SEQ(&self->doCapture, AL_TRUE);
     return ALC_TRUE;
 }
 
 static void ALCcaptureOSS_stop(ALCcaptureOSS *self)
 {
-    self->doCapture = 0;
+    ATOMIC_STORE_SEQ(&self->doCapture, AL_FALSE);
 }
 
 static ALCenum ALCcaptureOSS_captureSamples(ALCcaptureOSS *self, ALCvoid *buffer, ALCuint samples)

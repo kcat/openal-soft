@@ -43,19 +43,18 @@ ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value)
     WriteLock(&map->lock);
     if(map->size > 0)
     {
-        ALsizei low = 0;
-        ALsizei high = map->size - 1;
-        while(low < high)
-        {
-            ALsizei mid = low + (high-low)/2;
-            if(map->keys[mid] < key)
-                low = mid + 1;
+        ALsizei count = map->size;
+        do {
+            ALsizei step = count>>1;
+            ALsizei i = pos+step;
+            if(!(map->keys[i] < key))
+                count = step;
             else
-                high = mid;
-        }
-        if(map->keys[low] < key)
-            low++;
-        pos = low;
+            {
+                pos = i+1;
+                count -= step+1;
+            }
+        } while(count > 0);
     }
 
     if(pos == map->size || map->keys[pos] != key)
@@ -126,25 +125,28 @@ ALvoid *RemoveUIntMapKey(UIntMap *map, ALuint key)
     WriteLock(&map->lock);
     if(map->size > 0)
     {
-        ALsizei low = 0;
-        ALsizei high = map->size - 1;
-        while(low < high)
-        {
-            ALsizei mid = low + (high-low)/2;
-            if(map->keys[mid] < key)
-                low = mid + 1;
+        ALsizei pos = 0;
+        ALsizei count = map->size;
+        do {
+            ALsizei step = count>>1;
+            ALsizei i = pos+step;
+            if(!(map->keys[i] < key))
+                count = step;
             else
-                high = mid;
-        }
-        if(map->keys[low] == key)
-        {
-            ptr = map->values[low];
-            if(low < map->size-1)
             {
-                memmove(&map->keys[low], &map->keys[low+1],
-                        (map->size-1-low)*sizeof(map->keys[0]));
-                memmove(&map->values[low], &map->values[low+1],
-                        (map->size-1-low)*sizeof(map->values[0]));
+                pos = i+1;
+                count -= step+1;
+            }
+        } while(count > 0);
+        if(pos < map->size && map->keys[pos] == key)
+        {
+            ptr = map->values[pos];
+            if(pos < map->size-1)
+            {
+                memmove(&map->keys[pos], &map->keys[pos+1],
+                        (map->size-1-pos)*sizeof(map->keys[0]));
+                memmove(&map->values[pos], &map->values[pos+1],
+                        (map->size-1-pos)*sizeof(map->values[0]));
             }
             map->size--;
         }
@@ -155,33 +157,36 @@ ALvoid *RemoveUIntMapKey(UIntMap *map, ALuint key)
 
 ALvoid *RemoveUIntMapKeyNoLock(UIntMap *map, ALuint key)
 {
+    ALvoid *ptr = NULL;
     if(map->size > 0)
     {
-        ALsizei low = 0;
-        ALsizei high = map->size - 1;
-        while(low < high)
-        {
-            ALsizei mid = low + (high-low)/2;
-            if(map->keys[mid] < key)
-                low = mid + 1;
+        ALsizei pos = 0;
+        ALsizei count = map->size;
+        do {
+            ALsizei step = count>>1;
+            ALsizei i = pos+step;
+            if(!(map->keys[i] < key))
+                count = step;
             else
-                high = mid;
-        }
-        if(map->keys[low] == key)
-        {
-            ALvoid *ptr = map->values[low];
-            if(low < map->size-1)
             {
-                memmove(&map->keys[low], &map->keys[low+1],
-                        (map->size-1-low)*sizeof(map->keys[0]));
-                memmove(&map->values[low], &map->values[low+1],
-                        (map->size-1-low)*sizeof(map->values[0]));
+                pos = i+1;
+                count -= step+1;
+            }
+        } while(count > 0);
+        if(pos < map->size && map->keys[pos] == key)
+        {
+            ptr = map->values[pos];
+            if(pos < map->size-1)
+            {
+                memmove(&map->keys[pos], &map->keys[pos+1],
+                        (map->size-1-pos)*sizeof(map->keys[0]));
+                memmove(&map->values[pos], &map->values[pos+1],
+                        (map->size-1-pos)*sizeof(map->values[0]));
             }
             map->size--;
-            return ptr;
         }
     }
-    return NULL;
+    return ptr;
 }
 
 ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key)
@@ -190,18 +195,21 @@ ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key)
     ReadLock(&map->lock);
     if(map->size > 0)
     {
-        ALsizei low = 0;
-        ALsizei high = map->size - 1;
-        while(low < high)
-        {
-            ALsizei mid = low + (high-low)/2;
-            if(map->keys[mid] < key)
-                low = mid + 1;
+        ALsizei pos = 0;
+        ALsizei count = map->size;
+        do {
+            ALsizei step = count>>1;
+            ALsizei i = pos+step;
+            if(!(map->keys[i] < key))
+                count = step;
             else
-                high = mid;
-        }
-        if(map->keys[low] == key)
-            ptr = map->values[low];
+            {
+                pos = i+1;
+                count -= step+1;
+            }
+        } while(count > 0);
+        if(pos < map->size && map->keys[pos] == key)
+            ptr = map->values[pos];
     }
     ReadUnlock(&map->lock);
     return ptr;
@@ -211,18 +219,21 @@ ALvoid *LookupUIntMapKeyNoLock(UIntMap *map, ALuint key)
 {
     if(map->size > 0)
     {
-        ALsizei low = 0;
-        ALsizei high = map->size - 1;
-        while(low < high)
-        {
-            ALsizei mid = low + (high-low)/2;
-            if(map->keys[mid] < key)
-                low = mid + 1;
+        ALsizei pos = 0;
+        ALsizei count = map->size;
+        do {
+            ALsizei step = count>>1;
+            ALsizei i = pos+step;
+            if(!(map->keys[i] < key))
+                count = step;
             else
-                high = mid;
-        }
-        if(map->keys[low] == key)
-            return map->values[low];
+            {
+                pos = i+1;
+                count -= step+1;
+            }
+        } while(count > 0);
+        if(pos < map->size && map->keys[pos] == key)
+            return map->values[pos];
     }
     return NULL;
 }

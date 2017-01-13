@@ -678,8 +678,8 @@ void MainWindow::loadConfig(const QString &fname)
     QStringList disabledCpuExts = settings.value("disable-cpu-exts").toStringList();
     if(disabledCpuExts.size() == 1)
         disabledCpuExts = disabledCpuExts[0].split(QChar(','));
-    for(QString &str : disabledCpuExts)
-        str = str.trimmed();
+    for(QStringList::iterator iter = disabledCpuExts.begin();iter != disabledCpuExts.end();iter++)
+        *iter = iter->trimmed();
     ui->enableSSECheckBox->setChecked(!disabledCpuExts.contains("sse", Qt::CaseInsensitive));
     ui->enableSSE2CheckBox->setChecked(!disabledCpuExts.contains("sse2", Qt::CaseInsensitive));
     ui->enableSSE3CheckBox->setChecked(!disabledCpuExts.contains("sse3", Qt::CaseInsensitive));
@@ -689,8 +689,8 @@ void MainWindow::loadConfig(const QString &fname)
     QStringList hrtf_paths = settings.value("hrtf-paths").toStringList();
     if(hrtf_paths.size() == 1)
         hrtf_paths = hrtf_paths[0].split(QChar(','));
-    for(QString &str : hrtf_paths)
-        str = str.trimmed();
+    for(QStringList::iterator iter = hrtf_paths.begin();iter != hrtf_paths.end();iter++)
+        *iter = iter->trimmed();
     if(!hrtf_paths.empty() && !hrtf_paths.back().isEmpty())
         ui->defaultHrtfPathsCheckBox->setCheckState(Qt::Unchecked);
     else
@@ -745,8 +745,8 @@ void MainWindow::loadConfig(const QString &fname)
     {
         if(drivers.size() == 1)
             drivers = drivers[0].split(QChar(','));
-        for(QString &str : drivers)
-            str = str.trimmed();
+        for(QStringList::iterator iter = drivers.begin();iter != drivers.end();iter++)
+            *iter = iter->trimmed();
 
         bool lastWasEmpty = false;
         foreach(const QString &backend, drivers)
@@ -798,8 +798,8 @@ void MainWindow::loadConfig(const QString &fname)
     QStringList excludefx = settings.value("excludefx").toStringList();
     if(excludefx.size() == 1)
         excludefx = excludefx[0].split(QChar(','));
-    for(QString &str : excludefx)
-        str = str.trimmed();
+    for(QStringList::iterator iter = excludefx.begin();iter != excludefx.end();iter++)
+        *iter = iter->trimmed();
     ui->enableEaxReverbCheck->setChecked(!excludefx.contains("eaxreverb", Qt::CaseInsensitive));
     ui->enableStdReverbCheck->setChecked(!excludefx.contains("reverb", Qt::CaseInsensitive));
     ui->enableChorusCheck->setChecked(!excludefx.contains("chorus", Qt::CaseInsensitive));

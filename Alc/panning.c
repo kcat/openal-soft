@@ -756,25 +756,45 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
     }
 }
 
-static void InitHrtfPanning(ALCdevice *device)
+static void InitHrtfPanning(ALCdevice *device, bool hoa_mode)
 {
-    size_t count = 4;
+    static const ALuint map_foa[] = { 0, 1, 2, 3 };
+    static const ALuint map_hoa[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+    const ALuint *ambi_map = hoa_mode ? map_hoa : map_foa;
+    size_t count = hoa_mode ? COUNTOF(map_hoa) : COUNTOF(map_foa);
     ALuint i;
+
+    static_assert(COUNTOF(map_hoa) <= COUNTOF(device->Hrtf.Coeffs), "ALCdevice::Hrtf.Values/Coeffs size is too small");
 
     for(i = 0;i < count;i++)
     {
         device->Dry.Ambi.Map[i].Scale = 1.0f;
-        device->Dry.Ambi.Map[i].Index = i;
+        device->Dry.Ambi.Map[i].Index = ambi_map[i];
     }
     device->Dry.CoeffCount = 0;
     device->Dry.NumChannels = count;
 
-    device->FOAOut.Ambi = device->Dry.Ambi;
-    device->FOAOut.CoeffCount = device->Dry.CoeffCount;
+    if(!hoa_mode)
+    {
+        device->FOAOut.Ambi = device->Dry.Ambi;
+        device->FOAOut.CoeffCount = device->Dry.CoeffCount;
+    }
+    else
+    {
+        memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
+        for(i = 0;i < 4;i++)
+        {
+            device->FOAOut.Ambi.Map[i].Scale = 1.0f;
+            device->FOAOut.Ambi.Map[i].Index = i;
+        }
+        device->FOAOut.CoeffCount = 0;
+
+        ambiup_reset(device->AmbiUp, device);
+    }
 
     memset(device->Hrtf.Coeffs, 0, sizeof(device->Hrtf.Coeffs));
     device->Hrtf.IrSize = BuildBFormatHrtf(device->Hrtf.Handle,
-        device->Hrtf.Coeffs, device->Dry.NumChannels
+        device->Hrtf.Coeffs, device->Dry.NumChannels, hoa_mode ? ambi_map : NULL
     );
 
     /* Round up to the nearest multiple of 8 */
@@ -895,8 +915,6 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         return;
     }
 
-    ambiup_free(device->AmbiUp);
-    device->AmbiUp = NULL;
     bformatdec_free(device->AmbiDecoder);
     device->AmbiDecoder = NULL;
 
@@ -964,6 +982,8 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
 
     if(device->Hrtf.Handle)
     {
+        bool hoa_mode;
+
         device->Render_Mode = HrtfRender;
         if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "hrtf-mode", &mode))
         {
@@ -975,17 +995,36 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
                 ERR("Unexpected hrtf-mode: %s\n", mode);
         }
 
+        if(device->Render_Mode == HrtfRender)
+        {
+            /* Don't bother with HOA when using full HRTF rendering. Nothing
+             * needs it, and it eases the CPU/memory load.
+             */
+            ambiup_free(device->AmbiUp);
+            device->AmbiUp = NULL;
+            hoa_mode = false;
+        }
+        else
+        {
+            if(!device->AmbiUp)
+                device->AmbiUp = ambiup_alloc();
+            hoa_mode = true;
+        }
+
         TRACE("%s HRTF rendering enabled, using \"%s\"\n",
             ((device->Render_Mode == HrtfRender) ? "Full" : "Basic"),
             al_string_get_cstr(device->Hrtf.Name)
         );
-        InitHrtfPanning(device);
+        InitHrtfPanning(device, hoa_mode);
         return;
     }
     device->Hrtf.Status = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
 
 no_hrtf:
     TRACE("HRTF disabled\n");
+
+    ambiup_free(device->AmbiUp);
+    device->AmbiUp = NULL;
 
     bs2blevel = ((headphones && hrtf_appreq != Hrtf_Disable) ||
                  (hrtf_appreq == Hrtf_Enable)) ? 5 : 0;

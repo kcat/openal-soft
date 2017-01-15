@@ -47,6 +47,6 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
  * for first-order. Returns the maximum impulse-response length of the
  * generated coefficients.
  */
-ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][2], ALuint NumChannels);
+ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][2], ALuint NumChannels, const ALuint *AmbiMap);
 
 #endif /* ALC_HRTF_H */

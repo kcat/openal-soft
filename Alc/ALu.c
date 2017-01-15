@@ -1488,6 +1488,13 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         {
             int lidx = GetChannelIdxByName(device->RealOut, FrontLeft);
             int ridx = GetChannelIdxByName(device->RealOut, FrontRight);
+
+            if(device->AmbiUp)
+                ambiup_process(device->AmbiUp,
+                    device->Dry.Buffer, device->Dry.NumChannels,
+                    SAFE_CONST(ALfloatBUFFERSIZE*,device->FOAOut.Buffer), SamplesToDo
+                );
+
             if(lidx != -1 && ridx != -1)
             {
                 HrtfDirectMixerFunc HrtfMix = SelectHrtfMixer();

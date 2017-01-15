@@ -136,12 +136,14 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
 }
 
 
-ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][2], ALuint NumChannels)
+ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][2], ALuint NumChannels, const ALuint *AmbiMap)
 {
+#define HRTF_AMBI_CHAN_COUNT 14
+    /* NOTE: azimuth goes clockwise. */
     static const struct {
         ALfloat elevation;
         ALfloat azimuth;
-    } Ambi3DPoints[14] = {
+    } Ambi3DPoints[HRTF_AMBI_CHAN_COUNT] = {
         { DEG2RAD( 90.0f), DEG2RAD(   0.0f) },
         { DEG2RAD( 35.0f), DEG2RAD( -45.0f) },
         { DEG2RAD( 35.0f), DEG2RAD(  45.0f) },
@@ -157,7 +159,7 @@ ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][
         { DEG2RAD(-35.0f), DEG2RAD(-135.0f) },
         { DEG2RAD(-90.0f), DEG2RAD(   0.0f) },
     };
-    static const ALfloat Ambi3DMatrix[14][2][MAX_AMBI_COEFFS] = {
+    static const ALfloat Ambi3DMatrixFOA[HRTF_AMBI_CHAN_COUNT][2][MAX_AMBI_COEFFS] = {
         { { 1.88982237e-001f,  0.00000000e+000f,  1.90399923e-001f,  0.00000000e+000f }, { 7.14285714e-002f,  0.00000000e+000f,  1.24646009e-001f,  0.00000000e+000f } },
         { { 1.88982237e-001f,  1.09057783e-001f,  1.09208910e-001f,  1.09057783e-001f }, { 7.14285714e-002f,  7.13950780e-002f,  7.14940135e-002f,  7.13950780e-002f } },
         { { 1.88982237e-001f, -1.09057783e-001f,  1.09208910e-001f,  1.09057783e-001f }, { 7.14285714e-002f, -7.13950780e-002f,  7.14940135e-002f,  7.13950780e-002f } },
@@ -172,9 +174,25 @@ ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][
         { { 1.88982237e-001f, -1.09057783e-001f, -1.09208910e-001f, -1.09057783e-001f }, { 7.14285714e-002f, -7.13950780e-002f, -7.14940135e-002f, -7.13950780e-002f } },
         { { 1.88982237e-001f,  1.09057783e-001f, -1.09208910e-001f, -1.09057783e-001f }, { 7.14285714e-002f,  7.13950780e-002f, -7.14940135e-002f, -7.13950780e-002f } },
         { { 1.88982237e-001f,  0.00000000e+000f, -1.90399923e-001f,  0.00000000e+000f }, { 7.14285714e-002f,  0.00000000e+000f, -1.24646009e-001f,  0.00000000e+000f } }
+    }, Ambi3DMatrixHOA[HRTF_AMBI_CHAN_COUNT][2][MAX_AMBI_COEFFS] = {
+        { { 1.43315266e-001f,  0.00000000e+000f,  1.90399923e-001f,  0.00000000e+000f,  0.00000000e+000f,  0.00000000e+000f,  1.18020996e-001f,  0.00000000e+000f,  0.00000000e+000f }, { 7.26741039e-002f,  0.00000000e+000f,  1.24646009e-001f,  0.00000000e+000f,  0.00000000e+000f,  0.00000000e+000f,  1.49618920e-001f,  0.00000000e+000f,  0.00000000e+000f } },
+        { { 1.40852210e-001f,  1.09057783e-001f,  1.09208910e-001f,  1.09057783e-001f,  7.58818830e-002f,  7.66295578e-002f, -3.28314629e-004f,  7.66295578e-002f,  0.00000000e+000f }, { 7.14251066e-002f,  7.13950780e-002f,  7.14940135e-002f,  7.13950780e-002f,  9.61978444e-002f,  9.71456952e-002f, -4.16214759e-004f,  9.71456952e-002f,  0.00000000e+000f } },
+        { { 1.40852210e-001f, -1.09057783e-001f,  1.09208910e-001f,  1.09057783e-001f, -7.58818830e-002f, -7.66295578e-002f, -3.28314629e-004f,  7.66295578e-002f,  0.00000000e+000f }, { 7.14251066e-002f, -7.13950780e-002f,  7.14940135e-002f,  7.13950780e-002f, -9.61978444e-002f, -9.71456952e-002f, -4.16214759e-004f,  9.71456952e-002f,  0.00000000e+000f } },
+        { { 1.40852210e-001f, -1.09057783e-001f,  1.09208910e-001f, -1.09057783e-001f,  7.58818830e-002f, -7.66295578e-002f, -3.28314629e-004f, -7.66295578e-002f,  0.00000000e+000f }, { 7.14251066e-002f, -7.13950780e-002f,  7.14940135e-002f, -7.13950780e-002f,  9.61978444e-002f, -9.71456952e-002f, -4.16214759e-004f, -9.71456952e-002f,  0.00000000e+000f } },
+        { { 1.40852210e-001f,  1.09057783e-001f,  1.09208910e-001f, -1.09057783e-001f, -7.58818830e-002f,  7.66295578e-002f, -3.28314629e-004f, -7.66295578e-002f,  0.00000000e+000f }, { 7.14251066e-002f,  7.13950780e-002f,  7.14940135e-002f, -7.13950780e-002f, -9.61978444e-002f,  9.71456952e-002f, -4.16214759e-004f, -9.71456952e-002f,  0.00000000e+000f } },
+        { { 1.39644596e-001f,  0.00000000e+000f,  0.00000000e+000f,  1.88281281e-001f,  0.00000000e+000f,  0.00000000e+000f, -5.83538687e-002f,  0.00000000e+000f,  1.01835015e-001f }, { 7.08127349e-002f,  0.00000000e+000f,  0.00000000e+000f,  1.23259031e-001f,  0.00000000e+000f,  0.00000000e+000f, -7.39770307e-002f,  0.00000000e+000f,  1.29099445e-001f } },
+        { { 1.39644596e-001f, -1.88281281e-001f,  0.00000000e+000f,  0.00000000e+000f,  0.00000000e+000f,  0.00000000e+000f, -5.83538687e-002f,  0.00000000e+000f, -1.01835015e-001f }, { 7.08127349e-002f, -1.23259031e-001f,  0.00000000e+000f,  0.00000000e+000f,  0.00000000e+000f,  0.00000000e+000f, -7.39770307e-002f,  0.00000000e+000f, -1.29099445e-001f } },
+        { { 1.39644596e-001f,  0.00000000e+000f,  0.00000000e+000f, -1.88281281e-001f,  0.00000000e+000f,  0.00000000e+000f, -5.83538687e-002f,  0.00000000e+000f,  1.01835015e-001f }, { 7.08127349e-002f,  0.00000000e+000f,  0.00000000e+000f, -1.23259031e-001f,  0.00000000e+000f,  0.00000000e+000f, -7.39770307e-002f,  0.00000000e+000f,  1.29099445e-001f } },
+        { { 1.39644596e-001f,  1.88281281e-001f,  0.00000000e+000f,  0.00000000e+000f,  0.00000000e+000f,  0.00000000e+000f, -5.83538687e-002f,  0.00000000e+000f, -1.01835015e-001f }, { 7.08127349e-002f,  1.23259031e-001f,  0.00000000e+000f,  0.00000000e+000f,  0.00000000e+000f,  0.00000000e+000f, -7.39770307e-002f,  0.00000000e+000f, -1.29099445e-001f } },
+        { { 1.40852210e-001f,  1.09057783e-001f, -1.09208910e-001f,  1.09057783e-001f,  7.58818830e-002f, -7.66295578e-002f, -3.28314629e-004f, -7.66295578e-002f,  0.00000000e+000f }, { 7.14251066e-002f,  7.13950780e-002f, -7.14940135e-002f,  7.13950780e-002f,  9.61978444e-002f, -9.71456952e-002f, -4.16214759e-004f, -9.71456952e-002f,  0.00000000e+000f } },
+        { { 1.40852210e-001f, -1.09057783e-001f, -1.09208910e-001f,  1.09057783e-001f, -7.58818830e-002f,  7.66295578e-002f, -3.28314629e-004f, -7.66295578e-002f,  0.00000000e+000f }, { 7.14251066e-002f, -7.13950780e-002f, -7.14940135e-002f,  7.13950780e-002f, -9.61978444e-002f,  9.71456952e-002f, -4.16214759e-004f, -9.71456952e-002f,  0.00000000e+000f } },
+        { { 1.40852210e-001f, -1.09057783e-001f, -1.09208910e-001f, -1.09057783e-001f,  7.58818830e-002f,  7.66295578e-002f, -3.28314629e-004f,  7.66295578e-002f,  0.00000000e+000f }, { 7.14251066e-002f, -7.13950780e-002f, -7.14940135e-002f, -7.13950780e-002f,  9.61978444e-002f,  9.71456952e-002f, -4.16214759e-004f,  9.71456952e-002f,  0.00000000e+000f } },
+        { { 1.40852210e-001f,  1.09057783e-001f, -1.09208910e-001f, -1.09057783e-001f, -7.58818830e-002f, -7.66295578e-002f, -3.28314629e-004f,  7.66295578e-002f,  0.00000000e+000f }, { 7.14251066e-002f,  7.13950780e-002f, -7.14940135e-002f, -7.13950780e-002f, -9.61978444e-002f, -9.71456952e-002f, -4.16214759e-004f,  9.71456952e-002f,  0.00000000e+000f } },
+        { { 1.43315266e-001f,  0.00000000e+000f, -1.90399923e-001f,  0.00000000e+000f,  0.00000000e+000f,  0.00000000e+000f,  1.18020996e-001f,  0.00000000e+000f,  0.00000000e+000f }, { 7.26741039e-002f,  0.00000000e+000f, -1.24646009e-001f,  0.00000000e+000f,  0.00000000e+000f,  0.00000000e+000f,  1.49618920e-001f,  0.00000000e+000f,  0.00000000e+000f } },
     };
+    const ALfloat (*Ambi3DMatrix)[2][MAX_AMBI_COEFFS] = AmbiMap ? Ambi3DMatrixHOA : Ambi3DMatrixFOA;
 
-/* Change this to 2 for dual-band HRTF processing. May require a higher quality
+/* Set this to 2 for dual-band HRTF processing. May require a higher quality
  * band-splitter, or better calculation of the new IR length to deal with the
  * tail generated by the filter.
  */
@@ -186,9 +204,7 @@ ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][
     ALuint max_length = 0;
     ALuint i, j, c, b;
 
-    assert(NumChannels == 4);
-
-    for(c = 0;c < COUNTOF(Ambi3DPoints);c++)
+    for(c = 0;c < HRTF_AMBI_CHAN_COUNT;c++)
     {
         ALuint evidx, azidx;
         ALuint evoffset;
@@ -215,7 +231,7 @@ ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][
 
     memset(temps, 0, sizeof(temps));
     bandsplit_init(&splitter, 400.0f / (ALfloat)Hrtf->sampleRate);
-    for(c = 0;c < COUNTOF(Ambi3DMatrix);c++)
+    for(c = 0;c < HRTF_AMBI_CHAN_COUNT;c++)
     {
         const ALshort *fir;
         ALuint delay;
@@ -240,11 +256,12 @@ ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][
         delay = Hrtf->delays[lidx[c]] - min_delay;
         for(i = 0;i < NumChannels;++i)
         {
+            const ALsizei a = AmbiMap ? AmbiMap[i] : i;
             for(b = 0;b < NUM_BANDS;b++)
             {
                 ALuint k = 0;
                 for(j = delay;j < HRIR_LENGTH;++j)
-                    coeffs[i][j][0] += temps[b][k++] * Ambi3DMatrix[c][b][i];
+                    coeffs[i][j][0] += temps[b][k++] * Ambi3DMatrix[c][b][a];
             }
         }
         max_length = maxu(max_length, minu(delay + Hrtf->irSize, HRIR_LENGTH));
@@ -269,11 +286,12 @@ ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][
         delay = Hrtf->delays[ridx[c]] - min_delay;
         for(i = 0;i < NumChannels;++i)
         {
+            const ALsizei a = AmbiMap ? AmbiMap[i] : i;
             for(b = 0;b < NUM_BANDS;b++)
             {
                 ALuint k = 0;
                 for(j = delay;j < HRIR_LENGTH;++j)
-                    coeffs[i][j][1] += temps[b][k++] * Ambi3DMatrix[c][b][i];
+                    coeffs[i][j][1] += temps[b][k++] * Ambi3DMatrix[c][b][a];
             }
         }
         max_length = maxu(max_length, minu(delay + Hrtf->irSize, HRIR_LENGTH));
@@ -282,6 +300,7 @@ ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][
 #undef NUM_BANDS
 
     return max_length;
+#undef HRTF_AMBI_CHAN_COUNT
 }
 
 

@@ -2055,9 +2055,13 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     if((device->AmbiDecoder && bformatdec_getOrder(device->AmbiDecoder) >= 2))
         size += (ChannelsFromDevFmt(device->FmtChans)+4) * sizeof(device->Dry.Buffer[0]);
     else if(device->Hrtf.Handle || device->Uhj_Encoder || device->AmbiDecoder)
+    {
         size += ChannelsFromDevFmt(device->FmtChans) * sizeof(device->Dry.Buffer[0]);
-    else if(device->FmtChans > DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3)
+        if(device->AmbiUp) size += 4 * sizeof(device->Dry.Buffer[0]);
+    }
+    else if(device->AmbiUp)
         size += 4 * sizeof(device->Dry.Buffer[0]);
+    TRACE("Allocating "SZFMT" channels, "SZFMT" bytes\n", size/sizeof(device->Dry.Buffer[0]), size);
     device->Dry.Buffer = al_calloc(16, size);
     if(!device->Dry.Buffer)
     {
@@ -2076,8 +2080,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->RealOut.NumChannels = device->Dry.NumChannels;
     }
 
-    if((device->AmbiDecoder && bformatdec_getOrder(device->AmbiDecoder) >= 2) ||
-       (device->FmtChans > DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3))
+    if((device->AmbiDecoder && bformatdec_getOrder(device->AmbiDecoder) >= 2) || device->AmbiUp)
     {
         /* Higher-order rendering requires upsampling first-order content, so
          * make sure to mix it separately.
@@ -2090,6 +2093,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->FOAOut.Buffer = device->Dry.Buffer;
         device->FOAOut.NumChannels = device->Dry.NumChannels;
     }
+    TRACE("Channel config, Dry: %u, FOA: %u, Real: %u\n", device->Dry.NumChannels,
+          device->FOAOut.NumChannels, device->RealOut.NumChannels);
 
     SetMixerFPUMode(&oldMode);
     if(device->DefaultSlot)

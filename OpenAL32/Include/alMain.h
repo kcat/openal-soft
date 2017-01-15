@@ -643,8 +643,8 @@ struct ALCdevice_struct
         const struct Hrtf *Handle;
 
         /* HRTF filter state for dry buffer content */
-        alignas(16) ALfloat Values[4][HRIR_LENGTH][2];
-        alignas(16) ALfloat Coeffs[4][HRIR_LENGTH][2];
+        alignas(16) ALfloat Values[9][HRIR_LENGTH][2];
+        alignas(16) ALfloat Coeffs[9][HRIR_LENGTH][2];
         ALuint Offset;
         ALuint IrSize;
     } Hrtf;

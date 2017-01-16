@@ -198,9 +198,9 @@ ALsizei BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH]
  */
 #define NUM_BANDS 2
     BandSplitter splitter;
-    ALfloat temps[3][HRIR_LENGTH];
-    ALsizei lidx[14], ridx[14];
+    ALsizei lidx[HRTF_AMBI_CHAN_COUNT], ridx[HRTF_AMBI_CHAN_COUNT];
     ALsizei min_delay = HRTF_HISTORY_LENGTH;
+    ALfloat temps[3][HRIR_LENGTH];
     ALsizei max_length = 0;
     ALsizei i, j, c, b;
 

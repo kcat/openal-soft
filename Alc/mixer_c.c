@@ -18,8 +18,9 @@ static inline ALfloat fir8_32(const ALfloat *restrict vals, ALuint frac)
 { return resample_fir8(vals[-3], vals[-2], vals[-1], vals[0], vals[1], vals[2], vals[3], vals[4], frac); }
 
 
-const ALfloat *Resample_copy32_C(const BsincState* UNUSED(state), const ALfloat *restrict src, ALuint UNUSED(frac),
-  ALuint UNUSED(increment), ALfloat *restrict dst, ALuint numsamples)
+const ALfloat *Resample_copy32_C(const BsincState* UNUSED(state),
+  const ALfloat *restrict src, ALuint UNUSED(frac), ALint UNUSED(increment),
+  ALfloat *restrict dst, ALsizei numsamples)
 {
 #if defined(HAVE_SSE) || defined(HAVE_NEON)
     /* Avoid copying the source data if it's aligned like the destination. */
@@ -32,10 +33,10 @@ const ALfloat *Resample_copy32_C(const BsincState* UNUSED(state), const ALfloat 
 
 #define DECL_TEMPLATE(Sampler)                                                \
 const ALfloat *Resample_##Sampler##_C(const BsincState* UNUSED(state),        \
-  const ALfloat *restrict src, ALuint frac, ALuint increment,                 \
-  ALfloat *restrict dst, ALuint numsamples)                                   \
+  const ALfloat *restrict src, ALuint frac, ALint increment,                  \
+  ALfloat *restrict dst, ALsizei numsamples)                                  \
 {                                                                             \
-    ALuint i;                                                                 \
+    ALsizei i;                                                                \
     for(i = 0;i < numsamples;i++)                                             \
     {                                                                         \
         dst[i] = Sampler(src, frac);                                          \
@@ -55,16 +56,15 @@ DECL_TEMPLATE(fir8_32)
 #undef DECL_TEMPLATE
 
 const ALfloat *Resample_bsinc32_C(const BsincState *state, const ALfloat *restrict src,
-                                  ALuint frac, ALuint increment, ALfloat *restrict dst,
-                                  ALuint dstlen)
+                                  ALuint frac, ALint increment, ALfloat *restrict dst,
+                                  ALsizei dstlen)
 {
     const ALfloat *fil, *scd, *phd, *spd;
     const ALfloat sf = state->sf;
-    const ALuint m = state->m;
+    const ALsizei m = state->m;
     const ALint l = state->l;
-    ALuint j_f, pi, i;
+    ALsizei j_s, j_f, pi, i;
     ALfloat pf, r;
-    ALint j_s;
 
     for(i = 0;i < dstlen;i++)
     {
@@ -94,9 +94,9 @@ const ALfloat *Resample_bsinc32_C(const BsincState *state, const ALfloat *restri
 }
 
 
-void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const ALfloat *restrict src, ALuint numsamples)
+void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const ALfloat *restrict src, ALsizei numsamples)
 {
-    ALuint i;
+    ALsizei i;
     if(numsamples > 1)
     {
         dst[0] = filter->b0 * src[0] +

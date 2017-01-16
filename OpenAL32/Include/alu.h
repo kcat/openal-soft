@@ -149,7 +149,8 @@ typedef struct SendParams {
 
 
 typedef const ALfloat* (*ResamplerFunc)(const BsincState *state,
-    const ALfloat *restrict src, ALuint frac, ALuint increment, ALfloat *restrict dst, ALuint dstlen
+    const ALfloat *restrict src, ALuint frac, ALint increment,
+    ALfloat *restrict dst, ALsizei dstlen
 );
 
 typedef void (*MixerFunc)(const ALfloat *data, ALsizei OutChans,

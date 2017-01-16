@@ -13,16 +13,15 @@
 
 
 const ALfloat *Resample_bsinc32_SSE(const BsincState *state, const ALfloat *restrict src,
-                                    ALuint frac, ALuint increment, ALfloat *restrict dst,
-                                    ALuint dstlen)
+                                    ALuint frac, ALint increment, ALfloat *restrict dst,
+                                    ALsizei dstlen)
 {
     const __m128 sf4 = _mm_set1_ps(state->sf);
-    const ALuint m = state->m;
+    const ALsizei m = state->m;
     const ALint l = state->l;
     const ALfloat *fil, *scd, *phd, *spd;
-    ALuint pi, j_f, i;
+    ALsizei j_s, pi, j_f, i;
     ALfloat pf;
-    ALint j_s;
     __m128 r4;
 
     for(i = 0;i < dstlen;i++)

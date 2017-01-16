@@ -32,11 +32,11 @@ void bandsplit_clear(BandSplitter *splitter)
 }
 
 void bandsplit_process(BandSplitter *splitter, ALfloat *restrict hpout, ALfloat *restrict lpout,
-                       const ALfloat *input, ALuint count)
+                       const ALfloat *input, ALsizei count)
 {
     ALfloat coeff, d, x;
     ALfloat z1, z2;
-    ALuint i;
+    ALsizei i;
 
     coeff = splitter->coeff*0.5f + 0.5f;
     z1 = splitter->lp_z1;

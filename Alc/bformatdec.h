@@ -44,6 +44,6 @@ typedef struct BandSplitter {
 void bandsplit_init(BandSplitter *splitter, ALfloat freq_mult);
 void bandsplit_clear(BandSplitter *splitter);
 void bandsplit_process(BandSplitter *splitter, ALfloat *restrict hpout, ALfloat *restrict lpout,
-                       const ALfloat *input, ALuint count);
+                       const ALfloat *input, ALsizei count);
 
 #endif /* BFORMATDEC_H */

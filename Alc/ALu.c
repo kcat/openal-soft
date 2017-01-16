@@ -1498,7 +1498,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             if(lidx != -1 && ridx != -1)
             {
                 HrtfDirectMixerFunc HrtfMix = SelectHrtfMixer();
-                ALuint irsize = device->Hrtf.IrSize;
+                ALsizei irsize = device->Hrtf.IrSize;
                 for(c = 0;c < device->Dry.NumChannels;c++)
                 {
                     HrtfMix(device->RealOut.Buffer, lidx, ridx,

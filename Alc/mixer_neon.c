@@ -9,13 +9,13 @@
 #include "hrtf.h"
 
 
-static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
-                                   const ALuint IrSize,
+static inline void ApplyCoeffsStep(ALsizei Offset, ALfloat (*restrict Values)[2],
+                                   const ALsizei IrSize,
                                    ALfloat (*restrict Coeffs)[2],
                                    const ALfloat (*restrict CoeffStep)[2],
                                    ALfloat left, ALfloat right)
 {
-    ALuint c;
+    ALsizei c;
     float32x4_t leftright4;
     {
         float32x2_t leftright2 = vdup_n_f32(0.0);
@@ -25,8 +25,8 @@ static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
     }
     for(c = 0;c < IrSize;c += 2)
     {
-        const ALuint o0 = (Offset+c)&HRIR_MASK;
-        const ALuint o1 = (o0+1)&HRIR_MASK;
+        const ALsizei o0 = (Offset+c)&HRIR_MASK;
+        const ALsizei o1 = (o0+1)&HRIR_MASK;
         float32x4_t vals = vcombine_f32(vld1_f32((float32_t*)&Values[o0][0]),
                                         vld1_f32((float32_t*)&Values[o1][0]));
         float32x4_t coefs = vld1q_f32((float32_t*)&Coeffs[c][0]);
@@ -41,12 +41,12 @@ static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
     }
 }
 
-static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
-                               const ALuint IrSize,
+static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*restrict Values)[2],
+                               const ALsizei IrSize,
                                ALfloat (*restrict Coeffs)[2],
                                ALfloat left, ALfloat right)
 {
-    ALuint c;
+    ALsizei c;
     float32x4_t leftright4;
     {
         float32x2_t leftright2 = vdup_n_f32(0.0);
@@ -56,8 +56,8 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
     }
     for(c = 0;c < IrSize;c += 2)
     {
-        const ALuint o0 = (Offset+c)&HRIR_MASK;
-        const ALuint o1 = (o0+1)&HRIR_MASK;
+        const ALsizei o0 = (Offset+c)&HRIR_MASK;
+        const ALsizei o1 = (o0+1)&HRIR_MASK;
         float32x4_t vals = vcombine_f32(vld1_f32((float32_t*)&Values[o0][0]),
                                         vld1_f32((float32_t*)&Values[o1][0]));
         float32x4_t coefs = vld1q_f32((float32_t*)&Coeffs[c][0]);
@@ -75,24 +75,24 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 #undef MixHrtf
 
 
-void Mix_Neon(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
-              ALfloat *CurrentGains, const ALfloat *TargetGains, ALuint Counter, ALuint OutPos,
-              ALuint BufferSize)
+void Mix_Neon(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
+              ALfloat *CurrentGains, const ALfloat *TargetGains, ALsizei Counter, ALsizei OutPos,
+              ALsizei BufferSize)
 {
     ALfloat gain, delta, step;
     float32x4_t gain4;
-    ALuint c;
+    ALsizei c;
 
     delta = (Counter > 0) ? 1.0f/(ALfloat)Counter : 0.0f;
 
     for(c = 0;c < OutChans;c++)
     {
-        ALuint pos = 0;
+        ALsizei pos = 0;
         gain = CurrentGains[c];
         step = (TargetGains[c] - gain) * delta;
         if(fabsf(step) > FLT_EPSILON)
         {
-            ALuint minsize = minu(BufferSize, Counter);
+            ALsizei minsize = mini(BufferSize, Counter);
             /* Mix with applying gain steps in aligned multiples of 4. */
             if(minsize-pos > 3)
             {
@@ -127,7 +127,7 @@ void Mix_Neon(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer
             CurrentGains[c] = gain;
 
             /* Mix until pos is aligned with 4 or the mix is done. */
-            minsize = minu(BufferSize, (pos+3)&~3);
+            minsize = mini(BufferSize, (pos+3)&~3);
             for(;pos < minsize;pos++)
                 OutBuffer[c][OutPos+pos] += data[pos]*gain;
         }
@@ -147,14 +147,14 @@ void Mix_Neon(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer
     }
 }
 
-void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restrict data)[BUFFERSIZE], ALuint InChans, ALuint InPos, ALuint BufferSize)
+void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restrict data)[BUFFERSIZE], ALsizei InChans, ALsizei InPos, ALsizei BufferSize)
 {
     float32x4_t gain4;
-    ALuint c;
+    ALsizei c;
 
     for(c = 0;c < InChans;c++)
     {
-        ALuint pos = 0;
+        ALsizei pos = 0;
         ALfloat gain = Gains[c];
         if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
             continue;

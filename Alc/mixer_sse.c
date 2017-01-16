@@ -72,8 +72,8 @@ const ALfloat *Resample_bsinc32_SSE(const BsincState *state, const ALfloat *rest
 }
 
 
-static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
-                                   const ALuint IrSize,
+static inline void ApplyCoeffsStep(ALsizei Offset, ALfloat (*restrict Values)[2],
+                                   const ALsizei IrSize,
                                    ALfloat (*restrict Coeffs)[2],
                                    const ALfloat (*restrict CoeffStep)[2],
                                    ALfloat left, ALfloat right)
@@ -81,12 +81,12 @@ static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
     const __m128 lrlr = _mm_setr_ps(left, right, left, right);
     __m128 coeffs, deltas, imp0, imp1;
     __m128 vals = _mm_setzero_ps();
-    ALuint i;
+    ALsizei i;
 
     if((Offset&1))
     {
-        const ALuint o0 = Offset&HRIR_MASK;
-        const ALuint o1 = (Offset+IrSize-1)&HRIR_MASK;
+        const ALsizei o0 = Offset&HRIR_MASK;
+        const ALsizei o1 = (Offset+IrSize-1)&HRIR_MASK;
 
         coeffs = _mm_load_ps(&Coeffs[0][0]);
         deltas = _mm_load_ps(&CoeffStep[0][0]);
@@ -98,7 +98,7 @@ static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
         _mm_storel_pi((__m64*)&Values[o0][0], vals);
         for(i = 1;i < IrSize-1;i += 2)
         {
-            const ALuint o2 = (Offset+i)&HRIR_MASK;
+            const ALsizei o2 = (Offset+i)&HRIR_MASK;
 
             coeffs = _mm_load_ps(&Coeffs[i+1][0]);
             deltas = _mm_load_ps(&CoeffStep[i+1][0]);
@@ -120,7 +120,7 @@ static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
     {
         for(i = 0;i < IrSize;i += 2)
         {
-            const ALuint o = (Offset + i)&HRIR_MASK;
+            const ALsizei o = (Offset + i)&HRIR_MASK;
 
             coeffs = _mm_load_ps(&Coeffs[i][0]);
             deltas = _mm_load_ps(&CoeffStep[i][0]);
@@ -134,20 +134,20 @@ static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
     }
 }
 
-static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
-                               const ALuint IrSize,
+static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*restrict Values)[2],
+                               const ALsizei IrSize,
                                ALfloat (*restrict Coeffs)[2],
                                ALfloat left, ALfloat right)
 {
     const __m128 lrlr = _mm_setr_ps(left, right, left, right);
     __m128 vals = _mm_setzero_ps();
     __m128 coeffs;
-    ALuint i;
+    ALsizei i;
 
     if((Offset&1))
     {
-        const ALuint o0 = Offset&HRIR_MASK;
-        const ALuint o1 = (Offset+IrSize-1)&HRIR_MASK;
+        const ALsizei o0 = Offset&HRIR_MASK;
+        const ALsizei o1 = (Offset+IrSize-1)&HRIR_MASK;
         __m128 imp0, imp1;
 
         coeffs = _mm_load_ps(&Coeffs[0][0]);
@@ -157,7 +157,7 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
         _mm_storel_pi((__m64*)&Values[o0][0], vals);
         for(i = 1;i < IrSize-1;i += 2)
         {
-            const ALuint o2 = (Offset+i)&HRIR_MASK;
+            const ALsizei o2 = (Offset+i)&HRIR_MASK;
 
             coeffs = _mm_load_ps(&Coeffs[i+1][0]);
             vals = _mm_load_ps(&Values[o2][0]);
@@ -176,7 +176,7 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
     {
         for(i = 0;i < IrSize;i += 2)
         {
-            const ALuint o = (Offset + i)&HRIR_MASK;
+            const ALsizei o = (Offset + i)&HRIR_MASK;
 
             coeffs = _mm_load_ps(&Coeffs[i][0]);
             vals = _mm_load_ps(&Values[o][0]);
@@ -192,24 +192,24 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 #undef MixHrtf
 
 
-void Mix_SSE(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
-             ALfloat *CurrentGains, const ALfloat *TargetGains, ALuint Counter, ALuint OutPos,
-             ALuint BufferSize)
+void Mix_SSE(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
+             ALfloat *CurrentGains, const ALfloat *TargetGains, ALsizei Counter, ALsizei OutPos,
+             ALsizei BufferSize)
 {
     ALfloat gain, delta, step;
     __m128 gain4;
-    ALuint c;
+    ALsizei c;
 
     delta = (Counter > 0) ? 1.0f/(ALfloat)Counter : 0.0f;
 
     for(c = 0;c < OutChans;c++)
     {
-        ALuint pos = 0;
+        ALsizei pos = 0;
         gain = CurrentGains[c];
         step = (TargetGains[c] - gain) * delta;
         if(fabsf(step) > FLT_EPSILON)
         {
-            ALuint minsize = minu(BufferSize, Counter);
+            ALsizei minsize = mini(BufferSize, Counter);
             /* Mix with applying gain steps in aligned multiples of 4. */
             if(minsize-pos > 3)
             {
@@ -246,7 +246,7 @@ void Mix_SSE(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)
             CurrentGains[c] = gain;
 
             /* Mix until pos is aligned with 4 or the mix is done. */
-            minsize = minu(BufferSize, (pos+3)&~3);
+            minsize = mini(BufferSize, (pos+3)&~3);
             for(;pos < minsize;pos++)
                 OutBuffer[c][OutPos+pos] += data[pos]*gain;
         }
@@ -266,14 +266,14 @@ void Mix_SSE(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)
     }
 }
 
-void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restrict data)[BUFFERSIZE], ALuint InChans, ALuint InPos, ALuint BufferSize)
+void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restrict data)[BUFFERSIZE], ALsizei InChans, ALsizei InPos, ALsizei BufferSize)
 {
     __m128 gain4;
-    ALuint c;
+    ALsizei c;
 
     for(c = 0;c < InChans;c++)
     {
-        ALuint pos = 0;
+        ALsizei pos = 0;
         ALfloat gain = Gains[c];
         if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
             continue;

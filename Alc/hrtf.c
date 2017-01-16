@@ -60,32 +60,32 @@ static struct Hrtf *LoadedHrtfs = NULL;
  * will return an index between 0 and (evcount - 1). Assumes the FPU is in
  * round-to-zero mode.
  */
-static ALuint CalcEvIndex(ALuint evcount, ALfloat ev)
+static ALsizei CalcEvIndex(ALsizei evcount, ALfloat ev)
 {
     ev = (F_PI_2 + ev) * (evcount-1) / F_PI;
-    return minu(fastf2u(ev + 0.5f), evcount-1);
+    return mini(fastf2i(ev + 0.5f), evcount-1);
 }
 
 /* Calculate the azimuth index given the polar azimuth in radians. This will
  * return an index between 0 and (azcount - 1). Assumes the FPU is in round-to-
  * zero mode.
  */
-static ALuint CalcAzIndex(ALuint azcount, ALfloat az)
+static ALsizei CalcAzIndex(ALsizei azcount, ALfloat az)
 {
     az = (F_TAU + az) * azcount / F_TAU;
-    return fastf2u(az + 0.5f) % azcount;
+    return fastf2i(az + 0.5f) % azcount;
 }
 
 /* Calculates static HRIR coefficients and delays for the given polar elevation
  * and azimuth in radians. The coefficients are normalized and attenuated by
  * the specified gain.
  */
-void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat gain, ALfloat (*coeffs)[2], ALuint *delays)
+void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat gain, ALfloat (*coeffs)[2], ALsizei *delays)
 {
-    ALuint evidx, azidx, lidx, ridx;
-    ALuint azcount, evoffset;
+    ALsizei evidx, azidx, lidx, ridx;
+    ALsizei azcount, evoffset;
     ALfloat dirfact;
-    ALuint i;
+    ALsizei i;
 
     dirfact = 1.0f - (spread / F_TAU);
 
@@ -102,8 +102,8 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
     ridx = evoffset + ((azcount-azidx) % azcount);
 
     /* Calculate the HRIR delays. */
-    delays[0] = fastf2u(Hrtf->delays[lidx]*dirfact + 0.5f) << HRTFDELAY_BITS;
-    delays[1] = fastf2u(Hrtf->delays[ridx]*dirfact + 0.5f) << HRTFDELAY_BITS;
+    delays[0] = fastf2i(Hrtf->delays[lidx]*dirfact + 0.5f) << HRTFDELAY_BITS;
+    delays[1] = fastf2i(Hrtf->delays[ridx]*dirfact + 0.5f) << HRTFDELAY_BITS;
 
     /* Calculate the sample offsets for the HRIR indices. */
     lidx *= Hrtf->irSize;
@@ -136,7 +136,7 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
 }
 
 
-ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][2], ALuint NumChannels, const ALuint *AmbiMap)
+ALsizei BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][2], ALsizei NumChannels, const ALsizei *AmbiMap)
 {
 #define HRTF_AMBI_CHAN_COUNT 14
     /* NOTE: azimuth goes clockwise. */
@@ -199,10 +199,10 @@ ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][
 #define NUM_BANDS 2
     BandSplitter splitter;
     ALfloat temps[3][HRIR_LENGTH];
-    ALuint lidx[14], ridx[14];
-    ALuint min_delay = HRTF_HISTORY_LENGTH;
-    ALuint max_length = 0;
-    ALuint i, j, c, b;
+    ALsizei lidx[14], ridx[14];
+    ALsizei min_delay = HRTF_HISTORY_LENGTH;
+    ALsizei max_length = 0;
+    ALsizei i, j, c, b;
 
     for(c = 0;c < HRTF_AMBI_CHAN_COUNT;c++)
     {
@@ -211,22 +211,22 @@ ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][
         ALuint azcount;
 
         /* Calculate elevation index. */
-        evidx = (ALuint)floorf((F_PI_2 + Ambi3DPoints[c].elevation) *
-                               (Hrtf->evCount-1)/F_PI + 0.5f);
-        evidx = minu(evidx, Hrtf->evCount-1);
+        evidx = (ALsizei)floorf((F_PI_2 + Ambi3DPoints[c].elevation) *
+                                (Hrtf->evCount-1)/F_PI + 0.5f);
+        evidx = mini(evidx, Hrtf->evCount-1);
 
         azcount = Hrtf->azCount[evidx];
         evoffset = Hrtf->evOffset[evidx];
 
         /* Calculate azimuth index for this elevation. */
-        azidx = (ALuint)floorf((F_TAU+Ambi3DPoints[c].azimuth) *
-                               azcount/F_TAU + 0.5f) % azcount;
+        azidx = (ALsizei)floorf((F_TAU+Ambi3DPoints[c].azimuth) *
+                                azcount/F_TAU + 0.5f) % azcount;
 
         /* Calculate indices for left and right channels. */
         lidx[c] = evoffset + azidx;
         ridx[c] = evoffset + ((azcount-azidx) % azcount);
 
-        min_delay = minu(min_delay, minu(Hrtf->delays[lidx[c]], Hrtf->delays[ridx[c]]));
+        min_delay = mini(min_delay, mini(Hrtf->delays[lidx[c]], Hrtf->delays[ridx[c]]));
     }
 
     memset(temps, 0, sizeof(temps));
@@ -234,7 +234,7 @@ ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][
     for(c = 0;c < HRTF_AMBI_CHAN_COUNT;c++)
     {
         const ALshort *fir;
-        ALuint delay;
+        ALsizei delay;
 
         /* Convert the left FIR from shorts to float */
         fir = &Hrtf->coeffs[lidx[c] * Hrtf->irSize];
@@ -259,12 +259,12 @@ ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][
             const ALsizei a = AmbiMap ? AmbiMap[i] : i;
             for(b = 0;b < NUM_BANDS;b++)
             {
-                ALuint k = 0;
+                ALsizei k = 0;
                 for(j = delay;j < HRIR_LENGTH;++j)
                     coeffs[i][j][0] += temps[b][k++] * Ambi3DMatrix[c][b][a];
             }
         }
-        max_length = maxu(max_length, minu(delay + Hrtf->irSize, HRIR_LENGTH));
+        max_length = maxi(max_length, mini(delay + Hrtf->irSize, HRIR_LENGTH));
 
         /* Convert the right FIR from shorts to float */
         fir = &Hrtf->coeffs[ridx[c] * Hrtf->irSize];
@@ -294,9 +294,9 @@ ALuint BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][
                     coeffs[i][j][1] += temps[b][k++] * Ambi3DMatrix[c][b][a];
             }
         }
-        max_length = maxu(max_length, minu(delay + Hrtf->irSize, HRIR_LENGTH));
+        max_length = maxi(max_length, mini(delay + Hrtf->irSize, HRIR_LENGTH));
     }
-    TRACE("Skipped min delay: %u, new combined length: %u\n", min_delay, max_length);
+    TRACE("Skipped min delay: %d, new combined length: %d\n", min_delay, max_length);
 #undef NUM_BANDS
 
     return max_length;

@@ -562,7 +562,7 @@ enum RenderMode {
 typedef ALfloat ChannelConfig[MAX_AMBI_COEFFS];
 typedef struct BFChannelConfig {
     ALfloat Scale;
-    ALuint Index;
+    ALsizei Index;
 } BFChannelConfig;
 
 typedef union AmbiConfig {
@@ -584,7 +584,7 @@ typedef struct HrtfState {
 
 typedef struct HrtfParams {
     alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
-    ALuint Delay[2];
+    ALsizei Delay[2];
 } HrtfParams;
 
 
@@ -593,7 +593,7 @@ typedef struct HrtfParams {
  * to be a sensible size, however, as it constrains the max stepping value used
  * for mixing, as well as the maximum number of samples per mixing iteration.
  */
-#define BUFFERSIZE (2048u)
+#define BUFFERSIZE 2048
 
 struct ALCdevice_struct
 {
@@ -645,8 +645,8 @@ struct ALCdevice_struct
         /* HRTF filter state for dry buffer content */
         alignas(16) ALfloat Values[9][HRIR_LENGTH][2];
         alignas(16) ALfloat Coeffs[9][HRIR_LENGTH][2];
-        ALuint Offset;
-        ALuint IrSize;
+        ALsizei Offset;
+        ALsizei IrSize;
     } Hrtf;
 
     /* UHJ encoder state */

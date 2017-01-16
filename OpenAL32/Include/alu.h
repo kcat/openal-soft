@@ -115,7 +115,7 @@ typedef struct MixHrtfParams {
     HrtfParams *Current;
     struct {
         alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
-        ALint Delay[2];
+        ALsizei Delay[2];
     } Steps;
 } MixHrtfParams;
 
@@ -152,21 +152,21 @@ typedef const ALfloat* (*ResamplerFunc)(const BsincState *state,
     const ALfloat *restrict src, ALuint frac, ALuint increment, ALfloat *restrict dst, ALuint dstlen
 );
 
-typedef void (*MixerFunc)(const ALfloat *data, ALuint OutChans,
+typedef void (*MixerFunc)(const ALfloat *data, ALsizei OutChans,
                           ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALfloat *CurrentGains,
-                          const ALfloat *TargetGains, ALuint Counter, ALuint OutPos,
-                          ALuint BufferSize);
+                          const ALfloat *TargetGains, ALsizei Counter, ALsizei OutPos,
+                          ALsizei BufferSize);
 typedef void (*RowMixerFunc)(ALfloat *OutBuffer, const ALfloat *gains,
-                             const ALfloat (*restrict data)[BUFFERSIZE], ALuint InChans,
-                             ALuint InPos, ALuint BufferSize);
-typedef void (*HrtfMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint lidx, ALuint ridx,
-                              const ALfloat *data, ALuint Counter, ALuint Offset, ALuint OutPos,
-                              const ALuint IrSize, const MixHrtfParams *hrtfparams,
-                              HrtfState *hrtfstate, ALuint BufferSize);
+                             const ALfloat (*restrict data)[BUFFERSIZE], ALsizei InChans,
+                             ALsizei InPos, ALsizei BufferSize);
+typedef void (*HrtfMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALsizei lidx, ALsizei ridx,
+                              const ALfloat *data, ALsizei Counter, ALsizei Offset, ALsizei OutPos,
+                              const ALsizei IrSize, const MixHrtfParams *hrtfparams,
+                              HrtfState *hrtfstate, ALsizei BufferSize);
 typedef void (*HrtfDirectMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE],
-                                    ALuint lidx, ALuint ridx, const ALfloat *data, ALuint Offset,
-                                    const ALuint IrSize, ALfloat (*restrict Coeffs)[2],
-                                    ALfloat (*restrict Values)[2], ALuint BufferSize);
+                                    ALsizei lidx, ALsizei ridx, const ALfloat *data, ALsizei Offset,
+                                    const ALsizei IrSize, ALfloat (*restrict Coeffs)[2],
+                                    ALfloat (*restrict Values)[2], ALsizei BufferSize);
 
 
 #define GAIN_MIX_MAX  (16.0f) /* +24dB */

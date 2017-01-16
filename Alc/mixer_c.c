@@ -135,16 +135,16 @@ void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const 
 }
 
 
-static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
-                                   const ALuint IrSize,
+static inline void ApplyCoeffsStep(ALsizei Offset, ALfloat (*restrict Values)[2],
+                                   const ALsizei IrSize,
                                    ALfloat (*restrict Coeffs)[2],
                                    const ALfloat (*restrict CoeffStep)[2],
                                    ALfloat left, ALfloat right)
 {
-    ALuint c;
+    ALsizei c;
     for(c = 0;c < IrSize;c++)
     {
-        const ALuint off = (Offset+c)&HRIR_MASK;
+        const ALsizei off = (Offset+c)&HRIR_MASK;
         Values[off][0] += Coeffs[c][0] * left;
         Values[off][1] += Coeffs[c][1] * right;
         Coeffs[c][0] += CoeffStep[c][0];
@@ -152,15 +152,15 @@ static inline void ApplyCoeffsStep(ALuint Offset, ALfloat (*restrict Values)[2],
     }
 }
 
-static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
-                               const ALuint IrSize,
+static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*restrict Values)[2],
+                               const ALsizei IrSize,
                                ALfloat (*restrict Coeffs)[2],
                                ALfloat left, ALfloat right)
 {
-    ALuint c;
+    ALsizei c;
     for(c = 0;c < IrSize;c++)
     {
-        const ALuint off = (Offset+c)&HRIR_MASK;
+        const ALsizei off = (Offset+c)&HRIR_MASK;
         Values[off][0] += Coeffs[c][0] * left;
         Values[off][1] += Coeffs[c][1] * right;
     }
@@ -172,23 +172,23 @@ static inline void ApplyCoeffs(ALuint Offset, ALfloat (*restrict Values)[2],
 #undef MixHrtf
 
 
-void Mix_C(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
-           ALfloat *CurrentGains, const ALfloat *TargetGains, ALuint Counter, ALuint OutPos,
-           ALuint BufferSize)
+void Mix_C(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
+           ALfloat *CurrentGains, const ALfloat *TargetGains, ALsizei Counter, ALsizei OutPos,
+           ALsizei BufferSize)
 {
     ALfloat gain, delta, step;
-    ALuint c;
+    ALsizei c;
 
     delta = (Counter > 0) ? 1.0f/(ALfloat)Counter : 0.0f;
 
     for(c = 0;c < OutChans;c++)
     {
-        ALuint pos = 0;
+        ALsizei pos = 0;
         gain = CurrentGains[c];
         step = (TargetGains[c] - gain) * delta;
         if(fabsf(step) > FLT_EPSILON)
         {
-            ALuint minsize = minu(BufferSize, Counter);
+            ALsizei minsize = mini(BufferSize, Counter);
             for(;pos < minsize;pos++)
             {
                 OutBuffer[c][OutPos+pos] += data[pos]*gain;
@@ -212,9 +212,9 @@ void Mix_C(const ALfloat *data, ALuint OutChans, ALfloat (*restrict OutBuffer)[B
  * transform. And as the matrices are more or less static once set up, no
  * stepping is necessary.
  */
-void MixRow_C(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restrict data)[BUFFERSIZE], ALuint InChans, ALuint InPos, ALuint BufferSize)
+void MixRow_C(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restrict data)[BUFFERSIZE], ALsizei InChans, ALsizei InPos, ALsizei BufferSize)
 {
-    ALuint c, i;
+    ALsizei c, i;
 
     for(c = 0;c < InChans;c++)
     {

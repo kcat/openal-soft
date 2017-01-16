@@ -45,7 +45,7 @@ extern inline void CalcXYZCoeffs(ALfloat x, ALfloat y, ALfloat z, ALfloat spread
 #define THIRD_ORDER_SCALE   (1.0f / 1.30657f)
 
 
-static const ALuint FuMa2ACN[MAX_AMBI_COEFFS] = {
+static const ALsizei FuMa2ACN[MAX_AMBI_COEFFS] = {
     0,  /* W */
     3,  /* X */
     1,  /* Y */
@@ -63,7 +63,7 @@ static const ALuint FuMa2ACN[MAX_AMBI_COEFFS] = {
     15, /* P */
     9,  /* Q */
 };
-static const ALuint ACN2ACN[MAX_AMBI_COEFFS] = {
+static const ALsizei ACN2ACN[MAX_AMBI_COEFFS] = {
     0,  1,  2,  3,  4,  5,  6,  7,
     8,  9, 10, 11, 12, 13, 14, 15
 };
@@ -345,7 +345,7 @@ static void SetChannelMap(const enum Channel *devchans, ChannelConfig *ambicoeff
                           const ChannelMap *chanmap, size_t count, ALuint *outcount,
                           ALboolean isfuma)
 {
-    const ALuint *acnmap = isfuma ? FuMa2ACN : ACN2ACN;
+    const ALsizei *acnmap = isfuma ? FuMa2ACN : ACN2ACN;
     const ALfloat *n3dscale = isfuma ? FuMa2N3DScale : UnitScale;
     size_t j, k;
     ALuint i;
@@ -366,7 +366,7 @@ static void SetChannelMap(const enum Channel *devchans, ChannelConfig *ambicoeff
 
             for(k = 0;k < MAX_AMBI_COEFFS;++k)
             {
-                ALuint acn = acnmap[k];
+                ALsizei acn = acnmap[k];
                 ambicoeffs[i][acn] = chanmap[j].Config[k] / n3dscale[acn];
             }
             break;
@@ -514,10 +514,10 @@ static const ChannelMap MonoCfg[1] = {
 static void InitPanning(ALCdevice *device)
 {
     const ChannelMap *chanmap = NULL;
-    ALuint coeffcount = 0;
+    ALsizei coeffcount = 0;
     ALfloat ambiscale;
-    size_t count = 0;
-    ALuint i, j;
+    ALsizei count = 0;
+    ALsizei i, j;
 
     ambiscale = 1.0f;
     switch(device->FmtChans)
@@ -579,7 +579,7 @@ static void InitPanning(ALCdevice *device)
 
     if(device->FmtChans >= DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3)
     {
-        const ALuint *acnmap = (device->AmbiFmt == AmbiFormat_FuMa) ? FuMa2ACN : ACN2ACN;
+        const ALsizei *acnmap = (device->AmbiFmt == AmbiFormat_FuMa) ? FuMa2ACN : ACN2ACN;
         const ALfloat *n3dscale = (device->AmbiFmt == AmbiFormat_FuMa) ? FuMa2N3DScale :
                                   (device->AmbiFmt == AmbiFormat_ACN_SN3D) ? SN3D2N3DScale :
                                   /*(device->AmbiFmt == AmbiFormat_ACN_N3D) ?*/ UnitScale;
@@ -589,7 +589,7 @@ static void InitPanning(ALCdevice *device)
                 (device->FmtChans == DevFmtAmbi1) ? 4 : 1;
         for(i = 0;i < count;i++)
         {
-            ALuint acn = acnmap[i];
+            ALsizei acn = acnmap[i];
             device->Dry.Ambi.Map[i].Scale = 1.0f/n3dscale[acn];
             device->Dry.Ambi.Map[i].Index = acn;
         }
@@ -624,7 +624,7 @@ static void InitPanning(ALCdevice *device)
         device->Dry.CoeffCount = coeffcount;
 
         memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
-        for(i = 0;i < device->Dry.NumChannels;i++)
+        for(i = 0;i < (ALsizei)device->Dry.NumChannels;i++)
         {
             device->FOAOut.Ambi.Coeffs[i][0] = device->Dry.Ambi.Coeffs[i][0];
             for(j = 1;j < 4;j++)
@@ -639,7 +639,7 @@ static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const A
     ChannelMap chanmap[MAX_OUTPUT_CHANNELS];
     const ALfloat *coeff_scale = UnitScale;
     ALfloat ambiscale = 1.0f;
-    ALuint i, j;
+    ALsizei i, j;
 
     if(conf->FreqBands != 1)
         ERR("Basic renderer uses the high-frequency matrix as single-band (xover_freq = %.0fhz)\n",
@@ -659,11 +659,11 @@ static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const A
     else if(conf->CoeffScale == ADS_FuMa)
         coeff_scale = FuMa2N3DScale;
 
-    for(i = 0;i < conf->NumSpeakers;i++)
+    for(i = 0;i < (ALsizei)conf->NumSpeakers;i++)
     {
-        ALuint chan = speakermap[i];
+        ALsizei chan = speakermap[i];
         ALfloat gain;
-        ALuint k = 0;
+        ALsizei k = 0;
 
         for(j = 0;j < MAX_AMBI_COEFFS;j++)
             chanmap[i].Config[j] = 0.0f;
@@ -686,7 +686,7 @@ static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const A
                              (conf->ChanMask > 0xf) ? 9 : 4;
 
     memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
-    for(i = 0;i < device->Dry.NumChannels;i++)
+    for(i = 0;i < (ALsizei)device->Dry.NumChannels;i++)
     {
         device->FOAOut.Ambi.Coeffs[i][0] = device->Dry.Ambi.Coeffs[i][0];
         for(j = 1;j < 4;j++)
@@ -700,7 +700,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
     const char *devname;
     int decflags = 0;
     size_t count;
-    ALuint i;
+    size_t i;
 
     devname = al_string_get_cstr(device->DeviceName);
     if(GetConfigValueBool(devname, "decoder", "distance-comp", 1))
@@ -758,11 +758,11 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuin
 
 static void InitHrtfPanning(ALCdevice *device, bool hoa_mode)
 {
-    static const ALuint map_foa[] = { 0, 1, 2, 3 };
-    static const ALuint map_hoa[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
-    const ALuint *ambi_map = hoa_mode ? map_hoa : map_foa;
+    static const ALsizei map_foa[] = { 0, 1, 2, 3 };
+    static const ALsizei map_hoa[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+    const ALsizei *ambi_map = hoa_mode ? map_hoa : map_foa;
     size_t count = hoa_mode ? COUNTOF(map_hoa) : COUNTOF(map_foa);
-    ALuint i;
+    size_t i;
 
     static_assert(COUNTOF(map_hoa) <= COUNTOF(device->Hrtf.Coeffs), "ALCdevice::Hrtf.Values/Coeffs size is too small");
 
@@ -803,12 +803,12 @@ static void InitHrtfPanning(ALCdevice *device, bool hoa_mode)
 
 static void InitUhjPanning(ALCdevice *device)
 {
-    size_t count = 3;
-    ALuint i;
+    ALsizei count = 3;
+    ALsizei i;
 
     for(i = 0;i < count;i++)
     {
-        ALuint acn = FuMa2ACN[i];
+        ALsizei acn = FuMa2ACN[i];
         device->Dry.Ambi.Map[i].Scale = 1.0f/FuMa2N3DScale[acn];
         device->Dry.Ambi.Map[i].Index = acn;
     }
@@ -1065,7 +1065,7 @@ no_hrtf:
 
 void aluInitEffectPanning(ALeffectslot *slot)
 {
-    ALuint i;
+    ALsizei i;
 
     memset(slot->ChanMap, 0, sizeof(slot->ChanMap));
     slot->NumChannels = 0;

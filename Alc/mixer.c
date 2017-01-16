@@ -589,7 +589,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     {
                         ALfloat delta = 1.0f / (ALfloat)Counter;
                         ALfloat coeffdiff;
-                        ALint delaydiff;
+                        ALsizei delaydiff;
                         for(j = 0;j < IrSize;j++)
                         {
                             coeffdiff = parms->Hrtf.Target.Coeffs[j][0] - parms->Hrtf.Current.Coeffs[j][0];
@@ -597,9 +597,9 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                             coeffdiff = parms->Hrtf.Target.Coeffs[j][1] - parms->Hrtf.Current.Coeffs[j][1];
                             hrtfparams.Steps.Coeffs[j][1] = coeffdiff * delta;
                         }
-                        delaydiff = (ALint)(parms->Hrtf.Target.Delay[0] - parms->Hrtf.Current.Delay[0]);
+                        delaydiff = parms->Hrtf.Target.Delay[0] - parms->Hrtf.Current.Delay[0];
                         hrtfparams.Steps.Delay[0] = fastf2i((ALfloat)delaydiff * delta);
-                        delaydiff = (ALint)(parms->Hrtf.Target.Delay[1] - parms->Hrtf.Current.Delay[1]);
+                        delaydiff = parms->Hrtf.Target.Delay[1] - parms->Hrtf.Current.Delay[1];
                         hrtfparams.Steps.Delay[1] = fastf2i((ALfloat)delaydiff * delta);
                     }
                     hrtfparams.Target = &parms->Hrtf.Target;

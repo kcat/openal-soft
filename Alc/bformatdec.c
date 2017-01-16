@@ -246,7 +246,7 @@ typedef struct BFormatDec {
 
     struct {
         alignas(16) ALfloat Buffer[MAX_DELAY_LENGTH];
-        ALuint Length; /* Valid range is [0...MAX_DELAY_LENGTH). */
+        ALsizei Length; /* Valid range is [0...MAX_DELAY_LENGTH). */
     } Delay[MAX_OUTPUT_CHANNELS];
 
     struct {
@@ -255,7 +255,7 @@ typedef struct BFormatDec {
         ALfloat Gains[4][MAX_OUTPUT_CHANNELS][FB_Max];
     } UpSampler;
 
-    ALuint NumChannels;
+    ALsizei NumChannels;
     ALboolean DualBand;
     ALboolean Periphonic;
 } BFormatDec;
@@ -297,7 +297,7 @@ int bformatdec_getOrder(const struct BFormatDec *dec)
     return 0;
 }
 
-void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount, ALuint srate, const ALuint chanmap[MAX_OUTPUT_CHANNELS], int flags)
+void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALuint chanmap[MAX_OUTPUT_CHANNELS], int flags)
 {
     static const ALuint map2DTo3D[MAX_AMBI2D_COEFFS] = {
         0,  1, 3,  4, 8,  9, 15
@@ -305,7 +305,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
     const ALfloat *coeff_scale = UnitScale;
     ALfloat distgain[MAX_OUTPUT_CHANNELS];
     ALfloat maxdist, ratio;
-    ALuint i;
+    ALsizei i;
 
     al_free(dec->Samples);
     dec->Samples = NULL;
@@ -375,7 +375,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
 
             dec->Delay[chan].Length = (ALuint)clampf(delay, 0.0f, (ALfloat)(MAX_DELAY_LENGTH-1));
             distgain[i] = conf->Speakers[i].Distance / maxdist;
-            TRACE("Channel %u \"%s\" distance compensation: %u samples, %f gain\n", chan,
+            TRACE("Channel %u \"%s\" distance compensation: %d samples, %f gain\n", chan,
                 al_string_get_cstr(conf->Speakers[i].Name), dec->Delay[chan].Length, distgain[i]
             );
         }
@@ -492,9 +492,9 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALuint chancount,
 }
 
 
-void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint OutChannels, const ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint SamplesToDo)
+void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALsizei OutChannels, const ALfloat (*restrict InSamples)[BUFFERSIZE], ALsizei SamplesToDo)
 {
-    ALuint chan, i;
+    ALsizei chan, i;
 
     if(dec->DualBand)
     {
@@ -519,7 +519,7 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
 
             if(dec->Delay[chan].Length > 0)
             {
-                const ALuint base = dec->Delay[chan].Length;
+                const ALsizei base = dec->Delay[chan].Length;
                 if(SamplesToDo >= base)
                 {
                     for(i = 0;i < base;i++)
@@ -556,7 +556,7 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
 
             if(dec->Delay[chan].Length > 0)
             {
-                const ALuint base = dec->Delay[chan].Length;
+                const ALsizei base = dec->Delay[chan].Length;
                 if(SamplesToDo >= base)
                 {
                     for(i = 0;i < base;i++)
@@ -583,9 +583,9 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
 }
 
 
-void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint InChannels, ALuint SamplesToDo)
+void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALfloat (*restrict InSamples)[BUFFERSIZE], ALsizei InChannels, ALsizei SamplesToDo)
 {
-    ALuint i, j;
+    ALsizei i, j;
 
     /* This up-sampler is very simplistic. It essentially decodes the first-
      * order content to a square channel array (or cube if height is desired),
@@ -652,9 +652,9 @@ void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device)
                       ambiup->Gains, device->Dry.NumChannels);
 }
 
-void ambiup_process(struct AmbiUpsampler *ambiup, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALuint OutChannels, const ALfloat (*restrict InSamples)[BUFFERSIZE], ALuint SamplesToDo)
+void ambiup_process(struct AmbiUpsampler *ambiup, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALsizei OutChannels, const ALfloat (*restrict InSamples)[BUFFERSIZE], ALsizei SamplesToDo)
 {
-    ALuint i, j;
+    ALsizei i, j;
 
     for(i = 0;i < 4;i++)
     {

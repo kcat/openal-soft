@@ -379,7 +379,7 @@ static void SetChannelMap(const enum Channel *devchans, ChannelConfig *ambicoeff
 
 static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALuint speakermap[MAX_OUTPUT_CHANNELS])
 {
-    ALuint i;
+    ALsizei i;
 
     for(i = 0;i < conf->NumSpeakers;i++)
     {
@@ -659,7 +659,7 @@ static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const A
     else if(conf->CoeffScale == ADS_FuMa)
         coeff_scale = FuMa2N3DScale;
 
-    for(i = 0;i < (ALsizei)conf->NumSpeakers;i++)
+    for(i = 0;i < conf->NumSpeakers;i++)
     {
         ALsizei chan = speakermap[i];
         ALfloat gain;

@@ -130,10 +130,10 @@ static const ALfloat Ambi2DPoints[4][3] = {
     {  0.707106781f,  0.0f,  0.707106781f },
 };
 static const ALfloat Ambi2DDecoder[4][FB_Max][MAX_AMBI_COEFFS] = {
-    { { 0.353553f,  0.204094f, 0.0f,  0.204094f }, { 0.25f,  0.204094f, 0.0f,  0.204094f } },
-    { { 0.353553f, -0.204094f, 0.0f,  0.204094f }, { 0.25f, -0.204094f, 0.0f,  0.204094f } },
-    { { 0.353553f,  0.204094f, 0.0f, -0.204094f }, { 0.25f,  0.204094f, 0.0f, -0.204094f } },
-    { { 0.353553f, -0.204094f, 0.0f, -0.204094f }, { 0.25f, -0.204094f, 0.0f, -0.204094f } },
+    { { 3.53553391e-1f,  2.04124145e-1f, 0.0f,  2.04124145e-1f }, { 0.25f,  2.04124145e-1f, 0.0f,  2.04124145e-1f } },
+    { { 3.53553391e-1f, -2.04124145e-1f, 0.0f,  2.04124145e-1f }, { 0.25f, -2.04124145e-1f, 0.0f,  2.04124145e-1f } },
+    { { 3.53553391e-1f,  2.04124145e-1f, 0.0f, -2.04124145e-1f }, { 0.25f,  2.04124145e-1f, 0.0f, -2.04124145e-1f } },
+    { { 3.53553391e-1f, -2.04124145e-1f, 0.0f, -2.04124145e-1f }, { 0.25f, -2.04124145e-1f, 0.0f, -2.04124145e-1f } },
 };
 static ALfloat Ambi2DEncoderT[4][MAX_AMBI_COEFFS];
 
@@ -168,7 +168,7 @@ static alonce_flag bformatdec_inited = AL_ONCE_FLAG_INIT;
 
 static void init_bformatdec(void)
 {
-    ALuint i, j;
+    size_t i, j;
 
     MixMatrixRow = SelectRowMixer();
 

@@ -381,7 +381,7 @@ static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter
 }
 
 
-ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei SamplesToDo)
+void MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei SamplesToDo)
 {
     ResamplerFunc Resample;
     ALbufferlistitem *BufferListItem;

@@ -1392,7 +1392,7 @@ DECL_TEMPLATE(ALbyte, aluF2B)
 #undef DECL_TEMPLATE
 
 
-ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
+void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 {
     ALuint SamplesToDo;
     ALvoice *voice, *voice_end;
@@ -1599,7 +1599,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 }
 
 
-ALvoid aluHandleDisconnect(ALCdevice *device)
+void aluHandleDisconnect(ALCdevice *device)
 {
     ALCcontext *Context;
 

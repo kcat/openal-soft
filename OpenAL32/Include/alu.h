@@ -348,11 +348,11 @@ void ComputeFirstOrderGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans,
 void ComputeFirstOrderGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 
-ALvoid MixSource(struct ALvoice *voice, struct ALsource *source, ALCdevice *Device, ALsizei SamplesToDo);
+void MixSource(struct ALvoice *voice, struct ALsource *Source, ALCdevice *Device, ALsizei SamplesToDo);
 
-ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size);
+void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size);
 /* Caller must lock the device. */
-ALvoid aluHandleDisconnect(ALCdevice *device);
+void aluHandleDisconnect(ALCdevice *device);
 
 extern ALfloat ConeScale;
 extern ALfloat ZScale;

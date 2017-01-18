@@ -589,7 +589,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     {
                         ALfloat delta = 1.0f / (ALfloat)Counter;
                         ALfloat coeffdiff;
-                        ALsizei delaydiff;
+                        ALint delaydiff;
                         for(j = 0;j < IrSize;j++)
                         {
                             coeffdiff = parms->Hrtf.Target.Coeffs[j][0] - parms->Hrtf.Current.Coeffs[j][0];
@@ -609,9 +609,11 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     ridx = GetChannelIdxByName(Device->RealOut, FrontRight);
                     assert(lidx != -1 && ridx != -1);
 
-                    MixHrtfSamples(voice->DirectOut.Buffer, lidx, ridx, samples, Counter,
-                                   voice->Offset, OutPos, IrSize, &hrtfparams,
-                                   &parms->Hrtf.State, DstBufferSize);
+                    MixHrtfSamples(
+                        voice->DirectOut.Buffer[lidx], voice->DirectOut.Buffer[ridx],
+                        samples, Counter, voice->Offset, OutPos, IrSize, &hrtfparams,
+                        &parms->Hrtf.State, DstBufferSize
+                    );
                 }
             }
 

@@ -21,11 +21,11 @@ const ALfloat *Resample_bsinc32_C(const BsincState *state, const ALfloat *restri
 
 
 /* C mixers */
-void MixHrtf_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALsizei lidx, ALsizei ridx,
+void MixHrtf_C(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
                const ALfloat *data, ALsizei Counter, ALsizei Offset, ALsizei OutPos,
                const ALsizei IrSize, const struct MixHrtfParams *hrtfparams,
                struct HrtfState *hrtfstate, ALsizei BufferSize);
-void MixDirectHrtf_C(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALsizei lidx, ALsizei ridx,
+void MixDirectHrtf_C(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
                      const ALfloat *data, ALsizei Offset, const ALsizei IrSize,
                      ALfloat (*restrict Coeffs)[2], ALfloat (*restrict Values)[2],
                      ALsizei BufferSize);
@@ -37,11 +37,11 @@ void MixRow_C(ALfloat *OutBuffer, const ALfloat *Gains,
               ALsizei InPos, ALsizei BufferSize);
 
 /* SSE mixers */
-void MixHrtf_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALsizei lidx, ALsizei ridx,
+void MixHrtf_SSE(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
                  const ALfloat *data, ALsizei Counter, ALsizei Offset, ALsizei OutPos,
                  const ALsizei IrSize, const struct MixHrtfParams *hrtfparams,
                  struct HrtfState *hrtfstate, ALsizei BufferSize);
-void MixDirectHrtf_SSE(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALsizei lidx, ALsizei ridx,
+void MixDirectHrtf_SSE(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
                        const ALfloat *data, ALsizei Offset, const ALsizei IrSize,
                        ALfloat (*restrict Coeffs)[2], ALfloat (*restrict Values)[2],
                        ALsizei BufferSize);
@@ -93,11 +93,11 @@ const ALfloat *Resample_fir8_32_SSE41(const BsincState *state, const ALfloat *re
                                       ALsizei numsamples);
 
 /* Neon mixers */
-void MixHrtf_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALsizei lidx, ALsizei ridx,
+void MixHrtf_Neon(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
                   const ALfloat *data, ALsizei Counter, ALsizei Offset, ALsizei OutPos,
                   const ALsizei IrSize, const struct MixHrtfParams *hrtfparams,
                   struct HrtfState *hrtfstate, ALsizei BufferSize);
-void MixDirectHrtf_Neon(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALsizei lidx, ALsizei ridx,
+void MixDirectHrtf_Neon(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
                         const ALfloat *data, ALsizei Offset, const ALsizei IrSize,
                         ALfloat (*restrict Coeffs)[2], ALfloat (*restrict Values)[2],
                         ALsizei BufferSize);

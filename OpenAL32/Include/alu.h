@@ -160,14 +160,14 @@ typedef void (*MixerFunc)(const ALfloat *data, ALsizei OutChans,
 typedef void (*RowMixerFunc)(ALfloat *OutBuffer, const ALfloat *gains,
                              const ALfloat (*restrict data)[BUFFERSIZE], ALsizei InChans,
                              ALsizei InPos, ALsizei BufferSize);
-typedef void (*HrtfMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALsizei lidx, ALsizei ridx,
+typedef void (*HrtfMixerFunc)(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
                               const ALfloat *data, ALsizei Counter, ALsizei Offset, ALsizei OutPos,
                               const ALsizei IrSize, const MixHrtfParams *hrtfparams,
                               HrtfState *hrtfstate, ALsizei BufferSize);
-typedef void (*HrtfDirectMixerFunc)(ALfloat (*restrict OutBuffer)[BUFFERSIZE],
-                                    ALsizei lidx, ALsizei ridx, const ALfloat *data, ALsizei Offset,
-                                    const ALsizei IrSize, ALfloat (*restrict Coeffs)[2],
-                                    ALfloat (*restrict Values)[2], ALsizei BufferSize);
+typedef void (*HrtfDirectMixerFunc)(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
+                                    const ALfloat *data, ALsizei Offset, const ALsizei IrSize,
+                                    ALfloat (*restrict Coeffs)[2], ALfloat (*restrict Values)[2],
+                                    ALsizei BufferSize);
 
 
 #define GAIN_MIX_MAX  (16.0f) /* +24dB */

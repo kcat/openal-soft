@@ -307,9 +307,9 @@ static inline ALfloat Sample_ALfloat(ALfloat val)
 { return val; }
 
 #define DECL_TEMPLATE(T)                                                      \
-static inline void Load_##T(ALfloat *dst, const T *src, ALuint srcstep, ALuint samples)\
+static inline void Load_##T(ALfloat *dst, const T *src, ALint srcstep, ALsizei samples)\
 {                                                                             \
-    ALuint i;                                                                 \
+    ALsizei i;                                                                \
     for(i = 0;i < samples;i++)                                                \
         dst[i] = Sample_##T(src[i*srcstep]);                                  \
 }
@@ -320,7 +320,7 @@ DECL_TEMPLATE(ALfloat)
 
 #undef DECL_TEMPLATE
 
-static void LoadSamples(ALfloat *dst, const ALvoid *src, ALuint srcstep, enum FmtType srctype, ALuint samples)
+static void LoadSamples(ALfloat *dst, const ALvoid *src, ALint srcstep, enum FmtType srctype, ALsizei samples)
 {
     switch(srctype)
     {
@@ -336,9 +336,9 @@ static void LoadSamples(ALfloat *dst, const ALvoid *src, ALuint srcstep, enum Fm
     }
 }
 
-static inline void SilenceSamples(ALfloat *dst, ALuint samples)
+static inline void SilenceSamples(ALfloat *dst, ALsizei samples)
 {
-    ALuint i;
+    ALsizei i;
     for(i = 0;i < samples;i++)
         dst[i] = 0.0f;
 }
@@ -346,9 +346,9 @@ static inline void SilenceSamples(ALfloat *dst, ALuint samples)
 
 static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter,
                                 ALfloat *restrict dst, const ALfloat *restrict src,
-                                ALuint numsamples, enum ActiveFilters type)
+                                ALsizei numsamples, enum ActiveFilters type)
 {
-    ALuint i;
+    ALsizei i;
     switch(type)
     {
         case AF_None:
@@ -369,7 +369,7 @@ static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter
             for(i = 0;i < numsamples;)
             {
                 ALfloat temp[256];
-                ALuint todo = minu(256, numsamples-i);
+                ALsizei todo = mini(256, numsamples-i);
 
                 ALfilterState_process(lpfilter, temp, src+i, todo);
                 ALfilterState_process(hpfilter, dst+i, temp, todo);
@@ -381,21 +381,22 @@ static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter
 }
 
 
-ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
+ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei SamplesToDo)
 {
     ResamplerFunc Resample;
     ALbufferlistitem *BufferListItem;
     ALuint DataPosInt, DataPosFrac;
     ALboolean Looping;
-    ALuint increment;
+    ALint increment;
     ALenum State;
-    ALuint OutPos;
-    ALuint NumChannels;
-    ALuint SampleSize;
+    ALsizei OutPos;
+    ALsizei NumChannels;
+    ALsizei SampleSize;
     ALint64 DataSize64;
-    ALuint Counter;
-    ALuint IrSize;
-    ALuint chan, send, j;
+    ALsizei Counter;
+    ALsizei IrSize;
+    ALsizei chan, j;
+    ALuint send;
 
     /* Get source info */
     State          = AL_PLAYING; /* Only called while playing. */
@@ -415,7 +416,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
     Counter = voice->Moving ? SamplesToDo : 0;
     OutPos = 0;
     do {
-        ALuint SrcBufferSize, DstBufferSize;
+        ALsizei SrcBufferSize, DstBufferSize;
 
         /* Figure out how many buffer samples will be needed */
         DataSize64  = SamplesToDo-OutPos;
@@ -424,7 +425,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
         DataSize64 >>= FRACTIONBITS;
         DataSize64 += MAX_POST_SAMPLES+MAX_PRE_SAMPLES;
 
-        SrcBufferSize = (ALuint)mini64(DataSize64, BUFFERSIZE);
+        SrcBufferSize = (ALsizei)mini64(DataSize64, BUFFERSIZE);
 
         /* Figure out how many samples we can actually mix from this. */
         DataSize64  = SrcBufferSize;
@@ -432,8 +433,8 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
         DataSize64 <<= FRACTIONBITS;
         DataSize64 -= DataPosFrac;
 
-        DstBufferSize = (ALuint)((DataSize64+(increment-1)) / increment);
-        DstBufferSize = minu(DstBufferSize, (SamplesToDo-OutPos));
+        DstBufferSize = (ALsizei)((DataSize64+(increment-1)) / increment);
+        DstBufferSize = mini(DstBufferSize, (SamplesToDo-OutPos));
 
         /* Some mixers like having a multiple of 4, so try to give that unless
          * this is the last update. */
@@ -444,7 +445,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
         {
             const ALfloat *ResampledData;
             ALfloat *SrcData = Device->SourceData;
-            ALuint SrcDataSize;
+            ALsizei SrcDataSize;
 
             /* Load the previous samples into the source data first. */
             memcpy(SrcData, voice->PrevSamples[chan], MAX_PRE_SAMPLES*sizeof(ALfloat));
@@ -454,7 +455,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
             {
                 const ALbuffer *ALBuffer = BufferListItem->buffer;
                 const ALubyte *Data = ALBuffer->data;
-                ALuint DataSize;
+                ALsizei DataSize;
 
                 /* Offset buffer data to current channel */
                 Data += chan*SampleSize;
@@ -478,13 +479,12 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                 }
                 else
                 {
-                    ALuint LoopStart = ALBuffer->LoopStart;
-                    ALuint LoopEnd   = ALBuffer->LoopEnd;
+                    ALsizei LoopStart = ALBuffer->LoopStart;
+                    ALsizei LoopEnd   = ALBuffer->LoopEnd;
 
                     /* Load what's left of this loop iteration, then load
                      * repeats of the loop section */
-                    DataSize = LoopEnd - DataPosInt;
-                    DataSize = minu(SrcBufferSize - SrcDataSize, DataSize);
+                    DataSize = minu(SrcBufferSize - SrcDataSize, LoopEnd - DataPosInt);
 
                     LoadSamples(&SrcData[SrcDataSize], &Data[DataPosInt * NumChannels*SampleSize],
                                 NumChannels, ALBuffer->FmtType, DataSize);
@@ -493,7 +493,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                     DataSize = LoopEnd-LoopStart;
                     while(SrcBufferSize > SrcDataSize)
                     {
-                        DataSize = minu(SrcBufferSize - SrcDataSize, DataSize);
+                        DataSize = mini(SrcBufferSize - SrcDataSize, DataSize);
 
                         LoadSamples(&SrcData[SrcDataSize], &Data[LoopStart * NumChannels*SampleSize],
                                     NumChannels, ALBuffer->FmtType, DataSize);
@@ -645,22 +645,22 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
 
         OutPos += DstBufferSize;
         voice->Offset += DstBufferSize;
-        Counter = maxu(DstBufferSize, Counter) - DstBufferSize;
+        Counter = maxi(DstBufferSize, Counter) - DstBufferSize;
 
         /* Handle looping sources */
         while(1)
         {
             const ALbuffer *ALBuffer;
-            ALuint DataSize = 0;
-            ALuint LoopStart = 0;
-            ALuint LoopEnd = 0;
+            ALsizei DataSize = 0;
+            ALsizei LoopStart = 0;
+            ALsizei LoopEnd = 0;
 
             if((ALBuffer=BufferListItem->buffer) != NULL)
             {
                 DataSize = ALBuffer->SampleLen;
                 LoopStart = ALBuffer->LoopStart;
                 LoopEnd = ALBuffer->LoopEnd;
-                if(LoopEnd > DataPosInt)
+                if((ALuint)LoopEnd > DataPosInt)
                     break;
             }
 
@@ -671,7 +671,7 @@ ALvoid MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALuint Sam
                 break;
             }
 
-            if(DataSize > DataPosInt)
+            if((ALuint)DataSize > DataPosInt)
                 break;
 
             if(!(BufferListItem=BufferListItem->next))

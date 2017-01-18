@@ -177,8 +177,8 @@ static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
     audio_info_t info;
-    ALuint frameSize;
-    int numChannels;
+    ALsizei frameSize;
+    ALsizei numChannels;
 
     AUDIO_INITINFO(&info);
 
@@ -220,7 +220,7 @@ static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
         return ALC_FALSE;
     }
 
-    if(ChannelsFromDevFmt(device->FmtChans) != info.play.channels)
+    if(ChannelsFromDevFmt(device->FmtChans) != (ALsizei)info.play.channels)
     {
         ERR("Could not set %d channels, got %d instead\n", ChannelsFromDevFmt(device->FmtChans), info.play.channels);
         return ALC_FALSE;

@@ -1310,8 +1310,8 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans)
     return "(unknown channels)";
 }
 
-extern inline ALuint FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType type);
-ALuint BytesFromDevFmt(enum DevFmtType type)
+extern inline ALsizei FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType type);
+ALsizei BytesFromDevFmt(enum DevFmtType type)
 {
     switch(type)
     {
@@ -1325,7 +1325,7 @@ ALuint BytesFromDevFmt(enum DevFmtType type)
     }
     return 0;
 }
-ALuint ChannelsFromDevFmt(enum DevFmtChannels chans)
+ALsizei ChannelsFromDevFmt(enum DevFmtChannels chans)
 {
     switch(chans)
     {
@@ -2093,7 +2093,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->FOAOut.Buffer = device->Dry.Buffer;
         device->FOAOut.NumChannels = device->Dry.NumChannels;
     }
-    TRACE("Channel config, Dry: %u, FOA: %u, Real: %u\n", device->Dry.NumChannels,
+    TRACE("Channel config, Dry: %d, FOA: %d, Real: %d\n", device->Dry.NumChannels,
           device->FOAOut.NumChannels, device->RealOut.NumChannels);
 
     SetMixerFPUMode(&oldMode);

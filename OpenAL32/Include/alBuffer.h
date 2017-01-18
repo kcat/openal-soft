@@ -36,9 +36,9 @@ enum UserFmtChannels {
     UserFmtBFormat3D = AL_BFORMAT3D_SOFT, /* WXYZ */
 };
 
-ALuint BytesFromUserFmt(enum UserFmtType type);
-ALuint ChannelsFromUserFmt(enum UserFmtChannels chans);
-inline ALuint FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType type)
+ALsizei BytesFromUserFmt(enum UserFmtType type);
+ALsizei ChannelsFromUserFmt(enum UserFmtChannels chans);
+inline ALsizei FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType type)
 {
     return ChannelsFromUserFmt(chans) * BytesFromUserFmt(type);
 }
@@ -63,9 +63,9 @@ enum FmtChannels {
 };
 #define MAX_INPUT_CHANNELS  (8)
 
-ALuint BytesFromFmt(enum FmtType type);
-ALuint ChannelsFromFmt(enum FmtChannels chans);
-inline ALuint FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type)
+ALsizei BytesFromFmt(enum FmtType type);
+ALsizei ChannelsFromFmt(enum FmtChannels chans);
+inline ALsizei FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type)
 {
     return ChannelsFromFmt(chans) * BytesFromFmt(type);
 }
@@ -87,8 +87,8 @@ typedef struct ALbuffer {
     ALsizei              OriginalSize;
     ALsizei              OriginalAlign;
 
-    ALsizei  LoopStart;
-    ALsizei  LoopEnd;
+    ALsizei LoopStart;
+    ALsizei LoopEnd;
 
     ATOMIC(ALsizei) UnpackAlign;
     ATOMIC(ALsizei) PackAlign;

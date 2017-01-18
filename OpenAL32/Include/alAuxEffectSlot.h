@@ -18,7 +18,7 @@ typedef struct ALeffectState {
     const struct ALeffectStateVtable *vtbl;
 
     ALfloat (*OutBuffer)[BUFFERSIZE];
-    ALuint OutChannels;
+    ALsizei OutChannels;
 } ALeffectState;
 
 void ALeffectState_Construct(ALeffectState *state);
@@ -120,7 +120,7 @@ typedef struct ALeffectslot {
     /* Self ID */
     ALuint id;
 
-    ALuint NumChannels;
+    ALsizei NumChannels;
     BFChannelConfig ChanMap[MAX_EFFECT_CHANNELS];
     /* Wet buffer configuration is ACN channel order with N3D scaling:
      * * Channel 0 is the unattenuated mono signal.

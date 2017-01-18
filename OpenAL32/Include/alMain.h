@@ -499,9 +499,9 @@ enum DevFmtChannels {
 };
 #define MAX_OUTPUT_CHANNELS  (16)
 
-ALuint BytesFromDevFmt(enum DevFmtType type);
-ALuint ChannelsFromDevFmt(enum DevFmtChannels chans);
-inline ALuint FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType type)
+ALsizei BytesFromDevFmt(enum DevFmtType type);
+ALsizei ChannelsFromDevFmt(enum DevFmtChannels chans);
+inline ALsizei FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType type)
 {
     return ChannelsFromDevFmt(chans) * BytesFromDevFmt(type);
 }
@@ -682,20 +682,20 @@ struct ALCdevice_struct
          * first-order, 9 for second-order, etc). If the count is 0, Ambi.Map
          * is used instead to map each output to a coefficient index.
          */
-        ALuint CoeffCount;
+        ALsizei CoeffCount;
 
         ALfloat (*Buffer)[BUFFERSIZE];
-        ALuint NumChannels;
+        ALsizei NumChannels;
     } Dry;
 
     /* First-order ambisonics output, to be upsampled to the dry buffer if different. */
     struct {
         AmbiConfig Ambi;
         /* Will only be 4 or 0. */
-        ALuint CoeffCount;
+        ALsizei CoeffCount;
 
         ALfloat (*Buffer)[BUFFERSIZE];
-        ALuint NumChannels;
+        ALsizei NumChannels;
     } FOAOut;
 
     /* "Real" output, which will be written to the device buffer. May alias the
@@ -705,7 +705,7 @@ struct ALCdevice_struct
         enum Channel ChannelName[MAX_OUTPUT_CHANNELS];
 
         ALfloat (*Buffer)[BUFFERSIZE];
-        ALuint NumChannels;
+        ALsizei NumChannels;
     } RealOut;
 
     /* Running count of the mixer invocations, in 31.1 fixed point. This

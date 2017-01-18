@@ -1400,7 +1400,7 @@ ALvoid aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
     ALsource *source;
     ALCcontext *ctx;
     FPUCtl oldMode;
-    ALuint i, c;
+    ALsizei i, c;
 
     SetMixerFPUMode(&oldMode);
 

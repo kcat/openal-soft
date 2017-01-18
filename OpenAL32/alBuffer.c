@@ -42,8 +42,8 @@ extern inline void LockBuffersWrite(ALCdevice *device);
 extern inline void UnlockBuffersWrite(ALCdevice *device);
 extern inline struct ALbuffer *LookupBuffer(ALCdevice *device, ALuint id);
 extern inline struct ALbuffer *RemoveBuffer(ALCdevice *device, ALuint id);
-extern inline ALuint FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType type);
-extern inline ALuint FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type);
+extern inline ALsizei FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType type);
+extern inline ALsizei FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type);
 
 static ALboolean IsValidType(ALenum type);
 static ALboolean IsValidChannels(ALenum channels);
@@ -145,7 +145,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
     ALCcontext *context;
     ALbuffer *albuf;
     ALenum newformat = AL_NONE;
-    ALuint framesize;
+    ALsizei framesize;
     ALsizei align;
     ALenum err;
 
@@ -293,9 +293,9 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
     ALCdevice *device;
     ALCcontext *context;
     ALbuffer *albuf;
-    ALuint byte_align;
-    ALuint channels;
-    ALuint bytes;
+    ALsizei byte_align;
+    ALsizei channels;
+    ALsizei bytes;
     ALsizei align;
 
     context = GetContextRef();
@@ -1074,7 +1074,7 @@ ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, 
 }
 
 
-ALuint BytesFromUserFmt(enum UserFmtType type)
+ALsizei BytesFromUserFmt(enum UserFmtType type)
 {
     switch(type)
     {
@@ -1095,7 +1095,7 @@ ALuint BytesFromUserFmt(enum UserFmtType type)
     }
     return 0;
 }
-ALuint ChannelsFromUserFmt(enum UserFmtChannels chans)
+ALsizei ChannelsFromUserFmt(enum UserFmtChannels chans)
 {
     switch(chans)
     {
@@ -1190,7 +1190,7 @@ static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans,
     return AL_FALSE;
 }
 
-ALuint BytesFromFmt(enum FmtType type)
+ALsizei BytesFromFmt(enum FmtType type)
 {
     switch(type)
     {
@@ -1200,7 +1200,7 @@ ALuint BytesFromFmt(enum FmtType type)
     }
     return 0;
 }
-ALuint ChannelsFromFmt(enum FmtChannels chans)
+ALsizei ChannelsFromFmt(enum FmtChannels chans)
 {
     switch(chans)
     {

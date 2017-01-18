@@ -96,12 +96,12 @@ typedef struct ALvoice {
 
     struct {
         ALfloat (*Buffer)[BUFFERSIZE];
-        ALuint Channels;
+        ALsizei Channels;
     } DirectOut;
 
     struct {
         ALfloat (*Buffer)[BUFFERSIZE];
-        ALuint Channels;
+        ALsizei Channels;
     } SendOut[MAX_SENDS];
 
     struct {
@@ -194,8 +194,8 @@ typedef struct ALsource {
     ATOMIC(ALboolean) looping;
 
     /** Current buffer sample info. */
-    ALuint NumChannels;
-    ALuint SampleSize;
+    ALsizei NumChannels;
+    ALsizei SampleSize;
 
     ALenum NeedsUpdate;
 

@@ -20,16 +20,6 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
-
-#if defined(_WIN64)
-#define SZFMT "%I64u"
-#elif defined(_WIN32)
-#define SZFMT "%u"
-#else
-#define SZFMT "%zu"
-#endif
-
-
 #include "static_assert.h"
 #include "align.h"
 #include "atomic.h"
@@ -38,8 +28,6 @@
 #include "alstring.h"
 #include "almalloc.h"
 #include "threads.h"
-
-#include "hrtf.h"
 
 #ifndef ALC_SOFT_device_clock
 #define ALC_SOFT_device_clock 1
@@ -125,6 +113,15 @@ AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint buffer, ALsizei offset, AL
 AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum format);
 #endif
 #endif
+#endif
+
+
+#if defined(_WIN64)
+#define SZFMT "%I64u"
+#elif defined(_WIN32)
+#define SZFMT "%u"
+#else
+#define SZFMT "%zu"
 #endif
 
 
@@ -577,6 +574,10 @@ typedef union AmbiConfig {
 #define HRTF_HISTORY_LENGTH (1<<HRTF_HISTORY_BITS)
 #define HRTF_HISTORY_MASK   (HRTF_HISTORY_LENGTH-1)
 
+#define HRIR_BITS        (7)
+#define HRIR_LENGTH      (1<<HRIR_BITS)
+#define HRIR_MASK        (HRIR_LENGTH-1)
+
 typedef struct HrtfState {
     alignas(16) ALfloat History[HRTF_HISTORY_LENGTH];
     alignas(16) ALfloat Values[HRIR_LENGTH][2];
@@ -586,6 +587,13 @@ typedef struct HrtfParams {
     alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
     ALsizei Delay[2];
 } HrtfParams;
+
+typedef struct HrtfEntry {
+    al_string name;
+
+    const struct Hrtf *hrtf;
+} HrtfEntry;
+TYPEDEF_VECTOR(HrtfEntry, vector_HrtfEntry)
 
 
 /* Size for temporary storage of buffer data, in ALfloats. Larger values need

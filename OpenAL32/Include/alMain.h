@@ -906,8 +906,11 @@ inline ALint GetChannelIndex(const enum Channel names[MAX_OUTPUT_CHANNELS], enum
 #define GetChannelIdxByName(x, c) GetChannelIndex((x).ChannelName, (c))
 
 extern FILE *LogFile;
-
-#if defined(__GNUC__) && !defined(_WIN32) && !defined(IN_IDE_PARSER)
+    
+#if defined(__ANDROID__)
+#include <android/log.h>
+#define AL_PRINT(T, MSG, ...) __android_log_print(T, "openal", "AL lib: %s: "MSG, __FUNCTION__ , ## __VA_ARGS__)
+#elif defined(__GNUC__) && !defined(_WIN32) && !defined(IN_IDE_PARSER)
 #define AL_PRINT(T, MSG, ...) fprintf(LogFile, "AL lib: %s %s: "MSG, T, __FUNCTION__ , ## __VA_ARGS__)
 #else
 void al_print(const char *type, const char *func, const char *fmt, ...) DECL_FORMAT(printf, 3,4);
@@ -923,24 +926,36 @@ enum LogLevel {
 };
 extern enum LogLevel LogLevel;
 
+#if defined(__ANDROID__)
+#define TRACEREF_TYPE ANDROID_LOG_VERBOSE
+#define TRACE_TYPE ANDROID_LOG_DEBUG
+#define WARN_TYPE ANDROID_LOG_WARN
+#define ERR_TYPE ANDROID_LOG_ERROR
+#else
+#define TRACEREF_TYPE "(--)"
+#define TRACE_TYPE "(II)"
+#define WARN_TYPE "(WW)"
+#define ERR_TYPE "(EE)"
+#endif
+    
 #define TRACEREF(...) do {                                                    \
     if(LogLevel >= LogRef)                                                    \
-        AL_PRINT("(--)", __VA_ARGS__);                                        \
+        AL_PRINT(TRACEREF_TYPE, __VA_ARGS__);                                 \
 } while(0)
 
 #define TRACE(...) do {                                                       \
     if(LogLevel >= LogTrace)                                                  \
-        AL_PRINT("(II)", __VA_ARGS__);                                        \
+        AL_PRINT(TRACE_TYPE, __VA_ARGS__);                                    \
 } while(0)
 
 #define WARN(...) do {                                                        \
     if(LogLevel >= LogWarning)                                                \
-        AL_PRINT("(WW)", __VA_ARGS__);                                        \
+        AL_PRINT(WARN_TYPE, __VA_ARGS__);                                     \
 } while(0)
 
 #define ERR(...) do {                                                         \
     if(LogLevel >= LogError)                                                  \
-        AL_PRINT("(EE)", __VA_ARGS__);                                        \
+        AL_PRINT(ERR_TYPE, __VA_ARGS__);                                      \
 } while(0)
 
 

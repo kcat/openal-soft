@@ -208,10 +208,6 @@ static void opensl_close_playback(ALCdevice *Device)
 {
     osl_data *data = Device->ExtraData;
 
-    if(data->bufferQueueObject != NULL)
-        VCALL0(data->bufferQueueObject,Destroy)();
-    data->bufferQueueObject = NULL;
-
     VCALL0(data->outputMix,Destroy)();
     data->outputMix = NULL;
 
@@ -277,18 +273,9 @@ static ALCboolean opensl_reset_playback(ALCdevice *Device)
 
     result = VCALL(data->engine,CreateAudioPlayer)(&data->bufferQueueObject, &audioSrc, &audioSnk, 1, &id, &req);
     PRINTERR(result, "engine->CreateAudioPlayer");
-    if(SL_RESULT_SUCCESS == result)
-    {
-        result = VCALL(data->bufferQueueObject,Realize)(SL_BOOLEAN_FALSE);
-        PRINTERR(result, "bufferQueue->Realize");
-    }
 
     if(SL_RESULT_SUCCESS != result)
     {
-        if(data->bufferQueueObject != NULL)
-            VCALL0(data->bufferQueueObject,Destroy)();
-        data->bufferQueueObject = NULL;
-
         return ALC_FALSE;
     }
 
@@ -303,8 +290,14 @@ static ALCboolean opensl_start_playback(ALCdevice *Device)
     SLresult result;
     ALuint i;
 
-    result = VCALL(data->bufferQueueObject,GetInterface)(SL_IID_BUFFERQUEUE, &bufferQueue);
-    PRINTERR(result, "bufferQueue->GetInterface");
+    result = VCALL(data->bufferQueueObject,Realize)(SL_BOOLEAN_FALSE);
+    PRINTERR(result, "bufferQueue->Realize");
+
+    if(SL_RESULT_SUCCESS == result)
+    {
+        result = VCALL(data->bufferQueueObject,GetInterface)(SL_IID_BUFFERQUEUE, &bufferQueue);
+        PRINTERR(result, "bufferQueue->GetInterface");
+    }
     if(SL_RESULT_SUCCESS == result)
     {
         result = VCALL(bufferQueue,RegisterCallback)(opensl_callback, Device);
@@ -347,7 +340,6 @@ static ALCboolean opensl_start_playback(ALCdevice *Device)
     {
         if(data->bufferQueueObject != NULL)
             VCALL0(data->bufferQueueObject,Destroy)();
-        data->bufferQueueObject = NULL;
 
         free(data->buffer);
         data->buffer = NULL;
@@ -391,6 +383,9 @@ static void opensl_stop_playback(ALCdevice *Device)
         } while(SL_RESULT_SUCCESS == result && state.count > 0);
         PRINTERR(result, "bufferQueue->GetState");
     }
+
+    if(data->bufferQueueObject != NULL)
+        VCALL0(data->bufferQueueObject,Destroy)();
 
     free(data->buffer);
     data->buffer = NULL;

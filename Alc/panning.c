@@ -524,7 +524,7 @@ static void InitPanning(ALCdevice *device)
             count = COUNTOF(QuadCfg);
             chanmap = QuadCfg;
             ambiscale = FIRST_ORDER_SCALE;
-            coeffcount = 9;
+            coeffcount = 4;
             break;
 
         case DevFmtX51:
@@ -545,7 +545,7 @@ static void InitPanning(ALCdevice *device)
             count = COUNTOF(X61Cfg);
             chanmap = X61Cfg;
             ambiscale = SECOND_ORDER_SCALE;
-            coeffcount = 16;
+            coeffcount = 9;
             break;
 
         case DevFmtX71:

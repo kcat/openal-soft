@@ -214,12 +214,7 @@ void ComputeAmbientGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, AL
     ALsizei i;
 
     for(i = 0;i < numchans;i++)
-    {
-        // The W coefficients are based on a mathematical average of the
-        // output. The square root of the base average provides for a more
-        // perceptual average volume, better suited to non-directional gains.
-        gains[i] = sqrtf(chancoeffs[i][0]) * ingain;
-    }
+        gains[i] = chancoeffs[i][0] * 1.414213562f * ingain;
     for(;i < MAX_OUTPUT_CHANNELS;i++)
         gains[i] = 0.0f;
 }
@@ -465,8 +460,8 @@ static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALuint spe
 static const ChannelMap MonoCfg[1] = {
     { FrontCenter, { 1.0f } },
 }, StereoCfg[2] = {
-    { FrontLeft,   { 5.00000000e-1f,  2.88675135e-1f, 0.0f, 0.0f } },
-    { FrontRight,  { 5.00000000e-1f, -2.88675135e-1f, 0.0f, 0.0f } },
+    { FrontLeft,   { 5.00000000e-1f,  2.88675135e-1f, 0.0f,  0.00000000e+0f } },
+    { FrontRight,  { 5.00000000e-1f, -2.88675135e-1f, 0.0f,  0.00000000e+0f } },
 }, QuadCfg[4] = {
     { BackLeft,    { 3.53553391e-1f,  2.04124145e-1f, 0.0f, -2.04124145e-1f } },
     { FrontLeft,   { 3.53553391e-1f,  2.04124145e-1f, 0.0f,  2.04124145e-1f } },

@@ -3,6 +3,24 @@
 
 #include "alMain.h"
 
+
+/* These are the necessary scales for first-order HF responses to play over
+ * higher-order 2D (non-periphonic) decoders.
+ */
+#define W_SCALE2D_SECOND   1.224744871f /* sqrt(1.5) */
+#define XYZ_SCALE2D_SECOND 1.0f
+#define W_SCALE2D_THIRD   1.414213562f /* sqrt(2) */
+#define XYZ_SCALE2D_THIRD 1.082392196f
+
+/* These are the necessary scales for first-order HF responses to play over
+ * higher-order 3D (periphonic) decoders.
+ */
+#define W_SCALE3D_SECOND   1.341640787f /* sqrt(1.8) */
+#define XYZ_SCALE3D_SECOND 1.0f
+#define W_SCALE3D_THIRD   1.695486018f
+#define XYZ_SCALE3D_THIRD 1.136697713f
+
+
 struct AmbDecConf;
 struct BFormatDec;
 struct AmbiUpsampler;

@@ -39,12 +39,6 @@
 extern inline void CalcXYZCoeffs(ALfloat x, ALfloat y, ALfloat z, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
 
 
-#define ZERO_ORDER_SCALE    0.0f
-#define FIRST_ORDER_SCALE   1.0f
-#define SECOND_ORDER_SCALE  (1.0f / 1.22474f)
-#define THIRD_ORDER_SCALE   (1.0f / 1.30657f)
-
-
 static const ALsizei FuMa2ACN[MAX_AMBI_COEFFS] = {
     0,  /* W */
     3,  /* X */
@@ -499,59 +493,50 @@ static void InitPanning(ALCdevice *device)
 {
     const ChannelMap *chanmap = NULL;
     ALsizei coeffcount = 0;
-    ALfloat ambiscale;
     ALsizei count = 0;
     ALsizei i, j;
 
-    ambiscale = 1.0f;
     switch(device->FmtChans)
     {
         case DevFmtMono:
             count = COUNTOF(MonoCfg);
             chanmap = MonoCfg;
-            ambiscale = ZERO_ORDER_SCALE;
             coeffcount = 1;
             break;
 
         case DevFmtStereo:
             count = COUNTOF(StereoCfg);
             chanmap = StereoCfg;
-            ambiscale = FIRST_ORDER_SCALE;
             coeffcount = 4;
             break;
 
         case DevFmtQuad:
             count = COUNTOF(QuadCfg);
             chanmap = QuadCfg;
-            ambiscale = FIRST_ORDER_SCALE;
             coeffcount = 4;
             break;
 
         case DevFmtX51:
             count = COUNTOF(X51SideCfg);
             chanmap = X51SideCfg;
-            ambiscale = SECOND_ORDER_SCALE;
             coeffcount = 9;
             break;
 
         case DevFmtX51Rear:
             count = COUNTOF(X51RearCfg);
             chanmap = X51RearCfg;
-            ambiscale = SECOND_ORDER_SCALE;
             coeffcount = 9;
             break;
 
         case DevFmtX61:
             count = COUNTOF(X61Cfg);
             chanmap = X61Cfg;
-            ambiscale = SECOND_ORDER_SCALE;
             coeffcount = 9;
             break;
 
         case DevFmtX71:
             count = COUNTOF(X71Cfg);
             chanmap = X71Cfg;
-            ambiscale = THIRD_ORDER_SCALE;
             coeffcount = 16;
             break;
 
@@ -603,16 +588,23 @@ static void InitPanning(ALCdevice *device)
     }
     else
     {
+        ALfloat w_scale, xyz_scale;
+
         SetChannelMap(device->RealOut.ChannelName, device->Dry.Ambi.Coeffs,
                       chanmap, count, &device->Dry.NumChannels);
         device->Dry.CoeffCount = coeffcount;
 
+        w_scale = (device->Dry.CoeffCount > 9) ? W_SCALE2D_THIRD :
+                  (device->Dry.CoeffCount > 4) ? W_SCALE2D_SECOND : 1.0f;
+        xyz_scale = (device->Dry.CoeffCount > 9) ? XYZ_SCALE2D_THIRD :
+                    (device->Dry.CoeffCount > 4) ? XYZ_SCALE2D_SECOND : 1.0f;
+
         memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
-        for(i = 0;i < (ALsizei)device->Dry.NumChannels;i++)
+        for(i = 0;i < device->Dry.NumChannels;i++)
         {
-            device->FOAOut.Ambi.Coeffs[i][0] = device->Dry.Ambi.Coeffs[i][0];
+            device->FOAOut.Ambi.Coeffs[i][0] = device->Dry.Ambi.Coeffs[i][0] * w_scale;
             for(j = 1;j < 4;j++)
-                device->FOAOut.Ambi.Coeffs[i][j] = device->Dry.Ambi.Coeffs[i][j] * ambiscale;
+                device->FOAOut.Ambi.Coeffs[i][j] = device->Dry.Ambi.Coeffs[i][j] * xyz_scale;
         }
         device->FOAOut.CoeffCount = 4;
     }
@@ -622,21 +614,40 @@ static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const A
 {
     ChannelMap chanmap[MAX_OUTPUT_CHANNELS];
     const ALfloat *coeff_scale = UnitScale;
-    ALfloat ambiscale = 1.0f;
+    ALfloat w_scale = 1.0f;
+    ALfloat xyz_scale = 1.0f;
     ALsizei i, j;
 
     if(conf->FreqBands != 1)
         ERR("Basic renderer uses the high-frequency matrix as single-band (xover_freq = %.0fhz)\n",
             conf->XOverFreq);
 
-    if(conf->ChanMask > 0x1ff)
-        ambiscale = THIRD_ORDER_SCALE;
-    else if(conf->ChanMask > 0xf)
-        ambiscale = SECOND_ORDER_SCALE;
-    else if(conf->ChanMask > 0x1)
-        ambiscale = FIRST_ORDER_SCALE;
+    if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
+    {
+        if(conf->ChanMask > 0x1ff)
+        {
+            w_scale = W_SCALE3D_THIRD;
+            xyz_scale = XYZ_SCALE3D_THIRD;
+        }
+        else if(conf->ChanMask > 0xf)
+        {
+            w_scale = W_SCALE3D_SECOND;
+            xyz_scale = XYZ_SCALE3D_SECOND;
+        }
+    }
     else
-        ambiscale = 0.0f;
+    {
+        if(conf->ChanMask > 0x1ff)
+        {
+            w_scale = W_SCALE2D_THIRD;
+            xyz_scale = XYZ_SCALE2D_THIRD;
+        }
+        else if(conf->ChanMask > 0xf)
+        {
+            w_scale = W_SCALE2D_SECOND;
+            xyz_scale = XYZ_SCALE2D_SECOND;
+        }
+    }
 
     if(conf->CoeffScale == ADS_SN3D)
         coeff_scale = SN3D2N3DScale;
@@ -670,11 +681,11 @@ static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const A
                              (conf->ChanMask > 0xf) ? 9 : 4;
 
     memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
-    for(i = 0;i < (ALsizei)device->Dry.NumChannels;i++)
+    for(i = 0;i < device->Dry.NumChannels;i++)
     {
-        device->FOAOut.Ambi.Coeffs[i][0] = device->Dry.Ambi.Coeffs[i][0];
+        device->FOAOut.Ambi.Coeffs[i][0] = device->Dry.Ambi.Coeffs[i][0] * w_scale;
         for(j = 1;j < 4;j++)
-            device->FOAOut.Ambi.Coeffs[i][j] = device->Dry.Ambi.Coeffs[i][j] * ambiscale;
+            device->FOAOut.Ambi.Coeffs[i][j] = device->Dry.Ambi.Coeffs[i][j] * xyz_scale;
     }
     device->FOAOut.CoeffCount = 4;
 }

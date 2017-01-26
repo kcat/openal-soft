@@ -46,4 +46,12 @@ void CloseLib(void *handle);
 void *GetSymbol(void *handle, const char *name);
 #endif
 
+#ifdef __ANDROID__
+#define JCALL(obj, func)  ((*(obj))->func((obj), EXTRACT_VCALL_ARGS
+#define JCALL0(obj, func)  ((*(obj))->func((obj) EXTRACT_VCALL_ARGS
+
+/** Returns a JNIEnv*. */
+void *Android_GetJNIEnv(void);
+#endif
+
 #endif /* AL_COMPAT_H */

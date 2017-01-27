@@ -933,7 +933,6 @@ extern enum LogLevel LogLevel;
 #define TRACEREF(...) do {                                                    \
     if(LogLevel >= LogRef)                                                    \
         AL_PRINT("(--)", __VA_ARGS__);                                        \
-    LOG_ANDROID(ANDROID_LOG_VERBOSE, __VA_ARGS__);                            \
 } while(0)
 
 #define TRACE(...) do {                                                       \

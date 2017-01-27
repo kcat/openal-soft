@@ -282,13 +282,16 @@ static ALCboolean opensl_reset_playback(ALCdevice *Device)
         //int sampleRate = Integer.parseInt(srateStr);
         sampleRate = JCALL(env,CallStaticIntMethod)(int_cls, int_parseint, srateStr);
 
+        TRACE("Got system sample rate %uhz\n", sampleRate);
         if(!sampleRate) sampleRate = Device->Frequency;
         else sampleRate = maxu(sampleRate, MIN_OUTPUT_RATE);
     }
 
     if(sampleRate != Device->Frequency)
     {
-        Device->NumUpdates = Device->NumUpdates * sampleRate / Device->Frequency;
+        Device->NumUpdates = (Device->NumUpdates*sampleRate + (Device->Frequency>>1)) /
+                             Device->Frequency;
+        Device->NumUpdates = maxu(Device->NumUpdates, 2);
         Device->Frequency = sampleRate;
     }
     Device->FmtChans = DevFmtStereo;

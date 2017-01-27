@@ -213,6 +213,13 @@ ELSE()
 ENDIF()
 UNSET(OLD_REQUIRED_LIBRARIES)
 
+# Include liblog for Android logging
+CHECK_LIBRARY_EXISTS(log __android_log_print "" HAVE_LIBLOG)
+IF(HAVE_LIBLOG)
+    SET(EXTRA_LIBS log ${EXTRA_LIBS})
+    SET(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} log)
+ENDIF()
+
 # Check if we have C99 variable length arrays
 CHECK_C_SOURCE_COMPILES(
 "int main(int argc, char *argv[])

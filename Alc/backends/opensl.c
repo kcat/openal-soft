@@ -251,6 +251,7 @@ static ALCboolean opensl_reset_playback(ALCdevice *Device)
         jmethodID int_parseint = JCALL(env,GetStaticMethodID)(int_cls,
             "parseInt", "(Ljava/lang/String;)I"
         );
+        TRACE("Integer: %p, parseInt: %p\n", int_cls, int_parseint);
 
         jclass ctx_cls = (*env)->FindClass(env, "android/content/Context");
         jfieldID ctx_audsvc = (*env)->GetStaticFieldID(env, ctx_cls,
@@ -259,6 +260,8 @@ static ALCboolean opensl_reset_playback(ALCdevice *Device)
         jmethodID ctx_getSysSvc = (*env)->GetMethodID(env, ctx_cls,
             "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;"
         );
+        TRACE("Context: %p, AUDIO_SERVICE: %p, getSystemService: %p\n",
+              ctx_cls, ctx_audsvc, ctx_getSysSvc);
 
         jclass audmgr_cls = JCALL(env,FindClass)("android/media/AudioManager");
         jfieldID audmgr_prop_out_srate = JCALL(env,GetStaticFieldID)(audmgr_cls,
@@ -267,22 +270,34 @@ static ALCboolean opensl_reset_playback(ALCdevice *Device)
         jmethodID audmgr_getproperty = JCALL(env,GetMethodID)(audmgr_cls,
             "getProperty", "(Ljava/lang/String;)Ljava/lang/Object;"
         );
+        TRACE("AudioManager: %p, PROPERTY_OUTPUT_SAMPLE_RATE: %p, getProperty: %p\n",
+              audmgr_cls, audmgr_prop_out_srate, audmgr_getproperty);
+
+        const char *strchars;
+        jstring strobj;
 
         /* Now make the calls. */
         //AudioManager audMgr = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
-        jobject audMgr = JCALL(env,CallStaticObjectMethod)(ctx_cls, ctx_getSysSvc,
-            JCALL(env,GetStaticObjectField)(ctx_cls, ctx_audsvc)
-        );
+        strobj = JCALL(env,GetStaticObjectField)(ctx_cls, ctx_audsvc);
+        jobject audMgr = JCALL(env,CallStaticObjectMethod)(ctx_cls, ctx_getSysSvc, strobj);
+        strchars = JCALL(env,GetStringUTFChars)(strobj, NULL);
+        TRACE("Context.getSystemService(%s) = %p\n", strchars, audMgr);
+        JCALL(env,ReleaseStringUTFChars)(strobj, strchars);
 
         //String srateStr = audMgr.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
-        jstring srateStr = JCALL(env,CallObjectMethod)(audMgr, audmgr_getproperty,
-            JCALL(env,GetStaticObjectField)(audmgr_cls, audmgr_prop_out_srate)
-        );
+        strobj = JCALL(env,GetStaticObjectField)(audmgr_cls, audmgr_prop_out_srate);
+        jstring srateStr = JCALL(env,CallObjectMethod)(audMgr, audmgr_getproperty, strobj);
+        strchars = JCALL(env,GetStringUTFChars)(strobj, NULL);
+        TRACE("audMgr.getProperty(%s) = %p\n", strchars, srateStr);
+        JCALL(env,ReleaseStringUTFChars)(strobj, strchars);
 
         //int sampleRate = Integer.parseInt(srateStr);
         sampleRate = JCALL(env,CallStaticIntMethod)(int_cls, int_parseint, srateStr);
 
-        TRACE("Got system sample rate %uhz\n", sampleRate);
+        strchars = JCALL(env,GetStringUTFChars)(srateStr, NULL);
+        TRACE("Got system sample rate %uhz (%s)\n", sampleRate, strchars);
+        JCALL(env,ReleaseStringUTFChars)(srateStr, strchars);
+
         if(!sampleRate) sampleRate = Device->Frequency;
         else sampleRate = maxu(sampleRate, MIN_OUTPUT_RATE);
     }

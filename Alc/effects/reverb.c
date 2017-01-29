@@ -1357,7 +1357,7 @@ static ALvoid LateReverb(ALreverbState *State, ALsizei todo, ALfloat (*restrict 
 
         /* Apply a low-pass filter to simulate surface absorption. */
         for(j = 0;j < 4;j++)
-            f[j] = LateLowPassInOut(State, 0, f[j]);
+            f[j] = LateLowPassInOut(State, j, f[j]);
 
         /* To help increase diffusion, run each line through three all-pass
          * filters. This is where the feedback cycles from line 0 to 3 to 1 to

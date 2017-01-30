@@ -360,7 +360,7 @@ static void SetChannelMap(const enum Channel *devchans, ChannelConfig *ambicoeff
     *outcount = i;
 }
 
-static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALuint speakermap[MAX_OUTPUT_CHANNELS])
+static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei speakermap[MAX_OUTPUT_CHANNELS])
 {
     ALsizei i;
 
@@ -610,7 +610,7 @@ static void InitPanning(ALCdevice *device)
     }
 }
 
-static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALuint speakermap[MAX_OUTPUT_CHANNELS])
+static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei speakermap[MAX_OUTPUT_CHANNELS])
 {
     ChannelMap chanmap[MAX_OUTPUT_CHANNELS];
     const ALfloat *coeff_scale = UnitScale;
@@ -690,7 +690,7 @@ static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const A
     device->FOAOut.CoeffCount = 4;
 }
 
-static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALuint speakermap[MAX_OUTPUT_CHANNELS])
+static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei speakermap[MAX_OUTPUT_CHANNELS])
 {
     const char *devname;
     int decflags = 0;
@@ -879,7 +879,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
 
     if(device->FmtChans != DevFmtStereo)
     {
-        ALuint speakermap[MAX_OUTPUT_CHANNELS];
+        ALsizei speakermap[MAX_OUTPUT_CHANNELS];
         const char *devname, *layout = NULL;
         AmbDecConf conf, *pconf = NULL;
 

@@ -233,9 +233,9 @@ int bformatdec_getOrder(const struct BFormatDec *dec)
     return 0;
 }
 
-void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALuint chanmap[MAX_OUTPUT_CHANNELS], int flags)
+void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALsizei chanmap[MAX_OUTPUT_CHANNELS], int flags)
 {
-    static const ALuint map2DTo3D[MAX_AMBI2D_COEFFS] = {
+    static const ALsizei map2DTo3D[MAX_AMBI2D_COEFFS] = {
         0,  1, 3,  4, 8,  9, 15
     };
     const ALfloat *coeff_scale = UnitScale;
@@ -312,7 +312,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
     {
         for(i = 0;i < conf->NumSpeakers;i++)
         {
-            ALuint chan = chanmap[i];
+            ALsizei chan = chanmap[i];
             ALfloat delay;
 
             /* Distance compensation only delays in steps of the sample rate.
@@ -341,15 +341,15 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
         dec->DualBand = AL_FALSE;
         for(i = 0;i < conf->NumSpeakers;i++)
         {
-            ALuint chan = chanmap[i];
+            ALsizei chan = chanmap[i];
             ALfloat gain;
-            ALuint j, k;
+            ALsizei j, k;
 
             if(!dec->Periphonic)
             {
                 for(j = 0,k = 0;j < MAX_AMBI2D_COEFFS;j++)
                 {
-                    ALuint l = map2DTo3D[j];
+                    ALsizei l = map2DTo3D[j];
                     if(j == 0) gain = conf->HFOrderGain[0];
                     else if(j == 1) gain = conf->HFOrderGain[1];
                     else if(j == 3) gain = conf->HFOrderGain[2];
@@ -385,15 +385,15 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
         ratio = powf(10.0f, conf->XOverRatio / 40.0f);
         for(i = 0;i < conf->NumSpeakers;i++)
         {
-            ALuint chan = chanmap[i];
+            ALsizei chan = chanmap[i];
             ALfloat gain;
-            ALuint j, k;
+            ALsizei j, k;
 
             if(!dec->Periphonic)
             {
                 for(j = 0,k = 0;j < MAX_AMBI2D_COEFFS;j++)
                 {
-                    ALuint l = map2DTo3D[j];
+                    ALsizei l = map2DTo3D[j];
                     if(j == 0) gain = conf->HFOrderGain[0] * ratio;
                     else if(j == 1) gain = conf->HFOrderGain[1] * ratio;
                     else if(j == 3) gain = conf->HFOrderGain[2] * ratio;
@@ -405,7 +405,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
                 }
                 for(j = 0,k = 0;j < MAX_AMBI2D_COEFFS;j++)
                 {
-                    ALuint l = map2DTo3D[j];
+                    ALsizei l = map2DTo3D[j];
                     if(j == 0) gain = conf->LFOrderGain[0] / ratio;
                     else if(j == 1) gain = conf->LFOrderGain[1] / ratio;
                     else if(j == 3) gain = conf->LFOrderGain[2] / ratio;

@@ -268,7 +268,7 @@ static ALCboolean opensl_reset_playback(ALCdevice *Device)
             "PROPERTY_OUTPUT_SAMPLE_RATE", "Ljava/lang/String;"
         );
         jmethodID audmgr_getproperty = JCALL(env,GetMethodID)(audmgr_cls,
-            "getProperty", "(Ljava/lang/String;)Ljava/lang/Object;"
+            "getProperty", "(Ljava/lang/String;)Ljava/lang/String;"
         );
         TRACE("AudioManager: %p, PROPERTY_OUTPUT_SAMPLE_RATE: %p, getProperty: %p\n",
               audmgr_cls, audmgr_prop_out_srate, audmgr_getproperty);

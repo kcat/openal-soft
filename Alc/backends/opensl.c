@@ -253,11 +253,11 @@ static ALCboolean opensl_reset_playback(ALCdevice *Device)
         );
         TRACE("Integer: %p, parseInt: %p\n", int_cls, int_parseint);
 
-        jclass ctx_cls = (*env)->FindClass(env, "android/content/Context");
-        jfieldID ctx_audsvc = (*env)->GetStaticFieldID(env, ctx_cls,
+        jclass ctx_cls = JCALL(env,FindClass)("android/content/Context");
+        jfieldID ctx_audsvc = JCALL(env,GetStaticFieldID)(ctx_cls,
             "AUDIO_SERVICE", "Ljava/lang/String;"
         );
-        jmethodID ctx_getSysSvc = (*env)->GetMethodID(env, ctx_cls,
+        jmethodID ctx_getSysSvc = JCALL(env,GetMethodID)(ctx_cls,
             "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;"
         );
         TRACE("Context: %p, AUDIO_SERVICE: %p, getSystemService: %p\n",
@@ -279,7 +279,7 @@ static ALCboolean opensl_reset_playback(ALCdevice *Device)
         /* Now make the calls. */
         //AudioManager audMgr = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
         strobj = JCALL(env,GetStaticObjectField)(ctx_cls, ctx_audsvc);
-        jobject audMgr = JCALL(env,CallStaticObjectMethod)(ctx_cls, ctx_getSysSvc, strobj);
+        jobject audMgr = JCALL(env,CallObjectMethod)(ctx_cls, ctx_getSysSvc, strobj);
         strchars = JCALL(env,GetStringUTFChars)(strobj, NULL);
         TRACE("Context.getSystemService(%s) = %p\n", strchars, audMgr);
         JCALL(env,ReleaseStringUTFChars)(strobj, strchars);

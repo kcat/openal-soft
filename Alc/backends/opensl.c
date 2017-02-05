@@ -237,13 +237,11 @@ static ALCboolean opensl_reset_playback(ALCdevice *Device)
     SLInterfaceID id;
     SLresult result;
     SLboolean req;
+    JNIEnv *env;
 
-    if((Device->Flags&DEVICE_FREQUENCY_REQUEST))
-        sampleRate = Device->Frequency;
-    else
+    sampleRate = Device->Frequency;
+    if(!(Device->Flags&DEVICE_FREQUENCY_REQUEST) && (env=Android_GetJNIEnv()) != NULL)
     {
-        JNIEnv *env = Android_GetJNIEnv();
-
         /* Get necessary stuff for using java.lang.Integer,
          * android.content.Context, and android.media.AudioManager.
          */

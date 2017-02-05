@@ -1179,6 +1179,12 @@ static void CleanupJNIEnv(void* UNUSED(ptr))
 
 void *Android_GetJNIEnv(void)
 {
+    if(!gJavaVM)
+    {
+        WARN("gJavaVM is NULL!\n");
+        return NULL;
+    }
+
     /* http://developer.android.com/guide/practices/jni.html
      *
      * All threads are Linux threads, scheduled by the kernel. They're usually

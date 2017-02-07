@@ -249,8 +249,9 @@ static int ALCopenslPlayback_mixerProc(void *arg)
     SetRTPriority();
     althrd_setname(althrd_current(), MIXER_THREAD_NAME);
 
-    result = VCALL(self->mBufferQueueObj,GetInterface)(SL_IID_BUFFERQUEUE, &bufferQueue);
-    PRINTERR(result, "bufferQueue->GetInterface SL_IID_BUFFERQUEUE");
+    result = VCALL(self->mBufferQueueObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
+                                                       &bufferQueue);
+    PRINTERR(result, "bufferQueue->GetInterface SL_IID_ANDROIDSIMPLEBUFFERQUEUE");
     if(SL_RESULT_SUCCESS == result)
     {
         result = VCALL(self->mBufferQueueObj,GetInterface)(SL_IID_PLAY, &player);

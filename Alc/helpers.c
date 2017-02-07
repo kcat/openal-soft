@@ -242,10 +242,15 @@ void FillCPUCaps(ALuint capfilter)
         char buf[256];
         while(fgets(buf, sizeof(buf), file) != NULL)
         {
+            size_t len;
             char *str;
 
             if(strncmp(buf, "Features\t:", 10) != 0)
                 continue;
+
+            len = strlen(buf);
+            while(len > 0 && isspace(buf[len-1]))
+                buf[--len] = 0;
 
             TRACE("Got features string:%s\n", buf+10);
 

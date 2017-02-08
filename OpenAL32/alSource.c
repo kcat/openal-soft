@@ -527,16 +527,16 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
             if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
                !ATOMIC_LOAD(&Context->DeferUpdates, almemory_order_acquire))
             {
-                LockContext(Context);
+                ALCdevice_Lock(Context->Device);
                 WriteLock(&Source->queue_lock);
                 if(ApplyOffset(Source) == AL_FALSE)
                 {
                     WriteUnlock(&Source->queue_lock);
-                    UnlockContext(Context);
+                    ALCdevice_Unlock(Context->Device);
                     SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_VALUE, AL_FALSE);
                 }
                 WriteUnlock(&Source->queue_lock);
-                UnlockContext(Context);
+                ALCdevice_Unlock(Context->Device);
             }
             return AL_TRUE;
 
@@ -728,16 +728,16 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
                 !ATOMIC_LOAD(&Context->DeferUpdates, almemory_order_acquire))
             {
-                LockContext(Context);
+                ALCdevice_Lock(Context->Device);
                 WriteLock(&Source->queue_lock);
                 if(ApplyOffset(Source) == AL_FALSE)
                 {
                     WriteUnlock(&Source->queue_lock);
-                    UnlockContext(Context);
+                    ALCdevice_Unlock(Context->Device);
                     SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_VALUE, AL_FALSE);
                 }
                 WriteUnlock(&Source->queue_lock);
-                UnlockContext(Context);
+                ALCdevice_Unlock(Context->Device);
             }
             return AL_TRUE;
 
@@ -1606,10 +1606,10 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
             continue;
         FreeThunkEntry(Source->id);
 
-        LockContext(context);
+        ALCdevice_Lock(context->Device);
         voice = GetSourceVoice(Source, context);
         if(voice) voice->Source = NULL;
-        UnlockContext(context);
+        ALCdevice_Unlock(context->Device);
 
         DeinitSource(Source);
 
@@ -2303,7 +2303,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
             SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     }
 
-    LockContext(context);
+    ALCdevice_Lock(context->Device);
     while(n > context->MaxVoices-context->VoiceCount)
     {
         ALvoice *temp = NULL;
@@ -2314,7 +2314,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
             temp = al_malloc(16, newcount * sizeof(context->Voices[0]));
         if(!temp)
         {
-            UnlockContext(context);
+            ALCdevice_Unlock(context->Device);
             SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
         }
         memcpy(temp, context->Voices, context->MaxVoices * sizeof(temp[0]));
@@ -2341,7 +2341,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
             SetSourceState(source, context, AL_PLAYING);
         }
     }
-    UnlockContext(context);
+    ALCdevice_Unlock(context->Device);
 
 done:
     UnlockSourcesRead(context);
@@ -2370,7 +2370,7 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
             SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     }
 
-    LockContext(context);
+    ALCdevice_Lock(context->Device);
     if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
     {
         for(i = 0;i < n;i++)
@@ -2387,7 +2387,7 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
             SetSourceState(source, context, AL_PAUSED);
         }
     }
-    UnlockContext(context);
+    ALCdevice_Unlock(context->Device);
 
 done:
     UnlockSourcesRead(context);
@@ -2416,14 +2416,14 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
             SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     }
 
-    LockContext(context);
+    ALCdevice_Lock(context->Device);
     for(i = 0;i < n;i++)
     {
         source = LookupSource(context, sources[i]);
         source->new_state = AL_NONE;
         SetSourceState(source, context, AL_STOPPED);
     }
-    UnlockContext(context);
+    ALCdevice_Unlock(context->Device);
 
 done:
     UnlockSourcesRead(context);
@@ -2452,14 +2452,14 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
             SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     }
 
-    LockContext(context);
+    ALCdevice_Lock(context->Device);
     for(i = 0;i < n;i++)
     {
         source = LookupSource(context, sources[i]);
         source->new_state = AL_NONE;
         SetSourceState(source, context, AL_INITIAL);
     }
-    UnlockContext(context);
+    ALCdevice_Unlock(context->Device);
 
 done:
     UnlockSourcesRead(context);

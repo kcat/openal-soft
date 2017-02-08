@@ -1496,9 +1496,6 @@ static ALCboolean IsValidALCChannels(ALCenum channels)
  * Miscellaneous ALC helpers
  ************************************************/
 
-extern inline void LockContext(ALCcontext *context);
-extern inline void UnlockContext(ALCcontext *context);
-
 void ALCdevice_Lock(ALCdevice *device)
 {
     V0(device->Backend,lock)();

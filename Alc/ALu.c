@@ -1369,9 +1369,9 @@ static inline ALubyte aluF2UB(ALfloat val)
 
 #define DECL_TEMPLATE(T, func)                                                \
 static void Write_##T(ALfloatBUFFERSIZE *InBuffer, ALvoid *OutBuffer,         \
-                      ALuint SamplesToDo, ALuint numchans)                    \
+                      ALsizei SamplesToDo, ALsizei numchans)                  \
 {                                                                             \
-    ALuint i, j;                                                              \
+    ALsizei i, j;                                                             \
     for(j = 0;j < numchans;j++)                                               \
     {                                                                         \
         const ALfloat *in = InBuffer[j];                                      \
@@ -1394,7 +1394,7 @@ DECL_TEMPLATE(ALbyte, aluF2B)
 
 void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 {
-    ALuint SamplesToDo;
+    ALsizei SamplesToDo;
     ALvoice *voice, *voice_end;
     ALeffectslot *slot;
     ALsource *source;
@@ -1406,7 +1406,7 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
     while(size > 0)
     {
-        SamplesToDo = minu(size, BUFFERSIZE);
+        SamplesToDo = mini(size, BUFFERSIZE);
         for(c = 0;c < device->Dry.NumChannels;c++)
             memset(device->Dry.Buffer[c], 0, SamplesToDo*sizeof(ALfloat));
         if(device->Dry.Buffer != device->RealOut.Buffer)
@@ -1559,7 +1559,7 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         if(buffer)
         {
             ALfloat (*OutBuffer)[BUFFERSIZE] = device->RealOut.Buffer;
-            ALuint OutChannels = device->RealOut.NumChannels;
+            ALsizei OutChannels = device->RealOut.NumChannels;
 
 #define WRITE(T, a, b, c, d) do {               \
     Write_##T((a), (b), (c), (d));              \

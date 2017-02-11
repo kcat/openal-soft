@@ -1438,54 +1438,62 @@ IF(ALSOFT_TESTS)
 ENDIF()
 
 IF(ALSOFT_EXAMPLES)
-    IF(SDL2_FOUND AND SDL_SOUND_FOUND)
-        ADD_LIBRARY(ex-common STATIC examples/common/alhelpers.c
-                                     examples/common/sdl_sound.c)
-        SET_PROPERTY(TARGET ex-common APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
-        SET_PROPERTY(TARGET ex-common APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
-                                                                          ${SDL_SOUND_INCLUDE_DIR})
-
-        ADD_EXECUTABLE(alstream examples/alstream.c)
-        TARGET_LINK_LIBRARIES(alstream ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
-                                       common ${LIBNAME})
-        SET_PROPERTY(TARGET alstream APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
-        SET_PROPERTY(TARGET alstream APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
-                                                                         ${SDL_SOUND_INCLUDE_DIR})
-
-        ADD_EXECUTABLE(alreverb examples/alreverb.c)
-        TARGET_LINK_LIBRARIES(alreverb ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
-                                       common ${LIBNAME})
-        SET_PROPERTY(TARGET alreverb APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
-        SET_PROPERTY(TARGET alreverb APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
-                                                                         ${SDL_SOUND_INCLUDE_DIR})
-
-        ADD_EXECUTABLE(allatency examples/allatency.c)
-        TARGET_LINK_LIBRARIES(allatency ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
-                                        common ${LIBNAME})
-        SET_PROPERTY(TARGET allatency APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
-        SET_PROPERTY(TARGET allatency APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
-                                                                          ${SDL_SOUND_INCLUDE_DIR})
-
-        ADD_EXECUTABLE(alloopback examples/alloopback.c)
-        TARGET_LINK_LIBRARIES(alloopback ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
-                                         common ${LIBNAME})
-        SET_PROPERTY(TARGET alloopback APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
-        SET_PROPERTY(TARGET alloopback APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
-                                                                           ${SDL_SOUND_INCLUDE_DIR})
-
-        ADD_EXECUTABLE(alhrtf examples/alhrtf.c)
-        TARGET_LINK_LIBRARIES(alhrtf ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
-                                     common ${LIBNAME})
-        SET_PROPERTY(TARGET alhrtf APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
-        SET_PROPERTY(TARGET alhrtf APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
-                                                                       ${SDL_SOUND_INCLUDE_DIR})
-
-        IF(ALSOFT_INSTALL)
-            INSTALL(TARGETS alstream alreverb allatency alloopback alhrtf
-                    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-                    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-                    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    IF(SDL2_FOUND)
+        IF(SDL_SOUND_FOUND)
+            ADD_LIBRARY(ex-common STATIC examples/common/alhelpers.c
+                                         examples/common/sdl_sound.c)
+            SET_PROPERTY(TARGET ex-common APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
+            SET_PROPERTY(TARGET ex-common APPEND PROPERTY
+                INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR}
             )
+
+            ADD_EXECUTABLE(alstream examples/alstream.c)
+            TARGET_LINK_LIBRARIES(alstream ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
+                                           common ${LIBNAME})
+            SET_PROPERTY(TARGET alstream APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
+            SET_PROPERTY(TARGET alstream APPEND PROPERTY
+                INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR}
+            )
+
+            ADD_EXECUTABLE(alreverb examples/alreverb.c)
+            TARGET_LINK_LIBRARIES(alreverb ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
+                                           common ${LIBNAME})
+            SET_PROPERTY(TARGET alreverb APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
+            SET_PROPERTY(TARGET alreverb APPEND PROPERTY
+                INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR}
+            )
+
+            ADD_EXECUTABLE(allatency examples/allatency.c)
+            TARGET_LINK_LIBRARIES(allatency ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
+                                            common ${LIBNAME})
+            SET_PROPERTY(TARGET allatency APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
+            SET_PROPERTY(TARGET allatency APPEND PROPERTY
+                INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR}
+            )
+
+            ADD_EXECUTABLE(alloopback examples/alloopback.c)
+            TARGET_LINK_LIBRARIES(alloopback ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
+                                             common ${LIBNAME})
+            SET_PROPERTY(TARGET alloopback APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
+            SET_PROPERTY(TARGET alloopback APPEND PROPERTY
+                INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR}
+            )
+
+            ADD_EXECUTABLE(alhrtf examples/alhrtf.c)
+            TARGET_LINK_LIBRARIES(alhrtf ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
+                                         common ${LIBNAME})
+            SET_PROPERTY(TARGET alhrtf APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
+            SET_PROPERTY(TARGET alhrtf APPEND PROPERTY
+                INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR}
+            )
+
+            IF(ALSOFT_INSTALL)
+                INSTALL(TARGETS alstream alreverb allatency alloopback alhrtf
+                        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+                        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                )
+            ENDIF()
         ENDIF()
 
         SET(FFVER_OK FALSE)
@@ -1514,10 +1522,11 @@ IF(ALSOFT_EXAMPLES)
         ENDIF()
         IF(FFVER_OK AND NOT MSVC)
             ADD_EXECUTABLE(alffplay examples/alffplay.c)
-            TARGET_LINK_LIBRARIES(alffplay common ex-common ${SDL2_LIBRARY} ${LIBNAME} ${FFMPEG_LIBRARIES})
+            TARGET_LINK_LIBRARIES(alffplay common ${SDL2_LIBRARY} ${LIBNAME} ${FFMPEG_LIBRARIES})
             SET_PROPERTY(TARGET alffplay APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
-            SET_PROPERTY(TARGET alffplay APPEND PROPERTY INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR}
-                                                                             ${FFMPEG_INCLUDE_DIRS})
+            SET_PROPERTY(TARGET alffplay APPEND PROPERTY
+                INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${FFMPEG_INCLUDE_DIRS}
+            )
 
             IF(ALSOFT_INSTALL)
                 INSTALL(TARGETS alffplay

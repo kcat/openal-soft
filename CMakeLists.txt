@@ -1494,6 +1494,8 @@ IF(ALSOFT_EXAMPLES)
                         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
                 )
             ENDIF()
+
+            MESSAGE(STATUS "Building SDL_sound example programs")
         ENDIF()
 
         SET(FFVER_OK FALSE)
@@ -1535,9 +1537,7 @@ IF(ALSOFT_EXAMPLES)
                         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
                 )
             ENDIF()
-            MESSAGE(STATUS "Building SDL and FFmpeg example programs")
-        ELSE()
-            MESSAGE(STATUS "Building SDL example programs")
+            MESSAGE(STATUS "Building SDL+FFmpeg example programs")
         ENDIF()
         MESSAGE(STATUS "")
     ENDIF()

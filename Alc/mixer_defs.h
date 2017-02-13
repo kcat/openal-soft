@@ -67,10 +67,6 @@ inline void InitiatePositionArrays(ALuint frac, ALint increment, ALuint *restric
     }
 }
 
-const ALfloat *Resample_bsinc32_SSE(const BsincState *state, const ALfloat *restrict src,
-                                    ALuint frac, ALint increment, ALfloat *restrict dst,
-                                    ALsizei dstlen);
-
 const ALfloat *Resample_lerp32_SSE2(const BsincState *state, const ALfloat *restrict src,
                                     ALuint frac, ALint increment, ALfloat *restrict dst,
                                     ALsizei numsamples);
@@ -92,6 +88,10 @@ const ALfloat *Resample_fir8_32_SSE41(const BsincState *state, const ALfloat *re
                                       ALuint frac, ALint increment, ALfloat *restrict dst,
                                       ALsizei numsamples);
 
+const ALfloat *Resample_bsinc32_SSE(const BsincState *state, const ALfloat *restrict src,
+                                    ALuint frac, ALint increment, ALfloat *restrict dst,
+                                    ALsizei dstlen);
+
 /* Neon mixers */
 void MixHrtf_Neon(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
                   const ALfloat *data, ALsizei Counter, ALsizei Offset, ALsizei OutPos,
@@ -107,5 +107,19 @@ void Mix_Neon(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffe
 void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Gains,
                  const ALfloat (*restrict data)[BUFFERSIZE], ALsizei InChans,
                  ALsizei InPos, ALsizei BufferSize);
+
+/* Neon resamplers */
+const ALfloat *Resample_lerp32_Neon(const BsincState *state, const ALfloat *restrict src,
+                                    ALuint frac, ALint increment, ALfloat *restrict dst,
+                                    ALsizei numsamples);
+const ALfloat *Resample_fir4_32_Neon(const BsincState *state, const ALfloat *restrict src,
+                                     ALuint frac, ALint increment, ALfloat *restrict dst,
+                                     ALsizei numsamples);
+const ALfloat *Resample_fir8_32_Neon(const BsincState *state, const ALfloat *restrict src,
+                                     ALuint frac, ALint increment, ALfloat *restrict dst,
+                                     ALsizei numsamples);
+const ALfloat *Resample_bsinc32_Neon(const BsincState *state, const ALfloat *restrict src,
+                                     ALuint frac, ALint increment, ALfloat *restrict dst,
+                                     ALsizei dstlen);
 
 #endif /* MIXER_DEFS_H */

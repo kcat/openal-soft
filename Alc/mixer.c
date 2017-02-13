@@ -113,6 +113,10 @@ static inline ResamplerFunc SelectResampler(enum Resampler resampler)
         case PointResampler:
             return Resample_point32_C;
         case LinearResampler:
+#ifdef HAVE_NEON
+            if((CPUCapFlags&CPU_CAP_NEON))
+                return Resample_lerp32_Neon;
+#endif
 #ifdef HAVE_SSE4_1
             if((CPUCapFlags&CPU_CAP_SSE4_1))
                 return Resample_lerp32_SSE41;
@@ -123,6 +127,10 @@ static inline ResamplerFunc SelectResampler(enum Resampler resampler)
 #endif
             return Resample_lerp32_C;
         case FIR4Resampler:
+#ifdef HAVE_NEON
+            if((CPUCapFlags&CPU_CAP_NEON))
+                return Resample_fir4_32_Neon;
+#endif
 #ifdef HAVE_SSE4_1
             if((CPUCapFlags&CPU_CAP_SSE4_1))
                 return Resample_fir4_32_SSE41;
@@ -133,6 +141,10 @@ static inline ResamplerFunc SelectResampler(enum Resampler resampler)
 #endif
             return Resample_fir4_32_C;
         case FIR8Resampler:
+#ifdef HAVE_NEON
+            if((CPUCapFlags&CPU_CAP_NEON))
+                return Resample_fir8_32_Neon;
+#endif
 #ifdef HAVE_SSE4_1
             if((CPUCapFlags&CPU_CAP_SSE4_1))
                 return Resample_fir8_32_SSE41;
@@ -143,6 +155,10 @@ static inline ResamplerFunc SelectResampler(enum Resampler resampler)
 #endif
             return Resample_fir8_32_C;
         case BSincResampler:
+#ifdef HAVE_NEON
+            if((CPUCapFlags&CPU_CAP_NEON))
+                return Resample_bsinc32_Neon;
+#endif
 #ifdef HAVE_SSE
             if((CPUCapFlags&CPU_CAP_SSE))
                 return Resample_bsinc32_SSE;

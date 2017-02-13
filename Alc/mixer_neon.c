@@ -10,12 +10,6 @@
 #include "mixer_defs.h"
 
 
-#ifdef __GNUC__
-#define ASSUME_ALIGNED(ptr, ...) __builtin_assume_aligned((ptr), __VA_ARGS__)
-#else
-#define ASSUME_ALIGNED(ptr, ...) (ptr)
-#endif
-
 const ALfloat *Resample_lerp32_Neon(const BsincState* UNUSED(state), const ALfloat *restrict src,
                                     ALuint frac, ALint increment, ALfloat *restrict dst,
                                     ALsizei numsamples)
@@ -248,12 +242,14 @@ const ALfloat *Resample_bsinc32_Neon(const BsincState *state, const ALfloat *res
             const float32x4_t pf4 = vdupq_n_f32(pf);
             for(j = 0;j < m;j+=4)
             {
+                /* f = ((fil + sf*scd) + pf*(phd + sf*spd)) */
                 const float32x4_t f4 = vmlaq_f32(vmlaq_f32(vld1q_f32(&fil[j]),
                                                            sf4, vld1q_f32(&scd[j])),
                     pf4, vmlaq_f32(vld1q_f32(&phd[j]),
                         sf4, vld1q_f32(&spd[j])
                     )
                 );
+                /* r += f*src */
                 r4 = vmlaq_f32(r4, f4, vld1q_f32(&src[j]));
             }
         }
@@ -283,6 +279,9 @@ static inline void ApplyCoeffsStep(ALsizei Offset, ALfloat (*restrict Values)[2]
         leftright2 = vset_lane_f32(right, leftright2, 1);
         leftright4 = vcombine_f32(leftright2, leftright2);
     }
+    Values = ASSUME_ALIGNED(Values, 16);
+    Coeffs = ASSUME_ALIGNED(Coeffs, 16);
+    CoeffStep = ASSUME_ALIGNED(CoeffStep, 16);
     for(c = 0;c < IrSize;c += 2)
     {
         const ALsizei o0 = (Offset+c)&HRIR_MASK;
@@ -314,6 +313,8 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*restrict Values)[2],
         leftright2 = vset_lane_f32(right, leftright2, 1);
         leftright4 = vcombine_f32(leftright2, leftright2);
     }
+    Values = ASSUME_ALIGNED(Values, 16);
+    Coeffs = ASSUME_ALIGNED(Coeffs, 16);
     for(c = 0;c < IrSize;c += 2)
     {
         const ALsizei o0 = (Offset+c)&HRIR_MASK;
@@ -342,6 +343,9 @@ void Mix_Neon(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffe
     ALfloat gain, delta, step;
     float32x4_t gain4;
     ALsizei c;
+
+    data = ASSUME_ALIGNED(data, 16);
+    OutBuffer = ASSUME_ALIGNED(OutBuffer, 16);
 
     delta = (Counter > 0) ? 1.0f/(ALfloat)Counter : 0.0f;
 
@@ -411,6 +415,9 @@ void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restr
 {
     float32x4_t gain4;
     ALsizei c;
+
+    data = ASSUME_ALIGNED(data, 16);
+    OutBuffer = ASSUME_ALIGNED(OutBuffer, 16);
 
     for(c = 0;c < InChans;c++)
     {

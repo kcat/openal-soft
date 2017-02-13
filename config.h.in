@@ -5,6 +5,9 @@
 /* Define any available alignment declaration */
 #define ALIGN(x) ${ALIGN_DECL}
 
+/* Define a built-in call indicating an aligned data pointer */
+#define ASSUME_ALIGNED(x, y) ${ASSUME_ALIGNED_DECL}
+
 /* Explicit hidden visibility attribute */
 #define HIDDEN_DECL ${HIDDEN_DECL}
 

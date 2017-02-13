@@ -12,12 +12,6 @@
 #include "mixer_defs.h"
 
 
-#ifdef __GNUC__
-#define ASSUME_ALIGNED(ptr, ...) __builtin_assume_aligned((ptr), __VA_ARGS__)
-#else
-#define ASSUME_ALIGNED(ptr, ...) (ptr)
-#endif
-
 const ALfloat *Resample_bsinc32_SSE(const BsincState *state, const ALfloat *restrict src,
                                     ALuint frac, ALint increment, ALfloat *restrict dst,
                                     ALsizei dstlen)
@@ -52,9 +46,11 @@ const ALfloat *Resample_bsinc32_SSE(const BsincState *state, const ALfloat *rest
 #define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))
             for(j = 0;j < m;j+=4)
             {
+                /* f = ((fil + sf*scd) + pf*(phd + sf*spd)) */
                 const __m128 f4 = MLA4(MLA4(LD4(&fil[j]), sf4, LD4(&scd[j])),
                     pf4, MLA4(LD4(&phd[j]), sf4, LD4(&spd[j]))
                 );
+                /* r += f*src */
                 r4 = MLA4(r4, f4, ULD4(&src[j]));
             }
 #undef MLA4
@@ -84,6 +80,9 @@ static inline void ApplyCoeffsStep(ALsizei Offset, ALfloat (*restrict Values)[2]
     __m128 vals = _mm_setzero_ps();
     ALsizei i;
 
+    Values = ASSUME_ALIGNED(Values, 16);
+    Coeffs = ASSUME_ALIGNED(Coeffs, 16);
+    CoeffStep = ASSUME_ALIGNED(CoeffStep, 16);
     if((Offset&1))
     {
         const ALsizei o0 = Offset&HRIR_MASK;
@@ -145,6 +144,8 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*restrict Values)[2],
     __m128 coeffs;
     ALsizei i;
 
+    Values = ASSUME_ALIGNED(Values, 16);
+    Coeffs = ASSUME_ALIGNED(Coeffs, 16);
     if((Offset&1))
     {
         const ALsizei o0 = Offset&HRIR_MASK;

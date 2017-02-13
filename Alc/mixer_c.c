@@ -62,10 +62,10 @@ const ALfloat *Resample_bsinc32_C(const BsincState *state, const ALfloat *restri
     const ALfloat *fil, *scd, *phd, *spd;
     const ALfloat sf = state->sf;
     const ALsizei m = state->m;
-    const ALint l = state->l;
-    ALsizei j_s, j_f, pi, i;
+    ALsizei j_f, pi, i;
     ALfloat pf, r;
 
+    src += state->l;
     for(i = 0;i < dstlen;i++)
     {
         // Calculate the phase index and factor.
@@ -81,9 +81,9 @@ const ALfloat *Resample_bsinc32_C(const BsincState *state, const ALfloat *restri
 
         // Apply the scale and phase interpolated filter.
         r = 0.0f;
-        for(j_f = 0,j_s = l;j_f < m;j_f++,j_s++)
+        for(j_f = 0;j_f < m;j_f++)
             r += (fil[j_f] + sf*scd[j_f] + pf*(phd[j_f] + sf*spd[j_f])) *
-                    src[j_s];
+                    src[j_f];
         dst[i] = r;
 
         frac += increment;

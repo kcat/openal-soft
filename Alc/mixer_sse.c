@@ -12,18 +12,24 @@
 #include "mixer_defs.h"
 
 
+#ifdef __GNUC__
+#define ASSUME_ALIGNED(ptr, ...) __builtin_assume_aligned((ptr), __VA_ARGS__)
+#else
+#define ASSUME_ALIGNED(ptr, ...) (ptr)
+#endif
+
 const ALfloat *Resample_bsinc32_SSE(const BsincState *state, const ALfloat *restrict src,
                                     ALuint frac, ALint increment, ALfloat *restrict dst,
                                     ALsizei dstlen)
 {
     const __m128 sf4 = _mm_set1_ps(state->sf);
     const ALsizei m = state->m;
-    const ALint l = state->l;
     const ALfloat *fil, *scd, *phd, *spd;
-    ALsizei j_s, pi, j_f, i;
+    ALsizei pi, i, j;
     ALfloat pf;
     __m128 r4;
 
+    src += state->l;
     for(i = 0;i < dstlen;i++)
     {
         // Calculate the phase index and factor.
@@ -32,32 +38,28 @@ const ALfloat *Resample_bsinc32_SSE(const BsincState *state, const ALfloat *rest
         pf = (frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF));
 #undef FRAC_PHASE_BITDIFF
 
-        fil = state->coeffs[pi].filter;
-        scd = state->coeffs[pi].scDelta;
-        phd = state->coeffs[pi].phDelta;
-        spd = state->coeffs[pi].spDelta;
+        fil = ASSUME_ALIGNED(state->coeffs[pi].filter, 16);
+        scd = ASSUME_ALIGNED(state->coeffs[pi].scDelta, 16);
+        phd = ASSUME_ALIGNED(state->coeffs[pi].phDelta, 16);
+        spd = ASSUME_ALIGNED(state->coeffs[pi].spDelta, 16);
 
         // Apply the scale and phase interpolated filter.
         r4 = _mm_setzero_ps();
         {
             const __m128 pf4 = _mm_set1_ps(pf);
-            for(j_f = 0,j_s = l;j_f < m;j_f+=4,j_s+=4)
+#define LD4(x) _mm_load_ps(x)
+#define ULD4(x) _mm_loadu_ps(x)
+#define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))
+            for(j = 0;j < m;j+=4)
             {
-                const __m128 f4 = _mm_add_ps(
-                    _mm_add_ps(
-                        _mm_load_ps(&fil[j_f]),
-                        _mm_mul_ps(sf4, _mm_load_ps(&scd[j_f]))
-                    ),
-                    _mm_mul_ps(
-                        pf4,
-                        _mm_add_ps(
-                            _mm_load_ps(&phd[j_f]),
-                            _mm_mul_ps(sf4, _mm_load_ps(&spd[j_f]))
-                        )
-                    )
+                const __m128 f4 = MLA4(MLA4(LD4(&fil[j]), sf4, LD4(&scd[j])),
+                    pf4, MLA4(LD4(&phd[j]), sf4, LD4(&spd[j]))
                 );
-                r4 = _mm_add_ps(r4, _mm_mul_ps(f4, _mm_loadu_ps(&src[j_s])));
+                r4 = MLA4(r4, f4, ULD4(&src[j]));
             }
+#undef MLA4
+#undef ULD4
+#undef LD4
         }
         r4 = _mm_add_ps(r4, _mm_shuffle_ps(r4, r4, _MM_SHUFFLE(0, 1, 2, 3)));
         r4 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));

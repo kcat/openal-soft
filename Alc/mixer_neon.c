@@ -248,8 +248,8 @@ const ALfloat *Resample_bsinc32_Neon(const BsincState *state, const ALfloat *res
             const float32x4_t pf4 = vdupq_n_f32(pf);
             for(j = 0;j < m;j+=4)
             {
-                float32x4_t f4 = vmlaq_f32(vld1q_f32(&fil[j]), sf4, vld1q_f32(&scd[j]));
-                f4 = vmlaq_f32(f4,
+                const float32x4_t f4 = vmlaq_f32(vmlaq_f32(vld1q_f32(&fil[j]),
+                                                           sf4, vld1q_f32(&scd[j])),
                     pf4, vmlaq_f32(vld1q_f32(&phd[j]),
                         sf4, vld1q_f32(&spd[j])
                     )

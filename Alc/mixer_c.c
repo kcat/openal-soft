@@ -18,7 +18,7 @@ static inline ALfloat fir8_32(const ALfloat *restrict vals, ALuint frac)
 { return resample_fir8(vals[-3], vals[-2], vals[-1], vals[0], vals[1], vals[2], vals[3], vals[4], frac); }
 
 
-const ALfloat *Resample_copy32_C(const BsincState* UNUSED(state),
+const ALfloat *Resample_copy32_C(const InterpState* UNUSED(state),
   const ALfloat *restrict src, ALuint UNUSED(frac), ALint UNUSED(increment),
   ALfloat *restrict dst, ALsizei numsamples)
 {
@@ -32,7 +32,7 @@ const ALfloat *Resample_copy32_C(const BsincState* UNUSED(state),
 }
 
 #define DECL_TEMPLATE(Sampler)                                                \
-const ALfloat *Resample_##Sampler##_C(const BsincState* UNUSED(state),        \
+const ALfloat *Resample_##Sampler##_C(const InterpState* UNUSED(state),       \
   const ALfloat *restrict src, ALuint frac, ALint increment,                  \
   ALfloat *restrict dst, ALsizei numsamples)                                  \
 {                                                                             \
@@ -55,17 +55,17 @@ DECL_TEMPLATE(fir8_32)
 
 #undef DECL_TEMPLATE
 
-const ALfloat *Resample_bsinc32_C(const BsincState *state, const ALfloat *restrict src,
+const ALfloat *Resample_bsinc32_C(const InterpState *state, const ALfloat *restrict src,
                                   ALuint frac, ALint increment, ALfloat *restrict dst,
                                   ALsizei dstlen)
 {
     const ALfloat *fil, *scd, *phd, *spd;
-    const ALfloat sf = state->sf;
-    const ALsizei m = state->m;
+    const ALfloat sf = state->bsinc.sf;
+    const ALsizei m = state->bsinc.m;
     ALsizei j_f, pi, i;
     ALfloat pf, r;
 
-    src += state->l;
+    src += state->bsinc.l;
     for(i = 0;i < dstlen;i++)
     {
         // Calculate the phase index and factor.
@@ -74,10 +74,10 @@ const ALfloat *Resample_bsinc32_C(const BsincState *state, const ALfloat *restri
         pf = (frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF));
 #undef FRAC_PHASE_BITDIFF
 
-        fil = state->coeffs[pi].filter;
-        scd = state->coeffs[pi].scDelta;
-        phd = state->coeffs[pi].phDelta;
-        spd = state->coeffs[pi].spDelta;
+        fil = ASSUME_ALIGNED(state->bsinc.coeffs[pi].filter, 16);
+        scd = ASSUME_ALIGNED(state->bsinc.coeffs[pi].scDelta, 16);
+        phd = ASSUME_ALIGNED(state->bsinc.coeffs[pi].phDelta, 16);
+        spd = ASSUME_ALIGNED(state->bsinc.coeffs[pi].spDelta, 16);
 
         // Apply the scale and phase interpolated filter.
         r = 0.0f;

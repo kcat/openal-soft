@@ -433,7 +433,7 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
         voice->Step = MAX_PITCH<<FRACTIONBITS;
     else
         voice->Step = maxi(fastf2i(Pitch*FRACTIONONE + 0.5f), 1);
-    BsincPrepare(voice->Step, &voice->SincState);
+    BsincPrepare(voice->Step, &voice->ResampleState.bsinc);
 
     /* Calculate gains */
     DryGain  = clampf(SourceVolume, MinVolume, MaxVolume);
@@ -1115,7 +1115,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
         voice->Step = MAX_PITCH<<FRACTIONBITS;
     else
         voice->Step = maxi(fastf2i(Pitch*FRACTIONONE + 0.5f), 1);
-    BsincPrepare(voice->Step, &voice->SincState);
+    BsincPrepare(voice->Step, &voice->ResampleState.bsinc);
 
     if(Device->Render_Mode == HrtfRender)
     {

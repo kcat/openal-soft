@@ -12,12 +12,12 @@ struct MixHrtfParams;
 struct HrtfState;
 
 /* C resamplers */
-const ALfloat *Resample_copy32_C(const BsincState *state, const ALfloat *restrict src, ALuint frac, ALint increment, ALfloat *restrict dst, ALsizei dstlen);
-const ALfloat *Resample_point32_C(const BsincState *state, const ALfloat *restrict src, ALuint frac, ALint increment, ALfloat *restrict dst, ALsizei dstlen);
-const ALfloat *Resample_lerp32_C(const BsincState *state, const ALfloat *restrict src, ALuint frac, ALint increment, ALfloat *restrict dst, ALsizei dstlen);
-const ALfloat *Resample_fir4_32_C(const BsincState *state, const ALfloat *restrict src, ALuint frac, ALint increment, ALfloat *restrict dst, ALsizei dstlen);
-const ALfloat *Resample_fir8_32_C(const BsincState *state, const ALfloat *restrict src, ALuint frac, ALint increment, ALfloat *restrict dst, ALsizei dstlen);
-const ALfloat *Resample_bsinc32_C(const BsincState *state, const ALfloat *restrict src, ALuint frac, ALint increment, ALfloat *restrict dst, ALsizei dstlen);
+const ALfloat *Resample_copy32_C(const InterpState *state, const ALfloat *restrict src, ALuint frac, ALint increment, ALfloat *restrict dst, ALsizei dstlen);
+const ALfloat *Resample_point32_C(const InterpState *state, const ALfloat *restrict src, ALuint frac, ALint increment, ALfloat *restrict dst, ALsizei dstlen);
+const ALfloat *Resample_lerp32_C(const InterpState *state, const ALfloat *restrict src, ALuint frac, ALint increment, ALfloat *restrict dst, ALsizei dstlen);
+const ALfloat *Resample_fir4_32_C(const InterpState *state, const ALfloat *restrict src, ALuint frac, ALint increment, ALfloat *restrict dst, ALsizei dstlen);
+const ALfloat *Resample_fir8_32_C(const InterpState *state, const ALfloat *restrict src, ALuint frac, ALint increment, ALfloat *restrict dst, ALsizei dstlen);
+const ALfloat *Resample_bsinc32_C(const InterpState *state, const ALfloat *restrict src, ALuint frac, ALint increment, ALfloat *restrict dst, ALsizei dstlen);
 
 
 /* C mixers */
@@ -67,28 +67,28 @@ inline void InitiatePositionArrays(ALuint frac, ALint increment, ALuint *restric
     }
 }
 
-const ALfloat *Resample_lerp32_SSE2(const BsincState *state, const ALfloat *restrict src,
+const ALfloat *Resample_lerp32_SSE2(const InterpState *state, const ALfloat *restrict src,
                                     ALuint frac, ALint increment, ALfloat *restrict dst,
                                     ALsizei numsamples);
-const ALfloat *Resample_lerp32_SSE41(const BsincState *state, const ALfloat *restrict src,
+const ALfloat *Resample_lerp32_SSE41(const InterpState *state, const ALfloat *restrict src,
                                      ALuint frac, ALint increment, ALfloat *restrict dst,
                                      ALsizei numsamples);
 
-const ALfloat *Resample_fir4_32_SSE3(const BsincState *state, const ALfloat *restrict src,
+const ALfloat *Resample_fir4_32_SSE3(const InterpState *state, const ALfloat *restrict src,
                                      ALuint frac, ALint increment, ALfloat *restrict dst,
                                      ALsizei numsamples);
-const ALfloat *Resample_fir4_32_SSE41(const BsincState *state, const ALfloat *restrict src,
+const ALfloat *Resample_fir4_32_SSE41(const InterpState *state, const ALfloat *restrict src,
                                       ALuint frac, ALint increment, ALfloat *restrict dst,
                                       ALsizei numsamples);
 
-const ALfloat *Resample_fir8_32_SSE3(const BsincState *state, const ALfloat *restrict src,
+const ALfloat *Resample_fir8_32_SSE3(const InterpState *state, const ALfloat *restrict src,
                                      ALuint frac, ALint increment, ALfloat *restrict dst,
                                      ALsizei numsamples);
-const ALfloat *Resample_fir8_32_SSE41(const BsincState *state, const ALfloat *restrict src,
+const ALfloat *Resample_fir8_32_SSE41(const InterpState *state, const ALfloat *restrict src,
                                       ALuint frac, ALint increment, ALfloat *restrict dst,
                                       ALsizei numsamples);
 
-const ALfloat *Resample_bsinc32_SSE(const BsincState *state, const ALfloat *restrict src,
+const ALfloat *Resample_bsinc32_SSE(const InterpState *state, const ALfloat *restrict src,
                                     ALuint frac, ALint increment, ALfloat *restrict dst,
                                     ALsizei dstlen);
 
@@ -109,16 +109,16 @@ void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Gains,
                  ALsizei InPos, ALsizei BufferSize);
 
 /* Neon resamplers */
-const ALfloat *Resample_lerp32_Neon(const BsincState *state, const ALfloat *restrict src,
+const ALfloat *Resample_lerp32_Neon(const InterpState *state, const ALfloat *restrict src,
                                     ALuint frac, ALint increment, ALfloat *restrict dst,
                                     ALsizei numsamples);
-const ALfloat *Resample_fir4_32_Neon(const BsincState *state, const ALfloat *restrict src,
+const ALfloat *Resample_fir4_32_Neon(const InterpState *state, const ALfloat *restrict src,
                                      ALuint frac, ALint increment, ALfloat *restrict dst,
                                      ALsizei numsamples);
-const ALfloat *Resample_fir8_32_Neon(const BsincState *state, const ALfloat *restrict src,
+const ALfloat *Resample_fir8_32_Neon(const InterpState *state, const ALfloat *restrict src,
                                      ALuint frac, ALint increment, ALfloat *restrict dst,
                                      ALsizei numsamples);
-const ALfloat *Resample_bsinc32_Neon(const BsincState *state, const ALfloat *restrict src,
+const ALfloat *Resample_bsinc32_Neon(const InterpState *state, const ALfloat *restrict src,
                                      ALuint frac, ALint increment, ALfloat *restrict dst,
                                      ALsizei dstlen);
 

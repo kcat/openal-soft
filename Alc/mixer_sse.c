@@ -12,18 +12,18 @@
 #include "mixer_defs.h"
 
 
-const ALfloat *Resample_bsinc32_SSE(const BsincState *state, const ALfloat *restrict src,
+const ALfloat *Resample_bsinc32_SSE(const InterpState *state, const ALfloat *restrict src,
                                     ALuint frac, ALint increment, ALfloat *restrict dst,
                                     ALsizei dstlen)
 {
-    const __m128 sf4 = _mm_set1_ps(state->sf);
-    const ALsizei m = state->m;
+    const __m128 sf4 = _mm_set1_ps(state->bsinc.sf);
+    const ALsizei m = state->bsinc.m;
     const ALfloat *fil, *scd, *phd, *spd;
     ALsizei pi, i, j;
     ALfloat pf;
     __m128 r4;
 
-    src += state->l;
+    src += state->bsinc.l;
     for(i = 0;i < dstlen;i++)
     {
         // Calculate the phase index and factor.
@@ -32,10 +32,10 @@ const ALfloat *Resample_bsinc32_SSE(const BsincState *state, const ALfloat *rest
         pf = (frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF));
 #undef FRAC_PHASE_BITDIFF
 
-        fil = ASSUME_ALIGNED(state->coeffs[pi].filter, 16);
-        scd = ASSUME_ALIGNED(state->coeffs[pi].scDelta, 16);
-        phd = ASSUME_ALIGNED(state->coeffs[pi].phDelta, 16);
-        spd = ASSUME_ALIGNED(state->coeffs[pi].spDelta, 16);
+        fil = ASSUME_ALIGNED(state->bsinc.coeffs[pi].filter, 16);
+        scd = ASSUME_ALIGNED(state->bsinc.coeffs[pi].scDelta, 16);
+        phd = ASSUME_ALIGNED(state->bsinc.coeffs[pi].phDelta, 16);
+        spd = ASSUME_ALIGNED(state->bsinc.coeffs[pi].spDelta, 16);
 
         // Apply the scale and phase interpolated filter.
         r4 = _mm_setzero_ps();

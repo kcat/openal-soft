@@ -62,6 +62,10 @@ typedef struct BsincState {
     } coeffs[BSINC_PHASE_COUNT];
 } BsincState;
 
+typedef union InterpState {
+    BsincState bsinc;
+} InterpState;
+
 
 typedef union aluVector {
     alignas(16) ALfloat v[4];
@@ -148,7 +152,7 @@ typedef struct SendParams {
 } SendParams;
 
 
-typedef const ALfloat* (*ResamplerFunc)(const BsincState *state,
+typedef const ALfloat* (*ResamplerFunc)(const InterpState *state,
     const ALfloat *restrict src, ALuint frac, ALint increment,
     ALfloat *restrict dst, ALsizei dstlen
 );

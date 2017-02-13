@@ -10,9 +10,9 @@
 #include "mixer_defs.h"
 
 
-const ALfloat *Resample_lerp32_Neon(const BsincState* UNUSED(state), const ALfloat *restrict src,
-                                    ALuint frac, ALint increment, ALfloat *restrict dst,
-                                    ALsizei numsamples)
+const ALfloat *Resample_lerp32_Neon(const InterpState* UNUSED(state),
+  const ALfloat *restrict src, ALuint frac, ALint increment,
+  ALfloat *restrict dst, ALsizei numsamples)
 {
     const int32x4_t increment4 = vdupq_n_s32(increment*4);
     const float32x4_t fracOne4 = vdupq_n_f32(1.0f/FRACTIONONE);
@@ -66,9 +66,9 @@ const ALfloat *Resample_lerp32_Neon(const BsincState* UNUSED(state), const ALflo
     return dst;
 }
 
-const ALfloat *Resample_fir4_32_Neon(const BsincState* UNUSED(state), const ALfloat *restrict src,
-                                     ALuint frac, ALint increment, ALfloat *restrict dst,
-                                     ALsizei numsamples)
+const ALfloat *Resample_fir4_32_Neon(const InterpState* UNUSED(state),
+  const ALfloat *restrict src, ALuint frac, ALint increment,
+  ALfloat *restrict dst, ALsizei numsamples)
 {
     const int32x4_t increment4 = vdupq_n_s32(increment*4);
     const uint32x4_t fracMask4 = vdupq_n_u32(FRACTIONMASK);
@@ -136,9 +136,9 @@ const ALfloat *Resample_fir4_32_Neon(const BsincState* UNUSED(state), const ALfl
     return dst;
 }
 
-const ALfloat *Resample_fir8_32_Neon(const BsincState* UNUSED(state), const ALfloat *restrict src,
-                                     ALuint frac, ALint increment, ALfloat *restrict dst,
-                                     ALsizei numsamples)
+const ALfloat *Resample_fir8_32_Neon(const InterpState* UNUSED(state),
+  const ALfloat *restrict src, ALuint frac, ALint increment,
+  ALfloat *restrict dst, ALsizei numsamples)
 {
     const int32x4_t increment4 = vdupq_n_s32(increment*4);
     const uint32x4_t fracMask4 = vdupq_n_u32(FRACTIONMASK);
@@ -211,18 +211,18 @@ const ALfloat *Resample_fir8_32_Neon(const BsincState* UNUSED(state), const ALfl
     return dst;
 }
 
-const ALfloat *Resample_bsinc32_Neon(const BsincState *state, const ALfloat *restrict src,
-                                     ALuint frac, ALint increment, ALfloat *restrict dst,
-                                     ALsizei dstlen)
+const ALfloat *Resample_bsinc32_Neon(const InterpState *state,
+  const ALfloat *restrict src, ALuint frac, ALint increment,
+  ALfloat *restrict dst, ALsizei dstlen)
 {
-    const float32x4_t sf4 = vdupq_n_f32(state->sf);
-    const ALsizei m = state->m;
+    const float32x4_t sf4 = vdupq_n_f32(state->bsinc.sf);
+    const ALsizei m = state->bsinc.m;
     const ALfloat *fil, *scd, *phd, *spd;
     ALsizei pi, i, j;
     float32x4_t r4;
     ALfloat pf;
 
-    src += state->l;
+    src += state->bsinc.l;
     for(i = 0;i < dstlen;i++)
     {
         // Calculate the phase index and factor.
@@ -231,10 +231,10 @@ const ALfloat *Resample_bsinc32_Neon(const BsincState *state, const ALfloat *res
         pf = (frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF));
 #undef FRAC_PHASE_BITDIFF
 
-        fil = ASSUME_ALIGNED(state->coeffs[pi].filter, 16);
-        scd = ASSUME_ALIGNED(state->coeffs[pi].scDelta, 16);
-        phd = ASSUME_ALIGNED(state->coeffs[pi].phDelta, 16);
-        spd = ASSUME_ALIGNED(state->coeffs[pi].spDelta, 16);
+        fil = ASSUME_ALIGNED(state->bsinc.coeffs[pi].filter, 16);
+        scd = ASSUME_ALIGNED(state->bsinc.coeffs[pi].scDelta, 16);
+        phd = ASSUME_ALIGNED(state->bsinc.coeffs[pi].phDelta, 16);
+        spd = ASSUME_ALIGNED(state->bsinc.coeffs[pi].spDelta, 16);
 
         // Apply the scale and phase interpolated filter.
         r4 = vdupq_n_f32(0.0f);

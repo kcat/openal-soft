@@ -564,7 +564,7 @@ void MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei Samp
             );
 
             /* Now resample, then filter and mix to the appropriate outputs. */
-            ResampledData = Resample(&voice->SincState,
+            ResampledData = Resample(&voice->ResampleState,
                 &SrcData[MAX_PRE_SAMPLES], DataPosFrac, increment,
                 Device->ResampledData, DstBufferSize
             );

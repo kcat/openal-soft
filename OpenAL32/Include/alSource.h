@@ -92,7 +92,7 @@ typedef struct ALvoice {
 
     alignas(16) ALfloat PrevSamples[MAX_INPUT_CHANNELS][MAX_PRE_SAMPLES];
 
-    BsincState SincState;
+    InterpState ResampleState;
 
     struct {
         ALfloat (*Buffer)[BUFFERSIZE];

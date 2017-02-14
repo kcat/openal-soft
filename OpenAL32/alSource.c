@@ -46,7 +46,7 @@ extern inline void LockSourcesWrite(ALCcontext *context);
 extern inline void UnlockSourcesWrite(ALCcontext *context);
 extern inline struct ALsource *LookupSource(ALCcontext *context, ALuint id);
 extern inline struct ALsource *RemoveSource(ALCcontext *context, ALuint id);
-extern inline ALboolean IsPlayingOrPaused(ALsource *source);
+extern inline ALboolean IsPlayingOrPaused(const ALsource *source);
 
 static void InitSourceParams(ALsource *Source);
 static void DeinitSource(ALsource *source);
@@ -141,7 +141,7 @@ static inline ALvoice *GetSourceVoice(const ALsource *source, const ALCcontext *
 
 static inline bool SourceShouldUpdate(const ALsource *source, const ALCcontext *context)
 {
-    return (source->state == AL_PLAYING || source->state == AL_PAUSED) &&
+    return IsPlayingOrPaused(source) &&
            !ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire);
 }
 

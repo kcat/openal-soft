@@ -224,7 +224,7 @@ void UpdateAllSourceProps(ALCcontext *context);
 ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state);
 ALboolean ApplyOffset(ALsource *Source);
 
-inline ALboolean IsPlayingOrPaused(ALsource *source)
+inline ALboolean IsPlayingOrPaused(const ALsource *source)
 {
     ALenum state = ATOMIC_LOAD_SEQ(&source->state);
     return state == AL_PLAYING || state == AL_PAUSED;

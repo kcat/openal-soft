@@ -1697,8 +1697,7 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
             ALsource *Source = context->SourceMap.values[pos];
             ALenum new_state;
 
-            if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
-               Source->OffsetType != AL_NONE)
+            if(Source->OffsetType != AL_NONE && IsPlayingOrPaused(Source))
             {
                 WriteLock(&Source->queue_lock);
                 ApplyOffset(Source);

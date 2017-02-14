@@ -711,7 +711,7 @@ void MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei Samp
     voice->Moving = AL_TRUE;
 
     /* Update source info */
-    Source->state = State;
+    ATOMIC_STORE(&Source->state,             State, almemory_order_relaxed);
     ATOMIC_STORE(&Source->current_buffer,    BufferListItem, almemory_order_relaxed);
     ATOMIC_STORE(&Source->position,          DataPosInt, almemory_order_relaxed);
     ATOMIC_STORE(&Source->position_fraction, DataPosFrac, almemory_order_release);

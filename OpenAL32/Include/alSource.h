@@ -175,7 +175,7 @@ typedef struct ALsource {
     ALint SourceType;
 
     /** Source state (initial, playing, paused, or stopped) */
-    ALenum state;
+    ATOMIC(ALenum) state;
     ALenum new_state;
 
     /** Source Buffer Queue info. */
@@ -223,6 +223,13 @@ inline struct ALsource *RemoveSource(ALCcontext *context, ALuint id)
 void UpdateAllSourceProps(ALCcontext *context);
 ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state);
 ALboolean ApplyOffset(ALsource *Source);
+
+inline ALboolean IsPlayingOrPaused(ALsource *source)
+{
+    ALenum state = ATOMIC_LOAD_SEQ(&source->state);
+    return state == AL_PLAYING || state == AL_PAUSED;
+}
+
 
 ALvoid ReleaseALSources(ALCcontext *Context);
 

@@ -1326,7 +1326,7 @@ static void UpdateContextSources(ALCcontext *ctx, ALeffectslot *slot)
         for(;voice != voice_end;++voice)
         {
             if(!(source=voice->Source)) continue;
-            if(source->state != AL_PLAYING && source->state != AL_PAUSED)
+            if(!IsPlayingOrPaused(source))
                 voice->Source = NULL;
             else
                 CalcSourceParams(voice, ctx, force);
@@ -1449,7 +1449,8 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             {
                 ALboolean IsVoiceInit = (voice->Step > 0);
                 source = voice->Source;
-                if(source && source->state == AL_PLAYING && IsVoiceInit)
+                if(IsVoiceInit && source &&
+                   ATOMIC_LOAD(&source->state, almemory_order_relaxed) == AL_PLAYING)
                     MixSource(voice, source, device, SamplesToDo);
             }
 
@@ -1614,12 +1615,13 @@ void aluHandleDisconnect(ALCdevice *device)
         voice_end = voice + Context->VoiceCount;
         while(voice != voice_end)
         {
+            ALenum playing = AL_PLAYING;
             ALsource *source = voice->Source;
             voice->Source = NULL;
 
-            if(source && source->state == AL_PLAYING)
+            if(source &&
+               ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(ALenum, &source->state, &playing, AL_STOPPED))
             {
-                source->state = AL_STOPPED;
                 ATOMIC_STORE(&source->current_buffer, NULL, almemory_order_relaxed);
                 ATOMIC_STORE(&source->position, 0, almemory_order_relaxed);
                 ATOMIC_STORE(&source->position_fraction, 0, almemory_order_release);

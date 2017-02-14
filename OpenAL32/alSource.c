@@ -46,6 +46,7 @@ extern inline void LockSourcesWrite(ALCcontext *context);
 extern inline void UnlockSourcesWrite(ALCcontext *context);
 extern inline struct ALsource *LookupSource(ALCcontext *context, ALuint id);
 extern inline struct ALsource *RemoveSource(ALCcontext *context, ALuint id);
+extern inline ALboolean IsPlayingOrPaused(ALsource *source);
 
 static void InitSourceParams(ALsource *Source);
 static void DeinitSource(ALsource *source);
@@ -524,7 +525,7 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
             Source->OffsetType = prop;
             Source->Offset = *values;
 
-            if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
+            if(IsPlayingOrPaused(Source) &&
                !ATOMIC_LOAD(&Context->DeferUpdates, almemory_order_acquire))
             {
                 ALCdevice_Lock(Context->Device);
@@ -671,7 +672,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             }
 
             WriteLock(&Source->queue_lock);
-            if(!(Source->state == AL_STOPPED || Source->state == AL_INITIAL))
+            if(IsPlayingOrPaused(Source))
             {
                 WriteUnlock(&Source->queue_lock);
                 UnlockBuffersRead(device);
@@ -725,7 +726,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             Source->OffsetType = prop;
             Source->Offset = *values;
 
-            if((Source->state == AL_PLAYING || Source->state == AL_PAUSED) &&
+            if(IsPlayingOrPaused(Source) &&
                 !ATOMIC_LOAD(&Context->DeferUpdates, almemory_order_acquire))
             {
                 ALCdevice_Lock(Context->Device);
@@ -843,8 +844,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             }
             UnlockFiltersRead(device);
 
-            if(slot != Source->Send[values[1]].Slot &&
-               (Source->state == AL_PLAYING || Source->state == AL_PAUSED))
+            if(slot != Source->Send[values[1]].Slot && IsPlayingOrPaused(Source))
             {
                 /* Add refcount on the new slot, and release the previous slot */
                 if(slot) IncrementRef(&slot->ref);
@@ -1227,7 +1227,7 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             return AL_TRUE;
 
         case AL_SOURCE_STATE:
-            *values = Source->state;
+            *values = ATOMIC_LOAD_SEQ(&Source->state);
             return AL_TRUE;
 
         case AL_BYTE_LENGTH_SOFT:
@@ -2767,7 +2767,7 @@ static void InitSourceParams(ALsource *Source)
     Source->Offset = 0.0;
     Source->OffsetType = AL_NONE;
     Source->SourceType = AL_UNDETERMINED;
-    Source->state = AL_INITIAL;
+    ATOMIC_INIT(&Source->state, AL_INITIAL);
     Source->new_state = AL_NONE;
 
     ATOMIC_INIT(&Source->queue, NULL);
@@ -2926,9 +2926,7 @@ void UpdateAllSourceProps(ALCcontext *context)
     {
         ALvoice *voice = &context->Voices[pos];
         ALsource *source = voice->Source;
-        if(source != NULL && (source->state == AL_PLAYING ||
-                              source->state == AL_PAUSED) &&
-           source->NeedsUpdate)
+        if(source != NULL && source->NeedsUpdate && IsPlayingOrPaused(source))
         {
             source->NeedsUpdate = AL_FALSE;
             UpdateSourceProps(source, num_sends);
@@ -2963,18 +2961,14 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             BufferList = BufferList->next;
         }
 
-        if(Source->state != AL_PAUSED)
+        if(ATOMIC_EXCHANGE(ALenum, &Source->state, AL_PLAYING, almemory_order_acq_rel) == AL_PAUSED)
+            discontinuity = AL_FALSE;
+        else
         {
-            Source->state = AL_PLAYING;
             ATOMIC_STORE(&Source->current_buffer, BufferList, almemory_order_relaxed);
             ATOMIC_STORE(&Source->position, 0, almemory_order_relaxed);
             ATOMIC_STORE(&Source->position_fraction, 0, almemory_order_release);
             discontinuity = AL_TRUE;
-        }
-        else
-        {
-            Source->state = AL_PLAYING;
-            discontinuity = AL_FALSE;
         }
 
         // Check if an Offset has been set
@@ -3041,15 +3035,15 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
     }
     else if(state == AL_PAUSED)
     {
-        if(Source->state == AL_PLAYING)
-            Source->state = AL_PAUSED;
+        ALenum playing = AL_PLAYING;
+        ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(ALenum, &Source->state, &playing, AL_PAUSED);
     }
     else if(state == AL_STOPPED)
     {
     do_stop:
-        if(Source->state != AL_INITIAL)
+        if(ATOMIC_LOAD(&Source->state, almemory_order_acquire) != AL_INITIAL)
         {
-            Source->state = AL_STOPPED;
+            ATOMIC_STORE(&Source->state, AL_STOPPED, almemory_order_relaxed);
             ATOMIC_STORE_SEQ(&Source->current_buffer, NULL);
         }
         Source->OffsetType = AL_NONE;
@@ -3057,9 +3051,9 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
     }
     else if(state == AL_INITIAL)
     {
-        if(Source->state != AL_INITIAL)
+        if(ATOMIC_LOAD(&Source->state, almemory_order_acquire) != AL_INITIAL)
         {
-            Source->state = AL_INITIAL;
+            ATOMIC_STORE(&Source->state, AL_INITIAL, almemory_order_relaxed);
             ATOMIC_STORE(&Source->current_buffer, ATOMIC_LOAD_SEQ(&Source->queue),
                          almemory_order_relaxed);
             ATOMIC_STORE(&Source->position, 0, almemory_order_relaxed);
@@ -3085,7 +3079,7 @@ static ALint64 GetSourceSampleOffset(ALsource *Source, ALCdevice *device, ALuint
     ALuint refcount;
 
     ReadLock(&Source->queue_lock);
-    if(Source->state != AL_PLAYING && Source->state != AL_PAUSED)
+    if(!IsPlayingOrPaused(Source))
     {
         ReadUnlock(&Source->queue_lock);
         do {
@@ -3135,7 +3129,7 @@ static ALdouble GetSourceSecOffset(ALsource *Source, ALCdevice *device, ALuint64
     ALuint refcount;
 
     ReadLock(&Source->queue_lock);
-    if(Source->state != AL_PLAYING && Source->state != AL_PAUSED)
+    if(!IsPlayingOrPaused(Source))
     {
         ReadUnlock(&Source->queue_lock);
         do {
@@ -3200,7 +3194,7 @@ static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCdevice *device
     ALuint refcount;
 
     ReadLock(&Source->queue_lock);
-    if(Source->state != AL_PLAYING && Source->state != AL_PAUSED)
+    if(!IsPlayingOrPaused(Source))
     {
         ReadUnlock(&Source->queue_lock);
         return 0.0;

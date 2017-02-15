@@ -112,6 +112,7 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 
 
 extern inline ALuint NextPowerOf2(ALuint value);
+extern inline size_t RoundUp(size_t value, size_t r);
 extern inline ALint fastf2i(ALfloat f);
 extern inline ALuint fastf2u(ALfloat f);
 

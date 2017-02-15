@@ -356,6 +356,13 @@ inline ALuint NextPowerOf2(ALuint value)
     return value+1;
 }
 
+/** Round up a value to the next multiple. */
+inline size_t RoundUp(size_t value, size_t r)
+{
+    value += r-1;
+    return value - (value%r);
+}
+
 /* Fast float-to-int conversion. Assumes the FPU is already in round-to-zero
  * mode. */
 inline ALint fastf2i(ALfloat f)
@@ -812,6 +819,8 @@ ALCcontext *GetContextRef(void);
 
 void ALCcontext_IncRef(ALCcontext *context);
 void ALCcontext_DecRef(ALCcontext *context);
+
+void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends);
 
 void AppendAllDevicesList(const ALCchar *name);
 void AppendCaptureDeviceList(const ALCchar *name);

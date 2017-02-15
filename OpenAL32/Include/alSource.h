@@ -23,6 +23,8 @@ typedef struct ALbufferlistitem {
 
 
 struct ALsourceProps {
+    ATOMIC(struct ALsourceProps*) next;
+
     ATOMIC(ALfloat)   Pitch;
     ATOMIC(ALfloat)   Gain;
     ATOMIC(ALfloat)   OuterGain;
@@ -69,14 +71,12 @@ struct ALsourceProps {
         ATOMIC(ALfloat) HFReference;
         ATOMIC(ALfloat) GainLF;
         ATOMIC(ALfloat) LFReference;
-    } Send[MAX_SENDS];
-
-    ATOMIC(struct ALsourceProps*) next;
+    } Send[];
 };
 
 
 typedef struct ALvoice {
-    struct ALsourceProps Props;
+    struct ALsourceProps *Props;
 
     struct ALsource *Source;
 

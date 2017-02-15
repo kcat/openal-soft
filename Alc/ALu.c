@@ -807,14 +807,6 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
     ALint NumSends;
     ALint i;
 
-    DryGainHF = 1.0f;
-    DryGainLF = 1.0f;
-    for(i = 0;i < MAX_SENDS;i++)
-    {
-        WetGainHF[i] = 1.0f;
-        WetGainLF[i] = 1.0f;
-    }
-
     /* Get context/device properties */
     DopplerFactor = Listener->Params.DopplerFactor;
     SpeedOfSound  = Listener->Params.SpeedOfSound;
@@ -989,8 +981,14 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
 
     /* Source Gain + Attenuation */
     DryGain = SourceVolume * Attenuation;
+    DryGainHF = 1.0f;
+    DryGainLF = 1.0f;
     for(i = 0;i < NumSends;i++)
+    {
         WetGain[i] = SourceVolume * RoomAttenuation[i];
+        WetGainHF[i] = 1.0f;
+        WetGainLF[i] = 1.0f;
+    }
 
     /* Distance-based air absorption */
     if(AirAbsorptionFactor > 0.0f && ClampedDist > MinDist)
@@ -1284,7 +1282,9 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context, ALboolean forc
 
     if(props)
     {
-        voice->Props = *props;
+        memcpy(voice->Props, props,
+            offsetof(struct ALsourceProps, Send[context->Device->NumAuxSends])
+        );
 
         ATOMIC_REPLACE_HEAD(struct ALsourceProps*, &source->FreeList, props);
     }
@@ -1296,9 +1296,9 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context, ALboolean forc
         if((buffer=BufferListItem->buffer) != NULL)
         {
             if(buffer->FmtChannels == FmtMono)
-                CalcAttnSourceParams(voice, &voice->Props, buffer, context);
+                CalcAttnSourceParams(voice, voice->Props, buffer, context);
             else
-                CalcNonAttnSourceParams(voice, &voice->Props, buffer, context);
+                CalcNonAttnSourceParams(voice, voice->Props, buffer, context);
             break;
         }
         BufferListItem = BufferListItem->next;

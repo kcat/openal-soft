@@ -1769,6 +1769,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     ALCcontext *context;
     enum HrtfRequestMode hrtf_appreq = Hrtf_Default;
     enum HrtfRequestMode hrtf_userreq = Hrtf_Default;
+    ALsizei old_sends = device->NumAuxSends;
     enum DevFmtChannels oldChans;
     enum DevFmtType oldType;
     ALCuint oldFreq;
@@ -2183,7 +2184,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     {
         ALsizei pos;
 
-        ReadLock(&context->PropLock);
+        WriteLock(&context->PropLock);
         LockUIntMapRead(&context->EffectSlotMap);
         for(pos = 0;pos < context->EffectSlotMap.size;pos++)
         {
@@ -2208,8 +2209,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         for(pos = 0;pos < context->SourceMap.size;pos++)
         {
             ALsource *source = context->SourceMap.values[pos];
-            ALuint s = device->NumAuxSends;
-            while(s < MAX_SENDS)
+            struct ALsourceProps *props;
+            ALsizei s;
+
+            for(s = device->NumAuxSends;s < MAX_SENDS;s++)
             {
                 if(source->Send[s].Slot)
                     DecrementRef(&source->Send[s].Slot->ref);
@@ -2219,14 +2222,32 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 source->Send[s].HFReference = LOWPASSFREQREF;
                 source->Send[s].GainLF = 1.0f;
                 source->Send[s].LFReference = HIGHPASSFREQREF;
-                s++;
             }
+
             source->NeedsUpdate = AL_TRUE;
+
+            /* Clear any pre-existing source property structs, in case the
+             * number of auxiliary sends changed. Playing (or paused) sources
+             * will have updates specified.
+             */
+            props = ATOMIC_EXCHANGE_SEQ(struct ALsourceProps*, &source->Update, NULL);
+            al_free(props);
+
+            props = ATOMIC_EXCHANGE(struct ALsourceProps*, &source->FreeList, NULL,
+                                    almemory_order_relaxed);
+            while(props)
+            {
+                struct ALsourceProps *next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
+                al_free(props);
+                props = next;
+            }
         }
+        AllocateVoices(context, context->MaxVoices, old_sends);
         UnlockUIntMapRead(&context->SourceMap);
 
         UpdateListenerProps(context);
-        ReadUnlock(&context->PropLock);
+        UpdateAllSourceProps(context);
+        WriteUnlock(&context->PropLock);
 
         context = context->next;
     }
@@ -2592,6 +2613,65 @@ ALCcontext *GetContextRef(void)
     }
 
     return context;
+}
+
+
+void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
+{
+    ALCdevice *device = context->Device;
+    ALsizei num_sends = device->NumAuxSends;
+    struct ALsourceProps *props;
+    size_t sizeof_props;
+    ALvoice *voices;
+    ALsizei v = 0;
+    size_t size;
+
+    if(num_voices == context->MaxVoices && num_sends == old_sends)
+        return;
+
+    /* Allocate the voices, and the voices' stored source property set
+     * (including the dynamically-sized Send[] array) in one chunk.
+     */
+    sizeof_props = RoundUp(offsetof(struct ALsourceProps, Send[num_sends]), 16);
+    size = sizeof(*voices) + sizeof_props;
+
+    voices = al_calloc(16, size * num_voices);
+    props = (struct ALsourceProps*)(voices + num_voices);
+
+    if(context->Voices)
+    {
+        ALsizei v_count = mini(context->VoiceCount, num_voices);
+        for(;v < v_count;v++)
+        {
+            ALsizei s_count = mini(old_sends, num_sends);
+            ALsizei i;
+
+            /* Copy the old voice data and source property set to the new
+             * storage.
+             */
+            voices[v] = context->Voices[v];
+            *props = *(context->Voices[v].Props);
+            for(i = 0;i < s_count;i++)
+                props->Send[i] = context->Voices[v].Props->Send[i];
+
+            /* Set this voice's property set pointer and increment 'props' to
+             * the next property storage space.
+             */
+            voices[v].Props = props;
+            props = (struct ALsourceProps*)((char*)props + sizeof_props);
+        }
+    }
+    /* Finish setting the voices' property set pointers. */
+    for(;v < num_voices;v++)
+    {
+        voices[v].Props = props;
+        props = (struct ALsourceProps*)((char*)props + sizeof_props);
+    }
+
+    al_free(context->Voices);
+    context->Voices = voices;
+    context->MaxVoices = num_voices;
+    context->VoiceCount = mini(context->VoiceCount, num_voices);
 }
 
 
@@ -3267,11 +3347,13 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         InitRef(&ALContext->ref, 1);
         ALContext->Listener = (ALlistener*)ALContext->_listener_mem;
 
+        ALContext->Device = device;
         ATOMIC_INIT(&ALContext->ActiveAuxSlotList, NULL);
 
+        ALContext->Voices = NULL;
+        ALContext->MaxVoices = 0;
         ALContext->VoiceCount = 0;
-        ALContext->MaxVoices = 256;
-        ALContext->Voices = al_calloc(16, ALContext->MaxVoices * sizeof(ALContext->Voices[0]));
+        AllocateVoices(ALContext, 256, device->NumAuxSends);
     }
     if(!ALContext || !ALContext->Voices)
     {
@@ -3312,8 +3394,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         return NULL;
     }
 
-    ALContext->Device = device;
-    ALCdevice_IncRef(device);
+    ALCdevice_IncRef(ALContext->Device);
     InitContext(ALContext);
 
     if(ConfigValueFloat(al_string_get_cstr(device->DeviceName), NULL, "volume-adjust", &valf))

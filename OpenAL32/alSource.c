@@ -2306,23 +2306,13 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     ALCdevice_Lock(context->Device);
     while(n > context->MaxVoices-context->VoiceCount)
     {
-        ALvoice *temp = NULL;
-        ALsizei newcount;
-
-        newcount = context->MaxVoices << 1;
-        if(newcount > 0)
-            temp = al_malloc(16, newcount * sizeof(context->Voices[0]));
-        if(!temp)
+        ALsizei newcount = context->MaxVoices << 1;
+        if(context->MaxVoices >= newcount)
         {
             ALCdevice_Unlock(context->Device);
             SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
         }
-        memcpy(temp, context->Voices, context->MaxVoices * sizeof(temp[0]));
-        memset(&temp[context->MaxVoices], 0, (newcount-context->MaxVoices) * sizeof(temp[0]));
-
-        al_free(context->Voices);
-        context->Voices = temp;
-        context->MaxVoices = newcount;
+        AllocateVoices(context, newcount, context->Device->NumAuxSends);
     }
 
     if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire) == DeferAll)
@@ -2757,6 +2747,7 @@ static void InitSourceParams(ALsource *Source)
     Source->Direct.LFReference = HIGHPASSFREQREF;
     for(i = 0;i < MAX_SENDS;i++)
     {
+        Source->Send[i].Slot = NULL;
         Source->Send[i].Gain = 1.0f;
         Source->Send[i].GainHF = 1.0f;
         Source->Send[i].HFReference = LOWPASSFREQREF;
@@ -2819,7 +2810,7 @@ static void DeinitSource(ALsource *source)
         BufferList = next;
     }
 
-    for(i = 0;i < MAX_SENDS;++i)
+    for(i = 0;i < MAX_SENDS;i++)
     {
         if(source->Send[i].Slot)
             DecrementRef(&source->Send[i].Slot->ref);
@@ -2835,7 +2826,7 @@ static void UpdateSourceProps(ALsource *source, ALuint num_sends)
     /* Get an unused property container, or allocate a new one as needed. */
     props = ATOMIC_LOAD(&source->FreeList, almemory_order_acquire);
     if(!props)
-        props = al_calloc(16, sizeof(*props));
+        props = al_calloc(16, offsetof(struct ALsourceProps, Send[num_sends]));
     else
     {
         struct ALsourceProps *next;

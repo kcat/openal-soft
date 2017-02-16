@@ -95,19 +95,18 @@ typedef struct ALvoice {
     InterpState ResampleState;
 
     struct {
+        DirectParams Params[MAX_INPUT_CHANNELS];
+
         ALfloat (*Buffer)[BUFFERSIZE];
         ALsizei Channels;
-    } DirectOut;
+    } Direct;
 
     struct {
+        SendParams Params[MAX_INPUT_CHANNELS];
+
         ALfloat (*Buffer)[BUFFERSIZE];
         ALsizei Channels;
-    } SendOut[MAX_SENDS];
-
-    struct {
-        DirectParams Direct;
-        SendParams Send[MAX_SENDS];
-    } Chan[MAX_INPUT_CHANNELS];
+    } Send[MAX_SENDS];
 } ALvoice;
 
 

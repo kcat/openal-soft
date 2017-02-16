@@ -569,7 +569,7 @@ void MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei Samp
                 Device->ResampledData, DstBufferSize
             );
             {
-                DirectParams *parms = &voice->Chan[chan].Direct;
+                DirectParams *parms = &voice->Direct.Params[chan];
                 const ALfloat *samples;
 
                 samples = DoFilters(
@@ -581,8 +581,9 @@ void MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei Samp
                     if(!Counter)
                         memcpy(parms->Gains.Current, parms->Gains.Target,
                                sizeof(parms->Gains.Current));
-                    MixSamples(samples, voice->DirectOut.Channels, voice->DirectOut.Buffer,
-                        parms->Gains.Current, parms->Gains.Target, Counter, OutPos, DstBufferSize
+                    MixSamples(samples, voice->Direct.Channels, voice->Direct.Buffer,
+                        parms->Gains.Current, parms->Gains.Target, Counter, OutPos,
+                        DstBufferSize
                     );
                 }
                 else
@@ -626,7 +627,7 @@ void MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei Samp
                     assert(lidx != -1 && ridx != -1);
 
                     MixHrtfSamples(
-                        voice->DirectOut.Buffer[lidx], voice->DirectOut.Buffer[ridx],
+                        voice->Direct.Buffer[lidx], voice->Direct.Buffer[ridx],
                         samples, Counter, voice->Offset, OutPos, IrSize, &hrtfparams,
                         &parms->Hrtf.State, DstBufferSize
                     );
@@ -635,10 +636,10 @@ void MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei Samp
 
             for(send = 0;send < Device->NumAuxSends;send++)
             {
-                SendParams *parms = &voice->Chan[chan].Send[send];
+                SendParams *parms = &voice->Send[send].Params[chan];
                 const ALfloat *samples;
 
-                if(!voice->SendOut[send].Buffer)
+                if(!voice->Send[send].Buffer)
                     continue;
 
                 samples = DoFilters(
@@ -649,7 +650,7 @@ void MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei Samp
                 if(!Counter)
                     memcpy(parms->Gains.Current, parms->Gains.Target,
                            sizeof(parms->Gains.Current));
-                MixSamples(samples, voice->SendOut[send].Channels, voice->SendOut[send].Buffer,
+                MixSamples(samples, voice->Send[send].Channels, voice->Send[send].Buffer,
                     parms->Gains.Current, parms->Gains.Target, Counter, OutPos, DstBufferSize
                 );
             }

@@ -269,42 +269,64 @@ static int ALCplaybackOSS_mixerProc(void *ptr)
 {
     ALCplaybackOSS *self = (ALCplaybackOSS*)ptr;
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    ALint frameSize;
+    struct timeval timeout;
+    ALubyte *write_ptr;
+    ALint frame_size;
+    ALint to_write;
     ssize_t wrote;
+    fd_set wfds;
+    int sret;
 
     SetRTPriority();
     althrd_setname(althrd_current(), MIXER_THREAD_NAME);
 
-    frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
 
+    ALCplaybackOSS_lock(self);
     while(!ATOMIC_LOAD_SEQ(&self->killNow) && device->Connected)
     {
-        ALint len = self->data_size;
-        ALubyte *WritePtr = self->mix_data;
+        FD_ZERO(&wfds);
+        FD_SET(self->fd, &wfds);
+        timeout.tv_sec = 1;
+        timeout.tv_usec = 0;
 
-        aluMixData(device, WritePtr, len/frameSize);
-        while(len > 0 && !ATOMIC_LOAD_SEQ(&self->killNow))
+        ALCplaybackOSS_unlock(self);
+        sret = select(self->fd+1, NULL, &wfds, NULL, &timeout);
+        ALCplaybackOSS_lock(self);
+        if(sret < 0)
         {
-            wrote = write(self->fd, WritePtr, len);
+            if(errno == EINTR)
+                continue;
+            ERR("select failed: %s\n", strerror(errno));
+            aluHandleDisconnect(device);
+            break;
+        }
+        else if(sret == 0)
+        {
+            WARN("select timeout\n");
+            continue;
+        }
+
+        write_ptr = self->mix_data;
+        to_write = self->data_size;
+        aluMixData(device, write_ptr, to_write/frame_size);
+        while(to_write > 0 && !ATOMIC_LOAD_SEQ(&self->killNow))
+        {
+            wrote = write(self->fd, write_ptr, to_write);
             if(wrote < 0)
             {
-                if(errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
-                {
-                    ERR("write failed: %s\n", strerror(errno));
-                    ALCplaybackOSS_lock(self);
-                    aluHandleDisconnect(device);
-                    ALCplaybackOSS_unlock(self);
-                    break;
-                }
-
-                al_nssleep(1000000);
-                continue;
+                if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+                    continue;
+                ERR("write failed: %s\n", strerror(errno));
+                aluHandleDisconnect(device);
+                break;
             }
 
-            len -= wrote;
-            WritePtr += wrote;
+            to_write -= wrote;
+            write_ptr += wrote;
         }
     }
+    ALCplaybackOSS_unlock(self);
 
     return 0;
 }
@@ -492,7 +514,6 @@ typedef struct ALCcaptureOSS {
     int fd;
 
     ll_ringbuffer_t *ring;
-    ATOMIC(ALenum) doCapture;
 
     ATOMIC(ALenum) killNow;
     althrd_t thread;
@@ -520,40 +541,54 @@ static int ALCcaptureOSS_recordProc(void *ptr)
 {
     ALCcaptureOSS *self = (ALCcaptureOSS*)ptr;
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    int frameSize;
+    struct timeval timeout;
+    int frame_size;
+    fd_set rfds;
     ssize_t amt;
+    int sret;
 
     SetRTPriority();
     althrd_setname(althrd_current(), RECORD_THREAD_NAME);
 
-    frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
 
     while(!ATOMIC_LOAD_SEQ(&self->killNow))
     {
         ll_ringbuffer_data_t vec[2];
 
-        amt = 0;
-        if(ATOMIC_LOAD_SEQ(&self->doCapture))
+        FD_ZERO(&rfds);
+        FD_SET(self->fd, &rfds);
+        timeout.tv_sec = 1;
+        timeout.tv_usec = 0;
+
+        sret = select(self->fd+1, &rfds, NULL, NULL, &timeout);
+        if(sret < 0)
         {
-            ll_ringbuffer_get_write_vector(self->ring, vec);
-            if(vec[0].len > 0)
-            {
-                amt = read(self->fd, vec[0].buf, vec[0].len*frameSize);
-                if(amt < 0)
-                {
-                    ERR("read failed: %s\n", strerror(errno));
-                    ALCcaptureOSS_lock(self);
-                    aluHandleDisconnect(device);
-                    ALCcaptureOSS_unlock(self);
-                    break;
-                }
-                ll_ringbuffer_write_advance(self->ring, amt/frameSize);
-            }
+            if(errno == EINTR)
+                continue;
+            ERR("select failed: %s\n", strerror(errno));
+            aluHandleDisconnect(device);
+            break;
         }
-        if(amt == 0)
+        else if(sret == 0)
         {
-            al_nssleep(1000000);
+            WARN("select timeout\n");
             continue;
+        }
+
+        ll_ringbuffer_get_write_vector(self->ring, vec);
+        if(vec[0].len > 0)
+        {
+            amt = read(self->fd, vec[0].buf, vec[0].len*frame_size);
+            if(amt < 0)
+            {
+                ERR("read failed: %s\n", strerror(errno));
+                ALCcaptureOSS_lock(self);
+                aluHandleDisconnect(device);
+                ALCcaptureOSS_unlock(self);
+                break;
+            }
+            ll_ringbuffer_write_advance(self->ring, amt/frame_size);
         }
     }
 
@@ -566,7 +601,6 @@ static void ALCcaptureOSS_Construct(ALCcaptureOSS *self, ALCdevice *device)
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCcaptureOSS, ALCbackend, self);
 
-    ATOMIC_INIT(&self->doCapture, AL_FALSE);
     ATOMIC_INIT(&self->killNow, AL_FALSE);
 }
 
@@ -690,15 +724,6 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
         return ALC_OUT_OF_MEMORY;
     }
 
-    if(althrd_create(&self->thread, ALCcaptureOSS_recordProc, self) != althrd_success)
-    {
-        ll_ringbuffer_free(self->ring);
-        self->ring = NULL;
-        close(self->fd);
-        self->fd = -1;
-        return ALC_OUT_OF_MEMORY;
-    }
-
     al_string_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
@@ -706,11 +731,6 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
 
 static void ALCcaptureOSS_close(ALCcaptureOSS *self)
 {
-    int res;
-
-    ATOMIC_STORE_SEQ(&self->killNow, AL_TRUE);
-    althrd_join(self->thread, &res);
-
     close(self->fd);
     self->fd = -1;
 
@@ -720,13 +740,23 @@ static void ALCcaptureOSS_close(ALCcaptureOSS *self)
 
 static ALCboolean ALCcaptureOSS_start(ALCcaptureOSS *self)
 {
-    ATOMIC_STORE_SEQ(&self->doCapture, AL_TRUE);
+    ATOMIC_STORE_SEQ(&self->killNow, AL_FALSE);
+    if(althrd_create(&self->thread, ALCcaptureOSS_recordProc, self) != althrd_success)
+        return ALC_FALSE;
     return ALC_TRUE;
 }
 
 static void ALCcaptureOSS_stop(ALCcaptureOSS *self)
 {
-    ATOMIC_STORE_SEQ(&self->doCapture, AL_FALSE);
+    int res;
+
+    if(ATOMIC_EXCHANGE_SEQ(ALenum, &self->killNow, AL_TRUE))
+        return;
+
+    althrd_join(self->thread, &res);
+
+    if(ioctl(self->fd, SNDCTL_DSP_RESET) != 0)
+        ERR("Error resetting device: %s\n", strerror(errno));
 }
 
 static ALCenum ALCcaptureOSS_captureSamples(ALCcaptureOSS *self, ALCvoid *buffer, ALCuint samples)

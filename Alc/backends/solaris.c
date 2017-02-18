@@ -50,7 +50,7 @@ typedef struct ALCsolarisBackend {
     ALubyte *mix_data;
     int data_size;
 
-    volatile int killNow;
+    ATOMIC(ALenum) killNow;
     althrd_t thread;
 } ALCsolarisBackend;
 
@@ -84,6 +84,7 @@ static void ALCsolarisBackend_Construct(ALCsolarisBackend *self, ALCdevice *devi
     SET_VTABLE2(ALCsolarisBackend, ALCbackend, self);
 
     self->fd = -1;
+    ATOMIC_INIT(&self->killNow, AL_FALSE);
 }
 
 static void ALCsolarisBackend_Destruct(ALCsolarisBackend *self)
@@ -103,43 +104,65 @@ static void ALCsolarisBackend_Destruct(ALCsolarisBackend *self)
 static int ALCsolarisBackend_mixerProc(void *ptr)
 {
     ALCsolarisBackend *self = ptr;
-    ALCdevice *Device = STATIC_CAST(ALCbackend,self)->mDevice;
-    ALint frameSize;
-    int wrote;
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    struct timeval timeout;
+    ALubyte *write_ptr;
+    ALint frame_size;
+    ALint to_write;
+    ssize_t wrote;
+    fd_set wfds;
+    int sret;
 
     SetRTPriority();
     althrd_setname(althrd_current(), MIXER_THREAD_NAME);
 
-    frameSize = FrameSizeFromDevFmt(Device->FmtChans, Device->FmtType);
+    frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
 
-    while(!self->killNow && Device->Connected)
+    ALCsolarisBackend_lock(self);
+    while(!ATOMIC_LOAD_SEQ(&self->killNow) && device->Connected)
     {
-        ALint len = self->data_size;
-        ALubyte *WritePtr = self->mix_data;
+        FD_ZERO(&wfds);
+        FD_SET(self->fd, &wfds);
+        timeout.tv_sec = 1;
+        timeout.tv_usec = 0;
 
-        aluMixData(Device, WritePtr, len/frameSize);
-        while(len > 0 && !self->killNow)
+        ALCsolarisBackend_unlock(self);
+        sret = select(self->fd+1, NULL, &wfds, NULL, &timeout);
+        ALCsolarisBackend_lock(self);
+        if(sret < 0)
         {
-            wrote = write(self->fd, WritePtr, len);
+            if(errno == EINTR)
+                continue;
+            ERR("select failed: %s\n", strerror(errno));
+            aluHandleDisconnect(device);
+            break;
+        }
+        else if(sret == 0)
+        {
+            WARN("select timeout\n");
+            continue;
+        }
+
+        write_ptr = self->mix_data;
+        to_write = self->data_size;
+        aluMixData(device, write_ptr, to_write/frame_size);
+        while(to_write > 0 && !ATOMIC_LOAD_SEQ(&self->killNow))
+        {
+            wrote = write(self->fd, write_ptr, to_write);
             if(wrote < 0)
             {
-                if(errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
-                {
-                    ERR("write failed: %s\n", strerror(errno));
-                    ALCsolarisBackend_lock(self);
-                    aluHandleDisconnect(Device);
-                    ALCsolarisBackend_unlock(self);
-                    break;
-                }
-
-                al_nssleep(1000000);
-                continue;
+                if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+                    continue;
+                ERR("write failed: %s\n", strerror(errno));
+                aluHandleDisconnect(device);
+                break;
             }
 
-            len -= wrote;
-            WritePtr += wrote;
+            to_write -= wrote;
+            write_ptr += wrote;
         }
     }
+    ALCsolarisBackend_unlock(self);
 
     return 0;
 }
@@ -250,7 +273,7 @@ static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
 
 static ALCboolean ALCsolarisBackend_start(ALCsolarisBackend *self)
 {
-    self->killNow = 0;
+    ATOMIC_STORE_SEQ(&self->killNow, AL_FALSE);
     if(althrd_create(&self->thread, ALCsolarisBackend_mixerProc, self) != althrd_success)
         return ALC_FALSE;
     return ALC_TRUE;
@@ -260,10 +283,9 @@ static void ALCsolarisBackend_stop(ALCsolarisBackend *self)
 {
     int res;
 
-    if(self->killNow)
+    if(ATOMIC_EXCHANGE_SEQ(int, &self->killNow, AL_TRUE))
         return;
 
-    self->killNow = 1;
     althrd_join(self->thread, &res);
 
     if(ioctl(self->fd, AUDIO_DRAIN) < 0)

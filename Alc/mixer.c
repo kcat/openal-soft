@@ -43,22 +43,21 @@ static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,
 
 extern inline void InitiatePositionArrays(ALuint frac, ALint increment, ALuint *restrict frac_arr, ALint *restrict pos_arr, ALsizei size);
 
-alignas(16) union ResamplerCoeffs ResampleCoeffs;
+alignas(16) ALfloat ResampleCoeffs_FIR4[FRACTIONONE][4];
 
 
 enum Resampler {
     PointResampler,
     LinearResampler,
     FIR4Resampler,
-    FIR8Resampler,
     BSincResampler,
 
     ResamplerDefault = LinearResampler
 };
 
-/* FIR8 requires 3 extra samples before the current position, and 4 after. */
-static_assert(MAX_PRE_SAMPLES >= 3, "MAX_PRE_SAMPLES must be at least 3!");
-static_assert(MAX_POST_SAMPLES >= 4, "MAX_POST_SAMPLES must be at least 4!");
+/* BSinc requires up to 11 extra samples before the current position, and 12 after. */
+static_assert(MAX_PRE_SAMPLES >= 11, "MAX_PRE_SAMPLES must be at least 11!");
+static_assert(MAX_POST_SAMPLES >= 12, "MAX_POST_SAMPLES must be at least 12!");
 
 
 static MixerFunc MixSamples = Mix_C;
@@ -140,20 +139,6 @@ static inline ResamplerFunc SelectResampler(enum Resampler resampler)
                 return Resample_fir4_32_SSE3;
 #endif
             return Resample_fir4_32_C;
-        case FIR8Resampler:
-#ifdef HAVE_NEON
-            if((CPUCapFlags&CPU_CAP_NEON))
-                return Resample_fir8_32_Neon;
-#endif
-#ifdef HAVE_SSE4_1
-            if((CPUCapFlags&CPU_CAP_SSE4_1))
-                return Resample_fir8_32_SSE41;
-#endif
-#ifdef HAVE_SSE3
-            if((CPUCapFlags&CPU_CAP_SSE3))
-                return Resample_fir8_32_SSE3;
-#endif
-            return Resample_fir8_32_C;
         case BSincResampler:
 #ifdef HAVE_NEON
             if((CPUCapFlags&CPU_CAP_NEON))
@@ -264,13 +249,11 @@ void aluInitMixer(void)
             resampler = LinearResampler;
         else if(strcasecmp(str, "sinc4") == 0)
             resampler = FIR4Resampler;
-        else if(strcasecmp(str, "sinc8") == 0)
-            resampler = FIR8Resampler;
         else if(strcasecmp(str, "bsinc") == 0)
             resampler = BSincResampler;
-        else if(strcasecmp(str, "cubic") == 0)
+        else if(strcasecmp(str, "cubic") == 0 || strcasecmp(str, "sinc8") == 0)
         {
-            WARN("Resampler option \"cubic\" is deprecated, using sinc4\n");
+            WARN("Resampler option \"%s\" is deprecated, using sinc4\n", str);
             resampler = FIR4Resampler;
         }
         else
@@ -284,28 +267,14 @@ void aluInitMixer(void)
         }
     }
 
-    if(resampler == FIR8Resampler)
-        for(i = 0;i < FRACTIONONE;i++)
-        {
-            ALdouble mu = (ALdouble)i / FRACTIONONE;
-            ResampleCoeffs.FIR8[i][0] = SincKaiser(4.0, mu - -3.0);
-            ResampleCoeffs.FIR8[i][1] = SincKaiser(4.0, mu - -2.0);
-            ResampleCoeffs.FIR8[i][2] = SincKaiser(4.0, mu - -1.0);
-            ResampleCoeffs.FIR8[i][3] = SincKaiser(4.0, mu -  0.0);
-            ResampleCoeffs.FIR8[i][4] = SincKaiser(4.0, mu -  1.0);
-            ResampleCoeffs.FIR8[i][5] = SincKaiser(4.0, mu -  2.0);
-            ResampleCoeffs.FIR8[i][6] = SincKaiser(4.0, mu -  3.0);
-            ResampleCoeffs.FIR8[i][7] = SincKaiser(4.0, mu -  4.0);
-        }
-    else if(resampler == FIR4Resampler)
-        for(i = 0;i < FRACTIONONE;i++)
-        {
-            ALdouble mu = (ALdouble)i / FRACTIONONE;
-            ResampleCoeffs.FIR4[i][0] = SincKaiser(2.0, mu - -1.0);
-            ResampleCoeffs.FIR4[i][1] = SincKaiser(2.0, mu -  0.0);
-            ResampleCoeffs.FIR4[i][2] = SincKaiser(2.0, mu -  1.0);
-            ResampleCoeffs.FIR4[i][3] = SincKaiser(2.0, mu -  2.0);
-        }
+    for(i = 0;i < FRACTIONONE;i++)
+    {
+        ALdouble mu = (ALdouble)i / FRACTIONONE;
+        ResampleCoeffs_FIR4[i][0] = SincKaiser(2.0, mu - -1.0);
+        ResampleCoeffs_FIR4[i][1] = SincKaiser(2.0, mu -  0.0);
+        ResampleCoeffs_FIR4[i][2] = SincKaiser(2.0, mu -  1.0);
+        ResampleCoeffs_FIR4[i][3] = SincKaiser(2.0, mu -  2.0);
+    }
 
     MixHrtfSamples = SelectHrtfMixer();
     MixSamples = SelectMixer();

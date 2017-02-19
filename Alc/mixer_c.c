@@ -14,8 +14,6 @@ static inline ALfloat lerp32(const ALfloat *restrict vals, ALuint frac)
 { return lerp(vals[0], vals[1], frac * (1.0f/FRACTIONONE)); }
 static inline ALfloat fir4_32(const ALfloat *restrict vals, ALuint frac)
 { return resample_fir4(vals[-1], vals[0], vals[1], vals[2], frac); }
-static inline ALfloat fir8_32(const ALfloat *restrict vals, ALuint frac)
-{ return resample_fir8(vals[-3], vals[-2], vals[-1], vals[0], vals[1], vals[2], vals[3], vals[4], frac); }
 
 
 const ALfloat *Resample_copy32_C(const InterpState* UNUSED(state),
@@ -51,7 +49,6 @@ const ALfloat *Resample_##Sampler##_C(const InterpState* UNUSED(state),       \
 DECL_TEMPLATE(point32)
 DECL_TEMPLATE(lerp32)
 DECL_TEMPLATE(fir4_32)
-DECL_TEMPLATE(fir8_32)
 
 #undef DECL_TEMPLATE
 

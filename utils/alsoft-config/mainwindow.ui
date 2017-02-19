@@ -7,13 +7,13 @@
     <x>0</x>
     <y>0</y>
     <width>564</width>
-    <height>454</height>
+    <height>460</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>564</width>
-    <height>454</height>
+    <height>460</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -131,8 +131,8 @@ to stereo output.</string>
        <rect>
         <x>380</x>
         <y>20</y>
-        <width>96</width>
-        <height>22</height>
+        <width>91</width>
+        <height>29</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -2075,8 +2075,8 @@ added by the ALC_EXT_DEDICATED extension.</string>
        <rect>
         <x>160</x>
         <y>20</y>
-        <width>131</width>
-        <height>22</height>
+        <width>123</width>
+        <height>29</height>
        </rect>
       </property>
       <property name="sizeAdjustPolicy">
@@ -2245,7 +2245,7 @@ added by the ALC_EXT_DEDICATED extension.</string>
      <x>0</x>
      <y>0</y>
      <width>564</width>
-     <height>19</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

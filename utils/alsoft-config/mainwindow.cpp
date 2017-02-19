@@ -101,7 +101,6 @@ static const struct NameValuePair {
     { "Linear", "linear" },
     { "Default (Linear)", "" },
     { "4-Point Sinc", "sinc4" },
-    { "8-Point Sinc", "sinc8" },
     { "Band-limited Sinc", "bsinc" },
 
     { "", "" }
@@ -598,9 +597,10 @@ void MainWindow::loadConfig(const QString &fname)
 
     QString resampler = settings.value("resampler").toString().trimmed();
     ui->resamplerSlider->setValue(0);
-    /* The "cubic" resampler is no longer supported. It's been replaced by
-     * "sinc4". */
-    if(resampler == "cubic")
+    /* The "cubic" and "sinc8" resamplers are no longer supported. Use "sinc4"
+     * as a fallback.
+     */
+    if(resampler == "cubic" || resampler == "sinc8")
         resampler = "sinc4";
     for(int i = 0;resamplerList[i].name[0];i++)
     {

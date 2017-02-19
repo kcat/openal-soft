@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "alMain.h"
+#include "alu.h"
 
 #include "backends/base.h"
 
@@ -45,8 +46,12 @@ ClockLatency ALCbackend_getClockLatency(ALCbackend *self)
 
     almtx_lock(&self->mMutex);
     ret.ClockTime = GetDeviceClockTime(device);
-    // TODO: Perhaps should be NumUpdates-1 worth of UpdateSize?
-    ret.Latency = 0;
+    /* NOTE: The device will generally have about all but one periods filled at
+     * any given time during playback. Without a more accurate measurement from
+     * the output, this is an okay approximation.
+     */
+    ret.Latency = device->UpdateSize * DEVICE_CLOCK_RES / device->Frequency *
+                  maxu(device->NumUpdates-1, 1);
     almtx_unlock(&self->mMutex);
 
     return ret;

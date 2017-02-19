@@ -177,7 +177,9 @@ static int ALCportPlayback_WriteCallback(const void *UNUSED(inputBuffer), void *
 {
     ALCportPlayback *self = userData;
 
+    ALCportPlayback_lock(self);
     aluMixData(STATIC_CAST(ALCbackend, self)->mDevice, outputBuffer, framesPerBuffer);
+    ALCportPlayback_unlock(self);
     return 0;
 }
 

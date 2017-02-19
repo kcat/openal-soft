@@ -109,7 +109,9 @@ static int ALCnullBackend_mixerProc(void *ptr)
             al_nssleep(restTime);
         else while(avail-done >= device->UpdateSize)
         {
+            ALCnullBackend_lock(self);
             aluMixData(device, NULL, device->UpdateSize);
+            ALCnullBackend_unlock(self);
             done += device->UpdateSize;
         }
     }

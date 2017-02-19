@@ -89,8 +89,10 @@ static OSStatus ca_callback(void *inRefCon, AudioUnitRenderActionFlags *ioAction
     ALCdevice *device = (ALCdevice*)inRefCon;
     ca_data *data = (ca_data*)device->ExtraData;
 
+    ALCdevice_Lock(device);
     aluMixData(device, ioData->mBuffers[0].mData,
                ioData->mBuffers[0].mDataByteSize / data->frameSize);
+    ALCdevice_Unlock(device);
 
     return noErr;
 }

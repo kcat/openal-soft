@@ -232,8 +232,10 @@ FORCE_ALIGN static int ALCwinmmPlayback_mixerProc(void *arg)
         }
 
         WaveHdr = ((WAVEHDR*)msg.lParam);
+        ALCwinmmPlayback_lock(self);
         aluMixData(device, WaveHdr->lpData, WaveHdr->dwBufferLength /
                                             self->Format.nBlockAlign);
+        ALCwinmmPlayback_unlock(self);
 
         // Send buffer back to play more data
         waveOutWrite(self->OutHdl, WaveHdr, sizeof(WAVEHDR));

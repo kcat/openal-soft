@@ -629,10 +629,10 @@ FORCE_ALIGN static int ALCmmdevPlayback_mixerProc(void *arg)
         hr = IAudioRenderClient_GetBuffer(self->render, len, &buffer);
         if(SUCCEEDED(hr))
         {
-            V0(device->Backend,lock)();
+            ALCmmdevPlayback_lock(self);
             aluMixData(device, buffer, len);
             self->Padding = written + len;
-            V0(device->Backend,unlock)();
+            ALCmmdevPlayback_unlock(self);
             hr = IAudioRenderClient_ReleaseBuffer(self->render, len, 0);
         }
         if(FAILED(hr))

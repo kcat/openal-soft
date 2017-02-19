@@ -299,8 +299,10 @@ FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(void *ptr)
         if(SUCCEEDED(err))
         {
             // If we have an active context, mix data directly into output buffer otherwise fill with silence
+            ALCdevice_Lock(device);
             aluMixData(device, WritePtr1, WriteCnt1/FrameSize);
             aluMixData(device, WritePtr2, WriteCnt2/FrameSize);
+            ALCdevice_Unlock(device);
 
             // Unlock output buffer only when successfully locked
             IDirectSoundBuffer_Unlock(self->Buffer, WritePtr1, WriteCnt1, WritePtr2, WriteCnt2);

@@ -33,6 +33,8 @@
 #include "alu.h"
 #include "threads.h"
 
+#include "backends/base.h"
+
 
 typedef struct {
     snd_pcm_t* pcmHandle;
@@ -161,13 +163,13 @@ FORCE_ALIGN static int qsa_proc_playback(void* ptr)
 {
     ALCdevice* device=(ALCdevice*)ptr;
     qsa_data* data=(qsa_data*)device->ExtraData;
-    char* write_ptr;
-    int avail;
     snd_pcm_channel_status_t status;
     struct sched_param param;
-    fd_set wfds;
-    int selectret;
     struct timeval timeout;
+    char* write_ptr;
+    fd_set wfds;
+    ALint len;
+    int sret;
 
     SetRTPriority();
     althrd_setname(althrd_current(), MIXER_THREAD_NAME);
@@ -177,59 +179,53 @@ FORCE_ALIGN static int qsa_proc_playback(void* ptr)
     param.sched_priority=param.sched_curpriority+1;
     SchedSet(0, 0, SCHED_NOCHANGE, &param);
 
-    ALint frame_size=FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    const ALint frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
 
-    while (!data->killNow)
+    V0(device->Backend,lock)();
+    while(!data->killNow)
     {
-        ALint len=data->size;
-        write_ptr=data->buffer;
+        FD_ZERO(&wfds);
+        FD_SET(data->audio_fd, &wfds);
+        timeout.tv_sec=2;
+        timeout.tv_usec=0;
 
-        avail=len/frame_size;
-        aluMixData(device, write_ptr, avail);
-
-        while (len>0 && !data->killNow)
+        /* Select also works like time slice to OS */
+        V0(device->Backend,unlock)();
+        sret = select(data->audio_fd+1, NULL, &wfds, NULL, &timeout);
+        V0(device->Backend,lock)();
+        if(sret == -1)
         {
-            FD_ZERO(&wfds);
-            FD_SET(data->audio_fd, &wfds);
-            timeout.tv_sec=2;
-            timeout.tv_usec=0;
+            ERR("select error: %s\n", strerror(errno));
+            aluHandleDisconnect(device);
+            break;
+        }
+        if(sret == 0)
+        {
+            ERR("select timeout\n");
+            continue;
+        }
 
-            /* Select also works like time slice to OS */
-            selectret=select(data->audio_fd+1, NULL, &wfds, NULL, &timeout);
-            switch (selectret)
+        len = data->size;
+        write_ptr = data->buffer;
+        aluMixData(device, write_ptr, len/frame_size);
+        while(len>0 && !data->killNow)
+        {
+            int wrote = snd_pcm_plugin_write(data->pcmHandle, write_ptr, len);
+            if(wrote <= 0)
             {
-                case -1:
-                     aluHandleDisconnect(device);
-                     return 1;
-                case 0:
-                     break;
-                default:
-                     if (FD_ISSET(data->audio_fd, &wfds))
-                     {
-                         break;
-                     }
-                     break;
-            }
-
-            int wrote=snd_pcm_plugin_write(data->pcmHandle, write_ptr, len);
-
-            if (wrote<=0)
-            {
-                if ((errno==EAGAIN) || (errno==EWOULDBLOCK))
-                {
+                if(errno==EAGAIN || errno==EWOULDBLOCK)
                     continue;
-                }
 
-                memset(&status, 0, sizeof (status));
-                status.channel=SND_PCM_CHANNEL_PLAYBACK;
+                memset(&status, 0, sizeof(status));
+                status.channel = SND_PCM_CHANNEL_PLAYBACK;
 
                 snd_pcm_plugin_status(data->pcmHandle, &status);
 
                 /* we need to reinitialize the sound channel if we've underrun the buffer */
-                if ((status.status==SND_PCM_STATUS_UNDERRUN) ||
-                    (status.status==SND_PCM_STATUS_READY))
+                if(status.status == SND_PCM_STATUS_UNDERRUN ||
+                   status.status == SND_PCM_STATUS_READY)
                 {
-                    if ((snd_pcm_plugin_prepare(data->pcmHandle, SND_PCM_CHANNEL_PLAYBACK))<0)
+                    if(snd_pcm_plugin_prepare(data->pcmHandle, SND_PCM_CHANNEL_PLAYBACK) < 0)
                     {
                         aluHandleDisconnect(device);
                         break;
@@ -238,11 +234,12 @@ FORCE_ALIGN static int qsa_proc_playback(void* ptr)
             }
             else
             {
-                write_ptr+=wrote;
-                len-=wrote;
+                write_ptr += wrote;
+                len -= wrote;
             }
         }
     }
+    V0(device->Backend,unlock)();
 
     return 0;
 }

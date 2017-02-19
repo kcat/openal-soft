@@ -105,7 +105,9 @@ static int ALCsndioBackend_mixerProc(void *ptr)
         ALsizei len = self->data_size;
         ALubyte *WritePtr = self->mix_data;
 
+        ALCsndioBackend_lock(self);
         aluMixData(device, WritePtr, len/frameSize);
+        ALCsndioBackend_unlock(self);
         while(len > 0 && !self->killNow)
         {
             wrote = sio_write(self->sndHandle, WritePtr, len);

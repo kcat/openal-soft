@@ -1423,7 +1423,6 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 memset(device->FOAOut.Buffer[c], 0, SamplesToDo*sizeof(ALfloat));
 
         IncrementRef(&device->MixCount);
-        V0(device->Backend,lock)();
 
         if((slot=device->DefaultSlot) != NULL)
         {
@@ -1488,7 +1487,6 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         device->SamplesDone += SamplesToDo;
         device->ClockBase += (device->SamplesDone/device->Frequency) * DEVICE_CLOCK_RES;
         device->SamplesDone %= device->Frequency;
-        V0(device->Backend,unlock)();
         IncrementRef(&device->MixCount);
 
         if(device->Hrtf.Handle)

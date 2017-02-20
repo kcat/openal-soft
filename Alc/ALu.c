@@ -1373,15 +1373,39 @@ static inline ALubyte aluF2UB(ALfloat val)
 { return aluF2B(val)+128; }
 
 #define DECL_TEMPLATE(T, func)                                                \
-static void Write_##T(ALfloatBUFFERSIZE *InBuffer, ALvoid *OutBuffer,         \
-                      ALsizei SamplesToDo, ALsizei numchans)                  \
+static void Write_##T(const ALfloatBUFFERSIZE *InBuffer, ALvoid *OutBuffer,   \
+                      DistanceComp *distcomp, ALsizei SamplesToDo,            \
+                      ALsizei numchans)                                       \
 {                                                                             \
     ALsizei i, j;                                                             \
     for(j = 0;j < numchans;j++)                                               \
     {                                                                         \
         const ALfloat *in = InBuffer[j];                                      \
         T *restrict out = (T*)OutBuffer + j;                                  \
-        for(i = 0;i < SamplesToDo;i++)                                        \
+        const ALfloat gain = distcomp[j].Gain;                                \
+        const ALsizei base = distcomp[j].Length;                              \
+        if(base > 0 || gain != 1.0f)                                          \
+        {                                                                     \
+            if(SamplesToDo >= base)                                           \
+            {                                                                 \
+                for(i = 0;i < base;i++)                                       \
+                    out[i*numchans] = func(distcomp[j].Buffer[i]*gain);       \
+                for(;i < SamplesToDo;i++)                                     \
+                    out[i*numchans] = func(in[i-base]*gain);                  \
+                memcpy(distcomp[j].Buffer, &in[SamplesToDo-base],             \
+                        base*sizeof(ALfloat));                                \
+            }                                                                 \
+            else                                                              \
+            {                                                                 \
+                for(i = 0;i < SamplesToDo;i++)                                \
+                    out[i*numchans] = func(distcomp[j].Buffer[i]*gain);       \
+                memmove(distcomp[j].Buffer, distcomp[j].Buffer+SamplesToDo,   \
+                        (base-SamplesToDo)*sizeof(ALfloat));                  \
+                memcpy(distcomp[j].Buffer+base-SamplesToDo, in,               \
+                        SamplesToDo*sizeof(ALfloat));                         \
+            }                                                                 \
+        }                                                                     \
+        else for(i = 0;i < SamplesToDo;i++)                                   \
             out[i*numchans] = func(in[i]);                                    \
     }                                                                         \
 }
@@ -1564,33 +1588,34 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         {
             ALfloat (*OutBuffer)[BUFFERSIZE] = device->RealOut.Buffer;
             ALsizei OutChannels = device->RealOut.NumChannels;
+            DistanceComp *DistComp = device->ChannelDelay;
 
-#define WRITE(T, a, b, c, d) do {               \
-    Write_##T((a), (b), (c), (d));              \
-    buffer = (T*)buffer + (c)*(d);              \
+#define WRITE(T, a, b, c, d, e) do {                                          \
+    Write_##T(SAFE_CONST(ALfloatBUFFERSIZE*,(a)), (b), (c), (d), (e));        \
+    buffer = (T*)buffer + (d)*(e);                                            \
 } while(0)
             switch(device->FmtType)
             {
                 case DevFmtByte:
-                    WRITE(ALbyte, OutBuffer, buffer, SamplesToDo, OutChannels);
+                    WRITE(ALbyte, OutBuffer, buffer, DistComp, SamplesToDo, OutChannels);
                     break;
                 case DevFmtUByte:
-                    WRITE(ALubyte, OutBuffer, buffer, SamplesToDo, OutChannels);
+                    WRITE(ALubyte, OutBuffer, buffer, DistComp, SamplesToDo, OutChannels);
                     break;
                 case DevFmtShort:
-                    WRITE(ALshort, OutBuffer, buffer, SamplesToDo, OutChannels);
+                    WRITE(ALshort, OutBuffer, buffer, DistComp, SamplesToDo, OutChannels);
                     break;
                 case DevFmtUShort:
-                    WRITE(ALushort, OutBuffer, buffer, SamplesToDo, OutChannels);
+                    WRITE(ALushort, OutBuffer, buffer, DistComp, SamplesToDo, OutChannels);
                     break;
                 case DevFmtInt:
-                    WRITE(ALint, OutBuffer, buffer, SamplesToDo, OutChannels);
+                    WRITE(ALint, OutBuffer, buffer, DistComp, SamplesToDo, OutChannels);
                     break;
                 case DevFmtUInt:
-                    WRITE(ALuint, OutBuffer, buffer, SamplesToDo, OutChannels);
+                    WRITE(ALuint, OutBuffer, buffer, DistComp, SamplesToDo, OutChannels);
                     break;
                 case DevFmtFloat:
-                    WRITE(ALfloat, OutBuffer, buffer, SamplesToDo, OutChannels);
+                    WRITE(ALfloat, OutBuffer, buffer, DistComp, SamplesToDo, OutChannels);
                     break;
             }
 #undef WRITE

@@ -693,13 +693,10 @@ static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const A
 static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei speakermap[MAX_OUTPUT_CHANNELS])
 {
     const char *devname;
-    int decflags = 0;
     size_t count;
     size_t i;
 
     devname = al_string_get_cstr(device->DeviceName);
-    if(GetConfigValueBool(devname, "decoder", "distance-comp", 1))
-        decflags |= BFDF_DistanceComp;
 
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
@@ -731,8 +728,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsiz
         (conf->ChanMask > 0xf) ? (conf->ChanMask > 0x1ff) ? "third" : "second" : "first",
         (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? " periphonic" : ""
     );
-    bformatdec_reset(device->AmbiDecoder, conf, count, device->Frequency,
-                     speakermap, decflags);
+    bformatdec_reset(device->AmbiDecoder, conf, count, device->Frequency, speakermap);
 
     if(bformatdec_getOrder(device->AmbiDecoder) < 2)
     {
@@ -758,6 +754,41 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsiz
             }
         }
         device->FOAOut.CoeffCount = 0;
+    }
+
+    ALfloat maxdist = 0.0f;
+    for(i = 0;i < (size_t)conf->NumSpeakers;i++)
+        maxdist = maxf(maxdist, conf->Speakers[i].Distance);
+
+    if(GetConfigValueBool(devname, "decoder", "distance-comp", 1) && maxdist > 0.0f)
+    {
+        ALfloat srate = (ALfloat)device->Frequency;
+        for(i = 0;i < (size_t)conf->NumSpeakers;i++)
+        {
+            ALsizei chan = speakermap[i];
+            ALfloat delay;
+
+            /* Distance compensation only delays in steps of the sample rate.
+             * This is a bit less accurate since the delay time falls to the
+             * nearest sample time, but it's far simpler as it doesn't have to
+             * deal with phase offsets. This means at 48khz, for instance, the
+             * distance delay will be in steps of about 7 millimeters.
+             */
+            delay = floorf((maxdist-conf->Speakers[i].Distance) / SPEEDOFSOUNDMETRESPERSEC *
+                           srate + 0.5f);
+            if(delay >= (ALfloat)MAX_DELAY_LENGTH)
+                ERR("Delay for speaker \"%s\" exceeds buffer length (%f >= %u)\n",
+                    al_string_get_cstr(conf->Speakers[i].Name), delay, MAX_DELAY_LENGTH);
+
+            device->ChannelDelay[chan].Length = (ALsizei)clampf(
+                delay, 0.0f, (ALfloat)(MAX_DELAY_LENGTH-1)
+            );
+            device->ChannelDelay[chan].Gain = conf->Speakers[i].Distance / maxdist;
+            TRACE("Channel %u \"%s\" distance compensation: %d samples, %f gain\n", chan,
+                al_string_get_cstr(conf->Speakers[i].Name), device->ChannelDelay[chan].Length,
+                device->ChannelDelay[chan].Gain
+            );
+        }
     }
 }
 
@@ -886,6 +917,13 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     memset(&device->Dry.Ambi, 0, sizeof(device->Dry.Ambi));
     device->Dry.CoeffCount = 0;
     device->Dry.NumChannels = 0;
+
+    memset(device->ChannelDelay, 0, sizeof(device->ChannelDelay));
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+    {
+        device->ChannelDelay[i].Gain = 1.0f;
+        device->ChannelDelay[i].Length = 0;
+    }
 
     if(device->FmtChans != DevFmtStereo)
     {

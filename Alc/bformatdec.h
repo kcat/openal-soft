@@ -33,7 +33,7 @@ struct BFormatDec *bformatdec_alloc();
 void bformatdec_free(struct BFormatDec *dec);
 int bformatdec_getOrder(const struct BFormatDec *dec);
 int bformatdec_isPeriphonic(const struct BFormatDec *dec);
-void bformatdec_reset(struct BFormatDec *dec, const struct AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALsizei chanmap[MAX_OUTPUT_CHANNELS], int flags);
+void bformatdec_reset(struct BFormatDec *dec, const struct AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALsizei chanmap[MAX_OUTPUT_CHANNELS]);
 
 /* Decodes the ambisonic input to the given output channels. */
 void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALsizei OutChannels, const ALfloat (*restrict InSamples)[BUFFERSIZE], ALsizei SamplesToDo);

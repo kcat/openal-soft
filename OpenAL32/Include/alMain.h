@@ -603,6 +603,15 @@ typedef struct HrtfEntry {
 TYPEDEF_VECTOR(HrtfEntry, vector_HrtfEntry)
 
 
+/* Maximum delay in samples for speaker distance compensation. */
+#define MAX_DELAY_LENGTH 128
+
+typedef struct DistanceComp {
+    ALfloat Gain;
+    ALsizei Length; /* Valid range is [0...MAX_DELAY_LENGTH). */
+    alignas(16) ALfloat Buffer[MAX_DELAY_LENGTH];
+} DistanceComp;
+
 /* Size for temporary storage of buffer data, in ALfloats. Larger values need
  * more memory, while smaller values may need more iterations. The value needs
  * to be a sensible size, however, as it constrains the max stepping value used
@@ -722,6 +731,9 @@ struct ALCdevice_struct
         ALfloat (*Buffer)[BUFFERSIZE];
         ALsizei NumChannels;
     } RealOut;
+
+    /* Delay buffers used to compensate for speaker distances. */
+    DistanceComp ChannelDelay[MAX_OUTPUT_CHANNELS];
 
     /* Running count of the mixer invocations, in 31.1 fixed point. This
      * actually increments *twice* when mixing, first at the start and then at

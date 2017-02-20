@@ -622,7 +622,7 @@ configuration file.</string>
         <x>-10</x>
         <y>100</y>
         <width>551</width>
-        <height>191</height>
+        <height>161</height>
        </rect>
       </property>
       <property name="title">
@@ -703,56 +703,17 @@ configuration file.</string>
         </rect>
        </property>
        <property name="text">
-        <string>5.1 Surround (Side):</string>
+        <string>5.1 Surround:</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-      <widget class="QLabel" name="label_27">
-       <property name="geometry">
-        <rect>
-         <x>20</x>
-         <y>90</y>
-         <width>121</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>5.1 Surround (Rear):</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="decoder51RearLineEdit">
-       <property name="geometry">
-        <rect>
-         <x>150</x>
-         <y>90</y>
-         <width>281</width>
-         <height>21</height>
-        </rect>
-       </property>
-      </widget>
-      <widget class="QPushButton" name="decoder51RearButton">
-       <property name="geometry">
-        <rect>
-         <x>440</x>
-         <y>90</y>
-         <width>91</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Browse...</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_28">
        <property name="geometry">
         <rect>
          <x>20</x>
-         <y>120</y>
+         <y>90</y>
          <width>121</width>
          <height>21</height>
         </rect>
@@ -768,7 +729,7 @@ configuration file.</string>
        <property name="geometry">
         <rect>
          <x>150</x>
-         <y>120</y>
+         <y>90</y>
          <width>281</width>
          <height>21</height>
         </rect>
@@ -778,7 +739,7 @@ configuration file.</string>
        <property name="geometry">
         <rect>
          <x>440</x>
-         <y>120</y>
+         <y>90</y>
          <width>91</width>
          <height>21</height>
         </rect>
@@ -791,7 +752,7 @@ configuration file.</string>
        <property name="geometry">
         <rect>
          <x>440</x>
-         <y>150</y>
+         <y>120</y>
          <width>91</width>
          <height>21</height>
         </rect>
@@ -804,7 +765,7 @@ configuration file.</string>
        <property name="geometry">
         <rect>
          <x>150</x>
-         <y>150</y>
+         <y>120</y>
          <width>281</width>
          <height>21</height>
         </rect>
@@ -814,7 +775,7 @@ configuration file.</string>
        <property name="geometry">
         <rect>
          <x>20</x>
-         <y>150</y>
+         <y>120</y>
          <width>121</width>
          <height>21</height>
         </rect>

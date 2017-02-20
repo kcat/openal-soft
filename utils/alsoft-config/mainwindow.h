@@ -39,7 +39,6 @@ private slots:
 
     void selectQuadDecoderFile();
     void select51DecoderFile();
-    void select51RearDecoderFile();
     void select61DecoderFile();
     void select71DecoderFile();
 

@@ -335,8 +335,6 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->decoderQuadButton, SIGNAL(clicked()), this, SLOT(selectQuadDecoderFile()));
     connect(ui->decoder51LineEdit, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
     connect(ui->decoder51Button, SIGNAL(clicked()), this, SLOT(select51DecoderFile()));
-    connect(ui->decoder51RearLineEdit, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
-    connect(ui->decoder51RearButton, SIGNAL(clicked()), this, SLOT(select51RearDecoderFile()));
     connect(ui->decoder61LineEdit, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
     connect(ui->decoder61Button, SIGNAL(clicked()), this, SLOT(select61DecoderFile()));
     connect(ui->decoder71LineEdit, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
@@ -671,7 +669,6 @@ void MainWindow::loadConfig(const QString &fname)
 
     ui->decoderQuadLineEdit->setText(settings.value("decoder/quad").toString());
     ui->decoder51LineEdit->setText(settings.value("decoder/surround51").toString());
-    ui->decoder51RearLineEdit->setText(settings.value("decoder/surround51rear").toString());
     ui->decoder61LineEdit->setText(settings.value("decoder/surround61").toString());
     ui->decoder71LineEdit->setText(settings.value("decoder/surround71").toString());
 
@@ -901,7 +898,6 @@ void MainWindow::saveConfig(const QString &fname) const
 
     settings.setValue("decoder/quad", ui->decoderQuadLineEdit->text());
     settings.setValue("decoder/surround51", ui->decoder51LineEdit->text());
-    settings.setValue("decoder/surround51rear", ui->decoder51RearLineEdit->text());
     settings.setValue("decoder/surround61", ui->decoder61LineEdit->text());
     settings.setValue("decoder/surround71", ui->decoder71LineEdit->text());
 
@@ -1123,9 +1119,7 @@ void MainWindow::toggleHqState(int state)
 void MainWindow::selectQuadDecoderFile()
 { selectDecoderFile(ui->decoderQuadLineEdit, "Select Quadrophonic Decoder");}
 void MainWindow::select51DecoderFile()
-{ selectDecoderFile(ui->decoder51LineEdit, "Select 5.1 Surround (Side) Decoder");}
-void MainWindow::select51RearDecoderFile()
-{ selectDecoderFile(ui->decoder51RearLineEdit, "Select 5.1 Surround (Rear) Decoder");}
+{ selectDecoderFile(ui->decoder51LineEdit, "Select 5.1 Surround Decoder");}
 void MainWindow::select61DecoderFile()
 { selectDecoderFile(ui->decoder61LineEdit, "Select 6.1 Surround Decoder");}
 void MainWindow::select71DecoderFile()

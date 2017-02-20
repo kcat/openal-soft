@@ -940,8 +940,8 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         switch(device->FmtChans)
         {
             case DevFmtQuad: layout = "quad"; break;
-            case DevFmtX51: layout = "surround51"; break;
-            case DevFmtX51Rear: layout = "surround51rear"; break;
+            case DevFmtX51: /* fall-through */
+            case DevFmtX51Rear: layout = "surround51"; break;
             case DevFmtX61: layout = "surround61"; break;
             case DevFmtX71: layout = "surround71"; break;
             /* Mono, Stereo, and Ambisonics output don't use custom decoders. */

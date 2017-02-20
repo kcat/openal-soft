@@ -246,14 +246,9 @@ distance-comp = true
 quad =
 
 ## surround51:
-#  Decoder configuration file for 5.1 Surround (Side) channel output. See
-#  docs/ambdec.txt for a description of the file format.
+#  Decoder configuration file for 5.1 Surround (Side and Rear) channel output.
+#  See docs/ambdec.txt for a description of the file format.
 surround51 =
-
-## surround51rear:
-#  Decoder configuration file for 5.1 Surround (Rear) channel output. See
-#  docs/ambdec.txt for a description of the file format.
-surround51rear =
 
 ## surround61:
 #  Decoder configuration file for 6.1 Surround channel output. See

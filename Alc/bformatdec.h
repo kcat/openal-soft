@@ -25,9 +25,6 @@ struct AmbDecConf;
 struct BFormatDec;
 struct AmbiUpsampler;
 
-enum BFormatDecFlags {
-    BFDF_DistanceComp = 1<<0
-};
 
 struct BFormatDec *bformatdec_alloc();
 void bformatdec_free(struct BFormatDec *dec);

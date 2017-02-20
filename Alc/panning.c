@@ -610,6 +610,47 @@ static void InitPanning(ALCdevice *device)
     }
 }
 
+static void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei speakermap[MAX_OUTPUT_CHANNELS])
+{
+    const char *devname = al_string_get_cstr(device->DeviceName);
+    ALfloat maxdist = 0.0f;
+    ALsizei i;
+
+    for(i = 0;i < conf->NumSpeakers;i++)
+        maxdist = maxf(maxdist, conf->Speakers[i].Distance);
+
+    if(GetConfigValueBool(devname, "decoder", "distance-comp", 1) && maxdist > 0.0f)
+    {
+        ALfloat srate = (ALfloat)device->Frequency;
+        for(i = 0;i < conf->NumSpeakers;i++)
+        {
+            ALsizei chan = speakermap[i];
+            ALfloat delay;
+
+            /* Distance compensation only delays in steps of the sample rate.
+             * This is a bit less accurate since the delay time falls to the
+             * nearest sample time, but it's far simpler as it doesn't have to
+             * deal with phase offsets. This means at 48khz, for instance, the
+             * distance delay will be in steps of about 7 millimeters.
+             */
+            delay = floorf((maxdist-conf->Speakers[i].Distance) / SPEEDOFSOUNDMETRESPERSEC *
+                           srate + 0.5f);
+            if(delay >= (ALfloat)MAX_DELAY_LENGTH)
+                ERR("Delay for speaker \"%s\" exceeds buffer length (%f >= %u)\n",
+                    al_string_get_cstr(conf->Speakers[i].Name), delay, MAX_DELAY_LENGTH);
+
+            device->ChannelDelay[chan].Length = (ALsizei)clampf(
+                delay, 0.0f, (ALfloat)(MAX_DELAY_LENGTH-1)
+            );
+            device->ChannelDelay[chan].Gain = conf->Speakers[i].Distance / maxdist;
+            TRACE("Channel %u \"%s\" distance compensation: %d samples, %f gain\n", chan,
+                al_string_get_cstr(conf->Speakers[i].Name), device->ChannelDelay[chan].Length,
+                device->ChannelDelay[chan].Gain
+            );
+        }
+    }
+}
+
 static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei speakermap[MAX_OUTPUT_CHANNELS])
 {
     ChannelMap chanmap[MAX_OUTPUT_CHANNELS];
@@ -688,15 +729,14 @@ static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const A
             device->FOAOut.Ambi.Coeffs[i][j] = device->Dry.Ambi.Coeffs[i][j] * xyz_scale;
     }
     device->FOAOut.CoeffCount = 4;
+
+    InitDistanceComp(device, conf, speakermap);
 }
 
 static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei speakermap[MAX_OUTPUT_CHANNELS])
 {
-    const char *devname;
     size_t count;
     size_t i;
-
-    devname = al_string_get_cstr(device->DeviceName);
 
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
@@ -756,40 +796,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsiz
         device->FOAOut.CoeffCount = 0;
     }
 
-    ALfloat maxdist = 0.0f;
-    for(i = 0;i < (size_t)conf->NumSpeakers;i++)
-        maxdist = maxf(maxdist, conf->Speakers[i].Distance);
-
-    if(GetConfigValueBool(devname, "decoder", "distance-comp", 1) && maxdist > 0.0f)
-    {
-        ALfloat srate = (ALfloat)device->Frequency;
-        for(i = 0;i < (size_t)conf->NumSpeakers;i++)
-        {
-            ALsizei chan = speakermap[i];
-            ALfloat delay;
-
-            /* Distance compensation only delays in steps of the sample rate.
-             * This is a bit less accurate since the delay time falls to the
-             * nearest sample time, but it's far simpler as it doesn't have to
-             * deal with phase offsets. This means at 48khz, for instance, the
-             * distance delay will be in steps of about 7 millimeters.
-             */
-            delay = floorf((maxdist-conf->Speakers[i].Distance) / SPEEDOFSOUNDMETRESPERSEC *
-                           srate + 0.5f);
-            if(delay >= (ALfloat)MAX_DELAY_LENGTH)
-                ERR("Delay for speaker \"%s\" exceeds buffer length (%f >= %u)\n",
-                    al_string_get_cstr(conf->Speakers[i].Name), delay, MAX_DELAY_LENGTH);
-
-            device->ChannelDelay[chan].Length = (ALsizei)clampf(
-                delay, 0.0f, (ALfloat)(MAX_DELAY_LENGTH-1)
-            );
-            device->ChannelDelay[chan].Gain = conf->Speakers[i].Distance / maxdist;
-            TRACE("Channel %u \"%s\" distance compensation: %d samples, %f gain\n", chan,
-                al_string_get_cstr(conf->Speakers[i].Name), device->ChannelDelay[chan].Length,
-                device->ChannelDelay[chan].Gain
-            );
-        }
-    }
+    InitDistanceComp(device, conf, speakermap);
 }
 
 static void InitHrtfPanning(ALCdevice *device, bool hoa_mode)

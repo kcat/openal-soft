@@ -35,8 +35,6 @@ private slots:
     void updatePeriodCountEdit(int size);
     void updatePeriodCountSlider();
 
-    void toggleHqState(int state);
-
     void selectQuadDecoderFile();
     void select51DecoderFile();
     void select61DecoderFile();

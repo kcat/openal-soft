@@ -329,7 +329,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->stereoPanningComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(enableApplyButton()));
     connect(ui->ambiFormatComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(enableApplyButton()));
 
-    connect(ui->decoderHQModeCheckBox, SIGNAL(stateChanged(int)), this, SLOT(toggleHqState(int)));
+    connect(ui->decoderHQModeCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->decoderDistCompCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->decoderQuadLineEdit, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
     connect(ui->decoderQuadButton, SIGNAL(clicked()), this, SLOT(selectQuadDecoderFile()));
@@ -665,7 +665,6 @@ void MainWindow::loadConfig(const QString &fname)
     ui->decoderHQModeCheckBox->setChecked(hqmode);
     bool distcomp = settings.value("decoder/distance-comp", true).toBool();
     ui->decoderDistCompCheckBox->setChecked(distcomp);
-    ui->decoderDistCompCheckBox->setEnabled(hqmode);
 
     ui->decoderQuadLineEdit->setText(settings.value("decoder/quad").toString());
     ui->decoder51LineEdit->setText(settings.value("decoder/surround51").toString());
@@ -1109,12 +1108,6 @@ void MainWindow::updatePeriodCountSlider()
     enableApplyButton();
 }
 
-
-void MainWindow::toggleHqState(int state)
-{
-    ui->decoderDistCompCheckBox->setEnabled(state);
-    enableApplyButton();
-}
 
 void MainWindow::selectQuadDecoderFile()
 { selectDecoderFile(ui->decoderQuadLineEdit, "Select Quadrophonic Decoder");}

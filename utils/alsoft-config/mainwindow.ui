@@ -601,9 +601,8 @@ appropriate speaker configuration you intend to use.</string>
        <string>This applies the necessary delays and attenuation
 to make the speakers behave as though they are
 all equidistant, which is important for proper
-playback of 3D sound rendering. Requires the high
-quality ambisonic renderer, as well as the proper
-distances to be specified in the decoder
+playback of 3D sound rendering. Requires the
+proper distances to be specified in the decoder
 configuration file.</string>
       </property>
       <property name="layoutDirection">

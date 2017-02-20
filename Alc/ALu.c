@@ -81,7 +81,6 @@ extern inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max);
 
 extern inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu);
 extern inline ALfloat resample_fir4(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALuint frac);
-extern inline ALfloat resample_fir8(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALfloat val4, ALfloat val5, ALfloat val6, ALfloat val7, ALuint frac);
 
 extern inline void aluVectorSet(aluVector *restrict vector, ALfloat x, ALfloat y, ALfloat z, ALfloat w);
 
@@ -1415,12 +1414,12 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         SamplesToDo = mini(size, BUFFERSIZE);
         for(c = 0;c < device->Dry.NumChannels;c++)
             memset(device->Dry.Buffer[c], 0, SamplesToDo*sizeof(ALfloat));
-        if(device->Dry.Buffer != device->RealOut.Buffer)
-            for(c = 0;c < device->RealOut.NumChannels;c++)
-                memset(device->RealOut.Buffer[c], 0, SamplesToDo*sizeof(ALfloat));
         if(device->Dry.Buffer != device->FOAOut.Buffer)
             for(c = 0;c < device->FOAOut.NumChannels;c++)
                 memset(device->FOAOut.Buffer[c], 0, SamplesToDo*sizeof(ALfloat));
+        if(device->Dry.Buffer != device->RealOut.Buffer)
+            for(c = 0;c < device->RealOut.NumChannels;c++)
+                memset(device->RealOut.Buffer[c], 0, SamplesToDo*sizeof(ALfloat));
 
         IncrementRef(&device->MixCount);
 

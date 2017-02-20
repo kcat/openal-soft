@@ -184,10 +184,7 @@ typedef struct BFormatDec {
     } Delay[MAX_OUTPUT_CHANNELS];
 
     struct {
-        ALsizei Index;
-
         BandSplitter XOver;
-
         ALfloat Gains[FB_Max];
     } UpSampler[4];
 
@@ -233,6 +230,11 @@ int bformatdec_getOrder(const struct BFormatDec *dec)
     return 0;
 }
 
+int bformatdec_isPeriphonic(const struct BFormatDec *dec)
+{
+    return dec->Periphonic;
+}
+
 void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALsizei chanmap[MAX_OUTPUT_CHANNELS], int flags)
 {
     static const ALsizei map2DTo3D[MAX_AMBI2D_COEFFS] = {
@@ -271,13 +273,11 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
     {
         dec->Periphonic = AL_TRUE;
 
-        dec->UpSampler[0].Index = 0;
         dec->UpSampler[0].Gains[FB_HighFreq] = (dec->NumChannels > 9) ? W_SCALE3D_THIRD :
                                                (dec->NumChannels > 4) ? W_SCALE3D_SECOND : 1.0f;
         dec->UpSampler[0].Gains[FB_LowFreq] = 1.0f;
         for(i = 1;i < 4;i++)
         {
-            dec->UpSampler[i].Index = i;
             dec->UpSampler[i].Gains[FB_HighFreq] = (dec->NumChannels > 9) ? XYZ_SCALE3D_THIRD :
                                                    (dec->NumChannels > 4) ? XYZ_SCALE3D_SECOND : 1.0f;
             dec->UpSampler[i].Gains[FB_LowFreq] = 1.0f;
@@ -287,17 +287,17 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
     {
         dec->Periphonic = AL_FALSE;
 
-        dec->UpSampler[0].Index = 0;
         dec->UpSampler[0].Gains[FB_HighFreq] = (dec->NumChannels > 5) ? W_SCALE2D_THIRD :
                                                (dec->NumChannels > 3) ? W_SCALE2D_SECOND : 1.0f;
         dec->UpSampler[0].Gains[FB_LowFreq] = 1.0f;
-        for(i = 1;i < 4;i++)
+        for(i = 1;i < 3;i++)
         {
-            dec->UpSampler[i].Index = (i>2) ? i-1 : ((i==2) ? INVALID_UPSAMPLE_INDEX : i);
             dec->UpSampler[i].Gains[FB_HighFreq] = (dec->NumChannels > 5) ? XYZ_SCALE2D_THIRD :
                                                    (dec->NumChannels > 3) ? XYZ_SCALE2D_SECOND : 1.0f;
             dec->UpSampler[i].Gains[FB_LowFreq] = 1.0f;
         }
+        dec->UpSampler[3].Gains[FB_HighFreq] = 0.0f;
+        dec->UpSampler[3].Gains[FB_LowFreq] = 0.0f;
     }
 
     maxdist = 0.0f;
@@ -553,10 +553,6 @@ void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[B
      */
     for(i = 0;i < InChannels;i++)
     {
-        ALsizei dst_chan = dec->UpSampler[i].Index;
-        if(dst_chan == INVALID_UPSAMPLE_INDEX)
-            continue;
-
         /* First, split the first-order components into low and high frequency
          * bands.
          */
@@ -566,7 +562,7 @@ void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[B
         );
 
         /* Now write each band to the output. */
-        MixMatrixRow(OutBuffer[dst_chan], dec->UpSampler[i].Gains,
+        MixMatrixRow(OutBuffer[i], dec->UpSampler[i].Gains,
             SAFE_CONST(ALfloatBUFFERSIZE*,dec->Samples), FB_Max, 0,
             SamplesToDo
         );

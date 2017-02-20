@@ -742,10 +742,20 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsiz
     else
     {
         memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
-        for(i = 0;i < 4;i++)
+        if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
+            for(i = 0;i < 4;i++)
+            {
+                device->FOAOut.Ambi.Map[i].Scale = 1.0f;
+                device->FOAOut.Ambi.Map[i].Index = i;
+            }
+        else
         {
-            device->FOAOut.Ambi.Map[i].Scale = 1.0f;
-            device->FOAOut.Ambi.Map[i].Index = i;
+            static const int map[3] = { 0, 1, 3 };
+            for(i = 0;i < 3;i++)
+            {
+                device->FOAOut.Ambi.Map[i].Scale = 1.0f;
+                device->FOAOut.Ambi.Map[i].Index = map[i];
+            }
         }
         device->FOAOut.CoeffCount = 0;
     }

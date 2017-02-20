@@ -32,6 +32,7 @@ enum BFormatDecFlags {
 struct BFormatDec *bformatdec_alloc();
 void bformatdec_free(struct BFormatDec *dec);
 int bformatdec_getOrder(const struct BFormatDec *dec);
+int bformatdec_isPeriphonic(const struct BFormatDec *dec);
 void bformatdec_reset(struct BFormatDec *dec, const struct AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALsizei chanmap[MAX_OUTPUT_CHANNELS], int flags);
 
 /* Decodes the ambisonic input to the given output channels. */

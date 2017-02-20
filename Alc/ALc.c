@@ -2118,16 +2118,21 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     aluInitRenderer(device, hrtf_id, hrtf_appreq, hrtf_userreq);
 
     /* Allocate extra channels for any post-filter output. */
-    size = device->Dry.NumChannels * sizeof(device->Dry.Buffer[0]);
-    if((device->AmbiDecoder && bformatdec_getOrder(device->AmbiDecoder) >= 2))
-        size += (ChannelsFromDevFmt(device->FmtChans)+4) * sizeof(device->Dry.Buffer[0]);
-    else if(device->Hrtf.Handle || device->Uhj_Encoder || device->AmbiDecoder)
+    size = device->Dry.NumChannels;
+    if(device->AmbiDecoder && bformatdec_getOrder(device->AmbiDecoder) >= 2)
     {
-        size += ChannelsFromDevFmt(device->FmtChans) * sizeof(device->Dry.Buffer[0]);
-        if(device->AmbiUp) size += 4 * sizeof(device->Dry.Buffer[0]);
+        size += ChannelsFromDevFmt(device->FmtChans);
+        size += bformatdec_isPeriphonic(device->AmbiDecoder) ? 4 : 3;
     }
-    else if(device->AmbiUp)
-        size += 4 * sizeof(device->Dry.Buffer[0]);
+    else
+    {
+        if(device->Hrtf.Handle || device->Uhj_Encoder || device->AmbiDecoder)
+            size += ChannelsFromDevFmt(device->FmtChans);
+        if(device->AmbiUp)
+            size += 4;
+    }
+    size *= sizeof(device->Dry.Buffer[0]);
+
     TRACE("Allocating "SZFMT" channels, "SZFMT" bytes\n", size/sizeof(device->Dry.Buffer[0]), size);
     device->Dry.Buffer = al_calloc(16, size);
     if(!device->Dry.Buffer)
@@ -2136,29 +2141,32 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         return ALC_INVALID_DEVICE;
     }
 
+    if((device->AmbiDecoder && bformatdec_getOrder(device->AmbiDecoder) >= 2) || device->AmbiUp)
+    {
+        /* Higher-order rendering requires upsampling first-order content, so
+         * make sure to mix it separately.
+         */
+        device->FOAOut.Buffer = device->Dry.Buffer + device->Dry.NumChannels;
+        if((device->AmbiDecoder && bformatdec_isPeriphonic(device->AmbiDecoder)) || device->AmbiUp)
+            device->FOAOut.NumChannels = 4;
+        else
+            device->FOAOut.NumChannels = 3;
+    }
+    else
+    {
+        device->FOAOut.Buffer = device->Dry.Buffer;
+        device->FOAOut.NumChannels = device->Dry.NumChannels;
+    }
+
     if(device->Hrtf.Handle || device->Uhj_Encoder || device->AmbiDecoder)
     {
-        device->RealOut.Buffer = device->Dry.Buffer + device->Dry.NumChannels;
+        device->RealOut.Buffer = device->FOAOut.Buffer + device->FOAOut.NumChannels;
         device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans);
     }
     else
     {
         device->RealOut.Buffer = device->Dry.Buffer;
         device->RealOut.NumChannels = device->Dry.NumChannels;
-    }
-
-    if((device->AmbiDecoder && bformatdec_getOrder(device->AmbiDecoder) >= 2) || device->AmbiUp)
-    {
-        /* Higher-order rendering requires upsampling first-order content, so
-         * make sure to mix it separately.
-         */
-        device->FOAOut.Buffer = device->RealOut.Buffer + device->RealOut.NumChannels;
-        device->FOAOut.NumChannels = 4;
-    }
-    else
-    {
-        device->FOAOut.Buffer = device->Dry.Buffer;
-        device->FOAOut.NumChannels = device->Dry.NumChannels;
     }
     TRACE("Channel config, Dry: %d, FOA: %d, Real: %d\n", device->Dry.NumChannels,
           device->FOAOut.NumChannels, device->RealOut.NumChannels);

@@ -2625,8 +2625,11 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
     size = sizeof(ALvoice*) + sizeof_voice + sizeof_props;
 
     voices = al_calloc(16, RoundUp(size*num_voices, 16));
+    /* The voice and property objects are stored interleaved since they're
+     * paired together.
+     */
     voice = (ALvoice*)((char*)voices + RoundUp(num_voices*sizeof(ALvoice*), 16));
-    props = (struct ALsourceProps*)((char*)voice + num_voices*sizeof_voice);
+    props = (struct ALsourceProps*)((char*)voice + sizeof_voice);
 
     if(context->Voices)
     {
@@ -2646,27 +2649,23 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
             for(i = 0;i < s_count;i++)
                 props->Send[i] = context->Voices[v]->Props->Send[i];
 
-            /* Set this voice's property set pointer and increment 'props' to
-             * the next property storage space.
-             */
+            /* Set this voice's property set pointer and voice reference. */
             voice->Props = props;
-            props = (struct ALsourceProps*)((char*)props + sizeof_props);
-
-            /* Set this voice's reference and increment 'voice' to the next
-             * voice storage space.
-             */
             voices[v] = voice;
-            voice = (ALvoice*)((char*)voice + sizeof_voice);
+
+            /* Increment pointers to the next storage space. */
+            voice = (ALvoice*)((char*)props + sizeof_props);
+            props = (struct ALsourceProps*)((char*)voice + sizeof_voice);
         }
     }
     /* Finish setting the voices' property set pointers and references. */
     for(;v < num_voices;v++)
     {
         voice->Props = props;
-        props = (struct ALsourceProps*)((char*)props + sizeof_props);
-
         voices[v] = voice;
-        voice = (ALvoice*)((char*)voice + sizeof_voice);
+
+        voice = (ALvoice*)((char*)props + sizeof_props);
+        props = (struct ALsourceProps*)((char*)voice + sizeof_voice);
     }
 
     al_free(context->Voices);

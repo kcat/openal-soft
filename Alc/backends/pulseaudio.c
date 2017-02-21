@@ -182,6 +182,8 @@ static ALCboolean pulse_load(void)
 #ifdef HAVE_DYNLOAD
     if(!pa_handle)
     {
+        al_string missing_funcs = AL_STRING_INIT_STATIC();
+
 #ifdef _WIN32
 #define PALIB "libpulse-0.dll"
 #elif defined(__APPLE__) && defined(__MACH__)
@@ -191,12 +193,16 @@ static ALCboolean pulse_load(void)
 #endif
         pa_handle = LoadLib(PALIB);
         if(!pa_handle)
+        {
+            WARN("Failed to load %s\n", PALIB);
             return ALC_FALSE;
+        }
 
 #define LOAD_FUNC(x) do {                                                     \
     p##x = GetSymbol(pa_handle, #x);                                          \
     if(!(p##x)) {                                                             \
         ret = ALC_FALSE;                                                      \
+        al_string_append_cstr(&missing_funcs, "\n" #x);                       \
     }                                                                         \
 } while(0)
         LOAD_FUNC(pa_context_unref);
@@ -270,9 +276,11 @@ static ALCboolean pulse_load(void)
 
         if(ret == ALC_FALSE)
         {
+            WARN("Missing expected functions:%s\n", al_string_get_cstr(missing_funcs));
             CloseLib(pa_handle);
             pa_handle = NULL;
         }
+        al_string_deinit(&missing_funcs);
     }
 #endif /* HAVE_DYNLOAD */
     return ret;

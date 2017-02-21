@@ -199,15 +199,21 @@ static ALCboolean alsa_load(void)
 #ifdef HAVE_DYNLOAD
     if(!alsa_handle)
     {
+        al_string missing_funcs = AL_STRING_INIT_STATIC();
+
         alsa_handle = LoadLib("libasound.so.2");
         if(!alsa_handle)
+        {
+            WARN("Failed to load %s\n", "libasound.so.2");
             return ALC_FALSE;
+        }
 
         error = ALC_FALSE;
 #define LOAD_FUNC(f) do {                                                     \
     p##f = GetSymbol(alsa_handle, #f);                                        \
     if(p##f == NULL) {                                                        \
         error = ALC_TRUE;                                                     \
+        al_string_append_cstr(&missing_funcs, "\n" #f);                       \
     }                                                                         \
 } while(0)
         ALSA_FUNCS(LOAD_FUNC);
@@ -215,10 +221,11 @@ static ALCboolean alsa_load(void)
 
         if(error)
         {
+            WARN("Missing expected functions:%s\n", al_string_get_cstr(missing_funcs));
             CloseLib(alsa_handle);
             alsa_handle = NULL;
-            return ALC_FALSE;
         }
+        al_string_deinit(&missing_funcs);
     }
 #endif
 

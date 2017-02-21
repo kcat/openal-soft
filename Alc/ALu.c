@@ -1313,7 +1313,7 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context, ALboolean forc
 
 static void UpdateContextSources(ALCcontext *ctx, ALeffectslot *slot)
 {
-    ALvoice *voice, *voice_end;
+    ALvoice **voice, **voice_end;
     ALsource *source;
 
     IncrementRef(&ctx->UpdateCount);
@@ -1330,11 +1330,11 @@ static void UpdateContextSources(ALCcontext *ctx, ALeffectslot *slot)
         voice_end = voice + ctx->VoiceCount;
         for(;voice != voice_end;++voice)
         {
-            if(!(source=voice->Source)) continue;
+            if(!(source=(*voice)->Source)) continue;
             if(!IsPlayingOrPaused(source))
-                voice->Source = NULL;
+                (*voice)->Source = NULL;
             else
-                CalcSourceParams(voice, ctx, force);
+                CalcSourceParams(*voice, ctx, force);
         }
     }
     IncrementRef(&ctx->UpdateCount);
@@ -1424,7 +1424,7 @@ DECL_TEMPLATE(ALbyte, aluF2B)
 void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 {
     ALsizei SamplesToDo;
-    ALvoice *voice, *voice_end;
+    ALvoice **voice, **voice_end;
     ALeffectslot *slot;
     ALsource *source;
     ALCcontext *ctx;
@@ -1475,11 +1475,11 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             voice_end = voice + ctx->VoiceCount;
             for(;voice != voice_end;++voice)
             {
-                ALboolean IsVoiceInit = (voice->Step > 0);
-                source = voice->Source;
+                ALboolean IsVoiceInit = ((*voice)->Step > 0);
+                source = (*voice)->Source;
                 if(IsVoiceInit && source &&
                    ATOMIC_LOAD(&source->state, almemory_order_relaxed) == AL_PLAYING)
-                    MixSource(voice, source, device, SamplesToDo);
+                    MixSource(*voice, source, device, SamplesToDo);
             }
 
             /* effect slot processing */
@@ -1637,15 +1637,15 @@ void aluHandleDisconnect(ALCdevice *device)
     Context = ATOMIC_LOAD_SEQ(&device->ContextList);
     while(Context)
     {
-        ALvoice *voice, *voice_end;
+        ALvoice **voice, **voice_end;
 
         voice = Context->Voices;
         voice_end = voice + Context->VoiceCount;
         while(voice != voice_end)
         {
             ALenum playing = AL_PLAYING;
-            ALsource *source = voice->Source;
-            voice->Source = NULL;
+            ALsource *source = (*voice)->Source;
+            (*voice)->Source = NULL;
 
             if(source &&
                ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(ALenum, &source->state, &playing, AL_STOPPED))

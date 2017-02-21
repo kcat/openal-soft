@@ -106,7 +106,7 @@ typedef struct ALvoice {
 
         ALfloat (*Buffer)[BUFFERSIZE];
         ALsizei Channels;
-    } Send[MAX_SENDS];
+    } Send[];
 } ALvoice;
 
 

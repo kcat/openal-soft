@@ -128,12 +128,12 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
 
 static inline ALvoice *GetSourceVoice(const ALsource *source, const ALCcontext *context)
 {
-    ALvoice *voice = context->Voices;
-    ALvoice *voice_end = voice + context->VoiceCount;
+    ALvoice **voice = context->Voices;
+    ALvoice **voice_end = voice + context->VoiceCount;
     while(voice != voice_end)
     {
-        if(voice->Source == source)
-            return voice;
+        if((*voice)->Source == source)
+            return *voice;
         ++voice;
     }
     return NULL;
@@ -2915,7 +2915,7 @@ void UpdateAllSourceProps(ALCcontext *context)
 
     for(pos = 0;pos < context->VoiceCount;pos++)
     {
-        ALvoice *voice = &context->Voices[pos];
+        ALvoice *voice = context->Voices[pos];
         ALsource *source = voice->Source;
         if(source != NULL && source->NeedsUpdate && IsPlayingOrPaused(source))
         {
@@ -2982,16 +2982,16 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         {
             for(i = 0;i < Context->VoiceCount;i++)
             {
-                if(Context->Voices[i].Source == NULL)
+                if(Context->Voices[i]->Source == NULL)
                 {
-                    voice = &Context->Voices[i];
+                    voice = Context->Voices[i];
                     voice->Source = Source;
                     break;
                 }
             }
             if(voice == NULL)
             {
-                voice = &Context->Voices[Context->VoiceCount++];
+                voice = Context->Voices[Context->VoiceCount++];
                 voice->Source = Source;
             }
             discontinuity = AL_TRUE;

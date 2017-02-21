@@ -812,7 +812,7 @@ struct ALCcontext_struct {
 
     ALfloat GainBoost;
 
-    struct ALvoice *Voices;
+    struct ALvoice **Voices;
     ALsizei VoiceCount;
     ALsizei MaxVoices;
 

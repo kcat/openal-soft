@@ -2607,21 +2607,26 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
     ALsizei num_sends = device->NumAuxSends;
     struct ALsourceProps *props;
     size_t sizeof_props;
-    ALvoice *voices;
+    size_t sizeof_voice;
+    ALvoice **voices;
+    ALvoice *voice;
     ALsizei v = 0;
     size_t size;
 
     if(num_voices == context->MaxVoices && num_sends == old_sends)
         return;
 
-    /* Allocate the voices, and the voices' stored source property set
-     * (including the dynamically-sized Send[] array) in one chunk.
+    /* Allocate the voice pointers, voices, and the voices' stored source
+     * property set (including the dynamically-sized Send[] array) in one
+     * chunk.
      */
     sizeof_props = RoundUp(offsetof(struct ALsourceProps, Send[num_sends]), 16);
-    size = sizeof(*voices) + sizeof_props;
+    sizeof_voice = RoundUp(offsetof(ALvoice, Send[num_sends]), 16);
+    size = sizeof(ALvoice*) + sizeof_voice + sizeof_props;
 
-    voices = al_calloc(16, size * num_voices);
-    props = (struct ALsourceProps*)(voices + num_voices);
+    voices = al_calloc(16, RoundUp(size*num_voices, 16));
+    voice = (ALvoice*)((char*)voices + RoundUp(num_voices*sizeof(ALvoice*), 16));
+    props = (struct ALsourceProps*)((char*)voice + num_voices*sizeof_voice);
 
     if(context->Voices)
     {
@@ -2634,23 +2639,34 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
             /* Copy the old voice data and source property set to the new
              * storage.
              */
-            voices[v] = context->Voices[v];
-            *props = *(context->Voices[v].Props);
+            *voice = *(context->Voices[v]);
             for(i = 0;i < s_count;i++)
-                props->Send[i] = context->Voices[v].Props->Send[i];
+                voice->Send[i] = context->Voices[v]->Send[i];
+            *props = *(context->Voices[v]->Props);
+            for(i = 0;i < s_count;i++)
+                props->Send[i] = context->Voices[v]->Props->Send[i];
 
             /* Set this voice's property set pointer and increment 'props' to
              * the next property storage space.
              */
-            voices[v].Props = props;
+            voice->Props = props;
             props = (struct ALsourceProps*)((char*)props + sizeof_props);
+
+            /* Set this voice's reference and increment 'voice' to the next
+             * voice storage space.
+             */
+            voices[v] = voice;
+            voice = (ALvoice*)((char*)voice + sizeof_voice);
         }
     }
-    /* Finish setting the voices' property set pointers. */
+    /* Finish setting the voices' property set pointers and references. */
     for(;v < num_voices;v++)
     {
-        voices[v].Props = props;
+        voice->Props = props;
         props = (struct ALsourceProps*)((char*)props + sizeof_props);
+
+        voices[v] = voice;
+        voice = (ALvoice*)((char*)voice + sizeof_voice);
     }
 
     al_free(context->Voices);

@@ -401,6 +401,7 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
 {
     ALsizei chan, i;
 
+    OutBuffer = ASSUME_ALIGNED(OutBuffer, 16);
     if(dec->DualBand)
     {
         for(i = 0;i < dec->NumChannels;i++)

@@ -176,10 +176,9 @@
 #slots = 64
 
 ## sends:
-#  Sets the number of auxiliary sends per source. When not specified (default),
-#  it allows the app to request how many it wants. The maximum value currently
-#  possible is 16.
-#sends =
+#  Limits the number of auxiliary sends allowed per source. Setting this higher
+#  than the default has no effect.
+#sends = 16
 
 ## volume-adjust:
 #  A global volume adjustment for source output, expressed in decibels. The

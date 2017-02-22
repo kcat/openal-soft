@@ -1585,14 +1585,8 @@ during updates.</string>
 help for systems with apps that try to play more sounds than
 the CPU can handle.</string>
       </property>
-      <property name="inputMask">
-       <string/>
-      </property>
       <property name="maxLength">
-       <number>3</number>
-      </property>
-      <property name="frame">
-       <bool>true</bool>
+       <number>4</number>
       </property>
       <property name="placeholderText">
        <string>256</string>
@@ -1645,14 +1639,8 @@ create. A slot can use a non-negligible amount of CPU time if
 an effect is set on it even if no sources are feeding it, so this
 may help when apps use more than the system can handle.</string>
       </property>
-      <property name="inputMask">
-       <string/>
-      </property>
       <property name="maxLength">
        <number>3</number>
-      </property>
-      <property name="frame">
-       <bool>true</bool>
       </property>
       <property name="placeholderText">
        <string>64</string>
@@ -1684,15 +1672,14 @@ may help when apps use more than the system can handle.</string>
        </rect>
       </property>
       <property name="toolTip">
-       <string>The number of auxiliary sends per source. When not specified,
-it allows the app to request how many it wants. The maximum
-value currently possible is 16.</string>
+       <string>Limits the number of auxiliary sends allowed per source.
+Setting this higher than the default has no effect.</string>
       </property>
       <property name="maxLength">
-       <number>1</number>
+       <number>2</number>
       </property>
       <property name="placeholderText">
-       <string>Auto</string>
+       <string>16</string>
       </property>
      </widget>
      <widget class="QGroupBox" name="cpuExtGroupBox">

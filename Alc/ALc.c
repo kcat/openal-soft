@@ -1895,8 +1895,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->NumMonoSources = numMono;
         device->NumStereoSources = numStereo;
 
-        ConfigValueInt(NULL, NULL, "sends", &numSends);
-        new_sends = clampi(numSends, 0, MAX_SENDS);
+        if(ConfigValueInt(NULL, NULL, "sends", &new_sends))
+            new_sends = clampi(numSends, 0, clampi(new_sends, 0, MAX_SENDS));
+        else
+            new_sends = clampi(numSends, 0, MAX_SENDS);
     }
     else if(attrList && attrList[0])
     {
@@ -1977,8 +1979,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->NumMonoSources = numMono;
         device->NumStereoSources = numStereo;
 
-        ConfigValueInt(al_string_get_cstr(device->DeviceName), NULL, "sends", &numSends);
-        new_sends = clampi(numSends, 0, MAX_SENDS);
+        if(ConfigValueInt(al_string_get_cstr(device->DeviceName), NULL, "sends", &new_sends))
+            new_sends = clampi(numSends, 0, clampi(new_sends, 0, MAX_SENDS));
+        else
+            new_sends = clampi(numSends, 0, MAX_SENDS);
     }
 
     if((device->Flags&DEVICE_RUNNING))
@@ -3736,8 +3740,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     ConfigValueUInt(deviceName, NULL, "slots", &device->AuxiliaryEffectSlotMax);
     if(device->AuxiliaryEffectSlotMax == 0) device->AuxiliaryEffectSlotMax = 64;
 
-    ConfigValueInt(deviceName, NULL, "sends", &device->NumAuxSends);
-    device->NumAuxSends = clampi(device->NumAuxSends, 0, MAX_SENDS);
+    if(ConfigValueInt(deviceName, NULL, "sends", &device->NumAuxSends))
+        device->NumAuxSends = clampi(
+            DEFAULT_SENDS, 0, clampi(device->NumAuxSends, 0, MAX_SENDS)
+        );
 
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
@@ -4142,8 +4148,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     ConfigValueUInt(NULL, NULL, "slots", &device->AuxiliaryEffectSlotMax);
     if(device->AuxiliaryEffectSlotMax == 0) device->AuxiliaryEffectSlotMax = 64;
 
-    ConfigValueInt(NULL, NULL, "sends", &device->NumAuxSends);
-    device->NumAuxSends = clampi(device->NumAuxSends, 0, MAX_SENDS);
+    if(ConfigValueInt(NULL, NULL, "sends", &device->NumAuxSends))
+        device->NumAuxSends = clampi(
+            DEFAULT_SENDS, 0, clampi(device->NumAuxSends, 0, MAX_SENDS)
+        );
 
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;

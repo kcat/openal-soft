@@ -3639,7 +3639,12 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->Frequency = DEFAULT_OUTPUT_RATE;
     device->IsHeadphones = AL_FALSE;
     device->AmbiFmt = AmbiFormat_Default;
+#if defined(__ANDROID__) || defined(ANDROID)
+    //Audio is delayed in Android when NumUpdates is 4
+    device->NumUpdates = 1;
+#else
     device->NumUpdates = 4;
+#endif
     device->UpdateSize = 1024;
 
     if(!PlaybackBackend.getFactory)

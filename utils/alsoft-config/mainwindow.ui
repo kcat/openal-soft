@@ -1649,13 +1649,13 @@ may help when apps use more than the system can handle.</string>
        <string/>
       </property>
       <property name="maxLength">
-       <number>1</number>
+       <number>3</number>
       </property>
       <property name="frame">
        <bool>true</bool>
       </property>
       <property name="placeholderText">
-       <string>4</string>
+       <string>64</string>
       </property>
      </widget>
      <widget class="QLabel" name="label_8">
@@ -1686,7 +1686,7 @@ may help when apps use more than the system can handle.</string>
       <property name="toolTip">
        <string>The number of auxiliary sends per source. When not specified,
 it allows the app to request how many it wants. The maximum
-value currently possible is 4.</string>
+value currently possible is 16.</string>
       </property>
       <property name="maxLength">
        <number>1</number>

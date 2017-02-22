@@ -1,7 +1,8 @@
 #ifndef _AL_SOURCE_H_
 #define _AL_SOURCE_H_
 
-#define MAX_SENDS                 4
+#define MAX_SENDS      16
+#define DEFAULT_SENDS  2
 
 #include "alMain.h"
 #include "alu.h"

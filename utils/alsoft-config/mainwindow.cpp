@@ -295,9 +295,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     mSourceCountValidator = new QIntValidator(0, 4096, this);
     ui->srcCountLineEdit->setValidator(mSourceCountValidator);
-    mEffectSlotValidator = new QIntValidator(0, 16, this);
+    mEffectSlotValidator = new QIntValidator(0, 64, this);
     ui->effectSlotLineEdit->setValidator(mEffectSlotValidator);
-    mSourceSendValidator = new QIntValidator(0, 4, this);
+    mSourceSendValidator = new QIntValidator(0, 16, this);
     ui->srcSendLineEdit->setValidator(mSourceSendValidator);
     mSampleRateValidator = new QIntValidator(8000, 192000, this);
     ui->sampleRateCombo->lineEdit()->setValidator(mSampleRateValidator);

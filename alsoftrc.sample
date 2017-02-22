@@ -173,12 +173,12 @@
 #  can use a non-negligible amount of CPU time if an effect is set on it even
 #  if no sources are feeding it, so this may help when apps use more than the
 #  system can handle.
-#slots = 4
+#slots = 64
 
 ## sends:
 #  Sets the number of auxiliary sends per source. When not specified (default),
 #  it allows the app to request how many it wants. The maximum value currently
-#  possible is 4.
+#  possible is 16.
 #sends =
 
 ## volume-adjust:

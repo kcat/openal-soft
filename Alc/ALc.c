@@ -1788,11 +1788,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             GotType  = 1<<2,
             GotAll   = GotFreq|GotChans|GotType
         };
-        ALCuint freq, numMono, numStereo, numSends;
+        ALCuint freq, numMono, numStereo;
         enum DevFmtChannels schans;
         enum DevFmtType stype;
         ALCuint attrIdx = 0;
         ALCint gotFmt = 0;
+        ALCsizei numSends;
 
         if(!attrList)
         {
@@ -1894,13 +1895,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->NumMonoSources = numMono;
         device->NumStereoSources = numStereo;
 
-        ConfigValueUInt(NULL, NULL, "sends", &numSends);
-        new_sends = clampi(numSends, 1, MAX_SENDS);
+        ConfigValueInt(NULL, NULL, "sends", &numSends);
+        new_sends = clampi(numSends, 0, MAX_SENDS);
     }
     else if(attrList && attrList[0])
     {
-        ALCuint freq, numMono, numStereo, numSends;
+        ALCuint freq, numMono, numStereo;
         ALCuint attrIdx = 0;
+        ALCsizei numSends;
 
         /* If a context is already running on the device, stop playback so the
          * device attributes can be updated. */
@@ -1921,8 +1923,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(attrList[attrIdx] == ALC_FREQUENCY)
             {
                 freq = attrList[attrIdx + 1];
-                device->Flags |= DEVICE_FREQUENCY_REQUEST;
                 TRACE_ATTR(ALC_FREQUENCY, freq);
+                device->Flags |= DEVICE_FREQUENCY_REQUEST;
             }
 
             if(attrList[attrIdx] == ALC_STEREO_SOURCES)
@@ -1975,8 +1977,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->NumMonoSources = numMono;
         device->NumStereoSources = numStereo;
 
-        ConfigValueUInt(al_string_get_cstr(device->DeviceName), NULL, "sends", &numSends);
-        new_sends = clampi(numSends, 1, MAX_SENDS);
+        ConfigValueInt(al_string_get_cstr(device->DeviceName), NULL, "sends", &numSends);
+        new_sends = clampi(numSends, 0, MAX_SENDS);
     }
 
     if((device->Flags&DEVICE_RUNNING))
@@ -3620,8 +3622,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->SamplesDone = 0;
 
     device->SourcesMax = 256;
-    device->AuxiliaryEffectSlotMax = 4;
-    device->NumAuxSends = MAX_SENDS;
+    device->AuxiliaryEffectSlotMax = 64;
+    device->NumAuxSends = DEFAULT_SENDS;
 
     InitUIntMap(&device->BufferMap, ~0);
     InitUIntMap(&device->EffectMap, ~0);
@@ -3732,7 +3734,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     if(device->SourcesMax == 0) device->SourcesMax = 256;
 
     ConfigValueUInt(deviceName, NULL, "slots", &device->AuxiliaryEffectSlotMax);
-    if(device->AuxiliaryEffectSlotMax == 0) device->AuxiliaryEffectSlotMax = 4;
+    if(device->AuxiliaryEffectSlotMax == 0) device->AuxiliaryEffectSlotMax = 64;
 
     ConfigValueInt(deviceName, NULL, "sends", &device->NumAuxSends);
     device->NumAuxSends = clampi(device->NumAuxSends, 0, MAX_SENDS);
@@ -4107,8 +4109,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->SamplesDone = 0;
 
     device->SourcesMax = 256;
-    device->AuxiliaryEffectSlotMax = 4;
-    device->NumAuxSends = MAX_SENDS;
+    device->AuxiliaryEffectSlotMax = 64;
+    device->NumAuxSends = DEFAULT_SENDS;
 
     InitUIntMap(&device->BufferMap, ~0);
     InitUIntMap(&device->EffectMap, ~0);
@@ -4138,7 +4140,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     if(device->SourcesMax == 0) device->SourcesMax = 256;
 
     ConfigValueUInt(NULL, NULL, "slots", &device->AuxiliaryEffectSlotMax);
-    if(device->AuxiliaryEffectSlotMax == 0) device->AuxiliaryEffectSlotMax = 4;
+    if(device->AuxiliaryEffectSlotMax == 0) device->AuxiliaryEffectSlotMax = 64;
 
     ConfigValueInt(NULL, NULL, "sends", &device->NumAuxSends);
     device->NumAuxSends = clampi(device->NumAuxSends, 0, MAX_SENDS);

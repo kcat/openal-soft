@@ -419,17 +419,10 @@ static ALCboolean ALCplaybackOSS_reset(ALCplaybackOSS *self)
 
     periods = device->NumUpdates;
     numChannels = ChannelsFromDevFmt(device->FmtChans);
-    frameSize = numChannels * BytesFromDevFmt(device->FmtType);
-
     ossSpeed = device->Frequency;
-    log2FragmentSize = log2i(device->UpdateSize * frameSize);
-
-    /* according to the OSS spec, 16 bytes are the minimum */
-    if (log2FragmentSize < 4)
-        log2FragmentSize = 4;
-    /* Subtract one period since the temp mixing buffer counts as one. Still
-     * need at least two on the card, though. */
-    if(periods > 2) periods--;
+    frameSize = numChannels * BytesFromDevFmt(device->FmtType);
+    /* According to the OSS spec, 16 bytes (log2(16)) is the minimum. */
+    log2FragmentSize = maxi(log2i(device->UpdateSize*frameSize), 4);
     numFragmentsLogSize = (periods << 16) | log2FragmentSize;
 
 #define CHECKERR(func) if((func) < 0) {                                       \
@@ -467,7 +460,7 @@ static ALCboolean ALCplaybackOSS_reset(ALCplaybackOSS *self)
 
     device->Frequency = ossSpeed;
     device->UpdateSize = info.fragsize / frameSize;
-    device->NumUpdates = info.fragments + 1;
+    device->NumUpdates = info.fragments;
 
     SetDefaultChannelOrder(device);
 

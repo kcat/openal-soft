@@ -381,7 +381,7 @@ void MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei Samp
     ALsizei Counter;
     ALsizei IrSize;
     ALsizei chan, j;
-    ALuint send;
+    ALsizei send;
 
     /* Get source info */
     State          = AL_PLAYING; /* Only called while playing. */

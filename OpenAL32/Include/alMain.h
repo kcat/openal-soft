@@ -648,7 +648,7 @@ struct ALCdevice_struct
 
     ALCuint NumMonoSources;
     ALCuint NumStereoSources;
-    ALuint  NumAuxSends;
+    ALsizei NumAuxSends;
 
     // Map of Buffers for this device
     UIntMap BufferMap;

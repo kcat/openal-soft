@@ -161,7 +161,7 @@ typedef struct ALsource {
         ALfloat HFReference;
         ALfloat GainLF;
         ALfloat LFReference;
-    } Send[MAX_SENDS];
+    } *Send;
 
     /**
      * Last user-specified offset, and the offset type (bytes, samples, or

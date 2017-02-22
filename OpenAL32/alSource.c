@@ -48,9 +48,9 @@ extern inline struct ALsource *LookupSource(ALCcontext *context, ALuint id);
 extern inline struct ALsource *RemoveSource(ALCcontext *context, ALuint id);
 extern inline ALboolean IsPlayingOrPaused(const ALsource *source);
 
-static void InitSourceParams(ALsource *Source);
-static void DeinitSource(ALsource *source);
-static void UpdateSourceProps(ALsource *source, ALuint num_sends);
+static void InitSourceParams(ALsource *Source, ALsizei num_sends);
+static void DeinitSource(ALsource *source, ALsizei num_sends);
+static void UpdateSourceProps(ALsource *source, ALsizei num_sends);
 static ALint64 GetSourceSampleOffset(ALsource *Source, ALCdevice *device, ALuint64 *clocktime);
 static ALdouble GetSourceSecOffset(ALsource *Source, ALCdevice *device, ALuint64 *clocktime);
 static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCdevice *device);
@@ -816,7 +816,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_AUXILIARY_SEND_FILTER:
             LockEffectSlotsRead(Context);
             LockFiltersRead(device);
-            if(!((ALuint)values[1] < device->NumAuxSends &&
+            if(!((ALuint)values[1] < (ALuint)device->NumAuxSends &&
                  (values[0] == 0 || (slot=LookupEffectSlot(Context, values[0])) != NULL) &&
                  (values[2] == 0 || (filter=LookupFilter(device, values[2])) != NULL)))
             {
@@ -1539,6 +1539,7 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
 
 AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
 {
+    ALCdevice *device;
     ALCcontext *context;
     ALsizei cur = 0;
     ALenum err;
@@ -1548,6 +1549,7 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
 
     if(!(n >= 0))
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    device = context->Device;
     for(cur = 0;cur < n;cur++)
     {
         ALsource *source = al_calloc(16, sizeof(ALsource));
@@ -1556,7 +1558,7 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
             alDeleteSources(cur, sources);
             SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
         }
-        InitSourceParams(source);
+        InitSourceParams(source, device->NumAuxSends);
 
         err = NewThunkEntry(&source->id);
         if(err == AL_NO_ERROR)
@@ -1581,6 +1583,7 @@ done:
 
 AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
 {
+    ALCdevice *device;
     ALCcontext *context;
     ALsource *Source;
     ALsizei i;
@@ -1598,6 +1601,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
         if(LookupSource(context, sources[i]) == NULL)
             SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     }
+    device = context->Device;
     for(i = 0;i < n;i++)
     {
         ALvoice *voice;
@@ -1606,12 +1610,12 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
             continue;
         FreeThunkEntry(Source->id);
 
-        ALCdevice_Lock(context->Device);
+        ALCdevice_Lock(device);
         voice = GetSourceVoice(Source, context);
         if(voice) voice->Source = NULL;
-        ALCdevice_Unlock(context->Device);
+        ALCdevice_Unlock(device);
 
-        DeinitSource(Source);
+        DeinitSource(Source, device->NumAuxSends);
 
         memset(Source, 0, sizeof(*Source));
         al_free(Source);
@@ -2692,9 +2696,9 @@ done:
 }
 
 
-static void InitSourceParams(ALsource *Source)
+static void InitSourceParams(ALsource *Source, ALsizei num_sends)
 {
-    ALuint i;
+    ALsizei i;
 
     RWLockInit(&Source->queue_lock);
 
@@ -2745,7 +2749,8 @@ static void InitSourceParams(ALsource *Source)
     Source->Direct.HFReference = LOWPASSFREQREF;
     Source->Direct.GainLF = 1.0f;
     Source->Direct.LFReference = HIGHPASSFREQREF;
-    for(i = 0;i < MAX_SENDS;i++)
+    Source->Send = al_calloc(16, num_sends*sizeof(Source->Send[0]));
+    for(i = 0;i < num_sends;i++)
     {
         Source->Send[i].Slot = NULL;
         Source->Send[i].Gain = 1.0f;
@@ -2775,12 +2780,12 @@ static void InitSourceParams(ALsource *Source)
     ATOMIC_INIT(&Source->FreeList, NULL);
 }
 
-static void DeinitSource(ALsource *source)
+static void DeinitSource(ALsource *source, ALsizei num_sends)
 {
     ALbufferlistitem *BufferList;
     struct ALsourceProps *props;
     size_t count = 0;
-    size_t i;
+    ALsizei i;
 
     props = ATOMIC_LOAD_SEQ(&source->Update);
     if(props) al_free(props);
@@ -2810,18 +2815,23 @@ static void DeinitSource(ALsource *source)
         BufferList = next;
     }
 
-    for(i = 0;i < MAX_SENDS;i++)
+    if(source->Send)
     {
-        if(source->Send[i].Slot)
-            DecrementRef(&source->Send[i].Slot->ref);
-        source->Send[i].Slot = NULL;
+        for(i = 0;i < num_sends;i++)
+        {
+            if(source->Send[i].Slot)
+                DecrementRef(&source->Send[i].Slot->ref);
+            source->Send[i].Slot = NULL;
+        }
+        al_free(source->Send);
+        source->Send = NULL;
     }
 }
 
-static void UpdateSourceProps(ALsource *source, ALuint num_sends)
+static void UpdateSourceProps(ALsource *source, ALsizei num_sends)
 {
     struct ALsourceProps *props;
-    size_t i;
+    ALsizei i;
 
     /* Get an unused property container, or allocate a new one as needed. */
     props = ATOMIC_LOAD(&source->FreeList, almemory_order_acquire);
@@ -2856,7 +2866,7 @@ static void UpdateSourceProps(ALsource *source, ALuint num_sends)
         ATOMIC_STORE(&props->Direction[i], source->Direction[i], almemory_order_relaxed);
     for(i = 0;i < 2;i++)
     {
-        size_t j;
+        ALsizei j;
         for(j = 0;j < 3;j++)
             ATOMIC_STORE(&props->Orientation[i][j], source->Orientation[i][j],
                          almemory_order_relaxed);
@@ -2910,7 +2920,7 @@ static void UpdateSourceProps(ALsource *source, ALuint num_sends)
 
 void UpdateAllSourceProps(ALCcontext *context)
 {
-    ALuint num_sends = context->Device->NumAuxSends;
+    ALsizei num_sends = context->Device->NumAuxSends;
     ALsizei pos;
 
     for(pos = 0;pos < context->VoiceCount;pos++)
@@ -3390,13 +3400,14 @@ static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac)
  */
 ALvoid ReleaseALSources(ALCcontext *Context)
 {
+    ALCdevice *device = Context->Device;
     ALsizei pos;
     for(pos = 0;pos < Context->SourceMap.size;pos++)
     {
         ALsource *temp = Context->SourceMap.values[pos];
         Context->SourceMap.values[pos] = NULL;
 
-        DeinitSource(temp);
+        DeinitSource(temp, device->NumAuxSends);
 
         FreeThunkEntry(temp->id);
         memset(temp, 0, sizeof(*temp));

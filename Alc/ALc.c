@@ -1766,15 +1766,17 @@ static inline void UpdateClockBase(ALCdevice *device)
  */
 static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 {
-    ALCcontext *context;
-    enum HrtfRequestMode hrtf_appreq = Hrtf_Default;
     enum HrtfRequestMode hrtf_userreq = Hrtf_Default;
-    ALsizei old_sends = device->NumAuxSends;
+    enum HrtfRequestMode hrtf_appreq = Hrtf_Default;
+    const ALsizei old_sends = device->NumAuxSends;
+    ALsizei new_sends = device->NumAuxSends;
     enum DevFmtChannels oldChans;
     enum DevFmtType oldType;
+    ALboolean update_failed;
+    ALCsizei hrtf_id = -1;
+    ALCcontext *context;
     ALCuint oldFreq;
     FPUCtl oldMode;
-    ALCsizei hrtf_id = -1;
     size_t size;
 
     // Check for attributes
@@ -1800,10 +1802,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         numMono = device->NumMonoSources;
         numStereo = device->NumStereoSources;
-        numSends = device->NumAuxSends;
         schans = device->FmtChans;
         stype = device->FmtType;
         freq = device->Frequency;
+        numSends = old_sends;
 
 #define TRACE_ATTR(a, v) TRACE("Loopback %s = %d\n", #a, v)
         while(attrList[attrIdx])
@@ -1880,9 +1882,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             return ALC_INVALID_VALUE;
         }
 
-        ConfigValueUInt(NULL, NULL, "sends", &numSends);
-        numSends = minu(MAX_SENDS, numSends);
-
         if((device->Flags&DEVICE_RUNNING))
             V0(device->Backend,stop)();
         device->Flags &= ~DEVICE_RUNNING;
@@ -1894,7 +1893,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->FmtType = stype;
         device->NumMonoSources = numMono;
         device->NumStereoSources = numStereo;
-        device->NumAuxSends = numSends;
+
+        ConfigValueUInt(NULL, NULL, "sends", &numSends);
+        new_sends = clampi(numSends, 1, MAX_SENDS);
     }
     else if(attrList && attrList[0])
     {
@@ -1907,10 +1908,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             V0(device->Backend,stop)();
         device->Flags &= ~DEVICE_RUNNING;
 
+        UpdateClockBase(device);
+
         freq = device->Frequency;
         numMono = device->NumMonoSources;
         numStereo = device->NumStereoSources;
-        numSends = device->NumAuxSends;
+        numSends = old_sends;
 
 #define TRACE_ATTR(a, v) TRACE("%s = %d\n", #a, v)
         while(attrList[attrIdx])
@@ -1962,11 +1965,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         ConfigValueUInt(al_string_get_cstr(device->DeviceName), NULL, "frequency", &freq);
         freq = maxu(freq, MIN_OUTPUT_RATE);
 
-        ConfigValueUInt(al_string_get_cstr(device->DeviceName), NULL, "sends", &numSends);
-        numSends = minu(MAX_SENDS, numSends);
-
-        UpdateClockBase(device);
-
         device->UpdateSize = (ALuint64)device->UpdateSize * freq /
                              device->Frequency;
         /* SSE and Neon do best with the update size being a multiple of 4 */
@@ -1976,7 +1974,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->Frequency = freq;
         device->NumMonoSources = numMono;
         device->NumStereoSources = numStereo;
-        device->NumAuxSends = numSends;
+
+        ConfigValueUInt(al_string_get_cstr(device->DeviceName), NULL, "sends", &numSends);
+        new_sends = clampi(numSends, 1, MAX_SENDS);
     }
 
     if((device->Flags&DEVICE_RUNNING))
@@ -2148,6 +2148,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->FOAOut.NumChannels = device->Dry.NumChannels;
     }
 
+    /* Need to delay returning failure until replacement Send arrays have been
+     * allocated with the appropriate size.
+     */
+    device->NumAuxSends = new_sends;
+    update_failed = AL_FALSE;
     SetMixerFPUMode(&oldMode);
     if(device->DefaultSlot)
     {
@@ -2157,11 +2162,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         state->OutBuffer = device->Dry.Buffer;
         state->OutChannels = device->Dry.NumChannels;
         if(V(state,deviceUpdate)(device) == AL_FALSE)
-        {
-            RestoreFPUMode(&oldMode);
-            return ALC_INVALID_DEVICE;
-        }
-        UpdateEffectSlotProps(slot);
+            update_failed = AL_TRUE;
+        else
+            UpdateEffectSlotProps(slot);
     }
 
     context = ATOMIC_LOAD_SEQ(&device->ContextList);
@@ -2179,14 +2182,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             state->OutBuffer = device->Dry.Buffer;
             state->OutChannels = device->Dry.NumChannels;
             if(V(state,deviceUpdate)(device) == AL_FALSE)
-            {
-                UnlockUIntMapRead(&context->EffectSlotMap);
-                ReadUnlock(&context->PropLock);
-                RestoreFPUMode(&oldMode);
-                return ALC_INVALID_DEVICE;
-            }
-
-            UpdateEffectSlotProps(slot);
+                update_failed = AL_TRUE;
+            else
+                UpdateEffectSlotProps(slot);
         }
         UnlockUIntMapRead(&context->EffectSlotMap);
 
@@ -2195,25 +2193,39 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         {
             ALsource *source = context->SourceMap.values[pos];
             struct ALsourceProps *props;
-            ALsizei s;
 
-            for(s = device->NumAuxSends;s < MAX_SENDS;s++)
+            if(old_sends != device->NumAuxSends)
             {
-                if(source->Send[s].Slot)
-                    DecrementRef(&source->Send[s].Slot->ref);
-                source->Send[s].Slot = NULL;
-                source->Send[s].Gain = 1.0f;
-                source->Send[s].GainHF = 1.0f;
-                source->Send[s].HFReference = LOWPASSFREQREF;
-                source->Send[s].GainLF = 1.0f;
-                source->Send[s].LFReference = HIGHPASSFREQREF;
+                ALvoid *sends = al_calloc(16, device->NumAuxSends*sizeof(source->Send[0]));
+                ALsizei s;
+
+                memcpy(sends, source->Send,
+                    mini(device->NumAuxSends, old_sends)*sizeof(source->Send[0])
+                );
+                for(s = device->NumAuxSends;s < old_sends;s++)
+                {
+                    if(source->Send[s].Slot)
+                        DecrementRef(&source->Send[s].Slot->ref);
+                    source->Send[s].Slot = NULL;
+                }
+                al_free(source->Send);
+                source->Send = sends;
+                for(s = old_sends;s < device->NumAuxSends;s++)
+                {
+                    source->Send[s].Slot = NULL;
+                    source->Send[s].Gain = 1.0f;
+                    source->Send[s].GainHF = 1.0f;
+                    source->Send[s].HFReference = LOWPASSFREQREF;
+                    source->Send[s].GainLF = 1.0f;
+                    source->Send[s].LFReference = HIGHPASSFREQREF;
+                }
             }
 
             source->NeedsUpdate = AL_TRUE;
 
             /* Clear any pre-existing source property structs, in case the
              * number of auxiliary sends changed. Playing (or paused) sources
-             * will have updates specified.
+             * will have updates respecified in UpdateAllSourceProps.
              */
             props = ATOMIC_EXCHANGE_SEQ(struct ALsourceProps*, &source->Update, NULL);
             al_free(props);
@@ -2237,6 +2249,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         context = context->next;
     }
     RestoreFPUMode(&oldMode);
+    if(update_failed)
+        return ALC_INVALID_DEVICE;
 
     if(!(device->Flags&DEVICE_PAUSED))
     {
@@ -3720,8 +3734,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     ConfigValueUInt(deviceName, NULL, "slots", &device->AuxiliaryEffectSlotMax);
     if(device->AuxiliaryEffectSlotMax == 0) device->AuxiliaryEffectSlotMax = 4;
 
-    ConfigValueUInt(deviceName, NULL, "sends", &device->NumAuxSends);
-    if(device->NumAuxSends > MAX_SENDS) device->NumAuxSends = MAX_SENDS;
+    ConfigValueInt(deviceName, NULL, "sends", &device->NumAuxSends);
+    device->NumAuxSends = clampi(device->NumAuxSends, 0, MAX_SENDS);
 
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
@@ -4126,8 +4140,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     ConfigValueUInt(NULL, NULL, "slots", &device->AuxiliaryEffectSlotMax);
     if(device->AuxiliaryEffectSlotMax == 0) device->AuxiliaryEffectSlotMax = 4;
 
-    ConfigValueUInt(NULL, NULL, "sends", &device->NumAuxSends);
-    if(device->NumAuxSends > MAX_SENDS) device->NumAuxSends = MAX_SENDS;
+    ConfigValueInt(NULL, NULL, "sends", &device->NumAuxSends);
+    device->NumAuxSends = clampi(device->NumAuxSends, 0, MAX_SENDS);
 
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;

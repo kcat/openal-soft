@@ -541,23 +541,19 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
 
         for(i = 0;i < NumSends;i++)
         {
-            if(!SendSlots[i])
+            const ALeffectslot *Slot = SendSlots[i];
+            if(Slot)
             {
                 for(c = 0;c < num_channels;c++)
-                {
-                    for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                        voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
-                }
+                    ComputeFirstOrderGainsBF(Slot->ChanMap, Slot->NumChannels,
+                        matrix.m[c], WetGain[i], voice->Send[i].Params[c].Gains.Target
+                    );
             }
             else
             {
                 for(c = 0;c < num_channels;c++)
-                {
-                    const ALeffectslot *Slot = SendSlots[i];
-                    ComputeFirstOrderGainsBF(Slot->ChanMap, Slot->NumChannels,
-                        matrix.m[c], WetGain[i], voice->Send[i].Params[c].Gains.Target
-                    );
-                }
+                    for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
+                        voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
             }
         }
 
@@ -589,18 +585,14 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
 
                 for(i = 0;i < NumSends;i++)
                 {
-                    if(!SendSlots[i])
-                    {
-                        for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                            voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
-                    }
-                    else
-                    {
-                        const ALeffectslot *Slot = SendSlots[i];
+                    const ALeffectslot *Slot = SendSlots[i];
+                    if(Slot)
                         ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels,
                             coeffs, WetGain[i], voice->Send[i].Params[c].Gains.Target
                         );
-                    }
+                    else
+                        for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
+                            voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
                 }
             }
 
@@ -647,18 +639,14 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
 
                 for(i = 0;i < NumSends;i++)
                 {
-                    if(!SendSlots[i])
-                    {
-                        for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                            voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
-                    }
-                    else
-                    {
-                        const ALeffectslot *Slot = SendSlots[i];
+                    const ALeffectslot *Slot = SendSlots[i];
+                    if(Slot)
                         ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels,
                             coeffs, WetGain[i], voice->Send[i].Params[c].Gains.Target
                         );
-                    }
+                    else
+                        for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
+                            voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
                 }
             }
 
@@ -683,7 +671,6 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
 
                     for(i = 0;i < NumSends;i++)
                     {
-                        ALuint j;
                         for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
                             voice->Direct.Params[c].Gains.Target[j] = 0.0f;
                     }
@@ -711,19 +698,14 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
 
                 for(i = 0;i < NumSends;i++)
                 {
-                    if(!SendSlots[i])
-                    {
-                        ALuint j;
-                        for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                            voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
-                    }
-                    else
-                    {
-                        const ALeffectslot *Slot = SendSlots[i];
+                    const ALeffectslot *Slot = SendSlots[i];
+                    if(Slot)
                         ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels,
                             coeffs, WetGain[i], voice->Send[i].Params[c].Gains.Target
                         );
-                    }
+                    else
+                        for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
+                            voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
                 }
             }
 
@@ -808,7 +790,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
     ALfloat Pitch;
     ALuint Frequency;
     ALint NumSends;
-    ALint i;
+    ALint i, j;
 
     /* Get context/device properties */
     DopplerFactor = Listener->Params.DopplerFactor;
@@ -1159,19 +1141,14 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
 
         for(i = 0;i < NumSends;i++)
         {
-            if(!SendSlots[i])
-            {
-                ALuint j;
-                for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                    voice->Send[i].Params[0].Gains.Target[j] = 0.0f;
-            }
-            else
-            {
-                const ALeffectslot *Slot = SendSlots[i];
+            const ALeffectslot *Slot = SendSlots[i];
+            if(Slot)
                 ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels,
                     coeffs, WetGain[i], voice->Send[i].Params[0].Gains.Target
                 );
-            }
+            else
+                for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
+                    voice->Send[i].Params[0].Gains.Target[j] = 0.0f;
         }
 
         voice->IsHrtf = AL_TRUE;
@@ -1217,19 +1194,14 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
 
         for(i = 0;i < NumSends;i++)
         {
-            if(!SendSlots[i])
-            {
-                ALuint j;
-                for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                    voice->Send[i].Params[0].Gains.Target[j] = 0.0f;
-            }
-            else
-            {
-                const ALeffectslot *Slot = SendSlots[i];
+            const ALeffectslot *Slot = SendSlots[i];
+            if(Slot)
                 ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels,
                     coeffs, WetGain[i], voice->Send[i].Params[0].Gains.Target
                 );
-            }
+            else
+                for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
+                    voice->Send[i].Params[0].Gains.Target[j] = 0.0f;
         }
 
         voice->IsHrtf = AL_FALSE;

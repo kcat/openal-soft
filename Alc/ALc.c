@@ -3639,7 +3639,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->Frequency = DEFAULT_OUTPUT_RATE;
     device->IsHeadphones = AL_FALSE;
     device->AmbiFmt = AmbiFormat_Default;
-    device->NumUpdates = 4;
+    device->NumUpdates = 3;
     device->UpdateSize = 1024;
 
     if(!PlaybackBackend.getFactory)

@@ -81,7 +81,7 @@
 #  which helps protect against skips when the CPU is under load, but increases
 #  the delay between a sound getting mixed and being heard. Acceptable values
 #  range between 2 and 16.
-#periods = 4
+#periods = 3
 
 ## stereo-mode:
 #  Specifies if stereo output is treated as being headphones or speakers. With

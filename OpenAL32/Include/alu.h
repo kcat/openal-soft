@@ -297,6 +297,16 @@ inline void CalcXYZCoeffs(ALfloat x, ALfloat y, ALfloat z, ALfloat spread, ALflo
 void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
 
 /**
+ * CalcAnglePairwiseCoeffs
+ *
+ * Calculates ambisonic coefficients based on azimuth and elevation. The
+ * azimuth and elevation parameters are in radians, going right and up
+ * respectively. This pairwise variant warps the result such that +30 azimuth
+ * is full right, and -30 azimuth is full left.
+ */
+void CalcAnglePairwiseCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
+
+/**
  * ComputeAmbientGains
  *
  * Computes channel gains for ambient, omni-directional sounds.

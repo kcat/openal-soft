@@ -202,6 +202,14 @@ void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat
     CalcDirectionCoeffs(dir, spread, coeffs);
 }
 
+void CalcAnglePairwiseCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS])
+{
+    ALfloat sign = (azimuth < 0.0f) ? -1.0f : 1.0f;
+    if(!(fabsf(azimuth) > F_PI_2))
+        azimuth = minf(fabsf(azimuth) * F_PI_2 / (F_PI/6.0f), F_PI_2) * sign;
+    CalcAngleCoeffs(azimuth, elevation, spread, coeffs);
+}
+
 
 void ComputeAmbientGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
@@ -237,7 +245,7 @@ void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, AL
         float gain = 0.0f;
         for(j = 0;j < numcoeffs;j++)
             gain += chancoeffs[i][j]*coeffs[j];
-        gains[i] = gain * ingain;
+        gains[i] = clampf(gain, 0.0f, 1.0f) * ingain;
     }
     for(;i < MAX_OUTPUT_CHANNELS;i++)
         gains[i] = 0.0f;
@@ -262,7 +270,7 @@ void ComputeFirstOrderGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans,
         float gain = 0.0f;
         for(j = 0;j < 4;j++)
             gain += chancoeffs[i][j] * mtx[j];
-        gains[i] = gain * ingain;
+        gains[i] = clampf(gain, 0.0f, 1.0f) * ingain;
     }
     for(;i < MAX_OUTPUT_CHANNELS;i++)
         gains[i] = 0.0f;
@@ -454,8 +462,8 @@ static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei sp
 static const ChannelMap MonoCfg[1] = {
     { FrontCenter, { 1.0f } },
 }, StereoCfg[2] = {
-    { FrontLeft,   { 5.00000000e-1f,  2.88675135e-1f, 0.0f,  0.00000000e+0f } },
-    { FrontRight,  { 5.00000000e-1f, -2.88675135e-1f, 0.0f,  0.00000000e+0f } },
+    { FrontLeft,   { 5.00000000e-1f,  2.88675135e-1f, 0.0f,  1.19573156e-1f } },
+    { FrontRight,  { 5.00000000e-1f, -2.88675135e-1f, 0.0f,  1.19573156e-1f } },
 }, QuadCfg[4] = {
     { BackLeft,    { 3.53553391e-1f,  2.04124145e-1f, 0.0f, -2.04124145e-1f } },
     { FrontLeft,   { 3.53553391e-1f,  2.04124145e-1f, 0.0f,  2.04124145e-1f } },

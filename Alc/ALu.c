@@ -679,23 +679,12 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
                 }
 
                 if(Device->Render_Mode == StereoPair)
-                {
-                    /* Clamp X so it remains within 30 degrees of 0 or 180 degree azimuth. */
-                    ALfloat x = sinf(chans[c].angle) * cosf(chans[c].elevation);
-                    coeffs[0] = clampf(-x, -0.5f, 0.5f) + 0.5f;
-                    voice->Direct.Params[c].Gains.Target[0] = sqrtf(coeffs[0]) * DryGain;
-                    voice->Direct.Params[c].Gains.Target[1] = sqrtf(1.0f-coeffs[0]) * DryGain;
-                    for(j = 2;j < MAX_OUTPUT_CHANNELS;j++)
-                        voice->Direct.Params[c].Gains.Target[j] = 0.0f;
-
-                    CalcAngleCoeffs(chans[c].angle, chans[c].elevation, 0.0f, coeffs);
-                }
+                    CalcAnglePairwiseCoeffs(chans[c].angle, chans[c].elevation, 0.0f, coeffs);
                 else
-                {
                     CalcAngleCoeffs(chans[c].angle, chans[c].elevation, 0.0f, coeffs);
-                    ComputePanningGains(Device->Dry, coeffs, DryGain,
-                                        voice->Direct.Params[c].Gains.Target);
-                }
+                ComputePanningGains(Device->Dry,
+                    coeffs, DryGain, voice->Direct.Params[c].Gains.Target
+                );
 
                 for(i = 0;i < NumSends;i++)
                 {
@@ -1173,22 +1162,15 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
 
         if(Device->Render_Mode == StereoPair)
         {
-            /* Clamp X so it remains within 30 degrees of 0 or 180 degree azimuth. */
-            ALfloat x = -dir[0] * (0.5f * (cosf(spread*0.5f) + 1.0f));
-            x = clampf(x, -0.5f, 0.5f) + 0.5f;
-            voice->Direct.Params[0].Gains.Target[0] = sqrtf(x) * DryGain;
-            voice->Direct.Params[0].Gains.Target[1] = sqrtf(1.0f-x) * DryGain;
-            for(i = 2;i < MAX_OUTPUT_CHANNELS;i++)
-                voice->Direct.Params[0].Gains.Target[i] = 0.0f;
-
-            CalcDirectionCoeffs(dir, spread, coeffs);
+            ALfloat ev = asinf(clampf(dir[1], -1.0f, 1.0f));
+            ALfloat az = atan2f(dir[0], -dir[2]);
+            CalcAnglePairwiseCoeffs(az, ev, radius, coeffs);
         }
         else
-        {
             CalcDirectionCoeffs(dir, spread, coeffs);
-            ComputePanningGains(Device->Dry, coeffs, DryGain,
-                                voice->Direct.Params[0].Gains.Target);
-        }
+        ComputePanningGains(Device->Dry,
+            coeffs, DryGain, voice->Direct.Params[0].Gains.Target
+        );
 
         for(i = 0;i < NumSends;i++)
         {

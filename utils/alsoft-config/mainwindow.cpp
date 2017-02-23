@@ -110,10 +110,10 @@ static const struct NameValuePair {
     { "Headphones", "headphones" },
 
     { "", "" }
-}, stereoPanList[] = {
+}, stereoEncList[] = {
     { "Default", "" },
+    { "Pan Pot", "panpot" },
     { "UHJ", "uhj" },
-    { "Pair-Wise", "paired" },
 
     { "", "" }
 }, ambiFormatList[] = {
@@ -234,9 +234,9 @@ MainWindow::MainWindow(QWidget *parent) :
     for(int i = 0;stereoModeList[i].name[0];i++)
         ui->stereoModeCombo->addItem(stereoModeList[i].name);
     ui->stereoModeCombo->adjustSize();
-    for(int i = 0;stereoPanList[i].name[0];i++)
-        ui->stereoPanningComboBox->addItem(stereoPanList[i].name);
-    ui->stereoPanningComboBox->adjustSize();
+    for(int i = 0;stereoEncList[i].name[0];i++)
+        ui->stereoEncodingComboBox->addItem(stereoEncList[i].name);
+    ui->stereoEncodingComboBox->adjustSize();
     for(int i = 0;ambiFormatList[i].name[0];i++)
         ui->ambiFormatComboBox->addItem(ambiFormatList[i].name);
     ui->ambiFormatComboBox->adjustSize();
@@ -326,7 +326,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->periodCountSlider, SIGNAL(valueChanged(int)), this, SLOT(updatePeriodCountEdit(int)));
     connect(ui->periodCountEdit, SIGNAL(editingFinished()), this, SLOT(updatePeriodCountSlider()));
 
-    connect(ui->stereoPanningComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(enableApplyButton()));
+    connect(ui->stereoEncodingComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(enableApplyButton()));
     connect(ui->ambiFormatComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(enableApplyButton()));
 
     connect(ui->decoderHQModeCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
@@ -637,15 +637,15 @@ void MainWindow::loadConfig(const QString &fname)
         updatePeriodCountSlider();
     }
 
-    QString stereopan = settings.value("stereo-panning").toString();
-    ui->stereoPanningComboBox->setCurrentIndex(0);
+    QString stereopan = settings.value("stereo-encoding").toString();
+    ui->stereoEncodingComboBox->setCurrentIndex(0);
     if(stereopan.isEmpty() == false)
     {
-        QString str = getNameFromValue(stereoPanList, stereopan);
+        QString str = getNameFromValue(stereoEncList, stereopan);
         if(!str.isEmpty())
         {
-            int j = ui->stereoPanningComboBox->findText(str);
-            if(j > 0) ui->stereoPanningComboBox->setCurrentIndex(j);
+            int j = ui->stereoEncodingComboBox->findText(str);
+            if(j > 0) ui->stereoEncodingComboBox->setCurrentIndex(j);
         }
     }
 
@@ -885,7 +885,7 @@ void MainWindow::saveConfig(const QString &fname) const
     settings.setValue("resampler", resamplerList[ui->resamplerSlider->value()].value);
 
     settings.setValue("stereo-mode", getValueFromName(stereoModeList, ui->stereoModeCombo->currentText()));
-    settings.setValue("stereo-panning", getValueFromName(stereoPanList, ui->stereoPanningComboBox->currentText()));
+    settings.setValue("stereo-encoding", getValueFromName(stereoEncList, ui->stereoEncodingComboBox->currentText()));
     settings.setValue("ambi-format", getValueFromName(ambiFormatList, ui->ambiFormatComboBox->currentText()));
 
     settings.setValue("decoder/hq-mode",

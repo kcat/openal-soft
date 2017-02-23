@@ -89,13 +89,14 @@
 #  Valid settings are auto, speakers, and headphones.
 #stereo-mode = auto
 
-## stereo-panning:
-#  Specifies the panning method for non-HRTF stereo output. uhj (default)
-#  creates stereo-compatible two-channel UHJ output, which encodes some
-#  surround sound information, while paired uses standard pair-wise panning
-#  between -30 and +30 degrees. If crossfeed filters are used, uhj panning is
-#  disabled.
-#stereo-panning = uhj
+## stereo-encoding:
+#  Specifies the encoding method for non-HRTF stereo output. 'panpot' (default)
+#  uses standard amplitude panning (aka pair-wise, stereo pair, etc) between
+#  -30 and +30 degrees, while 'uhj' creates stereo-compatible two-channel UHJ
+#  output, which encodes some surround sound information into stereo output
+#  that can be decoded with a surround sound receiver. If crossfeed filters are
+#  used, UHJ is disabled.
+#stereo-encoding = panpot
 
 ## ambi-format:
 #  Specifies the channel order and normalization for the "ambi*" set of channel

@@ -428,7 +428,7 @@ frames needed for each mixing update.</string>
         </widget>
        </widget>
       </widget>
-      <widget class="QComboBox" name="stereoPanningComboBox">
+      <widget class="QComboBox" name="stereoEncodingComboBox">
        <property name="geometry">
         <rect>
          <x>130</x>
@@ -438,11 +438,13 @@ frames needed for each mixing update.</string>
         </rect>
        </property>
        <property name="toolTip">
-        <string>Selects the panning method for non-HRTF stereo
-mixing. UHJ creates stereo-compatible two-channel
-output, which encodes some surround information.
-Pair-Wise uses standard pair-wise panning between
--30 and +30 degrees. The default is UHJ.</string>
+        <string>Pan Pot uses standard amplitude panning (aka
+pair-wise, stereo pair, etc) between -30 and +30
+degrees, while UHJ creates a stereo-compatible
+two-channel UHJ mix, which encodes some
+surround sound information into stereo output
+that can be decoded with a surround sound
+receiver.</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_19">
@@ -455,7 +457,7 @@ Pair-Wise uses standard pair-wise panning between
         </rect>
        </property>
        <property name="text">
-        <string>Stereo Panning:</string>
+        <string>Stereo Encoding:</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>

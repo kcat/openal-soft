@@ -1143,6 +1143,8 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
 no_hrtf:
     TRACE("HRTF disabled\n");
 
+    device->Render_Mode = StereoPair;
+
     ambiup_free(device->AmbiUp);
     device->AmbiUp = NULL;
 
@@ -1154,7 +1156,6 @@ no_hrtf:
     {
         device->Bs2b = al_calloc(16, sizeof(*device->Bs2b));
         bs2b_set_params(device->Bs2b, bs2blevel, device->Frequency);
-        device->Render_Mode = StereoPair;
         TRACE("BS2B enabled\n");
         InitPanning(device);
         return;
@@ -1162,13 +1163,12 @@ no_hrtf:
 
     TRACE("BS2B disabled\n");
 
-    device->Render_Mode = NormalRender;
-    if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "stereo-panning", &mode))
+    if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "stereo-encoding", &mode))
     {
-        if(strcasecmp(mode, "paired") == 0)
-            device->Render_Mode = StereoPair;
-        else if(strcasecmp(mode, "uhj") != 0)
-            ERR("Unexpected stereo-panning: %s\n", mode);
+        if(strcasecmp(mode, "uhj") == 0)
+            device->Render_Mode = NormalRender;
+        else if(strcasecmp(mode, "panpot") != 0)
+            ERR("Unexpected stereo-encoding: %s\n", mode);
     }
     if(device->Render_Mode == NormalRender)
     {

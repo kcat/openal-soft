@@ -49,6 +49,14 @@ openal-soft-1.18.0:
 
     Added an option to the example apps to open a specific device.
 
+    Increased the maximum auxiliary send limit to 16 (up from 4). Requires
+    requesting them with the ALC_MAX_AUXILIARY_SENDS context creation
+    attribute.
+
+    Increased the default auxiliary effect slot count to 64 (up from 4).
+
+    Reduced the default period count to 3 (down from 4).
+
     Slightly improved automatic naming for enumerated HRTFs.
 
     Improved B-Format decoding with HRTF output.

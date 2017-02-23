@@ -1089,11 +1089,11 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
 
     // Calculate the master filters
     hfscale = props->Reverb.HFReference / frequency;
-    gainhf = maxf(props->Reverb.GainHF, 0.0001f);
+    gainhf = maxf(props->Reverb.GainHF, 0.0625f); /* Limit -24dB */
     ALfilterState_setParams(&State->Filter[0].Lp, ALfilterType_HighShelf,
                             gainhf, hfscale, calc_rcpQ_from_slope(gainhf, 0.75f));
     lfscale = props->Reverb.LFReference / frequency;
-    gainlf = maxf(props->Reverb.GainLF, 0.0001f);
+    gainlf = maxf(props->Reverb.GainLF, 0.0625f);
     ALfilterState_setParams(&State->Filter[0].Hp, ALfilterType_LowShelf,
                             gainlf, lfscale, calc_rcpQ_from_slope(gainlf, 0.75f));
     for(i = 1;i < 4;i++)

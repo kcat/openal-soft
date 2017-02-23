@@ -138,7 +138,7 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *
      * filters' gain is for the reference frequency, which is the centerpoint
      * of the transition band.
      */
-    gain = sqrtf(props->Equalizer.LowGain);
+    gain = maxf(sqrtf(props->Equalizer.LowGain), 0.0625f); /* Limit -24dB */
     freq_mult = props->Equalizer.LowCutoff/frequency;
     ALfilterState_setParams(&state->filter[0][0], ALfilterType_LowShelf,
         gain, freq_mult, calc_rcpQ_from_slope(gain, 0.75f)
@@ -153,7 +153,7 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *
         state->filter[0][i].a2 = state->filter[0][0].a2;
     }
 
-    gain = props->Equalizer.Mid1Gain;
+    gain = maxf(props->Equalizer.Mid1Gain, 0.0625f);
     freq_mult = props->Equalizer.Mid1Center/frequency;
     ALfilterState_setParams(&state->filter[1][0], ALfilterType_Peaking,
         gain, freq_mult, calc_rcpQ_from_bandwidth(
@@ -169,7 +169,7 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *
         state->filter[1][i].a2 = state->filter[1][0].a2;
     }
 
-    gain = props->Equalizer.Mid2Gain;
+    gain = maxf(props->Equalizer.Mid2Gain, 0.0625f);
     freq_mult = props->Equalizer.Mid2Center/frequency;
     ALfilterState_setParams(&state->filter[2][0], ALfilterType_Peaking,
         gain, freq_mult, calc_rcpQ_from_bandwidth(
@@ -185,7 +185,7 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *
         state->filter[2][i].a2 = state->filter[2][0].a2;
     }
 
-    gain = sqrtf(props->Equalizer.HighGain);
+    gain = maxf(sqrtf(props->Equalizer.HighGain), 0.0625f);
     freq_mult = props->Equalizer.HighCutoff/frequency;
     ALfilterState_setParams(&state->filter[3][0], ALfilterType_HighShelf,
         gain, freq_mult, calc_rcpQ_from_slope(gain, 0.75f)

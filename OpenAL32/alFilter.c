@@ -362,7 +362,7 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
     ALfloat b[3] = { 1.0f, 0.0f, 0.0f };
 
     // Limit gain to -100dB
-    gain = maxf(gain, 0.00001f);
+    assert(gain > 0.00001f);
 
     w0 = F_TAU * freq_mult;
     sin_w0 = sinf(w0);

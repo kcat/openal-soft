@@ -226,7 +226,7 @@ ALboolean ApplyOffset(ALsource *Source);
 
 inline ALboolean IsPlayingOrPaused(const ALsource *source)
 {
-    ALenum state = ATOMIC_LOAD_SEQ(&source->state);
+    ALenum state = ATOMIC_LOAD(&source->state, almemory_order_relaxed);
     return state == AL_PLAYING || state == AL_PAUSED;
 }
 

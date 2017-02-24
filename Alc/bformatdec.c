@@ -221,11 +221,6 @@ int bformatdec_getOrder(const struct BFormatDec *dec)
     return 0;
 }
 
-int bformatdec_isPeriphonic(const struct BFormatDec *dec)
-{
-    return dec->Periphonic;
-}
-
 void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALsizei chanmap[MAX_OUTPUT_CHANNELS])
 {
     static const ALsizei map2DTo3D[MAX_AMBI2D_COEFFS] = {

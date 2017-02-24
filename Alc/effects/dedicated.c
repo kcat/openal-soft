@@ -98,7 +98,7 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCdevice *
         else
         {
             ALfloat coeffs[MAX_AMBI_COEFFS];
-            CalcXYZCoeffs(0.0f, 0.0f, -1.0f, 0.0f, coeffs);
+            CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
 
             STATIC_CAST(ALeffectState,state)->OutBuffer = device->Dry.Buffer;
             STATIC_CAST(ALeffectState,state)->OutChannels = device->Dry.NumChannels;
@@ -109,16 +109,18 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCdevice *
 
 static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
-    const ALfloat *gains = state->gains;
     ALuint i, c;
 
+    SamplesIn = ASSUME_ALIGNED(SamplesIn, 16);
+    SamplesOut = ASSUME_ALIGNED(SamplesOut, 16);
     for(c = 0;c < NumChannels;c++)
     {
-        if(!(fabsf(gains[c]) > GAIN_SILENCE_THRESHOLD))
+        const ALfloat gain = state->gains[c];
+        if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
 
         for(i = 0;i < SamplesToDo;i++)
-            SamplesOut[c][i] += SamplesIn[0][i] * gains[c];
+            SamplesOut[c][i] += SamplesIn[0][i] * gain;
     }
 }
 

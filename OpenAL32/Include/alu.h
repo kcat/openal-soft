@@ -276,25 +276,21 @@ void aluInitEffectPanning(struct ALeffectslot *slot);
 void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
 
 /**
- * CalcXYZCoeffs
- *
- * Same as CalcDirectionCoeffs except the direction is specified as separate x,
- * y, and z parameters instead of an array.
- */
-inline void CalcXYZCoeffs(ALfloat x, ALfloat y, ALfloat z, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS])
-{
-    ALfloat dir[3] = { x, y, z };
-    CalcDirectionCoeffs(dir, spread, coeffs);
-}
-
-/**
  * CalcAngleCoeffs
  *
  * Calculates ambisonic coefficients based on azimuth and elevation. The
  * azimuth and elevation parameters are in radians, going right and up
  * respectively.
  */
-void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
+inline void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS])
+{
+    ALfloat dir[3] = {
+        sinf(azimuth) * cosf(elevation),
+        sinf(elevation),
+        -cosf(azimuth) * cosf(elevation)
+    };
+    CalcDirectionCoeffs(dir, spread, coeffs);
+}
 
 /**
  * CalcAnglePairwiseCoeffs

@@ -134,11 +134,11 @@ static ALvoid ALechoState_update(ALechoState *state, const ALCdevice *Device, co
     gain = Slot->Params.Gain;
 
     /* First tap panning */
-    CalcXYZCoeffs(-lrpan, 0.0f, 0.0f, spread, coeffs);
+    CalcAngleCoeffs(-F_PI_2*lrpan, 0.0f, spread, coeffs);
     ComputePanningGains(Device->Dry, coeffs, gain, state->Gain[0]);
 
     /* Second tap panning */
-    CalcXYZCoeffs( lrpan, 0.0f, 0.0f, spread, coeffs);
+    CalcAngleCoeffs( F_PI_2*lrpan, 0.0f, spread, coeffs);
     ComputePanningGains(Device->Dry, coeffs, gain, state->Gain[1]);
 }
 

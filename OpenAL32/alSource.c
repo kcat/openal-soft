@@ -2957,13 +2957,13 @@ void UpdateAllSourceProps(ALCcontext *context)
  */
 ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
 {
+    ALvoice *voice;
+
     WriteLock(&Source->queue_lock);
     if(state == AL_PLAYING)
     {
         ALCdevice *device = Context->Device;
         ALbufferlistitem *BufferList;
-        ALboolean discontinuity;
-        ALvoice *voice = NULL;
         ALsizei i;
 
         /* Check that there is a queue containing at least one valid, non zero
@@ -2977,61 +2977,68 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             BufferList = BufferList->next;
         }
 
-        if(ATOMIC_EXCHANGE(ALenum, &Source->state, AL_PLAYING, almemory_order_acq_rel) == AL_PAUSED)
-            discontinuity = AL_FALSE;
-        else
-        {
-            ATOMIC_STORE(&Source->current_buffer, BufferList, almemory_order_relaxed);
-            ATOMIC_STORE(&Source->position, 0, almemory_order_relaxed);
-            ATOMIC_STORE(&Source->position_fraction, 0, almemory_order_release);
-            discontinuity = AL_TRUE;
-        }
-
-        // Check if an Offset has been set
-        if(Source->OffsetType != AL_NONE)
-        {
-            ApplyOffset(Source);
-            /* discontinuity = AL_TRUE;??? */
-        }
-
-        /* If there's nothing to play, or device is disconnected, go right to
-         * stopped */
+        /* If there's nothing to play, or the device is disconnected, go right
+         * to stopped.
+         */
         if(!BufferList || !device->Connected)
             goto do_stop;
+
+        voice = GetSourceVoice(Source, Context);
+        switch(ATOMIC_EXCHANGE(ALenum, &Source->state, AL_PLAYING, almemory_order_acq_rel))
+        {
+            case AL_PLAYING:
+                /* A source that's already playing is restarted. */
+                ATOMIC_STORE(&Source->current_buffer, BufferList, almemory_order_relaxed);
+                ATOMIC_STORE(&Source->position, 0, almemory_order_relaxed);
+                ATOMIC_STORE(&Source->position_fraction, 0, almemory_order_release);
+                /* fall-through */
+            case AL_PAUSED:
+                /* A source that's paused simply resumes. Make sure it uses the
+                 * volume last specified; there's no reason to fade from where
+                 * it stopped at.
+                 */
+                assert(voice != NULL);
+                voice->Moving = AL_FALSE;
+                goto done;
+
+            default:
+                /* A source that's not playing or paused has its offset
+                 * applied, and then starts playing.
+                 */
+                ATOMIC_STORE(&Source->current_buffer, BufferList, almemory_order_relaxed);
+                ATOMIC_STORE(&Source->position, 0, almemory_order_relaxed);
+                ATOMIC_STORE(&Source->position_fraction, 0, almemory_order_release);
+                if(Source->OffsetType != AL_NONE)
+                    ApplyOffset(Source);
+                break;
+        }
 
         /* Make sure this source isn't already active, and if not, look for an
          * unused voice to put it in.
          */
-        voice = GetSourceVoice(Source, Context);
+        assert(voice == NULL);
+        for(i = 0;i < Context->VoiceCount;i++)
+        {
+            if(Context->Voices[i]->Source == NULL)
+            {
+                voice = Context->Voices[i];
+                voice->Source = Source;
+                break;
+            }
+        }
         if(voice == NULL)
         {
-            for(i = 0;i < Context->VoiceCount;i++)
-            {
-                if(Context->Voices[i]->Source == NULL)
-                {
-                    voice = Context->Voices[i];
-                    voice->Source = Source;
-                    break;
-                }
-            }
-            if(voice == NULL)
-            {
-                voice = Context->Voices[Context->VoiceCount++];
-                voice->Source = Source;
-            }
-            discontinuity = AL_TRUE;
+            voice = Context->Voices[Context->VoiceCount++];
+            voice->Source = Source;
         }
 
-        if(discontinuity)
-        {
-            /* Clear previous samples if playback is discontinuous. */
-            memset(voice->PrevSamples, 0, sizeof(voice->PrevSamples));
+        /* Clear previous samples. */
+        memset(voice->PrevSamples, 0, sizeof(voice->PrevSamples));
 
-            /* Clear the stepping value so the mixer knows not to mix this
-             * until the update gets applied.
-             */
-            voice->Step = 0;
-        }
+        /* Clear the stepping value so the mixer knows not to mix this until
+         * the update gets applied.
+         */
+        voice->Step = 0;
 
         voice->Moving = AL_FALSE;
         for(i = 0;i < MAX_INPUT_CHANNELS;i++)
@@ -3057,6 +3064,8 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
     else if(state == AL_STOPPED)
     {
     do_stop:
+        voice = GetSourceVoice(Source, Context);
+        if(voice) voice->Source = NULL;
         if(ATOMIC_LOAD(&Source->state, almemory_order_acquire) != AL_INITIAL)
         {
             ATOMIC_STORE(&Source->state, AL_STOPPED, almemory_order_relaxed);
@@ -3067,6 +3076,8 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
     }
     else if(state == AL_INITIAL)
     {
+        voice = GetSourceVoice(Source, Context);
+        if(voice) voice->Source = NULL;
         if(ATOMIC_LOAD(&Source->state, almemory_order_acquire) != AL_INITIAL)
         {
             ATOMIC_STORE(&Source->state, AL_INITIAL, almemory_order_relaxed);
@@ -3078,6 +3089,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         Source->OffsetType = AL_NONE;
         Source->Offset = 0.0;
     }
+done:
     WriteUnlock(&Source->queue_lock);
 }
 

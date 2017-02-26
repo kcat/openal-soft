@@ -1427,7 +1427,10 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 source = (*voice)->Source;
                 if(IsVoiceInit && source &&
                    ATOMIC_LOAD(&source->state, almemory_order_relaxed) == AL_PLAYING)
-                    MixSource(*voice, source, device, SamplesToDo);
+                {
+                    if(!MixSource(*voice, source, device, SamplesToDo))
+                        (*voice)->Source = NULL;
+                }
             }
 
             /* effect slot processing */

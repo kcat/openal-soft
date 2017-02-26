@@ -366,7 +366,7 @@ static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter
 }
 
 
-void MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei SamplesToDo)
+ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei SamplesToDo)
 {
     ResamplerFunc Resample;
     ALbufferlistitem *BufferListItem;
@@ -685,4 +685,5 @@ void MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei Samp
     ATOMIC_STORE(&Source->current_buffer,    BufferListItem, almemory_order_relaxed);
     ATOMIC_STORE(&Source->position,          DataPosInt, almemory_order_relaxed);
     ATOMIC_STORE(&Source->position_fraction, DataPosFrac, almemory_order_release);
+    return State == AL_PLAYING;
 }

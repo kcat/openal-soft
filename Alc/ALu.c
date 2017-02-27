@@ -1594,16 +1594,13 @@ void aluHandleDisconnect(ALCdevice *device)
         voice_end = voice + Context->VoiceCount;
         while(voice != voice_end)
         {
-            ALenum playing = AL_PLAYING;
             ALsource *source = (*voice)->Source;
             (*voice)->Source = NULL;
 
-            if(source &&
-               ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(ALenum, &source->state, &playing, AL_STOPPED))
+            if(source)
             {
-                ATOMIC_STORE(&source->current_buffer, NULL, almemory_order_relaxed);
-                ATOMIC_STORE(&source->position, 0, almemory_order_relaxed);
-                ATOMIC_STORE(&source->position_fraction, 0, almemory_order_release);
+                ALenum playing = AL_PLAYING;
+                ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(ALenum, &source->state, &playing, AL_STOPPED);
             }
 
             voice++;

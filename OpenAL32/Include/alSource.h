@@ -81,6 +81,17 @@ typedef struct ALvoice {
 
     struct ALsource *Source;
 
+    /* Current buffer queue item being played. */
+    ATOMIC(ALbufferlistitem*) current_buffer;
+
+    /**
+     * Source offset in samples, relative to the currently playing buffer, NOT
+     * the whole queue, and the fractional (fixed-point) offset to the next
+     * sample.
+     */
+    ATOMIC(ALuint) position;
+    ATOMIC(ALuint) position_fraction;
+
     /** Current target parameters used for mixing. */
     ALint Step;
 
@@ -178,18 +189,9 @@ typedef struct ALsource {
     ATOMIC(ALenum) state;
     ALenum new_state;
 
-    /** Source Buffer Queue info. */
+    /** Source Buffer Queue head. */
     RWLock queue_lock;
     ATOMIC(ALbufferlistitem*) queue;
-    ATOMIC(ALbufferlistitem*) current_buffer;
-
-    /**
-     * Source offset in samples, relative to the currently playing buffer, NOT
-     * the whole queue, and the fractional (fixed-point) offset to the next
-     * sample.
-     */
-    ATOMIC(ALuint) position;
-    ATOMIC(ALuint) position_fraction;
 
     ATOMIC(ALboolean) looping;
 
@@ -222,7 +224,7 @@ inline struct ALsource *RemoveSource(ALCcontext *context, ALuint id)
 
 void UpdateAllSourceProps(ALCcontext *context);
 ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state);
-ALboolean ApplyOffset(ALsource *Source);
+ALboolean ApplyOffset(ALsource *Source, ALvoice *voice);
 
 inline ALboolean IsPlayingOrPaused(const ALsource *source)
 {

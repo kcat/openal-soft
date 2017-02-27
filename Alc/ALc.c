@@ -1692,22 +1692,24 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
 
         LockUIntMapRead(&context->SourceMap);
         V0(device->Backend,lock)();
+        for(pos = 0;pos < context->VoiceCount;pos++)
+        {
+            ALvoice *voice = context->Voices[pos];
+            ALsource *source = voice->Source;
+            if(source && source->OffsetType != AL_NONE)
+            {
+                WriteLock(&source->queue_lock);
+                ApplyOffset(source, voice);
+                WriteUnlock(&source->queue_lock);
+            }
+        }
         for(pos = 0;pos < context->SourceMap.size;pos++)
         {
-            ALsource *Source = context->SourceMap.values[pos];
-            ALenum new_state;
-
-            if(Source->OffsetType != AL_NONE && IsPlayingOrPaused(Source))
-            {
-                WriteLock(&Source->queue_lock);
-                ApplyOffset(Source);
-                WriteUnlock(&Source->queue_lock);
-            }
-
-            new_state = Source->new_state;
-            Source->new_state = AL_NONE;
+            ALsource *source = context->SourceMap.values[pos];
+            ALenum new_state = source->new_state;
+            source->new_state = AL_NONE;
             if(new_state)
-                SetSourceState(Source, context, new_state);
+                SetSourceState(source, context, new_state);
         }
         V0(device->Backend,unlock)();
         UnlockUIntMapRead(&context->SourceMap);

@@ -51,9 +51,9 @@ extern inline ALboolean IsPlayingOrPaused(const ALsource *source);
 static void InitSourceParams(ALsource *Source, ALsizei num_sends);
 static void DeinitSource(ALsource *source, ALsizei num_sends);
 static void UpdateSourceProps(ALsource *source, ALsizei num_sends);
-static ALint64 GetSourceSampleOffset(ALsource *Source, ALCdevice *device, ALuint64 *clocktime);
-static ALdouble GetSourceSecOffset(ALsource *Source, ALCdevice *device, ALuint64 *clocktime);
-static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCdevice *device);
+static ALint64 GetSourceSampleOffset(ALsource *Source, ALCcontext *context, ALuint64 *clocktime);
+static ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, ALuint64 *clocktime);
+static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context);
 static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac);
 
 typedef enum SourceProp {
@@ -531,17 +531,20 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
             Source->OffsetType = prop;
             Source->Offset = *values;
 
-            if(IsPlayingOrPausedSeq(Source) &&
-               !ATOMIC_LOAD(&Context->DeferUpdates, almemory_order_acquire))
+            if(!ATOMIC_LOAD(&Context->DeferUpdates, almemory_order_acquire) &&
+               IsPlayingOrPausedSeq(Source))
             {
+                ALvoice *voice;
+
                 ALCdevice_Lock(Context->Device);
                 /* Double-check that the source is still playing while we have
                  * the lock.
                  */
-                if(IsPlayingOrPaused(Source))
+                voice = GetSourceVoice(Source, Context);
+                if(voice)
                 {
                     WriteLock(&Source->queue_lock);
-                    if(ApplyOffset(Source) == AL_FALSE)
+                    if(ApplyOffset(Source, voice) == AL_FALSE)
                     {
                         WriteUnlock(&Source->queue_lock);
                         ALCdevice_Unlock(Context->Device);
@@ -714,7 +717,6 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 newlist = NULL;
             }
             oldlist = ATOMIC_EXCHANGE_SEQ(ALbufferlistitem*, &Source->queue, newlist);
-            ATOMIC_STORE_SEQ(&Source->current_buffer, newlist);
             WriteUnlock(&Source->queue_lock);
             UnlockBuffersRead(device);
 
@@ -738,14 +740,17 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             Source->OffsetType = prop;
             Source->Offset = *values;
 
-            if(IsPlayingOrPausedSeq(Source) &&
-                !ATOMIC_LOAD(&Context->DeferUpdates, almemory_order_acquire))
+            if(!ATOMIC_LOAD(&Context->DeferUpdates, almemory_order_acquire) &&
+               IsPlayingOrPausedSeq(Source))
             {
+                ALvoice *voice;
+
                 ALCdevice_Lock(Context->Device);
-                if(IsPlayingOrPaused(Source))
+                voice = GetSourceVoice(Source, Context);
+                if(voice)
                 {
                     WriteLock(&Source->queue_lock);
-                    if(ApplyOffset(Source) == AL_FALSE)
+                    if(ApplyOffset(Source, voice) == AL_FALSE)
                     {
                         WriteUnlock(&Source->queue_lock);
                         ALCdevice_Unlock(Context->Device);
@@ -1091,7 +1096,7 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_SEC_OFFSET:
         case AL_SAMPLE_OFFSET:
         case AL_BYTE_OFFSET:
-            *values = GetSourceOffset(Source, prop, device);
+            *values = GetSourceOffset(Source, prop, Context);
             return AL_TRUE;
 
         case AL_CONE_OUTER_GAINHF:
@@ -1144,7 +1149,7 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
             /* Get the source offset with the clock time first. Then get the
              * clock time with the device latency. Order is important.
              */
-            values[0] = GetSourceSecOffset(Source, device, &srcclock);
+            values[0] = GetSourceSecOffset(Source, Context, &srcclock);
             clocktime = V0(device->Backend,getClockLatency)();
             if(srcclock == (ALuint64)clocktime.ClockTime)
                 values[1] = (ALdouble)clocktime.Latency / 1000000000.0;
@@ -1235,8 +1240,7 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_BUFFER:
             ReadLock(&Source->queue_lock);
             BufferList = (Source->SourceType == AL_STATIC) ?
-                         ATOMIC_LOAD_SEQ(&Source->queue) :
-                         ATOMIC_LOAD_SEQ(&Source->current_buffer);
+                         ATOMIC_LOAD_SEQ(&Source->queue) : NULL;
             *values = (BufferList && BufferList->buffer) ? BufferList->buffer->id : 0;
             ReadUnlock(&Source->queue_lock);
             return AL_TRUE;
@@ -1326,8 +1330,15 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             else
             {
                 const ALbufferlistitem *BufferList = ATOMIC_LOAD_SEQ(&Source->queue);
-                const ALbufferlistitem *Current = ATOMIC_LOAD_SEQ(&Source->current_buffer);
+                const ALbufferlistitem *Current = NULL;
                 ALsizei played = 0;
+                ALvoice *voice;
+
+                if((voice=GetSourceVoice(Source, Context)) != NULL)
+                    Current = ATOMIC_LOAD_SEQ(&voice->current_buffer);
+                else if(ATOMIC_LOAD_SEQ(&Source->state) == AL_INITIAL)
+                    Current = BufferList;
+
                 while(BufferList && BufferList != Current)
                 {
                     played++;
@@ -1442,7 +1453,7 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
             /* Get the source offset with the clock time first. Then get the
              * clock time with the device latency. Order is important.
              */
-            values[0] = GetSourceSampleOffset(Source, device, &srcclock);
+            values[0] = GetSourceSampleOffset(Source, Context, &srcclock);
             clocktime = V0(device->Backend,getClockLatency)();
             if(srcclock == (ALuint64)clocktime.ClockTime)
                 values[1] = clocktime.Latency;
@@ -2606,12 +2617,6 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
             BufferList = BufferList->next;
         BufferList->next = BufferListStart;
     }
-    /* If the current buffer was at the end (NULL), put it at the start of the newly queued
-     * buffers.
-     */
-    BufferList = NULL;
-    ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(ALbufferlistitem*, &source->current_buffer,
-                                       &BufferList, BufferListStart);
     WriteUnlock(&source->queue_lock);
 
 done:
@@ -2626,10 +2631,8 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
     ALbufferlistitem *OldHead;
     ALbufferlistitem *OldTail;
     ALbufferlistitem *Current;
+    ALvoice *voice;
     ALsizei i = 0;
-
-    if(nb == 0)
-        return;
 
     context = GetContextRef();
     if(!context) return;
@@ -2641,6 +2644,9 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
     if((source=LookupSource(context, src)) == NULL)
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
 
+    /* Nothing to unqueue. */
+    if(nb == 0) goto done;
+
     WriteLock(&source->queue_lock);
     if(ATOMIC_LOAD_SEQ(&source->looping) || source->SourceType != AL_STREAMING)
     {
@@ -2651,7 +2657,11 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
 
     /* Find the new buffer queue head */
     OldTail = ATOMIC_LOAD_SEQ(&source->queue);
-    Current = ATOMIC_LOAD_SEQ(&source->current_buffer);
+    Current = NULL;
+    if((voice=GetSourceVoice(source, context)) != NULL)
+        Current = ATOMIC_LOAD_SEQ(&voice->current_buffer);
+    else if(ATOMIC_LOAD_SEQ(&source->state) == AL_INITIAL)
+        Current = OldTail;
     if(OldTail != Current)
     {
         for(i = 1;i < nb;i++)
@@ -2782,10 +2792,6 @@ static void InitSourceParams(ALsource *Source, ALsizei num_sends)
     Source->new_state = AL_NONE;
 
     ATOMIC_INIT(&Source->queue, NULL);
-    ATOMIC_INIT(&Source->current_buffer, NULL);
-
-    ATOMIC_INIT(&Source->position, 0);
-    ATOMIC_INIT(&Source->position_fraction, 0);
 
     ATOMIC_INIT(&Source->looping, AL_FALSE);
 
@@ -2987,29 +2993,22 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         switch(ATOMIC_EXCHANGE(ALenum, &Source->state, AL_PLAYING, almemory_order_acq_rel))
         {
             case AL_PLAYING:
+                assert(voice != NULL);
                 /* A source that's already playing is restarted. */
-                ATOMIC_STORE(&Source->current_buffer, BufferList, almemory_order_relaxed);
-                ATOMIC_STORE(&Source->position, 0, almemory_order_relaxed);
-                ATOMIC_STORE(&Source->position_fraction, 0, almemory_order_release);
+                ATOMIC_STORE(&voice->current_buffer, BufferList, almemory_order_relaxed);
+                ATOMIC_STORE(&voice->position, 0, almemory_order_relaxed);
+                ATOMIC_STORE(&voice->position_fraction, 0, almemory_order_release);
                 /* fall-through */
             case AL_PAUSED:
+                assert(voice != NULL);
                 /* A source that's paused simply resumes. Make sure it uses the
                  * volume last specified; there's no reason to fade from where
                  * it stopped at.
                  */
-                assert(voice != NULL);
                 voice->Moving = AL_FALSE;
                 goto done;
 
             default:
-                /* A source that's not playing or paused has its offset
-                 * applied, and then starts playing.
-                 */
-                ATOMIC_STORE(&Source->current_buffer, BufferList, almemory_order_relaxed);
-                ATOMIC_STORE(&Source->position, 0, almemory_order_relaxed);
-                ATOMIC_STORE(&Source->position_fraction, 0, almemory_order_release);
-                if(Source->OffsetType != AL_NONE)
-                    ApplyOffset(Source);
                 break;
         }
 
@@ -3031,6 +3030,15 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             voice = Context->Voices[Context->VoiceCount++];
             voice->Source = Source;
         }
+
+        /* A source that's not playing or paused has any offset applied when it
+         * starts playing.
+         */
+        ATOMIC_STORE(&voice->current_buffer, BufferList, almemory_order_relaxed);
+        ATOMIC_STORE(&voice->position, 0, almemory_order_relaxed);
+        ATOMIC_STORE(&voice->position_fraction, 0, almemory_order_release);
+        if(Source->OffsetType != AL_NONE)
+            ApplyOffset(Source, voice);
 
         /* Clear previous samples. */
         memset(voice->PrevSamples, 0, sizeof(voice->PrevSamples));
@@ -3067,10 +3075,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         voice = GetSourceVoice(Source, Context);
         if(voice) voice->Source = NULL;
         if(ATOMIC_LOAD(&Source->state, almemory_order_acquire) != AL_INITIAL)
-        {
             ATOMIC_STORE(&Source->state, AL_STOPPED, almemory_order_relaxed);
-            ATOMIC_STORE_SEQ(&Source->current_buffer, NULL);
-        }
         Source->OffsetType = AL_NONE;
         Source->Offset = 0.0;
     }
@@ -3079,13 +3084,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         voice = GetSourceVoice(Source, Context);
         if(voice) voice->Source = NULL;
         if(ATOMIC_LOAD(&Source->state, almemory_order_acquire) != AL_INITIAL)
-        {
             ATOMIC_STORE(&Source->state, AL_INITIAL, almemory_order_relaxed);
-            ATOMIC_STORE(&Source->current_buffer, ATOMIC_LOAD_SEQ(&Source->queue),
-                         almemory_order_relaxed);
-            ATOMIC_STORE(&Source->position, 0, almemory_order_relaxed);
-            ATOMIC_STORE_SEQ(&Source->position_fraction, 0);
-        }
         Source->OffsetType = AL_NONE;
         Source->Offset = 0.0;
     }
@@ -3099,42 +3098,49 @@ done:
  * samples. The offset is relative to the start of the queue (not the start of
  * the current buffer).
  */
-static ALint64 GetSourceSampleOffset(ALsource *Source, ALCdevice *device, ALuint64 *clocktime)
+static ALint64 GetSourceSampleOffset(ALsource *Source, ALCcontext *context, ALuint64 *clocktime)
 {
+    ALCdevice *device = context->Device;
     const ALbufferlistitem *BufferList;
     const ALbufferlistitem *Current;
     ALuint64 readPos;
     ALuint refcount;
+    ALvoice *voice;
 
     ReadLock(&Source->queue_lock);
+    BufferList = ATOMIC_LOAD(&Source->queue, almemory_order_relaxed);
     do {
-        BufferList = Current = NULL;
+        Current = NULL;
         readPos = 0;
         while(((refcount=ATOMIC_LOAD(&device->MixCount, almemory_order_acquire))&1))
             althrd_yield();
         *clocktime = GetDeviceClockTime(device);
 
-        if(IsPlayingOrPaused(Source))
+        voice = GetSourceVoice(Source, context);
+        if(voice)
         {
-            BufferList = ATOMIC_LOAD(&Source->queue, almemory_order_relaxed);
-            Current = ATOMIC_LOAD(&Source->current_buffer, almemory_order_relaxed);
+            Current = ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed);
 
-            readPos  = (ALuint64)ATOMIC_LOAD(&Source->position, almemory_order_relaxed) << 32;
-            readPos |= ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed) <<
+            readPos  = (ALuint64)ATOMIC_LOAD(&voice->position, almemory_order_relaxed) << 32;
+            readPos |= ATOMIC_LOAD(&voice->position_fraction, almemory_order_relaxed) <<
                        (32-FRACTIONBITS);
         }
         ATOMIC_THREAD_FENCE(almemory_order_acquire);
     } while(refcount != ATOMIC_LOAD(&device->MixCount, almemory_order_relaxed));
 
-    while(BufferList && BufferList != Current)
+    if(voice)
     {
-        if(BufferList->buffer)
-            readPos += (ALuint64)BufferList->buffer->SampleLen << 32;
-        BufferList = BufferList->next;
+        while(BufferList && BufferList != Current)
+        {
+            if(BufferList->buffer)
+                readPos += (ALuint64)BufferList->buffer->SampleLen << 32;
+            BufferList = BufferList->next;
+        }
+        readPos = minu64(readPos, U64(0x7fffffffffffffff));
     }
 
     ReadUnlock(&Source->queue_lock);
-    return (ALint64)minu64(readPos, U64(0x7fffffffffffffff));
+    return (ALint64)readPos;
 }
 
 /* GetSourceSecOffset
@@ -3142,37 +3148,39 @@ static ALint64 GetSourceSampleOffset(ALsource *Source, ALCdevice *device, ALuint
  * Gets the current read offset for the given Source, in seconds. The offset is
  * relative to the start of the queue (not the start of the current buffer).
  */
-static ALdouble GetSourceSecOffset(ALsource *Source, ALCdevice *device, ALuint64 *clocktime)
+static ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, ALuint64 *clocktime)
 {
+    ALCdevice *device = context->Device;
     const ALbufferlistitem *BufferList;
     const ALbufferlistitem *Current;
     ALuint64 readPos;
     ALuint refcount;
     ALdouble offset;
+    ALvoice *voice;
 
     ReadLock(&Source->queue_lock);
+    BufferList = ATOMIC_LOAD(&Source->queue, almemory_order_relaxed);
     do {
-        BufferList = Current = NULL;
+        Current = NULL;
         readPos = 0;
         while(((refcount=ATOMIC_LOAD(&device->MixCount, almemory_order_acquire))&1))
             althrd_yield();
         *clocktime = GetDeviceClockTime(device);
 
-        if(IsPlayingOrPaused(Source))
+        voice = GetSourceVoice(Source, context);
+        if(voice)
         {
-            BufferList = ATOMIC_LOAD(&Source->queue, almemory_order_relaxed);
-            Current = ATOMIC_LOAD(&Source->current_buffer, almemory_order_relaxed);
+            Current = ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed);
 
-            readPos  = (ALuint64)ATOMIC_LOAD(&Source->position, almemory_order_relaxed) <<
+            readPos  = (ALuint64)ATOMIC_LOAD(&voice->position, almemory_order_relaxed) <<
                        FRACTIONBITS;
-            readPos |= ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed);
+            readPos |= ATOMIC_LOAD(&voice->position_fraction, almemory_order_relaxed);
         }
         ATOMIC_THREAD_FENCE(almemory_order_acquire);
     } while(refcount != ATOMIC_LOAD(&device->MixCount, almemory_order_relaxed));
 
-    if(!Current)
-        offset = 0.0;
-    else
+    offset = 0.0;
+    if(voice)
     {
         const ALbuffer *Buffer = NULL;
         while(BufferList && BufferList != Current)
@@ -3207,8 +3215,9 @@ static ALdouble GetSourceSecOffset(ALsource *Source, ALCdevice *device, ALuint64
  * (Bytes, Samples or Seconds). The offset is relative to the start of the
  * queue (not the start of the current buffer).
  */
-static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCdevice *device)
+static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 {
+    ALCdevice *device = context->Device;
     const ALbufferlistitem *BufferList;
     const ALbufferlistitem *Current;
     const ALbuffer *Buffer = NULL;
@@ -3218,25 +3227,26 @@ static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCdevice *device
     ALboolean looping;
     ALuint refcount;
     ALdouble offset;
-    ALenum state;
+    ALvoice *voice;
 
     ReadLock(&Source->queue_lock);
+    BufferList = ATOMIC_LOAD(&Source->queue, almemory_order_relaxed);
+    looping = ATOMIC_LOAD(&Source->looping, almemory_order_relaxed);
     do {
         while(((refcount=ATOMIC_LOAD(&device->MixCount, almemory_order_acquire))&1))
             althrd_yield();
-        state = ATOMIC_LOAD(&Source->state, almemory_order_relaxed);
+        voice = GetSourceVoice(Source, context);
+        if(voice)
+        {
+            Current = ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed);
 
-        BufferList = ATOMIC_LOAD(&Source->queue, almemory_order_relaxed);
-        Current = ATOMIC_LOAD(&Source->current_buffer, almemory_order_relaxed);
-
-        readPos = ATOMIC_LOAD(&Source->position, almemory_order_relaxed);
-        readPosFrac = ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed);
-
-        looping = ATOMIC_LOAD(&Source->looping, almemory_order_relaxed);
+            readPos = ATOMIC_LOAD(&voice->position, almemory_order_relaxed);
+            readPosFrac = ATOMIC_LOAD(&voice->position_fraction, almemory_order_relaxed);
+        }
         ATOMIC_THREAD_FENCE(almemory_order_acquire);
     } while(refcount != ATOMIC_LOAD(&device->MixCount, almemory_order_relaxed));
 
-    if(state != AL_PLAYING && state != AL_PAUSED)
+    if(!voice)
     {
         ReadUnlock(&Source->queue_lock);
         return 0.0;
@@ -3314,7 +3324,7 @@ static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCdevice *device
  * Apply the stored playback offset to the Source. This function will update
  * the number of buffers "played" given the stored offset.
  */
-ALboolean ApplyOffset(ALsource *Source)
+ALboolean ApplyOffset(ALsource *Source, ALvoice *voice)
 {
     ALbufferlistitem *BufferList;
     const ALbuffer *Buffer;
@@ -3335,10 +3345,9 @@ ALboolean ApplyOffset(ALsource *Source)
         if(bufferLen > offset-totalBufferLen)
         {
             /* Offset is in this buffer */
-            ATOMIC_STORE(&Source->current_buffer, BufferList, almemory_order_relaxed);
-
-            ATOMIC_STORE(&Source->position, offset - totalBufferLen, almemory_order_relaxed);
-            ATOMIC_STORE(&Source->position_fraction, frac, almemory_order_release);
+            ATOMIC_STORE(&voice->current_buffer, BufferList, almemory_order_relaxed);
+            ATOMIC_STORE(&voice->position, offset - totalBufferLen, almemory_order_relaxed);
+            ATOMIC_STORE(&voice->position_fraction, frac, almemory_order_release);
             return AL_TRUE;
         }
 

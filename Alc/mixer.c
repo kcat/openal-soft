@@ -385,9 +385,9 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
 
     /* Get source info */
     State          = AL_PLAYING; /* Only called while playing. */
-    BufferListItem = ATOMIC_LOAD(&Source->current_buffer, almemory_order_acquire);
-    DataPosInt     = ATOMIC_LOAD(&Source->position, almemory_order_relaxed);
-    DataPosFrac    = ATOMIC_LOAD(&Source->position_fraction, almemory_order_relaxed);
+    DataPosInt     = ATOMIC_LOAD(&voice->position, almemory_order_acquire);
+    DataPosFrac    = ATOMIC_LOAD(&voice->position_fraction, almemory_order_relaxed);
+    BufferListItem = ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed);
     Looping        = ATOMIC_LOAD(&Source->looping, almemory_order_relaxed);
     NumChannels    = Source->NumChannels;
     SampleSize     = Source->SampleSize;
@@ -681,9 +681,9 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
     voice->Moving = AL_TRUE;
 
     /* Update source info */
-    ATOMIC_STORE(&Source->state,             State, almemory_order_relaxed);
-    ATOMIC_STORE(&Source->current_buffer,    BufferListItem, almemory_order_relaxed);
-    ATOMIC_STORE(&Source->position,          DataPosInt, almemory_order_relaxed);
-    ATOMIC_STORE(&Source->position_fraction, DataPosFrac, almemory_order_release);
+    ATOMIC_STORE(&Source->state,            State, almemory_order_relaxed);
+    ATOMIC_STORE(&voice->position,          DataPosInt, almemory_order_relaxed);
+    ATOMIC_STORE(&voice->position_fraction, DataPosFrac, almemory_order_relaxed);
+    ATOMIC_STORE(&voice->current_buffer,    BufferListItem, almemory_order_release);
     return State == AL_PLAYING;
 }

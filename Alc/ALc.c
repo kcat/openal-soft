@@ -106,9 +106,8 @@ static struct BackendInfo BackendList[] = {
 #ifdef HAVE_WAVE
     { "wave", ALCwaveBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
 #endif
-
-    { NULL, NULL, NULL, NULL, NULL, EmptyFuncs }
 };
+static ALsizei BackendListSize = COUNTOF(BackendList);
 #undef EmptyFuncs
 
 static struct BackendInfo PlaybackBackend;
@@ -911,8 +910,11 @@ static void alc_initconfig(void)
           ALSOFT_GIT_COMMIT_HASH, ALSOFT_GIT_BRANCH);
     {
         char buf[1024] = "";
-        int len = snprintf(buf, sizeof(buf), "%s", BackendList[0].name);
-        for(i = 1;BackendList[i].name;i++)
+        int len = 0;
+
+        if(BackendListSize > 0)
+            len += snprintf(buf, sizeof(buf), "%s", BackendList[0].name);
+        for(i = 1;i < BackendListSize;i++)
             len += snprintf(buf+len, sizeof(buf)-len, ", %s", BackendList[i].name);
         TRACE("Supported backends: %s\n", buf);
     }
@@ -1042,26 +1044,22 @@ static void alc_initconfig(void)
             len = (next ? ((size_t)(next-devs)) : strlen(devs));
             while(len > 0 && isspace(devs[len-1]))
                 len--;
-            for(n = i;BackendList[n].name;n++)
+            for(n = i;n < BackendListSize;n++)
             {
                 if(len == strlen(BackendList[n].name) &&
                    strncmp(BackendList[n].name, devs, len) == 0)
                 {
                     if(delitem)
                     {
-                        do {
+                        for(;n+1 < BackendListSize;n++)
                             BackendList[n] = BackendList[n+1];
-                            ++n;
-                        } while(BackendList[n].name);
+                        BackendListSize--;
                     }
                     else
                     {
                         struct BackendInfo Bkp = BackendList[n];
-                        while(n > i)
-                        {
+                        for(;n > i;n--)
                             BackendList[n] = BackendList[n-1];
-                            --n;
-                        }
                         BackendList[n] = Bkp;
 
                         i++;
@@ -1072,16 +1070,10 @@ static void alc_initconfig(void)
         } while(next++);
 
         if(endlist)
-        {
-            BackendList[i].name = NULL;
-            BackendList[i].getFactory = NULL;
-            BackendList[i].Init = NULL;
-            BackendList[i].Deinit = NULL;
-            BackendList[i].Probe = NULL;
-        }
+            BackendListSize = i;
     }
 
-    for(i = 0;(BackendList[i].Init || BackendList[i].getFactory) && (!PlaybackBackend.name || !CaptureBackend.name);i++)
+    for(i = 0;i < BackendListSize && (!PlaybackBackend.name || !CaptureBackend.name);i++)
     {
         if(BackendList[i].getFactory)
         {
@@ -1289,7 +1281,7 @@ static void alc_deinit(void)
     memset(&PlaybackBackend, 0, sizeof(PlaybackBackend));
     memset(&CaptureBackend, 0, sizeof(CaptureBackend));
 
-    for(i = 0;BackendList[i].Deinit || BackendList[i].getFactory;i++)
+    for(i = 0;i < BackendListSize;i++)
     {
         if(!BackendList[i].getFactory)
             BackendList[i].Deinit();

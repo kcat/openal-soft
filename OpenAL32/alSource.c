@@ -697,7 +697,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             if(buffer != NULL)
             {
                 /* Add the selected buffer to a one-item queue */
-                newlist = malloc(sizeof(ALbufferlistitem));
+                newlist = al_calloc(DEF_ALIGN, sizeof(ALbufferlistitem));
                 newlist->buffer = buffer;
                 newlist->next = NULL;
                 IncrementRef(&buffer->ref);
@@ -728,7 +728,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
 
                 if(temp->buffer)
                     DecrementRef(&temp->buffer->ref);
-                free(temp);
+                al_free(temp);
             }
             return AL_TRUE;
 
@@ -2545,12 +2545,12 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
 
         if(!BufferListStart)
         {
-            BufferListStart = malloc(sizeof(ALbufferlistitem));
+            BufferListStart = al_calloc(DEF_ALIGN, sizeof(ALbufferlistitem));
             BufferList = BufferListStart;
         }
         else
         {
-            BufferList->next = malloc(sizeof(ALbufferlistitem));
+            BufferList->next = al_calloc(DEF_ALIGN, sizeof(ALbufferlistitem));
             BufferList = BufferList->next;
         }
         BufferList->buffer = buffer;
@@ -2588,7 +2588,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
                     DecrementRef(&buffer->ref);
                     ReadUnlock(&buffer->lock);
                 }
-                free(BufferListStart);
+                al_free(BufferListStart);
                 BufferListStart = next;
             }
             UnlockBuffersRead(device);
@@ -2711,7 +2711,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
             DecrementRef(&buffer->ref);
         }
 
-        free(OldHead);
+        al_free(OldHead);
         OldHead = next;
     }
 
@@ -2832,7 +2832,7 @@ static void DeinitSource(ALsource *source, ALsizei num_sends)
         ALbufferlistitem *next = BufferList->next;
         if(BufferList->buffer != NULL)
             DecrementRef(&BufferList->buffer->ref);
-        free(BufferList);
+        al_free(BufferList);
         BufferList = next;
     }
 

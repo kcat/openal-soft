@@ -42,17 +42,22 @@ ALCuint ALCbackend_availableSamples(ALCbackend* UNUSED(self))
 ClockLatency ALCbackend_getClockLatency(ALCbackend *self)
 {
     ALCdevice *device = self->mDevice;
+    ALuint refcount;
     ClockLatency ret;
 
-    almtx_lock(&self->mMutex);
-    ret.ClockTime = GetDeviceClockTime(device);
+    do {
+        while(((refcount=ATOMIC_LOAD(&device->MixCount, almemory_order_acquire))&1))
+            althrd_yield();
+        ret.ClockTime = GetDeviceClockTime(device);
+        ATOMIC_THREAD_FENCE(almemory_order_acquire);
+    } while(refcount != ATOMIC_LOAD(&device->MixCount, almemory_order_relaxed));
+
     /* NOTE: The device will generally have about all but one periods filled at
      * any given time during playback. Without a more accurate measurement from
      * the output, this is an okay approximation.
      */
     ret.Latency = device->UpdateSize * DEVICE_CLOCK_RES / device->Frequency *
                   maxu(device->NumUpdates-1, 1);
-    almtx_unlock(&self->mMutex);
 
     return ret;
 }

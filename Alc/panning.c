@@ -546,10 +546,10 @@ static void InitPanning(ALCdevice *device)
 
     if(device->FmtChans >= DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3)
     {
-        const ALsizei *acnmap = (device->AmbiFmt == AmbiFormat_FuMa) ? FuMa2ACN : ACN2ACN;
-        const ALfloat *n3dscale = (device->AmbiFmt == AmbiFormat_FuMa) ? FuMa2N3DScale :
-                                  (device->AmbiFmt == AmbiFormat_ACN_SN3D) ? SN3D2N3DScale :
-                                  /*(device->AmbiFmt == AmbiFormat_ACN_N3D) ?*/ UnitScale;
+        const ALsizei *acnmap = (device->AmbiLayout == AmbiLayout_FuMa) ? FuMa2ACN : ACN2ACN;
+        const ALfloat *n3dscale = (device->AmbiScale == AmbiNorm_FuMa) ? FuMa2N3DScale :
+                                  (device->AmbiScale == AmbiNorm_SN3D) ? SN3D2N3DScale :
+                                  /*(device->AmbiScale == AmbiNorm_N3D) ?*/ UnitScale;
 
         count = (device->FmtChans == DevFmtAmbi3) ? 16 :
                 (device->FmtChans == DevFmtAmbi2) ? 9 :

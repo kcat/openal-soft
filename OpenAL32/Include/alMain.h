@@ -510,12 +510,19 @@ inline ALsizei FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType ty
     return ChannelsFromDevFmt(chans) * BytesFromDevFmt(type);
 }
 
-enum AmbiFormat {
-    AmbiFormat_FuMa,     /* FuMa channel order and normalization */
-    AmbiFormat_ACN_SN3D, /* ACN channel order and SN3D normalization */
-    AmbiFormat_ACN_N3D,  /* ACN channel order and N3D normalization */
+enum AmbiLayout {
+    AmbiLayout_FuMa, /* FuMa channel order */
+    AmbiLayout_ACN,  /* ACN channel order */
 
-    AmbiFormat_Default = AmbiFormat_ACN_SN3D
+    AmbiLayout_Default = AmbiLayout_ACN
+};
+
+enum AmbiNorm {
+    AmbiNorm_FuMa, /* FuMa normalization */
+    AmbiNorm_SN3D, /* SN3D normalization */
+    AmbiNorm_N3D,  /* N3D normalization */
+
+    AmbiNorm_Default = AmbiNorm_SN3D
 };
 
 
@@ -635,7 +642,8 @@ struct ALCdevice_struct
     /* For DevFmtAmbi* output only, specifies the channel order and
      * normalization.
      */
-    enum AmbiFormat AmbiFmt;
+    enum AmbiLayout AmbiLayout;
+    enum AmbiNorm   AmbiScale;
 
     al_string DeviceName;
 

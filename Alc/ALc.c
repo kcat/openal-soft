@@ -3640,7 +3640,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->FmtType = DevFmtTypeDefault;
     device->Frequency = DEFAULT_OUTPUT_RATE;
     device->IsHeadphones = AL_FALSE;
-    device->AmbiFmt = AmbiFormat_Default;
+    device->AmbiLayout = AmbiLayout_Default;
+    device->AmbiScale = AmbiNorm_Default;
     device->NumUpdates = 3;
     device->UpdateSize = 1024;
 
@@ -3763,11 +3764,20 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "ambi-format", &fmt))
     {
         if(strcasecmp(fmt, "fuma") == 0)
-            device->AmbiFmt = AmbiFormat_FuMa;
+        {
+            device->AmbiLayout = AmbiLayout_FuMa;
+            device->AmbiScale = AmbiNorm_FuMa;
+        }
         else if(strcasecmp(fmt, "acn+sn3d") == 0)
-            device->AmbiFmt = AmbiFormat_ACN_SN3D;
+        {
+            device->AmbiLayout = AmbiLayout_ACN;
+            device->AmbiScale = AmbiNorm_SN3D;
+        }
         else if(strcasecmp(fmt, "acn+n3d") == 0)
-            device->AmbiFmt = AmbiFormat_ACN_N3D;
+        {
+            device->AmbiLayout = AmbiLayout_ACN;
+            device->AmbiScale = AmbiNorm_N3D;
+        }
         else
             ERR("Unsupported ambi-format: %s\n", fmt);
     }
@@ -3939,7 +3949,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         return NULL;
     }
     device->IsHeadphones = AL_FALSE;
-    device->AmbiFmt = AmbiFormat_Default;
+    device->AmbiLayout = AmbiLayout_Default;
+    device->AmbiScale = AmbiNorm_Default;
 
     device->UpdateSize = samples;
     device->NumUpdates = 1;
@@ -4142,7 +4153,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->FmtChans = DevFmtChannelsDefault;
     device->FmtType = DevFmtTypeDefault;
     device->IsHeadphones = AL_FALSE;
-    device->AmbiFmt = AmbiFormat_Default;
+    device->AmbiLayout = AmbiLayout_Default;
+    device->AmbiScale = AmbiNorm_Default;
 
     ConfigValueUInt(NULL, NULL, "sources", &device->SourcesMax);
     if(device->SourcesMax == 0) device->SourcesMax = 256;

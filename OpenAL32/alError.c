@@ -36,6 +36,8 @@ ALboolean TrapALError = AL_FALSE;
 ALvoid alSetError(ALCcontext *Context, ALenum errorCode)
 {
     ALenum curerr = AL_NO_ERROR;
+
+    WARN("Error generated on context %p, code 0x%04x\n", Context, errorCode);
     if(TrapALError)
     {
 #ifdef _WIN32
@@ -46,6 +48,7 @@ ALvoid alSetError(ALCcontext *Context, ALenum errorCode)
         raise(SIGTRAP);
 #endif
     }
+
     ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(ALenum, &Context->LastError, &curerr, errorCode);
 }
 
@@ -57,6 +60,8 @@ AL_API ALenum AL_APIENTRY alGetError(void)
     Context = GetContextRef();
     if(!Context)
     {
+        WARN("Querying error state on null context (implicitly 0x%04x)\n",
+             AL_INVALID_OPERATION);
         if(TrapALError)
         {
 #ifdef _WIN32

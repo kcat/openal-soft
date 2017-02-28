@@ -1731,6 +1731,7 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
  */
 static void alcSetError(ALCdevice *device, ALCenum errorCode)
 {
+    WARN("Error generated on device %p, code 0x%04x\n", device, errorCode);
     if(TrapALCError)
     {
 #ifdef _WIN32

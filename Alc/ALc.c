@@ -1807,6 +1807,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     ALCuint oldFreq;
     FPUCtl oldMode;
     size_t size;
+    ALCsizei i;
 
     // Check for attributes
     if(device->Type == Loopback)
@@ -2047,6 +2048,13 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     al_free(device->Bs2b);
     device->Bs2b = NULL;
+
+    al_free(device->ChannelDelay[0].Buffer);
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+    {
+        device->ChannelDelay[i].Length = 0;
+        device->ChannelDelay[i].Buffer = NULL;
+    }
 
     al_free(device->Dry.Buffer);
     device->Dry.Buffer = NULL;
@@ -2329,6 +2337,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
  */
 static ALCvoid FreeDevice(ALCdevice *device)
 {
+    ALsizei i;
+
     TRACE("%p\n", device);
 
     V0(device->Backend,close)();
@@ -2381,6 +2391,14 @@ static ALCvoid FreeDevice(ALCdevice *device)
 
     ambiup_free(device->AmbiUp);
     device->AmbiUp = NULL;
+
+    al_free(device->ChannelDelay[0].Buffer);
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+    {
+        device->ChannelDelay[i].Gain   = 1.0f;
+        device->ChannelDelay[i].Length = 0;
+        device->ChannelDelay[i].Buffer = NULL;
+    }
 
     AL_STRING_DEINIT(device->DeviceName);
 
@@ -3687,6 +3705,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     const ALCchar *fmt;
     ALCdevice *device;
     ALCenum err;
+    ALCsizei i;
 
     DO_INITCONFIG();
 
@@ -3747,6 +3766,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     InitUIntMap(&device->BufferMap, ~0);
     InitUIntMap(&device->EffectMap, ~0);
     InitUIntMap(&device->FilterMap, ~0);
+
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+    {
+        device->ChannelDelay[i].Gain   = 1.0f;
+        device->ChannelDelay[i].Length = 0;
+        device->ChannelDelay[i].Buffer = NULL;
+    }
 
     //Set output format
     device->FmtChans = DevFmtChannelsDefault;
@@ -3991,6 +4017,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
 {
     ALCdevice *device = NULL;
     ALCenum err;
+    ALCsizei i;
 
     DO_INITCONFIG();
 
@@ -4035,6 +4062,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     InitUIntMap(&device->BufferMap, ~0);
     InitUIntMap(&device->EffectMap, ~0);
     InitUIntMap(&device->FilterMap, ~0);
+
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+    {
+        device->ChannelDelay[i].Gain   = 1.0f;
+        device->ChannelDelay[i].Length = 0;
+        device->ChannelDelay[i].Buffer = NULL;
+    }
 
     if(!CaptureBackend.getFactory)
         device->Backend = create_backend_wrapper(device, &CaptureBackend.Funcs,
@@ -4198,6 +4232,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
 {
     ALCbackendFactory *factory;
     ALCdevice *device;
+    ALCsizei i;
 
     DO_INITCONFIG();
 
@@ -4247,6 +4282,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     InitUIntMap(&device->BufferMap, ~0);
     InitUIntMap(&device->EffectMap, ~0);
     InitUIntMap(&device->FilterMap, ~0);
+
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+    {
+        device->ChannelDelay[i].Gain   = 1.0f;
+        device->ChannelDelay[i].Length = 0;
+        device->ChannelDelay[i].Buffer = NULL;
+    }
 
     factory = ALCloopbackFactory_getFactory();
     device->Backend = V(factory,createBackend)(device, ALCbackend_Loopback);

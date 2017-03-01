@@ -616,6 +616,7 @@ static void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const AL
 {
     const char *devname = al_string_get_cstr(device->DeviceName);
     ALfloat maxdist = 0.0f;
+    ALsizei total = 0;
     ALsizei i;
 
     for(i = 0;i < conf->NumSpeakers;i++)
@@ -649,6 +650,21 @@ static void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const AL
                 al_string_get_cstr(conf->Speakers[i].Name), device->ChannelDelay[chan].Length,
                 device->ChannelDelay[chan].Gain
             );
+
+            /* Round up to the next 4th sample, so each channel buffer starts
+             * 16-byte aligned.
+             */
+            total += RoundUp(device->ChannelDelay[chan].Length, 4);
+        }
+    }
+
+    if(total > 0)
+    {
+        device->ChannelDelay[0].Buffer = al_calloc(16, total * sizeof(ALfloat));
+        for(i = 1;i < MAX_OUTPUT_CHANNELS;i++)
+        {
+            size_t len = RoundUp(device->ChannelDelay[i-1].Length, 4);
+            device->ChannelDelay[i].Buffer = device->ChannelDelay[i-1].Buffer + len;
         }
     }
 }

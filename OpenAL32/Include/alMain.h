@@ -631,12 +631,12 @@ TYPEDEF_VECTOR(HrtfEntry, vector_HrtfEntry)
 
 
 /* Maximum delay in samples for speaker distance compensation. */
-#define MAX_DELAY_LENGTH 128
+#define MAX_DELAY_LENGTH 1024
 
 typedef struct DistanceComp {
     ALfloat Gain;
     ALsizei Length; /* Valid range is [0...MAX_DELAY_LENGTH). */
-    alignas(16) ALfloat Buffer[MAX_DELAY_LENGTH];
+    ALfloat *Buffer;
 } DistanceComp;
 
 /* Size for temporary storage of buffer data, in ALfloats. Larger values need

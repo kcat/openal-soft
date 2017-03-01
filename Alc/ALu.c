@@ -1332,24 +1332,24 @@ static void Write_##T(const ALfloatBUFFERSIZE *InBuffer, ALvoid *OutBuffer,   \
         T *restrict out = (T*)OutBuffer + j;                                  \
         const ALfloat gain = distcomp[j].Gain;                                \
         const ALsizei base = distcomp[j].Length;                              \
+        ALfloat *restrict distbuf = ASSUME_ALIGNED(distcomp[j].Buffer, 16);   \
         if(base > 0 || gain != 1.0f)                                          \
         {                                                                     \
             if(SamplesToDo >= base)                                           \
             {                                                                 \
                 for(i = 0;i < base;i++)                                       \
-                    out[i*numchans] = func(distcomp[j].Buffer[i]*gain);       \
+                    out[i*numchans] = func(distbuf[i]*gain);                  \
                 for(;i < SamplesToDo;i++)                                     \
                     out[i*numchans] = func(in[i-base]*gain);                  \
-                memcpy(distcomp[j].Buffer, &in[SamplesToDo-base],             \
-                        base*sizeof(ALfloat));                                \
+                memcpy(distbuf, &in[SamplesToDo-base], base*sizeof(ALfloat)); \
             }                                                                 \
             else                                                              \
             {                                                                 \
                 for(i = 0;i < SamplesToDo;i++)                                \
-                    out[i*numchans] = func(distcomp[j].Buffer[i]*gain);       \
-                memmove(distcomp[j].Buffer, distcomp[j].Buffer+SamplesToDo,   \
+                    out[i*numchans] = func(distbuf[i]*gain);                  \
+                memmove(distbuf, distbuf+SamplesToDo,                         \
                         (base-SamplesToDo)*sizeof(ALfloat));                  \
-                memcpy(distcomp[j].Buffer+base-SamplesToDo, in,               \
+                memcpy(distbuf+base-SamplesToDo, in,                          \
                         SamplesToDo*sizeof(ALfloat));                         \
             }                                                                 \
         }                                                                     \

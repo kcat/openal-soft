@@ -1780,12 +1780,15 @@ static void alcSetError(ALCdevice *device, ALCenum errorCode)
  *
  * Updates the device's base clock time with however many samples have been
  * done. This is used so frequency changes on the device don't cause the time
- * to jump forward or back.
+ * to jump forward or back. Must not be called while the device is running/
+ * mixing.
  */
 static inline void UpdateClockBase(ALCdevice *device)
 {
+    IncrementRef(&device->MixCount);
     device->ClockBase += device->SamplesDone * DEVICE_CLOCK_RES / device->Frequency;
     device->SamplesDone = 0;
+    IncrementRef(&device->MixCount);
 }
 
 /* UpdateDeviceParams

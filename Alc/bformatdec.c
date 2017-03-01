@@ -6,6 +6,7 @@
 #include "mixer_defs.h"
 #include "alu.h"
 
+#include "bool.h"
 #include "threads.h"
 #include "almalloc.h"
 
@@ -181,7 +182,6 @@ typedef struct BFormatDec {
 
     ALsizei NumChannels;
     ALboolean DualBand;
-    ALboolean Periphonic;
 } BFormatDec;
 
 BFormatDec *bformatdec_alloc()
@@ -204,29 +204,13 @@ void bformatdec_free(BFormatDec *dec)
     }
 }
 
-int bformatdec_getOrder(const struct BFormatDec *dec)
-{
-    if(dec->Periphonic)
-    {
-        if(dec->NumChannels > 9) return 3;
-        if(dec->NumChannels > 4) return 2;
-        if(dec->NumChannels > 1) return 1;
-    }
-    else
-    {
-        if(dec->NumChannels > 5) return 3;
-        if(dec->NumChannels > 3) return 2;
-        if(dec->NumChannels > 1) return 1;
-    }
-    return 0;
-}
-
 void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALsizei chanmap[MAX_OUTPUT_CHANNELS])
 {
     static const ALsizei map2DTo3D[MAX_AMBI2D_COEFFS] = {
         0,  1, 3,  4, 8,  9, 15
     };
     const ALfloat *coeff_scale = UnitScale;
+    bool periphonic;
     ALfloat ratio;
     ALsizei i;
 
@@ -256,7 +240,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
         bandsplit_init(&dec->UpSampler[i].XOver, ratio);
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
-        dec->Periphonic = AL_TRUE;
+        periphonic = true;
 
         dec->UpSampler[0].Gains[FB_HighFreq] = (dec->NumChannels > 9) ? W_SCALE3D_THIRD :
                                                (dec->NumChannels > 4) ? W_SCALE3D_SECOND : 1.0f;
@@ -270,7 +254,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
     }
     else
     {
-        dec->Periphonic = AL_FALSE;
+        periphonic = false;
 
         dec->UpSampler[0].Gains[FB_HighFreq] = (dec->NumChannels > 5) ? W_SCALE2D_THIRD :
                                                (dec->NumChannels > 3) ? W_SCALE2D_SECOND : 1.0f;
@@ -295,7 +279,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
             ALfloat gain;
             ALsizei j, k;
 
-            if(!dec->Periphonic)
+            if(!periphonic)
             {
                 for(j = 0,k = 0;j < MAX_AMBI2D_COEFFS;j++)
                 {
@@ -339,7 +323,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
             ALfloat gain;
             ALsizei j, k;
 
-            if(!dec->Periphonic)
+            if(!periphonic)
             {
                 for(j = 0,k = 0;j < MAX_AMBI2D_COEFFS;j++)
                 {

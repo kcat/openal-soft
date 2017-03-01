@@ -775,7 +775,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsiz
     );
     bformatdec_reset(device->AmbiDecoder, conf, count, device->Frequency, speakermap);
 
-    if(bformatdec_getOrder(device->AmbiDecoder) < 2)
+    if(!(conf->ChanMask > 0xf))
     {
         device->FOAOut.Ambi = device->Dry.Ambi;
         device->FOAOut.CoeffCount = device->Dry.CoeffCount;

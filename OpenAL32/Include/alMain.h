@@ -29,6 +29,29 @@
 #include "almalloc.h"
 #include "threads.h"
 
+#ifndef ALC_SOFT_loopback2
+#define ALC_SOFT_loopback2 1
+#define ALC_AMBISONIC_LAYOUT_SOFT                0x1997
+#define ALC_AMBISONIC_SCALING_SOFT               0x1998
+#define ALC_AMBISONIC_ORDER_SOFT                 0x1999
+
+#define ALC_BFORMAT3D_SOFT                       0x1508
+
+/* Ambisonic layouts */
+#define ALC_ACN_SOFT                             0x1600
+#define ALC_FUMA_SOFT                            0x1601
+
+/* Ambisonic scalings (normalization) */
+#define ALC_N3D_SOFT                             0x1700
+#define ALC_SN3D_SOFT                            0x1701
+/*#define ALC_FUMA_SOFT*/
+
+typedef ALCboolean (ALC_APIENTRY*LPALCISAMBISONICFORMATSUPPORTEDSOFT)(ALCdevice *device, ALCenum layout, ALCenum scaling, ALsizei order);
+#ifdef AL_ALEXT_PROTOTYPES
+ALC_API ALCboolean ALC_APIENTRY alcIsAmbisonicFormatSupportedSOFT(ALCdevice *device, ALCenum layout, ALCenum scaling, ALsizei order);
+#endif
+#endif
+
 #ifndef ALC_SOFT_device_clock
 #define ALC_SOFT_device_clock 1
 typedef int64_t ALCint64SOFT;
@@ -511,16 +534,16 @@ inline ALsizei FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType ty
 }
 
 enum AmbiLayout {
-    AmbiLayout_FuMa, /* FuMa channel order */
-    AmbiLayout_ACN,  /* ACN channel order */
+    AmbiLayout_FuMa = ALC_FUMA_SOFT, /* FuMa channel order */
+    AmbiLayout_ACN = ALC_ACN_SOFT,   /* ACN channel order */
 
     AmbiLayout_Default = AmbiLayout_ACN
 };
 
 enum AmbiNorm {
-    AmbiNorm_FuMa, /* FuMa normalization */
-    AmbiNorm_SN3D, /* SN3D normalization */
-    AmbiNorm_N3D,  /* N3D normalization */
+    AmbiNorm_FuMa = ALC_FUMA_SOFT, /* FuMa normalization */
+    AmbiNorm_SN3D = ALC_SN3D_SOFT, /* SN3D normalization */
+    AmbiNorm_N3D = ALC_N3D_SOFT,   /* N3D normalization */
 
     AmbiNorm_Default = AmbiNorm_SN3D
 };

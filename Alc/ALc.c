@@ -157,6 +157,8 @@ static const ALCfunction alcFunctions[] = {
     DECL(alcIsRenderFormatSupportedSOFT),
     DECL(alcRenderSamplesSOFT),
 
+    DECL(alcIsAmbisonicFormatSupportedSOFT),
+
     DECL(alcDevicePauseSOFT),
     DECL(alcDeviceResumeSOFT),
 
@@ -335,6 +337,7 @@ static const ALCenums enumeration[] = {
     DECL(ALC_5POINT1_SOFT),
     DECL(ALC_6POINT1_SOFT),
     DECL(ALC_7POINT1_SOFT),
+    DECL(ALC_BFORMAT3D_SOFT),
 
     DECL(ALC_BYTE_SOFT),
     DECL(ALC_UNSIGNED_BYTE_SOFT),
@@ -356,6 +359,14 @@ static const ALCenums enumeration[] = {
     DECL(ALC_NUM_HRTF_SPECIFIERS_SOFT),
     DECL(ALC_HRTF_SPECIFIER_SOFT),
     DECL(ALC_HRTF_ID_SOFT),
+
+    DECL(ALC_AMBISONIC_LAYOUT_SOFT),
+    DECL(ALC_AMBISONIC_SCALING_SOFT),
+    DECL(ALC_AMBISONIC_ORDER_SOFT),
+    DECL(ALC_ACN_SOFT),
+    DECL(ALC_FUMA_SOFT),
+    DECL(ALC_N3D_SOFT),
+    DECL(ALC_SN3D_SOFT),
 
     DECL(ALC_NO_ERROR),
     DECL(ALC_INVALID_DEVICE),
@@ -1478,11 +1489,34 @@ static ALCboolean IsValidALCChannels(ALCenum channels)
         case ALC_5POINT1_SOFT:
         case ALC_6POINT1_SOFT:
         case ALC_7POINT1_SOFT:
+        case ALC_BFORMAT3D_SOFT:
             return ALC_TRUE;
     }
     return ALC_FALSE;
 }
 
+static ALCboolean IsValidAmbiLayout(ALCenum layout)
+{
+    switch(layout)
+    {
+        case ALC_ACN_SOFT:
+        case ALC_FUMA_SOFT:
+            return ALC_TRUE;
+    }
+    return ALC_FALSE;
+}
+
+static ALCboolean IsValidAmbiScaling(ALCenum scaling)
+{
+    switch(scaling)
+    {
+        case ALC_N3D_SOFT:
+        case ALC_SN3D_SOFT:
+        case ALC_FUMA_SOFT:
+            return ALC_TRUE;
+    }
+    return ALC_FALSE;
+}
 
 /************************************************
  * Miscellaneous ALC helpers
@@ -1777,18 +1811,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     // Check for attributes
     if(device->Type == Loopback)
     {
-        enum {
-            GotFreq  = 1<<0,
-            GotChans = 1<<1,
-            GotType  = 1<<2,
-            GotAll   = GotFreq|GotChans|GotType
-        };
-        ALCuint freq, numMono, numStereo;
-        enum DevFmtChannels schans;
-        enum DevFmtType stype;
-        ALCuint attrIdx = 0;
-        ALCint gotFmt = 0;
-        ALCsizei numSends;
+        ALCsizei numMono, numStereo, numSends;
+        ALCenum alayout = AL_NONE;
+        ALCenum ascale = AL_NONE;
+        ALCenum schans = AL_NONE;
+        ALCenum stype = AL_NONE;
+        ALCsizei attrIdx = 0;
+        ALCsizei aorder = 0;
+        ALCuint freq = 0;
 
         if(!attrList)
         {
@@ -1798,9 +1828,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         numMono = device->NumMonoSources;
         numStereo = device->NumStereoSources;
-        schans = device->FmtChans;
-        stype = device->FmtType;
-        freq = device->Frequency;
         numSends = old_sends;
 
 #define TRACE_ATTR(a, v) TRACE("Loopback %s = %d\n", #a, v)
@@ -1808,22 +1835,18 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         {
             if(attrList[attrIdx] == ALC_FORMAT_CHANNELS_SOFT)
             {
-                ALCint val = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_FORMAT_CHANNELS_SOFT, val);
-                if(!IsValidALCChannels(val) || !ChannelsFromDevFmt(val))
+                schans = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_FORMAT_CHANNELS_SOFT, schans);
+                if(!IsValidALCChannels(schans))
                     return ALC_INVALID_VALUE;
-                schans = val;
-                gotFmt |= GotChans;
             }
 
             if(attrList[attrIdx] == ALC_FORMAT_TYPE_SOFT)
             {
-                ALCint val = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_FORMAT_TYPE_SOFT, val);
-                if(!IsValidALCType(val) || !BytesFromDevFmt(val))
+                stype = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_FORMAT_TYPE_SOFT, stype);
+                if(!IsValidALCType(stype))
                     return ALC_INVALID_VALUE;
-                stype = val;
-                gotFmt |= GotType;
             }
 
             if(attrList[attrIdx] == ALC_FREQUENCY)
@@ -1832,16 +1855,38 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 TRACE_ATTR(ALC_FREQUENCY, freq);
                 if(freq < MIN_OUTPUT_RATE)
                     return ALC_INVALID_VALUE;
-                gotFmt |= GotFreq;
+            }
+
+            if(attrList[attrIdx] == ALC_AMBISONIC_LAYOUT_SOFT)
+            {
+                alayout = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_AMBISONIC_LAYOUT_SOFT, alayout);
+                if(!IsValidAmbiLayout(alayout))
+                    return ALC_INVALID_VALUE;
+            }
+
+            if(attrList[attrIdx] == ALC_AMBISONIC_SCALING_SOFT)
+            {
+                ascale = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_AMBISONIC_SCALING_SOFT, ascale);
+                if(!IsValidAmbiScaling(ascale))
+                    return ALC_INVALID_VALUE;
+            }
+
+            if(attrList[attrIdx] == ALC_AMBISONIC_ORDER_SOFT)
+            {
+                aorder = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_AMBISONIC_ORDER_SOFT, aorder);
+                if(aorder < 1 || aorder > MAX_AMBI_ORDER)
+                    return ALC_INVALID_VALUE;
             }
 
             if(attrList[attrIdx] == ALC_STEREO_SOURCES)
             {
                 numStereo = attrList[attrIdx + 1];
                 TRACE_ATTR(ALC_STEREO_SOURCES, numStereo);
-                if(numStereo > device->SourcesMax)
-                    numStereo = device->SourcesMax;
 
+                numStereo = clampi(numStereo, 0, device->SourcesMax);
                 numMono = device->SourcesMax - numStereo;
             }
 
@@ -1849,14 +1894,16 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             {
                 numSends = attrList[attrIdx + 1];
                 TRACE_ATTR(ALC_MAX_AUXILIARY_SENDS, numSends);
+                numSends = clampi(numSends, 0, MAX_SENDS);
             }
 
             if(attrList[attrIdx] == ALC_HRTF_SOFT)
             {
-                TRACE_ATTR(ALC_HRTF_SOFT, attrList[attrIdx + 1]);
-                if(attrList[attrIdx + 1] == ALC_FALSE)
+                ALCint val = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_HRTF_SOFT, val);
+                if(val == ALC_FALSE)
                     hrtf_appreq = Hrtf_Disable;
-                else if(attrList[attrIdx + 1] == ALC_TRUE)
+                else if(val == ALC_TRUE)
                     hrtf_appreq = Hrtf_Enable;
                 else
                     hrtf_appreq = Hrtf_Default;
@@ -1872,9 +1919,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
 #undef TRACE_ATTR
 
-        if(gotFmt != GotAll)
+        if(!schans || !stype || !freq)
         {
             WARN("Missing format for loopback device\n");
+            return ALC_INVALID_VALUE;
+        }
+        if(schans == ALC_BFORMAT3D_SOFT && (!alayout || !ascale || !aorder))
+        {
+            WARN("Missing ambisonic info for loopback device\n");
             return ALC_INVALID_VALUE;
         }
 
@@ -1884,22 +1936,29 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         UpdateClockBase(device);
 
+        if(schans == ALC_BFORMAT3D_SOFT)
+        {
+            device->FmtChans = DevFmtAmbi1 + aorder;
+            device->AmbiLayout = alayout;
+            device->AmbiScale = ascale;
+        }
+        else
+            device->FmtChans = schans;
         device->Frequency = freq;
-        device->FmtChans = schans;
         device->FmtType = stype;
         device->NumMonoSources = numMono;
         device->NumStereoSources = numStereo;
 
         if(ConfigValueInt(NULL, NULL, "sends", &new_sends))
-            new_sends = clampi(numSends, 0, clampi(new_sends, 0, MAX_SENDS));
+            new_sends = mini(numSends, clampi(new_sends, 0, MAX_SENDS));
         else
-            new_sends = clampi(numSends, 0, MAX_SENDS);
+            new_sends = numSends;
     }
     else if(attrList && attrList[0])
     {
-        ALCuint freq, numMono, numStereo;
-        ALCuint attrIdx = 0;
-        ALCsizei numSends;
+        ALCsizei numMono, numStereo, numSends;
+        ALCsizei attrIdx = 0;
+        ALCuint freq;
 
         /* If a context is already running on the device, stop playback so the
          * device attributes can be updated. */
@@ -1928,9 +1987,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             {
                 numStereo = attrList[attrIdx + 1];
                 TRACE_ATTR(ALC_STEREO_SOURCES, numStereo);
-                if(numStereo > device->SourcesMax)
-                    numStereo = device->SourcesMax;
 
+                numStereo = clampi(numStereo, 0, device->SourcesMax);
                 numMono = device->SourcesMax - numStereo;
             }
 
@@ -1938,6 +1996,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             {
                 numSends = attrList[attrIdx + 1];
                 TRACE_ATTR(ALC_MAX_AUXILIARY_SENDS, numSends);
+                numSends = clampi(numSends, 0, MAX_SENDS);
             }
 
             if(attrList[attrIdx] == ALC_HRTF_SOFT)
@@ -1975,9 +2034,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->NumStereoSources = numStereo;
 
         if(ConfigValueInt(al_string_get_cstr(device->DeviceName), NULL, "sends", &new_sends))
-            new_sends = clampi(numSends, 0, clampi(new_sends, 0, MAX_SENDS));
+            new_sends = mini(numSends, clampi(new_sends, 0, MAX_SENDS));
         else
-            new_sends = clampi(numSends, 0, MAX_SENDS);
+            new_sends = numSends;
     }
 
     if((device->Flags&DEVICE_RUNNING))
@@ -2883,6 +2942,14 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
 }
 
 
+static inline ALCsizei NumAttrsForDevice(ALCdevice *device)
+{
+    if(device->Type == Loopback && device->FmtChans >= DevFmtAmbi1 &&
+       device->FmtChans <= DevFmtAmbi3)
+        return 23;
+    return 17;
+}
+
 static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values)
 {
     ALCsizei i;
@@ -2914,6 +2981,9 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             case ALC_CAPTURE_SAMPLES:
             case ALC_FORMAT_CHANNELS_SOFT:
             case ALC_FORMAT_TYPE_SOFT:
+            case ALC_AMBISONIC_LAYOUT_SOFT:
+            case ALC_AMBISONIC_SCALING_SOFT:
+            case ALC_AMBISONIC_ORDER_SOFT:
                 alcSetError(NULL, ALC_INVALID_DEVICE);
                 return 0;
 
@@ -2965,11 +3035,11 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             return 1;
 
         case ALC_ATTRIBUTES_SIZE:
-            values[0] = 17;
+            values[0] = NumAttrsForDevice(device);
             return 1;
 
         case ALC_ALL_ATTRIBUTES:
-            if(size < 17)
+            if(size < NumAttrsForDevice(device))
             {
                 alcSetError(device, ALC_INVALID_VALUE);
                 return 0;
@@ -2990,8 +3060,25 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             }
             else
             {
-                values[i++] = ALC_FORMAT_CHANNELS_SOFT;
-                values[i++] = device->FmtChans;
+                if(device->FmtChans >= DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3)
+                {
+                    values[i++] = ALC_FORMAT_CHANNELS_SOFT;
+                    values[i++] = ALC_BFORMAT3D_SOFT;
+
+                    values[i++] = ALC_AMBISONIC_LAYOUT_SOFT;
+                    values[i++] = device->AmbiLayout;
+
+                    values[i++] = ALC_AMBISONIC_SCALING_SOFT;
+                    values[i++] = device->AmbiScale;
+
+                    values[i++] = ALC_AMBISONIC_ORDER_SOFT;
+                    values[i++] = device->FmtChans-DevFmtAmbi1+1;
+                }
+                else
+                {
+                    values[i++] = ALC_FORMAT_CHANNELS_SOFT;
+                    values[i++] = device->FmtChans;
+                }
 
                 values[i++] = ALC_FORMAT_TYPE_SOFT;
                 values[i++] = device->FmtType;
@@ -3046,7 +3133,10 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
                 alcSetError(device, ALC_INVALID_DEVICE);
                 return 0;
             }
-            values[0] = device->FmtChans;
+            if(device->FmtChans >= DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3)
+                values[0] = ALC_BFORMAT3D_SOFT;
+            else
+                values[0] = device->FmtChans;
             return 1;
 
         case ALC_FORMAT_TYPE_SOFT:
@@ -3056,6 +3146,36 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
                 return 0;
             }
             values[0] = device->FmtType;
+            return 1;
+
+        case ALC_AMBISONIC_LAYOUT_SOFT:
+            if(device->Type != Loopback || !(device->FmtChans >= DevFmtAmbi1 &&
+                                             device->FmtChans <= DevFmtAmbi3))
+            {
+                alcSetError(device, ALC_INVALID_DEVICE);
+                return 0;
+            }
+            values[0] = device->AmbiLayout;
+            return 1;
+
+        case ALC_AMBISONIC_SCALING_SOFT:
+            if(device->Type != Loopback || !(device->FmtChans >= DevFmtAmbi1 &&
+                                             device->FmtChans <= DevFmtAmbi3))
+            {
+                alcSetError(device, ALC_INVALID_DEVICE);
+                return 0;
+            }
+            values[0] = device->AmbiScale;
+            return 1;
+
+        case ALC_AMBISONIC_ORDER_SOFT:
+            if(device->Type != Loopback || !(device->FmtChans >= DevFmtAmbi1 &&
+                                             device->FmtChans <= DevFmtAmbi3))
+            {
+                alcSetError(device, ALC_INVALID_DEVICE);
+                return 0;
+            }
+            values[0] = device->FmtChans - DevFmtAmbi1 + 1;
             return 1;
 
         case ALC_MONO_SOURCES:
@@ -4191,9 +4311,7 @@ ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device
         alcSetError(device, ALC_INVALID_VALUE);
     else
     {
-        if(IsValidALCType(type) && BytesFromDevFmt(type) > 0 &&
-           IsValidALCChannels(channels) && ChannelsFromDevFmt(channels) > 0 &&
-           freq >= MIN_OUTPUT_RATE)
+        if(IsValidALCType(type) && IsValidALCChannels(channels) && freq >= MIN_OUTPUT_RATE)
             ret = ALC_TRUE;
     }
     if(device) ALCdevice_DecRef(device);
@@ -4221,6 +4339,28 @@ FORCE_ALIGN ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, AL
     if(device) ALCdevice_DecRef(device);
 }
 
+
+/************************************************
+ * ALC loopback2 functions
+ ************************************************/
+
+ALC_API ALCboolean ALC_APIENTRY alcIsAmbisonicFormatSupportedSOFT(ALCdevice *device, ALCenum layout, ALCenum scaling, ALsizei order)
+{
+    ALCboolean ret = ALC_FALSE;
+
+    if(!VerifyDevice(&device) || device->Type != Loopback)
+        alcSetError(device, ALC_INVALID_DEVICE);
+    else if(order <= 0)
+        alcSetError(device, ALC_INVALID_VALUE);
+    else
+    {
+        if(IsValidAmbiLayout(layout) && IsValidAmbiScaling(scaling) && order <= MAX_AMBI_ORDER)
+            ret = ALC_TRUE;
+    }
+    if(device) ALCdevice_DecRef(device);
+
+    return ret;
+}
 
 /************************************************
  * ALC DSP pause/resume functions

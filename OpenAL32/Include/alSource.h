@@ -1,12 +1,13 @@
 #ifndef _AL_SOURCE_H_
 #define _AL_SOURCE_H_
 
-#define MAX_SENDS      16
-#define DEFAULT_SENDS  2
-
+#include "bool.h"
 #include "alMain.h"
 #include "alu.h"
 #include "hrtf.h"
+
+#define MAX_SENDS      16
+#define DEFAULT_SENDS  2
 
 #ifdef __cplusplus
 extern "C" {
@@ -80,6 +81,7 @@ typedef struct ALvoice {
     struct ALsourceProps *Props;
 
     struct ALsource *Source;
+    ATOMIC(bool) Playing;
 
     /* Current buffer queue item being played. */
     ATOMIC(ALbufferlistitem*) current_buffer;

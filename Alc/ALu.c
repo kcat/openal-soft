@@ -1224,9 +1224,8 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
     }
 }
 
-static void CalcSourceParams(ALvoice *voice, ALCcontext *context, ALboolean force)
+static void CalcSourceParams(ALvoice *voice, ALsource *source, ALCcontext *context, ALboolean force)
 {
-    ALsource *source = voice->Source;
     const ALbufferlistitem *BufferListItem;
     struct ALsourceProps *props;
 
@@ -1278,11 +1277,8 @@ static void UpdateContextSources(ALCcontext *ctx, ALeffectslot *slot)
         voice_end = voice + ctx->VoiceCount;
         for(;voice != voice_end;++voice)
         {
-            if(!(source=(*voice)->Source)) continue;
-            if(!IsPlayingOrPaused(source))
-                (*voice)->Source = NULL;
-            else
-                CalcSourceParams(*voice, ctx, force);
+            if((source=(*voice)->Source) != NULL)
+                CalcSourceParams(*voice, source, ctx, force);
         }
     }
     IncrementRef(&ctx->UpdateCount);
@@ -1423,13 +1419,15 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             voice_end = voice + ctx->VoiceCount;
             for(;voice != voice_end;++voice)
             {
-                ALboolean IsVoiceInit = ((*voice)->Step > 0);
                 source = (*voice)->Source;
-                if(IsVoiceInit && source &&
-                   ATOMIC_LOAD(&source->state, almemory_order_relaxed) == AL_PLAYING)
+                if(source && ATOMIC_LOAD(&(*voice)->Playing, almemory_order_relaxed) &&
+                   (*voice)->Step > 0)
                 {
                     if(!MixSource(*voice, source, device, SamplesToDo))
+                    {
                         (*voice)->Source = NULL;
+                        ATOMIC_STORE(&(*voice)->Playing, false, almemory_order_release);
+                    }
                 }
             }
 
@@ -1596,6 +1594,7 @@ void aluHandleDisconnect(ALCdevice *device)
         {
             ALsource *source = (*voice)->Source;
             (*voice)->Source = NULL;
+            ATOMIC_STORE(&(*voice)->Playing, false, almemory_order_release);
 
             if(source)
             {

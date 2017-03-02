@@ -635,9 +635,9 @@ configuration file.</string>
       <widget class="QLineEdit" name="decoderQuadLineEdit">
        <property name="geometry">
         <rect>
-         <x>150</x>
+         <x>120</x>
          <y>30</y>
-         <width>281</width>
+         <width>311</width>
          <height>21</height>
         </rect>
        </property>
@@ -647,7 +647,7 @@ configuration file.</string>
         <rect>
          <x>20</x>
          <y>30</y>
-         <width>121</width>
+         <width>91</width>
          <height>21</height>
         </rect>
        </property>
@@ -674,9 +674,9 @@ configuration file.</string>
       <widget class="QLineEdit" name="decoder51LineEdit">
        <property name="geometry">
         <rect>
-         <x>150</x>
+         <x>120</x>
          <y>60</y>
-         <width>281</width>
+         <width>311</width>
          <height>21</height>
         </rect>
        </property>
@@ -699,7 +699,7 @@ configuration file.</string>
         <rect>
          <x>20</x>
          <y>60</y>
-         <width>121</width>
+         <width>91</width>
          <height>21</height>
         </rect>
        </property>
@@ -715,7 +715,7 @@ configuration file.</string>
         <rect>
          <x>20</x>
          <y>90</y>
-         <width>121</width>
+         <width>91</width>
          <height>21</height>
         </rect>
        </property>
@@ -729,9 +729,9 @@ configuration file.</string>
       <widget class="QLineEdit" name="decoder61LineEdit">
        <property name="geometry">
         <rect>
-         <x>150</x>
+         <x>120</x>
          <y>90</y>
-         <width>281</width>
+         <width>311</width>
          <height>21</height>
         </rect>
        </property>
@@ -765,9 +765,9 @@ configuration file.</string>
       <widget class="QLineEdit" name="decoder71LineEdit">
        <property name="geometry">
         <rect>
-         <x>150</x>
+         <x>120</x>
          <y>120</y>
-         <width>281</width>
+         <width>311</width>
          <height>21</height>
         </rect>
        </property>
@@ -777,7 +777,7 @@ configuration file.</string>
         <rect>
          <x>20</x>
          <y>120</y>
-         <width>121</width>
+         <width>91</width>
          <height>21</height>
         </rect>
        </property>

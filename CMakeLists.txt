@@ -1325,11 +1325,16 @@ ENDIF()
 
 IF(ALSOFT_INSTALL)
     # Add an install target here
-    INSTALL(TARGETS OpenAL
+    INSTALL(TARGETS OpenAL EXPORT OpenAL
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     )
+    INSTALL(EXPORT OpenAL
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/OpenAL
+            NAMESPACE OpenAL::
+            FILE OpenALConfig.cmake)
     INSTALL(FILES include/AL/al.h
                   include/AL/alc.h
                   include/AL/alext.h

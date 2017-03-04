@@ -1237,18 +1237,11 @@ CONFIGURE_FILE(
     "${OpenAL_BINARY_DIR}/openal.pc"
     @ONLY)
 
-# Build a common library with reusable helpers
-ADD_LIBRARY(common STATIC ${COMMON_OBJS})
-SET_PROPERTY(TARGET common APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
-IF(NOT LIBTYPE STREQUAL "STATIC")
-    SET_PROPERTY(TARGET common PROPERTY POSITION_INDEPENDENT_CODE TRUE)
-ENDIF()
-
 # Build main library
 IF(LIBTYPE STREQUAL "STATIC")
     ADD_LIBRARY(openal STATIC ${COMMON_OBJS} ${OPENAL_OBJS} ${ALC_OBJS})
 ELSE()
-    ADD_LIBRARY(openal SHARED ${OPENAL_OBJS} ${ALC_OBJS})
+    ADD_LIBRARY(openal SHARED ${COMMON_OBJS} ${OPENAL_OBJS} ${ALC_OBJS})
 ENDIF()
 SET_PROPERTY(TARGET openal APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
 SET_PROPERTY(TARGET openal APPEND PROPERTY COMPILE_DEFINITIONS AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES)
@@ -1323,7 +1316,7 @@ if(WIN32 AND NOT LIBTYPE STREQUAL "STATIC")
     ENDIF()
 ENDIF()
 
-TARGET_LINK_LIBRARIES(openal common ${EXTRA_LIBS})
+TARGET_LINK_LIBRARIES(openal ${EXTRA_LIBS})
 IF(TARGET build_version)
     ADD_DEPENDENCIES(openal build_version)
 ENDIF()
@@ -1438,7 +1431,7 @@ IF(ALSOFT_TESTS)
     ADD_LIBRARY(test-common STATIC examples/common/alhelpers.c)
     SET_PROPERTY(TARGET test-common APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
 
-    ADD_EXECUTABLE(altonegen examples/altonegen.c)
+    ADD_EXECUTABLE(altonegen examples/altonegen.c ${COMMON_OBJS})
     TARGET_LINK_LIBRARIES(altonegen test-common openal)
     SET_PROPERTY(TARGET altonegen APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
 
@@ -1464,41 +1457,41 @@ IF(ALSOFT_EXAMPLES)
                 INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR}
             )
 
-            ADD_EXECUTABLE(alstream examples/alstream.c)
+            ADD_EXECUTABLE(alstream examples/alstream.c ${COMMON_OBJS})
             TARGET_LINK_LIBRARIES(alstream ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
-                                           common openal)
+                                           openal)
             SET_PROPERTY(TARGET alstream APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
             SET_PROPERTY(TARGET alstream APPEND PROPERTY
                 INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR}
             )
 
-            ADD_EXECUTABLE(alreverb examples/alreverb.c)
+            ADD_EXECUTABLE(alreverb examples/alreverb.c ${COMMON_OBJS})
             TARGET_LINK_LIBRARIES(alreverb ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
-                                           common openal)
+                                           openal)
             SET_PROPERTY(TARGET alreverb APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
             SET_PROPERTY(TARGET alreverb APPEND PROPERTY
                 INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR}
             )
 
-            ADD_EXECUTABLE(allatency examples/allatency.c)
+            ADD_EXECUTABLE(allatency examples/allatency.c ${COMMON_OBJS})
             TARGET_LINK_LIBRARIES(allatency ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
-                                            common openal)
+                                            openal)
             SET_PROPERTY(TARGET allatency APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
             SET_PROPERTY(TARGET allatency APPEND PROPERTY
                 INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR}
             )
 
-            ADD_EXECUTABLE(alloopback examples/alloopback.c)
+            ADD_EXECUTABLE(alloopback examples/alloopback.c ${COMMON_OBJS})
             TARGET_LINK_LIBRARIES(alloopback ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
-                                             common openal)
+                                             openal)
             SET_PROPERTY(TARGET alloopback APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
             SET_PROPERTY(TARGET alloopback APPEND PROPERTY
                 INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR}
             )
 
-            ADD_EXECUTABLE(alhrtf examples/alhrtf.c)
+            ADD_EXECUTABLE(alhrtf examples/alhrtf.c ${COMMON_OBJS})
             TARGET_LINK_LIBRARIES(alhrtf ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
-                                         common openal)
+                                         openal)
             SET_PROPERTY(TARGET alhrtf APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
             SET_PROPERTY(TARGET alhrtf APPEND PROPERTY
                 INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR}
@@ -1540,8 +1533,8 @@ IF(ALSOFT_EXAMPLES)
             ENDIF()
         ENDIF()
         IF(FFVER_OK AND NOT MSVC)
-            ADD_EXECUTABLE(alffplay examples/alffplay.c)
-            TARGET_LINK_LIBRARIES(alffplay common ${SDL2_LIBRARY} openal ${FFMPEG_LIBRARIES})
+            ADD_EXECUTABLE(alffplay examples/alffplay.c ${COMMON_OBJS})
+            TARGET_LINK_LIBRARIES(alffplay ${SDL2_LIBRARY} openal ${FFMPEG_LIBRARIES})
             SET_PROPERTY(TARGET alffplay APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
             SET_PROPERTY(TARGET alffplay APPEND PROPERTY
                 INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${FFMPEG_INCLUDE_DIRS}

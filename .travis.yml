@@ -3,11 +3,15 @@ matrix:
   include:
     - os: linux
       dist: trusty
+    - os: linux
+      dist: trusty
+      env:
+        - BUILD_ANDROID=true
     - os: osx
 sudo: required
 install:
   - >
-    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+    if [[ "${TRAVIS_OS_NAME}" == "linux" && -z "${BUILD_ANDROID}" ]]; then
       # Install pulseaudio, portaudio, ALSA, JACK dependencies for
       # corresponding backends.
       # Install Qt5 dependency for alsoft-config.
@@ -18,4 +22,25 @@ install:
         libjack-dev \
         qtbase5-dev
     fi
-script: cmake . && make -j2
+  - >
+    if [[ "${TRAVIS_OS_NAME}" == "linux" && "${BUILD_ANDROID}" == "true" ]]; then
+      curl -o ~/android-ndk.zip https://dl.google.com/android/repository/android-ndk-r14-linux-x86_64.zip
+      unzip -q ~/android-ndk.zip -d ~
+      sed -i -e 's/VERSION 3.6.0/VERSION 3.2/' ~/android-ndk-r14/build/cmake/android.toolchain.cmake
+    fi
+script:
+  - >
+    if [[ "${TRAVIS_OS_NAME}" == "linux" && -z "${BUILD_ANDROID}" ]]; then
+      cmake .
+    fi
+  - >
+    if [[ "${TRAVIS_OS_NAME}" == "linux" && "${BUILD_ANDROID}" == "true" ]]; then
+      cmake \
+        -DCMAKE_TOOLCHAIN_FILE=~/android-ndk-r14/build/cmake/android.toolchain.cmake \
+        .
+    fi
+  - >
+    if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+      cmake .
+    fi
+  - make -j2

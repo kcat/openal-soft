@@ -1,9 +1,10 @@
-os:
-  - linux
-  - osx
-dist: trusty
-sudo: required
 language: c
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+    - os: osx
+sudo: required
 install:
   - >
     if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then

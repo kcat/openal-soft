@@ -1442,11 +1442,10 @@ IF(ALSOFT_UTILS)
 ENDIF()
 
 IF(ALSOFT_TESTS)
-    ADD_LIBRARY(test-common STATIC examples/common/alhelpers.c)
-    SET_PROPERTY(TARGET test-common APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
+    SET(TEST_COMMON_OBJS  examples/common/alhelpers.c)
 
-    ADD_EXECUTABLE(altonegen examples/altonegen.c ${COMMON_OBJS})
-    TARGET_LINK_LIBRARIES(altonegen test-common OpenAL)
+    ADD_EXECUTABLE(altonegen examples/altonegen.c ${COMMON_OBJS} ${TEST_COMMON_OBJS})
+    TARGET_LINK_LIBRARIES(altonegen OpenAL)
     SET_PROPERTY(TARGET altonegen APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
 
     IF(ALSOFT_INSTALL)
@@ -1464,44 +1463,38 @@ ENDIF()
 IF(ALSOFT_EXAMPLES)
     IF(SDL2_FOUND)
         IF(SDL_SOUND_FOUND)
-            ADD_LIBRARY(ex-common STATIC examples/common/alhelpers.c)
-            SET_PROPERTY(TARGET ex-common APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
+            SET(EX_COMMON_OBJS  examples/common/alhelpers.c)
 
-            ADD_EXECUTABLE(alstream examples/alstream.c ${COMMON_OBJS})
-            TARGET_LINK_LIBRARIES(alstream ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
-                                           OpenAL)
+            ADD_EXECUTABLE(alstream examples/alstream.c ${COMMON_OBJS} ${EX_COMMON_OBJS})
+            TARGET_LINK_LIBRARIES(alstream ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} OpenAL)
             SET_PROPERTY(TARGET alstream APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
             SET_PROPERTY(TARGET alstream APPEND PROPERTY
                 INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR}
             )
 
-            ADD_EXECUTABLE(alreverb examples/alreverb.c ${COMMON_OBJS})
-            TARGET_LINK_LIBRARIES(alreverb ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
-                                           OpenAL)
+            ADD_EXECUTABLE(alreverb examples/alreverb.c ${COMMON_OBJS} ${EX_COMMON_OBJS})
+            TARGET_LINK_LIBRARIES(alreverb ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} OpenAL)
             SET_PROPERTY(TARGET alreverb APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
             SET_PROPERTY(TARGET alreverb APPEND PROPERTY
                 INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR}
             )
 
-            ADD_EXECUTABLE(allatency examples/allatency.c ${COMMON_OBJS})
-            TARGET_LINK_LIBRARIES(allatency ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
-                                            OpenAL)
+            ADD_EXECUTABLE(allatency examples/allatency.c ${COMMON_OBJS} ${EX_COMMON_OBJS})
+            TARGET_LINK_LIBRARIES(allatency ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} OpenAL)
             SET_PROPERTY(TARGET allatency APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
             SET_PROPERTY(TARGET allatency APPEND PROPERTY
                 INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR}
             )
 
-            ADD_EXECUTABLE(alloopback examples/alloopback.c ${COMMON_OBJS})
-            TARGET_LINK_LIBRARIES(alloopback ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
-                                             OpenAL)
+            ADD_EXECUTABLE(alloopback examples/alloopback.c ${COMMON_OBJS} ${EX_COMMON_OBJS})
+            TARGET_LINK_LIBRARIES(alloopback ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} OpenAL)
             SET_PROPERTY(TARGET alloopback APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
             SET_PROPERTY(TARGET alloopback APPEND PROPERTY
                 INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR}
             )
 
-            ADD_EXECUTABLE(alhrtf examples/alhrtf.c ${COMMON_OBJS})
-            TARGET_LINK_LIBRARIES(alhrtf ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}
-                                         OpenAL)
+            ADD_EXECUTABLE(alhrtf examples/alhrtf.c ${COMMON_OBJS} ${EX_COMMON_OBJS})
+            TARGET_LINK_LIBRARIES(alhrtf ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} OpenAL)
             SET_PROPERTY(TARGET alhrtf APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
             SET_PROPERTY(TARGET alhrtf APPEND PROPERTY
                 INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR}

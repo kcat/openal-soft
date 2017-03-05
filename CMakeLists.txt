@@ -83,10 +83,13 @@ IF(WIN32)
 ENDIF()
 
 
+SET(EXTRA_LIBS "")
+SET(EXTRA_LDFLAGS "")
+
 # QNX's gcc do not uses /usr/include and /usr/lib pathes by default
 IF ("${CMAKE_C_PLATFORM_ID}" STREQUAL "QNX")
     ADD_DEFINITIONS("-I/usr/include")
-    SET(EXTRA_LIBS ${EXTRA_LIBS} -L/usr/lib)
+    SET(EXTRA_LDFLAGS "${EXTRA_LDFLAGS} -L/usr/lib")
 ENDIF()
 
 IF(NOT LIBTYPE)
@@ -361,7 +364,7 @@ int main()
             HAVE_STATIC_LIBGCC_SWITCH
         )
         if(HAVE_STATIC_LIBGCC_SWITCH)
-            set(EXTRA_LIBS ${EXTRA_LIBS} -static-libgcc)
+            set(EXTRA_LDFLAGS "${EXTRA_LDFLAGS} -static-libgcc")
         endif()
         set(CMAKE_REQUIRED_LIBRARIES ${OLD_REQUIRED_LIBRARIES})
         unset(OLD_REQUIRED_LIBRARIES)
@@ -608,7 +611,7 @@ IF(NOT HAVE_WINDOWS_H)
     IF(HAVE_PTHREAD)
         SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} -pthread")
         SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -pthread")
-        SET(EXTRA_LIBS ${EXTRA_LIBS} -pthread)
+        SET(EXTRA_LDFLAGS "${EXTRA_LDFLAGS} -pthread")
     ENDIF()
 
     CHECK_LIBRARY_EXISTS(pthread pthread_create "" HAVE_LIBPTHREAD)
@@ -1307,7 +1310,7 @@ if(WIN32 AND NOT LIBTYPE STREQUAL "STATIC")
                 MESSAGE(STATUS "WARNING: Cannot find dlltool, disabling .def/.lib generation")
             ENDIF()
         ELSE()
-            SET_PROPERTY(TARGET OpenAL APPEND_STRING PROPERTY LINK_FLAGS " -Wl,--output-def,OpenAL32.def")
+            SET(EXTRA_LDFLAGS "${EXTRA_LDFLAGS} -Wl,--output-def,OpenAL32.def")
             ADD_CUSTOM_COMMAND(TARGET OpenAL POST_BUILD
                 COMMAND "${SED_EXECUTABLE}" -i -e "s/ @[^ ]*//" OpenAL32.def
                 COMMAND "${DLLTOOL_EXECUTABLE}" -d OpenAL32.def -l OpenAL32.lib -D OpenAL32.dll
@@ -1318,6 +1321,7 @@ if(WIN32 AND NOT LIBTYPE STREQUAL "STATIC")
     ENDIF()
 ENDIF()
 
+SET_PROPERTY(TARGET OpenAL APPEND_STRING PROPERTY LINK_FLAGS ${EXTRA_LDFLAGS})
 TARGET_LINK_LIBRARIES(OpenAL ${EXTRA_LIBS})
 IF(TARGET build_version)
     ADD_DEPENDENCIES(OpenAL build_version)

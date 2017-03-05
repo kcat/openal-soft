@@ -1721,7 +1721,7 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
         for(pos = 0;pos < context->VoiceCount;pos++)
         {
             ALvoice *voice = context->Voices[pos];
-            ALsource *source = voice->Source;
+            ALsource *source = ATOMIC_LOAD(&voice->Source, almemory_order_acquire);
             if(source && source->OffsetType != AL_NONE)
             {
                 WriteLock(&source->queue_lock);

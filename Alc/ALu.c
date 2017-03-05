@@ -1277,8 +1277,8 @@ static void UpdateContextSources(ALCcontext *ctx, ALeffectslot *slot)
         voice_end = voice + ctx->VoiceCount;
         for(;voice != voice_end;++voice)
         {
-            if((source=(*voice)->Source) != NULL)
-                CalcSourceParams(*voice, source, ctx, force);
+            source = ATOMIC_LOAD(&(*voice)->Source, almemory_order_acquire);
+            if(source) CalcSourceParams(*voice, source, ctx, force);
         }
     }
     IncrementRef(&ctx->UpdateCount);
@@ -1419,13 +1419,13 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             voice_end = voice + ctx->VoiceCount;
             for(;voice != voice_end;++voice)
             {
-                source = (*voice)->Source;
+                source = ATOMIC_LOAD(&(*voice)->Source, almemory_order_acquire);
                 if(source && ATOMIC_LOAD(&(*voice)->Playing, almemory_order_relaxed) &&
                    (*voice)->Step > 0)
                 {
                     if(!MixSource(*voice, source, device, SamplesToDo))
                     {
-                        (*voice)->Source = NULL;
+                        ATOMIC_STORE(&(*voice)->Source, NULL, almemory_order_relaxed);
                         ATOMIC_STORE(&(*voice)->Playing, false, almemory_order_release);
                     }
                 }
@@ -1592,8 +1592,8 @@ void aluHandleDisconnect(ALCdevice *device)
         voice_end = voice + Context->VoiceCount;
         while(voice != voice_end)
         {
-            ALsource *source = (*voice)->Source;
-            (*voice)->Source = NULL;
+            ALsource *source = ATOMIC_EXCHANGE(ALsource*, &(*voice)->Source, NULL,
+                                               almemory_order_acq_rel);
             ATOMIC_STORE(&(*voice)->Playing, false, almemory_order_release);
 
             if(source)

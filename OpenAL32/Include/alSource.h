@@ -80,7 +80,7 @@ struct ALsourceProps {
 typedef struct ALvoice {
     struct ALsourceProps *Props;
 
-    struct ALsource *Source;
+    ATOMIC(struct ALsource*) Source;
     ATOMIC(bool) Playing;
 
     /* Current buffer queue item being played. */

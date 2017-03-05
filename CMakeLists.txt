@@ -1464,12 +1464,8 @@ ENDIF()
 IF(ALSOFT_EXAMPLES)
     IF(SDL2_FOUND)
         IF(SDL_SOUND_FOUND)
-            ADD_LIBRARY(ex-common STATIC examples/common/alhelpers.c
-                                         examples/common/sdl_sound.c)
+            ADD_LIBRARY(ex-common STATIC examples/common/alhelpers.c)
             SET_PROPERTY(TARGET ex-common APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
-            SET_PROPERTY(TARGET ex-common APPEND PROPERTY
-                INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR}
-            )
 
             ADD_EXECUTABLE(alstream examples/alstream.c ${COMMON_OBJS})
             TARGET_LINK_LIBRARIES(alstream ex-common ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY}

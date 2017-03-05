@@ -27,16 +27,14 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include <SDL_sound.h>
+
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
 
 #include "common/alhelpers.h"
-#include "common/sdl_sound.h"
 
-
-static LPALBUFFERSAMPLESSOFT alBufferSamplesSOFT = wrap_BufferSamples;
-static LPALISBUFFERFORMATSUPPORTEDSOFT alIsBufferFormatSupportedSOFT;
 
 static LPALSOURCEDSOFT alSourcedSOFT;
 static LPALSOURCE3DSOFT alSource3dSOFT;
@@ -52,47 +50,63 @@ static LPALGETSOURCE3I64SOFT alGetSource3i64SOFT;
 static LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
 
 /* LoadBuffer loads the named audio file into an OpenAL buffer object, and
- * returns the new buffer ID. */
+ * returns the new buffer ID.
+ */
 static ALuint LoadSound(const char *filename)
 {
-    ALenum err, format, type, channels;
-    ALuint rate, buffer;
-    size_t datalen;
-    void *data;
-    FilePtr sound;
+    Sound_Sample *sample;
+    ALenum err, format;
+    ALuint buffer;
+    Uint32 slen;
 
     /* Open the audio file */
-    sound = openAudioFile(filename, 1000);
-    if(!sound)
+    sample = Sound_NewSampleFromFile(filename, NULL, 65536);
+    if(!sample)
     {
         fprintf(stderr, "Could not open audio in %s\n", filename);
-        closeAudioFile(sound);
         return 0;
     }
 
     /* Get the sound format, and figure out the OpenAL format */
-    if(getAudioInfo(sound, &rate, &channels, &type) != 0)
+    if(sample->actual.channels == 1)
     {
-        fprintf(stderr, "Error getting audio info for %s\n", filename);
-        closeAudioFile(sound);
-        return 0;
+        if(sample->actual.format == AUDIO_U8)
+            format = AL_FORMAT_MONO8;
+        else if(sample->actual.format == AUDIO_S16SYS)
+            format = AL_FORMAT_MONO16;
+        else
+        {
+            fprintf(stderr, "Unsupported sample format: 0x%04x\n", sample->actual.format);
+            Sound_FreeSample(sample);
+            return 0;
+        }
     }
-
-    format = GetFormat(channels, type, alIsBufferFormatSupportedSOFT);
-    if(format == AL_NONE)
+    else if(sample->actual.channels == 2)
     {
-        fprintf(stderr, "Unsupported format (%s, %s) for %s\n",
-                ChannelsName(channels), TypeName(type), filename);
-        closeAudioFile(sound);
+        if(sample->actual.format == AUDIO_U8)
+            format = AL_FORMAT_STEREO8;
+        else if(sample->actual.format == AUDIO_S16SYS)
+            format = AL_FORMAT_STEREO16;
+        else
+        {
+            fprintf(stderr, "Unsupported sample format: 0x%04x\n", sample->actual.format);
+            Sound_FreeSample(sample);
+            return 0;
+        }
+    }
+    else
+    {
+        fprintf(stderr, "Unsupported channel count: %d\n", sample->actual.channels);
+        Sound_FreeSample(sample);
         return 0;
     }
 
     /* Decode the whole audio stream to a buffer. */
-    data = decodeAudioStream(sound, &datalen);
-    if(!data)
+    slen = Sound_DecodeAll(sample);
+    if(!sample->buffer || slen == 0)
     {
         fprintf(stderr, "Failed to read audio from %s\n", filename);
-        closeAudioFile(sound);
+        Sound_FreeSample(sample);
         return 0;
     }
 
@@ -100,17 +114,15 @@ static ALuint LoadSound(const char *filename)
      * close the file. */
     buffer = 0;
     alGenBuffers(1, &buffer);
-    alBufferSamplesSOFT(buffer, rate, format, BytesToFrames(datalen, channels, type),
-                        channels, type, data);
-    free(data);
-    closeAudioFile(sound);
+    alBufferData(buffer, format, sample->buffer, slen, sample->actual.rate);
+    Sound_FreeSample(sample);
 
     /* Check if an error occured, and clean up if so. */
     err = alGetError();
     if(err != AL_NO_ERROR)
     {
         fprintf(stderr, "OpenAL Error: %s\n", alGetString(err));
-        if(alIsBuffer(buffer))
+        if(buffer && alIsBuffer(buffer))
             alDeleteBuffers(1, &buffer);
         return 0;
     }
@@ -158,18 +170,16 @@ int main(int argc, char **argv)
     LOAD_PROC(alGetSourcei64SOFT);
     LOAD_PROC(alGetSource3i64SOFT);
     LOAD_PROC(alGetSourcei64vSOFT);
-
-    if(alIsExtensionPresent("AL_SOFT_buffer_samples"))
-    {
-        LOAD_PROC(alBufferSamplesSOFT);
-        LOAD_PROC(alIsBufferFormatSupportedSOFT);
-    }
 #undef LOAD_PROC
+
+    /* Initialize SDL_sound. */
+    Sound_Init();
 
     /* Load the sound into a buffer. */
     buffer = LoadSound(argv[0]);
     if(!buffer)
     {
+        Sound_Quit();
         CloseAL();
         return 1;
     }
@@ -195,10 +205,11 @@ int main(int argc, char **argv)
     } while(alGetError() == AL_NO_ERROR && state == AL_PLAYING);
     printf("\n");
 
-    /* All done. Delete resources, and close OpenAL. */
+    /* All done. Delete resources, and close down SDL_sound and OpenAL. */
     alDeleteSources(1, &source);
     alDeleteBuffers(1, &buffer);
 
+    Sound_Quit();
     CloseAL();
 
     return 0;

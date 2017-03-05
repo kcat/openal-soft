@@ -28,12 +28,13 @@
 #include <assert.h>
 #include <math.h>
 
+#include <SDL_sound.h>
+
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
 
 #include "common/alhelpers.h"
-#include "common/sdl_sound.h"
 
 
 #ifndef M_PI
@@ -44,47 +45,63 @@ static LPALCGETSTRINGISOFT alcGetStringiSOFT;
 static LPALCRESETDEVICESOFT alcResetDeviceSOFT;
 
 /* LoadBuffer loads the named audio file into an OpenAL buffer object, and
- * returns the new buffer ID. */
+ * returns the new buffer ID.
+ */
 static ALuint LoadSound(const char *filename)
 {
-    ALenum err, format, type, channels;
-    ALuint rate, buffer;
-    size_t datalen;
-    void *data;
-    FilePtr sound;
+    Sound_Sample *sample;
+    ALenum err, format;
+    ALuint buffer;
+    Uint32 slen;
 
     /* Open the audio file */
-    sound = openAudioFile(filename, 1000);
-    if(!sound)
+    sample = Sound_NewSampleFromFile(filename, NULL, 65536);
+    if(!sample)
     {
         fprintf(stderr, "Could not open audio in %s\n", filename);
-        closeAudioFile(sound);
         return 0;
     }
 
     /* Get the sound format, and figure out the OpenAL format */
-    if(getAudioInfo(sound, &rate, &channels, &type) != 0)
+    if(sample->actual.channels == 1)
     {
-        fprintf(stderr, "Error getting audio info for %s\n", filename);
-        closeAudioFile(sound);
-        return 0;
+        if(sample->actual.format == AUDIO_U8)
+            format = AL_FORMAT_MONO8;
+        else if(sample->actual.format == AUDIO_S16SYS)
+            format = AL_FORMAT_MONO16;
+        else
+        {
+            fprintf(stderr, "Unsupported sample format: 0x%04x\n", sample->actual.format);
+            Sound_FreeSample(sample);
+            return 0;
+        }
     }
-
-    format = GetFormat(channels, type, NULL);
-    if(format == AL_NONE)
+    else if(sample->actual.channels == 2)
     {
-        fprintf(stderr, "Unsupported format (%s, %s) for %s\n",
-                ChannelsName(channels), TypeName(type), filename);
-        closeAudioFile(sound);
+        if(sample->actual.format == AUDIO_U8)
+            format = AL_FORMAT_STEREO8;
+        else if(sample->actual.format == AUDIO_S16SYS)
+            format = AL_FORMAT_STEREO16;
+        else
+        {
+            fprintf(stderr, "Unsupported sample format: 0x%04x\n", sample->actual.format);
+            Sound_FreeSample(sample);
+            return 0;
+        }
+    }
+    else
+    {
+        fprintf(stderr, "Unsupported channel count: %d\n", sample->actual.channels);
+        Sound_FreeSample(sample);
         return 0;
     }
 
     /* Decode the whole audio stream to a buffer. */
-    data = decodeAudioStream(sound, &datalen);
-    if(!data)
+    slen = Sound_DecodeAll(sample);
+    if(!sample->buffer || slen == 0)
     {
         fprintf(stderr, "Failed to read audio from %s\n", filename);
-        closeAudioFile(sound);
+        Sound_FreeSample(sample);
         return 0;
     }
 
@@ -92,9 +109,8 @@ static ALuint LoadSound(const char *filename)
      * close the file. */
     buffer = 0;
     alGenBuffers(1, &buffer);
-    alBufferData(buffer, format, data, datalen, rate);
-    free(data);
-    closeAudioFile(sound);
+    alBufferData(buffer, format, sample->buffer, slen, sample->actual.rate);
+    Sound_FreeSample(sample);
 
     /* Check if an error occured, and clean up if so. */
     err = alGetError();
@@ -219,10 +235,14 @@ int main(int argc, char **argv)
     }
     fflush(stdout);
 
+    /* Initialize SDL_sound. */
+    Sound_Init();
+
     /* Load the sound into a buffer. */
     buffer = LoadSound(soundname);
     if(!buffer)
     {
+        Sound_Quit();
         CloseAL();
         return 1;
     }
@@ -263,10 +283,11 @@ int main(int argc, char **argv)
         alGetSourcei(source, AL_SOURCE_STATE, &state);
     } while(alGetError() == AL_NO_ERROR && state == AL_PLAYING);
 
-    /* All done. Delete resources, and close OpenAL. */
+    /* All done. Delete resources, and close down SDL_sound and OpenAL. */
     alDeleteSources(1, &source);
     alDeleteBuffers(1, &buffer);
 
+    Sound_Quit();
     CloseAL();
 
     return 0;

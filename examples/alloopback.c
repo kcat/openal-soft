@@ -61,6 +61,35 @@ void SDLCALL RenderSDLSamples(void *userdata, Uint8 *stream, int len)
 }
 
 
+static const char *ChannelsName(ALCenum chans)
+{
+    switch(chans)
+    {
+    case ALC_MONO_SOFT: return "Mono";
+    case ALC_STEREO_SOFT: return "Stereo";
+    case ALC_QUAD_SOFT: return "Quadraphonic";
+    case ALC_5POINT1_SOFT: return "5.1 Surround";
+    case ALC_6POINT1_SOFT: return "6.1 Surround";
+    case ALC_7POINT1_SOFT: return "7.1 Surround";
+    }
+    return "Unknown Channels";
+}
+
+static const char *TypeName(ALCenum type)
+{
+    switch(type)
+    {
+    case ALC_BYTE_SOFT: return "S8";
+    case ALC_UNSIGNED_BYTE_SOFT: return "U8";
+    case ALC_SHORT_SOFT: return "S16";
+    case ALC_UNSIGNED_SHORT_SOFT: return "U16";
+    case ALC_INT_SOFT: return "S32";
+    case ALC_UNSIGNED_INT_SOFT: return "U32";
+    case ALC_FLOAT_SOFT: return "Float32";
+    }
+    return "Unknown Type";
+}
+
 /* Creates a one second buffer containing a sine wave, and returns the new
  * buffer ID. */
 static ALuint CreateSineWave(void)
@@ -169,7 +198,7 @@ int main(int argc, char *argv[])
 
     attrs[6] = 0; /* end of list */
 
-    playback.FrameSize = FramesToBytes(1, attrs[1], attrs[3]);
+    playback.FrameSize = obtained.channels * SDL_AUDIO_BITSIZE(obtained.format) / 8;
 
     /* Initialize OpenAL loopback device, using our format attributes. */
     playback.Device = alcLoopbackOpenDeviceSOFT(NULL);

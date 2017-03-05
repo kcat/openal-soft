@@ -2,5 +2,19 @@ os:
   - linux
   - osx
 dist: trusty
+sudo: required
 language: c
+install:
+  - >
+    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+      # Install pulseaudio, portaudio, ALSA, JACK dependencies for
+      # corresponding backends.
+      # Install Qt5 dependency for alsoft-config.
+      sudo apt-get install -qq \
+        libpulse-dev \
+        portaudio19-dev \
+        libasound2-dev \
+        libjack-dev \
+        qtbase5-dev
+    fi
 script: cmake . && make -j2

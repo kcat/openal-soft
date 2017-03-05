@@ -31,16 +31,25 @@ install:
 script:
   - >
     if [[ "${TRAVIS_OS_NAME}" == "linux" && -z "${BUILD_ANDROID}" ]]; then
-      cmake .
+      cmake \
+        -DALSOFT_REQUIRE_ALSA=ON \
+        -DALSOFT_REQUIRE_OSS=ON \
+        -DALSOFT_REQUIRE_PORTAUDIO=ON \
+        -DALSOFT_REQUIRE_PULSEAUDIO=ON \
+        -DALSOFT_REQUIRE_JACK=ON \
+        .
     fi
   - >
     if [[ "${TRAVIS_OS_NAME}" == "linux" && "${BUILD_ANDROID}" == "true" ]]; then
       cmake \
         -DCMAKE_TOOLCHAIN_FILE=~/android-ndk-r14/build/cmake/android.toolchain.cmake \
+        -DALSOFT_REQUIRE_OPENSL=ON \
         .
     fi
   - >
     if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
-      cmake .
+      cmake \
+        -DALSOFT_REQUIRE_COREAUDIO=ON \
+        .
     fi
   - make -j2

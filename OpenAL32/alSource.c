@@ -46,7 +46,6 @@ extern inline void LockSourcesWrite(ALCcontext *context);
 extern inline void UnlockSourcesWrite(ALCcontext *context);
 extern inline struct ALsource *LookupSource(ALCcontext *context, ALuint id);
 extern inline struct ALsource *RemoveSource(ALCcontext *context, ALuint id);
-extern inline ALboolean IsPlayingOrPaused(const ALsource *source);
 
 static void InitSourceParams(ALsource *Source, ALsizei num_sends);
 static void DeinitSource(ALsource *source, ALsizei num_sends);

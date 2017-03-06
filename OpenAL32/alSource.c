@@ -144,6 +144,19 @@ static inline bool IsPlayingOrPausedSeq(const ALsource *source)
     return state == AL_PLAYING || state == AL_PAUSED;
 }
 
+static ALenum GetSourceState(ALsource *source, ALvoice *voice)
+{
+    if(!voice)
+    {
+        ALenum state = AL_PLAYING;
+        if(ATOMIC_COMPARE_EXCHANGE_STRONG(ALenum, &source->state, &state, AL_STOPPED,
+                                          almemory_order_acq_rel, almemory_order_acquire))
+            return AL_STOPPED;
+        return state;
+    }
+    return ATOMIC_LOAD(&source->state, almemory_order_acquire);
+}
+
 static inline bool SourceShouldUpdate(const ALsource *source, const ALCcontext *context)
 {
     return IsPlayingOrPausedSeq(source) &&
@@ -686,11 +699,14 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             }
 
             WriteLock(&Source->queue_lock);
-            if(IsPlayingOrPausedSeq(Source))
             {
-                WriteUnlock(&Source->queue_lock);
-                UnlockBuffersRead(device);
-                SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_OPERATION, AL_FALSE);
+                ALenum state = GetSourceState(Source, GetSourceVoice(Source, Context));
+                if(state == AL_PLAYING || state == AL_PAUSED)
+                {
+                    WriteUnlock(&Source->queue_lock);
+                    UnlockBuffersRead(device);
+                    SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_OPERATION, AL_FALSE);
+                }
             }
 
             if(buffer != NULL)
@@ -1245,7 +1261,7 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             return AL_TRUE;
 
         case AL_SOURCE_STATE:
-            *values = ATOMIC_LOAD_SEQ(&Source->state);
+            *values = GetSourceState(Source, GetSourceVoice(Source, Context));
             return AL_TRUE;
 
         case AL_BYTE_LENGTH_SOFT:
@@ -2950,7 +2966,7 @@ void UpdateAllSourceProps(ALCcontext *context)
     {
         ALvoice *voice = context->Voices[pos];
         ALsource *source = ATOMIC_LOAD(&voice->Source, almemory_order_acquire);
-        if(source != NULL && source->NeedsUpdate && IsPlayingOrPausedSeq(source))
+        if(source != NULL && source->NeedsUpdate)
         {
             source->NeedsUpdate = AL_FALSE;
             UpdateSourceProps(source, num_sends);
@@ -2994,7 +3010,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             goto do_stop;
 
         voice = GetSourceVoice(Source, Context);
-        switch(ATOMIC_EXCHANGE(ALenum, &Source->state, AL_PLAYING, almemory_order_acq_rel))
+        switch(GetSourceState(Source, voice))
         {
             case AL_PLAYING:
                 assert(voice != NULL);
@@ -3012,6 +3028,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
                  */
                 voice->Moving = AL_FALSE;
                 ATOMIC_STORE(&voice->Playing, true, almemory_order_release);
+                ATOMIC_STORE(&Source->state, AL_PLAYING, almemory_order_release);
                 goto done;
 
             default:
@@ -3070,6 +3087,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
 
         ATOMIC_STORE(&voice->Source, Source, almemory_order_relaxed);
         ATOMIC_STORE(&voice->Playing, true, almemory_order_release);
+        ATOMIC_STORE(&Source->state, AL_PLAYING, almemory_order_release);
     }
     else if(state == AL_PAUSED)
     {

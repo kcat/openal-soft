@@ -681,7 +681,6 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
     voice->Moving = AL_TRUE;
 
     /* Update source info */
-    ATOMIC_STORE(&Source->state,            State, almemory_order_relaxed);
     ATOMIC_STORE(&voice->position,          DataPosInt, almemory_order_relaxed);
     ATOMIC_STORE(&voice->position_fraction, DataPosFrac, almemory_order_relaxed);
     ATOMIC_STORE(&voice->current_buffer,    BufferListItem, almemory_order_release);

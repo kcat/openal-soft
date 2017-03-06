@@ -9,6 +9,9 @@ matrix:
         - BUILD_ANDROID=true
     - os: osx
 sudo: required
+cache:
+  directories:
+    - $HOME/android-ndk-r14
 install:
   - >
     if [[ "${TRAVIS_OS_NAME}" == "linux" && -z "${BUILD_ANDROID}" ]]; then

@@ -2987,7 +2987,6 @@ void UpdateAllSourceProps(ALCcontext *context)
 ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
 {
     ALCdevice *device = Context->Device;
-    ALuint refcount;
     ALvoice *voice;
 
     WriteLock(&Source->queue_lock);
@@ -3109,7 +3108,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         if((voice=GetSourceVoice(Source, Context)) != NULL)
         {
             ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
-            while(((refcount=ATOMIC_LOAD(&device->MixCount, almemory_order_acquire))&1))
+            while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
                 althrd_yield();
         }
         if(GetSourceState(Source, voice) == AL_PLAYING)
@@ -3121,7 +3120,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         {
             ATOMIC_STORE(&voice->Source, NULL, almemory_order_relaxed);
             ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
-            while(((refcount=ATOMIC_LOAD(&device->MixCount, almemory_order_acquire))&1))
+            while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
                 althrd_yield();
         }
         if(ATOMIC_LOAD(&Source->state, almemory_order_acquire) != AL_INITIAL)

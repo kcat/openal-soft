@@ -94,6 +94,13 @@ typedef struct ALvoice {
     ATOMIC(ALuint) position;
     ATOMIC(ALuint) position_fraction;
 
+    /**
+     * Number of channels and bytes-per-sample for the attached source's
+     * buffer(s).
+     */
+    ALsizei NumChannels;
+    ALsizei SampleSize;
+
     /** Current target parameters used for mixing. */
     ALint Step;
 
@@ -196,10 +203,6 @@ typedef struct ALsource {
     ATOMIC(ALbufferlistitem*) queue;
 
     ATOMIC(ALboolean) looping;
-
-    /** Current buffer sample info. */
-    ALsizei NumChannels;
-    ALsizei SampleSize;
 
     ALenum NeedsUpdate;
 

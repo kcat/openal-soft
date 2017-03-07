@@ -389,8 +389,8 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
     DataPosFrac    = ATOMIC_LOAD(&voice->position_fraction, almemory_order_relaxed);
     BufferListItem = ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed);
     Looping        = ATOMIC_LOAD(&Source->looping, almemory_order_relaxed);
-    NumChannels    = Source->NumChannels;
-    SampleSize     = Source->SampleSize;
+    NumChannels    = voice->NumChannels;
+    SampleSize     = voice->SampleSize;
     increment      = voice->Step;
 
     IrSize = (Device->Hrtf.Handle ? Device->Hrtf.Handle->irSize : 0);

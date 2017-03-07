@@ -719,11 +719,6 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
 
                 /* Source is now Static */
                 Source->SourceType = AL_STATIC;
-
-                ReadLock(&buffer->lock);
-                Source->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
-                Source->SampleSize  = BytesFromFmt(buffer->FmtType);
-                ReadUnlock(&buffer->lock);
             }
             else
             {
@@ -2582,12 +2577,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         IncrementRef(&buffer->ref);
 
         if(BufferFmt == NULL)
-        {
             BufferFmt = buffer;
-
-            source->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
-            source->SampleSize  = BytesFromFmt(buffer->FmtType);
-        }
         else if(BufferFmt->Frequency != buffer->Frequency ||
                 BufferFmt->OriginalChannels != buffer->OriginalChannels ||
                 BufferFmt->OriginalType != buffer->OriginalType)
@@ -2990,6 +2980,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
     {
         ALCdevice *device = Context->Device;
         ALbufferlistitem *BufferList;
+        ALbuffer *buffer = NULL;
         ALsizei i;
 
         /* Check that there is a queue containing at least one valid, non zero
@@ -2997,7 +2988,6 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         BufferList = ATOMIC_LOAD_SEQ(&Source->queue);
         while(BufferList)
         {
-            ALbuffer *buffer;
             if((buffer=BufferList->buffer) != NULL && buffer->SampleLen > 0)
                 break;
             BufferList = BufferList->next;
@@ -3063,6 +3053,9 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         ATOMIC_STORE(&voice->position_fraction, 0, almemory_order_relaxed);
         if(Source->OffsetType != AL_NONE)
             ApplyOffset(Source, voice);
+
+        voice->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
+        voice->SampleSize  = BytesFromFmt(buffer->FmtType);
 
         /* Clear previous samples. */
         memset(voice->PrevSamples, 0, sizeof(voice->PrevSamples));

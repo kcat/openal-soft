@@ -27,52 +27,52 @@ typedef struct ALbufferlistitem {
 struct ALsourceProps {
     ATOMIC(struct ALsourceProps*) next;
 
-    ATOMIC(ALfloat)   Pitch;
-    ATOMIC(ALfloat)   Gain;
-    ATOMIC(ALfloat)   OuterGain;
-    ATOMIC(ALfloat)   MinGain;
-    ATOMIC(ALfloat)   MaxGain;
-    ATOMIC(ALfloat)   InnerAngle;
-    ATOMIC(ALfloat)   OuterAngle;
-    ATOMIC(ALfloat)   RefDistance;
-    ATOMIC(ALfloat)   MaxDistance;
-    ATOMIC(ALfloat)   RollOffFactor;
-    ATOMIC(ALfloat)   Position[3];
-    ATOMIC(ALfloat)   Velocity[3];
-    ATOMIC(ALfloat)   Direction[3];
-    ATOMIC(ALfloat)   Orientation[2][3];
-    ATOMIC(ALboolean) HeadRelative;
-    ATOMIC(enum DistanceModel) DistanceModel;
-    ATOMIC(ALboolean) DirectChannels;
+    ALfloat Pitch;
+    ALfloat Gain;
+    ALfloat OuterGain;
+    ALfloat MinGain;
+    ALfloat MaxGain;
+    ALfloat InnerAngle;
+    ALfloat OuterAngle;
+    ALfloat RefDistance;
+    ALfloat MaxDistance;
+    ALfloat RollOffFactor;
+    ALfloat Position[3];
+    ALfloat Velocity[3];
+    ALfloat Direction[3];
+    ALfloat Orientation[2][3];
+    ALboolean HeadRelative;
+    enum DistanceModel DistanceModel;
+    ALboolean DirectChannels;
 
-    ATOMIC(ALboolean) DryGainHFAuto;
-    ATOMIC(ALboolean) WetGainAuto;
-    ATOMIC(ALboolean) WetGainHFAuto;
-    ATOMIC(ALfloat)   OuterGainHF;
+    ALboolean DryGainHFAuto;
+    ALboolean WetGainAuto;
+    ALboolean WetGainHFAuto;
+    ALfloat   OuterGainHF;
 
-    ATOMIC(ALfloat) AirAbsorptionFactor;
-    ATOMIC(ALfloat) RoomRolloffFactor;
-    ATOMIC(ALfloat) DopplerFactor;
+    ALfloat AirAbsorptionFactor;
+    ALfloat RoomRolloffFactor;
+    ALfloat DopplerFactor;
 
-    ATOMIC(ALfloat) StereoPan[2];
+    ALfloat StereoPan[2];
 
-    ATOMIC(ALfloat) Radius;
+    ALfloat Radius;
 
     /** Direct filter and auxiliary send info. */
     struct {
-        ATOMIC(ALfloat) Gain;
-        ATOMIC(ALfloat) GainHF;
-        ATOMIC(ALfloat) HFReference;
-        ATOMIC(ALfloat) GainLF;
-        ATOMIC(ALfloat) LFReference;
+        ALfloat Gain;
+        ALfloat GainHF;
+        ALfloat HFReference;
+        ALfloat GainLF;
+        ALfloat LFReference;
     } Direct;
     struct {
-        ATOMIC(struct ALeffectslot*) Slot;
-        ATOMIC(ALfloat) Gain;
-        ATOMIC(ALfloat) GainHF;
-        ATOMIC(ALfloat) HFReference;
-        ATOMIC(ALfloat) GainLF;
-        ATOMIC(ALfloat) LFReference;
+        struct ALeffectslot *Slot;
+        ALfloat Gain;
+        ALfloat GainHF;
+        ALfloat HFReference;
+        ALfloat GainLF;
+        ALfloat LFReference;
     } Send[];
 };
 

@@ -530,8 +530,9 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
     props = ATOMIC_LOAD_SEQ(&EffectSlot->FreeList);
     while(props)
     {
-        State = ATOMIC_EXCHANGE(ALeffectState*, &props->State, NULL, almemory_order_relaxed);
-        if(State) ALeffectState_DecRef(State);
+        if(props->State)
+            ALeffectState_DecRef(props->State);
+        props->State = NULL;
         props = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
     }
 
@@ -602,24 +603,20 @@ ALenum InitEffectSlot(ALeffectslot *slot)
 void DeinitEffectSlot(ALeffectslot *slot)
 {
     struct ALeffectslotProps *props;
-    ALeffectState *state;
     size_t count = 0;
 
     props = ATOMIC_LOAD_SEQ(&slot->Update);
     if(props)
     {
-        state = ATOMIC_LOAD(&props->State, almemory_order_relaxed);
-        if(state) ALeffectState_DecRef(state);
+        if(props->State) ALeffectState_DecRef(props->State);
         TRACE("Freed unapplied AuxiliaryEffectSlot update %p\n", props);
         al_free(props);
     }
     props = ATOMIC_LOAD(&slot->FreeList, almemory_order_relaxed);
     while(props)
     {
-        struct ALeffectslotProps *next;
-        state = ATOMIC_LOAD(&props->State, almemory_order_relaxed);
-        next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
-        if(state) ALeffectState_DecRef(state);
+        struct ALeffectslotProps *next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
+        if(props->State) ALeffectState_DecRef(props->State);
         al_free(props);
         props = next;
         ++count;
@@ -651,17 +648,17 @@ void UpdateEffectSlotProps(ALeffectslot *slot)
     }
 
     /* Copy in current property values. */
-    ATOMIC_STORE(&props->Gain, slot->Gain, almemory_order_relaxed);
-    ATOMIC_STORE(&props->AuxSendAuto, slot->AuxSendAuto, almemory_order_relaxed);
+    props->Gain = slot->Gain;
+    props->AuxSendAuto = slot->AuxSendAuto;
 
-    ATOMIC_STORE(&props->Type, slot->Effect.Type, almemory_order_relaxed);
+    props->Type = slot->Effect.Type;
     props->Props = slot->Effect.Props;
     /* Swap out any stale effect state object there may be in the container, to
      * delete it.
      */
     ALeffectState_IncRef(slot->Effect.State);
-    oldstate = ATOMIC_EXCHANGE(ALeffectState*, &props->State, slot->Effect.State,
-                               almemory_order_relaxed);
+    oldstate = props->State;
+    props->State = slot->Effect.State;
 
     /* Set the new container for updating internal parameters. */
     props = ATOMIC_EXCHANGE(struct ALeffectslotProps*, &slot->Update, props,

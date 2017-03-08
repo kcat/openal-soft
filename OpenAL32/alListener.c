@@ -474,30 +474,30 @@ void UpdateListenerProps(ALCcontext *context)
     }
 
     /* Copy in current property values. */
-    ATOMIC_STORE(&props->Position[0], listener->Position[0], almemory_order_relaxed);
-    ATOMIC_STORE(&props->Position[1], listener->Position[1], almemory_order_relaxed);
-    ATOMIC_STORE(&props->Position[2], listener->Position[2], almemory_order_relaxed);
+    props->Position[0] = listener->Position[0];
+    props->Position[1] = listener->Position[1];
+    props->Position[2] = listener->Position[2];
 
-    ATOMIC_STORE(&props->Velocity[0], listener->Velocity[0], almemory_order_relaxed);
-    ATOMIC_STORE(&props->Velocity[1], listener->Velocity[1], almemory_order_relaxed);
-    ATOMIC_STORE(&props->Velocity[2], listener->Velocity[2], almemory_order_relaxed);
+    props->Velocity[0] = listener->Velocity[0];
+    props->Velocity[1] = listener->Velocity[1];
+    props->Velocity[2] = listener->Velocity[2];
 
-    ATOMIC_STORE(&props->Forward[0], listener->Forward[0], almemory_order_relaxed);
-    ATOMIC_STORE(&props->Forward[1], listener->Forward[1], almemory_order_relaxed);
-    ATOMIC_STORE(&props->Forward[2], listener->Forward[2], almemory_order_relaxed);
-    ATOMIC_STORE(&props->Up[0], listener->Up[0], almemory_order_relaxed);
-    ATOMIC_STORE(&props->Up[1], listener->Up[1], almemory_order_relaxed);
-    ATOMIC_STORE(&props->Up[2], listener->Up[2], almemory_order_relaxed);
+    props->Forward[0] = listener->Forward[0];
+    props->Forward[1] = listener->Forward[1];
+    props->Forward[2] = listener->Forward[2];
+    props->Up[0] = listener->Up[0];
+    props->Up[1] = listener->Up[1];
+    props->Up[2] = listener->Up[2];
 
-    ATOMIC_STORE(&props->Gain, listener->Gain, almemory_order_relaxed);
-    ATOMIC_STORE(&props->MetersPerUnit, listener->MetersPerUnit, almemory_order_relaxed);
+    props->Gain = listener->Gain;
+    props->MetersPerUnit = listener->MetersPerUnit;
 
-    ATOMIC_STORE(&props->DopplerFactor, context->DopplerFactor, almemory_order_relaxed);
-    ATOMIC_STORE(&props->DopplerVelocity, context->DopplerVelocity, almemory_order_relaxed);
-    ATOMIC_STORE(&props->SpeedOfSound, context->SpeedOfSound, almemory_order_relaxed);
+    props->DopplerFactor = context->DopplerFactor;
+    props->DopplerVelocity = context->DopplerVelocity;
+    props->SpeedOfSound = context->SpeedOfSound;
 
-    ATOMIC_STORE(&props->SourceDistanceModel, context->SourceDistanceModel, almemory_order_relaxed);
-    ATOMIC_STORE(&props->DistanceModel, context->DistanceModel, almemory_order_relaxed);
+    props->SourceDistanceModel = context->SourceDistanceModel;
+    props->DistanceModel = context->DistanceModel;;
 
     /* Set the new container for updating internal parameters. */
     props = ATOMIC_EXCHANGE(struct ALlistenerProps*, &listener->Update, props, almemory_order_acq_rel);

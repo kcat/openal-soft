@@ -9,29 +9,29 @@ extern "C" {
 #endif
 
 struct ALlistenerProps {
-    ATOMIC(ALfloat) Position[3];
-    ATOMIC(ALfloat) Velocity[3];
-    ATOMIC(ALfloat) Forward[3];
-    ATOMIC(ALfloat) Up[3];
-    ATOMIC(ALfloat) Gain;
-    ATOMIC(ALfloat) MetersPerUnit;
+    ALfloat Position[3];
+    ALfloat Velocity[3];
+    ALfloat Forward[3];
+    ALfloat Up[3];
+    ALfloat Gain;
+    ALfloat MetersPerUnit;
 
-    ATOMIC(ALfloat) DopplerFactor;
-    ATOMIC(ALfloat) DopplerVelocity;
-    ATOMIC(ALfloat) SpeedOfSound;
-    ATOMIC(ALboolean) SourceDistanceModel;
-    ATOMIC(enum DistanceModel) DistanceModel;
+    ALfloat DopplerFactor;
+    ALfloat DopplerVelocity;
+    ALfloat SpeedOfSound;
+    ALboolean SourceDistanceModel;
+    enum DistanceModel DistanceModel;
 
     ATOMIC(struct ALlistenerProps*) next;
 };
 
 typedef struct ALlistener {
-    volatile ALfloat Position[3];
-    volatile ALfloat Velocity[3];
-    volatile ALfloat Forward[3];
-    volatile ALfloat Up[3];
-    volatile ALfloat Gain;
-    volatile ALfloat MetersPerUnit;
+    ALfloat Position[3];
+    ALfloat Velocity[3];
+    ALfloat Forward[3];
+    ALfloat Up[3];
+    ALfloat Gain;
+    ALfloat MetersPerUnit;
 
     /* Pointer to the most recent property values that are awaiting an update.
      */

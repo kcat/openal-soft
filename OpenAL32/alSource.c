@@ -2892,63 +2892,60 @@ static void UpdateSourceProps(ALsource *source, ALsizei num_sends)
     }
 
     /* Copy in current property values. */
-    ATOMIC_STORE(&props->Pitch, source->Pitch, almemory_order_relaxed);
-    ATOMIC_STORE(&props->Gain, source->Gain, almemory_order_relaxed);
-    ATOMIC_STORE(&props->OuterGain, source->OuterGain, almemory_order_relaxed);
-    ATOMIC_STORE(&props->MinGain, source->MinGain, almemory_order_relaxed);
-    ATOMIC_STORE(&props->MaxGain, source->MaxGain, almemory_order_relaxed);
-    ATOMIC_STORE(&props->InnerAngle, source->InnerAngle, almemory_order_relaxed);
-    ATOMIC_STORE(&props->OuterAngle, source->OuterAngle, almemory_order_relaxed);
-    ATOMIC_STORE(&props->RefDistance, source->RefDistance, almemory_order_relaxed);
-    ATOMIC_STORE(&props->MaxDistance, source->MaxDistance, almemory_order_relaxed);
-    ATOMIC_STORE(&props->RollOffFactor, source->RollOffFactor, almemory_order_relaxed);
+    props->Pitch = source->Pitch;
+    props->Gain = source->Gain;
+    props->OuterGain = source->OuterGain;
+    props->MinGain = source->MinGain;
+    props->MaxGain = source->MaxGain;
+    props->InnerAngle = source->InnerAngle;
+    props->OuterAngle = source->OuterAngle;
+    props->RefDistance = source->RefDistance;
+    props->MaxDistance = source->MaxDistance;
+    props->RollOffFactor = source->RollOffFactor;
     for(i = 0;i < 3;i++)
-        ATOMIC_STORE(&props->Position[i], source->Position[i], almemory_order_relaxed);
+        props->Position[i] = source->Position[i];
     for(i = 0;i < 3;i++)
-        ATOMIC_STORE(&props->Velocity[i], source->Velocity[i], almemory_order_relaxed);
+        props->Velocity[i] = source->Velocity[i];
     for(i = 0;i < 3;i++)
-        ATOMIC_STORE(&props->Direction[i], source->Direction[i], almemory_order_relaxed);
+        props->Direction[i] = source->Direction[i];
     for(i = 0;i < 2;i++)
     {
         ALsizei j;
         for(j = 0;j < 3;j++)
-            ATOMIC_STORE(&props->Orientation[i][j], source->Orientation[i][j],
-                         almemory_order_relaxed);
+            props->Orientation[i][j] = source->Orientation[i][j];
     }
-    ATOMIC_STORE(&props->HeadRelative, source->HeadRelative, almemory_order_relaxed);
-    ATOMIC_STORE(&props->DistanceModel, source->DistanceModel, almemory_order_relaxed);
-    ATOMIC_STORE(&props->DirectChannels, source->DirectChannels, almemory_order_relaxed);
+    props->HeadRelative = source->HeadRelative;
+    props->DistanceModel = source->DistanceModel;
+    props->DirectChannels = source->DirectChannels;
 
-    ATOMIC_STORE(&props->DryGainHFAuto, source->DryGainHFAuto, almemory_order_relaxed);
-    ATOMIC_STORE(&props->WetGainAuto, source->WetGainAuto, almemory_order_relaxed);
-    ATOMIC_STORE(&props->WetGainHFAuto, source->WetGainHFAuto, almemory_order_relaxed);
-    ATOMIC_STORE(&props->OuterGainHF, source->OuterGainHF, almemory_order_relaxed);
+    props->DryGainHFAuto = source->DryGainHFAuto;
+    props->WetGainAuto = source->WetGainAuto;
+    props->WetGainHFAuto = source->WetGainHFAuto;
+    props->OuterGainHF = source->OuterGainHF;
 
-    ATOMIC_STORE(&props->AirAbsorptionFactor, source->AirAbsorptionFactor, almemory_order_relaxed);
-    ATOMIC_STORE(&props->RoomRolloffFactor, source->RoomRolloffFactor, almemory_order_relaxed);
-    ATOMIC_STORE(&props->DopplerFactor, source->DopplerFactor, almemory_order_relaxed);
+    props->AirAbsorptionFactor = source->AirAbsorptionFactor;
+    props->RoomRolloffFactor = source->RoomRolloffFactor;
+    props->DopplerFactor = source->DopplerFactor;
 
-    ATOMIC_STORE(&props->StereoPan[0], source->StereoPan[0], almemory_order_relaxed);
-    ATOMIC_STORE(&props->StereoPan[1], source->StereoPan[1], almemory_order_relaxed);
+    props->StereoPan[0] = source->StereoPan[0];
+    props->StereoPan[1] = source->StereoPan[1];
 
-    ATOMIC_STORE(&props->Radius, source->Radius, almemory_order_relaxed);
+    props->Radius = source->Radius;
 
-    ATOMIC_STORE(&props->Direct.Gain, source->Direct.Gain, almemory_order_relaxed);
-    ATOMIC_STORE(&props->Direct.GainHF, source->Direct.GainHF, almemory_order_relaxed);
-    ATOMIC_STORE(&props->Direct.HFReference, source->Direct.HFReference, almemory_order_relaxed);
-    ATOMIC_STORE(&props->Direct.GainLF, source->Direct.GainLF, almemory_order_relaxed);
-    ATOMIC_STORE(&props->Direct.LFReference, source->Direct.LFReference, almemory_order_relaxed);
+    props->Direct.Gain = source->Direct.Gain;
+    props->Direct.GainHF = source->Direct.GainHF;
+    props->Direct.HFReference = source->Direct.HFReference;
+    props->Direct.GainLF = source->Direct.GainLF;
+    props->Direct.LFReference = source->Direct.LFReference;
 
     for(i = 0;i < num_sends;i++)
     {
-        ATOMIC_STORE(&props->Send[i].Slot, source->Send[i].Slot, almemory_order_relaxed);
-        ATOMIC_STORE(&props->Send[i].Gain, source->Send[i].Gain, almemory_order_relaxed);
-        ATOMIC_STORE(&props->Send[i].GainHF, source->Send[i].GainHF, almemory_order_relaxed);
-        ATOMIC_STORE(&props->Send[i].HFReference, source->Send[i].HFReference,
-                     almemory_order_relaxed);
-        ATOMIC_STORE(&props->Send[i].GainLF, source->Send[i].GainLF, almemory_order_relaxed);
-        ATOMIC_STORE(&props->Send[i].LFReference, source->Send[i].LFReference,
-                     almemory_order_relaxed);
+        props->Send[i].Slot = source->Send[i].Slot;
+        props->Send[i].Gain = source->Send[i].Gain;
+        props->Send[i].GainHF = source->Send[i].GainHF;
+        props->Send[i].HFReference = source->Send[i].HFReference;
+        props->Send[i].GainLF = source->Send[i].GainLF;
+        props->Send[i].LFReference = source->Send[i].LFReference;
     }
 
     /* Set the new container for updating internal parameters. */

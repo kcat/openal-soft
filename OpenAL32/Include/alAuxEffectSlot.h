@@ -75,13 +75,13 @@ static const struct ALeffectStateFactoryVtable T##_ALeffectStateFactory_vtable =
 
 
 struct ALeffectslotProps {
-    ATOMIC(ALfloat)   Gain;
-    ATOMIC(ALboolean) AuxSendAuto;
+    ALfloat   Gain;
+    ALboolean AuxSendAuto;
 
-    ATOMIC(ALenum) Type;
+    ALenum Type;
     ALeffectProps Props;
 
-    ATOMIC(ALeffectState*) State;
+    ALeffectState *State;
 
     ATOMIC(struct ALeffectslotProps*) next;
 };

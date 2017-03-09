@@ -77,60 +77,6 @@ struct ALsourceProps {
 };
 
 
-typedef struct ALvoice {
-    struct ALsourceProps *Props;
-
-    ATOMIC(struct ALsource*) Source;
-    ATOMIC(bool) Playing;
-
-    /* Current buffer queue item being played. */
-    ATOMIC(ALbufferlistitem*) current_buffer;
-
-    /**
-     * Source offset in samples, relative to the currently playing buffer, NOT
-     * the whole queue, and the fractional (fixed-point) offset to the next
-     * sample.
-     */
-    ATOMIC(ALuint) position;
-    ATOMIC(ALuint) position_fraction;
-
-    /**
-     * Number of channels and bytes-per-sample for the attached source's
-     * buffer(s).
-     */
-    ALsizei NumChannels;
-    ALsizei SampleSize;
-
-    /** Current target parameters used for mixing. */
-    ALint Step;
-
-    /* If not 'moving', gain/coefficients are set directly without fading. */
-    ALboolean Moving;
-
-    ALboolean IsHrtf;
-
-    ALuint Offset; /* Number of output samples mixed since starting. */
-
-    alignas(16) ALfloat PrevSamples[MAX_INPUT_CHANNELS][MAX_PRE_SAMPLES];
-
-    InterpState ResampleState;
-
-    struct {
-        DirectParams Params[MAX_INPUT_CHANNELS];
-
-        ALfloat (*Buffer)[BUFFERSIZE];
-        ALsizei Channels;
-    } Direct;
-
-    struct {
-        SendParams Params[MAX_INPUT_CHANNELS];
-
-        ALfloat (*Buffer)[BUFFERSIZE];
-        ALsizei Channels;
-    } Send[];
-} ALvoice;
-
-
 typedef struct ALsource {
     /** Source properties. */
     ALfloat   Pitch;

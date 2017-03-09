@@ -35,9 +35,9 @@ extern "C" {
 
 struct ALsource;
 struct ALsourceProps;
+struct ALbufferlistitem;
 struct ALvoice;
 struct ALeffectslot;
-struct ALbuffer;
 
 
 /* The number of distinct scale and phase intervals within the filter table. */
@@ -123,6 +123,7 @@ typedef struct MixHrtfParams {
     } Steps;
 } MixHrtfParams;
 
+
 typedef struct DirectParams {
     enum ActiveFilters FilterType;
     ALfilterState LowPass;
@@ -150,6 +151,59 @@ typedef struct SendParams {
         ALfloat Target[MAX_OUTPUT_CHANNELS];
     } Gains;
 } SendParams;
+
+typedef struct ALvoice {
+    struct ALsourceProps *Props;
+
+    ATOMIC(struct ALsource*) Source;
+    ATOMIC(bool) Playing;
+
+    /* Current buffer queue item being played. */
+    ATOMIC(struct ALbufferlistitem*) current_buffer;
+
+    /**
+     * Source offset in samples, relative to the currently playing buffer, NOT
+     * the whole queue, and the fractional (fixed-point) offset to the next
+     * sample.
+     */
+    ATOMIC(ALuint) position;
+    ATOMIC(ALuint) position_fraction;
+
+    /**
+     * Number of channels and bytes-per-sample for the attached source's
+     * buffer(s).
+     */
+    ALsizei NumChannels;
+    ALsizei SampleSize;
+
+    /** Current target parameters used for mixing. */
+    ALint Step;
+
+    /* If not 'moving', gain/coefficients are set directly without fading. */
+    ALboolean Moving;
+
+    ALboolean IsHrtf;
+
+    ALuint Offset; /* Number of output samples mixed since starting. */
+
+    alignas(16) ALfloat PrevSamples[MAX_INPUT_CHANNELS][MAX_PRE_SAMPLES];
+
+    InterpState ResampleState;
+
+    struct {
+        DirectParams Params[MAX_INPUT_CHANNELS];
+
+        ALfloat (*Buffer)[BUFFERSIZE];
+        ALsizei Channels;
+    } Direct;
+
+    struct {
+        SendParams Params[MAX_INPUT_CHANNELS];
+
+        ALfloat (*Buffer)[BUFFERSIZE];
+        ALsizei Channels;
+    } Send[];
+} ALvoice;
 
 
 typedef const ALfloat* (*ResamplerFunc)(const InterpState *state,

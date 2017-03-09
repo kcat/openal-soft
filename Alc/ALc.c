@@ -1704,13 +1704,12 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
     if(ATOMIC_EXCHANGE_SEQ(ALenum, &context->DeferUpdates, AL_FALSE))
     {
         ALsizei pos;
-        uint updates;
 
         /* Tell the mixer to stop applying updates, then wait for any active
          * updating to finish, before providing updates.
          */
         ATOMIC_STORE_SEQ(&context->HoldUpdates, AL_TRUE);
-        while(((updates=ReadRef(&context->UpdateCount))&1) != 0)
+        while((ATOMIC_LOAD(&context->UpdateCount, almemory_order_acquire)&1) != 0)
             althrd_yield();
 
         UpdateListenerProps(context);

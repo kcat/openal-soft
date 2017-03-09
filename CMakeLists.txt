@@ -722,6 +722,7 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/uhjfilter.c
               Alc/ambdec.c
               Alc/bformatdec.c
+              Alc/nfcfilter.c
               Alc/panning.c
               Alc/mixer.c
               Alc/mixer_c.c

@@ -393,7 +393,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
     SampleSize     = voice->SampleSize;
     increment      = voice->Step;
 
-    IrSize = (Device->Hrtf.Handle ? Device->Hrtf.Handle->irSize : 0);
+    IrSize = (Device->HrtfHandle ? Device->HrtfHandle->irSize : 0);
 
     Resample = ((increment == FRACTIONONE && DataPosFrac == 0) ?
                 Resample_copy32_C : ResampleSamples);

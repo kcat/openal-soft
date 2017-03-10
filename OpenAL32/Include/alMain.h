@@ -622,6 +622,14 @@ typedef struct HrtfParams {
     ALsizei Delay[2];
 } HrtfParams;
 
+typedef struct DirectHrtfState {
+    /* HRTF filter state for dry buffer content */
+    alignas(16) ALfloat Values[9][HRIR_LENGTH][2];
+    alignas(16) ALfloat Coeffs[9][HRIR_LENGTH][2];
+    ALsizei Offset;
+    ALsizei IrSize;
+} DirectHrtfState;
+
 typedef struct HrtfEntry {
     al_string name;
 
@@ -687,19 +695,12 @@ struct ALCdevice_struct
     // Map of Filters for this device
     UIntMap FilterMap;
 
-    /* HRTF filter tables */
-    struct {
-        vector_HrtfEntry List;
-        al_string Name;
-        ALCenum Status;
-        const struct Hrtf *Handle;
-
-        /* HRTF filter state for dry buffer content */
-        alignas(16) ALfloat Values[9][HRIR_LENGTH][2];
-        alignas(16) ALfloat Coeffs[9][HRIR_LENGTH][2];
-        ALsizei Offset;
-        ALsizei IrSize;
-    } Hrtf;
+    /* HRTF state and info */
+    DirectHrtfState *Hrtf;
+    al_string HrtfName;
+    const struct Hrtf *HrtfHandle;
+    vector_HrtfEntry HrtfList;
+    ALCenum HrtfStatus;
 
     /* UHJ encoder state */
     struct Uhj2Encoder *Uhj_Encoder;

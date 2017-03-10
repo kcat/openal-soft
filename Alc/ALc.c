@@ -2313,7 +2313,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         for(pos = 0;pos < context->VoiceCount;pos++)
         {
             ALvoice *voice = context->Voices[pos];
-            if(!voice->Source) continue;
+            if(ATOMIC_LOAD(&voice->Source, almemory_order_acquire) == NULL)
+                continue;
 
             if(device->AvgSpeakerDist > 0.0f)
             {

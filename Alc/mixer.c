@@ -545,15 +545,60 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                     &parms->LowPass, &parms->HighPass, Device->FilteredData,
                     ResampledData, DstBufferSize, parms->FilterType
                 );
-                if(!voice->IsHrtf)
+                if(!(voice->Flags&VOICE_IS_HRTF))
                 {
                     if(!Counter)
                         memcpy(parms->Gains.Current, parms->Gains.Target,
                                sizeof(parms->Gains.Current));
-                    MixSamples(samples, voice->Direct.Channels, voice->Direct.Buffer,
-                        parms->Gains.Current, parms->Gains.Target, Counter, OutPos,
-                        DstBufferSize
-                    );
+                    if(!(voice->Flags&VOICE_HAS_NFC))
+                        MixSamples(samples, voice->Direct.Channels, voice->Direct.Buffer,
+                            parms->Gains.Current, parms->Gains.Target, Counter, OutPos,
+                            DstBufferSize
+                        );
+                    else
+                    {
+                        ALfloat *nfcsamples = Device->NFCtrlData;
+                        ALsizei chanoffset = 0;
+                        MixSamples(samples,
+                            voice->Direct.ChannelsPerOrder[0], voice->Direct.Buffer,
+                            parms->Gains.Current, parms->Gains.Target, Counter, OutPos,
+                            DstBufferSize
+                        );
+                        chanoffset += voice->Direct.ChannelsPerOrder[0];
+                        if(voice->Direct.ChannelsPerOrder[1] > 0)
+                        {
+                            NfcFilterUpdate1(&parms->NFCtrlFilter[0], nfcsamples, samples,
+                                             DstBufferSize);
+                            MixSamples(nfcsamples,
+                                voice->Direct.ChannelsPerOrder[1], voice->Direct.Buffer+chanoffset,
+                                parms->Gains.Current+chanoffset, parms->Gains.Target+chanoffset,
+                                Counter, OutPos, DstBufferSize
+                            );
+                            chanoffset += voice->Direct.ChannelsPerOrder[1];
+                        }
+                        if(voice->Direct.ChannelsPerOrder[2] > 0)
+                        {
+                            NfcFilterUpdate2(&parms->NFCtrlFilter[1], nfcsamples, samples,
+                                             DstBufferSize);
+                            MixSamples(nfcsamples,
+                                voice->Direct.ChannelsPerOrder[2], voice->Direct.Buffer+chanoffset,
+                                parms->Gains.Current+chanoffset, parms->Gains.Target+chanoffset,
+                                Counter, OutPos, DstBufferSize
+                            );
+                            chanoffset += voice->Direct.ChannelsPerOrder[2];
+                        }
+                        if(voice->Direct.ChannelsPerOrder[3] > 0)
+                        {
+                            NfcFilterUpdate3(&parms->NFCtrlFilter[2], nfcsamples, samples,
+                                             DstBufferSize);
+                            MixSamples(nfcsamples,
+                                voice->Direct.ChannelsPerOrder[3], voice->Direct.Buffer+chanoffset,
+                                parms->Gains.Current+chanoffset, parms->Gains.Target+chanoffset,
+                                Counter, OutPos, DstBufferSize
+                            );
+                            chanoffset += voice->Direct.ChannelsPerOrder[3];
+                        }
+                    }
                 }
                 else
                 {

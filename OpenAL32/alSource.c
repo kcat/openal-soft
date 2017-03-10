@@ -3084,6 +3084,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
         voice->Step = 0;
 
         voice->Moving = AL_FALSE;
+        voice->Flags = 0;
         for(i = 0;i < MAX_INPUT_CHANNELS;i++)
         {
             ALsizei j;
@@ -3093,6 +3094,17 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
             {
                 voice->Direct.Params[i].Hrtf.State.Values[j][0] = 0.0f;
                 voice->Direct.Params[i].Hrtf.State.Values[j][1] = 0.0f;
+            }
+        }
+        if(device->AvgSpeakerDist > 0.0f)
+        {
+            ALfloat w1 = SPEEDOFSOUNDMETRESPERSEC /
+                         (device->AvgSpeakerDist * device->Frequency);
+            for(i = 0;i < voice->NumChannels;i++)
+            {
+                NfcFilterCreate1(&voice->Direct.Params[i].NFCtrlFilter[0], 0.0f, w1);
+                NfcFilterCreate2(&voice->Direct.Params[i].NFCtrlFilter[1], 0.0f, w1);
+                NfcFilterCreate3(&voice->Direct.Params[i].NFCtrlFilter[2], 0.0f, w1);
             }
         }
 

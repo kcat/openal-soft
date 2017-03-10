@@ -726,6 +726,7 @@ struct ALCdevice_struct
     alignas(16) ALfloat SourceData[BUFFERSIZE];
     alignas(16) ALfloat ResampledData[BUFFERSIZE];
     alignas(16) ALfloat FilteredData[BUFFERSIZE];
+    alignas(16) ALfloat NFCtrlData[BUFFERSIZE];
 
     /* The "dry" path corresponds to the main output. */
     struct {
@@ -738,6 +739,7 @@ struct ALCdevice_struct
 
         ALfloat (*Buffer)[BUFFERSIZE];
         ALsizei NumChannels;
+        ALsizei NumChannelsPerOrder[MAX_AMBI_ORDER+1];
     } Dry;
 
     /* First-order ambisonics output, to be upsampled to the dry buffer if different. */
@@ -759,6 +761,11 @@ struct ALCdevice_struct
         ALfloat (*Buffer)[BUFFERSIZE];
         ALsizei NumChannels;
     } RealOut;
+
+    /* The average speaker distance as determined by the ambdec configuration
+     * (or alternatively, by the NFC-HOA reference delay). Only used for NFC.
+     */
+    ALfloat AvgSpeakerDist;
 
     /* Delay buffers used to compensate for speaker distances. */
     DistanceComp ChannelDelay[MAX_OUTPUT_CHANNELS];

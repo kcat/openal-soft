@@ -496,6 +496,7 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
         break;
     }
 
+    voice->Flags &= ~(VOICE_IS_HRTF | VOICE_HAS_NFC);
     if(isbformat)
     {
         ALfloat N[3], V[3], U[3];
@@ -535,6 +536,17 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
         for(c = 0;c < num_channels;c++)
             ComputeFirstOrderGains(Device->FOAOut, matrix.m[c], DryGain,
                                    voice->Direct.Params[c].Gains.Target);
+        if(Device->AvgSpeakerDist > 0.0f)
+        {
+            /* NOTE: The NFCtrlFilters were created with a w0 of 0, which is
+             * what we want for FOA input. So there's nothing to adjust.
+             */
+            voice->Direct.ChannelsPerOrder[0] = 1;
+            voice->Direct.ChannelsPerOrder[1] = mini(voice->Direct.Channels-1, 3);
+            voice->Direct.ChannelsPerOrder[2] = 0;
+            voice->Direct.ChannelsPerOrder[3] = 0;
+            voice->Flags |= VOICE_HAS_NFC;
+        }
 
         for(i = 0;i < NumSends;i++)
         {
@@ -553,8 +565,6 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
                         voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
             }
         }
-
-        voice->IsHrtf = AL_FALSE;
     }
     else
     {
@@ -592,8 +602,6 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
                             voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
                 }
             }
-
-            voice->IsHrtf = AL_FALSE;
         }
         else if(Device->Render_Mode == HrtfRender)
         {
@@ -647,7 +655,7 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
                 }
             }
 
-            voice->IsHrtf = AL_TRUE;
+            voice->Flags |= VOICE_IS_HRTF;
         }
         else
         {
@@ -694,8 +702,6 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
                             voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
                 }
             }
-
-            voice->IsHrtf = AL_FALSE;
         }
     }
 
@@ -1064,6 +1070,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
         voice->Step = maxi(fastf2i(Pitch*FRACTIONONE + 0.5f), 1);
     BsincPrepare(voice->Step, &voice->ResampleState.bsinc);
 
+    voice->Flags &= ~(VOICE_IS_HRTF | VOICE_HAS_NFC);
     if(Device->Render_Mode == HrtfRender)
     {
         /* Full HRTF rendering. Skip the virtual channels and render to the
@@ -1115,7 +1122,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
                     voice->Send[i].Params[0].Gains.Target[j] = 0.0f;
         }
 
-        voice->IsHrtf = AL_TRUE;
+        voice->Flags |= VOICE_IS_HRTF;
     }
     else
     {
@@ -1128,10 +1135,49 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
         /* Get the localized direction, and compute panned gains. */
         if(Distance > FLT_EPSILON)
         {
+            if(Device->AvgSpeakerDist > 0.0f && MetersPerUnit > 0.0f)
+            {
+                ALfloat w0 = SPEEDOFSOUNDMETRESPERSEC /
+                             (Distance*MetersPerUnit * (ALfloat)Device->Frequency);
+                ALfloat w1 = SPEEDOFSOUNDMETRESPERSEC /
+                             (Device->AvgSpeakerDist * (ALfloat)Device->Frequency);
+                /* Clamp w0 for really close distances, to prevent excessive
+                 * bass.
+                 */
+                w0 = minf(w0, w1*4.0f);
+
+                NfcFilterAdjust1(&voice->Direct.Params[0].NFCtrlFilter[0], w0);
+                NfcFilterAdjust2(&voice->Direct.Params[0].NFCtrlFilter[1], w0);
+                NfcFilterAdjust3(&voice->Direct.Params[0].NFCtrlFilter[2], w0);
+
+                for(i = 0;i < MAX_AMBI_ORDER+1;i++)
+                    voice->Direct.ChannelsPerOrder[i] = Device->Dry.NumChannelsPerOrder[i];
+                voice->Flags |= VOICE_HAS_NFC;
+            }
+
             dir[0] = -SourceToListener.v[0];
             dir[1] = -SourceToListener.v[1];
             dir[2] = -SourceToListener.v[2] * ZScale;
         }
+        else if(Device->AvgSpeakerDist > 0.0f)
+        {
+            /* If the source distance is 0, set w0 to w1 to act as a pass-
+             * through. We still want to pass the signal through the filters so
+             * they keep an appropriate history, in case the source moves away
+             * from the listener.
+             */
+            ALfloat w0 = SPEEDOFSOUNDMETRESPERSEC /
+                         (Device->AvgSpeakerDist * (ALfloat)Device->Frequency);
+
+            NfcFilterAdjust1(&voice->Direct.Params[0].NFCtrlFilter[0], w0);
+            NfcFilterAdjust2(&voice->Direct.Params[0].NFCtrlFilter[1], w0);
+            NfcFilterAdjust3(&voice->Direct.Params[0].NFCtrlFilter[2], w0);
+
+            for(i = 0;i < MAX_AMBI_ORDER+1;i++)
+                voice->Direct.ChannelsPerOrder[i] = Device->Dry.NumChannelsPerOrder[i];
+            voice->Flags |= VOICE_HAS_NFC;
+        }
+
         if(radius > Distance)
             spread = F_TAU - Distance/radius*F_PI;
         else if(Distance > FLT_EPSILON)
@@ -1160,8 +1206,6 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
                 for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
                     voice->Send[i].Params[0].Gains.Target[j] = 0.0f;
         }
-
-        voice->IsHrtf = AL_FALSE;
     }
 
     {

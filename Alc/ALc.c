@@ -2310,6 +2310,24 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             }
         }
         AllocateVoices(context, context->MaxVoices, old_sends);
+        for(pos = 0;pos < context->VoiceCount;pos++)
+        {
+            ALvoice *voice = context->Voices[pos];
+            if(!voice->Source) continue;
+
+            if(device->AvgSpeakerDist > 0.0f)
+            {
+                /* Reinitialize the NFC filters for new parameters. */
+                ALfloat w1 = SPEEDOFSOUNDMETRESPERSEC /
+                             (device->AvgSpeakerDist * device->Frequency);
+                for(i = 0;i < voice->NumChannels;i++)
+                {
+                    NfcFilterCreate1(&voice->Direct.Params[i].NFCtrlFilter[0], 0.0f, w1);
+                    NfcFilterCreate2(&voice->Direct.Params[i].NFCtrlFilter[1], 0.0f, w1);
+                    NfcFilterCreate3(&voice->Direct.Params[i].NFCtrlFilter[2], 0.0f, w1);
+                }
+            }
+        }
         UnlockUIntMapRead(&context->SourceMap);
 
         UpdateListenerProps(context);
@@ -3755,6 +3773,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->FOAOut.NumChannels = 0;
     device->RealOut.Buffer = NULL;
     device->RealOut.NumChannels = 0;
+    device->AvgSpeakerDist = 0.0f;
 
     ATOMIC_INIT(&device->ContextList, NULL);
 
@@ -4271,6 +4290,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->FOAOut.NumChannels = 0;
     device->RealOut.Buffer = NULL;
     device->RealOut.NumChannels = 0;
+    device->AvgSpeakerDist = 0.0f;
 
     ATOMIC_INIT(&device->ContextList, NULL);
 

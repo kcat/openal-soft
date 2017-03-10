@@ -17,6 +17,7 @@
 
 #include "hrtf.h"
 #include "align.h"
+#include "nfcfilter.h"
 #include "math_defs.h"
 
 
@@ -129,6 +130,8 @@ typedef struct DirectParams {
     ALfilterState LowPass;
     ALfilterState HighPass;
 
+    NfcFilter NFCtrlFilter[MAX_AMBI_ORDER];
+
     struct {
         HrtfParams Current;
         HrtfParams Target;
@@ -151,6 +154,9 @@ typedef struct SendParams {
         ALfloat Target[MAX_OUTPUT_CHANNELS];
     } Gains;
 } SendParams;
+
+#define VOICE_IS_HRTF (1<<0)
+#define VOICE_HAS_NFC (1<<1)
 
 typedef struct ALvoice {
     struct ALsourceProps *Props;
@@ -182,7 +188,7 @@ typedef struct ALvoice {
     /* If not 'moving', gain/coefficients are set directly without fading. */
     ALboolean Moving;
 
-    ALboolean IsHrtf;
+    ALuint Flags;
 
     ALuint Offset; /* Number of output samples mixed since starting. */
 
@@ -195,6 +201,7 @@ typedef struct ALvoice {
 
         ALfloat (*Buffer)[BUFFERSIZE];
         ALsizei Channels;
+        ALsizei ChannelsPerOrder[MAX_AMBI_ORDER+1];
     } Direct;
 
     struct {

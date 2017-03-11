@@ -3034,7 +3034,7 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
                  * volume last specified; there's no reason to fade from where
                  * it stopped at.
                  */
-                voice->Moving = AL_FALSE;
+                voice->Flags &= ~VOICE_IS_MOVING;
                 ATOMIC_STORE(&voice->Playing, true, almemory_order_release);
                 ATOMIC_STORE(&Source->state, AL_PLAYING, almemory_order_release);
                 goto done;
@@ -3083,7 +3083,6 @@ ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
          */
         voice->Step = 0;
 
-        voice->Moving = AL_FALSE;
         voice->Flags = 0;
         for(i = 0;i < MAX_INPUT_CHANNELS;i++)
         {

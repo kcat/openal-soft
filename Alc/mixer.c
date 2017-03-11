@@ -398,7 +398,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
     Resample = ((increment == FRACTIONONE && DataPosFrac == 0) ?
                 Resample_copy32_C : ResampleSamples);
 
-    Counter = voice->Moving ? SamplesToDo : 0;
+    Counter = (voice->Flags&VOICE_IS_MOVING) ? SamplesToDo : 0;
     OutPos = 0;
     do {
         ALsizei SrcBufferSize, DstBufferSize;
@@ -723,7 +723,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
         }
     } while(State == AL_PLAYING && OutPos < SamplesToDo);
 
-    voice->Moving = AL_TRUE;
+    voice->Flags |= VOICE_IS_MOVING;
 
     /* Update source info */
     ATOMIC_STORE(&voice->position,          DataPosInt, almemory_order_relaxed);

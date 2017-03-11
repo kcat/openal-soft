@@ -155,8 +155,10 @@ typedef struct SendParams {
     } Gains;
 } SendParams;
 
-#define VOICE_IS_HRTF (1<<0)
-#define VOICE_HAS_NFC (1<<1)
+/* If not 'moving', gain targets are used directly without fading. */
+#define VOICE_IS_MOVING (1<<0)
+#define VOICE_IS_HRTF   (1<<1)
+#define VOICE_HAS_NFC   (1<<2)
 
 typedef struct ALvoice {
     struct ALsourceProps *Props;
@@ -184,9 +186,6 @@ typedef struct ALvoice {
 
     /** Current target parameters used for mixing. */
     ALint Step;
-
-    /* If not 'moving', gain/coefficients are set directly without fading. */
-    ALboolean Moving;
 
     ALuint Flags;
 

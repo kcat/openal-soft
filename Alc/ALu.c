@@ -1504,7 +1504,7 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             {
                 HrtfMix(device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
                     device->Dry.Buffer[c], state->Offset, state->IrSize,
-                    state->Coeffs[c], state->Values[c], SamplesToDo
+                    state->Chan[c].Coeffs, state->Chan[c].Values, SamplesToDo
                 );
             }
             state->Offset += SamplesToDo;

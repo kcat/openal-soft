@@ -624,10 +624,12 @@ typedef struct HrtfParams {
 
 typedef struct DirectHrtfState {
     /* HRTF filter state for dry buffer content */
-    alignas(16) ALfloat Values[9][HRIR_LENGTH][2];
-    alignas(16) ALfloat Coeffs[9][HRIR_LENGTH][2];
     ALsizei Offset;
     ALsizei IrSize;
+    struct {
+        alignas(16) ALfloat Values[HRIR_LENGTH][2];
+        alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
+    } Chan[];
 } DirectHrtfState;
 
 typedef struct HrtfEntry {

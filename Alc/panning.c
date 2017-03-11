@@ -927,10 +927,13 @@ static void InitHrtfPanning(ALCdevice *device, bool hoa_mode)
     };
     const ALfloat (*AmbiMatrix)[2][MAX_AMBI_COEFFS] = hoa_mode ? AmbiMatrixHOA : AmbiMatrixFOA;
     ALsizei count = hoa_mode ? 9 : 4;
+    size_t sizeof_hrtfstate;
     ALsizei i;
 
-    static_assert(9 <= COUNTOF(device->Hrtf->Coeffs), "ALCdevice::Hrtf.Values/Coeffs size is too small");
     static_assert(COUNTOF(AmbiPoints) <= HRTF_AMBI_MAX_CHANNELS, "HRTF_AMBI_MAX_CHANNELS is too small");
+
+    sizeof_hrtfstate = offsetof(DirectHrtfState, Chan[count]);
+    device->Hrtf = al_calloc(16, sizeof_hrtfstate);
 
     for(i = 0;i < count;i++)
     {
@@ -962,9 +965,8 @@ static void InitHrtfPanning(ALCdevice *device, bool hoa_mode)
 
     device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans);
 
-    memset(device->Hrtf->Coeffs, 0, sizeof(device->Hrtf->Coeffs));
     device->Hrtf->IrSize = BuildBFormatHrtf(device->HrtfHandle,
-        device->Hrtf->Coeffs, device->Dry.NumChannels,
+        device->Hrtf, device->Dry.NumChannels,
         AmbiPoints, AmbiMatrix, COUNTOF(AmbiPoints)
     );
 
@@ -1196,7 +1198,6 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
                 device->AmbiUp = ambiup_alloc();
             hoa_mode = true;
         }
-        device->Hrtf = al_calloc(16, sizeof(device->Hrtf[0]));
 
         TRACE("%s HRTF rendering enabled, using \"%s\"\n",
             ((device->Render_Mode == HrtfRender) ? "Full" : "Basic"),

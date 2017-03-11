@@ -136,7 +136,7 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
 }
 
 
-ALsizei BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH][2], ALsizei NumChannels, const ALfloat (*restrict AmbiPoints)[2], const ALfloat (*restrict AmbiMatrix)[2][MAX_AMBI_COEFFS], ALsizei AmbiCount)
+ALsizei BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei NumChannels, const ALfloat (*restrict AmbiPoints)[2], const ALfloat (*restrict AmbiMatrix)[2][MAX_AMBI_COEFFS], ALsizei AmbiCount)
 {
 /* Set this to 2 for dual-band HRTF processing. May require a higher quality
  * band-splitter, or better calculation of the new IR length to deal with the
@@ -206,7 +206,7 @@ ALsizei BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH]
             {
                 ALsizei k = 0;
                 for(j = delay;j < HRIR_LENGTH;++j)
-                    coeffs[i][j][0] += temps[b][k++] * AmbiMatrix[c][b][i];
+                    state->Chan[i].Coeffs[j][0] += temps[b][k++] * AmbiMatrix[c][b][i];
             }
         }
         max_length = maxi(max_length, mini(delay + Hrtf->irSize, HRIR_LENGTH));
@@ -235,7 +235,7 @@ ALsizei BuildBFormatHrtf(const struct Hrtf *Hrtf, ALfloat (*coeffs)[HRIR_LENGTH]
             {
                 ALuint k = 0;
                 for(j = delay;j < HRIR_LENGTH;++j)
-                    coeffs[i][j][1] += temps[b][k++] * AmbiMatrix[c][b][i];
+                    state->Chan[i].Coeffs[j][1] += temps[b][k++] * AmbiMatrix[c][b][i];
             }
         }
         max_length = maxi(max_length, mini(delay + Hrtf->irSize, HRIR_LENGTH));

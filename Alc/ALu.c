@@ -1504,7 +1504,6 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             state = device->Hrtf;
             for(c = 0;c < device->Dry.NumChannels;c++)
             {
-                typedef ALfloat ALfloat2[2];
                 HrtfMix(device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
                     device->Dry.Buffer[c], state->Offset, state->IrSize,
                     SAFE_CONST(ALfloat2*,state->Chan[c].Coeffs),

@@ -23,8 +23,8 @@ void MixHrtf(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
              const ALsizei IrSize, MixHrtfParams *hrtfparams, HrtfState *hrtfstate,
              ALsizei BufferSize)
 {
-    const ALfloat (*Coeffs)[2] = hrtfparams->Current->Coeffs;
-    ALsizei Delay[2] = { hrtfparams->Current->Delay[0], hrtfparams->Current->Delay[1] };
+    const ALfloat (*Coeffs)[2] = ASSUME_ALIGNED(hrtfparams->Coeffs, 16);
+    const ALsizei Delay[2] = { hrtfparams->Delay[0], hrtfparams->Delay[1] };
     ALfloat gainstep = hrtfparams->GainStep;
     ALfloat gain = hrtfparams->Gain;
     ALfloat left, right;

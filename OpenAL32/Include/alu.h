@@ -116,7 +116,8 @@ enum ActiveFilters {
 
 
 typedef struct MixHrtfParams {
-    const HrtfParams *Current;
+    const ALfloat (*Coeffs)[2];
+    ALsizei Delay[2];
     ALfloat Gain;
     ALfloat GainStep;
 } MixHrtfParams;

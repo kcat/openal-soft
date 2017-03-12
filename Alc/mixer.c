@@ -612,7 +612,9 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                     if(!Counter)
                     {
                         parms->Hrtf.Old = parms->Hrtf.Target;
-                        hrtfparams.Current = &parms->Hrtf.Target;
+                        hrtfparams.Coeffs = SAFE_CONST(ALfloat2*,parms->Hrtf.Target.Coeffs);
+                        hrtfparams.Delay[0] = parms->Hrtf.Target.Delay[0];
+                        hrtfparams.Delay[1] = parms->Hrtf.Target.Delay[1];
                         hrtfparams.Gain = parms->Hrtf.Target.Gain;
                         hrtfparams.GainStep = 0.0f;
                         MixHrtfSamples(
@@ -631,7 +633,9 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                          * So it needs to fade out over DstBufferSize instead
                          * of Counter.
                          */
-                        hrtfparams.Current = &parms->Hrtf.Old;
+                        hrtfparams.Coeffs = SAFE_CONST(ALfloat2*,parms->Hrtf.Old.Coeffs);
+                        hrtfparams.Delay[0] = parms->Hrtf.Old.Delay[0];
+                        hrtfparams.Delay[1] = parms->Hrtf.Old.Delay[1];
                         hrtfparams.Gain = parms->Hrtf.Old.Gain;
                         hrtfparams.GainStep = -hrtfparams.Gain /
                                               (ALfloat)DstBufferSize;
@@ -648,8 +652,10 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                          * fade time this mix handles.
                          */
                         gain = lerp(parms->Hrtf.Old.Gain, parms->Hrtf.Target.Gain,
-                                    minf(1.0f, (ALfloat)Counter / (ALfloat)DstBufferSize));
-                        hrtfparams.Current = &parms->Hrtf.Target;
+                                    minf(1.0f, (ALfloat)Counter/DstBufferSize));
+                        hrtfparams.Coeffs = SAFE_CONST(ALfloat2*,parms->Hrtf.Target.Coeffs);
+                        hrtfparams.Delay[0] = parms->Hrtf.Target.Delay[0];
+                        hrtfparams.Delay[1] = parms->Hrtf.Target.Delay[1];
                         hrtfparams.Gain = 0.0f;
                         hrtfparams.GainStep = gain / (ALfloat)DstBufferSize;
                         MixHrtfSamples(

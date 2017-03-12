@@ -35,6 +35,9 @@ private slots:
     void updatePeriodCountEdit(int size);
     void updatePeriodCountSlider();
 
+    void updateRefDelayEdit(int delay);
+    void updateRefDelaySlider();
+
     void selectQuadDecoderFile();
     void select51DecoderFile();
     void select61DecoderFile();
@@ -63,6 +66,7 @@ private:
 
     QValidator *mPeriodSizeValidator;
     QValidator *mPeriodCountValidator;
+    QValidator *mRefDelayValidator;
     QValidator *mSourceCountValidator;
     QValidator *mEffectSlotValidator;
     QValidator *mSourceSendValidator;

@@ -293,6 +293,9 @@ MainWindow::MainWindow(QWidget *parent) :
     mPeriodCountValidator = new QIntValidator(2, 16, this);
     ui->periodCountEdit->setValidator(mPeriodCountValidator);
 
+    mRefDelayValidator = new QDoubleValidator(0.0, 1000.0, 3, this);
+    ui->decoderNFRefDelayEdit->setValidator(mRefDelayValidator);
+
     mSourceCountValidator = new QIntValidator(0, 4096, this);
     ui->srcCountLineEdit->setValidator(mSourceCountValidator);
     mEffectSlotValidator = new QIntValidator(0, 64, this);
@@ -332,6 +335,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->decoderHQModeCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->decoderDistCompCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->decoderNFEffectsCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->decoderNFRefDelaySlider, SIGNAL(valueChanged(int)), this, SLOT(updateRefDelayEdit(int)));
+    connect(ui->decoderNFRefDelayEdit, SIGNAL(editingFinished()), this, SLOT(updateRefDelaySlider()));
     connect(ui->decoderQuadLineEdit, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
     connect(ui->decoderQuadButton, SIGNAL(clicked()), this, SLOT(selectQuadDecoderFile()));
     connect(ui->decoder51LineEdit, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
@@ -425,6 +430,7 @@ MainWindow::~MainWindow()
     delete ui;
     delete mPeriodSizeValidator;
     delete mPeriodCountValidator;
+    delete mRefDelayValidator;
     delete mSourceCountValidator;
     delete mEffectSlotValidator;
     delete mSourceSendValidator;
@@ -668,6 +674,13 @@ void MainWindow::loadConfig(const QString &fname)
     ui->decoderDistCompCheckBox->setChecked(distcomp);
     bool nfeffects = settings.value("decoder/nfc", true).toBool();
     ui->decoderNFEffectsCheckBox->setChecked(nfeffects);
+    double refdelay = settings.value("decoder/nfc-ref-delay", 0.0).toDouble();
+    ui->decoderNFRefDelayEdit->clear();
+    if(refdelay > 0.0)
+    {
+        ui->decoderNFRefDelayEdit->insert(QString::number(refdelay));
+        updateRefDelaySlider();
+    }
 
     ui->decoderQuadLineEdit->setText(settings.value("decoder/quad").toString());
     ui->decoder51LineEdit->setText(settings.value("decoder/surround51").toString());
@@ -900,6 +913,7 @@ void MainWindow::saveConfig(const QString &fname) const
     settings.setValue("decoder/nfc",
         ui->decoderNFEffectsCheckBox->isChecked() ? QString(/*"true"*/) : QString("false")
     );
+    settings.setValue("decoder/nfc-ref-delay", ui->decoderNFRefDelayEdit->text());
 
     settings.setValue("decoder/quad", ui->decoderQuadLineEdit->text());
     settings.setValue("decoder/surround51", ui->decoder51LineEdit->text());
@@ -1111,6 +1125,26 @@ void MainWindow::updatePeriodCountSlider()
     else if(pos > 16)
         pos = 16;
     ui->periodCountSlider->setSliderPosition(pos);
+    enableApplyButton();
+}
+
+
+void MainWindow::updateRefDelayEdit(int delay)
+{
+    ui->decoderNFRefDelayEdit->clear();
+    if(delay > 0)
+    {
+        QString str = QString::asprintf("%0.03f", delay/1000.0);
+        ui->decoderNFRefDelayEdit->insert(str);
+    }
+    enableApplyButton();
+}
+
+void MainWindow::updateRefDelaySlider()
+{
+    double pos = ui->decoderNFRefDelayEdit->text().toDouble();
+    if(pos > 1.0) pos = 1.0;
+    ui->decoderNFRefDelaySlider->setSliderPosition((int)(pos*1000.0));
     enableApplyButton();
 }
 

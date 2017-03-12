@@ -621,7 +621,7 @@ configuration file.</string>
       <property name="geometry">
        <rect>
         <x>-10</x>
-        <y>120</y>
+        <y>160</y>
         <width>551</width>
         <height>161</height>
        </rect>
@@ -817,6 +817,88 @@ Quality Mode to be enabled.</string>
       <property name="checked">
        <bool>true</bool>
       </property>
+     </widget>
+     <widget class="QWidget" name="widget_3" native="true">
+      <property name="geometry">
+       <rect>
+        <x>-10</x>
+        <y>110</y>
+        <width>551</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="toolTip">
+       <string>The reference delay value for ambisonic output. When
+Channels is set to one of the Ambisonic formats, this
+option enables NFC-HOA output with the specified
+Reference Delay parameter. The specified value can then
+be shared with an appropriate NFC-HOA decoder to
+reproduce correct near-field effects. Keep in mind that
+despite being designed for higher-order ambisonics, this
+applies to first-order output all the same. When left unset,
+normal output is created with no near-field simulation.</string>
+      </property>
+      <widget class="QLabel" name="label_27">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>0</y>
+         <width>161</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Near-Field Reference Delay:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+      <widget class="QSlider" name="decoderNFRefDelaySlider">
+       <property name="geometry">
+        <rect>
+         <x>190</x>
+         <y>0</y>
+         <width>251</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="maximum">
+        <number>1000</number>
+       </property>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="decoderNFRefDelayEdit">
+       <property name="geometry">
+        <rect>
+         <x>450</x>
+         <y>0</y>
+         <width>51</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+       <property name="placeholderText">
+        <string>off</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_31">
+       <property name="geometry">
+        <rect>
+         <x>510</x>
+         <y>0</y>
+         <width>31</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>sec.</string>
+       </property>
+      </widget>
      </widget>
     </widget>
     <widget class="QWidget" name="tab_5">

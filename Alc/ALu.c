@@ -634,10 +634,11 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
 
                 /* Get the static HRIR coefficients and delays for this channel. */
                 GetHrtfCoeffs(Device->HrtfHandle,
-                    chans[c].elevation, chans[c].angle, 0.0f, DryGain,
+                    chans[c].elevation, chans[c].angle, 0.0f,
                     voice->Direct.Params[c].Hrtf.Target.Coeffs,
                     voice->Direct.Params[c].Hrtf.Target.Delay
                 );
+                voice->Direct.Params[c].Hrtf.Target.Gain = DryGain;
 
                 /* Normal panning for auxiliary sends. */
                 CalcAngleCoeffs(chans[c].angle, chans[c].elevation, 0.0f, coeffs);
@@ -1104,9 +1105,10 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
             spread = asinf(radius / Distance) * 2.0f;
 
         /* Get the HRIR coefficients and delays. */
-        GetHrtfCoeffs(Device->HrtfHandle, ev, az, spread, DryGain,
+        GetHrtfCoeffs(Device->HrtfHandle, ev, az, spread,
                       voice->Direct.Params[0].Hrtf.Target.Coeffs,
                       voice->Direct.Params[0].Hrtf.Target.Delay);
+        voice->Direct.Params[0].Hrtf.Target.Gain = DryGain;
 
         CalcDirectionCoeffs(dir, spread, coeffs);
 
@@ -1502,9 +1504,11 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             state = device->Hrtf;
             for(c = 0;c < device->Dry.NumChannels;c++)
             {
+                typedef ALfloat ALfloat2[2];
                 HrtfMix(device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
                     device->Dry.Buffer[c], state->Offset, state->IrSize,
-                    state->Chan[c].Coeffs, state->Chan[c].Values, SamplesToDo
+                    SAFE_CONST(ALfloat2*,state->Chan[c].Coeffs),
+                    state->Chan[c].Values, SamplesToDo
                 );
             }
             state->Offset += SamplesToDo;

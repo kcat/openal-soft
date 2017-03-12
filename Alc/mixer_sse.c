@@ -69,74 +69,9 @@ const ALfloat *Resample_bsinc32_SSE(const InterpState *state, const ALfloat *res
 }
 
 
-static inline void ApplyCoeffsStep(ALsizei Offset, ALfloat (*restrict Values)[2],
-                                   const ALsizei IrSize,
-                                   ALfloat (*restrict Coeffs)[2],
-                                   const ALfloat (*restrict CoeffStep)[2],
-                                   ALfloat left, ALfloat right)
-{
-    const __m128 lrlr = _mm_setr_ps(left, right, left, right);
-    __m128 coeffs, deltas, imp0, imp1;
-    __m128 vals = _mm_setzero_ps();
-    ALsizei i;
-
-    Values = ASSUME_ALIGNED(Values, 16);
-    Coeffs = ASSUME_ALIGNED(Coeffs, 16);
-    CoeffStep = ASSUME_ALIGNED(CoeffStep, 16);
-    if((Offset&1))
-    {
-        const ALsizei o0 = Offset&HRIR_MASK;
-        const ALsizei o1 = (Offset+IrSize-1)&HRIR_MASK;
-
-        coeffs = _mm_load_ps(&Coeffs[0][0]);
-        deltas = _mm_load_ps(&CoeffStep[0][0]);
-        vals = _mm_loadl_pi(vals, (__m64*)&Values[o0][0]);
-        imp0 = _mm_mul_ps(lrlr, coeffs);
-        coeffs = _mm_add_ps(coeffs, deltas);
-        vals = _mm_add_ps(imp0, vals);
-        _mm_store_ps(&Coeffs[0][0], coeffs);
-        _mm_storel_pi((__m64*)&Values[o0][0], vals);
-        for(i = 1;i < IrSize-1;i += 2)
-        {
-            const ALsizei o2 = (Offset+i)&HRIR_MASK;
-
-            coeffs = _mm_load_ps(&Coeffs[i+1][0]);
-            deltas = _mm_load_ps(&CoeffStep[i+1][0]);
-            vals = _mm_load_ps(&Values[o2][0]);
-            imp1 = _mm_mul_ps(lrlr, coeffs);
-            coeffs = _mm_add_ps(coeffs, deltas);
-            imp0 = _mm_shuffle_ps(imp0, imp1, _MM_SHUFFLE(1, 0, 3, 2));
-            vals = _mm_add_ps(imp0, vals);
-            _mm_store_ps(&Coeffs[i+1][0], coeffs);
-            _mm_store_ps(&Values[o2][0], vals);
-            imp0 = imp1;
-        }
-        vals = _mm_loadl_pi(vals, (__m64*)&Values[o1][0]);
-        imp0 = _mm_movehl_ps(imp0, imp0);
-        vals = _mm_add_ps(imp0, vals);
-        _mm_storel_pi((__m64*)&Values[o1][0], vals);
-    }
-    else
-    {
-        for(i = 0;i < IrSize;i += 2)
-        {
-            const ALsizei o = (Offset + i)&HRIR_MASK;
-
-            coeffs = _mm_load_ps(&Coeffs[i][0]);
-            deltas = _mm_load_ps(&CoeffStep[i][0]);
-            vals = _mm_load_ps(&Values[o][0]);
-            imp0 = _mm_mul_ps(lrlr, coeffs);
-            coeffs = _mm_add_ps(coeffs, deltas);
-            vals = _mm_add_ps(imp0, vals);
-            _mm_store_ps(&Coeffs[i][0], coeffs);
-            _mm_store_ps(&Values[o][0], vals);
-        }
-    }
-}
-
 static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*restrict Values)[2],
                                const ALsizei IrSize,
-                               ALfloat (*restrict Coeffs)[2],
+                               const ALfloat (*restrict Coeffs)[2],
                                ALfloat left, ALfloat right)
 {
     const __m128 lrlr = _mm_setr_ps(left, right, left, right);

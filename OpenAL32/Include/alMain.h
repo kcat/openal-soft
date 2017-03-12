@@ -620,6 +620,7 @@ typedef struct HrtfState {
 typedef struct HrtfParams {
     alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
     ALsizei Delay[2];
+    ALfloat Gain;
 } HrtfParams;
 
 typedef struct DirectHrtfState {

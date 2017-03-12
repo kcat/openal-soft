@@ -116,12 +116,9 @@ enum ActiveFilters {
 
 
 typedef struct MixHrtfParams {
-    const HrtfParams *Target;
-    HrtfParams *Current;
-    struct {
-        alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
-        ALsizei Delay[2];
-    } Steps;
+    const HrtfParams *Current;
+    ALfloat Gain;
+    ALfloat GainStep;
 } MixHrtfParams;
 
 
@@ -133,7 +130,7 @@ typedef struct DirectParams {
     NfcFilter NFCtrlFilter[MAX_AMBI_ORDER];
 
     struct {
-        HrtfParams Current;
+        HrtfParams Old;
         HrtfParams Target;
         HrtfState State;
     } Hrtf;
@@ -225,13 +222,13 @@ typedef void (*RowMixerFunc)(ALfloat *OutBuffer, const ALfloat *gains,
                              const ALfloat (*restrict data)[BUFFERSIZE], ALsizei InChans,
                              ALsizei InPos, ALsizei BufferSize);
 typedef void (*HrtfMixerFunc)(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
-                              const ALfloat *data, ALsizei Counter, ALsizei Offset, ALsizei OutPos,
-                              const ALsizei IrSize, const MixHrtfParams *hrtfparams,
+                              const ALfloat *data, ALsizei Offset, ALsizei OutPos,
+                              const ALsizei IrSize, MixHrtfParams *hrtfparams,
                               HrtfState *hrtfstate, ALsizei BufferSize);
 typedef void (*HrtfDirectMixerFunc)(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
                                     const ALfloat *data, ALsizei Offset, const ALsizei IrSize,
-                                    ALfloat (*restrict Coeffs)[2], ALfloat (*restrict Values)[2],
-                                    ALsizei BufferSize);
+                                    const ALfloat (*restrict Coeffs)[2],
+                                    ALfloat (*restrict Values)[2], ALsizei BufferSize);
 
 
 #define GAIN_MIX_MAX  (16.0f) /* +24dB */

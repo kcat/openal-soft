@@ -36,7 +36,7 @@ void FreeHrtfs(void);
 vector_HrtfEntry EnumerateHrtf(const_al_string devname);
 void FreeHrtfList(vector_HrtfEntry *list);
 
-void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat gain, ALfloat (*coeffs)[2], ALsizei *delays);
+void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat (*coeffs)[2], ALsizei *delays);
 
 /**
  * Produces HRTF filter coefficients for decoding B-Format, given a set of

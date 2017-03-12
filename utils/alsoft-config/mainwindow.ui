@@ -823,7 +823,7 @@ Quality Mode to be enabled.</string>
        <rect>
         <x>-10</x>
         <y>110</y>
-        <width>551</width>
+        <width>281</width>
         <height>21</height>
        </rect>
       </property>
@@ -843,7 +843,7 @@ normal output is created with no near-field simulation.</string>
         <rect>
          <x>20</x>
          <y>0</y>
-         <width>161</width>
+         <width>151</width>
          <height>21</height>
         </rect>
        </property>
@@ -854,49 +854,26 @@ normal output is created with no near-field simulation.</string>
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
        </property>
       </widget>
-      <widget class="QSlider" name="decoderNFRefDelaySlider">
+      <widget class="QDoubleSpinBox" name="decoderNFRefDelaySpinBox">
        <property name="geometry">
         <rect>
-         <x>190</x>
+         <x>180</x>
          <y>0</y>
-         <width>251</width>
-         <height>20</height>
+         <width>91</width>
+         <height>21</height>
         </rect>
+       </property>
+       <property name="suffix">
+        <string>sec</string>
+       </property>
+       <property name="decimals">
+        <number>4</number>
        </property>
        <property name="maximum">
-        <number>1000</number>
+        <double>1000.000000000000000</double>
        </property>
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="decoderNFRefDelayEdit">
-       <property name="geometry">
-        <rect>
-         <x>450</x>
-         <y>0</y>
-         <width>51</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-       <property name="placeholderText">
-        <string>off</string>
-       </property>
-      </widget>
-      <widget class="QLabel" name="label_31">
-       <property name="geometry">
-        <rect>
-         <x>510</x>
-         <y>0</y>
-         <width>31</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>sec.</string>
+       <property name="singleStep">
+        <double>0.010000000000000</double>
        </property>
       </widget>
      </widget>

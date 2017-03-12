@@ -1133,10 +1133,9 @@ void MainWindow::updateRefDelayEdit(int delay)
 {
     ui->decoderNFRefDelayEdit->clear();
     if(delay > 0)
-    {
-        QString str = QString::asprintf("%0.03f", delay/1000.0);
-        ui->decoderNFRefDelayEdit->insert(str);
-    }
+        ui->decoderNFRefDelayEdit->insert(
+            QString("%1").arg(delay/1000.0, 0, 'f', 3)
+        );
     enableApplyButton();
 }
 

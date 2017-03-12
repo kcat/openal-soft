@@ -331,6 +331,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->decoderHQModeCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->decoderDistCompCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->decoderNFEffectsCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->decoderQuadLineEdit, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
     connect(ui->decoderQuadButton, SIGNAL(clicked()), this, SLOT(selectQuadDecoderFile()));
     connect(ui->decoder51LineEdit, SIGNAL(textChanged(QString)), this, SLOT(enableApplyButton()));
@@ -665,6 +666,8 @@ void MainWindow::loadConfig(const QString &fname)
     ui->decoderHQModeCheckBox->setChecked(hqmode);
     bool distcomp = settings.value("decoder/distance-comp", true).toBool();
     ui->decoderDistCompCheckBox->setChecked(distcomp);
+    bool nfeffects = settings.value("decoder/nfc", true).toBool();
+    ui->decoderNFEffectsCheckBox->setChecked(nfeffects);
 
     ui->decoderQuadLineEdit->setText(settings.value("decoder/quad").toString());
     ui->decoder51LineEdit->setText(settings.value("decoder/surround51").toString());
@@ -893,6 +896,9 @@ void MainWindow::saveConfig(const QString &fname) const
     );
     settings.setValue("decoder/distance-comp",
         ui->decoderDistCompCheckBox->isChecked() ? QString(/*"true"*/) : QString("false")
+    );
+    settings.setValue("decoder/nfc",
+        ui->decoderNFEffectsCheckBox->isChecked() ? QString(/*"true"*/) : QString("false")
     );
 
     settings.setValue("decoder/quad", ui->decoderQuadLineEdit->text());

@@ -238,6 +238,15 @@ hq-mode = false
 #  specified in the decoder configuration file.
 distance-comp = true
 
+## nfc:
+#  Enables near-field control filters. This simulates and compensates for low-
+#  frequency effects caused by the curvature of nearby sound-waves, which
+#  creates a more realistic perception of sound distance. Note that the effect
+#  may be stronger or weaker than intended if the application doesn't use or
+#  specify an appropriate unit scale, or if incorrect speaker distances are set
+#  in the decoder configuration file. Requires hq-mode to be enabled.
+nfc = true
+
 ## quad:
 #  Decoder configuration file for Quadrophonic channel output. See
 #  docs/ambdec.txt for a description of the file format.

@@ -31,7 +31,7 @@
       <x>470</x>
       <y>405</y>
       <width>81</width>
-      <height>25</height>
+      <height>21</height>
      </rect>
     </property>
     <property name="text">
@@ -52,9 +52,6 @@
       <height>401</height>
      </rect>
     </property>
-    <property name="currentIndex">
-     <number>0</number>
-    </property>
     <widget class="QWidget" name="tab_3">
      <attribute name="title">
       <string>Playback</string>
@@ -65,7 +62,7 @@
         <x>110</x>
         <y>50</y>
         <width>78</width>
-        <height>22</height>
+        <height>21</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -114,7 +111,7 @@ float and converted to the output sample type as needed.</string>
         <x>110</x>
         <y>20</y>
         <width>78</width>
-        <height>22</height>
+        <height>21</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -132,7 +129,7 @@ to stereo output.</string>
         <x>380</x>
         <y>20</y>
         <width>91</width>
-        <height>29</height>
+        <height>21</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -226,7 +223,7 @@ to stereo output.</string>
         <x>380</x>
         <y>50</y>
         <width>78</width>
-        <height>22</height>
+        <height>21</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -302,7 +299,7 @@ mixed and being heard.</string>
            <x>80</x>
            <y>20</y>
            <width>160</width>
-           <height>23</height>
+           <height>21</height>
           </rect>
          </property>
          <property name="minimum">
@@ -339,7 +336,7 @@ mixed and being heard.</string>
            <x>20</x>
            <y>20</y>
            <width>51</width>
-           <height>22</height>
+           <height>21</height>
           </rect>
          </property>
          <property name="placeholderText">
@@ -366,7 +363,7 @@ frames needed for each mixing update.</string>
            <x>60</x>
            <y>20</y>
            <width>160</width>
-           <height>23</height>
+           <height>21</height>
           </rect>
          </property>
          <property name="minimum">
@@ -419,7 +416,7 @@ frames needed for each mixing update.</string>
            <x>0</x>
            <y>20</y>
            <width>51</width>
-           <height>22</height>
+           <height>21</height>
           </rect>
          </property>
          <property name="placeholderText">
@@ -434,7 +431,7 @@ frames needed for each mixing update.</string>
          <x>130</x>
          <y>130</y>
          <width>131</width>
-         <height>22</height>
+         <height>21</height>
         </rect>
        </property>
        <property name="toolTip">
@@ -482,7 +479,7 @@ receiver.</string>
          <x>390</x>
          <y>130</y>
          <width>131</width>
-         <height>22</height>
+         <height>21</height>
         </rect>
        </property>
       </widget>
@@ -949,7 +946,7 @@ normal output is created with no near-field simulation.</string>
           <x>420</x>
           <y>20</y>
           <width>81</width>
-          <height>25</height>
+          <height>21</height>
          </rect>
         </property>
         <property name="text">
@@ -990,7 +987,7 @@ listed above.</string>
           <x>420</x>
           <y>50</y>
           <width>81</width>
-          <height>25</height>
+          <height>21</height>
          </rect>
         </property>
         <property name="text">
@@ -1026,7 +1023,7 @@ listed above.</string>
         <x>130</x>
         <y>50</y>
         <width>161</width>
-        <height>22</height>
+        <height>21</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -1074,7 +1071,7 @@ application or system to determine if it should be used.</string>
         <x>130</x>
         <y>20</y>
         <width>161</width>
-        <height>22</height>
+        <height>21</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -1142,9 +1139,6 @@ application or system to determine if it should be used.</string>
         <width>421</width>
         <height>361</height>
        </rect>
-      </property>
-      <property name="currentIndex">
-       <number>0</number>
       </property>
       <widget class="QWidget" name="page">
        <widget class="QCheckBox" name="backendCheckBox">
@@ -1334,7 +1328,7 @@ processing requests. Must be a power of 2.</string>
            <x>10</x>
            <y>30</y>
            <width>301</width>
-           <height>23</height>
+           <height>21</height>
           </rect>
          </property>
          <property name="maximum">
@@ -1667,7 +1661,7 @@ during updates.</string>
         <x>190</x>
         <y>20</y>
         <width>51</width>
-        <height>22</height>
+        <height>21</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -1720,7 +1714,7 @@ the CPU can handle.</string>
         <x>190</x>
         <y>50</y>
         <width>51</width>
-        <height>22</height>
+        <height>21</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -1758,7 +1752,7 @@ may help when apps use more than the system can handle.</string>
         <x>190</x>
         <y>80</y>
         <width>51</width>
-        <height>22</height>
+        <height>21</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -2113,7 +2107,7 @@ added by the ALC_EXT_DEDICATED extension.</string>
         <x>160</x>
         <y>20</y>
         <width>123</width>
-        <height>29</height>
+        <height>21</height>
        </rect>
       </property>
       <property name="sizeAdjustPolicy">
@@ -2263,7 +2257,7 @@ added by the ALC_EXT_DEDICATED extension.</string>
       <x>370</x>
       <y>405</y>
       <width>91</width>
-      <height>25</height>
+      <height>21</height>
      </rect>
     </property>
     <property name="text">

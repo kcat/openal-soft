@@ -138,9 +138,9 @@ static inline ALvoice *GetSourceVoice(const ALsource *source, const ALCcontext *
     return NULL;
 }
 
-static inline bool IsPlayingOrPausedSeq(const ALsource *source)
+static inline bool IsPlayingOrPaused(ALsource *source)
 {
-    ALenum state = ATOMIC_LOAD_SEQ(&source->state);
+    ALenum state = ATOMIC_LOAD(&source->state, almemory_order_acquire);
     return state == AL_PLAYING || state == AL_PAUSED;
 }
 
@@ -157,10 +157,10 @@ static ALenum GetSourceState(ALsource *source, ALvoice *voice)
     return ATOMIC_LOAD(&source->state, almemory_order_acquire);
 }
 
-static inline bool SourceShouldUpdate(const ALsource *source, const ALCcontext *context)
+static inline bool SourceShouldUpdate(ALsource *source, ALCcontext *context)
 {
-    return IsPlayingOrPausedSeq(source) &&
-           !ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire);
+    return !ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire) &&
+           IsPlayingOrPaused(source);
 }
 
 static ALint FloatValsByProp(ALenum prop)
@@ -543,8 +543,7 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
             Source->OffsetType = prop;
             Source->Offset = *values;
 
-            if(!ATOMIC_LOAD(&Context->DeferUpdates, almemory_order_acquire) &&
-               IsPlayingOrPausedSeq(Source))
+            if(SourceShouldUpdate(Source, Context))
             {
                 ALvoice *voice;
 
@@ -750,8 +749,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             Source->OffsetType = prop;
             Source->Offset = *values;
 
-            if(!ATOMIC_LOAD(&Context->DeferUpdates, almemory_order_acquire) &&
-               IsPlayingOrPausedSeq(Source))
+            if(SourceShouldUpdate(Source, Context))
             {
                 ALvoice *voice;
 
@@ -874,7 +872,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             }
             UnlockFiltersRead(device);
 
-            if(slot != Source->Send[values[1]].Slot && IsPlayingOrPausedSeq(Source))
+            if(slot != Source->Send[values[1]].Slot && IsPlayingOrPaused(Source))
             {
                 /* Add refcount on the new slot, and release the previous slot */
                 if(slot) IncrementRef(&slot->ref);

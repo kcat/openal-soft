@@ -117,18 +117,11 @@ static struct BackendInfo CaptureBackend;
 /************************************************
  * Functions, enums, and errors
  ************************************************/
-typedef struct ALCfunction {
+#define DECL(x) { #x, (ALCvoid*)(x) }
+static const struct {
     const ALCchar *funcName;
     ALCvoid *address;
-} ALCfunction;
-
-typedef struct ALCenums {
-    const ALCchar *enumName;
-    ALCenum value;
-} ALCenums;
-
-#define DECL(x) { #x, (ALCvoid*)(x) }
-static const ALCfunction alcFunctions[] = {
+} alcFunctions[] = {
     DECL(alcCreateContext),
     DECL(alcMakeContextCurrent),
     DECL(alcProcessContext),
@@ -294,13 +287,14 @@ static const ALCfunction alcFunctions[] = {
     DECL(alBufferSamplesSOFT),
     DECL(alGetBufferSamplesSOFT),
     DECL(alIsBufferFormatSupportedSOFT),
-
-    { NULL, NULL }
 };
 #undef DECL
 
 #define DECL(x) { #x, (x) }
-static const ALCenums enumeration[] = {
+static const struct {
+    const ALCchar *enumName;
+    ALCenum value;
+} alcEnumerations[] = {
     DECL(ALC_INVALID),
     DECL(ALC_FALSE),
     DECL(ALC_TRUE),
@@ -698,8 +692,6 @@ static const ALCenums enumeration[] = {
     DECL(AL_EQUALIZER_HIGH_CUTOFF),
 
     DECL(AL_DEDICATED_GAIN),
-
-    { NULL, (ALCenum)0 }
 };
 #undef DECL
 
@@ -3458,10 +3450,15 @@ ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar
     }
     else
     {
-        ALsizei i = 0;
-        while(alcFunctions[i].funcName && strcmp(alcFunctions[i].funcName, funcName) != 0)
-            i++;
-        ptr = alcFunctions[i].address;
+        size_t i = 0;
+        for(i = 0;i < COUNTOF(alcFunctions);i++)
+        {
+            if(strcmp(alcFunctions[i].funcName, funcName) == 0)
+            {
+                ptr = alcFunctions[i].address;
+                break;
+            }
+        }
     }
 
     return ptr;
@@ -3484,10 +3481,15 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
     }
     else
     {
-        ALsizei i = 0;
-        while(enumeration[i].enumName && strcmp(enumeration[i].enumName, enumName) != 0)
-            i++;
-        val = enumeration[i].value;
+        size_t i = 0;
+        for(i = 0;i < COUNTOF(alcEnumerations);i++)
+        {
+            if(strcmp(alcEnumerations[i].enumName, enumName) == 0)
+            {
+                val = alcEnumerations[i].value;
+                break;
+            }
+        }
     }
 
     return val;

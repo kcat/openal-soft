@@ -93,13 +93,13 @@ RowMixerFunc SelectRowMixer(void)
 
 static inline HrtfMixerFunc SelectHrtfMixer(void)
 {
-#ifdef HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
-        return MixHrtf_SSE;
-#endif
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
         return MixHrtf_Neon;
+#endif
+#ifdef HAVE_SSE
+    if((CPUCapFlags&CPU_CAP_SSE))
+        return MixHrtf_SSE;
 #endif
 
     return MixHrtf_C;

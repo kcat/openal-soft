@@ -129,7 +129,7 @@ static ALvoid ALechoState_update(ALechoState *state, const ALCdevice *Device, co
     gain = minf(1.0f - props->Echo.Damping, 0.0625f); /* Limit -24dB */
     ALfilterState_setParams(&state->Filter, ALfilterType_HighShelf,
                             gain, LOWPASSFREQREF/frequency,
-                            calc_rcpQ_from_slope(gain, 0.75f));
+                            calc_rcpQ_from_slope(gain, 1.0f));
 
     gain = Slot->Params.Gain;
 

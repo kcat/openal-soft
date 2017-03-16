@@ -718,11 +718,11 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
             if(DryGainLF != 1.0f) voice->Direct.Params[c].FilterType |= AF_HighPass;
             ALfilterState_setParams(
                 &voice->Direct.Params[c].LowPass, ALfilterType_HighShelf,
-                DryGainHF, HFScale, calc_rcpQ_from_slope(DryGainHF, 0.75f)
+                DryGainHF, HFScale, calc_rcpQ_from_slope(DryGainHF, 1.0f)
             );
             ALfilterState_setParams(
                 &voice->Direct.Params[c].HighPass, ALfilterType_LowShelf,
-                DryGainLF, LFScale, calc_rcpQ_from_slope(DryGainLF, 0.75f)
+                DryGainLF, LFScale, calc_rcpQ_from_slope(DryGainLF, 1.0f)
             );
         }
     }
@@ -739,11 +739,11 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
             if(WetGainLF[i] != 1.0f) voice->Send[i].Params[c].FilterType |= AF_HighPass;
             ALfilterState_setParams(
                 &voice->Send[i].Params[c].LowPass, ALfilterType_HighShelf,
-                WetGainHF[i], HFScale, calc_rcpQ_from_slope(WetGainHF[i], 0.75f)
+                WetGainHF[i], HFScale, calc_rcpQ_from_slope(WetGainHF[i], 1.0f)
             );
             ALfilterState_setParams(
                 &voice->Send[i].Params[c].HighPass, ALfilterType_LowShelf,
-                WetGainLF[i], LFScale, calc_rcpQ_from_slope(WetGainLF[i], 0.75f)
+                WetGainLF[i], LFScale, calc_rcpQ_from_slope(WetGainLF[i], 1.0f)
             );
         }
     }
@@ -1220,11 +1220,11 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
         if(DryGainLF != 1.0f) voice->Direct.Params[0].FilterType |= AF_HighPass;
         ALfilterState_setParams(
             &voice->Direct.Params[0].LowPass, ALfilterType_HighShelf,
-            DryGainHF, HFScale, calc_rcpQ_from_slope(DryGainHF, 0.75f)
+            DryGainHF, HFScale, calc_rcpQ_from_slope(DryGainHF, 1.0f)
         );
         ALfilterState_setParams(
             &voice->Direct.Params[0].HighPass, ALfilterType_LowShelf,
-            DryGainLF, LFScale, calc_rcpQ_from_slope(DryGainLF, 0.75f)
+            DryGainLF, LFScale, calc_rcpQ_from_slope(DryGainLF, 1.0f)
         );
     }
     for(i = 0;i < NumSends;i++)
@@ -1238,11 +1238,11 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
         if(WetGainLF[i] != 1.0f) voice->Send[i].Params[0].FilterType |= AF_HighPass;
         ALfilterState_setParams(
             &voice->Send[i].Params[0].LowPass, ALfilterType_HighShelf,
-            WetGainHF[i], HFScale, calc_rcpQ_from_slope(WetGainHF[i], 0.75f)
+            WetGainHF[i], HFScale, calc_rcpQ_from_slope(WetGainHF[i], 1.0f)
         );
         ALfilterState_setParams(
             &voice->Send[i].Params[0].HighPass, ALfilterType_LowShelf,
-            WetGainLF[i], LFScale, calc_rcpQ_from_slope(WetGainLF[i], 0.75f)
+            WetGainLF[i], LFScale, calc_rcpQ_from_slope(WetGainLF[i], 1.0f)
         );
     }
 }

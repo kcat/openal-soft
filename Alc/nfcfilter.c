@@ -62,12 +62,8 @@ void NfcFilterCreate1(NfcFilter *nfc, const float w0, const float w1)
     nfc->g = 1.0f;
     nfc->coeffs[0] = 1.0f;
 
-    /* NOTE: Slight adjustment from the literature to raise the center
-     * frequency a bit (0.5 -> 1.0).
-     */
-
     /* Calculate bass-boost coefficients. */
-    r = 1.0f * w0;
+    r = 0.5f * w0;
     b_00 = B[1][0] * r;
     g_0 = 1.0f + b_00;
 
@@ -75,7 +71,7 @@ void NfcFilterCreate1(NfcFilter *nfc, const float w0, const float w1)
     nfc->coeffs[1] = (2.0f * b_00) / g_0;
 
     /* Calculate bass-cut coefficients. */
-    r = 1.0f * w1;
+    r = 0.5f * w1;
     b_00 = B[1][0] * r;
     g_0 = 1.0f + b_00;
 
@@ -89,7 +85,7 @@ void NfcFilterAdjust1(NfcFilter *nfc, const float w0)
     float b_00, g_0;
     float r;
 
-    r = 1.0f * w0;
+    r = 0.5f * w0;
     b_00 = B[1][0] * r;
     g_0 = 1.0f + b_00;
 
@@ -131,7 +127,7 @@ void NfcFilterCreate2(NfcFilter *nfc, const float w0, const float w1)
     nfc->coeffs[0] = 1.0f;
 
     /* Calculate bass-boost coefficients. */
-    r = 1.0f * w0;
+    r = 0.5f * w0;
     b_10 = B[2][0] * r;
     b_11 = B[2][1] * r * r;
     g_1 = 1.0f + b_10 + b_11;
@@ -141,7 +137,7 @@ void NfcFilterCreate2(NfcFilter *nfc, const float w0, const float w1)
     nfc->coeffs[2] = (4.0f * b_11) / g_1;
 
     /* Calculate bass-cut coefficients. */
-    r = 1.0f * w1;
+    r = 0.5f * w1;
     b_10 = B[2][0] * r;
     b_11 = B[2][1] * r * r;
     g_1 = 1.0f + b_10 + b_11;
@@ -157,7 +153,7 @@ void NfcFilterAdjust2(NfcFilter *nfc, const float w0)
     float b_10, b_11, g_1;
     float r;
 
-    r = 1.0f * w0;
+    r = 0.5f * w0;
     b_10 = B[2][0] * r;
     b_11 = B[2][1] * r * r;
     g_1 = 1.0f + b_10 + b_11;
@@ -207,7 +203,7 @@ void NfcFilterCreate3(NfcFilter *nfc, const float w0, const float w1)
     nfc->coeffs[0] = 1.0f;
 
     /* Calculate bass-boost coefficients. */
-    r = 1.0f * w0;
+    r = 0.5f * w0;
     b_10 = B[3][0] * r;
     b_11 = B[3][1] * r * r;
     g_1 = 1.0f + b_10 + b_11;
@@ -223,7 +219,7 @@ void NfcFilterCreate3(NfcFilter *nfc, const float w0, const float w1)
     nfc->coeffs[2+1] = (2.0f * b_00) / g_0;
 
     /* Calculate bass-cut coefficients. */
-    r = 1.0f * w1;
+    r = 0.5f * w1;
     b_10 = B[3][0] * r;
     b_11 = B[3][1] * r * r;
     g_1 = 1.0f + b_10 + b_11;
@@ -247,7 +243,7 @@ void NfcFilterAdjust3(NfcFilter *nfc, const float w0)
     float b_00, g_0;
     float r;
 
-    r = 1.0f * w0;
+    r = 0.5f * w0;
     b_10 = B[3][0] * r;
     b_11 = B[3][1] * r * r;
     g_1 = 1.0f + b_10 + b_11;

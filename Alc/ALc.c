@@ -1531,7 +1531,7 @@ void ALCdevice_Unlock(ALCdevice *device)
  */
 void SetDefaultWFXChannelOrder(ALCdevice *device)
 {
-    ALuint i;
+    ALsizei i;
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
         device->RealOut.ChannelName[i] = InvalidChannel;
@@ -1630,7 +1630,7 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
  */
 void SetDefaultChannelOrder(ALCdevice *device)
 {
-    ALuint i;
+    ALsizei i;
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
         device->RealOut.ChannelName[i] = InvalidChannel;

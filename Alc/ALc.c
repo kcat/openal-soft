@@ -3095,9 +3095,6 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             {
                 if(device->FmtChans >= DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3)
                 {
-                    values[i++] = ALC_FORMAT_CHANNELS_SOFT;
-                    values[i++] = ALC_BFORMAT3D_SOFT;
-
                     values[i++] = ALC_AMBISONIC_LAYOUT_SOFT;
                     values[i++] = device->AmbiLayout;
 
@@ -3106,6 +3103,9 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
 
                     values[i++] = ALC_AMBISONIC_ORDER_SOFT;
                     values[i++] = device->FmtChans-DevFmtAmbi1+1;
+
+                    values[i++] = ALC_FORMAT_CHANNELS_SOFT;
+                    values[i++] = ALC_BFORMAT3D_SOFT;
                 }
                 else
                 {
@@ -3290,11 +3290,11 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
         switch(pname)
         {
             case ALC_ATTRIBUTES_SIZE:
-                *values = 21;
+                *values = NumAttrsForDevice(device)+2;
                 break;
 
             case ALC_ALL_ATTRIBUTES:
-                if(size < 21)
+                if(size < NumAttrsForDevice(device)+2)
                     alcSetError(device, ALC_INVALID_VALUE);
                 else
                 {
@@ -3313,8 +3313,25 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                     }
                     else
                     {
-                        values[i++] = ALC_FORMAT_CHANNELS_SOFT;
-                        values[i++] = device->FmtChans;
+                        if(device->FmtChans >= DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3)
+                        {
+                            values[i++] = ALC_AMBISONIC_LAYOUT_SOFT;
+                            values[i++] = device->AmbiLayout;
+
+                            values[i++] = ALC_AMBISONIC_SCALING_SOFT;
+                            values[i++] = device->AmbiScale;
+
+                            values[i++] = ALC_AMBISONIC_ORDER_SOFT;
+                            values[i++] = device->FmtChans-DevFmtAmbi1+1;
+
+                            values[i++] = ALC_FORMAT_CHANNELS_SOFT;
+                            values[i++] = ALC_BFORMAT3D_SOFT;
+                        }
+                        else
+                        {
+                            values[i++] = ALC_FORMAT_CHANNELS_SOFT;
+                            values[i++] = device->FmtChans;
+                        }
 
                         values[i++] = ALC_FORMAT_TYPE_SOFT;
                         values[i++] = device->FmtType;
@@ -3360,12 +3377,10 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                 break;
 
             case ALC_DEVICE_LATENCY_SOFT:
-                {
-                    almtx_lock(&device->BackendLock);
-                    clock = V0(device->Backend,getClockLatency)();
-                    almtx_unlock(&device->BackendLock);
-                    *values = clock.Latency;
-                }
+                almtx_lock(&device->BackendLock);
+                clock = V0(device->Backend,getClockLatency)();
+                almtx_unlock(&device->BackendLock);
+                *values = clock.Latency;
                 break;
 
             case ALC_DEVICE_CLOCK_LATENCY_SOFT:
@@ -3373,7 +3388,6 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                     alcSetError(device, ALC_INVALID_VALUE);
                 else
                 {
-                    ClockLatency clock;
                     almtx_lock(&device->BackendLock);
                     clock = V0(device->Backend,getClockLatency)();
                     almtx_unlock(&device->BackendLock);

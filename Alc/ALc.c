@@ -1679,9 +1679,9 @@ extern inline ALint GetChannelIndex(const enum Channel names[MAX_OUTPUT_CHANNELS
  * does *NOT* stop mixing, but rather prevents certain property changes from
  * taking effect.
  */
-void ALCcontext_DeferUpdates(ALCcontext *context, ALenum type)
+void ALCcontext_DeferUpdates(ALCcontext *context)
 {
-    ATOMIC_STORE_SEQ(&context->DeferUpdates, type);
+    ATOMIC_STORE_SEQ(&context->DeferUpdates, AL_TRUE);
 }
 
 /* ALCcontext_ProcessUpdates
@@ -1690,13 +1690,9 @@ void ALCcontext_DeferUpdates(ALCcontext *context, ALenum type)
  */
 void ALCcontext_ProcessUpdates(ALCcontext *context)
 {
-    ALCdevice *device = context->Device;
-
     ReadLock(&context->PropLock);
     if(ATOMIC_EXCHANGE_SEQ(ALenum, &context->DeferUpdates, AL_FALSE))
     {
-        ALsizei pos;
-
         /* Tell the mixer to stop applying updates, then wait for any active
          * updating to finish, before providing updates.
          */
@@ -1706,31 +1702,6 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
 
         UpdateListenerProps(context);
         UpdateAllEffectSlotProps(context);
-
-        LockUIntMapRead(&context->SourceMap);
-        V0(device->Backend,lock)();
-        for(pos = 0;pos < context->VoiceCount;pos++)
-        {
-            ALvoice *voice = context->Voices[pos];
-            ALsource *source = ATOMIC_LOAD(&voice->Source, almemory_order_acquire);
-            if(source && source->OffsetType != AL_NONE)
-            {
-                WriteLock(&source->queue_lock);
-                ApplyOffset(source, voice);
-                WriteUnlock(&source->queue_lock);
-            }
-        }
-        for(pos = 0;pos < context->SourceMap.size;pos++)
-        {
-            ALsource *source = context->SourceMap.values[pos];
-            ALenum new_state = source->new_state;
-            source->new_state = AL_NONE;
-            if(new_state)
-                SetSourceState(source, context, new_state);
-        }
-        V0(device->Backend,unlock)();
-        UnlockUIntMapRead(&context->SourceMap);
-
         UpdateAllSourceProps(context);
 
         /* Now with all updates declared, let the mixer continue applying them
@@ -2819,7 +2790,7 @@ ALC_API ALCvoid ALC_APIENTRY alcSuspendContext(ALCcontext *context)
         alcSetError(NULL, ALC_INVALID_CONTEXT);
     else
     {
-        ALCcontext_DeferUpdates(context, DeferAllowPlay);
+        ALCcontext_DeferUpdates(context);
         ALCcontext_DecRef(context);
     }
 }

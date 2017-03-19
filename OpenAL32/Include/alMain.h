@@ -879,14 +879,8 @@ void AppendCaptureDeviceList(const ALCchar *name);
 void ALCdevice_Lock(ALCdevice *device);
 void ALCdevice_Unlock(ALCdevice *device);
 
-void ALCcontext_DeferUpdates(ALCcontext *context, ALenum type);
+void ALCcontext_DeferUpdates(ALCcontext *context);
 void ALCcontext_ProcessUpdates(ALCcontext *context);
-
-enum {
-    DeferOff = AL_FALSE,
-    DeferAll,
-    DeferAllowPlay
-};
 
 
 typedef struct {

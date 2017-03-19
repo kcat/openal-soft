@@ -54,6 +54,8 @@ static ALint64 GetSourceSampleOffset(ALsource *Source, ALCcontext *context, ALui
 static ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, ALuint64 *clocktime);
 static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context);
 static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac);
+static void SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state);
+static ALboolean ApplyOffset(ALsource *Source, ALvoice *voice);
 
 typedef enum SourceProp {
     srcPitch = AL_PITCH,
@@ -543,7 +545,7 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
             Source->OffsetType = prop;
             Source->Offset = *values;
 
-            if(SourceShouldUpdate(Source, Context))
+            if(IsPlayingOrPaused(Source))
             {
                 ALvoice *voice;
 
@@ -749,7 +751,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             Source->OffsetType = prop;
             Source->Offset = *values;
 
-            if(SourceShouldUpdate(Source, Context))
+            if(IsPlayingOrPaused(Source))
             {
                 ALvoice *voice;
 
@@ -2354,7 +2356,6 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         {
             source = LookupSource(context, sources[i]);
             ATOMIC_STORE(&source->state, AL_STOPPED, almemory_order_relaxed);
-            source->new_state = AL_NONE;
         }
         ALCdevice_Unlock(device);
         goto done;
@@ -2371,21 +2372,10 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         AllocateVoices(context, newcount, device->NumAuxSends);
     }
 
-    if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire) == DeferAll)
+    for(i = 0;i < n;i++)
     {
-        for(i = 0;i < n;i++)
-        {
-            source = LookupSource(context, sources[i]);
-            source->new_state = AL_PLAYING;
-        }
-    }
-    else
-    {
-        for(i = 0;i < n;i++)
-        {
-            source = LookupSource(context, sources[i]);
-            SetSourceState(source, context, AL_PLAYING);
-        }
+        source = LookupSource(context, sources[i]);
+        SetSourceState(source, context, AL_PLAYING);
     }
     ALCdevice_Unlock(device);
 
@@ -2417,21 +2407,10 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     }
 
     ALCdevice_Lock(context->Device);
-    if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
+    for(i = 0;i < n;i++)
     {
-        for(i = 0;i < n;i++)
-        {
-            source = LookupSource(context, sources[i]);
-            source->new_state = AL_PAUSED;
-        }
-    }
-    else
-    {
-        for(i = 0;i < n;i++)
-        {
-            source = LookupSource(context, sources[i]);
-            SetSourceState(source, context, AL_PAUSED);
-        }
+        source = LookupSource(context, sources[i]);
+        SetSourceState(source, context, AL_PAUSED);
     }
     ALCdevice_Unlock(context->Device);
 
@@ -2466,7 +2445,6 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     for(i = 0;i < n;i++)
     {
         source = LookupSource(context, sources[i]);
-        source->new_state = AL_NONE;
         SetSourceState(source, context, AL_STOPPED);
     }
     ALCdevice_Unlock(context->Device);
@@ -2502,7 +2480,6 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
     for(i = 0;i < n;i++)
     {
         source = LookupSource(context, sources[i]);
-        source->new_state = AL_NONE;
         SetSourceState(source, context, AL_INITIAL);
     }
     ALCdevice_Unlock(context->Device);
@@ -2810,7 +2787,6 @@ static void InitSourceParams(ALsource *Source, ALsizei num_sends)
     Source->OffsetType = AL_NONE;
     Source->SourceType = AL_UNDETERMINED;
     ATOMIC_INIT(&Source->state, AL_INITIAL);
-    Source->new_state = AL_NONE;
 
     ATOMIC_INIT(&Source->queue, NULL);
 
@@ -2979,7 +2955,7 @@ void UpdateAllSourceProps(ALCcontext *context)
  *
  * Sets the source's new play state given its current state.
  */
-ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
+static void SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
 {
     ALCdevice *device = Context->Device;
     ALvoice *voice;
@@ -3372,7 +3348,7 @@ static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *conte
  * Apply the stored playback offset to the Source. This function will update
  * the number of buffers "played" given the stored offset.
  */
-ALboolean ApplyOffset(ALsource *Source, ALvoice *voice)
+static ALboolean ApplyOffset(ALsource *Source, ALvoice *voice)
 {
     ALbufferlistitem *BufferList;
     const ALbuffer *Buffer;

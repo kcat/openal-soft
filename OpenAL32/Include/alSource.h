@@ -142,7 +142,6 @@ typedef struct ALsource {
 
     /** Source state (initial, playing, paused, or stopped) */
     ATOMIC(ALenum) state;
-    ALenum new_state;
 
     /** Source Buffer Queue head. */
     RWLock queue_lock;
@@ -174,9 +173,6 @@ inline struct ALsource *RemoveSource(ALCcontext *context, ALuint id)
 { return (struct ALsource*)RemoveUIntMapKeyNoLock(&context->SourceMap, id); }
 
 void UpdateAllSourceProps(ALCcontext *context);
-ALvoid SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state);
-ALboolean ApplyOffset(ALsource *Source, ALvoice *voice);
-
 
 ALvoid ReleaseALSources(ALCcontext *Context);
 

@@ -152,7 +152,7 @@ AL_API ALboolean AL_APIENTRY alGetBoolean(ALenum pname)
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire) == DeferAll)
+        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
             value = AL_TRUE;
         break;
 
@@ -198,7 +198,7 @@ AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire) == DeferAll)
+        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
             value = (ALdouble)AL_TRUE;
         break;
 
@@ -243,7 +243,7 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire) == DeferAll)
+        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
             value = (ALfloat)AL_TRUE;
         break;
 
@@ -288,7 +288,7 @@ AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire) == DeferAll)
+        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
             value = (ALint)AL_TRUE;
         break;
 
@@ -333,7 +333,7 @@ AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname)
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire) == DeferAll)
+        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
             value = (ALint64SOFT)AL_TRUE;
         break;
 
@@ -671,7 +671,7 @@ AL_API ALvoid AL_APIENTRY alDeferUpdatesSOFT(void)
     context = GetContextRef();
     if(!context) return;
 
-    ALCcontext_DeferUpdates(context, DeferAll);
+    ALCcontext_DeferUpdates(context);
 
     ALCcontext_DecRef(context);
 }

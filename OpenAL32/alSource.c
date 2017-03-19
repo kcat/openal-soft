@@ -54,7 +54,6 @@ static ALint64 GetSourceSampleOffset(ALsource *Source, ALCcontext *context, ALui
 static ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, ALuint64 *clocktime);
 static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context);
 static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac);
-static void SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state);
 static ALboolean ApplyOffset(ALsource *Source, ALvoice *voice);
 
 typedef enum SourceProp {
@@ -2330,10 +2329,11 @@ AL_API ALvoid AL_APIENTRY alSourcePlay(ALuint source)
 }
 AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 {
-    ALCdevice *device;
     ALCcontext *context;
+    ALCdevice *device;
     ALsource *source;
-    ALsizei i;
+    ALvoice *voice;
+    ALsizei i, j;
 
     context = GetContextRef();
     if(!context) return;
@@ -2374,8 +2374,122 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 
     for(i = 0;i < n;i++)
     {
+        ALbufferlistitem *BufferList;
+        ALbuffer *buffer = NULL;
+
         source = LookupSource(context, sources[i]);
-        SetSourceState(source, context, AL_PLAYING);
+        WriteLock(&source->queue_lock);
+        /* Check that there is a queue containing at least one valid, non zero
+         * length Buffer.
+         */
+        BufferList = ATOMIC_LOAD_SEQ(&source->queue);
+        while(BufferList)
+        {
+            if((buffer=BufferList->buffer) != NULL && buffer->SampleLen > 0)
+                break;
+            BufferList = BufferList->next;
+        }
+
+        /* If there's nothing to play, go right to stopped. */
+        if(!BufferList)
+        {
+            /* NOTE: A source without any playable buffers should not have an
+             * ALvoice since it shouldn't be in a playing or paused state. So
+             * there's no need to look up its voice and clear the source.
+             */
+            ATOMIC_STORE(&source->state, AL_STOPPED, almemory_order_relaxed);
+            source->OffsetType = AL_NONE;
+            source->Offset = 0.0;
+            goto finish_play;
+        }
+
+        voice = GetSourceVoice(source, context);
+        switch(GetSourceState(source, voice))
+        {
+            case AL_PLAYING:
+                assert(voice != NULL);
+                /* A source that's already playing is restarted from the beginning. */
+                ATOMIC_STORE(&voice->current_buffer, BufferList, almemory_order_relaxed);
+                ATOMIC_STORE(&voice->position, 0, almemory_order_relaxed);
+                ATOMIC_STORE(&voice->position_fraction, 0, almemory_order_release);
+                goto finish_play;
+
+            case AL_PAUSED:
+                assert(voice != NULL);
+                /* A source that's paused simply resumes. Make sure it uses the
+                 * volume last specified; there's no reason to fade from where
+                 * it stopped at.
+                 */
+                voice->Flags &= ~VOICE_IS_MOVING;
+                ATOMIC_STORE(&voice->Playing, true, almemory_order_release);
+                ATOMIC_STORE(&source->state, AL_PLAYING, almemory_order_release);
+                goto finish_play;
+
+            default:
+                break;
+        }
+
+        source->NeedsUpdate = AL_FALSE;
+        UpdateSourceProps(source, device->NumAuxSends);
+
+        /* Make sure this source isn't already active, and if not, look for an
+         * unused voice to put it in.
+         */
+        assert(voice == NULL);
+        for(j = 0;j < context->VoiceCount;j++)
+        {
+            if(ATOMIC_LOAD(&context->Voices[j]->Source, almemory_order_acquire) == NULL)
+            {
+                voice = context->Voices[j];
+                break;
+            }
+        }
+        if(voice == NULL)
+            voice = context->Voices[context->VoiceCount++];
+        ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
+        ATOMIC_THREAD_FENCE(almemory_order_acquire);
+
+        /* A source that's not playing or paused has any offset applied when it
+         * starts playing.
+         */
+        ATOMIC_STORE(&voice->current_buffer, BufferList, almemory_order_relaxed);
+        ATOMIC_STORE(&voice->position, 0, almemory_order_relaxed);
+        ATOMIC_STORE(&voice->position_fraction, 0, almemory_order_relaxed);
+        if(source->OffsetType != AL_NONE)
+            ApplyOffset(source, voice);
+
+        voice->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
+        voice->SampleSize  = BytesFromFmt(buffer->FmtType);
+
+        /* Clear previous samples. */
+        memset(voice->PrevSamples, 0, sizeof(voice->PrevSamples));
+
+        /* Clear the stepping value so the mixer knows not to mix this until
+         * the update gets applied.
+         */
+        voice->Step = 0;
+
+        voice->Flags = 0;
+        for(j = 0;j < voice->NumChannels;j++)
+            memset(&voice->Direct.Params[j].Hrtf.State, 0,
+                   sizeof(voice->Direct.Params[j].Hrtf.State));
+        if(device->AvgSpeakerDist > 0.0f)
+        {
+            ALfloat w1 = SPEEDOFSOUNDMETRESPERSEC /
+                        (device->AvgSpeakerDist * device->Frequency);
+            for(j = 0;j < voice->NumChannels;j++)
+            {
+                NfcFilterCreate1(&voice->Direct.Params[j].NFCtrlFilter[0], 0.0f, w1);
+                NfcFilterCreate2(&voice->Direct.Params[j].NFCtrlFilter[1], 0.0f, w1);
+                NfcFilterCreate3(&voice->Direct.Params[j].NFCtrlFilter[2], 0.0f, w1);
+            }
+        }
+
+        ATOMIC_STORE(&voice->Source, source, almemory_order_relaxed);
+        ATOMIC_STORE(&voice->Playing, true, almemory_order_release);
+        ATOMIC_STORE(&source->state, AL_PLAYING, almemory_order_release);
+    finish_play:
+        WriteUnlock(&source->queue_lock);
     }
     ALCdevice_Unlock(device);
 
@@ -2391,7 +2505,9 @@ AL_API ALvoid AL_APIENTRY alSourcePause(ALuint source)
 AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
 {
     ALCcontext *context;
+    ALCdevice *device;
     ALsource *source;
+    ALvoice *voice;
     ALsizei i;
 
     context = GetContextRef();
@@ -2406,13 +2522,23 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
             SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     }
 
-    ALCdevice_Lock(context->Device);
+    device = context->Device;
+    ALCdevice_Lock(device);
     for(i = 0;i < n;i++)
     {
         source = LookupSource(context, sources[i]);
-        SetSourceState(source, context, AL_PAUSED);
+        WriteLock(&source->queue_lock);
+        if((voice=GetSourceVoice(source, context)) != NULL)
+        {
+            ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
+            while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
+                althrd_yield();
+        }
+        if(GetSourceState(source, voice) == AL_PLAYING)
+            ATOMIC_STORE(&source->state, AL_PAUSED, almemory_order_release);
+        WriteUnlock(&source->queue_lock);
     }
-    ALCdevice_Unlock(context->Device);
+    ALCdevice_Unlock(device);
 
 done:
     UnlockSourcesRead(context);
@@ -2426,7 +2552,9 @@ AL_API ALvoid AL_APIENTRY alSourceStop(ALuint source)
 AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
 {
     ALCcontext *context;
+    ALCdevice *device;
     ALsource *source;
+    ALvoice *voice;
     ALsizei i;
 
     context = GetContextRef();
@@ -2441,13 +2569,26 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
             SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     }
 
-    ALCdevice_Lock(context->Device);
+    device = context->Device;
+    ALCdevice_Lock(device);
     for(i = 0;i < n;i++)
     {
         source = LookupSource(context, sources[i]);
-        SetSourceState(source, context, AL_STOPPED);
+        WriteLock(&source->queue_lock);
+        if((voice=GetSourceVoice(source, context)) != NULL)
+        {
+            ATOMIC_STORE(&voice->Source, NULL, almemory_order_relaxed);
+            ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
+            while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
+                althrd_yield();
+        }
+        if(ATOMIC_LOAD(&source->state, almemory_order_acquire) != AL_INITIAL)
+            ATOMIC_STORE(&source->state, AL_STOPPED, almemory_order_relaxed);
+        source->OffsetType = AL_NONE;
+        source->Offset = 0.0;
+        WriteUnlock(&source->queue_lock);
     }
-    ALCdevice_Unlock(context->Device);
+    ALCdevice_Unlock(device);
 
 done:
     UnlockSourcesRead(context);
@@ -2461,7 +2602,9 @@ AL_API ALvoid AL_APIENTRY alSourceRewind(ALuint source)
 AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
 {
     ALCcontext *context;
+    ALCdevice *device;
     ALsource *source;
+    ALvoice *voice;
     ALsizei i;
 
     context = GetContextRef();
@@ -2476,13 +2619,26 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
             SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     }
 
-    ALCdevice_Lock(context->Device);
+    device = context->Device;
+    ALCdevice_Lock(device);
     for(i = 0;i < n;i++)
     {
         source = LookupSource(context, sources[i]);
-        SetSourceState(source, context, AL_INITIAL);
+        WriteLock(&source->queue_lock);
+        if((voice=GetSourceVoice(source, context)) != NULL)
+        {
+            ATOMIC_STORE(&voice->Source, NULL, almemory_order_relaxed);
+            ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
+            while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
+                althrd_yield();
+        }
+        if(ATOMIC_LOAD(&source->state, almemory_order_acquire) != AL_INITIAL)
+            ATOMIC_STORE(&source->state, AL_INITIAL, almemory_order_relaxed);
+        source->OffsetType = AL_NONE;
+        source->Offset = 0.0;
+        WriteUnlock(&source->queue_lock);
     }
-    ALCdevice_Unlock(context->Device);
+    ALCdevice_Unlock(device);
 
 done:
     UnlockSourcesRead(context);
@@ -2950,169 +3106,6 @@ void UpdateAllSourceProps(ALCcontext *context)
     }
 }
 
-
-/* SetSourceState
- *
- * Sets the source's new play state given its current state.
- */
-static void SetSourceState(ALsource *Source, ALCcontext *Context, ALenum state)
-{
-    ALCdevice *device = Context->Device;
-    ALvoice *voice;
-
-    WriteLock(&Source->queue_lock);
-    if(state == AL_PLAYING)
-    {
-        ALCdevice *device = Context->Device;
-        ALbufferlistitem *BufferList;
-        ALbuffer *buffer = NULL;
-        ALsizei i;
-
-        /* Check that there is a queue containing at least one valid, non zero
-         * length Buffer. */
-        BufferList = ATOMIC_LOAD_SEQ(&Source->queue);
-        while(BufferList)
-        {
-            if((buffer=BufferList->buffer) != NULL && buffer->SampleLen > 0)
-                break;
-            BufferList = BufferList->next;
-        }
-
-        /* If there's nothing to play, go right to stopped. */
-        if(!BufferList)
-        {
-            /* NOTE: A source without any playable buffers should not have an
-             * ALvoice since it shouldn't be in a playing or paused state. So
-             * there's no need to look up its voice and clear the source.
-             */
-            ATOMIC_STORE(&Source->state, AL_STOPPED, almemory_order_relaxed);
-            Source->OffsetType = AL_NONE;
-            Source->Offset = 0.0;
-            goto done;
-        }
-
-        voice = GetSourceVoice(Source, Context);
-        switch(GetSourceState(Source, voice))
-        {
-            case AL_PLAYING:
-                assert(voice != NULL);
-                /* A source that's already playing is restarted from the beginning. */
-                ATOMIC_STORE(&voice->current_buffer, BufferList, almemory_order_relaxed);
-                ATOMIC_STORE(&voice->position, 0, almemory_order_relaxed);
-                ATOMIC_STORE(&voice->position_fraction, 0, almemory_order_release);
-                goto done;
-
-            case AL_PAUSED:
-                assert(voice != NULL);
-                /* A source that's paused simply resumes. Make sure it uses the
-                 * volume last specified; there's no reason to fade from where
-                 * it stopped at.
-                 */
-                voice->Flags &= ~VOICE_IS_MOVING;
-                ATOMIC_STORE(&voice->Playing, true, almemory_order_release);
-                ATOMIC_STORE(&Source->state, AL_PLAYING, almemory_order_release);
-                goto done;
-
-            default:
-                break;
-        }
-
-        Source->NeedsUpdate = AL_FALSE;
-        UpdateSourceProps(Source, device->NumAuxSends);
-
-        /* Make sure this source isn't already active, and if not, look for an
-         * unused voice to put it in.
-         */
-        assert(voice == NULL);
-        for(i = 0;i < Context->VoiceCount;i++)
-        {
-            if(ATOMIC_LOAD(&Context->Voices[i]->Source, almemory_order_acquire) == NULL)
-            {
-                voice = Context->Voices[i];
-                break;
-            }
-        }
-        if(voice == NULL)
-            voice = Context->Voices[Context->VoiceCount++];
-        ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
-        ATOMIC_THREAD_FENCE(almemory_order_acquire);
-
-        /* A source that's not playing or paused has any offset applied when it
-         * starts playing.
-         */
-        ATOMIC_STORE(&voice->current_buffer, BufferList, almemory_order_relaxed);
-        ATOMIC_STORE(&voice->position, 0, almemory_order_relaxed);
-        ATOMIC_STORE(&voice->position_fraction, 0, almemory_order_relaxed);
-        if(Source->OffsetType != AL_NONE)
-            ApplyOffset(Source, voice);
-
-        voice->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
-        voice->SampleSize  = BytesFromFmt(buffer->FmtType);
-
-        /* Clear previous samples. */
-        memset(voice->PrevSamples, 0, sizeof(voice->PrevSamples));
-
-        /* Clear the stepping value so the mixer knows not to mix this until
-         * the update gets applied.
-         */
-        voice->Step = 0;
-
-        voice->Flags = 0;
-        for(i = 0;i < MAX_INPUT_CHANNELS;i++)
-        {
-            ALsizei j;
-            for(j = 0;j < HRTF_HISTORY_LENGTH;j++)
-                voice->Direct.Params[i].Hrtf.State.History[j] = 0.0f;
-            for(j = 0;j < HRIR_LENGTH;j++)
-            {
-                voice->Direct.Params[i].Hrtf.State.Values[j][0] = 0.0f;
-                voice->Direct.Params[i].Hrtf.State.Values[j][1] = 0.0f;
-            }
-        }
-        if(device->AvgSpeakerDist > 0.0f)
-        {
-            ALfloat w1 = SPEEDOFSOUNDMETRESPERSEC /
-                         (device->AvgSpeakerDist * device->Frequency);
-            for(i = 0;i < voice->NumChannels;i++)
-            {
-                NfcFilterCreate1(&voice->Direct.Params[i].NFCtrlFilter[0], 0.0f, w1);
-                NfcFilterCreate2(&voice->Direct.Params[i].NFCtrlFilter[1], 0.0f, w1);
-                NfcFilterCreate3(&voice->Direct.Params[i].NFCtrlFilter[2], 0.0f, w1);
-            }
-        }
-
-        ATOMIC_STORE(&voice->Source, Source, almemory_order_relaxed);
-        ATOMIC_STORE(&voice->Playing, true, almemory_order_release);
-        ATOMIC_STORE(&Source->state, AL_PLAYING, almemory_order_release);
-    }
-    else if(state == AL_PAUSED)
-    {
-        if((voice=GetSourceVoice(Source, Context)) != NULL)
-        {
-            ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
-            while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
-                althrd_yield();
-        }
-        if(GetSourceState(Source, voice) == AL_PLAYING)
-            ATOMIC_STORE(&Source->state, AL_PAUSED, almemory_order_release);
-    }
-    else /*if(state == AL_STOPPED || state == AL_INITIAL)*/
-    {
-        if((voice=GetSourceVoice(Source, Context)) != NULL)
-        {
-            ATOMIC_STORE(&voice->Source, NULL, almemory_order_relaxed);
-            ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
-            while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
-                althrd_yield();
-        }
-        if(ATOMIC_LOAD(&Source->state, almemory_order_acquire) != AL_INITIAL)
-            ATOMIC_STORE(&Source->state, state, almemory_order_relaxed);
-        Source->OffsetType = AL_NONE;
-        Source->Offset = 0.0;
-    }
-done:
-    WriteUnlock(&Source->queue_lock);
-}
 
 /* GetSourceSampleOffset
  *

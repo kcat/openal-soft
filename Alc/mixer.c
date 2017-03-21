@@ -368,26 +368,27 @@ static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter
 
 ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei SamplesToDo)
 {
-    ResamplerFunc Resample;
     ALbufferlistitem *BufferListItem;
-    ALuint DataPosInt, DataPosFrac;
-    bool isplaying = true;
-    bool islooping;
-    ALint increment;
-    ALsizei OutPos;
-    ALsizei NumChannels;
-    ALsizei SampleSize;
+    ALsizei NumChannels, SampleSize;
+    ResamplerFunc Resample;
+    ALsizei DataPosInt;
+    ALuint DataPosFrac;
     ALint64 DataSize64;
+    ALint increment;
     ALsizei Counter;
+    ALsizei OutPos;
     ALsizei IrSize;
+    bool isplaying;
+    bool islooping;
     ALsizei chan;
     ALsizei send;
 
     /* Get source info */
-    DataPosInt     = ATOMIC_LOAD(&voice->position, almemory_order_acquire);
+    isplaying      = true; /* Will only be called while playing. */
+    islooping      = ATOMIC_LOAD(&Source->looping, almemory_order_acquire);
+    DataPosInt     = ATOMIC_LOAD(&voice->position, almemory_order_relaxed);
     DataPosFrac    = ATOMIC_LOAD(&voice->position_fraction, almemory_order_relaxed);
     BufferListItem = ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed);
-    islooping      = ATOMIC_LOAD(&Source->looping, almemory_order_relaxed);
     NumChannels    = voice->NumChannels;
     SampleSize     = voice->SampleSize;
     increment      = voice->Step;
@@ -445,7 +446,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                 Data += chan*SampleSize;
 
                 /* If current pos is beyond the loop range, do not loop */
-                if(!islooping || DataPosInt >= (ALuint)ALBuffer->LoopEnd)
+                if(!islooping || DataPosInt >= ALBuffer->LoopEnd)
                 {
                     islooping = false;
 
@@ -489,7 +490,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
             {
                 /* Crawl the buffer queue to fill in the temp buffer */
                 ALbufferlistitem *tmpiter = BufferListItem;
-                ALuint pos = DataPosInt;
+                ALsizei pos = DataPosInt;
 
                 while(tmpiter && SrcBufferSize > SrcDataSize)
                 {
@@ -497,7 +498,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                     if((ALBuffer=tmpiter->buffer) != NULL)
                     {
                         const ALubyte *Data = ALBuffer->data;
-                        ALuint DataSize = ALBuffer->SampleLen;
+                        ALsizei DataSize = ALBuffer->SampleLen;
 
                         /* Skip the data already played */
                         if(DataSize <= pos)
@@ -713,7 +714,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                 DataSize = ALBuffer->SampleLen;
                 LoopStart = ALBuffer->LoopStart;
                 LoopEnd = ALBuffer->LoopEnd;
-                if((ALuint)LoopEnd > DataPosInt)
+                if(LoopEnd > DataPosInt)
                     break;
             }
 
@@ -724,7 +725,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                 break;
             }
 
-            if((ALuint)DataSize > DataPosInt)
+            if(DataSize > DataPosInt)
                 break;
 
             if(!(BufferListItem=BufferListItem->next))

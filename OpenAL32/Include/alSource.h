@@ -149,7 +149,7 @@ typedef struct ALsource {
 
     ATOMIC(ALboolean) looping;
 
-    ALenum NeedsUpdate;
+    ATOMIC_FLAG PropsClean;
 
     ATOMIC(struct ALsourceProps*) Update;
     ATOMIC(struct ALsourceProps*) FreeList;

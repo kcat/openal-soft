@@ -2254,7 +2254,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 }
             }
 
-            source->NeedsUpdate = AL_TRUE;
+            ATOMIC_FLAG_CLEAR(&source->PropsClean, almemory_order_release);
 
             /* Clear any pre-existing source property structs, in case the
              * number of auxiliary sends changed. Playing (or paused) sources

@@ -421,7 +421,7 @@ static ALint Int64ValsByProp(ALenum prop)
     if(SourceShouldUpdate(Source, Context))                                   \
         UpdateSourceProps(Source, device->NumAuxSends);                       \
     else                                                                      \
-        Source->NeedsUpdate = AL_TRUE;                                        \
+        ATOMIC_FLAG_CLEAR(&Source->PropsClean, almemory_order_release);       \
 } while(0)
 
 static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALfloat *values)
@@ -2429,7 +2429,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
                 break;
         }
 
-        source->NeedsUpdate = AL_FALSE;
+        ATOMIC_FLAG_TEST_AND_SET(&source->PropsClean, almemory_order_acquire);
         UpdateSourceProps(source, device->NumAuxSends);
 
         /* Make sure this source isn't already active, and if not, look for an
@@ -2948,7 +2948,10 @@ static void InitSourceParams(ALsource *Source, ALsizei num_sends)
 
     ATOMIC_INIT(&Source->looping, AL_FALSE);
 
-    Source->NeedsUpdate = AL_TRUE;
+    /* No way to do an 'init' here, so just test+set with relaxed ordering and
+     * ignore the test.
+     */
+    ATOMIC_FLAG_TEST_AND_SET(&Source->PropsClean, almemory_order_relaxed);
 
     ATOMIC_INIT(&Source->Update, NULL);
     ATOMIC_INIT(&Source->FreeList, NULL);
@@ -3098,11 +3101,8 @@ void UpdateAllSourceProps(ALCcontext *context)
     {
         ALvoice *voice = context->Voices[pos];
         ALsource *source = ATOMIC_LOAD(&voice->Source, almemory_order_acquire);
-        if(source != NULL && source->NeedsUpdate)
-        {
-            source->NeedsUpdate = AL_FALSE;
+        if(source != NULL && ATOMIC_FLAG_TEST_AND_SET(&source->PropsClean, almemory_order_acq_rel))
             UpdateSourceProps(source, num_sends);
-        }
     }
 }
 

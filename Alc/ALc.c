@@ -1904,7 +1904,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         if(schans == ALC_BFORMAT3D_SOFT)
         {
-            device->FmtChans = DevFmtAmbi1 + aorder;
+            device->FmtChans = DevFmtAmbi1 + (aorder-1);
             device->AmbiLayout = alayout;
             device->AmbiScale = ascale;
         }

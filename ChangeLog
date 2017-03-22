@@ -7,11 +7,16 @@ openal-soft-1.18.0:
     Implemented 3D processing for some effects. Currently implemented for
     Reverb, Compressor, Equalizer, and Ring Modulator.
 
-    Implemented 2-channel UHJ output encoding. Used by default for stereo playback.
+    Implemented 2-channel UHJ output encoding. This needs to be enabled with a
+    config option to be used.
 
     Implemented dual-band processing for high-quality ambisonic decoding.
 
-    Implemented distance-compensation for high-quality ambisonic decoding.
+    Implemented distance-compensation for surround sound output.
+
+    Implemented near-field emulation and compensation with ambisonic rendering.
+    Currently only applies when using the high-quality ambisonic decoder or
+    ambisonic output, with appropriate config options.
 
     Implemented a config option to select a preferred HRTF.
 

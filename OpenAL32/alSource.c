@@ -139,13 +139,21 @@ static inline ALvoice *GetSourceVoice(const ALsource *source, const ALCcontext *
     return NULL;
 }
 
+/**
+ * Returns if the last known state for the source was playing or paused. Does
+ * not sync with the mixer voice.
+ */
 static inline bool IsPlayingOrPaused(ALsource *source)
 {
     ALenum state = ATOMIC_LOAD(&source->state, almemory_order_acquire);
     return state == AL_PLAYING || state == AL_PAUSED;
 }
 
-static ALenum GetSourceState(ALsource *source, ALvoice *voice)
+/**
+ * Returns an updated source state using the matching voice's status (or lack
+ * thereof).
+ */
+static inline ALenum GetSourceState(ALsource *source, ALvoice *voice)
 {
     if(!voice)
     {
@@ -158,6 +166,10 @@ static ALenum GetSourceState(ALsource *source, ALvoice *voice)
     return ATOMIC_LOAD(&source->state, almemory_order_acquire);
 }
 
+/**
+ * Returns if the source should specify an update, given the context's
+ * deferring state and the source's last known state.
+ */
 static inline bool SourceShouldUpdate(ALsource *source, ALCcontext *context)
 {
     return !ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire) &&

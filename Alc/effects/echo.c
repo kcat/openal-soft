@@ -34,14 +34,14 @@ typedef struct ALechoState {
     DERIVE_FROM_TYPE(ALeffectState);
 
     ALfloat *SampleBuffer;
-    ALuint BufferLength;
+    ALsizei BufferLength;
 
     // The echo is two tap. The delay is the number of samples from before the
     // current offset
     struct {
-        ALuint delay;
+        ALsizei delay;
     } Tap[2];
-    ALuint Offset;
+    ALsizei Offset;
     /* The panning gains for the two taps */
     ALfloat Gain[2][MAX_OUTPUT_CHANNELS];
 
@@ -83,12 +83,12 @@ static ALvoid ALechoState_Destruct(ALechoState *state)
 
 static ALboolean ALechoState_deviceUpdate(ALechoState *state, ALCdevice *Device)
 {
-    ALuint maxlen, i;
+    ALsizei maxlen, i;
 
     // Use the next power of 2 for the buffer length, so the tap offsets can be
     // wrapped using a mask instead of a modulo
-    maxlen  = fastf2u(AL_ECHO_MAX_DELAY * Device->Frequency) + 1;
-    maxlen += fastf2u(AL_ECHO_MAX_LRDELAY * Device->Frequency) + 1;
+    maxlen  = fastf2i(AL_ECHO_MAX_DELAY * Device->Frequency) + 1;
+    maxlen += fastf2i(AL_ECHO_MAX_LRDELAY * Device->Frequency) + 1;
     maxlen  = NextPowerOf2(maxlen);
 
     if(maxlen != state->BufferLength)
@@ -112,8 +112,8 @@ static ALvoid ALechoState_update(ALechoState *state, const ALCdevice *Device, co
     ALfloat coeffs[MAX_AMBI_COEFFS];
     ALfloat gain, lrpan, spread;
 
-    state->Tap[0].delay = fastf2u(props->Echo.Delay * frequency) + 1;
-    state->Tap[1].delay = fastf2u(props->Echo.LRDelay * frequency);
+    state->Tap[0].delay = fastf2i(props->Echo.Delay * frequency) + 1;
+    state->Tap[1].delay = fastf2i(props->Echo.LRDelay * frequency);
     state->Tap[1].delay += state->Tap[0].delay;
 
     spread = props->Echo.Spread;
@@ -144,13 +144,13 @@ static ALvoid ALechoState_update(ALechoState *state, const ALCdevice *Device, co
 
 static ALvoid ALechoState_process(ALechoState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
-    const ALuint mask = state->BufferLength-1;
-    const ALuint tap1 = state->Tap[0].delay;
-    const ALuint tap2 = state->Tap[1].delay;
-    ALuint offset = state->Offset;
+    const ALsizei mask = state->BufferLength-1;
+    const ALsizei tap1 = state->Tap[0].delay;
+    const ALsizei tap2 = state->Tap[1].delay;
+    ALsizei offset = state->Offset;
     ALfloat x[2], y[2], in, out;
-    ALuint base;
-    ALuint i, k;
+    ALuint base, k;
+    ALsizei i;
 
     x[0] = state->Filter.x[0];
     x[1] = state->Filter.x[1];
@@ -159,7 +159,7 @@ static ALvoid ALechoState_process(ALechoState *state, ALuint SamplesToDo, const 
     for(base = 0;base < SamplesToDo;)
     {
         ALfloat temps[128][2];
-        ALuint td = minu(128, SamplesToDo-base);
+        ALsizei td = mini(128, SamplesToDo-base);
 
         for(i = 0;i < td;i++)
         {

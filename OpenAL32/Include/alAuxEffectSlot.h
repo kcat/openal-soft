@@ -4,6 +4,7 @@
 #include "alMain.h"
 #include "alEffect.h"
 
+#include "atomic.h"
 #include "align.h"
 
 #ifdef __cplusplus
@@ -88,8 +89,6 @@ struct ALeffectslotProps {
 
 
 typedef struct ALeffectslot {
-    ALboolean NeedsUpdate;
-
     ALfloat   Gain;
     ALboolean AuxSendAuto;
 
@@ -99,6 +98,8 @@ typedef struct ALeffectslot {
 
         ALeffectState *State;
     } Effect;
+
+    ATOMIC_FLAG PropsClean;
 
     RefCount ref;
 

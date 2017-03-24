@@ -60,7 +60,7 @@ static void ALeffectState_DecRef(ALeffectState *state);
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))          \
         UpdateEffectSlotProps(slot);                                          \
     else                                                                      \
-        slot->NeedsUpdate = AL_TRUE;                                          \
+        ATOMIC_FLAG_CLEAR(&slot->PropsClean, almemory_order_release);         \
 } while(0)
 
 
@@ -579,9 +579,9 @@ ALenum InitEffectSlot(ALeffectslot *slot)
     if(!(slot->Effect.State=V0(factory,create)()))
         return AL_OUT_OF_MEMORY;
 
-    slot->NeedsUpdate = AL_FALSE;
     slot->Gain = 1.0;
     slot->AuxSendAuto = AL_TRUE;
+    ATOMIC_FLAG_TEST_AND_SET(&slot->PropsClean, almemory_order_relaxed);
     InitRef(&slot->ref, 0);
 
     ATOMIC_INIT(&slot->Update, NULL);
@@ -683,9 +683,8 @@ void UpdateAllEffectSlotProps(ALCcontext *context)
     slot = ATOMIC_LOAD_SEQ(&context->ActiveAuxSlotList);
     while(slot)
     {
-        if(slot->NeedsUpdate)
+        if(ATOMIC_FLAG_TEST_AND_SET(&slot->PropsClean, almemory_order_acq_rel))
             UpdateEffectSlotProps(slot);
-        slot->NeedsUpdate = AL_FALSE;
         slot = ATOMIC_LOAD(&slot->next, almemory_order_relaxed);
     }
     UnlockEffectSlotsRead(context);

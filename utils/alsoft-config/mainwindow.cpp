@@ -596,7 +596,8 @@ void MainWindow::loadConfig(const QString &fname)
     ui->srcSendLineEdit->insert(settings.value("sends").toString());
 
     QString resampler = settings.value("resampler").toString().trimmed();
-    ui->resamplerSlider->setValue(0);
+    ui->resamplerSlider->setValue(2);
+    ui->resamplerLabel->setText(resamplerList[2].name);
     /* The "cubic" and "sinc8" resamplers are no longer supported. Use "sinc4"
      * as a fallback.
      */
@@ -607,6 +608,7 @@ void MainWindow::loadConfig(const QString &fname)
         if(resampler == resamplerList[i].value)
         {
             ui->resamplerSlider->setValue(i);
+            ui->resamplerLabel->setText(resamplerList[i].name);
             break;
         }
     }

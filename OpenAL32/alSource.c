@@ -3113,7 +3113,7 @@ void UpdateAllSourceProps(ALCcontext *context)
     {
         ALvoice *voice = context->Voices[pos];
         ALsource *source = ATOMIC_LOAD(&voice->Source, almemory_order_acquire);
-        if(source != NULL && ATOMIC_FLAG_TEST_AND_SET(&source->PropsClean, almemory_order_acq_rel))
+        if(source != NULL && !ATOMIC_FLAG_TEST_AND_SET(&source->PropsClean, almemory_order_acq_rel))
             UpdateSourceProps(source, num_sends);
     }
 }

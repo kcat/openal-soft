@@ -683,7 +683,7 @@ void UpdateAllEffectSlotProps(ALCcontext *context)
     slot = ATOMIC_LOAD_SEQ(&context->ActiveAuxSlotList);
     while(slot)
     {
-        if(ATOMIC_FLAG_TEST_AND_SET(&slot->PropsClean, almemory_order_acq_rel))
+        if(!ATOMIC_FLAG_TEST_AND_SET(&slot->PropsClean, almemory_order_acq_rel))
             UpdateEffectSlotProps(slot);
         slot = ATOMIC_LOAD(&slot->next, almemory_order_relaxed);
     }

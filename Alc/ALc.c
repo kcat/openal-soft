@@ -1320,7 +1320,6 @@ static void ProbeDevices(al_string *list, struct BackendInfo *backendinfo, enum 
         ALCbackendFactory *factory = backendinfo->getFactory();
         V(factory,probe)(type);
     }
-
     UnlockLists();
 }
 static void ProbeAllDevicesList(void)
@@ -2573,11 +2572,13 @@ static void FreeContext(ALCcontext *context)
 /* ReleaseContext
  *
  * Removes the context reference from the given device and removes it from
- * being current on the running thread or globally.
+ * being current on the running thread or globally. Returns true if other
+ * contexts still exist on the device.
  */
-static void ReleaseContext(ALCcontext *context, ALCdevice *device)
+static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
 {
-    ALCcontext *origctx;
+    ALCcontext *origctx, *newhead;
+    bool ret = true;
 
     if(altss_get(LocalContext) == context)
     {
@@ -2592,8 +2593,8 @@ static void ReleaseContext(ALCcontext *context, ALCdevice *device)
 
     ALCdevice_Lock(device);
     origctx = context;
-    if(!ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(ALCcontext*, &device->ContextList,
-                                           &origctx, context->next))
+    newhead = context->next;
+    if(!ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(ALCcontext*, &device->ContextList, &origctx, newhead))
     {
         ALCcontext *volatile*list = &origctx->next;
         while(*list)
@@ -2606,9 +2607,12 @@ static void ReleaseContext(ALCcontext *context, ALCdevice *device)
             list = &(*list)->next;
         }
     }
+    else
+        ret = !!newhead;
     ALCdevice_Unlock(device);
 
     ALCcontext_DecRef(context);
+    return ret;
 }
 
 void ALCcontext_IncRef(ALCcontext *context)
@@ -3501,6 +3505,10 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     ALfloat valf;
     ALCenum err;
 
+    /* Explicitly hold the list lock while taking the BackendLock in case the
+     * device is asynchronously destropyed, to ensure this new context is
+     * properly cleaned up after being made.
+     */
     LockLists();
     if(!VerifyDevice(&device) || device->Type == Capture || !device->Connected)
     {
@@ -3609,13 +3617,18 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     ALCdevice *Device;
 
     LockLists();
-    /* alcGetContextsDevice sets an error for invalid contexts */
-    Device = alcGetContextsDevice(context);
+    if(!VerifyContext(&context))
+    {
+        UnlockLists();
+        alcSetError(NULL, ALC_INVALID_CONTEXT);
+        return;
+    }
+
+    Device = context->Device;
     if(Device)
     {
         almtx_lock(&Device->BackendLock);
-        ReleaseContext(context, Device);
-        if(!ATOMIC_LOAD_SEQ(&Device->ContextList))
+        if(!ReleaseContext(context, Device))
         {
             V0(Device->Backend,stop)();
             Device->Flags &= ~DEVICE_RUNNING;
@@ -3623,6 +3636,8 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
         almtx_unlock(&Device->BackendLock);
     }
     UnlockLists();
+
+    ALCcontext_DecRef(context);
 }
 
 

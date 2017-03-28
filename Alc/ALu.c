@@ -1281,20 +1281,18 @@ static void CalcSourceParams(ALvoice *voice, ALsource *source, ALCcontext *conte
 }
 
 
-static void UpdateContextSources(ALCcontext *ctx, ALeffectslot *slot)
+static void UpdateContextSources(ALCcontext *ctx, const struct ALeffectslotArray *slots)
 {
     ALvoice **voice, **voice_end;
     ALsource *source;
+    ALsizei i;
 
     IncrementRef(&ctx->UpdateCount);
     if(!ATOMIC_LOAD(&ctx->HoldUpdates, almemory_order_acquire))
     {
         ALboolean force = CalcListenerParams(ctx);
-        while(slot)
-        {
-            force |= CalcEffectSlotParams(slot, ctx->Device);
-            slot = ATOMIC_LOAD(&slot->next, almemory_order_relaxed);
-        }
+        for(i = 0;i < slots->count;i++)
+            force |= CalcEffectSlotParams(slots->slot[i], ctx->Device);
 
         voice = ctx->Voices;
         voice_end = voice + ctx->VoiceCount;
@@ -1417,24 +1415,23 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         if((slot=device->DefaultSlot) != NULL)
         {
             CalcEffectSlotParams(device->DefaultSlot, device);
-            for(i = 0;i < slot->NumChannels;i++)
-                memset(slot->WetBuffer[i], 0, SamplesToDo*sizeof(ALfloat));
+            for(c = 0;c < slot->NumChannels;c++)
+                memset(slot->WetBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
         }
 
         ctx = ATOMIC_LOAD(&device->ContextList, almemory_order_acquire);
         while(ctx)
         {
-            ALeffectslot *slotroot;
+            const struct ALeffectslotArray *auxslots;
 
-            slotroot = ATOMIC_LOAD(&ctx->ActiveAuxSlotList, almemory_order_acquire);
-            UpdateContextSources(ctx, slotroot);
+            auxslots = ATOMIC_LOAD(&ctx->ActiveAuxSlots, almemory_order_acquire);
+            UpdateContextSources(ctx, auxslots);
 
-            slot = slotroot;
-            while(slot)
+            for(i = 0;i < auxslots->count;i++)
             {
-                for(i = 0;i < slot->NumChannels;i++)
-                    memset(slot->WetBuffer[i], 0, SamplesToDo*sizeof(ALfloat));
-                slot = ATOMIC_LOAD(&slot->next, almemory_order_relaxed);
+                ALeffectslot *slot = auxslots->slot[i];
+                for(c = 0;c < slot->NumChannels;c++)
+                    memset(slot->WetBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
             }
 
             /* source processing */
@@ -1455,13 +1452,12 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             }
 
             /* effect slot processing */
-            slot = slotroot;
-            while(slot)
+            for(i = 0;i < auxslots->count;i++)
             {
+                ALeffectslot *slot = auxslots->slot[i];
                 ALeffectState *state = slot->Params.EffectState;
                 V(state,process)(SamplesToDo, SAFE_CONST(ALfloatBUFFERSIZE*,slot->WetBuffer),
                                  state->OutBuffer, state->OutChannels);
-                slot = ATOMIC_LOAD(&slot->next, almemory_order_relaxed);
             }
 
             ctx = ctx->next;

@@ -75,6 +75,12 @@ static const struct ALeffectStateFactoryVtable T##_ALeffectStateFactory_vtable =
 #define MAX_EFFECT_CHANNELS (4)
 
 
+struct ALeffectslotArray {
+    ALsizei count;
+    struct ALeffectslot *slot[];
+};
+
+
 struct ALeffectslotProps {
     ALfloat   Gain;
     ALboolean AuxSendAuto;
@@ -134,8 +140,6 @@ typedef struct ALeffectslot {
      * first-order device output (FOAOut).
      */
     alignas(16) ALfloat WetBuffer[MAX_EFFECT_CHANNELS][BUFFERSIZE];
-
-    ATOMIC(struct ALeffectslot*) next;
 } ALeffectslot;
 
 inline void LockEffectSlotsRead(ALCcontext *context)

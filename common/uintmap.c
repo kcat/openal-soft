@@ -119,6 +119,81 @@ ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value)
     return AL_NO_ERROR;
 }
 
+ALenum InsertUIntMapEntryNoLock(UIntMap *map, ALuint key, ALvoid *value)
+{
+    ALsizei pos = 0;
+
+    if(map->size > 0)
+    {
+        ALsizei count = map->size;
+        do {
+            ALsizei step = count>>1;
+            ALsizei i = pos+step;
+            if(!(map->keys[i] < key))
+                count = step;
+            else
+            {
+                pos = i+1;
+                count -= step+1;
+            }
+        } while(count > 0);
+    }
+
+    if(pos == map->size || map->keys[pos] != key)
+    {
+        if(map->size == map->limit)
+            return AL_OUT_OF_MEMORY;
+
+        if(map->size == map->capacity)
+        {
+            ALuint *keys = NULL;
+            ALvoid **values;
+            ALsizei newcap, keylen;
+
+            newcap = (map->capacity ? (map->capacity<<1) : 4);
+            if(map->limit > 0 && newcap > map->limit)
+                newcap = map->limit;
+            if(newcap > map->capacity)
+            {
+                /* Round the memory size for keys up to a multiple of the
+                 * pointer size.
+                 */
+                keylen = newcap * sizeof(map->keys[0]);
+                keylen += sizeof(map->values[0]) - 1;
+                keylen -= keylen%sizeof(map->values[0]);
+
+                keys = al_malloc(16, keylen + newcap*sizeof(map->values[0]));
+            }
+            if(!keys)
+                return AL_OUT_OF_MEMORY;
+            values = (ALvoid**)((ALbyte*)keys + keylen);
+
+            if(map->keys)
+            {
+                memcpy(keys, map->keys, map->size*sizeof(map->keys[0]));
+                memcpy(values, map->values, map->size*sizeof(map->values[0]));
+            }
+            al_free(map->keys);
+            map->keys = keys;
+            map->values = values;
+            map->capacity = newcap;
+        }
+
+        if(pos < map->size)
+        {
+            memmove(&map->keys[pos+1], &map->keys[pos],
+                    (map->size-pos)*sizeof(map->keys[0]));
+            memmove(&map->values[pos+1], &map->values[pos],
+                    (map->size-pos)*sizeof(map->values[0]));
+        }
+        map->size++;
+    }
+    map->keys[pos] = key;
+    map->values[pos] = value;
+
+    return AL_NO_ERROR;
+}
+
 ALvoid *RemoveUIntMapKey(UIntMap *map, ALuint key)
 {
     ALvoid *ptr = NULL;

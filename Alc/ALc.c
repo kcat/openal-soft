@@ -2449,6 +2449,7 @@ static ALCboolean VerifyDevice(ALCdevice **device)
 static ALvoid InitContext(ALCcontext *Context)
 {
     ALlistener *listener = Context->Listener;
+    struct ALeffectslotArray *auxslots;
 
     //Initialise listener
     listener->Gain = 1.0f;
@@ -2490,6 +2491,10 @@ static ALvoid InitContext(ALCcontext *Context)
     InitUIntMap(&Context->SourceMap, Context->Device->SourcesMax);
     InitUIntMap(&Context->EffectSlotMap, Context->Device->AuxiliaryEffectSlotMax);
 
+    auxslots = al_calloc(DEF_ALIGN, offsetof(struct ALeffectslotArray, slot[0]));
+    auxslots->count = 0;
+    ATOMIC_INIT(&Context->ActiveAuxSlots, auxslots);
+
     //Set globals
     Context->DistanceModel = DefaultDistanceModel;
     Context->SourceDistanceModel = AL_FALSE;
@@ -2510,10 +2515,15 @@ static ALvoid InitContext(ALCcontext *Context)
 static void FreeContext(ALCcontext *context)
 {
     ALlistener *listener = context->Listener;
+    struct ALeffectslotArray *auxslots;
     struct ALlistenerProps *lprops;
     size_t count;
 
     TRACE("%p\n", context);
+
+    auxslots = ATOMIC_EXCHANGE(struct ALeffectslotArray*, &context->ActiveAuxSlots,
+                               NULL, almemory_order_relaxed);
+    al_free(auxslots);
 
     if(context->SourceMap.size > 0)
     {
@@ -3511,7 +3521,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         ALContext->Listener = (ALlistener*)ALContext->_listener_mem;
 
         ALContext->Device = device;
-        ATOMIC_INIT(&ALContext->ActiveAuxSlotList, NULL);
+        ATOMIC_INIT(&ALContext->ActiveAuxSlots, NULL);
 
         ALContext->Voices = NULL;
         ALContext->MaxVoices = 0;

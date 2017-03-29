@@ -75,7 +75,7 @@ Soft has its own config option for this, this is ignored.
 /opt/xover_freq <freq:float>
 Specifies the crossover frequency for dual-band decoders. Frequencies less than
 this are fed to the low-frequency matrix, and frequencies greater than this are
-fed to the high-freqyency matrix. Unused for single-band decoders.
+fed to the high-frequency matrix. Unused for single-band decoders.
 
 /opt/xover_ratio <decibels:float>
 Specifies the volume ratio between the frequency bands. Values greater than 0

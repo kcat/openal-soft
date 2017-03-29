@@ -20,8 +20,8 @@ of any specific speaker layout, so with a proper decoder the same recording can
 be played back on a variety of speaker setups, from quadrophonic and hexagonal
 to cubic and other periphonic (with height) layouts.
 
-Although it was developed over 30 years ago, various factors held ambisonics
-back from really taking hold in the consumer market. However, given the solid
+Although it was developed decades ago, various factors held ambisonics back
+from really taking hold in the consumer market. However, given the solid
 theories backing it, as well as the potential and practical benefits on offer,
 it continued to be a topic of research over the years, with improvements being
 made over the original design. One of the improvements made is the use of
@@ -60,6 +60,13 @@ proper sound wave that's perceived to come from the intended direction. Doing
 this creates a larger sweet spot, allowing the perceived sound direction to
 remain correct over a larger area around the center of the speakers.
 
+In addition, Ambisonics can encode the near-field effect of sounds, effectively
+capturing the sound distance. The near-field effect is a subtle low-frequency
+boost as a result of wave-front curvature, and properly compensating for this
+occuring with the output speakers (as well as emulating it with a synthesized
+soundfield) can create an improved sense of distance for sounds that move near
+or far.
+
 
 How Is It Used?
 ===============
@@ -69,8 +76,8 @@ the speaker setup the user has. Since the OpenAL API does not explicitly handle
 the output channel configuration, it has a lot of leeway in how to deal with
 the audio before it's played back for the user to hear. Consequently, OpenAL
 Soft (or any other OpenAL implementation that wishes to) can render using
-Ambisonics and decode the ambisonic mix for a high level of directional
-accuracy over what simple pan-pot could provide.
+Ambisonics and decode the ambisonic mix for a high level of accuracy over what
+simple pan-pot could provide.
 
 This is effectively what the high-quality mode option does, when given an
 appropriate decoder configuation for the playback channel layout. 3D rendering
@@ -113,7 +120,7 @@ response, with ambisonics or not. It will do the best it can, but there are
 trade-offs between detail and accuracy.
 
 Another issue lies with HRTF. While it's certainly possible to play an
-ambisonic mix using HRTF, doing so with a high degree of spatial detail
-requires a fair amount of resources, in both memory and processing time. And
-even with it, mixing sounds with HRTF directly will still be better for
-positional accuracy.
+ambisonic mix using HRTF and retain a sense of 3D sound, doing so with a high
+degree of spatial detail requires a fair amount of resources, in both memory
+and processing time. And even with it, mixing sounds with HRTF directly will
+still be better for positional accuracy.

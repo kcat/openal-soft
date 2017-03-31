@@ -1324,8 +1324,6 @@ static ALboolean IsValidType(ALenum type)
         case AL_UNSIGNED_INT_SOFT:
         case AL_FLOAT_SOFT:
         case AL_DOUBLE_SOFT:
-        case AL_BYTE3_SOFT:
-        case AL_UNSIGNED_BYTE3_SOFT:
         case AL_MULAW_SOFT:
             return AL_TRUE;
     }

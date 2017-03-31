@@ -1306,34 +1306,30 @@ static void UpdateContextSources(ALCcontext *ctx, const struct ALeffectslotArray
 }
 
 
-/* Specialized function to clamp to [-1, +1] with only one branch. This also
- * converts NaN to 0. */
-static inline ALfloat aluClampf(ALfloat val)
-{
-    if(fabsf(val) <= 1.0f) return val;
-    return (ALfloat)((0.0f < val) - (val < 0.0f));
-}
-
 static inline ALfloat aluF2F(ALfloat val)
 { return val; }
 
+#define S25_MAX_NORM (16777215.0f/16777216.0f)
 static inline ALint aluF2I(ALfloat val)
 {
-    /* Floats only have a 24-bit mantissa, so [-16777215, +16777215] is the max
-     * integer range normalized floats can be safely converted to.
+    /* Floats only have a 24-bit mantissa, so [-16777216, +16777216] is the max
+     * integer range normalized floats can be safely converted to (a bit of the
+     * exponent helps out, effectively giving 25 bits).
      */
-    return fastf2i(aluClampf(val)*16777215.0f)<<7;
+    return fastf2i(clampf(val, -1.0f, S25_MAX_NORM)*16777216.0f)<<7;
 }
 static inline ALuint aluF2UI(ALfloat val)
 { return aluF2I(val)+2147483648u; }
 
+#define S16_MAX_NORM (32767.0f/32768.0f)
 static inline ALshort aluF2S(ALfloat val)
-{ return fastf2i(aluClampf(val)*32767.0f); }
+{ return fastf2i(clampf(val, -1.0f, S16_MAX_NORM)*32768.0f); }
 static inline ALushort aluF2US(ALfloat val)
 { return aluF2S(val)+32768; }
 
+#define S8_MAX_NORM (127.0f/128.0f)
 static inline ALbyte aluF2B(ALfloat val)
-{ return fastf2i(aluClampf(val)*127.0f); }
+{ return fastf2i(clampf(val, -1.0f, S8_MAX_NORM)*128.0f); }
 static inline ALubyte aluF2UB(ALfloat val)
 { return aluF2B(val)+128; }
 

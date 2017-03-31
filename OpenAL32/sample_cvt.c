@@ -574,9 +574,10 @@ static inline ALfloat Conv_ALfloat_ALuint(ALuint val)
 #define DECL_TEMPLATE(FT, T, smin, smax)        \
 static inline AL##T Conv_AL##T##_##FT(FT val)   \
 {                                               \
-    if(val > 1.0f) return smax;                 \
-    if(val < -1.0f) return smin;                \
-    return (AL##T)(val * (FT)smax);             \
+    val *= (FT)smax + 1;                        \
+    if(val >= (FT)smax) return smax;            \
+    if(val <= (FT)smin) return smin;            \
+    return (AL##T)val;                          \
 }                                               \
 static inline ALu##T Conv_ALu##T##_##FT(FT val) \
 { return Conv_ALu##T##_AL##T(Conv_AL##T##_##FT(val)); }
@@ -590,9 +591,10 @@ DECL_TEMPLATE(ALdouble, int, -2147483647-1, 2147483647)
 /* Special handling for float32 to int32, since it would overflow. */
 static inline ALint Conv_ALint_ALfloat(ALfloat val)
 {
-    if(val > 1.0f) return 2147483647;
-    if(val < -1.0f) return -2147483647-1;
-    return (ALint)(val * 16777215.0f) << 7;
+    val *= 16777216.0f;
+    if(val >= 16777215.0f) return 0x7fffff80/*16777215 << 7*/;
+    if(val <= -16777216.0f) return 0x80000000/*-16777216 << 7*/;
+    return (ALint)val << 7;
 }
 static inline ALuint Conv_ALuint_ALfloat(ALfloat val)
 { return Conv_ALuint_ALint(Conv_ALint_ALfloat(val)); }

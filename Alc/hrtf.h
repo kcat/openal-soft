@@ -15,7 +15,7 @@ struct Hrtf {
 
     const ALubyte *azCount;
     const ALushort *evOffset;
-    const ALshort *coeffs;
+    const ALfloat *coeffs;
     const ALubyte *delays;
 
     const char *filename;

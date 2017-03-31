@@ -51,7 +51,7 @@ static const ALchar magicMarker01[8] = "MinPHR01";
 
 /* First value for pass-through coefficients (remaining are 0), used for omni-
  * directional sounds. */
-static const ALfloat PassthruCoeff = 32767.0f * 0.707106781187f/*sqrt(0.5)*/;
+static const ALfloat PassthruCoeff = 0.707106781187f/*sqrt(0.5)*/;
 
 static struct Hrtf *LoadedHrtfs = NULL;
 
@@ -110,12 +110,12 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
 
     /* Calculate the normalized and attenuated HRIR coefficients. */
     i = 0;
-    coeffs[i][0] = lerp(PassthruCoeff, Hrtf->coeffs[lidx+i], dirfact) * (1.0f/32767.0f);
-    coeffs[i][1] = lerp(PassthruCoeff, Hrtf->coeffs[ridx+i], dirfact) * (1.0f/32767.0f);
+    coeffs[i][0] = lerp(PassthruCoeff, Hrtf->coeffs[lidx+i], dirfact);
+    coeffs[i][1] = lerp(PassthruCoeff, Hrtf->coeffs[ridx+i], dirfact);
     for(i = 1;i < Hrtf->irSize;i++)
     {
-        coeffs[i][0] = Hrtf->coeffs[lidx+i]*(1.0f/32767.0f) * dirfact;
-        coeffs[i][1] = Hrtf->coeffs[ridx+i]*(1.0f/32767.0f) * dirfact;
+        coeffs[i][0] = Hrtf->coeffs[lidx+i] * dirfact;
+        coeffs[i][1] = Hrtf->coeffs[ridx+i] * dirfact;
     }
 }
 
@@ -132,7 +132,7 @@ ALsizei BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsize
     ALsizei min_delay = HRTF_HISTORY_LENGTH;
     ALfloat temps[3][HRIR_LENGTH];
     ALsizei max_length = 0;
-    ALsizei i, j, c, b;
+    ALsizei i, c, b;
 
     for(c = 0;c < AmbiCount;c++)
     {
@@ -163,63 +163,69 @@ ALsizei BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsize
     bandsplit_init(&splitter, 400.0f / (ALfloat)Hrtf->sampleRate);
     for(c = 0;c < AmbiCount;c++)
     {
-        const ALshort *fir;
+        const ALfloat *fir;
         ALsizei delay;
 
-        /* Convert the left FIR from shorts to float */
+        /* Add to the left output coefficients with the specified delay. */
         fir = &Hrtf->coeffs[lidx[c] * Hrtf->irSize];
+        delay = Hrtf->delays[lidx[c]] - min_delay;
         if(NUM_BANDS == 1)
         {
-            for(i = 0;i < Hrtf->irSize;i++)
-                temps[0][i] = fir[i] / 32767.0f;
+            for(i = 0;i < NumChannels;++i)
+            {
+                ALsizei j = delay, k = 0;
+                while(j < HRIR_LENGTH && k < Hrtf->irSize)
+                    state->Chan[i].Coeffs[j++][0] += fir[k++] * AmbiMatrix[c][0][i];
+            }
         }
         else
         {
             /* Band-split left HRIR into low and high frequency responses. */
             bandsplit_clear(&splitter);
             for(i = 0;i < Hrtf->irSize;i++)
-                temps[2][i] = fir[i] / 32767.0f;
+                temps[2][i] = fir[i];
             bandsplit_process(&splitter, temps[0], temps[1], temps[2], HRIR_LENGTH);
-        }
 
-        /* Add to the left output coefficients with the specified delay. */
-        delay = Hrtf->delays[lidx[c]] - min_delay;
-        for(i = 0;i < NumChannels;++i)
-        {
-            for(b = 0;b < NUM_BANDS;b++)
+            for(i = 0;i < NumChannels;++i)
             {
-                ALsizei k = 0;
-                for(j = delay;j < HRIR_LENGTH;++j)
-                    state->Chan[i].Coeffs[j][0] += temps[b][k++] * AmbiMatrix[c][b][i];
+                for(b = 0;b < NUM_BANDS;b++)
+                {
+                    ALsizei j = delay, k = 0;
+                    while(j < HRIR_LENGTH)
+                        state->Chan[i].Coeffs[j++][0] += temps[b][k++] * AmbiMatrix[c][b][i];
+                }
             }
         }
         max_length = maxi(max_length, mini(delay + Hrtf->irSize, HRIR_LENGTH));
 
-        /* Convert the right FIR from shorts to float */
+        /* Add to the right output coefficients with the specified delay. */
         fir = &Hrtf->coeffs[ridx[c] * Hrtf->irSize];
+        delay = Hrtf->delays[ridx[c]] - min_delay;
         if(NUM_BANDS == 1)
         {
-            for(i = 0;i < Hrtf->irSize;i++)
-                temps[0][i] = fir[i] / 32767.0f;
+            for(i = 0;i < NumChannels;++i)
+            {
+                ALsizei j = delay, k = 0;
+                while(j < HRIR_LENGTH && k < Hrtf->irSize)
+                    state->Chan[i].Coeffs[j++][1] += fir[k++] * AmbiMatrix[c][0][i];
+            }
         }
         else
         {
             /* Band-split right HRIR into low and high frequency responses. */
             bandsplit_clear(&splitter);
             for(i = 0;i < Hrtf->irSize;i++)
-                temps[2][i] = fir[i] / 32767.0f;
+                temps[2][i] = fir[i];
             bandsplit_process(&splitter, temps[0], temps[1], temps[2], HRIR_LENGTH);
-        }
 
-        /* Add to the right output coefficients with the specified delay. */
-        delay = Hrtf->delays[ridx[c]] - min_delay;
-        for(i = 0;i < NumChannels;++i)
-        {
-            for(b = 0;b < NUM_BANDS;b++)
+            for(i = 0;i < NumChannels;++i)
             {
-                ALuint k = 0;
-                for(j = delay;j < HRIR_LENGTH;++j)
-                    state->Chan[i].Coeffs[j][1] += temps[b][k++] * AmbiMatrix[c][b][i];
+                for(b = 0;b < NUM_BANDS;b++)
+                {
+                    ALsizei j = delay, k = 0;
+                    while(j < HRIR_LENGTH)
+                        state->Chan[i].Coeffs[j++][1] += temps[b][k++] * AmbiMatrix[c][b][i];
+                }
             }
         }
         max_length = maxi(max_length, mini(delay + Hrtf->irSize, HRIR_LENGTH));
@@ -241,8 +247,9 @@ static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALsizei evCount
 
     total  = sizeof(struct Hrtf);
     total += sizeof(Hrtf->azCount[0])*evCount;
-    total  = RoundUp(total, 2); /* Align for (u)short fields */
+    total  = RoundUp(total, sizeof(ALushort)); /* Align for ushort fields */
     total += sizeof(Hrtf->evOffset[0])*evCount;
+    total  = RoundUp(total, sizeof(ALfloat)); /* Align for float fields */
     total += sizeof(Hrtf->coeffs[0])*irSize*irCount;
     total += sizeof(Hrtf->delays[0])*irCount;
     total += al_string_length(filename)+1;
@@ -257,7 +264,7 @@ static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALsizei evCount
         ALushort *_evOffset;
         ALubyte *_azCount;
         ALubyte *_delays;
-        ALshort *_coeffs;
+        ALfloat *_coeffs;
         char *_name;
         ALsizei i;
 
@@ -269,11 +276,12 @@ static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALsizei evCount
         _azCount = (ALubyte*)(base + offset); Hrtf->azCount = _azCount;
         offset += sizeof(_azCount[0])*evCount;
 
-        offset = RoundUp(offset, 2); /* Align for (u)short fields */
+        offset = RoundUp(offset, sizeof(ALushort)); /* Align for ushort fields */
         _evOffset = (ALushort*)(base + offset); Hrtf->evOffset = _evOffset;
         offset += sizeof(_evOffset[0])*evCount;
 
-        _coeffs = (ALshort*)(base + offset); Hrtf->coeffs = _coeffs;
+        offset = RoundUp(offset, sizeof(ALfloat)); /* Align for float fields */
+        _coeffs = (ALfloat*)(base + offset); Hrtf->coeffs = _coeffs;
         offset += sizeof(_coeffs[0])*irSize*irCount;
 
         _delays = (ALubyte*)(base + offset); Hrtf->delays = _delays;
@@ -287,7 +295,8 @@ static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALsizei evCount
         /* Copy input data to storage. */
         for(i = 0;i < evCount;i++) _azCount[i] = azCount[i];
         for(i = 0;i < evCount;i++) _evOffset[i] = evOffset[i];
-        for(i = 0;i < irSize*irCount;i++) _coeffs[i] = coeffs[i];
+        for(i = 0;i < irSize*irCount;i++)
+            _coeffs[i] = coeffs[i] / 32768.0f;
         for(i = 0;i < irCount;i++) _delays[i] = delays[i];
         for(i = 0;i < (ALsizei)al_string_length(filename);i++)
             _name[i] = VECTOR_ELEM(filename, i);

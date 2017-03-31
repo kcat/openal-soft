@@ -283,10 +283,10 @@ void aluInitMixer(void)
 
 
 static inline ALfloat Sample_ALbyte(ALbyte val)
-{ return val * (1.0f/127.0f); }
+{ return val * (1.0f/128.0f); }
 
 static inline ALfloat Sample_ALshort(ALshort val)
-{ return val * (1.0f/32767.0f); }
+{ return val * (1.0f/32768.0f); }
 
 static inline ALfloat Sample_ALfloat(ALfloat val)
 { return val; }

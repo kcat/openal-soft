@@ -608,17 +608,17 @@ static inline T Conv_##T##_##UT(UT val) { return (T)Conv_##ST##_##UT(val) * OP; 
 #define DECL_TEMPLATE2(T1, T2, OP)     \
 DECL_TEMPLATE(T1, AL##T2, ALu##T2, OP)
 
-DECL_TEMPLATE2(ALfloat, byte, (1.0f/127.0f))
-DECL_TEMPLATE2(ALdouble, byte, (1.0/127.0))
-DECL_TEMPLATE2(ALfloat, short, (1.0f/32767.0f))
-DECL_TEMPLATE2(ALdouble, short, (1.0/32767.0))
-DECL_TEMPLATE2(ALdouble, int, (1.0/2147483647.0))
+DECL_TEMPLATE2(ALfloat, byte, (1.0f/128.0f))
+DECL_TEMPLATE2(ALdouble, byte, (1.0/128.0))
+DECL_TEMPLATE2(ALfloat, short, (1.0f/32768.0f))
+DECL_TEMPLATE2(ALdouble, short, (1.0/32768.0))
+DECL_TEMPLATE2(ALdouble, int, (1.0/2147483648.0))
 
 /* Special handling for int32 to float32, since it would overflow. */
 static inline ALfloat Conv_ALfloat_ALint(ALint val)
-{ return (ALfloat)(val>>7) * (1.0f/16777215.0f); }
+{ return (ALfloat)(val>>7) * (1.0f/16777216.0f); }
 static inline ALfloat Conv_ALfloat_ALuint(ALuint val)
-{ return (ALfloat)(Conv_ALint_ALuint(val)>>7) * (1.0f/16777215.0f); }
+{ return (ALfloat)(Conv_ALint_ALuint(val)>>7) * (1.0f/16777216.0f); }
 
 #undef DECL_TEMPLATE2
 #undef DECL_TEMPLATE

@@ -231,6 +231,74 @@ ALsizei BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsize
 }
 
 
+static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALsizei evCount, ALsizei irCount,
+                                    const ALubyte *azCount, const ALushort *evOffset,
+                                    const ALshort *coeffs, const ALubyte *delays,
+                                    const_al_string filename)
+{
+    struct Hrtf *Hrtf;
+    size_t total;
+
+    total  = sizeof(struct Hrtf);
+    total += sizeof(Hrtf->azCount[0])*evCount;
+    total  = RoundUp(total, 2); /* Align for (u)short fields */
+    total += sizeof(Hrtf->evOffset[0])*evCount;
+    total += sizeof(Hrtf->coeffs[0])*irSize*irCount;
+    total += sizeof(Hrtf->delays[0])*irCount;
+    total += al_string_length(filename)+1;
+
+    Hrtf = al_calloc(16, total);
+    if(Hrtf == NULL)
+        ERR("Out of memory.\n");
+    else
+    {
+        uintptr_t offset = sizeof(struct Hrtf);
+        char *base = (char*)Hrtf;
+        ALushort *_evOffset;
+        ALubyte *_azCount;
+        ALubyte *_delays;
+        ALshort *_coeffs;
+        char *_name;
+        ALsizei i;
+
+        Hrtf->sampleRate = rate;
+        Hrtf->irSize = irSize;
+        Hrtf->evCount = evCount;
+
+        /* Set up pointers to storage following the main HRTF struct. */
+        _azCount = (ALubyte*)(base + offset); Hrtf->azCount = _azCount;
+        offset += sizeof(_azCount[0])*evCount;
+
+        offset = RoundUp(offset, 2); /* Align for (u)short fields */
+        _evOffset = (ALushort*)(base + offset); Hrtf->evOffset = _evOffset;
+        offset += sizeof(_evOffset[0])*evCount;
+
+        _coeffs = (ALshort*)(base + offset); Hrtf->coeffs = _coeffs;
+        offset += sizeof(_coeffs[0])*irSize*irCount;
+
+        _delays = (ALubyte*)(base + offset); Hrtf->delays = _delays;
+        offset += sizeof(_delays[0])*irCount;
+
+        _name = (char*)(base + offset); Hrtf->filename = _name;
+        offset += sizeof(_name[0])*(al_string_length(filename)+1);
+
+        Hrtf->next = NULL;
+
+        /* Copy input data to storage. */
+        for(i = 0;i < evCount;i++) _azCount[i] = azCount[i];
+        for(i = 0;i < evCount;i++) _evOffset[i] = evOffset[i];
+        for(i = 0;i < irSize*irCount;i++) _coeffs[i] = coeffs[i];
+        for(i = 0;i < irCount;i++) _delays[i] = delays[i];
+        for(i = 0;i < (ALsizei)al_string_length(filename);i++)
+            _name[i] = VECTOR_ELEM(filename, i);
+        _name[i] = '\0';
+
+        assert(offset == total);
+    }
+
+    return Hrtf;
+}
+
 static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const_al_string filename)
 {
     const ALubyte maxDelay = HRTF_HISTORY_LENGTH-1;
@@ -387,45 +455,8 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const_al_str
     }
 
     if(!failed)
-    {
-        size_t total = sizeof(struct Hrtf);
-        total += sizeof(Hrtf->azCount[0])*evCount;
-        total  = (total+1)&~1; /* Align for (u)short fields */
-        total += sizeof(Hrtf->evOffset[0])*evCount;
-        total += sizeof(Hrtf->coeffs[0])*irSize*irCount;
-        total += sizeof(Hrtf->delays[0])*irCount;
-        total += al_string_length(filename)+1;
-
-        Hrtf = al_calloc(16, total);
-        if(Hrtf == NULL)
-        {
-            ERR("Out of memory.\n");
-            failed = AL_TRUE;
-        }
-    }
-
-    if(!failed)
-    {
-        char *base = (char*)Hrtf;
-        uintptr_t offset = sizeof(*Hrtf);
-
-        Hrtf->sampleRate = rate;
-        Hrtf->irSize = irSize;
-        Hrtf->evCount = evCount;
-        Hrtf->azCount = ((ALubyte*)(base + offset)); offset += evCount*sizeof(Hrtf->azCount[0]);
-        offset = (offset+1)&~1; /* Align for (u)short fields */
-        Hrtf->evOffset = ((ALushort*)(base + offset)); offset += evCount*sizeof(Hrtf->evOffset[0]);
-        Hrtf->coeffs = ((ALshort*)(base + offset)); offset += irSize*irCount*sizeof(Hrtf->coeffs[0]);
-        Hrtf->delays = ((ALubyte*)(base + offset)); offset += irCount*sizeof(Hrtf->delays[0]);
-        Hrtf->filename = ((char*)(base + offset));
-        Hrtf->next = NULL;
-
-        memcpy((void*)Hrtf->azCount, azCount, sizeof(azCount[0])*evCount);
-        memcpy((void*)Hrtf->evOffset, evOffset, sizeof(evOffset[0])*evCount);
-        memcpy((void*)Hrtf->coeffs, coeffs, sizeof(coeffs[0])*irSize*irCount);
-        memcpy((void*)Hrtf->delays, delays, sizeof(delays[0])*irCount);
-        memcpy((void*)Hrtf->filename, al_string_get_cstr(filename), al_string_length(filename)+1);
-    }
+        Hrtf = CreateHrtfStore(rate, irSize, evCount, irCount, azCount,
+                               evOffset, coeffs, delays, filename);
 
     free(azCount);
     free(evOffset);
@@ -568,45 +599,8 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const_al_str
     }
 
     if(!failed)
-    {
-        size_t total = sizeof(struct Hrtf);
-        total += sizeof(Hrtf->azCount[0])*evCount;
-        total  = (total+1)&~1; /* Align for (u)short fields */
-        total += sizeof(Hrtf->evOffset[0])*evCount;
-        total += sizeof(Hrtf->coeffs[0])*irSize*irCount;
-        total += sizeof(Hrtf->delays[0])*irCount;
-        total += al_string_length(filename)+1;
-
-        Hrtf = al_calloc(16, total);
-        if(Hrtf == NULL)
-        {
-            ERR("Out of memory.\n");
-            failed = AL_TRUE;
-        }
-    }
-
-    if(!failed)
-    {
-        char *base = (char*)Hrtf;
-        uintptr_t offset = sizeof(*Hrtf);
-
-        Hrtf->sampleRate = rate;
-        Hrtf->irSize = irSize;
-        Hrtf->evCount = evCount;
-        Hrtf->azCount = ((ALubyte*)(base + offset)); offset += evCount*sizeof(Hrtf->azCount[0]);
-        offset = (offset+1)&~1; /* Align for (u)short fields */
-        Hrtf->evOffset = ((ALushort*)(base + offset)); offset += evCount*sizeof(Hrtf->evOffset[0]);
-        Hrtf->coeffs = ((ALshort*)(base + offset)); offset += irSize*irCount*sizeof(Hrtf->coeffs[0]);
-        Hrtf->delays = ((ALubyte*)(base + offset)); offset += irCount*sizeof(Hrtf->delays[0]);
-        Hrtf->filename = ((char*)(base + offset));
-        Hrtf->next = NULL;
-
-        memcpy((void*)Hrtf->azCount, azCount, sizeof(azCount[0])*evCount);
-        memcpy((void*)Hrtf->evOffset, evOffset, sizeof(evOffset[0])*evCount);
-        memcpy((void*)Hrtf->coeffs, coeffs, sizeof(coeffs[0])*irSize*irCount);
-        memcpy((void*)Hrtf->delays, delays, sizeof(delays[0])*irCount);
-        memcpy((void*)Hrtf->filename, al_string_get_cstr(filename), al_string_length(filename)+1);
-    }
+        Hrtf = CreateHrtfStore(rate, irSize, evCount, irCount, azCount,
+                               evOffset, coeffs, delays, filename);
 
     free(evOffset);
     free(coeffs);

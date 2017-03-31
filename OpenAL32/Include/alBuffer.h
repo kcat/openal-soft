@@ -17,8 +17,6 @@ enum UserFmtType {
     UserFmtUInt   = AL_UNSIGNED_INT_SOFT,
     UserFmtFloat  = AL_FLOAT_SOFT,
     UserFmtDouble = AL_DOUBLE_SOFT,
-    UserFmtByte3  = AL_BYTE3_SOFT,
-    UserFmtUByte3 = AL_UNSIGNED_BYTE3_SOFT,
     UserFmtMulaw  = AL_MULAW_SOFT,
     UserFmtAlaw   = 0x10000000,
     UserFmtIMA4,

@@ -183,8 +183,6 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
 
         case UserFmtInt:
         case UserFmtUInt:
-        case UserFmtByte3:
-        case UserFmtUByte3:
         case UserFmtDouble:
             framesize = FrameSizeFromUserFmt(srcchannels, srctype) * align;
             if((size%framesize) != 0)
@@ -1086,8 +1084,6 @@ ALsizei BytesFromUserFmt(enum UserFmtType type)
     case UserFmtUInt: return sizeof(ALuint);
     case UserFmtFloat: return sizeof(ALfloat);
     case UserFmtDouble: return sizeof(ALdouble);
-    case UserFmtByte3: return sizeof(ALbyte[3]);
-    case UserFmtUByte3: return sizeof(ALubyte[3]);
     case UserFmtMulaw: return sizeof(ALubyte);
     case UserFmtAlaw: return sizeof(ALubyte);
     case UserFmtIMA4: break; /* not handled here */

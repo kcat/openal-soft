@@ -174,14 +174,6 @@ typedef ALubyte ALmulaw;
 typedef ALubyte ALalaw;
 typedef ALubyte ALima4;
 typedef ALubyte ALmsadpcm;
-typedef struct {
-    ALbyte b[3];
-} ALbyte3;
-static_assert(sizeof(ALbyte3)==sizeof(ALbyte[3]), "ALbyte3 size is not 3");
-typedef struct {
-    ALubyte b[3];
-} ALubyte3;
-static_assert(sizeof(ALubyte3)==sizeof(ALubyte[3]), "ALubyte3 size is not 3");
 
 static inline ALshort DecodeMuLaw(ALmulaw val)
 { return muLawDecompressionTable[val]; }
@@ -498,49 +490,6 @@ static void EncodeMSADPCMBlock(ALmsadpcm *dst, const ALshort *src, ALint *sample
 }
 
 
-static inline ALint DecodeByte3(ALbyte3 val)
-{
-    if(IS_LITTLE_ENDIAN)
-        return (val.b[2]<<16) | (((ALubyte)val.b[1])<<8) | ((ALubyte)val.b[0]);
-    return (val.b[0]<<16) | (((ALubyte)val.b[1])<<8) | ((ALubyte)val.b[2]);
-}
-
-static inline ALbyte3 EncodeByte3(ALint val)
-{
-    if(IS_LITTLE_ENDIAN)
-    {
-        ALbyte3 ret = {{ val, val>>8, val>>16 }};
-        return ret;
-    }
-    else
-    {
-        ALbyte3 ret = {{ val>>16, val>>8, val }};
-        return ret;
-    }
-}
-
-static inline ALint DecodeUByte3(ALubyte3 val)
-{
-    if(IS_LITTLE_ENDIAN)
-        return (val.b[2]<<16) | (val.b[1]<<8) | (val.b[0]);
-    return (val.b[0]<<16) | (val.b[1]<<8) | val.b[2];
-}
-
-static inline ALubyte3 EncodeUByte3(ALint val)
-{
-    if(IS_LITTLE_ENDIAN)
-    {
-        ALubyte3 ret = {{ val, val>>8, val>>16 }};
-        return ret;
-    }
-    else
-    {
-        ALubyte3 ret = {{ val>>16, val>>8, val }};
-        return ret;
-    }
-}
-
-
 /* Define same-type pass-through sample conversion functions (excludes ADPCM,
  * which are block-based). */
 #define DECL_TEMPLATE(T) \
@@ -552,8 +501,6 @@ DECL_TEMPLATE(ALshort);
 DECL_TEMPLATE(ALushort);
 DECL_TEMPLATE(ALint);
 DECL_TEMPLATE(ALuint);
-DECL_TEMPLATE(ALbyte3);
-DECL_TEMPLATE(ALubyte3);
 DECL_TEMPLATE(ALalaw);
 DECL_TEMPLATE(ALmulaw);
 
@@ -652,35 +599,6 @@ static inline ALuint Conv_ALuint_ALfloat(ALfloat val)
 
 #undef DECL_TEMPLATE
 
-/* Define byte3 and ubyte3 functions (goes through int and uint functions). */
-#define DECL_TEMPLATE(T)                            \
-static inline ALbyte3 Conv_ALbyte3_##T(T val)       \
-{ return EncodeByte3(Conv_ALint_##T(val)>>8); }     \
-static inline T Conv_##T##_ALbyte3(ALbyte3 val)     \
-{ return Conv_##T##_ALint(DecodeByte3(val)<<8); }   \
-                                                    \
-static inline ALubyte3 Conv_ALubyte3_##T(T val)     \
-{ return EncodeUByte3(Conv_ALuint_##T(val)>>8); }   \
-static inline T Conv_##T##_ALubyte3(ALubyte3 val)   \
-{ return Conv_##T##_ALuint(DecodeUByte3(val)<<8); }
-
-DECL_TEMPLATE(ALbyte)
-DECL_TEMPLATE(ALubyte)
-DECL_TEMPLATE(ALshort)
-DECL_TEMPLATE(ALushort)
-DECL_TEMPLATE(ALint)
-DECL_TEMPLATE(ALuint)
-DECL_TEMPLATE(ALfloat)
-DECL_TEMPLATE(ALdouble)
-
-#undef DECL_TEMPLATE
-
-/* Define byte3 <-> ubyte3 functions. */
-static inline ALbyte3 Conv_ALbyte3_ALubyte3(ALubyte3 val)
-{ return EncodeByte3(DecodeUByte3(val)-8388608); }
-static inline ALubyte3 Conv_ALubyte3_ALbyte3(ALbyte3 val)
-{ return EncodeUByte3(DecodeByte3(val)+8388608); }
-
 /* Define muLaw and aLaw functions (goes through short functions). */
 #define DECL_TEMPLATE(T)                                                      \
 static inline ALmulaw Conv_ALmulaw_##T(T val)                                 \
@@ -701,8 +619,6 @@ DECL_TEMPLATE(ALint)
 DECL_TEMPLATE(ALuint)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
-DECL_TEMPLATE(ALbyte3)
-DECL_TEMPLATE(ALubyte3)
 
 #undef DECL_TEMPLATE
 
@@ -735,9 +651,7 @@ DECL_TEMPLATE(T, ALuint)   \
 DECL_TEMPLATE(T, ALfloat)  \
 DECL_TEMPLATE(T, ALdouble) \
 DECL_TEMPLATE(T, ALmulaw)  \
-DECL_TEMPLATE(T, ALalaw)   \
-DECL_TEMPLATE(T, ALbyte3)  \
-DECL_TEMPLATE(T, ALubyte3)
+DECL_TEMPLATE(T, ALalaw)
 
 DECL_TEMPLATE2(ALbyte)
 DECL_TEMPLATE2(ALubyte)
@@ -749,8 +663,6 @@ DECL_TEMPLATE2(ALfloat)
 DECL_TEMPLATE2(ALdouble)
 DECL_TEMPLATE2(ALmulaw)
 DECL_TEMPLATE2(ALalaw)
-DECL_TEMPLATE2(ALbyte3)
-DECL_TEMPLATE2(ALubyte3)
 
 #undef DECL_TEMPLATE2
 #undef DECL_TEMPLATE
@@ -800,8 +712,6 @@ DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
 DECL_TEMPLATE(ALalaw)
-DECL_TEMPLATE(ALbyte3)
-DECL_TEMPLATE(ALubyte3)
 
 #undef DECL_TEMPLATE
 
@@ -853,8 +763,6 @@ DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
 DECL_TEMPLATE(ALalaw)
-DECL_TEMPLATE(ALbyte3)
-DECL_TEMPLATE(ALubyte3)
 
 #undef DECL_TEMPLATE
 
@@ -906,8 +814,6 @@ DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
 DECL_TEMPLATE(ALalaw)
-DECL_TEMPLATE(ALbyte3)
-DECL_TEMPLATE(ALubyte3)
 
 #undef DECL_TEMPLATE
 
@@ -957,8 +863,6 @@ DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
 DECL_TEMPLATE(ALalaw)
-DECL_TEMPLATE(ALbyte3)
-DECL_TEMPLATE(ALubyte3)
 
 #undef DECL_TEMPLATE
 
@@ -1035,12 +939,6 @@ static void Convert_##T(T *dst, const ALvoid *src, enum UserFmtType srcType,  \
         case UserFmtMSADPCM:                                                  \
             Convert_##T##_ALmsadpcm(dst, src, numchans, len, align);          \
             break;                                                            \
-        case UserFmtByte3:                                                    \
-            Convert_##T##_ALbyte3(dst, src, numchans, len, align);            \
-            break;                                                            \
-        case UserFmtUByte3:                                                   \
-            Convert_##T##_ALubyte3(dst, src, numchans, len, align);           \
-            break;                                                            \
     }                                                                         \
 }
 
@@ -1056,8 +954,6 @@ DECL_TEMPLATE(ALmulaw)
 DECL_TEMPLATE(ALalaw)
 DECL_TEMPLATE(ALima4)
 DECL_TEMPLATE(ALmsadpcm)
-DECL_TEMPLATE(ALbyte3)
-DECL_TEMPLATE(ALubyte3)
 
 #undef DECL_TEMPLATE
 
@@ -1101,12 +997,6 @@ void ConvertData(ALvoid *dst, enum UserFmtType dstType, const ALvoid *src, enum 
             break;
         case UserFmtMSADPCM:
             Convert_ALmsadpcm(dst, src, srcType, numchans, len, align);
-            break;
-        case UserFmtByte3:
-            Convert_ALbyte3(dst, src, srcType, numchans, len, align);
-            break;
-        case UserFmtUByte3:
-            Convert_ALubyte3(dst, src, srcType, numchans, len, align);
             break;
     }
 }

@@ -389,11 +389,11 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const_al_str
     if(!failed)
     {
         size_t total = sizeof(struct Hrtf);
-        total += sizeof(azCount[0])*evCount;
+        total += sizeof(Hrtf->azCount[0])*evCount;
         total  = (total+1)&~1; /* Align for (u)short fields */
-        total += sizeof(evOffset[0])*evCount;
-        total += sizeof(coeffs[0])*irSize*irCount;
-        total += sizeof(delays[0])*irCount;
+        total += sizeof(Hrtf->evOffset[0])*evCount;
+        total += sizeof(Hrtf->coeffs[0])*irSize*irCount;
+        total += sizeof(Hrtf->delays[0])*irCount;
         total += al_string_length(filename)+1;
 
         Hrtf = al_calloc(16, total);
@@ -570,11 +570,11 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const_al_str
     if(!failed)
     {
         size_t total = sizeof(struct Hrtf);
-        total += sizeof(azCount[0])*evCount;
+        total += sizeof(Hrtf->azCount[0])*evCount;
         total  = (total+1)&~1; /* Align for (u)short fields */
-        total += sizeof(evOffset[0])*evCount;
-        total += sizeof(coeffs[0])*irSize*irCount;
-        total += sizeof(delays[0])*irCount;
+        total += sizeof(Hrtf->evOffset[0])*evCount;
+        total += sizeof(Hrtf->coeffs[0])*irSize*irCount;
+        total += sizeof(Hrtf->delays[0])*irCount;
         total += al_string_length(filename)+1;
 
         Hrtf = al_calloc(16, total);

@@ -37,13 +37,14 @@ typedef const _##N* const_##N;
                                                                               \
     if(((_x) ? (_x)->Capacity : 0) < _cap)                                    \
     {                                                                         \
+        ptrdiff_t data_offset = (char*)((_x)->Data) - (char*)(_x);            \
         size_t old_size = ((_x) ? (_x)->Size : 0);                            \
         void *temp;                                                           \
                                                                               \
-        temp = al_calloc(16, sizeof(*(_x)) + sizeof((_x)->Data[0])*_cap);     \
+        temp = al_calloc(16, data_offset + sizeof((_x)->Data[0])*_cap);       \
         assert(temp != NULL);                                                 \
         if((_x))                                                              \
-            memcpy(((ALubyte*)temp)+sizeof(*(_x)), (_x)->Data,                \
+            memcpy(((char*)temp)+data_offset, (_x)->Data,                     \
                    sizeof((_x)->Data[0])*old_size);                           \
                                                                               \
         al_free((_x));                                                        \

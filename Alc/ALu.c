@@ -1450,10 +1450,10 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             /* effect slot processing */
             for(i = 0;i < auxslots->count;i++)
             {
-                ALeffectslot *slot = auxslots->slot[i];
+                const ALeffectslot *slot = auxslots->slot[i];
                 ALeffectState *state = slot->Params.EffectState;
-                V(state,process)(SamplesToDo, SAFE_CONST(ALfloatBUFFERSIZE*,slot->WetBuffer),
-                                 state->OutBuffer, state->OutChannels);
+                V(state,process)(SamplesToDo, slot->WetBuffer, state->OutBuffer,
+                                 state->OutChannels);
             }
 
             ctx = ctx->next;

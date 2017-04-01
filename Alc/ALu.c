@@ -1341,7 +1341,7 @@ static void Write_##T(const ALfloatBUFFERSIZE *InBuffer, ALvoid *OutBuffer,   \
     ALsizei i, j;                                                             \
     for(j = 0;j < numchans;j++)                                               \
     {                                                                         \
-        const ALfloat *in = InBuffer[j];                                      \
+        const ALfloat *restrict in = ASSUME_ALIGNED(InBuffer[j], 16);         \
         T *restrict out = (T*)OutBuffer + j;                                  \
         const ALfloat gain = distcomp[j].Gain;                                \
         const ALsizei base = distcomp[j].Length;                              \

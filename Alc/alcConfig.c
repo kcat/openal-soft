@@ -233,7 +233,61 @@ static void LoadConfigFromFile(FILE *f)
                 curSection[0] = 0;
             else
             {
-                strncpy(curSection, section, sizeof(curSection)-1);
+                size_t len, p = 0;
+                do {
+                    char *nextp = strchr(section, '%');
+                    if(!nextp)
+                    {
+                        strncpy(curSection+p, section, sizeof(curSection)-1-p);
+                        break;
+                    }
+
+                    len = nextp - section;
+                    if(len > sizeof(curSection)-1-p)
+                        len = sizeof(curSection)-1-p;
+                    strncpy(curSection+p, section, len);
+                    p += len;
+                    section = nextp;
+
+                    if(((section[1] >= '0' && section[1] <= '9') ||
+                        (section[1] >= 'a' && section[1] <= 'f') ||
+                        (section[1] >= 'A' && section[1] <= 'F')) &&
+                       ((section[2] >= '0' && section[2] <= '9') ||
+                        (section[2] >= 'a' && section[2] <= 'f') ||
+                        (section[2] >= 'A' && section[2] <= 'F')))
+                    {
+                        unsigned char b = 0;
+                        if(section[1] >= '0' && section[1] <= '9')
+                            b = (section[1]-'0') << 4;
+                        else if(section[1] >= 'a' && section[1] <= 'f')
+                            b = (section[1]-'a'+0xa) << 4;
+                        else if(section[1] >= 'A' && section[1] <= 'F')
+                            b = (section[1]-'A'+0x0a) << 4;
+                        if(section[2] >= '0' && section[2] <= '9')
+                            b |= (section[2]-'0');
+                        else if(section[2] >= 'a' && section[2] <= 'f')
+                            b |= (section[2]-'a'+0xa);
+                        else if(section[2] >= 'A' && section[2] <= 'F')
+                            b |= (section[2]-'A'+0x0a);
+                        if(p < sizeof(curSection)-1)
+                            curSection[p++] = b;
+                        section += 3;
+                    }
+                    else if(section[1] == '%')
+                    {
+                        if(p < sizeof(curSection)-1)
+                            curSection[p++] = '%';
+                        section += 2;
+                    }
+                    else
+                    {
+                        if(p < sizeof(curSection)-1)
+                            curSection[p++] = '%';
+                        section += 1;
+                    }
+                    if(p < sizeof(curSection)-1)
+                        curSection[p] = 0;
+                } while(p < sizeof(curSection)-1 && *section != 0);
                 curSection[sizeof(curSection)-1] = 0;
             }
 

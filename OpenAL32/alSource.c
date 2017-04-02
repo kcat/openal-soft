@@ -699,6 +699,15 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
 
             WriteLock(&Source->queue_lock);
             ATOMIC_STORE_SEQ(&Source->looping, *values);
+            if(ATOMIC_LOAD(&Source->state, almemory_order_acquire) == AL_PLAYING)
+            {
+                /* If the source is playing, wait for the current mix to finish
+                 * to ensure it isn't currently looping back or reaching the
+                 * end.
+                 */
+                while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
+                    althrd_yield();
+            }
             WriteUnlock(&Source->queue_lock);
             return AL_TRUE;
 

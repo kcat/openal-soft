@@ -183,7 +183,7 @@ static ALCenum ca_open_playback(ALCdevice *device, const ALCchar *deviceName)
         return ALC_INVALID_VALUE;
     }
 
-    al_string_copy_cstr(&device->DeviceName, deviceName);
+    alstr_copy_cstr(&device->DeviceName, deviceName);
     device->ExtraData = data;
     return ALC_NO_ERROR;
 }
@@ -596,7 +596,7 @@ static ALCenum ca_open_capture(ALCdevice *device, const ALCchar *deviceName)
     );
     if(!data->ring) goto error;
 
-    al_string_copy_cstr(&device->DeviceName, deviceName);
+    alstr_copy_cstr(&device->DeviceName, deviceName);
 
     return ALC_NO_ERROR;
 

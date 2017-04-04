@@ -252,7 +252,7 @@ static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALsizei evCount
     total  = RoundUp(total, sizeof(ALfloat)); /* Align for float fields */
     total += sizeof(Hrtf->coeffs[0])*irSize*irCount;
     total += sizeof(Hrtf->delays[0])*irCount;
-    total += al_string_length(filename)+1;
+    total += alstr_length(filename)+1;
 
     Hrtf = al_calloc(16, total);
     if(Hrtf == NULL)
@@ -288,7 +288,7 @@ static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALsizei evCount
         offset += sizeof(_delays[0])*irCount;
 
         _name = (char*)(base + offset); Hrtf->filename = _name;
-        offset += sizeof(_name[0])*(al_string_length(filename)+1);
+        offset += sizeof(_name[0])*(alstr_length(filename)+1);
 
         Hrtf->next = NULL;
 
@@ -298,7 +298,7 @@ static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALsizei evCount
         for(i = 0;i < irSize*irCount;i++)
             _coeffs[i] = coeffs[i] / 32768.0f;
         for(i = 0;i < irCount;i++) _delays[i] = delays[i];
-        for(i = 0;i < (ALsizei)al_string_length(filename);i++)
+        for(i = 0;i < (ALsizei)alstr_length(filename);i++)
             _name[i] = VECTOR_ELEM(filename, i);
         _name[i] = '\0';
 
@@ -325,7 +325,7 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const_al_str
     if(datalen < 9)
     {
         ERR("Unexpected end of %s data (req %d, rem "SZFMT")\n",
-            al_string_get_cstr(filename), 9, datalen);
+            alstr_get_cstr(filename), 9, datalen);
         return NULL;
     }
 
@@ -364,7 +364,7 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const_al_str
     if(datalen < evCount*2)
     {
         ERR("Unexpected end of %s data (req %d, rem "SZFMT")\n",
-            al_string_get_cstr(filename), evCount*2, datalen);
+            alstr_get_cstr(filename), evCount*2, datalen);
         return NULL;
     }
 
@@ -433,7 +433,7 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const_al_str
         if(datalen < reqsize)
         {
             ERR("Unexpected end of %s data (req "SZFMT", rem "SZFMT")\n",
-                al_string_get_cstr(filename), reqsize, datalen);
+                alstr_get_cstr(filename), reqsize, datalen);
             failed = AL_TRUE;
         }
     }
@@ -489,7 +489,7 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const_al_str
     if(datalen < 6)
     {
         ERR("Unexpected end of %s data (req %d, rem "SZFMT"\n",
-            al_string_get_cstr(filename), 6, datalen);
+            alstr_get_cstr(filename), 6, datalen);
         return NULL;
     }
 
@@ -523,7 +523,7 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const_al_str
     if(datalen < evCount)
     {
         ERR("Unexpected end of %s data (req %d, rem "SZFMT"\n",
-            al_string_get_cstr(filename), evCount, datalen);
+            alstr_get_cstr(filename), evCount, datalen);
         return NULL;
     }
 
@@ -575,7 +575,7 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const_al_str
         if(datalen < reqsize)
         {
             ERR("Unexpected end of %s data (req "SZFMT", rem "SZFMT"\n",
-                al_string_get_cstr(filename), reqsize, datalen);
+                alstr_get_cstr(filename), reqsize, datalen);
             failed = AL_TRUE;
         }
     }
@@ -626,11 +626,11 @@ static void AddFileEntry(vector_HrtfEntry *list, const_al_string filename)
     const char *ext;
     int i;
 
-#define MATCH_FNAME(i) (al_string_cmp_cstr(filename, (i)->hrtf->filename) == 0)
+#define MATCH_FNAME(i) (alstr_cmp_cstr(filename, (i)->hrtf->filename) == 0)
     VECTOR_FIND_IF(iter, const HrtfEntry, *list, MATCH_FNAME);
     if(iter != VECTOR_END(*list))
     {
-        TRACE("Skipping duplicate file entry %s\n", al_string_get_cstr(filename));
+        TRACE("Skipping duplicate file entry %s\n", alstr_get_cstr(filename));
         return;
     }
 #undef MATCH_FNAME
@@ -638,24 +638,24 @@ static void AddFileEntry(vector_HrtfEntry *list, const_al_string filename)
     entry.hrtf = LoadedHrtfs;
     while(entry.hrtf)
     {
-        if(al_string_cmp_cstr(filename, entry.hrtf->filename) == 0)
+        if(alstr_cmp_cstr(filename, entry.hrtf->filename) == 0)
         {
-            TRACE("Skipping load of already-loaded file %s\n", al_string_get_cstr(filename));
+            TRACE("Skipping load of already-loaded file %s\n", alstr_get_cstr(filename));
             goto skip_load;
         }
         entry.hrtf = entry.hrtf->next;
     }
 
-    TRACE("Loading %s...\n", al_string_get_cstr(filename));
-    fmap = MapFileToMem(al_string_get_cstr(filename));
+    TRACE("Loading %s...\n", alstr_get_cstr(filename));
+    fmap = MapFileToMem(alstr_get_cstr(filename));
     if(fmap.ptr == NULL)
     {
-        ERR("Could not open %s\n", al_string_get_cstr(filename));
+        ERR("Could not open %s\n", alstr_get_cstr(filename));
         return;
     }
 
     if(fmap.len < sizeof(magicMarker01))
-        ERR("%s data is too short ("SZFMT" bytes)\n", al_string_get_cstr(filename), fmap.len);
+        ERR("%s data is too short ("SZFMT" bytes)\n", alstr_get_cstr(filename), fmap.len);
     else if(memcmp(fmap.ptr, magicMarker01, sizeof(magicMarker01)) == 0)
     {
         TRACE("Detected data set format v1\n");
@@ -671,12 +671,12 @@ static void AddFileEntry(vector_HrtfEntry *list, const_al_string filename)
         );
     }
     else
-        ERR("Invalid header in %s: \"%.8s\"\n", al_string_get_cstr(filename), (const char*)fmap.ptr);
+        ERR("Invalid header in %s: \"%.8s\"\n", alstr_get_cstr(filename), (const char*)fmap.ptr);
     UnmapFileMem(&fmap);
 
     if(!hrtf)
     {
-        ERR("Failed to load %s\n", al_string_get_cstr(filename));
+        ERR("Failed to load %s\n", alstr_get_cstr(filename));
         return;
     }
 
@@ -689,9 +689,9 @@ static void AddFileEntry(vector_HrtfEntry *list, const_al_string filename)
 skip_load:
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
      * format update). */
-    name = strrchr(al_string_get_cstr(filename), '/');
-    if(!name) name = strrchr(al_string_get_cstr(filename), '\\');
-    if(!name) name = al_string_get_cstr(filename);
+    name = strrchr(alstr_get_cstr(filename), '/');
+    if(!name) name = strrchr(alstr_get_cstr(filename), '\\');
+    if(!name) name = alstr_get_cstr(filename);
     else ++name;
 
     ext = strrchr(name, '.');
@@ -699,24 +699,24 @@ skip_load:
     i = 0;
     do {
         if(!ext)
-            al_string_copy_cstr(&entry.name, name);
+            alstr_copy_cstr(&entry.name, name);
         else
-            al_string_copy_range(&entry.name, name, ext);
+            alstr_copy_range(&entry.name, name, ext);
         if(i != 0)
         {
             char str[64];
             snprintf(str, sizeof(str), " #%d", i+1);
-            al_string_append_cstr(&entry.name, str);
+            alstr_append_cstr(&entry.name, str);
         }
         ++i;
 
-#define MATCH_NAME(i)  (al_string_cmp(entry.name, (i)->name) == 0)
+#define MATCH_NAME(i)  (alstr_cmp(entry.name, (i)->name) == 0)
         VECTOR_FIND_IF(iter, const HrtfEntry, *list, MATCH_NAME);
 #undef MATCH_NAME
     } while(iter != VECTOR_END(*list));
 
-    TRACE("Adding entry \"%s\" from file \"%s\"\n", al_string_get_cstr(entry.name),
-          al_string_get_cstr(filename));
+    TRACE("Adding entry \"%s\" from file \"%s\"\n", alstr_get_cstr(entry.name),
+          alstr_get_cstr(filename));
     VECTOR_PUSH_BACK(*list, entry);
 }
 
@@ -730,11 +730,11 @@ static void AddBuiltInEntry(vector_HrtfEntry *list, const ALubyte *data, size_t 
     const HrtfEntry *iter;
     int i;
 
-#define MATCH_FNAME(i) (al_string_cmp_cstr(filename, (i)->hrtf->filename) == 0)
+#define MATCH_FNAME(i) (alstr_cmp_cstr(filename, (i)->hrtf->filename) == 0)
     VECTOR_FIND_IF(iter, const HrtfEntry, *list, MATCH_FNAME);
     if(iter != VECTOR_END(*list))
     {
-        TRACE("Skipping duplicate file entry %s\n", al_string_get_cstr(filename));
+        TRACE("Skipping duplicate file entry %s\n", alstr_get_cstr(filename));
         return;
     }
 #undef MATCH_FNAME
@@ -742,18 +742,18 @@ static void AddBuiltInEntry(vector_HrtfEntry *list, const ALubyte *data, size_t 
     entry.hrtf = LoadedHrtfs;
     while(entry.hrtf)
     {
-        if(al_string_cmp_cstr(filename, entry.hrtf->filename) == 0)
+        if(alstr_cmp_cstr(filename, entry.hrtf->filename) == 0)
         {
-            TRACE("Skipping load of already-loaded file %s\n", al_string_get_cstr(filename));
+            TRACE("Skipping load of already-loaded file %s\n", alstr_get_cstr(filename));
             goto skip_load;
         }
         entry.hrtf = entry.hrtf->next;
     }
 
-    TRACE("Loading %s...\n", al_string_get_cstr(filename));
+    TRACE("Loading %s...\n", alstr_get_cstr(filename));
     if(datalen < sizeof(magicMarker01))
     {
-        ERR("%s data is too short ("SZFMT" bytes)\n", al_string_get_cstr(filename), datalen);
+        ERR("%s data is too short ("SZFMT" bytes)\n", alstr_get_cstr(filename), datalen);
         return;
     }
 
@@ -772,11 +772,11 @@ static void AddBuiltInEntry(vector_HrtfEntry *list, const ALubyte *data, size_t 
         );
     }
     else
-        ERR("Invalid header in %s: \"%.8s\"\n", al_string_get_cstr(filename), data);
+        ERR("Invalid header in %s: \"%.8s\"\n", alstr_get_cstr(filename), data);
 
     if(!hrtf)
     {
-        ERR("Failed to load %s\n", al_string_get_cstr(filename));
+        ERR("Failed to load %s\n", alstr_get_cstr(filename));
         return;
     }
 
@@ -789,21 +789,21 @@ static void AddBuiltInEntry(vector_HrtfEntry *list, const ALubyte *data, size_t 
 skip_load:
     i = 0;
     do {
-        al_string_copy(&entry.name, filename);
+        alstr_copy(&entry.name, filename);
         if(i != 0)
         {
             char str[64];
             snprintf(str, sizeof(str), " #%d", i+1);
-            al_string_append_cstr(&entry.name, str);
+            alstr_append_cstr(&entry.name, str);
         }
         ++i;
 
-#define MATCH_NAME(i)  (al_string_cmp(entry.name, (i)->name) == 0)
+#define MATCH_NAME(i)  (alstr_cmp(entry.name, (i)->name) == 0)
         VECTOR_FIND_IF(iter, const HrtfEntry, *list, MATCH_NAME);
 #undef MATCH_NAME
     } while(iter != VECTOR_END(*list));
 
-    TRACE("Adding built-in entry \"%s\"\n", al_string_get_cstr(entry.name));
+    TRACE("Adding built-in entry \"%s\"\n", alstr_get_cstr(entry.name));
     VECTOR_PUSH_BACK(*list, entry);
 }
 
@@ -909,7 +909,7 @@ vector_HrtfEntry EnumerateHrtf(const_al_string devname)
     const char *pathlist = "";
     bool usedefaults = true;
 
-    if(ConfigValueStr(al_string_get_cstr(devname), NULL, "hrtf-paths", &pathlist))
+    if(ConfigValueStr(alstr_get_cstr(devname), NULL, "hrtf-paths", &pathlist))
     {
         al_string pname = AL_STRING_INIT_STATIC();
         while(pathlist && *pathlist)
@@ -937,21 +937,21 @@ vector_HrtfEntry EnumerateHrtf(const_al_string devname)
                 vector_al_string flist;
                 size_t i;
 
-                al_string_append_range(&pname, pathlist, end);
+                alstr_append_range(&pname, pathlist, end);
 
-                flist = SearchDataFiles(".mhr", al_string_get_cstr(pname));
+                flist = SearchDataFiles(".mhr", alstr_get_cstr(pname));
                 for(i = 0;i < VECTOR_SIZE(flist);i++)
                     AddFileEntry(&list, VECTOR_ELEM(flist, i));
-                VECTOR_FOR_EACH(al_string, flist, al_string_deinit);
+                VECTOR_FOR_EACH(al_string, flist, alstr_reset);
                 VECTOR_DEINIT(flist);
             }
 
             pathlist = next;
         }
 
-        al_string_deinit(&pname);
+        alstr_reset(&pname);
     }
-    else if(ConfigValueExists(al_string_get_cstr(devname), NULL, "hrtf_tables"))
+    else if(ConfigValueExists(alstr_get_cstr(devname), NULL, "hrtf_tables"))
         ERR("The hrtf_tables option is deprecated, please use hrtf-paths instead.\n");
 
     if(usedefaults)
@@ -964,30 +964,30 @@ vector_HrtfEntry EnumerateHrtf(const_al_string devname)
         flist = SearchDataFiles(".mhr", "openal/hrtf");
         for(i = 0;i < VECTOR_SIZE(flist);i++)
             AddFileEntry(&list, VECTOR_ELEM(flist, i));
-        VECTOR_FOR_EACH(al_string, flist, al_string_deinit);
+        VECTOR_FOR_EACH(al_string, flist, alstr_reset);
         VECTOR_DEINIT(flist);
 
         rdata = GetResource(IDR_DEFAULT_44100_MHR, &rsize);
         if(rdata != NULL && rsize > 0)
         {
-            al_string_copy_cstr(&ename, "Built-In 44100hz");
+            alstr_copy_cstr(&ename, "Built-In 44100hz");
             AddBuiltInEntry(&list, rdata, rsize, ename);
         }
 
         rdata = GetResource(IDR_DEFAULT_48000_MHR, &rsize);
         if(rdata != NULL && rsize > 0)
         {
-            al_string_copy_cstr(&ename, "Built-In 48000hz");
+            alstr_copy_cstr(&ename, "Built-In 48000hz");
             AddBuiltInEntry(&list, rdata, rsize, ename);
         }
-        al_string_deinit(&ename);
+        alstr_reset(&ename);
     }
 
-    if(VECTOR_SIZE(list) > 1 && ConfigValueStr(al_string_get_cstr(devname), NULL, "default-hrtf", &defaulthrtf))
+    if(VECTOR_SIZE(list) > 1 && ConfigValueStr(alstr_get_cstr(devname), NULL, "default-hrtf", &defaulthrtf))
     {
         const HrtfEntry *iter;
         /* Find the preferred HRTF and move it to the front of the list. */
-#define FIND_ENTRY(i)  (al_string_cmp_cstr((i)->name, defaulthrtf) == 0)
+#define FIND_ENTRY(i)  (alstr_cmp_cstr((i)->name, defaulthrtf) == 0)
         VECTOR_FIND_IF(iter, const HrtfEntry, list, FIND_ENTRY);
 #undef FIND_ENTRY
         if(iter == VECTOR_END(list))
@@ -1006,9 +1006,7 @@ vector_HrtfEntry EnumerateHrtf(const_al_string devname)
 
 void FreeHrtfList(vector_HrtfEntry *list)
 {
-#define CLEAR_ENTRY(i) do {           \
-    al_string_deinit(&(i)->name);     \
-} while(0)
+#define CLEAR_ENTRY(i) alstr_reset(&(i)->name)
     VECTOR_FOR_EACH(HrtfEntry, *list, CLEAR_ENTRY);
     VECTOR_DEINIT(*list);
 #undef CLEAR_ENTRY

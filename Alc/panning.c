@@ -386,45 +386,45 @@ static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei sp
          * use the side channels when the device is configured for back,
          * and vice-versa.
          */
-        if(al_string_cmp_cstr(conf->Speakers[i].Name, "LF") == 0)
+        if(alstr_cmp_cstr(conf->Speakers[i].Name, "LF") == 0)
             c = GetChannelIdxByName(device->RealOut, FrontLeft);
-        else if(al_string_cmp_cstr(conf->Speakers[i].Name, "RF") == 0)
+        else if(alstr_cmp_cstr(conf->Speakers[i].Name, "RF") == 0)
             c = GetChannelIdxByName(device->RealOut, FrontRight);
-        else if(al_string_cmp_cstr(conf->Speakers[i].Name, "CE") == 0)
+        else if(alstr_cmp_cstr(conf->Speakers[i].Name, "CE") == 0)
             c = GetChannelIdxByName(device->RealOut, FrontCenter);
-        else if(al_string_cmp_cstr(conf->Speakers[i].Name, "LS") == 0)
+        else if(alstr_cmp_cstr(conf->Speakers[i].Name, "LS") == 0)
         {
             if(device->FmtChans == DevFmtX51Rear)
                 c = GetChannelIdxByName(device->RealOut, BackLeft);
             else
                 c = GetChannelIdxByName(device->RealOut, SideLeft);
         }
-        else if(al_string_cmp_cstr(conf->Speakers[i].Name, "RS") == 0)
+        else if(alstr_cmp_cstr(conf->Speakers[i].Name, "RS") == 0)
         {
             if(device->FmtChans == DevFmtX51Rear)
                 c = GetChannelIdxByName(device->RealOut, BackRight);
             else
                 c = GetChannelIdxByName(device->RealOut, SideRight);
         }
-        else if(al_string_cmp_cstr(conf->Speakers[i].Name, "LB") == 0)
+        else if(alstr_cmp_cstr(conf->Speakers[i].Name, "LB") == 0)
         {
             if(device->FmtChans == DevFmtX51)
                 c = GetChannelIdxByName(device->RealOut, SideLeft);
             else
                 c = GetChannelIdxByName(device->RealOut, BackLeft);
         }
-        else if(al_string_cmp_cstr(conf->Speakers[i].Name, "RB") == 0)
+        else if(alstr_cmp_cstr(conf->Speakers[i].Name, "RB") == 0)
         {
             if(device->FmtChans == DevFmtX51)
                 c = GetChannelIdxByName(device->RealOut, SideRight);
             else
                 c = GetChannelIdxByName(device->RealOut, BackRight);
         }
-        else if(al_string_cmp_cstr(conf->Speakers[i].Name, "CB") == 0)
+        else if(alstr_cmp_cstr(conf->Speakers[i].Name, "CB") == 0)
             c = GetChannelIdxByName(device->RealOut, BackCenter);
         else
         {
-            const char *name = al_string_get_cstr(conf->Speakers[i].Name);
+            const char *name = alstr_get_cstr(conf->Speakers[i].Name);
             unsigned int n;
             char ch;
 
@@ -439,7 +439,7 @@ static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei sp
         if(c == -1)
         {
             ERR("Failed to lookup AmbDec speaker label %s\n",
-                al_string_get_cstr(conf->Speakers[i].Name));
+                alstr_get_cstr(conf->Speakers[i].Name));
             return false;
         }
         speakermap[i] = c;
@@ -489,7 +489,7 @@ static const ChannelMap MonoCfg[1] = {
 
 static void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei order, bool periphonic)
 {
-    const char *devname = al_string_get_cstr(device->DeviceName);
+    const char *devname = alstr_get_cstr(device->DeviceName);
     ALsizei i;
 
     if(GetConfigValueBool(devname, "decoder", "nfc", 1) && ctrl_dist > 0.0f)
@@ -514,7 +514,7 @@ static void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei orde
 
 static void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei speakermap[MAX_OUTPUT_CHANNELS])
 {
-    const char *devname = al_string_get_cstr(device->DeviceName);
+    const char *devname = alstr_get_cstr(device->DeviceName);
     ALfloat maxdist = 0.0f;
     ALsizei total = 0;
     ALsizei i;
@@ -540,14 +540,14 @@ static void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const AL
                            srate + 0.5f);
             if(delay >= (ALfloat)MAX_DELAY_LENGTH)
                 ERR("Delay for speaker \"%s\" exceeds buffer length (%f >= %u)\n",
-                    al_string_get_cstr(conf->Speakers[i].Name), delay, MAX_DELAY_LENGTH);
+                    alstr_get_cstr(conf->Speakers[i].Name), delay, MAX_DELAY_LENGTH);
 
             device->ChannelDelay[chan].Length = (ALsizei)clampf(
                 delay, 0.0f, (ALfloat)(MAX_DELAY_LENGTH-1)
             );
             device->ChannelDelay[chan].Gain = conf->Speakers[i].Distance / maxdist;
             TRACE("Channel %u \"%s\" distance compensation: %d samples, %f gain\n", chan,
-                al_string_get_cstr(conf->Speakers[i].Name), device->ChannelDelay[chan].Length,
+                  alstr_get_cstr(conf->Speakers[i].Name), device->ChannelDelay[chan].Length,
                 device->ChannelDelay[chan].Gain
             );
 
@@ -628,7 +628,7 @@ static void InitPanning(ALCdevice *device)
 
     if(device->FmtChans >= DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3)
     {
-        const char *devname = al_string_get_cstr(device->DeviceName);
+        const char *devname = alstr_get_cstr(device->DeviceName);
         const ALsizei *acnmap = (device->AmbiLayout == AmbiLayout_FuMa) ? FuMa2ACN : ACN2ACN;
         const ALfloat *n3dscale = (device->AmbiScale == AmbiNorm_FuMa) ? FuMa2N3DScale :
                                   (device->AmbiScale == AmbiNorm_SN3D) ? SN3D2N3DScale :
@@ -1005,7 +1005,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     al_free(device->Hrtf);
     device->Hrtf = NULL;
     device->HrtfHandle = NULL;
-    al_string_clear(&device->HrtfName);
+    alstr_clear(&device->HrtfName);
     device->Render_Mode = NormalRender;
 
     memset(&device->Dry.Ambi, 0, sizeof(device->Dry.Ambi));
@@ -1033,7 +1033,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
 
         ambdec_init(&conf);
 
-        devname = al_string_get_cstr(device->DeviceName);
+        devname = alstr_get_cstr(device->DeviceName);
         switch(device->FmtChans)
         {
             case DevFmtQuad: layout = "quad"; break;
@@ -1110,7 +1110,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     if(device->Type != Loopback)
     {
         const char *mode;
-        if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "stereo-mode", &mode))
+        if(ConfigValueStr(alstr_get_cstr(device->DeviceName), NULL, "stereo-mode", &mode))
         {
             if(strcasecmp(mode, "headphones") == 0)
                 headphones = true;
@@ -1154,7 +1154,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         if(entry->hrtf->sampleRate == device->Frequency)
         {
             device->HrtfHandle = entry->hrtf;
-            al_string_copy(&device->HrtfName, entry->name);
+            alstr_copy(&device->HrtfName, entry->name);
         }
     }
 
@@ -1164,7 +1164,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         if(entry->hrtf->sampleRate == device->Frequency)
         {
             device->HrtfHandle = entry->hrtf;
-            al_string_copy(&device->HrtfName, entry->name);
+            alstr_copy(&device->HrtfName, entry->name);
         }
     }
 
@@ -1173,7 +1173,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         bool hoa_mode;
 
         device->Render_Mode = HrtfRender;
-        if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "hrtf-mode", &mode))
+        if(ConfigValueStr(alstr_get_cstr(device->DeviceName), NULL, "hrtf-mode", &mode))
         {
             if(strcasecmp(mode, "full") == 0)
                 device->Render_Mode = HrtfRender;
@@ -1201,7 +1201,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
 
         TRACE("%s HRTF rendering enabled, using \"%s\"\n",
             ((device->Render_Mode == HrtfRender) ? "Full" : "Basic"),
-            al_string_get_cstr(device->HrtfName)
+            alstr_get_cstr(device->HrtfName)
         );
         InitHrtfPanning(device, hoa_mode);
         return;
@@ -1219,7 +1219,7 @@ no_hrtf:
     bs2blevel = ((headphones && hrtf_appreq != Hrtf_Disable) ||
                  (hrtf_appreq == Hrtf_Enable)) ? 5 : 0;
     if(device->Type != Loopback)
-        ConfigValueInt(al_string_get_cstr(device->DeviceName), NULL, "cf_level", &bs2blevel);
+        ConfigValueInt(alstr_get_cstr(device->DeviceName), NULL, "cf_level", &bs2blevel);
     if(bs2blevel > 0 && bs2blevel <= 6)
     {
         device->Bs2b = al_calloc(16, sizeof(*device->Bs2b));
@@ -1231,7 +1231,7 @@ no_hrtf:
 
     TRACE("BS2B disabled\n");
 
-    if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "stereo-encoding", &mode))
+    if(ConfigValueStr(alstr_get_cstr(device->DeviceName), NULL, "stereo-encoding", &mode))
     {
         if(strcasecmp(mode, "uhj") == 0)
             device->Render_Mode = NormalRender;

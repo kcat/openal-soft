@@ -373,25 +373,25 @@ void ReadALConfig(void)
     if(SHGetSpecialFolderPathW(NULL, buffer, CSIDL_APPDATA, FALSE) != FALSE)
     {
         al_string filepath = AL_STRING_INIT_STATIC();
-        al_string_copy_wcstr(&filepath, buffer);
-        al_string_append_cstr(&filepath, "\\alsoft.ini");
+        alstr_copy_wcstr(&filepath, buffer);
+        alstr_append_cstr(&filepath, "\\alsoft.ini");
 
-        TRACE("Loading config %s...\n", al_string_get_cstr(filepath));
-        f = al_fopen(al_string_get_cstr(filepath), "rt");
+        TRACE("Loading config %s...\n", alstr_get_cstr(filepath));
+        f = al_fopen(alstr_get_cstr(filepath), "rt");
         if(f)
         {
             LoadConfigFromFile(f);
             fclose(f);
         }
-        al_string_deinit(&filepath);
+        alstr_reset(&filepath);
     }
 
     ppath = GetProcPath();
-    if(!al_string_empty(ppath))
+    if(!alstr_empty(ppath))
     {
-        al_string_append_cstr(&ppath, "\\alsoft.ini");
-        TRACE("Loading config %s...\n", al_string_get_cstr(ppath));
-        f = al_fopen(al_string_get_cstr(ppath), "r");
+        alstr_append_cstr(&ppath, "\\alsoft.ini");
+        TRACE("Loading config %s...\n", alstr_get_cstr(ppath));
+        f = al_fopen(alstr_get_cstr(ppath), "r");
         if(f)
         {
             LoadConfigFromFile(f);
@@ -402,19 +402,19 @@ void ReadALConfig(void)
     if((str=_wgetenv(L"ALSOFT_CONF")) != NULL && *str)
     {
         al_string filepath = AL_STRING_INIT_STATIC();
-        al_string_copy_wcstr(&filepath, str);
+        alstr_copy_wcstr(&filepath, str);
 
-        TRACE("Loading config %s...\n", al_string_get_cstr(filepath));
-        f = al_fopen(al_string_get_cstr(filepath), "rt");
+        TRACE("Loading config %s...\n", alstr_get_cstr(filepath));
+        f = al_fopen(alstr_get_cstr(filepath), "rt");
         if(f)
         {
             LoadConfigFromFile(f);
             fclose(f);
         }
-        al_string_deinit(&filepath);
+        alstr_reset(&filepath);
     }
 
-    al_string_deinit(&ppath);
+    alstr_reset(&ppath);
 }
 #else
 void ReadALConfig(void)
@@ -502,11 +502,11 @@ void ReadALConfig(void)
     }
 
     ppath = GetProcPath();
-    if(!al_string_empty(ppath))
+    if(!alstr_empty(ppath))
     {
-        al_string_append_cstr(&ppath, "/alsoft.conf");
-        TRACE("Loading config %s...\n", al_string_get_cstr(ppath));
-        f = al_fopen(al_string_get_cstr(ppath), "r");
+        alstr_append_cstr(&ppath, "/alsoft.conf");
+        TRACE("Loading config %s...\n", alstr_get_cstr(ppath));
+        f = al_fopen(alstr_get_cstr(ppath), "r");
         if(f)
         {
             LoadConfigFromFile(f);
@@ -525,7 +525,7 @@ void ReadALConfig(void)
         }
     }
 
-    al_string_deinit(&ppath);
+    alstr_reset(&ppath);
 }
 #endif
 

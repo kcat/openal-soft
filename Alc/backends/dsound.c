@@ -145,16 +145,16 @@ static BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHA
     {
         const DevMap *iter;
 
-        al_string_copy_cstr(&entry.name, DEVNAME_HEAD);
-        al_string_append_wcstr(&entry.name, desc);
+        alstr_copy_cstr(&entry.name, DEVNAME_HEAD);
+        alstr_append_wcstr(&entry.name, desc);
         if(count != 0)
         {
             char str[64];
             snprintf(str, sizeof(str), " #%d", count+1);
-            al_string_append_cstr(&entry.name, str);
+            alstr_append_cstr(&entry.name, str);
         }
 
-#define MATCH_ENTRY(i) (al_string_cmp(entry.name, (i)->name) == 0)
+#define MATCH_ENTRY(i) (alstr_cmp(entry.name, (i)->name) == 0)
         VECTOR_FIND_IF(iter, const DevMap, *devices, MATCH_ENTRY);
         if(iter == VECTOR_END(*devices)) break;
 #undef MATCH_ENTRY
@@ -165,7 +165,7 @@ static BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHA
     hr = StringFromCLSID(guid, &guidstr);
     if(SUCCEEDED(hr))
     {
-        TRACE("Got device \"%s\", GUID \"%ls\"\n", al_string_get_cstr(entry.name), guidstr);
+        TRACE("Got device \"%s\", GUID \"%ls\"\n", alstr_get_cstr(entry.name), guidstr);
         CoTaskMemFree(guidstr);
     }
 
@@ -343,14 +343,14 @@ static ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *de
 
     if(!deviceName && VECTOR_SIZE(PlaybackDevices) > 0)
     {
-        deviceName = al_string_get_cstr(VECTOR_FRONT(PlaybackDevices).name);
+        deviceName = alstr_get_cstr(VECTOR_FRONT(PlaybackDevices).name);
         guid = &VECTOR_FRONT(PlaybackDevices).guid;
     }
     else
     {
         const DevMap *iter;
 
-#define MATCH_NAME(i)  (al_string_cmp_cstr((i)->name, deviceName) == 0)
+#define MATCH_NAME(i)  (alstr_cmp_cstr((i)->name, deviceName) == 0)
         VECTOR_FIND_IF(iter, const DevMap, PlaybackDevices, MATCH_NAME);
 #undef MATCH_NAME
         if(iter == VECTOR_END(PlaybackDevices))
@@ -381,7 +381,7 @@ static ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *de
         return ALC_INVALID_VALUE;
     }
 
-    al_string_copy_cstr(&device->DeviceName, deviceName);
+    alstr_copy_cstr(&device->DeviceName, deviceName);
 
     return ALC_NO_ERROR;
 }
@@ -706,14 +706,14 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
 
     if(!deviceName && VECTOR_SIZE(CaptureDevices) > 0)
     {
-        deviceName = al_string_get_cstr(VECTOR_FRONT(CaptureDevices).name);
+        deviceName = alstr_get_cstr(VECTOR_FRONT(CaptureDevices).name);
         guid = &VECTOR_FRONT(CaptureDevices).guid;
     }
     else
     {
         const DevMap *iter;
 
-#define MATCH_NAME(i)  (al_string_cmp_cstr((i)->name, deviceName) == 0)
+#define MATCH_NAME(i)  (alstr_cmp_cstr((i)->name, deviceName) == 0)
         VECTOR_FIND_IF(iter, const DevMap, CaptureDevices, MATCH_NAME);
 #undef MATCH_NAME
         if(iter == VECTOR_END(CaptureDevices))
@@ -855,7 +855,7 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
     self->BufferBytes = DSCBDescription.dwBufferBytes;
     SetDefaultWFXChannelOrder(device);
 
-    al_string_copy_cstr(&device->DeviceName, deviceName);
+    alstr_copy_cstr(&device->DeviceName, deviceName);
 
     return ALC_NO_ERROR;
 }
@@ -958,9 +958,9 @@ done:
 
 
 static inline void AppendAllDevicesList2(const DevMap *entry)
-{ AppendAllDevicesList(al_string_get_cstr(entry->name)); }
+{ AppendAllDevicesList(alstr_get_cstr(entry->name)); }
 static inline void AppendCaptureDeviceList2(const DevMap *entry)
-{ AppendCaptureDeviceList(al_string_get_cstr(entry->name)); }
+{ AppendCaptureDeviceList(alstr_get_cstr(entry->name)); }
 
 typedef struct ALCdsoundBackendFactory {
     DERIVE_FROM_TYPE(ALCbackendFactory);

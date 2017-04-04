@@ -45,7 +45,7 @@ static vector_al_string CaptureDevices;
 
 static void clear_devlist(vector_al_string *list)
 {
-    VECTOR_FOR_EACH(al_string, *list, al_string_deinit);
+    VECTOR_FOR_EACH(al_string, *list, alstr_reset);
     VECTOR_RESIZE(*list, 0, 0);
 }
 
@@ -71,23 +71,23 @@ static void ProbePlaybackDevices(void)
             ALuint count = 0;
             while(1)
             {
-                al_string_copy_cstr(&dname, DEVNAME_HEAD);
-                al_string_append_wcstr(&dname, WaveCaps.szPname);
+                alstr_copy_cstr(&dname, DEVNAME_HEAD);
+                alstr_append_wcstr(&dname, WaveCaps.szPname);
                 if(count != 0)
                 {
                     char str[64];
                     snprintf(str, sizeof(str), " #%d", count+1);
-                    al_string_append_cstr(&dname, str);
+                    alstr_append_cstr(&dname, str);
                 }
                 count++;
 
-#define MATCH_ENTRY(i) (al_string_cmp(dname, *(i)) == 0)
+#define MATCH_ENTRY(i) (alstr_cmp(dname, *(i)) == 0)
                 VECTOR_FIND_IF(iter, const al_string, PlaybackDevices, MATCH_ENTRY);
                 if(iter == VECTOR_END(PlaybackDevices)) break;
 #undef MATCH_ENTRY
             }
 
-            TRACE("Got device \"%s\", ID %u\n", al_string_get_cstr(dname), i);
+            TRACE("Got device \"%s\", ID %u\n", alstr_get_cstr(dname), i);
         }
         VECTOR_PUSH_BACK(PlaybackDevices, dname);
     }
@@ -114,23 +114,23 @@ static void ProbeCaptureDevices(void)
             ALuint count = 0;
             while(1)
             {
-                al_string_copy_cstr(&dname, DEVNAME_HEAD);
-                al_string_append_wcstr(&dname, WaveCaps.szPname);
+                alstr_copy_cstr(&dname, DEVNAME_HEAD);
+                alstr_append_wcstr(&dname, WaveCaps.szPname);
                 if(count != 0)
                 {
                     char str[64];
                     snprintf(str, sizeof(str), " #%d", count+1);
-                    al_string_append_cstr(&dname, str);
+                    alstr_append_cstr(&dname, str);
                 }
                 count++;
 
-#define MATCH_ENTRY(i) (al_string_cmp(dname, *(i)) == 0)
+#define MATCH_ENTRY(i) (alstr_cmp(dname, *(i)) == 0)
                 VECTOR_FIND_IF(iter, const al_string, CaptureDevices, MATCH_ENTRY);
                 if(iter == VECTOR_END(CaptureDevices)) break;
 #undef MATCH_ENTRY
             }
 
-            TRACE("Got device \"%s\", ID %u\n", al_string_get_cstr(dname), i);
+            TRACE("Got device \"%s\", ID %u\n", alstr_get_cstr(dname), i);
         }
         VECTOR_PUSH_BACK(CaptureDevices, dname);
     }
@@ -257,8 +257,8 @@ static ALCenum ALCwinmmPlayback_open(ALCwinmmPlayback *self, const ALCchar *devi
         ProbePlaybackDevices();
 
     // Find the Device ID matching the deviceName if valid
-#define MATCH_DEVNAME(iter) (!al_string_empty(*(iter)) && \
-                             (!deviceName || al_string_cmp_cstr(*(iter), deviceName) == 0))
+#define MATCH_DEVNAME(iter) (!alstr_empty(*(iter)) && \
+                             (!deviceName || alstr_cmp_cstr(*(iter), deviceName) == 0))
     VECTOR_FIND_IF(iter, const al_string, PlaybackDevices, MATCH_DEVNAME);
     if(iter == VECTOR_END(PlaybackDevices))
         return ALC_INVALID_VALUE;
@@ -300,7 +300,7 @@ retry_open:
         goto failure;
     }
 
-    al_string_copy(&device->DeviceName, VECTOR_ELEM(PlaybackDevices, DeviceID));
+    alstr_copy(&device->DeviceName, VECTOR_ELEM(PlaybackDevices, DeviceID));
     return ALC_NO_ERROR;
 
 failure:
@@ -544,7 +544,7 @@ static ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *name)
         ProbeCaptureDevices();
 
     // Find the Device ID matching the deviceName if valid
-#define MATCH_DEVNAME(iter) (!al_string_empty(*(iter)) &&  (!name || al_string_cmp_cstr(*iter, name) == 0))
+#define MATCH_DEVNAME(iter) (!alstr_empty(*(iter)) && (!name || alstr_cmp_cstr(*iter, name) == 0))
     VECTOR_FIND_IF(iter, const al_string, CaptureDevices, MATCH_DEVNAME);
     if(iter == VECTOR_END(CaptureDevices))
         return ALC_INVALID_VALUE;
@@ -638,7 +638,7 @@ static ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *name)
     if(althrd_create(&self->thread, ALCwinmmCapture_captureProc, self) != althrd_success)
         goto failure;
 
-    al_string_copy(&device->DeviceName, VECTOR_ELEM(CaptureDevices, DeviceID));
+    alstr_copy(&device->DeviceName, VECTOR_ELEM(CaptureDevices, DeviceID));
     return ALC_NO_ERROR;
 
 failure:
@@ -715,13 +715,13 @@ static ALCuint ALCwinmmCapture_availableSamples(ALCwinmmCapture *self)
 
 static inline void AppendAllDevicesList2(const al_string *name)
 {
-    if(!al_string_empty(*name))
-        AppendAllDevicesList(al_string_get_cstr(*name));
+    if(!alstr_empty(*name))
+        AppendAllDevicesList(alstr_get_cstr(*name));
 }
 static inline void AppendCaptureDeviceList2(const al_string *name)
 {
-    if(!al_string_empty(*name))
-        AppendCaptureDeviceList(al_string_get_cstr(*name));
+    if(!alstr_empty(*name))
+        AppendCaptureDeviceList(alstr_get_cstr(*name));
 }
 
 typedef struct ALCwinmmBackendFactory {

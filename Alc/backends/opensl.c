@@ -399,7 +399,7 @@ static ALCenum ALCopenslPlayback_open(ALCopenslPlayback *self, const ALCchar *na
         return ALC_INVALID_VALUE;
     }
 
-    al_string_copy_cstr(&device->DeviceName, name);
+    alstr_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
 }

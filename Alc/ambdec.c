@@ -164,7 +164,7 @@ static int load_ambdec_speakers(AmbDecConf *conf, FILE *f, char **buffer, size_t
             const char *conn = my_strtok_r(NULL, " \t", saveptr);
 
             if(!name) WARN("Name not specified for speaker %u\n", cur+1);
-            else al_string_copy_cstr(&conf->Speakers[cur].Name, name);
+            else alstr_copy_cstr(&conf->Speakers[cur].Name, name);
             if(!dist) WARN("Distance not specified for speaker %u\n", cur+1);
             else read_float(&conf->Speakers[cur].Distance, dist);
             if(!az) WARN("Azimuth not specified for speaker %u\n", cur+1);
@@ -172,7 +172,7 @@ static int load_ambdec_speakers(AmbDecConf *conf, FILE *f, char **buffer, size_t
             if(!elev) WARN("Elevation not specified for speaker %u\n", cur+1);
             else read_float(&conf->Speakers[cur].Elevation, elev);
             if(!conn) TRACE("Connection not specified for speaker %u\n", cur+1);
-            else al_string_copy_cstr(&conf->Speakers[cur].Connection, conn);
+            else alstr_copy_cstr(&conf->Speakers[cur].Connection, conn);
 
             cur++;
         }
@@ -293,11 +293,11 @@ void ambdec_deinit(AmbDecConf *conf)
 {
     ALsizei i;
 
-    al_string_deinit(&conf->Description);
+    alstr_reset(&conf->Description);
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
     {
-        al_string_deinit(&conf->Speakers[i].Name);
-        al_string_deinit(&conf->Speakers[i].Connection);
+        alstr_reset(&conf->Speakers[i].Name);
+        alstr_reset(&conf->Speakers[i].Connection);
     }
     memset(conf, 0, sizeof(*conf));
 }
@@ -331,7 +331,7 @@ int ambdec_load(AmbDecConf *conf, const char *fname)
         if(strcmp(command, "description") == 0)
         {
             char *value = my_strtok_r(NULL, "", &saveptr);
-            al_string_copy_cstr(&conf->Description, lstrip(value));
+            alstr_copy_cstr(&conf->Description, lstrip(value));
         }
         else if(strcmp(command, "version") == 0)
         {

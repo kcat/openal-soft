@@ -130,7 +130,7 @@ static ALCenum ALCnullBackend_open(ALCnullBackend *self, const ALCchar *name)
         return ALC_INVALID_VALUE;
 
     device = STATIC_CAST(ALCbackend, self)->mDevice;
-    al_string_copy_cstr(&device->DeviceName, name);
+    alstr_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
 }

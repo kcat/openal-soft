@@ -213,7 +213,7 @@ static ALCboolean alsa_load(void)
     p##f = GetSymbol(alsa_handle, #f);                                        \
     if(p##f == NULL) {                                                        \
         error = ALC_TRUE;                                                     \
-        al_string_append_cstr(&missing_funcs, "\n" #f);                       \
+        alstr_append_cstr(&missing_funcs, "\n" #f);                           \
     }                                                                         \
 } while(0)
         ALSA_FUNCS(LOAD_FUNC);
@@ -221,11 +221,11 @@ static ALCboolean alsa_load(void)
 
         if(error)
         {
-            WARN("Missing expected functions:%s\n", al_string_get_cstr(missing_funcs));
+            WARN("Missing expected functions:%s\n", alstr_get_cstr(missing_funcs));
             CloseLib(alsa_handle);
             alsa_handle = NULL;
         }
-        al_string_deinit(&missing_funcs);
+        alstr_reset(&missing_funcs);
     }
 #endif
 
@@ -276,8 +276,8 @@ static void probe_devices(snd_pcm_stream_t stream, vector_DevMap *DeviceList)
 
     AL_STRING_INIT(entry.name);
     AL_STRING_INIT(entry.device_name);
-    al_string_copy_cstr(&entry.name, alsaDevice);
-    al_string_copy_cstr(&entry.device_name, GetConfigValue(NULL, "alsa", (stream==SND_PCM_STREAM_PLAYBACK) ?
+    alstr_copy_cstr(&entry.name, alsaDevice);
+    alstr_copy_cstr(&entry.device_name, GetConfigValue(NULL, "alsa", (stream==SND_PCM_STREAM_PLAYBACK) ?
                                                            "device" : "capture", "default"));
     VECTOR_PUSH_BACK(*DeviceList, entry);
 
@@ -344,8 +344,8 @@ static void probe_devices(snd_pcm_stream_t stream, vector_DevMap *DeviceList)
             TRACE("Got device \"%s\", \"%s\"\n", name, device);
             AL_STRING_INIT(entry.name);
             AL_STRING_INIT(entry.device_name);
-            al_string_copy_cstr(&entry.name, name);
-            al_string_copy_cstr(&entry.device_name, device);
+            alstr_copy_cstr(&entry.name, name);
+            alstr_copy_cstr(&entry.device_name, device);
             VECTOR_PUSH_BACK(*DeviceList, entry);
         }
         snd_ctl_close(handle);
@@ -636,12 +636,12 @@ static ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name)
         if(VECTOR_SIZE(PlaybackDevices) == 0)
             probe_devices(SND_PCM_STREAM_PLAYBACK, &PlaybackDevices);
 
-#define MATCH_NAME(i)  (al_string_cmp_cstr((i)->name, name) == 0)
+#define MATCH_NAME(i)  (alstr_cmp_cstr((i)->name, name) == 0)
         VECTOR_FIND_IF(iter, const DevMap, PlaybackDevices, MATCH_NAME);
 #undef MATCH_NAME
         if(iter == VECTOR_END(PlaybackDevices))
             return ALC_INVALID_VALUE;
-        driver = al_string_get_cstr(iter->device_name);
+        driver = alstr_get_cstr(iter->device_name);
     }
     else
     {
@@ -660,7 +660,7 @@ static ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name)
     /* Free alsa's global config tree. Otherwise valgrind reports a ton of leaks. */
     snd_config_update_free_global();
 
-    al_string_copy_cstr(&device->DeviceName, name);
+    alstr_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
 }
@@ -711,7 +711,7 @@ static ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
             break;
     }
 
-    allowmmap = GetConfigValueBool(al_string_get_cstr(device->DeviceName), "alsa", "mmap", 1);
+    allowmmap = GetConfigValueBool(alstr_get_cstr(device->DeviceName), "alsa", "mmap", 1);
     periods = device->NumUpdates;
     periodLen = (ALuint64)device->UpdateSize * 1000000 / device->Frequency;
     bufferLen = periodLen * periods;
@@ -777,7 +777,7 @@ static ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
     }
     CHECK(snd_pcm_hw_params_set_channels(self->pcmHandle, hp, ChannelsFromDevFmt(device->FmtChans)));
     /* set rate (implicitly constrains period/buffer parameters) */
-    if(!GetConfigValueBool(al_string_get_cstr(device->DeviceName), "alsa", "allow-resampler", 0) ||
+    if(!GetConfigValueBool(alstr_get_cstr(device->DeviceName), "alsa", "allow-resampler", 0) ||
        !(device->Flags&DEVICE_FREQUENCY_REQUEST))
     {
         if(snd_pcm_hw_params_set_rate_resample(self->pcmHandle, hp, 0) < 0)
@@ -977,12 +977,12 @@ static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
         if(VECTOR_SIZE(CaptureDevices) == 0)
             probe_devices(SND_PCM_STREAM_CAPTURE, &CaptureDevices);
 
-#define MATCH_NAME(i)  (al_string_cmp_cstr((i)->name, name) == 0)
+#define MATCH_NAME(i)  (alstr_cmp_cstr((i)->name, name) == 0)
         VECTOR_FIND_IF(iter, const DevMap, CaptureDevices, MATCH_NAME);
 #undef MATCH_NAME
         if(iter == VECTOR_END(CaptureDevices))
             return ALC_INVALID_VALUE;
-        driver = al_string_get_cstr(iter->device_name);
+        driver = alstr_get_cstr(iter->device_name);
     }
     else
     {
@@ -1072,7 +1072,7 @@ static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
         }
     }
 
-    al_string_copy_cstr(&device->DeviceName, name);
+    alstr_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
 
@@ -1314,9 +1314,9 @@ static ClockLatency ALCcaptureAlsa_getClockLatency(ALCcaptureAlsa *self)
 
 
 static inline void AppendAllDevicesList2(const DevMap *entry)
-{ AppendAllDevicesList(al_string_get_cstr(entry->name)); }
+{ AppendAllDevicesList(alstr_get_cstr(entry->name)); }
 static inline void AppendCaptureDeviceList2(const DevMap *entry)
-{ AppendCaptureDeviceList(al_string_get_cstr(entry->name)); }
+{ AppendCaptureDeviceList(alstr_get_cstr(entry->name)); }
 
 typedef struct ALCalsaBackendFactory {
     DERIVE_FROM_TYPE(ALCbackendFactory);

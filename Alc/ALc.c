@@ -1311,7 +1311,7 @@ static void ProbeDevices(al_string *list, struct BackendInfo *backendinfo, enum 
     DO_INITCONFIG();
 
     LockLists();
-    al_string_clear(list);
+    alstr_clear(list);
 
     if(backendinfo->Probe)
         backendinfo->Probe(type);
@@ -1331,7 +1331,7 @@ static void AppendDevice(const ALCchar *name, al_string *devnames)
 {
     size_t len = strlen(name);
     if(len > 0)
-        al_string_append_range(devnames, name, name+len+1);
+        alstr_append_range(devnames, name, name+len+1);
 }
 void AppendAllDevicesList(const ALCchar *name)
 { AppendDevice(name, &alcAllDevicesList); }
@@ -1985,7 +1985,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
 #undef TRACE_ATTR
 
-        ConfigValueUInt(al_string_get_cstr(device->DeviceName), NULL, "frequency", &freq);
+        ConfigValueUInt(alstr_get_cstr(device->DeviceName), NULL, "frequency", &freq);
         freq = maxu(freq, MIN_OUTPUT_RATE);
 
         device->UpdateSize = (ALuint64)device->UpdateSize * freq /
@@ -1998,7 +1998,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->NumMonoSources = numMono;
         device->NumStereoSources = numStereo;
 
-        if(ConfigValueInt(al_string_get_cstr(device->DeviceName), NULL, "sends", &new_sends))
+        if(ConfigValueInt(alstr_get_cstr(device->DeviceName), NULL, "sends", &new_sends))
             new_sends = mini(numSends, clampi(new_sends, 0, MAX_SENDS));
         else
             new_sends = numSends;
@@ -2037,7 +2037,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     if(device->Type != Loopback)
     {
         const char *hrtf;
-        if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "hrtf", &hrtf))
+        if(ConfigValueStr(alstr_get_cstr(device->DeviceName), NULL, "hrtf", &hrtf))
         {
             if(strcasecmp(hrtf, "true") == 0)
                 hrtf_userreq = Hrtf_Enable;
@@ -2869,26 +2869,26 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
     case ALC_ALL_DEVICES_SPECIFIER:
         if(VerifyDevice(&Device))
         {
-            value = al_string_get_cstr(Device->DeviceName);
+            value = alstr_get_cstr(Device->DeviceName);
             ALCdevice_DecRef(Device);
         }
         else
         {
             ProbeAllDevicesList();
-            value = al_string_get_cstr(alcAllDevicesList);
+            value = alstr_get_cstr(alcAllDevicesList);
         }
         break;
 
     case ALC_CAPTURE_DEVICE_SPECIFIER:
         if(VerifyDevice(&Device))
         {
-            value = al_string_get_cstr(Device->DeviceName);
+            value = alstr_get_cstr(Device->DeviceName);
             ALCdevice_DecRef(Device);
         }
         else
         {
             ProbeCaptureDeviceList();
-            value = al_string_get_cstr(alcCaptureDeviceList);
+            value = alstr_get_cstr(alcCaptureDeviceList);
         }
         break;
 
@@ -2898,13 +2898,13 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
         break;
 
     case ALC_DEFAULT_ALL_DEVICES_SPECIFIER:
-        if(al_string_empty(alcAllDevicesList))
+        if(alstr_empty(alcAllDevicesList))
             ProbeAllDevicesList();
 
         VerifyDevice(&Device);
 
         free(alcDefaultAllDevicesSpecifier);
-        alcDefaultAllDevicesSpecifier = strdup(al_string_get_cstr(alcAllDevicesList));
+        alcDefaultAllDevicesSpecifier = strdup(alstr_get_cstr(alcAllDevicesList));
         if(!alcDefaultAllDevicesSpecifier)
             alcSetError(Device, ALC_OUT_OF_MEMORY);
 
@@ -2913,13 +2913,13 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
         break;
 
     case ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER:
-        if(al_string_empty(alcCaptureDeviceList))
+        if(alstr_empty(alcCaptureDeviceList))
             ProbeCaptureDeviceList();
 
         VerifyDevice(&Device);
 
         free(alcCaptureDefaultDeviceSpecifier);
-        alcCaptureDefaultDeviceSpecifier = strdup(al_string_get_cstr(alcCaptureDeviceList));
+        alcCaptureDefaultDeviceSpecifier = strdup(alstr_get_cstr(alcCaptureDeviceList));
         if(!alcCaptureDefaultDeviceSpecifier)
             alcSetError(Device, ALC_OUT_OF_MEMORY);
 
@@ -2943,7 +2943,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
         else
         {
             almtx_lock(&Device->BackendLock);
-            value = (Device->HrtfHandle ? al_string_get_cstr(Device->HrtfName) : "");
+            value = (Device->HrtfHandle ? alstr_get_cstr(Device->HrtfName) : "");
             almtx_unlock(&Device->BackendLock);
             ALCdevice_DecRef(Device);
         }
@@ -3578,7 +3578,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     ALCdevice_IncRef(ALContext->Device);
     InitContext(ALContext);
 
-    if(ConfigValueFloat(al_string_get_cstr(device->DeviceName), NULL, "volume-adjust", &valf))
+    if(ConfigValueFloat(alstr_get_cstr(device->DeviceName), NULL, "volume-adjust", &valf))
     {
         if(!isfinite(valf))
             ERR("volume-adjust must be finite: %f\n", valf);
@@ -3937,7 +3937,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     }
     almtx_init(&device->BackendLock, almtx_plain);
 
-    if(ConfigValueStr(al_string_get_cstr(device->DeviceName), NULL, "ambi-format", &fmt))
+    if(ConfigValueStr(alstr_get_cstr(device->DeviceName), NULL, "ambi-format", &fmt))
     {
         if(strcasecmp(fmt, "fuma") == 0)
         {
@@ -3985,7 +3985,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         } while(!ATOMIC_COMPARE_EXCHANGE_WEAK_SEQ(ALCdevice*, &DeviceList, &head, device));
     }
 
-    TRACE("Created device %p, \"%s\"\n", device, al_string_get_cstr(device->DeviceName));
+    TRACE("Created device %p, \"%s\"\n", device, alstr_get_cstr(device->DeviceName));
     return device;
 }
 
@@ -4155,7 +4155,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         } while(!ATOMIC_COMPARE_EXCHANGE_WEAK_SEQ(ALCdevice*, &DeviceList, &head, device));
     }
 
-    TRACE("Created device %p, \"%s\"\n", device, al_string_get_cstr(device->DeviceName));
+    TRACE("Created device %p, \"%s\"\n", device, alstr_get_cstr(device->DeviceName));
     return device;
 }
 
@@ -4519,7 +4519,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum
     {
         case ALC_HRTF_SPECIFIER_SOFT:
             if(index >= 0 && (size_t)index < VECTOR_SIZE(device->HrtfList))
-                str = al_string_get_cstr(VECTOR_ELEM(device->HrtfList, index).name);
+                str = alstr_get_cstr(VECTOR_ELEM(device->HrtfList, index).name);
             else
                 alcSetError(device, ALC_INVALID_VALUE);
             break;

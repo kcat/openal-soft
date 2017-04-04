@@ -130,14 +130,14 @@ static void get_device_name_and_guid(IMMDevice *device, al_string *name, al_stri
     PROPVARIANT pvguid;
     HRESULT hr;
 
-    al_string_copy_cstr(name, DEVNAME_HEAD);
+    alstr_copy_cstr(name, DEVNAME_HEAD);
 
     hr = IMMDevice_OpenPropertyStore(device, STGM_READ, &ps);
     if(FAILED(hr))
     {
         WARN("OpenPropertyStore failed: 0x%08lx\n", hr);
-        al_string_append_cstr(name, "Unknown Device Name");
-        if(guid!=NULL)al_string_copy_cstr(guid, "Unknown Device GUID");
+        alstr_append_cstr(name, "Unknown Device Name");
+        if(guid!=NULL)alstr_copy_cstr(guid, "Unknown Device GUID");
         return;
     }
 
@@ -147,14 +147,14 @@ static void get_device_name_and_guid(IMMDevice *device, al_string *name, al_stri
     if(FAILED(hr))
     {
         WARN("GetValue Device_FriendlyName failed: 0x%08lx\n", hr);
-        al_string_append_cstr(name, "Unknown Device Name");
+        alstr_append_cstr(name, "Unknown Device Name");
     }
     else if(pvname.vt == VT_LPWSTR)
-        al_string_append_wcstr(name, pvname.pwszVal);
+        alstr_append_wcstr(name, pvname.pwszVal);
     else
     {
         WARN("Unexpected PROPVARIANT type: 0x%04x\n", pvname.vt);
-        al_string_append_cstr(name, "Unknown Device Name");
+        alstr_append_cstr(name, "Unknown Device Name");
     }
     PropVariantClear(&pvname);
 
@@ -165,14 +165,14 @@ static void get_device_name_and_guid(IMMDevice *device, al_string *name, al_stri
         if(FAILED(hr))
         {
             WARN("GetValue AudioEndpoint_GUID failed: 0x%08lx\n", hr);
-            al_string_copy_cstr(guid, "Unknown Device GUID");
+            alstr_copy_cstr(guid, "Unknown Device GUID");
         }
         else if(pvguid.vt == VT_LPWSTR)
-            al_string_copy_wcstr(guid, pvguid.pwszVal);
+            alstr_copy_wcstr(guid, pvguid.pwszVal);
         else
         {
             WARN("Unexpected PROPVARIANT type: 0x%04x\n", pvguid.vt);
-            al_string_copy_cstr(guid, "Unknown Device GUID");
+            alstr_copy_cstr(guid, "Unknown Device GUID");
         }
 
         PropVariantClear(&pvguid);
@@ -228,22 +228,22 @@ static void add_device(IMMDevice *device, const WCHAR *devid, vector_DevMap *lis
     {
         const DevMap *iter;
 
-        al_string_copy(&entry.name, tmpname);
+        alstr_copy(&entry.name, tmpname);
         if(count != 0)
         {
             char str[64];
             snprintf(str, sizeof(str), " #%d", count+1);
-            al_string_append_cstr(&entry.name, str);
+            alstr_append_cstr(&entry.name, str);
         }
 
-#define MATCH_ENTRY(i) (al_string_cmp(entry.name, (i)->name) == 0)
+#define MATCH_ENTRY(i) (alstr_cmp(entry.name, (i)->name) == 0)
         VECTOR_FIND_IF(iter, const DevMap, *list, MATCH_ENTRY);
         if(iter == VECTOR_END(*list)) break;
 #undef MATCH_ENTRY
         count++;
     }
 
-    TRACE("Got device \"%s\", \"%s\", \"%ls\"\n", al_string_get_cstr(entry.name), al_string_get_cstr(entry.endpoint_guid), entry.devid);
+    TRACE("Got device \"%s\", \"%s\", \"%ls\"\n", alstr_get_cstr(entry.name), alstr_get_cstr(entry.endpoint_guid), entry.devid);
     VECTOR_PUSH_BACK(*list, entry);
 
     AL_STRING_DEINIT(tmpname);
@@ -716,8 +716,8 @@ static ALCenum ALCmmdevPlayback_open(ALCmmdevPlayback *self, const ALCchar *devi
             }
 
             hr = E_FAIL;
-#define MATCH_NAME(i) (al_string_cmp_cstr((i)->name, deviceName) == 0 ||        \
-                       al_string_cmp_cstr((i)->endpoint_guid, deviceName) == 0)
+#define MATCH_NAME(i) (alstr_cmp_cstr((i)->name, deviceName) == 0 ||        \
+                       alstr_cmp_cstr((i)->endpoint_guid, deviceName) == 0)
             VECTOR_FIND_IF(iter, const DevMap, PlaybackDevices, MATCH_NAME);
 #undef MATCH_NAME
             if(iter == VECTOR_END(PlaybackDevices))
@@ -739,7 +739,7 @@ static ALCenum ALCmmdevPlayback_open(ALCmmdevPlayback *self, const ALCchar *devi
             {
                 ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
                 self->devid = strdupW(iter->devid);
-                al_string_copy(&device->DeviceName, iter->name);
+                alstr_copy(&device->DeviceName, iter->name);
                 hr = S_OK;
             }
         }
@@ -797,7 +797,7 @@ static HRESULT ALCmmdevPlayback_openProxy(ALCmmdevPlayback *self)
     if(SUCCEEDED(hr))
     {
         self->client = ptr;
-        if(al_string_empty(device->DeviceName))
+        if(alstr_empty(device->DeviceName))
             get_device_name_and_guid(self->mmdev, &device->DeviceName, NULL);
     }
 
@@ -1377,8 +1377,8 @@ static ALCenum ALCmmdevCapture_open(ALCmmdevCapture *self, const ALCchar *device
             }
 
             hr = E_FAIL;
-#define MATCH_NAME(i) (al_string_cmp_cstr((i)->name, deviceName) == 0 ||        \
-                       al_string_cmp_cstr((i)->endpoint_guid, deviceName) == 0)
+#define MATCH_NAME(i) (alstr_cmp_cstr((i)->name, deviceName) == 0 ||        \
+                       alstr_cmp_cstr((i)->endpoint_guid, deviceName) == 0)
             VECTOR_FIND_IF(iter, const DevMap, CaptureDevices, MATCH_NAME);
 #undef MATCH_NAME
             if(iter == VECTOR_END(CaptureDevices))
@@ -1400,7 +1400,7 @@ static ALCenum ALCmmdevCapture_open(ALCmmdevCapture *self, const ALCchar *device
             {
                 ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
                 self->devid = strdupW(iter->devid);
-                al_string_copy(&device->DeviceName, iter->name);
+                alstr_copy(&device->DeviceName, iter->name);
                 hr = S_OK;
             }
         }
@@ -1476,7 +1476,7 @@ static HRESULT ALCmmdevCapture_openProxy(ALCmmdevCapture *self)
     if(SUCCEEDED(hr))
     {
         self->client = ptr;
-        if(al_string_empty(device->DeviceName))
+        if(alstr_empty(device->DeviceName))
             get_device_name_and_guid(self->mmdev, &device->DeviceName, NULL);
     }
 
@@ -1777,9 +1777,9 @@ ALCenum ALCmmdevCapture_captureSamples(ALCmmdevCapture *self, ALCvoid *buffer, A
 
 
 static inline void AppendAllDevicesList2(const DevMap *entry)
-{ AppendAllDevicesList(al_string_get_cstr(entry->name)); }
+{ AppendAllDevicesList(alstr_get_cstr(entry->name)); }
 static inline void AppendCaptureDeviceList2(const DevMap *entry)
-{ AppendCaptureDeviceList(al_string_get_cstr(entry->name)); }
+{ AppendCaptureDeviceList(alstr_get_cstr(entry->name)); }
 
 typedef struct ALCmmdevBackendFactory {
     DERIVE_FROM_TYPE(ALCbackendFactory);

@@ -46,6 +46,12 @@
 #define MIN_AZ_COUNT                 (1)
 #define MAX_AZ_COUNT                 (128)
 
+struct HrtfEntry {
+    struct HrtfEntry *next;
+    struct Hrtf *handle;
+    char filename[];
+};
+
 static const ALchar magicMarker00[8] = "MinPHR00";
 static const ALchar magicMarker01[8] = "MinPHR01";
 
@@ -240,7 +246,7 @@ ALsizei BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsize
 static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALsizei evCount, ALsizei irCount,
                                     const ALubyte *azCount, const ALushort *evOffset,
                                     const ALshort *coeffs, const ALubyte *delays,
-                                    const_al_string filename)
+                                    const char *filename)
 {
     struct Hrtf *Hrtf;
     size_t total;
@@ -255,7 +261,7 @@ static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALsizei evCount
 
     Hrtf = al_calloc(16, total);
     if(Hrtf == NULL)
-        ERR("Out of memory allocating storage for %s.\n", alstr_get_cstr(filename));
+        ERR("Out of memory allocating storage for %s.\n", filename);
     else
     {
         uintptr_t offset = sizeof(struct Hrtf);
@@ -298,7 +304,7 @@ static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALsizei evCount
     return Hrtf;
 }
 
-static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const_al_string filename)
+static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const char *filename)
 {
     const ALubyte maxDelay = HRTF_HISTORY_LENGTH-1;
     struct Hrtf *Hrtf = NULL;
@@ -314,8 +320,7 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const_al_str
 
     if(datalen < 9)
     {
-        ERR("Unexpected end of %s data (req %d, rem "SZFMT")\n",
-            alstr_get_cstr(filename), 9, datalen);
+        ERR("Unexpected end of %s data (req %d, rem "SZFMT")\n", filename, 9, datalen);
         return NULL;
     }
 
@@ -353,8 +358,7 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const_al_str
 
     if(datalen < evCount*2)
     {
-        ERR("Unexpected end of %s data (req %d, rem "SZFMT")\n",
-            alstr_get_cstr(filename), evCount*2, datalen);
+        ERR("Unexpected end of %s data (req %d, rem "SZFMT")\n", filename, evCount*2, datalen);
         return NULL;
     }
 
@@ -423,7 +427,7 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const_al_str
         if(datalen < reqsize)
         {
             ERR("Unexpected end of %s data (req "SZFMT", rem "SZFMT")\n",
-                alstr_get_cstr(filename), reqsize, datalen);
+                filename, reqsize, datalen);
             failed = AL_TRUE;
         }
     }
@@ -463,7 +467,7 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const_al_str
     return Hrtf;
 }
 
-static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const_al_string filename)
+static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const char *filename)
 {
     const ALubyte maxDelay = HRTF_HISTORY_LENGTH-1;
     struct Hrtf *Hrtf = NULL;
@@ -478,8 +482,7 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const_al_str
 
     if(datalen < 6)
     {
-        ERR("Unexpected end of %s data (req %d, rem "SZFMT"\n",
-            alstr_get_cstr(filename), 6, datalen);
+        ERR("Unexpected end of %s data (req %d, rem "SZFMT"\n", filename, 6, datalen);
         return NULL;
     }
 
@@ -512,8 +515,7 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const_al_str
 
     if(datalen < evCount)
     {
-        ERR("Unexpected end of %s data (req %d, rem "SZFMT"\n",
-            alstr_get_cstr(filename), evCount, datalen);
+        ERR("Unexpected end of %s data (req %d, rem "SZFMT"\n", filename, evCount, datalen);
         return NULL;
     }
 
@@ -565,7 +567,7 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const_al_str
         if(datalen < reqsize)
         {
             ERR("Unexpected end of %s data (req "SZFMT", rem "SZFMT"\n",
-                alstr_get_cstr(filename), reqsize, datalen);
+                filename, reqsize, datalen);
             failed = AL_TRUE;
         }
     }
@@ -610,9 +612,7 @@ static void AddFileEntry(vector_EnumeratedHrtf *list, const_al_string filename)
 {
     EnumeratedHrtf entry = { AL_STRING_INIT_STATIC(), NULL };
     struct HrtfEntry *loaded_entry;
-    struct Hrtf *hrtf = NULL;
     const EnumeratedHrtf *iter;
-    struct FileMapping fmap;
     const char *name;
     const char *ext;
     int i;
@@ -639,50 +639,13 @@ static void AddFileEntry(vector_EnumeratedHrtf *list, const_al_string filename)
         loaded_entry = loaded_entry->next;
     }
 
-    TRACE("Loading %s...\n", alstr_get_cstr(filename));
-    fmap = MapFileToMem(alstr_get_cstr(filename));
-    if(fmap.ptr == NULL)
-    {
-        ERR("Could not open %s\n", alstr_get_cstr(filename));
-        return;
-    }
-
-    if(fmap.len < sizeof(magicMarker01))
-        ERR("%s data is too short ("SZFMT" bytes)\n", alstr_get_cstr(filename), fmap.len);
-    else if(memcmp(fmap.ptr, magicMarker01, sizeof(magicMarker01)) == 0)
-    {
-        TRACE("Detected data set format v1\n");
-        hrtf = LoadHrtf01((const ALubyte*)fmap.ptr+sizeof(magicMarker01),
-            fmap.len-sizeof(magicMarker01), filename
-        );
-    }
-    else if(memcmp(fmap.ptr, magicMarker00, sizeof(magicMarker00)) == 0)
-    {
-        TRACE("Detected data set format v0\n");
-        hrtf = LoadHrtf00((const ALubyte*)fmap.ptr+sizeof(magicMarker00),
-            fmap.len-sizeof(magicMarker00), filename
-        );
-    }
-    else
-        ERR("Invalid header in %s: \"%.8s\"\n", alstr_get_cstr(filename), (const char*)fmap.ptr);
-    UnmapFileMem(&fmap);
-
-    if(!hrtf)
-    {
-        ERR("Failed to load %s\n", alstr_get_cstr(filename));
-        return;
-    }
-
     loaded_entry = al_calloc(DEF_ALIGN,
         offsetof(struct HrtfEntry, filename[alstr_length(filename)+1])
     );
     loaded_entry->next = LoadedHrtfs;
-    loaded_entry->handle = hrtf;
+    loaded_entry->handle = NULL;
     strcpy(loaded_entry->filename, alstr_get_cstr(filename));
     LoadedHrtfs = loaded_entry;
-
-    TRACE("Loaded HRTF support for format: %s %uhz\n",
-          DevFmtChannelsString(DevFmtStereo), hrtf->sampleRate);
 
 skip_load:
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
@@ -762,19 +725,19 @@ static void AddBuiltInEntry(vector_EnumeratedHrtf *list, const ALubyte *data, si
     if(memcmp(data, magicMarker01, sizeof(magicMarker01)) == 0)
     {
         TRACE("Detected data set format v1\n");
-        hrtf = LoadHrtf01(data+sizeof(magicMarker01),
-            datalen-sizeof(magicMarker01), filename
+        hrtf = LoadHrtf01((const ALubyte*)data+sizeof(magicMarker01),
+            datalen-sizeof(magicMarker01), alstr_get_cstr(filename)
         );
     }
     else if(memcmp(data, magicMarker00, sizeof(magicMarker00)) == 0)
     {
         TRACE("Detected data set format v0\n");
-        hrtf = LoadHrtf00(data+sizeof(magicMarker00),
-            datalen-sizeof(magicMarker00), filename
+        hrtf = LoadHrtf00((const ALubyte*)data+sizeof(magicMarker00),
+            datalen-sizeof(magicMarker00), alstr_get_cstr(filename)
         );
     }
     else
-        ERR("Invalid header in %s: \"%.8s\"\n", alstr_get_cstr(filename), data);
+        ERR("Invalid header in %s: \"%.8s\"\n", alstr_get_cstr(filename), (const char*)data);
 
     if(!hrtf)
     {
@@ -1030,6 +993,65 @@ void FreeHrtfList(vector_EnumeratedHrtf *list)
     VECTOR_FOR_EACH(EnumeratedHrtf, *list, CLEAR_ENTRY);
     VECTOR_DEINIT(*list);
 #undef CLEAR_ENTRY
+}
+
+struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry)
+{
+    static ATOMIC_FLAG LoadLock = ATOMIC_FLAG_INIT;
+    struct Hrtf *hrtf = NULL;
+    struct FileMapping fmap;
+
+    while(ATOMIC_FLAG_TEST_AND_SET(&LoadLock, almemory_order_seq_cst))
+        althrd_yield();
+
+    if(entry->handle)
+    {
+        hrtf = entry->handle;
+        goto done;
+    }
+
+    TRACE("Loading %s...\n", entry->filename);
+    fmap = MapFileToMem(entry->filename);
+    if(fmap.ptr == NULL)
+    {
+        ERR("Could not open %s\n", entry->filename);
+        goto done;
+    }
+
+    if(fmap.len < sizeof(magicMarker01))
+        ERR("%s data is too short ("SZFMT" bytes)\n", entry->filename, fmap.len);
+    else if(memcmp(fmap.ptr, magicMarker01, sizeof(magicMarker01)) == 0)
+    {
+        TRACE("Detected data set format v1\n");
+        hrtf = LoadHrtf01((const ALubyte*)fmap.ptr+sizeof(magicMarker01),
+            fmap.len-sizeof(magicMarker01), entry->filename
+        );
+    }
+    else if(memcmp(fmap.ptr, magicMarker00, sizeof(magicMarker00)) == 0)
+    {
+        TRACE("Detected data set format v0\n");
+        hrtf = LoadHrtf00((const ALubyte*)fmap.ptr+sizeof(magicMarker00),
+            fmap.len-sizeof(magicMarker00), entry->filename
+        );
+    }
+    else
+        ERR("Invalid header in %s: \"%.8s\"\n", entry->filename, (const char*)fmap.ptr);
+    UnmapFileMem(&fmap);
+
+    if(!hrtf)
+    {
+        ERR("Failed to load %s\n", entry->filename);
+        goto done;
+    }
+
+    TRACE("Loaded HRTF support for format: %s %uhz\n",
+          DevFmtChannelsString(DevFmtStereo), hrtf->sampleRate);
+
+    entry->handle = hrtf;
+
+done:
+    ATOMIC_FLAG_CLEAR(&LoadLock, almemory_order_seq_cst);
+    return hrtf;
 }
 
 

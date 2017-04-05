@@ -18,6 +18,8 @@
 #define HRTF_AMBI_MAX_CHANNELS 16
 
 
+struct HrtfEntry;
+
 struct Hrtf {
     ALuint sampleRate;
     ALsizei irSize;
@@ -29,17 +31,12 @@ struct Hrtf {
     const ALubyte *delays;
 };
 
-struct HrtfEntry {
-    struct HrtfEntry *next;
-    struct Hrtf *handle;
-    char filename[];
-};
-
 
 void FreeHrtfs(void);
 
 vector_EnumeratedHrtf EnumerateHrtf(const_al_string devname);
 void FreeHrtfList(vector_EnumeratedHrtf *list);
+struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry);
 
 void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat (*coeffs)[2], ALsizei *delays);
 

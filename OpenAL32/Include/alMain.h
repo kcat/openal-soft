@@ -637,7 +637,7 @@ typedef struct DirectHrtfState {
 typedef struct EnumeratedHrtf {
     al_string name;
 
-    const struct HrtfEntry *hrtf;
+    struct HrtfEntry *hrtf;
 } EnumeratedHrtf;
 TYPEDEF_VECTOR(EnumeratedHrtf, vector_EnumeratedHrtf)
 

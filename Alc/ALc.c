@@ -2049,6 +2049,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         if(hrtf_userreq == Hrtf_Enable || (hrtf_userreq != Hrtf_Disable && hrtf_appreq == Hrtf_Enable))
         {
+            const struct Hrtf *hrtf = NULL;
             if(VECTOR_SIZE(device->HrtfList) == 0)
             {
                 VECTOR_DEINIT(device->HrtfList);
@@ -2056,9 +2057,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             }
             if(VECTOR_SIZE(device->HrtfList) > 0)
             {
-                const struct Hrtf *hrtf = VECTOR_ELEM(device->HrtfList, 0).hrtf->handle;
                 if(hrtf_id >= 0 && (size_t)hrtf_id < VECTOR_SIZE(device->HrtfList))
-                    hrtf = VECTOR_ELEM(device->HrtfList, hrtf_id).hrtf->handle;
+                    hrtf = GetLoadedHrtf(VECTOR_ELEM(device->HrtfList, hrtf_id).hrtf);
+                else
+                    hrtf = GetLoadedHrtf(VECTOR_ELEM(device->HrtfList, 0).hrtf);
+            }
+
+            if(hrtf)
+            {
                 device->FmtChans = DevFmtStereo;
                 device->Frequency = hrtf->sampleRate;
                 device->Flags |= DEVICE_CHANNELS_REQUEST | DEVICE_FREQUENCY_REQUEST;
@@ -2069,36 +2075,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 hrtf_appreq = Hrtf_Disable;
                 device->HrtfStatus = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
             }
-        }
-    }
-    else if(hrtf_appreq == Hrtf_Enable)
-    {
-        size_t i = VECTOR_SIZE(device->HrtfList);
-        /* Loopback device. We don't need to match to a specific HRTF entry
-         * here. If the requested ID matches, we'll pick that later, if not,
-         * we'll try to auto-select one anyway. Just make sure one exists
-         * that'll work.
-         */
-        if(device->FmtChans == DevFmtStereo)
-        {
-            if(VECTOR_SIZE(device->HrtfList) == 0)
-            {
-                VECTOR_DEINIT(device->HrtfList);
-                device->HrtfList = EnumerateHrtf(device->DeviceName);
-            }
-            for(i = 0;i < VECTOR_SIZE(device->HrtfList);i++)
-            {
-                const struct Hrtf *hrtf = VECTOR_ELEM(device->HrtfList, i).hrtf->handle;
-                if(hrtf->sampleRate == device->Frequency)
-                    break;
-            }
-        }
-        if(i == VECTOR_SIZE(device->HrtfList))
-        {
-            ERR("Requested format not HRTF compatible: %s, %uhz\n",
-                DevFmtChannelsString(device->FmtChans), device->Frequency);
-            hrtf_appreq = Hrtf_Disable;
-            device->HrtfStatus = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
         }
     }
 

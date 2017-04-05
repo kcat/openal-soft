@@ -53,7 +53,11 @@ static const ALchar magicMarker01[8] = "MinPHR01";
  * directional sounds. */
 static const ALfloat PassthruCoeff = 0.707106781187f/*sqrt(0.5)*/;
 
-static struct Hrtf *LoadedHrtfs = NULL;
+static struct LoadedHrtfEntry {
+    struct LoadedHrtfEntry *next;
+    struct Hrtf *hrtf;
+    char filename[];
+} *LoadedHrtfs = NULL;
 
 
 /* Calculate the elevation index given the polar elevation in radians. This
@@ -252,11 +256,10 @@ static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALsizei evCount
     total  = RoundUp(total, sizeof(ALfloat)); /* Align for float fields */
     total += sizeof(Hrtf->coeffs[0])*irSize*irCount;
     total += sizeof(Hrtf->delays[0])*irCount;
-    total += alstr_length(filename)+1;
 
     Hrtf = al_calloc(16, total);
     if(Hrtf == NULL)
-        ERR("Out of memory.\n");
+        ERR("Out of memory allocating storage for %s.\n", alstr_get_cstr(filename));
     else
     {
         uintptr_t offset = sizeof(struct Hrtf);
@@ -265,7 +268,6 @@ static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALsizei evCount
         ALubyte *_azCount;
         ALubyte *_delays;
         ALfloat *_coeffs;
-        char *_name;
         ALsizei i;
 
         Hrtf->sampleRate = rate;
@@ -287,20 +289,12 @@ static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALsizei evCount
         _delays = (ALubyte*)(base + offset); Hrtf->delays = _delays;
         offset += sizeof(_delays[0])*irCount;
 
-        _name = (char*)(base + offset); Hrtf->filename = _name;
-        offset += sizeof(_name[0])*(alstr_length(filename)+1);
-
-        Hrtf->next = NULL;
-
         /* Copy input data to storage. */
         for(i = 0;i < evCount;i++) _azCount[i] = azCount[i];
         for(i = 0;i < evCount;i++) _evOffset[i] = evOffset[i];
         for(i = 0;i < irSize*irCount;i++)
             _coeffs[i] = coeffs[i] / 32768.0f;
         for(i = 0;i < irCount;i++) _delays[i] = delays[i];
-        for(i = 0;i < (ALsizei)alstr_length(filename);i++)
-            _name[i] = VECTOR_ELEM(filename, i);
-        _name[i] = '\0';
 
         assert(offset == total);
     }
@@ -619,6 +613,7 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const_al_str
 static void AddFileEntry(vector_HrtfEntry *list, const_al_string filename)
 {
     HrtfEntry entry = { AL_STRING_INIT_STATIC(), NULL };
+    struct LoadedHrtfEntry *loaded_entry;
     struct Hrtf *hrtf = NULL;
     const HrtfEntry *iter;
     struct FileMapping fmap;
@@ -626,24 +621,27 @@ static void AddFileEntry(vector_HrtfEntry *list, const_al_string filename)
     const char *ext;
     int i;
 
-#define MATCH_FNAME(i) (alstr_cmp_cstr(filename, (i)->hrtf->filename) == 0)
-    VECTOR_FIND_IF(iter, const HrtfEntry, *list, MATCH_FNAME);
-    if(iter != VECTOR_END(*list))
+    /* Check if this file has already been loaded globally. */
+    loaded_entry = LoadedHrtfs;
+    while(loaded_entry)
     {
-        TRACE("Skipping duplicate file entry %s\n", alstr_get_cstr(filename));
-        return;
-    }
+        if(alstr_cmp_cstr(filename, loaded_entry->filename) == 0)
+        {
+            /* Check if this entry has already been added to the list. */
+#define MATCH_ENTRY(i) (loaded_entry->hrtf == (i)->hrtf)
+            VECTOR_FIND_IF(iter, const HrtfEntry, *list, MATCH_ENTRY);
+            if(iter != VECTOR_END(*list))
+            {
+                TRACE("Skipping duplicate file entry %s\n", alstr_get_cstr(filename));
+                return;
+            }
 #undef MATCH_FNAME
 
-    entry.hrtf = LoadedHrtfs;
-    while(entry.hrtf)
-    {
-        if(alstr_cmp_cstr(filename, entry.hrtf->filename) == 0)
-        {
             TRACE("Skipping load of already-loaded file %s\n", alstr_get_cstr(filename));
+            hrtf = loaded_entry->hrtf;
             goto skip_load;
         }
-        entry.hrtf = entry.hrtf->next;
+        loaded_entry = loaded_entry->next;
     }
 
     TRACE("Loading %s...\n", alstr_get_cstr(filename));
@@ -680,11 +678,16 @@ static void AddFileEntry(vector_HrtfEntry *list, const_al_string filename)
         return;
     }
 
-    hrtf->next = LoadedHrtfs;
-    LoadedHrtfs = hrtf;
+    loaded_entry = al_calloc(DEF_ALIGN,
+        offsetof(struct LoadedHrtfEntry, filename[alstr_length(filename)+1])
+    );
+    loaded_entry->next = LoadedHrtfs;
+    loaded_entry->hrtf = hrtf;
+    strcpy(loaded_entry->filename, alstr_get_cstr(filename));
+    LoadedHrtfs = loaded_entry;
+
     TRACE("Loaded HRTF support for format: %s %uhz\n",
             DevFmtChannelsString(DevFmtStereo), hrtf->sampleRate);
-    entry.hrtf = hrtf;
 
 skip_load:
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
@@ -714,6 +717,7 @@ skip_load:
         VECTOR_FIND_IF(iter, const HrtfEntry, *list, MATCH_NAME);
 #undef MATCH_NAME
     } while(iter != VECTOR_END(*list));
+    entry.hrtf = hrtf;
 
     TRACE("Adding entry \"%s\" from file \"%s\"\n", alstr_get_cstr(entry.name),
           alstr_get_cstr(filename));
@@ -726,28 +730,32 @@ skip_load:
 static void AddBuiltInEntry(vector_HrtfEntry *list, const ALubyte *data, size_t datalen, const_al_string filename)
 {
     HrtfEntry entry = { AL_STRING_INIT_STATIC(), NULL };
+    struct LoadedHrtfEntry *loaded_entry;
     struct Hrtf *hrtf = NULL;
     const HrtfEntry *iter;
+    const char *name;
+    const char *ext;
     int i;
 
-#define MATCH_FNAME(i) (alstr_cmp_cstr(filename, (i)->hrtf->filename) == 0)
-    VECTOR_FIND_IF(iter, const HrtfEntry, *list, MATCH_FNAME);
-    if(iter != VECTOR_END(*list))
+    loaded_entry = LoadedHrtfs;
+    while(loaded_entry)
     {
-        TRACE("Skipping duplicate file entry %s\n", alstr_get_cstr(filename));
-        return;
-    }
+        if(alstr_cmp_cstr(filename, loaded_entry->filename) == 0)
+        {
+#define MATCH_ENTRY(i) (loaded_entry->hrtf == (i)->hrtf)
+            VECTOR_FIND_IF(iter, const HrtfEntry, *list, MATCH_ENTRY);
+            if(iter != VECTOR_END(*list))
+            {
+                TRACE("Skipping duplicate file entry %s\n", alstr_get_cstr(filename));
+                return;
+            }
 #undef MATCH_FNAME
 
-    entry.hrtf = LoadedHrtfs;
-    while(entry.hrtf)
-    {
-        if(alstr_cmp_cstr(filename, entry.hrtf->filename) == 0)
-        {
             TRACE("Skipping load of already-loaded file %s\n", alstr_get_cstr(filename));
+            hrtf = loaded_entry->hrtf;
             goto skip_load;
         }
-        entry.hrtf = entry.hrtf->next;
+        loaded_entry = loaded_entry->next;
     }
 
     TRACE("Loading %s...\n", alstr_get_cstr(filename));
@@ -780,16 +788,33 @@ static void AddBuiltInEntry(vector_HrtfEntry *list, const ALubyte *data, size_t 
         return;
     }
 
-    hrtf->next = LoadedHrtfs;
-    LoadedHrtfs = hrtf;
+    loaded_entry = al_calloc(DEF_ALIGN,
+        offsetof(struct LoadedHrtfEntry, filename[alstr_length(filename)+1])
+    );
+    loaded_entry->next = LoadedHrtfs;
+    loaded_entry->hrtf = hrtf;
+    strcpy(loaded_entry->filename, alstr_get_cstr(filename));
+    LoadedHrtfs = loaded_entry;
+
     TRACE("Loaded HRTF support for format: %s %uhz\n",
             DevFmtChannelsString(DevFmtStereo), hrtf->sampleRate);
-    entry.hrtf = hrtf;
 
 skip_load:
+    /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
+     * format update). */
+    name = strrchr(alstr_get_cstr(filename), '/');
+    if(!name) name = strrchr(alstr_get_cstr(filename), '\\');
+    if(!name) name = alstr_get_cstr(filename);
+    else ++name;
+
+    ext = strrchr(name, '.');
+
     i = 0;
     do {
-        alstr_copy(&entry.name, filename);
+        if(!ext)
+            alstr_copy_cstr(&entry.name, name);
+        else
+            alstr_copy_range(&entry.name, name, ext);
         if(i != 0)
         {
             char str[64];
@@ -802,6 +827,7 @@ skip_load:
         VECTOR_FIND_IF(iter, const HrtfEntry, *list, MATCH_NAME);
 #undef MATCH_NAME
     } while(iter != VECTOR_END(*list));
+    entry.hrtf = hrtf;
 
     TRACE("Adding built-in entry \"%s\"\n", alstr_get_cstr(entry.name));
     VECTOR_PUSH_BACK(*list, entry);
@@ -1015,12 +1041,13 @@ void FreeHrtfList(vector_HrtfEntry *list)
 
 void FreeHrtfs(void)
 {
-    struct Hrtf *Hrtf = LoadedHrtfs;
+    struct LoadedHrtfEntry *Hrtf = LoadedHrtfs;
     LoadedHrtfs = NULL;
 
     while(Hrtf != NULL)
     {
-        struct Hrtf *next = Hrtf->next;
+        struct LoadedHrtfEntry *next = Hrtf->next;
+        al_free(Hrtf->hrtf);
         al_free(Hrtf);
         Hrtf = next;
     }

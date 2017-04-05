@@ -17,9 +17,6 @@ struct Hrtf {
     const ALushort *evOffset;
     const ALfloat *coeffs;
     const ALubyte *delays;
-
-    const char *filename;
-    struct Hrtf *next;
 };
 
 #define HRTFDELAY_BITS    (20)

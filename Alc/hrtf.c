@@ -633,21 +633,24 @@ static void AddFileEntry(vector_EnumeratedHrtf *list, const_al_string filename)
             }
 #undef MATCH_FNAME
 
-            TRACE("Skipping load of already-loaded file %s\n", alstr_get_cstr(filename));
-            goto skip_load;
+            break;
         }
         loaded_entry = loaded_entry->next;
     }
 
-    loaded_entry = al_calloc(DEF_ALIGN,
-        offsetof(struct HrtfEntry, filename[alstr_length(filename)+1])
-    );
-    loaded_entry->next = LoadedHrtfs;
-    loaded_entry->handle = NULL;
-    strcpy(loaded_entry->filename, alstr_get_cstr(filename));
-    LoadedHrtfs = loaded_entry;
+    if(!loaded_entry)
+    {
+        TRACE("Got new file \"%s\"\n", alstr_get_cstr(filename));
 
-skip_load:
+        loaded_entry = al_calloc(DEF_ALIGN,
+            offsetof(struct HrtfEntry, filename[alstr_length(filename)+1])
+        );
+        loaded_entry->next = LoadedHrtfs;
+        loaded_entry->handle = NULL;
+        strcpy(loaded_entry->filename, alstr_get_cstr(filename));
+        LoadedHrtfs = loaded_entry;
+    }
+
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
      * format update). */
     name = strrchr(alstr_get_cstr(filename), '/');

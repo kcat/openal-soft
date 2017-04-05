@@ -8,6 +8,16 @@
 #include "alstring.h"
 
 
+#define HRTFDELAY_BITS    (20)
+#define HRTFDELAY_FRACONE (1<<HRTFDELAY_BITS)
+#define HRTFDELAY_MASK    (HRTFDELAY_FRACONE-1)
+
+/* The maximum number of virtual speakers used to generate HRTF coefficients
+ * for decoding B-Format.
+ */
+#define HRTF_AMBI_MAX_CHANNELS 16
+
+
 struct Hrtf {
     ALuint sampleRate;
     ALsizei irSize;
@@ -19,19 +29,17 @@ struct Hrtf {
     const ALubyte *delays;
 };
 
-#define HRTFDELAY_BITS    (20)
-#define HRTFDELAY_FRACONE (1<<HRTFDELAY_BITS)
-#define HRTFDELAY_MASK    (HRTFDELAY_FRACONE-1)
+struct HrtfEntry {
+    struct HrtfEntry *next;
+    struct Hrtf *handle;
+    char filename[];
+};
 
-/* The maximum number of virtual speakers used to generate HRTF coefficients
- * for decoding B-Format.
- */
-#define HRTF_AMBI_MAX_CHANNELS 16
 
 void FreeHrtfs(void);
 
-vector_HrtfEntry EnumerateHrtf(const_al_string devname);
-void FreeHrtfList(vector_HrtfEntry *list);
+vector_EnumeratedHrtf EnumerateHrtf(const_al_string devname);
+void FreeHrtfList(vector_EnumeratedHrtf *list);
 
 void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat (*coeffs)[2], ALsizei *delays);
 

@@ -1150,20 +1150,22 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
 
     if(hrtf_id >= 0 && (size_t)hrtf_id < VECTOR_SIZE(device->HrtfList))
     {
-        const HrtfEntry *entry = &VECTOR_ELEM(device->HrtfList, hrtf_id);
-        if(entry->hrtf->sampleRate == device->Frequency)
+        const EnumeratedHrtf *entry = &VECTOR_ELEM(device->HrtfList, hrtf_id);
+        const struct Hrtf *hrtf = entry->hrtf->handle;
+        if(hrtf->sampleRate == device->Frequency)
         {
-            device->HrtfHandle = entry->hrtf;
+            device->HrtfHandle = hrtf;
             alstr_copy(&device->HrtfName, entry->name);
         }
     }
 
     for(i = 0;!device->HrtfHandle && i < VECTOR_SIZE(device->HrtfList);i++)
     {
-        const HrtfEntry *entry = &VECTOR_ELEM(device->HrtfList, i);
-        if(entry->hrtf->sampleRate == device->Frequency)
+        const EnumeratedHrtf *entry = &VECTOR_ELEM(device->HrtfList, i);
+        const struct Hrtf *hrtf = entry->hrtf->handle;
+        if(hrtf->sampleRate == device->Frequency)
         {
-            device->HrtfHandle = entry->hrtf;
+            device->HrtfHandle = hrtf;
             alstr_copy(&device->HrtfName, entry->name);
         }
     }

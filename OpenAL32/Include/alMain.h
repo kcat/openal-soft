@@ -358,6 +358,7 @@ extern "C" {
 #endif
 
 struct Hrtf;
+struct HrtfEntry;
 
 
 #define DEFAULT_OUTPUT_RATE  (44100)
@@ -633,12 +634,12 @@ typedef struct DirectHrtfState {
     } Chan[];
 } DirectHrtfState;
 
-typedef struct HrtfEntry {
+typedef struct EnumeratedHrtf {
     al_string name;
 
-    const struct Hrtf *hrtf;
-} HrtfEntry;
-TYPEDEF_VECTOR(HrtfEntry, vector_HrtfEntry)
+    const struct HrtfEntry *hrtf;
+} EnumeratedHrtf;
+TYPEDEF_VECTOR(EnumeratedHrtf, vector_EnumeratedHrtf)
 
 
 /* Maximum delay in samples for speaker distance compensation. */
@@ -702,7 +703,7 @@ struct ALCdevice_struct
     DirectHrtfState *Hrtf;
     al_string HrtfName;
     const struct Hrtf *HrtfHandle;
-    vector_HrtfEntry HrtfList;
+    vector_EnumeratedHrtf HrtfList;
     ALCenum HrtfStatus;
 
     /* UHJ encoder state */

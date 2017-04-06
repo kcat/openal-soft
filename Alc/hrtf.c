@@ -59,6 +59,7 @@ static const ALchar magicMarker01[8] = "MinPHR01";
  * directional sounds. */
 static const ALfloat PassthruCoeff = 0.707106781187f/*sqrt(0.5)*/;
 
+static ATOMIC_FLAG LoadedHrtfLock = ATOMIC_FLAG_INIT;
 static struct HrtfEntry *LoadedHrtfs = NULL;
 
 
@@ -272,6 +273,7 @@ static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALsizei evCount
         ALfloat *_coeffs;
         ALsizei i;
 
+        InitRef(&Hrtf->ref, 0);
         Hrtf->sampleRate = rate;
         Hrtf->irSize = irSize;
         Hrtf->evCount = evCount;
@@ -973,7 +975,6 @@ void FreeHrtfList(vector_EnumeratedHrtf *list)
 
 struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry)
 {
-    static ATOMIC_FLAG LoadLock = ATOMIC_FLAG_INIT;
     struct Hrtf *hrtf = NULL;
     struct FileMapping fmap;
     const ALubyte *rdata;
@@ -982,12 +983,13 @@ struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry)
     size_t rsize;
     char ch;
 
-    while(ATOMIC_FLAG_TEST_AND_SET(&LoadLock, almemory_order_seq_cst))
+    while(ATOMIC_FLAG_TEST_AND_SET(&LoadedHrtfLock, almemory_order_seq_cst))
         althrd_yield();
 
     if(entry->handle)
     {
         hrtf = entry->handle;
+        Hrtf_IncRef(hrtf);
         goto done;
     }
 
@@ -1047,15 +1049,52 @@ struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry)
         ERR("Failed to load %s\n", name);
         goto done;
     }
+    entry->handle = hrtf;
+    Hrtf_IncRef(hrtf);
 
     TRACE("Loaded HRTF support for format: %s %uhz\n",
           DevFmtChannelsString(DevFmtStereo), hrtf->sampleRate);
 
-    entry->handle = hrtf;
-
 done:
-    ATOMIC_FLAG_CLEAR(&LoadLock, almemory_order_seq_cst);
+    ATOMIC_FLAG_CLEAR(&LoadedHrtfLock, almemory_order_seq_cst);
     return hrtf;
+}
+
+
+void Hrtf_IncRef(struct Hrtf *hrtf)
+{
+    uint ref = IncrementRef(&hrtf->ref);
+    TRACEREF("%p increasing refcount to %u\n", hrtf, ref);
+}
+
+void Hrtf_DecRef(struct Hrtf *hrtf)
+{
+    struct HrtfEntry *Hrtf;
+    uint ref = DecrementRef(&hrtf->ref);
+    TRACEREF("%p decreasing refcount to %u\n", hrtf, ref);
+    if(ref == 0)
+    {
+        while(ATOMIC_FLAG_TEST_AND_SET(&LoadedHrtfLock, almemory_order_seq_cst))
+            althrd_yield();
+
+        Hrtf = LoadedHrtfs;
+        while(Hrtf != NULL)
+        {
+            /* Need to double-check that it's still unused, as another device
+             * could've reacquired this HRTF after its reference went to 0 and
+             * before the lock was taken.
+             */
+            if(hrtf == Hrtf->handle && ReadRef(&hrtf->ref) == 0)
+            {
+                al_free(Hrtf->handle);
+                Hrtf->handle = NULL;
+                TRACE("Unloaded unused HRTF %s\n", Hrtf->filename);
+            }
+            Hrtf = Hrtf->next;
+        }
+
+        ATOMIC_FLAG_CLEAR(&LoadedHrtfLock, almemory_order_seq_cst);
+    }
 }
 
 

@@ -6,6 +6,7 @@
 
 #include "alMain.h"
 #include "alstring.h"
+#include "atomic.h"
 
 
 #define HRTFDELAY_BITS    (20)
@@ -21,6 +22,8 @@
 struct HrtfEntry;
 
 struct Hrtf {
+    RefCount ref;
+
     ALuint sampleRate;
     ALsizei irSize;
     ALubyte evCount;
@@ -37,6 +40,8 @@ void FreeHrtfs(void);
 vector_EnumeratedHrtf EnumerateHrtf(const_al_string devname);
 void FreeHrtfList(vector_EnumeratedHrtf *list);
 struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry);
+void Hrtf_IncRef(struct Hrtf *hrtf);
+void Hrtf_DecRef(struct Hrtf *hrtf);
 
 void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat (*coeffs)[2], ALsizei *delays);
 

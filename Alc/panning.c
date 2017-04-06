@@ -997,6 +997,8 @@ static void InitUhjPanning(ALCdevice *device)
 
 void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf_appreq, enum HrtfRequestMode hrtf_userreq)
 {
+    /* Hold the HRTF the device last used, in case it's used again. */
+    struct Hrtf *old_hrtf = device->HrtfHandle;
     const char *mode;
     bool headphones;
     int bs2blevel;
@@ -1028,6 +1030,9 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         const char *devname, *layout = NULL;
         AmbDecConf conf, *pconf = NULL;
 
+        if(old_hrtf)
+            Hrtf_DecRef(old_hrtf);
+        old_hrtf = NULL;
         if(hrtf_appreq == Hrtf_Enable)
             device->HrtfStatus = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
 
@@ -1151,28 +1156,48 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     if(hrtf_id >= 0 && (size_t)hrtf_id < VECTOR_SIZE(device->HrtfList))
     {
         const EnumeratedHrtf *entry = &VECTOR_ELEM(device->HrtfList, hrtf_id);
-        const struct Hrtf *hrtf = GetLoadedHrtf(entry->hrtf);
+        struct Hrtf *hrtf = GetLoadedHrtf(entry->hrtf);
         if(hrtf && hrtf->sampleRate == device->Frequency)
         {
             device->HrtfHandle = hrtf;
             alstr_copy(&device->HrtfName, entry->name);
+        }
+        else if(hrtf)
+            Hrtf_DecRef(hrtf);
+    }
+
+    /* Reuse the old HRTF if its compatible and any desired HRTF isn't
+     * compatible.
+     */
+    if(!device->HrtfHandle && old_hrtf)
+    {
+        if(old_hrtf->sampleRate == device->Frequency)
+        {
+            device->HrtfHandle = old_hrtf;
+            old_hrtf = NULL;
         }
     }
 
     for(i = 0;!device->HrtfHandle && i < VECTOR_SIZE(device->HrtfList);i++)
     {
         const EnumeratedHrtf *entry = &VECTOR_ELEM(device->HrtfList, i);
-        const struct Hrtf *hrtf = GetLoadedHrtf(entry->hrtf);
+        struct Hrtf *hrtf = GetLoadedHrtf(entry->hrtf);
         if(hrtf && hrtf->sampleRate == device->Frequency)
         {
             device->HrtfHandle = hrtf;
             alstr_copy(&device->HrtfName, entry->name);
         }
+        else if(hrtf)
+            Hrtf_DecRef(hrtf);
     }
 
     if(device->HrtfHandle)
     {
         bool hoa_mode;
+
+        if(old_hrtf)
+            Hrtf_DecRef(old_hrtf);
+        old_hrtf = NULL;
 
         device->Render_Mode = HrtfRender;
         if(ConfigValueStr(alstr_get_cstr(device->DeviceName), NULL, "hrtf-mode", &mode))
@@ -1211,6 +1236,9 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     device->HrtfStatus = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
 
 no_hrtf:
+    if(old_hrtf)
+        Hrtf_DecRef(old_hrtf);
+    old_hrtf = NULL;
     TRACE("HRTF disabled\n");
 
     device->Render_Mode = StereoPair;

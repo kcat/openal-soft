@@ -2049,7 +2049,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         if(hrtf_userreq == Hrtf_Enable || (hrtf_userreq != Hrtf_Disable && hrtf_appreq == Hrtf_Enable))
         {
-            const struct Hrtf *hrtf = NULL;
+            struct Hrtf *hrtf = NULL;
             if(VECTOR_SIZE(device->HrtfList) == 0)
             {
                 VECTOR_DEINIT(device->HrtfList);
@@ -2068,6 +2068,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 device->FmtChans = DevFmtStereo;
                 device->Frequency = hrtf->sampleRate;
                 device->Flags |= DEVICE_CHANNELS_REQUEST | DEVICE_FREQUENCY_REQUEST;
+                if(device->HrtfHandle)
+                    Hrtf_DecRef(device->HrtfHandle);
+                device->HrtfHandle = hrtf;
             }
             else
             {
@@ -2338,6 +2341,9 @@ static ALCvoid FreeDevice(ALCdevice *device)
 
     AL_STRING_DEINIT(device->HrtfName);
     FreeHrtfList(&device->HrtfList);
+    if(device->HrtfHandle)
+        Hrtf_DecRef(device->HrtfHandle);
+    device->HrtfHandle = NULL;
     al_free(device->Hrtf);
     device->Hrtf = NULL;
 
@@ -3755,6 +3761,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->Bs2b = NULL;
     device->Uhj_Encoder = NULL;
     device->Hrtf = NULL;
+    device->HrtfHandle = NULL;
     VECTOR_INIT(device->HrtfList);
     AL_STRING_INIT(device->HrtfName);
     device->Render_Mode = NormalRender;
@@ -4062,6 +4069,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->Type = Capture;
 
     device->Hrtf = NULL;
+    device->HrtfHandle = NULL;
     VECTOR_INIT(device->HrtfList);
     AL_STRING_INIT(device->HrtfName);
 
@@ -4272,6 +4280,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
 
     device->Flags = 0;
     device->Hrtf = NULL;
+    device->HrtfHandle = NULL;
     VECTOR_INIT(device->HrtfList);
     AL_STRING_INIT(device->HrtfName);
     device->Bs2b = NULL;

@@ -38,6 +38,13 @@
 
 #include "common/alhelpers.h"
 
+#ifndef SDL_AUDIO_MASK_BITSIZE
+#define SDL_AUDIO_MASK_BITSIZE (0xFF)
+#endif
+#ifndef SDL_AUDIO_BITSIZE
+#define SDL_AUDIO_BITSIZE(x) (x & SDL_AUDIO_MASK_BITSIZE)
+#endif
+
 #ifndef M_PI
 #define M_PI    (3.14159265358979323846)
 #endif

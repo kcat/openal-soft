@@ -39,6 +39,13 @@
 #include "common/alhelpers.h"
 
 
+#ifndef SDL_AUDIO_MASK_BITSIZE
+#define SDL_AUDIO_MASK_BITSIZE (0xFF)
+#endif
+#ifndef SDL_AUDIO_BITSIZE
+#define SDL_AUDIO_BITSIZE(x) (x & SDL_AUDIO_MASK_BITSIZE)
+#endif
+
 /* Define the number of buffers and buffer size (in milliseconds) to use. 4
  * buffers with 200ms each gives a nice per-chunk size, and lets the queue last
  * for almost one second. */

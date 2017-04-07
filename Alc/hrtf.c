@@ -419,7 +419,7 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const char *
     {
         coeffs = malloc(sizeof(coeffs[0])*irSize*irCount);
         delays = malloc(sizeof(delays[0])*irCount);
-        if(coeffs == NULL)
+        if(coeffs == NULL || delays == NULL)
         {
             ERR("Out of memory.\n");
             failed = AL_TRUE;
@@ -583,7 +583,7 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const char *
 
         coeffs = malloc(sizeof(coeffs[0])*irSize*irCount);
         delays = malloc(sizeof(delays[0])*irCount);
-        if(coeffs == NULL)
+        if(coeffs == NULL || delays == NULL)
         {
             ERR("Out of memory.\n");
             failed = AL_TRUE;

@@ -1166,7 +1166,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
             Hrtf_DecRef(hrtf);
     }
 
-    /* Reuse the old HRTF if its compatible and any desired HRTF isn't
+    /* Reuse the old HRTF if it's compatible and any desired HRTF wasn't
      * compatible.
      */
     if(!device->HrtfHandle && old_hrtf)

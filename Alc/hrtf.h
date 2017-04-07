@@ -30,8 +30,8 @@ struct Hrtf {
 
     const ALubyte *azCount;
     const ALushort *evOffset;
-    const ALfloat *coeffs;
-    const ALubyte *delays;
+    const ALfloat (*coeffs)[2];
+    const ALubyte (*delays)[2];
 };
 
 

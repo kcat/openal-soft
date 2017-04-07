@@ -167,17 +167,25 @@ ALsizei BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsize
     for(c = 0;c < AmbiCount;c++)
     {
         const ALfloat (*fir)[2] = &Hrtf->coeffs[idx[c] * Hrtf->irSize];
-        ALubyte delay;
+        ALsizei ldelay = Hrtf->delays[idx[c]][0] - min_delay;
+        ALsizei rdelay = Hrtf->delays[idx[c]][1] - min_delay;
 
-        /* Add to the left output coefficients with the specified delay. */
-        delay = Hrtf->delays[idx[c]][0] - min_delay;
+        max_length = maxi(max_length,
+            mini(maxi(ldelay, rdelay) + Hrtf->irSize, HRIR_LENGTH)
+        );
+
         if(NUM_BANDS == 1)
         {
             for(i = 0;i < NumChannels;++i)
             {
-                ALsizei j = delay, k = 0;
-                while(j < HRIR_LENGTH && k < Hrtf->irSize)
-                    state->Chan[i].Coeffs[j++][0] += fir[k++][0] * AmbiMatrix[c][0][i];
+                ALsizei lidx = ldelay, ridx = rdelay;
+                ALsizei j = 0;
+                while(lidx < HRIR_LENGTH && ridx < HRIR_LENGTH && j < Hrtf->irSize)
+                {
+                    state->Chan[i].Coeffs[lidx++][0] += fir[j][0] * AmbiMatrix[c][0][i];
+                    state->Chan[i].Coeffs[ridx++][1] += fir[j][1] * AmbiMatrix[c][0][i];
+                    j++;
+                }
             }
         }
         else
@@ -188,48 +196,36 @@ ALsizei BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsize
                 temps[2][i] = fir[i][0];
             bandsplit_process(&splitter, temps[0], temps[1], temps[2], HRIR_LENGTH);
 
+            /* Apply left ear response with delay. */
             for(i = 0;i < NumChannels;++i)
             {
                 for(b = 0;b < NUM_BANDS;b++)
                 {
-                    ALsizei j = delay, k = 0;
-                    while(j < HRIR_LENGTH)
-                        state->Chan[i].Coeffs[j++][0] += temps[b][k++] * AmbiMatrix[c][b][i];
+                    ALsizei lidx = ldelay;
+                    ALsizei j = 0;
+                    while(lidx < HRIR_LENGTH)
+                        state->Chan[i].Coeffs[lidx++][0] += temps[b][j++] * AmbiMatrix[c][b][i];
                 }
             }
-        }
-        max_length = maxi(max_length, mini(delay + Hrtf->irSize, HRIR_LENGTH));
 
-        /* Add to the right output coefficients with the specified delay. */
-        delay = Hrtf->delays[idx[c]][1] - min_delay;
-        if(NUM_BANDS == 1)
-        {
-            for(i = 0;i < NumChannels;++i)
-            {
-                ALsizei j = delay, k = 0;
-                while(j < HRIR_LENGTH && k < Hrtf->irSize)
-                    state->Chan[i].Coeffs[j++][1] += fir[k++][1] * AmbiMatrix[c][0][i];
-            }
-        }
-        else
-        {
             /* Band-split right HRIR into low and high frequency responses. */
             bandsplit_clear(&splitter);
             for(i = 0;i < Hrtf->irSize;i++)
                 temps[2][i] = fir[i][1];
             bandsplit_process(&splitter, temps[0], temps[1], temps[2], HRIR_LENGTH);
 
+            /* Apply right ear response with delay. */
             for(i = 0;i < NumChannels;++i)
             {
                 for(b = 0;b < NUM_BANDS;b++)
                 {
-                    ALsizei j = delay, k = 0;
-                    while(j < HRIR_LENGTH)
-                        state->Chan[i].Coeffs[j++][1] += temps[b][k++] * AmbiMatrix[c][b][i];
+                    ALsizei ridx = rdelay;
+                    ALsizei j = 0;
+                    while(ridx < HRIR_LENGTH)
+                        state->Chan[i].Coeffs[ridx++][1] += temps[b][j++] * AmbiMatrix[c][b][i];
                 }
             }
         }
-        max_length = maxi(max_length, mini(delay + Hrtf->irSize, HRIR_LENGTH));
     }
     TRACE("Skipped min delay: %d, new combined length: %d\n", min_delay, max_length);
 

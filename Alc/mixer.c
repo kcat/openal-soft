@@ -156,7 +156,7 @@ static inline ResamplerFunc SelectResampler(enum Resampler resampler)
 
 
 /* The sinc resampler makes use of a Kaiser window to limit the needed sample
- * points to 4 and 8, respectively.
+ * points to 4.
  */
 
 #ifndef M_PI

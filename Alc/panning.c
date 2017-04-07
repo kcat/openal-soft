@@ -1166,18 +1166,6 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
             Hrtf_DecRef(hrtf);
     }
 
-    /* Reuse the old HRTF if it's compatible and any desired HRTF wasn't
-     * compatible.
-     */
-    if(!device->HrtfHandle && old_hrtf)
-    {
-        if(old_hrtf->sampleRate == device->Frequency)
-        {
-            device->HrtfHandle = old_hrtf;
-            old_hrtf = NULL;
-        }
-    }
-
     for(i = 0;!device->HrtfHandle && i < VECTOR_SIZE(device->HrtfList);i++)
     {
         const EnumeratedHrtf *entry = &VECTOR_ELEM(device->HrtfList, i);

@@ -317,7 +317,7 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const char *
     ALubyte *azCount = NULL;
     ALushort *evOffset = NULL;
     ALshort *coeffs = NULL;
-    const ALubyte *delays = NULL;
+    ALubyte *delays = NULL;
     ALuint i, j;
 
     if(datalen < 9)
@@ -416,6 +416,7 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const char *
     if(!failed)
     {
         coeffs = malloc(sizeof(coeffs[0])*irSize*irCount);
+        delays = malloc(sizeof(delays[0])*irCount);
         if(coeffs == NULL)
         {
             ERR("Out of memory.\n");
@@ -446,11 +447,10 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const char *
             }
         }
 
-        delays = data;
-        data += irCount;
-        datalen -= irCount;
         for(i = 0;i < irCount;i++)
         {
+            delays[i] = *(data++);
+            datalen -= 1;
             if(delays[i] > maxDelay)
             {
                 ERR("Invalid delays[%d]: %d (%d)\n", i, delays[i], maxDelay);
@@ -466,6 +466,7 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const char *
     free(azCount);
     free(evOffset);
     free(coeffs);
+    free(delays);
     return Hrtf;
 }
 
@@ -479,7 +480,7 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const char *
     const ALubyte *azCount = NULL;
     ALushort *evOffset = NULL;
     ALshort *coeffs = NULL;
-    const ALubyte *delays = NULL;
+    ALubyte *delays = NULL;
     ALuint i, j;
 
     if(datalen < 6)
@@ -556,6 +557,7 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const char *
         }
 
         coeffs = malloc(sizeof(coeffs[0])*irSize*irCount);
+        delays = malloc(sizeof(delays[0])*irCount);
         if(coeffs == NULL)
         {
             ERR("Out of memory.\n");
@@ -588,11 +590,10 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const char *
             }
         }
 
-        delays = data;
-        data += irCount;
-        datalen -= irCount;
         for(i = 0;i < irCount;i++)
         {
+            delays[i] = *(data++);
+            datalen -= 1;
             if(delays[i] > maxDelay)
             {
                 ERR("Invalid delays[%d]: %d (%d)\n", i, delays[i], maxDelay);
@@ -607,8 +608,10 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const char *
 
     free(evOffset);
     free(coeffs);
+    free(delays);
     return Hrtf;
 }
+
 
 static void AddFileEntry(vector_EnumeratedHrtf *list, const_al_string filename)
 {

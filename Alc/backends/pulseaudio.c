@@ -626,6 +626,11 @@ static void ALCpulsePlayback_bufferAttrCallback(pa_stream *stream, void *pdata)
 
     self->attr = *pa_stream_get_buffer_attr(stream);
     TRACE("minreq=%d, tlength=%d, prebuf=%d\n", self->attr.minreq, self->attr.tlength, self->attr.prebuf);
+    /* FIXME: Update the device's UpdateSize (and/or NumUpdates) using the new
+     * buffer attributes? Changing UpdateSize will change the ALC_REFRESH
+     * property, which probably shouldn't change between device resets. But
+     * leaving it alone means ALC_REFRESH will be off.
+     */
 }
 
 static void ALCpulsePlayback_contextStateCallback(pa_context *context, void *pdata)
@@ -797,7 +802,6 @@ static int ALCpulsePlayback_mixerProc(void *ptr)
     ALCpulsePlayback *self = ptr;
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
     ALuint buffer_size;
-    ALint update_size;
     size_t frame_size;
     ssize_t len;
 
@@ -806,18 +810,30 @@ static int ALCpulsePlayback_mixerProc(void *ptr)
 
     pa_threaded_mainloop_lock(self->loop);
     frame_size = pa_frame_size(&self->spec);
-    update_size = device->UpdateSize * frame_size;
+    buffer_size = device->UpdateSize * device->NumUpdates * frame_size;
 
-    /* Sanitize buffer metrics, in case we actually have less than what we
-     * asked for. */
-    buffer_size = minu(update_size*device->NumUpdates, self->attr.tlength);
-    update_size = minu(update_size, buffer_size/2);
-    do {
-        len = pa_stream_writable_size(self->stream) - self->attr.tlength +
-              buffer_size;
-        if(len < update_size)
+    while(!self->killNow && device->Connected)
+    {
+        len = pa_stream_writable_size(self->stream);
+        if(len < 0)
         {
-            if(pa_stream_is_corked(self->stream) == 1)
+            ERR("Failed to get writable size: %ld", (long)len);
+            aluHandleDisconnect(device);
+            break;
+        }
+
+        /* Make sure we're going to write at least 2 'periods' (minreqs), in
+         * case the server increased it since starting playback.
+         */
+        buffer_size = maxu(buffer_size, self->attr.minreq*2);
+
+        /* NOTE: This assumes pa_stream_writable_size returns between 0 and
+         * tlength, else there will be more latency than intended.
+         */
+        len = mini(len - (ssize_t)self->attr.tlength, 0) + buffer_size;
+        if(len < self->attr.minreq)
+        {
+            if(pa_stream_is_corked(self->stream))
             {
                 pa_operation *o;
                 o = pa_stream_cork(self->stream, 0, NULL, NULL);
@@ -826,11 +842,12 @@ static int ALCpulsePlayback_mixerProc(void *ptr)
             pa_threaded_mainloop_wait(self->loop);
             continue;
         }
-        len -= len%update_size;
+        len -= len%self->attr.minreq;
 
         while(len > 0)
         {
             size_t newlen = len;
+            int ret;
             void *buf;
             pa_free_cb_t free_func = NULL;
 
@@ -842,10 +859,15 @@ static int ALCpulsePlayback_mixerProc(void *ptr)
 
             aluMixData(device, buf, newlen/frame_size);
 
-            pa_stream_write(self->stream, buf, newlen, free_func, 0, PA_SEEK_RELATIVE);
+            ret = pa_stream_write(self->stream, buf, newlen, free_func, 0, PA_SEEK_RELATIVE);
+            if(ret != PA_OK)
+            {
+                ERR("Failed to write to stream: %d, %s\n", ret, pa_strerror(ret));
+                break;
+            }
             len -= newlen;
         }
-    } while(!self->killNow && device->Connected);
+    }
     pa_threaded_mainloop_unlock(self->loop);
 
     return 0;

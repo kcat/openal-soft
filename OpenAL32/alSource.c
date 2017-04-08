@@ -53,7 +53,7 @@ static void UpdateSourceProps(ALsource *source, ALsizei num_sends);
 static ALint64 GetSourceSampleOffset(ALsource *Source, ALCcontext *context, ALuint64 *clocktime);
 static ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, ALuint64 *clocktime);
 static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context);
-static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac);
+static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALsizei *frac);
 static ALboolean ApplyOffset(ALsource *Source, ALvoice *voice);
 
 typedef enum SourceProp {
@@ -3158,7 +3158,7 @@ static ALint64 GetSourceSampleOffset(ALsource *Source, ALCcontext *context, ALui
             Current = ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed);
 
             readPos  = (ALuint64)ATOMIC_LOAD(&voice->position, almemory_order_relaxed) << 32;
-            readPos |= ATOMIC_LOAD(&voice->position_fraction, almemory_order_relaxed) <<
+            readPos |= (ALuint64)ATOMIC_LOAD(&voice->position_fraction, almemory_order_relaxed) <<
                        (32-FRACTIONBITS);
         }
         ATOMIC_THREAD_FENCE(almemory_order_acquire);
@@ -3258,7 +3258,8 @@ static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *conte
     const ALbufferlistitem *Current;
     const ALbuffer *Buffer = NULL;
     ALboolean readFin = AL_FALSE;
-    ALuint readPos, readPosFrac;
+    ALuint readPos;
+    ALsizei readPosFrac;
     ALuint totalBufferLen;
     ALboolean looping;
     ALuint refcount;
@@ -3367,7 +3368,8 @@ static ALboolean ApplyOffset(ALsource *Source, ALvoice *voice)
     ALbufferlistitem *BufferList;
     const ALbuffer *Buffer;
     ALuint bufferLen, totalBufferLen;
-    ALuint offset=0, frac=0;
+    ALuint offset = 0;
+    ALsizei frac = 0;
 
     /* Get sample frame offset */
     if(!GetSampleOffset(Source, &offset, &frac))
@@ -3405,7 +3407,7 @@ static ALboolean ApplyOffset(ALsource *Source, ALvoice *voice)
  * or Second offset supplied by the application). This takes into account the
  * fact that the buffer format may have been modifed since.
  */
-static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac)
+static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALsizei *frac)
 {
     const ALbuffer *Buffer = NULL;
     const ALbufferlistitem *BufferList;
@@ -3454,13 +3456,13 @@ static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALuint *frac)
     case AL_SAMPLE_OFFSET:
         dblfrac = modf(Source->Offset, &dbloff);
         *offset = (ALuint)mind(dbloff, UINT_MAX);
-        *frac = (ALuint)mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0);
+        *frac = (ALsizei)mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0);
         break;
 
     case AL_SEC_OFFSET:
         dblfrac = modf(Source->Offset*Buffer->Frequency, &dbloff);
         *offset = (ALuint)mind(dbloff, UINT_MAX);
-        *frac = (ALuint)mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0);
+        *frac = (ALsizei)mind(dblfrac*FRACTIONONE, FRACTIONONE-1.0);
         break;
     }
     Source->OffsetType = AL_NONE;

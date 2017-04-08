@@ -29,14 +29,14 @@
 
 
 const ALfloat *Resample_lerp32_SSE41(const InterpState* UNUSED(state),
-  const ALfloat *restrict src, ALuint frac, ALint increment,
+  const ALfloat *restrict src, ALsizei frac, ALint increment,
   ALfloat *restrict dst, ALsizei numsamples)
 {
     const __m128i increment4 = _mm_set1_epi32(increment*4);
     const __m128 fracOne4 = _mm_set1_ps(1.0f/FRACTIONONE);
     const __m128i fracMask4 = _mm_set1_epi32(FRACTIONMASK);
     union { alignas(16) ALint i[4]; float f[4]; } pos_;
-    union { alignas(16) ALuint i[4]; float f[4]; } frac_;
+    union { alignas(16) ALsizei i[4]; float f[4]; } frac_;
     __m128i frac4, pos4;
     ALint pos;
     ALsizei i;
@@ -86,13 +86,13 @@ const ALfloat *Resample_lerp32_SSE41(const InterpState* UNUSED(state),
 }
 
 const ALfloat *Resample_fir4_32_SSE41(const InterpState* UNUSED(state),
-  const ALfloat *restrict src, ALuint frac, ALint increment,
+  const ALfloat *restrict src, ALsizei frac, ALint increment,
   ALfloat *restrict dst, ALsizei numsamples)
 {
     const __m128i increment4 = _mm_set1_epi32(increment*4);
     const __m128i fracMask4 = _mm_set1_epi32(FRACTIONMASK);
     union { alignas(16) ALint i[4]; float f[4]; } pos_;
-    union { alignas(16) ALuint i[4]; float f[4]; } frac_;
+    union { alignas(16) ALsizei i[4]; float f[4]; } frac_;
     __m128i frac4, pos4;
     ALint pos;
     ALsizei i;

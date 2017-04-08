@@ -8,16 +8,16 @@
 #include "alAuxEffectSlot.h"
 
 
-static inline ALfloat point32(const ALfloat *restrict vals, ALuint UNUSED(frac))
+static inline ALfloat point32(const ALfloat *restrict vals, ALsizei UNUSED(frac))
 { return vals[0]; }
-static inline ALfloat lerp32(const ALfloat *restrict vals, ALuint frac)
+static inline ALfloat lerp32(const ALfloat *restrict vals, ALsizei frac)
 { return lerp(vals[0], vals[1], frac * (1.0f/FRACTIONONE)); }
-static inline ALfloat fir4_32(const ALfloat *restrict vals, ALuint frac)
+static inline ALfloat fir4_32(const ALfloat *restrict vals, ALsizei frac)
 { return resample_fir4(vals[-1], vals[0], vals[1], vals[2], frac); }
 
 
 const ALfloat *Resample_copy32_C(const InterpState* UNUSED(state),
-  const ALfloat *restrict src, ALuint UNUSED(frac), ALint UNUSED(increment),
+  const ALfloat *restrict src, ALsizei UNUSED(frac), ALint UNUSED(increment),
   ALfloat *restrict dst, ALsizei numsamples)
 {
 #if defined(HAVE_SSE) || defined(HAVE_NEON)
@@ -31,7 +31,7 @@ const ALfloat *Resample_copy32_C(const InterpState* UNUSED(state),
 
 #define DECL_TEMPLATE(Sampler)                                                \
 const ALfloat *Resample_##Sampler##_C(const InterpState* UNUSED(state),       \
-  const ALfloat *restrict src, ALuint frac, ALint increment,                  \
+  const ALfloat *restrict src, ALsizei frac, ALint increment,                 \
   ALfloat *restrict dst, ALsizei numsamples)                                  \
 {                                                                             \
     ALsizei i;                                                                \
@@ -53,7 +53,7 @@ DECL_TEMPLATE(fir4_32)
 #undef DECL_TEMPLATE
 
 const ALfloat *Resample_bsinc32_C(const InterpState *state, const ALfloat *restrict src,
-                                  ALuint frac, ALint increment, ALfloat *restrict dst,
+                                  ALsizei frac, ALint increment, ALfloat *restrict dst,
                                   ALsizei dstlen)
 {
     const ALfloat *fil, *scd, *phd, *spd;
@@ -79,8 +79,7 @@ const ALfloat *Resample_bsinc32_C(const InterpState *state, const ALfloat *restr
         // Apply the scale and phase interpolated filter.
         r = 0.0f;
         for(j_f = 0;j_f < m;j_f++)
-            r += (fil[j_f] + sf*scd[j_f] + pf*(phd[j_f] + sf*spd[j_f])) *
-                    src[j_f];
+            r += (fil[j_f] + sf*scd[j_f] + pf*(phd[j_f] + sf*spd[j_f])) * src[j_f];
         dst[i] = r;
 
         frac += increment;

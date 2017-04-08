@@ -173,7 +173,7 @@ typedef struct ALvoice {
      * sample.
      */
     ATOMIC(ALuint) position;
-    ATOMIC(ALuint) position_fraction;
+    ATOMIC(ALsizei) position_fraction;
 
     /**
      * Number of channels and bytes-per-sample for the attached source's
@@ -211,7 +211,7 @@ typedef struct ALvoice {
 
 
 typedef const ALfloat* (*ResamplerFunc)(const InterpState *state,
-    const ALfloat *restrict src, ALuint frac, ALint increment,
+    const ALfloat *restrict src, ALsizei frac, ALint increment,
     ALfloat *restrict dst, ALsizei dstlen
 );
 

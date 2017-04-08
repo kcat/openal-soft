@@ -11,21 +11,21 @@
 
 
 const ALfloat *Resample_lerp32_Neon(const InterpState* UNUSED(state),
-  const ALfloat *restrict src, ALuint frac, ALint increment,
+  const ALfloat *restrict src, ALsizei frac, ALint increment,
   ALfloat *restrict dst, ALsizei numsamples)
 {
     const int32x4_t increment4 = vdupq_n_s32(increment*4);
     const float32x4_t fracOne4 = vdupq_n_f32(1.0f/FRACTIONONE);
-    const uint32x4_t fracMask4 = vdupq_n_u32(FRACTIONMASK);
+    const int32x4_t fracMask4 = vdupq_n_s32(FRACTIONMASK);
     alignas(16) ALint pos_[4];
-    alignas(16) ALuint frac_[4];
+    alignas(16) ALsizei frac_[4];
     int32x4_t pos4;
-    uint32x4_t frac4;
+    int32x4_t frac4;
     ALsizei i;
 
     InitiatePositionArrays(frac, increment, frac_, pos_, 4);
 
-    frac4 = vld1q_u32(frac_);
+    frac4 = vld1q_s32(frac_);
     pos4 = vld1q_s32(pos_);
 
     for(i = 0;numsamples-i > 3;i += 4)
@@ -35,14 +35,14 @@ const ALfloat *Resample_lerp32_Neon(const InterpState* UNUSED(state),
 
         /* val1 + (val2-val1)*mu */
         const float32x4_t r0 = vsubq_f32(val2, val1);
-        const float32x4_t mu = vmulq_f32(vcvtq_f32_u32(frac4), fracOne4);
+        const float32x4_t mu = vmulq_f32(vcvtq_f32_s32(frac4), fracOne4);
         const float32x4_t out = vmlaq_f32(val1, mu, r0);
 
         vst1q_f32(&dst[i], out);
 
-        frac4 = vaddq_u32(frac4, (uint32x4_t)increment4);
-        pos4 = vaddq_s32(pos4, (int32x4_t)vshrq_n_u32(frac4, FRACTIONBITS));
-        frac4 = vandq_u32(frac4, fracMask4);
+        frac4 = vaddq_s32(frac4, increment4);
+        pos4 = vaddq_s32(pos4, vshrq_n_s32(frac4, FRACTIONBITS));
+        frac4 = vandq_s32(frac4, fracMask4);
 
         vst1q_s32(pos_, pos4);
     }
@@ -54,7 +54,7 @@ const ALfloat *Resample_lerp32_Neon(const InterpState* UNUSED(state),
          * resample.
          */
         ALint pos = pos_[0];
-        frac = vgetq_lane_u32(frac4, 0);
+        frac = vgetq_lane_s32(frac4, 0);
         do {
             dst[i] = lerp(src[pos], src[pos+1], frac * (1.0f/FRACTIONONE));
 
@@ -67,20 +67,20 @@ const ALfloat *Resample_lerp32_Neon(const InterpState* UNUSED(state),
 }
 
 const ALfloat *Resample_fir4_32_Neon(const InterpState* UNUSED(state),
-  const ALfloat *restrict src, ALuint frac, ALint increment,
+  const ALfloat *restrict src, ALsizei frac, ALint increment,
   ALfloat *restrict dst, ALsizei numsamples)
 {
     const int32x4_t increment4 = vdupq_n_s32(increment*4);
-    const uint32x4_t fracMask4 = vdupq_n_u32(FRACTIONMASK);
+    const int32x4_t fracMask4 = vdupq_n_s32(FRACTIONMASK);
     alignas(16) ALint pos_[4];
-    alignas(16) ALuint frac_[4];
+    alignas(16) ALsizei frac_[4];
     int32x4_t pos4;
-    uint32x4_t frac4;
+    int32x4_t frac4;
     ALsizei i;
 
     InitiatePositionArrays(frac, increment, frac_, pos_, 4);
 
-    frac4 = vld1q_u32(frac_);
+    frac4 = vld1q_s32(frac_);
     pos4 = vld1q_s32(pos_);
 
     --src;
@@ -109,12 +109,12 @@ const ALfloat *Resample_fir4_32_Neon(const InterpState* UNUSED(state),
 
         vst1q_f32(&dst[i], out);
 
-        frac4 = vaddq_u32(frac4, (uint32x4_t)increment4);
-        pos4 = vaddq_s32(pos4, (int32x4_t)vshrq_n_u32(frac4, FRACTIONBITS));
-        frac4 = vandq_u32(frac4, fracMask4);
+        frac4 = vaddq_s32(frac4, increment4);
+        pos4 = vaddq_s32(pos4, vshrq_n_s32(frac4, FRACTIONBITS));
+        frac4 = vandq_s32(frac4, fracMask4);
 
         vst1q_s32(pos_, pos4);
-        vst1q_u32(frac_, frac4);
+        vst1q_s32(frac_, frac4);
     }
 
     if(i < numsamples)
@@ -137,7 +137,7 @@ const ALfloat *Resample_fir4_32_Neon(const InterpState* UNUSED(state),
 }
 
 const ALfloat *Resample_bsinc32_Neon(const InterpState *state,
-  const ALfloat *restrict src, ALuint frac, ALint increment,
+  const ALfloat *restrict src, ALsizei frac, ALint increment,
   ALfloat *restrict dst, ALsizei dstlen)
 {
     const float32x4_t sf4 = vdupq_n_f32(state->bsinc.sf);

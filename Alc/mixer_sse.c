@@ -13,7 +13,7 @@
 
 
 const ALfloat *Resample_bsinc32_SSE(const InterpState *state, const ALfloat *restrict src,
-                                    ALuint frac, ALint increment, ALfloat *restrict dst,
+                                    ALsizei frac, ALint increment, ALfloat *restrict dst,
                                     ALsizei dstlen)
 {
     const __m128 sf4 = _mm_set1_ps(state->bsinc.sf);

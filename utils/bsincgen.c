@@ -364,11 +364,49 @@ static void BsiGenerateTables()
     fprintf(stdout, " },\n        {");
     for(si = 0; si < (BSINC_SCALE_COUNT - 1); si++)
         fprintf(stdout, " %d,", mt[si]);
-    fprintf(stdout, " 0 }\n    };\n");
+    fprintf(stdout, " 0 }\n    };\n\n");
+}
+
+
+/* These methods generate a much simplified 4-point sinc interpolator using a
+ * Kaiser windows. This is much simpler to process at run-time, but has notably
+ * more aliasing noise.
+ */
+
+/* Same as in alu.h! */
+#define FRACTIONBITS (12)
+#define FRACTIONONE  (1<<FRACTIONBITS)
+
+static double SincKaiser(double r, double x)
+{
+    /* Limit rippling to -60dB. */
+    return Kaiser(CalcKaiserBeta(60.0), x / r) * Sinc(x);
+}
+
+static void Sinc4GenerateTables(void)
+{
+    static double filter[FRACTIONONE][4];
+
+    int i;
+    for(i = 0;i < FRACTIONONE;i++)
+    {
+        double mu = (double)i / FRACTIONONE;
+        filter[i][0] = SincKaiser(2.0, mu - -1.0);
+        filter[i][1] = SincKaiser(2.0, mu -  0.0);
+        filter[i][2] = SincKaiser(2.0, mu -  1.0);
+        filter[i][3] = SincKaiser(2.0, mu -  2.0);
+    }
+
+    fprintf(stdout, "static const float sinc4Tab[%d][4] =\n{\n", FRACTIONONE);
+    for(i = 0;i < FRACTIONONE;i++)
+        fprintf(stdout, "    { %+14.9ef, %+14.9ef, %+14.9ef, %+14.9ef },\n",
+                filter[i][0], filter[i][1], filter[i][2], filter[i][3]);
+    fprintf(stdout, "};\n\n");
 }
 
 int main(void)
 {
     BsiGenerateTables();
+    Sinc4GenerateTables();
     return 0;
 }

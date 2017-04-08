@@ -90,10 +90,10 @@ const ALfloat *Resample_fir4_32_Neon(const InterpState* UNUSED(state),
         const float32x4_t val1 = vld1q_f32(&src[pos_[1]]);
         const float32x4_t val2 = vld1q_f32(&src[pos_[2]]);
         const float32x4_t val3 = vld1q_f32(&src[pos_[3]]);
-        float32x4_t k0 = vld1q_f32(ResampleCoeffs_FIR4[frac_[0]]);
-        float32x4_t k1 = vld1q_f32(ResampleCoeffs_FIR4[frac_[1]]);
-        float32x4_t k2 = vld1q_f32(ResampleCoeffs_FIR4[frac_[2]]);
-        float32x4_t k3 = vld1q_f32(ResampleCoeffs_FIR4[frac_[3]]);
+        float32x4_t k0 = vld1q_f32(sinc4Tab[frac_[0]]);
+        float32x4_t k1 = vld1q_f32(sinc4Tab[frac_[1]]);
+        float32x4_t k2 = vld1q_f32(sinc4Tab[frac_[2]]);
+        float32x4_t k3 = vld1q_f32(sinc4Tab[frac_[3]]);
         float32x4_t out;
 
         k0 = vmulq_f32(k0, val0);

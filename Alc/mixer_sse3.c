@@ -55,10 +55,10 @@ const ALfloat *Resample_fir4_32_SSE3(const InterpState* UNUSED(state),
         const __m128 val1 = _mm_loadu_ps(&src[pos_.i[1]]);
         const __m128 val2 = _mm_loadu_ps(&src[pos_.i[2]]);
         const __m128 val3 = _mm_loadu_ps(&src[pos_.i[3]]);
-        __m128 k0 = _mm_load_ps(ResampleCoeffs_FIR4[frac_.i[0]]);
-        __m128 k1 = _mm_load_ps(ResampleCoeffs_FIR4[frac_.i[1]]);
-        __m128 k2 = _mm_load_ps(ResampleCoeffs_FIR4[frac_.i[2]]);
-        __m128 k3 = _mm_load_ps(ResampleCoeffs_FIR4[frac_.i[3]]);
+        __m128 k0 = _mm_load_ps(sinc4Tab[frac_.i[0]]);
+        __m128 k1 = _mm_load_ps(sinc4Tab[frac_.i[1]]);
+        __m128 k2 = _mm_load_ps(sinc4Tab[frac_.i[2]]);
+        __m128 k3 = _mm_load_ps(sinc4Tab[frac_.i[3]]);
         __m128 out;
 
         k0 = _mm_mul_ps(k0, val0);

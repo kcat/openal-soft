@@ -1067,8 +1067,8 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
     self->attr.maxlength = -1;
 
     self->stream = ALCpulsePlayback_connectStream(alstr_get_cstr(self->device_name),
-                                                  self->loop, self->context, flags,
-                                                  &self->attr, &self->spec, &chanmap);
+        self->loop, self->context, flags, &self->attr, &self->spec, &chanmap
+    );
     if(!self->stream)
     {
         pa_threaded_mainloop_unlock(self->loop);
@@ -1542,9 +1542,9 @@ static ALCenum ALCpulseCapture_open(ALCpulseCapture *self, const ALCchar *name)
         flags |= PA_STREAM_DONT_MOVE;
 
     TRACE("Connecting to \"%s\"\n", pulse_name ? pulse_name : "(default)");
-    self->stream = ALCpulseCapture_connectStream(pulse_name, self->loop, self->context,
-                                                 flags, &self->attr, &self->spec,
-                                                 &chanmap);
+    self->stream = ALCpulseCapture_connectStream(pulse_name,
+        self->loop, self->context, flags, &self->attr, &self->spec, &chanmap
+    );
     if(!self->stream)
     {
         pa_threaded_mainloop_unlock(self->loop);

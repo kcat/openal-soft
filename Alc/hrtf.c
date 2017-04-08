@@ -941,7 +941,7 @@ vector_EnumeratedHrtf EnumerateHrtf(const_al_string devname)
                 vector_al_string flist;
                 size_t i;
 
-                alstr_append_range(&pname, pathlist, end);
+                alstr_copy_range(&pname, pathlist, end);
 
                 flist = SearchDataFiles(".mhr", alstr_get_cstr(pname));
                 for(i = 0;i < VECTOR_SIZE(flist);i++)

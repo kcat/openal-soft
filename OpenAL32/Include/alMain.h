@@ -429,9 +429,6 @@ typedef struct {
     ALCuint (*AvailableSamples)(ALCdevice*);
 } BackendFuncs;
 
-ALCboolean alc_ca_init(BackendFuncs *func_list);
-void alc_ca_deinit(void);
-void alc_ca_probe(enum DevProbe type);
 ALCboolean alc_qsa_init(BackendFuncs *func_list);
 void alc_qsa_deinit(void);
 void alc_qsa_probe(enum DevProbe type);

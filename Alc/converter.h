@@ -21,7 +21,7 @@ typedef struct SampleConverter {
     ALsizei mIncrement;
     ResamplerFunc mResample;
 
-    alignas(16) ALfloat mSrcSamples[BUFFERSIZE+MAX_PRE_SAMPLES+MAX_POST_SAMPLES];
+    alignas(16) ALfloat mSrcSamples[BUFFERSIZE];
     alignas(16) ALfloat mDstSamples[BUFFERSIZE];
 
     struct {

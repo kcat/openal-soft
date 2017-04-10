@@ -32,7 +32,7 @@ typedef struct SampleConverter {
 SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType dstType, ALsizei numchans, ALsizei srcRate, ALsizei dstRate);
 void DestroySampleConverter(SampleConverter **converter);
 
-ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid *src, ALsizei *srcframes, ALvoid *dst, ALsizei dstframes);
+ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALsizei *srcframes, ALvoid *dst, ALsizei dstframes);
 ALsizei SampleConverterAvailableOut(SampleConverter *converter, ALsizei srcframes);
 
 #ifdef __cpluspluc

@@ -210,7 +210,7 @@ ALsizei SampleConverterAvailableOut(SampleConverter *converter, ALsizei srcframe
 }
 
 
-ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid *src, ALsizei *srcframes, ALvoid *dst, ALsizei dstframes)
+ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALsizei *srcframes, ALvoid *dst, ALsizei dstframes)
 {
     const ALsizei SrcFrameSize = converter->mNumChannels * converter->mSrcTypeSize;
     const ALsizei DstFrameSize = converter->mNumChannels * converter->mDstTypeSize;
@@ -237,7 +237,7 @@ ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid *src, ALsi
                 *srcframes = 0;
                 break;
             }
-            src = (ALbyte*)src + SrcFrameSize*-prepcount;
+            *src = (const ALbyte*)*src + SrcFrameSize*-prepcount;
             *srcframes += prepcount;
             prepcount = 0;
         }
@@ -272,7 +272,7 @@ ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid *src, ALsi
 
         for(chan = 0;chan < converter->mNumChannels;chan++)
         {
-            const ALbyte *SrcSamples = (const ALbyte*)src + converter->mSrcTypeSize*chan;
+            const ALbyte *SrcSamples = (const ALbyte*)*src + converter->mSrcTypeSize*chan;
             ALbyte *DstSamples = (ALbyte*)dst + converter->mSrcTypeSize*chan;
             const ALfloat *ResampledData;
             ALsizei SrcDataEnd;
@@ -321,7 +321,7 @@ ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid *src, ALsi
         converter->mFracOffset = DataPosFrac & FRACTIONMASK;
 
         /* Update the src and dst pointers in case there's still more to do. */
-        src = (const ALbyte*)src + SrcFrameSize*(DataPosFrac>>FRACTIONBITS);
+        *src = (const ALbyte*)*src + SrcFrameSize*(DataPosFrac>>FRACTIONBITS);
         *srcframes -= mini(*srcframes, (DataPosFrac>>FRACTIONBITS));
 
         dst = (ALbyte*)dst + DstFrameSize*DstSize;

@@ -302,6 +302,15 @@ inline ALfloat resample_fir4(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat v
 }
 
 
+enum Resampler {
+    PointResampler,
+    LinearResampler,
+    FIR4Resampler,
+    BSincResampler,
+
+    ResamplerDefault = LinearResampler
+};
+
 enum HrtfRequestMode {
     Hrtf_Default = 0,
     Hrtf_Enable = 1,
@@ -313,6 +322,7 @@ void aluInitMixer(void);
 
 MixerFunc SelectMixer(void);
 RowMixerFunc SelectRowMixer(void);
+ResamplerFunc SelectResampler(enum Resampler resampler);
 
 /* aluInitRenderer
  *

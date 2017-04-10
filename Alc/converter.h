@@ -1,0 +1,42 @@
+#ifndef CONVERTER_H
+#define CONVERTER_H
+
+#include "alMain.h"
+#include "alu.h"
+
+#ifdef __cpluspluc
+extern "C" {
+#endif
+
+typedef struct SampleConverter {
+    enum DevFmtType mSrcType;
+    enum DevFmtType mDstType;
+    ALsizei mNumChannels;
+    ALsizei mSrcTypeSize;
+    ALsizei mDstTypeSize;
+
+    ALint mSrcPrepCount;
+
+    ALsizei mFracOffset;
+    ALsizei mIncrement;
+    ResamplerFunc mResample;
+
+    alignas(16) ALfloat mSrcSamples[BUFFERSIZE+MAX_PRE_SAMPLES+MAX_POST_SAMPLES];
+    alignas(16) ALfloat mDstSamples[BUFFERSIZE];
+
+    struct {
+        alignas(16) ALfloat mPrevSamples[MAX_PRE_SAMPLES+MAX_POST_SAMPLES];
+    } Chan[];
+} SampleConverter;
+
+SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType dstType, ALsizei numchans, ALsizei srcRate, ALsizei dstRate);
+void DestroySampleConverter(SampleConverter **converter);
+
+ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid *src, ALsizei *srcframes, ALvoid *dst, ALsizei dstframes);
+ALsizei SampleConverterAvailableOut(SampleConverter *converter, ALsizei srcframes);
+
+#ifdef __cpluspluc
+}
+#endif
+
+#endif /* CONVERTER_H */

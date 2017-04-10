@@ -689,6 +689,7 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/alcConfig.c
               Alc/alcRing.c
               Alc/bs2b.c
+              Alc/converter.c
               Alc/effects/chorus.c
               Alc/effects/compressor.c
               Alc/effects/dedicated.c

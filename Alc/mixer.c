@@ -44,15 +44,6 @@ static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,
 extern inline void InitiatePositionArrays(ALsizei frac, ALint increment, ALsizei *restrict frac_arr, ALint *restrict pos_arr, ALsizei size);
 
 
-enum Resampler {
-    PointResampler,
-    LinearResampler,
-    FIR4Resampler,
-    BSincResampler,
-
-    ResamplerDefault = LinearResampler
-};
-
 /* BSinc requires up to 11 extra samples before the current position, and 12 after. */
 static_assert(MAX_PRE_SAMPLES >= 11, "MAX_PRE_SAMPLES must be at least 11!");
 static_assert(MAX_POST_SAMPLES >= 12, "MAX_POST_SAMPLES must be at least 12!");
@@ -103,7 +94,7 @@ static inline HrtfMixerFunc SelectHrtfMixer(void)
     return MixHrtf_C;
 }
 
-static inline ResamplerFunc SelectResampler(enum Resampler resampler)
+ResamplerFunc SelectResampler(enum Resampler resampler)
 {
     switch(resampler)
     {

@@ -35,6 +35,18 @@ void DestroySampleConverter(SampleConverter **converter);
 ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALsizei *srcframes, ALvoid *dst, ALsizei dstframes);
 ALsizei SampleConverterAvailableOut(SampleConverter *converter, ALsizei srcframes);
 
+
+typedef struct ChannelConverter {
+    enum DevFmtType mSrcType;
+    enum DevFmtChannels mSrcChans;
+    enum DevFmtChannels mDstChans;
+} ChannelConverter;
+
+ChannelConverter *CreateChannelConverter(enum DevFmtType srcType, enum DevFmtChannels srcChans, enum DevFmtChannels dstChans);
+void DestroyChannelConverter(ChannelConverter **converter);
+
+void ChannelConverterInput(ChannelConverter *converter, const ALvoid *src, ALfloat *dst, ALsizei frames);
+
 #ifdef __cpluspluc
 }
 #endif

@@ -359,7 +359,7 @@ void DestroyChannelConverter(ChannelConverter **converter)
 
 
 #define DECL_TEMPLATE(T)                                                       \
-static void MonoConvert##T(ALfloat *restrict dst, const T *src, ALsizei frames)\
+static void Mono2Stereo##T(ALfloat *restrict dst, const T *src, ALsizei frames)\
 {                                                                              \
     const T *data = (T*)src;                                                   \
     ALsizei i;                                                                 \
@@ -368,7 +368,7 @@ static void MonoConvert##T(ALfloat *restrict dst, const T *src, ALsizei frames)\
         dst[i*2 + 1] = dst[i*2 + 0] = Sample_##T(data[i]) * 0.707106781187f;   \
 }                                                                              \
                                                                                \
-static void StereoConvert##T(ALfloat *restrict dst, const T *src, ALsizei frames)\
+static void Stereo2Mono##T(ALfloat *restrict dst, const T *src, ALsizei frames)\
 {                                                                              \
     const T *data = (T*)src;                                                   \
     ALsizei i;                                                                 \
@@ -402,25 +402,25 @@ void ChannelConverterInput(ChannelConverter *converter, const ALvoid *src, ALflo
         switch(converter->mSrcType)
         {
             case DevFmtByte:
-                MonoConvertALbyte(dst, src, frames);
+                Stereo2MonoALbyte(dst, src, frames);
                 break;
             case DevFmtUByte:
-                MonoConvertALubyte(dst, src, frames);
+                Stereo2MonoALubyte(dst, src, frames);
                 break;
             case DevFmtShort:
-                MonoConvertALshort(dst, src, frames);
+                Stereo2MonoALshort(dst, src, frames);
                 break;
             case DevFmtUShort:
-                MonoConvertALushort(dst, src, frames);
+                Stereo2MonoALushort(dst, src, frames);
                 break;
             case DevFmtInt:
-                MonoConvertALint(dst, src, frames);
+                Stereo2MonoALint(dst, src, frames);
                 break;
             case DevFmtUInt:
-                MonoConvertALuint(dst, src, frames);
+                Stereo2MonoALuint(dst, src, frames);
                 break;
             case DevFmtFloat:
-                MonoConvertALfloat(dst, src, frames);
+                Stereo2MonoALfloat(dst, src, frames);
                 break;
         }
     }
@@ -429,25 +429,25 @@ void ChannelConverterInput(ChannelConverter *converter, const ALvoid *src, ALflo
         switch(converter->mSrcType)
         {
             case DevFmtByte:
-                StereoConvertALbyte(dst, src, frames);
+                Mono2StereoALbyte(dst, src, frames);
                 break;
             case DevFmtUByte:
-                StereoConvertALubyte(dst, src, frames);
+                Mono2StereoALubyte(dst, src, frames);
                 break;
             case DevFmtShort:
-                StereoConvertALshort(dst, src, frames);
+                Mono2StereoALshort(dst, src, frames);
                 break;
             case DevFmtUShort:
-                StereoConvertALushort(dst, src, frames);
+                Mono2StereoALushort(dst, src, frames);
                 break;
             case DevFmtInt:
-                StereoConvertALint(dst, src, frames);
+                Mono2StereoALint(dst, src, frames);
                 break;
             case DevFmtUInt:
-                StereoConvertALuint(dst, src, frames);
+                Mono2StereoALuint(dst, src, frames);
                 break;
             case DevFmtFloat:
-                StereoConvertALfloat(dst, src, frames);
+                Mono2StereoALfloat(dst, src, frames);
                 break;
         }
     }

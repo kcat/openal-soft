@@ -361,20 +361,16 @@ void DestroyChannelConverter(ChannelConverter **converter)
 #define DECL_TEMPLATE(T)                                                       \
 static void Mono2Stereo##T(ALfloat *restrict dst, const T *src, ALsizei frames)\
 {                                                                              \
-    const T *data = (T*)src;                                                   \
     ALsizei i;                                                                 \
-                                                                               \
     for(i = 0;i < frames;i++)                                                  \
-        dst[i*2 + 1] = dst[i*2 + 0] = Sample_##T(data[i]) * 0.707106781187f;   \
+        dst[i*2 + 1] = dst[i*2 + 0] = Sample_##T(src[i]) * 0.707106781187f;    \
 }                                                                              \
                                                                                \
 static void Stereo2Mono##T(ALfloat *restrict dst, const T *src, ALsizei frames)\
 {                                                                              \
-    const T *data = (T*)src;                                                   \
     ALsizei i;                                                                 \
-                                                                               \
     for(i = 0;i < frames;i++)                                                  \
-        dst[i] = (Sample_##T(data[i*2 + 0])+Sample_##T(data[i*2 + 1])) *       \
+        dst[i] = (Sample_##T(src[i*2 + 0])+Sample_##T(src[i*2 + 1])) *         \
                  0.707106781187f;                                              \
 }
 

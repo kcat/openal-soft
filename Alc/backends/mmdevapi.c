@@ -44,6 +44,7 @@
 #include "threads.h"
 #include "compat.h"
 #include "alstring.h"
+#include "converter.h"
 
 #include "backends/base.h"
 
@@ -1206,6 +1207,8 @@ typedef struct ALCmmdevCapture {
 
     HANDLE MsgEvent;
 
+    ChannelConverter *ChannelConv;
+    SampleConverter *SampleConv;
     ll_ringbuffer_t *Ring;
 
     volatile int killNow;
@@ -1253,6 +1256,8 @@ static void ALCmmdevCapture_Construct(ALCmmdevCapture *self, ALCdevice *device)
 
     self->MsgEvent = NULL;
 
+    self->ChannelConv = NULL;
+    self->SampleConv = NULL;
     self->Ring = NULL;
 
     self->killNow = 0;
@@ -1262,6 +1267,9 @@ static void ALCmmdevCapture_Destruct(ALCmmdevCapture *self)
 {
     ll_ringbuffer_free(self->Ring);
     self->Ring = NULL;
+
+    DestroySampleConverter(&self->SampleConv);
+    DestroyChannelConverter(&self->ChannelConv);
 
     if(self->NotifyEvent != NULL)
         CloseHandle(self->NotifyEvent);
@@ -1282,6 +1290,8 @@ FORCE_ALIGN int ALCmmdevCapture_recordProc(void *arg)
 {
     ALCmmdevCapture *self = arg;
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALfloat *samples = NULL;
+    size_t samplesmax = 0;
     HRESULT hr;
 
     hr = CoInitialize(NULL);
@@ -1304,33 +1314,74 @@ FORCE_ALIGN int ALCmmdevCapture_recordProc(void *arg)
         hr = IAudioCaptureClient_GetNextPacketSize(self->capture, &avail);
         if(FAILED(hr))
             ERR("Failed to get next packet size: 0x%08lx\n", hr);
-        else while(avail > 0 && SUCCEEDED(hr))
+        else if(avail > 0)
         {
             UINT32 numsamples;
             DWORD flags;
-            BYTE *data;
+            BYTE *rdata;
 
             hr = IAudioCaptureClient_GetBuffer(self->capture,
-                &data, &numsamples, &flags, NULL, NULL
+                &rdata, &numsamples, &flags, NULL, NULL
             );
             if(FAILED(hr))
-            {
                 ERR("Failed to get capture buffer: 0x%08lx\n", hr);
-                break;
-            }
-
-            ll_ringbuffer_write(self->Ring, (char*)data, numsamples);
-
-            hr = IAudioCaptureClient_ReleaseBuffer(self->capture, numsamples);
-            if(FAILED(hr))
+            else
             {
-                ERR("Failed to release capture buffer: 0x%08lx\n", hr);
-                break;
-            }
+                ll_ringbuffer_data_t data[2];
+                size_t dstframes = 0;
 
-            hr = IAudioCaptureClient_GetNextPacketSize(self->capture, &avail);
-            if(FAILED(hr))
-                ERR("Failed to get next packet size: 0x%08lx\n", hr);
+                if(self->ChannelConv)
+                {
+                    if(samplesmax < numsamples)
+                    {
+                        size_t newmax = RoundUp(numsamples, 4096);
+                        ALfloat *tmp = al_calloc(DEF_ALIGN, newmax*2*sizeof(ALfloat));
+                        al_free(samples);
+                        samples = tmp;
+                        samplesmax = newmax;
+                    }
+                    ChannelConverterInput(self->ChannelConv, rdata, samples, numsamples);
+                    rdata = (BYTE*)samples;
+                }
+
+                ll_ringbuffer_get_write_vector(self->Ring, data);
+
+                if(self->SampleConv)
+                {
+                    const ALvoid *srcdata = rdata;
+                    ALsizei srcframes = numsamples;
+
+                    dstframes = SampleConverterInput(self->SampleConv,
+                        &srcdata, &srcframes, data[0].buf, data[0].len
+                    );
+                    if(srcframes > 0 && dstframes == data[0].len && data[1].len > 0)
+                    {
+                        /* If some source samples remain, all of the first dest
+                         * block was filled, and there's space in the second
+                         * dest block, do another run for the second block.
+                         */
+                        dstframes += SampleConverterInput(self->SampleConv,
+                            &srcdata, &srcframes, data[1].buf, data[1].len
+                        );
+                    }
+                }
+                else
+                {
+                    size_t framesize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+                    ALuint len1 = minu(data[0].len, numsamples);
+                    ALuint len2 = minu(data[1].len, numsamples-len1);
+
+                    memcpy(data[0].buf, rdata, len1*framesize);
+                    if(len2 > 0)
+                        memcpy(data[1].buf, rdata+len1*framesize, len2*framesize);
+                    dstframes = len1 + len2;
+                }
+
+                ll_ringbuffer_write_advance(self->Ring, dstframes);
+
+                hr = IAudioCaptureClient_ReleaseBuffer(self->capture, numsamples);
+                if(FAILED(hr)) ERR("Failed to release capture buffer: 0x%08lx\n", hr);
+            }
         }
 
         if(FAILED(hr))
@@ -1345,6 +1396,10 @@ FORCE_ALIGN int ALCmmdevCapture_recordProc(void *arg)
         if(res != WAIT_OBJECT_0)
             ERR("WaitForSingleObjectEx error: 0x%lx\n", res);
     }
+
+    al_free(samples);
+    samples = NULL;
+    samplesmax = 0;
 
     CoUninitialize();
     return 0;
@@ -1528,6 +1583,7 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     WAVEFORMATEXTENSIBLE OutputType;
     WAVEFORMATEX *wfx = NULL;
+    enum DevFmtType srcType;
     REFERENCE_TIME buf_time;
     UINT32 buffer_len;
     void *ptr = NULL;
@@ -1587,33 +1643,28 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
     }
     switch(device->FmtType)
     {
+        /* NOTE: Signedness doesn't matter, the converter will handle it. */
+        case DevFmtByte:
         case DevFmtUByte:
             OutputType.Format.wBitsPerSample = 8;
-            OutputType.Samples.wValidBitsPerSample = 8;
             OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
             break;
         case DevFmtShort:
+        case DevFmtUShort:
             OutputType.Format.wBitsPerSample = 16;
-            OutputType.Samples.wValidBitsPerSample = 16;
             OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
             break;
         case DevFmtInt:
+        case DevFmtUInt:
             OutputType.Format.wBitsPerSample = 32;
-            OutputType.Samples.wValidBitsPerSample = 32;
             OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
             break;
         case DevFmtFloat:
             OutputType.Format.wBitsPerSample = 32;
-            OutputType.Samples.wValidBitsPerSample = 32;
             OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
             break;
-
-        case DevFmtByte:
-        case DevFmtUShort:
-        case DevFmtUInt:
-            WARN("%s capture samples not supported\n", DevFmtTypeString(device->FmtType));
-            return E_FAIL;
     }
+    OutputType.Samples.wValidBitsPerSample = OutputType.Format.wBitsPerSample;
     OutputType.Format.nSamplesPerSec = device->Frequency;
 
     OutputType.Format.nBlockAlign = OutputType.Format.nChannels *
@@ -1631,27 +1682,103 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
         return hr;
     }
 
-    /* FIXME: We should do conversion/resampling if we didn't get a matching format. */
-    if(wfx->nSamplesPerSec != OutputType.Format.nSamplesPerSec ||
-       wfx->wBitsPerSample != OutputType.Format.wBitsPerSample ||
-       wfx->nChannels != OutputType.Format.nChannels ||
-       wfx->nBlockAlign != OutputType.Format.nBlockAlign)
+    DestroySampleConverter(&self->SampleConv);
+    DestroyChannelConverter(&self->ChannelConv);
+
+    if(wfx != NULL)
     {
-        ERR("Failed to get matching format, wanted: %s %s %uhz, got: %d channel%s %d-bit %luhz\n",
-            DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
-            device->Frequency, wfx->nChannels, (wfx->nChannels==1)?"":"s", wfx->wBitsPerSample,
-            wfx->nSamplesPerSec);
+        if(!(wfx->nChannels == OutputType.Format.nChannels ||
+             (wfx->nChannels == 1 && OutputType.Format.nChannels == 2) ||
+             (wfx->nChannels == 2 && OutputType.Format.nChannels == 1)))
+        {
+            ERR("Failed to get matching format, wanted: %s %s %uhz, got: %d channel%s %d-bit %luhz\n",
+                DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
+                device->Frequency, wfx->nChannels, (wfx->nChannels==1)?"":"s", wfx->wBitsPerSample,
+                wfx->nSamplesPerSec);
+            CoTaskMemFree(wfx);
+            return E_FAIL;
+        }
+
+        if(!MakeExtensible(&OutputType, wfx))
+        {
+            CoTaskMemFree(wfx);
+            return E_FAIL;
+        }
         CoTaskMemFree(wfx);
+        wfx = NULL;
+    }
+
+    if(IsEqualGUID(&OutputType.SubFormat, &KSDATAFORMAT_SUBTYPE_PCM))
+    {
+        if(OutputType.Format.wBitsPerSample == 8)
+            srcType = DevFmtUByte;
+        else if(OutputType.Format.wBitsPerSample == 16)
+            srcType = DevFmtShort;
+        else if(OutputType.Format.wBitsPerSample == 32)
+            srcType = DevFmtInt;
+        else
+        {
+            ERR("Unhandled integer bit depth: %d\n", OutputType.Format.wBitsPerSample);
+            return E_FAIL;
+        }
+    }
+    else if(IsEqualGUID(&OutputType.SubFormat, &KSDATAFORMAT_SUBTYPE_IEEE_FLOAT))
+    {
+        if(OutputType.Format.wBitsPerSample == 32)
+            srcType = DevFmtFloat;
+        else
+        {
+            ERR("Unhandled float bit depth: %d\n", OutputType.Format.wBitsPerSample);
+            return E_FAIL;
+        }
+    }
+    else
+    {
+        ERR("Unhandled format sub-type\n");
         return E_FAIL;
     }
 
-    if(!MakeExtensible(&OutputType, wfx))
+    if(device->FmtChans == DevFmtMono && OutputType.Format.nChannels == 2)
     {
-        CoTaskMemFree(wfx);
-        return E_FAIL;
+        self->ChannelConv = CreateChannelConverter(srcType, DevFmtStereo,
+                                                   device->FmtChans);
+        if(!self->ChannelConv)
+        {
+            ERR("Failed to create stereo-to-mono converter\n");
+            return E_FAIL;
+        }
+        /* The channel converter always outputs float, so change the input type
+         * for the resampler/type-converter.
+         */
+        srcType = DevFmtFloat;
     }
-    CoTaskMemFree(wfx);
-    wfx = NULL;
+    else if(device->FmtChans == DevFmtStereo && OutputType.Format.nChannels == 1)
+    {
+        self->ChannelConv = CreateChannelConverter(srcType, DevFmtMono,
+                                                   device->FmtChans);
+        if(!self->ChannelConv)
+        {
+            ERR("Failed to create mono-to-stereo converter\n");
+            return E_FAIL;
+        }
+        srcType = DevFmtFloat;
+    }
+
+    if(device->Frequency != OutputType.Format.nSamplesPerSec || device->FmtType != srcType)
+    {
+        self->SampleConv = CreateSampleConverter(
+            srcType, device->FmtType, ChannelsFromDevFmt(device->FmtChans),
+            OutputType.Format.nSamplesPerSec, device->Frequency
+        );
+        if(!self->SampleConv)
+        {
+            ERR("Failed to create converter for format, dst: %s %s %uhz, src: %d-bit %luhz\n",
+                DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
+                device->Frequency, OutputType.Format.wBitsPerSample,
+                OutputType.Format.nSamplesPerSec);
+            return E_FAIL;
+        }
+    }
 
     hr = IAudioClient_Initialize(self->client,
         AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
@@ -1672,7 +1799,9 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
 
     buffer_len = maxu(device->UpdateSize*device->NumUpdates + 1, buffer_len);
     ll_ringbuffer_free(self->Ring);
-    self->Ring = ll_ringbuffer_create(buffer_len, OutputType.Format.nBlockAlign);
+    self->Ring = ll_ringbuffer_create(buffer_len,
+        FrameSizeFromDevFmt(device->FmtChans, device->FmtType)
+    );
     if(!self->Ring)
     {
         ERR("Failed to allocate capture ring buffer\n");
@@ -1851,7 +1980,7 @@ static ALCboolean ALCmmdevBackendFactory_querySupport(ALCmmdevBackendFactory* UN
      * stereo input, for example, and the app asks for 22050hz mono,
      * initialization will fail.
      */
-    if(type == ALCbackend_Playback /*|| type == ALCbackend_Capture*/)
+    if(type == ALCbackend_Playback || type == ALCbackend_Capture)
         return ALC_TRUE;
     return ALC_FALSE;
 }

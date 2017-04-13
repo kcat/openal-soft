@@ -102,13 +102,13 @@ const aluMatrixf IdentityMatrixf = {{
 
 static inline HrtfDirectMixerFunc SelectHrtfMixer(void)
 {
-#ifdef HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
-        return MixDirectHrtf_SSE;
-#endif
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
         return MixDirectHrtf_Neon;
+#endif
+#ifdef HAVE_SSE
+    if((CPUCapFlags&CPU_CAP_SSE))
+        return MixDirectHrtf_SSE;
 #endif
 
     return MixDirectHrtf_C;

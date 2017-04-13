@@ -1367,14 +1367,12 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans)
     case DevFmtX51Rear: return "5.1 Surround (Rear)";
     case DevFmtX61: return "6.1 Surround";
     case DevFmtX71: return "7.1 Surround";
-    case DevFmtAmbi1: return "Ambisonic (1st Order)";
-    case DevFmtAmbi2: return "Ambisonic (2nd Order)";
-    case DevFmtAmbi3: return "Ambisonic (3rd Order)";
+    case DevFmtAmbi3D: return "Ambisonic 3D";
     }
     return "(unknown channels)";
 }
 
-extern inline ALsizei FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType type);
+extern inline ALsizei FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType type, ALsizei ambiorder);
 ALsizei BytesFromDevFmt(enum DevFmtType type)
 {
     switch(type)
@@ -1389,7 +1387,7 @@ ALsizei BytesFromDevFmt(enum DevFmtType type)
     }
     return 0;
 }
-ALsizei ChannelsFromDevFmt(enum DevFmtChannels chans)
+ALsizei ChannelsFromDevFmt(enum DevFmtChannels chans, ALsizei ambiorder)
 {
     switch(chans)
     {
@@ -1400,9 +1398,9 @@ ALsizei ChannelsFromDevFmt(enum DevFmtChannels chans)
     case DevFmtX51Rear: return 6;
     case DevFmtX61: return 7;
     case DevFmtX71: return 8;
-    case DevFmtAmbi1: return 4;
-    case DevFmtAmbi2: return 9;
-    case DevFmtAmbi3: return 16;
+    case DevFmtAmbi3D: return (ambiorder >= 3) ? 16 :
+                              (ambiorder == 2) ? 9 :
+                              (ambiorder == 1) ? 4 : 1;
     }
     return 0;
 }
@@ -1585,40 +1583,32 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
         device->RealOut.ChannelName[6] = SideLeft;
         device->RealOut.ChannelName[7] = SideRight;
         break;
-    case DevFmtAmbi1:
+    case DevFmtAmbi3D:
         device->RealOut.ChannelName[0] = Aux0;
-        device->RealOut.ChannelName[1] = Aux1;
-        device->RealOut.ChannelName[2] = Aux2;
-        device->RealOut.ChannelName[3] = Aux3;
-        break;
-    case DevFmtAmbi2:
-        device->RealOut.ChannelName[0] = Aux0;
-        device->RealOut.ChannelName[1] = Aux1;
-        device->RealOut.ChannelName[2] = Aux2;
-        device->RealOut.ChannelName[3] = Aux3;
-        device->RealOut.ChannelName[4] = Aux4;
-        device->RealOut.ChannelName[5] = Aux5;
-        device->RealOut.ChannelName[6] = Aux6;
-        device->RealOut.ChannelName[7] = Aux7;
-        device->RealOut.ChannelName[8] = Aux8;
-        break;
-    case DevFmtAmbi3:
-        device->RealOut.ChannelName[0] = Aux0;
-        device->RealOut.ChannelName[1] = Aux1;
-        device->RealOut.ChannelName[2] = Aux2;
-        device->RealOut.ChannelName[3] = Aux3;
-        device->RealOut.ChannelName[4] = Aux4;
-        device->RealOut.ChannelName[5] = Aux5;
-        device->RealOut.ChannelName[6] = Aux6;
-        device->RealOut.ChannelName[7] = Aux7;
-        device->RealOut.ChannelName[8] = Aux8;
-        device->RealOut.ChannelName[9] = Aux9;
-        device->RealOut.ChannelName[10] = Aux10;
-        device->RealOut.ChannelName[11] = Aux11;
-        device->RealOut.ChannelName[12] = Aux12;
-        device->RealOut.ChannelName[13] = Aux13;
-        device->RealOut.ChannelName[14] = Aux14;
-        device->RealOut.ChannelName[15] = Aux15;
+        if(device->AmbiOrder > 0)
+        {
+            device->RealOut.ChannelName[1] = Aux1;
+            device->RealOut.ChannelName[2] = Aux2;
+            device->RealOut.ChannelName[3] = Aux3;
+        }
+        if(device->AmbiOrder > 1)
+        {
+            device->RealOut.ChannelName[4] = Aux4;
+            device->RealOut.ChannelName[5] = Aux5;
+            device->RealOut.ChannelName[6] = Aux6;
+            device->RealOut.ChannelName[7] = Aux7;
+            device->RealOut.ChannelName[8] = Aux8;
+        }
+        if(device->AmbiOrder > 2)
+        {
+            device->RealOut.ChannelName[9]  = Aux9;
+            device->RealOut.ChannelName[10] = Aux10;
+            device->RealOut.ChannelName[11] = Aux11;
+            device->RealOut.ChannelName[12] = Aux12;
+            device->RealOut.ChannelName[13] = Aux13;
+            device->RealOut.ChannelName[14] = Aux14;
+            device->RealOut.ChannelName[15] = Aux15;
+        }
         break;
     }
 }
@@ -1661,9 +1651,7 @@ void SetDefaultChannelOrder(ALCdevice *device)
     case DevFmtQuad:
     case DevFmtX51:
     case DevFmtX61:
-    case DevFmtAmbi1:
-    case DevFmtAmbi2:
-    case DevFmtAmbi3:
+    case DevFmtAmbi3D:
         SetDefaultWFXChannelOrder(device);
         break;
     }
@@ -1901,16 +1889,15 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         UpdateClockBase(device);
 
+        device->Frequency = freq;
+        device->FmtChans = schans;
+        device->FmtType = stype;
         if(schans == ALC_BFORMAT3D_SOFT)
         {
-            device->FmtChans = DevFmtAmbi1 + (aorder-1);
+            device->AmbiOrder = aorder;
             device->AmbiLayout = alayout;
             device->AmbiScale = ascale;
         }
-        else
-            device->FmtChans = schans;
-        device->Frequency = freq;
-        device->FmtType = stype;
         device->NumMonoSources = numMono;
         device->NumStereoSources = numStereo;
 
@@ -2944,8 +2931,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
 
 static inline ALCsizei NumAttrsForDevice(ALCdevice *device)
 {
-    if(device->Type == Loopback && device->FmtChans >= DevFmtAmbi1 &&
-       device->FmtChans <= DevFmtAmbi3)
+    if(device->Type == Loopback && device->FmtChans == DevFmtAmbi3D)
         return 23;
     return 17;
 }
@@ -3060,7 +3046,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             }
             else
             {
-                if(device->FmtChans >= DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3)
+                if(device->FmtChans == DevFmtAmbi3D)
                 {
                     values[i++] = ALC_AMBISONIC_LAYOUT_SOFT;
                     values[i++] = device->AmbiLayout;
@@ -3069,16 +3055,11 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
                     values[i++] = device->AmbiScale;
 
                     values[i++] = ALC_AMBISONIC_ORDER_SOFT;
-                    values[i++] = device->FmtChans-DevFmtAmbi1+1;
+                    values[i++] = device->AmbiOrder;
+                }
 
-                    values[i++] = ALC_FORMAT_CHANNELS_SOFT;
-                    values[i++] = ALC_BFORMAT3D_SOFT;
-                }
-                else
-                {
-                    values[i++] = ALC_FORMAT_CHANNELS_SOFT;
-                    values[i++] = device->FmtChans;
-                }
+                values[i++] = ALC_FORMAT_CHANNELS_SOFT;
+                values[i++] = device->FmtChans;
 
                 values[i++] = ALC_FORMAT_TYPE_SOFT;
                 values[i++] = device->FmtType;
@@ -3133,10 +3114,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
                 alcSetError(device, ALC_INVALID_DEVICE);
                 return 0;
             }
-            if(device->FmtChans >= DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3)
-                values[0] = ALC_BFORMAT3D_SOFT;
-            else
-                values[0] = device->FmtChans;
+            values[0] = device->FmtChans;
             return 1;
 
         case ALC_FORMAT_TYPE_SOFT:
@@ -3149,8 +3127,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             return 1;
 
         case ALC_AMBISONIC_LAYOUT_SOFT:
-            if(device->Type != Loopback || !(device->FmtChans >= DevFmtAmbi1 &&
-                                             device->FmtChans <= DevFmtAmbi3))
+            if(device->Type != Loopback || device->FmtChans != DevFmtAmbi3D)
             {
                 alcSetError(device, ALC_INVALID_DEVICE);
                 return 0;
@@ -3159,8 +3136,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             return 1;
 
         case ALC_AMBISONIC_SCALING_SOFT:
-            if(device->Type != Loopback || !(device->FmtChans >= DevFmtAmbi1 &&
-                                             device->FmtChans <= DevFmtAmbi3))
+            if(device->Type != Loopback || device->FmtChans != DevFmtAmbi3D)
             {
                 alcSetError(device, ALC_INVALID_DEVICE);
                 return 0;
@@ -3169,13 +3145,12 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             return 1;
 
         case ALC_AMBISONIC_ORDER_SOFT:
-            if(device->Type != Loopback || !(device->FmtChans >= DevFmtAmbi1 &&
-                                             device->FmtChans <= DevFmtAmbi3))
+            if(device->Type != Loopback || device->FmtChans != DevFmtAmbi3D)
             {
                 alcSetError(device, ALC_INVALID_DEVICE);
                 return 0;
             }
-            values[0] = device->FmtChans - DevFmtAmbi1 + 1;
+            values[0] = device->AmbiOrder;
             return 1;
 
         case ALC_MONO_SOURCES:
@@ -3280,7 +3255,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                     }
                     else
                     {
-                        if(device->FmtChans >= DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3)
+                        if(device->FmtChans == DevFmtAmbi3D)
                         {
                             values[i++] = ALC_AMBISONIC_LAYOUT_SOFT;
                             values[i++] = device->AmbiLayout;
@@ -3289,16 +3264,11 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                             values[i++] = device->AmbiScale;
 
                             values[i++] = ALC_AMBISONIC_ORDER_SOFT;
-                            values[i++] = device->FmtChans-DevFmtAmbi1+1;
+                            values[i++] = device->AmbiOrder;
+                        }
 
-                            values[i++] = ALC_FORMAT_CHANNELS_SOFT;
-                            values[i++] = ALC_BFORMAT3D_SOFT;
-                        }
-                        else
-                        {
-                            values[i++] = ALC_FORMAT_CHANNELS_SOFT;
-                            values[i++] = device->FmtChans;
-                        }
+                        values[i++] = ALC_FORMAT_CHANNELS_SOFT;
+                        values[i++] = device->FmtChans;
 
                         values[i++] = ALC_FORMAT_TYPE_SOFT;
                         values[i++] = device->FmtType;
@@ -3825,17 +3795,18 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         static const struct {
             const char name[16];
             enum DevFmtChannels chans;
+            ALsizei order;
         } chanlist[] = {
-            { "mono",       DevFmtMono   },
-            { "stereo",     DevFmtStereo },
-            { "quad",       DevFmtQuad   },
-            { "surround51", DevFmtX51    },
-            { "surround61", DevFmtX61    },
-            { "surround71", DevFmtX71    },
-            { "surround51rear", DevFmtX51Rear },
-            { "ambi1", DevFmtAmbi1 },
-            { "ambi2", DevFmtAmbi2 },
-            { "ambi3", DevFmtAmbi3 },
+            { "mono",       DevFmtMono,   0 },
+            { "stereo",     DevFmtStereo, 0 },
+            { "quad",       DevFmtQuad,   0 },
+            { "surround51", DevFmtX51,    0 },
+            { "surround61", DevFmtX61,    0 },
+            { "surround71", DevFmtX71,    0 },
+            { "surround51rear", DevFmtX51Rear, 0 },
+            { "ambi1", DevFmtAmbi3D, 1 },
+            { "ambi2", DevFmtAmbi3D, 2 },
+            { "ambi3", DevFmtAmbi3D, 3 },
         };
         size_t i;
 
@@ -3844,6 +3815,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
             if(strcasecmp(chanlist[i].name, fmt) == 0)
             {
                 device->FmtChans = chanlist[i].chans;
+                device->AmbiOrder = chanlist[i].order;
                 device->Flags |= DEVICE_CHANNELS_REQUEST;
                 break;
             }
@@ -4118,6 +4090,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         return NULL;
     }
     device->IsHeadphones = AL_FALSE;
+    device->AmbiOrder = 0;
     device->AmbiLayout = AmbiLayout_Default;
     device->AmbiScale = AmbiNorm_Default;
 

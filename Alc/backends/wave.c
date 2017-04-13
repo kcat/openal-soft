@@ -127,7 +127,7 @@ static int ALCwaveBackend_mixerProc(void *ptr)
 
     althrd_setname(althrd_current(), MIXER_THREAD_NAME);
 
-    frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
 
     done = 0;
     if(altimespec_get(&start, AL_TIME_UTC) != AL_TIME_UTC)
@@ -251,7 +251,10 @@ static ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
     clearerr(self->mFile);
 
     if(GetConfigValueBool(NULL, "wave", "bformat", 0))
-        device->FmtChans = DevFmtAmbi1;
+    {
+        device->FmtChans = DevFmtAmbi3D;
+        device->AmbiOrder = 1;
+    }
 
     switch(device->FmtType)
     {
@@ -279,9 +282,7 @@ static ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
         case DevFmtX51Rear: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x010 | 0x020; break;
         case DevFmtX61: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x100 | 0x200 | 0x400; break;
         case DevFmtX71: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x010 | 0x020 | 0x200 | 0x400; break;
-        case DevFmtAmbi1:
-        case DevFmtAmbi2:
-        case DevFmtAmbi3:
+        case DevFmtAmbi3D:
             /* .amb output requires FuMa */
             device->AmbiLayout = AmbiLayout_FuMa;
             device->AmbiScale = AmbiNorm_FuMa;
@@ -290,14 +291,14 @@ static ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
             break;
     }
     bits = BytesFromDevFmt(device->FmtType) * 8;
-    channels = ChannelsFromDevFmt(device->FmtChans);
+    channels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
 
-    fprintf(self->mFile, "RIFF");
+    fputs("RIFF", self->mFile);
     fwrite32le(0xFFFFFFFF, self->mFile); // 'RIFF' header len; filled in at close
 
-    fprintf(self->mFile, "WAVE");
+    fputs("WAVE", self->mFile);
 
-    fprintf(self->mFile, "fmt ");
+    fputs("fmt ", self->mFile);
     fwrite32le(40, self->mFile); // 'fmt ' header len; 40 bytes for EXTENSIBLE
 
     // 16-bit val, format type id (extensible: 0xFFFE)
@@ -323,7 +324,7 @@ static ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
                                (isbformat ? SUBTYPE_BFORMAT_PCM : SUBTYPE_PCM)), 1, 16, self->mFile);
     (void)val;
 
-    fprintf(self->mFile, "data");
+    fputs("data", self->mFile);
     fwrite32le(0xFFFFFFFF, self->mFile); // 'data' header len; filled in at close
 
     if(ferror(self->mFile))
@@ -342,7 +343,9 @@ static ALCboolean ALCwaveBackend_start(ALCwaveBackend *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
-    self->mSize = device->UpdateSize * FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    self->mSize = device->UpdateSize * FrameSizeFromDevFmt(
+        device->FmtChans, device->FmtType, device->AmbiOrder
+    );
     self->mBuffer = malloc(self->mSize);
     if(!self->mBuffer)
     {

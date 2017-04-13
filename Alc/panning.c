@@ -620,13 +620,11 @@ static void InitPanning(ALCdevice *device)
             coeffcount = 16;
             break;
 
-        case DevFmtAmbi1:
-        case DevFmtAmbi2:
-        case DevFmtAmbi3:
+        case DevFmtAmbi3D:
             break;
     }
 
-    if(device->FmtChans >= DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3)
+    if(device->FmtChans == DevFmtAmbi3D)
     {
         const char *devname = alstr_get_cstr(device->DeviceName);
         const ALsizei *acnmap = (device->AmbiLayout == AmbiLayout_FuMa) ? FuMa2ACN : ACN2ACN;
@@ -635,9 +633,9 @@ static void InitPanning(ALCdevice *device)
                                   /*(device->AmbiScale == AmbiNorm_N3D) ?*/ UnitScale;
         ALfloat nfc_delay = 0.0f;
 
-        count = (device->FmtChans == DevFmtAmbi3) ? 16 :
-                (device->FmtChans == DevFmtAmbi2) ? 9 :
-                (device->FmtChans == DevFmtAmbi1) ? 4 : 1;
+        count = (device->AmbiOrder == 3) ? 16 :
+                (device->AmbiOrder == 2) ? 9 :
+                (device->AmbiOrder == 1) ? 4 : 1;
         for(i = 0;i < count;i++)
         {
             ALsizei acn = acnmap[i];
@@ -647,7 +645,7 @@ static void InitPanning(ALCdevice *device)
         device->Dry.CoeffCount = 0;
         device->Dry.NumChannels = count;
 
-        if(device->FmtChans == DevFmtAmbi1)
+        if(device->AmbiOrder < 2)
         {
             device->FOAOut.Ambi = device->Dry.Ambi;
             device->FOAOut.CoeffCount = device->Dry.CoeffCount;
@@ -674,10 +672,7 @@ static void InitPanning(ALCdevice *device)
         {
             nfc_delay = clampf(nfc_delay, 0.001f, 1000.0f);
             InitNearFieldCtrl(device, nfc_delay * SPEEDOFSOUNDMETRESPERSEC,
-                              (device->FmtChans == DevFmtAmbi3) ? 3 :
-                              (device->FmtChans == DevFmtAmbi2) ? 2 : 1,
-                              true
-            );
+                              device->AmbiOrder, true);
         }
     }
     else
@@ -861,7 +856,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsiz
         device->FOAOut.NumChannels = count;
     }
 
-    device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans);
+    device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
 
     avg_dist = 0.0f;
     for(i = 0;i < conf->NumSpeakers;i++)
@@ -963,7 +958,7 @@ static void InitHrtfPanning(ALCdevice *device, bool hoa_mode)
         ambiup_reset(device->AmbiUp, device);
     }
 
-    device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans);
+    device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
 
     device->Hrtf->IrSize = BuildBFormatHrtf(device->HrtfHandle,
         device->Hrtf, device->Dry.NumChannels,
@@ -992,7 +987,7 @@ static void InitUhjPanning(ALCdevice *device)
     device->FOAOut.CoeffCount = device->Dry.CoeffCount;
     device->FOAOut.NumChannels = 0;
 
-    device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans);
+    device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
 }
 
 void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf_appreq, enum HrtfRequestMode hrtf_userreq)
@@ -1049,9 +1044,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
             /* Mono, Stereo, and Ambisonics output don't use custom decoders. */
             case DevFmtMono:
             case DevFmtStereo:
-            case DevFmtAmbi1:
-            case DevFmtAmbi2:
-            case DevFmtAmbi3:
+            case DevFmtAmbi3D:
                 break;
         }
         if(layout)
@@ -1085,7 +1078,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         {
             bformatdec_free(device->AmbiDecoder);
             device->AmbiDecoder = NULL;
-            if(device->FmtChans > DevFmtAmbi1 && device->FmtChans <= DevFmtAmbi3)
+            if(device->FmtChans == DevFmtAmbi3D && device->AmbiOrder == 1)
             {
                 if(!device->AmbiUp)
                     device->AmbiUp = ambiup_alloc();

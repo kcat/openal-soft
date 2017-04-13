@@ -280,7 +280,7 @@ static int ALCplaybackOSS_mixerProc(void *ptr)
     SetRTPriority();
     althrd_setname(althrd_current(), MIXER_THREAD_NAME);
 
-    frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
 
     ALCplaybackOSS_lock(self);
     while(!ATOMIC_LOAD_SEQ(&self->killNow) && device->Connected)
@@ -418,7 +418,7 @@ static ALCboolean ALCplaybackOSS_reset(ALCplaybackOSS *self)
     }
 
     periods = device->NumUpdates;
-    numChannels = ChannelsFromDevFmt(device->FmtChans);
+    numChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
     ossSpeed = device->Frequency;
     frameSize = numChannels * BytesFromDevFmt(device->FmtType);
     /* According to the OSS spec, 16 bytes (log2(16)) is the minimum. */
@@ -444,7 +444,7 @@ static ALCboolean ALCplaybackOSS_reset(ALCplaybackOSS *self)
     }
 #undef CHECKERR
 
-    if((int)ChannelsFromDevFmt(device->FmtChans) != numChannels)
+    if((int)ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder) != numChannels)
     {
         ERR("Failed to set %s, got %d channels instead\n", DevFmtChannelsString(device->FmtChans), numChannels);
         return ALC_FALSE;
@@ -471,7 +471,9 @@ static ALCboolean ALCplaybackOSS_start(ALCplaybackOSS *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
-    self->data_size = device->UpdateSize * FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    self->data_size = device->UpdateSize * FrameSizeFromDevFmt(
+        device->FmtChans, device->FmtType, device->AmbiOrder
+    );
     self->mix_data = calloc(1, self->data_size);
 
     ATOMIC_STORE_SEQ(&self->killNow, AL_FALSE);
@@ -543,7 +545,7 @@ static int ALCcaptureOSS_recordProc(void *ptr)
     SetRTPriority();
     althrd_setname(althrd_current(), RECORD_THREAD_NAME);
 
-    frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
 
     while(!ATOMIC_LOAD_SEQ(&self->killNow))
     {
@@ -660,7 +662,7 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
     }
 
     periods = 4;
-    numChannels = ChannelsFromDevFmt(device->FmtChans);
+    numChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
     frameSize = numChannels * BytesFromDevFmt(device->FmtType);
     ossSpeed = device->Frequency;
     log2FragmentSize = log2i(device->UpdateSize * device->NumUpdates *
@@ -690,7 +692,7 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
     }
 #undef CHECKERR
 
-    if((int)ChannelsFromDevFmt(device->FmtChans) != numChannels)
+    if((int)ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder) != numChannels)
     {
         ERR("Failed to set %s, got %d channels instead\n", DevFmtChannelsString(device->FmtChans), numChannels);
         close(self->fd);

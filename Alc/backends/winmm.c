@@ -382,7 +382,7 @@ static ALCboolean ALCwinmmPlayback_start(ALCwinmmPlayback *self)
 
     // Create 4 Buffers
     BufferSize  = device->UpdateSize*device->NumUpdates / 4;
-    BufferSize *= FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    BufferSize *= FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
 
     BufferData = calloc(4, BufferSize);
     for(i = 0;i < 4;i++)
@@ -563,9 +563,7 @@ static ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *name)
         case DevFmtX51Rear:
         case DevFmtX61:
         case DevFmtX71:
-        case DevFmtAmbi1:
-        case DevFmtAmbi2:
-        case DevFmtAmbi3:
+        case DevFmtAmbi3D:
             return ALC_INVALID_ENUM;
     }
 
@@ -586,7 +584,7 @@ static ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *name)
     memset(&self->Format, 0, sizeof(WAVEFORMATEX));
     self->Format.wFormatTag = ((device->FmtType == DevFmtFloat) ?
                                WAVE_FORMAT_IEEE_FLOAT : WAVE_FORMAT_PCM);
-    self->Format.nChannels = ChannelsFromDevFmt(device->FmtChans);
+    self->Format.nChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
     self->Format.wBitsPerSample = BytesFromDevFmt(device->FmtType) * 8;
     self->Format.nBlockAlign = self->Format.wBitsPerSample *
                                self->Format.nChannels / 8;

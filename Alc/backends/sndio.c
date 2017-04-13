@@ -98,7 +98,7 @@ static int ALCsndioBackend_mixerProc(void *ptr)
     SetRTPriority();
     althrd_setname(althrd_current(), MIXER_THREAD_NAME);
 
-    frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
 
     while(!self->killNow && device->Connected)
     {
@@ -245,7 +245,9 @@ static ALCboolean ALCsndioBackend_start(ALCsndioBackend *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
 
-    self->data_size = device->UpdateSize * FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    self->data_size = device->UpdateSize * FrameSizeFromDevFmt(
+        device->FmtChans, device->FmtType, device->AmbiOrder
+    );
     al_free(self->mix_data);
     self->mix_data = al_calloc(16, self->data_size);
 

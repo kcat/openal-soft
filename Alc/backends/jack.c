@@ -228,7 +228,9 @@ static int ALCjackPlayback_bufferSizeNotify(jack_nframes_t numframes, void *arg)
     TRACE("%u update size x%u\n", device->UpdateSize, device->NumUpdates);
 
     ll_ringbuffer_free(self->Ring);
-    self->Ring = ll_ringbuffer_create(bufsize, FrameSizeFromDevFmt(device->FmtChans, device->FmtType));
+    self->Ring = ll_ringbuffer_create(bufsize,
+        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder)
+    );
     if(!self->Ring)
     {
         ERR("Failed to reallocate ringbuffer\n");
@@ -423,7 +425,7 @@ static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
     /* Force 32-bit float output. */
     device->FmtType = DevFmtFloat;
 
-    numchans = ChannelsFromDevFmt(device->FmtChans);
+    numchans = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
     for(i = 0;i < numchans;i++)
     {
         char name[64];
@@ -452,7 +454,9 @@ static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
     }
 
     ll_ringbuffer_free(self->Ring);
-    self->Ring = ll_ringbuffer_create(bufsize, FrameSizeFromDevFmt(device->FmtChans, device->FmtType));
+    self->Ring = ll_ringbuffer_create(bufsize,
+        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder)
+    );
     if(!self->Ring)
     {
         ERR("Failed to allocate ringbuffer\n");

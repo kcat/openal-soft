@@ -389,7 +389,7 @@ void ChannelConverterInput(ChannelConverter *converter, const ALvoid *src, ALflo
     if(converter->mSrcChans == converter->mDstChans)
     {
         LoadSamples(dst, src, 1, converter->mSrcType,
-                    frames*ChannelsFromDevFmt(converter->mSrcChans));
+                    frames*ChannelsFromDevFmt(converter->mSrcChans, 0));
         return;
     }
 

@@ -508,24 +508,20 @@ enum DevFmtChannels {
     DevFmtX51    = ALC_5POINT1_SOFT,
     DevFmtX61    = ALC_6POINT1_SOFT,
     DevFmtX71    = ALC_7POINT1_SOFT,
+    DevFmtAmbi3D = ALC_BFORMAT3D_SOFT,
 
     /* Similar to 5.1, except using rear channels instead of sides */
     DevFmtX51Rear = 0x80000000,
-
-    /* Ambisonic formats should be kept together */
-    DevFmtAmbi1,
-    DevFmtAmbi2,
-    DevFmtAmbi3,
 
     DevFmtChannelsDefault = DevFmtStereo
 };
 #define MAX_OUTPUT_CHANNELS  (16)
 
 ALsizei BytesFromDevFmt(enum DevFmtType type);
-ALsizei ChannelsFromDevFmt(enum DevFmtChannels chans);
-inline ALsizei FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType type)
+ALsizei ChannelsFromDevFmt(enum DevFmtChannels chans, ALsizei ambiorder);
+inline ALsizei FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType type, ALsizei ambiorder)
 {
-    return ChannelsFromDevFmt(chans) * BytesFromDevFmt(type);
+    return ChannelsFromDevFmt(chans, ambiorder) * BytesFromDevFmt(type);
 }
 
 enum AmbiLayout {
@@ -668,6 +664,7 @@ struct ALCdevice_struct
     enum DevFmtChannels FmtChans;
     enum DevFmtType     FmtType;
     ALboolean IsHeadphones;
+    ALsizei AmbiOrder;
     /* For DevFmtAmbi* output only, specifies the channel order and
      * normalization.
      */

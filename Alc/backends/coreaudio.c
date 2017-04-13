@@ -319,7 +319,7 @@ static ALCboolean ALCcoreAudioPlayback_reset(ALCcoreAudioPlayback *self)
     }
 
     /* setup callback */
-    self->frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    self->frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
     input.inputProc = ALCcoreAudioPlayback_MixerProc;
     input.inputProcRefCon = self;
 
@@ -608,9 +608,7 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
         case DevFmtX51Rear:
         case DevFmtX61:
         case DevFmtX71:
-        case DevFmtAmbi1:
-        case DevFmtAmbi2:
-        case DevFmtAmbi3:
+        case DevFmtAmbi3D:
             ERR("%s not supported\n", DevFmtChannelsString(device->FmtChans));
             goto error;
     }
@@ -624,7 +622,7 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
 
     // save requested format description for later use
     self->format = requestedFormat;
-    self->frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    self->frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
 
     // Use intermediate format for sample rate conversion (outputFormat)
     // Set sample rate to the same as hardware for resampling later

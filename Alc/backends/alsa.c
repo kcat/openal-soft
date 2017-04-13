@@ -755,7 +755,7 @@ static ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
     }
     CHECK(snd_pcm_hw_params_set_format(self->pcmHandle, hp, format));
     /* test and set channels (implicitly sets frame bits) */
-    if(snd_pcm_hw_params_test_channels(self->pcmHandle, hp, ChannelsFromDevFmt(device->FmtChans)) < 0)
+    if(snd_pcm_hw_params_test_channels(self->pcmHandle, hp, ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder)) < 0)
     {
         static const enum DevFmtChannels channellist[] = {
             DevFmtStereo,
@@ -768,14 +768,15 @@ static ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
 
         for(k = 0;k < COUNTOF(channellist);k++)
         {
-            if(snd_pcm_hw_params_test_channels(self->pcmHandle, hp, ChannelsFromDevFmt(channellist[k])) >= 0)
+            if(snd_pcm_hw_params_test_channels(self->pcmHandle, hp, ChannelsFromDevFmt(channellist[k], 0)) >= 0)
             {
                 device->FmtChans = channellist[k];
+                device->AmbiOrder = 0;
                 break;
             }
         }
     }
-    CHECK(snd_pcm_hw_params_set_channels(self->pcmHandle, hp, ChannelsFromDevFmt(device->FmtChans)));
+    CHECK(snd_pcm_hw_params_set_channels(self->pcmHandle, hp, ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder)));
     /* set rate (implicitly constrains period/buffer parameters) */
     if(!GetConfigValueBool(alstr_get_cstr(device->DeviceName), "alsa", "allow-resampler", 0) ||
        !(device->Flags&DEVICE_FREQUENCY_REQUEST))
@@ -1039,7 +1040,7 @@ static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
     /* set format (implicitly sets sample bits) */
     CHECK(snd_pcm_hw_params_set_format(self->pcmHandle, hp, format));
     /* set channels (implicitly sets frame bits) */
-    CHECK(snd_pcm_hw_params_set_channels(self->pcmHandle, hp, ChannelsFromDevFmt(device->FmtChans)));
+    CHECK(snd_pcm_hw_params_set_channels(self->pcmHandle, hp, ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder)));
     /* set rate (implicitly constrains period/buffer parameters) */
     CHECK(snd_pcm_hw_params_set_rate(self->pcmHandle, hp, device->Frequency, 0));
     /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
@@ -1063,7 +1064,7 @@ static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
     {
         self->ring = ll_ringbuffer_create(
             device->UpdateSize*device->NumUpdates + 1,
-            FrameSizeFromDevFmt(device->FmtChans, device->FmtType)
+            FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder)
         );
         if(!self->ring)
         {

@@ -65,9 +65,7 @@ static SLuint32 GetChannelMask(enum DevFmtChannels chans)
                                SL_SPEAKER_FRONT_CENTER|SL_SPEAKER_LOW_FREQUENCY|
                                SL_SPEAKER_BACK_LEFT|SL_SPEAKER_BACK_RIGHT|
                                SL_SPEAKER_SIDE_LEFT|SL_SPEAKER_SIDE_RIGHT;
-        case DevFmtAmbi1:
-        case DevFmtAmbi2:
-        case DevFmtAmbi3:
+        case DevFmtAmbi3D:
             break;
     }
     return 0;
@@ -513,7 +511,7 @@ static ALCboolean ALCopenslPlayback_reset(ALCopenslPlayback *self)
     device->FmtType = DevFmtShort;
 
     SetDefaultWFXChannelOrder(device);
-    self->mFrameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    self->mFrameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
 
 
     loc_bufq.locatorType = SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE;
@@ -522,7 +520,7 @@ static ALCboolean ALCopenslPlayback_reset(ALCopenslPlayback *self)
 #ifdef SL_DATAFORMAT_PCM_EX
     SLDataFormat_PCM_EX format_pcm;
     format_pcm.formatType = SL_DATAFORMAT_PCM_EX;
-    format_pcm.numChannels = ChannelsFromDevFmt(device->FmtChans);
+    format_pcm.numChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
     format_pcm.sampleRate = device->Frequency * 1000;
     format_pcm.bitsPerSample = BytesFromDevFmt(device->FmtType) * 8;
     format_pcm.containerSize = format_pcm.bitsPerSample;
@@ -533,7 +531,7 @@ static ALCboolean ALCopenslPlayback_reset(ALCopenslPlayback *self)
 #else
     SLDataFormat_PCM format_pcm;
     format_pcm.formatType = SL_DATAFORMAT_PCM;
-    format_pcm.numChannels = ChannelsFromDevFmt(device->FmtChans);
+    format_pcm.numChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
     format_pcm.samplesPerSec = device->Frequency * 1000;
     format_pcm.bitsPerSample = BytesFromDevFmt(device->FmtType) * 8;
     format_pcm.containerSize = format_pcm.bitsPerSample;

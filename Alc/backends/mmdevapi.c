@@ -922,9 +922,7 @@ static HRESULT ALCmmdevPlayback_resetProxy(ALCmmdevPlayback *self)
             OutputType.Format.nChannels = 1;
             OutputType.dwChannelMask = MONO;
             break;
-        case DevFmtAmbi1:
-        case DevFmtAmbi2:
-        case DevFmtAmbi3:
+        case DevFmtAmbi3D:
             device->FmtChans = DevFmtStereo;
             /*fall-through*/
         case DevFmtStereo:
@@ -1367,7 +1365,8 @@ FORCE_ALIGN int ALCmmdevCapture_recordProc(void *arg)
                 }
                 else
                 {
-                    size_t framesize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+                    size_t framesize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType,
+                                                           device->AmbiOrder);
                     ALuint len1 = minu(data[0].len, numsamples);
                     ALuint len2 = minu(data[1].len, numsamples-len1);
 
@@ -1636,9 +1635,7 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
             OutputType.dwChannelMask = X7DOT1;
             break;
 
-        case DevFmtAmbi1:
-        case DevFmtAmbi2:
-        case DevFmtAmbi3:
+        case DevFmtAmbi3D:
             return E_FAIL;
     }
     switch(device->FmtType)
@@ -1767,7 +1764,7 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
     if(device->Frequency != OutputType.Format.nSamplesPerSec || device->FmtType != srcType)
     {
         self->SampleConv = CreateSampleConverter(
-            srcType, device->FmtType, ChannelsFromDevFmt(device->FmtChans),
+            srcType, device->FmtType, ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder),
             OutputType.Format.nSamplesPerSec, device->Frequency
         );
         if(!self->SampleConv)
@@ -1800,7 +1797,7 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
     buffer_len = maxu(device->UpdateSize*device->NumUpdates + 1, buffer_len);
     ll_ringbuffer_free(self->Ring);
     self->Ring = ll_ringbuffer_create(buffer_len,
-        FrameSizeFromDevFmt(device->FmtChans, device->FmtType)
+        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder)
     );
     if(!self->Ring)
     {

@@ -1014,7 +1014,7 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
             break;
     }
     self->spec.rate = device->Frequency;
-    self->spec.channels = ChannelsFromDevFmt(device->FmtChans);
+    self->spec.channels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
 
     if(pa_sample_spec_valid(&self->spec) == 0)
     {
@@ -1028,9 +1028,7 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
         case DevFmtMono:
             mapname = "mono";
             break;
-        case DevFmtAmbi1:
-        case DevFmtAmbi2:
-        case DevFmtAmbi3:
+        case DevFmtAmbi3D:
             device->FmtChans = DevFmtStereo;
             /*fall-through*/
         case DevFmtStereo:
@@ -1464,6 +1462,7 @@ static ALCenum ALCpulseCapture_open(ALCpulseCapture *self, const ALCchar *name)
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
     const char *pulse_name = NULL;
     pa_stream_flags_t flags = 0;
+    const char *mapname = NULL;
     pa_channel_map chanmap;
     ALuint samples;
 
@@ -1488,9 +1487,6 @@ static ALCenum ALCpulseCapture_open(ALCpulseCapture *self, const ALCchar *name)
 
     pa_threaded_mainloop_lock(self->loop);
 
-    self->spec.rate = device->Frequency;
-    self->spec.channels = ChannelsFromDevFmt(device->FmtChans);
-
     switch(device->FmtType)
     {
         case DevFmtUByte:
@@ -1512,6 +1508,44 @@ static ALCenum ALCpulseCapture_open(ALCpulseCapture *self, const ALCchar *name)
             pa_threaded_mainloop_unlock(self->loop);
             goto fail;
     }
+
+    switch(device->FmtChans)
+    {
+        case DevFmtMono:
+            mapname = "mono";
+            break;
+        case DevFmtStereo:
+            mapname = "front-left,front-right";
+            break;
+        case DevFmtQuad:
+            mapname = "front-left,front-right,rear-left,rear-right";
+            break;
+        case DevFmtX51:
+            mapname = "front-left,front-right,front-center,lfe,side-left,side-right";
+            break;
+        case DevFmtX51Rear:
+            mapname = "front-left,front-right,front-center,lfe,rear-left,rear-right";
+            break;
+        case DevFmtX61:
+            mapname = "front-left,front-right,front-center,lfe,rear-center,side-left,side-right";
+            break;
+        case DevFmtX71:
+            mapname = "front-left,front-right,front-center,lfe,rear-left,rear-right,side-left,side-right";
+            break;
+        case DevFmtAmbi3D:
+            ERR("%s capture samples not supported\n", DevFmtChannelsString(device->FmtChans));
+            pa_threaded_mainloop_unlock(self->loop);
+            goto fail;
+    }
+    if(!pa_channel_map_parse(&chanmap, mapname))
+    {
+        ERR("Failed to build channel map for %s\n", DevFmtChannelsString(device->FmtChans));
+        pa_threaded_mainloop_unlock(self->loop);
+        return ALC_FALSE;
+    }
+
+    self->spec.rate = device->Frequency;
+    self->spec.channels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
 
     if(pa_sample_spec_valid(&self->spec) == 0)
     {

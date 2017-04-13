@@ -179,7 +179,9 @@ FORCE_ALIGN static int qsa_proc_playback(void* ptr)
     param.sched_priority=param.sched_curpriority+1;
     SchedSet(0, 0, SCHED_NOCHANGE, &param);
 
-    const ALint frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    const ALint frame_size = FrameSizeFromDevFmt(
+        device->FmtChans, device->FmtType, device->AmbiOrder
+    );
 
     V0(device->Backend,lock)();
     while(!data->killNow)
@@ -361,14 +363,14 @@ static ALCboolean qsa_reset_playback(ALCdevice* device)
     data->cparams.start_mode=SND_PCM_START_FULL;
     data->cparams.stop_mode=SND_PCM_STOP_STOP;
 
-    data->cparams.buf.block.frag_size=device->UpdateSize*
-        ChannelsFromDevFmt(device->FmtChans)*BytesFromDevFmt(device->FmtType);
+    data->cparams.buf.block.frag_size=device->UpdateSize *
+        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
     data->cparams.buf.block.frags_max=device->NumUpdates;
     data->cparams.buf.block.frags_min=device->NumUpdates;
 
     data->cparams.format.interleave=1;
     data->cparams.format.rate=device->Frequency;
-    data->cparams.format.voices=ChannelsFromDevFmt(device->FmtChans);
+    data->cparams.format.voices=ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
     data->cparams.format.format=format;
 
     if ((snd_pcm_plugin_params(data->pcmHandle, &data->cparams))<0)
@@ -552,7 +554,7 @@ static ALCboolean qsa_reset_playback(ALCdevice* device)
     SetDefaultChannelOrder(device);
 
     device->UpdateSize=data->csetup.buf.block.frag_size/
-        (ChannelsFromDevFmt(device->FmtChans)*BytesFromDevFmt(device->FmtType));
+        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
     device->NumUpdates=data->csetup.buf.block.frags;
 
     data->size=data->csetup.buf.block.frag_size;
@@ -684,13 +686,13 @@ static ALCenum qsa_open_capture(ALCdevice* device, const ALCchar* deviceName)
     data->cparams.stop_mode=SND_PCM_STOP_STOP;
 
     data->cparams.buf.block.frag_size=device->UpdateSize*
-        ChannelsFromDevFmt(device->FmtChans)*BytesFromDevFmt(device->FmtType);
+        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
     data->cparams.buf.block.frags_max=device->NumUpdates;
     data->cparams.buf.block.frags_min=device->NumUpdates;
 
     data->cparams.format.interleave=1;
     data->cparams.format.rate=device->Frequency;
-    data->cparams.format.voices=ChannelsFromDevFmt(device->FmtChans);
+    data->cparams.format.voices=ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
     data->cparams.format.format=format;
 
     if(snd_pcm_plugin_params(data->pcmHandle, &data->cparams) < 0)
@@ -749,7 +751,7 @@ static ALCuint qsa_available_samples(ALCdevice* device)
 {
     qsa_data* data=(qsa_data*)device->ExtraData;
     snd_pcm_channel_status_t status;
-    ALint frame_size=FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    ALint frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
     ALint free_size;
     int rstatus;
 
@@ -785,7 +787,7 @@ static ALCenum qsa_capture_samples(ALCdevice *device, ALCvoid *buffer, ALCuint s
     int selectret;
     struct timeval timeout;
     int bytes_read;
-    ALint frame_size=FrameSizeFromDevFmt(device->FmtChans, device->FmtType);
+    ALint frame_size=FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
     ALint len=samples*frame_size;
     int rstatus;
 

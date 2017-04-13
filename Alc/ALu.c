@@ -80,7 +80,7 @@ extern inline ALuint64 maxu64(ALuint64 a, ALuint64 b);
 extern inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max);
 
 extern inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu);
-extern inline ALfloat resample_fir4(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALuint frac);
+extern inline ALfloat resample_fir4(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALsizei frac);
 
 extern inline void aluVectorSet(aluVector *restrict vector, ALfloat x, ALfloat y, ALfloat z, ALfloat w);
 

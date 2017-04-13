@@ -295,7 +295,7 @@ inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu)
 {
     return val1 + (val2-val1)*mu;
 }
-inline ALfloat resample_fir4(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALuint frac)
+inline ALfloat resample_fir4(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALsizei frac)
 {
     return sinc4Tab[frac][0]*val0 + sinc4Tab[frac][1]*val1 +
            sinc4Tab[frac][2]*val2 + sinc4Tab[frac][3]*val3;

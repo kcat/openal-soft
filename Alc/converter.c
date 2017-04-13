@@ -65,7 +65,8 @@ static inline ALfloat Sample_ALfloat(ALfloat val)
 { return val; }
 
 #define DECL_TEMPLATE(T)                                                      \
-static inline void Load_##T(ALfloat *dst, const T *src, ALint srcstep, ALsizei samples)\
+static inline void Load_##T(ALfloat *restrict dst, const T *restrict src,     \
+                            ALint srcstep, ALsizei samples)                   \
 {                                                                             \
     ALsizei i;                                                                \
     for(i = 0;i < samples;i++)                                                \
@@ -130,7 +131,8 @@ static inline ALfloat ALfloat_Sample(ALfloat val)
 { return val; }
 
 #define DECL_TEMPLATE(T)                                                      \
-static inline void Store_##T(T *dst, const ALfloat *src, ALint dststep, ALsizei samples)\
+static inline void Store_##T(T *restrict dst, const ALfloat *restrict src,    \
+                             ALint dststep, ALsizei samples)                  \
 {                                                                             \
     ALsizei i;                                                                \
     for(i = 0;i < samples;i++)                                                \

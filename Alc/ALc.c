@@ -1834,13 +1834,18 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                     return ALC_INVALID_VALUE;
             }
 
+            if(attrList[attrIdx] == ALC_MONO_SOURCES)
+            {
+                numMono = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_MONO_SOURCES, numMono);
+                numMono = maxi(numMono, 0);
+            }
+
             if(attrList[attrIdx] == ALC_STEREO_SOURCES)
             {
                 numStereo = attrList[attrIdx + 1];
                 TRACE_ATTR(ALC_STEREO_SOURCES, numStereo);
-
-                numStereo = clampi(numStereo, 0, device->SourcesMax);
-                numMono = device->SourcesMax - numStereo;
+                numStereo = maxi(numStereo, 0);
             }
 
             if(attrList[attrIdx] == ALC_MAX_AUXILIARY_SENDS)
@@ -1898,6 +1903,21 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             device->AmbiLayout = alayout;
             device->AmbiScale = ascale;
         }
+
+        if(numMono > INT_MAX-numStereo)
+            numMono = INT_MAX-numStereo;
+        numMono += numStereo;
+        if(ConfigValueInt(NULL, NULL, "sources", &numMono))
+        {
+            if(numMono <= 0)
+                numMono = 256;
+        }
+        else
+            numMono = maxi(numMono, 256);
+        numStereo = mini(numStereo, numMono);
+        numMono -= numStereo;
+        device->SourcesMax = numMono + numStereo;
+
         device->NumMonoSources = numMono;
         device->NumStereoSources = numStereo;
 
@@ -1935,13 +1955,18 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 device->Flags |= DEVICE_FREQUENCY_REQUEST;
             }
 
+            if(attrList[attrIdx] == ALC_MONO_SOURCES)
+            {
+                numMono = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_MONO_SOURCES, numMono);
+                numMono = maxi(numMono, 0);
+            }
+
             if(attrList[attrIdx] == ALC_STEREO_SOURCES)
             {
                 numStereo = attrList[attrIdx + 1];
                 TRACE_ATTR(ALC_STEREO_SOURCES, numStereo);
-
-                numStereo = clampi(numStereo, 0, device->SourcesMax);
-                numMono = device->SourcesMax - numStereo;
+                numStereo = maxi(numStereo, 0);
             }
 
             if(attrList[attrIdx] == ALC_MAX_AUXILIARY_SENDS)
@@ -1982,6 +2007,21 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             device->UpdateSize = (device->UpdateSize+3)&~3;
 
         device->Frequency = freq;
+
+        if(numMono > INT_MAX-numStereo)
+            numMono = INT_MAX-numStereo;
+        numMono += numStereo;
+        if(ConfigValueInt(alstr_get_cstr(device->DeviceName), NULL, "sources", &numMono))
+        {
+            if(numMono <= 0)
+                numMono = 256;
+        }
+        else
+            numMono = maxi(numMono, 256);
+        numStereo = mini(numStereo, numMono);
+        numMono -= numStereo;
+        device->SourcesMax = numMono + numStereo;
+
         device->NumMonoSources = numMono;
         device->NumStereoSources = numStereo;
 
@@ -2150,6 +2190,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
      * allocated with the appropriate size.
      */
     device->NumAuxSends = new_sends;
+    TRACE("Max sources: %d (%d + %d), effect slots: %d, sends: %d\n",
+          device->SourcesMax, device->NumMonoSources, device->NumStereoSources,
+          device->AuxiliaryEffectSlotMax, device->NumAuxSends);
     update_failed = AL_FALSE;
     SetMixerFPUMode(&oldMode);
     if(device->DefaultSlot)
@@ -2187,6 +2230,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         UnlockUIntMapRead(&context->EffectSlotMap);
 
         LockUIntMapRead(&context->SourceMap);
+        RelimitUIntMapNoLock(&context->SourceMap, device->SourcesMax);
         for(pos = 0;pos < context->SourceMap.size;pos++)
         {
             ALsource *source = context->SourceMap.values[pos];
@@ -3751,9 +3795,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->AuxiliaryEffectSlotMax = 64;
     device->NumAuxSends = DEFAULT_SENDS;
 
-    InitUIntMap(&device->BufferMap, ~0);
-    InitUIntMap(&device->EffectMap, ~0);
-    InitUIntMap(&device->FilterMap, ~0);
+    InitUIntMap(&device->BufferMap, INT_MAX);
+    InitUIntMap(&device->EffectMap, INT_MAX);
+    InitUIntMap(&device->FilterMap, INT_MAX);
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
     {
@@ -4051,9 +4095,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->RealOut.Buffer = NULL;
     device->RealOut.NumChannels = 0;
 
-    InitUIntMap(&device->BufferMap, ~0);
-    InitUIntMap(&device->EffectMap, ~0);
-    InitUIntMap(&device->FilterMap, ~0);
+    InitUIntMap(&device->BufferMap, INT_MAX);
+    InitUIntMap(&device->EffectMap, INT_MAX);
+    InitUIntMap(&device->FilterMap, INT_MAX);
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
     {
@@ -4279,9 +4323,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->AuxiliaryEffectSlotMax = 64;
     device->NumAuxSends = DEFAULT_SENDS;
 
-    InitUIntMap(&device->BufferMap, ~0);
-    InitUIntMap(&device->EffectMap, ~0);
-    InitUIntMap(&device->FilterMap, ~0);
+    InitUIntMap(&device->BufferMap, INT_MAX);
+    InitUIntMap(&device->EffectMap, INT_MAX);
+    InitUIntMap(&device->FilterMap, INT_MAX);
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
     {

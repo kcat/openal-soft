@@ -36,6 +36,11 @@ void ResetUIntMap(UIntMap *map)
     WriteUnlock(&map->lock);
 }
 
+void RelimitUIntMapNoLock(UIntMap *map, ALsizei limit)
+{
+    map->limit = limit;
+}
+
 ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value)
 {
     ALsizei pos = 0;
@@ -59,7 +64,7 @@ ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value)
 
     if(pos == map->size || map->keys[pos] != key)
     {
-        if(map->size == map->limit)
+        if(map->size >= map->limit)
         {
             WriteUnlock(&map->lock);
             return AL_OUT_OF_MEMORY;
@@ -141,7 +146,7 @@ ALenum InsertUIntMapEntryNoLock(UIntMap *map, ALuint key, ALvoid *value)
 
     if(pos == map->size || map->keys[pos] != key)
     {
-        if(map->size == map->limit)
+        if(map->size >= map->limit)
             return AL_OUT_OF_MEMORY;
 
         if(map->size == map->capacity)

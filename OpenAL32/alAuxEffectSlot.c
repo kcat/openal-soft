@@ -479,7 +479,7 @@ done:
 
 void InitEffectFactoryMap(void)
 {
-    InitUIntMap(&EffectStateFactoryMap, ~0);
+    InitUIntMap(&EffectStateFactoryMap, INT_MAX);
 
     InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_NULL, ALnullStateFactory_getFactory);
     InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_EAXREVERB, ALreverbStateFactory_getFactory);

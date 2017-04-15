@@ -19,10 +19,11 @@ typedef struct UIntMap {
     RWLock lock;
 } UIntMap;
 #define UINTMAP_STATIC_INITIALIZE_N(_n) { NULL, NULL, 0, 0, (_n), RWLOCK_STATIC_INITIALIZE }
-#define UINTMAP_STATIC_INITIALIZE UINTMAP_STATIC_INITIALIZE_N(~0)
+#define UINTMAP_STATIC_INITIALIZE UINTMAP_STATIC_INITIALIZE_N(INT_MAX)
 
 void InitUIntMap(UIntMap *map, ALsizei limit);
 void ResetUIntMap(UIntMap *map);
+void RelimitUIntMapNoLock(UIntMap *map, ALsizei limit);
 ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value);
 ALenum InsertUIntMapEntryNoLock(UIntMap *map, ALuint key, ALvoid *value);
 ALvoid *RemoveUIntMapKey(UIntMap *map, ALuint key);

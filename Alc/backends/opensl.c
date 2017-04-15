@@ -149,7 +149,7 @@ typedef struct ALCopenslPlayback {
 
     ALsizei mFrameSize;
 
-    ATOMIC(ALboolean) mKillNow;
+    ATOMIC(ALenum) mKillNow;
     althrd_t mThread;
 } ALCopenslPlayback;
 
@@ -637,7 +637,7 @@ static void ALCopenslPlayback_stop(ALCopenslPlayback *self)
     SLresult result;
     int res;
 
-    if(ATOMIC_EXCHANGE_SEQ(ALboolean, &self->mKillNow, AL_TRUE))
+    if(ATOMIC_EXCHANGE_SEQ(&self->mKillNow, AL_TRUE))
         return;
 
     /* Lock the backend to ensure we don't flag the mixer to die and signal the

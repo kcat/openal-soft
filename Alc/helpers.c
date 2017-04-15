@@ -564,7 +564,7 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
     vector_al_string results = VECTOR_INIT_STATIC();
     size_t i;
 
-    while(ATOMIC_EXCHANGE_SEQ(uint, &search_lock, 1) == 1)
+    while(ATOMIC_EXCHANGE_SEQ(&search_lock, 1) == 1)
         althrd_yield();
 
     /* If the path is absolute, use it directly. */
@@ -840,7 +840,7 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
     static RefCount search_lock;
     vector_al_string results = VECTOR_INIT_STATIC();
 
-    while(ATOMIC_EXCHANGE_SEQ(uint, &search_lock, 1) == 1)
+    while(ATOMIC_EXCHANGE_SEQ(&search_lock, 1) == 1)
         althrd_yield();
 
     if(subdir[0] == '/')

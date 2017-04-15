@@ -126,9 +126,8 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
         if(curarray)
             memcpy(newarray->slot+n, curarray->slot, sizeof(ALeffectslot*)*curarray->count);
 
-        newarray = ATOMIC_EXCHANGE(struct ALeffectslotArray*,
-            &context->ActiveAuxSlots, newarray, almemory_order_acq_rel
-        );
+        newarray = ATOMIC_EXCHANGE_PTR(&context->ActiveAuxSlots, newarray,
+                                       almemory_order_acq_rel);
         device = context->Device;
         while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
             althrd_yield();
@@ -187,9 +186,8 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *
                 newarray->slot[i++] = slot;
         }
 
-        newarray = ATOMIC_EXCHANGE(struct ALeffectslotArray*,
-            &context->ActiveAuxSlots, newarray, almemory_order_acq_rel
-        );
+        newarray = ATOMIC_EXCHANGE_PTR(&context->ActiveAuxSlots, newarray,
+                                       almemory_order_acq_rel);
         device = context->Device;
         while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
             althrd_yield();
@@ -668,9 +666,8 @@ void UpdateEffectSlotProps(ALeffectslot *slot)
         struct ALeffectslotProps *next;
         do {
             next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
-        } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALeffectslotProps*,
-                &slot->FreeList, &props, next, almemory_order_seq_cst,
-                almemory_order_acquire) == 0);
+        } while(ATOMIC_COMPARE_EXCHANGE_PTR_WEAK(&slot->FreeList, &props, next,
+                almemory_order_seq_cst, almemory_order_acquire) == 0);
     }
 
     /* Copy in current property values. */
@@ -687,8 +684,7 @@ void UpdateEffectSlotProps(ALeffectslot *slot)
     props->State = slot->Effect.State;
 
     /* Set the new container for updating internal parameters. */
-    props = ATOMIC_EXCHANGE(struct ALeffectslotProps*, &slot->Update, props,
-                            almemory_order_acq_rel);
+    props = ATOMIC_EXCHANGE_PTR(&slot->Update, props, almemory_order_acq_rel);
     if(props)
     {
         /* If there was an unused update container, put it back in the

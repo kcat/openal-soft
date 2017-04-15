@@ -491,7 +491,7 @@ static void ALCplaybackOSS_stop(ALCplaybackOSS *self)
 {
     int res;
 
-    if(ATOMIC_EXCHANGE_SEQ(ALenum, &self->killNow, AL_TRUE))
+    if(ATOMIC_EXCHANGE_SEQ(&self->killNow, AL_TRUE))
         return;
     althrd_join(self->thread, &res);
 
@@ -745,7 +745,7 @@ static void ALCcaptureOSS_stop(ALCcaptureOSS *self)
 {
     int res;
 
-    if(ATOMIC_EXCHANGE_SEQ(ALenum, &self->killNow, AL_TRUE))
+    if(ATOMIC_EXCHANGE_SEQ(&self->killNow, AL_TRUE))
         return;
 
     althrd_join(self->thread, &res);

@@ -241,7 +241,7 @@ static ALboolean CalcListenerParams(ALCcontext *Context)
     struct ALlistenerProps *props;
     aluVector vel;
 
-    props = ATOMIC_EXCHANGE(struct ALlistenerProps*, &Listener->Update, NULL, almemory_order_acq_rel);
+    props = ATOMIC_EXCHANGE_PTR(&Listener->Update, NULL, almemory_order_acq_rel);
     if(!props) return AL_FALSE;
 
     /* AT then UP */
@@ -291,7 +291,7 @@ static ALboolean CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
     struct ALeffectslotProps *props;
     ALeffectState *state;
 
-    props = ATOMIC_EXCHANGE(struct ALeffectslotProps*, &slot->Update, NULL, almemory_order_acq_rel);
+    props = ATOMIC_EXCHANGE_PTR(&slot->Update, NULL, almemory_order_acq_rel);
     if(!props) return AL_FALSE;
 
     slot->Params.Gain = props->Gain;
@@ -1252,7 +1252,7 @@ static void CalcSourceParams(ALvoice *voice, ALsource *source, ALCcontext *conte
     const ALbufferlistitem *BufferListItem;
     struct ALsourceProps *props;
 
-    props = ATOMIC_EXCHANGE(struct ALsourceProps*, &source->Update, NULL, almemory_order_acq_rel);
+    props = ATOMIC_EXCHANGE_PTR(&source->Update, NULL, almemory_order_acq_rel);
     if(!props && !force) return;
 
     if(props)
@@ -1607,14 +1607,14 @@ void aluHandleDisconnect(ALCdevice *device)
         voice_end = voice + Context->VoiceCount;
         while(voice != voice_end)
         {
-            ALsource *source = ATOMIC_EXCHANGE(ALsource*, &(*voice)->Source, NULL,
-                                               almemory_order_acq_rel);
+            ALsource *source = ATOMIC_EXCHANGE_PTR(&(*voice)->Source, NULL,
+                                                   almemory_order_acq_rel);
             ATOMIC_STORE(&(*voice)->Playing, false, almemory_order_release);
 
             if(source)
             {
                 ALenum playing = AL_PLAYING;
-                ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(ALenum, &source->state, &playing, AL_STOPPED);
+                (void)(ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(&source->state, &playing, AL_STOPPED));
             }
 
             voice++;

@@ -468,9 +468,8 @@ void UpdateListenerProps(ALCcontext *context)
         struct ALlistenerProps *next;
         do {
             next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
-        } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALlistenerProps*,
-                &listener->FreeList, &props, next, almemory_order_seq_cst,
-                almemory_order_acquire) == 0);
+        } while(ATOMIC_COMPARE_EXCHANGE_PTR_WEAK(&listener->FreeList, &props, next,
+                almemory_order_seq_cst, almemory_order_acquire) == 0);
     }
 
     /* Copy in current property values. */
@@ -500,7 +499,7 @@ void UpdateListenerProps(ALCcontext *context)
     props->DistanceModel = context->DistanceModel;;
 
     /* Set the new container for updating internal parameters. */
-    props = ATOMIC_EXCHANGE(struct ALlistenerProps*, &listener->Update, props, almemory_order_acq_rel);
+    props = ATOMIC_EXCHANGE_PTR(&listener->Update, props, almemory_order_acq_rel);
     if(props)
     {
         /* If there was an unused update container, put it back in the

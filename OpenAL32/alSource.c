@@ -158,7 +158,7 @@ static inline ALenum GetSourceState(ALsource *source, ALvoice *voice)
     if(!voice)
     {
         ALenum state = AL_PLAYING;
-        if(ATOMIC_COMPARE_EXCHANGE_STRONG(ALenum, &source->state, &state, AL_STOPPED,
+        if(ATOMIC_COMPARE_EXCHANGE_STRONG(&source->state, &state, AL_STOPPED,
                                           almemory_order_acq_rel, almemory_order_acquire))
             return AL_STOPPED;
         return state;
@@ -747,7 +747,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 Source->SourceType = AL_UNDETERMINED;
                 newlist = NULL;
             }
-            oldlist = ATOMIC_EXCHANGE_SEQ(ALbufferlistitem*, &Source->queue, newlist);
+            oldlist = ATOMIC_EXCHANGE_PTR_SEQ(&Source->queue, newlist);
             WriteUnlock(&Source->queue_lock);
             UnlockBuffersRead(device);
 
@@ -2784,8 +2784,8 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
     source->SourceType = AL_STREAMING;
 
     BufferList = NULL;
-    if(!ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(ALbufferlistitem*, &source->queue,
-                                           &BufferList, BufferListStart))
+    if(!ATOMIC_COMPARE_EXCHANGE_PTR_STRONG_SEQ(&source->queue, &BufferList,
+                                               BufferListStart))
     {
         /* Queue head is not NULL, append to the end of the queue */
         while(BufferList->next != NULL)
@@ -2854,7 +2854,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
     }
 
     /* Swap it, and cut the new head from the old. */
-    OldHead = ATOMIC_EXCHANGE_SEQ(ALbufferlistitem*, &source->queue, OldTail->next);
+    OldHead = ATOMIC_EXCHANGE_PTR_SEQ(&source->queue, OldTail->next);
     if(OldTail->next)
     {
         ALCdevice *device = context->Device;
@@ -3003,7 +3003,7 @@ static void DeinitSource(ALsource *source, ALsizei num_sends)
     if(count > 3)
         WARN("Freed "SZFMT" Source property objects\n", count);
 
-    BufferList = ATOMIC_EXCHANGE_SEQ(ALbufferlistitem*, &source->queue, NULL);
+    BufferList = ATOMIC_EXCHANGE_PTR_SEQ(&source->queue, NULL);
     while(BufferList != NULL)
     {
         ALbufferlistitem *next = BufferList->next;
@@ -3040,9 +3040,8 @@ static void UpdateSourceProps(ALsource *source, ALsizei num_sends)
         struct ALsourceProps *next;
         do {
             next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
-        } while(ATOMIC_COMPARE_EXCHANGE_WEAK(struct ALsourceProps*,
-                &source->FreeList, &props, next, almemory_order_acq_rel,
-                almemory_order_acquire) == 0);
+        } while(ATOMIC_COMPARE_EXCHANGE_PTR_WEAK(&source->FreeList, &props, next,
+                almemory_order_acq_rel, almemory_order_acquire) == 0);
     }
 
     /* Copy in current property values. */
@@ -3103,7 +3102,7 @@ static void UpdateSourceProps(ALsource *source, ALsizei num_sends)
     }
 
     /* Set the new container for updating internal parameters. */
-    props = ATOMIC_EXCHANGE(struct ALsourceProps*, &source->Update, props, almemory_order_acq_rel);
+    props = ATOMIC_EXCHANGE_PTR(&source->Update, props, almemory_order_acq_rel);
     if(props)
     {
         /* If there was an unused update container, put it back in the

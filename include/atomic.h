@@ -24,24 +24,22 @@ extern "C" {
 #define ATOMIC(T)  T _Atomic
 #define ATOMIC_FLAG atomic_flag
 
-#define ATOMIC_INIT(_val, _newval)  atomic_init((_val), (_newval))
-#define ATOMIC_INIT_STATIC(_newval) ATOMIC_VAR_INIT(_newval)
+#define ATOMIC_INIT atomic_init
+#define ATOMIC_INIT_STATIC ATOMIC_VAR_INIT
 /*#define ATOMIC_FLAG_INIT ATOMIC_FLAG_INIT*/
 
-#define ATOMIC_LOAD(_val, _MO)  atomic_load_explicit(_val, _MO)
-#define ATOMIC_STORE(_val, _newval, _MO) atomic_store_explicit(_val, _newval, _MO)
+#define ATOMIC_LOAD atomic_load_explicit
+#define ATOMIC_STORE atomic_store_explicit
 
-#define ATOMIC_ADD(_val, _incr, _MO) atomic_fetch_add_explicit(_val, _incr, _MO)
-#define ATOMIC_SUB(_val, _decr, _MO) atomic_fetch_sub_explicit(_val, _decr, _MO)
+#define ATOMIC_ADD atomic_fetch_add_explicit
+#define ATOMIC_SUB atomic_fetch_sub_explicit
 
-#define ATOMIC_EXCHANGE(_val, _newval, _MO) atomic_exchange_explicit(_val, _newval, _MO)
-#define ATOMIC_COMPARE_EXCHANGE_STRONG(_val, _orig, _newval, _MO1, _MO2)   \
-    atomic_compare_exchange_strong_explicit(_val, _orig, _newval, _MO1, _MO2)
-#define ATOMIC_COMPARE_EXCHANGE_WEAK(_val, _orig, _newval, _MO1, _MO2)   \
-    atomic_compare_exchange_weak_explicit(_val, _orig, _newval, _MO1, _MO2)
+#define ATOMIC_EXCHANGE atomic_exchange_explicit
+#define ATOMIC_COMPARE_EXCHANGE_STRONG atomic_compare_exchange_strong_explicit
+#define ATOMIC_COMPARE_EXCHANGE_WEAK atomic_compare_exchange_weak_explicit
 
-#define ATOMIC_FLAG_TEST_AND_SET(_val, _MO) atomic_flag_test_and_set_explicit(_val, _MO)
-#define ATOMIC_FLAG_CLEAR(_val, _MO) atomic_flag_clear_explicit(_val, _MO)
+#define ATOMIC_FLAG_TEST_AND_SET atomic_flag_test_and_set_explicit
+#define ATOMIC_FLAG_CLEAR atomic_flag_clear_explicit
 
 #define ATOMIC_THREAD_FENCE atomic_thread_fence
 

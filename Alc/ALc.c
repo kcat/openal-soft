@@ -3274,11 +3274,11 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
         switch(pname)
         {
             case ALC_ATTRIBUTES_SIZE:
-                *values = NumAttrsForDevice(device)+2;
+                *values = NumAttrsForDevice(device)+4;
                 break;
 
             case ALC_ALL_ATTRIBUTES:
-                if(size < NumAttrsForDevice(device)+2)
+                if(size < NumAttrsForDevice(device)+4)
                     alcSetError(device, ALC_INVALID_VALUE);
                 else
                 {

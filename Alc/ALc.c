@@ -1786,91 +1786,87 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 #define TRACE_ATTR(a, v) TRACE("Loopback %s = %d\n", #a, v)
         while(attrList[attrIdx])
         {
-            if(attrList[attrIdx] == ALC_FORMAT_CHANNELS_SOFT)
+            switch(attrList[attrIdx])
             {
-                schans = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_FORMAT_CHANNELS_SOFT, schans);
-                if(!IsValidALCChannels(schans))
-                    return ALC_INVALID_VALUE;
-            }
+                case ALC_FORMAT_CHANNELS_SOFT:
+                    schans = attrList[attrIdx + 1];
+                    TRACE_ATTR(ALC_FORMAT_CHANNELS_SOFT, schans);
+                    if(!IsValidALCChannels(schans))
+                        return ALC_INVALID_VALUE;
+                    break;
 
-            if(attrList[attrIdx] == ALC_FORMAT_TYPE_SOFT)
-            {
-                stype = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_FORMAT_TYPE_SOFT, stype);
-                if(!IsValidALCType(stype))
-                    return ALC_INVALID_VALUE;
-            }
+                case ALC_FORMAT_TYPE_SOFT:
+                    stype = attrList[attrIdx + 1];
+                    TRACE_ATTR(ALC_FORMAT_TYPE_SOFT, stype);
+                    if(!IsValidALCType(stype))
+                        return ALC_INVALID_VALUE;
+                    break;
 
-            if(attrList[attrIdx] == ALC_FREQUENCY)
-            {
-                freq = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_FREQUENCY, freq);
-                if(freq < MIN_OUTPUT_RATE)
-                    return ALC_INVALID_VALUE;
-            }
+                case ALC_FREQUENCY:
+                    freq = attrList[attrIdx + 1];
+                    TRACE_ATTR(ALC_FREQUENCY, freq);
+                    if(freq < MIN_OUTPUT_RATE)
+                        return ALC_INVALID_VALUE;
+                    break;
 
-            if(attrList[attrIdx] == ALC_AMBISONIC_LAYOUT_SOFT)
-            {
-                alayout = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_AMBISONIC_LAYOUT_SOFT, alayout);
-                if(!IsValidAmbiLayout(alayout))
-                    return ALC_INVALID_VALUE;
-            }
+                case ALC_AMBISONIC_LAYOUT_SOFT:
+                    alayout = attrList[attrIdx + 1];
+                    TRACE_ATTR(ALC_AMBISONIC_LAYOUT_SOFT, alayout);
+                    if(!IsValidAmbiLayout(alayout))
+                        return ALC_INVALID_VALUE;
+                    break;
 
-            if(attrList[attrIdx] == ALC_AMBISONIC_SCALING_SOFT)
-            {
-                ascale = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_AMBISONIC_SCALING_SOFT, ascale);
-                if(!IsValidAmbiScaling(ascale))
-                    return ALC_INVALID_VALUE;
-            }
+                case ALC_AMBISONIC_SCALING_SOFT:
+                    ascale = attrList[attrIdx + 1];
+                    TRACE_ATTR(ALC_AMBISONIC_SCALING_SOFT, ascale);
+                    if(!IsValidAmbiScaling(ascale))
+                        return ALC_INVALID_VALUE;
+                    break;
 
-            if(attrList[attrIdx] == ALC_AMBISONIC_ORDER_SOFT)
-            {
-                aorder = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_AMBISONIC_ORDER_SOFT, aorder);
-                if(aorder < 1 || aorder > MAX_AMBI_ORDER)
-                    return ALC_INVALID_VALUE;
-            }
+                case ALC_AMBISONIC_ORDER_SOFT:
+                    aorder = attrList[attrIdx + 1];
+                    TRACE_ATTR(ALC_AMBISONIC_ORDER_SOFT, aorder);
+                    if(aorder < 1 || aorder > MAX_AMBI_ORDER)
+                        return ALC_INVALID_VALUE;
+                    break;
 
-            if(attrList[attrIdx] == ALC_MONO_SOURCES)
-            {
-                numMono = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_MONO_SOURCES, numMono);
-                numMono = maxi(numMono, 0);
-            }
+                case ALC_MONO_SOURCES:
+                    numMono = attrList[attrIdx + 1];
+                    TRACE_ATTR(ALC_MONO_SOURCES, numMono);
+                    numMono = maxi(numMono, 0);
+                    break;
 
-            if(attrList[attrIdx] == ALC_STEREO_SOURCES)
-            {
-                numStereo = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_STEREO_SOURCES, numStereo);
-                numStereo = maxi(numStereo, 0);
-            }
+                case ALC_STEREO_SOURCES:
+                    numStereo = attrList[attrIdx + 1];
+                    TRACE_ATTR(ALC_STEREO_SOURCES, numStereo);
+                    numStereo = maxi(numStereo, 0);
+                    break;
 
-            if(attrList[attrIdx] == ALC_MAX_AUXILIARY_SENDS)
-            {
-                numSends = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_MAX_AUXILIARY_SENDS, numSends);
-                numSends = clampi(numSends, 0, MAX_SENDS);
-            }
+                case ALC_MAX_AUXILIARY_SENDS:
+                    numSends = attrList[attrIdx + 1];
+                    TRACE_ATTR(ALC_MAX_AUXILIARY_SENDS, numSends);
+                    numSends = clampi(numSends, 0, MAX_SENDS);
+                    break;
 
-            if(attrList[attrIdx] == ALC_HRTF_SOFT)
-            {
-                ALCint val = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_HRTF_SOFT, val);
-                if(val == ALC_FALSE)
-                    hrtf_appreq = Hrtf_Disable;
-                else if(val == ALC_TRUE)
-                    hrtf_appreq = Hrtf_Enable;
-                else
-                    hrtf_appreq = Hrtf_Default;
-            }
+                case ALC_HRTF_SOFT:
+                    TRACE_ATTR(ALC_HRTF_SOFT, attrList[attrIdx + 1]);
+                    if(attrList[attrIdx + 1] == ALC_FALSE)
+                        hrtf_appreq = Hrtf_Disable;
+                    else if(attrList[attrIdx + 1] == ALC_TRUE)
+                        hrtf_appreq = Hrtf_Enable;
+                    else
+                        hrtf_appreq = Hrtf_Default;
+                    break;
 
-            if(attrList[attrIdx] == ALC_HRTF_ID_SOFT)
-            {
-                hrtf_id = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_HRTF_ID_SOFT, hrtf_id);
+                case ALC_HRTF_ID_SOFT:
+                    hrtf_id = attrList[attrIdx + 1];
+                    TRACE_ATTR(ALC_HRTF_ID_SOFT, hrtf_id);
+                    break;
+
+                default:
+                    TRACE("Loopback 0x%04X = %d (0x%x)\n", attrList[attrIdx],
+                          attrList[attrIdx + 1], attrList[attrIdx + 1]);
+                    break;
             }
 
             attrIdx += 2;
@@ -1948,49 +1944,51 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 #define TRACE_ATTR(a, v) TRACE("%s = %d\n", #a, v)
         while(attrList[attrIdx])
         {
-            if(attrList[attrIdx] == ALC_FREQUENCY)
+            switch(attrList[attrIdx])
             {
-                freq = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_FREQUENCY, freq);
-                device->Flags |= DEVICE_FREQUENCY_REQUEST;
-            }
+                case ALC_FREQUENCY:
+                    freq = attrList[attrIdx + 1];
+                    TRACE_ATTR(ALC_FREQUENCY, freq);
+                    device->Flags |= DEVICE_FREQUENCY_REQUEST;
+                    break;
 
-            if(attrList[attrIdx] == ALC_MONO_SOURCES)
-            {
-                numMono = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_MONO_SOURCES, numMono);
-                numMono = maxi(numMono, 0);
-            }
+                case ALC_MONO_SOURCES:
+                    numMono = attrList[attrIdx + 1];
+                    TRACE_ATTR(ALC_MONO_SOURCES, numMono);
+                    numMono = maxi(numMono, 0);
+                    break;
 
-            if(attrList[attrIdx] == ALC_STEREO_SOURCES)
-            {
-                numStereo = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_STEREO_SOURCES, numStereo);
-                numStereo = maxi(numStereo, 0);
-            }
+                case ALC_STEREO_SOURCES:
+                    numStereo = attrList[attrIdx + 1];
+                    TRACE_ATTR(ALC_STEREO_SOURCES, numStereo);
+                    numStereo = maxi(numStereo, 0);
+                    break;
 
-            if(attrList[attrIdx] == ALC_MAX_AUXILIARY_SENDS)
-            {
-                numSends = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_MAX_AUXILIARY_SENDS, numSends);
-                numSends = clampi(numSends, 0, MAX_SENDS);
-            }
+                case ALC_MAX_AUXILIARY_SENDS:
+                    numSends = attrList[attrIdx + 1];
+                    TRACE_ATTR(ALC_MAX_AUXILIARY_SENDS, numSends);
+                    numSends = clampi(numSends, 0, MAX_SENDS);
+                    break;
 
-            if(attrList[attrIdx] == ALC_HRTF_SOFT)
-            {
-                TRACE_ATTR(ALC_HRTF_SOFT, attrList[attrIdx + 1]);
-                if(attrList[attrIdx + 1] == ALC_FALSE)
-                    hrtf_appreq = Hrtf_Disable;
-                else if(attrList[attrIdx + 1] == ALC_TRUE)
-                    hrtf_appreq = Hrtf_Enable;
-                else
-                    hrtf_appreq = Hrtf_Default;
-            }
+                case ALC_HRTF_SOFT:
+                    TRACE_ATTR(ALC_HRTF_SOFT, attrList[attrIdx + 1]);
+                    if(attrList[attrIdx + 1] == ALC_FALSE)
+                        hrtf_appreq = Hrtf_Disable;
+                    else if(attrList[attrIdx + 1] == ALC_TRUE)
+                        hrtf_appreq = Hrtf_Enable;
+                    else
+                        hrtf_appreq = Hrtf_Default;
+                    break;
 
-            if(attrList[attrIdx] == ALC_HRTF_ID_SOFT)
-            {
-                hrtf_id = attrList[attrIdx + 1];
-                TRACE_ATTR(ALC_HRTF_ID_SOFT, hrtf_id);
+                case ALC_HRTF_ID_SOFT:
+                    hrtf_id = attrList[attrIdx + 1];
+                    TRACE_ATTR(ALC_HRTF_ID_SOFT, hrtf_id);
+                    break;
+
+                default:
+                    TRACE("0x%04X = %d (0x%x)\n", attrList[attrIdx],
+                          attrList[attrIdx + 1], attrList[attrIdx + 1]);
+                    break;
             }
 
             attrIdx += 2;

@@ -256,7 +256,7 @@ static const union {
 } EndianTest = { 1 };
 #define IS_LITTLE_ENDIAN (EndianTest.b[0] == 1)
 
-#define COUNTOF(x) (sizeof((x))/sizeof((x)[0]))
+#define COUNTOF(x) (sizeof(x) / sizeof(0[x]))
 
 
 #define DERIVE_FROM_TYPE(t)          t t##_parent

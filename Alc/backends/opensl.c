@@ -700,6 +700,376 @@ static ClockLatency ALCopenslPlayback_getClockLatency(ALCopenslPlayback *self)
 }
 
 
+typedef struct ALCopenslCapture {
+    DERIVE_FROM_TYPE(ALCbackend);
+
+    /* engine interfaces */
+    SLObjectItf mEngineObj;
+    SLEngineItf mEngine;
+
+    /* recording interfaces */
+    SLObjectItf mRecordObj;
+
+    ll_ringbuffer_t *mRing;
+    ALCuint mSplOffset;
+
+    ALsizei mFrameSize;
+} ALCopenslCapture;
+
+static void ALCopenslCapture_process(SLAndroidSimpleBufferQueueItf bq, void *context);
+
+static void ALCopenslCapture_Construct(ALCopenslCapture *self, ALCdevice *device);
+static void ALCopenslCapture_Destruct(ALCopenslCapture *self);
+static ALCenum ALCopenslCapture_open(ALCopenslCapture *self, const ALCchar *name);
+static void ALCopenslCapture_close(ALCopenslCapture *self);
+static DECLARE_FORWARD(ALCopenslCapture, ALCbackend, ALCboolean, reset)
+static ALCboolean ALCopenslCapture_start(ALCopenslCapture *self);
+static void ALCopenslCapture_stop(ALCopenslCapture *self);
+static ALCenum ALCopenslCapture_captureSamples(ALCopenslCapture *self, ALCvoid *buffer, ALCuint samples);
+static ALCuint ALCopenslCapture_availableSamples(ALCopenslCapture *self);
+static DECLARE_FORWARD(ALCopenslCapture, ALCbackend, ClockLatency, getClockLatency)
+static DECLARE_FORWARD(ALCopenslCapture, ALCbackend, void, lock)
+static DECLARE_FORWARD(ALCopenslCapture, ALCbackend, void, unlock)
+DECLARE_DEFAULT_ALLOCATORS(ALCopenslCapture)
+DEFINE_ALCBACKEND_VTABLE(ALCopenslCapture);
+
+
+static void ALCopenslCapture_process(SLAndroidSimpleBufferQueueItf UNUSED(bq), void *context)
+{
+    ALCopenslCapture *self = context;
+    /* A new chunk has been written into the ring buffer, advance it. */
+    ll_ringbuffer_write_advance(self->mRing, 1);
+}
+
+
+static void ALCopenslCapture_Construct(ALCopenslCapture *self, ALCdevice *device)
+{
+    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    SET_VTABLE2(ALCopenslCapture, ALCbackend, self);
+
+    self->mEngineObj = NULL;
+    self->mEngine = NULL;
+
+    self->mRecordObj = NULL;
+
+    self->mRing = NULL;
+    self->mSplOffset = 0;
+
+    self->mFrameSize = 0;
+}
+
+static void ALCopenslCapture_Destruct(ALCopenslCapture *self)
+{
+    ll_ringbuffer_free(self->mRing);
+    self->mRing = NULL;
+
+    if(self->mRecordObj != NULL)
+        VCALL0(self->mRecordObj,Destroy)();
+    self->mRecordObj = NULL;
+
+    if(self->mEngineObj != NULL)
+        VCALL0(self->mEngineObj,Destroy)();
+    self->mEngineObj = NULL;
+    self->mEngine = NULL;
+
+    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+}
+
+static ALCenum ALCopenslCapture_open(ALCopenslCapture *self, const ALCchar *name)
+{
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    SLDataLocator_AndroidSimpleBufferQueue loc_bq;
+    SLAndroidSimpleBufferQueueItf bufferQueue;
+    SLDataLocator_IODevice loc_dev;
+    SLDataSource audioSrc;
+    SLDataSink audioSnk;
+    SLresult result;
+
+    if(!name)
+        name = opensl_device;
+    else if(strcmp(name, opensl_device) != 0)
+        return ALC_INVALID_VALUE;
+
+    result = slCreateEngine(&self->mEngineObj, 0, NULL, 0, NULL, NULL);
+    PRINTERR(result, "slCreateEngine");
+    if(SL_RESULT_SUCCESS == result)
+    {
+        result = VCALL(self->mEngineObj,Realize)(SL_BOOLEAN_FALSE);
+        PRINTERR(result, "engine->Realize");
+    }
+    if(SL_RESULT_SUCCESS == result)
+    {
+        result = VCALL(self->mEngineObj,GetInterface)(SL_IID_ENGINE, &self->mEngine);
+        PRINTERR(result, "engine->GetInterface");
+    }
+    if(SL_RESULT_SUCCESS == result)
+    {
+        /* Ensure the total length is at least 100ms */
+        ALsizei length = maxi(device->NumUpdates * device->UpdateSize,
+                              device->Frequency / 10);
+        /* Ensure the per-chunk length is at least 10ms, and no more than 50ms. */
+        ALsizei update_len = clampi(device->NumUpdates*device->UpdateSize / 3,
+                                    device->Frequency / 100,
+                                    device->Frequency / 100 * 5);
+
+        device->UpdateSize = update_len;
+        device->NumUpdates = (length+update_len-1) / update_len;
+
+        self->mFrameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
+    }
+    loc_dev.locatorType = SL_DATALOCATOR_IODEVICE;
+    loc_dev.deviceType = SL_IODEVICE_AUDIOINPUT;
+    loc_dev.deviceID = SL_DEFAULTDEVICEID_AUDIOINPUT;
+    loc_dev.device = NULL;
+
+    audioSrc.pLocator = &loc_dev;
+    audioSrc.pFormat = NULL;
+
+    loc_bq.locatorType = SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE;
+    loc_bq.numBuffers = device->NumUpdates;
+
+#ifdef SL_DATAFORMAT_PCM_EX
+    SLDataFormat_PCM_EX format_pcm;
+    format_pcm.formatType = SL_DATAFORMAT_PCM_EX;
+    format_pcm.numChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
+    format_pcm.sampleRate = device->Frequency * 1000;
+    format_pcm.bitsPerSample = BytesFromDevFmt(device->FmtType) * 8;
+    format_pcm.containerSize = format_pcm.bitsPerSample;
+    format_pcm.channelMask = GetChannelMask(device->FmtChans);
+    format_pcm.endianness = IS_LITTLE_ENDIAN ? SL_BYTEORDER_LITTLEENDIAN :
+                                               SL_BYTEORDER_BIGENDIAN;
+    format_pcm.representation = GetTypeRepresentation(device->FmtType);
+#else
+    SLDataFormat_PCM format_pcm;
+    format_pcm.formatType = SL_DATAFORMAT_PCM;
+    format_pcm.numChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
+    format_pcm.samplesPerSec = device->Frequency * 1000;
+    format_pcm.bitsPerSample = BytesFromDevFmt(device->FmtType) * 8;
+    format_pcm.containerSize = format_pcm.bitsPerSample;
+    format_pcm.channelMask = GetChannelMask(device->FmtChans);
+    format_pcm.endianness = IS_LITTLE_ENDIAN ? SL_BYTEORDER_LITTLEENDIAN :
+                                               SL_BYTEORDER_BIGENDIAN;
+#endif
+
+    audioSnk.pLocator = &loc_bq;
+    audioSnk.pFormat = &format_pcm;
+
+    if(SL_RESULT_SUCCESS == result)
+    {
+        const SLInterfaceID ids[2] = { SL_IID_ANDROIDSIMPLEBUFFERQUEUE, SL_IID_ANDROIDCONFIGURATION };
+        const SLboolean reqs[2] = { SL_BOOLEAN_TRUE, SL_BOOLEAN_FALSE };
+
+        result = VCALL(self->mEngine,CreateAudioRecorder)(&self->mRecordObj,
+            &audioSrc, &audioSnk, COUNTOF(ids), ids, reqs
+        );
+        PRINTERR(result, "engine->CreateAudioRecorder");
+    }
+    if(SL_RESULT_SUCCESS == result)
+    {
+        /* Set the record preset to "generic", if possible. */
+        SLAndroidConfigurationItf config;
+        result = VCALL(self->mRecordObj,GetInterface)(SL_IID_ANDROIDCONFIGURATION, &config);
+        PRINTERR(result, "recordObj->GetInterface SL_IID_ANDROIDCONFIGURATION");
+        if(SL_RESULT_SUCCESS == result)
+        {
+            SLuint32 preset = SL_ANDROID_RECORDING_PRESET_GENERIC;
+            result = VCALL(config,SetConfiguration)(SL_ANDROID_KEY_RECORDING_PRESET,
+                &preset, sizeof(preset)
+            );
+            PRINTERR(result, "config->SetConfiguration");
+        }
+
+        /* Clear any error since this was optional. */
+        result = SL_RESULT_SUCCESS;
+    }
+    if(SL_RESULT_SUCCESS == result)
+    {
+        result = VCALL(self->mRecordObj,Realize)(SL_BOOLEAN_FALSE);
+        PRINTERR(result, "recordObj->Realize");
+    }
+
+    if(SL_RESULT_SUCCESS == result)
+    {
+        self->mRing = ll_ringbuffer_create(device->NumUpdates + 1,
+                                           device->UpdateSize * self->mFrameSize);
+
+        result = VCALL(self->mRecordObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
+                                                      &bufferQueue);
+        PRINTERR(result, "recordObj->GetInterface");
+    }
+    if(SL_RESULT_SUCCESS == result)
+    {
+        result = VCALL(bufferQueue,RegisterCallback)(ALCopenslCapture_process, self);
+        PRINTERR(result, "bufferQueue->RegisterCallback");
+    }
+    if(SL_RESULT_SUCCESS == result)
+    {
+        ALsizei chunk_size = device->UpdateSize * self->mFrameSize;
+        ll_ringbuffer_data_t data[2];
+        size_t i;
+
+        ll_ringbuffer_get_write_vector(self->mRing, data);
+        for(i = 0;i < data[0].len && SL_RESULT_SUCCESS == result;i++)
+        {
+            result = VCALL(bufferQueue,Enqueue)(data[0].buf + chunk_size*i, chunk_size);
+            PRINTERR(result, "bufferQueue->Enqueue");
+        }
+        for(i = 0;i < data[1].len && SL_RESULT_SUCCESS == result;i++)
+        {
+            result = VCALL(bufferQueue,Enqueue)(data[1].buf + chunk_size*i, chunk_size);
+            PRINTERR(result, "bufferQueue->Enqueue");
+        }
+    }
+
+    if(SL_RESULT_SUCCESS != result)
+    {
+        if(self->mRecordObj != NULL)
+            VCALL0(self->mRecordObj,Destroy)();
+        self->mRecordObj = NULL;
+
+        if(self->mEngineObj != NULL)
+            VCALL0(self->mEngineObj,Destroy)();
+        self->mEngineObj = NULL;
+        self->mEngine = NULL;
+
+        return ALC_INVALID_VALUE;
+    }
+
+    alstr_copy_cstr(&device->DeviceName, name);
+
+    return ALC_NO_ERROR;
+}
+
+static void ALCopenslCapture_close(ALCopenslCapture *self)
+{
+    ll_ringbuffer_free(self->mRing);
+    self->mRing = NULL;
+
+    if(self->mRecordObj != NULL)
+        VCALL0(self->mRecordObj,Destroy)();
+    self->mRecordObj = NULL;
+
+    if(self->mEngineObj != NULL)
+        VCALL0(self->mEngineObj,Destroy)();
+    self->mEngineObj = NULL;
+    self->mEngine = NULL;
+}
+
+static ALCboolean ALCopenslCapture_start(ALCopenslCapture *self)
+{
+    SLRecordItf record;
+    SLresult result;
+
+    result = VCALL(self->mRecordObj,GetInterface)(SL_IID_RECORD, &record);
+    PRINTERR(result, "recordObj->GetInterface");
+
+    if(SL_RESULT_SUCCESS == result)
+    {
+        result = VCALL(record,SetRecordState)(SL_RECORDSTATE_RECORDING);
+        PRINTERR(result, "record->SetRecordState");
+    }
+
+    if(SL_RESULT_SUCCESS != result)
+    {
+        ALCopenslCapture_lock(self);
+        aluHandleDisconnect(STATIC_CAST(ALCbackend, self)->mDevice);
+        ALCopenslCapture_unlock(self);
+        return ALC_FALSE;
+    }
+
+    return ALC_TRUE;
+}
+
+static void ALCopenslCapture_stop(ALCopenslCapture *self)
+{
+    SLRecordItf record;
+    SLresult result;
+
+    result = VCALL(self->mRecordObj,GetInterface)(SL_IID_RECORD, &record);
+    PRINTERR(result, "recordObj->GetInterface");
+
+    if(SL_RESULT_SUCCESS == result)
+    {
+        result = VCALL(record,SetRecordState)(SL_RECORDSTATE_PAUSED);
+        PRINTERR(result, "record->SetRecordState");
+    }
+}
+
+static ALCenum ALCopenslCapture_captureSamples(ALCopenslCapture *self, ALCvoid *buffer, ALCuint samples)
+{
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALsizei chunk_size = device->UpdateSize * self->mFrameSize;
+    SLAndroidSimpleBufferQueueItf bufferQueue;
+    ll_ringbuffer_data_t data[2];
+    SLresult result;
+    size_t advance;
+    ALCuint i;
+
+    /* Read the desired samples from the ring buffer then advance its read
+     * pointer.
+     */
+    ll_ringbuffer_get_read_vector(self->mRing, data);
+    advance = 0;
+    for(i = 0;i < samples;)
+    {
+        ALCuint rem = minu(samples - i, device->UpdateSize - self->mSplOffset);
+        memcpy((ALCbyte*)buffer + i*self->mFrameSize,
+               data[0].buf + self->mSplOffset*self->mFrameSize,
+               rem * self->mFrameSize);
+
+        self->mSplOffset += rem;
+        if(self->mSplOffset == device->UpdateSize)
+        {
+            /* Finished a chunk, reset the offset and advance the read pointer. */
+            self->mSplOffset = 0;
+            advance++;
+
+            data[0].len--;
+            if(!data[0].len)
+                data[0] = data[1];
+            else
+                data[0].buf += chunk_size;
+        }
+
+        i += rem;
+    }
+    ll_ringbuffer_read_advance(self->mRing, advance);
+
+    result = VCALL(self->mRecordObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
+                                                  &bufferQueue);
+    PRINTERR(result, "recordObj->GetInterface");
+
+    /* Enqueue any newly-writable chunks in the ring buffer. */
+    ll_ringbuffer_get_write_vector(self->mRing, data);
+    for(i = 0;i < data[0].len && SL_RESULT_SUCCESS == result;i++)
+    {
+        result = VCALL(bufferQueue,Enqueue)(data[0].buf + chunk_size*i, chunk_size);
+        PRINTERR(result, "bufferQueue->Enqueue");
+    }
+    for(i = 0;i < data[1].len && SL_RESULT_SUCCESS == result;i++)
+    {
+        result = VCALL(bufferQueue,Enqueue)(data[1].buf + chunk_size*i, chunk_size);
+        PRINTERR(result, "bufferQueue->Enqueue");
+    }
+
+    if(SL_RESULT_SUCCESS != result)
+    {
+        ALCopenslCapture_lock(self);
+        aluHandleDisconnect(device);
+        ALCopenslCapture_unlock(self);
+        return ALC_INVALID_DEVICE;
+    }
+
+    return ALC_NO_ERROR;
+}
+
+static ALCuint ALCopenslCapture_availableSamples(ALCopenslCapture *self)
+{
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    return ll_ringbuffer_read_space(self->mRing) * device->UpdateSize;
+}
+
+
 typedef struct ALCopenslBackendFactory {
     DERIVE_FROM_TYPE(ALCbackendFactory);
 } ALCopenslBackendFactory;
@@ -716,7 +1086,7 @@ static void ALCopenslBackendFactory_deinit(ALCopenslBackendFactory* UNUSED(self)
 
 static ALCboolean ALCopenslBackendFactory_querySupport(ALCopenslBackendFactory* UNUSED(self), ALCbackend_Type type)
 {
-    if(type == ALCbackend_Playback)
+    if(type == ALCbackend_Playback || type == ALCbackend_Capture)
         return ALC_TRUE;
     return ALC_FALSE;
 }
@@ -730,6 +1100,7 @@ static void ALCopenslBackendFactory_probe(ALCopenslBackendFactory* UNUSED(self),
             break;
 
         case CAPTURE_DEVICE_PROBE:
+            AppendAllDevicesList(opensl_device);
             break;
     }
 }
@@ -740,6 +1111,13 @@ static ALCbackend* ALCopenslBackendFactory_createBackend(ALCopenslBackendFactory
     {
         ALCopenslPlayback *backend;
         NEW_OBJ(backend, ALCopenslPlayback)(device);
+        if(!backend) return NULL;
+        return STATIC_CAST(ALCbackend, backend);
+    }
+    if(type == ALCbackend_Capture)
+    {
+        ALCopenslCapture *backend;
+        NEW_OBJ(backend, ALCopenslCapture)(device);
         if(!backend) return NULL;
         return STATIC_CAST(ALCbackend, backend);
     }

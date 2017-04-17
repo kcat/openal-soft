@@ -42,9 +42,9 @@
 #define ALC_FUMA_SOFT                            0x1601
 
 /* Ambisonic scalings (normalization) */
-#define ALC_N3D_SOFT                             0x1700
-#define ALC_SN3D_SOFT                            0x1701
 /*#define ALC_FUMA_SOFT*/
+#define ALC_SN3D_SOFT                            0x1602
+#define ALC_N3D_SOFT                             0x1603
 
 typedef ALCboolean (ALC_APIENTRY*LPALCISAMBISONICFORMATSUPPORTEDSOFT)(ALCdevice *device, ALCenum layout, ALCenum scaling, ALsizei order);
 #ifdef AL_ALEXT_PROTOTYPES

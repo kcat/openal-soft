@@ -268,6 +268,7 @@ static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter
 ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei SamplesToDo)
 {
     ALbufferlistitem *BufferListItem;
+    ALbufferlistitem *BufferLoopItem;
     ALsizei NumChannels, SampleSize;
     ResamplerFunc Resample;
     ALsizei DataPosInt;
@@ -278,16 +279,15 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
     ALsizei OutPos;
     ALsizei IrSize;
     bool isplaying;
-    bool islooping;
     ALsizei chan;
     ALsizei send;
 
     /* Get source info */
     isplaying      = true; /* Will only be called while playing. */
-    islooping      = ATOMIC_LOAD(&Source->looping, almemory_order_acquire);
-    DataPosInt     = ATOMIC_LOAD(&voice->position, almemory_order_relaxed);
+    DataPosInt     = ATOMIC_LOAD(&voice->position, almemory_order_acquire);
     DataPosFrac    = ATOMIC_LOAD(&voice->position_fraction, almemory_order_relaxed);
     BufferListItem = ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed);
+    BufferLoopItem = ATOMIC_LOAD(&voice->loop_buffer, almemory_order_relaxed);
     NumChannels    = voice->NumChannels;
     SampleSize     = voice->SampleSize;
     increment      = voice->Step;
@@ -345,9 +345,9 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                 Data += chan*SampleSize;
 
                 /* If current pos is beyond the loop range, do not loop */
-                if(!islooping || DataPosInt >= ALBuffer->LoopEnd)
+                if(!BufferLoopItem || DataPosInt >= ALBuffer->LoopEnd)
                 {
-                    islooping = false;
+                    BufferLoopItem = NULL;
 
                     /* Load what's left to play from the source buffer, and
                      * clear the rest of the temp buffer */
@@ -415,8 +415,8 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                         }
                     }
                     tmpiter = tmpiter->next;
-                    if(!tmpiter && islooping)
-                        tmpiter = ATOMIC_LOAD(&Source->queue, almemory_order_acquire);
+                    if(!tmpiter && BufferLoopItem)
+                        tmpiter = BufferLoopItem;
                     else if(!tmpiter)
                     {
                         SilenceSamples(&SrcData[SrcDataSize], SrcBufferSize - SrcDataSize);
@@ -602,7 +602,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                     break;
             }
 
-            if(islooping && Source->SourceType == AL_STATIC)
+            if(BufferLoopItem && Source->SourceType == AL_STATIC)
             {
                 assert(LoopEnd > LoopStart);
                 DataPosInt = ((DataPosInt-LoopStart)%(LoopEnd-LoopStart)) + LoopStart;
@@ -614,12 +614,9 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
 
             if(!(BufferListItem=BufferListItem->next))
             {
-                if(islooping)
-                    BufferListItem = ATOMIC_LOAD(&Source->queue, almemory_order_acquire);
-                else
+                if(!(BufferListItem=BufferLoopItem))
                 {
                     isplaying = false;
-                    BufferListItem = NULL;
                     DataPosInt = 0;
                     DataPosFrac = 0;
                     break;

@@ -40,6 +40,7 @@ typedef struct ALsource {
     ALfloat   Direction[3];
     ALfloat   Orientation[2][3];
     ALboolean HeadRelative;
+    ALboolean Looping;
     enum DistanceModel DistanceModel;
     ALboolean DirectChannels;
 
@@ -91,9 +92,7 @@ typedef struct ALsource {
 
     /** Source Buffer Queue head. */
     RWLock queue_lock;
-    ATOMIC(ALbufferlistitem*) queue;
-
-    ATOMIC(ALboolean) looping;
+    ALbufferlistitem *queue;
 
     ATOMIC_FLAG PropsClean;
 

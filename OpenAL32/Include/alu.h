@@ -219,9 +219,6 @@ typedef struct ALvoice {
     ATOMIC(struct ALsource*) Source;
     ATOMIC(bool) Playing;
 
-    /* Current buffer queue item being played. */
-    ATOMIC(struct ALbufferlistitem*) current_buffer;
-
     /**
      * Source offset in samples, relative to the currently playing buffer, NOT
      * the whole queue, and the fractional (fixed-point) offset to the next
@@ -229,6 +226,14 @@ typedef struct ALvoice {
      */
     ATOMIC(ALuint) position;
     ATOMIC(ALsizei) position_fraction;
+
+    /* Current buffer queue item being played. */
+    ATOMIC(struct ALbufferlistitem*) current_buffer;
+
+    /* Buffer queue item to loop to at end of queue (will be NULL for non-
+     * looping voices).
+     */
+    ATOMIC(struct ALbufferlistitem*) loop_buffer;
 
     /**
      * Number of channels and bytes-per-sample for the attached source's

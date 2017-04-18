@@ -163,8 +163,8 @@ static void ALCjackPlayback_stop(ALCjackPlayback *self);
 static DECLARE_FORWARD2(ALCjackPlayback, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
 static DECLARE_FORWARD(ALCjackPlayback, ALCbackend, ALCuint, availableSamples)
 static ClockLatency ALCjackPlayback_getClockLatency(ALCjackPlayback *self);
-static void ALCjackPlayback_lock(ALCjackPlayback *self);
-static void ALCjackPlayback_unlock(ALCjackPlayback *self);
+static DECLARE_FORWARD(ALCjackPlayback, ALCbackend, void, lock)
+static DECLARE_FORWARD(ALCjackPlayback, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCjackPlayback)
 
 DEFINE_ALCBACKEND_VTABLE(ALCjackPlayback);
@@ -248,7 +248,7 @@ static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
     ll_ringbuffer_data_t data[2];
     jack_nframes_t total = 0;
     jack_nframes_t todo;
-    ALuint i, c, numchans;
+    ALsizei i, c, numchans;
 
     ll_ringbuffer_get_read_vector(self->Ring, data);
 
@@ -260,7 +260,7 @@ static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
     for(c = 0;c < numchans;c++)
     {
         const ALfloat *restrict in = ((ALfloat*)data[0].buf) + c;
-        for(i = 0;i < todo;i++)
+        for(i = 0;(jack_nframes_t)i < todo;i++)
             out[c][i] = in[i*numchans];
         out[c] += todo;
     }
@@ -272,7 +272,7 @@ static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
         for(c = 0;c < numchans;c++)
         {
             const ALfloat *restrict in = ((ALfloat*)data[1].buf) + c;
-            for(i = 0;i < todo;i++)
+            for(i = 0;(jack_nframes_t)i < todo;i++)
                 out[c][i] = in[i*numchans];
             out[c] += todo;
         }
@@ -287,7 +287,7 @@ static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
         todo = numframes-total;
         for(c = 0;c < numchans;c++)
         {
-            for(i = 0;i < todo;i++)
+            for(i = 0;(jack_nframes_t)i < todo;i++)
                 out[c][i] = 0.0f;
         }
     }
@@ -397,7 +397,7 @@ static void ALCjackPlayback_close(ALCjackPlayback *self)
 static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    ALuint numchans, i;
+    ALsizei numchans, i;
     ALuint bufsize;
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
@@ -471,7 +471,7 @@ static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
 static ALCboolean ALCjackPlayback_start(ALCjackPlayback *self)
 {
     const char **ports;
-    ALuint i;
+    ALsizei i;
 
     if(jack_activate(self->Client))
     {
@@ -541,17 +541,6 @@ static ClockLatency ALCjackPlayback_getClockLatency(ALCjackPlayback *self)
     ALCjackPlayback_unlock(self);
 
     return ret;
-}
-
-
-static void ALCjackPlayback_lock(ALCjackPlayback *self)
-{
-    almtx_lock(&STATIC_CAST(ALCbackend,self)->mMutex);
-}
-
-static void ALCjackPlayback_unlock(ALCjackPlayback *self)
-{
-    almtx_unlock(&STATIC_CAST(ALCbackend,self)->mMutex);
 }
 
 

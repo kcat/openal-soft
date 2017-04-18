@@ -2232,7 +2232,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         for(pos = 0;pos < context->SourceMap.size;pos++)
         {
             ALsource *source = context->SourceMap.values[pos];
-            struct ALsourceProps *props;
 
             if(old_sends != device->NumAuxSends)
             {
@@ -2262,26 +2261,28 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             }
 
             ATOMIC_FLAG_CLEAR(&source->PropsClean, almemory_order_release);
-
-            /* Clear any pre-existing source property structs, in case the
-             * number of auxiliary sends changed. Playing (or paused) sources
-             * will have updates respecified in UpdateAllSourceProps.
-             */
-            props = ATOMIC_EXCHANGE_PTR_SEQ(&source->Update, NULL);
-            al_free(props);
-
-            props = ATOMIC_EXCHANGE_PTR(&source->FreeList, NULL, almemory_order_relaxed);
-            while(props)
-            {
-                struct ALsourceProps *next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
-                al_free(props);
-                props = next;
-            }
         }
         AllocateVoices(context, context->MaxVoices, old_sends);
         for(pos = 0;pos < context->VoiceCount;pos++)
         {
             ALvoice *voice = context->Voices[pos];
+            struct ALvoiceProps *props;
+
+            /* Clear any pre-existing voice property structs, in case the
+             * number of auxiliary sends changed. Active sources will have
+             * updates respecified in UpdateAllSourceProps.
+             */
+            props = ATOMIC_EXCHANGE_PTR(&voice->Update, NULL, almemory_order_relaxed);
+            al_free(props);
+
+            props = ATOMIC_EXCHANGE_PTR(&voice->FreeList, NULL, almemory_order_relaxed);
+            while(props)
+            {
+                struct ALvoiceProps *next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
+                al_free(props);
+                props = next;
+            }
+
             if(ATOMIC_LOAD(&voice->Source, almemory_order_acquire) == NULL)
                 continue;
 
@@ -2527,6 +2528,7 @@ static void FreeContext(ALCcontext *context)
     struct ALeffectslotArray *auxslots;
     struct ALlistenerProps *lprops;
     size_t count;
+    ALsizei i;
 
     TRACE("%p\n", context);
 
@@ -2549,6 +2551,8 @@ static void FreeContext(ALCcontext *context)
     }
     ResetUIntMap(&context->EffectSlotMap);
 
+    for(i = 0;i < context->VoiceCount;i++)
+        DeinitVoice(context->Voices[i]);
     al_free(context->Voices);
     context->Voices = NULL;
     context->VoiceCount = 0;
@@ -2706,7 +2710,7 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
 {
     ALCdevice *device = context->Device;
     ALsizei num_sends = device->NumAuxSends;
-    struct ALsourceProps *props;
+    struct ALvoiceProps *props;
     size_t sizeof_props;
     size_t sizeof_voice;
     ALvoice **voices;
@@ -2721,7 +2725,7 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
      * property set (including the dynamically-sized Send[] array) in one
      * chunk.
      */
-    sizeof_props = RoundUp(offsetof(struct ALsourceProps, Send[num_sends]), 16);
+    sizeof_props = RoundUp(offsetof(struct ALvoiceProps, Send[num_sends]), 16);
     sizeof_voice = RoundUp(offsetof(ALvoice, Send[num_sends]), 16);
     size = sizeof(ALvoice*) + sizeof_voice + sizeof_props;
 
@@ -2730,7 +2734,7 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
      * paired together.
      */
     voice = (ALvoice*)((char*)voices + RoundUp(num_voices*sizeof(ALvoice*), 16));
-    props = (struct ALsourceProps*)((char*)voice + sizeof_voice);
+    props = (struct ALvoiceProps*)((char*)voice + sizeof_voice);
 
     if(context->Voices)
     {
@@ -2738,17 +2742,18 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
         for(;v < v_count;v++)
         {
             ALsizei s_count = mini(old_sends, num_sends);
+            ALvoice *old_voice = context->Voices[v];
             ALsizei i;
 
             /* Copy the old voice data and source property set to the new
              * storage.
              */
-            *voice = *(context->Voices[v]);
+            *voice = *old_voice;
             for(i = 0;i < s_count;i++)
-                voice->Send[i] = context->Voices[v]->Send[i];
-            *props = *(context->Voices[v]->Props);
+                voice->Send[i] = old_voice->Send[i];
+            *props = *(old_voice->Props);
             for(i = 0;i < s_count;i++)
-                props->Send[i] = context->Voices[v]->Props->Send[i];
+                props->Send[i] = old_voice->Props->Send[i];
 
             /* Set this voice's property set pointer and voice reference. */
             voice->Props = props;
@@ -2756,17 +2761,27 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
 
             /* Increment pointers to the next storage space. */
             voice = (ALvoice*)((char*)props + sizeof_props);
-            props = (struct ALsourceProps*)((char*)voice + sizeof_voice);
+            props = (struct ALvoiceProps*)((char*)voice + sizeof_voice);
         }
+        /* Deinit any left over voices that weren't copied over to the new
+         * array. NOTE: If this does anything, v equals num_voices and
+         * num_voices is less than VoiceCount, so the following loop won't do
+         * anything.
+         */
+        for(;v < context->VoiceCount;v++)
+            DeinitVoice(context->Voices[v]);
     }
     /* Finish setting the voices' property set pointers and references. */
     for(;v < num_voices;v++)
     {
+        ATOMIC_INIT(&voice->Update, NULL);
+        ATOMIC_INIT(&voice->FreeList, NULL);
+
         voice->Props = props;
         voices[v] = voice;
 
         voice = (ALvoice*)((char*)props + sizeof_props);
-        props = (struct ALsourceProps*)((char*)voice + sizeof_voice);
+        props = (struct ALvoiceProps*)((char*)voice + sizeof_voice);
     }
 
     al_free(context->Voices);

@@ -49,7 +49,7 @@ extern inline struct ALsource *RemoveSource(ALCcontext *context, ALuint id);
 
 static void InitSourceParams(ALsource *Source, ALsizei num_sends);
 static void DeinitSource(ALsource *source, ALsizei num_sends);
-static void UpdateSourceProps(ALsource *source, ALsizei num_sends);
+static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_sends);
 static ALint64 GetSourceSampleOffset(ALsource *Source, ALCcontext *context, ALuint64 *clocktime);
 static ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, ALuint64 *clocktime);
 static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context);
@@ -430,8 +430,10 @@ static ALint Int64ValsByProp(ALenum prop)
 } while(0)
 
 #define DO_UPDATEPROPS() do {                                                 \
-    if(SourceShouldUpdate(Source, Context))                                   \
-        UpdateSourceProps(Source, device->NumAuxSends);                       \
+    ALvoice *voice;                                                           \
+    if(SourceShouldUpdate(Source, Context) &&                                 \
+       (voice=GetSourceVoice(Source, Context)) != NULL)                       \
+        UpdateSourceProps(Source, voice, device->NumAuxSends);                \
     else                                                                      \
         ATOMIC_FLAG_CLEAR(&Source->PropsClean, almemory_order_release);       \
 } while(0)
@@ -896,16 +898,20 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
 
             if(slot != Source->Send[values[1]].Slot && IsPlayingOrPaused(Source))
             {
+                ALvoice *voice;
                 /* Add refcount on the new slot, and release the previous slot */
                 if(slot) IncrementRef(&slot->ref);
                 if(Source->Send[values[1]].Slot)
                     DecrementRef(&Source->Send[values[1]].Slot->ref);
                 Source->Send[values[1]].Slot = slot;
 
-                /* We must force an update if the auxiliary slot changed on a
-                 * playing source, in case the slot is about to be deleted.
+                /* We must force an update if the auxiliary slot changed on an
+                 * active source, in case the slot is about to be deleted.
                  */
-                UpdateSourceProps(Source, device->NumAuxSends);
+                if((voice=GetSourceVoice(Source, Context)) != NULL)
+                    UpdateSourceProps(Source, voice, device->NumAuxSends);
+                else
+                    ATOMIC_FLAG_CLEAR(&Source->PropsClean, almemory_order_release);
             }
             else
             {
@@ -2450,9 +2456,6 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
                 break;
         }
 
-        ATOMIC_FLAG_TEST_AND_SET(&source->PropsClean, almemory_order_acquire);
-        UpdateSourceProps(source, device->NumAuxSends);
-
         /* Make sure this source isn't already active, and if not, look for an
          * unused voice to put it in.
          */
@@ -2468,7 +2471,9 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         if(voice == NULL)
             voice = context->Voices[context->VoiceCount++];
         ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
-        ATOMIC_THREAD_FENCE(almemory_order_acquire);
+
+        ATOMIC_FLAG_TEST_AND_SET(&source->PropsClean, almemory_order_acquire);
+        UpdateSourceProps(source, voice, device->NumAuxSends);
 
         /* A source that's not playing or paused has any offset applied when it
          * starts playing.
@@ -2973,35 +2978,12 @@ static void InitSourceParams(ALsource *Source, ALsizei num_sends)
      * ignore the test.
      */
     ATOMIC_FLAG_TEST_AND_SET(&Source->PropsClean, almemory_order_relaxed);
-
-    ATOMIC_INIT(&Source->Update, NULL);
-    ATOMIC_INIT(&Source->FreeList, NULL);
 }
 
 static void DeinitSource(ALsource *source, ALsizei num_sends)
 {
     ALbufferlistitem *BufferList;
-    struct ALsourceProps *props;
-    size_t count = 0;
     ALsizei i;
-
-    props = ATOMIC_LOAD_SEQ(&source->Update);
-    if(props) al_free(props);
-
-    props = ATOMIC_LOAD(&source->FreeList, almemory_order_relaxed);
-    while(props)
-    {
-        struct ALsourceProps *next;
-        next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
-        al_free(props);
-        props = next;
-        ++count;
-    }
-    /* This is excessively spammy if it traces every source destruction, so
-     * just warn if it was unexpectedly large.
-     */
-    if(count > 3)
-        WARN("Freed "SZFMT" Source property objects\n", count);
 
     BufferList = ATOMIC_EXCHANGE_PTR_SEQ(&source->queue, NULL);
     while(BufferList != NULL)
@@ -3026,21 +3008,21 @@ static void DeinitSource(ALsource *source, ALsizei num_sends)
     }
 }
 
-static void UpdateSourceProps(ALsource *source, ALsizei num_sends)
+static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_sends)
 {
-    struct ALsourceProps *props;
+    struct ALvoiceProps *props;
     ALsizei i;
 
     /* Get an unused property container, or allocate a new one as needed. */
-    props = ATOMIC_LOAD(&source->FreeList, almemory_order_acquire);
+    props = ATOMIC_LOAD(&voice->FreeList, almemory_order_acquire);
     if(!props)
-        props = al_calloc(16, offsetof(struct ALsourceProps, Send[num_sends]));
+        props = al_calloc(16, offsetof(struct ALvoiceProps, Send[num_sends]));
     else
     {
-        struct ALsourceProps *next;
+        struct ALvoiceProps *next;
         do {
             next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
-        } while(ATOMIC_COMPARE_EXCHANGE_PTR_WEAK(&source->FreeList, &props, next,
+        } while(ATOMIC_COMPARE_EXCHANGE_PTR_WEAK(&voice->FreeList, &props, next,
                 almemory_order_acq_rel, almemory_order_acquire) == 0);
     }
 
@@ -3102,13 +3084,13 @@ static void UpdateSourceProps(ALsource *source, ALsizei num_sends)
     }
 
     /* Set the new container for updating internal parameters. */
-    props = ATOMIC_EXCHANGE_PTR(&source->Update, props, almemory_order_acq_rel);
+    props = ATOMIC_EXCHANGE_PTR(&voice->Update, props, almemory_order_acq_rel);
     if(props)
     {
         /* If there was an unused update container, put it back in the
          * freelist.
          */
-        ATOMIC_REPLACE_HEAD(struct ALsourceProps*, &source->FreeList, props);
+        ATOMIC_REPLACE_HEAD(struct ALvoiceProps*, &voice->FreeList, props);
     }
 }
 
@@ -3121,8 +3103,8 @@ void UpdateAllSourceProps(ALCcontext *context)
     {
         ALvoice *voice = context->Voices[pos];
         ALsource *source = ATOMIC_LOAD(&voice->Source, almemory_order_acquire);
-        if(source != NULL && !ATOMIC_FLAG_TEST_AND_SET(&source->PropsClean, almemory_order_acq_rel))
-            UpdateSourceProps(source, num_sends);
+        if(source && !ATOMIC_FLAG_TEST_AND_SET(&source->PropsClean, almemory_order_acq_rel))
+            UpdateSourceProps(source, voice, num_sends);
     }
 }
 

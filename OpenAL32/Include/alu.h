@@ -35,7 +35,6 @@ extern "C" {
 #endif
 
 struct ALsource;
-struct ALsourceProps;
 struct ALbufferlistitem;
 struct ALvoice;
 struct ALeffectslot;
@@ -153,13 +152,69 @@ typedef struct SendParams {
     } Gains;
 } SendParams;
 
+
+struct ALvoiceProps {
+    ATOMIC(struct ALvoiceProps*) next;
+
+    ALfloat Pitch;
+    ALfloat Gain;
+    ALfloat OuterGain;
+    ALfloat MinGain;
+    ALfloat MaxGain;
+    ALfloat InnerAngle;
+    ALfloat OuterAngle;
+    ALfloat RefDistance;
+    ALfloat MaxDistance;
+    ALfloat RollOffFactor;
+    ALfloat Position[3];
+    ALfloat Velocity[3];
+    ALfloat Direction[3];
+    ALfloat Orientation[2][3];
+    ALboolean HeadRelative;
+    enum DistanceModel DistanceModel;
+    ALboolean DirectChannels;
+
+    ALboolean DryGainHFAuto;
+    ALboolean WetGainAuto;
+    ALboolean WetGainHFAuto;
+    ALfloat   OuterGainHF;
+
+    ALfloat AirAbsorptionFactor;
+    ALfloat RoomRolloffFactor;
+    ALfloat DopplerFactor;
+
+    ALfloat StereoPan[2];
+
+    ALfloat Radius;
+
+    /** Direct filter and auxiliary send info. */
+    struct {
+        ALfloat Gain;
+        ALfloat GainHF;
+        ALfloat HFReference;
+        ALfloat GainLF;
+        ALfloat LFReference;
+    } Direct;
+    struct {
+        struct ALeffectslot *Slot;
+        ALfloat Gain;
+        ALfloat GainHF;
+        ALfloat HFReference;
+        ALfloat GainLF;
+        ALfloat LFReference;
+    } Send[];
+};
+
 /* If not 'moving', gain targets are used directly without fading. */
 #define VOICE_IS_MOVING (1<<0)
 #define VOICE_IS_HRTF   (1<<1)
 #define VOICE_HAS_NFC   (1<<2)
 
 typedef struct ALvoice {
-    struct ALsourceProps *Props;
+    struct ALvoiceProps *Props;
+
+    ATOMIC(struct ALvoiceProps*) Update;
+    ATOMIC(struct ALvoiceProps*) FreeList;
 
     ATOMIC(struct ALsource*) Source;
     ATOMIC(bool) Playing;
@@ -208,6 +263,8 @@ typedef struct ALvoice {
         ALsizei Channels;
     } Send[];
 } ALvoice;
+
+void DeinitVoice(ALvoice *voice);
 
 
 typedef const ALfloat* (*ResamplerFunc)(const InterpState *state,

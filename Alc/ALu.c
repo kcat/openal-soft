@@ -100,6 +100,31 @@ const aluMatrixf IdentityMatrixf = {{
 }};
 
 
+void DeinitVoice(ALvoice *voice)
+{
+    struct ALvoiceProps *props;
+    size_t count = 0;
+
+    props = ATOMIC_EXCHANGE_PTR_SEQ(&voice->Update, NULL);
+    if(props) al_free(props);
+
+    props = ATOMIC_EXCHANGE_PTR(&voice->FreeList, NULL, almemory_order_relaxed);
+    while(props)
+    {
+        struct ALvoiceProps *next;
+        next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
+        al_free(props);
+        props = next;
+        ++count;
+    }
+    /* This is excessively spammy if it traces every voice destruction, so just
+     * warn if it was unexpectedly large.
+     */
+    if(count > 3)
+        WARN("Freed "SZFMT" voice property objects\n", count);
+}
+
+
 static inline HrtfDirectMixerFunc SelectHrtfMixer(void)
 {
 #ifdef HAVE_NEON
@@ -324,7 +349,7 @@ static ALboolean CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
 }
 
 
-static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
+static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
 {
     static const struct ChanMap MonoMap[1] = {
         { FrontCenter, 0.0f, 0.0f }
@@ -749,7 +774,7 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALsourceProps *
     }
 }
 
-static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
+static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
 {
     const ALCdevice *Device = ALContext->Device;
     const ALlistener *Listener = ALContext->Listener;
@@ -1247,24 +1272,24 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALsourceProps *pro
     }
 }
 
-static void CalcSourceParams(ALvoice *voice, ALsource *source, ALCcontext *context, ALboolean force)
+static void CalcSourceParams(ALvoice *voice, ALCcontext *context, ALboolean force)
 {
     const ALbufferlistitem *BufferListItem;
-    struct ALsourceProps *props;
+    struct ALvoiceProps *props;
 
-    props = ATOMIC_EXCHANGE_PTR(&source->Update, NULL, almemory_order_acq_rel);
+    props = ATOMIC_EXCHANGE_PTR(&voice->Update, NULL, almemory_order_acq_rel);
     if(!props && !force) return;
 
     if(props)
     {
         memcpy(voice->Props, props,
-            offsetof(struct ALsourceProps, Send[context->Device->NumAuxSends])
+            offsetof(struct ALvoiceProps, Send[context->Device->NumAuxSends])
         );
 
-        ATOMIC_REPLACE_HEAD(struct ALsourceProps*, &source->FreeList, props);
+        ATOMIC_REPLACE_HEAD(struct ALvoiceProps*, &voice->FreeList, props);
     }
 
-    BufferListItem = ATOMIC_LOAD(&source->queue, almemory_order_relaxed);
+    BufferListItem = ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed);
     while(BufferListItem != NULL)
     {
         const ALbuffer *buffer;
@@ -1299,7 +1324,7 @@ static void UpdateContextSources(ALCcontext *ctx, const struct ALeffectslotArray
         for(;voice != voice_end;++voice)
         {
             source = ATOMIC_LOAD(&(*voice)->Source, almemory_order_acquire);
-            if(source) CalcSourceParams(*voice, source, ctx, force);
+            if(source) CalcSourceParams(*voice, ctx, force);
         }
     }
     IncrementRef(&ctx->UpdateCount);

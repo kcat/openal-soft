@@ -118,9 +118,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
         ALsizei newcount = curarray->count + n;
         ALCdevice *device;
 
-        newarray = al_calloc(DEF_ALIGN,
-            offsetof(struct ALeffectslotArray, slot[newcount])
-        );
+        newarray = al_calloc(DEF_ALIGN, FAM_SIZE(struct ALeffectslotArray, slot, newcount));
         newarray->count = newcount;
         memcpy(newarray->slot, tmpslots, sizeof(ALeffectslot*)*n);
         if(curarray)
@@ -170,9 +168,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *
         ALsizei j, k;
 
         assert(newcount >= 0);
-        newarray = al_calloc(DEF_ALIGN,
-            offsetof(struct ALeffectslotArray, slot[newcount])
-        );
+        newarray = al_calloc(DEF_ALIGN, FAM_SIZE(struct ALeffectslotArray, slot, newcount));
         newarray->count = newcount;
         for(i = j = 0;i < newarray->count;)
         {

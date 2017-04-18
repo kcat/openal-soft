@@ -225,6 +225,12 @@ typedef ALuint64SOFT ALuint64;
 #define DECL_FORMAT(x, y, z)
 #endif
 
+/* Calculates the size of a struct with N elements of a flexible array member.
+ * GCC and Clang allow offsetof(Type, fam[N]) for this, but MSVC seems to have
+ * trouble, so a bit more verbose workaround is needed.
+ */
+#define FAM_SIZE(T, M, N)  (offsetof(T, M) + sizeof(((T*)NULL)->M[0])*(N))
+
 #if defined(__GNUC__) && defined(__i386__)
 /* force_align_arg_pointer is required for proper function arguments aligning
  * when SSE code is used. Some systems (Windows, QNX) do not guarantee our

@@ -688,7 +688,7 @@ static void AddFileEntry(vector_EnumeratedHrtf *list, const_al_string filename)
         TRACE("Got new file \"%s\"\n", alstr_get_cstr(filename));
 
         loaded_entry = al_calloc(DEF_ALIGN,
-            offsetof(struct HrtfEntry, filename[alstr_length(filename)+1])
+            FAM_SIZE(struct HrtfEntry, filename, alstr_length(filename)+1)
         );
         loaded_entry->next = LoadedHrtfs;
         loaded_entry->handle = NULL;
@@ -769,7 +769,7 @@ static void AddBuiltInEntry(vector_EnumeratedHrtf *list, const_al_string filenam
         TRACE("Got new file \"%s\"\n", alstr_get_cstr(filename));
 
         loaded_entry = al_calloc(DEF_ALIGN,
-            offsetof(struct HrtfEntry, filename[namelen])
+            FAM_SIZE(struct HrtfEntry, filename, namelen)
         );
         loaded_entry->next = LoadedHrtfs;
         loaded_entry->handle = hrtf;

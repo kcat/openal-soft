@@ -13,7 +13,7 @@ SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType 
     if(numchans <= 0 || srcRate <= 0 || dstRate <= 0)
         return NULL;
 
-    converter = al_calloc(16, offsetof(SampleConverter, Chan[numchans]));
+    converter = al_calloc(16, FAM_SIZE(SampleConverter, Chan, numchans));
     converter->mSrcType = srcType;
     converter->mDstType = dstType;
     converter->mNumChannels = numchans;

@@ -2501,7 +2501,7 @@ static ALvoid InitContext(ALCcontext *Context)
     InitUIntMap(&Context->SourceMap, Context->Device->SourcesMax);
     InitUIntMap(&Context->EffectSlotMap, Context->Device->AuxiliaryEffectSlotMax);
 
-    auxslots = al_calloc(DEF_ALIGN, offsetof(struct ALeffectslotArray, slot[0]));
+    auxslots = al_calloc(DEF_ALIGN, sizeof(struct ALeffectslotArray));
     auxslots->count = 0;
     ATOMIC_INIT(&Context->ActiveAuxSlots, auxslots);
 
@@ -2725,8 +2725,8 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
      * property set (including the dynamically-sized Send[] array) in one
      * chunk.
      */
-    sizeof_props = RoundUp(offsetof(struct ALvoiceProps, Send[num_sends]), 16);
-    sizeof_voice = RoundUp(offsetof(ALvoice, Send[num_sends]), 16);
+    sizeof_props = RoundUp(FAM_SIZE(struct ALvoiceProps, Send, num_sends), 16);
+    sizeof_voice = RoundUp(FAM_SIZE(ALvoice, Send, num_sends), 16);
     size = sizeof(ALvoice*) + sizeof_voice + sizeof_props;
 
     voices = al_calloc(16, RoundUp(size*num_voices, 16));

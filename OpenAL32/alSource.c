@@ -3013,7 +3013,7 @@ static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_send
     /* Get an unused property container, or allocate a new one as needed. */
     props = ATOMIC_LOAD(&voice->FreeList, almemory_order_acquire);
     if(!props)
-        props = al_calloc(16, offsetof(struct ALvoiceProps, Send[num_sends]));
+        props = al_calloc(16, FAM_SIZE(struct ALvoiceProps, Send, num_sends));
     else
     {
         struct ALvoiceProps *next;

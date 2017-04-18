@@ -1283,7 +1283,7 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context, ALboolean forc
     if(props)
     {
         memcpy(voice->Props, props,
-            offsetof(struct ALvoiceProps, Send[context->Device->NumAuxSends])
+            FAM_SIZE(struct ALvoiceProps, Send, context->Device->NumAuxSends)
         );
 
         ATOMIC_REPLACE_HEAD(struct ALvoiceProps*, &voice->FreeList, props);

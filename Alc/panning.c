@@ -922,13 +922,11 @@ static void InitHrtfPanning(ALCdevice *device, bool hoa_mode)
     };
     const ALfloat (*AmbiMatrix)[2][MAX_AMBI_COEFFS] = hoa_mode ? AmbiMatrixHOA : AmbiMatrixFOA;
     ALsizei count = hoa_mode ? 9 : 4;
-    size_t sizeof_hrtfstate;
     ALsizei i;
 
     static_assert(COUNTOF(AmbiPoints) <= HRTF_AMBI_MAX_CHANNELS, "HRTF_AMBI_MAX_CHANNELS is too small");
 
-    sizeof_hrtfstate = offsetof(DirectHrtfState, Chan[count]);
-    device->Hrtf = al_calloc(16, sizeof_hrtfstate);
+    device->Hrtf = al_calloc(16, FAM_SIZE(DirectHrtfState, Chan, count));
 
     for(i = 0;i < count;i++)
     {

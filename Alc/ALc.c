@@ -2725,8 +2725,8 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
      * property set (including the dynamically-sized Send[] array) in one
      * chunk.
      */
-    sizeof_props = RoundUp(FAM_SIZE(struct ALvoiceProps, Send, num_sends), 16);
     sizeof_voice = RoundUp(FAM_SIZE(ALvoice, Send, num_sends), 16);
+    sizeof_props = RoundUp(FAM_SIZE(struct ALvoiceProps, Send, num_sends), 16);
     size = sizeof(ALvoice*) + sizeof_voice + sizeof_props;
 
     voices = al_calloc(16, RoundUp(size*num_voices, 16));
@@ -2738,10 +2738,11 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
 
     if(context->Voices)
     {
-        ALsizei v_count = mini(context->VoiceCount, num_voices);
+        const ALsizei v_count = mini(context->VoiceCount, num_voices);
+        const ALsizei s_count = mini(old_sends, num_sends);
+
         for(;v < v_count;v++)
         {
-            ALsizei s_count = mini(old_sends, num_sends);
             ALvoice *old_voice = context->Voices[v];
             ALsizei i;
 
@@ -3530,36 +3531,23 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     ATOMIC_STORE_SEQ(&device->LastError, ALC_NO_ERROR);
 
     ALContext = al_calloc(16, sizeof(ALCcontext)+sizeof(ALlistener));
-    if(ALContext)
-    {
-        InitRef(&ALContext->ref, 1);
-        ALContext->Listener = (ALlistener*)ALContext->_listener_mem;
-
-        ALContext->Device = device;
-        ATOMIC_INIT(&ALContext->ActiveAuxSlots, NULL);
-
-        ALContext->Voices = NULL;
-        ALContext->MaxVoices = 0;
-        ALContext->VoiceCount = 0;
-        AllocateVoices(ALContext, 256, device->NumAuxSends);
-    }
-    if(!ALContext || !ALContext->Voices)
+    if(!ALContext)
     {
         almtx_unlock(&device->BackendLock);
-
-        if(ALContext)
-        {
-            al_free(ALContext->Voices);
-            ALContext->Voices = NULL;
-
-            al_free(ALContext);
-            ALContext = NULL;
-        }
 
         alcSetError(device, ALC_OUT_OF_MEMORY);
         ALCdevice_DecRef(device);
         return NULL;
     }
+
+    InitRef(&ALContext->ref, 1);
+    ALContext->Listener = (ALlistener*)ALContext->_listener_mem;
+
+    ALContext->Voices = NULL;
+    ALContext->VoiceCount = 0;
+    ALContext->MaxVoices = 0;
+    ATOMIC_INIT(&ALContext->ActiveAuxSlots, NULL);
+    ALContext->Device = device;
 
     if((err=UpdateDeviceParams(device, attrList)) != ALC_NO_ERROR)
     {
@@ -3581,6 +3569,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         ALCdevice_DecRef(device);
         return NULL;
     }
+    AllocateVoices(ALContext, 256, device->NumAuxSends);
 
     ALCdevice_IncRef(ALContext->Device);
     InitContext(ALContext);

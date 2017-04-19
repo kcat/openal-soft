@@ -356,7 +356,7 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const char *
     if(failed)
         return NULL;
 
-    if(datalen < evCount*2)
+    if(datalen < evCount*2u)
     {
         ERR("Unexpected end of %s data (req %d, rem "SZFMT")\n", filename, evCount*2, datalen);
         return NULL;

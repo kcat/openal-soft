@@ -870,7 +870,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsiz
     InitDistanceComp(device, conf, speakermap);
 }
 
-static void InitHrtfPanning(ALCdevice *device, bool hoa_mode)
+static void InitHrtfPanning(ALCdevice *device)
 {
     /* NOTE: azimuth goes clockwise. */
     static const ALfloat AmbiPoints[][2] = {
@@ -920,8 +920,9 @@ static void InitHrtfPanning(ALCdevice *device, bool hoa_mode)
         { { 1.40852210e-001f,  1.09057783e-001f, -1.09208910e-001f, -1.09057783e-001f, -7.58818830e-002f, -7.66295578e-002f, -3.28314629e-004f,  7.66295578e-002f,  0.00000000e+000f }, { 7.14251066e-002f,  7.13950780e-002f, -7.14940135e-002f, -7.13950780e-002f, -9.61978444e-002f, -9.71456952e-002f, -4.16214759e-004f,  9.71456952e-002f,  0.00000000e+000f } },
         { { 1.43315266e-001f,  0.00000000e+000f, -1.90399923e-001f,  0.00000000e+000f,  0.00000000e+000f,  0.00000000e+000f,  1.18020996e-001f,  0.00000000e+000f,  0.00000000e+000f }, { 7.26741039e-002f,  0.00000000e+000f, -1.24646009e-001f,  0.00000000e+000f,  0.00000000e+000f,  0.00000000e+000f,  1.49618920e-001f,  0.00000000e+000f,  0.00000000e+000f } },
     };
-    const ALfloat (*AmbiMatrix)[2][MAX_AMBI_COEFFS] = hoa_mode ? AmbiMatrixHOA : AmbiMatrixFOA;
-    ALsizei count = hoa_mode ? 9 : 4;
+    const ALfloat (*AmbiMatrix)[2][MAX_AMBI_COEFFS] = device->AmbiUp ? AmbiMatrixHOA :
+                                                                       AmbiMatrixFOA;
+    ALsizei count = device->AmbiUp ? 9 : 4;
     ALsizei i;
 
     static_assert(COUNTOF(AmbiPoints) <= HRTF_AMBI_MAX_CHANNELS, "HRTF_AMBI_MAX_CHANNELS is too small");
@@ -936,13 +937,7 @@ static void InitHrtfPanning(ALCdevice *device, bool hoa_mode)
     device->Dry.CoeffCount = 0;
     device->Dry.NumChannels = count;
 
-    if(!hoa_mode)
-    {
-        device->FOAOut.Ambi = device->Dry.Ambi;
-        device->FOAOut.CoeffCount = device->Dry.CoeffCount;
-        device->FOAOut.NumChannels = 0;
-    }
-    else
+    if(device->AmbiUp)
     {
         memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
         for(i = 0;i < 4;i++)
@@ -954,6 +949,12 @@ static void InitHrtfPanning(ALCdevice *device, bool hoa_mode)
         device->FOAOut.NumChannels = 4;
 
         ambiup_reset(device->AmbiUp, device);
+    }
+    else
+    {
+        device->FOAOut.Ambi = device->Dry.Ambi;
+        device->FOAOut.CoeffCount = device->Dry.CoeffCount;
+        device->FOAOut.NumChannels = 0;
     }
 
     device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
@@ -1172,8 +1173,6 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
 
     if(device->HrtfHandle)
     {
-        bool hoa_mode;
-
         if(old_hrtf)
             Hrtf_DecRef(old_hrtf);
         old_hrtf = NULL;
@@ -1196,20 +1195,18 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
              */
             ambiup_free(device->AmbiUp);
             device->AmbiUp = NULL;
-            hoa_mode = false;
         }
         else
         {
             if(!device->AmbiUp)
                 device->AmbiUp = ambiup_alloc();
-            hoa_mode = true;
         }
 
         TRACE("%s HRTF rendering enabled, using \"%s\"\n",
             ((device->Render_Mode == HrtfRender) ? "Full" : "Basic"),
             alstr_get_cstr(device->HrtfName)
         );
-        InitHrtfPanning(device, hoa_mode);
+        InitHrtfPanning(device);
         return;
     }
     device->HrtfStatus = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;

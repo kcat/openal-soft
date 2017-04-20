@@ -1301,7 +1301,7 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context, ALboolean forc
                 CalcNonAttnSourceParams(voice, voice->Props, buffer, context);
             break;
         }
-        BufferListItem = BufferListItem->next;
+        BufferListItem = ATOMIC_LOAD(&BufferListItem->next, almemory_order_acquire);
     }
 }
 

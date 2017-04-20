@@ -5,6 +5,7 @@
 #include "alMain.h"
 #include "alu.h"
 #include "hrtf.h"
+#include "atomic.h"
 
 #define MAX_SENDS      16
 #define DEFAULT_SENDS  2
@@ -19,7 +20,7 @@ struct ALsource;
 
 typedef struct ALbufferlistitem {
     struct ALbuffer *buffer;
-    struct ALbufferlistitem *volatile next;
+    ATOMIC(struct ALbufferlistitem*) next;
 } ALbufferlistitem;
 
 

@@ -414,7 +414,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                             SrcDataSize += DataSize;
                         }
                     }
-                    tmpiter = tmpiter->next;
+                    tmpiter = ATOMIC_LOAD(&tmpiter->next, almemory_order_acquire);
                     if(!tmpiter && BufferLoopItem)
                         tmpiter = BufferLoopItem;
                     else if(!tmpiter)
@@ -612,9 +612,11 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
             if(DataSize > DataPosInt)
                 break;
 
-            if(!(BufferListItem=BufferListItem->next))
+            BufferListItem = ATOMIC_LOAD(&BufferListItem->next, almemory_order_acquire);
+            if(!BufferListItem)
             {
-                if(!(BufferListItem=BufferLoopItem))
+                BufferListItem = BufferLoopItem;
+                if(!BufferListItem)
                 {
                     isplaying = false;
                     DataPosInt = 0;

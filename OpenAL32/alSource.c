@@ -2810,8 +2810,9 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         source->queue = BufferListStart;
     else
     {
-        while(BufferList->next != NULL)
-            BufferList = ATOMIC_LOAD(&BufferList->next, almemory_order_relaxed);
+        ALbufferlistitem *next;
+        while((next=ATOMIC_LOAD(&BufferList->next, almemory_order_relaxed)) != NULL)
+            BufferList = next;
         ATOMIC_STORE(&BufferList->next, BufferListStart, almemory_order_release);
     }
     WriteUnlock(&source->queue_lock);

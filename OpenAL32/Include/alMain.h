@@ -139,6 +139,19 @@ AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum format);
 #endif
 #endif
 
+#ifndef AL_SOFT_source_resampler
+#define AL_SOFT_source_resampler
+#define AL_NUM_RESAMPLERS_SOFT                   0x7fff0000
+#define AL_DEFAULT_RESAMPLER_SOFT                0x7fff0001
+#define AL_SOURCE_RESAMPLER_SOFT                 0x7fff0003
+#define AL_RESAMPLER_NAME_SOFT                   0x7fff0004
+
+typedef const ALchar* (AL_APIENTRY*LPALGETSTRINGISOFT)(ALenum pname, ALsizei index);
+#ifdef AL_ALEXT_PROTOTYPES
+AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index);
+#endif
+#endif
+
 
 #if defined(_WIN64)
 #define SZFMT "%I64u"

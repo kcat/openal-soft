@@ -287,6 +287,8 @@ static const struct {
     DECL(alBufferSamplesSOFT),
     DECL(alGetBufferSamplesSOFT),
     DECL(alIsBufferFormatSupportedSOFT),
+
+    DECL(alGetStringiSOFT),
 };
 #undef DECL
 
@@ -692,6 +694,11 @@ static const struct {
     DECL(AL_EQUALIZER_HIGH_CUTOFF),
 
     DECL(AL_DEDICATED_GAIN),
+
+    DECL(AL_NUM_RESAMPLERS_SOFT),
+    DECL(AL_DEFAULT_RESAMPLER_SOFT),
+    DECL(AL_SOURCE_RESAMPLER_SOFT),
+    DECL(AL_RESAMPLER_NAME_SOFT),
 };
 #undef DECL
 

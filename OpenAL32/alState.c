@@ -47,6 +47,12 @@ static const ALchar alErrInvalidValue[] = "Invalid Value";
 static const ALchar alErrInvalidOp[] = "Invalid Operation";
 static const ALchar alErrOutOfMemory[] = "Out of Memory";
 
+/* Resampler strings */
+static const ALchar alPointResampler[] = "Zero-Order Hold (Point)";
+static const ALchar alLinearResampler[] = "Linear";
+static const ALchar alSinc4Resampler[] = "4-Point Sinc";
+static const ALchar alBSincResampler[] = "Band-limited Sinc (12/24)";
+
 AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
 {
     ALCcontext *context;
@@ -161,6 +167,15 @@ AL_API ALboolean AL_APIENTRY alGetBoolean(ALenum pname)
             value = AL_TRUE;
         break;
 
+    case AL_NUM_RESAMPLERS_SOFT:
+        /* Always non-0. */
+        value = AL_TRUE;
+        break;
+
+    case AL_DEFAULT_RESAMPLER_SOFT:
+        value = ResamplerDefault ? AL_TRUE : AL_FALSE;
+        break;
+
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
@@ -204,6 +219,14 @@ AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
 
     case AL_GAIN_LIMIT_SOFT:
         value = (ALdouble)GAIN_MIX_MAX/context->GainBoost;
+        break;
+
+    case AL_NUM_RESAMPLERS_SOFT:
+        value = (ALdouble)(ResamplerMax + 1);
+        break;
+
+    case AL_DEFAULT_RESAMPLER_SOFT:
+        value = (ALdouble)ResamplerDefault;
         break;
 
     default:
@@ -251,6 +274,14 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
         value = GAIN_MIX_MAX/context->GainBoost;
         break;
 
+    case AL_NUM_RESAMPLERS_SOFT:
+        value = (ALfloat)(ResamplerMax + 1);
+        break;
+
+    case AL_DEFAULT_RESAMPLER_SOFT:
+        value = (ALfloat)ResamplerDefault;
+        break;
+
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
@@ -294,6 +325,14 @@ AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
 
     case AL_GAIN_LIMIT_SOFT:
         value = (ALint)(GAIN_MIX_MAX/context->GainBoost);
+        break;
+
+    case AL_NUM_RESAMPLERS_SOFT:
+        value = ResamplerMax + 1;
+        break;
+
+    case AL_DEFAULT_RESAMPLER_SOFT:
+        value = ResamplerDefault;
         break;
 
     default:
@@ -341,6 +380,14 @@ AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname)
         value = (ALint64SOFT)(GAIN_MIX_MAX/context->GainBoost);
         break;
 
+    case AL_NUM_RESAMPLERS_SOFT:
+        value = (ALint64SOFT)(ResamplerMax + 1);
+        break;
+
+    case AL_DEFAULT_RESAMPLER_SOFT:
+        value = (ALint64SOFT)ResamplerDefault;
+        break;
+
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
@@ -365,6 +412,8 @@ AL_API ALvoid AL_APIENTRY alGetBooleanv(ALenum pname, ALboolean *values)
             case AL_SPEED_OF_SOUND:
             case AL_DEFERRED_UPDATES_SOFT:
             case AL_GAIN_LIMIT_SOFT:
+            case AL_NUM_RESAMPLERS_SOFT:
+            case AL_DEFAULT_RESAMPLER_SOFT:
                 values[0] = alGetBoolean(pname);
                 return;
         }
@@ -399,6 +448,8 @@ AL_API ALvoid AL_APIENTRY alGetDoublev(ALenum pname, ALdouble *values)
             case AL_SPEED_OF_SOUND:
             case AL_DEFERRED_UPDATES_SOFT:
             case AL_GAIN_LIMIT_SOFT:
+            case AL_NUM_RESAMPLERS_SOFT:
+            case AL_DEFAULT_RESAMPLER_SOFT:
                 values[0] = alGetDouble(pname);
                 return;
         }
@@ -433,6 +484,8 @@ AL_API ALvoid AL_APIENTRY alGetFloatv(ALenum pname, ALfloat *values)
             case AL_SPEED_OF_SOUND:
             case AL_DEFERRED_UPDATES_SOFT:
             case AL_GAIN_LIMIT_SOFT:
+            case AL_NUM_RESAMPLERS_SOFT:
+            case AL_DEFAULT_RESAMPLER_SOFT:
                 values[0] = alGetFloat(pname);
                 return;
         }
@@ -467,6 +520,8 @@ AL_API ALvoid AL_APIENTRY alGetIntegerv(ALenum pname, ALint *values)
             case AL_SPEED_OF_SOUND:
             case AL_DEFERRED_UPDATES_SOFT:
             case AL_GAIN_LIMIT_SOFT:
+            case AL_NUM_RESAMPLERS_SOFT:
+            case AL_DEFAULT_RESAMPLER_SOFT:
                 values[0] = alGetInteger(pname);
                 return;
         }
@@ -499,6 +554,8 @@ AL_API void AL_APIENTRY alGetInteger64vSOFT(ALenum pname, ALint64SOFT *values)
             case AL_SPEED_OF_SOUND:
             case AL_DEFERRED_UPDATES_SOFT:
             case AL_GAIN_LIMIT_SOFT:
+            case AL_NUM_RESAMPLERS_SOFT:
+            case AL_DEFAULT_RESAMPLER_SOFT:
                 values[0] = alGetInteger64SOFT(pname);
                 return;
         }
@@ -686,4 +743,37 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void)
     ALCcontext_ProcessUpdates(context);
 
     ALCcontext_DecRef(context);
+}
+
+
+AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index)
+{
+    const char *ResamplerNames[] = {
+        alPointResampler, alLinearResampler,
+        alSinc4Resampler, alBSincResampler,
+    };
+    const ALchar *value = NULL;
+    ALCcontext *context;
+
+    static_assert(COUNTOF(ResamplerNames) == ResamplerMax+1, "Incorrect ResamplerNames list");
+
+    context = GetContextRef();
+    if(!context) return NULL;
+
+    switch(pname)
+    {
+    case AL_RESAMPLER_NAME_SOFT:
+        if(index < 0 || (size_t)index >= COUNTOF(ResamplerNames))
+            SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+        value = ResamplerNames[index];
+        break;
+
+    default:
+        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+    }
+
+done:
+    ALCcontext_DecRef(context);
+
+    return value;
 }

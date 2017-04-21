@@ -45,6 +45,8 @@ enum Resampler {
     LinearResampler,
     FIR4Resampler,
     BSincResampler,
+
+    ResamplerMax = BSincResampler
 };
 extern enum Resampler ResamplerDefault;
 

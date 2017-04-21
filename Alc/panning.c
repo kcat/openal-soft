@@ -1077,7 +1077,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         {
             bformatdec_free(device->AmbiDecoder);
             device->AmbiDecoder = NULL;
-            if(device->FmtChans == DevFmtAmbi3D && device->AmbiOrder == 1)
+            if(device->FmtChans == DevFmtAmbi3D && device->AmbiOrder > 1)
             {
                 if(!device->AmbiUp)
                     device->AmbiUp = ambiup_alloc();

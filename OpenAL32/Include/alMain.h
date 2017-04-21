@@ -141,10 +141,10 @@ AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum format);
 
 #ifndef AL_SOFT_source_resampler
 #define AL_SOFT_source_resampler
-#define AL_NUM_RESAMPLERS_SOFT                   0x7fff0000
-#define AL_DEFAULT_RESAMPLER_SOFT                0x7fff0001
-#define AL_SOURCE_RESAMPLER_SOFT                 0x7fff0003
-#define AL_RESAMPLER_NAME_SOFT                   0x7fff0004
+#define AL_NUM_RESAMPLERS_SOFT                   0x1210
+#define AL_DEFAULT_RESAMPLER_SOFT                0x1211
+#define AL_SOURCE_RESAMPLER_SOFT                 0x1212
+#define AL_RESAMPLER_NAME_SOFT                   0x1213
 
 typedef const ALchar* (AL_APIENTRY*LPALGETSTRINGISOFT)(ALenum pname, ALsizei index);
 #ifdef AL_ALEXT_PROTOTYPES

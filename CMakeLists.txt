@@ -264,12 +264,11 @@ HAVE_C11_ALIGNAS)
 # Check if we have C11 _Atomic
 CHECK_C_SOURCE_COMPILES(
 "#include <stdatomic.h>
- const int _Atomic foo = ATOMIC_VAR_INIT(~0);
- int _Atomic bar = ATOMIC_VAR_INIT(0);
+ int _Atomic foo = ATOMIC_VAR_INIT(0);
  int main()
  {
-     atomic_fetch_add(&bar, 2);
-     return atomic_load(&foo);
+     atomic_fetch_add(&foo, 2);
+     return 0;
  }"
 HAVE_C11_ATOMIC)
 

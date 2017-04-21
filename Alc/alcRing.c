@@ -103,16 +103,16 @@ void ll_ringbuffer_reset(ll_ringbuffer_t *rb)
  * elements in front of the read pointer and behind the write pointer. */
 size_t ll_ringbuffer_read_space(const ll_ringbuffer_t *rb)
 {
-    size_t w = ATOMIC_LOAD(&rb->write_ptr, almemory_order_acquire) & rb->size_mask;
-    size_t r = ATOMIC_LOAD(&rb->read_ptr, almemory_order_acquire) & rb->size_mask;
+    size_t w = ATOMIC_LOAD(&CONST_CAST(ll_ringbuffer_t*,rb)->write_ptr, almemory_order_acquire);
+    size_t r = ATOMIC_LOAD(&CONST_CAST(ll_ringbuffer_t*,rb)->read_ptr, almemory_order_acquire);
     return (w-r) & rb->size_mask;
 }
 /* Return the number of elements available for writing. This is the number of
  * elements in front of the write pointer and behind the read pointer. */
 size_t ll_ringbuffer_write_space(const ll_ringbuffer_t *rb)
 {
-    size_t w = ATOMIC_LOAD(&rb->write_ptr, almemory_order_acquire) & rb->size_mask;
-    size_t r = ATOMIC_LOAD(&rb->read_ptr, almemory_order_acquire) & rb->size_mask;
+    size_t w = ATOMIC_LOAD(&CONST_CAST(ll_ringbuffer_t*,rb)->write_ptr, almemory_order_acquire);
+    size_t r = ATOMIC_LOAD(&CONST_CAST(ll_ringbuffer_t*,rb)->read_ptr, almemory_order_acquire);
     return (r-w-1) & rb->size_mask;
 }
 
@@ -256,8 +256,10 @@ void ll_ringbuffer_get_read_vector(const ll_ringbuffer_t *rb, ll_ringbuffer_data
     size_t cnt2;
     size_t w, r;
 
-    w = ATOMIC_LOAD(&rb->write_ptr, almemory_order_acquire) & rb->size_mask;
-    r = ATOMIC_LOAD(&rb->read_ptr, almemory_order_acquire) & rb->size_mask;
+    w = ATOMIC_LOAD(&CONST_CAST(ll_ringbuffer_t*,rb)->write_ptr, almemory_order_acquire);
+    r = ATOMIC_LOAD(&CONST_CAST(ll_ringbuffer_t*,rb)->read_ptr, almemory_order_acquire);
+    w &= rb->size_mask;
+    r &= rb->size_mask;
     free_cnt = (w-r) & rb->size_mask;
 
     cnt2 = r + free_cnt;
@@ -289,8 +291,10 @@ void ll_ringbuffer_get_write_vector(const ll_ringbuffer_t *rb, ll_ringbuffer_dat
     size_t cnt2;
     size_t w, r;
 
-    w = ATOMIC_LOAD(&rb->write_ptr, almemory_order_acquire) & rb->size_mask;
-    r = ATOMIC_LOAD(&rb->read_ptr, almemory_order_acquire) & rb->size_mask;
+    w = ATOMIC_LOAD(&CONST_CAST(ll_ringbuffer_t*,rb)->write_ptr, almemory_order_acquire);
+    r = ATOMIC_LOAD(&CONST_CAST(ll_ringbuffer_t*,rb)->read_ptr, almemory_order_acquire);
+    w &= rb->size_mask;
+    r &= rb->size_mask;
     free_cnt = (r-w-1) & rb->size_mask;
 
     cnt2 = w + free_cnt;

@@ -1276,7 +1276,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
 
 static void CalcSourceParams(ALvoice *voice, ALCcontext *context, ALboolean force)
 {
-    const ALbufferlistitem *BufferListItem;
+    ALbufferlistitem *BufferListItem;
     struct ALvoiceProps *props;
 
     props = ATOMIC_EXCHANGE_PTR(&voice->Update, NULL, almemory_order_acq_rel);

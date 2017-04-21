@@ -369,9 +369,8 @@ enum Resampler {
     LinearResampler,
     FIR4Resampler,
     BSincResampler,
-
-    ResamplerDefault = LinearResampler
 };
+extern enum Resampler ResamplerDefault;
 
 enum HrtfRequestMode {
     Hrtf_Default = 0,

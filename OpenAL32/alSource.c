@@ -2946,6 +2946,7 @@ static void InitSourceParams(ALsource *Source, ALsizei num_sends)
     Source->HeadRelative = AL_FALSE;
     Source->Looping = AL_FALSE;
     Source->DistanceModel = DefaultDistanceModel;
+    Source->Resampler = ResamplerDefault;
     Source->DirectChannels = AL_FALSE;
 
     Source->StereoPan[0] = DEG2RAD( 30.0f);
@@ -3054,6 +3055,7 @@ static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_send
     }
     props->HeadRelative = source->HeadRelative;
     props->DistanceModel = source->DistanceModel;
+    props->Resampler = source->Resampler;
     props->DirectChannels = source->DirectChannels;
 
     props->DryGainHFAuto = source->DryGainHFAuto;

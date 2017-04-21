@@ -43,6 +43,7 @@ typedef struct ALsource {
     ALboolean HeadRelative;
     ALboolean Looping;
     enum DistanceModel DistanceModel;
+    enum Resampler Resampler;
     ALboolean DirectChannels;
 
     ALboolean DryGainHFAuto;

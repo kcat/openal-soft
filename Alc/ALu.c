@@ -455,6 +455,7 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *p
     else
         voice->Step = maxi(fastf2i(Pitch*FRACTIONONE + 0.5f), 1);
     BsincPrepare(voice->Step, &voice->ResampleState.bsinc);
+    voice->Resampler = SelectResampler(props->Resampler);
 
     /* Calculate gains */
     DryGain  = clampf(SourceVolume, MinVolume, MaxVolume);
@@ -1095,6 +1096,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
     else
         voice->Step = maxi(fastf2i(Pitch*FRACTIONONE + 0.5f), 1);
     BsincPrepare(voice->Step, &voice->ResampleState.bsinc);
+    voice->Resampler = SelectResampler(props->Resampler);
 
     voice->Flags &= ~(VOICE_IS_HRTF | VOICE_HAS_NFC);
     if(Device->Render_Mode == HrtfRender)

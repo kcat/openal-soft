@@ -40,6 +40,14 @@ struct ALvoice;
 struct ALeffectslot;
 
 
+enum Resampler {
+    PointResampler,
+    LinearResampler,
+    FIR4Resampler,
+    BSincResampler,
+};
+extern enum Resampler ResamplerDefault;
+
 /* The number of distinct scale and phase intervals within the filter table. */
 #define BSINC_SCALE_BITS  4
 #define BSINC_SCALE_COUNT (1<<BSINC_SCALE_BITS)
@@ -65,6 +73,11 @@ typedef struct BsincState {
 typedef union InterpState {
     BsincState bsinc;
 } InterpState;
+
+typedef const ALfloat* (*ResamplerFunc)(const InterpState *state,
+    const ALfloat *restrict src, ALsizei frac, ALint increment,
+    ALfloat *restrict dst, ALsizei dstlen
+);
 
 
 typedef union aluVector {
@@ -172,6 +185,7 @@ struct ALvoiceProps {
     ALfloat Orientation[2][3];
     ALboolean HeadRelative;
     enum DistanceModel DistanceModel;
+    enum Resampler Resampler;
     ALboolean DirectChannels;
 
     ALboolean DryGainHFAuto;
@@ -245,6 +259,8 @@ typedef struct ALvoice {
     /** Current target parameters used for mixing. */
     ALint Step;
 
+    ResamplerFunc Resampler;
+
     ALuint Flags;
 
     ALuint Offset; /* Number of output samples mixed since starting. */
@@ -271,11 +287,6 @@ typedef struct ALvoice {
 
 void DeinitVoice(ALvoice *voice);
 
-
-typedef const ALfloat* (*ResamplerFunc)(const InterpState *state,
-    const ALfloat *restrict src, ALsizei frac, ALint increment,
-    ALfloat *restrict dst, ALsizei dstlen
-);
 
 typedef void (*MixerFunc)(const ALfloat *data, ALsizei OutChans,
                           ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALfloat *CurrentGains,
@@ -364,20 +375,11 @@ inline ALfloat resample_fir4(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat v
 }
 
 
-enum Resampler {
-    PointResampler,
-    LinearResampler,
-    FIR4Resampler,
-    BSincResampler,
-};
-extern enum Resampler ResamplerDefault;
-
 enum HrtfRequestMode {
     Hrtf_Default = 0,
     Hrtf_Enable = 1,
     Hrtf_Disable = 2,
 };
-
 
 void aluInitMixer(void);
 

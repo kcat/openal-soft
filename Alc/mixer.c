@@ -53,7 +53,6 @@ enum Resampler ResamplerDefault = LinearResampler;
 
 static MixerFunc MixSamples = Mix_C;
 static HrtfMixerFunc MixHrtfSamples = MixHrtf_C;
-static ResamplerFunc ResampleSamples = Resample_point32_C;
 
 MixerFunc SelectMixer(void)
 {
@@ -177,7 +176,6 @@ void aluInitMixer(void)
 
     MixHrtfSamples = SelectHrtfMixer();
     MixSamples = SelectMixer();
-    ResampleSamples = SelectResampler(ResamplerDefault);
 }
 
 
@@ -295,7 +293,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
     IrSize = (Device->HrtfHandle ? Device->HrtfHandle->irSize : 0);
 
     Resample = ((increment == FRACTIONONE && DataPosFrac == 0) ?
-                Resample_copy32_C : ResampleSamples);
+                Resample_copy32_C : voice->Resampler);
 
     Counter = (voice->Flags&VOICE_IS_MOVING) ? SamplesToDo : 0;
     OutPos = 0;

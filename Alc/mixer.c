@@ -507,25 +507,32 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                     }
                     else
                     {
-                        HrtfState backupstate = parms->Hrtf.State;
                         ALfloat gain;
 
                         /* The old coefficients need to fade to silence
                          * completely since they'll be replaced after the mix.
                          * So it needs to fade out over DstBufferSize instead
                          * of Counter.
+                         *
+                         * Don't bother with the fade out when starting from
+                         * silence.
                          */
-                        hrtfparams.Coeffs = SAFE_CONST(ALfloat2*,parms->Hrtf.Old.Coeffs);
-                        hrtfparams.Delay[0] = parms->Hrtf.Old.Delay[0];
-                        hrtfparams.Delay[1] = parms->Hrtf.Old.Delay[1];
-                        hrtfparams.Gain = parms->Hrtf.Old.Gain;
-                        hrtfparams.GainStep = -hrtfparams.Gain /
-                                              (ALfloat)DstBufferSize;
-                        MixHrtfSamples(
-                            voice->Direct.Buffer[lidx], voice->Direct.Buffer[ridx],
-                            samples, voice->Offset, OutPos, IrSize, &hrtfparams,
-                            &backupstate, DstBufferSize
-                        );
+                        if(parms->Hrtf.Old.Gain > GAIN_SILENCE_THRESHOLD)
+                        {
+                            HrtfState backupstate = parms->Hrtf.State;
+
+                            hrtfparams.Coeffs = SAFE_CONST(ALfloat2*,parms->Hrtf.Old.Coeffs);
+                            hrtfparams.Delay[0] = parms->Hrtf.Old.Delay[0];
+                            hrtfparams.Delay[1] = parms->Hrtf.Old.Delay[1];
+                            hrtfparams.Gain = parms->Hrtf.Old.Gain;
+                            hrtfparams.GainStep = -hrtfparams.Gain /
+                                                  (ALfloat)DstBufferSize;
+                            MixHrtfSamples(
+                                voice->Direct.Buffer[lidx], voice->Direct.Buffer[ridx],
+                                samples, voice->Offset, OutPos, IrSize, &hrtfparams,
+                                &backupstate, DstBufferSize
+                            );
+                        }
 
                         /* The new coefficients need to fade in completely
                          * since they're replacing the old ones. To keep the

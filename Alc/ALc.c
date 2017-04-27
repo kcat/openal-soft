@@ -2192,13 +2192,19 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->FOAOut.NumChannels = device->Dry.NumChannels;
     }
 
-    /* Need to delay returning failure until replacement Send arrays have been
-     * allocated with the appropriate size.
-     */
     device->NumAuxSends = new_sends;
     TRACE("Max sources: %d (%d + %d), effect slots: %d, sends: %d\n",
           device->SourcesMax, device->NumMonoSources, device->NumStereoSources,
           device->AuxiliaryEffectSlotMax, device->NumAuxSends);
+
+    if(GetConfigValueBool(alstr_get_cstr(device->DeviceName), NULL, "output-limiter", 1))
+        device->LimiterGain = 1.0f;
+    else
+        device->LimiterGain = 0.0f;
+
+    /* Need to delay returning failure until replacement Send arrays have been
+     * allocated with the appropriate size.
+     */
     update_failed = AL_FALSE;
     SetMixerFPUMode(&oldMode);
     if(device->DefaultSlot)
@@ -3794,6 +3800,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->FOAOut.NumChannels = 0;
     device->RealOut.Buffer = NULL;
     device->RealOut.NumChannels = 0;
+    device->LimiterGain = 1.0f;
     device->AvgSpeakerDist = 0.0f;
 
     ATOMIC_INIT(&device->ContextList, NULL);
@@ -4322,6 +4329,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->FOAOut.NumChannels = 0;
     device->RealOut.Buffer = NULL;
     device->RealOut.NumChannels = 0;
+    device->LimiterGain = 1.0f;
     device->AvgSpeakerDist = 0.0f;
 
     ATOMIC_INIT(&device->ContextList, NULL);

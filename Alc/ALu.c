@@ -1333,6 +1333,49 @@ static void UpdateContextSources(ALCcontext *ctx, const struct ALeffectslotArray
 }
 
 
+static ALfloat ApplyLimiter(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALsizei NumChans,
+                            const ALfloat AttackRate, const ALfloat ReleaseRate,
+                            const ALfloat InGain, ALfloat (*restrict Gains),
+                            const ALsizei SamplesToDo)
+{
+    bool do_limit = false;
+    ALsizei c, i;
+
+    OutBuffer = ASSUME_ALIGNED(OutBuffer, 16);
+    Gains = ASSUME_ALIGNED(Gains, 16);
+
+    for(i = 0;i < SamplesToDo;i++)
+        Gains[i] = 1.0f;
+
+    for(c = 0;c < NumChans;c++)
+    {
+        ALfloat lastgain = InGain;
+        for(i = 0;i < SamplesToDo;i++)
+        {
+            /* Clamp limiter range to 0dB...-80dB. */
+            ALfloat gain = 1.0f / clampf(fabsf(OutBuffer[c][i]), 1.0f, 1000.0f);
+            if(lastgain >= gain)
+                lastgain = maxf(lastgain*AttackRate, gain);
+            else
+                lastgain = minf(lastgain/ReleaseRate, gain);
+            do_limit |= (lastgain < 1.0f);
+
+            lastgain = minf(lastgain, Gains[i]);
+            Gains[i] = lastgain;
+        }
+    }
+    if(do_limit)
+    {
+        for(c = 0;c < NumChans;c++)
+        {
+            for(i = 0;i < SamplesToDo;i++)
+                OutBuffer[c][i] *= Gains[i];
+        }
+    }
+
+    return Gains[SamplesToDo-1];
+}
+
 static inline ALfloat aluF2F(ALfloat val)
 { return val; }
 
@@ -1579,8 +1622,23 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         {
             ALfloat (*OutBuffer)[BUFFERSIZE] = device->RealOut.Buffer;
             ALsizei OutChannels = device->RealOut.NumChannels;
-            DistanceComp *DistComp = device->ChannelDelay;
+            DistanceComp *DistComp;
 
+            if(device->LimiterGain > 0.0f)
+            {
+                /* Limiter attack drops -80dB in 50ms. */
+                const ALfloat AttackRate = powf(0.0001f, 1.0f/(device->Frequency*0.05f));
+                /* Limiter release raises +80dB in 1s. */
+                const ALfloat ReleaseRate = powf(0.0001f, 1.0f/(device->Frequency*1.0f));
+
+                /* Use NFCtrlData for temp gain storage. */
+                device->LimiterGain = ApplyLimiter(OutBuffer, OutChannels,
+                    AttackRate, ReleaseRate, device->LimiterGain, device->NFCtrlData,
+                    SamplesToDo
+                );
+            }
+
+            DistComp = device->ChannelDelay;
 #define WRITE(T, a, b, c, d, e) do {                                          \
     Write_##T(SAFE_CONST(ALfloatBUFFERSIZE*,(a)), (b), (c), (d), (e));        \
     buffer = (T*)buffer + (d)*(e);                                            \

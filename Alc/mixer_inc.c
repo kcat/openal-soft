@@ -9,9 +9,6 @@
 #include "alu.h"
 
 
-#define MAX_UPDATE_SAMPLES 128
-
-
 static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*restrict Values)[2],
                                const ALsizei irSize,
                                const ALfloat (*restrict Coeffs)[2],
@@ -28,34 +25,24 @@ void MixHrtf(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
     ALfloat gainstep = hrtfparams->GainStep;
     ALfloat gain = hrtfparams->Gain;
     ALfloat left, right;
-    ALsizei pos, i;
+    ALsizei i;
 
-    for(pos = 0;pos < BufferSize;)
+    LeftOut  += OutPos;
+    RightOut += OutPos;
+    for(i = 0;i < BufferSize;i++)
     {
-        ALfloat out[MAX_UPDATE_SAMPLES][2];
-        ALsizei todo = mini(BufferSize-pos, MAX_UPDATE_SAMPLES);
+        hrtfstate->History[Offset&HRTF_HISTORY_MASK] = *(data++);
+        left = hrtfstate->History[(Offset-Delay[0])&HRTF_HISTORY_MASK];
+        right = hrtfstate->History[(Offset-Delay[1])&HRTF_HISTORY_MASK];
 
-        for(i = 0;i < todo;i++)
-        {
-            hrtfstate->History[Offset&HRTF_HISTORY_MASK] = data[pos++];
-            left = hrtfstate->History[(Offset-Delay[0])&HRTF_HISTORY_MASK];
-            right = hrtfstate->History[(Offset-Delay[1])&HRTF_HISTORY_MASK];
+        hrtfstate->Values[(Offset+IrSize)&HRIR_MASK][0] = 0.0f;
+        hrtfstate->Values[(Offset+IrSize)&HRIR_MASK][1] = 0.0f;
+        Offset++;
 
-            hrtfstate->Values[(Offset+IrSize)&HRIR_MASK][0] = 0.0f;
-            hrtfstate->Values[(Offset+IrSize)&HRIR_MASK][1] = 0.0f;
-            Offset++;
-
-            ApplyCoeffs(Offset, hrtfstate->Values, IrSize, Coeffs, left, right);
-            out[i][0] = hrtfstate->Values[Offset&HRIR_MASK][0]*gain;
-            out[i][1] = hrtfstate->Values[Offset&HRIR_MASK][1]*gain;
-            gain += gainstep;
-        }
-
-        for(i = 0;i < todo;i++)
-            LeftOut[OutPos+i] += out[i][0];
-        for(i = 0;i < todo;i++)
-            RightOut[OutPos+i] += out[i][1];
-        OutPos += todo;
+        ApplyCoeffs(Offset, hrtfstate->Values, IrSize, Coeffs, left, right);
+        *(LeftOut++)  += hrtfstate->Values[Offset&HRIR_MASK][0]*gain;
+        *(RightOut++) += hrtfstate->Values[Offset&HRIR_MASK][1]*gain;
+        gain += gainstep;
     }
     hrtfparams->Gain = gain;
 }
@@ -65,30 +52,18 @@ void MixDirectHrtf(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
                    const ALfloat (*restrict Coeffs)[2], ALfloat (*restrict Values)[2],
                    ALsizei BufferSize)
 {
-    ALfloat out[MAX_UPDATE_SAMPLES][2];
     ALfloat insample;
-    ALsizei pos, i;
+    ALsizei i;
 
-    for(pos = 0;pos < BufferSize;)
+    for(i = 0;i < BufferSize;i++)
     {
-        ALsizei todo = mini(BufferSize-pos, MAX_UPDATE_SAMPLES);
+        Values[(Offset+IrSize)&HRIR_MASK][0] = 0.0f;
+        Values[(Offset+IrSize)&HRIR_MASK][1] = 0.0f;
+        Offset++;
 
-        for(i = 0;i < todo;i++)
-        {
-            Values[(Offset+IrSize)&HRIR_MASK][0] = 0.0f;
-            Values[(Offset+IrSize)&HRIR_MASK][1] = 0.0f;
-            Offset++;
-
-            insample = *(data++);
-            ApplyCoeffs(Offset, Values, IrSize, Coeffs, insample, insample);
-            out[i][0] = Values[Offset&HRIR_MASK][0];
-            out[i][1] = Values[Offset&HRIR_MASK][1];
-        }
-
-        for(i = 0;i < todo;i++)
-            LeftOut[pos+i] += out[i][0];
-        for(i = 0;i < todo;i++)
-            RightOut[pos+i] += out[i][1];
-        pos += todo;
+        insample = *(data++);
+        ApplyCoeffs(Offset, Values, IrSize, Coeffs, insample, insample);
+        *(LeftOut++)  += Values[Offset&HRIR_MASK][0];
+        *(RightOut++) += Values[Offset&HRIR_MASK][1];
     }
 }

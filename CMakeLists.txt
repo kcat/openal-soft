@@ -330,6 +330,11 @@ ELSE()
         ENDIF()
     ENDFOREACH()
 
+    CHECK_C_COMPILER_FLAG(-fno-math-errno HAVE_FNO_MATH_ERRNO)
+    IF(HAVE_FNO_MATH_ERRNO)
+        SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} -fno-math-errno")
+    ENDIF()
+
     CHECK_C_SOURCE_COMPILES("int foo() __attribute__((destructor));
                              int main() {return 0;}" HAVE_GCC_DESTRUCTOR)
 

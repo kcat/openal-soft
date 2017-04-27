@@ -328,6 +328,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->stereoEncodingComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(enableApplyButton()));
     connect(ui->ambiFormatComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(enableApplyButton()));
+    connect(ui->outputLimiterCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
 
     connect(ui->decoderHQModeCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->decoderDistCompCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
@@ -641,6 +642,13 @@ void MainWindow::loadConfig(const QString &fname)
         updatePeriodCountSlider();
     }
 
+    if(settings.value("output-limiter").isNull())
+        ui->outputLimiterCheckBox->setCheckState(Qt::PartiallyChecked);
+    else
+        ui->outputLimiterCheckBox->setCheckState(
+            settings.value("output-limiter").toBool() ? Qt::Checked : Qt::Unchecked
+        );
+
     QString stereopan = settings.value("stereo-encoding").toString();
     ui->stereoEncodingComboBox->setCurrentIndex(0);
     if(stereopan.isEmpty() == false)
@@ -895,6 +903,14 @@ void MainWindow::saveConfig(const QString &fname) const
     settings.setValue("stereo-mode", getValueFromName(stereoModeList, ui->stereoModeCombo->currentText()));
     settings.setValue("stereo-encoding", getValueFromName(stereoEncList, ui->stereoEncodingComboBox->currentText()));
     settings.setValue("ambi-format", getValueFromName(ambiFormatList, ui->ambiFormatComboBox->currentText()));
+
+    Qt::CheckState limiter = ui->outputLimiterCheckBox->checkState();
+    if(limiter == Qt::PartiallyChecked)
+        settings.setValue("output-limiter", QString());
+    else if(limiter == Qt::Checked)
+        settings.setValue("output-limiter", QString("true"));
+    else if(limiter == Qt::Unchecked)
+        settings.setValue("output-limiter", QString("false"));
 
     settings.setValue("decoder/hq-mode",
         ui->decoderHQModeCheckBox->isChecked() ? QString("true") : QString(/*"false"*/)

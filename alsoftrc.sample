@@ -181,6 +181,12 @@
 #  than the default has no effect.
 #sends = 16
 
+## output-limiter:
+#  Applies a gain limiter on the final mixed output. This reduces the volume
+#  when the output samples would otherwise clamp, avoiding excessive clipping
+#  noise.
+#output-limiter = true
+
 ## volume-adjust:
 #  A global volume adjustment for source output, expressed in decibels. The
 #  value is logarithmic, so +6 will be a scale of (approximately) 2x, +12 will

@@ -129,7 +129,7 @@ to stereo output.</string>
         <x>380</x>
         <y>20</y>
         <width>91</width>
-        <height>21</height>
+        <height>29</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -236,9 +236,9 @@ otherwise be suitable for speakers.</string>
       <property name="geometry">
        <rect>
         <x>-11</x>
-        <y>200</y>
+        <y>180</y>
         <width>551</width>
-        <height>181</height>
+        <height>201</height>
        </rect>
       </property>
       <property name="title">
@@ -481,6 +481,27 @@ receiver.</string>
          <width>131</width>
          <height>21</height>
         </rect>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="outputLimiterCheckBox">
+       <property name="geometry">
+        <rect>
+         <x>30</x>
+         <y>160</y>
+         <width>231</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="toolTip">
+        <string>Applies a gain limiter on the final mixed output. This reduces the
+volume when the output samples would otherwise be clamped,
+avoiding excessive clipping noise.</string>
+       </property>
+       <property name="text">
+        <string>Enable Gain Limiter</string>
+       </property>
+       <property name="tristate">
+        <bool>true</bool>
        </property>
       </widget>
      </widget>
@@ -2107,7 +2128,7 @@ added by the ALC_EXT_DEDICATED extension.</string>
         <x>160</x>
         <y>20</y>
         <width>123</width>
-        <height>21</height>
+        <height>29</height>
        </rect>
       </property>
       <property name="sizeAdjustPolicy">

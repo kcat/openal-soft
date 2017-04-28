@@ -303,6 +303,30 @@ static ALvoid ALreverbState_Destruct(ALreverbState *State)
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,State));
 }
 
+/* The B-Format to A-Format conversion matrix. The arrangement of rows is
+ * deliberately chosen to align the resulting lines to their spatial opposites
+ * (0:above front left <-> 3:above back right, 1:below front right <-> 2:below
+ * back left). It's not quite opposite, since the A-Format results in a
+ * tetrahedron, but it's close enough. Should the model be extended to 8-lines
+ * in the future, true opposites can be used.
+ */
+static const aluMatrixf B2A = {{
+    { 0.288675134595f,  0.288675134595f,  0.288675134595f,  0.288675134595f },
+    { 0.288675134595f, -0.288675134595f, -0.288675134595f,  0.288675134595f },
+    { 0.288675134595f,  0.288675134595f, -0.288675134595f, -0.288675134595f },
+    { 0.288675134595f, -0.288675134595f,  0.288675134595f, -0.288675134595f }
+}};
+
+/* Converts A-Format to B-Format (transposed). */
+static const aluMatrixf A2B = {{
+    { 0.8660254038f,  0.8660254038f,  0.8660254038f,  0.8660254038f },
+    { 0.8660254038f, -0.8660254038f, -0.8660254038f,  0.8660254038f },
+    { 0.8660254038f,  0.8660254038f, -0.8660254038f, -0.8660254038f },
+    { 0.8660254038f, -0.8660254038f,  0.8660254038f, -0.8660254038f }
+}};
+
+static const ALfloat FadeStep = 1.0f / FADE_SAMPLES;
+
 /* This is a user config option for modifying the overall output of the reverb
  * effect.
  */
@@ -1275,14 +1299,6 @@ static aluMatrixf GetTransformFromVector(const ALfloat *vec)
 /* Update the early and late 3D panning gains. */
 static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, const ALfloat gain, const ALfloat earlyGain, const ALfloat lateGain, ALreverbState *State)
 {
-    /* Converts A-Format to B-Format (transposed). */
-    static const aluMatrixf A2B = {{
-        { 0.8660254038f,  0.8660254038f,  0.8660254038f,  0.8660254038f },
-        { 0.8660254038f, -0.8660254038f, -0.8660254038f,  0.8660254038f },
-        { 0.8660254038f,  0.8660254038f, -0.8660254038f, -0.8660254038f },
-        { 0.8660254038f, -0.8660254038f,  0.8660254038f, -0.8660254038f }
-    }};
-
     aluMatrixf transform, rot;
     ALsizei i;
 
@@ -1633,7 +1649,7 @@ static inline void VectorReverse(ALfloat vec[4])
  */
 #define DECL_TEMPLATE(T)                                                      \
 static ALvoid EarlyReflection_##T(ALreverbState *State, const ALsizei todo,   \
-                                  ALfloat fade, const ALfloat step,           \
+                                  ALfloat fade,                               \
                                   ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])\
 {                                                                             \
     ALsizei offset = State->Offset;                                           \
@@ -1675,7 +1691,7 @@ static ALvoid EarlyReflection_##T(ALreverbState *State, const ALsizei todo,   \
                         f[j]);                                                \
                                                                               \
         offset++;                                                             \
-        fade = minf(1.0f, fade + step);/*fade += step;*/                      \
+        fade = minf(1.0f, fade + FadeStep);                                   \
     }                                                                         \
 }
 DECL_TEMPLATE(Unfaded)
@@ -1720,7 +1736,7 @@ static inline ALfloat LateT60Filter(const ALsizei index, const ALfloat in, ALrev
  */
 #define DECL_TEMPLATE(T)                                                      \
 static ALvoid LateReverb_##T(ALreverbState *State, const ALsizei todo,        \
-                             ALfloat fade, const ALfloat step,                \
+                             ALfloat fade,                                    \
                              ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])     \
 {                                                                             \
     const ALfloat apFeedCoeff = State->ApFeedCoeff;                           \
@@ -1761,18 +1777,22 @@ static ALvoid LateReverb_##T(ALreverbState *State, const ALsizei todo,        \
             DelayLineIn(&State->Late.Delay[j], offset, f[j]);                 \
                                                                               \
         offset++;                                                             \
-        fade = minf(1.0f, fade + step);/*fade += step;*/                      \
+        fade = minf(1.0f, fade + FadeStep);                                   \
     }                                                                         \
 }
 DECL_TEMPLATE(Unfaded)
 DECL_TEMPLATE(Faded)
 #undef DECL_TEMPLATE
 
+typedef ALfloat (*ProcMethodType)(ALreverbState *State, const ALsizei todo, ALfloat fade,
+    const ALfloat (*restrict input)[MAX_UPDATE_SAMPLES],
+    ALfloat (*restrict early)[MAX_UPDATE_SAMPLES], ALfloat (*restrict late)[MAX_UPDATE_SAMPLES]);
+
 /* Perform the non-EAX reverb pass on a given input sample, resulting in
  * four-channel output.
  */
 static ALfloat VerbPass(ALreverbState *State, const ALsizei todo, ALfloat fade,
-                        const ALfloat step, ALfloat (*restrict input)[MAX_UPDATE_SAMPLES],
+                        const ALfloat (*restrict input)[MAX_UPDATE_SAMPLES],
                         ALfloat (*restrict early)[MAX_UPDATE_SAMPLES],
                         ALfloat (*restrict late)[MAX_UPDATE_SAMPLES])
 {
@@ -1793,19 +1813,19 @@ static ALfloat VerbPass(ALreverbState *State, const ALsizei todo, ALfloat fade,
     if(fade < 1.0f)
     {
         /* Generate early reflections. */
-        EarlyReflection_Faded(State, todo, fade, step, early);
+        EarlyReflection_Faded(State, todo, fade, early);
 
         /* Generate late reverb. */
-        LateReverb_Faded(State, todo, fade, step, late);
-        fade = minf(1.0f, fade + todo*step);
+        LateReverb_Faded(State, todo, fade, late);
+        fade = minf(1.0f, fade + todo*FadeStep);
     }
     else
     {
         /* Generate early reflections. */
-        EarlyReflection_Unfaded(State, todo, fade, step, early);
+        EarlyReflection_Unfaded(State, todo, fade, early);
 
         /* Generate late reverb. */
-        LateReverb_Unfaded(State, todo, fade, step, late);
+        LateReverb_Unfaded(State, todo, fade, late);
     }
 
     /* Step all delays forward one sample. */
@@ -1817,7 +1837,10 @@ static ALfloat VerbPass(ALreverbState *State, const ALsizei todo, ALfloat fade,
 /* Perform the EAX reverb pass on a given input sample, resulting in four-
  * channel output.
  */
-static ALfloat EAXVerbPass(ALreverbState *State, const ALsizei todo, ALfloat fade, const ALfloat step, ALfloat (*restrict input)[MAX_UPDATE_SAMPLES], ALfloat (*restrict early)[MAX_UPDATE_SAMPLES], ALfloat (*restrict late)[MAX_UPDATE_SAMPLES])
+static ALfloat EAXVerbPass(ALreverbState *State, const ALsizei todo, ALfloat fade,
+                           const ALfloat (*restrict input)[MAX_UPDATE_SAMPLES],
+                           ALfloat (*restrict early)[MAX_UPDATE_SAMPLES],
+                           ALfloat (*restrict late)[MAX_UPDATE_SAMPLES])
 {
     ALsizei i, c;
 
@@ -1843,19 +1866,19 @@ static ALfloat EAXVerbPass(ALreverbState *State, const ALsizei todo, ALfloat fad
     if(fade < 1.0f)
     {
         /* Generate early reflections. */
-        EarlyReflection_Faded(State, todo, fade, step, early);
+        EarlyReflection_Faded(State, todo, fade, early);
 
         /* Generate late reverb. */
-        LateReverb_Faded(State, todo, fade, step, late);
-        fade = minf(1.0f, fade + todo*step);
+        LateReverb_Faded(State, todo, fade, late);
+        fade = minf(1.0f, fade + todo*FadeStep);
     }
     else
     {
         /* Generate early reflections. */
-        EarlyReflection_Unfaded(State, todo, fade, step, early);
+        EarlyReflection_Unfaded(State, todo, fade, early);
 
         /* Generate late reverb. */
-        LateReverb_Unfaded(State, todo, fade, step, late);
+        LateReverb_Unfaded(State, todo, fade, late);
     }
 
     /* Step all delays forward. */
@@ -1864,23 +1887,9 @@ static ALfloat EAXVerbPass(ALreverbState *State, const ALsizei todo, ALfloat fad
     return fade;
 }
 
-static ALvoid ALreverbState_processStandard(ALreverbState *State, const ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], const ALuint NumChannels)
+static ALvoid ALreverbState_process(ALreverbState *State, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
 {
-    /* The B-Format to A-Format conversion matrix.  The arragement of rows
-     * is deliberately chosen to align the resulting lines to their spatial
-     * opposites (0:above front left <-> 3:above back right, 1:below front
-     * right <-> 2:below back left).  It's not quite opposite, since the
-     * A-Format results in a tetrahedron, but it's close enough.  Should the
-     * model be extended to 8-lines in the future, true opposites can be
-     * used.
-     */
-    static const aluMatrixf B2A = {{
-        { 0.288675134595f,  0.288675134595f,  0.288675134595f,  0.288675134595f },
-        { 0.288675134595f, -0.288675134595f, -0.288675134595f,  0.288675134595f },
-        { 0.288675134595f,  0.288675134595f, -0.288675134595f, -0.288675134595f },
-        { 0.288675134595f, -0.288675134595f,  0.288675134595f, -0.288675134595f }
-    }};
-    static const ALfloat FadeStep = 1.0f / FADE_SAMPLES;
+    ProcMethodType ReverbProc = State->IsEax ? EAXVerbPass : VerbPass;
     ALfloat (*restrict afmt)[MAX_UPDATE_SAMPLES] = State->AFormatSamples;
     ALfloat (*restrict early)[MAX_UPDATE_SAMPLES] = State->EarlySamples;
     ALfloat (*restrict late)[MAX_UPDATE_SAMPLES] = State->ReverbSamples;
@@ -1901,7 +1910,7 @@ static ALvoid ALreverbState_processStandard(ALreverbState *State, const ALuint S
             );
 
         /* Process the samples for reverb. */
-        fade = VerbPass(State, todo, fade, FadeStep, afmt, early, late);
+        fade = ReverbProc(State, todo, fade, afmt, early, late);
         if(UNEXPECTED(fadeCount < FADE_SAMPLES) && (fadeCount += todo) >= FADE_SAMPLES)
         {
             /* Update the cross-fading delay line taps. */
@@ -1934,86 +1943,6 @@ static ALvoid ALreverbState_processStandard(ALreverbState *State, const ALuint S
         base += todo;
     }
     State->FadeCount = fadeCount;
-}
-
-static ALvoid ALreverbState_processEax(ALreverbState *State, const ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], const ALuint NumChannels)
-{
-    /* The B-Format to A-Format conversion matrix.  The arragement of rows
-     * is deliberately chosen to align the resulting lines to their spatial
-     * opposites (0:above front left <-> 3:above back right, 1:below front
-     * right <-> 2:below back left).  It's not quite opposite, since the
-     * A-Format results in a tetrahedron, but it's close enough.  Should the
-     * model be extended to 8-lines in the future, true opposites can be
-     * used.
-     */
-    static const aluMatrixf B2A = {{
-        { 0.288675134595f,  0.288675134595f,  0.288675134595f,  0.288675134595f },
-        { 0.288675134595f, -0.288675134595f, -0.288675134595f,  0.288675134595f },
-        { 0.288675134595f,  0.288675134595f, -0.288675134595f, -0.288675134595f },
-        { 0.288675134595f, -0.288675134595f,  0.288675134595f, -0.288675134595f }
-    }};
-    static const ALfloat FadeStep = 1.0f / FADE_SAMPLES;
-    ALfloat (*restrict afmt)[MAX_UPDATE_SAMPLES] = State->AFormatSamples;
-    ALfloat (*restrict early)[MAX_UPDATE_SAMPLES] = State->EarlySamples;
-    ALfloat (*restrict late)[MAX_UPDATE_SAMPLES] = State->ReverbSamples;
-    ALsizei fadeCount = State->FadeCount;
-    ALfloat fade = (ALfloat)fadeCount / FADE_SAMPLES;
-    ALuint base, c;
-
-    /* Process reverb for these samples. */
-    for(base = 0;base < SamplesToDo;)
-    {
-        ALsizei todo = minu(SamplesToDo-base, MAX_UPDATE_SAMPLES);
-
-        memset(afmt, 0, 4*MAX_UPDATE_SAMPLES*sizeof(float));
-        for(c = 0;c < 4;c++)
-            MixRowSamples(afmt[c], B2A.m[c],
-                SamplesIn, MAX_EFFECT_CHANNELS, base, todo
-            );
-
-        /* Process the samples for EAX reverb. */
-        fade = EAXVerbPass(State, todo, fade, FadeStep, afmt, early, late);
-        if(UNEXPECTED(fadeCount < FADE_SAMPLES) && (fadeCount += todo) >= FADE_SAMPLES)
-        {
-            /* Update the cross-fading delay line taps. */
-            fadeCount = FADE_SAMPLES;
-            for(c = 0;c < 4;c++)
-            {
-                State->EarlyDelayTap[c][0] = State->EarlyDelayTap[c][1];
-                State->Early.Ap[c].Offset[0] = State->Early.Ap[c].Offset[1];
-                State->Early.Offset[c][0] = State->Early.Offset[c][1];
-                State->LateDelayTap[c][0] = State->LateDelayTap[c][1];
-                State->Late.Ap[c].Offset[0] = State->Late.Ap[c].Offset[1];
-                State->Late.Offset[c][0] = State->Late.Offset[c][1];
-            }
-        }
-
-        /* Mix the A-Format results to output, implicitly converting back to
-         * B-Format.
-         */
-        for(c = 0;c < 4;c++)
-            MixSamples(early[c], NumChannels, SamplesOut,
-                State->Early.CurrentGain[c], State->Early.PanGain[c],
-                SamplesToDo-base, base, todo
-            );
-        for(c = 0;c < 4;c++)
-            MixSamples(late[c], NumChannels, SamplesOut,
-                State->Late.CurrentGain[c], State->Late.PanGain[c],
-                SamplesToDo-base, base, todo
-            );
-
-        base += todo;
-    }
-    State->FadeCount = fadeCount;
-}
-
-static ALvoid ALreverbState_process(ALreverbState *State, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
-{
-    /* Process the EAX or non-EAX reverb effect. */
-    if(State->IsEax)
-        ALreverbState_processEax(State, SamplesToDo, SamplesIn, SamplesOut, NumChannels);
-    else
-        ALreverbState_processStandard(State, SamplesToDo, SamplesIn, SamplesOut, NumChannels);
 }
 
 

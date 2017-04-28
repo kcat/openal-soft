@@ -43,6 +43,12 @@
  */
 #define FADE_SAMPLES  128
 
+#ifdef __GNUC__
+#define UNEXPECTED(x) __builtin_expect((bool)(x), 0)
+#else
+#define UNEXPECTED(x) (x)
+#endif
+
 static MixerFunc MixSamples = Mix_C;
 static RowMixerFunc MixRowSamples = MixRow_C;
 
@@ -1874,11 +1880,12 @@ static ALvoid ALreverbState_processStandard(ALreverbState *State, const ALuint S
         { 0.288675134595f,  0.288675134595f, -0.288675134595f, -0.288675134595f },
         { 0.288675134595f, -0.288675134595f,  0.288675134595f, -0.288675134595f }
     }};
+    static const ALfloat FadeStep = 1.0f / FADE_SAMPLES;
     ALfloat (*restrict afmt)[MAX_UPDATE_SAMPLES] = State->AFormatSamples;
     ALfloat (*restrict early)[MAX_UPDATE_SAMPLES] = State->EarlySamples;
     ALfloat (*restrict late)[MAX_UPDATE_SAMPLES] = State->ReverbSamples;
-    ALfloat fade = (ALfloat)State->FadeCount / FADE_SAMPLES;
-    ALfloat step = 1.0f / FADE_SAMPLES;
+    ALsizei fadeCount = State->FadeCount;
+    ALfloat fade = (ALfloat)fadeCount / FADE_SAMPLES;
     ALuint base, c;
 
     /* Process reverb for these samples. */
@@ -1894,7 +1901,21 @@ static ALvoid ALreverbState_processStandard(ALreverbState *State, const ALuint S
             );
 
         /* Process the samples for reverb. */
-        fade = VerbPass(State, todo, fade, step, afmt, early, late);
+        fade = VerbPass(State, todo, fade, FadeStep, afmt, early, late);
+        if(UNEXPECTED(fadeCount < FADE_SAMPLES) && (fadeCount += todo) >= FADE_SAMPLES)
+        {
+            /* Update the cross-fading delay line taps. */
+            fadeCount = FADE_SAMPLES;
+            for(c = 0;c < 4;c++)
+            {
+                State->EarlyDelayTap[c][0] = State->EarlyDelayTap[c][1];
+                State->Early.Ap[c].Offset[0] = State->Early.Ap[c].Offset[1];
+                State->Early.Offset[c][0] = State->Early.Offset[c][1];
+                State->LateDelayTap[c][0] = State->LateDelayTap[c][1];
+                State->Late.Ap[c].Offset[0] = State->Late.Ap[c].Offset[1];
+                State->Late.Offset[c][0] = State->Late.Offset[c][1];
+            }
+        }
 
         /* Mix the A-Format results to output, implicitly converting back to
          * B-Format.
@@ -1912,6 +1933,7 @@ static ALvoid ALreverbState_processStandard(ALreverbState *State, const ALuint S
 
         base += todo;
     }
+    State->FadeCount = fadeCount;
 }
 
 static ALvoid ALreverbState_processEax(ALreverbState *State, const ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], const ALuint NumChannels)
@@ -1930,11 +1952,12 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, const ALuint Sample
         { 0.288675134595f,  0.288675134595f, -0.288675134595f, -0.288675134595f },
         { 0.288675134595f, -0.288675134595f,  0.288675134595f, -0.288675134595f }
     }};
+    static const ALfloat FadeStep = 1.0f / FADE_SAMPLES;
     ALfloat (*restrict afmt)[MAX_UPDATE_SAMPLES] = State->AFormatSamples;
     ALfloat (*restrict early)[MAX_UPDATE_SAMPLES] = State->EarlySamples;
     ALfloat (*restrict late)[MAX_UPDATE_SAMPLES] = State->ReverbSamples;
-    ALfloat fade = (ALfloat)State->FadeCount / FADE_SAMPLES;
-    ALfloat step = 1.0f / FADE_SAMPLES;
+    ALsizei fadeCount = State->FadeCount;
+    ALfloat fade = (ALfloat)fadeCount / FADE_SAMPLES;
     ALuint base, c;
 
     /* Process reverb for these samples. */
@@ -1949,7 +1972,21 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, const ALuint Sample
             );
 
         /* Process the samples for EAX reverb. */
-        fade = EAXVerbPass(State, todo, fade, step, afmt, early, late);
+        fade = EAXVerbPass(State, todo, fade, FadeStep, afmt, early, late);
+        if(UNEXPECTED(fadeCount < FADE_SAMPLES) && (fadeCount += todo) >= FADE_SAMPLES)
+        {
+            /* Update the cross-fading delay line taps. */
+            fadeCount = FADE_SAMPLES;
+            for(c = 0;c < 4;c++)
+            {
+                State->EarlyDelayTap[c][0] = State->EarlyDelayTap[c][1];
+                State->Early.Ap[c].Offset[0] = State->Early.Ap[c].Offset[1];
+                State->Early.Offset[c][0] = State->Early.Offset[c][1];
+                State->LateDelayTap[c][0] = State->LateDelayTap[c][1];
+                State->Late.Ap[c].Offset[0] = State->Late.Ap[c].Offset[1];
+                State->Late.Offset[c][0] = State->Late.Offset[c][1];
+            }
+        }
 
         /* Mix the A-Format results to output, implicitly converting back to
          * B-Format.
@@ -1967,6 +2004,7 @@ static ALvoid ALreverbState_processEax(ALreverbState *State, const ALuint Sample
 
         base += todo;
     }
+    State->FadeCount = fadeCount;
 }
 
 static ALvoid ALreverbState_process(ALreverbState *State, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
@@ -1976,28 +2014,6 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALuint SamplesToDo, co
         ALreverbState_processEax(State, SamplesToDo, SamplesIn, SamplesOut, NumChannels);
     else
         ALreverbState_processStandard(State, SamplesToDo, SamplesIn, SamplesOut, NumChannels);
-
-    /* Update the cross-fading delay line taps. */
-    if(State->FadeCount < FADE_SAMPLES)
-    {
-        State->FadeCount += SamplesToDo;
-        if(State->FadeCount >= FADE_SAMPLES)
-        {
-            ALsizei i;
-
-            State->FadeCount = FADE_SAMPLES;
-
-            for(i = 0;i < 4;i++)
-            {
-                State->EarlyDelayTap[i][0] = State->EarlyDelayTap[i][1];
-                State->Early.Ap[i].Offset[0] = State->Early.Ap[i].Offset[1];
-                State->Early.Offset[i][0] = State->Early.Offset[i][1];
-                State->LateDelayTap[i][0] = State->LateDelayTap[i][1];
-                State->Late.Ap[i].Offset[0] = State->Late.Ap[i].Offset[1];
-                State->Late.Offset[i][0] = State->Late.Offset[i][1];
-            }
-        }
-    }
 }
 
 

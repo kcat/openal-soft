@@ -1691,7 +1691,7 @@ static ALvoid EarlyReflection_##T(ALreverbState *State, const ALsizei todo,   \
                         f[j]);                                                \
                                                                               \
         offset++;                                                             \
-        fade = minf(1.0f, fade + FadeStep);                                   \
+        fade += FadeStep;                                                     \
     }                                                                         \
 }
 DECL_TEMPLATE(Unfaded)
@@ -1777,7 +1777,7 @@ static ALvoid LateReverb_##T(ALreverbState *State, const ALsizei todo,        \
             DelayLineIn(&State->Late.Delay[j], offset, f[j]);                 \
                                                                               \
         offset++;                                                             \
-        fade = minf(1.0f, fade + FadeStep);                                   \
+        fade += FadeStep;                                                     \
     }                                                                         \
 }
 DECL_TEMPLATE(Unfaded)
@@ -1901,6 +1901,9 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALuint SamplesToDo, co
     for(base = 0;base < SamplesToDo;)
     {
         ALsizei todo = minu(SamplesToDo-base, MAX_UPDATE_SAMPLES);
+        /* If cross-fading, don't do more samples than there are to fade. */
+        if(FADE_SAMPLES-fadeCount > 0)
+            todo = mini(todo, FADE_SAMPLES-fadeCount);
 
         /* Convert B-Format to A-Format for processing. */
         memset(afmt, 0, sizeof(*afmt)*4);
@@ -1915,6 +1918,7 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALuint SamplesToDo, co
         {
             /* Update the cross-fading delay line taps. */
             fadeCount = FADE_SAMPLES;
+            fade = 1.0f;
             for(c = 0;c < 4;c++)
             {
                 State->EarlyDelayTap[c][0] = State->EarlyDelayTap[c][1];

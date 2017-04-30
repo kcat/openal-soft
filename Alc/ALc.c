@@ -3015,8 +3015,8 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
 static inline ALCsizei NumAttrsForDevice(ALCdevice *device)
 {
     if(device->Type == Loopback && device->FmtChans == DevFmtAmbi3D)
-        return 23;
-    return 17;
+        return 25;
+    return 19;
 }
 
 static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values)
@@ -3162,6 +3162,9 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
 
             values[i++] = ALC_HRTF_STATUS_SOFT;
             values[i++] = device->HrtfStatus;
+
+            values[i++] = ALC_OUTPUT_LIMITER_SOFT;
+            values[i++] = (device->LimiterGain > 0.0f) ? ALC_TRUE : ALC_FALSE;
             almtx_unlock(&device->BackendLock);
 
             values[i++] = 0;
@@ -3268,6 +3271,10 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             almtx_unlock(&device->BackendLock);
             return 1;
 
+        case ALC_OUTPUT_LIMITER_SOFT:
+            values[0] = (device->LimiterGain > 0.0f) ? ALC_TRUE : ALC_FALSE;
+            return 1;
+
         default:
             alcSetError(device, ALC_INVALID_ENUM);
             return 0;
@@ -3371,6 +3378,9 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
 
                     values[i++] = ALC_HRTF_STATUS_SOFT;
                     values[i++] = device->HrtfStatus;
+
+                    values[i++] = ALC_OUTPUT_LIMITER_SOFT;
+                    values[i++] = (device->LimiterGain > 0.0f) ? ALC_TRUE : ALC_FALSE;
 
                     clock = V0(device->Backend,getClockLatency)();
                     values[i++] = ALC_DEVICE_CLOCK_SOFT;

@@ -152,6 +152,11 @@ AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index);
 #endif
 #endif
 
+#ifndef ALC_SOFT_output_limiter
+#define ALC_SOFT_output_limiter
+#define ALC_OUTPUT_LIMITER_SOFT                  0x199A
+#endif
+
 
 #if defined(_WIN64)
 #define SZFMT "%I64u"

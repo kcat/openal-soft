@@ -364,6 +364,8 @@ static const struct {
     DECL(ALC_N3D_SOFT),
     DECL(ALC_SN3D_SOFT),
 
+    DECL(ALC_OUTPUT_LIMITER_SOFT),
+
     DECL(ALC_NO_ERROR),
     DECL(ALC_INVALID_DEVICE),
     DECL(ALC_INVALID_CONTEXT),
@@ -777,7 +779,7 @@ static const ALCchar alcExtensionList[] =
     "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE "
     "ALC_EXT_DEDICATED ALC_EXT_disconnect ALC_EXT_EFX "
     "ALC_EXT_thread_local_context ALC_SOFTX_device_clock ALC_SOFT_HRTF "
-    "ALC_SOFT_loopback ALC_SOFT_pause_device";
+    "ALC_SOFT_loopback ALC_SOFTX_output_limiter ALC_SOFT_pause_device";
 static const ALCint alcMajorVersion = 1;
 static const ALCint alcMinorVersion = 1;
 
@@ -1757,6 +1759,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 {
     enum HrtfRequestMode hrtf_userreq = Hrtf_Default;
     enum HrtfRequestMode hrtf_appreq = Hrtf_Default;
+    ALCenum gainLimiter = (device->LimiterGain > 0.0f);
     const ALsizei old_sends = device->NumAuxSends;
     ALsizei new_sends = device->NumAuxSends;
     enum DevFmtChannels oldChans;
@@ -1768,6 +1771,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     FPUCtl oldMode;
     size_t size;
     ALCsizei i;
+    int val;
 
     // Check for attributes
     if(device->Type == Loopback)
@@ -1869,6 +1873,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 case ALC_HRTF_ID_SOFT:
                     hrtf_id = attrList[attrIdx + 1];
                     TRACE_ATTR(ALC_HRTF_ID_SOFT, hrtf_id);
+                    break;
+
+                case ALC_OUTPUT_LIMITER_SOFT:
+                    gainLimiter = attrList[attrIdx + 1];
+                    TRACE_ATTR(ALC_OUTPUT_LIMITER_SOFT, gainLimiter);
                     break;
 
                 default:
@@ -1991,6 +2000,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 case ALC_HRTF_ID_SOFT:
                     hrtf_id = attrList[attrIdx + 1];
                     TRACE_ATTR(ALC_HRTF_ID_SOFT, hrtf_id);
+                    break;
+
+                case ALC_OUTPUT_LIMITER_SOFT:
+                    gainLimiter = attrList[attrIdx + 1];
+                    TRACE_ATTR(ALC_OUTPUT_LIMITER_SOFT, gainLimiter);
                     break;
 
                 default:
@@ -2197,10 +2211,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
           device->SourcesMax, device->NumMonoSources, device->NumStereoSources,
           device->AuxiliaryEffectSlotMax, device->NumAuxSends);
 
-    if(GetConfigValueBool(alstr_get_cstr(device->DeviceName), NULL, "output-limiter", 1))
-        device->LimiterGain = 1.0f;
-    else
-        device->LimiterGain = 0.0f;
+    if(ConfigValueBool(alstr_get_cstr(device->DeviceName), NULL, "output-limiter", &val))
+        gainLimiter = val;
+    device->LimiterGain = gainLimiter ? 1.0f : 0.0f;
 
     /* Need to delay returning failure until replacement Send arrays have been
      * allocated with the appropriate size.

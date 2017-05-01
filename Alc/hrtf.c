@@ -67,20 +67,28 @@ static struct HrtfEntry *LoadedHrtfs = NULL;
  * will return an index between 0 and (evcount - 1). Assumes the FPU is in
  * round-to-zero mode.
  */
-static ALsizei CalcEvIndex(ALsizei evcount, ALfloat ev)
+static ALsizei CalcEvIndex(ALsizei evcount, ALfloat ev, ALfloat *mu)
 {
-    ev = (F_PI_2 + ev) * (evcount-1) / F_PI;
-    return mini(fastf2i(ev + 0.5f), evcount-1);
+    ALsizei idx;
+    ev = (F_PI_2+ev) * (evcount-1) / F_PI;
+    idx = mini(fastf2i(ev), evcount-1);
+
+    *mu = ev - idx;
+    return idx;
 }
 
 /* Calculate the azimuth index given the polar azimuth in radians. This will
  * return an index between 0 and (azcount - 1). Assumes the FPU is in round-to-
  * zero mode.
  */
-static ALsizei CalcAzIndex(ALsizei azcount, ALfloat az)
+static ALsizei CalcAzIndex(ALsizei azcount, ALfloat az, ALfloat *mu)
 {
-    az = (F_TAU + az) * azcount / F_TAU;
-    return fastf2i(az + 0.5f) % azcount;
+    ALsizei idx;
+    az = (F_TAU+az) * azcount / F_TAU;
+
+    idx = fastf2i(az) % azcount;
+    *mu = az - floorf(az);
+    return idx;
 }
 
 /* Calculates static HRIR coefficients and delays for the given polar elevation
@@ -88,38 +96,87 @@ static ALsizei CalcAzIndex(ALsizei azcount, ALfloat az)
  */
 void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat (*coeffs)[2], ALsizei *delays)
 {
-    ALsizei evidx, azidx, idx;
+    ALsizei evidx, azidx, idx[4];
     ALsizei evoffset;
+    ALfloat emu, amu[2];
+    ALfloat blend[4];
     ALfloat dirfact;
-    ALsizei i;
+    ALsizei i, c;
 
     dirfact = 1.0f - (spread / F_TAU);
 
-    /* Claculate elevation index. */
-    evidx = CalcEvIndex(Hrtf->evCount, elevation);
+    /* Claculate the lower elevation index. */
+    evidx = CalcEvIndex(Hrtf->evCount, elevation, &emu);
     evoffset = Hrtf->evOffset[evidx];
 
-    /* Calculate azimuth index. */
-    azidx = CalcAzIndex(Hrtf->azCount[evidx], azimuth);
+    /* Calculate lower azimuth index. */
+    azidx= CalcAzIndex(Hrtf->azCount[evidx], azimuth, &amu[0]);
 
-    /* Calculate the HRIR indices for left and right channels. */
-    idx = evoffset + azidx;
+    /* Calculate the lower HRIR indices. */
+    idx[0] = evoffset + azidx;
+    idx[1] = evoffset + ((azidx+1) % Hrtf->azCount[evidx]);
+    if(evidx < Hrtf->evCount-1)
+    {
+        /* Increment elevation to the next (upper) index. */
+        evidx++;
+        evoffset = Hrtf->evOffset[evidx];
 
-    /* Calculate the HRIR delays. */
-    delays[0] = fastf2i(Hrtf->delays[idx][0]*dirfact + 0.5f);
-    delays[1] = fastf2i(Hrtf->delays[idx][1]*dirfact + 0.5f);
+        /* Calculate upper azimuth index. */
+        azidx = CalcAzIndex(Hrtf->azCount[evidx], azimuth, &amu[1]);
+
+        /* Calculate the upper HRIR indices. */
+        idx[2] = evoffset + azidx;
+        idx[3] = evoffset + ((azidx+1) % Hrtf->azCount[evidx]);
+    }
+    else
+    {
+        /* If the lower elevation is the top index, the upper elevation is the
+         * same as the lower.
+         */
+        amu[1] = amu[0];
+        idx[2] = idx[0];
+        idx[3] = idx[1];
+    }
+
+    /* Calculate bilinear blending weights, attenuated according to the
+     * directional panning factor.
+     */
+    blend[0] = (1.0f-emu) * (1.0f-amu[0]) * dirfact;
+    blend[1] = (1.0f-emu) * (     amu[0]) * dirfact;
+    blend[2] = (     emu) * (1.0f-amu[1]) * dirfact;
+    blend[3] = (     emu) * (     amu[1]) * dirfact;
+
+    /* Calculate the blended HRIR delays. */
+    delays[0] = fastf2i(
+        Hrtf->delays[idx[0]][0]*blend[0] + Hrtf->delays[idx[1]][0]*blend[1] +
+        Hrtf->delays[idx[2]][0]*blend[2] + Hrtf->delays[idx[3]][0]*blend[3] + 0.5f
+    );
+    delays[1] = fastf2i(
+        Hrtf->delays[idx[0]][1]*blend[0] + Hrtf->delays[idx[1]][1]*blend[1] +
+        Hrtf->delays[idx[2]][1]*blend[2] + Hrtf->delays[idx[3]][1]*blend[3] + 0.5f
+    );
 
     /* Calculate the sample offsets for the HRIR indices. */
-    idx *= Hrtf->irSize;
+    idx[0] *= Hrtf->irSize;
+    idx[1] *= Hrtf->irSize;
+    idx[2] *= Hrtf->irSize;
+    idx[3] *= Hrtf->irSize;
 
-    /* Calculate the normalized and attenuated HRIR coefficients. */
-    i = 0;
-    coeffs[i][0] = lerp(PassthruCoeff, Hrtf->coeffs[idx+i][0], dirfact);
-    coeffs[i][1] = lerp(PassthruCoeff, Hrtf->coeffs[idx+i][1], dirfact);
+    /* Calculate the blended HRIR coefficients. */
+    coeffs[0][0] = PassthruCoeff * (1.0f-dirfact);
+    coeffs[0][1] = PassthruCoeff * (1.0f-dirfact);
     for(i = 1;i < Hrtf->irSize;i++)
     {
-        coeffs[i][0] = Hrtf->coeffs[idx+i][0] * dirfact;
-        coeffs[i][1] = Hrtf->coeffs[idx+i][1] * dirfact;
+        coeffs[i][0] = 0.0f;
+        coeffs[i][1] = 0.0f;
+    }
+    for(c = 0;c < 4;c++)
+    {
+        for(i = 0;i < Hrtf->irSize;i++)
+        {
+            coeffs[i][0] += Hrtf->coeffs[idx[c]+i][0] * blend[c];
+            coeffs[i][1] += Hrtf->coeffs[idx[c]+i][1] * blend[c];
+        }
     }
 }
 

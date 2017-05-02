@@ -2438,7 +2438,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     {
         ALbufferlistitem *BufferList;
         ALbuffer *buffer = NULL;
-        bool start_moving = false;
+        bool start_fading = false;
         ALsizei s;
 
         source = LookupSource(context, sources[i]);
@@ -2481,11 +2481,11 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
             case AL_PAUSED:
                 assert(voice != NULL);
                 /* A source that's paused simply resumes. Clear its mixing
-                 * parameters and mark it as 'moving' so it fades in from
+                 * parameters and mark it as 'fading' so it fades in from
                  * silence.
                  */
                 voice->Step = 0;
-                voice->Flags |= VOICE_IS_MOVING;
+                voice->Flags |= VOICE_IS_FADING;
                 memset(voice->Direct.Params, 0, sizeof(voice->Direct.Params[0])*
                                                 voice->NumChannels);
                 for(s = 0;s < device->NumAuxSends;s++)
@@ -2531,7 +2531,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         if(source->OffsetType != AL_NONE)
         {
             ApplyOffset(source, voice);
-            start_moving = ATOMIC_LOAD(&voice->position, almemory_order_relaxed) != 0 ||
+            start_fading = ATOMIC_LOAD(&voice->position, almemory_order_relaxed) != 0 ||
                 ATOMIC_LOAD(&voice->position_fraction, almemory_order_relaxed) != 0 ||
                 ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed) != BufferList;
         }
@@ -2547,7 +2547,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
          */
         voice->Step = 0;
 
-        voice->Flags = start_moving ? VOICE_IS_MOVING : 0;
+        voice->Flags = start_fading ? VOICE_IS_FADING : 0;
         memset(voice->Direct.Params, 0, sizeof(voice->Direct.Params[0])*voice->NumChannels);
         for(s = 0;s < device->NumAuxSends;s++)
             memset(voice->Send[s].Params, 0, sizeof(voice->Send[s].Params[0])*voice->NumChannels);

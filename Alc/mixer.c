@@ -445,7 +445,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                     &parms->LowPass, &parms->HighPass, Device->FilteredData,
                     ResampledData, DstBufferSize, parms->FilterType
                 );
-                if(!(voice->Flags&VOICE_IS_HRTF))
+                if(!(voice->Flags&VOICE_HAS_HRTF))
                 {
                     if(!Counter)
                         memcpy(parms->Gains.Current, parms->Gains.Target,

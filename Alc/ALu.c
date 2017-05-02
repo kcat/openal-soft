@@ -522,7 +522,7 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *p
         break;
     }
 
-    voice->Flags &= ~(VOICE_IS_HRTF | VOICE_HAS_NFC);
+    voice->Flags &= ~(VOICE_HAS_HRTF | VOICE_HAS_NFC);
     if(isbformat)
     {
         ALfloat N[3], V[3], U[3];
@@ -682,7 +682,7 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *p
                 }
             }
 
-            voice->Flags |= VOICE_IS_HRTF;
+            voice->Flags |= VOICE_HAS_HRTF;
         }
         else
         {
@@ -1098,7 +1098,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
     BsincPrepare(voice->Step, &voice->ResampleState.bsinc);
     voice->Resampler = SelectResampler(props->Resampler);
 
-    voice->Flags &= ~(VOICE_IS_HRTF | VOICE_HAS_NFC);
+    voice->Flags &= ~(VOICE_HAS_HRTF | VOICE_HAS_NFC);
     if(Device->Render_Mode == HrtfRender)
     {
         /* Full HRTF rendering. Skip the virtual channels and render to the
@@ -1151,7 +1151,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
                     voice->Send[i].Params[0].Gains.Target[j] = 0.0f;
         }
 
-        voice->Flags |= VOICE_IS_HRTF;
+        voice->Flags |= VOICE_HAS_HRTF;
     }
     else
     {

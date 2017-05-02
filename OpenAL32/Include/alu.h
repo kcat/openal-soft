@@ -223,7 +223,7 @@ struct ALvoiceProps {
 
 /* If not 'fading', gain targets are used directly without fading. */
 #define VOICE_IS_FADING (1<<0)
-#define VOICE_IS_HRTF   (1<<1)
+#define VOICE_HAS_HRTF  (1<<1)
 #define VOICE_HAS_NFC   (1<<2)
 
 typedef struct ALvoice {

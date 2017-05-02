@@ -509,7 +509,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                         parms->Hrtf.Old = parms->Hrtf.Target;
                         parms->Hrtf.Old.Gain = 0.0f;
                     }
-                    else if(firstpass && parms->Hrtf.Old.Gain > GAIN_SILENCE_THRESHOLD)
+                    else if(firstpass)
                     {
                         HrtfState backupstate = parms->Hrtf.State;
                         ALfloat gain;

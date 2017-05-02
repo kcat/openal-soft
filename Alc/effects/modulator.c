@@ -33,10 +33,10 @@
 typedef struct ALmodulatorState {
     DERIVE_FROM_TYPE(ALeffectState);
 
-    void (*Process)(ALfloat*, const ALfloat*, ALuint, const ALuint, ALuint);
+    void (*Process)(ALfloat*, const ALfloat*, ALsizei, const ALsizei, ALsizei);
 
-    ALuint index;
-    ALuint step;
+    ALsizei index;
+    ALsizei step;
 
     ALfloat Gain[MAX_EFFECT_CHANNELS][MAX_OUTPUT_CHANNELS];
 
@@ -46,7 +46,7 @@ typedef struct ALmodulatorState {
 static ALvoid ALmodulatorState_Destruct(ALmodulatorState *state);
 static ALboolean ALmodulatorState_deviceUpdate(ALmodulatorState *state, ALCdevice *device);
 static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props);
-static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels);
+static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ALmodulatorState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALmodulatorState);
@@ -56,26 +56,26 @@ DEFINE_ALEFFECTSTATE_VTABLE(ALmodulatorState);
 #define WAVEFORM_FRACONE   (1<<WAVEFORM_FRACBITS)
 #define WAVEFORM_FRACMASK  (WAVEFORM_FRACONE-1)
 
-static inline ALfloat Sin(ALuint index)
+static inline ALfloat Sin(ALsizei index)
 {
     return sinf(index*(F_TAU/WAVEFORM_FRACONE) - F_PI)*0.5f + 0.5f;
 }
 
-static inline ALfloat Saw(ALuint index)
+static inline ALfloat Saw(ALsizei index)
 {
     return (ALfloat)index / WAVEFORM_FRACONE;
 }
 
-static inline ALfloat Square(ALuint index)
+static inline ALfloat Square(ALsizei index)
 {
     return (ALfloat)((index >> (WAVEFORM_FRACBITS - 1)) & 1);
 }
 
 #define DECL_TEMPLATE(func)                                                   \
 static void Modulate##func(ALfloat *restrict dst, const ALfloat *restrict src,\
-                           ALuint index, const ALuint step, ALuint todo)      \
+                           ALsizei index, const ALsizei step, ALsizei todo)   \
 {                                                                             \
-    ALuint i;                                                                 \
+    ALsizei i;                                                                \
     for(i = 0;i < todo;i++)                                                   \
     {                                                                         \
         index += step;                                                        \
@@ -118,7 +118,7 @@ static ALboolean ALmodulatorState_deviceUpdate(ALmodulatorState *UNUSED(state), 
 static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props)
 {
     ALfloat cw, a;
-    ALuint i;
+    ALsizei i;
 
     if(props->Modulator.Waveform == AL_RING_MODULATOR_SINUSOID)
         state->Process = ModulateSin;
@@ -151,17 +151,17 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *
                                Slot->Params.Gain, state->Gain[i]);
 }
 
-static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
+static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    const ALuint step = state->step;
-    ALuint index = state->index;
-    ALuint base;
+    const ALsizei step = state->step;
+    ALsizei index = state->index;
+    ALsizei base;
 
     for(base = 0;base < SamplesToDo;)
     {
         ALfloat temps[2][128];
-        ALuint td = minu(128, SamplesToDo-base);
-        ALuint i, j, k;
+        ALsizei td = mini(128, SamplesToDo-base);
+        ALsizei i, j, k;
 
         for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
         {

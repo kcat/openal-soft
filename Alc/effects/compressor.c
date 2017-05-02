@@ -43,7 +43,7 @@ typedef struct ALcompressorState {
 static ALvoid ALcompressorState_Destruct(ALcompressorState *state);
 static ALboolean ALcompressorState_deviceUpdate(ALcompressorState *state, ALCdevice *device);
 static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCdevice *device, const ALeffectslot *slot, const ALeffectProps *props);
-static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels);
+static ALvoid ALcompressorState_process(ALcompressorState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ALcompressorState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALcompressorState);
@@ -89,15 +89,15 @@ static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCdevice
                                slot->Params.Gain, state->Gain[i]);
 }
 
-static ALvoid ALcompressorState_process(ALcompressorState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
+static ALvoid ALcompressorState_process(ALcompressorState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    ALuint i, j, k;
-    ALuint base;
+    ALsizei i, j, k;
+    ALsizei base;
 
     for(base = 0;base < SamplesToDo;)
     {
         ALfloat temps[64][4];
-        ALuint td = minu(64, SamplesToDo-base);
+        ALsizei td = mini(64, SamplesToDo-base);
 
         /* Load samples into the temp buffer first. */
         for(j = 0;j < 4;j++)

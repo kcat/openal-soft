@@ -39,9 +39,9 @@ typedef struct ALflangerState {
     DERIVE_FROM_TYPE(ALeffectState);
 
     ALfloat *SampleBuffer[2];
-    ALuint BufferLength;
-    ALuint offset;
-    ALuint lfo_range;
+    ALsizei BufferLength;
+    ALsizei offset;
+    ALsizei lfo_range;
     ALfloat lfo_scale;
     ALint lfo_disp;
 
@@ -58,7 +58,7 @@ typedef struct ALflangerState {
 static ALvoid ALflangerState_Destruct(ALflangerState *state);
 static ALboolean ALflangerState_deviceUpdate(ALflangerState *state, ALCdevice *Device);
 static ALvoid ALflangerState_update(ALflangerState *state, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props);
-static ALvoid ALflangerState_process(ALflangerState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels);
+static ALvoid ALflangerState_process(ALflangerState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ALflangerState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALflangerState);
@@ -88,10 +88,10 @@ static ALvoid ALflangerState_Destruct(ALflangerState *state)
 
 static ALboolean ALflangerState_deviceUpdate(ALflangerState *state, ALCdevice *Device)
 {
-    ALuint maxlen;
-    ALuint it;
+    ALsizei maxlen;
+    ALsizei it;
 
-    maxlen = fastf2u(AL_FLANGER_MAX_DELAY * 3.0f * Device->Frequency) + 1;
+    maxlen = fastf2i(AL_FLANGER_MAX_DELAY * 3.0f * Device->Frequency) + 1;
     maxlen = NextPowerOf2(maxlen);
 
     if(maxlen != state->BufferLength)
@@ -152,7 +152,7 @@ static ALvoid ALflangerState_update(ALflangerState *state, const ALCdevice *Devi
     else
     {
         /* Calculate LFO coefficient */
-        state->lfo_range = fastf2u(frequency/rate + 0.5f);
+        state->lfo_range = fastf2i(frequency/rate + 0.5f);
         switch(state->waveform)
         {
             case FWF_Triangle:
@@ -197,15 +197,15 @@ static inline void Sinusoid(ALint *delay_left, ALint *delay_right, ALuint offset
 }
 
 #define DECL_TEMPLATE(Func)                                                   \
-static void Process##Func(ALflangerState *state, const ALuint SamplesToDo,    \
+static void Process##Func(ALflangerState *state, const ALsizei SamplesToDo,   \
   const ALfloat *restrict SamplesIn, ALfloat (*restrict out)[2])              \
 {                                                                             \
-    const ALuint bufmask = state->BufferLength-1;                             \
+    const ALsizei bufmask = state->BufferLength-1;                            \
     ALfloat *restrict leftbuf = state->SampleBuffer[0];                       \
     ALfloat *restrict rightbuf = state->SampleBuffer[1];                      \
-    ALuint offset = state->offset;                                            \
+    ALsizei offset = state->offset;                                           \
     const ALfloat feedback = state->feedback;                                 \
-    ALuint it;                                                                \
+    ALsizei it;                                                               \
                                                                               \
     for(it = 0;it < SamplesToDo;it++)                                         \
     {                                                                         \
@@ -228,15 +228,15 @@ DECL_TEMPLATE(Sinusoid)
 
 #undef DECL_TEMPLATE
 
-static ALvoid ALflangerState_process(ALflangerState *state, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
+static ALvoid ALflangerState_process(ALflangerState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    ALuint it, kt;
-    ALuint base;
+    ALsizei it, kt;
+    ALsizei base;
 
     for(base = 0;base < SamplesToDo;)
     {
         ALfloat temps[128][2];
-        ALuint td = minu(128, SamplesToDo-base);
+        ALsizei td = mini(128, SamplesToDo-base);
 
         switch(state->waveform)
         {

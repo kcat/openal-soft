@@ -186,7 +186,7 @@ typedef struct ALreverbState {
 static ALvoid ALreverbState_Destruct(ALreverbState *State);
 static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Device);
 static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props);
-static ALvoid ALreverbState_process(ALreverbState *State, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels);
+static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ALreverbState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALreverbState);
@@ -1887,7 +1887,7 @@ static ALfloat EAXVerbPass(ALreverbState *State, const ALsizei todo, ALfloat fad
     return fade;
 }
 
-static ALvoid ALreverbState_process(ALreverbState *State, ALuint SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALuint NumChannels)
+static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
     ProcMethodType ReverbProc = State->IsEax ? EAXVerbPass : VerbPass;
     ALfloat (*restrict afmt)[MAX_UPDATE_SAMPLES] = State->AFormatSamples;
@@ -1895,12 +1895,12 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALuint SamplesToDo, co
     ALfloat (*restrict late)[MAX_UPDATE_SAMPLES] = State->ReverbSamples;
     ALsizei fadeCount = State->FadeCount;
     ALfloat fade = (ALfloat)fadeCount / FADE_SAMPLES;
-    ALuint base, c;
+    ALsizei base, c;
 
     /* Process reverb for these samples. */
     for(base = 0;base < SamplesToDo;)
     {
-        ALsizei todo = minu(SamplesToDo-base, MAX_UPDATE_SAMPLES);
+        ALsizei todo = mini(SamplesToDo-base, MAX_UPDATE_SAMPLES);
         /* If cross-fading, don't do more samples than there are to fade. */
         if(FADE_SAMPLES-fadeCount > 0)
             todo = mini(todo, FADE_SAMPLES-fadeCount);

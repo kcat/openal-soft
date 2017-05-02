@@ -2438,6 +2438,8 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     {
         ALbufferlistitem *BufferList;
         ALbuffer *buffer = NULL;
+        bool start_moving = false;
+        ALsizei s;
 
         source = LookupSource(context, sources[i]);
         WriteLock(&source->queue_lock);
@@ -2478,11 +2480,17 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 
             case AL_PAUSED:
                 assert(voice != NULL);
-                /* A source that's paused simply resumes. Make sure it uses the
-                 * volume last specified; there's no reason to fade from where
-                 * it stopped at.
+                /* A source that's paused simply resumes. Clear its mixing
+                 * parameters and mark it as 'moving' so it fades in from
+                 * silence.
                  */
-                voice->Flags &= ~VOICE_IS_MOVING;
+                voice->Step = 0;
+                voice->Flags |= VOICE_IS_MOVING;
+                memset(voice->Direct.Params, 0, sizeof(voice->Direct.Params[0])*
+                                                voice->NumChannels);
+                for(s = 0;s < device->NumAuxSends;s++)
+                    memset(voice->Send[s].Params, 0, sizeof(voice->Send[s].Params[0])*
+                                                     voice->NumChannels);
                 ATOMIC_STORE(&voice->Playing, true, almemory_order_release);
                 ATOMIC_STORE(&source->state, AL_PLAYING, almemory_order_release);
                 goto finish_play;
@@ -2521,7 +2529,12 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         ATOMIC_STORE(&voice->position, 0, almemory_order_relaxed);
         ATOMIC_STORE(&voice->position_fraction, 0, almemory_order_relaxed);
         if(source->OffsetType != AL_NONE)
+        {
             ApplyOffset(source, voice);
+            start_moving = ATOMIC_LOAD(&voice->position, almemory_order_relaxed) != 0 ||
+                ATOMIC_LOAD(&voice->position_fraction, almemory_order_relaxed) != 0 ||
+                ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed) != BufferList;
+        }
 
         voice->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
         voice->SampleSize  = BytesFromFmt(buffer->FmtType);
@@ -2534,10 +2547,10 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
          */
         voice->Step = 0;
 
-        voice->Flags = 0;
-        for(j = 0;j < voice->NumChannels;j++)
-            memset(&voice->Direct.Params[j].Hrtf.State, 0,
-                   sizeof(voice->Direct.Params[j].Hrtf.State));
+        voice->Flags = start_moving ? VOICE_IS_MOVING : 0;
+        memset(voice->Direct.Params, 0, sizeof(voice->Direct.Params[0])*voice->NumChannels);
+        for(s = 0;s < device->NumAuxSends;s++)
+            memset(voice->Send[s].Params, 0, sizeof(voice->Send[s].Params[0])*voice->NumChannels);
         if(device->AvgSpeakerDist > 0.0f)
         {
             ALfloat w1 = SPEEDOFSOUNDMETRESPERSEC /

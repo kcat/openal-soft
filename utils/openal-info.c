@@ -251,6 +251,38 @@ static void printALInfo(void)
     checkALErrors();
 }
 
+static void printResamplerInfo(void)
+{
+    LPALGETSTRINGISOFT alGetStringiSOFT;
+    ALint num_resamplers;
+    ALint def_resampler;
+
+    if(!alIsExtensionPresent("AL_SOFT_source_resampler"))
+    {
+        printf("Resampler info not available\n");
+        return;
+    }
+
+    alGetStringiSOFT = alGetProcAddress("alGetStringiSOFT");
+
+    num_resamplers = alGetInteger(AL_NUM_RESAMPLERS_SOFT);
+    def_resampler = alGetInteger(AL_DEFAULT_RESAMPLER_SOFT);
+
+    if(!num_resamplers)
+        printf("!!! No resamplers found !!!\n");
+    else
+    {
+        ALint i;
+        printf("Available resamplers:\n");
+        for(i = 0;i < num_resamplers;++i)
+        {
+            const ALchar *name = alGetStringiSOFT(AL_RESAMPLER_NAME_SOFT, i);
+            printf("    %s%s\n", name, (i==def_resampler)?" *":"");
+        }
+    }
+    checkALErrors();
+}
+
 static void printEFXInfo(ALCdevice *device)
 {
     ALCint major, minor, sends;
@@ -394,6 +426,7 @@ int main(int argc, char *argv[])
     }
 
     printALInfo();
+    printResamplerInfo();
     printEFXInfo(device);
 
     alcMakeContextCurrent(NULL);

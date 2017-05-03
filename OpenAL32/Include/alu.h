@@ -301,6 +301,11 @@ typedef void (*HrtfMixerFunc)(ALfloat *restrict LeftOut, ALfloat *restrict Right
                               const ALfloat *data, ALsizei Offset, ALsizei OutPos,
                               const ALsizei IrSize, MixHrtfParams *hrtfparams,
                               HrtfState *hrtfstate, ALsizei BufferSize);
+typedef void (*HrtfMixerBlendFunc)(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
+                                   const ALfloat *data, ALsizei Offset, ALsizei OutPos,
+                                   const ALsizei IrSize, const HrtfParams *oldparams,
+                                   MixHrtfParams *newparams, HrtfState *hrtfstate,
+                                   ALsizei BufferSize);
 typedef void (*HrtfDirectMixerFunc)(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
                                     const ALfloat *data, ALsizei Offset, const ALsizei IrSize,
                                     const ALfloat (*restrict Coeffs)[2],

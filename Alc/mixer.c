@@ -53,6 +53,7 @@ enum Resampler ResamplerDefault = LinearResampler;
 
 static MixerFunc MixSamples = Mix_C;
 static HrtfMixerFunc MixHrtfSamples = MixHrtf_C;
+HrtfMixerBlendFunc MixHrtfBlendSamples = MixHrtfBlend_C;
 
 MixerFunc SelectMixer(void)
 {
@@ -90,8 +91,20 @@ static inline HrtfMixerFunc SelectHrtfMixer(void)
     if((CPUCapFlags&CPU_CAP_SSE))
         return MixHrtf_SSE;
 #endif
-
     return MixHrtf_C;
+}
+
+static inline HrtfMixerBlendFunc SelectHrtfBlendMixer(void)
+{
+#ifdef HAVE_NEON
+    if((CPUCapFlags&CPU_CAP_NEON))
+        return MixHrtfBlend_Neon;
+#endif
+#ifdef HAVE_SSE
+    if((CPUCapFlags&CPU_CAP_SSE))
+        return MixHrtfBlend_SSE;
+#endif
+    return MixHrtfBlend_C;
 }
 
 ResamplerFunc SelectResampler(enum Resampler resampler)
@@ -174,6 +187,7 @@ void aluInitMixer(void)
         }
     }
 
+    MixHrtfBlendSamples = SelectHrtfBlendMixer();
     MixHrtfSamples = SelectHrtfMixer();
     MixSamples = SelectMixer();
 }
@@ -511,25 +525,10 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                     }
                     else if(firstpass)
                     {
-                        HrtfState backupstate = parms->Hrtf.State;
                         ALfloat gain;
 
                         /* Fade between the coefficients over 64 samples. */
-                        fademix = mini(DstBufferSize,  64);
-
-                        /* The old coefficients need to fade to silence
-                         * completely since they'll be replaced after this mix.
-                         */
-                        hrtfparams.Coeffs = SAFE_CONST(ALfloat2*,parms->Hrtf.Old.Coeffs);
-                        hrtfparams.Delay[0] = parms->Hrtf.Old.Delay[0];
-                        hrtfparams.Delay[1] = parms->Hrtf.Old.Delay[1];
-                        hrtfparams.Gain = parms->Hrtf.Old.Gain;
-                        hrtfparams.GainStep = -hrtfparams.Gain / (ALfloat)fademix;
-                        MixHrtfSamples(
-                            voice->Direct.Buffer[lidx], voice->Direct.Buffer[ridx],
-                            samples, voice->Offset, OutPos, IrSize, &hrtfparams,
-                            &backupstate, fademix
-                        );
+                        fademix = mini(DstBufferSize, 64);
 
                         /* The new coefficients need to fade in completely
                          * since they're replacing the old ones. To keep the
@@ -544,10 +543,11 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                         hrtfparams.Delay[1] = parms->Hrtf.Target.Delay[1];
                         hrtfparams.Gain = 0.0f;
                         hrtfparams.GainStep = gain / (ALfloat)fademix;
-                        MixHrtfSamples(
+
+                        MixHrtfBlendSamples(
                             voice->Direct.Buffer[lidx], voice->Direct.Buffer[ridx],
-                            samples, voice->Offset, OutPos, IrSize, &hrtfparams,
-                            &parms->Hrtf.State, fademix
+                            samples, voice->Offset, OutPos, IrSize, &parms->Hrtf.Old,
+                            &hrtfparams, &parms->Hrtf.State, fademix
                         );
                         /* Update the old parameters with the result. */
                         parms->Hrtf.Old = parms->Hrtf.Target;

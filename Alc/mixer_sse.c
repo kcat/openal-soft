@@ -124,6 +124,7 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*restrict Values)[2],
 }
 
 #define MixHrtf MixHrtf_SSE
+#define MixHrtfBlend MixHrtfBlend_SSE
 #define MixDirectHrtf MixDirectHrtf_SSE
 #include "mixer_inc.c"
 #undef MixHrtf

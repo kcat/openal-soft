@@ -48,7 +48,7 @@ static const ALchar alErrInvalidOp[] = "Invalid Operation";
 static const ALchar alErrOutOfMemory[] = "Out of Memory";
 
 /* Resampler strings */
-static const ALchar alPointResampler[] = "Zero-Order Hold (Point)";
+static const ALchar alPointResampler[] = "Nearest";
 static const ALchar alLinearResampler[] = "Linear";
 static const ALchar alSinc4Resampler[] = "4-Point Sinc";
 static const ALchar alBSincResampler[] = "Band-limited Sinc (12/24)";

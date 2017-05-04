@@ -1355,6 +1355,7 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context, ALboolean forc
 
         ATOMIC_REPLACE_HEAD(struct ALvoiceProps*, &voice->FreeList, props);
     }
+    props = voice->Props;
 
     BufferListItem = ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed);
     while(BufferListItem != NULL)
@@ -1362,10 +1363,11 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context, ALboolean forc
         const ALbuffer *buffer;
         if((buffer=BufferListItem->buffer) != NULL)
         {
-            if(buffer->FmtChannels == FmtMono)
-                CalcAttnSourceParams(voice, voice->Props, buffer, context);
+            if(props->SpatializeMode == SpatializeOn ||
+               (props->SpatializeMode == SpatializeAuto && buffer->FmtChannels == FmtMono))
+                CalcAttnSourceParams(voice, props, buffer, context);
             else
-                CalcNonAttnSourceParams(voice, voice->Props, buffer, context);
+                CalcNonAttnSourceParams(voice, props, buffer, context);
             break;
         }
         BufferListItem = ATOMIC_LOAD(&BufferListItem->next, almemory_order_acquire);

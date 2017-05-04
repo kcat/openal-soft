@@ -45,6 +45,7 @@ typedef struct ALsource {
     enum DistanceModel DistanceModel;
     enum Resampler Resampler;
     ALboolean DirectChannels;
+    enum SpatializeMode Spatialize;
 
     ALboolean DryGainHFAuto;
     ALboolean WetGainAuto;

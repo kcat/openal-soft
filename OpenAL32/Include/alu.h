@@ -40,6 +40,12 @@ struct ALvoice;
 struct ALeffectslot;
 
 
+enum SpatializeMode {
+    SpatializeOff,
+    SpatializeOn,
+    SpatializeAuto
+};
+
 enum Resampler {
     PointResampler,
     LinearResampler,
@@ -189,6 +195,7 @@ struct ALvoiceProps {
     enum DistanceModel DistanceModel;
     enum Resampler Resampler;
     ALboolean DirectChannels;
+    enum SpatializeMode SpatializeMode;
 
     ALboolean DryGainHFAuto;
     ALboolean WetGainAuto;

@@ -2984,6 +2984,7 @@ static void InitSourceParams(ALsource *Source, ALsizei num_sends)
     Source->DistanceModel = DefaultDistanceModel;
     Source->Resampler = ResamplerDefault;
     Source->DirectChannels = AL_FALSE;
+    Source->Spatialize = SpatializeAuto;
 
     Source->StereoPan[0] = DEG2RAD( 30.0f);
     Source->StereoPan[1] = DEG2RAD(-30.0f);
@@ -3093,6 +3094,7 @@ static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_send
     props->DistanceModel = source->DistanceModel;
     props->Resampler = source->Resampler;
     props->DirectChannels = source->DirectChannels;
+    props->SpatializeMode = source->Spatialize;
 
     props->DryGainHFAuto = source->DryGainHFAuto;
     props->WetGainAuto = source->WetGainAuto;

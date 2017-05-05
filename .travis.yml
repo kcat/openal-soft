@@ -49,6 +49,7 @@ script:
         -DALSOFT_REQUIRE_PORTAUDIO=ON \
         -DALSOFT_REQUIRE_PULSEAUDIO=ON \
         -DALSOFT_REQUIRE_JACK=ON \
+        -DALSOFT_EMBED_HRTF_DATA=YES \
         .
     fi
   - >
@@ -56,12 +57,14 @@ script:
       cmake \
         -DCMAKE_TOOLCHAIN_FILE=~/android-ndk-r14/build/cmake/android.toolchain.cmake \
         -DALSOFT_REQUIRE_OPENSL=ON \
+        -DALSOFT_EMBED_HRTF_DATA=YES \
         .
     fi
   - >
     if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
       cmake \
         -DALSOFT_REQUIRE_COREAUDIO=ON \
+        -DALSOFT_EMBED_HRTF_DATA=YES \
         .
     fi
   - make -j2

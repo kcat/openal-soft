@@ -100,6 +100,17 @@ const aluMatrixf IdentityMatrixf = {{
 }};
 
 
+struct OutputLimiter *alloc_limiter(void)
+{
+    struct OutputLimiter *limiter = al_calloc(16, sizeof(*limiter));
+    /* Limiter attack drops -80dB in 50ms. */
+    limiter->AttackRate = 0.05f;
+    /* Limiter release raises +80dB in 1s. */
+    limiter->ReleaseRate = 1.0f;
+    limiter->Gain = 1.0f;
+    return limiter;
+}
+
 void DeinitVoice(ALvoice *voice)
 {
     struct ALvoiceProps *props;
@@ -1400,47 +1411,74 @@ static void UpdateContextSources(ALCcontext *ctx, const struct ALeffectslotArray
 }
 
 
-static ALfloat ApplyLimiter(ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALsizei NumChans,
-                            const ALfloat AttackRate, const ALfloat ReleaseRate,
-                            const ALfloat InGain, ALfloat (*restrict Gains),
-                            const ALsizei SamplesToDo)
+static void ApplyLimiter(struct OutputLimiter *Limiter,
+                         ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALsizei NumChans,
+                         const ALfloat AttackRate, const ALfloat ReleaseRate,
+                         ALfloat *restrict Values, const ALsizei SamplesToDo)
 {
     bool do_limit = false;
     ALsizei c, i;
 
     OutBuffer = ASSUME_ALIGNED(OutBuffer, 16);
-    Gains = ASSUME_ALIGNED(Gains, 16);
+    Values = ASSUME_ALIGNED(Values, 16);
 
     for(i = 0;i < SamplesToDo;i++)
-        Gains[i] = 1.0f;
+        Values[i] = 0.0f;
 
+    /* First, find the maximum amplitude (squared) for each sample position in each channel. */
     for(c = 0;c < NumChans;c++)
     {
-        ALfloat lastgain = InGain;
         for(i = 0;i < SamplesToDo;i++)
         {
+            ALfloat amp_sqr = OutBuffer[c][i] * OutBuffer[c][i];
+            Values[i] = maxf(Values[i], amp_sqr);
+        }
+    }
+
+    /* Next, calculate the gains needed to limit the output. */
+    {
+        ALfloat lastgain = Limiter->Gain;
+        ALsizei wpos = Limiter->Pos;
+        ALfloat sum = 0.0f;
+        ALfloat gain;
+
+        /* Unfortunately we can't store the running sum due to fp inaccuracies
+         * causing it to drift over time. So we need to recalculate it every
+         * once in a while (i.e. every invocation).
+         */
+        for(i = 0;i < LIMITER_WINDOW_SIZE;i++)
+            sum += Limiter->Window[i];
+
+        for(i = 0;i < SamplesToDo;i++)
+        {
+            sum -= Limiter->Window[wpos];
+            Limiter->Window[wpos] = Values[i];
+            sum += Values[i];
+
             /* Clamp limiter range to 0dB...-80dB. */
-            ALfloat gain = 1.0f / clampf(fabsf(OutBuffer[c][i]), 1.0f, 1000.0f);
+            gain = 1.0f / clampf(sqrtf(sum / (ALfloat)LIMITER_WINDOW_SIZE), 1.0f, 1000.0f);
             if(lastgain >= gain)
                 lastgain = maxf(lastgain*AttackRate, gain);
             else
                 lastgain = minf(lastgain/ReleaseRate, gain);
             do_limit |= (lastgain < 1.0f);
+            Values[i] = lastgain;
 
-            lastgain = minf(lastgain, Gains[i]);
-            Gains[i] = lastgain;
+            wpos = (wpos+1)&LIMITER_WINDOW_MASK;
         }
+
+        Limiter->Gain = lastgain;
+        Limiter->Pos = wpos;
     }
     if(do_limit)
     {
+        /* Finally, apply the gains to each channel. */
         for(c = 0;c < NumChans;c++)
         {
             for(i = 0;i < SamplesToDo;i++)
-                OutBuffer[c][i] *= Gains[i];
+                OutBuffer[c][i] *= Values[i];
         }
     }
-
-    return Gains[SamplesToDo-1];
 }
 
 static inline ALfloat aluF2F(ALfloat val)
@@ -1689,19 +1727,17 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         {
             ALfloat (*OutBuffer)[BUFFERSIZE] = device->RealOut.Buffer;
             ALsizei OutChannels = device->RealOut.NumChannels;
+            struct OutputLimiter *Limiter = device->Limiter;
             DistanceComp *DistComp;
 
-            if(device->LimiterGain > 0.0f)
+            if(Limiter)
             {
-                /* Limiter attack drops -80dB in 50ms. */
-                const ALfloat AttackRate = powf(0.0001f, 1.0f/(device->Frequency*0.05f));
-                /* Limiter release raises +80dB in 1s. */
-                const ALfloat ReleaseRate = powf(0.0001f, 1.0f/(device->Frequency*1.0f));
+                const ALfloat AttackRate = powf(0.0001f, 1.0f/(device->Frequency*Limiter->AttackRate));
+                const ALfloat ReleaseRate = powf(0.0001f, 1.0f/(device->Frequency*Limiter->ReleaseRate));
 
-                /* Use NFCtrlData for temp gain storage. */
-                device->LimiterGain = ApplyLimiter(OutBuffer, OutChannels,
-                    AttackRate, ReleaseRate, device->LimiterGain, device->NFCtrlData,
-                    SamplesToDo
+                /* Use NFCtrlData for temp value storage. */
+                ApplyLimiter(Limiter, OutBuffer, OutChannels,
+                    AttackRate, ReleaseRate, device->NFCtrlData, SamplesToDo
                 );
             }
 

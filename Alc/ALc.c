@@ -1762,7 +1762,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 {
     enum HrtfRequestMode hrtf_userreq = Hrtf_Default;
     enum HrtfRequestMode hrtf_appreq = Hrtf_Default;
-    ALCenum gainLimiter = (device->LimiterGain > 0.0f);
+    ALCenum gainLimiter = !!device->Limiter;
     const ALsizei old_sends = device->NumAuxSends;
     ALsizei new_sends = device->NumAuxSends;
     enum DevFmtChannels oldChans;
@@ -2216,7 +2216,16 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     if(ConfigValueBool(alstr_get_cstr(device->DeviceName), NULL, "output-limiter", &val))
         gainLimiter = val;
-    device->LimiterGain = gainLimiter ? 1.0f : 0.0f;
+    if(gainLimiter)
+    {
+        if(!device->Limiter)
+            device->Limiter = alloc_limiter();
+    }
+    else if(device->Limiter)
+    {
+        al_free(device->Limiter);
+        device->Limiter = NULL;
+    }
 
     /* Need to delay returning failure until replacement Send arrays have been
      * allocated with the appropriate size.
@@ -2417,6 +2426,9 @@ static ALCvoid FreeDevice(ALCdevice *device)
 
     ambiup_free(device->AmbiUp);
     device->AmbiUp = NULL;
+
+    al_free(device->Limiter);
+    device->Limiter = NULL;
 
     al_free(device->ChannelDelay[0].Buffer);
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
@@ -3167,7 +3179,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             values[i++] = device->HrtfStatus;
 
             values[i++] = ALC_OUTPUT_LIMITER_SOFT;
-            values[i++] = (device->LimiterGain > 0.0f) ? ALC_TRUE : ALC_FALSE;
+            values[i++] = device->Limiter ? ALC_TRUE : ALC_FALSE;
             almtx_unlock(&device->BackendLock);
 
             values[i++] = 0;
@@ -3275,7 +3287,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             return 1;
 
         case ALC_OUTPUT_LIMITER_SOFT:
-            values[0] = (device->LimiterGain > 0.0f) ? ALC_TRUE : ALC_FALSE;
+            values[0] = device->Limiter ? ALC_TRUE : ALC_FALSE;
             return 1;
 
         default:
@@ -3383,7 +3395,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                     values[i++] = device->HrtfStatus;
 
                     values[i++] = ALC_OUTPUT_LIMITER_SOFT;
-                    values[i++] = (device->LimiterGain > 0.0f) ? ALC_TRUE : ALC_FALSE;
+                    values[i++] = device->Limiter ? ALC_TRUE : ALC_FALSE;
 
                     clock = V0(device->Backend,getClockLatency)();
                     values[i++] = ALC_DEVICE_CLOCK_SOFT;
@@ -3826,7 +3838,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->FOAOut.NumChannels = 0;
     device->RealOut.Buffer = NULL;
     device->RealOut.NumChannels = 0;
-    device->LimiterGain = 1.0f;
+    device->Limiter = alloc_limiter();
     device->AvgSpeakerDist = 0.0f;
 
     ATOMIC_INIT(&device->ContextList, NULL);
@@ -4355,7 +4367,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->FOAOut.NumChannels = 0;
     device->RealOut.Buffer = NULL;
     device->RealOut.NumChannels = 0;
-    device->LimiterGain = 1.0f;
+    device->Limiter = alloc_limiter();
     device->AvgSpeakerDist = 0.0f;
 
     ATOMIC_INIT(&device->ContextList, NULL);

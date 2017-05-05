@@ -391,6 +391,7 @@ extern "C" {
 
 struct Hrtf;
 struct HrtfEntry;
+struct OutputLimiter;
 
 
 #define DEFAULT_OUTPUT_RATE  (44100)
@@ -793,7 +794,7 @@ struct ALCdevice_struct
         ALsizei NumChannels;
     } RealOut;
 
-    ALfloat LimiterGain;
+    struct OutputLimiter *Limiter;
 
     /* The average speaker distance as determined by the ambdec configuration
      * (or alternatively, by the NFC-HOA reference delay). Only used for NFC.

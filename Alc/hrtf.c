@@ -869,9 +869,10 @@ static void AddBuiltInEntry(vector_EnumeratedHrtf *list, const_al_string filenam
 }
 
 
-#ifndef ALSOFT_EMBED_HRTF_DATA
 #define IDR_DEFAULT_44100_MHR 1
 #define IDR_DEFAULT_48000_MHR 2
+
+#ifndef ALSOFT_EMBED_HRTF_DATA
 
 static const ALubyte *GetResource(int UNUSED(name), size_t *size)
 {
@@ -880,87 +881,25 @@ static const ALubyte *GetResource(int UNUSED(name), size_t *size)
 }
 
 #else
-#include "hrtf_res.h"
 
-#ifdef _WIN32
-static const ALubyte *GetResource(int name, size_t *size)
-{
-    HMODULE handle;
-    HGLOBAL res;
-    HRSRC rc;
-
-    GetModuleHandleExW(
-        GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
-        (LPCWSTR)GetResource, &handle
-    );
-    rc = FindResourceW(handle, MAKEINTRESOURCEW(name), MAKEINTRESOURCEW(MHRTYPE));
-    res = LoadResource(handle, rc);
-
-    *size = SizeofResource(handle, rc);
-    return LockResource(res);
-}
-
-#elif defined(__APPLE__)
-
-#include <Availability.h>
-#include <mach-o/getsect.h>
-#include <mach-o/ldsyms.h>
-
-static const ALubyte *GetResource(int name, size_t *size)
-{
-#if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && (__MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
-    /* NOTE: OSX 10.7 and up need to call getsectiondata(&_mh_dylib_header, ...). However, that
-     * call requires 10.7.
-     */
-    if(name == IDR_DEFAULT_44100_MHR)
-        return getsectiondata(&_mh_dylib_header, "binary", "default_44100", size);
-    if(name == IDR_DEFAULT_48000_MHR)
-        return getsectiondata(&_mh_dylib_header, "binary", "default_48000", size);
-#else
-    if(name == IDR_DEFAULT_44100_MHR)
-        return getsectdata("binary", "default_44100", size);
-    if(name == IDR_DEFAULT_48000_MHR)
-        return getsectdata("binary", "default_48000", size);
-#endif
-    *size = 0;
-    return NULL;
-}
-
-#else
-
-extern const ALubyte _binary_default_44100_mhr_start[] HIDDEN_DECL;
-extern const ALubyte _binary_default_44100_mhr_end[] HIDDEN_DECL;
-extern const ALubyte _binary_default_44100_mhr_size[] HIDDEN_DECL;
-
-extern const ALubyte _binary_default_48000_mhr_start[] HIDDEN_DECL;
-extern const ALubyte _binary_default_48000_mhr_end[] HIDDEN_DECL;
-extern const ALubyte _binary_default_48000_mhr_size[] HIDDEN_DECL;
+#include "default-44100.mhr.h"
+#include "default-48000.mhr.h"
 
 static const ALubyte *GetResource(int name, size_t *size)
 {
     if(name == IDR_DEFAULT_44100_MHR)
     {
-        /* Make sure all symbols are referenced, to ensure the compiler won't
-         * ignore the declarations and lose the visibility attribute used to
-         * hide them (would be nice if ld or objcopy could automatically mark
-         * them as hidden when generating them, but apparently they can't).
-         */
-        const void *volatile ptr =_binary_default_44100_mhr_size;
-        (void)ptr;
-        *size = _binary_default_44100_mhr_end - _binary_default_44100_mhr_start;
-        return _binary_default_44100_mhr_start;
+        *size = sizeof(hrtf_default_44100);
+        return hrtf_default_44100;
     }
     if(name == IDR_DEFAULT_48000_MHR)
     {
-        const void *volatile ptr =_binary_default_48000_mhr_size;
-        (void)ptr;
-        *size = _binary_default_48000_mhr_end - _binary_default_48000_mhr_start;
-        return _binary_default_48000_mhr_start;
+        *size = sizeof(hrtf_default_48000);
+        return hrtf_default_48000;
     }
     *size = 0;
     return NULL;
 }
-#endif
 #endif
 
 vector_EnumeratedHrtf EnumerateHrtf(const_al_string devname)

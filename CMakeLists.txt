@@ -1102,7 +1102,7 @@ SET(BACKENDS  "${BACKENDS} Null")
 
 option(ALSOFT_EMBED_HRTF_DATA "Embed the HRTF data files (increases library footprint)" OFF)
 if(ALSOFT_EMBED_HRTF_DATA)
-    SET(NATIVE_SRC_DIR  "${OpenAL_SOURCE_DIR}/utils/native-tools/")
+    SET(NATIVE_SRC_DIR  "${OpenAL_SOURCE_DIR}/native-tools/")
     SET(NATIVE_BIN_DIR  "${OpenAL_BINARY_DIR}/native-tools/")
     FILE(MAKE_DIRECTORY "${NATIVE_BIN_DIR}")
 

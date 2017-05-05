@@ -527,8 +527,8 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                     {
                         ALfloat gain;
 
-                        /* Fade between the coefficients over 64 samples. */
-                        fademix = mini(DstBufferSize, 64);
+                        /* Fade between the coefficients over 128 samples. */
+                        fademix = mini(DstBufferSize, 128);
 
                         /* The new coefficients need to fade in completely
                          * since they're replacing the old ones. To keep the

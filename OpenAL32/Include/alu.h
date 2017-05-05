@@ -186,7 +186,7 @@ struct ALvoiceProps {
     ALfloat OuterAngle;
     ALfloat RefDistance;
     ALfloat MaxDistance;
-    ALfloat RollOffFactor;
+    ALfloat RolloffFactor;
     ALfloat Position[3];
     ALfloat Velocity[3];
     ALfloat Direction[3];

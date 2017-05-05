@@ -1074,7 +1074,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
         {
             /* If the slot's auxiliary send auto is off, the data sent to the
              * effect slot is the same as the dry path, sans filter effects */
-            RoomRolloff[i] = props->RollOffFactor;
+            RoomRolloff[i] = props->RolloffFactor;
             DecayDistance[i] = 0.0f;
             RoomAirAbsorption[i] = AIRABSORBGAINHF;
         }
@@ -1133,7 +1133,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
         case InverseDistance:
             if(props->RefDistance > 0.0f)
             {
-                ALfloat dist = lerp(props->RefDistance, ClampedDist, props->RollOffFactor);
+                ALfloat dist = lerp(props->RefDistance, ClampedDist, props->RolloffFactor);
                 if(dist > 0.0f) Attenuation = props->RefDistance / dist;
                 for(i = 0;i < NumSends;i++)
                 {
@@ -1151,7 +1151,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
         case LinearDistance:
             if(props->MaxDistance != props->RefDistance)
             {
-                Attenuation = props->RollOffFactor * (ClampedDist-props->RefDistance) /
+                Attenuation = props->RolloffFactor * (ClampedDist-props->RefDistance) /
                               (props->MaxDistance-props->RefDistance);
                 Attenuation = maxf(1.0f - Attenuation, 0.0f);
                 for(i = 0;i < NumSends;i++)
@@ -1171,7 +1171,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
         case ExponentDistance:
             if(ClampedDist > 0.0f && props->RefDistance > 0.0f)
             {
-                Attenuation = powf(ClampedDist/props->RefDistance, -props->RollOffFactor);
+                Attenuation = powf(ClampedDist/props->RefDistance, -props->RolloffFactor);
                 for(i = 0;i < NumSends;i++)
                     RoomAttenuation[i] = powf(ClampedDist/props->RefDistance, -RoomRolloff[i]);
             }

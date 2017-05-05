@@ -504,7 +504,7 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_ROLLOFF_FACTOR:
             CHECKVAL(*values >= 0.0f);
 
-            Source->RollOffFactor = *values;
+            Source->RolloffFactor = *values;
             DO_UPDATEPROPS();
             return AL_TRUE;
 
@@ -1143,7 +1143,7 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
             return AL_TRUE;
 
         case AL_ROLLOFF_FACTOR:
-            *values = Source->RollOffFactor;
+            *values = Source->RolloffFactor;
             return AL_TRUE;
 
         case AL_REFERENCE_DISTANCE:
@@ -2988,7 +2988,7 @@ static void InitSourceParams(ALsource *Source, ALsizei num_sends)
     Source->Orientation[1][2] =  0.0f;
     Source->RefDistance = 1.0f;
     Source->MaxDistance = FLT_MAX;
-    Source->RollOffFactor = 1.0f;
+    Source->RolloffFactor = 1.0f;
     Source->Gain = 1.0f;
     Source->MinGain = 0.0f;
     Source->MaxGain = 1.0f;
@@ -3099,7 +3099,7 @@ static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_send
     props->OuterAngle = source->OuterAngle;
     props->RefDistance = source->RefDistance;
     props->MaxDistance = source->MaxDistance;
-    props->RollOffFactor = source->RollOffFactor;
+    props->RolloffFactor = source->RolloffFactor;
     for(i = 0;i < 3;i++)
         props->Position[i] = source->Position[i];
     for(i = 0;i < 3;i++)

@@ -540,6 +540,11 @@ QStringList MainWindow::collectHrtfs()
                 }
             }
         }
+
+#ifdef ALSOFT_EMBED_HRTF_DATA
+        ret.push_back("Built-In 44100hz");
+        ret.push_back("Built-In 48000hz");
+#endif
     }
     return ret;
 }

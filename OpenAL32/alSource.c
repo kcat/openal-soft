@@ -119,6 +119,9 @@ typedef enum SourceProp {
 
     /* AL_SOFT_source_resampler */
     srcResampler = AL_SOURCE_RESAMPLER_SOFT,
+
+    /* AL_SOFT_source_spatialize */
+    srcSpatialize = AL_SOURCE_SPATIALIZE_SOFT,
 } SourceProp;
 
 static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALfloat *values);
@@ -218,6 +221,7 @@ static ALint FloatValsByProp(ALenum prop)
         case AL_SEC_LENGTH_SOFT:
         case AL_SOURCE_RADIUS:
         case AL_SOURCE_RESAMPLER_SOFT:
+        case AL_SOURCE_SPATIALIZE_SOFT:
             return 1;
 
         case AL_STEREO_ANGLES:
@@ -282,6 +286,7 @@ static ALint DoubleValsByProp(ALenum prop)
         case AL_SEC_LENGTH_SOFT:
         case AL_SOURCE_RADIUS:
         case AL_SOURCE_RESAMPLER_SOFT:
+        case AL_SOURCE_SPATIALIZE_SOFT:
             return 1;
 
         case AL_SEC_OFFSET_LATENCY_SOFT:
@@ -347,6 +352,7 @@ static ALint IntValsByProp(ALenum prop)
         case AL_SEC_LENGTH_SOFT:
         case AL_SOURCE_RADIUS:
         case AL_SOURCE_RESAMPLER_SOFT:
+        case AL_SOURCE_SPATIALIZE_SOFT:
             return 1;
 
         case AL_POSITION:
@@ -408,6 +414,7 @@ static ALint Int64ValsByProp(ALenum prop)
         case AL_SEC_LENGTH_SOFT:
         case AL_SOURCE_RADIUS:
         case AL_SOURCE_RESAMPLER_SOFT:
+        case AL_SOURCE_SPATIALIZE_SOFT:
             return 1;
 
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
@@ -656,6 +663,7 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
         case AL_DIRECT_CHANNELS_SOFT:
         case AL_SOURCE_RESAMPLER_SOFT:
+        case AL_SOURCE_SPATIALIZE_SOFT:
             ival = (ALint)values[0];
             return SetSourceiv(Source, Context, prop, &ival);
 
@@ -888,6 +896,13 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             DO_UPDATEPROPS();
             return AL_TRUE;
 
+        case AL_SOURCE_SPATIALIZE_SOFT:
+            CHECKVAL(*values >= AL_FALSE && *values <= AL_AUTO_SOFT);
+
+            Source->Spatialize = *values;
+            DO_UPDATEPROPS();
+            return AL_TRUE;
+
 
         case AL_AUXILIARY_SEND_FILTER:
             LockEffectSlotsRead(Context);
@@ -1029,6 +1044,7 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
         case AL_DIRECT_CHANNELS_SOFT:
         case AL_DISTANCE_MODEL:
         case AL_SOURCE_RESAMPLER_SOFT:
+        case AL_SOURCE_SPATIALIZE_SOFT:
             CHECKVAL(*values <= INT_MAX && *values >= INT_MIN);
 
             ivals[0] = (ALint)*values;
@@ -1269,6 +1285,7 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_SAMPLE_LENGTH_SOFT:
         case AL_DISTANCE_MODEL:
         case AL_SOURCE_RESAMPLER_SOFT:
+        case AL_SOURCE_SPATIALIZE_SOFT:
             if((err=GetSourceiv(Source, Context, (int)prop, ivals)) != AL_FALSE)
                 *values = (ALdouble)ivals[0];
             return err;
@@ -1443,6 +1460,10 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             *values = Source->Resampler;
             return AL_TRUE;
 
+        case AL_SOURCE_SPATIALIZE_SOFT:
+            *values = Source->Spatialize;
+            return AL_TRUE;
+
         /* 1x float/double */
         case AL_CONE_INNER_ANGLE:
         case AL_CONE_OUTER_ANGLE:
@@ -1602,6 +1623,7 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
         case AL_DIRECT_CHANNELS_SOFT:
         case AL_DISTANCE_MODEL:
         case AL_SOURCE_RESAMPLER_SOFT:
+        case AL_SOURCE_SPATIALIZE_SOFT:
             if((err=GetSourceiv(Source, Context, prop, ivals)) != AL_FALSE)
                 *values = ivals[0];
             return err;

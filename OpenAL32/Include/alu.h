@@ -41,9 +41,9 @@ struct ALeffectslot;
 
 
 enum SpatializeMode {
-    SpatializeOff,
-    SpatializeOn,
-    SpatializeAuto
+    SpatializeOff = AL_FALSE,
+    SpatializeOn = AL_TRUE,
+    SpatializeAuto = AL_AUTO_SOFT
 };
 
 enum Resampler {

@@ -44,7 +44,7 @@ int main (int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    if (fprintf(output_file, "unsigned char %s[] = {", variable_name) < 0)
+    if (fprintf(output_file, "static const unsigned char %s[] = {", variable_name) < 0)
     {
         printf("Could not write to output file '%s': %s\n", output_name, strerror(ferror(output_file)));
         return EXIT_FAILURE;

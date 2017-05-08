@@ -1455,24 +1455,18 @@ static void ApplyLimiter(struct OutputLimiter *Limiter,
     {
         ALfloat lastgain = Limiter->Gain;
         ALsizei wpos = Limiter->Pos;
-        ALfloat sum = 0.0f;
+        ALuint sum = Limiter->SquaredSum;
         ALfloat gain;
-
-        /* Unfortunately we can't store the running sum due to fp inaccuracies
-         * causing it to drift over time. So we need to recalculate it every
-         * once in a while (i.e. every invocation).
-         */
-        for(i = 0;i < LIMITER_WINDOW_SIZE;i++)
-            sum += Limiter->Window[i];
 
         for(i = 0;i < SamplesToDo;i++)
         {
             sum -= Limiter->Window[wpos];
-            Limiter->Window[wpos] = Values[i];
-            sum += Values[i];
+            Limiter->Window[wpos] = fastf2u(minf(Values[i]*65536.0f, LIMITER_VALUE_MAX));
+            sum += Limiter->Window[wpos];
 
             /* Clamp limiter range to 0dB...-80dB. */
-            gain = 1.0f / clampf(sqrtf(sum / (ALfloat)LIMITER_WINDOW_SIZE), 1.0f, 1000.0f);
+            gain = 1.0f / clampf(sqrtf((ALfloat)sum / ((ALfloat)LIMITER_WINDOW_SIZE*65536.0f)),
+                                 1.0f, 1000.0f);
             if(lastgain >= gain)
                 lastgain = maxf(lastgain*AttackRate, gain);
             else
@@ -1485,6 +1479,7 @@ static void ApplyLimiter(struct OutputLimiter *Limiter,
 
         Limiter->Gain = lastgain;
         Limiter->Pos = wpos;
+        Limiter->SquaredSum = sum;
     }
     if(do_limit)
     {

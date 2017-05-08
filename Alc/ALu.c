@@ -414,6 +414,7 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
     const struct ChanMap *chans = NULL;
     ALsizei num_channels = 0;
     bool isbformat = false;
+    ALfloat downmix_gain = 1.0f;
     ALsizei c, i, j;
 
     switch(Buffer->FmtChannels)
@@ -432,31 +433,40 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
 
         chans = StereoMap;
         num_channels = 2;
+        downmix_gain = 1.0f / 2.0f;
         break;
 
     case FmtRear:
         chans = RearMap;
         num_channels = 2;
+        downmix_gain = 1.0f / 2.0f;
         break;
 
     case FmtQuad:
         chans = QuadMap;
         num_channels = 4;
+        downmix_gain = 1.0f / 4.0f;
         break;
 
     case FmtX51:
         chans = X51Map;
         num_channels = 6;
+        /* NOTE: Excludes LFE. */
+        downmix_gain = 1.0f / 5.0f;
         break;
 
     case FmtX61:
         chans = X61Map;
         num_channels = 7;
+        /* NOTE: Excludes LFE. */
+        downmix_gain = 1.0f / 6.0f;
         break;
 
     case FmtX71:
         chans = X71Map;
         num_channels = 8;
+        /* NOTE: Excludes LFE. */
+        downmix_gain = 1.0f / 7.0f;
         break;
 
     case FmtBFormat2D:
@@ -544,8 +554,8 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
         }
         else
         {
-            /* Non-panned B-Format has its XYZ channels rotated according to
-             * the orientation.
+            /* Local B-Format sources have their XYZ channels rotated according
+             * to the orientation.
              */
             ALfloat N[3], V[3], U[3];
             aluMatrixf matrix;
@@ -622,8 +632,8 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
     }
     else if(DirectChannels)
     {
-        /* Skip the virtual channels and write inputs to the real output with
-         * no explicit panning.
+        /* Direct source channels always play local. Skip the virtual channels
+         * and write inputs to the matching real outputs.
          */
         voice->Direct.Buffer = Device->RealOut.Buffer;
         voice->Direct.Channels = Device->RealOut.NumChannels;
@@ -680,7 +690,7 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
             GetHrtfCoeffs(Device->HrtfHandle, ev, az, Spread,
                           voice->Direct.Params[0].Hrtf.Target.Coeffs,
                           voice->Direct.Params[0].Hrtf.Target.Delay);
-            voice->Direct.Params[0].Hrtf.Target.Gain = DryGain;
+            voice->Direct.Params[0].Hrtf.Target.Gain = DryGain * downmix_gain;
 
             /* Remaining channels use the same results as the first. */
             for(c = 1;c < num_channels;c++)
@@ -709,8 +719,9 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
                             for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
                                 voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
                         else
-                            ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels,
-                                coeffs, WetGain[i], voice->Send[i].Params[c].Gains.Target
+                            ComputePanningGainsBF(Slot->ChanMap,
+                                Slot->NumChannels, coeffs, WetGain[i] * downmix_gain,
+                                voice->Send[i].Params[c].Gains.Target
                             );
                     }
                 else
@@ -720,6 +731,10 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
         }
         else
         {
+            /* Local sources on HRTF play with each channel panned to its
+             * relative location around the listener, providing "virtual
+             * speaker" responses.
+             */
             for(c = 0;c < num_channels;c++)
             {
                 ALfloat coeffs[MAX_AMBI_COEFFS];
@@ -829,7 +844,7 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
                 }
 
                 ComputePanningGains(Device->Dry,
-                    coeffs, DryGain, voice->Direct.Params[c].Gains.Target
+                    coeffs, DryGain * downmix_gain, voice->Direct.Params[c].Gains.Target
                 );
             }
 
@@ -844,8 +859,9 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
                             for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
                                 voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
                         else
-                            ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels,
-                                coeffs, WetGain[i], voice->Send[i].Params[c].Gains.Target
+                            ComputePanningGainsBF(Slot->ChanMap,
+                                Slot->NumChannels, coeffs, WetGain[i] * downmix_gain,
+                                voice->Send[i].Params[c].Gains.Target
                             );
                     }
                 else

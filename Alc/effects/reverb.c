@@ -311,18 +311,18 @@ static ALvoid ALreverbState_Destruct(ALreverbState *State)
  * in the future, true opposites can be used.
  */
 static const aluMatrixf B2A = {{
-    { 0.288675134595f,  0.288675134595f,  0.288675134595f,  0.288675134595f },
-    { 0.288675134595f, -0.288675134595f, -0.288675134595f,  0.288675134595f },
-    { 0.288675134595f,  0.288675134595f, -0.288675134595f, -0.288675134595f },
-    { 0.288675134595f, -0.288675134595f,  0.288675134595f, -0.288675134595f }
+    { 0.866025403785f,  0.288675134595f,  0.288675134595f,  0.288675134595f },
+    { 0.866025403785f, -0.288675134595f, -0.288675134595f,  0.288675134595f },
+    { 0.866025403785f,  0.288675134595f, -0.288675134595f, -0.288675134595f },
+    { 0.866025403785f, -0.288675134595f,  0.288675134595f, -0.288675134595f }
 }};
 
 /* Converts A-Format to B-Format (transposed). */
 static const aluMatrixf A2B = {{
-    { 0.8660254038f,  0.8660254038f,  0.8660254038f,  0.8660254038f },
-    { 0.8660254038f, -0.8660254038f, -0.8660254038f,  0.8660254038f },
-    { 0.8660254038f,  0.8660254038f, -0.8660254038f, -0.8660254038f },
-    { 0.8660254038f, -0.8660254038f,  0.8660254038f, -0.8660254038f }
+    { 0.288675134595f,  0.866025403785f,  0.866025403785f,  0.8660254038f },
+    { 0.288675134595f, -0.866025403785f, -0.866025403785f,  0.8660254038f },
+    { 0.288675134595f,  0.866025403785f, -0.866025403785f, -0.8660254038f },
+    { 0.288675134595f, -0.866025403785f,  0.866025403785f, -0.8660254038f }
 }};
 
 static const ALfloat FadeStep = 1.0f / FADE_SAMPLES;
@@ -1413,9 +1413,11 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
                     frequency, State);
 
     /* Update early and late 3D panning. Attenuate the early and late stages
-     * both by 0.7071 (-3dB) to better balance the mixture.
+     * both by 0.5 (-6dB) to better balance the early and late mixture, and
+     * also to balance the two-step early reflection taps (which feed into the
+     * late reverb).
      */
-    gain = sqrtf(0.5f) * props->Reverb.Gain * Slot->Params.Gain * ReverbBoost;
+    gain = 0.5f * props->Reverb.Gain * Slot->Params.Gain * ReverbBoost;
     Update3DPanning(Device, props->Reverb.ReflectionsPan,
                     props->Reverb.LateReverbPan, gain,
                     props->Reverb.ReflectionsGain,

@@ -1427,6 +1427,8 @@ static void UpdateContextSources(ALCcontext *ctx, const struct ALeffectslotArray
 }
 
 
+static_assert(LIMITER_VALUE_MAX < (UINT_MAX/LIMITER_WINDOW_SIZE), "LIMITER_VALUE_MAX is too big");
+
 static void ApplyLimiter(struct OutputLimiter *Limiter,
                          ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALsizei NumChans,
                          const ALfloat AttackRate, const ALfloat ReleaseRate,
@@ -1446,8 +1448,8 @@ static void ApplyLimiter(struct OutputLimiter *Limiter,
     {
         for(i = 0;i < SamplesToDo;i++)
         {
-            ALfloat amp_sqr = OutBuffer[c][i] * OutBuffer[c][i];
-            Values[i] = maxf(Values[i], amp_sqr);
+            ALfloat amp = OutBuffer[c][i];
+            Values[i] = maxf(Values[i], amp*amp);
         }
     }
 
@@ -1456,7 +1458,7 @@ static void ApplyLimiter(struct OutputLimiter *Limiter,
         ALfloat lastgain = Limiter->Gain;
         ALsizei wpos = Limiter->Pos;
         ALuint sum = Limiter->SquaredSum;
-        ALfloat gain;
+        ALfloat gain, rms;
 
         for(i = 0;i < SamplesToDo;i++)
         {
@@ -1464,9 +1466,13 @@ static void ApplyLimiter(struct OutputLimiter *Limiter,
             Limiter->Window[wpos] = fastf2u(minf(Values[i]*65536.0f, LIMITER_VALUE_MAX));
             sum += Limiter->Window[wpos];
 
-            /* Clamp limiter range to 0dB...-80dB. */
-            gain = 1.0f / clampf(sqrtf((ALfloat)sum / ((ALfloat)LIMITER_WINDOW_SIZE*65536.0f)),
-                                 1.0f, 1000.0f);
+            rms = sqrtf((ALfloat)sum / ((ALfloat)LIMITER_WINDOW_SIZE*65536.0f));
+
+            /* Clamp the minimum RMS to 0dB. The uint used for the squared sum
+             * inherently limits the maximum RMS to about 21dB, thus the gain
+             * ranges from 0dB to -21dB.
+             */
+            gain = 1.0f / maxf(rms, 1.0f);
             if(lastgain >= gain)
                 lastgain = maxf(lastgain*AttackRate, gain);
             else

@@ -299,7 +299,7 @@ void DeinitVoice(ALvoice *voice);
 
 #define LIMITER_WINDOW_SIZE (1<<7) /* 128 */
 #define LIMITER_WINDOW_MASK (LIMITER_WINDOW_SIZE-1)
-#define LIMITER_VALUE_MAX  (UINT_MAX / LIMITER_WINDOW_SIZE)
+#define LIMITER_VALUE_MAX  (1<<24) /* 16777216 */
 struct OutputLimiter {
     /* RMS detection window, sum of values in the window, and the next write
      * pos. Values are 16.16 fixed-point.

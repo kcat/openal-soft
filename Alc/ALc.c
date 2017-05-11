@@ -1762,7 +1762,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 {
     enum HrtfRequestMode hrtf_userreq = Hrtf_Default;
     enum HrtfRequestMode hrtf_appreq = Hrtf_Default;
-    ALCenum gainLimiter = !!device->Limiter;
+    ALCenum gainLimiter = device->Limiter ? ALC_TRUE : ALC_FALSE;
     const ALsizei old_sends = device->NumAuxSends;
     ALsizei new_sends = device->NumAuxSends;
     enum DevFmtChannels oldChans;
@@ -2215,13 +2215,17 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
           device->AuxiliaryEffectSlotMax, device->NumAuxSends);
 
     if(ConfigValueBool(alstr_get_cstr(device->DeviceName), NULL, "output-limiter", &val))
-        gainLimiter = val;
-    if(gainLimiter)
+        gainLimiter = val ? ALC_TRUE : ALC_FALSE;
+    /* Valid values for gainLimiter are ALC_DONT_CARE_SOFT, ALC_TRUE, and
+     * ALC_FALSE. We default to on, so ALC_DONT_CARE_SOFT is the same as
+     * ALC_TRUE.
+     */
+    if(gainLimiter != ALC_FALSE)
     {
         if(!device->Limiter)
             device->Limiter = alloc_limiter();
     }
-    else if(device->Limiter)
+    else
     {
         al_free(device->Limiter);
         device->Limiter = NULL;

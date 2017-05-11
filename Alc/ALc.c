@@ -738,7 +738,7 @@ static const ALchar alExtList[] =
     "AL_LOKI_quadriphonic AL_SOFT_block_alignment AL_SOFT_deferred_updates "
     "AL_SOFT_direct_channels AL_SOFT_gain_clamp_ex AL_SOFT_loop_points "
     "AL_SOFT_MSADPCM AL_SOFT_source_latency AL_SOFT_source_length "
-    "AL_SOFT_source_resampler AL_SOFTX_source_spatialize";
+    "AL_SOFT_source_resampler AL_SOFT_source_spatialize";
 
 static ATOMIC(ALCenum) LastNullDeviceError = ATOMIC_INIT_STATIC(ALC_NO_ERROR);
 

@@ -448,6 +448,12 @@ AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index);
 #endif
 #endif
 
+#ifndef AL_SOFT_source_spatialize
+#define AL_SOFT_source_spatialize
+#define AL_SOURCE_SPATIALIZE_SOFT                0x1214
+#define AL_AUTO_SOFT                             0x0002
+#endif
+
 #ifdef __cplusplus
 }
 #endif

@@ -2230,6 +2230,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         al_free(device->Limiter);
         device->Limiter = NULL;
     }
+    TRACE("Output limiter %s\n", device->Limiter ? "enabled" : "disabled");
 
     /* Need to delay returning failure until replacement Send arrays have been
      * allocated with the appropriate size.

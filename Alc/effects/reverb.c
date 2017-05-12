@@ -311,18 +311,18 @@ static ALvoid ALreverbState_Destruct(ALreverbState *State)
  * in the future, true opposites can be used.
  */
 static const aluMatrixf B2A = {{
-    { 0.866025403785f,  0.288675134595f,  0.288675134595f,  0.288675134595f },
-    { 0.866025403785f, -0.288675134595f, -0.288675134595f,  0.288675134595f },
-    { 0.866025403785f,  0.288675134595f, -0.288675134595f, -0.288675134595f },
-    { 0.866025403785f, -0.288675134595f,  0.288675134595f, -0.288675134595f }
+    { 0.288675134595f,  0.288675134595f,  0.288675134595f,  0.288675134595f },
+    { 0.288675134595f, -0.288675134595f, -0.288675134595f,  0.288675134595f },
+    { 0.288675134595f,  0.288675134595f, -0.288675134595f, -0.288675134595f },
+    { 0.288675134595f, -0.288675134595f,  0.288675134595f, -0.288675134595f }
 }};
 
-/* Converts A-Format to B-Format (transposed). */
+/* Converts A-Format to B-Format. */
 static const aluMatrixf A2B = {{
-    { 0.288675134595f,  0.866025403785f,  0.866025403785f,  0.8660254038f },
-    { 0.288675134595f, -0.866025403785f, -0.866025403785f,  0.8660254038f },
-    { 0.288675134595f,  0.866025403785f, -0.866025403785f, -0.8660254038f },
-    { 0.288675134595f, -0.866025403785f,  0.866025403785f, -0.8660254038f }
+    { 0.866025403785f,  0.866025403785f,  0.866025403785f,  0.866025403785f },
+    { 0.866025403785f, -0.866025403785f,  0.866025403785f, -0.866025403785f },
+    { 0.866025403785f, -0.866025403785f, -0.866025403785f,  0.866025403785f },
+    { 0.866025403785f,  0.866025403785f, -0.866025403785f, -0.866025403785f }
 }};
 
 static const ALfloat FadeStep = 1.0f / FADE_SAMPLES;
@@ -1305,14 +1305,14 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     STATIC_CAST(ALeffectState,State)->OutBuffer = Device->FOAOut.Buffer;
     STATIC_CAST(ALeffectState,State)->OutChannels = Device->FOAOut.NumChannels;
 
-    /* Note: Both _m2 and _res are transposed. */
+    /* Note: _res is transposed. */
 #define MATRIX_MULT(_res, _m1, _m2) do {                                                   \
     int row, col;                                                                          \
     for(col = 0;col < 4;col++)                                                             \
     {                                                                                      \
         for(row = 0;row < 4;row++)                                                         \
-            _res.m[col][row] = _m1.m[row][0]*_m2.m[col][0] + _m1.m[row][1]*_m2.m[col][1] + \
-                               _m1.m[row][2]*_m2.m[col][2] + _m1.m[row][3]*_m2.m[col][3];  \
+            _res.m[col][row] = _m1.m[row][0]*_m2.m[0][col] + _m1.m[row][1]*_m2.m[1][col] + \
+                               _m1.m[row][2]*_m2.m[2][col] + _m1.m[row][3]*_m2.m[3][col];  \
     }                                                                                      \
 } while(0)
     /* Create a matrix that first converts A-Format to B-Format, then rotates

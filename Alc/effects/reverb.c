@@ -1055,24 +1055,25 @@ static ALvoid UpdateModulator(const ALfloat modTime, const ALfloat modDepth,
 
     /* Modulation is calculated in two parts.
      *
-     * The modulation time effects the sinus applied to the change in
-     * frequency.  An index out of the current time range (both in samples)
-     * is incremented each sample.  The range is bound to a reasonable
-     * minimum (1 sample) and when the timing changes, the index is rescaled
-     * to the new range (to keep the sinus consistent).
+     * The modulation time effects the speed of the sinus. An index out of the
+     * current range (both in samples) is incremented each sample, so a longer
+     * time implies a larger range. The range is bound to a reasonable minimum
+     * (1 sample) and when the timing changes, the index is rescaled to the new
+     * range to keep the sinus consistent.
      */
     range = maxu(fastf2u(modTime*frequency), 1);
     State->Mod.Index = (ALuint)(State->Mod.Index * (ALuint64)range /
                                 State->Mod.Range);
     State->Mod.Range = range;
 
-    /* The modulation depth effects the amount of frequency change over the
-     * range of the sinus.  It needs to be scaled by the modulation time so
-     * that a given depth produces a consistent change in frequency over all
-     * ranges of time.  Since the depth is applied to a sinus value, it needs
-     * to be halfed once for the sinus range and again for the sinus swing
-     * in time (half of it is spent decreasing the frequency, half is spent
-     * increasing it).
+    /* The modulation depth effects the scale of the sinus, which changes how
+     * much extra delay is added to the delay line. This delay changing over
+     * time changes the pitch, creating the modulation effect. The scale needs
+     * to be multiplied by the modulation time so that a given depth produces a
+     * consistent shift in frequency over all ranges of time. Since the depth
+     * is applied to a sinus value, it needs to be halved once for the sinus
+     * range (-1...+1 to 0...1) and again for the sinus swing in time (half of
+     * it is spent decreasing the frequency, half is spent increasing it).
      */
     State->Mod.Depth = modDepth * MODULATION_DEPTH_COEFF * modTime / 2.0f /
                        2.0f * frequency;

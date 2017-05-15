@@ -668,7 +668,7 @@ static void InitPanning(ALCdevice *device)
             ambiup_reset(device->AmbiUp, device);
         }
 
-        if(ConfigValueFloat(devname, "decoder", "nfc-ref-delay", &nfc_delay))
+        if(ConfigValueFloat(devname, "decoder", "nfc-ref-delay", &nfc_delay) && nfc_delay > 0.0f)
         {
             nfc_delay = clampf(nfc_delay, 0.001f, 1000.0f);
             InitNearFieldCtrl(device, nfc_delay * SPEEDOFSOUNDMETRESPERSEC,

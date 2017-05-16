@@ -764,6 +764,13 @@ static pa_stream *ALCpulsePlayback_connectStream(const char *device_name,
     pa_stream_state_t state;
     pa_stream *stream;
 
+    if(!device_name)
+    {
+        device_name = getenv("ALSOFT_PULSE_DEFAULT");
+        if(device_name && !device_name[0])
+            device_name = NULL;
+    }
+
     stream = pa_stream_new_with_proplist(context, "Playback Stream", spec, chanmap, prop_filter);
     if(!stream)
     {

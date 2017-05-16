@@ -947,8 +947,8 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
     {
         ALfloat hfScale = props->Direct.HFReference / Frequency;
         ALfloat lfScale = props->Direct.LFReference / Frequency;
-        ALfloat gainHF = maxf(DryGainHF, 0.0625f); /* Limit -24dB */
-        ALfloat gainLF = maxf(DryGainLF, 0.0625f);
+        ALfloat gainHF = maxf(DryGainHF, 0.001f); /* Limit -60dB */
+        ALfloat gainLF = maxf(DryGainLF, 0.001f);
         for(c = 0;c < num_channels;c++)
         {
             voice->Direct.Params[c].FilterType = AF_None;
@@ -968,8 +968,8 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
     {
         ALfloat hfScale = props->Send[i].HFReference / Frequency;
         ALfloat lfScale = props->Send[i].LFReference / Frequency;
-        ALfloat gainHF = maxf(WetGainHF[i], 0.0625f);
-        ALfloat gainLF = maxf(WetGainLF[i], 0.0625f);
+        ALfloat gainHF = maxf(WetGainHF[i], 0.001f);
+        ALfloat gainLF = maxf(WetGainLF[i], 0.001f);
         for(c = 0;c < num_channels;c++)
         {
             voice->Send[i].Params[c].FilterType = AF_None;

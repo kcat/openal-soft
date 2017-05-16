@@ -1068,6 +1068,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
     ALfloat WetGainLF[MAX_SENDS];
     ALfloat dir[3];
     ALfloat spread;
+    ALfloat meters;
     ALfloat Pitch;
     ALint i;
 
@@ -1221,30 +1222,28 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
     }
 
     /* Distance-based air absorption */
-    if(props->AirAbsorptionFactor > 0.0f && ClampedDist > props->RefDistance)
-    {
-        ALfloat meters = (ClampedDist-props->RefDistance) * Listener->Params.MetersPerUnit;
+    meters = (ClampedDist-props->RefDistance) * props->RolloffFactor *
+             Listener->Params.MetersPerUnit;
+    if(meters > 0.0f && props->AirAbsorptionFactor > 0.0f)
         DryGainHF *= powf(AIRABSORBGAINHF, props->AirAbsorptionFactor*meters);
-        for(i = 0;i < NumSends;i++)
-            WetGainHF[i] *= powf(RoomAirAbsorption[i], props->AirAbsorptionFactor*meters);
-    }
 
-    if(props->WetGainAuto)
+    if(props->WetGainAuto && meters > 0.0f)
     {
-        ALfloat ApparentDist = 1.0f/maxf(Attenuation, 0.00001f) - 1.0f;
-
         /* Apply a decay-time transformation to the wet path, based on the
-         * attenuation of the dry path.
-         *
-         * Using the apparent distance, based on the distance attenuation, the
-         * initial decay of the reverb effect is calculated and applied to the
-         * wet path.
+         * source distance in meters. The initial decay of the reverb effect is
+         * calculated and applied to the wet path.
          */
         for(i = 0;i < NumSends;i++)
         {
             if(DecayDistance[i] > 0.0f)
-                WetGain[i] *= powf(0.001f/*-60dB*/, ApparentDist/DecayDistance[i]);
+                WetGain[i] *= powf(0.001f/*-60dB*/, meters/DecayDistance[i]);
         }
+
+        /* Yes, the wet path's air absorption is applied with WetGainAuto on,
+         * rather than WetGainHFAuto.
+         */
+        for(i = 0;i < NumSends;i++)
+            WetGainHF[i] *= powf(RoomAirAbsorption[i], meters);
     }
 
     /* Calculate directional soundcones */

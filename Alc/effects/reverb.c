@@ -1324,14 +1324,14 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
 
     /* Calculate the master filters */
     hfScale = props->Reverb.HFReference / frequency;
-    /* Restrict the filter gains from going below -40dB to keep the I3DL2
-     * model from killing most of the signal.
+    /* Restrict the filter gains from going below -60dB to keep the filter from
+     * killing most of the signal.
      */
-    gainhf = maxf(props->Reverb.GainHF, 0.01f);
+    gainhf = maxf(props->Reverb.GainHF, 0.001f);
     ALfilterState_setParams(&State->Filter[0].Lp, ALfilterType_HighShelf,
                             gainhf, hfScale, calc_rcpQ_from_slope(gainhf, 1.0f));
     lfScale = props->Reverb.LFReference / frequency;
-    gainlf = maxf(props->Reverb.GainLF, 0.01f);
+    gainlf = maxf(props->Reverb.GainLF, 0.001f);
     ALfilterState_setParams(&State->Filter[0].Hp, ALfilterType_LowShelf,
                             gainlf, lfScale, calc_rcpQ_from_slope(gainlf, 1.0f));
     for(i = 1;i < 4;i++)

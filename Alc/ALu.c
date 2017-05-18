@@ -1054,12 +1054,9 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
     const ALlistener *Listener = ALContext->Listener;
     const ALsizei NumSends = Device->NumAuxSends;
     aluVector Position, Velocity, Direction, SourceToListener;
-    ALfloat Distance, ClampedDist;
-    ALfloat DopplerFactor;
+    ALfloat Distance, ClampedDist, DopplerFactor;
     ALfloat RoomAirAbsorption[MAX_SENDS];
     ALeffectslot *SendSlots[MAX_SENDS];
-    ALfloat Attenuation;
-    ALfloat RoomAttenuation[MAX_SENDS];
     ALfloat RoomRolloff[MAX_SENDS];
     ALfloat DecayDistance[MAX_SENDS];
     ALfloat DryGain, DryGainHF, DryGainLF;
@@ -1072,11 +1069,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
     ALfloat Pitch;
     ALint i;
 
-    Pitch = 1.0f;
-    aluVectorSet(&Position, props->Position[0], props->Position[1], props->Position[2], 1.0f);
-    aluVectorSet(&Direction, props->Direction[0], props->Direction[1], props->Direction[2], 0.0f);
-    aluVectorSet(&Velocity, props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0f);
-
+    /* Set mixing buffers and get send parameters. */
     voice->Direct.Buffer = Device->Dry.Buffer;
     voice->Direct.Channels = Device->Dry.NumChannels;
     for(i = 0;i < NumSends;i++)
@@ -1120,6 +1113,9 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
     }
 
     /* Transform source to listener space (convert to head relative) */
+    aluVectorSet(&Position, props->Position[0], props->Position[1], props->Position[2], 1.0f);
+    aluVectorSet(&Direction, props->Direction[0], props->Direction[1], props->Direction[2], 0.0f);
+    aluVectorSet(&Velocity, props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0f);
     if(props->HeadRelative == AL_FALSE)
     {
         const aluMatrixf *Matrix = &Listener->Params.Matrix;
@@ -1144,12 +1140,20 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
     SourceToListener.v[3] = 0.0f;
     Distance = aluNormalize(SourceToListener.v);
 
+    /* Initial source gain */
+    DryGain = props->Gain;
+    DryGainHF = 1.0f;
+    DryGainLF = 1.0f;
+    for(i = 0;i < NumSends;i++)
+    {
+        WetGain[i] = props->Gain;
+        WetGainHF[i] = 1.0f;
+        WetGainLF[i] = 1.0f;
+    }
+
     /* Calculate distance attenuation */
     ClampedDist = Distance;
 
-    Attenuation = 1.0f;
-    for(i = 0;i < NumSends;i++)
-        RoomAttenuation[i] = 1.0f;
     switch(Listener->Params.SourceDistanceModel ?
            props->DistanceModel : Listener->Params.DistanceModel)
     {
@@ -1162,11 +1166,11 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
             if(props->RefDistance > 0.0f)
             {
                 ALfloat dist = lerp(props->RefDistance, ClampedDist, props->RolloffFactor);
-                if(dist > 0.0f) Attenuation = props->RefDistance / dist;
+                if(dist > 0.0f) DryGain *= props->RefDistance / dist;
                 for(i = 0;i < NumSends;i++)
                 {
                     dist = lerp(props->RefDistance, ClampedDist, RoomRolloff[i]);
-                    if(dist > 0.0f) RoomAttenuation[i] = props->RefDistance / dist;
+                    if(dist > 0.0f) WetGain[i] *= props->RefDistance / dist;
                 }
             }
             break;
@@ -1179,14 +1183,14 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
         case LinearDistance:
             if(props->MaxDistance != props->RefDistance)
             {
-                Attenuation = props->RolloffFactor * (ClampedDist-props->RefDistance) /
+                ALfloat attn = props->RolloffFactor * (ClampedDist-props->RefDistance) /
                               (props->MaxDistance-props->RefDistance);
-                Attenuation = maxf(1.0f - Attenuation, 0.0f);
+                DryGain *= maxf(1.0f - attn, 0.0f);
                 for(i = 0;i < NumSends;i++)
                 {
-                    RoomAttenuation[i] = RoomRolloff[i] * (ClampedDist-props->RefDistance) /
-                                         (props->MaxDistance-props->RefDistance);
-                    RoomAttenuation[i] = maxf(1.0f - RoomAttenuation[i], 0.0f);
+                    attn = RoomRolloff[i] * (ClampedDist-props->RefDistance) /
+                           (props->MaxDistance-props->RefDistance);
+                    WetGain[i] *= maxf(1.0f - attn, 0.0f);
                 }
             }
             break;
@@ -1199,26 +1203,15 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
         case ExponentDistance:
             if(ClampedDist > 0.0f && props->RefDistance > 0.0f)
             {
-                Attenuation = powf(ClampedDist/props->RefDistance, -props->RolloffFactor);
+                DryGain *= powf(ClampedDist/props->RefDistance, -props->RolloffFactor);
                 for(i = 0;i < NumSends;i++)
-                    RoomAttenuation[i] = powf(ClampedDist/props->RefDistance, -RoomRolloff[i]);
+                    WetGain[i] *= powf(ClampedDist/props->RefDistance, -RoomRolloff[i]);
             }
             break;
 
         case DisableDistance:
             ClampedDist = props->RefDistance;
             break;
-    }
-
-    /* Source Gain + Attenuation */
-    DryGain = props->Gain * Attenuation;
-    DryGainHF = 1.0f;
-    DryGainLF = 1.0f;
-    for(i = 0;i < NumSends;i++)
-    {
-        WetGain[i] = props->Gain * RoomAttenuation[i];
-        WetGainHF[i] = 1.0f;
-        WetGainLF[i] = 1.0f;
     }
 
     /* Distance-based air absorption */
@@ -1294,18 +1287,20 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
 
     /* Apply gain and frequency filters */
     DryGain  = clampf(DryGain, props->MinGain, props->MaxGain);
-    DryGain *= props->Direct.Gain * Listener->Params.Gain;
-    DryGain  = minf(DryGain, GAIN_MIX_MAX);
+    DryGain  = minf(DryGain*props->Direct.Gain*Listener->Params.Gain, GAIN_MIX_MAX);
     DryGainHF *= props->Direct.GainHF;
     DryGainLF *= props->Direct.GainLF;
     for(i = 0;i < NumSends;i++)
     {
         WetGain[i]  = clampf(WetGain[i], props->MinGain, props->MaxGain);
-        WetGain[i] *= props->Send[i].Gain * Listener->Params.Gain;
-        WetGain[i]  = minf(WetGain[i], GAIN_MIX_MAX);
+        WetGain[i]  = minf(WetGain[i]*props->Send[i].Gain*Listener->Params.Gain, GAIN_MIX_MAX);
         WetGainHF[i] *= props->Send[i].GainHF;
         WetGainLF[i] *= props->Send[i].GainLF;
     }
+
+
+    /* Initial source pitch */
+    Pitch = props->Pitch;
 
     /* Calculate velocity-based doppler effect */
     DopplerFactor = props->DopplerFactor * Listener->Params.DopplerFactor;
@@ -1328,10 +1323,10 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
                  clampf(SpeedOfSound-VSS, 1.0f, SpeedOfSound*2.0f - 1.0f);
     }
 
-    /* Calculate fixed-point stepping value, based on the pitch, buffer
-     * frequency, and output frequency.
+    /* Adjust pitch based on the buffer and output frequencies, and calculate
+     * fixed-point stepping value.
      */
-    Pitch *= (ALfloat)ALBuffer->Frequency/(ALfloat)Device->Frequency * props->Pitch;
+    Pitch *= (ALfloat)ALBuffer->Frequency/(ALfloat)Device->Frequency;
     if(Pitch > (ALfloat)MAX_PITCH)
         voice->Step = MAX_PITCH<<FRACTIONBITS;
     else

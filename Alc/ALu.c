@@ -1336,20 +1336,33 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
     if(DopplerFactor > 0.0f)
     {
         const aluVector *lvelocity = &Listener->Params.Velocity;
-        ALfloat SpeedOfSound = Listener->Params.SpeedOfSound;
-        ALfloat VSS, VLS;
+        const ALfloat SpeedOfSound = Listener->Params.SpeedOfSound;
+        ALfloat vss, vls;
 
-        if(SpeedOfSound < 1.0f)
+        vss = aluDotproduct(&Velocity, &SourceToListener) * DopplerFactor;
+        vls = aluDotproduct(lvelocity, &SourceToListener) * DopplerFactor;
+
+        if(!(vls < SpeedOfSound))
         {
-            DopplerFactor *= 1.0f/SpeedOfSound;
-            SpeedOfSound   = 1.0f;
+            /* Listener moving away from the source at the speed of sound.
+             * Sound waves can't catch it.
+             */
+            Pitch = 0.0f;
         }
-
-        VSS = aluDotproduct(&Velocity, &SourceToListener) * DopplerFactor;
-        VLS = aluDotproduct(lvelocity, &SourceToListener) * DopplerFactor;
-
-        Pitch *= clampf(SpeedOfSound-VLS, 1.0f, SpeedOfSound*2.0f - 1.0f) /
-                 clampf(SpeedOfSound-VSS, 1.0f, SpeedOfSound*2.0f - 1.0f);
+        else if(!(vss < SpeedOfSound))
+        {
+            /* Source moving toward the listener at the speed of sound. Sound
+             * waves bunch up to extreme frequencies.
+             */
+            Pitch = HUGE_VALF;
+        }
+        else
+        {
+            /* Source and listener movement is nominal. Calculate the proper
+             * doppler shift.
+             */
+            Pitch *= (SpeedOfSound-vls) / (SpeedOfSound-vss);
+        }
     }
 
     /* Adjust pitch based on the buffer and output frequencies, and calculate

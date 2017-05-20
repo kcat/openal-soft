@@ -337,13 +337,17 @@ static ALboolean CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
     {
         slot->Params.RoomRolloff = props->Props.Reverb.RoomRolloffFactor;
         slot->Params.DecayTime = props->Props.Reverb.DecayTime;
+        slot->Params.DecayHFRatio = props->Props.Reverb.DecayHFRatio;
         slot->Params.AirAbsorptionGainHF = props->Props.Reverb.AirAbsorptionGainHF;
+        slot->Params.DecayHFLimit = props->Props.Reverb.DecayHFLimit;
     }
     else
     {
         slot->Params.RoomRolloff = 0.0f;
         slot->Params.DecayTime = 0.0f;
+        slot->Params.DecayHFRatio = 0.0f;
         slot->Params.AirAbsorptionGainHF = 1.0f;
+        slot->Params.DecayHFLimit = AL_FALSE;
     }
 
     /* Swap effect states. No need to play with the ref counts since they keep
@@ -1059,13 +1063,13 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
     ALeffectslot *SendSlots[MAX_SENDS];
     ALfloat RoomRolloff[MAX_SENDS];
     ALfloat DecayDistance[MAX_SENDS];
+    ALfloat DecayHFDistance[MAX_SENDS];
     ALfloat DryGain, DryGainHF, DryGainLF;
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
     ALfloat WetGainLF[MAX_SENDS];
     ALfloat dir[3];
     ALfloat spread;
-    ALfloat meters;
     ALfloat Pitch;
     ALint i;
 
@@ -1082,14 +1086,22 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
             SendSlots[i] = NULL;
             RoomRolloff[i] = 0.0f;
             DecayDistance[i] = 0.0f;
+            DecayHFDistance[i] = 0.0f;
             RoomAirAbsorption[i] = 1.0f;
         }
         else if(SendSlots[i]->Params.AuxSendAuto)
         {
             RoomRolloff[i] = SendSlots[i]->Params.RoomRolloff + props->RoomRolloffFactor;
-            DecayDistance[i] = SendSlots[i]->Params.DecayTime *
-                               SPEEDOFSOUNDMETRESPERSEC;
+            DecayDistance[i] = SendSlots[i]->Params.DecayTime * SPEEDOFSOUNDMETRESPERSEC;
+            DecayHFDistance[i] = DecayDistance[i] * SendSlots[i]->Params.DecayHFRatio;
             RoomAirAbsorption[i] = SendSlots[i]->Params.AirAbsorptionGainHF;
+            if(SendSlots[i]->Params.DecayHFLimit && RoomAirAbsorption[i] < 1.0f)
+            {
+                ALfloat limitRatio = log10f(0.001f)/*-60 dB*/ / (log10f(RoomAirAbsorption[i]) *
+                                                                 DecayDistance[i]);
+                limitRatio = minf(limitRatio, SendSlots[i]->Params.DecayHFRatio);
+                DecayHFDistance[i] = minf(DecayHFDistance[i], limitRatio*DecayDistance[i]);
+            }
         }
         else
         {
@@ -1097,6 +1109,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
              * effect slot is the same as the dry path, sans filter effects */
             RoomRolloff[i] = props->RolloffFactor;
             DecayDistance[i] = 0.0f;
+            DecayHFDistance[i] = 0.0f;
             RoomAirAbsorption[i] = AIRABSORBGAINHF;
         }
 
@@ -1215,28 +1228,47 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
     }
 
     /* Distance-based air absorption */
-    meters = (ClampedDist-props->RefDistance) * props->RolloffFactor *
-             Listener->Params.MetersPerUnit;
-    if(meters > 0.0f && props->AirAbsorptionFactor > 0.0f)
-        DryGainHF *= powf(AIRABSORBGAINHF, props->AirAbsorptionFactor*meters);
-
-    if(props->WetGainAuto && meters > 0.0f)
+    if(ClampedDist > props->RefDistance)
     {
-        /* Apply a decay-time transformation to the wet path, based on the
-         * source distance in meters. The initial decay of the reverb effect is
-         * calculated and applied to the wet path.
-         */
-        for(i = 0;i < NumSends;i++)
+        ALfloat meters_base = (ClampedDist-props->RefDistance) * Listener->Params.MetersPerUnit;
+        if(props->AirAbsorptionFactor > 0.0f)
         {
-            if(DecayDistance[i] > 0.0f)
-                WetGain[i] *= powf(0.001f/*-60dB*/, meters/DecayDistance[i]);
+            ALfloat absorb = props->AirAbsorptionFactor * meters_base;
+            DryGainHF *= powf(AIRABSORBGAINHF, absorb*props->RolloffFactor);
+            for(i = 0;i < NumSends;i++)
+            {
+                if(RoomRolloff[i] > 0.0f)
+                    WetGainHF[i] *= powf(RoomAirAbsorption[i], absorb*RoomRolloff[i]);
+            }
         }
 
-        /* Yes, the wet path's air absorption is applied with WetGainAuto on,
-         * rather than WetGainHFAuto.
-         */
-        for(i = 0;i < NumSends;i++)
-            WetGainHF[i] *= powf(RoomAirAbsorption[i], meters);
+        if(props->WetGainAuto)
+        {
+            meters_base *= props->RolloffFactor;
+
+            /* Apply a decay-time transformation to the wet path, based on the
+             * source distance in meters. The initial decay of the reverb
+             * effect is calculated and applied to the wet path.
+             */
+            for(i = 0;i < NumSends;i++)
+            {
+                ALfloat gain;
+
+                if(!(DecayDistance[i] > 0.0f))
+                    continue;
+
+                gain = powf(0.001f/*-60dB*/, meters_base/DecayDistance[i]);
+                WetGain[i] *= gain;
+                /* Yes, the wet path's air absorption is applied with
+                 * WetGainAuto on, rather than WetGainHFAuto.
+                 */
+                if(gain > 0.0f)
+                {
+                    ALfloat gainhf = powf(0.001f/*-60dB*/, meters_base/DecayHFDistance[i]) / gain;
+                    WetGainHF[i] *= minf(gainhf, 1.0f);
+                }
+            }
+        }
     }
 
     /* Calculate directional soundcones */

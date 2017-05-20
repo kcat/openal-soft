@@ -1068,6 +1068,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
     ALfloat WetGain[MAX_SENDS];
     ALfloat WetGainHF[MAX_SENDS];
     ALfloat WetGainLF[MAX_SENDS];
+    bool directional;
     ALfloat dir[3];
     ALfloat spread;
     ALfloat Pitch;
@@ -1146,7 +1147,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
         Velocity.v[2] += lvelocity->v[2];
     }
 
-    aluNormalize(Direction.v);
+    directional = aluNormalize(Direction.v) > FLT_EPSILON;
     SourceToListener.v[0] = -Position.v[0];
     SourceToListener.v[1] = -Position.v[1];
     SourceToListener.v[2] = -Position.v[2];
@@ -1272,46 +1273,42 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
     }
 
     /* Calculate directional soundcones */
-    if(props->InnerAngle < 360.0f)
+    if(directional && props->InnerAngle < 360.0f)
     {
         ALfloat ConeVolume;
         ALfloat ConeHF;
         ALfloat Angle;
-        ALfloat scale;
 
-        Angle = RAD2DEG(acosf(aluDotproduct(&Direction, &SourceToListener)) * ConeScale) * 2.0f;
-        if(Angle > props->InnerAngle)
+        Angle = acosf(aluDotproduct(&Direction, &SourceToListener));
+        Angle = RAD2DEG(Angle * ConeScale * 2.0f);
+        if(!(Angle > props->InnerAngle))
         {
-            if(Angle < props->OuterAngle)
-            {
-                scale = (Angle-props->InnerAngle) / (props->OuterAngle-props->InnerAngle);
-                ConeVolume = lerp(1.0f, props->OuterGain, scale);
-                ConeHF = lerp(1.0f, props->OuterGainHF, scale);
-            }
-            else
-            {
-                ConeVolume = props->OuterGain;
-                ConeHF = props->OuterGainHF;
-            }
-            DryGain *= ConeVolume;
-            if(props->DryGainHFAuto)
-                DryGainHF *= ConeHF;
+            ConeVolume = 1.0f;
+            ConeHF = 1.0f;
+        }
+        else if(Angle < props->OuterAngle)
+        {
+            ALfloat scale = (            Angle-props->InnerAngle) /
+                            (props->OuterAngle-props->InnerAngle);
+            ConeVolume = lerp(1.0f, props->OuterGain, scale);
+            ConeHF = lerp(1.0f, props->OuterGainHF, scale);
+        }
+        else
+        {
+            ConeVolume = props->OuterGain;
+            ConeHF = props->OuterGainHF;
         }
 
-        /* Wet path uses the total area of the cone emitter (the room will
-         * receive the same amount of sound regardless of its direction).
-         */
-        scale = (asinf(maxf((props->OuterAngle-props->InnerAngle)/360.0f, 0.0f)) / F_PI) +
-                (props->InnerAngle/360.0f);
+        DryGain *= ConeVolume;
+        if(props->DryGainHFAuto)
+            DryGainHF *= ConeHF;
         if(props->WetGainAuto)
         {
-            ConeVolume = lerp(1.0f, props->OuterGain, scale);
             for(i = 0;i < NumSends;i++)
                 WetGain[i] *= ConeVolume;
         }
         if(props->WetGainHFAuto)
         {
-            ConeHF = lerp(1.0f, props->OuterGainHF, scale);
             for(i = 0;i < NumSends;i++)
                 WetGainHF[i] *= ConeHF;
         }

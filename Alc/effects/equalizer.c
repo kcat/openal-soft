@@ -145,13 +145,7 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *
     );
     /* Copy the filter coefficients for the other input channels. */
     for(i = 1;i < MAX_EFFECT_CHANNELS;i++)
-    {
-        state->filter[0][i].b0 = state->filter[0][0].b0;
-        state->filter[0][i].b1 = state->filter[0][0].b1;
-        state->filter[0][i].b2 = state->filter[0][0].b2;
-        state->filter[0][i].a1 = state->filter[0][0].a1;
-        state->filter[0][i].a2 = state->filter[0][0].a2;
-    }
+        ALfilterState_copyParams(&state->filter[0][i], &state->filter[0][0]);
 
     gain = maxf(props->Equalizer.Mid1Gain, 0.0625f);
     freq_mult = props->Equalizer.Mid1Center/frequency;
@@ -161,13 +155,7 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *
         )
     );
     for(i = 1;i < MAX_EFFECT_CHANNELS;i++)
-    {
-        state->filter[1][i].b0 = state->filter[1][0].b0;
-        state->filter[1][i].b1 = state->filter[1][0].b1;
-        state->filter[1][i].b2 = state->filter[1][0].b2;
-        state->filter[1][i].a1 = state->filter[1][0].a1;
-        state->filter[1][i].a2 = state->filter[1][0].a2;
-    }
+        ALfilterState_copyParams(&state->filter[1][i], &state->filter[1][0]);
 
     gain = maxf(props->Equalizer.Mid2Gain, 0.0625f);
     freq_mult = props->Equalizer.Mid2Center/frequency;
@@ -177,13 +165,7 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *
         )
     );
     for(i = 1;i < MAX_EFFECT_CHANNELS;i++)
-    {
-        state->filter[2][i].b0 = state->filter[2][0].b0;
-        state->filter[2][i].b1 = state->filter[2][0].b1;
-        state->filter[2][i].b2 = state->filter[2][0].b2;
-        state->filter[2][i].a1 = state->filter[2][0].a1;
-        state->filter[2][i].a2 = state->filter[2][0].a2;
-    }
+        ALfilterState_copyParams(&state->filter[2][i], &state->filter[2][0]);
 
     gain = maxf(sqrtf(props->Equalizer.HighGain), 0.0625f);
     freq_mult = props->Equalizer.HighCutoff/frequency;
@@ -191,13 +173,7 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *
         gain, freq_mult, calc_rcpQ_from_slope(gain, 0.75f)
     );
     for(i = 1;i < MAX_EFFECT_CHANNELS;i++)
-    {
-        state->filter[3][i].b0 = state->filter[3][0].b0;
-        state->filter[3][i].b1 = state->filter[3][0].b1;
-        state->filter[3][i].b2 = state->filter[3][0].b2;
-        state->filter[3][i].a1 = state->filter[3][0].a1;
-        state->filter[3][i].a2 = state->filter[3][0].a2;
-    }
+        ALfilterState_copyParams(&state->filter[3][i], &state->filter[3][0]);
 }
 
 static ALvoid ALequalizerState_process(ALequalizerState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

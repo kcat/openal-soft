@@ -1336,17 +1336,8 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device
                             gainlf, lfScale, calc_rcpQ_from_slope(gainlf, 1.0f));
     for(i = 1;i < 4;i++)
     {
-        State->Filter[i].Lp.b0 = State->Filter[0].Lp.b0;
-        State->Filter[i].Lp.b1 = State->Filter[0].Lp.b1;
-        State->Filter[i].Lp.b2 = State->Filter[0].Lp.b2;
-        State->Filter[i].Lp.a1 = State->Filter[0].Lp.a1;
-        State->Filter[i].Lp.a2 = State->Filter[0].Lp.a2;
-
-        State->Filter[i].Hp.b0 = State->Filter[0].Hp.b0;
-        State->Filter[i].Hp.b1 = State->Filter[0].Hp.b1;
-        State->Filter[i].Hp.b2 = State->Filter[0].Hp.b2;
-        State->Filter[i].Hp.a1 = State->Filter[0].Hp.a1;
-        State->Filter[i].Hp.a2 = State->Filter[0].Hp.a2;
+        ALfilterState_copyParams(&State->Filter[i].Lp, &State->Filter[0].Lp);
+        ALfilterState_copyParams(&State->Filter[i].Hp, &State->Filter[0].Hp);
     }
 
     /* Update the main effect delay and associated taps. */

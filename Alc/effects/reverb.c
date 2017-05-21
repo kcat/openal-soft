@@ -992,8 +992,8 @@ static void CalcT60DampingCoeffs(const ALfloat length, const ALfloat lfDecayTime
     {
         if(mfGain < hfGain)
         {
-            double hg = mfGain / lfGain;
-            double lg = mfGain / hfGain;
+            ALfloat hg = mfGain / lfGain;
+            ALfloat lg = mfGain / hfGain;
 
             CalcHighShelfCoeffs(hg, lfW, lfcoeffs);
             CalcLowShelfCoeffs(lg, hfW, hfcoeffs);

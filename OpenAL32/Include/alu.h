@@ -348,6 +348,9 @@ typedef void (*HrtfDirectMixerFunc)(ALfloat *restrict LeftOut, ALfloat *restrict
 #define SPEEDOFSOUNDMETRESPERSEC  (343.3f)
 #define AIRABSORBGAINHF           (0.99426f) /* -0.05dB */
 
+/* Target gain for the reverb decay feedback reaching the decay time. */
+#define REVERB_DECAY_GAIN  (0.001f) /* -60 dB */
+
 #define FRACTIONBITS (12)
 #define FRACTIONONE  (1<<FRACTIONBITS)
 #define FRACTIONMASK (FRACTIONONE-1)

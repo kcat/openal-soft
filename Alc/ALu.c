@@ -1098,8 +1098,8 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
             RoomAirAbsorption[i] = SendSlots[i]->Params.AirAbsorptionGainHF;
             if(SendSlots[i]->Params.DecayHFLimit && RoomAirAbsorption[i] < 1.0f)
             {
-                ALfloat limitRatio = log10f(0.001f)/*-60 dB*/ / (log10f(RoomAirAbsorption[i]) *
-                                                                 DecayDistance[i]);
+                ALfloat limitRatio = log10f(REVERB_DECAY_GAIN) /
+                                     (log10f(RoomAirAbsorption[i]) * DecayDistance[i]);
                 limitRatio = minf(limitRatio, SendSlots[i]->Params.DecayHFRatio);
                 DecayHFDistance[i] = minf(DecayHFDistance[i], limitRatio*DecayDistance[i]);
             }
@@ -1258,15 +1258,15 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
                 if(!(DecayDistance[i] > 0.0f))
                     continue;
 
-                gain = powf(0.001f/*-60dB*/, meters_base/DecayDistance[i]);
+                gain = powf(REVERB_DECAY_GAIN, meters_base/DecayDistance[i]);
                 WetGain[i] *= gain;
                 /* Yes, the wet path's air absorption is applied with
                  * WetGainAuto on, rather than WetGainHFAuto.
                  */
                 if(gain > 0.0f)
                 {
-                    ALfloat gainhf = powf(0.001f/*-60dB*/, meters_base/DecayHFDistance[i]) / gain;
-                    WetGainHF[i] *= minf(gainhf, 1.0f);
+                    ALfloat gainhf = powf(REVERB_DECAY_GAIN, meters_base/DecayHFDistance[i]);
+                    WetGainHF[i] *= minf(gainhf / gain, 1.0f);
                 }
             }
         }

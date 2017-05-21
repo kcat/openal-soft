@@ -645,7 +645,7 @@ static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Dev
  */
 static inline ALfloat CalcDecayCoeff(const ALfloat length, const ALfloat decayTime)
 {
-    return powf(0.001f/*-60 dB*/, length/decayTime);
+    return powf(REVERB_DECAY_GAIN, length/decayTime);
 }
 
 /* Calculate a decay length from a coefficient and the time until the decay
@@ -653,7 +653,7 @@ static inline ALfloat CalcDecayCoeff(const ALfloat length, const ALfloat decayTi
  */
 static inline ALfloat CalcDecayLength(const ALfloat coeff, const ALfloat decayTime)
 {
-    return log10f(coeff) * decayTime / log10f(0.001f)/*-60 dB*/;
+    return log10f(coeff) * decayTime / log10f(REVERB_DECAY_GAIN);
 }
 
 /* Calculate an attenuation to be applied to the input of any echo models to

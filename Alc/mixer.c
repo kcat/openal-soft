@@ -457,7 +457,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
 
                 samples = DoFilters(
                     &parms->LowPass, &parms->HighPass, Device->FilteredData,
-                    ResampledData, DstBufferSize, parms->FilterType
+                    ResampledData, DstBufferSize, voice->Direct.FilterType
                 );
                 if(!(voice->Flags&VOICE_HAS_HRTF))
                 {
@@ -598,7 +598,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
 
                 samples = DoFilters(
                     &parms->LowPass, &parms->HighPass, Device->FilteredData,
-                    ResampledData, DstBufferSize, parms->FilterType
+                    ResampledData, DstBufferSize, voice->Send[send].FilterType
                 );
 
                 if(!Counter)

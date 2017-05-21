@@ -144,7 +144,6 @@ typedef struct MixHrtfParams {
 
 
 typedef struct DirectParams {
-    enum ActiveFilters FilterType;
     ALfilterState LowPass;
     ALfilterState HighPass;
 
@@ -163,7 +162,6 @@ typedef struct DirectParams {
 } DirectParams;
 
 typedef struct SendParams {
-    enum ActiveFilters FilterType;
     ALfilterState LowPass;
     ALfilterState HighPass;
 
@@ -279,6 +277,7 @@ typedef struct ALvoice {
     InterpState ResampleState;
 
     struct {
+        enum ActiveFilters FilterType;
         DirectParams Params[MAX_INPUT_CHANNELS];
 
         ALfloat (*Buffer)[BUFFERSIZE];
@@ -287,6 +286,7 @@ typedef struct ALvoice {
     } Direct;
 
     struct {
+        enum ActiveFilters FilterType;
         SendParams Params[MAX_INPUT_CHANNELS];
 
         ALfloat (*Buffer)[BUFFERSIZE];

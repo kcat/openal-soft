@@ -954,9 +954,9 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
         ALfloat gainHF = maxf(DryGainHF, 0.001f); /* Limit -60dB */
         ALfloat gainLF = maxf(DryGainLF, 0.001f);
 
-        voice->Direct.Params[0].FilterType = AF_None;
-        if(gainHF != 1.0f) voice->Direct.Params[0].FilterType |= AF_LowPass;
-        if(gainLF != 1.0f) voice->Direct.Params[0].FilterType |= AF_HighPass;
+        voice->Direct.FilterType = AF_None;
+        if(gainHF != 1.0f) voice->Direct.FilterType |= AF_LowPass;
+        if(gainLF != 1.0f) voice->Direct.FilterType |= AF_HighPass;
         ALfilterState_setParams(
             &voice->Direct.Params[0].LowPass, ALfilterType_HighShelf,
             gainHF, hfScale, calc_rcpQ_from_slope(gainHF, 1.0f)
@@ -967,7 +967,6 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
         );
         for(c = 1;c < num_channels;c++)
         {
-            voice->Direct.Params[c].FilterType = voice->Direct.Params[0].FilterType;
             ALfilterState_copyParams(&voice->Direct.Params[c].LowPass,
                                      &voice->Direct.Params[0].LowPass);
             ALfilterState_copyParams(&voice->Direct.Params[c].HighPass,
@@ -981,9 +980,9 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
         ALfloat gainHF = maxf(WetGainHF[i], 0.001f);
         ALfloat gainLF = maxf(WetGainLF[i], 0.001f);
 
-        voice->Send[i].Params[0].FilterType = AF_None;
-        if(gainHF != 1.0f) voice->Send[i].Params[0].FilterType |= AF_LowPass;
-        if(gainLF != 1.0f) voice->Send[i].Params[0].FilterType |= AF_HighPass;
+        voice->Send[i].FilterType = AF_None;
+        if(gainHF != 1.0f) voice->Send[i].FilterType |= AF_LowPass;
+        if(gainLF != 1.0f) voice->Send[i].FilterType |= AF_HighPass;
         ALfilterState_setParams(
             &voice->Send[i].Params[0].LowPass, ALfilterType_HighShelf,
             gainHF, hfScale, calc_rcpQ_from_slope(gainHF, 1.0f)
@@ -994,7 +993,6 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
         );
         for(c = 1;c < num_channels;c++)
         {
-            voice->Send[i].Params[c].FilterType = voice->Send[i].Params[0].FilterType;
             ALfilterState_copyParams(&voice->Send[i].Params[c].LowPass,
                                      &voice->Send[i].Params[0].LowPass);
             ALfilterState_copyParams(&voice->Send[i].Params[c].HighPass,

@@ -151,6 +151,27 @@ static inline HrtfDirectMixerFunc SelectHrtfMixer(void)
 }
 
 
+/* Prior to VS2013, MSVC lacks the round() family of functions. */
+#if defined(_MSC_VER) && _MSC_VER < 1800
+static long lroundf(float val)
+{
+    if(val < 0.0)
+        return fastf2i(ceilf(val-0.5f));
+    return fastf2i(floorf(val+0.5f));
+}
+#endif
+
+/* This RNG method was created based on the math found in opusdec. It's quick,
+ * and starting with a seed value of 22222, is suitable for generating
+ * whitenoise.
+ */
+static inline ALuint dither_rng(ALuint *seed)
+{
+    *seed = (*seed * 96314165) + 907633515;
+    return *seed;
+}
+
+
 static inline void aluCrossproduct(const ALfloat *inVector1, const ALfloat *inVector2, ALfloat *outVector)
 {
     outVector[0] = inVector1[1]*inVector2[2] - inVector1[2]*inVector2[1];
@@ -1544,37 +1565,57 @@ static void ApplyLimiter(struct OutputLimiter *Limiter,
     }
 }
 
-static inline ALfloat aluF2F(ALfloat val)
-{ return val; }
 
-#define S25_MAX_NORM (16777215.0f/16777216.0f)
-static inline ALint aluF2I(ALfloat val)
+/* NOTE: Non-dithered conversions have unused extra parameters. */
+static inline ALfloat aluF2F(ALfloat val, ...)
+{ return val; }
+static inline ALint aluF2I(ALfloat val, ...)
 {
     /* Floats only have a 24-bit mantissa, so [-16777216, +16777216] is the max
      * integer range normalized floats can be safely converted to (a bit of the
      * exponent helps out, effectively giving 25 bits).
      */
-    return fastf2i(clampf(val, -1.0f, S25_MAX_NORM)*16777216.0f)<<7;
+    return fastf2i(clampf(val*16777216.0f, -16777216.0f, 16777215.0f))<<7;
 }
-static inline ALuint aluF2UI(ALfloat val)
-{ return aluF2I(val)+2147483648u; }
+static inline ALshort aluF2S(ALfloat val, ...)
+{ return fastf2i(clampf(val*32768.0f, -32768.0f, 32767.0f)); }
+static inline ALbyte aluF2B(ALfloat val, ...)
+{ return fastf2i(clampf(val*128.0f, -128.0f, 127.0f)); }
 
-#define S16_MAX_NORM (32767.0f/32768.0f)
-static inline ALshort aluF2S(ALfloat val)
-{ return fastf2i(clampf(val, -1.0f, S16_MAX_NORM)*32768.0f); }
-static inline ALushort aluF2US(ALfloat val)
-{ return aluF2S(val)+32768; }
+/* Dithered conversion functions. Only applies to 8- and 16-bit output for now,
+ * as 32-bit int and float are at the limits of the rendered sample depth. This
+ * can change if the dithering bit depth becomes configurable (effectively
+ * quantizing to a lower bit depth than the output is capable of).
+ */
+static inline ALshort aluF2SDithered(ALfloat val, const ALfloat dither_val)
+{
+    val = val*32768.0f + dither_val;
+    return lroundf(clampf(val, -32768.0f, 32767.0f));
+}
+static inline ALbyte aluF2BDithered(ALfloat val, const ALfloat dither_val)
+{
+    val = val*128.0f + dither_val;
+    return lroundf(clampf(val, -128.0f, 127.0f));
+}
 
-#define S8_MAX_NORM (127.0f/128.0f)
-static inline ALbyte aluF2B(ALfloat val)
-{ return fastf2i(clampf(val, -1.0f, S8_MAX_NORM)*128.0f); }
-static inline ALubyte aluF2UB(ALfloat val)
-{ return aluF2B(val)+128; }
+/* Define unsigned output variations. */
+#define DECL_TEMPLATE(T, Name, func, O)                     \
+static inline T Name(ALfloat val, const ALfloat dither_val) \
+{ return func(val, dither_val)+O; }
 
-#define DECL_TEMPLATE(T, func)                                                \
-static void Write_##T(const ALfloatBUFFERSIZE *InBuffer, ALvoid *OutBuffer,   \
-                      DistanceComp *distcomp, ALsizei SamplesToDo,            \
-                      ALsizei numchans)                                       \
+DECL_TEMPLATE(ALubyte, aluF2UB, aluF2B, 128)
+DECL_TEMPLATE(ALushort, aluF2US, aluF2S, 32768)
+DECL_TEMPLATE(ALuint, aluF2UI, aluF2I, 2147483648u)
+DECL_TEMPLATE(ALubyte, aluF2UBDithered, aluF2BDithered, 128)
+DECL_TEMPLATE(ALushort, aluF2USDithered, aluF2SDithered, 32768)
+
+#undef DECL_TEMPLATE
+
+#define DECL_TEMPLATE(T, D, func)                                             \
+static void Write##T##D(const ALfloatBUFFERSIZE *InBuffer, ALvoid *OutBuffer, \
+                      DistanceComp *distcomp,                                 \
+                      const ALfloat *restrict DitherValues,                   \
+                      ALsizei SamplesToDo, ALsizei numchans)                  \
 {                                                                             \
     ALsizei i, j;                                                             \
     for(j = 0;j < numchans;j++)                                               \
@@ -1589,15 +1630,15 @@ static void Write_##T(const ALfloatBUFFERSIZE *InBuffer, ALvoid *OutBuffer,   \
             if(SamplesToDo >= base)                                           \
             {                                                                 \
                 for(i = 0;i < base;i++)                                       \
-                    out[i*numchans] = func(distbuf[i]*gain);                  \
+                    out[i*numchans] = func(distbuf[i]*gain, DitherValues[i]); \
                 for(;i < SamplesToDo;i++)                                     \
-                    out[i*numchans] = func(in[i-base]*gain);                  \
+                    out[i*numchans] = func(in[i-base]*gain, DitherValues[i]); \
                 memcpy(distbuf, &in[SamplesToDo-base], base*sizeof(ALfloat)); \
             }                                                                 \
             else                                                              \
             {                                                                 \
                 for(i = 0;i < SamplesToDo;i++)                                \
-                    out[i*numchans] = func(distbuf[i]*gain);                  \
+                    out[i*numchans] = func(distbuf[i]*gain, DitherValues[i]); \
                 memmove(distbuf, distbuf+SamplesToDo,                         \
                         (base-SamplesToDo)*sizeof(ALfloat));                  \
                 memcpy(distbuf+base-SamplesToDo, in,                          \
@@ -1605,17 +1646,22 @@ static void Write_##T(const ALfloatBUFFERSIZE *InBuffer, ALvoid *OutBuffer,   \
             }                                                                 \
         }                                                                     \
         else for(i = 0;i < SamplesToDo;i++)                                   \
-            out[i*numchans] = func(in[i]);                                    \
+            out[i*numchans] = func(in[i], DitherValues[i]);                   \
     }                                                                         \
 }
 
-DECL_TEMPLATE(ALfloat, aluF2F)
-DECL_TEMPLATE(ALuint, aluF2UI)
-DECL_TEMPLATE(ALint, aluF2I)
-DECL_TEMPLATE(ALushort, aluF2US)
-DECL_TEMPLATE(ALshort, aluF2S)
-DECL_TEMPLATE(ALubyte, aluF2UB)
-DECL_TEMPLATE(ALbyte, aluF2B)
+DECL_TEMPLATE(ALfloat, /*no dither*/, aluF2F)
+DECL_TEMPLATE(ALuint, /*no dither*/, aluF2UI)
+DECL_TEMPLATE(ALint, /*no dither*/, aluF2I)
+DECL_TEMPLATE(ALushort, /*no dither*/, aluF2US)
+DECL_TEMPLATE(ALshort, /*no dither*/, aluF2S)
+DECL_TEMPLATE(ALubyte, /*no dither*/, aluF2UB)
+DECL_TEMPLATE(ALbyte, /*no dither*/, aluF2B)
+
+DECL_TEMPLATE(ALushort, _Dithered, aluF2USDithered)
+DECL_TEMPLATE(ALshort, _Dithered, aluF2SDithered)
+DECL_TEMPLATE(ALubyte, _Dithered, aluF2UBDithered)
+DECL_TEMPLATE(ALbyte, _Dithered, aluF2BDithered)
 
 #undef DECL_TEMPLATE
 
@@ -1792,6 +1838,7 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             ALsizei OutChannels = device->RealOut.NumChannels;
             struct OutputLimiter *Limiter = device->Limiter;
             DistanceComp *DistComp;
+            ALfloat *DitherValues;
 
             if(Limiter)
             {
@@ -1804,33 +1851,79 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 );
             }
 
+            /* Dithering. Step 1, generate whitenoise (uniform distribution of
+             * random values between -1 and +1). Use NFCtrlData for random
+             * value storage. Step 2 is to add the noise to the samples, before
+             * rounding and after scaling up to the desired quantization depth,
+             * which occurs in the sample conversion stage.
+             */
+            if(!device->DitherEnabled)
+                memset(device->NFCtrlData, 0, SamplesToDo*sizeof(ALfloat));
+            else
+            {
+                ALuint dither_seed = device->DitherSeed;
+                ALsizei i;
+
+                for(i = 0;i < SamplesToDo;i++)
+                {
+                    ALuint rng0 = dither_rng(&dither_seed);
+                    ALuint rng1 = dither_rng(&dither_seed);
+                    device->NFCtrlData[i] = (ALfloat)(rng0*(1.0/UINT_MAX) - rng1*(1.0/UINT_MAX));
+                }
+                device->DitherSeed = dither_seed;
+            }
+            DitherValues = device->NFCtrlData;
+
             DistComp = device->ChannelDelay;
-#define WRITE(T, a, b, c, d, e) do {                                          \
-    Write_##T(SAFE_CONST(ALfloatBUFFERSIZE*,(a)), (b), (c), (d), (e));        \
-    buffer = (T*)buffer + (d)*(e);                                            \
+#define WRITE(T, D, a, b, c, d, e, f) do {                                    \
+    Write##T##D(SAFE_CONST(ALfloatBUFFERSIZE*,(a)), (b), (c), (d), (e), (f)); \
+    buffer = (T*)buffer + (e)*(f);                                            \
 } while(0)
             switch(device->FmtType)
             {
                 case DevFmtByte:
-                    WRITE(ALbyte, OutBuffer, buffer, DistComp, SamplesToDo, OutChannels);
+                    if(device->DitherEnabled)
+                        WRITE(ALbyte, _Dithered, OutBuffer, buffer, DistComp, DitherValues,
+                              SamplesToDo, OutChannels);
+                    else
+                        WRITE(ALbyte, /*no dither*/, OutBuffer, buffer, DistComp, DitherValues,
+                              SamplesToDo, OutChannels);
                     break;
                 case DevFmtUByte:
-                    WRITE(ALubyte, OutBuffer, buffer, DistComp, SamplesToDo, OutChannels);
+                    if(device->DitherEnabled)
+                        WRITE(ALubyte, _Dithered, OutBuffer, buffer, DistComp, DitherValues,
+                              SamplesToDo, OutChannels);
+                    else
+                        WRITE(ALubyte, /*no dither*/, OutBuffer, buffer, DistComp, DitherValues,
+                              SamplesToDo, OutChannels);
                     break;
                 case DevFmtShort:
-                    WRITE(ALshort, OutBuffer, buffer, DistComp, SamplesToDo, OutChannels);
+                    if(device->DitherEnabled)
+                        WRITE(ALshort, _Dithered, OutBuffer, buffer, DistComp, DitherValues,
+                              SamplesToDo, OutChannels);
+                    else
+                        WRITE(ALshort, /*no dither*/, OutBuffer, buffer, DistComp, DitherValues,
+                              SamplesToDo, OutChannels);
                     break;
                 case DevFmtUShort:
-                    WRITE(ALushort, OutBuffer, buffer, DistComp, SamplesToDo, OutChannels);
+                    if(device->DitherEnabled)
+                        WRITE(ALushort, _Dithered, OutBuffer, buffer, DistComp, DitherValues,
+                              SamplesToDo, OutChannels);
+                    else
+                        WRITE(ALushort, /*no dither*/, OutBuffer, buffer, DistComp, DitherValues,
+                              SamplesToDo, OutChannels);
                     break;
                 case DevFmtInt:
-                    WRITE(ALint, OutBuffer, buffer, DistComp, SamplesToDo, OutChannels);
+                    WRITE(ALint, /*no dither*/, OutBuffer, buffer, DistComp, DitherValues,
+                          SamplesToDo, OutChannels);
                     break;
                 case DevFmtUInt:
-                    WRITE(ALuint, OutBuffer, buffer, DistComp, SamplesToDo, OutChannels);
+                    WRITE(ALuint, /*no dither*/, OutBuffer, buffer, DistComp, DitherValues,
+                          SamplesToDo, OutChannels);
                     break;
                 case DevFmtFloat:
-                    WRITE(ALfloat, OutBuffer, buffer, DistComp, SamplesToDo, OutChannels);
+                    WRITE(ALfloat, /*no dither*/, OutBuffer, buffer, DistComp, DitherValues,
+                          SamplesToDo, OutChannels);
                     break;
             }
 #undef WRITE

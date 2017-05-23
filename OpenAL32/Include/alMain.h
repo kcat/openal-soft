@@ -798,6 +798,10 @@ struct ALCdevice_struct
     /* Delay buffers used to compensate for speaker distances. */
     DistanceComp ChannelDelay[MAX_OUTPUT_CHANNELS];
 
+    /* Dithering control. */
+    bool DitherEnabled;
+    ALuint DitherSeed;
+
     /* Running count of the mixer invocations, in 31.1 fixed point. This
      * actually increments *twice* when mixing, first at the start and then at
      * the end, so the bottom bit indicates if the device is currently mixing

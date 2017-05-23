@@ -2080,6 +2080,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     UpdateClockBase(device);
 
+    device->DitherSeed = DITHER_RNG_SEED;
+
     /*************************************************************************
      * Update device format request if HRTF is requested
      */
@@ -4015,6 +4017,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
             ERR("Unsupported ambi-format: %s\n", fmt);
     }
 
+    device->DitherEnabled = GetConfigValueBool(
+        alstr_get_cstr(device->DeviceName), NULL, "dither", 1
+    );
+
     if(DefaultEffect.type != AL_EFFECT_NULL)
     {
         device->DefaultSlot = (ALeffectslot*)device->_slot_mem;
@@ -4432,6 +4438,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
 
     // Open the "backend"
     V(device->Backend,open)("Loopback");
+
+    device->DitherEnabled = GetConfigValueBool(NULL, NULL, "dither", 1);
 
     {
         ALCdevice *head = ATOMIC_LOAD_SEQ(&DeviceList);

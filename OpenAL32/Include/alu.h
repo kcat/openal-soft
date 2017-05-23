@@ -40,6 +40,9 @@ struct ALvoice;
 struct ALeffectslot;
 
 
+#define DITHER_RNG_SEED 22222
+
+
 enum SpatializeMode {
     SpatializeOff = AL_FALSE,
     SpatializeOn = AL_TRUE,

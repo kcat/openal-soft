@@ -329,6 +329,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->stereoEncodingComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(enableApplyButton()));
     connect(ui->ambiFormatComboBox, SIGNAL(currentIndexChanged(QString)), this, SLOT(enableApplyButton()));
     connect(ui->outputLimiterCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->outputDitherCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
 
     connect(ui->decoderHQModeCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->decoderDistCompCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
@@ -654,6 +655,13 @@ void MainWindow::loadConfig(const QString &fname)
             settings.value("output-limiter").toBool() ? Qt::Checked : Qt::Unchecked
         );
 
+    if(settings.value("dither").isNull())
+        ui->outputDitherCheckBox->setCheckState(Qt::PartiallyChecked);
+    else
+        ui->outputDitherCheckBox->setCheckState(
+            settings.value("dither").toBool() ? Qt::Checked : Qt::Unchecked
+        );
+
     QString stereopan = settings.value("stereo-encoding").toString();
     ui->stereoEncodingComboBox->setCurrentIndex(0);
     if(stereopan.isEmpty() == false)
@@ -916,6 +924,14 @@ void MainWindow::saveConfig(const QString &fname) const
         settings.setValue("output-limiter", QString("true"));
     else if(limiter == Qt::Unchecked)
         settings.setValue("output-limiter", QString("false"));
+
+    Qt::CheckState dither = ui->outputDitherCheckBox->checkState();
+    if(dither == Qt::PartiallyChecked)
+        settings.setValue("dither", QString());
+    else if(dither == Qt::Checked)
+        settings.setValue("dither", QString("true"));
+    else if(dither == Qt::Unchecked)
+        settings.setValue("dither", QString("false"));
 
     settings.setValue("decoder/hq-mode",
         ui->decoderHQModeCheckBox->isChecked() ? QString("true") : QString(/*"false"*/)

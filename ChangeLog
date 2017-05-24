@@ -19,6 +19,11 @@ openal-soft-1.18.0:
     Currently only applies when using the high-quality ambisonic decoder or
     ambisonic output, with appropriate config options.
 
+    Implemented an output limiter to reduce the amount of distortion from
+    clipping.
+
+    Implemented dithering for 8-bit and 16-bit output.
+
     Implemented a config option to select a preferred HRTF.
 
     Implemented a run-time check for NEON extensions using /proc/cpuinfo.
@@ -70,9 +75,6 @@ openal-soft-1.18.0:
     Improved internal property handling for better batching behavior.
 
     Improved performance of certain filter uses.
-
-    Altered cone behavior for automatic auxiliary send gain and gainhf
-    management. Now better represents the energy the room receives.
 
     Removed support for the AL_SOFT_buffer_samples and AL_SOFT_buffer_sub_data
     extensions. Due to conflicts with AL_EXT_SOURCE_RADIUS.

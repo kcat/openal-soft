@@ -277,9 +277,43 @@ static void probe_devices(snd_pcm_stream_t stream, vector_DevMap *DeviceList)
     AL_STRING_INIT(entry.name);
     AL_STRING_INIT(entry.device_name);
     alstr_copy_cstr(&entry.name, alsaDevice);
-    alstr_copy_cstr(&entry.device_name, GetConfigValue(NULL, "alsa", (stream==SND_PCM_STREAM_PLAYBACK) ?
-                                                           "device" : "capture", "default"));
+    alstr_copy_cstr(&entry.device_name, GetConfigValue(
+        NULL, "alsa", (stream==SND_PCM_STREAM_PLAYBACK) ? "device" : "capture", "default"
+    ));
     VECTOR_PUSH_BACK(*DeviceList, entry);
+
+    if(stream == SND_PCM_STREAM_PLAYBACK)
+    {
+        const char *customdevs, *sep, *next;
+        next = GetConfigValue(NULL, "alsa", "custom-devices", "");
+        while((customdevs=next) != NULL && customdevs[0])
+        {
+            next = strchr(customdevs, ';');
+            sep = strchr(customdevs, '=');
+            if(!sep)
+            {
+                al_string spec = AL_STRING_INIT_STATIC();
+                if(next)
+                    alstr_copy_range(&spec, customdevs, next++);
+                else
+                    alstr_copy_cstr(&spec, customdevs);
+                ERR("Invalid ALSA device specification \"%s\"\n", alstr_get_cstr(spec));
+                alstr_reset(&spec);
+                continue;
+            }
+
+            AL_STRING_INIT(entry.name);
+            AL_STRING_INIT(entry.device_name);
+            alstr_copy_range(&entry.name, customdevs, sep++);
+            if(next)
+                alstr_copy_range(&entry.device_name, sep, next++);
+            else
+                alstr_copy_cstr(&entry.device_name, sep);
+            TRACE("Got device \"%s\", \"%s\"\n", alstr_get_cstr(entry.name),
+                  alstr_get_cstr(entry.device_name));
+            VECTOR_PUSH_BACK(*DeviceList, entry);
+        }
+    }
 
     card = -1;
     if((err=snd_card_next(&card)) < 0)
@@ -325,7 +359,8 @@ static void probe_devices(snd_pcm_stream_t stream, vector_DevMap *DeviceList)
             snd_pcm_info_set_device(pcminfo, dev);
             snd_pcm_info_set_subdevice(pcminfo, 0);
             snd_pcm_info_set_stream(pcminfo, stream);
-            if((err = snd_ctl_pcm_info(handle, pcminfo)) < 0) {
+            if((err = snd_ctl_pcm_info(handle, pcminfo)) < 0)
+            {
                 if(err != -ENOENT)
                     ERR("control digital audio info (hw:%d): %s\n", card, snd_strerror(err));
                 continue;
@@ -337,9 +372,9 @@ static void probe_devices(snd_pcm_stream_t stream, vector_DevMap *DeviceList)
             ConfigValueStr(NULL, "alsa", name, &device_prefix);
 
             snprintf(name, sizeof(name), "%s, %s (CARD=%s,DEV=%d)",
-                        cardname, devname, cardid, dev);
+                     cardname, devname, cardid, dev);
             snprintf(device, sizeof(device), "%sCARD=%s,DEV=%d",
-                        device_prefix, cardid, dev);
+                     device_prefix, cardid, dev);
 
             TRACE("Got device \"%s\", \"%s\"\n", name, device);
             AL_STRING_INIT(entry.name);

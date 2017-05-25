@@ -454,6 +454,11 @@ AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index);
 #define AL_AUTO_SOFT                             0x0002
 #endif
 
+#ifndef ALC_SOFT_output_limiter
+#define ALC_SOFT_output_limiter
+#define ALC_OUTPUT_LIMITER_SOFT                  0x199A
+#endif
+
 #ifdef __cplusplus
 }
 #endif

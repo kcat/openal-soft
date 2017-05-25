@@ -139,11 +139,6 @@ AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum format);
 #endif
 #endif
 
-#ifndef ALC_SOFT_output_limiter
-#define ALC_SOFT_output_limiter
-#define ALC_OUTPUT_LIMITER_SOFT                  0x199A
-#endif
-
 
 #if defined(_WIN64)
 #define SZFMT "%I64u"

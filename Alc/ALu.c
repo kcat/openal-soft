@@ -1494,6 +1494,50 @@ static void UpdateContextSources(ALCcontext *ctx, const struct ALeffectslotArray
 }
 
 
+static void ApplyDistanceComp(ALfloatBUFFERSIZE *restrict Samples, DistanceComp *distcomp,
+                              ALfloat *restrict Values, ALsizei SamplesToDo, ALsizei numchans)
+{
+    ALsizei i, c;
+
+    Values = ASSUME_ALIGNED(Values, 16);
+    for(c = 0;c < numchans;c++)
+    {
+        ALfloat *restrict inout = ASSUME_ALIGNED(Samples[c], 16);
+        const ALfloat gain = distcomp[c].Gain;
+        const ALsizei base = distcomp[c].Length;
+        ALfloat *restrict distbuf = ASSUME_ALIGNED(distcomp[c].Buffer, 16);
+
+        if(base == 0)
+        {
+            if(gain < 1.0f)
+            {
+                for(i = 0;i < SamplesToDo;i++)
+                    inout[i] *= gain;
+            }
+            continue;
+        }
+
+        if(SamplesToDo >= base)
+        {
+            for(i = 0;i < base;i++)
+                Values[i] = distbuf[i];
+            for(;i < SamplesToDo;i++)
+                Values[i] = inout[i-base];
+            memcpy(distbuf, &inout[SamplesToDo-base], base*sizeof(ALfloat));
+        }
+        else
+        {
+            for(i = 0;i < SamplesToDo;i++)
+                Values[i] = distbuf[i];
+            memmove(distbuf, distbuf+SamplesToDo, (base-SamplesToDo)*sizeof(ALfloat));
+            memcpy(distbuf+base-SamplesToDo, inout, SamplesToDo*sizeof(ALfloat));
+        }
+        for(i = 0;i < SamplesToDo;i++)
+            inout[i] = Values[i]*gain;
+    }
+}
+
+
 static_assert(LIMITER_VALUE_MAX < (UINT_MAX/LIMITER_WINDOW_SIZE), "LIMITER_VALUE_MAX is too big");
 
 static void ApplyLimiter(struct OutputLimiter *Limiter,
@@ -1613,39 +1657,16 @@ DECL_TEMPLATE(ALushort, aluF2USDithered, aluF2SDithered, 32768)
 
 #define DECL_TEMPLATE(T, D, func)                                             \
 static void Write##T##D(const ALfloatBUFFERSIZE *InBuffer, ALvoid *OutBuffer, \
-                      DistanceComp *distcomp,                                 \
-                      const ALfloat *restrict DitherValues,                   \
-                      ALsizei SamplesToDo, ALsizei numchans)                  \
+                        const ALfloat *restrict DitherValues,                 \
+                        ALsizei SamplesToDo, ALsizei numchans)                \
 {                                                                             \
     ALsizei i, j;                                                             \
     for(j = 0;j < numchans;j++)                                               \
     {                                                                         \
         const ALfloat *restrict in = ASSUME_ALIGNED(InBuffer[j], 16);         \
         T *restrict out = (T*)OutBuffer + j;                                  \
-        const ALfloat gain = distcomp[j].Gain;                                \
-        const ALsizei base = distcomp[j].Length;                              \
-        ALfloat *restrict distbuf = ASSUME_ALIGNED(distcomp[j].Buffer, 16);   \
-        if(base > 0 || gain != 1.0f)                                          \
-        {                                                                     \
-            if(SamplesToDo >= base)                                           \
-            {                                                                 \
-                for(i = 0;i < base;i++)                                       \
-                    out[i*numchans] = func(distbuf[i]*gain, DitherValues[i]); \
-                for(;i < SamplesToDo;i++)                                     \
-                    out[i*numchans] = func(in[i-base]*gain, DitherValues[i]); \
-                memcpy(distbuf, &in[SamplesToDo-base], base*sizeof(ALfloat)); \
-            }                                                                 \
-            else                                                              \
-            {                                                                 \
-                for(i = 0;i < SamplesToDo;i++)                                \
-                    out[i*numchans] = func(distbuf[i]*gain, DitherValues[i]); \
-                memmove(distbuf, distbuf+SamplesToDo,                         \
-                        (base-SamplesToDo)*sizeof(ALfloat));                  \
-                memcpy(distbuf+base-SamplesToDo, in,                          \
-                        SamplesToDo*sizeof(ALfloat));                         \
-            }                                                                 \
-        }                                                                     \
-        else for(i = 0;i < SamplesToDo;i++)                                   \
+                                                                              \
+        for(i = 0;i < SamplesToDo;i++)                                        \
             out[i*numchans] = func(in[i], DitherValues[i]);                   \
     }                                                                         \
 }
@@ -1837,8 +1858,11 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             ALfloat (*OutBuffer)[BUFFERSIZE] = device->RealOut.Buffer;
             ALsizei OutChannels = device->RealOut.NumChannels;
             struct OutputLimiter *Limiter = device->Limiter;
-            DistanceComp *DistComp;
             ALfloat *DitherValues;
+
+            /* Use NFCtrlData for temp value storage. */
+            ApplyDistanceComp(OutBuffer, device->ChannelDelay, device->NFCtrlData,
+                              SamplesToDo, OutChannels);
 
             if(Limiter)
             {
@@ -1874,55 +1898,54 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             }
             DitherValues = device->NFCtrlData;
 
-            DistComp = device->ChannelDelay;
-#define WRITE(T, D, a, b, c, d, e, f) do {                                    \
-    Write##T##D(SAFE_CONST(ALfloatBUFFERSIZE*,(a)), (b), (c), (d), (e), (f)); \
-    buffer = (T*)buffer + (e)*(f);                                            \
+#define WRITE(T, D, a, b, c, d, e) do {                                       \
+    Write##T##D(SAFE_CONST(ALfloatBUFFERSIZE*,(a)), (b), (c), (d), (e));      \
+    buffer = (T*)buffer + (d)*(e);                                            \
 } while(0)
             switch(device->FmtType)
             {
                 case DevFmtByte:
                     if(device->DitherEnabled)
-                        WRITE(ALbyte, _Dithered, OutBuffer, buffer, DistComp, DitherValues,
+                        WRITE(ALbyte, _Dithered, OutBuffer, buffer, DitherValues,
                               SamplesToDo, OutChannels);
                     else
-                        WRITE(ALbyte, /*no dither*/, OutBuffer, buffer, DistComp, DitherValues,
+                        WRITE(ALbyte, /*no dither*/, OutBuffer, buffer, DitherValues,
                               SamplesToDo, OutChannels);
                     break;
                 case DevFmtUByte:
                     if(device->DitherEnabled)
-                        WRITE(ALubyte, _Dithered, OutBuffer, buffer, DistComp, DitherValues,
+                        WRITE(ALubyte, _Dithered, OutBuffer, buffer, DitherValues,
                               SamplesToDo, OutChannels);
                     else
-                        WRITE(ALubyte, /*no dither*/, OutBuffer, buffer, DistComp, DitherValues,
+                        WRITE(ALubyte, /*no dither*/, OutBuffer, buffer, DitherValues,
                               SamplesToDo, OutChannels);
                     break;
                 case DevFmtShort:
                     if(device->DitherEnabled)
-                        WRITE(ALshort, _Dithered, OutBuffer, buffer, DistComp, DitherValues,
+                        WRITE(ALshort, _Dithered, OutBuffer, buffer, DitherValues,
                               SamplesToDo, OutChannels);
                     else
-                        WRITE(ALshort, /*no dither*/, OutBuffer, buffer, DistComp, DitherValues,
+                        WRITE(ALshort, /*no dither*/, OutBuffer, buffer, DitherValues,
                               SamplesToDo, OutChannels);
                     break;
                 case DevFmtUShort:
                     if(device->DitherEnabled)
-                        WRITE(ALushort, _Dithered, OutBuffer, buffer, DistComp, DitherValues,
+                        WRITE(ALushort, _Dithered, OutBuffer, buffer, DitherValues,
                               SamplesToDo, OutChannels);
                     else
-                        WRITE(ALushort, /*no dither*/, OutBuffer, buffer, DistComp, DitherValues,
+                        WRITE(ALushort, /*no dither*/, OutBuffer, buffer, DitherValues,
                               SamplesToDo, OutChannels);
                     break;
                 case DevFmtInt:
-                    WRITE(ALint, /*no dither*/, OutBuffer, buffer, DistComp, DitherValues,
+                    WRITE(ALint, /*no dither*/, OutBuffer, buffer, DitherValues,
                           SamplesToDo, OutChannels);
                     break;
                 case DevFmtUInt:
-                    WRITE(ALuint, /*no dither*/, OutBuffer, buffer, DistComp, DitherValues,
+                    WRITE(ALuint, /*no dither*/, OutBuffer, buffer, DitherValues,
                           SamplesToDo, OutChannels);
                     break;
                 case DevFmtFloat:
-                    WRITE(ALfloat, /*no dither*/, OutBuffer, buffer, DistComp, DitherValues,
+                    WRITE(ALfloat, /*no dither*/, OutBuffer, buffer, DitherValues,
                           SamplesToDo, OutChannels);
                     break;
             }

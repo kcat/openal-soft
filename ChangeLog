@@ -2,8 +2,8 @@ openal-soft-1.18.0:
 
     Implemented the AL_EXT_STEREO_ANGLES and AL_EXT_SOURCE_RADIUS extensions.
 
-    Implemented the AL_SOFT_gain_clamp_ex, AL_SOFT_source_resampler, and
-    AL_SOFT_source_spatialize extensions.
+    Implemented the AL_SOFT_gain_clamp_ex, AL_SOFT_source_resampler,
+    AL_SOFT_source_spatialize, and ALC_SOFT_output_limiter extensions.
 
     Implemented 3D processing for some effects. Currently implemented for
     Reverb, Compressor, Equalizer, and Ring Modulator.

@@ -91,7 +91,7 @@ static ALboolean ALchorusState_deviceUpdate(ALchorusState *state, ALCdevice *Dev
     ALsizei maxlen;
     ALsizei it;
 
-    maxlen = fastf2u(AL_CHORUS_MAX_DELAY * 3.0f * Device->Frequency) + 1;
+    maxlen = fastf2u(AL_CHORUS_MAX_DELAY * 2.0f * Device->Frequency) + 1;
     maxlen = NextPowerOf2(maxlen);
 
     if(maxlen != state->BufferLength)
@@ -131,9 +131,10 @@ static ALvoid ALchorusState_update(ALchorusState *state, const ALCdevice *Device
             state->waveform = CWF_Sinusoid;
             break;
     }
-    state->depth = props->Chorus.Depth;
     state->feedback = props->Chorus.Feedback;
     state->delay = fastf2i(props->Chorus.Delay * frequency);
+    /* The LFO depth is scaled to be relative to the sample delay. */
+    state->depth = props->Chorus.Depth * state->delay;
 
     /* Gains for left and right sides */
     CalcAngleCoeffs(-F_PI_2, 0.0f, 0.0f, coeffs);
@@ -172,13 +173,13 @@ static inline void Triangle(ALint *delay_left, ALint *delay_right, ALuint offset
 {
     ALfloat lfo_value;
 
-    lfo_value = 2.0f - fabsf(2.0f - state->lfo_scale*(offset%state->lfo_range));
-    lfo_value *= state->depth * state->delay;
+    lfo_value = 1.0f - fabsf(2.0f - state->lfo_scale*(offset%state->lfo_range));
+    lfo_value *= state->depth;
     *delay_left = fastf2i(lfo_value) + state->delay;
 
     offset += state->lfo_disp;
-    lfo_value = 2.0f - fabsf(2.0f - state->lfo_scale*(offset%state->lfo_range));
-    lfo_value *= state->depth * state->delay;
+    lfo_value = 1.0f - fabsf(2.0f - state->lfo_scale*(offset%state->lfo_range));
+    lfo_value *= state->depth;
     *delay_right = fastf2i(lfo_value) + state->delay;
 }
 
@@ -186,13 +187,13 @@ static inline void Sinusoid(ALint *delay_left, ALint *delay_right, ALuint offset
 {
     ALfloat lfo_value;
 
-    lfo_value = 1.0f + sinf(state->lfo_scale*(offset%state->lfo_range));
-    lfo_value *= state->depth * state->delay;
+    lfo_value = sinf(state->lfo_scale*(offset%state->lfo_range));
+    lfo_value *= state->depth;
     *delay_left = fastf2i(lfo_value) + state->delay;
 
     offset += state->lfo_disp;
-    lfo_value = 1.0f + sinf(state->lfo_scale*(offset%state->lfo_range));
-    lfo_value *= state->depth * state->delay;
+    lfo_value = sinf(state->lfo_scale*(offset%state->lfo_range));
+    lfo_value *= state->depth;
     *delay_right = fastf2i(lfo_value) + state->delay;
 }
 
@@ -212,11 +213,13 @@ static void Process##Func(ALchorusState *state, const ALsizei SamplesToDo,    \
         ALint delay_left, delay_right;                                        \
         Func(&delay_left, &delay_right, offset, state);                       \
                                                                               \
+        leftbuf[offset&bufmask] = SamplesIn[it];                              \
         out[it][0] = leftbuf[(offset-delay_left)&bufmask];                    \
-        leftbuf[offset&bufmask] = (out[it][0]+SamplesIn[it]) * feedback;      \
+        leftbuf[offset&bufmask] += out[it][0] * feedback;                     \
                                                                               \
+        rightbuf[offset&bufmask] = SamplesIn[it];                             \
         out[it][1] = rightbuf[(offset-delay_right)&bufmask];                  \
-        rightbuf[offset&bufmask] = (out[it][1]+SamplesIn[it]) * feedback;     \
+        rightbuf[offset&bufmask] += out[it][1] * feedback;                    \
                                                                               \
         offset++;                                                             \
     }                                                                         \

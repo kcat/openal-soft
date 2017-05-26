@@ -165,7 +165,10 @@ static ALvoid ALchorusState_update(ALchorusState *state, const ALCdevice *Device
         }
 
         /* Calculate lfo phase displacement */
-        state->lfo_disp = fastf2i(state->lfo_range * (phase/360.0f));
+        if(phase >= 0)
+            state->lfo_disp = fastf2i(state->lfo_range * (phase/360.0f));
+        else
+            state->lfo_disp = fastf2i(state->lfo_range * ((360+phase)/360.0f));
     }
 }
 

@@ -1259,7 +1259,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
             for(i = 0;i < NumSends;i++)
             {
                 if(RoomRolloff[i] > 0.0f)
-                    WetGainHF[i] *= powf(RoomAirAbsorption[i], absorb*RoomRolloff[i]);
+                    WetGainHF[i] *= powf(AIRABSORBGAINHF, absorb*RoomRolloff[i]);
             }
         }
 

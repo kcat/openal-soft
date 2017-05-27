@@ -1738,6 +1738,12 @@ static void alcSetError(ALCdevice *device, ALCenum errorCode)
 }
 
 
+struct Compressor *CreateDeviceLimiter(const ALCdevice *device)
+{
+    return CompressorInit(0.0f, 0.0f, AL_FALSE, AL_TRUE, 0.0f, 0.0f, 0.5f, 2.0f,
+                          0.0f, -0.5f, 3.0f, device->Frequency);
+}
+
 /* UpdateClockBase
  *
  * Updates the device's base clock time with however many samples have been
@@ -2224,8 +2230,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
      */
     if(gainLimiter != ALC_FALSE)
     {
-        if(!device->Limiter)
-            device->Limiter = alloc_limiter();
+        if(!device->Limiter || device->Frequency != GetCompressorSampleRate(device->Limiter))
+        {
+            al_free(device->Limiter);
+            device->Limiter = CreateDeviceLimiter(device);
+        }
     }
     else
     {
@@ -3845,7 +3854,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->FOAOut.NumChannels = 0;
     device->RealOut.Buffer = NULL;
     device->RealOut.NumChannels = 0;
-    device->Limiter = alloc_limiter();
+    device->Limiter = NULL;
     device->AvgSpeakerDist = 0.0f;
 
     ATOMIC_INIT(&device->ContextList, NULL);
@@ -4020,6 +4029,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->DitherEnabled = GetConfigValueBool(
         alstr_get_cstr(device->DeviceName), NULL, "dither", 1
     );
+
+    device->Limiter = CreateDeviceLimiter(device);
 
     if(DefaultEffect.type != AL_EFFECT_NULL)
     {
@@ -4378,7 +4389,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->FOAOut.NumChannels = 0;
     device->RealOut.Buffer = NULL;
     device->RealOut.NumChannels = 0;
-    device->Limiter = alloc_limiter();
+    device->Limiter = NULL;
     device->AvgSpeakerDist = 0.0f;
 
     ATOMIC_INIT(&device->ContextList, NULL);
@@ -4440,6 +4451,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     V(device->Backend,open)("Loopback");
 
     device->DitherEnabled = GetConfigValueBool(NULL, NULL, "dither", 1);
+
+    device->Limiter = CreateDeviceLimiter(device);
 
     {
         ALCdevice *head = ATOMIC_LOAD_SEQ(&DeviceList);

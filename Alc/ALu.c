@@ -100,17 +100,6 @@ const aluMatrixf IdentityMatrixf = {{
 }};
 
 
-struct OutputLimiter *alloc_limiter(void)
-{
-    struct OutputLimiter *limiter = al_calloc(16, sizeof(*limiter));
-    /* Limiter attack drops -80dB in 50ms. */
-    limiter->AttackRate = 0.05f;
-    /* Limiter release raises +80dB in 1s. */
-    limiter->ReleaseRate = 1.0f;
-    limiter->Gain = 1.0f;
-    return limiter;
-}
-
 void DeinitVoice(ALvoice *voice)
 {
     struct ALvoiceProps *props;
@@ -1538,78 +1527,6 @@ static void ApplyDistanceComp(ALfloatBUFFERSIZE *restrict Samples, DistanceComp 
 }
 
 
-static_assert(LIMITER_VALUE_MAX < (UINT_MAX/LIMITER_WINDOW_SIZE), "LIMITER_VALUE_MAX is too big");
-
-static void ApplyLimiter(struct OutputLimiter *Limiter,
-                         ALfloat (*restrict OutBuffer)[BUFFERSIZE], const ALsizei NumChans,
-                         const ALfloat AttackRate, const ALfloat ReleaseRate,
-                         ALfloat *restrict Values, const ALsizei SamplesToDo)
-{
-    bool do_limit = false;
-    ALsizei c, i;
-
-    OutBuffer = ASSUME_ALIGNED(OutBuffer, 16);
-    Values = ASSUME_ALIGNED(Values, 16);
-
-    for(i = 0;i < SamplesToDo;i++)
-        Values[i] = 0.0f;
-
-    /* First, find the maximum amplitude (squared) for each sample position in each channel. */
-    for(c = 0;c < NumChans;c++)
-    {
-        for(i = 0;i < SamplesToDo;i++)
-        {
-            ALfloat amp = OutBuffer[c][i];
-            Values[i] = maxf(Values[i], amp*amp);
-        }
-    }
-
-    /* Next, calculate the gains needed to limit the output. */
-    {
-        ALfloat lastgain = Limiter->Gain;
-        ALsizei wpos = Limiter->Pos;
-        ALuint sum = Limiter->SquaredSum;
-        ALfloat gain, rms;
-
-        for(i = 0;i < SamplesToDo;i++)
-        {
-            sum -= Limiter->Window[wpos];
-            Limiter->Window[wpos] = fastf2u(minf(Values[i]*65536.0f, LIMITER_VALUE_MAX));
-            sum += Limiter->Window[wpos];
-
-            rms = sqrtf((ALfloat)sum / ((ALfloat)LIMITER_WINDOW_SIZE*65536.0f));
-
-            /* Clamp the minimum RMS to 0dB. The uint used for the squared sum
-             * inherently limits the maximum RMS to about 21dB, thus the gain
-             * ranges from 0dB to -21dB.
-             */
-            gain = 1.0f / maxf(rms, 1.0f);
-            if(lastgain >= gain)
-                lastgain = maxf(lastgain*AttackRate, gain);
-            else
-                lastgain = minf(lastgain/ReleaseRate, gain);
-            do_limit |= (lastgain < 1.0f);
-            Values[i] = lastgain;
-
-            wpos = (wpos+1)&LIMITER_WINDOW_MASK;
-        }
-
-        Limiter->Gain = lastgain;
-        Limiter->Pos = wpos;
-        Limiter->SquaredSum = sum;
-    }
-    if(do_limit)
-    {
-        /* Finally, apply the gains to each channel. */
-        for(c = 0;c < NumChans;c++)
-        {
-            for(i = 0;i < SamplesToDo;i++)
-                OutBuffer[c][i] *= Values[i];
-        }
-    }
-}
-
-
 /* NOTE: Non-dithered conversions have unused extra parameters. */
 static inline ALfloat aluF2F(ALfloat val, ...)
 { return val; }
@@ -1857,7 +1774,7 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         {
             ALfloat (*OutBuffer)[BUFFERSIZE] = device->RealOut.Buffer;
             ALsizei OutChannels = device->RealOut.NumChannels;
-            struct OutputLimiter *Limiter = device->Limiter;
+            struct Compressor *Limiter = device->Limiter;
             ALfloat *DitherValues;
 
             /* Use NFCtrlData for temp value storage. */
@@ -1865,15 +1782,7 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                               SamplesToDo, OutChannels);
 
             if(Limiter)
-            {
-                const ALfloat AttackRate = powf(0.0001f, 1.0f/(device->Frequency*Limiter->AttackRate));
-                const ALfloat ReleaseRate = powf(0.0001f, 1.0f/(device->Frequency*Limiter->ReleaseRate));
-
-                /* Use NFCtrlData for temp value storage. */
-                ApplyLimiter(Limiter, OutBuffer, OutChannels,
-                    AttackRate, ReleaseRate, device->NFCtrlData, SamplesToDo
-                );
-            }
+                ApplyCompression(Limiter, OutChannels, SamplesToDo, OutBuffer);
 
             /* Dithering. Step 1, generate whitenoise (uniform distribution of
              * random values between -1 and +1). Use NFCtrlData for random

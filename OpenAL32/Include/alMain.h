@@ -380,7 +380,7 @@ extern "C" {
 
 struct Hrtf;
 struct HrtfEntry;
-struct OutputLimiter;
+struct Compressor;
 
 
 #define DEFAULT_OUTPUT_RATE  (44100)
@@ -783,7 +783,7 @@ struct ALCdevice_struct
         ALsizei NumChannels;
     } RealOut;
 
-    struct OutputLimiter *Limiter;
+    struct Compressor *Limiter;
 
     /* The average speaker distance as determined by the ambdec configuration
      * (or alternatively, by the NFC-HOA reference delay). Only used for NFC.
@@ -1046,6 +1046,34 @@ vector_al_string SearchDataFiles(const char *match, const char *subdir);
  */
 typedef ALfloat ALfloatBUFFERSIZE[BUFFERSIZE];
 typedef ALfloat ALfloat2[2];
+
+
+/* The compressor requires the following information for proper
+ * initialization:
+ *
+ *   PreGainDb      - Gain applied before detection (in dB).
+ *   PostGainDb     - Gain applied after compression (in dB).
+ *   SummedLink     - Whether to use summed (true) or maxed (false) linking.
+ *   RmsSensing     - Whether to use RMS (true) or Peak (false) sensing.
+ *   AttackTimeMin  - Minimum attack time (in seconds).
+ *   AttackTimeMax  - Maximum attack time.  Automates when min != max.
+ *   ReleaseTimeMin - Minimum release time (in seconds).
+ *   ReleaseTimeMax - Maximum release time.  Automates when min != max.
+ *   Ratio          - Compression ratio (x:1).  Set to 0 for true limiter.
+ *   ThresholdDb    - Triggering threshold (in dB).
+ *   KneeDb         - Knee width (below threshold; in dB).
+ *   SampleRate     - Sample rate to process.
+ */
+struct Compressor *CompressorInit(const ALfloat PreGainDb, const ALfloat PostGainDb,
+    const ALboolean SummedLink, const ALboolean RmsSensing, const ALfloat AttackTimeMin,
+    const ALfloat AttackTimeMax, const ALfloat ReleaseTimeMin, const ALfloat ReleaseTimeMax,
+    const ALfloat Ratio, const ALfloat ThresholdDb, const ALfloat KneeDb,
+    const ALuint SampleRate);
+
+ALuint GetCompressorSampleRate(const struct Compressor *Comp);
+
+void ApplyCompression(struct Compressor *Comp, const ALsizei NumChans, const ALsizei SamplesToDo,
+                      ALfloat (*restrict OutBuffer)[BUFFERSIZE]);
 
 #ifdef __cplusplus
 }

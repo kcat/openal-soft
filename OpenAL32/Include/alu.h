@@ -300,28 +300,6 @@ typedef struct ALvoice {
 void DeinitVoice(ALvoice *voice);
 
 
-#define LIMITER_WINDOW_SIZE (1<<7) /* 128 */
-#define LIMITER_WINDOW_MASK (LIMITER_WINDOW_SIZE-1)
-#define LIMITER_VALUE_MAX  (1<<24) /* 16777216 */
-struct OutputLimiter {
-    /* RMS detection window, sum of values in the window, and the next write
-     * pos. Values are 16.16 fixed-point.
-     */
-    ALuint Window[LIMITER_WINDOW_SIZE];
-    ALuint SquaredSum;
-    ALsizei Pos;
-
-    /* In milliseconds. */
-    ALfloat AttackRate;
-    ALfloat ReleaseRate;
-
-    /* The gain last used for limiting. */
-    ALfloat Gain;
-};
-
-struct OutputLimiter *alloc_limiter(void);
-
-
 typedef void (*MixerFunc)(const ALfloat *data, ALsizei OutChans,
                           ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALfloat *CurrentGains,
                           const ALfloat *TargetGains, ALsizei Counter, ALsizei OutPos,

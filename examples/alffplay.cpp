@@ -5,6 +5,7 @@
  */
 
 #include <condition_variable>
+#include <functional>
 #include <algorithm>
 #include <iostream>
 #include <iomanip>

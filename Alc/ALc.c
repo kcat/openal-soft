@@ -1740,8 +1740,8 @@ static void alcSetError(ALCdevice *device, ALCenum errorCode)
 
 struct Compressor *CreateDeviceLimiter(const ALCdevice *device)
 {
-    return CompressorInit(0.0f, 0.0f, AL_FALSE, AL_FALSE, 0.0f, 0.0f, 0.5f, 2.0f,
-                          0.0f, -0.5f, 3.0f, device->Frequency);
+    return CompressorInit(0.0f, 0.0f, AL_FALSE, AL_TRUE, 0.0f, 0.0f, 0.5f, 2.0f,
+                          0.0f, -3.0f, 3.0f, device->Frequency);
 }
 
 /* UpdateClockBase

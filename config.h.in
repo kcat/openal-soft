@@ -8,9 +8,6 @@
 /* Define a built-in call indicating an aligned data pointer */
 #define ASSUME_ALIGNED(x, y) ${ASSUME_ALIGNED_DECL}
 
-/* Explicit hidden visibility attribute */
-#define HIDDEN_DECL ${HIDDEN_DECL}
-
 /* Define if HRTF data is embedded in the library */
 #cmakedefine ALSOFT_EMBED_HRTF_DATA
 

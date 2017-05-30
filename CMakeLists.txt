@@ -359,7 +359,6 @@ int main()
 ENDIF()
 
 # Set visibility/export options if available
-SET(HIDDEN_DECL "")
 IF(WIN32)
     SET(EXPORT_DECL "__declspec(dllexport)")
     IF(NOT MINGW)
@@ -388,7 +387,6 @@ ELSE()
         CHECK_C_COMPILER_FLAG(-fvisibility=hidden HAVE_VISIBILITY_HIDDEN_SWITCH)
         IF(HAVE_VISIBILITY_HIDDEN_SWITCH)
             SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} -fvisibility=hidden")
-            SET(HIDDEN_DECL "__attribute__((visibility(\"hidden\")))")
         ENDIF()
     ENDIF()
 

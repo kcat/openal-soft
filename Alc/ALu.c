@@ -1195,7 +1195,9 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
                 break;
             /*fall-through*/
         case InverseDistance:
-            if(props->RefDistance > 0.0f)
+            if(!(props->RefDistance > 0.0f))
+                ClampedDist = props->RefDistance;
+            else
             {
                 ALfloat dist = lerp(props->RefDistance, ClampedDist, props->RolloffFactor);
                 if(dist > 0.0f) DryGain *= props->RefDistance / dist;
@@ -1213,10 +1215,12 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
                 break;
             /*fall-through*/
         case LinearDistance:
-            if(props->MaxDistance != props->RefDistance)
+            if(!(props->MaxDistance != props->RefDistance))
+                ClampedDist = props->RefDistance;
+            else
             {
                 ALfloat attn = props->RolloffFactor * (ClampedDist-props->RefDistance) /
-                              (props->MaxDistance-props->RefDistance);
+                               (props->MaxDistance-props->RefDistance);
                 DryGain *= maxf(1.0f - attn, 0.0f);
                 for(i = 0;i < NumSends;i++)
                 {
@@ -1233,7 +1237,9 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
                 break;
             /*fall-through*/
         case ExponentDistance:
-            if(ClampedDist > 0.0f && props->RefDistance > 0.0f)
+            if(!(ClampedDist > 0.0f && props->RefDistance > 0.0f))
+                ClampedDist = props->RefDistance;
+            else
             {
                 DryGain *= powf(ClampedDist/props->RefDistance, -props->RolloffFactor);
                 for(i = 0;i < NumSends;i++)

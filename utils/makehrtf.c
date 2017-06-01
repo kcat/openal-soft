@@ -1267,9 +1267,9 @@ static void ResamplerSetup(ResamplerT *rs, const uint srcRate, const uint dstRat
     rs->mP = dstRate / gcd;
     rs->mQ = srcRate / gcd;
     /* The cutoff is adjusted by half the transition width, so the transition
-    * ends before the nyquist (0.5).  Both are scaled by the downsampling
-    * factor.
-    */
+     * ends before the nyquist (0.5).  Both are scaled by the downsampling
+     * factor.
+     */
     if(rs->mP > rs->mQ)
     {
         cutoff = 0.45 / rs->mP;
@@ -1923,13 +1923,12 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
 
 // Calculate the onset time of an HRIR and average it with any existing
 // timing for its elevation and azimuth.
-static void AverageHrirOnset(const double *hrir, const double f, const uint ei, const uint ai, const HrirDataT *hData)
+static void AverageHrirOnset(const double *hrir, const uint n, const double f, const uint ei, const uint ai, const HrirDataT *hData)
 {
     double mag;
-    uint n, i, j;
+    uint i, j;
 
     mag = 0.0;
-    n = hData->mIrPoints;
     for(i = 0;i < n;i++)
         mag = fmax(fabs(hrir[i]), mag);
     mag *= 0.15;
@@ -1944,7 +1943,7 @@ static void AverageHrirOnset(const double *hrir, const double f, const uint ei, 
 
 // Calculate the magnitude response of an HRIR and average it with any
 // existing responses for its elevation and azimuth.
-static void AverageHrirMagnitude(const double *hrir, const double f, const uint ei, const uint ai, const HrirDataT *hData)
+static void AverageHrirMagnitude(const double *hrir, const uint npoints, const double f, const uint ei, const uint ai, const HrirDataT *hData)
 {
     double *re, *im;
     uint n, m, i, j;
@@ -1952,7 +1951,7 @@ static void AverageHrirMagnitude(const double *hrir, const double f, const uint 
     n = hData->mFftSize;
     re = CreateArray(n);
     im = CreateArray(n);
-    for(i = 0;i < hData->mIrPoints;i++)
+    for(i = 0;i < npoints;i++)
     {
         re[i] = hrir[i];
         im[i] = 0.0;
@@ -2106,23 +2105,6 @@ static void ReconstructHrirs(const HrirDataT *hData)
     }
     DestroyArray (im);
     DestroyArray (re);
-}
-
-// Resamples the HRIRs for use at the given sampling rate.
-static void ResampleHrirs(const uint rate, HrirDataT *hData)
-{
-    uint n, step, start, end, j;
-    ResamplerT rs;
-
-    ResamplerSetup(&rs, hData->mIrRate, rate);
-    n = hData->mIrPoints;
-    step = hData->mIrSize;
-    start = hData->mEvOffset[hData->mEvStart] * step;
-    end = hData->mIrCount * step;
-    for(j = start;j < end;j += step)
-        ResamplerRun(&rs, n, &hData->mHrirs[j], n, &hData->mHrirs[j]);
-    ResamplerClear(&rs);
-    hData->mIrRate = rate;
 }
 
 /* Given an elevation index and an azimuth, calculate the indices of the two
@@ -2614,17 +2596,37 @@ static int ReadSourceRef(TokenReaderT *tr, SourceRefT *src)
 }
 
 // Process the list of sources in the data set definition.
-static int ProcessSources(const HeadModelT model, TokenReaderT *tr, HrirDataT *hData)
+static int ProcessSources(const HeadModelT model, const uint dstRate, TokenReaderT *tr, HrirDataT *hData)
 {
     uint *setCount, *setFlag;
     uint line, col, ei, ai;
+    uint res_points;
     SourceRefT src;
     double factor;
     double *hrir;
+    ResamplerT rs;
+
+    ResamplerSetup(&rs, hData->mIrRate, dstRate);
+    /* Scale the number of IR points for resampling. This could be improved by
+     * also including space for the resampler build-up and fall-off (rs.mL*2),
+     * instead of clipping them off, but that could affect the HRTDs. It's not
+     * a big deal to exclude them for sources that aren't already minimum-
+     * phase).
+     */
+    res_points = (uint)(((uint64)hData->mIrPoints*dstRate + hData->mIrRate-1) /
+                        hData->mIrRate);
+    /* Clamp to the IR size to prevent overflow, and don't go less than the
+     * original point count.
+     */
+    if(res_points > hData->mIrSize)
+        res_points = hData->mIrSize;
+    else if(res_points < hData->mIrPoints)
+        res_points = hData->mIrPoints;
 
     setCount = (uint*)calloc(hData->mEvCount, sizeof(uint));
     setFlag = (uint*)calloc(hData->mIrCount, sizeof(uint));
-    hrir = CreateArray(hData->mIrPoints);
+    hrir = CreateArray(res_points);
+
     while(TrIsOperator(tr, "["))
     {
         TrIndication(tr, & line, & col);
@@ -2649,9 +2651,13 @@ static int ProcessSources(const HeadModelT model, TokenReaderT *tr, HrirDataT *h
             if(!LoadSource(&src, hData->mIrRate, hData->mIrPoints, hrir))
                 goto error;
 
+            if(hData->mIrRate != dstRate)
+                ResamplerRun(&rs, hData->mIrPoints, hrir,
+                             res_points, hrir);
+
             if(model == HM_DATASET)
-                AverageHrirOnset(hrir, 1.0 / factor, ei, ai, hData);
-            AverageHrirMagnitude(hrir, 1.0 / factor, ei, ai, hData);
+                AverageHrirOnset(hrir, res_points, 1.0 / factor, ei, ai, hData);
+            AverageHrirMagnitude(hrir, res_points, 1.0 / factor, ei, ai, hData);
             factor += 1.0;
             if(!TrIsOperator(tr, "+"))
                 break;
@@ -2660,6 +2666,8 @@ static int ProcessSources(const HeadModelT model, TokenReaderT *tr, HrirDataT *h
         setFlag[hData->mEvOffset[ei] + ai] = 1;
         setCount[ei]++;
     }
+    hData->mIrPoints = res_points;
+    hData->mIrRate = dstRate;
 
     ei = 0;
     while(ei < hData->mEvCount && setCount[ei] < 1)
@@ -2673,6 +2681,7 @@ static int ProcessSources(const HeadModelT model, TokenReaderT *tr, HrirDataT *h
         {
             if(!TrLoad(tr))
             {
+                ResamplerClear(&rs);
                 DestroyArray(hrir);
                 free(setFlag);
                 free(setCount);
@@ -2687,6 +2696,7 @@ static int ProcessSources(const HeadModelT model, TokenReaderT *tr, HrirDataT *h
         TrError(tr, "Missing source references.\n");
 
 error:
+    ResamplerClear(&rs);
     DestroyArray(hrir);
     free(setFlag);
     free(setCount);
@@ -2735,9 +2745,9 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
             fclose(fp);
         return 0;
     }
-    hData.mHrirs = CreateArray(hData.mIrCount * hData . mIrSize);
+    hData.mHrirs = CreateArray(hData.mIrCount * hData.mIrSize);
     hData.mHrtds = CreateArray(hData.mIrCount);
-    if(!ProcessSources(model, &tr, &hData))
+    if(!ProcessSources(model, outRate ? outRate : hData.mIrRate, &tr, &hData))
     {
         DestroyArray(hData.mHrtds);
         DestroyArray(hData.mHrirs);
@@ -2758,11 +2768,6 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
     }
     fprintf(stdout, "Performing minimum phase reconstruction...\n");
     ReconstructHrirs(&hData);
-    if(outRate != 0 && outRate != hData.mIrRate)
-    {
-        fprintf(stdout, "Resampling HRIRs...\n");
-        ResampleHrirs(outRate, &hData);
-    }
     fprintf(stdout, "Truncating minimum-phase HRIRs...\n");
     hData.mIrPoints = truncSize;
     fprintf(stdout, "Synthesizing missing elevations...\n");

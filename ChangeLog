@@ -28,6 +28,8 @@ openal-soft-1.18.0:
 
     Implemented a run-time check for NEON extensions using /proc/cpuinfo.
 
+    Implemented experimental capture support for the OpenSL backend.
+
     Fixed building on compilers with NEON support but don't default to having
     NEON enabled.
 

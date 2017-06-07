@@ -331,21 +331,6 @@ ALfloat ReverbBoost = 1.0f;
  */
 ALboolean EmulateEAXReverb = AL_FALSE;
 
-/* This coefficient is used to define the sinus depth according to the
- * modulation depth property. This value must be below 1, which would cause the
- * sampler to stall on the downswing, and above 1 it will cause it to sample
- * backwards.
- */
-static const ALfloat MODULATION_DEPTH_COEFF = 1.0f / 2048.0f;
-
-/* A filter is used to avoid the terrible distortion caused by changing
- * modulation time and/or depth.  To be consistent across different sample
- * rates, the coefficient must be raised to a constant divided by the sample
- * rate:  coeff^(constant / rate).
- */
-static const ALfloat MODULATION_FILTER_COEFF = 0.048f;
-static const ALfloat MODULATION_FILTER_CONST = 100000.0f;
-
 /* The all-pass and delay lines have a variable length dependent on the
  * effect's density parameter.  The resulting density multiplier is:
  *
@@ -473,19 +458,32 @@ static const ALfloat LATE_LINE_LENGTHS[4] =
     9.709681e-3f, 1.223343e-2f, 1.689561e-2f, 1.941936e-2f
 };
 
-/* HACK: Workaround for a modff bug in 32-bit Windows, which attempts to write
- * a 64-bit double to the 32-bit float parameter.
+/* This coefficient is used to define the sinus depth according to the
+ * modulation depth property. This value must be below half the shortest late
+ * line length (0.0097/2 = ~0.0048), otherwise with certain parameters (high
+ * mod time, low density) the downswing can sample before the input.
  */
-#if defined(_WIN32) && !defined (_M_X64) && !defined(_M_ARM)
-static inline float hack_modff(float x, float *y)
+static const ALfloat MODULATION_DEPTH_COEFF = 1.0f / 4096.0f;
+
+/* A filter is used to avoid the terrible distortion caused by changing
+ * modulation time and/or depth.  To be consistent across different sample
+ * rates, the coefficient must be raised to a constant divided by the sample
+ * rate:  coeff^(constant / rate).
+ */
+static const ALfloat MODULATION_FILTER_COEFF = 0.048f;
+static const ALfloat MODULATION_FILTER_CONST = 100000.0f;
+
+
+/* Prior to VS2013, MSVC lacks the round() family of functions. */
+#if defined(_MSC_VER) && _MSC_VER < 1800
+static inline long lroundf(float val)
 {
-    double di;
-    double df = modf((double)x, &di);
-    *y = (float)di;
-    return (float)df;
+    if(val < 0.0)
+        return fastf2i(ceilf(val-0.5f));
+    return fastf2i(floorf(val+0.5f));
 }
-#define modff hack_modff
 #endif
+
 
 /**************************************
  *  Device Update                     *
@@ -1067,12 +1065,12 @@ static ALvoid UpdateModulator(const ALfloat modTime, const ALfloat modDepth,
      * time changes the pitch, creating the modulation effect. The scale needs
      * to be multiplied by the modulation time so that a given depth produces a
      * consistent shift in frequency over all ranges of time. Since the depth
-     * is applied to a sinus value, it needs to be halved once for the sinus
-     * range (-1...+1 to 0...1) and again for the sinus swing in time (half of
-     * it is spent decreasing the frequency, half is spent increasing it).
+     * is applied to a sinus value, it needs to be halved for the sinus swing
+     * in time (half of it is spent decreasing the frequency, half is spent
+     * increasing it).
      */
-    State->Mod.Depth = modDepth * MODULATION_DEPTH_COEFF * modTime / 2.0f /
-                       2.0f * frequency;
+    State->Mod.Depth = modDepth * MODULATION_DEPTH_COEFF * modTime / 2.0f *
+                       frequency;
 }
 
 /* Update the offsets for the main effect delay line. */
@@ -1446,7 +1444,7 @@ static inline ALvoid DelayLineIn4Rev(DelayLineI *Delay, ALsizei offset, const AL
         Delay->Line[offset][i] = in[3-i];
 }
 
-static void CalcModulationDelays(ALreverbState *State, ALfloat *restrict delays, const ALsizei todo)
+static void CalcModulationDelays(ALreverbState *State, ALint *restrict delays, const ALsizei todo)
 {
     ALfloat sinus, range;
     ALsizei index, i;
@@ -1456,10 +1454,9 @@ static void CalcModulationDelays(ALreverbState *State, ALfloat *restrict delays,
     for(i = 0;i < todo;i++)
     {
         /* Calculate the sinus rhythm (dependent on modulation time and the
-         * sampling rate).  The center of the sinus is moved to reduce the
-         * delay of the effect when the time or depth are low.
+         * sampling rate).
          */
-        sinus = 1.0f - cosf(F_TAU * index / State->Mod.Range);
+        sinus = sinf(F_TAU * index / State->Mod.Range);
 
         /* Step the modulation index forward, keeping it bound to its range. */
         index = (index+1) % State->Mod.Range;
@@ -1470,8 +1467,8 @@ static void CalcModulationDelays(ALreverbState *State, ALfloat *restrict delays,
          */
         range = lerp(range, State->Mod.Depth, State->Mod.Coeff);
 
-        /* Calculate the read offset with fraction. */
-        delays[i] = range*sinus;
+        /* Calculate the read offset. */
+        delays[i] = lroundf(range*sinus);
     }
     State->Mod.Index = index;
     State->Mod.Filter = range;
@@ -1686,14 +1683,13 @@ static ALvoid LateReverb_##T(ALreverbState *State, const ALsizei todo,        \
     const ALfloat apFeedCoeff = State->ApFeedCoeff;                           \
     const ALfloat mixX = State->MixX;                                         \
     const ALfloat mixY = State->MixY;                                         \
-    ALfloat fdelay, frac;                                                     \
+    ALint moddelay[MAX_UPDATE_SAMPLES];                                       \
     ALsizei delay;                                                            \
     ALsizei offset;                                                           \
     ALsizei i, j;                                                             \
     ALfloat f[4];                                                             \
                                                                               \
-    /* Calculations modulation delays, uing the output as temp storage. */    \
-    CalcModulationDelays(State, &out[0][0], todo);                            \
+    CalcModulationDelays(State, moddelay, todo);                              \
                                                                               \
     offset = State->Offset;                                                   \
     for(i = 0;i < todo;i++)                                                   \
@@ -1704,31 +1700,12 @@ static ALvoid LateReverb_##T(ALreverbState *State, const ALsizei todo,        \
                 offset-State->LateDelayTap[j][1], j, fade                     \
             ) * State->Late.DensityGain;                                      \
                                                                               \
-        /* Separate the integer offset and fraction between it and the next   \
-         * sample.                                                            \
-         */                                                                   \
-        frac = modff(out[0][i], &fdelay);                                     \
-        delay = offset - fastf2i(fdelay);                                     \
-                                                                              \
+        delay = offset - moddelay[i];                                         \
         for(j = 0;j < 4;j++)                                                  \
-        {                                                                     \
-            ALfloat out0, out1;                                               \
-                                                                              \
-            /* Get the two samples crossed by the offset delay. */            \
-            out0 = DELAY_OUT_##T(&State->Late.Delay,                          \
+            f[j] += DELAY_OUT_##T(&State->Late.Delay,                         \
                 delay-State->Late.Offset[j][0],                               \
                 delay-State->Late.Offset[j][1], j, fade                       \
             );                                                                \
-            out1 = DELAY_OUT_##T(&State->Late.Delay,                          \
-                delay-State->Late.Offset[j][0]-1,                             \
-                delay-State->Late.Offset[j][1]-1, j, fade                     \
-            );                                                                \
-                                                                              \
-            /* The modulated result is obtained by linearly interpolating the \
-             * two samples that were acquired above.                          \
-             */                                                               \
-            f[j] += lerp(out0, out1, frac);                                   \
-        }                                                                     \
                                                                               \
         for(j = 0;j < 4;j++)                                                  \
             f[j] = LateT60Filter(j, f[j], State);                             \

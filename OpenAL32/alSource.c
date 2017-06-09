@@ -2502,17 +2502,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 
             case AL_PAUSED:
                 assert(voice != NULL);
-                /* A source that's paused simply resumes. Clear its mixing
-                 * parameters and mark it as 'fading' so it fades in from
-                 * silence.
-                 */
-                voice->Step = 0;
-                voice->Flags |= VOICE_IS_FADING;
-                memset(voice->Direct.Params, 0, sizeof(voice->Direct.Params[0])*
-                                                voice->NumChannels);
-                for(s = 0;s < device->NumAuxSends;s++)
-                    memset(voice->Send[s].Params, 0, sizeof(voice->Send[s].Params[0])*
-                                                     voice->NumChannels);
+                /* A source that's paused simply resumes. */
                 ATOMIC_STORE(&voice->Playing, true, almemory_order_release);
                 ATOMIC_STORE(&source->state, AL_PLAYING, almemory_order_release);
                 goto finish_play;

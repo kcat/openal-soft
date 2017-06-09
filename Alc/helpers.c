@@ -40,6 +40,10 @@
 #include <dirent.h>
 #endif
 
+#ifdef __FreeBSD__
+#include <sys/sysctl.h>
+#endif
+
 #ifndef AL_NO_UID_DEFS
 #if defined(HAVE_GUIDDEF_H) || defined(HAVE_INITGUID_H)
 #define INITGUID
@@ -707,9 +711,22 @@ void UnmapFileMem(const struct FileMapping *mapping)
 al_string GetProcPath(void)
 {
     al_string ret = AL_STRING_INIT_STATIC();
-    const char *fname;
     char *pathname, *sep;
     size_t pathlen;
+
+#ifdef __FreeBSD__
+    int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1};
+    mib[3] = getpid();
+    if (sysctl(mib, 4, NULL, &pathlen, NULL, 0) == -1) {
+        WARN("Failed to sysctl kern.proc.pathname.%d: %s\n", mib[3], strerror(errno));
+        return ret;
+    }
+
+    pathname = malloc(pathlen + 1);
+    sysctl(mib, 4, (void*)pathname, &pathlen, NULL, 0);
+    pathname[pathlen] = 0;
+#else
+    const char *fname;
     ssize_t len;
 
     pathlen = 256;
@@ -738,6 +755,8 @@ al_string GetProcPath(void)
     }
 
     pathname[len] = 0;
+#endif
+
     sep = strrchr(pathname, '/');
     if(sep)
         alstr_copy_range(&ret, pathname, sep);

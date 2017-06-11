@@ -1,3 +1,9 @@
+openal-soft-1.18.1:
+
+    Fixed an issue where resuming a source might not restart playing it.
+
+    Added correct retrieval of the executable's path on FreeBSD.
+
 openal-soft-1.18.0:
 
     Implemented the AL_EXT_STEREO_ANGLES and AL_EXT_SOURCE_RADIUS extensions.

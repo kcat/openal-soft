@@ -817,7 +817,6 @@ static int ALCpulsePlayback_mixerProc(void *ptr)
 
     pa_threaded_mainloop_lock(self->loop);
     frame_size = pa_frame_size(&self->spec);
-    buffer_size = device->UpdateSize * device->NumUpdates * frame_size;
 
     while(!self->killNow && device->Connected)
     {
@@ -830,15 +829,17 @@ static int ALCpulsePlayback_mixerProc(void *ptr)
         }
 
         /* Make sure we're going to write at least 2 'periods' (minreqs), in
-         * case the server increased it since starting playback.
+         * case the server increased it since starting playback. Also round up
+         * the number of writable periods if it's not an integer count.
          */
-        buffer_size = maxu(buffer_size, self->attr.minreq*2);
+        buffer_size = maxu((self->attr.tlength + self->attr.minreq/2) / self->attr.minreq, 2) *
+                      self->attr.minreq;
 
         /* NOTE: This assumes pa_stream_writable_size returns between 0 and
          * tlength, else there will be more latency than intended.
          */
         len = mini(len - (ssize_t)self->attr.tlength, 0) + buffer_size;
-        if(len < self->attr.minreq)
+        if(len < (int32_t)self->attr.minreq)
         {
             if(pa_stream_is_corked(self->stream))
             {
@@ -968,7 +969,6 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
     const char *mapname = NULL;
     pa_channel_map chanmap;
     pa_operation *o;
-    ALuint len;
 
     pa_threaded_mainloop_lock(self->loop);
 
@@ -1107,11 +1107,10 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
     pa_stream_set_buffer_attr_callback(self->stream, ALCpulsePlayback_bufferAttrCallback, self);
     ALCpulsePlayback_bufferAttrCallback(self->stream, self);
 
-    len = self->attr.minreq / pa_frame_size(&self->spec);
-    device->NumUpdates = (ALuint)clampd(
-        (ALdouble)device->NumUpdates/len*device->UpdateSize + 0.5, 2.0, 16.0
+    device->NumUpdates = (ALuint)clampu64(
+        (self->attr.tlength + self->attr.minreq/2) / self->attr.minreq, 2, 16
     );
-    device->UpdateSize = len;
+    device->UpdateSize = self->attr.minreq / pa_frame_size(&self->spec);
 
     /* HACK: prebuf should be 0 as that's what we set it to. However on some
      * systems it comes back as non-0, so we have to make sure the device will
@@ -1121,7 +1120,7 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
      */
     if(self->attr.prebuf != 0)
     {
-        len = self->attr.prebuf / pa_frame_size(&self->spec);
+        ALuint len = self->attr.prebuf / pa_frame_size(&self->spec);
         if(len <= device->UpdateSize*device->NumUpdates)
             ERR("Non-0 prebuf, %u samples (%u bytes), device has %u samples\n",
                 len, self->attr.prebuf, device->UpdateSize*device->NumUpdates);

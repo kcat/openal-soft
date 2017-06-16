@@ -2,6 +2,9 @@ openal-soft-1.18.1:
 
     Fixed an issue where resuming a source might not restart playing it.
 
+    Fixed PulseAudio playback when the configured stream length is much less
+    than the requested length.
+
     Added correct retrieval of the executable's path on FreeBSD.
 
 openal-soft-1.18.0:

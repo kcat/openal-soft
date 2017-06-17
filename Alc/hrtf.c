@@ -362,6 +362,41 @@ static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALsizei evCount
     return Hrtf;
 }
 
+static ALubyte GetLE_ALubyte(const ALubyte **data, size_t *len)
+{
+    ALubyte ret = (*data)[0];
+    *data += 1; *len -= 1;
+    return ret;
+}
+
+static ALshort GetLE_ALshort(const ALubyte **data, size_t *len)
+{
+    ALshort ret = (*data)[0] | ((*data)[1]<<8);
+    *data += 2; *len -= 2;
+    return ret;
+}
+
+static ALushort GetLE_ALushort(const ALubyte **data, size_t *len)
+{
+    ALushort ret = (*data)[0] | ((*data)[1]<<8);
+    *data += 2; *len -= 2;
+    return ret;
+}
+
+static ALint GetLE_ALuint(const ALubyte **data, size_t *len)
+{
+    ALint ret = (*data)[0] | ((*data)[1]<<8) | ((*data)[2]<<16) | ((*data)[3]<<24);
+    *data += 4; *len -= 4;
+    return ret;
+}
+
+static const ALubyte *Get_ALubytePtr(const ALubyte **data, size_t *len, size_t size)
+{
+    const ALubyte *ret = *data;
+    *data += size; *len -= size;
+    return ret;
+}
+
 static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const char *filename)
 {
     const ALubyte maxDelay = HRTF_HISTORY_LENGTH-1;
@@ -383,22 +418,13 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const char *
         return NULL;
     }
 
-    rate  = *(data++);
-    rate |= *(data++)<<8;
-    rate |= *(data++)<<16;
-    rate |= *(data++)<<24;
-    datalen -= 4;
+    rate = GetLE_ALuint(&data, &datalen);
 
-    irCount  = *(data++);
-    irCount |= *(data++)<<8;
-    datalen -= 2;
+    irCount = GetLE_ALushort(&data, &datalen);
 
-    irSize  = *(data++);
-    irSize |= *(data++)<<8;
-    datalen -= 2;
+    irSize = GetLE_ALushort(&data, &datalen);
 
-    evCount = *(data++);
-    datalen -= 1;
+    evCount = GetLE_ALubyte(&data, &datalen);
 
     if(irSize < MIN_IR_SIZE || irSize > MAX_IR_SIZE || (irSize%MOD_IR_SIZE))
     {
@@ -431,14 +457,10 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const char *
 
     if(!failed)
     {
-        evOffset[0]  = *(data++);
-        evOffset[0] |= *(data++)<<8;
-        datalen -= 2;
+        evOffset[0] = GetLE_ALushort(&data, &datalen);
         for(i = 1;i < evCount;i++)
         {
-            evOffset[i]  = *(data++);
-            evOffset[i] |= *(data++)<<8;
-            datalen -= 2;
+            evOffset[i] = GetLE_ALushort(&data, &datalen);
             if(evOffset[i] <= evOffset[i-1])
             {
                 ERR("Invalid evOffset: evOffset[%d]=%d (last=%d)\n",
@@ -494,22 +516,15 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const char *
 
     if(!failed)
     {
-        for(i = 0;i < irCount*irSize;i+=irSize)
+        for(i = 0;i < irCount;i++)
         {
             for(j = 0;j < irSize;j++)
-            {
-                ALshort coeff;
-                coeff  = *(data++);
-                coeff |= *(data++)<<8;
-                datalen -= 2;
-                coeffs[i+j][0] = coeff / 32768.0f;
-            }
+                coeffs[i*irSize + j][0] = GetLE_ALshort(&data, &datalen) / 32768.0f;
         }
 
         for(i = 0;i < irCount;i++)
         {
-            delays[i][0] = *(data++);
-            datalen -= 1;
+            delays[i][0] = GetLE_ALubyte(&data, &datalen);
             if(delays[i][0] > maxDelay)
             {
                 ERR("Invalid delays[%d]: %d (%d)\n", i, delays[i][0], maxDelay);
@@ -569,17 +584,11 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const char *
         return NULL;
     }
 
-    rate  = *(data++);
-    rate |= *(data++)<<8;
-    rate |= *(data++)<<16;
-    rate |= *(data++)<<24;
-    datalen -= 4;
+    rate = GetLE_ALuint(&data, &datalen);
 
-    irSize = *(data++);
-    datalen -= 1;
+    irSize = GetLE_ALubyte(&data, &datalen);
 
-    evCount = *(data++);
-    datalen -= 1;
+    evCount = GetLE_ALubyte(&data, &datalen);
 
     if(irSize < MIN_IR_SIZE || irSize > MAX_IR_SIZE || (irSize%MOD_IR_SIZE))
     {
@@ -602,9 +611,7 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const char *
         return NULL;
     }
 
-    azCount = data;
-    data += evCount;
-    datalen -= evCount;
+    azCount = Get_ALubytePtr(&data, &datalen, evCount);
 
     evOffset = malloc(sizeof(evOffset[0])*evCount);
     if(azCount == NULL || evOffset == NULL)
@@ -658,22 +665,15 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const char *
 
     if(!failed)
     {
-        for(i = 0;i < irCount*irSize;i+=irSize)
+        for(i = 0;i < irCount;i++)
         {
             for(j = 0;j < irSize;j++)
-            {
-                ALshort coeff;
-                coeff  = *(data++);
-                coeff |= *(data++)<<8;
-                datalen -= 2;
-                coeffs[i+j][0] = coeff / 32768.0f;
-            }
+                coeffs[i*irSize + j][0] = GetLE_ALshort(&data, &datalen) / 32768.0f;
         }
 
         for(i = 0;i < irCount;i++)
         {
-            delays[i][0] = *(data++);
-            datalen -= 1;
+            delays[i][0] = GetLE_ALubyte(&data, &datalen);
             if(delays[i][0] > maxDelay)
             {
                 ERR("Invalid delays[%d]: %d (%d)\n", i, delays[i][0], maxDelay);

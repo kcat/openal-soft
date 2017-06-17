@@ -963,9 +963,6 @@ static void InitHrtfPanning(ALCdevice *device)
         device->Hrtf, device->Dry.NumChannels,
         AmbiPoints, AmbiMatrix, COUNTOF(AmbiPoints)
     );
-
-    /* Round up to the nearest multiple of 8 */
-    device->Hrtf->IrSize = (device->Hrtf->IrSize+7)&~7;
 }
 
 static void InitUhjPanning(ALCdevice *device)

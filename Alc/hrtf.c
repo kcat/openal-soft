@@ -284,8 +284,10 @@ ALsizei BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsize
             }
         }
     }
-    TRACE("Skipped min delay: %d, new combined length: %d\n", min_delay, max_length);
+    /* Round up to the next IR size multiple. */
+    max_length = RoundUp(max_length, MOD_IR_SIZE);
 
+    TRACE("Skipped min delay: %d, new combined length: %d\n", min_delay, max_length);
     return max_length;
 #undef NUM_BANDS
 }

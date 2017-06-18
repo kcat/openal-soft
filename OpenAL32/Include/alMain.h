@@ -436,25 +436,6 @@ enum DevProbe {
     CAPTURE_DEVICE_PROBE
 };
 
-typedef struct {
-    ALCenum (*OpenPlayback)(ALCdevice*, const ALCchar*);
-    void (*ClosePlayback)(ALCdevice*);
-    ALCboolean (*ResetPlayback)(ALCdevice*);
-    ALCboolean (*StartPlayback)(ALCdevice*);
-    void (*StopPlayback)(ALCdevice*);
-
-    ALCenum (*OpenCapture)(ALCdevice*, const ALCchar*);
-    void (*CloseCapture)(ALCdevice*);
-    void (*StartCapture)(ALCdevice*);
-    void (*StopCapture)(ALCdevice*);
-    ALCenum (*CaptureSamples)(ALCdevice*, void*, ALCuint);
-    ALCuint (*AvailableSamples)(ALCdevice*);
-} BackendFuncs;
-
-ALCboolean alc_qsa_init(BackendFuncs *func_list);
-void alc_qsa_deinit(void);
-void alc_qsa_probe(enum DevProbe type);
-
 struct ALCbackend;
 
 

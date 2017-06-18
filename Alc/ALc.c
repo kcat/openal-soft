@@ -54,57 +54,52 @@
 struct BackendInfo {
     const char *name;
     ALCbackendFactory* (*getFactory)(void);
-    ALCboolean (*Init)(BackendFuncs*);
-    void (*Deinit)(void);
-    void (*Probe)(enum DevProbe);
-    BackendFuncs Funcs;
 };
 
-#define EmptyFuncs { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 static struct BackendInfo BackendList[] = {
 #ifdef HAVE_JACK
-    { "jack", ALCjackBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
+    { "jack", ALCjackBackendFactory_getFactory },
 #endif
 #ifdef HAVE_PULSEAUDIO
-    { "pulse", ALCpulseBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
+    { "pulse", ALCpulseBackendFactory_getFactory },
 #endif
 #ifdef HAVE_ALSA
-    { "alsa", ALCalsaBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
+    { "alsa", ALCalsaBackendFactory_getFactory },
 #endif
 #ifdef HAVE_COREAUDIO
-    { "core", ALCcoreAudioBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
+    { "core", ALCcoreAudioBackendFactory_getFactory },
 #endif
 #ifdef HAVE_OSS
-    { "oss", ALCossBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
+    { "oss", ALCossBackendFactory_getFactory },
 #endif
 #ifdef HAVE_SOLARIS
-    { "solaris", ALCsolarisBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
+    { "solaris", ALCsolarisBackendFactory_getFactory },
 #endif
 #ifdef HAVE_SNDIO
-    { "sndio", ALCsndioBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
+    { "sndio", ALCsndioBackendFactory_getFactory },
 #endif
 #ifdef HAVE_QSA
-    { "qsa", NULL, alc_qsa_init, alc_qsa_deinit, alc_qsa_probe, EmptyFuncs },
+    { "qsa", ALCqsaBackendFactory_getFactory },
 #endif
 #ifdef HAVE_MMDEVAPI
-    { "mmdevapi", ALCmmdevBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
+    { "mmdevapi", ALCmmdevBackendFactory_getFactory },
 #endif
 #ifdef HAVE_DSOUND
-    { "dsound", ALCdsoundBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
+    { "dsound", ALCdsoundBackendFactory_getFactory },
 #endif
 #ifdef HAVE_WINMM
-    { "winmm", ALCwinmmBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
+    { "winmm", ALCwinmmBackendFactory_getFactory },
 #endif
 #ifdef HAVE_PORTAUDIO
-    { "port", ALCportBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
+    { "port", ALCportBackendFactory_getFactory },
 #endif
 #ifdef HAVE_OPENSL
-    { "opensl", ALCopenslBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
+    { "opensl", ALCopenslBackendFactory_getFactory },
 #endif
 
-    { "null", ALCnullBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
+    { "null", ALCnullBackendFactory_getFactory },
 #ifdef HAVE_WAVE
-    { "wave", ALCwaveBackendFactory_getFactory, NULL, NULL, NULL, EmptyFuncs },
+    { "wave", ALCwaveBackendFactory_getFactory },
 #endif
 };
 static ALsizei BackendListSize = COUNTOF(BackendList);
@@ -1091,43 +1086,20 @@ static void alc_initconfig(void)
 
     for(i = 0;i < BackendListSize && (!PlaybackBackend.name || !CaptureBackend.name);i++)
     {
-        if(BackendList[i].getFactory)
-        {
-            ALCbackendFactory *factory = BackendList[i].getFactory();
-            if(!V0(factory,init)())
-            {
-                WARN("Failed to initialize backend \"%s\"\n", BackendList[i].name);
-                continue;
-            }
-
-            TRACE("Initialized backend \"%s\"\n", BackendList[i].name);
-            if(!PlaybackBackend.name && V(factory,querySupport)(ALCbackend_Playback))
-            {
-                PlaybackBackend = BackendList[i];
-                TRACE("Added \"%s\" for playback\n", PlaybackBackend.name);
-            }
-            if(!CaptureBackend.name && V(factory,querySupport)(ALCbackend_Capture))
-            {
-                CaptureBackend = BackendList[i];
-                TRACE("Added \"%s\" for capture\n", CaptureBackend.name);
-            }
-
-            continue;
-        }
-
-        if(!BackendList[i].Init(&BackendList[i].Funcs))
+        ALCbackendFactory *factory = BackendList[i].getFactory();
+        if(!V0(factory,init)())
         {
             WARN("Failed to initialize backend \"%s\"\n", BackendList[i].name);
             continue;
         }
 
         TRACE("Initialized backend \"%s\"\n", BackendList[i].name);
-        if(BackendList[i].Funcs.OpenPlayback && !PlaybackBackend.name)
+        if(!PlaybackBackend.name && V(factory,querySupport)(ALCbackend_Playback))
         {
             PlaybackBackend = BackendList[i];
             TRACE("Added \"%s\" for playback\n", PlaybackBackend.name);
         }
-        if(BackendList[i].Funcs.OpenCapture && !CaptureBackend.name)
+        if(!CaptureBackend.name && V(factory,querySupport)(ALCbackend_Capture))
         {
             CaptureBackend = BackendList[i];
             TRACE("Added \"%s\" for capture\n", CaptureBackend.name);
@@ -1299,13 +1271,8 @@ static void alc_deinit(void)
 
     for(i = 0;i < BackendListSize;i++)
     {
-        if(!BackendList[i].getFactory)
-            BackendList[i].Deinit();
-        else
-        {
-            ALCbackendFactory *factory = BackendList[i].getFactory();
-            V0(factory,deinit)();
-        }
+        ALCbackendFactory *factory = BackendList[i].getFactory();
+        V0(factory,deinit)();
     }
     {
         ALCbackendFactory *factory = ALCloopbackFactory_getFactory();
@@ -1321,18 +1288,16 @@ static void alc_deinit(void)
  ************************************************/
 static void ProbeDevices(al_string *list, struct BackendInfo *backendinfo, enum DevProbe type)
 {
+    ALCbackendFactory *factory;
+
     DO_INITCONFIG();
 
     LockLists();
     alstr_clear(list);
 
-    if(backendinfo->Probe)
-        backendinfo->Probe(type);
-    else if(backendinfo->getFactory)
-    {
-        ALCbackendFactory *factory = backendinfo->getFactory();
-        V(factory,probe)(type);
-    }
+    factory = backendinfo->getFactory();
+    V(factory,probe)(type);
+
     UnlockLists();
 }
 static void ProbeAllDevicesList(void)
@@ -3830,6 +3795,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *Context)
  */
 ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 {
+    ALCbackendFactory *factory;
     const ALCchar *fmt;
     ALCdevice *device;
     ALCenum err;
@@ -3916,14 +3882,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->NumUpdates = 3;
     device->UpdateSize = 1024;
 
-    if(!PlaybackBackend.getFactory)
-        device->Backend = create_backend_wrapper(device, &PlaybackBackend.Funcs,
-                                                 ALCbackend_Playback);
-    else
-    {
-        ALCbackendFactory *factory = PlaybackBackend.getFactory();
-        device->Backend = V(factory,createBackend)(device, ALCbackend_Playback);
-    }
+    factory = PlaybackBackend.getFactory();
+    device->Backend = V(factory,createBackend)(device, ALCbackend_Playback);
     if(!device->Backend)
     {
         al_free(device);
@@ -4151,6 +4111,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device)
  ************************************************/
 ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei samples)
 {
+    ALCbackendFactory *factory;
     ALCdevice *device = NULL;
     ALCenum err;
     ALCsizei i;
@@ -4208,14 +4169,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         device->ChannelDelay[i].Buffer = NULL;
     }
 
-    if(!CaptureBackend.getFactory)
-        device->Backend = create_backend_wrapper(device, &CaptureBackend.Funcs,
-                                                 ALCbackend_Capture);
-    else
-    {
-        ALCbackendFactory *factory = CaptureBackend.getFactory();
-        device->Backend = V(factory,createBackend)(device, ALCbackend_Capture);
-    }
+    factory = CaptureBackend.getFactory();
+    device->Backend = V(factory,createBackend)(device, ALCbackend_Capture);
     if(!device->Backend)
     {
         al_free(device);

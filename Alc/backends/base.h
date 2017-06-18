@@ -142,6 +142,7 @@ ALCbackendFactory *ALCossBackendFactory_getFactory(void);
 ALCbackendFactory *ALCjackBackendFactory_getFactory(void);
 ALCbackendFactory *ALCsolarisBackendFactory_getFactory(void);
 ALCbackendFactory *ALCsndioBackendFactory_getFactory(void);
+ALCbackendFactory *ALCqsaBackendFactory_getFactory(void);
 ALCbackendFactory *ALCmmdevBackendFactory_getFactory(void);
 ALCbackendFactory *ALCdsoundBackendFactory_getFactory(void);
 ALCbackendFactory *ALCwinmmBackendFactory_getFactory(void);
@@ -150,7 +151,5 @@ ALCbackendFactory *ALCopenslBackendFactory_getFactory(void);
 ALCbackendFactory *ALCnullBackendFactory_getFactory(void);
 ALCbackendFactory *ALCwaveBackendFactory_getFactory(void);
 ALCbackendFactory *ALCloopbackFactory_getFactory(void);
-
-ALCbackend *create_backend_wrapper(ALCdevice *device, const BackendFuncs *funcs, ALCbackend_Type type);
 
 #endif /* AL_BACKENDS_BASE_H */

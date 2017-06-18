@@ -7,6 +7,8 @@ openal-soft-1.18.1:
 
     Added correct retrieval of the executable's path on FreeBSD.
 
+    Added a config option to specify the dithering depth.
+
 openal-soft-1.18.0:
 
     Implemented the AL_EXT_STEREO_ANGLES and AL_EXT_SOURCE_RADIUS extensions.

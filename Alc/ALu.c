@@ -1786,12 +1786,10 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             if(Limiter)
                 ApplyCompression(Limiter, OutChannels, SamplesToDo, OutBuffer);
 
-            /* Dither only applies to 8- and 16-bit output for now, as 32-bit
-             * int and float are at the limits of the rendered sample depth.
-             * This can change if the dithering bit depth becomes configurable
-             * (effectively quantizing to a lower bit depth than the output is
-             * capable of).
-             */
+            if(device->DitherDepth > 0.0f)
+                ApplyDither(OutBuffer, &device->DitherSeed, device->DitherDepth, SamplesToDo,
+                            OutChannels);
+
 #define WRITE(T, a, b, c, d) do {                                             \
     Write##T(SAFE_CONST(ALfloatBUFFERSIZE*,(a)), (b), (c), (d));              \
     buffer = (T*)buffer + (c)*(d);                                            \
@@ -1799,23 +1797,15 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             switch(device->FmtType)
             {
                 case DevFmtByte:
-                    if(device->DitherEnabled)
-                        ApplyDither(OutBuffer, &device->DitherSeed, 128.0f, SamplesToDo, OutChannels);
                     WRITE(ALbyte, OutBuffer, buffer, SamplesToDo, OutChannels);
                     break;
                 case DevFmtUByte:
-                    if(device->DitherEnabled)
-                        ApplyDither(OutBuffer, &device->DitherSeed, 128.0f, SamplesToDo, OutChannels);
                     WRITE(ALubyte, OutBuffer, buffer, SamplesToDo, OutChannels);
                     break;
                 case DevFmtShort:
-                    if(device->DitherEnabled)
-                        ApplyDither(OutBuffer, &device->DitherSeed, 32768.0f, SamplesToDo, OutChannels);
                     WRITE(ALshort, OutBuffer, buffer, SamplesToDo, OutChannels);
                     break;
                 case DevFmtUShort:
-                    if(device->DitherEnabled)
-                        ApplyDither(OutBuffer, &device->DitherSeed, 32768.0f, SamplesToDo, OutChannels);
                     WRITE(ALushort, OutBuffer, buffer, SamplesToDo, OutChannels);
                     break;
                 case DevFmtInt:

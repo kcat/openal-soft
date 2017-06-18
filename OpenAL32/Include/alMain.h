@@ -794,7 +794,7 @@ struct ALCdevice_struct
     DistanceComp ChannelDelay[MAX_OUTPUT_CHANNELS];
 
     /* Dithering control. */
-    bool DitherEnabled;
+    ALfloat DitherDepth;
     ALuint DitherSeed;
 
     /* Running count of the mixer invocations, in 31.1 fixed point. This

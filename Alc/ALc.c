@@ -2222,6 +2222,35 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
           device->SourcesMax, device->NumMonoSources, device->NumStereoSources,
           device->AuxiliaryEffectSlotMax, device->NumAuxSends);
 
+    if(!GetConfigValueBool(alstr_get_cstr(device->DeviceName), NULL, "dither", 1))
+        device->DitherDepth = 0.0f;
+    else
+    {
+        ALint depth = 0;
+        ConfigValueInt(alstr_get_cstr(device->DeviceName), NULL, "dither-depth", &depth);
+        if(depth <= 0)
+        {
+            switch(device->FmtType)
+            {
+                case DevFmtByte:
+                case DevFmtUByte:
+                    depth = 8;
+                    break;
+                case DevFmtShort:
+                case DevFmtUShort:
+                    depth = 16;
+                    break;
+                case DevFmtInt:
+                case DevFmtUInt:
+                case DevFmtFloat:
+                    break;
+            }
+        }
+        else if(depth > 24)
+            depth = 24;
+        device->DitherDepth = (depth > 0) ? powf(2.0f, (ALfloat)(depth-1)) : 0.0f;
+    }
+
     if(ConfigValueBool(alstr_get_cstr(device->DeviceName), NULL, "output-limiter", &val))
         gainLimiter = val ? ALC_TRUE : ALC_FALSE;
     /* Valid values for gainLimiter are ALC_DONT_CARE_SOFT, ALC_TRUE, and
@@ -4026,10 +4055,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
             ERR("Unsupported ambi-format: %s\n", fmt);
     }
 
-    device->DitherEnabled = GetConfigValueBool(
-        alstr_get_cstr(device->DeviceName), NULL, "dither", 1
-    );
-
     device->Limiter = CreateDeviceLimiter(device);
 
     if(DefaultEffect.type != AL_EFFECT_NULL)
@@ -4449,8 +4474,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
 
     // Open the "backend"
     V(device->Backend,open)("Loopback");
-
-    device->DitherEnabled = GetConfigValueBool(NULL, NULL, "dither", 1);
 
     device->Limiter = CreateDeviceLimiter(device);
 

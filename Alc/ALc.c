@@ -2187,9 +2187,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
           device->SourcesMax, device->NumMonoSources, device->NumStereoSources,
           device->AuxiliaryEffectSlotMax, device->NumAuxSends);
 
-    if(!GetConfigValueBool(alstr_get_cstr(device->DeviceName), NULL, "dither", 1))
-        device->DitherDepth = 0.0f;
-    else
+    device->DitherDepth = 0.0f;
+    if(GetConfigValueBool(alstr_get_cstr(device->DeviceName), NULL, "dither", 1))
     {
         ALint depth = 0;
         ConfigValueInt(alstr_get_cstr(device->DeviceName), NULL, "dither-depth", &depth);
@@ -2215,6 +2214,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             depth = 24;
         device->DitherDepth = (depth > 0) ? powf(2.0f, (ALfloat)(depth-1)) : 0.0f;
     }
+    if(!(device->DitherDepth > 0.0f))
+        TRACE("Dithering disabled\n");
+    else
+        TRACE("Dithering enabled (%g-bit, %g)\n", log2f(device->DitherDepth)+1.0f,
+              device->DitherDepth);
 
     if(ConfigValueBool(alstr_get_cstr(device->DeviceName), NULL, "output-limiter", &val))
         gainLimiter = val ? ALC_TRUE : ALC_FALSE;

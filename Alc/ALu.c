@@ -1777,14 +1777,13 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         {
             ALfloat (*OutBuffer)[BUFFERSIZE] = device->RealOut.Buffer;
             ALsizei OutChannels = device->RealOut.NumChannels;
-            struct Compressor *Limiter = device->Limiter;
 
             /* Use NFCtrlData for temp value storage. */
             ApplyDistanceComp(OutBuffer, device->ChannelDelay, device->NFCtrlData,
                               SamplesToDo, OutChannels);
 
-            if(Limiter)
-                ApplyCompression(Limiter, OutChannels, SamplesToDo, OutBuffer);
+            if(device->Limiter)
+                ApplyCompression(device->Limiter, OutChannels, SamplesToDo, OutBuffer);
 
             if(device->DitherDepth > 0.0f)
                 ApplyDither(OutBuffer, &device->DitherSeed, device->DitherDepth, SamplesToDo,

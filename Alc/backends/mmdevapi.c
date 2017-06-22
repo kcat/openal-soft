@@ -1744,6 +1744,7 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
             ERR("Failed to create stereo-to-mono converter\n");
             return E_FAIL;
         }
+        TRACE("Created stereo-to-mono converter\n");
         /* The channel converter always outputs float, so change the input type
          * for the resampler/type-converter.
          */
@@ -1758,6 +1759,7 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
             ERR("Failed to create mono-to-stereo converter\n");
             return E_FAIL;
         }
+        TRACE("Created mono-to-stereo converter\n");
         srcType = DevFmtFloat;
     }
 
@@ -1775,6 +1777,10 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
                 OutputType.Format.nSamplesPerSec);
             return E_FAIL;
         }
+        TRACE("Created converter for format, dst: %s %s %uhz, src: %d-bit %luhz\n",
+              DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
+              device->Frequency, OutputType.Format.wBitsPerSample,
+              OutputType.Format.nSamplesPerSec);
     }
 
     hr = IAudioClient_Initialize(self->client,

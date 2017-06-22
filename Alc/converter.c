@@ -219,7 +219,7 @@ ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALs
     const ALsizei increment = converter->mIncrement;
     ALsizei pos = 0;
 
-    while(pos < dstframes)
+    while(pos < dstframes && *srcframes > 0)
     {
         ALfloat *restrict SrcData = ASSUME_ALIGNED(converter->mSrcSamples, 16);
         ALfloat *restrict DstData = ASSUME_ALIGNED(converter->mDstSamples, 16);
@@ -241,7 +241,8 @@ ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALs
             }
             *src = (const ALbyte*)*src + SrcFrameSize*-prepcount;
             *srcframes += prepcount;
-            prepcount = 0;
+            converter->mSrcPrepCount = 0;
+            continue;
         }
         toread = mini(*srcframes, BUFFERSIZE-(MAX_POST_SAMPLES+MAX_PRE_SAMPLES));
 
@@ -253,7 +254,7 @@ ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALs
              */
             for(chan = 0;chan < converter->mNumChannels;chan++)
                 LoadSamples(&converter->Chan[chan].mPrevSamples[prepcount],
-                    (const ALbyte*)src + converter->mSrcTypeSize*chan,
+                    (const ALbyte*)*src + converter->mSrcTypeSize*chan,
                     converter->mNumChannels, converter->mSrcType, toread
                 );
 

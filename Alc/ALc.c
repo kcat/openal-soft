@@ -1214,6 +1214,8 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *jvm, void* UNUSED(reserved))
     return JNI_VERSION_1_4;
 }
 
+/* Android doesn't have log2f, really? */
+#define log2f(x)  (logf(x) / logf(2.0f))
 #endif
 
 

@@ -1741,10 +1741,10 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
                                                    device->FmtChans);
         if(!self->ChannelConv)
         {
-            ERR("Failed to create stereo-to-mono converter\n");
+            ERR("Failed to create %s stereo-to-mono converter\n", DevFmtTypeString(srcType));
             return E_FAIL;
         }
-        TRACE("Created stereo-to-mono converter\n");
+        TRACE("Created %s stereo-to-mono converter\n", DevFmtTypeString(srcType));
         /* The channel converter always outputs float, so change the input type
          * for the resampler/type-converter.
          */
@@ -1756,10 +1756,10 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
                                                    device->FmtChans);
         if(!self->ChannelConv)
         {
-            ERR("Failed to create mono-to-stereo converter\n");
+            ERR("Failed to create %s mono-to-stereo converter\n", DevFmtTypeString(srcType));
             return E_FAIL;
         }
-        TRACE("Created mono-to-stereo converter\n");
+        TRACE("Created %s mono-to-stereo converter\n", DevFmtTypeString(srcType));
         srcType = DevFmtFloat;
     }
 
@@ -1771,16 +1771,14 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
         );
         if(!self->SampleConv)
         {
-            ERR("Failed to create converter for format, dst: %s %s %uhz, src: %d-bit %luhz\n",
+            ERR("Failed to create converter for %s format, dst: %s %uhz, src: %s %luhz\n",
                 DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
-                device->Frequency, OutputType.Format.wBitsPerSample,
-                OutputType.Format.nSamplesPerSec);
+                device->Frequency, DevFmtTypeString(srcType), OutputType.Format.nSamplesPerSec);
             return E_FAIL;
         }
-        TRACE("Created converter for format, dst: %s %s %uhz, src: %d-bit %luhz\n",
+        TRACE("Created converter for %s format, dst: %s %uhz, src: %s %luhz\n",
               DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
-              device->Frequency, OutputType.Format.wBitsPerSample,
-              OutputType.Format.nSamplesPerSec);
+              device->Frequency, DevFmtTypeString(srcType), OutputType.Format.nSamplesPerSec);
     }
 
     hr = IAudioClient_Initialize(self->client,

@@ -282,7 +282,7 @@ ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALs
         for(chan = 0;chan < converter->mNumChannels;chan++)
         {
             const ALbyte *SrcSamples = (const ALbyte*)*src + converter->mSrcTypeSize*chan;
-            ALbyte *DstSamples = (ALbyte*)dst + converter->mSrcTypeSize*chan;
+            ALbyte *DstSamples = (ALbyte*)dst + converter->mDstTypeSize*chan;
             const ALfloat *ResampledData;
             ALsizei SrcDataEnd;
 
@@ -301,7 +301,7 @@ ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALs
             SrcDataEnd = (DataPosFrac + increment*DstSize)>>FRACTIONBITS;
             if(SrcDataEnd >= prepcount+toread)
                 memset(converter->Chan[chan].mPrevSamples, 0,
-                    sizeof(converter->Chan[chan].mPrevSamples));
+                       sizeof(converter->Chan[chan].mPrevSamples));
             else
             {
                 size_t len = mini(MAX_PRE_SAMPLES+MAX_POST_SAMPLES, prepcount+toread-SrcDataEnd);

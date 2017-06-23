@@ -194,6 +194,12 @@ ALsizei SampleConverterAvailableOut(SampleConverter *converter, ALsizei srcframe
         prepcount = 0;
     }
 
+    if(srcframes < 1)
+    {
+        /* No output samples if there's no input samples. */
+        return 0;
+    }
+
     if(prepcount < MAX_POST_SAMPLES+MAX_PRE_SAMPLES &&
        MAX_POST_SAMPLES+MAX_PRE_SAMPLES-prepcount >= srcframes)
     {

@@ -1409,6 +1409,20 @@ IF(ALSOFT_TESTS)
 ENDIF()
 
 IF(ALSOFT_EXAMPLES)
+    ADD_EXECUTABLE(alrecord examples/alrecord.c ${COMMON_OBJS})
+    TARGET_LINK_LIBRARIES(alrecord OpenAL)
+    SET_PROPERTY(TARGET alrecord APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
+
+    IF(ALSOFT_INSTALL)
+        INSTALL(TARGETS alrecord
+                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+                LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        )
+    ENDIF()
+
+    MESSAGE(STATUS "Building example programs")
+
     IF(SDL2_FOUND)
         IF(SDL_SOUND_FOUND)
             SET(EX_COMMON_OBJS  examples/common/alhelpers.c)

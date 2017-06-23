@@ -59,7 +59,7 @@ static inline ALfloat Sample_ALushort(ALushort val)
 static inline ALfloat Sample_ALint(ALint val)
 { return (val>>7) * (1.0f/16777216.0f); }
 static inline ALfloat Sample_ALuint(ALuint val)
-{ return ((ALint)(val>>7) - 16777216) * (1.0f/16777216.0f); }
+{ return Sample_ALint(val - INT_MAX - 1); }
 
 static inline ALfloat Sample_ALfloat(ALfloat val)
 { return val; }

@@ -85,6 +85,8 @@ typedef union InterpState {
     BsincState bsinc;
 } InterpState;
 
+ALboolean BsincPrepare(const ALuint increment, BsincState *state);
+
 typedef const ALfloat* (*ResamplerFunc)(const InterpState *state,
     const ALfloat *restrict src, ALsizei frac, ALint increment,
     ALfloat *restrict dst, ALsizei dstlen

@@ -19,6 +19,7 @@ typedef struct SampleConverter {
 
     ALsizei mFracOffset;
     ALsizei mIncrement;
+    InterpState mState;
     ResamplerFunc mResample;
 
     alignas(16) ALfloat mSrcSamples[BUFFERSIZE];

@@ -214,7 +214,7 @@ static aluVector aluMatrixfVector(const aluMatrixf *mtx, const aluVector *vec)
  * modified for use with an interpolated increment for buttery-smooth pitch
  * changes.
  */
-static ALboolean BsincPrepare(const ALuint increment, BsincState *state)
+ALboolean BsincPrepare(const ALuint increment, BsincState *state)
 {
     static const ALfloat scaleBase = 1.510578918e-01f, scaleRange = 1.177936623e+00f;
     static const ALuint m[BSINC_SCALE_COUNT] = { 24, 24, 24, 24, 24, 24, 24, 20, 20, 20, 16, 16, 16, 12, 12, 12 };

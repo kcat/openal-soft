@@ -1610,9 +1610,6 @@ DECL_TEMPLATE(ALbyte, aluF2B)
 void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 {
     ALsizei SamplesToDo;
-    ALvoice **voice, **voice_end;
-    ALeffectslot *slot;
-    ALsource *source;
     ALCcontext *ctx;
     FPUCtl oldMode;
     ALsizei i, c;
@@ -1633,9 +1630,10 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
         IncrementRef(&device->MixCount);
 
-        if((slot=device->DefaultSlot) != NULL)
+        if(device->DefaultSlot != NULL)
         {
-            CalcEffectSlotParams(device->DefaultSlot, device);
+            ALeffectslot *slot = device->DefaultSlot;
+            CalcEffectSlotParams(slot, device);
             for(c = 0;c < slot->NumChannels;c++)
                 memset(slot->WetBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
         }
@@ -1656,18 +1654,17 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             }
 
             /* source processing */
-            voice = ctx->Voices;
-            voice_end = voice + ctx->VoiceCount;
-            for(;voice != voice_end;++voice)
+            for(i = 0;i < ctx->VoiceCount;i++)
             {
-                source = ATOMIC_LOAD(&(*voice)->Source, almemory_order_acquire);
-                if(source && ATOMIC_LOAD(&(*voice)->Playing, almemory_order_relaxed) &&
-                   (*voice)->Step > 0)
+                ALvoice *voice = ctx->Voices[i];
+                ALsource *source = ATOMIC_LOAD(&voice->Source, almemory_order_acquire);
+                if(source && ATOMIC_LOAD(&voice->Playing, almemory_order_relaxed) &&
+                   voice->Step > 0)
                 {
-                    if(!MixSource(*voice, source, device, SamplesToDo))
+                    if(!MixSource(voice, source, device, SamplesToDo))
                     {
-                        ATOMIC_STORE(&(*voice)->Source, NULL, almemory_order_relaxed);
-                        ATOMIC_STORE(&(*voice)->Playing, false, almemory_order_release);
+                        ATOMIC_STORE(&voice->Source, NULL, almemory_order_relaxed);
+                        ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
                     }
                 }
             }
@@ -1829,33 +1826,30 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
 void aluHandleDisconnect(ALCdevice *device)
 {
-    ALCcontext *Context;
+    ALCcontext *ctx;
 
     device->Connected = ALC_FALSE;
 
-    Context = ATOMIC_LOAD_SEQ(&device->ContextList);
-    while(Context)
+    ctx = ATOMIC_LOAD_SEQ(&device->ContextList);
+    while(ctx)
     {
-        ALvoice **voice, **voice_end;
-
-        voice = Context->Voices;
-        voice_end = voice + Context->VoiceCount;
-        while(voice != voice_end)
+        ALsizei i;
+        for(i = 0;i < ctx->VoiceCount;i++)
         {
-            ALsource *source = ATOMIC_EXCHANGE_PTR(&(*voice)->Source, NULL,
-                                                   almemory_order_acq_rel);
-            ATOMIC_STORE(&(*voice)->Playing, false, almemory_order_release);
+            ALvoice *voice = ctx->Voices[i];
+            ALsource *source;
+
+            source = ATOMIC_EXCHANGE_PTR(&voice->Source, NULL, almemory_order_acq_rel);
+            ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
 
             if(source)
             {
                 ALenum playing = AL_PLAYING;
                 (void)(ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(&source->state, &playing, AL_STOPPED));
             }
-
-            voice++;
         }
-        Context->VoiceCount = 0;
+        ctx->VoiceCount = 0;
 
-        Context = Context->next;
+        ctx = ctx->next;
     }
 }

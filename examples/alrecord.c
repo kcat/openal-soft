@@ -78,7 +78,7 @@ int main(int argc, char **argv)
 {
     static const char optlist[] =
 "    --channels/-c <channels>  Set channel count (1 or 2)\n"
-"    --bits/-b <bits>          Set channel count (8 or 16)\n"
+"    --bits/-b <bits>          Set channel count (8, 16, or 32)\n"
 "    --rate/-r <rate>          Set sample rate (8000 to 96000)\n"
 "    --time/-t <time>          Time in seconds to record (1 to 10)\n"
 "    --outfile/-o <filename>   Output filename (default: record.wav)";
@@ -150,7 +150,8 @@ int main(int argc, char **argv)
             }
 
             recorder.mBits = strtol(argv[1], &end, 0);
-            if((recorder.mBits != 8 && recorder.mBits != 16) || (end && *end != '\0'))
+            if((recorder.mBits != 8 && recorder.mBits != 16 && recorder.mBits != 32) ||
+               (end && *end != '\0'))
             {
                 fprintf(stderr, "Invalid bit count: %s\n", argv[1]);
                 return 1;
@@ -229,6 +230,8 @@ int main(int argc, char **argv)
             format = AL_FORMAT_MONO8;
         else if(recorder.mBits == 16)
             format = AL_FORMAT_MONO16;
+        else if(recorder.mBits == 32)
+            format = AL_FORMAT_MONO_FLOAT32;
     }
     else if(recorder.mChannels == 2)
     {
@@ -236,13 +239,18 @@ int main(int argc, char **argv)
             format = AL_FORMAT_STEREO8;
         else if(recorder.mBits == 16)
             format = AL_FORMAT_STEREO16;
+        else if(recorder.mBits == 32)
+            format = AL_FORMAT_STEREO_FLOAT32;
     }
 
     recorder.mDevice = alcCaptureOpenDevice(devname, recorder.mSampleRate, format, 32768);
     if(!recorder.mDevice)
     {
-        fprintf(stderr, "Failed to open %s, %s %d-bit %dhz %d samples\n", devname?devname:"default device",
-            (recorder.mChannels == 1) ? "mono" : "stereo", recorder.mBits,recorder.mSampleRate,
+        fprintf(stderr, "Failed to open %s, %s %d-bit, %s, %dhz (%d samples)\n",
+            devname ? devname : "default device",
+            (recorder.mBits == 32) ? "Float" :
+            (recorder.mBits !=  8) ? "Signed" : "Unsigned", recorder.mBits,
+            (recorder.mChannels == 1) ? "Mono" : "Stereo", recorder.mSampleRate,
             32768
         );
         return 1;
@@ -267,8 +275,8 @@ int main(int argc, char **argv)
     fputs("fmt ", recorder.mFile);
     fwrite32le(18, recorder.mFile); // 'fmt ' header len
 
-    // 16-bit val, format type id
-    fwrite16le(0x0001, recorder.mFile);
+    // 16-bit val, format type id (1 = integer PCM, 3 = float PCM)
+    fwrite16le((recorder.mBits == 32) ? 0x0003 : 0x0001, recorder.mFile);
     // 16-bit val, channel count
     fwrite16le(recorder.mChannels, recorder.mFile);
     // 32-bit val, frequency
@@ -294,9 +302,11 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    fprintf(stderr, "Recording '%s', %s %d-bit %dhz, %f sec\n", fname,
-        (recorder.mChannels == 1) ? "mono" : "stereo", recorder.mBits,recorder.mSampleRate,
-        ceilf(recorder.mRecTime)
+    fprintf(stderr, "Recording '%s', %s %d-bit, %s, %dhz (%g second%s)\n", fname,
+        (recorder.mBits == 32) ? "Float" :
+        (recorder.mBits !=  8) ? "Signed" : "Unsigned", recorder.mBits,
+        (recorder.mChannels == 1) ? "Mono" : "Stereo", recorder.mSampleRate,
+        recorder.mRecTime, (recorder.mRecTime != 1.0f) ? "s" : ""
     );
 
     alcCaptureStart(recorder.mDevice);
@@ -320,17 +330,30 @@ int main(int argc, char **argv)
         }
         alcCaptureSamples(recorder.mDevice, recorder.mBuffer, count);
 #if defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN
+        /* Byteswap multibyte samples on big-endian systems (wav needs little-
+         * endian, and OpenAL gives the system's native-endian).
+         */
         if(recorder.mBits == 16)
         {
             ALCint i;
-            /* Byteswap short samples on big-endian systems (wav needs little-
-             * endian, and OpenAL gives the system's native-endian).
-             */
             for(i = 0;i < count*recorder.mChannels;i++)
             {
                 ALbyte b = recorder.mBuffer[i*2 + 0];
                 recorder.mBuffer[i*2 + 0] = recorder.mBuffer[i*2 + 1];
                 recorder.mBuffer[i*2 + 1] = b;
+            }
+        }
+        else if(recorder.mBits == 32)
+        {
+            ALCint i;
+            for(i = 0;i < count*recorder.mChannels;i++)
+            {
+                ALbyte b0 = recorder.mBuffer[i*4 + 0];
+                ALbyte b1 = recorder.mBuffer[i*4 + 1];
+                recorder.mBuffer[i*4 + 0] = recorder.mBuffer[i*4 + 3];
+                recorder.mBuffer[i*4 + 1] = recorder.mBuffer[i*4 + 2];
+                recorder.mBuffer[i*4 + 2] = b1;
+                recorder.mBuffer[i*4 + 3] = b0;
             }
         }
 #endif

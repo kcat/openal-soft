@@ -1602,6 +1602,10 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
 
     buf_time = ((REFERENCE_TIME)device->UpdateSize*device->NumUpdates*10000000 +
                                 device->Frequency-1) / device->Frequency;
+    // Make sure buffer is at least 100ms in size
+    buf_time = maxu64(buf_time, U64(1000000));
+    device->UpdateSize = (buf_time*device->Frequency + 10000000-1)/10000000 /
+                         device->NumUpdates;
 
     OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
     switch(device->FmtChans)

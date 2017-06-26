@@ -5,6 +5,8 @@ openal-soft-1.18.1:
     Fixed PulseAudio playback when the configured stream length is much less
     than the requested length.
 
+    Fixed MMDevAPI capture with sample rates not matching the backing device.
+
     Added correct retrieval of the executable's path on FreeBSD.
 
     Added a config option to specify the dithering depth.

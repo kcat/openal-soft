@@ -111,6 +111,15 @@ typedef struct {
 #define WM_USER_Enumerate   (WM_USER+5)
 #define WM_USER_Last        (WM_USER+5)
 
+static const char MessageStr[WM_USER_Last+1-WM_USER][20] = {
+    "Open Device",
+    "Reset Device",
+    "Start Device",
+    "Stop Device",
+    "Close Device",
+    "Enumerate Devices",
+};
+
 static inline void ReturnMsgResponse(ThreadRequest *req, HRESULT res)
 {
     req->result = res;
@@ -405,7 +414,11 @@ static DWORD CALLBACK ALCmmdevProxy_messageHandler(void *ptr)
     TRACE("Starting message loop\n");
     while(GetMessage(&msg, NULL, WM_USER_First, WM_USER_Last))
     {
-        TRACE("Got message %u (lparam=%p, wparam=%p)\n", msg.message, (void*)msg.lParam, (void*)msg.wParam);
+        TRACE("Got message \"%s\" (0x%04x, lparam=%p, wparam=%p)\n",
+            (msg.message >= WM_USER && msg.message <= WM_USER_Last) ?
+            MessageStr[msg.message-WM_USER] : "Unknown",
+            msg.message, (void*)msg.lParam, (void*)msg.wParam
+        );
         switch(msg.message)
         {
         case WM_USER_OpenDevice:

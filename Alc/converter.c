@@ -219,7 +219,7 @@ ALsizei SampleConverterAvailableOut(SampleConverter *converter, ALsizei srcframe
     DataSize64 -= DataPosFrac;
 
     /* If we have a full prep, we can generate at least one sample. */
-    return (ALsizei)clampu64(DataSize64/increment, 1, INT_MAX);
+    return (ALsizei)clampu64((DataSize64 + increment-1)/increment, 1, BUFFERSIZE);
 }
 
 
@@ -283,7 +283,7 @@ ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALs
         DataSize64 -= DataPosFrac;
 
         /* If we have a full prep, we can generate at least one sample. */
-        DstSize = (ALsizei)clampu64(DataSize64/increment, 1, BUFFERSIZE);
+        DstSize = (ALsizei)clampu64((DataSize64 + increment-1)/increment, 1, BUFFERSIZE);
         DstSize = mini(DstSize, dstframes-pos);
 
         for(chan = 0;chan < converter->mNumChannels;chan++)

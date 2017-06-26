@@ -65,6 +65,8 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 #define X7DOT1 (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_SIDE_LEFT|SPEAKER_SIDE_RIGHT)
 #define X7DOT1_WIDE (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT|SPEAKER_FRONT_LEFT_OF_CENTER|SPEAKER_FRONT_RIGHT_OF_CENTER)
 
+#define REFTIME_PER_SEC ((REFERENCE_TIME)10000000)
+
 #define DEVNAME_HEAD "OpenAL Soft on "
 
 
@@ -891,8 +893,8 @@ static HRESULT ALCmmdevPlayback_resetProxy(ALCmmdevPlayback *self)
     CoTaskMemFree(wfx);
     wfx = NULL;
 
-    buf_time = ((REFERENCE_TIME)device->UpdateSize*device->NumUpdates*10000000 +
-                                device->Frequency-1) / device->Frequency;
+    buf_time = ScaleCeil(device->UpdateSize*device->NumUpdates, REFTIME_PER_SEC,
+                         device->Frequency);
 
     if(!(device->Flags&DEVICE_FREQUENCY_REQUEST))
         device->Frequency = OutputType.Format.nSamplesPerSec;
@@ -1081,7 +1083,7 @@ static HRESULT ALCmmdevPlayback_resetProxy(ALCmmdevPlayback *self)
     hr = IAudioClient_GetDevicePeriod(self->client, &min_per, NULL);
     if(SUCCEEDED(hr))
     {
-        min_len = (UINT32)((min_per*device->Frequency + 10000000-1) / 10000000);
+        min_len = (UINT32)ScaleCeil(min_per, device->Frequency, REFTIME_PER_SEC);
         /* Find the nearest multiple of the period size to the update size */
         if(min_len < device->UpdateSize)
             min_len *= (device->UpdateSize + min_len/2)/min_len;
@@ -1600,11 +1602,11 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
     }
     self->client = ptr;
 
-    buf_time = ((REFERENCE_TIME)device->UpdateSize*device->NumUpdates*10000000 +
-                                device->Frequency-1) / device->Frequency;
+    buf_time = ScaleCeil(device->UpdateSize*device->NumUpdates, REFTIME_PER_SEC,
+                         device->Frequency);
     // Make sure buffer is at least 100ms in size
-    buf_time = maxu64(buf_time, U64(1000000));
-    device->UpdateSize = (buf_time*device->Frequency + 10000000-1)/10000000 /
+    buf_time = maxu64(buf_time, REFTIME_PER_SEC/10);
+    device->UpdateSize = ScaleCeil(buf_time, device->Frequency, REFTIME_PER_SEC) /
                          device->NumUpdates;
 
     OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;

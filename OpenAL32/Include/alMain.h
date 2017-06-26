@@ -409,6 +409,24 @@ inline size_t RoundUp(size_t value, size_t r)
     return value - (value%r);
 }
 
+/* Scales the given value using 64-bit integer math, rounding the result. */
+inline ALuint64 ScaleRound(ALuint64 val, ALuint64 new_scale, ALuint64 old_scale)
+{
+    return (val*new_scale + old_scale/2) / old_scale;
+}
+
+/* Scales the given value using 64-bit integer math, flooring the result. */
+inline ALuint64 ScaleFloor(ALuint64 val, ALuint64 new_scale, ALuint64 old_scale)
+{
+    return val * new_scale / old_scale;
+}
+
+/* Scales the given value using 64-bit integer math, ceiling the result. */
+inline ALuint64 ScaleCeil(ALuint64 val, ALuint64 new_scale, ALuint64 old_scale)
+{
+    return (val*new_scale + old_scale-1) / old_scale;
+}
+
 /* Fast float-to-int conversion. Assumes the FPU is already in round-to-zero
  * mode. */
 inline ALint fastf2i(ALfloat f)

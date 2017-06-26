@@ -26,8 +26,9 @@ SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType 
 
     /* Have to set the mixer FPU mode since that's what the resampler code expects. */
     SetMixerFPUMode(&oldMode);
-    converter->mIncrement = (ALsizei)clampu64((ALuint64)srcRate*FRACTIONONE/dstRate,
-                                              1, MAX_PITCH*FRACTIONONE);
+    converter->mIncrement = (ALsizei)clampu64(
+        ScaleRound(srcRate, FRACTIONONE, dstRate), 1, MAX_PITCH*FRACTIONONE
+    );
     if(converter->mIncrement == FRACTIONONE)
         converter->mResample = Resample_copy32_C;
     else

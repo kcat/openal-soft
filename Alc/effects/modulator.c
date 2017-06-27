@@ -127,7 +127,7 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *
     else /*if(Slot->Params.EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SQUARE)*/
         state->Process = ModulateSquare;
 
-    state->step = fastf2u(props->Modulator.Frequency*WAVEFORM_FRACONE /
+    state->step = fastf2i(props->Modulator.Frequency*WAVEFORM_FRACONE /
                           Device->Frequency);
     if(state->step == 0) state->step = 1;
 

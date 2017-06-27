@@ -89,7 +89,7 @@ static void RmsDetection(Compressor *Comp, const ALsizei SamplesToDo)
         ALfloat sig = Comp->Envelope[i];
 
         sum -= window[index];
-        window[index] = fastf2u(minf(sig * sig * 65536.0f, RMS_VALUE_MAX));
+        window[index] = fastf2i(minf(sig * sig * 65536.0f, RMS_VALUE_MAX));
         sum += window[index];
         index = (index + 1) & RMS_WINDOW_MASK;
 

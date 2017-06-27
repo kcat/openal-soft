@@ -443,11 +443,6 @@ inline ALint fastf2i(ALfloat f)
 #endif
 }
 
-/* Fast float-to-uint conversion. Assumes the FPU is already in round-to-zero
- * mode. */
-inline ALuint fastf2u(ALfloat f)
-{ return fastf2i(f); }
-
 
 enum DevProbe {
     ALL_DEVICE_PROBE,

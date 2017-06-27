@@ -231,7 +231,7 @@ ALboolean BsincPrepare(const ALuint increment, BsincState *state)
         { 24, 24, 24, 24, 24, 24, 24, 20, 20, 20, 16, 16, 16, 12, 12, 0 }
     };
     ALfloat sf;
-    ALuint si, pi;
+    ALsizei si, pi;
     ALboolean uncut = AL_TRUE;
 
     if(increment > FRACTIONONE)
@@ -249,7 +249,7 @@ ALboolean BsincPrepare(const ALuint increment, BsincState *state)
         else
         {
             sf = (BSINC_SCALE_COUNT - 1) * (sf - scaleBase) * scaleRange;
-            si = fastf2u(sf);
+            si = fastf2i(sf);
             /* The interpolation factor is fit to this diagonally-symmetric
              * curve to reduce the transition ripple caused by interpolating
              * different scales of the sinc function.

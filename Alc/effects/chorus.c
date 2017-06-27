@@ -91,7 +91,7 @@ static ALboolean ALchorusState_deviceUpdate(ALchorusState *state, ALCdevice *Dev
     ALsizei maxlen;
     ALsizei it;
 
-    maxlen = fastf2u(AL_CHORUS_MAX_DELAY * 2.0f * Device->Frequency) + 1;
+    maxlen = fastf2i(AL_CHORUS_MAX_DELAY * 2.0f * Device->Frequency) + 1;
     maxlen = NextPowerOf2(maxlen);
 
     if(maxlen != state->BufferLength)

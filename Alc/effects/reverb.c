@@ -511,7 +511,7 @@ static ALuint CalcLineLength(const ALfloat length, const ptrdiff_t offset, const
     /* All line lengths are powers of 2, calculated from their lengths in
      * seconds, rounded up.
      */
-    samples = fastf2u(ceilf(length*frequency));
+    samples = fastf2i(ceilf(length*frequency));
     samples = NextPowerOf2(samples + extra);
 
     /* All lines share a single sample buffer. */
@@ -627,7 +627,7 @@ static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Dev
 
     /* The late feed taps are set a fixed position past the latest delay tap. */
     for(i = 0;i < 4;i++)
-        State->LateFeedTap = fastf2u((AL_EAXREVERB_MAX_REFLECTIONS_DELAY +
+        State->LateFeedTap = fastf2i((AL_EAXREVERB_MAX_REFLECTIONS_DELAY +
                                       EARLY_TAP_LENGTHS[3]*multiplier) *
                                      frequency);
 
@@ -1055,7 +1055,7 @@ static ALvoid UpdateModulator(const ALfloat modTime, const ALfloat modDepth,
      * (1 sample) and when the timing changes, the index is rescaled to the new
      * range to keep the sinus consistent.
      */
-    range = maxu(fastf2u(modTime*frequency), 1);
+    range = maxi(fastf2i(modTime*frequency), 1);
     State->Mod.Index = (ALuint)(State->Mod.Index * (ALuint64)range /
                                 State->Mod.Range);
     State->Mod.Range = range;
@@ -1094,13 +1094,13 @@ static ALvoid UpdateDelayLine(const ALfloat earlyDelay, const ALfloat lateDelay,
     for(i = 0;i < 4;i++)
     {
         length = earlyDelay + EARLY_TAP_LENGTHS[i]*multiplier;
-        State->EarlyDelayTap[i][1] = fastf2u(length * frequency);
+        State->EarlyDelayTap[i][1] = fastf2i(length * frequency);
 
         length = EARLY_TAP_LENGTHS[i]*multiplier;
         State->EarlyDelayCoeff[i] = CalcDecayCoeff(length, decayTime);
 
         length = lateDelay + (LATE_LINE_LENGTHS[i] - LATE_LINE_LENGTHS[0])*0.25f*multiplier;
-        State->LateDelayTap[i][1] = State->LateFeedTap + fastf2u(length * frequency);
+        State->LateDelayTap[i][1] = State->LateFeedTap + fastf2i(length * frequency);
     }
 }
 
@@ -1124,7 +1124,7 @@ static ALvoid UpdateEarlyLines(const ALfloat density, const ALfloat decayTime, c
         length = EARLY_LINE_LENGTHS[i] * multiplier;
 
         /* Calculate the delay offset for each delay line. */
-        State->Early.Offset[i][1] = fastf2u(length * frequency);
+        State->Early.Offset[i][1] = fastf2i(length * frequency);
 
         /* Calculate the gain (coefficient) for each line. */
         State->Early.Coeff[i] = CalcDecayCoeff(length, decayTime);
@@ -1181,7 +1181,7 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
         length = lerp(LATE_LINE_LENGTHS[i] * multiplier, echoTime, echoDepth);
 
         /* Calculate the delay offset for each delay line. */
-        State->Late.Offset[i][1] = fastf2u(length * frequency);
+        State->Late.Offset[i][1] = fastf2i(length * frequency);
 
         /* Approximate the absorption that the vector all-pass would exhibit
          * given the current diffusion so we don't have to process a full T60

@@ -121,7 +121,6 @@ extern inline ALuint64 ScaleRound(ALuint64 val, ALuint64 new_scale, ALuint64 old
 extern inline ALuint64 ScaleFloor(ALuint64 val, ALuint64 new_scale, ALuint64 old_scale);
 extern inline ALuint64 ScaleCeil(ALuint64 val, ALuint64 new_scale, ALuint64 old_scale);
 extern inline ALint fastf2i(ALfloat f);
-extern inline ALuint fastf2u(ALfloat f);
 
 
 ALuint CPUCapFlags = 0;

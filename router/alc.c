@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 #include "AL/alc.h"
+#include "router.h"
 
 
 ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)

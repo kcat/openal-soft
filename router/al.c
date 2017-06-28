@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 #include "AL/al.h"
+#include "router.h"
 
 
 #define DECL_THUNK0(R, n) AL_API R AL_APIENTRY n(void) { return (R)0; }

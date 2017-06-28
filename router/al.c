@@ -7,12 +7,20 @@
 #include "router.h"
 
 
-#define DECL_THUNK0(R, n) AL_API R AL_APIENTRY n(void) { return (R)0; }
-#define DECL_THUNK1(R, n, T1) AL_API R AL_APIENTRY n(T1 a) { return (R)0; }
-#define DECL_THUNK2(R, n, T1, T2) AL_API R AL_APIENTRY n(T1 a, T2 b) { return (R)0; }
-#define DECL_THUNK3(R, n, T1, T2, T3) AL_API R AL_APIENTRY n(T1 a, T2 b, T3 c) { return (R)0; }
-#define DECL_THUNK4(R, n, T1, T2, T3, T4) AL_API R AL_APIENTRY n(T1 a, T2 b, T3 c, T4 d) { return (R)0; }
-#define DECL_THUNK5(R, n, T1, T2, T3, T4, T5) AL_API R AL_APIENTRY n(T1 a, T2 b, T3 c, T4 d, T5 e) { return (R)0; }
+ATOMIC(DriverIface*) CurrentCtxDriver = ATOMIC_INIT_STATIC(NULL);
+
+#define DECL_THUNK0(R, n) AL_API R AL_APIENTRY n(void) \
+{ return ATOMIC_LOAD_SEQ(&CurrentCtxDriver)->n(); }
+#define DECL_THUNK1(R, n, T1) AL_API R AL_APIENTRY n(T1 a) \
+{ return ATOMIC_LOAD_SEQ(&CurrentCtxDriver)->n(a); }
+#define DECL_THUNK2(R, n, T1, T2) AL_API R AL_APIENTRY n(T1 a, T2 b) \
+{ return ATOMIC_LOAD_SEQ(&CurrentCtxDriver)->n(a, b); }
+#define DECL_THUNK3(R, n, T1, T2, T3) AL_API R AL_APIENTRY n(T1 a, T2 b, T3 c)\
+{ return ATOMIC_LOAD_SEQ(&CurrentCtxDriver)->n(a, b, c); }
+#define DECL_THUNK4(R, n, T1, T2, T3, T4) AL_API R AL_APIENTRY n(T1 a, T2 b, T3 c, T4 d) \
+{ return ATOMIC_LOAD_SEQ(&CurrentCtxDriver)->n(a, b, c, d); }
+#define DECL_THUNK5(R, n, T1, T2, T3, T4, T5) AL_API R AL_APIENTRY n(T1 a, T2 b, T3 c, T4 d, T5 e)\
+{ return ATOMIC_LOAD_SEQ(&CurrentCtxDriver)->n(a, b, c, d, e); }
 
 
 DECL_THUNK1(void, alDopplerFactor, ALfloat)

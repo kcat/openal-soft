@@ -7,6 +7,7 @@
 
 #include "AL/alc.h"
 #include "AL/al.h"
+#include "atomic.h"
 
 
 typedef struct DriverIface {
@@ -111,5 +112,8 @@ typedef struct DriverIface {
 
 extern DriverIface *DriverList;
 extern int DriverListSize;
+
+extern ATOMIC(DriverIface*) CurrentCtxDriver;
+
 
 #endif /* ROUTER_ROUTER_H */

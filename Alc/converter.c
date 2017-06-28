@@ -10,6 +10,7 @@ SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType 
 {
     SampleConverter *converter;
     FPUCtl oldMode;
+    ALsizei step;
 
     if(numchans <= 0 || srcRate <= 0 || dstRate <= 0)
         return NULL;
@@ -26,9 +27,8 @@ SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType 
 
     /* Have to set the mixer FPU mode since that's what the resampler code expects. */
     SetMixerFPUMode(&oldMode);
-    converter->mIncrement = (ALsizei)clampu64(
-        ScaleRound(srcRate, FRACTIONONE, dstRate), 1, MAX_PITCH*FRACTIONONE
-    );
+    step = fastf2i(minf((ALdouble)srcRate / dstRate, MAX_PITCH)*FRACTIONONE + 0.5f);
+    converter->mIncrement = maxi(step, 1);
     if(converter->mIncrement == FRACTIONONE)
         converter->mResample = Resample_copy32_C;
     else

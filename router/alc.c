@@ -363,6 +363,19 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)
         }
         almtx_unlock(&EnumerationLock);
     }
+    else
+    {
+        int i;
+        for(i = 0;i < DriverListSize;i++)
+        {
+            if(DriverList[i].ALCVer >= MAKE_ALC_VER(1, 1) ||
+               DriverList[i].alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT"))
+            {
+                idx = i;
+                break;
+            }
+        }
+    }
 
     device = DriverList[idx].alcOpenDevice(devicename);
     if(device)
@@ -683,10 +696,29 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
         return CaptureDevicesList.Names;
 
     case ALC_DEFAULT_DEVICE_SPECIFIER:
+        for(i = 0;i < DriverListSize;i++)
+        {
+            if(DriverList[i].ALCVer >= MAKE_ALC_VER(1, 1) ||
+               DriverList[i].alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT"))
+                return DriverList[i].alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER);
+        }
+        return "";
+
     case ALC_DEFAULT_ALL_DEVICES_SPECIFIER:
+        for(i = 0;i < DriverListSize;i++)
+        {
+            if(DriverList[i].alcIsExtensionPresent(NULL, "ALC_ENUMERATE_ALL_EXT"))
+                return DriverList[i].alcGetString(NULL, ALC_DEFAULT_ALL_DEVICES_SPECIFIER);
+        }
+        return "";
+
     case ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER:
-        if(DriverListSize > 0)
-            return DriverList[0].alcGetString(NULL, param);
+        for(i = 0;i < DriverListSize;i++)
+        {
+            if(DriverList[i].ALCVer >= MAKE_ALC_VER(1, 1) ||
+               DriverList[i].alcIsExtensionPresent(NULL, "ALC_EXT_CAPTURE"))
+                return DriverList[i].alcGetString(NULL, ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER);
+        }
         return "";
 
     default:
@@ -771,6 +803,19 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, 
             return NULL;
         }
         almtx_unlock(&EnumerationLock);
+    }
+    else
+    {
+        int i;
+        for(i = 0;i < DriverListSize;i++)
+        {
+            if(DriverList[i].ALCVer >= MAKE_ALC_VER(1, 1) ||
+               DriverList[i].alcIsExtensionPresent(NULL, "ALC_EXT_CAPTURE"))
+            {
+                idx = i;
+                break;
+            }
+        }
     }
 
     device = DriverList[idx].alcCaptureOpenDevice(devicename, frequency, format, buffersize);

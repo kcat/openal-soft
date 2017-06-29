@@ -257,7 +257,7 @@ int alcnd_timedwait(alcnd_t *cond, almtx_t *mtx, const struct timespec *time_poi
     else
     {
         sleeptime  = (time_point->tv_nsec - curtime.tv_nsec + 999999)/1000000;
-        sleeptime += (time_point->tv_sec - curtime.tv_sec)*1000;
+        sleeptime += (DWORD)(time_point->tv_sec - curtime.tv_sec)*1000;
         if(SleepConditionVariableCS(cond, mtx, sleeptime) != 0)
             return althrd_success;
     }
@@ -364,7 +364,7 @@ int alcnd_timedwait(alcnd_t *cond, almtx_t *mtx, const struct timespec *time_poi
     else
     {
         sleeptime  = (time_point->tv_nsec - curtime.tv_nsec + 999999)/1000000;
-        sleeptime += (time_point->tv_sec - curtime.tv_sec)*1000;
+        sleeptime += (DWORD)(time_point->tv_sec - curtime.tv_sec)*1000;
     }
 
     IncrementRef(&icond->wait_count);

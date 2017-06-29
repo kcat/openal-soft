@@ -1619,7 +1619,7 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
                          device->Frequency);
     // Make sure buffer is at least 100ms in size
     buf_time = maxu64(buf_time, REFTIME_PER_SEC/10);
-    device->UpdateSize = ScaleCeil(buf_time, device->Frequency, REFTIME_PER_SEC) /
+    device->UpdateSize = (ALuint)ScaleCeil(buf_time, device->Frequency, REFTIME_PER_SEC) /
                          device->NumUpdates;
 
     OutputType.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;

@@ -375,7 +375,25 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device)
 
 ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrlist)
 {
-    return NULL;
+    ALCcontext *context;
+    ALint idx;
+
+    if(!device || (idx=LookupPtrIntMapKey(&DeviceIfaceMap, device) < 0))
+    {
+        ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
+        return ALC_FALSE;
+    }
+    context = DriverList[idx].alcCreateContext(device, attrlist);
+    if(context)
+    {
+        if(InsertPtrIntMapEntry(&ContextIfaceMap, context, idx) != ALC_NO_ERROR)
+        {
+            DriverList[idx].alcDestroyContext(context);
+            context = NULL;
+        }
+    }
+
+    return context;
 }
 
 ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
@@ -407,6 +425,16 @@ ALC_API void ALC_APIENTRY alcSuspendContext(ALCcontext *context)
 
 ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 {
+    ALint idx;
+
+    if(!context || (idx=LookupPtrIntMapKey(&ContextIfaceMap, context) < 0))
+    {
+        ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_CONTEXT);
+        return;
+    }
+
+    DriverList[idx].alcDestroyContext(context);
+    RemovePtrIntMapKey(&ContextIfaceMap, context);
 }
 
 ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void)

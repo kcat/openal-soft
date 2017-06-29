@@ -334,6 +334,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)
     ALCdevice *device;
     ALint idx = 0;
 
+    /* Prior to the enumeration extension, apps would hardcode these names as a
+     * quality hint for the wrapper driver. Ignore them since there's no sane
+     * way to map them.
+     */
     if(devicename && (devicename[0] == '\0' ||
                       strcmp(devicename, "DirectSound3D") == 0 ||
                       strcmp(devicename, "DirectSound") == 0 ||
@@ -341,11 +345,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)
         devicename = NULL;
     if(devicename)
     {
-        (void)alcGetString(NULL, ALC_DEVICE_SPECIFIER);
+        if(!DevicesList.Names)
+            (void)alcGetString(NULL, ALC_DEVICE_SPECIFIER);
         idx = GetDriverIndexForName(&DevicesList, devicename);
         if(idx < 0)
         {
-            (void)alcGetString(NULL, ALC_ALL_DEVICES_SPECIFIER);
+            if(!AllDevicesList.Names)
+                (void)alcGetString(NULL, ALC_ALL_DEVICES_SPECIFIER);
             idx = GetDriverIndexForName(&AllDevicesList, devicename);
             if(idx < 0)
             {
@@ -739,7 +745,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, 
         devicename = NULL;
     if(devicename)
     {
-        (void)alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER);
+        if(!CaptureDevicesList.Names)
+            (void)alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER);
         idx = GetDriverIndexForName(&CaptureDevicesList, devicename);
         if(idx < 0)
         {

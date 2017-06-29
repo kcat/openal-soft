@@ -33,6 +33,8 @@ BOOL APIENTRY DllMain(HINSTANCE module, DWORD reason, void *reserved)
             break;
 
         case DLL_PROCESS_DETACH:
+            ResetPtrIntMap(&ContextIfaceMap);
+            ResetPtrIntMap(&DeviceIfaceMap);
             for(i = 0;i < DriverListSize;i++)
             {
                 if(DriverList[i].Module)

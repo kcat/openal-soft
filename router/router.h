@@ -134,4 +134,8 @@ ALenum InsertPtrIntMapEntry(PtrIntMap *map, ALvoid *key, ALint value);
 ALint RemovePtrIntMapKey(PtrIntMap *map, ALvoid *key);
 ALint LookupPtrIntMapKey(PtrIntMap *map, ALvoid *key);
 
+
+extern PtrIntMap DeviceIfaceMap;
+extern PtrIntMap ContextIfaceMap;
+
 #endif /* ROUTER_ROUTER_H */

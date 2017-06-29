@@ -57,6 +57,7 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
 
 static void AddModule(HMODULE module, const WCHAR *name)
 {
+    DriverIface newdrv;
     int err = 0;
     int i;
 
@@ -81,10 +82,10 @@ static void AddModule(HMODULE module, const WCHAR *name)
         DriverListSizeMax = newmax;
     }
 
+    memset(&newdrv, 0, sizeof(newdrv));
 #define LOAD_PROC(x) do {                                                     \
-    DriverList[DriverListSize].x = CAST_FUNC(DriverList[DriverListSize].x)    \
-                                   GetProcAddress(module, #x);                \
-    if(!DriverList[DriverListSize].x)                                         \
+    newdrv.x = CAST_FUNC(newdrv.x) GetProcAddress(module, #x);                \
+    if(!newdrv.x)                                                             \
     {                                                                         \
         fprintf(stderr, "Failed to find entry point for %s in %ls\n",         \
                 #x, name);                                                    \
@@ -188,15 +189,15 @@ static void AddModule(HMODULE module, const WCHAR *name)
     if(!err)
     {
         ALCint alc_ver[2];
-        wcsncpy(DriverList[DriverListSize].Name, name, 32);
-        DriverList[DriverListSize].Module = module;
-        DriverList[DriverListSize].alcGetIntegerv(NULL, ALC_MAJOR_VERSION, 1, &alc_ver[0]);
-        DriverList[DriverListSize].alcGetIntegerv(NULL, ALC_MINOR_VERSION, 1, &alc_ver[1]);
-        if(DriverList[DriverListSize].alcGetError(NULL) == ALC_NO_ERROR)
-            DriverList[DriverListSize].ALCVer = MAKE_ALC_VER(alc_ver[0], alc_ver[1]);
+        wcsncpy(newdrv.Name, name, 32);
+        newdrv.Module = module;
+        newdrv.alcGetIntegerv(NULL, ALC_MAJOR_VERSION, 1, &alc_ver[0]);
+        newdrv.alcGetIntegerv(NULL, ALC_MINOR_VERSION, 1, &alc_ver[1]);
+        if(newdrv.alcGetError(NULL) == ALC_NO_ERROR)
+            newdrv.ALCVer = MAKE_ALC_VER(alc_ver[0], alc_ver[1]);
         else
-            DriverList[DriverListSize].ALCVer = MAKE_ALC_VER(1, 0);
-        DriverListSize++;
+            newdrv.ALCVer = MAKE_ALC_VER(1, 0);
+        DriverList[DriverListSize++] = newdrv;
     }
 }
 

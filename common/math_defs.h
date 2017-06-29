@@ -15,7 +15,11 @@
 #endif
 
 #ifndef HUGE_VALF
-#define HUGE_VALF  (1.0f/0.0f)
+static const union msvc_inf_hack {
+    unsigned char b[4];
+    float f;
+} msvc_inf_union = {{ 0x00, 0x00, 0x80, 0x7F }};
+#define HUGE_VALF (msvc_inf_union.f)
 #endif
 
 #define DEG2RAD(x)  ((float)(x) * (F_PI/180.0f))

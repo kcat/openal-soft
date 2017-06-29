@@ -621,7 +621,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
     case ALC_OUT_OF_MEMORY:
         return alcErrOutOfMemory;
     case ALC_EXTENSIONS:
-        return "";
+        return alcExtensionList;
 
     case ALC_DEVICE_SPECIFIER:
         ClearDeviceList(&DevicesList);

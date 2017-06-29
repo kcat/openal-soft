@@ -302,15 +302,74 @@ static void AppendDeviceList(EnumeratedList *list, const ALCchar *names, ALint i
     list->IndexSize += count;
 }
 
+static ALint GetDriverIndexForName(const EnumeratedList *list, const ALCchar *name)
+{
+    const ALCchar *devnames = list->Names;
+    const ALCint *index = list->Indicies;
+
+    while(devnames && *devnames)
+    {
+        if(strcmp(name, devnames) == 0)
+            return *index;
+        devnames += strlen(devnames)+1;
+        index++;
+    }
+    return -1;
+}
+
 
 ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)
 {
-    return NULL;
+    ALCdevice *device;
+    ALint idx = 0;
+
+    if(devicename && (devicename[0] == '\0' ||
+                      strcmp(devicename, "DirectSound3D") == 0 ||
+                      strcmp(devicename, "DirectSound") == 0 ||
+                      strcmp(devicename, "MMSYSTEM") == 0))
+        devicename = NULL;
+    if(devicename)
+    {
+        (void)alcGetString(NULL, ALC_DEVICE_SPECIFIER);
+        idx = GetDriverIndexForName(&DevicesList, devicename);
+        if(idx < 0)
+        {
+            (void)alcGetString(NULL, ALC_ALL_DEVICES_SPECIFIER);
+            idx = GetDriverIndexForName(&AllDevicesList, devicename);
+            if(idx < 0)
+            {
+                ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_VALUE);
+                return NULL;
+            }
+        }
+    }
+
+    device = DriverList[idx].alcOpenDevice(devicename);
+    if(device)
+    {
+        if(InsertPtrIntMapEntry(&DeviceIfaceMap, device, idx) != ALC_NO_ERROR)
+        {
+            DriverList[idx].alcCloseDevice(device);
+            device = NULL;
+        }
+    }
+
+    return device;
 }
 
 ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device)
 {
-    return ALC_FALSE;
+    ALint idx;
+
+    if(!device || (idx=LookupPtrIntMapKey(&DeviceIfaceMap, device) < 0))
+    {
+        ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
+        return ALC_FALSE;
+    }
+    if(!DriverList[idx].alcCloseDevice(device))
+        return ALC_FALSE;
+    RemovePtrIntMapKey(&DeviceIfaceMap, device);
+    return ALC_TRUE;
 }
 
 
@@ -604,12 +663,48 @@ ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsi
 
 ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, ALCuint frequency, ALCenum format, ALCsizei buffersize)
 {
-    return NULL;
+    ALCdevice *device;
+    ALint idx = 0;
+
+    if(devicename && devicename[0] == '\0')
+        devicename = NULL;
+    if(devicename)
+    {
+        (void)alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER);
+        idx = GetDriverIndexForName(&CaptureDevicesList, devicename);
+        if(idx < 0)
+        {
+            ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_VALUE);
+            return NULL;
+        }
+    }
+
+    device = DriverList[idx].alcCaptureOpenDevice(devicename, frequency, format, buffersize);
+    if(device)
+    {
+        if(InsertPtrIntMapEntry(&DeviceIfaceMap, device, idx) != ALC_NO_ERROR)
+        {
+            DriverList[idx].alcCaptureCloseDevice(device);
+            device = NULL;
+        }
+    }
+
+    return device;
 }
 
 ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device)
 {
-    return ALC_FALSE;
+    ALint idx;
+
+    if(!device || (idx=LookupPtrIntMapKey(&DeviceIfaceMap, device) < 0))
+    {
+        ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
+        return ALC_FALSE;
+    }
+    if(!DriverList[idx].alcCaptureCloseDevice(device))
+        return ALC_FALSE;
+    RemovePtrIntMapKey(&DeviceIfaceMap, device);
+    return ALC_TRUE;
 }
 
 ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)

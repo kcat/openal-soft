@@ -18,7 +18,7 @@ static int DriverListSizeMax = 0;
 static void LoadDriverList(void);
 
 
-BOOL APIENTRY DllMain(HINSTANCE module, DWORD reason, void *reserved)
+BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reserved))
 {
     int i;
 
@@ -187,8 +187,16 @@ static void AddModule(HMODULE module, const WCHAR *name)
     LOAD_PROC(alDistanceModel);
     if(!err)
     {
+        ALCint alc_ver[2];
         wcsncpy(DriverList[DriverListSize].Name, name, 32);
-        DriverList[DriverListSize++].Module = module;
+        DriverList[DriverListSize].Module = module;
+        DriverList[DriverListSize].alcGetIntegerv(NULL, ALC_MAJOR_VERSION, 1, &alc_ver[0]);
+        DriverList[DriverListSize].alcGetIntegerv(NULL, ALC_MINOR_VERSION, 1, &alc_ver[1]);
+        if(DriverList[DriverListSize].alcGetError(NULL) == ALC_NO_ERROR)
+            DriverList[DriverListSize].ALCVer = MAKE_ALC_VER(alc_ver[0], alc_ver[1]);
+        else
+            DriverList[DriverListSize].ALCVer = MAKE_ALC_VER(1, 0);
+        DriverListSize++;
     }
 }
 

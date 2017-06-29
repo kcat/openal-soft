@@ -11,9 +11,24 @@
 #include "rwlock.h"
 
 
+#ifndef UNUSED
+#if defined(__cplusplus)
+#define UNUSED(x)
+#elif defined(__GNUC__)
+#define UNUSED(x) UNUSED_##x __attribute__((unused))
+#elif defined(__LCLINT__)
+#define UNUSED(x) /*@unused@*/ x
+#else
+#define UNUSED(x) x
+#endif
+#endif
+
+#define MAKE_ALC_VER(major, minor) (((major)<<8) | (minor))
+
 typedef struct DriverIface {
     WCHAR Name[32];
     HMODULE Module;
+    int ALCVer;
 
     LPALCCREATECONTEXT alcCreateContext;
     LPALCMAKECONTEXTCURRENT alcMakeContextCurrent;

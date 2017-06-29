@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "AL/alc.h"
 #include "router.h"
@@ -371,7 +372,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device)
 {
     ALint idx;
 
-    if(!device || (idx=LookupPtrIntMapKey(&DeviceIfaceMap, device) < 0))
+    if(!device || (idx=LookupPtrIntMapKey(&DeviceIfaceMap, device)) < 0)
     {
         ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
         return ALC_FALSE;
@@ -388,7 +389,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     ALCcontext *context;
     ALint idx;
 
-    if(!device || (idx=LookupPtrIntMapKey(&DeviceIfaceMap, device) < 0))
+    if(!device || (idx=LookupPtrIntMapKey(&DeviceIfaceMap, device)) < 0)
     {
         ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
         return ALC_FALSE;
@@ -466,7 +467,7 @@ ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 {
     ALint idx;
 
-    if(!context || (idx=LookupPtrIntMapKey(&ContextIfaceMap, context) < 0))
+    if(!context || (idx=LookupPtrIntMapKey(&ContextIfaceMap, context)) < 0)
     {
         ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_CONTEXT);
         return;
@@ -620,11 +621,9 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
         ClearDeviceList(&DevicesList);
         for(i = 0;i < DriverListSize;i++)
         {
-            /* Only enumerate names from drivers that support it.
-             * FIXME: Check for ALC 1.1 too, since that guarantees enumeration
-             * support.
-             */
-            if(DriverList[i].alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT"))
+            /* Only enumerate names from drivers that support it. */
+            if(DriverList[i].ALCVer >= MAKE_ALC_VER(1, 1) ||
+               DriverList[i].alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT"))
                 AppendDeviceList(&DevicesList,
                     DriverList[i].alcGetString(NULL, ALC_DEVICE_SPECIFIER), i
                 );
@@ -642,7 +641,8 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
                 AppendDeviceList(&AllDevicesList,
                     DriverList[i].alcGetString(NULL, ALC_ALL_DEVICES_SPECIFIER), i
                 );
-            else if(DriverList[i].alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT"))
+            else if(DriverList[i].ALCVer >= MAKE_ALC_VER(1, 1) ||
+                    DriverList[i].alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT"))
                 AppendDeviceList(&AllDevicesList,
                     DriverList[i].alcGetString(NULL, ALC_DEVICE_SPECIFIER), i
                 );
@@ -653,7 +653,8 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
         ClearDeviceList(&CaptureDevicesList);
         for(i = 0;i < DriverListSize;i++)
         {
-            if(DriverList[i].alcIsExtensionPresent(NULL, "ALC_EXT_CAPTURE"))
+            if(DriverList[i].ALCVer >= MAKE_ALC_VER(1, 1) ||
+               DriverList[i].alcIsExtensionPresent(NULL, "ALC_EXT_CAPTURE"))
                 AppendDeviceList(&CaptureDevicesList,
                     DriverList[i].alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER), i
                 );
@@ -764,7 +765,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device)
 {
     ALint idx;
 
-    if(!device || (idx=LookupPtrIntMapKey(&DeviceIfaceMap, device) < 0))
+    if(!device || (idx=LookupPtrIntMapKey(&DeviceIfaceMap, device)) < 0)
     {
         ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
         return ALC_FALSE;

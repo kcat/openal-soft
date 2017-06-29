@@ -398,7 +398,36 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
 ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
 {
-    return ALC_FALSE;
+    ALint idx = -1;
+
+    if(context)
+    {
+        idx = LookupPtrIntMapKey(&ContextIfaceMap, context);
+        if(idx < 0)
+        {
+            ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_CONTEXT);
+            return ALC_FALSE;
+        }
+        if(!DriverList[idx].alcMakeContextCurrent(context))
+            return ALC_FALSE;
+    }
+
+    /* Unset the context from the old driver if it's different from the new
+     * current one.
+     */
+    if(idx < 0)
+    {
+        DriverIface *oldiface = ATOMIC_EXCHANGE_PTR_SEQ(&CurrentCtxDriver, NULL);
+        if(oldiface) oldiface->alcMakeContextCurrent(NULL);
+    }
+    else
+    {
+        DriverIface *oldiface = ATOMIC_EXCHANGE_PTR_SEQ(&CurrentCtxDriver, &DriverList[idx]);
+        if(oldiface && oldiface != &DriverList[idx])
+            oldiface->alcMakeContextCurrent(NULL);
+    }
+
+    return ALC_TRUE;
 }
 
 ALC_API void ALC_APIENTRY alcProcessContext(ALCcontext *context)
@@ -439,7 +468,8 @@ ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 
 ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void)
 {
-    return NULL;
+    DriverIface *iface = ATOMIC_LOAD_SEQ(&CurrentCtxDriver);
+    return iface ? iface->alcGetCurrentContext() : NULL;
 }
 
 ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *context)

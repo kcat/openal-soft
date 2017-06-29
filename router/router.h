@@ -8,6 +8,7 @@
 #include "AL/alc.h"
 #include "AL/al.h"
 #include "atomic.h"
+#include "rwlock.h"
 
 
 typedef struct DriverIface {
@@ -115,5 +116,22 @@ extern int DriverListSize;
 
 extern ATOMIC(DriverIface*) CurrentCtxDriver;
 
+
+typedef struct PtrIntMap {
+    ALvoid **keys;
+    /* Shares memory with keys. */
+    ALint *values;
+
+    ALsizei size;
+    ALsizei capacity;
+    RWLock lock;
+} PtrIntMap;
+#define PTRINTMAP_STATIC_INITIALIZE { NULL, NULL, 0, 0, RWLOCK_STATIC_INITIALIZE }
+
+void InitPtrIntMap(PtrIntMap *map);
+void ResetPtrIntMap(PtrIntMap *map);
+ALenum InsertPtrIntMapEntry(PtrIntMap *map, ALvoid *key, ALint value);
+ALint RemovePtrIntMapKey(PtrIntMap *map, ALvoid *key);
+ALint LookupPtrIntMapKey(PtrIntMap *map, ALvoid *key);
 
 #endif /* ROUTER_ROUTER_H */

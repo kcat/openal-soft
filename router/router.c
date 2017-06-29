@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "AL/alc.h"
 #include "AL/al.h"
@@ -274,4 +275,153 @@ void LoadDriverList(void)
     if(len > 0 && (path[len-1] == '\\' || path[len-1] == '/'))
         path[len-1] = '\0';
     SearchDrivers(path);
+}
+
+
+void InitPtrIntMap(PtrIntMap *map)
+{
+    map->keys = NULL;
+    map->values = NULL;
+    map->size = 0;
+    map->capacity = 0;
+    RWLockInit(&map->lock);
+}
+
+void ResetPtrIntMap(PtrIntMap *map)
+{
+    WriteLock(&map->lock);
+    free(map->keys);
+    map->keys = NULL;
+    map->values = NULL;
+    map->size = 0;
+    map->capacity = 0;
+    WriteUnlock(&map->lock);
+}
+
+ALenum InsertPtrIntMapEntry(PtrIntMap *map, ALvoid *key, ALint value)
+{
+    ALsizei pos = 0;
+
+    WriteLock(&map->lock);
+    if(map->size > 0)
+    {
+        ALsizei count = map->size;
+        do {
+            ALsizei step = count>>1;
+            ALsizei i = pos+step;
+            if(!(map->keys[i] < key))
+                count = step;
+            else
+            {
+                pos = i+1;
+                count -= step+1;
+            }
+        } while(count > 0);
+    }
+
+    if(pos == map->size || map->keys[pos] != key)
+    {
+        if(map->size == map->capacity)
+        {
+            ALvoid **keys = NULL;
+            ALint *values;
+            ALsizei newcap;
+
+            newcap = (map->capacity ? (map->capacity<<1) : 4);
+            if(newcap > map->capacity)
+                keys = calloc(sizeof(map->keys[0])+sizeof(map->values[0]), newcap);
+            if(!keys)
+            {
+                WriteUnlock(&map->lock);
+                return AL_OUT_OF_MEMORY;
+            }
+            values = (ALint*)&keys[newcap];
+
+            if(map->keys)
+            {
+                memcpy(keys, map->keys, map->size*sizeof(map->keys[0]));
+                memcpy(values, map->values, map->size*sizeof(map->values[0]));
+            }
+            free(map->keys);
+            map->keys = keys;
+            map->values = values;
+            map->capacity = newcap;
+        }
+
+        if(pos < map->size)
+        {
+            memmove(&map->keys[pos+1], &map->keys[pos],
+                    (map->size-pos)*sizeof(map->keys[0]));
+            memmove(&map->values[pos+1], &map->values[pos],
+                    (map->size-pos)*sizeof(map->values[0]));
+        }
+        map->size++;
+    }
+    map->keys[pos] = key;
+    map->values[pos] = value;
+    WriteUnlock(&map->lock);
+
+    return AL_NO_ERROR;
+}
+
+ALint RemovePtrIntMapKey(PtrIntMap *map, ALvoid *key)
+{
+    ALint ret = -1;
+    WriteLock(&map->lock);
+    if(map->size > 0)
+    {
+        ALsizei pos = 0;
+        ALsizei count = map->size;
+        do {
+            ALsizei step = count>>1;
+            ALsizei i = pos+step;
+            if(!(map->keys[i] < key))
+                count = step;
+            else
+            {
+                pos = i+1;
+                count -= step+1;
+            }
+        } while(count > 0);
+        if(pos < map->size && map->keys[pos] == key)
+        {
+            ret = map->values[pos];
+            if(pos < map->size-1)
+            {
+                memmove(&map->keys[pos], &map->keys[pos+1],
+                        (map->size-1-pos)*sizeof(map->keys[0]));
+                memmove(&map->values[pos], &map->values[pos+1],
+                        (map->size-1-pos)*sizeof(map->values[0]));
+            }
+            map->size--;
+        }
+    }
+    WriteUnlock(&map->lock);
+    return ret;
+}
+
+ALint LookupPtrIntMapKey(PtrIntMap *map, ALvoid *key)
+{
+    ALint ret = -1;
+    ReadLock(&map->lock);
+    if(map->size > 0)
+    {
+        ALsizei pos = 0;
+        ALsizei count = map->size;
+        do {
+            ALsizei step = count>>1;
+            ALsizei i = pos+step;
+            if(!(map->keys[i] < key))
+                count = step;
+            else
+            {
+                pos = i+1;
+                count -= step+1;
+            }
+        } while(count > 0);
+        if(pos < map->size && map->keys[pos] == key)
+            ret = map->values[pos];
+    }
+    ReadUnlock(&map->lock);
+    return ret;
 }

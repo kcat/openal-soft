@@ -240,8 +240,8 @@ static const ALCint alcMinorVersion = 1;
 
 
 static ATOMIC(ALCenum) LastError = ATOMIC_INIT_STATIC(ALC_NO_ERROR);
-PtrIntMap DeviceIfaceMap = PTRINTMAP_STATIC_INITIALIZE;
-PtrIntMap ContextIfaceMap = PTRINTMAP_STATIC_INITIALIZE;
+static PtrIntMap DeviceIfaceMap = PTRINTMAP_STATIC_INITIALIZE;
+static PtrIntMap ContextIfaceMap = PTRINTMAP_STATIC_INITIALIZE;
 
 
 typedef struct EnumeratedList {
@@ -315,6 +315,16 @@ static ALint GetDriverIndexForName(const EnumeratedList *list, const ALCchar *na
         index++;
     }
     return -1;
+}
+
+void ReleaseALC(void)
+{
+    ClearDeviceList(&DevicesList);
+    ClearDeviceList(&AllDevicesList);
+    ClearDeviceList(&CaptureDevicesList);
+
+    ResetPtrIntMap(&ContextIfaceMap);
+    ResetPtrIntMap(&DeviceIfaceMap);
 }
 
 

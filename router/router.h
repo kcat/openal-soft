@@ -135,7 +135,6 @@ ALint RemovePtrIntMapKey(PtrIntMap *map, ALvoid *key);
 ALint LookupPtrIntMapKey(PtrIntMap *map, ALvoid *key);
 
 
-extern PtrIntMap DeviceIfaceMap;
-extern PtrIntMap ContextIfaceMap;
+void ReleaseALC(void);
 
 #endif /* ROUTER_ROUTER_H */

@@ -15,6 +15,8 @@ DriverIface *DriverList = NULL;
 int DriverListSize = 0;
 static int DriverListSizeMax = 0;
 
+almtx_t EnumerationLock;
+
 static void LoadDriverList(void);
 
 
@@ -26,6 +28,7 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
     {
         case DLL_PROCESS_ATTACH:
             LoadDriverList();
+            almtx_init(&EnumerationLock, almtx_recursive);
             break;
 
         case DLL_THREAD_ATTACH:
@@ -34,6 +37,7 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
 
         case DLL_PROCESS_DETACH:
             ReleaseALC();
+            almtx_destroy(&EnumerationLock);
             for(i = 0;i < DriverListSize;i++)
             {
                 if(DriverList[i].Module)

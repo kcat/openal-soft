@@ -9,6 +9,7 @@
 #include "AL/al.h"
 #include "atomic.h"
 #include "rwlock.h"
+#include "threads.h"
 
 
 #ifndef UNUSED
@@ -149,6 +150,8 @@ ALenum InsertPtrIntMapEntry(PtrIntMap *map, ALvoid *key, ALint value);
 ALint RemovePtrIntMapKey(PtrIntMap *map, ALvoid *key);
 ALint LookupPtrIntMapKey(PtrIntMap *map, ALvoid *key);
 
+
+extern almtx_t EnumerationLock;
 
 void ReleaseALC(void);
 

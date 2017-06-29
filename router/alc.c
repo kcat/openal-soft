@@ -345,6 +345,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)
         devicename = NULL;
     if(devicename)
     {
+        almtx_lock(&EnumerationLock);
         if(!DevicesList.Names)
             (void)alcGetString(NULL, ALC_DEVICE_SPECIFIER);
         idx = GetDriverIndexForName(&DevicesList, devicename);
@@ -356,9 +357,11 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)
             if(idx < 0)
             {
                 ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_VALUE);
+                almtx_unlock(&EnumerationLock);
                 return NULL;
             }
         }
+        almtx_unlock(&EnumerationLock);
     }
 
     device = DriverList[idx].alcOpenDevice(devicename);
@@ -624,6 +627,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
         return alcExtensionList;
 
     case ALC_DEVICE_SPECIFIER:
+        almtx_lock(&EnumerationLock);
         ClearDeviceList(&DevicesList);
         for(i = 0;i < DriverListSize;i++)
         {
@@ -634,9 +638,11 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
                     DriverList[i].alcGetString(NULL, ALC_DEVICE_SPECIFIER), i
                 );
         }
+        almtx_unlock(&EnumerationLock);
         return DevicesList.Names;
 
     case ALC_ALL_DEVICES_SPECIFIER:
+        almtx_lock(&EnumerationLock);
         ClearDeviceList(&AllDevicesList);
         for(i = 0;i < DriverListSize;i++)
         {
@@ -653,9 +659,11 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
                     DriverList[i].alcGetString(NULL, ALC_DEVICE_SPECIFIER), i
                 );
         }
+        almtx_unlock(&EnumerationLock);
         return AllDevicesList.Names;
 
     case ALC_CAPTURE_DEVICE_SPECIFIER:
+        almtx_lock(&EnumerationLock);
         ClearDeviceList(&CaptureDevicesList);
         for(i = 0;i < DriverListSize;i++)
         {
@@ -665,6 +673,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
                     DriverList[i].alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER), i
                 );
         }
+        almtx_unlock(&EnumerationLock);
         return CaptureDevicesList.Names;
 
     case ALC_DEFAULT_DEVICE_SPECIFIER:
@@ -745,14 +754,17 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, 
         devicename = NULL;
     if(devicename)
     {
+        almtx_lock(&EnumerationLock);
         if(!CaptureDevicesList.Names)
             (void)alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER);
         idx = GetDriverIndexForName(&CaptureDevicesList, devicename);
         if(idx < 0)
         {
             ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_VALUE);
+            almtx_unlock(&EnumerationLock);
             return NULL;
         }
+        almtx_unlock(&EnumerationLock);
     }
 
     device = DriverList[idx].alcCaptureOpenDevice(devicename, frequency, format, buffersize);

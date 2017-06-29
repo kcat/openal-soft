@@ -750,7 +750,7 @@ static inline void CalcHighpassCoeffs(const ALfloat gain, const ALfloat w, ALflo
     g = maxf(0.001f, gain);
     g2 = g * g;
     cw = cosf(w);
-    p = g / (g*cw + sqrt((cw - 1.0f) * (g2*cw + g2 - 2.0f)));
+    p = g / (g*cw + sqrtf((cw - 1.0f) * (g2*cw + g2 - 2.0f)));
 
     coeffs[0] = p;
     coeffs[1] = -p;

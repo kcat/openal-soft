@@ -2,6 +2,8 @@
 #include "config.h"
 
 #include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "AL/alc.h"
 #include "router.h"
@@ -230,6 +232,8 @@ static const ALCchar alcErrInvalidContext[] = "Invalid Context";
 static const ALCchar alcErrInvalidEnum[] = "Invalid Enum";
 static const ALCchar alcErrInvalidValue[] = "Invalid Value";
 static const ALCchar alcErrOutOfMemory[] = "Out of Memory";
+static const ALCchar alcExtensionList[] =
+    "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE";
 
 static const ALCint alcMajorVersion = 1;
 static const ALCint alcMinorVersion = 1;
@@ -238,6 +242,65 @@ static const ALCint alcMinorVersion = 1;
 static ATOMIC(ALCenum) LastError = ATOMIC_INIT_STATIC(ALC_NO_ERROR);
 PtrIntMap DeviceIfaceMap = PTRINTMAP_STATIC_INITIALIZE;
 PtrIntMap ContextIfaceMap = PTRINTMAP_STATIC_INITIALIZE;
+
+
+typedef struct EnumeratedList {
+    ALCchar *Names;
+    ALCchar *NamesEnd;
+    ALCint *Indicies;
+    ALCsizei IndexSize;
+} EnumeratedList;
+static EnumeratedList DevicesList = { NULL, NULL, NULL, 0 };
+static EnumeratedList AllDevicesList = { NULL, NULL, NULL, 0 };
+static EnumeratedList CaptureDevicesList = { NULL, NULL, NULL, 0 };
+
+static void ClearDeviceList(EnumeratedList *list)
+{
+    free(list->Names);
+    list->Names = NULL;
+    list->NamesEnd = NULL;
+
+    free(list->Indicies);
+    list->Indicies = NULL;
+    list->IndexSize = 0;
+}
+
+static void AppendDeviceList(EnumeratedList *list, const ALCchar *names, ALint idx)
+{
+    const ALCchar *name_end = names;
+    ALCsizei count = 0;
+    ALCchar *new_list;
+    ALCint *new_indicies;
+    size_t len;
+    ALCsizei i;
+
+    if(!name_end)
+        return;
+    while(*name_end)
+    {
+        count++;
+        name_end += strlen(name_end)+1;
+    }
+    if(names == name_end)
+        return;
+
+    len = (list->NamesEnd - list->Names) + (name_end - names);
+    new_list = calloc(1, len + 1);
+    memcpy(new_list,  list->Names, list->NamesEnd - list->Names);
+    memcpy(new_list + (list->NamesEnd - list->Names), names, name_end - names);
+    free(list->Names);
+    list->Names = new_list;
+    list->NamesEnd = list->Names + len;
+
+    new_indicies = calloc(sizeof(ALCint), list->IndexSize + count);
+    for(i = 0;i < list->IndexSize;i++)
+        new_indicies[i] = list->Indicies[i];
+    for(i = 0;i < count;i++)
+        new_indicies[list->IndexSize+i] = idx;
+    free(list->Indicies);
+    list->Indicies = new_indicies;
+    list->IndexSize += count;
+}
 
 
 ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)
@@ -318,6 +381,9 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
 
 ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const ALCchar *extname)
 {
+    const char *ptr;
+    size_t len;
+
     if(device)
     {
         ALint idx = LookupPtrIntMapKey(&DeviceIfaceMap, device);
@@ -327,6 +393,20 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
             return ALC_FALSE;
         }
         return DriverList[idx].alcIsExtensionPresent(device, extname);
+    }
+
+    len = strlen(extname);
+    ptr = alcExtensionList;
+    while(ptr && *ptr)
+    {
+        if(strncasecmp(ptr, extname, len) == 0 && (ptr[len] == '\0' || isspace(ptr[len])))
+            return ALC_TRUE;
+        if((ptr=strchr(ptr, ' ')) != NULL)
+        {
+            do {
+                ++ptr;
+            } while(isspace(*ptr));
+        }
     }
     return ALC_FALSE;
 }
@@ -379,6 +459,8 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
 
 ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum param)
 {
+    ALsizei i = 0;
+
     if(device)
     {
         ALint idx = LookupPtrIntMapKey(&DeviceIfaceMap, device);
@@ -408,9 +490,48 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
         return "";
 
     case ALC_DEVICE_SPECIFIER:
+        ClearDeviceList(&DevicesList);
+        for(i = 0;i < DriverListSize;i++)
+        {
+            /* Only enumerate names from drivers that support it.
+             * FIXME: Check for ALC 1.1 too, since that guarantees enumeration
+             * support.
+             */
+            if(DriverList[i].alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT"))
+                AppendDeviceList(&DevicesList,
+                    DriverList[i].alcGetString(NULL, ALC_DEVICE_SPECIFIER), i
+                );
+        }
+        return DevicesList.Names;
+
     case ALC_ALL_DEVICES_SPECIFIER:
+        ClearDeviceList(&AllDevicesList);
+        for(i = 0;i < DriverListSize;i++)
+        {
+            /* If the driver doesn't support ALC_ENUMERATE_ALL_EXT, substitute
+             * standard enumeration.
+             */
+            if(DriverList[i].alcIsExtensionPresent(NULL, "ALC_ENUMERATE_ALL_EXT"))
+                AppendDeviceList(&AllDevicesList,
+                    DriverList[i].alcGetString(NULL, ALC_ALL_DEVICES_SPECIFIER), i
+                );
+            else if(DriverList[i].alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT"))
+                AppendDeviceList(&AllDevicesList,
+                    DriverList[i].alcGetString(NULL, ALC_DEVICE_SPECIFIER), i
+                );
+        }
+        return AllDevicesList.Names;
+
     case ALC_CAPTURE_DEVICE_SPECIFIER:
-        return "";
+        ClearDeviceList(&CaptureDevicesList);
+        for(i = 0;i < DriverListSize;i++)
+        {
+            if(DriverList[i].alcIsExtensionPresent(NULL, "ALC_EXT_CAPTURE"))
+                AppendDeviceList(&CaptureDevicesList,
+                    DriverList[i].alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER), i
+                );
+        }
+        return CaptureDevicesList.Names;
 
     case ALC_DEFAULT_DEVICE_SPECIFIER:
     case ALC_DEFAULT_ALL_DEVICES_SPECIFIER:

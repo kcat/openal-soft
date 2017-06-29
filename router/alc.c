@@ -420,16 +420,21 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
 {
     ALint idx = -1;
 
+    almtx_lock(&ContextSwitchLock);
     if(context)
     {
         idx = LookupPtrIntMapKey(&ContextIfaceMap, context);
         if(idx < 0)
         {
             ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_CONTEXT);
+            almtx_unlock(&ContextSwitchLock);
             return ALC_FALSE;
         }
         if(!DriverList[idx].alcMakeContextCurrent(context))
+        {
+            almtx_unlock(&ContextSwitchLock);
             return ALC_FALSE;
+        }
     }
 
     /* Unset the context from the old driver if it's different from the new
@@ -446,6 +451,7 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
         if(oldiface && oldiface != &DriverList[idx])
             oldiface->alcMakeContextCurrent(NULL);
     }
+    almtx_unlock(&ContextSwitchLock);
 
     return ALC_TRUE;
 }

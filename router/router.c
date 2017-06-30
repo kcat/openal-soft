@@ -195,7 +195,7 @@ static void AddModule(HMODULE module, const WCHAR *name)
     LOAD_PROC(alDistanceModel);
     if(!err)
     {
-        ALCint alc_ver[2];
+        ALCint alc_ver[2] = { 0, 0 };
         wcsncpy(newdrv.Name, name, 32);
         newdrv.Module = module;
         newdrv.alcGetIntegerv(NULL, ALC_MAJOR_VERSION, 1, &alc_ver[0]);

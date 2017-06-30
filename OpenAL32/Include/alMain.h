@@ -807,8 +807,6 @@ struct ALCdevice_struct
     almtx_t BackendLock;
     struct ALCbackend *Backend;
 
-    void *ExtraData; // For the backend's use
-
     ALCdevice *volatile next;
 
     /* Memory space used by the default slot (Playback devices only) */

@@ -153,9 +153,7 @@ ALint RemovePtrIntMapKey(PtrIntMap *map, ALvoid *key);
 ALint LookupPtrIntMapKey(PtrIntMap *map, ALvoid *key);
 
 
-extern almtx_t EnumerationLock;
-extern almtx_t ContextSwitchLock;
-
+void InitALC(void);
 void ReleaseALC(void);
 
 

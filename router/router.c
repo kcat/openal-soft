@@ -16,9 +16,6 @@ DriverIface *DriverList = NULL;
 int DriverListSize = 0;
 static int DriverListSizeMax = 0;
 
-almtx_t EnumerationLock;
-almtx_t ContextSwitchLock;
-
 enum LogLevel LogLevel = LogLevel_Error;
 FILE *LogFile;
 
@@ -56,8 +53,8 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
                     LogLevel = l;
             }
             LoadDriverList();
-            almtx_init(&EnumerationLock, almtx_recursive);
-            almtx_init(&ContextSwitchLock, almtx_plain);
+
+            InitALC();
             break;
 
         case DLL_THREAD_ATTACH:
@@ -67,8 +64,6 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
         case DLL_PROCESS_DETACH:
             ReleaseALC();
 
-            almtx_destroy(&ContextSwitchLock);
-            almtx_destroy(&EnumerationLock);
             for(i = 0;i < DriverListSize;i++)
             {
                 if(DriverList[i].Module)

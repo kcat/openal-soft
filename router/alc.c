@@ -241,6 +241,9 @@ static const ALCint alcMajorVersion = 1;
 static const ALCint alcMinorVersion = 1;
 
 
+static almtx_t EnumerationLock;
+static almtx_t ContextSwitchLock;
+
 static ATOMIC(ALCenum) LastError = ATOMIC_INIT_STATIC(ALC_NO_ERROR);
 static PtrIntMap DeviceIfaceMap = PTRINTMAP_STATIC_INITIALIZE;
 static PtrIntMap ContextIfaceMap = PTRINTMAP_STATIC_INITIALIZE;
@@ -320,6 +323,12 @@ static ALint GetDriverIndexForName(const EnumeratedList *list, const ALCchar *na
     return -1;
 }
 
+void InitALC(void)
+{
+    almtx_init(&EnumerationLock, almtx_recursive);
+    almtx_init(&ContextSwitchLock, almtx_plain);
+}
+
 void ReleaseALC(void)
 {
     ClearDeviceList(&DevicesList);
@@ -328,6 +337,9 @@ void ReleaseALC(void)
 
     ResetPtrIntMap(&ContextIfaceMap);
     ResetPtrIntMap(&DeviceIfaceMap);
+
+    almtx_destroy(&ContextSwitchLock);
+    almtx_destroy(&EnumerationLock);
 }
 
 

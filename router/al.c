@@ -9,8 +9,6 @@
 
 ATOMIC(DriverIface*) CurrentCtxDriver = ATOMIC_INIT_STATIC(NULL);
 
-#define DECL_THUNK0(R, n) AL_API R AL_APIENTRY n(void) \
-{ return ATOMIC_LOAD_SEQ(&CurrentCtxDriver)->n(); }
 #define DECL_THUNK1(R, n, T1) AL_API R AL_APIENTRY n(T1 a) \
 { return ATOMIC_LOAD_SEQ(&CurrentCtxDriver)->n(a); }
 #define DECL_THUNK2(R, n, T1, T2) AL_API R AL_APIENTRY n(T1 a, T2 b) \
@@ -21,6 +19,17 @@ ATOMIC(DriverIface*) CurrentCtxDriver = ATOMIC_INIT_STATIC(NULL);
 { return ATOMIC_LOAD_SEQ(&CurrentCtxDriver)->n(a, b, c, d); }
 #define DECL_THUNK5(R, n, T1, T2, T3, T4, T5) AL_API R AL_APIENTRY n(T1 a, T2 b, T3 c, T4 d, T5 e)\
 { return ATOMIC_LOAD_SEQ(&CurrentCtxDriver)->n(a, b, c, d, e); }
+
+
+/* Ugly hack for some apps calling alGetError without a current context, and
+ * expecting it to be AL_NO_ERROR.
+ */
+AL_API ALenum AL_APIENTRY alGetError(void)
+{
+    DriverIface *iface = ATOMIC_LOAD_SEQ(&CurrentCtxDriver);
+    if(iface) return iface->alGetError();
+    return AL_NO_ERROR;
+}
 
 
 DECL_THUNK1(void, alDopplerFactor, ALfloat)
@@ -41,8 +50,6 @@ DECL_THUNK1(ALboolean, alGetBoolean, ALenum)
 DECL_THUNK1(ALint, alGetInteger, ALenum)
 DECL_THUNK1(ALfloat, alGetFloat, ALenum)
 DECL_THUNK1(ALdouble, alGetDouble, ALenum)
-
-DECL_THUNK0(ALenum, alGetError)
 
 DECL_THUNK1(ALboolean, alIsExtensionPresent, const ALchar*)
 DECL_THUNK1(void*, alGetProcAddress, const ALchar*)

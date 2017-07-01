@@ -168,15 +168,24 @@ extern FILE *LogFile;
 
 #define TRACE(...) do {                                   \
     if(LogLevel >= LogLevel_Trace)                        \
+    {                                                     \
         fprintf(LogFile, "AL Router (II): " __VA_ARGS__); \
+        fflush(LogFile);                                  \
+    }                                                     \
 } while(0)
 #define WARN(...) do {                                    \
     if(LogLevel >= LogLevel_Warn)                         \
+    {                                                     \
         fprintf(LogFile, "AL Router (WW): " __VA_ARGS__); \
+        fflush(LogFile);                                  \
+    }                                                     \
 } while(0)
 #define ERR(...) do {                                     \
     if(LogLevel >= LogLevel_Error)                        \
+    {                                                     \
         fprintf(LogFile, "AL Router (EE): " __VA_ARGS__); \
+        fflush(LogFile);                                  \
+    }                                                     \
 } while(0)
 
 #endif /* ROUTER_ROUTER_H */

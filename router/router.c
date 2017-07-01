@@ -18,16 +18,42 @@ static int DriverListSizeMax = 0;
 almtx_t EnumerationLock;
 almtx_t ContextSwitchLock;
 
+enum LogLevel LogLevel = LogLevel_Error;
+FILE *LogFile;
+
 static void LoadDriverList(void);
 
 
 BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reserved))
 {
+    const char *str;
     int i;
 
     switch(reason)
     {
         case DLL_PROCESS_ATTACH:
+            LogFile = stderr;
+            str = getenv("ALROUTER_LOGFILE");
+            if(str && *str != '\0')
+            {
+                FILE *f = fopen(str, "w");
+                if(f == NULL)
+                    ERR("Could not open log file: %s\n", str);
+                else
+                    LogFile = f;
+            }
+            str = getenv("ALROUTER_LOGLEVEL");
+            if(str && *str != '\0')
+            {
+                char *end = NULL;
+                long l = strtol(str, &end, 0);
+                if(!end || *end != '\0')
+                    ERR("Invalid log level value: %s\n", str);
+                else if(l < LogLevel_None || l > LogLevel_Trace)
+                    ERR("Log level out of range: %s\n", str);
+                else
+                    LogLevel = l;
+            }
             LoadDriverList();
             almtx_init(&EnumerationLock, almtx_recursive);
             almtx_init(&ContextSwitchLock, almtx_plain);
@@ -39,6 +65,7 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
 
         case DLL_PROCESS_DETACH:
             ReleaseALC();
+
             almtx_destroy(&ContextSwitchLock);
             almtx_destroy(&EnumerationLock);
             for(i = 0;i < DriverListSize;i++)
@@ -50,6 +77,10 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
             DriverList = NULL;
             DriverListSize = 0;
             DriverListSizeMax = 0;
+
+            if(LogFile && LogFile != stderr)
+                fclose(LogFile);
+            LogFile = NULL;
             break;
     }
     return TRUE;
@@ -70,8 +101,15 @@ static void AddModule(HMODULE module, const WCHAR *name)
 
     for(i = 0;i < DriverListSize;i++)
     {
-        if(DriverList[i].Module == module || wcscmp(DriverList[i].Name, name) == 0)
+        if(DriverList[i].Module == module)
         {
+            TRACE("Skipping already-loaded module %p\n", module);
+            FreeLibrary(module);
+            return;
+        }
+        if(wcscmp(DriverList[i].Name, name) == 0)
+        {
+            TRACE("Skipping similarly-named module %ls\n", name);
             FreeLibrary(module);
             return;
         }
@@ -94,8 +132,7 @@ static void AddModule(HMODULE module, const WCHAR *name)
     newdrv.x = CAST_FUNC(newdrv.x) GetProcAddress(module, #x);                \
     if(!newdrv.x)                                                             \
     {                                                                         \
-        fprintf(stderr, "Failed to find entry point for %s in %ls\n",         \
-                #x, name);                                                    \
+        ERR("Failed to find entry point for %s in %ls\n", #x, name);          \
         err = 1;                                                              \
     }                                                                         \
 } while(0)
@@ -204,6 +241,8 @@ static void AddModule(HMODULE module, const WCHAR *name)
             newdrv.ALCVer = MAKE_ALC_VER(alc_ver[0], alc_ver[1]);
         else
             newdrv.ALCVer = MAKE_ALC_VER(1, 0);
+        TRACE("Loaded module %p, %ls, ALC %d.%d\n", module, name,
+              newdrv.ALCVer>>8, newdrv.ALCVer&255);
         DriverList[DriverListSize++] = newdrv;
     }
 }
@@ -214,6 +253,7 @@ static void SearchDrivers(WCHAR *path)
     WIN32_FIND_DATAW fdata;
     HANDLE srchHdl;
 
+    TRACE("Searching for drivers in %ls...\n", path);
     wcsncpy(srchPath, path, MAX_PATH);
     wcsncat(srchPath, L"\\*oal.dll", MAX_PATH - lstrlenW(srchPath));
     srchHdl = FindFirstFileW(srchPath, &fdata);
@@ -225,9 +265,13 @@ static void SearchDrivers(WCHAR *path)
             wcsncpy(srchPath, path, MAX_PATH);
             wcsncat(srchPath, L"\\", MAX_PATH - lstrlenW(srchPath));
             wcsncat(srchPath, fdata.cFileName, MAX_PATH - lstrlenW(srchPath));
+            TRACE("Found %ls\n", srchPath);
 
             mod = LoadLibraryW(srchPath);
-            if(mod) AddModule(mod, fdata.cFileName);
+            if(!mod)
+                WARN("Could not load %ls\n", srchPath);
+            else
+                AddModule(mod, fdata.cFileName);
         } while(FindNextFileW(srchHdl, &fdata));
         FindClose(srchHdl);
     }

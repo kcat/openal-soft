@@ -5,6 +5,8 @@
 #include <windows.h>
 #include <winnt.h>
 
+#include <stdio.h>
+
 #include "AL/alc.h"
 #include "AL/al.h"
 #include "atomic.h"
@@ -155,5 +157,28 @@ extern almtx_t EnumerationLock;
 extern almtx_t ContextSwitchLock;
 
 void ReleaseALC(void);
+
+
+enum LogLevel {
+    LogLevel_None  = 0,
+    LogLevel_Error = 1,
+    LogLevel_Warn  = 2,
+    LogLevel_Trace = 3,
+};
+extern enum LogLevel LogLevel;
+extern FILE *LogFile;
+
+#define TRACE(...) do {                                   \
+    if(LogLevel >= LogLevel_Trace)                        \
+        fprintf(LogFile, "AL Router (II): " __VA_ARGS__); \
+} while(0)
+#define WARN(...) do {                                    \
+    if(LogLevel >= LogLevel_Warn)                         \
+        fprintf(LogFile, "AL Router (WW): " __VA_ARGS__); \
+} while(0)
+#define ERR(...) do {                                     \
+    if(LogLevel >= LogLevel_Error)                        \
+        fprintf(LogFile, "AL Router (EE): " __VA_ARGS__); \
+} while(0)
 
 #endif /* ROUTER_ROUTER_H */

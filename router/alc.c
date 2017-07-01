@@ -279,6 +279,7 @@ static void AppendDeviceList(EnumeratedList *list, const ALCchar *names, ALint i
         return;
     while(*name_end)
     {
+        TRACE("Enumerated \"%s\", driver %d\n", name_end, idx);
         count++;
         name_end += strlen(name_end)+1;
     }

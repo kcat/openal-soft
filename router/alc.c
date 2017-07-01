@@ -8,6 +8,7 @@
 
 #include "AL/alc.h"
 #include "router.h"
+#include "almalloc.h"
 
 
 #define COUNTOF(x)  (sizeof(x)/sizeof(x[0]))
@@ -257,11 +258,11 @@ static EnumeratedList CaptureDevicesList = { NULL, NULL, NULL, 0 };
 
 static void ClearDeviceList(EnumeratedList *list)
 {
-    free(list->Names);
+    al_free(list->Names);
     list->Names = NULL;
     list->NamesEnd = NULL;
 
-    free(list->Indicies);
+    al_free(list->Indicies);
     list->Indicies = NULL;
     list->IndexSize = 0;
 }
@@ -287,19 +288,19 @@ static void AppendDeviceList(EnumeratedList *list, const ALCchar *names, ALint i
         return;
 
     len = (list->NamesEnd - list->Names) + (name_end - names);
-    new_list = calloc(1, len + 1);
+    new_list = al_calloc(DEF_ALIGN, len + 1);
     memcpy(new_list,  list->Names, list->NamesEnd - list->Names);
     memcpy(new_list + (list->NamesEnd - list->Names), names, name_end - names);
-    free(list->Names);
+    al_free(list->Names);
     list->Names = new_list;
     list->NamesEnd = list->Names + len;
 
-    new_indicies = calloc(sizeof(ALCint), list->IndexSize + count);
+    new_indicies = al_calloc(16, sizeof(ALCint)*(list->IndexSize + count));
     for(i = 0;i < list->IndexSize;i++)
         new_indicies[i] = list->Indicies[i];
     for(i = 0;i < count;i++)
         new_indicies[list->IndexSize+i] = idx;
-    free(list->Indicies);
+    al_free(list->Indicies);
     list->Indicies = new_indicies;
     list->IndexSize += count;
 }

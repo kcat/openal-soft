@@ -9,6 +9,7 @@
 
 #include "AL/alc.h"
 #include "AL/al.h"
+#include "almalloc.h"
 
 
 DriverIface *DriverList = NULL;
@@ -73,7 +74,7 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
                 if(DriverList[i].Module)
                     FreeLibrary(DriverList[i].Module);
             }
-            free(DriverList);
+            al_free(DriverList);
             DriverList = NULL;
             DriverListSize = 0;
             DriverListSizeMax = 0;
@@ -118,11 +119,11 @@ static void AddModule(HMODULE module, const WCHAR *name)
     if(DriverListSize == DriverListSizeMax)
     {
         int newmax = DriverListSizeMax ? DriverListSizeMax<<1 : 4;
-        void *newlist = calloc(sizeof(DriverList[0]), newmax);
+        void *newlist = al_calloc(DEF_ALIGN, sizeof(DriverList[0])*newmax);
         if(!newlist) return;
 
         memcpy(newlist, DriverList, DriverListSize*sizeof(DriverList[0]));
-        free(DriverList);
+        al_free(DriverList);
         DriverList = newlist;
         DriverListSizeMax = newmax;
     }
@@ -351,7 +352,7 @@ void InitPtrIntMap(PtrIntMap *map)
 void ResetPtrIntMap(PtrIntMap *map)
 {
     WriteLock(&map->lock);
-    free(map->keys);
+    al_free(map->keys);
     map->keys = NULL;
     map->values = NULL;
     map->size = 0;
@@ -390,7 +391,7 @@ ALenum InsertPtrIntMapEntry(PtrIntMap *map, ALvoid *key, ALint value)
 
             newcap = (map->capacity ? (map->capacity<<1) : 4);
             if(newcap > map->capacity)
-                keys = calloc(sizeof(map->keys[0])+sizeof(map->values[0]), newcap);
+                keys = al_calloc(16, (sizeof(map->keys[0])+sizeof(map->values[0]))*newcap);
             if(!keys)
             {
                 WriteUnlock(&map->lock);
@@ -403,7 +404,7 @@ ALenum InsertPtrIntMapEntry(PtrIntMap *map, ALvoid *key, ALint value)
                 memcpy(keys, map->keys, map->size*sizeof(map->keys[0]));
                 memcpy(values, map->values, map->size*sizeof(map->values[0]));
             }
-            free(map->keys);
+            al_free(map->keys);
             map->keys = keys;
             map->values = values;
             map->capacity = newcap;

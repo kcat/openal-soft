@@ -1430,12 +1430,9 @@ int main(int argc, char *argv[])
         ALCdevice *dev = NULL;
         if(argc > 3 && strcmp(argv[1], "-device") == 0)
         {
+            fileidx = 3;
             dev = alcOpenDevice(argv[2]);
-            if(dev)
-            {
-                fileidx = 3;
-                return dev;
-            }
+            if(dev) return dev;
             std::cerr<< "Failed to open \""<<argv[2]<<"\" - trying default" <<std::endl;
         }
         return alcOpenDevice(nullptr);

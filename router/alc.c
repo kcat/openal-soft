@@ -345,8 +345,8 @@ void ReleaseALC(void)
 
 ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)
 {
-    ALCdevice *device;
-    ALint idx = 0;
+    ALCdevice *device = NULL;
+    ALint idx;
 
     /* Prior to the enumeration extension, apps would hardcode these names as a
      * quality hint for the wrapper driver. Ignore them since there's no sane
@@ -368,14 +368,14 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)
             if(!AllDevicesList.Names)
                 (void)alcGetString(NULL, ALC_ALL_DEVICES_SPECIFIER);
             idx = GetDriverIndexForName(&AllDevicesList, devicename);
-            if(idx < 0)
-            {
-                ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_VALUE);
-                almtx_unlock(&EnumerationLock);
-                return NULL;
-            }
         }
         almtx_unlock(&EnumerationLock);
+        if(idx < 0)
+        {
+            ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_VALUE);
+            return NULL;
+        }
+        device = DriverList[idx].alcOpenDevice(devicename);
     }
     else
     {
@@ -386,12 +386,12 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)
                DriverList[i].alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT"))
             {
                 idx = i;
+                device = DriverList[idx].alcOpenDevice(NULL);
                 break;
             }
         }
     }
 
-    device = DriverList[idx].alcOpenDevice(devicename);
     if(device)
     {
         if(InsertPtrIntMapEntry(&DeviceIfaceMap, device, idx) != ALC_NO_ERROR)
@@ -799,8 +799,8 @@ ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsi
 
 ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, ALCuint frequency, ALCenum format, ALCsizei buffersize)
 {
-    ALCdevice *device;
-    ALint idx = 0;
+    ALCdevice *device = NULL;
+    ALint idx;
 
     if(devicename && devicename[0] == '\0')
         devicename = NULL;
@@ -810,13 +810,15 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, 
         if(!CaptureDevicesList.Names)
             (void)alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER);
         idx = GetDriverIndexForName(&CaptureDevicesList, devicename);
+        almtx_unlock(&EnumerationLock);
         if(idx < 0)
         {
             ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_VALUE);
-            almtx_unlock(&EnumerationLock);
             return NULL;
         }
-        almtx_unlock(&EnumerationLock);
+        device = DriverList[idx].alcCaptureOpenDevice(
+            devicename, frequency, format, buffersize
+        );
     }
     else
     {
@@ -827,12 +829,14 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, 
                DriverList[i].alcIsExtensionPresent(NULL, "ALC_EXT_CAPTURE"))
             {
                 idx = i;
+                device = DriverList[idx].alcCaptureOpenDevice(
+                    NULL, frequency, format, buffersize
+                );
                 break;
             }
         }
     }
 
-    device = DriverList[idx].alcCaptureOpenDevice(devicename, frequency, format, buffersize);
     if(device)
     {
         if(InsertPtrIntMapEntry(&DeviceIfaceMap, device, idx) != ALC_NO_ERROR)

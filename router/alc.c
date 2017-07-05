@@ -316,10 +316,14 @@ static ALint GetDriverIndexForName(const EnumeratedList *list, const ALCchar *na
     while(devnames && *devnames)
     {
         if(strcmp(name, devnames) == 0)
+        {
+            TRACE("Found driver %d for name \"%s\"\n", *index, name);
             return *index;
+        }
         devnames += strlen(devnames)+1;
         index++;
     }
+    TRACE("Failed to find driver for name \"%s\"\n", name);
     return -1;
 }
 

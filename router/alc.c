@@ -374,12 +374,13 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)
             idx = GetDriverIndexForName(&AllDevicesList, devicename);
         }
         almtx_unlock(&EnumerationLock);
-        if(idx < 0)
+        if(idx >= 0)
+            device = DriverList[idx].alcOpenDevice(devicename);
+        else for(idx = 0;idx < DriverListSize;idx++)
         {
-            ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_VALUE);
-            return NULL;
+            device = DriverList[idx].alcOpenDevice(devicename);
+            if(device) break;
         }
-        device = DriverList[idx].alcOpenDevice(devicename);
     }
     else
     {
@@ -815,14 +816,17 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, 
             (void)alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER);
         idx = GetDriverIndexForName(&CaptureDevicesList, devicename);
         almtx_unlock(&EnumerationLock);
-        if(idx < 0)
+        if(idx >= 0)
+            device = DriverList[idx].alcCaptureOpenDevice(
+                devicename, frequency, format, buffersize
+            );
+        else for(idx = 0;idx < DriverListSize;idx++)
         {
-            ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_VALUE);
-            return NULL;
+            device = DriverList[idx].alcCaptureOpenDevice(
+                devicename, frequency, format, buffersize
+            );
+            if(device) break;
         }
-        device = DriverList[idx].alcCaptureOpenDevice(
-            devicename, frequency, format, buffersize
-        );
     }
     else
     {

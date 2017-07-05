@@ -1446,6 +1446,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    const ALCchar *name = nullptr;
+    if(alcIsExtensionPresent(device, "ALC_ENUMERATE_ALL_EXT"))
+        name = alcGetString(device, ALC_ALL_DEVICES_SPECIFIER);
+    if(!name || alcGetError(device) != AL_NO_ERROR)
+        name = alcGetString(device, ALC_DEVICE_SPECIFIER);
+    std::cout<< "Opened \""<<name<<"\"" <<std::endl;
+
     if(fileidx < argc && strcmp(argv[fileidx], "-direct") == 0)
     {
         ++fileidx;

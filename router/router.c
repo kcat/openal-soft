@@ -16,6 +16,8 @@ DriverIface *DriverList = NULL;
 int DriverListSize = 0;
 static int DriverListSizeMax = 0;
 
+altss_t ThreadCtxDriver;
+
 enum LogLevel LogLevel = LogLevel_Error;
 FILE *LogFile;
 
@@ -54,6 +56,7 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
             }
             LoadDriverList();
 
+            altss_create(&ThreadCtxDriver, NULL);
             InitALC();
             break;
 
@@ -63,6 +66,7 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
 
         case DLL_PROCESS_DETACH:
             ReleaseALC();
+            altss_delete(ThreadCtxDriver);
 
             for(i = 0;i < DriverListSize;i++)
             {
@@ -124,6 +128,7 @@ static void AddModule(HMODULE module, const WCHAR *name)
     }
 
     memset(&newdrv, 0, sizeof(newdrv));
+    /* Load required functions. */
 #define LOAD_PROC(x) do {                                                     \
     newdrv.x = CAST_FUNC(newdrv.x) GetProcAddress(module, #x);                \
     if(!newdrv.x)                                                             \
@@ -237,10 +242,30 @@ static void AddModule(HMODULE module, const WCHAR *name)
             newdrv.ALCVer = MAKE_ALC_VER(alc_ver[0], alc_ver[1]);
         else
             newdrv.ALCVer = MAKE_ALC_VER(1, 0);
+
+#undef LOAD_PROC
+#define LOAD_PROC(x) do {                                                     \
+    newdrv.x = CAST_FUNC(newdrv.x) newdrv.alcGetProcAddress(NULL, #x);        \
+    if(!newdrv.x)                                                             \
+    {                                                                         \
+        ERR("Failed to find entry point for %s in %ls\n", #x, name);          \
+        err = 1;                                                              \
+    }                                                                         \
+} while(0)
+        if(newdrv.alcIsExtensionPresent(NULL, "ALC_EXT_thread_local_context"))
+        {
+            LOAD_PROC(alcSetThreadContext);
+            LOAD_PROC(alcGetThreadContext);
+        }
+    }
+
+    if(!err)
+    {
         TRACE("Loaded module %p, %ls, ALC %d.%d\n", module, name,
               newdrv.ALCVer>>8, newdrv.ALCVer&255);
         DriverList[DriverListSize++] = newdrv;
     }
+#undef LOAD_PROC
 }
 
 static void SearchDrivers(WCHAR *path)

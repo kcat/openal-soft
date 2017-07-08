@@ -473,16 +473,22 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
      */
     if(idx < 0)
     {
-        DriverIface *oldiface = ATOMIC_EXCHANGE_PTR_SEQ(&CurrentCtxDriver, NULL);
+        DriverIface *oldiface = altss_get(ThreadCtxDriver);
+        if(oldiface) oldiface->alcSetThreadContext(NULL);
+        oldiface = ATOMIC_EXCHANGE_PTR_SEQ(&CurrentCtxDriver, NULL);
         if(oldiface) oldiface->alcMakeContextCurrent(NULL);
     }
     else
     {
-        DriverIface *oldiface = ATOMIC_EXCHANGE_PTR_SEQ(&CurrentCtxDriver, &DriverList[idx]);
+        DriverIface *oldiface = altss_get(ThreadCtxDriver);
+        if(oldiface && oldiface != &DriverList[idx])
+            oldiface->alcSetThreadContext(NULL);
+        oldiface = ATOMIC_EXCHANGE_PTR_SEQ(&CurrentCtxDriver, &DriverList[idx]);
         if(oldiface && oldiface != &DriverList[idx])
             oldiface->alcMakeContextCurrent(NULL);
     }
     almtx_unlock(&ContextSwitchLock);
+    altss_set(ThreadCtxDriver, NULL);
 
     return ALC_TRUE;
 }
@@ -525,7 +531,8 @@ ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 
 ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void)
 {
-    DriverIface *iface = ATOMIC_LOAD_SEQ(&CurrentCtxDriver);
+    DriverIface *iface = altss_get(ThreadCtxDriver);
+    if(!iface) iface = ATOMIC_LOAD_SEQ(&CurrentCtxDriver);
     return iface ? iface->alcGetCurrentContext() : NULL;
 }
 
@@ -899,4 +906,45 @@ ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, 
             return DriverList[idx].alcCaptureSamples(device, buffer, samples);
     }
     ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
+}
+
+
+ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
+{
+    ALCenum err = ALC_INVALID_CONTEXT;
+    ALint idx;
+
+    if(!context)
+    {
+        DriverIface *oldiface = altss_get(ThreadCtxDriver);
+        if(oldiface && !oldiface->alcSetThreadContext(NULL))
+            return ALC_FALSE;
+        altss_set(ThreadCtxDriver, NULL);
+        return ALC_TRUE;
+    }
+
+    idx = LookupPtrIntMapKey(&ContextIfaceMap, context);
+    if(idx >= 0)
+    {
+        if(DriverList[idx].alcSetThreadContext(context))
+        {
+            DriverIface *oldiface = altss_get(ThreadCtxDriver);
+            if(oldiface != &DriverList[idx])
+            {
+                altss_set(ThreadCtxDriver, &DriverList[idx]);
+                if(oldiface) oldiface->alcSetThreadContext(NULL);
+            }
+            return ALC_TRUE;
+        }
+        err = DriverList[idx].alcGetError(NULL);
+    }
+    ATOMIC_STORE_SEQ(&LastError, err);
+    return ALC_FALSE;
+}
+
+ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
+{
+    DriverIface *iface = altss_get(ThreadCtxDriver);
+    if(iface) return iface->alcGetThreadContext();
+    return NULL;
 }

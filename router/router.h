@@ -9,6 +9,7 @@
 
 #include "AL/alc.h"
 #include "AL/al.h"
+#include "AL/alext.h"
 #include "atomic.h"
 #include "rwlock.h"
 #include "threads.h"
@@ -53,6 +54,9 @@ typedef struct DriverIface {
     LPALCCAPTURESTART alcCaptureStart;
     LPALCCAPTURESTOP alcCaptureStop;
     LPALCCAPTURESAMPLES alcCaptureSamples;
+
+    PFNALCSETTHREADCONTEXTPROC alcSetThreadContext;
+    PFNALCGETTHREADCONTEXTPROC alcGetThreadContext;
 
     LPALENABLE alEnable;
     LPALDISABLE alDisable;
@@ -132,6 +136,7 @@ typedef struct DriverIface {
 extern DriverIface *DriverList;
 extern int DriverListSize;
 
+extern altss_t ThreadCtxDriver;
 extern ATOMIC(DriverIface*) CurrentCtxDriver;
 
 

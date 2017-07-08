@@ -39,6 +39,9 @@ static const struct {
     DECL(alcCaptureStop),
     DECL(alcCaptureSamples),
 
+    DECL(alcSetThreadContext),
+    DECL(alcGetThreadContext),
+
     DECL(alEnable),
     DECL(alDisable),
     DECL(alIsEnabled),
@@ -235,7 +238,8 @@ static const ALCchar alcErrInvalidEnum[] = "Invalid Enum";
 static const ALCchar alcErrInvalidValue[] = "Invalid Value";
 static const ALCchar alcErrOutOfMemory[] = "Out of Memory";
 static const ALCchar alcExtensionList[] =
-    "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE";
+    "ALC_ENUMERATE_ALL_EXT ALC_ENUMERATION_EXT ALC_EXT_CAPTURE "
+    "ALC_EXT_thread_local_context";
 
 static const ALCint alcMajorVersion = 1;
 static const ALCint alcMinorVersion = 1;

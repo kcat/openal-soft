@@ -1206,6 +1206,9 @@ IF(LIBTYPE STREQUAL "STATIC")
     ADD_LIBRARY(OpenAL STATIC ${COMMON_OBJS} ${OPENAL_OBJS} ${ALC_OBJS})
 ELSE()
     ADD_LIBRARY(OpenAL SHARED ${COMMON_OBJS} ${OPENAL_OBJS} ${ALC_OBJS})
+    IF(WIN32)
+        SET_TARGET_PROPERTIES(OpenAL PROPERTIES PREFIX "")
+    ENDIF()
 ENDIF()
 SET_TARGET_PROPERTIES(OpenAL PROPERTIES OUTPUT_NAME ${LIBNAME}
     VERSION ${LIB_VERSION}
@@ -1245,33 +1248,6 @@ IF(WIN32)
         SET_PROPERTY(TARGET OpenAL APPEND_STRING PROPERTY LINK_FLAGS " -mwindows")
     ENDIF()
 
-    if(NOT LIBTYPE STREQUAL "STATIC")
-        SET_TARGET_PROPERTIES(OpenAL PROPERTIES PREFIX "")
-
-        IF(MINGW AND ALSOFT_BUILD_IMPORT_LIB)
-            FIND_PROGRAM(SED_EXECUTABLE NAMES sed DOC "sed executable")
-            FIND_PROGRAM(DLLTOOL_EXECUTABLE NAMES "${DLLTOOL}" DOC "dlltool executable")
-            IF(NOT SED_EXECUTABLE OR NOT DLLTOOL_EXECUTABLE)
-                MESSAGE(STATUS "")
-                IF(NOT SED_EXECUTABLE)
-                    MESSAGE(STATUS "WARNING: Cannot find sed, disabling .def/.lib generation")
-                ENDIF()
-                IF(NOT DLLTOOL_EXECUTABLE)
-                    MESSAGE(STATUS "WARNING: Cannot find dlltool, disabling .def/.lib generation")
-                ENDIF()
-            ELSE()
-                SET_PROPERTY(TARGET OpenAL APPEND_STRING PROPERTY LINK_FLAGS
-                             " -Wl,--output-def,OpenAL32.def")
-                ADD_CUSTOM_COMMAND(TARGET OpenAL POST_BUILD
-                    COMMAND "${SED_EXECUTABLE}" -i -e "s/ @[^ ]*//" OpenAL32.def
-                    COMMAND "${DLLTOOL_EXECUTABLE}" -d OpenAL32.def -l OpenAL32.lib -D OpenAL32.dll
-                    COMMENT "Stripping ordinals from OpenAL32.def and generating OpenAL32.lib..."
-                    VERBATIM
-                )
-            ENDIF()
-        ENDIF()
-    ENDIF()
-
     if(ALSOFT_BUILD_ROUTER)
         SET_TARGET_PROPERTIES(OpenAL PROPERTIES OUTPUT_NAME soft_oal)
 
@@ -1297,6 +1273,31 @@ IF(WIN32)
                     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
                     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
             )
+        ENDIF()
+    ENDIF()
+
+    if(NOT LIBTYPE STREQUAL "STATIC")
+        IF(MINGW AND ALSOFT_BUILD_IMPORT_LIB)
+            FIND_PROGRAM(SED_EXECUTABLE NAMES sed DOC "sed executable")
+            FIND_PROGRAM(DLLTOOL_EXECUTABLE NAMES "${DLLTOOL}" DOC "dlltool executable")
+            IF(NOT SED_EXECUTABLE OR NOT DLLTOOL_EXECUTABLE)
+                MESSAGE(STATUS "")
+                IF(NOT SED_EXECUTABLE)
+                    MESSAGE(STATUS "WARNING: Cannot find sed, disabling .def/.lib generation")
+                ENDIF()
+                IF(NOT DLLTOOL_EXECUTABLE)
+                    MESSAGE(STATUS "WARNING: Cannot find dlltool, disabling .def/.lib generation")
+                ENDIF()
+            ELSE()
+                SET_PROPERTY(TARGET ${EX_TARGET} APPEND_STRING PROPERTY LINK_FLAGS
+                             " -Wl,--output-def,OpenAL32.def")
+                ADD_CUSTOM_COMMAND(TARGET ${EX_TARGET} POST_BUILD
+                    COMMAND "${SED_EXECUTABLE}" -i -e "s/ @[^ ]*//" OpenAL32.def
+                    COMMAND "${DLLTOOL_EXECUTABLE}" -d OpenAL32.def -l OpenAL32.lib -D OpenAL32.dll
+                    COMMENT "Stripping ordinals from OpenAL32.def and generating OpenAL32.lib..."
+                    VERBATIM
+                )
+            ENDIF()
         ENDIF()
     ENDIF()
 ENDIF()

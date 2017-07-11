@@ -11,6 +11,8 @@
 #include "AL/al.h"
 #include "almalloc.h"
 
+#include "version.h"
+
 
 DriverIface *DriverList = NULL;
 int DriverListSize = 0;
@@ -54,6 +56,7 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
                 else
                     LogLevel = l;
             }
+            TRACE("Initializing router v0.1-%s %s\n", ALSOFT_GIT_COMMIT_HASH, ALSOFT_GIT_BRANCH);
             LoadDriverList();
 
             altss_create(&ThreadCtxDriver, NULL);

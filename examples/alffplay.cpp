@@ -1370,7 +1370,7 @@ int main(int argc, char *argv[])
 
     if(argc < 2)
     {
-        std::cerr<< "Usage: "<<argv[0]<<" [-device <device name>] <files...>" <<std::endl;
+        std::cerr<< "Usage: "<<argv[0]<<" [-device <device name>] [-direct] <files...>" <<std::endl;
         return 1;
     }
     /* Register all formats and codecs */

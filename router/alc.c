@@ -320,14 +320,10 @@ static ALint GetDriverIndexForName(const EnumeratedList *list, const ALCchar *na
     while(devnames && *devnames)
     {
         if(strcmp(name, devnames) == 0)
-        {
-            TRACE("Found driver %d for name \"%s\"\n", *index, name);
             return *index;
-        }
         devnames += strlen(devnames)+1;
         index++;
     }
-    TRACE("Failed to find driver for name \"%s\"\n", name);
     return -1;
 }
 
@@ -381,8 +377,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)
         if(idx < 0)
         {
             ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_VALUE);
+            TRACE("Failed to find driver for name \"%s\"\n", devicename);
             return NULL;
         }
+        TRACE("Found driver %d for name \"%s\"\n", idx, devicename);
         device = DriverList[idx].alcOpenDevice(devicename);
     }
     else
@@ -394,6 +392,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)
                DriverList[i].alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT"))
             {
                 idx = i;
+                TRACE("Using default device from driver %d\n", idx);
                 device = DriverList[idx].alcOpenDevice(NULL);
                 break;
             }
@@ -829,8 +828,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, 
         if(idx < 0)
         {
             ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_VALUE);
+            TRACE("Failed to find driver for name \"%s\"\n", devicename);
             return NULL;
         }
+        TRACE("Found driver %d for name \"%s\"\n", idx, devicename);
         device = DriverList[idx].alcCaptureOpenDevice(
             devicename, frequency, format, buffersize
         );
@@ -844,6 +845,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, 
                DriverList[i].alcIsExtensionPresent(NULL, "ALC_EXT_CAPTURE"))
             {
                 idx = i;
+                TRACE("Using default capture device from driver %d\n", idx);
                 device = DriverList[idx].alcCaptureOpenDevice(
                     NULL, frequency, format, buffersize
                 );

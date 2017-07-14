@@ -1611,11 +1611,9 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 {
     ALsizei SamplesToDo;
     ALCcontext *ctx;
-    FPUCtl oldMode;
     ALsizei i, c;
 
-    SetMixerFPUMode(&oldMode);
-
+    START_MIXER_MODE();
     while(size > 0)
     {
         SamplesToDo = mini(size, BUFFERSIZE);
@@ -1819,8 +1817,7 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
         size -= SamplesToDo;
     }
-
-    RestoreFPUMode(&oldMode);
+    END_MIXER_MODE();
 }
 
 

@@ -1741,7 +1741,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     ALCsizei hrtf_id = -1;
     ALCcontext *context;
     ALCuint oldFreq;
-    FPUCtl oldMode;
     size_t size;
     ALCsizei i;
     int val;
@@ -2244,7 +2243,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
      * allocated with the appropriate size.
      */
     update_failed = AL_FALSE;
-    SetMixerFPUMode(&oldMode);
+    START_MIXER_MODE();
     context = ATOMIC_LOAD_SEQ(&device->ContextList);
     while(context)
     {
@@ -2359,7 +2358,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         context = context->next;
     }
-    RestoreFPUMode(&oldMode);
+    END_MIXER_MODE();
     if(update_failed)
         return ALC_INVALID_DEVICE;
 
@@ -3662,11 +3661,10 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
     if(ALContext->DefaultSlot)
     {
-        FPUCtl oldMode;
         ALeffectslot *slot = ALContext->DefaultSlot;
         ALeffectState *state = slot->Effect.State;
 
-        SetMixerFPUMode(&oldMode);
+        START_MIXER_MODE();
         state->OutBuffer = device->Dry.Buffer;
         state->OutChannels = device->Dry.NumChannels;
         if(V(state,deviceUpdate)(device) != AL_FALSE)
@@ -3676,7 +3674,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
             DeinitEffectSlot(ALContext->DefaultSlot);
             ALContext->DefaultSlot = NULL;
         }
-        RestoreFPUMode(&oldMode);
+        END_MIXER_MODE();
     }
 
     ALCdevice_IncRef(ALContext->Device);

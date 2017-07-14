@@ -506,7 +506,6 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
     if(newtype != EffectSlot->Effect.Type)
     {
         ALeffectStateFactory *factory;
-        FPUCtl oldMode;
 
         factory = getFactoryByType(newtype);
         if(!factory)
@@ -517,19 +516,19 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
         State = V0(factory,create)();
         if(!State) return AL_OUT_OF_MEMORY;
 
-        SetMixerFPUMode(&oldMode);
+        START_MIXER_MODE();
         almtx_lock(&Device->BackendLock);
         State->OutBuffer = Device->Dry.Buffer;
         State->OutChannels = Device->Dry.NumChannels;
         if(V(State,deviceUpdate)(Device) == AL_FALSE)
         {
             almtx_unlock(&Device->BackendLock);
-            RestoreFPUMode(&oldMode);
+            LEAVE_MIXER_MODE();
             ALeffectState_DecRef(State);
             return AL_OUT_OF_MEMORY;
         }
         almtx_unlock(&Device->BackendLock);
-        RestoreFPUMode(&oldMode);
+        END_MIXER_MODE();
 
         if(!effect)
         {

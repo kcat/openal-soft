@@ -9,7 +9,6 @@
 SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType dstType, ALsizei numchans, ALsizei srcRate, ALsizei dstRate)
 {
     SampleConverter *converter;
-    FPUCtl oldMode;
     ALsizei step;
 
     if(numchans <= 0 || srcRate <= 0 || dstRate <= 0)
@@ -26,7 +25,7 @@ SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType 
     converter->mFracOffset = 0;
 
     /* Have to set the mixer FPU mode since that's what the resampler code expects. */
-    SetMixerFPUMode(&oldMode);
+    START_MIXER_MODE();
     step = fastf2i(minf((ALdouble)srcRate / dstRate, MAX_PITCH)*FRACTIONONE + 0.5f);
     converter->mIncrement = maxi(step, 1);
     if(converter->mIncrement == FRACTIONONE)
@@ -37,7 +36,7 @@ SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType 
         BsincPrepare(converter->mIncrement, &converter->mState.bsinc);
         converter->mResample = SelectResampler(BSincResampler);
     }
-    RestoreFPUMode(&oldMode);
+    END_MIXER_MODE();
 
     return converter;
 }
@@ -230,9 +229,8 @@ ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALs
     const ALsizei DstFrameSize = converter->mNumChannels * converter->mDstTypeSize;
     const ALsizei increment = converter->mIncrement;
     ALsizei pos = 0;
-    FPUCtl oldMode;
 
-    SetMixerFPUMode(&oldMode);
+    START_MIXER_MODE();
     while(pos < dstframes && *srcframes > 0)
     {
         ALfloat *restrict SrcData = ASSUME_ALIGNED(converter->mSrcSamples, 16);
@@ -344,7 +342,7 @@ ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALs
         dst = (ALbyte*)dst + DstFrameSize*DstSize;
         pos += DstSize;
     }
-    RestoreFPUMode(&oldMode);
+    END_MIXER_MODE();
 
     return pos;
 }

@@ -1030,7 +1030,7 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *p
     {
         SendSlots[i] = props->Send[i].Slot;
         if(!SendSlots[i] && i == 0)
-            SendSlots[i] = Device->DefaultSlot;
+            SendSlots[i] = ALContext->DefaultSlot;
         if(!SendSlots[i] || SendSlots[i]->Params.EffectType == AL_EFFECT_NULL)
         {
             SendSlots[i] = NULL;
@@ -1100,7 +1100,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
     {
         SendSlots[i] = props->Send[i].Slot;
         if(!SendSlots[i] && i == 0)
-            SendSlots[i] = Device->DefaultSlot;
+            SendSlots[i] = ALContext->DefaultSlot;
         if(!SendSlots[i] || SendSlots[i]->Params.EffectType == AL_EFFECT_NULL)
         {
             SendSlots[i] = NULL;
@@ -1630,18 +1630,18 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
 
         IncrementRef(&device->MixCount);
 
-        if(device->DefaultSlot != NULL)
-        {
-            ALeffectslot *slot = device->DefaultSlot;
-            CalcEffectSlotParams(slot, device);
-            for(c = 0;c < slot->NumChannels;c++)
-                memset(slot->WetBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
-        }
-
         ctx = ATOMIC_LOAD(&device->ContextList, almemory_order_acquire);
         while(ctx)
         {
             const struct ALeffectslotArray *auxslots;
+
+            if(ctx->DefaultSlot != NULL)
+            {
+                ALeffectslot *slot = ctx->DefaultSlot;
+                CalcEffectSlotParams(slot, device);
+                for(c = 0;c < slot->NumChannels;c++)
+                    memset(slot->WetBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
+            }
 
             auxslots = ATOMIC_LOAD(&ctx->ActiveAuxSlots, almemory_order_acquire);
             UpdateContextSources(ctx, auxslots);
@@ -1678,15 +1678,15 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                                  state->OutChannels);
             }
 
-            ctx = ctx->next;
-        }
+            if(ctx->DefaultSlot != NULL)
+            {
+                const ALeffectslot *slot = ctx->DefaultSlot;
+                ALeffectState *state = slot->Params.EffectState;
+                V(state,process)(SamplesToDo, slot->WetBuffer, state->OutBuffer,
+                                state->OutChannels);
+            }
 
-        if(device->DefaultSlot != NULL)
-        {
-            const ALeffectslot *slot = device->DefaultSlot;
-            ALeffectState *state = slot->Params.EffectState;
-            V(state,process)(SamplesToDo, slot->WetBuffer, state->OutBuffer,
-                             state->OutChannels);
+            ctx = ctx->next;
         }
 
         /* Increment the clock time. Every second's worth of samples is

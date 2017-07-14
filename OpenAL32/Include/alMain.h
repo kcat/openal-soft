@@ -798,9 +798,6 @@ struct ALCdevice_struct
      */
     RefCount MixCount;
 
-    /* Default effect slot */
-    struct ALeffectslot *DefaultSlot;
-
     // Contexts created on this device
     ATOMIC(ALCcontext*) ContextList;
 
@@ -808,9 +805,6 @@ struct ALCdevice_struct
     struct ALCbackend *Backend;
 
     ALCdevice *volatile next;
-
-    /* Memory space used by the default slot (Playback devices only) */
-    alignas(16) ALCbyte _slot_mem[];
 };
 
 // Frequency was requested by the app or config file
@@ -872,12 +866,15 @@ struct ALCcontext_struct {
 
     ATOMIC(struct ALeffectslotArray*) ActiveAuxSlots;
 
+    /* Default effect slot */
+    struct ALeffectslot *DefaultSlot;
+
     ALCdevice  *Device;
     const ALCchar *ExtensionList;
 
     ALCcontext *volatile next;
 
-    /* Memory space used by the listener */
+    /* Memory space used by the listener (and possibly default effect slot) */
     alignas(16) ALCbyte _listener_mem[];
 };
 

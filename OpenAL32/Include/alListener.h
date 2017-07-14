@@ -26,7 +26,7 @@ struct ALlistenerProps {
 };
 
 typedef struct ALlistener {
-    ALfloat Position[3];
+    alignas(16) ALfloat Position[3];
     ALfloat Velocity[3];
     ALfloat Forward[3];
     ALfloat Up[3];

@@ -2549,8 +2549,17 @@ static ALvoid InitContext(ALCcontext *Context)
     InitUIntMap(&Context->SourceMap, Context->Device->SourcesMax);
     InitUIntMap(&Context->EffectSlotMap, Context->Device->AuxiliaryEffectSlotMax);
 
-    auxslots = al_calloc(DEF_ALIGN, sizeof(struct ALeffectslotArray));
-    auxslots->count = 0;
+    if(Context->DefaultSlot)
+    {
+        auxslots = al_calloc(DEF_ALIGN, FAM_SIZE(struct ALeffectslotArray, slot, 1));
+        auxslots->count = 1;
+        auxslots->slot[0] = Context->DefaultSlot;
+    }
+    else
+    {
+        auxslots = al_calloc(DEF_ALIGN, sizeof(struct ALeffectslotArray));
+        auxslots->count = 0;
+    }
     ATOMIC_INIT(&Context->ActiveAuxSlots, auxslots);
 
     //Set globals

@@ -1633,14 +1633,6 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
         {
             const struct ALeffectslotArray *auxslots;
 
-            if(ctx->DefaultSlot != NULL)
-            {
-                ALeffectslot *slot = ctx->DefaultSlot;
-                CalcEffectSlotParams(slot, device);
-                for(c = 0;c < slot->NumChannels;c++)
-                    memset(slot->WetBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
-            }
-
             auxslots = ATOMIC_LOAD(&ctx->ActiveAuxSlots, almemory_order_acquire);
             UpdateContextSources(ctx, auxslots);
 
@@ -1674,14 +1666,6 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
                 ALeffectState *state = slot->Params.EffectState;
                 V(state,process)(SamplesToDo, slot->WetBuffer, state->OutBuffer,
                                  state->OutChannels);
-            }
-
-            if(ctx->DefaultSlot != NULL)
-            {
-                const ALeffectslot *slot = ctx->DefaultSlot;
-                ALeffectState *state = slot->Params.EffectState;
-                V(state,process)(SamplesToDo, slot->WetBuffer, state->OutBuffer,
-                                state->OutChannels);
             }
 
             ctx = ctx->next;

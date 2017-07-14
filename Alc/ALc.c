@@ -3617,7 +3617,26 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     ATOMIC_INIT(&ALContext->ActiveAuxSlots, NULL);
     ALContext->Device = device;
 
-    if(DefaultEffect.type != AL_EFFECT_NULL)
+    if((err=UpdateDeviceParams(device, attrList)) != ALC_NO_ERROR)
+    {
+        almtx_unlock(&device->BackendLock);
+
+        al_free(ALContext);
+        ALContext = NULL;
+
+        alcSetError(device, err);
+        if(err == ALC_INVALID_DEVICE)
+        {
+            V0(device->Backend,lock)();
+            aluHandleDisconnect(device);
+            V0(device->Backend,unlock)();
+        }
+        ALCdevice_DecRef(device);
+        return NULL;
+    }
+    AllocateVoices(ALContext, 256, device->NumAuxSends);
+
+    if(DefaultEffect.type != AL_EFFECT_NULL && device->Type == Playback)
     {
         ALContext->DefaultSlot = (ALeffectslot*)(ALContext->_listener_mem + sizeof(ALlistener));
         if(InitEffectSlot(ALContext->DefaultSlot) != AL_NO_ERROR)
@@ -3635,46 +3654,23 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
                 ERR("Failed to initialize the default effect\n");
             }
         }
-    }
-
-    if((err=UpdateDeviceParams(device, attrList)) != ALC_NO_ERROR)
-    {
-        almtx_unlock(&device->BackendLock);
-
-        al_free(ALContext->Voices);
-        ALContext->Voices = NULL;
-
-        al_free(ALContext);
-        ALContext = NULL;
-
-        alcSetError(device, err);
-        if(err == ALC_INVALID_DEVICE)
+        if(ALContext->DefaultSlot)
         {
-            V0(device->Backend,lock)();
-            aluHandleDisconnect(device);
-            V0(device->Backend,unlock)();
-        }
-        ALCdevice_DecRef(device);
-        return NULL;
-    }
-    AllocateVoices(ALContext, 256, device->NumAuxSends);
+            ALeffectslot *slot = ALContext->DefaultSlot;
+            ALeffectState *state = slot->Effect.State;
 
-    if(ALContext->DefaultSlot)
-    {
-        ALeffectslot *slot = ALContext->DefaultSlot;
-        ALeffectState *state = slot->Effect.State;
-
-        START_MIXER_MODE();
-        state->OutBuffer = device->Dry.Buffer;
-        state->OutChannels = device->Dry.NumChannels;
-        if(V(state,deviceUpdate)(device) != AL_FALSE)
-            UpdateEffectSlotProps(slot);
-        else
-        {
-            DeinitEffectSlot(ALContext->DefaultSlot);
-            ALContext->DefaultSlot = NULL;
+            START_MIXER_MODE();
+            state->OutBuffer = device->Dry.Buffer;
+            state->OutChannels = device->Dry.NumChannels;
+            if(V(state,deviceUpdate)(device) != AL_FALSE)
+                UpdateEffectSlotProps(slot);
+            else
+            {
+                DeinitEffectSlot(ALContext->DefaultSlot);
+                ALContext->DefaultSlot = NULL;
+            }
+            END_MIXER_MODE();
         }
-        END_MIXER_MODE();
     }
 
     ALCdevice_IncRef(ALContext->Device);

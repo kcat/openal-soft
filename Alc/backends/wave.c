@@ -320,8 +320,9 @@ static ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
     // 32-bit val, channel mask
     fwrite32le(chanmask, self->mFile);
     // 16 byte GUID, sub-type format
-    val = fwrite(((bits==32) ? (isbformat ? SUBTYPE_BFORMAT_FLOAT : SUBTYPE_FLOAT) :
-                               (isbformat ? SUBTYPE_BFORMAT_PCM : SUBTYPE_PCM)), 1, 16, self->mFile);
+    val = fwrite((device->FmtType == DevFmtFloat) ?
+                 (isbformat ? SUBTYPE_BFORMAT_FLOAT : SUBTYPE_FLOAT) :
+                 (isbformat ? SUBTYPE_BFORMAT_PCM : SUBTYPE_PCM), 1, 16, self->mFile);
     (void)val;
 
     fputs("data", self->mFile);

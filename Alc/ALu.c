@@ -1583,13 +1583,13 @@ DECL_TEMPLATE(ALuint, aluF2UI, aluF2I, 2147483648u)
 
 #define DECL_TEMPLATE(T, func)                                                \
 static void Write##T(const ALfloatBUFFERSIZE *InBuffer, ALvoid *OutBuffer,    \
-                     ALsizei SamplesToDo, ALsizei numchans)                   \
+                     ALsizei Offset, ALsizei SamplesToDo, ALsizei numchans)   \
 {                                                                             \
     ALsizei i, j;                                                             \
     for(j = 0;j < numchans;j++)                                               \
     {                                                                         \
         const ALfloat *restrict in = ASSUME_ALIGNED(InBuffer[j], 16);         \
-        T *restrict out = (T*)OutBuffer + j;                                  \
+        T *restrict out = (T*)OutBuffer + Offset*numchans + j;                \
                                                                               \
         for(i = 0;i < SamplesToDo;i++)                                        \
             out[i*numchans] = func(in[i]);                                    \
@@ -1607,16 +1607,17 @@ DECL_TEMPLATE(ALbyte, aluF2B)
 #undef DECL_TEMPLATE
 
 
-void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
+void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
 {
     ALsizei SamplesToDo;
+    ALsizei SamplesDone;
     ALCcontext *ctx;
     ALsizei i, c;
 
     START_MIXER_MODE();
-    while(size > 0)
+    for(SamplesDone = 0;SamplesDone < NumSamples;)
     {
-        SamplesToDo = mini(size, BUFFERSIZE);
+        SamplesToDo = mini(NumSamples-SamplesDone, BUFFERSIZE);
         for(c = 0;c < device->Dry.NumChannels;c++)
             memset(device->Dry.Buffer[c], 0, SamplesToDo*sizeof(ALfloat));
         if(device->Dry.Buffer != device->FOAOut.Buffer)
@@ -1752,54 +1753,53 @@ void aluMixData(ALCdevice *device, ALvoid *buffer, ALsizei size)
             }
         }
 
-        if(buffer)
+        if(OutBuffer)
         {
-            ALfloat (*OutBuffer)[BUFFERSIZE] = device->RealOut.Buffer;
-            ALsizei OutChannels = device->RealOut.NumChannels;
+            ALfloat (*Buffer)[BUFFERSIZE] = device->RealOut.Buffer;
+            ALsizei Channels = device->RealOut.NumChannels;
 
             /* Use NFCtrlData for temp value storage. */
-            ApplyDistanceComp(OutBuffer, device->ChannelDelay, device->NFCtrlData,
-                              SamplesToDo, OutChannels);
+            ApplyDistanceComp(Buffer, device->ChannelDelay, device->NFCtrlData,
+                              SamplesToDo, Channels);
 
             if(device->Limiter)
-                ApplyCompression(device->Limiter, OutChannels, SamplesToDo, OutBuffer);
+                ApplyCompression(device->Limiter, Channels, SamplesToDo, Buffer);
 
             if(device->DitherDepth > 0.0f)
-                ApplyDither(OutBuffer, &device->DitherSeed, device->DitherDepth, SamplesToDo,
-                            OutChannels);
+                ApplyDither(Buffer, &device->DitherSeed, device->DitherDepth, SamplesToDo,
+                            Channels);
 
-#define WRITE(T, a, b, c, d) do {                                             \
-    Write##T(SAFE_CONST(ALfloatBUFFERSIZE*,(a)), (b), (c), (d));              \
-    buffer = (T*)buffer + (c)*(d);                                            \
+#define WRITE(T, a, b, c, d, e) do {                                          \
+    Write##T(SAFE_CONST(ALfloatBUFFERSIZE*,(a)), (b), (c), (d), (e));         \
 } while(0)
             switch(device->FmtType)
             {
                 case DevFmtByte:
-                    WRITE(ALbyte, OutBuffer, buffer, SamplesToDo, OutChannels);
+                    WRITE(ALbyte, Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
                     break;
                 case DevFmtUByte:
-                    WRITE(ALubyte, OutBuffer, buffer, SamplesToDo, OutChannels);
+                    WRITE(ALubyte, Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
                     break;
                 case DevFmtShort:
-                    WRITE(ALshort, OutBuffer, buffer, SamplesToDo, OutChannels);
+                    WRITE(ALshort, Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
                     break;
                 case DevFmtUShort:
-                    WRITE(ALushort, OutBuffer, buffer, SamplesToDo, OutChannels);
+                    WRITE(ALushort, Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
                     break;
                 case DevFmtInt:
-                    WRITE(ALint, OutBuffer, buffer, SamplesToDo, OutChannels);
+                    WRITE(ALint, Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
                     break;
                 case DevFmtUInt:
-                    WRITE(ALuint, OutBuffer, buffer, SamplesToDo, OutChannels);
+                    WRITE(ALuint, Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
                     break;
                 case DevFmtFloat:
-                    WRITE(ALfloat, OutBuffer, buffer, SamplesToDo, OutChannels);
+                    WRITE(ALfloat, Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
                     break;
             }
 #undef WRITE
         }
 
-        size -= SamplesToDo;
+        SamplesDone += SamplesToDo;
     }
     END_MIXER_MODE();
 }

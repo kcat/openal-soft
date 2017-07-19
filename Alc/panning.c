@@ -152,8 +152,7 @@ void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat spread, ALfloat coeffs[MA
          * ZH5 = -0.0625*sqrt(pi) * (-1+ca)*(ca+1)*(21*ca*ca*ca*ca - 14*ca*ca + 1);
          *
          * The gain of the source is compensated for size, so that the
-         * loundness doesn't depend on the spread. That is, the factors are
-         * scaled so that ZH0 remains 1 regardless of the spread. Thus:
+         * loundness doesn't depend on the spread. Thus:
          *
          * ZH0 = 1.0f;
          * ZH1 = 0.5f * (ca+1.0f);
@@ -163,11 +162,13 @@ void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat spread, ALfloat coeffs[MA
          * ZH5 = 0.0625f * (ca+1.0f)*(21.0f*ca*ca*ca*ca - 14.0f*ca*ca + 1.0f);
          */
         ALfloat ca = cosf(spread * 0.5f);
+        /* Increase the source volume by up to +3dB for a full spread. */
+        ALfloat scale = sqrtf(1.0f + spread/F_TAU);
 
-        ALfloat ZH0_norm = 1.0f;
-        ALfloat ZH1_norm = 0.5f * (ca+1.f);
-        ALfloat ZH2_norm = 0.5f * (ca+1.f)*ca;
-        ALfloat ZH3_norm = 0.125f * (ca+1.f)*(5.f*ca*ca-1.f);
+        ALfloat ZH0_norm = scale;
+        ALfloat ZH1_norm = 0.5f * (ca+1.f) * scale;
+        ALfloat ZH2_norm = 0.5f * (ca+1.f)*ca * scale;
+        ALfloat ZH3_norm = 0.125f * (ca+1.f)*(5.f*ca*ca-1.f) * scale;
 
         /* Zeroth-order */
         coeffs[0]  *= ZH0_norm;

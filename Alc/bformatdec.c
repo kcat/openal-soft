@@ -75,6 +75,45 @@ void bandsplit_process(BandSplitter *splitter, ALfloat *restrict hpout, ALfloat 
 }
 
 
+void splitterap_init(SplitterAllpass *splitter, ALfloat freq_mult)
+{
+    ALfloat w = freq_mult * F_TAU;
+    ALfloat cw = cosf(w);
+    if(cw > FLT_EPSILON)
+        splitter->coeff = (sinf(w) - 1.0f) / cw;
+    else
+        splitter->coeff = cw * -0.5f;
+
+    splitter->z1 = 0.0f;
+}
+
+void splitterap_clear(SplitterAllpass *splitter)
+{
+    splitter->z1 = 0.0f;
+}
+
+void splitterap_process(SplitterAllpass *splitter, ALfloat *restrict samples, ALsizei count)
+{
+    ALfloat coeff, d, x;
+    ALfloat z1;
+    ALsizei i;
+
+    coeff = splitter->coeff;
+    z1 = splitter->z1;
+    for(i = 0;i < count;i++)
+    {
+        x = samples[i];
+
+        d = x - coeff*z1;
+        x = z1 + coeff*d;
+        z1 = d;
+
+        samples[i] = x;
+    }
+    splitter->z1 = z1;
+}
+
+
 static const ALfloat UnitScale[MAX_AMBI_COEFFS] = {
     1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
     1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f

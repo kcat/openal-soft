@@ -60,4 +60,16 @@ void bandsplit_clear(BandSplitter *splitter);
 void bandsplit_process(BandSplitter *splitter, ALfloat *restrict hpout, ALfloat *restrict lpout,
                        const ALfloat *input, ALsizei count);
 
+/* The all-pass portion of the band splitter. Applies the same phase shift
+ * without splitting the signal.
+ */
+typedef struct SplitterAllpass {
+    ALfloat coeff;
+    ALfloat z1;
+} SplitterAllpass;
+
+void splitterap_init(SplitterAllpass *splitter, ALfloat freq_mult);
+void splitterap_clear(SplitterAllpass *splitter);
+void splitterap_process(SplitterAllpass *splitter, ALfloat *restrict samples, ALsizei count);
+
 #endif /* BFORMATDEC_H */

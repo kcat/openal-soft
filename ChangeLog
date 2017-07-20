@@ -7,9 +7,13 @@ openal-soft-1.18.1:
 
     Fixed MMDevAPI capture with sample rates not matching the backing device.
 
+    Fixed int32 output for the Wave Writer.
+
     Added correct retrieval of the executable's path on FreeBSD.
 
     Added a config option to specify the dithering depth.
+
+    Added a 5.1 decoder preset that excludes front-center output.
 
 openal-soft-1.18.0:
 

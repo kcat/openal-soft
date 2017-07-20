@@ -3648,37 +3648,12 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     if(DefaultEffect.type != AL_EFFECT_NULL && device->Type == Playback)
     {
         ALContext->DefaultSlot = (ALeffectslot*)(ALContext->_listener_mem + sizeof(ALlistener));
-        if(InitEffectSlot(ALContext->DefaultSlot) != AL_NO_ERROR)
+        if(InitEffectSlot(ALContext->DefaultSlot) == AL_NO_ERROR)
+            aluInitEffectPanning(ALContext->DefaultSlot);
+        else
         {
             ALContext->DefaultSlot = NULL;
             ERR("Failed to initialize the default effect slot\n");
-        }
-        else
-        {
-            aluInitEffectPanning(ALContext->DefaultSlot);
-            if(InitializeEffect(device, ALContext->DefaultSlot, &DefaultEffect) != AL_NO_ERROR)
-            {
-                DeinitEffectSlot(ALContext->DefaultSlot);
-                ALContext->DefaultSlot = NULL;
-                ERR("Failed to initialize the default effect\n");
-            }
-        }
-        if(ALContext->DefaultSlot)
-        {
-            ALeffectslot *slot = ALContext->DefaultSlot;
-            ALeffectState *state = slot->Effect.State;
-
-            START_MIXER_MODE();
-            state->OutBuffer = device->Dry.Buffer;
-            state->OutChannels = device->Dry.NumChannels;
-            if(V(state,deviceUpdate)(device) != AL_FALSE)
-                UpdateEffectSlotProps(slot);
-            else
-            {
-                DeinitEffectSlot(ALContext->DefaultSlot);
-                ALContext->DefaultSlot = NULL;
-            }
-            END_MIXER_MODE();
         }
     }
 
@@ -3708,6 +3683,14 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
                                                      ALContext) == 0);
     }
     almtx_unlock(&device->BackendLock);
+
+    if(ALContext->DefaultSlot)
+    {
+        if(InitializeEffect(device, ALContext->DefaultSlot, &DefaultEffect) == AL_NO_ERROR)
+            UpdateEffectSlotProps(ALContext->DefaultSlot);
+        else
+            ERR("Failed to initialize the default effect\n");
+    }
 
     ALCdevice_DecRef(device);
 

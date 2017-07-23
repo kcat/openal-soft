@@ -821,7 +821,11 @@ void ALCossBackendFactory_probe(ALCossBackendFactory* UNUSED(self), enum DevProb
             cur = &oss_playback;
             while(cur != NULL)
             {
-                AppendAllDevicesList(cur->handle);
+#ifdef HAVE_STAT
+                struct stat buf;
+                if(stat(cur->path, &buf) == 0)
+#endif
+                    AppendAllDevicesList(cur->handle);
                 cur = cur->next;
             }
             break;
@@ -832,7 +836,11 @@ void ALCossBackendFactory_probe(ALCossBackendFactory* UNUSED(self), enum DevProb
             cur = &oss_capture;
             while(cur != NULL)
             {
-                AppendCaptureDeviceList(cur->handle);
+#ifdef HAVE_STAT
+                struct stat buf;
+                if(stat(cur->path, &buf) == 0)
+#endif
+                    AppendCaptureDeviceList(cur->handle);
                 cur = cur->next;
             }
             break;

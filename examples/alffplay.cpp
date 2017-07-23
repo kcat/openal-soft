@@ -16,6 +16,7 @@
 #include <atomic>
 #include <mutex>
 #include <deque>
+#include <array>
 
 extern "C" {
 #include "libavcodec/avcodec.h"

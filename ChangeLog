@@ -9,6 +9,8 @@ openal-soft-1.18.1:
 
     Fixed int32 output for the Wave Writer.
 
+    Fixed enumeration of OSS devices that are missing device files.
+
     Added correct retrieval of the executable's path on FreeBSD.
 
     Added a config option to specify the dithering depth.

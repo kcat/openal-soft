@@ -37,7 +37,7 @@
 
 /* Current data set limits defined by the makehrtf utility. */
 #define MIN_IR_SIZE                  (8)
-#define MAX_IR_SIZE                  (128)
+#define MAX_IR_SIZE                  (512)
 #define MOD_IR_SIZE                  (8)
 
 #define MIN_EV_COUNT                 (5)

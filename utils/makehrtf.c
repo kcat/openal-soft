@@ -2,7 +2,7 @@
  * HRTF utility for producing and demonstrating the process of creating an
  * OpenAL Soft compatible HRIR data set.
  *
- * Copyright (C) 2011-2014  Christopher Fitzgerald
+ * Copyright (C) 2011-2017  Christopher Fitzgerald
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -83,7 +83,7 @@
 #endif
 
 // The epsilon used to maintain signal stability.
-#define EPSILON                      (1e-15)
+#define EPSILON                      (1e-9)
 
 // Constants for accessing the token reader's ring buffer.
 #define TR_RING_BITS                 (16)
@@ -145,16 +145,16 @@
 #define MAX_ASCII_BITS               (32)
 
 // The limits to the FFT window size override on the command line.
-#define MIN_FFTSIZE                  (512)
-#define MAX_FFTSIZE                  (16384)
+#define MIN_FFTSIZE                  (65536)
+#define MAX_FFTSIZE                  (131072)
 
 // The limits to the equalization range limit on the command line.
 #define MIN_LIMIT                    (2.0)
 #define MAX_LIMIT                    (120.0)
 
 // The limits to the truncation window size on the command line.
-#define MIN_TRUNCSIZE                (8)
-#define MAX_TRUNCSIZE                (128)
+#define MIN_TRUNCSIZE                (16)
+#define MAX_TRUNCSIZE                (512)
 
 // The limits to the custom head radius on the command line.
 #define MIN_CUSTOM_RADIUS            (0.05)
@@ -165,6 +165,7 @@
 #define MOD_TRUNCSIZE                (8)
 
 // The defaults for the command line options.
+#define DEFAULT_FFTSIZE              (65536)
 #define DEFAULT_EQUALIZE             (1)
 #define DEFAULT_SURFACE              (1)
 #define DEFAULT_LIMIT                (24.0)
@@ -985,10 +986,10 @@ static void FftInverse(const uint n, const double *inR, const double *inI, doubl
     }
 }
 
-/* Calculate the complex helical sequence (or discrete-time analytical
- * signal) of the given input using the Hilbert transform.  Given the
- * negative natural logarithm of a signal's magnitude response, the imaginary
- * components can be used as the angles for minimum-phase reconstruction.
+/* Calculate the complex helical sequence (or discrete-time analytical signal)
+ * of the given input using the Hilbert transform. Given the natural logarithm
+ * of a signal's magnitude response, the imaginary components can be used as
+ * the angles for minimum-phase reconstruction.
  */
 static void Hilbert(const uint n, const double *in, double *outR, double *outI)
 {
@@ -1009,24 +1010,20 @@ static void Hilbert(const uint n, const double *in, double *outR, double *outI)
             outI[i] = 0.0;
         }
     }
-    FftForward(n, outR, outI, outR, outI);
-    /* Currently the Fourier routines operate only on point counts that are
-     * powers of two.  If that changes and n is odd, the following conditional
-     * should be:  i < (n + 1) / 2.
-     */
-    for(i = 1;i < (n/2);i++)
+    FftInverse(n, outR, outI, outR, outI);
+    for(i = 1;i < (n+1)/2;i++)
     {
         outR[i] *= 2.0;
         outI[i] *= 2.0;
     }
-    // If n is odd, the following increment should be skipped.
-    i++;
+    /* Increment i if n is even. */
+    i += (n&1)^1;
     for(;i < n;i++)
     {
         outR[i] = 0.0;
         outI[i] = 0.0;
     }
-    FftInverse(n, outR, outI, outR, outI);
+    FftForward(n, outR, outI, outR, outI);
 }
 
 /* Calculate the magnitude response of the given input.  This is used in
@@ -1080,15 +1077,15 @@ static void LimitMagnitudeResponse(const uint n, const double limit, const doubl
 static void MinimumPhase(const uint n, const double *in, double *outR, double *outI)
 {
     const uint m = 1 + (n / 2);
-    double aR, aI;
     double *mags;
+    double aR, aI;
     uint i;
 
     mags = CreateArray(n);
     for(i = 0;i < m;i++)
     {
-        mags[i] = fmax(in[i], EPSILON);
-        outR[i] = -log(mags[i]);
+        mags[i] = fmax(EPSILON, in[i]);
+        outR[i] = log(mags[i]);
     }
     for(;i < n;i++)
     {
@@ -1097,9 +1094,8 @@ static void MinimumPhase(const uint n, const double *in, double *outR, double *o
     }
     Hilbert(n, outR, outR, outI);
     // Remove any DC offset the filter has.
-    outR[0] = 0.0;
-    outI[0] = 0.0;
-    for(i = 1;i < n;i++)
+    mags[0] = EPSILON;
+    for(i = 0;i < n;i++)
     {
         ComplexExp(0.0, outI[i], &aR, &aI);
         ComplexMul(mags[i], 0.0, aR, aI, &outR[i], &outI[i]);
@@ -1272,13 +1268,13 @@ static void ResamplerSetup(ResamplerT *rs, const uint srcRate, const uint dstRat
      */
     if(rs->mP > rs->mQ)
     {
-        cutoff = 0.45 / rs->mP;
-        width = 0.1 / rs->mP;
+        cutoff = 0.475 / rs->mP;
+        width = 0.05 / rs->mP;
     }
     else
     {
-        cutoff = 0.45 / rs->mQ;
-        width = 0.1 / rs->mQ;
+        cutoff = 0.475 / rs->mQ;
+        width = 0.05 / rs->mQ;
     }
     // A rejection of -180 dB is used for the stop band.
     l = CalcKaiserOrder(180.0, width) / 2;
@@ -1923,12 +1919,13 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
 
 // Calculate the onset time of an HRIR and average it with any existing
 // timing for its elevation and azimuth.
-static void AverageHrirOnset(const double *hrir, const uint n, const double f, const uint ei, const uint ai, const HrirDataT *hData)
+static void AverageHrirOnset(const double *hrir, const double f, const uint ei, const uint ai, const HrirDataT *hData)
 {
     double mag;
-    uint i, j;
+    uint n, i, j;
 
     mag = 0.0;
+    n = hData->mIrPoints;
     for(i = 0;i < n;i++)
         mag = fmax(fabs(hrir[i]), mag);
     mag *= 0.15;
@@ -1943,7 +1940,7 @@ static void AverageHrirOnset(const double *hrir, const uint n, const double f, c
 
 // Calculate the magnitude response of an HRIR and average it with any
 // existing responses for its elevation and azimuth.
-static void AverageHrirMagnitude(const double *hrir, const uint npoints, const double f, const uint ei, const uint ai, const HrirDataT *hData)
+static void AverageHrirMagnitude(const double *hrir, const double f, const uint ei, const uint ai, const HrirDataT *hData)
 {
     double *re, *im;
     uint n, m, i, j;
@@ -1951,7 +1948,7 @@ static void AverageHrirMagnitude(const double *hrir, const uint npoints, const d
     n = hData->mFftSize;
     re = CreateArray(n);
     im = CreateArray(n);
-    for(i = 0;i < npoints;i++)
+    for(i = 0;i < hData->mIrPoints;i++)
     {
         re[i] = hrir[i];
         im[i] = 0.0;
@@ -2105,6 +2102,23 @@ static void ReconstructHrirs(const HrirDataT *hData)
     }
     DestroyArray (im);
     DestroyArray (re);
+}
+
+// Resamples the HRIRs for use at the given sampling rate.
+static void ResampleHrirs(const uint rate, HrirDataT *hData)
+{
+    uint n, step, start, end, j;
+    ResamplerT rs;
+
+    ResamplerSetup(&rs, hData->mIrRate, rate);
+    n = hData->mIrPoints;
+    step = hData->mIrSize;
+    start = hData->mEvOffset[hData->mEvStart] * step;
+    end = hData->mIrCount * step;
+    for(j = start;j < end;j += step)
+        ResamplerRun(&rs, n, &hData->mHrirs[j], n, &hData->mHrirs[j]);
+    ResamplerClear(&rs);
+    hData->mIrRate = rate;
 }
 
 /* Given an elevation index and an azimuth, calculate the indices of the two
@@ -2343,14 +2357,10 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
                 return 0;
             }
             hData->mIrPoints = points;
-            hData->mFftSize = fftSize;
             if(fftSize <= 0)
             {
-                points = 1;
-                while(points < (4 * hData->mIrPoints))
-                    points <<= 1;
-                hData->mFftSize = points;
-                hData->mIrSize = 1 + (points / 2);
+                hData->mFftSize = DEFAULT_FFTSIZE;
+                hData->mIrSize = 1 + (DEFAULT_FFTSIZE / 2);
             }
             else
             {
@@ -2596,37 +2606,17 @@ static int ReadSourceRef(TokenReaderT *tr, SourceRefT *src)
 }
 
 // Process the list of sources in the data set definition.
-static int ProcessSources(const HeadModelT model, const uint dstRate, TokenReaderT *tr, HrirDataT *hData)
+static int ProcessSources(const HeadModelT model, TokenReaderT *tr, HrirDataT *hData)
 {
     uint *setCount, *setFlag;
     uint line, col, ei, ai;
-    uint res_points;
     SourceRefT src;
     double factor;
     double *hrir;
-    ResamplerT rs;
-
-    ResamplerSetup(&rs, hData->mIrRate, dstRate);
-    /* Scale the number of IR points for resampling. This could be improved by
-     * also including space for the resampler build-up and fall-off (rs.mL*2),
-     * instead of clipping them off, but that could affect the HRTDs. It's not
-     * a big deal to exclude them for sources that aren't already minimum-
-     * phase).
-     */
-    res_points = (uint)(((uint64)hData->mIrPoints*dstRate + hData->mIrRate-1) /
-                        hData->mIrRate);
-    /* Clamp to the IR size to prevent overflow, and don't go less than the
-     * original point count.
-     */
-    if(res_points > hData->mIrSize)
-        res_points = hData->mIrSize;
-    else if(res_points < hData->mIrPoints)
-        res_points = hData->mIrPoints;
 
     setCount = (uint*)calloc(hData->mEvCount, sizeof(uint));
     setFlag = (uint*)calloc(hData->mIrCount, sizeof(uint));
-    hrir = CreateArray(res_points);
-
+    hrir = CreateArray(hData->mIrPoints);
     while(TrIsOperator(tr, "["))
     {
         TrIndication(tr, & line, & col);
@@ -2651,13 +2641,9 @@ static int ProcessSources(const HeadModelT model, const uint dstRate, TokenReade
             if(!LoadSource(&src, hData->mIrRate, hData->mIrPoints, hrir))
                 goto error;
 
-            if(hData->mIrRate != dstRate)
-                ResamplerRun(&rs, hData->mIrPoints, hrir,
-                             res_points, hrir);
-
             if(model == HM_DATASET)
-                AverageHrirOnset(hrir, res_points, 1.0 / factor, ei, ai, hData);
-            AverageHrirMagnitude(hrir, res_points, 1.0 / factor, ei, ai, hData);
+                AverageHrirOnset(hrir, 1.0 / factor, ei, ai, hData);
+            AverageHrirMagnitude(hrir, 1.0 / factor, ei, ai, hData);
             factor += 1.0;
             if(!TrIsOperator(tr, "+"))
                 break;
@@ -2666,8 +2652,6 @@ static int ProcessSources(const HeadModelT model, const uint dstRate, TokenReade
         setFlag[hData->mEvOffset[ei] + ai] = 1;
         setCount[ei]++;
     }
-    hData->mIrPoints = res_points;
-    hData->mIrRate = dstRate;
 
     ei = 0;
     while(ei < hData->mEvCount && setCount[ei] < 1)
@@ -2681,7 +2665,6 @@ static int ProcessSources(const HeadModelT model, const uint dstRate, TokenReade
         {
             if(!TrLoad(tr))
             {
-                ResamplerClear(&rs);
                 DestroyArray(hrir);
                 free(setFlag);
                 free(setCount);
@@ -2696,7 +2679,6 @@ static int ProcessSources(const HeadModelT model, const uint dstRate, TokenReade
         TrError(tr, "Missing source references.\n");
 
 error:
-    ResamplerClear(&rs);
     DestroyArray(hrir);
     free(setFlag);
     free(setCount);
@@ -2747,7 +2729,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
     }
     hData.mHrirs = CreateArray(hData.mIrCount * hData.mIrSize);
     hData.mHrtds = CreateArray(hData.mIrCount);
-    if(!ProcessSources(model, outRate ? outRate : hData.mIrRate, &tr, &hData))
+    if(!ProcessSources(model, &tr, &hData))
     {
         DestroyArray(hData.mHrtds);
         DestroyArray(hData.mHrirs);
@@ -2768,6 +2750,11 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
     }
     fprintf(stdout, "Performing minimum phase reconstruction...\n");
     ReconstructHrirs(&hData);
+    if(outRate != 0 && outRate != hData.mIrRate)
+    {
+        fprintf(stdout, "Resampling HRIRs...\n");
+        ResampleHrirs(outRate, &hData);
+    }
     fprintf(stdout, "Truncating minimum-phase HRIRs...\n");
     hData.mIrPoints = truncSize;
     fprintf(stdout, "Synthesizing missing elevations...\n");
@@ -2809,8 +2796,7 @@ static void PrintHelp(const char *argv0, FILE *ofile)
     fprintf(ofile, "Options:\n");
     fprintf(ofile, " -r=<rate>       Change the data set sample rate to the specified value and\n");
     fprintf(ofile, "                 resample the HRIRs accordingly.\n");
-    fprintf(ofile, " -f=<points>     Override the FFT window size (defaults to the first power-\n");
-    fprintf(ofile, "                 of-two that fits four times the number of HRIR points).\n");
+    fprintf(ofile, " -f=<points>     Override the FFT window size (default: %u).\n", DEFAULT_FFTSIZE);
     fprintf(ofile, " -e={on|off}     Toggle diffuse-field equalization (default: %s).\n", (DEFAULT_EQUALIZE ? "on" : "off"));
     fprintf(ofile, " -s={on|off}     Toggle surface-weighted diffuse-field average (default: %s).\n", (DEFAULT_SURFACE ? "on" : "off"));
     fprintf(ofile, " -l={<dB>|none}  Specify a limit to the magnitude range of the diffuse-field\n");

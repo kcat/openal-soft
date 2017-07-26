@@ -9,10 +9,6 @@
 #include "atomic.h"
 
 
-#define HRTFDELAY_BITS    (20)
-#define HRTFDELAY_FRACONE (1<<HRTFDELAY_BITS)
-#define HRTFDELAY_MASK    (HRTFDELAY_FRACONE-1)
-
 /* The maximum number of virtual speakers used to generate HRTF coefficients
  * for decoding B-Format.
  */

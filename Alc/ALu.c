@@ -1526,7 +1526,6 @@ static void ApplyDistanceComp(ALfloatBUFFERSIZE *restrict Samples, DistanceComp 
     }
 }
 
-
 static void ApplyDither(ALfloatBUFFERSIZE *restrict Samples, ALuint *dither_seed,
                         const ALfloat quant_scale, const ALsizei SamplesToDo,
                         const ALsizei numchans)
@@ -1555,9 +1554,9 @@ static void ApplyDither(ALfloatBUFFERSIZE *restrict Samples, ALuint *dither_seed
 }
 
 
-static inline ALfloat aluF2F(ALfloat val)
+static inline ALfloat Conv_ALfloat(ALfloat val)
 { return val; }
-static inline ALint aluF2I(ALfloat val)
+static inline ALint Conv_ALint(ALfloat val)
 {
     /* Floats only have a 24-bit mantissa, so [-16777216, +16777216] is the max
      * integer range normalized floats can be safely converted to (a bit of the
@@ -1565,24 +1564,23 @@ static inline ALint aluF2I(ALfloat val)
      */
     return fastf2i(clampf(val*16777216.0f, -16777216.0f, 16777215.0f))<<7;
 }
-static inline ALshort aluF2S(ALfloat val)
+static inline ALshort Conv_ALshort(ALfloat val)
 { return fastf2i(clampf(val*32768.0f, -32768.0f, 32767.0f)); }
-static inline ALbyte aluF2B(ALfloat val)
+static inline ALbyte Conv_ALbyte(ALfloat val)
 { return fastf2i(clampf(val*128.0f, -128.0f, 127.0f)); }
 
 /* Define unsigned output variations. */
-#define DECL_TEMPLATE(T, Name, func, O)                     \
-static inline T Name(ALfloat val)                           \
-{ return func(val)+O; }
+#define DECL_TEMPLATE(T, func, O)                             \
+static inline T Conv_##T(ALfloat val) { return func(val)+O; }
 
-DECL_TEMPLATE(ALubyte, aluF2UB, aluF2B, 128)
-DECL_TEMPLATE(ALushort, aluF2US, aluF2S, 32768)
-DECL_TEMPLATE(ALuint, aluF2UI, aluF2I, 2147483648u)
+DECL_TEMPLATE(ALubyte, Conv_ALbyte, 128)
+DECL_TEMPLATE(ALushort, Conv_ALshort, 32768)
+DECL_TEMPLATE(ALuint, Conv_ALint, 2147483648u)
 
 #undef DECL_TEMPLATE
 
-#define DECL_TEMPLATE(T, func)                                                \
-static void Write##T(const ALfloatBUFFERSIZE *InBuffer, ALvoid *OutBuffer,    \
+#define DECL_TEMPLATE(T, A)                                                   \
+static void Write##A(const ALfloatBUFFERSIZE *InBuffer, ALvoid *OutBuffer,    \
                      ALsizei Offset, ALsizei SamplesToDo, ALsizei numchans)   \
 {                                                                             \
     ALsizei i, j;                                                             \
@@ -1592,17 +1590,17 @@ static void Write##T(const ALfloatBUFFERSIZE *InBuffer, ALvoid *OutBuffer,    \
         T *restrict out = (T*)OutBuffer + Offset*numchans + j;                \
                                                                               \
         for(i = 0;i < SamplesToDo;i++)                                        \
-            out[i*numchans] = func(in[i]);                                    \
+            out[i*numchans] = Conv_##T(in[i]);                                \
     }                                                                         \
 }
 
-DECL_TEMPLATE(ALfloat, aluF2F)
-DECL_TEMPLATE(ALuint, aluF2UI)
-DECL_TEMPLATE(ALint, aluF2I)
-DECL_TEMPLATE(ALushort, aluF2US)
-DECL_TEMPLATE(ALshort, aluF2S)
-DECL_TEMPLATE(ALubyte, aluF2UB)
-DECL_TEMPLATE(ALbyte, aluF2B)
+DECL_TEMPLATE(ALfloat, F32)
+DECL_TEMPLATE(ALuint, UI32)
+DECL_TEMPLATE(ALint, I32)
+DECL_TEMPLATE(ALushort, UI16)
+DECL_TEMPLATE(ALshort, I16)
+DECL_TEMPLATE(ALubyte, UI8)
+DECL_TEMPLATE(ALbyte, I8)
 
 #undef DECL_TEMPLATE
 
@@ -1769,34 +1767,30 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
                 ApplyDither(Buffer, &device->DitherSeed, device->DitherDepth, SamplesToDo,
                             Channels);
 
-#define WRITE(T, a, b, c, d, e) do {                                          \
-    Write##T(SAFE_CONST(ALfloatBUFFERSIZE*,(a)), (b), (c), (d), (e));         \
-} while(0)
             switch(device->FmtType)
             {
                 case DevFmtByte:
-                    WRITE(ALbyte, Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
+                    WriteI8(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
                     break;
                 case DevFmtUByte:
-                    WRITE(ALubyte, Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
+                    WriteUI8(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
                     break;
                 case DevFmtShort:
-                    WRITE(ALshort, Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
+                    WriteI16(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
                     break;
                 case DevFmtUShort:
-                    WRITE(ALushort, Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
+                    WriteUI16(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
                     break;
                 case DevFmtInt:
-                    WRITE(ALint, Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
+                    WriteI32(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
                     break;
                 case DevFmtUInt:
-                    WRITE(ALuint, Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
+                    WriteUI32(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
                     break;
                 case DevFmtFloat:
-                    WRITE(ALfloat, Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
+                    WriteF32(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
                     break;
             }
-#undef WRITE
         }
 
         SamplesDone += SamplesToDo;

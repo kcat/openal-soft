@@ -329,34 +329,28 @@ typedef struct ChannelMap {
     ChannelConfig Config;
 } ChannelMap;
 
-static void SetChannelMap(const enum Channel *devchans, ChannelConfig *ambicoeffs,
-                          const ChannelMap *chanmap, size_t count, ALsizei *outcount)
+static void SetChannelMap(const enum Channel devchans[MAX_OUTPUT_CHANNELS],
+                          ChannelConfig *ambicoeffs, const ChannelMap *chanmap,
+                          ALsizei count, ALsizei *outcount)
 {
-    size_t j, k;
-    ALsizei i;
+    ALsizei maxchans = 0;
+    ALsizei i, j;
 
-    for(i = 0;i < MAX_OUTPUT_CHANNELS && devchans[i] != InvalidChannel;i++)
+    for(i = 0;i < count;i++)
     {
-        if(devchans[i] == LFE)
+        ALint idx = GetChannelIndex(devchans, chanmap[i].ChanName);
+        if(idx < 0)
         {
-            for(j = 0;j < MAX_AMBI_COEFFS;j++)
-                ambicoeffs[i][j] = 0.0f;
+            ERR("Failed to find %s channel in device\n",
+                GetLabelFromChannel(chanmap[i].ChanName));
             continue;
         }
 
-        for(j = 0;j < count;j++)
-        {
-            if(devchans[i] != chanmap[j].ChanName)
-                continue;
-
-            for(k = 0;k < MAX_AMBI_COEFFS;++k)
-                ambicoeffs[i][k] = chanmap[j].Config[k];
-            break;
-        }
-        if(j == count)
-            ERR("Failed to match %s channel (%u) in channel map\n", GetLabelFromChannel(devchans[i]), i);
+        maxchans = maxi(maxchans, idx+1);
+        for(j = 0;j < MAX_AMBI_COEFFS;j++)
+            ambicoeffs[idx][j] = chanmap[i].Config[j];
     }
-    *outcount = i;
+    *outcount = mini(maxchans, MAX_OUTPUT_CHANNELS);
 }
 
 static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei speakermap[MAX_OUTPUT_CHANNELS])
@@ -460,12 +454,12 @@ static const ChannelMap MonoCfg[1] = {
     { FrontLeft,   { 3.53553391e-1f,  2.04124145e-1f, 0.0f,  2.04124145e-1f } },
     { FrontRight,  { 3.53553391e-1f, -2.04124145e-1f, 0.0f,  2.04124145e-1f } },
     { BackRight,   { 3.53553391e-1f, -2.04124145e-1f, 0.0f, -2.04124145e-1f } },
-}, X51SideCfg[5] = {
+}, X51SideCfg[4] = {
     { SideLeft,    { 3.33000782e-1f,  1.89084803e-1f, 0.0f, -2.00042375e-1f, -2.12307769e-2f, 0.0f, 0.0f, 0.0f, -1.14579885e-2f } },
     { FrontLeft,   { 1.88542860e-1f,  1.27709292e-1f, 0.0f,  1.66295695e-1f,  7.30571517e-2f, 0.0f, 0.0f, 0.0f,  2.10901184e-2f } },
     { FrontRight,  { 1.88542860e-1f, -1.27709292e-1f, 0.0f,  1.66295695e-1f, -7.30571517e-2f, 0.0f, 0.0f, 0.0f,  2.10901184e-2f } },
     { SideRight,   { 3.33000782e-1f, -1.89084803e-1f, 0.0f, -2.00042375e-1f,  2.12307769e-2f, 0.0f, 0.0f, 0.0f, -1.14579885e-2f } },
-}, X51RearCfg[5] = {
+}, X51RearCfg[4] = {
     { BackLeft,    { 3.33000782e-1f,  1.89084803e-1f, 0.0f, -2.00042375e-1f, -2.12307769e-2f, 0.0f, 0.0f, 0.0f, -1.14579885e-2f } },
     { FrontLeft,   { 1.88542860e-1f,  1.27709292e-1f, 0.0f,  1.66295695e-1f,  7.30571517e-2f, 0.0f, 0.0f, 0.0f,  2.10901184e-2f } },
     { FrontRight,  { 1.88542860e-1f, -1.27709292e-1f, 0.0f,  1.66295695e-1f, -7.30571517e-2f, 0.0f, 0.0f, 0.0f,  2.10901184e-2f } },

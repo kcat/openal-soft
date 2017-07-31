@@ -951,9 +951,8 @@ static void InitHrtfPanning(ALCdevice *device)
 
     device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
 
-    device->Hrtf->IrSize = BuildBFormatHrtf(device->HrtfHandle,
-        device->Hrtf, device->Dry.NumChannels,
-        AmbiPoints, AmbiMatrix, COUNTOF(AmbiPoints)
+    BuildBFormatHrtf(device->HrtfHandle,
+        device->Hrtf, device->Dry.NumChannels, AmbiPoints, AmbiMatrix, COUNTOF(AmbiPoints)
     );
 }
 

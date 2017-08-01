@@ -1483,6 +1483,54 @@ static void UpdateContextSources(ALCcontext *ctx, const struct ALeffectslotArray
 }
 
 
+static void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*restrict Buffer)[BUFFERSIZE],
+                           int lidx, int ridx, int cidx, ALsizei SamplesToDo,
+                           ALsizei NumChannels)
+{
+    ALfloat (*restrict lsplit)[BUFFERSIZE] = ASSUME_ALIGNED(Stablizer->LSplit, 16);
+    ALfloat (*restrict rsplit)[BUFFERSIZE] = ASSUME_ALIGNED(Stablizer->RSplit, 16);
+    ALsizei i;
+
+    /* Apply an all-pass to all channels, except the front-left and front-
+     * right, so they maintain the same relative phase.
+     */
+    for(i = 0;i < NumChannels;i++)
+    {
+        if(i == lidx || i == ridx)
+            continue;
+        splitterap_process(&Stablizer->APFilter[i], Buffer[i], SamplesToDo);
+    }
+
+    bandsplit_process(&Stablizer->LFilter, lsplit[1], lsplit[0], Buffer[lidx], SamplesToDo);
+    bandsplit_process(&Stablizer->RFilter, rsplit[1], rsplit[0], Buffer[ridx], SamplesToDo);
+
+    for(i = 0;i < SamplesToDo;i++)
+    {
+        ALfloat lfsum, hfsum;
+        ALfloat m, s, c;
+
+        lfsum = lsplit[0][i] + rsplit[0][i];
+        hfsum = lsplit[1][i] + rsplit[1][i];
+        s = lsplit[0][i] + lsplit[1][i] - rsplit[0][i] - rsplit[1][i];
+
+        /* This pans the separate low- and high-frequency sums between being on
+         * the center channel and the left/right channels. The low-frequency
+         * sum is 1/3rd toward center (2/3rds on left/right) and the high-
+         * frequency sum is 1/4th toward center (3/4ths on left/right). These
+         * values can be tweaked.
+         */
+        m = lfsum*cosf(1.0f/3.0f * F_PI_2) + hfsum*cosf(1.0f/4.0f * F_PI_2);
+        c = lfsum*sinf(1.0f/3.0f * F_PI_2) + hfsum*sinf(1.0f/4.0f * F_PI_2);
+
+        /* The generated center channel signal adds to the existing signal,
+         * while the modified left and right channels replace.
+         */
+        Buffer[lidx][i] = (m + s) * 0.5f;
+        Buffer[ridx][i] = (m - s) * 0.5f;
+        Buffer[cidx][i] += c * 0.5f;
+    }
+}
+
 static void ApplyDistanceComp(ALfloatBUFFERSIZE *restrict Samples, DistanceComp *distcomp,
                               ALfloat *restrict Values, ALsizei SamplesToDo, ALsizei numchans)
 {
@@ -1755,6 +1803,17 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
         {
             ALfloat (*Buffer)[BUFFERSIZE] = device->RealOut.Buffer;
             ALsizei Channels = device->RealOut.NumChannels;
+
+            if(device->Stablizer)
+            {
+                int lidx = GetChannelIdxByName(device->RealOut, FrontLeft);
+                int ridx = GetChannelIdxByName(device->RealOut, FrontRight);
+                int cidx = GetChannelIdxByName(device->RealOut, FrontCenter);
+                assert(lidx >= 0 && ridx >= 0 && cidx >= 0);
+
+                ApplyStablizer(device->Stablizer, Buffer, lidx, ridx, cidx,
+                               SamplesToDo, Channels);
+            }
 
             /* Use NFCtrlData for temp value storage. */
             ApplyDistanceComp(Buffer, device->ChannelDelay, device->NFCtrlData,

@@ -181,6 +181,14 @@
 #  than the default has no effect.
 #sends = 16
 
+## front-stablizer:
+#  Applies filters to "stablize" front sound imaging. A psychoacoustic method
+#  is used to generate a front-center channel signal from the front-left and
+#  front-right channels, improving the front response by reducing the combing
+#  artifacts and phase errors. Consequently, it will only work with channel
+#  configurations that include front-left, front-right, and front-center.
+#front-stablizer = false
+
 ## output-limiter:
 #  Applies a gain limiter on the final mixed output. This reduces the volume
 #  when the output samples would otherwise clamp, avoiding excessive clipping

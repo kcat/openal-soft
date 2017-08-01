@@ -2433,6 +2433,9 @@ static ALCvoid FreeDevice(ALCdevice *device)
     ambiup_free(device->AmbiUp);
     device->AmbiUp = NULL;
 
+    al_free(device->Stablizer);
+    device->Stablizer = NULL;
+
     al_free(device->Limiter);
     device->Limiter = NULL;
 

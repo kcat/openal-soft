@@ -72,4 +72,12 @@ void splitterap_init(SplitterAllpass *splitter, ALfloat freq_mult);
 void splitterap_clear(SplitterAllpass *splitter);
 void splitterap_process(SplitterAllpass *splitter, ALfloat *restrict samples, ALsizei count);
 
+
+typedef struct FrontStablizer {
+    SplitterAllpass APFilter[MAX_OUTPUT_CHANNELS];
+    BandSplitter LFilter, RFilter;
+    alignas(16) ALfloat LSplit[2][BUFFERSIZE];
+    alignas(16) ALfloat RSplit[2][BUFFERSIZE];
+} FrontStablizer;
+
 #endif /* BFORMATDEC_H */

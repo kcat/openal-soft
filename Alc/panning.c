@@ -1006,6 +1006,9 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         device->ChannelDelay[i].Length = 0;
     }
 
+    al_free(device->Stablizer);
+    device->Stablizer = NULL;
+
     if(device->FmtChans != DevFmtStereo)
     {
         ALsizei speakermap[MAX_OUTPUT_CHANNELS];
@@ -1083,6 +1086,43 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
             InitHQPanning(device, pconf, speakermap);
         else
             InitCustomPanning(device, pconf, speakermap);
+
+        /* Enable the stablizer only for formats that have front-left, front-
+         * right, and front-center outputs.
+         */
+        switch(device->FmtChans)
+        {
+        case DevFmtX51:
+        case DevFmtX51Rear:
+        case DevFmtX61:
+        case DevFmtX71:
+            if(GetConfigValueBool(devname, NULL, "front-stablizer", 0))
+            {
+                /* Initialize band-splitting filters for the front-left and
+                 * front-right channels, with a crossover at 5khz (could be
+                 * higher).
+                 */
+                ALfloat scale = (ALfloat)(5000.0 / device->Frequency);
+                FrontStablizer *stablizer = al_calloc(16, sizeof(*stablizer));
+
+                bandsplit_init(&stablizer->LFilter, scale);
+                stablizer->RFilter = stablizer->LFilter;
+
+                /* Initialize all-pass filters for all other channels. */
+                splitterap_init(&stablizer->APFilter[0], scale);
+                for(i = 1;i < (size_t)device->RealOut.NumChannels;i++)
+                    stablizer->APFilter[i] = stablizer->APFilter[0];
+
+                device->Stablizer = stablizer;
+            }
+            break;
+        case DevFmtMono:
+        case DevFmtStereo:
+        case DevFmtQuad:
+        case DevFmtAmbi3D:
+            break;
+        }
+        TRACE("Front stablizer %s\n", device->Stablizer ? "enabled" : "disabled");
 
         ambdec_deinit(&conf);
         return;

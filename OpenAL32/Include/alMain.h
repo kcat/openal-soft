@@ -380,6 +380,7 @@ extern "C" {
 
 struct Hrtf;
 struct HrtfEntry;
+struct FrontStablizer;
 struct Compressor;
 
 
@@ -776,6 +777,8 @@ struct ALCdevice_struct
         ALfloat (*Buffer)[BUFFERSIZE];
         ALsizei NumChannels;
     } RealOut;
+
+    struct FrontStablizer *Stablizer;
 
     struct Compressor *Limiter;
 

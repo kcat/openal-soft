@@ -64,6 +64,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <limits.h>
 #include <ctype.h>
 #include <math.h>
 #ifdef HAVE_STRINGS_H
@@ -815,18 +816,22 @@ static double Lerp(const double a, const double b, const double f)
     return a + (f * (b - a));
 }
 
-// Performs a high-passed triangular probability density function dither from
-// a double to an integer.  It assumes the input sample is already scaled.
-static int HpTpdfDither(const double in, int *hpHist)
+static inline uint dither_rng(uint *seed)
 {
-    static const double PRNG_SCALE = 1.0 / (RAND_MAX+1.0);
-    int prn;
-    double out;
+    *seed = (*seed * 96314165) + 907633515;
+    return *seed;
+}
 
-    prn = rand();
-    out = round(in + (PRNG_SCALE * (prn - *hpHist)));
-    *hpHist = prn;
-    return (int)out;
+// Performs a triangular probability density function dither. It assumes the
+// input sample is already scaled.
+static inline double TpdfDither(const double in, uint *seed)
+{
+    static const double PRNG_SCALE = 1.0 / UINT_MAX;
+    uint prn0, prn1;
+
+    prn0 = dither_rng(seed);
+    prn1 = dither_rng(seed);
+    return round(in + (prn0*PRNG_SCALE - prn1*PRNG_SCALE));
 }
 
 // Allocates an array of doubles.
@@ -1867,8 +1872,9 @@ static int WriteBin4(const ByteOrderT order, const uint bytes, const uint32 in, 
 static int StoreMhr(const HrirDataT *hData, const char *filename)
 {
     uint e, step, end, n, j, i;
-    int hpHist, v;
+    uint dither_seed;
     FILE *fp;
+    int v;
 
     if((fp=fopen(filename, "wb")) == NULL)
     {
@@ -1891,13 +1897,15 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
     step = hData->mIrSize;
     end = hData->mIrCount * step;
     n = hData->mIrPoints;
-    srand(0x31DF840C);
+    dither_seed = 22222;
     for(j = 0;j < end;j += step)
     {
-        hpHist = 0;
+        double out[MAX_TRUNCSIZE];
+        for(i = 0;i < n;i++)
+            out[i] = TpdfDither(32767.0 * hData->mHrirs[j+i], &dither_seed);
         for(i = 0;i < n;i++)
         {
-            v = HpTpdfDither(32767.0 * hData->mHrirs[j+i], &hpHist);
+            v = (int)Clamp(out[i], -32768.0, 32767.0);
             if(!WriteBin4(BO_LITTLE, 2, (uint32)v, fp, filename))
                 return 0;
         }

@@ -403,6 +403,8 @@ enum HrtfRequestMode {
     Hrtf_Disable = 2,
 };
 
+void aluInit(void);
+
 void aluInitMixer(void);
 
 MixerFunc SelectMixer(void);

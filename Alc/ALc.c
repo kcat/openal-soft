@@ -1001,6 +1001,7 @@ static void alc_initconfig(void)
 #endif
     ConfigValueInt(NULL, NULL, "rt-prio", &RTPrioLevel);
 
+    aluInit();
     aluInitMixer();
 
     str = getenv("ALSOFT_TRAP_ERROR");

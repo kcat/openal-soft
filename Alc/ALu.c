@@ -43,18 +43,6 @@
 #include "backends/base.h"
 
 
-struct ChanMap {
-    enum Channel channel;
-    ALfloat angle;
-    ALfloat elevation;
-};
-
-/* Cone scalar */
-ALfloat ConeScale = 1.0f;
-
-/* Localized Z scalar for mono sources */
-ALfloat ZScale = 1.0f;
-
 extern inline ALfloat minf(ALfloat a, ALfloat b);
 extern inline ALfloat maxf(ALfloat a, ALfloat b);
 extern inline ALfloat clampf(ALfloat val, ALfloat min, ALfloat max);
@@ -92,12 +80,28 @@ extern inline void aluMatrixfSet(aluMatrixf *matrix,
                                  ALfloat m20, ALfloat m21, ALfloat m22, ALfloat m23,
                                  ALfloat m30, ALfloat m31, ALfloat m32, ALfloat m33);
 
+
+/* Cone scalar */
+ALfloat ConeScale = 1.0f;
+
+/* Localized Z scalar for mono sources */
+ALfloat ZScale = 1.0f;
+
 const aluMatrixf IdentityMatrixf = {{
     { 1.0f, 0.0f, 0.0f, 0.0f },
     { 0.0f, 1.0f, 0.0f, 0.0f },
     { 0.0f, 0.0f, 1.0f, 0.0f },
     { 0.0f, 0.0f, 0.0f, 1.0f },
 }};
+
+
+struct ChanMap {
+    enum Channel channel;
+    ALfloat angle;
+    ALfloat elevation;
+};
+
+static HrtfDirectMixerFunc MixDirectHrtf = MixDirectHrtf_C;
 
 
 void DeinitVoice(ALvoice *voice)
@@ -205,6 +209,11 @@ static aluVector aluMatrixfVector(const aluMatrixf *mtx, const aluVector *vec)
     return v;
 }
 
+
+void aluInit(void)
+{
+    MixDirectHrtf = SelectHrtfMixer();
+}
 
 /* Prepares the interpolator for a given rate (determined by increment).  A
  * result of AL_FALSE indicates that the filter output will completely cut
@@ -1729,7 +1738,6 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
 
         if(device->HrtfHandle)
         {
-            HrtfDirectMixerFunc HrtfMix;
             DirectHrtfState *state;
             int lidx, ridx;
 
@@ -1743,11 +1751,10 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
             ridx = GetChannelIdxByName(device->RealOut, FrontRight);
             assert(lidx != -1 && ridx != -1);
 
-            HrtfMix = SelectHrtfMixer();
             state = device->Hrtf;
             for(c = 0;c < device->Dry.NumChannels;c++)
             {
-                HrtfMix(device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
+                MixDirectHrtf(device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
                     device->Dry.Buffer[c], state->Offset, state->IrSize,
                     SAFE_CONST(ALfloat2*,state->Chan[c].Coeffs),
                     state->Chan[c].Values, SamplesToDo

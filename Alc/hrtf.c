@@ -96,7 +96,8 @@ static ALsizei CalcAzIndex(ALsizei azcount, ALfloat az, ALfloat *mu)
 /* Calculates static HRIR coefficients and delays for the given polar elevation
  * and azimuth in radians. The coefficients are normalized.
  */
-void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat (*coeffs)[2], ALsizei *delays)
+void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread,
+                   ALfloat (*restrict coeffs)[2], ALsizei *delays)
 {
     ALsizei evidx, azidx, idx[4];
     ALsizei evoffset;
@@ -164,6 +165,7 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
     idx[2] *= Hrtf->irSize;
     idx[3] *= Hrtf->irSize;
 
+    coeffs = ASSUME_ALIGNED(coeffs, 16);
     /* Calculate the blended HRIR coefficients. */
     coeffs[0][0] = PassthruCoeff * (1.0f-dirfact);
     coeffs[0][1] = PassthruCoeff * (1.0f-dirfact);
@@ -174,10 +176,11 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
     }
     for(c = 0;c < 4;c++)
     {
+        const ALfloat (*restrict srccoeffs)[2] = ASSUME_ALIGNED(Hrtf->coeffs+idx[c], 16);
         for(i = 0;i < Hrtf->irSize;i++)
         {
-            coeffs[i][0] += Hrtf->coeffs[idx[c]+i][0] * blend[c];
-            coeffs[i][1] += Hrtf->coeffs[idx[c]+i][1] * blend[c];
+            coeffs[i][0] += srccoeffs[i][0] * blend[c];
+            coeffs[i][1] += srccoeffs[i][1] * blend[c];
         }
     }
 }

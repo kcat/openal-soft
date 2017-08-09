@@ -54,6 +54,8 @@ struct HrtfEntry {
 
 static const ALchar magicMarker00[8] = "MinPHR00";
 static const ALchar magicMarker01[8] = "MinPHR01";
+/* FIXME: Set with the right number when finalized. */
+static const ALchar magicMarker02[18] = "MinPHRTEMPDONOTUSE";
 
 /* First value for pass-through coefficients (remaining are 0), used for omni-
  * directional sounds. */
@@ -383,9 +385,16 @@ static ALushort GetLE_ALushort(const ALubyte **data, size_t *len)
     return ret;
 }
 
-static ALint GetLE_ALuint(const ALubyte **data, size_t *len)
+static ALint GetLE_ALint24(const ALubyte **data, size_t *len)
 {
-    ALint ret = (*data)[0] | ((*data)[1]<<8) | ((*data)[2]<<16) | ((*data)[3]<<24);
+    ALint ret = (*data)[0] | ((*data)[1]<<8) | ((*data)[2]<<16);
+    *data += 3; *len -= 3;
+    return (ret^0x800000) - 0x800000;
+}
+
+static ALuint GetLE_ALuint(const ALubyte **data, size_t *len)
+{
+    ALuint ret = (*data)[0] | ((*data)[1]<<8) | ((*data)[2]<<16) | ((*data)[3]<<24);
     *data += 4; *len -= 4;
     return ret;
 }
@@ -698,6 +707,217 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const char *
                 for(k = 0;k < irSize;k++)
                     coeffs[ridx*irSize + k][1] = coeffs[lidx*irSize + k][0];
                 delays[ridx][1] = delays[lidx][0];
+            }
+        }
+
+        Hrtf = CreateHrtfStore(rate, irSize, evCount, irCount, azCount,
+                               evOffset, coeffs, delays, filename);
+    }
+
+    free(evOffset);
+    free(coeffs);
+    free(delays);
+    return Hrtf;
+}
+
+#define SAMPLETYPE_S16 0
+#define SAMPLETYPE_S24 1
+
+#define CHANTYPE_LEFTONLY  0
+#define CHANTYPE_LEFTRIGHT 1
+
+static struct Hrtf *LoadHrtf02(const ALubyte *data, size_t datalen, const char *filename)
+{
+    const ALubyte maxDelay = HRTF_HISTORY_LENGTH-1;
+    struct Hrtf *Hrtf = NULL;
+    ALboolean failed = AL_FALSE;
+    ALuint rate = 0;
+    ALubyte sampleType;
+    ALubyte channelType;
+    ALushort irCount = 0;
+    ALushort irSize = 0;
+    ALubyte evCount = 0;
+    const ALubyte *azCount = NULL;
+    ALushort *evOffset = NULL;
+    ALfloat (*coeffs)[2] = NULL;
+    ALubyte (*delays)[2] = NULL;
+    ALsizei i, j;
+
+    if(datalen < 6)
+    {
+        ERR("Unexpected end of %s data (req %d, rem "SZFMT"\n", filename, 6, datalen);
+        return NULL;
+    }
+
+    rate = GetLE_ALuint(&data, &datalen);
+    sampleType = GetLE_ALubyte(&data, &datalen);
+    channelType = GetLE_ALubyte(&data, &datalen);
+
+    irSize = GetLE_ALubyte(&data, &datalen);
+
+    evCount = GetLE_ALubyte(&data, &datalen);
+
+    if(sampleType > SAMPLETYPE_S24)
+    {
+        ERR("Unsupported sample type: %d\n", sampleType);
+        failed = AL_TRUE;
+    }
+    if(channelType > CHANTYPE_LEFTRIGHT)
+    {
+        ERR("Unsupported channel type: %d\n", channelType);
+        failed = AL_TRUE;
+    }
+
+    if(irSize < MIN_IR_SIZE || irSize > MAX_IR_SIZE || (irSize%MOD_IR_SIZE))
+    {
+        ERR("Unsupported HRIR size: irSize=%d (%d to %d by %d)\n",
+            irSize, MIN_IR_SIZE, MAX_IR_SIZE, MOD_IR_SIZE);
+        failed = AL_TRUE;
+    }
+    if(evCount < MIN_EV_COUNT || evCount > MAX_EV_COUNT)
+    {
+        ERR("Unsupported elevation count: evCount=%d (%d to %d)\n",
+            evCount, MIN_EV_COUNT, MAX_EV_COUNT);
+        failed = AL_TRUE;
+    }
+    if(failed)
+        return NULL;
+
+    if(datalen < evCount)
+    {
+        ERR("Unexpected end of %s data (req %d, rem "SZFMT"\n", filename, evCount, datalen);
+        return NULL;
+    }
+
+    azCount = Get_ALubytePtr(&data, &datalen, evCount);
+
+    evOffset = malloc(sizeof(evOffset[0])*evCount);
+    if(azCount == NULL || evOffset == NULL)
+    {
+        ERR("Out of memory.\n");
+        failed = AL_TRUE;
+    }
+
+    if(!failed)
+    {
+        for(i = 0;i < evCount;i++)
+        {
+            if(azCount[i] < MIN_AZ_COUNT || azCount[i] > MAX_AZ_COUNT)
+            {
+                ERR("Unsupported azimuth count: azCount[%d]=%d (%d to %d)\n",
+                    i, azCount[i], MIN_AZ_COUNT, MAX_AZ_COUNT);
+                failed = AL_TRUE;
+            }
+        }
+    }
+
+    if(!failed)
+    {
+        evOffset[0] = 0;
+        irCount = azCount[0];
+        for(i = 1;i < evCount;i++)
+        {
+            evOffset[i] = evOffset[i-1] + azCount[i-1];
+            irCount += azCount[i];
+        }
+
+        coeffs = malloc(sizeof(coeffs[0])*irSize*irCount);
+        delays = malloc(sizeof(delays[0])*irCount);
+        if(coeffs == NULL || delays == NULL)
+        {
+            ERR("Out of memory.\n");
+            failed = AL_TRUE;
+        }
+    }
+
+    if(!failed)
+    {
+        size_t reqsize = 2*irSize*irCount + irCount;
+        if(datalen < reqsize)
+        {
+            ERR("Unexpected end of %s data (req "SZFMT", rem "SZFMT"\n",
+                filename, reqsize, datalen);
+            failed = AL_TRUE;
+        }
+    }
+
+    if(!failed)
+    {
+        if(channelType == CHANTYPE_LEFTONLY || channelType == CHANTYPE_LEFTRIGHT)
+        {
+            if(sampleType == SAMPLETYPE_S16)
+                for(i = 0;i < irCount;i++)
+                {
+                    for(j = 0;j < irSize;j++)
+                        coeffs[i*irSize + j][0] = GetLE_ALshort(&data, &datalen) / 32768.0f;
+                }
+            else if(sampleType == SAMPLETYPE_S24)
+                for(i = 0;i < irCount;i++)
+                {
+                    for(j = 0;j < irSize;j++)
+                        coeffs[i*irSize + j][0] = GetLE_ALint24(&data, &datalen) / 8388608.0f;
+                }
+        }
+        if(channelType == CHANTYPE_LEFTRIGHT)
+        {
+            if(sampleType == SAMPLETYPE_S16)
+                for(i = 0;i < irCount;i++)
+                {
+                    for(j = 0;j < irSize;j++)
+                        coeffs[i*irSize + j][1] = GetLE_ALshort(&data, &datalen) / 32768.0f;
+                }
+            else if(sampleType == SAMPLETYPE_S24)
+                for(i = 0;i < irCount;i++)
+                {
+                    for(j = 0;j < irSize;j++)
+                        coeffs[i*irSize + j][1] = GetLE_ALint24(&data, &datalen) / 8388608.0f;
+                }
+        }
+        if(channelType == CHANTYPE_LEFTONLY || channelType == CHANTYPE_LEFTRIGHT)
+        {
+            for(i = 0;i < irCount;i++)
+            {
+                delays[i][0] = GetLE_ALubyte(&data, &datalen);
+                if(delays[i][0] > maxDelay)
+                {
+                    ERR("Invalid delays[%d][0]: %d (%d)\n", i, delays[i][0], maxDelay);
+                    failed = AL_TRUE;
+                }
+            }
+        }
+        if(channelType == CHANTYPE_LEFTRIGHT)
+        {
+            for(i = 0;i < irCount;i++)
+            {
+                delays[i][1] = GetLE_ALubyte(&data, &datalen);
+                if(delays[i][1] > maxDelay)
+                {
+                    ERR("Invalid delays[%d][1]: %d (%d)\n", i, delays[i][1], maxDelay);
+                    failed = AL_TRUE;
+                }
+            }
+        }
+    }
+
+    if(!failed)
+    {
+        if(channelType == CHANTYPE_LEFTONLY)
+        {
+            /* Mirror the left ear responses to the right ear. */
+            for(i = 0;i < evCount;i++)
+            {
+                ALushort evoffset = evOffset[i];
+                ALubyte azcount = azCount[i];
+                for(j = 0;j < azcount;j++)
+                {
+                    ALsizei lidx = evoffset + j;
+                    ALsizei ridx = evoffset + ((azcount-j) % azcount);
+                    ALsizei k;
+
+                    for(k = 0;k < irSize;k++)
+                        coeffs[ridx*irSize + k][1] = coeffs[lidx*irSize + k][0];
+                    delays[ridx][1] = delays[lidx][0];
+                }
             }
         }
 
@@ -1064,8 +1284,15 @@ struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry)
         rsize = fmap.len;
     }
 
-    if(rsize < sizeof(magicMarker01))
+    if(rsize < sizeof(magicMarker02))
         ERR("%s data is too short ("SZFMT" bytes)\n", name, rsize);
+    else if(memcmp(rdata, magicMarker02, sizeof(magicMarker02)) == 0)
+    {
+        TRACE("Detected data set format v2\n");
+        hrtf = LoadHrtf02(rdata+sizeof(magicMarker02),
+            rsize-sizeof(magicMarker02), name
+        );
+    }
     else if(memcmp(rdata, magicMarker01, sizeof(magicMarker01)) == 0)
     {
         TRACE("Detected data set format v1\n");

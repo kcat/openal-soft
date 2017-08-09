@@ -196,6 +196,19 @@
 // response protocol 01.
 #define MHR_FORMAT                   ("MinPHR01")
 
+#define MHR_FORMAT_EXPERIMENTAL      ("MinPHRTEMPDONOTUSE")
+
+// Sample and channel type enum values
+typedef enum SampleTypeT {
+    ST_S16 = 0,
+    ST_S24 = 1
+} SampleTypeT;
+
+typedef enum ChannelTypeT {
+    CT_LEFTONLY  = 0,
+    CT_LEFTRIGHT = 1
+} ChannelTypeT;
+
 // Byte order for the serialization routines.
 typedef enum ByteOrderT {
     BO_NONE,
@@ -268,6 +281,8 @@ typedef struct SourceRefT {
 // the resulting HRTF.
 typedef struct HrirDataT {
     uint mIrRate;
+    SampleTypeT mSampleType;
+    ChannelTypeT mChannelType;
     uint mIrCount;
     uint mIrSize;
     uint mIrPoints;
@@ -1869,7 +1884,7 @@ static int WriteBin4(const ByteOrderT order, const uint bytes, const uint32 in, 
 }
 
 // Store the OpenAL Soft HRTF data set.
-static int StoreMhr(const HrirDataT *hData, const char *filename)
+static int StoreMhr(const HrirDataT *hData, const int experimental, const char *filename)
 {
     uint e, step, end, n, j, i;
     uint dither_seed;
@@ -1881,10 +1896,17 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
         fprintf(stderr, "Error: Could not open MHR file '%s'.\n", filename);
         return 0;
     }
-    if(!WriteAscii(MHR_FORMAT, fp, filename))
+    if(!WriteAscii(experimental ? MHR_FORMAT_EXPERIMENTAL : MHR_FORMAT, fp, filename))
         return 0;
     if(!WriteBin4(BO_LITTLE, 4, (uint32)hData->mIrRate, fp, filename))
         return 0;
+    if(experimental)
+    {
+        if(!WriteBin4(BO_LITTLE, 1, (uint32)hData->mSampleType, fp, filename))
+            return 0;
+        if(!WriteBin4(BO_LITTLE, 1, (uint32)hData->mChannelType, fp, filename))
+            return 0;
+    }
     if(!WriteBin4(BO_LITTLE, 1, (uint32)hData->mIrPoints, fp, filename))
         return 0;
     if(!WriteBin4(BO_LITTLE, 1, (uint32)hData->mEvCount, fp, filename))
@@ -1900,13 +1922,17 @@ static int StoreMhr(const HrirDataT *hData, const char *filename)
     dither_seed = 22222;
     for(j = 0;j < end;j += step)
     {
+        const double scale = (!experimental || hData->mSampleType == ST_S16) ? 32767.0 :
+                             ((hData->mSampleType == ST_S24) ? 8388607.0 : 0.0);
+        const int bps = (!experimental || hData->mSampleType == ST_S16) ? 2 :
+                        ((hData->mSampleType == ST_S24) ? 3 : 0);
         double out[MAX_TRUNCSIZE];
         for(i = 0;i < n;i++)
-            out[i] = TpdfDither(32767.0 * hData->mHrirs[j+i], &dither_seed);
+            out[i] = TpdfDither(scale * hData->mHrirs[j+i], &dither_seed);
         for(i = 0;i < n;i++)
         {
-            v = (int)Clamp(out[i], -32768.0, 32767.0);
-            if(!WriteBin4(BO_LITTLE, 2, (uint32)v, fp, filename))
+            v = (int)Clamp(out[i], -scale-1.0, scale);
+            if(!WriteBin4(BO_LITTLE, bps, (uint32)v, fp, filename))
                 return 0;
         }
     }
@@ -2697,7 +2723,7 @@ error:
  * resulting data set as desired.  If the input name is NULL it will read
  * from standard input.
  */
-static int ProcessDefinition(const char *inName, const uint outRate, const uint fftSize, const int equalize, const int surface, const double limit, const uint truncSize, const HeadModelT model, const double radius, const OutputFormatT outFormat, const char *outName)
+static int ProcessDefinition(const char *inName, const uint outRate, const uint fftSize, const int equalize, const int surface, const double limit, const uint truncSize, const HeadModelT model, const double radius, const OutputFormatT outFormat, const int experimental, const char *outName)
 {
     char rateStr[8+1], expName[MAX_PATH_LEN];
     TokenReaderT tr;
@@ -2706,6 +2732,8 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
     FILE *fp;
 
     hData.mIrRate = 0;
+    hData.mSampleType = ST_S24;
+    hData.mChannelType = CT_LEFTONLY;
     hData.mIrPoints = 0;
     hData.mFftSize = 0;
     hData.mIrSize = 0;
@@ -2779,7 +2807,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
     {
         case OF_MHR:
             fprintf(stdout, "Creating MHR data set file...\n");
-            if(!StoreMhr(&hData, expName))
+            if(!StoreMhr(&hData, experimental, expName))
             {
                 DestroyArray(hData.mHrtds);
                 DestroyArray(hData.mHrirs);
@@ -2826,6 +2854,7 @@ int main(const int argc, const char *argv[])
     OutputFormatT outFormat;
     uint outRate, fftSize;
     int equalize, surface;
+    int experimental;
     char *end = NULL;
     HeadModelT model;
     uint truncSize;
@@ -2860,6 +2889,7 @@ int main(const int argc, const char *argv[])
     truncSize = DEFAULT_TRUNCSIZE;
     model = DEFAULT_HEAD_MODEL;
     radius = DEFAULT_CUSTOM_RADIUS;
+    experimental = 0;
 
     argi = 2;
     while(argi < argc)
@@ -2954,6 +2984,8 @@ int main(const int argc, const char *argv[])
             inName = &argv[argi][3];
         else if(strncmp(argv[argi], "-o=", 3) == 0)
             outName = &argv[argi][3];
+        else if(strcmp(argv[argi], "--experimental") == 0)
+            experimental = 1;
         else
         {
             fprintf(stderr, "Error:  Invalid option '%s'.\n", argv[argi]);
@@ -2961,7 +2993,9 @@ int main(const int argc, const char *argv[])
         }
         argi++;
     }
-    if(!ProcessDefinition(inName, outRate, fftSize, equalize, surface, limit, truncSize, model, radius, outFormat, outName))
+    if(!ProcessDefinition(inName, outRate, fftSize, equalize, surface, limit,
+                          truncSize, model, radius, outFormat, experimental,
+                          outName))
         return -1;
     fprintf(stdout, "Operation completed.\n");
     return 0;

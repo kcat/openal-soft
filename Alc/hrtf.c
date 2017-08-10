@@ -746,9 +746,9 @@ static struct Hrtf *LoadHrtf02(const ALubyte *data, size_t datalen, const char *
     ALubyte (*delays)[2] = NULL;
     ALsizei i, j;
 
-    if(datalen < 6)
+    if(datalen < 8)
     {
-        ERR("Unexpected end of %s data (req %d, rem "SZFMT"\n", filename, 6, datalen);
+        ERR("Unexpected end of %s data (req %d, rem "SZFMT"\n", filename, 8, datalen);
         return NULL;
     }
 

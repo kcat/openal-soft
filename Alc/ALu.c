@@ -39,6 +39,7 @@
 #include "static_assert.h"
 
 #include "mixer_defs.h"
+#include "bsinc_inc.c"
 
 #include "backends/base.h"
 
@@ -225,20 +226,6 @@ void aluInit(void)
  */
 ALboolean BsincPrepare(const ALuint increment, BsincState *state)
 {
-    static const ALfloat scaleBase = 1.510578918e-01f, scaleRange = 1.177936623e+00f;
-    static const ALuint m[BSINC_SCALE_COUNT] = { 24, 24, 24, 24, 24, 24, 24, 20, 20, 20, 16, 16, 16, 12, 12, 12 };
-    static const ALuint to[4][BSINC_SCALE_COUNT] =
-    {
-        { 0, 24, 408, 792, 1176, 1560, 1944, 2328, 2648, 2968, 3288, 3544, 3800, 4056, 4248, 4440 },
-        { 4632, 5016, 5400, 5784, 6168, 6552, 6936, 7320, 7640, 7960, 8280, 8536, 8792, 9048, 9240, 0 },
-        { 0, 9432, 9816, 10200, 10584, 10968, 11352, 11736, 12056, 12376, 12696, 12952, 13208, 13464, 13656, 13848 },
-        { 14040, 14424, 14808, 15192, 15576, 15960, 16344, 16728, 17048, 17368, 17688, 17944, 18200, 18456, 18648, 0 }
-    };
-    static const ALuint tm[2][BSINC_SCALE_COUNT] =
-    {
-        { 0, 24, 24, 24, 24, 24, 24, 20, 20, 20, 16, 16, 16, 12, 12, 12 },
-        { 24, 24, 24, 24, 24, 24, 24, 20, 20, 20, 16, 16, 16, 12, 12, 0 }
-    };
     ALfloat sf;
     ALsizei si, pi;
     ALboolean uncut = AL_TRUE;
@@ -246,7 +233,7 @@ ALboolean BsincPrepare(const ALuint increment, BsincState *state)
     if(increment > FRACTIONONE)
     {
         sf = (ALfloat)FRACTIONONE / increment;
-        if(sf < scaleBase)
+        if(sf < bsinc.scaleBase)
         {
             /* Signal has been completely cut.  The return result can be used
              * to skip the filter (and output zeros) as an optimization.
@@ -257,7 +244,7 @@ ALboolean BsincPrepare(const ALuint increment, BsincState *state)
         }
         else
         {
-            sf = (BSINC_SCALE_COUNT - 1) * (sf - scaleBase) * scaleRange;
+            sf = (BSINC_SCALE_COUNT - 1) * (sf - bsinc.scaleBase) * bsinc.scaleRange;
             si = fastf2i(sf);
             /* The interpolation factor is fit to this diagonally-symmetric
              * curve to reduce the transition ripple caused by interpolating
@@ -273,17 +260,17 @@ ALboolean BsincPrepare(const ALuint increment, BsincState *state)
     }
 
     state->sf = sf;
-    state->m = m[si];
-    state->l = -(ALint)((m[si] / 2) - 1);
+    state->m = bsinc.m[si];
+    state->l = -((state->m/2) - 1);
     /* The CPU cost of this table re-mapping could be traded for the memory
      * cost of a complete table map (1024 elements large).
      */
     for(pi = 0;pi < BSINC_PHASE_COUNT;pi++)
     {
-        state->coeffs[pi].filter  = &bsincTab[to[0][si] + tm[0][si]*pi];
-        state->coeffs[pi].scDelta = &bsincTab[to[1][si] + tm[1][si]*pi];
-        state->coeffs[pi].phDelta = &bsincTab[to[2][si] + tm[0][si]*pi];
-        state->coeffs[pi].spDelta = &bsincTab[to[3][si] + tm[1][si]*pi];
+        state->coeffs[pi].filter  = &bsinc.Tab[bsinc.to[0][si] + bsinc.tm[0][si]*pi];
+        state->coeffs[pi].scDelta = &bsinc.Tab[bsinc.to[1][si] + bsinc.tm[1][si]*pi];
+        state->coeffs[pi].phDelta = &bsinc.Tab[bsinc.to[2][si] + bsinc.tm[0][si]*pi];
+        state->coeffs[pi].spDelta = &bsinc.Tab[bsinc.to[3][si] + bsinc.tm[1][si]*pi];
     }
     return uncut;
 }

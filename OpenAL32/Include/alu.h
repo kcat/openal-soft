@@ -71,7 +71,7 @@ extern enum Resampler ResamplerDefault;
  */
 typedef struct BsincState {
     ALfloat sf; /* Scale interpolation factor. */
-    ALuint m;   /* Coefficient count. */
+    ALsizei m;  /* Coefficient count. */
     ALint l;    /* Left coefficient offset. */
     struct {
         const ALfloat *filter;   /* Filter coefficients. */
@@ -382,7 +382,6 @@ inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max)
 { return minu64(max, maxu64(min, val)); }
 
 
-extern alignas(16) const ALfloat bsincTab[18840];
 extern alignas(16) const ALfloat sinc4Tab[FRACTIONONE][4];
 
 

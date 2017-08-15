@@ -294,11 +294,13 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
     ALsizei IrSize;
     bool isplaying;
     bool firstpass;
+    bool isstatic;
     ALsizei chan;
     ALsizei send;
 
     /* Get source info */
     isplaying      = true; /* Will only be called while playing. */
+    isstatic       = Source->SourceType == AL_STATIC;
     DataPosInt     = ATOMIC_LOAD(&voice->position, almemory_order_acquire);
     DataPosFrac    = ATOMIC_LOAD(&voice->position_fraction, almemory_order_relaxed);
     BufferListItem = ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed);
@@ -352,7 +354,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
             memcpy(SrcData, voice->PrevSamples[chan], MAX_PRE_SAMPLES*sizeof(ALfloat));
             SrcDataSize = MAX_PRE_SAMPLES;
 
-            if(Source->SourceType == AL_STATIC)
+            if(isstatic)
             {
                 const ALbuffer *ALBuffer = BufferListItem->buffer;
                 const ALubyte *Data = ALBuffer->data;
@@ -636,7 +638,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                     break;
             }
 
-            if(BufferLoopItem && Source->SourceType == AL_STATIC)
+            if(isstatic && BufferLoopItem)
             {
                 assert(LoopEnd > LoopStart);
                 DataPosInt = ((DataPosInt-LoopStart)%(LoopEnd-LoopStart)) + LoopStart;

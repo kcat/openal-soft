@@ -57,6 +57,7 @@ const ALfloat *Resample_bsinc32_C(const InterpState *state, const ALfloat *restr
                                   ALsizei dstlen)
 {
     const ALfloat *fil, *scd, *phd, *spd;
+    const ALfloat *filter = state->bsinc.filter;
     const ALfloat sf = state->bsinc.sf;
     const ALsizei m = state->bsinc.m;
     ALsizei j_f, pi, i;
@@ -71,10 +72,10 @@ const ALfloat *Resample_bsinc32_C(const InterpState *state, const ALfloat *restr
         pf = (frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF));
 #undef FRAC_PHASE_BITDIFF
 
-        fil = ASSUME_ALIGNED(state->bsinc.coeffs[pi].filter, 16);
-        scd = ASSUME_ALIGNED(state->bsinc.coeffs[pi].scDelta, 16);
-        phd = ASSUME_ALIGNED(state->bsinc.coeffs[pi].phDelta, 16);
-        spd = ASSUME_ALIGNED(state->bsinc.coeffs[pi].spDelta, 16);
+        fil = ASSUME_ALIGNED(filter + m*pi*4, 16);
+        scd = ASSUME_ALIGNED(fil + m, 16);
+        phd = ASSUME_ALIGNED(scd + m, 16);
+        spd = ASSUME_ALIGNED(phd + m, 16);
 
         // Apply the scale and phase interpolated filter.
         r = 0.0f;

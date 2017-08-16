@@ -73,12 +73,11 @@ typedef struct BsincState {
     ALfloat sf; /* Scale interpolation factor. */
     ALsizei m;  /* Coefficient count. */
     ALint l;    /* Left coefficient offset. */
-    struct {
-        const ALfloat *filter;   /* Filter coefficients. */
-        const ALfloat *scDelta;  /* Scale deltas. */
-        const ALfloat *phDelta;  /* Phase deltas. */
-        const ALfloat *spDelta;  /* Scale-phase deltas. */
-    } coeffs[BSINC_PHASE_COUNT];
+    /* Filter coefficients, followed by the scale, phase, and scale-phase
+     * delta coefficients. Starting at phase index 0, each subsequent phase
+     * index follows contiguously.
+     */
+    const ALfloat *filter;
 } BsincState;
 
 typedef union InterpState {

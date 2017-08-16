@@ -226,9 +226,9 @@ void aluInit(void)
  */
 ALboolean BsincPrepare(const ALuint increment, BsincState *state)
 {
-    ALfloat sf;
-    ALsizei si, pi;
     ALboolean uncut = AL_TRUE;
+    ALfloat sf;
+    ALsizei si;
 
     if(increment > FRACTIONONE)
     {
@@ -262,16 +262,7 @@ ALboolean BsincPrepare(const ALuint increment, BsincState *state)
     state->sf = sf;
     state->m = bsinc.m[si];
     state->l = -((state->m/2) - 1);
-    /* The CPU cost of this table re-mapping could be traded for the memory
-     * cost of a complete table map (1024 elements large).
-     */
-    for(pi = 0;pi < BSINC_PHASE_COUNT;pi++)
-    {
-        state->coeffs[pi].filter  = &bsinc.Tab[bsinc.filterOffset[si] + bsinc.m[si]*(pi*4 + 0)];
-        state->coeffs[pi].scDelta = &bsinc.Tab[bsinc.filterOffset[si] + bsinc.m[si]*(pi*4 + 1)];
-        state->coeffs[pi].phDelta = &bsinc.Tab[bsinc.filterOffset[si] + bsinc.m[si]*(pi*4 + 2)];
-        state->coeffs[pi].spDelta = &bsinc.Tab[bsinc.filterOffset[si] + bsinc.m[si]*(pi*4 + 3)];
-    }
+    state->filter = bsinc.Tab + bsinc.filterOffset[si];
     return uncut;
 }
 

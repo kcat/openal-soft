@@ -140,6 +140,7 @@ const ALfloat *Resample_bsinc32_Neon(const InterpState *state,
   const ALfloat *restrict src, ALsizei frac, ALint increment,
   ALfloat *restrict dst, ALsizei dstlen)
 {
+    const ALfloat *filter = state->bsinc.filter;
     const float32x4_t sf4 = vdupq_n_f32(state->bsinc.sf);
     const ALsizei m = state->bsinc.m;
     const ALfloat *fil, *scd, *phd, *spd;
@@ -156,10 +157,10 @@ const ALfloat *Resample_bsinc32_Neon(const InterpState *state,
         pf = (frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF));
 #undef FRAC_PHASE_BITDIFF
 
-        fil = ASSUME_ALIGNED(state->bsinc.coeffs[pi].filter, 16);
-        scd = ASSUME_ALIGNED(state->bsinc.coeffs[pi].scDelta, 16);
-        phd = ASSUME_ALIGNED(state->bsinc.coeffs[pi].phDelta, 16);
-        spd = ASSUME_ALIGNED(state->bsinc.coeffs[pi].spDelta, 16);
+        fil = ASSUME_ALIGNED(filter + m*pi*4, 16);
+        scd = ASSUME_ALIGNED(fil + m, 16);
+        phd = ASSUME_ALIGNED(scd + m, 16);
+        spd = ASSUME_ALIGNED(phd + m, 16);
 
         // Apply the scale and phase interpolated filter.
         r4 = vdupq_n_f32(0.0f);

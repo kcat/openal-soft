@@ -267,10 +267,10 @@ ALboolean BsincPrepare(const ALuint increment, BsincState *state)
      */
     for(pi = 0;pi < BSINC_PHASE_COUNT;pi++)
     {
-        state->coeffs[pi].filter  = &bsinc.Tab[bsinc.to[0][si] + bsinc.tm[0][si]*pi];
-        state->coeffs[pi].scDelta = &bsinc.Tab[bsinc.to[1][si] + bsinc.tm[1][si]*pi];
-        state->coeffs[pi].phDelta = &bsinc.Tab[bsinc.to[2][si] + bsinc.tm[0][si]*pi];
-        state->coeffs[pi].spDelta = &bsinc.Tab[bsinc.to[3][si] + bsinc.tm[1][si]*pi];
+        state->coeffs[pi].filter  = &bsinc.Tab[bsinc.filterOffset[si] + bsinc.m[si]*(pi*4 + 0)];
+        state->coeffs[pi].scDelta = &bsinc.Tab[bsinc.filterOffset[si] + bsinc.m[si]*(pi*4 + 1)];
+        state->coeffs[pi].phDelta = &bsinc.Tab[bsinc.filterOffset[si] + bsinc.m[si]*(pi*4 + 2)];
+        state->coeffs[pi].spDelta = &bsinc.Tab[bsinc.filterOffset[si] + bsinc.m[si]*(pi*4 + 3)];
     }
     return uncut;
 }

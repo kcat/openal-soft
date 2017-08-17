@@ -8,15 +8,13 @@
 #include "alAuxEffectSlot.h"
 
 
-static inline ALfloat point32(const ALfloat *restrict vals, ALsizei UNUSED(frac))
+static inline ALfloat do_point(const ALfloat *restrict vals, ALsizei UNUSED(frac))
 { return vals[0]; }
-static inline ALfloat lerp32(const ALfloat *restrict vals, ALsizei frac)
+static inline ALfloat do_lerp(const ALfloat *restrict vals, ALsizei frac)
 { return lerp(vals[0], vals[1], frac * (1.0f/FRACTIONONE)); }
-static inline ALfloat fir4_32(const ALfloat *restrict vals, ALsizei frac)
-{ return resample_fir4(vals[-1], vals[0], vals[1], vals[2], frac); }
 
 
-const ALfloat *Resample_copy32_C(const InterpState* UNUSED(state),
+const ALfloat *Resample_copy_C(const InterpState* UNUSED(state),
   const ALfloat *restrict src, ALsizei UNUSED(frac), ALint UNUSED(increment),
   ALfloat *restrict dst, ALsizei numsamples)
 {
@@ -29,8 +27,8 @@ const ALfloat *Resample_copy32_C(const InterpState* UNUSED(state),
     return dst;
 }
 
-#define DECL_TEMPLATE(Sampler)                                                \
-const ALfloat *Resample_##Sampler##_C(const InterpState* UNUSED(state),       \
+#define DECL_TEMPLATE(Tag, Sampler)                                           \
+const ALfloat *Resample_##Tag##_C(const InterpState* UNUSED(state),           \
   const ALfloat *restrict src, ALsizei frac, ALint increment,                 \
   ALfloat *restrict dst, ALsizei numsamples)                                  \
 {                                                                             \
@@ -46,15 +44,33 @@ const ALfloat *Resample_##Sampler##_C(const InterpState* UNUSED(state),       \
     return dst;                                                               \
 }
 
-DECL_TEMPLATE(point32)
-DECL_TEMPLATE(lerp32)
-DECL_TEMPLATE(fir4_32)
+DECL_TEMPLATE(point, do_point)
+DECL_TEMPLATE(lerp, do_lerp)
 
 #undef DECL_TEMPLATE
 
-const ALfloat *Resample_bsinc32_C(const InterpState *state, const ALfloat *restrict src,
-                                  ALsizei frac, ALint increment, ALfloat *restrict dst,
-                                  ALsizei dstlen)
+const ALfloat *Resample_fir4_C(const InterpState *state, const ALfloat *restrict src,
+                               ALsizei frac, ALint increment, ALfloat *restrict dst,
+                               ALsizei numsamples)
+{
+    const ALfloat (*restrict filter)[4] = ASSUME_ALIGNED(state->sinc4.filter, 16);
+    ALsizei i;
+
+    src -= 1;
+    for(i = 0;i < numsamples;i++)
+    {
+        dst[i] = resample_fir4(filter, src[0], src[1], src[2], src[3], frac);
+
+        frac += increment;
+        src  += frac>>FRACTIONBITS;
+        frac &= FRACTIONMASK;
+    }
+    return dst;
+}
+
+const ALfloat *Resample_bsinc_C(const InterpState *state, const ALfloat *restrict src,
+                                ALsizei frac, ALint increment, ALfloat *restrict dst,
+                                ALsizei dstlen)
 {
     const ALfloat *fil, *scd, *phd, *spd;
     const ALfloat *filter = state->bsinc.filter;

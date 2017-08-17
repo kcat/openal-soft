@@ -29,7 +29,7 @@ SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType 
     step = fastf2i(minf((ALdouble)srcRate / dstRate, MAX_PITCH)*FRACTIONONE + 0.5f);
     converter->mIncrement = maxi(step, 1);
     if(converter->mIncrement == FRACTIONONE)
-        converter->mResample = Resample_copy32_C;
+        converter->mResample = Resample_copy_C;
     else
     {
         /* TODO: Allow other resamplers. */

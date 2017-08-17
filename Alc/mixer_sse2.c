@@ -27,7 +27,7 @@
 #include "mixer_defs.h"
 
 
-const ALfloat *Resample_lerp32_SSE2(const InterpState* UNUSED(state),
+const ALfloat *Resample_lerp_SSE2(const InterpState* UNUSED(state),
   const ALfloat *restrict src, ALsizei frac, ALint increment,
   ALfloat *restrict dst, ALsizei numsamples)
 {

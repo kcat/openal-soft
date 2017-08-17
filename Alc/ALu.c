@@ -69,7 +69,9 @@ extern inline ALuint64 maxu64(ALuint64 a, ALuint64 b);
 extern inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max);
 
 extern inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu);
-extern inline ALfloat resample_fir4(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALsizei frac);
+extern inline ALfloat resample_fir4(const ALfloat (*restrict filter)[4],
+                                    ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3,
+                                    ALsizei frac);
 
 extern inline void aluVectorSet(aluVector *restrict vector, ALfloat x, ALfloat y, ALfloat z, ALfloat w);
 
@@ -1037,7 +1039,10 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *p
         voice->Step = MAX_PITCH<<FRACTIONBITS;
     else
         voice->Step = maxi(fastf2i(Pitch*FRACTIONONE + 0.5f), 1);
-    BsincPrepare(voice->Step, &voice->ResampleState.bsinc);
+    if(props->Resampler == BSincResampler)
+        BsincPrepare(voice->Step, &voice->ResampleState.bsinc);
+    else
+        voice->ResampleState.sinc4.filter = sinc4Tab;
     voice->Resampler = SelectResampler(props->Resampler);
 
     /* Calculate gains */
@@ -1380,7 +1385,10 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
         voice->Step = MAX_PITCH<<FRACTIONBITS;
     else
         voice->Step = maxi(fastf2i(Pitch*FRACTIONONE + 0.5f), 1);
-    BsincPrepare(voice->Step, &voice->ResampleState.bsinc);
+    if(props->Resampler == BSincResampler)
+        BsincPrepare(voice->Step, &voice->ResampleState.bsinc);
+    else
+        voice->ResampleState.sinc4.filter = sinc4Tab;
     voice->Resampler = SelectResampler(props->Resampler);
 
     if(Distance > FLT_EPSILON)

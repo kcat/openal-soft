@@ -31,10 +31,11 @@
 #include "mixer_defs.h"
 
 
-const ALfloat *Resample_fir4_32_SSE3(const InterpState* UNUSED(state),
+const ALfloat *Resample_fir4_SSE3(const InterpState *state,
   const ALfloat *restrict src, ALsizei frac, ALint increment,
   ALfloat *restrict dst, ALsizei numsamples)
 {
+    const ALfloat (*restrict filter)[4] = ASSUME_ALIGNED(state->sinc4.filter, 16);
     const __m128i increment4 = _mm_set1_epi32(increment*4);
     const __m128i fracMask4 = _mm_set1_epi32(FRACTIONMASK);
     union { alignas(16) ALint i[4]; float f[4]; } pos_;
@@ -55,10 +56,10 @@ const ALfloat *Resample_fir4_32_SSE3(const InterpState* UNUSED(state),
         const __m128 val1 = _mm_loadu_ps(&src[pos_.i[1]]);
         const __m128 val2 = _mm_loadu_ps(&src[pos_.i[2]]);
         const __m128 val3 = _mm_loadu_ps(&src[pos_.i[3]]);
-        __m128 k0 = _mm_load_ps(sinc4Tab[frac_.i[0]]);
-        __m128 k1 = _mm_load_ps(sinc4Tab[frac_.i[1]]);
-        __m128 k2 = _mm_load_ps(sinc4Tab[frac_.i[2]]);
-        __m128 k3 = _mm_load_ps(sinc4Tab[frac_.i[3]]);
+        __m128 k0 = _mm_load_ps(filter[frac_.i[0]]);
+        __m128 k1 = _mm_load_ps(filter[frac_.i[1]]);
+        __m128 k2 = _mm_load_ps(filter[frac_.i[2]]);
+        __m128 k3 = _mm_load_ps(filter[frac_.i[3]]);
         __m128 out;
 
         k0 = _mm_mul_ps(k0, val0);
@@ -87,7 +88,7 @@ const ALfloat *Resample_fir4_32_SSE3(const InterpState* UNUSED(state),
 
     for(;i < numsamples;i++)
     {
-        dst[i] = resample_fir4(src[pos], src[pos+1], src[pos+2], src[pos+3], frac);
+        dst[i] = resample_fir4(filter, src[pos], src[pos+1], src[pos+2], src[pos+3], frac);
 
         frac += increment;
         pos  += frac>>FRACTIONBITS;

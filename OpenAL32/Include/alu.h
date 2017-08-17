@@ -59,7 +59,9 @@ enum Resampler {
 };
 extern enum Resampler ResamplerDefault;
 
-/* The number of distinct scale and phase intervals within the filter table. */
+/* The number of distinct scale and phase intervals within the bsinc filter
+ * table.
+ */
 #define BSINC_SCALE_BITS  4
 #define BSINC_SCALE_COUNT (1<<BSINC_SCALE_BITS)
 #define BSINC_PHASE_BITS  4
@@ -80,8 +82,13 @@ typedef struct BsincState {
     const ALfloat *filter;
 } BsincState;
 
+typedef struct Sinc4State {
+    const ALfloat (*filter)[4];
+} Sinc4State;
+
 typedef union InterpState {
     BsincState bsinc;
+    Sinc4State sinc4;
 } InterpState;
 
 ALboolean BsincPrepare(const ALuint increment, BsincState *state);
@@ -381,17 +388,14 @@ inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max)
 { return minu64(max, maxu64(min, val)); }
 
 
-extern alignas(16) const ALfloat sinc4Tab[FRACTIONONE][4];
-
-
 inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu)
 {
     return val1 + (val2-val1)*mu;
 }
-inline ALfloat resample_fir4(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALsizei frac)
+inline ALfloat resample_fir4(const ALfloat (*restrict filter)[4], ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALsizei frac)
 {
-    return sinc4Tab[frac][0]*val0 + sinc4Tab[frac][1]*val1 +
-           sinc4Tab[frac][2]*val2 + sinc4Tab[frac][3]*val3;
+    return filter[frac][0]*val0 + filter[frac][1]*val1 +
+           filter[frac][2]*val2 + filter[frac][3]*val3;
 }
 
 

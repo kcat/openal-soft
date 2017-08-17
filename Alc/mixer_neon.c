@@ -10,7 +10,7 @@
 #include "mixer_defs.h"
 
 
-const ALfloat *Resample_lerp32_Neon(const InterpState* UNUSED(state),
+const ALfloat *Resample_lerp_Neon(const InterpState* UNUSED(state),
   const ALfloat *restrict src, ALsizei frac, ALint increment,
   ALfloat *restrict dst, ALsizei numsamples)
 {
@@ -66,10 +66,11 @@ const ALfloat *Resample_lerp32_Neon(const InterpState* UNUSED(state),
     return dst;
 }
 
-const ALfloat *Resample_fir4_32_Neon(const InterpState* UNUSED(state),
+const ALfloat *Resample_fir4_Neon(const InterpState *state,
   const ALfloat *restrict src, ALsizei frac, ALint increment,
   ALfloat *restrict dst, ALsizei numsamples)
 {
+    const ALfloat (*restrict filter)[4] = ASSUME_ALIGNED(state->sinc4.filter, 16);
     const int32x4_t increment4 = vdupq_n_s32(increment*4);
     const int32x4_t fracMask4 = vdupq_n_s32(FRACTIONMASK);
     alignas(16) ALint pos_[4];
@@ -90,10 +91,10 @@ const ALfloat *Resample_fir4_32_Neon(const InterpState* UNUSED(state),
         const float32x4_t val1 = vld1q_f32(&src[pos_[1]]);
         const float32x4_t val2 = vld1q_f32(&src[pos_[2]]);
         const float32x4_t val3 = vld1q_f32(&src[pos_[3]]);
-        float32x4_t k0 = vld1q_f32(sinc4Tab[frac_[0]]);
-        float32x4_t k1 = vld1q_f32(sinc4Tab[frac_[1]]);
-        float32x4_t k2 = vld1q_f32(sinc4Tab[frac_[2]]);
-        float32x4_t k3 = vld1q_f32(sinc4Tab[frac_[3]]);
+        float32x4_t k0 = vld1q_f32(filter[frac_[0]]);
+        float32x4_t k1 = vld1q_f32(filter[frac_[1]]);
+        float32x4_t k2 = vld1q_f32(filter[frac_[2]]);
+        float32x4_t k3 = vld1q_f32(filter[frac_[3]]);
         float32x4_t out;
 
         k0 = vmulq_f32(k0, val0);
@@ -126,7 +127,7 @@ const ALfloat *Resample_fir4_32_Neon(const InterpState* UNUSED(state),
         ALint pos = pos_[0];
         frac = frac_[0];
         do {
-            dst[i] = resample_fir4(src[pos], src[pos+1], src[pos+2], src[pos+3], frac);
+            dst[i] = resample_fir4(filter, src[pos], src[pos+1], src[pos+2], src[pos+3], frac);
 
             frac += increment;
             pos  += frac>>FRACTIONBITS;
@@ -136,7 +137,7 @@ const ALfloat *Resample_fir4_32_Neon(const InterpState* UNUSED(state),
     return dst;
 }
 
-const ALfloat *Resample_bsinc32_Neon(const InterpState *state,
+const ALfloat *Resample_bsinc_Neon(const InterpState *state,
   const ALfloat *restrict src, ALsizei frac, ALint increment,
   ALfloat *restrict dst, ALsizei dstlen)
 {

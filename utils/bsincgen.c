@@ -342,7 +342,7 @@ static void Sinc4GenerateTables(void)
         }
     }
 
-    fprintf(stdout, "alignas(16) const float sinc4Tab[FRACTIONONE][4] = {\n");
+    fprintf(stdout, "alignas(16) static const float sinc4Tab[FRACTIONONE][4] = {\n");
     for(pi = 0;pi < FRACTIONONE;pi++)
         fprintf(stdout, "    { %+14.9ef, %+14.9ef, %+14.9ef, %+14.9ef },\n",
                 filter[pi][0], filter[pi][1], filter[pi][2], filter[pi][3]);

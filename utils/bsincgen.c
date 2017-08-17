@@ -41,6 +41,10 @@
 #define M_PI                         (3.14159265358979323846)
 #endif
 
+#if defined(__ANDROID__) && !(defined(_ISOC99_SOURCE) || (defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L))
+#define log2(x)  (log(x) / log(2.0))
+#endif
+
 // The number of distinct scale and phase intervals within the filter table.
 #define BSINC_SCALE_COUNT (16)
 #define BSINC_PHASE_COUNT (16)

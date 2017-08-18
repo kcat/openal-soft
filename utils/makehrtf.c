@@ -305,6 +305,58 @@ typedef struct ResamplerT {
 } ResamplerT;
 
 
+/****************************************
+ *** Complex number type and routines ***
+ ****************************************/
+
+typedef struct {
+    double Real, Imag;
+} Complex;
+
+static Complex MakeComplex(double r, double i)
+{
+    Complex c = { r, i };
+    return c;
+}
+
+static Complex c_add(Complex a, Complex b)
+{
+    Complex r;
+    r.Real = a.Real + b.Real;
+    r.Imag = a.Imag + b.Imag;
+    return r;
+}
+
+static Complex c_sub(Complex a, Complex b)
+{
+    Complex r;
+    r.Real = a.Real - b.Real;
+    r.Imag = a.Imag - b.Imag;
+    return r;
+}
+
+static Complex c_mul(Complex a, Complex b)
+{
+    Complex r;
+    r.Real = a.Real*b.Real - a.Imag*b.Imag;
+    r.Imag = a.Imag*b.Real + a.Real*b.Imag;
+    return r;
+}
+
+static double c_abs(Complex a)
+{
+    return sqrt(a.Real*a.Real + a.Imag*a.Imag);
+}
+
+static Complex c_exp(Complex a)
+{
+    Complex r;
+    double e = exp(a.Real);
+    r.Real = e * cos(a.Imag);
+    r.Imag = e * sin(a.Imag);
+    return r;
+}
+
 /*****************************
  *** Token reader routines ***
  *****************************/
@@ -868,41 +920,17 @@ static double *CreateArray(size_t n)
 static void DestroyArray(double *a)
 { free(a); }
 
-// Complex number routines.  All outputs must be non-NULL.
-
-// Magnitude/absolute value.
-static double ComplexAbs(const double r, const double i)
-{
-    return sqrt(r*r + i*i);
-}
-
-// Multiply.
-static void ComplexMul(const double aR, const double aI, const double bR, const double bI, double *outR, double *outI)
-{
-    *outR = (aR * bR) - (aI * bI);
-    *outI = (aI * bR) + (aR * bI);
-}
-
-// Base-e exponent.
-static void ComplexExp(const double inR, const double inI, double *outR, double *outI)
-{
-    double e = exp(inR);
-    *outR = e * cos(inI);
-    *outI = e * sin(inI);
-}
-
 /* Fast Fourier transform routines.  The number of points must be a power of
  * two.  In-place operation is possible only if both the real and imaginary
  * parts are in-place together.
  */
 
 // Performs bit-reversal ordering.
-static void FftArrange(const uint n, const double *inR, const double *inI, double *outR, double *outI)
+static void FftArrange(const uint n, const Complex *in, Complex *out)
 {
     uint rk, k, m;
-    double tempR, tempI;
 
-    if(inR == outR && inI == outI)
+    if(in == out)
     {
         // Handle in-place arrangement.
         rk = 0;
@@ -910,12 +938,9 @@ static void FftArrange(const uint n, const double *inR, const double *inI, doubl
         {
             if(rk > k)
             {
-                tempR = inR[rk];
-                tempI = inI[rk];
-                outR[rk] = inR[k];
-                outI[rk] = inI[k];
-                outR[k] = tempR;
-                outI[k] = tempI;
+                Complex temp = in[rk];
+                out[rk] = in[k];
+                out[k] = temp;
             }
             m = n;
             while(rk&(m >>= 1))
@@ -929,8 +954,7 @@ static void FftArrange(const uint n, const double *inR, const double *inI, doubl
         rk = 0;
         for(k = 0;k < n;k++)
         {
-            outR[rk] = inR[k];
-            outI[rk] = inI[k];
+            out[rk] = in[k];
             m = n;
             while(rk&(m >>= 1))
                 rk &= ~m;
@@ -940,69 +964,54 @@ static void FftArrange(const uint n, const double *inR, const double *inI, doubl
 }
 
 // Performs the summation.
-static void FftSummation(const uint n, const double s, double *re, double *im)
+static void FftSummation(const int n, const double s, Complex *cplx)
 {
     double pi;
-    uint m, m2;
-    double vR, vI, wR, wI;
-    uint i, k, mk;
-    double tR, tI;
+    int m, m2;
+    int i, k, mk;
 
     pi = s * M_PI;
     for(m = 1, m2 = 2;m < n; m <<= 1, m2 <<= 1)
     {
         // v = Complex (-2.0 * sin (0.5 * pi / m) * sin (0.5 * pi / m), -sin (pi / m))
-        vR = sin(0.5 * pi / m);
-        vR = -2.0 * vR * vR;
-        vI = -sin(pi / m);
-        // w = Complex (1.0, 0.0)
-        wR = 1.0;
-        wI = 0.0;
+        double sm = sin(0.5 * pi / m);
+        Complex v = MakeComplex(-2.0*sm*sm, -sin(pi / m));
+        Complex w = MakeComplex(1.0, 0.0);
         for(i = 0;i < m;i++)
         {
             for(k = i;k < n;k += m2)
             {
+                Complex t;
                 mk = k + m;
-                // t = ComplexMul(w, out[km2])
-                tR = (wR * re[mk]) - (wI * im[mk]);
-                tI = (wR * im[mk]) + (wI * re[mk]);
-                // out[mk] = ComplexSub (out [k], t)
-                re[mk] = re[k] - tR;
-                im[mk] = im[k] - tI;
-                // out[k] = ComplexAdd (out [k], t)
-                re[k] += tR;
-                im[k] += tI;
+                t = c_mul(w, cplx[mk]);
+                cplx[mk] = c_sub(cplx[k], t);
+                cplx[k] = c_add(cplx[k], t);
             }
-            // t = ComplexMul (v, w)
-            tR = (vR * wR) - (vI * wI);
-            tI = (vR * wI) + (vI * wR);
-            // w = ComplexAdd (w, t)
-            wR += tR;
-            wI += tI;
+            w = c_add(w, c_mul(v, w));
         }
     }
 }
 
 // Performs a forward FFT.
-static void FftForward(const uint n, const double *inR, const double *inI, double *outR, double *outI)
+static void FftForward(const uint n, const Complex *in, Complex *out)
 {
-    FftArrange(n, inR, inI, outR, outI);
-    FftSummation(n, 1.0, outR, outI);
+    FftArrange(n, in, out);
+    FftSummation(n, 1.0, out);
 }
 
 // Performs an inverse FFT.
-static void FftInverse(const uint n, const double *inR, const double *inI, double *outR, double *outI)
+static void FftInverse(const uint n, const Complex *in, Complex *out)
 {
     double f;
     uint i;
 
-    FftArrange(n, inR, inI, outR, outI);
-    FftSummation(n, -1.0, outR, outI);
+    FftArrange(n, in, out);
+    FftSummation(n, -1.0, out);
     f = 1.0 / n;
     for(i = 0;i < n;i++)
     {
-        outR[i] *= f;
-        outI[i] *= f;
+        out[i].Real *= f;
+        out[i].Imag *= f;
     }
 }
 
@@ -1011,39 +1020,39 @@ static void FftInverse(const uint n, const double *inR, const double *inI, doubl
  * of a signal's magnitude response, the imaginary components can be used as
  * the angles for minimum-phase reconstruction.
  */
-static void Hilbert(const uint n, const double *in, double *outR, double *outI)
+static void Hilbert(const uint n, const Complex *in, Complex *out)
 {
     uint i;
 
-    if(in == outR)
+    if(in == out)
     {
         // Handle in-place operation.
         for(i = 0;i < n;i++)
-            outI[i] = 0.0;
+            out[i].Imag = 0.0;
     }
     else
     {
         // Handle copy operation.
         for(i = 0;i < n;i++)
         {
-            outR[i] = in[i];
-            outI[i] = 0.0;
+            out[i].Real = in[i].Real;
+            out[i].Imag = 0.0;
         }
     }
-    FftInverse(n, outR, outI, outR, outI);
+    FftInverse(n, out, out);
     for(i = 1;i < (n+1)/2;i++)
     {
-        outR[i] *= 2.0;
-        outI[i] *= 2.0;
+        out[i].Real *= 2.0;
+        out[i].Imag *= 2.0;
     }
     /* Increment i if n is even. */
     i += (n&1)^1;
     for(;i < n;i++)
     {
-        outR[i] = 0.0;
-        outI[i] = 0.0;
+        out[i].Real = 0.0;
+        out[i].Imag = 0.0;
     }
-    FftForward(n, outR, outI, outR, outI);
+    FftForward(n, out, out);
 }
 
 /* Calculate the magnitude response of the given input.  This is used in
@@ -1051,12 +1060,12 @@ static void Hilbert(const uint n, const double *in, double *outR, double *outI)
  * minimum phase reconstruction.  The mirrored half of the response is also
  * discarded.
  */
-static void MagnitudeResponse(const uint n, const double *inR, const double *inI, double *out)
+static void MagnitudeResponse(const uint n, const Complex *in, double *out)
 {
     const uint m = 1 + (n / 2);
     uint i;
     for(i = 0;i < m;i++)
-        out[i] = fmax(ComplexAbs(inR[i], inI[i]), EPSILON);
+        out[i] = fmax(c_abs(in[i]), EPSILON);
 }
 
 /* Apply a range limit (in dB) to the given magnitude response.  This is used
@@ -1094,31 +1103,31 @@ static void LimitMagnitudeResponse(const uint n, const double limit, const doubl
  * residuals (which were discarded).  The mirrored half of the response is
  * reconstructed.
  */
-static void MinimumPhase(const uint n, const double *in, double *outR, double *outI)
+static void MinimumPhase(const uint n, const double *in, Complex *out)
 {
     const uint m = 1 + (n / 2);
     double *mags;
-    double aR, aI;
     uint i;
 
     mags = CreateArray(n);
     for(i = 0;i < m;i++)
     {
         mags[i] = fmax(EPSILON, in[i]);
-        outR[i] = log(mags[i]);
+        out[i].Real = log(mags[i]);
+        out[i].Imag = 0.0;
     }
     for(;i < n;i++)
     {
         mags[i] = mags[n - i];
-        outR[i] = outR[n - i];
+        out[i] = out[n - i];
     }
-    Hilbert(n, outR, outR, outI);
+    Hilbert(n, out, out);
     // Remove any DC offset the filter has.
     mags[0] = EPSILON;
     for(i = 0;i < n;i++)
     {
-        ComplexExp(0.0, outI[i], &aR, &aI);
-        ComplexMul(mags[i], 0.0, aR, aI, &outR[i], &outI[i]);
+        Complex a = c_exp(MakeComplex(0.0, out[i].Imag));
+        out[i] = c_mul(MakeComplex(mags[i], 0.0), a);
     }
     DestroyArray(mags);
 }
@@ -1977,30 +1986,25 @@ static void AverageHrirOnset(const double *hrir, const double f, const uint ei, 
 // existing responses for its elevation and azimuth.
 static void AverageHrirMagnitude(const double *hrir, const double f, const uint ei, const uint ai, const HrirDataT *hData)
 {
-    double *re, *im;
     uint n, m, i, j;
+    Complex *cplx;
+    double *mags;
 
     n = hData->mFftSize;
-    re = CreateArray(n);
-    im = CreateArray(n);
+    cplx = calloc(sizeof(*cplx), n);
+    mags = calloc(sizeof(*mags), n);
     for(i = 0;i < hData->mIrPoints;i++)
-    {
-        re[i] = hrir[i];
-        im[i] = 0.0;
-    }
+        cplx[i] = MakeComplex(hrir[i], 0.0);
     for(;i < n;i++)
-    {
-        re[i] = 0.0;
-        im[i] = 0.0;
-    }
-    FftForward(n, re, im, re, im);
-    MagnitudeResponse(n, re, im, re);
+        cplx[i] = MakeComplex(0.0, 0.0);
+    FftForward(n, cplx, cplx);
+    MagnitudeResponse(n, cplx, mags);
     m = 1 + (n / 2);
     j = (hData->mEvOffset[ei] + ai) * hData->mIrSize;
     for(i = 0;i < m;i++)
-        hData->mHrirs[j+i] = Lerp(hData->mHrirs[j+i], re[i], f);
-    DestroyArray(im);
-    DestroyArray(re);
+        hData->mHrirs[j+i] = Lerp(hData->mHrirs[j+i], mags[i], f);
+    free(mags);
+    free(cplx);
 }
 
 /* Calculate the contribution of each HRIR to the diffuse-field average based
@@ -2120,23 +2124,21 @@ static void DiffuseFieldEqualize(const double *dfa, const HrirDataT *hData)
 static void ReconstructHrirs(const HrirDataT *hData)
 {
     uint step, start, end, n, j, i;
-    double *re, *im;
+    Complex *cplx;
 
     step = hData->mIrSize;
     start = hData->mEvOffset[hData->mEvStart] * step;
     end = hData->mIrCount * step;
     n = hData->mFftSize;
-    re = CreateArray(n);
-    im = CreateArray(n);
+    cplx = calloc(sizeof(*cplx), n);
     for(j = start;j < end;j += step)
     {
-        MinimumPhase(n, &hData->mHrirs[j], re, im);
-        FftInverse(n, re, im, re, im);
+        MinimumPhase(n, &hData->mHrirs[j], cplx);
+        FftInverse(n, cplx, cplx);
         for(i = 0;i < hData->mIrPoints;i++)
-            hData->mHrirs[j+i] = re[i];
+            hData->mHrirs[j+i] = cplx[i].Real;
     }
-    DestroyArray (im);
-    DestroyArray (re);
+    free(cplx);
 }
 
 // Resamples the HRIRs for use at the given sampling rate.

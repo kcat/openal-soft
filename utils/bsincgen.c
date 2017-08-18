@@ -161,11 +161,9 @@ static void BsiGenerateTables()
     for(si = 0; si < BSINC_SCALE_COUNT; si++)
     {
         const double scale = scaleBase + (scaleRange * si / (BSINC_SCALE_COUNT - 1));
-        const double a = MinDouble(BSINC_POINTS_MIN, BSINC_POINTS_MIN / (2.0 * scale));
-        int m = 2 * (int)floor(a);
-
-        // Make sure the number of points is a multiple of 4 (for SSE).
-        m += ~(m - 1) & 3;
+        const double a = MinDouble(floor(BSINC_POINTS_MIN / (2.0 * scale)),
+                                   BSINC_POINTS_MIN);
+        int m = 2 * (int)a;
 
         mt[si] = m;
         at[si] = a;
@@ -240,6 +238,10 @@ static void BsiGenerateTables()
                 spDeltas[si][pi][o + i] = phDeltas[si + 1][pi][o + i] - phDeltas[si][pi][o + i];
         }
     }
+
+    // Make sure the number of points is a multiple of 4 (for SIMD).
+    for(si = 0; si < BSINC_SCALE_COUNT; si++)
+        mt[si] = (mt[si]+3) & ~3;
 
     // Calculate the table size.
     i = 0;
@@ -331,8 +333,8 @@ static void Sinc4GenerateTables(void)
     const double scaleBase = width / 2.0;
     const double scaleRange = 1.0 - scaleBase;
     const double scale = scaleBase + scaleRange;
-    const double a = MinDouble(4.0, 4.0 / (2.0*scale));
-    const int m = 2 * (int)floor(a);
+    const double a = MinDouble(4.0, floor(4.0 / (2.0*scale)));
+    const int m = 2 * (int)a;
     const int l = (m/2) - 1;
     int pi;
     for(pi = 0;pi < FRACTIONONE;pi++)

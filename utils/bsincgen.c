@@ -51,7 +51,7 @@
 
 #define BSINC_REJECTION (60.0)
 #define BSINC_POINTS_MIN (12)
-#define BSINC_ORDER (11)
+#define BSINC_ORDER (BSINC_POINTS_MIN - 1)
 
 static double MinDouble(double a, double b)
 { return (a <= b) ? a : b; }
@@ -98,14 +98,9 @@ static double BesselI_0(const double x)
  */
 static double Kaiser(const double b, const double k)
 {
-    double k2;
-
-    if((k < -1.0) || (k > 1.0))
+    if(!(k >= -1.0 && k <= 1.0))
         return 0.0;
-
-    k2 = MaxDouble(1.0 - (k * k), 0.0);
-
-    return BesselI_0(b * sqrt(k2)) / BesselI_0(b);
+    return BesselI_0(b * sqrt(1.0 - k*k)) / BesselI_0(b);
 }
 
 /* NOTE: Calculates the transition width of the Kaiser window.  Rejection is

@@ -1296,11 +1296,11 @@ static void ResamplerSetup(ResamplerT *rs, const uint srcRate, const uint dstRat
         cutoff = 0.475 / rs->mQ;
         width = 0.05 / rs->mQ;
     }
-    // A rejection of -180 dB is used for the stop band. Round up the order to
-    // keep the transition width from growing.
+    // A rejection of -180 dB is used for the stop band. Round up when
+    // calculating the left offset to avoid increasing the transition width.
     l = (CalcKaiserOrder(180.0, width)+1) / 2;
     beta = CalcKaiserBeta(180.0);
-    rs->mM = (l+1) * 2;
+    rs->mM = l*2 + 1;
     rs->mL = l;
     rs->mF = CreateArray(rs->mM);
     for(i = 0;i < ((int)rs->mM);i++)

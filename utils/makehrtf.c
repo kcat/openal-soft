@@ -343,6 +343,14 @@ static Complex c_mul(Complex a, Complex b)
     return r;
 }
 
+static Complex c_muls(Complex a, double s)
+{
+    Complex r;
+    r.Real = a.Real * s;
+    r.Imag = a.Imag * s;
+    return r;
+}
+
 static double c_abs(Complex a)
 {
     return sqrt(a.Real*a.Real + a.Imag*a.Imag);
@@ -1009,10 +1017,7 @@ static void FftInverse(const uint n, const Complex *in, Complex *out)
     FftSummation(n, -1.0, out);
     f = 1.0 / n;
     for(i = 0;i < n;i++)
-    {
-        out[i].Real *= f;
-        out[i].Imag *= f;
-    }
+        out[i] = c_muls(out[i], f);
 }
 
 /* Calculate the complex helical sequence (or discrete-time analytical signal)
@@ -1034,24 +1039,15 @@ static void Hilbert(const uint n, const Complex *in, Complex *out)
     {
         // Handle copy operation.
         for(i = 0;i < n;i++)
-        {
-            out[i].Real = in[i].Real;
-            out[i].Imag = 0.0;
-        }
+            out[i] = MakeComplex(in[i].Real, 0.0);
     }
     FftInverse(n, out, out);
     for(i = 1;i < (n+1)/2;i++)
-    {
-        out[i].Real *= 2.0;
-        out[i].Imag *= 2.0;
-    }
+        out[i] = c_muls(out[i], 2.0);
     /* Increment i if n is even. */
     i += (n&1)^1;
     for(;i < n;i++)
-    {
-        out[i].Real = 0.0;
-        out[i].Imag = 0.0;
-    }
+        out[i] = MakeComplex(0.0, 0.0);
     FftForward(n, out, out);
 }
 

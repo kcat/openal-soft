@@ -59,7 +59,7 @@ const ALfloat *Resample_fir4_C(const InterpState *state, const ALfloat *restrict
     src -= 1;
     for(i = 0;i < numsamples;i++)
     {
-        dst[i] = resample_fir4(filter, src[0], src[1], src[2], src[3], frac);
+        dst[i] = resample_fir4(src[0], src[1], src[2], src[3], filter[frac]);
 
         frac += increment;
         src  += frac>>FRACTIONBITS;

@@ -127,7 +127,7 @@ const ALfloat *Resample_fir4_Neon(const InterpState *state,
         ALint pos = pos_[0];
         frac = frac_[0];
         do {
-            dst[i] = resample_fir4(filter, src[pos], src[pos+1], src[pos+2], src[pos+3], frac);
+            dst[i] = resample_fir4(src[pos], src[pos+1], src[pos+2], src[pos+3], filter[frac]);
 
             frac += increment;
             pos  += frac>>FRACTIONBITS;

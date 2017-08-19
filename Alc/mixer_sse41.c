@@ -145,7 +145,7 @@ const ALfloat *Resample_fir4_SSE41(const InterpState *state,
 
     for(;i < numsamples;i++)
     {
-        dst[i] = resample_fir4(filter, src[pos], src[pos+1], src[pos+2], src[pos+3], frac);
+        dst[i] = resample_fir4(src[pos], src[pos+1], src[pos+2], src[pos+3], filter[frac]);
 
         frac += increment;
         pos  += frac>>FRACTIONBITS;

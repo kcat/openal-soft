@@ -392,10 +392,9 @@ inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu)
 {
     return val1 + (val2-val1)*mu;
 }
-inline ALfloat resample_fir4(const ALfloat (*restrict filter)[4], ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, ALsizei frac)
+inline ALfloat resample_fir4(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, const ALfloat *restrict filter)
 {
-    return filter[frac][0]*val0 + filter[frac][1]*val1 +
-           filter[frac][2]*val2 + filter[frac][3]*val3;
+    return filter[0]*val0 + filter[1]*val1 + filter[2]*val2 + filter[3]*val3;
 }
 
 

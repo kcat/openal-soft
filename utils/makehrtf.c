@@ -1113,8 +1113,7 @@ static void MinimumPhase(const uint n, const double *in, Complex *out)
     for(i = 0;i < m;i++)
     {
         mags[i] = fmax(EPSILON, in[i]);
-        out[i].Real = log(mags[i]);
-        out[i].Imag = 0.0;
+        out[i] = MakeComplex(log(mags[i]), 0.0);
     }
     for(;i < n;i++)
     {
@@ -2124,7 +2123,12 @@ static void DiffuseFieldEqualize(const double *dfa, const HrirDataT *hData)
 static void ReconstructHrirs(const HrirDataT *hData)
 {
     uint step, start, end, n, j, i;
+    uint pcdone, lastpc;
     Complex *cplx;
+
+    pcdone = lastpc = 0;
+    printf("%3d%% done.", pcdone);
+    fflush(stdout);
 
     step = hData->mIrSize;
     start = hData->mEvOffset[hData->mEvStart] * step;
@@ -2137,8 +2141,16 @@ static void ReconstructHrirs(const HrirDataT *hData)
         FftInverse(n, cplx, cplx);
         for(i = 0;i < hData->mIrPoints;i++)
             hData->mHrirs[j+i] = cplx[i].Real;
+        pcdone = (j+step-start) * 100 / (end-start);
+        if(pcdone != lastpc)
+        {
+            lastpc = pcdone;
+            printf("\r%3d%% done.", pcdone);
+            fflush(stdout);
+        }
     }
     free(cplx);
+    printf("\n");
 }
 
 // Resamples the HRIRs for use at the given sampling rate.
@@ -2650,7 +2662,12 @@ static int ProcessSources(const HeadModelT model, TokenReaderT *tr, HrirDataT *h
     SourceRefT src;
     double factor;
     double *hrir;
+    int count;
 
+    printf("Loading sources...");
+    fflush(stdout);
+
+    count = 0;
     setCount = (uint*)calloc(hData->mEvCount, sizeof(uint));
     setFlag = (uint*)calloc(hData->mIrCount, sizeof(uint));
     hrir = CreateArray(hData->mIrPoints);
@@ -2675,6 +2692,14 @@ static int ProcessSources(const HeadModelT model, TokenReaderT *tr, HrirDataT *h
         {
             if(!ReadSourceRef(tr, &src))
                 goto error;
+
+            // TODO: Would be nice to display 'x of y files', but that would
+            // require preparing the source refs first to get a total count
+            // before loading them.
+            ++count;
+            printf("\rLoading sources... %d file%s", count, (count==1)?"":"s");
+            fflush(stdout);
+
             if(!LoadSource(&src, hData->mIrRate, hData->mIrPoints, hrir))
                 goto error;
 
@@ -2689,6 +2714,7 @@ static int ProcessSources(const HeadModelT model, TokenReaderT *tr, HrirDataT *h
         setFlag[hData->mEvOffset[ei] + ai] = 1;
         setCount[ei]++;
     }
+    printf("\n");
 
     ei = 0;
     while(ei < hData->mEvCount && setCount[ei] < 1)

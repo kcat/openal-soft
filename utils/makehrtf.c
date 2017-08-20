@@ -300,12 +300,6 @@ typedef enum HeadModelT {
     HM_SPHERE   // Calculate the onset using a spherical head model.
 } HeadModelT;
 
-// Desired output format from the command line.
-typedef enum OutputFormatT {
-    OF_NONE,
-    OF_MHR   // OpenAL Soft MHR data set file.
-} OutputFormatT;
-
 // Unsigned integer type.
 typedef unsigned int uint;
 
@@ -2809,13 +2803,14 @@ error:
  * resulting data set as desired.  If the input name is NULL it will read
  * from standard input.
  */
-static int ProcessDefinition(const char *inName, const uint outRate, const uint fftSize, const int equalize, const int surface, const double limit, const uint truncSize, const HeadModelT model, const double radius, const OutputFormatT outFormat, const int experimental, const char *outName)
+static int ProcessDefinition(const char *inName, const uint outRate, const uint fftSize, const int equalize, const int surface, const double limit, const uint truncSize, const HeadModelT model, const double radius, const int experimental, const char *outName)
 {
     char rateStr[8+1], expName[MAX_PATH_LEN];
     TokenReaderT tr;
     HrirDataT hData;
     double *dfa;
     FILE *fp;
+    int ret;
 
     hData.mIrRate = 0;
     hData.mSampleType = ST_S24;
@@ -2889,33 +2884,19 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
     CalculateHrtds(model, (radius > DEFAULT_CUSTOM_RADIUS) ? radius : hData.mRadius, &hData);
     snprintf(rateStr, 8, "%u", hData.mIrRate);
     StrSubst(outName, "%r", rateStr, MAX_PATH_LEN, expName);
-    switch(outFormat)
-    {
-        case OF_MHR:
-            fprintf(stdout, "Creating MHR data set file...\n");
-            if(!StoreMhr(&hData, experimental, expName))
-            {
-                DestroyArray(hData.mHrtds);
-                DestroyArray(hData.mHrirs);
-                return 0;
-            }
-            break;
-        default:
-            break;
-    }
+    fprintf(stdout, "Creating MHR data set file...\n");
+    ret = StoreMhr(&hData, experimental, expName);
+
     DestroyArray(hData.mHrtds);
     DestroyArray(hData.mHrirs);
-    return 1;
+    return ret;
 }
 
 static void PrintHelp(const char *argv0, FILE *ofile)
 {
     fprintf(ofile, "Usage:  %s <command> [<option>...]\n\n", argv0);
-    fprintf(ofile, "Commands:\n");
-    fprintf(ofile, " -m, --make-mhr  Makes an OpenAL Soft compatible HRTF data set.\n");
-    fprintf(ofile, "                 Defaults output to: ./oalsoft_hrtf_%%r.mhr\n");
-    fprintf(ofile, " -h, --help      Displays this help information.\n\n");
     fprintf(ofile, "Options:\n");
+    fprintf(ofile, " -m              Ignored for compatibility.\n");
     fprintf(ofile, " -r <rate>       Change the data set sample rate to the specified value and\n");
     fprintf(ofile, "                 resample the HRIRs accordingly.\n");
     fprintf(ofile, " -f <points>     Override the FFT window size (default: %u).\n", DEFAULT_FFTSIZE);
@@ -2963,7 +2944,6 @@ int wmain(int argc, const wchar_t *wargv[])
 int main(int argc, char *argv[])
 {
     const char *inName = NULL, *outName = NULL;
-    OutputFormatT outFormat;
     uint outRate, fftSize;
     int equalize, surface;
     int experimental;
@@ -2974,25 +2954,14 @@ int main(int argc, char *argv[])
     double limit;
     int opt;
 
-    if(argc < 2 || strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)
+    if(argc < 2)
     {
         fprintf(stdout, "HRTF Processing and Composition Utility\n\n");
         PrintHelp(argv[0], stdout);
         exit(EXIT_SUCCESS);
     }
 
-    if(strcmp(argv[1], "--make-mhr") == 0 || strcmp(argv[1], "-m") == 0)
-    {
-        outName = "./oalsoft_hrtf_%r.mhr";
-        outFormat = OF_MHR;
-    }
-    else
-    {
-        fprintf(stderr, "Error: Invalid command '%s'.\n\n", argv[1]);
-        PrintHelp(argv[0], stderr);
-        exit(EXIT_FAILURE);
-    }
-
+    outName = "./oalsoft_hrtf_%r.mhr";
     outRate = 0;
     fftSize = 0;
     equalize = DEFAULT_EQUALIZE;
@@ -3003,11 +2972,14 @@ int main(int argc, char *argv[])
     radius = DEFAULT_CUSTOM_RADIUS;
     experimental = 0;
 
-    optind = 2;
-    while((opt=getopt(argc, argv, "r:f:e:s:k:w:d:c:e:i:o:xh")) != -1)
+    while((opt=getopt(argc, argv, "mr:f:e:s:k:w:d:c:e:i:o:xh")) != -1)
     {
         switch(opt)
         {
+        case 'm':
+            fprintf(stderr, "Ignoring unused command '-m'.\n");
+            break;
+
         case 'r':
             outRate = strtoul(optarg, &end, 10);
             if(end[0] != '\0' || outRate < MIN_RATE || outRate > MAX_RATE)
@@ -3117,8 +3089,7 @@ int main(int argc, char *argv[])
     }
 
     if(!ProcessDefinition(inName, outRate, fftSize, equalize, surface, limit,
-                          truncSize, model, radius, outFormat, experimental,
-                          outName))
+                          truncSize, model, radius, experimental, outName))
         return -1;
     fprintf(stdout, "Operation completed.\n");
 

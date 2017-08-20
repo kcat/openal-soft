@@ -576,7 +576,7 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
                 voice->Direct.ChannelsPerOrder[0] = 1;
                 voice->Direct.ChannelsPerOrder[1] = mini(voice->Direct.Channels-1, 3);
                 for(i = 2;i < MAX_AMBI_ORDER+1;i++)
-                    voice->Direct.ChannelsPerOrder[2] = 0;
+                    voice->Direct.ChannelsPerOrder[i] = 0;
                 voice->Flags |= VOICE_HAS_NFC;
             }
 

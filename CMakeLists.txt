@@ -652,6 +652,8 @@ int main()
     ENDIF()
 ENDIF()
 
+CHECK_SYMBOL_EXISTS(getopt unistd.h HAVE_GETOPT)
+
 # Check for a 64-bit type
 CHECK_INCLUDE_FILE(stdint.h HAVE_STDINT_H)
 IF(NOT HAVE_STDINT_H)
@@ -1395,6 +1397,9 @@ IF(ALSOFT_UTILS)
     TARGET_LINK_LIBRARIES(openal-info OpenAL)
 
     ADD_EXECUTABLE(makehrtf utils/makehrtf.c)
+    IF(NOT HAVE_GETOPT)
+        SET_PROPERTY(TARGET makehrtf APPEND PROPERTY SOURCE utils/getopt.c)
+    ENDIF()
     SET_PROPERTY(TARGET makehrtf APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
     IF(HAVE_LIBM)
         TARGET_LINK_LIBRARIES(makehrtf m)

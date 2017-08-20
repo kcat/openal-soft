@@ -20,6 +20,9 @@
 /* Define if we have the _aligned_malloc function */
 #cmakedefine HAVE__ALIGNED_MALLOC
 
+/* Define if we have the getopt function */
+#cmakedefine HAVE_GETOPT
+
 /* Define if we have SSE CPU extensions */
 #cmakedefine HAVE_SSE
 #cmakedefine HAVE_SSE2

@@ -2983,7 +2983,7 @@ int main(int argc, char *argv[])
             outRate = strtoul(optarg, &end, 10);
             if(end[0] != '\0' || outRate < MIN_RATE || outRate > MAX_RATE)
             {
-                fprintf(stderr, "Error:  Expected a value from %u to %u for '-r'.\n", MIN_RATE, MAX_RATE);
+                fprintf(stderr, "Error: Got unexpected value \"%s\" for option -%c, expected between %u to %u.\n", optarg, opt, MIN_RATE, MAX_RATE);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -2992,7 +2992,7 @@ int main(int argc, char *argv[])
             fftSize = strtoul(optarg, &end, 10);
             if(end[0] != '\0' || (fftSize&(fftSize-1)) || fftSize < MIN_FFTSIZE || fftSize > MAX_FFTSIZE)
             {
-                fprintf(stderr, "Error:  Expected a power-of-two value from %u to %u for '-f'.\n", MIN_FFTSIZE, MAX_FFTSIZE);
+                fprintf(stderr, "Error: Got unexpected value \"%s\" for option -%c, expected a power-of-two between %u to %u.\n", optarg, opt, MIN_FFTSIZE, MAX_FFTSIZE);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -3004,7 +3004,7 @@ int main(int argc, char *argv[])
                 equalize = 0;
             else
             {
-                fprintf(stderr, "Error:  Expected 'on' or 'off' for '-e'.\n");
+                fprintf(stderr, "Error: Got unexpected value \"%s\" for option -%c, expected on or off.\n", optarg, opt);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -3016,7 +3016,7 @@ int main(int argc, char *argv[])
                 surface = 0;
             else
             {
-                fprintf(stderr, "Error:  Expected 'on' or 'off' for '-s'.\n");
+                fprintf(stderr, "Error: Got unexpected value \"%s\" for option -%c, expected on or off.\n", optarg, opt);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -3029,7 +3029,7 @@ int main(int argc, char *argv[])
                 limit = strtod(optarg, &end);
                 if(end[0] != '\0' || limit < MIN_LIMIT || limit > MAX_LIMIT)
                 {
-                    fprintf(stderr, "Error:  Expected 'none' or a value from %.2f to %.2f for '-l'.\n", MIN_LIMIT, MAX_LIMIT);
+                    fprintf(stderr, "Error: Got unexpected value \"%s\" for option -%c, expected between %.0f to %.0f.\n", optarg, opt, MIN_LIMIT, MAX_LIMIT);
                     exit(EXIT_FAILURE);
                 }
             }
@@ -3039,7 +3039,7 @@ int main(int argc, char *argv[])
             truncSize = strtoul(optarg, &end, 10);
             if(end[0] != '\0' || truncSize < MIN_TRUNCSIZE || truncSize > MAX_TRUNCSIZE || (truncSize%MOD_TRUNCSIZE))
             {
-                fprintf(stderr, "Error:  Expected a value from %u to %u in multiples of %u for '-w'.\n", MIN_TRUNCSIZE, MAX_TRUNCSIZE, MOD_TRUNCSIZE);
+                fprintf(stderr, "Error: Got unexpected value \"%s\" for option -%c, expected multiple of %u between %u to %u.\n", optarg, opt, MOD_TRUNCSIZE, MIN_TRUNCSIZE, MAX_TRUNCSIZE);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -3051,7 +3051,7 @@ int main(int argc, char *argv[])
                 model = HM_SPHERE;
             else
             {
-                fprintf(stderr, "Error:  Expected 'dataset' or 'sphere' for '-d'.\n");
+                fprintf(stderr, "Error: Got unexpected value \"%s\" for option -%c, expected dataset or sphere.\n", optarg, opt);
                 exit(EXIT_FAILURE);
             }
             break;
@@ -3060,7 +3060,7 @@ int main(int argc, char *argv[])
             radius = strtod(optarg, &end);
             if(end[0] != '\0' || radius < MIN_CUSTOM_RADIUS || radius > MAX_CUSTOM_RADIUS)
             {
-                fprintf(stderr, "Error:  Expected a value from %.2f to %.2f for '-c'.\n", MIN_CUSTOM_RADIUS, MAX_CUSTOM_RADIUS);
+                fprintf(stderr, "Error: Got unexpected value \"%s\" for option -%c, expected between %.2f to %.2f.\n", optarg, opt, MIN_CUSTOM_RADIUS, MAX_CUSTOM_RADIUS);
                 exit(EXIT_FAILURE);
             }
             break;

@@ -1382,6 +1382,7 @@ IF(ALSOFT_AMBDEC_PRESETS)
     INSTALL(FILES presets/3D7.1.ambdec
                   presets/hexagon.ambdec
                   presets/itu5.1.ambdec
+                  presets/itu5.1-nocenter.ambdec
                   presets/rectangle.ambdec
                   presets/square.ambdec
                   presets/presets.txt

@@ -2515,7 +2515,7 @@ static ALvoid InitContext(ALCcontext *Context)
 
     //Initialise listener
     listener->Gain = 1.0f;
-    listener->MetersPerUnit = 1.0f;
+    listener->MetersPerUnit = AL_DEFAULT_METERS_PER_UNIT;
     listener->Position[0] = 0.0f;
     listener->Position[1] = 0.0f;
     listener->Position[2] = 0.0f;
@@ -2537,7 +2537,7 @@ static ALvoid InitContext(ALCcontext *Context)
     );
     aluVectorSet(&listener->Params.Velocity, 0.0f, 0.0f, 0.0f, 0.0f);
     listener->Params.Gain = 1.0f;
-    listener->Params.MetersPerUnit = 1.0f;
+    listener->Params.MetersPerUnit = listener->MetersPerUnit;
     listener->Params.DopplerFactor = 1.0f;
     listener->Params.SpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
 

@@ -43,7 +43,7 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
         break;
 
     case AL_METERS_PER_UNIT:
-        if(!(value >= 0.0f && isfinite(value)))
+        if(!(value >= AL_MIN_METERS_PER_UNIT && value <= AL_MAX_METERS_PER_UNIT))
             SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
         context->Listener->MetersPerUnit = value;
         break;

@@ -2822,7 +2822,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
     hData.mEvCount = 0;
     hData.mRadius = 0;
     hData.mDistance = 0;
-    fprintf(stdout, "Reading HRIR definition...\n");
+    fprintf(stdout, "Reading HRIR definition from %s...\n", inName?inName:"stdin");
     if(inName != NULL)
     {
         fp = fopen(inName, "r");
@@ -2884,7 +2884,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
     CalculateHrtds(model, (radius > DEFAULT_CUSTOM_RADIUS) ? radius : hData.mRadius, &hData);
     snprintf(rateStr, 8, "%u", hData.mIrRate);
     StrSubst(outName, "%r", rateStr, MAX_PATH_LEN, expName);
-    fprintf(stdout, "Creating MHR data set file...\n");
+    fprintf(stdout, "Creating MHR data set %s...\n", expName);
     ret = StoreMhr(&hData, experimental, expName);
 
     DestroyArray(hData.mHrtds);

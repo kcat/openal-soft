@@ -497,7 +497,7 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
              */
             ALfloat coeffs[MAX_AMBI_COEFFS];
 
-            if(Device->AvgSpeakerDist > 0.0f && Listener->Params.MetersPerUnit > 0.0f)
+            if(Device->AvgSpeakerDist > 0.0f)
             {
                 ALfloat mdist = Distance * Listener->Params.MetersPerUnit;
                 ALfloat w0 = SPEEDOFSOUNDMETRESPERSEC /
@@ -793,7 +793,7 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
             ALfloat w0 = 0.0f;
 
             /* Calculate NFC filter coefficient if needed. */
-            if(Device->AvgSpeakerDist > 0.0f && Listener->Params.MetersPerUnit > 0.0f)
+            if(Device->AvgSpeakerDist > 0.0f)
             {
                 ALfloat mdist = Distance * Listener->Params.MetersPerUnit;
                 ALfloat w1 = SPEEDOFSOUNDMETRESPERSEC /

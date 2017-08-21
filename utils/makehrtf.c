@@ -2971,7 +2971,7 @@ int main(int argc, char *argv[])
     radius = DEFAULT_CUSTOM_RADIUS;
     experimental = 0;
 
-    while((opt=getopt(argc, argv, "mr:f:e:s:k:w:d:c:e:i:o:xh")) != -1)
+    while((opt=getopt(argc, argv, "mr:f:e:s:l:w:d:c:e:i:o:xh")) != -1)
     {
         switch(opt)
         {

@@ -2808,7 +2808,6 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
     char rateStr[8+1], expName[MAX_PATH_LEN];
     TokenReaderT tr;
     HrirDataT hData;
-    double *dfa;
     FILE *fp;
     int ret;
 
@@ -2858,7 +2857,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
         fclose(fp);
     if(equalize)
     {
-        dfa = CreateArray(1 + (hData.mFftSize/2));
+        double *dfa = CreateArray(1 + (hData.mFftSize/2));
         fprintf(stdout, "Calculating diffuse-field average...\n");
         CalculateDiffuseFieldAverage(&hData, surface, limit, dfa);
         fprintf(stdout, "Performing diffuse-field equalization...\n");
@@ -2932,7 +2931,7 @@ int wmain(int argc, const wchar_t *wargv[])
     int i;
 
     atexit(cleanup_arglist);
-    arglist = calloc(sizeof(*arglist), argc);
+    arglist = calloc(sizeof(*arglist), argc+1);
     for(i = 0;i < argc;i++)
         arglist[i] = ToUTF8(wargv[i]);
 

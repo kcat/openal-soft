@@ -1411,7 +1411,7 @@ static void ResamplerRun(ResamplerT *rs, const uint inN, const double *in, const
         work[i] = r;
     }
     // Clean up after in-place operation.
-    if(in == out)
+    if(work != out)
     {
         for(i = 0;i < outN;i++)
             out[i] = work[i];
@@ -2853,7 +2853,7 @@ static int ProcessDefinition(const char *inName, const uint outRate, const uint 
             fclose(fp);
         return 0;
     }
-    if(inName != NULL)
+    if(fp != stdin)
         fclose(fp);
     if(equalize)
     {

@@ -52,6 +52,7 @@
 #define BSINC_REJECTION (60.0)
 #define BSINC_POINTS_MIN (12)
 #define BSINC_ORDER (BSINC_POINTS_MIN - 1)
+#define BSINC_POINTS_MAX (BSINC_POINTS_MIN * 2)
 
 static double MinDouble(double a, double b)
 { return (a <= b) ? a : b; }
@@ -127,12 +128,12 @@ static double CalcKaiserBeta(const double rejection)
 }
 
 /* Generates the coefficient, delta, and index tables required by the bsinc resampler */
-static void BsiGenerateTables()
+static void BsiGenerateTables(const char *tabname)
 {
-    static double   filter[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT + 1][2 * BSINC_POINTS_MIN];
-    static double scDeltas[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT    ][2 * BSINC_POINTS_MIN];
-    static double phDeltas[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT + 1][2 * BSINC_POINTS_MIN];
-    static double spDeltas[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT    ][2 * BSINC_POINTS_MIN];
+    static double   filter[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT + 1][BSINC_POINTS_MAX];
+    static double scDeltas[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT    ][BSINC_POINTS_MAX];
+    static double phDeltas[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT + 1][BSINC_POINTS_MAX];
+    static double spDeltas[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT    ][BSINC_POINTS_MAX];
     static int mt[BSINC_SCALE_COUNT];
     static double at[BSINC_SCALE_COUNT];
     double width, beta, scaleBase, scaleRange;
@@ -256,11 +257,11 @@ static void BsiGenerateTables()
 "    const float scaleBase, scaleRange;\n"
 "    const int m[BSINC_SCALE_COUNT];\n"
 "    const int filterOffset[BSINC_SCALE_COUNT];\n"
-"} bsinc = {\n", BSINC_ORDER, (((BSINC_ORDER%100)/10) == 1) ? "th" :
+"} %s = {\n", BSINC_ORDER, (((BSINC_ORDER%100)/10) == 1) ? "th" :
                               ((BSINC_ORDER%10) == 1) ? "st" :
                               ((BSINC_ORDER%10) == 2) ? "nd" :
                               ((BSINC_ORDER%10) == 3) ? "rd" : "th",
-                 BSINC_REJECTION, width, log2(1.0/scaleBase), i);
+                 BSINC_REJECTION, width, log2(1.0/scaleBase), i, tabname);
 
     fprintf(stdout, "    /* Tab */ {\n");
     for(si = 0; si < BSINC_SCALE_COUNT; si++)
@@ -357,7 +358,7 @@ static void Sinc4GenerateTables(void)
 
 int main(void)
 {
-    BsiGenerateTables();
+    BsiGenerateTables("bsinc");
     Sinc4GenerateTables();
     return 0;
 }

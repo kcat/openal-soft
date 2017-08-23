@@ -49,10 +49,10 @@
 #define BSINC_SCALE_COUNT (16)
 #define BSINC_PHASE_COUNT (16)
 
-#define BSINC_REJECTION (60.0)
-#define BSINC_POINTS_MIN (12)
-#define BSINC_ORDER (BSINC_POINTS_MIN - 1)
-#define BSINC_POINTS_MAX (BSINC_POINTS_MIN * 2)
+/* 24 points includes the doubling for downsampling. So the maximum allowed
+ * order is 11, which is 12 sample points that multiplied by 2 is 24.
+ */
+#define BSINC_POINTS_MAX (24)
 
 static double MinDouble(double a, double b)
 { return (a <= b) ? a : b; }
@@ -104,8 +104,8 @@ static double Kaiser(const double b, const double k)
     return BesselI_0(b * sqrt(1.0 - k*k)) / BesselI_0(b);
 }
 
-/* NOTE: Calculates the transition width of the Kaiser window.  Rejection is
- *       in dB.
+/* Calculates the (normalized frequency) transition width of the Kaiser window.
+ * Rejection is in dB.
  */
 static double CalcKaiserWidth(const double rejection, const int order)
 {
@@ -113,7 +113,7 @@ static double CalcKaiserWidth(const double rejection, const int order)
 
     if(rejection > 21.0)
        return (rejection - 7.95) / (order * 2.285 * w_t);
-
+    /* This enforces a minimum rejection of just above 21.18dB */
     return 5.79 / (order * w_t);
 }
 
@@ -128,7 +128,7 @@ static double CalcKaiserBeta(const double rejection)
 }
 
 /* Generates the coefficient, delta, and index tables required by the bsinc resampler */
-static void BsiGenerateTables(const char *tabname)
+static void BsiGenerateTables(const char *tabname, const double rejection, const int order)
 {
     static double   filter[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT + 1][BSINC_POINTS_MAX];
     static double scDeltas[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT    ][BSINC_POINTS_MAX];
@@ -136,6 +136,7 @@ static void BsiGenerateTables(const char *tabname)
     static double spDeltas[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT    ][BSINC_POINTS_MAX];
     static int mt[BSINC_SCALE_COUNT];
     static double at[BSINC_SCALE_COUNT];
+    const int num_points_min = order + 1;
     double width, beta, scaleBase, scaleRange;
     int si, pi, i;
 
@@ -148,8 +149,8 @@ static void BsiGenerateTables(const char *tabname)
        band, but it may vary due to the linear interpolation between scales
        of the filter.
     */
-    width = CalcKaiserWidth(BSINC_REJECTION, BSINC_ORDER);
-    beta = CalcKaiserBeta(BSINC_REJECTION);
+    width = CalcKaiserWidth(rejection, order);
+    beta = CalcKaiserBeta(rejection);
     scaleBase = width / 2.0;
     scaleRange = 1.0 - scaleBase;
 
@@ -157,9 +158,8 @@ static void BsiGenerateTables(const char *tabname)
     for(si = 0; si < BSINC_SCALE_COUNT; si++)
     {
         const double scale = scaleBase + (scaleRange * si / (BSINC_SCALE_COUNT - 1));
-        const double a = MinDouble(floor(BSINC_POINTS_MIN / (2.0 * scale)),
-                                   BSINC_POINTS_MIN);
-        int m = 2 * (int)a;
+        const double a = MinDouble(floor(num_points_min / (2.0 * scale)), num_points_min);
+        const int m = 2 * (int)a;
 
         mt[si] = m;
         at[si] = a;
@@ -171,7 +171,7 @@ static void BsiGenerateTables(const char *tabname)
     for(si = 0; si < BSINC_SCALE_COUNT; si++)
     {
         const int m = mt[si];
-        const int o = BSINC_POINTS_MIN - (m / 2);
+        const int o = num_points_min - (m / 2);
         const int l = (m / 2) - 1;
         const double a = at[si];
         const double scale = scaleBase + (scaleRange * si / (BSINC_SCALE_COUNT - 1));
@@ -198,7 +198,7 @@ static void BsiGenerateTables(const char *tabname)
     for(si = 0; si < (BSINC_SCALE_COUNT - 1); si++)
     {
         const int m = mt[si];
-        const int o = BSINC_POINTS_MIN - (m / 2);
+        const int o = num_points_min - (m / 2);
 
         for(pi = 0; pi < BSINC_PHASE_COUNT; pi++)
         {
@@ -211,7 +211,7 @@ static void BsiGenerateTables(const char *tabname)
     for(si = 0; si < BSINC_SCALE_COUNT; si++)
     {
         const int m = mt[si];
-        const int o = BSINC_POINTS_MIN - (m / 2);
+        const int o = num_points_min - (m / 2);
 
         for(pi = 0; pi < BSINC_PHASE_COUNT; pi++)
         {
@@ -226,7 +226,7 @@ static void BsiGenerateTables(const char *tabname)
     for(si = 0; si < (BSINC_SCALE_COUNT - 1); si++)
     {
         const int m = mt[si];
-        const int o = BSINC_POINTS_MIN - (m / 2);
+        const int o = num_points_min - (m / 2);
 
         for(pi = 0; pi < BSINC_PHASE_COUNT; pi++)
         {
@@ -257,17 +257,17 @@ static void BsiGenerateTables(const char *tabname)
 "    const float scaleBase, scaleRange;\n"
 "    const int m[BSINC_SCALE_COUNT];\n"
 "    const int filterOffset[BSINC_SCALE_COUNT];\n"
-"} %s = {\n", BSINC_ORDER, (((BSINC_ORDER%100)/10) == 1) ? "th" :
-                              ((BSINC_ORDER%10) == 1) ? "st" :
-                              ((BSINC_ORDER%10) == 2) ? "nd" :
-                              ((BSINC_ORDER%10) == 3) ? "rd" : "th",
-                 BSINC_REJECTION, width, log2(1.0/scaleBase), i, tabname);
+"} %s = {\n", order, (((order%100)/10) == 1) ? "th" :
+                     ((order%10) == 1) ? "st" :
+                     ((order%10) == 2) ? "nd" :
+                     ((order%10) == 3) ? "rd" : "th",
+              rejection, width, log2(1.0/scaleBase), i, tabname);
 
     fprintf(stdout, "    /* Tab */ {\n");
     for(si = 0; si < BSINC_SCALE_COUNT; si++)
     {
         const int m = mt[si];
-        const int o = BSINC_POINTS_MIN - (m / 2);
+        const int o = num_points_min - (m / 2);
 
         for(pi = 0; pi < BSINC_PHASE_COUNT; pi++)
         {
@@ -324,12 +324,12 @@ static void BsiGenerateTables(const char *tabname)
 #define FRACTIONBITS (12)
 #define FRACTIONONE  (1<<FRACTIONBITS)
 
-static void Sinc4GenerateTables(void)
+static void Sinc4GenerateTables(const double rejection)
 {
     static double filter[FRACTIONONE][4];
 
-    const double width = CalcKaiserWidth(BSINC_REJECTION, 3);
-    const double beta = CalcKaiserBeta(BSINC_REJECTION);
+    const double width = CalcKaiserWidth(rejection, 3);
+    const double beta = CalcKaiserBeta(rejection);
     const double scaleBase = width / 2.0;
     const double scaleRange = 1.0 - scaleBase;
     const double scale = scaleBase + scaleRange;
@@ -358,7 +358,8 @@ static void Sinc4GenerateTables(void)
 
 int main(void)
 {
-    BsiGenerateTables("bsinc");
-    Sinc4GenerateTables();
+    /* An 11th order filter with a -60dB drop at nyquist. */
+    BsiGenerateTables("bsinc", 60.0, 11);
+    Sinc4GenerateTables(60.0);
     return 0;
 }

@@ -16,7 +16,7 @@ const ALfloat *Resample_bsinc_SSE(const InterpState *state, const ALfloat *restr
                                   ALsizei frac, ALint increment, ALfloat *restrict dst,
                                   ALsizei dstlen)
 {
-    const ALfloat *filter = state->bsinc.filter;
+    const ALfloat *const filter = state->bsinc.filter;
     const __m128 sf4 = _mm_set1_ps(state->bsinc.sf);
     const ALsizei m = state->bsinc.m;
     const ALfloat *fil, *scd, *phd, *spd;

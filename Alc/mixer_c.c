@@ -73,7 +73,7 @@ const ALfloat *Resample_bsinc_C(const InterpState *state, const ALfloat *restric
                                 ALsizei dstlen)
 {
     const ALfloat *fil, *scd, *phd, *spd;
-    const ALfloat *filter = state->bsinc.filter;
+    const ALfloat *const filter = state->bsinc.filter;
     const ALfloat sf = state->bsinc.sf;
     const ALsizei m = state->bsinc.m;
     ALsizei j_f, pi, i;

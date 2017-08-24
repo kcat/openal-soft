@@ -141,7 +141,7 @@ const ALfloat *Resample_bsinc_Neon(const InterpState *state,
   const ALfloat *restrict src, ALsizei frac, ALint increment,
   ALfloat *restrict dst, ALsizei dstlen)
 {
-    const ALfloat *filter = state->bsinc.filter;
+    const ALfloat *const filter = state->bsinc.filter;
     const float32x4_t sf4 = vdupq_n_f32(state->bsinc.sf);
     const ALsizei m = state->bsinc.m;
     const ALfloat *fil, *scd, *phd, *spd;

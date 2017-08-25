@@ -34,7 +34,7 @@ SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType 
     {
         /* TODO: Allow other resamplers. */
         BsincPrepare(converter->mIncrement, &converter->mState.bsinc);
-        converter->mResample = SelectResampler(BSincResampler);
+        converter->mResample = SelectResampler(BSinc12Resampler);
     }
     END_MIXER_MODE();
 

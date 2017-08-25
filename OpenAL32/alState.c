@@ -51,7 +51,7 @@ static const ALchar alErrOutOfMemory[] = "Out of Memory";
 static const ALchar alPointResampler[] = "Nearest";
 static const ALchar alLinearResampler[] = "Linear";
 static const ALchar alSinc4Resampler[] = "4-Point Sinc";
-static const ALchar alBSincResampler[] = "Band-limited Sinc (12/24)";
+static const ALchar alBSinc12Resampler[] = "Band-limited Sinc (12/24)";
 
 AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
 {
@@ -750,7 +750,7 @@ AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index)
 {
     const char *ResamplerNames[] = {
         alPointResampler, alLinearResampler,
-        alSinc4Resampler, alBSincResampler,
+        alSinc4Resampler, alBSinc12Resampler,
     };
     const ALchar *value = NULL;
     ALCcontext *context;

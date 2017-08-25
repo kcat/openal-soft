@@ -234,7 +234,7 @@ ALboolean BsincPrepare(const ALuint increment, BsincState *state)
     if(increment > FRACTIONONE)
     {
         sf = (ALfloat)FRACTIONONE / increment;
-        if(sf < bsinc.scaleBase)
+        if(sf < bsinc12.scaleBase)
         {
             /* Signal has been completely cut.  The return result can be used
              * to skip the filter (and output zeros) as an optimization.
@@ -245,7 +245,7 @@ ALboolean BsincPrepare(const ALuint increment, BsincState *state)
         }
         else
         {
-            sf = (BSINC_SCALE_COUNT - 1) * (sf - bsinc.scaleBase) * bsinc.scaleRange;
+            sf = (BSINC_SCALE_COUNT - 1) * (sf - bsinc12.scaleBase) * bsinc12.scaleRange;
             si = fastf2i(sf);
             /* The interpolation factor is fit to this diagonally-symmetric
              * curve to reduce the transition ripple caused by interpolating
@@ -261,9 +261,9 @@ ALboolean BsincPrepare(const ALuint increment, BsincState *state)
     }
 
     state->sf = sf;
-    state->m = bsinc.m[si];
+    state->m = bsinc12.m[si];
     state->l = -((state->m/2) - 1);
-    state->filter = bsinc.Tab + bsinc.filterOffset[si];
+    state->filter = bsinc12.Tab + bsinc12.filterOffset[si];
     return uncut;
 }
 
@@ -1038,7 +1038,7 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *p
         voice->Step = MAX_PITCH<<FRACTIONBITS;
     else
         voice->Step = maxi(fastf2i(Pitch*FRACTIONONE + 0.5f), 1);
-    if(props->Resampler == BSincResampler)
+    if(props->Resampler == BSinc12Resampler)
         BsincPrepare(voice->Step, &voice->ResampleState.bsinc);
     else
         voice->ResampleState.sinc4.filter = sinc4Tab;
@@ -1384,7 +1384,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
         voice->Step = MAX_PITCH<<FRACTIONBITS;
     else
         voice->Step = maxi(fastf2i(Pitch*FRACTIONONE + 0.5f), 1);
-    if(props->Resampler == BSincResampler)
+    if(props->Resampler == BSinc12Resampler)
         BsincPrepare(voice->Step, &voice->ResampleState.bsinc);
     else
         voice->ResampleState.sinc4.filter = sinc4Tab;

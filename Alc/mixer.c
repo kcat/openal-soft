@@ -141,7 +141,7 @@ ResamplerFunc SelectResampler(enum Resampler resampler)
                 return Resample_fir4_SSE3;
 #endif
             return Resample_fir4_C;
-        case BSincResampler:
+        case BSinc12Resampler:
 #ifdef HAVE_NEON
             if((CPUCapFlags&CPU_CAP_NEON))
                 return Resample_bsinc_Neon;
@@ -170,7 +170,7 @@ void aluInitMixer(void)
         else if(strcasecmp(str, "sinc4") == 0)
             ResamplerDefault = FIR4Resampler;
         else if(strcasecmp(str, "bsinc") == 0)
-            ResamplerDefault = BSincResampler;
+            ResamplerDefault = BSinc12Resampler;
         else if(strcasecmp(str, "cubic") == 0 || strcasecmp(str, "sinc8") == 0)
         {
             WARN("Resampler option \"%s\" is deprecated, using sinc4\n", str);

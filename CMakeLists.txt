@@ -1103,29 +1103,53 @@ ENDIF()
 # This is always available
 SET(BACKENDS  "${BACKENDS} Null")
 
-option(ALSOFT_EMBED_HRTF_DATA "Embed the HRTF data files (increases library footprint)" OFF)
-if(ALSOFT_EMBED_HRTF_DATA)
-    SET(NATIVE_SRC_DIR  "${OpenAL_SOURCE_DIR}/native-tools/")
-    SET(NATIVE_BIN_DIR  "${OpenAL_BINARY_DIR}/native-tools/")
-    FILE(MAKE_DIRECTORY "${NATIVE_BIN_DIR}")
 
-    SET(BIN2H_COMMAND  "${NATIVE_BIN_DIR}bin2h")
-    ADD_CUSTOM_COMMAND(OUTPUT "${BIN2H_COMMAND}"
-        COMMAND ${CMAKE_COMMAND} "${NATIVE_SRC_DIR}"
-        COMMAND ${CMAKE_COMMAND} --build . --config "Release"
-        WORKING_DIRECTORY "${NATIVE_BIN_DIR}"
-        DEPENDS "${NATIVE_SRC_DIR}CMakeLists.txt" "${NATIVE_SRC_DIR}bin2h.c"
+FIND_PACKAGE(Git)
+IF(GIT_FOUND AND EXISTS "${OpenAL_SOURCE_DIR}/.git")
+    # Get the current working branch and its latest abbreviated commit hash
+    ADD_CUSTOM_TARGET(build_version
+        ${CMAKE_COMMAND} -D GIT_EXECUTABLE=${GIT_EXECUTABLE}
+                         -D LIB_VERSION=${LIB_VERSION}
+                         -D SRC=${OpenAL_SOURCE_DIR}/version.h.in
+                         -D DST=${OpenAL_BINARY_DIR}/version.h
+                         -P ${OpenAL_SOURCE_DIR}/version.cmake
+        WORKING_DIRECTORY "${OpenAL_SOURCE_DIR}"
         VERBATIM
     )
+ELSE()
+    SET(GIT_BRANCH "UNKNOWN")
+    SET(GIT_COMMIT_HASH "unknown")
+    CONFIGURE_FILE(
+        "${OpenAL_SOURCE_DIR}/version.h.in"
+        "${OpenAL_BINARY_DIR}/version.h")
+ENDIF()
 
+SET(NATIVE_SRC_DIR  "${OpenAL_SOURCE_DIR}/native-tools/")
+SET(NATIVE_BIN_DIR  "${OpenAL_BINARY_DIR}/native-tools/")
+FILE(MAKE_DIRECTORY "${NATIVE_BIN_DIR}")
+
+SET(BIN2H_COMMAND  "${NATIVE_BIN_DIR}bin2h")
+ADD_CUSTOM_COMMAND(OUTPUT "${BIN2H_COMMAND}"
+    COMMAND ${CMAKE_COMMAND} "${NATIVE_SRC_DIR}"
+    COMMAND ${CMAKE_COMMAND} --build . --clean-first --config "Release"
+    WORKING_DIRECTORY "${NATIVE_BIN_DIR}"
+    DEPENDS "${NATIVE_SRC_DIR}CMakeLists.txt" "${NATIVE_SRC_DIR}bin2h.c"
+    VERBATIM
+)
+ADD_CUSTOM_TARGET(native-tools
+    DEPENDS "${BIN2H_COMMAND}"
+    VERBATIM
+)
+
+option(ALSOFT_EMBED_HRTF_DATA "Embed the HRTF data files (increases library footprint)" OFF)
+if(ALSOFT_EMBED_HRTF_DATA)
     MACRO(make_hrtf_header FILENAME VARNAME)
         SET(infile  "${OpenAL_SOURCE_DIR}/hrtf/${FILENAME}")
         SET(outfile  "${OpenAL_BINARY_DIR}/${FILENAME}.h")
 
         ADD_CUSTOM_COMMAND(OUTPUT "${outfile}"
             COMMAND "${BIN2H_COMMAND}" "${infile}" "${outfile}" ${VARNAME}
-            DEPENDS "${BIN2H_COMMAND}" "${infile}"
-            COMMENT "Generating ${FILENAME}.h"
+            DEPENDS native-tools "${infile}"
             VERBATIM
         )
 
@@ -1157,26 +1181,6 @@ IF(NOT WIN32)
     SET(LIBNAME "openal")
 ELSE()
     SET(LIBNAME "OpenAL32")
-ENDIF()
-
-FIND_PACKAGE(Git)
-IF(GIT_FOUND AND EXISTS "${OpenAL_SOURCE_DIR}/.git")
-    # Get the current working branch and its latest abbreviated commit hash
-    ADD_CUSTOM_TARGET(build_version
-        ${CMAKE_COMMAND} -D GIT_EXECUTABLE=${GIT_EXECUTABLE}
-                         -D LIB_VERSION=${LIB_VERSION}
-                         -D SRC=${OpenAL_SOURCE_DIR}/version.h.in
-                         -D DST=${OpenAL_BINARY_DIR}/version.h
-                         -P ${OpenAL_SOURCE_DIR}/version.cmake
-        WORKING_DIRECTORY "${OpenAL_SOURCE_DIR}"
-        VERBATIM
-    )
-ELSE()
-    SET(GIT_BRANCH "UNKNOWN")
-    SET(GIT_COMMIT_HASH "unknown")
-    CONFIGURE_FILE(
-        "${OpenAL_SOURCE_DIR}/version.h.in"
-        "${OpenAL_BINARY_DIR}/version.h")
 ENDIF()
 
 # Needed for openal.pc.in

@@ -33,9 +33,66 @@
  *   accessed October 2012.
  */
 
+#define _UNICODE
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <stdlib.h>
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+static char *ToUTF8(const wchar_t *from)
+{
+    char *out = NULL;
+    int len;
+    if((len=WideCharToMultiByte(CP_UTF8, 0, from, -1, NULL, 0, NULL, NULL)) > 0)
+    {
+        out = calloc(sizeof(*out), len);
+        WideCharToMultiByte(CP_UTF8, 0, from, -1, out, len, NULL, NULL);
+        out[len-1] = 0;
+    }
+    return out;
+}
+
+static WCHAR *FromUTF8(const char *str)
+{
+    WCHAR *out = NULL;
+    int len;
+
+    if((len=MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0)) > 0)
+    {
+        out = calloc(sizeof(WCHAR), len);
+        MultiByteToWideChar(CP_UTF8, 0, str, -1, out, len);
+        out[len-1] = 0;
+    }
+    return out;
+}
+
+
+static FILE *my_fopen(const char *fname, const char *mode)
+{
+    WCHAR *wname=NULL, *wmode=NULL;
+    FILE *file = NULL;
+
+    wname = FromUTF8(fname);
+    wmode = FromUTF8(mode);
+    if(!wname)
+        fprintf(stderr, "Failed to convert UTF-8 filename: \"%s\"\n", fname);
+    else if(!wmode)
+        fprintf(stderr, "Failed to convert UTF-8 mode: \"%s\"\n", mode);
+    else
+        file = _wfopen(wname, wmode);
+
+    free(wname);
+    free(wmode);
+
+    return file;
+}
+#define fopen my_fopen
+#endif
+
 
 #ifndef M_PI
 #define M_PI                         (3.14159265358979323846)
@@ -128,7 +185,7 @@ static double CalcKaiserBeta(const double rejection)
 }
 
 /* Generates the coefficient, delta, and index tables required by the bsinc resampler */
-static void BsiGenerateTables(const char *tabname, const double rejection, const int order)
+static void BsiGenerateTables(FILE *output, const char *tabname, const double rejection, const int order)
 {
     static double   filter[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT + 1][BSINC_POINTS_MAX];
     static double scDeltas[BSINC_SCALE_COUNT][BSINC_PHASE_COUNT    ][BSINC_POINTS_MAX];
@@ -239,7 +296,7 @@ static void BsiGenerateTables(const char *tabname, const double rejection, const
     for(si = 0; si < BSINC_SCALE_COUNT; si++)
         mt[si] = (mt[si]+3) & ~3;
 
-    fprintf(stdout,
+    fprintf(output,
 "/* This %d%s order filter has a rejection of -%.0fdB, yielding a transition width\n"
 " * of ~%.3f (normalized frequency). Order increases when downsampling to a\n"
 " * limit of one octave, after which the quality of the filter (transition\n"
@@ -258,31 +315,31 @@ static void BsiGenerateTables(const char *tabname, const double rejection, const
        the signal.  The limit in octaves can be calculated by taking the
        base-2 logarithm of its inverse: log_2(1 / scaleBase)
     */
-    fprintf(stdout, "    /* scaleBase */ %.9ef, /* scaleRange */ %.9ef,\n", scaleBase, 1.0 / scaleRange);
+    fprintf(output, "    /* scaleBase */ %.9ef, /* scaleRange */ %.9ef,\n", scaleBase, 1.0 / scaleRange);
 
-    fprintf(stdout, "    /* m */ {");
-    fprintf(stdout, " %d", mt[0]);
+    fprintf(output, "    /* m */ {");
+    fprintf(output, " %d", mt[0]);
     for(si = 1; si < BSINC_SCALE_COUNT; si++)
-        fprintf(stdout, ", %d", mt[si]);
-    fprintf(stdout, " },\n");
+        fprintf(output, ", %d", mt[si]);
+    fprintf(output, " },\n");
 
-    fprintf(stdout, "    /* filterOffset */ {");
-    fprintf(stdout, " %d", 0);
+    fprintf(output, "    /* filterOffset */ {");
+    fprintf(output, " %d", 0);
     i = mt[0]*4*BSINC_PHASE_COUNT;
     for(si = 1; si < BSINC_SCALE_COUNT; si++)
     {
-        fprintf(stdout, ", %d", i);
+        fprintf(output, ", %d", i);
         i += mt[si]*4*BSINC_PHASE_COUNT;
     }
 
-    fprintf(stdout, " },\n");
+    fprintf(output, " },\n");
 
     // Calculate the table size.
     i = 0;
     for(si = 0; si < BSINC_SCALE_COUNT; si++)
         i += 4 * BSINC_PHASE_COUNT * mt[si];
 
-    fprintf(stdout, "\n    /* Tab (%d entries) */ {\n", i);
+    fprintf(output, "\n    /* Tab (%d entries) */ {\n", i);
     for(si = 0; si < BSINC_SCALE_COUNT; si++)
     {
         const int m = mt[si];
@@ -290,23 +347,23 @@ static void BsiGenerateTables(const char *tabname, const double rejection, const
 
         for(pi = 0; pi < BSINC_PHASE_COUNT; pi++)
         {
-            fprintf(stdout, "        /* %2d,%2d (%d) */", si, pi, m);
-            fprintf(stdout, "\n       ");
+            fprintf(output, "        /* %2d,%2d (%d) */", si, pi, m);
+            fprintf(output, "\n       ");
             for(i = 0; i < m; i++)
-                fprintf(stdout, " %+14.9ef,", filter[si][pi][o + i]);
-            fprintf(stdout, "\n       ");
+                fprintf(output, " %+14.9ef,", filter[si][pi][o + i]);
+            fprintf(output, "\n       ");
             for(i = 0; i < m; i++)
-                fprintf(stdout, " %+14.9ef,", scDeltas[si][pi][o + i]);
-            fprintf(stdout, "\n       ");
+                fprintf(output, " %+14.9ef,", scDeltas[si][pi][o + i]);
+            fprintf(output, "\n       ");
             for(i = 0; i < m; i++)
-                fprintf(stdout, " %+14.9ef,", phDeltas[si][pi][o + i]);
-            fprintf(stdout, "\n       ");
+                fprintf(output, " %+14.9ef,", phDeltas[si][pi][o + i]);
+            fprintf(output, "\n       ");
             for(i = 0; i < m; i++)
-                fprintf(stdout, " %+14.9ef,", spDeltas[si][pi][o + i]);
-            fprintf(stdout, "\n");
+                fprintf(output, " %+14.9ef,", spDeltas[si][pi][o + i]);
+            fprintf(output, "\n");
         }
     }
-    fprintf(stdout, "    }\n};\n\n");
+    fprintf(output, "    }\n};\n\n");
 }
 
 
@@ -319,7 +376,7 @@ static void BsiGenerateTables(const char *tabname, const double rejection, const
 #define FRACTIONBITS (12)
 #define FRACTIONONE  (1<<FRACTIONBITS)
 
-static void Sinc4GenerateTables(const double rejection)
+static void Sinc4GenerateTables(FILE *output, const double rejection)
 {
     static double filter[FRACTIONONE][4];
 
@@ -344,16 +401,63 @@ static void Sinc4GenerateTables(const double rejection)
         }
     }
 
-    fprintf(stdout, "alignas(16) static const float sinc4Tab[FRACTIONONE][4] = {\n");
+    fprintf(output, "alignas(16) static const float sinc4Tab[FRACTIONONE][4] = {\n");
     for(pi = 0;pi < FRACTIONONE;pi++)
-        fprintf(stdout, "    { %+14.9ef, %+14.9ef, %+14.9ef, %+14.9ef },\n",
+        fprintf(output, "    { %+14.9ef, %+14.9ef, %+14.9ef, %+14.9ef },\n",
                 filter[pi][0], filter[pi][1], filter[pi][2], filter[pi][3]);
-    fprintf(stdout, "};\n\n");
+    fprintf(output, "};\n\n");
 }
 
-int main(void)
+
+#ifdef _WIN32
+#define main my_main
+int main(int argc, char *argv[]);
+
+static char **arglist;
+static void cleanup_arglist(void)
 {
-    fprintf(stdout, "/* Generated by bsincgen, do not edit! */\n\n"
+    int i;
+    for(i = 0;arglist[i];i++)
+        free(arglist[i]);
+    free(arglist);
+}
+
+int wmain(int argc, const wchar_t *wargv[])
+{
+    int i;
+
+    atexit(cleanup_arglist);
+    arglist = calloc(sizeof(*arglist), argc+1);
+    for(i = 0;i < argc;i++)
+        arglist[i] = ToUTF8(wargv[i]);
+
+    return main(argc, arglist);
+}
+#endif
+
+int main(int argc, char *argv[])
+{
+    FILE *output;
+
+    if(argc > 2)
+    {
+        fprintf(stderr, "Usage: %s [output file]\n", argv[0]);
+        return 1;
+    }
+
+    if(argc == 2)
+    {
+        output = fopen(argv[1], "rb");
+        if(!output)
+        {
+            fprintf(stderr, "Failed to open %s for writing\n", argv[1]);
+            return 1;
+        }
+    }
+    else
+        output = stdout;
+
+    fprintf(output, "/* Generated by bsincgen, do not edit! */\n\n"
 "typedef struct BSincTable {\n"
 "    const float scaleBase, scaleRange;\n"
 "    const int m[BSINC_SCALE_COUNT];\n"
@@ -361,7 +465,12 @@ int main(void)
 "    alignas(16) const float Tab[];\n"
 "} BSincTable;\n\n");
     /* An 11th order filter with a -60dB drop at nyquist. */
-    BsiGenerateTables("bsinc12", 60.0, 11);
-    Sinc4GenerateTables(60.0);
+    BsiGenerateTables(output, "bsinc12", 60.0, 11);
+    Sinc4GenerateTables(output, 60.0);
+
+    if(output != stdout)
+        fclose(output);
+    output = NULL;
+
     return 0;
 }

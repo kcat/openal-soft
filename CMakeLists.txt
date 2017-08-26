@@ -1419,6 +1419,9 @@ IF(ALSOFT_UTILS)
     IF(HAVE_LIBM)
         TARGET_LINK_LIBRARIES(bsincgen m)
     ENDIF()
+    IF(WIN32 AND CMAKE_COMPILER_IS_GNUCC)
+        SET_PROPERTY(TARGET bsincgen APPEND_STRING PROPERTY LINK_FLAGS " -municode")
+    ENDIF()
 
     IF(ALSOFT_INSTALL)
         INSTALL(TARGETS openal-info makehrtf bsincgen

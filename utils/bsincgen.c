@@ -369,7 +369,7 @@ int main(int argc, char *argv[])
 
     if(argc == 2)
     {
-        output = fopen(argv[1], "rb");
+        output = fopen(argv[1], "wb");
         if(!output)
         {
             fprintf(stderr, "Failed to open %s for writing\n", argv[1]);

@@ -100,9 +100,9 @@ static const struct NameValuePair {
     { "Point", "point" },
     { "Linear", "linear" },
     { "Default (Linear)", "" },
-    { "4-Point Sinc", "sinc4" },
-    { "Band-limited Sinc (12/24)", "bsinc12" },
-    { "Band-limited Sinc (24/48)", "bsinc24" },
+    { "3rd order Sinc", "sinc4" },
+    { "11th order Sinc", "bsinc12" },
+    { "23rd order Sinc", "bsinc24" },
 
     { "", "" }
 }, stereoModeList[] = {

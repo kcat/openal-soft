@@ -50,9 +50,9 @@ static const ALchar alErrOutOfMemory[] = "Out of Memory";
 /* Resampler strings */
 static const ALchar alPointResampler[] = "Nearest";
 static const ALchar alLinearResampler[] = "Linear";
-static const ALchar alSinc4Resampler[] = "4-Point Sinc";
-static const ALchar alBSinc12Resampler[] = "Band-limited Sinc (12/24)";
-static const ALchar alBSinc24Resampler[] = "Band-limited Sinc (24/48)";
+static const ALchar alSinc4Resampler[] = "3rd order Sinc";
+static const ALchar alBSinc12Resampler[] = "11th order Sinc";
+static const ALchar alBSinc24Resampler[] = "23rd order Sinc";
 
 AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
 {

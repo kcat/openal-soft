@@ -51,13 +51,14 @@
 #endif
 
 // The number of distinct scale and phase intervals within the filter table.
+// Must be the same as in alu.h!
 #define BSINC_SCALE_COUNT (16)
 #define BSINC_PHASE_COUNT (16)
 
-/* 24 points includes the doubling for downsampling. So the maximum allowed
- * order is 11, which is 12 sample points that multiplied by 2 is 24.
+/* 48 points includes the doubling for downsampling, so the maximum number of
+ * base sample points is 24, which is 23rd order.
  */
-#define BSINC_POINTS_MAX (24)
+#define BSINC_POINTS_MAX (48)
 
 static double MinDouble(double a, double b)
 { return (a <= b) ? a : b; }
@@ -251,7 +252,7 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
 " * width) suffers to reduce the CPU cost. The bandlimiting will cut all sound\n"
 " * after downsampling by ~%.2f octaves.\n"
 " */\n"
-"static const BSincTable %s = {\n",
+"const BSincTable %s = {\n",
             order, (((order%100)/10) == 1) ? "th" :
                    ((order%10) == 1) ? "st" :
                    ((order%10) == 2) ? "nd" :
@@ -386,6 +387,8 @@ int main(int argc, char *argv[])
 "    const int filterOffset[BSINC_SCALE_COUNT];\n"
 "    alignas(16) const float Tab[];\n"
 "} BSincTable;\n\n");
+    /* A 23rd order filter with a -60dB drop at nyquist. */
+    BsiGenerateTables(output, "bsinc24", 60.0, 23);
     /* An 11th order filter with a -60dB drop at nyquist. */
     BsiGenerateTables(output, "bsinc12", 60.0, 11);
     Sinc4GenerateTables(output, 60.0);

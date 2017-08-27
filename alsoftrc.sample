@@ -150,9 +150,10 @@
 #  point - nearest sample, no interpolation
 #  linear - extrapolates samples using a linear slope between samples
 #  sinc4 - extrapolates samples using a 4-point Sinc filter
-#  bsinc - extrapolates samples using a band-limited Sinc filter (varying
-#          between 12 and 24 points, with anti-aliasing)
-#  Specifying other values will result in using the default (linear).
+#  bsinc12 - extrapolates samples using a band-limited Sinc filter (varying
+#            between 12 and 24 points, with anti-aliasing)
+#  bsinc24 - extrapolates samples using a band-limited Sinc filter (varying
+#            between 24 and 48 points, with anti-aliasing)
 #resampler = linear
 
 ## rt-prio: (global)

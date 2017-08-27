@@ -24,16 +24,17 @@
 #define MAX_PITCH  (255)
 
 /* Maximum number of buffer samples before the current pos needed for resampling. */
-#define MAX_PRE_SAMPLES 12
+#define MAX_PRE_SAMPLES 24
 
 /* Maximum number of buffer samples after the current pos needed for resampling. */
-#define MAX_POST_SAMPLES 12
+#define MAX_POST_SAMPLES 24
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+struct BSincTable;
 struct ALsource;
 struct ALbufferlistitem;
 struct ALvoice;
@@ -54,8 +55,9 @@ enum Resampler {
     LinearResampler,
     FIR4Resampler,
     BSinc12Resampler,
+    BSinc24Resampler,
 
-    ResamplerMax = BSinc12Resampler
+    ResamplerMax = BSinc24Resampler
 };
 extern enum Resampler ResamplerDefault;
 
@@ -91,12 +93,15 @@ typedef union InterpState {
     Sinc4State sinc4;
 } InterpState;
 
-ALboolean BsincPrepare(const ALuint increment, BsincState *state);
-
 typedef const ALfloat* (*ResamplerFunc)(const InterpState *state,
     const ALfloat *restrict src, ALsizei frac, ALint increment,
     ALfloat *restrict dst, ALsizei dstlen
 );
+
+ALboolean BsincPrepare(const ALuint increment, BsincState *state, const struct BSincTable *table);
+
+extern const struct BSincTable bsinc12;
+extern const struct BSincTable bsinc24;
 
 
 typedef union aluVector {

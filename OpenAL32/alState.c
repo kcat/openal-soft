@@ -52,6 +52,7 @@ static const ALchar alPointResampler[] = "Nearest";
 static const ALchar alLinearResampler[] = "Linear";
 static const ALchar alSinc4Resampler[] = "4-Point Sinc";
 static const ALchar alBSinc12Resampler[] = "Band-limited Sinc (12/24)";
+static const ALchar alBSinc24Resampler[] = "Band-limited Sinc (24/48)";
 
 AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
 {
@@ -751,6 +752,7 @@ AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index)
     const char *ResamplerNames[] = {
         alPointResampler, alLinearResampler,
         alSinc4Resampler, alBSinc12Resampler,
+        alBSinc24Resampler,
     };
     const ALchar *value = NULL;
     ALCcontext *context;

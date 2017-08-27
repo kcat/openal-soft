@@ -64,6 +64,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <stddef.h>
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
@@ -79,9 +80,18 @@
 
 #include "win_main_utf8.h"
 
-// Rely (if naively) on OpenAL's header for the types used for serialization.
-#include "AL/al.h"
-#include "AL/alext.h"
+/* Define int64_t and uint64_t types */
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+#include <inttypes.h>
+#elif defined(_WIN32) && defined(__GNUC__)
+#include <stdint.h>
+#elif defined(_WIN32)
+typedef __int64 int64_t;
+typedef unsigned __int64 uint64_t;
+#else
+/* Fallback if nothing above works */
+#include <inttypes.h>
+#endif
 
 #ifndef M_PI
 #define M_PI                         (3.14159265358979323846)
@@ -252,10 +262,10 @@ typedef enum HeadModelT {
 typedef unsigned int uint;
 
 // Serialization types.  The trailing digit indicates the number of bits.
-typedef ALubyte      uint8;
-typedef ALint        int32;
-typedef ALuint       uint32;
-typedef ALuint64SOFT uint64;
+typedef unsigned char uint8;
+typedef int           int32;
+typedef unsigned int  uint32;
+typedef uint64_t      uint64;
 
 // Token reader state for parsing the data set definition.
 typedef struct TokenReaderT {

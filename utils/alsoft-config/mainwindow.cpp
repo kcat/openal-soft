@@ -101,7 +101,8 @@ static const struct NameValuePair {
     { "Linear", "linear" },
     { "Default (Linear)", "" },
     { "4-Point Sinc", "sinc4" },
-    { "Band-limited Sinc", "bsinc" },
+    { "Band-limited Sinc (12/24)", "bsinc12" },
+    { "Band-limited Sinc (24/48)", "bsinc24" },
 
     { "", "" }
 }, stereoModeList[] = {
@@ -610,6 +611,9 @@ void MainWindow::loadConfig(const QString &fname)
      */
     if(resampler == "cubic" || resampler == "sinc8")
         resampler = "sinc4";
+    /* The "bsinc" resampler name is an alias for "bsinc12". */
+    else if(resampler == "bsinc")
+        resampler = "bsinc12";
     for(int i = 0;resamplerList[i].name[0];i++)
     {
         if(resampler == resamplerList[i].value)

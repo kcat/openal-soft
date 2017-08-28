@@ -39,7 +39,7 @@
 #include "static_assert.h"
 
 #include "mixer_defs.h"
-#include "bsinc_inc.c"
+#include "bsinc_inc.h"
 
 #include "backends/base.h"
 

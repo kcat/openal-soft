@@ -1129,15 +1129,17 @@ SET(NATIVE_BIN_DIR  "${OpenAL_BINARY_DIR}/native-tools/")
 FILE(MAKE_DIRECTORY "${NATIVE_BIN_DIR}")
 
 SET(BIN2H_COMMAND  "${NATIVE_BIN_DIR}bin2h")
-ADD_CUSTOM_COMMAND(OUTPUT "${BIN2H_COMMAND}"
+SET(BSINCGEN_COMMAND  "${NATIVE_BIN_DIR}bsincgen")
+ADD_CUSTOM_COMMAND(OUTPUT "${BIN2H_COMMAND}" "${BSINCGEN_COMMAND}"
     COMMAND ${CMAKE_COMMAND} "${NATIVE_SRC_DIR}"
-    COMMAND ${CMAKE_COMMAND} --build . --clean-first --config "Release"
+    COMMAND ${CMAKE_COMMAND} -E remove "${BIN2H_COMMAND}" "${BSINCGEN_COMMAND}"
+    COMMAND ${CMAKE_COMMAND} --build . --config "Release"
     WORKING_DIRECTORY "${NATIVE_BIN_DIR}"
-    DEPENDS "${NATIVE_SRC_DIR}CMakeLists.txt" "${NATIVE_SRC_DIR}bin2h.c"
+    DEPENDS "${NATIVE_SRC_DIR}CMakeLists.txt" "${NATIVE_SRC_DIR}bin2h.c" "${NATIVE_SRC_DIR}bsincgen.c"
     VERBATIM
 )
 ADD_CUSTOM_TARGET(native-tools
-    DEPENDS "${BIN2H_COMMAND}"
+    DEPENDS "${BIN2H_COMMAND}" "${BSINCGEN_COMMAND}"
     VERBATIM
 )
 
@@ -1152,13 +1154,19 @@ if(ALSOFT_EMBED_HRTF_DATA)
             DEPENDS native-tools "${infile}"
             VERBATIM
         )
-
         SET(ALC_OBJS  ${ALC_OBJS} "${outfile}")
     ENDMACRO()
 
     make_hrtf_header(default-44100.mhr "hrtf_default_44100")
     make_hrtf_header(default-48000.mhr "hrtf_default_48000")
 endif()
+
+ADD_CUSTOM_COMMAND(OUTPUT "${OpenAL_BINARY_DIR}/bsinc_inc.h"
+    COMMAND "${BSINCGEN_COMMAND}" "${OpenAL_BINARY_DIR}/bsinc_inc.h"
+    DEPENDS native-tools "${NATIVE_SRC_DIR}bsincgen.c"
+    VERBATIM
+)
+SET(ALC_OBJS  ${ALC_OBJS} "${OpenAL_BINARY_DIR}/bsinc_inc.h")
 
 
 IF(ALSOFT_UTILS AND NOT ALSOFT_NO_CONFIG_UTIL)
@@ -1414,17 +1422,8 @@ IF(ALSOFT_UTILS)
         SET_PROPERTY(TARGET makehrtf APPEND_STRING PROPERTY LINK_FLAGS " -municode")
     ENDIF()
 
-    ADD_EXECUTABLE(bsincgen utils/bsincgen.c)
-    SET_PROPERTY(TARGET bsincgen APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
-    IF(HAVE_LIBM)
-        TARGET_LINK_LIBRARIES(bsincgen m)
-    ENDIF()
-    IF(WIN32 AND CMAKE_COMPILER_IS_GNUCC)
-        SET_PROPERTY(TARGET bsincgen APPEND_STRING PROPERTY LINK_FLAGS " -municode")
-    ENDIF()
-
     IF(ALSOFT_INSTALL)
-        INSTALL(TARGETS openal-info makehrtf bsincgen
+        INSTALL(TARGETS openal-info makehrtf
                 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
                 LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
                 ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

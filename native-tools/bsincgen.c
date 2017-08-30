@@ -362,6 +362,8 @@ int main(int argc, char *argv[])
 {
     FILE *output;
 
+    GET_UNICODE_ARGS(&argc, &argv);
+
     if(argc > 2)
     {
         fprintf(stderr, "Usage: %s [output file]\n", argv[0]);

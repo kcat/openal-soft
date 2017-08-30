@@ -12,80 +12,77 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-
-static char *ToUTF8(const wchar_t *from)
-{
-    char *out = NULL;
-    int len;
-    if((len=WideCharToMultiByte(CP_UTF8, 0, from, -1, NULL, 0, NULL, NULL)) > 0)
-    {
-        out = calloc(sizeof(*out), len);
-        WideCharToMultiByte(CP_UTF8, 0, from, -1, out, len, NULL, NULL);
-        out[len-1] = 0;
-    }
-    return out;
-}
-
-static WCHAR *FromUTF8(const char *str)
-{
-    WCHAR *out = NULL;
-    int len;
-
-    if((len=MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0)) > 0)
-    {
-        out = calloc(sizeof(WCHAR), len);
-        MultiByteToWideChar(CP_UTF8, 0, str, -1, out, len);
-        out[len-1] = 0;
-    }
-    return out;
-}
-
+#include <shellapi.h>
 
 static FILE *my_fopen(const char *fname, const char *mode)
 {
     WCHAR *wname=NULL, *wmode=NULL;
+    int namelen, modelen;
     FILE *file = NULL;
 
-    wname = FromUTF8(fname);
-    wmode = FromUTF8(mode);
-    if(!wname)
-        fprintf(stderr, "Failed to convert UTF-8 filename: \"%s\"\n", fname);
-    else if(!wmode)
-        fprintf(stderr, "Failed to convert UTF-8 mode: \"%s\"\n", mode);
-    else
-        file = _wfopen(wname, wmode);
+    namelen = MultiByteToWideChar(CP_UTF8, 0, fname, -1, NULL, 0);
+    modelen = MultiByteToWideChar(CP_UTF8, 0, mode, -1, NULL, 0);
+
+    if(namelen <= 0 || modelen <= 0)
+    {
+        fprintf(stderr, "Failed to convert UTF-8 fname \"%s\", mode \"%s\"\n", fname, mode);
+        return NULL;
+    }
+
+    wname = calloc(sizeof(WCHAR), namelen+modelen);
+    wmode = wname + namelen;
+    MultiByteToWideChar(CP_UTF8, 0, fname, -1, wname, -1);
+    MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, -1);
+
+    file = _wfopen(wname, wmode);
 
     free(wname);
-    free(wmode);
 
     return file;
 }
 #define fopen my_fopen
 
 
-#define main my_main
-int main(int argc, char *argv[]);
-
 static char **arglist;
 static void cleanup_arglist(void)
 {
-    int i;
-    for(i = 0;arglist[i];i++)
-        free(arglist[i]);
     free(arglist);
 }
 
-int wmain(int argc, const wchar_t *wargv[])
+static void GetUnicodeArgs(int *argc, char ***argv)
 {
-    int i;
+    size_t total;
+    wchar_t **args;
+    int nargs, i;
+
+    args = CommandLineToArgvW(GetCommandLineW(), &nargs);
+    if(!args)
+    {
+        fprintf(stderr, "Failed to get command line args: %ld\n", GetLastError());
+        exit(EXIT_FAILURE);
+    }
+
+    total = sizeof(**argv) * nargs;
+    for(i = 0;i < nargs;i++)
+        total += WideCharToMultiByte(CP_UTF8, 0, args[i], -1, NULL, 0, NULL, NULL);
 
     atexit(cleanup_arglist);
-    arglist = calloc(sizeof(*arglist), argc+1);
-    for(i = 0;i < argc;i++)
-        arglist[i] = ToUTF8(wargv[i]);
-
-    return main(argc, arglist);
+    arglist = *argv = calloc(1, total);
+    (*argv)[0] = (char*)(*argv + nargs);
+    for(i = 0;i < nargs-1;i++)
+    {
+        int len = WideCharToMultiByte(CP_UTF8, 0, args[i], -1, (*argv)[i], -1, NULL, NULL);
+        (*argv)[i+1] = (*argv)[i] + len;
+    }
+    WideCharToMultiByte(CP_UTF8, 0, args[i], -1, (*argv)[i], -1, NULL, NULL);
+    *argc = nargs;
 }
+#define GET_UNICODE_ARGS(argc, argv) GetUnicodeArgs(argc, argv)
+
+#else
+
+/* Do nothing. */
+#define GET_UNICODE_ARGS(argc, argv)
 
 #endif
 

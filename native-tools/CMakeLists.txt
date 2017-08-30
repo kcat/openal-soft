@@ -4,6 +4,10 @@ project(native-tools)
 
 include(CheckLibraryExists)
 
+if(WIN32)
+    add_definitions("-D_WIN32")
+endif(WIN32)
+
 check_library_exists(m pow "" HAVE_LIBM)
 
 add_executable(bin2h bin2h.c)
@@ -20,6 +24,3 @@ set_target_properties(bsincgen PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CM
 if(HAVE_LIBM)
     target_link_libraries(bsincgen m)
 endif(HAVE_LIBM)
-if(WIN32 AND CMAKE_COMPILER_IS_GNUCC)
-    set_property(TARGET bsincgen APPEND_STRING PROPERTY LINK_FLAGS " -municode")
-endif(WIN32 AND CMAKE_COMPILER_IS_GNUCC)

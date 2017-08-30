@@ -144,8 +144,8 @@ const ALfloat *Resample_bsinc_Neon(const InterpState *state,
     const ALfloat *const filter = state->bsinc.filter;
     const float32x4_t sf4 = vdupq_n_f32(state->bsinc.sf);
     const ALsizei m = state->bsinc.m;
-    const ALfloat *fil, *scd, *phd, *spd;
-    ALsizei pi, i, j;
+    const float32x4_t *fil, *scd, *phd, *spd;
+    ALsizei pi, i, j, offset;
     float32x4_t r4;
     ALfloat pf;
 
@@ -158,23 +158,22 @@ const ALfloat *Resample_bsinc_Neon(const InterpState *state,
         pf = (frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF));
 #undef FRAC_PHASE_BITDIFF
 
-        fil = ASSUME_ALIGNED(filter + m*pi*4, 16);
-        scd = ASSUME_ALIGNED(fil + m, 16);
-        phd = ASSUME_ALIGNED(scd + m, 16);
-        spd = ASSUME_ALIGNED(phd + m, 16);
+        offset = m*pi*4;
+        fil = ASSUME_ALIGNED(filter + offset, 16); offset += m;
+        scd = ASSUME_ALIGNED(filter + offset, 16); offset += m;
+        phd = ASSUME_ALIGNED(filter + offset, 16); offset += m;
+        spd = ASSUME_ALIGNED(filter + offset, 16);
 
         // Apply the scale and phase interpolated filter.
         r4 = vdupq_n_f32(0.0f);
         {
             const float32x4_t pf4 = vdupq_n_f32(pf);
-            for(j = 0;j < m;j+=4)
+            for(j = 0;j < m;j+=4,fil++,scd++,phd++,spd++)
             {
                 /* f = ((fil + sf*scd) + pf*(phd + sf*spd)) */
-                const float32x4_t f4 = vmlaq_f32(vmlaq_f32(vld1q_f32(&fil[j]),
-                                                           sf4, vld1q_f32(&scd[j])),
-                    pf4, vmlaq_f32(vld1q_f32(&phd[j]),
-                        sf4, vld1q_f32(&spd[j])
-                    )
+                const float32x4_t f4 = vmlaq_f32(
+                    vmlaq_f32(*fil, sf4, *scd),
+                    pf4, vmlaq_f32(*phd, sf4, *spd)
                 );
                 /* r += f*src */
                 r4 = vmlaq_f32(r4, f4, vld1q_f32(&src[j]));

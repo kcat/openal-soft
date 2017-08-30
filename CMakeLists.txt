@@ -1135,7 +1135,9 @@ ADD_CUSTOM_COMMAND(OUTPUT "${BIN2H_COMMAND}" "${BSINCGEN_COMMAND}"
     COMMAND ${CMAKE_COMMAND} -E remove "${BIN2H_COMMAND}" "${BSINCGEN_COMMAND}"
     COMMAND ${CMAKE_COMMAND} --build . --config "Release"
     WORKING_DIRECTORY "${NATIVE_BIN_DIR}"
-    DEPENDS "${NATIVE_SRC_DIR}CMakeLists.txt" "${NATIVE_SRC_DIR}bin2h.c" "${NATIVE_SRC_DIR}bsincgen.c"
+    DEPENDS "${NATIVE_SRC_DIR}CMakeLists.txt"
+    IMPLICIT_DEPENDS C "${NATIVE_SRC_DIR}bin2h.c"
+                     C "${NATIVE_SRC_DIR}bsincgen.c"
     VERBATIM
 )
 ADD_CUSTOM_TARGET(native-tools

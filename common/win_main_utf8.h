@@ -31,8 +31,8 @@ static FILE *my_fopen(const char *fname, const char *mode)
 
     wname = calloc(sizeof(WCHAR), namelen+modelen);
     wmode = wname + namelen;
-    MultiByteToWideChar(CP_UTF8, 0, fname, -1, wname, -1);
-    MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, -1);
+    MultiByteToWideChar(CP_UTF8, 0, fname, -1, wname, namelen);
+    MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, modelen);
 
     file = _wfopen(wname, wmode);
 
@@ -71,10 +71,10 @@ static void GetUnicodeArgs(int *argc, char ***argv)
     (*argv)[0] = (char*)(*argv + nargs);
     for(i = 0;i < nargs-1;i++)
     {
-        int len = WideCharToMultiByte(CP_UTF8, 0, args[i], -1, (*argv)[i], -1, NULL, NULL);
+        int len = WideCharToMultiByte(CP_UTF8, 0, args[i], -1, (*argv)[i], 65535, NULL, NULL);
         (*argv)[i+1] = (*argv)[i] + len;
     }
-    WideCharToMultiByte(CP_UTF8, 0, args[i], -1, (*argv)[i], -1, NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, args[i], -1, (*argv)[i], 65535, NULL, NULL);
     *argc = nargs;
 
     LocalFree(args);

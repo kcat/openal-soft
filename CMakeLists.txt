@@ -1033,6 +1033,14 @@ IF(JACK_FOUND)
         SET(BACKENDS  "${BACKENDS} JACK${IS_LINKED},")
         SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/jack.c)
         ADD_BACKEND_LIBS(${JACK_LIBRARIES})
+        SET(OLD_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
+        SET(CMAKE_REQUIRED_LIBRARIES ${OLD_REQUIRED_LIBRARIES} ${JACK_LIBRARIES})
+        CHECK_C_SOURCE_COMPILES("extern void default_jack_error_callback(const char *);
+	                         int main() {
+                                     default_jack_error_callback(\"\");
+                                     return 0;
+                                }" HAVE_DEFAULT_JACK_ERROR_CALLBACK)
+        SET(CMAKE_REQUIRED_LIBRARIES ${OLD_REQUIRED_LIBRARIES})
     ENDIF()
 ENDIF()
 IF(ALSOFT_REQUIRE_JACK AND NOT HAVE_JACK)

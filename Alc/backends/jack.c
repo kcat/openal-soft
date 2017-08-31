@@ -39,6 +39,16 @@ static const ALCchar jackDevice[] = "JACK Default";
 
 
 #ifdef HAVE_DYNLOAD
+
+/*
+ * `default_jack_error_callback' is exported by JACK1, while in JACK2
+ * the callback is reset to the default by passing a NULL to
+ * `jack_set_error_function'.  As such, after loading this symbol, passing
+ * the resulting pointer to `jack_set_error_function' will reset the error
+ * callback regardless of the version of JACK used.
+ */
+void (*pdefault_jack_error_callback)(const char *);
+
 #define JACK_FUNCS(MAGIC)          \
     MAGIC(jack_client_open);       \
     MAGIC(jack_client_close);      \
@@ -54,6 +64,7 @@ static const ALCchar jackDevice[] = "JACK Default";
     MAGIC(jack_get_ports);         \
     MAGIC(jack_free);              \
     MAGIC(jack_get_sample_rate);   \
+    MAGIC(jack_error_callback);    \
     MAGIC(jack_set_error_function); \
     MAGIC(jack_set_process_callback); \
     MAGIC(jack_set_buffer_size_callback); \
@@ -65,6 +76,7 @@ static void *jack_handle;
 JACK_FUNCS(MAKE_FUNC);
 #undef MAKE_FUNC
 
+#define default_jack_error_callback pdefault_jack_error_callback
 #define jack_client_open pjack_client_open
 #define jack_client_close pjack_client_close
 #define jack_client_name_size pjack_client_name_size
@@ -79,11 +91,16 @@ JACK_FUNCS(MAKE_FUNC);
 #define jack_get_ports pjack_get_ports
 #define jack_free pjack_free
 #define jack_get_sample_rate pjack_get_sample_rate
+#define jack_error_callback pjack_error_callback
 #define jack_set_error_function pjack_set_error_function
 #define jack_set_process_callback pjack_set_process_callback
 #define jack_set_buffer_size_callback pjack_set_buffer_size_callback
 #define jack_set_buffer_size pjack_set_buffer_size
 #define jack_get_buffer_size pjack_get_buffer_size
+#elif defined(HAVE_DEFAULT_JACK_ERROR_CALLBACK)
+extern void default_jack_error_callback(const char *);
+#else
+#define default_jack_error_callback NULL
 #endif
 
 
@@ -109,6 +126,8 @@ static ALCboolean jack_load(void)
             WARN("Failed to load %s\n", JACKLIB);
             return ALC_FALSE;
         }
+
+        pdefault_jack_error_callback = GetSymbol(jack_handle, "default_jack_error_callback");
 
         error = ALC_FALSE;
 #define LOAD_FUNC(f) do {                                                     \
@@ -567,7 +586,7 @@ static ALCboolean ALCjackBackendFactory_init(ALCjackBackendFactory* UNUSED(self)
 
     jack_set_error_function(jack_msg_handler);
     client = jack_client_open("alsoft", ClientOptions, &status, NULL);
-    jack_set_error_function(NULL);
+    jack_set_error_function(default_jack_error_callback);
     if(client == NULL)
     {
         WARN("jack_client_open() failed, 0x%02x\n", status);

@@ -76,6 +76,8 @@ static void GetUnicodeArgs(int *argc, char ***argv)
     }
     WideCharToMultiByte(CP_UTF8, 0, args[i], -1, (*argv)[i], -1, NULL, NULL);
     *argc = nargs;
+
+    LocalFree(args);
 }
 #define GET_UNICODE_ARGS(argc, argv) GetUnicodeArgs(argc, argv)
 

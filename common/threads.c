@@ -500,6 +500,8 @@ void althrd_setname(althrd_t thr, const char *name)
 #if defined(PTHREAD_SETNAME_NP_ONE_PARAM)
     if(althrd_equal(thr, althrd_current()))
         pthread_setname_np(name);
+#elif defined(PTHREAD_SETNAME_NP_THREE_PARAMS)
+    pthread_setname_np(thr, "%s", (void*)name);
 #else
     pthread_setname_np(thr, name);
 #endif

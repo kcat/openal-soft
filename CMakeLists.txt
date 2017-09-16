@@ -623,6 +623,16 @@ int main()
 }"
                 PTHREAD_SETNAME_NP_ONE_PARAM
             )
+            CHECK_C_SOURCE_COMPILES("
+#include <pthread.h>
+#include <pthread_np.h>
+int main()
+{
+    pthread_setname_np(pthread_self(), \"%s\", \"testname\");
+    return 0;
+}"
+                PTHREAD_SETNAME_NP_THREE_PARAMS
+            )
         ENDIF()
         CHECK_SYMBOL_EXISTS(pthread_mutexattr_setkind_np "pthread.h;pthread_np.h" HAVE_PTHREAD_MUTEXATTR_SETKIND_NP)
     ELSE()
@@ -638,6 +648,15 @@ int main()
     return 0;
 }"
                 PTHREAD_SETNAME_NP_ONE_PARAM
+            )
+            CHECK_C_SOURCE_COMPILES("
+#include <pthread.h>
+int main()
+{
+    pthread_setname_np(pthread_self(), \"%s\", \"testname\");
+    return 0;
+}"
+                PTHREAD_SETNAME_NP_THREE_PARAMS
             )
         ENDIF()
         CHECK_SYMBOL_EXISTS(pthread_mutexattr_setkind_np pthread.h HAVE_PTHREAD_MUTEXATTR_SETKIND_NP)

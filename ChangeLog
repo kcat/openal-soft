@@ -1,3 +1,14 @@
+openal-soft-1.18.2:
+
+    Fixed resetting the FPU rounding mode after certain function calls on
+    Windows.
+
+    Fixed use of SSE intrinsics when building with Clang on Windows.
+
+    Fixed use of pthread_setnane_np on NetBSD.
+
+    OSS now links with libossaudio if found at build time (for NetBSD).
+
 openal-soft-1.18.1:
 
     Fixed an issue where resuming a source might not restart playing it.

@@ -898,6 +898,9 @@ void ALCcontext_ProcessUpdates(ALCcontext *context);
 typedef struct {
 #ifdef HAVE_FENV_H
     DERIVE_FROM_TYPE(fenv_t);
+#ifdef _WIN32
+    int round_mode;
+#endif
 #else
     int state;
 #endif

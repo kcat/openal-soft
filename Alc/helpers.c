@@ -295,6 +295,13 @@ void SetMixerFPUMode(FPUCtl *ctl)
 {
 #ifdef HAVE_FENV_H
     fegetenv(STATIC_CAST(fenv_t, ctl));
+#ifdef _WIN32
+    /* HACK: A nasty bug in MinGW-W64 causes fegetenv and fesetenv to not save
+     * and restore the FPU rounding mode, so we have to do it manually. Don't
+     * know if this also applies to MSVC.
+     */
+    ctl->round_mode = fegetround();
+#endif
 #if defined(__GNUC__) && defined(HAVE_SSE)
     /* FIXME: Some fegetenv implementations can get the SSE environment too?
      * How to tell when it does? */
@@ -341,6 +348,9 @@ void RestoreFPUMode(const FPUCtl *ctl)
 {
 #ifdef HAVE_FENV_H
     fesetenv(STATIC_CAST(fenv_t, ctl));
+#ifdef _WIN32
+    fesetround(ctl->round_mode);
+#endif
 #if defined(__GNUC__) && defined(HAVE_SSE)
     if((CPUCapFlags&CPU_CAP_SSE))
         __asm__ __volatile__("ldmxcsr %0" : : "m" (*&ctl->sse_state));

@@ -29,6 +29,7 @@
 #include "alAuxEffectSlot.h"
 #include "alEffect.h"
 #include "alFilter.h"
+#include "alListener.h"
 #include "alError.h"
 #include "mixer_defs.h"
 
@@ -694,7 +695,7 @@ static inline ALvoid CalcMatrixCoeffs(const ALfloat diffusion, ALfloat *x, ALflo
  * filters.
  */
 static ALfloat CalcLimitedHfRatio(const ALfloat hfRatio, const ALfloat airAbsorptionGainHF,
-                                  const ALfloat decayTime)
+                                  const ALfloat decayTime, const ALfloat SpeedOfSound)
 {
     ALfloat limitRatio;
 
@@ -703,8 +704,8 @@ static ALfloat CalcLimitedHfRatio(const ALfloat hfRatio, const ALfloat airAbsorp
      * equation, solve for HF ratio.  The delay length is cancelled out of
      * the equation, so it can be calculated once for all lines.
      */
-    limitRatio = 1.0f / (CalcDecayLength(airAbsorptionGainHF, decayTime) *
-                         SPEEDOFSOUNDMETRESPERSEC);
+    limitRatio = 1.0f / (CalcDecayLength(airAbsorptionGainHF, decayTime) * SpeedOfSound);
+
     /* Using the limit calculated above, apply the upper bound to the HF
      * ratio. Also need to limit the result to a minimum of 0.1, just like
      * the HF ratio parameter.
@@ -1310,6 +1311,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
 static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props)
 {
     const ALCdevice *Device = Context->Device;
+    const ALlistener *Listener = Context->Listener;
     ALuint frequency = Device->Frequency;
     ALfloat lfScale, hfScale, hfRatio;
     ALfloat lfDecayTime, hfDecayTime;
@@ -1360,7 +1362,8 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
     hfRatio = props->Reverb.DecayHFRatio;
     if(props->Reverb.DecayHFLimit && props->Reverb.AirAbsorptionGainHF < 1.0f)
         hfRatio = CalcLimitedHfRatio(hfRatio, props->Reverb.AirAbsorptionGainHF,
-                                     props->Reverb.DecayTime);
+                                     props->Reverb.DecayTime, Listener->Params.SpeedOfSound *
+                                     Listener->Params.MetersPerUnit);
 
     /* Calculate the LF/HF decay times. */
     lfDecayTime = clampf(props->Reverb.DecayTime * props->Reverb.DecayLFRatio,

@@ -1105,7 +1105,8 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
         else if(SendSlots[i]->Params.AuxSendAuto)
         {
             RoomRolloff[i] = SendSlots[i]->Params.RoomRolloff + props->RoomRolloffFactor;
-            DecayDistance[i] = SendSlots[i]->Params.DecayTime * SPEEDOFSOUNDMETRESPERSEC;
+            DecayDistance[i] = SendSlots[i]->Params.DecayTime * Listener->Params.SpeedOfSound *
+                               Listener->Params.MetersPerUnit;
             DecayHFDistance[i] = DecayDistance[i] * SendSlots[i]->Params.DecayHFRatio;
             if(SendSlots[i]->Params.DecayHFLimit)
             {

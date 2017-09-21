@@ -182,7 +182,7 @@ typedef struct ALreverbState {
 
 static ALvoid ALreverbState_Destruct(ALreverbState *State);
 static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Device);
-static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props);
+static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props);
 static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ALreverbState)
 
@@ -1307,8 +1307,9 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
 #undef MATRIX_MULT
 }
 
-static ALvoid ALreverbState_update(ALreverbState *State, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props)
+static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props)
 {
+    const ALCdevice *Device = Context->Device;
     ALuint frequency = Device->Frequency;
     ALfloat lfScale, hfScale, hfRatio;
     ALfloat lfDecayTime, hfDecayTime;

@@ -89,7 +89,7 @@ typedef struct ALequalizerState {
 
 static ALvoid ALequalizerState_Destruct(ALequalizerState *state);
 static ALboolean ALequalizerState_deviceUpdate(ALequalizerState *state, ALCdevice *device);
-static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *device, const ALeffectslot *slot, const ALeffectProps *props);
+static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props);
 static ALvoid ALequalizerState_process(ALequalizerState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ALequalizerState)
 
@@ -122,8 +122,9 @@ static ALboolean ALequalizerState_deviceUpdate(ALequalizerState *UNUSED(state), 
     return AL_TRUE;
 }
 
-static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCdevice *device, const ALeffectslot *slot, const ALeffectProps *props)
+static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
 {
+    const ALCdevice *device = context->Device;
     ALfloat frequency = (ALfloat)device->Frequency;
     ALfloat gain, freq_mult;
     ALuint i;

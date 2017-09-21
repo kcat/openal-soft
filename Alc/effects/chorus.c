@@ -57,7 +57,7 @@ typedef struct ALchorusState {
 
 static ALvoid ALchorusState_Destruct(ALchorusState *state);
 static ALboolean ALchorusState_deviceUpdate(ALchorusState *state, ALCdevice *Device);
-static ALvoid ALchorusState_update(ALchorusState *state, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props);
+static ALvoid ALchorusState_update(ALchorusState *state, const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props);
 static ALvoid ALchorusState_process(ALchorusState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ALchorusState)
 
@@ -115,9 +115,10 @@ static ALboolean ALchorusState_deviceUpdate(ALchorusState *state, ALCdevice *Dev
     return AL_TRUE;
 }
 
-static ALvoid ALchorusState_update(ALchorusState *state, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props)
+static ALvoid ALchorusState_update(ALchorusState *state, const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props)
 {
-    ALfloat frequency = (ALfloat)Device->Frequency;
+    const ALCdevice *device = Context->Device;
+    ALfloat frequency = (ALfloat)device->Frequency;
     ALfloat coeffs[MAX_AMBI_COEFFS];
     ALfloat rate;
     ALint phase;
@@ -138,9 +139,9 @@ static ALvoid ALchorusState_update(ALchorusState *state, const ALCdevice *Device
 
     /* Gains for left and right sides */
     CalcAngleCoeffs(-F_PI_2, 0.0f, 0.0f, coeffs);
-    ComputePanningGains(Device->Dry, coeffs, Slot->Params.Gain, state->Gain[0]);
+    ComputePanningGains(device->Dry, coeffs, Slot->Params.Gain, state->Gain[0]);
     CalcAngleCoeffs( F_PI_2, 0.0f, 0.0f, coeffs);
-    ComputePanningGains(Device->Dry, coeffs, Slot->Params.Gain, state->Gain[1]);
+    ComputePanningGains(device->Dry, coeffs, Slot->Params.Gain, state->Gain[1]);
 
     phase = props->Chorus.Phase;
     rate = props->Chorus.Rate;

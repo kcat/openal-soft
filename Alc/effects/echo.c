@@ -52,7 +52,7 @@ typedef struct ALechoState {
 
 static ALvoid ALechoState_Destruct(ALechoState *state);
 static ALboolean ALechoState_deviceUpdate(ALechoState *state, ALCdevice *Device);
-static ALvoid ALechoState_update(ALechoState *state, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props);
+static ALvoid ALechoState_update(ALechoState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props);
 static ALvoid ALechoState_process(ALechoState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ALechoState)
 
@@ -106,9 +106,10 @@ static ALboolean ALechoState_deviceUpdate(ALechoState *state, ALCdevice *Device)
     return AL_TRUE;
 }
 
-static ALvoid ALechoState_update(ALechoState *state, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props)
+static ALvoid ALechoState_update(ALechoState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
 {
-    ALuint frequency = Device->Frequency;
+    const ALCdevice *device = context->Device;
+    ALuint frequency = device->Frequency;
     ALfloat coeffs[MAX_AMBI_COEFFS];
     ALfloat gain, lrpan, spread;
 
@@ -131,15 +132,15 @@ static ALvoid ALechoState_update(ALechoState *state, const ALCdevice *Device, co
                             gain, LOWPASSFREQREF/frequency,
                             calc_rcpQ_from_slope(gain, 1.0f));
 
-    gain = Slot->Params.Gain;
+    gain = slot->Params.Gain;
 
     /* First tap panning */
     CalcAngleCoeffs(-F_PI_2*lrpan, 0.0f, spread, coeffs);
-    ComputePanningGains(Device->Dry, coeffs, gain, state->Gain[0]);
+    ComputePanningGains(device->Dry, coeffs, gain, state->Gain[0]);
 
     /* Second tap panning */
     CalcAngleCoeffs( F_PI_2*lrpan, 0.0f, spread, coeffs);
-    ComputePanningGains(Device->Dry, coeffs, gain, state->Gain[1]);
+    ComputePanningGains(device->Dry, coeffs, gain, state->Gain[1]);
 }
 
 static ALvoid ALechoState_process(ALechoState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

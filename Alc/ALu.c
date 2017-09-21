@@ -320,7 +320,7 @@ static ALboolean CalcListenerParams(ALCcontext *Context)
     return AL_TRUE;
 }
 
-static ALboolean CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
+static ALboolean CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context)
 {
     struct ALeffectslotProps *props;
     ALeffectState *state;
@@ -355,7 +355,7 @@ static ALboolean CalcEffectSlotParams(ALeffectslot *slot, ALCdevice *device)
     props->State = slot->Params.EffectState;
     slot->Params.EffectState = state;
 
-    V(state,update)(device, slot, &props->Props);
+    V(state,update)(context, slot, &props->Props);
 
     ATOMIC_REPLACE_HEAD(struct ALeffectslotProps*, &slot->FreeList, props);
     return AL_TRUE;
@@ -1468,7 +1468,7 @@ static void UpdateContextSources(ALCcontext *ctx, const struct ALeffectslotArray
     {
         ALboolean force = CalcListenerParams(ctx);
         for(i = 0;i < slots->count;i++)
-            force |= CalcEffectSlotParams(slots->slot[i], ctx->Device);
+            force |= CalcEffectSlotParams(slots->slot[i], ctx);
 
         voice = ctx->Voices;
         voice_end = voice + ctx->VoiceCount;

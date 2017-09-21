@@ -37,7 +37,7 @@ typedef struct ALdedicatedState {
 
 static ALvoid ALdedicatedState_Destruct(ALdedicatedState *state);
 static ALboolean ALdedicatedState_deviceUpdate(ALdedicatedState *state, ALCdevice *device);
-static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCdevice *device, const ALeffectslot *Slot, const ALeffectProps *props);
+static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props);
 static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ALdedicatedState)
 
@@ -65,16 +65,17 @@ static ALboolean ALdedicatedState_deviceUpdate(ALdedicatedState *UNUSED(state), 
     return AL_TRUE;
 }
 
-static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCdevice *device, const ALeffectslot *Slot, const ALeffectProps *props)
+static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
 {
+    const ALCdevice *device = context->Device;
     ALfloat Gain;
     ALuint i;
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
         state->gains[i] = 0.0f;
 
-    Gain = Slot->Params.Gain * props->Dedicated.Gain;
-    if(Slot->Params.EffectType == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
+    Gain = slot->Params.Gain * props->Dedicated.Gain;
+    if(slot->Params.EffectType == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
     {
         int idx;
         if((idx=GetChannelIdxByName(device->RealOut, LFE)) != -1)
@@ -84,7 +85,7 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCdevice *
             state->gains[idx] = Gain;
         }
     }
-    else if(Slot->Params.EffectType == AL_EFFECT_DEDICATED_DIALOGUE)
+    else if(slot->Params.EffectType == AL_EFFECT_DEDICATED_DIALOGUE)
     {
         int idx;
         /* Dialog goes to the front-center speaker if it exists, otherwise it

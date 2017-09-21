@@ -42,7 +42,7 @@ typedef struct ALcompressorState {
 
 static ALvoid ALcompressorState_Destruct(ALcompressorState *state);
 static ALboolean ALcompressorState_deviceUpdate(ALcompressorState *state, ALCdevice *device);
-static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCdevice *device, const ALeffectslot *slot, const ALeffectProps *props);
+static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props);
 static ALvoid ALcompressorState_process(ALcompressorState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ALcompressorState)
 
@@ -76,8 +76,9 @@ static ALboolean ALcompressorState_deviceUpdate(ALcompressorState *state, ALCdev
     return AL_TRUE;
 }
 
-static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCdevice *device, const ALeffectslot *slot, const ALeffectProps *props)
+static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
 {
+    const ALCdevice *device = context->Device;
     ALuint i;
 
     state->Enabled = props->Compressor.OnOff;

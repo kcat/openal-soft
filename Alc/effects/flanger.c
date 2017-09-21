@@ -57,7 +57,7 @@ typedef struct ALflangerState {
 
 static ALvoid ALflangerState_Destruct(ALflangerState *state);
 static ALboolean ALflangerState_deviceUpdate(ALflangerState *state, ALCdevice *Device);
-static ALvoid ALflangerState_update(ALflangerState *state, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props);
+static ALvoid ALflangerState_update(ALflangerState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props);
 static ALvoid ALflangerState_process(ALflangerState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ALflangerState)
 
@@ -115,9 +115,10 @@ static ALboolean ALflangerState_deviceUpdate(ALflangerState *state, ALCdevice *D
     return AL_TRUE;
 }
 
-static ALvoid ALflangerState_update(ALflangerState *state, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props)
+static ALvoid ALflangerState_update(ALflangerState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
 {
-    ALfloat frequency = (ALfloat)Device->Frequency;
+    const ALCdevice *device = context->Device;
+    ALfloat frequency = (ALfloat)device->Frequency;
     ALfloat coeffs[MAX_AMBI_COEFFS];
     ALfloat rate;
     ALint phase;
@@ -138,9 +139,9 @@ static ALvoid ALflangerState_update(ALflangerState *state, const ALCdevice *Devi
 
     /* Gains for left and right sides */
     CalcAngleCoeffs(-F_PI_2, 0.0f, 0.0f, coeffs);
-    ComputePanningGains(Device->Dry, coeffs, Slot->Params.Gain, state->Gain[0]);
+    ComputePanningGains(device->Dry, coeffs, slot->Params.Gain, state->Gain[0]);
     CalcAngleCoeffs( F_PI_2, 0.0f, 0.0f, coeffs);
-    ComputePanningGains(Device->Dry, coeffs, Slot->Params.Gain, state->Gain[1]);
+    ComputePanningGains(device->Dry, coeffs, slot->Params.Gain, state->Gain[1]);
 
     phase = props->Flanger.Phase;
     rate = props->Flanger.Rate;

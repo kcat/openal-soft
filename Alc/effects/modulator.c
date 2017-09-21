@@ -45,7 +45,7 @@ typedef struct ALmodulatorState {
 
 static ALvoid ALmodulatorState_Destruct(ALmodulatorState *state);
 static ALboolean ALmodulatorState_deviceUpdate(ALmodulatorState *state, ALCdevice *device);
-static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props);
+static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props);
 static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ALmodulatorState)
 
@@ -115,8 +115,9 @@ static ALboolean ALmodulatorState_deviceUpdate(ALmodulatorState *UNUSED(state), 
     return AL_TRUE;
 }
 
-static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props)
+static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
 {
+    const ALCdevice *device = context->Device;
     ALfloat cw, a;
     ALsizei i;
 
@@ -128,11 +129,11 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *
         state->Process = ModulateSquare;
 
     state->step = fastf2i(props->Modulator.Frequency*WAVEFORM_FRACONE /
-                          Device->Frequency);
+                          device->Frequency);
     if(state->step == 0) state->step = 1;
 
     /* Custom filter coeffs, which match the old version instead of a low-shelf. */
-    cw = cosf(F_TAU * props->Modulator.HighPassCutoff / Device->Frequency);
+    cw = cosf(F_TAU * props->Modulator.HighPassCutoff / device->Frequency);
     a = (2.0f-cw) - sqrtf(powf(2.0f-cw, 2.0f) - 1.0f);
 
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
@@ -144,11 +145,11 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCdevice *
         state->Filter[i].a2 = 0.0f;
     }
 
-    STATIC_CAST(ALeffectState,state)->OutBuffer = Device->FOAOut.Buffer;
-    STATIC_CAST(ALeffectState,state)->OutChannels = Device->FOAOut.NumChannels;
+    STATIC_CAST(ALeffectState,state)->OutBuffer = device->FOAOut.Buffer;
+    STATIC_CAST(ALeffectState,state)->OutChannels = device->FOAOut.NumChannels;
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputeFirstOrderGains(Device->FOAOut, IdentityMatrixf.m[i],
-                               Slot->Params.Gain, state->Gain[i]);
+        ComputeFirstOrderGains(device->FOAOut, IdentityMatrixf.m[i],
+                               slot->Params.Gain, state->Gain[i]);
 }
 
 static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

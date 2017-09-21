@@ -45,7 +45,7 @@ typedef struct ALdistortionState {
 
 static ALvoid ALdistortionState_Destruct(ALdistortionState *state);
 static ALboolean ALdistortionState_deviceUpdate(ALdistortionState *state, ALCdevice *device);
-static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props);
+static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props);
 static ALvoid ALdistortionState_process(ALdistortionState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ALdistortionState)
 
@@ -71,9 +71,10 @@ static ALboolean ALdistortionState_deviceUpdate(ALdistortionState *UNUSED(state)
     return AL_TRUE;
 }
 
-static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCdevice *Device, const ALeffectslot *Slot, const ALeffectProps *props)
+static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
 {
-    ALfloat frequency = (ALfloat)Device->Frequency;
+    const ALCdevice *device = context->Device;
+    ALfloat frequency = (ALfloat)device->Frequency;
     ALfloat bandwidth;
     ALfloat cutoff;
     ALfloat edge;
@@ -103,7 +104,7 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCdevice
         cutoff / (frequency*4.0f), calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
     );
 
-    ComputeAmbientGains(Device->Dry, Slot->Params.Gain, state->Gain);
+    ComputeAmbientGains(device->Dry, slot->Params.Gain, state->Gain);
 }
 
 static ALvoid ALdistortionState_process(ALdistortionState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

@@ -7,6 +7,8 @@ openal-soft-1.18.2:
 
     Fixed use of pthread_setnane_np on NetBSD.
 
+    Fixed building on FreeBSD with an older freebsd-lib.
+
     OSS now links with libossaudio if found at build time (for NetBSD).
 
 openal-soft-1.18.1:

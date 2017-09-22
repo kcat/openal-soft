@@ -1362,8 +1362,8 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
     hfRatio = props->Reverb.DecayHFRatio;
     if(props->Reverb.DecayHFLimit && props->Reverb.AirAbsorptionGainHF < 1.0f)
         hfRatio = CalcLimitedHfRatio(hfRatio, props->Reverb.AirAbsorptionGainHF,
-                                     props->Reverb.DecayTime, Listener->Params.SpeedOfSound *
-                                     Listener->Params.MetersPerUnit);
+            props->Reverb.DecayTime, Listener->Params.ReverbSpeedOfSound
+        );
 
     /* Calculate the LF/HF decay times. */
     lfDecayTime = clampf(props->Reverb.DecayTime * props->Reverb.DecayLFRatio,

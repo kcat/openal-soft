@@ -516,6 +516,7 @@ void aluHandleDisconnect(ALCdevice *device);
 
 extern ALfloat ConeScale;
 extern ALfloat ZScale;
+extern ALboolean OverrideReverbSpeedOfSound;
 
 #ifdef __cplusplus
 }

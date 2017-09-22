@@ -89,6 +89,9 @@ ALfloat ConeScale = 1.0f;
 /* Localized Z scalar for mono sources */
 ALfloat ZScale = 1.0f;
 
+/* Force default speed of sound for distance-related reverb decay. */
+ALboolean OverrideReverbSpeedOfSound = AL_FALSE;
+
 const aluMatrixf IdentityMatrixf = {{
     { 1.0f, 0.0f, 0.0f, 0.0f },
     { 0.0f, 1.0f, 0.0f, 0.0f },
@@ -312,6 +315,11 @@ static ALboolean CalcListenerParams(ALCcontext *Context)
 
     Listener->Params.DopplerFactor = props->DopplerFactor;
     Listener->Params.SpeedOfSound = props->SpeedOfSound * props->DopplerVelocity;
+    if(OverrideReverbSpeedOfSound)
+        Listener->Params.ReverbSpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
+    else
+        Listener->Params.ReverbSpeedOfSound = Listener->Params.SpeedOfSound *
+                                              Listener->Params.MetersPerUnit;
 
     Listener->Params.SourceDistanceModel = props->SourceDistanceModel;
     Listener->Params.DistanceModel = props->DistanceModel;
@@ -1105,8 +1113,8 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
         else if(SendSlots[i]->Params.AuxSendAuto)
         {
             RoomRolloff[i] = SendSlots[i]->Params.RoomRolloff + props->RoomRolloffFactor;
-            DecayDistance[i] = SendSlots[i]->Params.DecayTime * Listener->Params.SpeedOfSound *
-                               Listener->Params.MetersPerUnit;
+            DecayDistance[i] = SendSlots[i]->Params.DecayTime *
+                               Listener->Params.ReverbSpeedOfSound;
             DecayHFDistance[i] = DecayDistance[i] * SendSlots[i]->Params.DecayHFRatio;
             if(SendSlots[i]->Params.DecayHFLimit)
             {

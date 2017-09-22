@@ -50,7 +50,8 @@ typedef struct ALlistener {
         ALfloat MetersPerUnit;
 
         ALfloat DopplerFactor;
-        ALfloat SpeedOfSound;
+        ALfloat SpeedOfSound; /* in units per sec! */
+        ALfloat ReverbSpeedOfSound; /* in meters per sec! */
 
         ALboolean SourceDistanceModel;
         enum DistanceModel DistanceModel;

@@ -885,6 +885,10 @@ static void alc_init(void)
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
         ZScale *= -1.0f;
 
+    str = getenv("__ALSOFT_REVERB_IGNORES_SOUND_SPEED");
+    if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
+        OverrideReverbSpeedOfSound = AL_TRUE;
+
     ret = altss_create(&LocalContext, ReleaseThreadCtx);
     assert(ret == althrd_success);
 
@@ -2540,6 +2544,7 @@ static ALvoid InitContext(ALCcontext *Context)
     listener->Params.MetersPerUnit = listener->MetersPerUnit;
     listener->Params.DopplerFactor = 1.0f;
     listener->Params.SpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
+    listener->Params.ReverbSpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
 
     ATOMIC_INIT(&listener->Update, NULL);
     ATOMIC_INIT(&listener->FreeList, NULL);

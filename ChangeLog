@@ -5,6 +5,8 @@ openal-soft-1.18.2:
 
     Fixed use of SSE intrinsics when building with Clang on Windows.
 
+    Fixed a crash with the JACK backend when using JACK1.
+
     Fixed use of pthread_setnane_np on NetBSD.
 
     Fixed building on FreeBSD with an older freebsd-lib.

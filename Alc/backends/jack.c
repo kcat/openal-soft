@@ -63,6 +63,7 @@ static const ALCchar jackDevice[] = "JACK Default";
 static void *jack_handle;
 #define MAKE_FUNC(f) static __typeof(f) * p##f
 JACK_FUNCS(MAKE_FUNC);
+static __typeof(jack_error_callback) * pjack_error_callback;
 #undef MAKE_FUNC
 
 #define jack_client_open pjack_client_open
@@ -84,6 +85,7 @@ JACK_FUNCS(MAKE_FUNC);
 #define jack_set_buffer_size_callback pjack_set_buffer_size_callback
 #define jack_set_buffer_size pjack_set_buffer_size
 #define jack_get_buffer_size pjack_get_buffer_size
+#define jack_error_callback (*pjack_error_callback)
 #endif
 
 
@@ -120,6 +122,10 @@ static ALCboolean jack_load(void)
 } while(0)
         JACK_FUNCS(LOAD_FUNC);
 #undef LOAD_FUNC
+        /* Optional symbols. These don't exist in all versions of JACK. */
+#define LOAD_SYM(f) p##f = GetSymbol(jack_handle, #f)
+        LOAD_SYM(jack_error_callback);
+#undef LOAD_SYM
 
         if(error)
         {
@@ -556,6 +562,7 @@ typedef struct ALCjackBackendFactory {
 
 static ALCboolean ALCjackBackendFactory_init(ALCjackBackendFactory* UNUSED(self))
 {
+    void (*old_error_cb)(const char*);
     jack_client_t *client;
     jack_status_t status;
 
@@ -565,9 +572,10 @@ static ALCboolean ALCjackBackendFactory_init(ALCjackBackendFactory* UNUSED(self)
     if(!GetConfigValueBool(NULL, "jack", "spawn-server", 0))
         ClientOptions |= JackNoStartServer;
 
+    old_error_cb = (&jack_error_callback ? jack_error_callback : NULL);
     jack_set_error_function(jack_msg_handler);
     client = jack_client_open("alsoft", ClientOptions, &status, NULL);
-    jack_set_error_function(NULL);
+    jack_set_error_function(old_error_cb);
     if(client == NULL)
     {
         WARN("jack_client_open() failed, 0x%02x\n", status);

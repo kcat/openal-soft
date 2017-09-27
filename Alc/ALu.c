@@ -271,7 +271,30 @@ ALboolean BsincPrepare(const ALuint increment, BsincState *state, const BSincTab
 }
 
 
-static ALboolean CalcListenerParams(ALCcontext *Context)
+static bool CalcContextParams(ALCcontext *Context)
+{
+    ALlistener *Listener = Context->Listener;
+    struct ALcontextProps *props;
+
+    props = ATOMIC_EXCHANGE_PTR(&Context->Update, NULL, almemory_order_acq_rel);
+    if(!props) return false;
+
+    Listener->Params.MetersPerUnit = props->MetersPerUnit;
+
+    Listener->Params.DopplerFactor = props->DopplerFactor;
+    Listener->Params.SpeedOfSound = props->SpeedOfSound * props->DopplerVelocity;
+    if(!OverrideReverbSpeedOfSound)
+        Listener->Params.ReverbSpeedOfSound = Listener->Params.SpeedOfSound *
+                                              Listener->Params.MetersPerUnit;
+
+    Listener->Params.SourceDistanceModel = props->SourceDistanceModel;
+    Listener->Params.DistanceModel = props->DistanceModel;
+
+    ATOMIC_REPLACE_HEAD(struct ALcontextProps*, &Context->FreeList, props);
+    return true;
+}
+
+static bool CalcListenerParams(ALCcontext *Context)
 {
     ALlistener *Listener = Context->Listener;
     ALfloat N[3], V[3], U[3], P[3];
@@ -279,7 +302,7 @@ static ALboolean CalcListenerParams(ALCcontext *Context)
     aluVector vel;
 
     props = ATOMIC_EXCHANGE_PTR(&Listener->Update, NULL, almemory_order_acq_rel);
-    if(!props) return AL_FALSE;
+    if(!props) return false;
 
     /* AT then UP */
     N[0] = props->Forward[0];
@@ -311,30 +334,18 @@ static ALboolean CalcListenerParams(ALCcontext *Context)
     Listener->Params.Velocity = aluMatrixfVector(&Listener->Params.Matrix, &vel);
 
     Listener->Params.Gain = props->Gain * Context->GainBoost;
-    Listener->Params.MetersPerUnit = props->MetersPerUnit;
-
-    Listener->Params.DopplerFactor = props->DopplerFactor;
-    Listener->Params.SpeedOfSound = props->SpeedOfSound * props->DopplerVelocity;
-    if(OverrideReverbSpeedOfSound)
-        Listener->Params.ReverbSpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
-    else
-        Listener->Params.ReverbSpeedOfSound = Listener->Params.SpeedOfSound *
-                                              Listener->Params.MetersPerUnit;
-
-    Listener->Params.SourceDistanceModel = props->SourceDistanceModel;
-    Listener->Params.DistanceModel = props->DistanceModel;
 
     ATOMIC_REPLACE_HEAD(struct ALlistenerProps*, &Listener->FreeList, props);
-    return AL_TRUE;
+    return true;
 }
 
-static ALboolean CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context)
+static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context)
 {
     struct ALeffectslotProps *props;
     ALeffectState *state;
 
     props = ATOMIC_EXCHANGE_PTR(&slot->Update, NULL, almemory_order_acq_rel);
-    if(!props) return AL_FALSE;
+    if(!props) return false;
 
     slot->Params.Gain = props->Gain;
     slot->Params.AuxSendAuto = props->AuxSendAuto;
@@ -366,7 +377,7 @@ static ALboolean CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context)
     V(state,update)(context, slot, &props->Props);
 
     ATOMIC_REPLACE_HEAD(struct ALeffectslotProps*, &slot->FreeList, props);
-    return AL_TRUE;
+    return true;
 }
 
 
@@ -1430,7 +1441,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
                           WetGainLF, WetGainHF, SendSlots, ALBuffer, props, Listener, Device);
 }
 
-static void CalcSourceParams(ALvoice *voice, ALCcontext *context, ALboolean force)
+static void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
 {
     ALbufferlistitem *BufferListItem;
     struct ALvoiceProps *props;
@@ -1475,7 +1486,8 @@ static void UpdateContextSources(ALCcontext *ctx, const struct ALeffectslotArray
     IncrementRef(&ctx->UpdateCount);
     if(!ATOMIC_LOAD(&ctx->HoldUpdates, almemory_order_acquire))
     {
-        ALboolean force = CalcListenerParams(ctx);
+        ALboolean cforce = CalcContextParams(ctx);
+        ALboolean force = CalcListenerParams(ctx) | cforce;
         for(i = 0;i < slots->count;i++)
             force |= CalcEffectSlotParams(slots->slot[i], ctx);
 

@@ -21,7 +21,7 @@
 #include "config.h"
 
 #include "alMain.h"
-#include "AL/alc.h"
+#include "alu.h"
 #include "alError.h"
 #include "alListener.h"
 #include "alSource.h"
@@ -45,8 +45,10 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
     case AL_METERS_PER_UNIT:
         if(!(value >= AL_MIN_METERS_PER_UNIT && value <= AL_MAX_METERS_PER_UNIT))
             SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-        context->Listener->MetersPerUnit = value;
-        break;
+        context->MetersPerUnit = value;
+        if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
+            UpdateContextProps(context);
+        goto done;
 
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
@@ -266,7 +268,7 @@ AL_API ALvoid AL_APIENTRY alGetListenerf(ALenum param, ALfloat *value)
         break;
 
     case AL_METERS_PER_UNIT:
-        *value = context->Listener->MetersPerUnit;
+        *value = context->MetersPerUnit;
         break;
 
     default:
@@ -489,14 +491,6 @@ void UpdateListenerProps(ALCcontext *context)
     props->Up[2] = listener->Up[2];
 
     props->Gain = listener->Gain;
-    props->MetersPerUnit = listener->MetersPerUnit;
-
-    props->DopplerFactor = context->DopplerFactor;
-    props->DopplerVelocity = context->DopplerVelocity;
-    props->SpeedOfSound = context->SpeedOfSound;
-
-    props->SourceDistanceModel = context->SourceDistanceModel;
-    props->DistanceModel = context->DistanceModel;;
 
     /* Set the new container for updating internal parameters. */
     props = ATOMIC_EXCHANGE_PTR(&listener->Update, props, almemory_order_acq_rel);

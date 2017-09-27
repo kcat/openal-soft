@@ -1669,6 +1669,7 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
         while((ATOMIC_LOAD(&context->UpdateCount, almemory_order_acquire)&1) != 0)
             althrd_yield();
 
+        UpdateContextProps(context);
         UpdateListenerProps(context);
         UpdateAllEffectSlotProps(context);
         UpdateAllSourceProps(context);
@@ -2519,7 +2520,6 @@ static ALvoid InitContext(ALCcontext *Context)
 
     //Initialise listener
     listener->Gain = 1.0f;
-    listener->MetersPerUnit = AL_DEFAULT_METERS_PER_UNIT;
     listener->Position[0] = 0.0f;
     listener->Position[1] = 0.0f;
     listener->Position[2] = 0.0f;
@@ -2532,19 +2532,6 @@ static ALvoid InitContext(ALCcontext *Context)
     listener->Up[0] = 0.0f;
     listener->Up[1] = 1.0f;
     listener->Up[2] = 0.0f;
-
-    aluMatrixfSet(&listener->Params.Matrix,
-        1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f
-    );
-    aluVectorSet(&listener->Params.Velocity, 0.0f, 0.0f, 0.0f, 0.0f);
-    listener->Params.Gain = 1.0f;
-    listener->Params.MetersPerUnit = listener->MetersPerUnit;
-    listener->Params.DopplerFactor = 1.0f;
-    listener->Params.SpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
-    listener->Params.ReverbSpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
 
     ATOMIC_INIT(&listener->Update, NULL);
     ATOMIC_INIT(&listener->FreeList, NULL);
@@ -2577,9 +2564,28 @@ static ALvoid InitContext(ALCcontext *Context)
     Context->DopplerFactor = 1.0f;
     Context->DopplerVelocity = 1.0f;
     Context->SpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
+    Context->MetersPerUnit = AL_DEFAULT_METERS_PER_UNIT;
     ATOMIC_INIT(&Context->DeferUpdates, AL_FALSE);
 
+    ATOMIC_INIT(&Context->Update, NULL);
+    ATOMIC_INIT(&Context->FreeList, NULL);
+
     Context->ExtensionList = alExtList;
+
+
+    aluMatrixfSet(&listener->Params.Matrix,
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f
+    );
+    aluVectorSet(&listener->Params.Velocity, 0.0f, 0.0f, 0.0f, 0.0f);
+    listener->Params.Gain = listener->Gain;
+    listener->Params.MetersPerUnit = Context->MetersPerUnit;
+    listener->Params.DopplerFactor = Context->DopplerFactor;
+    listener->Params.SpeedOfSound = Context->SpeedOfSound * Context->DopplerVelocity;
+    listener->Params.ReverbSpeedOfSound = listener->Params.SpeedOfSound *
+                                          listener->Params.MetersPerUnit;
 }
 
 
@@ -2593,10 +2599,27 @@ static void FreeContext(ALCcontext *context)
     ALlistener *listener = context->Listener;
     struct ALeffectslotArray *auxslots;
     struct ALlistenerProps *lprops;
+    struct ALcontextProps *cprops;
     size_t count;
     ALsizei i;
 
     TRACE("%p\n", context);
+
+    if((cprops=ATOMIC_LOAD(&context->Update, almemory_order_acquire)) != NULL)
+    {
+        TRACE("Freed unapplied context update %p\n", cprops);
+        al_free(cprops);
+    }
+    count = 0;
+    cprops = ATOMIC_LOAD(&context->FreeList, almemory_order_acquire);
+    while(cprops)
+    {
+        struct ALcontextProps *next = ATOMIC_LOAD(&cprops->next, almemory_order_acquire);
+        al_free(cprops);
+        cprops = next;
+        ++count;
+    }
+    TRACE("Freed "SZFMT" context property object%s\n", count, (count==1)?"":"s");
 
     if(context->DefaultSlot)
     {

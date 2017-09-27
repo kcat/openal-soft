@@ -514,6 +514,8 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples);
 /* Caller must lock the device. */
 void aluHandleDisconnect(ALCdevice *device);
 
+void UpdateContextProps(ALCcontext *context);
+
 extern ALfloat ConeScale;
 extern ALfloat ZScale;
 extern ALboolean OverrideReverbSpeedOfSound;

@@ -382,6 +382,7 @@ struct Hrtf;
 struct HrtfEntry;
 struct FrontStablizer;
 struct Compressor;
+struct ALcontextProps;
 
 
 #define DEFAULT_OUTPUT_RATE  (44100)
@@ -851,6 +852,7 @@ struct ALCcontext_struct {
     ALfloat DopplerFactor;
     ALfloat DopplerVelocity;
     ALfloat SpeedOfSound;
+    ALfloat MetersPerUnit;
     ATOMIC(ALenum) DeferUpdates;
 
     RWLock PropLock;
@@ -862,6 +864,9 @@ struct ALCcontext_struct {
     ATOMIC(ALenum) HoldUpdates;
 
     ALfloat GainBoost;
+
+    ATOMIC(struct ALcontextProps*) Update;
+    ATOMIC(struct ALcontextProps*) FreeList;
 
     struct ALvoice **Voices;
     ALsizei VoiceCount;

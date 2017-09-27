@@ -72,7 +72,7 @@ AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-        UpdateListenerProps(context);
+        UpdateContextProps(context);
 
 done:
     WriteUnlock(&context->PropLock);
@@ -97,7 +97,7 @@ AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-        UpdateListenerProps(context);
+        UpdateContextProps(context);
 
 done:
     WriteUnlock(&context->PropLock);
@@ -648,7 +648,7 @@ AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
     WriteLock(&context->PropLock);
     context->DopplerFactor = value;
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-        UpdateListenerProps(context);
+        UpdateContextProps(context);
     WriteUnlock(&context->PropLock);
 
 done:
@@ -668,7 +668,7 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
     WriteLock(&context->PropLock);
     context->DopplerVelocity = value;
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-        UpdateListenerProps(context);
+        UpdateContextProps(context);
     WriteUnlock(&context->PropLock);
 
 done:
@@ -688,7 +688,7 @@ AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat value)
     WriteLock(&context->PropLock);
     context->SpeedOfSound = value;
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-        UpdateListenerProps(context);
+        UpdateContextProps(context);
     WriteUnlock(&context->PropLock);
 
 done:
@@ -713,7 +713,7 @@ AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
     if(!context->SourceDistanceModel)
     {
         if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-            UpdateListenerProps(context);
+            UpdateContextProps(context);
     }
     WriteUnlock(&context->PropLock);
 
@@ -778,4 +778,43 @@ done:
     ALCcontext_DecRef(context);
 
     return value;
+}
+
+
+void UpdateContextProps(ALCcontext *context)
+{
+    struct ALcontextProps *props;
+
+    /* Get an unused proprty container, or allocate a new one as needed. */
+    props = ATOMIC_LOAD(&context->FreeList, almemory_order_acquire);
+    if(!props)
+        props = al_calloc(16, sizeof(*props));
+    else
+    {
+        struct ALcontextProps *next;
+        do {
+            next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
+        } while(ATOMIC_COMPARE_EXCHANGE_PTR_WEAK(&context->FreeList, &props, next,
+                almemory_order_seq_cst, almemory_order_acquire) == 0);
+    }
+
+    /* Copy in current property values. */
+    props->MetersPerUnit = context->MetersPerUnit;
+
+    props->DopplerFactor = context->DopplerFactor;
+    props->DopplerVelocity = context->DopplerVelocity;
+    props->SpeedOfSound = context->SpeedOfSound;
+
+    props->SourceDistanceModel = context->SourceDistanceModel;
+    props->DistanceModel = context->DistanceModel;
+
+    /* Set the new container for updating internal parameters. */
+    props = ATOMIC_EXCHANGE_PTR(&context->Update, props, almemory_order_acq_rel);
+    if(props)
+    {
+        /* If there was an unused update container, put it back in the
+         * freelist.
+         */
+        ATOMIC_REPLACE_HEAD(struct ALcontextProps*, &context->FreeList, props);
+    }
 }

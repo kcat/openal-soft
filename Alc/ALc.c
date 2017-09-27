@@ -145,8 +145,6 @@ static const struct {
     DECL(alcIsRenderFormatSupportedSOFT),
     DECL(alcRenderSamplesSOFT),
 
-    DECL(alcIsAmbisonicFormatSupportedSOFT),
-
     DECL(alcDevicePauseSOFT),
     DECL(alcDeviceResumeSOFT),
 
@@ -3116,8 +3114,8 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
 static inline ALCsizei NumAttrsForDevice(ALCdevice *device)
 {
     if(device->Type == Loopback && device->FmtChans == DevFmtAmbi3D)
-        return 25;
-    return 19;
+        return 27;
+    return 21;
 }
 
 static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values)
@@ -3154,6 +3152,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             case ALC_AMBISONIC_LAYOUT_SOFT:
             case ALC_AMBISONIC_SCALING_SOFT:
             case ALC_AMBISONIC_ORDER_SOFT:
+            case ALC_MAX_AMBISONIC_ORDER_SOFT:
                 alcSetError(NULL, ALC_INVALID_DEVICE);
                 return 0;
 
@@ -3202,6 +3201,10 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
 
         case ALC_EFX_MINOR_VERSION:
             values[0] = alcEFXMinorVersion;
+            return 1;
+
+        case ALC_MAX_AMBISONIC_ORDER_SOFT:
+            values[0] = MAX_AMBI_ORDER;
             return 1;
 
         case ALC_ATTRIBUTES_SIZE:
@@ -3266,6 +3269,9 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
 
             values[i++] = ALC_OUTPUT_LIMITER_SOFT;
             values[i++] = device->Limiter ? ALC_TRUE : ALC_FALSE;
+
+            values[i++] = ALC_MAX_AMBISONIC_ORDER_SOFT;
+            values[i++] = MAX_AMBI_ORDER;
             almtx_unlock(&device->BackendLock);
 
             values[i++] = 0;
@@ -4562,28 +4568,6 @@ FORCE_ALIGN ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, AL
     if(device) ALCdevice_DecRef(device);
 }
 
-
-/************************************************
- * ALC loopback2 functions
- ************************************************/
-
-ALC_API ALCboolean ALC_APIENTRY alcIsAmbisonicFormatSupportedSOFT(ALCdevice *device, ALCenum layout, ALCenum scaling, ALsizei order)
-{
-    ALCboolean ret = ALC_FALSE;
-
-    if(!VerifyDevice(&device) || device->Type != Loopback)
-        alcSetError(device, ALC_INVALID_DEVICE);
-    else if(order <= 0)
-        alcSetError(device, ALC_INVALID_VALUE);
-    else
-    {
-        if(IsValidAmbiLayout(layout) && IsValidAmbiScaling(scaling) && order <= MAX_AMBI_ORDER)
-            ret = ALC_TRUE;
-    }
-    if(device) ALCdevice_DecRef(device);
-
-    return ret;
-}
 
 /************************************************
  * ALC DSP pause/resume functions

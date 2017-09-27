@@ -32,25 +32,21 @@
 
 #ifndef ALC_SOFT_loopback2
 #define ALC_SOFT_loopback2 1
-#define ALC_AMBISONIC_LAYOUT_SOFT                0x1997
-#define ALC_AMBISONIC_SCALING_SOFT               0x1998
-#define ALC_AMBISONIC_ORDER_SOFT                 0x1999
+#define ALC_AMBISONIC_LAYOUT_SOFT                0xfff0
+#define ALC_AMBISONIC_SCALING_SOFT               0xfff1
+#define ALC_AMBISONIC_ORDER_SOFT                 0xfff2
+#define ALC_MAX_AMBISONIC_ORDER_SOFT             0xfff3
 
 #define ALC_BFORMAT3D_SOFT                       0x1508
 
 /* Ambisonic layouts */
-#define ALC_ACN_SOFT                             0x1600
-#define ALC_FUMA_SOFT                            0x1601
+#define ALC_ACN_SOFT                             0xfff4
+#define ALC_FUMA_SOFT                            0xfff5
 
 /* Ambisonic scalings (normalization) */
 /*#define ALC_FUMA_SOFT*/
-#define ALC_SN3D_SOFT                            0x1602
-#define ALC_N3D_SOFT                             0x1603
-
-typedef ALCboolean (ALC_APIENTRY*LPALCISAMBISONICFORMATSUPPORTEDSOFT)(ALCdevice *device, ALCenum layout, ALCenum scaling, ALsizei order);
-#ifdef AL_ALEXT_PROTOTYPES
-ALC_API ALCboolean ALC_APIENTRY alcIsAmbisonicFormatSupportedSOFT(ALCdevice *device, ALCenum layout, ALCenum scaling, ALsizei order);
-#endif
+#define ALC_SN3D_SOFT                            0xfff6
+#define ALC_N3D_SOFT                             0xfff7
 #endif
 
 #ifndef ALC_SOFT_device_clock

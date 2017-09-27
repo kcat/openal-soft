@@ -26,20 +26,31 @@
 #include "alListener.h"
 #include "alSource.h"
 
+#define DO_UPDATEPROPS() do {                                                 \
+    if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))          \
+        UpdateListenerProps(context);                                         \
+    else                                                                      \
+        ATOMIC_FLAG_CLEAR(&listener->PropsClean, almemory_order_release);     \
+} while(0)
+
+
 AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
 {
+    ALlistener *listener;
     ALCcontext *context;
 
     context = GetContextRef();
     if(!context) return;
 
+    listener = context->Listener;
     WriteLock(&context->PropLock);
     switch(param)
     {
     case AL_GAIN:
         if(!(value >= 0.0f && isfinite(value)))
             SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-        context->Listener->Gain = value;
+        listener->Gain = value;
+        DO_UPDATEPROPS();
         break;
 
     case AL_METERS_PER_UNIT:
@@ -48,13 +59,13 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
         context->MetersPerUnit = value;
         if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
             UpdateContextProps(context);
-        goto done;
+        else
+            ATOMIC_FLAG_CLEAR(&context->PropsClean, almemory_order_release);
+        break;
 
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
-    if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-        UpdateListenerProps(context);
 
 done:
     WriteUnlock(&context->PropLock);
@@ -64,35 +75,37 @@ done:
 
 AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat value2, ALfloat value3)
 {
+    ALlistener *listener;
     ALCcontext *context;
 
     context = GetContextRef();
     if(!context) return;
 
+    listener = context->Listener;
     WriteLock(&context->PropLock);
     switch(param)
     {
     case AL_POSITION:
         if(!(isfinite(value1) && isfinite(value2) && isfinite(value3)))
             SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-        context->Listener->Position[0] = value1;
-        context->Listener->Position[1] = value2;
-        context->Listener->Position[2] = value3;
+        listener->Position[0] = value1;
+        listener->Position[1] = value2;
+        listener->Position[2] = value3;
+        DO_UPDATEPROPS();
         break;
 
     case AL_VELOCITY:
         if(!(isfinite(value1) && isfinite(value2) && isfinite(value3)))
             SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-        context->Listener->Velocity[0] = value1;
-        context->Listener->Velocity[1] = value2;
-        context->Listener->Velocity[2] = value3;
+        listener->Velocity[0] = value1;
+        listener->Velocity[1] = value2;
+        listener->Velocity[2] = value3;
+        DO_UPDATEPROPS();
         break;
 
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
-    if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-        UpdateListenerProps(context);
 
 done:
     WriteUnlock(&context->PropLock);
@@ -102,6 +115,7 @@ done:
 
 AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
 {
+    ALlistener *listener;
     ALCcontext *context;
 
     if(values)
@@ -123,6 +137,7 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
     context = GetContextRef();
     if(!context) return;
 
+    listener = context->Listener;
     WriteLock(&context->PropLock);
     if(!(values))
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
@@ -133,19 +148,18 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
              isfinite(values[3]) && isfinite(values[4]) && isfinite(values[5])))
             SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
         /* AT then UP */
-        context->Listener->Forward[0] = values[0];
-        context->Listener->Forward[1] = values[1];
-        context->Listener->Forward[2] = values[2];
-        context->Listener->Up[0] = values[3];
-        context->Listener->Up[1] = values[4];
-        context->Listener->Up[2] = values[5];
+        listener->Forward[0] = values[0];
+        listener->Forward[1] = values[1];
+        listener->Forward[2] = values[2];
+        listener->Up[0] = values[3];
+        listener->Up[1] = values[4];
+        listener->Up[2] = values[5];
+        DO_UPDATEPROPS();
         break;
 
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
-    if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-        UpdateListenerProps(context);
 
 done:
     WriteUnlock(&context->PropLock);
@@ -166,8 +180,6 @@ AL_API ALvoid AL_APIENTRY alListeneri(ALenum param, ALint UNUSED(value))
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
-    if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-        UpdateListenerProps(context);
 
 done:
     WriteUnlock(&context->PropLock);
@@ -196,8 +208,6 @@ AL_API void AL_APIENTRY alListener3i(ALenum param, ALint value1, ALint value2, A
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
-    if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-        UpdateListenerProps(context);
 
 done:
     WriteUnlock(&context->PropLock);
@@ -242,8 +252,6 @@ AL_API void AL_APIENTRY alListeneriv(ALenum param, const ALint *values)
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
-    if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-        UpdateListenerProps(context);
 
 done:
     WriteUnlock(&context->PropLock);

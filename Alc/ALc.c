@@ -1669,8 +1669,10 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
         while((ATOMIC_LOAD(&context->UpdateCount, almemory_order_acquire)&1) != 0)
             althrd_yield();
 
-        UpdateContextProps(context);
-        UpdateListenerProps(context);
+        if(!ATOMIC_FLAG_TEST_AND_SET(&context->PropsClean, almemory_order_acq_rel))
+            UpdateContextProps(context);
+        if(!ATOMIC_FLAG_TEST_AND_SET(&context->Listener->PropsClean, almemory_order_acq_rel))
+            UpdateListenerProps(context);
         UpdateAllEffectSlotProps(context);
         UpdateAllSourceProps(context);
 
@@ -2358,6 +2360,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
         UnlockUIntMapRead(&context->SourceMap);
 
+        ATOMIC_FLAG_TEST_AND_SET(&context->PropsClean, almemory_order_release);
+        UpdateContextProps(context);
+        ATOMIC_FLAG_TEST_AND_SET(&context->Listener->PropsClean, almemory_order_release);
         UpdateListenerProps(context);
         UpdateAllSourceProps(context);
         WriteUnlock(&context->PropLock);
@@ -2532,6 +2537,7 @@ static ALvoid InitContext(ALCcontext *Context)
     listener->Up[0] = 0.0f;
     listener->Up[1] = 1.0f;
     listener->Up[2] = 0.0f;
+    ATOMIC_FLAG_TEST_AND_SET(&listener->PropsClean, almemory_order_relaxed);
 
     ATOMIC_INIT(&listener->Update, NULL);
     ATOMIC_INIT(&listener->FreeList, NULL);
@@ -2565,6 +2571,7 @@ static ALvoid InitContext(ALCcontext *Context)
     Context->DopplerVelocity = 1.0f;
     Context->SpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
     Context->MetersPerUnit = AL_DEFAULT_METERS_PER_UNIT;
+    ATOMIC_FLAG_TEST_AND_SET(&Context->PropsClean, almemory_order_relaxed);
     ATOMIC_INIT(&Context->DeferUpdates, AL_FALSE);
 
     ATOMIC_INIT(&Context->Update, NULL);

@@ -54,6 +54,14 @@ static const ALchar alSinc4Resampler[] = "3rd order Sinc";
 static const ALchar alBSinc12Resampler[] = "11th order Sinc";
 static const ALchar alBSinc24Resampler[] = "23rd order Sinc";
 
+#define DO_UPDATEPROPS() do {                                                 \
+    if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))          \
+        UpdateContextProps(context);                                          \
+    else                                                                      \
+        ATOMIC_FLAG_CLEAR(&context->PropsClean, almemory_order_release);      \
+} while(0)
+
+
 AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
 {
     ALCcontext *context;
@@ -66,13 +74,12 @@ AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
         context->SourceDistanceModel = AL_TRUE;
+        DO_UPDATEPROPS();
         break;
 
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
-    if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-        UpdateContextProps(context);
 
 done:
     WriteUnlock(&context->PropLock);
@@ -91,13 +98,12 @@ AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
         context->SourceDistanceModel = AL_FALSE;
+        DO_UPDATEPROPS();
         break;
 
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
-    if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-        UpdateContextProps(context);
 
 done:
     WriteUnlock(&context->PropLock);
@@ -647,8 +653,7 @@ AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
 
     WriteLock(&context->PropLock);
     context->DopplerFactor = value;
-    if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-        UpdateContextProps(context);
+    DO_UPDATEPROPS();
     WriteUnlock(&context->PropLock);
 
 done:
@@ -667,8 +672,7 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
 
     WriteLock(&context->PropLock);
     context->DopplerVelocity = value;
-    if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-        UpdateContextProps(context);
+    DO_UPDATEPROPS();
     WriteUnlock(&context->PropLock);
 
 done:
@@ -687,8 +691,7 @@ AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat value)
 
     WriteLock(&context->PropLock);
     context->SpeedOfSound = value;
-    if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-        UpdateContextProps(context);
+    DO_UPDATEPROPS();
     WriteUnlock(&context->PropLock);
 
 done:
@@ -711,10 +714,7 @@ AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
     WriteLock(&context->PropLock);
     context->DistanceModel = value;
     if(!context->SourceDistanceModel)
-    {
-        if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
-            UpdateContextProps(context);
-    }
+        DO_UPDATEPROPS();
     WriteUnlock(&context->PropLock);
 
 done:

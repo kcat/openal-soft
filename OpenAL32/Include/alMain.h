@@ -853,6 +853,8 @@ struct ALCcontext_struct {
     ALfloat DopplerVelocity;
     ALfloat SpeedOfSound;
     ALfloat MetersPerUnit;
+
+    ATOMIC_FLAG PropsClean;
     ATOMIC(ALenum) DeferUpdates;
 
     RWLock PropLock;

@@ -110,13 +110,13 @@ typedef struct ALeffectslot {
     RefCount ref;
 
     ATOMIC(struct ALeffectslotProps*) Update;
-    ATOMIC(struct ALeffectslotProps*) FreeList;
 
     struct {
         ALfloat   Gain;
         ALboolean AuxSendAuto;
 
         ALenum EffectType;
+        ALeffectProps EffectProps;
         ALeffectState *EffectState;
 
         ALfloat RoomRolloff; /* Added to the source's room rolloff, not multiplied. */
@@ -160,7 +160,7 @@ inline struct ALeffectslot *RemoveEffectSlot(ALCcontext *context, ALuint id)
 
 ALenum InitEffectSlot(ALeffectslot *slot);
 void DeinitEffectSlot(ALeffectslot *slot);
-void UpdateEffectSlotProps(ALeffectslot *slot);
+void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context);
 void UpdateAllEffectSlotProps(ALCcontext *context);
 ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context);
 
@@ -178,10 +178,12 @@ ALeffectStateFactory *ALmodulatorStateFactory_getFactory(void);
 ALeffectStateFactory *ALdedicatedStateFactory_getFactory(void);
 
 
-ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *effect);
+ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect);
 
 void InitEffectFactoryMap(void);
 void DeinitEffectFactoryMap(void);
+
+void ALeffectState_DecRef(ALeffectState *state);
 
 #ifdef __cplusplus
 }

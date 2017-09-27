@@ -786,7 +786,7 @@ void UpdateContextProps(ALCcontext *context)
     struct ALcontextProps *props;
 
     /* Get an unused proprty container, or allocate a new one as needed. */
-    props = ATOMIC_LOAD(&context->FreeList, almemory_order_acquire);
+    props = ATOMIC_LOAD(&context->FreeContextProps, almemory_order_acquire);
     if(!props)
         props = al_calloc(16, sizeof(*props));
     else
@@ -794,7 +794,7 @@ void UpdateContextProps(ALCcontext *context)
         struct ALcontextProps *next;
         do {
             next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
-        } while(ATOMIC_COMPARE_EXCHANGE_PTR_WEAK(&context->FreeList, &props, next,
+        } while(ATOMIC_COMPARE_EXCHANGE_PTR_WEAK(&context->FreeContextProps, &props, next,
                 almemory_order_seq_cst, almemory_order_acquire) == 0);
     }
 
@@ -815,6 +815,6 @@ void UpdateContextProps(ALCcontext *context)
         /* If there was an unused update container, put it back in the
          * freelist.
          */
-        ATOMIC_REPLACE_HEAD(struct ALcontextProps*, &context->FreeList, props);
+        ATOMIC_REPLACE_HEAD(struct ALcontextProps*, &context->FreeContextProps, props);
     }
 }

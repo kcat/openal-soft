@@ -251,7 +251,6 @@ typedef struct ALvoice {
     struct ALvoiceProps *Props;
 
     ATOMIC(struct ALvoiceProps*) Update;
-    ATOMIC(struct ALvoiceProps*) FreeList;
 
     ATOMIC(struct ALsource*) Source;
     ATOMIC(bool) Playing;

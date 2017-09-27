@@ -2255,6 +2255,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     context = ATOMIC_LOAD_SEQ(&device->ContextList);
     while(context)
     {
+        struct ALvoiceProps *vprops;
         ALsizei pos;
 
         if(context->DefaultSlot)
@@ -2267,7 +2268,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(V(state,deviceUpdate)(device) == AL_FALSE)
                 update_failed = AL_TRUE;
             else
-                UpdateEffectSlotProps(slot);
+                UpdateEffectSlotProps(slot, context);
         }
 
         WriteLock(&context->PropLock);
@@ -2282,7 +2283,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(V(state,deviceUpdate)(device) == AL_FALSE)
                 update_failed = AL_TRUE;
             else
-                UpdateEffectSlotProps(slot);
+                UpdateEffectSlotProps(slot, context);
         }
         UnlockUIntMapRead(&context->EffectSlotMap);
 
@@ -2321,26 +2322,25 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
             ATOMIC_FLAG_CLEAR(&source->PropsClean, almemory_order_release);
         }
+
+        /* Clear any pre-existing voice property structs, in case the number of
+         * auxiliary sends is changing. Active sources will have updates
+         * respecified in UpdateAllSourceProps.
+         */
+        vprops = ATOMIC_EXCHANGE_PTR(&context->FreeVoiceProps, NULL, almemory_order_acq_rel);
+        while(vprops)
+        {
+            struct ALvoiceProps *next = ATOMIC_LOAD(&vprops->next, almemory_order_relaxed);
+            al_free(vprops);
+            vprops = next;
+        }
+
         AllocateVoices(context, context->MaxVoices, old_sends);
         for(pos = 0;pos < context->VoiceCount;pos++)
         {
             ALvoice *voice = context->Voices[pos];
-            struct ALvoiceProps *props;
 
-            /* Clear any pre-existing voice property structs, in case the
-             * number of auxiliary sends changed. Active sources will have
-             * updates respecified in UpdateAllSourceProps.
-             */
-            props = ATOMIC_EXCHANGE_PTR(&voice->Update, NULL, almemory_order_relaxed);
-            al_free(props);
-
-            props = ATOMIC_EXCHANGE_PTR(&voice->FreeList, NULL, almemory_order_relaxed);
-            while(props)
-            {
-                struct ALvoiceProps *next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
-                al_free(props);
-                props = next;
-            }
+            al_free(ATOMIC_EXCHANGE_PTR(&voice->Update, NULL, almemory_order_acq_rel));
 
             if(ATOMIC_LOAD(&voice->Source, almemory_order_acquire) == NULL)
                 continue;
@@ -2540,7 +2540,6 @@ static ALvoid InitContext(ALCcontext *Context)
     ATOMIC_FLAG_TEST_AND_SET(&listener->PropsClean, almemory_order_relaxed);
 
     ATOMIC_INIT(&listener->Update, NULL);
-    ATOMIC_INIT(&listener->FreeList, NULL);
 
     //Validate Context
     InitRef(&Context->UpdateCount, 0);
@@ -2575,7 +2574,10 @@ static ALvoid InitContext(ALCcontext *Context)
     ATOMIC_INIT(&Context->DeferUpdates, AL_FALSE);
 
     ATOMIC_INIT(&Context->Update, NULL);
-    ATOMIC_INIT(&Context->FreeList, NULL);
+    ATOMIC_INIT(&Context->FreeContextProps, NULL);
+    ATOMIC_INIT(&Context->FreeListenerProps, NULL);
+    ATOMIC_INIT(&Context->FreeVoiceProps, NULL);
+    ATOMIC_INIT(&Context->FreeEffectslotProps, NULL);
 
     Context->ExtensionList = alExtList;
 
@@ -2605,8 +2607,10 @@ static void FreeContext(ALCcontext *context)
 {
     ALlistener *listener = context->Listener;
     struct ALeffectslotArray *auxslots;
+    struct ALeffectslotProps *eprops;
     struct ALlistenerProps *lprops;
     struct ALcontextProps *cprops;
+    struct ALvoiceProps *vprops;
     size_t count;
     ALsizei i;
 
@@ -2617,8 +2621,9 @@ static void FreeContext(ALCcontext *context)
         TRACE("Freed unapplied context update %p\n", cprops);
         al_free(cprops);
     }
+
     count = 0;
-    cprops = ATOMIC_LOAD(&context->FreeList, almemory_order_acquire);
+    cprops = ATOMIC_LOAD(&context->FreeContextProps, almemory_order_acquire);
     while(cprops)
     {
         struct ALcontextProps *next = ATOMIC_LOAD(&cprops->next, almemory_order_acquire);
@@ -2645,6 +2650,17 @@ static void FreeContext(ALCcontext *context)
     }
     ResetUIntMap(&context->SourceMap);
 
+    count = 0;
+    eprops = ATOMIC_LOAD(&context->FreeEffectslotProps, almemory_order_relaxed);
+    while(eprops)
+    {
+        struct ALeffectslotProps *next = ATOMIC_LOAD(&eprops->next, almemory_order_relaxed);
+        if(eprops->State) ALeffectState_DecRef(eprops->State);
+        al_free(eprops);
+        eprops = next;
+        ++count;
+    }
+    TRACE("Freed "SZFMT" AuxiliaryEffectSlot property object%s\n", count, (count==1)?"":"s");
     if(context->EffectSlotMap.size > 0)
     {
         WARN("(%p) Deleting %d AuxiliaryEffectSlot%s\n", context, context->EffectSlotMap.size,
@@ -2652,6 +2668,17 @@ static void FreeContext(ALCcontext *context)
         ReleaseALAuxiliaryEffectSlots(context);
     }
     ResetUIntMap(&context->EffectSlotMap);
+
+    count = 0;
+    vprops = ATOMIC_LOAD(&context->FreeVoiceProps, almemory_order_relaxed);
+    while(vprops)
+    {
+        struct ALvoiceProps *next = ATOMIC_LOAD(&vprops->next, almemory_order_relaxed);
+        al_free(vprops);
+        vprops = next;
+        ++count;
+    }
+    TRACE("Freed "SZFMT" voice property object%s\n", count, (count==1)?"":"s");
 
     for(i = 0;i < context->VoiceCount;i++)
         DeinitVoice(context->Voices[i]);
@@ -2666,7 +2693,7 @@ static void FreeContext(ALCcontext *context)
         al_free(lprops);
     }
     count = 0;
-    lprops = ATOMIC_LOAD(&listener->FreeList, almemory_order_acquire);
+    lprops = ATOMIC_LOAD(&context->FreeListenerProps, almemory_order_acquire);
     while(lprops)
     {
         struct ALlistenerProps *next = ATOMIC_LOAD(&lprops->next, almemory_order_acquire);
@@ -2878,7 +2905,6 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
     for(;v < num_voices;v++)
     {
         ATOMIC_INIT(&voice->Update, NULL);
-        ATOMIC_INIT(&voice->FreeList, NULL);
 
         voice->Props = props;
         voices[v] = voice;
@@ -3725,8 +3751,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
     if(ALContext->DefaultSlot)
     {
-        if(InitializeEffect(device, ALContext->DefaultSlot, &DefaultEffect) == AL_NO_ERROR)
-            UpdateEffectSlotProps(ALContext->DefaultSlot);
+        if(InitializeEffect(ALContext, ALContext->DefaultSlot, &DefaultEffect) == AL_NO_ERROR)
+            UpdateEffectSlotProps(ALContext->DefaultSlot, ALContext);
         else
             ERR("Failed to initialize the default effect\n");
     }

@@ -52,11 +52,10 @@ static inline ALeffectStateFactory *getFactoryByType(ALenum type)
 }
 
 static void ALeffectState_IncRef(ALeffectState *state);
-static void ALeffectState_DecRef(ALeffectState *state);
 
 #define DO_UPDATEPROPS() do {                                                 \
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))          \
-        UpdateEffectSlotProps(slot);                                          \
+        UpdateEffectSlotProps(slot, context);                                 \
     else                                                                      \
         ATOMIC_FLAG_CLEAR(&slot->PropsClean, almemory_order_release);         \
 } while(0)
@@ -251,7 +250,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
             UnlockEffectsRead(device);
             SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
         }
-        err = InitializeEffect(device, slot, effect);
+        err = InitializeEffect(context, slot, effect);
         UnlockEffectsRead(device);
 
         if(err != AL_NO_ERROR)
@@ -497,8 +496,9 @@ void DeinitEffectFactoryMap(void)
 }
 
 
-ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *effect)
+ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect)
 {
+    ALCdevice *Device = Context->Device;
     ALenum newtype = (effect ? effect->type : AL_EFFECT_NULL);
     struct ALeffectslotProps *props;
     ALeffectState *State;
@@ -548,7 +548,7 @@ ALenum InitializeEffect(ALCdevice *Device, ALeffectslot *EffectSlot, ALeffect *e
         EffectSlot->Effect.Props = effect->Props;
 
     /* Remove state references from old effect slot property updates. */
-    props = ATOMIC_LOAD_SEQ(&EffectSlot->FreeList);
+    props = ATOMIC_LOAD_SEQ(&Context->FreeEffectslotProps);
     while(props)
     {
         if(props->State)
@@ -568,7 +568,7 @@ static void ALeffectState_IncRef(ALeffectState *state)
     TRACEREF("%p increasing refcount to %u\n", state, ref);
 }
 
-static void ALeffectState_DecRef(ALeffectState *state)
+void ALeffectState_DecRef(ALeffectState *state)
 {
     uint ref;
     ref = DecrementRef(&state->Ref);
@@ -606,7 +606,6 @@ ALenum InitEffectSlot(ALeffectslot *slot)
     InitRef(&slot->ref, 0);
 
     ATOMIC_INIT(&slot->Update, NULL);
-    ATOMIC_INIT(&slot->FreeList, NULL);
 
     slot->Params.Gain = 1.0f;
     slot->Params.AuxSendAuto = AL_TRUE;
@@ -624,7 +623,6 @@ ALenum InitEffectSlot(ALeffectslot *slot)
 void DeinitEffectSlot(ALeffectslot *slot)
 {
     struct ALeffectslotProps *props;
-    size_t count = 0;
 
     props = ATOMIC_LOAD_SEQ(&slot->Update);
     if(props)
@@ -633,29 +631,19 @@ void DeinitEffectSlot(ALeffectslot *slot)
         TRACE("Freed unapplied AuxiliaryEffectSlot update %p\n", props);
         al_free(props);
     }
-    props = ATOMIC_LOAD(&slot->FreeList, almemory_order_relaxed);
-    while(props)
-    {
-        struct ALeffectslotProps *next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
-        if(props->State) ALeffectState_DecRef(props->State);
-        al_free(props);
-        props = next;
-        ++count;
-    }
-    TRACE("Freed "SZFMT" AuxiliaryEffectSlot property object%s\n", count, (count==1)?"":"s");
 
     ALeffectState_DecRef(slot->Effect.State);
     if(slot->Params.EffectState)
         ALeffectState_DecRef(slot->Params.EffectState);
 }
 
-void UpdateEffectSlotProps(ALeffectslot *slot)
+void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context)
 {
     struct ALeffectslotProps *props;
     ALeffectState *oldstate;
 
     /* Get an unused property container, or allocate a new one as needed. */
-    props = ATOMIC_LOAD(&slot->FreeList, almemory_order_relaxed);
+    props = ATOMIC_LOAD(&context->FreeEffectslotProps, almemory_order_relaxed);
     if(!props)
         props = al_calloc(16, sizeof(*props));
     else
@@ -663,7 +651,7 @@ void UpdateEffectSlotProps(ALeffectslot *slot)
         struct ALeffectslotProps *next;
         do {
             next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
-        } while(ATOMIC_COMPARE_EXCHANGE_PTR_WEAK(&slot->FreeList, &props, next,
+        } while(ATOMIC_COMPARE_EXCHANGE_PTR_WEAK(&context->FreeEffectslotProps, &props, next,
                 almemory_order_seq_cst, almemory_order_acquire) == 0);
     }
 
@@ -687,7 +675,7 @@ void UpdateEffectSlotProps(ALeffectslot *slot)
         /* If there was an unused update container, put it back in the
          * freelist.
          */
-        ATOMIC_REPLACE_HEAD(struct ALeffectslotProps*, &slot->FreeList, props);
+        ATOMIC_REPLACE_HEAD(struct ALeffectslotProps*, &context->FreeEffectslotProps, props);
     }
 
     if(oldstate)
@@ -705,7 +693,7 @@ void UpdateAllEffectSlotProps(ALCcontext *context)
     {
         ALeffectslot *slot = auxslots->slot[i];
         if(!ATOMIC_FLAG_TEST_AND_SET(&slot->PropsClean, almemory_order_acq_rel))
-            UpdateEffectSlotProps(slot);
+            UpdateEffectSlotProps(slot, context);
     }
     UnlockEffectSlotsRead(context);
 }

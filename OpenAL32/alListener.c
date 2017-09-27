@@ -470,7 +470,7 @@ void UpdateListenerProps(ALCcontext *context)
     struct ALlistenerProps *props;
 
     /* Get an unused proprty container, or allocate a new one as needed. */
-    props = ATOMIC_LOAD(&listener->FreeList, almemory_order_acquire);
+    props = ATOMIC_LOAD(&context->FreeListenerProps, almemory_order_acquire);
     if(!props)
         props = al_calloc(16, sizeof(*props));
     else
@@ -478,7 +478,7 @@ void UpdateListenerProps(ALCcontext *context)
         struct ALlistenerProps *next;
         do {
             next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
-        } while(ATOMIC_COMPARE_EXCHANGE_PTR_WEAK(&listener->FreeList, &props, next,
+        } while(ATOMIC_COMPARE_EXCHANGE_PTR_WEAK(&context->FreeListenerProps, &props, next,
                 almemory_order_seq_cst, almemory_order_acquire) == 0);
     }
 
@@ -507,6 +507,6 @@ void UpdateListenerProps(ALCcontext *context)
         /* If there was an unused update container, put it back in the
          * freelist.
          */
-        ATOMIC_REPLACE_HEAD(struct ALlistenerProps*, &listener->FreeList, props);
+        ATOMIC_REPLACE_HEAD(struct ALlistenerProps*, &context->FreeListenerProps, props);
     }
 }

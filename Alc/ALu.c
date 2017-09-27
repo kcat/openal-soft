@@ -111,26 +111,7 @@ static HrtfDirectMixerFunc MixDirectHrtf = MixDirectHrtf_C;
 
 void DeinitVoice(ALvoice *voice)
 {
-    struct ALvoiceProps *props;
-    size_t count = 0;
-
-    props = ATOMIC_EXCHANGE_PTR_SEQ(&voice->Update, NULL);
-    if(props) al_free(props);
-
-    props = ATOMIC_EXCHANGE_PTR(&voice->FreeList, NULL, almemory_order_relaxed);
-    while(props)
-    {
-        struct ALvoiceProps *next;
-        next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
-        al_free(props);
-        props = next;
-        ++count;
-    }
-    /* This is excessively spammy if it traces every voice destruction, so just
-     * warn if it was unexpectedly large.
-     */
-    if(count > 3)
-        WARN("Freed "SZFMT" voice property objects\n", count);
+    al_free(ATOMIC_EXCHANGE_PTR_SEQ(&voice->Update, NULL));
 }
 
 
@@ -290,7 +271,7 @@ static bool CalcContextParams(ALCcontext *Context)
     Listener->Params.SourceDistanceModel = props->SourceDistanceModel;
     Listener->Params.DistanceModel = props->DistanceModel;
 
-    ATOMIC_REPLACE_HEAD(struct ALcontextProps*, &Context->FreeList, props);
+    ATOMIC_REPLACE_HEAD(struct ALcontextProps*, &Context->FreeContextProps, props);
     return true;
 }
 
@@ -335,48 +316,54 @@ static bool CalcListenerParams(ALCcontext *Context)
 
     Listener->Params.Gain = props->Gain * Context->GainBoost;
 
-    ATOMIC_REPLACE_HEAD(struct ALlistenerProps*, &Listener->FreeList, props);
+    ATOMIC_REPLACE_HEAD(struct ALlistenerProps*, &Context->FreeListenerProps, props);
     return true;
 }
 
-static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context)
+static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
 {
     struct ALeffectslotProps *props;
     ALeffectState *state;
 
     props = ATOMIC_EXCHANGE_PTR(&slot->Update, NULL, almemory_order_acq_rel);
-    if(!props) return false;
+    if(!props && !force) return false;
 
-    slot->Params.Gain = props->Gain;
-    slot->Params.AuxSendAuto = props->AuxSendAuto;
-    slot->Params.EffectType = props->Type;
-    if(IsReverbEffect(slot->Params.EffectType))
+    if(props)
     {
-        slot->Params.RoomRolloff = props->Props.Reverb.RoomRolloffFactor;
-        slot->Params.DecayTime = props->Props.Reverb.DecayTime;
-        slot->Params.DecayHFRatio = props->Props.Reverb.DecayHFRatio;
-        slot->Params.DecayHFLimit = props->Props.Reverb.DecayHFLimit;
-        slot->Params.AirAbsorptionGainHF = props->Props.Reverb.AirAbsorptionGainHF;
+        slot->Params.Gain = props->Gain;
+        slot->Params.AuxSendAuto = props->AuxSendAuto;
+        slot->Params.EffectType = props->Type;
+        slot->Params.EffectProps = props->Props;
+        if(IsReverbEffect(props->Type))
+        {
+            slot->Params.RoomRolloff = props->Props.Reverb.RoomRolloffFactor;
+            slot->Params.DecayTime = props->Props.Reverb.DecayTime;
+            slot->Params.DecayHFRatio = props->Props.Reverb.DecayHFRatio;
+            slot->Params.DecayHFLimit = props->Props.Reverb.DecayHFLimit;
+            slot->Params.AirAbsorptionGainHF = props->Props.Reverb.AirAbsorptionGainHF;
+        }
+        else
+        {
+            slot->Params.RoomRolloff = 0.0f;
+            slot->Params.DecayTime = 0.0f;
+            slot->Params.DecayHFRatio = 0.0f;
+            slot->Params.DecayHFLimit = AL_FALSE;
+            slot->Params.AirAbsorptionGainHF = 1.0f;
+        }
+
+        /* Swap effect states. No need to play with the ref counts since they
+         * keep the same number of refs.
+         */
+        state = props->State;
+        props->State = slot->Params.EffectState;
+        slot->Params.EffectState = state;
+
+        ATOMIC_REPLACE_HEAD(struct ALeffectslotProps*, &context->FreeEffectslotProps, props);
     }
     else
-    {
-        slot->Params.RoomRolloff = 0.0f;
-        slot->Params.DecayTime = 0.0f;
-        slot->Params.DecayHFRatio = 0.0f;
-        slot->Params.DecayHFLimit = AL_FALSE;
-        slot->Params.AirAbsorptionGainHF = 1.0f;
-    }
+        state = slot->Params.EffectState;
 
-    /* Swap effect states. No need to play with the ref counts since they keep
-     * the same number of refs.
-     */
-    state = props->State;
-    props->State = slot->Params.EffectState;
-    slot->Params.EffectState = state;
-
-    V(state,update)(context, slot, &props->Props);
-
-    ATOMIC_REPLACE_HEAD(struct ALeffectslotProps*, &slot->FreeList, props);
+    V(state,update)(context, slot, &slot->Params.EffectProps);
     return true;
 }
 
@@ -1455,7 +1442,7 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
             FAM_SIZE(struct ALvoiceProps, Send, context->Device->NumAuxSends)
         );
 
-        ATOMIC_REPLACE_HEAD(struct ALvoiceProps*, &voice->FreeList, props);
+        ATOMIC_REPLACE_HEAD(struct ALvoiceProps*, &context->FreeVoiceProps, props);
     }
     props = voice->Props;
 
@@ -1486,10 +1473,10 @@ static void UpdateContextSources(ALCcontext *ctx, const struct ALeffectslotArray
     IncrementRef(&ctx->UpdateCount);
     if(!ATOMIC_LOAD(&ctx->HoldUpdates, almemory_order_acquire))
     {
-        ALboolean cforce = CalcContextParams(ctx);
-        ALboolean force = CalcListenerParams(ctx) | cforce;
+        bool cforce = CalcContextParams(ctx);
+        bool force = CalcListenerParams(ctx) | cforce;
         for(i = 0;i < slots->count;i++)
-            force |= CalcEffectSlotParams(slots->slot[i], ctx);
+            force |= CalcEffectSlotParams(slots->slot[i], ctx, cforce);
 
         voice = ctx->Voices;
         voice_end = voice + ctx->VoiceCount;

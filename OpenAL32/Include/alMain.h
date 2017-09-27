@@ -383,6 +383,9 @@ struct HrtfEntry;
 struct FrontStablizer;
 struct Compressor;
 struct ALcontextProps;
+struct ALlistenerProps;
+struct ALvoiceProps;
+struct ALeffectslotProps;
 
 
 #define DEFAULT_OUTPUT_RATE  (44100)
@@ -868,7 +871,14 @@ struct ALCcontext_struct {
     ALfloat GainBoost;
 
     ATOMIC(struct ALcontextProps*) Update;
-    ATOMIC(struct ALcontextProps*) FreeList;
+
+    /* Linked lists of unused property containers, free to use for future
+     * updates.
+     */
+    ATOMIC(struct ALcontextProps*) FreeContextProps;
+    ATOMIC(struct ALlistenerProps*) FreeListenerProps;
+    ATOMIC(struct ALvoiceProps*) FreeVoiceProps;
+    ATOMIC(struct ALeffectslotProps*) FreeEffectslotProps;
 
     struct ALvoice **Voices;
     ALsizei VoiceCount;

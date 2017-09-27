@@ -42,11 +42,6 @@ typedef struct ALlistener {
      */
     ATOMIC(struct ALlistenerProps*) Update;
 
-    /* A linked list of unused property containers, free to use for future
-     * updates.
-     */
-    ATOMIC(struct ALlistenerProps*) FreeList;
-
     struct {
         aluMatrixf Matrix;
         aluVector  Velocity;

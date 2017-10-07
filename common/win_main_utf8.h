@@ -1,10 +1,10 @@
 #ifndef WIN_MAIN_UTF8_H
 #define WIN_MAIN_UTF8_H
 
-/* For Windows systems this overrides main() so that the argv strings are UTF-8
- * encoded, and also overrides fopen to accept UTF-8 filenames. Working with
- * wmain directly complicates cross-platform compatibility, while normal main()
- * in Windows uses the current codepage (which has limited availability of
+/* For Windows systems this provides a way to get UTF-8 encoded argv strings,
+ * and also overrides fopen to accept UTF-8 filenames. Working with wmain
+ * directly complicates cross-platform compatibility, while normal main() in
+ * Windows uses the current codepage (which has limited availability of
  * characters).
  *
  * For MinGW, you must link with -municode
@@ -19,6 +19,7 @@ static FILE *my_fopen(const char *fname, const char *mode)
     WCHAR *wname=NULL, *wmode=NULL;
     int namelen, modelen;
     FILE *file = NULL;
+    errno_t err;
 
     namelen = MultiByteToWideChar(CP_UTF8, 0, fname, -1, NULL, 0);
     modelen = MultiByteToWideChar(CP_UTF8, 0, mode, -1, NULL, 0);
@@ -34,7 +35,12 @@ static FILE *my_fopen(const char *fname, const char *mode)
     MultiByteToWideChar(CP_UTF8, 0, fname, -1, wname, namelen);
     MultiByteToWideChar(CP_UTF8, 0, mode, -1, wmode, modelen);
 
-    file = _wfopen(wname, wmode);
+    err = _wfopen_s(&file, wname, wmode);
+    if(err)
+    {
+        errno = err;
+        file = NULL;
+    }
 
     free(wname);
 

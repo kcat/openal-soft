@@ -137,7 +137,8 @@ extern DriverIface *DriverList;
 extern int DriverListSize;
 
 extern altss_t ThreadCtxDriver;
-extern ATOMIC(DriverIface*) CurrentCtxDriver;
+typedef ATOMIC(DriverIface*) atomic_DriverIfacePtr;
+extern atomic_DriverIfacePtr CurrentCtxDriver;
 
 
 typedef struct PtrIntMap {

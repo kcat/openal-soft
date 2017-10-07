@@ -7,7 +7,7 @@
 #include "router.h"
 
 
-ATOMIC(DriverIface*) CurrentCtxDriver = ATOMIC_INIT_STATIC(NULL);
+atomic_DriverIfacePtr CurrentCtxDriver = ATOMIC_INIT_STATIC(NULL);
 
 #define DECL_THUNK1(R,n,T1) AL_API R AL_APIENTRY n(T1 a)                      \
 {                                                                             \

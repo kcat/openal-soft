@@ -34,10 +34,10 @@ const ALfloat *Resample_bsinc_SSE(const InterpState *state, const ALfloat *restr
 #undef FRAC_PHASE_BITDIFF
 
         offset = m*pi*4;
-        fil = ASSUME_ALIGNED(filter + offset, 16); offset += m;
-        scd = ASSUME_ALIGNED(filter + offset, 16); offset += m;
-        phd = ASSUME_ALIGNED(filter + offset, 16); offset += m;
-        spd = ASSUME_ALIGNED(filter + offset, 16);
+        fil = (const __m128*)ASSUME_ALIGNED(filter + offset, 16); offset += m;
+        scd = (const __m128*)ASSUME_ALIGNED(filter + offset, 16); offset += m;
+        phd = (const __m128*)ASSUME_ALIGNED(filter + offset, 16); offset += m;
+        spd = (const __m128*)ASSUME_ALIGNED(filter + offset, 16);
 
         // Apply the scale and phase interpolated filter.
         r4 = _mm_setzero_ps();

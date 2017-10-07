@@ -46,7 +46,7 @@
 #define M_PI                         (3.14159265358979323846)
 #endif
 
-#if defined(__ANDROID__) && !(defined(_ISOC99_SOURCE) || (defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L))
+#if !(defined(_ISOC99_SOURCE) || (defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200112L))
 #define log2(x)  (log(x) / log(2.0))
 #endif
 

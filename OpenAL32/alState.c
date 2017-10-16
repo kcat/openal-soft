@@ -54,6 +54,16 @@ static const ALchar alSinc4Resampler[] = "3rd order Sinc";
 static const ALchar alBSinc12Resampler[] = "11th order Sinc";
 static const ALchar alBSinc24Resampler[] = "23rd order Sinc";
 
+/* WARNING: Non-standard export! Not part of any extension, or exposed in the
+ * alcFunctions list.
+ */
+AL_API const ALchar* AL_APIENTRY alsoft_get_version(void)
+{
+    const char *spoof = getenv("ALSOFT_SPOOF_VERSION");
+    if(spoof && spoof[0] != '\0') return spoof;
+    return ALSOFT_VERSION;
+}
+
 #define DO_UPDATEPROPS() do {                                                 \
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))          \
         UpdateContextProps(context);                                          \

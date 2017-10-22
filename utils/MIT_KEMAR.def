@@ -12,25 +12,25 @@
 # It is copyrighted 1994 by MIT Media Laboratory, and provided free of charge
 # with no restrictions on use so long as the authors (above) are cited.
 #
-# This definition is used to generate the internal HRTF table used by OpenAL
+# This definition is used to generate the default HRTF table used by OpenAL
 # Soft.
 
 # The following are the data set metrics.  They must always be specified at
-# start of a definition file, but their order is not important.
+# the start of a definition file, but their order is not important.
 
 # Sampling rate of the HRIR data (in hertz).
 rate     = 44100
+
+# The channel type of incoming HRIR data (mono or stereo).  Mono channel
+# inputs will result in mirroring to provide the right ear HRIRs.  If not
+# specified, this defaults to mono.
+type     = mono
 
 # The number of points to use from the HRIR data.  This should be a
 # sufficiently large value (to encompass the entire impulse response).  It
 # cannot be smaller than the truncation size (default is 32) specified on the
 # command line.
 points   = 512
-
-# A list of the number of azimuths measured for each elevation.  There must
-# be at least 5 elevations covering the 180 degrees for the data set to be
-# viable.
-azimuths = 1, 12, 24, 36, 45, 56, 60, 72, 72, 72, 72, 72, 60, 56, 45, 36, 24, 12, 1
 
 # The radius of the listener's head (measured ear-to-ear in meters).  The
 # makehrtf utility uses this value to rescale measured propagation delays
@@ -41,62 +41,83 @@ azimuths = 1, 12, 24, 36, 45, 56, 60, 72, 72, 72, 72, 72, 60, 56, 45, 36, 24, 12
 # default).  At the moment, radius rescaling does not adjust HRIR coupling.
 radius   = 0.09
 
-# The distance between the source and the listener (in meters).  This does
-# have to match the data set, but it's effect is minimal at the moment due to
-# the coupled nature of OpenAL Soft's HRTF model.
+# A list of the distances between the source and the listener (in meters) for
+# each field.  These must start at or above the head radius and proceed in
+# ascending order.  Since the MIT set is single-field, there is only one
+# distance.
 distance = 1.4
 
-# Following the metrics is the list of source HRIRs for each elevation and
-# azimuth pair.  They don't have to be specified in order, but the final
-# composition must not be sparse.  They can however begin above a number of
-# elevations (as typical for HRIR measurements).
+# A list of the number of azimuths measured for each elevation per field.
+# Elevations are separated by commas (,) while fields are separated by
+# semicolons (;).  There must be at least 5 elevations covering 180 degrees
+# degrees of elevation for the data set to be viable.  The poles (first and
+# last elevation) must be singular (an azimuth count of 1).
+azimuths = 1, 12, 24, 36, 45, 56, 60, 72, 72, 72, 72, 72, 60, 56, 45, 36, 24, 12, 1
+
+# Following the metrics is the list of source HRIRs for each field,
+# elevation, and azimuth triplet.  They don't have to be specified in order,
+# but the final composition must not be sparse.  They can however begin above
+# a number of elevations (as typical for HRIR measurements).
 #
-# The elevation and azimuth indices are used to determine the resulting polar
-# coordinates following OpenAL Soft's convention (-90 degree elevation
-# increasing counter-clockwise from the bottom; 0 degree azimuth increasing
-# clockwise from the front).
+# The field index is used to determine the distance coordinate (for mult-
+# field HRTFs) while the elevation and azimuth indices are used to determine
+# the resulting polar coordinates following OpenAL Soft's convention (-90
+# degree elevation increasing counter-clockwise from the bottom; 0 degree
+# azimuth increasing clockwise from the front).
 #
-# More than one HRIR can be used per source, in which case the average
-# magnitude response of all references for that source is used.
+# More than one HRIR can be used per source.  This allows the composition of
+# averaged magnitude responses or the specification of stereo HRTFs.  Target
+# ears must (and can only be) specified for each source when the type metric
+# is set to 'stereo'.
 #
 # Source specification is of the form (~BNF):
 #
-#  source = '[' ev_index ',' az_index ']' '=' source_ref [ '+' source_ref ]*
+#  source = ( sf_index | mf_index ) source_ref [ '+' source_ref ]*
 #
+#  sf_index = '[' ev_index ',' az_index ']' '='
+#  mf_index = '[' fd_index ',' ev_index ',' az_index ']' '='
+#  source_ref = mono_ref | stereo_ref
+#
+#  fd_index   = unsigned_integer
 #  ev_index   = unsigned_integer
 #  az_index   = unsigned_integer
-#  source_ref = ref_spec ':' filename
+#  mono_ref   = ref_spec ':' filename
+#  stereo_ref = ref_spec ':' filename ear
 #
-#  ref_spec = ( wave_fmt  '(' wave_parms ')' [ '@' start_sample   ] ) |
-#             ( bin_fmt   '(' bini_parms ')' [ '@' start_bytes    ] ) |
-#             ( bin_fmt   '(' binf_parms ')' [ '@' start_bytes    ] ) |
-#             ( ascii_fmt '(' asci_parms ')' [ '@' start_elements ] ) |
-#             ( ascii_fmt '(' ascf_parms ')' [ '@' start_elements ] )
+#  ref_spec = ( wave_fmt  '(' wave_parms ')' [ '@' start_sample  ] ) |
+#             ( bin_fmt   '(' bini_parms ')' [ '@' start_byte    ] ) |
+#             ( bin_fmt   '(' binf_parms ')' [ '@' start_byte    ] ) |
+#             ( ascii_fmt '(' asci_parms ')' [ '@' start_element ] ) |
+#             ( ascii_fmt '(' ascf_parms ')' [ '@' start_element ] )
 #  filename = double_quoted_string
+#  ear      = 'left' | 'right'
 #
-#  wave_fmt       = 'wave'
-#  wave_parms     = channel
-#  bin_fmt        = 'bin_le' | 'bin_be'
-#  bini_parms     = 'int' ',' byte_size [ ',' bin_sig_bits ] [ ';' skip_bytes ]
-#  binf_parms     = 'fp'  ',' byte_size                      [ ';' skip_bytes ]
-#  ascii_fmt      = 'ascii'
-#  asci_parms     = 'int' ',' sig_bits  [ ';' skip_elements ]
-#  ascf_parms     = 'fp'                [ ';' skip_elements ]
-#  start_sample   = unsigned_integer
-#  start_bytes    = unsigned_integer
-#  start_elements = unsigned_integer
+#  wave_fmt      = 'wave'
+#  wave_parms    = channel
+#  bin_fmt       = 'bin_le' | 'bin_be'
+#  bini_parms    = 'int' ',' byte_size [ ',' bin_sig_bits ] [ ';' skip_bytes ]
+#  binf_parms    = 'fp'  ',' byte_size                      [ ';' skip_bytes ]
+#  ascii_fmt     = 'ascii'
+#  asci_parms    = 'int' ',' sig_bits  [ ';' skip_elements ]
+#  ascf_parms    = 'fp'                [ ';' skip_elements ]
+#  start_sample  = unsigned_integer
+#  start_byte    = unsigned_integer
+#  start_element = unsigned_integer
 #
-#  channel       = unsigned_integer
-#  byte_size     = unsigned_integer
-#  bin_sig_bits  = signed_integer
-#  skip_bytes    = unsigned_integer
-#  sig_bits      = unsigned_integer
-#  skip_elements = unsigned_integer
+#  channel             = unsigned_integer
+#  byte_size           = unsigned_integer
+#  bin_sig_bits        = signed_integer
+#  skip_bytes          = unsigned_integer
+#  sig_bits            = unsigned_integer
+#  skip_elements       = unsigned_integer
 #
 # For bin_sig_bits, positive values mean the significant bits start at the
 # MSB (padding toward the LSB) while negative values mean they start at the
 # LSB.
 
+# Even though the MIT set is provided as stereo .wav files, each channel is
+# for a different sized KEMAR ear.  Since it is not a stereo data set, no ear
+# is specified.  The smaller KEMAR ear (in the left channel: 0) is used.
 [  5,  0 ] = wave (0) : "./MITfull/elev-40/L-40e000a.wav"
 [  5,  1 ] = wave (0) : "./MITfull/elev-40/L-40e006a.wav"
 [  5,  2 ] = wave (0) : "./MITfull/elev-40/L-40e013a.wav"

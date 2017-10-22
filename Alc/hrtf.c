@@ -40,11 +40,19 @@
 #define MAX_IR_SIZE                  (512)
 #define MOD_IR_SIZE                  (8)
 
+#define MIN_FD_COUNT                 (1)
+#define MAX_FD_COUNT                 (16)
+
+#define MIN_FD_DISTANCE              (50)
+#define MAX_FD_DISTANCE              (2500)
+
 #define MIN_EV_COUNT                 (5)
 #define MAX_EV_COUNT                 (128)
 
 #define MIN_AZ_COUNT                 (1)
 #define MAX_AZ_COUNT                 (128)
+
+#define MAX_HRIR_DELAY               (HRTF_HISTORY_LENGTH-1)
 
 struct HrtfEntry {
     struct HrtfEntry *next;
@@ -54,8 +62,7 @@ struct HrtfEntry {
 
 static const ALchar magicMarker00[8] = "MinPHR00";
 static const ALchar magicMarker01[8] = "MinPHR01";
-/* FIXME: Set with the right number when finalized. */
-static const ALchar magicMarker02[18] = "MinPHRTEMPDONOTUSE";
+static const ALchar magicMarker02[8] = "MinPHR02";
 
 /* First value for pass-through coefficients (remaining are 0), used for omni-
  * directional sounds. */
@@ -411,7 +418,6 @@ static const ALubyte *Get_ALubytePtr(const ALubyte **data, size_t *len, size_t s
 
 static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const char *filename)
 {
-    const ALubyte maxDelay = HRTF_HISTORY_LENGTH-1;
     struct Hrtf *Hrtf = NULL;
     ALboolean failed = AL_FALSE;
     ALuint rate = 0;
@@ -537,9 +543,9 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const char *
         for(i = 0;i < irCount;i++)
         {
             delays[i][0] = GetLE_ALubyte(&data, &datalen);
-            if(delays[i][0] > maxDelay)
+            if(delays[i][0] > MAX_HRIR_DELAY)
             {
-                ERR("Invalid delays[%d]: %d (%d)\n", i, delays[i][0], maxDelay);
+                ERR("Invalid delays[%d]: %d (%d)\n", i, delays[i][0], MAX_HRIR_DELAY);
                 failed = AL_TRUE;
             }
         }
@@ -577,7 +583,6 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const char *
 
 static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const char *filename)
 {
-    const ALubyte maxDelay = HRTF_HISTORY_LENGTH-1;
     struct Hrtf *Hrtf = NULL;
     ALboolean failed = AL_FALSE;
     ALuint rate = 0;
@@ -686,9 +691,9 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const char *
         for(i = 0;i < irCount;i++)
         {
             delays[i][0] = GetLE_ALubyte(&data, &datalen);
-            if(delays[i][0] > maxDelay)
+            if(delays[i][0] > MAX_HRIR_DELAY)
             {
-                ERR("Invalid delays[%d]: %d (%d)\n", i, delays[i][0], maxDelay);
+                ERR("Invalid delays[%d]: %d (%d)\n", i, delays[i][0], MAX_HRIR_DELAY);
                 failed = AL_TRUE;
             }
         }
@@ -731,7 +736,6 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const char *
 
 static struct Hrtf *LoadHrtf02(const ALubyte *data, size_t datalen, const char *filename)
 {
-    const ALubyte maxDelay = HRTF_HISTORY_LENGTH-1;
     struct Hrtf *Hrtf = NULL;
     ALboolean failed = AL_FALSE;
     ALuint rate = 0;
@@ -739,6 +743,8 @@ static struct Hrtf *LoadHrtf02(const ALubyte *data, size_t datalen, const char *
     ALubyte channelType;
     ALushort irCount = 0;
     ALushort irSize = 0;
+    ALubyte fdCount = 0;
+    ALushort distance = 0;
     ALubyte evCount = 0;
     const ALubyte *azCount = NULL;
     ALushort *evOffset = NULL;
@@ -758,7 +764,7 @@ static struct Hrtf *LoadHrtf02(const ALubyte *data, size_t datalen, const char *
 
     irSize = GetLE_ALubyte(&data, &datalen);
 
-    evCount = GetLE_ALubyte(&data, &datalen);
+    fdCount = GetLE_ALubyte(&data, &datalen);
 
     if(sampleType > SAMPLETYPE_S24)
     {
@@ -777,41 +783,66 @@ static struct Hrtf *LoadHrtf02(const ALubyte *data, size_t datalen, const char *
             irSize, MIN_IR_SIZE, MAX_IR_SIZE, MOD_IR_SIZE);
         failed = AL_TRUE;
     }
-    if(evCount < MIN_EV_COUNT || evCount > MAX_EV_COUNT)
+    if(fdCount != 1)
     {
-        ERR("Unsupported elevation count: evCount=%d (%d to %d)\n",
-            evCount, MIN_EV_COUNT, MAX_EV_COUNT);
+        ERR("Multiple field-depths not supported: fdCount=%d (%d to %d)\n",
+            evCount, MIN_FD_COUNT, MAX_FD_COUNT);
         failed = AL_TRUE;
     }
     if(failed)
         return NULL;
 
-    if(datalen < evCount)
+    for(i = 0;i < fdCount;i++)
     {
-        ERR("Unexpected end of %s data (req %d, rem "SZFMT"\n", filename, evCount, datalen);
-        return NULL;
-    }
+        if(datalen < 3)
+        {
+            ERR("Unexpected end of %s data (req %d, rem "SZFMT"\n", filename, 3, datalen);
+            return NULL;
+        }
 
-    azCount = Get_ALubytePtr(&data, &datalen, evCount);
+        distance = GetLE_ALushort(&data, &datalen);
+        if(distance < MIN_FD_DISTANCE || distance > MAX_FD_DISTANCE)
+        {
+            ERR("Unsupported field distance: distance=%d (%dmm to %dmm)\n",
+                distance, MIN_FD_DISTANCE, MAX_FD_DISTANCE);
+            failed = AL_TRUE;
+        }
+
+        evCount = GetLE_ALubyte(&data, &datalen);
+        if(evCount < MIN_EV_COUNT || evCount > MAX_EV_COUNT)
+        {
+            ERR("Unsupported elevation count: evCount=%d (%d to %d)\n",
+                evCount, MIN_EV_COUNT, MAX_EV_COUNT);
+            failed = AL_TRUE;
+        }
+        if(failed)
+            return NULL;
+
+        if(datalen < evCount)
+        {
+            ERR("Unexpected end of %s data (req %d, rem "SZFMT"\n", filename, evCount, datalen);
+            return NULL;
+        }
+
+        azCount = Get_ALubytePtr(&data, &datalen, evCount);
+        for(j = 0;j < evCount;j++)
+        {
+            if(azCount[j] < MIN_AZ_COUNT || azCount[j] > MAX_AZ_COUNT)
+            {
+                ERR("Unsupported azimuth count: azCount[%d]=%d (%d to %d)\n",
+                    j, azCount[j], MIN_AZ_COUNT, MAX_AZ_COUNT);
+                failed = AL_TRUE;
+            }
+        }
+    }
+    if(failed)
+        return NULL;
 
     evOffset = malloc(sizeof(evOffset[0])*evCount);
     if(azCount == NULL || evOffset == NULL)
     {
         ERR("Out of memory.\n");
         failed = AL_TRUE;
-    }
-
-    if(!failed)
-    {
-        for(i = 0;i < evCount;i++)
-        {
-            if(azCount[i] < MIN_AZ_COUNT || azCount[i] > MAX_AZ_COUNT)
-            {
-                ERR("Unsupported azimuth count: azCount[%d]=%d (%d to %d)\n",
-                    i, azCount[i], MIN_AZ_COUNT, MAX_AZ_COUNT);
-                failed = AL_TRUE;
-            }
-        }
     }
 
     if(!failed)
@@ -846,7 +877,7 @@ static struct Hrtf *LoadHrtf02(const ALubyte *data, size_t datalen, const char *
 
     if(!failed)
     {
-        if(channelType == CHANTYPE_LEFTONLY || channelType == CHANTYPE_LEFTRIGHT)
+        if(channelType == CHANTYPE_LEFTONLY)
         {
             if(sampleType == SAMPLETYPE_S16)
                 for(i = 0;i < irCount;i++)
@@ -860,42 +891,50 @@ static struct Hrtf *LoadHrtf02(const ALubyte *data, size_t datalen, const char *
                     for(j = 0;j < irSize;j++)
                         coeffs[i*irSize + j][0] = GetLE_ALint24(&data, &datalen) / 8388608.0f;
                 }
+
+            for(i = 0;i < irCount;i++)
+            {
+                delays[i][0] = GetLE_ALubyte(&data, &datalen);
+                if(delays[i][0] > MAX_HRIR_DELAY)
+                {
+                    ERR("Invalid delays[%d][0]: %d (%d)\n", i, delays[i][0], MAX_HRIR_DELAY);
+                    failed = AL_TRUE;
+                }
+            }
         }
-        if(channelType == CHANTYPE_LEFTRIGHT)
+        else if(channelType == CHANTYPE_LEFTRIGHT)
         {
             if(sampleType == SAMPLETYPE_S16)
                 for(i = 0;i < irCount;i++)
                 {
                     for(j = 0;j < irSize;j++)
+                    {
+                        coeffs[i*irSize + j][0] = GetLE_ALshort(&data, &datalen) / 32768.0f;
                         coeffs[i*irSize + j][1] = GetLE_ALshort(&data, &datalen) / 32768.0f;
+                    }
                 }
             else if(sampleType == SAMPLETYPE_S24)
                 for(i = 0;i < irCount;i++)
                 {
                     for(j = 0;j < irSize;j++)
+                    {
+                        coeffs[i*irSize + j][0] = GetLE_ALint24(&data, &datalen) / 8388608.0f;
                         coeffs[i*irSize + j][1] = GetLE_ALint24(&data, &datalen) / 8388608.0f;
+                    }
                 }
-        }
-        if(channelType == CHANTYPE_LEFTONLY || channelType == CHANTYPE_LEFTRIGHT)
-        {
+
             for(i = 0;i < irCount;i++)
             {
                 delays[i][0] = GetLE_ALubyte(&data, &datalen);
-                if(delays[i][0] > maxDelay)
+                if(delays[i][0] > MAX_HRIR_DELAY)
                 {
-                    ERR("Invalid delays[%d][0]: %d (%d)\n", i, delays[i][0], maxDelay);
+                    ERR("Invalid delays[%d][0]: %d (%d)\n", i, delays[i][0], MAX_HRIR_DELAY);
                     failed = AL_TRUE;
                 }
-            }
-        }
-        if(channelType == CHANTYPE_LEFTRIGHT)
-        {
-            for(i = 0;i < irCount;i++)
-            {
                 delays[i][1] = GetLE_ALubyte(&data, &datalen);
-                if(delays[i][1] > maxDelay)
+                if(delays[i][1] > MAX_HRIR_DELAY)
                 {
-                    ERR("Invalid delays[%d][1]: %d (%d)\n", i, delays[i][1], maxDelay);
+                    ERR("Invalid delays[%d][1]: %d (%d)\n", i, delays[i][1], MAX_HRIR_DELAY);
                     failed = AL_TRUE;
                 }
             }

@@ -954,6 +954,8 @@ static void InitHrtfPanning(ALCdevice *device)
     BuildBFormatHrtf(device->HrtfHandle,
         device->Hrtf, device->Dry.NumChannels, AmbiPoints, AmbiMatrix, COUNTOF(AmbiPoints)
     );
+
+    InitNearFieldCtrl(device, device->HrtfHandle->distance, device->AmbiUp ? 2 : 1, true);
 }
 
 static void InitUhjPanning(ALCdevice *device)

@@ -22,6 +22,8 @@ struct Hrtf {
 
     ALuint sampleRate;
     ALsizei irSize;
+
+    ALfloat distance;
     ALubyte evCount;
 
     const ALubyte *azCount;

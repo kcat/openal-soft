@@ -305,10 +305,10 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
 }
 
 
-static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALsizei evCount, ALsizei irCount,
-                                    const ALubyte *azCount, const ALushort *evOffset,
-                                    const ALfloat (*coeffs)[2], const ALubyte (*delays)[2],
-                                    const char *filename)
+static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize,
+  ALfloat distance, ALsizei evCount, ALsizei irCount, const ALubyte *azCount,
+  const ALushort *evOffset, const ALfloat (*coeffs)[2], const ALubyte (*delays)[2],
+  const char *filename)
 {
     struct Hrtf *Hrtf;
     size_t total;
@@ -337,6 +337,7 @@ static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALsizei evCount
         InitRef(&Hrtf->ref, 0);
         Hrtf->sampleRate = rate;
         Hrtf->irSize = irSize;
+        Hrtf->distance = distance;
         Hrtf->evCount = evCount;
 
         /* Set up pointers to storage following the main HRTF struct. */
@@ -570,7 +571,7 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const char *
             }
         }
 
-        Hrtf = CreateHrtfStore(rate, irSize, evCount, irCount, azCount,
+        Hrtf = CreateHrtfStore(rate, irSize, 0.0f, evCount, irCount, azCount,
                                evOffset, coeffs, delays, filename);
     }
 
@@ -718,7 +719,7 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const char *
             }
         }
 
-        Hrtf = CreateHrtfStore(rate, irSize, evCount, irCount, azCount,
+        Hrtf = CreateHrtfStore(rate, irSize, 0.0f, evCount, irCount, azCount,
                                evOffset, coeffs, delays, filename);
     }
 
@@ -963,8 +964,10 @@ static struct Hrtf *LoadHrtf02(const ALubyte *data, size_t datalen, const char *
             }
         }
 
-        Hrtf = CreateHrtfStore(rate, irSize, evCount, irCount, azCount,
-                               evOffset, coeffs, delays, filename);
+        Hrtf = CreateHrtfStore(rate, irSize,
+            (ALfloat)distance / 1000.0f, evCount, irCount, azCount, evOffset,
+            coeffs, delays, filename
+        );
     }
 
     free(evOffset);

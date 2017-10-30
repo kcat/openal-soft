@@ -2580,12 +2580,7 @@ static ALvoid InitContext(ALCcontext *Context)
     Context->ExtensionList = alExtList;
 
 
-    aluMatrixfSet(&listener->Params.Matrix,
-        1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f
-    );
+    listener->Params.Matrix = IdentityMatrixf;
     aluVectorSet(&listener->Params.Velocity, 0.0f, 0.0f, 0.0f, 0.0f);
     listener->Params.Gain = listener->Gain;
     listener->Params.MetersPerUnit = Context->MetersPerUnit;
@@ -2593,6 +2588,8 @@ static ALvoid InitContext(ALCcontext *Context)
     listener->Params.SpeedOfSound = Context->SpeedOfSound * Context->DopplerVelocity;
     listener->Params.ReverbSpeedOfSound = listener->Params.SpeedOfSound *
                                           listener->Params.MetersPerUnit;
+    listener->Params.SourceDistanceModel = Context->SourceDistanceModel;
+    listener->Params.DistanceModel = Context->DistanceModel;
 }
 
 

@@ -1495,6 +1495,13 @@ IF(ALSOFT_EXAMPLES)
         IF(SDL_SOUND_FOUND)
             SET(EX_COMMON_OBJS  examples/common/alhelpers.c)
 
+            ADD_EXECUTABLE(alplay examples/alplay.c ${COMMON_OBJS} ${EX_COMMON_OBJS})
+            TARGET_LINK_LIBRARIES(alplay ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} OpenAL)
+            SET_PROPERTY(TARGET alplay APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
+            SET_PROPERTY(TARGET alplay APPEND PROPERTY
+                INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR}
+            )
+
             ADD_EXECUTABLE(alstream examples/alstream.c ${COMMON_OBJS} ${EX_COMMON_OBJS})
             TARGET_LINK_LIBRARIES(alstream ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} OpenAL)
             SET_PROPERTY(TARGET alstream APPEND PROPERTY COMPILE_FLAGS ${EXTRA_CFLAGS})
@@ -1531,7 +1538,7 @@ IF(ALSOFT_EXAMPLES)
             )
 
             IF(ALSOFT_INSTALL)
-                INSTALL(TARGETS alstream alreverb allatency alloopback alhrtf
+                INSTALL(TARGETS alplay alstream alreverb allatency alloopback alhrtf
                         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
                         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
                         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

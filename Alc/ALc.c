@@ -1297,6 +1297,8 @@ static void ProbeDevices(al_string *list, struct BackendInfo *backendinfo, enum 
     LockLists();
     alstr_clear(list);
 
+    if (!backendinfo->getFactory)
+        return;
     factory = backendinfo->getFactory();
     V(factory,probe)(type);
 

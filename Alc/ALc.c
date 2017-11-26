@@ -1290,15 +1290,16 @@ static void alc_deinit(void)
  ************************************************/
 static void ProbeDevices(al_string *list, struct BackendInfo *backendinfo, enum DevProbe type)
 {
-    ALCbackendFactory *factory;
-
     DO_INITCONFIG();
 
     LockLists();
     alstr_clear(list);
 
-    if((factory=backendinfo->getFactory()) != NULL)
+    if(backendinfo->getFactory)
+    {
+        ALCbackendFactory *factory = backendinfo->getFactory();
         V(factory,probe)(type);
+    }
 
     UnlockLists();
 }

@@ -122,6 +122,10 @@ typedef enum SourceProp {
 
     /* AL_SOFT_source_spatialize */
     srcSpatialize = AL_SOURCE_SPATIALIZE_SOFT,
+
+    /* ALC_SOFT_device_clock */
+    srcSampleOffsetClockSOFT = AL_SAMPLE_OFFSET_CLOCK_SOFT,
+    srcSecOffsetClockSOFT = AL_SEC_OFFSET_CLOCK_SOFT,
 } SourceProp;
 
 static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALfloat *values);
@@ -236,6 +240,7 @@ static ALint FloatValsByProp(ALenum prop)
             return 6;
 
         case AL_SEC_OFFSET_LATENCY_SOFT:
+        case AL_SEC_OFFSET_CLOCK_SOFT:
             break; /* Double only */
 
         case AL_BUFFER:
@@ -243,6 +248,7 @@ static ALint FloatValsByProp(ALenum prop)
         case AL_AUXILIARY_SEND_FILTER:
             break; /* i/i64 only */
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
+        case AL_SAMPLE_OFFSET_CLOCK_SOFT:
             break; /* i64 only */
     }
     return 0;
@@ -290,6 +296,7 @@ static ALint DoubleValsByProp(ALenum prop)
             return 1;
 
         case AL_SEC_OFFSET_LATENCY_SOFT:
+        case AL_SEC_OFFSET_CLOCK_SOFT:
         case AL_STEREO_ANGLES:
             return 2;
 
@@ -306,6 +313,7 @@ static ALint DoubleValsByProp(ALenum prop)
         case AL_AUXILIARY_SEND_FILTER:
             break; /* i/i64 only */
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
+        case AL_SAMPLE_OFFSET_CLOCK_SOFT:
             break; /* i64 only */
     }
     return 0;
@@ -365,8 +373,10 @@ static ALint IntValsByProp(ALenum prop)
             return 6;
 
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
+        case AL_SAMPLE_OFFSET_CLOCK_SOFT:
             break; /* i64 only */
         case AL_SEC_OFFSET_LATENCY_SOFT:
+        case AL_SEC_OFFSET_CLOCK_SOFT:
             break; /* Double only */
         case AL_STEREO_ANGLES:
             break; /* Float/double only */
@@ -418,6 +428,7 @@ static ALint Int64ValsByProp(ALenum prop)
             return 1;
 
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
+        case AL_SAMPLE_OFFSET_CLOCK_SOFT:
             return 2;
 
         case AL_POSITION:
@@ -430,6 +441,7 @@ static ALint Int64ValsByProp(ALenum prop)
             return 6;
 
         case AL_SEC_OFFSET_LATENCY_SOFT:
+        case AL_SEC_OFFSET_CLOCK_SOFT:
             break; /* Double only */
         case AL_STEREO_ANGLES:
             break; /* Float/double only */
@@ -463,6 +475,7 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_SAMPLE_LENGTH_SOFT:
         case AL_SEC_LENGTH_SOFT:
         case AL_SEC_OFFSET_LATENCY_SOFT:
+        case AL_SEC_OFFSET_CLOCK_SOFT:
             /* Query only */
             SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_OPERATION, AL_FALSE);
 
@@ -676,6 +689,7 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_DIRECT_FILTER:
         case AL_AUXILIARY_SEND_FILTER:
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
+        case AL_SAMPLE_OFFSET_CLOCK_SOFT:
             break;
     }
 
@@ -1005,6 +1019,8 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
 
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
         case AL_SEC_OFFSET_LATENCY_SOFT:
+        case AL_SEC_OFFSET_CLOCK_SOFT:
+        case AL_SAMPLE_OFFSET_CLOCK_SOFT:
         case AL_STEREO_ANGLES:
             break;
     }
@@ -1025,6 +1041,7 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
         case AL_BUFFERS_PROCESSED:
         case AL_SOURCE_STATE:
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
+        case AL_SAMPLE_OFFSET_CLOCK_SOFT:
         case AL_BYTE_LENGTH_SOFT:
         case AL_SAMPLE_LENGTH_SOFT:
         case AL_SEC_LENGTH_SOFT:
@@ -1108,6 +1125,7 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
             return SetSourcefv(Source, Context, (int)prop, fvals);
 
         case AL_SEC_OFFSET_LATENCY_SOFT:
+        case AL_SEC_OFFSET_CLOCK_SOFT:
         case AL_STEREO_ANGLES:
             break;
     }
@@ -1243,6 +1261,11 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
             }
             return AL_TRUE;
 
+        case AL_SEC_OFFSET_CLOCK_SOFT:
+            values[0] = GetSourceSecOffset(Source, Context, &srcclock);
+            values[1] = srcclock / 1000000000.0;
+            return AL_TRUE;
+
         case AL_POSITION:
             values[0] = Source->Position[0];
             values[1] = Source->Position[1];
@@ -1294,6 +1317,7 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_DIRECT_FILTER:
         case AL_AUXILIARY_SEND_FILTER:
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
+        case AL_SAMPLE_OFFSET_CLOCK_SOFT:
             break;
     }
 
@@ -1514,8 +1538,10 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             return err;
 
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
+        case AL_SAMPLE_OFFSET_CLOCK_SOFT:
             break; /* i64 only */
         case AL_SEC_OFFSET_LATENCY_SOFT:
+        case AL_SEC_OFFSET_CLOCK_SOFT:
             break; /* Double only */
         case AL_STEREO_ANGLES:
             break; /* Float/double only */
@@ -1557,6 +1583,11 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
                 ALuint64 diff = clocktime.ClockTime - srcclock;
                 values[1] = clocktime.Latency - minu64(clocktime.Latency, diff);
             }
+            return AL_TRUE;
+
+        case AL_SAMPLE_OFFSET_CLOCK_SOFT:
+            values[0] = GetSourceSampleOffset(Source, Context, &srcclock);
+            values[1] = srcclock;
             return AL_TRUE;
 
         /* 1x float/double */
@@ -1646,6 +1677,7 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
             return err;
 
         case AL_SEC_OFFSET_LATENCY_SOFT:
+        case AL_SEC_OFFSET_CLOCK_SOFT:
             break; /* Double only */
         case AL_STEREO_ANGLES:
             break; /* Float/double only */

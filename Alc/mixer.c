@@ -343,6 +343,9 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
         if(DstBufferSize < SamplesToDo-OutPos)
             DstBufferSize &= ~3;
 
+        /* It's impossible to have a buffer list item with no entries. */
+        assert(BufferListItem->num_buffers > 0);
+
         for(chan = 0;chan < NumChannels;chan++)
         {
             const ALfloat *ResampledData;
@@ -354,54 +357,94 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
             memset(SrcData+MAX_PRE_SAMPLES, 0, (SrcBufferSize-MAX_PRE_SAMPLES)*sizeof(ALfloat));
             FilledAmt = MAX_PRE_SAMPLES;
 
-            /* TODO: Handle multi-buffer items by adding them together in
-             * SrcData. Need to work out how to deal with looping (loop
-             * points).
-             */
             if(isstatic)
             {
-                const ALbuffer *ALBuffer = BufferListItem->buffers[0];
-                const ALubyte *Data = ALBuffer->data;
-                ALsizei DataSize;
-
-                /* Offset buffer data to current channel */
-                Data += chan*SampleSize;
+                /* TODO: For static sources, loop points are taken from the
+                 * first buffer (should be adjusted by any buffer offset, to
+                 * possibly be added later).
+                 */
+                const ALbuffer *Buffer0 = BufferListItem->buffers[0];
+                const ALsizei LoopStart = Buffer0->LoopStart;
+                const ALsizei LoopEnd   = Buffer0->LoopEnd;
+                const ALsizei LoopSize  = LoopEnd - LoopStart;
 
                 /* If current pos is beyond the loop range, do not loop */
-                if(!BufferLoopItem || DataPosInt >= ALBuffer->LoopEnd)
+                if(!BufferLoopItem || DataPosInt >= LoopEnd)
                 {
+                    ALsizei SizeToDo = SrcBufferSize - FilledAmt;
+                    ALsizei CompLen = 0;
+                    ALsizei i;
+
                     BufferLoopItem = NULL;
 
-                    /* Load what's left to play from the source buffer, and
-                     * clear the rest of the temp buffer */
-                    DataSize = minu(SrcBufferSize - FilledAmt,
-                                    ALBuffer->SampleLen - DataPosInt);
+                    for(i = 0;i < BufferListItem->num_buffers;i++)
+                    {
+                        const ALbuffer *buffer = BufferListItem->buffers[i];
+                        const ALubyte *Data = buffer->data;
+                        ALsizei DataSize;
 
-                    LoadSamples(&SrcData[FilledAmt], &Data[DataPosInt * NumChannels*SampleSize],
-                                NumChannels, ALBuffer->FmtType, DataSize);
-                    FilledAmt += DataSize;
+                        if(DataPosInt >= buffer->SampleLen)
+                            continue;
+
+                        /* Load what's left to play from the buffer */
+                        DataSize = mini(SizeToDo, buffer->SampleLen - DataPosInt);
+                        CompLen = maxi(CompLen, DataSize);
+
+                        LoadSamples(&SrcData[FilledAmt],
+                            &Data[(DataPosInt*NumChannels + chan)*SampleSize],
+                            NumChannels, buffer->FmtType, DataSize
+                        );
+                    }
+                    FilledAmt += CompLen;
                 }
                 else
                 {
-                    ALsizei LoopStart = ALBuffer->LoopStart;
-                    ALsizei LoopEnd   = ALBuffer->LoopEnd;
+                    ALsizei SizeToDo = mini(SrcBufferSize - FilledAmt, LoopEnd - DataPosInt);
+                    ALsizei CompLen = 0;
+                    ALsizei i;
 
-                    /* Load what's left of this loop iteration, then load
-                     * repeats of the loop section */
-                    DataSize = minu(SrcBufferSize - FilledAmt, LoopEnd - DataPosInt);
+                    for(i = 0;i < BufferListItem->num_buffers;i++)
+                    {
+                        const ALbuffer *buffer = BufferListItem->buffers[i];
+                        const ALubyte *Data = buffer->data;
+                        ALsizei DataSize;
 
-                    LoadSamples(&SrcData[FilledAmt], &Data[DataPosInt * NumChannels*SampleSize],
-                                NumChannels, ALBuffer->FmtType, DataSize);
-                    FilledAmt += DataSize;
+                        if(DataPosInt >= buffer->SampleLen)
+                            continue;
 
-                    DataSize = LoopEnd-LoopStart;
+                        /* Load what's left of this loop iteration */
+                        DataSize = mini(SizeToDo, buffer->SampleLen - DataPosInt);
+                        CompLen = maxi(CompLen, DataSize);
+
+                        LoadSamples(&SrcData[FilledAmt],
+                            &Data[(DataPosInt*NumChannels + chan)*SampleSize],
+                            NumChannels, buffer->FmtType, DataSize
+                        );
+                    }
+                    FilledAmt += CompLen;
+
                     while(SrcBufferSize > FilledAmt)
                     {
-                        DataSize = mini(SrcBufferSize - FilledAmt, DataSize);
+                        const ALsizei SizeToDo = mini(SrcBufferSize - FilledAmt, LoopSize);
 
-                        LoadSamples(&SrcData[FilledAmt], &Data[LoopStart * NumChannels*SampleSize],
-                                    NumChannels, ALBuffer->FmtType, DataSize);
-                        FilledAmt += DataSize;
+                        for(i = 0;i < BufferListItem->num_buffers;i++)
+                        {
+                            const ALbuffer *buffer = BufferListItem->buffers[i];
+                            const ALubyte *Data = buffer->data;
+                            ALsizei DataSize;
+
+                            if(DataPosInt >= buffer->SampleLen)
+                                continue;
+
+                            DataSize = mini(SizeToDo, buffer->SampleLen - DataPosInt);
+                            CompLen = maxi(CompLen, DataSize);
+
+                            LoadSamples(&SrcData[FilledAmt],
+                                &Data[(DataPosInt*NumChannels + chan)*SampleSize],
+                                NumChannels, buffer->FmtType, DataSize
+                            );
+                        }
+                        FilledAmt += CompLen;
                     }
                 }
             }
@@ -413,32 +456,37 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
 
                 while(tmpiter && SrcBufferSize > FilledAmt)
                 {
-                    const ALbuffer *ALBuffer;
-                    if(tmpiter->num_buffers >= 1 && (ALBuffer=tmpiter->buffers[0]) != NULL)
+                    ALsizei SizeToDo = SrcBufferSize - FilledAmt;
+                    ALsizei CompLen = 0;
+                    ALsizei i;
+
+                    for(i = 0;i < tmpiter->num_buffers;i++)
                     {
-                        const ALubyte *Data = ALBuffer->data;
-                        ALsizei DataSize = ALBuffer->SampleLen;
+                        const ALbuffer *ALBuffer = tmpiter->buffers[i];
+                        ALsizei DataSize = ALBuffer ? ALBuffer->SampleLen : 0;
+                        CompLen = maxi(CompLen, DataSize);
 
-                        /* Skip the data already played */
-                        if(DataSize <= pos)
-                            pos -= DataSize;
-                        else
+                        if(DataSize > pos)
                         {
+                            const ALubyte *Data = ALBuffer->data;
                             Data += (pos*NumChannels + chan)*SampleSize;
-                            DataSize -= pos;
-                            pos -= pos;
 
-                            DataSize = minu(SrcBufferSize - FilledAmt, DataSize);
+                            DataSize = minu(SizeToDo, DataSize - pos);
                             LoadSamples(&SrcData[FilledAmt], Data, NumChannels,
                                         ALBuffer->FmtType, DataSize);
-                            FilledAmt += DataSize;
                         }
+                    }
+                    if(pos > CompLen)
+                        pos -= CompLen;
+                    else
+                    {
+                        FilledAmt += CompLen - pos;
+                        pos = 0;
                     }
                     if(SrcBufferSize > FilledAmt)
                     {
                         tmpiter = ATOMIC_LOAD(&tmpiter->next, almemory_order_acquire);
-                        if(!tmpiter && BufferLoopItem)
-                            tmpiter = BufferLoopItem;
+                        if(!tmpiter) tmpiter = BufferLoopItem;
                     }
                 }
             }
@@ -620,31 +668,31 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
         Counter = maxi(DstBufferSize, Counter) - DstBufferSize;
         firstpass = false;
 
-        /* Handle looping sources */
-        while(1)
+        /* Handle looping source position */
+        if(isstatic && BufferLoopItem)
         {
-            const ALbuffer *ALBuffer;
-            ALsizei DataSize = 0;
-            ALsizei LoopStart = 0;
-            ALsizei LoopEnd = 0;
-
-            if(BufferListItem->num_buffers >= 1 && (ALBuffer=BufferListItem->buffers[0]) != NULL)
-            {
-                DataSize = ALBuffer->SampleLen;
-                LoopStart = ALBuffer->LoopStart;
-                LoopEnd = ALBuffer->LoopEnd;
-                if(LoopEnd > DataPosInt)
-                    break;
-            }
-
-            if(isstatic && BufferLoopItem)
+            const ALbuffer *Buffer = BufferListItem->buffers[0];
+            ALsizei LoopStart = Buffer->LoopStart;
+            ALsizei LoopEnd = Buffer->LoopEnd;
+            if(DataPosInt >= LoopEnd)
             {
                 assert(LoopEnd > LoopStart);
                 DataPosInt = ((DataPosInt-LoopStart)%(LoopEnd-LoopStart)) + LoopStart;
-                break;
+            }
+        }
+        else while(1)
+        {
+            /* Handle non-looping or buffer queue source position */
+            ALsizei CompLen = 0;
+            ALsizei i;
+
+            for(i = 0;i < BufferListItem->num_buffers;i++)
+            {
+                const ALbuffer *buffer = BufferListItem->buffers[i];
+                if(buffer) CompLen = maxi(CompLen, buffer->SampleLen);
             }
 
-            if(DataSize > DataPosInt)
+            if(CompLen > DataPosInt)
                 break;
 
             BufferListItem = ATOMIC_LOAD(&BufferListItem->next, almemory_order_acquire);
@@ -660,7 +708,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                 }
             }
 
-            DataPosInt -= DataSize;
+            DataPosInt -= CompLen;
         }
     } while(isplaying && OutPos < SamplesToDo);
 

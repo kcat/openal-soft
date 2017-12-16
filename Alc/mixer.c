@@ -216,7 +216,7 @@ static inline void Load_##T(ALfloat *restrict dst, const T *restrict src,     \
 {                                                                             \
     ALsizei i;                                                                \
     for(i = 0;i < samples;i++)                                                \
-        dst[i] = Sample_##T(src[i*srcstep]);                                  \
+        dst[i] += Sample_##T(src[i*srcstep]);                                 \
 }
 
 DECL_TEMPLATE(ALbyte)
@@ -240,13 +240,6 @@ static void LoadSamples(ALfloat *restrict dst, const ALvoid *restrict src, ALint
             Load_ALfloat(dst, src, srcstep, samples);
             break;
     }
-}
-
-static inline void SilenceSamples(ALfloat *dst, ALsizei samples)
-{
-    ALsizei i;
-    for(i = 0;i < samples;i++)
-        dst[i] = 0.0f;
 }
 
 
@@ -356,8 +349,9 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
             ALfloat *SrcData = Device->SourceData;
             ALsizei FilledAmt;
 
-            /* Load the previous samples into the source data first. */
+            /* Load the previous samples into the source data first, and clear the rest. */
             memcpy(SrcData, voice->PrevSamples[chan], MAX_PRE_SAMPLES*sizeof(ALfloat));
+            memset(SrcData+MAX_PRE_SAMPLES, 0, (SrcBufferSize-MAX_PRE_SAMPLES)*sizeof(ALfloat));
             FilledAmt = MAX_PRE_SAMPLES;
 
             /* TODO: Handle multi-buffer items by adding them together in
@@ -386,9 +380,6 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                     LoadSamples(&SrcData[FilledAmt], &Data[DataPosInt * NumChannels*SampleSize],
                                 NumChannels, ALBuffer->FmtType, DataSize);
                     FilledAmt += DataSize;
-
-                    SilenceSamples(&SrcData[FilledAmt], SrcBufferSize - FilledAmt);
-                    FilledAmt += SrcBufferSize - FilledAmt;
                 }
                 else
                 {
@@ -443,13 +434,11 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                             FilledAmt += DataSize;
                         }
                     }
-                    tmpiter = ATOMIC_LOAD(&tmpiter->next, almemory_order_acquire);
-                    if(!tmpiter && BufferLoopItem)
-                        tmpiter = BufferLoopItem;
-                    else if(!tmpiter)
+                    if(SrcBufferSize > FilledAmt)
                     {
-                        SilenceSamples(&SrcData[FilledAmt], SrcBufferSize - FilledAmt);
-                        FilledAmt += SrcBufferSize - FilledAmt;
+                        tmpiter = ATOMIC_LOAD(&tmpiter->next, almemory_order_acquire);
+                        if(!tmpiter && BufferLoopItem)
+                            tmpiter = BufferLoopItem;
                     }
                 }
             }

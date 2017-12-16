@@ -41,6 +41,8 @@ typedef struct ALchorusState {
     ALfloat *SampleBuffer[2];
     ALsizei BufferLength;
     ALsizei offset;
+
+    ALsizei lfo_offset;
     ALsizei lfo_range;
     ALfloat lfo_scale;
     ALint lfo_disp;
@@ -73,6 +75,7 @@ static void ALchorusState_Construct(ALchorusState *state)
     state->SampleBuffer[0] = NULL;
     state->SampleBuffer[1] = NULL;
     state->offset = 0;
+    state->lfo_offset = 0;
     state->lfo_range = 1;
     state->waveform = CWF_Triangle;
 }
@@ -155,14 +158,21 @@ static ALvoid ALchorusState_update(ALchorusState *state, const ALCcontext *Conte
     rate = props->Chorus.Rate;
     if(!(rate > 0.0f))
     {
-        state->lfo_scale = 0.0f;
+        state->lfo_offset = 0;
         state->lfo_range = 1;
+        state->lfo_scale = 0.0f;
         state->lfo_disp = 0;
     }
     else
     {
-        /* Calculate LFO coefficient */
-        state->lfo_range = fastf2i(frequency/rate + 0.5f);
+        /* Calculate LFO coefficient (number of samples per cycle). Limit the
+         * max range to avoid overflow when calculating the displacement.
+         */
+        ALsizei lfo_range = mini(fastf2i(frequency/rate + 0.5f), INT_MAX/360 - 180);
+
+        state->lfo_offset = fastf2i((ALfloat)state->lfo_offset/state->lfo_range*
+                                    lfo_range + 0.5f) % lfo_range;
+        state->lfo_range = lfo_range;
         switch(state->waveform)
         {
             case CWF_Triangle:
@@ -174,10 +184,8 @@ static ALvoid ALchorusState_update(ALchorusState *state, const ALCcontext *Conte
         }
 
         /* Calculate lfo phase displacement */
-        if(phase >= 0)
-            state->lfo_disp = fastf2i(state->lfo_range * (phase/360.0f));
-        else
-            state->lfo_disp = fastf2i(state->lfo_range * ((360+phase)/360.0f));
+        if(phase < 0) phase = 360 + phase;
+        state->lfo_disp = (state->lfo_range*phase + 180) / 360;
     }
 }
 
@@ -225,16 +233,16 @@ static ALvoid ALchorusState_process(ALchorusState *state, ALsizei SamplesToDo, c
             ALint disp_offset = state->lfo_disp*c;
             ALint moddelays[128];
 
-            offset = state->offset;
             if(state->waveform == CWF_Triangle)
-                GetTriangleDelays(moddelays, (offset+disp_offset)%state->lfo_range,
+                GetTriangleDelays(moddelays, (state->lfo_offset+disp_offset)%state->lfo_range,
                                   state->lfo_range, state->lfo_scale, state->depth, state->delay,
                                   todo);
             else /*if(state->waveform == CWF_Sinusoid)*/
-                GetSinusoidDelays(moddelays, (offset+disp_offset)%state->lfo_range,
+                GetSinusoidDelays(moddelays, (state->lfo_offset+disp_offset)%state->lfo_range,
                                   state->lfo_range, state->lfo_scale, state->depth, state->delay,
                                   todo);
 
+            offset = state->offset;
             for(i = 0;i < todo;i++)
             {
                 ALint delay = moddelays[i] >> FRACTIONBITS;
@@ -248,6 +256,7 @@ static ALvoid ALchorusState_process(ALchorusState *state, ALsizei SamplesToDo, c
             }
         }
         state->offset = offset;
+        state->lfo_offset = (state->lfo_offset+todo) % state->lfo_range;
 
         for(c = 0;c < NumChannels;c++)
         {

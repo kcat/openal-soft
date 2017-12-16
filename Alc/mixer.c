@@ -335,7 +335,6 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
         DataSize64 += DataPosFrac+FRACTIONMASK;
         DataSize64 >>= FRACTIONBITS;
         DataSize64 += MAX_POST_SAMPLES+MAX_PRE_SAMPLES;
-
         SrcBufferSize = (ALsizei)mini64(DataSize64, BUFFERSIZE);
 
         /* Figure out how many samples we can actually mix from this. */
@@ -343,24 +342,23 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
         DataSize64 -= MAX_POST_SAMPLES+MAX_PRE_SAMPLES;
         DataSize64 <<= FRACTIONBITS;
         DataSize64 -= DataPosFrac;
-
-        DstBufferSize = (ALsizei)((DataSize64+(increment-1)) / increment);
-        DstBufferSize = mini(DstBufferSize, (SamplesToDo-OutPos));
+        DstBufferSize = (ALsizei)mini64((DataSize64+(increment-1)) / increment,
+                                        SamplesToDo - OutPos);
 
         /* Some mixers like having a multiple of 4, so try to give that unless
          * this is the last update. */
-        if(OutPos+DstBufferSize < SamplesToDo)
+        if(DstBufferSize < SamplesToDo-OutPos)
             DstBufferSize &= ~3;
 
         for(chan = 0;chan < NumChannels;chan++)
         {
             const ALfloat *ResampledData;
             ALfloat *SrcData = Device->SourceData;
-            ALsizei SrcDataSize;
+            ALsizei FilledAmt;
 
             /* Load the previous samples into the source data first. */
             memcpy(SrcData, voice->PrevSamples[chan], MAX_PRE_SAMPLES*sizeof(ALfloat));
-            SrcDataSize = MAX_PRE_SAMPLES;
+            FilledAmt = MAX_PRE_SAMPLES;
 
             /* TODO: Handle multi-buffer items by adding them together in
              * SrcData. Need to work out how to deal with looping (loop
@@ -382,15 +380,15 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
 
                     /* Load what's left to play from the source buffer, and
                      * clear the rest of the temp buffer */
-                    DataSize = minu(SrcBufferSize - SrcDataSize,
+                    DataSize = minu(SrcBufferSize - FilledAmt,
                                     ALBuffer->SampleLen - DataPosInt);
 
-                    LoadSamples(&SrcData[SrcDataSize], &Data[DataPosInt * NumChannels*SampleSize],
+                    LoadSamples(&SrcData[FilledAmt], &Data[DataPosInt * NumChannels*SampleSize],
                                 NumChannels, ALBuffer->FmtType, DataSize);
-                    SrcDataSize += DataSize;
+                    FilledAmt += DataSize;
 
-                    SilenceSamples(&SrcData[SrcDataSize], SrcBufferSize - SrcDataSize);
-                    SrcDataSize += SrcBufferSize - SrcDataSize;
+                    SilenceSamples(&SrcData[FilledAmt], SrcBufferSize - FilledAmt);
+                    FilledAmt += SrcBufferSize - FilledAmt;
                 }
                 else
                 {
@@ -399,20 +397,20 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
 
                     /* Load what's left of this loop iteration, then load
                      * repeats of the loop section */
-                    DataSize = minu(SrcBufferSize - SrcDataSize, LoopEnd - DataPosInt);
+                    DataSize = minu(SrcBufferSize - FilledAmt, LoopEnd - DataPosInt);
 
-                    LoadSamples(&SrcData[SrcDataSize], &Data[DataPosInt * NumChannels*SampleSize],
+                    LoadSamples(&SrcData[FilledAmt], &Data[DataPosInt * NumChannels*SampleSize],
                                 NumChannels, ALBuffer->FmtType, DataSize);
-                    SrcDataSize += DataSize;
+                    FilledAmt += DataSize;
 
                     DataSize = LoopEnd-LoopStart;
-                    while(SrcBufferSize > SrcDataSize)
+                    while(SrcBufferSize > FilledAmt)
                     {
-                        DataSize = mini(SrcBufferSize - SrcDataSize, DataSize);
+                        DataSize = mini(SrcBufferSize - FilledAmt, DataSize);
 
-                        LoadSamples(&SrcData[SrcDataSize], &Data[LoopStart * NumChannels*SampleSize],
+                        LoadSamples(&SrcData[FilledAmt], &Data[LoopStart * NumChannels*SampleSize],
                                     NumChannels, ALBuffer->FmtType, DataSize);
-                        SrcDataSize += DataSize;
+                        FilledAmt += DataSize;
                     }
                 }
             }
@@ -422,7 +420,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                 ALbufferlistitem *tmpiter = BufferListItem;
                 ALsizei pos = DataPosInt;
 
-                while(tmpiter && SrcBufferSize > SrcDataSize)
+                while(tmpiter && SrcBufferSize > FilledAmt)
                 {
                     const ALbuffer *ALBuffer;
                     if(tmpiter->num_buffers >= 1 && (ALBuffer=tmpiter->buffers[0]) != NULL)
@@ -439,10 +437,10 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                             DataSize -= pos;
                             pos -= pos;
 
-                            DataSize = minu(SrcBufferSize - SrcDataSize, DataSize);
-                            LoadSamples(&SrcData[SrcDataSize], Data, NumChannels,
+                            DataSize = minu(SrcBufferSize - FilledAmt, DataSize);
+                            LoadSamples(&SrcData[FilledAmt], Data, NumChannels,
                                         ALBuffer->FmtType, DataSize);
-                            SrcDataSize += DataSize;
+                            FilledAmt += DataSize;
                         }
                     }
                     tmpiter = ATOMIC_LOAD(&tmpiter->next, almemory_order_acquire);
@@ -450,8 +448,8 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                         tmpiter = BufferLoopItem;
                     else if(!tmpiter)
                     {
-                        SilenceSamples(&SrcData[SrcDataSize], SrcBufferSize - SrcDataSize);
-                        SrcDataSize += SrcBufferSize - SrcDataSize;
+                        SilenceSamples(&SrcData[FilledAmt], SrcBufferSize - FilledAmt);
+                        FilledAmt += SrcBufferSize - FilledAmt;
                     }
                 }
             }

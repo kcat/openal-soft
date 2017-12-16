@@ -24,15 +24,17 @@ install:
     fi
   - >
     if [[ "${TRAVIS_OS_NAME}" == "linux" && "${BUILD_ANDROID}" == "true" ]]; then
-      curl -o ~/android-ndk.zip https://dl.google.com/android/repository/android-ndk-r14-linux-x86_64.zip
+      curl -o ~/android-ndk.zip https://dl.google.com/android/repository/android-ndk-r15-linux-x86_64.zip
       unzip -q ~/android-ndk.zip -d ~ \
-        'android-ndk-r14/build/cmake/*' \
-        'android-ndk-r14/platforms/android-9/arch-arm/*' \
-        'android-ndk-r14/source.properties' \
-        'android-ndk-r14/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a/*' \
-        'android-ndk-r14/sysroot/*' \
-        'android-ndk-r14/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/*' \
-        'android-ndk-r14/toolchains/llvm/prebuilt/linux-x86_64/*'
+        'android-ndk-r15/build/cmake/*' \
+        'android-ndk-r15/build/core/toolchains/arm-linux-androideabi-*/*' \
+        'android-ndk-r15/platforms/android-14/arch-arm/*' \
+        'android-ndk-r15/source.properties' \
+        'android-ndk-r15/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a/*' \
+        'android-ndk-r15/sources/cxx-stl/gnu-libstdc++/4.9/include/*' \
+        'android-ndk-r15/sysroot/*' \
+        'android-ndk-r15/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/*' \
+        'android-ndk-r15/toolchains/llvm/prebuilt/linux-x86_64/*'
     fi
 script:
   - >

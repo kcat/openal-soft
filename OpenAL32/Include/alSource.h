@@ -19,8 +19,9 @@ struct ALsource;
 
 
 typedef struct ALbufferlistitem {
-    struct ALbuffer *buffer;
     ATOMIC(struct ALbufferlistitem*) next;
+    ALsizei num_buffers;
+    struct ALbuffer *buffers[];
 } ALbufferlistitem;
 
 

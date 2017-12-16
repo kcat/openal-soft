@@ -1450,7 +1450,7 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
     while(BufferListItem != NULL)
     {
         const ALbuffer *buffer;
-        if((buffer=BufferListItem->buffer) != NULL)
+        if(BufferListItem->num_buffers >= 1 && (buffer=BufferListItem->buffers[0]) != NULL)
         {
             if(props->SpatializeMode == SpatializeOn ||
                (props->SpatializeMode == SpatializeAuto && buffer->FmtChannels == FmtMono))

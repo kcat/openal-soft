@@ -362,9 +362,13 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
             memcpy(SrcData, voice->PrevSamples[chan], MAX_PRE_SAMPLES*sizeof(ALfloat));
             SrcDataSize = MAX_PRE_SAMPLES;
 
+            /* TODO: Handle multi-buffer items by adding them together in
+             * SrcData. Need to work out how to deal with looping (loop
+             * points).
+             */
             if(isstatic)
             {
-                const ALbuffer *ALBuffer = BufferListItem->buffer;
+                const ALbuffer *ALBuffer = BufferListItem->buffers[0];
                 const ALubyte *Data = ALBuffer->data;
                 ALsizei DataSize;
 
@@ -421,7 +425,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                 while(tmpiter && SrcBufferSize > SrcDataSize)
                 {
                     const ALbuffer *ALBuffer;
-                    if((ALBuffer=tmpiter->buffer) != NULL)
+                    if(tmpiter->num_buffers >= 1 && (ALBuffer=tmpiter->buffers[0]) != NULL)
                     {
                         const ALubyte *Data = ALBuffer->data;
                         ALsizei DataSize = ALBuffer->SampleLen;
@@ -637,7 +641,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
             ALsizei LoopStart = 0;
             ALsizei LoopEnd = 0;
 
-            if((ALBuffer=BufferListItem->buffer) != NULL)
+            if(BufferListItem->num_buffers >= 1 && (ALBuffer=BufferListItem->buffers[0]) != NULL)
             {
                 DataSize = ALBuffer->SampleLen;
                 LoopStart = ALBuffer->LoopStart;

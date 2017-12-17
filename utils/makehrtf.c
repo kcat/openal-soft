@@ -965,9 +965,7 @@ static double *CreateDoubles(size_t n)
 {
     double *a;
 
-    if(n == 0)
-        n = 1;
-    a = calloc(n, sizeof(*a));
+    a = calloc(n?n:1, sizeof(*a));
     if(a == NULL)
     {
         fprintf(stderr, "Error:  Out of memory.\n");
@@ -981,9 +979,7 @@ static Complex *CreateComplexes(size_t n)
 {
     Complex *a;
 
-    if(n == 0)
-        n = 1;
-    a = calloc(n, sizeof(*a));
+    a = calloc(n?n:1, sizeof(*a));
     if(a == NULL)
     {
         fprintf(stderr, "Error:  Out of memory.\n");
@@ -2564,6 +2560,9 @@ static int PrepareHrirData(const uint fdCount, const double distances[MAX_FD_COU
         for(ei = 0;ei < evCounts[fi];ei++)
             azTotal += azCounts[(fi * MAX_EV_COUNT) + ei];
     }
+    if(!fdCount || !evTotal || !azTotal)
+        return 0;
+
     hData->mFds = calloc(fdCount, sizeof(*hData->mFds));
     if(hData->mFds == NULL)
         return 0;

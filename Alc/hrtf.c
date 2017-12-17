@@ -1057,7 +1057,7 @@ static void AddFileEntry(vector_EnumeratedHrtf *list, const_al_string filename)
 /* Unfortunate that we have to duplicate AddFileEntry to take a memory buffer
  * for input instead of opening the given filename.
  */
-static void AddBuiltInEntry(vector_EnumeratedHrtf *list, const_al_string filename, size_t residx)
+static void AddBuiltInEntry(vector_EnumeratedHrtf *list, const_al_string filename, ALuint residx)
 {
     EnumeratedHrtf entry = { AL_STRING_INIT_STATIC(), NULL };
     struct HrtfEntry *loaded_entry;
@@ -1097,7 +1097,7 @@ static void AddBuiltInEntry(vector_EnumeratedHrtf *list, const_al_string filenam
         );
         loaded_entry->next = LoadedHrtfs;
         loaded_entry->handle = hrtf;
-        snprintf(loaded_entry->filename, namelen,  "!"SZFMT"_%s",
+        snprintf(loaded_entry->filename, namelen,  "!%u_%s",
                  residx, alstr_get_cstr(filename));
         LoadedHrtfs = loaded_entry;
     }
@@ -1285,7 +1285,7 @@ struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry)
     struct FileMapping fmap;
     const ALubyte *rdata;
     const char *name;
-    size_t residx;
+    ALuint residx;
     size_t rsize;
     char ch;
 
@@ -1301,7 +1301,7 @@ struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry)
 
     fmap.ptr = NULL;
     fmap.len = 0;
-    if(sscanf(entry->filename, "!"SZFMT"%c", &residx, &ch) == 2 && ch == '_')
+    if(sscanf(entry->filename, "!%u%c", &residx, &ch) == 2 && ch == '_')
     {
         name = strchr(entry->filename, ch)+1;
 
@@ -1309,7 +1309,7 @@ struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry)
         rdata = GetResource(residx, &rsize);
         if(rdata == NULL || rsize == 0)
         {
-            ERR("Could not get resource "SZFMT", %s\n", residx, name);
+            ERR("Could not get resource %u, %s\n", residx, name);
             goto done;
         }
     }

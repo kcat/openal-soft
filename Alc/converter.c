@@ -26,7 +26,7 @@ SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType 
 
     /* Have to set the mixer FPU mode since that's what the resampler code expects. */
     START_MIXER_MODE();
-    step = fastf2i(minf((ALdouble)srcRate / dstRate, MAX_PITCH)*FRACTIONONE + 0.5f);
+    step = fastf2i((ALfloat)mind((ALdouble)srcRate / dstRate, MAX_PITCH)*FRACTIONONE + 0.5f);
     converter->mIncrement = maxi(step, 1);
     if(converter->mIncrement == FRACTIONONE)
         converter->mResample = Resample_copy_C;

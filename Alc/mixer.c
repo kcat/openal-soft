@@ -51,11 +51,11 @@ static_assert(MAX_POST_SAMPLES >= 12, "MAX_POST_SAMPLES must be at least 12!");
 
 enum Resampler ResamplerDefault = LinearResampler;
 
-static MixerFunc MixSamples = Mix_C;
+MixerFunc MixSamples = Mix_C;
 static HrtfMixerFunc MixHrtfSamples = MixHrtf_C;
 HrtfMixerBlendFunc MixHrtfBlendSamples = MixHrtfBlend_C;
 
-MixerFunc SelectMixer(void)
+static MixerFunc SelectMixer(void)
 {
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))

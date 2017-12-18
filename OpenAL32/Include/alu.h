@@ -412,7 +412,6 @@ void aluInit(void);
 
 void aluInitMixer(void);
 
-MixerFunc SelectMixer(void);
 RowMixerFunc SelectRowMixer(void);
 ResamplerFunc SelectResampler(enum Resampler resampler);
 
@@ -514,6 +513,8 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples);
 void aluHandleDisconnect(ALCdevice *device);
 
 void UpdateContextProps(ALCcontext *context);
+
+extern MixerFunc MixSamples;
 
 extern ALfloat ConeScale;
 extern ALfloat ZScale;

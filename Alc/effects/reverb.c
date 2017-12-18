@@ -50,13 +50,11 @@
 #define UNEXPECTED(x) (x)
 #endif
 
-static MixerFunc MixSamples = Mix_C;
 static RowMixerFunc MixRowSamples = MixRow_C;
 
 static alonce_flag mixfunc_inited = AL_ONCE_FLAG_INIT;
 static void init_mixfunc(void)
 {
-    MixSamples = SelectMixer();
     MixRowSamples = SelectRowMixer();
 }
 

@@ -38,7 +38,7 @@ enum ChorusWaveForm {
 typedef struct ALchorusState {
     DERIVE_FROM_TYPE(ALeffectState);
 
-    ALfloat *SampleBuffer[2];
+    ALfloat *SampleBuffer;
     ALsizei BufferLength;
     ALsizei offset;
 
@@ -72,8 +72,7 @@ static void ALchorusState_Construct(ALchorusState *state)
     SET_VTABLE2(ALchorusState, ALeffectState, state);
 
     state->BufferLength = 0;
-    state->SampleBuffer[0] = NULL;
-    state->SampleBuffer[1] = NULL;
+    state->SampleBuffer = NULL;
     state->offset = 0;
     state->lfo_offset = 0;
     state->lfo_range = 1;
@@ -82,9 +81,8 @@ static void ALchorusState_Construct(ALchorusState *state)
 
 static ALvoid ALchorusState_Destruct(ALchorusState *state)
 {
-    al_free(state->SampleBuffer[0]);
-    state->SampleBuffer[0] = NULL;
-    state->SampleBuffer[1] = NULL;
+    al_free(state->SampleBuffer);
+    state->SampleBuffer = NULL;
 
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
 }
@@ -99,21 +97,17 @@ static ALboolean ALchorusState_deviceUpdate(ALchorusState *state, ALCdevice *Dev
 
     if(maxlen != state->BufferLength)
     {
-        void *temp = al_calloc(16, maxlen * sizeof(ALfloat) * 2);
+        void *temp = al_calloc(16, maxlen * sizeof(ALfloat));
         if(!temp) return AL_FALSE;
 
-        al_free(state->SampleBuffer[0]);
-        state->SampleBuffer[0] = temp;
-        state->SampleBuffer[1] = state->SampleBuffer[0] + maxlen;
+        al_free(state->SampleBuffer);
+        state->SampleBuffer = temp;
 
         state->BufferLength = maxlen;
     }
 
     for(it = 0;it < state->BufferLength;it++)
-    {
-        state->SampleBuffer[0][it] = 0.0f;
-        state->SampleBuffer[1][it] = 0.0f;
-    }
+        state->SampleBuffer[it] = 0.0f;
 
     return AL_TRUE;
 }
@@ -144,7 +138,7 @@ static ALvoid ALchorusState_update(ALchorusState *state, const ALCcontext *Conte
     /* Offset the delay so that the center point remains the same with the LFO
      * ranging from 0...2 instead of -1...+1.
      */
-    state->delay = fastf2i(delay - state->depth + 0.5f);
+    state->delay = fastf2i(delay-state->depth + 0.5f);
 
     state->feedback = props->Chorus.Feedback;
 
@@ -218,48 +212,67 @@ static ALvoid ALchorusState_process(ALchorusState *state, ALsizei SamplesToDo, c
 {
     const ALsizei bufmask = state->BufferLength-1;
     const ALfloat feedback = state->feedback;
+    const ALsizei avgdelay = (state->delay+fastf2i(state->depth) + (FRACTIONONE>>1)) >>
+                             FRACTIONBITS;
+    ALfloat *restrict delaybuf = state->SampleBuffer;
     ALsizei i, c;
     ALsizei base;
 
     for(base = 0;base < SamplesToDo;)
     {
         const ALsizei todo = mini(256, SamplesToDo-base);
-        ALfloat temps[256];
+        ALint moddelays[2][256];
+        ALfloat temps[2][256];
+        ALsizei offset;
 
-        for(c = 0;c < 2;c++)
+        if(state->waveform == CWF_Triangle)
         {
-            ALfloat *restrict sampbuf = state->SampleBuffer[c];
-            ALint disp_offset = state->lfo_disp*c;
-            ALint moddelays[256];
-            ALsizei offset;
+            GetTriangleDelays(moddelays[0], state->lfo_offset, state->lfo_range, state->lfo_scale,
+                              state->depth, state->delay, todo);
+            GetTriangleDelays(moddelays[1], (state->lfo_offset+state->lfo_disp)%state->lfo_range,
+                              state->lfo_range, state->lfo_scale, state->depth, state->delay,
+                              todo);
+        }
+        else /*if(state->waveform == CWF_Sinusoid)*/
+        {
+            GetSinusoidDelays(moddelays[0], state->lfo_offset, state->lfo_range, state->lfo_scale,
+                              state->depth, state->delay, todo);
+            GetSinusoidDelays(moddelays[1], (state->lfo_offset+state->lfo_disp)%state->lfo_range,
+                              state->lfo_range, state->lfo_scale, state->depth, state->delay,
+                              todo);
+        }
 
-            if(state->waveform == CWF_Triangle)
-                GetTriangleDelays(moddelays, (state->lfo_offset+disp_offset)%state->lfo_range,
-                                  state->lfo_range, state->lfo_scale, state->depth, state->delay,
-                                  todo);
-            else /*if(state->waveform == CWF_Sinusoid)*/
-                GetSinusoidDelays(moddelays, (state->lfo_offset+disp_offset)%state->lfo_range,
-                                  state->lfo_range, state->lfo_scale, state->depth, state->delay,
-                                  todo);
+        offset = state->offset;
+        for(i = 0;i < todo;i++)
+        {
+            ALint delay;
+            ALfloat mu;
 
-            offset = state->offset;
-            for(i = 0;i < todo;i++)
-            {
-                ALint delay = moddelays[i] >> FRACTIONBITS;
-                ALfloat mu = (moddelays[i]&FRACTIONMASK) * (1.0f/FRACTIONONE);
+            // Feed the buffer's input first (necessary for delays < 1).
+            delaybuf[offset&bufmask] = SamplesIn[0][base+i];
 
-                sampbuf[offset&bufmask] = SamplesIn[0][base+i];
-                temps[i] = sampbuf[(offset-delay) & bufmask]*(1.0f-mu) +
-                           sampbuf[(offset-(delay+1)) & bufmask]*mu;
-                sampbuf[offset&bufmask] += temps[i] * feedback;
-                offset++;
-            }
+            // Tap for the left output.
+            delay = moddelays[0][i] >> FRACTIONBITS;
+            mu = (moddelays[0][i]&FRACTIONMASK) * (1.0f/FRACTIONONE);
+            temps[0][i] = delaybuf[(offset-delay) & bufmask]*(1.0f-mu) +
+                          delaybuf[(offset-(delay+1)) & bufmask]*mu;
 
-            MixSamples(temps, NumChannels, SamplesOut, state->Gain[c], state->Gain[c],
-                       0, base, todo);
+            // Tap for the right output.
+            delay = moddelays[1][i] >> FRACTIONBITS;
+            mu = (moddelays[1][i]&FRACTIONMASK) * (1.0f/FRACTIONONE);
+            temps[1][i] = delaybuf[(offset-delay) & bufmask]*(1.0f-mu) +
+                          delaybuf[(offset-(delay+1)) & bufmask]*mu;
+
+            // Accumulate feedback from the average delay of the taps.
+            delaybuf[offset&bufmask] += delaybuf[(offset-avgdelay) & bufmask] * feedback;
+            offset++;
         }
         state->offset += todo;
         state->lfo_offset = (state->lfo_offset+todo) % state->lfo_range;
+
+        for(c = 0;c < 2;c++)
+            MixSamples(temps[c], NumChannels, SamplesOut, state->Gain[c], state->Gain[c],
+                       0, base, todo);
 
         base += todo;
     }

@@ -223,15 +223,15 @@ static ALvoid ALchorusState_process(ALchorusState *state, ALsizei SamplesToDo, c
 
     for(base = 0;base < SamplesToDo;)
     {
-        const ALsizei todo = mini(128, SamplesToDo-base);
-        ALfloat temps[2][128];
-        ALsizei offset;
+        const ALsizei todo = mini(256, SamplesToDo-base);
+        ALfloat temps[256];
 
         for(c = 0;c < 2;c++)
         {
             ALfloat *restrict sampbuf = state->SampleBuffer[c];
             ALint disp_offset = state->lfo_disp*c;
-            ALint moddelays[128];
+            ALint moddelays[256];
+            ALsizei offset;
 
             if(state->waveform == CWF_Triangle)
                 GetTriangleDelays(moddelays, (state->lfo_offset+disp_offset)%state->lfo_range,
@@ -249,31 +249,17 @@ static ALvoid ALchorusState_process(ALchorusState *state, ALsizei SamplesToDo, c
                 ALfloat mu = (moddelays[i]&FRACTIONMASK) * (1.0f/FRACTIONONE);
 
                 sampbuf[offset&bufmask] = SamplesIn[0][base+i];
-                temps[c][i] = (sampbuf[(offset-delay) & bufmask]*(1.0f-mu) +
-                               sampbuf[(offset-(delay+1)) & bufmask]*mu) * feedback;
-                sampbuf[offset&bufmask] += temps[c][i];
+                temps[i] = (sampbuf[(offset-delay) & bufmask]*(1.0f-mu) +
+                            sampbuf[(offset-(delay+1)) & bufmask]*mu) * feedback;
+                sampbuf[offset&bufmask] += temps[i];
                 offset++;
             }
+
+            MixSamples(temps, NumChannels, SamplesOut, state->Gain[c], state->Gain[c],
+                       0, base, todo);
         }
-        state->offset = offset;
+        state->offset += todo;
         state->lfo_offset = (state->lfo_offset+todo) % state->lfo_range;
-
-        for(c = 0;c < NumChannels;c++)
-        {
-            ALfloat gain = state->Gain[0][c];
-            if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
-            {
-                for(i = 0;i < todo;i++)
-                    SamplesOut[c][i+base] += temps[0][i] * gain;
-            }
-
-            gain = state->Gain[1][c];
-            if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
-            {
-                for(i = 0;i < todo;i++)
-                    SamplesOut[c][i+base] += temps[1][i] * gain;
-            }
-        }
 
         base += todo;
     }

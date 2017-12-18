@@ -249,9 +249,9 @@ static ALvoid ALchorusState_process(ALchorusState *state, ALsizei SamplesToDo, c
                 ALfloat mu = (moddelays[i]&FRACTIONMASK) * (1.0f/FRACTIONONE);
 
                 sampbuf[offset&bufmask] = SamplesIn[0][base+i];
-                temps[i] = (sampbuf[(offset-delay) & bufmask]*(1.0f-mu) +
-                            sampbuf[(offset-(delay+1)) & bufmask]*mu) * feedback;
-                sampbuf[offset&bufmask] += temps[i];
+                temps[i] = sampbuf[(offset-delay) & bufmask]*(1.0f-mu) +
+                           sampbuf[(offset-(delay+1)) & bufmask]*mu;
+                sampbuf[offset&bufmask] += temps[i] * feedback;
                 offset++;
             }
 

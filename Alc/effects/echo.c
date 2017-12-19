@@ -42,8 +42,12 @@ typedef struct ALechoState {
         ALsizei delay;
     } Tap[2];
     ALsizei Offset;
+
     /* The panning gains for the two taps */
-    ALfloat Gain[2][MAX_OUTPUT_CHANNELS];
+    struct {
+        ALfloat Current[MAX_OUTPUT_CHANNELS];
+        ALfloat Target[MAX_OUTPUT_CHANNELS];
+    } Gains[2];
 
     ALfloat FeedGain;
 
@@ -83,7 +87,7 @@ static ALvoid ALechoState_Destruct(ALechoState *state)
 
 static ALboolean ALechoState_deviceUpdate(ALechoState *state, ALCdevice *Device)
 {
-    ALsizei maxlen, i;
+    ALsizei maxlen;
 
     // Use the next power of 2 for the buffer length, so the tap offsets can be
     // wrapped using a mask instead of a modulo
@@ -100,8 +104,9 @@ static ALboolean ALechoState_deviceUpdate(ALechoState *state, ALCdevice *Device)
         state->SampleBuffer = temp;
         state->BufferLength = maxlen;
     }
-    for(i = 0;i < state->BufferLength;i++)
-        state->SampleBuffer[i] = 0.0f;
+
+    memset(state->SampleBuffer, 0, state->BufferLength*sizeof(ALfloat));
+    memset(state->Gains, 0, sizeof(state->Gains));
 
     return AL_TRUE;
 }
@@ -111,7 +116,7 @@ static ALvoid ALechoState_update(ALechoState *state, const ALCcontext *context, 
     const ALCdevice *device = context->Device;
     ALuint frequency = device->Frequency;
     ALfloat coeffs[MAX_AMBI_COEFFS];
-    ALfloat gain, lrpan, spread;
+    ALfloat gainhf, lrpan, spread;
 
     state->Tap[0].delay = maxi(fastf2i(props->Echo.Delay*frequency + 0.5f), 1);
     state->Tap[1].delay = fastf2i(props->Echo.LRDelay*frequency + 0.5f);
@@ -127,20 +132,18 @@ static ALvoid ALechoState_update(ALechoState *state, const ALCcontext *context, 
 
     state->FeedGain = props->Echo.Feedback;
 
-    gain = maxf(1.0f - props->Echo.Damping, 0.0625f); /* Limit -24dB */
+    gainhf = maxf(1.0f - props->Echo.Damping, 0.0625f); /* Limit -24dB */
     ALfilterState_setParams(&state->Filter, ALfilterType_HighShelf,
-                            gain, LOWPASSFREQREF/frequency,
-                            calc_rcpQ_from_slope(gain, 1.0f));
-
-    gain = slot->Params.Gain;
+                            gainhf, LOWPASSFREQREF/frequency,
+                            calc_rcpQ_from_slope(gainhf, 1.0f));
 
     /* First tap panning */
     CalcAngleCoeffs(-F_PI_2*lrpan, 0.0f, spread, coeffs);
-    ComputePanningGains(device->Dry, coeffs, gain, state->Gain[0]);
+    ComputePanningGains(device->Dry, coeffs, slot->Params.Gain, state->Gains[0].Target);
 
     /* Second tap panning */
     CalcAngleCoeffs( F_PI_2*lrpan, 0.0f, spread, coeffs);
-    ComputePanningGains(device->Dry, coeffs, gain, state->Gain[1]);
+    ComputePanningGains(device->Dry, coeffs, slot->Params.Gain, state->Gains[1].Target);
 }
 
 static ALvoid ALechoState_process(ALechoState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
@@ -151,8 +154,8 @@ static ALvoid ALechoState_process(ALechoState *state, ALsizei SamplesToDo, const
     ALfloat *restrict delaybuf = state->SampleBuffer;
     ALsizei offset = state->Offset;
     ALfloat x[2], y[2], in, out;
-    ALsizei base, k;
-    ALsizei i;
+    ALsizei base;
+    ALsizei c, i;
 
     x[0] = state->Filter.x[0];
     x[1] = state->Filter.x[1];
@@ -187,22 +190,9 @@ static ALvoid ALechoState_process(ALechoState *state, ALsizei SamplesToDo, const
             offset++;
         }
 
-        for(k = 0;k < NumChannels;k++)
-        {
-            ALfloat gain = state->Gain[0][k];
-            if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
-            {
-                for(i = 0;i < td;i++)
-                    SamplesOut[k][i+base] += temps[0][i] * gain;
-            }
-
-            gain = state->Gain[1][k];
-            if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
-            {
-                for(i = 0;i < td;i++)
-                    SamplesOut[k][i+base] += temps[1][i] * gain;
-            }
-        }
+        for(c = 0;c < 2;c++)
+            MixSamples(temps[c], NumChannels, SamplesOut, state->Gains[c].Current,
+                       state->Gains[c].Target, SamplesToDo-base, base, td);
 
         base += td;
     }

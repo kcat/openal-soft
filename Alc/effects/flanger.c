@@ -48,7 +48,10 @@ typedef struct ALflangerState {
     ALint lfo_disp;
 
     /* Gains for left and right sides */
-    ALfloat Gain[2][MAX_OUTPUT_CHANNELS];
+    struct {
+        ALfloat Current[MAX_OUTPUT_CHANNELS];
+        ALfloat Target[MAX_OUTPUT_CHANNELS];
+    } Gains[2];
 
     /* effect parameters */
     enum FlangerWaveForm waveform;
@@ -90,7 +93,6 @@ static ALvoid ALflangerState_Destruct(ALflangerState *state)
 static ALboolean ALflangerState_deviceUpdate(ALflangerState *state, ALCdevice *Device)
 {
     ALsizei maxlen;
-    ALsizei it;
 
     maxlen = fastf2i(AL_FLANGER_MAX_DELAY * 2.0f * Device->Frequency) + 1;
     maxlen = NextPowerOf2(maxlen);
@@ -106,8 +108,8 @@ static ALboolean ALflangerState_deviceUpdate(ALflangerState *state, ALCdevice *D
         state->BufferLength = maxlen;
     }
 
-    for(it = 0;it < state->BufferLength;it++)
-        state->SampleBuffer[it] = 0.0f;
+    memset(state->SampleBuffer, 0, state->BufferLength*sizeof(ALfloat));
+    memset(state->Gains, 0, sizeof(state->Gains));
 
     return AL_TRUE;
 }
@@ -144,9 +146,9 @@ static ALvoid ALflangerState_update(ALflangerState *state, const ALCcontext *con
 
     /* Gains for left and right sides */
     CalcAngleCoeffs(-F_PI_2, 0.0f, 0.0f, coeffs);
-    ComputePanningGains(device->Dry, coeffs, slot->Params.Gain, state->Gain[0]);
+    ComputePanningGains(device->Dry, coeffs, slot->Params.Gain, state->Gains[0].Target);
     CalcAngleCoeffs( F_PI_2, 0.0f, 0.0f, coeffs);
-    ComputePanningGains(device->Dry, coeffs, slot->Params.Gain, state->Gain[1]);
+    ComputePanningGains(device->Dry, coeffs, slot->Params.Gain, state->Gains[1].Target);
 
     phase = props->Flanger.Phase;
     rate = props->Flanger.Rate;
@@ -270,8 +272,8 @@ static ALvoid ALflangerState_process(ALflangerState *state, ALsizei SamplesToDo,
         state->lfo_offset = (state->lfo_offset+todo) % state->lfo_range;
 
         for(c = 0;c < 2;c++)
-            MixSamples(temps[c], NumChannels, SamplesOut, state->Gain[c], state->Gain[c],
-                       0, base, todo);
+            MixSamples(temps[c], NumChannels, SamplesOut, state->Gains[c].Current,
+                       state->Gains[c].Target, 0, base, todo);
 
         base += todo;
     }

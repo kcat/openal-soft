@@ -113,8 +113,8 @@ static ALvoid ALechoState_update(ALechoState *state, const ALCcontext *context, 
     ALfloat coeffs[MAX_AMBI_COEFFS];
     ALfloat gain, lrpan, spread;
 
-    state->Tap[0].delay = fastf2i(props->Echo.Delay * frequency) + 1;
-    state->Tap[1].delay = fastf2i(props->Echo.LRDelay * frequency);
+    state->Tap[0].delay = maxi(fastf2i(props->Echo.Delay*frequency + 0.5f), 1);
+    state->Tap[1].delay = fastf2i(props->Echo.LRDelay*frequency + 0.5f);
     state->Tap[1].delay += state->Tap[0].delay;
 
     spread = props->Echo.Spread;
@@ -148,6 +148,7 @@ static ALvoid ALechoState_process(ALechoState *state, ALsizei SamplesToDo, const
     const ALsizei mask = state->BufferLength-1;
     const ALsizei tap1 = state->Tap[0].delay;
     const ALsizei tap2 = state->Tap[1].delay;
+    ALfloat *restrict delaybuf = state->SampleBuffer;
     ALsizei offset = state->Offset;
     ALfloat x[2], y[2], in, out;
     ALsizei base, k;
@@ -159,26 +160,30 @@ static ALvoid ALechoState_process(ALechoState *state, ALsizei SamplesToDo, const
     y[1] = state->Filter.y[1];
     for(base = 0;base < SamplesToDo;)
     {
-        ALfloat temps[128][2];
+        ALfloat temps[2][128];
         ALsizei td = mini(128, SamplesToDo-base);
 
         for(i = 0;i < td;i++)
         {
-            /* First tap */
-            temps[i][0] = state->SampleBuffer[(offset-tap1) & mask];
-            /* Second tap */
-            temps[i][1] = state->SampleBuffer[(offset-tap2) & mask];
+            /* Feed the delay buffer's input first. */
+            delaybuf[offset&mask] = SamplesIn[0][i+base];
 
-            // Apply damping and feedback gain to the second tap, and mix in the
-            // new sample
-            in = temps[i][1] + SamplesIn[0][i+base];
+            /* First tap */
+            temps[0][i] = delaybuf[(offset-tap1) & mask];
+            /* Second tap */
+            temps[1][i] = delaybuf[(offset-tap2) & mask];
+
+            /* Apply damping to the second tap, then add it to the buffer with
+             * feedback attenuation.
+             */
+            in = temps[1][i];
             out = in*state->Filter.b0 +
                   x[0]*state->Filter.b1 + x[1]*state->Filter.b2 -
                   y[0]*state->Filter.a1 - y[1]*state->Filter.a2;
             x[1] = x[0]; x[0] = in;
             y[1] = y[0]; y[0] = out;
 
-            state->SampleBuffer[offset&mask] = out * state->FeedGain;
+            delaybuf[offset&mask] += out * state->FeedGain;
             offset++;
         }
 
@@ -188,14 +193,14 @@ static ALvoid ALechoState_process(ALechoState *state, ALsizei SamplesToDo, const
             if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
             {
                 for(i = 0;i < td;i++)
-                    SamplesOut[k][i+base] += temps[i][0] * gain;
+                    SamplesOut[k][i+base] += temps[0][i] * gain;
             }
 
             gain = state->Gain[1][k];
             if(fabsf(gain) > GAIN_SILENCE_THRESHOLD)
             {
                 for(i = 0;i < td;i++)
-                    SamplesOut[k][i+base] += temps[i][1] * gain;
+                    SamplesOut[k][i+base] += temps[1][i] * gain;
             }
         }
 

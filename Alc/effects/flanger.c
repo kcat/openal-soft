@@ -216,6 +216,7 @@ static ALvoid ALflangerState_process(ALflangerState *state, ALsizei SamplesToDo,
     const ALsizei avgdelay = (state->delay+fastf2i(state->depth) + (FRACTIONONE>>1)) >>
                              FRACTIONBITS;
     ALfloat *restrict delaybuf = state->SampleBuffer;
+    ALsizei offset = state->offset;
     ALsizei i, c;
     ALsizei base;
 
@@ -224,7 +225,6 @@ static ALvoid ALflangerState_process(ALflangerState *state, ALsizei SamplesToDo,
         const ALsizei todo = mini(256, SamplesToDo-base);
         ALint moddelays[2][256];
         ALfloat temps[2][256];
-        ALsizei offset;
 
         if(state->waveform == FWF_Triangle)
         {
@@ -242,8 +242,8 @@ static ALvoid ALflangerState_process(ALflangerState *state, ALsizei SamplesToDo,
                               state->lfo_range, state->lfo_scale, state->depth, state->delay,
                               todo);
         }
+        state->lfo_offset = (state->lfo_offset+todo) % state->lfo_range;
 
-        offset = state->offset;
         for(i = 0;i < todo;i++)
         {
             ALint delay;
@@ -268,8 +268,6 @@ static ALvoid ALflangerState_process(ALflangerState *state, ALsizei SamplesToDo,
             delaybuf[offset&bufmask] += delaybuf[(offset-avgdelay) & bufmask] * feedback;
             offset++;
         }
-        state->offset += todo;
-        state->lfo_offset = (state->lfo_offset+todo) % state->lfo_range;
 
         for(c = 0;c < 2;c++)
             MixSamples(temps[c], NumChannels, SamplesOut, state->Gains[c].Current,
@@ -277,6 +275,8 @@ static ALvoid ALflangerState_process(ALflangerState *state, ALsizei SamplesToDo,
 
         base += todo;
     }
+
+    state->offset = offset;
 }
 
 

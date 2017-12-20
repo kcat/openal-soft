@@ -154,7 +154,7 @@ static ALvoid ALflangerState_update(ALflangerState *state, const ALCcontext *con
     rate = props->Flanger.Rate;
     if(!(rate > 0.0f))
     {
-        state->lfo_offset = 1;
+        state->lfo_offset = 0;
         state->lfo_range = 1;
         state->lfo_scale = 0.0f;
         state->lfo_disp = 0;

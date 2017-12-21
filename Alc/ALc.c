@@ -3111,9 +3111,10 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
 
 static inline ALCsizei NumAttrsForDevice(ALCdevice *device)
 {
+    if(device->Type == Capture) return 9;
     if(device->Type == Loopback && device->FmtChans == DevFmtAmbi3D)
-        return 27;
-    return 21;
+        return 35;
+    return 29;
 }
 
 static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values)
@@ -3165,6 +3166,39 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
     {
         switch(param)
         {
+            case ALC_ATTRIBUTES_SIZE:
+                values[0] = NumAttrsForDevice(device);
+                return 1;
+
+            case ALC_ALL_ATTRIBUTES:
+                if(size < NumAttrsForDevice(device))
+                {
+                    alcSetError(device, ALC_INVALID_VALUE);
+                    return 0;
+                }
+
+                i = 0;
+                almtx_lock(&device->BackendLock);
+                values[i++] = ALC_MAJOR_VERSION;
+                values[i++] = alcMajorVersion;
+                values[i++] = ALC_MINOR_VERSION;
+                values[i++] = alcMinorVersion;
+                values[i++] = ALC_CAPTURE_SAMPLES;
+                values[i++] = V0(device->Backend,availableSamples)();
+                values[i++] = ALC_CONNECTED;
+                values[i++] = device->Connected;
+                almtx_unlock(&device->BackendLock);
+
+                values[i++] = 0;
+                return i;
+
+            case ALC_MAJOR_VERSION:
+                values[0] = alcMajorVersion;
+                return 1;
+            case ALC_MINOR_VERSION:
+                values[0] = alcMinorVersion;
+                return 1;
+
             case ALC_CAPTURE_SAMPLES:
                 almtx_lock(&device->BackendLock);
                 values[0] = V0(device->Backend,availableSamples)();
@@ -3185,26 +3219,6 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
     /* render device */
     switch(param)
     {
-        case ALC_MAJOR_VERSION:
-            values[0] = alcMajorVersion;
-            return 1;
-
-        case ALC_MINOR_VERSION:
-            values[0] = alcMinorVersion;
-            return 1;
-
-        case ALC_EFX_MAJOR_VERSION:
-            values[0] = alcEFXMajorVersion;
-            return 1;
-
-        case ALC_EFX_MINOR_VERSION:
-            values[0] = alcEFXMinorVersion;
-            return 1;
-
-        case ALC_MAX_AMBISONIC_ORDER_SOFT:
-            values[0] = MAX_AMBI_ORDER;
-            return 1;
-
         case ALC_ATTRIBUTES_SIZE:
             values[0] = NumAttrsForDevice(device);
             return 1;
@@ -3218,9 +3232,17 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
 
             i = 0;
             almtx_lock(&device->BackendLock);
+            values[i++] = ALC_MAJOR_VERSION;
+            values[i++] = alcMajorVersion;
+            values[i++] = ALC_MINOR_VERSION;
+            values[i++] = alcMinorVersion;
+            values[i++] = ALC_EFX_MAJOR_VERSION;
+            values[i++] = alcEFXMajorVersion;
+            values[i++] = ALC_EFX_MINOR_VERSION;
+            values[i++] = alcEFXMinorVersion;
+
             values[i++] = ALC_FREQUENCY;
             values[i++] = device->Frequency;
-
             if(device->Type != Loopback)
             {
                 values[i++] = ALC_REFRESH;
@@ -3274,6 +3296,22 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
 
             values[i++] = 0;
             return i;
+
+        case ALC_MAJOR_VERSION:
+            values[0] = alcMajorVersion;
+            return 1;
+
+        case ALC_MINOR_VERSION:
+            values[0] = alcMinorVersion;
+            return 1;
+
+        case ALC_EFX_MAJOR_VERSION:
+            values[0] = alcEFXMajorVersion;
+            return 1;
+
+        case ALC_EFX_MINOR_VERSION:
+            values[0] = alcEFXMinorVersion;
+            return 1;
 
         case ALC_FREQUENCY:
             values[0] = device->Frequency;
@@ -3378,6 +3416,10 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
 
         case ALC_OUTPUT_LIMITER_SOFT:
             values[0] = device->Limiter ? ALC_TRUE : ALC_FALSE;
+            return 1;
+
+        case ALC_MAX_AMBISONIC_ORDER_SOFT:
+            values[0] = MAX_AMBI_ORDER;
             return 1;
 
         default:

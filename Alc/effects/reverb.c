@@ -129,13 +129,14 @@ typedef struct ALreverbState {
         /* The vibrato time is tracked with an index over a modulus-wrapped
          * range (in samples).
          */
-        ALuint    Index;
-        ALuint    Range;
+        ALsizei Index;
+        ALsizei Range;
+        ALfloat Scale;
 
         /* The depth of frequency change (also in samples) and its filter. */
-        ALfloat   Depth;
-        ALfloat   Coeff;
-        ALfloat   Filter;
+        ALfloat Depth;
+        ALfloat Coeff;
+        ALfloat Filter;
     } Mod; /* EAX only */
 
     struct {
@@ -242,6 +243,7 @@ static void ALreverbState_Construct(ALreverbState *state)
 
     state->Mod.Index = 0;
     state->Mod.Range = 1;
+    state->Mod.Scale = 0.0f;
     state->Mod.Depth = 0.0f;
     state->Mod.Coeff = 0.0f;
     state->Mod.Filter = 0.0f;
@@ -1044,7 +1046,7 @@ static void CalcT60DampingCoeffs(const ALfloat length, const ALfloat lfDecayTime
 static ALvoid UpdateModulator(const ALfloat modTime, const ALfloat modDepth,
                               const ALuint frequency, ALreverbState *State)
 {
-    ALuint range;
+    ALsizei range;
 
     /* Modulation is calculated in two parts.
      *
@@ -1055,9 +1057,10 @@ static ALvoid UpdateModulator(const ALfloat modTime, const ALfloat modDepth,
      * range to keep the sinus consistent.
      */
     range = maxi(fastf2i(modTime*frequency), 1);
-    State->Mod.Index = (ALuint)(State->Mod.Index * (ALuint64)range /
-                                State->Mod.Range);
+    State->Mod.Index = (ALsizei)(State->Mod.Index * (ALint64)range /
+                                 State->Mod.Range) % range;
     State->Mod.Range = range;
+    State->Mod.Scale = F_TAU / range;
 
     /* The modulation depth effects the scale of the sinus, which changes how
      * much extra delay is added to the delay line. This delay changing over
@@ -1448,17 +1451,17 @@ static inline ALvoid DelayLineIn4Rev(DelayLineI *Delay, ALsizei offset, const AL
 
 static void CalcModulationDelays(ALreverbState *State, ALint *restrict delays, const ALsizei todo)
 {
-    ALfloat sinus, range;
+    ALfloat sinus, depth;
     ALsizei index, i;
 
     index = State->Mod.Index;
-    range = State->Mod.Filter;
+    depth = State->Mod.Filter;
     for(i = 0;i < todo;i++)
     {
         /* Calculate the sinus rhythm (dependent on modulation time and the
          * sampling rate).
          */
-        sinus = sinf(F_TAU * index / State->Mod.Range);
+        sinus = sinf(index * State->Mod.Scale);
 
         /* Step the modulation index forward, keeping it bound to its range. */
         index = (index+1) % State->Mod.Range;
@@ -1467,13 +1470,13 @@ static void CalcModulationDelays(ALreverbState *State, ALint *restrict delays, c
          * from, so it must be filtered to reduce the distortion caused by even
          * small parameter changes.
          */
-        range = lerp(range, State->Mod.Depth, State->Mod.Coeff);
+        depth = lerp(depth, State->Mod.Depth, State->Mod.Coeff);
 
         /* Calculate the read offset. */
-        delays[i] = lroundf(range*sinus);
+        delays[i] = lroundf(depth*sinus);
     }
     State->Mod.Index = index;
-    State->Mod.Filter = range;
+    State->Mod.Filter = depth;
 }
 
 /* Applies a scattering matrix to the 4-line (vector) input.  This is used

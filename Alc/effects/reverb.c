@@ -33,6 +33,16 @@
 #include "alError.h"
 #include "mixer_defs.h"
 
+/* This is a user config option for modifying the overall output of the reverb
+ * effect.
+ */
+ALfloat ReverbBoost = 1.0f;
+
+/* Specifies whether to use a standard reverb effect in place of EAX reverb (no
+ * high-pass, modulation, or echo).
+ */
+ALboolean EmulateEAXReverb = AL_FALSE;
+
 /* This is the maximum number of samples processed for each inner loop
  * iteration. */
 #define MAX_UPDATE_SAMPLES  256
@@ -57,6 +67,184 @@ static void init_mixfunc(void)
 {
     MixRowSamples = SelectRowMixer();
 }
+
+/* The B-Format to A-Format conversion matrix. The arrangement of rows is
+ * deliberately chosen to align the resulting lines to their spatial opposites
+ * (0:above front left <-> 3:above back right, 1:below front right <-> 2:below
+ * back left). It's not quite opposite, since the A-Format results in a
+ * tetrahedron, but it's close enough. Should the model be extended to 8-lines
+ * in the future, true opposites can be used.
+ */
+static const aluMatrixf B2A = {{
+    { 0.288675134595f,  0.288675134595f,  0.288675134595f,  0.288675134595f },
+    { 0.288675134595f, -0.288675134595f, -0.288675134595f,  0.288675134595f },
+    { 0.288675134595f,  0.288675134595f, -0.288675134595f, -0.288675134595f },
+    { 0.288675134595f, -0.288675134595f,  0.288675134595f, -0.288675134595f }
+}};
+
+/* Converts A-Format to B-Format. */
+static const aluMatrixf A2B = {{
+    { 0.866025403785f,  0.866025403785f,  0.866025403785f,  0.866025403785f },
+    { 0.866025403785f, -0.866025403785f,  0.866025403785f, -0.866025403785f },
+    { 0.866025403785f, -0.866025403785f, -0.866025403785f,  0.866025403785f },
+    { 0.866025403785f,  0.866025403785f, -0.866025403785f, -0.866025403785f }
+}};
+
+static const ALfloat FadeStep = 1.0f / FADE_SAMPLES;
+
+/* The all-pass and delay lines have a variable length dependent on the
+ * effect's density parameter.  The resulting density multiplier is:
+ *
+ *     multiplier = 1 + (density * LINE_MULTIPLIER)
+ *
+ * Thus the line multiplier below will result in a maximum density multiplier
+ * of 10.
+ */
+static const ALfloat LINE_MULTIPLIER = 9.0f;
+
+/* All delay line lengths are specified in seconds.
+ *
+ * To approximate early reflections, we break them up into primary (those
+ * arriving from the same direction as the source) and secondary (those
+ * arriving from the opposite direction).
+ *
+ * The early taps decorrelate the 4-channel signal to approximate an average
+ * room response for the primary reflections after the initial early delay.
+ *
+ * Given an average room dimension (d_a) and the speed of sound (c) we can
+ * calculate the average reflection delay (r_a) regardless of listener and
+ * source positions as:
+ *
+ *     r_a = d_a / c
+ *     c   = 343.3
+ *
+ * This can extended to finding the average difference (r_d) between the
+ * maximum (r_1) and minimum (r_0) reflection delays:
+ *
+ *     r_0 = 2 / 3 r_a
+ *         = r_a - r_d / 2
+ *         = r_d
+ *     r_1 = 4 / 3 r_a
+ *         = r_a + r_d / 2
+ *         = 2 r_d
+ *     r_d = 2 / 3 r_a
+ *         = r_1 - r_0
+ *
+ * As can be determined by integrating the 1D model with a source (s) and
+ * listener (l) positioned across the dimension of length (d_a):
+ *
+ *     r_d = int_(l=0)^d_a (int_(s=0)^d_a |2 d_a - 2 (l + s)| ds) dl / c
+ *
+ * The initial taps (T_(i=0)^N) are then specified by taking a power series
+ * that ranges between r_0 and half of r_1 less r_0:
+ *
+ *     R_i = 2^(i / (2 N - 1)) r_d
+ *         = r_0 + (2^(i / (2 N - 1)) - 1) r_d
+ *         = r_0 + T_i
+ *     T_i = R_i - r_0
+ *         = (2^(i / (2 N - 1)) - 1) r_d
+ *
+ * Assuming an average of 5m (up to 50m with the density multiplier), we get
+ * the following taps:
+ */
+static const ALfloat EARLY_TAP_LENGTHS[4] =
+{
+    0.000000e+0f, 1.010676e-3f, 2.126553e-3f, 3.358580e-3f
+};
+
+/* The early all-pass filter lengths are based on the early tap lengths:
+ *
+ *     A_i = R_i / a
+ *
+ * Where a is the approximate maximum all-pass cycle limit (20).
+ */
+static const ALfloat EARLY_ALLPASS_LENGTHS[4] =
+{
+    4.854840e-4f, 5.360178e-4f, 5.918117e-4f, 6.534130e-4f
+};
+
+/* The early delay lines are used to transform the primary reflections into
+ * the secondary reflections.  The A-format is arranged in such a way that
+ * the channels/lines are spatially opposite:
+ *
+ *     C_i is opposite C_(N-i-1)
+ *
+ * The delays of the two opposing reflections (R_i and O_i) from a source
+ * anywhere along a particular dimension always sum to twice its full delay:
+ *
+ *     2 r_a = R_i + O_i
+ *
+ * With that in mind we can determine the delay between the two reflections
+ * and thus specify our early line lengths (L_(i=0)^N) using:
+ *
+ *     O_i = 2 r_a - R_(N-i-1)
+ *     L_i = O_i - R_(N-i-1)
+ *         = 2 (r_a - R_(N-i-1))
+ *         = 2 (r_a - T_(N-i-1) - r_0)
+ *         = 2 r_a (1 - (2 / 3) 2^((N - i - 1) / (2 N - 1)))
+ *
+ * Using an average dimension of 5m, we get:
+ */
+static const ALfloat EARLY_LINE_LENGTHS[4] =
+{
+    2.992520e-3f, 5.456575e-3f, 7.688329e-3f, 9.709681e-3f
+};
+
+/* The late all-pass filter lengths are based on the late line lengths:
+ *
+ *     A_i = (5 / 3) L_i / r_1
+ */
+static const ALfloat LATE_ALLPASS_LENGTHS[4] =
+{
+    8.091400e-4f, 1.019453e-3f, 1.407968e-3f, 1.618280e-3f
+};
+
+/* The late lines are used to approximate the decaying cycle of recursive
+ * late reflections.
+ *
+ * Splitting the lines in half, we start with the shortest reflection paths
+ * (L_(i=0)^(N/2)):
+ *
+ *     L_i = 2^(i / (N - 1)) r_d
+ *
+ * Then for the opposite (longest) reflection paths (L_(i=N/2)^N):
+ *
+ *     L_i = 2 r_a - L_(i-N/2)
+ *         = 2 r_a - 2^((i - N / 2) / (N - 1)) r_d
+ *
+ * For our 5m average room, we get:
+ */
+static const ALfloat LATE_LINE_LENGTHS[4] =
+{
+    9.709681e-3f, 1.223343e-2f, 1.689561e-2f, 1.941936e-2f
+};
+
+/* This coefficient is used to define the sinus depth according to the
+ * modulation depth property. This value must be below half the shortest late
+ * line length (0.0097/2 = ~0.0048), otherwise with certain parameters (high
+ * mod time, low density) the downswing can sample before the input.
+ */
+static const ALfloat MODULATION_DEPTH_COEFF = 1.0f / 4096.0f;
+
+/* A filter is used to avoid the terrible distortion caused by changing
+ * modulation time and/or depth.  To be consistent across different sample
+ * rates, the coefficient must be raised to a constant divided by the sample
+ * rate:  coeff^(constant / rate).
+ */
+static const ALfloat MODULATION_FILTER_COEFF = 0.048f;
+static const ALfloat MODULATION_FILTER_CONST = 100000.0f;
+
+
+/* Prior to VS2013, MSVC lacks the round() family of functions. */
+#if defined(_MSC_VER) && _MSC_VER < 1800
+static inline long lroundf(float val)
+{
+    if(val < 0.0)
+        return fastf2i(ceilf(val-0.5f));
+    return fastf2i(floorf(val+0.5f));
+}
+#endif
+
 
 typedef struct DelayLineI {
     /* The delay lines use interleaved samples, with the lengths being powers
@@ -297,194 +485,6 @@ static ALvoid ALreverbState_Destruct(ALreverbState *State)
 
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,State));
 }
-
-/* The B-Format to A-Format conversion matrix. The arrangement of rows is
- * deliberately chosen to align the resulting lines to their spatial opposites
- * (0:above front left <-> 3:above back right, 1:below front right <-> 2:below
- * back left). It's not quite opposite, since the A-Format results in a
- * tetrahedron, but it's close enough. Should the model be extended to 8-lines
- * in the future, true opposites can be used.
- */
-static const aluMatrixf B2A = {{
-    { 0.288675134595f,  0.288675134595f,  0.288675134595f,  0.288675134595f },
-    { 0.288675134595f, -0.288675134595f, -0.288675134595f,  0.288675134595f },
-    { 0.288675134595f,  0.288675134595f, -0.288675134595f, -0.288675134595f },
-    { 0.288675134595f, -0.288675134595f,  0.288675134595f, -0.288675134595f }
-}};
-
-/* Converts A-Format to B-Format. */
-static const aluMatrixf A2B = {{
-    { 0.866025403785f,  0.866025403785f,  0.866025403785f,  0.866025403785f },
-    { 0.866025403785f, -0.866025403785f,  0.866025403785f, -0.866025403785f },
-    { 0.866025403785f, -0.866025403785f, -0.866025403785f,  0.866025403785f },
-    { 0.866025403785f,  0.866025403785f, -0.866025403785f, -0.866025403785f }
-}};
-
-static const ALfloat FadeStep = 1.0f / FADE_SAMPLES;
-
-/* This is a user config option for modifying the overall output of the reverb
- * effect.
- */
-ALfloat ReverbBoost = 1.0f;
-
-/* Specifies whether to use a standard reverb effect in place of EAX reverb (no
- * high-pass, modulation, or echo).
- */
-ALboolean EmulateEAXReverb = AL_FALSE;
-
-/* The all-pass and delay lines have a variable length dependent on the
- * effect's density parameter.  The resulting density multiplier is:
- *
- *     multiplier = 1 + (density * LINE_MULTIPLIER)
- *
- * Thus the line multiplier below will result in a maximum density multiplier
- * of 10.
- */
-static const ALfloat LINE_MULTIPLIER = 9.0f;
-
-/* All delay line lengths are specified in seconds.
- *
- * To approximate early reflections, we break them up into primary (those
- * arriving from the same direction as the source) and secondary (those
- * arriving from the opposite direction).
- *
- * The early taps decorrelate the 4-channel signal to approximate an average
- * room response for the primary reflections after the initial early delay.
- *
- * Given an average room dimension (d_a) and the speed of sound (c) we can
- * calculate the average reflection delay (r_a) regardless of listener and
- * source positions as:
- *
- *     r_a = d_a / c
- *     c   = 343.3
- *
- * This can extended to finding the average difference (r_d) between the
- * maximum (r_1) and minimum (r_0) reflection delays:
- *
- *     r_0 = 2 / 3 r_a
- *         = r_a - r_d / 2
- *         = r_d
- *     r_1 = 4 / 3 r_a
- *         = r_a + r_d / 2
- *         = 2 r_d
- *     r_d = 2 / 3 r_a
- *         = r_1 - r_0
- *
- * As can be determined by integrating the 1D model with a source (s) and
- * listener (l) positioned across the dimension of length (d_a):
- *
- *     r_d = int_(l=0)^d_a (int_(s=0)^d_a |2 d_a - 2 (l + s)| ds) dl / c
- *
- * The initial taps (T_(i=0)^N) are then specified by taking a power series
- * that ranges between r_0 and half of r_1 less r_0:
- *
- *     R_i = 2^(i / (2 N - 1)) r_d
- *         = r_0 + (2^(i / (2 N - 1)) - 1) r_d
- *         = r_0 + T_i
- *     T_i = R_i - r_0
- *         = (2^(i / (2 N - 1)) - 1) r_d
- *
- * Assuming an average of 5m (up to 50m with the density multiplier), we get
- * the following taps:
- */
-static const ALfloat EARLY_TAP_LENGTHS[4] =
-{
-    0.000000e+0f, 1.010676e-3f, 2.126553e-3f, 3.358580e-3f
-};
-
-/* The early all-pass filter lengths are based on the early tap lengths:
- *
- *     A_i = R_i / a
- *
- * Where a is the approximate maximum all-pass cycle limit (20).
- */
-static const ALfloat EARLY_ALLPASS_LENGTHS[4] =
-{
-    4.854840e-4f, 5.360178e-4f, 5.918117e-4f, 6.534130e-4f
-};
-
-/* The early delay lines are used to transform the primary reflections into
- * the secondary reflections.  The A-format is arranged in such a way that
- * the channels/lines are spatially opposite:
- *
- *     C_i is opposite C_(N-i-1)
- *
- * The delays of the two opposing reflections (R_i and O_i) from a source
- * anywhere along a particular dimension always sum to twice its full delay:
- *
- *     2 r_a = R_i + O_i
- *
- * With that in mind we can determine the delay between the two reflections
- * and thus specify our early line lengths (L_(i=0)^N) using:
- *
- *     O_i = 2 r_a - R_(N-i-1)
- *     L_i = O_i - R_(N-i-1)
- *         = 2 (r_a - R_(N-i-1))
- *         = 2 (r_a - T_(N-i-1) - r_0)
- *         = 2 r_a (1 - (2 / 3) 2^((N - i - 1) / (2 N - 1)))
- *
- * Using an average dimension of 5m, we get:
- */
-static const ALfloat EARLY_LINE_LENGTHS[4] =
-{
-    2.992520e-3f, 5.456575e-3f, 7.688329e-3f, 9.709681e-3f
-};
-
-/* The late all-pass filter lengths are based on the late line lengths:
- *
- *     A_i = (5 / 3) L_i / r_1
- */
-static const ALfloat LATE_ALLPASS_LENGTHS[4] =
-{
-    8.091400e-4f, 1.019453e-3f, 1.407968e-3f, 1.618280e-3f
-};
-
-/* The late lines are used to approximate the decaying cycle of recursive
- * late reflections.
- *
- * Splitting the lines in half, we start with the shortest reflection paths
- * (L_(i=0)^(N/2)):
- *
- *     L_i = 2^(i / (N - 1)) r_d
- *
- * Then for the opposite (longest) reflection paths (L_(i=N/2)^N):
- *
- *     L_i = 2 r_a - L_(i-N/2)
- *         = 2 r_a - 2^((i - N / 2) / (N - 1)) r_d
- *
- * For our 5m average room, we get:
- */
-static const ALfloat LATE_LINE_LENGTHS[4] =
-{
-    9.709681e-3f, 1.223343e-2f, 1.689561e-2f, 1.941936e-2f
-};
-
-/* This coefficient is used to define the sinus depth according to the
- * modulation depth property. This value must be below half the shortest late
- * line length (0.0097/2 = ~0.0048), otherwise with certain parameters (high
- * mod time, low density) the downswing can sample before the input.
- */
-static const ALfloat MODULATION_DEPTH_COEFF = 1.0f / 4096.0f;
-
-/* A filter is used to avoid the terrible distortion caused by changing
- * modulation time and/or depth.  To be consistent across different sample
- * rates, the coefficient must be raised to a constant divided by the sample
- * rate:  coeff^(constant / rate).
- */
-static const ALfloat MODULATION_FILTER_COEFF = 0.048f;
-static const ALfloat MODULATION_FILTER_CONST = 100000.0f;
-
-
-/* Prior to VS2013, MSVC lacks the round() family of functions. */
-#if defined(_MSC_VER) && _MSC_VER < 1800
-static inline long lroundf(float val)
-{
-    if(val < 0.0)
-        return fastf2i(ceilf(val-0.5f));
-    return fastf2i(floorf(val+0.5f));
-}
-#endif
-
 
 /**************************************
  *  Device Update                     *

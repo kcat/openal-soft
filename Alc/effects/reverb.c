@@ -219,10 +219,10 @@ static const ALfloat LATE_LINE_LENGTHS[4] =
     9.709681e-3f, 1.223343e-2f, 1.689561e-2f, 1.941936e-2f
 };
 
-/* This coefficient is used to define the sinus depth according to the
- * modulation depth property. This value must be below half the shortest late
- * line length (0.0097/2 = ~0.0048), otherwise with certain parameters (high
- * mod time, low density) the downswing can sample before the input.
+/* This coefficient is used to define the delay scale from the sinus, according
+ * to the modulation depth property. This value must be below half the shortest
+ * late line length (0.0097/2 = ~0.0048), otherwise with certain parameters
+ * (high mod time, low density) the downswing can sample before the input.
  */
 static const ALfloat MODULATION_DEPTH_COEFF = 1.0f / 4096.0f;
 
@@ -540,15 +540,14 @@ static ALboolean AllocLines(const ALuint frequency, ALreverbState *State)
     /* Multiplier for the maximum density value, i.e. density=1, which is
      * actually the least density...
      */
-    multiplier = 1.0f + LINE_MULTIPLIER;
+    multiplier = 1.0f + AL_EAXREVERB_MAX_DENSITY*LINE_MULTIPLIER;
 
     /* The main delay length includes the maximum early reflection delay, the
      * largest early tap width, the maximum late reverb delay, and the
      * largest late tap width.  Finally, it must also be extended by the
      * update size (MAX_UPDATE_SAMPLES) for block processing.
      */
-    length = AL_EAXREVERB_MAX_REFLECTIONS_DELAY +
-             EARLY_TAP_LENGTHS[3]*multiplier +
+    length = AL_EAXREVERB_MAX_REFLECTIONS_DELAY + EARLY_TAP_LENGTHS[3]*multiplier +
              AL_EAXREVERB_MAX_LATE_REVERB_DELAY +
              (LATE_LINE_LENGTHS[3] - LATE_LINE_LENGTHS[0])*0.25f*multiplier;
     totalSamples += CalcLineLength(length, totalSamples, frequency, MAX_UPDATE_SAMPLES,

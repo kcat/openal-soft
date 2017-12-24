@@ -220,11 +220,11 @@ static const ALfloat LATE_LINE_LENGTHS[4] =
 };
 
 /* This coefficient is used to define the delay scale from the sinus, according
- * to the modulation depth property. This value must be below half the shortest
- * late line length (0.0097/2 = ~0.0048), otherwise with certain parameters
- * (high mod time, low density) the downswing can sample before the input.
+ * to the modulation depth property. This value must be below the shortest late
+ * line length (0.0097), otherwise with certain parameters (high mod time, low
+ * density) the downswing can sample before the input.
  */
-static const ALfloat MODULATION_DEPTH_COEFF = 1.0f / 4096.0f;
+static const ALfloat MODULATION_DEPTH_COEFF = 0.0032f;
 
 /* A filter is used to avoid the terrible distortion caused by changing
  * modulation time and/or depth.  To be consistent across different sample
@@ -1055,22 +1055,21 @@ static ALvoid UpdateModulator(const ALfloat modTime, const ALfloat modDepth,
      * (1 sample) and when the timing changes, the index is rescaled to the new
      * range to keep the sinus consistent.
      */
-    range = maxi(fastf2i(modTime*frequency), 1);
+    range = fastf2i(modTime*frequency + 0.5f);
     State->Mod.Index = (ALsizei)(State->Mod.Index * (ALint64)range /
                                  State->Mod.Range) % range;
     State->Mod.Range = range;
     State->Mod.Scale = F_TAU / range;
 
-    /* The modulation depth effects the scale of the sinus, which changes how
-     * much extra delay is added to the delay line. This delay changing over
-     * time changes the pitch, creating the modulation effect. The scale needs
-     * to be multiplied by the modulation time so that a given depth produces a
-     * consistent shift in frequency over all ranges of time. Since the depth
-     * is applied to a sinus value, it needs to be halved for the sinus swing
-     * in time (half of it is spent decreasing the frequency, half is spent
-     * increasing it).
+    /* The modulation depth effects the scale of the sinus, which varies the
+     * delay for the tapped output. This delay changing over time changes the
+     * pitch, creating the modulation effect. The scale needs to be multiplied
+     * by the modulation time (itself scaled by the max modulation time) so
+     * that a given depth produces a consistent shift in frequency over all
+     * ranges of time.
      */
-    State->Mod.Depth = modDepth * MODULATION_DEPTH_COEFF * modTime / 2.0f *
+    State->Mod.Depth = modDepth * MODULATION_DEPTH_COEFF *
+                       (modTime / AL_EAXREVERB_MAX_MODULATION_TIME) *
                        frequency;
 }
 
@@ -1706,9 +1705,15 @@ static ALvoid LateReverb_##T(ALreverbState *State, const ALsizei todo,        \
                                                                               \
         delay = offset - moddelay[i];                                         \
         for(j = 0;j < 4;j++)                                                  \
-            f[j] += DELAY_OUT_##T(&State->Late.Delay,                         \
+            out[j][i] = f[j] + DELAY_OUT_##T(&State->Late.Delay,              \
                 delay-State->Late.Offset[j][0],                               \
                 delay-State->Late.Offset[j][1], j, fade                       \
+            );                                                                \
+                                                                              \
+        for(j = 0;j < 4;j++)                                                  \
+            f[j] += DELAY_OUT_##T(&State->Late.Delay,                         \
+                offset-State->Late.Offset[j][0],                              \
+                offset-State->Late.Offset[j][1], j, fade                      \
             );                                                                \
                                                                               \
         for(j = 0;j < 4;j++)                                                  \
@@ -1716,9 +1721,6 @@ static ALvoid LateReverb_##T(ALreverbState *State, const ALsizei todo,        \
                                                                               \
         VectorAllpass_##T(f, offset, apFeedCoeff, mixX, mixY, fade,           \
                           &State->Late.VecAp);                                \
-                                                                              \
-        for(j = 0;j < 4;j++)                                                  \
-            out[j][i] = f[j];                                                 \
                                                                               \
         VectorReverse(f);                                                     \
                                                                               \

@@ -1405,8 +1405,7 @@ static inline ALfloat FadedDelayLineOut(const DelayLineI *Delay, const ALsizei o
 {
     return lerp(Delay->Line[off0&Delay->Mask][c], Delay->Line[off1&Delay->Mask][c], mu);
 }
-#define DELAY_OUT_Faded(d, o0, o1, c, mu) FadedDelayLineOut(d, o0, o1, c, mu)
-#define DELAY_OUT_Unfaded(d, o0, o1, c, mu) DelayLineOut(d, o0, c)
+#define UnfadedDelayLineOut(d, o0, o1, c, mu) DelayLineOut(d, o0, c)
 
 static inline ALvoid DelayLineIn(DelayLineI *Delay, const ALsizei offset, const ALsizei c, const ALfloat in)
 {
@@ -1529,8 +1528,8 @@ static void VectorAllpass_##T(ALfloat *restrict vec, const ALsizei offset,    \
     for(i = 0;i < 4;i++)                                                      \
     {                                                                         \
         input = vec[i];                                                       \
-        vec[i] = DELAY_OUT_##T(&Vap->Delay, offset-Vap->Offset[i][0],         \
-                               offset-Vap->Offset[i][1], i, mu) -             \
+        vec[i] = T##DelayLineOut(&Vap->Delay, offset-Vap->Offset[i][0],       \
+                                 offset-Vap->Offset[i][1], i, mu) -           \
                  feedCoeff*input;                                             \
         f[i] = input + feedCoeff*vec[i];                                      \
     }                                                                         \
@@ -1588,7 +1587,7 @@ static ALvoid EarlyReflection_##T(ALreverbState *State, const ALsizei todo,   \
     for(i = 0;i < todo;i++)                                                   \
     {                                                                         \
         for(j = 0;j < 4;j++)                                                  \
-            f[j] = DELAY_OUT_##T(&State->Delay,                               \
+            f[j] = T##DelayLineOut(&State->Delay,                             \
                 offset-State->EarlyDelayTap[j][0],                            \
                 offset-State->EarlyDelayTap[j][1], j, fade                    \
             ) * State->EarlyDelayCoeff[j];                                    \
@@ -1599,7 +1598,7 @@ static ALvoid EarlyReflection_##T(ALreverbState *State, const ALsizei todo,   \
         DelayLineIn4Rev(&State->Early.Delay, offset, f);                      \
                                                                               \
         for(j = 0;j < 4;j++)                                                  \
-            f[j] += DELAY_OUT_##T(&State->Early.Delay,                        \
+            f[j] += T##DelayLineOut(&State->Early.Delay,                      \
                 offset-State->Early.Offset[j][0],                             \
                 offset-State->Early.Offset[j][1], j, fade                     \
             ) * State->Early.Coeff[j];                                        \
@@ -1676,7 +1675,7 @@ static ALvoid LateReverb_Faded(ALreverbState *State, const ALsizei todo,
         ALfloat f[4];
 
         for(j = 0;j < 4;j++)
-            f[j] = DELAY_OUT_Faded(&State->Delay,
+            f[j] = FadedDelayLineOut(&State->Delay,
                 offset-State->LateDelayTap[j][0],
                 offset-State->LateDelayTap[j][1], j, fade
             ) * State->Late.DensityGain;
@@ -1695,7 +1694,7 @@ static ALvoid LateReverb_Faded(ALreverbState *State, const ALsizei todo,
         }
 
         for(j = 0;j < 4;j++)
-            f[j] += DELAY_OUT_Faded(&State->Late.Delay,
+            f[j] += FadedDelayLineOut(&State->Late.Delay,
                 offset - (State->Late.Offset[j][0]>>FRACTIONBITS),
                 offset - (State->Late.Offset[j][1]>>FRACTIONBITS), j, fade
             );

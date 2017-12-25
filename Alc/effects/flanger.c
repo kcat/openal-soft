@@ -119,7 +119,6 @@ static ALvoid ALflangerState_update(ALflangerState *state, const ALCcontext *con
     const ALCdevice *device = context->Device;
     ALfloat frequency = (ALfloat)device->Frequency;
     ALfloat coeffs[MAX_AMBI_COEFFS];
-    ALfloat delay;
     ALfloat rate;
     ALint phase;
 
@@ -134,13 +133,8 @@ static ALvoid ALflangerState_update(ALflangerState *state, const ALCcontext *con
     }
 
     /* The LFO depth is scaled to be relative to the sample delay. */
-    delay = props->Flanger.Delay*frequency * FRACTIONONE;
-    state->depth = props->Flanger.Depth * delay;
-
-    /* Offset the delay so that the center point remains the same with the LFO
-     * ranging from 0...2 instead of -1...+1.
-     */
-    state->delay = fastf2i(delay-state->depth + 0.5f);
+    state->delay = fastf2i(props->Flanger.Delay*frequency*FRACTIONONE + 0.5f);
+    state->depth = props->Flanger.Depth * state->delay;
 
     state->feedback = props->Flanger.Feedback;
 
@@ -192,7 +186,7 @@ static void GetTriangleDelays(ALint *restrict delays, ALsizei offset, const ALsi
     ALsizei i;
     for(i = 0;i < todo;i++)
     {
-        delays[i] = fastf2i((2.0f - fabsf(2.0f - lfo_scale*offset)) * depth) + delay;
+        delays[i] = fastf2i((1.0f - fabsf(2.0f - lfo_scale*offset)) * depth) + delay;
         offset = (offset+1)%lfo_range;
     }
 }
@@ -204,7 +198,7 @@ static void GetSinusoidDelays(ALint *restrict delays, ALsizei offset, const ALsi
     ALsizei i;
     for(i = 0;i < todo;i++)
     {
-        delays[i] = fastf2i((sinf(lfo_scale*offset)+1.0f) * depth) + delay;
+        delays[i] = fastf2i(sinf(lfo_scale*offset) * depth) + delay;
         offset = (offset+1)%lfo_range;
     }
 }
@@ -213,8 +207,7 @@ static ALvoid ALflangerState_process(ALflangerState *state, ALsizei SamplesToDo,
 {
     const ALsizei bufmask = state->BufferLength-1;
     const ALfloat feedback = state->feedback;
-    const ALsizei avgdelay = (state->delay+fastf2i(state->depth) + (FRACTIONONE>>1)) >>
-                             FRACTIONBITS;
+    const ALsizei avgdelay = (state->delay + (FRACTIONONE>>1)) >> FRACTIONBITS;
     ALfloat *restrict delaybuf = state->SampleBuffer;
     ALsizei offset = state->offset;
     ALsizei i, c;
@@ -253,16 +246,16 @@ static ALvoid ALflangerState_process(ALflangerState *state, ALsizei SamplesToDo,
             delaybuf[offset&bufmask] = SamplesIn[0][base+i];
 
             // Tap for the left output.
-            delay = moddelays[0][i] >> FRACTIONBITS;
+            delay = offset - (moddelays[0][i]>>FRACTIONBITS);
             mu = (moddelays[0][i]&FRACTIONMASK) * (1.0f/FRACTIONONE);
-            temps[0][i] = delaybuf[(offset-delay) & bufmask]*(1.0f-mu) +
-                          delaybuf[(offset-(delay+1)) & bufmask]*mu;
+            temps[0][i] = delaybuf[(delay  ) & bufmask]*(1.0f-mu) +
+                          delaybuf[(delay-1) & bufmask]*(     mu);
 
             // Tap for the right output.
-            delay = moddelays[1][i] >> FRACTIONBITS;
+            delay = offset - (moddelays[1][i]>>FRACTIONBITS);
             mu = (moddelays[1][i]&FRACTIONMASK) * (1.0f/FRACTIONONE);
-            temps[1][i] = delaybuf[(offset-delay) & bufmask]*(1.0f-mu) +
-                          delaybuf[(offset-(delay+1)) & bufmask]*mu;
+            temps[1][i] = delaybuf[(delay  ) & bufmask]*(1.0f-mu) +
+                          delaybuf[(delay-1) & bufmask]*(     mu);
 
             // Accumulate feedback from the average delay.
             delaybuf[offset&bufmask] += delaybuf[(offset-avgdelay) & bufmask] * feedback;

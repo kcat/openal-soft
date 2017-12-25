@@ -353,7 +353,7 @@ typedef struct ALreverbState {
     ALsizei Offset;
 
     /* Temporary storage used when processing. */
-    alignas(16) ALint ModUlationDelays[MAX_UPDATE_SAMPLES][2];
+    alignas(16) ALsizei ModulationDelays[4][MAX_UPDATE_SAMPLES][2];
     alignas(16) ALfloat AFormatSamples[4][MAX_UPDATE_SAMPLES];
     alignas(16) ALfloat ReverbSamples[4][MAX_UPDATE_SAMPLES];
     alignas(16) ALfloat EarlySamples[4][MAX_UPDATE_SAMPLES];
@@ -1051,7 +1051,7 @@ static ALvoid UpdateModulator(const ALfloat modTime, const ALfloat modDepth,
      */
     State->Mod.Depth[1] = modDepth * MODULATION_DEPTH_COEFF *
                           (modTime / AL_EAXREVERB_MAX_MODULATION_TIME) *
-                          frequency;
+                          frequency * FRACTIONONE;
 }
 
 /* Update the offsets for the main effect delay line. */
@@ -1162,7 +1162,7 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
         length = lerp(LATE_LINE_LENGTHS[i] * multiplier, echoTime, echoDepth);
 
         /* Calculate the delay offset for each delay line. */
-        State->Late.Offset[i][1] = fastf2i(length * frequency);
+        State->Late.Offset[i][1] = fastf2i(length*frequency*FRACTIONONE + 0.5f);
 
         /* Approximate the absorption that the vector all-pass would exhibit
          * given the current diffusion so we don't have to process a full T60
@@ -1429,28 +1429,31 @@ static inline ALvoid DelayLineIn4Rev(DelayLineI *Delay, ALsizei offset, const AL
         Delay->Line[offset][i] = in[3-i];
 }
 
-static void CalcModulationDelays(ALreverbState *State, ALint (*restrict delays)[2],
-                                 const ALsizei todo)
+static void CalcModulationDelays(ALreverbState *State,
+                                 ALsizei (*restrict delays)[MAX_UPDATE_SAMPLES][2],
+                                 const ALsizei (*restrict offsets)[2], const ALsizei todo)
 {
+    ALsizei phase_offset = State->Mod.Range >> 2;
+    ALsizei index, c, i;
     ALfloat sinus;
-    ALsizei index, i;
 
-    index = State->Mod.Index;
-    for(i = 0;i < todo;i++)
+    for(c = 0;c < 4;c++)
     {
-        /* Calculate the sinus rhythm (dependent on modulation time and the
-         * sampling rate).
-         */
-        sinus = sinf(index * State->Mod.Scale);
+        index = State->Mod.Index + phase_offset*c;
+        for(i = 0;i < todo;i++)
+        {
+            /* Calculate the sinus rhythm (dependent on modulation time and the
+             * sampling rate).
+             */
+            sinus = sinf(index * State->Mod.Scale) + 1.0f;
+            index = (index+1) % State->Mod.Range;
 
-        /* Step the modulation index forward, keeping it bound to its range. */
-        index = (index+1) % State->Mod.Range;
-
-        /* Calculate the read offset. */
-        delays[i][0] = lroundf(sinus * State->Mod.Depth[0]);
-        delays[i][1] = lroundf(sinus * State->Mod.Depth[1]);
+            /* Calculate the read offset. */
+            delays[c][i][0] = fastf2i(sinus*State->Mod.Depth[0]) + offsets[c][0];
+            delays[c][i][1] = fastf2i(sinus*State->Mod.Depth[1]) + offsets[c][1];
+        }
     }
-    State->Mod.Index = index;
+    State->Mod.Index = (State->Mod.Index+todo) % State->Mod.Range;
 }
 
 /* Applies a scattering matrix to the 4-line (vector) input.  This is used
@@ -1654,64 +1657,115 @@ static inline ALfloat LateT60Filter(const ALsizei index, const ALfloat in, ALrev
  * Two static specializations are used for transitional (cross-faded) delay
  * line processing and non-transitional processing.
  */
-#define DECL_TEMPLATE(T)                                                      \
-static ALvoid LateReverb_##T(ALreverbState *State, const ALsizei todo,        \
-                             ALfloat fade,                                    \
-                             ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])     \
-{                                                                             \
-    ALint (*restrict moddelay)[2] = State->ModUlationDelays;                  \
-    const ALfloat apFeedCoeff = State->ApFeedCoeff;                           \
-    const ALfloat mixX = State->MixX;                                         \
-    const ALfloat mixY = State->MixY;                                         \
-    ALsizei delay[2];                                                         \
-    ALsizei offset;                                                           \
-    ALsizei i, j;                                                             \
-    ALfloat f[4];                                                             \
-                                                                              \
-    CalcModulationDelays(State, moddelay, todo);                              \
-                                                                              \
-    offset = State->Offset;                                                   \
-    for(i = 0;i < todo;i++)                                                   \
-    {                                                                         \
-        for(j = 0;j < 4;j++)                                                  \
-            f[j] = DELAY_OUT_##T(&State->Delay,                               \
-                offset-State->LateDelayTap[j][0],                             \
-                offset-State->LateDelayTap[j][1], j, fade                     \
-            ) * State->Late.DensityGain;                                      \
-                                                                              \
-        delay[0] = offset - moddelay[i][0];                                   \
-        delay[1] = offset - moddelay[i][1];                                   \
-        for(j = 0;j < 4;j++)                                                  \
-            out[j][i] = f[j] + DELAY_OUT_##T(&State->Late.Delay,              \
-                delay[0]-State->Late.Offset[j][0],                            \
-                delay[1]-State->Late.Offset[j][1], j, fade                    \
-            );                                                                \
-                                                                              \
-        for(j = 0;j < 4;j++)                                                  \
-            f[j] += DELAY_OUT_##T(&State->Late.Delay,                         \
-                offset-State->Late.Offset[j][0],                              \
-                offset-State->Late.Offset[j][1], j, fade                      \
-            );                                                                \
-                                                                              \
-        for(j = 0;j < 4;j++)                                                  \
-            f[j] = LateT60Filter(j, f[j], State);                             \
-                                                                              \
-        VectorAllpass_##T(f, offset, apFeedCoeff, mixX, mixY, fade,           \
-                          &State->Late.VecAp);                                \
-                                                                              \
-        VectorReverse(f);                                                     \
-                                                                              \
-        VectorPartialScatter(f, mixX, mixY);                                  \
-                                                                              \
-        DelayLineIn4(&State->Late.Delay, offset, f);                          \
-                                                                              \
-        offset++;                                                             \
-        fade += FadeStep;                                                     \
-    }                                                                         \
+static ALvoid LateReverb_Faded(ALreverbState *State, const ALsizei todo,
+                             ALfloat fade,
+                             ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
+{
+    ALsizei (*restrict moddelay)[MAX_UPDATE_SAMPLES][2] = State->ModulationDelays;
+    const ALfloat apFeedCoeff = State->ApFeedCoeff;
+    const ALfloat mixX = State->MixX;
+    const ALfloat mixY = State->MixY;
+    ALsizei offset;
+    ALsizei i, j;
+
+    CalcModulationDelays(State, moddelay, State->Late.Offset, todo);
+
+    offset = State->Offset;
+    for(i = 0;i < todo;i++)
+    {
+        ALfloat f[4];
+
+        for(j = 0;j < 4;j++)
+            f[j] = DELAY_OUT_Faded(&State->Delay,
+                offset-State->LateDelayTap[j][0],
+                offset-State->LateDelayTap[j][1], j, fade
+            ) * State->Late.DensityGain;
+
+        for(j = 0;j < 4;j++)
+        {
+            ALsizei delay0 = offset - (moddelay[j][i][0]>>FRACTIONBITS);
+            ALfloat modmu0 = (moddelay[j][i][0]&FRACTIONBITS) * (1.0f/FRACTIONONE);
+            ALsizei delay1 = offset - (moddelay[j][i][1]>>FRACTIONBITS);
+            ALfloat modmu1 = (moddelay[j][i][1]&FRACTIONBITS) * (1.0f/FRACTIONONE);
+            ALfloat r = DelayLineOut(&State->Late.Delay, delay0  , j)*(1.0f-modmu0)*(1.0f-fade) +
+                        DelayLineOut(&State->Late.Delay, delay0-1, j)*(     modmu0)*(1.0f-fade) +
+                        DelayLineOut(&State->Late.Delay, delay1  , j)*(1.0f-modmu1)*(     fade) +
+                        DelayLineOut(&State->Late.Delay, delay1-1, j)*(     modmu1)*(     fade);
+            out[j][i] = f[j] + r;
+        }
+
+        for(j = 0;j < 4;j++)
+            f[j] += DELAY_OUT_Faded(&State->Late.Delay,
+                offset - (State->Late.Offset[j][0]>>FRACTIONBITS),
+                offset - (State->Late.Offset[j][1]>>FRACTIONBITS), j, fade
+            );
+
+        for(j = 0;j < 4;j++)
+            f[j] = LateT60Filter(j, f[j], State);
+
+        VectorAllpass_Faded(f, offset, apFeedCoeff, mixX, mixY, fade,
+                            &State->Late.VecAp);
+
+        VectorReverse(f);
+
+        VectorPartialScatter(f, mixX, mixY);
+
+        DelayLineIn4(&State->Late.Delay, offset, f);
+
+        offset++;
+        fade += FadeStep;
+    }
 }
-DECL_TEMPLATE(Unfaded)
-DECL_TEMPLATE(Faded)
-#undef DECL_TEMPLATE
+static ALvoid LateReverb_Unfaded(ALreverbState *State, const ALsizei todo,
+                                 ALfloat fade,
+                                 ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
+{
+    ALsizei (*restrict moddelay)[MAX_UPDATE_SAMPLES][2] = State->ModulationDelays;
+    const ALfloat apFeedCoeff = State->ApFeedCoeff;
+    const ALfloat mixX = State->MixX;
+    const ALfloat mixY = State->MixY;
+    ALsizei offset;
+    ALsizei i, j;
+
+    CalcModulationDelays(State, moddelay, State->Late.Offset, todo);
+
+    offset = State->Offset;
+    for(i = 0;i < todo;i++)
+    {
+        ALfloat f[4];
+
+        for(j = 0;j < 4;j++)
+            f[j] = DelayLineOut(&State->Delay, offset-State->LateDelayTap[j][0], j) *
+                   State->Late.DensityGain;
+
+        for(j = 0;j < 4;j++)
+        {
+            ALsizei delay = offset - (moddelay[j][i][0]>>FRACTIONBITS);
+            ALfloat modmu = (moddelay[j][i][0]&FRACTIONBITS) * (1.0f/FRACTIONONE);
+            ALfloat r = DelayLineOut(&State->Late.Delay,   delay, j)*(1.0-modmu) +
+                        DelayLineOut(&State->Late.Delay, delay-1, j)*(    modmu);
+            out[j][i] = f[j] + r;
+        }
+
+        for(j = 0;j < 4;j++)
+            f[j] += DelayLineOut(&State->Late.Delay,
+                offset - (State->Late.Offset[j][0]>>FRACTIONBITS), j);
+
+        for(j = 0;j < 4;j++)
+            f[j] = LateT60Filter(j, f[j], State);
+
+        VectorAllpass_Unfaded(f, offset, apFeedCoeff, mixX, mixY, fade,
+                              &State->Late.VecAp);
+
+        VectorReverse(f);
+
+        VectorPartialScatter(f, mixX, mixY);
+
+        DelayLineIn4(&State->Late.Delay, offset, f);
+
+        offset++;
+    }
+}
 
 typedef ALfloat (*ProcMethodType)(ALreverbState *State, const ALsizei todo, ALfloat fade,
     const ALfloat (*restrict input)[MAX_UPDATE_SAMPLES],

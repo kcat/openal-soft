@@ -1653,12 +1653,11 @@ static inline ALfloat LateT60Filter(const ALsizei index, const ALfloat in, ALrev
  * Finally, the lines are reversed (so they feed their opposite directions)
  * and scattered with the FDN matrix before re-feeding the delay lines.
  *
- * Two static specializations are used for transitional (cross-faded) delay
- * line processing and non-transitional processing.
+ * Two variations are made, one for for transitional (cross-faded) delay line
+ * processing and one for non-transitional processing.
  */
-static ALvoid LateReverb_Faded(ALreverbState *State, const ALsizei todo,
-                             ALfloat fade,
-                             ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
+static ALvoid LateReverb_Faded(ALreverbState *State, const ALsizei todo, ALfloat fade,
+                               ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
 {
     ALsizei (*restrict moddelay)[MAX_UPDATE_SAMPLES][2] = State->ModulationDelays;
     const ALfloat apFeedCoeff = State->ApFeedCoeff;
@@ -1715,8 +1714,7 @@ static ALvoid LateReverb_Faded(ALreverbState *State, const ALsizei todo,
         fade += FadeStep;
     }
 }
-static ALvoid LateReverb_Unfaded(ALreverbState *State, const ALsizei todo,
-                                 ALfloat fade,
+static ALvoid LateReverb_Unfaded(ALreverbState *State, const ALsizei todo, ALfloat fade,
                                  ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
 {
     ALsizei (*restrict moddelay)[MAX_UPDATE_SAMPLES][2] = State->ModulationDelays;

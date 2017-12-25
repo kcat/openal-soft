@@ -226,14 +226,6 @@ static const ALfloat LATE_LINE_LENGTHS[4] =
  */
 static const ALfloat MODULATION_DEPTH_COEFF = 0.0032f;
 
-/* A filter is used to avoid the terrible distortion caused by changing
- * modulation time and/or depth.  To be consistent across different sample
- * rates, the coefficient must be raised to a constant divided by the sample
- * rate:  coeff^(constant / rate).
- */
-static const ALfloat MODULATION_FILTER_COEFF = 0.048f;
-static const ALfloat MODULATION_FILTER_CONST = 100000.0f;
-
 
 /* Prior to VS2013, MSVC lacks the round() family of functions. */
 #if defined(_MSC_VER) && _MSC_VER < 1800
@@ -322,9 +314,7 @@ typedef struct ALreverbState {
         ALfloat Scale;
 
         /* The depth of frequency change (also in samples) and its filter. */
-        ALfloat Depth;
-        ALfloat Coeff;
-        ALfloat Filter;
+        ALfloat Depth[2];
     } Mod; /* EAX only */
 
     struct {
@@ -363,6 +353,7 @@ typedef struct ALreverbState {
     ALsizei Offset;
 
     /* Temporary storage used when processing. */
+    alignas(16) ALint ModUlationDelays[MAX_UPDATE_SAMPLES][2];
     alignas(16) ALfloat AFormatSamples[4][MAX_UPDATE_SAMPLES];
     alignas(16) ALfloat ReverbSamples[4][MAX_UPDATE_SAMPLES];
     alignas(16) ALfloat EarlySamples[4][MAX_UPDATE_SAMPLES];
@@ -432,9 +423,8 @@ static void ALreverbState_Construct(ALreverbState *state)
     state->Mod.Index = 0;
     state->Mod.Range = 1;
     state->Mod.Scale = 0.0f;
-    state->Mod.Depth = 0.0f;
-    state->Mod.Coeff = 0.0f;
-    state->Mod.Filter = 0.0f;
+    state->Mod.Depth[0] = 0.0f;
+    state->Mod.Depth[1] = 0.0f;
 
     state->Late.DensityGain = 0.0f;
 
@@ -608,28 +598,19 @@ static ALboolean AllocLines(const ALuint frequency, ALreverbState *State)
 
 static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Device)
 {
-    ALuint frequency = Device->Frequency, i;
+    ALuint frequency = Device->Frequency;
     ALfloat multiplier;
 
     /* Allocate the delay lines. */
     if(!AllocLines(frequency, State))
         return AL_FALSE;
 
-    /* Calculate the modulation filter coefficient.  Notice that the exponent
-     * is calculated given the current sample rate.  This ensures that the
-     * resulting filter response over time is consistent across all sample
-     * rates.
-     */
-    State->Mod.Coeff = powf(MODULATION_FILTER_COEFF,
-                            MODULATION_FILTER_CONST / frequency);
-
-    multiplier = 1.0f + LINE_MULTIPLIER;
+    multiplier = 1.0f + AL_EAXREVERB_MAX_DENSITY*LINE_MULTIPLIER;
 
     /* The late feed taps are set a fixed position past the latest delay tap. */
-    for(i = 0;i < 4;i++)
-        State->LateFeedTap = fastf2i((AL_EAXREVERB_MAX_REFLECTIONS_DELAY +
-                                      EARLY_TAP_LENGTHS[3]*multiplier) *
-                                     frequency);
+    State->LateFeedTap = fastf2i((AL_EAXREVERB_MAX_REFLECTIONS_DELAY +
+                                  EARLY_TAP_LENGTHS[3]*multiplier) *
+                                 frequency);
 
     return AL_TRUE;
 }
@@ -1068,9 +1049,9 @@ static ALvoid UpdateModulator(const ALfloat modTime, const ALfloat modDepth,
      * that a given depth produces a consistent shift in frequency over all
      * ranges of time.
      */
-    State->Mod.Depth = modDepth * MODULATION_DEPTH_COEFF *
-                       (modTime / AL_EAXREVERB_MAX_MODULATION_TIME) *
-                       frequency;
+    State->Mod.Depth[1] = modDepth * MODULATION_DEPTH_COEFF *
+                          (modTime / AL_EAXREVERB_MAX_MODULATION_TIME) *
+                          frequency;
 }
 
 /* Update the offsets for the main effect delay line. */
@@ -1396,7 +1377,8 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
            (State->Early.Offset[i][1] != State->Early.Offset[i][0]) ||
            (State->LateDelayTap[i][1] != State->LateDelayTap[i][0]) ||
            (State->Late.VecAp.Offset[i][1] != State->Late.VecAp.Offset[i][0]) ||
-           (State->Late.Offset[i][1] != State->Late.Offset[i][0]))
+           (State->Late.Offset[i][1] != State->Late.Offset[i][0]) ||
+           (State->Mod.Depth[1] != State->Mod.Depth[0]))
         {
             State->FadeCount = 0;
             break;
@@ -1447,13 +1429,13 @@ static inline ALvoid DelayLineIn4Rev(DelayLineI *Delay, ALsizei offset, const AL
         Delay->Line[offset][i] = in[3-i];
 }
 
-static void CalcModulationDelays(ALreverbState *State, ALint *restrict delays, const ALsizei todo)
+static void CalcModulationDelays(ALreverbState *State, ALint (*restrict delays)[2],
+                                 const ALsizei todo)
 {
-    ALfloat sinus, depth;
+    ALfloat sinus;
     ALsizei index, i;
 
     index = State->Mod.Index;
-    depth = State->Mod.Filter;
     for(i = 0;i < todo;i++)
     {
         /* Calculate the sinus rhythm (dependent on modulation time and the
@@ -1464,17 +1446,11 @@ static void CalcModulationDelays(ALreverbState *State, ALint *restrict delays, c
         /* Step the modulation index forward, keeping it bound to its range. */
         index = (index+1) % State->Mod.Range;
 
-        /* The depth determines the range over which to read the input samples
-         * from, so it must be filtered to reduce the distortion caused by even
-         * small parameter changes.
-         */
-        depth = lerp(depth, State->Mod.Depth, State->Mod.Coeff);
-
         /* Calculate the read offset. */
-        delays[i] = lroundf(depth*sinus);
+        delays[i][0] = lroundf(sinus * State->Mod.Depth[0]);
+        delays[i][1] = lroundf(sinus * State->Mod.Depth[1]);
     }
     State->Mod.Index = index;
-    State->Mod.Filter = depth;
 }
 
 /* Applies a scattering matrix to the 4-line (vector) input.  This is used
@@ -1683,11 +1659,11 @@ static ALvoid LateReverb_##T(ALreverbState *State, const ALsizei todo,        \
                              ALfloat fade,                                    \
                              ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])     \
 {                                                                             \
+    ALint (*restrict moddelay)[2] = State->ModUlationDelays;                  \
     const ALfloat apFeedCoeff = State->ApFeedCoeff;                           \
     const ALfloat mixX = State->MixX;                                         \
     const ALfloat mixY = State->MixY;                                         \
-    ALint moddelay[MAX_UPDATE_SAMPLES];                                       \
-    ALsizei delay;                                                            \
+    ALsizei delay[2];                                                         \
     ALsizei offset;                                                           \
     ALsizei i, j;                                                             \
     ALfloat f[4];                                                             \
@@ -1703,11 +1679,12 @@ static ALvoid LateReverb_##T(ALreverbState *State, const ALsizei todo,        \
                 offset-State->LateDelayTap[j][1], j, fade                     \
             ) * State->Late.DensityGain;                                      \
                                                                               \
-        delay = offset - moddelay[i];                                         \
+        delay[0] = offset - moddelay[i][0];                                   \
+        delay[1] = offset - moddelay[i][1];                                   \
         for(j = 0;j < 4;j++)                                                  \
             out[j][i] = f[j] + DELAY_OUT_##T(&State->Late.Delay,              \
-                delay-State->Late.Offset[j][0],                               \
-                delay-State->Late.Offset[j][1], j, fade                       \
+                delay[0]-State->Late.Offset[j][0],                            \
+                delay[1]-State->Late.Offset[j][1], j, fade                    \
             );                                                                \
                                                                               \
         for(j = 0;j < 4;j++)                                                  \
@@ -1874,6 +1851,7 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
                 State->Late.VecAp.Offset[c][0] = State->Late.VecAp.Offset[c][1];
                 State->Late.Offset[c][0] = State->Late.Offset[c][1];
             }
+            State->Mod.Depth[0] = State->Mod.Depth[1];
         }
 
         /* Mix the A-Format results to output, implicitly converting back to

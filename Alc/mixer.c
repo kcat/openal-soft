@@ -44,9 +44,9 @@ static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,
 extern inline void InitiatePositionArrays(ALsizei frac, ALint increment, ALsizei *restrict frac_arr, ALint *restrict pos_arr, ALsizei size);
 
 
-/* BSinc requires up to 11 extra samples before the current position, and 12 after. */
-static_assert(MAX_PRE_SAMPLES >= 11, "MAX_PRE_SAMPLES must be at least 11!");
-static_assert(MAX_POST_SAMPLES >= 12, "MAX_POST_SAMPLES must be at least 12!");
+/* BSinc24 requires up to 23 extra samples before the current position, and 24 after. */
+static_assert(MAX_PRE_SAMPLES >= 23, "MAX_PRE_SAMPLES must be at least 23!");
+static_assert(MAX_POST_SAMPLES >= 24, "MAX_POST_SAMPLES must be at least 24!");
 
 
 enum Resampler ResamplerDefault = LinearResampler;

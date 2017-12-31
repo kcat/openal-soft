@@ -41,7 +41,6 @@ namespace {
 const std::string AppName("alffplay");
 
 bool do_direct_out = false;
-bool has_latency_check = false;
 LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
 
 const std::chrono::duration<double> AVSyncThreshold(0.01);
@@ -311,12 +310,13 @@ std::chrono::nanoseconds AudioState::getClock()
     std::unique_lock<std::recursive_mutex> lock(mSrcMutex);
     /* The audio clock is the timestamp of the sample currently being heard.
      * It's based on 4 components:
-     * 1 - The timestamp of the next sample to buffer (state->current_pts)
+     * 1 - The timestamp of the next sample to buffer (mCurrentPts)
      * 2 - The length of the source's buffer queue
+     *     (AudioBufferTime*AL_BUFFERS_QUEUED)
      * 3 - The offset OpenAL is currently at in the source (the first value
-     *     from AL_SEC_OFFSET_LATENCY_SOFT)
+     *     from AL_SAMPLE_OFFSET_LATENCY_SOFT)
      * 4 - The latency between OpenAL and the DAC (the second value from
-     *     AL_SEC_OFFSET_LATENCY_SOFT)
+     *     AL_SAMPLE_OFFSET_LATENCY_SOFT)
      *
      * Subtracting the length of the source queue from the next sample's
      * timestamp gives the timestamp of the sample at start of the source
@@ -328,25 +328,22 @@ std::chrono::nanoseconds AudioState::getClock()
     if(mSource)
     {
         ALint64SOFT offset[2];
-        ALint queue_size;
+        ALint queued;
         ALint status;
 
         /* NOTE: The source state must be checked last, in case an underrun
          * occurs and the source stops between retrieving the offset+latency
          * and getting the state. */
-        if(has_latency_check)
-        {
-            alGetSourcei64vSOFT(mSource, AL_SEC_OFFSET_LATENCY_SOFT, offset);
-            alGetSourcei(mSource, AL_BUFFERS_QUEUED, &queue_size);
-        }
+        if(alGetSourcei64vSOFT)
+            alGetSourcei64vSOFT(mSource, AL_SAMPLE_OFFSET_LATENCY_SOFT, offset);
         else
         {
             ALint ioffset;
             alGetSourcei(mSource, AL_SAMPLE_OFFSET, &ioffset);
-            alGetSourcei(mSource, AL_BUFFERS_QUEUED, &queue_size);
             offset[0] = (ALint64SOFT)ioffset << 32;
             offset[1] = 0;
         }
+        alGetSourcei(mSource, AL_BUFFERS_QUEUED, &queued);
         alGetSourcei(mSource, AL_SOURCE_STATE, &status);
 
         /* If the source is AL_STOPPED, then there was an underrun and all
@@ -355,7 +352,7 @@ std::chrono::nanoseconds AudioState::getClock()
          * when it starts recovery. */
         if(status != AL_STOPPED)
         {
-            pts -= AudioBufferTime*queue_size;
+            pts -= AudioBufferTime*queued;
             pts += std::chrono::duration_cast<nanoseconds>(
                 fixed32(offset[0] / mCodecCtx->sample_rate)
             );
@@ -1457,6 +1454,14 @@ int main(int argc, char *argv[])
     if(!name || alcGetError(device) != AL_NO_ERROR)
         name = alcGetString(device, ALC_DEVICE_SPECIFIER);
     std::cout<< "Opened \""<<name<<"\"" <<std::endl;
+
+    if(alIsExtensionPresent("AL_SOFT_source_latency"))
+    {
+        std::cout<< "Found AL_SOFT_source_latency" <<std::endl;
+        alGetSourcei64vSOFT = reinterpret_cast<LPALGETSOURCEI64VSOFT>(
+            alGetProcAddress("alGetSourcei64vSOFT")
+        );
+    }
 
     if(fileidx < argc && strcmp(argv[fileidx], "-direct") == 0)
     {

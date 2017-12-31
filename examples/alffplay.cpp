@@ -36,20 +36,19 @@ extern "C" {
 #include "AL/al.h"
 #include "AL/alext.h"
 
-namespace
-{
+namespace {
 
-static const std::string AppName("alffplay");
+const std::string AppName("alffplay");
 
-static bool do_direct_out = false;
-static bool has_latency_check = false;
-static LPALGETSOURCEDVSOFT alGetSourcedvSOFT;
+bool do_direct_out = false;
+bool has_latency_check = false;
+LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
 
-#define AUDIO_BUFFER_TIME 100 /* In milliseconds, per-buffer */
+const std::chrono::duration<double> AVSyncThreshold(0.01);
+const std::chrono::seconds AVNoSyncThreshold(10);
+const std::chrono::milliseconds AudioBufferTime(100); /* Per-buffer */
 #define AUDIO_BUFFER_QUEUE_SIZE 8 /* Number of buffers to queue */
 #define MAX_QUEUE_SIZE (15 * 1024 * 1024) /* Bytes of compressed data to keep queued */
-#define AV_SYNC_THRESHOLD 0.01
-#define AV_NOSYNC_THRESHOLD 10.0
 #define SAMPLE_CORRECTION_MAX_DIFF 0.05
 #define AUDIO_DIFF_AVG_NB 20
 #define VIDEO_PICTURE_QUEUE_SIZE 16
@@ -60,12 +59,12 @@ enum {
     FF_MOVIE_DONE_EVENT
 };
 
-enum {
-    AV_SYNC_AUDIO_MASTER,
-    AV_SYNC_VIDEO_MASTER,
-    AV_SYNC_EXTERNAL_MASTER,
+enum class SyncMaster {
+    Audio,
+    Video,
+    External,
 
-    DEFAULT_AV_SYNC_TYPE = AV_SYNC_EXTERNAL_MASTER
+    Default = External
 };
 
 
@@ -123,7 +122,6 @@ struct AudioState {
 
     /* Used for clock difference average computation */
     struct {
-        std::atomic<int> Clocks; /* In microseconds */
         double Accum;
         double AvgCoeff;
         double Threshold;
@@ -131,7 +129,7 @@ struct AudioState {
     } mDiff;
 
     /* Time (in seconds) of the next sample to be buffered */
-    double mCurrentPts;
+    std::chrono::duration<double> mCurrentPts;
 
     /* Decompressed sample frame, and swresample context for conversion */
     AVFrame           *mDecodedFrame;
@@ -158,7 +156,7 @@ struct AudioState {
 
     AudioState(MovieState *movie)
       : mMovie(movie), mStream(nullptr), mCodecCtx(nullptr)
-      , mDiff{{0}, 0.0, 0.0, 0.0, 0}, mCurrentPts(0.0), mDecodedFrame(nullptr)
+      , mDiff{0.0, 0.0, 0.0, 0}, mCurrentPts(0.0), mDecodedFrame(nullptr)
       , mSwresCtx(nullptr), mDstChanLayout(0), mDstSampleFmt(AV_SAMPLE_FMT_NONE)
       , mSamples(nullptr), mSamplesLen(0), mSamplesPos(0), mSamplesMax(0)
       , mFormat(AL_NONE), mFrameSize(0), mSource(0), mBufferIdx(0)
@@ -180,7 +178,7 @@ struct AudioState {
         avcodec_free_context(&mCodecCtx);
     }
 
-    double getClock();
+    std::chrono::nanoseconds getClock();
 
     int getSync();
     int decodeFrame();
@@ -198,13 +196,13 @@ struct VideoState {
     std::mutex mQueueMtx;
     std::condition_variable mQueueCond;
 
-    double  mClock;
-    double  mFrameTimer;
-    double  mFrameLastPts;
-    double  mFrameLastDelay;
-    double  mCurrentPts;
+    std::chrono::nanoseconds mClock;
+    std::chrono::duration<double> mFrameTimer;
+    std::chrono::nanoseconds mFrameLastPts;
+    std::chrono::nanoseconds mFrameLastDelay;
+    std::chrono::nanoseconds mCurrentPts;
     /* time (av_gettime) at which we updated mCurrentPts - used to have running video pts */
-    int64_t mCurrentPtsTime;
+    std::chrono::microseconds mCurrentPtsTime;
 
     /* Decompressed video frame, and swscale context for conversion */
     AVFrame           *mDecodedFrame;
@@ -214,10 +212,10 @@ struct VideoState {
         SDL_Texture *mImage;
         int mWidth, mHeight; /* Logical image size (actual size may be larger) */
         std::atomic<bool> mUpdated;
-        double mPts;
+        std::chrono::nanoseconds mPts;
 
         Picture()
-          : mImage(nullptr), mWidth(0), mHeight(0), mUpdated(false), mPts(0.0)
+          : mImage(nullptr), mWidth(0), mHeight(0), mUpdated(false), mPts(0)
         { }
         ~Picture()
         {
@@ -235,9 +233,9 @@ struct VideoState {
     std::atomic<bool> mFinalUpdate;
 
     VideoState(MovieState *movie)
-      : mMovie(movie), mStream(nullptr), mCodecCtx(nullptr), mClock(0.0)
-      , mFrameTimer(0.0), mFrameLastPts(0.0), mFrameLastDelay(0.0)
-      , mCurrentPts(0.0), mCurrentPtsTime(0), mDecodedFrame(nullptr)
+      : mMovie(movie), mStream(nullptr), mCodecCtx(nullptr), mClock(0)
+      , mFrameTimer(0.0), mFrameLastPts(0), mFrameLastDelay(0)
+      , mCurrentPts(0), mCurrentPtsTime(0), mDecodedFrame(nullptr)
       , mSwscaleCtx(nullptr), mPictQSize(0), mPictQRead(0), mPictQWrite(0)
       , mFirstUpdate(true), mEOS(false), mFinalUpdate(false)
     { }
@@ -249,24 +247,24 @@ struct VideoState {
         avcodec_free_context(&mCodecCtx);
     }
 
-    double getClock();
+    std::chrono::nanoseconds getClock();
 
     static Uint32 SDLCALL sdl_refresh_timer_cb(Uint32 interval, void *opaque);
-    void schedRefresh(int delay);
+    void schedRefresh(std::chrono::milliseconds delay);
     void display(SDL_Window *screen, SDL_Renderer *renderer);
     void refreshTimer(SDL_Window *screen, SDL_Renderer *renderer);
     void updatePicture(SDL_Window *screen, SDL_Renderer *renderer);
-    int queuePicture(double pts);
-    double synchronize(double pts);
+    int queuePicture(std::chrono::nanoseconds pts);
+    std::chrono::nanoseconds synchronize(std::chrono::nanoseconds pts);
     int handler();
 };
 
 struct MovieState {
     AVFormatContext *mFormatCtx;
 
-    int mAVSyncType;
+    SyncMaster mAVSyncType;
 
-    int64_t mExternalClockBase;
+    std::chrono::microseconds mClockBase;
 
     std::atomic<bool> mQuit;
 
@@ -280,8 +278,8 @@ struct MovieState {
     std::string mFilename;
 
     MovieState(std::string fname)
-      : mFormatCtx(nullptr), mAVSyncType(DEFAULT_AV_SYNC_TYPE)
-      , mExternalClockBase(0), mQuit(false), mAudio(this), mVideo(this)
+      : mFormatCtx(nullptr), mAVSyncType(SyncMaster::Default)
+      , mClockBase(0), mQuit(false), mAudio(this), mVideo(this)
       , mFilename(std::move(fname))
     { }
     ~MovieState()
@@ -296,18 +294,19 @@ struct MovieState {
     bool prepare();
     void setTitle(SDL_Window *window);
 
-    double getClock();
+    std::chrono::nanoseconds getClock();
 
-    double getMasterClock();
+    std::chrono::nanoseconds getMasterClock();
 
     int streamComponentOpen(int stream_index);
     int parse_handler();
 };
 
 
-double AudioState::getClock()
+std::chrono::nanoseconds AudioState::getClock()
 {
-    double pts;
+    using fixed32 = std::chrono::duration<ALint64SOFT,std::ratio<1,(1ll<<32)>>;
+    using nanoseconds = std::chrono::nanoseconds;
 
     std::unique_lock<std::recursive_mutex> lock(mSrcMutex);
     /* The audio clock is the timestamp of the sample currently being heard.
@@ -325,10 +324,10 @@ double AudioState::getClock()
      * OpenAL's current position, and subtracting the source latency from that
      * gives the timestamp of the sample currently at the DAC.
      */
-    pts = mCurrentPts;
+    nanoseconds pts = std::chrono::duration_cast<nanoseconds>(mCurrentPts);
     if(mSource)
     {
-        ALdouble offset[2];
+        ALint64SOFT offset[2];
         ALint queue_size;
         ALint status;
 
@@ -337,7 +336,7 @@ double AudioState::getClock()
          * and getting the state. */
         if(has_latency_check)
         {
-            alGetSourcedvSOFT(mSource, AL_SEC_OFFSET_LATENCY_SOFT, offset);
+            alGetSourcei64vSOFT(mSource, AL_SEC_OFFSET_LATENCY_SOFT, offset);
             alGetSourcei(mSource, AL_BUFFERS_QUEUED, &queue_size);
         }
         else
@@ -345,8 +344,8 @@ double AudioState::getClock()
             ALint ioffset;
             alGetSourcei(mSource, AL_SAMPLE_OFFSET, &ioffset);
             alGetSourcei(mSource, AL_BUFFERS_QUEUED, &queue_size);
-            offset[0] = (double)ioffset / (double)mCodecCtx->sample_rate;
-            offset[1] = 0.0f;
+            offset[0] = (ALint64SOFT)ioffset << 32;
+            offset[1] = 0;
         }
         alGetSourcei(mSource, AL_SOURCE_STATE, &status);
 
@@ -355,26 +354,32 @@ double AudioState::getClock()
          * will put the source into an AL_INITIAL state and clear the queue
          * when it starts recovery. */
         if(status != AL_STOPPED)
-            pts -= queue_size*((double)AUDIO_BUFFER_TIME/1000.0) - offset[0];
+        {
+            pts -= AudioBufferTime*queue_size;
+            pts += std::chrono::duration_cast<nanoseconds>(
+                fixed32(offset[0] / mCodecCtx->sample_rate)
+            );
+        }
         if(status == AL_PLAYING)
-            pts -= offset[1];
+            pts -= nanoseconds(offset[1]);
     }
     lock.unlock();
 
-    return std::max(pts, 0.0);
+    return std::max(pts, std::chrono::nanoseconds::zero());
 }
 
 int AudioState::getSync()
 {
-    double diff, avg_diff, ref_clock;
+    using seconds = std::chrono::duration<double>;
+    double avg_diff;
 
-    if(mMovie->mAVSyncType == AV_SYNC_AUDIO_MASTER)
+    if(mMovie->mAVSyncType == SyncMaster::Audio)
         return 0;
 
-    ref_clock = mMovie->getMasterClock();
-    diff = ref_clock - getClock();
+    auto ref_clock = mMovie->getMasterClock();
+    auto diff = seconds(ref_clock - getClock());
 
-    if(!(fabs(diff) < AV_NOSYNC_THRESHOLD))
+    if(!(diff < AVNoSyncThreshold && diff > -AVNoSyncThreshold))
     {
         /* Difference is TOO big; reset diff stuff */
         mDiff.Accum = 0.0;
@@ -382,17 +387,17 @@ int AudioState::getSync()
     }
 
     /* Accumulate the diffs */
-    mDiff.Accum = mDiff.Accum*mDiff.AvgCoeff + diff;
+    mDiff.Accum = mDiff.Accum*mDiff.AvgCoeff + diff.count();
     avg_diff = mDiff.Accum*(1.0 - mDiff.AvgCoeff);
     if(fabs(avg_diff) < mDiff.Threshold)
         return 0;
 
     /* Constrain the per-update difference to avoid exceedingly large skips */
-    if(!(diff <= SAMPLE_CORRECTION_MAX_DIFF))
-        diff = SAMPLE_CORRECTION_MAX_DIFF;
-    else if(!(diff >= -SAMPLE_CORRECTION_MAX_DIFF))
-        diff = -SAMPLE_CORRECTION_MAX_DIFF;
-    return (int)(diff*mCodecCtx->sample_rate);
+    if(!(diff.count() < SAMPLE_CORRECTION_MAX_DIFF))
+        return (int)(SAMPLE_CORRECTION_MAX_DIFF * mCodecCtx->sample_rate);
+    if(!(diff.count() > -SAMPLE_CORRECTION_MAX_DIFF))
+        return (int)(-SAMPLE_CORRECTION_MAX_DIFF * mCodecCtx->sample_rate);
+    return (int)(diff.count()*mCodecCtx->sample_rate);
 }
 
 int AudioState::decodeFrame()
@@ -425,7 +430,9 @@ int AudioState::decodeFrame()
         /* If provided, update w/ pts */
         int64_t pts = av_frame_get_best_effort_timestamp(mDecodedFrame);
         if(pts != AV_NOPTS_VALUE)
-            mCurrentPts = av_q2d(mStream->time_base)*pts;
+            mCurrentPts = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::duration<double>(av_q2d(mStream->time_base)*pts)
+            );
 
         if(mDecodedFrame->nb_samples > mSamplesMax)
         {
@@ -477,6 +484,9 @@ static void sample_dup(uint8_t *out, const uint8_t *in, int count, int frame_siz
 
 int AudioState::readAudio(uint8_t *samples, int length)
 {
+    using seconds = std::chrono::duration<int64_t>;
+    using nanoseconds = std::chrono::nanoseconds;
+
     int sample_skip = getSync();
     int audio_size = 0;
 
@@ -494,7 +504,7 @@ int AudioState::readAudio(uint8_t *samples, int length)
             mSamplesPos = std::min(mSamplesLen, sample_skip);
             sample_skip -= mSamplesPos;
 
-            mCurrentPts += (double)mSamplesPos / (double)mCodecCtx->sample_rate;
+            mCurrentPts += nanoseconds(seconds(mSamplesPos)) / mCodecCtx->sample_rate;
             continue;
         }
 
@@ -521,7 +531,7 @@ int AudioState::readAudio(uint8_t *samples, int length)
         }
 
         mSamplesPos += rem;
-        mCurrentPts += (double)rem / mCodecCtx->sample_rate;
+        mCurrentPts += nanoseconds(seconds(rem)) / mCodecCtx->sample_rate;
         samples += rem*mFrameSize;
         audio_size += rem;
     }
@@ -531,7 +541,7 @@ int AudioState::readAudio(uint8_t *samples, int length)
         int rem = length - audio_size;
         std::fill_n(samples, rem*mFrameSize,
                     (mDstSampleFmt == AV_SAMPLE_FMT_U8) ? 0x80 : 0x00);
-        mCurrentPts += (double)rem / mCodecCtx->sample_rate;
+        mCurrentPts += nanoseconds(seconds(rem)) / mCodecCtx->sample_rate;
         audio_size += rem;
     }
 
@@ -649,8 +659,8 @@ int AudioState::handler()
             mFormat = AL_FORMAT_STEREO16;
         }
     }
-    ALsizei buffer_len = mCodecCtx->sample_rate * AUDIO_BUFFER_TIME / 1000 *
-            mFrameSize;
+    ALsizei buffer_len = std::chrono::duration_cast<std::chrono::duration<int>>(
+        mCodecCtx->sample_rate * AudioBufferTime).count() * mFrameSize;
     void *samples = av_malloc(buffer_len);
 
     mSamples = NULL;
@@ -741,7 +751,7 @@ int AudioState::handler()
         /* (re)start the source if needed, and wait for a buffer to finish */
         if(state != AL_PLAYING && state != AL_PAUSED)
             alSourcePlay(mSource);
-        SDL_Delay(AUDIO_BUFFER_TIME / 3);
+        SDL_Delay((AudioBufferTime/3).count());
 
         lock.lock();
     }
@@ -759,9 +769,9 @@ finish:
 }
 
 
-double VideoState::getClock()
+std::chrono::nanoseconds VideoState::getClock()
 {
-    double delta = (av_gettime() - mCurrentPtsTime) / 1000000.0;
+    auto delta = std::chrono::microseconds(av_gettime()) - mCurrentPtsTime;
     return mCurrentPts + delta;
 }
 
@@ -775,9 +785,9 @@ Uint32 SDLCALL VideoState::sdl_refresh_timer_cb(Uint32 /*interval*/, void *opaqu
 }
 
 /* Schedules an FF_REFRESH_EVENT event to occur in 'delay' ms. */
-void VideoState::schedRefresh(int delay)
+void VideoState::schedRefresh(std::chrono::milliseconds delay)
 {
-    SDL_AddTimer(delay, sdl_refresh_timer_cb, this);
+    SDL_AddTimer(delay.count(), sdl_refresh_timer_cb, this);
 }
 
 /* Called by VideoState::refreshTimer to display the next video frame. */
@@ -834,7 +844,7 @@ void VideoState::refreshTimer(SDL_Window *screen, SDL_Renderer *renderer)
             mPictQCond.notify_all();
             return;
         }
-        schedRefresh(100);
+        schedRefresh(std::chrono::milliseconds(100));
         return;
     }
 
@@ -845,7 +855,7 @@ retry:
         if(mEOS)
             mFinalUpdate = true;
         else
-            schedRefresh(1);
+            schedRefresh(std::chrono::milliseconds(1));
         lock.unlock();
         mPictQCond.notify_all();
         return;
@@ -853,11 +863,11 @@ retry:
 
     Picture *vp = &mPictQ[mPictQRead];
     mCurrentPts = vp->mPts;
-    mCurrentPtsTime = av_gettime();
+    mCurrentPtsTime = std::chrono::microseconds(av_gettime());
 
     /* Get delay using the frame pts and the pts from last frame. */
-    double delay = vp->mPts - mFrameLastPts;
-    if(delay <= 0 || delay >= 1.0)
+    auto delay = vp->mPts - mFrameLastPts;
+    if(delay <= std::chrono::seconds::zero() || delay >= std::chrono::seconds(1))
     {
         /* If incorrect delay, use previous one. */
         delay = mFrameLastDelay;
@@ -867,33 +877,35 @@ retry:
     mFrameLastPts = vp->mPts;
 
     /* Update delay to sync to clock if not master source. */
-    if(mMovie->mAVSyncType != AV_SYNC_VIDEO_MASTER)
+    if(mMovie->mAVSyncType != SyncMaster::Video)
     {
-        double ref_clock = mMovie->getMasterClock();
-        double diff = vp->mPts - ref_clock;
+        using seconds = std::chrono::duration<double>;
+
+        auto ref_clock = mMovie->getMasterClock();
+        auto diff = seconds(vp->mPts - ref_clock);
 
         /* Skip or repeat the frame. Take delay into account. */
-        double sync_threshold = std::min(delay, AV_SYNC_THRESHOLD);
-        if(fabs(diff) < AV_NOSYNC_THRESHOLD)
+        auto sync_threshold = std::min(seconds(delay), AVSyncThreshold);
+        if(!(diff < AVNoSyncThreshold && diff > -AVNoSyncThreshold))
         {
             if(diff <= -sync_threshold)
-                delay = 0;
+                delay = std::chrono::nanoseconds::zero();
             else if(diff >= sync_threshold)
-                delay *= 2.0;
+                delay *= 2;
         }
     }
 
     mFrameTimer += delay;
     /* Compute the REAL delay. */
-    double actual_delay = mFrameTimer - (av_gettime() / 1000000.0);
-    if(!(actual_delay >= 0.010))
+    auto actual_delay = mFrameTimer - std::chrono::microseconds(av_gettime());
+    if(!(actual_delay >= AVSyncThreshold))
     {
         /* We don't have time to handle this picture, just skip to the next one. */
         mPictQRead = (mPictQRead+1)%mPictQ.size();
         mPictQSize--;
         goto retry;
     }
-    schedRefresh((int)(actual_delay*1000.0 + 0.5));
+    schedRefresh(std::chrono::duration_cast<std::chrono::milliseconds>(actual_delay));
 
     /* Show the picture! */
     display(screen, renderer);
@@ -1001,7 +1013,7 @@ void VideoState::updatePicture(SDL_Window *screen, SDL_Renderer *renderer)
     mPictQCond.notify_one();
 }
 
-int VideoState::queuePicture(double pts)
+int VideoState::queuePicture(std::chrono::nanoseconds pts)
 {
     /* Wait until we have space for a new pic */
     std::unique_lock<std::mutex> lock(mPictQMutex);
@@ -1036,20 +1048,20 @@ int VideoState::queuePicture(double pts)
     return 0;
 }
 
-double VideoState::synchronize(double pts)
+std::chrono::nanoseconds VideoState::synchronize(std::chrono::nanoseconds pts)
 {
-    double frame_delay;
-
-    if(pts == 0.0) /* if we aren't given a pts, set it to the clock */
+    if(pts == std::chrono::nanoseconds::zero()) /* if we aren't given a pts, set it to the clock */
         pts = mClock;
     else /* if we have pts, set video clock to it */
         mClock = pts;
 
     /* update the video clock */
-    frame_delay = av_q2d(mCodecCtx->time_base);
+    auto frame_delay = av_q2d(mCodecCtx->time_base);
     /* if we are repeating a frame, adjust clock accordingly */
     frame_delay += mDecodedFrame->repeat_pict * (frame_delay * 0.5);
-    mClock += frame_delay;
+
+    mClock += std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::duration<double>(frame_delay));
     return pts;
 }
 
@@ -1077,8 +1089,12 @@ int VideoState::handler()
             break;
         }
 
-        double pts = synchronize(
-            av_q2d(mStream->time_base) * av_frame_get_best_effort_timestamp(mDecodedFrame)
+        std::chrono::nanoseconds pts = synchronize(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::duration<double>(
+                    av_q2d(mStream->time_base) * av_frame_get_best_effort_timestamp(mDecodedFrame)
+                )
+            )
         );
         if(queuePicture(pts) < 0)
             break;
@@ -1132,7 +1148,7 @@ bool MovieState::prepare()
         return false;
     }
 
-    mVideo.schedRefresh(40);
+    mVideo.schedRefresh(std::chrono::milliseconds(40));
 
     mParseThread = std::thread(std::mem_fn(&MovieState::parse_handler), this);
     return true;
@@ -1148,16 +1164,17 @@ void MovieState::setTitle(SDL_Window *window)
     SDL_SetWindowTitle(window, (mFilename.substr(fpos)+" - "+AppName).c_str());
 }
 
-double MovieState::getClock()
+std::chrono::nanoseconds MovieState::getClock()
 {
-    return (av_gettime()-mExternalClockBase) / 1000000.0;
+    using microseconds = std::chrono::microseconds;
+    return microseconds(av_gettime()) - mClockBase;
 }
 
-double MovieState::getMasterClock()
+std::chrono::nanoseconds MovieState::getMasterClock()
 {
-    if(mAVSyncType == AV_SYNC_VIDEO_MASTER)
+    if(mAVSyncType == SyncMaster::Video)
         return mVideo.getClock();
-    if(mAVSyncType == AV_SYNC_AUDIO_MASTER)
+    if(mAVSyncType == SyncMaster::Audio)
         return mAudio.getClock();
     return getClock();
 }
@@ -1207,9 +1224,9 @@ int MovieState::streamComponentOpen(int stream_index)
             mVideo.mStream = mFormatCtx->streams[stream_index];
             mVideo.mCodecCtx = avctx;
 
-            mVideo.mCurrentPtsTime = av_gettime();
-            mVideo.mFrameTimer = (double)mVideo.mCurrentPtsTime / 1000000.0;
-            mVideo.mFrameLastDelay = 40e-3;
+            mVideo.mCurrentPtsTime = std::chrono::microseconds(av_gettime());
+            mVideo.mFrameTimer = mVideo.mCurrentPtsTime;
+            mVideo.mFrameLastDelay = std::chrono::milliseconds(40);
 
             mVideoThread = std::thread(std::mem_fn(&VideoState::handler), &mVideo);
             break;
@@ -1241,7 +1258,7 @@ int MovieState::parse_handler()
     /* Start the external clock in 50ms, to give the audio and video
      * components time to start without needing to skip ahead.
      */
-    mExternalClockBase = av_gettime() + 50000;
+    mClockBase = std::chrono::microseconds(av_gettime() + 50000);
     if(audio_index >= 0) audio_index = streamComponentOpen(audio_index);
     if(video_index >= 0) video_index = streamComponentOpen(video_index);
 

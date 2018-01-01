@@ -14,6 +14,7 @@
 #include <thread>
 #include <chrono>
 #include <atomic>
+#include <vector>
 #include <mutex>
 #include <deque>
 #include <array>
@@ -53,8 +54,10 @@ const std::chrono::duration<double> AudioSampleCorrectionMax(0.05);
 /* Averaging filter coefficient for audio sync. */
 #define AUDIO_DIFF_AVG_NB 20
 const double AudioAvgFilterCoeff = std::pow(0.01, 1.0/AUDIO_DIFF_AVG_NB);
-const std::chrono::milliseconds AudioBufferTime(20); /* Per-buffer */
-#define AUDIO_BUFFER_QUEUE_SIZE 25 /* Number of buffers to queue (~500ms) */
+/* Per-buffer size, in time */
+const std::chrono::milliseconds AudioBufferTime(20);
+/* Buffer total size, in time (should be divisible by the buffer time) */
+const std::chrono::milliseconds AudioBufferTotalTime(800);
 
 #define MAX_QUEUE_SIZE (15 * 1024 * 1024) /* Bytes of compressed data to keep queued */
 
@@ -150,18 +153,17 @@ struct AudioState {
 
     std::recursive_mutex mSrcMutex;
     ALuint mSource{0};
-    std::array<ALuint,AUDIO_BUFFER_QUEUE_SIZE> mBuffers;
+    std::vector<ALuint> mBuffers;
     ALsizei mBufferIdx{0};
 
     AudioState(MovieState &movie) : mMovie(movie)
-    {
-        std::fill(mBuffers.begin(), mBuffers.end(), 0);
-    }
+    { }
     ~AudioState()
     {
         if(mSource)
             alDeleteSources(1, &mSource);
-        alDeleteBuffers(mBuffers.size(), mBuffers.data());
+        if(!mBuffers.empty())
+            alDeleteBuffers(mBuffers.size(), mBuffers.data());
 
         av_frame_free(&mDecodedFrame);
         swr_free(&mSwresCtx);
@@ -676,6 +678,7 @@ int AudioState::handler()
         goto finish;
     }
 
+    mBuffers.assign(AudioBufferTotalTime / AudioBufferTime, 0);
     alGenBuffers(mBuffers.size(), mBuffers.data());
     alGenSources(1, &mSource);
 
@@ -695,10 +698,12 @@ int AudioState::handler()
         /* First remove any processed buffers. */
         ALint processed;
         alGetSourcei(mSource, AL_BUFFERS_PROCESSED, &processed);
-        if(processed > 0)
+        while(processed > 0)
         {
-            std::array<ALuint,AUDIO_BUFFER_QUEUE_SIZE> tmp;
-            alSourceUnqueueBuffers(mSource, processed, tmp.data());
+            std::array<ALuint,4> bids;
+            alSourceUnqueueBuffers(mSource, std::min<ALsizei>(bids.size(), processed),
+                                   bids.data());
+            processed -= std::min<ALsizei>(bids.size(), processed);
         }
 
         /* Refill the buffer queue. */

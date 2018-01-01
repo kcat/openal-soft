@@ -388,7 +388,7 @@ int AudioState::getSync()
 
 int AudioState::decodeFrame()
 {
-    while(!mMovie.mQuit.load())
+    while(!mMovie.mQuit.load(std::memory_order_relaxed))
     {
         std::unique_lock<std::mutex> lock(mQueueMtx);
         int ret = avcodec_receive_frame(mCodecCtx, mDecodedFrame);
@@ -685,7 +685,7 @@ int AudioState::handler()
     if(do_direct_out)
         alSourcei(mSource, AL_DIRECT_CHANNELS_SOFT, AL_TRUE);
 
-    while(alGetError() == AL_NO_ERROR && !mMovie.mQuit.load())
+    while(alGetError() == AL_NO_ERROR && !mMovie.mQuit.load(std::memory_order_relaxed))
     {
         /* First remove any processed buffers. */
         ALint processed;
@@ -1005,11 +1005,11 @@ int VideoState::queuePicture(std::chrono::nanoseconds pts)
 {
     /* Wait until we have space for a new pic */
     std::unique_lock<std::mutex> lock(mPictQMutex);
-    while(mPictQSize >= mPictQ.size() && !mMovie.mQuit.load())
+    while(mPictQSize >= mPictQ.size() && !mMovie.mQuit.load(std::memory_order_relaxed))
         mPictQCond.wait(lock);
     lock.unlock();
 
-    if(mMovie.mQuit.load())
+    if(mMovie.mQuit.load(std::memory_order_relaxed))
         return -1;
 
     Picture *vp = &mPictQ[mPictQWrite];
@@ -1023,9 +1023,9 @@ int VideoState::queuePicture(std::chrono::nanoseconds pts)
 
     /* Wait until the picture is updated. */
     lock.lock();
-    while(!vp->mUpdated && !mMovie.mQuit.load())
+    while(!vp->mUpdated && !mMovie.mQuit.load(std::memory_order_relaxed))
         mPictQCond.wait(lock);
-    if(mMovie.mQuit.load())
+    if(mMovie.mQuit.load(std::memory_order_relaxed))
         return -1;
     vp->mPts = pts;
 
@@ -1056,7 +1056,7 @@ std::chrono::nanoseconds VideoState::synchronize(std::chrono::nanoseconds pts)
 int VideoState::handler()
 {
     mDecodedFrame = av_frame_alloc();
-    while(!mMovie.mQuit)
+    while(!mMovie.mQuit.load(std::memory_order_relaxed))
     {
         std::unique_lock<std::mutex> lock(mQueueMtx);
         /* Decode video frame */
@@ -1096,7 +1096,7 @@ int VideoState::handler()
     av_frame_free(&mDecodedFrame);
 
     std::unique_lock<std::mutex> lock(mPictQMutex);
-    if(mMovie.mQuit)
+    if(mMovie.mQuit.load(std::memory_order_relaxed))
     {
         mPictQRead = 0;
         mPictQWrite = 0;
@@ -1111,7 +1111,7 @@ int VideoState::handler()
 
 int MovieState::decode_interrupt_cb(void *ctx)
 {
-    return reinterpret_cast<MovieState*>(ctx)->mQuit;
+    return reinterpret_cast<MovieState*>(ctx)->mQuit.load(std::memory_order_relaxed);
 }
 
 bool MovieState::prepare()

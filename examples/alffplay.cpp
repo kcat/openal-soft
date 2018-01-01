@@ -746,9 +746,11 @@ int AudioState::handler()
         alGetSourcei(mSource, AL_SOURCE_STATE, &state);
         if(state == AL_STOPPED)
         {
-            /* AL_STOPPED means there was an underrun. Rewind the source to get
+            /* AL_STOPPED means there was an underrun. Clear the buffer queue
+             * since this likely means we're late, and rewind the source to get
              * it back into an AL_INITIAL state.
              */
+            alSourcei(mSource, AL_BUFFER, 0);
             alSourceRewind(mSource);
             continue;
         }

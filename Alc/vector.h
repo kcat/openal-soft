@@ -37,7 +37,8 @@ typedef const _##N* const_##N;
                                                                               \
     if(((_x) ? (_x)->Capacity : 0) < _cap)                                    \
     {                                                                         \
-        ptrdiff_t data_offset = (char*)((_x)->Data) - (char*)(_x);            \
+        ptrdiff_t data_offset = (_x) ? (char*)((_x)->Data) - (char*)(_x) :    \
+                                sizeof(*(_x));                                \
         size_t old_size = ((_x) ? (_x)->Size : 0);                            \
         void *temp;                                                           \
                                                                               \

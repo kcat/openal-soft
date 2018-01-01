@@ -683,15 +683,7 @@ int AudioState::handler()
     alGenSources(1, &mSource);
 
     if(do_direct_out)
-    {
-        if(!alIsExtensionPresent("AL_SOFT_direct_channels"))
-            std::cerr<< "AL_SOFT_direct_channels not supported for direct output" <<std::endl;
-        else
-        {
-            alSourcei(mSource, AL_DIRECT_CHANNELS_SOFT, AL_TRUE);
-            std::cout<< "Direct out enabled" <<std::endl;
-        }
-    }
+        alSourcei(mSource, AL_DIRECT_CHANNELS_SOFT, AL_TRUE);
 
     while(alGetError() == AL_NO_ERROR && !mMovie.mQuit.load())
     {
@@ -1462,7 +1454,13 @@ int main(int argc, char *argv[])
     if(fileidx < argc && strcmp(argv[fileidx], "-direct") == 0)
     {
         ++fileidx;
-        do_direct_out = true;
+        if(!alIsExtensionPresent("AL_SOFT_direct_channels"))
+            std::cerr<< "AL_SOFT_direct_channels not supported for direct output" <<std::endl;
+        else
+        {
+            std::cout<< "Found AL_SOFT_direct_channels" <<std::endl;
+            do_direct_out = true;
+        }
     }
 
     while(fileidx < argc && !movState)

@@ -150,19 +150,18 @@ struct AudioState {
 
     std::recursive_mutex mSrcMutex;
     ALuint mSource{0};
-    ALuint mBuffers[AUDIO_BUFFER_QUEUE_SIZE];
+    std::array<ALuint,AUDIO_BUFFER_QUEUE_SIZE> mBuffers;
     ALsizei mBufferIdx{0};
 
     AudioState(MovieState &movie) : mMovie(movie)
     {
-        for(auto &buf : mBuffers)
-            buf = 0;
+        std::fill(mBuffers.begin(), mBuffers.end(), 0);
     }
     ~AudioState()
     {
         if(mSource)
             alDeleteSources(1, &mSource);
-        alDeleteBuffers(AUDIO_BUFFER_QUEUE_SIZE, mBuffers);
+        alDeleteBuffers(mBuffers.size(), mBuffers.data());
 
         av_frame_free(&mDecodedFrame);
         swr_free(&mSwresCtx);
@@ -677,7 +676,7 @@ int AudioState::handler()
         goto finish;
     }
 
-    alGenBuffers(AUDIO_BUFFER_QUEUE_SIZE, mBuffers);
+    alGenBuffers(mBuffers.size(), mBuffers.data());
     alGenSources(1, &mSource);
 
     if(do_direct_out)
@@ -705,7 +704,7 @@ int AudioState::handler()
         /* Refill the buffer queue. */
         ALint queued;
         alGetSourcei(mSource, AL_BUFFERS_QUEUED, &queued);
-        while(queued < AUDIO_BUFFER_QUEUE_SIZE)
+        while((ALuint)queued < mBuffers.size())
         {
             int audio_size;
 
@@ -715,7 +714,7 @@ int AudioState::handler()
             if(audio_size <= 0) break;
 
             ALuint bufid = mBuffers[mBufferIdx++];
-            mBufferIdx %= AUDIO_BUFFER_QUEUE_SIZE;
+            mBufferIdx %= mBuffers.size();
 
             alBufferData(bufid, mFormat, samples, audio_size, mCodecCtx->sample_rate);
             alSourceQueueBuffers(mSource, 1, &bufid);
@@ -733,8 +732,8 @@ int AudioState::handler()
              * since this likely means we're late, and rewind the source to get
              * it back into an AL_INITIAL state.
              */
-            alSourcei(mSource, AL_BUFFER, 0);
             alSourceRewind(mSource);
+            alSourcei(mSource, AL_BUFFER, 0);
             continue;
         }
 

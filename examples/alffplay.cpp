@@ -41,7 +41,7 @@ namespace {
 
 const std::string AppName("alffplay");
 
-bool do_direct_out = false;
+bool EnableDirectOut = false;
 LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
 
 const std::chrono::seconds AVNoSyncThreshold(10);
@@ -682,7 +682,7 @@ int AudioState::handler()
     alGenBuffers(mBuffers.size(), mBuffers.data());
     alGenSources(1, &mSource);
 
-    if(do_direct_out)
+    if(EnableDirectOut)
         alSourcei(mSource, AL_DIRECT_CHANNELS_SOFT, AL_TRUE);
 
     while(alGetError() == AL_NO_ERROR && !mMovie.mQuit.load(std::memory_order_relaxed))
@@ -1459,7 +1459,7 @@ int main(int argc, char *argv[])
         else
         {
             std::cout<< "Found AL_SOFT_direct_channels" <<std::endl;
-            do_direct_out = true;
+            EnableDirectOut = true;
         }
     }
 

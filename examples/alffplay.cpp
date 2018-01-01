@@ -75,10 +75,9 @@ enum class SyncMaster {
 
 class PacketQueue {
     std::deque<AVPacket> mPackets;
-    size_t mTotalSize;
+    size_t mTotalSize{0};
 
 public:
-    PacketQueue() : mTotalSize(0) { }
     ~PacketQueue() { clear(); }
 
     bool empty() const noexcept { return mPackets.empty(); }
@@ -117,49 +116,44 @@ public:
 struct MovieState;
 
 struct AudioState {
-    MovieState *mMovie;
+    MovieState &mMovie;
 
-    AVStream *mStream;
-    AVCodecContext *mCodecCtx;
+    AVStream *mStream{nullptr};
+    AVCodecContext *mCodecCtx{nullptr};
 
     std::mutex mQueueMtx;
     std::condition_variable mQueueCond;
 
     /* Used for clock difference average computation */
-    std::chrono::duration<double> mClockDiffAvg;
+    std::chrono::duration<double> mClockDiffAvg{0};
 
     /* Time (in nanoseconds) of the next sample to be buffered */
-    std::chrono::nanoseconds mCurrentPts;
+    std::chrono::nanoseconds mCurrentPts{0};
 
     /* Decompressed sample frame, and swresample context for conversion */
-    AVFrame           *mDecodedFrame;
-    struct SwrContext *mSwresCtx;
+    AVFrame           *mDecodedFrame{nullptr};
+    struct SwrContext *mSwresCtx{nullptr};
 
     /* Conversion format, for what gets fed to Alure */
-    int                 mDstChanLayout;
-    enum AVSampleFormat mDstSampleFmt;
+    int                 mDstChanLayout{0};
+    enum AVSampleFormat mDstSampleFmt{AV_SAMPLE_FMT_NONE};
 
     /* Storage of converted samples */
-    uint8_t *mSamples;
-    int mSamplesLen; /* In samples */
-    int mSamplesPos;
-    int mSamplesMax;
+    uint8_t *mSamples{nullptr};
+    int mSamplesLen{0}; /* In samples */
+    int mSamplesPos{0};
+    int mSamplesMax{0};
 
     /* OpenAL format */
-    ALenum mFormat;
-    ALsizei mFrameSize;
+    ALenum mFormat{AL_NONE};
+    ALsizei mFrameSize{0};
 
     std::recursive_mutex mSrcMutex;
-    ALuint mSource;
+    ALuint mSource{0};
     ALuint mBuffers[AUDIO_BUFFER_QUEUE_SIZE];
-    ALsizei mBufferIdx;
+    ALsizei mBufferIdx{0};
 
-    AudioState(MovieState *movie)
-      : mMovie(movie), mStream(nullptr), mCodecCtx(nullptr)
-      , mClockDiffAvg{0.0}, mCurrentPts(0), mDecodedFrame(nullptr)
-      , mSwresCtx(nullptr), mDstChanLayout(0), mDstSampleFmt(AV_SAMPLE_FMT_NONE)
-      , mSamples(nullptr), mSamplesLen(0), mSamplesPos(0), mSamplesMax(0)
-      , mFormat(AL_NONE), mFrameSize(0), mSource(0), mBufferIdx(0)
+    AudioState(MovieState &movie) : mMovie(movie)
     {
         for(auto &buf : mBuffers)
             buf = 0;
@@ -188,35 +182,32 @@ struct AudioState {
 };
 
 struct VideoState {
-    MovieState *mMovie;
+    MovieState &mMovie;
 
-    AVStream *mStream;
-    AVCodecContext *mCodecCtx;
+    AVStream *mStream{nullptr};
+    AVCodecContext *mCodecCtx{nullptr};
 
     std::mutex mQueueMtx;
     std::condition_variable mQueueCond;
 
-    std::chrono::nanoseconds mClock;
-    std::chrono::duration<double> mFrameTimer;
-    std::chrono::nanoseconds mFrameLastPts;
-    std::chrono::nanoseconds mFrameLastDelay;
-    std::chrono::nanoseconds mCurrentPts;
+    std::chrono::nanoseconds mClock{0};
+    std::chrono::duration<double> mFrameTimer{0};
+    std::chrono::nanoseconds mFrameLastPts{0};
+    std::chrono::nanoseconds mFrameLastDelay{0};
+    std::chrono::nanoseconds mCurrentPts{0};
     /* time (av_gettime) at which we updated mCurrentPts - used to have running video pts */
-    std::chrono::microseconds mCurrentPtsTime;
+    std::chrono::microseconds mCurrentPtsTime{0};
 
     /* Decompressed video frame, and swscale context for conversion */
-    AVFrame           *mDecodedFrame;
-    struct SwsContext *mSwscaleCtx;
+    AVFrame           *mDecodedFrame{nullptr};
+    struct SwsContext *mSwscaleCtx{nullptr};
 
     struct Picture {
-        SDL_Texture *mImage;
-        int mWidth, mHeight; /* Logical image size (actual size may be larger) */
-        std::atomic<bool> mUpdated;
-        std::chrono::nanoseconds mPts;
+        SDL_Texture *mImage{nullptr};
+        int mWidth{0}, mHeight{0}; /* Logical image size (actual size may be larger) */
+        std::atomic<bool> mUpdated{false};
+        std::chrono::nanoseconds mPts{0};
 
-        Picture()
-          : mImage(nullptr), mWidth(0), mHeight(0), mUpdated(false), mPts(0)
-        { }
         ~Picture()
         {
             if(mImage)
@@ -225,20 +216,14 @@ struct VideoState {
         }
     };
     std::array<Picture,VIDEO_PICTURE_QUEUE_SIZE> mPictQ;
-    size_t mPictQSize, mPictQRead, mPictQWrite;
+    size_t mPictQSize{0}, mPictQRead{0}, mPictQWrite{0};
     std::mutex mPictQMutex;
     std::condition_variable mPictQCond;
-    bool mFirstUpdate;
-    std::atomic<bool> mEOS;
-    std::atomic<bool> mFinalUpdate;
+    bool mFirstUpdate{true};
+    std::atomic<bool> mEOS{false};
+    std::atomic<bool> mFinalUpdate{false};
 
-    VideoState(MovieState *movie)
-      : mMovie(movie), mStream(nullptr), mCodecCtx(nullptr), mClock(0)
-      , mFrameTimer(0.0), mFrameLastPts(0), mFrameLastDelay(0)
-      , mCurrentPts(0), mCurrentPtsTime(0), mDecodedFrame(nullptr)
-      , mSwscaleCtx(nullptr), mPictQSize(0), mPictQRead(0), mPictQWrite(0)
-      , mFirstUpdate(true), mEOS(false), mFinalUpdate(false)
-    { }
+    VideoState(MovieState &movie) : mMovie(movie) { }
     ~VideoState()
     {
         sws_freeContext(mSwscaleCtx);
@@ -260,18 +245,18 @@ struct VideoState {
 };
 
 struct MovieState {
-    AVFormatContext *mFormatCtx;
+    AVFormatContext *mFormatCtx{nullptr};
 
-    SyncMaster mAVSyncType;
+    SyncMaster mAVSyncType{SyncMaster::Default};
 
-    std::chrono::microseconds mClockBase;
+    std::chrono::microseconds mClockBase{0};
 
     std::mutex mSendMtx;
     std::condition_variable mSendCond;
     /* NOTE: false/clear = need data, true/set = no data needed */
     std::atomic_flag mSendDataGood;
 
-    std::atomic<bool> mQuit;
+    std::atomic<bool> mQuit{false};
 
     AudioState mAudio;
     VideoState mVideo;
@@ -283,9 +268,7 @@ struct MovieState {
     std::string mFilename;
 
     MovieState(std::string fname)
-      : mFormatCtx(nullptr), mAVSyncType(SyncMaster::Default)
-      , mClockBase(0), mQuit(false), mAudio(this), mVideo(this)
-      , mFilename(std::move(fname))
+      : mAudio(*this), mVideo(*this), mFilename(std::move(fname))
     { }
     ~MovieState()
     {
@@ -375,10 +358,10 @@ int AudioState::getSync()
 {
     using seconds = std::chrono::duration<double>;
 
-    if(mMovie->mAVSyncType == SyncMaster::Audio)
+    if(mMovie.mAVSyncType == SyncMaster::Audio)
         return 0;
 
-    auto ref_clock = mMovie->getMasterClock();
+    auto ref_clock = mMovie.getMasterClock();
     auto diff = seconds(ref_clock - getClock());
 
     if(!(diff < AVNoSyncThreshold && diff > -AVNoSyncThreshold))
@@ -404,15 +387,15 @@ int AudioState::getSync()
 
 int AudioState::decodeFrame()
 {
-    while(!mMovie->mQuit.load())
+    while(!mMovie.mQuit.load())
     {
         std::unique_lock<std::mutex> lock(mQueueMtx);
         int ret = avcodec_receive_frame(mCodecCtx, mDecodedFrame);
         if(ret == AVERROR(EAGAIN))
         {
-            mMovie->mSendDataGood.clear(std::memory_order_relaxed);
-            std::unique_lock<std::mutex>(mMovie->mSendMtx).unlock();
-            mMovie->mSendCond.notify_one();
+            mMovie.mSendDataGood.clear(std::memory_order_relaxed);
+            std::unique_lock<std::mutex>(mMovie.mSendMtx).unlock();
+            mMovie.mSendCond.notify_one();
             do {
                 mQueueCond.wait(lock);
                 ret = avcodec_receive_frame(mCodecCtx, mDecodedFrame);
@@ -420,8 +403,8 @@ int AudioState::decodeFrame()
         }
         lock.unlock();
         if(ret == AVERROR_EOF) break;
-        mMovie->mSendDataGood.clear(std::memory_order_relaxed);
-        mMovie->mSendCond.notify_one();
+        mMovie.mSendDataGood.clear(std::memory_order_relaxed);
+        mMovie.mSendCond.notify_one();
         if(ret < 0)
         {
             std::cerr<< "Failed to decode frame: "<<ret <<std::endl;
@@ -708,7 +691,7 @@ int AudioState::handler()
         }
     }
 
-    while(alGetError() == AL_NO_ERROR && !mMovie->mQuit.load())
+    while(alGetError() == AL_NO_ERROR && !mMovie.mQuit.load())
     {
         /* First remove any processed buffers. */
         ALint processed;
@@ -886,11 +869,11 @@ retry:
     mFrameLastPts = vp->mPts;
 
     /* Update delay to sync to clock if not master source. */
-    if(mMovie->mAVSyncType != SyncMaster::Video)
+    if(mMovie.mAVSyncType != SyncMaster::Video)
     {
         using seconds = std::chrono::duration<double>;
 
-        auto ref_clock = mMovie->getMasterClock();
+        auto ref_clock = mMovie.getMasterClock();
         auto diff = seconds(vp->mPts - ref_clock);
 
         /* Skip or repeat the frame. Take delay into account. */
@@ -1026,11 +1009,11 @@ int VideoState::queuePicture(std::chrono::nanoseconds pts)
 {
     /* Wait until we have space for a new pic */
     std::unique_lock<std::mutex> lock(mPictQMutex);
-    while(mPictQSize >= mPictQ.size() && !mMovie->mQuit.load())
+    while(mPictQSize >= mPictQ.size() && !mMovie.mQuit.load())
         mPictQCond.wait(lock);
     lock.unlock();
 
-    if(mMovie->mQuit.load())
+    if(mMovie.mQuit.load())
         return -1;
 
     Picture *vp = &mPictQ[mPictQWrite];
@@ -1044,9 +1027,9 @@ int VideoState::queuePicture(std::chrono::nanoseconds pts)
 
     /* Wait until the picture is updated. */
     lock.lock();
-    while(!vp->mUpdated && !mMovie->mQuit.load())
+    while(!vp->mUpdated && !mMovie.mQuit.load())
         mPictQCond.wait(lock);
-    if(mMovie->mQuit.load())
+    if(mMovie.mQuit.load())
         return -1;
     vp->mPts = pts;
 
@@ -1077,16 +1060,16 @@ std::chrono::nanoseconds VideoState::synchronize(std::chrono::nanoseconds pts)
 int VideoState::handler()
 {
     mDecodedFrame = av_frame_alloc();
-    while(!mMovie->mQuit)
+    while(!mMovie.mQuit)
     {
         std::unique_lock<std::mutex> lock(mQueueMtx);
         /* Decode video frame */
         int ret = avcodec_receive_frame(mCodecCtx, mDecodedFrame);
         if(ret == AVERROR(EAGAIN))
         {
-            mMovie->mSendDataGood.clear(std::memory_order_relaxed);
-            std::unique_lock<std::mutex>(mMovie->mSendMtx).unlock();
-            mMovie->mSendCond.notify_one();
+            mMovie.mSendDataGood.clear(std::memory_order_relaxed);
+            std::unique_lock<std::mutex>(mMovie.mSendMtx).unlock();
+            mMovie.mSendCond.notify_one();
             do {
                 mQueueCond.wait(lock);
                 ret = avcodec_receive_frame(mCodecCtx, mDecodedFrame);
@@ -1094,8 +1077,8 @@ int VideoState::handler()
         }
         lock.unlock();
         if(ret == AVERROR_EOF) break;
-        mMovie->mSendDataGood.clear(std::memory_order_relaxed);
-        mMovie->mSendCond.notify_one();
+        mMovie.mSendDataGood.clear(std::memory_order_relaxed);
+        mMovie.mSendCond.notify_one();
         if(ret < 0)
         {
             std::cerr<< "Failed to decode frame: "<<ret <<std::endl;
@@ -1117,7 +1100,7 @@ int VideoState::handler()
     av_frame_free(&mDecodedFrame);
 
     std::unique_lock<std::mutex> lock(mPictQMutex);
-    if(mMovie->mQuit)
+    if(mMovie.mQuit)
     {
         mPictQRead = 0;
         mPictQWrite = 0;

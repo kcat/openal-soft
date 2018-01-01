@@ -43,15 +43,20 @@ const std::string AppName("alffplay");
 bool do_direct_out = false;
 LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
 
-const std::chrono::duration<double> VideoSyncThreshold(0.01);
-const std::chrono::duration<double> AudioSyncThreshold(0.03);
 const std::chrono::seconds AVNoSyncThreshold(10);
+
+const std::chrono::duration<double> VideoSyncThreshold(0.01);
+#define VIDEO_PICTURE_QUEUE_SIZE 16
+
+const std::chrono::duration<double> AudioSyncThreshold(0.03);
+const std::chrono::duration<double> AudioSampleCorrectionMax(0.05);
+/* Averaging filter coefficient for audio sync. */
+#define AUDIO_DIFF_AVG_NB 20
+const double AudioAvgFilterCoeff = std::pow(0.01, 1.0/AUDIO_DIFF_AVG_NB);
 const std::chrono::milliseconds AudioBufferTime(20); /* Per-buffer */
 #define AUDIO_BUFFER_QUEUE_SIZE 25 /* Number of buffers to queue (~500ms) */
+
 #define MAX_QUEUE_SIZE (15 * 1024 * 1024) /* Bytes of compressed data to keep queued */
-#define SAMPLE_CORRECTION_MAX_DIFF 0.05
-#define AUDIO_DIFF_AVG_NB 20
-#define VIDEO_PICTURE_QUEUE_SIZE 16
 
 enum {
     FF_UPDATE_EVENT = SDL_USEREVENT,
@@ -121,10 +126,7 @@ struct AudioState {
     std::condition_variable mQueueCond;
 
     /* Used for clock difference average computation */
-    struct {
-        std::chrono::duration<double> Accum;
-        double AvgCoeff;
-    } mDiff;
+    std::chrono::duration<double> mClockDiffAvg;
 
     /* Time (in nanoseconds) of the next sample to be buffered */
     std::chrono::nanoseconds mCurrentPts;
@@ -154,7 +156,7 @@ struct AudioState {
 
     AudioState(MovieState *movie)
       : mMovie(movie), mStream(nullptr), mCodecCtx(nullptr)
-      , mDiff{{}, 0.0}, mCurrentPts(0), mDecodedFrame(nullptr)
+      , mClockDiffAvg{0.0}, mCurrentPts(0), mDecodedFrame(nullptr)
       , mSwresCtx(nullptr), mDstChanLayout(0), mDstSampleFmt(AV_SAMPLE_FMT_NONE)
       , mSamples(nullptr), mSamplesLen(0), mSamplesPos(0), mSamplesMax(0)
       , mFormat(AL_NONE), mFrameSize(0), mSource(0), mBufferIdx(0)
@@ -382,21 +384,21 @@ int AudioState::getSync()
     if(!(diff < AVNoSyncThreshold && diff > -AVNoSyncThreshold))
     {
         /* Difference is TOO big; reset accumulated average */
-        mDiff.Accum = std::chrono::duration<double>::zero();
+        mClockDiffAvg = std::chrono::duration<double>::zero();
         return 0;
     }
 
     /* Accumulate the diffs */
-    mDiff.Accum = mDiff.Accum*mDiff.AvgCoeff + diff;
-    auto avg_diff = mDiff.Accum*(1.0 - mDiff.AvgCoeff);
+    mClockDiffAvg = mClockDiffAvg*AudioAvgFilterCoeff + diff;
+    auto avg_diff = mClockDiffAvg*(1.0 - AudioAvgFilterCoeff);
     if(avg_diff < AudioSyncThreshold/2.0 && avg_diff > -AudioSyncThreshold)
         return 0;
 
     /* Constrain the per-update difference to avoid exceedingly large skips */
-    if(!(diff.count() < SAMPLE_CORRECTION_MAX_DIFF))
-        return (int)(SAMPLE_CORRECTION_MAX_DIFF * mCodecCtx->sample_rate);
-    if(!(diff.count() > -SAMPLE_CORRECTION_MAX_DIFF))
-        return (int)(-SAMPLE_CORRECTION_MAX_DIFF * mCodecCtx->sample_rate);
+    if(!(diff < AudioSampleCorrectionMax))
+        return (int)(AudioSampleCorrectionMax * mCodecCtx->sample_rate).count();
+    if(!(diff > -AudioSampleCorrectionMax))
+        return (int)(-AudioSampleCorrectionMax * mCodecCtx->sample_rate).count();
     return (int)(diff.count()*mCodecCtx->sample_rate);
 }
 
@@ -1222,9 +1224,6 @@ int MovieState::streamComponentOpen(int stream_index)
         case AVMEDIA_TYPE_AUDIO:
             mAudio.mStream = mFormatCtx->streams[stream_index];
             mAudio.mCodecCtx = avctx;
-
-            /* Averaging filter for audio sync */
-            mAudio.mDiff.AvgCoeff = exp(log(0.01) / AUDIO_DIFF_AVG_NB);
 
             mAudioThread = std::thread(std::mem_fn(&AudioState::handler), &mAudio);
             break;

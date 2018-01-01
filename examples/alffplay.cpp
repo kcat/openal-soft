@@ -43,7 +43,8 @@ const std::string AppName("alffplay");
 bool do_direct_out = false;
 LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
 
-const std::chrono::duration<double> AVSyncThreshold(0.01);
+const std::chrono::duration<double> VideoSyncThreshold(0.01);
+const std::chrono::duration<double> AudioSyncThreshold(0.03);
 const std::chrono::seconds AVNoSyncThreshold(10);
 const std::chrono::milliseconds AudioBufferTime(20); /* Per-buffer */
 #define AUDIO_BUFFER_QUEUE_SIZE 25 /* Number of buffers to queue (~500ms) */
@@ -121,10 +122,8 @@ struct AudioState {
 
     /* Used for clock difference average computation */
     struct {
-        double Accum;
+        std::chrono::duration<double> Accum;
         double AvgCoeff;
-        double Threshold;
-        int AvgCount;
     } mDiff;
 
     /* Time (in nanoseconds) of the next sample to be buffered */
@@ -155,7 +154,7 @@ struct AudioState {
 
     AudioState(MovieState *movie)
       : mMovie(movie), mStream(nullptr), mCodecCtx(nullptr)
-      , mDiff{0.0, 0.0, 0.0, 0}, mCurrentPts(0), mDecodedFrame(nullptr)
+      , mDiff{{}, 0.0}, mCurrentPts(0), mDecodedFrame(nullptr)
       , mSwresCtx(nullptr), mDstChanLayout(0), mDstSampleFmt(AV_SAMPLE_FMT_NONE)
       , mSamples(nullptr), mSamplesLen(0), mSamplesPos(0), mSamplesMax(0)
       , mFormat(AL_NONE), mFrameSize(0), mSource(0), mBufferIdx(0)
@@ -373,7 +372,6 @@ std::chrono::nanoseconds AudioState::getClock()
 int AudioState::getSync()
 {
     using seconds = std::chrono::duration<double>;
-    double avg_diff;
 
     if(mMovie->mAVSyncType == SyncMaster::Audio)
         return 0;
@@ -383,15 +381,15 @@ int AudioState::getSync()
 
     if(!(diff < AVNoSyncThreshold && diff > -AVNoSyncThreshold))
     {
-        /* Difference is TOO big; reset diff stuff */
-        mDiff.Accum = 0.0;
+        /* Difference is TOO big; reset accumulated average */
+        mDiff.Accum = std::chrono::duration<double>::zero();
         return 0;
     }
 
     /* Accumulate the diffs */
-    mDiff.Accum = mDiff.Accum*mDiff.AvgCoeff + diff.count();
-    avg_diff = mDiff.Accum*(1.0 - mDiff.AvgCoeff);
-    if(fabs(avg_diff) < mDiff.Threshold)
+    mDiff.Accum = mDiff.Accum*mDiff.AvgCoeff + diff;
+    auto avg_diff = mDiff.Accum*(1.0 - mDiff.AvgCoeff);
+    if(avg_diff < AudioSyncThreshold/2.0 && avg_diff > -AudioSyncThreshold)
         return 0;
 
     /* Constrain the per-update difference to avoid exceedingly large skips */
@@ -894,7 +892,7 @@ retry:
         auto diff = seconds(vp->mPts - ref_clock);
 
         /* Skip or repeat the frame. Take delay into account. */
-        auto sync_threshold = std::min(seconds(delay), AVSyncThreshold);
+        auto sync_threshold = std::min(seconds(delay), VideoSyncThreshold);
         if(!(diff < AVNoSyncThreshold && diff > -AVNoSyncThreshold))
         {
             if(diff <= -sync_threshold)
@@ -907,7 +905,7 @@ retry:
     mFrameTimer += delay;
     /* Compute the REAL delay. */
     auto actual_delay = mFrameTimer - std::chrono::microseconds(av_gettime());
-    if(!(actual_delay >= AVSyncThreshold))
+    if(!(actual_delay >= VideoSyncThreshold))
     {
         /* We don't have time to handle this picture, just skip to the next one. */
         mPictQRead = (mPictQRead+1)%mPictQ.size();
@@ -1227,8 +1225,6 @@ int MovieState::streamComponentOpen(int stream_index)
 
             /* Averaging filter for audio sync */
             mAudio.mDiff.AvgCoeff = exp(log(0.01) / AUDIO_DIFF_AVG_NB);
-            /* Correct audio only if larger error than this */
-            mAudio.mDiff.Threshold = 0.050/* 50 ms */;
 
             mAudioThread = std::thread(std::mem_fn(&AudioState::handler), &mAudio);
             break;

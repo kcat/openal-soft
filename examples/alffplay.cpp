@@ -76,6 +76,10 @@ enum class SyncMaster {
 };
 
 
+inline std::chrono::microseconds get_avtime()
+{ return std::chrono::microseconds(av_gettime()); }
+
+
 class PacketQueue {
     std::deque<AVPacket> mPackets;
     size_t mTotalSize{0};
@@ -759,7 +763,7 @@ finish:
 
 std::chrono::nanoseconds VideoState::getClock()
 {
-    auto delta = std::chrono::microseconds(av_gettime()) - mCurrentPtsTime;
+    auto delta = get_avtime() - mCurrentPtsTime;
     return mCurrentPts + delta;
 }
 
@@ -851,7 +855,7 @@ retry:
 
     Picture *vp = &mPictQ[mPictQRead];
     mCurrentPts = vp->mPts;
-    mCurrentPtsTime = std::chrono::microseconds(av_gettime());
+    mCurrentPtsTime = get_avtime();
 
     /* Get delay using the frame pts and the pts from last frame. */
     auto delay = vp->mPts - mFrameLastPts;
@@ -885,7 +889,7 @@ retry:
 
     mFrameTimer += delay;
     /* Compute the REAL delay. */
-    auto actual_delay = mFrameTimer - std::chrono::microseconds(av_gettime());
+    auto actual_delay = mFrameTimer - get_avtime();
     if(!(actual_delay >= VideoSyncThreshold))
     {
         /* We don't have time to handle this picture, just skip to the next one. */
@@ -1158,8 +1162,7 @@ void MovieState::setTitle(SDL_Window *window)
 
 std::chrono::nanoseconds MovieState::getClock()
 {
-    using microseconds = std::chrono::microseconds;
-    return microseconds(av_gettime()) - mClockBase;
+    return get_avtime() - mClockBase;
 }
 
 std::chrono::nanoseconds MovieState::getMasterClock()
@@ -1211,7 +1214,7 @@ int MovieState::streamComponentOpen(int stream_index)
             mVideo.mStream = mFormatCtx->streams[stream_index];
             mVideo.mCodecCtx = avctx;
 
-            mVideo.mCurrentPtsTime = std::chrono::microseconds(av_gettime());
+            mVideo.mCurrentPtsTime = get_avtime();
             mVideo.mFrameTimer = mVideo.mCurrentPtsTime;
             mVideo.mFrameLastDelay = std::chrono::milliseconds(40);
 
@@ -1245,7 +1248,7 @@ int MovieState::parse_handler()
     /* Start the external clock in 50ms, to give the audio and video
      * components time to start without needing to skip ahead.
      */
-    mClockBase = std::chrono::microseconds(av_gettime() + 50000);
+    mClockBase = get_avtime() + std::chrono::milliseconds(50);
     if(audio_index >= 0) audio_index = streamComponentOpen(audio_index);
     if(video_index >= 0) video_index = streamComponentOpen(video_index);
 

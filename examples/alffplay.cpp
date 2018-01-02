@@ -86,6 +86,11 @@ inline microseconds get_avtime()
 { return microseconds(av_gettime()); }
 
 /* Define unique_ptrs to auto-cleanup associated ffmpeg objects. */
+struct AVIOContextDeleter {
+    void operator()(AVIOContext *ptr) { avio_closep(&ptr); }
+};
+using AVIOContextPtr = std::unique_ptr<AVIOContext,AVIOContextDeleter>;
+
 struct AVFormatCtxDeleter {
     void operator()(AVFormatContext *ptr) { avformat_close_input(&ptr); }
 };
@@ -270,6 +275,7 @@ struct VideoState {
 };
 
 struct MovieState {
+    AVIOContextPtr mIOContext;
     AVFormatCtxPtr mFormatCtx;
 
     SyncMaster mAVSyncType{SyncMaster::Default};
@@ -1132,12 +1138,13 @@ bool MovieState::prepare()
         std::cerr<< "Failed to open "<<mFilename <<std::endl;
         return false;
     }
+    mIOContext.reset(avioctx);
 
     /* Open movie file. If avformat_open_input fails it will automatically free
      * this context, so don't set it onto a smart pointer yet.
      */
     AVFormatContext *fmtctx = avformat_alloc_context();
-    fmtctx->pb = avioctx;
+    fmtctx->pb = mIOContext.get();
     fmtctx->interrupt_callback = intcb;
     if(avformat_open_input(&fmtctx, mFilename.c_str(), nullptr, nullptr) != 0)
     {

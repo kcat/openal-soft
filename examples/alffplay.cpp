@@ -85,6 +85,32 @@ enum class SyncMaster {
 inline microseconds get_avtime()
 { return microseconds(av_gettime()); }
 
+/* Define unique_ptrs to auto-cleanup associated ffmpeg objects. */
+struct AVFormatCtxDeleter {
+    void operator()(AVFormatContext *ptr) { avformat_close_input(&ptr); }
+};
+using AVFormatCtxPtr = std::unique_ptr<AVFormatContext,AVFormatCtxDeleter>;
+
+struct AVCodecCtxDeleter {
+    void operator()(AVCodecContext *ptr) { avcodec_free_context(&ptr); }
+};
+using AVCodecCtxPtr = std::unique_ptr<AVCodecContext,AVCodecCtxDeleter>;
+
+struct AVFrameDeleter {
+    void operator()(AVFrame *ptr) { av_frame_free(&ptr); }
+};
+using AVFramePtr = std::unique_ptr<AVFrame,AVFrameDeleter>;
+
+struct SwrContextDeleter {
+    void operator()(SwrContext *ptr) { swr_free(&ptr); }
+};
+using SwrContextPtr = std::unique_ptr<SwrContext,SwrContextDeleter>;
+
+struct SwsContextDeleter {
+    void operator()(SwsContext *ptr) { sws_freeContext(ptr); }
+};
+using SwsContextPtr = std::unique_ptr<SwsContext,SwsContextDeleter>;
+
 
 class PacketQueue {
     std::deque<AVPacket> mPackets;
@@ -132,7 +158,7 @@ struct AudioState {
     MovieState &mMovie;
 
     AVStream *mStream{nullptr};
-    AVCodecContext *mCodecCtx{nullptr};
+    AVCodecCtxPtr mCodecCtx;
 
     std::mutex mQueueMtx;
     std::condition_variable mQueueCond;
@@ -144,8 +170,8 @@ struct AudioState {
     nanoseconds mCurrentPts{0};
 
     /* Decompressed sample frame, and swresample context for conversion */
-    AVFrame           *mDecodedFrame{nullptr};
-    struct SwrContext *mSwresCtx{nullptr};
+    AVFramePtr    mDecodedFrame;
+    SwrContextPtr mSwresCtx;
 
     /* Conversion format, for what gets fed to Alure */
     int                 mDstChanLayout{0};
@@ -175,12 +201,7 @@ struct AudioState {
         if(!mBuffers.empty())
             alDeleteBuffers(mBuffers.size(), mBuffers.data());
 
-        av_frame_free(&mDecodedFrame);
-        swr_free(&mSwresCtx);
-
         av_freep(&mSamples);
-
-        avcodec_free_context(&mCodecCtx);
     }
 
     nanoseconds getClock();
@@ -196,7 +217,7 @@ struct VideoState {
     MovieState &mMovie;
 
     AVStream *mStream{nullptr};
-    AVCodecContext *mCodecCtx{nullptr};
+    AVCodecCtxPtr mCodecCtx;
 
     std::mutex mQueueMtx;
     std::condition_variable mQueueCond;
@@ -210,8 +231,8 @@ struct VideoState {
     microseconds mCurrentPtsTime{0};
 
     /* Decompressed video frame, and swscale context for conversion */
-    AVFrame           *mDecodedFrame{nullptr};
-    struct SwsContext *mSwscaleCtx{nullptr};
+    AVFramePtr    mDecodedFrame;
+    SwsContextPtr mSwscaleCtx;
 
     struct Picture {
         SDL_Texture *mImage{nullptr};
@@ -235,13 +256,6 @@ struct VideoState {
     std::atomic<bool> mFinalUpdate{false};
 
     VideoState(MovieState &movie) : mMovie(movie) { }
-    ~VideoState()
-    {
-        sws_freeContext(mSwscaleCtx);
-        mSwscaleCtx = nullptr;
-        av_frame_free(&mDecodedFrame);
-        avcodec_free_context(&mCodecCtx);
-    }
 
     nanoseconds getClock();
 
@@ -256,7 +270,7 @@ struct VideoState {
 };
 
 struct MovieState {
-    AVFormatContext *mFormatCtx{nullptr};
+    AVFormatCtxPtr mFormatCtx;
 
     SyncMaster mAVSyncType{SyncMaster::Default};
 
@@ -286,7 +300,6 @@ struct MovieState {
         mQuit = true;
         if(mParseThread.joinable())
             mParseThread.join();
-        avformat_close_input(&mFormatCtx);
     }
 
     static int decode_interrupt_cb(void *ctx);
@@ -400,7 +413,7 @@ int AudioState::decodeFrame()
     while(!mMovie.mQuit.load(std::memory_order_relaxed))
     {
         std::unique_lock<std::mutex> lock(mQueueMtx);
-        int ret = avcodec_receive_frame(mCodecCtx, mDecodedFrame);
+        int ret = avcodec_receive_frame(mCodecCtx.get(), mDecodedFrame.get());
         if(ret == AVERROR(EAGAIN))
         {
             mMovie.mSendDataGood.clear(std::memory_order_relaxed);
@@ -408,7 +421,7 @@ int AudioState::decodeFrame()
             mMovie.mSendCond.notify_one();
             do {
                 mQueueCond.wait(lock);
-                ret = avcodec_receive_frame(mCodecCtx, mDecodedFrame);
+                ret = avcodec_receive_frame(mCodecCtx.get(), mDecodedFrame.get());
             } while(ret == AVERROR(EAGAIN));
         }
         lock.unlock();
@@ -423,12 +436,12 @@ int AudioState::decodeFrame()
 
         if(mDecodedFrame->nb_samples <= 0)
         {
-            av_frame_unref(mDecodedFrame);
+            av_frame_unref(mDecodedFrame.get());
             continue;
         }
 
         /* If provided, update w/ pts */
-        int64_t pts = av_frame_get_best_effort_timestamp(mDecodedFrame);
+        int64_t pts = av_frame_get_best_effort_timestamp(mDecodedFrame.get());
         if(pts != AV_NOPTS_VALUE)
             mCurrentPts = std::chrono::duration_cast<nanoseconds>(
                 seconds_d64(av_q2d(mStream->time_base)*pts)
@@ -444,11 +457,11 @@ int AudioState::decodeFrame()
             mSamplesMax = mDecodedFrame->nb_samples;
         }
         /* Return the amount of sample frames converted */
-        int data_size = swr_convert(mSwresCtx, &mSamples, mDecodedFrame->nb_samples,
+        int data_size = swr_convert(mSwresCtx.get(), &mSamples, mDecodedFrame->nb_samples,
             (const uint8_t**)mDecodedFrame->data, mDecodedFrame->nb_samples
         );
 
-        av_frame_unref(mDecodedFrame);
+        av_frame_unref(mDecodedFrame.get());
         return data_size;
     }
 
@@ -665,20 +678,21 @@ int AudioState::handler()
     mSamplesPos = 0;
     mSamplesLen = 0;
 
-    if(!(mDecodedFrame=av_frame_alloc()))
+    mDecodedFrame.reset(av_frame_alloc());
+    if(!mDecodedFrame)
     {
         std::cerr<< "Failed to allocate audio frame" <<std::endl;
         goto finish;
     }
 
-    mSwresCtx = swr_alloc_set_opts(nullptr,
+    mSwresCtx.reset(swr_alloc_set_opts(nullptr,
         mDstChanLayout, mDstSampleFmt, mCodecCtx->sample_rate,
         mCodecCtx->channel_layout ? mCodecCtx->channel_layout :
             (uint64_t)av_get_default_channel_layout(mCodecCtx->channels),
         mCodecCtx->sample_fmt, mCodecCtx->sample_rate,
         0, nullptr
-    );
-    if(!mSwresCtx || swr_init(mSwresCtx) != 0)
+    ));
+    if(!mSwresCtx || swr_init(mSwresCtx.get()) != 0)
     {
         std::cerr<< "Failed to initialize audio converter" <<std::endl;
         goto finish;
@@ -753,9 +767,6 @@ int AudioState::handler()
 finish:
     alSourceRewind(mSource);
     alSourcei(mSource, AL_BUFFER, 0);
-
-    av_frame_free(&mDecodedFrame);
-    swr_free(&mSwresCtx);
 
     av_freep(&mSamples);
 
@@ -953,7 +964,7 @@ void VideoState::updatePicture(SDL_Window *screen, SDL_Renderer *renderer)
 
     if(vp->mImage)
     {
-        AVFrame *frame = mDecodedFrame;
+        AVFrame *frame = mDecodedFrame.get();
         void *pixels = nullptr;
         int pitch = 0;
 
@@ -974,12 +985,11 @@ void VideoState::updatePicture(SDL_Window *screen, SDL_Renderer *renderer)
             int h = mCodecCtx->height;
             if(!mSwscaleCtx || fmt_updated)
             {
-                sws_freeContext(mSwscaleCtx);
-                mSwscaleCtx = sws_getContext(
+                mSwscaleCtx.reset(sws_getContext(
                     w, h, mCodecCtx->pix_fmt,
                     w, h, AV_PIX_FMT_YUV420P, 0,
                     nullptr, nullptr, nullptr
-                );
+                ));
             }
 
             /* point pict at the queue */
@@ -993,7 +1003,7 @@ void VideoState::updatePicture(SDL_Window *screen, SDL_Renderer *renderer)
             pict_linesize[1] = pitch / 2;
             pict_linesize[2] = pitch / 2;
 
-            sws_scale(mSwscaleCtx, (const uint8_t**)frame->data,
+            sws_scale(mSwscaleCtx.get(), (const uint8_t**)frame->data,
                       frame->linesize, 0, h, pict_data, pict_linesize);
             SDL_UnlockTexture(vp->mImage);
         }
@@ -1058,12 +1068,12 @@ nanoseconds VideoState::synchronize(nanoseconds pts)
 
 int VideoState::handler()
 {
-    mDecodedFrame = av_frame_alloc();
+    mDecodedFrame.reset(av_frame_alloc());
     while(!mMovie.mQuit.load(std::memory_order_relaxed))
     {
         std::unique_lock<std::mutex> lock(mQueueMtx);
         /* Decode video frame */
-        int ret = avcodec_receive_frame(mCodecCtx, mDecodedFrame);
+        int ret = avcodec_receive_frame(mCodecCtx.get(), mDecodedFrame.get());
         if(ret == AVERROR(EAGAIN))
         {
             mMovie.mSendDataGood.clear(std::memory_order_relaxed);
@@ -1071,7 +1081,7 @@ int VideoState::handler()
             mMovie.mSendCond.notify_one();
             do {
                 mQueueCond.wait(lock);
-                ret = avcodec_receive_frame(mCodecCtx, mDecodedFrame);
+                ret = avcodec_receive_frame(mCodecCtx.get(), mDecodedFrame.get());
             } while(ret == AVERROR(EAGAIN));
         }
         lock.unlock();
@@ -1084,16 +1094,15 @@ int VideoState::handler()
             continue;
         }
 
-        int64_t ts = av_frame_get_best_effort_timestamp(mDecodedFrame);
+        int64_t ts = av_frame_get_best_effort_timestamp(mDecodedFrame.get());
         auto pts = synchronize(
             std::chrono::duration_cast<nanoseconds>(seconds_d64(av_q2d(mStream->time_base)*ts))
         );
         if(queuePicture(pts) < 0)
             break;
-        av_frame_unref(mDecodedFrame);
+        av_frame_unref(mDecodedFrame.get());
     }
     mEOS = true;
-    av_frame_free(&mDecodedFrame);
 
     std::unique_lock<std::mutex> lock(mPictQMutex);
     if(mMovie.mQuit.load(std::memory_order_relaxed))
@@ -1116,25 +1125,29 @@ int MovieState::decode_interrupt_cb(void *ctx)
 
 bool MovieState::prepare()
 {
-    mFormatCtx = avformat_alloc_context();
-    mFormatCtx->interrupt_callback.callback = decode_interrupt_cb;
-    mFormatCtx->interrupt_callback.opaque = this;
-    if(avio_open2(&mFormatCtx->pb, mFilename.c_str(), AVIO_FLAG_READ,
-                  &mFormatCtx->interrupt_callback, nullptr))
+    AVIOContext *avioctx = nullptr;
+    AVIOInterruptCB intcb = { decode_interrupt_cb, this };
+    if(avio_open2(&avioctx, mFilename.c_str(), AVIO_FLAG_READ, &intcb, nullptr))
     {
         std::cerr<< "Failed to open "<<mFilename <<std::endl;
         return false;
     }
 
-    /* Open movie file */
-    if(avformat_open_input(&mFormatCtx, mFilename.c_str(), nullptr, nullptr) != 0)
+    /* Open movie file. If avformat_open_input fails it will automatically free
+     * this context, so don't set it onto a smart pointer yet.
+     */
+    AVFormatContext *fmtctx = avformat_alloc_context();
+    fmtctx->pb = avioctx;
+    fmtctx->interrupt_callback = intcb;
+    if(avformat_open_input(&fmtctx, mFilename.c_str(), nullptr, nullptr) != 0)
     {
         std::cerr<< "Failed to open "<<mFilename <<std::endl;
         return false;
     }
+    mFormatCtx.reset(fmtctx);
 
     /* Retrieve stream information */
-    if(avformat_find_stream_info(mFormatCtx, nullptr) < 0)
+    if(avformat_find_stream_info(mFormatCtx.get(), nullptr) < 0)
     {
         std::cerr<< mFilename<<": failed to find stream info" <<std::endl;
         return false;
@@ -1181,21 +1194,17 @@ int MovieState::streamComponentOpen(int stream_index)
     /* Get a pointer to the codec context for the stream, and open the
      * associated codec.
      */
-    AVCodecContext *avctx = avcodec_alloc_context3(nullptr);
+    AVCodecCtxPtr avctx(avcodec_alloc_context3(nullptr));
     if(!avctx) return -1;
 
-    if(avcodec_parameters_to_context(avctx, mFormatCtx->streams[stream_index]->codecpar))
-    {
-        avcodec_free_context(&avctx);
+    if(avcodec_parameters_to_context(avctx.get(), mFormatCtx->streams[stream_index]->codecpar))
         return -1;
-    }
 
     AVCodec *codec = avcodec_find_decoder(avctx->codec_id);
-    if(!codec || avcodec_open2(avctx, codec, nullptr) < 0)
+    if(!codec || avcodec_open2(avctx.get(), codec, nullptr) < 0)
     {
         std::cerr<< "Unsupported codec: "<<avcodec_get_name(avctx->codec_id)
                  << " (0x"<<std::hex<<avctx->codec_id<<std::dec<<")" <<std::endl;
-        avcodec_free_context(&avctx);
         return -1;
     }
 
@@ -1204,14 +1213,14 @@ int MovieState::streamComponentOpen(int stream_index)
     {
         case AVMEDIA_TYPE_AUDIO:
             mAudio.mStream = mFormatCtx->streams[stream_index];
-            mAudio.mCodecCtx = avctx;
+            mAudio.mCodecCtx = std::move(avctx);
 
             mAudioThread = std::thread(std::mem_fn(&AudioState::handler), &mAudio);
             break;
 
         case AVMEDIA_TYPE_VIDEO:
             mVideo.mStream = mFormatCtx->streams[stream_index];
-            mVideo.mCodecCtx = avctx;
+            mVideo.mCodecCtx = std::move(avctx);
 
             mVideo.mCurrentPtsTime = get_avtime();
             mVideo.mFrameTimer = mVideo.mCurrentPtsTime;
@@ -1221,7 +1230,6 @@ int MovieState::streamComponentOpen(int stream_index)
             break;
 
         default:
-            avcodec_free_context(&avctx);
             return -1;
     }
 
@@ -1234,14 +1242,15 @@ int MovieState::parse_handler()
     int audio_index = -1;
 
     /* Dump information about file onto standard error */
-    av_dump_format(mFormatCtx, 0, mFilename.c_str(), 0);
+    av_dump_format(mFormatCtx.get(), 0, mFilename.c_str(), 0);
 
     /* Find the first video and audio streams */
     for(unsigned int i = 0;i < mFormatCtx->nb_streams;i++)
     {
-        if(mFormatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && video_index < 0)
+        auto codecpar = mFormatCtx->streams[i]->codecpar;
+        if(codecpar->codec_type == AVMEDIA_TYPE_VIDEO && video_index < 0)
             video_index = i;
-        else if(mFormatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && audio_index < 0)
+        else if(codecpar->codec_type == AVMEDIA_TYPE_AUDIO && audio_index < 0)
             audio_index = i;
     }
     /* Start the external clock in 50ms, to give the audio and video
@@ -1264,7 +1273,7 @@ int MovieState::parse_handler()
     while(!mQuit.load(std::memory_order_relaxed) && !input_finished)
     {
         AVPacket packet;
-        if(av_read_frame(mFormatCtx, &packet) < 0)
+        if(av_read_frame(mFormatCtx.get(), &packet) < 0)
             input_finished = true;
         else
         {
@@ -1283,7 +1292,7 @@ int MovieState::parse_handler()
                 std::unique_lock<std::mutex> lock(mAudio.mQueueMtx);
                 int ret;
                 do {
-                    ret = avcodec_send_packet(mAudio.mCodecCtx, audio_queue.front());
+                    ret = avcodec_send_packet(mAudio.mCodecCtx.get(), audio_queue.front());
                     if(ret != AVERROR(EAGAIN)) audio_queue.pop();
                 } while(ret != AVERROR(EAGAIN) && !audio_queue.empty());
                 lock.unlock();
@@ -1294,7 +1303,7 @@ int MovieState::parse_handler()
                 std::unique_lock<std::mutex> lock(mVideo.mQueueMtx);
                 int ret;
                 do {
-                    ret = avcodec_send_packet(mVideo.mCodecCtx, video_queue.front());
+                    ret = avcodec_send_packet(mVideo.mCodecCtx.get(), video_queue.front());
                     if(ret != AVERROR(EAGAIN)) video_queue.pop();
                 } while(ret != AVERROR(EAGAIN) && !video_queue.empty());
                 lock.unlock();
@@ -1317,17 +1326,17 @@ int MovieState::parse_handler()
     /* Pass a null packet to finish the send buffers (the receive functions
      * will get AVERROR_EOF when emptied).
      */
-    if(mVideo.mCodecCtx != nullptr)
+    if(mVideo.mCodecCtx)
     {
         { std::lock_guard<std::mutex> lock(mVideo.mQueueMtx);
-            avcodec_send_packet(mVideo.mCodecCtx, nullptr);
+            avcodec_send_packet(mVideo.mCodecCtx.get(), nullptr);
         }
         mVideo.mQueueCond.notify_one();
     }
-    if(mAudio.mCodecCtx != nullptr)
+    if(mAudio.mCodecCtx)
     {
         { std::lock_guard<std::mutex> lock(mAudio.mQueueMtx);
-            avcodec_send_packet(mAudio.mCodecCtx, nullptr);
+            avcodec_send_packet(mAudio.mCodecCtx.get(), nullptr);
         }
         mAudio.mQueueCond.notify_one();
     }

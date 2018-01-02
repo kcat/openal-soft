@@ -270,7 +270,6 @@ struct VideoState {
     void refreshTimer(SDL_Window *screen, SDL_Renderer *renderer);
     void updatePicture(SDL_Window *screen, SDL_Renderer *renderer);
     int queuePicture(nanoseconds pts);
-    nanoseconds synchronize(nanoseconds pts);
     int handler();
 };
 
@@ -447,10 +446,9 @@ int AudioState::decodeFrame()
         }
 
         /* If provided, update w/ pts */
-        int64_t pts = av_frame_get_best_effort_timestamp(mDecodedFrame.get());
-        if(pts != AV_NOPTS_VALUE)
+        if(mDecodedFrame->best_effort_timestamp != AV_NOPTS_VALUE)
             mCurrentPts = std::chrono::duration_cast<nanoseconds>(
-                seconds_d64(av_q2d(mStream->time_base)*pts)
+                seconds_d64(av_q2d(mStream->time_base)*mDecodedFrame->best_effort_timestamp)
             );
 
         if(mDecodedFrame->nb_samples > mSamplesMax)
@@ -1015,9 +1013,8 @@ void VideoState::updatePicture(SDL_Window *screen, SDL_Renderer *renderer)
         }
     }
 
-    std::unique_lock<std::mutex> lock(mPictQMutex);
-    vp->mUpdated = true;
-    lock.unlock();
+    vp->mUpdated.store(true, std::memory_order_release);
+    std::unique_lock<std::mutex>(mPictQMutex).unlock();
     mPictQCond.notify_one();
 }
 
@@ -1035,7 +1032,7 @@ int VideoState::queuePicture(nanoseconds pts)
     Picture *vp = &mPictQ[mPictQWrite];
 
     /* We have to create/update the picture in the main thread  */
-    vp->mUpdated = false;
+    vp->mUpdated.store(false, std::memory_order_relaxed);
     SDL_Event evt{};
     evt.user.type = FF_UPDATE_EVENT;
     evt.user.data1 = this;
@@ -1043,8 +1040,12 @@ int VideoState::queuePicture(nanoseconds pts)
 
     /* Wait until the picture is updated. */
     lock.lock();
-    while(!vp->mUpdated && !mMovie.mQuit.load(std::memory_order_relaxed))
+    while(!vp->mUpdated.load(std::memory_order_relaxed))
+    {
+        if(mMovie.mQuit.load(std::memory_order_relaxed))
+            return -1;
         mPictQCond.wait(lock);
+    }
     if(mMovie.mQuit.load(std::memory_order_relaxed))
         return -1;
     vp->mPts = pts;
@@ -1054,22 +1055,6 @@ int VideoState::queuePicture(nanoseconds pts)
     lock.unlock();
 
     return 0;
-}
-
-nanoseconds VideoState::synchronize(nanoseconds pts)
-{
-    if(pts == nanoseconds::zero()) /* if we aren't given a pts, set it to the clock */
-        pts = mClock;
-    else /* if we have pts, set video clock to it */
-        mClock = pts;
-
-    /* update the video clock */
-    auto frame_delay = av_q2d(mCodecCtx->time_base);
-    /* if we are repeating a frame, adjust clock accordingly */
-    frame_delay += mDecodedFrame->repeat_pict * (frame_delay * 0.5);
-
-    mClock += std::chrono::duration_cast<nanoseconds>(seconds_d64(frame_delay));
-    return pts;
 }
 
 int VideoState::handler()
@@ -1100,10 +1085,19 @@ int VideoState::handler()
             continue;
         }
 
-        int64_t ts = av_frame_get_best_effort_timestamp(mDecodedFrame.get());
-        auto pts = synchronize(
-            std::chrono::duration_cast<nanoseconds>(seconds_d64(av_q2d(mStream->time_base)*ts))
-        );
+        /* Get the PTS for this frame. */
+        nanoseconds pts;
+        if(mDecodedFrame->best_effort_timestamp != AV_NOPTS_VALUE)
+            mClock = std::chrono::duration_cast<nanoseconds>(
+                seconds_d64(av_q2d(mStream->time_base)*mDecodedFrame->best_effort_timestamp)
+            );
+        pts = mClock;
+
+        /* Update the video clock to the next expected PTS. */
+        auto frame_delay = av_q2d(mCodecCtx->time_base);
+        frame_delay += mDecodedFrame->repeat_pict * (frame_delay * 0.5);
+        mClock += std::chrono::duration_cast<nanoseconds>(seconds_d64(frame_delay));
+
         if(queuePicture(pts) < 0)
             break;
         av_frame_unref(mDecodedFrame.get());

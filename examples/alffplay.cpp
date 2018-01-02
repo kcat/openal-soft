@@ -173,9 +173,9 @@ struct AudioState {
     AVFramePtr    mDecodedFrame;
     SwrContextPtr mSwresCtx;
 
-    /* Conversion format, for what gets fed to Alure */
-    int                 mDstChanLayout{0};
-    enum AVSampleFormat mDstSampleFmt{AV_SAMPLE_FMT_NONE};
+    /* Conversion format, for what gets fed to OpenAL */
+    int            mDstChanLayout{0};
+    AVSampleFormat mDstSampleFmt{AV_SAMPLE_FMT_NONE};
 
     /* Storage of converted samples */
     uint8_t *mSamples{nullptr};
@@ -564,7 +564,7 @@ int AudioState::handler()
     std::unique_lock<std::recursive_mutex> lock(mSrcMutex);
     ALenum fmt;
 
-    /* Find a suitable format for Alure. */
+    /* Find a suitable format for OpenAL. */
     mDstChanLayout = 0;
     if(mCodecCtx->sample_fmt == AV_SAMPLE_FMT_U8 || mCodecCtx->sample_fmt == AV_SAMPLE_FMT_U8P)
     {

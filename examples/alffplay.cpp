@@ -52,7 +52,7 @@ LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
 
 const seconds AVNoSyncThreshold(10);
 
-const seconds_d64 VideoSyncThreshold(0.01);
+const milliseconds VideoSyncThreshold(10);
 #define VIDEO_PICTURE_QUEUE_SIZE 16
 
 const seconds_d64 AudioSyncThreshold(0.03);
@@ -210,6 +210,8 @@ struct AudioState {
     }
 
     nanoseconds getClock();
+    bool isBufferFilled();
+    void startPlayback();
 
     int getSync();
     int decodeFrame();
@@ -228,7 +230,7 @@ struct VideoState {
     std::condition_variable mQueueCond;
 
     nanoseconds mClock{0};
-    seconds_d64 mFrameTimer{0};
+    nanoseconds mFrameTimer{0};
     nanoseconds mFrameLastPts{0};
     nanoseconds mFrameLastDelay{0};
     nanoseconds mCurrentPts{0};
@@ -263,6 +265,7 @@ struct VideoState {
     VideoState(MovieState &movie) : mMovie(movie) { }
 
     nanoseconds getClock();
+    bool isBufferFilled();
 
     static Uint32 SDLCALL sdl_refresh_timer_cb(Uint32 interval, void *opaque);
     void schedRefresh(milliseconds delay);
@@ -280,6 +283,7 @@ struct MovieState {
     SyncMaster mAVSyncType{SyncMaster::Default};
 
     microseconds mClockBase{0};
+    std::atomic<bool> mPlaying{false};
 
     std::mutex mSendMtx;
     std::condition_variable mSendCond;
@@ -382,6 +386,21 @@ nanoseconds AudioState::getClock()
     lock.unlock();
 
     return std::max(pts, nanoseconds::zero());
+}
+
+bool AudioState::isBufferFilled()
+{
+    /* All of OpenAL's buffer queueing happens under the mSrcMutex lock, as
+     * does the source gen. So when we're able to grab the lock and the source
+     * is valid, the queue must be full.
+     */
+    std::lock_guard<std::recursive_mutex> lock(mSrcMutex);
+    return mSource != 0;
+}
+
+void AudioState::startPlayback()
+{
+    return alSourcePlay(mSource);
 }
 
 int AudioState::getSync()
@@ -761,7 +780,8 @@ int AudioState::handler()
         lock.unlock();
 
         /* (re)start the source if needed, and wait for a buffer to finish */
-        if(state != AL_PLAYING && state != AL_PAUSED)
+        if(state != AL_PLAYING && state != AL_PAUSED &&
+           mMovie.mPlaying.load(std::memory_order_relaxed))
             alSourcePlay(mSource);
         SDL_Delay((AudioBufferTime/3).count());
 
@@ -780,8 +800,15 @@ finish:
 
 nanoseconds VideoState::getClock()
 {
+    /* NOTE: This returns incorrect times while not playing. */
     auto delta = get_avtime() - mCurrentPtsTime;
     return mCurrentPts + delta;
+}
+
+bool VideoState::isBufferFilled()
+{
+    std::unique_lock<std::mutex> lock(mPictQMutex);
+    return mPictQSize >= mPictQ.size();
 }
 
 Uint32 SDLCALL VideoState::sdl_refresh_timer_cb(Uint32 /*interval*/, void *opaque)
@@ -856,6 +883,11 @@ void VideoState::refreshTimer(SDL_Window *screen, SDL_Renderer *renderer)
         schedRefresh(milliseconds(100));
         return;
     }
+    if(!mMovie.mPlaying.load(std::memory_order_relaxed))
+    {
+        schedRefresh(milliseconds(1));
+        return;
+    }
 
     std::unique_lock<std::mutex> lock(mPictQMutex);
 retry:
@@ -889,10 +921,10 @@ retry:
     if(mMovie.mAVSyncType != SyncMaster::Video)
     {
         auto ref_clock = mMovie.getMasterClock();
-        auto diff = seconds_d64(vp->mPts - ref_clock);
+        auto diff = vp->mPts - ref_clock;
 
         /* Skip or repeat the frame. Take delay into account. */
-        auto sync_threshold = std::min(seconds_d64(delay), VideoSyncThreshold);
+        auto sync_threshold = std::min<nanoseconds>(delay, VideoSyncThreshold);
         if(!(diff < AVNoSyncThreshold && diff > -AVNoSyncThreshold))
         {
             if(diff <= -sync_threshold)
@@ -1172,6 +1204,8 @@ void MovieState::setTitle(SDL_Window *window)
 
 nanoseconds MovieState::getClock()
 {
+    if(!mPlaying.load(std::memory_order_relaxed))
+        return nanoseconds::zero();
     return get_avtime() - mClockBase;
 }
 
@@ -1223,10 +1257,6 @@ int MovieState::streamComponentOpen(int stream_index)
             mVideo.mStream = mFormatCtx->streams[stream_index];
             mVideo.mCodecCtx = std::move(avctx);
 
-            mVideo.mCurrentPtsTime = get_avtime();
-            mVideo.mFrameTimer = mVideo.mCurrentPtsTime;
-            mVideo.mFrameLastDelay = milliseconds(40);
-
             mVideoThread = std::thread(std::mem_fn(&VideoState::handler), &mVideo);
             break;
 
@@ -1250,16 +1280,10 @@ int MovieState::parse_handler()
     {
         auto codecpar = mFormatCtx->streams[i]->codecpar;
         if(codecpar->codec_type == AVMEDIA_TYPE_VIDEO && video_index < 0)
-            video_index = i;
+            video_index = streamComponentOpen(i);
         else if(codecpar->codec_type == AVMEDIA_TYPE_AUDIO && audio_index < 0)
-            audio_index = i;
+            audio_index = streamComponentOpen(i);
     }
-    /* Start the external clock in 50ms, to give the audio and video
-     * components time to start without needing to skip ahead.
-     */
-    mClockBase = get_avtime() + milliseconds(50);
-    if(audio_index >= 0) audio_index = streamComponentOpen(audio_index);
-    if(video_index >= 0) video_index = streamComponentOpen(video_index);
 
     if(video_index < 0 && audio_index < 0)
     {
@@ -1317,6 +1341,19 @@ int MovieState::parse_handler()
             if(queue_size == 0 || (queue_size < MAX_QUEUE_SIZE && !input_finished))
                 break;
 
+            if(!mPlaying.load(std::memory_order_relaxed))
+            {
+                if((!mAudio.mCodecCtx || mAudio.isBufferFilled()) &&
+                   (!mVideo.mCodecCtx || mVideo.isBufferFilled()))
+                {
+                    /* Set the base time 50ms ahead of the current av time. */
+                    mClockBase = get_avtime() + milliseconds(50);
+                    mVideo.mCurrentPtsTime = mClockBase;
+                    mVideo.mFrameTimer = mVideo.mCurrentPtsTime;
+                    mAudio.startPlayback();
+                    mPlaying.store(std::memory_order_release);
+                }
+            }
             /* Nothing to send or get for now, wait a bit and try again. */
             { std::unique_lock<std::mutex> lock(mSendMtx);
                 if(mSendDataGood.test_and_set(std::memory_order_relaxed))
@@ -1423,7 +1460,8 @@ int main(int argc, char *argv[])
         return 1;
     }
     /* Make a renderer to handle the texture image surface and rendering. */
-    SDL_Renderer *renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_ACCELERATED);
+    Uint32 render_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
+    SDL_Renderer *renderer = SDL_CreateRenderer(screen, -1, render_flags);
     if(renderer)
     {
         SDL_RendererInfo rinf{};
@@ -1444,7 +1482,10 @@ int main(int argc, char *argv[])
         }
     }
     if(!renderer)
-        renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_SOFTWARE);
+    {
+        render_flags = SDL_RENDERER_SOFTWARE | SDL_RENDERER_PRESENTVSYNC;
+        renderer = SDL_CreateRenderer(screen, -1, render_flags);
+    }
     if(!renderer)
     {
         std::cerr<< "SDL: could not create renderer - exiting" <<std::endl;

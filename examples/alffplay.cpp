@@ -297,6 +297,8 @@ struct MovieState {
 
     nanoseconds getMasterClock();
 
+    nanoseconds getDuration();
+
     int streamComponentOpen(int stream_index);
     int parse_handler();
 };
@@ -1168,6 +1170,9 @@ nanoseconds MovieState::getMasterClock()
     return getClock();
 }
 
+nanoseconds MovieState::getDuration()
+{ return std::chrono::duration<int64_t,std::ratio<1,AV_TIME_BASE>>(mFormatCtx->duration); }
+
 int MovieState::streamComponentOpen(int stream_index)
 {
     if(stream_index < 0 || (unsigned int)stream_index >= mFormatCtx->nb_streams)
@@ -1348,6 +1353,35 @@ int MovieState::parse_handler()
     return 0;
 }
 
+
+// Helper class+method to print the time with human-readable formatting.
+struct PrettyTime {
+    seconds_d64 mTime;
+};
+inline std::ostream &operator<<(std::ostream &os, const PrettyTime &rhs)
+{
+    using hours = std::chrono::hours;
+    using minutes = std::chrono::minutes;
+    using std::chrono::duration_cast;
+
+    seconds t = duration_cast<seconds>(rhs.mTime);
+    if(t.count() < 0)
+    {
+        os << '-';
+        t *= -1;
+    }
+
+    // Only handle up to hour formatting
+    if(t >= hours(1))
+        os << duration_cast<hours>(t).count() << 'h' << std::setfill('0') << std::setw(2)
+           << (duration_cast<minutes>(t).count() % 60) << 'm';
+    else
+        os << duration_cast<minutes>(t).count() << 'm' << std::setfill('0');
+    os << std::setw(2) << (duration_cast<seconds>(t).count() % 60) << 's' << std::setw(0)
+       << std::setfill(' ');
+    return os;
+}
+
 } // namespace
 
 
@@ -1477,8 +1511,14 @@ int main(int argc, char *argv[])
         Next, Quit
     } eom_action = EomAction::Next;
     SDL_Event event;
-    while(SDL_WaitEvent(&event) == 1)
+    while(1)
     {
+        int have_evt = SDL_WaitEventTimeout(&event, 10);
+
+        std::cout<< "\r "<<PrettyTime{movState->getMasterClock()}<<" / "<<
+                    PrettyTime{movState->getDuration()} <<std::flush;
+        if(!have_evt) continue;
+
         switch(event.type)
         {
             case SDL_KEYDOWN:
@@ -1530,6 +1570,7 @@ int main(int argc, char *argv[])
                 break;
 
             case FF_MOVIE_DONE_EVENT:
+                std::cout<<'\n';
                 if(eom_action != EomAction::Quit)
                 {
                     movState = nullptr;

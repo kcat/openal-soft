@@ -1444,7 +1444,7 @@ static void CalcModulationDelays(ALreverbState *State,
             /* Calculate the sinus rhythm (dependent on modulation time and the
              * sampling rate).
              */
-            sinus = sinf(index * State->Mod.Scale) + 1.0f;
+            sinus = sinf(index * State->Mod.Scale);
             index = (index+1) % State->Mod.Range;
 
             /* Calculate the read offset. */

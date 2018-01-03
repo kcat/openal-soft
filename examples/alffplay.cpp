@@ -37,6 +37,20 @@ extern "C" {
 #include "AL/al.h"
 #include "AL/alext.h"
 
+extern "C" {
+#ifndef ALC_SOFT_device_clock
+#define ALC_SOFT_device_clock 1
+typedef int64_t ALCint64SOFT;
+typedef uint64_t ALCuint64SOFT;
+#define ALC_DEVICE_CLOCK_SOFT                    0x1600
+#define ALC_DEVICE_LATENCY_SOFT                  0x1601
+#define ALC_DEVICE_CLOCK_LATENCY_SOFT            0x1602
+#define AL_SAMPLE_OFFSET_CLOCK_SOFT              0x1202
+#define AL_SEC_OFFSET_CLOCK_SOFT                 0x1203
+typedef void (ALC_APIENTRY*LPALCGETINTEGER64VSOFT)(ALCdevice *device, ALCenum pname, ALsizei size, ALCint64SOFT *values);
+#endif
+} // extern "C"
+
 namespace {
 
 using nanoseconds = std::chrono::nanoseconds;
@@ -49,6 +63,7 @@ const std::string AppName("alffplay");
 
 bool EnableDirectOut = false;
 LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
+LPALCGETINTEGER64VSOFT alcGetInteger64vSOFT;
 
 const seconds AVNoSyncThreshold(10);
 
@@ -173,6 +188,9 @@ struct AudioState {
 
     /* Time of the next sample to be buffered */
     nanoseconds mCurrentPts{0};
+
+    /* Device clock time that the stream started at. */
+    nanoseconds mDeviceStartTime{nanoseconds::min()};
 
     /* Decompressed sample frame, and swresample context for conversion */
     AVFramePtr    mDecodedFrame;
@@ -328,9 +346,29 @@ struct MovieState {
 
 nanoseconds AudioState::getClock()
 {
+    auto device = alcGetContextsDevice(alcGetCurrentContext());
     std::unique_lock<std::recursive_mutex> lock(mSrcMutex);
-    /* The audio clock is the timestamp of the sample currently being heard.
-     * It's based on 4 components:
+
+    // The audio clock is the timestamp of the sample currently being heard.
+    if(alcGetInteger64vSOFT)
+    {
+        // If device start time = min, we aren't playing yet.
+        if(mDeviceStartTime == nanoseconds::min())
+            return nanoseconds::zero();
+
+        // Get the current device clock time and latency.
+        ALCint64SOFT devtimes[2]={0,0};
+        alcGetInteger64vSOFT(device, ALC_DEVICE_CLOCK_LATENCY_SOFT, 2, devtimes);
+        auto latency = nanoseconds(devtimes[1]);
+        auto device_time = nanoseconds(devtimes[0]);
+
+        // The clock is simply the current device time relative to the recorded
+        // start time. We can also subtract the latency to get more a accurate
+        // position of where the audio device actually is in the output stream.
+        return device_time - mDeviceStartTime - latency;
+    }
+
+    /* The source-based clock is based on 4 components:
      * 1 - The timestamp of the next sample to buffer (mCurrentPts)
      * 2 - The length of the source's buffer queue
      *     (AudioBufferTime*AL_BUFFERS_QUEUED)
@@ -340,10 +378,10 @@ nanoseconds AudioState::getClock()
      *     AL_SAMPLE_OFFSET_LATENCY_SOFT)
      *
      * Subtracting the length of the source queue from the next sample's
-     * timestamp gives the timestamp of the sample at start of the source
-     * queue. Adding the source offset to that results in the timestamp for
-     * OpenAL's current position, and subtracting the source latency from that
-     * gives the timestamp of the sample currently at the DAC.
+     * timestamp gives the timestamp of the sample at the start of the source
+     * queue. Adding the source offset to that results in the timestamp for the
+     * sample at OpenAL's current position, and subtracting the source latency
+     * from that gives the timestamp of the sample currently at the DAC.
      */
     nanoseconds pts = mCurrentPts;
     if(mSource)
@@ -380,6 +418,7 @@ nanoseconds AudioState::getClock()
                 fixed32(offset[0] / mCodecCtx->sample_rate)
             );
         }
+        /* Don't offset by the latency if the source isn't playing. */
         if(status == AL_PLAYING)
             pts -= nanoseconds(offset[1]);
     }
@@ -400,7 +439,27 @@ bool AudioState::isBufferFilled()
 
 void AudioState::startPlayback()
 {
-    return alSourcePlay(mSource);
+    alSourcePlay(mSource);
+    if(alcGetInteger64vSOFT)
+    {
+        using fixed32 = std::chrono::duration<int64_t,std::ratio<1,(1ll<<32)>>;
+
+        // Subtract the total buffer queue time from the current pts to get the
+        // pts of the start of the queue.
+        nanoseconds startpts = mCurrentPts - AudioBufferTotalTime;
+        int64_t srctimes[2]={0,0};
+        alGetSourcei64vSOFT(mSource, AL_SAMPLE_OFFSET_CLOCK_SOFT, srctimes);
+        auto device_time = nanoseconds(srctimes[1]);
+        auto src_offset = std::chrono::duration_cast<nanoseconds>(fixed32(srctimes[0])) /
+                          mCodecCtx->sample_rate;
+
+        // The mixer may have ticked and incremented the device time and sample
+        // offset, so subtract the source offset from the device time to get
+        // the device time the source started at. Also subtract startpts to get
+        // the device time the stream would have started at to reach where it
+        // is now.
+        mDeviceStartTime = device_time - src_offset - startpts;
+    }
 }
 
 int AudioState::getSync()
@@ -537,7 +596,12 @@ int AudioState::readAudio(uint8_t *samples, int length)
             mSamplesPos = std::min(mSamplesLen, sample_skip);
             sample_skip -= mSamplesPos;
 
-            mCurrentPts += nanoseconds(seconds(mSamplesPos)) / mCodecCtx->sample_rate;
+            // Adjust the device start time and current pts by the amount we're
+            // skipping/duplicating, so that the clock remains correct for the
+            // current stream position.
+            auto skip = nanoseconds(seconds(mSamplesPos)) / mCodecCtx->sample_rate;
+            mDeviceStartTime -= skip;
+            mCurrentPts += skip;
             continue;
         }
 
@@ -777,14 +841,13 @@ int AudioState::handler()
             continue;
         }
 
-        lock.unlock();
-
         /* (re)start the source if needed, and wait for a buffer to finish */
         if(state != AL_PLAYING && state != AL_PAUSED &&
            mMovie.mPlaying.load(std::memory_order_relaxed))
-            alSourcePlay(mSource);
-        SDL_Delay((AudioBufferTime/3).count());
+            startPlayback();
 
+        lock.unlock();
+        SDL_Delay((AudioBufferTime/3).count());
         lock.lock();
     }
 
@@ -1524,6 +1587,17 @@ int main(int argc, char *argv[])
     if(!name || alcGetError(device) != AL_NO_ERROR)
         name = alcGetString(device, ALC_DEVICE_SPECIFIER);
     std::cout<< "Opened \""<<name<<"\"" <<std::endl;
+
+    /* WARNING: ALC_SOFT_device_clock is still subject to change. It's fine to
+     * play around with and test out, but avoid in production code.
+     */
+    if(alcIsExtensionPresent(device, "ALC_SOFTX_device_clock"))
+    {
+        std::cout<< "Found ALC_SOFT_device_clock" <<std::endl;
+        alcGetInteger64vSOFT = reinterpret_cast<LPALCGETINTEGER64VSOFT>(
+            alcGetProcAddress(device, "alcGetInteger64vSOFT")
+        );
+    }
 
     if(alIsExtensionPresent("AL_SOFT_source_latency"))
     {

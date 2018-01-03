@@ -427,6 +427,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                     {
                         const ALsizei SizeToDo = mini(SrcBufferSize - FilledAmt, LoopSize);
 
+                        CompLen = 0;
                         for(i = 0;i < BufferListItem->num_buffers;i++)
                         {
                             const ALbuffer *buffer = BufferListItem->buffers[i];

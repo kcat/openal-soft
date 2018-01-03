@@ -1739,8 +1739,8 @@ static ALvoid LateReverb_Unfaded(ALreverbState *State, const ALsizei todo, ALflo
         {
             ALsizei delay = offset - (moddelay[j][i][0]>>FRACTIONBITS);
             ALfloat modmu = (moddelay[j][i][0]&FRACTIONBITS) * (1.0f/FRACTIONONE);
-            ALfloat r = DelayLineOut(&State->Late.Delay,   delay, j)*(1.0-modmu) +
-                        DelayLineOut(&State->Late.Delay, delay-1, j)*(    modmu);
+            ALfloat r = DelayLineOut(&State->Late.Delay,   delay, j)*(1.0f-modmu) +
+                        DelayLineOut(&State->Late.Delay, delay-1, j)*(     modmu);
             out[j][i] = f[j] + r;
         }
 

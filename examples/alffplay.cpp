@@ -210,7 +210,7 @@ struct AudioState {
     ALenum mFormat{AL_NONE};
     ALsizei mFrameSize{0};
 
-    std::recursive_mutex mSrcMutex;
+    std::mutex mSrcMutex;
     ALuint mSource{0};
     std::vector<ALuint> mBuffers;
     ALsizei mBufferIdx{0};
@@ -227,7 +227,13 @@ struct AudioState {
         av_freep(&mSamples);
     }
 
-    nanoseconds getClock();
+    nanoseconds getClockNoLock();
+    nanoseconds getClock()
+    {
+        std::lock_guard<std::mutex> lock(mSrcMutex);
+        return getClockNoLock();
+    }
+
     bool isBufferFilled();
     void startPlayback();
 
@@ -344,11 +350,8 @@ struct MovieState {
 };
 
 
-nanoseconds AudioState::getClock()
+nanoseconds AudioState::getClockNoLock()
 {
-    auto device = alcGetContextsDevice(alcGetCurrentContext());
-    std::unique_lock<std::recursive_mutex> lock(mSrcMutex);
-
     // The audio clock is the timestamp of the sample currently being heard.
     if(alcGetInteger64vSOFT)
     {
@@ -357,7 +360,8 @@ nanoseconds AudioState::getClock()
             return nanoseconds::zero();
 
         // Get the current device clock time and latency.
-        ALCint64SOFT devtimes[2]={0,0};
+        auto device = alcGetContextsDevice(alcGetCurrentContext());
+        ALCint64SOFT devtimes[2] = {0,0};
         alcGetInteger64vSOFT(device, ALC_DEVICE_CLOCK_LATENCY_SOFT, 2, devtimes);
         auto latency = nanoseconds(devtimes[1]);
         auto device_time = nanoseconds(devtimes[0]);
@@ -422,7 +426,6 @@ nanoseconds AudioState::getClock()
         if(status == AL_PLAYING)
             pts -= nanoseconds(offset[1]);
     }
-    lock.unlock();
 
     return std::max(pts, nanoseconds::zero());
 }
@@ -433,7 +436,7 @@ bool AudioState::isBufferFilled()
      * does the source gen. So when we're able to grab the lock and the source
      * is valid, the queue must be full.
      */
-    std::lock_guard<std::recursive_mutex> lock(mSrcMutex);
+    std::lock_guard<std::mutex> lock(mSrcMutex);
     return mSource != 0;
 }
 
@@ -468,7 +471,7 @@ int AudioState::getSync()
         return 0;
 
     auto ref_clock = mMovie.getMasterClock();
-    auto diff = seconds_d64(ref_clock - getClock());
+    auto diff = seconds_d64(ref_clock - getClockNoLock());
 
     if(!(diff < AVNoSyncThreshold && diff > -AVNoSyncThreshold))
     {
@@ -648,7 +651,7 @@ int AudioState::readAudio(uint8_t *samples, int length)
 
 int AudioState::handler()
 {
-    std::unique_lock<std::recursive_mutex> lock(mSrcMutex);
+    std::unique_lock<std::mutex> lock(mSrcMutex);
     ALenum fmt;
 
     /* Find a suitable format for OpenAL. */

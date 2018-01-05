@@ -71,7 +71,7 @@ const milliseconds VideoSyncThreshold(10);
 #define VIDEO_PICTURE_QUEUE_SIZE 16
 
 const seconds_d64 AudioSyncThreshold(0.03);
-const seconds_d64 AudioSampleCorrectionMax(0.05);
+const milliseconds AudioSampleCorrectionMax(50);
 /* Averaging filter coefficient for audio sync. */
 #define AUDIO_DIFF_AVG_NB 20
 const double AudioAvgFilterCoeff = std::pow(0.01, 1.0/AUDIO_DIFF_AVG_NB);
@@ -471,12 +471,12 @@ int AudioState::getSync()
         return 0;
 
     auto ref_clock = mMovie.getMasterClock();
-    auto diff = seconds_d64(ref_clock - getClockNoLock());
+    auto diff = ref_clock - getClockNoLock();
 
     if(!(diff < AVNoSyncThreshold && diff > -AVNoSyncThreshold))
     {
         /* Difference is TOO big; reset accumulated average */
-        mClockDiffAvg = std::chrono::duration<double>::zero();
+        mClockDiffAvg = seconds_d64::zero();
         return 0;
     }
 
@@ -487,11 +487,9 @@ int AudioState::getSync()
         return 0;
 
     /* Constrain the per-update difference to avoid exceedingly large skips */
-    if(!(diff < AudioSampleCorrectionMax))
-        return (int)(AudioSampleCorrectionMax * mCodecCtx->sample_rate).count();
-    if(!(diff > -AudioSampleCorrectionMax))
-        return (int)(-AudioSampleCorrectionMax * mCodecCtx->sample_rate).count();
-    return (int)(diff.count()*mCodecCtx->sample_rate);
+    diff = std::min<nanoseconds>(std::max<nanoseconds>(diff, -AudioSampleCorrectionMax),
+                                 AudioSampleCorrectionMax);
+    return (int)std::chrono::duration_cast<seconds>(diff*mCodecCtx->sample_rate).count();
 }
 
 int AudioState::decodeFrame()

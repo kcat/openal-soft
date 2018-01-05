@@ -1162,7 +1162,7 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
         length = lerp(LATE_LINE_LENGTHS[i] * multiplier, echoTime, echoDepth);
 
         /* Calculate the delay offset for each delay line. */
-        State->Late.Offset[i][1] = fastf2i(length*frequency*FRACTIONONE + 0.5f);
+        State->Late.Offset[i][1] = fastf2i(length*frequency + 0.5f);
 
         /* Approximate the absorption that the vector all-pass would exhibit
          * given the current diffusion so we don't have to process a full T60
@@ -1438,6 +1438,8 @@ static void CalcModulationDelays(ALreverbState *State,
 
     for(c = 0;c < 4;c++)
     {
+        ALsizei offset0 = offsets[c][0] << FRACTIONBITS;
+        ALsizei offset1 = offsets[c][1] << FRACTIONBITS;
         index = State->Mod.Index + phase_offset*c;
         for(i = 0;i < todo;i++)
         {
@@ -1448,8 +1450,8 @@ static void CalcModulationDelays(ALreverbState *State,
             index = (index+1) % State->Mod.Range;
 
             /* Calculate the read offset. */
-            delays[c][i][0] = fastf2i(sinus*State->Mod.Depth[0]) + offsets[c][0];
-            delays[c][i][1] = fastf2i(sinus*State->Mod.Depth[1]) + offsets[c][1];
+            delays[c][i][0] = fastf2i(sinus*State->Mod.Depth[0]) + offset0;
+            delays[c][i][1] = fastf2i(sinus*State->Mod.Depth[1]) + offset1;
         }
     }
     State->Mod.Index = (State->Mod.Index+todo) % State->Mod.Range;
@@ -1680,22 +1682,9 @@ static ALvoid LateReverb_Faded(ALreverbState *State, const ALsizei todo, ALfloat
             ) * State->Late.DensityGain;
 
         for(j = 0;j < 4;j++)
-        {
-            ALsizei delay0 = offset - (moddelay[j][i][0]>>FRACTIONBITS);
-            ALfloat modmu0 = (moddelay[j][i][0]&FRACTIONBITS) * (1.0f/FRACTIONONE);
-            ALsizei delay1 = offset - (moddelay[j][i][1]>>FRACTIONBITS);
-            ALfloat modmu1 = (moddelay[j][i][1]&FRACTIONBITS) * (1.0f/FRACTIONONE);
-            ALfloat r = DelayLineOut(&State->Late.Delay, delay0  , j)*(1.0f-modmu0)*(1.0f-fade) +
-                        DelayLineOut(&State->Late.Delay, delay0-1, j)*(     modmu0)*(1.0f-fade) +
-                        DelayLineOut(&State->Late.Delay, delay1  , j)*(1.0f-modmu1)*(     fade) +
-                        DelayLineOut(&State->Late.Delay, delay1-1, j)*(     modmu1)*(     fade);
-            out[j][i] = f[j] + r;
-        }
-
-        for(j = 0;j < 4;j++)
             f[j] += FadedDelayLineOut(&State->Late.Delay,
-                offset - (State->Late.Offset[j][0]>>FRACTIONBITS),
-                offset - (State->Late.Offset[j][1]>>FRACTIONBITS), j, fade
+                offset - State->Late.Offset[j][0],
+                offset - State->Late.Offset[j][1], j, fade
             );
 
         for(j = 0;j < 4;j++)
@@ -1703,6 +1692,9 @@ static ALvoid LateReverb_Faded(ALreverbState *State, const ALsizei todo, ALfloat
 
         VectorAllpass_Faded(f, offset, apFeedCoeff, mixX, mixY, fade,
                             &State->Late.VecAp);
+
+        for(j = 0;j < 4;j++)
+            out[j][i] = f[j];
 
         VectorReverse(f);
 
@@ -1736,23 +1728,17 @@ static ALvoid LateReverb_Unfaded(ALreverbState *State, const ALsizei todo, ALflo
                    State->Late.DensityGain;
 
         for(j = 0;j < 4;j++)
-        {
-            ALsizei delay = offset - (moddelay[j][i][0]>>FRACTIONBITS);
-            ALfloat modmu = (moddelay[j][i][0]&FRACTIONBITS) * (1.0f/FRACTIONONE);
-            ALfloat r = DelayLineOut(&State->Late.Delay,   delay, j)*(1.0f-modmu) +
-                        DelayLineOut(&State->Late.Delay, delay-1, j)*(     modmu);
-            out[j][i] = f[j] + r;
-        }
-
-        for(j = 0;j < 4;j++)
             f[j] += DelayLineOut(&State->Late.Delay,
-                offset - (State->Late.Offset[j][0]>>FRACTIONBITS), j);
+                offset - State->Late.Offset[j][0], j);
 
         for(j = 0;j < 4;j++)
             f[j] = LateT60Filter(j, f[j], State);
 
         VectorAllpass_Unfaded(f, offset, apFeedCoeff, mixX, mixY, fade,
                               &State->Late.VecAp);
+
+        for(j = 0;j < 4;j++)
+            out[j][i] = f[j];
 
         VectorReverse(f);
 

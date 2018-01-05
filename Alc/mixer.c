@@ -437,11 +437,11 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                             if(DataPosInt >= buffer->SampleLen)
                                 continue;
 
-                            DataSize = mini(SizeToDo, buffer->SampleLen - DataPosInt);
+                            DataSize = mini(SizeToDo, buffer->SampleLen - LoopStart);
                             CompLen = maxi(CompLen, DataSize);
 
                             LoadSamples(&SrcData[FilledAmt],
-                                &Data[(DataPosInt*NumChannels + chan)*SampleSize],
+                                &Data[(LoopStart*NumChannels + chan)*SampleSize],
                                 NumChannels, buffer->FmtType, DataSize
                             );
                         }

@@ -434,7 +434,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                             const ALubyte *Data = buffer->data;
                             ALsizei DataSize;
 
-                            if(DataPosInt >= buffer->SampleLen)
+                            if(LoopStart >= buffer->SampleLen)
                                 continue;
 
                             DataSize = mini(SizeToDo, buffer->SampleLen - LoopStart);

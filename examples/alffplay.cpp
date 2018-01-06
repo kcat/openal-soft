@@ -852,11 +852,11 @@ int AudioState::handler()
         lock.lock();
     }
 
-finish:
     alSourceRewind(mSource);
     alSourcei(mSource, AL_BUFFER, 0);
 
-    av_freep(&mSamples);
+finish:
+    av_freep(&samples);
 
     return 0;
 }

@@ -50,6 +50,10 @@
 #define log2(x)  (log(x) / log(2.0))
 #endif
 
+/* Same as in alu.h! */
+#define FRACTIONBITS (12)
+#define FRACTIONONE  (1<<FRACTIONBITS)
+
 // The number of distinct scale and phase intervals within the filter table.
 // Must be the same as in alu.h!
 #define BSINC_SCALE_COUNT (16)
@@ -316,48 +320,6 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
 }
 
 
-/* These methods generate a much simplified 4-point sinc interpolator using a
- * Kaiser window. This is much simpler to process at run-time, but has notably
- * more aliasing noise.
- */
-
-/* Same as in alu.h! */
-#define FRACTIONBITS (12)
-#define FRACTIONONE  (1<<FRACTIONBITS)
-
-static void Sinc4GenerateTables(FILE *output, const double rejection)
-{
-    static double filter[FRACTIONONE][4];
-
-    const double width = CalcKaiserWidth(rejection, 3);
-    const double beta = CalcKaiserBeta(rejection);
-    const double scaleBase = width / 2.0;
-    const double scaleRange = 1.0 - scaleBase;
-    const double scale = scaleBase + scaleRange;
-    const double a = MinDouble(4.0, floor(4.0 / (2.0*scale)));
-    const int m = 2 * (int)a;
-    const int l = (m/2) - 1;
-    int pi;
-    for(pi = 0;pi < FRACTIONONE;pi++)
-    {
-        const double phase = l + ((double)pi / FRACTIONONE);
-        int i;
-
-        for(i = 0;i < m;i++)
-        {
-            double x = i - phase;
-            filter[pi][i] = Kaiser(beta, x / a) * Sinc(x);
-        }
-    }
-
-    fprintf(output, "alignas(16) static const float sinc4Tab[FRACTIONONE][4] = {\n");
-    for(pi = 0;pi < FRACTIONONE;pi++)
-        fprintf(output, "    { %+14.9ef, %+14.9ef, %+14.9ef, %+14.9ef },\n",
-                filter[pi][0], filter[pi][1], filter[pi][2], filter[pi][3]);
-    fprintf(output, "};\n\n");
-}
-
-
 int main(int argc, char *argv[])
 {
     FILE *output;
@@ -396,7 +358,6 @@ int main(int argc, char *argv[])
     BsiGenerateTables(output, "bsinc24", 60.0, 23);
     /* An 11th order filter with a -60dB drop at nyquist. */
     BsiGenerateTables(output, "bsinc12", 60.0, 11);
-    Sinc4GenerateTables(output, 60.0);
 
     if(output != stdout)
         fclose(output);

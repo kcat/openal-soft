@@ -1046,9 +1046,6 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *p
         BsincPrepare(voice->Step, &voice->ResampleState.bsinc, &bsinc24);
     else if(props->Resampler == BSinc12Resampler)
         BsincPrepare(voice->Step, &voice->ResampleState.bsinc, &bsinc12);
-    else
-
-        voice->ResampleState.sinc4.filter = sinc4Tab;
     voice->Resampler = SelectResampler(props->Resampler);
 
     /* Calculate gains */
@@ -1396,8 +1393,6 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
         BsincPrepare(voice->Step, &voice->ResampleState.bsinc, &bsinc24);
     else if(props->Resampler == BSinc12Resampler)
         BsincPrepare(voice->Step, &voice->ResampleState.bsinc, &bsinc12);
-    else
-        voice->ResampleState.sinc4.filter = sinc4Tab;
     voice->Resampler = SelectResampler(props->Resampler);
 
     if(Distance > FLT_EPSILON)

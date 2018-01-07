@@ -84,13 +84,8 @@ typedef struct BsincState {
     const ALfloat *filter;
 } BsincState;
 
-typedef struct Sinc4State {
-    const ALfloat (*filter)[4];
-} Sinc4State;
-
 typedef union InterpState {
     BsincState bsinc;
-    Sinc4State sinc4;
 } InterpState;
 
 typedef const ALfloat* (*ResamplerFunc)(const InterpState *state,

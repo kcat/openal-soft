@@ -100,7 +100,7 @@ static const struct NameValuePair {
     { "Point", "point" },
     { "Linear", "linear" },
     { "Default (Linear)", "" },
-    { "3rd order Sinc", "sinc4" },
+    { "Cubic Spline", "cubic" },
     { "11th order Sinc", "bsinc12" },
     { "23rd order Sinc", "bsinc24" },
 

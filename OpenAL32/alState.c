@@ -50,7 +50,7 @@ static const ALchar alErrOutOfMemory[] = "Out of Memory";
 /* Resampler strings */
 static const ALchar alPointResampler[] = "Nearest";
 static const ALchar alLinearResampler[] = "Linear";
-static const ALchar alSinc4Resampler[] = "3rd order Sinc";
+static const ALchar alCubicResampler[] = "Cubic";
 static const ALchar alBSinc12Resampler[] = "11th order Sinc";
 static const ALchar alBSinc24Resampler[] = "23rd order Sinc";
 
@@ -761,7 +761,7 @@ AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index)
 {
     const char *ResamplerNames[] = {
         alPointResampler, alLinearResampler,
-        alSinc4Resampler, alBSinc12Resampler,
+        alCubicResampler, alBSinc12Resampler,
         alBSinc24Resampler,
     };
     const ALchar *value = NULL;

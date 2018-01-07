@@ -15,7 +15,7 @@ struct HrtfState;
 const ALfloat *Resample_copy_C(const InterpState *state, const ALfloat *restrict src, ALsizei frac, ALint increment, ALfloat *restrict dst, ALsizei dstlen);
 const ALfloat *Resample_point_C(const InterpState *state, const ALfloat *restrict src, ALsizei frac, ALint increment, ALfloat *restrict dst, ALsizei dstlen);
 const ALfloat *Resample_lerp_C(const InterpState *state, const ALfloat *restrict src, ALsizei frac, ALint increment, ALfloat *restrict dst, ALsizei dstlen);
-const ALfloat *Resample_fir4_C(const InterpState *state, const ALfloat *restrict src, ALsizei frac, ALint increment, ALfloat *restrict dst, ALsizei dstlen);
+const ALfloat *Resample_cubic_C(const InterpState *state, const ALfloat *restrict src, ALsizei frac, ALint increment, ALfloat *restrict dst, ALsizei dstlen);
 const ALfloat *Resample_bsinc_C(const InterpState *state, const ALfloat *restrict src, ALsizei frac, ALint increment, ALfloat *restrict dst, ALsizei dstlen);
 
 
@@ -83,13 +83,6 @@ const ALfloat *Resample_lerp_SSE41(const InterpState *state, const ALfloat *rest
                                    ALsizei frac, ALint increment, ALfloat *restrict dst,
                                    ALsizei numsamples);
 
-const ALfloat *Resample_fir4_SSE3(const InterpState *state, const ALfloat *restrict src,
-                                  ALsizei frac, ALint increment, ALfloat *restrict dst,
-                                  ALsizei numsamples);
-const ALfloat *Resample_fir4_SSE41(const InterpState *state, const ALfloat *restrict src,
-                                   ALsizei frac, ALint increment, ALfloat *restrict dst,
-                                   ALsizei numsamples);
-
 const ALfloat *Resample_bsinc_SSE(const InterpState *state, const ALfloat *restrict src,
                                   ALsizei frac, ALint increment, ALfloat *restrict dst,
                                   ALsizei dstlen);
@@ -117,9 +110,6 @@ void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Gains,
 
 /* Neon resamplers */
 const ALfloat *Resample_lerp_Neon(const InterpState *state, const ALfloat *restrict src,
-                                  ALsizei frac, ALint increment, ALfloat *restrict dst,
-                                  ALsizei numsamples);
-const ALfloat *Resample_fir4_Neon(const InterpState *state, const ALfloat *restrict src,
                                   ALsizei frac, ALint increment, ALfloat *restrict dst,
                                   ALsizei numsamples);
 const ALfloat *Resample_bsinc_Neon(const InterpState *state, const ALfloat *restrict src,

@@ -128,19 +128,7 @@ ResamplerFunc SelectResampler(enum Resampler resampler)
 #endif
             return Resample_lerp_C;
         case FIR4Resampler:
-#ifdef HAVE_NEON
-            if((CPUCapFlags&CPU_CAP_NEON))
-                return Resample_fir4_Neon;
-#endif
-#ifdef HAVE_SSE4_1
-            if((CPUCapFlags&CPU_CAP_SSE4_1))
-                return Resample_fir4_SSE41;
-#endif
-#ifdef HAVE_SSE3
-            if((CPUCapFlags&CPU_CAP_SSE3))
-                return Resample_fir4_SSE3;
-#endif
-            return Resample_fir4_C;
+            return Resample_cubic_C;
         case BSinc12Resampler:
         case BSinc24Resampler:
 #ifdef HAVE_NEON
@@ -168,7 +156,7 @@ void aluInitMixer(void)
             ResamplerDefault = PointResampler;
         else if(strcasecmp(str, "linear") == 0)
             ResamplerDefault = LinearResampler;
-        else if(strcasecmp(str, "sinc4") == 0)
+        else if(strcasecmp(str, "cubic") == 0)
             ResamplerDefault = FIR4Resampler;
         else if(strcasecmp(str, "bsinc12") == 0)
             ResamplerDefault = BSinc12Resampler;
@@ -179,9 +167,9 @@ void aluInitMixer(void)
             WARN("Resampler option \"%s\" is deprecated, using bsinc12\n", str);
             ResamplerDefault = BSinc12Resampler;
         }
-        else if(strcasecmp(str, "cubic") == 0 || strcasecmp(str, "sinc8") == 0)
+        else if(strcasecmp(str, "sinc4") == 0 || strcasecmp(str, "sinc8") == 0)
         {
-            WARN("Resampler option \"%s\" is deprecated, using sinc4\n", str);
+            WARN("Resampler option \"%s\" is deprecated, using cubic\n", str);
             ResamplerDefault = FIR4Resampler;
         }
         else

@@ -12,7 +12,16 @@ static inline ALfloat do_point(const ALfloat *restrict vals, ALsizei UNUSED(frac
 { return vals[0]; }
 static inline ALfloat do_lerp(const ALfloat *restrict vals, ALsizei frac)
 { return lerp(vals[0], vals[1], frac * (1.0f/FRACTIONONE)); }
-
+static inline ALfloat do_cubic(const ALfloat *restrict vals, ALsizei frac)
+{
+    ALfloat mu = frac * (1.0f/FRACTIONONE);
+    ALfloat mu2 = mu*mu, mu3 = mu2*mu;
+    ALfloat a0 = -0.5f*mu3 +       mu2 + -0.5f*mu;
+    ALfloat a1 =  1.5f*mu3 + -2.5f*mu2            + 1.0f;
+    ALfloat a2 = -1.5f*mu3 +  2.0f*mu2 +  0.5f*mu;
+    ALfloat a3 =  0.5f*mu3 + -0.5f*mu2;
+    return vals[0]*a0 + vals[1]*a1 + vals[2]*a2 + vals[3]*a3;
+}
 
 const ALfloat *Resample_copy_C(const InterpState* UNUSED(state),
   const ALfloat *restrict src, ALsizei UNUSED(frac), ALint UNUSED(increment),
@@ -27,12 +36,14 @@ const ALfloat *Resample_copy_C(const InterpState* UNUSED(state),
     return dst;
 }
 
-#define DECL_TEMPLATE(Tag, Sampler)                                           \
+#define DECL_TEMPLATE(Tag, Sampler, O)                                        \
 const ALfloat *Resample_##Tag##_C(const InterpState* UNUSED(state),           \
   const ALfloat *restrict src, ALsizei frac, ALint increment,                 \
   ALfloat *restrict dst, ALsizei numsamples)                                  \
 {                                                                             \
     ALsizei i;                                                                \
+                                                                              \
+    src -= O;                                                                 \
     for(i = 0;i < numsamples;i++)                                             \
     {                                                                         \
         dst[i] = Sampler(src, frac);                                          \
@@ -44,29 +55,11 @@ const ALfloat *Resample_##Tag##_C(const InterpState* UNUSED(state),           \
     return dst;                                                               \
 }
 
-DECL_TEMPLATE(point, do_point)
-DECL_TEMPLATE(lerp, do_lerp)
+DECL_TEMPLATE(point, do_point, 0)
+DECL_TEMPLATE(lerp, do_lerp, 0)
+DECL_TEMPLATE(cubic, do_cubic, 1)
 
 #undef DECL_TEMPLATE
-
-const ALfloat *Resample_fir4_C(const InterpState *state, const ALfloat *restrict src,
-                               ALsizei frac, ALint increment, ALfloat *restrict dst,
-                               ALsizei numsamples)
-{
-    const ALfloat (*restrict filter)[4] = ASSUME_ALIGNED(state->sinc4.filter, 16);
-    ALsizei i;
-
-    src -= 1;
-    for(i = 0;i < numsamples;i++)
-    {
-        dst[i] = resample_fir4(src[0], src[1], src[2], src[3], filter[frac]);
-
-        frac += increment;
-        src  += frac>>FRACTIONBITS;
-        frac &= FRACTIONMASK;
-    }
-    return dst;
-}
 
 const ALfloat *Resample_bsinc_C(const InterpState *state, const ALfloat *restrict src,
                                 ALsizei frac, ALint increment, ALfloat *restrict dst,

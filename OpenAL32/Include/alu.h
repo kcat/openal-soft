@@ -396,10 +396,6 @@ inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu)
 {
     return val1 + (val2-val1)*mu;
 }
-inline ALfloat resample_fir4(ALfloat val0, ALfloat val1, ALfloat val2, ALfloat val3, const ALfloat *restrict filter)
-{
-    return filter[0]*val0 + filter[1]*val1 + filter[2]*val2 + filter[3]*val3;
-}
 
 
 enum HrtfRequestMode {

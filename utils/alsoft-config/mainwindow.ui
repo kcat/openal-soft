@@ -52,6 +52,9 @@
       <height>401</height>
      </rect>
     </property>
+    <property name="currentIndex">
+     <number>0</number>
+    </property>
     <widget class="QWidget" name="tab_3">
      <attribute name="title">
       <string>Playback</string>
@@ -128,7 +131,7 @@ to stereo output.</string>
        <rect>
         <x>380</x>
         <y>20</y>
-        <width>91</width>
+        <width>93</width>
         <height>29</height>
        </rect>
       </property>
@@ -1924,27 +1927,6 @@ be useful for preventing those extensions from being used.</string>
      <attribute name="title">
       <string>Effects</string>
      </attribute>
-     <widget class="QCheckBox" name="emulateEaxCheckBox">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>60</y>
-        <width>161</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="toolTip">
-       <string>Uses a simpler reverb method to emulate the EAX reverb
-effect. This may slightly improve performance at the cost of
-some quality.</string>
-      </property>
-      <property name="layoutDirection">
-       <enum>Qt::RightToLeft</enum>
-      </property>
-      <property name="text">
-       <string>Emulate EAX Reverb:</string>
-      </property>
-     </widget>
      <widget class="QGroupBox" name="groupBox_5">
       <property name="geometry">
        <rect>
@@ -2148,7 +2130,7 @@ added by the ALC_EXT_DEDICATED extension.</string>
        <rect>
         <x>160</x>
         <y>20</y>
-        <width>123</width>
+        <width>125</width>
         <height>29</height>
        </rect>
       </property>

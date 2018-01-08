@@ -370,7 +370,6 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->backendCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
 
     connect(ui->defaultReverbComboBox, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(enableApplyButton()));
-    connect(ui->emulateEaxCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->enableEaxReverbCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->enableStdReverbCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->enableChorusCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
@@ -822,8 +821,6 @@ void MainWindow::loadConfig(const QString &fname)
         }
     }
 
-    ui->emulateEaxCheckBox->setChecked(settings.value("reverb/emulate-eax", false).toBool());
-
     QStringList excludefx = settings.value("excludefx").toStringList();
     if(excludefx.size() == 1)
         excludefx = excludefx[0].split(QChar(','));
@@ -1030,11 +1027,6 @@ void MainWindow::saveConfig(const QString &fname) const
         QString str = ui->defaultReverbComboBox->currentText().toLower();
         settings.setValue("default-reverb", str);
     }
-
-    if(ui->emulateEaxCheckBox->isChecked())
-        settings.setValue("reverb/emulate-eax", "true");
-    else
-        settings.remove("reverb/emulate-eax"/*, "false"*/);
 
     strlist.clear();
     if(!ui->enableEaxReverbCheck->isChecked())

@@ -38,11 +38,6 @@
  */
 ALfloat ReverbBoost = 1.0f;
 
-/* Specifies whether to use a standard reverb effect in place of EAX reverb (no
- * high-pass, modulation, or echo).
- */
-ALboolean EmulateEAXReverb = AL_FALSE;
-
 /* This is the maximum number of samples processed for each inner loop
  * iteration. */
 #define MAX_UPDATE_SAMPLES  256
@@ -249,8 +244,6 @@ typedef struct VecAllpass {
 typedef struct ALreverbState {
     DERIVE_FROM_TYPE(ALeffectState);
 
-    ALboolean IsEax;
-
     /* All delay lines are allocated as a single buffer to reduce memory
      * fragmentation and management code.
      */
@@ -368,8 +361,6 @@ static void ALreverbState_Construct(ALreverbState *state)
 
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALreverbState, ALeffectState, state);
-
-    state->IsEax = AL_FALSE;
 
     state->TotalSamples = 0;
     state->SampleBuffer = NULL;
@@ -1293,11 +1284,6 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
     ALfloat gain, gainlf, gainhf;
     ALsizei i;
 
-    if(Slot->Params.EffectType == AL_EFFECT_EAXREVERB && !EmulateEAXReverb)
-        State->IsEax = AL_TRUE;
-    else if(Slot->Params.EffectType == AL_EFFECT_REVERB || EmulateEAXReverb)
-        State->IsEax = AL_FALSE;
-
     /* Calculate the master filters */
     hfScale = props->Reverb.HFReference / frequency;
     /* Restrict the filter gains from going below -60dB to keep the filter from
@@ -1739,112 +1725,14 @@ static ALvoid LateReverb_Unfaded(ALreverbState *State, const ALsizei todo, ALflo
     }
 }
 
-typedef ALfloat (*ProcMethodType)(ALreverbState *State, const ALsizei todo, ALfloat fade,
-    const ALfloat (*restrict input)[MAX_UPDATE_SAMPLES],
-    ALfloat (*restrict early)[MAX_UPDATE_SAMPLES], ALfloat (*restrict late)[MAX_UPDATE_SAMPLES]);
-
-/* Perform the non-EAX reverb pass on a given input sample, resulting in
- * four-channel output.
- */
-static ALfloat VerbPass(ALreverbState *State, const ALsizei todo, ALfloat fade,
-                        const ALfloat (*restrict input)[MAX_UPDATE_SAMPLES],
-                        ALfloat (*restrict early)[MAX_UPDATE_SAMPLES],
-                        ALfloat (*restrict late)[MAX_UPDATE_SAMPLES])
-{
-    ALsizei i, c;
-
-    for(c = 0;c < 4;c++)
-    {
-        /* Low-pass filter the incoming samples (use the early buffer as temp
-         * storage).
-         */
-        ALfilterState_process(&State->Filter[c].Lp, &early[0][0], input[c], todo);
-
-        /* Feed the initial delay line. */
-        for(i = 0;i < todo;i++)
-            DelayLineIn(&State->Delay, State->Offset+i, c, early[0][i]);
-    }
-
-    if(fade < 1.0f)
-    {
-        /* Generate early reflections. */
-        EarlyReflection_Faded(State, todo, fade, early);
-
-        /* Generate late reverb. */
-        LateReverb_Faded(State, todo, fade, late);
-        fade = minf(1.0f, fade + todo*FadeStep);
-    }
-    else
-    {
-        /* Generate early reflections. */
-        EarlyReflection_Unfaded(State, todo, fade, early);
-
-        /* Generate late reverb. */
-        LateReverb_Unfaded(State, todo, fade, late);
-    }
-
-    /* Step all delays forward one sample. */
-    State->Offset += todo;
-
-    return fade;
-}
-
-/* Perform the EAX reverb pass on a given input sample, resulting in four-
- * channel output.
- */
-static ALfloat EAXVerbPass(ALreverbState *State, const ALsizei todo, ALfloat fade,
-                           const ALfloat (*restrict input)[MAX_UPDATE_SAMPLES],
-                           ALfloat (*restrict early)[MAX_UPDATE_SAMPLES],
-                           ALfloat (*restrict late)[MAX_UPDATE_SAMPLES])
-{
-    ALsizei i, c;
-
-    for(c = 0;c < 4;c++)
-    {
-        /* Band-pass the incoming samples. Use the early output lines for temp
-         * storage.
-         */
-        ALfilterState_process(&State->Filter[c].Lp, early[0], input[c], todo);
-        ALfilterState_process(&State->Filter[c].Hp, early[1], early[0], todo);
-
-        /* Feed the initial delay line. */
-        for(i = 0;i < todo;i++)
-            DelayLineIn(&State->Delay, State->Offset+i, c, early[1][i]);
-    }
-
-    if(fade < 1.0f)
-    {
-        /* Generate early reflections. */
-        EarlyReflection_Faded(State, todo, fade, early);
-
-        /* Generate late reverb. */
-        LateReverb_Faded(State, todo, fade, late);
-        fade = minf(1.0f, fade + todo*FadeStep);
-    }
-    else
-    {
-        /* Generate early reflections. */
-        EarlyReflection_Unfaded(State, todo, fade, early);
-
-        /* Generate late reverb. */
-        LateReverb_Unfaded(State, todo, fade, late);
-    }
-
-    /* Step all delays forward. */
-    State->Offset += todo;
-
-    return fade;
-}
-
 static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    ProcMethodType ReverbProc = State->IsEax ? EAXVerbPass : VerbPass;
     ALfloat (*restrict afmt)[MAX_UPDATE_SAMPLES] = State->AFormatSamples;
     ALfloat (*restrict early)[MAX_UPDATE_SAMPLES] = State->EarlySamples;
     ALfloat (*restrict late)[MAX_UPDATE_SAMPLES] = State->ReverbSamples;
     ALsizei fadeCount = State->FadeCount;
     ALfloat fade = (ALfloat)fadeCount / FADE_SAMPLES;
-    ALsizei base, c;
+    ALsizei base, c, i;
 
     /* Process reverb for these samples. */
     for(base = 0;base < SamplesToDo;)
@@ -1862,7 +1750,40 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
             );
 
         /* Process the samples for reverb. */
-        fade = ReverbProc(State, todo, fade, afmt, early, late);
+        for(c = 0;c < 4;c++)
+        {
+            /* Band-pass the incoming samples. Use the early output lines for
+             * temp storage.
+             */
+            ALfilterState_process(&State->Filter[c].Lp, early[0], afmt[c], todo);
+            ALfilterState_process(&State->Filter[c].Hp, early[1], early[0], todo);
+
+            /* Feed the initial delay line. */
+            for(i = 0;i < todo;i++)
+                DelayLineIn(&State->Delay, State->Offset+i, c, early[1][i]);
+        }
+
+        if(fade < 1.0f)
+        {
+            /* Generate early reflections. */
+            EarlyReflection_Faded(State, todo, fade, early);
+
+            /* Generate late reverb. */
+            LateReverb_Faded(State, todo, fade, late);
+            fade = minf(1.0f, fade + todo*FadeStep);
+        }
+        else
+        {
+            /* Generate early reflections. */
+            EarlyReflection_Unfaded(State, todo, fade, early);
+
+            /* Generate late reverb. */
+            LateReverb_Unfaded(State, todo, fade, late);
+        }
+
+        /* Step all delays forward. */
+        State->Offset += todo;
+
         if(UNLIKELY(fadeCount < FADE_SAMPLES) && (fadeCount += todo) >= FADE_SAMPLES)
         {
             /* Update the cross-fading delay line taps. */

@@ -1028,8 +1028,6 @@ static void alc_initconfig(void)
     if(ConfigValueFloat(NULL, "reverb", "boost", &valf))
         ReverbBoost *= powf(10.0f, valf / 20.0f);
 
-    EmulateEAXReverb = GetConfigValueBool(NULL, "reverb", "emulate-eax", AL_FALSE);
-
     if(((devs=getenv("ALSOFT_DRIVERS")) && devs[0]) ||
        ConfigValueStr(NULL, NULL, "drivers", &devs))
     {

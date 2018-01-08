@@ -116,6 +116,7 @@ static ALboolean ALflangerState_deviceUpdate(ALflangerState *state, ALCdevice *D
 
 static ALvoid ALflangerState_update(ALflangerState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
 {
+    const ALsizei mindelay = maxi(MAX_PRE_SAMPLES, MAX_POST_SAMPLES) << FRACTIONBITS;
     const ALCdevice *device = context->Device;
     ALfloat frequency = (ALfloat)device->Frequency;
     ALfloat coeffs[MAX_AMBI_COEFFS];
@@ -132,9 +133,12 @@ static ALvoid ALflangerState_update(ALflangerState *state, const ALCcontext *con
             break;
     }
 
-    /* The LFO depth is scaled to be relative to the sample delay. */
-    state->delay = fastf2i(props->Flanger.Delay*frequency*FRACTIONONE + 0.5f);
-    state->depth = props->Flanger.Depth * state->delay;
+    /* The LFO depth is scaled to be relative to the sample delay. Clamp the
+     * delay and depth to allow enough padding for resampling.
+     */
+    state->delay = maxi(fastf2i(props->Flanger.Delay*frequency*FRACTIONONE + 0.5f),
+                        mindelay);
+    state->depth = minf(props->Flanger.Depth * state->delay, state->delay - mindelay);
 
     state->feedback = props->Flanger.Feedback;
 
@@ -248,14 +252,16 @@ static ALvoid ALflangerState_process(ALflangerState *state, ALsizei SamplesToDo,
             // Tap for the left output.
             delay = offset - (moddelays[0][i]>>FRACTIONBITS);
             mu = (moddelays[0][i]&FRACTIONMASK) * (1.0f/FRACTIONONE);
-            temps[0][i] = delaybuf[(delay  ) & bufmask]*(1.0f-mu) +
-                          delaybuf[(delay-1) & bufmask]*(     mu);
+            temps[0][i] = cubic(delaybuf[(delay+1) & bufmask], delaybuf[(delay  ) & bufmask],
+                                delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask],
+                                mu);
 
             // Tap for the right output.
             delay = offset - (moddelays[1][i]>>FRACTIONBITS);
             mu = (moddelays[1][i]&FRACTIONMASK) * (1.0f/FRACTIONONE);
-            temps[1][i] = delaybuf[(delay  ) & bufmask]*(1.0f-mu) +
-                          delaybuf[(delay-1) & bufmask]*(     mu);
+            temps[1][i] = cubic(delaybuf[(delay+1) & bufmask], delaybuf[(delay  ) & bufmask],
+                                delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask],
+                                mu);
 
             // Accumulate feedback from the average delay.
             delaybuf[offset&bufmask] += delaybuf[(offset-avgdelay) & bufmask] * feedback;

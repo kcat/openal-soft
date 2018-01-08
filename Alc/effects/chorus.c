@@ -116,6 +116,7 @@ static ALboolean ALchorusState_deviceUpdate(ALchorusState *state, ALCdevice *Dev
 
 static ALvoid ALchorusState_update(ALchorusState *state, const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props)
 {
+    const ALsizei mindelay = maxi(MAX_PRE_SAMPLES, MAX_POST_SAMPLES) << FRACTIONBITS;
     const ALCdevice *device = Context->Device;
     ALfloat frequency = (ALfloat)device->Frequency;
     ALfloat coeffs[MAX_AMBI_COEFFS];
@@ -132,9 +133,12 @@ static ALvoid ALchorusState_update(ALchorusState *state, const ALCcontext *Conte
             break;
     }
 
-    /* The LFO depth is scaled to be relative to the sample delay. */
-    state->delay = fastf2i(props->Chorus.Delay*frequency*FRACTIONONE + 0.5f);
-    state->depth = props->Chorus.Depth * state->delay;
+    /* The LFO depth is scaled to be relative to the sample delay. Clamp the
+     * delay and depth to allow enough padding for resampling.
+     */
+    state->delay = maxi(fastf2i(props->Chorus.Delay*frequency*FRACTIONONE + 0.5f),
+                        mindelay);
+    state->depth = minf(props->Chorus.Depth * state->delay, state->delay - mindelay);
 
     state->feedback = props->Chorus.Feedback;
 
@@ -249,14 +253,16 @@ static ALvoid ALchorusState_process(ALchorusState *state, ALsizei SamplesToDo, c
             // Tap for the left output.
             delay = offset - (moddelays[0][i]>>FRACTIONBITS);
             mu = (moddelays[0][i]&FRACTIONMASK) * (1.0f/FRACTIONONE);
-            temps[0][i] = delaybuf[(delay  ) & bufmask]*(1.0f-mu) +
-                          delaybuf[(delay-1) & bufmask]*(     mu);
+            temps[0][i] = cubic(delaybuf[(delay+1) & bufmask], delaybuf[(delay  ) & bufmask],
+                                delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask],
+                                mu);
 
             // Tap for the right output.
             delay = offset - (moddelays[1][i]>>FRACTIONBITS);
             mu = (moddelays[1][i]&FRACTIONMASK) * (1.0f/FRACTIONONE);
-            temps[1][i] = delaybuf[(delay  ) & bufmask]*(1.0f-mu) +
-                          delaybuf[(delay-1) & bufmask]*(     mu);
+            temps[1][i] = cubic(delaybuf[(delay+1) & bufmask], delaybuf[(delay  ) & bufmask],
+                                delaybuf[(delay-1) & bufmask], delaybuf[(delay-2) & bufmask],
+                                mu);
 
             // Accumulate feedback from the average delay of the taps.
             delaybuf[offset&bufmask] += delaybuf[(offset-avgdelay) & bufmask] * feedback;

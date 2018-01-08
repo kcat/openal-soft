@@ -391,6 +391,15 @@ inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu)
 {
     return val1 + (val2-val1)*mu;
 }
+inline ALfloat cubic(ALfloat val1, ALfloat val2, ALfloat val3, ALfloat val4, ALfloat mu)
+{
+    ALfloat mu2 = mu*mu, mu3 = mu2*mu;
+    ALfloat a0 = -0.5f*mu3 +       mu2 + -0.5f*mu;
+    ALfloat a1 =  1.5f*mu3 + -2.5f*mu2            + 1.0f;
+    ALfloat a2 = -1.5f*mu3 +  2.0f*mu2 +  0.5f*mu;
+    ALfloat a3 =  0.5f*mu3 + -0.5f*mu2;
+    return val1*a0 + val2*a1 + val3*a2 + val4*a3;
+}
 
 
 enum HrtfRequestMode {

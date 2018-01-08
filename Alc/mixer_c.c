@@ -13,15 +13,7 @@ static inline ALfloat do_point(const ALfloat *restrict vals, ALsizei UNUSED(frac
 static inline ALfloat do_lerp(const ALfloat *restrict vals, ALsizei frac)
 { return lerp(vals[0], vals[1], frac * (1.0f/FRACTIONONE)); }
 static inline ALfloat do_cubic(const ALfloat *restrict vals, ALsizei frac)
-{
-    ALfloat mu = frac * (1.0f/FRACTIONONE);
-    ALfloat mu2 = mu*mu, mu3 = mu2*mu;
-    ALfloat a0 = -0.5f*mu3 +       mu2 + -0.5f*mu;
-    ALfloat a1 =  1.5f*mu3 + -2.5f*mu2            + 1.0f;
-    ALfloat a2 = -1.5f*mu3 +  2.0f*mu2 +  0.5f*mu;
-    ALfloat a3 =  0.5f*mu3 + -0.5f*mu2;
-    return vals[0]*a0 + vals[1]*a1 + vals[2]*a2 + vals[3]*a3;
-}
+{ return cubic(vals[0], vals[1], vals[2], vals[3], frac * (1.0f/FRACTIONONE)); }
 
 const ALfloat *Resample_copy_C(const InterpState* UNUSED(state),
   const ALfloat *restrict src, ALsizei UNUSED(frac), ALint UNUSED(increment),

@@ -203,6 +203,14 @@ AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum format);
 #endif
 
 
+#ifdef __GNUC__
+#define LIKELY(x) __builtin_expect(!!(x), !0)
+#define UNLIKELY(x) __builtin_expect(!!(x), 0)
+#else
+#define LIKELY(x) (!!(x))
+#define UNLIKELY(x) (!!(x))
+#endif
+
 typedef ALint64SOFT ALint64;
 typedef ALuint64SOFT ALuint64;
 

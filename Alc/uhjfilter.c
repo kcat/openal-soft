@@ -20,7 +20,7 @@ static void allpass_process(AllPassState *state, ALfloat *restrict dst, const AL
 {
     ALsizei i;
 
-    if(todo > 1)
+    if(LIKELY(todo > 1))
     {
         dst[0] = aa*(src[0] + state->y[1]) - state->x[1];
         dst[1] = aa*(src[1] + state->y[0]) - state->x[0];

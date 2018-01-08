@@ -54,11 +54,6 @@ ALboolean EmulateEAXReverb = AL_FALSE;
  */
 #define FADE_SAMPLES  128
 
-#ifdef __GNUC__
-#define UNEXPECTED(x) __builtin_expect((bool)(x), 0)
-#else
-#define UNEXPECTED(x) (x)
-#endif
 
 static RowMixerFunc MixRowSamples = MixRow_C;
 
@@ -1868,7 +1863,7 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
 
         /* Process the samples for reverb. */
         fade = ReverbProc(State, todo, fade, afmt, early, late);
-        if(UNEXPECTED(fadeCount < FADE_SAMPLES) && (fadeCount += todo) >= FADE_SAMPLES)
+        if(UNLIKELY(fadeCount < FADE_SAMPLES) && (fadeCount += todo) >= FADE_SAMPLES)
         {
             /* Update the cross-fading delay line taps. */
             fadeCount = FADE_SAMPLES;

@@ -1467,7 +1467,7 @@ int MovieState::parse_handler()
 
 // Helper class+method to print the time with human-readable formatting.
 struct PrettyTime {
-    seconds_d64 mTime;
+    seconds mTime;
 };
 inline std::ostream &operator<<(std::ostream &os, const PrettyTime &rhs)
 {
@@ -1475,7 +1475,7 @@ inline std::ostream &operator<<(std::ostream &os, const PrettyTime &rhs)
     using minutes = std::chrono::minutes;
     using std::chrono::duration_cast;
 
-    seconds t = duration_cast<seconds>(rhs.mTime);
+    seconds t = rhs.mTime;
     if(t.count() < 0)
     {
         os << '-';
@@ -1636,13 +1636,19 @@ int main(int argc, char *argv[])
     enum class EomAction {
         Next, Quit
     } eom_action = EomAction::Next;
+    seconds last_time(-1);
     SDL_Event event;
     while(1)
     {
         int have_evt = SDL_WaitEventTimeout(&event, 10);
 
-        std::cout<< "\r "<<PrettyTime{movState->getMasterClock()}<<" / "<<
-                    PrettyTime{movState->getDuration()} <<std::flush;
+        auto cur_time = std::chrono::duration_cast<seconds>(movState->getMasterClock());
+        if(cur_time != last_time)
+        {
+            auto end_time = std::chrono::duration_cast<seconds>(movState->getDuration());
+            std::cout<< "\r "<<PrettyTime{cur_time}<<" / "<<PrettyTime{end_time} <<std::flush;
+            last_time = cur_time;
+        }
         if(!have_evt) continue;
 
         switch(event.type)
@@ -1697,6 +1703,7 @@ int main(int argc, char *argv[])
 
             case FF_MOVIE_DONE_EVENT:
                 std::cout<<'\n';
+                last_time = seconds(-1);
                 if(eom_action != EomAction::Quit)
                 {
                     movState = nullptr;

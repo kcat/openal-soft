@@ -120,7 +120,7 @@ static ALboolean ALchorusState_deviceUpdate(ALchorusState *state, ALCdevice *Dev
 
 static ALvoid ALchorusState_update(ALchorusState *state, const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props)
 {
-    const ALsizei mindelay = maxi(MAX_PRE_SAMPLES, MAX_POST_SAMPLES) << FRACTIONBITS;
+    const ALsizei mindelay = MAX_RESAMPLE_PADDING << FRACTIONBITS;
     const ALCdevice *device = Context->Device;
     ALfloat frequency = (ALfloat)device->Frequency;
     ALfloat coeffs[MAX_AMBI_COEFFS];

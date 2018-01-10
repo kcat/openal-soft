@@ -26,7 +26,7 @@ typedef struct SampleConverter {
     alignas(16) ALfloat mDstSamples[BUFFERSIZE];
 
     struct {
-        alignas(16) ALfloat mPrevSamples[MAX_PRE_SAMPLES+MAX_POST_SAMPLES];
+        alignas(16) ALfloat mPrevSamples[MAX_RESAMPLE_PADDING*2];
     } Chan[];
 } SampleConverter;
 

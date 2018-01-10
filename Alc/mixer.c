@@ -45,8 +45,7 @@ extern inline void InitiatePositionArrays(ALsizei frac, ALint increment, ALsizei
 
 
 /* BSinc24 requires up to 23 extra samples before the current position, and 24 after. */
-static_assert(MAX_PRE_SAMPLES >= 23, "MAX_PRE_SAMPLES must be at least 23!");
-static_assert(MAX_POST_SAMPLES >= 24, "MAX_POST_SAMPLES must be at least 24!");
+static_assert(MAX_RESAMPLE_PADDING >= 24, "MAX_RESAMPLE_PADDING must be at least 24!");
 
 
 enum Resampler ResamplerDefault = LinearResampler;
@@ -320,12 +319,12 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
         DataSize64 *= increment;
         DataSize64 += DataPosFrac+FRACTIONMASK;
         DataSize64 >>= FRACTIONBITS;
-        DataSize64 += MAX_POST_SAMPLES+MAX_PRE_SAMPLES;
+        DataSize64 += MAX_RESAMPLE_PADDING*2;
         SrcBufferSize = (ALsizei)mini64(DataSize64, BUFFERSIZE);
 
         /* Figure out how many samples we can actually mix from this. */
         DataSize64  = SrcBufferSize;
-        DataSize64 -= MAX_POST_SAMPLES+MAX_PRE_SAMPLES;
+        DataSize64 -= MAX_RESAMPLE_PADDING*2;
         DataSize64 <<= FRACTIONBITS;
         DataSize64 -= DataPosFrac;
         DstBufferSize = (ALsizei)mini64((DataSize64+(increment-1)) / increment,
@@ -346,9 +345,10 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
             ALsizei FilledAmt;
 
             /* Load the previous samples into the source data first, and clear the rest. */
-            memcpy(SrcData, voice->PrevSamples[chan], MAX_PRE_SAMPLES*sizeof(ALfloat));
-            memset(SrcData+MAX_PRE_SAMPLES, 0, (SrcBufferSize-MAX_PRE_SAMPLES)*sizeof(ALfloat));
-            FilledAmt = MAX_PRE_SAMPLES;
+            memcpy(SrcData, voice->PrevSamples[chan], MAX_RESAMPLE_PADDING*sizeof(ALfloat));
+            memset(SrcData+MAX_RESAMPLE_PADDING, 0, (BUFFERSIZE-MAX_RESAMPLE_PADDING)*
+                                                    sizeof(ALfloat));
+            FilledAmt = MAX_RESAMPLE_PADDING;
 
             if(isstatic)
             {
@@ -488,12 +488,12 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
             /* Store the last source samples used for next time. */
             memcpy(voice->PrevSamples[chan],
                 &SrcData[(increment*DstBufferSize + DataPosFrac)>>FRACTIONBITS],
-                MAX_PRE_SAMPLES*sizeof(ALfloat)
+                MAX_RESAMPLE_PADDING*sizeof(ALfloat)
             );
 
             /* Now resample, then filter and mix to the appropriate outputs. */
             ResampledData = Resample(&voice->ResampleState,
-                &SrcData[MAX_PRE_SAMPLES], DataPosFrac, increment,
+                &SrcData[MAX_RESAMPLE_PADDING], DataPosFrac, increment,
                 Device->TempBuffer[RESAMPLED_BUF], DstBufferSize
             );
             {

@@ -97,7 +97,7 @@ typedef union ALeffectProps {
         ALfloat Depth;
         ALfloat Feedback;
         ALfloat Delay;
-    } Chorus;
+    } Chorus; /* Also Flanger */
 
     struct {
         ALboolean OnOff;
@@ -133,15 +133,6 @@ typedef union ALeffectProps {
         ALfloat HighCutoff;
         ALfloat HighGain;
     } Equalizer;
-
-    struct {
-        ALint Waveform;
-        ALint Phase;
-        ALfloat Rate;
-        ALfloat Depth;
-        ALfloat Feedback;
-        ALfloat Delay;
-    } Flanger;
 
     struct {
         ALfloat Frequency;

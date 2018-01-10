@@ -724,7 +724,6 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/effects/distortion.c
               Alc/effects/echo.c
               Alc/effects/equalizer.c
-              Alc/effects/flanger.c
               Alc/effects/modulator.c
               Alc/effects/null.c
               Alc/effects/reverb.c

@@ -493,12 +493,12 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         SET_VTABLE1(ALequalizer, effect);
         break;
     case AL_EFFECT_FLANGER:
-        effect->Props.Flanger.Waveform = AL_FLANGER_DEFAULT_WAVEFORM;
-        effect->Props.Flanger.Phase = AL_FLANGER_DEFAULT_PHASE;
-        effect->Props.Flanger.Rate = AL_FLANGER_DEFAULT_RATE;
-        effect->Props.Flanger.Depth = AL_FLANGER_DEFAULT_DEPTH;
-        effect->Props.Flanger.Feedback = AL_FLANGER_DEFAULT_FEEDBACK;
-        effect->Props.Flanger.Delay = AL_FLANGER_DEFAULT_DELAY;
+        effect->Props.Chorus.Waveform = AL_FLANGER_DEFAULT_WAVEFORM;
+        effect->Props.Chorus.Phase = AL_FLANGER_DEFAULT_PHASE;
+        effect->Props.Chorus.Rate = AL_FLANGER_DEFAULT_RATE;
+        effect->Props.Chorus.Depth = AL_FLANGER_DEFAULT_DEPTH;
+        effect->Props.Chorus.Feedback = AL_FLANGER_DEFAULT_FEEDBACK;
+        effect->Props.Chorus.Delay = AL_FLANGER_DEFAULT_DELAY;
         SET_VTABLE1(ALflanger, effect);
         break;
     case AL_EFFECT_RING_MODULATOR:

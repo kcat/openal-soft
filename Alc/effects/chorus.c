@@ -30,9 +30,12 @@
 #include "alu.h"
 
 
-enum ChorusWaveForm {
-    CWF_Triangle = AL_CHORUS_WAVEFORM_TRIANGLE,
-    CWF_Sinusoid = AL_CHORUS_WAVEFORM_SINUSOID
+static_assert(AL_CHORUS_WAVEFORM_SINUSOID == AL_FLANGER_WAVEFORM_SINUSOID, "Chorus/Flanger waveform value mismatch");
+static_assert(AL_CHORUS_WAVEFORM_TRIANGLE == AL_FLANGER_WAVEFORM_TRIANGLE, "Chorus/Flanger waveform value mismatch");
+
+enum WaveForm {
+    WF_Sinusoid,
+    WF_Triangle
 };
 
 typedef struct ALchorusState {
@@ -54,7 +57,7 @@ typedef struct ALchorusState {
     } Gains[2];
 
     /* effect parameters */
-    enum ChorusWaveForm waveform;
+    enum WaveForm waveform;
     ALint delay;
     ALfloat depth;
     ALfloat feedback;
@@ -79,7 +82,7 @@ static void ALchorusState_Construct(ALchorusState *state)
     state->offset = 0;
     state->lfo_offset = 0;
     state->lfo_range = 1;
-    state->waveform = CWF_Triangle;
+    state->waveform = WF_Triangle;
 }
 
 static ALvoid ALchorusState_Destruct(ALchorusState *state)
@@ -92,9 +95,10 @@ static ALvoid ALchorusState_Destruct(ALchorusState *state)
 
 static ALboolean ALchorusState_deviceUpdate(ALchorusState *state, ALCdevice *Device)
 {
+    const ALfloat max_delay = maxf(AL_CHORUS_MAX_DELAY, AL_FLANGER_MAX_DELAY);
     ALsizei maxlen;
 
-    maxlen = fastf2i(AL_CHORUS_MAX_DELAY * 2.0f * Device->Frequency) + 1;
+    maxlen = fastf2i(max_delay * 2.0f * Device->Frequency) + 1;
     maxlen = NextPowerOf2(maxlen);
 
     if(maxlen != state->BufferLength)
@@ -126,10 +130,10 @@ static ALvoid ALchorusState_update(ALchorusState *state, const ALCcontext *Conte
     switch(props->Chorus.Waveform)
     {
         case AL_CHORUS_WAVEFORM_TRIANGLE:
-            state->waveform = CWF_Triangle;
+            state->waveform = WF_Triangle;
             break;
         case AL_CHORUS_WAVEFORM_SINUSOID:
-            state->waveform = CWF_Sinusoid;
+            state->waveform = WF_Sinusoid;
             break;
     }
 
@@ -169,10 +173,10 @@ static ALvoid ALchorusState_update(ALchorusState *state, const ALCcontext *Conte
         state->lfo_range = lfo_range;
         switch(state->waveform)
         {
-            case CWF_Triangle:
+            case WF_Triangle:
                 state->lfo_scale = 4.0f / state->lfo_range;
                 break;
-            case CWF_Sinusoid:
+            case WF_Sinusoid:
                 state->lfo_scale = F_TAU / state->lfo_range;
                 break;
         }
@@ -224,19 +228,19 @@ static ALvoid ALchorusState_process(ALchorusState *state, ALsizei SamplesToDo, c
         ALint moddelays[2][256];
         ALfloat temps[2][256];
 
-        if(state->waveform == CWF_Triangle)
-        {
-            GetTriangleDelays(moddelays[0], state->lfo_offset, state->lfo_range, state->lfo_scale,
-                              state->depth, state->delay, todo);
-            GetTriangleDelays(moddelays[1], (state->lfo_offset+state->lfo_disp)%state->lfo_range,
-                              state->lfo_range, state->lfo_scale, state->depth, state->delay,
-                              todo);
-        }
-        else /*if(state->waveform == CWF_Sinusoid)*/
+        if(state->waveform == WF_Sinusoid)
         {
             GetSinusoidDelays(moddelays[0], state->lfo_offset, state->lfo_range, state->lfo_scale,
                               state->depth, state->delay, todo);
             GetSinusoidDelays(moddelays[1], (state->lfo_offset+state->lfo_disp)%state->lfo_range,
+                              state->lfo_range, state->lfo_scale, state->depth, state->delay,
+                              todo);
+        }
+        else /*if(state->waveform == WF_Triangle)*/
+        {
+            GetTriangleDelays(moddelays[0], state->lfo_offset, state->lfo_range, state->lfo_scale,
+                              state->depth, state->delay, todo);
+            GetTriangleDelays(moddelays[1], (state->lfo_offset+state->lfo_disp)%state->lfo_range,
                               state->lfo_range, state->lfo_scale, state->depth, state->delay,
                               todo);
         }
@@ -420,3 +424,147 @@ void ALchorus_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum par
 }
 
 DEFINE_ALEFFECT_VTABLE(ALchorus);
+
+
+/* Flanger is basically a chorus with a really short delay. They can both use
+ * the same processing functions, so piggyback flanger on the chorus functions.
+ */
+typedef struct ALflangerStateFactory {
+    DERIVE_FROM_TYPE(ALeffectStateFactory);
+} ALflangerStateFactory;
+
+ALeffectState *ALflangerStateFactory_create(ALflangerStateFactory *UNUSED(factory))
+{
+    ALchorusState *state;
+
+    NEW_OBJ0(state, ALchorusState)();
+    if(!state) return NULL;
+
+    return STATIC_CAST(ALeffectState, state);
+}
+
+DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALflangerStateFactory);
+
+ALeffectStateFactory *ALflangerStateFactory_getFactory(void)
+{
+    static ALflangerStateFactory FlangerFactory = { { GET_VTABLE2(ALflangerStateFactory, ALeffectStateFactory) } };
+
+    return STATIC_CAST(ALeffectStateFactory, &FlangerFactory);
+}
+
+
+void ALflanger_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint val)
+{
+    ALeffectProps *props = &effect->Props;
+    switch(param)
+    {
+        case AL_FLANGER_WAVEFORM:
+            if(!(val >= AL_FLANGER_MIN_WAVEFORM && val <= AL_FLANGER_MAX_WAVEFORM))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Chorus.Waveform = val;
+            break;
+
+        case AL_FLANGER_PHASE:
+            if(!(val >= AL_FLANGER_MIN_PHASE && val <= AL_FLANGER_MAX_PHASE))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Chorus.Phase = val;
+            break;
+
+        default:
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+    }
+}
+void ALflanger_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
+{
+    ALflanger_setParami(effect, context, param, vals[0]);
+}
+void ALflanger_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
+{
+    ALeffectProps *props = &effect->Props;
+    switch(param)
+    {
+        case AL_FLANGER_RATE:
+            if(!(val >= AL_FLANGER_MIN_RATE && val <= AL_FLANGER_MAX_RATE))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Chorus.Rate = val;
+            break;
+
+        case AL_FLANGER_DEPTH:
+            if(!(val >= AL_FLANGER_MIN_DEPTH && val <= AL_FLANGER_MAX_DEPTH))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Chorus.Depth = val;
+            break;
+
+        case AL_FLANGER_FEEDBACK:
+            if(!(val >= AL_FLANGER_MIN_FEEDBACK && val <= AL_FLANGER_MAX_FEEDBACK))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Chorus.Feedback = val;
+            break;
+
+        case AL_FLANGER_DELAY:
+            if(!(val >= AL_FLANGER_MIN_DELAY && val <= AL_FLANGER_MAX_DELAY))
+                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+            props->Chorus.Delay = val;
+            break;
+
+        default:
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+    }
+}
+void ALflanger_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
+{
+    ALflanger_setParamf(effect, context, param, vals[0]);
+}
+
+void ALflanger_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+{
+    const ALeffectProps *props = &effect->Props;
+    switch(param)
+    {
+        case AL_FLANGER_WAVEFORM:
+            *val = props->Chorus.Waveform;
+            break;
+
+        case AL_FLANGER_PHASE:
+            *val = props->Chorus.Phase;
+            break;
+
+        default:
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+    }
+}
+void ALflanger_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
+{
+    ALflanger_getParami(effect, context, param, vals);
+}
+void ALflanger_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
+{
+    const ALeffectProps *props = &effect->Props;
+    switch(param)
+    {
+        case AL_FLANGER_RATE:
+            *val = props->Chorus.Rate;
+            break;
+
+        case AL_FLANGER_DEPTH:
+            *val = props->Chorus.Depth;
+            break;
+
+        case AL_FLANGER_FEEDBACK:
+            *val = props->Chorus.Feedback;
+            break;
+
+        case AL_FLANGER_DELAY:
+            *val = props->Chorus.Delay;
+            break;
+
+        default:
+            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+    }
+}
+void ALflanger_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
+{
+    ALflanger_getParamf(effect, context, param, vals);
+}
+
+DEFINE_ALEFFECT_VTABLE(ALflanger);

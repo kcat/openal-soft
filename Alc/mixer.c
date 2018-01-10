@@ -268,6 +268,11 @@ static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter
 }
 
 
+/* This function uses these device temp buffers. */
+#define SOURCE_DATA_BUF 0
+#define RESAMPLED_BUF 1
+#define FILTERED_BUF 2
+#define NFC_DATA_BUF 3
 ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei SamplesToDo)
 {
     ALbufferlistitem *BufferListItem;
@@ -337,7 +342,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
         for(chan = 0;chan < NumChannels;chan++)
         {
             const ALfloat *ResampledData;
-            ALfloat *SrcData = Device->SourceData;
+            ALfloat *SrcData = Device->TempBuffer[SOURCE_DATA_BUF];
             ALsizei FilledAmt;
 
             /* Load the previous samples into the source data first, and clear the rest. */
@@ -489,14 +494,14 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
             /* Now resample, then filter and mix to the appropriate outputs. */
             ResampledData = Resample(&voice->ResampleState,
                 &SrcData[MAX_PRE_SAMPLES], DataPosFrac, increment,
-                Device->ResampledData, DstBufferSize
+                Device->TempBuffer[RESAMPLED_BUF], DstBufferSize
             );
             {
                 DirectParams *parms = &voice->Direct.Params[chan];
                 const ALfloat *samples;
 
                 samples = DoFilters(
-                    &parms->LowPass, &parms->HighPass, Device->FilteredData,
+                    &parms->LowPass, &parms->HighPass, Device->TempBuffer[FILTERED_BUF],
                     ResampledData, DstBufferSize, voice->Direct.FilterType
                 );
                 if(!(voice->Flags&VOICE_HAS_HRTF))
@@ -511,7 +516,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                         );
                     else
                     {
-                        ALfloat *nfcsamples = Device->NFCtrlData;
+                        ALfloat *nfcsamples = Device->TempBuffer[NFC_DATA_BUF];
                         ALsizei chanoffset = 0;
 
                         MixSamples(samples,
@@ -635,7 +640,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                     continue;
 
                 samples = DoFilters(
-                    &parms->LowPass, &parms->HighPass, Device->FilteredData,
+                    &parms->LowPass, &parms->HighPass, Device->TempBuffer[FILTERED_BUF],
                     ResampledData, DstBufferSize, voice->Send[send].FilterType
                 );
 

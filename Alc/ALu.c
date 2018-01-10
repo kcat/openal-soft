@@ -1814,8 +1814,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
                                SamplesToDo, Channels);
             }
 
-            /* Use NFCtrlData for temp value storage. */
-            ApplyDistanceComp(Buffer, device->ChannelDelay, device->NFCtrlData,
+            ApplyDistanceComp(Buffer, device->ChannelDelay, device->TempBuffer[0],
                               SamplesToDo, Channels);
 
             if(device->Limiter)

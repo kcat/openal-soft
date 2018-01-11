@@ -24,7 +24,8 @@
 #include <stdlib.h>
 
 #include "ringbuffer.h"
-#include "alMain.h"
+#include "align.h"
+#include "atomic.h"
 #include "threads.h"
 #include "almalloc.h"
 #include "compat.h"
@@ -49,9 +50,21 @@ struct ll_ringbuffer {
 ll_ringbuffer_t *ll_ringbuffer_create(size_t sz, size_t elem_sz)
 {
     ll_ringbuffer_t *rb;
-    size_t power_of_two;
+    size_t power_of_two = 0;
 
-    power_of_two = NextPowerOf2((ALuint)sz);
+    if(sz > 0)
+    {
+        power_of_two = sz - 1;
+        power_of_two |= power_of_two>>1;
+        power_of_two |= power_of_two>>2;
+        power_of_two |= power_of_two>>4;
+        power_of_two |= power_of_two>>8;
+        power_of_two |= power_of_two>>16;
+#if SIZE_MAX > UINT_MAX
+        power_of_two |= power_of_two>>32;
+#endif
+    }
+    power_of_two++;
     if(power_of_two < sz) return NULL;
 
     rb = al_malloc(16, sizeof(*rb) + power_of_two*elem_sz);

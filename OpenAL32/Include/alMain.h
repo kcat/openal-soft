@@ -187,20 +187,6 @@ AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum format);
 
 
 #ifdef __GNUC__
-/* This helps cast away the const-ness of a pointer without accidentally
- * changing the pointer type. This is necessary due to Clang's inability to use
- * atomic_load on a const _Atomic variable.
- */
-#define CONST_CAST(T, V) __extension__({                                      \
-    const T _tmp = (V);                                                       \
-    (T)_tmp;                                                                  \
-})
-#else
-#define CONST_CAST(T, V) ((T)(V))
-#endif
-
-
-#ifdef __GNUC__
 #define LIKELY(x) __builtin_expect(!!(x), !0)
 #define UNLIKELY(x) __builtin_expect(!!(x), 0)
 #else

@@ -52,7 +52,7 @@ enum Resampler ResamplerDefault = LinearResampler;
 
 MixerFunc MixSamples = Mix_C;
 static HrtfMixerFunc MixHrtfSamples = MixHrtf_C;
-HrtfMixerBlendFunc MixHrtfBlendSamples = MixHrtfBlend_C;
+static HrtfMixerBlendFunc MixHrtfBlendSamples = MixHrtfBlend_C;
 
 static MixerFunc SelectMixer(void)
 {

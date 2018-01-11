@@ -78,7 +78,7 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCcontext 
     if(slot->Params.EffectType == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
     {
         int idx;
-        if((idx=GetChannelIdxByName(device->RealOut, LFE)) != -1)
+        if((idx=GetChannelIdxByName(&device->RealOut, LFE)) != -1)
         {
             STATIC_CAST(ALeffectState,state)->OutBuffer = device->RealOut.Buffer;
             STATIC_CAST(ALeffectState,state)->OutChannels = device->RealOut.NumChannels;
@@ -90,7 +90,7 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCcontext 
         int idx;
         /* Dialog goes to the front-center speaker if it exists, otherwise it
          * plays from the front-center location. */
-        if((idx=GetChannelIdxByName(device->RealOut, FrontCenter)) != -1)
+        if((idx=GetChannelIdxByName(&device->RealOut, FrontCenter)) != -1)
         {
             STATIC_CAST(ALeffectState,state)->OutBuffer = device->RealOut.Buffer;
             STATIC_CAST(ALeffectState,state)->OutChannels = device->RealOut.NumChannels;
@@ -103,7 +103,7 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCcontext 
 
             STATIC_CAST(ALeffectState,state)->OutBuffer = device->Dry.Buffer;
             STATIC_CAST(ALeffectState,state)->OutChannels = device->Dry.NumChannels;
-            ComputePanningGains(device->Dry, coeffs, Gain, state->gains);
+            ComputeDryPanGains(&device->Dry, coeffs, Gain, state->gains);
         }
     }
 }

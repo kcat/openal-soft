@@ -678,6 +678,35 @@ typedef struct DistanceComp {
  */
 #define BUFFERSIZE 2048
 
+typedef struct DryMixParams {
+    AmbiConfig Ambi;
+    /* Number of coefficients in each Ambi.Coeffs to mix together (4 for first-
+     * order, 9 for second-order, etc). If the count is 0, Ambi.Map is used
+     * instead to map each output to a coefficient index.
+     */
+    ALsizei CoeffCount;
+
+    ALfloat (*Buffer)[BUFFERSIZE];
+    ALsizei NumChannels;
+    ALsizei NumChannelsPerOrder[MAX_AMBI_ORDER+1];
+} DryMixParams;
+
+typedef struct BFMixParams {
+    AmbiConfig Ambi;
+    /* Will only be 4 or 0. */
+    ALsizei CoeffCount;
+
+    ALfloat (*Buffer)[BUFFERSIZE];
+    ALsizei NumChannels;
+} BFMixParams;
+
+typedef struct RealMixParams {
+    enum Channel ChannelName[MAX_OUTPUT_CHANNELS];
+
+    ALfloat (*Buffer)[BUFFERSIZE];
+    ALsizei NumChannels;
+} RealMixParams;
+
 struct ALCdevice_struct
 {
     RefCount ref;
@@ -752,38 +781,15 @@ struct ALCdevice_struct
     alignas(16) ALfloat TempBuffer[4][BUFFERSIZE];
 
     /* The "dry" path corresponds to the main output. */
-    struct {
-        AmbiConfig Ambi;
-        /* Number of coefficients in each Ambi.Coeffs to mix together (4 for
-         * first-order, 9 for second-order, etc). If the count is 0, Ambi.Map
-         * is used instead to map each output to a coefficient index.
-         */
-        ALsizei CoeffCount;
-
-        ALfloat (*Buffer)[BUFFERSIZE];
-        ALsizei NumChannels;
-        ALsizei NumChannelsPerOrder[MAX_AMBI_ORDER+1];
-    } Dry;
+    DryMixParams Dry;
 
     /* First-order ambisonics output, to be upsampled to the dry buffer if different. */
-    struct {
-        AmbiConfig Ambi;
-        /* Will only be 4 or 0. */
-        ALsizei CoeffCount;
-
-        ALfloat (*Buffer)[BUFFERSIZE];
-        ALsizei NumChannels;
-    } FOAOut;
+    BFMixParams FOAOut;
 
     /* "Real" output, which will be written to the device buffer. May alias the
      * dry buffer.
      */
-    struct {
-        enum Channel ChannelName[MAX_OUTPUT_CHANNELS];
-
-        ALfloat (*Buffer)[BUFFERSIZE];
-        ALsizei NumChannels;
-    } RealOut;
+    RealMixParams RealOut;
 
     struct FrontStablizer *Stablizer;
 
@@ -984,12 +990,6 @@ void SetDefaultWFXChannelOrder(ALCdevice *device);
 const ALCchar *DevFmtTypeString(enum DevFmtType type);
 const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans);
 
-/**
- * GetChannelIdxByName
- *
- * Returns the index for the given channel name (e.g. FrontCenter), or -1 if it
- * doesn't exist.
- */
 inline ALint GetChannelIndex(const enum Channel names[MAX_OUTPUT_CHANNELS], enum Channel chan)
 {
     ALint i;
@@ -1000,7 +1000,14 @@ inline ALint GetChannelIndex(const enum Channel names[MAX_OUTPUT_CHANNELS], enum
     }
     return -1;
 }
-#define GetChannelIdxByName(x, c) GetChannelIndex((x).ChannelName, (c))
+/**
+ * GetChannelIdxByName
+ *
+ * Returns the index for the given channel name (e.g. FrontCenter), or -1 if it
+ * doesn't exist.
+ */
+inline ALint GetChannelIdxByName(const RealMixParams *real, enum Channel chan)
+{ return GetChannelIndex(real->ChannelName, chan); }
 
 extern FILE *LogFile;
 

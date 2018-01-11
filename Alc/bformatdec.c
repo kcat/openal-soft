@@ -549,7 +549,7 @@ void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device)
         {
             ALfloat coeffs[MAX_AMBI_COEFFS] = { 0.0f };
             CalcDirectionCoeffs(Ambi3DPoints[i], 0.0f, coeffs);
-            ComputePanningGains(device->Dry, coeffs, 1.0f, encgains[i]);
+            ComputeDryPanGains(&device->Dry, coeffs, 1.0f, encgains[i]);
         }
 
         /* Combine the matrices that do the in->virt and virt->out conversions

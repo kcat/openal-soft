@@ -548,8 +548,8 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                     ALsizei fademix = 0;
                     int lidx, ridx;
 
-                    lidx = GetChannelIdxByName(Device->RealOut, FrontLeft);
-                    ridx = GetChannelIdxByName(Device->RealOut, FrontRight);
+                    lidx = GetChannelIdxByName(&Device->RealOut, FrontLeft);
+                    ridx = GetChannelIdxByName(&Device->RealOut, FrontRight);
                     assert(lidx != -1 && ridx != -1);
 
                     if(!Counter)

@@ -1264,13 +1264,15 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     MATRIX_MULT(transform, rot, A2B);
     memset(&State->Early.PanGain, 0, sizeof(State->Early.PanGain));
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputeFirstOrderGains(Device->FOAOut, transform.m[i], gain*earlyGain, State->Early.PanGain[i]);
+        ComputeFirstOrderGains(&Device->FOAOut, transform.m[i], gain*earlyGain,
+                               State->Early.PanGain[i]);
 
     rot = GetTransformFromVector(LateReverbPan);
     MATRIX_MULT(transform, rot, A2B);
     memset(&State->Late.PanGain, 0, sizeof(State->Late.PanGain));
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputeFirstOrderGains(Device->FOAOut, transform.m[i], gain*lateGain, State->Late.PanGain[i]);
+        ComputeFirstOrderGains(&Device->FOAOut, transform.m[i], gain*lateGain,
+                               State->Late.PanGain[i]);
 #undef MATRIX_MULT
 }
 

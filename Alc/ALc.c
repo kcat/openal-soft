@@ -1637,6 +1637,7 @@ void SetDefaultChannelOrder(ALCdevice *device)
 }
 
 extern inline ALint GetChannelIndex(const enum Channel names[MAX_OUTPUT_CHANNELS], enum Channel chan);
+extern inline ALint GetChannelIdxByName(const RealMixParams *real, enum Channel chan);
 
 
 /* ALCcontext_DeferUpdates

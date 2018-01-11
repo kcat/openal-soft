@@ -132,7 +132,7 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext 
     STATIC_CAST(ALeffectState,state)->OutBuffer = device->FOAOut.Buffer;
     STATIC_CAST(ALeffectState,state)->OutChannels = device->FOAOut.NumChannels;
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputeFirstOrderGains(device->FOAOut, IdentityMatrixf.m[i],
+        ComputeFirstOrderGains(&device->FOAOut, IdentityMatrixf.m[i],
                                slot->Params.Gain, state->Gain[i]);
 
     /* Calculate coefficients for the each type of filter. Note that the shelf

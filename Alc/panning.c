@@ -37,6 +37,9 @@
 
 
 extern inline void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
+extern inline void ComputeAmbientGains(const DryMixParams *dry, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+extern inline void ComputeDryPanGains(const DryMixParams *dry, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+extern inline void ComputeFirstOrderGains(const BFMixParams *foa, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 
 static const ALsizei FuMa2ACN[MAX_AMBI_COEFFS] = {
@@ -382,41 +385,41 @@ static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei sp
          * and vice-versa.
          */
         if(alstr_cmp_cstr(conf->Speakers[i].Name, "LF") == 0)
-            c = GetChannelIdxByName(device->RealOut, FrontLeft);
+            c = GetChannelIdxByName(&device->RealOut, FrontLeft);
         else if(alstr_cmp_cstr(conf->Speakers[i].Name, "RF") == 0)
-            c = GetChannelIdxByName(device->RealOut, FrontRight);
+            c = GetChannelIdxByName(&device->RealOut, FrontRight);
         else if(alstr_cmp_cstr(conf->Speakers[i].Name, "CE") == 0)
-            c = GetChannelIdxByName(device->RealOut, FrontCenter);
+            c = GetChannelIdxByName(&device->RealOut, FrontCenter);
         else if(alstr_cmp_cstr(conf->Speakers[i].Name, "LS") == 0)
         {
             if(device->FmtChans == DevFmtX51Rear)
-                c = GetChannelIdxByName(device->RealOut, BackLeft);
+                c = GetChannelIdxByName(&device->RealOut, BackLeft);
             else
-                c = GetChannelIdxByName(device->RealOut, SideLeft);
+                c = GetChannelIdxByName(&device->RealOut, SideLeft);
         }
         else if(alstr_cmp_cstr(conf->Speakers[i].Name, "RS") == 0)
         {
             if(device->FmtChans == DevFmtX51Rear)
-                c = GetChannelIdxByName(device->RealOut, BackRight);
+                c = GetChannelIdxByName(&device->RealOut, BackRight);
             else
-                c = GetChannelIdxByName(device->RealOut, SideRight);
+                c = GetChannelIdxByName(&device->RealOut, SideRight);
         }
         else if(alstr_cmp_cstr(conf->Speakers[i].Name, "LB") == 0)
         {
             if(device->FmtChans == DevFmtX51)
-                c = GetChannelIdxByName(device->RealOut, SideLeft);
+                c = GetChannelIdxByName(&device->RealOut, SideLeft);
             else
-                c = GetChannelIdxByName(device->RealOut, BackLeft);
+                c = GetChannelIdxByName(&device->RealOut, BackLeft);
         }
         else if(alstr_cmp_cstr(conf->Speakers[i].Name, "RB") == 0)
         {
             if(device->FmtChans == DevFmtX51)
-                c = GetChannelIdxByName(device->RealOut, SideRight);
+                c = GetChannelIdxByName(&device->RealOut, SideRight);
             else
-                c = GetChannelIdxByName(device->RealOut, BackRight);
+                c = GetChannelIdxByName(&device->RealOut, BackRight);
         }
         else if(alstr_cmp_cstr(conf->Speakers[i].Name, "CB") == 0)
-            c = GetChannelIdxByName(device->RealOut, BackCenter);
+            c = GetChannelIdxByName(&device->RealOut, BackCenter);
         else
         {
             const char *name = alstr_get_cstr(conf->Speakers[i].Name);
@@ -424,7 +427,7 @@ static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei sp
             char ch;
 
             if(sscanf(name, "AUX%u%c", &n, &ch) == 1 && n < 16)
-                c = GetChannelIdxByName(device->RealOut, Aux0+n);
+                c = GetChannelIdxByName(&device->RealOut, Aux0+n);
             else
             {
                 ERR("AmbDec speaker label \"%s\" not recognized\n", name);

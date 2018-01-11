@@ -92,7 +92,7 @@ typedef const ALfloat* (*ResamplerFunc)(const InterpState *state,
     ALfloat *restrict dst, ALsizei dstlen
 );
 
-ALboolean BsincPrepare(const ALuint increment, BsincState *state, const struct BSincTable *table);
+void BsincPrepare(const ALuint increment, BsincState *state, const struct BSincTable *table);
 
 extern const struct BSincTable bsinc12;
 extern const struct BSincTable bsinc24;

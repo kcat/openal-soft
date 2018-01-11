@@ -208,34 +208,21 @@ void aluInit(void)
  * modified for use with an interpolated increment for buttery-smooth pitch
  * changes.
  */
-ALboolean BsincPrepare(const ALuint increment, BsincState *state, const BSincTable *table)
+void BsincPrepare(const ALuint increment, BsincState *state, const BSincTable *table)
 {
-    ALboolean uncut = AL_TRUE;
     ALfloat sf;
     ALsizei si;
 
     if(increment > FRACTIONONE)
     {
         sf = (ALfloat)FRACTIONONE / increment;
-        if(sf < table->scaleBase)
-        {
-            /* Signal has been completely cut.  The return result can be used
-             * to skip the filter (and output zeros) as an optimization.
-             */
-            sf = 0.0f;
-            si = 0;
-            uncut = AL_FALSE;
-        }
-        else
-        {
-            sf = (BSINC_SCALE_COUNT - 1) * (sf - table->scaleBase) * table->scaleRange;
-            si = fastf2i(sf);
-            /* The interpolation factor is fit to this diagonally-symmetric
-             * curve to reduce the transition ripple caused by interpolating
-             * different scales of the sinc function.
-             */
-            sf = 1.0f - cosf(asinf(sf - si));
-        }
+        sf = maxf(0.0f, (BSINC_SCALE_COUNT-1) * (sf-table->scaleBase) * table->scaleRange);
+        si = fastf2i(sf);
+        /* The interpolation factor is fit to this diagonally-symmetric curve
+         * to reduce the transition ripple caused by interpolating different
+         * scales of the sinc function.
+         */
+        sf = 1.0f - cosf(asinf(sf - si));
     }
     else
     {
@@ -247,7 +234,6 @@ ALboolean BsincPrepare(const ALuint increment, BsincState *state, const BSincTab
     state->m = table->m[si];
     state->l = -((state->m/2) - 1);
     state->filter = table->Tab + table->filterOffset[si];
-    return uncut;
 }
 
 

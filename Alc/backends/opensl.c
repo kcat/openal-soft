@@ -26,8 +26,9 @@
 
 #include "alMain.h"
 #include "alu.h"
-#include "compat.h"
+#include "ringbuffer.h"
 #include "threads.h"
+#include "compat.h"
 
 #include "backends/base.h"
 

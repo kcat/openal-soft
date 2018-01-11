@@ -714,10 +714,10 @@ SET(OPENAL_OBJS  OpenAL32/alAuxEffectSlot.c
 SET(ALC_OBJS  Alc/ALc.c
               Alc/ALu.c
               Alc/alconfig.c
-              Alc/alcRing.c
               Alc/bs2b.c
               Alc/converter.c
               Alc/mastering.c
+              Alc/ringbuffer.c
               Alc/effects/chorus.c
               Alc/effects/compressor.c
               Alc/effects/dedicated.c

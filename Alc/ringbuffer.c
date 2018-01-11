@@ -23,6 +23,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "ringbuffer.h"
 #include "alMain.h"
 #include "threads.h"
 #include "almalloc.h"
@@ -39,7 +40,6 @@ struct ll_ringbuffer {
     size_t size;
     size_t size_mask;
     size_t elem_size;
-    int mlocked;
 
     alignas(16) char buf[];
 };
@@ -49,7 +49,7 @@ struct ll_ringbuffer {
 ll_ringbuffer_t *ll_ringbuffer_create(size_t sz, size_t elem_sz)
 {
     ll_ringbuffer_t *rb;
-    ALuint power_of_two;
+    size_t power_of_two;
 
     power_of_two = NextPowerOf2(sz);
     if(power_of_two < sz)
@@ -63,32 +63,13 @@ ll_ringbuffer_t *ll_ringbuffer_create(size_t sz, size_t elem_sz)
     rb->size = power_of_two;
     rb->size_mask = rb->size - 1;
     rb->elem_size = elem_sz;
-    rb->mlocked = 0;
     return rb;
 }
 
 /* Free all data associated with the ringbuffer `rb'. */
 void ll_ringbuffer_free(ll_ringbuffer_t *rb)
 {
-    if(rb)
-    {
-#ifdef USE_MLOCK
-        if(rb->mlocked)
-            munlock(rb, sizeof(*rb) + rb->size*rb->elem_size);
-#endif /* USE_MLOCK */
-        al_free(rb);
-    }
-}
-
-/* Lock the data block of `rb' using the system call 'mlock'. */
-int ll_ringbuffer_mlock(ll_ringbuffer_t *rb)
-{
-#ifdef USE_MLOCK
-    if(!rb->mlocked && mlock(rb, sizeof(*rb) + rb->size*rb->elem_size))
-        return -1;
-#endif /* USE_MLOCK */
-    rb->mlocked = 1;
-    return 0;
+    al_free(rb);
 }
 
 /* Reset the read and write pointers to zero. This is not thread safe. */

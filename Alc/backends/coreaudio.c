@@ -27,6 +27,7 @@
 
 #include "alMain.h"
 #include "alu.h"
+#include "ringbuffer.h"
 
 #include <CoreServices/CoreServices.h>
 #include <unistd.h>

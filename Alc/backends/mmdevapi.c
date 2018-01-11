@@ -41,6 +41,7 @@
 
 #include "alMain.h"
 #include "alu.h"
+#include "ringbuffer.h"
 #include "threads.h"
 #include "compat.h"
 #include "alstring.h"

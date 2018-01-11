@@ -34,6 +34,7 @@
 #include "alu.h"
 #include "bs2b.h"
 #include "hrtf.h"
+#include "mastering.h"
 #include "uhjfilter.h"
 #include "bformatdec.h"
 #include "static_assert.h"

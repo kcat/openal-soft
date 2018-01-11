@@ -37,6 +37,7 @@
 #include "alBuffer.h"
 #include "alAuxEffectSlot.h"
 #include "alError.h"
+#include "mastering.h"
 #include "bformatdec.h"
 #include "alu.h"
 

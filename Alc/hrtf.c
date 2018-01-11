@@ -298,7 +298,8 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
         }
     }
     /* Round up to the next IR size multiple. */
-    max_length = RoundUp(max_length, MOD_IR_SIZE);
+    max_length += MOD_IR_SIZE-1;
+    max_length -= max_length%MOD_IR_SIZE;
 
     TRACE("Skipped min delay: %d, new combined length: %d\n", min_delay, max_length);
     state->IrSize = max_length;

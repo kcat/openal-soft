@@ -948,7 +948,7 @@ static ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
     }
 
 done:
-    return ll_ringbuffer_read_space(self->Ring);
+    return (ALCuint)ll_ringbuffer_read_space(self->Ring);
 }
 
 

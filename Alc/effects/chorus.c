@@ -142,7 +142,8 @@ static ALvoid ALchorusState_update(ALchorusState *state, const ALCcontext *Conte
      */
     state->delay = maxi(fastf2i(props->Chorus.Delay*frequency*FRACTIONONE + 0.5f),
                         mindelay);
-    state->depth = minf(props->Chorus.Depth * state->delay, state->delay - mindelay);
+    state->depth = minf(props->Chorus.Depth * state->delay,
+                        (ALfloat)(state->delay - mindelay));
 
     state->feedback = props->Chorus.Feedback;
 

@@ -708,7 +708,7 @@ static ALCenum ALCwinmmCapture_captureSamples(ALCwinmmCapture *self, ALCvoid *bu
 
 static ALCuint ALCwinmmCapture_availableSamples(ALCwinmmCapture *self)
 {
-    return ll_ringbuffer_read_space(self->Ring);
+    return (ALCuint)ll_ringbuffer_read_space(self->Ring);
 }
 
 

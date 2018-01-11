@@ -532,7 +532,7 @@ void ambiup_free(struct AmbiUpsampler *ambiup)
 void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device)
 {
     ALfloat ratio;
-    size_t i;
+    ALsizei i;
 
     ratio = 400.0f / (ALfloat)device->Frequency;
     for(i = 0;i < 4;i++)
@@ -545,11 +545,11 @@ void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device)
         ALsizei j;
         size_t k;
 
-        for(i = 0;i < COUNTOF(Ambi3DPoints);i++)
+        for(k = 0;k < COUNTOF(Ambi3DPoints);k++)
         {
             ALfloat coeffs[MAX_AMBI_COEFFS] = { 0.0f };
-            CalcDirectionCoeffs(Ambi3DPoints[i], 0.0f, coeffs);
-            ComputeDryPanGains(&device->Dry, coeffs, 1.0f, encgains[i]);
+            CalcDirectionCoeffs(Ambi3DPoints[k], 0.0f, coeffs);
+            ComputeDryPanGains(&device->Dry, coeffs, 1.0f, encgains[k]);
         }
 
         /* Combine the matrices that do the in->virt and virt->out conversions

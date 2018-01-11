@@ -306,6 +306,7 @@ enum almemory_order {
 } while(0)
 
 int _al_invalid_atomic_size(); /* not defined */
+void *_al_invalid_atomic_ptr_size(); /* not defined */
 
 #define ATOMIC_ADD(_val, _incr, _MO)                                          \
     ((sizeof((_val)->value)==4) ? WRAP_ADDSUB(LONG, AtomicAdd32, &(_val)->value, (_incr)) : \
@@ -327,7 +328,7 @@ int _al_invalid_atomic_size(); /* not defined */
 
 #define ATOMIC_EXCHANGE_PTR(_val, _newval, _MO) \
     ((sizeof((_val)->value)==sizeof(void*)) ? AtomicSwapPtr((void*volatile*)&(_val)->value, (_newval)) : \
-     (void*)_al_invalid_atomic_size())
+     _al_invalid_atomic_ptr_size())
 #define ATOMIC_COMPARE_EXCHANGE_PTR_STRONG(_val, _oldval, _newval, _MO1, _MO2)\
     ((sizeof((_val)->value)==sizeof(void*)) ? CompareAndSwapPtr((void*volatile*)&(_val)->value, (_newval), (void**)(_oldval)) : \
      (bool)_al_invalid_atomic_size())

@@ -512,7 +512,7 @@ static void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const AL
 {
     const char *devname = alstr_get_cstr(device->DeviceName);
     ALfloat maxdist = 0.0f;
-    ALsizei total = 0;
+    size_t total = 0;
     ALsizei i;
 
     for(i = 0;i < conf->NumSpeakers;i++)

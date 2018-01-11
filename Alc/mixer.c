@@ -35,6 +35,7 @@
 #include "alAuxEffectSlot.h"
 #include "alu.h"
 
+#include "cpu_caps.h"
 #include "mixer_defs.h"
 
 

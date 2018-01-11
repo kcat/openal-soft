@@ -108,6 +108,7 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 
 #include "alMain.h"
 #include "alu.h"
+#include "cpu_caps.h"
 #include "atomic.h"
 #include "uintmap.h"
 #include "vector.h"
@@ -124,12 +125,11 @@ extern inline ALuint64 ScaleCeil(ALuint64 val, ALuint64 new_scale, ALuint64 old_
 extern inline ALint fastf2i(ALfloat f);
 
 
-ALuint CPUCapFlags = 0;
+int CPUCapFlags = 0;
 
-
-void FillCPUCaps(ALuint capfilter)
+void FillCPUCaps(int capfilter)
 {
-    ALuint caps = 0;
+    int caps = 0;
 
 /* FIXME: We really should get this for all available CPUs in case different
  * CPUs have different caps (is that possible on one machine?). */

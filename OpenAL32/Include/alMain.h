@@ -940,17 +940,6 @@ extern enum LogLevel LogLevel;
 extern ALint RTPrioLevel;
 
 
-extern ALuint CPUCapFlags;
-enum {
-    CPU_CAP_SSE    = 1<<0,
-    CPU_CAP_SSE2   = 1<<1,
-    CPU_CAP_SSE3   = 1<<2,
-    CPU_CAP_SSE4_1 = 1<<3,
-    CPU_CAP_NEON   = 1<<4,
-};
-
-void FillCPUCaps(ALuint capfilter);
-
 vector_al_string SearchDataFiles(const char *match, const char *subdir);
 
 /* Small hack to use a pointer-to-array types as a normal argument type.

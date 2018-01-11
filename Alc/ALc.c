@@ -41,6 +41,7 @@
 #include "bformatdec.h"
 #include "alu.h"
 
+#include "cpu_caps.h"
 #include "compat.h"
 #include "threads.h"
 #include "alstring.h"
@@ -900,7 +901,7 @@ static void alc_init(void)
 static void alc_initconfig(void)
 {
     const char *devs, *str;
-    ALuint capfilter;
+    int capfilter;
     float valf;
     int i, n;
 

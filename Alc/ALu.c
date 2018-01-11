@@ -39,6 +39,7 @@
 #include "bformatdec.h"
 #include "static_assert.h"
 
+#include "cpu_caps.h"
 #include "mixer_defs.h"
 #include "bsinc_inc.h"
 

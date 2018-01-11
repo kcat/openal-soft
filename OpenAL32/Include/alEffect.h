@@ -27,6 +27,15 @@ extern ALboolean DisabledEffects[MAX_EFFECTS];
 
 extern ALfloat ReverbBoost;
 
+struct EffectList {
+    const char *name;
+    int type;
+    const char *ename;
+    ALenum val;
+};
+extern const struct EffectList EffectList[];
+
+
 struct ALeffectVtable {
     void (*const setParami)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
     void (*const setParamiv)(struct ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);

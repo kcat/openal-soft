@@ -471,14 +471,6 @@ enum AmbiNorm {
 };
 
 
-extern const struct EffectList {
-    const char *name;
-    int type;
-    const char *ename;
-    ALenum val;
-} EffectList[];
-
-
 enum DeviceType {
     Playback,
     Capture,

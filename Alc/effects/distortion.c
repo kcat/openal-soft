@@ -79,9 +79,6 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCcontex
     ALfloat cutoff;
     ALfloat edge;
 
-    /* Store distorted signal attenuation settings. */
-    state->attenuation = props->Distortion.Gain;
-
     /* Store waveshaper edge settings. */
     edge = sinf(props->Distortion.Edge * (F_PI_2));
     edge = minf(edge, 0.99f);
@@ -104,7 +101,7 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCcontex
         cutoff / (frequency*4.0f), calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
     );
 
-    ComputeAmbientGains(&device->Dry, slot->Params.Gain, state->Gain);
+    ComputeAmbientGains(&device->Dry, slot->Params.Gain * props->Distortion.Gain, state->Gain);
 }
 
 static ALvoid ALdistortionState_process(ALdistortionState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
@@ -165,9 +162,9 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALsizei Sample
         for(kt = 0;kt < NumChannels;kt++)
         {
             /* Fourth step, final, do attenuation and perform decimation,
-             * store only one sample out of 4.
+             * storing only one sample out of four.
              */
-            ALfloat gain = state->Gain[kt] * state->attenuation;
+            ALfloat gain = state->Gain[kt];
             if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
                 continue;
 

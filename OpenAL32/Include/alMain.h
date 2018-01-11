@@ -292,6 +292,7 @@ struct HrtfEntry;
 struct DirectHrtfState;
 struct FrontStablizer;
 struct Compressor;
+struct ALCbackend;
 struct ALcontextProps;
 struct ALlistenerProps;
 struct ALvoiceProps;
@@ -363,8 +364,6 @@ enum DevProbe {
     ALL_DEVICE_PROBE,
     CAPTURE_DEVICE_PROBE
 };
-
-struct ALCbackend;
 
 
 enum DistanceModel {

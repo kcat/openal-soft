@@ -98,8 +98,8 @@ static ALboolean ALchorusState_deviceUpdate(ALchorusState *state, ALCdevice *Dev
     const ALfloat max_delay = maxf(AL_CHORUS_MAX_DELAY, AL_FLANGER_MAX_DELAY);
     ALsizei maxlen;
 
-    maxlen = fastf2i(max_delay * 2.0f * Device->Frequency) + 1;
-    maxlen = NextPowerOf2(maxlen);
+    maxlen = NextPowerOf2(fastf2i(max_delay*2.0f*Device->Frequency) + 1);
+    if(maxlen <= 0) return AL_FALSE;
 
     if(maxlen != state->BufferLength)
     {

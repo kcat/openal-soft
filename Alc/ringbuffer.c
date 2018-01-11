@@ -51,9 +51,8 @@ ll_ringbuffer_t *ll_ringbuffer_create(size_t sz, size_t elem_sz)
     ll_ringbuffer_t *rb;
     size_t power_of_two;
 
-    power_of_two = NextPowerOf2(sz);
-    if(power_of_two < sz)
-        return NULL;
+    power_of_two = NextPowerOf2((ALuint)sz);
+    if(power_of_two < sz) return NULL;
 
     rb = al_malloc(16, sizeof(*rb) + power_of_two*elem_sz);
     if(!rb) return NULL;

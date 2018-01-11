@@ -91,9 +91,10 @@ static ALboolean ALechoState_deviceUpdate(ALechoState *state, ALCdevice *Device)
 
     // Use the next power of 2 for the buffer length, so the tap offsets can be
     // wrapped using a mask instead of a modulo
-    maxlen  = fastf2i(AL_ECHO_MAX_DELAY * Device->Frequency) + 1;
-    maxlen += fastf2i(AL_ECHO_MAX_LRDELAY * Device->Frequency) + 1;
-    maxlen  = NextPowerOf2(maxlen);
+    maxlen = fastf2i(AL_ECHO_MAX_DELAY*Device->Frequency + 0.5f) +
+             fastf2i(AL_ECHO_MAX_LRDELAY*Device->Frequency + 0.5f);
+    maxlen = NextPowerOf2(maxlen);
+    if(maxlen <= 0) return AL_FALSE;
 
     if(maxlen != state->BufferLength)
     {

@@ -42,6 +42,7 @@
 #include "alu.h"
 #include "alconfig.h"
 
+#include "fpu_modes.h"
 #include "cpu_caps.h"
 #include "compat.h"
 #include "threads.h"

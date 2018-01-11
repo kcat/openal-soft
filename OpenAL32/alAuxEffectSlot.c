@@ -32,6 +32,7 @@
 #include "alListener.h"
 #include "alSource.h"
 
+#include "fpu_modes.h"
 #include "almalloc.h"
 
 

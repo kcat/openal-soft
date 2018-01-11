@@ -109,6 +109,7 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 #include "alMain.h"
 #include "alu.h"
 #include "cpu_caps.h"
+#include "fpu_modes.h"
 #include "atomic.h"
 #include "uintmap.h"
 #include "vector.h"
@@ -295,7 +296,7 @@ void FillCPUCaps(int capfilter)
 void SetMixerFPUMode(FPUCtl *ctl)
 {
 #ifdef HAVE_FENV_H
-    fegetenv(STATIC_CAST(fenv_t, ctl));
+    fegetenv(&ctl->flt_env);
 #ifdef _WIN32
     /* HACK: A nasty bug in MinGW-W64 causes fegetenv and fesetenv to not save
      * and restore the FPU rounding mode, so we have to do it manually. Don't
@@ -348,7 +349,7 @@ void SetMixerFPUMode(FPUCtl *ctl)
 void RestoreFPUMode(const FPUCtl *ctl)
 {
 #ifdef HAVE_FENV_H
-    fesetenv(STATIC_CAST(fenv_t, ctl));
+    fesetenv(&ctl->flt_env);
 #ifdef _WIN32
     fesetround(ctl->round_mode);
 #endif

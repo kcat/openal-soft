@@ -3,6 +3,7 @@
 
 #include "converter.h"
 
+#include "fpu_modes.h"
 #include "mixer_defs.h"
 
 

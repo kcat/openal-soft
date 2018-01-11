@@ -1133,7 +1133,7 @@ static void alc_initconfig(void)
                 continue;
 
             len = (next ? ((size_t)(next-str)) : strlen(str));
-            for(n = 0;EffectList[n].name;n++)
+            for(n = 0;n < EFFECTLIST_SIZE;n++)
             {
                 if(len == strlen(EffectList[n].name) &&
                    strncmp(EffectList[n].name, str, len) == 0)

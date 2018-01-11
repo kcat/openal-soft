@@ -32,19 +32,18 @@
 #include "alError.h"
 
 
-const struct EffectList EffectList[] = {
-    { "eaxreverb",  AL__EAXREVERB,  "AL_EFFECT_EAXREVERB",      AL_EFFECT_EAXREVERB },
-    { "reverb",     AL__REVERB,     "AL_EFFECT_REVERB",         AL_EFFECT_REVERB },
-    { "chorus",     AL__CHORUS,     "AL_EFFECT_CHORUS",         AL_EFFECT_CHORUS },
-    { "compressor", AL__COMPRESSOR, "AL_EFFECT_COMPRESSOR",     AL_EFFECT_COMPRESSOR },
-    { "distortion", AL__DISTORTION, "AL_EFFECT_DISTORTION",     AL_EFFECT_DISTORTION },
-    { "echo",       AL__ECHO,       "AL_EFFECT_ECHO",           AL_EFFECT_ECHO },
-    { "equalizer",  AL__EQUALIZER,  "AL_EFFECT_EQUALIZER",      AL_EFFECT_EQUALIZER },
-    { "flanger",    AL__FLANGER,    "AL_EFFECT_FLANGER",        AL_EFFECT_FLANGER },
-    { "modulator",  AL__MODULATOR,  "AL_EFFECT_RING_MODULATOR", AL_EFFECT_RING_MODULATOR },
-    { "dedicated",  AL__DEDICATED,  "AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT", AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT },
-    { "dedicated",  AL__DEDICATED,  "AL_EFFECT_DEDICATED_DIALOGUE", AL_EFFECT_DEDICATED_DIALOGUE },
-    { NULL, 0, NULL, (ALenum)0 }
+const struct EffectList EffectList[EFFECTLIST_SIZE] = {
+    { "eaxreverb",  EAXREVERB_EFFECT,  AL_EFFECT_EAXREVERB },
+    { "reverb",     REVERB_EFFECT,     AL_EFFECT_REVERB },
+    { "chorus",     CHORUS_EFFECT,     AL_EFFECT_CHORUS },
+    { "compressor", COMPRESSOR_EFFECT, AL_EFFECT_COMPRESSOR },
+    { "distortion", DISTORTION_EFFECT, AL_EFFECT_DISTORTION },
+    { "echo",       ECHO_EFFECT,       AL_EFFECT_ECHO },
+    { "equalizer",  EQUALIZER_EFFECT,  AL_EFFECT_EQUALIZER },
+    { "flanger",    FLANGER_EFFECT,    AL_EFFECT_FLANGER },
+    { "modulator",  MODULATOR_EFFECT,  AL_EFFECT_RING_MODULATOR },
+    { "dedicated",  DEDICATED_EFFECT,  AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT },
+    { "dedicated",  DEDICATED_EFFECT,  AL_EFFECT_DEDICATED_DIALOGUE },
 };
 
 ALboolean DisabledEffects[MAX_EFFECTS];
@@ -175,7 +174,7 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint value)
         {
             ALboolean isOk = (value == AL_EFFECT_NULL);
             ALint i;
-            for(i = 0;!isOk && EffectList[i].val;i++)
+            for(i = 0;!isOk && i < EFFECTLIST_SIZE;i++)
             {
                 if(value == EffectList[i].val &&
                    !DisabledEffects[EffectList[i].type])
@@ -682,9 +681,9 @@ ALvoid LoadReverbPreset(const char *name, ALeffect *effect)
         return;
     }
 
-    if(!DisabledEffects[AL__EAXREVERB])
+    if(!DisabledEffects[EAXREVERB_EFFECT])
         InitEffectParams(effect, AL_EFFECT_EAXREVERB);
-    else if(!DisabledEffects[AL__REVERB])
+    else if(!DisabledEffects[REVERB_EFFECT])
         InitEffectParams(effect, AL_EFFECT_REVERB);
     else
         InitEffectParams(effect, AL_EFFECT_NULL);

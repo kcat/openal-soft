@@ -10,16 +10,16 @@ extern "C" {
 struct ALeffect;
 
 enum {
-    AL__EAXREVERB = 0,
-    AL__REVERB,
-    AL__CHORUS,
-    AL__COMPRESSOR,
-    AL__DISTORTION,
-    AL__ECHO,
-    AL__EQUALIZER,
-    AL__FLANGER,
-    AL__MODULATOR,
-    AL__DEDICATED,
+    EAXREVERB_EFFECT = 0,
+    REVERB_EFFECT,
+    CHORUS_EFFECT,
+    COMPRESSOR_EFFECT,
+    DISTORTION_EFFECT,
+    ECHO_EFFECT,
+    EQUALIZER_EFFECT,
+    FLANGER_EFFECT,
+    MODULATOR_EFFECT,
+    DEDICATED_EFFECT,
 
     MAX_EFFECTS
 };
@@ -28,12 +28,12 @@ extern ALboolean DisabledEffects[MAX_EFFECTS];
 extern ALfloat ReverbBoost;
 
 struct EffectList {
-    const char *name;
+    const char name[16];
     int type;
-    const char *ename;
     ALenum val;
 };
-extern const struct EffectList EffectList[];
+#define EFFECTLIST_SIZE 11
+extern const struct EffectList EffectList[EFFECTLIST_SIZE];
 
 
 struct ALeffectVtable {

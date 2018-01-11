@@ -15,6 +15,15 @@
 #define HRTF_AMBI_MAX_CHANNELS 16
 
 
+#define HRTF_HISTORY_BITS   (6)
+#define HRTF_HISTORY_LENGTH (1<<HRTF_HISTORY_BITS)
+#define HRTF_HISTORY_MASK   (HRTF_HISTORY_LENGTH-1)
+
+#define HRIR_BITS        (7)
+#define HRIR_LENGTH      (1<<HRIR_BITS)
+#define HRIR_MASK        (HRIR_LENGTH-1)
+
+
 struct HrtfEntry;
 
 struct Hrtf {
@@ -31,6 +40,28 @@ struct Hrtf {
     const ALfloat (*coeffs)[2];
     const ALubyte (*delays)[2];
 };
+
+
+typedef struct HrtfState {
+    alignas(16) ALfloat History[HRTF_HISTORY_LENGTH];
+    alignas(16) ALfloat Values[HRIR_LENGTH][2];
+} HrtfState;
+
+typedef struct HrtfParams {
+    alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
+    ALsizei Delay[2];
+    ALfloat Gain;
+} HrtfParams;
+
+typedef struct DirectHrtfState {
+    /* HRTF filter state for dry buffer content */
+    ALsizei Offset;
+    ALsizei IrSize;
+    struct {
+        alignas(16) ALfloat Values[HRIR_LENGTH][2];
+        alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
+    } Chan[];
+} DirectHrtfState;
 
 
 void FreeHrtfs(void);

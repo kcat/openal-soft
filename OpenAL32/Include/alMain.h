@@ -386,6 +386,7 @@ extern "C" {
 
 struct Hrtf;
 struct HrtfEntry;
+struct DirectHrtfState;
 struct FrontStablizer;
 struct Compressor;
 struct ALcontextProps;
@@ -625,35 +626,6 @@ typedef union AmbiConfig {
 } AmbiConfig;
 
 
-#define HRTF_HISTORY_BITS   (6)
-#define HRTF_HISTORY_LENGTH (1<<HRTF_HISTORY_BITS)
-#define HRTF_HISTORY_MASK   (HRTF_HISTORY_LENGTH-1)
-
-#define HRIR_BITS        (7)
-#define HRIR_LENGTH      (1<<HRIR_BITS)
-#define HRIR_MASK        (HRIR_LENGTH-1)
-
-typedef struct HrtfState {
-    alignas(16) ALfloat History[HRTF_HISTORY_LENGTH];
-    alignas(16) ALfloat Values[HRIR_LENGTH][2];
-} HrtfState;
-
-typedef struct HrtfParams {
-    alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
-    ALsizei Delay[2];
-    ALfloat Gain;
-} HrtfParams;
-
-typedef struct DirectHrtfState {
-    /* HRTF filter state for dry buffer content */
-    ALsizei Offset;
-    ALsizei IrSize;
-    struct {
-        alignas(16) ALfloat Values[HRIR_LENGTH][2];
-        alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
-    } Chan[];
-} DirectHrtfState;
-
 typedef struct EnumeratedHrtf {
     al_string name;
 
@@ -750,7 +722,7 @@ struct ALCdevice_struct
     UIntMap FilterMap;
 
     /* HRTF state and info */
-    DirectHrtfState *Hrtf;
+    struct DirectHrtfState *Hrtf;
     al_string HrtfName;
     struct Hrtf *HrtfHandle;
     vector_EnumeratedHrtf HrtfList;

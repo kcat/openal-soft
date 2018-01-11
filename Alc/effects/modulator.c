@@ -38,9 +38,12 @@ typedef struct ALmodulatorState {
     ALsizei index;
     ALsizei step;
 
-    ALfloat Gain[MAX_EFFECT_CHANNELS][MAX_OUTPUT_CHANNELS];
+    struct {
+        ALfilterState Filter;
 
-    ALfilterState Filter[MAX_EFFECT_CHANNELS];
+        ALfloat CurrentGains[MAX_OUTPUT_CHANNELS];
+        ALfloat TargetGains[MAX_OUTPUT_CHANNELS];
+    } Chans[MAX_EFFECT_CHANNELS];
 } ALmodulatorState;
 
 static ALvoid ALmodulatorState_Destruct(ALmodulatorState *state);
@@ -93,16 +96,11 @@ DECL_TEMPLATE(Square)
 
 static void ALmodulatorState_Construct(ALmodulatorState *state)
 {
-    ALuint i;
-
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALmodulatorState, ALeffectState, state);
 
     state->index = 0;
     state->step = 1;
-
-    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ALfilterState_clear(&state->Filter[i]);
 }
 
 static ALvoid ALmodulatorState_Destruct(ALmodulatorState *state)
@@ -110,8 +108,15 @@ static ALvoid ALmodulatorState_Destruct(ALmodulatorState *state)
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
 }
 
-static ALboolean ALmodulatorState_deviceUpdate(ALmodulatorState *UNUSED(state), ALCdevice *UNUSED(device))
+static ALboolean ALmodulatorState_deviceUpdate(ALmodulatorState *state, ALCdevice *UNUSED(device))
 {
+    ALsizei i, j;
+    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
+    {
+        ALfilterState_clear(&state->Chans[i].Filter);
+        for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
+            state->Chans[i].CurrentGains[j] = 0.0f;
+    }
     return AL_TRUE;
 }
 
@@ -136,20 +141,19 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCcontext 
     cw = cosf(F_TAU * props->Modulator.HighPassCutoff / device->Frequency);
     a = (2.0f-cw) - sqrtf(powf(2.0f-cw, 2.0f) - 1.0f);
 
-    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-    {
-        state->Filter[i].b0 = a;
-        state->Filter[i].b1 = -a;
-        state->Filter[i].b2 = 0.0f;
-        state->Filter[i].a1 = -a;
-        state->Filter[i].a2 = 0.0f;
-    }
+    state->Chans[0].Filter.b0 = a;
+    state->Chans[0].Filter.b1 = -a;
+    state->Chans[0].Filter.b2 = 0.0f;
+    state->Chans[0].Filter.a1 = -a;
+    state->Chans[0].Filter.a2 = 0.0f;
+    for(i = 1;i < MAX_EFFECT_CHANNELS;i++)
+        ALfilterState_copyParams(&state->Chans[i].Filter, &state->Chans[0].Filter);
 
     STATIC_CAST(ALeffectState,state)->OutBuffer = device->FOAOut.Buffer;
     STATIC_CAST(ALeffectState,state)->OutChannels = device->FOAOut.NumChannels;
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
         ComputeFirstOrderGains(&device->FOAOut, IdentityMatrixf.m[i],
-                               slot->Params.Gain, state->Gain[i]);
+                               slot->Params.Gain, state->Chans[i].TargetGains);
 }
 
 static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
@@ -162,29 +166,20 @@ static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALsizei SamplesT
     {
         ALfloat temps[2][128];
         ALsizei td = mini(128, SamplesToDo-base);
-        ALsizei i, j, k;
+        ALsizei i;
 
-        for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
+        for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
         {
-            ALfilterState_process(&state->Filter[j], temps[0], &SamplesIn[j][base], td);
+            ALfilterState_process(&state->Chans[i].Filter, temps[0], &SamplesIn[i][base], td);
             state->Process(temps[1], temps[0], index, step, td);
 
-            for(k = 0;k < NumChannels;k++)
-            {
-                ALfloat gain = state->Gain[j][k];
-                if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
-                    continue;
-
-                for(i = 0;i < td;i++)
-                    SamplesOut[k][base+i] += gain * temps[1][i];
-            }
+            MixSamples(temps[1], NumChannels, SamplesOut, state->Chans[i].CurrentGains,
+                       state->Chans[i].TargetGains, SamplesToDo-base, base, td);
         }
 
         for(i = 0;i < td;i++)
-        {
             index += step;
-            index &= WAVEFORM_FRACMASK;
-        }
+        index &= WAVEFORM_FRACMASK;
         base += td;
     }
     state->index = index;

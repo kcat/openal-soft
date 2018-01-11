@@ -32,7 +32,8 @@
 typedef struct ALdedicatedState {
     DERIVE_FROM_TYPE(ALeffectState);
 
-    ALfloat gains[MAX_OUTPUT_CHANNELS];
+    ALfloat CurrentGains[MAX_OUTPUT_CHANNELS];
+    ALfloat TargetGains[MAX_OUTPUT_CHANNELS];
 } ALdedicatedState;
 
 static ALvoid ALdedicatedState_Destruct(ALdedicatedState *state);
@@ -46,13 +47,8 @@ DEFINE_ALEFFECTSTATE_VTABLE(ALdedicatedState);
 
 static void ALdedicatedState_Construct(ALdedicatedState *state)
 {
-    ALsizei s;
-
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALdedicatedState, ALeffectState, state);
-
-    for(s = 0;s < MAX_OUTPUT_CHANNELS;s++)
-        state->gains[s] = 0.0f;
 }
 
 static ALvoid ALdedicatedState_Destruct(ALdedicatedState *state)
@@ -60,8 +56,11 @@ static ALvoid ALdedicatedState_Destruct(ALdedicatedState *state)
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
 }
 
-static ALboolean ALdedicatedState_deviceUpdate(ALdedicatedState *UNUSED(state), ALCdevice *UNUSED(device))
+static ALboolean ALdedicatedState_deviceUpdate(ALdedicatedState *state, ALCdevice *UNUSED(device))
 {
+    ALsizei i;
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+        state->CurrentGains[i] = 0.0f;
     return AL_TRUE;
 }
 
@@ -69,10 +68,10 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCcontext 
 {
     const ALCdevice *device = context->Device;
     ALfloat Gain;
-    ALuint i;
+    ALsizei i;
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-        state->gains[i] = 0.0f;
+        state->TargetGains[i] = 0.0f;
 
     Gain = slot->Params.Gain * props->Dedicated.Gain;
     if(slot->Params.EffectType == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
@@ -82,7 +81,7 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCcontext 
         {
             STATIC_CAST(ALeffectState,state)->OutBuffer = device->RealOut.Buffer;
             STATIC_CAST(ALeffectState,state)->OutChannels = device->RealOut.NumChannels;
-            state->gains[idx] = Gain;
+            state->TargetGains[idx] = Gain;
         }
     }
     else if(slot->Params.EffectType == AL_EFFECT_DEDICATED_DIALOGUE)
@@ -94,7 +93,7 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCcontext 
         {
             STATIC_CAST(ALeffectState,state)->OutBuffer = device->RealOut.Buffer;
             STATIC_CAST(ALeffectState,state)->OutChannels = device->RealOut.NumChannels;
-            state->gains[idx] = Gain;
+            state->TargetGains[idx] = Gain;
         }
         else
         {
@@ -103,26 +102,15 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCcontext 
 
             STATIC_CAST(ALeffectState,state)->OutBuffer = device->Dry.Buffer;
             STATIC_CAST(ALeffectState,state)->OutChannels = device->Dry.NumChannels;
-            ComputeDryPanGains(&device->Dry, coeffs, Gain, state->gains);
+            ComputeDryPanGains(&device->Dry, coeffs, Gain, state->TargetGains);
         }
     }
 }
 
 static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    ALsizei i, c;
-
-    SamplesIn = ASSUME_ALIGNED(SamplesIn, 16);
-    SamplesOut = ASSUME_ALIGNED(SamplesOut, 16);
-    for(c = 0;c < NumChannels;c++)
-    {
-        const ALfloat gain = state->gains[c];
-        if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
-            continue;
-
-        for(i = 0;i < SamplesToDo;i++)
-            SamplesOut[c][i] += SamplesIn[0][i] * gain;
-    }
+    MixSamples(SamplesIn[0], NumChannels, SamplesOut, state->CurrentGains,
+               state->TargetGains, SamplesToDo, 0, SamplesToDo);
 }
 
 

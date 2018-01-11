@@ -102,7 +102,4 @@ static void T##_Delete(void *ptr) { al_free(ptr); }
 /* Helper to set an object's vtable thunk for a child type. Used when constructing an object. */
 #define SET_VTABLE2(T1, T2, obj) (STATIC_CAST(T2, obj)->vtbl = GET_VTABLE2(T1, T2))
 
-/* Helper to set an object's vtable for a type. */
-#define SET_VTABLE1(T1, obj)     ((obj)->vtbl = &(T1##_vtable))
-
 #endif /* POLYMORPHISM_H */

@@ -30,6 +30,7 @@
 #include "alu.h"
 #include "bformatdec.h"
 #include "hrtf.h"
+#include "alconfig.h"
 
 #include "compat.h"
 #include "almalloc.h"

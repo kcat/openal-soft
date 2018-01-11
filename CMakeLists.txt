@@ -713,7 +713,7 @@ SET(OPENAL_OBJS  OpenAL32/alAuxEffectSlot.c
 )
 SET(ALC_OBJS  Alc/ALc.c
               Alc/ALu.c
-              Alc/alcConfig.c
+              Alc/alconfig.c
               Alc/alcRing.c
               Alc/bs2b.c
               Alc/converter.c

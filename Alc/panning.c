@@ -29,6 +29,7 @@
 #include "alMain.h"
 #include "alAuxEffectSlot.h"
 #include "alu.h"
+#include "alconfig.h"
 #include "bool.h"
 #include "ambdec.h"
 #include "bformatdec.h"

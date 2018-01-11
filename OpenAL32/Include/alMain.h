@@ -850,16 +850,6 @@ size_t ll_ringbuffer_write(ll_ringbuffer_t *rb, const char *src, size_t cnt);
 void ll_ringbuffer_write_advance(ll_ringbuffer_t *rb, size_t cnt);
 size_t ll_ringbuffer_write_space(const ll_ringbuffer_t *rb);
 
-void ReadALConfig(void);
-void FreeALConfig(void);
-int ConfigValueExists(const char *devName, const char *blockName, const char *keyName);
-const char *GetConfigValue(const char *devName, const char *blockName, const char *keyName, const char *def);
-int GetConfigValueBool(const char *devName, const char *blockName, const char *keyName, int def);
-int ConfigValueStr(const char *devName, const char *blockName, const char *keyName, const char **ret);
-int ConfigValueInt(const char *devName, const char *blockName, const char *keyName, int *ret);
-int ConfigValueUInt(const char *devName, const char *blockName, const char *keyName, unsigned int *ret);
-int ConfigValueFloat(const char *devName, const char *blockName, const char *keyName, float *ret);
-int ConfigValueBool(const char *devName, const char *blockName, const char *keyName, int *ret);
 
 void SetRTPriority(void);
 

@@ -26,6 +26,7 @@
 
 #include "alMain.h"
 #include "alu.h"
+#include "alconfig.h"
 #include "compat.h"
 
 #include "backends/base.h"

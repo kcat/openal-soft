@@ -38,6 +38,7 @@
 #endif
 
 #include "alMain.h"
+#include "alconfig.h"
 #include "compat.h"
 #include "bool.h"
 

@@ -40,6 +40,7 @@
 #include "mastering.h"
 #include "bformatdec.h"
 #include "alu.h"
+#include "alconfig.h"
 
 #include "cpu_caps.h"
 #include "compat.h"

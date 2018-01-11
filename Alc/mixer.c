@@ -34,6 +34,7 @@
 #include "alListener.h"
 #include "alAuxEffectSlot.h"
 #include "alu.h"
+#include "alconfig.h"
 
 #include "cpu_caps.h"
 #include "mixer_defs.h"

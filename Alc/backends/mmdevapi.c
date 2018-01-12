@@ -71,6 +71,13 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 #define DEVNAME_HEAD "OpenAL Soft on "
 
 
+/* Scales the given value using 64-bit integer math, ceiling the result. */
+static inline ALuint64 ScaleCeil(ALuint64 val, ALuint64 new_scale, ALuint64 old_scale)
+{
+    return (val*new_scale + old_scale-1) / old_scale;
+}
+
+
 typedef struct {
     al_string name;
     al_string endpoint_guid; // obtained from PKEY_AudioEndpoint_GUID , set to "Unknown device GUID" if absent.

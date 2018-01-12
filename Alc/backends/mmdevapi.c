@@ -533,9 +533,9 @@ typedef struct ALCmmdevPlayback {
 
     HANDLE MsgEvent;
 
-    volatile UINT32 Padding;
+    ATOMIC(UINT32) Padding;
 
-    volatile int killNow;
+    ATOMIC(int) killNow;
     althrd_t thread;
 } ALCmmdevPlayback;
 
@@ -580,9 +580,9 @@ static void ALCmmdevPlayback_Construct(ALCmmdevPlayback *self, ALCdevice *device
 
     self->MsgEvent = NULL;
 
-    self->Padding = 0;
+    ATOMIC_INIT(&self->Padding, 0);
 
-    self->killNow = 0;
+    ATOMIC_INIT(&self->killNow, 0);
 }
 
 static void ALCmmdevPlayback_Destruct(ALCmmdevPlayback *self)
@@ -626,7 +626,7 @@ FORCE_ALIGN static int ALCmmdevPlayback_mixerProc(void *arg)
 
     update_size = device->UpdateSize;
     buffer_len = update_size * device->NumUpdates;
-    while(!self->killNow)
+    while(!ATOMIC_LOAD(&self->killNow, almemory_order_relaxed))
     {
         hr = IAudioClient_GetCurrentPadding(self->client, &written);
         if(FAILED(hr))
@@ -637,7 +637,7 @@ FORCE_ALIGN static int ALCmmdevPlayback_mixerProc(void *arg)
             V0(device->Backend,unlock)();
             break;
         }
-        self->Padding = written;
+        ATOMIC_STORE(&self->Padding, written, almemory_order_relaxed);
 
         len = buffer_len - written;
         if(len < update_size)
@@ -655,7 +655,7 @@ FORCE_ALIGN static int ALCmmdevPlayback_mixerProc(void *arg)
         {
             ALCmmdevPlayback_lock(self);
             aluMixData(device, buffer, len);
-            self->Padding = written + len;
+            ATOMIC_STORE(&self->Padding, written + len, almemory_order_relaxed);
             ALCmmdevPlayback_unlock(self);
             hr = IAudioRenderClient_ReleaseBuffer(self->render, len, 0);
         }
@@ -668,7 +668,7 @@ FORCE_ALIGN static int ALCmmdevPlayback_mixerProc(void *arg)
             break;
         }
     }
-    self->Padding = 0;
+    ATOMIC_STORE(&self->Padding, 0, almemory_order_release);
 
     CoUninitialize();
     return 0;
@@ -1162,7 +1162,7 @@ static HRESULT ALCmmdevPlayback_startProxy(ALCmmdevPlayback *self)
     if(SUCCEEDED(hr))
     {
         self->render = ptr;
-        self->killNow = 0;
+        ATOMIC_STORE(&self->killNow, 0, almemory_order_release);
         if(althrd_create(&self->thread, ALCmmdevPlayback_mixerProc, self) != althrd_success)
         {
             if(self->render)
@@ -1192,7 +1192,7 @@ static void ALCmmdevPlayback_stopProxy(ALCmmdevPlayback *self)
     if(!self->render)
         return;
 
-    self->killNow = 1;
+    ATOMIC_STORE_SEQ(&self->killNow, 1);
     althrd_join(self->thread, &res);
 
     IAudioRenderClient_Release(self->render);
@@ -1208,7 +1208,8 @@ static ClockLatency ALCmmdevPlayback_getClockLatency(ALCmmdevPlayback *self)
 
     ALCmmdevPlayback_lock(self);
     ret.ClockTime = GetDeviceClockTime(device);
-    ret.Latency = self->Padding * DEVICE_CLOCK_RES / device->Frequency;
+    ret.Latency = ATOMIC_LOAD(&self->Padding, almemory_order_relaxed) * DEVICE_CLOCK_RES /
+                  device->Frequency;
     ALCmmdevPlayback_unlock(self);
 
     return ret;
@@ -1232,7 +1233,7 @@ typedef struct ALCmmdevCapture {
     SampleConverter *SampleConv;
     ll_ringbuffer_t *Ring;
 
-    volatile int killNow;
+    ATOMIC(int) killNow;
     althrd_t thread;
 } ALCmmdevCapture;
 
@@ -1281,7 +1282,7 @@ static void ALCmmdevCapture_Construct(ALCmmdevCapture *self, ALCdevice *device)
     self->SampleConv = NULL;
     self->Ring = NULL;
 
-    self->killNow = 0;
+    ATOMIC_INIT(&self->killNow, 0);
 }
 
 static void ALCmmdevCapture_Destruct(ALCmmdevCapture *self)
@@ -1327,7 +1328,7 @@ FORCE_ALIGN int ALCmmdevCapture_recordProc(void *arg)
 
     althrd_setname(althrd_current(), RECORD_THREAD_NAME);
 
-    while(!self->killNow)
+    while(!ATOMIC_LOAD(&self->killNow, almemory_order_relaxed))
     {
         UINT32 avail;
         DWORD res;
@@ -1875,7 +1876,7 @@ static HRESULT ALCmmdevCapture_startProxy(ALCmmdevCapture *self)
     if(SUCCEEDED(hr))
     {
         self->capture = ptr;
-        self->killNow = 0;
+        ATOMIC_STORE(&self->killNow, 0, almemory_order_release);
         if(althrd_create(&self->thread, ALCmmdevCapture_recordProc, self) != althrd_success)
         {
             ERR("Failed to start thread\n");
@@ -1909,7 +1910,7 @@ static void ALCmmdevCapture_stopProxy(ALCmmdevCapture *self)
     if(!self->capture)
         return;
 
-    self->killNow = 1;
+    ATOMIC_STORE_SEQ(&self->killNow, 1);
     althrd_join(self->thread, &res);
 
     IAudioCaptureClient_Release(self->capture);

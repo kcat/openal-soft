@@ -17,6 +17,7 @@
 #include "AL/alc.h"
 #include "AL/alext.h"
 
+#include "logging.h"
 #include "polymorphism.h"
 #include "static_assert.h"
 #include "align.h"
@@ -221,12 +222,6 @@ typedef ALuint64SOFT ALuint64;
 #else
 #define UNUSED(x) x
 #endif
-#endif
-
-#ifdef __GNUC__
-#define DECL_FORMAT(x, y, z) __attribute__((format(x, (y), (z))))
-#else
-#define DECL_FORMAT(x, y, z)
 #endif
 
 /* Calculates the size of a struct with N elements of a flexible array member.
@@ -776,6 +771,7 @@ void ALCcontext_DeferUpdates(ALCcontext *context);
 void ALCcontext_ProcessUpdates(ALCcontext *context);
 
 
+extern ALint RTPrioLevel;
 void SetRTPriority(void);
 
 void SetDefaultChannelOrder(ALCdevice *device);
@@ -802,57 +798,6 @@ inline ALint GetChannelIndex(const enum Channel names[MAX_OUTPUT_CHANNELS], enum
  */
 inline ALint GetChannelIdxByName(const RealMixParams *real, enum Channel chan)
 { return GetChannelIndex(real->ChannelName, chan); }
-
-extern FILE *LogFile;
-
-#if defined(__GNUC__) && !defined(_WIN32) && !defined(IN_IDE_PARSER)
-#define AL_PRINT(T, MSG, ...) fprintf(LogFile, "AL lib: %s %s: "MSG, T, __FUNCTION__ , ## __VA_ARGS__)
-#else
-void al_print(const char *type, const char *func, const char *fmt, ...) DECL_FORMAT(printf, 3,4);
-#define AL_PRINT(T, ...) al_print((T), __FUNCTION__, __VA_ARGS__)
-#endif
-
-#ifdef __ANDROID__
-#include <android/log.h>
-#define LOG_ANDROID(T, MSG, ...) __android_log_print(T, "openal", "AL lib: %s: "MSG, __FUNCTION__ , ## __VA_ARGS__)
-#else
-#define LOG_ANDROID(T, MSG, ...) ((void)0)
-#endif
-
-enum LogLevel {
-    NoLog,
-    LogError,
-    LogWarning,
-    LogTrace,
-    LogRef
-};
-extern enum LogLevel LogLevel;
-
-#define TRACEREF(...) do {                                                    \
-    if(LogLevel >= LogRef)                                                    \
-        AL_PRINT("(--)", __VA_ARGS__);                                        \
-} while(0)
-
-#define TRACE(...) do {                                                       \
-    if(LogLevel >= LogTrace)                                                  \
-        AL_PRINT("(II)", __VA_ARGS__);                                        \
-    LOG_ANDROID(ANDROID_LOG_DEBUG, __VA_ARGS__);                              \
-} while(0)
-
-#define WARN(...) do {                                                        \
-    if(LogLevel >= LogWarning)                                                \
-        AL_PRINT("(WW)", __VA_ARGS__);                                        \
-    LOG_ANDROID(ANDROID_LOG_WARN, __VA_ARGS__);                               \
-} while(0)
-
-#define ERR(...) do {                                                         \
-    if(LogLevel >= LogError)                                                  \
-        AL_PRINT("(EE)", __VA_ARGS__);                                        \
-    LOG_ANDROID(ANDROID_LOG_ERROR, __VA_ARGS__);                              \
-} while(0)
-
-
-extern ALint RTPrioLevel;
 
 
 vector_al_string SearchDataFiles(const char *match, const char *subdir);

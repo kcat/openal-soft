@@ -10,6 +10,8 @@
 
 
 extern inline ALuint64 GetDeviceClockTime(ALCdevice *device);
+extern inline void ALCdevice_Lock(ALCdevice *device);
+extern inline void ALCdevice_Unlock(ALCdevice *device);
 
 /* Base ALCbackend method implementations. */
 void ALCbackend_Construct(ALCbackend *self, ALCdevice *device)

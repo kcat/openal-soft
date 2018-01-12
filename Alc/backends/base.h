@@ -152,4 +152,11 @@ ALCbackendFactory *ALCnullBackendFactory_getFactory(void);
 ALCbackendFactory *ALCwaveBackendFactory_getFactory(void);
 ALCbackendFactory *ALCloopbackFactory_getFactory(void);
 
+
+inline void ALCdevice_Lock(ALCdevice *device)
+{ V0(device->Backend,lock)(); }
+
+inline void ALCdevice_Unlock(ALCdevice *device)
+{ V0(device->Backend,unlock)(); }
+
 #endif /* AL_BACKENDS_BASE_H */

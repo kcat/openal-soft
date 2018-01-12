@@ -738,19 +738,15 @@ struct ALCcontext_struct {
 
 ALCcontext *GetContextRef(void);
 
-void ALCcontext_IncRef(ALCcontext *context);
 void ALCcontext_DecRef(ALCcontext *context);
+
+void ALCcontext_DeferUpdates(ALCcontext *context);
+void ALCcontext_ProcessUpdates(ALCcontext *context);
 
 void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends);
 
 void AppendAllDevicesList(const ALCchar *name);
 void AppendCaptureDeviceList(const ALCchar *name);
-
-void ALCdevice_Lock(ALCdevice *device);
-void ALCdevice_Unlock(ALCdevice *device);
-
-void ALCcontext_DeferUpdates(ALCcontext *context);
-void ALCcontext_ProcessUpdates(ALCcontext *context);
 
 
 extern ALint RTPrioLevel;

@@ -1494,17 +1494,6 @@ static ALCboolean IsValidAmbiScaling(ALCenum scaling)
  * Miscellaneous ALC helpers
  ************************************************/
 
-void ALCdevice_Lock(ALCdevice *device)
-{
-    V0(device->Backend,lock)();
-}
-
-void ALCdevice_Unlock(ALCdevice *device)
-{
-    V0(device->Backend,unlock)();
-}
-
-
 /* SetDefaultWFXChannelOrder
  *
  * Sets the default channel order used by WaveFormatEx.
@@ -2732,7 +2721,7 @@ static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
     if(ATOMIC_COMPARE_EXCHANGE_PTR_STRONG_SEQ(&GlobalContext, &origctx, NULL))
         ALCcontext_DecRef(context);
 
-    ALCdevice_Lock(device);
+    V0(device->Backend,lock)();
     origctx = context;
     newhead = context->next;
     if(!ATOMIC_COMPARE_EXCHANGE_PTR_STRONG_SEQ(&device->ContextList, &origctx, newhead))
@@ -2750,13 +2739,13 @@ static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
     }
     else
         ret = !!newhead;
-    ALCdevice_Unlock(device);
+    V0(device->Backend,unlock)();
 
     ALCcontext_DecRef(context);
     return ret;
 }
 
-void ALCcontext_IncRef(ALCcontext *context)
+static void ALCcontext_IncRef(ALCcontext *context)
 {
     uint ref = IncrementRef(&context->ref);
     TRACEREF("%p increasing refcount to %u\n", context, ref);

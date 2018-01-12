@@ -3104,7 +3104,8 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
 static inline ALCsizei NumAttrsForDevice(ALCdevice *device)
 {
     if(device->Type == Capture) return 9;
-    if(device->Type == Loopback && device->FmtChans == DevFmtAmbi3D)
+    if(device->Type != Loopback) return 29;
+    if(device->FmtChans == DevFmtAmbi3D)
         return 35;
     return 29;
 }

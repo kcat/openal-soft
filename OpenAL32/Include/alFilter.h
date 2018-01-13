@@ -107,6 +107,28 @@ inline void ALfilterState_processPassthru(ALfilterState *filter, const ALfloat *
 }
 
 
+struct ALfilter;
+
+typedef struct ALfilterVtable {
+    void (*const setParami)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALint val);
+    void (*const setParamiv)(struct ALfilter *filter, ALCcontext *context, ALenum param, const ALint *vals);
+    void (*const setParamf)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALfloat val);
+    void (*const setParamfv)(struct ALfilter *filter, ALCcontext *context, ALenum param, const ALfloat *vals);
+
+    void (*const getParami)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALint *val);
+    void (*const getParamiv)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALint *vals);
+    void (*const getParamf)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *val);
+    void (*const getParamfv)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *vals);
+} ALfilterVtable;
+
+#define DEFINE_ALFILTER_VTABLE(T)           \
+const struct ALfilterVtable T##_vtable = {  \
+    T##_setParami, T##_setParamiv,          \
+    T##_setParamf, T##_setParamfv,          \
+    T##_getParami, T##_getParamiv,          \
+    T##_getParamf, T##_getParamfv,          \
+}
+
 typedef struct ALfilter {
     // Filter type (AL_FILTER_NULL, ...)
     ALenum type;
@@ -117,29 +139,11 @@ typedef struct ALfilter {
     ALfloat GainLF;
     ALfloat LFReference;
 
-    void (*SetParami)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALint val);
-    void (*SetParamiv)(struct ALfilter *filter, ALCcontext *context, ALenum param, const ALint *vals);
-    void (*SetParamf)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALfloat val);
-    void (*SetParamfv)(struct ALfilter *filter, ALCcontext *context, ALenum param, const ALfloat *vals);
-
-    void (*GetParami)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALint *val);
-    void (*GetParamiv)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALint *vals);
-    void (*GetParamf)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *val);
-    void (*GetParamfv)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *vals);
+    const struct ALfilterVtable *vtbl;
 
     /* Self ID */
     ALuint id;
 } ALfilter;
-
-#define ALfilter_SetParami(x, c, p, v)  ((x)->SetParami((x),(c),(p),(v)))
-#define ALfilter_SetParamiv(x, c, p, v) ((x)->SetParamiv((x),(c),(p),(v)))
-#define ALfilter_SetParamf(x, c, p, v)  ((x)->SetParamf((x),(c),(p),(v)))
-#define ALfilter_SetParamfv(x, c, p, v) ((x)->SetParamfv((x),(c),(p),(v)))
-
-#define ALfilter_GetParami(x, c, p, v)  ((x)->GetParami((x),(c),(p),(v)))
-#define ALfilter_GetParamiv(x, c, p, v) ((x)->GetParamiv((x),(c),(p),(v)))
-#define ALfilter_GetParamf(x, c, p, v)  ((x)->GetParamf((x),(c),(p),(v)))
-#define ALfilter_GetParamfv(x, c, p, v) ((x)->GetParamfv((x),(c),(p),(v)))
 
 inline void LockFiltersRead(ALCdevice *device)
 { LockUIntMapRead(&device->FilterMap); }

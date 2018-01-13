@@ -166,7 +166,7 @@ AL_API ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint value)
         else
         {
             /* Call the appropriate handler */
-            ALfilter_SetParami(ALFilter, Context, param, value);
+            V(ALFilter,setParami)(Context, param, value);
         }
     }
     UnlockFiltersWrite(Device);
@@ -197,7 +197,7 @@ AL_API ALvoid AL_APIENTRY alFilteriv(ALuint filter, ALenum param, const ALint *v
     else
     {
         /* Call the appropriate handler */
-        ALfilter_SetParamiv(ALFilter, Context, param, values);
+        V(ALFilter,setParamiv)(Context, param, values);
     }
     UnlockFiltersWrite(Device);
 
@@ -220,7 +220,7 @@ AL_API ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat value)
     else
     {
         /* Call the appropriate handler */
-        ALfilter_SetParamf(ALFilter, Context, param, value);
+        V(ALFilter,setParamf)(Context, param, value);
     }
     UnlockFiltersWrite(Device);
 
@@ -243,7 +243,7 @@ AL_API ALvoid AL_APIENTRY alFilterfv(ALuint filter, ALenum param, const ALfloat 
     else
     {
         /* Call the appropriate handler */
-        ALfilter_SetParamfv(ALFilter, Context, param, values);
+        V(ALFilter,setParamfv)(Context, param, values);
     }
     UnlockFiltersWrite(Device);
 
@@ -270,7 +270,7 @@ AL_API ALvoid AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *value
         else
         {
             /* Call the appropriate handler */
-            ALfilter_GetParami(ALFilter, Context, param, value);
+            V(ALFilter,getParami)(Context, param, value);
         }
     }
     UnlockFiltersRead(Device);
@@ -301,7 +301,7 @@ AL_API ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *valu
     else
     {
         /* Call the appropriate handler */
-        ALfilter_GetParamiv(ALFilter, Context, param, values);
+        V(ALFilter,getParamiv)(Context, param, values);
     }
     UnlockFiltersRead(Device);
 
@@ -324,7 +324,7 @@ AL_API ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *val
     else
     {
         /* Call the appropriate handler */
-        ALfilter_GetParamf(ALFilter, Context, param, value);
+        V(ALFilter,getParamf)(Context, param, value);
     }
     UnlockFiltersRead(Device);
 
@@ -347,7 +347,7 @@ AL_API ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *va
     else
     {
         /* Call the appropriate handler */
-        ALfilter_GetParamfv(ALFilter, Context, param, values);
+        V(ALFilter,getParamfv)(Context, param, values);
     }
     UnlockFiltersRead(Device);
 
@@ -435,11 +435,11 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
 }
 
 
-static void lp_SetParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
+static void ALlowpass_setParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-static void lp_SetParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), const ALint *UNUSED(vals))
+static void ALlowpass_setParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), const ALint *UNUSED(vals))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-static void lp_SetParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat val)
+static void ALlowpass_setParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
     {
@@ -459,16 +459,14 @@ static void lp_SetParamf(ALfilter *filter, ALCcontext *context, ALenum param, AL
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-static void lp_SetParamfv(ALfilter *filter, ALCcontext *context, ALenum param, const ALfloat *vals)
-{
-    lp_SetParamf(filter, context, param, vals[0]);
-}
+static void ALlowpass_setParamfv(ALfilter *filter, ALCcontext *context, ALenum param, const ALfloat *vals)
+{ ALlowpass_setParamf(filter, context, param, vals[0]); }
 
-static void lp_GetParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
+static void ALlowpass_getParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-static void lp_GetParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(vals))
+static void ALlowpass_getParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(vals))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-static void lp_GetParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *val)
+static void ALlowpass_getParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
     {
@@ -484,17 +482,17 @@ static void lp_GetParamf(ALfilter *filter, ALCcontext *context, ALenum param, AL
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-static void lp_GetParamfv(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *vals)
-{
-    lp_GetParamf(filter, context, param, vals);
-}
+static void ALlowpass_getParamfv(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *vals)
+{ ALlowpass_getParamf(filter, context, param, vals); }
+
+DEFINE_ALFILTER_VTABLE(ALlowpass);
 
 
-static void hp_SetParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
+static void ALhighpass_setParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-static void hp_SetParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), const ALint *UNUSED(vals))
+static void ALhighpass_setParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), const ALint *UNUSED(vals))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-static void hp_SetParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat val)
+static void ALhighpass_setParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
     {
@@ -514,16 +512,14 @@ static void hp_SetParamf(ALfilter *filter, ALCcontext *context, ALenum param, AL
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-static void hp_SetParamfv(ALfilter *filter, ALCcontext *context, ALenum param, const ALfloat *vals)
-{
-    hp_SetParamf(filter, context, param, vals[0]);
-}
+static void ALhighpass_setParamfv(ALfilter *filter, ALCcontext *context, ALenum param, const ALfloat *vals)
+{ ALhighpass_setParamf(filter, context, param, vals[0]); }
 
-static void hp_GetParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
+static void ALhighpass_getParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-static void hp_GetParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(vals))
+static void ALhighpass_getParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(vals))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-static void hp_GetParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *val)
+static void ALhighpass_getParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
     {
@@ -539,17 +535,17 @@ static void hp_GetParamf(ALfilter *filter, ALCcontext *context, ALenum param, AL
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-static void hp_GetParamfv(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *vals)
-{
-    hp_GetParamf(filter, context, param, vals);
-}
+static void ALhighpass_getParamfv(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *vals)
+{ ALhighpass_getParamf(filter, context, param, vals); }
+
+DEFINE_ALFILTER_VTABLE(ALhighpass);
 
 
-static void bp_SetParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
+static void ALbandpass_setParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-static void bp_SetParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), const ALint *UNUSED(vals))
+static void ALbandpass_setParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), const ALint *UNUSED(vals))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-static void bp_SetParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat val)
+static void ALbandpass_setParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat val)
 {
     switch(param)
     {
@@ -575,16 +571,14 @@ static void bp_SetParamf(ALfilter *filter, ALCcontext *context, ALenum param, AL
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-static void bp_SetParamfv(ALfilter *filter, ALCcontext *context, ALenum param, const ALfloat *vals)
-{
-    bp_SetParamf(filter, context, param, vals[0]);
-}
+static void ALbandpass_setParamfv(ALfilter *filter, ALCcontext *context, ALenum param, const ALfloat *vals)
+{ ALbandpass_setParamf(filter, context, param, vals[0]); }
 
-static void bp_GetParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
+static void ALbandpass_getParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-static void bp_GetParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(vals))
+static void ALbandpass_getParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(vals))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-static void bp_GetParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *val)
+static void ALbandpass_getParamf(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *val)
 {
     switch(param)
     {
@@ -604,29 +598,31 @@ static void bp_GetParamf(ALfilter *filter, ALCcontext *context, ALenum param, AL
             SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
     }
 }
-static void bp_GetParamfv(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *vals)
-{
-    bp_GetParamf(filter, context, param, vals);
-}
+static void ALbandpass_getParamfv(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *vals)
+{ ALbandpass_getParamf(filter, context, param, vals); }
+
+DEFINE_ALFILTER_VTABLE(ALbandpass);
 
 
-static void null_SetParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
+static void ALnullfilter_setParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-static void null_SetParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), const ALint *UNUSED(vals))
+static void ALnullfilter_setParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), const ALint *UNUSED(vals))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-static void null_SetParamf(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALfloat UNUSED(val))
+static void ALnullfilter_setParamf(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALfloat UNUSED(val))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-static void null_SetParamfv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), const ALfloat *UNUSED(vals))
+static void ALnullfilter_setParamfv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), const ALfloat *UNUSED(vals))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
 
-static void null_GetParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
+static void ALnullfilter_getParami(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-static void null_GetParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(vals))
+static void ALnullfilter_getParamiv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(vals))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-static void null_GetParamf(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALfloat *UNUSED(val))
+static void ALnullfilter_getParamf(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALfloat *UNUSED(val))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-static void null_GetParamfv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALfloat *UNUSED(vals))
+static void ALnullfilter_getParamfv(ALfilter *UNUSED(filter), ALCcontext *context, ALenum UNUSED(param), ALfloat *UNUSED(vals))
 { SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
+
+DEFINE_ALFILTER_VTABLE(ALnullfilter);
 
 
 ALvoid ReleaseALFilters(ALCdevice *device)
@@ -654,15 +650,7 @@ static void InitFilterParams(ALfilter *filter, ALenum type)
         filter->HFReference = LOWPASSFREQREF;
         filter->GainLF = 1.0f;
         filter->LFReference = HIGHPASSFREQREF;
-
-        filter->SetParami  = lp_SetParami;
-        filter->SetParamiv = lp_SetParamiv;
-        filter->SetParamf  = lp_SetParamf;
-        filter->SetParamfv = lp_SetParamfv;
-        filter->GetParami  = lp_GetParami;
-        filter->GetParamiv = lp_GetParamiv;
-        filter->GetParamf  = lp_GetParamf;
-        filter->GetParamfv = lp_GetParamfv;
+        filter->vtbl = &ALlowpass_vtable;
     }
     else if(type == AL_FILTER_HIGHPASS)
     {
@@ -671,15 +659,7 @@ static void InitFilterParams(ALfilter *filter, ALenum type)
         filter->HFReference = LOWPASSFREQREF;
         filter->GainLF = AL_HIGHPASS_DEFAULT_GAINLF;
         filter->LFReference = HIGHPASSFREQREF;
-
-        filter->SetParami  = hp_SetParami;
-        filter->SetParamiv = hp_SetParamiv;
-        filter->SetParamf  = hp_SetParamf;
-        filter->SetParamfv = hp_SetParamfv;
-        filter->GetParami  = hp_GetParami;
-        filter->GetParamiv = hp_GetParamiv;
-        filter->GetParamf  = hp_GetParamf;
-        filter->GetParamfv = hp_GetParamfv;
+        filter->vtbl = &ALhighpass_vtable;
     }
     else if(type == AL_FILTER_BANDPASS)
     {
@@ -688,15 +668,7 @@ static void InitFilterParams(ALfilter *filter, ALenum type)
         filter->HFReference = LOWPASSFREQREF;
         filter->GainLF = AL_BANDPASS_DEFAULT_GAINLF;
         filter->LFReference = HIGHPASSFREQREF;
-
-        filter->SetParami  = bp_SetParami;
-        filter->SetParamiv = bp_SetParamiv;
-        filter->SetParamf  = bp_SetParamf;
-        filter->SetParamfv = bp_SetParamfv;
-        filter->GetParami  = bp_GetParami;
-        filter->GetParamiv = bp_GetParamiv;
-        filter->GetParamf  = bp_GetParamf;
-        filter->GetParamfv = bp_GetParamfv;
+        filter->vtbl = &ALbandpass_vtable;
     }
     else
     {
@@ -705,15 +677,7 @@ static void InitFilterParams(ALfilter *filter, ALenum type)
         filter->HFReference = LOWPASSFREQREF;
         filter->GainLF = 1.0f;
         filter->LFReference = HIGHPASSFREQREF;
-
-        filter->SetParami  = null_SetParami;
-        filter->SetParamiv = null_SetParamiv;
-        filter->SetParamf  = null_SetParamf;
-        filter->SetParamfv = null_SetParamfv;
-        filter->GetParami  = null_GetParami;
-        filter->GetParamiv = null_GetParamiv;
-        filter->GetParamf  = null_GetParamf;
-        filter->GetParamfv = null_GetParamfv;
+        filter->vtbl = &ALnullfilter_vtable;
     }
     filter->type = type;
 }

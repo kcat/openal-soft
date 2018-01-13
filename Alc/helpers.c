@@ -642,7 +642,7 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
         /* Search the local and global data dirs. */
         for(i = 0;i < COUNTOF(ids);i++)
         {
-            WCHAR buffer[PATH_MAX];
+            WCHAR buffer[MAX_PATH];
             if(SHGetSpecialFolderPathW(NULL, buffer, ids[i], FALSE) != FALSE)
             {
                 alstr_copy_wcstr(&path, buffer);
@@ -907,15 +907,32 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
     {
         al_string path = AL_STRING_INIT_STATIC();
         const char *str, *next;
-        char cwdbuf[PATH_MAX];
 
         /* Search the app-local directory. */
         if((str=getenv("ALSOFT_LOCAL_PATH")) && *str != '\0')
             DirectorySearch(str, ext, &results);
-        else if(getcwd(cwdbuf, sizeof(cwdbuf)))
-            DirectorySearch(cwdbuf, ext, &results);
         else
-            DirectorySearch(".", ext, &results);
+        {
+            size_t cwdlen = 256;
+            char *cwdbuf = malloc(cwdlen);
+            while(!getcwd(cwdbuf, cwdlen))
+            {
+                free(cwdbuf);
+                cwdbuf = NULL;
+                if(errno != ERANGE)
+                    break;
+                cwdlen <<= 1;
+                cwdbuf = malloc(cwdlen);
+            }
+            if(!cwdbuf)
+                DirectorySearch(".", ext, &results);
+            else
+            {
+                DirectorySearch(cwdbuf, ext, &results);
+                free(cwdbuf);
+                cwdbuf = NULL;
+            }
+        }
 
         // Search local data dir
         if((str=getenv("XDG_DATA_HOME")) != NULL && str[0] != '\0')

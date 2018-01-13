@@ -367,7 +367,7 @@ static void LoadConfigFromFile(FILE *f)
 void ReadALConfig(void)
 {
     al_string ppath = AL_STRING_INIT_STATIC();
-    WCHAR buffer[PATH_MAX];
+    WCHAR buffer[MAX_PATH];
     const WCHAR *str;
     FILE *f;
 
@@ -420,8 +420,8 @@ void ReadALConfig(void)
 #else
 void ReadALConfig(void)
 {
-    al_string ppath = AL_STRING_INIT_STATIC();
-    char buffer[PATH_MAX];
+    al_string confpaths = AL_STRING_INIT_STATIC();
+    al_string fname = AL_STRING_INIT_STATIC();
     const char *str;
     FILE *f;
 
@@ -437,45 +437,55 @@ void ReadALConfig(void)
 
     if(!(str=getenv("XDG_CONFIG_DIRS")) || str[0] == 0)
         str = "/etc/xdg";
-    strncpy(buffer, str, sizeof(buffer)-1);
-    buffer[sizeof(buffer)-1] = 0;
+    alstr_copy_cstr(&confpaths, str);
     /* Go through the list in reverse, since "the order of base directories
      * denotes their importance; the first directory listed is the most
      * important". Ergo, we need to load the settings from the later dirs
      * first so that the settings in the earlier dirs override them.
      */
-    while(1)
+    while(!alstr_empty(confpaths))
     {
-        char *next = strrchr(buffer, ':');
-        if(next) *(next++) = 0;
-        else next = buffer;
-
-        if(next[0] != '/')
-            WARN("Ignoring XDG config dir: %s\n", next);
+        char *next = strrchr(alstr_get_cstr(confpaths), ':');
+        if(next)
+        {
+            size_t len = next - alstr_get_cstr(confpaths);
+            alstr_copy_cstr(&fname, next+1);
+            VECTOR_RESIZE(confpaths, len, len+1);
+            VECTOR_ELEM(confpaths, len) = 0;
+        }
         else
         {
-            size_t len = strlen(next);
-            strncpy(next+len, "/alsoft.conf", buffer+sizeof(buffer)-next-len);
-            buffer[sizeof(buffer)-1] = 0;
+            alstr_reset(&fname);
+            fname = confpaths;
+            AL_STRING_INIT(confpaths);
+        }
 
-            TRACE("Loading config %s...\n", next);
-            f = al_fopen(next, "r");
+        if(alstr_empty(fname) || VECTOR_FRONT(fname) != '/')
+            WARN("Ignoring XDG config dir: %s\n", alstr_get_cstr(fname));
+        else
+        {
+            if(VECTOR_BACK(fname) != '/') alstr_append_cstr(&fname, "/alsoft.conf");
+            else alstr_append_cstr(&fname, "alsoft.conf");
+
+            TRACE("Loading config %s...\n", alstr_get_cstr(fname));
+            f = al_fopen(alstr_get_cstr(fname), "r");
             if(f)
             {
                 LoadConfigFromFile(f);
                 fclose(f);
             }
         }
-        if(next == buffer)
-            break;
+        alstr_clear(&fname);
     }
 
     if((str=getenv("HOME")) != NULL && *str)
     {
-        snprintf(buffer, sizeof(buffer), "%s/.alsoftrc", str);
+        alstr_copy_cstr(&fname, str);
+        if(VECTOR_BACK(fname) != '/') alstr_append_cstr(&fname, "/.alsoftrc");
+        else alstr_append_cstr(&fname, ".alsoftrc");
 
-        TRACE("Loading config %s...\n", buffer);
-        f = al_fopen(buffer, "r");
+        TRACE("Loading config %s...\n", alstr_get_cstr(fname));
+        f = al_fopen(alstr_get_cstr(fname), "r");
         if(f)
         {
             LoadConfigFromFile(f);
@@ -484,17 +494,25 @@ void ReadALConfig(void)
     }
 
     if((str=getenv("XDG_CONFIG_HOME")) != NULL && str[0] != 0)
-        snprintf(buffer, sizeof(buffer), "%s/%s", str, "alsoft.conf");
+    {
+        alstr_copy_cstr(&fname, str);
+        if(VECTOR_BACK(fname) != '/') alstr_append_cstr(&fname, "/alsoft.conf");
+        else alstr_append_cstr(&fname, "alsoft.conf");
+    }
     else
     {
-        buffer[0] = 0;
+        alstr_clear(&fname);
         if((str=getenv("HOME")) != NULL && str[0] != 0)
-            snprintf(buffer, sizeof(buffer), "%s/.config/%s", str, "alsoft.conf");
+        {
+            alstr_copy_cstr(&fname, str);
+            if(VECTOR_BACK(fname) != '/') alstr_append_cstr(&fname, "/.config/alsoft.conf");
+            else alstr_append_cstr(&fname, ".config/alsoft.conf");
+        }
     }
-    if(buffer[0] != 0)
+    if(!alstr_empty(fname))
     {
-        TRACE("Loading config %s...\n", buffer);
-        f = al_fopen(buffer, "r");
+        TRACE("Loading config %s...\n", alstr_get_cstr(fname));
+        f = al_fopen(alstr_get_cstr(fname), "r");
         if(f)
         {
             LoadConfigFromFile(f);
@@ -502,12 +520,15 @@ void ReadALConfig(void)
         }
     }
 
-    GetProcBinary(&ppath, NULL);
-    if(!alstr_empty(ppath))
+    alstr_clear(&fname);
+    GetProcBinary(&fname, NULL);
+    if(!alstr_empty(fname))
     {
-        alstr_append_cstr(&ppath, "/alsoft.conf");
-        TRACE("Loading config %s...\n", alstr_get_cstr(ppath));
-        f = al_fopen(alstr_get_cstr(ppath), "r");
+        if(VECTOR_BACK(fname) != '/') alstr_append_cstr(&fname, "/alsoft.conf");
+        else alstr_append_cstr(&fname, "alsoft.conf");
+
+        TRACE("Loading config %s...\n", alstr_get_cstr(fname));
+        f = al_fopen(alstr_get_cstr(fname), "r");
         if(f)
         {
             LoadConfigFromFile(f);
@@ -526,7 +547,8 @@ void ReadALConfig(void)
         }
     }
 
-    alstr_reset(&ppath);
+    alstr_reset(&fname);
+    alstr_reset(&confpaths);
 }
 #endif
 

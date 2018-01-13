@@ -236,14 +236,6 @@ typedef ALuint64SOFT ALuint64;
 #define DECL_VLA(T, _name, _size)  T *_name = alloca((_size) * sizeof(T))
 #endif
 
-#ifndef PATH_MAX
-#ifdef MAX_PATH
-#define PATH_MAX MAX_PATH
-#else
-#define PATH_MAX 4096
-#endif
-#endif
-
 
 static const union {
     ALuint u;

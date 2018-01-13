@@ -43,6 +43,7 @@ void alstr_append_range(al_string *str, const al_string_char_type *from, const a
 /* Windows-only methods to deal with WideChar strings. */
 void alstr_copy_wcstr(al_string *str, const wchar_t *from);
 void alstr_append_wcstr(al_string *str, const wchar_t *from);
+void alstr_copy_wrange(al_string *str, const wchar_t *from, const wchar_t *to);
 void alstr_append_wrange(al_string *str, const wchar_t *from, const wchar_t *to);
 #endif
 

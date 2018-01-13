@@ -1149,6 +1149,17 @@ void alstr_append_wcstr(al_string *str, const wchar_t *from)
     }
 }
 
+void alstr_copy_wrange(al_string *str, const wchar_t *from, const wchar_t *to)
+{
+    int len;
+    if((len=WideCharToMultiByte(CP_UTF8, 0, from, (int)(to-from), NULL, 0, NULL, NULL)) > 0)
+    {
+        VECTOR_RESIZE(*str, len, len+1);
+        WideCharToMultiByte(CP_UTF8, 0, from, (int)(to-from), &VECTOR_FRONT(*str), len+1, NULL, NULL);
+        VECTOR_ELEM(*str, len) = 0;
+    }
+}
+
 void alstr_append_wrange(al_string *str, const wchar_t *from, const wchar_t *to)
 {
     int len;

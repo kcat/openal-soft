@@ -731,54 +731,65 @@ void UnmapFileMem(const struct FileMapping *mapping)
 
 void GetProcBinary(al_string *path, al_string *fname)
 {
-    char *pathname, *sep;
+    char *pathname = NULL;
     size_t pathlen;
 
 #ifdef __FreeBSD__
     int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1};
     mib[3] = getpid();
     if(sysctl(mib, 4, NULL, &pathlen, NULL, 0) == -1)
-    {
         WARN("Failed to sysctl kern.proc.pathname.%d: %s\n", mib[3], strerror(errno));
-        return;
-    }
-
-    pathname = malloc(pathlen + 1);
-    sysctl(mib, 4, (void*)pathname, &pathlen, NULL, 0);
-    pathname[pathlen] = 0;
-#else
-    const char *selfname;
-    ssize_t len;
-
-    pathlen = 256;
-    pathname = malloc(pathlen);
-
-    selfname = "/proc/self/exe";
-    len = readlink(selfname, pathname, pathlen);
-    if(len == -1 && errno == ENOENT)
+    else
     {
-        selfname = "/proc/self/file";
-        len = readlink(selfname, pathname, pathlen);
+        pathname = malloc(pathlen + 1);
+        sysctl(mib, 4, (void*)pathname, &pathlen, NULL, 0);
+        pathname[pathlen] = 0;
     }
-
-    while(len > 0 && (size_t)len == pathlen)
-    {
-        free(pathname);
-        pathlen <<= 1;
-        pathname = malloc(pathlen);
-        len = readlink(selfname, pathname, pathlen);
-    }
-    if(len <= 0)
-    {
-        free(pathname);
-        WARN("Failed to readlink %s: %s\n", selfname, strerror(errno));
-        return;
-    }
-
-    pathname[len] = 0;
 #endif
+    if(!pathname)
+    {
+        const char *selfname;
+        ssize_t len;
 
-    sep = strrchr(pathname, '/');
+        pathlen = 256;
+        pathname = malloc(pathlen);
+
+        selfname = "/proc/self/exe";
+        len = readlink(selfname, pathname, pathlen);
+        if(len == -1 && errno == ENOENT)
+        {
+            selfname = "/proc/self/file";
+            len = readlink(selfname, pathname, pathlen);
+        }
+        if(len == -1 && errno == ENOENT)
+        {
+            selfname = "/proc/curproc/exe";
+            len = readlink(selfname, pathname, pathlen);
+        }
+        if(len == -1 && errno == ENOENT)
+        {
+            selfname = "/proc/curproc/file";
+            len = readlink(selfname, pathname, pathlen);
+        }
+
+        while(len > 0 && (size_t)len == pathlen)
+        {
+            free(pathname);
+            pathlen <<= 1;
+            pathname = malloc(pathlen);
+            len = readlink(selfname, pathname, pathlen);
+        }
+        if(len <= 0)
+        {
+            free(pathname);
+            WARN("Failed to readlink %s: %s\n", selfname, strerror(errno));
+            return;
+        }
+
+        pathname[len] = 0;
+    }
+
+    char *sep = strrchr(pathname, '/');
     if(sep)
     {
         if(path) alstr_copy_range(path, pathname, sep);

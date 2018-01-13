@@ -319,7 +319,6 @@ typedef struct ALreverbState {
         struct {
             ALfloat LFCoeffs[3];
             ALfloat HFCoeffs[3];
-            ALfloat MidCoeff;
             /* The LF and HF filters keep a state of the last input and last
              * output sample.
              */
@@ -431,8 +430,6 @@ static void ALreverbState_Construct(ALreverbState *state)
             state->Late.Filters[i].LFCoeffs[j] = 0.0f;
             state->Late.Filters[i].HFCoeffs[j] = 0.0f;
         }
-        state->Late.Filters[i].MidCoeff = 0.0f;
-
         state->Late.Filters[i].States[0][0] = 0.0f;
         state->Late.Filters[i].States[0][1] = 0.0f;
         state->Late.Filters[i].States[1][0] = 0.0f;
@@ -924,7 +921,7 @@ static inline void CalcHighShelfCoeffs(const ALfloat gain, const ALfloat w, ALfl
 static void CalcT60DampingCoeffs(const ALfloat length, const ALfloat lfDecayTime,
                                  const ALfloat mfDecayTime, const ALfloat hfDecayTime,
                                  const ALfloat lfW, const ALfloat hfW, ALfloat lfcoeffs[3],
-                                 ALfloat hfcoeffs[3], ALfloat *midcoeff)
+                                 ALfloat hfcoeffs[3])
 {
     ALfloat lfGain = CalcDecayCoeff(length, lfDecayTime);
     ALfloat mfGain = CalcDecayCoeff(length, mfDecayTime);
@@ -932,51 +929,46 @@ static void CalcT60DampingCoeffs(const ALfloat length, const ALfloat lfDecayTime
 
     if(lfGain < mfGain)
     {
+        CalcHighpassCoeffs(lfGain / mfGain, lfW, lfcoeffs);
         if(mfGain < hfGain)
         {
-            CalcLowShelfCoeffs(mfGain / hfGain, hfW, lfcoeffs);
-            CalcHighpassCoeffs(lfGain / mfGain, lfW, hfcoeffs);
-            *midcoeff = hfGain;
+            CalcLowShelfCoeffs(mfGain / hfGain, hfW, hfcoeffs);
+            hfcoeffs[0] *= hfGain; hfcoeffs[1] *= hfGain;
         }
         else if(mfGain > hfGain)
         {
-            CalcHighpassCoeffs(lfGain / mfGain, lfW, lfcoeffs);
             CalcLowpassCoeffs(hfGain / mfGain, hfW, hfcoeffs);
-            *midcoeff = mfGain;
+            hfcoeffs[0] *= mfGain; hfcoeffs[1] *= mfGain;
         }
         else
         {
-            lfcoeffs[0] = 1.0f;
-            lfcoeffs[1] = 0.0f;
-            lfcoeffs[2] = 0.0f;
-            CalcHighpassCoeffs(lfGain / mfGain, lfW, hfcoeffs);
-            *midcoeff = mfGain;
+            hfcoeffs[0] = mfGain;
+            hfcoeffs[1] = 0.0f;
+            hfcoeffs[2] = 0.0f;
         }
     }
     else if(lfGain > mfGain)
     {
+        CalcHighShelfCoeffs(mfGain / lfGain, lfW, lfcoeffs);
         if(mfGain < hfGain)
         {
             ALfloat hg = mfGain / lfGain;
             ALfloat lg = mfGain / hfGain;
+            ALfloat mg = maxf(lfGain, hfGain) / maxf(hg, lg);
 
-            CalcHighShelfCoeffs(hg, lfW, lfcoeffs);
             CalcLowShelfCoeffs(lg, hfW, hfcoeffs);
-            *midcoeff = maxf(lfGain, hfGain) / maxf(hg, lg);
+            hfcoeffs[0] *= mg; hfcoeffs[1] *= mg;
         }
         else if(mfGain > hfGain)
         {
-            CalcHighShelfCoeffs(mfGain / lfGain, lfW, lfcoeffs);
             CalcLowpassCoeffs(hfGain / mfGain, hfW, hfcoeffs);
-            *midcoeff = lfGain;
+            hfcoeffs[0] *= lfGain; hfcoeffs[1] *= lfGain;
         }
         else
         {
-            lfcoeffs[0] = 1.0f;
-            lfcoeffs[1] = 0.0f;
-            lfcoeffs[2] = 0.0f;
-            CalcHighShelfCoeffs(mfGain / lfGain, lfW, hfcoeffs);
-            *midcoeff = lfGain;
+            hfcoeffs[0] = lfGain;
+            hfcoeffs[1] = 0.0f;
+            hfcoeffs[2] = 0.0f;
         }
     }
     else
@@ -988,19 +980,18 @@ static void CalcT60DampingCoeffs(const ALfloat length, const ALfloat lfDecayTime
         if(mfGain < hfGain)
         {
             CalcLowShelfCoeffs(mfGain / hfGain, hfW, hfcoeffs);
-            *midcoeff = hfGain;
+            hfcoeffs[0] *= hfGain; hfcoeffs[1] *= hfGain;
         }
         else if(mfGain > hfGain)
         {
             CalcLowpassCoeffs(hfGain / mfGain, hfW, hfcoeffs);
-            *midcoeff = mfGain;
+            hfcoeffs[0] *= mfGain; hfcoeffs[1] *= mfGain;
         }
         else
         {
-            hfcoeffs[3] = 1.0f;
-            hfcoeffs[4] = 0.0f;
-            hfcoeffs[5] = 0.0f;
-            *midcoeff = mfGain;
+            hfcoeffs[0] = mfGain;
+            hfcoeffs[1] = 0.0f;
+            hfcoeffs[2] = 0.0f;
         }
     }
 }
@@ -1162,8 +1153,7 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
         /* Calculate the T60 damping coefficients for each line. */
         CalcT60DampingCoeffs(length, lfDecayTime, mfDecayTime, hfDecayTime,
                              lfW, hfW, State->Late.Filters[i].LFCoeffs,
-                             State->Late.Filters[i].HFCoeffs,
-                             &State->Late.Filters[i].MidCoeff);
+                             State->Late.Filters[i].HFCoeffs);
     }
 }
 
@@ -1386,7 +1376,8 @@ static inline ALfloat DelayLineOut(const DelayLineI *Delay, const ALsizei offset
 static inline ALfloat FadedDelayLineOut(const DelayLineI *Delay, const ALsizei off0,
                                         const ALsizei off1, const ALsizei c, const ALfloat mu)
 {
-    return lerp(Delay->Line[off0&Delay->Mask][c], Delay->Line[off1&Delay->Mask][c], mu);
+    return Delay->Line[off0&Delay->Mask][c]*(1.0f-mu) +
+           Delay->Line[off1&Delay->Mask][c]*(     mu);
 }
 #define UnfadedDelayLineOut(d, o0, o1, c, mu) DelayLineOut(d, o0, c)
 
@@ -1615,12 +1606,13 @@ static inline ALfloat FirstOrderFilter(const ALfloat in, const ALfloat coeffs[3]
 /* Applies the two T60 damping filter sections. */
 static inline ALfloat LateT60Filter(const ALsizei index, const ALfloat in, ALreverbState *State)
 {
-    ALfloat out = FirstOrderFilter(in, State->Late.Filters[index].LFCoeffs,
-                                   State->Late.Filters[index].States[0]);
-
-    return State->Late.Filters[index].MidCoeff *
-           FirstOrderFilter(out, State->Late.Filters[index].HFCoeffs,
-                            State->Late.Filters[index].States[1]);
+    return FirstOrderFilter(
+        FirstOrderFilter(
+            in, State->Late.Filters[index].LFCoeffs,
+            State->Late.Filters[index].States[0]
+        ), State->Late.Filters[index].HFCoeffs,
+        State->Late.Filters[index].States[1]
+    );
 }
 
 /* This generates the reverb tail using a modified feed-back delay network

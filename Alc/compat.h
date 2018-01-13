@@ -38,7 +38,7 @@ struct FileMapping {
 struct FileMapping MapFileToMem(const char *fname);
 void UnmapFileMem(const struct FileMapping *mapping);
 
-al_string GetProcPath(void);
+void GetProcBinary(al_string *path, al_string *fname);
 
 #ifdef HAVE_DYNLOAD
 void *LoadLib(const char *name);

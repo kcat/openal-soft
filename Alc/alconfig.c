@@ -366,9 +366,9 @@ static void LoadConfigFromFile(FILE *f)
 #ifdef _WIN32
 void ReadALConfig(void)
 {
+    al_string ppath = AL_STRING_INIT_STATIC();
     WCHAR buffer[PATH_MAX];
     const WCHAR *str;
-    al_string ppath;
     FILE *f;
 
     if(SHGetSpecialFolderPathW(NULL, buffer, CSIDL_APPDATA, FALSE) != FALSE)
@@ -387,7 +387,7 @@ void ReadALConfig(void)
         alstr_reset(&filepath);
     }
 
-    ppath = GetProcPath();
+    GetProcBinary(&ppath, NULL);
     if(!alstr_empty(ppath))
     {
         alstr_append_cstr(&ppath, "\\alsoft.ini");
@@ -420,9 +420,9 @@ void ReadALConfig(void)
 #else
 void ReadALConfig(void)
 {
+    al_string ppath = AL_STRING_INIT_STATIC();
     char buffer[PATH_MAX];
     const char *str;
-    al_string ppath;
     FILE *f;
 
     str = "/etc/openal/alsoft.conf";
@@ -502,7 +502,7 @@ void ReadALConfig(void)
         }
     }
 
-    ppath = GetProcPath();
+    GetProcBinary(&ppath, NULL);
     if(!alstr_empty(ppath))
     {
         alstr_append_cstr(&ppath, "/alsoft.conf");

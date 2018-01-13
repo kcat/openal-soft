@@ -390,9 +390,8 @@ static WCHAR *strrchrW(WCHAR *str, WCHAR ch)
     return ret;
 }
 
-al_string GetProcPath(void)
+void GetProcBinary(al_string *path, al_string *fname)
 {
-    al_string ret = AL_STRING_INIT_STATIC();
     WCHAR *pathname, *sep;
     DWORD pathlen;
     DWORD len;
@@ -409,23 +408,34 @@ al_string GetProcPath(void)
     {
         free(pathname);
         ERR("Failed to get process name: error %lu\n", GetLastError());
-        return ret;
+        return;
     }
 
     pathname[len] = 0;
-    if((sep = strrchrW(pathname, '\\')))
+    if((sep=strrchrW(pathname, '\\')) != NULL)
     {
-        WCHAR *sep2 = strrchrW(pathname, '/');
-        if(sep2) *sep2 = 0;
-        else *sep = 0;
+        WCHAR *sep2 = strrchrW(sep+1, '/');
+        if(sep2) sep = sep2;
     }
-    else if((sep = strrchrW(pathname, '/')))
-        *sep = 0;
-    alstr_copy_wcstr(&ret, pathname);
+    else
+        sep = strrchrW(pathname, '/');
+
+    if(sep)
+    {
+        if(path) alstr_copy_wrange(path, pathname, sep);
+        if(fname) alstr_copy_wcstr(fname, sep+1);
+    }
+    else
+    {
+        if(path) alstr_clear(path);
+        if(fname) alstr_copy_wcstr(fname, pathname);
+    }
     free(pathname);
 
-    TRACE("Got: %s\n", alstr_get_cstr(ret));
-    return ret;
+    if(path && fname)
+        TRACE("Got: %s, %s\n", alstr_get_cstr(*path), alstr_get_cstr(*fname));
+    else if(path) TRACE("Got path: %s\n", alstr_get_cstr(*path));
+    else if(fname) TRACE("Got filename: %s\n", alstr_get_cstr(*fname));
 }
 
 
@@ -719,36 +729,36 @@ void UnmapFileMem(const struct FileMapping *mapping)
 
 #else
 
-al_string GetProcPath(void)
+void GetProcBinary(al_string *path, al_string *fname)
 {
-    al_string ret = AL_STRING_INIT_STATIC();
     char *pathname, *sep;
     size_t pathlen;
 
 #ifdef __FreeBSD__
     int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1};
     mib[3] = getpid();
-    if (sysctl(mib, 4, NULL, &pathlen, NULL, 0) == -1) {
+    if(sysctl(mib, 4, NULL, &pathlen, NULL, 0) == -1)
+    {
         WARN("Failed to sysctl kern.proc.pathname.%d: %s\n", mib[3], strerror(errno));
-        return ret;
+        return;
     }
 
     pathname = malloc(pathlen + 1);
     sysctl(mib, 4, (void*)pathname, &pathlen, NULL, 0);
     pathname[pathlen] = 0;
 #else
-    const char *fname;
+    const char *selfname;
     ssize_t len;
 
     pathlen = 256;
     pathname = malloc(pathlen);
 
-    fname = "/proc/self/exe";
-    len = readlink(fname, pathname, pathlen);
+    selfname = "/proc/self/exe";
+    len = readlink(selfname, pathname, pathlen);
     if(len == -1 && errno == ENOENT)
     {
-        fname = "/proc/self/file";
-        len = readlink(fname, pathname, pathlen);
+        selfname = "/proc/self/file";
+        len = readlink(selfname, pathname, pathlen);
     }
 
     while(len > 0 && (size_t)len == pathlen)
@@ -756,13 +766,13 @@ al_string GetProcPath(void)
         free(pathname);
         pathlen <<= 1;
         pathname = malloc(pathlen);
-        len = readlink(fname, pathname, pathlen);
+        len = readlink(selfname, pathname, pathlen);
     }
     if(len <= 0)
     {
         free(pathname);
-        WARN("Failed to readlink %s: %s\n", fname, strerror(errno));
-        return ret;
+        WARN("Failed to readlink %s: %s\n", selfname, strerror(errno));
+        return;
     }
 
     pathname[len] = 0;
@@ -770,13 +780,21 @@ al_string GetProcPath(void)
 
     sep = strrchr(pathname, '/');
     if(sep)
-        alstr_copy_range(&ret, pathname, sep);
+    {
+        if(path) alstr_copy_range(path, pathname, sep);
+        if(fname) alstr_copy_cstr(fname, sep+1);
+    }
     else
-        alstr_copy_cstr(&ret, pathname);
+    {
+        if(path) alstr_clear(path);
+        if(fname) alstr_copy_cstr(fname, pathname);
+    }
     free(pathname);
 
-    TRACE("Got: %s\n", alstr_get_cstr(ret));
-    return ret;
+    if(path && fname)
+        TRACE("Got: %s, %s\n", alstr_get_cstr(*path), alstr_get_cstr(*fname));
+    else if(path) TRACE("Got path: %s\n", alstr_get_cstr(*path));
+    else if(fname) TRACE("Got filename: %s\n", alstr_get_cstr(*fname));
 }
 
 

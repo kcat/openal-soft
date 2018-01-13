@@ -1281,23 +1281,23 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
     const ALCdevice *Device = Context->Device;
     const ALlistener *Listener = Context->Listener;
     ALuint frequency = Device->Frequency;
-    ALfloat lfScale, hfScale, hfRatio;
+    ALfloat lf0norm, hf0norm, hfRatio;
     ALfloat lfDecayTime, hfDecayTime;
     ALfloat gain, gainlf, gainhf;
     ALsizei i;
 
     /* Calculate the master filters */
-    hfScale = props->Reverb.HFReference / frequency;
+    hf0norm = props->Reverb.HFReference / frequency;
     /* Restrict the filter gains from going below -60dB to keep the filter from
      * killing most of the signal.
      */
     gainhf = maxf(props->Reverb.GainHF, 0.001f);
     ALfilterState_setParams(&State->Filter[0].Lp, ALfilterType_HighShelf,
-                            gainhf, hfScale, calc_rcpQ_from_slope(gainhf, 1.0f));
-    lfScale = props->Reverb.LFReference / frequency;
+                            gainhf, hf0norm, calc_rcpQ_from_slope(gainhf, 1.0f));
+    lf0norm = props->Reverb.LFReference / frequency;
     gainlf = maxf(props->Reverb.GainLF, 0.001f);
     ALfilterState_setParams(&State->Filter[0].Hp, ALfilterType_LowShelf,
-                            gainlf, lfScale, calc_rcpQ_from_slope(gainlf, 1.0f));
+                            gainlf, lf0norm, calc_rcpQ_from_slope(gainlf, 1.0f));
     for(i = 1;i < 4;i++)
     {
         ALfilterState_copyParams(&State->Filter[i].Lp, &State->Filter[0].Lp);
@@ -1341,7 +1341,7 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
     /* Update the late lines. */
     UpdateLateLines(props->Reverb.Density, props->Reverb.Diffusion,
                     lfDecayTime, props->Reverb.DecayTime, hfDecayTime,
-                    F_TAU * lfScale, F_TAU * hfScale,
+                    F_TAU * lf0norm, F_TAU * hf0norm,
                     props->Reverb.EchoTime, props->Reverb.EchoDepth,
                     frequency, State);
 

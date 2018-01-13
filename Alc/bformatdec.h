@@ -55,7 +55,7 @@ typedef struct BandSplitter {
     ALfloat hp_z1;
 } BandSplitter;
 
-void bandsplit_init(BandSplitter *splitter, ALfloat freq_mult);
+void bandsplit_init(BandSplitter *splitter, ALfloat f0norm);
 void bandsplit_clear(BandSplitter *splitter);
 void bandsplit_process(BandSplitter *splitter, ALfloat *restrict hpout, ALfloat *restrict lpout,
                        const ALfloat *input, ALsizei count);
@@ -68,7 +68,7 @@ typedef struct SplitterAllpass {
     ALfloat z1;
 } SplitterAllpass;
 
-void splitterap_init(SplitterAllpass *splitter, ALfloat freq_mult);
+void splitterap_init(SplitterAllpass *splitter, ALfloat f0norm);
 void splitterap_clear(SplitterAllpass *splitter);
 void splitterap_process(SplitterAllpass *splitter, ALfloat *restrict samples, ALsizei count);
 

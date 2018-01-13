@@ -48,22 +48,25 @@ typedef struct ALfilterState {
 /* Currently only a C-based filter process method is implemented. */
 #define ALfilterState_process ALfilterState_processC
 
-/* Calculates the rcpQ (i.e. 1/Q) coefficient for shelving filters, using the
+/**
+ * Calculates the rcpQ (i.e. 1/Q) coefficient for shelving filters, using the
  * reference gain and shelf slope parameter.
- * 0 < gain
- * 0 < slope <= 1
+ * \param gain 0 < gain
+ * \param slope 0 < slope <= 1
  */
 inline ALfloat calc_rcpQ_from_slope(ALfloat gain, ALfloat slope)
 {
     return sqrtf((gain + 1.0f/gain)*(1.0f/slope - 1.0f) + 2.0f);
 }
-/* Calculates the rcpQ (i.e. 1/Q) coefficient for filters, using the frequency
- * multiple (i.e. ref_freq / sampling_freq) and bandwidth.
- * 0 < freq_mult < 0.5.
+/**
+ * Calculates the rcpQ (i.e. 1/Q) coefficient for filters, using the normalized
+ * reference frequency and bandwidth.
+ * \param f0norm 0 < f0norm < 0.5.
+ * \param bandwidth 0 < bandwidth
  */
-inline ALfloat calc_rcpQ_from_bandwidth(ALfloat freq_mult, ALfloat bandwidth)
+inline ALfloat calc_rcpQ_from_bandwidth(ALfloat f0norm, ALfloat bandwidth)
 {
-    ALfloat w0 = F_TAU * freq_mult;
+    ALfloat w0 = F_TAU * f0norm;
     return 2.0f*sinhf(logf(2.0f)/2.0f*bandwidth*w0/sinf(w0));
 }
 
@@ -75,7 +78,22 @@ inline void ALfilterState_clear(ALfilterState *filter)
     filter->y[1] = 0.0f;
 }
 
-void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat gain, ALfloat freq_mult, ALfloat rcpQ);
+/**
+ * Sets up the filter state for the specified filter type and its parameters.
+ *
+ * \param filter The filter object to prepare.
+ * \param type The type of filter for the object to apply.
+ * \param gain The gain for the reference frequency response. Only used by the
+ *             Shelf and Peaking filter types.
+ * \param f0norm The normalized reference frequency (ref_freq / sample_rate).
+ *               This is the center point for the Shelf, Peaking, and BandPass
+ *               filter types, or the cutoff frequency for the LowPass and
+ *               HighPass filter types.
+ * \param rcpQ The reciprocal of the Q coefficient for the filter's transition
+ *             band. Can be generated from calc_rcpQ_from_slope or
+ *             calc_rcpQ_from_bandwidth depending on the available data.
+ */
+void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat gain, ALfloat f0norm, ALfloat rcpQ);
 
 inline void ALfilterState_copyParams(ALfilterState *restrict dst, const ALfilterState *restrict src)
 {

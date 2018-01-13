@@ -39,7 +39,7 @@ extern inline void ALfilterState_clear(ALfilterState *filter);
 extern inline void ALfilterState_copyParams(ALfilterState *restrict dst, const ALfilterState *restrict src);
 extern inline void ALfilterState_processPassthru(ALfilterState *filter, const ALfloat *restrict src, ALsizei numsamples);
 extern inline ALfloat calc_rcpQ_from_slope(ALfloat gain, ALfloat slope);
-extern inline ALfloat calc_rcpQ_from_bandwidth(ALfloat freq_mult, ALfloat bandwidth);
+extern inline ALfloat calc_rcpQ_from_bandwidth(ALfloat f0norm, ALfloat bandwidth);
 
 static void InitFilterParams(ALfilter *filter, ALenum type);
 
@@ -355,7 +355,7 @@ AL_API ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *va
 }
 
 
-void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat gain, ALfloat freq_mult, ALfloat rcpQ)
+void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat gain, ALfloat f0norm, ALfloat rcpQ)
 {
     ALfloat alpha, sqrtgain_alpha_2;
     ALfloat w0, sin_w0, cos_w0;
@@ -365,7 +365,7 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
     // Limit gain to -100dB
     assert(gain > 0.00001f);
 
-    w0 = F_TAU * freq_mult;
+    w0 = F_TAU * f0norm;
     sin_w0 = sinf(w0);
     cos_w0 = cosf(w0);
     alpha = sin_w0/2.0f * rcpQ;

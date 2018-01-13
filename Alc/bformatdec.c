@@ -11,9 +11,9 @@
 #include "almalloc.h"
 
 
-void bandsplit_init(BandSplitter *splitter, ALfloat freq_mult)
+void bandsplit_init(BandSplitter *splitter, ALfloat f0norm)
 {
-    ALfloat w = freq_mult * F_TAU;
+    ALfloat w = f0norm * F_TAU;
     ALfloat cw = cosf(w);
     if(cw > FLT_EPSILON)
         splitter->coeff = (sinf(w) - 1.0f) / cw;
@@ -75,9 +75,9 @@ void bandsplit_process(BandSplitter *splitter, ALfloat *restrict hpout, ALfloat 
 }
 
 
-void splitterap_init(SplitterAllpass *splitter, ALfloat freq_mult)
+void splitterap_init(SplitterAllpass *splitter, ALfloat f0norm)
 {
-    ALfloat w = freq_mult * F_TAU;
+    ALfloat w = f0norm * F_TAU;
     ALfloat cw = cosf(w);
     if(cw > FLT_EPSILON)
         splitter->coeff = (sinf(w) - 1.0f) / cw;

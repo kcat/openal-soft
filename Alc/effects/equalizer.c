@@ -125,7 +125,7 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext 
 {
     const ALCdevice *device = context->Device;
     ALfloat frequency = (ALfloat)device->Frequency;
-    ALfloat gain, freq_mult;
+    ALfloat gain, f0norm;
     ALuint i;
 
     STATIC_CAST(ALeffectState,state)->OutBuffer = device->FOAOut.Buffer;
@@ -139,31 +139,31 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext 
      * of the transition band.
      */
     gain = maxf(sqrtf(props->Equalizer.LowGain), 0.0625f); /* Limit -24dB */
-    freq_mult = props->Equalizer.LowCutoff/frequency;
+    f0norm = props->Equalizer.LowCutoff/frequency;
     ALfilterState_setParams(&state->Chans[0].filter[0], ALfilterType_LowShelf,
-        gain, freq_mult, calc_rcpQ_from_slope(gain, 0.75f)
+        gain, f0norm, calc_rcpQ_from_slope(gain, 0.75f)
     );
 
     gain = maxf(props->Equalizer.Mid1Gain, 0.0625f);
-    freq_mult = props->Equalizer.Mid1Center/frequency;
+    f0norm = props->Equalizer.Mid1Center/frequency;
     ALfilterState_setParams(&state->Chans[0].filter[1], ALfilterType_Peaking,
-        gain, freq_mult, calc_rcpQ_from_bandwidth(
-            freq_mult, props->Equalizer.Mid1Width
+        gain, f0norm, calc_rcpQ_from_bandwidth(
+            f0norm, props->Equalizer.Mid1Width
         )
     );
 
     gain = maxf(props->Equalizer.Mid2Gain, 0.0625f);
-    freq_mult = props->Equalizer.Mid2Center/frequency;
+    f0norm = props->Equalizer.Mid2Center/frequency;
     ALfilterState_setParams(&state->Chans[0].filter[2], ALfilterType_Peaking,
-        gain, freq_mult, calc_rcpQ_from_bandwidth(
-            freq_mult, props->Equalizer.Mid2Width
+        gain, f0norm, calc_rcpQ_from_bandwidth(
+            f0norm, props->Equalizer.Mid2Width
         )
     );
 
     gain = maxf(sqrtf(props->Equalizer.HighGain), 0.0625f);
-    freq_mult = props->Equalizer.HighCutoff/frequency;
+    f0norm = props->Equalizer.HighCutoff/frequency;
     ALfilterState_setParams(&state->Chans[0].filter[3], ALfilterType_HighShelf,
-        gain, freq_mult, calc_rcpQ_from_slope(gain, 0.75f)
+        gain, f0norm, calc_rcpQ_from_slope(gain, 0.75f)
     );
 
     /* Copy the filter coefficients for the other input channels. */

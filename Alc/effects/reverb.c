@@ -318,7 +318,8 @@ typedef struct ALreverbState {
             /* The HF and LF filters each keep a state of the last input and
              * last output sample.
              */
-            ALfloat States[2][2];
+            ALfloat HFState[2];
+            ALfloat LFState[2];
         } Filters[NUM_LINES];
 
         /* A Gerzon vector all-pass filter is used to simulate diffusion. */
@@ -426,10 +427,10 @@ static void ALreverbState_Construct(ALreverbState *state)
             state->Late.Filters[i].HFCoeffs[j] = 0.0f;
             state->Late.Filters[i].LFCoeffs[j] = 0.0f;
         }
-        state->Late.Filters[i].States[0][0] = 0.0f;
-        state->Late.Filters[i].States[0][1] = 0.0f;
-        state->Late.Filters[i].States[1][0] = 0.0f;
-        state->Late.Filters[i].States[1][1] = 0.0f;
+        state->Late.Filters[i].HFState[0] = 0.0f;
+        state->Late.Filters[i].HFState[1] = 0.0f;
+        state->Late.Filters[i].LFState[0] = 0.0f;
+        state->Late.Filters[i].LFState[1] = 0.0f;
     }
 
     for(i = 0;i < NUM_LINES;i++)
@@ -1652,8 +1653,8 @@ static ALvoid LateReverb_Faded(ALreverbState *State, const ALsizei todo, ALfloat
 
         for(j = 0;j < NUM_LINES;j++)
             f[j] = LateT60Filter(
-                State->Late.Filters[j].HFCoeffs, State->Late.Filters[j].States[0],
-                State->Late.Filters[j].LFCoeffs, State->Late.Filters[j].States[1],
+                State->Late.Filters[j].HFCoeffs, State->Late.Filters[j].HFState,
+                State->Late.Filters[j].LFCoeffs, State->Late.Filters[j].LFState,
                 f[j]
             );
         VectorAllpass_Faded(f, offset, apFeedCoeff, mixX, mixY, fade,
@@ -1697,8 +1698,8 @@ static ALvoid LateReverb_Unfaded(ALreverbState *State, const ALsizei todo, ALflo
 
         for(j = 0;j < NUM_LINES;j++)
             f[j] = LateT60Filter(
-                State->Late.Filters[j].HFCoeffs, State->Late.Filters[j].States[0],
-                State->Late.Filters[j].LFCoeffs, State->Late.Filters[j].States[1],
+                State->Late.Filters[j].HFCoeffs, State->Late.Filters[j].HFState,
+                State->Late.Filters[j].LFCoeffs, State->Late.Filters[j].LFState,
                 f[j]
             );
         VectorAllpass_Unfaded(f, offset, apFeedCoeff, mixX, mixY, fade,

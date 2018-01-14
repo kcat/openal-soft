@@ -720,12 +720,6 @@ inline ALint GetChannelIdxByName(const RealMixParams *real, enum Channel chan)
 
 vector_al_string SearchDataFiles(const char *match, const char *subdir);
 
-/* Small hack to use a pointer-to-array types as a normal argument type.
- * Shouldn't be used directly.
- */
-typedef ALfloat ALfloatBUFFERSIZE[BUFFERSIZE];
-typedef ALfloat ALfloat2[2];
-
 #ifdef __cplusplus
 }
 #endif

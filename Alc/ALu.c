@@ -1521,7 +1521,7 @@ static void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*restrict Buffer)
     }
 }
 
-static void ApplyDistanceComp(ALfloatBUFFERSIZE *restrict Samples, DistanceComp *distcomp,
+static void ApplyDistanceComp(ALfloat (*restrict Samples)[BUFFERSIZE], DistanceComp *distcomp,
                               ALfloat *restrict Values, ALsizei SamplesToDo, ALsizei numchans)
 {
     ALsizei i, c;
@@ -1564,7 +1564,7 @@ static void ApplyDistanceComp(ALfloatBUFFERSIZE *restrict Samples, DistanceComp 
     }
 }
 
-static void ApplyDither(ALfloatBUFFERSIZE *restrict Samples, ALuint *dither_seed,
+static void ApplyDither(ALfloat (*restrict Samples)[BUFFERSIZE], ALuint *dither_seed,
                         const ALfloat quant_scale, const ALsizei SamplesToDo,
                         const ALsizei numchans)
 {
@@ -1618,8 +1618,9 @@ DECL_TEMPLATE(ALuint, Conv_ALint, 2147483648u)
 #undef DECL_TEMPLATE
 
 #define DECL_TEMPLATE(T, A)                                                   \
-static void Write##A(const ALfloatBUFFERSIZE *InBuffer, ALvoid *OutBuffer,    \
-                     ALsizei Offset, ALsizei SamplesToDo, ALsizei numchans)   \
+static void Write##A(const ALfloat (*restrict InBuffer)[BUFFERSIZE],          \
+                     ALvoid *OutBuffer, ALsizei Offset, ALsizei SamplesToDo,  \
+                     ALsizei numchans)                                        \
 {                                                                             \
     ALsizei i, j;                                                             \
     for(j = 0;j < numchans;j++)                                               \

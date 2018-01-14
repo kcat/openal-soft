@@ -35,6 +35,11 @@ struct ALeffectStateVtable {
     void (*const Delete)(void *ptr);
 };
 
+/* Small hack to use a pointer-to-array types as a normal argument type.
+ * Shouldn't be used directly.
+ */
+typedef ALfloat ALfloatBUFFERSIZE[BUFFERSIZE];
+
 #define DEFINE_ALEFFECTSTATE_VTABLE(T)                                        \
 DECLARE_THUNK(T, ALeffectState, void, Destruct)                               \
 DECLARE_THUNK1(T, ALeffectState, ALboolean, deviceUpdate, ALCdevice*)         \

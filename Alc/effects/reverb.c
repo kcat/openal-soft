@@ -1341,18 +1341,19 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
     /* Determine if delay-line cross-fading is required. */
     for(i = 0;i < NUM_LINES;i++)
     {
-        if((State->EarlyDelayTap[i][1] != State->EarlyDelayTap[i][0]) ||
-           (State->Early.VecAp.Offset[i][1] != State->Early.VecAp.Offset[i][0]) ||
-           (State->Early.Offset[i][1] != State->Early.Offset[i][0]) ||
-           (State->LateDelayTap[i][1] != State->LateDelayTap[i][0]) ||
-           (State->Late.VecAp.Offset[i][1] != State->Late.VecAp.Offset[i][0]) ||
-           (State->Late.Offset[i][1] != State->Late.Offset[i][0]) ||
-           (State->Mod.Depth[1] != State->Mod.Depth[0]))
+        if(State->EarlyDelayTap[i][1] != State->EarlyDelayTap[i][0] ||
+           State->Early.VecAp.Offset[i][1] != State->Early.VecAp.Offset[i][0] ||
+           State->Early.Offset[i][1] != State->Early.Offset[i][0] ||
+           State->LateDelayTap[i][1] != State->LateDelayTap[i][0] ||
+           State->Late.VecAp.Offset[i][1] != State->Late.VecAp.Offset[i][0] ||
+           State->Late.Offset[i][1] != State->Late.Offset[i][0])
         {
             State->FadeCount = 0;
             break;
         }
     }
+    if(State->Mod.Depth[1] != State->Mod.Depth[0])
+        State->FadeCount = 0;
 }
 
 

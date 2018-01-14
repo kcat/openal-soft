@@ -433,12 +433,10 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
 
             memset(dec->ChannelMix, 0, SamplesToDo*sizeof(ALfloat));
             MixMatrixRow(dec->ChannelMix, dec->Matrix.Dual[chan][FB_HighFreq],
-                SAFE_CONST(ALfloatBUFFERSIZE*,dec->SamplesHF), dec->NumChannels, 0,
-                SamplesToDo
+                dec->SamplesHF, dec->NumChannels, 0, SamplesToDo
             );
             MixMatrixRow(dec->ChannelMix, dec->Matrix.Dual[chan][FB_LowFreq],
-                SAFE_CONST(ALfloatBUFFERSIZE*,dec->SamplesLF), dec->NumChannels, 0,
-                SamplesToDo
+                dec->SamplesLF, dec->NumChannels, 0, SamplesToDo
             );
 
             for(i = 0;i < SamplesToDo;i++)
@@ -489,8 +487,7 @@ void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[B
 
         /* Now write each band to the output. */
         MixMatrixRow(OutBuffer[i], dec->UpSampler[i].Gains,
-            SAFE_CONST(ALfloatBUFFERSIZE*,dec->Samples), FB_Max, 0,
-            SamplesToDo
+            dec->Samples, FB_Max, 0, SamplesToDo
         );
     }
 }
@@ -605,8 +602,7 @@ void ambiup_process(struct AmbiUpsampler *ambiup, ALfloat (*restrict OutBuffer)[
 
         for(j = 0;j < OutChannels;j++)
             MixMatrixRow(OutBuffer[j], ambiup->Gains[i][j],
-                SAFE_CONST(ALfloatBUFFERSIZE*,ambiup->Samples), FB_Max, 0,
-                SamplesToDo
+                ambiup->Samples, FB_Max, 0, SamplesToDo
             );
     }
 }

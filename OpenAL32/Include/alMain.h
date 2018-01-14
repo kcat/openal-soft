@@ -146,48 +146,6 @@ AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum format);
 
 
 #ifdef __GNUC__
-/* Because of a long-standing deficiency in C, you're not allowed to implicitly
- * cast a pointer-to-type-array to a pointer-to-const-type-array. For example,
- *
- * int (*ptr)[10];
- * const int (*cptr)[10] = ptr;
- *
- * is not allowed and most compilers will generate noisy warnings about
- * incompatible types, even though it just makes the array elements const.
- * Clang will allow it if you make the array type a typedef, like this:
- *
- * typedef int int10[10];
- * int10 *ptr;
- * const int10 *cptr = ptr;
- *
- * however GCC does not and still issues the incompatible type warning. The
- * "proper" way to fix it is to add an explicit cast for the constified type,
- * but that removes the vast majority of otherwise useful type-checking you'd
- * get, and runs the risk of improper casts if types are later changed. Leaving
- * it non-const can also be an issue if you use it as a function parameter, and
- * happen to have a const type as input (and also reduce the capabilities of
- * the compiler to better optimize the function).
- *
- * So to work around the problem, we use a macro. The macro first assigns the
- * incoming variable to the specified non-const type to ensure it's the correct
- * type, then casts the variable as the desired constified type. Very ugly, but
- * I'd rather not have hundreds of lines of warnings because I want to tell the
- * compiler that some array(s) can't be changed by the code, or have lots of
- * error-prone casts.
- */
-#define SAFE_CONST(T, var) __extension__({                                    \
-    T _tmp = (var);                                                           \
-    (const T)_tmp;                                                            \
-})
-#else
-/* Non-GNU-compatible compilers have to use a straight cast with no extra
- * checks, due to the lack of multi-statement expressions.
- */
-#define SAFE_CONST(T, var) ((const T)(var))
-#endif
-
-
-#ifdef __GNUC__
 #define LIKELY(x) __builtin_expect(!!(x), !0)
 #define UNLIKELY(x) __builtin_expect(!!(x), 0)
 #else

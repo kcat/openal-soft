@@ -1724,8 +1724,8 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
 
             if(device->AmbiUp)
                 ambiup_process(device->AmbiUp,
-                    device->Dry.Buffer, device->Dry.NumChannels,
-                    SAFE_CONST(ALfloatBUFFERSIZE*,device->FOAOut.Buffer), SamplesToDo
+                    device->Dry.Buffer, device->Dry.NumChannels, device->FOAOut.Buffer,
+                    SamplesToDo
                 );
 
             lidx = GetChannelIdxByName(&device->RealOut, FrontLeft);
@@ -1737,8 +1737,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
             {
                 MixDirectHrtf(device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
                     device->Dry.Buffer[c], state->Offset, state->IrSize,
-                    SAFE_CONST(ALfloat2*,state->Chan[c].Coeffs),
-                    state->Chan[c].Values, SamplesToDo
+                    state->Chan[c].Coeffs, state->Chan[c].Values, SamplesToDo
                 );
             }
             state->Offset += SamplesToDo;
@@ -1747,19 +1746,19 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
         {
             if(device->Dry.Buffer != device->FOAOut.Buffer)
                 bformatdec_upSample(device->AmbiDecoder,
-                    device->Dry.Buffer, SAFE_CONST(ALfloatBUFFERSIZE*,device->FOAOut.Buffer),
-                    device->FOAOut.NumChannels, SamplesToDo
+                    device->Dry.Buffer, device->FOAOut.Buffer, device->FOAOut.NumChannels,
+                    SamplesToDo
                 );
             bformatdec_process(device->AmbiDecoder,
-                device->RealOut.Buffer, device->RealOut.NumChannels,
-                SAFE_CONST(ALfloatBUFFERSIZE*,device->Dry.Buffer), SamplesToDo
+                device->RealOut.Buffer, device->RealOut.NumChannels, device->Dry.Buffer,
+                SamplesToDo
             );
         }
         else if(device->AmbiUp)
         {
             ambiup_process(device->AmbiUp,
-                device->RealOut.Buffer, device->RealOut.NumChannels,
-                SAFE_CONST(ALfloatBUFFERSIZE*,device->FOAOut.Buffer), SamplesToDo
+                device->RealOut.Buffer, device->RealOut.NumChannels, device->FOAOut.Buffer,
+                SamplesToDo
             );
         }
         else if(device->Uhj_Encoder)

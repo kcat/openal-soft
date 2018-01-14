@@ -583,7 +583,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                          */
                         gain = lerp(parms->Hrtf.Old.Gain, parms->Hrtf.Target.Gain,
                                     minf(1.0f, (ALfloat)fademix/Counter));
-                        hrtfparams.Coeffs = SAFE_CONST(ALfloat2*,parms->Hrtf.Target.Coeffs);
+                        hrtfparams.Coeffs = parms->Hrtf.Target.Coeffs;
                         hrtfparams.Delay[0] = parms->Hrtf.Target.Delay[0];
                         hrtfparams.Delay[1] = parms->Hrtf.Target.Delay[1];
                         hrtfparams.Gain = 0.0f;
@@ -612,7 +612,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
                             gain = lerp(parms->Hrtf.Old.Gain, gain,
                                         (ALfloat)todo/(Counter-fademix));
 
-                        hrtfparams.Coeffs = SAFE_CONST(ALfloat2*,parms->Hrtf.Target.Coeffs);
+                        hrtfparams.Coeffs = parms->Hrtf.Target.Coeffs;
                         hrtfparams.Delay[0] = parms->Hrtf.Target.Delay[0];
                         hrtfparams.Delay[1] = parms->Hrtf.Target.Delay[1];
                         hrtfparams.Gain = parms->Hrtf.Old.Gain;

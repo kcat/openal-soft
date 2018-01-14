@@ -665,11 +665,9 @@ static ALfloat CalcLimitedHfRatio(const ALfloat hfRatio, const ALfloat airAbsorp
      */
     limitRatio = 1.0f / (CalcDecayLength(airAbsorptionGainHF, decayTime) * SpeedOfSound);
 
-    /* Using the limit calculated above, apply the upper bound to the HF
-     * ratio. Also need to limit the result to a minimum of 0.1, just like
-     * the HF ratio parameter.
+    /* Using the limit calculated above, apply the upper bound to the HF ratio.
      */
-    return clampf(limitRatio, 0.1f, hfRatio);
+    return minf(limitRatio, hfRatio);
 }
 
 /* Calculates the first-order high-pass coefficients following the I3DL2

@@ -217,17 +217,6 @@ static const ALfloat LATE_LINE_LENGTHS[4] =
 static const ALfloat MODULATION_DEPTH_COEFF = 0.0032f;
 
 
-/* Prior to VS2013, MSVC lacks the round() family of functions. */
-#if defined(_MSC_VER) && _MSC_VER < 1800
-static inline long lroundf(float val)
-{
-    if(val < 0.0)
-        return fastf2i(ceilf(val-0.5f));
-    return fastf2i(floorf(val+0.5f));
-}
-#endif
-
-
 typedef struct DelayLineI {
     /* The delay lines use interleaved samples, with the lengths being powers
      * of 2 to allow the use of bit-masking instead of a modulus for wrapping.
@@ -317,10 +306,10 @@ typedef struct ALreverbState {
 
         /* T60 decay filters are used to simulate absorption. */
         struct {
-            ALfloat LFCoeffs[3];
             ALfloat HFCoeffs[3];
-            /* The LF and HF filters keep a state of the last input and last
-             * output sample.
+            ALfloat LFCoeffs[3];
+            /* The HF and LF filters each keep a state of the last input and
+             * last output sample.
              */
             ALfloat States[2][2];
         } Filters[4];
@@ -427,8 +416,8 @@ static void ALreverbState_Construct(ALreverbState *state)
 
         for(j = 0;j < 3;j++)
         {
-            state->Late.Filters[i].LFCoeffs[j] = 0.0f;
             state->Late.Filters[i].HFCoeffs[j] = 0.0f;
+            state->Late.Filters[i].LFCoeffs[j] = 0.0f;
         }
         state->Late.Filters[i].States[0][0] = 0.0f;
         state->Late.Filters[i].States[0][1] = 0.0f;
@@ -1593,25 +1582,23 @@ DECL_TEMPLATE(Faded)
 #undef DECL_TEMPLATE
 
 /* Applies a first order filter section. */
-static inline ALfloat FirstOrderFilter(const ALfloat in, const ALfloat coeffs[3], ALfloat state[2])
+static inline ALfloat FirstOrderFilter(const ALfloat in, const ALfloat *restrict coeffs,
+                                       ALfloat *restrict state)
 {
     ALfloat out = coeffs[0]*in + coeffs[1]*state[0] + coeffs[2]*state[1];
-
     state[0] = in;
     state[1] = out;
-
     return out;
 }
 
 /* Applies the two T60 damping filter sections. */
-static inline ALfloat LateT60Filter(const ALsizei index, const ALfloat in, ALreverbState *State)
+static inline ALfloat LateT60Filter(const ALfloat *restrict HFCoeffs, ALfloat *restrict HFState,
+                                    const ALfloat *restrict LFCoeffs, ALfloat *restrict LFState,
+                                    const ALfloat in)
 {
     return FirstOrderFilter(
-        FirstOrderFilter(
-            in, State->Late.Filters[index].LFCoeffs,
-            State->Late.Filters[index].States[0]
-        ), State->Late.Filters[index].HFCoeffs,
-        State->Late.Filters[index].States[1]
+        FirstOrderFilter(in, HFCoeffs, HFState),
+        LFCoeffs, LFState
     );
 }
 
@@ -1659,8 +1646,11 @@ static ALvoid LateReverb_Faded(ALreverbState *State, const ALsizei todo, ALfloat
             );
 
         for(j = 0;j < 4;j++)
-            f[j] = LateT60Filter(j, f[j], State);
-
+            f[j] = LateT60Filter(
+                State->Late.Filters[j].HFCoeffs, State->Late.Filters[j].States[0],
+                State->Late.Filters[j].LFCoeffs, State->Late.Filters[j].States[1],
+                f[j]
+            );
         VectorAllpass_Faded(f, offset, apFeedCoeff, mixX, mixY, fade,
                             &State->Late.VecAp);
 
@@ -1702,8 +1692,11 @@ static ALvoid LateReverb_Unfaded(ALreverbState *State, const ALsizei todo, ALflo
                 offset - State->Late.Offset[j][0], j);
 
         for(j = 0;j < 4;j++)
-            f[j] = LateT60Filter(j, f[j], State);
-
+            f[j] = LateT60Filter(
+                State->Late.Filters[j].HFCoeffs, State->Late.Filters[j].States[0],
+                State->Late.Filters[j].LFCoeffs, State->Late.Filters[j].States[1],
+                f[j]
+            );
         VectorAllpass_Unfaded(f, offset, apFeedCoeff, mixX, mixY, fade,
                               &State->Late.VecAp);
 

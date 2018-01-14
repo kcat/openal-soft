@@ -95,7 +95,7 @@ const ALfloat *Resample_bsinc_C(const InterpState *state, const ALfloat *restric
 void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const ALfloat *restrict src, ALsizei numsamples)
 {
     ALsizei i;
-    if(numsamples > 1)
+    if(LIKELY(numsamples > 1))
     {
         dst[0] = filter->b0 * src[0] +
                  filter->b1 * filter->x[0] +

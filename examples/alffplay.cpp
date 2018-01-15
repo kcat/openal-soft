@@ -37,20 +37,6 @@ extern "C" {
 #include "AL/al.h"
 #include "AL/alext.h"
 
-extern "C" {
-#ifndef ALC_SOFT_device_clock
-#define ALC_SOFT_device_clock 1
-typedef int64_t ALCint64SOFT;
-typedef uint64_t ALCuint64SOFT;
-#define ALC_DEVICE_CLOCK_SOFT                    0x1600
-#define ALC_DEVICE_LATENCY_SOFT                  0x1601
-#define ALC_DEVICE_CLOCK_LATENCY_SOFT            0x1602
-#define AL_SAMPLE_OFFSET_CLOCK_SOFT              0x1202
-#define AL_SEC_OFFSET_CLOCK_SOFT                 0x1203
-typedef void (ALC_APIENTRY*LPALCGETINTEGER64VSOFT)(ALCdevice *device, ALCenum pname, ALsizei size, ALCint64SOFT *values);
-#endif
-} // extern "C"
-
 namespace {
 
 using nanoseconds = std::chrono::nanoseconds;

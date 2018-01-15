@@ -916,9 +916,8 @@ static inline void CalcHighShelfCoeffs(const ALfloat gain, const ALfloat w, ALfl
 
 /* Calculates the 3-band T60 damping coefficients for a particular delay line
  * of specified length using a combination of two low/high-pass/shelf or
- * pass-through filter sections (producing 3 coefficients each) and a general
- * gain (7th coefficient) given decay times for each band split at two (LF/
- * HF) reference frequencies (w).
+ * pass-through filter sections (producing 3 coefficients each) given decay
+ * times for each band split at two (LF/HF) reference frequencies (w).
  */
 static void CalcT60DampingCoeffs(const ALfloat length, const ALfloat lfDecayTime,
                                  const ALfloat mfDecayTime, const ALfloat hfDecayTime,

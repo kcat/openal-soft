@@ -237,6 +237,21 @@ typedef struct VecAllpass {
     ALsizei Offset[NUM_LINES][2];
 } VecAllpass;
 
+typedef struct T60Filter {
+    /* Two filters are used to adjust the signal. One to control the low
+     * frequencies, and one to control the high frequencies. The HF filter also
+     * adjusts the overall output gain, affecting the remaining mid-band.
+     */
+    ALfloat HFCoeffs[3];
+    ALfloat LFCoeffs[3];
+
+    /* The HF and LF filters each keep a state of the last input and last
+     * output sample.
+     */
+    ALfloat HFState[2];
+    ALfloat LFState[2];
+} T60Filter;
+
 typedef struct EarlyReflections {
     /* A Gerzon vector all-pass filter is used to simulate initial diffusion.
      * The spread from this filter also helps smooth out the reverb tail.
@@ -263,7 +278,7 @@ typedef struct Modulator {
     ALsizei Range;
     ALfloat IdxScale;
 
-    /* The depth of frequency change (also in samples) and its filter. */
+    /* The LFO delay scale (in samples scaled by FRACTIONONE). */
     ALfloat Depth[2];
 } Modulator;
 
@@ -278,15 +293,7 @@ typedef struct LateReverb {
     ALsizei    Offset[NUM_LINES][2];
 
     /* T60 decay filters are used to simulate absorption. */
-    struct {
-        ALfloat HFCoeffs[3];
-        ALfloat LFCoeffs[3];
-        /* The HF and LF filters each keep a state of the last input and last
-         * output sample.
-         */
-        ALfloat HFState[2];
-        ALfloat LFState[2];
-    } T60[NUM_LINES];
+    T60Filter T60[NUM_LINES];
 
     /* A Gerzon vector all-pass filter is used to simulate diffusion. */
     VecAllpass VecAp;
@@ -1599,13 +1606,11 @@ static inline ALfloat FirstOrderFilter(const ALfloat in, const ALfloat *restrict
 }
 
 /* Applies the two T60 damping filter sections. */
-static inline ALfloat LateT60Filter(const ALfloat *restrict HFCoeffs, ALfloat *restrict HFState,
-                                    const ALfloat *restrict LFCoeffs, ALfloat *restrict LFState,
-                                    const ALfloat in)
+static inline ALfloat LateT60Filter(T60Filter *filter, const ALfloat in)
 {
     return FirstOrderFilter(
-        FirstOrderFilter(in, HFCoeffs, HFState),
-        LFCoeffs, LFState
+        FirstOrderFilter(in, filter->HFCoeffs, filter->HFState),
+        filter->LFCoeffs, filter->LFState
     );
 }
 
@@ -1653,11 +1658,7 @@ static ALvoid LateReverb_Faded(ALreverbState *State, const ALsizei todo, ALfloat
             );
 
         for(j = 0;j < NUM_LINES;j++)
-            f[j] = LateT60Filter(
-                State->Late.T60[j].HFCoeffs, State->Late.T60[j].HFState,
-                State->Late.T60[j].LFCoeffs, State->Late.T60[j].LFState,
-                f[j]
-            );
+            f[j] = LateT60Filter(&State->Late.T60[j], f[j]);
         VectorAllpass_Faded(f, offset, apFeedCoeff, mixX, mixY, fade,
                             &State->Late.VecAp);
 
@@ -1698,11 +1699,7 @@ static ALvoid LateReverb_Unfaded(ALreverbState *State, const ALsizei todo, ALflo
             f[j] += DelayLineOut(&State->Late.Delay, offset-State->Late.Offset[j][0], j);
 
         for(j = 0;j < NUM_LINES;j++)
-            f[j] = LateT60Filter(
-                State->Late.T60[j].HFCoeffs, State->Late.T60[j].HFState,
-                State->Late.T60[j].LFCoeffs, State->Late.T60[j].LFState,
-                f[j]
-            );
+            f[j] = LateT60Filter(&State->Late.T60[j], f[j]);
         VectorAllpass_Unfaded(f, offset, apFeedCoeff, mixX, mixY, fade,
                               &State->Late.VecAp);
 

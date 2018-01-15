@@ -713,7 +713,6 @@ static inline void CalcHighpassCoeffs(const ALfloat gain, const ALfloat w, ALflo
         coeffs[0] = 1.0f;
         coeffs[1] = 0.0f;
         coeffs[2] = 0.0f;
-
         return;
     }
 
@@ -758,7 +757,6 @@ static inline void CalcLowpassCoeffs(const ALfloat gain, const ALfloat w, ALfloa
         coeffs[0] = 1.0f;
         coeffs[1] = 0.0f;
         coeffs[2] = 0.0f;
-
         return;
     }
 
@@ -830,7 +828,6 @@ static inline void CalcLowShelfCoeffs(const ALfloat gain, const ALfloat w, ALflo
         coeffs[0] = 1.0f;
         coeffs[1] = 0.0f;
         coeffs[2] = 0.0f;
-
         return;
     }
 
@@ -902,7 +899,6 @@ static inline void CalcHighShelfCoeffs(const ALfloat gain, const ALfloat w, ALfl
         coeffs[0] = 1.0f;
         coeffs[1] = 0.0f;
         coeffs[2] = 0.0f;
-
         return;
     }
 
@@ -933,30 +929,29 @@ static void CalcT60DampingCoeffs(const ALfloat length, const ALfloat lfDecayTime
     ALfloat mfGain = CalcDecayCoeff(length, mfDecayTime);
     ALfloat hfGain = CalcDecayCoeff(length, hfDecayTime);
 
-    if(lfGain < mfGain)
+    if(lfGain <= mfGain)
     {
         CalcHighpassCoeffs(lfGain / mfGain, lfW, lfcoeffs);
-        if(mfGain < hfGain)
-        {
-            CalcLowShelfCoeffs(mfGain / hfGain, hfW, hfcoeffs);
-            hfcoeffs[0] *= hfGain; hfcoeffs[1] *= hfGain;
-        }
-        else if(mfGain > hfGain)
+        if(mfGain >= hfGain)
         {
             CalcLowpassCoeffs(hfGain / mfGain, hfW, hfcoeffs);
             hfcoeffs[0] *= mfGain; hfcoeffs[1] *= mfGain;
         }
         else
         {
-            hfcoeffs[0] = mfGain;
-            hfcoeffs[1] = 0.0f;
-            hfcoeffs[2] = 0.0f;
+            CalcLowShelfCoeffs(mfGain / hfGain, hfW, hfcoeffs);
+            hfcoeffs[0] *= hfGain; hfcoeffs[1] *= hfGain;
         }
     }
-    else if(lfGain > mfGain)
+    else
     {
         CalcHighShelfCoeffs(mfGain / lfGain, lfW, lfcoeffs);
-        if(mfGain < hfGain)
+        if(mfGain >= hfGain)
+        {
+            CalcLowpassCoeffs(hfGain / mfGain, hfW, hfcoeffs);
+            hfcoeffs[0] *= lfGain; hfcoeffs[1] *= lfGain;
+        }
+        else
         {
             ALfloat hg = mfGain / lfGain;
             ALfloat lg = mfGain / hfGain;
@@ -964,40 +959,6 @@ static void CalcT60DampingCoeffs(const ALfloat length, const ALfloat lfDecayTime
 
             CalcLowShelfCoeffs(lg, hfW, hfcoeffs);
             hfcoeffs[0] *= mg; hfcoeffs[1] *= mg;
-        }
-        else if(mfGain > hfGain)
-        {
-            CalcLowpassCoeffs(hfGain / mfGain, hfW, hfcoeffs);
-            hfcoeffs[0] *= lfGain; hfcoeffs[1] *= lfGain;
-        }
-        else
-        {
-            hfcoeffs[0] = lfGain;
-            hfcoeffs[1] = 0.0f;
-            hfcoeffs[2] = 0.0f;
-        }
-    }
-    else
-    {
-        lfcoeffs[0] = 1.0f;
-        lfcoeffs[1] = 0.0f;
-        lfcoeffs[2] = 0.0f;
-
-        if(mfGain < hfGain)
-        {
-            CalcLowShelfCoeffs(mfGain / hfGain, hfW, hfcoeffs);
-            hfcoeffs[0] *= hfGain; hfcoeffs[1] *= hfGain;
-        }
-        else if(mfGain > hfGain)
-        {
-            CalcLowpassCoeffs(hfGain / mfGain, hfW, hfcoeffs);
-            hfcoeffs[0] *= mfGain; hfcoeffs[1] *= mfGain;
-        }
-        else
-        {
-            hfcoeffs[0] = mfGain;
-            hfcoeffs[1] = 0.0f;
-            hfcoeffs[2] = 0.0f;
         }
     }
 }

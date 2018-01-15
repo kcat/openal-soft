@@ -343,19 +343,21 @@ static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize,
         Hrtf->evCount = evCount;
 
         /* Set up pointers to storage following the main HRTF struct. */
-        _azCount = (ALubyte*)(base + offset); Hrtf->azCount = _azCount;
+        _azCount = (ALubyte*)(base + offset);
         offset += sizeof(_azCount[0])*evCount;
 
         offset = RoundUp(offset, sizeof(ALushort)); /* Align for ushort fields */
-        _evOffset = (ALushort*)(base + offset); Hrtf->evOffset = _evOffset;
+        _evOffset = (ALushort*)(base + offset);
         offset += sizeof(_evOffset[0])*evCount;
 
         offset = RoundUp(offset, 16); /* Align for coefficients using SIMD */
-        _coeffs = (ALfloat(*)[2])(base + offset); Hrtf->coeffs = _coeffs;
+        _coeffs = (ALfloat(*)[2])(base + offset);
         offset += sizeof(_coeffs[0])*irSize*irCount;
 
-        _delays = (ALubyte(*)[2])(base + offset); Hrtf->delays = _delays;
+        _delays = (ALubyte(*)[2])(base + offset);
         offset += sizeof(_delays[0])*irCount;
+
+        assert(offset == total);
 
         /* Copy input data to storage. */
         for(i = 0;i < evCount;i++) _azCount[i] = azCount[i];
@@ -371,7 +373,11 @@ static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize,
             _delays[i][1] = delays[i][1];
         }
 
-        assert(offset == total);
+        /* Finally, assign the storage pointers. */
+        Hrtf->azCount = _azCount;
+        Hrtf->evOffset = _evOffset;
+        Hrtf->coeffs = _coeffs;
+        Hrtf->delays = _delays;
     }
 
     return Hrtf;

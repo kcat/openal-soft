@@ -1493,10 +1493,11 @@ static inline void VectorPartialScatter(ALfloat *restrict out, const ALfloat *re
  * line processing and non-transitional processing.
  */
 #define DECL_TEMPLATE(T)                                                      \
-static void VectorAllpass_##T(ALfloat *restrict vec, const ALsizei offset,    \
-                              const ALfloat feedCoeff, const ALfloat xCoeff,  \
-                              const ALfloat yCoeff, const ALfloat mu,         \
-                              VecAllpass *Vap)                                \
+static void VectorAllpass_##T(ALfloat *restrict out,                          \
+                              const ALfloat *restrict in,                     \
+                              const ALsizei offset, const ALfloat feedCoeff,  \
+                              const ALfloat xCoeff, const ALfloat yCoeff,     \
+                              const ALfloat mu, VecAllpass *Vap)              \
 {                                                                             \
     ALfloat f[NUM_LINES], fs[NUM_LINES];                                      \
     ALfloat input;                                                            \
@@ -1506,13 +1507,12 @@ static void VectorAllpass_##T(ALfloat *restrict vec, const ALsizei offset,    \
                                                                               \
     for(i = 0;i < NUM_LINES;i++)                                              \
     {                                                                         \
-        input = vec[i];                                                       \
-        vec[i] = T##DelayLineOut(&Vap->Delay, offset-Vap->Offset[i][0],       \
+        input = in[i];                                                        \
+        out[i] = T##DelayLineOut(&Vap->Delay, offset-Vap->Offset[i][0],       \
                                  offset-Vap->Offset[i][1], i, mu) -           \
                  feedCoeff*input;                                             \
-        f[i] = input + feedCoeff*vec[i];                                      \
+        f[i] = input + feedCoeff*out[i];                                      \
     }                                                                         \
-                                                                              \
     VectorPartialScatter(fs, f, xCoeff, yCoeff);                              \
                                                                               \
     DelayLineIn4(&Vap->Delay, offset, fs);                                    \
@@ -1563,12 +1563,12 @@ static ALvoid EarlyReflection_##T(ALreverbState *State, const ALsizei todo,   \
     for(i = 0;i < todo;i++)                                                   \
     {                                                                         \
         for(j = 0;j < NUM_LINES;j++)                                          \
-            f[j] = T##DelayLineOut(&State->Delay,                             \
+            fr[j] = T##DelayLineOut(&State->Delay,                            \
                 offset-State->EarlyDelayTap[j][0],                            \
                 offset-State->EarlyDelayTap[j][1], j, fade                    \
             ) * State->EarlyDelayCoeff[j];                                    \
                                                                               \
-        VectorAllpass_##T(f, offset, apFeedCoeff, mixX, mixY, fade,           \
+        VectorAllpass_##T(f, fr, offset, apFeedCoeff, mixX, mixY, fade,       \
                           &State->Early.VecAp);                               \
                                                                               \
         DelayLineIn4Rev(&State->Early.Delay, offset, f);                      \
@@ -1606,12 +1606,15 @@ static inline ALfloat FirstOrderFilter(const ALfloat in, const ALfloat *restrict
 }
 
 /* Applies the two T60 damping filter sections. */
-static inline ALfloat LateT60Filter(T60Filter *filter, const ALfloat in)
+static inline void LateT60Filter(ALfloat *restrict out, const ALfloat *restrict in,
+                                 T60Filter *filter)
 {
-    return FirstOrderFilter(
-        FirstOrderFilter(in, filter->HFCoeffs, filter->HFState),
-        filter->LFCoeffs, filter->LFState
-    );
+    ALsizei i;
+    for(i = 0;i < NUM_LINES;i++)
+        out[i] = FirstOrderFilter(
+            FirstOrderFilter(in[i], filter[i].HFCoeffs, filter[i].HFState),
+            filter[i].LFCoeffs, filter[i].LFState
+        );
 }
 
 /* This generates the reverb tail using a modified feed-back delay network
@@ -1657,9 +1660,8 @@ static ALvoid LateReverb_Faded(ALreverbState *State, const ALsizei todo, ALfloat
                 offset - State->Late.Offset[j][1], j, fade
             );
 
-        for(j = 0;j < NUM_LINES;j++)
-            f[j] = LateT60Filter(&State->Late.T60[j], f[j]);
-        VectorAllpass_Faded(f, offset, apFeedCoeff, mixX, mixY, fade,
+        LateT60Filter(fr, f, State->Late.T60);
+        VectorAllpass_Faded(f, fr, offset, apFeedCoeff, mixX, mixY, fade,
                             &State->Late.VecAp);
 
         for(j = 0;j < NUM_LINES;j++)
@@ -1698,9 +1700,8 @@ static ALvoid LateReverb_Unfaded(ALreverbState *State, const ALsizei todo, ALflo
         for(j = 0;j < NUM_LINES;j++)
             f[j] += DelayLineOut(&State->Late.Delay, offset-State->Late.Offset[j][0], j);
 
-        for(j = 0;j < NUM_LINES;j++)
-            f[j] = LateT60Filter(&State->Late.T60[j], f[j]);
-        VectorAllpass_Unfaded(f, offset, apFeedCoeff, mixX, mixY, fade,
+        LateT60Filter(fr, f, State->Late.T60);
+        VectorAllpass_Unfaded(f, fr, offset, apFeedCoeff, mixX, mixY, fade,
                               &State->Late.VecAp);
 
         for(j = 0;j < NUM_LINES;j++)

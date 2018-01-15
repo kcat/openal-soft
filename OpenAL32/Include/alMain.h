@@ -47,21 +47,6 @@
 #define ALC_N3D_SOFT                             0xfff7
 #endif
 
-#ifndef ALC_SOFT_device_clock
-#define ALC_SOFT_device_clock 1
-typedef int64_t ALCint64SOFT;
-typedef uint64_t ALCuint64SOFT;
-#define ALC_DEVICE_CLOCK_SOFT                    0x1600
-#define ALC_DEVICE_LATENCY_SOFT                  0x1601
-#define ALC_DEVICE_CLOCK_LATENCY_SOFT            0x1602
-#define AL_SAMPLE_OFFSET_CLOCK_SOFT              0x1202
-#define AL_SEC_OFFSET_CLOCK_SOFT                 0x1203
-typedef void (ALC_APIENTRY*LPALCGETINTEGER64VSOFT)(ALCdevice *device, ALCenum pname, ALsizei size, ALCint64SOFT *values);
-#ifdef AL_ALEXT_PROTOTYPES
-ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname, ALsizei size, ALCint64SOFT *values);
-#endif
-#endif
-
 #ifndef AL_SOFT_buffer_samples2
 #define AL_SOFT_buffer_samples2 1
 /* Channel configurations */

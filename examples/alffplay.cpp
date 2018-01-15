@@ -1589,10 +1589,7 @@ int main(int argc, char *argv[])
         name = alcGetString(device, ALC_DEVICE_SPECIFIER);
     std::cout<< "Opened \""<<name<<"\"" <<std::endl;
 
-    /* WARNING: ALC_SOFT_device_clock is still subject to change. It's fine to
-     * play around with and test out, but avoid in production code.
-     */
-    if(alcIsExtensionPresent(device, "ALC_SOFTX_device_clock"))
+    if(alcIsExtensionPresent(device, "ALC_SOFT_device_clock"))
     {
         std::cout<< "Found ALC_SOFT_device_clock" <<std::endl;
         alcGetInteger64vSOFT = reinterpret_cast<LPALCGETINTEGER64VSOFT>(

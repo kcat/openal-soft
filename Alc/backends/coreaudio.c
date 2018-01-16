@@ -23,7 +23,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <alloca.h>
 
 #include "alMain.h"
 #include "alu.h"
@@ -725,27 +724,26 @@ static void ALCcoreAudioCapture_stop(ALCcoreAudioCapture *self)
 
 static ALCenum ALCcoreAudioCapture_captureSamples(ALCcoreAudioCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    AudioBufferList *list;
+    union {
+        ALbyte _[sizeof(AudioBufferList) + sizeof(AudioBuffer)];
+        AudioBufferList list;
+    } audiobuf = { { 0 } };
     UInt32 frameCount;
     OSStatus err;
 
     // If no samples are requested, just return
-    if(samples == 0)
-        return ALC_NO_ERROR;
-
-    // Allocate a temporary AudioBufferList to use as the return resamples data
-    list = alloca(sizeof(AudioBufferList) + sizeof(AudioBuffer));
+    if(samples == 0) return ALC_NO_ERROR;
 
     // Point the resampling buffer to the capture buffer
-    list->mNumberBuffers = 1;
-    list->mBuffers[0].mNumberChannels = self->format.mChannelsPerFrame;
-    list->mBuffers[0].mDataByteSize = samples * self->frameSize;
-    list->mBuffers[0].mData = buffer;
+    audiobuf.list.mNumberBuffers = 1;
+    audiobuf.list.mBuffers[0].mNumberChannels = self->format.mChannelsPerFrame;
+    audiobuf.list.mBuffers[0].mDataByteSize = samples * self->frameSize;
+    audiobuf.list.mBuffers[0].mData = buffer;
 
     // Resample into another AudioBufferList
     frameCount = samples;
     err = AudioConverterFillComplexBuffer(self->audioConverter,
-        ALCcoreAudioCapture_ConvertCallback, self, &frameCount, list, NULL
+        ALCcoreAudioCapture_ConvertCallback, self, &frameCount, &audiobuf.list, NULL
     );
     if(err != noErr)
     {

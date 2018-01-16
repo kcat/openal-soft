@@ -185,17 +185,6 @@ static const ALfloat Ambi3DDecoder[8][FB_Max][MAX_AMBI_COEFFS] = {
 };
 
 
-static RowMixerFunc MixMatrixRow = MixRow_C;
-
-
-static alonce_flag bformatdec_inited = AL_ONCE_FLAG_INIT;
-
-static void init_bformatdec(void)
-{
-    MixMatrixRow = SelectRowMixer();
-}
-
-
 /* NOTE: BandSplitter filters are unused with single-band decoding */
 typedef struct BFormatDec {
     ALboolean Enabled[MAX_OUTPUT_CHANNELS];
@@ -225,7 +214,6 @@ typedef struct BFormatDec {
 
 BFormatDec *bformatdec_alloc()
 {
-    alcall_once(&bformatdec_inited, init_bformatdec);
     return al_calloc(16, sizeof(BFormatDec));
 }
 
@@ -432,10 +420,10 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
                 continue;
 
             memset(dec->ChannelMix, 0, SamplesToDo*sizeof(ALfloat));
-            MixMatrixRow(dec->ChannelMix, dec->Matrix.Dual[chan][FB_HighFreq],
+            MixRowSamples(dec->ChannelMix, dec->Matrix.Dual[chan][FB_HighFreq],
                 dec->SamplesHF, dec->NumChannels, 0, SamplesToDo
             );
-            MixMatrixRow(dec->ChannelMix, dec->Matrix.Dual[chan][FB_LowFreq],
+            MixRowSamples(dec->ChannelMix, dec->Matrix.Dual[chan][FB_LowFreq],
                 dec->SamplesLF, dec->NumChannels, 0, SamplesToDo
             );
 
@@ -451,8 +439,8 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
                 continue;
 
             memset(dec->ChannelMix, 0, SamplesToDo*sizeof(ALfloat));
-            MixMatrixRow(dec->ChannelMix, dec->Matrix.Single[chan], InSamples,
-                         dec->NumChannels, 0, SamplesToDo);
+            MixRowSamples(dec->ChannelMix, dec->Matrix.Single[chan], InSamples,
+                          dec->NumChannels, 0, SamplesToDo);
 
             for(i = 0;i < SamplesToDo;i++)
                 OutBuffer[chan][i] += dec->ChannelMix[i];
@@ -486,7 +474,7 @@ void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[B
         );
 
         /* Now write each band to the output. */
-        MixMatrixRow(OutBuffer[i], dec->UpSampler[i].Gains,
+        MixRowSamples(OutBuffer[i], dec->UpSampler[i].Gains,
             dec->Samples, FB_Max, 0, SamplesToDo
         );
     }
@@ -517,7 +505,6 @@ typedef struct AmbiUpsampler {
 
 AmbiUpsampler *ambiup_alloc()
 {
-    alcall_once(&bformatdec_inited, init_bformatdec);
     return al_calloc(16, sizeof(AmbiUpsampler));
 }
 
@@ -601,7 +588,7 @@ void ambiup_process(struct AmbiUpsampler *ambiup, ALfloat (*restrict OutBuffer)[
         );
 
         for(j = 0;j < OutChannels;j++)
-            MixMatrixRow(OutBuffer[j], ambiup->Gains[i][j],
+            MixRowSamples(OutBuffer[j], ambiup->Gains[i][j],
                 ambiup->Samples, FB_Max, 0, SamplesToDo
             );
     }

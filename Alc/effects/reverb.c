@@ -57,14 +57,6 @@ ALfloat ReverbBoost = 1.0f;
 #define NUM_LINES 4
 
 
-static RowMixerFunc MixRowSamples = MixRow_C;
-
-static alonce_flag mixfunc_inited = AL_ONCE_FLAG_INIT;
-static void init_mixfunc(void)
-{
-    MixRowSamples = SelectRowMixer();
-}
-
 /* The B-Format to A-Format conversion matrix. The arrangement of rows is
  * deliberately chosen to align the resulting lines to their spatial opposites
  * (0:above front left <-> 3:above back right, 1:below front right <-> 2:below
@@ -1759,8 +1751,6 @@ typedef struct ALreverbStateFactory {
 static ALeffectState *ALreverbStateFactory_create(ALreverbStateFactory* UNUSED(factory))
 {
     ALreverbState *state;
-
-    alcall_once(&mixfunc_inited, init_mixfunc);
 
     NEW_OBJ0(state, ALreverbState)();
     if(!state) return NULL;

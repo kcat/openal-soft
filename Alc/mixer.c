@@ -53,6 +53,7 @@ static_assert(MAX_RESAMPLE_PADDING >= 24, "MAX_RESAMPLE_PADDING must be at least
 enum Resampler ResamplerDefault = LinearResampler;
 
 MixerFunc MixSamples = Mix_C;
+RowMixerFunc MixRowSamples = MixRow_C;
 static HrtfMixerFunc MixHrtfSamples = MixHrtf_C;
 static HrtfMixerBlendFunc MixHrtfBlendSamples = MixHrtfBlend_C;
 
@@ -69,7 +70,7 @@ static MixerFunc SelectMixer(void)
     return Mix_C;
 }
 
-RowMixerFunc SelectRowMixer(void)
+static RowMixerFunc SelectRowMixer(void)
 {
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
@@ -187,6 +188,7 @@ void aluInitMixer(void)
     MixHrtfBlendSamples = SelectHrtfBlendMixer();
     MixHrtfSamples = SelectHrtfMixer();
     MixSamples = SelectMixer();
+    MixRowSamples = SelectRowMixer();
 }
 
 

@@ -385,6 +385,13 @@ inline ALuint64 maxu64(ALuint64 a, ALuint64 b)
 inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max)
 { return minu64(max, maxu64(min, val)); }
 
+inline size_t minz(size_t a, size_t b)
+{ return ((a > b) ? b : a); }
+inline size_t maxz(size_t a, size_t b)
+{ return ((a > b) ? a : b); }
+inline size_t clampz(size_t val, size_t min, size_t max)
+{ return minz(max, maxz(min, val)); }
+
 
 inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu)
 {

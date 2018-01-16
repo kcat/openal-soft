@@ -71,6 +71,10 @@ extern inline ALuint64 minu64(ALuint64 a, ALuint64 b);
 extern inline ALuint64 maxu64(ALuint64 a, ALuint64 b);
 extern inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max);
 
+extern inline size_t minz(size_t a, size_t b);
+extern inline size_t maxz(size_t a, size_t b);
+extern inline size_t clampz(size_t val, size_t min, size_t max);
+
 extern inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu);
 extern inline ALfloat cubic(ALfloat val1, ALfloat val2, ALfloat val3, ALfloat val4, ALfloat mu);
 

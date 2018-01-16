@@ -41,6 +41,8 @@ typedef struct ALdistortionState {
     ALfilterState bandpass;
     ALfloat attenuation;
     ALfloat edge_coeff;
+
+    ALfloat Buffer[2][BUFFERSIZE];
 } ALdistortionState;
 
 static ALvoid ALdistortionState_Destruct(ALdistortionState *state);
@@ -106,73 +108,67 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCcontex
 
 static ALvoid ALdistortionState_process(ALdistortionState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
+    ALfloat (*restrict buffer)[BUFFERSIZE] = state->Buffer;
     const ALfloat fc = state->edge_coeff;
-    ALsizei it, kt;
     ALsizei base;
+    ALsizei i, k;
 
     for(base = 0;base < SamplesToDo;)
     {
-        float buffer[2][64 * 4];
-        ALsizei td = mini(64, SamplesToDo-base);
-
         /* Perform 4x oversampling to avoid aliasing. Oversampling greatly
          * improves distortion quality and allows to implement lowpass and
          * bandpass filters using high frequencies, at which classic IIR
          * filters became unstable.
          */
+        ALsizei todo = mini(BUFFERSIZE, (SamplesToDo-base) * 4);
 
-        /* Fill oversample buffer using zero stuffing. */
-        for(it = 0;it < td;it++)
-        {
-            /* Multiply the sample by the amount of oversampling to maintain
-             * the signal's power.
-             */
-            buffer[0][it*4 + 0] = SamplesIn[0][it+base] * 4.0f;
-            buffer[0][it*4 + 1] = 0.0f;
-            buffer[0][it*4 + 2] = 0.0f;
-            buffer[0][it*4 + 3] = 0.0f;
-        }
+        /* Fill oversample buffer using zero stuffing. Multiply the sample by
+         * the amount of oversampling to maintain the signal's power.
+         */
+        for(i = 0;i < todo;i++)
+            buffer[0][i] = !(i&3) ? SamplesIn[0][(i>>2)+base] * 4.0f : 0.0f;
 
         /* First step, do lowpass filtering of original signal. Additionally
          * perform buffer interpolation and lowpass cutoff for oversampling
          * (which is fortunately first step of distortion). So combine three
          * operations into the one.
          */
-        ALfilterState_process(&state->lowpass, buffer[1], buffer[0], td*4);
+        ALfilterState_process(&state->lowpass, buffer[1], buffer[0], todo);
 
         /* Second step, do distortion using waveshaper function to emulate
          * signal processing during tube overdriving. Three steps of
          * waveshaping are intended to modify waveform without boost/clipping/
          * attenuation process.
          */
-        for(it = 0;it < td*4;it++)
+        for(i = 0;i < todo;i++)
         {
-            ALfloat smp = buffer[1][it];
+            ALfloat smp = buffer[1][i];
 
             smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp));
             smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp)) * -1.0f;
             smp = (1.0f + fc) * smp/(1.0f + fc*fabsf(smp));
 
-            buffer[0][it] = smp;
+            buffer[0][i] = smp;
         }
 
         /* Third step, do bandpass filtering of distorted signal. */
-        ALfilterState_process(&state->bandpass, buffer[1], buffer[0], td*4);
+        ALfilterState_process(&state->bandpass, buffer[1], buffer[0], todo);
 
-        for(kt = 0;kt < NumChannels;kt++)
+        todo >>= 2;
+        for(k = 0;k < NumChannels;k++)
         {
             /* Fourth step, final, do attenuation and perform decimation,
              * storing only one sample out of four.
              */
-            ALfloat gain = state->Gain[kt];
+            ALfloat gain = state->Gain[k];
             if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
                 continue;
 
-            for(it = 0;it < td;it++)
-                SamplesOut[kt][base+it] += gain * buffer[1][it*4];
+            for(i = 0;i < todo;i++)
+                SamplesOut[k][base+i] += gain * buffer[1][i*4];
         }
 
-        base += td;
+        base += todo;
     }
 }
 

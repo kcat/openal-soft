@@ -1374,7 +1374,7 @@ FORCE_ALIGN int ALCmmdevCapture_recordProc(void *arg)
                     ALsizei srcframes = numsamples;
 
                     dstframes = SampleConverterInput(self->SampleConv,
-                        &srcdata, &srcframes, data[0].buf, data[0].len
+                        &srcdata, &srcframes, data[0].buf, (ALsizei)minz(data[0].len, INT_MAX)
                     );
                     if(srcframes > 0 && dstframes == data[0].len && data[1].len > 0)
                     {
@@ -1383,16 +1383,16 @@ FORCE_ALIGN int ALCmmdevCapture_recordProc(void *arg)
                          * dest block, do another run for the second block.
                          */
                         dstframes += SampleConverterInput(self->SampleConv,
-                            &srcdata, &srcframes, data[1].buf, data[1].len
+                            &srcdata, &srcframes, data[1].buf, (ALsizei)minz(data[1].len, INT_MAX)
                         );
                     }
                 }
                 else
                 {
-                    size_t framesize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType,
+                    ALuint framesize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType,
                                                            device->AmbiOrder);
-                    ALuint len1 = minu(data[0].len, numsamples);
-                    ALuint len2 = minu(data[1].len, numsamples-len1);
+                    size_t len1 = minz(data[0].len, numsamples);
+                    size_t len2 = minz(data[1].len, numsamples-len1);
 
                     memcpy(data[0].buf, rdata, len1*framesize);
                     if(len2 > 0)

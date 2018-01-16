@@ -15,6 +15,13 @@
 #include "alBuffer.h"
 
 
+#ifdef HAVE_C99_VLA
+#define DECL_VLA(T, _name, _size)  T _name[(_size)]
+#else
+#define DECL_VLA(T, _name, _size)  T *_name = alloca((_size) * sizeof(T))
+#endif
+
+
 /* IMA ADPCM Stepsize table */
 static const int IMAStep_size[89] = {
        7,    8,    9,   10,   11,   12,   13,   14,   16,   17,   19,

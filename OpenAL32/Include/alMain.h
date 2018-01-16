@@ -173,12 +173,6 @@ typedef ALuint64SOFT ALuint64;
  */
 #define FAM_SIZE(T, M, N)  (offsetof(T, M) + sizeof(((T*)NULL)->M[0])*(N))
 
-#ifdef HAVE_C99_VLA
-#define DECL_VLA(T, _name, _size)  T _name[(_size)]
-#else
-#define DECL_VLA(T, _name, _size)  T *_name = alloca((_size) * sizeof(T))
-#endif
-
 
 static const union {
     ALuint u;

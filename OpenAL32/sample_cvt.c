@@ -632,15 +632,13 @@ static inline ALmulaw Conv_ALmulaw_ALalaw(ALalaw val)
 
 
 #define DECL_TEMPLATE(T1, T2)                                                 \
-static void Convert_##T1##_##T2(T1 *dst, const T2 *src, ALuint numchans,      \
-                                ALuint len, ALsizei UNUSED(align))            \
+static void Convert_##T1##_##T2(T1 *dst, const T2 *src, ALsizei numchans,     \
+                                ALsizei len, ALsizei UNUSED(align))           \
 {                                                                             \
-    ALuint i, j;                                                              \
+    ALsizei i;                                                                \
+    len *= numchans;                                                          \
     for(i = 0;i < len;i++)                                                    \
-    {                                                                         \
-        for(j = 0;j < numchans;j++)                                           \
-            *(dst++) = Conv_##T1##_##T2(*(src++));                            \
-    }                                                                         \
+        *(dst++) = Conv_##T1##_##T2(*(src++));                                \
 }
 
 #define DECL_TEMPLATE2(T)  \
@@ -670,12 +668,12 @@ DECL_TEMPLATE2(ALalaw)
 #undef DECL_TEMPLATE
 
 #define DECL_TEMPLATE(T)                                                      \
-static void Convert_##T##_ALima4(T *dst, const ALima4 *src, ALuint numchans,  \
-                                 ALuint len, ALuint align)                    \
+static void Convert_##T##_ALima4(T *dst, const ALima4 *src, ALsizei numchans, \
+                                 ALsizei len, ALsizei align)                  \
 {                                                                             \
     ALsizei byte_align = ((align-1)/2 + 4) * numchans;                        \
     DECL_VLA(ALshort, tmp, align*numchans);                                   \
-    ALuint i, j, k;                                                           \
+    ALsizei i, j, k;                                                          \
                                                                               \
     assert(align > 0 && (len%align) == 0);                                    \
     for(i = 0;i < len;i += align)                                             \
@@ -693,11 +691,11 @@ static void Convert_##T##_ALima4(T *dst, const ALima4 *src, ALuint numchans,  \
 
 DECL_TEMPLATE(ALbyte)
 DECL_TEMPLATE(ALubyte)
-static void Convert_ALshort_ALima4(ALshort *dst, const ALima4 *src, ALuint numchans,
-                                   ALuint len, ALuint align)
+static void Convert_ALshort_ALima4(ALshort *dst, const ALima4 *src, ALsizei numchans,
+                                   ALsizei len, ALsizei align)
 {
     ALsizei byte_align = ((align-1)/2 + 4) * numchans;
-    ALuint i;
+    ALsizei i;
 
     assert(align > 0 && (len%align) == 0);
     for(i = 0;i < len;i += align)
@@ -718,14 +716,14 @@ DECL_TEMPLATE(ALalaw)
 #undef DECL_TEMPLATE
 
 #define DECL_TEMPLATE(T)                                                      \
-static void Convert_ALima4_##T(ALima4 *dst, const T *src, ALuint numchans,    \
-                               ALuint len, ALuint align)                      \
+static void Convert_ALima4_##T(ALima4 *dst, const T *src, ALsizei numchans,   \
+                               ALsizei len, ALsizei align)                    \
 {                                                                             \
     ALint sample[MAX_INPUT_CHANNELS] = {0,0,0,0,0,0,0,0};                     \
     ALint index[MAX_INPUT_CHANNELS] = {0,0,0,0,0,0,0,0};                      \
     ALsizei byte_align = ((align-1)/2 + 4) * numchans;                        \
     DECL_VLA(ALshort, tmp, align*numchans);                                   \
-    ALuint i, j, k;                                                           \
+    ALsizei i, j, k;                                                          \
                                                                               \
     assert(align > 0 && (len%align) == 0);                                    \
     for(i = 0;i < len;i += align)                                             \
@@ -743,12 +741,12 @@ static void Convert_ALima4_##T(ALima4 *dst, const T *src, ALuint numchans,    \
 DECL_TEMPLATE(ALbyte)
 DECL_TEMPLATE(ALubyte)
 static void Convert_ALima4_ALshort(ALima4 *dst, const ALshort *src,
-                                   ALuint numchans, ALuint len, ALuint align)
+                                   ALsizei numchans, ALsizei len, ALsizei align)
 {
     ALint sample[MAX_INPUT_CHANNELS] = {0,0,0,0,0,0,0,0};
     ALint index[MAX_INPUT_CHANNELS] = {0,0,0,0,0,0,0,0};
     ALsizei byte_align = ((align-1)/2 + 4) * numchans;
-    ALuint i;
+    ALsizei i;
 
     assert(align > 0 && (len%align) == 0);
     for(i = 0;i < len;i += align)
@@ -771,12 +769,12 @@ DECL_TEMPLATE(ALalaw)
 
 #define DECL_TEMPLATE(T)                                                      \
 static void Convert_##T##_ALmsadpcm(T *dst, const ALmsadpcm *src,             \
-                                    ALuint numchans, ALuint len,              \
-                                    ALuint align)                             \
+                                    ALsizei numchans, ALsizei len,            \
+                                    ALsizei align)                            \
 {                                                                             \
     ALsizei byte_align = ((align-2)/2 + 7) * numchans;                        \
     DECL_VLA(ALshort, tmp, align*numchans);                                   \
-    ALuint i, j, k;                                                           \
+    ALsizei i, j, k;                                                          \
                                                                               \
     assert(align > 1 && (len%align) == 0);                                    \
     for(i = 0;i < len;i += align)                                             \
@@ -795,11 +793,11 @@ static void Convert_##T##_ALmsadpcm(T *dst, const ALmsadpcm *src,             \
 DECL_TEMPLATE(ALbyte)
 DECL_TEMPLATE(ALubyte)
 static void Convert_ALshort_ALmsadpcm(ALshort *dst, const ALmsadpcm *src,
-                                      ALuint numchans, ALuint len,
-                                      ALuint align)
+                                      ALsizei numchans, ALsizei len,
+                                      ALsizei align)
 {
     ALsizei byte_align = ((align-2)/2 + 7) * numchans;
-    ALuint i;
+    ALsizei i;
 
     assert(align > 1 && (len%align) == 0);
     for(i = 0;i < len;i += align)
@@ -821,12 +819,13 @@ DECL_TEMPLATE(ALalaw)
 
 #define DECL_TEMPLATE(T)                                                      \
 static void Convert_ALmsadpcm_##T(ALmsadpcm *dst, const T *src,               \
-                                  ALuint numchans, ALuint len, ALuint align)  \
+                                  ALsizei numchans, ALsizei len,              \
+                                  ALsizei align)                              \
 {                                                                             \
     ALint sample[MAX_INPUT_CHANNELS] = {0,0,0,0,0,0,0,0};                     \
     ALsizei byte_align = ((align-2)/2 + 7) * numchans;                        \
     DECL_VLA(ALshort, tmp, align*numchans);                                   \
-    ALuint i, j, k;                                                           \
+    ALsizei i, j, k;                                                          \
                                                                               \
     assert(align > 1 && (len%align) == 0);                                    \
     for(i = 0;i < len;i += align)                                             \
@@ -844,11 +843,11 @@ static void Convert_ALmsadpcm_##T(ALmsadpcm *dst, const T *src,               \
 DECL_TEMPLATE(ALbyte)
 DECL_TEMPLATE(ALubyte)
 static void Convert_ALmsadpcm_ALshort(ALmsadpcm *dst, const ALshort *src,
-                                      ALuint numchans, ALuint len, ALuint align)
+                                      ALsizei numchans, ALsizei len, ALsizei align)
 {
     ALint sample[MAX_INPUT_CHANNELS] = {0,0,0,0,0,0,0,0};
     ALsizei byte_align = ((align-2)/2 + 7) * numchans;
-    ALuint i;
+    ALsizei i;
 
     assert(align > 1 && (len%align) == 0);
     for(i = 0;i < len;i += align)
@@ -871,29 +870,29 @@ DECL_TEMPLATE(ALalaw)
 /* NOTE: We don't store compressed samples internally, so these conversions
  * should never happen. */
 static void Convert_ALima4_ALima4(ALima4* UNUSED(dst), const ALima4* UNUSED(src),
-                                  ALuint UNUSED(numchans), ALuint UNUSED(len),
-                                  ALuint UNUSED(align))
+                                  ALsizei UNUSED(numchans), ALsizei UNUSED(len),
+                                  ALsizei UNUSED(align))
 {
     ERR("Unexpected IMA4-to-IMA4 conversion!\n");
 }
 
 static void Convert_ALmsadpcm_ALmsadpcm(ALmsadpcm* UNUSED(dst), const ALmsadpcm* UNUSED(src),
-                                        ALuint UNUSED(numchans), ALuint UNUSED(len),
-                                        ALuint UNUSED(align))
+                                        ALsizei UNUSED(numchans), ALsizei UNUSED(len),
+                                        ALsizei UNUSED(align))
 {
     ERR("Unexpected MSADPCM-to-MSADPCM conversion!\n");
 }
 
 static void Convert_ALmsadpcm_ALima4(ALmsadpcm* UNUSED(dst), const ALima4* UNUSED(src),
-                                     ALuint UNUSED(numchans), ALuint UNUSED(len),
-                                     ALuint UNUSED(align))
+                                     ALsizei UNUSED(numchans), ALsizei UNUSED(len),
+                                     ALsizei UNUSED(align))
 {
     ERR("Unexpected IMA4-to-MSADPCM conversion!\n");
 }
 
 static void Convert_ALima4_ALmsadpcm(ALima4* UNUSED(dst), const ALmsadpcm* UNUSED(src),
-                                     ALuint UNUSED(numchans), ALuint UNUSED(len),
-                                     ALuint UNUSED(align))
+                                     ALsizei UNUSED(numchans), ALsizei UNUSED(len),
+                                     ALsizei UNUSED(align))
 {
     ERR("Unexpected MSADPCM-to-IMA4 conversion!\n");
 }
@@ -960,7 +959,8 @@ DECL_TEMPLATE(ALmsadpcm)
 #undef DECL_TEMPLATE
 
 
-void ConvertData(ALvoid *dst, enum UserFmtType dstType, const ALvoid *src, enum UserFmtType srcType, ALsizei numchans, ALsizei len, ALsizei align)
+void ConvertData(ALvoid *dst, enum UserFmtType dstType, const ALvoid *src,
+                 enum UserFmtType srcType, ALsizei numchans, ALsizei len, ALsizei align)
 {
     switch(dstType)
     {

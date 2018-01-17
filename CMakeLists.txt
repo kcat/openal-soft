@@ -499,6 +499,7 @@ IF(HAVE_INTRIN_H)
         }" HAVE_CPUID_INTRINSIC)
 ENDIF()
 
+CHECK_SYMBOL_EXISTS(sysconf          unistd.h HAVE_SYSCONF)
 CHECK_SYMBOL_EXISTS(aligned_alloc    stdlib.h HAVE_ALIGNED_ALLOC)
 CHECK_SYMBOL_EXISTS(posix_memalign   stdlib.h HAVE_POSIX_MEMALIGN)
 CHECK_SYMBOL_EXISTS(_aligned_malloc  malloc.h HAVE__ALIGNED_MALLOC)

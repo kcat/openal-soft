@@ -171,6 +171,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
         case UserFmtShort:
         case UserFmtUShort:
         case UserFmtFloat:
+        case UserFmtMulaw:
+        case UserFmtAlaw:
             framesize = FrameSizeFromUserFmt(srcchannels, srctype) * align;
             if((size%framesize) != 0)
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
@@ -199,30 +201,6 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
                 case UserFmtX71: newformat = AL_FORMAT_71CHN32; break;
                 case UserFmtBFormat2D: newformat = AL_FORMAT_BFORMAT2D_FLOAT32; break;
                 case UserFmtBFormat3D: newformat = AL_FORMAT_BFORMAT3D_FLOAT32; break;
-            }
-            err = LoadData(albuf, freq, newformat, size/framesize*align,
-                           srcchannels, srctype, data, align, AL_TRUE);
-            if(err != AL_NO_ERROR)
-                SET_ERROR_AND_GOTO(context, err, done);
-            break;
-
-        case UserFmtMulaw:
-        case UserFmtAlaw:
-            framesize = FrameSizeFromUserFmt(srcchannels, srctype) * align;
-            if((size%framesize) != 0)
-                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-
-            switch(srcchannels)
-            {
-                case UserFmtMono: newformat = AL_FORMAT_MONO16; break;
-                case UserFmtStereo: newformat = AL_FORMAT_STEREO16; break;
-                case UserFmtRear: newformat = AL_FORMAT_REAR16; break;
-                case UserFmtQuad: newformat = AL_FORMAT_QUAD16; break;
-                case UserFmtX51: newformat = AL_FORMAT_51CHN16; break;
-                case UserFmtX61: newformat = AL_FORMAT_61CHN16; break;
-                case UserFmtX71: newformat = AL_FORMAT_71CHN16; break;
-                case UserFmtBFormat2D: newformat = AL_FORMAT_BFORMAT2D_16; break;
-                case UserFmtBFormat3D: newformat = AL_FORMAT_BFORMAT3D_16; break;
             }
             err = LoadData(albuf, freq, newformat, size/framesize*align,
                            srcchannels, srctype, data, align, AL_TRUE);
@@ -1193,6 +1171,8 @@ ALsizei BytesFromFmt(enum FmtType type)
     case FmtByte: return sizeof(ALbyte);
     case FmtShort: return sizeof(ALshort);
     case FmtFloat: return sizeof(ALfloat);
+    case FmtMulaw: return sizeof(ALubyte);
+    case FmtAlaw: return sizeof(ALubyte);
     }
     return 0;
 }
@@ -1222,14 +1202,19 @@ static ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum Fm
         { AL_MONO8_SOFT,   FmtMono, FmtByte  },
         { AL_MONO16_SOFT,  FmtMono, FmtShort },
         { AL_MONO32F_SOFT, FmtMono, FmtFloat },
+        { AL_FORMAT_MONO_MULAW, FmtMono, FmtMulaw },
+        { AL_FORMAT_MONO_ALAW_EXT, FmtMono, FmtAlaw },
 
         { AL_STEREO8_SOFT,   FmtStereo, FmtByte  },
         { AL_STEREO16_SOFT,  FmtStereo, FmtShort },
         { AL_STEREO32F_SOFT, FmtStereo, FmtFloat },
+        { AL_FORMAT_STEREO_MULAW, FmtStereo, FmtMulaw },
+        { AL_FORMAT_STEREO_ALAW_EXT, FmtStereo, FmtAlaw },
 
         { AL_REAR8_SOFT,   FmtRear, FmtByte  },
         { AL_REAR16_SOFT,  FmtRear, FmtShort },
         { AL_REAR32F_SOFT, FmtRear, FmtFloat },
+        { AL_FORMAT_REAR_MULAW, FmtRear, FmtMulaw },
 
         { AL_FORMAT_QUAD8_LOKI,  FmtQuad, FmtByte  },
         { AL_FORMAT_QUAD16_LOKI, FmtQuad, FmtShort },
@@ -1237,26 +1222,32 @@ static ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum Fm
         { AL_QUAD8_SOFT,   FmtQuad, FmtByte  },
         { AL_QUAD16_SOFT,  FmtQuad, FmtShort },
         { AL_QUAD32F_SOFT, FmtQuad, FmtFloat },
+        { AL_FORMAT_QUAD_MULAW, FmtQuad, FmtMulaw },
 
         { AL_5POINT1_8_SOFT,   FmtX51, FmtByte  },
         { AL_5POINT1_16_SOFT,  FmtX51, FmtShort },
         { AL_5POINT1_32F_SOFT, FmtX51, FmtFloat },
+        { AL_FORMAT_51CHN_MULAW, FmtX51, FmtMulaw },
 
         { AL_6POINT1_8_SOFT,   FmtX61, FmtByte  },
         { AL_6POINT1_16_SOFT,  FmtX61, FmtShort },
         { AL_6POINT1_32F_SOFT, FmtX61, FmtFloat },
+        { AL_FORMAT_61CHN_MULAW, FmtX61, FmtMulaw },
 
         { AL_7POINT1_8_SOFT,   FmtX71, FmtByte  },
         { AL_7POINT1_16_SOFT,  FmtX71, FmtShort },
         { AL_7POINT1_32F_SOFT, FmtX71, FmtFloat },
+        { AL_FORMAT_71CHN_MULAW, FmtX71, FmtMulaw },
 
         { AL_BFORMAT2D_8_SOFT,   FmtBFormat2D, FmtByte },
         { AL_BFORMAT2D_16_SOFT,  FmtBFormat2D, FmtShort },
         { AL_BFORMAT2D_32F_SOFT, FmtBFormat2D, FmtFloat },
+        { AL_FORMAT_BFORMAT2D_MULAW, FmtBFormat2D, FmtMulaw },
 
         { AL_BFORMAT3D_8_SOFT,   FmtBFormat3D, FmtByte },
         { AL_BFORMAT3D_16_SOFT,  FmtBFormat3D, FmtShort },
         { AL_BFORMAT3D_32F_SOFT, FmtBFormat3D, FmtFloat },
+        { AL_FORMAT_BFORMAT3D_MULAW, FmtBFormat3D, FmtMulaw },
     };
     ALuint i;
 

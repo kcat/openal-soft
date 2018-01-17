@@ -47,6 +47,8 @@ enum FmtType {
     FmtByte  = UserFmtByte,
     FmtShort = UserFmtShort,
     FmtFloat = UserFmtFloat,
+    FmtMulaw = UserFmtMulaw,
+    FmtAlaw  = UserFmtAlaw,
 };
 enum FmtChannels {
     FmtMono   = UserFmtMono,

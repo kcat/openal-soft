@@ -33,6 +33,7 @@
 #include "alBuffer.h"
 #include "alListener.h"
 #include "alAuxEffectSlot.h"
+#include "sample_cvt.h"
 #include "alu.h"
 #include "alconfig.h"
 
@@ -201,6 +202,14 @@ static inline ALfloat Sample_ALshort(ALshort val)
 static inline ALfloat Sample_ALfloat(ALfloat val)
 { return val; }
 
+typedef ALubyte ALmulaw;
+static inline ALfloat Sample_ALmulaw(ALmulaw val)
+{ return muLawDecompressionTable[val] * (1.0f/32768.0f); }
+
+typedef ALubyte ALalaw;
+static inline ALfloat Sample_ALalaw(ALalaw val)
+{ return aLawDecompressionTable[val] * (1.0f/32768.0f); }
+
 #define DECL_TEMPLATE(T)                                                      \
 static inline void Load_##T(ALfloat *restrict dst, const T *restrict src,     \
                             ALint srcstep, ALsizei samples)                   \
@@ -213,24 +222,24 @@ static inline void Load_##T(ALfloat *restrict dst, const T *restrict src,     \
 DECL_TEMPLATE(ALbyte)
 DECL_TEMPLATE(ALshort)
 DECL_TEMPLATE(ALfloat)
+DECL_TEMPLATE(ALmulaw)
+DECL_TEMPLATE(ALalaw)
 
 #undef DECL_TEMPLATE
 
 static void LoadSamples(ALfloat *restrict dst, const ALvoid *restrict src, ALint srcstep,
                         enum FmtType srctype, ALsizei samples)
 {
+#define HANDLE_FMT(ET, ST) case ET: Load_##ST(dst, src, srcstep, samples); break
     switch(srctype)
     {
-        case FmtByte:
-            Load_ALbyte(dst, src, srcstep, samples);
-            break;
-        case FmtShort:
-            Load_ALshort(dst, src, srcstep, samples);
-            break;
-        case FmtFloat:
-            Load_ALfloat(dst, src, srcstep, samples);
-            break;
+        HANDLE_FMT(FmtByte, ALbyte);
+        HANDLE_FMT(FmtShort, ALshort);
+        HANDLE_FMT(FmtFloat, ALfloat);
+        HANDLE_FMT(FmtMulaw, ALmulaw);
+        HANDLE_FMT(FmtAlaw, ALalaw);
     }
+#undef HANDLE_FMT
 }
 
 

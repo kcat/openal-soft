@@ -236,10 +236,10 @@ struct ALvoiceProps {
     } Send[];
 };
 
-/* If not 'fading', gain targets are used directly without fading. */
-#define VOICE_IS_FADING (1<<0)
-#define VOICE_HAS_HRTF  (1<<1)
-#define VOICE_HAS_NFC   (1<<2)
+#define VOICE_IS_STATIC (1<<0)
+#define VOICE_IS_FADING (1<<1) /* Fading sources use gain stepping for smooth transitions. */
+#define VOICE_HAS_HRTF  (1<<2)
+#define VOICE_HAS_NFC   (1<<3)
 
 typedef struct ALvoice {
     struct ALvoiceProps *Props;
@@ -516,7 +516,7 @@ inline void ComputeFirstOrderGains(const BFMixParams *foa, const ALfloat mtx[4],
 }
 
 
-ALboolean MixSource(struct ALvoice *voice, struct ALsource *Source, ALCdevice *Device, ALsizei SamplesToDo);
+ALboolean MixSource(struct ALvoice *voice, ALCdevice *Device, ALsizei SamplesToDo);
 
 void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples);
 /* Caller must lock the device. */

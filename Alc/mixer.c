@@ -276,7 +276,7 @@ static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter
 #define RESAMPLED_BUF 1
 #define FILTERED_BUF 2
 #define NFC_DATA_BUF 3
-ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei SamplesToDo)
+ALboolean MixSource(ALvoice *voice, ALCdevice *Device, ALsizei SamplesToDo)
 {
     ALbufferlistitem *BufferListItem;
     ALbufferlistitem *BufferLoopItem;
@@ -297,7 +297,7 @@ ALboolean MixSource(ALvoice *voice, ALsource *Source, ALCdevice *Device, ALsizei
 
     /* Get source info */
     isplaying      = true; /* Will only be called while playing. */
-    isstatic       = Source->SourceType == AL_STATIC;
+    isstatic       = !!(voice->Flags&VOICE_IS_STATIC);
     DataPosInt     = ATOMIC_LOAD(&voice->position, almemory_order_acquire);
     DataPosFrac    = ATOMIC_LOAD(&voice->position_fraction, almemory_order_relaxed);
     BufferListItem = ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed);

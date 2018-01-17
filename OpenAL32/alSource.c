@@ -2623,6 +2623,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         voice->Step = 0;
 
         voice->Flags = start_fading ? VOICE_IS_FADING : 0;
+        if(source->SourceType == AL_STATIC) voice->Flags |= VOICE_IS_STATIC;
         memset(voice->Direct.Params, 0, sizeof(voice->Direct.Params[0])*voice->NumChannels);
         for(s = 0;s < device->NumAuxSends;s++)
             memset(voice->Send[s].Params, 0, sizeof(voice->Send[s].Params[0])*voice->NumChannels);

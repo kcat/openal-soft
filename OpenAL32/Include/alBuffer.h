@@ -105,8 +105,6 @@ typedef struct ALbuffer {
 ALbuffer *NewBuffer(ALCcontext *context);
 void DeleteBuffer(ALCdevice *device, ALbuffer *buffer);
 
-ALenum LoadData(ALbuffer *buffer, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALsizei align, ALboolean storesrc);
-
 inline void LockBuffersRead(ALCdevice *device)
 { LockUIntMapRead(&device->BufferMap); }
 inline void UnlockBuffersRead(ALCdevice *device)

@@ -760,6 +760,13 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             }
 
             WriteLock(&Source->queue_lock);
+            if(buffer && buffer->MappedAccess != 0)
+            {
+                WriteUnlock(&Source->queue_lock);
+                UnlockBuffersRead(device);
+                SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_OPERATION, AL_FALSE);
+            }
+            else
             {
                 ALenum state = GetSourceState(Source, GetSourceVoice(Source, Context));
                 if(state == AL_PLAYING || state == AL_PAUSED)
@@ -2880,6 +2887,12 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
          * reference on some buffers if this operation ends up failing. */
         ReadLock(&buffer->lock);
         IncrementRef(&buffer->ref);
+
+        if(buffer->MappedAccess != 0)
+        {
+            WriteUnlock(&source->queue_lock);
+            SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, buffer_error);
+        }
 
         if(BufferFmt == NULL)
             BufferFmt = buffer;

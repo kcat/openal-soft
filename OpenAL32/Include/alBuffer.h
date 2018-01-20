@@ -76,6 +76,7 @@ typedef struct ALbuffer {
 
     ALsizei  Frequency;
     ALenum   Format;
+    ALbitfieldSOFT Access;
     ALsizei  SampleLen;
 
     enum FmtChannels FmtChannels;
@@ -92,6 +93,8 @@ typedef struct ALbuffer {
 
     ATOMIC(ALsizei) UnpackAlign;
     ATOMIC(ALsizei) PackAlign;
+
+    ALbitfieldSOFT MappedAccess;
 
     /* Number of times buffer was attached to a source (deletion can only occur when 0) */
     RefCount ref;

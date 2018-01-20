@@ -45,12 +45,17 @@ extern inline struct ALbuffer *RemoveBuffer(ALCdevice *device, ALuint id);
 extern inline ALsizei FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType type);
 extern inline ALsizei FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type);
 
-static ALenum LoadData(ALbuffer *buffer, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALsizei align, ALboolean storesrc);
+static ALenum LoadData(ALbuffer *buffer, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALsizei align, ALbitfieldSOFT access, ALboolean storesrc);
 static ALboolean IsValidType(ALenum type);
 static ALboolean IsValidChannels(ALenum channels);
 static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans, enum UserFmtType *type);
 static ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *type);
 static ALsizei SanitizeAlignment(enum UserFmtType type, ALsizei align);
+
+
+#define FORMAT_MASK  0x00ffffff
+#define ACCESS_FLAGS (AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT)
+#define INVALID_FLAG_MASK  ~(FORMAT_MASK | ACCESS_FLAGS)
 
 
 AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
@@ -157,9 +162,9 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
     LockBuffersRead(device);
     if((albuf=LookupBuffer(device, buffer)) == NULL)
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
-    if(!(size >= 0 && freq > 0))
+    if(!(size >= 0 && freq > 0) || (format&INVALID_FLAG_MASK) != 0)
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-    if(DecomposeUserFormat(format, &srcchannels, &srctype) == AL_FALSE)
+    if(DecomposeUserFormat(format&FORMAT_MASK, &srcchannels, &srctype) == AL_FALSE)
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
 
     align = SanitizeAlignment(srctype, ATOMIC_LOAD_SEQ(&albuf->UnpackAlign));
@@ -178,8 +183,9 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
             if((size%framesize) != 0)
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
-            err = LoadData(albuf, freq, format, size/framesize*align,
-                           srcchannels, srctype, data, align, AL_TRUE);
+            err = LoadData(albuf, freq, format&FORMAT_MASK, size/framesize*align,
+                           srcchannels, srctype, data, align, format&ACCESS_FLAGS,
+                           AL_TRUE);
             if(err != AL_NO_ERROR)
                 SET_ERROR_AND_GOTO(context, err, done);
             break;
@@ -204,7 +210,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
                 case UserFmtBFormat3D: newformat = AL_FORMAT_BFORMAT3D_FLOAT32; break;
             }
             err = LoadData(albuf, freq, newformat, size/framesize*align,
-                           srcchannels, srctype, data, align, AL_TRUE);
+                           srcchannels, srctype, data, align, format&ACCESS_FLAGS,
+                           AL_TRUE);
             if(err != AL_NO_ERROR)
                 SET_ERROR_AND_GOTO(context, err, done);
             break;
@@ -228,7 +235,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
                 case UserFmtBFormat3D: newformat = AL_FORMAT_BFORMAT3D_16; break;
             }
             err = LoadData(albuf, freq, newformat, size/framesize*align,
-                           srcchannels, srctype, data, align, AL_TRUE);
+                           srcchannels, srctype, data, align, format&ACCESS_FLAGS,
+                           AL_TRUE);
             if(err != AL_NO_ERROR)
                 SET_ERROR_AND_GOTO(context, err, done);
             break;
@@ -252,11 +260,86 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
                 case UserFmtBFormat3D: newformat = AL_FORMAT_BFORMAT3D_16; break;
             }
             err = LoadData(albuf, freq, newformat, size/framesize*align,
-                           srcchannels, srctype, data, align, AL_TRUE);
+                           srcchannels, srctype, data, align, format&ACCESS_FLAGS,
+                           AL_TRUE);
             if(err != AL_NO_ERROR)
                 SET_ERROR_AND_GOTO(context, err, done);
             break;
     }
+
+done:
+    UnlockBuffersRead(device);
+    ALCcontext_DecRef(context);
+}
+
+AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei length, ALbitfieldSOFT access)
+{
+    void *retval = NULL;
+    ALCdevice *device;
+    ALCcontext *context;
+    ALbuffer *albuf;
+
+    context = GetContextRef();
+    if(!context) return retval;
+
+    device = context->Device;
+    LockBuffersRead(device);
+    if((albuf=LookupBuffer(device, buffer)) == NULL)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+    if(!access || (access&~(AL_MAP_READ_BIT_SOFT|AL_MAP_WRITE_BIT_SOFT)) != 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    WriteLock(&albuf->lock);
+    if(((access&AL_MAP_READ_BIT_SOFT) && !(albuf->Access&AL_MAP_READ_BIT_SOFT)) ||
+       ((access&AL_MAP_WRITE_BIT_SOFT) && !(albuf->Access&AL_MAP_WRITE_BIT_SOFT)))
+    {
+        WriteUnlock(&albuf->lock);
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    }
+    if(offset < 0 || offset >= albuf->OriginalSize ||
+       length <= 0 || length > albuf->OriginalSize - offset)
+    {
+        WriteUnlock(&albuf->lock);
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    }
+    if(ReadRef(&albuf->ref) != 0 || albuf->MappedAccess != 0)
+    {
+        WriteUnlock(&albuf->lock);
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+    }
+
+    retval = (ALbyte*)albuf->data + offset;
+    albuf->MappedAccess = access;
+    if((access&AL_MAP_WRITE_BIT_SOFT) && !(access&AL_MAP_READ_BIT_SOFT))
+        memset(retval, 0x55, length);
+    WriteUnlock(&albuf->lock);
+
+done:
+    UnlockBuffersRead(device);
+    ALCcontext_DecRef(context);
+
+    return retval;
+}
+
+AL_API void AL_APIENTRY alUnmapBufferSOFT(ALuint buffer)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALbuffer *albuf;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    LockBuffersRead(device);
+    if((albuf=LookupBuffer(device, buffer)) == NULL)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+
+    WriteLock(&albuf->lock);
+    if(albuf->MappedAccess == 0)
+        alSetError(context, AL_INVALID_OPERATION);
+    else
+        albuf->MappedAccess = 0;
+    WriteUnlock(&albuf->lock);
 
 done:
     UnlockBuffersRead(device);
@@ -303,6 +386,11 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
     {
         WriteUnlock(&albuf->lock);
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+    }
+    if(albuf->MappedAccess != 0)
+    {
+        WriteUnlock(&albuf->lock);
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
     }
 
     if(albuf->OriginalType == UserFmtIMA4)
@@ -362,7 +450,7 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
     LockBuffersRead(device);
     if((albuf=LookupBuffer(device, buffer)) == NULL)
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
-    if(!(samples >= 0 && samplerate != 0))
+    if(!(samples >= 0 && samplerate != 0) || (internalformat&~FORMAT_MASK) != 0)
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
     if(IsValidType(type) == AL_FALSE || IsValidChannels(channels) == AL_FALSE)
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
@@ -374,7 +462,7 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
     err = LoadData(albuf, samplerate, internalformat, samples,
-                   channels, type, data, align, AL_FALSE);
+                   channels, type, data, align, 0, AL_FALSE);
     if(err != AL_NO_ERROR)
         SET_ERROR_AND_GOTO(context, err, done);
 
@@ -956,7 +1044,7 @@ done:
  * Currently, the new format must have the same channel configuration as the
  * original format.
  */
-static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALsizei align, ALboolean storesrc)
+static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALsizei align, ALbitfieldSOFT access, ALboolean storesrc)
 {
     enum FmtChannels DstChannels = FmtMono;
     enum FmtType DstType = FmtUByte;
@@ -968,6 +1056,12 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
     if((long)SrcChannels != (long)DstChannels)
         return AL_INVALID_ENUM;
 
+    if(access != 0)
+    {
+        if(!storesrc || (long)SrcType != (long)DstType)
+            return AL_INVALID_VALUE;
+    }
+
     NewChannels = ChannelsFromFmt(DstChannels);
     NewBytes = BytesFromFmt(DstType);
 
@@ -978,7 +1072,7 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
         return AL_OUT_OF_MEMORY;
 
     WriteLock(&ALBuf->lock);
-    if(ReadRef(&ALBuf->ref) != 0)
+    if(ReadRef(&ALBuf->ref) != 0 || ALBuf->MappedAccess != 0)
     {
         WriteUnlock(&ALBuf->lock);
         return AL_INVALID_OPERATION;
@@ -1041,6 +1135,7 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
     ALBuf->FmtChannels = DstChannels;
     ALBuf->FmtType = DstType;
     ALBuf->Format = NewFormat;
+    ALBuf->Access = access;
 
     ALBuf->SampleLen = frames;
     ALBuf->LoopStart = 0;
@@ -1346,6 +1441,8 @@ ALbuffer *NewBuffer(ALCcontext *context)
     if(!buffer)
         SET_ERROR_AND_RETURN_VALUE(context, AL_OUT_OF_MEMORY, NULL);
     RWLockInit(&buffer->lock);
+    buffer->Access = 0;
+    buffer->MappedAccess = 0;
 
     err = NewThunkEntry(&buffer->id);
     if(err == AL_NO_ERROR)

@@ -959,7 +959,7 @@ done:
 static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALsizei align, ALboolean storesrc)
 {
     enum FmtChannels DstChannels = FmtMono;
-    enum FmtType DstType = FmtByte;
+    enum FmtType DstType = FmtUByte;
     ALuint NewChannels, NewBytes;
     ALuint64 newsize;
 
@@ -1169,7 +1169,7 @@ ALsizei BytesFromFmt(enum FmtType type)
 {
     switch(type)
     {
-    case FmtByte: return sizeof(ALbyte);
+    case FmtUByte: return sizeof(ALubyte);
     case FmtShort: return sizeof(ALshort);
     case FmtFloat: return sizeof(ALfloat);
     case FmtMulaw: return sizeof(ALubyte);
@@ -1200,52 +1200,52 @@ static ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum Fm
         enum FmtChannels channels;
         enum FmtType type;
     } list[] = {
-        { AL_FORMAT_MONO8,         FmtMono, FmtByte  },
+        { AL_FORMAT_MONO8,         FmtMono, FmtUByte },
         { AL_FORMAT_MONO16,        FmtMono, FmtShort },
         { AL_FORMAT_MONO_FLOAT32,  FmtMono, FmtFloat },
         { AL_FORMAT_MONO_MULAW,    FmtMono, FmtMulaw },
         { AL_FORMAT_MONO_ALAW_EXT, FmtMono, FmtAlaw  },
 
-        { AL_FORMAT_STEREO8,         FmtStereo, FmtByte  },
+        { AL_FORMAT_STEREO8,         FmtStereo, FmtUByte },
         { AL_FORMAT_STEREO16,        FmtStereo, FmtShort },
         { AL_FORMAT_STEREO_FLOAT32,  FmtStereo, FmtFloat },
         { AL_FORMAT_STEREO_MULAW,    FmtStereo, FmtMulaw },
         { AL_FORMAT_STEREO_ALAW_EXT, FmtStereo, FmtAlaw  },
 
-        { AL_FORMAT_REAR8,      FmtRear, FmtByte  },
+        { AL_FORMAT_REAR8,      FmtRear, FmtUByte },
         { AL_FORMAT_REAR16,     FmtRear, FmtShort },
         { AL_FORMAT_REAR32,     FmtRear, FmtFloat },
         { AL_FORMAT_REAR_MULAW, FmtRear, FmtMulaw },
 
-        { AL_FORMAT_QUAD8_LOKI,  FmtQuad, FmtByte  },
+        { AL_FORMAT_QUAD8_LOKI,  FmtQuad, FmtUByte },
         { AL_FORMAT_QUAD16_LOKI, FmtQuad, FmtShort },
 
-        { AL_FORMAT_QUAD8,      FmtQuad, FmtByte  },
+        { AL_FORMAT_QUAD8,      FmtQuad, FmtUByte },
         { AL_FORMAT_QUAD16,     FmtQuad, FmtShort },
         { AL_FORMAT_QUAD32,     FmtQuad, FmtFloat },
         { AL_FORMAT_QUAD_MULAW, FmtQuad, FmtMulaw },
 
-        { AL_FORMAT_51CHN8,      FmtX51, FmtByte  },
+        { AL_FORMAT_51CHN8,      FmtX51, FmtUByte },
         { AL_FORMAT_51CHN16,     FmtX51, FmtShort },
         { AL_FORMAT_51CHN32,     FmtX51, FmtFloat },
         { AL_FORMAT_51CHN_MULAW, FmtX51, FmtMulaw },
 
-        { AL_FORMAT_61CHN8,      FmtX61, FmtByte  },
+        { AL_FORMAT_61CHN8,      FmtX61, FmtUByte },
         { AL_FORMAT_61CHN16,     FmtX61, FmtShort },
         { AL_FORMAT_61CHN32,     FmtX61, FmtFloat },
         { AL_FORMAT_61CHN_MULAW, FmtX61, FmtMulaw },
 
-        { AL_FORMAT_71CHN8,      FmtX71, FmtByte  },
+        { AL_FORMAT_71CHN8,      FmtX71, FmtUByte },
         { AL_FORMAT_71CHN16,     FmtX71, FmtShort },
         { AL_FORMAT_71CHN32,     FmtX71, FmtFloat },
         { AL_FORMAT_71CHN_MULAW, FmtX71, FmtMulaw },
 
-        { AL_FORMAT_BFORMAT2D_8,       FmtBFormat2D, FmtByte  },
+        { AL_FORMAT_BFORMAT2D_8,       FmtBFormat2D, FmtUByte },
         { AL_FORMAT_BFORMAT2D_16,      FmtBFormat2D, FmtShort },
         { AL_FORMAT_BFORMAT2D_FLOAT32, FmtBFormat2D, FmtFloat },
         { AL_FORMAT_BFORMAT2D_MULAW,   FmtBFormat2D, FmtMulaw },
 
-        { AL_FORMAT_BFORMAT3D_8,       FmtBFormat3D, FmtByte  },
+        { AL_FORMAT_BFORMAT3D_8,       FmtBFormat3D, FmtUByte },
         { AL_FORMAT_BFORMAT3D_16,      FmtBFormat3D, FmtShort },
         { AL_FORMAT_BFORMAT3D_FLOAT32, FmtBFormat3D, FmtFloat },
         { AL_FORMAT_BFORMAT3D_MULAW,   FmtBFormat3D, FmtMulaw },

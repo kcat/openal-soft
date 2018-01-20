@@ -44,7 +44,7 @@ inline ALsizei FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType
 
 /* Storable formats */
 enum FmtType {
-    FmtByte  = UserFmtByte,
+    FmtUByte = UserFmtUByte,
     FmtShort = UserFmtShort,
     FmtFloat = UserFmtFloat,
     FmtMulaw = UserFmtMulaw,

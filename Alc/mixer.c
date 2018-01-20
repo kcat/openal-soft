@@ -193,8 +193,8 @@ void aluInitMixer(void)
 }
 
 
-static inline ALfloat Sample_ALbyte(ALbyte val)
-{ return val * (1.0f/128.0f); }
+static inline ALfloat Sample_ALubyte(ALubyte val)
+{ return (val-128) * (1.0f/128.0f); }
 
 static inline ALfloat Sample_ALshort(ALshort val)
 { return val * (1.0f/32768.0f); }
@@ -219,7 +219,7 @@ static inline void Load_##T(ALfloat *restrict dst, const T *restrict src,     \
         dst[i] += Sample_##T(src[i*srcstep]);                                 \
 }
 
-DECL_TEMPLATE(ALbyte)
+DECL_TEMPLATE(ALubyte)
 DECL_TEMPLATE(ALshort)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALmulaw)
@@ -233,7 +233,7 @@ static void LoadSamples(ALfloat *restrict dst, const ALvoid *restrict src, ALint
 #define HANDLE_FMT(ET, ST) case ET: Load_##ST(dst, src, srcstep, samples); break
     switch(srctype)
     {
-        HANDLE_FMT(FmtByte, ALbyte);
+        HANDLE_FMT(FmtUByte, ALubyte);
         HANDLE_FMT(FmtShort, ALshort);
         HANDLE_FMT(FmtFloat, ALfloat);
         HANDLE_FMT(FmtMulaw, ALmulaw);

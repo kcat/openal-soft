@@ -50,7 +50,7 @@ static ALboolean IsValidType(ALenum type);
 static ALboolean IsValidChannels(ALenum channels);
 static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans, enum UserFmtType *type);
 static ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *type);
-static ALboolean SanitizeAlignment(enum UserFmtType type, ALsizei *align);
+static ALsizei SanitizeAlignment(enum UserFmtType type, ALsizei align);
 
 
 AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
@@ -162,9 +162,9 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
     if(DecomposeUserFormat(format, &srcchannels, &srctype) == AL_FALSE)
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
 
-    align = ATOMIC_LOAD_SEQ(&albuf->UnpackAlign);
-    if(SanitizeAlignment(srctype, &align) == AL_FALSE)
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    align = SanitizeAlignment(srctype, ATOMIC_LOAD_SEQ(&albuf->UnpackAlign));
+    if(align < 1) SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+
     switch(srctype)
     {
         case UserFmtByte:
@@ -288,8 +288,8 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
 
     WriteLock(&albuf->lock);
-    align = ATOMIC_LOAD_SEQ(&albuf->UnpackAlign);
-    if(SanitizeAlignment(srctype, &align) == AL_FALSE)
+    align = SanitizeAlignment(srctype, ATOMIC_LOAD_SEQ(&albuf->UnpackAlign));
+    if(align < 1)
     {
         WriteUnlock(&albuf->lock);
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
@@ -367,9 +367,9 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint buffer,
     if(IsValidType(type) == AL_FALSE || IsValidChannels(channels) == AL_FALSE)
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
 
-    align = ATOMIC_LOAD_SEQ(&albuf->UnpackAlign);
-    if(SanitizeAlignment(type, &align) == AL_FALSE)
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    align = SanitizeAlignment(type, ATOMIC_LOAD_SEQ(&albuf->UnpackAlign));
+    if(align < 1) SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+
     if((samples%align) != 0)
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
@@ -405,8 +405,8 @@ AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint buffer,
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
 
     WriteLock(&albuf->lock);
-    align = ATOMIC_LOAD_SEQ(&albuf->UnpackAlign);
-    if(SanitizeAlignment(type, &align) == AL_FALSE)
+    align = SanitizeAlignment(type, ATOMIC_LOAD_SEQ(&albuf->UnpackAlign));
+    if(align < 1)
     {
         WriteUnlock(&albuf->lock);
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
@@ -460,8 +460,8 @@ AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint buffer,
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
 
     ReadLock(&albuf->lock);
-    align = ATOMIC_LOAD_SEQ(&albuf->PackAlign);
-    if(SanitizeAlignment(type, &align) == AL_FALSE)
+    align = SanitizeAlignment(type, ATOMIC_LOAD_SEQ(&albuf->PackAlign));
+    if(align < 1)
     {
         ReadUnlock(&albuf->lock);
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
@@ -1265,12 +1265,12 @@ static ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum Fm
     return AL_FALSE;
 }
 
-static ALboolean SanitizeAlignment(enum UserFmtType type, ALsizei *align)
+static ALsizei SanitizeAlignment(enum UserFmtType type, ALsizei align)
 {
-    if(*align < 0)
-        return AL_FALSE;
+    if(align < 0)
+        return 0;
 
-    if(*align == 0)
+    if(align == 0)
     {
         if(type == UserFmtIMA4)
         {
@@ -1278,29 +1278,27 @@ static ALboolean SanitizeAlignment(enum UserFmtType type, ALsizei *align)
              * nVidia and Apple use 64+1 sample frames per block -> block_size=36 bytes per channel
              * Most PC sound software uses 2040+1 sample frames per block -> block_size=1024 bytes per channel
              */
-            *align = 65;
+            return 65;
         }
-        else if(type == UserFmtMSADPCM)
-            *align = 64;
-        else
-            *align = 1;
-        return AL_TRUE;
+        if(type == UserFmtMSADPCM)
+            return 64;
+        return 1;
     }
 
     if(type == UserFmtIMA4)
     {
         /* IMA4 block alignment must be a multiple of 8, plus 1. */
-        return ((*align)&7) == 1;
+        if((align&7) == 1) return align;
+        return 0;
     }
     if(type == UserFmtMSADPCM)
     {
         /* MSADPCM block alignment must be a multiple of 2. */
-        /* FIXME: Too strict? Might only require align*channels to be a
-         * multiple of 2. */
-        return ((*align)&1) == 0;
+        if((align&1) == 0) return align;
+        return 0;
     }
 
-    return AL_TRUE;
+    return align;
 }
 
 

@@ -1316,7 +1316,6 @@ static ALboolean IsValidType(ALenum type)
         case AL_UNSIGNED_INT_SOFT:
         case AL_FLOAT_SOFT:
         case AL_DOUBLE_SOFT:
-        case AL_MULAW_SOFT:
             return AL_TRUE;
     }
     return AL_FALSE;
@@ -1333,8 +1332,6 @@ static ALboolean IsValidChannels(ALenum channels)
         case AL_5POINT1_SOFT:
         case AL_6POINT1_SOFT:
         case AL_7POINT1_SOFT:
-        case AL_BFORMAT2D_SOFT:
-        case AL_BFORMAT3D_SOFT:
             return AL_TRUE;
     }
     return AL_FALSE;

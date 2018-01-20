@@ -17,8 +17,8 @@ enum UserFmtType {
     UserFmtUInt   = AL_UNSIGNED_INT_SOFT,
     UserFmtFloat  = AL_FLOAT_SOFT,
     UserFmtDouble = AL_DOUBLE_SOFT,
-    UserFmtMulaw  = AL_MULAW_SOFT,
-    UserFmtAlaw   = 0x10000000,
+    UserFmtMulaw  = 0x10000000,
+    UserFmtAlaw,
     UserFmtIMA4,
     UserFmtMSADPCM,
 };
@@ -30,8 +30,8 @@ enum UserFmtChannels {
     UserFmtX51       = AL_5POINT1_SOFT, /* (WFX order) */
     UserFmtX61       = AL_6POINT1_SOFT, /* (WFX order) */
     UserFmtX71       = AL_7POINT1_SOFT, /* (WFX order) */
-    UserFmtBFormat2D = AL_BFORMAT2D_SOFT, /* WXY */
-    UserFmtBFormat3D = AL_BFORMAT3D_SOFT, /* WXYZ */
+    UserFmtBFormat2D = 0x20000000, /* WXY */
+    UserFmtBFormat3D, /* WXYZ */
 };
 
 ALsizei BytesFromUserFmt(enum UserFmtType type);

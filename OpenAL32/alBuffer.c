@@ -288,29 +288,23 @@ AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei 
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     if(!access || (access&~(AL_MAP_READ_BIT_SOFT|AL_MAP_WRITE_BIT_SOFT)) != 0)
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+
     WriteLock(&albuf->lock);
     if(((access&AL_MAP_READ_BIT_SOFT) && !(albuf->Access&AL_MAP_READ_BIT_SOFT)) ||
        ((access&AL_MAP_WRITE_BIT_SOFT) && !(albuf->Access&AL_MAP_WRITE_BIT_SOFT)))
-    {
-        WriteUnlock(&albuf->lock);
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-    }
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, unlock_done);
     if(offset < 0 || offset >= albuf->OriginalSize ||
        length <= 0 || length > albuf->OriginalSize - offset)
-    {
-        WriteUnlock(&albuf->lock);
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-    }
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, unlock_done);
     if(ReadRef(&albuf->ref) != 0 || albuf->MappedAccess != 0)
-    {
-        WriteUnlock(&albuf->lock);
-        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
-    }
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, unlock_done);
 
     retval = (ALbyte*)albuf->data + offset;
     albuf->MappedAccess = access;
     if((access&AL_MAP_WRITE_BIT_SOFT) && !(access&AL_MAP_READ_BIT_SOFT))
         memset(retval, 0x55, length);
+
+unlock_done:
     WriteUnlock(&albuf->lock);
 
 done:

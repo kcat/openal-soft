@@ -81,7 +81,7 @@ static void al_fprintf(FILE *file, const char *fmt, ...)
 #define fprintf al_fprintf
 #define printf(...) al_fprintf(stdout, __VA_ARGS__)
 
-static int al_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *file)
+static size_t al_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *file)
 {
     char str[1024];
     WCHAR *wstr;

@@ -932,7 +932,7 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALsizei frames, enum UserFm
         newsize = (newsize+15) & ~0xf;
     if(newsize != ALBuf->BytesAlloc)
     {
-        void *temp = al_calloc(16, (size_t)newsize);
+        void *temp = al_malloc(16, (size_t)newsize);
         if(!temp && newsize)
         {
             WriteUnlock(&ALBuf->lock);

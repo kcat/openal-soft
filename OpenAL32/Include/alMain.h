@@ -52,7 +52,7 @@ typedef unsigned int ALbitfieldSOFT;
 #define AL_MAP_READ_BIT_SOFT                     0x01000000
 #define AL_MAP_WRITE_BIT_SOFT                    0x02000000
 typedef void* (AL_APIENTRY*LPALMAPBUFFERSOFT)(ALuint buffer, ALsizei offset, ALsizei length, ALbitfieldSOFT access);
-typedef void* (AL_APIENTRY*LPALUNMAPBUFFERSOFT)(ALuint buffer);
+typedef void (AL_APIENTRY*LPALUNMAPBUFFERSOFT)(ALuint buffer);
 #ifdef AL_ALEXT_PROTOTYPES
 AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei length, ALbitfieldSOFT access);
 AL_API void AL_APIENTRY alUnmapBufferSOFT(ALuint buffer);

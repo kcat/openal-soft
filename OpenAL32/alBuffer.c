@@ -939,7 +939,7 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALsizei frames, enum UserFm
         ALBuf->OriginalSize  = frames / align * byte_align;
         ALBuf->OriginalAlign = align;
         assert(DstType == FmtShort);
-        if(data != NULL)
+        if(data != NULL && ALBuf->data != NULL)
             Convert_ALshort_ALima4(ALBuf->data, data, NumChannels, frames, align);
     }
     else if(SrcType == UserFmtMSADPCM)
@@ -948,18 +948,16 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALsizei frames, enum UserFm
         ALBuf->OriginalSize  = frames / align * byte_align;
         ALBuf->OriginalAlign = align;
         assert(DstType == FmtShort);
-        if(data != NULL)
+        if(data != NULL && ALBuf->data != NULL)
             Convert_ALshort_ALmsadpcm(ALBuf->data, data, NumChannels, frames, align);
     }
     else
     {
         ALBuf->OriginalSize  = frames * FrameSize;
         ALBuf->OriginalAlign = 1;
-        if(data != NULL)
-        {
-            assert((long)SrcType == (long)DstType);
+        assert((long)SrcType == (long)DstType);
+        if(data != NULL && ALBuf->data != NULL)
             memcpy(ALBuf->data, data, frames*FrameSize);
-        }
     }
 
     ALBuf->Frequency = freq;

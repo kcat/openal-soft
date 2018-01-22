@@ -104,9 +104,6 @@
 /* Define to the size of a long long int type */
 #cmakedefine SIZEOF_LONG_LONG ${SIZEOF_LONG_LONG}
 
-/* Define if we have C99 variable-length array support */
-#cmakedefine HAVE_C99_VLA
-
 /* Define if we have C99 _Bool support */
 #cmakedefine HAVE_C99_BOOL
 
@@ -142,9 +139,6 @@
 
 /* Define if we have pthread_np.h */
 #cmakedefine HAVE_PTHREAD_NP_H
-
-/* Define if we have alloca.h */
-#cmakedefine HAVE_ALLOCA_H
 
 /* Define if we have malloc.h */
 #cmakedefine HAVE_MALLOC_H

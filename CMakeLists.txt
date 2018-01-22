@@ -228,16 +228,6 @@ IF(HAVE_LIBLOG)
     SET(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} log)
 ENDIF()
 
-# Check if we have C99 variable length arrays
-CHECK_C_SOURCE_COMPILES(
-"int main(int argc, char *argv[])
- {
-     volatile int tmp[argc];
-     tmp[0] = argv[0][0];
-     return tmp[0];
- }"
-HAVE_C99_VLA)
-
 # Check if we have C99 bool
 CHECK_C_SOURCE_COMPILES(
 "int main(int argc, char *argv[])
@@ -506,12 +496,6 @@ CHECK_SYMBOL_EXISTS(_aligned_malloc  malloc.h HAVE__ALIGNED_MALLOC)
 CHECK_SYMBOL_EXISTS(lrintf math.h HAVE_LRINTF)
 CHECK_SYMBOL_EXISTS(modff  math.h HAVE_MODFF)
 CHECK_SYMBOL_EXISTS(log2f  math.h HAVE_LOG2F)
-IF(NOT HAVE_C99_VLA)
-    CHECK_SYMBOL_EXISTS(alloca malloc.h HAVE_ALLOCA)
-    IF(NOT HAVE_ALLOCA)
-        MESSAGE(FATAL_ERROR "No alloca function found, please report!")
-    ENDIF()
-ENDIF()
 
 IF(HAVE_FLOAT_H)
     CHECK_SYMBOL_EXISTS(_controlfp float.h HAVE__CONTROLFP)

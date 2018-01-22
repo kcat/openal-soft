@@ -9,28 +9,28 @@ extern "C" {
 
 /* User formats */
 enum UserFmtType {
-    UserFmtByte   = AL_BYTE_SOFT,
-    UserFmtUByte  = AL_UNSIGNED_BYTE_SOFT,
-    UserFmtShort  = AL_SHORT_SOFT,
-    UserFmtUShort = AL_UNSIGNED_SHORT_SOFT,
-    UserFmtInt    = AL_INT_SOFT,
-    UserFmtUInt   = AL_UNSIGNED_INT_SOFT,
-    UserFmtFloat  = AL_FLOAT_SOFT,
-    UserFmtDouble = AL_DOUBLE_SOFT,
-    UserFmtMulaw  = 0x10000000,
+    UserFmtByte,
+    UserFmtUByte,
+    UserFmtShort,
+    UserFmtUShort,
+    UserFmtInt,
+    UserFmtUInt,
+    UserFmtFloat,
+    UserFmtDouble,
+    UserFmtMulaw,
     UserFmtAlaw,
     UserFmtIMA4,
     UserFmtMSADPCM,
 };
 enum UserFmtChannels {
-    UserFmtMono      = AL_MONO_SOFT,
-    UserFmtStereo    = AL_STEREO_SOFT,
-    UserFmtRear      = AL_REAR_SOFT,
-    UserFmtQuad      = AL_QUAD_SOFT,
-    UserFmtX51       = AL_5POINT1_SOFT, /* (WFX order) */
-    UserFmtX61       = AL_6POINT1_SOFT, /* (WFX order) */
-    UserFmtX71       = AL_7POINT1_SOFT, /* (WFX order) */
-    UserFmtBFormat2D = 0x20000000, /* WXY */
+    UserFmtMono,
+    UserFmtStereo,
+    UserFmtRear,
+    UserFmtQuad,
+    UserFmtX51, /* (WFX order) */
+    UserFmtX61, /* (WFX order) */
+    UserFmtX71, /* (WFX order) */
+    UserFmtBFormat2D, /* WXY */
     UserFmtBFormat3D, /* WXYZ */
 };
 

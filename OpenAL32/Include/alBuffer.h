@@ -71,19 +71,17 @@ inline ALsizei FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type)
 typedef struct ALbuffer {
     ALvoid  *data;
 
-    ALsizei  Frequency;
-    ALenum   Format;
+    ALsizei Frequency;
     ALbitfieldSOFT Access;
-    ALsizei  SampleLen;
+    ALsizei SampleLen;
 
     enum FmtChannels FmtChannels;
     enum FmtType     FmtType;
-    ALuint BytesAlloc;
+    ALsizei BytesAlloc;
 
-    enum UserFmtChannels OriginalChannels;
-    enum UserFmtType     OriginalType;
-    ALsizei              OriginalSize;
-    ALsizei              OriginalAlign;
+    enum UserFmtType OriginalType;
+    ALsizei OriginalSize;
+    ALsizei OriginalAlign;
 
     ALsizei LoopStart;
     ALsizei LoopEnd;

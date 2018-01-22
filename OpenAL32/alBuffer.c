@@ -45,9 +45,8 @@ extern inline struct ALbuffer *RemoveBuffer(ALCdevice *device, ALuint id);
 extern inline ALsizei FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType type);
 extern inline ALsizei FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type);
 
-static ALenum LoadData(ALbuffer *buffer, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALsizei align, ALbitfieldSOFT access, ALboolean storesrc);
+static ALenum LoadData(ALbuffer *buffer, ALuint freq, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALsizei align, ALbitfieldSOFT access);
 static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans, enum UserFmtType *type);
-static ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *type);
 static ALsizei SanitizeAlignment(enum UserFmtType type, ALsizei align);
 
 
@@ -148,7 +147,6 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
     ALCdevice *device;
     ALCcontext *context;
     ALbuffer *albuf;
-    ALenum newformat = AL_NONE;
     ALsizei framesize;
     ALsizei align;
     ALenum err;
@@ -180,59 +178,30 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
             if((size%framesize) != 0)
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
-            err = LoadData(albuf, freq, format&FORMAT_MASK, size/framesize*align,
-                           srcchannels, srctype, data, align, format&ACCESS_FLAGS,
-                           AL_TRUE);
+            err = LoadData(albuf, freq, size/framesize*align, srcchannels, srctype,
+                           data, align, format&ACCESS_FLAGS);
             if(err != AL_NO_ERROR)
                 SET_ERROR_AND_GOTO(context, err, done);
             break;
 
         case UserFmtIMA4:
-            framesize  = (align-1)/2 + 4;
-            framesize *= ChannelsFromUserFmt(srcchannels);
+            framesize = ((align-1)/2 + 4) * ChannelsFromUserFmt(srcchannels);
             if((size%framesize) != 0)
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
-            switch(srcchannels)
-            {
-                case UserFmtMono: newformat = AL_FORMAT_MONO16; break;
-                case UserFmtStereo: newformat = AL_FORMAT_STEREO16; break;
-                case UserFmtRear: newformat = AL_FORMAT_REAR16; break;
-                case UserFmtQuad: newformat = AL_FORMAT_QUAD16; break;
-                case UserFmtX51: newformat = AL_FORMAT_51CHN16; break;
-                case UserFmtX61: newformat = AL_FORMAT_61CHN16; break;
-                case UserFmtX71: newformat = AL_FORMAT_71CHN16; break;
-                case UserFmtBFormat2D: newformat = AL_FORMAT_BFORMAT2D_16; break;
-                case UserFmtBFormat3D: newformat = AL_FORMAT_BFORMAT3D_16; break;
-            }
-            err = LoadData(albuf, freq, newformat, size/framesize*align,
-                           srcchannels, srctype, data, align, format&ACCESS_FLAGS,
-                           AL_TRUE);
+            err = LoadData(albuf, freq, size/framesize*align, srcchannels, srctype,
+                           data, align, format&ACCESS_FLAGS);
             if(err != AL_NO_ERROR)
                 SET_ERROR_AND_GOTO(context, err, done);
             break;
 
         case UserFmtMSADPCM:
-            framesize  = (align-2)/2 + 7;
-            framesize *= ChannelsFromUserFmt(srcchannels);
+            framesize = ((align-2)/2 + 7) * ChannelsFromUserFmt(srcchannels);
             if((size%framesize) != 0)
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
-            switch(srcchannels)
-            {
-                case UserFmtMono: newformat = AL_FORMAT_MONO16; break;
-                case UserFmtStereo: newformat = AL_FORMAT_STEREO16; break;
-                case UserFmtRear: newformat = AL_FORMAT_REAR16; break;
-                case UserFmtQuad: newformat = AL_FORMAT_QUAD16; break;
-                case UserFmtX51: newformat = AL_FORMAT_51CHN16; break;
-                case UserFmtX61: newformat = AL_FORMAT_61CHN16; break;
-                case UserFmtX71: newformat = AL_FORMAT_71CHN16; break;
-                case UserFmtBFormat2D: newformat = AL_FORMAT_BFORMAT2D_16; break;
-                case UserFmtBFormat3D: newformat = AL_FORMAT_BFORMAT3D_16; break;
-            }
-            err = LoadData(albuf, freq, newformat, size/framesize*align,
-                           srcchannels, srctype, data, align, format&ACCESS_FLAGS,
-                           AL_TRUE);
+            err = LoadData(albuf, freq, size/framesize*align, srcchannels, srctype,
+                           data, align, format&ACCESS_FLAGS);
             if(err != AL_NO_ERROR)
                 SET_ERROR_AND_GOTO(context, err, done);
             break;
@@ -319,9 +288,10 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
     ALCcontext *context;
     ALbuffer *albuf;
     ALsizei byte_align;
-    ALsizei channels;
-    ALsizei bytes;
+    ALsizei frame_size;
+    ALsizei num_chans;
     ALsizei align;
+    void *dst;
 
     context = GetContextRef();
     if(!context) return;
@@ -342,7 +312,7 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
         WriteUnlock(&albuf->lock);
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
     }
-    if(srcchannels != albuf->OriginalChannels || srctype != albuf->OriginalType)
+    if((long)srcchannels != (long)albuf->FmtChannels || srctype != albuf->OriginalType)
     {
         WriteUnlock(&albuf->lock);
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
@@ -361,18 +331,17 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
     if(albuf->OriginalType == UserFmtIMA4)
     {
         byte_align  = (albuf->OriginalAlign-1)/2 + 4;
-        byte_align *= ChannelsFromUserFmt(albuf->OriginalChannels);
+        byte_align *= ChannelsFromFmt(albuf->FmtChannels);
     }
     else if(albuf->OriginalType == UserFmtMSADPCM)
     {
         byte_align  = (albuf->OriginalAlign-2)/2 + 7;
-        byte_align *= ChannelsFromUserFmt(albuf->OriginalChannels);
+        byte_align *= ChannelsFromFmt(albuf->FmtChannels);
     }
     else
     {
         byte_align  = albuf->OriginalAlign;
-        byte_align *= FrameSizeFromUserFmt(albuf->OriginalChannels,
-                                           albuf->OriginalType);
+        byte_align *= FrameSizeFromFmt(albuf->FmtChannels, albuf->FmtType);
     }
 
     if(offset > albuf->OriginalSize || length > albuf->OriginalSize-offset ||
@@ -382,14 +351,22 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
     }
 
-    channels = ChannelsFromFmt(albuf->FmtChannels);
-    bytes = BytesFromFmt(albuf->FmtType);
+    num_chans = ChannelsFromFmt(albuf->FmtChannels);
+    frame_size = num_chans * BytesFromFmt(albuf->FmtType);
     /* offset -> byte offset, length -> sample count */
-    offset = offset/byte_align * channels*bytes;
+    offset = offset/byte_align * frame_size;
     length = length/byte_align * albuf->OriginalAlign;
 
-    ConvertData((char*)albuf->data+offset, (enum UserFmtType)albuf->FmtType,
-                data, srctype, channels, length, align);
+    dst = (ALbyte*)albuf->data + offset;
+    if(srctype == UserFmtIMA4 && albuf->FmtType == FmtShort)
+        Convert_ALshort_ALima4(dst, data, num_chans, length, align);
+    else if(srctype == UserFmtMSADPCM && albuf->FmtType == FmtShort)
+        Convert_ALshort_ALmsadpcm(dst, data, num_chans, length, align);
+    else
+    {
+        assert((long)srctype == (long)albuf->FmtType);
+        memcpy(dst, data, length*frame_size);
+    }
     WriteUnlock(&albuf->lock);
 
 done:
@@ -668,15 +645,6 @@ AL_API ALvoid AL_APIENTRY alGetBufferf(ALuint buffer, ALenum param, ALfloat *val
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
     switch(param)
     {
-    case AL_SEC_LENGTH_SOFT:
-        ReadLock(&albuf->lock);
-        if(albuf->SampleLen != 0)
-            *value = albuf->SampleLen / (ALfloat)albuf->Frequency;
-        else
-            *value = 0.0f;
-        ReadUnlock(&albuf->lock);
-        break;
-
     default:
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
     }
@@ -785,18 +753,6 @@ AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum param, ALint *value
         ReadUnlock(&albuf->lock);
         break;
 
-    case AL_INTERNAL_FORMAT_SOFT:
-        *value = albuf->Format;
-        break;
-
-    case AL_BYTE_LENGTH_SOFT:
-        *value = albuf->OriginalSize;
-        break;
-
-    case AL_SAMPLE_LENGTH_SOFT:
-        *value = albuf->SampleLen;
-        break;
-
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
         *value = ATOMIC_LOAD_SEQ(&albuf->UnpackAlign);
         break;
@@ -899,32 +855,54 @@ done:
  * Currently, the new format must have the same channel configuration as the
  * original format.
  */
-static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALsizei align, ALbitfieldSOFT access, ALboolean storesrc)
+static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALsizei align, ALbitfieldSOFT access)
 {
     enum FmtChannels DstChannels = FmtMono;
     enum FmtType DstType = FmtUByte;
-    ALuint NewChannels, NewBytes;
-    ALuint64 newsize;
+    ALsizei NumChannels, FrameSize;
+    ALsizei newsize;
 
-    if(DecomposeFormat(NewFormat, &DstChannels, &DstType) == AL_FALSE)
-        return AL_INVALID_ENUM;
+    /* Currently no channels need to be converted. */
+    switch(SrcChannels)
+    {
+        case UserFmtMono: DstChannels = FmtMono; break;
+        case UserFmtStereo: DstChannels = FmtStereo; break;
+        case UserFmtRear: DstChannels = FmtRear; break;
+        case UserFmtQuad: DstChannels = FmtQuad; break;
+        case UserFmtX51: DstChannels = FmtX51; break;
+        case UserFmtX61: DstChannels = FmtX61; break;
+        case UserFmtX71: DstChannels = FmtX71; break;
+        case UserFmtBFormat2D: DstChannels = FmtBFormat2D; break;
+        case UserFmtBFormat3D: DstChannels = FmtBFormat3D; break;
+    }
     if((long)SrcChannels != (long)DstChannels)
         return AL_INVALID_ENUM;
 
+    /* IMA4 and MSADPCM convert to 16-bit short. */
+    switch(SrcType)
+    {
+        case UserFmtUByte: DstType = FmtUByte; break;
+        case UserFmtShort: DstType = FmtShort; break;
+        case UserFmtFloat: DstType = FmtFloat; break;
+        case UserFmtDouble: DstType = FmtDouble; break;
+        case UserFmtAlaw: DstType = FmtAlaw; break;
+        case UserFmtMulaw: DstType = FmtMulaw; break;
+        case UserFmtIMA4: DstType = FmtShort; break;
+        case UserFmtMSADPCM: DstType = FmtShort; break;
+    }
+
     if(access != 0)
     {
-        if(!storesrc || (long)SrcType != (long)DstType)
+        if((long)SrcType != (long)DstType)
             return AL_INVALID_VALUE;
     }
 
-    NewChannels = ChannelsFromFmt(DstChannels);
-    NewBytes = BytesFromFmt(DstType);
+    NumChannels = ChannelsFromFmt(DstChannels);
+    FrameSize = NumChannels * BytesFromFmt(DstType);
 
-    newsize = frames;
-    newsize *= NewBytes;
-    newsize *= NewChannels;
-    if(newsize > INT_MAX)
+    if(frames > INT_MAX/FrameSize)
         return AL_OUT_OF_MEMORY;
+    newsize = frames*FrameSize;
 
     WriteLock(&ALBuf->lock);
     if(ReadRef(&ALBuf->ref) != 0 || ALBuf->MappedAccess != 0)
@@ -939,7 +917,8 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
      * usage, and reporting the real size could cause problems for apps that
      * use AL_SIZE to try to get the buffer's play length.
      */
-    newsize = (newsize+15) & ~0xf;
+    if(newsize <= INT_MAX-15)
+        newsize = (newsize+15) & ~0xf;
     if(newsize != ALBuf->BytesAlloc)
     {
         void *temp = al_calloc(16, (size_t)newsize);
@@ -950,46 +929,42 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALenum NewFormat, ALsizei f
         }
         al_free(ALBuf->data);
         ALBuf->data = temp;
-        ALBuf->BytesAlloc = (ALuint)newsize;
+        ALBuf->BytesAlloc = newsize;
     }
 
-    if(data != NULL)
-        ConvertData(ALBuf->data, (enum UserFmtType)DstType, data, SrcType, NewChannels, frames, align);
-
-    if(storesrc)
+    ALBuf->OriginalType = SrcType;
+    if(SrcType == UserFmtIMA4)
     {
-        ALBuf->OriginalChannels = SrcChannels;
-        ALBuf->OriginalType     = SrcType;
-        if(SrcType == UserFmtIMA4)
-        {
-            ALsizei byte_align = ((align-1)/2 + 4) * ChannelsFromUserFmt(SrcChannels);
-            ALBuf->OriginalSize  = frames / align * byte_align;
-            ALBuf->OriginalAlign = align;
-        }
-        else if(SrcType == UserFmtMSADPCM)
-        {
-            ALsizei byte_align = ((align-2)/2 + 7) * ChannelsFromUserFmt(SrcChannels);
-            ALBuf->OriginalSize  = frames / align * byte_align;
-            ALBuf->OriginalAlign = align;
-        }
-        else
-        {
-            ALBuf->OriginalSize  = frames * FrameSizeFromUserFmt(SrcChannels, SrcType);
-            ALBuf->OriginalAlign = 1;
-        }
+        ALsizei byte_align   = ((align-1)/2 + 4) * NumChannels;
+        ALBuf->OriginalSize  = frames / align * byte_align;
+        ALBuf->OriginalAlign = align;
+        assert(DstType == FmtShort);
+        if(data != NULL)
+            Convert_ALshort_ALima4(ALBuf->data, data, NumChannels, frames, align);
+    }
+    else if(SrcType == UserFmtMSADPCM)
+    {
+        ALsizei byte_align   = ((align-2)/2 + 7) * NumChannels;
+        ALBuf->OriginalSize  = frames / align * byte_align;
+        ALBuf->OriginalAlign = align;
+        assert(DstType == FmtShort);
+        if(data != NULL)
+            Convert_ALshort_ALmsadpcm(ALBuf->data, data, NumChannels, frames, align);
     }
     else
     {
-        ALBuf->OriginalChannels = (enum UserFmtChannels)DstChannels;
-        ALBuf->OriginalType     = (enum UserFmtType)DstType;
-        ALBuf->OriginalSize     = frames * NewBytes * NewChannels;
-        ALBuf->OriginalAlign    = 1;
+        ALBuf->OriginalSize  = frames * FrameSize;
+        ALBuf->OriginalAlign = 1;
+        if(data != NULL)
+        {
+            assert((long)SrcType == (long)DstType);
+            memcpy(ALBuf->data, data, frames*FrameSize);
+        }
     }
 
     ALBuf->Frequency = freq;
     ALBuf->FmtChannels = DstChannels;
     ALBuf->FmtType = DstType;
-    ALBuf->Format = NewFormat;
     ALBuf->Access = access;
 
     ALBuf->SampleLen = frames;
@@ -1139,77 +1114,6 @@ ALsizei ChannelsFromFmt(enum FmtChannels chans)
     case FmtBFormat3D: return 4;
     }
     return 0;
-}
-static ALboolean DecomposeFormat(ALenum format, enum FmtChannels *chans, enum FmtType *type)
-{
-    static const struct {
-        ALenum format;
-        enum FmtChannels channels;
-        enum FmtType type;
-    } list[] = {
-        { AL_FORMAT_MONO8,         FmtMono, FmtUByte },
-        { AL_FORMAT_MONO16,        FmtMono, FmtShort },
-        { AL_FORMAT_MONO_FLOAT32,  FmtMono, FmtFloat },
-        { AL_FORMAT_MONO_MULAW,    FmtMono, FmtMulaw },
-        { AL_FORMAT_MONO_ALAW_EXT, FmtMono, FmtAlaw  },
-
-        { AL_FORMAT_STEREO8,         FmtStereo, FmtUByte },
-        { AL_FORMAT_STEREO16,        FmtStereo, FmtShort },
-        { AL_FORMAT_STEREO_FLOAT32,  FmtStereo, FmtFloat },
-        { AL_FORMAT_STEREO_MULAW,    FmtStereo, FmtMulaw },
-        { AL_FORMAT_STEREO_ALAW_EXT, FmtStereo, FmtAlaw  },
-
-        { AL_FORMAT_REAR8,      FmtRear, FmtUByte },
-        { AL_FORMAT_REAR16,     FmtRear, FmtShort },
-        { AL_FORMAT_REAR32,     FmtRear, FmtFloat },
-        { AL_FORMAT_REAR_MULAW, FmtRear, FmtMulaw },
-
-        { AL_FORMAT_QUAD8_LOKI,  FmtQuad, FmtUByte },
-        { AL_FORMAT_QUAD16_LOKI, FmtQuad, FmtShort },
-
-        { AL_FORMAT_QUAD8,      FmtQuad, FmtUByte },
-        { AL_FORMAT_QUAD16,     FmtQuad, FmtShort },
-        { AL_FORMAT_QUAD32,     FmtQuad, FmtFloat },
-        { AL_FORMAT_QUAD_MULAW, FmtQuad, FmtMulaw },
-
-        { AL_FORMAT_51CHN8,      FmtX51, FmtUByte },
-        { AL_FORMAT_51CHN16,     FmtX51, FmtShort },
-        { AL_FORMAT_51CHN32,     FmtX51, FmtFloat },
-        { AL_FORMAT_51CHN_MULAW, FmtX51, FmtMulaw },
-
-        { AL_FORMAT_61CHN8,      FmtX61, FmtUByte },
-        { AL_FORMAT_61CHN16,     FmtX61, FmtShort },
-        { AL_FORMAT_61CHN32,     FmtX61, FmtFloat },
-        { AL_FORMAT_61CHN_MULAW, FmtX61, FmtMulaw },
-
-        { AL_FORMAT_71CHN8,      FmtX71, FmtUByte },
-        { AL_FORMAT_71CHN16,     FmtX71, FmtShort },
-        { AL_FORMAT_71CHN32,     FmtX71, FmtFloat },
-        { AL_FORMAT_71CHN_MULAW, FmtX71, FmtMulaw },
-
-        { AL_FORMAT_BFORMAT2D_8,       FmtBFormat2D, FmtUByte },
-        { AL_FORMAT_BFORMAT2D_16,      FmtBFormat2D, FmtShort },
-        { AL_FORMAT_BFORMAT2D_FLOAT32, FmtBFormat2D, FmtFloat },
-        { AL_FORMAT_BFORMAT2D_MULAW,   FmtBFormat2D, FmtMulaw },
-
-        { AL_FORMAT_BFORMAT3D_8,       FmtBFormat3D, FmtUByte },
-        { AL_FORMAT_BFORMAT3D_16,      FmtBFormat3D, FmtShort },
-        { AL_FORMAT_BFORMAT3D_FLOAT32, FmtBFormat3D, FmtFloat },
-        { AL_FORMAT_BFORMAT3D_MULAW,   FmtBFormat3D, FmtMulaw },
-    };
-    size_t i;
-
-    for(i = 0;i < COUNTOF(list);i++)
-    {
-        if(list[i].format == format)
-        {
-            *chans = list[i].channels;
-            *type  = list[i].type;
-            return AL_TRUE;
-        }
-    }
-
-    return AL_FALSE;
 }
 
 static ALsizei SanitizeAlignment(enum UserFmtType type, ALsizei align)

@@ -2897,7 +2897,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         if(BufferFmt == NULL)
             BufferFmt = buffer;
         else if(BufferFmt->Frequency != buffer->Frequency ||
-                BufferFmt->OriginalChannels != buffer->OriginalChannels ||
+                BufferFmt->FmtChannels != buffer->FmtChannels ||
                 BufferFmt->OriginalType != buffer->OriginalType)
         {
             WriteUnlock(&source->queue_lock);
@@ -3493,8 +3493,8 @@ static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *conte
                 }
                 else
                 {
-                    ALuint FrameSize = FrameSizeFromUserFmt(BufferFmt->OriginalChannels,
-                                                            BufferFmt->OriginalType);
+                    ALuint FrameSize = FrameSizeFromFmt(BufferFmt->FmtChannels,
+                                                        BufferFmt->FmtType);
                     offset = (ALdouble)(readPos * FrameSize);
                 }
                 break;
@@ -3593,18 +3593,17 @@ static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALsizei *frac
         if(BufferFmt->OriginalType == UserFmtIMA4)
         {
             ALsizei align = (BufferFmt->OriginalAlign-1)/2 + 4;
-            *offset /= align * ChannelsFromUserFmt(BufferFmt->OriginalChannels);
+            *offset /= align * ChannelsFromFmt(BufferFmt->FmtChannels);
             *offset *= BufferFmt->OriginalAlign;
         }
         else if(BufferFmt->OriginalType == UserFmtMSADPCM)
         {
             ALsizei align = (BufferFmt->OriginalAlign-2)/2 + 7;
-            *offset /= align * ChannelsFromUserFmt(BufferFmt->OriginalChannels);
+            *offset /= align * ChannelsFromFmt(BufferFmt->FmtChannels);
             *offset *= BufferFmt->OriginalAlign;
         }
         else
-            *offset /= FrameSizeFromUserFmt(BufferFmt->OriginalChannels,
-                                            BufferFmt->OriginalType);
+            *offset /= FrameSizeFromFmt(BufferFmt->FmtChannels, BufferFmt->FmtType);
         *frac = 0;
         break;
 

@@ -202,6 +202,9 @@ static inline ALfloat Sample_ALshort(ALshort val)
 static inline ALfloat Sample_ALfloat(ALfloat val)
 { return val; }
 
+static inline ALfloat Sample_ALdouble(ALdouble val)
+{ return (ALfloat)val; }
+
 typedef ALubyte ALmulaw;
 static inline ALfloat Sample_ALmulaw(ALmulaw val)
 { return muLawDecompressionTable[val] * (1.0f/32768.0f); }
@@ -222,6 +225,7 @@ static inline void Load_##T(ALfloat *restrict dst, const T *restrict src,     \
 DECL_TEMPLATE(ALubyte)
 DECL_TEMPLATE(ALshort)
 DECL_TEMPLATE(ALfloat)
+DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
 DECL_TEMPLATE(ALalaw)
 
@@ -236,6 +240,7 @@ static void LoadSamples(ALfloat *restrict dst, const ALvoid *restrict src, ALint
         HANDLE_FMT(FmtUByte, ALubyte);
         HANDLE_FMT(FmtShort, ALshort);
         HANDLE_FMT(FmtFloat, ALfloat);
+        HANDLE_FMT(FmtDouble, ALdouble);
         HANDLE_FMT(FmtMulaw, ALmulaw);
         HANDLE_FMT(FmtAlaw, ALalaw);
     }

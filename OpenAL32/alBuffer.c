@@ -173,6 +173,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
         case UserFmtUByte:
         case UserFmtShort:
         case UserFmtFloat:
+        case UserFmtDouble:
         case UserFmtMulaw:
         case UserFmtAlaw:
             framesize = FrameSizeFromUserFmt(srcchannels, srctype) * align;
@@ -180,30 +181,6 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
             err = LoadData(albuf, freq, format&FORMAT_MASK, size/framesize*align,
-                           srcchannels, srctype, data, align, format&ACCESS_FLAGS,
-                           AL_TRUE);
-            if(err != AL_NO_ERROR)
-                SET_ERROR_AND_GOTO(context, err, done);
-            break;
-
-        case UserFmtDouble:
-            framesize = FrameSizeFromUserFmt(srcchannels, srctype) * align;
-            if((size%framesize) != 0)
-                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-
-            switch(srcchannels)
-            {
-                case UserFmtMono: newformat = AL_FORMAT_MONO_FLOAT32; break;
-                case UserFmtStereo: newformat = AL_FORMAT_STEREO_FLOAT32; break;
-                case UserFmtRear: newformat = AL_FORMAT_REAR32; break;
-                case UserFmtQuad: newformat = AL_FORMAT_QUAD32; break;
-                case UserFmtX51: newformat = AL_FORMAT_51CHN32; break;
-                case UserFmtX61: newformat = AL_FORMAT_61CHN32; break;
-                case UserFmtX71: newformat = AL_FORMAT_71CHN32; break;
-                case UserFmtBFormat2D: newformat = AL_FORMAT_BFORMAT2D_FLOAT32; break;
-                case UserFmtBFormat3D: newformat = AL_FORMAT_BFORMAT3D_FLOAT32; break;
-            }
-            err = LoadData(albuf, freq, newformat, size/framesize*align,
                            srcchannels, srctype, data, align, format&ACCESS_FLAGS,
                            AL_TRUE);
             if(err != AL_NO_ERROR)
@@ -1141,6 +1118,7 @@ ALsizei BytesFromFmt(enum FmtType type)
     case FmtUByte: return sizeof(ALubyte);
     case FmtShort: return sizeof(ALshort);
     case FmtFloat: return sizeof(ALfloat);
+    case FmtDouble: return sizeof(ALdouble);
     case FmtMulaw: return sizeof(ALubyte);
     case FmtAlaw: return sizeof(ALubyte);
     }

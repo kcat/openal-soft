@@ -506,8 +506,6 @@ DECL_TEMPLATE(ALbyte);
 DECL_TEMPLATE(ALubyte);
 DECL_TEMPLATE(ALshort);
 DECL_TEMPLATE(ALushort);
-DECL_TEMPLATE(ALint);
-DECL_TEMPLATE(ALuint);
 DECL_TEMPLATE(ALalaw);
 DECL_TEMPLATE(ALmulaw);
 
@@ -532,26 +530,19 @@ static inline T2 Conv_##T2##_##T1(T1 val) { return (T2)val + O; }
 
 DECL_TEMPLATE(ALbyte, ALubyte, 128);
 DECL_TEMPLATE(ALshort, ALushort, 32768);
-DECL_TEMPLATE(ALint, ALuint, 2147483648u);
 
 #undef DECL_TEMPLATE
 
 /* Define int-type to int-type functions */
-#define DECL_TEMPLATE(T, ST, UT, SH)                                          \
-static inline T Conv_##T##_##ST(ST val){ return val >> SH; }                  \
-static inline T Conv_##T##_##UT(UT val){ return Conv_##ST##_##UT(val) >> SH; }\
-static inline ST Conv_##ST##_##T(T val){ return val << SH; }                  \
-static inline UT Conv_##UT##_##T(T val){ return Conv_##UT##_##ST(val << SH); }
+#define DECL_TEMPLATE(T, T1, T2, SH)                                          \
+static inline T Conv_##T##_##T1(T1 val){ return val >> SH; }                  \
+static inline T Conv_##T##_##T2(T2 val){ return Conv_##T1##_##T2(val) >> SH; }\
+static inline T1 Conv_##T1##_##T(T val){ return val << SH; }                  \
+static inline T2 Conv_##T2##_##T(T val){ return Conv_##T2##_##T1(val << SH); }
 
-#define DECL_TEMPLATE2(T1, T2, SH)          \
-DECL_TEMPLATE(AL##T1, AL##T2, ALu##T2, SH)  \
-DECL_TEMPLATE(ALu##T1, ALu##T2, AL##T2, SH)
+DECL_TEMPLATE(ALbyte, ALshort, ALushort, 8)
+DECL_TEMPLATE(ALubyte, ALushort, ALshort, 8)
 
-DECL_TEMPLATE2(byte,  short, 8)
-DECL_TEMPLATE2(short, int,   16)
-DECL_TEMPLATE2(byte,  int,   24)
-
-#undef DECL_TEMPLATE2
 #undef DECL_TEMPLATE
 
 /* Define int-type to fp functions */
@@ -566,13 +557,6 @@ DECL_TEMPLATE2(ALfloat, byte, (1.0f/128.0f))
 DECL_TEMPLATE2(ALdouble, byte, (1.0/128.0))
 DECL_TEMPLATE2(ALfloat, short, (1.0f/32768.0f))
 DECL_TEMPLATE2(ALdouble, short, (1.0/32768.0))
-DECL_TEMPLATE2(ALdouble, int, (1.0/2147483648.0))
-
-/* Special handling for int32 to float32, since it would overflow. */
-static inline ALfloat Conv_ALfloat_ALint(ALint val)
-{ return (ALfloat)(val>>7) * (1.0f/16777216.0f); }
-static inline ALfloat Conv_ALfloat_ALuint(ALuint val)
-{ return (ALfloat)(Conv_ALint_ALuint(val)>>7) * (1.0f/16777216.0f); }
 
 #undef DECL_TEMPLATE2
 #undef DECL_TEMPLATE
@@ -593,18 +577,6 @@ DECL_TEMPLATE(ALfloat, byte, -128, 127)
 DECL_TEMPLATE(ALdouble, byte, -128, 127)
 DECL_TEMPLATE(ALfloat, short, -32768, 32767)
 DECL_TEMPLATE(ALdouble, short, -32768, 32767)
-DECL_TEMPLATE(ALdouble, int, -2147483647-1, 2147483647)
-
-/* Special handling for float32 to int32, since it would overflow. */
-static inline ALint Conv_ALint_ALfloat(ALfloat val)
-{
-    val *= 16777216.0f;
-    if(val >= 16777215.0f) return 0x7fffff80/*16777215 << 7*/;
-    if(val <= -16777216.0f) return 0x80000000/*-16777216 << 7*/;
-    return (ALint)val << 7;
-}
-static inline ALuint Conv_ALuint_ALfloat(ALfloat val)
-{ return Conv_ALuint_ALint(Conv_ALint_ALfloat(val)); }
 
 #undef DECL_TEMPLATE
 
@@ -624,8 +596,6 @@ DECL_TEMPLATE(ALbyte)
 DECL_TEMPLATE(ALubyte)
 DECL_TEMPLATE(ALshort)
 DECL_TEMPLATE(ALushort)
-DECL_TEMPLATE(ALint)
-DECL_TEMPLATE(ALuint)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 
@@ -653,8 +623,6 @@ DECL_TEMPLATE(T, ALbyte)   \
 DECL_TEMPLATE(T, ALubyte)  \
 DECL_TEMPLATE(T, ALshort)  \
 DECL_TEMPLATE(T, ALushort) \
-DECL_TEMPLATE(T, ALint)    \
-DECL_TEMPLATE(T, ALuint)   \
 DECL_TEMPLATE(T, ALfloat)  \
 DECL_TEMPLATE(T, ALdouble) \
 DECL_TEMPLATE(T, ALmulaw)  \
@@ -664,8 +632,6 @@ DECL_TEMPLATE2(ALbyte)
 DECL_TEMPLATE2(ALubyte)
 DECL_TEMPLATE2(ALshort)
 DECL_TEMPLATE2(ALushort)
-DECL_TEMPLATE2(ALint)
-DECL_TEMPLATE2(ALuint)
 DECL_TEMPLATE2(ALfloat)
 DECL_TEMPLATE2(ALdouble)
 DECL_TEMPLATE2(ALmulaw)
@@ -713,8 +679,6 @@ static void Convert_ALshort_ALima4(ALshort *dst, const ALima4 *src, ALsizei numc
     }
 }
 DECL_TEMPLATE(ALushort)
-DECL_TEMPLATE(ALint)
-DECL_TEMPLATE(ALuint)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
@@ -764,8 +728,6 @@ static void Convert_ALima4_ALshort(ALima4 *dst, const ALshort *src,
     }
 }
 DECL_TEMPLATE(ALushort)
-DECL_TEMPLATE(ALint)
-DECL_TEMPLATE(ALuint)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
@@ -815,8 +777,6 @@ static void Convert_ALshort_ALmsadpcm(ALshort *dst, const ALmsadpcm *src,
     }
 }
 DECL_TEMPLATE(ALushort)
-DECL_TEMPLATE(ALint)
-DECL_TEMPLATE(ALuint)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
@@ -865,8 +825,6 @@ static void Convert_ALmsadpcm_ALshort(ALmsadpcm *dst, const ALshort *src,
     }
 }
 DECL_TEMPLATE(ALushort)
-DECL_TEMPLATE(ALint)
-DECL_TEMPLATE(ALuint)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
@@ -923,12 +881,6 @@ static void Convert_##T(T *dst, const ALvoid *src, enum UserFmtType srcType,  \
         case UserFmtUShort:                                                   \
             Convert_##T##_ALushort(dst, src, numchans, len, align);           \
             break;                                                            \
-        case UserFmtInt:                                                      \
-            Convert_##T##_ALint(dst, src, numchans, len, align);              \
-            break;                                                            \
-        case UserFmtUInt:                                                     \
-            Convert_##T##_ALuint(dst, src, numchans, len, align);             \
-            break;                                                            \
         case UserFmtFloat:                                                    \
             Convert_##T##_ALfloat(dst, src, numchans, len, align);            \
             break;                                                            \
@@ -954,8 +906,6 @@ DECL_TEMPLATE(ALbyte)
 DECL_TEMPLATE(ALubyte)
 DECL_TEMPLATE(ALshort)
 DECL_TEMPLATE(ALushort)
-DECL_TEMPLATE(ALint)
-DECL_TEMPLATE(ALuint)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
@@ -982,12 +932,6 @@ void ConvertData(ALvoid *dst, enum UserFmtType dstType, const ALvoid *src,
             break;
         case UserFmtUShort:
             Convert_ALushort(dst, src, srcType, numchans, len, align);
-            break;
-        case UserFmtInt:
-            Convert_ALint(dst, src, srcType, numchans, len, align);
-            break;
-        case UserFmtUInt:
-            Convert_ALuint(dst, src, srcType, numchans, len, align);
             break;
         case UserFmtFloat:
             Convert_ALfloat(dst, src, srcType, numchans, len, align);

@@ -13,8 +13,6 @@ enum UserFmtType {
     UserFmtUByte,
     UserFmtShort,
     UserFmtUShort,
-    UserFmtInt,
-    UserFmtUInt,
     UserFmtFloat,
     UserFmtDouble,
     UserFmtMulaw,

@@ -502,10 +502,8 @@ static void EncodeMSADPCMBlock(ALmsadpcm *dst, const ALshort *src, ALint *sample
 #define DECL_TEMPLATE(T) \
 static inline T Conv_##T##_##T(T val) { return val; }
 
-DECL_TEMPLATE(ALbyte);
 DECL_TEMPLATE(ALubyte);
 DECL_TEMPLATE(ALshort);
-DECL_TEMPLATE(ALushort);
 DECL_TEMPLATE(ALalaw);
 DECL_TEMPLATE(ALmulaw);
 
@@ -523,62 +521,33 @@ static inline ALdouble Conv_ALdouble_ALdouble(ALdouble val)
 
 #undef DECL_TEMPLATE
 
-/* Define alternate-sign functions. */
-#define DECL_TEMPLATE(T1, T2, O)                                  \
-static inline T1 Conv_##T1##_##T2(T2 val) { return (T1)val - O; } \
-static inline T2 Conv_##T2##_##T1(T1 val) { return (T2)val + O; }
-
-DECL_TEMPLATE(ALbyte, ALubyte, 128);
-DECL_TEMPLATE(ALshort, ALushort, 32768);
-
-#undef DECL_TEMPLATE
-
 /* Define int-type to int-type functions */
-#define DECL_TEMPLATE(T, T1, T2, SH)                                          \
-static inline T Conv_##T##_##T1(T1 val){ return val >> SH; }                  \
-static inline T Conv_##T##_##T2(T2 val){ return Conv_##T1##_##T2(val) >> SH; }\
-static inline T1 Conv_##T1##_##T(T val){ return val << SH; }                  \
-static inline T2 Conv_##T2##_##T(T val){ return Conv_##T2##_##T1(val << SH); }
-
-DECL_TEMPLATE(ALbyte, ALshort, ALushort, 8)
-DECL_TEMPLATE(ALubyte, ALushort, ALshort, 8)
-
-#undef DECL_TEMPLATE
+static inline ALubyte Conv_ALubyte_ALshort(ALshort val) { return (val>>8) + 128; }
+static inline ALshort Conv_ALshort_ALubyte(ALubyte val) { return (val-128) << 8; }
 
 /* Define int-type to fp functions */
-#define DECL_TEMPLATE(T, ST, UT, OP)                                          \
-static inline T Conv_##T##_##ST(ST val) { return (T)val * OP; }               \
-static inline T Conv_##T##_##UT(UT val) { return (T)Conv_##ST##_##UT(val) * OP; }
-
-#define DECL_TEMPLATE2(T1, T2, OP)     \
-DECL_TEMPLATE(T1, AL##T2, ALu##T2, OP)
-
-DECL_TEMPLATE2(ALfloat, byte, (1.0f/128.0f))
-DECL_TEMPLATE2(ALdouble, byte, (1.0/128.0))
-DECL_TEMPLATE2(ALfloat, short, (1.0f/32768.0f))
-DECL_TEMPLATE2(ALdouble, short, (1.0/32768.0))
-
-#undef DECL_TEMPLATE2
-#undef DECL_TEMPLATE
+static inline ALfloat Conv_ALfloat_ALubyte(ALubyte val) { return (val-128) * (1.0f/128.0f); }
+static inline ALdouble Conv_ALdouble_ALubyte(ALubyte val) { return (val-128) * (1.0/128.0); }
+static inline ALfloat Conv_ALfloat_ALshort(ALshort val) { return val * (1.0f/32768.0f); }
+static inline ALdouble Conv_ALdouble_ALshort(ALshort val) { return val * (1.0/32768.0); }
 
 /* Define fp to int-type functions */
-#define DECL_TEMPLATE(FT, T, smin, smax)        \
-static inline AL##T Conv_AL##T##_##FT(FT val)   \
-{                                               \
-    val *= (FT)smax + 1;                        \
-    if(val >= (FT)smax) return smax;            \
-    if(val <= (FT)smin) return smin;            \
-    return (AL##T)val;                          \
-}                                               \
-static inline ALu##T Conv_ALu##T##_##FT(FT val) \
-{ return Conv_ALu##T##_AL##T(Conv_AL##T##_##FT(val)); }
-
-DECL_TEMPLATE(ALfloat, byte, -128, 127)
-DECL_TEMPLATE(ALdouble, byte, -128, 127)
-DECL_TEMPLATE(ALfloat, short, -32768, 32767)
-DECL_TEMPLATE(ALdouble, short, -32768, 32767)
-
-#undef DECL_TEMPLATE
+static inline ALubyte Conv_ALubyte_ALfloat(ALfloat val)
+{
+    val *= 128.0f;
+    if(val >= 127.0f) return 255;
+    if(val <= -128.0f) return 0;
+    return (ALbyte)val + 128;
+}
+static inline ALubyte Conv_ALubyte_ALdouble(ALdouble val) { return Conv_ALubyte_ALfloat(val); }
+static inline ALshort Conv_ALshort_ALfloat(ALfloat val)
+{
+    val *= 32768.0f;
+    if(val >= 32767.0f) return 32767;
+    if(val <= -32768.0f) return -32768;
+    return (ALshort)val;
+}
+static inline ALshort Conv_ALshort_ALdouble(ALdouble val) { return Conv_ALshort_ALfloat(val); }
 
 /* Define muLaw and aLaw functions (goes through short functions). */
 #define DECL_TEMPLATE(T)                                                      \
@@ -592,10 +561,8 @@ static inline ALalaw Conv_ALalaw_##T(T val)                                   \
 static inline T Conv_##T##_ALalaw(ALalaw val)                                 \
 { return Conv_##T##_ALshort(DecodeALaw(val)); }
 
-DECL_TEMPLATE(ALbyte)
 DECL_TEMPLATE(ALubyte)
 DECL_TEMPLATE(ALshort)
-DECL_TEMPLATE(ALushort)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 
@@ -619,19 +586,15 @@ static void Convert_##T1##_##T2(T1 *dst, const T2 *src, ALsizei numchans,     \
 }
 
 #define DECL_TEMPLATE2(T)  \
-DECL_TEMPLATE(T, ALbyte)   \
 DECL_TEMPLATE(T, ALubyte)  \
 DECL_TEMPLATE(T, ALshort)  \
-DECL_TEMPLATE(T, ALushort) \
 DECL_TEMPLATE(T, ALfloat)  \
 DECL_TEMPLATE(T, ALdouble) \
 DECL_TEMPLATE(T, ALmulaw)  \
 DECL_TEMPLATE(T, ALalaw)
 
-DECL_TEMPLATE2(ALbyte)
 DECL_TEMPLATE2(ALubyte)
 DECL_TEMPLATE2(ALshort)
-DECL_TEMPLATE2(ALushort)
 DECL_TEMPLATE2(ALfloat)
 DECL_TEMPLATE2(ALdouble)
 DECL_TEMPLATE2(ALmulaw)
@@ -662,7 +625,6 @@ static void Convert_##T##_ALima4(T *dst, const ALima4 *src, ALsizei numchans, \
     }                                                                         \
 }
 
-DECL_TEMPLATE(ALbyte)
 DECL_TEMPLATE(ALubyte)
 static void Convert_ALshort_ALima4(ALshort *dst, const ALima4 *src, ALsizei numchans,
                                    ALsizei len, ALsizei align)
@@ -678,7 +640,6 @@ static void Convert_ALshort_ALima4(ALshort *dst, const ALima4 *src, ALsizei numc
         dst += align*numchans;
     }
 }
-DECL_TEMPLATE(ALushort)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
@@ -709,7 +670,6 @@ static void Convert_ALima4_##T(ALima4 *dst, const T *src, ALsizei numchans,   \
     }                                                                         \
 }
 
-DECL_TEMPLATE(ALbyte)
 DECL_TEMPLATE(ALubyte)
 static void Convert_ALima4_ALshort(ALima4 *dst, const ALshort *src,
                                    ALsizei numchans, ALsizei len, ALsizei align)
@@ -727,7 +687,6 @@ static void Convert_ALima4_ALshort(ALima4 *dst, const ALshort *src,
         dst += byte_align;
     }
 }
-DECL_TEMPLATE(ALushort)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
@@ -759,7 +718,6 @@ static void Convert_##T##_ALmsadpcm(T *dst, const ALmsadpcm *src,             \
     }                                                                         \
 }
 
-DECL_TEMPLATE(ALbyte)
 DECL_TEMPLATE(ALubyte)
 static void Convert_ALshort_ALmsadpcm(ALshort *dst, const ALmsadpcm *src,
                                       ALsizei numchans, ALsizei len,
@@ -776,7 +734,6 @@ static void Convert_ALshort_ALmsadpcm(ALshort *dst, const ALmsadpcm *src,
         dst += align*numchans;
     }
 }
-DECL_TEMPLATE(ALushort)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
@@ -807,7 +764,6 @@ static void Convert_ALmsadpcm_##T(ALmsadpcm *dst, const T *src,               \
     }                                                                         \
 }
 
-DECL_TEMPLATE(ALbyte)
 DECL_TEMPLATE(ALubyte)
 static void Convert_ALmsadpcm_ALshort(ALmsadpcm *dst, const ALshort *src,
                                       ALsizei numchans, ALsizei len, ALsizei align)
@@ -824,7 +780,6 @@ static void Convert_ALmsadpcm_ALshort(ALmsadpcm *dst, const ALshort *src,
         dst += byte_align;
     }
 }
-DECL_TEMPLATE(ALushort)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
@@ -869,17 +824,11 @@ static void Convert_##T(T *dst, const ALvoid *src, enum UserFmtType srcType,  \
 {                                                                             \
     switch(srcType)                                                           \
     {                                                                         \
-        case UserFmtByte:                                                     \
-            Convert_##T##_ALbyte(dst, src, numchans, len, align);             \
-            break;                                                            \
         case UserFmtUByte:                                                    \
             Convert_##T##_ALubyte(dst, src, numchans, len, align);            \
             break;                                                            \
         case UserFmtShort:                                                    \
             Convert_##T##_ALshort(dst, src, numchans, len, align);            \
-            break;                                                            \
-        case UserFmtUShort:                                                   \
-            Convert_##T##_ALushort(dst, src, numchans, len, align);           \
             break;                                                            \
         case UserFmtFloat:                                                    \
             Convert_##T##_ALfloat(dst, src, numchans, len, align);            \
@@ -902,10 +851,8 @@ static void Convert_##T(T *dst, const ALvoid *src, enum UserFmtType srcType,  \
     }                                                                         \
 }
 
-DECL_TEMPLATE(ALbyte)
 DECL_TEMPLATE(ALubyte)
 DECL_TEMPLATE(ALshort)
-DECL_TEMPLATE(ALushort)
 DECL_TEMPLATE(ALfloat)
 DECL_TEMPLATE(ALdouble)
 DECL_TEMPLATE(ALmulaw)
@@ -921,17 +868,11 @@ void ConvertData(ALvoid *dst, enum UserFmtType dstType, const ALvoid *src,
 {
     switch(dstType)
     {
-        case UserFmtByte:
-            Convert_ALbyte(dst, src, srcType, numchans, len, align);
-            break;
         case UserFmtUByte:
             Convert_ALubyte(dst, src, srcType, numchans, len, align);
             break;
         case UserFmtShort:
             Convert_ALshort(dst, src, srcType, numchans, len, align);
-            break;
-        case UserFmtUShort:
-            Convert_ALushort(dst, src, srcType, numchans, len, align);
             break;
         case UserFmtFloat:
             Convert_ALfloat(dst, src, srcType, numchans, len, align);

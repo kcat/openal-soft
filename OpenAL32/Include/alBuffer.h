@@ -9,10 +9,8 @@ extern "C" {
 
 /* User formats */
 enum UserFmtType {
-    UserFmtByte,
     UserFmtUByte,
     UserFmtShort,
-    UserFmtUShort,
     UserFmtFloat,
     UserFmtDouble,
     UserFmtMulaw,

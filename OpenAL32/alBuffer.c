@@ -144,7 +144,7 @@ AL_API ALboolean AL_APIENTRY alIsBuffer(ALuint buffer)
 AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq)
 {
     enum UserFmtChannels srcchannels = UserFmtMono;
-    enum UserFmtType srctype = UserFmtByte;
+    enum UserFmtType srctype = UserFmtUByte;
     ALCdevice *device;
     ALCcontext *context;
     ALbuffer *albuf;
@@ -170,10 +170,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
 
     switch(srctype)
     {
-        case UserFmtByte:
         case UserFmtUByte:
         case UserFmtShort:
-        case UserFmtUShort:
         case UserFmtFloat:
         case UserFmtMulaw:
         case UserFmtAlaw:
@@ -339,7 +337,7 @@ done:
 AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, const ALvoid *data, ALsizei offset, ALsizei length)
 {
     enum UserFmtChannels srcchannels = UserFmtMono;
-    enum UserFmtType srctype = UserFmtByte;
+    enum UserFmtType srctype = UserFmtUByte;
     ALCdevice *device;
     ALCcontext *context;
     ALbuffer *albuf;
@@ -1030,10 +1028,8 @@ ALsizei BytesFromUserFmt(enum UserFmtType type)
 {
     switch(type)
     {
-    case UserFmtByte: return sizeof(ALbyte);
     case UserFmtUByte: return sizeof(ALubyte);
     case UserFmtShort: return sizeof(ALshort);
-    case UserFmtUShort: return sizeof(ALushort);
     case UserFmtFloat: return sizeof(ALfloat);
     case UserFmtDouble: return sizeof(ALdouble);
     case UserFmtMulaw: return sizeof(ALubyte);

@@ -914,8 +914,9 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALsizei frames, enum UserFm
 
     if((access&AL_PRESERVE_DATA_BIT_SOFT))
     {
-        /* Can only preserve data with the same format. */
-        if(ALBuf->FmtChannels != DstChannels || ALBuf->OriginalType != SrcType)
+        /* Can only preserve data with the same format and alignment. */
+        if(ALBuf->FmtChannels != DstChannels || ALBuf->OriginalType != SrcType ||
+           ALBuf->OriginalAlign != align)
         {
             WriteUnlock(&ALBuf->lock);
             return AL_INVALID_VALUE;

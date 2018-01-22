@@ -51,8 +51,9 @@ static ALsizei SanitizeAlignment(enum UserFmtType type, ALsizei align);
 
 
 #define FORMAT_MASK  0x00ffffff
-#define ACCESS_FLAGS (AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT)
-#define INVALID_FLAG_MASK  ~(FORMAT_MASK | ACCESS_FLAGS)
+#define CONSTRUCT_FLAGS (AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT | AL_PRESERVE_DATA_BIT_SOFT)
+#define INVALID_FORMAT_MASK  ~(FORMAT_MASK | CONSTRUCT_FLAGS)
+#define MAP_ACCESS_FLAGS (AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT)
 
 
 AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
@@ -158,7 +159,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
     LockBuffersRead(device);
     if((albuf=LookupBuffer(device, buffer)) == NULL)
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
-    if(!(size >= 0 && freq > 0) || (format&INVALID_FLAG_MASK) != 0)
+    if(!(size >= 0 && freq > 0) || (format&INVALID_FORMAT_MASK) != 0)
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
     if(DecomposeUserFormat(format&FORMAT_MASK, &srcchannels, &srctype) == AL_FALSE)
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
@@ -179,7 +180,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
             err = LoadData(albuf, freq, size/framesize*align, srcchannels, srctype,
-                           data, align, format&ACCESS_FLAGS);
+                           data, align, format&CONSTRUCT_FLAGS);
             if(err != AL_NO_ERROR)
                 SET_ERROR_AND_GOTO(context, err, done);
             break;
@@ -190,7 +191,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
             err = LoadData(albuf, freq, size/framesize*align, srcchannels, srctype,
-                           data, align, format&ACCESS_FLAGS);
+                           data, align, format&CONSTRUCT_FLAGS);
             if(err != AL_NO_ERROR)
                 SET_ERROR_AND_GOTO(context, err, done);
             break;
@@ -201,7 +202,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
             err = LoadData(albuf, freq, size/framesize*align, srcchannels, srctype,
-                           data, align, format&ACCESS_FLAGS);
+                           data, align, format&CONSTRUCT_FLAGS);
             if(err != AL_NO_ERROR)
                 SET_ERROR_AND_GOTO(context, err, done);
             break;
@@ -226,7 +227,7 @@ AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei 
     LockBuffersRead(device);
     if((albuf=LookupBuffer(device, buffer)) == NULL)
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
-    if(!access || (access&~(AL_MAP_READ_BIT_SOFT|AL_MAP_WRITE_BIT_SOFT)) != 0)
+    if(!access || (access&~MAP_ACCESS_FLAGS) != 0)
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
     WriteLock(&albuf->lock);
@@ -911,6 +912,16 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALsizei frames, enum UserFm
         return AL_INVALID_OPERATION;
     }
 
+    if((access&AL_PRESERVE_DATA_BIT_SOFT))
+    {
+        /* Can only preserve data with the same format. */
+        if(ALBuf->FmtChannels != DstChannels || ALBuf->OriginalType != SrcType)
+        {
+            WriteUnlock(&ALBuf->lock);
+            return AL_INVALID_VALUE;
+        }
+    }
+
     /* Round up to the next 16-byte multiple. This could reallocate only when
      * increasing or the new size is less than half the current, but then the
      * buffer's AL_SIZE would not be very reliable for accounting buffer memory
@@ -926,6 +937,11 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALsizei frames, enum UserFm
         {
             WriteUnlock(&ALBuf->lock);
             return AL_OUT_OF_MEMORY;
+        }
+        if((access&AL_PRESERVE_DATA_BIT_SOFT))
+        {
+            ALsizei tocopy = mini(newsize, ALBuf->BytesAlloc);
+            if(tocopy > 0) memcpy(temp, ALBuf->data, tocopy);
         }
         al_free(ALBuf->data);
         ALBuf->data = temp;

@@ -37,6 +37,25 @@ extern "C" {
 #include "AL/al.h"
 #include "AL/alext.h"
 
+extern "C" {
+#ifndef AL_SOFT_map_buffer
+#define AL_SOFT_map_buffer 1
+typedef unsigned int ALbitfieldSOFT;
+#define AL_MAP_READ_BIT_SOFT                     0x01000000
+#define AL_MAP_WRITE_BIT_SOFT                    0x02000000
+#define AL_PRESERVE_DATA_BIT_SOFT                0x04000000
+#define AL_MAP_PERSISTENT_BIT_SOFT               0x08000000
+typedef void* (AL_APIENTRY*LPALMAPBUFFERSOFT)(ALuint buffer, ALsizei offset, ALsizei length, ALbitfieldSOFT access);
+typedef void (AL_APIENTRY*LPALUNMAPBUFFERSOFT)(ALuint buffer);
+typedef void (AL_APIENTRY*LPALFLUSHMAPPEDBUFFERSOFT)(ALuint buffer, ALsizei offset, ALsizei length);
+#ifdef AL_ALEXT_PROTOTYPES
+AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei length, ALbitfieldSOFT access);
+AL_API void AL_APIENTRY alUnmapBufferSOFT(ALuint buffer);
+AL_API void AL_APIENTRY alFlushMappedBufferSOFT(ALuint buffer, ALsizei offset, ALsizei length);
+#endif
+#endif
+}
+
 namespace {
 
 using nanoseconds = std::chrono::nanoseconds;
@@ -50,6 +69,9 @@ const std::string AppName("alffplay");
 bool EnableDirectOut = false;
 LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
 LPALCGETINTEGER64VSOFT alcGetInteger64vSOFT;
+
+LPALMAPBUFFERSOFT alMapBufferSOFT;
+LPALUNMAPBUFFERSOFT alUnmapBufferSOFT;
 
 const seconds AVNoSyncThreshold(10);
 
@@ -225,7 +247,7 @@ struct AudioState {
 
     int getSync();
     int decodeFrame();
-    int readAudio(uint8_t *samples, int length);
+    bool readAudio(uint8_t *samples, int length);
 
     int handler();
 };
@@ -564,7 +586,7 @@ static void sample_dup(uint8_t *out, const uint8_t *in, int count, int frame_siz
 }
 
 
-int AudioState::readAudio(uint8_t *samples, int length)
+bool AudioState::readAudio(uint8_t *samples, int length)
 {
     int sample_skip = getSync();
     int audio_size = 0;
@@ -619,8 +641,10 @@ int AudioState::readAudio(uint8_t *samples, int length)
         samples += rem*mFrameSize;
         audio_size += rem;
     }
+    if(audio_size <= 0)
+        return false;
 
-    if(audio_size < length && audio_size > 0)
+    if(audio_size < length)
     {
         int rem = length - audio_size;
         std::fill_n(samples, rem*mFrameSize,
@@ -628,8 +652,7 @@ int AudioState::readAudio(uint8_t *samples, int length)
         mCurrentPts += nanoseconds(seconds(rem)) / mCodecCtx->sample_rate;
         audio_size += rem;
     }
-
-    return audio_size * mFrameSize;
+    return true;
 }
 
 
@@ -743,9 +766,9 @@ int AudioState::handler()
             mFormat = AL_FORMAT_STEREO16;
         }
     }
+    void *samples = nullptr;
     ALsizei buffer_len = std::chrono::duration_cast<std::chrono::duration<int>>(
         mCodecCtx->sample_rate * AudioBufferTime).count() * mFrameSize;
-    void *samples = av_malloc(buffer_len);
 
     mSamples = NULL;
     mSamplesMax = 0;
@@ -779,6 +802,23 @@ int AudioState::handler()
     if(EnableDirectOut)
         alSourcei(mSource, AL_DIRECT_CHANNELS_SOFT, AL_TRUE);
 
+    if(alGetError() != AL_NO_ERROR)
+        goto finish;
+
+    if(!alMapBufferSOFT)
+        samples = av_malloc(buffer_len);
+    else
+    {
+        for(ALuint bufid : mBuffers)
+            alBufferData(bufid, mFormat | AL_MAP_WRITE_BIT_SOFT, nullptr, buffer_len,
+                         mCodecCtx->sample_rate);
+        if(alGetError() != AL_NO_ERROR)
+        {
+            fprintf(stderr, "Failed to use mapped buffers\n");
+            samples = av_malloc(buffer_len);
+        }
+    }
+
     while(alGetError() == AL_NO_ERROR && !mMovie.mQuit.load(std::memory_order_relaxed))
     {
         /* First remove any processed buffers. */
@@ -797,19 +837,25 @@ int AudioState::handler()
         alGetSourcei(mSource, AL_BUFFERS_QUEUED, &queued);
         while((ALuint)queued < mBuffers.size())
         {
-            int audio_size;
+            ALuint bufid = mBuffers[mBufferIdx];
 
-            /* Read the next chunk of data, fill the buffer, and queue it on
+            uint8_t *ptr = reinterpret_cast<uint8_t*>(
+                samples ? samples : alMapBufferSOFT(bufid, 0, buffer_len, AL_MAP_WRITE_BIT_SOFT)
+            );
+            if(!ptr) break;
+
+            /* Read the next chunk of data, filling the buffer, and queue it on
              * the source */
-            audio_size = readAudio(reinterpret_cast<uint8_t*>(samples), buffer_len);
-            if(audio_size <= 0) break;
+            bool got_audio = readAudio(ptr, buffer_len);
+            if(!samples) alUnmapBufferSOFT(bufid);
+            if(!got_audio) break;
 
-            ALuint bufid = mBuffers[mBufferIdx++];
-            mBufferIdx %= mBuffers.size();
+            if(samples)
+                alBufferData(bufid, mFormat, samples, buffer_len, mCodecCtx->sample_rate);
 
-            alBufferData(bufid, mFormat, samples, audio_size, mCodecCtx->sample_rate);
             alSourceQueueBuffers(mSource, 1, &bufid);
-            queued++;
+            mBufferIdx = (mBufferIdx+1) % mBuffers.size();
+            ++queued;
         }
         if(queued == 0)
             break;
@@ -1589,6 +1635,14 @@ int main(int argc, char *argv[])
         alGetSourcei64vSOFT = reinterpret_cast<LPALGETSOURCEI64VSOFT>(
             alGetProcAddress("alGetSourcei64vSOFT")
         );
+    }
+    if(alIsExtensionPresent("AL_SOFTX_map_buffer"))
+    {
+        std::cout<< "Found AL_SOFT_map_buffer" <<std::endl;
+        alMapBufferSOFT = reinterpret_cast<LPALMAPBUFFERSOFT>(
+            alGetProcAddress("alMapBufferSOFT"));
+        alUnmapBufferSOFT = reinterpret_cast<LPALUNMAPBUFFERSOFT>(
+            alGetProcAddress("alUnmapBufferSOFT"));
     }
 
     if(fileidx < argc && strcmp(argv[fileidx], "-direct") == 0)

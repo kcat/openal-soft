@@ -51,9 +51,9 @@ static ALsizei SanitizeAlignment(enum UserFmtType type, ALsizei align);
 
 
 #define FORMAT_MASK  0x00ffffff
-#define CONSTRUCT_FLAGS (AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT | AL_PRESERVE_DATA_BIT_SOFT)
+#define CONSTRUCT_FLAGS (AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT | AL_PRESERVE_DATA_BIT_SOFT | AL_MAP_PERSISTENT_BIT_SOFT)
 #define INVALID_FORMAT_MASK  ~(FORMAT_MASK | CONSTRUCT_FLAGS)
-#define MAP_ACCESS_FLAGS (AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT)
+#define MAP_ACCESS_FLAGS (AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT | AL_MAP_PERSISTENT_BIT_SOFT)
 
 
 AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
@@ -232,18 +232,18 @@ AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei 
 
     WriteLock(&albuf->lock);
     if(((access&AL_MAP_READ_BIT_SOFT) && !(albuf->Access&AL_MAP_READ_BIT_SOFT)) ||
-       ((access&AL_MAP_WRITE_BIT_SOFT) && !(albuf->Access&AL_MAP_WRITE_BIT_SOFT)))
+       ((access&AL_MAP_WRITE_BIT_SOFT) && !(albuf->Access&AL_MAP_WRITE_BIT_SOFT)) ||
+       ((access&AL_MAP_PERSISTENT_BIT_SOFT) && !(albuf->Access&AL_MAP_PERSISTENT_BIT_SOFT)))
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, unlock_done);
     if(offset < 0 || offset >= albuf->OriginalSize ||
        length <= 0 || length > albuf->OriginalSize - offset)
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, unlock_done);
-    if(ReadRef(&albuf->ref) != 0 || albuf->MappedAccess != 0)
+    if(albuf->MappedAccess != 0 ||
+       (!(access&AL_MAP_PERSISTENT_BIT_SOFT) && ReadRef(&albuf->ref) != 0))
         SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, unlock_done);
 
     retval = (ALbyte*)albuf->data + offset;
     albuf->MappedAccess = access;
-    if((access&AL_MAP_WRITE_BIT_SOFT) && !(access&AL_MAP_READ_BIT_SOFT))
-        memset(retval, 0x55, length);
 
 unlock_done:
     WriteUnlock(&albuf->lock);
@@ -274,6 +274,43 @@ AL_API void AL_APIENTRY alUnmapBufferSOFT(ALuint buffer)
         alSetError(context, AL_INVALID_OPERATION);
     else
         albuf->MappedAccess = 0;
+    WriteUnlock(&albuf->lock);
+
+done:
+    UnlockBuffersRead(device);
+    ALCcontext_DecRef(context);
+}
+
+AL_API void AL_APIENTRY alFlushMappedBufferSOFT(ALuint buffer, ALsizei offset, ALsizei length)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALbuffer *albuf;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+    LockBuffersRead(device);
+    if((albuf=LookupBuffer(device, buffer)) == NULL)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+
+    WriteLock(&albuf->lock);
+    if(albuf->MappedAccess == 0 || !(albuf->MappedAccess&AL_MAP_WRITE_BIT_SOFT))
+        alSetError(context, AL_INVALID_OPERATION);
+    /* TODO: Should check mapped range. */
+    else if(offset < 0 || offset >= albuf->OriginalSize ||
+            length <= 0 || length > albuf->OriginalSize - offset)
+        alSetError(context, AL_INVALID_VALUE);
+    else
+    {
+        /* FIXME: Need to use some method of double-buffering for the mixer and
+         * app to hold separate memory, which can be safely transfered
+         * asynchronously. Currently we just say the app shouldn't write where
+         * OpenAL's reading, and hope for the best...
+         */
+        ATOMIC_THREAD_FENCE(almemory_order_seq_cst);
+    }
     WriteUnlock(&albuf->lock);
 
 done:

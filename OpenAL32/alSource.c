@@ -760,7 +760,8 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             }
 
             WriteLock(&Source->queue_lock);
-            if(buffer && buffer->MappedAccess != 0)
+            if(buffer && buffer->MappedAccess != 0 &&
+               !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
             {
                 WriteUnlock(&Source->queue_lock);
                 UnlockBuffersRead(device);
@@ -2888,7 +2889,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         ReadLock(&buffer->lock);
         IncrementRef(&buffer->ref);
 
-        if(buffer->MappedAccess != 0)
+        if(buffer->MappedAccess != 0 && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
         {
             WriteUnlock(&source->queue_lock);
             SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, buffer_error);

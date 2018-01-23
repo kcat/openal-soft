@@ -53,6 +53,7 @@ static ALsizei SanitizeAlignment(enum UserFmtType type, ALsizei align);
 #define FORMAT_MASK  0x00ffffff
 #define CONSTRUCT_FLAGS (AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT | AL_PRESERVE_DATA_BIT_SOFT | AL_MAP_PERSISTENT_BIT_SOFT)
 #define INVALID_FORMAT_MASK  ~(FORMAT_MASK | CONSTRUCT_FLAGS)
+#define MAP_READ_WRITE_FLAGS (AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT)
 #define MAP_ACCESS_FLAGS (AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT | AL_MAP_PERSISTENT_BIT_SOFT)
 
 
@@ -161,6 +162,8 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
     if(!(size >= 0 && freq > 0) || (format&INVALID_FORMAT_MASK) != 0)
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    if((format&AL_MAP_PERSISTENT_BIT_SOFT) && !(format&MAP_READ_WRITE_FLAGS))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
     if(DecomposeUserFormat(format&FORMAT_MASK, &srcchannels, &srctype) == AL_FALSE)
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
 
@@ -227,10 +230,13 @@ AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei 
     LockBuffersRead(device);
     if((albuf=LookupBuffer(device, buffer)) == NULL)
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
-    if(!access || (access&~MAP_ACCESS_FLAGS) != 0)
+    if(!(access&MAP_READ_WRITE_FLAGS) || (access&~MAP_ACCESS_FLAGS) != 0)
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
     WriteLock(&albuf->lock);
+    if((ReadRef(&albuf->ref) != 0 && !(access&AL_MAP_PERSISTENT_BIT_SOFT)) ||
+       albuf->MappedAccess != 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, unlock_done);
     if(((access&AL_MAP_READ_BIT_SOFT) && !(albuf->Access&AL_MAP_READ_BIT_SOFT)) ||
        ((access&AL_MAP_WRITE_BIT_SOFT) && !(albuf->Access&AL_MAP_WRITE_BIT_SOFT)) ||
        ((access&AL_MAP_PERSISTENT_BIT_SOFT) && !(albuf->Access&AL_MAP_PERSISTENT_BIT_SOFT)))
@@ -238,9 +244,6 @@ AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei 
     if(offset < 0 || offset >= albuf->OriginalSize ||
        length <= 0 || length > albuf->OriginalSize - offset)
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, unlock_done);
-    if(albuf->MappedAccess != 0 ||
-       (!(access&AL_MAP_PERSISTENT_BIT_SOFT) && ReadRef(&albuf->ref) != 0))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, unlock_done);
 
     retval = (ALbyte*)albuf->data + offset;
     albuf->MappedAccess = access;

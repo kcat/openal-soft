@@ -41,18 +41,14 @@ extern "C" {
 #ifndef AL_SOFT_map_buffer
 #define AL_SOFT_map_buffer 1
 typedef unsigned int ALbitfieldSOFT;
-#define AL_MAP_READ_BIT_SOFT                     0x01000000
-#define AL_MAP_WRITE_BIT_SOFT                    0x02000000
-#define AL_PRESERVE_DATA_BIT_SOFT                0x04000000
-#define AL_MAP_PERSISTENT_BIT_SOFT               0x08000000
+#define AL_MAP_READ_BIT_SOFT                     0x00000001
+#define AL_MAP_WRITE_BIT_SOFT                    0x00000002
+#define AL_MAP_PERSISTENT_BIT_SOFT               0x00000004
+#define AL_PRESERVE_DATA_BIT_SOFT                0x00000008
+typedef void (AL_APIENTRY*LPALBUFFERSTORAGESOFT)(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq, ALbitfieldSOFT flags);
 typedef void* (AL_APIENTRY*LPALMAPBUFFERSOFT)(ALuint buffer, ALsizei offset, ALsizei length, ALbitfieldSOFT access);
 typedef void (AL_APIENTRY*LPALUNMAPBUFFERSOFT)(ALuint buffer);
 typedef void (AL_APIENTRY*LPALFLUSHMAPPEDBUFFERSOFT)(ALuint buffer, ALsizei offset, ALsizei length);
-#ifdef AL_ALEXT_PROTOTYPES
-AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei length, ALbitfieldSOFT access);
-AL_API void AL_APIENTRY alUnmapBufferSOFT(ALuint buffer);
-AL_API void AL_APIENTRY alFlushMappedBufferSOFT(ALuint buffer, ALsizei offset, ALsizei length);
-#endif
 #endif
 }
 
@@ -70,6 +66,7 @@ bool EnableDirectOut = false;
 LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
 LPALCGETINTEGER64VSOFT alcGetInteger64vSOFT;
 
+LPALBUFFERSTORAGESOFT alBufferStorageSOFT;
 LPALMAPBUFFERSOFT alMapBufferSOFT;
 LPALUNMAPBUFFERSOFT alUnmapBufferSOFT;
 
@@ -805,13 +802,13 @@ int AudioState::handler()
     if(alGetError() != AL_NO_ERROR)
         goto finish;
 
-    if(!alMapBufferSOFT)
+    if(!alBufferStorageSOFT)
         samples = av_malloc(buffer_len);
     else
     {
         for(ALuint bufid : mBuffers)
-            alBufferData(bufid, mFormat | AL_MAP_WRITE_BIT_SOFT, nullptr, buffer_len,
-                         mCodecCtx->sample_rate);
+            alBufferStorageSOFT(bufid, mFormat, nullptr, buffer_len, mCodecCtx->sample_rate,
+                                AL_MAP_WRITE_BIT_SOFT);
         if(alGetError() != AL_NO_ERROR)
         {
             fprintf(stderr, "Failed to use mapped buffers\n");
@@ -1639,6 +1636,8 @@ int main(int argc, char *argv[])
     if(alIsExtensionPresent("AL_SOFTX_map_buffer"))
     {
         std::cout<< "Found AL_SOFT_map_buffer" <<std::endl;
+        alBufferStorageSOFT = reinterpret_cast<LPALBUFFERSTORAGESOFT>(
+            alGetProcAddress("alBufferStorageSOFT"));
         alMapBufferSOFT = reinterpret_cast<LPALMAPBUFFERSOFT>(
             alGetProcAddress("alMapBufferSOFT"));
         alUnmapBufferSOFT = reinterpret_cast<LPALUNMAPBUFFERSOFT>(

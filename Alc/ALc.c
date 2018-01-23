@@ -283,8 +283,10 @@ static const struct {
 
     DECL(alGetStringiSOFT),
 
+    DECL(alBufferStorageSOFT),
     DECL(alMapBufferSOFT),
     DECL(alUnmapBufferSOFT),
+    DECL(alFlushMappedBufferSOFT),
 };
 #undef DECL
 
@@ -649,6 +651,8 @@ static const struct {
 
     DECL(AL_MAP_READ_BIT_SOFT),
     DECL(AL_MAP_WRITE_BIT_SOFT),
+    DECL(AL_MAP_PERSISTENT_BIT_SOFT),
+    DECL(AL_PRESERVE_DATA_BIT_SOFT),
 };
 #undef DECL
 

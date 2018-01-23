@@ -50,14 +50,16 @@
 #ifndef AL_SOFT_map_buffer
 #define AL_SOFT_map_buffer 1
 typedef unsigned int ALbitfieldSOFT;
-#define AL_MAP_READ_BIT_SOFT                     0x01000000
-#define AL_MAP_WRITE_BIT_SOFT                    0x02000000
-#define AL_PRESERVE_DATA_BIT_SOFT                0x04000000
-#define AL_MAP_PERSISTENT_BIT_SOFT               0x08000000
+#define AL_MAP_READ_BIT_SOFT                     0x00000001
+#define AL_MAP_WRITE_BIT_SOFT                    0x00000002
+#define AL_MAP_PERSISTENT_BIT_SOFT               0x00000004
+#define AL_PRESERVE_DATA_BIT_SOFT                0x00000008
+typedef void (AL_APIENTRY*LPALBUFFERSTORAGESOFT)(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq, ALbitfieldSOFT flags);
 typedef void* (AL_APIENTRY*LPALMAPBUFFERSOFT)(ALuint buffer, ALsizei offset, ALsizei length, ALbitfieldSOFT access);
 typedef void (AL_APIENTRY*LPALUNMAPBUFFERSOFT)(ALuint buffer);
 typedef void (AL_APIENTRY*LPALFLUSHMAPPEDBUFFERSOFT)(ALuint buffer, ALsizei offset, ALsizei length);
 #ifdef AL_ALEXT_PROTOTYPES
+AL_API void AL_APIENTRY alBufferStorageSOFT(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq, ALbitfieldSOFT flags);
 AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei length, ALbitfieldSOFT access);
 AL_API void AL_APIENTRY alUnmapBufferSOFT(ALuint buffer);
 AL_API void AL_APIENTRY alFlushMappedBufferSOFT(ALuint buffer, ALsizei offset, ALsizei length);

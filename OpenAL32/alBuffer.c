@@ -50,9 +50,7 @@ static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans,
 static ALsizei SanitizeAlignment(enum UserFmtType type, ALsizei align);
 
 
-#define FORMAT_MASK  0x00ffffff
-#define CONSTRUCT_FLAGS (AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT | AL_PRESERVE_DATA_BIT_SOFT | AL_MAP_PERSISTENT_BIT_SOFT)
-#define INVALID_FORMAT_MASK  ~(FORMAT_MASK | CONSTRUCT_FLAGS)
+#define INVALID_STORAGE_MASK ~(AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT | AL_PRESERVE_DATA_BIT_SOFT | AL_MAP_PERSISTENT_BIT_SOFT)
 #define MAP_READ_WRITE_FLAGS (AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT)
 #define MAP_ACCESS_FLAGS (AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT | AL_MAP_PERSISTENT_BIT_SOFT)
 
@@ -143,6 +141,9 @@ AL_API ALboolean AL_APIENTRY alIsBuffer(ALuint buffer)
 
 
 AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq)
+{ alBufferStorageSOFT(buffer, format, data, size, freq, 0); }
+
+AL_API void AL_APIENTRY alBufferStorageSOFT(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq, ALbitfieldSOFT flags)
 {
     enum UserFmtChannels srcchannels = UserFmtMono;
     enum UserFmtType srctype = UserFmtUByte;
@@ -160,11 +161,11 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
     LockBuffersRead(device);
     if((albuf=LookupBuffer(device, buffer)) == NULL)
         SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
-    if(!(size >= 0 && freq > 0) || (format&INVALID_FORMAT_MASK) != 0)
+    if(!(size >= 0 && freq > 0) || (flags&INVALID_STORAGE_MASK) != 0)
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-    if((format&AL_MAP_PERSISTENT_BIT_SOFT) && !(format&MAP_READ_WRITE_FLAGS))
+    if((flags&AL_MAP_PERSISTENT_BIT_SOFT) && !(flags&MAP_READ_WRITE_FLAGS))
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-    if(DecomposeUserFormat(format&FORMAT_MASK, &srcchannels, &srctype) == AL_FALSE)
+    if(DecomposeUserFormat(format, &srcchannels, &srctype) == AL_FALSE)
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
 
     align = SanitizeAlignment(srctype, ATOMIC_LOAD_SEQ(&albuf->UnpackAlign));
@@ -183,7 +184,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
             err = LoadData(albuf, freq, size/framesize*align, srcchannels, srctype,
-                           data, align, format&CONSTRUCT_FLAGS);
+                           data, align, flags);
             if(err != AL_NO_ERROR)
                 SET_ERROR_AND_GOTO(context, err, done);
             break;
@@ -194,7 +195,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
             err = LoadData(albuf, freq, size/framesize*align, srcchannels, srctype,
-                           data, align, format&CONSTRUCT_FLAGS);
+                           data, align, flags);
             if(err != AL_NO_ERROR)
                 SET_ERROR_AND_GOTO(context, err, done);
             break;
@@ -205,7 +206,7 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
                 SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
 
             err = LoadData(albuf, freq, size/framesize*align, srcchannels, srctype,
-                           data, align, format&CONSTRUCT_FLAGS);
+                           data, align, flags);
             if(err != AL_NO_ERROR)
                 SET_ERROR_AND_GOTO(context, err, done);
             break;

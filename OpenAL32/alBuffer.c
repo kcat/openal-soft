@@ -305,55 +305,30 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
         SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
     if(DecomposeUserFormat(format, &srcchannels, &srctype) == AL_FALSE)
         SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
-
     WriteLock(&albuf->lock);
     align = SanitizeAlignment(srctype, ATOMIC_LOAD_SEQ(&albuf->UnpackAlign));
-    if(align < 1)
-    {
-        WriteUnlock(&albuf->lock);
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-    }
+    if(align < 1) SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, unlock_done);
+
     if((long)srcchannels != (long)albuf->FmtChannels || srctype != albuf->OriginalType)
-    {
-        WriteUnlock(&albuf->lock);
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
-    }
+        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, unlock_done);
     if(align != albuf->OriginalAlign)
-    {
-        WriteUnlock(&albuf->lock);
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
-    }
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, unlock_done);
     if(albuf->MappedAccess != 0)
-    {
-        WriteUnlock(&albuf->lock);
-        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
-    }
-
-    if(albuf->OriginalType == UserFmtIMA4)
-    {
-        byte_align  = (albuf->OriginalAlign-1)/2 + 4;
-        byte_align *= ChannelsFromFmt(albuf->FmtChannels);
-    }
-    else if(albuf->OriginalType == UserFmtMSADPCM)
-    {
-        byte_align  = (albuf->OriginalAlign-2)/2 + 7;
-        byte_align *= ChannelsFromFmt(albuf->FmtChannels);
-    }
-    else
-    {
-        byte_align  = albuf->OriginalAlign;
-        byte_align *= FrameSizeFromFmt(albuf->FmtChannels, albuf->FmtType);
-    }
-
-    if(offset > albuf->OriginalSize || length > albuf->OriginalSize-offset ||
-       (offset%byte_align) != 0 || (length%byte_align) != 0)
-    {
-        WriteUnlock(&albuf->lock);
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-    }
+        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, unlock_done);
 
     num_chans = ChannelsFromFmt(albuf->FmtChannels);
     frame_size = num_chans * BytesFromFmt(albuf->FmtType);
+    if(albuf->OriginalType == UserFmtIMA4)
+        byte_align = ((align-1)/2 + 4) * num_chans;
+    else if(albuf->OriginalType == UserFmtMSADPCM)
+        byte_align = ((align-2)/2 + 7) * num_chans;
+    else
+        byte_align = align * frame_size;
+
+    if(offset > albuf->OriginalSize || length > albuf->OriginalSize-offset ||
+       (offset%byte_align) != 0 || (length%byte_align) != 0)
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, unlock_done);
+
     /* offset -> byte offset, length -> sample count */
     offset = offset/byte_align * frame_size;
     length = length/byte_align * albuf->OriginalAlign;
@@ -368,6 +343,8 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
         assert((long)srctype == (long)albuf->FmtType);
         memcpy(dst, data, length*frame_size);
     }
+
+unlock_done:
     WriteUnlock(&albuf->lock);
 
 done:

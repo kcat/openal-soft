@@ -244,6 +244,8 @@ AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei 
 
     retval = (ALbyte*)albuf->data + offset;
     albuf->MappedAccess = access;
+    albuf->MappedOffset = offset;
+    albuf->MappedSize = length;
 
 unlock_done:
     WriteUnlock(&albuf->lock);
@@ -273,7 +275,11 @@ AL_API void AL_APIENTRY alUnmapBufferSOFT(ALuint buffer)
     if(albuf->MappedAccess == 0)
         alSetError(context, AL_INVALID_OPERATION);
     else
+    {
         albuf->MappedAccess = 0;
+        albuf->MappedOffset = 0;
+        albuf->MappedSize = 0;
+    }
     WriteUnlock(&albuf->lock);
 
 done:
@@ -298,9 +304,8 @@ AL_API void AL_APIENTRY alFlushMappedBufferSOFT(ALuint buffer, ALsizei offset, A
     WriteLock(&albuf->lock);
     if(albuf->MappedAccess == 0 || !(albuf->MappedAccess&AL_MAP_WRITE_BIT_SOFT))
         alSetError(context, AL_INVALID_OPERATION);
-    /* TODO: Should check mapped range. */
-    else if(offset < 0 || offset >= albuf->OriginalSize ||
-            length <= 0 || length > albuf->OriginalSize - offset)
+    else if(offset < albuf->MappedOffset || offset >= albuf->MappedOffset+albuf->MappedSize ||
+            length <= 0 || length > albuf->MappedOffset+albuf->MappedSize-offset)
         alSetError(context, AL_INVALID_VALUE);
     else
     {

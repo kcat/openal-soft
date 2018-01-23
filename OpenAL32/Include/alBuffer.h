@@ -90,6 +90,8 @@ typedef struct ALbuffer {
     ATOMIC(ALsizei) PackAlign;
 
     ALbitfieldSOFT MappedAccess;
+    ALsizei MappedOffset;
+    ALsizei MappedSize;
 
     /* Number of times buffer was attached to a source (deletion can only occur when 0) */
     RefCount ref;

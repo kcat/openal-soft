@@ -26,6 +26,11 @@ ALvoid alSetError(ALCcontext *context, ALenum errorCode, ALuint objid, const cha
     goto lbl;                                                                  \
 } while(0)
 
+#define SET_ERR_AND_RETURN(ctx, err, objid, msg) do {                          \
+    alSetError((ctx), (err), (objid), (msg));                                  \
+    return;                                                                    \
+} while(0)
+
 #ifdef __cplusplus
 }
 #endif

@@ -45,7 +45,9 @@ extern inline struct ALbuffer *RemoveBuffer(ALCdevice *device, ALuint id);
 extern inline ALsizei FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType type);
 extern inline ALsizei FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type);
 
-static ALenum LoadData(ALbuffer *buffer, ALuint freq, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALsizei align, ALbitfieldSOFT access);
+static void LoadData(ALCcontext *context, ALbuffer *buffer, ALuint freq, ALsizei frames,
+                     enum UserFmtChannels SrcChannels, enum UserFmtType SrcType,
+                     const ALvoid *data, ALsizei align, ALbitfieldSOFT access);
 static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans, enum UserFmtType *type);
 static ALsizei SanitizeAlignment(enum UserFmtType type, ALsizei align);
 
@@ -150,9 +152,8 @@ AL_API void AL_APIENTRY alBufferStorageSOFT(ALuint buffer, ALenum format, const 
     ALCdevice *device;
     ALCcontext *context;
     ALbuffer *albuf;
-    ALsizei framesize;
+    ALsizei framesize = 1;
     ALsizei align;
-    ALenum err;
 
     context = GetContextRef();
     if(!context) return;
@@ -180,37 +181,21 @@ AL_API void AL_APIENTRY alBufferStorageSOFT(ALuint buffer, ALenum format, const 
         case UserFmtMulaw:
         case UserFmtAlaw:
             framesize = FrameSizeFromUserFmt(srcchannels, srctype) * align;
-            if((size%framesize) != 0)
-                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-
-            err = LoadData(albuf, freq, size/framesize*align, srcchannels, srctype,
-                           data, align, flags);
-            if(err != AL_NO_ERROR)
-                SET_ERROR_AND_GOTO(context, err, done);
             break;
 
         case UserFmtIMA4:
             framesize = ((align-1)/2 + 4) * ChannelsFromUserFmt(srcchannels);
-            if((size%framesize) != 0)
-                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-
-            err = LoadData(albuf, freq, size/framesize*align, srcchannels, srctype,
-                           data, align, flags);
-            if(err != AL_NO_ERROR)
-                SET_ERROR_AND_GOTO(context, err, done);
             break;
 
         case UserFmtMSADPCM:
             framesize = ((align-2)/2 + 7) * ChannelsFromUserFmt(srcchannels);
-            if((size%framesize) != 0)
-                SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-
-            err = LoadData(albuf, freq, size/framesize*align, srcchannels, srctype,
-                           data, align, flags);
-            if(err != AL_NO_ERROR)
-                SET_ERROR_AND_GOTO(context, err, done);
             break;
     }
+    if((size%framesize) != 0)
+        alSetError(context, AL_INVALID_VALUE, buffer, "Data size is not a frame multiple");
+    else
+        LoadData(context, albuf, freq, size/framesize*align, srcchannels, srctype, data, align,
+                 flags);
 
 done:
     UnlockBuffersRead(device);
@@ -876,11 +861,9 @@ done:
 /*
  * LoadData
  *
- * Loads the specified data into the buffer, using the specified formats.
- * Currently, the new format must have the same channel configuration as the
- * original format.
+ * Loads the specified data into the buffer, using the specified format.
  */
-static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALsizei align, ALbitfieldSOFT access)
+static void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALsizei align, ALbitfieldSOFT access)
 {
     enum FmtChannels DstChannels = FmtMono;
     enum FmtType DstType = FmtUByte;
@@ -900,8 +883,8 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALsizei frames, enum UserFm
         case UserFmtBFormat2D: DstChannels = FmtBFormat2D; break;
         case UserFmtBFormat3D: DstChannels = FmtBFormat3D; break;
     }
-    if((long)SrcChannels != (long)DstChannels)
-        return AL_INVALID_ENUM;
+    if(UNLIKELY((long)SrcChannels != (long)DstChannels))
+        SET_ERR_AND_RETURN(context, AL_INVALID_ENUM, ALBuf->id, "Invalid format");
 
     /* IMA4 and MSADPCM convert to 16-bit short. */
     switch(SrcType)
@@ -918,32 +901,40 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALsizei frames, enum UserFm
 
     if(access != 0)
     {
-        if((long)SrcType != (long)DstType)
-            return AL_INVALID_VALUE;
+        if(UNLIKELY((long)SrcType != (long)DstType))
+            SET_ERR_AND_RETURN(context, AL_INVALID_VALUE, ALBuf->id,
+                               "Format cannot be mapped or preserved");
     }
 
     NumChannels = ChannelsFromFmt(DstChannels);
     FrameSize = NumChannels * BytesFromFmt(DstType);
 
-    if(frames > INT_MAX/FrameSize)
-        return AL_OUT_OF_MEMORY;
+    if(UNLIKELY(frames > INT_MAX/FrameSize))
+        SET_ERR_AND_RETURN(context, AL_OUT_OF_MEMORY, ALBuf->id, "Buffer size too large");
     newsize = frames*FrameSize;
 
     WriteLock(&ALBuf->lock);
-    if(ReadRef(&ALBuf->ref) != 0 || ALBuf->MappedAccess != 0)
+    if(UNLIKELY(ReadRef(&ALBuf->ref) != 0 || ALBuf->MappedAccess != 0))
     {
         WriteUnlock(&ALBuf->lock);
-        return AL_INVALID_OPERATION;
+        SET_ERR_AND_RETURN(context, AL_INVALID_OPERATION, ALBuf->id,
+                           "Modifying storage for in-use buffer");
     }
 
     if((access&AL_PRESERVE_DATA_BIT_SOFT))
     {
         /* Can only preserve data with the same format and alignment. */
-        if(ALBuf->FmtChannels != DstChannels || ALBuf->OriginalType != SrcType ||
-           ALBuf->OriginalAlign != align)
+        if(UNLIKELY(ALBuf->FmtChannels != DstChannels || ALBuf->OriginalType != SrcType))
         {
             WriteUnlock(&ALBuf->lock);
-            return AL_INVALID_VALUE;
+            SET_ERR_AND_RETURN(context, AL_INVALID_VALUE, ALBuf->id,
+                               "Preserving data of mismatched format");
+        }
+        if(UNLIKELY(ALBuf->OriginalAlign != align))
+        {
+            WriteUnlock(&ALBuf->lock);
+            SET_ERR_AND_RETURN(context, AL_INVALID_VALUE, ALBuf->id,
+                               "Preserving data of mismatched alignment");
         }
     }
 
@@ -958,10 +949,10 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALsizei frames, enum UserFm
     if(newsize != ALBuf->BytesAlloc)
     {
         void *temp = al_malloc(16, (size_t)newsize);
-        if(!temp && newsize)
+        if(UNLIKELY(!temp && newsize))
         {
             WriteUnlock(&ALBuf->lock);
-            return AL_OUT_OF_MEMORY;
+            SET_ERR_AND_RETURN(context, AL_OUT_OF_MEMORY, ALBuf->id, "Failed to allocate storage");
         }
         if((access&AL_PRESERVE_DATA_BIT_SOFT))
         {
@@ -1011,7 +1002,6 @@ static ALenum LoadData(ALbuffer *ALBuf, ALuint freq, ALsizei frames, enum UserFm
     ALBuf->LoopEnd = ALBuf->SampleLen;
 
     WriteUnlock(&ALBuf->lock);
-    return AL_NO_ERROR;
 }
 
 

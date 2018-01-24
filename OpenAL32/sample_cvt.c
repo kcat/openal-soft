@@ -130,9 +130,10 @@ const ALshort aLawDecompressionTable[256] = {
 
 static void DecodeIMA4Block(ALshort *dst, const ALubyte *src, ALint numchans, ALsizei align)
 {
-    ALint sample[MAX_INPUT_CHANNELS], index[MAX_INPUT_CHANNELS];
-    ALuint code[MAX_INPUT_CHANNELS];
-    ALsizei j,k,c;
+    ALint sample[MAX_INPUT_CHANNELS] = { 0 };
+    ALint index[MAX_INPUT_CHANNELS] = { 0 };
+    ALuint code[MAX_INPUT_CHANNELS] = { 0 };
+    ALsizei c, i;
 
     for(c = 0;c < numchans;c++)
     {
@@ -148,77 +149,77 @@ static void DecodeIMA4Block(ALshort *dst, const ALubyte *src, ALint numchans, AL
         dst[c] = sample[c];
     }
 
-    for(j = 1;j < align;j += 8)
+    for(i = 1;i < align;i++)
     {
-        for(c = 0;c < numchans;c++)
-        {
-            code[c]  = *(src++);
-            code[c] |= *(src++) << 8;
-            code[c] |= *(src++) << 16;
-            code[c] |= *(src++) << 24;
-        }
-
-        for(k = 0;k < 8;k++)
+        if((i&7) == 1)
         {
             for(c = 0;c < numchans;c++)
             {
-                int nibble = code[c]&0xf;
-                code[c] >>= 4;
-
-                sample[c] += IMA4Codeword[nibble] * IMAStep_size[index[c]] / 8;
-                sample[c] = clampi(sample[c], -32768, 32767);
-
-                index[c] += IMA4Index_adjust[nibble];
-                index[c] = clampi(index[c], 0, 88);
-
-                dst[(j+k)*numchans + c] = sample[c];
+                code[c]  = *(src++);
+                code[c] |= *(src++) << 8;
+                code[c] |= *(src++) << 16;
+                code[c] |= *(src++) << 24;
             }
+        }
+
+        for(c = 0;c < numchans;c++)
+        {
+            int nibble = code[c]&0xf;
+            code[c] >>= 4;
+
+            sample[c] += IMA4Codeword[nibble] * IMAStep_size[index[c]] / 8;
+            sample[c] = clampi(sample[c], -32768, 32767);
+
+            index[c] += IMA4Index_adjust[nibble];
+            index[c] = clampi(index[c], 0, 88);
+
+            *(dst++) = sample[c];
         }
     }
 }
 
 static void DecodeMSADPCMBlock(ALshort *dst, const ALubyte *src, ALint numchans, ALsizei align)
 {
-    ALubyte blockpred[MAX_INPUT_CHANNELS];
-    ALint delta[MAX_INPUT_CHANNELS];
-    ALshort samples[MAX_INPUT_CHANNELS][2];
-    ALint i, j;
+    ALubyte blockpred[MAX_INPUT_CHANNELS] = { 0 };
+    ALint delta[MAX_INPUT_CHANNELS] = { 0 };
+    ALshort samples[MAX_INPUT_CHANNELS][2] = { { 0, 0 } };
+    ALint c, i;
 
-    for(i = 0;i < numchans;i++)
+    for(c = 0;c < numchans;c++)
     {
-        blockpred[i] = *(src++);
-        blockpred[i] = minu(blockpred[i], 6);
+        blockpred[c] = *(src++);
+        blockpred[c] = minu(blockpred[c], 6);
     }
-    for(i = 0;i < numchans;i++)
+    for(c = 0;c < numchans;c++)
     {
-        delta[i]  = *(src++);
-        delta[i] |= *(src++) << 8;
-        delta[i]  = (delta[i]^0x8000) - 0x8000;
+        delta[c]  = *(src++);
+        delta[c] |= *(src++) << 8;
+        delta[c]  = (delta[c]^0x8000) - 32768;
     }
-    for(i = 0;i < numchans;i++)
+    for(c = 0;c < numchans;c++)
     {
-        samples[i][0]  = *(src++);
-        samples[i][0] |= *(src++) << 8;
-        samples[i][0]  = (samples[i][0]^0x8000) - 0x8000;
+        samples[c][0]  = *(src++);
+        samples[c][0] |= *(src++) << 8;
+        samples[c][0]  = (samples[c][0]^0x8000) - 32768;
     }
-    for(i = 0;i < numchans;i++)
+    for(c = 0;c < numchans;c++)
     {
-        samples[i][1]  = *(src++);
-        samples[i][1] |= *(src++) << 8;
-        samples[i][1]  = (samples[i][1]^0x8000) - 0x8000;
+        samples[c][1]  = *(src++);
+        samples[c][1] |= *(src++) << 8;
+        samples[c][1]  = (samples[c][1]^0x8000) - 0x8000;
     }
 
     /* Second sample is written first. */
-    for(i = 0;i < numchans;i++)
-        *(dst++) = samples[i][1];
-    for(i = 0;i < numchans;i++)
-        *(dst++) = samples[i][0];
+    for(c = 0;c < numchans;c++)
+        *(dst++) = samples[c][1];
+    for(c = 0;c < numchans;c++)
+        *(dst++) = samples[c][0];
 
-    for(j = 2;j < align;j++)
+    for(i = 2;i < align;i++)
     {
-        for(i = 0;i < numchans;i++)
+        for(c = 0;c < numchans;c++)
         {
-            const ALint num = (j*numchans) + i;
+            const ALint num = (i*numchans) + c;
             ALint nibble, pred;
 
             /* Read the nibble (first is in the upper bits). */
@@ -227,16 +228,16 @@ static void DecodeMSADPCMBlock(ALshort *dst, const ALubyte *src, ALint numchans,
             else
                 nibble = (*(src++))&0x0f;
 
-            pred  = (samples[i][0]*MSADPCMAdaptionCoeff[blockpred[i]][0] +
-                     samples[i][1]*MSADPCMAdaptionCoeff[blockpred[i]][1]) / 256;
-            pred += ((nibble^0x08) - 0x08) * delta[i];
+            pred  = (samples[c][0]*MSADPCMAdaptionCoeff[blockpred[c]][0] +
+                     samples[c][1]*MSADPCMAdaptionCoeff[blockpred[c]][1]) / 256;
+            pred += ((nibble^0x08) - 0x08) * delta[c];
             pred  = clampi(pred, -32768, 32767);
 
-            samples[i][1] = samples[i][0];
-            samples[i][0] = pred;
+            samples[c][1] = samples[c][0];
+            samples[c][0] = pred;
 
-            delta[i] = (MSADPCMAdaption[nibble] * delta[i]) / 256;
-            delta[i] = maxi(16, delta[i]);
+            delta[c] = (MSADPCMAdaption[nibble] * delta[c]) / 256;
+            delta[c] = maxi(16, delta[c]);
 
             *(dst++) = pred;
         }

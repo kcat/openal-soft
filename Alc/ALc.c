@@ -287,6 +287,11 @@ static const struct {
     DECL(alMapBufferSOFT),
     DECL(alUnmapBufferSOFT),
     DECL(alFlushMappedBufferSOFT),
+
+    DECL(alEventControlSOFT),
+    DECL(alEventCallbackSOFT),
+    DECL(alGetPointerSOFT),
+    DECL(alGetPointervSOFT),
 };
 #undef DECL
 
@@ -653,6 +658,13 @@ static const struct {
     DECL(AL_MAP_WRITE_BIT_SOFT),
     DECL(AL_MAP_PERSISTENT_BIT_SOFT),
     DECL(AL_PRESERVE_DATA_BIT_SOFT),
+
+    DECL(AL_EVENT_CALLBACK_FUNCTION_SOFT),
+    DECL(AL_EVENT_CALLBACK_USER_PARAM_SOFT),
+    DECL(AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT),
+    DECL(AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT),
+    DECL(AL_EVENT_TYPE_ERROR_SOFT),
+    DECL(AL_EVENT_TYPE_PERFORMANCE_SOFT),
 };
 #undef DECL
 
@@ -2534,6 +2546,10 @@ static ALvoid InitContext(ALCcontext *Context)
     Context->MetersPerUnit = AL_DEFAULT_METERS_PER_UNIT;
     ATOMIC_FLAG_TEST_AND_SET(&Context->PropsClean, almemory_order_relaxed);
     ATOMIC_INIT(&Context->DeferUpdates, AL_FALSE);
+    almtx_init(&Context->EventLock, almtx_plain);
+    Context->EnabledEvts = 0;
+    Context->EventCb = NULL;
+    Context->EventParam = NULL;
 
     ATOMIC_INIT(&Context->Update, NULL);
     ATOMIC_INIT(&Context->FreeContextProps, NULL);
@@ -2661,6 +2677,8 @@ static void FreeContext(ALCcontext *context)
         ++count;
     }
     TRACE("Freed "SZFMT" listener property object%s\n", count, (count==1)?"":"s");
+
+    almtx_destroy(&context->EventLock);
 
     ALCdevice_DecRef(context->Device);
     context->Device = NULL;

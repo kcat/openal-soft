@@ -415,6 +415,64 @@ done:
     return value;
 }
 
+AL_API void* AL_APIENTRY alGetPointerSOFT(ALenum pname)
+{
+    ALCcontext *context;
+    void *value = NULL;
+
+    context = GetContextRef();
+    if(!context) return NULL;
+
+    switch(pname)
+    {
+        case AL_EVENT_CALLBACK_FUNCTION_SOFT:
+            value = context->EventCb;
+            break;
+
+        case AL_EVENT_CALLBACK_USER_PARAM_SOFT:
+            value = context->EventParam;
+            break;
+
+    default:
+        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+    }
+
+done:
+    ALCcontext_DecRef(context);
+
+    return value;
+}
+
+AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values)
+{
+    ALCcontext *context;
+
+    if(values)
+    {
+        switch(pname)
+        {
+            case AL_EVENT_CALLBACK_FUNCTION_SOFT:
+            case AL_EVENT_CALLBACK_USER_PARAM_SOFT:
+                values[0] = alGetPointerSOFT(pname);
+                return;
+        }
+    }
+
+    context = GetContextRef();
+    if(!context) return;
+
+    if(!(values))
+        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    switch(pname)
+    {
+    default:
+        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+    }
+
+done:
+    ALCcontext_DecRef(context);
+}
+
 AL_API ALvoid AL_APIENTRY alGetBooleanv(ALenum pname, ALboolean *values)
 {
     ALCcontext *context;

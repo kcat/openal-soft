@@ -80,12 +80,12 @@ typedef void (AL_APIENTRY*ALEVENTPROCSOFT)(ALenum eventType, ALuint object, ALui
 typedef void (AL_APIENTRY*LPALEVENTCONTROLSOFT)(ALsizei count, const ALenum *types, ALboolean enable);
 typedef void (AL_APIENTRY*LPALEVENTCALLBACKSOFT)(ALEVENTPROCSOFT callback, void *userParam);
 typedef void* (AL_APIENTRY*LPALGETPOINTERSOFT)(ALenum pname);
-typedef void (AL_APIENTRY*LPALGETPOINTERVSOFT)(ALenum pname, void **params);
+typedef void (AL_APIENTRY*LPALGETPOINTERVSOFT)(ALenum pname, void **values);
 #ifdef AL_ALEXT_PROTOTYPES
 AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, ALboolean enable);
 AL_API void AL_APIENTRY alEventCallbackSOFT(ALEVENTPROCSOFT callback, void *userParam);
 AL_API void* AL_APIENTRY alGetPointerSOFT(ALenum pname);
-AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **params);
+AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values);
 #endif
 #endif
 
@@ -565,6 +565,13 @@ struct ALCdevice_struct
 #define RECORD_THREAD_NAME "alsoft-record"
 
 
+enum {
+    EventType_SourceStateChange = 1<<0,
+    EventType_BufferCompleted   = 1<<1,
+    EventType_Error             = 1<<2,
+    EventType_Performance       = 1<<3,
+};
+
 struct ALCcontext_struct {
     RefCount ref;
 
@@ -611,6 +618,11 @@ struct ALCcontext_struct {
     ALsizei MaxVoices;
 
     ATOMIC(struct ALeffectslotArray*) ActiveAuxSlots;
+
+    almtx_t EventLock;
+    ALbitfieldSOFT EnabledEvts;
+    ALEVENTPROCSOFT EventCb;
+    void *EventParam;
 
     /* Default effect slot */
     struct ALeffectslot *DefaultSlot;

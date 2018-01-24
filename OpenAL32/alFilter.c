@@ -152,7 +152,7 @@ AL_API ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint value)
     Device = Context->Device;
     LockFiltersWrite(Device);
     if((ALFilter=LookupFilter(Device, filter)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, filter, "Invalid filter ID");
     else
     {
         if(param == AL_FILTER_TYPE)
@@ -161,7 +161,7 @@ AL_API ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint value)
                value == AL_FILTER_HIGHPASS || value == AL_FILTER_BANDPASS)
                 InitFilterParams(ALFilter, value);
             else
-                alSetError(Context, AL_INVALID_VALUE);
+                alSetError(Context, AL_INVALID_VALUE, filter, "Filter type not supported");
         }
         else
         {
@@ -193,7 +193,7 @@ AL_API ALvoid AL_APIENTRY alFilteriv(ALuint filter, ALenum param, const ALint *v
     Device = Context->Device;
     LockFiltersWrite(Device);
     if((ALFilter=LookupFilter(Device, filter)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, filter, "Invalid filter ID");
     else
     {
         /* Call the appropriate handler */
@@ -216,7 +216,7 @@ AL_API ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat value)
     Device = Context->Device;
     LockFiltersWrite(Device);
     if((ALFilter=LookupFilter(Device, filter)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, filter, "Invalid filter ID");
     else
     {
         /* Call the appropriate handler */
@@ -239,7 +239,7 @@ AL_API ALvoid AL_APIENTRY alFilterfv(ALuint filter, ALenum param, const ALfloat 
     Device = Context->Device;
     LockFiltersWrite(Device);
     if((ALFilter=LookupFilter(Device, filter)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, filter, "Invalid filter ID");
     else
     {
         /* Call the appropriate handler */
@@ -262,7 +262,7 @@ AL_API ALvoid AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *value
     Device = Context->Device;
     LockFiltersRead(Device);
     if((ALFilter=LookupFilter(Device, filter)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, filter, "Invalid filter ID");
     else
     {
         if(param == AL_FILTER_TYPE)
@@ -297,7 +297,7 @@ AL_API ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *valu
     Device = Context->Device;
     LockFiltersRead(Device);
     if((ALFilter=LookupFilter(Device, filter)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, filter, "Invalid filter ID");
     else
     {
         /* Call the appropriate handler */
@@ -320,7 +320,7 @@ AL_API ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *val
     Device = Context->Device;
     LockFiltersRead(Device);
     if((ALFilter=LookupFilter(Device, filter)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, filter, "Invalid filter ID");
     else
     {
         /* Call the appropriate handler */
@@ -343,7 +343,7 @@ AL_API ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *va
     Device = Context->Device;
     LockFiltersRead(Device);
     if((ALFilter=LookupFilter(Device, filter)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, filter, "Invalid filter ID");
     else
     {
         /* Call the appropriate handler */

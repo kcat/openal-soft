@@ -277,7 +277,7 @@ AL_API void AL_APIENTRY alUnmapBufferSOFT(ALuint buffer)
 
     WriteLock(&albuf->lock);
     if(albuf->MappedAccess == 0)
-        alSetError(context, AL_INVALID_OPERATION);
+        alSetError(context, AL_INVALID_OPERATION, albuf->id, "Unmapping an unmapped buffer");
     else
     {
         albuf->MappedAccess = 0;
@@ -307,10 +307,11 @@ AL_API void AL_APIENTRY alFlushMappedBufferSOFT(ALuint buffer, ALsizei offset, A
 
     WriteLock(&albuf->lock);
     if(albuf->MappedAccess == 0 || !(albuf->MappedAccess&AL_MAP_WRITE_BIT_SOFT))
-        alSetError(context, AL_INVALID_OPERATION);
+        alSetError(context, AL_INVALID_OPERATION, albuf->id,
+                   "Flushing a buffer not mapped for writing");
     else if(offset < albuf->MappedOffset || offset >= albuf->MappedOffset+albuf->MappedSize ||
             length <= 0 || length > albuf->MappedOffset+albuf->MappedSize-offset)
-        alSetError(context, AL_INVALID_VALUE);
+        alSetError(context, AL_INVALID_VALUE, albuf->id, "Flushing an invalid range");
     else
     {
         /* FIXME: Need to use some method of double-buffering for the mixer and
@@ -408,7 +409,7 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint UNUSED(buffer),
     context = GetContextRef();
     if(!context) return;
 
-    alSetError(context, AL_INVALID_OPERATION);
+    alSetError(context, AL_INVALID_OPERATION, 0, "alBufferSamplesSOFT not supported");
 
     ALCcontext_DecRef(context);
 }
@@ -422,7 +423,7 @@ AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint UNUSED(buffer),
     context = GetContextRef();
     if(!context) return;
 
-    alSetError(context, AL_INVALID_OPERATION);
+    alSetError(context, AL_INVALID_OPERATION, 0, "alBufferSubSamplesSOFT not supported");
 
     ALCcontext_DecRef(context);
 }
@@ -436,7 +437,7 @@ AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint UNUSED(buffer),
     context = GetContextRef();
     if(!context) return;
 
-    alSetError(context, AL_INVALID_OPERATION);
+    alSetError(context, AL_INVALID_OPERATION, 0, "alGetBufferSamplesSOFT not supported");
 
     ALCcontext_DecRef(context);
 }
@@ -448,7 +449,7 @@ AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum UNUSED(format)
     context = GetContextRef();
     if(!context) return AL_FALSE;
 
-    alSetError(context, AL_INVALID_OPERATION);
+    alSetError(context, AL_INVALID_OPERATION, 0, "alIsBufferFormatSupportedSOFT not supported");
 
     ALCcontext_DecRef(context);
     return AL_FALSE;

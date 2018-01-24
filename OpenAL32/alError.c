@@ -33,11 +33,12 @@
 
 ALboolean TrapALError = AL_FALSE;
 
-ALvoid alSetError(ALCcontext *Context, ALenum errorCode)
+ALvoid alSetError(ALCcontext *context, ALenum errorCode, ALuint objid, const char *msg)
 {
     ALenum curerr = AL_NO_ERROR;
 
-    WARN("Error generated on context %p, code 0x%04x\n", Context, errorCode);
+    WARN("Error generated on context %p, code 0x%04x, object %u, \"%s\"\n",
+         context, errorCode, objid, msg);
     if(TrapALError)
     {
 #ifdef _WIN32
@@ -49,19 +50,27 @@ ALvoid alSetError(ALCcontext *Context, ALenum errorCode)
 #endif
     }
 
-    (void)(ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(&Context->LastError, &curerr, errorCode));
+    ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(&context->LastError, &curerr, errorCode);
+    if((context->EnabledEvts&EventType_Error))
+    {
+        almtx_lock(&context->EventLock);
+        if((context->EnabledEvts&EventType_Error) && context->EventCb)
+            (*context->EventCb)(AL_EVENT_TYPE_ERROR_SOFT, objid, errorCode, strlen(msg), msg,
+                                context->EventParam);
+        almtx_unlock(&context->EventLock);
+    }
 }
 
 AL_API ALenum AL_APIENTRY alGetError(void)
 {
-    ALCcontext *Context;
+    ALCcontext *context;
     ALenum errorCode;
 
-    Context = GetContextRef();
-    if(!Context)
+    context = GetContextRef();
+    if(!context)
     {
-        WARN("Querying error state on null context (implicitly 0x%04x)\n",
-             AL_INVALID_OPERATION);
+        const ALenum deferror = AL_INVALID_OPERATION;
+        WARN("Querying error state on null context (implicitly 0x%04x)\n", deferror);
         if(TrapALError)
         {
 #ifdef _WIN32
@@ -71,12 +80,12 @@ AL_API ALenum AL_APIENTRY alGetError(void)
             raise(SIGTRAP);
 #endif
         }
-        return AL_INVALID_OPERATION;
+        return deferror;
     }
 
-    errorCode = ATOMIC_EXCHANGE_SEQ(&Context->LastError, AL_NO_ERROR);
+    errorCode = ATOMIC_EXCHANGE_SEQ(&context->LastError, AL_NO_ERROR);
 
-    ALCcontext_DecRef(Context);
+    ALCcontext_DecRef(context);
 
     return errorCode;
 }

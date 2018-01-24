@@ -1844,9 +1844,9 @@ AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum param, ALfloat value)
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!(FloatValsByProp(param) == 1))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid float property");
     else
         SetSourcefv(Source, Context, param, &value);
     UnlockSourcesRead(Context);
@@ -1866,9 +1866,9 @@ AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!(FloatValsByProp(param) == 3))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid 3-float property");
     else
     {
         ALfloat fvals[3] = { value1, value2, value3 };
@@ -1891,11 +1891,11 @@ AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat 
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
     else if(!(FloatValsByProp(param) > 0))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid float-vector property");
     else
         SetSourcefv(Source, Context, param, values);
     UnlockSourcesRead(Context);
@@ -1916,9 +1916,9 @@ AL_API ALvoid AL_APIENTRY alSourcedSOFT(ALuint source, ALenum param, ALdouble va
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!(DoubleValsByProp(param) == 1))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid double property");
     else
     {
         ALfloat fval = (ALfloat)value;
@@ -1941,9 +1941,9 @@ AL_API ALvoid AL_APIENTRY alSource3dSOFT(ALuint source, ALenum param, ALdouble v
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!(DoubleValsByProp(param) == 3))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid 3-double property");
     else
     {
         ALfloat fvals[3] = { (ALfloat)value1, (ALfloat)value2, (ALfloat)value3 };
@@ -1967,11 +1967,11 @@ AL_API ALvoid AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdo
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
     else if(!((count=DoubleValsByProp(param)) > 0 && count <= 6))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid double-vector property");
     else
     {
         ALfloat fvals[6];
@@ -1999,9 +1999,9 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value)
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!(IntValsByProp(param) == 1))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid integer property");
     else
         SetSourceiv(Source, Context, param, &value);
     UnlockSourcesRead(Context);
@@ -2021,9 +2021,9 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, AL
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!(IntValsByProp(param) == 3))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid 3-integer property");
     else
     {
         ALint ivals[3] = { value1, value2, value3 };
@@ -2046,11 +2046,11 @@ AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum param, const ALint *val
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
     else if(!(IntValsByProp(param) > 0))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid integer-vector property");
     else
         SetSourceiv(Source, Context, param, values);
     UnlockSourcesRead(Context);
@@ -2071,9 +2071,9 @@ AL_API ALvoid AL_APIENTRY alSourcei64SOFT(ALuint source, ALenum param, ALint64SO
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!(Int64ValsByProp(param) == 1))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid integer64 property");
     else
         SetSourcei64v(Source, Context, param, &value);
     UnlockSourcesRead(Context);
@@ -2093,9 +2093,9 @@ AL_API void AL_APIENTRY alSource3i64SOFT(ALuint source, ALenum param, ALint64SOF
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!(Int64ValsByProp(param) == 3))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid 3-integer64 property");
     else
     {
         ALint64SOFT i64vals[3] = { value1, value2, value3 };
@@ -2118,11 +2118,11 @@ AL_API void AL_APIENTRY alSourcei64vSOFT(ALuint source, ALenum param, const ALin
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
     else if(!(Int64ValsByProp(param) > 0))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid integer64-vector property");
     else
         SetSourcei64v(Source, Context, param, values);
     UnlockSourcesRead(Context);
@@ -2143,11 +2143,11 @@ AL_API ALvoid AL_APIENTRY alGetSourcef(ALuint source, ALenum param, ALfloat *val
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!value)
-        alSetError(Context, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
     else if(!(FloatValsByProp(param) == 1))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid float property");
     else
     {
         ALdouble dval;
@@ -2172,11 +2172,11 @@ AL_API ALvoid AL_APIENTRY alGetSource3f(ALuint source, ALenum param, ALfloat *va
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!(value1 && value2 && value3))
-        alSetError(Context, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
     else if(!(FloatValsByProp(param) == 3))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid 3-float property");
     else
     {
         ALdouble dvals[3];
@@ -2206,11 +2206,11 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *va
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
     else if(!((count=FloatValsByProp(param)) > 0 && count <= 6))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid float-vector property");
     else
     {
         ALdouble dvals[6];
@@ -2239,11 +2239,11 @@ AL_API void AL_APIENTRY alGetSourcedSOFT(ALuint source, ALenum param, ALdouble *
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!value)
-        alSetError(Context, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
     else if(!(DoubleValsByProp(param) == 1))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid double property");
     else
         GetSourcedv(Source, Context, param, value);
     UnlockSourcesRead(Context);
@@ -2263,11 +2263,11 @@ AL_API void AL_APIENTRY alGetSource3dSOFT(ALuint source, ALenum param, ALdouble 
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!(value1 && value2 && value3))
-        alSetError(Context, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
     else if(!(DoubleValsByProp(param) == 3))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid 3-double property");
     else
     {
         ALdouble dvals[3];
@@ -2295,11 +2295,11 @@ AL_API void AL_APIENTRY alGetSourcedvSOFT(ALuint source, ALenum param, ALdouble 
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
     else if(!(DoubleValsByProp(param) > 0))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid double-vector property");
     else
         GetSourcedv(Source, Context, param, values);
     UnlockSourcesRead(Context);
@@ -2320,11 +2320,11 @@ AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum param, ALint *value
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!value)
-        alSetError(Context, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
     else if(!(IntValsByProp(param) == 1))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid integer property");
     else
         GetSourceiv(Source, Context, param, value);
     UnlockSourcesRead(Context);
@@ -2345,11 +2345,11 @@ AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum param, ALint *value1
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!(value1 && value2 && value3))
-        alSetError(Context, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
     else if(!(IntValsByProp(param) == 3))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid 3-integer property");
     else
     {
         ALint ivals[3];
@@ -2378,11 +2378,11 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum param, ALint *values
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
     else if(!(IntValsByProp(param) > 0))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid integer-vector property");
     else
         GetSourceiv(Source, Context, param, values);
     UnlockSourcesRead(Context);
@@ -2403,11 +2403,11 @@ AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64S
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!value)
-        alSetError(Context, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
     else if(!(Int64ValsByProp(param) == 1))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid integer64 property");
     else
         GetSourcei64v(Source, Context, param, value);
     UnlockSourcesRead(Context);
@@ -2427,11 +2427,11 @@ AL_API void AL_APIENTRY alGetSource3i64SOFT(ALuint source, ALenum param, ALint64
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!(value1 && value2 && value3))
-        alSetError(Context, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
     else if(!(Int64ValsByProp(param) == 3))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid 3-integer64 property");
     else
     {
         ALint64 i64vals[3];
@@ -2459,11 +2459,11 @@ AL_API void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME);
+        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE);
+        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
     else if(!(Int64ValsByProp(param) > 0))
-        alSetError(Context, AL_INVALID_ENUM);
+        alSetError(Context, AL_INVALID_ENUM, source, "Invalid integer64-vector property");
     else
         GetSourcei64v(Source, Context, param, values);
     UnlockSourcesRead(Context);

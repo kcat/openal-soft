@@ -48,14 +48,15 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
     {
     case AL_GAIN:
         if(!(value >= 0.0f && isfinite(value)))
-            SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Listener gain out of range", done);
         listener->Gain = value;
         DO_UPDATEPROPS();
         break;
 
     case AL_METERS_PER_UNIT:
         if(!(value >= AL_MIN_METERS_PER_UNIT && value <= AL_MAX_METERS_PER_UNIT))
-            SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Listener meters per unit out of range",
+                        done);
         context->MetersPerUnit = value;
         if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
             UpdateContextProps(context);
@@ -64,7 +65,7 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
         break;
 
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener float property");
     }
 
 done:
@@ -87,7 +88,7 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
     {
     case AL_POSITION:
         if(!(isfinite(value1) && isfinite(value2) && isfinite(value3)))
-            SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Listener position out of range", done);
         listener->Position[0] = value1;
         listener->Position[1] = value2;
         listener->Position[2] = value3;
@@ -96,7 +97,7 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
 
     case AL_VELOCITY:
         if(!(isfinite(value1) && isfinite(value2) && isfinite(value3)))
-            SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Listener velocity out of range", done);
         listener->Velocity[0] = value1;
         listener->Velocity[1] = value2;
         listener->Velocity[2] = value3;
@@ -104,7 +105,7 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
         break;
 
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener 3-float property");
     }
 
 done:
@@ -139,14 +140,13 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
 
     listener = context->Listener;
     WriteLock(&context->PropLock);
-    if(!(values))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    if(!values) SETERR_GOTO(context, AL_INVALID_VALUE, 0, "NULL pointer", done);
     switch(param)
     {
     case AL_ORIENTATION:
         if(!(isfinite(values[0]) && isfinite(values[1]) && isfinite(values[2]) &&
              isfinite(values[3]) && isfinite(values[4]) && isfinite(values[5])))
-            SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Listener orientation out of range", done);
         /* AT then UP */
         listener->Forward[0] = values[0];
         listener->Forward[1] = values[1];
@@ -158,7 +158,7 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
         break;
 
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener float-vector property");
     }
 
 done:
@@ -178,11 +178,10 @@ AL_API ALvoid AL_APIENTRY alListeneri(ALenum param, ALint UNUSED(value))
     switch(param)
     {
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener integer property");
     }
-
-done:
     WriteUnlock(&context->PropLock);
+
     ALCcontext_DecRef(context);
 }
 
@@ -206,11 +205,10 @@ AL_API void AL_APIENTRY alListener3i(ALenum param, ALint value1, ALint value2, A
     switch(param)
     {
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener 3-integer property");
     }
-
-done:
     WriteUnlock(&context->PropLock);
+
     ALCcontext_DecRef(context);
 }
 
@@ -245,16 +243,15 @@ AL_API void AL_APIENTRY alListeneriv(ALenum param, const ALint *values)
     if(!context) return;
 
     WriteLock(&context->PropLock);
-    if(!(values))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-    switch(param)
+    if(!values)
+        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
+    else switch(param)
     {
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener integer-vector property");
     }
-
-done:
     WriteUnlock(&context->PropLock);
+
     ALCcontext_DecRef(context);
 }
 
@@ -267,9 +264,9 @@ AL_API ALvoid AL_APIENTRY alGetListenerf(ALenum param, ALfloat *value)
     if(!context) return;
 
     ReadLock(&context->PropLock);
-    if(!(value))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-    switch(param)
+    if(!value)
+        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
+    else switch(param)
     {
     case AL_GAIN:
         *value = context->Listener->Gain;
@@ -280,11 +277,10 @@ AL_API ALvoid AL_APIENTRY alGetListenerf(ALenum param, ALfloat *value)
         break;
 
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener float property");
     }
-
-done:
     ReadUnlock(&context->PropLock);
+
     ALCcontext_DecRef(context);
 }
 
@@ -297,9 +293,9 @@ AL_API ALvoid AL_APIENTRY alGetListener3f(ALenum param, ALfloat *value1, ALfloat
     if(!context) return;
 
     ReadLock(&context->PropLock);
-    if(!(value1 && value2 && value3))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-    switch(param)
+    if(!value1 || !value2 || !value3)
+        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
+    else switch(param)
     {
     case AL_POSITION:
         *value1 = context->Listener->Position[0];
@@ -314,11 +310,10 @@ AL_API ALvoid AL_APIENTRY alGetListener3f(ALenum param, ALfloat *value1, ALfloat
         break;
 
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener 3-float property");
     }
-
-done:
     ReadUnlock(&context->PropLock);
+
     ALCcontext_DecRef(context);
 }
 
@@ -344,9 +339,9 @@ AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum param, ALfloat *values)
     if(!context) return;
 
     ReadLock(&context->PropLock);
-    if(!(values))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-    switch(param)
+    if(!values)
+        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
+    else switch(param)
     {
     case AL_ORIENTATION:
         // AT then UP
@@ -359,11 +354,10 @@ AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum param, ALfloat *values)
         break;
 
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener float-vector property");
     }
-
-done:
     ReadUnlock(&context->PropLock);
+
     ALCcontext_DecRef(context);
 }
 
@@ -376,16 +370,15 @@ AL_API ALvoid AL_APIENTRY alGetListeneri(ALenum param, ALint *value)
     if(!context) return;
 
     ReadLock(&context->PropLock);
-    if(!(value))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-    switch(param)
+    if(!value)
+        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
+    else switch(param)
     {
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener integer property");
     }
-
-done:
     ReadUnlock(&context->PropLock);
+
     ALCcontext_DecRef(context);
 }
 
@@ -398,9 +391,9 @@ AL_API void AL_APIENTRY alGetListener3i(ALenum param, ALint *value1, ALint *valu
     if(!context) return;
 
     ReadLock(&context->PropLock);
-    if(!(value1 && value2 && value3))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-    switch (param)
+    if(!value1 || !value2 || !value3)
+        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
+    else switch(param)
     {
     case AL_POSITION:
         *value1 = (ALint)context->Listener->Position[0];
@@ -415,11 +408,10 @@ AL_API void AL_APIENTRY alGetListener3i(ALenum param, ALint *value1, ALint *valu
         break;
 
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener 3-integer property");
     }
-
-done:
     ReadUnlock(&context->PropLock);
+
     ALCcontext_DecRef(context);
 }
 
@@ -440,9 +432,9 @@ AL_API void AL_APIENTRY alGetListeneriv(ALenum param, ALint* values)
     if(!context) return;
 
     ReadLock(&context->PropLock);
-    if(!(values))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
-    switch(param)
+    if(!values)
+        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
+    else switch(param)
     {
     case AL_ORIENTATION:
         // AT then UP
@@ -455,11 +447,10 @@ AL_API void AL_APIENTRY alGetListeneriv(ALenum param, ALint* values)
         break;
 
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener integer-vector property");
     }
-
-done:
     ReadUnlock(&context->PropLock);
+
     ALCcontext_DecRef(context);
 }
 

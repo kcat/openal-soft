@@ -452,7 +452,11 @@ static ALint Int64ValsByProp(ALenum prop)
 
 #define CHECKVAL(x) do {                                                      \
     if(!(x))                                                                  \
-        SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_VALUE, AL_FALSE);      \
+    {                                                                         \
+        alSetError(Context, AL_INVALID_VALUE, Source->id,                     \
+                   "Value out of range");                                     \
+        return AL_FALSE;                                                      \
+    }                                                                         \
 } while(0)
 
 #define DO_UPDATEPROPS() do {                                                 \
@@ -477,7 +481,8 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_SEC_OFFSET_LATENCY_SOFT:
         case AL_SEC_OFFSET_CLOCK_SOFT:
             /* Query only */
-            SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_OPERATION, AL_FALSE);
+            SETERR_RETURN(Context, AL_INVALID_OPERATION, Source->id,
+                          "Setting read-only source property", AL_FALSE);
 
         case AL_PITCH:
             CHECKVAL(*values >= 0.0f);
@@ -601,7 +606,8 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
                     {
                         WriteUnlock(&Source->queue_lock);
                         ALCdevice_Unlock(Context->Device);
-                        SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_VALUE, AL_FALSE);
+                        SETERR_RETURN(Context, AL_INVALID_VALUE, Source->id, "Invalid offset",
+                                      AL_FALSE);
                     }
                     WriteUnlock(&Source->queue_lock);
                 }
@@ -694,7 +700,7 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);
-    SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_ENUM, AL_FALSE);
+    SETERR_RETURN(Context, AL_INVALID_ENUM, Source->id, "Invalid source float property", AL_FALSE);
 }
 
 static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALint *values)
@@ -716,7 +722,8 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_SAMPLE_LENGTH_SOFT:
         case AL_SEC_LENGTH_SOFT:
             /* Query only */
-            SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_OPERATION, AL_FALSE);
+            SETERR_RETURN(Context, AL_INVALID_OPERATION, Source->id,
+                          "Setting read-only source property", AL_FALSE);
 
         case AL_SOURCE_RELATIVE:
             CHECKVAL(*values == AL_FALSE || *values == AL_TRUE);
@@ -756,7 +763,8 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             if(!(*values == 0 || (buffer=LookupBuffer(device, *values)) != NULL))
             {
                 UnlockBuffersRead(device);
-                SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_VALUE, AL_FALSE);
+                SETERR_RETURN(Context, AL_INVALID_VALUE, Source->id, "Invalid buffer ID",
+                              AL_FALSE);
             }
 
             WriteLock(&Source->queue_lock);
@@ -765,7 +773,8 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             {
                 WriteUnlock(&Source->queue_lock);
                 UnlockBuffersRead(device);
-                SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_OPERATION, AL_FALSE);
+                SETERR_RETURN(Context, AL_INVALID_OPERATION, Source->id,
+                              "Setting non-persistently mapped buffer", AL_FALSE);
             }
             else
             {
@@ -774,7 +783,8 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 {
                     WriteUnlock(&Source->queue_lock);
                     UnlockBuffersRead(device);
-                    SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_OPERATION, AL_FALSE);
+                    SETERR_RETURN(Context, AL_INVALID_OPERATION, Source->id,
+                                  "Setting buffer on playing or paused source", AL_FALSE);
                 }
             }
 
@@ -839,7 +849,8 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                     {
                         WriteUnlock(&Source->queue_lock);
                         ALCdevice_Unlock(Context->Device);
-                        SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_VALUE, AL_FALSE);
+                        SETERR_RETURN(Context, AL_INVALID_VALUE, Source->id,
+                                      "Invalid source offset", AL_FALSE);
                     }
                     WriteUnlock(&Source->queue_lock);
                 }
@@ -852,7 +863,8 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             if(!(*values == 0 || (filter=LookupFilter(device, *values)) != NULL))
             {
                 UnlockFiltersRead(device);
-                SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_VALUE, AL_FALSE);
+                SETERR_RETURN(Context, AL_INVALID_VALUE, Source->id, "Invalid filter ID",
+                              AL_FALSE);
             }
 
             if(!filter)
@@ -941,7 +953,9 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             {
                 UnlockFiltersRead(device);
                 UnlockEffectSlotsRead(Context);
-                SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_VALUE, AL_FALSE);
+                /* TODO: Fix message */
+                SETERR_RETURN(Context, AL_INVALID_VALUE, Source->id, "Invalid send parameter",
+                              AL_FALSE);
             }
 
             if(!filter)
@@ -1040,7 +1054,8 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);
-    SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_ENUM, AL_FALSE);
+    SETERR_RETURN(Context, AL_INVALID_ENUM, Source->id, "Invalid source integer property",
+                  AL_FALSE);
 }
 
 static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALint64SOFT *values)
@@ -1060,8 +1075,8 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
         case AL_SAMPLE_LENGTH_SOFT:
         case AL_SEC_LENGTH_SOFT:
             /* Query only */
-            SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_OPERATION, AL_FALSE);
-
+            SETERR_RETURN(Context, AL_INVALID_OPERATION, Source->id,
+                          "Setting read-only source property", AL_FALSE);
 
         /* 1x int */
         case AL_SOURCE_RELATIVE:
@@ -1145,7 +1160,8 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);
-    SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_ENUM, AL_FALSE);
+    SETERR_RETURN(Context, AL_INVALID_ENUM, Source->id, "Invalid source integer64 property",
+                  AL_FALSE);
 }
 
 #undef CHECKVAL
@@ -1342,7 +1358,8 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);
-    SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_ENUM, AL_FALSE);
+    SETERR_RETURN(Context, AL_INVALID_ENUM, Source->id, "Invalid source double property",
+                  AL_FALSE);
 }
 
 static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, ALint *values)
@@ -1586,7 +1603,8 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);
-    SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_ENUM, AL_FALSE);
+    SETERR_RETURN(Context, AL_INVALID_ENUM, Source->id, "Invalid source integer property",
+                  AL_FALSE);
 }
 
 static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, ALint64 *values)
@@ -1718,7 +1736,8 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);
-    SET_ERROR_AND_RETURN_VALUE(Context, AL_INVALID_ENUM, AL_FALSE);
+    SETERR_RETURN(Context, AL_INVALID_ENUM, Source->id, "Invalid source integer64 property",
+                  AL_FALSE);
 }
 
 
@@ -1733,7 +1752,7 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
     if(!context) return;
 
     if(!(n >= 0))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Generating negative sources", done);
     device = context->Device;
     for(cur = 0;cur < n;cur++)
     {
@@ -1741,7 +1760,7 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
         if(!source)
         {
             alDeleteSources(cur, sources);
-            SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
+            SETERR_GOTO(context, AL_OUT_OF_MEMORY,0, "Failed to allocate source object", done);
         }
         InitSourceParams(source, device->NumAuxSends);
 
@@ -1755,7 +1774,7 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
             al_free(source);
 
             alDeleteSources(cur, sources);
-            SET_ERROR_AND_GOTO(context, err, done);
+            SETERR_GOTO(context, err, 0, "Failed to set source ID", done);
         }
 
         sources[cur] = source->id;
@@ -1778,13 +1797,13 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
 
     LockSourcesWrite(context);
     if(!(n >= 0))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Deleting negative sources", done);
 
     /* Check that all Sources are valid */
     for(i = 0;i < n;i++)
     {
         if(LookupSource(context, sources[i]) == NULL)
-            SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+            SETERR_GOTO(context, AL_INVALID_NAME, sources[i], "Invalid source ID", done);
     }
     device = context->Device;
     for(i = 0;i < n;i++)
@@ -2490,11 +2509,11 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 
     LockSourcesRead(context);
     if(!(n >= 0))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Playing negative sources", done);
     for(i = 0;i < n;i++)
     {
         if(!LookupSource(context, sources[i]))
-            SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+            SETERR_GOTO(context, AL_INVALID_NAME, sources[i], "Invalid source ID", done);
     }
 
     device = context->Device;
@@ -2517,7 +2536,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         if(context->MaxVoices >= newcount)
         {
             ALCdevice_Unlock(device);
-            SET_ERROR_AND_GOTO(context, AL_OUT_OF_MEMORY, done);
+            SETERR_GOTO(context, AL_OUT_OF_MEMORY, 0, "Max voice count overflow", done);
         }
         AllocateVoices(context, newcount, device->NumAuxSends);
     }
@@ -2677,11 +2696,11 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
 
     LockSourcesRead(context);
     if(!(n >= 0))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Pausing negative sources", done);
     for(i = 0;i < n;i++)
     {
         if(!LookupSource(context, sources[i]))
-            SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+            SETERR_GOTO(context, AL_INVALID_NAME, sources[i], "Invalid source ID", done);
     }
 
     device = context->Device;
@@ -2724,11 +2743,11 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
 
     LockSourcesRead(context);
     if(!(n >= 0))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Stopping negative sources", done);
     for(i = 0;i < n;i++)
     {
         if(!LookupSource(context, sources[i]))
-            SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+            SETERR_GOTO(context, AL_INVALID_NAME, sources[i], "Invalid source ID", done);
     }
 
     device = context->Device;
@@ -2774,11 +2793,11 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
 
     LockSourcesRead(context);
     if(!(n >= 0))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Rewinding negative sources", done);
     for(i = 0;i < n;i++)
     {
         if(!LookupSource(context, sources[i]))
-            SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+            SETERR_GOTO(context, AL_INVALID_NAME, sources[i], "Invalid source ID", done);
     }
 
     device = context->Device;
@@ -2828,16 +2847,16 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
 
     LockSourcesRead(context);
     if(!(nb >= 0))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, src, "Queueing negative buffers", done);
     if((source=LookupSource(context, src)) == NULL)
-        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+        SETERR_GOTO(context, AL_INVALID_NAME, src, "Invalid source ID", done);
 
     WriteLock(&source->queue_lock);
     if(source->SourceType == AL_STATIC)
     {
         WriteUnlock(&source->queue_lock);
         /* Can't queue on a Static Source */
-        SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, done);
+        SETERR_GOTO(context, AL_INVALID_OPERATION, src, "Queueing onto a static source", done);
     }
 
     /* Check for a valid Buffer, for its frequency and format */
@@ -2862,7 +2881,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         if(buffers[i] && (buffer=LookupBuffer(device, buffers[i])) == NULL)
         {
             WriteUnlock(&source->queue_lock);
-            SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, buffer_error);
+            SETERR_GOTO(context, AL_INVALID_NAME, src, "Invalid buffer ID", buffer_error);
         }
 
         if(!BufferListStart)
@@ -2892,7 +2911,8 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         if(buffer->MappedAccess != 0 && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
         {
             WriteUnlock(&source->queue_lock);
-            SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, buffer_error);
+            SETERR_GOTO(context, AL_INVALID_OPERATION, src,
+                        "Queueing non-persistently mapped buffer", buffer_error);
         }
 
         if(BufferFmt == NULL)
@@ -2902,7 +2922,8 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
                 BufferFmt->OriginalType != buffer->OriginalType)
         {
             WriteUnlock(&source->queue_lock);
-            SET_ERROR_AND_GOTO(context, AL_INVALID_OPERATION, buffer_error);
+            alSetError(context, AL_INVALID_OPERATION, src,
+                       "Queueing buffer with mismatched format");
 
         buffer_error:
             /* A buffer failed (invalid ID or format), so unlock and release
@@ -2973,20 +2994,25 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
 
     LockSourcesRead(context);
     if(!(nb >= 0))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, src, "Unqueueing negative buffers", done);
 
     if((source=LookupSource(context, src)) == NULL)
-        SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+        SETERR_GOTO(context, AL_INVALID_NAME, src, "Invalid source ID", done);
 
     /* Nothing to unqueue. */
     if(nb == 0) goto done;
 
     WriteLock(&source->queue_lock);
-    if(source->Looping || source->SourceType != AL_STREAMING)
+    if(source->Looping)
     {
         WriteUnlock(&source->queue_lock);
-        /* Trying to unqueue buffers on a looping or non-streaming source. */
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, src, "Unqueueing from a looping source", done);
+    }
+    if(source->SourceType != AL_STREAMING)
+    {
+        WriteUnlock(&source->queue_lock);
+        SETERR_GOTO(context, AL_INVALID_VALUE, src, "Unqueueing from a non-streaming source",
+                    done);
     }
 
     /* Find the new buffer queue head */
@@ -3008,8 +3034,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
     if(i != nb)
     {
         WriteUnlock(&source->queue_lock);
-        /* Trying to unqueue pending buffers. */
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, src, "Unqueueing pending buffers", done);
     }
 
     /* Swap it, and cut the new head from the old. */

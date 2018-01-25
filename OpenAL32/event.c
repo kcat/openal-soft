@@ -17,11 +17,9 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
     context = GetContextRef();
     if(!context) return;
 
-    if(count < 0)
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    if(count < 0) SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Controlling negative events", done);
     if(count == 0) goto done;
-    if(!types)
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    if(!types) SETERR_GOTO(context, AL_INVALID_VALUE, 0, "NULL pointer", done);
 
     for(i = 0;i < count;i++)
     {
@@ -34,17 +32,16 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
         else if(types[i] == AL_EVENT_TYPE_PERFORMANCE_SOFT)
             flags |= EventType_Performance;
         else
-            SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+            SETERR_GOTO(context, AL_INVALID_ENUM, 0, "Invalid event type", done);
     }
 
     almtx_lock(&context->EventLock);
-
     if(enable)
         context->EnabledEvts |= flags;
     else
         context->EnabledEvts &= ~flags;
-
     almtx_unlock(&context->EventLock);
+
 done:
     ALCcontext_DecRef(context);
 }

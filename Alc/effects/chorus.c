@@ -317,24 +317,22 @@ void ALchorus_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALi
     {
         case AL_CHORUS_WAVEFORM:
             if(!(val >= AL_CHORUS_MIN_WAVEFORM && val <= AL_CHORUS_MAX_WAVEFORM))
-                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Invalid chorus waveform",);
             props->Chorus.Waveform = val;
             break;
 
         case AL_CHORUS_PHASE:
             if(!(val >= AL_CHORUS_MIN_PHASE && val <= AL_CHORUS_MAX_PHASE))
-                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Chorus phase out of range",);
             props->Chorus.Phase = val;
             break;
 
         default:
-            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid chorus integer property");
     }
 }
 void ALchorus_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
-{
-    ALchorus_setParami(effect, context, param, vals[0]);
-}
+{ ALchorus_setParami(effect, context, param, vals[0]); }
 void ALchorus_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     ALeffectProps *props = &effect->Props;
@@ -342,36 +340,34 @@ void ALchorus_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALf
     {
         case AL_CHORUS_RATE:
             if(!(val >= AL_CHORUS_MIN_RATE && val <= AL_CHORUS_MAX_RATE))
-                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Chorus rate out of range",);
             props->Chorus.Rate = val;
             break;
 
         case AL_CHORUS_DEPTH:
             if(!(val >= AL_CHORUS_MIN_DEPTH && val <= AL_CHORUS_MAX_DEPTH))
-                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Chorus depth out of range",);
             props->Chorus.Depth = val;
             break;
 
         case AL_CHORUS_FEEDBACK:
             if(!(val >= AL_CHORUS_MIN_FEEDBACK && val <= AL_CHORUS_MAX_FEEDBACK))
-                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Chorus feedback out of range",);
             props->Chorus.Feedback = val;
             break;
 
         case AL_CHORUS_DELAY:
             if(!(val >= AL_CHORUS_MIN_DELAY && val <= AL_CHORUS_MAX_DELAY))
-                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Chorus delay out of range",);
             props->Chorus.Delay = val;
             break;
 
         default:
-            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid chorus float property");
     }
 }
 void ALchorus_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
-{
-    ALchorus_setParamf(effect, context, param, vals[0]);
-}
+{ ALchorus_setParamf(effect, context, param, vals[0]); }
 
 void ALchorus_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
@@ -387,13 +383,11 @@ void ALchorus_getParami(const ALeffect *effect, ALCcontext *context, ALenum para
             break;
 
         default:
-            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid chorus integer property");
     }
 }
 void ALchorus_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
-{
-    ALchorus_getParami(effect, context, param, vals);
-}
+{ ALchorus_getParami(effect, context, param, vals); }
 void ALchorus_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     const ALeffectProps *props = &effect->Props;
@@ -416,13 +410,11 @@ void ALchorus_getParamf(const ALeffect *effect, ALCcontext *context, ALenum para
             break;
 
         default:
-            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid chorus float property");
     }
 }
 void ALchorus_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
-{
-    ALchorus_getParamf(effect, context, param, vals);
-}
+{ ALchorus_getParamf(effect, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(ALchorus);
 
@@ -461,24 +453,22 @@ void ALflanger_setParami(ALeffect *effect, ALCcontext *context, ALenum param, AL
     {
         case AL_FLANGER_WAVEFORM:
             if(!(val >= AL_FLANGER_MIN_WAVEFORM && val <= AL_FLANGER_MAX_WAVEFORM))
-                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Invalid flanger waveform",);
             props->Chorus.Waveform = val;
             break;
 
         case AL_FLANGER_PHASE:
             if(!(val >= AL_FLANGER_MIN_PHASE && val <= AL_FLANGER_MAX_PHASE))
-                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Flanger phase out of range",);
             props->Chorus.Phase = val;
             break;
 
         default:
-            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid flanger integer property");
     }
 }
 void ALflanger_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
-{
-    ALflanger_setParami(effect, context, param, vals[0]);
-}
+{ ALflanger_setParami(effect, context, param, vals[0]); }
 void ALflanger_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     ALeffectProps *props = &effect->Props;
@@ -486,36 +476,34 @@ void ALflanger_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, AL
     {
         case AL_FLANGER_RATE:
             if(!(val >= AL_FLANGER_MIN_RATE && val <= AL_FLANGER_MAX_RATE))
-                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Flanger rate out of range",);
             props->Chorus.Rate = val;
             break;
 
         case AL_FLANGER_DEPTH:
             if(!(val >= AL_FLANGER_MIN_DEPTH && val <= AL_FLANGER_MAX_DEPTH))
-                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Flanger depth out of range",);
             props->Chorus.Depth = val;
             break;
 
         case AL_FLANGER_FEEDBACK:
             if(!(val >= AL_FLANGER_MIN_FEEDBACK && val <= AL_FLANGER_MAX_FEEDBACK))
-                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Flanger feedback out of range",);
             props->Chorus.Feedback = val;
             break;
 
         case AL_FLANGER_DELAY:
             if(!(val >= AL_FLANGER_MIN_DELAY && val <= AL_FLANGER_MAX_DELAY))
-                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Flanger delay out of range",);
             props->Chorus.Delay = val;
             break;
 
         default:
-            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid flanger float property");
     }
 }
 void ALflanger_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
-{
-    ALflanger_setParamf(effect, context, param, vals[0]);
-}
+{ ALflanger_setParamf(effect, context, param, vals[0]); }
 
 void ALflanger_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 {
@@ -531,7 +519,7 @@ void ALflanger_getParami(const ALeffect *effect, ALCcontext *context, ALenum par
             break;
 
         default:
-            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid flanger integer property");
     }
 }
 void ALflanger_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
@@ -560,12 +548,10 @@ void ALflanger_getParamf(const ALeffect *effect, ALCcontext *context, ALenum par
             break;
 
         default:
-            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid flanger float property");
     }
 }
 void ALflanger_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
-{
-    ALflanger_getParamf(effect, context, param, vals);
-}
+{ ALflanger_getParamf(effect, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(ALflanger);

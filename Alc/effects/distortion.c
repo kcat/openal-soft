@@ -198,12 +198,10 @@ ALeffectStateFactory *ALdistortionStateFactory_getFactory(void)
 }
 
 
-void ALdistortion_setParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-void ALdistortion_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
-{
-    ALdistortion_setParami(effect, context, param, vals[0]);
-}
+void ALdistortion_setParami(ALeffect *effect, ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
+{ alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid distortion integer property"); }
+void ALdistortion_setParamiv(ALeffect *effect, ALCcontext *context, ALenum UNUSED(param), const ALint *UNUSED(vals))
+{ alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid distortion integer-vector property"); }
 void ALdistortion_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     ALeffectProps *props = &effect->Props;
@@ -211,49 +209,45 @@ void ALdistortion_setParamf(ALeffect *effect, ALCcontext *context, ALenum param,
     {
         case AL_DISTORTION_EDGE:
             if(!(val >= AL_DISTORTION_MIN_EDGE && val <= AL_DISTORTION_MAX_EDGE))
-                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Distortion edge out of range",);
             props->Distortion.Edge = val;
             break;
 
         case AL_DISTORTION_GAIN:
             if(!(val >= AL_DISTORTION_MIN_GAIN && val <= AL_DISTORTION_MAX_GAIN))
-                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Distortion gain out of range",);
             props->Distortion.Gain = val;
             break;
 
         case AL_DISTORTION_LOWPASS_CUTOFF:
             if(!(val >= AL_DISTORTION_MIN_LOWPASS_CUTOFF && val <= AL_DISTORTION_MAX_LOWPASS_CUTOFF))
-                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Distortion low-pass cutoff out of range",);
             props->Distortion.LowpassCutoff = val;
             break;
 
         case AL_DISTORTION_EQCENTER:
             if(!(val >= AL_DISTORTION_MIN_EQCENTER && val <= AL_DISTORTION_MAX_EQCENTER))
-                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Distortion EQ center out of range",);
             props->Distortion.EQCenter = val;
             break;
 
         case AL_DISTORTION_EQBANDWIDTH:
             if(!(val >= AL_DISTORTION_MIN_EQBANDWIDTH && val <= AL_DISTORTION_MAX_EQBANDWIDTH))
-                SET_ERROR_AND_RETURN(context, AL_INVALID_VALUE);
+                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Distortion EQ bandwidth out of range",);
             props->Distortion.EQBandwidth = val;
             break;
 
         default:
-            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid distortion float property");
     }
 }
 void ALdistortion_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
-{
-    ALdistortion_setParamf(effect, context, param, vals[0]);
-}
+{ ALdistortion_setParamf(effect, context, param, vals[0]); }
 
-void ALdistortion_getParami(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
-{ SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM); }
-void ALdistortion_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
-{
-    ALdistortion_getParami(effect, context, param, vals);
-}
+void ALdistortion_getParami(const ALeffect *effect, ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
+{ alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid distortion integer property"); }
+void ALdistortion_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(vals))
+{ alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid distortion integer-vector property"); }
 void ALdistortion_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     const ALeffectProps *props = &effect->Props;
@@ -280,12 +274,10 @@ void ALdistortion_getParamf(const ALeffect *effect, ALCcontext *context, ALenum 
             break;
 
         default:
-            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid distortion float property");
     }
 }
 void ALdistortion_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)
-{
-    ALdistortion_getParamf(effect, context, param, vals);
-}
+{ ALdistortion_getParamf(effect, context, param, vals); }
 
 DEFINE_ALEFFECT_VTABLE(ALdistortion);

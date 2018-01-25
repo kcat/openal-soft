@@ -88,11 +88,10 @@ AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
         break;
 
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_VALUE, 0, "Invalid enable property");
     }
-
-done:
     WriteUnlock(&context->PropLock);
+
     ALCcontext_DecRef(context);
 }
 
@@ -112,11 +111,10 @@ AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
         break;
 
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_VALUE, 0, "Invalid disable property");
     }
-
-done:
     WriteUnlock(&context->PropLock);
+
     ALCcontext_DecRef(context);
 }
 
@@ -135,12 +133,10 @@ AL_API ALboolean AL_APIENTRY alIsEnabled(ALenum capability)
         break;
 
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_VALUE, 0, "Invalid is enabled property");
     }
 
-done:
     ALCcontext_DecRef(context);
-
     return value;
 }
 
@@ -194,12 +190,10 @@ AL_API ALboolean AL_APIENTRY alGetBoolean(ALenum pname)
         break;
 
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_VALUE, 0, "Invalid boolean property");
     }
 
-done:
     ALCcontext_DecRef(context);
-
     return value;
 }
 
@@ -247,12 +241,10 @@ AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
         break;
 
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_VALUE, 0, "Invalid double property");
     }
 
-done:
     ALCcontext_DecRef(context);
-
     return value;
 }
 
@@ -300,12 +292,10 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
         break;
 
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_VALUE, 0, "Invalid float property");
     }
 
-done:
     ALCcontext_DecRef(context);
-
     return value;
 }
 
@@ -353,12 +343,10 @@ AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
         break;
 
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_VALUE, 0, "Invalid integer property");
     }
 
-done:
     ALCcontext_DecRef(context);
-
     return value;
 }
 
@@ -406,12 +394,10 @@ AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname)
         break;
 
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_VALUE, 0, "Invalid integer64 property");
     }
 
-done:
     ALCcontext_DecRef(context);
-
     return value;
 }
 
@@ -433,13 +419,11 @@ AL_API void* AL_APIENTRY alGetPointerSOFT(ALenum pname)
             value = context->EventParam;
             break;
 
-    default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        default:
+            alSetError(context, AL_INVALID_VALUE, 0, "Invalid pointer property");
     }
 
-done:
     ALCcontext_DecRef(context);
-
     return value;
 }
 
@@ -461,15 +445,14 @@ AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values)
     context = GetContextRef();
     if(!context) return;
 
-    if(!(values))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    if(!values)
+        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
     switch(pname)
     {
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_VALUE, 0, "Invalid pointer-vector property");
     }
 
-done:
     ALCcontext_DecRef(context);
 }
 
@@ -497,15 +480,14 @@ AL_API ALvoid AL_APIENTRY alGetBooleanv(ALenum pname, ALboolean *values)
     context = GetContextRef();
     if(!context) return;
 
-    if(!(values))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    if(!values)
+        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
     switch(pname)
     {
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_VALUE, 0, "Invalid boolean-vector property");
     }
 
-done:
     ALCcontext_DecRef(context);
 }
 
@@ -533,15 +515,14 @@ AL_API ALvoid AL_APIENTRY alGetDoublev(ALenum pname, ALdouble *values)
     context = GetContextRef();
     if(!context) return;
 
-    if(!(values))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    if(!values)
+        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
     switch(pname)
     {
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_VALUE, 0, "Invalid double-vector property");
     }
 
-done:
     ALCcontext_DecRef(context);
 }
 
@@ -569,15 +550,14 @@ AL_API ALvoid AL_APIENTRY alGetFloatv(ALenum pname, ALfloat *values)
     context = GetContextRef();
     if(!context) return;
 
-    if(!(values))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    if(!values)
+        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
     switch(pname)
     {
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_VALUE, 0, "Invalid float-vector property");
     }
 
-done:
     ALCcontext_DecRef(context);
 }
 
@@ -605,13 +585,14 @@ AL_API ALvoid AL_APIENTRY alGetIntegerv(ALenum pname, ALint *values)
     context = GetContextRef();
     if(!context) return;
 
+    if(!values)
+        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
     switch(pname)
     {
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_VALUE, 0, "Invalid integer-vector property");
     }
 
-done:
     ALCcontext_DecRef(context);
 }
 
@@ -639,13 +620,14 @@ AL_API void AL_APIENTRY alGetInteger64vSOFT(ALenum pname, ALint64SOFT *values)
     context = GetContextRef();
     if(!context) return;
 
+    if(!values)
+        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
     switch(pname)
     {
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_VALUE, 0, "Invalid integer64-vector property");
     }
 
-done:
     ALCcontext_DecRef(context);
 }
 
@@ -700,12 +682,10 @@ AL_API const ALchar* AL_APIENTRY alGetString(ALenum pname)
         break;
 
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_VALUE, 0, "Invalid string property");
     }
 
-done:
     ALCcontext_DecRef(context);
-
     return value;
 }
 
@@ -717,7 +697,7 @@ AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
     if(!context) return;
 
     if(!(value >= 0.0f && isfinite(value)))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Doppler factor out of range", done);
 
     WriteLock(&context->PropLock);
     context->DopplerFactor = value;
@@ -736,7 +716,7 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
     if(!context) return;
 
     if(!(value >= 0.0f && isfinite(value)))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Doppler velocity out of range", done);
 
     WriteLock(&context->PropLock);
     context->DopplerVelocity = value;
@@ -755,7 +735,7 @@ AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat value)
     if(!context) return;
 
     if(!(value > 0.0f && isfinite(value)))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Speed of sound out of range", done);
 
     WriteLock(&context->PropLock);
     context->SpeedOfSound = value;
@@ -777,7 +757,7 @@ AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
          value == AL_LINEAR_DISTANCE || value == AL_LINEAR_DISTANCE_CLAMPED ||
          value == AL_EXPONENT_DISTANCE || value == AL_EXPONENT_DISTANCE_CLAMPED ||
          value == AL_NONE))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Distance model out of range", done);
 
     WriteLock(&context->PropLock);
     context->DistanceModel = value;
@@ -834,12 +814,12 @@ AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index)
     {
     case AL_RESAMPLER_NAME_SOFT:
         if(index < 0 || (size_t)index >= COUNTOF(ResamplerNames))
-            SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+            SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Resampler name index out of range", done);
         value = ResamplerNames[index];
         break;
 
     default:
-        SET_ERROR_AND_GOTO(context, AL_INVALID_ENUM, done);
+        alSetError(context, AL_INVALID_VALUE, 0, "Invalid string indexed property");
     }
 
 done:

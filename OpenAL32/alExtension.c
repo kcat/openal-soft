@@ -45,8 +45,8 @@ AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
     context = GetContextRef();
     if(!context) return AL_FALSE;
 
-    if(!(extName))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+    if(!extName)
+        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "NULL pointer", done);
 
     len = strlen(extName);
     ptr = context->ExtensionList;

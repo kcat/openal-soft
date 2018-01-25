@@ -69,7 +69,7 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
     if(!context) return;
 
     if(!(n >= 0))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Generating negative effects", done);
 
     device = context->Device;
     for(cur = 0;cur < n;cur++)
@@ -80,7 +80,7 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
         {
             al_free(effect);
             alDeleteEffects(cur, effects);
-            SET_ERROR_AND_GOTO(context, err, done);
+            SETERR_GOTO(context, err, 0, "Failed to allocate effect object", done);
         }
 
         err = NewThunkEntry(&effect->id);
@@ -93,7 +93,7 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
             al_free(effect);
 
             alDeleteEffects(cur, effects);
-            SET_ERROR_AND_GOTO(context, err, done);
+            SETERR_GOTO(context, err, 0, "Failed to set effect ID", done);
         }
 
         effects[cur] = effect->id;
@@ -116,11 +116,11 @@ AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects)
     device = context->Device;
     LockEffectsWrite(device);
     if(!(n >= 0))
-        SET_ERROR_AND_GOTO(context, AL_INVALID_VALUE, done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Deleting negative effects", done);
     for(i = 0;i < n;i++)
     {
         if(effects[i] && LookupEffect(device, effects[i]) == NULL)
-            SET_ERROR_AND_GOTO(context, AL_INVALID_NAME, done);
+            SETERR_GOTO(context, AL_INVALID_NAME, effects[i], "Invalid effect ID", done);
     }
     for(i = 0;i < n;i++)
     {

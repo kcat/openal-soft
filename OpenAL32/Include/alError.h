@@ -11,24 +11,14 @@ extern ALboolean TrapALError;
 
 ALvoid alSetError(ALCcontext *context, ALenum errorCode, ALuint objid, const char *msg);
 
-#define SET_ERROR_AND_RETURN(ctx, err) do {                                    \
-    alSetError((ctx), (err), 0, "Unimplemented message");                      \
-    return;                                                                    \
-} while(0)
-
-#define SET_ERROR_AND_RETURN_VALUE(ctx, err, val) do {                         \
-    alSetError((ctx), (err), 0, "Unimplemented message");                      \
-    return (val);                                                              \
-} while(0)
-
-#define SET_ERROR_AND_GOTO(ctx, err, lbl) do {                                 \
-    alSetError((ctx), (err), 0, "Unimplemented message");                      \
+#define SETERR_GOTO(ctx, err, objid, msg, lbl) do {                            \
+    alSetError((ctx), (err), (objid), (msg));                                  \
     goto lbl;                                                                  \
 } while(0)
 
-#define SET_ERR_AND_RETURN(ctx, err, objid, msg) do {                          \
+#define SETERR_RETURN(ctx, err, objid, msg, retval) do {                       \
     alSetError((ctx), (err), (objid), (msg));                                  \
-    return;                                                                    \
+    return retval;                                                             \
 } while(0)
 
 #ifdef __cplusplus

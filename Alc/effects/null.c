@@ -110,69 +110,69 @@ ALeffectStateFactory *ALnullStateFactory_getFactory(void)
 }
 
 
-void ALnull_setParami(ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, ALint UNUSED(val))
+void ALnull_setParami(ALeffect *effect, ALCcontext *context, ALenum param, ALint UNUSED(val))
 {
     switch(param)
     {
         default:
-            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid null effect integer property");
     }
 }
-void ALnull_setParamiv(ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, const ALint* UNUSED(vals))
+void ALnull_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint* UNUSED(vals))
 {
     switch(param)
     {
         default:
-            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid null effect integer-vector property");
     }
 }
-void ALnull_setParamf(ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, ALfloat UNUSED(val))
+void ALnull_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat UNUSED(val))
 {
     switch(param)
     {
         default:
-            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid null effect float property");
     }
 }
-void ALnull_setParamfv(ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, const ALfloat* UNUSED(vals))
+void ALnull_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat* UNUSED(vals))
 {
     switch(param)
     {
         default:
-            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid null effect float-vector property");
     }
 }
 
-void ALnull_getParami(const ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, ALint* UNUSED(val))
+void ALnull_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint* UNUSED(val))
 {
     switch(param)
     {
         default:
-            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid null effect integer property");
     }
 }
-void ALnull_getParamiv(const ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, ALint* UNUSED(vals))
+void ALnull_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint* UNUSED(vals))
 {
     switch(param)
     {
         default:
-            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid null effect integer-vector property");
     }
 }
-void ALnull_getParamf(const ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, ALfloat* UNUSED(val))
+void ALnull_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat* UNUSED(val))
 {
     switch(param)
     {
         default:
-            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid null effect float property");
     }
 }
-void ALnull_getParamfv(const ALeffect* UNUSED(effect), ALCcontext *context, ALenum param, ALfloat* UNUSED(vals))
+void ALnull_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat* UNUSED(vals))
 {
     switch(param)
     {
         default:
-            SET_ERROR_AND_RETURN(context, AL_INVALID_ENUM);
+            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid null effect float-vector property");
     }
 }
 

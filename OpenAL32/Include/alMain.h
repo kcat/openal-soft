@@ -74,6 +74,7 @@ AL_API void AL_APIENTRY alFlushMappedBufferSOFT(ALuint buffer, ALsizei offset, A
 #define AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT  0xffe3
 #define AL_EVENT_TYPE_ERROR_SOFT                 0xffe4
 #define AL_EVENT_TYPE_PERFORMANCE_SOFT           0xffe5
+#define AL_EVENT_TYPE_DEPRECATED_SOFT            0xffe6
 typedef void (AL_APIENTRY*ALEVENTPROCSOFT)(ALenum eventType, ALuint object, ALuint param,
                                            ALsizei length, const ALchar *message,
                                            void *userParam);
@@ -570,6 +571,7 @@ enum {
     EventType_BufferCompleted   = 1<<1,
     EventType_Error             = 1<<2,
     EventType_Performance       = 1<<3,
+    EventType_Deprecated        = 1<<4,
 };
 
 struct ALCcontext_struct {

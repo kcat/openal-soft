@@ -31,6 +31,8 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
             flags |= EventType_Error;
         else if(types[i] == AL_EVENT_TYPE_PERFORMANCE_SOFT)
             flags |= EventType_Performance;
+        else if(types[i] == AL_EVENT_TYPE_DEPRECATED_SOFT)
+            flags |= EventType_Deprecated;
         else
             SETERR_GOTO(context, AL_INVALID_ENUM, 0, "Invalid event type", done);
     }

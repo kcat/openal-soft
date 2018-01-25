@@ -50,6 +50,24 @@ typedef void* (AL_APIENTRY*LPALMAPBUFFERSOFT)(ALuint buffer, ALsizei offset, ALs
 typedef void (AL_APIENTRY*LPALUNMAPBUFFERSOFT)(ALuint buffer);
 typedef void (AL_APIENTRY*LPALFLUSHMAPPEDBUFFERSOFT)(ALuint buffer, ALsizei offset, ALsizei length);
 #endif
+
+#ifndef AL_SOFT_events
+#define AL_SOFT_events 1
+#define AL_EVENT_CALLBACK_FUNCTION_SOFT          0x1220
+#define AL_EVENT_CALLBACK_USER_PARAM_SOFT        0x1221
+#define AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT      0x1222
+#define AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT  0x1223
+#define AL_EVENT_TYPE_ERROR_SOFT                 0x1224
+#define AL_EVENT_TYPE_PERFORMANCE_SOFT           0x1225
+#define AL_EVENT_TYPE_DEPRECATED_SOFT            0x1226
+typedef void (AL_APIENTRY*ALEVENTPROCSOFT)(ALenum eventType, ALuint object, ALuint param,
+                                           ALsizei length, const ALchar *message,
+                                           void *userParam);
+typedef void (AL_APIENTRY*LPALEVENTCONTROLSOFT)(ALsizei count, const ALenum *types, ALboolean enable);
+typedef void (AL_APIENTRY*LPALEVENTCALLBACKSOFT)(ALEVENTPROCSOFT callback, void *userParam);
+typedef void* (AL_APIENTRY*LPALGETPOINTERSOFT)(ALenum pname);
+typedef void (AL_APIENTRY*LPALGETPOINTERVSOFT)(ALenum pname, void **values);
+#endif
 }
 
 namespace {
@@ -69,6 +87,9 @@ LPALCGETINTEGER64VSOFT alcGetInteger64vSOFT;
 LPALBUFFERSTORAGESOFT alBufferStorageSOFT;
 LPALMAPBUFFERSOFT alMapBufferSOFT;
 LPALUNMAPBUFFERSOFT alUnmapBufferSOFT;
+
+LPALEVENTCONTROLSOFT alEventControlSOFT;
+LPALEVENTCALLBACKSOFT alEventCallbackSOFT;
 
 const seconds AVNoSyncThreshold(10);
 
@@ -231,6 +252,10 @@ struct AudioState {
 
         av_freep(&mSamples);
     }
+
+    static void AL_APIENTRY EventCallback(ALenum eventType, ALuint object, ALuint param,
+                                          ALsizei length, const ALchar *message,
+                                          void *userParam);
 
     nanoseconds getClockNoLock();
     nanoseconds getClock()
@@ -653,10 +678,44 @@ bool AudioState::readAudio(uint8_t *samples, int length)
 }
 
 
+void AL_APIENTRY AudioState::EventCallback(ALenum eventType, ALuint object, ALuint param,
+                                           ALsizei length, const ALchar *message,
+                                           void *userParam)
+{
+    AudioState *self = reinterpret_cast<AudioState*>(userParam);
+
+    std::cout<< "---- AL Event on AudioState "<<self<<" ----\nEvent: ";
+    switch(eventType)
+    {
+        case AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT: std::cout<< "Buffer completed"; break;
+        case AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT: std::cout<< "Source state changed"; break;
+        case AL_EVENT_TYPE_ERROR_SOFT: std::cout<< "API error"; break;
+        case AL_EVENT_TYPE_PERFORMANCE_SOFT: std::cout<< "Performance"; break;
+        case AL_EVENT_TYPE_DEPRECATED_SOFT: std::cout<< "Deprecated"; break;
+        default: std::cout<< "0x"<<std::hex<<std::setw(4)<<std::setfill('0')<<eventType<<
+                             std::dec<<std::setw(0)<<std::setfill(' '); break;
+    }
+    std::cout<< "\n"
+        "Object ID: "<<object<<'\n'<<
+        "Parameter: "<<param<<'\n'<<
+        "Message: "<<std::string(message, length)<<"\n----"<<
+        std::endl;
+}
+
 int AudioState::handler()
 {
+    const ALenum types[5] = {
+        AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT,
+        AL_EVENT_TYPE_ERROR_SOFT, AL_EVENT_TYPE_PERFORMANCE_SOFT, AL_EVENT_TYPE_DEPRECATED_SOFT
+    };
     std::unique_lock<std::mutex> lock(mSrcMutex);
     ALenum fmt;
+
+    if(alEventControlSOFT)
+    {
+        alEventControlSOFT(5, types, AL_TRUE);
+        alEventCallbackSOFT(EventCallback, this);
+    }
 
     /* Find a suitable format for OpenAL. */
     mDstChanLayout = 0;
@@ -886,6 +945,12 @@ int AudioState::handler()
 
 finish:
     av_freep(&samples);
+
+    if(alEventControlSOFT)
+    {
+        alEventControlSOFT(5, types, AL_FALSE);
+        alEventCallbackSOFT(nullptr, nullptr);
+    }
 
     return 0;
 }
@@ -1642,6 +1707,14 @@ int main(int argc, char *argv[])
             alGetProcAddress("alMapBufferSOFT"));
         alUnmapBufferSOFT = reinterpret_cast<LPALUNMAPBUFFERSOFT>(
             alGetProcAddress("alUnmapBufferSOFT"));
+    }
+    if(alIsExtensionPresent("AL_SOFTX_events"))
+    {
+        std::cout<< "Found AL_SOFT_events" <<std::endl;
+        alEventControlSOFT = reinterpret_cast<LPALEVENTCONTROLSOFT>(
+            alGetProcAddress("alEventControlSOFT"));
+        alEventCallbackSOFT = reinterpret_cast<LPALEVENTCALLBACKSOFT>(
+            alGetProcAddress("alEventCallbackSOFT"));
     }
 
     if(fileidx < argc && strcmp(argv[fileidx], "-direct") == 0)

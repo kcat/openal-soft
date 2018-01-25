@@ -427,35 +427,6 @@ AL_API void* AL_APIENTRY alGetPointerSOFT(ALenum pname)
     return value;
 }
 
-AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values)
-{
-    ALCcontext *context;
-
-    if(values)
-    {
-        switch(pname)
-        {
-            case AL_EVENT_CALLBACK_FUNCTION_SOFT:
-            case AL_EVENT_CALLBACK_USER_PARAM_SOFT:
-                values[0] = alGetPointerSOFT(pname);
-                return;
-        }
-    }
-
-    context = GetContextRef();
-    if(!context) return;
-
-    if(!values)
-        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
-    switch(pname)
-    {
-    default:
-        alSetError(context, AL_INVALID_VALUE, 0, "Invalid pointer-vector property");
-    }
-
-    ALCcontext_DecRef(context);
-}
-
 AL_API ALvoid AL_APIENTRY alGetBooleanv(ALenum pname, ALboolean *values)
 {
     ALCcontext *context;
@@ -626,6 +597,35 @@ AL_API void AL_APIENTRY alGetInteger64vSOFT(ALenum pname, ALint64SOFT *values)
     {
     default:
         alSetError(context, AL_INVALID_VALUE, 0, "Invalid integer64-vector property");
+    }
+
+    ALCcontext_DecRef(context);
+}
+
+AL_API void AL_APIENTRY alGetPointervSOFT(ALenum pname, void **values)
+{
+    ALCcontext *context;
+
+    if(values)
+    {
+        switch(pname)
+        {
+            case AL_EVENT_CALLBACK_FUNCTION_SOFT:
+            case AL_EVENT_CALLBACK_USER_PARAM_SOFT:
+                values[0] = alGetPointerSOFT(pname);
+                return;
+        }
+    }
+
+    context = GetContextRef();
+    if(!context) return;
+
+    if(!values)
+        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
+    switch(pname)
+    {
+    default:
+        alSetError(context, AL_INVALID_VALUE, 0, "Invalid pointer-vector property");
     }
 
     ALCcontext_DecRef(context);

@@ -66,7 +66,7 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
     if(!context) return;
 
     if(!(n >= 0))
-        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Generating negative buffers", done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Generating %d buffers", n);
 
     for(cur = 0;cur < n;cur++)
     {
@@ -98,7 +98,7 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
 
     LockBuffersWrite(device);
     if(!(n >= 0))
-        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Deleting negative buffers", done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Deleting %d buffers", n);
 
     for(i = 0;i < n;i++)
     {
@@ -107,9 +107,10 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
 
         /* Check for valid Buffer ID */
         if((ALBuf=LookupBuffer(device, buffers[i])) == NULL)
-            SETERR_GOTO(context, AL_INVALID_NAME, buffers[i], "Invalid buffer ID", done);
+            SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid buffer ID %u", buffers[i]);
         if(ReadRef(&ALBuf->ref) != 0)
-            SETERR_GOTO(context, AL_INVALID_OPERATION, buffers[i], "Deleting in-use buffer", done);
+            SETERR_GOTO(context, AL_INVALID_OPERATION, done, "Deleting in-use buffer %u",
+                        buffers[i]);
     }
 
     for(i = 0;i < n;i++)
@@ -161,19 +162,20 @@ AL_API void AL_APIENTRY alBufferStorageSOFT(ALuint buffer, ALenum format, const 
     device = context->Device;
     LockBuffersRead(device);
     if((albuf=LookupBuffer(device, buffer)) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, buffer, "Invalid buffer ID", done);
-    if(!(size >= 0)) SETERR_GOTO(context, AL_INVALID_VALUE, buffer, "Negative storage size", done);
-    if(!(freq > 0)) SETERR_GOTO(context, AL_INVALID_VALUE, buffer, "Invalid sample rate", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid buffer ID %u", buffer);
+    if(!(size >= 0)) SETERR_GOTO(context, AL_INVALID_VALUE, done, "Negative storage size %d", size);
+    if(!(freq > 0)) SETERR_GOTO(context, AL_INVALID_VALUE, done, "Invalid sample rate %d", freq);
     if((flags&INVALID_STORAGE_MASK) != 0)
-        SETERR_GOTO(context, AL_INVALID_VALUE, buffer, "Invalid storage flags", done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Invalid storage flags 0x%x",
+                    flags&INVALID_STORAGE_MASK);
     if((flags&AL_MAP_PERSISTENT_BIT_SOFT) && !(flags&MAP_READ_WRITE_FLAGS))
-        SETERR_GOTO(context, AL_INVALID_VALUE, buffer,
-                    "Declaring persistently mapped storage without read or write access", done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done,
+                    "Declaring persistently mapped storage without read or write access");
     if(DecomposeUserFormat(format, &srcchannels, &srctype) == AL_FALSE)
-        SETERR_GOTO(context, AL_INVALID_ENUM, buffer, "Invalid format", done);
+        SETERR_GOTO(context, AL_INVALID_ENUM, done, "Invalid format 0x%04x", format);
 
     align = SanitizeAlignment(srctype, ATOMIC_LOAD_SEQ(&albuf->UnpackAlign));
-    if(align < 1) SETERR_GOTO(context, AL_INVALID_VALUE, buffer, "Invalid unpack alignment", done);
+    if(align < 1) SETERR_GOTO(context, AL_INVALID_VALUE, done, "Invalid unpack alignment");
 
     switch(srctype)
     {
@@ -195,7 +197,8 @@ AL_API void AL_APIENTRY alBufferStorageSOFT(ALuint buffer, ALenum format, const 
             break;
     }
     if((size%framesize) != 0)
-        alSetError(context, AL_INVALID_VALUE, buffer, "Data size is not a frame multiple");
+        alSetError(context, AL_INVALID_VALUE, "Data size %d is not a multiple of frame size %d",
+                   size, framesize);
     else
         LoadData(context, albuf, freq, size/framesize*align, srcchannels, srctype, data, align,
                  flags);
@@ -218,32 +221,33 @@ AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei 
     device = context->Device;
     LockBuffersRead(device);
     if((albuf=LookupBuffer(device, buffer)) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, buffer, "Invalid buffer ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid buffer ID %u", buffer);
     if((access&~MAP_ACCESS_FLAGS) != 0)
-        SETERR_GOTO(context, AL_INVALID_VALUE, buffer, "Invalid map flags", done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Invalid map flags 0x%x",
+                    access&~MAP_ACCESS_FLAGS);
     if(!(access&MAP_READ_WRITE_FLAGS))
-        SETERR_GOTO(context, AL_INVALID_VALUE, buffer,
-                    "Mapping buffer without read or write access", done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done,
+                    "Mapping buffer without read or write access");
 
     WriteLock(&albuf->lock);
     if(ReadRef(&albuf->ref) != 0 && !(access&AL_MAP_PERSISTENT_BIT_SOFT))
-        SETERR_GOTO(context, AL_INVALID_OPERATION, buffer,
-                    "Mapping in-use buffer without persistent mapping", unlock_done);
+        SETERR_GOTO(context, AL_INVALID_OPERATION, unlock_done,
+                    "Mapping in-use buffer without persistent mapping");
     if(albuf->MappedAccess != 0)
-        SETERR_GOTO(context, AL_INVALID_OPERATION, buffer, "Mapping already-mapped buffer",
-                    unlock_done);
+        SETERR_GOTO(context, AL_INVALID_OPERATION, unlock_done, "Mapping already-mapped buffer");
     if((access&AL_MAP_READ_BIT_SOFT) && !(albuf->Access&AL_MAP_READ_BIT_SOFT))
-        SETERR_GOTO(context, AL_INVALID_VALUE, buffer,
-                    "Mapping buffer for reading without read access", unlock_done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, unlock_done,
+                    "Mapping buffer for reading without read access");
     if((access&AL_MAP_WRITE_BIT_SOFT) && !(albuf->Access&AL_MAP_WRITE_BIT_SOFT))
-        SETERR_GOTO(context, AL_INVALID_VALUE, buffer,
-                    "Mapping buffer for writing without write access", unlock_done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, unlock_done,
+                    "Mapping buffer for writing without write access");
     if((access&AL_MAP_PERSISTENT_BIT_SOFT) && !(albuf->Access&AL_MAP_PERSISTENT_BIT_SOFT))
-        SETERR_GOTO(context, AL_INVALID_VALUE, buffer,
-                    "Mapping buffer persistently without persistent access", unlock_done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, unlock_done,
+                    "Mapping buffer persistently without persistent access");
     if(offset < 0 || offset >= albuf->OriginalSize ||
        length <= 0 || length > albuf->OriginalSize - offset)
-        SETERR_GOTO(context, AL_INVALID_VALUE, buffer, "Mapping out of range", unlock_done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, unlock_done, "Mapping invalid range %d+%d",
+                    offset, length);
 
     retval = (ALbyte*)albuf->data + offset;
     albuf->MappedAccess = access;
@@ -272,11 +276,11 @@ AL_API void AL_APIENTRY alUnmapBufferSOFT(ALuint buffer)
     device = context->Device;
     LockBuffersRead(device);
     if((albuf=LookupBuffer(device, buffer)) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, buffer, "Invalid buffer ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid buffer ID %u", buffer);
 
     WriteLock(&albuf->lock);
     if(albuf->MappedAccess == 0)
-        alSetError(context, AL_INVALID_OPERATION, albuf->id, "Unmapping an unmapped buffer");
+        alSetError(context, AL_INVALID_OPERATION, "Unmapping an unmapped buffer %u", buffer);
     else
     {
         albuf->MappedAccess = 0;
@@ -302,15 +306,15 @@ AL_API void AL_APIENTRY alFlushMappedBufferSOFT(ALuint buffer, ALsizei offset, A
     device = context->Device;
     LockBuffersRead(device);
     if((albuf=LookupBuffer(device, buffer)) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, buffer, "Invalid buffer ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid buffer ID %u", buffer);
 
     WriteLock(&albuf->lock);
     if(albuf->MappedAccess == 0 || !(albuf->MappedAccess&AL_MAP_WRITE_BIT_SOFT))
-        alSetError(context, AL_INVALID_OPERATION, albuf->id,
-                   "Flushing a buffer not mapped for writing");
+        alSetError(context, AL_INVALID_OPERATION, "Flushing buffer %u not mapped for writing",
+                   buffer);
     else if(offset < albuf->MappedOffset || offset >= albuf->MappedOffset+albuf->MappedSize ||
             length <= 0 || length > albuf->MappedOffset+albuf->MappedSize-offset)
-        alSetError(context, AL_INVALID_VALUE, albuf->id, "Flushing an invalid range");
+        alSetError(context, AL_INVALID_VALUE, "Flushing an invalid range %d+%d", offset, length);
     else
     {
         /* FIXME: Need to use some method of double-buffering for the mixer and
@@ -346,22 +350,22 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
     device = context->Device;
     LockBuffersRead(device);
     if((albuf=LookupBuffer(device, buffer)) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, buffer, "Invalid buffer ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid buffer ID %u", buffer);
     if(DecomposeUserFormat(format, &srcchannels, &srctype) == AL_FALSE)
-        SETERR_GOTO(context, AL_INVALID_ENUM, buffer, "Invalid format", done);
+        SETERR_GOTO(context, AL_INVALID_ENUM, done, "Invalid format 0x%04x", format);
     WriteLock(&albuf->lock);
     align = SanitizeAlignment(srctype, ATOMIC_LOAD_SEQ(&albuf->UnpackAlign));
-    if(align < 1) SETERR_GOTO(context, AL_INVALID_VALUE, buffer, "Invalid unpack alignment", done);
+    if(align < 1) SETERR_GOTO(context, AL_INVALID_VALUE, unlock_done, "Invalid unpack alignment");
 
     if((long)srcchannels != (long)albuf->FmtChannels || srctype != albuf->OriginalType)
-        SETERR_GOTO(context, AL_INVALID_ENUM, buffer, "Unpacking data with mismatched format",
-                    unlock_done);
+        SETERR_GOTO(context, AL_INVALID_ENUM, unlock_done,
+                    "Unpacking data with mismatched format");
     if(align != albuf->OriginalAlign)
-        SETERR_GOTO(context, AL_INVALID_VALUE, buffer, "Unpacking data with mismatched alignment",
-                    unlock_done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, unlock_done,
+                    "Unpacking data with mismatched alignment");
     if(albuf->MappedAccess != 0)
-        SETERR_GOTO(context, AL_INVALID_OPERATION, buffer, "Unpacking data into mapped buffer",
-                    unlock_done);
+        SETERR_GOTO(context, AL_INVALID_OPERATION, unlock_done,
+                    "Unpacking data into mapped buffer");
 
     num_chans = ChannelsFromFmt(albuf->FmtChannels);
     frame_size = num_chans * BytesFromFmt(albuf->FmtType);
@@ -374,9 +378,10 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
 
     if(offset < 0 || length < 0 || offset > albuf->OriginalSize ||
        length > albuf->OriginalSize-offset)
-        SETERR_GOTO(context, AL_INVALID_VALUE, buffer, "Data sub-range out of range", unlock_done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, unlock_done, "Invalid data sub-range %d+%d",
+                    offset, length);
     if((offset%byte_align) != 0 || (length%byte_align) != 0)
-        SETERR_GOTO(context, AL_INVALID_VALUE, buffer, "Invalid sub-range alignment", unlock_done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, unlock_done, "Invalid sub-range alignment");
 
     /* offset -> byte offset, length -> sample count */
     offset = offset/byte_align * frame_size;
@@ -411,7 +416,7 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint UNUSED(buffer),
     context = GetContextRef();
     if(!context) return;
 
-    alSetError(context, AL_INVALID_OPERATION, 0, "alBufferSamplesSOFT not supported");
+    alSetError(context, AL_INVALID_OPERATION, "alBufferSamplesSOFT not supported");
 
     ALCcontext_DecRef(context);
 }
@@ -425,7 +430,7 @@ AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint UNUSED(buffer),
     context = GetContextRef();
     if(!context) return;
 
-    alSetError(context, AL_INVALID_OPERATION, 0, "alBufferSubSamplesSOFT not supported");
+    alSetError(context, AL_INVALID_OPERATION, "alBufferSubSamplesSOFT not supported");
 
     ALCcontext_DecRef(context);
 }
@@ -439,7 +444,7 @@ AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint UNUSED(buffer),
     context = GetContextRef();
     if(!context) return;
 
-    alSetError(context, AL_INVALID_OPERATION, 0, "alGetBufferSamplesSOFT not supported");
+    alSetError(context, AL_INVALID_OPERATION, "alGetBufferSamplesSOFT not supported");
 
     ALCcontext_DecRef(context);
 }
@@ -451,7 +456,7 @@ AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum UNUSED(format)
     context = GetContextRef();
     if(!context) return AL_FALSE;
 
-    alSetError(context, AL_INVALID_OPERATION, 0, "alIsBufferFormatSupportedSOFT not supported");
+    alSetError(context, AL_INVALID_OPERATION, "alIsBufferFormatSupportedSOFT not supported");
 
     ALCcontext_DecRef(context);
     return AL_FALSE;
@@ -469,12 +474,12 @@ AL_API void AL_APIENTRY alBufferf(ALuint buffer, ALenum param, ALfloat UNUSED(va
     device = context->Device;
     LockBuffersRead(device);
     if(LookupBuffer(device, buffer) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, buffer, "Invalid buffer ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid buffer ID %u", buffer);
 
     switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, buffer, "Invalid buffer float property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid buffer float property 0x%04x", param);
     }
 
 done:
@@ -494,12 +499,12 @@ AL_API void AL_APIENTRY alBuffer3f(ALuint buffer, ALenum param, ALfloat UNUSED(v
     device = context->Device;
     LockBuffersRead(device);
     if(LookupBuffer(device, buffer) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, buffer, "Invalid buffer ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid buffer ID %u", buffer);
 
     switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, buffer, "Invalid buffer 3-float property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid buffer 3-float property 0x%04x", param);
     }
 
 done:
@@ -519,13 +524,13 @@ AL_API void AL_APIENTRY alBufferfv(ALuint buffer, ALenum param, const ALfloat *v
     device = context->Device;
     LockBuffersRead(device);
     if(LookupBuffer(device, buffer) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, buffer, "Invalid buffer ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid buffer ID %u", buffer);
 
-    if(!values) SETERR_GOTO(context, AL_INVALID_VALUE, buffer, "NULL pointer", done);
+    if(!values) SETERR_GOTO(context, AL_INVALID_VALUE, done, "NULL pointer");
     switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, buffer, "Invalid buffer float-vector property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid buffer float-vector property 0x%04x", param);
     }
 
 done:
@@ -546,26 +551,26 @@ AL_API void AL_APIENTRY alBufferi(ALuint buffer, ALenum param, ALint value)
     device = context->Device;
     LockBuffersRead(device);
     if((albuf=LookupBuffer(device, buffer)) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, buffer, "Invalid buffer ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid buffer ID %u", buffer);
 
     switch(param)
     {
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
         if(!(value >= 0))
-            SETERR_GOTO(context, AL_INVALID_VALUE, buffer,
-                        "Negative buffer unpack block alignment", done);
+            SETERR_GOTO(context, AL_INVALID_VALUE, done,
+                        "Buffer unpack block alignment %d is invalid", value);
         ATOMIC_STORE_SEQ(&albuf->UnpackAlign, value);
         break;
 
     case AL_PACK_BLOCK_ALIGNMENT_SOFT:
         if(!(value >= 0))
-            SETERR_GOTO(context, AL_INVALID_VALUE, buffer, "Negative buffer pack block alignment",
-                        done);
+            SETERR_GOTO(context, AL_INVALID_VALUE, done,
+                        "Buffer pack block alignment %d is invalid", value);
         ATOMIC_STORE_SEQ(&albuf->PackAlign, value);
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, buffer, "Invalid buffer integer property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid buffer integer property 0x%04x", param);
     }
 
 done:
@@ -584,12 +589,12 @@ AL_API void AL_APIENTRY alBuffer3i(ALuint buffer, ALenum param, ALint UNUSED(val
 
     device = context->Device;
     if(LookupBuffer(device, buffer) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, buffer, "Invalid buffer ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid buffer ID %u", buffer);
 
     switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, buffer, "Invalid buffer 3-integer property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid buffer 3-integer property 0x%04x", param);
     }
 
 done:
@@ -620,9 +625,9 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum param, const ALint *val
     device = context->Device;
     LockBuffersRead(device);
     if((albuf=LookupBuffer(device, buffer)) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, buffer, "Invalid buffer ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid buffer ID %u", buffer);
 
-    if(!values) SETERR_GOTO(context, AL_INVALID_VALUE, buffer, "NULL pointer", done);
+    if(!values) SETERR_GOTO(context, AL_INVALID_VALUE, done, "NULL pointer");
     switch(param)
     {
     case AL_LOOP_POINTS_SOFT:
@@ -630,14 +635,15 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum param, const ALint *val
         if(ReadRef(&albuf->ref) != 0)
         {
             WriteUnlock(&albuf->lock);
-            SETERR_GOTO(context, AL_INVALID_OPERATION, buffer,
-                        "Modifying in-use buffer loop points", done);
+            SETERR_GOTO(context, AL_INVALID_OPERATION, done,
+                        "Modifying in-use buffer loop points");
         }
         if(values[0] >= values[1] || values[0] < 0 ||
            values[1] > albuf->SampleLen)
         {
             WriteUnlock(&albuf->lock);
-            SETERR_GOTO(context, AL_INVALID_VALUE, buffer, "Invalid loop point range", done);
+            SETERR_GOTO(context, AL_INVALID_VALUE, done, "Invalid loop point range %d -> %d",
+                        values[0], values[1]);
         }
 
         albuf->LoopStart = values[0];
@@ -646,7 +652,8 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum param, const ALint *val
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, buffer, "Invalid buffer integer-vector property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid buffer integer-vector property 0x%04x",
+                   param);
     }
 
 done:
@@ -667,13 +674,13 @@ AL_API ALvoid AL_APIENTRY alGetBufferf(ALuint buffer, ALenum param, ALfloat *val
     device = context->Device;
     LockBuffersRead(device);
     if((albuf=LookupBuffer(device, buffer)) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, buffer, "Invalid buffer ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid buffer ID %u", buffer);
 
-    if(!value) SETERR_GOTO(context, AL_INVALID_VALUE, buffer, "NULL pointer", done);
+    if(!value) SETERR_GOTO(context, AL_INVALID_VALUE, done, "NULL pointer");
     switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, buffer, "Invalid buffer float property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid buffer float property 0x%04x", param);
     }
 
 done:
@@ -693,14 +700,14 @@ AL_API void AL_APIENTRY alGetBuffer3f(ALuint buffer, ALenum param, ALfloat *valu
     device = context->Device;
     LockBuffersRead(device);
     if(LookupBuffer(device, buffer) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, buffer, "Invalid buffer ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid buffer ID %u", buffer);
 
     if(!value1 || !value2 || !value3)
-        SETERR_GOTO(context, AL_INVALID_VALUE, buffer, "NULL pointer", done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "NULL pointer");
     switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, buffer, "Invalid buffer 3-float property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid buffer 3-float property 0x%04x", param);
     }
 
 done:
@@ -727,13 +734,13 @@ AL_API void AL_APIENTRY alGetBufferfv(ALuint buffer, ALenum param, ALfloat *valu
     device = context->Device;
     LockBuffersRead(device);
     if(LookupBuffer(device, buffer) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, buffer, "Invalid buffer ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid buffer ID %u", buffer);
 
-    if(!values) SETERR_GOTO(context, AL_INVALID_VALUE, buffer, "NULL pointer", done);
+    if(!values) SETERR_GOTO(context, AL_INVALID_VALUE, done, "NULL pointer");
     switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, buffer, "Invalid buffer float-vector property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid buffer float-vector property 0x%04x", param);
     }
 
 done:
@@ -754,9 +761,9 @@ AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum param, ALint *value
     device = context->Device;
     LockBuffersRead(device);
     if((albuf=LookupBuffer(device, buffer)) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, buffer, "Invalid buffer ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid buffer ID %u", buffer);
 
-    if(!value) SETERR_GOTO(context, AL_INVALID_VALUE, buffer, "NULL pointer", done);
+    if(!value) SETERR_GOTO(context, AL_INVALID_VALUE, done, "NULL pointer");
     switch(param)
     {
     case AL_FREQUENCY:
@@ -787,7 +794,7 @@ AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum param, ALint *value
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, buffer, "Invalid buffer integer property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid buffer integer property 0x%04x", param);
     }
 
 done:
@@ -807,14 +814,14 @@ AL_API void AL_APIENTRY alGetBuffer3i(ALuint buffer, ALenum param, ALint *value1
     device = context->Device;
     LockBuffersRead(device);
     if(LookupBuffer(device, buffer) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, buffer, "Invalid buffer ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid buffer ID %u", buffer);
 
     if(!value1 || !value2 || !value3)
-        SETERR_GOTO(context, AL_INVALID_VALUE, buffer, "NULL pointer", done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "NULL pointer");
     switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, buffer, "Invalid buffer 3-integer property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid buffer 3-integer property 0x%04x", param);
     }
 
 done:
@@ -850,9 +857,9 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum param, ALint *values
     device = context->Device;
     LockBuffersRead(device);
     if((albuf=LookupBuffer(device, buffer)) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, buffer, "Invalid buffer ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid buffer ID %u", buffer);
 
-    if(!values) SETERR_GOTO(context, AL_INVALID_VALUE, buffer, "NULL pointer", done);
+    if(!values) SETERR_GOTO(context, AL_INVALID_VALUE, done, "NULL pointer");
     switch(param)
     {
     case AL_LOOP_POINTS_SOFT:
@@ -863,7 +870,8 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum param, ALint *values
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, buffer, "Invalid buffer integer-vector property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid buffer integer-vector property 0x%04x",
+                   param);
     }
 
 done:
@@ -898,7 +906,7 @@ static void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei 
         case UserFmtBFormat3D: DstChannels = FmtBFormat3D; break;
     }
     if(UNLIKELY((long)SrcChannels != (long)DstChannels))
-        SETERR_RETURN(context, AL_INVALID_ENUM, ALBuf->id, "Invalid format",);
+        SETERR_RETURN(context, AL_INVALID_ENUM,, "Invalid format");
 
     /* IMA4 and MSADPCM convert to 16-bit short. */
     switch(SrcType)
@@ -916,23 +924,22 @@ static void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei 
     if(access != 0)
     {
         if(UNLIKELY((long)SrcType != (long)DstType))
-            SETERR_RETURN(context, AL_INVALID_VALUE, ALBuf->id,
-                          "Format cannot be mapped or preserved",);
+            SETERR_RETURN(context, AL_INVALID_VALUE,, "Format cannot be mapped or preserved");
     }
 
     NumChannels = ChannelsFromFmt(DstChannels);
     FrameSize = NumChannels * BytesFromFmt(DstType);
 
     if(UNLIKELY(frames > INT_MAX/FrameSize))
-        SETERR_RETURN(context, AL_OUT_OF_MEMORY, ALBuf->id, "Buffer size too large",);
+        SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
+                      "Buffer size overflow, %d frames x %d bytes per frame", frames, FrameSize);
     newsize = frames*FrameSize;
 
     WriteLock(&ALBuf->lock);
     if(UNLIKELY(ReadRef(&ALBuf->ref) != 0 || ALBuf->MappedAccess != 0))
     {
         WriteUnlock(&ALBuf->lock);
-        SETERR_RETURN(context, AL_INVALID_OPERATION, ALBuf->id,
-                      "Modifying storage for in-use buffer",);
+        SETERR_RETURN(context, AL_INVALID_OPERATION,, "Modifying storage for in-use buffer");
     }
 
     if((access&AL_PRESERVE_DATA_BIT_SOFT))
@@ -941,14 +948,12 @@ static void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei 
         if(UNLIKELY(ALBuf->FmtChannels != DstChannels || ALBuf->OriginalType != SrcType))
         {
             WriteUnlock(&ALBuf->lock);
-            SETERR_RETURN(context, AL_INVALID_VALUE, ALBuf->id,
-                          "Preserving data of mismatched format",);
+            SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched format");
         }
         if(UNLIKELY(ALBuf->OriginalAlign != align))
         {
             WriteUnlock(&ALBuf->lock);
-            SETERR_RETURN(context, AL_INVALID_VALUE, ALBuf->id,
-                          "Preserving data of mismatched alignment",);
+            SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched alignment");
         }
     }
 
@@ -966,7 +971,8 @@ static void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei 
         if(UNLIKELY(!temp && newsize))
         {
             WriteUnlock(&ALBuf->lock);
-            SETERR_RETURN(context, AL_OUT_OF_MEMORY, ALBuf->id, "Failed to allocate storage",);
+            SETERR_RETURN(context, AL_OUT_OF_MEMORY,, "Failed to allocate %d bytes of storage",
+                          newsize);
         }
         if((access&AL_PRESERVE_DATA_BIT_SOFT))
         {
@@ -1204,7 +1210,7 @@ ALbuffer *NewBuffer(ALCcontext *context)
 
     buffer = al_calloc(16, sizeof(ALbuffer));
     if(!buffer)
-        SETERR_RETURN(context, AL_OUT_OF_MEMORY, 0, "Failed to allocate buffer object", NULL);
+        SETERR_RETURN(context, AL_OUT_OF_MEMORY, NULL, "Failed to allocate buffer object");
     RWLockInit(&buffer->lock);
     buffer->Access = 0;
     buffer->MappedAccess = 0;
@@ -1218,7 +1224,7 @@ ALbuffer *NewBuffer(ALCcontext *context)
         memset(buffer, 0, sizeof(ALbuffer));
         al_free(buffer);
 
-        SETERR_RETURN(context, err, 0, "Failed to set buffer ID", NULL);
+        SETERR_RETURN(context, err, NULL, "Failed to set buffer ID");
     }
 
     return buffer;

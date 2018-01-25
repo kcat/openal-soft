@@ -210,20 +210,21 @@ void ALcompressor_setParami(ALeffect *effect, ALCcontext *context, ALenum param,
     {
         case AL_COMPRESSOR_ONOFF:
             if(!(val >= AL_COMPRESSOR_MIN_ONOFF && val <= AL_COMPRESSOR_MAX_ONOFF))
-                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Compressor state out of range",);
+                SETERR_RETURN(context, AL_INVALID_VALUE,, "Compressor state out of range");
             props->Compressor.OnOff = val;
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid compressor integer property");
+            alSetError(context, AL_INVALID_ENUM, "Invalid compressor integer property 0x%04x",
+                       param);
     }
 }
 void ALcompressor_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
 { ALcompressor_setParami(effect, context, param, vals[0]); }
-void ALcompressor_setParamf(ALeffect *effect, ALCcontext *context, ALenum UNUSED(param), ALfloat UNUSED(val))
-{ alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid compressor float property"); }
-void ALcompressor_setParamfv(ALeffect *effect, ALCcontext *context, ALenum UNUSED(param), const ALfloat *UNUSED(vals))
-{ alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid compressor float-vector property"); }
+void ALcompressor_setParamf(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALfloat UNUSED(val))
+{ alSetError(context, AL_INVALID_ENUM, "Invalid compressor float property 0x%04x", param); }
+void ALcompressor_setParamfv(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, const ALfloat *UNUSED(vals))
+{ alSetError(context, AL_INVALID_ENUM, "Invalid compressor float-vector property 0x%04x", param); }
 
 void ALcompressor_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
 { 
@@ -235,14 +236,15 @@ void ALcompressor_getParami(const ALeffect *effect, ALCcontext *context, ALenum 
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid compressor integer property");
+            alSetError(context, AL_INVALID_ENUM, "Invalid compressor integer property 0x%04x",
+                       param);
     }
 }
 void ALcompressor_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
 { ALcompressor_getParami(effect, context, param, vals); }
-void ALcompressor_getParamf(const ALeffect *effect, ALCcontext *context, ALenum UNUSED(param), ALfloat *UNUSED(val))
-{ alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid compressor float property"); }
-void ALcompressor_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum UNUSED(param), ALfloat *UNUSED(vals))
-{ alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid compressor float-vector property"); }
+void ALcompressor_getParamf(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALfloat *UNUSED(val))
+{ alSetError(context, AL_INVALID_ENUM, "Invalid compressor float property 0x%04x", param); }
+void ALcompressor_getParamfv(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALfloat *UNUSED(vals))
+{ alSetError(context, AL_INVALID_ENUM, "Invalid compressor float-vector property 0x%04x", param); }
 
 DEFINE_ALEFFECT_VTABLE(ALcompressor);

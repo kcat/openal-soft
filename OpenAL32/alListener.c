@@ -48,15 +48,14 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
     {
     case AL_GAIN:
         if(!(value >= 0.0f && isfinite(value)))
-            SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Listener gain out of range", done);
+            SETERR_GOTO(context, AL_INVALID_VALUE, done, "Listener gain out of range");
         listener->Gain = value;
         DO_UPDATEPROPS();
         break;
 
     case AL_METERS_PER_UNIT:
         if(!(value >= AL_MIN_METERS_PER_UNIT && value <= AL_MAX_METERS_PER_UNIT))
-            SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Listener meters per unit out of range",
-                        done);
+            SETERR_GOTO(context, AL_INVALID_VALUE, done, "Listener meters per unit out of range");
         context->MetersPerUnit = value;
         if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
             UpdateContextProps(context);
@@ -88,7 +87,7 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
     {
     case AL_POSITION:
         if(!(isfinite(value1) && isfinite(value2) && isfinite(value3)))
-            SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Listener position out of range", done);
+            SETERR_GOTO(context, AL_INVALID_VALUE, done, "Listener position out of range");
         listener->Position[0] = value1;
         listener->Position[1] = value2;
         listener->Position[2] = value3;
@@ -97,7 +96,7 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
 
     case AL_VELOCITY:
         if(!(isfinite(value1) && isfinite(value2) && isfinite(value3)))
-            SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Listener velocity out of range", done);
+            SETERR_GOTO(context, AL_INVALID_VALUE, done, "Listener velocity out of range");
         listener->Velocity[0] = value1;
         listener->Velocity[1] = value2;
         listener->Velocity[2] = value3;
@@ -140,13 +139,13 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
 
     listener = context->Listener;
     WriteLock(&context->PropLock);
-    if(!values) SETERR_GOTO(context, AL_INVALID_VALUE, 0, "NULL pointer", done);
+    if(!values) SETERR_GOTO(context, AL_INVALID_VALUE, done, "NULL pointer");
     switch(param)
     {
     case AL_ORIENTATION:
         if(!(isfinite(values[0]) && isfinite(values[1]) && isfinite(values[2]) &&
              isfinite(values[3]) && isfinite(values[4]) && isfinite(values[5])))
-            SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Listener orientation out of range", done);
+            SETERR_GOTO(context, AL_INVALID_VALUE, done, "Listener orientation out of range");
         /* AT then UP */
         listener->Forward[0] = values[0];
         listener->Forward[1] = values[1];

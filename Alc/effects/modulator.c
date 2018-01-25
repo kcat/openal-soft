@@ -217,18 +217,18 @@ void ALmodulator_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, 
     {
         case AL_RING_MODULATOR_FREQUENCY:
             if(!(val >= AL_RING_MODULATOR_MIN_FREQUENCY && val <= AL_RING_MODULATOR_MAX_FREQUENCY))
-                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Modulator frequency out of range",);
+                SETERR_RETURN(context, AL_INVALID_VALUE,, "Modulator frequency out of range");
             props->Modulator.Frequency = val;
             break;
 
         case AL_RING_MODULATOR_HIGHPASS_CUTOFF:
             if(!(val >= AL_RING_MODULATOR_MIN_HIGHPASS_CUTOFF && val <= AL_RING_MODULATOR_MAX_HIGHPASS_CUTOFF))
-                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Modulator high-pass cutoff out of range",);
+                SETERR_RETURN(context, AL_INVALID_VALUE,, "Modulator high-pass cutoff out of range");
             props->Modulator.HighPassCutoff = val;
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid modulator float property");
+            alSetError(context, AL_INVALID_ENUM, "Invalid modulator float property 0x%04x", param);
     }
 }
 void ALmodulator_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
@@ -245,12 +245,12 @@ void ALmodulator_setParami(ALeffect *effect, ALCcontext *context, ALenum param, 
 
         case AL_RING_MODULATOR_WAVEFORM:
             if(!(val >= AL_RING_MODULATOR_MIN_WAVEFORM && val <= AL_RING_MODULATOR_MAX_WAVEFORM))
-                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Invalid modulator waveform",);
+                SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid modulator waveform");
             props->Modulator.Waveform = val;
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid modulator integer property");
+            alSetError(context, AL_INVALID_ENUM, "Invalid modulator integer property 0x%04x", param);
     }
 }
 void ALmodulator_setParamiv(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals)
@@ -272,7 +272,7 @@ void ALmodulator_getParami(const ALeffect *effect, ALCcontext *context, ALenum p
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid modulator integer property");
+            alSetError(context, AL_INVALID_ENUM, "Invalid modulator integer property 0x%04x", param);
     }
 }
 void ALmodulator_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals)
@@ -290,7 +290,7 @@ void ALmodulator_getParamf(const ALeffect *effect, ALCcontext *context, ALenum p
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid modulator float property");
+            alSetError(context, AL_INVALID_ENUM, "Invalid modulator float property 0x%04x", param);
     }
 }
 void ALmodulator_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)

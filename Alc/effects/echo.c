@@ -230,10 +230,10 @@ ALeffectStateFactory *ALechoStateFactory_getFactory(void)
 }
 
 
-void ALecho_setParami(ALeffect *effect, ALCcontext *context, ALenum UNUSED(param), ALint UNUSED(val))
-{ alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid echo integer property"); }
-void ALecho_setParamiv(ALeffect *effect, ALCcontext *context, ALenum UNUSED(param), const ALint *UNUSED(vals))
-{ alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid echo integer-vector property"); }
+void ALecho_setParami(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint UNUSED(val))
+{ alSetError(context, AL_INVALID_ENUM, "Invalid echo integer property 0x%04x", param); }
+void ALecho_setParamiv(ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, const ALint *UNUSED(vals))
+{ alSetError(context, AL_INVALID_ENUM, "Invalid echo integer-vector property 0x%04x", param); }
 void ALecho_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {
     ALeffectProps *props = &effect->Props;
@@ -241,45 +241,45 @@ void ALecho_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALflo
     {
         case AL_ECHO_DELAY:
             if(!(val >= AL_ECHO_MIN_DELAY && val <= AL_ECHO_MAX_DELAY))
-                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Echo delay out of range",);
+                SETERR_RETURN(context, AL_INVALID_VALUE,, "Echo delay out of range");
             props->Echo.Delay = val;
             break;
 
         case AL_ECHO_LRDELAY:
             if(!(val >= AL_ECHO_MIN_LRDELAY && val <= AL_ECHO_MAX_LRDELAY))
-                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Echo LR delay out of range",);
+                SETERR_RETURN(context, AL_INVALID_VALUE,, "Echo LR delay out of range");
             props->Echo.LRDelay = val;
             break;
 
         case AL_ECHO_DAMPING:
             if(!(val >= AL_ECHO_MIN_DAMPING && val <= AL_ECHO_MAX_DAMPING))
-                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Echo damping out of range",);
+                SETERR_RETURN(context, AL_INVALID_VALUE,, "Echo damping out of range");
             props->Echo.Damping = val;
             break;
 
         case AL_ECHO_FEEDBACK:
             if(!(val >= AL_ECHO_MIN_FEEDBACK && val <= AL_ECHO_MAX_FEEDBACK))
-                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Echo feedback out of range",);
+                SETERR_RETURN(context, AL_INVALID_VALUE,, "Echo feedback out of range");
             props->Echo.Feedback = val;
             break;
 
         case AL_ECHO_SPREAD:
             if(!(val >= AL_ECHO_MIN_SPREAD && val <= AL_ECHO_MAX_SPREAD))
-                SETERR_RETURN(context, AL_INVALID_VALUE, effect->id, "Echo spread out of range",);
+                SETERR_RETURN(context, AL_INVALID_VALUE,, "Echo spread out of range");
             props->Echo.Spread = val;
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid echo float property");
+            alSetError(context, AL_INVALID_ENUM, "Invalid echo float property 0x%04x", param);
     }
 }
 void ALecho_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals)
 { ALecho_setParamf(effect, context, param, vals[0]); }
 
-void ALecho_getParami(const ALeffect *effect, ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(val))
-{ alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid echo integer property"); }
-void ALecho_getParamiv(const ALeffect *effect, ALCcontext *context, ALenum UNUSED(param), ALint *UNUSED(vals))
-{ alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid echo integer-vector property"); }
+void ALecho_getParami(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(val))
+{ alSetError(context, AL_INVALID_ENUM, "Invalid echo integer property 0x%04x", param); }
+void ALecho_getParamiv(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(vals))
+{ alSetError(context, AL_INVALID_ENUM, "Invalid echo integer-vector property 0x%04x", param); }
 void ALecho_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val)
 {
     const ALeffectProps *props = &effect->Props;
@@ -306,7 +306,7 @@ void ALecho_getParamf(const ALeffect *effect, ALCcontext *context, ALenum param,
             break;
 
         default:
-            alSetError(context, AL_INVALID_ENUM, effect->id, "Invalid echo float property");
+            alSetError(context, AL_INVALID_ENUM, "Invalid echo float property 0x%04x", param);
     }
 }
 void ALecho_getParamfv(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals)

@@ -73,7 +73,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
     if(!context) return;
 
     if(!(n >= 0))
-        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Generating negative effect slots", done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Generating %d effect slots", n);
     tmpslots = al_malloc(DEF_ALIGN, sizeof(ALeffectslot*)*n);
 
     LockEffectSlotsWrite(context);
@@ -87,7 +87,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
             UnlockEffectSlotsWrite(context);
 
             alDeleteAuxiliaryEffectSlots(cur, effectslots);
-            SETERR_GOTO(context, err, 0, "Effect slot object allocation failed", done);
+            SETERR_GOTO(context, err, done, "Effect slot object allocation failed");
         }
 
         err = NewThunkEntry(&slot->id);
@@ -103,7 +103,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
             UnlockEffectSlotsWrite(context);
 
             alDeleteAuxiliaryEffectSlots(cur, effectslots);
-            SETERR_GOTO(context, err, 0, "Failed to set effect slot ID", done);
+            SETERR_GOTO(context, err, done, "Failed to set effect slot ID");
         }
 
         aluInitEffectPanning(slot);
@@ -149,15 +149,15 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *
 
     LockEffectSlotsWrite(context);
     if(!(n >= 0))
-        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Deleting negative effect slots",
-                    done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Deleting %d effect slots", n);
     for(i = 0;i < n;i++)
     {
         if((slot=LookupEffectSlot(context, effectslots[i])) == NULL)
-            SETERR_GOTO(context, AL_INVALID_NAME, effectslots[i], "Invalid effect slot ID", done);
+            SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid effect slot ID %u",
+                        effectslots[i]);
         if(ReadRef(&slot->ref) != 0)
-            SETERR_GOTO(context, AL_INVALID_OPERATION, effectslots[i],
-                        "Deleting in-use effect slot", done);
+            SETERR_GOTO(context, AL_INVALID_NAME, done, "Deleting in-use effect slot %u",
+                        effectslots[i]);
     }
 
     // All effectslots are valid
@@ -240,7 +240,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
     WriteLock(&context->PropLock);
     LockEffectSlotsRead(context);
     if((slot=LookupEffectSlot(context, effectslot)) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, effectslot, "Invalid effect slot ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid effect slot ID %u", effectslot);
     switch(param)
     {
     case AL_EFFECTSLOT_EFFECT:
@@ -251,25 +251,25 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
         if(!(value == 0 || effect != NULL))
         {
             UnlockEffectsRead(device);
-            SETERR_GOTO(context, AL_INVALID_VALUE, effectslot, "Invalid effect ID", done);
+            SETERR_GOTO(context, AL_INVALID_VALUE, done, "Invalid effect ID %u", value);
         }
         err = InitializeEffect(context, slot, effect);
         UnlockEffectsRead(device);
 
         if(err != AL_NO_ERROR)
-            SETERR_GOTO(context, err, effectslot, "Effect initialization failed", done);
+            SETERR_GOTO(context, err, done, "Effect initialization failed");
         break;
 
     case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
         if(!(value == AL_TRUE || value == AL_FALSE))
-            SETERR_GOTO(context, AL_INVALID_VALUE, effectslot,
-                        "Effect slot auxiliary send auto out of range", done);
+            SETERR_GOTO(context, AL_INVALID_VALUE, done,
+                        "Effect slot auxiliary send auto out of range");
         slot->AuxSendAuto = value;
         break;
 
     default:
-        SETERR_GOTO(context, AL_INVALID_ENUM, effectslot, "Invalid effect slot integer property",
-                    done);
+        SETERR_GOTO(context, AL_INVALID_ENUM, done, "Invalid effect slot integer property 0x%04x",
+                    param);
     }
     DO_UPDATEPROPS();
 
@@ -296,12 +296,12 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum para
 
     LockEffectSlotsRead(context);
     if(LookupEffectSlot(context, effectslot) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, effectslot, "Invalid effect slot ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid effect slot ID %u", effectslot);
     switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, effectslot,
-                   "Invalid effect slot integer-vector property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid effect slot integer-vector property 0x%04x",
+                   param);
     }
 
 done:
@@ -320,19 +320,18 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param
     WriteLock(&context->PropLock);
     LockEffectSlotsRead(context);
     if((slot=LookupEffectSlot(context, effectslot)) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, effectslot, "Invalid effect slot ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid effect slot ID %u", effectslot);
     switch(param)
     {
     case AL_EFFECTSLOT_GAIN:
         if(!(value >= 0.0f && value <= 1.0f))
-            SETERR_GOTO(context, AL_INVALID_VALUE, effectslot, "Effect slot gain out of range",
-                        done);
+            SETERR_GOTO(context, AL_INVALID_VALUE, done, "Effect slot gain out of range");
         slot->Gain = value;
         break;
 
     default:
-        SETERR_GOTO(context, AL_INVALID_ENUM, effectslot, "Invalid effect slot float property",
-                    done);
+        SETERR_GOTO(context, AL_INVALID_ENUM, done, "Invalid effect slot float property 0x%04x",
+                    param);
     }
     DO_UPDATEPROPS();
 
@@ -358,12 +357,12 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum para
 
     LockEffectSlotsRead(context);
     if(LookupEffectSlot(context, effectslot) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, effectslot, "Invalid effect slot ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid effect slot ID %u", effectslot);
     switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, effectslot,
-                   "Invalid effect slot float-vector property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid effect slot float-vector property 0x%04x",
+                   param);
     }
 
 done:
@@ -381,7 +380,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum pa
 
     LockEffectSlotsRead(context);
     if((slot=LookupEffectSlot(context, effectslot)) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, effectslot, "Invalid effect slot ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid effect slot ID %u", effectslot);
     switch(param)
     {
     case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
@@ -389,7 +388,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum pa
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, effectslot, "Invalid effect slot integer property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid effect slot integer property 0x%04x", param);
     }
 
 done:
@@ -414,12 +413,12 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum p
 
     LockEffectSlotsRead(context);
     if(LookupEffectSlot(context, effectslot) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, effectslot, "Invalid effect slot ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid effect slot ID %u", effectslot);
     switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, effectslot,
-                   "Invalid effect slot integer-vector property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid effect slot integer-vector property 0x%04x",
+                   param);
     }
 
 done:
@@ -437,7 +436,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum pa
 
     LockEffectSlotsRead(context);
     if((slot=LookupEffectSlot(context, effectslot)) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, effectslot, "Invalid effect slot ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid effect slot ID %u", effectslot);
     switch(param)
     {
     case AL_EFFECTSLOT_GAIN:
@@ -445,7 +444,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum pa
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, effectslot, "Invalid effect slot float property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid effect slot float property 0x%04x", param);
     }
 
 done:
@@ -469,12 +468,12 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum p
 
     LockEffectSlotsRead(context);
     if(LookupEffectSlot(context, effectslot) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, effectslot, "Invalid effect slot ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid effect slot ID %u", effectslot);
     switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, effectslot,
-                   "Invalid effect slot float-vector property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid effect slot float-vector property 0x%04x",
+                   param);
     }
 
 done:

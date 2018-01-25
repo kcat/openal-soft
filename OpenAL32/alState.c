@@ -697,14 +697,15 @@ AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
     if(!context) return;
 
     if(!(value >= 0.0f && isfinite(value)))
-        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Doppler factor out of range", done);
+        alSetError(context, AL_INVALID_VALUE, "Doppler factor out of range");
+    else
+    {
+        WriteLock(&context->PropLock);
+        context->DopplerFactor = value;
+        DO_UPDATEPROPS();
+        WriteUnlock(&context->PropLock);
+    }
 
-    WriteLock(&context->PropLock);
-    context->DopplerFactor = value;
-    DO_UPDATEPROPS();
-    WriteUnlock(&context->PropLock);
-
-done:
     ALCcontext_DecRef(context);
 }
 
@@ -727,14 +728,15 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
     }
 
     if(!(value >= 0.0f && isfinite(value)))
-        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Doppler velocity out of range", done);
+        alSetError(context, AL_INVALID_VALUE, "Doppler velocity out of range");
+    else
+    {
+        WriteLock(&context->PropLock);
+        context->DopplerVelocity = value;
+        DO_UPDATEPROPS();
+        WriteUnlock(&context->PropLock);
+    }
 
-    WriteLock(&context->PropLock);
-    context->DopplerVelocity = value;
-    DO_UPDATEPROPS();
-    WriteUnlock(&context->PropLock);
-
-done:
     ALCcontext_DecRef(context);
 }
 
@@ -746,14 +748,15 @@ AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat value)
     if(!context) return;
 
     if(!(value > 0.0f && isfinite(value)))
-        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Speed of sound out of range", done);
+        alSetError(context, AL_INVALID_VALUE, "Speed of sound out of range");
+    else
+    {
+        WriteLock(&context->PropLock);
+        context->SpeedOfSound = value;
+        DO_UPDATEPROPS();
+        WriteUnlock(&context->PropLock);
+    }
 
-    WriteLock(&context->PropLock);
-    context->SpeedOfSound = value;
-    DO_UPDATEPROPS();
-    WriteUnlock(&context->PropLock);
-
-done:
     ALCcontext_DecRef(context);
 }
 
@@ -768,15 +771,16 @@ AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
          value == AL_LINEAR_DISTANCE || value == AL_LINEAR_DISTANCE_CLAMPED ||
          value == AL_EXPONENT_DISTANCE || value == AL_EXPONENT_DISTANCE_CLAMPED ||
          value == AL_NONE))
-        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Distance model out of range", done);
+        alSetError(context, AL_INVALID_VALUE, "Distance model out of range");
+    else
+    {
+        WriteLock(&context->PropLock);
+        context->DistanceModel = value;
+        if(!context->SourceDistanceModel)
+            DO_UPDATEPROPS();
+        WriteUnlock(&context->PropLock);
+    }
 
-    WriteLock(&context->PropLock);
-    context->DistanceModel = value;
-    if(!context->SourceDistanceModel)
-        DO_UPDATEPROPS();
-    WriteUnlock(&context->PropLock);
-
-done:
     ALCcontext_DecRef(context);
 }
 
@@ -825,7 +829,7 @@ AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index)
     {
     case AL_RESAMPLER_NAME_SOFT:
         if(index < 0 || (size_t)index >= COUNTOF(ResamplerNames))
-            SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Resampler name index out of range", done);
+            SETERR_GOTO(context, AL_INVALID_VALUE, done, "Resampler name index out of range");
         value = ResamplerNames[index];
         break;
 
@@ -835,7 +839,6 @@ AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index)
 
 done:
     ALCcontext_DecRef(context);
-
     return value;
 }
 

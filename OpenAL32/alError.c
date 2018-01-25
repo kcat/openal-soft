@@ -21,6 +21,7 @@
 #include "config.h"
 
 #include <signal.h>
+#include <stdarg.h>
 
 #ifdef HAVE_WINDOWS_H
 #define WIN32_LEAN_AND_MEAN
@@ -33,12 +34,32 @@
 
 ALboolean TrapALError = AL_FALSE;
 
-ALvoid alSetError(ALCcontext *context, ALenum errorCode, ALuint objid, const char *msg)
+void alSetError(ALCcontext *context, ALenum errorCode, const char *msg, ...)
 {
     ALenum curerr = AL_NO_ERROR;
+    char message[1024] = { 0 };
+    va_list args;
+    int msglen;
 
-    WARN("Error generated on context %p, code 0x%04x, object %u, \"%s\"\n",
-         context, errorCode, objid, msg);
+    va_start(args, msg);
+    msglen = vsnprintf(message, sizeof(message), msg, args);
+    va_end(args);
+
+    if(msglen < 0 || (size_t)msglen >= sizeof(message))
+    {
+        message[sizeof(message)-1] = 0;
+        msglen = strlen(message);
+    }
+    if(msglen > 0)
+        msg = message;
+    else
+    {
+        msg = "<internal error constructing message>";
+        msglen = strlen(msg);
+    }
+
+    WARN("Error generated on context %p, code 0x%04x, \"%s\"\n",
+         context, errorCode, message);
     if(TrapALError)
     {
 #ifdef _WIN32
@@ -55,7 +76,7 @@ ALvoid alSetError(ALCcontext *context, ALenum errorCode, ALuint objid, const cha
     {
         almtx_lock(&context->EventLock);
         if((context->EnabledEvts&EventType_Error) && context->EventCb)
-            (*context->EventCb)(AL_EVENT_TYPE_ERROR_SOFT, objid, errorCode, strlen(msg), msg,
+            (*context->EventCb)(AL_EVENT_TYPE_ERROR_SOFT, 0, errorCode, msglen, msg,
                                 context->EventParam);
         almtx_unlock(&context->EventLock);
     }
@@ -86,6 +107,5 @@ AL_API ALenum AL_APIENTRY alGetError(void)
     errorCode = ATOMIC_EXCHANGE_SEQ(&context->LastError, AL_NO_ERROR);
 
     ALCcontext_DecRef(context);
-
     return errorCode;
 }

@@ -69,7 +69,7 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
     if(!context) return;
 
     if(!(n >= 0))
-        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Generating negative effects", done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Generating %d effects", n);
 
     device = context->Device;
     for(cur = 0;cur < n;cur++)
@@ -80,7 +80,7 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
         {
             al_free(effect);
             alDeleteEffects(cur, effects);
-            SETERR_GOTO(context, err, 0, "Failed to allocate effect object", done);
+            SETERR_GOTO(context, err, done, "Failed to allocate effect object");
         }
 
         err = NewThunkEntry(&effect->id);
@@ -93,7 +93,7 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
             al_free(effect);
 
             alDeleteEffects(cur, effects);
-            SETERR_GOTO(context, err, 0, "Failed to set effect ID", done);
+            SETERR_GOTO(context, err, done, "Failed to set effect ID");
         }
 
         effects[cur] = effect->id;
@@ -116,11 +116,11 @@ AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects)
     device = context->Device;
     LockEffectsWrite(device);
     if(!(n >= 0))
-        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Deleting negative effects", done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Deleting %d effects", n);
     for(i = 0;i < n;i++)
     {
         if(effects[i] && LookupEffect(device, effects[i]) == NULL)
-            SETERR_GOTO(context, AL_INVALID_NAME, effects[i], "Invalid effect ID", done);
+            SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid effect ID %u", effects[i]);
     }
     for(i = 0;i < n;i++)
     {
@@ -167,7 +167,7 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint value)
     Device = Context->Device;
     LockEffectsWrite(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, effect, "Invalid effect ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
     {
         if(param == AL_EFFECT_TYPE)
@@ -184,7 +184,7 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint value)
             if(isOk)
                 InitEffectParams(ALEffect, value);
             else
-                alSetError(Context, AL_INVALID_VALUE, effect, "Effect type not supported");
+                alSetError(Context, AL_INVALID_VALUE, "Effect type 0x%04x not supported", value);
         }
         else
         {
@@ -216,7 +216,7 @@ AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, const ALint *v
     Device = Context->Device;
     LockEffectsWrite(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, effect, "Invalid effect ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
     {
         /* Call the appropriate handler */
@@ -239,7 +239,7 @@ AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat value)
     Device = Context->Device;
     LockEffectsWrite(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, effect, "Invalid effect ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
     {
         /* Call the appropriate handler */
@@ -262,7 +262,7 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, const ALfloat 
     Device = Context->Device;
     LockEffectsWrite(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, effect, "Invalid effect ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
     {
         /* Call the appropriate handler */
@@ -285,7 +285,7 @@ AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *value
     Device = Context->Device;
     LockEffectsRead(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, effect, "Invalid effect ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
     {
         if(param == AL_EFFECT_TYPE)
@@ -320,7 +320,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *valu
     Device = Context->Device;
     LockEffectsRead(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, effect, "Invalid effect ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
     {
         /* Call the appropriate handler */
@@ -343,7 +343,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *val
     Device = Context->Device;
     LockEffectsRead(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, effect, "Invalid effect ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
     {
         /* Call the appropriate handler */
@@ -366,7 +366,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *va
     Device = Context->Device;
     LockEffectsRead(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, effect, "Invalid effect ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
     {
         /* Call the appropriate handler */

@@ -9,15 +9,15 @@ extern "C" {
 
 extern ALboolean TrapALError;
 
-ALvoid alSetError(ALCcontext *context, ALenum errorCode, ALuint objid, const char *msg);
+void alSetError(ALCcontext *context, ALenum errorCode, const char *msg, ...);
 
-#define SETERR_GOTO(ctx, err, objid, msg, lbl) do {                            \
-    alSetError((ctx), (err), (objid), (msg));                                  \
+#define SETERR_GOTO(ctx, err, lbl, ...) do {                                   \
+    alSetError((ctx), (err), __VA_ARGS__);                                     \
     goto lbl;                                                                  \
 } while(0)
 
-#define SETERR_RETURN(ctx, err, objid, msg, retval) do {                       \
-    alSetError((ctx), (err), (objid), (msg));                                  \
+#define SETERR_RETURN(ctx, err, retval, ...) do {                              \
+    alSetError((ctx), (err), __VA_ARGS__);                                     \
     return retval;                                                             \
 } while(0)
 

@@ -453,8 +453,7 @@ static ALint Int64ValsByProp(ALenum prop)
 #define CHECKVAL(x) do {                                                      \
     if(!(x))                                                                  \
     {                                                                         \
-        alSetError(Context, AL_INVALID_VALUE, Source->id,                     \
-                   "Value out of range");                                     \
+        alSetError(Context, AL_INVALID_VALUE, "Value out of range");          \
         return AL_FALSE;                                                      \
     }                                                                         \
 } while(0)
@@ -481,8 +480,8 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_SEC_OFFSET_LATENCY_SOFT:
         case AL_SEC_OFFSET_CLOCK_SOFT:
             /* Query only */
-            SETERR_RETURN(Context, AL_INVALID_OPERATION, Source->id,
-                          "Setting read-only source property", AL_FALSE);
+            SETERR_RETURN(Context, AL_INVALID_OPERATION, AL_FALSE,
+                          "Setting read-only source property 0x%04x", prop);
 
         case AL_PITCH:
             CHECKVAL(*values >= 0.0f);
@@ -606,8 +605,7 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
                     {
                         WriteUnlock(&Source->queue_lock);
                         ALCdevice_Unlock(Context->Device);
-                        SETERR_RETURN(Context, AL_INVALID_VALUE, Source->id, "Invalid offset",
-                                      AL_FALSE);
+                        SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid offset");
                     }
                     WriteUnlock(&Source->queue_lock);
                 }
@@ -700,7 +698,7 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);
-    SETERR_RETURN(Context, AL_INVALID_ENUM, Source->id, "Invalid source float property", AL_FALSE);
+    SETERR_RETURN(Context, AL_INVALID_ENUM, AL_FALSE, "Invalid source float property 0x%04x", prop);
 }
 
 static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALint *values)
@@ -722,8 +720,8 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_SAMPLE_LENGTH_SOFT:
         case AL_SEC_LENGTH_SOFT:
             /* Query only */
-            SETERR_RETURN(Context, AL_INVALID_OPERATION, Source->id,
-                          "Setting read-only source property", AL_FALSE);
+            SETERR_RETURN(Context, AL_INVALID_OPERATION, AL_FALSE,
+                          "Setting read-only source property 0x%04x", prop);
 
         case AL_SOURCE_RELATIVE:
             CHECKVAL(*values == AL_FALSE || *values == AL_TRUE);
@@ -763,8 +761,8 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             if(!(*values == 0 || (buffer=LookupBuffer(device, *values)) != NULL))
             {
                 UnlockBuffersRead(device);
-                SETERR_RETURN(Context, AL_INVALID_VALUE, Source->id, "Invalid buffer ID",
-                              AL_FALSE);
+                SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid buffer ID %u",
+                              *values);
             }
 
             WriteLock(&Source->queue_lock);
@@ -773,8 +771,8 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             {
                 WriteUnlock(&Source->queue_lock);
                 UnlockBuffersRead(device);
-                SETERR_RETURN(Context, AL_INVALID_OPERATION, Source->id,
-                              "Setting non-persistently mapped buffer", AL_FALSE);
+                SETERR_RETURN(Context, AL_INVALID_OPERATION, AL_FALSE,
+                              "Setting non-persistently mapped buffer %u", buffer->id);
             }
             else
             {
@@ -783,8 +781,8 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 {
                     WriteUnlock(&Source->queue_lock);
                     UnlockBuffersRead(device);
-                    SETERR_RETURN(Context, AL_INVALID_OPERATION, Source->id,
-                                  "Setting buffer on playing or paused source", AL_FALSE);
+                    SETERR_RETURN(Context, AL_INVALID_OPERATION, AL_FALSE,
+                                  "Setting buffer on playing or paused source %u", Source->id);
                 }
             }
 
@@ -849,8 +847,8 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                     {
                         WriteUnlock(&Source->queue_lock);
                         ALCdevice_Unlock(Context->Device);
-                        SETERR_RETURN(Context, AL_INVALID_VALUE, Source->id,
-                                      "Invalid source offset", AL_FALSE);
+                        SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE,
+                                      "Invalid source offset");
                     }
                     WriteUnlock(&Source->queue_lock);
                 }
@@ -863,8 +861,8 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             if(!(*values == 0 || (filter=LookupFilter(device, *values)) != NULL))
             {
                 UnlockFiltersRead(device);
-                SETERR_RETURN(Context, AL_INVALID_VALUE, Source->id, "Invalid filter ID",
-                              AL_FALSE);
+                SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid filter ID %u",
+                              *values);
             }
 
             if(!filter)
@@ -946,16 +944,24 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
 
         case AL_AUXILIARY_SEND_FILTER:
             LockEffectSlotsRead(Context);
+            if(!(values[0] == 0 || (slot=LookupEffectSlot(Context, values[0])) != NULL))
+            {
+                UnlockEffectSlotsRead(Context);
+                SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid effect ID %u",
+                              values[0]);
+            }
+            if(!((ALuint)values[1] < (ALuint)device->NumAuxSends))
+            {
+                UnlockEffectSlotsRead(Context);
+                SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid send %u", values[1]);
+            }
             LockFiltersRead(device);
-            if(!((ALuint)values[1] < (ALuint)device->NumAuxSends &&
-                 (values[0] == 0 || (slot=LookupEffectSlot(Context, values[0])) != NULL) &&
-                 (values[2] == 0 || (filter=LookupFilter(device, values[2])) != NULL)))
+            if(!(values[2] == 0 || (filter=LookupFilter(device, values[2])) != NULL))
             {
                 UnlockFiltersRead(device);
                 UnlockEffectSlotsRead(Context);
-                /* TODO: Fix message */
-                SETERR_RETURN(Context, AL_INVALID_VALUE, Source->id, "Invalid send parameter",
-                              AL_FALSE);
+                SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid filter ID %u",
+                              values[2]);
             }
 
             if(!filter)
@@ -1054,8 +1060,8 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);
-    SETERR_RETURN(Context, AL_INVALID_ENUM, Source->id, "Invalid source integer property",
-                  AL_FALSE);
+    SETERR_RETURN(Context, AL_INVALID_ENUM, AL_FALSE, "Invalid source integer property 0x%04x",
+                  prop);
 }
 
 static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALint64SOFT *values)
@@ -1075,8 +1081,8 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
         case AL_SAMPLE_LENGTH_SOFT:
         case AL_SEC_LENGTH_SOFT:
             /* Query only */
-            SETERR_RETURN(Context, AL_INVALID_OPERATION, Source->id,
-                          "Setting read-only source property", AL_FALSE);
+            SETERR_RETURN(Context, AL_INVALID_OPERATION, AL_FALSE,
+                          "Setting read-only source property 0x%04x", prop);
 
         /* 1x int */
         case AL_SOURCE_RELATIVE:
@@ -1160,8 +1166,8 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);
-    SETERR_RETURN(Context, AL_INVALID_ENUM, Source->id, "Invalid source integer64 property",
-                  AL_FALSE);
+    SETERR_RETURN(Context, AL_INVALID_ENUM, AL_FALSE, "Invalid source integer64 property 0x%04x",
+                  prop);
 }
 
 #undef CHECKVAL
@@ -1358,8 +1364,8 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);
-    SETERR_RETURN(Context, AL_INVALID_ENUM, Source->id, "Invalid source double property",
-                  AL_FALSE);
+    SETERR_RETURN(Context, AL_INVALID_ENUM, AL_FALSE, "Invalid source double property 0x%04x",
+                  prop);
 }
 
 static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, ALint *values)
@@ -1603,8 +1609,8 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);
-    SETERR_RETURN(Context, AL_INVALID_ENUM, Source->id, "Invalid source integer property",
-                  AL_FALSE);
+    SETERR_RETURN(Context, AL_INVALID_ENUM, AL_FALSE, "Invalid source integer property 0x%04x",
+                  prop);
 }
 
 static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, ALint64 *values)
@@ -1736,8 +1742,8 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
     }
 
     ERR("Unexpected property: 0x%04x\n", prop);
-    SETERR_RETURN(Context, AL_INVALID_ENUM, Source->id, "Invalid source integer64 property",
-                  AL_FALSE);
+    SETERR_RETURN(Context, AL_INVALID_ENUM, AL_FALSE, "Invalid source integer64 property 0x%04x",
+                  prop);
 }
 
 
@@ -1752,7 +1758,7 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
     if(!context) return;
 
     if(!(n >= 0))
-        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Generating negative sources", done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Generating %d sources", n);
     device = context->Device;
     for(cur = 0;cur < n;cur++)
     {
@@ -1760,7 +1766,7 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
         if(!source)
         {
             alDeleteSources(cur, sources);
-            SETERR_GOTO(context, AL_OUT_OF_MEMORY,0, "Failed to allocate source object", done);
+            SETERR_GOTO(context, AL_OUT_OF_MEMORY, done, "Failed to allocate source object");
         }
         InitSourceParams(source, device->NumAuxSends);
 
@@ -1774,7 +1780,7 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
             al_free(source);
 
             alDeleteSources(cur, sources);
-            SETERR_GOTO(context, err, 0, "Failed to set source ID", done);
+            SETERR_GOTO(context, err, done, "Failed to set source ID");
         }
 
         sources[cur] = source->id;
@@ -1797,13 +1803,13 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
 
     LockSourcesWrite(context);
     if(!(n >= 0))
-        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Deleting negative sources", done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Deleting %d sources", n);
 
     /* Check that all Sources are valid */
     for(i = 0;i < n;i++)
     {
         if(LookupSource(context, sources[i]) == NULL)
-            SETERR_GOTO(context, AL_INVALID_NAME, sources[i], "Invalid source ID", done);
+            SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid source ID %u", sources[i]);
     }
     device = context->Device;
     for(i = 0;i < n;i++)
@@ -1863,9 +1869,9 @@ AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum param, ALfloat value)
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(FloatValsByProp(param) == 1))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid float property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid float property 0x%04x", param);
     else
         SetSourcefv(Source, Context, param, &value);
     UnlockSourcesRead(Context);
@@ -1885,9 +1891,9 @@ AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(FloatValsByProp(param) == 3))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid 3-float property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid 3-float property 0x%04x", param);
     else
     {
         ALfloat fvals[3] = { value1, value2, value3 };
@@ -1910,11 +1916,11 @@ AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat 
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
+        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
     else if(!(FloatValsByProp(param) > 0))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid float-vector property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid float-vector property 0x%04x", param);
     else
         SetSourcefv(Source, Context, param, values);
     UnlockSourcesRead(Context);
@@ -1935,9 +1941,9 @@ AL_API ALvoid AL_APIENTRY alSourcedSOFT(ALuint source, ALenum param, ALdouble va
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(DoubleValsByProp(param) == 1))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid double property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid double property 0x%04x", param);
     else
     {
         ALfloat fval = (ALfloat)value;
@@ -1960,9 +1966,9 @@ AL_API ALvoid AL_APIENTRY alSource3dSOFT(ALuint source, ALenum param, ALdouble v
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(DoubleValsByProp(param) == 3))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid 3-double property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid 3-double property 0x%04x", param);
     else
     {
         ALfloat fvals[3] = { (ALfloat)value1, (ALfloat)value2, (ALfloat)value3 };
@@ -1986,11 +1992,11 @@ AL_API ALvoid AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdo
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
+        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
     else if(!((count=DoubleValsByProp(param)) > 0 && count <= 6))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid double-vector property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid double-vector property 0x%04x", param);
     else
     {
         ALfloat fvals[6];
@@ -2018,9 +2024,9 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value)
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(IntValsByProp(param) == 1))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid integer property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid integer property 0x%04x", param);
     else
         SetSourceiv(Source, Context, param, &value);
     UnlockSourcesRead(Context);
@@ -2040,9 +2046,9 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, AL
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(IntValsByProp(param) == 3))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid 3-integer property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid 3-integer property 0x%04x", param);
     else
     {
         ALint ivals[3] = { value1, value2, value3 };
@@ -2065,11 +2071,11 @@ AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum param, const ALint *val
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
+        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
     else if(!(IntValsByProp(param) > 0))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid integer-vector property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid integer-vector property 0x%04x", param);
     else
         SetSourceiv(Source, Context, param, values);
     UnlockSourcesRead(Context);
@@ -2090,9 +2096,9 @@ AL_API ALvoid AL_APIENTRY alSourcei64SOFT(ALuint source, ALenum param, ALint64SO
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(Int64ValsByProp(param) == 1))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid integer64 property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid integer64 property 0x%04x", param);
     else
         SetSourcei64v(Source, Context, param, &value);
     UnlockSourcesRead(Context);
@@ -2112,9 +2118,9 @@ AL_API void AL_APIENTRY alSource3i64SOFT(ALuint source, ALenum param, ALint64SOF
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(Int64ValsByProp(param) == 3))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid 3-integer64 property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid 3-integer64 property 0x%04x", param);
     else
     {
         ALint64SOFT i64vals[3] = { value1, value2, value3 };
@@ -2137,11 +2143,11 @@ AL_API void AL_APIENTRY alSourcei64vSOFT(ALuint source, ALenum param, const ALin
     WriteLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
+        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
     else if(!(Int64ValsByProp(param) > 0))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid integer64-vector property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid integer64-vector property 0x%04x", param);
     else
         SetSourcei64v(Source, Context, param, values);
     UnlockSourcesRead(Context);
@@ -2162,11 +2168,11 @@ AL_API ALvoid AL_APIENTRY alGetSourcef(ALuint source, ALenum param, ALfloat *val
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!value)
-        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
+        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
     else if(!(FloatValsByProp(param) == 1))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid float property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid float property 0x%04x", param);
     else
     {
         ALdouble dval;
@@ -2191,11 +2197,11 @@ AL_API ALvoid AL_APIENTRY alGetSource3f(ALuint source, ALenum param, ALfloat *va
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(value1 && value2 && value3))
-        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
+        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
     else if(!(FloatValsByProp(param) == 3))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid 3-float property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid 3-float property 0x%04x", param);
     else
     {
         ALdouble dvals[3];
@@ -2225,11 +2231,11 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *va
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
+        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
     else if(!((count=FloatValsByProp(param)) > 0 && count <= 6))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid float-vector property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid float-vector property 0x%04x", param);
     else
     {
         ALdouble dvals[6];
@@ -2258,11 +2264,11 @@ AL_API void AL_APIENTRY alGetSourcedSOFT(ALuint source, ALenum param, ALdouble *
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!value)
-        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
+        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
     else if(!(DoubleValsByProp(param) == 1))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid double property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid double property 0x%04x", param);
     else
         GetSourcedv(Source, Context, param, value);
     UnlockSourcesRead(Context);
@@ -2282,11 +2288,11 @@ AL_API void AL_APIENTRY alGetSource3dSOFT(ALuint source, ALenum param, ALdouble 
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(value1 && value2 && value3))
-        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
+        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
     else if(!(DoubleValsByProp(param) == 3))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid 3-double property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid 3-double property 0x%04x", param);
     else
     {
         ALdouble dvals[3];
@@ -2314,11 +2320,11 @@ AL_API void AL_APIENTRY alGetSourcedvSOFT(ALuint source, ALenum param, ALdouble 
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
+        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
     else if(!(DoubleValsByProp(param) > 0))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid double-vector property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid double-vector property 0x%04x", param);
     else
         GetSourcedv(Source, Context, param, values);
     UnlockSourcesRead(Context);
@@ -2339,11 +2345,11 @@ AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum param, ALint *value
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!value)
-        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
+        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
     else if(!(IntValsByProp(param) == 1))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid integer property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid integer property 0x%04x", param);
     else
         GetSourceiv(Source, Context, param, value);
     UnlockSourcesRead(Context);
@@ -2364,11 +2370,11 @@ AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum param, ALint *value1
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(value1 && value2 && value3))
-        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
+        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
     else if(!(IntValsByProp(param) == 3))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid 3-integer property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid 3-integer property 0x%04x", param);
     else
     {
         ALint ivals[3];
@@ -2397,11 +2403,11 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum param, ALint *values
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
+        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
     else if(!(IntValsByProp(param) > 0))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid integer-vector property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid integer-vector property 0x%04x", param);
     else
         GetSourceiv(Source, Context, param, values);
     UnlockSourcesRead(Context);
@@ -2422,11 +2428,11 @@ AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64S
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!value)
-        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
+        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
     else if(!(Int64ValsByProp(param) == 1))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid integer64 property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid integer64 property 0x%04x", param);
     else
         GetSourcei64v(Source, Context, param, value);
     UnlockSourcesRead(Context);
@@ -2446,11 +2452,11 @@ AL_API void AL_APIENTRY alGetSource3i64SOFT(ALuint source, ALenum param, ALint64
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(value1 && value2 && value3))
-        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
+        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
     else if(!(Int64ValsByProp(param) == 3))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid 3-integer64 property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid 3-integer64 property 0x%04x", param);
     else
     {
         ALint64 i64vals[3];
@@ -2478,11 +2484,11 @@ AL_API void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64
     ReadLock(&Context->PropLock);
     LockSourcesRead(Context);
     if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, source, "Invalid source ID");
+        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE, source, "NULL pointer");
+        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
     else if(!(Int64ValsByProp(param) > 0))
-        alSetError(Context, AL_INVALID_ENUM, source, "Invalid integer64-vector property");
+        alSetError(Context, AL_INVALID_ENUM, "Invalid integer64-vector property 0x%04x", param);
     else
         GetSourcei64v(Source, Context, param, values);
     UnlockSourcesRead(Context);
@@ -2509,11 +2515,11 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 
     LockSourcesRead(context);
     if(!(n >= 0))
-        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Playing negative sources", done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Playing %d sources", n);
     for(i = 0;i < n;i++)
     {
         if(!LookupSource(context, sources[i]))
-            SETERR_GOTO(context, AL_INVALID_NAME, sources[i], "Invalid source ID", done);
+            SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid source ID %u", sources[i]);
     }
 
     device = context->Device;
@@ -2536,7 +2542,8 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         if(context->MaxVoices >= newcount)
         {
             ALCdevice_Unlock(device);
-            SETERR_GOTO(context, AL_OUT_OF_MEMORY, 0, "Max voice count overflow", done);
+            SETERR_GOTO(context, AL_OUT_OF_MEMORY, done,
+                        "Overflow increasing voice count %d -> %d", context->MaxVoices, newcount);
         }
         AllocateVoices(context, newcount, device->NumAuxSends);
     }
@@ -2696,11 +2703,11 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
 
     LockSourcesRead(context);
     if(!(n >= 0))
-        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Pausing negative sources", done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Pausing %d sources", n);
     for(i = 0;i < n;i++)
     {
         if(!LookupSource(context, sources[i]))
-            SETERR_GOTO(context, AL_INVALID_NAME, sources[i], "Invalid source ID", done);
+            SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid source ID %u", sources[i]);
     }
 
     device = context->Device;
@@ -2743,11 +2750,11 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
 
     LockSourcesRead(context);
     if(!(n >= 0))
-        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Stopping negative sources", done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Stopping %d sources", n);
     for(i = 0;i < n;i++)
     {
         if(!LookupSource(context, sources[i]))
-            SETERR_GOTO(context, AL_INVALID_NAME, sources[i], "Invalid source ID", done);
+            SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid source ID %u", sources[i]);
     }
 
     device = context->Device;
@@ -2793,11 +2800,11 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
 
     LockSourcesRead(context);
     if(!(n >= 0))
-        SETERR_GOTO(context, AL_INVALID_VALUE, 0, "Rewinding negative sources", done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Rewinding %d sources", n);
     for(i = 0;i < n;i++)
     {
         if(!LookupSource(context, sources[i]))
-            SETERR_GOTO(context, AL_INVALID_NAME, sources[i], "Invalid source ID", done);
+            SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid source ID %u", sources[i]);
     }
 
     device = context->Device;
@@ -2847,16 +2854,16 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
 
     LockSourcesRead(context);
     if(!(nb >= 0))
-        SETERR_GOTO(context, AL_INVALID_VALUE, src, "Queueing negative buffers", done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Queueing %d buffers", nb);
     if((source=LookupSource(context, src)) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, src, "Invalid source ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid source ID %u", src);
 
     WriteLock(&source->queue_lock);
     if(source->SourceType == AL_STATIC)
     {
         WriteUnlock(&source->queue_lock);
         /* Can't queue on a Static Source */
-        SETERR_GOTO(context, AL_INVALID_OPERATION, src, "Queueing onto a static source", done);
+        SETERR_GOTO(context, AL_INVALID_OPERATION, done, "Queueing onto static source %u", src);
     }
 
     /* Check for a valid Buffer, for its frequency and format */
@@ -2881,7 +2888,8 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         if(buffers[i] && (buffer=LookupBuffer(device, buffers[i])) == NULL)
         {
             WriteUnlock(&source->queue_lock);
-            SETERR_GOTO(context, AL_INVALID_NAME, src, "Invalid buffer ID", buffer_error);
+            SETERR_GOTO(context, AL_INVALID_NAME, buffer_error, "Queueing invalid buffer ID %u",
+                        buffers[i]);
         }
 
         if(!BufferListStart)
@@ -2911,8 +2919,8 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         if(buffer->MappedAccess != 0 && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
         {
             WriteUnlock(&source->queue_lock);
-            SETERR_GOTO(context, AL_INVALID_OPERATION, src,
-                        "Queueing non-persistently mapped buffer", buffer_error);
+            SETERR_GOTO(context, AL_INVALID_OPERATION, buffer_error,
+                        "Queueing non-persistently mapped buffer %u", buffer->id);
         }
 
         if(BufferFmt == NULL)
@@ -2922,8 +2930,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
                 BufferFmt->OriginalType != buffer->OriginalType)
         {
             WriteUnlock(&source->queue_lock);
-            alSetError(context, AL_INVALID_OPERATION, src,
-                       "Queueing buffer with mismatched format");
+            alSetError(context, AL_INVALID_OPERATION, "Queueing buffer with mismatched format");
 
         buffer_error:
             /* A buffer failed (invalid ID or format), so unlock and release
@@ -2994,10 +3001,9 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
 
     LockSourcesRead(context);
     if(!(nb >= 0))
-        SETERR_GOTO(context, AL_INVALID_VALUE, src, "Unqueueing negative buffers", done);
-
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Unqueueing %d buffers", nb);
     if((source=LookupSource(context, src)) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, src, "Invalid source ID", done);
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid source ID %u", src);
 
     /* Nothing to unqueue. */
     if(nb == 0) goto done;
@@ -3006,13 +3012,13 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
     if(source->Looping)
     {
         WriteUnlock(&source->queue_lock);
-        SETERR_GOTO(context, AL_INVALID_VALUE, src, "Unqueueing from a looping source", done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Unqueueing from looping source %u", src);
     }
     if(source->SourceType != AL_STREAMING)
     {
         WriteUnlock(&source->queue_lock);
-        SETERR_GOTO(context, AL_INVALID_VALUE, src, "Unqueueing from a non-streaming source",
-                    done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Unqueueing from a non-streaming source %u",
+                    src);
     }
 
     /* Find the new buffer queue head */
@@ -3034,7 +3040,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
     if(i != nb)
     {
         WriteUnlock(&source->queue_lock);
-        SETERR_GOTO(context, AL_INVALID_VALUE, src, "Unqueueing pending buffers", done);
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Unqueueing pending buffers");
     }
 
     /* Swap it, and cut the new head from the old. */

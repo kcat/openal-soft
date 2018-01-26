@@ -64,7 +64,7 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener float property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid listener float property");
     }
 
 done:
@@ -104,7 +104,7 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener 3-float property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid listener 3-float property");
     }
 
 done:
@@ -157,7 +157,7 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener float-vector property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid listener float-vector property");
     }
 
 done:
@@ -177,7 +177,7 @@ AL_API ALvoid AL_APIENTRY alListeneri(ALenum param, ALint UNUSED(value))
     switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener integer property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid listener integer property");
     }
     WriteUnlock(&context->PropLock);
 
@@ -204,7 +204,7 @@ AL_API void AL_APIENTRY alListener3i(ALenum param, ALint value1, ALint value2, A
     switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener 3-integer property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid listener 3-integer property");
     }
     WriteUnlock(&context->PropLock);
 
@@ -243,11 +243,11 @@ AL_API void AL_APIENTRY alListeneriv(ALenum param, const ALint *values)
 
     WriteLock(&context->PropLock);
     if(!values)
-        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
+        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener integer-vector property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid listener integer-vector property");
     }
     WriteUnlock(&context->PropLock);
 
@@ -264,7 +264,7 @@ AL_API ALvoid AL_APIENTRY alGetListenerf(ALenum param, ALfloat *value)
 
     ReadLock(&context->PropLock);
     if(!value)
-        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
+        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_GAIN:
@@ -276,7 +276,7 @@ AL_API ALvoid AL_APIENTRY alGetListenerf(ALenum param, ALfloat *value)
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener float property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid listener float property");
     }
     ReadUnlock(&context->PropLock);
 
@@ -293,7 +293,7 @@ AL_API ALvoid AL_APIENTRY alGetListener3f(ALenum param, ALfloat *value1, ALfloat
 
     ReadLock(&context->PropLock);
     if(!value1 || !value2 || !value3)
-        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
+        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_POSITION:
@@ -309,7 +309,7 @@ AL_API ALvoid AL_APIENTRY alGetListener3f(ALenum param, ALfloat *value1, ALfloat
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener 3-float property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid listener 3-float property");
     }
     ReadUnlock(&context->PropLock);
 
@@ -339,7 +339,7 @@ AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum param, ALfloat *values)
 
     ReadLock(&context->PropLock);
     if(!values)
-        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
+        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_ORIENTATION:
@@ -353,7 +353,7 @@ AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum param, ALfloat *values)
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener float-vector property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid listener float-vector property");
     }
     ReadUnlock(&context->PropLock);
 
@@ -370,11 +370,11 @@ AL_API ALvoid AL_APIENTRY alGetListeneri(ALenum param, ALint *value)
 
     ReadLock(&context->PropLock);
     if(!value)
-        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
+        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener integer property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid listener integer property");
     }
     ReadUnlock(&context->PropLock);
 
@@ -391,7 +391,7 @@ AL_API void AL_APIENTRY alGetListener3i(ALenum param, ALint *value1, ALint *valu
 
     ReadLock(&context->PropLock);
     if(!value1 || !value2 || !value3)
-        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
+        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_POSITION:
@@ -407,7 +407,7 @@ AL_API void AL_APIENTRY alGetListener3i(ALenum param, ALint *value1, ALint *valu
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener 3-integer property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid listener 3-integer property");
     }
     ReadUnlock(&context->PropLock);
 
@@ -432,7 +432,7 @@ AL_API void AL_APIENTRY alGetListeneriv(ALenum param, ALint* values)
 
     ReadLock(&context->PropLock);
     if(!values)
-        alSetError(context, AL_INVALID_VALUE, 0, "NULL pointer");
+        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_ORIENTATION:
@@ -446,7 +446,7 @@ AL_API void AL_APIENTRY alGetListeneriv(ALenum param, ALint* values)
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, 0, "Invalid listener integer-vector property");
+        alSetError(context, AL_INVALID_ENUM, "Invalid listener integer-vector property");
     }
     ReadUnlock(&context->PropLock);
 

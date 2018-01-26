@@ -45,9 +45,10 @@ extern inline struct ALbuffer *RemoveBuffer(ALCdevice *device, ALuint id);
 extern inline ALsizei FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType type);
 extern inline ALsizei FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type);
 
-static void LoadData(ALCcontext *context, ALbuffer *buffer, ALuint freq, ALsizei frames,
+static const ALchar *NameFromUserFmtType(enum UserFmtType type);
+static void LoadData(ALCcontext *context, ALbuffer *buffer, ALuint freq, ALsizei size,
                      enum UserFmtChannels SrcChannels, enum UserFmtType SrcType,
-                     const ALvoid *data, ALsizei align, ALbitfieldSOFT access);
+                     const ALvoid *data, ALbitfieldSOFT access);
 static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans, enum UserFmtType *type);
 static ALsizei SanitizeAlignment(enum UserFmtType type, ALsizei align);
 
@@ -158,8 +159,6 @@ AL_API void AL_APIENTRY alBufferStorageSOFT(ALuint buffer, ALenum format, const 
     ALCdevice *device;
     ALCcontext *context;
     ALbuffer *albuf;
-    ALsizei framesize = 1;
-    ALsizei align;
 
     context = GetContextRef();
     if(!context) return;
@@ -180,36 +179,11 @@ AL_API void AL_APIENTRY alBufferStorageSOFT(ALuint buffer, ALenum format, const 
                    "Declaring persistently mapped storage without read or write access");
     else if(UNLIKELY(DecomposeUserFormat(format, &srcchannels, &srctype) == AL_FALSE))
         alSetError(context, AL_INVALID_ENUM, "Invalid format 0x%04x", format);
-    else if(UNLIKELY((align=SanitizeAlignment(srctype, ATOMIC_LOAD_SEQ(&albuf->UnpackAlign))) < 1))
-        alSetError(context, AL_INVALID_VALUE, "Invalid unpack alignment");
     else
     {
-        switch(srctype)
-        {
-        case UserFmtUByte:
-        case UserFmtShort:
-        case UserFmtFloat:
-        case UserFmtDouble:
-        case UserFmtMulaw:
-        case UserFmtAlaw:
-            framesize = FrameSizeFromUserFmt(srcchannels, srctype) * align;
-            break;
-
-        case UserFmtIMA4:
-            framesize = ((align-1)/2 + 4) * ChannelsFromUserFmt(srcchannels);
-            break;
-
-        case UserFmtMSADPCM:
-            framesize = ((align-2)/2 + 7) * ChannelsFromUserFmt(srcchannels);
-            break;
-        }
-        if((size%framesize) != 0)
-            alSetError(context, AL_INVALID_VALUE,
-                "Data size %d is not a multiple of frame size %d (%d unpack alignment)",
-                size, framesize, align);
-        else
-            LoadData(context, albuf, freq, size/framesize*align, srcchannels, srctype, data, align,
-                     flags);
+        WriteLock(&albuf->lock);
+        LoadData(context, albuf, freq, size, srcchannels, srctype, data, flags);
+        WriteUnlock(&albuf->lock);
     }
 
     UnlockBuffersRead(device);
@@ -887,19 +861,43 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum param, ALint *values
 }
 
 
+static const ALchar *NameFromUserFmtType(enum UserFmtType type)
+{
+    switch(type)
+    {
+        case UserFmtUByte: return "Unsigned Byte";
+        case UserFmtShort: return "Signed Short";
+        case UserFmtFloat: return "Float32";
+        case UserFmtDouble: return "Float64";
+        case UserFmtMulaw: return "muLaw";
+        case UserFmtAlaw: return "aLaw";
+        case UserFmtIMA4: return "IMA4 ADPCM";
+        case UserFmtMSADPCM: return "MSADPCM";
+    }
+    return "<internal type error>";
+}
+
 /*
  * LoadData
  *
  * Loads the specified data into the buffer, using the specified format.
  */
-static void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei frames, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALsizei align, ALbitfieldSOFT access)
+static void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALbitfieldSOFT access)
 {
     enum FmtChannels DstChannels = FmtMono;
     enum FmtType DstType = FmtUByte;
     ALsizei NumChannels, FrameSize;
+    ALsizei SrcByteAlign;
+    ALsizei unpackalign;
     ALsizei newsize;
+    ALsizei frames;
+    ALsizei align;
 
-    /* Currently no channels need to be converted. */
+    if(UNLIKELY(ReadRef(&ALBuf->ref) != 0 || ALBuf->MappedAccess != 0))
+        SETERR_RETURN(context, AL_INVALID_OPERATION,, "Modifying storage for in-use buffer %u",
+                      ALBuf->id);
+
+    /* Currently no channel configurations need to be converted. */
     switch(SrcChannels)
     {
         case UserFmtMono: DstChannels = FmtMono; break;
@@ -928,41 +926,59 @@ static void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei 
         case UserFmtMSADPCM: DstType = FmtShort; break;
     }
 
+    /* TODO: Currently we can only map/preserve samples when they're not
+     * converted. To allow it would need some kind of double-buffering to hold
+     * onto a copy of the original data.
+     */
     if(access != 0)
     {
         if(UNLIKELY((long)SrcType != (long)DstType))
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "Format cannot be mapped or preserved");
+            SETERR_RETURN(context, AL_INVALID_VALUE,, "%s samples cannot be mapped or preserved",
+                          NameFromUserFmtType(SrcType));
     }
 
-    NumChannels = ChannelsFromFmt(DstChannels);
-    FrameSize = NumChannels * BytesFromFmt(DstType);
-
-    if(UNLIKELY(frames > INT_MAX/FrameSize))
-        SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
-                      "Buffer size overflow, %d frames x %d bytes per frame", frames, FrameSize);
-    newsize = frames*FrameSize;
-
-    WriteLock(&ALBuf->lock);
-    if(UNLIKELY(ReadRef(&ALBuf->ref) != 0 || ALBuf->MappedAccess != 0))
-    {
-        WriteUnlock(&ALBuf->lock);
-        SETERR_RETURN(context, AL_INVALID_OPERATION,, "Modifying storage for in-use buffer");
-    }
+    unpackalign = ATOMIC_LOAD_SEQ(&ALBuf->UnpackAlign);
+    if(UNLIKELY((align=SanitizeAlignment(SrcType, unpackalign)) < 1))
+        SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid unpack alignment %d for %s samples",
+                      unpackalign, NameFromUserFmtType(SrcType));
 
     if((access&AL_PRESERVE_DATA_BIT_SOFT))
     {
         /* Can only preserve data with the same format and alignment. */
         if(UNLIKELY(ALBuf->FmtChannels != DstChannels || ALBuf->OriginalType != SrcType))
-        {
-            WriteUnlock(&ALBuf->lock);
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched format");
-        }
         if(UNLIKELY(ALBuf->OriginalAlign != align))
-        {
-            WriteUnlock(&ALBuf->lock);
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched alignment");
-        }
     }
+
+    /* Convert the input/source size in bytes to sample frames using the unpack
+     * block alignment.
+     */
+    if(SrcType == UserFmtIMA4)
+        SrcByteAlign = ((align-1)/2 + 4) * ChannelsFromUserFmt(SrcChannels);
+    else if(SrcType == UserFmtMSADPCM)
+        SrcByteAlign = ((align-2)/2 + 7) * ChannelsFromUserFmt(SrcChannels);
+    else
+        SrcByteAlign = align * FrameSizeFromUserFmt(SrcChannels, SrcType);
+    if(UNLIKELY((size%SrcByteAlign) != 0))
+        SETERR_RETURN(context, AL_INVALID_VALUE,,
+            "Data size %d is not a multiple of frame size %d (%d unpack alignment)",
+            size, SrcByteAlign, align);
+
+    if(UNLIKELY(size / SrcByteAlign > INT_MAX / align))
+        SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
+            "Buffer size overflow, %d blocks x %d samples per block", size/SrcByteAlign, align);
+    frames = size / SrcByteAlign * align;
+
+    /* Convert the sample frames to the number of bytes needed for internal
+     * storage.
+     */
+    NumChannels = ChannelsFromFmt(DstChannels);
+    FrameSize = NumChannels * BytesFromFmt(DstType);
+    if(UNLIKELY(frames > INT_MAX/FrameSize))
+        SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
+            "Buffer size overflow, %d frames x %d bytes per frame", frames, FrameSize);
+    newsize = frames*FrameSize;
 
     /* Round up to the next 16-byte multiple. This could reallocate only when
      * increasing or the new size is less than half the current, but then the
@@ -976,11 +992,8 @@ static void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei 
     {
         void *temp = al_malloc(16, (size_t)newsize);
         if(UNLIKELY(!temp && newsize))
-        {
-            WriteUnlock(&ALBuf->lock);
             SETERR_RETURN(context, AL_OUT_OF_MEMORY,, "Failed to allocate %d bytes of storage",
                           newsize);
-        }
         if((access&AL_PRESERVE_DATA_BIT_SOFT))
         {
             ALsizei tocopy = mini(newsize, ALBuf->BytesAlloc);
@@ -991,33 +1004,29 @@ static void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei 
         ALBuf->BytesAlloc = newsize;
     }
 
-    ALBuf->OriginalType = SrcType;
     if(SrcType == UserFmtIMA4)
     {
-        ALsizei byte_align   = ((align-1)/2 + 4) * NumChannels;
-        ALBuf->OriginalSize  = frames / align * byte_align;
-        ALBuf->OriginalAlign = align;
         assert(DstType == FmtShort);
         if(data != NULL && ALBuf->data != NULL)
             Convert_ALshort_ALima4(ALBuf->data, data, NumChannels, frames, align);
+        ALBuf->OriginalAlign = align;
     }
     else if(SrcType == UserFmtMSADPCM)
     {
-        ALsizei byte_align   = ((align-2)/2 + 7) * NumChannels;
-        ALBuf->OriginalSize  = frames / align * byte_align;
-        ALBuf->OriginalAlign = align;
         assert(DstType == FmtShort);
         if(data != NULL && ALBuf->data != NULL)
             Convert_ALshort_ALmsadpcm(ALBuf->data, data, NumChannels, frames, align);
+        ALBuf->OriginalAlign = align;
     }
     else
     {
-        ALBuf->OriginalSize  = frames * FrameSize;
-        ALBuf->OriginalAlign = 1;
         assert((long)SrcType == (long)DstType);
         if(data != NULL && ALBuf->data != NULL)
             memcpy(ALBuf->data, data, frames*FrameSize);
+        ALBuf->OriginalAlign = 1;
     }
+    ALBuf->OriginalSize = size;
+    ALBuf->OriginalType = SrcType;
 
     ALBuf->Frequency = freq;
     ALBuf->FmtChannels = DstChannels;
@@ -1027,8 +1036,6 @@ static void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei 
     ALBuf->SampleLen = frames;
     ALBuf->LoopStart = 0;
     ALBuf->LoopEnd = ALBuf->SampleLen;
-
-    WriteUnlock(&ALBuf->lock);
 }
 
 

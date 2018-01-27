@@ -494,6 +494,13 @@ IF(HAVE_INTRIN_H)
             _BitScanForward64(&idx, 1);
             return idx;
         }" HAVE_BITSCANFORWARD64_INTRINSIC)
+    CHECK_C_SOURCE_COMPILES("#include <intrin.h>
+        int main()
+        {
+            unsigned long idx = 0;
+            _BitScanForward(&idx, 1);
+            return idx;
+        }" HAVE_BITSCANFORWARD_INTRINSIC)
 ENDIF()
 
 CHECK_SYMBOL_EXISTS(sysconf          unistd.h HAVE_SYSCONF)

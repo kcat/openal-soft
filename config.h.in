@@ -182,6 +182,9 @@
 /* Define if we have the _BitScanForward64() intrinsic */
 #cmakedefine HAVE_BITSCANFORWARD64_INTRINSIC
 
+/* Define if we have the _BitScanForward() intrinsic */
+#cmakedefine HAVE_BITSCANFORWARD_INTRINSIC
+
 /* Define if we have _controlfp() */
 #cmakedefine HAVE__CONTROLFP
 

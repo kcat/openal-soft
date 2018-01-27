@@ -99,10 +99,24 @@ typedef ALuint64SOFT ALuint64;
 
 #elif defined(HAVE_BITSCANFORWARD64_INTRINSIC)
 
-static inline int msvc_ctz64(ALuint64 v)
+static inline int msvc64_ctz64(ALuint64 v)
 {
     unsigned long idx = 64;
     _BitScanForward64(&idx, v);
+    return (int)idx;
+}
+#define CTZ64(x) msvc64_ctz64(x)
+
+#elif defined(HAVE_BITSCANFORWARD_INTRINSIC)
+
+static inline int msvc_ctz64(ALuint64 v)
+{
+    unsigned long idx = 64;
+    if(!_BitScanForward(&idx, v&0xffffffff))
+    {
+        if(_BitScanForward(&idx, v>>32))
+            idx += 32;
+    }
     return (int)idx;
 }
 #define CTZ64(x) msvc_ctz64(x)

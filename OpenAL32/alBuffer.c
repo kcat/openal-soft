@@ -926,14 +926,14 @@ static void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei 
         case UserFmtMSADPCM: DstType = FmtShort; break;
     }
 
-    /* TODO: Currently we can only map/preserve samples when they're not
-     * converted. To allow it would need some kind of double-buffering to hold
-     * onto a copy of the original data.
+    /* TODO: Currently we can only map samples when they're not converted. To
+     * allow it would need some kind of double-buffering to hold onto a copy of
+     * the original data.
      */
-    if(access != 0)
+    if((access&MAP_READ_WRITE_FLAGS))
     {
         if(UNLIKELY((long)SrcType != (long)DstType))
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "%s samples cannot be mapped or preserved",
+            SETERR_RETURN(context, AL_INVALID_VALUE,, "%s samples cannot be mapped",
                           NameFromUserFmtType(SrcType));
     }
 

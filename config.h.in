@@ -179,6 +179,9 @@
 /* Define if we have the __cpuid() intrinsic */
 #cmakedefine HAVE_CPUID_INTRINSIC
 
+/* Define if we have the _BitScanForward64() intrinsic */
+#cmakedefine HAVE_BITSCANFORWARD64_INTRINSIC
+
 /* Define if we have _controlfp() */
 #cmakedefine HAVE__CONTROLFP
 

@@ -4,7 +4,9 @@ Source Install
 To install OpenAL Soft, use your favorite shell to go into the build/
 directory, and run:
 
+```bash
 cmake ..
+```
 
 Assuming configuration went well, you can then build it, typically using GNU
 Make (KDevelop, MSVC, and others are possible depending on your system setup
@@ -42,14 +44,10 @@ Acknowledgements
 
 Special thanks go to:
 
-Creative Labs for the original source code this is based off of.
-
-Christopher Fitzgerald for the current reverb effect implementation, and
+ - Creative Labs for the original source code this is based off of.
+ - Christopher Fitzgerald for the current reverb effect implementation, and
 helping with the low-pass and HRTF filters.
-
-Christian Borss for the 3D panning code previous versions used as a base.
-
-Ben Davis for the idea behind a previous version of the click-removal code.
-
-Richard Furse for helping with my understanding of Ambisonics that is used by
+ - Christian Borss for the 3D panning code previous versions used as a base.
+ - Ben Davis for the idea behind a previous version of the click-removal code.
+ - Richard Furse for helping with my understanding of Ambisonics that is used by
 the various parts of the library.

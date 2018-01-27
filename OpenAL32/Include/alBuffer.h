@@ -1,7 +1,13 @@
 #ifndef _AL_BUFFER_H_
 #define _AL_BUFFER_H_
 
-#include "alMain.h"
+#include "AL/alc.h"
+#include "AL/al.h"
+#include "AL/alext.h"
+
+#include "inprogext.h"
+#include "atomic.h"
+#include "rwlock.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -104,14 +110,6 @@ typedef struct ALbuffer {
 
 ALbuffer *NewBuffer(ALCcontext *context);
 void DeleteBuffer(ALCdevice *device, ALbuffer *buffer);
-
-inline void LockBuffersRead(ALCdevice *device)
-{ LockUIntMapRead(&device->BufferMap); }
-inline void UnlockBuffersRead(ALCdevice *device)
-{ UnlockUIntMapRead(&device->BufferMap); }
-
-inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
-{ return (ALbuffer*)LookupUIntMapKeyNoLock(&device->BufferMap, id); }
 
 ALvoid ReleaseALBuffers(ALCdevice *device);
 

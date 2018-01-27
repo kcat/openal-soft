@@ -38,10 +38,7 @@
 
 extern inline void LockBuffersRead(ALCdevice *device);
 extern inline void UnlockBuffersRead(ALCdevice *device);
-extern inline void LockBuffersWrite(ALCdevice *device);
-extern inline void UnlockBuffersWrite(ALCdevice *device);
-extern inline struct ALbuffer *LookupBuffer(ALCdevice *device, ALuint id);
-extern inline struct ALbuffer *RemoveBuffer(ALCdevice *device, ALuint id);
+extern inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id);
 extern inline ALsizei FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType type);
 extern inline ALsizei FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type);
 
@@ -51,6 +48,14 @@ static void LoadData(ALCcontext *context, ALbuffer *buffer, ALuint freq, ALsizei
                      const ALvoid *data, ALbitfieldSOFT access);
 static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans, enum UserFmtType *type);
 static ALsizei SanitizeAlignment(enum UserFmtType type, ALsizei align);
+
+static inline void LockBuffersWrite(ALCdevice *device)
+{ LockUIntMapWrite(&device->BufferMap); }
+static inline void UnlockBuffersWrite(ALCdevice *device)
+{ UnlockUIntMapWrite(&device->BufferMap); }
+
+static inline ALbuffer *RemoveBuffer(ALCdevice *device, ALuint id)
+{ return (ALbuffer*)RemoveUIntMapKeyNoLock(&device->BufferMap, id); }
 
 
 #define INVALID_STORAGE_MASK ~(AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT | AL_PRESERVE_DATA_BIT_SOFT | AL_MAP_PERSISTENT_BIT_SOFT)

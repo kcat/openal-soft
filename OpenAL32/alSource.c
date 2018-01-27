@@ -40,13 +40,6 @@
 #include "almalloc.h"
 
 
-extern inline void LockSourcesRead(ALCcontext *context);
-extern inline void UnlockSourcesRead(ALCcontext *context);
-extern inline void LockSourcesWrite(ALCcontext *context);
-extern inline void UnlockSourcesWrite(ALCcontext *context);
-extern inline struct ALsource *LookupSource(ALCcontext *context, ALuint id);
-extern inline struct ALsource *RemoveSource(ALCcontext *context, ALuint id);
-
 static void InitSourceParams(ALsource *Source, ALsizei num_sends);
 static void DeinitSource(ALsource *source, ALsizei num_sends);
 static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_sends, ALCcontext *context);
@@ -55,6 +48,20 @@ static ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, ALuint
 static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context);
 static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALsizei *frac);
 static ALboolean ApplyOffset(ALsource *Source, ALvoice *voice);
+
+static inline void LockSourcesRead(ALCcontext *context)
+{ LockUIntMapRead(&context->SourceMap); }
+static inline void UnlockSourcesRead(ALCcontext *context)
+{ UnlockUIntMapRead(&context->SourceMap); }
+static inline void LockSourcesWrite(ALCcontext *context)
+{ LockUIntMapWrite(&context->SourceMap); }
+static inline void UnlockSourcesWrite(ALCcontext *context)
+{ UnlockUIntMapWrite(&context->SourceMap); }
+
+static inline ALsource *LookupSource(ALCcontext *context, ALuint id)
+{ return (ALsource*)LookupUIntMapKeyNoLock(&context->SourceMap, id); }
+static inline ALsource *RemoveSource(ALCcontext *context, ALuint id)
+{ return (ALsource*)RemoveUIntMapKeyNoLock(&context->SourceMap, id); }
 
 static inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
 {

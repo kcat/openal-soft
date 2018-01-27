@@ -2376,13 +2376,12 @@ static ALCvoid FreeDevice(ALCdevice *device)
 
     almtx_destroy(&device->BackendLock);
 
-    if(device->BufferMap.size > 0)
-    {
-        WARN("(%p) Deleting %d Buffer%s\n", device, device->BufferMap.size,
-             (device->BufferMap.size==1)?"":"s");
-        ReleaseALBuffers(device);
-    }
-    ResetUIntMap(&device->BufferMap);
+    ReleaseALBuffers(device);
+#define FREE_BUFFERSUBLIST(x) al_free((x)->Buffers)
+    VECTOR_FOR_EACH(BufferSubList, device->BufferList, FREE_BUFFERSUBLIST);
+#undef FREE_BUFFERSUBLIST
+    VECTOR_DEINIT(device->BufferList);
+    almtx_destroy(&device->BufferLock);
 
     if(device->EffectMap.size > 0)
     {
@@ -3988,7 +3987,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->AuxiliaryEffectSlotMax = 64;
     device->NumAuxSends = DEFAULT_SENDS;
 
-    InitUIntMap(&device->BufferMap, INT_MAX);
+    VECTOR_INIT(device->BufferList);
     InitUIntMap(&device->EffectMap, INT_MAX);
     InitUIntMap(&device->FilterMap, INT_MAX);
 
@@ -4120,6 +4119,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         return NULL;
     }
     almtx_init(&device->BackendLock, almtx_plain);
+    almtx_init(&device->BufferLock, almtx_plain);
 
     if(ConfigValueStr(alstr_get_cstr(device->DeviceName), NULL, "ambi-format", &fmt))
     {
@@ -4265,7 +4265,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->RealOut.Buffer = NULL;
     device->RealOut.NumChannels = 0;
 
-    InitUIntMap(&device->BufferMap, INT_MAX);
+    VECTOR_INIT(device->BufferList);
     InitUIntMap(&device->EffectMap, INT_MAX);
     InitUIntMap(&device->FilterMap, INT_MAX);
 
@@ -4314,6 +4314,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         return NULL;
     }
     almtx_init(&device->BackendLock, almtx_plain);
+    almtx_init(&device->BufferLock, almtx_plain);
 
     {
         ALCdevice *head = ATOMIC_LOAD_SEQ(&DeviceList);
@@ -4488,7 +4489,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->AuxiliaryEffectSlotMax = 64;
     device->NumAuxSends = DEFAULT_SENDS;
 
-    InitUIntMap(&device->BufferMap, INT_MAX);
+    VECTOR_INIT(device->BufferList);
     InitUIntMap(&device->EffectMap, INT_MAX);
     InitUIntMap(&device->FilterMap, INT_MAX);
 
@@ -4508,6 +4509,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
         return NULL;
     }
     almtx_init(&device->BackendLock, almtx_plain);
+    almtx_init(&device->BufferLock, almtx_plain);
 
     //Set output format
     device->NumUpdates = 0;

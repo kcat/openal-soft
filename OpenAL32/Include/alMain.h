@@ -12,6 +12,9 @@
 #ifdef HAVE_STRINGS_H
 #include <strings.h>
 #endif
+#ifdef HAVE_INTRIN_H
+#include <intrin.h>
+#endif
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -82,6 +85,51 @@ typedef ALuint64SOFT ALuint64;
  */
 #define FAM_SIZE(T, M, N)  (offsetof(T, M) + sizeof(((T*)NULL)->M[0])*(N))
 
+
+/* Define a CTZ64 macro (count trailing zeros, for 64-bit integers). The result
+ * is *UNDEFINED* if the value is 0.
+ */
+#ifdef __GNUC__
+
+#if SIZEOF_LONG == 8
+#define CTZ64(x) __builtin_ctzl(x)
+#else
+#define CTZ64(x) __builtin_ctzll(x)
+#endif
+
+#elif defined(_MSC_VER)
+
+static inline int msvc_ctz64(ALuint64 v)
+{
+    unsigned long idx = 0;
+    _BitScanForward64(&idx, v);
+    return idx;
+}
+#define CTZ64(x) msvc_ctz64(x)
+
+#else
+
+/* There be black magics here. The popcnt64 method is derived from
+ * https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+ * while the ctz-utilizing-popcnt algorithm is shown here
+ * http://www.hackersdelight.org/hdcodetxt/ntz.c.txt
+ * as the ntz2 variant. These likely aren't the most efficient methods, but
+ * they're good enough if the GCC or MSVC intrinsics aren't available.
+ */
+static inline int fallback_popcnt64(ALuint64 v)
+{
+    v = v - ((v >> 1) & U64(0x5555555555555555));
+    v = (v & U64(0x3333333333333333)) + ((v >> 2) & U64(0x3333333333333333));
+    v = (v + (v >> 4)) & U64(0x0f0f0f0f0f0f0f0f);
+    return (v * U64(0x0101010101010101)) >> 56;
+}
+
+static inline int fallback_ctz64(ALuint64 value)
+{
+    return fallback_popcnt64(~value & (value - 1));
+}
+#define CTZ64(x) fallback_ctz64(x)
+#endif
 
 static const union {
     ALuint u;
@@ -312,6 +360,13 @@ typedef union AmbiConfig {
 } AmbiConfig;
 
 
+typedef struct BufferSubList {
+    ALuint64 FreeMask;
+    struct ALbuffer *Buffers; /* 64 */
+} BufferSubList;
+TYPEDEF_VECTOR(BufferSubList, vector_BufferSubList)
+
+
 typedef struct EnumeratedHrtf {
     al_string name;
 
@@ -399,7 +454,8 @@ struct ALCdevice_struct
     ALsizei NumAuxSends;
 
     // Map of Buffers for this device
-    UIntMap BufferMap;
+    vector_BufferSubList BufferList;
+    almtx_t BufferLock;
 
     // Map of Effects for this device
     UIntMap EffectMap;
@@ -620,13 +676,10 @@ inline ALint GetChannelIdxByName(const RealMixParams *real, enum Channel chan)
 { return GetChannelIndex(real->ChannelName, chan); }
 
 
-inline void LockBuffersRead(ALCdevice *device)
-{ LockUIntMapRead(&device->BufferMap); }
-inline void UnlockBuffersRead(ALCdevice *device)
-{ UnlockUIntMapRead(&device->BufferMap); }
-
-inline struct ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
-{ return (struct ALbuffer*)LookupUIntMapKeyNoLock(&device->BufferMap, id); }
+inline void LockBufferList(ALCdevice *device)
+{ almtx_lock(&device->BufferLock); }
+inline void UnlockBufferList(ALCdevice *device)
+{ almtx_unlock(&device->BufferLock); }
 
 
 vector_al_string SearchDataFiles(const char *match, const char *subdir);

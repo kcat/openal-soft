@@ -108,9 +108,6 @@ typedef struct ALbuffer {
     ALuint id;
 } ALbuffer;
 
-ALbuffer *NewBuffer(ALCcontext *context);
-void DeleteBuffer(ALCdevice *device, ALbuffer *buffer);
-
 ALvoid ReleaseALBuffers(ALCdevice *device);
 
 #ifdef __cplusplus

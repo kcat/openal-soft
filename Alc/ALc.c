@@ -2231,6 +2231,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     context = ATOMIC_LOAD_SEQ(&device->ContextList);
     while(context)
     {
+        SourceSubList *sublist, *subend;
         struct ALvoiceProps *vprops;
         ALsizei pos;
 
@@ -2263,40 +2264,48 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
         UnlockUIntMapRead(&context->EffectSlotMap);
 
-        LockUIntMapRead(&context->SourceMap);
-        RelimitUIntMapNoLock(&context->SourceMap, device->SourcesMax);
-        for(pos = 0;pos < context->SourceMap.size;pos++)
+        almtx_lock(&context->SourceLock);
+        sublist = VECTOR_BEGIN(context->SourceList);
+        subend = VECTOR_END(context->SourceList);
+        for(;sublist != subend;++sublist)
         {
-            ALsource *source = context->SourceMap.values[pos];
-
-            if(old_sends != device->NumAuxSends)
+            ALuint64 usemask = ~sublist->FreeMask;
+            while(usemask)
             {
-                ALvoid *sends = al_calloc(16, device->NumAuxSends*sizeof(source->Send[0]));
-                ALsizei s;
+                ALsizei idx = CTZ64(usemask);
+                ALsource *source = sublist->Sources + idx;
 
-                memcpy(sends, source->Send,
-                    mini(device->NumAuxSends, old_sends)*sizeof(source->Send[0])
-                );
-                for(s = device->NumAuxSends;s < old_sends;s++)
+                usemask &= ~(U64(1) << idx);
+
+                if(old_sends != device->NumAuxSends)
                 {
-                    if(source->Send[s].Slot)
-                        DecrementRef(&source->Send[s].Slot->ref);
-                    source->Send[s].Slot = NULL;
+                    ALvoid *sends = al_calloc(16, device->NumAuxSends*sizeof(source->Send[0]));
+                    ALsizei s;
+
+                    memcpy(sends, source->Send,
+                        mini(device->NumAuxSends, old_sends)*sizeof(source->Send[0])
+                    );
+                    for(s = device->NumAuxSends;s < old_sends;s++)
+                    {
+                        if(source->Send[s].Slot)
+                            DecrementRef(&source->Send[s].Slot->ref);
+                        source->Send[s].Slot = NULL;
+                    }
+                    al_free(source->Send);
+                    source->Send = sends;
+                    for(s = old_sends;s < device->NumAuxSends;s++)
+                    {
+                        source->Send[s].Slot = NULL;
+                        source->Send[s].Gain = 1.0f;
+                        source->Send[s].GainHF = 1.0f;
+                        source->Send[s].HFReference = LOWPASSFREQREF;
+                        source->Send[s].GainLF = 1.0f;
+                        source->Send[s].LFReference = HIGHPASSFREQREF;
+                    }
                 }
-                al_free(source->Send);
-                source->Send = sends;
-                for(s = old_sends;s < device->NumAuxSends;s++)
-                {
-                    source->Send[s].Slot = NULL;
-                    source->Send[s].Gain = 1.0f;
-                    source->Send[s].GainHF = 1.0f;
-                    source->Send[s].HFReference = LOWPASSFREQREF;
-                    source->Send[s].GainLF = 1.0f;
-                    source->Send[s].LFReference = HIGHPASSFREQREF;
-                }
+
+                ATOMIC_FLAG_CLEAR(&source->PropsClean, almemory_order_release);
             }
-
-            ATOMIC_FLAG_CLEAR(&source->PropsClean, almemory_order_release);
         }
 
         /* Clear any pre-existing voice property structs, in case the number of
@@ -2334,7 +2343,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 }
             }
         }
-        UnlockUIntMapRead(&context->SourceMap);
+        almtx_unlock(&context->SourceLock);
 
         ATOMIC_FLAG_TEST_AND_SET(&context->PropsClean, almemory_order_release);
         UpdateContextProps(context);
@@ -2522,7 +2531,9 @@ static ALvoid InitContext(ALCcontext *Context)
     Context->GainBoost = 1.0f;
     RWLockInit(&Context->PropLock);
     ATOMIC_INIT(&Context->LastError, AL_NO_ERROR);
-    InitUIntMap(&Context->SourceMap, Context->Device->SourcesMax);
+    VECTOR_INIT(Context->SourceList);
+    Context->NumSources = 0;
+    almtx_init(&Context->SourceLock, almtx_plain);
     InitUIntMap(&Context->EffectSlotMap, Context->Device->AuxiliaryEffectSlotMax);
 
     if(Context->DefaultSlot)
@@ -2618,13 +2629,13 @@ static void FreeContext(ALCcontext *context)
     auxslots = ATOMIC_EXCHANGE_PTR(&context->ActiveAuxSlots, NULL, almemory_order_relaxed);
     al_free(auxslots);
 
-    if(context->SourceMap.size > 0)
-    {
-        WARN("(%p) Deleting %d Source%s\n", context, context->SourceMap.size,
-             (context->SourceMap.size==1)?"":"s");
-        ReleaseALSources(context);
-    }
-    ResetUIntMap(&context->SourceMap);
+    ReleaseALSources(context);
+#define FREE_SOURCESUBLIST(x) al_free((x)->Sources)
+    VECTOR_FOR_EACH(SourceSubList, context->SourceList, FREE_SOURCESUBLIST);
+#undef FREE_SOURCESUBLIST
+    VECTOR_DEINIT(context->SourceList);
+    context->NumSources = 0;
+    almtx_destroy(&context->SourceLock);
 
     count = 0;
     eprops = ATOMIC_LOAD(&context->FreeEffectslotProps, almemory_order_relaxed);

@@ -165,6 +165,7 @@ struct FrontStablizer;
 struct Compressor;
 struct ALCbackend;
 struct ALbuffer;
+struct ALsource;
 struct ALcontextProps;
 struct ALlistenerProps;
 struct ALvoiceProps;
@@ -380,6 +381,12 @@ typedef struct BufferSubList {
 } BufferSubList;
 TYPEDEF_VECTOR(BufferSubList, vector_BufferSubList)
 
+typedef struct SourceSubList {
+    ALuint64 FreeMask;
+    struct ALsource *Sources; /* 64 */
+} SourceSubList;
+TYPEDEF_VECTOR(SourceSubList, vector_SourceSubList)
+
 
 typedef struct EnumeratedHrtf {
     al_string name;
@@ -589,7 +596,10 @@ struct ALCcontext_struct {
 
     struct ALlistener *Listener;
 
-    UIntMap SourceMap;
+    vector_SourceSubList SourceList;
+    ALuint NumSources;
+    almtx_t SourceLock;
+
     UIntMap EffectSlotMap;
 
     ATOMIC(ALenum) LastError;

@@ -40,6 +40,8 @@
 #include "almalloc.h"
 
 
+static ALsource *AllocSource(ALCcontext *context);
+static void FreeSource(ALCcontext *context, ALsource *source);
 static void InitSourceParams(ALsource *Source, ALsizei num_sends);
 static void DeinitSource(ALsource *source, ALsizei num_sends);
 static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_sends, ALCcontext *context);
@@ -49,19 +51,24 @@ static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *conte
 static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALsizei *frac);
 static ALboolean ApplyOffset(ALsource *Source, ALvoice *voice);
 
-static inline void LockSourcesRead(ALCcontext *context)
-{ LockUIntMapRead(&context->SourceMap); }
-static inline void UnlockSourcesRead(ALCcontext *context)
-{ UnlockUIntMapRead(&context->SourceMap); }
-static inline void LockSourcesWrite(ALCcontext *context)
-{ LockUIntMapWrite(&context->SourceMap); }
-static inline void UnlockSourcesWrite(ALCcontext *context)
-{ UnlockUIntMapWrite(&context->SourceMap); }
+static inline void LockSourceList(ALCcontext *context)
+{ almtx_lock(&context->SourceLock); }
+static inline void UnlockSourceList(ALCcontext *context)
+{ almtx_unlock(&context->SourceLock); }
 
 static inline ALsource *LookupSource(ALCcontext *context, ALuint id)
-{ return (ALsource*)LookupUIntMapKeyNoLock(&context->SourceMap, id); }
-static inline ALsource *RemoveSource(ALCcontext *context, ALuint id)
-{ return (ALsource*)RemoveUIntMapKeyNoLock(&context->SourceMap, id); }
+{
+    SourceSubList *sublist;
+    ALuint lidx = (id-1) >> 6;
+    ALsizei slidx = (id-1) & 0x3f;
+
+    if(UNLIKELY(lidx >= VECTOR_SIZE(context->SourceList)))
+        return NULL;
+    sublist = &VECTOR_ELEM(context->SourceList, lidx);
+    if(UNLIKELY(sublist->FreeMask & (U64(1)<<slidx)))
+        return NULL;
+    return sublist->Sources + slidx;
+}
 
 static inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
 {
@@ -1771,40 +1778,22 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
 
 AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
 {
-    ALCdevice *device;
     ALCcontext *context;
     ALsizei cur = 0;
-    ALenum err;
 
     context = GetContextRef();
     if(!context) return;
 
     if(!(n >= 0))
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Generating %d sources", n);
-    device = context->Device;
     for(cur = 0;cur < n;cur++)
     {
-        ALsource *source = al_calloc(16, sizeof(ALsource));
+        ALsource *source = AllocSource(context);
         if(!source)
         {
             alDeleteSources(cur, sources);
             SETERR_GOTO(context, AL_OUT_OF_MEMORY, done, "Failed to allocate source object");
         }
-        InitSourceParams(source, device->NumAuxSends);
-
-        err = NewThunkEntry(&source->id);
-        if(err == AL_NO_ERROR)
-            err = InsertUIntMapEntry(&context->SourceMap, source->id, source);
-        if(err != AL_NO_ERROR)
-        {
-            FreeThunkEntry(source->id);
-            memset(source, 0, sizeof(ALsource));
-            al_free(source);
-
-            alDeleteSources(cur, sources);
-            SETERR_GOTO(context, err, done, "Failed to set source ID");
-        }
-
         sources[cur] = source->id;
     }
 
@@ -1815,7 +1804,6 @@ done:
 
 AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
 {
-    ALCdevice *device;
     ALCcontext *context;
     ALsource *Source;
     ALsizei i;
@@ -1823,7 +1811,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
     context = GetContextRef();
     if(!context) return;
 
-    LockSourcesWrite(context);
+    LockSourceList(context);
     if(!(n >= 0))
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Deleting %d sources", n);
 
@@ -1833,31 +1821,14 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
         if(LookupSource(context, sources[i]) == NULL)
             SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid source ID %u", sources[i]);
     }
-    device = context->Device;
     for(i = 0;i < n;i++)
     {
-        ALvoice *voice;
-
-        if((Source=RemoveSource(context, sources[i])) == NULL)
-            continue;
-        FreeThunkEntry(Source->id);
-
-        ALCdevice_Lock(device);
-        if((voice=GetSourceVoice(Source, context)) != NULL)
-        {
-            ATOMIC_STORE(&voice->Source, NULL, almemory_order_relaxed);
-            ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
-        }
-        ALCdevice_Unlock(device);
-
-        DeinitSource(Source, device->NumAuxSends);
-
-        memset(Source, 0, sizeof(*Source));
-        al_free(Source);
+        if((Source=LookupSource(context, sources[i])) != NULL)
+            FreeSource(context, Source);
     }
 
 done:
-    UnlockSourcesWrite(context);
+    UnlockSourceList(context);
     ALCcontext_DecRef(context);
 }
 
@@ -1870,9 +1841,9 @@ AL_API ALboolean AL_APIENTRY alIsSource(ALuint source)
     context = GetContextRef();
     if(!context) return AL_FALSE;
 
-    LockSourcesRead(context);
+    LockSourceList(context);
     ret = (LookupSource(context, source) ? AL_TRUE : AL_FALSE);
-    UnlockSourcesRead(context);
+    UnlockSourceList(context);
 
     ALCcontext_DecRef(context);
 
@@ -1889,14 +1860,14 @@ AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum param, ALfloat value)
     if(!Context) return;
 
     WriteLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(FloatValsByProp(param) == 1))
         alSetError(Context, AL_INVALID_ENUM, "Invalid float property 0x%04x", param);
     else
         SetSourcefv(Source, Context, param, &value);
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     WriteUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -1911,7 +1882,7 @@ AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1
     if(!Context) return;
 
     WriteLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(FloatValsByProp(param) == 3))
@@ -1921,7 +1892,7 @@ AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1
         ALfloat fvals[3] = { value1, value2, value3 };
         SetSourcefv(Source, Context, param, fvals);
     }
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     WriteUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -1936,7 +1907,7 @@ AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat 
     if(!Context) return;
 
     WriteLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
@@ -1945,7 +1916,7 @@ AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat 
         alSetError(Context, AL_INVALID_ENUM, "Invalid float-vector property 0x%04x", param);
     else
         SetSourcefv(Source, Context, param, values);
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     WriteUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -1961,7 +1932,7 @@ AL_API ALvoid AL_APIENTRY alSourcedSOFT(ALuint source, ALenum param, ALdouble va
     if(!Context) return;
 
     WriteLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(DoubleValsByProp(param) == 1))
@@ -1971,7 +1942,7 @@ AL_API ALvoid AL_APIENTRY alSourcedSOFT(ALuint source, ALenum param, ALdouble va
         ALfloat fval = (ALfloat)value;
         SetSourcefv(Source, Context, param, &fval);
     }
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     WriteUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -1986,7 +1957,7 @@ AL_API ALvoid AL_APIENTRY alSource3dSOFT(ALuint source, ALenum param, ALdouble v
     if(!Context) return;
 
     WriteLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(DoubleValsByProp(param) == 3))
@@ -1996,7 +1967,7 @@ AL_API ALvoid AL_APIENTRY alSource3dSOFT(ALuint source, ALenum param, ALdouble v
         ALfloat fvals[3] = { (ALfloat)value1, (ALfloat)value2, (ALfloat)value3 };
         SetSourcefv(Source, Context, param, fvals);
     }
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     WriteUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -2012,7 +1983,7 @@ AL_API ALvoid AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdo
     if(!Context) return;
 
     WriteLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
@@ -2028,7 +1999,7 @@ AL_API ALvoid AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdo
             fvals[i] = (ALfloat)values[i];
         SetSourcefv(Source, Context, param, fvals);
     }
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     WriteUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -2044,14 +2015,14 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value)
     if(!Context) return;
 
     WriteLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(IntValsByProp(param) == 1))
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer property 0x%04x", param);
     else
         SetSourceiv(Source, Context, param, &value);
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     WriteUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -2066,7 +2037,7 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, AL
     if(!Context) return;
 
     WriteLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(IntValsByProp(param) == 3))
@@ -2076,7 +2047,7 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, AL
         ALint ivals[3] = { value1, value2, value3 };
         SetSourceiv(Source, Context, param, ivals);
     }
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     WriteUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -2091,7 +2062,7 @@ AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum param, const ALint *val
     if(!Context) return;
 
     WriteLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
@@ -2100,7 +2071,7 @@ AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum param, const ALint *val
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer-vector property 0x%04x", param);
     else
         SetSourceiv(Source, Context, param, values);
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     WriteUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -2116,14 +2087,14 @@ AL_API ALvoid AL_APIENTRY alSourcei64SOFT(ALuint source, ALenum param, ALint64SO
     if(!Context) return;
 
     WriteLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(Int64ValsByProp(param) == 1))
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer64 property 0x%04x", param);
     else
         SetSourcei64v(Source, Context, param, &value);
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     WriteUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -2138,7 +2109,7 @@ AL_API void AL_APIENTRY alSource3i64SOFT(ALuint source, ALenum param, ALint64SOF
     if(!Context) return;
 
     WriteLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(Int64ValsByProp(param) == 3))
@@ -2148,7 +2119,7 @@ AL_API void AL_APIENTRY alSource3i64SOFT(ALuint source, ALenum param, ALint64SOF
         ALint64SOFT i64vals[3] = { value1, value2, value3 };
         SetSourcei64v(Source, Context, param, i64vals);
     }
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     WriteUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -2163,7 +2134,7 @@ AL_API void AL_APIENTRY alSourcei64vSOFT(ALuint source, ALenum param, const ALin
     if(!Context) return;
 
     WriteLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
@@ -2172,7 +2143,7 @@ AL_API void AL_APIENTRY alSourcei64vSOFT(ALuint source, ALenum param, const ALin
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer64-vector property 0x%04x", param);
     else
         SetSourcei64v(Source, Context, param, values);
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     WriteUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -2188,7 +2159,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcef(ALuint source, ALenum param, ALfloat *val
     if(!Context) return;
 
     ReadLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!value)
@@ -2201,7 +2172,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcef(ALuint source, ALenum param, ALfloat *val
         if(GetSourcedv(Source, Context, param, &dval))
             *value = (ALfloat)dval;
     }
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     ReadUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -2217,7 +2188,7 @@ AL_API ALvoid AL_APIENTRY alGetSource3f(ALuint source, ALenum param, ALfloat *va
     if(!Context) return;
 
     ReadLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(value1 && value2 && value3))
@@ -2234,7 +2205,7 @@ AL_API ALvoid AL_APIENTRY alGetSource3f(ALuint source, ALenum param, ALfloat *va
             *value3 = (ALfloat)dvals[2];
         }
     }
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     ReadUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -2251,7 +2222,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *va
     if(!Context) return;
 
     ReadLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
@@ -2268,7 +2239,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *va
                 values[i] = (ALfloat)dvals[i];
         }
     }
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     ReadUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -2284,7 +2255,7 @@ AL_API void AL_APIENTRY alGetSourcedSOFT(ALuint source, ALenum param, ALdouble *
     if(!Context) return;
 
     ReadLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!value)
@@ -2293,7 +2264,7 @@ AL_API void AL_APIENTRY alGetSourcedSOFT(ALuint source, ALenum param, ALdouble *
         alSetError(Context, AL_INVALID_ENUM, "Invalid double property 0x%04x", param);
     else
         GetSourcedv(Source, Context, param, value);
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     ReadUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -2308,7 +2279,7 @@ AL_API void AL_APIENTRY alGetSource3dSOFT(ALuint source, ALenum param, ALdouble 
     if(!Context) return;
 
     ReadLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(value1 && value2 && value3))
@@ -2325,7 +2296,7 @@ AL_API void AL_APIENTRY alGetSource3dSOFT(ALuint source, ALenum param, ALdouble 
             *value3 = dvals[2];
         }
     }
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     ReadUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -2340,7 +2311,7 @@ AL_API void AL_APIENTRY alGetSourcedvSOFT(ALuint source, ALenum param, ALdouble 
     if(!Context) return;
 
     ReadLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
@@ -2349,7 +2320,7 @@ AL_API void AL_APIENTRY alGetSourcedvSOFT(ALuint source, ALenum param, ALdouble 
         alSetError(Context, AL_INVALID_ENUM, "Invalid double-vector property 0x%04x", param);
     else
         GetSourcedv(Source, Context, param, values);
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     ReadUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -2365,7 +2336,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum param, ALint *value
     if(!Context) return;
 
     ReadLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!value)
@@ -2374,7 +2345,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum param, ALint *value
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer property 0x%04x", param);
     else
         GetSourceiv(Source, Context, param, value);
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     ReadUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -2390,7 +2361,7 @@ AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum param, ALint *value1
     if(!Context) return;
 
     ReadLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(value1 && value2 && value3))
@@ -2407,7 +2378,7 @@ AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum param, ALint *value1
             *value3 = ivals[2];
         }
     }
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     ReadUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -2423,7 +2394,7 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum param, ALint *values
     if(!Context) return;
 
     ReadLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
@@ -2432,7 +2403,7 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum param, ALint *values
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer-vector property 0x%04x", param);
     else
         GetSourceiv(Source, Context, param, values);
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     ReadUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -2448,7 +2419,7 @@ AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64S
     if(!Context) return;
 
     ReadLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!value)
@@ -2457,7 +2428,7 @@ AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64S
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer64 property 0x%04x", param);
     else
         GetSourcei64v(Source, Context, param, value);
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     ReadUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -2472,7 +2443,7 @@ AL_API void AL_APIENTRY alGetSource3i64SOFT(ALuint source, ALenum param, ALint64
     if(!Context) return;
 
     ReadLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(value1 && value2 && value3))
@@ -2489,7 +2460,7 @@ AL_API void AL_APIENTRY alGetSource3i64SOFT(ALuint source, ALenum param, ALint64
             *value3 = i64vals[2];
         }
     }
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     ReadUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -2504,7 +2475,7 @@ AL_API void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64
     if(!Context) return;
 
     ReadLock(&Context->PropLock);
-    LockSourcesRead(Context);
+    LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
@@ -2513,7 +2484,7 @@ AL_API void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer64-vector property 0x%04x", param);
     else
         GetSourcei64v(Source, Context, param, values);
-    UnlockSourcesRead(Context);
+    UnlockSourceList(Context);
     ReadUnlock(&Context->PropLock);
 
     ALCcontext_DecRef(Context);
@@ -2535,7 +2506,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     context = GetContextRef();
     if(!context) return;
 
-    LockSourcesRead(context);
+    LockSourceList(context);
     if(!(n >= 0))
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Playing %d sources", n);
     for(i = 0;i < n;i++)
@@ -2704,7 +2675,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     ALCdevice_Unlock(device);
 
 done:
-    UnlockSourcesRead(context);
+    UnlockSourceList(context);
     ALCcontext_DecRef(context);
 }
 
@@ -2723,7 +2694,7 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     context = GetContextRef();
     if(!context) return;
 
-    LockSourcesRead(context);
+    LockSourceList(context);
     if(!(n >= 0))
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Pausing %d sources", n);
     for(i = 0;i < n;i++)
@@ -2751,7 +2722,7 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     ALCdevice_Unlock(device);
 
 done:
-    UnlockSourcesRead(context);
+    UnlockSourceList(context);
     ALCcontext_DecRef(context);
 }
 
@@ -2770,7 +2741,7 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     context = GetContextRef();
     if(!context) return;
 
-    LockSourcesRead(context);
+    LockSourceList(context);
     if(!(n >= 0))
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Stopping %d sources", n);
     for(i = 0;i < n;i++)
@@ -2801,7 +2772,7 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     ALCdevice_Unlock(device);
 
 done:
-    UnlockSourcesRead(context);
+    UnlockSourceList(context);
     ALCcontext_DecRef(context);
 }
 
@@ -2820,7 +2791,7 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
     context = GetContextRef();
     if(!context) return;
 
-    LockSourcesRead(context);
+    LockSourceList(context);
     if(!(n >= 0))
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Rewinding %d sources", n);
     for(i = 0;i < n;i++)
@@ -2851,7 +2822,7 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
     ALCdevice_Unlock(device);
 
 done:
-    UnlockSourcesRead(context);
+    UnlockSourceList(context);
     ALCcontext_DecRef(context);
 }
 
@@ -2874,7 +2845,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
 
     device = context->Device;
 
-    LockSourcesRead(context);
+    LockSourceList(context);
     if(!(nb >= 0))
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Queueing %d buffers", nb);
     if((source=LookupSource(context, src)) == NULL)
@@ -3004,7 +2975,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
     WriteUnlock(&source->queue_lock);
 
 done:
-    UnlockSourcesRead(context);
+    UnlockSourceList(context);
     ALCcontext_DecRef(context);
 }
 
@@ -3021,7 +2992,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
     context = GetContextRef();
     if(!context) return;
 
-    LockSourcesRead(context);
+    LockSourceList(context);
     if(!(nb >= 0))
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Unqueueing %d buffers", nb);
     if((source=LookupSource(context, src)) == NULL)
@@ -3088,7 +3059,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
     }
 
 done:
-    UnlockSourcesRead(context);
+    UnlockSourceList(context);
     ALCcontext_DecRef(context);
 }
 
@@ -3680,23 +3651,121 @@ static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALsizei *frac
 }
 
 
+static ALsource *AllocSource(ALCcontext *context)
+{
+    ALCdevice *device = context->Device;
+    SourceSubList *sublist, *subend;
+    ALsource *source = NULL;
+    ALsizei lidx = 0;
+    ALsizei slidx;
+
+    almtx_lock(&context->SourceLock);
+    if(context->NumSources >= device->SourcesMax)
+    {
+        almtx_unlock(&context->SourceLock);
+        return NULL;
+    }
+    sublist = VECTOR_BEGIN(context->SourceList);
+    subend = VECTOR_END(context->SourceList);
+    for(;sublist != subend;++sublist)
+    {
+        if(sublist->FreeMask)
+        {
+            slidx = CTZ64(sublist->FreeMask);
+            source = sublist->Sources + slidx;
+            break;
+        }
+        ++lidx;
+    }
+    if(UNLIKELY(!source))
+    {
+        const SourceSubList empty_sublist = { 0, NULL };
+        /* Don't allocate so many list entries that the 32-bit ID could
+         * overflow...
+         */
+        if(UNLIKELY(VECTOR_SIZE(context->SourceList) >= 1<<25))
+        {
+            almtx_unlock(&device->BufferLock);
+            return NULL;
+        }
+        lidx = (ALsizei)VECTOR_SIZE(context->SourceList);
+        VECTOR_PUSH_BACK(context->SourceList, empty_sublist);
+        sublist = &VECTOR_BACK(context->SourceList);
+        sublist->FreeMask = ~U64(0);
+        sublist->Sources = al_calloc(16, sizeof(ALsource)*64);
+        if(UNLIKELY(!sublist->Sources))
+        {
+            VECTOR_POP_BACK(context->SourceList);
+            almtx_unlock(&context->SourceLock);
+            return NULL;
+        }
+
+        slidx = 0;
+        source = sublist->Sources + slidx;
+    }
+
+    memset(source, 0, sizeof(*source));
+    InitSourceParams(source, device->NumAuxSends);
+
+    /* Add 1 to avoid source ID 0. */
+    source->id = ((lidx<<6) | slidx) + 1;
+
+    context->NumSources++;
+    sublist->FreeMask &= ~(U64(1)<<slidx);
+    almtx_unlock(&context->SourceLock);
+
+    return source;
+}
+
+static void FreeSource(ALCcontext *context, ALsource *source)
+{
+    ALCdevice *device = context->Device;
+    ALuint id = source->id - 1;
+    ALsizei lidx = id >> 6;
+    ALsizei slidx = id & 0x3f;
+    ALvoice *voice;
+
+    ALCdevice_Lock(device);
+    if((voice=GetSourceVoice(source, context)) != NULL)
+    {
+        ATOMIC_STORE(&voice->Source, NULL, almemory_order_relaxed);
+        ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
+    }
+    ALCdevice_Unlock(device);
+
+    DeinitSource(source, device->NumAuxSends);
+    memset(source, 0, sizeof(*source));
+
+    VECTOR_ELEM(context->SourceList, lidx).FreeMask |= U64(1) << slidx;
+    context->NumSources--;
+}
+
 /* ReleaseALSources
  *
  * Destroys all sources in the source map.
  */
-ALvoid ReleaseALSources(ALCcontext *Context)
+ALvoid ReleaseALSources(ALCcontext *context)
 {
-    ALCdevice *device = Context->Device;
-    ALsizei pos;
-    for(pos = 0;pos < Context->SourceMap.size;pos++)
+    ALCdevice *device = context->Device;
+    SourceSubList *sublist = VECTOR_BEGIN(context->SourceList);
+    SourceSubList *subend = VECTOR_END(context->SourceList);
+    size_t leftover = 0;
+    for(;sublist != subend;++sublist)
     {
-        ALsource *temp = Context->SourceMap.values[pos];
-        Context->SourceMap.values[pos] = NULL;
+        ALuint64 usemask = ~sublist->FreeMask;
+        while(usemask)
+        {
+            ALsizei idx = CTZ64(usemask);
+            ALsource *source = sublist->Sources + idx;
 
-        DeinitSource(temp, device->NumAuxSends);
+            DeinitSource(source, device->NumAuxSends);
+            memset(source, 0, sizeof(*source));
+            ++leftover;
 
-        FreeThunkEntry(temp->id);
-        memset(temp, 0, sizeof(*temp));
-        al_free(temp);
+            usemask &= ~(U64(1) << idx);
+        }
+        sublist->FreeMask = ~usemask;
     }
+    if(leftover > 0)
+        WARN("(%p) Deleted "SZFMT" Source%s\n", device, leftover, (leftover==1)?"":"s");
 }

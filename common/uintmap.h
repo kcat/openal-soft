@@ -25,7 +25,6 @@ typedef struct UIntMap {
 
 void InitUIntMap(UIntMap *map, ALsizei limit);
 void ResetUIntMap(UIntMap *map);
-void RelimitUIntMapNoLock(UIntMap *map, ALsizei limit);
 ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value);
 ALenum InsertUIntMapEntryNoLock(UIntMap *map, ALuint key, ALvoid *value);
 ALvoid *RemoveUIntMapKey(UIntMap *map, ALuint key);

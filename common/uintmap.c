@@ -36,11 +36,6 @@ void ResetUIntMap(UIntMap *map)
     WriteUnlock(&map->lock);
 }
 
-void RelimitUIntMapNoLock(UIntMap *map, ALsizei limit)
-{
-    map->limit = limit;
-}
-
 ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value)
 {
     ALsizei pos = 0;

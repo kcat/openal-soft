@@ -720,9 +720,10 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
     {
         static const ALCchar msg[] =
             "alDopplerVelocity is deprecated in AL1.1, use alSpeedOfSound";
+        const ALsizei msglen = (ALsizei)strlen(msg);
         almtx_lock(&context->EventLock);
         if((context->EnabledEvts&EventType_Deprecated) && context->EventCb)
-            (*context->EventCb)(AL_EVENT_TYPE_DEPRECATED_SOFT, 0, 0, strlen(msg), msg,
+            (*context->EventCb)(AL_EVENT_TYPE_DEPRECATED_SOFT, 0, 0, msglen, msg,
                                 context->EventParam);
         almtx_unlock(&context->EventLock);
     }

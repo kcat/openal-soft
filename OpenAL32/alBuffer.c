@@ -1252,15 +1252,15 @@ static ALbuffer *AllocBuffer(ALCcontext *context)
     if(UNLIKELY(!buffer))
     {
         const BufferSubList empty_sublist = { 0, NULL };
-        lidx = VECTOR_SIZE(device->BufferList);
         /* Don't allocate so many list entries that the 32-bit ID could
          * overflow...
          */
-        if(UNLIKELY(lidx >= 1<<25))
+        if(UNLIKELY(VECTOR_SIZE(device->BufferList) >= 1<<25))
         {
             almtx_unlock(&device->BufferLock);
             return NULL;
         }
+        lidx = (ALsizei)VECTOR_SIZE(device->BufferList);
         VECTOR_PUSH_BACK(device->BufferList, empty_sublist);
         sublist = &VECTOR_BACK(device->BufferList);
         sublist->FreeMask = ~U64(0);

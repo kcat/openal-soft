@@ -48,14 +48,14 @@ void alSetError(ALCcontext *context, ALenum errorCode, const char *msg, ...)
     if(msglen < 0 || (size_t)msglen >= sizeof(message))
     {
         message[sizeof(message)-1] = 0;
-        msglen = strlen(message);
+        msglen = (int)strlen(message);
     }
     if(msglen > 0)
         msg = message;
     else
     {
         msg = "<internal error constructing message>";
-        msglen = strlen(msg);
+        msglen = (int)strlen(msg);
     }
 
     WARN("Error generated on context %p, code 0x%04x, \"%s\"\n",

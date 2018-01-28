@@ -26,20 +26,13 @@ typedef struct UIntMap {
 void InitUIntMap(UIntMap *map, ALsizei limit);
 void ResetUIntMap(UIntMap *map);
 ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value);
-ALenum InsertUIntMapEntryNoLock(UIntMap *map, ALuint key, ALvoid *value);
 ALvoid *RemoveUIntMapKey(UIntMap *map, ALuint key);
-ALvoid *RemoveUIntMapKeyNoLock(UIntMap *map, ALuint key);
 ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key);
-ALvoid *LookupUIntMapKeyNoLock(UIntMap *map, ALuint key);
 
-inline void LockUIntMapRead(UIntMap *map)
-{ ReadLock(&map->lock); }
-inline void UnlockUIntMapRead(UIntMap *map)
-{ ReadUnlock(&map->lock); }
-inline void LockUIntMapWrite(UIntMap *map)
-{ WriteLock(&map->lock); }
-inline void UnlockUIntMapWrite(UIntMap *map)
-{ WriteUnlock(&map->lock); }
+inline void LockUIntMapRead(UIntMap *map) { ReadLock(&map->lock); }
+inline void UnlockUIntMapRead(UIntMap *map) { ReadUnlock(&map->lock); }
+inline void LockUIntMapWrite(UIntMap *map) { WriteLock(&map->lock); }
+inline void UnlockUIntMapWrite(UIntMap *map) { WriteUnlock(&map->lock); }
 
 #ifdef __cplusplus
 }

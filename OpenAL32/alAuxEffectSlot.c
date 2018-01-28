@@ -84,6 +84,7 @@ static inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
 
 AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslots)
 {
+    ALCdevice *device;
     ALCcontext *context;
     ALeffectslot **tmpslots = NULL;
     ALsizei cur;
@@ -96,7 +97,14 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Generating %d effect slots", n);
     tmpslots = al_malloc(DEF_ALIGN, sizeof(ALeffectslot*)*n);
 
+    device = context->Device;
     LockEffectSlotList(context);
+    if(device->AuxiliaryEffectSlotMax - VECTOR_SIZE(context->EffectSlotList) > (ALuint)n)
+    {
+        UnlockEffectSlotList(context);
+        SETERR_GOTO(context, AL_OUT_OF_MEMORY, done, "Exceeding %u auxiliary effect slot limit",
+                    device->AuxiliaryEffectSlotMax);
+    }
     for(cur = 0;cur < n;cur++)
     {
         ALeffectslotPtr *iter = VECTOR_BEGIN(context->EffectSlotList);

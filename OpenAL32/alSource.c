@@ -84,6 +84,20 @@ static inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
     return sublist->Buffers + slidx;
 }
 
+static inline ALfilter *LookupFilter(ALCdevice *device, ALuint id)
+{
+    FilterSubList *sublist;
+    ALuint lidx = (id-1) >> 6;
+    ALsizei slidx = (id-1) & 0x3f;
+
+    if(UNLIKELY(lidx >= VECTOR_SIZE(device->FilterList)))
+        return NULL;
+    sublist = &VECTOR_ELEM(device->FilterList, lidx);
+    if(UNLIKELY(sublist->FreeMask & (U64(1)<<slidx)))
+        return NULL;
+    return sublist->Filters + slidx;
+}
+
 static inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id)
 {
     id--;
@@ -894,10 +908,10 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             return AL_TRUE;
 
         case AL_DIRECT_FILTER:
-            LockFiltersRead(device);
+            almtx_lock(&device->FilterLock);
             if(!(*values == 0 || (filter=LookupFilter(device, *values)) != NULL))
             {
-                UnlockFiltersRead(device);
+                almtx_unlock(&device->FilterLock);
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid filter ID %u",
                               *values);
             }
@@ -918,7 +932,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 Source->Direct.GainLF = filter->GainLF;
                 Source->Direct.LFReference = filter->LFReference;
             }
-            UnlockFiltersRead(device);
+            almtx_unlock(&device->FilterLock);
             DO_UPDATEPROPS();
             return AL_TRUE;
 
@@ -992,10 +1006,10 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 almtx_unlock(&Context->EffectSlotLock);
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid send %u", values[1]);
             }
-            LockFiltersRead(device);
+            almtx_lock(&device->FilterLock);
             if(!(values[2] == 0 || (filter=LookupFilter(device, values[2])) != NULL))
             {
-                UnlockFiltersRead(device);
+                almtx_unlock(&device->FilterLock);
                 almtx_unlock(&Context->EffectSlotLock);
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid filter ID %u",
                               values[2]);
@@ -1018,7 +1032,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 Source->Send[values[1]].GainLF = filter->GainLF;
                 Source->Send[values[1]].LFReference = filter->LFReference;
             }
-            UnlockFiltersRead(device);
+            almtx_unlock(&device->FilterLock);
 
             if(slot != Source->Send[values[1]].Slot && IsPlayingOrPaused(Source))
             {

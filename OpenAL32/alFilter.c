@@ -29,27 +29,40 @@
 #include "alError.h"
 
 
-extern inline void LockFiltersRead(ALCdevice *device);
-extern inline void UnlockFiltersRead(ALCdevice *device);
-extern inline void LockFiltersWrite(ALCdevice *device);
-extern inline void UnlockFiltersWrite(ALCdevice *device);
-extern inline struct ALfilter *LookupFilter(ALCdevice *device, ALuint id);
-extern inline struct ALfilter *RemoveFilter(ALCdevice *device, ALuint id);
 extern inline void ALfilterState_clear(ALfilterState *filter);
 extern inline void ALfilterState_copyParams(ALfilterState *restrict dst, const ALfilterState *restrict src);
 extern inline void ALfilterState_processPassthru(ALfilterState *filter, const ALfloat *restrict src, ALsizei numsamples);
 extern inline ALfloat calc_rcpQ_from_slope(ALfloat gain, ALfloat slope);
 extern inline ALfloat calc_rcpQ_from_bandwidth(ALfloat f0norm, ALfloat bandwidth);
 
+static ALfilter *AllocFilter(ALCcontext *context);
+static void FreeFilter(ALCdevice *device, ALfilter *filter);
 static void InitFilterParams(ALfilter *filter, ALenum type);
+
+static inline void LockFilterList(ALCdevice *device)
+{ almtx_lock(&device->FilterLock); }
+static inline void UnlockFilterList(ALCdevice *device)
+{ almtx_unlock(&device->FilterLock); }
+
+static inline ALfilter *LookupFilter(ALCdevice *device, ALuint id)
+{
+    FilterSubList *sublist;
+    ALuint lidx = (id-1) >> 6;
+    ALsizei slidx = (id-1) & 0x3f;
+
+    if(UNLIKELY(lidx >= VECTOR_SIZE(device->FilterList)))
+        return NULL;
+    sublist = &VECTOR_ELEM(device->FilterList, lidx);
+    if(UNLIKELY(sublist->FreeMask & (U64(1)<<slidx)))
+        return NULL;
+    return sublist->Filters + slidx;
+}
 
 
 AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
 {
-    ALCdevice *device;
     ALCcontext *context;
     ALsizei cur = 0;
-    ALenum err;
 
     context = GetContextRef();
     if(!context) return;
@@ -57,28 +70,13 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
     if(!(n >= 0))
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Generating %d filters", n);
 
-    device = context->Device;
     for(cur = 0;cur < n;cur++)
     {
-        ALfilter *filter = al_calloc(16, sizeof(ALfilter));
+        ALfilter *filter = AllocFilter(context);
         if(!filter)
         {
             alDeleteFilters(cur, filters);
-            SETERR_GOTO(context, AL_OUT_OF_MEMORY, done, "Failed to allocate filter object");
-        }
-        InitFilterParams(filter, AL_FILTER_NULL);
-
-        err = NewThunkEntry(&filter->id);
-        if(err == AL_NO_ERROR)
-            err = InsertUIntMapEntry(&device->FilterMap, filter->id, filter);
-        if(err != AL_NO_ERROR)
-        {
-            FreeThunkEntry(filter->id);
-            memset(filter, 0, sizeof(ALfilter));
-            al_free(filter);
-
-            alDeleteFilters(cur, filters);
-            SETERR_GOTO(context, err, done, "Failed ot set filter ID");
+            break;
         }
 
         filters[cur] = filter->id;
@@ -99,7 +97,7 @@ AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, const ALuint *filters)
     if(!context) return;
 
     device = context->Device;
-    LockFiltersWrite(device);
+    LockFilterList(device);
     if(!(n >= 0))
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Deleting %d filters", n);
     for(i = 0;i < n;i++)
@@ -109,16 +107,12 @@ AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, const ALuint *filters)
     }
     for(i = 0;i < n;i++)
     {
-        if((filter=RemoveFilter(device, filters[i])) == NULL)
-            continue;
-        FreeThunkEntry(filter->id);
-
-        memset(filter, 0, sizeof(*filter));
-        al_free(filter);
+        if((filter=LookupFilter(device, filters[i])) != NULL)
+            FreeFilter(device, filter);
     }
 
 done:
-    UnlockFiltersWrite(device);
+    UnlockFilterList(device);
     ALCcontext_DecRef(context);
 }
 
@@ -130,10 +124,10 @@ AL_API ALboolean AL_APIENTRY alIsFilter(ALuint filter)
     Context = GetContextRef();
     if(!Context) return AL_FALSE;
 
-    LockFiltersRead(Context->Device);
+    LockFilterList(Context->Device);
     result = ((!filter || LookupFilter(Context->Device, filter)) ?
               AL_TRUE : AL_FALSE);
-    UnlockFiltersRead(Context->Device);
+    UnlockFilterList(Context->Device);
 
     ALCcontext_DecRef(Context);
 
@@ -150,7 +144,7 @@ AL_API ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint value)
     if(!Context) return;
 
     Device = Context->Device;
-    LockFiltersWrite(Device);
+    LockFilterList(Device);
     if((ALFilter=LookupFilter(Device, filter)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid filter ID %u", filter);
     else
@@ -169,7 +163,7 @@ AL_API ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint value)
             V(ALFilter,setParami)(Context, param, value);
         }
     }
-    UnlockFiltersWrite(Device);
+    UnlockFilterList(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -191,7 +185,7 @@ AL_API ALvoid AL_APIENTRY alFilteriv(ALuint filter, ALenum param, const ALint *v
     if(!Context) return;
 
     Device = Context->Device;
-    LockFiltersWrite(Device);
+    LockFilterList(Device);
     if((ALFilter=LookupFilter(Device, filter)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid filter ID %u", filter);
     else
@@ -199,7 +193,7 @@ AL_API ALvoid AL_APIENTRY alFilteriv(ALuint filter, ALenum param, const ALint *v
         /* Call the appropriate handler */
         V(ALFilter,setParamiv)(Context, param, values);
     }
-    UnlockFiltersWrite(Device);
+    UnlockFilterList(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -214,7 +208,7 @@ AL_API ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat value)
     if(!Context) return;
 
     Device = Context->Device;
-    LockFiltersWrite(Device);
+    LockFilterList(Device);
     if((ALFilter=LookupFilter(Device, filter)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid filter ID %u", filter);
     else
@@ -222,7 +216,7 @@ AL_API ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat value)
         /* Call the appropriate handler */
         V(ALFilter,setParamf)(Context, param, value);
     }
-    UnlockFiltersWrite(Device);
+    UnlockFilterList(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -237,7 +231,7 @@ AL_API ALvoid AL_APIENTRY alFilterfv(ALuint filter, ALenum param, const ALfloat 
     if(!Context) return;
 
     Device = Context->Device;
-    LockFiltersWrite(Device);
+    LockFilterList(Device);
     if((ALFilter=LookupFilter(Device, filter)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid filter ID %u", filter);
     else
@@ -245,7 +239,7 @@ AL_API ALvoid AL_APIENTRY alFilterfv(ALuint filter, ALenum param, const ALfloat 
         /* Call the appropriate handler */
         V(ALFilter,setParamfv)(Context, param, values);
     }
-    UnlockFiltersWrite(Device);
+    UnlockFilterList(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -260,7 +254,7 @@ AL_API ALvoid AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *value
     if(!Context) return;
 
     Device = Context->Device;
-    LockFiltersRead(Device);
+    LockFilterList(Device);
     if((ALFilter=LookupFilter(Device, filter)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid filter ID %u", filter);
     else
@@ -273,7 +267,7 @@ AL_API ALvoid AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *value
             V(ALFilter,getParami)(Context, param, value);
         }
     }
-    UnlockFiltersRead(Device);
+    UnlockFilterList(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -295,7 +289,7 @@ AL_API ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *valu
     if(!Context) return;
 
     Device = Context->Device;
-    LockFiltersRead(Device);
+    LockFilterList(Device);
     if((ALFilter=LookupFilter(Device, filter)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid filter ID %u", filter);
     else
@@ -303,7 +297,7 @@ AL_API ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *valu
         /* Call the appropriate handler */
         V(ALFilter,getParamiv)(Context, param, values);
     }
-    UnlockFiltersRead(Device);
+    UnlockFilterList(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -318,7 +312,7 @@ AL_API ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *val
     if(!Context) return;
 
     Device = Context->Device;
-    LockFiltersRead(Device);
+    LockFilterList(Device);
     if((ALFilter=LookupFilter(Device, filter)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid filter ID %u", filter);
     else
@@ -326,7 +320,7 @@ AL_API ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *val
         /* Call the appropriate handler */
         V(ALFilter,getParamf)(Context, param, value);
     }
-    UnlockFiltersRead(Device);
+    UnlockFilterList(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -341,7 +335,7 @@ AL_API ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *va
     if(!Context) return;
 
     Device = Context->Device;
-    LockFiltersRead(Device);
+    LockFilterList(Device);
     if((ALFilter=LookupFilter(Device, filter)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid filter ID %u", filter);
     else
@@ -349,7 +343,7 @@ AL_API ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *va
         /* Call the appropriate handler */
         V(ALFilter,getParamfv)(Context, param, values);
     }
-    UnlockFiltersRead(Device);
+    UnlockFilterList(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -625,19 +619,99 @@ static void ALnullfilter_getParamfv(ALfilter *UNUSED(filter), ALCcontext *contex
 DEFINE_ALFILTER_VTABLE(ALnullfilter);
 
 
-ALvoid ReleaseALFilters(ALCdevice *device)
+static ALfilter *AllocFilter(ALCcontext *context)
 {
-    ALsizei i;
-    for(i = 0;i < device->FilterMap.size;i++)
-    {
-        ALfilter *temp = device->FilterMap.values[i];
-        device->FilterMap.values[i] = NULL;
+    ALCdevice *device = context->Device;
+    FilterSubList *sublist, *subend;
+    ALfilter *filter = NULL;
+    ALsizei lidx = 0;
+    ALsizei slidx;
 
-        // Release filter structure
-        FreeThunkEntry(temp->id);
-        memset(temp, 0, sizeof(ALfilter));
-        al_free(temp);
+    almtx_lock(&device->FilterLock);
+    sublist = VECTOR_BEGIN(device->FilterList);
+    subend = VECTOR_END(device->FilterList);
+    for(;sublist != subend;++sublist)
+    {
+        if(sublist->FreeMask)
+        {
+            slidx = CTZ64(sublist->FreeMask);
+            filter = sublist->Filters + slidx;
+            break;
+        }
+        ++lidx;
     }
+    if(UNLIKELY(!filter))
+    {
+        const FilterSubList empty_sublist = { 0, NULL };
+        /* Don't allocate so many list entries that the 32-bit ID could
+         * overflow...
+         */
+        if(UNLIKELY(VECTOR_SIZE(device->FilterList) >= 1<<25))
+        {
+            almtx_unlock(&device->FilterLock);
+            return NULL;
+        }
+        lidx = (ALsizei)VECTOR_SIZE(device->FilterList);
+        VECTOR_PUSH_BACK(device->FilterList, empty_sublist);
+        sublist = &VECTOR_BACK(device->FilterList);
+        sublist->FreeMask = ~U64(0);
+        sublist->Filters = al_calloc(16, sizeof(ALfilter)*64);
+        if(UNLIKELY(!sublist->Filters))
+        {
+            VECTOR_POP_BACK(device->FilterList);
+            almtx_unlock(&device->FilterLock);
+            return NULL;
+        }
+
+        slidx = 0;
+        filter = sublist->Filters + slidx;
+    }
+
+    memset(filter, 0, sizeof(*filter));
+    InitFilterParams(filter, AL_FILTER_NULL);
+
+    /* Add 1 to avoid filter ID 0. */
+    filter->id = ((lidx<<6) | slidx) + 1;
+
+    sublist->FreeMask &= ~(U64(1)<<slidx);
+    almtx_unlock(&device->FilterLock);
+
+    return filter;
+}
+
+static void FreeFilter(ALCdevice *device, ALfilter *filter)
+{
+    ALuint id = filter->id - 1;
+    ALsizei lidx = id >> 6;
+    ALsizei slidx = id & 0x3f;
+
+    memset(filter, 0, sizeof(*filter));
+
+    VECTOR_ELEM(device->FilterList, lidx).FreeMask |= U64(1) << slidx;
+}
+
+void ReleaseALFilters(ALCdevice *device)
+{
+    FilterSubList *sublist = VECTOR_BEGIN(device->FilterList);
+    FilterSubList *subend = VECTOR_END(device->FilterList);
+    size_t leftover = 0;
+    for(;sublist != subend;++sublist)
+    {
+        ALuint64 usemask = ~sublist->FreeMask;
+        while(usemask)
+        {
+            ALsizei idx = CTZ64(usemask);
+            ALfilter *filter = sublist->Filters + idx;
+
+            memset(filter, 0, sizeof(*filter));
+            ++leftover;
+
+            usemask &= ~(U64(1) << idx);
+        }
+        sublist->FreeMask = ~usemask;
+    }
+    if(leftover > 0)
+        WARN("(%p) Deleted "SZFMT" Filter%s\n", device, leftover, (leftover==1)?"":"s");
 }
 
 

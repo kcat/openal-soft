@@ -166,6 +166,7 @@ struct Compressor;
 struct ALCbackend;
 struct ALbuffer;
 struct ALeffect;
+struct ALfilter;
 struct ALsource;
 struct ALcontextProps;
 struct ALlistenerProps;
@@ -388,6 +389,12 @@ typedef struct EffectSubList {
 } EffectSubList;
 TYPEDEF_VECTOR(EffectSubList, vector_EffectSubList)
 
+typedef struct FilterSubList {
+    ALuint64 FreeMask;
+    struct ALfilter *Filters; /* 64 */
+} FilterSubList;
+TYPEDEF_VECTOR(FilterSubList, vector_FilterSubList)
+
 typedef struct SourceSubList {
     ALuint64 FreeMask;
     struct ALsource *Sources; /* 64 */
@@ -496,7 +503,8 @@ struct ALCdevice_struct
     almtx_t EffectLock;
 
     // Map of Filters for this device
-    UIntMap FilterMap;
+    vector_FilterSubList FilterList;
+    almtx_t FilterLock;
 
     /* HRTF state and info */
     struct DirectHrtfState *Hrtf;

@@ -2399,13 +2399,12 @@ static ALCvoid FreeDevice(ALCdevice *device)
     VECTOR_DEINIT(device->EffectList);
     almtx_destroy(&device->EffectLock);
 
-    if(device->FilterMap.size > 0)
-    {
-        WARN("(%p) Deleting %d Filter%s\n", device, device->FilterMap.size,
-             (device->FilterMap.size==1)?"":"s");
-        ReleaseALFilters(device);
-    }
-    ResetUIntMap(&device->FilterMap);
+    ReleaseALFilters(device);
+#define FREE_FILTERSUBLIST(x) al_free((x)->Filters)
+    VECTOR_FOR_EACH(FilterSubList, device->FilterList, FREE_FILTERSUBLIST);
+#undef FREE_FILTERSUBLIST
+    VECTOR_DEINIT(device->FilterList);
+    almtx_destroy(&device->FilterLock);
 
     AL_STRING_DEINIT(device->HrtfName);
     FreeHrtfList(&device->HrtfList);
@@ -4000,7 +3999,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     VECTOR_INIT(device->BufferList);
     VECTOR_INIT(device->EffectList);
-    InitUIntMap(&device->FilterMap, INT_MAX);
+    VECTOR_INIT(device->FilterList);
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
     {
@@ -4132,6 +4131,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     almtx_init(&device->BackendLock, almtx_plain);
     almtx_init(&device->BufferLock, almtx_plain);
     almtx_init(&device->EffectLock, almtx_plain);
+    almtx_init(&device->FilterLock, almtx_plain);
 
     if(ConfigValueStr(alstr_get_cstr(device->DeviceName), NULL, "ambi-format", &fmt))
     {
@@ -4279,7 +4279,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
 
     VECTOR_INIT(device->BufferList);
     VECTOR_INIT(device->EffectList);
-    InitUIntMap(&device->FilterMap, INT_MAX);
+    VECTOR_INIT(device->FilterList);
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
     {
@@ -4328,6 +4328,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     almtx_init(&device->BackendLock, almtx_plain);
     almtx_init(&device->BufferLock, almtx_plain);
     almtx_init(&device->EffectLock, almtx_plain);
+    almtx_init(&device->FilterLock, almtx_plain);
 
     {
         ALCdevice *head = ATOMIC_LOAD_SEQ(&DeviceList);
@@ -4504,7 +4505,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
 
     VECTOR_INIT(device->BufferList);
     VECTOR_INIT(device->EffectList);
-    InitUIntMap(&device->FilterMap, INT_MAX);
+    VECTOR_INIT(device->FilterList);
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
     {
@@ -4524,6 +4525,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     almtx_init(&device->BackendLock, almtx_plain);
     almtx_init(&device->BufferLock, almtx_plain);
     almtx_init(&device->EffectLock, almtx_plain);
+    almtx_init(&device->FilterLock, almtx_plain);
 
     //Set output format
     device->NumUpdates = 0;

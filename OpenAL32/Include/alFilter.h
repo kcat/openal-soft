@@ -163,21 +163,7 @@ typedef struct ALfilter {
     ALuint id;
 } ALfilter;
 
-inline void LockFiltersRead(ALCdevice *device)
-{ LockUIntMapRead(&device->FilterMap); }
-inline void UnlockFiltersRead(ALCdevice *device)
-{ UnlockUIntMapRead(&device->FilterMap); }
-inline void LockFiltersWrite(ALCdevice *device)
-{ LockUIntMapWrite(&device->FilterMap); }
-inline void UnlockFiltersWrite(ALCdevice *device)
-{ UnlockUIntMapWrite(&device->FilterMap); }
-
-inline struct ALfilter *LookupFilter(ALCdevice *device, ALuint id)
-{ return (struct ALfilter*)LookupUIntMapKeyNoLock(&device->FilterMap, id); }
-inline struct ALfilter *RemoveFilter(ALCdevice *device, ALuint id)
-{ return (struct ALfilter*)RemoveUIntMapKeyNoLock(&device->FilterMap, id); }
-
-ALvoid ReleaseALFilters(ALCdevice *device);
+void ReleaseALFilters(ALCdevice *device);
 
 #ifdef __cplusplus
 }

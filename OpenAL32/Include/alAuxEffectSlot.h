@@ -171,9 +171,6 @@ ALeffectStateFactory *ALdedicatedStateFactory_getFactory(void);
 
 ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect);
 
-void InitEffectFactoryMap(void);
-void DeinitEffectFactoryMap(void);
-
 void ALeffectState_DecRef(ALeffectState *state);
 
 #ifdef __cplusplus

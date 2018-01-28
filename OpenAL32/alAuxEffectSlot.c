@@ -39,12 +39,32 @@
 extern inline void LockEffectSlotList(ALCcontext *context);
 extern inline void UnlockEffectSlotList(ALCcontext *context);
 
-static UIntMap EffectStateFactoryMap;
+static const struct {
+    ALenum Type;
+    ALeffectStateFactory* (*GetFactory)(void);
+} FactoryList[] = {
+    { AL_EFFECT_NULL, ALnullStateFactory_getFactory },
+    { AL_EFFECT_EAXREVERB, ALreverbStateFactory_getFactory },
+    { AL_EFFECT_REVERB, ALreverbStateFactory_getFactory },
+    { AL_EFFECT_CHORUS, ALchorusStateFactory_getFactory },
+    { AL_EFFECT_COMPRESSOR, ALcompressorStateFactory_getFactory },
+    { AL_EFFECT_DISTORTION, ALdistortionStateFactory_getFactory },
+    { AL_EFFECT_ECHO, ALechoStateFactory_getFactory },
+    { AL_EFFECT_EQUALIZER, ALequalizerStateFactory_getFactory },
+    { AL_EFFECT_FLANGER, ALflangerStateFactory_getFactory },
+    { AL_EFFECT_RING_MODULATOR, ALmodulatorStateFactory_getFactory },
+    { AL_EFFECT_DEDICATED_DIALOGUE, ALdedicatedStateFactory_getFactory },
+    { AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT, ALdedicatedStateFactory_getFactory }
+};
+
 static inline ALeffectStateFactory *getFactoryByType(ALenum type)
 {
-    ALeffectStateFactory* (*getFactory)(void) = LookupUIntMapKey(&EffectStateFactoryMap, type);
-    if(getFactory != NULL)
-        return getFactory();
+    size_t i;
+    for(i = 0;i < COUNTOF(FactoryList);i++)
+    {
+        if(FactoryList[i].Type == type)
+            return FactoryList[i].GetFactory();
+    }
     return NULL;
 }
 
@@ -514,30 +534,6 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum p
 done:
     UnlockEffectSlotList(context);
     ALCcontext_DecRef(context);
-}
-
-
-void InitEffectFactoryMap(void)
-{
-    InitUIntMap(&EffectStateFactoryMap, INT_MAX);
-
-    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_NULL, ALnullStateFactory_getFactory);
-    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_EAXREVERB, ALreverbStateFactory_getFactory);
-    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_REVERB, ALreverbStateFactory_getFactory);
-    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_CHORUS, ALchorusStateFactory_getFactory);
-    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_COMPRESSOR, ALcompressorStateFactory_getFactory);
-    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_DISTORTION, ALdistortionStateFactory_getFactory);
-    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_ECHO, ALechoStateFactory_getFactory);
-    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_EQUALIZER, ALequalizerStateFactory_getFactory);
-    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_FLANGER, ALflangerStateFactory_getFactory);
-    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_RING_MODULATOR, ALmodulatorStateFactory_getFactory);
-    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_DEDICATED_DIALOGUE, ALdedicatedStateFactory_getFactory);
-    InsertUIntMapEntry(&EffectStateFactoryMap, AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT, ALdedicatedStateFactory_getFactory);
-}
-
-void DeinitEffectFactoryMap(void)
-{
-    ResetUIntMap(&EffectStateFactoryMap);
 }
 
 

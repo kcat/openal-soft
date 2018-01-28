@@ -61,6 +61,20 @@ static inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id)
     return VECTOR_ELEM(context->EffectSlotList, id);
 }
 
+static inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
+{
+    EffectSubList *sublist;
+    ALuint lidx = (id-1) >> 6;
+    ALsizei slidx = (id-1) & 0x3f;
+
+    if(UNLIKELY(lidx >= VECTOR_SIZE(device->EffectList)))
+        return NULL;
+    sublist = &VECTOR_ELEM(device->EffectList, lidx);
+    if(UNLIKELY(sublist->FreeMask & (U64(1)<<slidx)))
+        return NULL;
+    return sublist->Effects + slidx;
+}
+
 
 #define DO_UPDATEPROPS() do {                                                 \
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))          \
@@ -261,15 +275,15 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
     case AL_EFFECTSLOT_EFFECT:
         device = context->Device;
 
-        LockEffectsRead(device);
+        almtx_lock(&device->EffectLock);
         effect = (value ? LookupEffect(device, value) : NULL);
         if(!(value == 0 || effect != NULL))
         {
-            UnlockEffectsRead(device);
+            almtx_unlock(&device->EffectLock);
             SETERR_GOTO(context, AL_INVALID_VALUE, done, "Invalid effect ID %u", value);
         }
         err = InitializeEffect(context, slot, effect);
-        UnlockEffectsRead(device);
+        almtx_unlock(&device->EffectLock);
 
         if(err != AL_NO_ERROR)
             SETERR_GOTO(context, err, done, "Effect initialization failed");

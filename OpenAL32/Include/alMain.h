@@ -165,6 +165,7 @@ struct FrontStablizer;
 struct Compressor;
 struct ALCbackend;
 struct ALbuffer;
+struct ALeffect;
 struct ALsource;
 struct ALcontextProps;
 struct ALlistenerProps;
@@ -381,6 +382,12 @@ typedef struct BufferSubList {
 } BufferSubList;
 TYPEDEF_VECTOR(BufferSubList, vector_BufferSubList)
 
+typedef struct EffectSubList {
+    ALuint64 FreeMask;
+    struct ALeffect *Effects; /* 64 */
+} EffectSubList;
+TYPEDEF_VECTOR(EffectSubList, vector_EffectSubList)
+
 typedef struct SourceSubList {
     ALuint64 FreeMask;
     struct ALsource *Sources; /* 64 */
@@ -485,7 +492,8 @@ struct ALCdevice_struct
     almtx_t BufferLock;
 
     // Map of Effects for this device
-    UIntMap EffectMap;
+    vector_EffectSubList EffectList;
+    almtx_t EffectLock;
 
     // Map of Filters for this device
     UIntMap FilterMap;

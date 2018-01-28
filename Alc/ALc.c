@@ -2392,13 +2392,12 @@ static ALCvoid FreeDevice(ALCdevice *device)
     VECTOR_DEINIT(device->BufferList);
     almtx_destroy(&device->BufferLock);
 
-    if(device->EffectMap.size > 0)
-    {
-        WARN("(%p) Deleting %d Effect%s\n", device, device->EffectMap.size,
-             (device->EffectMap.size==1)?"":"s");
-        ReleaseALEffects(device);
-    }
-    ResetUIntMap(&device->EffectMap);
+    ReleaseALEffects(device);
+#define FREE_EFFECTSUBLIST(x) al_free((x)->Effects)
+    VECTOR_FOR_EACH(EffectSubList, device->EffectList, FREE_EFFECTSUBLIST);
+#undef FREE_EFFECTSUBLIST
+    VECTOR_DEINIT(device->EffectList);
+    almtx_destroy(&device->EffectLock);
 
     if(device->FilterMap.size > 0)
     {
@@ -4000,7 +3999,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->NumAuxSends = DEFAULT_SENDS;
 
     VECTOR_INIT(device->BufferList);
-    InitUIntMap(&device->EffectMap, INT_MAX);
+    VECTOR_INIT(device->EffectList);
     InitUIntMap(&device->FilterMap, INT_MAX);
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
@@ -4132,6 +4131,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     }
     almtx_init(&device->BackendLock, almtx_plain);
     almtx_init(&device->BufferLock, almtx_plain);
+    almtx_init(&device->EffectLock, almtx_plain);
 
     if(ConfigValueStr(alstr_get_cstr(device->DeviceName), NULL, "ambi-format", &fmt))
     {
@@ -4278,7 +4278,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->RealOut.NumChannels = 0;
 
     VECTOR_INIT(device->BufferList);
-    InitUIntMap(&device->EffectMap, INT_MAX);
+    VECTOR_INIT(device->EffectList);
     InitUIntMap(&device->FilterMap, INT_MAX);
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
@@ -4327,6 +4327,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     }
     almtx_init(&device->BackendLock, almtx_plain);
     almtx_init(&device->BufferLock, almtx_plain);
+    almtx_init(&device->EffectLock, almtx_plain);
 
     {
         ALCdevice *head = ATOMIC_LOAD_SEQ(&DeviceList);
@@ -4502,7 +4503,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->NumAuxSends = DEFAULT_SENDS;
 
     VECTOR_INIT(device->BufferList);
-    InitUIntMap(&device->EffectMap, INT_MAX);
+    VECTOR_INIT(device->EffectList);
     InitUIntMap(&device->FilterMap, INT_MAX);
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
@@ -4522,6 +4523,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     }
     almtx_init(&device->BackendLock, almtx_plain);
     almtx_init(&device->BufferLock, almtx_plain);
+    almtx_init(&device->EffectLock, almtx_plain);
 
     //Set output format
     device->NumUpdates = 0;

@@ -48,20 +48,34 @@ const struct EffectList EffectList[EFFECTLIST_SIZE] = {
 
 ALboolean DisabledEffects[MAX_EFFECTS];
 
-extern inline void LockEffectsRead(ALCdevice *device);
-extern inline void UnlockEffectsRead(ALCdevice *device);
-extern inline void LockEffectsWrite(ALCdevice *device);
-extern inline void UnlockEffectsWrite(ALCdevice *device);
-extern inline struct ALeffect *LookupEffect(ALCdevice *device, ALuint id);
-extern inline struct ALeffect *RemoveEffect(ALCdevice *device, ALuint id);
 extern inline ALboolean IsReverbEffect(ALenum type);
 
+static ALeffect *AllocEffect(ALCcontext *context);
+static void FreeEffect(ALCdevice *device, ALeffect *effect);
 static void InitEffectParams(ALeffect *effect, ALenum type);
+
+static inline void LockEffectList(ALCdevice *device)
+{ almtx_lock(&device->EffectLock); }
+static inline void UnlockEffectList(ALCdevice *device)
+{ almtx_unlock(&device->EffectLock); }
+
+static inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
+{
+    EffectSubList *sublist;
+    ALuint lidx = (id-1) >> 6;
+    ALsizei slidx = (id-1) & 0x3f;
+
+    if(UNLIKELY(lidx >= VECTOR_SIZE(device->EffectList)))
+        return NULL;
+    sublist = &VECTOR_ELEM(device->EffectList, lidx);
+    if(UNLIKELY(sublist->FreeMask & (U64(1)<<slidx)))
+        return NULL;
+    return sublist->Effects + slidx;
+}
 
 
 AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
 {
-    ALCdevice *device;
     ALCcontext *context;
     ALsizei cur;
 
@@ -71,31 +85,14 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
     if(!(n >= 0))
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Generating %d effects", n);
 
-    device = context->Device;
     for(cur = 0;cur < n;cur++)
     {
-        ALeffect *effect = al_calloc(16, sizeof(ALeffect));
-        ALenum err = AL_OUT_OF_MEMORY;
-        if(!effect || (err=InitEffect(effect)) != AL_NO_ERROR)
+        ALeffect *effect = AllocEffect(context);
+        if(!effect)
         {
-            al_free(effect);
             alDeleteEffects(cur, effects);
-            SETERR_GOTO(context, err, done, "Failed to allocate effect object");
+            break;
         }
-
-        err = NewThunkEntry(&effect->id);
-        if(err == AL_NO_ERROR)
-            err = InsertUIntMapEntry(&device->EffectMap, effect->id, effect);
-        if(err != AL_NO_ERROR)
-        {
-            FreeThunkEntry(effect->id);
-            memset(effect, 0, sizeof(ALeffect));
-            al_free(effect);
-
-            alDeleteEffects(cur, effects);
-            SETERR_GOTO(context, err, done, "Failed to set effect ID");
-        }
-
         effects[cur] = effect->id;
     }
 
@@ -114,7 +111,7 @@ AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects)
     if(!context) return;
 
     device = context->Device;
-    LockEffectsWrite(device);
+    LockEffectList(device);
     if(!(n >= 0))
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Deleting %d effects", n);
     for(i = 0;i < n;i++)
@@ -124,16 +121,12 @@ AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects)
     }
     for(i = 0;i < n;i++)
     {
-        if((effect=RemoveEffect(device, effects[i])) == NULL)
-            continue;
-        FreeThunkEntry(effect->id);
-
-        memset(effect, 0, sizeof(*effect));
-        al_free(effect);
+        if((effect=LookupEffect(device, effects[i])) != NULL)
+            FreeEffect(device, effect);
     }
 
 done:
-    UnlockEffectsWrite(device);
+    UnlockEffectList(device);
     ALCcontext_DecRef(context);
 }
 
@@ -145,10 +138,10 @@ AL_API ALboolean AL_APIENTRY alIsEffect(ALuint effect)
     Context = GetContextRef();
     if(!Context) return AL_FALSE;
 
-    LockEffectsRead(Context->Device);
+    LockEffectList(Context->Device);
     result = ((!effect || LookupEffect(Context->Device, effect)) ?
               AL_TRUE : AL_FALSE);
-    UnlockEffectsRead(Context->Device);
+    UnlockEffectList(Context->Device);
 
     ALCcontext_DecRef(Context);
 
@@ -165,7 +158,7 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint value)
     if(!Context) return;
 
     Device = Context->Device;
-    LockEffectsWrite(Device);
+    LockEffectList(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
@@ -192,7 +185,7 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint value)
             V(ALEffect,setParami)(Context, param, value);
         }
     }
-    UnlockEffectsWrite(Device);
+    UnlockEffectList(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -214,7 +207,7 @@ AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, const ALint *v
     if(!Context) return;
 
     Device = Context->Device;
-    LockEffectsWrite(Device);
+    LockEffectList(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
@@ -222,7 +215,7 @@ AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, const ALint *v
         /* Call the appropriate handler */
         V(ALEffect,setParamiv)(Context, param, values);
     }
-    UnlockEffectsWrite(Device);
+    UnlockEffectList(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -237,7 +230,7 @@ AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat value)
     if(!Context) return;
 
     Device = Context->Device;
-    LockEffectsWrite(Device);
+    LockEffectList(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
@@ -245,7 +238,7 @@ AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat value)
         /* Call the appropriate handler */
         V(ALEffect,setParamf)(Context, param, value);
     }
-    UnlockEffectsWrite(Device);
+    UnlockEffectList(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -260,7 +253,7 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, const ALfloat 
     if(!Context) return;
 
     Device = Context->Device;
-    LockEffectsWrite(Device);
+    LockEffectList(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
@@ -268,7 +261,7 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, const ALfloat 
         /* Call the appropriate handler */
         V(ALEffect,setParamfv)(Context, param, values);
     }
-    UnlockEffectsWrite(Device);
+    UnlockEffectList(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -283,7 +276,7 @@ AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *value
     if(!Context) return;
 
     Device = Context->Device;
-    LockEffectsRead(Device);
+    LockEffectList(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
@@ -296,7 +289,7 @@ AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *value
             V(ALEffect,getParami)(Context, param, value);
         }
     }
-    UnlockEffectsRead(Device);
+    UnlockEffectList(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -318,7 +311,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *valu
     if(!Context) return;
 
     Device = Context->Device;
-    LockEffectsRead(Device);
+    LockEffectList(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
@@ -326,7 +319,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *valu
         /* Call the appropriate handler */
         V(ALEffect,getParamiv)(Context, param, values);
     }
-    UnlockEffectsRead(Device);
+    UnlockEffectList(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -341,7 +334,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *val
     if(!Context) return;
 
     Device = Context->Device;
-    LockEffectsRead(Device);
+    LockEffectList(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
@@ -349,7 +342,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *val
         /* Call the appropriate handler */
         V(ALEffect,getParamf)(Context, param, value);
     }
-    UnlockEffectsRead(Device);
+    UnlockEffectList(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -364,7 +357,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *va
     if(!Context) return;
 
     Device = Context->Device;
-    LockEffectsRead(Device);
+    LockEffectList(Device);
     if((ALEffect=LookupEffect(Device, effect)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
     else
@@ -372,7 +365,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *va
         /* Call the appropriate handler */
         V(ALEffect,getParamfv)(Context, param, values);
     }
-    UnlockEffectsRead(Device);
+    UnlockEffectList(Device);
 
     ALCcontext_DecRef(Context);
 }
@@ -384,19 +377,99 @@ ALenum InitEffect(ALeffect *effect)
     return AL_NO_ERROR;
 }
 
+static ALeffect *AllocEffect(ALCcontext *context)
+{
+    ALCdevice *device = context->Device;
+    EffectSubList *sublist, *subend;
+    ALeffect *effect = NULL;
+    ALsizei lidx = 0;
+    ALsizei slidx;
+
+    almtx_lock(&device->EffectLock);
+    sublist = VECTOR_BEGIN(device->EffectList);
+    subend = VECTOR_END(device->EffectList);
+    for(;sublist != subend;++sublist)
+    {
+        if(sublist->FreeMask)
+        {
+            slidx = CTZ64(sublist->FreeMask);
+            effect = sublist->Effects + slidx;
+            break;
+        }
+        ++lidx;
+    }
+    if(UNLIKELY(!effect))
+    {
+        const EffectSubList empty_sublist = { 0, NULL };
+        /* Don't allocate so many list entries that the 32-bit ID could
+         * overflow...
+         */
+        if(UNLIKELY(VECTOR_SIZE(device->EffectList) >= 1<<25))
+        {
+            almtx_unlock(&device->EffectLock);
+            return NULL;
+        }
+        lidx = (ALsizei)VECTOR_SIZE(device->EffectList);
+        VECTOR_PUSH_BACK(device->EffectList, empty_sublist);
+        sublist = &VECTOR_BACK(device->EffectList);
+        sublist->FreeMask = ~U64(0);
+        sublist->Effects = al_calloc(16, sizeof(ALeffect)*64);
+        if(UNLIKELY(!sublist->Effects))
+        {
+            VECTOR_POP_BACK(device->EffectList);
+            almtx_unlock(&device->EffectLock);
+            return NULL;
+        }
+
+        slidx = 0;
+        effect = sublist->Effects + slidx;
+    }
+
+    memset(effect, 0, sizeof(*effect));
+    InitEffectParams(effect, AL_EFFECT_NULL);
+
+    /* Add 1 to avoid effect ID 0. */
+    effect->id = ((lidx<<6) | slidx) + 1;
+
+    sublist->FreeMask &= ~(U64(1)<<slidx);
+    almtx_unlock(&device->EffectLock);
+
+    return effect;
+}
+
+static void FreeEffect(ALCdevice *device, ALeffect *effect)
+{
+    ALuint id = effect->id - 1;
+    ALsizei lidx = id >> 6;
+    ALsizei slidx = id & 0x3f;
+
+    memset(effect, 0, sizeof(*effect));
+
+    VECTOR_ELEM(device->EffectList, lidx).FreeMask |= U64(1) << slidx;
+}
+
 ALvoid ReleaseALEffects(ALCdevice *device)
 {
-    ALsizei i;
-    for(i = 0;i < device->EffectMap.size;i++)
+    EffectSubList *sublist = VECTOR_BEGIN(device->EffectList);
+    EffectSubList *subend = VECTOR_END(device->EffectList);
+    size_t leftover = 0;
+    for(;sublist != subend;++sublist)
     {
-        ALeffect *temp = device->EffectMap.values[i];
-        device->EffectMap.values[i] = NULL;
+        ALuint64 usemask = ~sublist->FreeMask;
+        while(usemask)
+        {
+            ALsizei idx = CTZ64(usemask);
+            ALeffect *effect = sublist->Effects + idx;
 
-        // Release effect structure
-        FreeThunkEntry(temp->id);
-        memset(temp, 0, sizeof(ALeffect));
-        al_free(temp);
+            memset(effect, 0, sizeof(*effect));
+            ++leftover;
+
+            usemask &= ~(U64(1) << idx);
+        }
+        sublist->FreeMask = ~usemask;
     }
+    if(leftover > 0)
+        WARN("(%p) Deleted "SZFMT" Effect%s\n", device, leftover, (leftover==1)?"":"s");
 }
 
 

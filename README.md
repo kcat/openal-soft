@@ -1,6 +1,15 @@
-Source Install
-==============
+OpenAL soft
+===========
 
+`master` branch CI status :  [![Build Status](https://travis-ci.org/kcat/openal-soft.svg?branch=master)](https://travis-ci.org/kcat/openal-soft) [![Windows Build Status](https://ci.appveyor.com/api/projects/status/github/kcat/openal-soft?branch=master&svg=true)](https://ci.appveyor.com/api/projects/status/github/kcat/openal-soft?branch=master&svg=true)
+
+OpenAL Soft is an LGPL-licensed, cross-platform, software implementation of the OpenAL 3D audio API. It's forked from the open-sourced Windows version available originally from openal.org's SVN repository (now defunct).
+OpenAL provides capabilities for playing audio in a virtual 3D environment. Distance attenuation, doppler shift, and directional sound emitters are among the features handled by the API. More advanced effects, including air absorption, occlusion, and environmental reverb, are available through the EFX extension. It also facilitates streaming audio, multi-channel buffers, and audio capture.
+
+More information is available on the [official website](http://openal-soft.org/)
+
+Source Install
+-------------
 To install OpenAL Soft, use your favorite shell to go into the build/
 directory, and run:
 
@@ -23,15 +32,14 @@ DirectSound was detected.
 
 
 Utilities
-=========
-
+---------
 The source package comes with an informational utility, openal-info, and is
 built by default. It prints out information provided by the ALC and AL sub-
 systems, including discovered devices, version information, and extensions.
 
 
 Configuration
-=============
+-------------
 
 OpenAL Soft can be configured on a per-user and per-system basis. This allows
 users and sysadmins to control information provided to applications, as well
@@ -40,7 +48,7 @@ available settings.
 
 
 Acknowledgements
-================
+----------------
 
 Special thanks go to:
 

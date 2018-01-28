@@ -908,10 +908,10 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             return AL_TRUE;
 
         case AL_DIRECT_FILTER:
-            almtx_lock(&device->FilterLock);
+            LockFilterList(device);
             if(!(*values == 0 || (filter=LookupFilter(device, *values)) != NULL))
             {
-                almtx_unlock(&device->FilterLock);
+                UnlockFilterList(device);
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid filter ID %u",
                               *values);
             }
@@ -932,7 +932,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 Source->Direct.GainLF = filter->GainLF;
                 Source->Direct.LFReference = filter->LFReference;
             }
-            almtx_unlock(&device->FilterLock);
+            UnlockFilterList(device);
             DO_UPDATEPROPS();
             return AL_TRUE;
 
@@ -994,23 +994,23 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
 
 
         case AL_AUXILIARY_SEND_FILTER:
-            almtx_lock(&Context->EffectSlotLock);
+            LockEffectSlotList(Context);
             if(!(values[0] == 0 || (slot=LookupEffectSlot(Context, values[0])) != NULL))
             {
-                almtx_unlock(&Context->EffectSlotLock);
+                UnlockEffectSlotList(Context);
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid effect ID %u",
                               values[0]);
             }
             if(!((ALuint)values[1] < (ALuint)device->NumAuxSends))
             {
-                almtx_unlock(&Context->EffectSlotLock);
+                UnlockEffectSlotList(Context);
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid send %u", values[1]);
             }
-            almtx_lock(&device->FilterLock);
+            LockFilterList(device);
             if(!(values[2] == 0 || (filter=LookupFilter(device, values[2])) != NULL))
             {
-                almtx_unlock(&device->FilterLock);
-                almtx_unlock(&Context->EffectSlotLock);
+                UnlockFilterList(device);
+                UnlockEffectSlotList(Context);
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid filter ID %u",
                               values[2]);
             }
@@ -1032,7 +1032,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 Source->Send[values[1]].GainLF = filter->GainLF;
                 Source->Send[values[1]].LFReference = filter->LFReference;
             }
-            almtx_unlock(&device->FilterLock);
+            UnlockFilterList(device);
 
             if(slot != Source->Send[values[1]].Slot && IsPlayingOrPaused(Source))
             {
@@ -1059,7 +1059,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 Source->Send[values[1]].Slot = slot;
                 DO_UPDATEPROPS();
             }
-            almtx_unlock(&Context->EffectSlotLock);
+            UnlockEffectSlotList(Context);
 
             return AL_TRUE;
 

@@ -32,6 +32,10 @@
 #include "alError.h"
 
 
+extern inline void LockEffectList(ALCdevice *device);
+extern inline void UnlockEffectList(ALCdevice *device);
+extern inline ALboolean IsReverbEffect(ALenum type);
+
 const struct EffectList EffectList[EFFECTLIST_SIZE] = {
     { "eaxreverb",  EAXREVERB_EFFECT,  AL_EFFECT_EAXREVERB },
     { "reverb",     REVERB_EFFECT,     AL_EFFECT_REVERB },
@@ -48,16 +52,9 @@ const struct EffectList EffectList[EFFECTLIST_SIZE] = {
 
 ALboolean DisabledEffects[MAX_EFFECTS];
 
-extern inline ALboolean IsReverbEffect(ALenum type);
-
 static ALeffect *AllocEffect(ALCcontext *context);
 static void FreeEffect(ALCdevice *device, ALeffect *effect);
 static void InitEffectParams(ALeffect *effect, ALenum type);
-
-static inline void LockEffectList(ALCdevice *device)
-{ almtx_lock(&device->EffectLock); }
-static inline void UnlockEffectList(ALCdevice *device)
-{ almtx_unlock(&device->EffectLock); }
 
 static inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
 {

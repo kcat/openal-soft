@@ -36,6 +36,9 @@
 #include "almalloc.h"
 
 
+extern inline void LockEffectSlotList(ALCcontext *context);
+extern inline void UnlockEffectSlotList(ALCcontext *context);
+
 static UIntMap EffectStateFactoryMap;
 static inline ALeffectStateFactory *getFactoryByType(ALenum type)
 {
@@ -47,11 +50,6 @@ static inline ALeffectStateFactory *getFactoryByType(ALenum type)
 
 static void ALeffectState_IncRef(ALeffectState *state);
 
-
-static inline void LockEffectSlotList(ALCcontext *context)
-{ almtx_lock(&context->EffectSlotLock); }
-static inline void UnlockEffectSlotList(ALCcontext *context)
-{ almtx_unlock(&context->EffectSlotLock); }
 
 static inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id)
 {
@@ -275,15 +273,15 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
     case AL_EFFECTSLOT_EFFECT:
         device = context->Device;
 
-        almtx_lock(&device->EffectLock);
+        LockEffectList(device);
         effect = (value ? LookupEffect(device, value) : NULL);
         if(!(value == 0 || effect != NULL))
         {
-            almtx_unlock(&device->EffectLock);
+            UnlockEffectList(device);
             SETERR_GOTO(context, AL_INVALID_VALUE, done, "Invalid effect ID %u", value);
         }
         err = InitializeEffect(context, slot, effect);
-        almtx_unlock(&device->EffectLock);
+        UnlockEffectList(device);
 
         if(err != AL_NO_ERROR)
             SETERR_GOTO(context, err, done, "Effect initialization failed");

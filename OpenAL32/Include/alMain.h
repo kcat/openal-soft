@@ -723,10 +723,19 @@ inline ALint GetChannelIdxByName(const RealMixParams *real, enum Channel chan)
 { return GetChannelIndex(real->ChannelName, chan); }
 
 
-inline void LockBufferList(ALCdevice *device)
-{ almtx_lock(&device->BufferLock); }
-inline void UnlockBufferList(ALCdevice *device)
-{ almtx_unlock(&device->BufferLock); }
+inline void LockBufferList(ALCdevice *device) { almtx_lock(&device->BufferLock); }
+inline void UnlockBufferList(ALCdevice *device) { almtx_unlock(&device->BufferLock); }
+
+inline void LockEffectList(ALCdevice *device) { almtx_lock(&device->EffectLock); }
+inline void UnlockEffectList(ALCdevice *device) { almtx_unlock(&device->EffectLock); }
+
+inline void LockFilterList(ALCdevice *device) { almtx_lock(&device->FilterLock); }
+inline void UnlockFilterList(ALCdevice *device) { almtx_unlock(&device->FilterLock); }
+
+inline void LockEffectSlotList(ALCcontext *context)
+{ almtx_lock(&context->EffectSlotLock); }
+inline void UnlockEffectSlotList(ALCcontext *context)
+{ almtx_unlock(&context->EffectSlotLock); }
 
 
 vector_al_string SearchDataFiles(const char *match, const char *subdir);

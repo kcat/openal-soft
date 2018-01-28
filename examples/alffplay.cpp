@@ -704,16 +704,16 @@ void AL_APIENTRY AudioState::EventCallback(ALenum eventType, ALuint object, ALui
 
 int AudioState::handler()
 {
-    const ALenum types[5] = {
+    const std::array<ALenum,5> types{{
         AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT,
         AL_EVENT_TYPE_ERROR_SOFT, AL_EVENT_TYPE_PERFORMANCE_SOFT, AL_EVENT_TYPE_DEPRECATED_SOFT
-    };
+    }};
     std::unique_lock<std::mutex> lock(mSrcMutex);
     ALenum fmt;
 
     if(alEventControlSOFT)
     {
-        alEventControlSOFT(5, types, AL_TRUE);
+        alEventControlSOFT(types.size(), types.data(), AL_TRUE);
         alEventCallbackSOFT(EventCallback, this);
     }
 
@@ -948,7 +948,7 @@ finish:
 
     if(alEventControlSOFT)
     {
-        alEventControlSOFT(5, types, AL_FALSE);
+        alEventControlSOFT(types.size(), types.data(), AL_FALSE);
         alEventCallbackSOFT(nullptr, nullptr);
     }
 

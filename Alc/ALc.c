@@ -2249,10 +2249,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
 
         WriteLock(&context->PropLock);
-        LockUIntMapRead(&context->EffectSlotMap);
-        for(pos = 0;pos < context->EffectSlotMap.size;pos++)
+        almtx_lock(&context->EffectSlotLock);
+        for(pos = 0;pos < (ALsizei)VECTOR_SIZE(context->EffectSlotList);pos++)
         {
-            ALeffectslot *slot = context->EffectSlotMap.values[pos];
+            ALeffectslot *slot = VECTOR_ELEM(context->EffectSlotList, pos);
             ALeffectState *state = slot->Effect.State;
 
             state->OutBuffer = device->Dry.Buffer;
@@ -2262,7 +2262,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             else
                 UpdateEffectSlotProps(slot, context);
         }
-        UnlockUIntMapRead(&context->EffectSlotMap);
+        almtx_unlock(&context->EffectSlotLock);
 
         almtx_lock(&context->SourceLock);
         sublist = VECTOR_BEGIN(context->SourceList);
@@ -2534,7 +2534,8 @@ static ALvoid InitContext(ALCcontext *Context)
     VECTOR_INIT(Context->SourceList);
     Context->NumSources = 0;
     almtx_init(&Context->SourceLock, almtx_plain);
-    InitUIntMap(&Context->EffectSlotMap, Context->Device->AuxiliaryEffectSlotMax);
+    VECTOR_INIT(Context->EffectSlotList);
+    almtx_init(&Context->EffectSlotLock, almtx_plain);
 
     if(Context->DefaultSlot)
     {
@@ -2648,13 +2649,13 @@ static void FreeContext(ALCcontext *context)
         ++count;
     }
     TRACE("Freed "SZFMT" AuxiliaryEffectSlot property object%s\n", count, (count==1)?"":"s");
-    if(context->EffectSlotMap.size > 0)
-    {
-        WARN("(%p) Deleting %d AuxiliaryEffectSlot%s\n", context, context->EffectSlotMap.size,
-             (context->EffectSlotMap.size==1)?"":"s");
-        ReleaseALAuxiliaryEffectSlots(context);
-    }
-    ResetUIntMap(&context->EffectSlotMap);
+
+    ReleaseALAuxiliaryEffectSlots(context);
+#define FREE_EFFECTSLOTPTR(x) al_free(*(x))
+    VECTOR_FOR_EACH(ALeffectslotPtr, context->EffectSlotList, FREE_EFFECTSLOTPTR);
+#undef FREE_EFFECTSLOTPTR
+    VECTOR_DEINIT(context->EffectSlotList);
+    almtx_destroy(&context->EffectSlotLock);
 
     count = 0;
     vprops = ATOMIC_LOAD(&context->FreeVoiceProps, almemory_order_relaxed);

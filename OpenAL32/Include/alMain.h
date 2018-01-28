@@ -387,6 +387,12 @@ typedef struct SourceSubList {
 } SourceSubList;
 TYPEDEF_VECTOR(SourceSubList, vector_SourceSubList)
 
+/* Effect slots are rather large, and apps aren't likely to have more than one
+ * or two (let alone 64), so hold them individually.
+ */
+typedef struct ALeffectslot *ALeffectslotPtr;
+TYPEDEF_VECTOR(ALeffectslotPtr, vector_ALeffectslotPtr)
+
 
 typedef struct EnumeratedHrtf {
     al_string name;
@@ -600,7 +606,8 @@ struct ALCcontext_struct {
     ALuint NumSources;
     almtx_t SourceLock;
 
-    UIntMap EffectSlotMap;
+    vector_ALeffectslotPtr EffectSlotList;
+    almtx_t EffectSlotLock;
 
     ATOMIC(ALenum) LastError;
 

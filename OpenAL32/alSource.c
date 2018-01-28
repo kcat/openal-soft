@@ -84,6 +84,14 @@ static inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
     return sublist->Buffers + slidx;
 }
 
+static inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id)
+{
+    id--;
+    if(UNLIKELY(id >= VECTOR_SIZE(context->EffectSlotList)))
+        return NULL;
+    return VECTOR_ELEM(context->EffectSlotList, id);
+}
+
 
 typedef enum SourceProp {
     srcPitch = AL_PITCH,
@@ -972,23 +980,23 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
 
 
         case AL_AUXILIARY_SEND_FILTER:
-            LockEffectSlotsRead(Context);
+            almtx_lock(&Context->EffectSlotLock);
             if(!(values[0] == 0 || (slot=LookupEffectSlot(Context, values[0])) != NULL))
             {
-                UnlockEffectSlotsRead(Context);
+                almtx_unlock(&Context->EffectSlotLock);
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid effect ID %u",
                               values[0]);
             }
             if(!((ALuint)values[1] < (ALuint)device->NumAuxSends))
             {
-                UnlockEffectSlotsRead(Context);
+                almtx_unlock(&Context->EffectSlotLock);
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid send %u", values[1]);
             }
             LockFiltersRead(device);
             if(!(values[2] == 0 || (filter=LookupFilter(device, values[2])) != NULL))
             {
                 UnlockFiltersRead(device);
-                UnlockEffectSlotsRead(Context);
+                almtx_unlock(&Context->EffectSlotLock);
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid filter ID %u",
                               values[2]);
             }
@@ -1037,7 +1045,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 Source->Send[values[1]].Slot = slot;
                 DO_UPDATEPROPS();
             }
-            UnlockEffectSlotsRead(Context);
+            almtx_unlock(&Context->EffectSlotLock);
 
             return AL_TRUE;
 

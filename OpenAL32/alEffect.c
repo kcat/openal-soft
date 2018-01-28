@@ -83,9 +83,8 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
     if(!context) return;
 
     if(!(n >= 0))
-        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Generating %d effects", n);
-
-    for(cur = 0;cur < n;cur++)
+        alSetError(context, AL_INVALID_VALUE, "Generating %d effects", n);
+    else for(cur = 0;cur < n;cur++)
     {
         ALeffect *effect = AllocEffect(context);
         if(!effect)
@@ -96,7 +95,6 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
         effects[cur] = effect->id;
     }
 
-done:
     ALCcontext_DecRef(context);
 }
 
@@ -407,6 +405,7 @@ static ALeffect *AllocEffect(ALCcontext *context)
         if(UNLIKELY(VECTOR_SIZE(device->EffectList) >= 1<<25))
         {
             almtx_unlock(&device->EffectLock);
+            alSetError(context, AL_OUT_OF_MEMORY, "Too many effects allocated");
             return NULL;
         }
         lidx = (ALsizei)VECTOR_SIZE(device->EffectList);
@@ -418,6 +417,7 @@ static ALeffect *AllocEffect(ALCcontext *context)
         {
             VECTOR_POP_BACK(device->EffectList);
             almtx_unlock(&device->EffectLock);
+            alSetError(context, AL_OUT_OF_MEMORY, "Failed to allocate effect batch");
             return NULL;
         }
 

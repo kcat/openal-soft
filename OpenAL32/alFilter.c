@@ -68,9 +68,8 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
     if(!context) return;
 
     if(!(n >= 0))
-        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Generating %d filters", n);
-
-    for(cur = 0;cur < n;cur++)
+        alSetError(context, AL_INVALID_VALUE, "Generating %d filters", n);
+    else for(cur = 0;cur < n;cur++)
     {
         ALfilter *filter = AllocFilter(context);
         if(!filter)
@@ -82,7 +81,6 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
         filters[cur] = filter->id;
     }
 
-done:
     ALCcontext_DecRef(context);
 }
 
@@ -649,6 +647,7 @@ static ALfilter *AllocFilter(ALCcontext *context)
         if(UNLIKELY(VECTOR_SIZE(device->FilterList) >= 1<<25))
         {
             almtx_unlock(&device->FilterLock);
+            alSetError(context, AL_OUT_OF_MEMORY, "Too many filters allocated");
             return NULL;
         }
         lidx = (ALsizei)VECTOR_SIZE(device->FilterList);
@@ -660,6 +659,7 @@ static ALfilter *AllocFilter(ALCcontext *context)
         {
             VECTOR_POP_BACK(device->FilterList);
             almtx_unlock(&device->FilterLock);
+            alSetError(context, AL_OUT_OF_MEMORY, "Failed to allocate filter batch");
             return NULL;
         }
 

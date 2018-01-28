@@ -1807,19 +1807,18 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
     if(!context) return;
 
     if(!(n >= 0))
-        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Generating %d sources", n);
-    for(cur = 0;cur < n;cur++)
+        alSetError(context, AL_INVALID_VALUE, "Generating %d sources", n);
+    else for(cur = 0;cur < n;cur++)
     {
         ALsource *source = AllocSource(context);
         if(!source)
         {
             alDeleteSources(cur, sources);
-            SETERR_GOTO(context, AL_OUT_OF_MEMORY, done, "Failed to allocate source object");
+            break;
         }
         sources[cur] = source->id;
     }
 
-done:
     ALCcontext_DecRef(context);
 }
 
@@ -3685,6 +3684,7 @@ static ALsource *AllocSource(ALCcontext *context)
     if(context->NumSources >= device->SourcesMax)
     {
         almtx_unlock(&context->SourceLock);
+        alSetError(context, AL_OUT_OF_MEMORY, "Exceeding %u source limit", device->SourcesMax);
         return NULL;
     }
     sublist = VECTOR_BEGIN(context->SourceList);
@@ -3708,6 +3708,7 @@ static ALsource *AllocSource(ALCcontext *context)
         if(UNLIKELY(VECTOR_SIZE(context->SourceList) >= 1<<25))
         {
             almtx_unlock(&device->BufferLock);
+            alSetError(context, AL_OUT_OF_MEMORY, "Too many sources allocated");
             return NULL;
         }
         lidx = (ALsizei)VECTOR_SIZE(context->SourceList);
@@ -3719,6 +3720,7 @@ static ALsource *AllocSource(ALCcontext *context)
         {
             VECTOR_POP_BACK(context->SourceList);
             almtx_unlock(&context->SourceLock);
+            alSetError(context, AL_OUT_OF_MEMORY, "Failed to allocate source batch");
             return NULL;
         }
 

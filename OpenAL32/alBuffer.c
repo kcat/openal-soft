@@ -1258,6 +1258,7 @@ static ALbuffer *AllocBuffer(ALCcontext *context)
         if(UNLIKELY(VECTOR_SIZE(device->BufferList) >= 1<<25))
         {
             almtx_unlock(&device->BufferLock);
+            alSetError(context, AL_OUT_OF_MEMORY, "Too many buffers allocated");
             return NULL;
         }
         lidx = (ALsizei)VECTOR_SIZE(device->BufferList);
@@ -1269,6 +1270,7 @@ static ALbuffer *AllocBuffer(ALCcontext *context)
         {
             VECTOR_POP_BACK(device->BufferList);
             almtx_unlock(&device->BufferLock);
+            alSetError(context, AL_OUT_OF_MEMORY, "Failed to allocate buffer batch");
             return NULL;
         }
 

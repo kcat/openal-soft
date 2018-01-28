@@ -366,10 +366,9 @@ AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *va
 }
 
 
-ALenum InitEffect(ALeffect *effect)
+void InitEffect(ALeffect *effect)
 {
     InitEffectParams(effect, AL_EFFECT_NULL);
-    return AL_NO_ERROR;
 }
 
 static ALeffect *AllocEffect(ALCcontext *context)
@@ -445,7 +444,7 @@ static void FreeEffect(ALCdevice *device, ALeffect *effect)
     VECTOR_ELEM(device->EffectList, lidx).FreeMask |= U64(1) << slidx;
 }
 
-ALvoid ReleaseALEffects(ALCdevice *device)
+void ReleaseALEffects(ALCdevice *device)
 {
     EffectSubList *sublist = VECTOR_BEGIN(device->EffectList);
     EffectSubList *subend = VECTOR_END(device->EffectList);
@@ -740,7 +739,7 @@ static const struct {
 };
 #undef DECL
 
-ALvoid LoadReverbPreset(const char *name, ALeffect *effect)
+void LoadReverbPreset(const char *name, ALeffect *effect)
 {
     size_t i;
 

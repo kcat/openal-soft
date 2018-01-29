@@ -2554,7 +2554,7 @@ static ALvoid InitContext(ALCcontext *Context)
     ATOMIC_FLAG_TEST_AND_SET(&Context->PropsClean, almemory_order_relaxed);
     ATOMIC_INIT(&Context->DeferUpdates, AL_FALSE);
     almtx_init(&Context->EventLock, almtx_plain);
-    Context->EnabledEvts = 0;
+    ATOMIC_INIT(&Context->EnabledEvts, 0);
     Context->EventCb = NULL;
     Context->EventParam = NULL;
 

@@ -39,9 +39,24 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
 
     almtx_lock(&context->EventLock);
     if(enable)
-        context->EnabledEvts |= flags;
+    {
+        ALbitfieldSOFT enabledevts = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed);
+        while(ATOMIC_COMPARE_EXCHANGE_WEAK(&context->EnabledEvts, &enabledevts, enabledevts|flags,
+                                           almemory_order_acq_rel, almemory_order_acquire) == 0)
+        {
+            /* enabledevts is (re-)filled with the current value on failure, so
+             * just try again.
+             */
+        }
+    }
     else
-        context->EnabledEvts &= ~flags;
+    {
+        ALbitfieldSOFT enabledevts = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed);
+        while(ATOMIC_COMPARE_EXCHANGE_WEAK(&context->EnabledEvts, &enabledevts, enabledevts&~flags,
+                                           almemory_order_acq_rel, almemory_order_acquire) == 0)
+        {
+        }
+    }
     almtx_unlock(&context->EventLock);
 
 done:

@@ -72,10 +72,12 @@ void alSetError(ALCcontext *context, ALenum errorCode, const char *msg, ...)
     }
 
     ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(&context->LastError, &curerr, errorCode);
-    if((context->EnabledEvts&EventType_Error))
+    if((ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed)&EventType_Error))
     {
+        ALbitfieldSOFT enabledevts;
         almtx_lock(&context->EventLock);
-        if((context->EnabledEvts&EventType_Error) && context->EventCb)
+        enabledevts = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed);
+        if((enabledevts&EventType_Error) && context->EventCb)
             (*context->EventCb)(AL_EVENT_TYPE_ERROR_SOFT, 0, errorCode, msglen, msg,
                                 context->EventParam);
         almtx_unlock(&context->EventLock);

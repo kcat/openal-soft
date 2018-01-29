@@ -252,7 +252,7 @@ typedef struct ALCplaybackOSS {
 static int ALCplaybackOSS_mixerProc(void *ptr);
 
 static void ALCplaybackOSS_Construct(ALCplaybackOSS *self, ALCdevice *device);
-static DECLARE_FORWARD(ALCplaybackOSS, ALCbackend, void, Destruct)
+static void ALCplaybackOSS_Destruct(ALCplaybackOSS *self);
 static ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name);
 static void ALCplaybackOSS_close(ALCplaybackOSS *self);
 static ALCboolean ALCplaybackOSS_reset(ALCplaybackOSS *self);
@@ -342,6 +342,12 @@ static void ALCplaybackOSS_Construct(ALCplaybackOSS *self, ALCdevice *device)
     ATOMIC_INIT(&self->killNow, AL_FALSE);
 }
 
+static void ALCplaybackOSS_Destruct(ALCplaybackOSS *self)
+{
+    ALCplaybackOSS_close(self);
+    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+}
+
 static ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name)
 {
     struct oss_device *dev = &oss_playback;
@@ -383,7 +389,8 @@ static ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name)
 
 static void ALCplaybackOSS_close(ALCplaybackOSS *self)
 {
-    close(self->fd);
+    if(self->fd != -1)
+        close(self->fd);
     self->fd = -1;
 }
 
@@ -519,7 +526,7 @@ typedef struct ALCcaptureOSS {
 static int ALCcaptureOSS_recordProc(void *ptr);
 
 static void ALCcaptureOSS_Construct(ALCcaptureOSS *self, ALCdevice *device);
-static DECLARE_FORWARD(ALCcaptureOSS, ALCbackend, void, Destruct)
+static void ALCcaptureOSS_Destruct(ALCcaptureOSS *self);
 static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name);
 static void ALCcaptureOSS_close(ALCcaptureOSS *self);
 static DECLARE_FORWARD(ALCcaptureOSS, ALCbackend, ALCboolean, reset)
@@ -599,6 +606,12 @@ static void ALCcaptureOSS_Construct(ALCcaptureOSS *self, ALCdevice *device)
     SET_VTABLE2(ALCcaptureOSS, ALCbackend, self);
 
     ATOMIC_INIT(&self->killNow, AL_FALSE);
+}
+
+static void ALCcaptureOSS_Destruct(ALCcaptureOSS *self)
+{
+    ALCcaptureOSS_close(self);
+    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
 static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
@@ -728,7 +741,8 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
 
 static void ALCcaptureOSS_close(ALCcaptureOSS *self)
 {
-    close(self->fd);
+    if(self->fd != -1)
+        close(self->fd);
     self->fd = -1;
 
     ll_ringbuffer_free(self->ring);

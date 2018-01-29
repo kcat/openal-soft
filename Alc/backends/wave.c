@@ -84,7 +84,7 @@ typedef struct ALCwaveBackend {
 static int ALCwaveBackend_mixerProc(void *ptr);
 
 static void ALCwaveBackend_Construct(ALCwaveBackend *self, ALCdevice *device);
-static DECLARE_FORWARD(ALCwaveBackend, ALCbackend, void, Destruct)
+static void ALCwaveBackend_Destruct(ALCwaveBackend *self);
 static ALCenum ALCwaveBackend_open(ALCwaveBackend *self, const ALCchar *name);
 static void ALCwaveBackend_close(ALCwaveBackend *self);
 static ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self);
@@ -114,6 +114,11 @@ static void ALCwaveBackend_Construct(ALCwaveBackend *self, ALCdevice *device)
     self->killNow = 1;
 }
 
+static void ALCwaveBackend_Destruct(ALCwaveBackend *self)
+{
+    ALCwaveBackend_close(self);
+    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+}
 
 static int ALCwaveBackend_mixerProc(void *ptr)
 {

@@ -194,21 +194,7 @@ static void ALCopenslPlayback_Construct(ALCopenslPlayback *self, ALCdevice *devi
 
 static void ALCopenslPlayback_Destruct(ALCopenslPlayback* self)
 {
-    if(self->mBufferQueueObj != NULL)
-        VCALL0(self->mBufferQueueObj,Destroy)();
-    self->mBufferQueueObj = NULL;
-
-    if(self->mOutputMix != NULL)
-        VCALL0(self->mOutputMix,Destroy)();
-    self->mOutputMix = NULL;
-
-    if(self->mEngineObj != NULL)
-        VCALL0(self->mEngineObj,Destroy)();
-    self->mEngineObj = NULL;
-    self->mEngine = NULL;
-
-    ll_ringbuffer_free(self->mRing);
-    self->mRing = NULL;
+    ALCopenslPlayback_close(self);
 
     alcnd_destroy(&self->mCond);
 
@@ -409,10 +395,12 @@ static void ALCopenslPlayback_close(ALCopenslPlayback *self)
         VCALL0(self->mBufferQueueObj,Destroy)();
     self->mBufferQueueObj = NULL;
 
-    VCALL0(self->mOutputMix,Destroy)();
+    if(self->mOutputMix)
+        VCALL0(self->mOutputMix,Destroy)();
     self->mOutputMix = NULL;
 
-    VCALL0(self->mEngineObj,Destroy)();
+    if(self->mEngineObj)
+        VCALL0(self->mEngineObj,Destroy)();
     self->mEngineObj = NULL;
     self->mEngine = NULL;
 }
@@ -761,18 +749,7 @@ static void ALCopenslCapture_Construct(ALCopenslCapture *self, ALCdevice *device
 
 static void ALCopenslCapture_Destruct(ALCopenslCapture *self)
 {
-    ll_ringbuffer_free(self->mRing);
-    self->mRing = NULL;
-
-    if(self->mRecordObj != NULL)
-        VCALL0(self->mRecordObj,Destroy)();
-    self->mRecordObj = NULL;
-
-    if(self->mEngineObj != NULL)
-        VCALL0(self->mEngineObj,Destroy)();
-    self->mEngineObj = NULL;
-    self->mEngine = NULL;
-
+    ALCopenslCapture_close(self);
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 

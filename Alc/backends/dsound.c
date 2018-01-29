@@ -192,7 +192,7 @@ typedef struct ALCdsoundPlayback {
 static int ALCdsoundPlayback_mixerProc(void *ptr);
 
 static void ALCdsoundPlayback_Construct(ALCdsoundPlayback *self, ALCdevice *device);
-static DECLARE_FORWARD(ALCdsoundPlayback, ALCbackend, void, Destruct)
+static void ALCdsoundPlayback_Destruct(ALCdsoundPlayback *self);
 static ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *name);
 static void ALCdsoundPlayback_close(ALCdsoundPlayback *self);
 static ALCboolean ALCdsoundPlayback_reset(ALCdsoundPlayback *self);
@@ -212,6 +212,12 @@ static void ALCdsoundPlayback_Construct(ALCdsoundPlayback *self, ALCdevice *devi
 {
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCdsoundPlayback, ALCbackend, self);
+}
+
+static void ALCdsoundPlayback_Destruct(ALCdsoundPlayback *self)
+{
+    ALCdsoundPlayback_close(self);
+    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
 
@@ -399,9 +405,11 @@ static void ALCdsoundPlayback_close(ALCdsoundPlayback *self)
         IDirectSoundBuffer_Release(self->PrimaryBuffer);
     self->PrimaryBuffer = NULL;
 
-    IDirectSound_Release(self->DS);
+    if(self->DS)
+        IDirectSound_Release(self->DS);
     self->DS = NULL;
-    CloseHandle(self->NotifyEvent);
+    if(self->NotifyEvent)
+        CloseHandle(self->NotifyEvent);
     self->NotifyEvent = NULL;
 }
 
@@ -661,7 +669,7 @@ typedef struct ALCdsoundCapture {
 } ALCdsoundCapture;
 
 static void ALCdsoundCapture_Construct(ALCdsoundCapture *self, ALCdevice *device);
-static DECLARE_FORWARD(ALCdsoundCapture, ALCbackend, void, Destruct)
+static void ALCdsoundCapture_Destruct(ALCdsoundCapture *self);
 static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *name);
 static void ALCdsoundCapture_close(ALCdsoundCapture *self);
 static DECLARE_FORWARD(ALCdsoundCapture, ALCbackend, ALCboolean, reset)
@@ -680,6 +688,12 @@ static void ALCdsoundCapture_Construct(ALCdsoundCapture *self, ALCdevice *device
 {
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCdsoundCapture, ALCbackend, self);
+}
+
+static void ALCdsoundCapture_Destruct(ALCdsoundCapture *self)
+{
+    ALCdsoundCapture_close(self);
+    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
 
@@ -867,7 +881,8 @@ static void ALCdsoundCapture_close(ALCdsoundCapture *self)
         self->DSCbuffer = NULL;
     }
 
-    IDirectSoundCapture_Release(self->DSC);
+    if(self->DSC)
+        IDirectSoundCapture_Release(self->DSC);
     self->DSC = NULL;
 }
 

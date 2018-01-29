@@ -446,7 +446,7 @@ static int ALCplaybackAlsa_mixerProc(void *ptr);
 static int ALCplaybackAlsa_mixerNoMMapProc(void *ptr);
 
 static void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device);
-static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, void, Destruct)
+static void ALCplaybackAlsa_Destruct(ALCplaybackAlsa *self);
 static ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name);
 static void ALCplaybackAlsa_close(ALCplaybackAlsa *self);
 static ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self);
@@ -466,6 +466,12 @@ static void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device)
 {
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCplaybackAlsa, ALCbackend, self);
+}
+
+void ALCplaybackAlsa_Destruct(ALCplaybackAlsa *self)
+{
+    ALCplaybackAlsa_close(self);
+    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
 
@@ -705,6 +711,7 @@ static ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name)
 static void ALCplaybackAlsa_close(ALCplaybackAlsa *self)
 {
     snd_pcm_close(self->pcmHandle);
+    self->pcmHandle = NULL;
 }
 
 static ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
@@ -973,7 +980,7 @@ typedef struct ALCcaptureAlsa {
 } ALCcaptureAlsa;
 
 static void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device);
-static DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, void, Destruct)
+static void ALCcaptureAlsa_Destruct(ALCcaptureAlsa *self);
 static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name);
 static void ALCcaptureAlsa_close(ALCcaptureAlsa *self);
 static DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, ALCboolean, reset)
@@ -993,6 +1000,12 @@ static void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device)
 {
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCcaptureAlsa, ALCbackend, self);
+}
+
+void ALCcaptureAlsa_Destruct(ALCcaptureAlsa *self)
+{
+    ALCcaptureAlsa_close(self);
+    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
 
@@ -1129,7 +1142,10 @@ error2:
 static void ALCcaptureAlsa_close(ALCcaptureAlsa *self)
 {
     snd_pcm_close(self->pcmHandle);
+    self->pcmHandle = NULL;
+
     ll_ringbuffer_free(self->ring);
+    self->ring = NULL;
 
     al_free(self->buffer);
     self->buffer = NULL;

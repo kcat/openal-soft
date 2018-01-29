@@ -123,6 +123,7 @@ static void ALCcoreAudioPlayback_Construct(ALCcoreAudioPlayback *self, ALCdevice
 
 static void ALCcoreAudioPlayback_Destruct(ALCcoreAudioPlayback *self)
 {
+    ALCcoreAudioPlayback_close(self);
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 

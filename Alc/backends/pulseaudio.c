@@ -519,6 +519,7 @@ static void ALCpulsePlayback_Construct(ALCpulsePlayback *self, ALCdevice *device
 
 static void ALCpulsePlayback_Destruct(ALCpulsePlayback *self)
 {
+    ALCpulsePlayback_close(self);
     AL_STRING_DEINIT(self->device_name);
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
@@ -958,12 +959,13 @@ static ALCenum ALCpulsePlayback_open(ALCpulsePlayback *self, const ALCchar *name
 
 static void ALCpulsePlayback_close(ALCpulsePlayback *self)
 {
-    pulse_close(self->loop, self->context, self->stream);
-    self->loop = NULL;
-    self->context = NULL;
-    self->stream = NULL;
-
-    alstr_clear(&self->device_name);
+    if(self->loop)
+    {
+        pulse_close(self->loop, self->context, self->stream);
+        self->loop = NULL;
+        self->context = NULL;
+        self->stream = NULL;
+    }
 }
 
 static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
@@ -1273,6 +1275,7 @@ static void ALCpulseCapture_Construct(ALCpulseCapture *self, ALCdevice *device)
 
 static void ALCpulseCapture_Destruct(ALCpulseCapture *self)
 {
+    ALCpulseCapture_close(self);
     AL_STRING_DEINIT(self->device_name);
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
@@ -1621,12 +1624,13 @@ fail:
 
 static void ALCpulseCapture_close(ALCpulseCapture *self)
 {
-    pulse_close(self->loop, self->context, self->stream);
-    self->loop = NULL;
-    self->context = NULL;
-    self->stream = NULL;
-
-    alstr_clear(&self->device_name);
+    if(self->loop)
+    {
+        pulse_close(self->loop, self->context, self->stream);
+        self->loop = NULL;
+        self->context = NULL;
+        self->stream = NULL;
+    }
 }
 
 static ALCboolean ALCpulseCapture_start(ALCpulseCapture *self)

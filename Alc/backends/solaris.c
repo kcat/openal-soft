@@ -90,9 +90,7 @@ static void ALCsolarisBackend_Construct(ALCsolarisBackend *self, ALCdevice *devi
 
 static void ALCsolarisBackend_Destruct(ALCsolarisBackend *self)
 {
-    if(self->fd != -1)
-        close(self->fd);
-    self->fd = -1;
+    ALCsolarisBackend_close(self);
 
     free(self->mix_data);
     self->mix_data = NULL;
@@ -193,7 +191,8 @@ static ALCenum ALCsolarisBackend_open(ALCsolarisBackend *self, const ALCchar *na
 
 static void ALCsolarisBackend_close(ALCsolarisBackend *self)
 {
-    close(self->fd);
+    if(self->fd != -1)
+        close(self->fd);
     self->fd = -1;
 }
 

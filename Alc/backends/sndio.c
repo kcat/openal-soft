@@ -77,9 +77,7 @@ static void ALCsndioBackend_Construct(ALCsndioBackend *self, ALCdevice *device)
 
 static void ALCsndioBackend_Destruct(ALCsndioBackend *self)
 {
-    if(self->sndHandle)
-        sio_close(self->sndHandle);
-    self->sndHandle = NULL;
+    ALCsndioBackend_close(self);
 
     al_free(self->mix_data);
     self->mix_data = NULL;
@@ -152,7 +150,8 @@ static ALCenum ALCsndioBackend_open(ALCsndioBackend *self, const ALCchar *name)
 
 static void ALCsndioBackend_close(ALCsndioBackend *self)
 {
-    sio_close(self->sndHandle);
+    if(self->sndHandle)
+        sio_close(self->sndHandle);
     self->sndHandle = NULL;
 }
 

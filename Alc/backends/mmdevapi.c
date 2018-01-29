@@ -587,6 +587,8 @@ static void ALCmmdevPlayback_Construct(ALCmmdevPlayback *self, ALCdevice *device
 
 static void ALCmmdevPlayback_Destruct(ALCmmdevPlayback *self)
 {
+    ALCmmdevPlayback_close(self);
+
     if(self->NotifyEvent != NULL)
         CloseHandle(self->NotifyEvent);
     self->NotifyEvent = NULL;
@@ -839,6 +841,9 @@ static HRESULT ALCmmdevPlayback_openProxy(ALCmmdevPlayback *self)
 static void ALCmmdevPlayback_close(ALCmmdevPlayback *self)
 {
     ThreadRequest req = { self->MsgEvent, 0 };
+
+    if(!req.FinishedEvt)
+        return;
 
     if(PostThreadMessage(ThreadID, WM_USER_CloseDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCmmdevProxy, self)))
         (void)WaitForResponse(&req);
@@ -1287,6 +1292,8 @@ static void ALCmmdevCapture_Construct(ALCmmdevCapture *self, ALCdevice *device)
 
 static void ALCmmdevCapture_Destruct(ALCmmdevCapture *self)
 {
+    ALCmmdevCapture_close(self);
+
     ll_ringbuffer_free(self->Ring);
     self->Ring = NULL;
 
@@ -1572,6 +1579,9 @@ static HRESULT ALCmmdevCapture_openProxy(ALCmmdevCapture *self)
 static void ALCmmdevCapture_close(ALCmmdevCapture *self)
 {
     ThreadRequest req = { self->MsgEvent, 0 };
+
+    if(!req.FinishedEvt)
+        return;
 
     if(PostThreadMessage(ThreadID, WM_USER_CloseDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCmmdevProxy, self)))
         (void)WaitForResponse(&req);

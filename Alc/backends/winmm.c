@@ -475,6 +475,7 @@ static void ALCwinmmCapture_Construct(ALCwinmmCapture *self, ALCdevice *device)
 
 static void ALCwinmmCapture_Destruct(ALCwinmmCapture *self)
 {
+    ALCwinmmCapture_close(self);
     if(self->InHdl)
         waveInClose(self->InHdl);
     self->InHdl = 0;
@@ -664,6 +665,7 @@ static void ALCwinmmCapture_close(ALCwinmmCapture *self)
     int i;
 
     /* Tell the processing thread to quit and wait for it to do so. */
+    if(self->killNow) return;
     self->killNow = AL_TRUE;
     PostThreadMessage(self->thread, WM_QUIT, 0, 0);
 

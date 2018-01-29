@@ -119,7 +119,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
 
     device = context->Device;
     LockEffectSlotList(context);
-    if(device->AuxiliaryEffectSlotMax - VECTOR_SIZE(context->EffectSlotList) > (ALuint)n)
+    if(device->AuxiliaryEffectSlotMax - VECTOR_SIZE(context->EffectSlotList) < (ALuint)n)
     {
         UnlockEffectSlotList(context);
         SETERR_GOTO(context, AL_OUT_OF_MEMORY, done, "Exceeding %u auxiliary effect slot limit",

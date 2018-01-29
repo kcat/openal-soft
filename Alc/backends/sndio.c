@@ -52,7 +52,6 @@ static int ALCsndioBackend_mixerProc(void *ptr);
 static void ALCsndioBackend_Construct(ALCsndioBackend *self, ALCdevice *device);
 static void ALCsndioBackend_Destruct(ALCsndioBackend *self);
 static ALCenum ALCsndioBackend_open(ALCsndioBackend *self, const ALCchar *name);
-static void ALCsndioBackend_close(ALCsndioBackend *self);
 static ALCboolean ALCsndioBackend_reset(ALCsndioBackend *self);
 static ALCboolean ALCsndioBackend_start(ALCsndioBackend *self);
 static void ALCsndioBackend_stop(ALCsndioBackend *self);
@@ -73,11 +72,16 @@ static void ALCsndioBackend_Construct(ALCsndioBackend *self, ALCdevice *device)
 {
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCsndioBackend, ALCbackend, self);
+
+    self->sndHandle = NULL;
+    self->mix_data = NULL;
 }
 
 static void ALCsndioBackend_Destruct(ALCsndioBackend *self)
 {
-    ALCsndioBackend_close(self);
+    if(self->sndHandle)
+        sio_close(self->sndHandle);
+    self->sndHandle = NULL;
 
     al_free(self->mix_data);
     self->mix_data = NULL;
@@ -146,13 +150,6 @@ static ALCenum ALCsndioBackend_open(ALCsndioBackend *self, const ALCchar *name)
     alstr_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
-}
-
-static void ALCsndioBackend_close(ALCsndioBackend *self)
-{
-    if(self->sndHandle)
-        sio_close(self->sndHandle);
-    self->sndHandle = NULL;
 }
 
 static ALCboolean ALCsndioBackend_reset(ALCsndioBackend *self)

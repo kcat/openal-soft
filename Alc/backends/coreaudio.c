@@ -98,7 +98,6 @@ typedef struct ALCcoreAudioPlayback {
 static void ALCcoreAudioPlayback_Construct(ALCcoreAudioPlayback *self, ALCdevice *device);
 static void ALCcoreAudioPlayback_Destruct(ALCcoreAudioPlayback *self);
 static ALCenum ALCcoreAudioPlayback_open(ALCcoreAudioPlayback *self, const ALCchar *name);
-static void ALCcoreAudioPlayback_close(ALCcoreAudioPlayback *self);
 static ALCboolean ALCcoreAudioPlayback_reset(ALCcoreAudioPlayback *self);
 static ALCboolean ALCcoreAudioPlayback_start(ALCcoreAudioPlayback *self);
 static void ALCcoreAudioPlayback_stop(ALCcoreAudioPlayback *self);
@@ -123,7 +122,9 @@ static void ALCcoreAudioPlayback_Construct(ALCcoreAudioPlayback *self, ALCdevice
 
 static void ALCcoreAudioPlayback_Destruct(ALCcoreAudioPlayback *self)
 {
-    ALCcoreAudioPlayback_close(self);
+    AudioUnitUninitialize(self->audioUnit);
+    AudioComponentInstanceDispose(self->audioUnit);
+
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
@@ -188,12 +189,6 @@ static ALCenum ALCcoreAudioPlayback_open(ALCcoreAudioPlayback *self, const ALCch
 
     alstr_copy_cstr(&device->DeviceName, name);
     return ALC_NO_ERROR;
-}
-
-static void ALCcoreAudioPlayback_close(ALCcoreAudioPlayback *self)
-{
-    AudioUnitUninitialize(self->audioUnit);
-    AudioComponentInstanceDispose(self->audioUnit);
 }
 
 static ALCboolean ALCcoreAudioPlayback_reset(ALCcoreAudioPlayback *self)

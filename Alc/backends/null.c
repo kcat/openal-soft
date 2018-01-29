@@ -45,7 +45,6 @@ static int ALCnullBackend_mixerProc(void *ptr);
 static void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device);
 static DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, Destruct)
 static ALCenum ALCnullBackend_open(ALCnullBackend *self, const ALCchar *name);
-static void ALCnullBackend_close(ALCnullBackend *self);
 static ALCboolean ALCnullBackend_reset(ALCnullBackend *self);
 static ALCboolean ALCnullBackend_start(ALCnullBackend *self);
 static void ALCnullBackend_stop(ALCnullBackend *self);
@@ -133,10 +132,6 @@ static ALCenum ALCnullBackend_open(ALCnullBackend *self, const ALCchar *name)
     alstr_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
-}
-
-static void ALCnullBackend_close(ALCnullBackend* UNUSED(self))
-{
 }
 
 static ALCboolean ALCnullBackend_reset(ALCnullBackend *self)

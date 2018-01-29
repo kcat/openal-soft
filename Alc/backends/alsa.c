@@ -448,7 +448,6 @@ static int ALCplaybackAlsa_mixerNoMMapProc(void *ptr);
 static void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device);
 static void ALCplaybackAlsa_Destruct(ALCplaybackAlsa *self);
 static ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name);
-static void ALCplaybackAlsa_close(ALCplaybackAlsa *self);
 static ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self);
 static ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self);
 static void ALCplaybackAlsa_stop(ALCplaybackAlsa *self);
@@ -466,11 +465,16 @@ static void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device)
 {
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCplaybackAlsa, ALCbackend, self);
+
+    self->pcmHandle = NULL;
+    self->buffer = NULL;
 }
 
 void ALCplaybackAlsa_Destruct(ALCplaybackAlsa *self)
 {
-    ALCplaybackAlsa_close(self);
+    if(self->pcmHandle)
+        snd_pcm_close(self->pcmHandle);
+    self->pcmHandle = NULL;
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
@@ -706,12 +710,6 @@ static ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name)
     alstr_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
-}
-
-static void ALCplaybackAlsa_close(ALCplaybackAlsa *self)
-{
-    snd_pcm_close(self->pcmHandle);
-    self->pcmHandle = NULL;
 }
 
 static ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
@@ -982,7 +980,6 @@ typedef struct ALCcaptureAlsa {
 static void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device);
 static void ALCcaptureAlsa_Destruct(ALCcaptureAlsa *self);
 static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name);
-static void ALCcaptureAlsa_close(ALCcaptureAlsa *self);
 static DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, ALCboolean, reset)
 static ALCboolean ALCcaptureAlsa_start(ALCcaptureAlsa *self);
 static void ALCcaptureAlsa_stop(ALCcaptureAlsa *self);
@@ -1000,11 +997,24 @@ static void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device)
 {
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCcaptureAlsa, ALCbackend, self);
+
+    self->pcmHandle = NULL;
+    self->buffer = NULL;
+    self->ring = NULL;
 }
 
 void ALCcaptureAlsa_Destruct(ALCcaptureAlsa *self)
 {
-    ALCcaptureAlsa_close(self);
+    if(self->pcmHandle)
+        snd_pcm_close(self->pcmHandle);
+    self->pcmHandle = NULL;
+
+    al_free(self->buffer);
+    self->buffer = NULL;
+
+    ll_ringbuffer_free(self->ring);
+    self->ring = NULL;
+
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
@@ -1137,18 +1147,6 @@ error2:
     snd_pcm_close(self->pcmHandle);
 
     return ALC_INVALID_VALUE;
-}
-
-static void ALCcaptureAlsa_close(ALCcaptureAlsa *self)
-{
-    snd_pcm_close(self->pcmHandle);
-    self->pcmHandle = NULL;
-
-    ll_ringbuffer_free(self->ring);
-    self->ring = NULL;
-
-    al_free(self->buffer);
-    self->buffer = NULL;
 }
 
 static ALCboolean ALCcaptureAlsa_start(ALCcaptureAlsa *self)

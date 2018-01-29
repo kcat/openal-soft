@@ -495,7 +495,6 @@ static int ALCpulsePlayback_mixerProc(void *ptr);
 static void ALCpulsePlayback_Construct(ALCpulsePlayback *self, ALCdevice *device);
 static void ALCpulsePlayback_Destruct(ALCpulsePlayback *self);
 static ALCenum ALCpulsePlayback_open(ALCpulsePlayback *self, const ALCchar *name);
-static void ALCpulsePlayback_close(ALCpulsePlayback *self);
 static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self);
 static ALCboolean ALCpulsePlayback_start(ALCpulsePlayback *self);
 static void ALCpulsePlayback_stop(ALCpulsePlayback *self);
@@ -514,12 +513,19 @@ static void ALCpulsePlayback_Construct(ALCpulsePlayback *self, ALCdevice *device
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCpulsePlayback, ALCbackend, self);
 
+    self->loop = NULL;
     AL_STRING_INIT(self->device_name);
 }
 
 static void ALCpulsePlayback_Destruct(ALCpulsePlayback *self)
 {
-    ALCpulsePlayback_close(self);
+    if(self->loop)
+    {
+        pulse_close(self->loop, self->context, self->stream);
+        self->loop = NULL;
+        self->context = NULL;
+        self->stream = NULL;
+    }
     AL_STRING_DEINIT(self->device_name);
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
@@ -957,17 +963,6 @@ static ALCenum ALCpulsePlayback_open(ALCpulsePlayback *self, const ALCchar *name
     return ALC_NO_ERROR;
 }
 
-static void ALCpulsePlayback_close(ALCpulsePlayback *self)
-{
-    if(self->loop)
-    {
-        pulse_close(self->loop, self->context, self->stream);
-        self->loop = NULL;
-        self->context = NULL;
-        self->stream = NULL;
-    }
-}
-
 static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
@@ -1251,7 +1246,6 @@ static pa_stream *ALCpulseCapture_connectStream(const char *device_name,
 static void ALCpulseCapture_Construct(ALCpulseCapture *self, ALCdevice *device);
 static void ALCpulseCapture_Destruct(ALCpulseCapture *self);
 static ALCenum ALCpulseCapture_open(ALCpulseCapture *self, const ALCchar *name);
-static void ALCpulseCapture_close(ALCpulseCapture *self);
 static DECLARE_FORWARD(ALCpulseCapture, ALCbackend, ALCboolean, reset)
 static ALCboolean ALCpulseCapture_start(ALCpulseCapture *self);
 static void ALCpulseCapture_stop(ALCpulseCapture *self);
@@ -1270,12 +1264,19 @@ static void ALCpulseCapture_Construct(ALCpulseCapture *self, ALCdevice *device)
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCpulseCapture, ALCbackend, self);
 
+    self->loop = NULL;
     AL_STRING_INIT(self->device_name);
 }
 
 static void ALCpulseCapture_Destruct(ALCpulseCapture *self)
 {
-    ALCpulseCapture_close(self);
+    if(self->loop)
+    {
+        pulse_close(self->loop, self->context, self->stream);
+        self->loop = NULL;
+        self->context = NULL;
+        self->stream = NULL;
+    }
     AL_STRING_DEINIT(self->device_name);
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
@@ -1620,17 +1621,6 @@ fail:
     self->stream = NULL;
 
     return ALC_INVALID_VALUE;
-}
-
-static void ALCpulseCapture_close(ALCpulseCapture *self)
-{
-    if(self->loop)
-    {
-        pulse_close(self->loop, self->context, self->stream);
-        self->loop = NULL;
-        self->context = NULL;
-        self->stream = NULL;
-    }
 }
 
 static ALCboolean ALCpulseCapture_start(ALCpulseCapture *self)

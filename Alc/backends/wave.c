@@ -86,7 +86,6 @@ static int ALCwaveBackend_mixerProc(void *ptr);
 static void ALCwaveBackend_Construct(ALCwaveBackend *self, ALCdevice *device);
 static void ALCwaveBackend_Destruct(ALCwaveBackend *self);
 static ALCenum ALCwaveBackend_open(ALCwaveBackend *self, const ALCchar *name);
-static void ALCwaveBackend_close(ALCwaveBackend *self);
 static ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self);
 static ALCboolean ALCwaveBackend_start(ALCwaveBackend *self);
 static void ALCwaveBackend_stop(ALCwaveBackend *self);
@@ -116,7 +115,10 @@ static void ALCwaveBackend_Construct(ALCwaveBackend *self, ALCdevice *device)
 
 static void ALCwaveBackend_Destruct(ALCwaveBackend *self)
 {
-    ALCwaveBackend_close(self);
+    if(self->mFile)
+        fclose(self->mFile);
+    self->mFile = NULL;
+
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
@@ -237,13 +239,6 @@ static ALCenum ALCwaveBackend_open(ALCwaveBackend *self, const ALCchar *name)
     alstr_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
-}
-
-static void ALCwaveBackend_close(ALCwaveBackend *self)
-{
-    if(self->mFile)
-        fclose(self->mFile);
-    self->mFile = NULL;
 }
 
 static ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)

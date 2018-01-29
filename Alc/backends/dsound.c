@@ -194,7 +194,6 @@ static int ALCdsoundPlayback_mixerProc(void *ptr);
 static void ALCdsoundPlayback_Construct(ALCdsoundPlayback *self, ALCdevice *device);
 static void ALCdsoundPlayback_Destruct(ALCdsoundPlayback *self);
 static ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *name);
-static void ALCdsoundPlayback_close(ALCdsoundPlayback *self);
 static ALCboolean ALCdsoundPlayback_reset(ALCdsoundPlayback *self);
 static ALCboolean ALCdsoundPlayback_start(ALCdsoundPlayback *self);
 static void ALCdsoundPlayback_stop(ALCdsoundPlayback *self);
@@ -212,11 +211,33 @@ static void ALCdsoundPlayback_Construct(ALCdsoundPlayback *self, ALCdevice *devi
 {
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCdsoundPlayback, ALCbackend, self);
+
+    self->DS = NULL;
+    self->PrimaryBuffer = NULL;
+    self->Buffer = NULL;
+    self->Notifies = NULL;
+    self->NotifyEvent = NULL;
 }
 
 static void ALCdsoundPlayback_Destruct(ALCdsoundPlayback *self)
 {
-    ALCdsoundPlayback_close(self);
+    if(self->Notifies)
+        IDirectSoundNotify_Release(self->Notifies);
+    self->Notifies = NULL;
+    if(self->Buffer)
+        IDirectSoundBuffer_Release(self->Buffer);
+    self->Buffer = NULL;
+    if(self->PrimaryBuffer != NULL)
+        IDirectSoundBuffer_Release(self->PrimaryBuffer);
+    self->PrimaryBuffer = NULL;
+
+    if(self->DS)
+        IDirectSound_Release(self->DS);
+    self->DS = NULL;
+    if(self->NotifyEvent)
+        CloseHandle(self->NotifyEvent);
+    self->NotifyEvent = NULL;
+
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
@@ -391,26 +412,6 @@ static ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *de
     alstr_copy_cstr(&device->DeviceName, deviceName);
 
     return ALC_NO_ERROR;
-}
-
-static void ALCdsoundPlayback_close(ALCdsoundPlayback *self)
-{
-    if(self->Notifies)
-        IDirectSoundNotify_Release(self->Notifies);
-    self->Notifies = NULL;
-    if(self->Buffer)
-        IDirectSoundBuffer_Release(self->Buffer);
-    self->Buffer = NULL;
-    if(self->PrimaryBuffer != NULL)
-        IDirectSoundBuffer_Release(self->PrimaryBuffer);
-    self->PrimaryBuffer = NULL;
-
-    if(self->DS)
-        IDirectSound_Release(self->DS);
-    self->DS = NULL;
-    if(self->NotifyEvent)
-        CloseHandle(self->NotifyEvent);
-    self->NotifyEvent = NULL;
 }
 
 static ALCboolean ALCdsoundPlayback_reset(ALCdsoundPlayback *self)
@@ -671,7 +672,6 @@ typedef struct ALCdsoundCapture {
 static void ALCdsoundCapture_Construct(ALCdsoundCapture *self, ALCdevice *device);
 static void ALCdsoundCapture_Destruct(ALCdsoundCapture *self);
 static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *name);
-static void ALCdsoundCapture_close(ALCdsoundCapture *self);
 static DECLARE_FORWARD(ALCdsoundCapture, ALCbackend, ALCboolean, reset)
 static ALCboolean ALCdsoundCapture_start(ALCdsoundCapture *self);
 static void ALCdsoundCapture_stop(ALCdsoundCapture *self);
@@ -688,11 +688,28 @@ static void ALCdsoundCapture_Construct(ALCdsoundCapture *self, ALCdevice *device
 {
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCdsoundCapture, ALCbackend, self);
+
+    self->DSC = NULL;
+    self->DSCbuffer = NULL;
+    self->Ring = NULL;
 }
 
 static void ALCdsoundCapture_Destruct(ALCdsoundCapture *self)
 {
-    ALCdsoundCapture_close(self);
+    ll_ringbuffer_free(self->Ring);
+    self->Ring = NULL;
+
+    if(self->DSCbuffer != NULL)
+    {
+        IDirectSoundCaptureBuffer_Stop(self->DSCbuffer);
+        IDirectSoundCaptureBuffer_Release(self->DSCbuffer);
+        self->DSCbuffer = NULL;
+    }
+
+    if(self->DSC)
+        IDirectSoundCapture_Release(self->DSC);
+    self->DSC = NULL;
+
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
@@ -867,23 +884,6 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
     alstr_copy_cstr(&device->DeviceName, deviceName);
 
     return ALC_NO_ERROR;
-}
-
-static void ALCdsoundCapture_close(ALCdsoundCapture *self)
-{
-    ll_ringbuffer_free(self->Ring);
-    self->Ring = NULL;
-
-    if(self->DSCbuffer != NULL)
-    {
-        IDirectSoundCaptureBuffer_Stop(self->DSCbuffer);
-        IDirectSoundCaptureBuffer_Release(self->DSCbuffer);
-        self->DSCbuffer = NULL;
-    }
-
-    if(self->DSC)
-        IDirectSoundCapture_Release(self->DSC);
-    self->DSC = NULL;
 }
 
 static ALCboolean ALCdsoundCapture_start(ALCdsoundCapture *self)

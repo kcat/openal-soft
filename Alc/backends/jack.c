@@ -164,7 +164,6 @@ static int ALCjackPlayback_mixerProc(void *arg);
 static void ALCjackPlayback_Construct(ALCjackPlayback *self, ALCdevice *device);
 static void ALCjackPlayback_Destruct(ALCjackPlayback *self);
 static ALCenum ALCjackPlayback_open(ALCjackPlayback *self, const ALCchar *name);
-static void ALCjackPlayback_close(ALCjackPlayback *self);
 static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self);
 static ALCboolean ALCjackPlayback_start(ALCjackPlayback *self);
 static void ALCjackPlayback_stop(ALCjackPlayback *self);
@@ -386,20 +385,6 @@ static ALCenum ALCjackPlayback_open(ALCjackPlayback *self, const ALCchar *name)
     alstr_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
-}
-
-static void ALCjackPlayback_close(ALCjackPlayback *self)
-{
-    ALuint i;
-
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-    {
-        if(self->Port[i])
-            jack_port_unregister(self->Client, self->Port[i]);
-        self->Port[i] = NULL;
-    }
-    jack_client_close(self->Client);
-    self->Client = NULL;
 }
 
 static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)

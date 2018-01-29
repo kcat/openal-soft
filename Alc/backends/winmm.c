@@ -159,7 +159,6 @@ static void CALLBACK ALCwinmmPlayback_waveOutProc(HWAVEOUT device, UINT msg, DWO
 static int ALCwinmmPlayback_mixerProc(void *arg);
 
 static ALCenum ALCwinmmPlayback_open(ALCwinmmPlayback *self, const ALCchar *name);
-static void ALCwinmmPlayback_close(ALCwinmmPlayback *self);
 static ALCboolean ALCwinmmPlayback_reset(ALCwinmmPlayback *self);
 static ALCboolean ALCwinmmPlayback_start(ALCwinmmPlayback *self);
 static void ALCwinmmPlayback_stop(ALCwinmmPlayback *self);
@@ -312,9 +311,6 @@ failure:
     return ALC_INVALID_VALUE;
 }
 
-static void ALCwinmmPlayback_close(ALCwinmmPlayback* UNUSED(self))
-{ }
-
 static ALCboolean ALCwinmmPlayback_reset(ALCwinmmPlayback *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
@@ -448,7 +444,6 @@ static void CALLBACK ALCwinmmCapture_waveInProc(HWAVEIN device, UINT msg, DWORD_
 static int ALCwinmmCapture_captureProc(void *arg);
 
 static ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *name);
-static void ALCwinmmCapture_close(ALCwinmmCapture *self);
 static DECLARE_FORWARD(ALCwinmmCapture, ALCbackend, ALCboolean, reset)
 static ALCboolean ALCwinmmCapture_start(ALCwinmmCapture *self);
 static void ALCwinmmCapture_stop(ALCwinmmCapture *self);
@@ -475,7 +470,34 @@ static void ALCwinmmCapture_Construct(ALCwinmmCapture *self, ALCdevice *device)
 
 static void ALCwinmmCapture_Destruct(ALCwinmmCapture *self)
 {
-    ALCwinmmCapture_close(self);
+    void *buffer = NULL;
+    int i;
+
+    /* Tell the processing thread to quit and wait for it to do so. */
+    if(!self->killNow)
+    {
+        self->killNow = AL_TRUE;
+        PostThreadMessage(self->thread, WM_QUIT, 0, 0);
+
+        althrd_join(self->thread, &i);
+
+        /* Make sure capture is stopped and all pending buffers are flushed. */
+        waveInReset(self->InHdl);
+
+        // Release the wave buffers
+        for(i = 0;i < 4;i++)
+        {
+            waveInUnprepareHeader(self->InHdl, &self->WaveBuffer[i], sizeof(WAVEHDR));
+            if(i == 0) buffer = self->WaveBuffer[i].lpData;
+            self->WaveBuffer[i].lpData = NULL;
+        }
+        free(buffer);
+    }
+
+    ll_ringbuffer_free(self->Ring);
+    self->Ring = NULL;
+
+    // Close the Wave device
     if(self->InHdl)
         waveInClose(self->InHdl);
     self->InHdl = 0;
@@ -657,38 +679,6 @@ failure:
     self->InHdl = NULL;
 
     return ALC_INVALID_VALUE;
-}
-
-static void ALCwinmmCapture_close(ALCwinmmCapture *self)
-{
-    void *buffer = NULL;
-    int i;
-
-    /* Tell the processing thread to quit and wait for it to do so. */
-    if(self->killNow) return;
-    self->killNow = AL_TRUE;
-    PostThreadMessage(self->thread, WM_QUIT, 0, 0);
-
-    althrd_join(self->thread, &i);
-
-    /* Make sure capture is stopped and all pending buffers are flushed. */
-    waveInReset(self->InHdl);
-
-    // Release the wave buffers
-    for(i = 0;i < 4;i++)
-    {
-        waveInUnprepareHeader(self->InHdl, &self->WaveBuffer[i], sizeof(WAVEHDR));
-        if(i == 0) buffer = self->WaveBuffer[i].lpData;
-        self->WaveBuffer[i].lpData = NULL;
-    }
-    free(buffer);
-
-    ll_ringbuffer_free(self->Ring);
-    self->Ring = NULL;
-
-    // Close the Wave device
-    waveInClose(self->InHdl);
-    self->InHdl = NULL;
 }
 
 static ALCboolean ALCwinmmCapture_start(ALCwinmmCapture *self)

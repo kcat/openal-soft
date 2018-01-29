@@ -545,7 +545,6 @@ static void ALCmmdevPlayback_Construct(ALCmmdevPlayback *self, ALCdevice *device
 static void ALCmmdevPlayback_Destruct(ALCmmdevPlayback *self);
 static ALCenum ALCmmdevPlayback_open(ALCmmdevPlayback *self, const ALCchar *name);
 static HRESULT ALCmmdevPlayback_openProxy(ALCmmdevPlayback *self);
-static void ALCmmdevPlayback_close(ALCmmdevPlayback *self);
 static void ALCmmdevPlayback_closeProxy(ALCmmdevPlayback *self);
 static ALCboolean ALCmmdevPlayback_reset(ALCmmdevPlayback *self);
 static HRESULT ALCmmdevPlayback_resetProxy(ALCmmdevPlayback *self);
@@ -587,7 +586,22 @@ static void ALCmmdevPlayback_Construct(ALCmmdevPlayback *self, ALCdevice *device
 
 static void ALCmmdevPlayback_Destruct(ALCmmdevPlayback *self)
 {
-    ALCmmdevPlayback_close(self);
+    if(self->MsgEvent)
+    {
+        ThreadRequest req = { self->MsgEvent, 0 };
+        if(PostThreadMessage(ThreadID, WM_USER_CloseDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCmmdevProxy, self)))
+            (void)WaitForResponse(&req);
+
+        CloseHandle(self->MsgEvent);
+        self->MsgEvent = NULL;
+    }
+
+    if(self->NotifyEvent)
+        CloseHandle(self->NotifyEvent);
+    self->NotifyEvent = NULL;
+
+    free(self->devid);
+    self->devid = NULL;
 
     if(self->NotifyEvent != NULL)
         CloseHandle(self->NotifyEvent);
@@ -837,26 +851,6 @@ static HRESULT ALCmmdevPlayback_openProxy(ALCmmdevPlayback *self)
     return hr;
 }
 
-
-static void ALCmmdevPlayback_close(ALCmmdevPlayback *self)
-{
-    ThreadRequest req = { self->MsgEvent, 0 };
-
-    if(!req.FinishedEvt)
-        return;
-
-    if(PostThreadMessage(ThreadID, WM_USER_CloseDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCmmdevProxy, self)))
-        (void)WaitForResponse(&req);
-
-    CloseHandle(self->MsgEvent);
-    self->MsgEvent = NULL;
-
-    CloseHandle(self->NotifyEvent);
-    self->NotifyEvent = NULL;
-
-    free(self->devid);
-    self->devid = NULL;
-}
 
 static void ALCmmdevPlayback_closeProxy(ALCmmdevPlayback *self)
 {
@@ -1248,7 +1242,6 @@ static void ALCmmdevCapture_Construct(ALCmmdevCapture *self, ALCdevice *device);
 static void ALCmmdevCapture_Destruct(ALCmmdevCapture *self);
 static ALCenum ALCmmdevCapture_open(ALCmmdevCapture *self, const ALCchar *name);
 static HRESULT ALCmmdevCapture_openProxy(ALCmmdevCapture *self);
-static void ALCmmdevCapture_close(ALCmmdevCapture *self);
 static void ALCmmdevCapture_closeProxy(ALCmmdevCapture *self);
 static DECLARE_FORWARD(ALCmmdevCapture, ALCbackend, ALCboolean, reset)
 static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self);
@@ -1292,20 +1285,25 @@ static void ALCmmdevCapture_Construct(ALCmmdevCapture *self, ALCdevice *device)
 
 static void ALCmmdevCapture_Destruct(ALCmmdevCapture *self)
 {
-    ALCmmdevCapture_close(self);
+    if(self->MsgEvent)
+    {
+        ThreadRequest req = { self->MsgEvent, 0 };
+        if(PostThreadMessage(ThreadID, WM_USER_CloseDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCmmdevProxy, self)))
+            (void)WaitForResponse(&req);
+
+        CloseHandle(self->MsgEvent);
+        self->MsgEvent = NULL;
+    }
+
+    if(self->NotifyEvent != NULL)
+        CloseHandle(self->NotifyEvent);
+    self->NotifyEvent = NULL;
 
     ll_ringbuffer_free(self->Ring);
     self->Ring = NULL;
 
     DestroySampleConverter(&self->SampleConv);
     DestroyChannelConverter(&self->ChannelConv);
-
-    if(self->NotifyEvent != NULL)
-        CloseHandle(self->NotifyEvent);
-    self->NotifyEvent = NULL;
-    if(self->MsgEvent != NULL)
-        CloseHandle(self->MsgEvent);
-    self->MsgEvent = NULL;
 
     free(self->devid);
     self->devid = NULL;
@@ -1529,7 +1527,6 @@ static ALCenum ALCmmdevCapture_open(ALCmmdevCapture *self, const ALCchar *device
 
         if(FAILED(hr))
         {
-            ALCmmdevCapture_close(self);
             if(hr == E_OUTOFMEMORY)
                return ALC_OUT_OF_MEMORY;
             return ALC_INVALID_VALUE;
@@ -1575,29 +1572,6 @@ static HRESULT ALCmmdevCapture_openProxy(ALCmmdevCapture *self)
     return hr;
 }
 
-
-static void ALCmmdevCapture_close(ALCmmdevCapture *self)
-{
-    ThreadRequest req = { self->MsgEvent, 0 };
-
-    if(!req.FinishedEvt)
-        return;
-
-    if(PostThreadMessage(ThreadID, WM_USER_CloseDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCmmdevProxy, self)))
-        (void)WaitForResponse(&req);
-
-    ll_ringbuffer_free(self->Ring);
-    self->Ring = NULL;
-
-    CloseHandle(self->MsgEvent);
-    self->MsgEvent = NULL;
-
-    CloseHandle(self->NotifyEvent);
-    self->NotifyEvent = NULL;
-
-    free(self->devid);
-    self->devid = NULL;
-}
 
 static void ALCmmdevCapture_closeProxy(ALCmmdevCapture *self)
 {

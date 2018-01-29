@@ -60,7 +60,6 @@ static int ALCsolarisBackend_mixerProc(void *ptr);
 static void ALCsolarisBackend_Construct(ALCsolarisBackend *self, ALCdevice *device);
 static void ALCsolarisBackend_Destruct(ALCsolarisBackend *self);
 static ALCenum ALCsolarisBackend_open(ALCsolarisBackend *self, const ALCchar *name);
-static void ALCsolarisBackend_close(ALCsolarisBackend *self);
 static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self);
 static ALCboolean ALCsolarisBackend_start(ALCsolarisBackend *self);
 static void ALCsolarisBackend_stop(ALCsolarisBackend *self);
@@ -85,12 +84,15 @@ static void ALCsolarisBackend_Construct(ALCsolarisBackend *self, ALCdevice *devi
     SET_VTABLE2(ALCsolarisBackend, ALCbackend, self);
 
     self->fd = -1;
+    self->mix_data = NULL;
     ATOMIC_INIT(&self->killNow, AL_FALSE);
 }
 
 static void ALCsolarisBackend_Destruct(ALCsolarisBackend *self)
 {
-    ALCsolarisBackend_close(self);
+    if(self->fd != -1)
+        close(self->fd);
+    self->fd = -1;
 
     free(self->mix_data);
     self->mix_data = NULL;
@@ -187,13 +189,6 @@ static ALCenum ALCsolarisBackend_open(ALCsolarisBackend *self, const ALCchar *na
     alstr_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
-}
-
-static void ALCsolarisBackend_close(ALCsolarisBackend *self)
-{
-    if(self->fd != -1)
-        close(self->fd);
-    self->fd = -1;
 }
 
 static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)

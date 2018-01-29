@@ -254,7 +254,6 @@ static int ALCplaybackOSS_mixerProc(void *ptr);
 static void ALCplaybackOSS_Construct(ALCplaybackOSS *self, ALCdevice *device);
 static void ALCplaybackOSS_Destruct(ALCplaybackOSS *self);
 static ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name);
-static void ALCplaybackOSS_close(ALCplaybackOSS *self);
 static ALCboolean ALCplaybackOSS_reset(ALCplaybackOSS *self);
 static ALCboolean ALCplaybackOSS_start(ALCplaybackOSS *self);
 static void ALCplaybackOSS_stop(ALCplaybackOSS *self);
@@ -339,12 +338,16 @@ static void ALCplaybackOSS_Construct(ALCplaybackOSS *self, ALCdevice *device)
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCplaybackOSS, ALCbackend, self);
 
+    self->fd = -1;
     ATOMIC_INIT(&self->killNow, AL_FALSE);
 }
 
 static void ALCplaybackOSS_Destruct(ALCplaybackOSS *self)
 {
-    ALCplaybackOSS_close(self);
+    if(self->fd != -1)
+        close(self->fd);
+    self->fd = -1;
+
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
@@ -385,13 +388,6 @@ static ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name)
     alstr_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
-}
-
-static void ALCplaybackOSS_close(ALCplaybackOSS *self)
-{
-    if(self->fd != -1)
-        close(self->fd);
-    self->fd = -1;
 }
 
 static ALCboolean ALCplaybackOSS_reset(ALCplaybackOSS *self)
@@ -528,7 +524,6 @@ static int ALCcaptureOSS_recordProc(void *ptr);
 static void ALCcaptureOSS_Construct(ALCcaptureOSS *self, ALCdevice *device);
 static void ALCcaptureOSS_Destruct(ALCcaptureOSS *self);
 static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name);
-static void ALCcaptureOSS_close(ALCcaptureOSS *self);
 static DECLARE_FORWARD(ALCcaptureOSS, ALCbackend, ALCboolean, reset)
 static ALCboolean ALCcaptureOSS_start(ALCcaptureOSS *self);
 static void ALCcaptureOSS_stop(ALCcaptureOSS *self);
@@ -605,12 +600,19 @@ static void ALCcaptureOSS_Construct(ALCcaptureOSS *self, ALCdevice *device)
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCcaptureOSS, ALCbackend, self);
 
+    self->fd = -1;
+    self->ring = NULL;
     ATOMIC_INIT(&self->killNow, AL_FALSE);
 }
 
 static void ALCcaptureOSS_Destruct(ALCcaptureOSS *self)
 {
-    ALCcaptureOSS_close(self);
+    if(self->fd != -1)
+        close(self->fd);
+    self->fd = -1;
+
+    ll_ringbuffer_free(self->ring);
+    self->ring = NULL;
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
@@ -737,16 +739,6 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
     alstr_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
-}
-
-static void ALCcaptureOSS_close(ALCcaptureOSS *self)
-{
-    if(self->fd != -1)
-        close(self->fd);
-    self->fd = -1;
-
-    ll_ringbuffer_free(self->ring);
-    self->ring = NULL;
 }
 
 static ALCboolean ALCcaptureOSS_start(ALCcaptureOSS *self)

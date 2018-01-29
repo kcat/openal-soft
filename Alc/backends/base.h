@@ -43,7 +43,6 @@ struct ALCbackendVtable {
     void (*const Destruct)(ALCbackend*);
 
     ALCenum (*const open)(ALCbackend*, const ALCchar*);
-    void (*const close)(ALCbackend*);
 
     ALCboolean (*const reset)(ALCbackend*);
     ALCboolean (*const start)(ALCbackend*);
@@ -63,7 +62,6 @@ struct ALCbackendVtable {
 #define DEFINE_ALCBACKEND_VTABLE(T)                                           \
 DECLARE_THUNK(T, ALCbackend, void, Destruct)                                  \
 DECLARE_THUNK1(T, ALCbackend, ALCenum, open, const ALCchar*)                  \
-DECLARE_THUNK(T, ALCbackend, void, close)                                     \
 DECLARE_THUNK(T, ALCbackend, ALCboolean, reset)                               \
 DECLARE_THUNK(T, ALCbackend, ALCboolean, start)                               \
 DECLARE_THUNK(T, ALCbackend, void, stop)                                      \
@@ -79,7 +77,6 @@ static const struct ALCbackendVtable T##_ALCbackend_vtable = {                \
     T##_ALCbackend_Destruct,                                                  \
                                                                               \
     T##_ALCbackend_open,                                                      \
-    T##_ALCbackend_close,                                                     \
     T##_ALCbackend_reset,                                                     \
     T##_ALCbackend_start,                                                     \
     T##_ALCbackend_stop,                                                      \

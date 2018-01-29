@@ -168,7 +168,6 @@ typedef struct PlaybackWrapper {
 static void PlaybackWrapper_Construct(PlaybackWrapper *self, ALCdevice *device);
 static void PlaybackWrapper_Destruct(PlaybackWrapper *self);
 static ALCenum PlaybackWrapper_open(PlaybackWrapper *self, const ALCchar *name);
-static void PlaybackWrapper_close(PlaybackWrapper *self);
 static ALCboolean PlaybackWrapper_reset(PlaybackWrapper *self);
 static ALCboolean PlaybackWrapper_start(PlaybackWrapper *self);
 static void PlaybackWrapper_stop(PlaybackWrapper *self);
@@ -626,19 +625,15 @@ static void PlaybackWrapper_Construct(PlaybackWrapper *self, ALCdevice *device)
 
 static void PlaybackWrapper_Destruct(PlaybackWrapper *self)
 {
-    PlaybackWrapper_close(self);
+    if(self->ExtraData)
+        qsa_close_playback(self);
+
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
 static ALCenum PlaybackWrapper_open(PlaybackWrapper *self, const ALCchar *name)
 {
     return qsa_open_playback(self, name);
-}
-
-static void PlaybackWrapper_close(PlaybackWrapper *self)
-{
-    if(self->ExtraData)
-        qsa_close_playback(self);
 }
 
 static ALCboolean PlaybackWrapper_reset(PlaybackWrapper *self)
@@ -670,7 +665,6 @@ typedef struct CaptureWrapper {
 static void CaptureWrapper_Construct(CaptureWrapper *self, ALCdevice *device);
 static void CaptureWrapper_Destruct(CaptureWrapper *self);
 static ALCenum CaptureWrapper_open(CaptureWrapper *self, const ALCchar *name);
-static void CaptureWrapper_close(CaptureWrapper *self);
 static DECLARE_FORWARD(CaptureWrapper, ALCbackend, ALCboolean, reset)
 static ALCboolean CaptureWrapper_start(CaptureWrapper *self);
 static void CaptureWrapper_stop(CaptureWrapper *self);
@@ -954,19 +948,15 @@ static void CaptureWrapper_Construct(CaptureWrapper *self, ALCdevice *device)
 
 static void CaptureWrapper_Destruct(CaptureWrapper *self)
 {
-    CaptureWrapper_close(self);
+    if(self->ExtraData)
+        qsa_close_capture(self);
+
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
 static ALCenum CaptureWrapper_open(CaptureWrapper *self, const ALCchar *name)
 {
     return qsa_open_capture(self, name);
-}
-
-static void CaptureWrapper_close(CaptureWrapper *self)
-{
-    if(self->ExtraData)
-        qsa_close_capture(self);
 }
 
 static ALCboolean CaptureWrapper_start(CaptureWrapper *self)

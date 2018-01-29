@@ -141,7 +141,6 @@ static int ALCportPlayback_WriteCallback(const void *inputBuffer, void *outputBu
 static void ALCportPlayback_Construct(ALCportPlayback *self, ALCdevice *device);
 static void ALCportPlayback_Destruct(ALCportPlayback *self);
 static ALCenum ALCportPlayback_open(ALCportPlayback *self, const ALCchar *name);
-static void ALCportPlayback_close(ALCportPlayback *self);
 static ALCboolean ALCportPlayback_reset(ALCportPlayback *self);
 static ALCboolean ALCportPlayback_start(ALCportPlayback *self);
 static void ALCportPlayback_stop(ALCportPlayback *self);
@@ -165,7 +164,11 @@ static void ALCportPlayback_Construct(ALCportPlayback *self, ALCdevice *device)
 
 static void ALCportPlayback_Destruct(ALCportPlayback *self)
 {
-    ALCportPlayback_close(self);
+    PaError err = self->stream ? Pa_CloseStream(self->stream) : paNoError;
+    if(err != paNoError)
+        ERR("Error closing stream: %s\n", Pa_GetErrorText(err));
+    self->stream = NULL;
+
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
@@ -250,14 +253,6 @@ retry_open:
 
 }
 
-static void ALCportPlayback_close(ALCportPlayback *self)
-{
-    PaError err = self->stream ? Pa_CloseStream(self->stream) : paNoError;
-    if(err != paNoError)
-        ERR("Error closing stream: %s\n", Pa_GetErrorText(err));
-    self->stream = NULL;
-}
-
 static ALCboolean ALCportPlayback_reset(ALCportPlayback *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
@@ -335,7 +330,6 @@ static int ALCportCapture_ReadCallback(const void *inputBuffer, void *outputBuff
 static void ALCportCapture_Construct(ALCportCapture *self, ALCdevice *device);
 static void ALCportCapture_Destruct(ALCportCapture *self);
 static ALCenum ALCportCapture_open(ALCportCapture *self, const ALCchar *name);
-static void ALCportCapture_close(ALCportCapture *self);
 static DECLARE_FORWARD(ALCportCapture, ALCbackend, ALCboolean, reset)
 static ALCboolean ALCportCapture_start(ALCportCapture *self);
 static void ALCportCapture_stop(ALCportCapture *self);
@@ -355,11 +349,19 @@ static void ALCportCapture_Construct(ALCportCapture *self, ALCdevice *device)
     SET_VTABLE2(ALCportCapture, ALCbackend, self);
 
     self->stream = NULL;
+    self->ring = NULL;
 }
 
 static void ALCportCapture_Destruct(ALCportCapture *self)
 {
-    ALCportCapture_close(self);
+    PaError err = self->stream ? Pa_CloseStream(self->stream) : paNoError;
+    if(err != paNoError)
+        ERR("Error closing stream: %s\n", Pa_GetErrorText(err));
+    self->stream = NULL;
+
+    ll_ringbuffer_free(self->ring);
+    self->ring = NULL;
+
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
@@ -440,17 +442,6 @@ static ALCenum ALCportCapture_open(ALCportCapture *self, const ALCchar *name)
     alstr_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
-}
-
-static void ALCportCapture_close(ALCportCapture *self)
-{
-    PaError err = self->stream ? Pa_CloseStream(self->stream) : paNoError;
-    if(err != paNoError)
-        ERR("Error closing stream: %s\n", Pa_GetErrorText(err));
-    self->stream = NULL;
-
-    ll_ringbuffer_free(self->ring);
-    self->ring = NULL;
 }
 
 

@@ -160,7 +160,6 @@ static int ALCopenslPlayback_mixerProc(void *arg);
 static void ALCopenslPlayback_Construct(ALCopenslPlayback *self, ALCdevice *device);
 static void ALCopenslPlayback_Destruct(ALCopenslPlayback *self);
 static ALCenum ALCopenslPlayback_open(ALCopenslPlayback *self, const ALCchar *name);
-static void ALCopenslPlayback_close(ALCopenslPlayback *self);
 static ALCboolean ALCopenslPlayback_reset(ALCopenslPlayback *self);
 static ALCboolean ALCopenslPlayback_start(ALCopenslPlayback *self);
 static void ALCopenslPlayback_stop(ALCopenslPlayback *self);
@@ -194,7 +193,18 @@ static void ALCopenslPlayback_Construct(ALCopenslPlayback *self, ALCdevice *devi
 
 static void ALCopenslPlayback_Destruct(ALCopenslPlayback* self)
 {
-    ALCopenslPlayback_close(self);
+    if(self->mBufferQueueObj != NULL)
+        VCALL0(self->mBufferQueueObj,Destroy)();
+    self->mBufferQueueObj = NULL;
+
+    if(self->mOutputMix)
+        VCALL0(self->mOutputMix,Destroy)();
+    self->mOutputMix = NULL;
+
+    if(self->mEngineObj)
+        VCALL0(self->mEngineObj,Destroy)();
+    self->mEngineObj = NULL;
+    self->mEngine = NULL;
 
     alcnd_destroy(&self->mCond);
 
@@ -387,22 +397,6 @@ static ALCenum ALCopenslPlayback_open(ALCopenslPlayback *self, const ALCchar *na
     alstr_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
-}
-
-static void ALCopenslPlayback_close(ALCopenslPlayback *self)
-{
-    if(self->mBufferQueueObj != NULL)
-        VCALL0(self->mBufferQueueObj,Destroy)();
-    self->mBufferQueueObj = NULL;
-
-    if(self->mOutputMix)
-        VCALL0(self->mOutputMix,Destroy)();
-    self->mOutputMix = NULL;
-
-    if(self->mEngineObj)
-        VCALL0(self->mEngineObj,Destroy)();
-    self->mEngineObj = NULL;
-    self->mEngine = NULL;
 }
 
 static ALCboolean ALCopenslPlayback_reset(ALCopenslPlayback *self)
@@ -710,7 +704,6 @@ static void ALCopenslCapture_process(SLAndroidSimpleBufferQueueItf bq, void *con
 static void ALCopenslCapture_Construct(ALCopenslCapture *self, ALCdevice *device);
 static void ALCopenslCapture_Destruct(ALCopenslCapture *self);
 static ALCenum ALCopenslCapture_open(ALCopenslCapture *self, const ALCchar *name);
-static void ALCopenslCapture_close(ALCopenslCapture *self);
 static DECLARE_FORWARD(ALCopenslCapture, ALCbackend, ALCboolean, reset)
 static ALCboolean ALCopenslCapture_start(ALCopenslCapture *self);
 static void ALCopenslCapture_stop(ALCopenslCapture *self);
@@ -749,7 +742,18 @@ static void ALCopenslCapture_Construct(ALCopenslCapture *self, ALCdevice *device
 
 static void ALCopenslCapture_Destruct(ALCopenslCapture *self)
 {
-    ALCopenslCapture_close(self);
+    ll_ringbuffer_free(self->mRing);
+    self->mRing = NULL;
+
+    if(self->mRecordObj != NULL)
+        VCALL0(self->mRecordObj,Destroy)();
+    self->mRecordObj = NULL;
+
+    if(self->mEngineObj != NULL)
+        VCALL0(self->mEngineObj,Destroy)();
+    self->mEngineObj = NULL;
+    self->mEngine = NULL;
+
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
@@ -916,21 +920,6 @@ static ALCenum ALCopenslCapture_open(ALCopenslCapture *self, const ALCchar *name
     alstr_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;
-}
-
-static void ALCopenslCapture_close(ALCopenslCapture *self)
-{
-    ll_ringbuffer_free(self->mRing);
-    self->mRing = NULL;
-
-    if(self->mRecordObj != NULL)
-        VCALL0(self->mRecordObj,Destroy)();
-    self->mRecordObj = NULL;
-
-    if(self->mEngineObj != NULL)
-        VCALL0(self->mEngineObj,Destroy)();
-    self->mEngineObj = NULL;
-    self->mEngine = NULL;
 }
 
 static ALCboolean ALCopenslCapture_start(ALCopenslCapture *self)

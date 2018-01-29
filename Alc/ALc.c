@@ -2434,11 +2434,8 @@ static ALCvoid FreeDevice(ALCdevice *device)
     TRACE("%p\n", device);
 
     if(device->Backend)
-    {
-        V0(device->Backend,close)();
         DELETE_OBJ(device->Backend);
-        device->Backend = NULL;
-    }
+    device->Backend = NULL;
 
     almtx_destroy(&device->BackendLock);
 
@@ -4146,8 +4143,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     // Find a playback device to open
     if((err=V(device->Backend,open)(deviceName)) != ALC_NO_ERROR)
     {
-        DELETE_OBJ(device->Backend);
-        device->Backend = NULL;
         FreeDevice(device);
         alcSetError(NULL, err);
         return NULL;
@@ -4318,8 +4313,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     );
     if((err=V(device->Backend,open)(deviceName)) != ALC_NO_ERROR)
     {
-        DELETE_OBJ(device->Backend);
-        device->Backend = NULL;
         FreeDevice(device);
         alcSetError(NULL, err);
         return NULL;

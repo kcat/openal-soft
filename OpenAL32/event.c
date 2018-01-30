@@ -37,7 +37,6 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
             SETERR_GOTO(context, AL_INVALID_ENUM, done, "Invalid event type 0x%04x", types[i]);
     }
 
-    almtx_lock(&context->EventLock);
     if(enable)
     {
         ALbitfieldSOFT enabledevts = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed);
@@ -57,7 +56,6 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
         {
         }
     }
-    almtx_unlock(&context->EventLock);
 
 done:
     ALCcontext_DecRef(context);
@@ -70,10 +68,10 @@ AL_API void AL_APIENTRY alEventCallbackSOFT(ALEVENTPROCSOFT callback, void *user
     context = GetContextRef();
     if(!context) return;
 
-    almtx_lock(&context->EventLock);
+    almtx_lock(&context->EventCbLock);
     context->EventCb = callback;
     context->EventParam = userParam;
-    almtx_unlock(&context->EventLock);
+    almtx_unlock(&context->EventCbLock);
 
     ALCcontext_DecRef(context);
 }

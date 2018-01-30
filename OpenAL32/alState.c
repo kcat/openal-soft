@@ -722,12 +722,12 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
             "alDopplerVelocity is deprecated in AL1.1, use alSpeedOfSound";
         const ALsizei msglen = (ALsizei)strlen(msg);
         ALbitfieldSOFT enabledevts;
-        almtx_lock(&context->EventLock);
+        almtx_lock(&context->EventCbLock);
         enabledevts = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed);
         if((enabledevts&EventType_Deprecated) && context->EventCb)
             (*context->EventCb)(AL_EVENT_TYPE_DEPRECATED_SOFT, 0, 0, msglen, msg,
                                 context->EventParam);
-        almtx_unlock(&context->EventLock);
+        almtx_unlock(&context->EventCbLock);
     }
 
     if(!(value >= 0.0f && isfinite(value)))

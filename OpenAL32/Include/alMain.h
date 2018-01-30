@@ -664,7 +664,7 @@ struct ALCcontext_struct {
 
     ATOMIC(struct ALeffectslotArray*) ActiveAuxSlots;
 
-    almtx_t EventLock;
+    almtx_t EventCbLock;
     ATOMIC(ALbitfieldSOFT) EnabledEvts;
     ALEVENTPROCSOFT EventCb;
     void *EventParam;

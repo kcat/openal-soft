@@ -2611,7 +2611,7 @@ static ALvoid InitContext(ALCcontext *Context)
     Context->MetersPerUnit = AL_DEFAULT_METERS_PER_UNIT;
     ATOMIC_FLAG_TEST_AND_SET(&Context->PropsClean, almemory_order_relaxed);
     ATOMIC_INIT(&Context->DeferUpdates, AL_FALSE);
-    almtx_init(&Context->EventLock, almtx_plain);
+    almtx_init(&Context->EventCbLock, almtx_plain);
     ATOMIC_INIT(&Context->EnabledEvts, 0);
     Context->EventCb = NULL;
     Context->EventParam = NULL;
@@ -2743,7 +2743,7 @@ static void FreeContext(ALCcontext *context)
     }
     TRACE("Freed "SZFMT" listener property object%s\n", count, (count==1)?"":"s");
 
-    almtx_destroy(&context->EventLock);
+    almtx_destroy(&context->EventCbLock);
 
     ALCdevice_DecRef(context->Device);
     context->Device = NULL;

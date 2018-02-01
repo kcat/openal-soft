@@ -40,7 +40,7 @@ static int EventThread(void *arg)
 
         /* Should check the actual type is enabled here too. */
         enabledevts = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_acquire);
-        if(context->EventCb && (enabledevts&evt.EnumType) != evt.EnumType)
+        if(context->EventCb && (enabledevts&evt.EnumType) == evt.EnumType)
             context->EventCb(evt.Type, evt.ObjectId, evt.Param, (ALsizei)strlen(evt.Message),
                              evt.Message, context->EventParam);
     }

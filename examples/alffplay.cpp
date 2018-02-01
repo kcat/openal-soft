@@ -237,6 +237,7 @@ struct AudioState {
     ALsizei mFrameSize{0};
 
     std::mutex mSrcMutex;
+    std::condition_variable mSrcCond;
     ALuint mSource{0};
     std::vector<ALuint> mBuffers;
     ALsizei mBufferIdx{0};
@@ -686,7 +687,11 @@ void AL_APIENTRY AudioState::EventCallback(ALenum eventType, ALuint object, ALui
 
     if(eventType == AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT)
     {
-        /* TODO: Signal the audio handler to wake up and decode another buffer. */
+        /* Temporarily lock the source mutex to ensure it's not between
+         * checking the processed count and going to sleep.
+         */
+        std::unique_lock<std::mutex>(self->mSrcMutex).unlock();
+        self->mSrcCond.notify_one();
         return;
     }
 
@@ -715,12 +720,14 @@ int AudioState::handler()
         AL_EVENT_TYPE_ERROR_SOFT, AL_EVENT_TYPE_PERFORMANCE_SOFT, AL_EVENT_TYPE_DEPRECATED_SOFT
     }};
     std::unique_lock<std::mutex> lock(mSrcMutex);
+    milliseconds sleep_time = AudioBufferTime / 3;
     ALenum fmt;
 
     if(alEventControlSOFT)
     {
         alEventControlSOFT(types.size(), types.data(), AL_TRUE);
         alEventCallbackSOFT(EventCallback, this);
+        sleep_time = AudioBufferTotalTime;
     }
 
     /* Find a suitable format for OpenAL. */
@@ -941,9 +948,7 @@ int AudioState::handler()
            mMovie.mPlaying.load(std::memory_order_relaxed))
             startPlayback();
 
-        lock.unlock();
-        SDL_Delay((AudioBufferTime/3).count());
-        lock.lock();
+        mSrcCond.wait_for(lock, sleep_time);
     }
 
     alSourceRewind(mSource);

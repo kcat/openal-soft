@@ -6,7 +6,47 @@
 #include "AL/alext.h"
 #include "alMain.h"
 #include "alError.h"
+#include "ringbuffer.h"
 
+
+static int EventThread(void *arg)
+{
+    ALCcontext *context = arg;
+
+    almtx_lock(&context->EventCbLock);
+    while(1)
+    {
+        AsyncEvent evt;
+        ALbitfieldSOFT enabledevts;
+
+        if(ll_ringbuffer_read_space(context->AsyncEvents) == 0)
+        {
+            /* Wait 50ms before checking again. Because events are delivered
+             * asynchronously by the mixer, it's possible for one to be written
+             * in between checking for a readable element and sleeping. So to
+             * ensure events don't get left to go stale in the ringbuffer, we
+             * need to keep checking regardless of being signaled.
+             */
+            struct timespec ts;
+            altimespec_get(&ts, AL_TIME_UTC);
+            ts.tv_nsec += 50000000;
+            ts.tv_sec += ts.tv_nsec/1000000000;
+            ts.tv_nsec %= 1000000000;
+            alcnd_timedwait(&context->EventCnd, &context->EventCbLock, &ts);
+            continue;
+        }
+        ll_ringbuffer_read(context->AsyncEvents, (char*)&evt, 1);
+        if(!evt.EnumType) break;
+
+        /* Should check the actual type is enabled here too. */
+        enabledevts = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_acquire);
+        if(context->EventCb && (enabledevts&evt.EnumType) != evt.EnumType)
+            context->EventCb(evt.Type, evt.ObjectId, evt.Param, (ALsizei)strlen(evt.Message),
+                             evt.Message, context->EventParam);
+    }
+    almtx_unlock(&context->EventCbLock);
+    return 0;
+}
 
 AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, ALboolean enable)
 {
@@ -39,7 +79,13 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
 
     if(enable)
     {
-        ALbitfieldSOFT enabledevts = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed);
+        ALbitfieldSOFT enabledevts;
+        bool isrunning;
+        almtx_lock(&context->EventThrdLock);
+        if(!context->AsyncEvents)
+            context->AsyncEvents = ll_ringbuffer_create(64, sizeof(AsyncEvent));
+        enabledevts = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed);
+        isrunning = !!enabledevts;
         while(ATOMIC_COMPARE_EXCHANGE_WEAK(&context->EnabledEvts, &enabledevts, enabledevts|flags,
                                            almemory_order_acq_rel, almemory_order_acquire) == 0)
         {
@@ -47,14 +93,38 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
              * just try again.
              */
         }
+        if(!isrunning && flags)
+            althrd_create(&context->EventThread, EventThread, context);
+        almtx_unlock(&context->EventThrdLock);
     }
     else
     {
-        ALbitfieldSOFT enabledevts = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed);
+        ALbitfieldSOFT enabledevts;
+        bool isrunning;
+        almtx_lock(&context->EventThrdLock);
+        enabledevts = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed);
+        isrunning = !!enabledevts;
         while(ATOMIC_COMPARE_EXCHANGE_WEAK(&context->EnabledEvts, &enabledevts, enabledevts&~flags,
                                            almemory_order_acq_rel, almemory_order_acquire) == 0)
         {
         }
+        if(isrunning && !(enabledevts&~flags))
+        {
+            static const AsyncEvent kill_evt = { 0 };
+            while(ll_ringbuffer_write_space(context->AsyncEvents) == 0)
+                althrd_yield();
+            ll_ringbuffer_write(context->AsyncEvents, (const char*)&kill_evt, 1);
+            althrd_join(context->EventThread, NULL);
+        }
+        else
+        {
+            /* Wait to ensure the event handler sees the changed flags before
+             * returning.
+             */
+            almtx_lock(&context->EventCbLock);
+            almtx_unlock(&context->EventCbLock);
+        }
+        almtx_unlock(&context->EventThrdLock);
     }
 
 done:

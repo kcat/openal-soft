@@ -158,6 +158,7 @@ static const union {
 extern "C" {
 #endif
 
+struct ll_ringbuffer;
 struct Hrtf;
 struct HrtfEntry;
 struct DirectHrtfState;
@@ -613,6 +614,14 @@ enum {
     EventType_Deprecated        = 1<<4,
 };
 
+typedef struct AsyncEvent {
+    unsigned int EnumType;
+    ALenum Type;
+    ALuint ObjectId;
+    ALuint Param;
+    ALchar Message[1008];
+} AsyncEvent;
+
 struct ALCcontext_struct {
     RefCount ref;
 
@@ -664,8 +673,12 @@ struct ALCcontext_struct {
 
     ATOMIC(struct ALeffectslotArray*) ActiveAuxSlots;
 
-    almtx_t EventCbLock;
+    almtx_t EventThrdLock;
+    althrd_t EventThread;
+    alcnd_t EventCnd;
+    struct ll_ringbuffer *AsyncEvents;
     ATOMIC(ALbitfieldSOFT) EnabledEvts;
+    almtx_t EventCbLock;
     ALEVENTPROCSOFT EventCb;
     void *EventParam;
 

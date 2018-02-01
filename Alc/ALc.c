@@ -41,6 +41,7 @@
 #include "bformatdec.h"
 #include "alu.h"
 #include "alconfig.h"
+#include "ringbuffer.h"
 
 #include "fpu_modes.h"
 #include "cpu_caps.h"
@@ -2611,8 +2612,11 @@ static ALvoid InitContext(ALCcontext *Context)
     Context->MetersPerUnit = AL_DEFAULT_METERS_PER_UNIT;
     ATOMIC_FLAG_TEST_AND_SET(&Context->PropsClean, almemory_order_relaxed);
     ATOMIC_INIT(&Context->DeferUpdates, AL_FALSE);
-    almtx_init(&Context->EventCbLock, almtx_plain);
+    almtx_init(&Context->EventThrdLock, almtx_plain);
+    alcnd_init(&Context->EventCnd);
+    Context->AsyncEvents = NULL;
     ATOMIC_INIT(&Context->EnabledEvts, 0);
+    almtx_init(&Context->EventCbLock, almtx_plain);
     Context->EventCb = NULL;
     Context->EventParam = NULL;
 
@@ -2743,7 +2747,21 @@ static void FreeContext(ALCcontext *context)
     }
     TRACE("Freed "SZFMT" listener property object%s\n", count, (count==1)?"":"s");
 
+    if(ATOMIC_EXCHANGE(&context->EnabledEvts, 0, almemory_order_acq_rel))
+    {
+        static const AsyncEvent kill_evt = { 0 };
+        while(ll_ringbuffer_write_space(context->AsyncEvents) == 0)
+            althrd_yield();
+        ll_ringbuffer_write(context->AsyncEvents, (const char*)&kill_evt, 1);
+        althrd_join(context->EventThread, NULL);
+    }
+
     almtx_destroy(&context->EventCbLock);
+    almtx_destroy(&context->EventThrdLock);
+    alcnd_destroy(&context->EventCnd);
+
+    ll_ringbuffer_free(context->AsyncEvents);
+    context->AsyncEvents = NULL;
 
     ALCdevice_DecRef(context->Device);
     context->Device = NULL;

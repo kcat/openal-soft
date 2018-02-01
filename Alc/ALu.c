@@ -1693,7 +1693,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
                 if(source && ATOMIC_LOAD(&voice->Playing, almemory_order_relaxed) &&
                    voice->Step > 0)
                 {
-                    if(!MixSource(voice, device, SamplesToDo))
+                    if(!MixSource(voice, source->id, ctx, SamplesToDo))
                     {
                         ATOMIC_STORE(&voice->Source, NULL, almemory_order_relaxed);
                         ATOMIC_STORE(&voice->Playing, false, almemory_order_release);

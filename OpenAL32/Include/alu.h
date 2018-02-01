@@ -516,7 +516,7 @@ inline void ComputeFirstOrderGains(const BFMixParams *foa, const ALfloat mtx[4],
 }
 
 
-ALboolean MixSource(struct ALvoice *voice, ALCdevice *Device, ALsizei SamplesToDo);
+ALboolean MixSource(struct ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsizei SamplesToDo);
 
 void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples);
 /* Caller must lock the device. */

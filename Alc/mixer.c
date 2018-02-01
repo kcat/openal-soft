@@ -36,6 +36,7 @@
 #include "sample_cvt.h"
 #include "alu.h"
 #include "alconfig.h"
+#include "ringbuffer.h"
 
 #include "cpu_caps.h"
 #include "mixer_defs.h"
@@ -193,6 +194,20 @@ void aluInitMixer(void)
 }
 
 
+static void SendAsyncEvent(ALCcontext *context, ALuint enumtype, ALenum type,
+                           ALuint objid, ALuint param, const char *msg)
+{
+    AsyncEvent evt;
+    evt.EnumType = enumtype;
+    evt.Type = type;
+    evt.ObjectId = objid;
+    evt.Param = param;
+    strcpy(evt.Message, msg);
+    if(ll_ringbuffer_write_space(context->AsyncEvents) > 0)
+        ll_ringbuffer_write(context->AsyncEvents, (const char*)&evt, 1);
+}
+
+
 static inline ALfloat Sample_ALubyte(ALubyte val)
 { return (val-128) * (1.0f/128.0f); }
 
@@ -290,11 +305,14 @@ static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter
 #define RESAMPLED_BUF 1
 #define FILTERED_BUF 2
 #define NFC_DATA_BUF 3
-ALboolean MixSource(ALvoice *voice, ALCdevice *Device, ALsizei SamplesToDo)
+ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsizei SamplesToDo)
 {
+    ALCdevice *Device = Context->Device;
     ALbufferlistitem *BufferListItem;
     ALbufferlistitem *BufferLoopItem;
     ALsizei NumChannels, SampleSize;
+    ALbitfieldSOFT enabledevt;
+    ALsizei buffers_done = 0;
     ResamplerFunc Resample;
     ALsizei DataPosInt;
     ALsizei DataPosFrac;
@@ -707,17 +725,14 @@ ALboolean MixSource(ALvoice *voice, ALCdevice *Device, ALsizei SamplesToDo)
             if(CompLen > DataPosInt)
                 break;
 
+            buffers_done++;
             BufferListItem = ATOMIC_LOAD(&BufferListItem->next, almemory_order_acquire);
-            if(!BufferListItem)
+            if(!BufferListItem && !(BufferListItem=BufferLoopItem))
             {
-                BufferListItem = BufferLoopItem;
-                if(!BufferListItem)
-                {
-                    isplaying = false;
-                    DataPosInt = 0;
-                    DataPosFrac = 0;
-                    break;
-                }
+                isplaying = false;
+                DataPosInt = 0;
+                DataPosFrac = 0;
+                break;
             }
 
             DataPosInt -= CompLen;
@@ -730,5 +745,17 @@ ALboolean MixSource(ALvoice *voice, ALCdevice *Device, ALsizei SamplesToDo)
     ATOMIC_STORE(&voice->position,          DataPosInt, almemory_order_relaxed);
     ATOMIC_STORE(&voice->position_fraction, DataPosFrac, almemory_order_relaxed);
     ATOMIC_STORE(&voice->current_buffer,    BufferListItem, almemory_order_release);
+
+    enabledevt = ATOMIC_LOAD(&Context->EnabledEvts, almemory_order_acquire);
+    if(buffers_done > 0 && (enabledevt&EventType_BufferCompleted))
+    {
+        do {
+            SendAsyncEvent(Context, EventType_BufferCompleted,
+                AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, SourceID, 0, "Buffer completed"
+            );
+        } while(--buffers_done > 0);
+        alcnd_signal(&Context->EventCnd);
+    }
+
     return isplaying;
 }

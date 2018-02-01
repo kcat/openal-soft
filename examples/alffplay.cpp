@@ -684,6 +684,12 @@ void AL_APIENTRY AudioState::EventCallback(ALenum eventType, ALuint object, ALui
 {
     AudioState *self = reinterpret_cast<AudioState*>(userParam);
 
+    if(eventType == AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT)
+    {
+        /* TODO: Signal the audio handler to wake up and decode another buffer. */
+        return;
+    }
+
     std::cout<< "---- AL Event on AudioState "<<self<<" ----\nEvent: ";
     switch(eventType)
     {

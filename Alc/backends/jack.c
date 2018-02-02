@@ -152,7 +152,7 @@ typedef struct ALCjackPlayback {
     ll_ringbuffer_t *Ring;
     alsem_t Sem;
 
-    volatile int killNow;
+    ATOMIC(ALenum) killNow;
     althrd_t thread;
 } ALCjackPlayback;
 
@@ -191,7 +191,7 @@ static void ALCjackPlayback_Construct(ALCjackPlayback *self, ALCdevice *device)
         self->Port[i] = NULL;
     self->Ring = NULL;
 
-    self->killNow = 1;
+    ATOMIC_INIT(&self->killNow, AL_TRUE);
 }
 
 static void ALCjackPlayback_Destruct(ALCjackPlayback *self)
@@ -312,7 +312,7 @@ static int ALCjackPlayback_mixerProc(void *arg)
     althrd_setname(althrd_current(), MIXER_THREAD_NAME);
 
     ALCjackPlayback_lock(self);
-    while(!self->killNow && device->Connected)
+    while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) && device->Connected)
     {
         ALuint todo, len1, len2;
 
@@ -479,7 +479,7 @@ static ALCboolean ALCjackPlayback_start(ALCjackPlayback *self)
     }
     jack_free(ports);
 
-    self->killNow = 0;
+    ATOMIC_STORE(&self->killNow, AL_FALSE, almemory_order_release);
     if(althrd_create(&self->thread, ALCjackPlayback_mixerProc, self) != althrd_success)
     {
         jack_deactivate(self->Client);
@@ -493,10 +493,9 @@ static void ALCjackPlayback_stop(ALCjackPlayback *self)
 {
     int res;
 
-    if(self->killNow)
+    if(ATOMIC_EXCHANGE(&self->killNow, AL_TRUE, almemory_order_acq_rel))
         return;
 
-    self->killNow = 1;
     alsem_post(&self->Sem);
     althrd_join(self->thread, &res);
 

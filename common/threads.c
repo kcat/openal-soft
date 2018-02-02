@@ -208,12 +208,6 @@ void almtx_destroy(almtx_t *mtx)
     DeleteCriticalSection(mtx);
 }
 
-int almtx_timedlock(almtx_t* UNUSED(mtx), const struct timespec* UNUSED(ts))
-{
-    /* Windows CRITICAL_SECTIONs don't seem to have a timedlock method. */
-    return althrd_error;
-}
-
 #if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x0600
 int alcnd_init(alcnd_t *cond)
 {
@@ -238,30 +232,6 @@ int alcnd_wait(alcnd_t *cond, almtx_t *mtx)
     if(SleepConditionVariableCS(cond, mtx, INFINITE) != 0)
         return althrd_success;
     return althrd_error;
-}
-
-int alcnd_timedwait(alcnd_t *cond, almtx_t *mtx, const struct timespec *time_point)
-{
-    struct timespec curtime;
-    DWORD sleeptime;
-
-    if(altimespec_get(&curtime, AL_TIME_UTC) != AL_TIME_UTC)
-        return althrd_error;
-
-    if(curtime.tv_sec > time_point->tv_sec || (curtime.tv_sec == time_point->tv_sec &&
-                                               curtime.tv_nsec >= time_point->tv_nsec))
-    {
-        if(SleepConditionVariableCS(cond, mtx, 0) != 0)
-            return althrd_success;
-    }
-    else
-    {
-        sleeptime  = (time_point->tv_nsec - curtime.tv_nsec + 999999)/1000000;
-        sleeptime += (DWORD)(time_point->tv_sec - curtime.tv_sec)*1000;
-        if(SleepConditionVariableCS(cond, mtx, sleeptime) != 0)
-            return althrd_success;
-    }
-    return (GetLastError()==ERROR_TIMEOUT) ? althrd_timedout : althrd_error;
 }
 
 void alcnd_destroy(alcnd_t* UNUSED(cond))
@@ -348,37 +318,6 @@ int alcnd_wait(alcnd_t *cond, almtx_t *mtx)
     return althrd_success;
 }
 
-int alcnd_timedwait(alcnd_t *cond, almtx_t *mtx, const struct timespec *time_point)
-{
-    _int_alcnd_t *icond = cond->Ptr;
-    struct timespec curtime;
-    DWORD sleeptime;
-    int res;
-
-    if(altimespec_get(&curtime, AL_TIME_UTC) != AL_TIME_UTC)
-        return althrd_error;
-
-    if(curtime.tv_sec > time_point->tv_sec || (curtime.tv_sec == time_point->tv_sec &&
-                                               curtime.tv_nsec >= time_point->tv_nsec))
-        sleeptime = 0;
-    else
-    {
-        sleeptime  = (time_point->tv_nsec - curtime.tv_nsec + 999999)/1000000;
-        sleeptime += (DWORD)(time_point->tv_sec - curtime.tv_sec)*1000;
-    }
-
-    IncrementRef(&icond->wait_count);
-    LeaveCriticalSection(mtx);
-
-    res = WaitForMultipleObjects(2, icond->events, FALSE, sleeptime);
-
-    if(DecrementRef(&icond->wait_count) == 0 && res == WAIT_OBJECT_0+BROADCAST)
-        ResetEvent(icond->events[BROADCAST]);
-    EnterCriticalSection(mtx);
-
-    return (res == WAIT_TIMEOUT) ? althrd_timedout : althrd_success;
-}
-
 void alcnd_destroy(alcnd_t *cond)
 {
     _int_alcnd_t *icond = cond->Ptr;
@@ -412,29 +351,6 @@ int alsem_wait(alsem_t *sem)
 {
     DWORD ret = WaitForSingleObject(*sem, INFINITE);
     if(ret == WAIT_OBJECT_0) return althrd_success;
-    return althrd_error;
-}
-
-int alsem_timedwait(alsem_t *sem, const struct timespec *time_point)
-{
-    struct timespec curtime;
-    DWORD sleeptime, ret;
-
-    if(altimespec_get(&curtime, AL_TIME_UTC) != AL_TIME_UTC)
-        return althrd_error;
-
-    if(curtime.tv_sec > time_point->tv_sec || (curtime.tv_sec == time_point->tv_sec &&
-                                               curtime.tv_nsec >= time_point->tv_nsec))
-        sleeptime = 0;
-    else
-    {
-        sleeptime  = (DWORD)(time_point->tv_sec - curtime.tv_sec)*1000;
-        sleeptime += (time_point->tv_nsec - curtime.tv_nsec + 999999)/1000000;
-    }
-
-    ret = WaitForSingleObject(*sem, sleeptime);
-    if(ret == WAIT_OBJECT_0) return althrd_success;
-    if(ret == WAIT_TIMEOUT) return althrd_timedout;
     return althrd_error;
 }
 
@@ -654,15 +570,9 @@ int almtx_init(almtx_t *mtx, int type)
     int ret;
 
     if(!mtx) return althrd_error;
-#ifdef HAVE_PTHREAD_MUTEX_TIMEDLOCK
-    if((type&~(almtx_recursive|almtx_timed)) != 0)
-        return althrd_error;
-#else
     if((type&~almtx_recursive) != 0)
         return althrd_error;
-#endif
 
-    type &= ~almtx_timed;
     if(type == almtx_plain)
         ret = pthread_mutex_init(mtx, NULL);
     else
@@ -694,20 +604,6 @@ void almtx_destroy(almtx_t *mtx)
     pthread_mutex_destroy(mtx);
 }
 
-int almtx_timedlock(almtx_t *mtx, const struct timespec *ts)
-{
-#ifdef HAVE_PTHREAD_MUTEX_TIMEDLOCK
-    int ret = pthread_mutex_timedlock(mtx, ts);
-    switch(ret)
-    {
-        case 0: return althrd_success;
-        case ETIMEDOUT: return althrd_timedout;
-        case EBUSY: return althrd_busy;
-    }
-#endif
-    return althrd_error;
-}
-
 int alcnd_init(alcnd_t *cond)
 {
     if(pthread_cond_init(cond, NULL) == 0)
@@ -732,13 +628,6 @@ int alcnd_broadcast(alcnd_t *cond)
 int alcnd_wait(alcnd_t *cond, almtx_t *mtx)
 {
     if(pthread_cond_wait(cond, mtx) == 0)
-        return althrd_success;
-    return althrd_error;
-}
-
-int alcnd_timedwait(alcnd_t *cond, almtx_t *mtx, const struct timespec *time_point)
-{
-    if(pthread_cond_timedwait(cond, mtx, time_point) == 0)
         return althrd_success;
     return althrd_error;
 }
@@ -771,14 +660,6 @@ int alsem_post(alsem_t *sem)
 int alsem_wait(alsem_t *sem)
 {
     if(sem_wait(sem) == 0) return althrd_success;
-    if(errno == EINTR) return -2;
-    return althrd_error;
-}
-
-int alsem_timedwait(alsem_t *sem, const struct timespec *time_point)
-{
-    if(sem_timedwait(sem, time_point) == 0) return althrd_success;
-    if(errno == ETIMEDOUT) return althrd_timedout;
     if(errno == EINTR) return -2;
     return althrd_error;
 }

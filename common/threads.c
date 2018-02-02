@@ -751,8 +751,8 @@ void alcnd_destroy(alcnd_t *cond)
 
 int alsem_init(alsem_t *sem, unsigned int initial)
 {
-    int ret = sem_init(sem, 0, initial);
-    if(ret == 0) return althrd_success;
+    if(sem_init(sem, 0, initial) == 0)
+        return althrd_success;
     return althrd_error;
 }
 
@@ -763,23 +763,21 @@ void alsem_destroy(alsem_t *sem)
 
 int alsem_post(alsem_t *sem)
 {
-    int ret = sem_post(sem);
-    if(ret == 0) return althrd_success;
+    if(sem_post(sem) == 0)
+        return althrd_success;
     return althrd_error;
 }
 
 int alsem_wait(alsem_t *sem)
 {
-    int ret = sem_wait(sem);
-    if(ret == 0) return althrd_success;
+    if(sem_wait(sem) == 0) return althrd_success;
     if(errno == EINTR) return -2;
     return althrd_error;
 }
 
 int alsem_timedwait(alsem_t *sem, const struct timespec *time_point)
 {
-    int ret = sem_timedwait(sem, time_point);
-    if(ret == 0) return althrd_success;
+    if(sem_timedwait(sem, time_point) == 0) return althrd_success;
     if(errno == ETIMEDOUT) return althrd_timedout;
     if(errno == EINTR) return -2;
     return althrd_error;

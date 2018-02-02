@@ -389,6 +389,56 @@ void alcnd_destroy(alcnd_t *cond)
 #endif /* defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x0600 */
 
 
+int alsem_init(alsem_t *sem, unsigned int initial)
+{
+    *sem = CreateSemaphore(NULL, initial, INT_MAX, NULL);
+    if(*sem != NULL) return althrd_success;
+    return althrd_error;
+}
+
+void alsem_destroy(alsem_t *sem)
+{
+    CloseHandle(*sem);
+}
+
+int alsem_post(alsem_t *sem)
+{
+    DWORD ret = ReleaseSemaphore(*sem, 1, NULL);
+    if(ret) return althrd_success;
+    return althrd_error;
+}
+
+int alsem_wait(alsem_t *sem)
+{
+    DWORD ret = WaitForSingleObject(*sem, INFINITE);
+    if(ret == WAIT_OBJECT_0) return althrd_success;
+    return althrd_error;
+}
+
+int alsem_timedwait(alsem_t *sem, const struct timespec *time_point)
+{
+    struct timespec curtime;
+    DWORD sleeptime, ret;
+
+    if(altimespec_get(&curtime, AL_TIME_UTC) != AL_TIME_UTC)
+        return althrd_error;
+
+    if(curtime.tv_sec > time_point->tv_sec || (curtime.tv_sec == time_point->tv_sec &&
+                                               curtime.tv_nsec >= time_point->tv_nsec))
+        sleeptime = 0;
+    else
+    {
+        sleeptime  = (DWORD)(time_point->tv_sec - curtime.tv_sec)*1000;
+        sleeptime += (time_point->tv_nsec - curtime.tv_nsec + 999999)/1000000;
+    }
+
+    ret = WaitForSingleObject(*sem, sleeptime);
+    if(ret == WAIT_OBJECT_0) return althrd_success;
+    if(ret == WAIT_TIMEOUT) return althrd_timedout;
+    return althrd_error;
+}
+
+
 /* An associative map of uint:void* pairs. The key is the TLS index (given by
  * TlsAlloc), and the value is the altss_dtor_t callback. When a thread exits,
  * we iterate over the TLS indices for their thread-local value and call the
@@ -696,6 +746,43 @@ int alcnd_timedwait(alcnd_t *cond, almtx_t *mtx, const struct timespec *time_poi
 void alcnd_destroy(alcnd_t *cond)
 {
     pthread_cond_destroy(cond);
+}
+
+
+int alsem_init(alsem_t *sem, unsigned int initial)
+{
+    int ret = sem_init(sem, 0, initial);
+    if(ret == 0) return althrd_success;
+    return althrd_error;
+}
+
+void alsem_destroy(alsem_t *sem)
+{
+    sem_destroy(sem);
+}
+
+int alsem_post(alsem_t *sem)
+{
+    int ret = sem_post(sem);
+    if(ret == 0) return althrd_success;
+    return althrd_error;
+}
+
+int alsem_wait(alsem_t *sem)
+{
+    int ret = sem_wait(sem);
+    if(ret == 0) return althrd_success;
+    if(errno == EINTR) return -2;
+    return althrd_error;
+}
+
+int alsem_timedwait(alsem_t *sem, const struct timespec *time_point)
+{
+    int ret = sem_timedwait(sem, time_point);
+    if(ret == 0) return althrd_success;
+    if(errno == ETIMEDOUT) return althrd_timedout;
+    if(errno == EINTR) return -2;
+    return althrd_error;
 }
 
 

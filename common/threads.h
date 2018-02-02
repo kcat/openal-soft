@@ -57,6 +57,7 @@ typedef CONDITION_VARIABLE alcnd_t;
 #else
 typedef struct { void *Ptr; } alcnd_t;
 #endif
+typedef HANDLE alsem_t;
 typedef DWORD altss_t;
 typedef LONG alonce_flag;
 
@@ -127,11 +128,13 @@ inline int altss_set(altss_t tss_id, void *val)
 #include <stdint.h>
 #include <errno.h>
 #include <pthread.h>
+#include <semaphore.h>
 
 
 typedef pthread_t althrd_t;
 typedef pthread_mutex_t almtx_t;
 typedef pthread_cond_t alcnd_t;
+typedef sem_t alsem_t;
 typedef pthread_key_t altss_t;
 typedef pthread_once_t alonce_flag;
 
@@ -232,6 +235,12 @@ int alcnd_broadcast(alcnd_t *cond);
 int alcnd_wait(alcnd_t *cond, almtx_t *mtx);
 int alcnd_timedwait(alcnd_t *cond, almtx_t *mtx, const struct timespec *time_point);
 void alcnd_destroy(alcnd_t *cond);
+
+int alsem_init(alsem_t *sem, unsigned int initial);
+void alsem_destroy(alsem_t *sem);
+int alsem_post(alsem_t *sem);
+int alsem_wait(alsem_t *sem);
+int alsem_timedwait(alsem_t *sem, const struct timespec *time_point);
 
 int altss_create(altss_t *tss_id, altss_dtor_t callback);
 void altss_delete(altss_t tss_id);

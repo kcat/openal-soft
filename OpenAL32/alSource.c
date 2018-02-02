@@ -187,16 +187,16 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
 static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, ALint *values);
 static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, ALint64 *values);
 
-static inline ALvoice *GetSourceVoice(const ALsource *source, const ALCcontext *context)
+static inline ALvoice *GetSourceVoice(ALsource *source, ALCcontext *context)
 {
-    ALvoice **voice = context->Voices;
-    ALvoice **voice_end = voice + context->VoiceCount;
-    while(voice != voice_end)
+    ALint idx = source->VoiceIdx;
+    if(idx >= 0 && idx < context->VoiceCount)
     {
-        if(ATOMIC_LOAD(&(*voice)->Source, almemory_order_acquire) == source)
-            return *voice;
-        ++voice;
+        ALvoice *voice = context->Voices[idx];
+        if(ATOMIC_LOAD(&voice->Source, almemory_order_acquire) == source)
+            return voice;
     }
+    source->VoiceIdx = -1;
     return NULL;
 }
 
@@ -2567,6 +2567,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         ALbufferlistitem *BufferList;
         ALbuffer *buffer = NULL;
         bool start_fading = false;
+        ALint vidx = -1;
         ALsizei s;
 
         source = LookupSource(context, sources[i]);
@@ -2630,12 +2631,13 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         {
             if(ATOMIC_LOAD(&context->Voices[j]->Source, almemory_order_acquire) == NULL)
             {
-                voice = context->Voices[j];
+                vidx = j;
                 break;
             }
         }
-        if(voice == NULL)
-            voice = context->Voices[context->VoiceCount++];
+        if(vidx == -1)
+            vidx = context->VoiceCount++;
+        voice = context->Voices[vidx];
         ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
 
         ATOMIC_FLAG_TEST_AND_SET(&source->PropsClean, almemory_order_acquire);
@@ -2690,6 +2692,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         ATOMIC_STORE(&voice->Source, source, almemory_order_relaxed);
         ATOMIC_STORE(&voice->Playing, true, almemory_order_release);
         ATOMIC_STORE(&source->state, AL_PLAYING, almemory_order_release);
+        source->VoiceIdx = vidx;
     finish_play:
         WriteUnlock(&source->queue_lock);
     }
@@ -3163,6 +3166,8 @@ static void InitSourceParams(ALsource *Source, ALsizei num_sends)
      * ignore the test.
      */
     ATOMIC_FLAG_TEST_AND_SET(&Source->PropsClean, almemory_order_relaxed);
+
+    Source->VoiceIdx = -1;
 }
 
 static void DeinitSource(ALsource *source, ALsizei num_sends)

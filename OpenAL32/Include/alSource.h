@@ -100,6 +100,11 @@ typedef struct ALsource {
 
     ATOMIC_FLAG PropsClean;
 
+    /* Index into the context's Voices array. Lazily updated, only checked and
+     * reset when looking up the voice.
+     */
+    ALint VoiceIdx;
+
     /** Self ID */
     ALuint id;
 } ALsource;

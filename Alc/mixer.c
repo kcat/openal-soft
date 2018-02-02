@@ -698,21 +698,45 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
         Counter = maxi(DstBufferSize, Counter) - DstBufferSize;
         firstpass = false;
 
-        /* Handle looping source position */
-        if(isstatic && BufferLoopItem)
+        if(isstatic)
         {
-            const ALbuffer *Buffer = BufferListItem->buffers[0];
-            ALsizei LoopStart = Buffer->LoopStart;
-            ALsizei LoopEnd = Buffer->LoopEnd;
-            if(DataPosInt >= LoopEnd)
+            if(BufferLoopItem)
             {
-                assert(LoopEnd > LoopStart);
-                DataPosInt = ((DataPosInt-LoopStart)%(LoopEnd-LoopStart)) + LoopStart;
+                /* Handle looping static source */
+                const ALbuffer *Buffer = BufferListItem->buffers[0];
+                ALsizei LoopStart = Buffer->LoopStart;
+                ALsizei LoopEnd = Buffer->LoopEnd;
+                if(DataPosInt >= LoopEnd)
+                {
+                    assert(LoopEnd > LoopStart);
+                    DataPosInt = ((DataPosInt-LoopStart)%(LoopEnd-LoopStart)) + LoopStart;
+                }
+            }
+            else
+            {
+                /* Handle non-looping static source */
+                ALsizei CompLen = 0;
+                ALsizei i;
+
+                for(i = 0;i < BufferListItem->num_buffers;i++)
+                {
+                    const ALbuffer *buffer = BufferListItem->buffers[i];
+                    if(buffer) CompLen = maxi(CompLen, buffer->SampleLen);
+                }
+
+                if(DataPosInt >= CompLen)
+                {
+                    isplaying = false;
+                    BufferListItem = NULL;
+                    DataPosInt = 0;
+                    DataPosFrac = 0;
+                    break;
+                }
             }
         }
         else while(1)
         {
-            /* Handle non-looping or buffer queue source position */
+            /* Handle streaming source */
             ALsizei CompLen = 0;
             ALsizei i;
 
@@ -746,6 +770,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
     ATOMIC_STORE(&voice->position_fraction, DataPosFrac, almemory_order_relaxed);
     ATOMIC_STORE(&voice->current_buffer,    BufferListItem, almemory_order_release);
 
+    /* Send any events now, after the position/buffer info was updated. */
     enabledevt = ATOMIC_LOAD(&Context->EnabledEvts, almemory_order_acquire);
     if(buffers_done > 0 && (enabledevt&EventType_BufferCompleted))
     {

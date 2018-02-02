@@ -146,7 +146,7 @@ typedef struct ALCopenslPlayback {
     SLObjectItf mBufferQueueObj;
 
     ll_ringbuffer_t *mRing;
-    alcnd_t mCond;
+    alsem_t mSem;
 
     ALsizei mFrameSize;
 
@@ -184,7 +184,7 @@ static void ALCopenslPlayback_Construct(ALCopenslPlayback *self, ALCdevice *devi
     self->mBufferQueueObj = NULL;
 
     self->mRing = NULL;
-    alcnd_init(&self->mCond);
+    alsem_init(&self->mSem, 0);
 
     self->mFrameSize = 0;
 
@@ -206,7 +206,7 @@ static void ALCopenslPlayback_Destruct(ALCopenslPlayback* self)
     self->mEngineObj = NULL;
     self->mEngine = NULL;
 
-    alcnd_destroy(&self->mCond);
+    alsem_destroy(&self->mSem);
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
@@ -227,7 +227,7 @@ static void ALCopenslPlayback_process(SLAndroidSimpleBufferQueueItf UNUSED(bq), 
      */
     ll_ringbuffer_read_advance(self->mRing, 1);
 
-    alcnd_signal(&self->mCond);
+    alsem_post(&self->mSem);
 }
 
 
@@ -287,24 +287,11 @@ static int ALCopenslPlayback_mixerProc(void *arg)
                 break;
             }
 
-            /* NOTE: Unfortunately, there is an unavoidable race condition
-             * here. It's possible for the process() method to run, updating
-             * the read pointer and signaling the condition variable, in
-             * between checking the write size and waiting for the condition
-             * variable here. This will cause alcnd_wait to wait until the
-             * *next* process() invocation signals the condition variable
-             * again.
-             *
-             * However, this should only happen if the mixer is running behind
-             * anyway (as ideally we'll be asleep in alcnd_wait by the time the
-             * process() method is invoked), so this behavior is not completely
-             * unwarranted. It's unfortunate since it'll be wasting time
-             * sleeping that could be used to catch up, but there's no way
-             * around it without blocking in the process() method.
-             */
             if(ll_ringbuffer_write_space(self->mRing) <= padding)
             {
-                alcnd_wait(&self->mCond, &STATIC_CAST(ALCbackend,self)->mMutex);
+                ALCopenslPlayback_unlock(self);
+                alsem_wait(&self->mSem);
+                ALCopenslPlayback_lock(self);
                 continue;
             }
         }
@@ -623,14 +610,7 @@ static void ALCopenslPlayback_stop(ALCopenslPlayback *self)
     if(ATOMIC_EXCHANGE_SEQ(&self->mKillNow, AL_TRUE))
         return;
 
-    /* Lock the backend to ensure we don't flag the mixer to die and signal the
-     * mixer to wake up in between it checking the flag and going to sleep and
-     * wait for a wakeup (potentially leading to it never waking back up to see
-     * the flag).
-     */
-    ALCopenslPlayback_lock(self);
-    ALCopenslPlayback_unlock(self);
-    alcnd_signal(&self->mCond);
+    alsem_post(&self->mSem);
     althrd_join(self->mThread, &res);
 
     result = VCALL(self->mBufferQueueObj,GetInterface)(SL_IID_PLAY, &player);

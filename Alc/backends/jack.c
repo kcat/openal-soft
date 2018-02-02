@@ -150,7 +150,7 @@ typedef struct ALCjackPlayback {
     jack_port_t *Port[MAX_OUTPUT_CHANNELS];
 
     ll_ringbuffer_t *Ring;
-    alcnd_t Cond;
+    alsem_t Sem;
 
     volatile int killNow;
     althrd_t thread;
@@ -184,7 +184,7 @@ static void ALCjackPlayback_Construct(ALCjackPlayback *self, ALCdevice *device)
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCjackPlayback, ALCbackend, self);
 
-    alcnd_init(&self->Cond);
+    alsem_init(&self->Sem, 0);
 
     self->Client = NULL;
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
@@ -210,7 +210,7 @@ static void ALCjackPlayback_Destruct(ALCjackPlayback *self)
         self->Client = NULL;
     }
 
-    alcnd_destroy(&self->Cond);
+    alsem_destroy(&self->Sem);
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
@@ -287,7 +287,7 @@ static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
     }
 
     ll_ringbuffer_read_advance(self->Ring, total);
-    alcnd_signal(&self->Cond);
+    alsem_post(&self->Sem);
 
     if(numframes > total)
     {
@@ -316,23 +316,11 @@ static int ALCjackPlayback_mixerProc(void *arg)
     {
         ALuint todo, len1, len2;
 
-        /* NOTE: Unfortunately, there is an unavoidable race condition here.
-         * It's possible for the process() method to run, updating the read
-         * pointer and signaling the condition variable, in between the mixer
-         * loop checking the write size and waiting for the condition variable.
-         * This will cause the mixer loop to wait until the *next* process()
-         * invocation, most likely writing silence for it.
-         *
-         * However, this should only happen if the mixer is running behind
-         * anyway (as ideally we'll be asleep in alcnd_wait by the time the
-         * process() method is invoked), so this behavior is not unwarranted.
-         * It's unfortunate since it'll be wasting time sleeping that could be
-         * used to catch up, but there's no way around it without blocking in
-         * the process() method.
-         */
         if(ll_ringbuffer_write_space(self->Ring) < device->UpdateSize)
         {
-            alcnd_wait(&self->Cond, &STATIC_CAST(ALCbackend,self)->mMutex);
+            ALCjackPlayback_unlock(self);
+            alsem_wait(&self->Sem);
+            ALCjackPlayback_lock(self);
             continue;
         }
 
@@ -509,13 +497,7 @@ static void ALCjackPlayback_stop(ALCjackPlayback *self)
         return;
 
     self->killNow = 1;
-    /* Lock the backend to ensure we don't flag the mixer to die and signal the
-     * mixer to wake up in between it checking the flag and going to sleep and
-     * wait for a wakeup (potentially leading to it never waking back up to see
-     * the flag). */
-    ALCjackPlayback_lock(self);
-    ALCjackPlayback_unlock(self);
-    alcnd_signal(&self->Cond);
+    alsem_post(&self->Sem);
     althrd_join(self->thread, &res);
 
     jack_deactivate(self->Client);

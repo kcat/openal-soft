@@ -675,7 +675,7 @@ struct ALCcontext_struct {
 
     almtx_t EventThrdLock;
     althrd_t EventThread;
-    alcnd_t EventCnd;
+    alsem_t EventSem;
     struct ll_ringbuffer *AsyncEvents;
     ATOMIC(ALbitfieldSOFT) EnabledEvts;
     almtx_t EventCbLock;

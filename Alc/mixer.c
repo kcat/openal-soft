@@ -754,7 +754,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                 AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, SourceID, 0, "Buffer completed"
             );
         } while(--buffers_done > 0);
-        alcnd_signal(&Context->EventCnd);
+        alsem_post(&Context->EventSem);
     }
 
     return isplaying;

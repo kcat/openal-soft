@@ -13,7 +13,6 @@ static int EventThread(void *arg)
 {
     ALCcontext *context = arg;
 
-    almtx_lock(&context->EventCbLock);
     while(1)
     {
         AsyncEvent evt;
@@ -21,30 +20,19 @@ static int EventThread(void *arg)
 
         if(ll_ringbuffer_read_space(context->AsyncEvents) == 0)
         {
-            /* Wait 50ms before checking again. Because events are delivered
-             * asynchronously by the mixer, it's possible for one to be written
-             * in between checking for a readable element and sleeping. So to
-             * ensure events don't get left to go stale in the ringbuffer, we
-             * need to keep checking regardless of being signaled.
-             */
-            struct timespec ts;
-            altimespec_get(&ts, AL_TIME_UTC);
-            ts.tv_nsec += 50000000;
-            ts.tv_sec += ts.tv_nsec/1000000000;
-            ts.tv_nsec %= 1000000000;
-            alcnd_timedwait(&context->EventCnd, &context->EventCbLock, &ts);
+            alsem_wait(&context->EventSem);
             continue;
         }
         ll_ringbuffer_read(context->AsyncEvents, (char*)&evt, 1);
         if(!evt.EnumType) break;
 
-        /* Should check the actual type is enabled here too. */
+        almtx_lock(&context->EventCbLock);
         enabledevts = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_acquire);
         if(context->EventCb && (enabledevts&evt.EnumType) == evt.EnumType)
             context->EventCb(evt.Type, evt.ObjectId, evt.Param, (ALsizei)strlen(evt.Message),
                              evt.Message, context->EventParam);
+        almtx_unlock(&context->EventCbLock);
     }
-    almtx_unlock(&context->EventCbLock);
     return 0;
 }
 
@@ -114,6 +102,7 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
             while(ll_ringbuffer_write_space(context->AsyncEvents) == 0)
                 althrd_yield();
             ll_ringbuffer_write(context->AsyncEvents, (const char*)&kill_evt, 1);
+            alsem_post(&context->EventSem);
             althrd_join(context->EventThread, NULL);
         }
         else

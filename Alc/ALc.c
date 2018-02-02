@@ -2613,7 +2613,7 @@ static ALvoid InitContext(ALCcontext *Context)
     ATOMIC_FLAG_TEST_AND_SET(&Context->PropsClean, almemory_order_relaxed);
     ATOMIC_INIT(&Context->DeferUpdates, AL_FALSE);
     almtx_init(&Context->EventThrdLock, almtx_plain);
-    alcnd_init(&Context->EventCnd);
+    alsem_init(&Context->EventSem, 0);
     Context->AsyncEvents = NULL;
     ATOMIC_INIT(&Context->EnabledEvts, 0);
     almtx_init(&Context->EventCbLock, almtx_plain);
@@ -2753,12 +2753,13 @@ static void FreeContext(ALCcontext *context)
         while(ll_ringbuffer_write_space(context->AsyncEvents) == 0)
             althrd_yield();
         ll_ringbuffer_write(context->AsyncEvents, (const char*)&kill_evt, 1);
+        alsem_post(&context->EventSem);
         althrd_join(context->EventThread, NULL);
     }
 
     almtx_destroy(&context->EventCbLock);
     almtx_destroy(&context->EventThrdLock);
-    alcnd_destroy(&context->EventCnd);
+    alsem_destroy(&context->EventSem);
 
     ll_ringbuffer_free(context->AsyncEvents);
     context->AsyncEvents = NULL;

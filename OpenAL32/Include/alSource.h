@@ -95,7 +95,6 @@ typedef struct ALsource {
     ATOMIC(ALenum) state;
 
     /** Source Buffer Queue head. */
-    RWLock queue_lock;
     ALbufferlistitem *queue;
 
     ATOMIC_FLAG PropsClean;

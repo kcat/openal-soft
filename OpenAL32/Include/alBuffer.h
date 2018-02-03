@@ -102,8 +102,6 @@ typedef struct ALbuffer {
     /* Number of times buffer was attached to a source (deletion can only occur when 0) */
     RefCount ref;
 
-    RWLock lock;
-
     /* Self ID */
     ALuint id;
 } ALbuffer;

@@ -192,11 +192,7 @@ AL_API void AL_APIENTRY alBufferStorageSOFT(ALuint buffer, ALenum format, const 
     else if(UNLIKELY(DecomposeUserFormat(format, &srcchannels, &srctype) == AL_FALSE))
         alSetError(context, AL_INVALID_ENUM, "Invalid format 0x%04x", format);
     else
-    {
-        WriteLock(&albuf->lock);
         LoadData(context, albuf, freq, size, srcchannels, srctype, data, flags);
-        WriteUnlock(&albuf->lock);
-    }
 
     UnlockBufferList(device);
     ALCcontext_DecRef(context);
@@ -223,9 +219,7 @@ AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei 
                    buffer);
     else
     {
-        ALbitfieldSOFT unavailable;
-        WriteLock(&albuf->lock);
-        unavailable = (albuf->Access^access) & access;
+        ALbitfieldSOFT unavailable = (albuf->Access^access) & access;
         if(UNLIKELY(ReadRef(&albuf->ref) != 0 && !(access&AL_MAP_PERSISTENT_BIT_SOFT)))
             alSetError(context, AL_INVALID_OPERATION,
                        "Mapping in-use buffer %u without persistent mapping", buffer);
@@ -251,8 +245,6 @@ AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei 
             albuf->MappedOffset = offset;
             albuf->MappedSize = length;
         }
-
-        WriteUnlock(&albuf->lock);
     }
     UnlockBufferList(device);
 
@@ -273,18 +265,13 @@ AL_API void AL_APIENTRY alUnmapBufferSOFT(ALuint buffer)
     LockBufferList(device);
     if((albuf=LookupBuffer(device, buffer)) == NULL)
         alSetError(context, AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    else if(albuf->MappedAccess == 0)
+        alSetError(context, AL_INVALID_OPERATION, "Unmapping unmapped buffer %u", buffer);
     else
     {
-        WriteLock(&albuf->lock);
-        if(albuf->MappedAccess == 0)
-            alSetError(context, AL_INVALID_OPERATION, "Unmapping unmapped buffer %u", buffer);
-        else
-        {
-            albuf->MappedAccess = 0;
-            albuf->MappedOffset = 0;
-            albuf->MappedSize = 0;
-        }
-        WriteUnlock(&albuf->lock);
+        albuf->MappedAccess = 0;
+        albuf->MappedOffset = 0;
+        albuf->MappedSize = 0;
     }
     UnlockBufferList(device);
 
@@ -304,27 +291,22 @@ AL_API void AL_APIENTRY alFlushMappedBufferSOFT(ALuint buffer, ALsizei offset, A
     LockBufferList(device);
     if(UNLIKELY((albuf=LookupBuffer(device, buffer)) == NULL))
         alSetError(context, AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    else if(UNLIKELY(!(albuf->MappedAccess&AL_MAP_WRITE_BIT_SOFT)))
+        alSetError(context, AL_INVALID_OPERATION,
+                   "Flushing buffer %u while not mapped for writing", buffer);
+    else if(UNLIKELY(offset < albuf->MappedOffset ||
+                     offset >= albuf->MappedOffset+albuf->MappedSize ||
+                     length <= 0 || length > albuf->MappedOffset+albuf->MappedSize-offset))
+        alSetError(context, AL_INVALID_VALUE, "Flushing invalid range %d+%d on buffer %u",
+                   offset, length, buffer);
     else
     {
-        WriteLock(&albuf->lock);
-        if(UNLIKELY(!(albuf->MappedAccess&AL_MAP_WRITE_BIT_SOFT)))
-            alSetError(context, AL_INVALID_OPERATION,
-                       "Flushing buffer %u while not mapped for writing", buffer);
-        else if(UNLIKELY(offset < albuf->MappedOffset ||
-                         offset >= albuf->MappedOffset+albuf->MappedSize ||
-                         length <= 0 || length > albuf->MappedOffset+albuf->MappedSize-offset))
-            alSetError(context, AL_INVALID_VALUE, "Flushing invalid range %d+%d on buffer %u",
-                       offset, length, buffer);
-        else
-        {
-            /* FIXME: Need to use some method of double-buffering for the mixer
-             * and app to hold separate memory, which can be safely transfered
-             * asynchronously. Currently we just say the app shouldn't write
-             * where OpenAL's reading, and hope for the best...
-             */
-            ATOMIC_THREAD_FENCE(almemory_order_seq_cst);
-        }
-        WriteUnlock(&albuf->lock);
+        /* FIXME: Need to use some method of double-buffering for the mixer and
+         * app to hold separate memory, which can be safely transfered
+         * asynchronously. Currently we just say the app shouldn't write where
+         * OpenAL's reading, and hope for the best...
+         */
+        ATOMIC_THREAD_FENCE(almemory_order_seq_cst);
     }
     UnlockBufferList(device);
 
@@ -356,7 +338,6 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
         ALsizei num_chans;
         void *dst;
 
-        WriteLock(&albuf->lock);
         unpack_align = ATOMIC_LOAD_SEQ(&albuf->UnpackAlign);
         align = SanitizeAlignment(srctype, unpack_align);
         if(UNLIKELY(align < 1))
@@ -412,8 +393,6 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
                 }
             }
         }
-
-        WriteUnlock(&albuf->lock);
     }
     UnlockBufferList(device);
 
@@ -638,7 +617,6 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum param, const ALint *val
     else switch(param)
     {
     case AL_LOOP_POINTS_SOFT:
-        WriteLock(&albuf->lock);
         if(UNLIKELY(ReadRef(&albuf->ref) != 0))
             alSetError(context, AL_INVALID_OPERATION, "Modifying in-use buffer %u's loop points",
                        buffer);
@@ -650,7 +628,6 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum param, const ALint *val
             albuf->LoopStart = values[0];
             albuf->LoopEnd = values[1];
         }
-        WriteUnlock(&albuf->lock);
         break;
 
     default:
@@ -776,10 +753,8 @@ AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum param, ALint *value
         break;
 
     case AL_SIZE:
-        ReadLock(&albuf->lock);
         *value = albuf->SampleLen * FrameSizeFromFmt(albuf->FmtChannels,
                                                      albuf->FmtType);
-        ReadUnlock(&albuf->lock);
         break;
 
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
@@ -857,10 +832,8 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum param, ALint *values
     else switch(param)
     {
     case AL_LOOP_POINTS_SOFT:
-        ReadLock(&albuf->lock);
         values[0] = albuf->LoopStart;
         values[1] = albuf->LoopEnd;
-        ReadUnlock(&albuf->lock);
         break;
 
     default:
@@ -1279,7 +1252,6 @@ static ALbuffer *AllocBuffer(ALCcontext *context)
     }
 
     memset(buffer, 0, sizeof(*buffer));
-    RWLockInit(&buffer->lock);
 
     /* Add 1 to avoid buffer ID 0. */
     buffer->id = ((lidx<<6) | slidx) + 1;

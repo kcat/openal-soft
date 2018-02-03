@@ -117,7 +117,7 @@ static int ALCsndioBackend_mixerProc(void *ptr)
             {
                 ERR("sio_write failed\n");
                 ALCdevice_Lock(device);
-                aluHandleDisconnect(device);
+                aluHandleDisconnect(device, "Failed to write playback samples");
                 ALCdevice_Unlock(device);
                 break;
             }

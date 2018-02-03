@@ -135,7 +135,7 @@ static int ALCsolarisBackend_mixerProc(void *ptr)
             if(errno == EINTR)
                 continue;
             ERR("select failed: %s\n", strerror(errno));
-            aluHandleDisconnect(device);
+            aluHandleDisconnect(device, "Failed to wait for playback buffer: %s", strerror(errno));
             break;
         }
         else if(sret == 0)
@@ -155,7 +155,8 @@ static int ALCsolarisBackend_mixerProc(void *ptr)
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
                     continue;
                 ERR("write failed: %s\n", strerror(errno));
-                aluHandleDisconnect(device);
+                aluHandleDisconnect(device, "Failed to write playback samples: %s",
+                                    strerror(errno));
                 break;
             }
 

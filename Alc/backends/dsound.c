@@ -267,7 +267,7 @@ FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(void *ptr)
     {
         ERR("Failed to get buffer caps: 0x%lx\n", err);
         ALCdevice_Lock(device);
-        aluHandleDisconnect(device);
+        aluHandleDisconnect(device, "Failure retrieving playback buffer info: 0x%lx", err);
         ALCdevice_Unlock(device);
         return 1;
     }
@@ -291,7 +291,7 @@ FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(void *ptr)
                 {
                     ERR("Failed to play buffer: 0x%lx\n", err);
                     ALCdevice_Lock(device);
-                    aluHandleDisconnect(device);
+                    aluHandleDisconnect(device, "Failure starting playback: 0x%lx", err);
                     ALCdevice_Unlock(device);
                     return 1;
                 }
@@ -339,7 +339,7 @@ FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(void *ptr)
         {
             ERR("Buffer lock error: %#lx\n", err);
             ALCdevice_Lock(device);
-            aluHandleDisconnect(device);
+            aluHandleDisconnect(device, "Failed to lock output buffer: 0x%lx", err);
             ALCdevice_Unlock(device);
             return 1;
         }
@@ -894,7 +894,8 @@ static ALCboolean ALCdsoundCapture_start(ALCdsoundCapture *self)
     if(FAILED(hr))
     {
         ERR("start failed: 0x%08lx\n", hr);
-        aluHandleDisconnect(STATIC_CAST(ALCbackend, self)->mDevice);
+        aluHandleDisconnect(STATIC_CAST(ALCbackend, self)->mDevice,
+                            "Failure starting capture: 0x%lx", hr);
         return ALC_FALSE;
     }
 
@@ -909,7 +910,8 @@ static void ALCdsoundCapture_stop(ALCdsoundCapture *self)
     if(FAILED(hr))
     {
         ERR("stop failed: 0x%08lx\n", hr);
-        aluHandleDisconnect(STATIC_CAST(ALCbackend, self)->mDevice);
+        aluHandleDisconnect(STATIC_CAST(ALCbackend, self)->mDevice,
+                            "Failure stopping capture: 0x%lx", hr);
     }
 }
 
@@ -959,7 +961,7 @@ static ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
     if(FAILED(hr))
     {
         ERR("update failed: 0x%08lx\n", hr);
-        aluHandleDisconnect(device);
+        aluHandleDisconnect(device, "Failure retrieving capture data: 0x%lx", hr);
     }
 
 done:

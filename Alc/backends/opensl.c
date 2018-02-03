@@ -255,7 +255,7 @@ static int ALCopenslPlayback_mixerProc(void *arg)
     if(SL_RESULT_SUCCESS != result)
     {
         ALCopenslPlayback_lock(self);
-        aluHandleDisconnect(device);
+        aluHandleDisconnect(device, "Failed to get playback buffer: 0x%08x", result);
         ALCopenslPlayback_unlock(self);
         return 1;
     }
@@ -283,7 +283,7 @@ static int ALCopenslPlayback_mixerProc(void *arg)
             }
             if(SL_RESULT_SUCCESS != result)
             {
-                aluHandleDisconnect(device);
+                aluHandleDisconnect(device, "Failed to start platback: 0x%08x", result);
                 break;
             }
 
@@ -919,7 +919,8 @@ static ALCboolean ALCopenslCapture_start(ALCopenslCapture *self)
     if(SL_RESULT_SUCCESS != result)
     {
         ALCopenslCapture_lock(self);
-        aluHandleDisconnect(STATIC_CAST(ALCbackend, self)->mDevice);
+        aluHandleDisconnect(STATIC_CAST(ALCbackend, self)->mDevice,
+                            "Failed to start capture: 0x%08x", result);
         ALCopenslCapture_unlock(self);
         return ALC_FALSE;
     }
@@ -1002,7 +1003,7 @@ static ALCenum ALCopenslCapture_captureSamples(ALCopenslCapture *self, ALCvoid *
     if(SL_RESULT_SUCCESS != result)
     {
         ALCopenslCapture_lock(self);
-        aluHandleDisconnect(device);
+        aluHandleDisconnect(device, "Failed to update capture buffer: 0x%08x", result);
         ALCopenslCapture_unlock(self);
         return ALC_INVALID_DEVICE;
     }

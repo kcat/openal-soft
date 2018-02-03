@@ -3810,7 +3810,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         if(err == ALC_INVALID_DEVICE)
         {
             V0(device->Backend,lock)();
-            aluHandleDisconnect(device);
+            aluHandleDisconnect(device, "Device update failure");
             V0(device->Backend,unlock)();
         }
         ALCdevice_DecRef(device);
@@ -4397,7 +4397,7 @@ ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
                 device->Flags |= DEVICE_RUNNING;
             else
             {
-                aluHandleDisconnect(device);
+                aluHandleDisconnect(device, "Device start failure");
                 alcSetError(device, ALC_INVALID_DEVICE);
             }
         }
@@ -4621,10 +4621,10 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device)
                     device->Flags |= DEVICE_RUNNING;
                 else
                 {
-                    alcSetError(device, ALC_INVALID_DEVICE);
                     V0(device->Backend,lock)();
-                    aluHandleDisconnect(device);
+                    aluHandleDisconnect(device, "Device start failure");
                     V0(device->Backend,unlock)();
+                    alcSetError(device, ALC_INVALID_DEVICE);
                 }
             }
         }
@@ -4694,7 +4694,7 @@ ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCi
         if(err == ALC_INVALID_DEVICE)
         {
             V0(device->Backend,lock)();
-            aluHandleDisconnect(device);
+            aluHandleDisconnect(device, "Device start failure");
             V0(device->Backend,unlock)();
         }
         ALCdevice_DecRef(device);

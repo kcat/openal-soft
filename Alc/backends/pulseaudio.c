@@ -650,7 +650,7 @@ static void ALCpulsePlayback_contextStateCallback(pa_context *context, void *pda
     if(pa_context_get_state(context) == PA_CONTEXT_FAILED)
     {
         ERR("Received context failure!\n");
-        aluHandleDisconnect(STATIC_CAST(ALCbackend,self)->mDevice);
+        aluHandleDisconnect(STATIC_CAST(ALCbackend,self)->mDevice, "Playback state failure");
     }
     pa_threaded_mainloop_signal(self->loop, 0);
 }
@@ -661,7 +661,7 @@ static void ALCpulsePlayback_streamStateCallback(pa_stream *stream, void *pdata)
     if(pa_stream_get_state(stream) == PA_STREAM_FAILED)
     {
         ERR("Received stream failure!\n");
-        aluHandleDisconnect(STATIC_CAST(ALCbackend,self)->mDevice);
+        aluHandleDisconnect(STATIC_CAST(ALCbackend,self)->mDevice, "Playback stream failure");
     }
     pa_threaded_mainloop_signal(self->loop, 0);
 }
@@ -835,7 +835,7 @@ static int ALCpulsePlayback_mixerProc(void *ptr)
         if(len < 0)
         {
             ERR("Failed to get writable size: %ld", (long)len);
-            aluHandleDisconnect(device);
+            aluHandleDisconnect(device, "Failed to get writable size: %ld", (long)len);
             break;
         }
 
@@ -1388,7 +1388,7 @@ static void ALCpulseCapture_contextStateCallback(pa_context *context, void *pdat
     if(pa_context_get_state(context) == PA_CONTEXT_FAILED)
     {
         ERR("Received context failure!\n");
-        aluHandleDisconnect(STATIC_CAST(ALCbackend,self)->mDevice);
+        aluHandleDisconnect(STATIC_CAST(ALCbackend,self)->mDevice, "Capture state failure");
     }
     pa_threaded_mainloop_signal(self->loop, 0);
 }
@@ -1399,7 +1399,7 @@ static void ALCpulseCapture_streamStateCallback(pa_stream *stream, void *pdata)
     if(pa_stream_get_state(stream) == PA_STREAM_FAILED)
     {
         ERR("Received stream failure!\n");
-        aluHandleDisconnect(STATIC_CAST(ALCbackend,self)->mDevice);
+        aluHandleDisconnect(STATIC_CAST(ALCbackend,self)->mDevice, "Capture stream failure");
     }
     pa_threaded_mainloop_signal(self->loop, 0);
 }
@@ -1662,14 +1662,15 @@ static ALCenum ALCpulseCapture_captureSamples(ALCpulseCapture *self, ALCvoid *bu
             state = pa_stream_get_state(self->stream);
             if(!PA_STREAM_IS_GOOD(state))
             {
-                aluHandleDisconnect(device);
+                aluHandleDisconnect(device, "Bad capture state: %u", state);
                 break;
             }
             if(pa_stream_peek(self->stream, &self->cap_store, &self->cap_len) < 0)
             {
                 ERR("pa_stream_peek() failed: %s\n",
                     pa_strerror(pa_context_errno(self->context)));
-                aluHandleDisconnect(device);
+                aluHandleDisconnect(device, "Failed retrieving capture samples: %s",
+                                    pa_strerror(pa_context_errno(self->context)));
                 break;
             }
             self->cap_remain = self->cap_len;
@@ -1710,7 +1711,7 @@ static ALCuint ALCpulseCapture_availableSamples(ALCpulseCapture *self)
         if(got < 0)
         {
             ERR("pa_stream_readable_size() failed: %s\n", pa_strerror(got));
-            aluHandleDisconnect(device);
+            aluHandleDisconnect(device, "Failed getting readable size: %s", pa_strerror(got));
         }
         else if((size_t)got > self->cap_len)
             readable += got - self->cap_len;

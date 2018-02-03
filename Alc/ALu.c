@@ -1850,30 +1850,47 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
 }
 
 
-void aluHandleDisconnect(ALCdevice *device)
+void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
 {
     ALCcontext *ctx;
+    AsyncEvent evt;
+    va_list args;
+    int msglen;
 
     device->Connected = ALC_FALSE;
+
+    evt.EnumType = EventType_Disconnected;
+    evt.Type = AL_EVENT_TYPE_DISCONNECTED_SOFT;
+    evt.ObjectId = 0;
+    evt.Param = 0;
+
+    va_start(args, msg);
+    msglen = vsnprintf(evt.Message, sizeof(evt.Message), msg, args);
+    va_end(args);
+
+    if(msglen < 0 || (size_t)msglen >= sizeof(evt.Message))
+    {
+        evt.Message[sizeof(evt.Message)-1] = 0;
+        msglen = (int)strlen(evt.Message);
+    }
+    if(msglen > 0)
+        msg = evt.Message;
+    else
+    {
+        msg = "<internal error constructing message>";
+        msglen = (int)strlen(msg);
+    }
 
     ctx = ATOMIC_LOAD_SEQ(&device->ContextList);
     while(ctx)
     {
         ALsizei i;
 
-        if((ATOMIC_LOAD(&ctx->EnabledEvts, almemory_order_acquire)&EventType_Disconnected))
+        if((ATOMIC_LOAD(&ctx->EnabledEvts, almemory_order_acquire)&EventType_Disconnected) &&
+           ll_ringbuffer_write_space(ctx->AsyncEvents) > 0)
         {
-            AsyncEvent evt;
-            evt.EnumType = EventType_Disconnected;
-            evt.Type = AL_EVENT_TYPE_DISCONNECTED_SOFT;
-            evt.ObjectId = 0;
-            evt.Param = 0;
-            strcpy(evt.Message, "Device disconnected");
-            if(ll_ringbuffer_write_space(ctx->AsyncEvents) > 0)
-            {
-                ll_ringbuffer_write(ctx->AsyncEvents, (const char*)&evt, 1);
-                alsem_post(&ctx->EventSem);
-            }
+            ll_ringbuffer_write(ctx->AsyncEvents, (const char*)&evt, 1);
+            alsem_post(&ctx->EventSem);
         }
 
         for(i = 0;i < ctx->VoiceCount;i++)

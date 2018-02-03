@@ -632,7 +632,7 @@ FORCE_ALIGN static int ALCmmdevPlayback_mixerProc(void *arg)
     {
         ERR("CoInitialize(NULL) failed: 0x%08lx\n", hr);
         V0(device->Backend,lock)();
-        aluHandleDisconnect(device);
+        aluHandleDisconnect(device, "COM init failed: 0x%08lx", hr);
         V0(device->Backend,unlock)();
         return 1;
     }
@@ -649,7 +649,7 @@ FORCE_ALIGN static int ALCmmdevPlayback_mixerProc(void *arg)
         {
             ERR("Failed to get padding: 0x%08lx\n", hr);
             V0(device->Backend,lock)();
-            aluHandleDisconnect(device);
+            aluHandleDisconnect(device, "Failed to retrieve buffer padding: 0x%08lx", hr);
             V0(device->Backend,unlock)();
             break;
         }
@@ -679,7 +679,7 @@ FORCE_ALIGN static int ALCmmdevPlayback_mixerProc(void *arg)
         {
             ERR("Failed to buffer data: 0x%08lx\n", hr);
             V0(device->Backend,lock)();
-            aluHandleDisconnect(device);
+            aluHandleDisconnect(device, "Failed to send playback samples: 0x%08lx", hr);
             V0(device->Backend,unlock)();
             break;
         }
@@ -1326,7 +1326,7 @@ FORCE_ALIGN int ALCmmdevCapture_recordProc(void *arg)
     {
         ERR("CoInitialize(NULL) failed: 0x%08lx\n", hr);
         V0(device->Backend,lock)();
-        aluHandleDisconnect(device);
+        aluHandleDisconnect(device, "COM init failed: 0x%08lx", hr);
         V0(device->Backend,unlock)();
         return 1;
     }
@@ -1415,7 +1415,7 @@ FORCE_ALIGN int ALCmmdevCapture_recordProc(void *arg)
         if(FAILED(hr))
         {
             V0(device->Backend,lock)();
-            aluHandleDisconnect(device);
+            aluHandleDisconnect(device, "Failed to capture samples: 0x%08lx", hr);
             V0(device->Backend,unlock)();
             break;
         }

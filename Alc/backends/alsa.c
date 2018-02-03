@@ -502,7 +502,7 @@ static int ALCplaybackAlsa_mixerProc(void *ptr)
         {
             ERR("Invalid state detected: %s\n", snd_strerror(state));
             ALCplaybackAlsa_lock(self);
-            aluHandleDisconnect(device);
+            aluHandleDisconnect(device, "Bad state: %s", snd_strerror(state));
             ALCplaybackAlsa_unlock(self);
             break;
         }
@@ -592,7 +592,7 @@ static int ALCplaybackAlsa_mixerNoMMapProc(void *ptr)
         {
             ERR("Invalid state detected: %s\n", snd_strerror(state));
             ALCplaybackAlsa_lock(self);
-            aluHandleDisconnect(device);
+            aluHandleDisconnect(device, "Bad state: %s", snd_strerror(state));
             ALCplaybackAlsa_unlock(self);
             break;
         }
@@ -1155,7 +1155,8 @@ static ALCboolean ALCcaptureAlsa_start(ALCcaptureAlsa *self)
     if(err < 0)
     {
         ERR("start failed: %s\n", snd_strerror(err));
-        aluHandleDisconnect(STATIC_CAST(ALCbackend, self)->mDevice);
+        aluHandleDisconnect(STATIC_CAST(ALCbackend, self)->mDevice, "Capture state failure: %s",
+                            snd_strerror(err));
         return ALC_FALSE;
     }
 
@@ -1249,7 +1250,7 @@ static ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buff
             if(amt < 0)
             {
                 ERR("restore error: %s\n", snd_strerror(amt));
-                aluHandleDisconnect(device);
+                aluHandleDisconnect(device, "Capture recovery failure: %s", snd_strerror(amt));
                 break;
             }
             /* If the amount available is less than what's asked, we lost it
@@ -1290,7 +1291,7 @@ static ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self)
         if(avail < 0)
         {
             ERR("restore error: %s\n", snd_strerror(avail));
-            aluHandleDisconnect(device);
+            aluHandleDisconnect(device, "Capture recovery failure: %s", snd_strerror(avail));
         }
     }
 
@@ -1329,7 +1330,7 @@ static ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self)
             if(amt < 0)
             {
                 ERR("restore error: %s\n", snd_strerror(amt));
-                aluHandleDisconnect(device);
+                aluHandleDisconnect(device, "Capture recovery failure: %s", snd_strerror(amt));
                 break;
             }
             avail = amt;

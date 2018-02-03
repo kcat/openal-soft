@@ -204,7 +204,7 @@ static int ALCwaveBackend_mixerProc(void *ptr)
             {
                 ERR("Error writing to file\n");
                 ALCdevice_Lock(device);
-                aluHandleDisconnect(device);
+                aluHandleDisconnect(device, "Failed to write playback samples");
                 ALCdevice_Unlock(device);
                 break;
             }

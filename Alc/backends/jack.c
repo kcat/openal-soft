@@ -241,7 +241,7 @@ static int ALCjackPlayback_bufferSizeNotify(jack_nframes_t numframes, void *arg)
     if(!self->Ring)
     {
         ERR("Failed to reallocate ringbuffer\n");
-        aluHandleDisconnect(device);
+        aluHandleDisconnect(device, "Failed to reallocate %u-sample buffer", bufsize);
     }
     ALCjackPlayback_unlock(self);
     return 0;

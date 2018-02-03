@@ -220,7 +220,7 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
         if(sret == -1)
         {
             ERR("select error: %s\n", strerror(errno));
-            aluHandleDisconnect(device);
+            aluHandleDisconnect(device, "Failed waiting for playback buffer: %s", strerror(errno));
             break;
         }
         if(sret == 0)
@@ -251,7 +251,7 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
                 {
                     if(snd_pcm_plugin_prepare(data->pcmHandle, SND_PCM_CHANNEL_PLAYBACK) < 0)
                     {
-                        aluHandleDisconnect(device);
+                        aluHandleDisconnect(device, "Playback recovery failed");
                         break;
                     }
                 }
@@ -847,7 +847,7 @@ static ALCuint qsa_available_samples(CaptureWrapper *self)
         if ((rstatus=snd_pcm_plugin_prepare(data->pcmHandle, SND_PCM_CHANNEL_CAPTURE))<0)
         {
             ERR("capture prepare failed: %s\n", snd_strerror(rstatus));
-            aluHandleDisconnect(device);
+            aluHandleDisconnect(device, "Failed capture recovery: %s", snd_strerror(rstatus));
             return 0;
         }
 
@@ -890,7 +890,7 @@ static ALCenum qsa_capture_samples(CaptureWrapper *self, ALCvoid *buffer, ALCuin
         switch (selectret)
         {
             case -1:
-                 aluHandleDisconnect(device);
+                 aluHandleDisconnect(device, "Failed to check capture samples");
                  return ALC_INVALID_DEVICE;
             case 0:
                  break;
@@ -921,7 +921,8 @@ static ALCenum qsa_capture_samples(CaptureWrapper *self, ALCvoid *buffer, ALCuin
                 if ((rstatus=snd_pcm_plugin_prepare(data->pcmHandle, SND_PCM_CHANNEL_CAPTURE))<0)
                 {
                     ERR("capture prepare failed: %s\n", snd_strerror(rstatus));
-                    aluHandleDisconnect(device);
+                    aluHandleDisconnect(device, "Failed capture recovery: %s",
+                                        snd_strerror(rstatus));
                     return ALC_INVALID_DEVICE;
                 }
                 snd_pcm_capture_go(data->pcmHandle);

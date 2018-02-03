@@ -299,7 +299,7 @@ static int ALCplaybackOSS_mixerProc(void *ptr)
             if(errno == EINTR)
                 continue;
             ERR("select failed: %s\n", strerror(errno));
-            aluHandleDisconnect(device);
+            aluHandleDisconnect(device, "Failed waiting for playback buffer: %s", strerror(errno));
             break;
         }
         else if(sret == 0)
@@ -319,7 +319,8 @@ static int ALCplaybackOSS_mixerProc(void *ptr)
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
                     continue;
                 ERR("write failed: %s\n", strerror(errno));
-                aluHandleDisconnect(device);
+                aluHandleDisconnect(device, "Failed writing playback samples: %s",
+                                    strerror(errno));
                 break;
             }
 
@@ -566,7 +567,7 @@ static int ALCcaptureOSS_recordProc(void *ptr)
             if(errno == EINTR)
                 continue;
             ERR("select failed: %s\n", strerror(errno));
-            aluHandleDisconnect(device);
+            aluHandleDisconnect(device, "Failed to check capture samples: %s", strerror(errno));
             break;
         }
         else if(sret == 0)
@@ -583,7 +584,7 @@ static int ALCcaptureOSS_recordProc(void *ptr)
             {
                 ERR("read failed: %s\n", strerror(errno));
                 ALCcaptureOSS_lock(self);
-                aluHandleDisconnect(device);
+                aluHandleDisconnect(device, "Failed reading capture samples: %s", strerror(errno));
                 ALCcaptureOSS_unlock(self);
                 break;
             }

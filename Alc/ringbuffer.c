@@ -22,6 +22,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
 
 #include "ringbuffer.h"
 #include "align.h"

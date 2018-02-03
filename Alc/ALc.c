@@ -32,7 +32,6 @@
 #include "alMain.h"
 #include "alSource.h"
 #include "alListener.h"
-#include "alThunk.h"
 #include "alSource.h"
 #include "alBuffer.h"
 #include "alAuxEffectSlot.h"
@@ -882,8 +881,6 @@ static void alc_init(void)
 
     ret = almtx_init(&ListLock, almtx_recursive);
     assert(ret == althrd_success);
-
-    ThunkInit();
 }
 
 static void alc_initconfig(void)
@@ -1237,7 +1234,6 @@ static void alc_deinit_safe(void)
     FreeHrtfs();
     FreeALConfig();
 
-    ThunkExit();
     almtx_destroy(&ListLock);
     altss_delete(LocalContext);
 

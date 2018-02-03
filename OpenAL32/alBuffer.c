@@ -32,7 +32,6 @@
 #include "alu.h"
 #include "alError.h"
 #include "alBuffer.h"
-#include "alThunk.h"
 #include "sample_cvt.h"
 
 

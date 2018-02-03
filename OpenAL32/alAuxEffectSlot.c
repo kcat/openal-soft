@@ -27,7 +27,6 @@
 #include "AL/alc.h"
 #include "alMain.h"
 #include "alAuxEffectSlot.h"
-#include "alThunk.h"
 #include "alError.h"
 #include "alListener.h"
 #include "alSource.h"

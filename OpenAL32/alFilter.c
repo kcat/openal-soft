@@ -25,7 +25,6 @@
 #include "alMain.h"
 #include "alu.h"
 #include "alFilter.h"
-#include "alThunk.h"
 #include "alError.h"
 
 

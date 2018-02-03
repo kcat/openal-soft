@@ -31,7 +31,6 @@
 #include "alError.h"
 #include "alSource.h"
 #include "alBuffer.h"
-#include "alThunk.h"
 #include "alAuxEffectSlot.h"
 
 #include "backends/base.h"

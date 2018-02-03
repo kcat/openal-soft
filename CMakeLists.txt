@@ -707,7 +707,6 @@ SET(OPENAL_OBJS  OpenAL32/alAuxEffectSlot.c
                  OpenAL32/alListener.c
                  OpenAL32/alSource.c
                  OpenAL32/alState.c
-                 OpenAL32/alThunk.c
                  OpenAL32/event.c
                  OpenAL32/sample_cvt.c
 )

@@ -28,7 +28,6 @@
 #include "AL/alc.h"
 #include "alMain.h"
 #include "alEffect.h"
-#include "alThunk.h"
 #include "alError.h"
 
 

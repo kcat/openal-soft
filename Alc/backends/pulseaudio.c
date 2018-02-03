@@ -876,8 +876,10 @@ static int ALCpulsePlayback_mixerProc(void *ptr)
                 free_func = pa_xfree;
             }
 
-            aluMixData(device, buf, newlen/frame_size);
+            newlen /= frame_size;
+            aluMixData(device, buf, newlen);
 
+            newlen *= frame_size;
             ret = pa_stream_write(self->stream, buf, newlen, free_func, 0, PA_SEEK_RELATIVE);
             if(ret != PA_OK)
             {

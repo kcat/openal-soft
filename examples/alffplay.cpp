@@ -60,6 +60,7 @@ typedef void (AL_APIENTRY*LPALFLUSHMAPPEDBUFFERSOFT)(ALuint buffer, ALsizei offs
 #define AL_EVENT_TYPE_ERROR_SOFT                 0x1224
 #define AL_EVENT_TYPE_PERFORMANCE_SOFT           0x1225
 #define AL_EVENT_TYPE_DEPRECATED_SOFT            0x1226
+#define AL_EVENT_TYPE_DISCONNECTED_SOFT          0x1227
 typedef void (AL_APIENTRY*ALEVENTPROCSOFT)(ALenum eventType, ALuint object, ALuint param,
                                            ALsizei length, const ALchar *message,
                                            void *userParam);
@@ -238,12 +239,13 @@ struct AudioState {
 
     std::mutex mSrcMutex;
     std::condition_variable mSrcCond;
+    std::atomic_flag mConnected;
     ALuint mSource{0};
     std::vector<ALuint> mBuffers;
     ALsizei mBufferIdx{0};
 
     AudioState(MovieState &movie) : mMovie(movie)
-    { }
+    { mConnected.test_and_set(std::memory_order_relaxed); }
     ~AudioState()
     {
         if(mSource)
@@ -703,6 +705,7 @@ void AL_APIENTRY AudioState::EventCallback(ALenum eventType, ALuint object, ALui
         case AL_EVENT_TYPE_ERROR_SOFT: std::cout<< "API error"; break;
         case AL_EVENT_TYPE_PERFORMANCE_SOFT: std::cout<< "Performance"; break;
         case AL_EVENT_TYPE_DEPRECATED_SOFT: std::cout<< "Deprecated"; break;
+        case AL_EVENT_TYPE_DISCONNECTED_SOFT: std::cout<< "Disconnected"; break;
         default: std::cout<< "0x"<<std::hex<<std::setw(4)<<std::setfill('0')<<eventType<<
                              std::dec<<std::setw(0)<<std::setfill(' '); break;
     }
@@ -711,13 +714,23 @@ void AL_APIENTRY AudioState::EventCallback(ALenum eventType, ALuint object, ALui
         "Parameter: "<<param<<'\n'<<
         "Message: "<<std::string(message, length)<<"\n----"<<
         std::endl;
+
+    if(eventType == AL_EVENT_TYPE_DISCONNECTED_SOFT)
+    {
+        { std::lock_guard<std::mutex> lock(self->mSrcMutex);
+            self->mConnected.clear(std::memory_order_release);
+        }
+        std::unique_lock<std::mutex>(self->mSrcMutex).unlock();
+        self->mSrcCond.notify_one();
+    }
 }
 
 int AudioState::handler()
 {
-    const std::array<ALenum,5> types{{
+    const std::array<ALenum,6> types{{
         AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT,
-        AL_EVENT_TYPE_ERROR_SOFT, AL_EVENT_TYPE_PERFORMANCE_SOFT, AL_EVENT_TYPE_DEPRECATED_SOFT
+        AL_EVENT_TYPE_ERROR_SOFT, AL_EVENT_TYPE_PERFORMANCE_SOFT, AL_EVENT_TYPE_DEPRECATED_SOFT,
+        AL_EVENT_TYPE_DISCONNECTED_SOFT
     }};
     std::unique_lock<std::mutex> lock(mSrcMutex);
     milliseconds sleep_time = AudioBufferTime / 3;
@@ -888,7 +901,8 @@ int AudioState::handler()
         }
     }
 
-    while(alGetError() == AL_NO_ERROR && !mMovie.mQuit.load(std::memory_order_relaxed))
+    while(alGetError() == AL_NO_ERROR && !mMovie.mQuit.load(std::memory_order_relaxed) &&
+          mConnected.test_and_set(std::memory_order_relaxed))
     {
         /* First remove any processed buffers. */
         ALint processed;

@@ -1324,7 +1324,9 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
              * clock time with the device latency. Order is important.
              */
             values[0] = GetSourceSecOffset(Source, Context, &srcclock);
+            almtx_lock(&device->BackendLock);
             clocktime = V0(device->Backend,getClockLatency)();
+            almtx_unlock(&device->BackendLock);
             if(srcclock == (ALuint64)clocktime.ClockTime)
                 values[1] = (ALdouble)clocktime.Latency / 1000000000.0;
             else
@@ -1655,7 +1657,9 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
              * clock time with the device latency. Order is important.
              */
             values[0] = GetSourceSampleOffset(Source, Context, &srcclock);
+            almtx_lock(&device->BackendLock);
             clocktime = V0(device->Backend,getClockLatency)();
+            almtx_unlock(&device->BackendLock);
             if(srcclock == (ALuint64)clocktime.ClockTime)
                 values[1] = clocktime.Latency;
             else

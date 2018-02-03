@@ -38,6 +38,7 @@
 #include "uhjfilter.h"
 #include "bformatdec.h"
 #include "static_assert.h"
+#include "ringbuffer.h"
 
 #include "fpu_modes.h"
 #include "cpu_caps.h"
@@ -1859,6 +1860,22 @@ void aluHandleDisconnect(ALCdevice *device)
     while(ctx)
     {
         ALsizei i;
+
+        if((ATOMIC_LOAD(&ctx->EnabledEvts, almemory_order_acquire)&EventType_Disconnected))
+        {
+            AsyncEvent evt;
+            evt.EnumType = EventType_Disconnected;
+            evt.Type = AL_EVENT_TYPE_DISCONNECTED_SOFT;
+            evt.ObjectId = 0;
+            evt.Param = 0;
+            strcpy(evt.Message, "Device disconnected");
+            if(ll_ringbuffer_write_space(ctx->AsyncEvents) > 0)
+            {
+                ll_ringbuffer_write(ctx->AsyncEvents, (const char*)&evt, 1);
+                alsem_post(&ctx->EventSem);
+            }
+        }
+
         for(i = 0;i < ctx->VoiceCount;i++)
         {
             ALvoice *voice = ctx->Voices[i];

@@ -61,6 +61,8 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
             flags |= EventType_Performance;
         else if(types[i] == AL_EVENT_TYPE_DEPRECATED_SOFT)
             flags |= EventType_Deprecated;
+        else if(types[i] == AL_EVENT_TYPE_DISCONNECTED_SOFT)
+            flags |= EventType_Disconnected;
         else
             SETERR_GOTO(context, AL_INVALID_ENUM, done, "Invalid event type 0x%04x", types[i]);
     }

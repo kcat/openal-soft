@@ -150,10 +150,6 @@ typedef enum SourceProp {
     /* AL_EXT_source_distance_model */
     srcDistanceModel = AL_DISTANCE_MODEL,
 
-    srcByteLengthSOFT = AL_BYTE_LENGTH_SOFT,
-    srcSampleLengthSOFT = AL_SAMPLE_LENGTH_SOFT,
-    srcSecLengthSOFT = AL_SEC_LENGTH_SOFT,
-
     /* AL_SOFT_source_latency */
     srcSampleOffsetLatencySOFT = AL_SAMPLE_OFFSET_LATENCY_SOFT,
     srcSecOffsetLatencySOFT = AL_SEC_OFFSET_LATENCY_SOFT,
@@ -270,9 +266,6 @@ static ALint FloatValsByProp(ALenum prop)
         case AL_BUFFERS_QUEUED:
         case AL_BUFFERS_PROCESSED:
         case AL_SOURCE_TYPE:
-        case AL_BYTE_LENGTH_SOFT:
-        case AL_SAMPLE_LENGTH_SOFT:
-        case AL_SEC_LENGTH_SOFT:
         case AL_SOURCE_RADIUS:
         case AL_SOURCE_RESAMPLER_SOFT:
         case AL_SOURCE_SPATIALIZE_SOFT:
@@ -337,9 +330,6 @@ static ALint DoubleValsByProp(ALenum prop)
         case AL_BUFFERS_QUEUED:
         case AL_BUFFERS_PROCESSED:
         case AL_SOURCE_TYPE:
-        case AL_BYTE_LENGTH_SOFT:
-        case AL_SAMPLE_LENGTH_SOFT:
-        case AL_SEC_LENGTH_SOFT:
         case AL_SOURCE_RADIUS:
         case AL_SOURCE_RESAMPLER_SOFT:
         case AL_SOURCE_SPATIALIZE_SOFT:
@@ -405,9 +395,6 @@ static ALint IntValsByProp(ALenum prop)
         case AL_BUFFERS_PROCESSED:
         case AL_SOURCE_TYPE:
         case AL_DIRECT_FILTER:
-        case AL_BYTE_LENGTH_SOFT:
-        case AL_SAMPLE_LENGTH_SOFT:
-        case AL_SEC_LENGTH_SOFT:
         case AL_SOURCE_RADIUS:
         case AL_SOURCE_RESAMPLER_SOFT:
         case AL_SOURCE_SPATIALIZE_SOFT:
@@ -469,9 +456,6 @@ static ALint Int64ValsByProp(ALenum prop)
         case AL_BUFFERS_PROCESSED:
         case AL_SOURCE_TYPE:
         case AL_DIRECT_FILTER:
-        case AL_BYTE_LENGTH_SOFT:
-        case AL_SAMPLE_LENGTH_SOFT:
-        case AL_SEC_LENGTH_SOFT:
         case AL_SOURCE_RADIUS:
         case AL_SOURCE_RESAMPLER_SOFT:
         case AL_SOURCE_SPATIALIZE_SOFT:
@@ -524,9 +508,6 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
 
     switch(prop)
     {
-        case AL_BYTE_LENGTH_SOFT:
-        case AL_SAMPLE_LENGTH_SOFT:
-        case AL_SEC_LENGTH_SOFT:
         case AL_SEC_OFFSET_LATENCY_SOFT:
         case AL_SEC_OFFSET_CLOCK_SOFT:
             /* Query only */
@@ -763,9 +744,6 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_SOURCE_TYPE:
         case AL_BUFFERS_QUEUED:
         case AL_BUFFERS_PROCESSED:
-        case AL_BYTE_LENGTH_SOFT:
-        case AL_SAMPLE_LENGTH_SOFT:
-        case AL_SEC_LENGTH_SOFT:
             /* Query only */
             SETERR_RETURN(Context, AL_INVALID_OPERATION, AL_FALSE,
                           "Setting read-only source property 0x%04x", prop);
@@ -1115,9 +1093,6 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
         case AL_SOURCE_STATE:
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
         case AL_SAMPLE_OFFSET_CLOCK_SOFT:
-        case AL_BYTE_LENGTH_SOFT:
-        case AL_SAMPLE_LENGTH_SOFT:
-        case AL_SEC_LENGTH_SOFT:
             /* Query only */
             SETERR_RETURN(Context, AL_INVALID_OPERATION, AL_FALSE,
                           "Setting read-only source property 0x%04x", prop);
@@ -1214,7 +1189,6 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
 static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, ALdouble *values)
 {
     ALCdevice *device = Context->Device;
-    ALbufferlistitem *BufferList;
     ClockLatency clocktime;
     ALuint64 srcclock;
     ALint ivals[3];
@@ -1282,32 +1256,6 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
 
         case AL_DOPPLER_FACTOR:
             *values = Source->DopplerFactor;
-            return AL_TRUE;
-
-        case AL_SEC_LENGTH_SOFT:
-            if(!(BufferList=Source->queue))
-                *values = 0;
-            else
-            {
-                ALint length = 0;
-                ALsizei freq = 1;
-                do {
-                    ALsizei max_len = 0;
-                    ALsizei i;
-                    for(i = 0;i < BufferList->num_buffers;i++)
-                    {
-                        ALbuffer *buffer = BufferList->buffers[i];
-                        if(buffer && buffer->SampleLen > 0)
-                        {
-                            freq = buffer->Frequency;
-                            max_len = maxi(max_len, buffer->SampleLen);
-                        }
-                    }
-                    length += max_len;
-                    BufferList = ATOMIC_LOAD(&BufferList->next, almemory_order_relaxed);
-                } while(BufferList != NULL);
-                *values = (ALdouble)length / (ALdouble)freq;
-            }
             return AL_TRUE;
 
         case AL_SOURCE_RADIUS:
@@ -1384,8 +1332,6 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:
         case AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO:
         case AL_DIRECT_CHANNELS_SOFT:
-        case AL_BYTE_LENGTH_SOFT:
-        case AL_SAMPLE_LENGTH_SOFT:
         case AL_DISTANCE_MODEL:
         case AL_SOURCE_RESAMPLER_SOFT:
         case AL_SOURCE_SPATIALIZE_SOFT:
@@ -1430,72 +1376,6 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
 
         case AL_SOURCE_STATE:
             *values = GetSourceState(Source, GetSourceVoice(Source, Context));
-            return AL_TRUE;
-
-        case AL_BYTE_LENGTH_SOFT:
-            if(!(BufferList=Source->queue))
-                *values = 0;
-            else
-            {
-                ALint length = 0;
-                do {
-                    ALsizei max_len = 0;
-                    ALsizei i;
-                    for(i = 0;i < BufferList->num_buffers;i++)
-                    {
-                        ALbuffer *buffer = BufferList->buffers[i];
-                        if(buffer && buffer->SampleLen > 0)
-                        {
-                            ALuint byte_align, sample_align;
-                            if(buffer->OriginalType == UserFmtIMA4)
-                            {
-                                ALsizei align = (buffer->OriginalAlign-1)/2 + 4;
-                                byte_align = align * ChannelsFromFmt(buffer->FmtChannels);
-                                sample_align = buffer->OriginalAlign;
-                            }
-                            else if(buffer->OriginalType == UserFmtMSADPCM)
-                            {
-                                ALsizei align = (buffer->OriginalAlign-2)/2 + 7;
-                                byte_align = align * ChannelsFromFmt(buffer->FmtChannels);
-                                sample_align = buffer->OriginalAlign;
-                            }
-                            else
-                            {
-                                ALsizei align = buffer->OriginalAlign;
-                                byte_align = align * ChannelsFromFmt(buffer->FmtChannels);
-                                sample_align = buffer->OriginalAlign;
-                            }
-
-                            max_len = maxi(max_len, buffer->SampleLen / sample_align * byte_align);
-                        }
-                    }
-                    length += max_len;
-
-                    BufferList = ATOMIC_LOAD(&BufferList->next, almemory_order_relaxed);
-                } while(BufferList != NULL);
-                *values = length;
-            }
-            return AL_TRUE;
-
-        case AL_SAMPLE_LENGTH_SOFT:
-            if(!(BufferList=Source->queue))
-                *values = 0;
-            else
-            {
-                ALint length = 0;
-                do {
-                    ALsizei max_len = 0;
-                    ALsizei i;
-                    for(i = 0;i < BufferList->num_buffers;i++)
-                    {
-                        ALbuffer *buffer = BufferList->buffers[i];
-                        if(buffer) max_len = maxi(max_len, buffer->SampleLen);
-                    }
-                    length += max_len;
-                    BufferList = ATOMIC_LOAD(&BufferList->next, almemory_order_relaxed);
-                } while(BufferList != NULL);
-                *values = length;
-            }
             return AL_TRUE;
 
         case AL_BUFFERS_QUEUED:
@@ -1591,7 +1471,6 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_AIR_ABSORPTION_FACTOR:
         case AL_ROOM_ROLLOFF_FACTOR:
         case AL_CONE_OUTER_GAINHF:
-        case AL_SEC_LENGTH_SOFT:
         case AL_SOURCE_RADIUS:
             if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
                 *values = (ALint)dvals[0];
@@ -1696,7 +1575,6 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
         case AL_AIR_ABSORPTION_FACTOR:
         case AL_ROOM_ROLLOFF_FACTOR:
         case AL_CONE_OUTER_GAINHF:
-        case AL_SEC_LENGTH_SOFT:
         case AL_SOURCE_RADIUS:
             if((err=GetSourcedv(Source, Context, prop, dvals)) != AL_FALSE)
                 *values = (ALint64)dvals[0];
@@ -1733,8 +1611,6 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
         case AL_SOURCE_STATE:
         case AL_BUFFERS_QUEUED:
         case AL_BUFFERS_PROCESSED:
-        case AL_BYTE_LENGTH_SOFT:
-        case AL_SAMPLE_LENGTH_SOFT:
         case AL_SOURCE_TYPE:
         case AL_DIRECT_FILTER_GAINHF_AUTO:
         case AL_AUXILIARY_SEND_FILTER_GAIN_AUTO:

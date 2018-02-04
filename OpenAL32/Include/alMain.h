@@ -466,7 +466,7 @@ struct ALCdevice_struct
 {
     RefCount ref;
 
-    ALCboolean Connected;
+    ATOMIC(ALenum) Connected;
     enum DeviceType Type;
 
     ALuint Frequency;

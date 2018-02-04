@@ -266,7 +266,8 @@ static int ALCopenslPlayback_mixerProc(void *arg)
     padding = ll_ringbuffer_write_space(self->mRing) - device->NumUpdates;
 
     ALCopenslPlayback_lock(self);
-    while(ATOMIC_LOAD_SEQ(&self->mKillNow) == AL_FALSE && device->Connected)
+    while(!ATOMIC_LOAD(&self->mKillNow, almemory_order_acquire) &&
+          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         size_t todo, len0, len1;
 

@@ -148,7 +148,7 @@ typedef struct ALCwinmmPlayback {
 
     WAVEFORMATEX Format;
 
-    volatile ALboolean killNow;
+    ATOMIC(ALenum) killNow;
     althrd_t thread;
 } ALCwinmmPlayback;
 
@@ -180,7 +180,7 @@ static void ALCwinmmPlayback_Construct(ALCwinmmPlayback *self, ALCdevice *device
     InitRef(&self->WaveBuffersCommitted, 0);
     self->OutHdl = NULL;
 
-    self->killNow = AL_TRUE;
+    ATOMIC_INIT(&self->killNow, AL_TRUE);
 }
 
 static void ALCwinmmPlayback_Destruct(ALCwinmmPlayback *self)
@@ -224,7 +224,7 @@ FORCE_ALIGN static int ALCwinmmPlayback_mixerProc(void *arg)
         if(msg.message != WOM_DONE)
             continue;
 
-        if(self->killNow)
+        if(ATOMIC_LOAD(&self->killNow, almemory_order_acquire))
         {
             if(ReadRef(&self->WaveBuffersCommitted) == 0)
                 break;
@@ -371,7 +371,7 @@ static ALCboolean ALCwinmmPlayback_start(ALCwinmmPlayback *self)
     ALint BufferSize;
     ALuint i;
 
-    self->killNow = AL_FALSE;
+    ATOMIC_STORE(&self->killNow, AL_FALSE, almemory_order_release);
     if(althrd_create(&self->thread, ALCwinmmPlayback_mixerProc, self) != althrd_success)
         return ALC_FALSE;
 
@@ -402,11 +402,8 @@ static void ALCwinmmPlayback_stop(ALCwinmmPlayback *self)
     void *buffer = NULL;
     int i;
 
-    if(self->killNow)
+    if(ATOMIC_EXCHANGE(&self->killNow, AL_TRUE, almemory_order_acq_rel))
         return;
-
-    // Set flag to stop processing headers
-    self->killNow = AL_TRUE;
     althrd_join(self->thread, &i);
 
     // Release the wave buffers
@@ -433,7 +430,7 @@ typedef struct ALCwinmmCapture {
 
     WAVEFORMATEX Format;
 
-    volatile ALboolean killNow;
+    ATOMIC(ALenum) killNow;
     althrd_t thread;
 } ALCwinmmCapture;
 
@@ -465,7 +462,7 @@ static void ALCwinmmCapture_Construct(ALCwinmmCapture *self, ALCdevice *device)
     InitRef(&self->WaveBuffersCommitted, 0);
     self->InHdl = NULL;
 
-    self->killNow = AL_TRUE;
+    ATOMIC_INIT(&self->killNow, AL_TRUE);
 }
 
 static void ALCwinmmCapture_Destruct(ALCwinmmCapture *self)
@@ -474,9 +471,8 @@ static void ALCwinmmCapture_Destruct(ALCwinmmCapture *self)
     int i;
 
     /* Tell the processing thread to quit and wait for it to do so. */
-    if(!self->killNow)
+    if(!ATOMIC_EXCHANGE(&self->killNow, AL_TRUE, almemory_order_acq_rel))
     {
-        self->killNow = AL_TRUE;
         PostThreadMessage(self->thread, WM_QUIT, 0, 0);
 
         althrd_join(self->thread, &i);
@@ -536,7 +532,7 @@ static int ALCwinmmCapture_captureProc(void *arg)
             continue;
         /* Don't wait for other buffers to finish before quitting. We're
          * closing so we don't need them. */
-        if(self->killNow)
+        if(ATOMIC_LOAD(&self->killNow, almemory_order_acquire))
             break;
 
         WaveHdr = ((WAVEHDR*)msg.lParam);
@@ -656,7 +652,7 @@ static ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *name)
         IncrementRef(&self->WaveBuffersCommitted);
     }
 
-    self->killNow = AL_FALSE;
+    ATOMIC_STORE(&self->killNow, AL_FALSE, almemory_order_release);
     if(althrd_create(&self->thread, ALCwinmmCapture_captureProc, self) != althrd_success)
         goto failure;
 

@@ -472,7 +472,7 @@ typedef struct ALCpulsePlayback {
     pa_stream *stream;
     pa_context *context;
 
-    volatile ALboolean killNow;
+    ATOMIC(ALenum) killNow;
     althrd_t thread;
 } ALCpulsePlayback;
 
@@ -515,6 +515,7 @@ static void ALCpulsePlayback_Construct(ALCpulsePlayback *self, ALCdevice *device
 
     self->loop = NULL;
     AL_STRING_INIT(self->device_name);
+    ATOMIC_INIT(&self->killNow, AL_TRUE);
 }
 
 static void ALCpulsePlayback_Destruct(ALCpulsePlayback *self)
@@ -829,7 +830,8 @@ static int ALCpulsePlayback_mixerProc(void *ptr)
     pa_threaded_mainloop_lock(self->loop);
     frame_size = pa_frame_size(&self->spec);
 
-    while(!self->killNow && device->Connected)
+    while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
+          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         len = pa_stream_writable_size(self->stream);
         if(len < 0)
@@ -1141,7 +1143,7 @@ static ALCboolean ALCpulsePlayback_reset(ALCpulsePlayback *self)
 
 static ALCboolean ALCpulsePlayback_start(ALCpulsePlayback *self)
 {
-    self->killNow = AL_FALSE;
+    ATOMIC_STORE(&self->killNow, AL_FALSE, almemory_order_release);
     if(althrd_create(&self->thread, ALCpulsePlayback_mixerProc, self) != althrd_success)
         return ALC_FALSE;
     return ALC_TRUE;
@@ -1152,10 +1154,9 @@ static void ALCpulsePlayback_stop(ALCpulsePlayback *self)
     pa_operation *o;
     int res;
 
-    if(!self->stream || self->killNow)
+    if(!self->stream || ATOMIC_EXCHANGE(&self->killNow, AL_TRUE, almemory_order_acq_rel))
         return;
 
-    self->killNow = AL_TRUE;
     /* Signal the main loop in case PulseAudio isn't sending us audio requests
      * (e.g. if the device is suspended). We need to lock the mainloop in case
      * the mixer is between checking the killNow flag but before waiting for
@@ -1705,7 +1706,7 @@ static ALCuint ALCpulseCapture_availableSamples(ALCpulseCapture *self)
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
     size_t readable = self->cap_remain;
 
-    if(device->Connected)
+    if(ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         ssize_t got;
         pa_threaded_mainloop_lock(self->loop);

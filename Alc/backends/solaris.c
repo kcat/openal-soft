@@ -120,7 +120,8 @@ static int ALCsolarisBackend_mixerProc(void *ptr)
     frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
 
     ALCsolarisBackend_lock(self);
-    while(!ATOMIC_LOAD_SEQ(&self->killNow) && device->Connected)
+    while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
+          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         FD_ZERO(&wfds);
         FD_SET(self->fd, &wfds);

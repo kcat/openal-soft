@@ -438,7 +438,7 @@ typedef struct ALCplaybackAlsa {
     ALvoid *buffer;
     ALsizei size;
 
-    volatile int killNow;
+    ATOMIC(ALenum) killNow;
     althrd_t thread;
 } ALCplaybackAlsa;
 
@@ -468,6 +468,8 @@ static void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device)
 
     self->pcmHandle = NULL;
     self->buffer = NULL;
+
+    ATOMIC_INIT(&self->killNow, AL_TRUE);
 }
 
 void ALCplaybackAlsa_Destruct(ALCplaybackAlsa *self)
@@ -495,7 +497,7 @@ static int ALCplaybackAlsa_mixerProc(void *ptr)
 
     update_size = device->UpdateSize;
     num_updates = device->NumUpdates;
-    while(!self->killNow)
+    while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire))
     {
         int state = verify_state(self->pcmHandle);
         if(state < 0)
@@ -585,7 +587,7 @@ static int ALCplaybackAlsa_mixerNoMMapProc(void *ptr)
 
     update_size = device->UpdateSize;
     num_updates = device->NumUpdates;
-    while(!self->killNow)
+    while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire))
     {
         int state = verify_state(self->pcmHandle);
         if(state < 0)
@@ -910,7 +912,7 @@ static ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self)
         }
         thread_func = ALCplaybackAlsa_mixerProc;
     }
-    self->killNow = 0;
+    ATOMIC_STORE(&self->killNow, AL_FALSE, almemory_order_release);
     if(althrd_create(&self->thread, thread_func, self) != althrd_success)
     {
         ERR("Could not create playback thread\n");
@@ -931,10 +933,8 @@ static void ALCplaybackAlsa_stop(ALCplaybackAlsa *self)
 {
     int res;
 
-    if(self->killNow)
+    if(ATOMIC_EXCHANGE(&self->killNow, AL_TRUE, almemory_order_acq_rel))
         return;
-
-    self->killNow = 1;
     althrd_join(self->thread, &res);
 
     al_free(self->buffer);
@@ -1207,7 +1207,7 @@ static ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buff
     }
 
     self->last_avail -= samples;
-    while(device->Connected && samples > 0)
+    while(ATOMIC_LOAD(&device->Connected, almemory_order_acquire) && samples > 0)
     {
         snd_pcm_sframes_t amt = 0;
 
@@ -1275,7 +1275,7 @@ static ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self)
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     snd_pcm_sframes_t avail = 0;
 
-    if(device->Connected && self->doCapture)
+    if(ATOMIC_LOAD(&device->Connected, almemory_order_acquire) && self->doCapture)
         avail = snd_pcm_avail_update(self->pcmHandle);
     if(avail < 0)
     {

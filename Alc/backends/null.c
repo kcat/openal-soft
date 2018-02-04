@@ -36,7 +36,7 @@
 typedef struct ALCnullBackend {
     DERIVE_FROM_TYPE(ALCbackend);
 
-    volatile int killNow;
+    ATOMIC(int) killNow;
     althrd_t thread;
 } ALCnullBackend;
 
@@ -65,6 +65,8 @@ static void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device)
 {
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCnullBackend, ALCbackend, self);
+
+    ATOMIC_INIT(&self->killNow, AL_TRUE);
 }
 
 
@@ -86,7 +88,8 @@ static int ALCnullBackend_mixerProc(void *ptr)
         ERR("Failed to get starting time\n");
         return 1;
     }
-    while(!self->killNow && device->Connected)
+    while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
+          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         if(altimespec_get(&now, AL_TIME_UTC) != AL_TIME_UTC)
         {
@@ -142,7 +145,7 @@ static ALCboolean ALCnullBackend_reset(ALCnullBackend *self)
 
 static ALCboolean ALCnullBackend_start(ALCnullBackend *self)
 {
-    self->killNow = 0;
+    ATOMIC_STORE(&self->killNow, AL_FALSE, almemory_order_release);
     if(althrd_create(&self->thread, ALCnullBackend_mixerProc, self) != althrd_success)
         return ALC_FALSE;
     return ALC_TRUE;
@@ -152,10 +155,8 @@ static void ALCnullBackend_stop(ALCnullBackend *self)
 {
     int res;
 
-    if(self->killNow)
+    if(ATOMIC_EXCHANGE(&self->killNow, AL_TRUE, almemory_order_acq_rel))
         return;
-
-    self->killNow = 1;
     althrd_join(self->thread, &res);
 }
 

@@ -1857,7 +1857,8 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
     va_list args;
     int msglen;
 
-    device->Connected = ALC_FALSE;
+    if(!ATOMIC_EXCHANGE(&device->Connected, AL_FALSE, almemory_order_acq_rel))
+        return;
 
     evt.EnumType = EventType_Disconnected;
     evt.Type = AL_EVENT_TYPE_DISCONNECTED_SOFT;

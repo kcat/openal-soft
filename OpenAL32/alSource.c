@@ -2518,7 +2518,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     device = context->Device;
     ALCdevice_Lock(device);
     /* If the device is disconnected, go right to stopped. */
-    if(!device->Connected)
+    if(!ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         for(i = 0;i < n;i++)
         {

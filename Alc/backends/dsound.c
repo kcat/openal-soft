@@ -185,7 +185,7 @@ typedef struct ALCdsoundPlayback {
     IDirectSoundNotify *Notifies;
     HANDLE             NotifyEvent;
 
-    volatile int killNow;
+    ATOMIC(ALenum) killNow;
     althrd_t thread;
 } ALCdsoundPlayback;
 
@@ -217,6 +217,7 @@ static void ALCdsoundPlayback_Construct(ALCdsoundPlayback *self, ALCdevice *devi
     self->Buffer = NULL;
     self->Notifies = NULL;
     self->NotifyEvent = NULL;
+    ATOMIC_INIT(&self->killNow, AL_TRUE);
 }
 
 static void ALCdsoundPlayback_Destruct(ALCdsoundPlayback *self)
@@ -276,7 +277,8 @@ FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(void *ptr)
     FragSize = device->UpdateSize * FrameSize;
 
     IDirectSoundBuffer_GetCurrentPosition(self->Buffer, &LastCursor, NULL);
-    while(!self->killNow)
+    while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
+          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         // Get current play cursor
         IDirectSoundBuffer_GetCurrentPosition(self->Buffer, &PlayCursor, NULL);
@@ -636,7 +638,7 @@ retry_open:
 
 static ALCboolean ALCdsoundPlayback_start(ALCdsoundPlayback *self)
 {
-    self->killNow = 0;
+    ATOMIC_STORE(&self->killNow, AL_FALSE, almemory_order_release);
     if(althrd_create(&self->thread, ALCdsoundPlayback_mixerProc, self) != althrd_success)
         return ALC_FALSE;
 
@@ -647,10 +649,8 @@ static void ALCdsoundPlayback_stop(ALCdsoundPlayback *self)
 {
     int res;
 
-    if(self->killNow)
+    if(ATOMIC_EXCHANGE(&self->killNow, AL_TRUE, almemory_order_acq_rel))
         return;
-
-    self->killNow = 1;
     althrd_join(self->thread, &res);
 
     IDirectSoundBuffer_Stop(self->Buffer);
@@ -930,7 +930,7 @@ static ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
     DWORD FrameSize;
     HRESULT hr;
 
-    if(!device->Connected)
+    if(!ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
         goto done;
 
     FrameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);

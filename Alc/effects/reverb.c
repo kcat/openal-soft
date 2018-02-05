@@ -226,7 +226,7 @@ typedef struct DelayLineI {
 
 typedef struct VecAllpass {
     DelayLineI Delay;
-    ALsizei Offset[NUM_LINES];
+    ALsizei Offset[NUM_LINES][2];
 } VecAllpass;
 
 typedef struct T60Filter {
@@ -399,7 +399,8 @@ static void ALreverbState_Construct(ALreverbState *state)
     state->Early.Delay.Line = NULL;
     for(i = 0;i < NUM_LINES;i++)
     {
-        state->Early.VecAp.Offset[i] = 0;
+        state->Early.VecAp.Offset[i][0] = 0;
+        state->Early.VecAp.Offset[i][1] = 0;
         state->Early.Offset[i][0] = 0;
         state->Early.Offset[i][1] = 0;
         state->Early.Coeff[i] = 0.0f;
@@ -422,7 +423,8 @@ static void ALreverbState_Construct(ALreverbState *state)
         state->Late.Offset[i][0] = 0;
         state->Late.Offset[i][1] = 0;
 
-        state->Late.VecAp.Offset[i] = 0;
+        state->Late.VecAp.Offset[i][0] = 0;
+        state->Late.VecAp.Offset[i][1] = 0;
 
         for(j = 0;j < 3;j++)
         {
@@ -1030,7 +1032,7 @@ static ALvoid UpdateEarlyLines(const ALfloat density, const ALfloat decayTime, c
         length = EARLY_ALLPASS_LENGTHS[i] * multiplier;
 
         /* Calculate the delay offset for each all-pass line. */
-        Early->VecAp.Offset[i] = fastf2i(length * frequency);
+        Early->VecAp.Offset[i][1] = fastf2i(length * frequency);
 
         /* Calculate the length (in seconds) of each delay line. */
         length = EARLY_LINE_LENGTHS[i] * multiplier;
@@ -1083,7 +1085,7 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
         length = LATE_ALLPASS_LENGTHS[i] * multiplier;
 
         /* Calculate the delay offset for each all-pass line. */
-        Late->VecAp.Offset[i] = fastf2i(length * frequency);
+        Late->VecAp.Offset[i][1] = fastf2i(length * frequency);
 
         /* Calculate the length (in seconds) of each delay line.  This also
          * applies the echo transformation.  As the EAX echo depth approaches
@@ -1300,8 +1302,10 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
     for(i = 0;i < NUM_LINES;i++)
     {
         if(State->EarlyDelayTap[i][1] != State->EarlyDelayTap[i][0] ||
+           State->Early.VecAp.Offset[i][1] != State->Early.VecAp.Offset[i][0] ||
            State->Early.Offset[i][1] != State->Early.Offset[i][0] ||
            State->LateDelayTap[i][1] != State->LateDelayTap[i][0] ||
+           State->Late.VecAp.Offset[i][1] != State->Late.VecAp.Offset[i][0] ||
            State->Late.Offset[i][1] != State->Late.Offset[i][0])
         {
             State->FadeCount = 0;
@@ -1436,26 +1440,38 @@ static inline void VectorPartialScatter(ALfloat *restrict out, const ALfloat *re
  * It works by vectorizing a regular all-pass filter and replacing the delay
  * element with a scattering matrix (like the one above) and a diagonal
  * matrix of delay elements.
+ *
+ * Two static specializations are used for transitional (cross-faded) delay
+ * line processing and non-transitional processing.
  */
-static void ApplyAllpass(ALfloat *restrict out, const ALfloat *restrict in, const ALsizei offset,
-                         const ALfloat feedCoeff, const ALfloat xCoeff, const ALfloat yCoeff,
-                         VecAllpass *Vap)
-{
-    ALfloat f[NUM_LINES], fs[NUM_LINES];
-    ALfloat input;
-    ALsizei i;
-
-    for(i = 0;i < NUM_LINES;i++)
-    {
-        input = in[i];
-        out[i] = DelayLineOut(&Vap->Delay, offset-Vap->Offset[i], i) -
-                 feedCoeff*input;
-        f[i] = input + feedCoeff*out[i];
-    }
-    VectorPartialScatter(fs, f, xCoeff, yCoeff);
-
-    DelayLineIn4(&Vap->Delay, offset, fs);
+#define DECL_TEMPLATE(T)                                                      \
+static void VectorAllpass_##T(ALfloat *restrict out,                          \
+                              const ALfloat *restrict in,                     \
+                              const ALsizei offset, const ALfloat feedCoeff,  \
+                              const ALfloat xCoeff, const ALfloat yCoeff,     \
+                              const ALfloat mu, VecAllpass *Vap)              \
+{                                                                             \
+    ALfloat f[NUM_LINES], fs[NUM_LINES];                                      \
+    ALfloat input;                                                            \
+    ALsizei i;                                                                \
+                                                                              \
+    (void)mu; /* Ignore for Unfaded. */                                       \
+                                                                              \
+    for(i = 0;i < NUM_LINES;i++)                                              \
+    {                                                                         \
+        input = in[i];                                                        \
+        out[i] = T##DelayLineOut(&Vap->Delay, offset-Vap->Offset[i][0],       \
+                                 offset-Vap->Offset[i][1], i, mu) -           \
+                 feedCoeff*input;                                             \
+        f[i] = input + feedCoeff*out[i];                                      \
+    }                                                                         \
+    VectorPartialScatter(fs, f, xCoeff, yCoeff);                              \
+                                                                              \
+    DelayLineIn4(&Vap->Delay, offset, fs);                                    \
 }
+DECL_TEMPLATE(Unfaded)
+DECL_TEMPLATE(Faded)
+#undef DECL_TEMPLATE
 
 /* A helper to reverse vector components. */
 static inline void VectorReverse(ALfloat *restrict out, const ALfloat *restrict in)
@@ -1504,8 +1520,8 @@ static ALvoid EarlyReflection_##T(ALreverbState *State, const ALsizei todo,   \
                 offset-State->EarlyDelayTap[j][1], j, fade                    \
             ) * State->EarlyDelayCoeff[j];                                    \
                                                                               \
-        ApplyAllpass(f, fr, offset, apFeedCoeff, mixX, mixY,                  \
-                     &State->Early.VecAp);                                    \
+        VectorAllpass_##T(f, fr, offset, apFeedCoeff, mixX, mixY, fade,       \
+                          &State->Early.VecAp);                               \
                                                                               \
         DelayLineIn4Rev(&State->Early.Delay, offset, f);                      \
                                                                               \
@@ -1597,7 +1613,8 @@ static ALvoid LateReverb_Faded(ALreverbState *State, const ALsizei todo, ALfloat
             );
 
         LateT60Filter(fr, f, State->Late.T60);
-        ApplyAllpass(f, fr, offset, apFeedCoeff, mixX, mixY, &State->Late.VecAp);
+        VectorAllpass_Faded(f, fr, offset, apFeedCoeff, mixX, mixY, fade,
+                            &State->Late.VecAp);
 
         for(j = 0;j < NUM_LINES;j++)
             out[j][i] = f[j];
@@ -1611,7 +1628,7 @@ static ALvoid LateReverb_Faded(ALreverbState *State, const ALsizei todo, ALfloat
         fade += FadeStep;
     }
 }
-static ALvoid LateReverb_Unfaded(ALreverbState *State, const ALsizei todo, ALfloat UNUSED(fade),
+static ALvoid LateReverb_Unfaded(ALreverbState *State, const ALsizei todo, ALfloat fade,
                                  ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
 {
     ALsizei (*restrict moddelay)[MAX_UPDATE_SAMPLES][2] = State->ModulationDelays;
@@ -1636,7 +1653,8 @@ static ALvoid LateReverb_Unfaded(ALreverbState *State, const ALsizei todo, ALflo
             f[j] += DelayLineOut(&State->Late.Delay, offset-State->Late.Offset[j][0], j);
 
         LateT60Filter(fr, f, State->Late.T60);
-        ApplyAllpass(f, fr, offset, apFeedCoeff, mixX, mixY, &State->Late.VecAp);
+        VectorAllpass_Unfaded(f, fr, offset, apFeedCoeff, mixX, mixY, fade,
+                              &State->Late.VecAp);
 
         for(j = 0;j < NUM_LINES;j++)
             out[j][i] = f[j];
@@ -1717,8 +1735,10 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
             for(c = 0;c < NUM_LINES;c++)
             {
                 State->EarlyDelayTap[c][0] = State->EarlyDelayTap[c][1];
+                State->Early.VecAp.Offset[c][0] = State->Early.VecAp.Offset[c][1];
                 State->Early.Offset[c][0] = State->Early.Offset[c][1];
                 State->LateDelayTap[c][0] = State->LateDelayTap[c][1];
+                State->Late.VecAp.Offset[c][0] = State->Late.VecAp.Offset[c][1];
                 State->Late.Offset[c][0] = State->Late.Offset[c][1];
             }
             State->Mod.Depth[0] = State->Mod.Depth[1];

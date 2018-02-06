@@ -89,6 +89,9 @@
 /* Define if we have the log2f function */
 #cmakedefine HAVE_LOG2F
 
+/* Define if we have the cbrtf function */
+#cmakedefine HAVE_CBRTF
+
 /* Define if we have the strtof function */
 #cmakedefine HAVE_STRTOF
 

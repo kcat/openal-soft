@@ -29,6 +29,13 @@ static inline float log2f(float f)
 }
 #endif
 
+#ifndef HAVE_CBRTF
+static inline float cbrtf(float f)
+{
+    return powf(f, 1.0f/3.0f);
+}
+#endif
+
 #define DEG2RAD(x)  ((float)(x) * (F_PI/180.0f))
 #define RAD2DEG(x)  ((float)(x) * (180.0f/F_PI))
 

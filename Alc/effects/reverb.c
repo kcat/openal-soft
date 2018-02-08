@@ -1124,17 +1124,19 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
     }
 }
 
-/* Creates a transform matrix given a reverb vector. This works by creating a
- * Z-focus transform, then a rotate transform around X, then Y, to place the
- * focal point in the direction of the vector, using the vector length as a
- * focus strength.
+/* Creates a transform matrix given a reverb vector. This works by first
+ * creating an inverse rotation around Y then X, applying a Z-focus transform,
+ * then non-inverse rotations back around X then Y, to place the focal point in
+ * the direction of the vector, using the vector length as a focus strength.
  *
- * This isn't technically correct since the vector is supposed to define the
- * aperture and not rotate the perceived soundfield, but in practice it's
- * probably good enough.
+ * This convoluted construction ultimately results in a B-Format transformation
+ * matrix that retains its original orientation, but spatially focuses the
+ * signal in the desired direction. There is probably a more efficient way to
+ * do this, but let's see how good the optimizer is.
  */
 static aluMatrixf GetTransformFromVector(const ALfloat *vec)
 {
+    const ALfloat sqrt_3 = 1.732050808f;
     aluMatrixf zfocus, xrot, yrot;
     aluMatrixf tmp1, tmp2;
     ALfloat length;
@@ -1145,12 +1147,12 @@ static aluMatrixf GetTransformFromVector(const ALfloat *vec)
     /* Define a Z-focus (X in Ambisonics) transform, given the panning vector
      * length.
      */
-    sa = sinf(minf(length, 1.0f) * (F_PI/4.0f));
+    sa = sinf(minf(length, 1.0f) * (F_PI/2.0f));
     aluMatrixfSet(&zfocus,
-                     1.0f/(1.0f+sa),                       0.0f,                       0.0f, (sa/(1.0f+sa))/1.732050808f,
-                               0.0f, sqrtf((1.0f-sa)/(1.0f+sa)),                       0.0f,                        0.0f,
-                               0.0f,                       0.0f, sqrtf((1.0f-sa)/(1.0f+sa)),                        0.0f,
-        (sa/(1.0f+sa))*1.732050808f,                       0.0f,                       0.0f,              1.0f/(1.0f+sa)
+        1.0f/(1.0f+sa), 0.0f, 0.0f, sa/(1.0f+sa)/sqrt_3,
+        0.0f,  sqrtf((1.0f-sa)/(1.0f+sa)),  0.0f,  0.0f,
+        0.0f,  0.0f,  sqrtf((1.0f-sa)/(1.0f+sa)),  0.0f,
+        sa/(1.0f+sa)*sqrt_3, 0.0f, 0.0f, 1.0f/(1.0f+sa)
     );
 
     /* Define rotation around X (Y in Ambisonics) */
@@ -1176,19 +1178,39 @@ static aluMatrixf GetTransformFromVector(const ALfloat *vec)
         0.0f, -sinf(a), 0.0f, cosf(a)
     );
 
+    /* First, define a matrix that applies the inverse of the Y- then X-
+     * rotation matrices, so that the desired direction lands on Z.
+     */
+#define MATRIX_INVMULT(_res, _m1, _m2) do {                                   \
+    int row, col;                                                             \
+    for(col = 0;col < 4;col++)                                                \
+    {                                                                         \
+        for(row = 0;row < 4;row++)                                            \
+            _res.m[row][col] = _m1.m[0][row]*_m2.m[col][0] +                  \
+                               _m1.m[1][row]*_m2.m[col][1] +                  \
+                               _m1.m[2][row]*_m2.m[col][2] +                  \
+                               _m1.m[3][row]*_m2.m[col][3];                   \
+    }                                                                         \
+} while(0)
+    MATRIX_INVMULT(tmp1, xrot, yrot);
+#undef MATRIX_INVMULT
+
 #define MATRIX_MULT(_res, _m1, _m2) do {                                      \
     int row, col;                                                             \
     for(col = 0;col < 4;col++)                                                \
     {                                                                         \
         for(row = 0;row < 4;row++)                                            \
-            _res.m[row][col] = _m1.m[row][0]*_m2.m[0][col] + _m1.m[row][1]*_m2.m[1][col] + \
-                               _m1.m[row][2]*_m2.m[2][col] + _m1.m[row][3]*_m2.m[3][col];  \
+            _res.m[row][col] = _m1.m[row][0]*_m2.m[0][col] +                  \
+                               _m1.m[row][1]*_m2.m[1][col] +                  \
+                               _m1.m[row][2]*_m2.m[2][col] +                  \
+                               _m1.m[row][3]*_m2.m[3][col];                   \
     }                                                                         \
 } while(0)
-    /* Define a matrix that first focuses on Z, then rotates around X then Y to
-     * focus the output in the direction of the vector.
+    /* Now apply matrices to focus on Z, then rotate back around X then Y, to
+     * result in a focus in the direction of the vector.
      */
-    MATRIX_MULT(tmp1, xrot, zfocus);
+    MATRIX_MULT(tmp2, zfocus, tmp1);
+    MATRIX_MULT(tmp1, xrot, tmp2);
     MATRIX_MULT(tmp2, yrot, tmp1);
 #undef MATRIX_MULT
 
@@ -1214,8 +1236,8 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
                                _m1.m[row][2]*_m2.m[2][col] + _m1.m[row][3]*_m2.m[3][col];  \
     }                                                                                      \
 } while(0)
-    /* Create a matrix that first converts A-Format to B-Format, then rotates
-     * the B-Format soundfield according to the panning vector.
+    /* Create a matrix that first converts A-Format to B-Format, then
+     * transforms the B-Format signal according to the panning vector.
      */
     rot = GetTransformFromVector(ReflectionsPan);
     MATRIX_MULT(transform, rot, A2B);

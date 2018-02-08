@@ -82,14 +82,21 @@ static const aluMatrixf A2B = {{
 static const ALfloat FadeStep = 1.0f / FADE_SAMPLES;
 
 /* The all-pass and delay lines have a variable length dependent on the
- * effect's density parameter.  The resulting density multiplier is:
+ * effect's density parameter, which helps alter the perceived environment
+ * size. The size-to-density conversion is a cubed scale:
  *
- *     multiplier = 1 + (density * LINE_MULTIPLIER)
+ * density = min(1.0, pow(size, 3.0) / DENSITY_SCALE);
  *
- * Thus the line multiplier below will result in a maximum density multiplier
- * of 10.
+ * The line lengths scale linearly with room size, so the inverse density
+ * conversion is needed, taking the cube root of the re-scaled density to
+ * calculate the line length multiplier:
+ *
+ *     length_mult = max(5.0, cbrtf(density*DENSITY_SCALE));
+ *
+ * The density scale below will result in a max line multiplier of 50, for an
+ * effective size range of 5m to 50m.
  */
-static const ALfloat LINE_MULTIPLIER = 9.0f;
+static const ALfloat DENSITY_SCALE = 125000.0f;
 
 /* All delay line lengths are specified in seconds.
  *
@@ -133,12 +140,11 @@ static const ALfloat LINE_MULTIPLIER = 9.0f;
  *     T_i = R_i - r_0
  *         = (2^(i / (2 N - 1)) - 1) r_d
  *
- * Assuming an average of 5m (up to 50m with the density multiplier), we get
- * the following taps:
+ * Assuming an average of 1m, we get the following taps:
  */
 static const ALfloat EARLY_TAP_LENGTHS[NUM_LINES] =
 {
-    0.000000e+0f, 1.010676e-3f, 2.126553e-3f, 3.358580e-3f
+    0.0000000e+0f, 2.0213520e-4f, 4.2531060e-4f, 6.7171600e-4f
 };
 
 /* The early all-pass filter lengths are based on the early tap lengths:
@@ -149,7 +155,7 @@ static const ALfloat EARLY_TAP_LENGTHS[NUM_LINES] =
  */
 static const ALfloat EARLY_ALLPASS_LENGTHS[NUM_LINES] =
 {
-    4.854840e-4f, 5.360178e-4f, 5.918117e-4f, 6.534130e-4f
+    9.7096800e-5f, 1.0720356e-4f, 1.1836234e-4f, 1.3068260e-4f
 };
 
 /* The early delay lines are used to transform the primary reflections into
@@ -172,11 +178,11 @@ static const ALfloat EARLY_ALLPASS_LENGTHS[NUM_LINES] =
  *         = 2 (r_a - T_(N-i-1) - r_0)
  *         = 2 r_a (1 - (2 / 3) 2^((N - i - 1) / (2 N - 1)))
  *
- * Using an average dimension of 5m, we get:
+ * Using an average dimension of 1m, we get:
  */
 static const ALfloat EARLY_LINE_LENGTHS[NUM_LINES] =
 {
-    2.992520e-3f, 5.456575e-3f, 7.688329e-3f, 9.709681e-3f
+    5.9850400e-4f, 1.0913150e-3f, 1.5376658e-3f, 1.9419362e-3f
 };
 
 /* The late all-pass filter lengths are based on the late line lengths:
@@ -185,7 +191,7 @@ static const ALfloat EARLY_LINE_LENGTHS[NUM_LINES] =
  */
 static const ALfloat LATE_ALLPASS_LENGTHS[NUM_LINES] =
 {
-    8.091400e-4f, 1.019453e-3f, 1.407968e-3f, 1.618280e-3f
+    1.6182800e-4f, 2.0389060e-4f, 2.8159360e-4f, 3.2365600e-4f
 };
 
 /* The late lines are used to approximate the decaying cycle of recursive
@@ -201,19 +207,19 @@ static const ALfloat LATE_ALLPASS_LENGTHS[NUM_LINES] =
  *     L_i = 2 r_a - L_(i-N/2)
  *         = 2 r_a - 2^((i - N / 2) / (N - 1)) r_d
  *
- * For our 5m average room, we get:
+ * For our 1m average room, we get:
  */
 static const ALfloat LATE_LINE_LENGTHS[NUM_LINES] =
 {
-    9.709681e-3f, 1.223343e-2f, 1.689561e-2f, 1.941936e-2f
+    1.9419362e-3f, 2.4466860e-3f, 3.3791220e-3f, 3.8838720e-3f
 };
 
 /* This coefficient is used to define the delay scale from the sinus, according
  * to the modulation depth property. This value must be below the shortest late
- * line length (0.0097), otherwise with certain parameters (high mod time, low
- * density) the downswing can sample before the input.
+ * line length, otherwise with certain parameters (high mod time, low density)
+ * the downswing can sample before the input.
  */
-static const ALfloat MODULATION_DEPTH_COEFF = 0.0032f;
+static const ALfloat MODULATION_DEPTH_COEFF = 0.001f;
 
 
 typedef struct DelayLineI {
@@ -464,6 +470,11 @@ static ALvoid ALreverbState_Destruct(ALreverbState *State)
  *  Device Update                     *
  **************************************/
 
+static inline ALfloat CalcDelayLengthMult(ALfloat density)
+{
+    return maxf(5.0f, cbrtf(density*DENSITY_SCALE));
+}
+
 /* Given the allocated sample buffer, this function updates each delay line
  * offset.
  */
@@ -514,7 +525,7 @@ static ALboolean AllocLines(const ALuint frequency, ALreverbState *State)
     /* Multiplier for the maximum density value, i.e. density=1, which is
      * actually the least density...
      */
-    multiplier = 1.0f + AL_EAXREVERB_MAX_DENSITY*LINE_MULTIPLIER;
+    multiplier = CalcDelayLengthMult(AL_EAXREVERB_MAX_DENSITY);
 
     /* The main delay length includes the maximum early reflection delay, the
      * largest early tap width, the maximum late reverb delay, and the
@@ -588,7 +599,7 @@ static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Dev
     if(!AllocLines(frequency, State))
         return AL_FALSE;
 
-    multiplier = 1.0f + AL_EAXREVERB_MAX_DENSITY*LINE_MULTIPLIER;
+    multiplier = CalcDelayLengthMult(AL_EAXREVERB_MAX_DENSITY);
 
     /* The late feed taps are set a fixed position past the latest delay tap. */
     State->LateFeedTap = fastf2i((AL_EAXREVERB_MAX_REFLECTIONS_DELAY +
@@ -993,7 +1004,7 @@ static ALvoid UpdateDelayLine(const ALfloat earlyDelay, const ALfloat lateDelay,
     ALfloat multiplier, length;
     ALuint i;
 
-    multiplier = 1.0f + density*LINE_MULTIPLIER;
+    multiplier = CalcDelayLengthMult(density);
 
     /* Early reflection taps are decorrelated by means of an average room
      * reflection approximation described above the definition of the taps.
@@ -1024,7 +1035,7 @@ static ALvoid UpdateEarlyLines(const ALfloat density, const ALfloat decayTime, c
     ALfloat multiplier, length;
     ALsizei i;
 
-    multiplier = 1.0f + density*LINE_MULTIPLIER;
+    multiplier = CalcDelayLengthMult(density);
 
     for(i = 0;i < NUM_LINES;i++)
     {
@@ -1059,7 +1070,7 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
      * The average length of the delay lines is used to calculate the
      * attenuation coefficient.
      */
-    multiplier = 1.0f + density*LINE_MULTIPLIER;
+    multiplier = CalcDelayLengthMult(density);
     length = (LATE_LINE_LENGTHS[0] + LATE_LINE_LENGTHS[1] +
               LATE_LINE_LENGTHS[2] + LATE_LINE_LENGTHS[3]) / 4.0f * multiplier;
     /* Include the echo transformation (see below). */

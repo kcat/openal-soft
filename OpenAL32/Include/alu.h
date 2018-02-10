@@ -429,6 +429,8 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
 
 void aluInitEffectPanning(struct ALeffectslot *slot);
 
+void aluSelectPostProcess(ALCdevice *device);
+
 /**
  * CalcDirectionCoeffs
  *

@@ -462,8 +462,9 @@ typedef struct RealMixParams {
     ALsizei NumChannels;
 } RealMixParams;
 
-struct ALCdevice_struct
-{
+typedef void (*POSTPROCESS)(ALCdevice *device, ALsizei SamplesToDo);
+
+struct ALCdevice_struct {
     RefCount ref;
 
     ATOMIC(ALenum) Connected;
@@ -506,6 +507,8 @@ struct ALCdevice_struct
     // Map of Filters for this device
     vector_FilterSubList FilterList;
     almtx_t FilterLock;
+
+    POSTPROCESS PostProcess;
 
     /* HRTF state and info */
     struct DirectHrtfState *Hrtf;

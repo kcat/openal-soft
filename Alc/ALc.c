@@ -2216,6 +2216,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     }
     TRACE("Output limiter %s\n", device->Limiter ? "enabled" : "disabled");
 
+    aluSelectPostProcess(device);
+
     /* Need to delay returning failure until replacement Send arrays have been
      * allocated with the appropriate size.
      */

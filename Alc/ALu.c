@@ -208,6 +208,98 @@ void aluInit(void)
     MixDirectHrtf = SelectHrtfMixer();
 }
 
+
+static void ProcessHrtf(ALCdevice *device, ALsizei SamplesToDo)
+{
+    DirectHrtfState *state;
+    int lidx, ridx;
+    ALsizei c;
+
+    if(device->AmbiUp)
+        ambiup_process(device->AmbiUp,
+            device->Dry.Buffer, device->Dry.NumChannels, device->FOAOut.Buffer,
+            SamplesToDo
+        );
+
+    lidx = GetChannelIdxByName(&device->RealOut, FrontLeft);
+    ridx = GetChannelIdxByName(&device->RealOut, FrontRight);
+    assert(lidx != -1 && ridx != -1);
+
+    state = device->Hrtf;
+    for(c = 0;c < device->Dry.NumChannels;c++)
+    {
+        MixDirectHrtf(device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
+            device->Dry.Buffer[c], state->Offset, state->IrSize,
+            state->Chan[c].Coeffs, state->Chan[c].Values, SamplesToDo
+        );
+    }
+    state->Offset += SamplesToDo;
+}
+
+static void ProcessAmbiDec(ALCdevice *device, ALsizei SamplesToDo)
+{
+    if(device->Dry.Buffer != device->FOAOut.Buffer)
+        bformatdec_upSample(device->AmbiDecoder,
+            device->Dry.Buffer, device->FOAOut.Buffer, device->FOAOut.NumChannels,
+            SamplesToDo
+        );
+    bformatdec_process(device->AmbiDecoder,
+        device->RealOut.Buffer, device->RealOut.NumChannels, device->Dry.Buffer,
+        SamplesToDo
+    );
+}
+
+static void ProcessAmbiUp(ALCdevice *device, ALsizei SamplesToDo)
+{
+    ambiup_process(device->AmbiUp,
+        device->RealOut.Buffer, device->RealOut.NumChannels, device->FOAOut.Buffer,
+        SamplesToDo
+    );
+}
+
+static void ProcessUhj(ALCdevice *device, ALsizei SamplesToDo)
+{
+    int lidx = GetChannelIdxByName(&device->RealOut, FrontLeft);
+    int ridx = GetChannelIdxByName(&device->RealOut, FrontRight);
+    if(LIKELY(lidx != -1 && ridx != -1))
+    {
+        /* Encode to stereo-compatible 2-channel UHJ output. */
+        EncodeUhj2(device->Uhj_Encoder,
+            device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
+            device->Dry.Buffer, SamplesToDo
+        );
+    }
+}
+
+static void ProcessBs2b(ALCdevice *device, ALsizei SamplesToDo)
+{
+    int lidx = GetChannelIdxByName(&device->RealOut, FrontLeft);
+    int ridx = GetChannelIdxByName(&device->RealOut, FrontRight);
+    if(LIKELY(lidx != -1 && ridx != -1))
+    {
+        /* Apply binaural/crossfeed filter */
+        bs2b_cross_feed(device->Bs2b, device->RealOut.Buffer[lidx],
+                        device->RealOut.Buffer[ridx], SamplesToDo);
+    }
+}
+
+void aluSelectPostProcess(ALCdevice *device)
+{
+    if(device->HrtfHandle)
+        device->PostProcess = ProcessHrtf;
+    else if(device->AmbiDecoder)
+        device->PostProcess = ProcessAmbiDec;
+    else if(device->AmbiUp)
+        device->PostProcess = ProcessAmbiUp;
+    else if(device->Uhj_Encoder)
+        device->PostProcess = ProcessUhj;
+    else if(device->Bs2b)
+        device->PostProcess = ProcessBs2b;
+    else
+        device->PostProcess = NULL;
+}
+
+
 /* Prepares the interpolator for a given rate (determined by increment).  A
  * result of AL_FALSE indicates that the filter output will completely cut
  * the input signal.
@@ -1723,74 +1815,11 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
         device->SamplesDone %= device->Frequency;
         IncrementRef(&device->MixCount);
 
-        if(device->HrtfHandle)
-        {
-            DirectHrtfState *state;
-            int lidx, ridx;
-
-            if(device->AmbiUp)
-                ambiup_process(device->AmbiUp,
-                    device->Dry.Buffer, device->Dry.NumChannels, device->FOAOut.Buffer,
-                    SamplesToDo
-                );
-
-            lidx = GetChannelIdxByName(&device->RealOut, FrontLeft);
-            ridx = GetChannelIdxByName(&device->RealOut, FrontRight);
-            assert(lidx != -1 && ridx != -1);
-
-            state = device->Hrtf;
-            for(c = 0;c < device->Dry.NumChannels;c++)
-            {
-                MixDirectHrtf(device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
-                    device->Dry.Buffer[c], state->Offset, state->IrSize,
-                    state->Chan[c].Coeffs, state->Chan[c].Values, SamplesToDo
-                );
-            }
-            state->Offset += SamplesToDo;
-        }
-        else if(device->AmbiDecoder)
-        {
-            if(device->Dry.Buffer != device->FOAOut.Buffer)
-                bformatdec_upSample(device->AmbiDecoder,
-                    device->Dry.Buffer, device->FOAOut.Buffer, device->FOAOut.NumChannels,
-                    SamplesToDo
-                );
-            bformatdec_process(device->AmbiDecoder,
-                device->RealOut.Buffer, device->RealOut.NumChannels, device->Dry.Buffer,
-                SamplesToDo
-            );
-        }
-        else if(device->AmbiUp)
-        {
-            ambiup_process(device->AmbiUp,
-                device->RealOut.Buffer, device->RealOut.NumChannels, device->FOAOut.Buffer,
-                SamplesToDo
-            );
-        }
-        else if(device->Uhj_Encoder)
-        {
-            int lidx = GetChannelIdxByName(&device->RealOut, FrontLeft);
-            int ridx = GetChannelIdxByName(&device->RealOut, FrontRight);
-            if(lidx != -1 && ridx != -1)
-            {
-                /* Encode to stereo-compatible 2-channel UHJ output. */
-                EncodeUhj2(device->Uhj_Encoder,
-                    device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
-                    device->Dry.Buffer, SamplesToDo
-                );
-            }
-        }
-        else if(device->Bs2b)
-        {
-            int lidx = GetChannelIdxByName(&device->RealOut, FrontLeft);
-            int ridx = GetChannelIdxByName(&device->RealOut, FrontRight);
-            if(lidx != -1 && ridx != -1)
-            {
-                /* Apply binaural/crossfeed filter */
-                bs2b_cross_feed(device->Bs2b, device->RealOut.Buffer[lidx],
-                                device->RealOut.Buffer[ridx], SamplesToDo);
-            }
-        }
+        /* Apply post-process for finalizing the Dry mix to the RealOut
+         * (Ambisonic decode, UHJ encode, etc).
+         */
+        if(LIKELY(device->PostProcess))
+            device->PostProcess(device, SamplesToDo);
 
         if(OutBuffer)
         {

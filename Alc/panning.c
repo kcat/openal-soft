@@ -679,10 +679,10 @@ static void InitPanning(ALCdevice *device)
                       chanmap, count, &device->Dry.NumChannels);
         device->Dry.CoeffCount = coeffcount;
 
-        w_scale = (device->Dry.CoeffCount > 9) ? W_SCALE2D_THIRD :
-                  (device->Dry.CoeffCount > 4) ? W_SCALE2D_SECOND : 1.0f;
-        xyz_scale = (device->Dry.CoeffCount > 9) ? XYZ_SCALE2D_THIRD :
-                    (device->Dry.CoeffCount > 4) ? XYZ_SCALE2D_SECOND : 1.0f;
+        w_scale = (device->Dry.CoeffCount > 9) ? W_SCALE_3H0P :
+                  (device->Dry.CoeffCount > 4) ? W_SCALE_2H0P : 1.0f;
+        xyz_scale = (device->Dry.CoeffCount > 9) ? XYZ_SCALE_3H0P :
+                    (device->Dry.CoeffCount > 4) ? XYZ_SCALE_2H0P : 1.0f;
 
         memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
         for(i = 0;i < device->Dry.NumChannels;i++)
@@ -713,26 +713,26 @@ static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const A
     {
         if(conf->ChanMask > 0x1ff)
         {
-            w_scale = W_SCALE3D_THIRD;
-            xyz_scale = XYZ_SCALE3D_THIRD;
+            w_scale = W_SCALE_3H3P;
+            xyz_scale = XYZ_SCALE_3H3P;
         }
         else if(conf->ChanMask > 0xf)
         {
-            w_scale = W_SCALE3D_SECOND;
-            xyz_scale = XYZ_SCALE3D_SECOND;
+            w_scale = W_SCALE_2H2P;
+            xyz_scale = XYZ_SCALE_2H2P;
         }
     }
     else
     {
         if(conf->ChanMask > 0x1ff)
         {
-            w_scale = W_SCALE2D_THIRD;
-            xyz_scale = XYZ_SCALE2D_THIRD;
+            w_scale = W_SCALE_3H0P;
+            xyz_scale = XYZ_SCALE_3H0P;
         }
         else if(conf->ChanMask > 0xf)
         {
-            w_scale = W_SCALE2D_SECOND;
-            xyz_scale = XYZ_SCALE2D_SECOND;
+            w_scale = W_SCALE_2H0P;
+            xyz_scale = XYZ_SCALE_2H0P;
         }
     }
 

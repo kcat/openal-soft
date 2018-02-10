@@ -269,13 +269,13 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
     {
         periphonic = true;
 
-        dec->UpSampler[0].Gains[FB_HighFreq] = (dec->NumChannels > 9) ? W_SCALE3D_THIRD :
-                                               (dec->NumChannels > 4) ? W_SCALE3D_SECOND : 1.0f;
+        dec->UpSampler[0].Gains[FB_HighFreq] = (conf->ChanMask > 0x1ff) ? W_SCALE_3H3P :
+                                               (conf->ChanMask > 0xf) ? W_SCALE_2H2P : 1.0f;
         dec->UpSampler[0].Gains[FB_LowFreq] = 1.0f;
         for(i = 1;i < 4;i++)
         {
-            dec->UpSampler[i].Gains[FB_HighFreq] = (dec->NumChannels > 9) ? XYZ_SCALE3D_THIRD :
-                                                   (dec->NumChannels > 4) ? XYZ_SCALE3D_SECOND : 1.0f;
+            dec->UpSampler[i].Gains[FB_HighFreq] = (conf->ChanMask > 0x1ff) ? XYZ_SCALE_3H3P :
+                                                   (conf->ChanMask > 0xf) ? XYZ_SCALE_2H2P : 1.0f;
             dec->UpSampler[i].Gains[FB_LowFreq] = 1.0f;
         }
     }
@@ -283,13 +283,13 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
     {
         periphonic = false;
 
-        dec->UpSampler[0].Gains[FB_HighFreq] = (dec->NumChannels > 5) ? W_SCALE2D_THIRD :
-                                               (dec->NumChannels > 3) ? W_SCALE2D_SECOND : 1.0f;
+        dec->UpSampler[0].Gains[FB_HighFreq] = (conf->ChanMask > 0x1ff) ? W_SCALE_3H0P :
+                                               (conf->ChanMask > 0xf) ? W_SCALE_2H0P : 1.0f;
         dec->UpSampler[0].Gains[FB_LowFreq] = 1.0f;
         for(i = 1;i < 3;i++)
         {
-            dec->UpSampler[i].Gains[FB_HighFreq] = (dec->NumChannels > 5) ? XYZ_SCALE2D_THIRD :
-                                                   (dec->NumChannels > 3) ? XYZ_SCALE2D_SECOND : 1.0f;
+            dec->UpSampler[i].Gains[FB_HighFreq] = (conf->ChanMask > 0x1ff) ? XYZ_SCALE_3H0P :
+                                                   (conf->ChanMask > 0xf) ? XYZ_SCALE_2H0P : 1.0f;
             dec->UpSampler[i].Gains[FB_LowFreq] = 1.0f;
         }
         dec->UpSampler[3].Gains[FB_HighFreq] = 0.0f;
@@ -559,10 +559,10 @@ void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device)
     else
     {
         /* Assumes full 3D/periphonic on the input and output mixes! */
-        ALfloat w_scale = (device->Dry.NumChannels > 9) ? W_SCALE3D_THIRD :
-                          (device->Dry.NumChannels > 4) ? W_SCALE3D_SECOND : 1.0f;
-        ALfloat xyz_scale = (device->Dry.NumChannels > 9) ? XYZ_SCALE3D_THIRD :
-                            (device->Dry.NumChannels > 4) ? XYZ_SCALE3D_SECOND : 1.0f;
+        ALfloat w_scale = (device->Dry.NumChannels > 9) ? W_SCALE_3H3P :
+                          (device->Dry.NumChannels > 4) ? W_SCALE_2H2P : 1.0f;
+        ALfloat xyz_scale = (device->Dry.NumChannels > 9) ? XYZ_SCALE_3H3P :
+                            (device->Dry.NumChannels > 4) ? XYZ_SCALE_2H2P : 1.0f;
         for(i = 0;i < 4;i++)
         {
             ALsizei index = GetChannelForACN(device->Dry, i);

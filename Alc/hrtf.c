@@ -194,7 +194,7 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
 }
 
 
-void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei NumChannels, const ALfloat (*restrict AmbiPoints)[2], const ALfloat (*restrict AmbiMatrix)[2][MAX_AMBI_COEFFS], ALsizei AmbiCount)
+void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei NumChannels, const ALfloat (*restrict AmbiPoints)[2], const ALfloat (*restrict AmbiMatrix)[MAX_AMBI_COEFFS], ALsizei AmbiCount, const ALfloat *restrict AmbiOrderHFGain)
 {
 /* Set this to 2 for dual-band HRTF processing. May require a higher quality
  * band-splitter, or better calculation of the new IR length to deal with the
@@ -248,12 +248,13 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
         {
             for(i = 0;i < NumChannels;++i)
             {
+                ALfloat hfgain = AmbiOrderHFGain[(ALsizei)floor(sqrt(i))];
                 ALsizei lidx = ldelay, ridx = rdelay;
                 ALsizei j = 0;
                 while(lidx < HRIR_LENGTH && ridx < HRIR_LENGTH && j < Hrtf->irSize)
                 {
-                    state->Chan[i].Coeffs[lidx++][0] += fir[j][0] * AmbiMatrix[c][0][i];
-                    state->Chan[i].Coeffs[ridx++][1] += fir[j][1] * AmbiMatrix[c][0][i];
+                    state->Chan[i].Coeffs[lidx++][0] += fir[j][0] * AmbiMatrix[c][i] * hfgain;
+                    state->Chan[i].Coeffs[ridx++][1] += fir[j][1] * AmbiMatrix[c][i] * hfgain;
                     j++;
                 }
             }
@@ -269,12 +270,15 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
             /* Apply left ear response with delay. */
             for(i = 0;i < NumChannels;++i)
             {
+                ALfloat hfgain = AmbiOrderHFGain[(ALsizei)floor(sqrt(i))];
                 for(b = 0;b < NUM_BANDS;b++)
                 {
                     ALsizei lidx = ldelay;
                     ALsizei j = 0;
                     while(lidx < HRIR_LENGTH)
-                        state->Chan[i].Coeffs[lidx++][0] += temps[b][j++] * AmbiMatrix[c][b][i];
+                        state->Chan[i].Coeffs[lidx++][0] += temps[b][j++] * AmbiMatrix[c][i] *
+                                                            hfgain;
+                    hfgain = 1.0f;
                 }
             }
 
@@ -287,12 +291,15 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
             /* Apply right ear response with delay. */
             for(i = 0;i < NumChannels;++i)
             {
+                ALfloat hfgain = AmbiOrderHFGain[(ALsizei)floor(sqrt(i))];
                 for(b = 0;b < NUM_BANDS;b++)
                 {
                     ALsizei ridx = rdelay;
                     ALsizei j = 0;
                     while(ridx < HRIR_LENGTH)
-                        state->Chan[i].Coeffs[ridx++][1] += temps[b][j++] * AmbiMatrix[c][b][i];
+                        state->Chan[i].Coeffs[ridx++][1] += temps[b][j++] * AmbiMatrix[c][i] *
+                                                            hfgain;
+                    hfgain = 1.0f;
                 }
             }
         }

@@ -237,6 +237,7 @@ int alsem_init(alsem_t *sem, unsigned int initial);
 void alsem_destroy(alsem_t *sem);
 int alsem_post(alsem_t *sem);
 int alsem_wait(alsem_t *sem);
+int alsem_trywait(alsem_t *sem);
 
 int altss_create(altss_t *tss_id, altss_dtor_t callback);
 void altss_delete(altss_t tss_id);

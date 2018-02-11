@@ -13,6 +13,11 @@ static int EventThread(void *arg)
 {
     ALCcontext *context = arg;
 
+    /* Clear all pending posts on the semaphore. */
+    while(alsem_trywait(&context->EventSem) == althrd_success)
+    {
+    }
+
     while(1)
     {
         AsyncEvent evt;

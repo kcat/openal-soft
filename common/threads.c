@@ -354,6 +354,14 @@ int alsem_wait(alsem_t *sem)
     return althrd_error;
 }
 
+int alsem_trywait(alsem_t *sem)
+{
+    DWORD ret = WaitForSingleObject(*sem, 0);
+    if(ret == WAIT_OBJECT_0) return althrd_success;
+    if(ret == WAIT_TIMEOUT) return althrd_busy;
+    return althrd_error;
+}
+
 
 /* An associative map of uint:void* pairs. The key is the TLS index (given by
  * TlsAlloc), and the value is the altss_dtor_t callback. When a thread exits,
@@ -660,6 +668,14 @@ int alsem_post(alsem_t *sem)
 int alsem_wait(alsem_t *sem)
 {
     if(sem_wait(sem) == 0) return althrd_success;
+    if(errno == EINTR) return -2;
+    return althrd_error;
+}
+
+int alsem_trywait(alsem_t *sem)
+{
+    if(sem_trywait(sem) == 0) return althrd_success;
+    if(errno == EWOULDBLOCK) return althrd_busy;
     if(errno == EINTR) return -2;
     return althrd_error;
 }

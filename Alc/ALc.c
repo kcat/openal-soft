@@ -2331,11 +2331,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 ALfloat w1 = SPEEDOFSOUNDMETRESPERSEC /
                              (device->AvgSpeakerDist * device->Frequency);
                 for(i = 0;i < voice->NumChannels;i++)
-                {
-                    NfcFilterCreate1(&voice->Direct.Params[i].NFCtrlFilter[0], 0.0f, w1);
-                    NfcFilterCreate2(&voice->Direct.Params[i].NFCtrlFilter[1], 0.0f, w1);
-                    NfcFilterCreate3(&voice->Direct.Params[i].NFCtrlFilter[2], 0.0f, w1);
-                }
+                    NfcFilterCreate(&voice->Direct.Params[i].NFCtrlFilter, 0.0f, w1);
             }
         }
         almtx_unlock(&context->SourceLock);

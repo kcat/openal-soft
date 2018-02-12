@@ -601,9 +601,7 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
                 w0 = minf(w0, w1*4.0f);
 
                 /* Only need to adjust the first channel of a B-Format source. */
-                NfcFilterAdjust1(&voice->Direct.Params[0].NFCtrlFilter[0], w0);
-                NfcFilterAdjust2(&voice->Direct.Params[0].NFCtrlFilter[1], w0);
-                NfcFilterAdjust3(&voice->Direct.Params[0].NFCtrlFilter[2], w0);
+                NfcFilterAdjust(&voice->Direct.Params[0].NFCtrlFilter, w0);
 
                 for(i = 0;i < MAX_AMBI_ORDER+1;i++)
                     voice->Direct.ChannelsPerOrder[i] = Device->Dry.NumChannelsPerOrder[i];
@@ -660,9 +658,7 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
                  * is what we want for FOA input. The first channel may have
                  * been previously re-adjusted if panned, so reset it.
                  */
-                NfcFilterAdjust1(&voice->Direct.Params[0].NFCtrlFilter[0], 0.0f);
-                NfcFilterAdjust2(&voice->Direct.Params[0].NFCtrlFilter[1], 0.0f);
-                NfcFilterAdjust3(&voice->Direct.Params[0].NFCtrlFilter[2], 0.0f);
+                NfcFilterAdjust(&voice->Direct.Params[0].NFCtrlFilter, 0.0f);
 
                 voice->Direct.ChannelsPerOrder[0] = 1;
                 voice->Direct.ChannelsPerOrder[1] = mini(voice->Direct.Channels-1, 3);
@@ -896,6 +892,10 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
                  */
                 w0 = minf(w0, w1*4.0f);
 
+                /* Adjust NFC filters. */
+                for(c = 0;c < num_channels;c++)
+                    NfcFilterAdjust(&voice->Direct.Params[c].NFCtrlFilter, w0);
+
                 for(i = 0;i < MAX_AMBI_ORDER+1;i++)
                     voice->Direct.ChannelsPerOrder[i] = Device->Dry.NumChannelsPerOrder[i];
                 voice->Flags |= VOICE_HAS_NFC;
@@ -915,14 +915,6 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
 
             for(c = 0;c < num_channels;c++)
             {
-                /* Adjust NFC filters if needed. */
-                if((voice->Flags&VOICE_HAS_NFC))
-                {
-                    NfcFilterAdjust1(&voice->Direct.Params[c].NFCtrlFilter[0], w0);
-                    NfcFilterAdjust2(&voice->Direct.Params[c].NFCtrlFilter[1], w0);
-                    NfcFilterAdjust3(&voice->Direct.Params[c].NFCtrlFilter[2], w0);
-                }
-
                 /* Special-case LFE */
                 if(chans[c].channel == LFE)
                 {
@@ -979,6 +971,9 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
                 w0 = SPEEDOFSOUNDMETRESPERSEC /
                      (Device->AvgSpeakerDist * (ALfloat)Device->Frequency);
 
+                for(c = 0;c < num_channels;c++)
+                    NfcFilterAdjust(&voice->Direct.Params[c].NFCtrlFilter, w0);
+
                 for(i = 0;i < MAX_AMBI_ORDER+1;i++)
                     voice->Direct.ChannelsPerOrder[i] = Device->Dry.NumChannelsPerOrder[i];
                 voice->Flags |= VOICE_HAS_NFC;
@@ -987,13 +982,6 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
             for(c = 0;c < num_channels;c++)
             {
                 ALfloat coeffs[MAX_AMBI_COEFFS];
-
-                if((voice->Flags&VOICE_HAS_NFC))
-                {
-                    NfcFilterAdjust1(&voice->Direct.Params[c].NFCtrlFilter[0], w0);
-                    NfcFilterAdjust2(&voice->Direct.Params[c].NFCtrlFilter[1], w0);
-                    NfcFilterAdjust3(&voice->Direct.Params[c].NFCtrlFilter[2], w0);
-                }
 
                 /* Special-case LFE */
                 if(chans[c].channel == LFE)

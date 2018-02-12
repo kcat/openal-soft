@@ -157,7 +157,7 @@ typedef struct DirectParams {
     ALfilterState LowPass;
     ALfilterState HighPass;
 
-    NfcFilter NFCtrlFilter[MAX_AMBI_ORDER];
+    NfcFilter NFCtrlFilter;
 
     struct {
         HrtfParams Old;

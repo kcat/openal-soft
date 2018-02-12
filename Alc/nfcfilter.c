@@ -52,12 +52,10 @@ static const float B[4][3] = {
   /*{ 4.2076f, 11.4877f, 5.7924f, 9.1401f }*/
 };
 
-void NfcFilterCreate1(NfcFilter *nfc, const float w0, const float w1)
+static void NfcFilterCreate1(struct NfcFilter1 *nfc, const float w0, const float w1)
 {
     float b_00, g_0;
     float r;
-
-    memset(nfc, 0, sizeof(*nfc));
 
     nfc->g = 1.0f;
     nfc->coeffs[0] = 1.0f;
@@ -80,7 +78,7 @@ void NfcFilterCreate1(NfcFilter *nfc, const float w0, const float w1)
     nfc->coeffs[1+1] = (2.0f * b_00) / g_0;
 }
 
-void NfcFilterAdjust1(NfcFilter *nfc, const float w0)
+static void NfcFilterAdjust1(struct NfcFilter1 *nfc, const float w0)
 {
     float b_00, g_0;
     float r;
@@ -93,35 +91,11 @@ void NfcFilterAdjust1(NfcFilter *nfc, const float w0)
     nfc->coeffs[1] = (2.0f * b_00) / g_0;
 }
 
-void NfcFilterUpdate1(NfcFilter *nfc, ALfloat *restrict dst, const float *restrict src, const int count)
-{
-    const float b0 = nfc->coeffs[0];
-    const float a0 = nfc->coeffs[1];
-    const float a1 = nfc->coeffs[2];
-    float z1 = nfc->history[0];
-    int i;
 
-    for(i = 0;i < count;i++)
-    {
-        float out = src[i] * b0;
-        float y;
-
-        y = out - (a1*z1);
-        out = y + (a0*z1);
-        z1 += y;
-
-        dst[i] = out;
-    }
-    nfc->history[0] = z1;
-}
-
-
-void NfcFilterCreate2(NfcFilter *nfc, const float w0, const float w1)
+static void NfcFilterCreate2(struct NfcFilter2 *nfc, const float w0, const float w1)
 {
     float b_10, b_11, g_1;
     float r;
-
-    memset(nfc, 0, sizeof(*nfc));
 
     nfc->g = 1.0f;
     nfc->coeffs[0] = 1.0f;
@@ -148,7 +122,7 @@ void NfcFilterCreate2(NfcFilter *nfc, const float w0, const float w1)
     nfc->coeffs[2+2] = (4.0f * b_11) / g_1;
 }
 
-void NfcFilterAdjust2(NfcFilter *nfc, const float w0)
+static void NfcFilterAdjust2(struct NfcFilter2 *nfc, const float w0)
 {
     float b_10, b_11, g_1;
     float r;
@@ -163,41 +137,12 @@ void NfcFilterAdjust2(NfcFilter *nfc, const float w0)
     nfc->coeffs[2] = (4.0f * b_11) / g_1;
 }
 
-void NfcFilterUpdate2(NfcFilter *nfc, ALfloat *restrict dst, const float *restrict src, const int count)
-{
-    const float b0 = nfc->coeffs[0];
-    const float a00 = nfc->coeffs[1];
-    const float a01 = nfc->coeffs[2];
-    const float a10 = nfc->coeffs[3];
-    const float a11 = nfc->coeffs[4];
-    float z1 = nfc->history[0];
-    float z2 = nfc->history[1];
-    int i;
 
-    for(i = 0;i < count;i++)
-    {
-        float out = src[i] * b0;
-        float y;
-
-        y = out - (a10*z1) - (a11*z2);
-        out = y + (a00*z1) + (a01*z2);
-        z2 += z1;
-        z1 += y;
-
-        dst[i] = out;
-    }
-    nfc->history[0] = z1;
-    nfc->history[1] = z2;
-}
-
-
-void NfcFilterCreate3(NfcFilter *nfc, const float w0, const float w1)
+static void NfcFilterCreate3(struct NfcFilter3 *nfc, const float w0, const float w1)
 {
     float b_10, b_11, g_1;
     float b_00, g_0;
     float r;
-
-    memset(nfc, 0, sizeof(*nfc));
 
     nfc->g = 1.0f;
     nfc->coeffs[0] = 1.0f;
@@ -237,7 +182,7 @@ void NfcFilterCreate3(NfcFilter *nfc, const float w0, const float w1)
     nfc->coeffs[3+2+1] = (2.0f * b_00) / g_0;
 }
 
-void NfcFilterAdjust3(NfcFilter *nfc, const float w0)
+static void NfcFilterAdjust3(struct NfcFilter3 *nfc, const float w0)
 {
     float b_10, b_11, g_1;
     float b_00, g_0;
@@ -259,18 +204,84 @@ void NfcFilterAdjust3(NfcFilter *nfc, const float w0)
     nfc->coeffs[2+1] = (2.0f * b_00) / g_0;
 }
 
+
+void NfcFilterCreate(NfcFilter *nfc, const float w0, const float w1)
+{
+    memset(nfc, 0, sizeof(*nfc));
+    NfcFilterCreate1(&nfc->first, w0, w1);
+    NfcFilterCreate2(&nfc->second, w0, w1);
+    NfcFilterCreate3(&nfc->third, w0, w1);
+}
+
+void NfcFilterAdjust(NfcFilter *nfc, const float w0)
+{
+    NfcFilterAdjust1(&nfc->first, w0);
+    NfcFilterAdjust2(&nfc->second, w0);
+    NfcFilterAdjust3(&nfc->third, w0);
+}
+
+
+void NfcFilterUpdate1(NfcFilter *nfc, ALfloat *restrict dst, const float *restrict src, const int count)
+{
+    const float b0 = nfc->first.coeffs[0];
+    const float a0 = nfc->first.coeffs[1];
+    const float a1 = nfc->first.coeffs[2];
+    float z1 = nfc->first.history[0];
+    int i;
+
+    for(i = 0;i < count;i++)
+    {
+        float out = src[i] * b0;
+        float y;
+
+        y = out - (a1*z1);
+        out = y + (a0*z1);
+        z1 += y;
+
+        dst[i] = out;
+    }
+    nfc->first.history[0] = z1;
+}
+
+void NfcFilterUpdate2(NfcFilter *nfc, ALfloat *restrict dst, const float *restrict src, const int count)
+{
+    const float b0 = nfc->second.coeffs[0];
+    const float a00 = nfc->second.coeffs[1];
+    const float a01 = nfc->second.coeffs[2];
+    const float a10 = nfc->second.coeffs[3];
+    const float a11 = nfc->second.coeffs[4];
+    float z1 = nfc->second.history[0];
+    float z2 = nfc->second.history[1];
+    int i;
+
+    for(i = 0;i < count;i++)
+    {
+        float out = src[i] * b0;
+        float y;
+
+        y = out - (a10*z1) - (a11*z2);
+        out = y + (a00*z1) + (a01*z2);
+        z2 += z1;
+        z1 += y;
+
+        dst[i] = out;
+    }
+    nfc->second.history[0] = z1;
+    nfc->second.history[1] = z2;
+}
+
 void NfcFilterUpdate3(NfcFilter *nfc, ALfloat *restrict dst, const float *restrict src, const int count)
 {
-    const float b0 = nfc->coeffs[0];
-    const float a00 = nfc->coeffs[1];
-    const float a01 = nfc->coeffs[2];
-    const float a02 = nfc->coeffs[3];
-    const float a10 = nfc->coeffs[4];
-    const float a11 = nfc->coeffs[5];
-    const float a12 = nfc->coeffs[6];
-    float z1 = nfc->history[0];
-    float z2 = nfc->history[1];
-    float z3 = nfc->history[2];
+    const float b0 = nfc->third.coeffs[0];
+    const float a00 = nfc->third.coeffs[1];
+    const float a01 = nfc->third.coeffs[2];
+    const float a02 = nfc->third.coeffs[3];
+    const float a10 = nfc->third.coeffs[4];
+    const float a11 = nfc->third.coeffs[5];
+    const float a12 = nfc->third.coeffs[6];
+    float z1 = nfc->third.history[0];
+    float z2 = nfc->third.history[1];
+    float z3 = nfc->third.history[2];
     int i;
 
     for(i = 0;i < count;i++)
@@ -289,11 +300,10 @@ void NfcFilterUpdate3(NfcFilter *nfc, ALfloat *restrict dst, const float *restri
 
         dst[i] = out;
     }
-    nfc->history[0] = z1;
-    nfc->history[1] = z2;
-    nfc->history[2] = z3;
+    nfc->third.history[0] = z1;
+    nfc->third.history[1] = z2;
+    nfc->third.history[2] = z3;
 }
-
 
 #if 0 /* Original methods the above are derived from. */
 static void NfcFilterCreate(NfcFilter *nfc, const ALsizei order, const float src_dist, const float ctl_dist, const float rate)

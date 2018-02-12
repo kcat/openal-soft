@@ -2534,13 +2534,9 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         if(device->AvgSpeakerDist > 0.0f)
         {
             ALfloat w1 = SPEEDOFSOUNDMETRESPERSEC /
-                        (device->AvgSpeakerDist * device->Frequency);
+                         (device->AvgSpeakerDist * device->Frequency);
             for(j = 0;j < voice->NumChannels;j++)
-            {
-                NfcFilterCreate1(&voice->Direct.Params[j].NFCtrlFilter[0], 0.0f, w1);
-                NfcFilterCreate2(&voice->Direct.Params[j].NFCtrlFilter[1], 0.0f, w1);
-                NfcFilterCreate3(&voice->Direct.Params[j].NFCtrlFilter[2], 0.0f, w1);
-            }
+                NfcFilterCreate(&voice->Direct.Params[j].NFCtrlFilter, 0.0f, w1);
         }
 
         ATOMIC_STORE(&voice->Source, source, almemory_order_relaxed);

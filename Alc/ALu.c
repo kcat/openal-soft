@@ -1926,18 +1926,10 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
         for(i = 0;i < ctx->VoiceCount;i++)
         {
             ALvoice *voice = ctx->Voices[i];
-            ALsource *source;
 
-            source = ATOMIC_EXCHANGE_PTR(&voice->Source, NULL, almemory_order_acq_rel);
+            ATOMIC_STORE(&voice->Source, NULL, almemory_order_relaxed);
             ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
-
-            if(source)
-            {
-                ALenum playing = AL_PLAYING;
-                (void)(ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(&source->state, &playing, AL_STOPPED));
-            }
         }
-        ctx->VoiceCount = 0;
 
         ctx = ctx->next;
     }

@@ -171,15 +171,19 @@ static const ALfloat Ambi3DPoints[8][3] = {
     { -0.577350269f, -0.577350269f,  0.577350269f },
     {  0.577350269f, -0.577350269f,  0.577350269f },
 };
-static const ALfloat Ambi3DDecoder[8][NUM_BANDS][MAX_AMBI_COEFFS] = {
-    { { 0.25f,  0.1443375672f,  0.1443375672f,  0.1443375672f }, { 0.125f,  0.125f,  0.125f,  0.125f } },
-    { { 0.25f, -0.1443375672f,  0.1443375672f,  0.1443375672f }, { 0.125f, -0.125f,  0.125f,  0.125f } },
-    { { 0.25f,  0.1443375672f,  0.1443375672f, -0.1443375672f }, { 0.125f,  0.125f,  0.125f, -0.125f } },
-    { { 0.25f, -0.1443375672f,  0.1443375672f, -0.1443375672f }, { 0.125f, -0.125f,  0.125f, -0.125f } },
-    { { 0.25f,  0.1443375672f, -0.1443375672f,  0.1443375672f }, { 0.125f,  0.125f, -0.125f,  0.125f } },
-    { { 0.25f, -0.1443375672f, -0.1443375672f,  0.1443375672f }, { 0.125f, -0.125f, -0.125f,  0.125f } },
-    { { 0.25f,  0.1443375672f, -0.1443375672f, -0.1443375672f }, { 0.125f,  0.125f, -0.125f, -0.125f } },
-    { { 0.25f, -0.1443375672f, -0.1443375672f, -0.1443375672f }, { 0.125f, -0.125f, -0.125f, -0.125f } },
+static const ALfloat Ambi3DDecoder[8][MAX_AMBI_COEFFS] = {
+    { 0.125f,  0.125f,  0.125f,  0.125f },
+    { 0.125f, -0.125f,  0.125f,  0.125f },
+    { 0.125f,  0.125f,  0.125f, -0.125f },
+    { 0.125f, -0.125f,  0.125f, -0.125f },
+    { 0.125f,  0.125f, -0.125f,  0.125f },
+    { 0.125f, -0.125f, -0.125f,  0.125f },
+    { 0.125f,  0.125f, -0.125f, -0.125f },
+    { 0.125f, -0.125f, -0.125f, -0.125f },
+};
+static const ALfloat Ambi3DDecoderHFScale[MAX_AMBI_COEFFS] = {
+    2.0f,
+    1.15470054f, 1.15470054f, 1.15470054f
 };
 
 
@@ -546,14 +550,11 @@ void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device)
         {
             for(j = 0;j < device->Dry.NumChannels;j++)
             {
-                ALfloat hfgain=0.0f, lfgain=0.0f;
+                ALfloat gain=0.0f;
                 for(k = 0;k < COUNTOF(Ambi3DDecoder);k++)
-                {
-                    hfgain += Ambi3DDecoder[k][HF_BAND][i]*encgains[k][j];
-                    lfgain += Ambi3DDecoder[k][LF_BAND][i]*encgains[k][j];
-                }
-                ambiup->Gains[i][j][HF_BAND] = hfgain;
-                ambiup->Gains[i][j][LF_BAND] = lfgain;
+                    gain += Ambi3DDecoder[k][i] * encgains[k][j];
+                ambiup->Gains[i][j][HF_BAND] = gain * Ambi3DDecoderHFScale[i];
+                ambiup->Gains[i][j][LF_BAND] = gain;
             }
         }
     }

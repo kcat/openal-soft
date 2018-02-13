@@ -114,11 +114,14 @@ void splitterap_process(SplitterAllpass *splitter, ALfloat *restrict samples, AL
 }
 
 
-static const ALfloat UnitScale[MAX_AMBI_COEFFS] = {
+/* NOTE: These are scale factors as applied to Ambisonics content. Decoder
+ * coefficients should be divided by these values to get proper N3D scalings.
+ */
+const ALfloat N3D2N3DScale[MAX_AMBI_COEFFS] = {
     1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
     1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
 };
-static const ALfloat SN3D2N3DScale[MAX_AMBI_COEFFS] = {
+const ALfloat SN3D2N3DScale[MAX_AMBI_COEFFS] = {
     1.000000000f, /* ACN  0 (W), sqrt(1) */
     1.732050808f, /* ACN  1 (Y), sqrt(3) */
     1.732050808f, /* ACN  2 (Z), sqrt(3) */
@@ -136,7 +139,7 @@ static const ALfloat SN3D2N3DScale[MAX_AMBI_COEFFS] = {
     2.645751311f, /* ACN 14 (N), sqrt(7) */
     2.645751311f, /* ACN 15 (P), sqrt(7) */
 };
-static const ALfloat FuMa2N3DScale[MAX_AMBI_COEFFS] = {
+const ALfloat FuMa2N3DScale[MAX_AMBI_COEFFS] = {
     1.414213562f, /* ACN  0 (W), sqrt(2) */
     1.732050808f, /* ACN  1 (Y), sqrt(3) */
     1.732050808f, /* ACN  2 (Z), sqrt(3) */
@@ -238,7 +241,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
     static const ALsizei map2DTo3D[MAX_AMBI2D_COEFFS] = {
         0,  1, 3,  4, 8,  9, 15
     };
-    const ALfloat *coeff_scale = UnitScale;
+    const ALfloat *coeff_scale = N3D2N3DScale;
     bool periphonic;
     ALfloat ratio;
     ALsizei i;

@@ -66,50 +66,6 @@ static const ALsizei ACN2ACN[MAX_AMBI_COEFFS] = {
     8,  9, 10, 11, 12, 13, 14, 15
 };
 
-/* NOTE: These are scale factors as applied to Ambisonics content. Decoder
- * coefficients should be divided by these values to get proper N3D scalings.
- */
-static const ALfloat UnitScale[MAX_AMBI_COEFFS] = {
-    1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-    1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
-};
-static const ALfloat SN3D2N3DScale[MAX_AMBI_COEFFS] = {
-    1.000000000f, /* ACN  0 (W), sqrt(1) */
-    1.732050808f, /* ACN  1 (Y), sqrt(3) */
-    1.732050808f, /* ACN  2 (Z), sqrt(3) */
-    1.732050808f, /* ACN  3 (X), sqrt(3) */
-    2.236067978f, /* ACN  4 (V), sqrt(5) */
-    2.236067978f, /* ACN  5 (T), sqrt(5) */
-    2.236067978f, /* ACN  6 (R), sqrt(5) */
-    2.236067978f, /* ACN  7 (S), sqrt(5) */
-    2.236067978f, /* ACN  8 (U), sqrt(5) */
-    2.645751311f, /* ACN  9 (Q), sqrt(7) */
-    2.645751311f, /* ACN 10 (O), sqrt(7) */
-    2.645751311f, /* ACN 11 (M), sqrt(7) */
-    2.645751311f, /* ACN 12 (K), sqrt(7) */
-    2.645751311f, /* ACN 13 (L), sqrt(7) */
-    2.645751311f, /* ACN 14 (N), sqrt(7) */
-    2.645751311f, /* ACN 15 (P), sqrt(7) */
-};
-static const ALfloat FuMa2N3DScale[MAX_AMBI_COEFFS] = {
-    1.414213562f, /* ACN  0 (W), sqrt(2) */
-    1.732050808f, /* ACN  1 (Y), sqrt(3) */
-    1.732050808f, /* ACN  2 (Z), sqrt(3) */
-    1.732050808f, /* ACN  3 (X), sqrt(3) */
-    1.936491673f, /* ACN  4 (V), sqrt(15)/2 */
-    1.936491673f, /* ACN  5 (T), sqrt(15)/2 */
-    2.236067978f, /* ACN  6 (R), sqrt(5) */
-    1.936491673f, /* ACN  7 (S), sqrt(15)/2 */
-    1.936491673f, /* ACN  8 (U), sqrt(15)/2 */
-    2.091650066f, /* ACN  9 (Q), sqrt(35/8) */
-    1.972026594f, /* ACN 10 (O), sqrt(35)/3 */
-    2.231093404f, /* ACN 11 (M), sqrt(224/45) */
-    2.645751311f, /* ACN 12 (K), sqrt(7) */
-    2.231093404f, /* ACN 13 (L), sqrt(224/45) */
-    1.972026594f, /* ACN 14 (N), sqrt(35)/3 */
-    2.091650066f, /* ACN 15 (P), sqrt(35/8) */
-};
-
 
 void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS])
 {
@@ -626,7 +582,7 @@ static void InitPanning(ALCdevice *device)
         const ALsizei *acnmap = (device->AmbiLayout == AmbiLayout_FuMa) ? FuMa2ACN : ACN2ACN;
         const ALfloat *n3dscale = (device->AmbiScale == AmbiNorm_FuMa) ? FuMa2N3DScale :
                                   (device->AmbiScale == AmbiNorm_SN3D) ? SN3D2N3DScale :
-                                  /*(device->AmbiScale == AmbiNorm_N3D) ?*/ UnitScale;
+                                  /*(device->AmbiScale == AmbiNorm_N3D) ?*/ N3D2N3DScale;
         ALfloat nfc_delay = 0.0f;
 
         count = (device->AmbiOrder == 3) ? 16 :
@@ -712,7 +668,7 @@ static void InitPanning(ALCdevice *device)
 static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei speakermap[MAX_OUTPUT_CHANNELS])
 {
     ChannelMap chanmap[MAX_OUTPUT_CHANNELS];
-    const ALfloat *coeff_scale = UnitScale;
+    const ALfloat *coeff_scale = N3D2N3DScale;
     ALfloat w_scale = 1.0f;
     ALfloat xyz_scale = 1.0f;
     ALsizei i, j;

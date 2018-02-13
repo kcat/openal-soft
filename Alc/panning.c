@@ -1086,24 +1086,19 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
 
         if(pconf && GetConfigValueBool(devname, "decoder", "hq-mode", 0))
         {
-            ambiup_free(device->AmbiUp);
-            device->AmbiUp = NULL;
+            ambiup_free(&device->AmbiUp);
             if(!device->AmbiDecoder)
                 device->AmbiDecoder = bformatdec_alloc();
         }
         else
         {
-            bformatdec_free(device->AmbiDecoder);
-            device->AmbiDecoder = NULL;
-            if(device->FmtChans == DevFmtAmbi3D && device->AmbiOrder > 1)
+            bformatdec_free(&device->AmbiDecoder);
+            if(device->FmtChans != DevFmtAmbi3D || device->AmbiOrder < 2)
+                ambiup_free(&device->AmbiUp);
+            else
             {
                 if(!device->AmbiUp)
                     device->AmbiUp = ambiup_alloc();
-            }
-            else
-            {
-                ambiup_free(device->AmbiUp);
-                device->AmbiUp = NULL;
             }
         }
 
@@ -1155,8 +1150,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         return;
     }
 
-    bformatdec_free(device->AmbiDecoder);
-    device->AmbiDecoder = NULL;
+    bformatdec_free(&device->AmbiDecoder);
 
     headphones = device->IsHeadphones;
     if(device->Type != Loopback)
@@ -1248,8 +1242,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
             /* Don't bother with HOA when using full HRTF rendering. Nothing
              * needs it, and it eases the CPU/memory load.
              */
-            ambiup_free(device->AmbiUp);
-            device->AmbiUp = NULL;
+            ambiup_free(&device->AmbiUp);
         }
         else
         {
@@ -1274,8 +1267,7 @@ no_hrtf:
 
     device->Render_Mode = StereoPair;
 
-    ambiup_free(device->AmbiUp);
-    device->AmbiUp = NULL;
+    ambiup_free(&device->AmbiUp);
 
     bs2blevel = ((headphones && hrtf_appreq != Hrtf_Disable) ||
                  (hrtf_appreq == Hrtf_Enable)) ? 5 : 0;

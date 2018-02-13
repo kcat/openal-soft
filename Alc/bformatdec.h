@@ -27,7 +27,7 @@ struct AmbiUpsampler;
 
 
 struct BFormatDec *bformatdec_alloc();
-void bformatdec_free(struct BFormatDec *dec);
+void bformatdec_free(struct BFormatDec **dec);
 void bformatdec_reset(struct BFormatDec *dec, const struct AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALsizei chanmap[MAX_OUTPUT_CHANNELS]);
 
 /* Decodes the ambisonic input to the given output channels. */
@@ -41,7 +41,7 @@ void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[B
  * with bformatdec.
  */
 struct AmbiUpsampler *ambiup_alloc();
-void ambiup_free(struct AmbiUpsampler *ambiup);
+void ambiup_free(struct AmbiUpsampler **ambiup);
 void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device);
 
 void ambiup_process(struct AmbiUpsampler *ambiup, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALsizei OutChannels, const ALfloat (*restrict InSamples)[BUFFERSIZE], ALsizei SamplesToDo);

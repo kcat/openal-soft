@@ -217,17 +217,17 @@ BFormatDec *bformatdec_alloc()
     return al_calloc(16, sizeof(BFormatDec));
 }
 
-void bformatdec_free(BFormatDec *dec)
+void bformatdec_free(BFormatDec **dec)
 {
     if(dec)
     {
-        al_free(dec->Samples);
-        dec->Samples = NULL;
-        dec->SamplesHF = NULL;
-        dec->SamplesLF = NULL;
+        al_free((*dec)->Samples);
+        (*dec)->Samples = NULL;
+        (*dec)->SamplesHF = NULL;
+        (*dec)->SamplesLF = NULL;
 
-        memset(dec, 0, sizeof(*dec));
-        al_free(dec);
+        al_free(*dec);
+        *dec = NULL;
     }
 }
 
@@ -507,9 +507,13 @@ AmbiUpsampler *ambiup_alloc()
     return al_calloc(16, sizeof(AmbiUpsampler));
 }
 
-void ambiup_free(struct AmbiUpsampler *ambiup)
+void ambiup_free(struct AmbiUpsampler **ambiup)
 {
-    al_free(ambiup);
+    if(ambiup)
+    {
+        al_free(*ambiup);
+        *ambiup = NULL;
+    }
 }
 
 void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device)

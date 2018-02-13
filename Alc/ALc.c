@@ -2469,11 +2469,8 @@ static ALCvoid FreeDevice(ALCdevice *device)
     al_free(device->Uhj_Encoder);
     device->Uhj_Encoder = NULL;
 
-    bformatdec_free(device->AmbiDecoder);
-    device->AmbiDecoder = NULL;
-
-    ambiup_free(device->AmbiUp);
-    device->AmbiUp = NULL;
+    bformatdec_free(&device->AmbiDecoder);
+    ambiup_free(&device->AmbiUp);
 
     al_free(device->Stablizer);
     device->Stablizer = NULL;

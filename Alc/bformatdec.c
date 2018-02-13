@@ -221,7 +221,7 @@ BFormatDec *bformatdec_alloc()
 
 void bformatdec_free(BFormatDec **dec)
 {
-    if(dec)
+    if(dec && *dec)
     {
         al_free((*dec)->Samples);
         (*dec)->Samples = NULL;

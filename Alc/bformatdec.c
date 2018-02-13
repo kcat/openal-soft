@@ -187,7 +187,7 @@ static const ALfloat Ambi3DDecoder[8][FB_Max][MAX_AMBI_COEFFS] = {
 
 /* NOTE: BandSplitter filters are unused with single-band decoding */
 typedef struct BFormatDec {
-    ALboolean Enabled[MAX_OUTPUT_CHANNELS];
+    ALuint Enabled; /* Bitfield of enabled channels. */
 
     union {
         alignas(16) ALfloat Dual[MAX_OUTPUT_CHANNELS][FB_Max][MAX_AMBI_COEFFS];
@@ -251,10 +251,9 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
     dec->SamplesHF = dec->Samples;
     dec->SamplesLF = dec->SamplesHF + dec->NumChannels;
 
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-        dec->Enabled[i] = AL_FALSE;
+    dec->Enabled = 0;
     for(i = 0;i < conf->NumSpeakers;i++)
-        dec->Enabled[chanmap[i]] = AL_TRUE;
+        dec->Enabled |= 1 << chanmap[i];
 
     if(conf->CoeffScale == ADS_SN3D)
         coeff_scale = SN3D2N3DScale;
@@ -416,7 +415,7 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
 
         for(chan = 0;chan < OutChannels;chan++)
         {
-            if(!dec->Enabled[chan])
+            if(!(dec->Enabled&(1<<chan)))
                 continue;
 
             memset(dec->ChannelMix, 0, SamplesToDo*sizeof(ALfloat));
@@ -435,7 +434,7 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[BU
     {
         for(chan = 0;chan < OutChannels;chan++)
         {
-            if(!dec->Enabled[chan])
+            if(!(dec->Enabled&(1<<chan)))
                 continue;
 
             memset(dec->ChannelMix, 0, SamplesToDo*sizeof(ALfloat));

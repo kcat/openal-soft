@@ -518,7 +518,7 @@ void ambiup_free(struct AmbiUpsampler **ambiup)
     }
 }
 
-void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device)
+void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device, ALfloat w_scale, ALfloat xyz_scale)
 {
     ALfloat ratio;
     ALsizei i;
@@ -560,11 +560,6 @@ void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device)
     }
     else
     {
-        /* Assumes full 3D/periphonic on the input and output mixes! */
-        ALfloat w_scale = (device->Dry.NumChannels > 9) ? W_SCALE_3H3P :
-                          (device->Dry.NumChannels > 4) ? W_SCALE_2H2P : 1.0f;
-        ALfloat xyz_scale = (device->Dry.NumChannels > 9) ? XYZ_SCALE_3H3P :
-                            (device->Dry.NumChannels > 4) ? XYZ_SCALE_2H2P : 1.0f;
         for(i = 0;i < 4;i++)
         {
             ALsizei index = GetChannelForACN(device->Dry, i);

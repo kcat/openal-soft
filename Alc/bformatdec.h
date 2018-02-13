@@ -38,11 +38,11 @@ void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*restrict OutBuffer)[B
 
 
 /* Stand-alone first-order upsampler. Kept here because it shares some stuff
- * with bformatdec.
+ * with bformatdec. Assumes a periphonic (4-channel) input mix!
  */
 struct AmbiUpsampler *ambiup_alloc();
 void ambiup_free(struct AmbiUpsampler **ambiup);
-void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device);
+void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device, ALfloat w_scale, ALfloat xyz_scale);
 
 void ambiup_process(struct AmbiUpsampler *ambiup, ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALsizei OutChannels, const ALfloat (*restrict InSamples)[BUFFERSIZE], ALsizei SamplesToDo);
 

@@ -12,7 +12,7 @@
 /* The maximum number of virtual speakers used to generate HRTF coefficients
  * for decoding B-Format.
  */
-#define HRTF_AMBI_MAX_CHANNELS 16
+#define HRTF_AMBI_MAX_CHANNELS 18
 
 
 #define HRTF_HISTORY_BITS   (6)

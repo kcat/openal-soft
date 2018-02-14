@@ -446,9 +446,8 @@ static void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei orde
 
     if(GetConfigValueBool(devname, "decoder", "nfc", 1) && ctrl_dist > 0.0f)
     {
-        /* NFC is only used when AvgSpeakerDist is greater than 0, and
-         * METERS_PER_UNIT is also greater than 0. In addition, NFC can only be
-         * used when rendering to an ambisonic buffer.
+        /* NFC is only used when AvgSpeakerDist is greater than 0, and can only
+         * be used when rendering to an ambisonic buffer.
          */
         device->AvgSpeakerDist = ctrl_dist;
 

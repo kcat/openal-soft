@@ -1363,10 +1363,20 @@ static inline ALvoid DelayLineIn4Rev(DelayLineI *Delay, ALsizei offset, const AL
 static inline void VectorPartialScatter(ALfloat *restrict out, const ALfloat *restrict in,
                                         const ALfloat xCoeff, const ALfloat yCoeff)
 {
-    out[0] = xCoeff*in[0] + yCoeff*(          in[1] + -in[2] +  in[3]);
-    out[1] = xCoeff*in[1] + yCoeff*(-in[0]          +  in[2] +  in[3]);
-    out[2] = xCoeff*in[2] + yCoeff*( in[0] + -in[1]          +  in[3]);
-    out[3] = xCoeff*in[3] + yCoeff*(-in[0] + -in[1] + -in[2]         );
+    out[0] = xCoeff*in[0] + yCoeff*(          in[1] + -in[2] + in[3]);
+    out[1] = xCoeff*in[1] + yCoeff*(-in[0]          +  in[2] + in[3]);
+    out[2] = xCoeff*in[2] + yCoeff*( in[0] + -in[1]          + in[3]);
+    out[3] = xCoeff*in[3] + yCoeff*(-in[0] + -in[1] + -in[2]        );
+}
+
+/* Same as above, but reverses the input. */
+static inline void VectorPartialScatterRev(ALfloat *restrict out, const ALfloat *restrict in,
+                                           const ALfloat xCoeff, const ALfloat yCoeff)
+{
+    out[0] = xCoeff*in[3] + yCoeff*(in[0] + -in[1] +  in[2]         );
+    out[1] = xCoeff*in[2] + yCoeff*(in[0] +  in[1]          + -in[3]);
+    out[2] = xCoeff*in[1] + yCoeff*(in[0]          + -in[2] +  in[3]);
+    out[3] = xCoeff*in[0] + yCoeff*(      + -in[1] + -in[2] + -in[3]);
 }
 
 /* This applies a Gerzon multiple-in/multiple-out (MIMO) vector all-pass
@@ -1407,14 +1417,6 @@ static void VectorAllpass_##T(ALfloat *restrict out,                          \
 DECL_TEMPLATE(Unfaded)
 DECL_TEMPLATE(Faded)
 #undef DECL_TEMPLATE
-
-/* A helper to reverse vector components. */
-static inline void VectorReverse(ALfloat *restrict out, const ALfloat *restrict in)
-{
-    ALsizei i;
-    for(i = 0;i < NUM_LINES;i++)
-        out[i] = in[NUM_LINES-1-i];
-}
 
 /* This generates early reflections.
  *
@@ -1469,10 +1471,9 @@ static ALvoid EarlyReflection_##T(ALreverbState *State, const ALsizei todo,   \
         for(j = 0;j < NUM_LINES;j++)                                          \
             out[j][i] = f[j];                                                 \
                                                                               \
-        VectorReverse(fr, f);                                                 \
-        VectorPartialScatter(f, fr, mixX, mixY);                              \
+        VectorPartialScatterRev(fr, f, mixX, mixY);                           \
                                                                               \
-        DelayLineIn4(&State->Delay, offset-State->LateFeedTap, f);            \
+        DelayLineIn4(&State->Delay, offset-State->LateFeedTap, fr);           \
                                                                               \
         offset++;                                                             \
         fade += FadeStep;                                                     \
@@ -1551,10 +1552,9 @@ static ALvoid LateReverb_Faded(ALreverbState *State, const ALsizei todo, ALfloat
         for(j = 0;j < NUM_LINES;j++)
             out[j][i] = f[j];
 
-        VectorReverse(fr, f);
-        VectorPartialScatter(f, fr, mixX, mixY);
+        VectorPartialScatterRev(fr, f, mixX, mixY);
 
-        DelayLineIn4(&State->Late.Delay, offset, f);
+        DelayLineIn4(&State->Late.Delay, offset, fr);
 
         offset++;
         fade += FadeStep;
@@ -1588,10 +1588,9 @@ static ALvoid LateReverb_Unfaded(ALreverbState *State, const ALsizei todo, ALflo
         for(j = 0;j < NUM_LINES;j++)
             out[j][i] = f[j];
 
-        VectorReverse(fr, f);
-        VectorPartialScatter(f, fr, mixX, mixY);
+        VectorPartialScatterRev(fr, f, mixX, mixY);
 
-        DelayLineIn4(&State->Late.Delay, offset, f);
+        DelayLineIn4(&State->Late.Delay, offset, fr);
 
         offset++;
     }

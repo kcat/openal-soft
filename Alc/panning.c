@@ -896,9 +896,9 @@ static void InitHrtfPanning(ALCdevice *device)
         { 5.55555556e-02f,  0.00000000e+00f, -1.23717915e-01f,  0.00000000e+00f,  0.00000000e+00f,  0.00000000e+00f,  0.00000000e+00f,  0.00000000e+00f },
     };
     static const ALfloat AmbiOrderHFGainFOA[MAX_AMBI_ORDER+1] = {
-        3.00000000e+00f, 1.73205081e+00f
+        1.00000000e+00f, 5.77350269e-01f
     }, AmbiOrderHFGainHOA[MAX_AMBI_ORDER+1] = {
-        2.40192231e+00f, 1.86052102e+00f, 9.60768923e-01f
+        9.80580676e-01f, 7.59554525e-01f, 3.92232270e-01f
     };
     const ALfloat (*restrict AmbiMatrix)[MAX_AMBI_COEFFS] = AmbiMatrixFOA;
     const ALfloat *restrict AmbiOrderHFGain = AmbiOrderHFGainFOA;

@@ -467,21 +467,6 @@ inline void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, 
  */
 void CalcAnglePairwiseCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
 
-void ComputeAmbientGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
-void ComputeAmbientGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
-/**
- * ComputeAmbientGains
- *
- * Computes channel gains for ambient, omni-directional sounds.
- */
-inline void ComputeAmbientGains(const DryMixParams *dry, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
-{
-    if(dry->CoeffCount > 0)
-        ComputeAmbientGainsMC(dry->Ambi.Coeffs, dry->NumChannels, ingain, gains);
-    else
-        ComputeAmbientGainsBF(dry->Ambi.Map, dry->NumChannels, ingain, gains);
-}
-
 
 void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, ALsizei numcoeffs, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);

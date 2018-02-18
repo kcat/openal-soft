@@ -38,7 +38,6 @@
 
 
 extern inline void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
-extern inline void ComputeAmbientGains(const DryMixParams *dry, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 extern inline void ComputeDryPanGains(const DryMixParams *dry, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 extern inline void ComputeFirstOrderGains(const BFMixParams *foa, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
@@ -161,31 +160,6 @@ void CalcAnglePairwiseCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread,
     CalcAngleCoeffs(azimuth, elevation, spread, coeffs);
 }
 
-
-void ComputeAmbientGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
-{
-    ALsizei i;
-
-    for(i = 0;i < numchans;i++)
-        gains[i] = chancoeffs[i][0] * 1.414213562f * ingain;
-    for(;i < MAX_OUTPUT_CHANNELS;i++)
-        gains[i] = 0.0f;
-}
-
-void ComputeAmbientGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
-{
-    ALfloat gain = 0.0f;
-    ALsizei i;
-
-    for(i = 0;i < numchans;i++)
-    {
-        if(chanmap[i].Index == 0)
-            gain += chanmap[i].Scale;
-    }
-    gains[0] = gain * 1.414213562f * ingain;
-    for(i = 1;i < MAX_OUTPUT_CHANNELS;i++)
-        gains[i] = 0.0f;
-}
 
 void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, ALsizei numcoeffs, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {

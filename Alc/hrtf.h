@@ -63,6 +63,11 @@ typedef struct DirectHrtfState {
     } Chan[];
 } DirectHrtfState;
 
+struct AngularPoint {
+    ALfloat Elev;
+    ALfloat Azim;
+};
+
 
 void FreeHrtfs(void);
 
@@ -79,6 +84,6 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
  * virtual speaker positions and HF/LF matrices for decoding to them. The
  * returned coefficients are ordered and scaled according to the matrices.
  */
-void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei NumChannels, const ALfloat (*restrict AmbiPoints)[2], const ALfloat (*restrict AmbiMatrix)[MAX_AMBI_COEFFS], ALsizei AmbiCount, const ALfloat *restrict AmbiOrderHFGain);
+void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei NumChannels, const struct AngularPoint *AmbiPoints, const ALfloat (*restrict AmbiMatrix)[MAX_AMBI_COEFFS], ALsizei AmbiCount, const ALfloat *restrict AmbiOrderHFGain);
 
 #endif /* ALC_HRTF_H */

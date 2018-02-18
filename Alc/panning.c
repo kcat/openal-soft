@@ -810,7 +810,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsiz
 static void InitHrtfPanning(ALCdevice *device)
 {
     /* NOTE: azimuth goes clockwise. */
-    static const ALfloat AmbiPoints[][2] = {
+    static const struct AngularPoint AmbiPoints[] = {
         { DEG2RAD( 90.0f), DEG2RAD(   0.0f) },
         { DEG2RAD( 35.0f), DEG2RAD(  45.0f) },
         { DEG2RAD( 35.0f), DEG2RAD( 135.0f) },

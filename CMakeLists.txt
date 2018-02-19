@@ -1525,6 +1525,15 @@ IF(ALSOFT_EXAMPLES)
                 PRIVATE ${LINKER_FLAGS} ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ex-common common
                         OpenAL)
 
+            ADD_EXECUTABLE(almultireverb examples/almultireverb.c)
+            TARGET_COMPILE_DEFINITIONS(almultireverb PRIVATE ${CPP_DEFS})
+            TARGET_INCLUDE_DIRECTORIES(almultireverb
+                PRIVATE ${SDL2_INCLUDE_DIR} ${SDL_SOUND_INCLUDE_DIR})
+            TARGET_COMPILE_OPTIONS(almultireverb PRIVATE ${C_FLAGS})
+            TARGET_LINK_LIBRARIES(almultireverb
+                PRIVATE ${LINKER_FLAGS} ${SDL_SOUND_LIBRARIES} ${SDL2_LIBRARY} ex-common common
+                        OpenAL ${MATH_LIB})
+
             ADD_EXECUTABLE(allatency examples/allatency.c)
             TARGET_COMPILE_DEFINITIONS(allatency PRIVATE ${CPP_DEFS})
             TARGET_INCLUDE_DIRECTORIES(allatency

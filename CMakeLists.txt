@@ -1562,7 +1562,7 @@ IF(ALSOFT_EXAMPLES)
                         OpenAL ${MATH_LIB})
 
             IF(ALSOFT_INSTALL)
-                INSTALL(TARGETS alplay alstream alreverb allatency alloopback alhrtf
+                INSTALL(TARGETS alplay alstream alreverb almultireverb allatency alloopback alhrtf
                         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
                         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
                         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

@@ -18,6 +18,7 @@
 #include <mutex>
 #include <deque>
 #include <array>
+#include <cmath>
 
 extern "C" {
 #include "libavcodec/avcodec.h"

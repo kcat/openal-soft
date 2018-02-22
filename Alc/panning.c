@@ -293,7 +293,8 @@ static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei sp
 
     for(i = 0;i < conf->NumSpeakers;i++)
     {
-        int c = -1;
+        enum Channel ch;
+        int chidx = -1;
 
         /* NOTE: AmbDec does not define any standard speaker names, however
          * for this to work we have to by able to find the output channel
@@ -316,62 +317,63 @@ static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei sp
          * and vice-versa.
          */
         if(alstr_cmp_cstr(conf->Speakers[i].Name, "LF") == 0)
-            c = GetChannelIdxByName(&device->RealOut, FrontLeft);
+            ch = FrontLeft;
         else if(alstr_cmp_cstr(conf->Speakers[i].Name, "RF") == 0)
-            c = GetChannelIdxByName(&device->RealOut, FrontRight);
+            ch = FrontRight;
         else if(alstr_cmp_cstr(conf->Speakers[i].Name, "CE") == 0)
-            c = GetChannelIdxByName(&device->RealOut, FrontCenter);
+            ch = FrontCenter;
         else if(alstr_cmp_cstr(conf->Speakers[i].Name, "LS") == 0)
         {
             if(device->FmtChans == DevFmtX51Rear)
-                c = GetChannelIdxByName(&device->RealOut, BackLeft);
+                ch = BackLeft;
             else
-                c = GetChannelIdxByName(&device->RealOut, SideLeft);
+                ch = SideLeft;
         }
         else if(alstr_cmp_cstr(conf->Speakers[i].Name, "RS") == 0)
         {
             if(device->FmtChans == DevFmtX51Rear)
-                c = GetChannelIdxByName(&device->RealOut, BackRight);
+                ch = BackRight;
             else
-                c = GetChannelIdxByName(&device->RealOut, SideRight);
+                ch = SideRight;
         }
         else if(alstr_cmp_cstr(conf->Speakers[i].Name, "LB") == 0)
         {
             if(device->FmtChans == DevFmtX51)
-                c = GetChannelIdxByName(&device->RealOut, SideLeft);
+                ch = SideLeft;
             else
-                c = GetChannelIdxByName(&device->RealOut, BackLeft);
+                ch = BackLeft;
         }
         else if(alstr_cmp_cstr(conf->Speakers[i].Name, "RB") == 0)
         {
             if(device->FmtChans == DevFmtX51)
-                c = GetChannelIdxByName(&device->RealOut, SideRight);
+                ch = SideRight;
             else
-                c = GetChannelIdxByName(&device->RealOut, BackRight);
+                ch = BackRight;
         }
         else if(alstr_cmp_cstr(conf->Speakers[i].Name, "CB") == 0)
-            c = GetChannelIdxByName(&device->RealOut, BackCenter);
+            ch = BackCenter;
         else
         {
             const char *name = alstr_get_cstr(conf->Speakers[i].Name);
             unsigned int n;
-            char ch;
+            char c;
 
-            if(sscanf(name, "AUX%u%c", &n, &ch) == 1 && n < 16)
-                c = GetChannelIdxByName(&device->RealOut, Aux0+n);
+            if(sscanf(name, "AUX%u%c", &n, &c) == 1 && n < 16)
+                ch = Aux0+n;
             else
             {
                 ERR("AmbDec speaker label \"%s\" not recognized\n", name);
                 return false;
             }
         }
-        if(c == -1)
+        chidx = GetChannelIdxByName(&device->RealOut, ch);
+        if(chidx == -1)
         {
             ERR("Failed to lookup AmbDec speaker label %s\n",
                 alstr_get_cstr(conf->Speakers[i].Name));
             return false;
         }
-        speakermap[i] = c;
+        speakermap[i] = chidx;
     }
 
     return true;

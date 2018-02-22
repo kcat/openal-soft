@@ -38,6 +38,9 @@
 extern inline void LockEffectSlotList(ALCcontext *context);
 extern inline void UnlockEffectSlotList(ALCcontext *context);
 
+static void AddActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *context);
+static void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *context);
+
 static const struct {
     ALenum Type;
     ALeffectStateFactory* (*GetFactory)(void);
@@ -105,7 +108,6 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
 {
     ALCdevice *device;
     ALCcontext *context;
-    ALeffectslot **tmpslots = NULL;
     ALsizei cur;
     ALenum err;
 
@@ -114,10 +116,10 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
 
     if(!(n >= 0))
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Generating %d effect slots", n);
-    tmpslots = al_malloc(DEF_ALIGN, sizeof(ALeffectslot*)*n);
+    if(n == 0) goto done;
 
-    device = context->Device;
     LockEffectSlotList(context);
+    device = context->Device;
     if(device->AuxiliaryEffectSlotMax - VECTOR_SIZE(context->EffectSlotList) < (ALuint)n)
     {
         UnlockEffectSlotList(context);
@@ -162,33 +164,12 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
         slot->id = (iter - VECTOR_BEGIN(context->EffectSlotList)) + 1;
         *iter = slot;
 
-        tmpslots[cur] = slot;
         effectslots[cur] = slot->id;
     }
-    if(n > 0)
-    {
-        struct ALeffectslotArray *curarray = ATOMIC_LOAD(&context->ActiveAuxSlots, almemory_order_acquire);
-        struct ALeffectslotArray *newarray = NULL;
-        ALsizei newcount = curarray->count + n;
-        ALCdevice *device;
-
-        newarray = al_calloc(DEF_ALIGN, FAM_SIZE(struct ALeffectslotArray, slot, newcount));
-        newarray->count = newcount;
-        memcpy(newarray->slot, tmpslots, sizeof(ALeffectslot*)*n);
-        if(curarray)
-            memcpy(newarray->slot+n, curarray->slot, sizeof(ALeffectslot*)*curarray->count);
-
-        newarray = ATOMIC_EXCHANGE_PTR(&context->ActiveAuxSlots, newarray,
-                                       almemory_order_acq_rel);
-        device = context->Device;
-        while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
-            althrd_yield();
-        al_free(newarray);
-    }
+    AddActiveEffectSlots(effectslots, n, context);
     UnlockEffectSlotList(context);
 
 done:
-    al_free(tmpslots);
     ALCcontext_DecRef(context);
 }
 
@@ -204,6 +185,8 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *
     LockEffectSlotList(context);
     if(!(n >= 0))
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Deleting %d effect slots", n);
+    if(n == 0) goto done;
+
     for(i = 0;i < n;i++)
     {
         if((slot=LookupEffectSlot(context, effectslots[i])) == NULL)
@@ -215,37 +198,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *
     }
 
     // All effectslots are valid
-    if(n > 0)
-    {
-        struct ALeffectslotArray *curarray = ATOMIC_LOAD(&context->ActiveAuxSlots, almemory_order_acquire);
-        struct ALeffectslotArray *newarray = NULL;
-        ALsizei newcount = curarray->count - n;
-        ALCdevice *device;
-        ALsizei j, k;
-
-        assert(newcount >= 0);
-        newarray = al_calloc(DEF_ALIGN, FAM_SIZE(struct ALeffectslotArray, slot, newcount));
-        newarray->count = newcount;
-        for(i = j = 0;i < newarray->count;)
-        {
-            slot = curarray->slot[j++];
-            for(k = 0;k < n;k++)
-            {
-                if(slot->id == effectslots[k])
-                    break;
-            }
-            if(k == n)
-                newarray->slot[i++] = slot;
-        }
-
-        newarray = ATOMIC_EXCHANGE_PTR(&context->ActiveAuxSlots, newarray,
-                                       almemory_order_acq_rel);
-        device = context->Device;
-        while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
-            althrd_yield();
-        al_free(newarray);
-    }
-
+    RemoveActiveEffectSlots(effectslots, n, context);
     for(i = 0;i < n;i++)
     {
         if((slot=LookupEffectSlot(context, effectslots[i])) == NULL)
@@ -627,6 +580,80 @@ void ALeffectState_Construct(ALeffectState *state)
 
 void ALeffectState_Destruct(ALeffectState *UNUSED(state))
 {
+}
+
+
+static void AddActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *context)
+{
+    struct ALeffectslotArray *curarray = ATOMIC_LOAD(&context->ActiveAuxSlots,
+                                                     almemory_order_acquire);
+    struct ALeffectslotArray *newarray = NULL;
+    ALsizei newcount = curarray->count + count;
+    ALCdevice *device = context->Device;
+    ALsizei i, j;
+
+    /* Insert the new effect slots into the head of the array, followed by the
+     * existing ones.
+     */
+    newarray = al_calloc(DEF_ALIGN, FAM_SIZE(struct ALeffectslotArray, slot, newcount));
+    newarray->count = newcount;
+    for(i = 0;i < count;i++)
+        newarray->slot[i] = LookupEffectSlot(context, slotids[i]);
+    for(j = 0;i < newcount;)
+        newarray->slot[i++] = curarray->slot[j++];
+    /* Remove any duplicates (first instance of each will be kept). */
+    for(i = 1;i < newcount;i++)
+    {
+        for(j = i;j != 0;)
+        {
+            if(newarray->slot[i] == newarray->slot[--j])
+                break;
+        }
+        if(j != 0)
+        {
+            newcount--;
+            for(j = i;j < newcount;j++)
+                newarray->slot[j] = newarray->slot[j+1];
+            i--;
+        }
+    }
+    newarray->count = newcount;
+
+    curarray = ATOMIC_EXCHANGE_PTR(&context->ActiveAuxSlots, newarray, almemory_order_acq_rel);
+    while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
+        althrd_yield();
+    al_free(curarray);
+}
+
+static void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *context)
+{
+    struct ALeffectslotArray *curarray = ATOMIC_LOAD(&context->ActiveAuxSlots,
+                                                     almemory_order_acquire);
+    struct ALeffectslotArray *newarray = NULL;
+    ALsizei newcount = curarray->count - count;
+    ALCdevice *device = context->Device;
+    ALsizei i, j;
+
+    assert(newcount >= 0);
+    newarray = al_calloc(DEF_ALIGN, FAM_SIZE(struct ALeffectslotArray, slot, newcount));
+    newarray->count = newcount;
+    for(i = j = 0;i < newarray->count;)
+    {
+        ALeffectslot *slot = curarray->slot[j++];
+        ALsizei k = count;
+        while(k != 0)
+        {
+            if(slot->id == slotids[--k])
+                break;
+        }
+        if(k == 0)
+            newarray->slot[i++] = slot;
+    }
+
+    curarray = ATOMIC_EXCHANGE_PTR(&context->ActiveAuxSlots, newarray, almemory_order_acq_rel);
+    while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
+        althrd_yield();
+    al_free(curarray);
 }
 
 

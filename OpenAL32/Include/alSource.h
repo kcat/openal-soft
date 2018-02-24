@@ -92,7 +92,7 @@ typedef struct ALsource {
     ALint SourceType;
 
     /** Source state (initial, playing, paused, or stopped) */
-    ATOMIC(ALenum) state;
+    ALenum state;
 
     /** Source Buffer Queue head. */
     ALbufferlistitem *queue;

@@ -209,6 +209,41 @@ void aluInit(void)
 }
 
 
+static void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
+{
+    ALbitfieldSOFT enabledevt;
+    AsyncEvent evt;
+    size_t strpos;
+    ALuint scale;
+
+    enabledevt = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_acquire);
+    if(!(enabledevt&EventType_SourceStateChange)) return;
+
+    evt.EnumType = EventType_SourceStateChange;
+    evt.Type = AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT;
+    evt.ObjectId = id;
+    evt.Param = AL_STOPPED;
+
+    /* Normally snprintf would be used, but this is called from the mixer and
+     * that function's not real-time safe, so we have to construct it manually.
+     */
+    strcpy(evt.Message, "Source ID "); strpos = 10;
+    scale = 1000000000;
+    while(scale > 0 && scale > id)
+        scale /= 10;
+    while(scale > 0)
+    {
+        evt.Message[strpos++] = '0' + ((id/scale)%10);
+        scale /= 10;
+    }
+    strcpy(evt.Message+strpos, " state changed to AL_STOPPED");
+
+    if(ll_ringbuffer_write_space(context->AsyncEvents) > 0)
+        ll_ringbuffer_write(context->AsyncEvents, (const char*)&evt, 1);
+    alsem_post(&context->EventSem);
+}
+
+
 static void ProcessHrtf(ALCdevice *device, ALsizei SamplesToDo)
 {
     DirectHrtfState *state;
@@ -1778,6 +1813,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
                     {
                         ATOMIC_STORE(&voice->Source, NULL, almemory_order_relaxed);
                         ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
+                        SendSourceStoppedEvent(ctx, source->id);
                     }
                 }
             }
@@ -1902,10 +1938,10 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
     ctx = ATOMIC_LOAD_SEQ(&device->ContextList);
     while(ctx)
     {
+        ALbitfieldSOFT enabledevt = ATOMIC_LOAD(&ctx->EnabledEvts, almemory_order_acquire);
         ALsizei i;
 
-        if((ATOMIC_LOAD(&ctx->EnabledEvts, almemory_order_acquire)&EventType_Disconnected) &&
-           ll_ringbuffer_write_space(ctx->AsyncEvents) > 0)
+        if((enabledevt&EventType_Disconnected) && ll_ringbuffer_write_space(ctx->AsyncEvents) > 0)
         {
             ll_ringbuffer_write(ctx->AsyncEvents, (const char*)&evt, 1);
             alsem_post(&ctx->EventSem);
@@ -1914,8 +1950,17 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
         for(i = 0;i < ctx->VoiceCount;i++)
         {
             ALvoice *voice = ctx->Voices[i];
+            ALsource *source;
 
-            ATOMIC_STORE(&voice->Source, NULL, almemory_order_relaxed);
+            source = ATOMIC_EXCHANGE_PTR(&voice->Source, NULL, almemory_order_relaxed);
+            if(source && ATOMIC_LOAD(&voice->Playing, almemory_order_relaxed))
+            {
+                /* If the source's voice was playing, it's now effectively
+                 * stopped (the source state will be updated the next time it's
+                 * checked).
+                 */
+                SendSourceStoppedEvent(ctx, source->id);
+            }
             ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
         }
 

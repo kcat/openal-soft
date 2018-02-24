@@ -32,6 +32,7 @@
 #include "alSource.h"
 #include "alBuffer.h"
 #include "alAuxEffectSlot.h"
+#include "ringbuffer.h"
 
 #include "backends/base.h"
 
@@ -231,6 +232,36 @@ static inline bool SourceShouldUpdate(ALsource *source, ALCcontext *context)
     return !ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire) &&
            IsPlayingOrPaused(source);
 }
+
+
+/** Can only be called while the mixer is locked! */
+static void SendStateChangeEvent(ALCcontext *context, ALuint id, ALenum state)
+{
+    ALbitfieldSOFT enabledevt;
+    AsyncEvent evt;
+
+    enabledevt = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_acquire);
+    if(!(enabledevt&EventType_SourceStateChange)) return;
+
+    evt.EnumType = EventType_SourceStateChange;
+    evt.Type = AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT;
+    evt.ObjectId = id;
+    evt.Param = state;
+    snprintf(evt.Message, sizeof(evt.Message), "Source ID %u state changed to %s", id,
+        (state==AL_INITIAL) ? "AL_INITIAL" :
+        (state==AL_PLAYING) ? "AL_PLAYING" :
+        (state==AL_PAUSED) ? "AL_PAUSED" :
+        (state==AL_STOPPED) ? "AL_STOPPED" : "<unknown>"
+    );
+    /* The mixer may have queued a state change that's not yet been processed,
+     * and we don't want state change messages to occur out of order, so send
+     * it through the async queue to ensure proper ordering.
+     */
+    if(ll_ringbuffer_write_space(context->AsyncEvents) > 0)
+        ll_ringbuffer_write(context->AsyncEvents, (const char*)&evt, 1);
+    alsem_post(&context->EventSem);
+}
+
 
 static ALint FloatValsByProp(ALenum prop)
 {
@@ -2396,10 +2427,13 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     /* If the device is disconnected, go right to stopped. */
     if(!ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
+        /* TODO: Send state change event? */
         for(i = 0;i < n;i++)
         {
             source = LookupSource(context, sources[i]);
             ATOMIC_STORE(&source->state, AL_STOPPED, almemory_order_relaxed);
+            source->OffsetType = AL_NONE;
+            source->Offset = 0.0;
         }
         ALCdevice_Unlock(device);
         goto done;
@@ -2443,15 +2477,18 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         }
 
         /* If there's nothing to play, go right to stopped. */
-        if(!BufferList)
+        if(UNLIKELY(!BufferList))
         {
             /* NOTE: A source without any playable buffers should not have an
              * ALvoice since it shouldn't be in a playing or paused state. So
              * there's no need to look up its voice and clear the source.
              */
+            ALenum oldstate = GetSourceState(source, NULL);
             ATOMIC_STORE(&source->state, AL_STOPPED, almemory_order_relaxed);
             source->OffsetType = AL_NONE;
             source->Offset = 0.0;
+            if(oldstate != AL_STOPPED)
+                SendStateChangeEvent(context, source->id, AL_STOPPED);
             continue;
         }
 
@@ -2471,6 +2508,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
                 /* A source that's paused simply resumes. */
                 ATOMIC_STORE(&voice->Playing, true, almemory_order_release);
                 ATOMIC_STORE(&source->state, AL_PLAYING, almemory_order_release);
+                SendStateChangeEvent(context, source->id, AL_PLAYING);
                 continue;
 
             default:
@@ -2543,6 +2581,8 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         ATOMIC_STORE(&voice->Playing, true, almemory_order_release);
         ATOMIC_STORE(&source->state, AL_PLAYING, almemory_order_release);
         source->VoiceIdx = vidx;
+
+        SendStateChangeEvent(context, source->id, AL_PLAYING);
     }
     ALCdevice_Unlock(device);
 
@@ -2581,13 +2621,12 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     {
         source = LookupSource(context, sources[i]);
         if((voice=GetSourceVoice(source, context)) != NULL)
-        {
             ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
-            while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
-                althrd_yield();
-        }
         if(GetSourceState(source, voice) == AL_PLAYING)
+        {
             ATOMIC_STORE(&source->state, AL_PAUSED, almemory_order_release);
+            SendStateChangeEvent(context, source->id, AL_PAUSED);
+        }
     }
     ALCdevice_Unlock(device);
 
@@ -2624,16 +2663,20 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     ALCdevice_Lock(device);
     for(i = 0;i < n;i++)
     {
+        ALenum oldstate;
         source = LookupSource(context, sources[i]);
         if((voice=GetSourceVoice(source, context)) != NULL)
         {
             ATOMIC_STORE(&voice->Source, NULL, almemory_order_relaxed);
             ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
-            while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
-                althrd_yield();
+            voice = NULL;
         }
-        if(ATOMIC_LOAD(&source->state, almemory_order_acquire) != AL_INITIAL)
+        oldstate = GetSourceState(source, voice);
+        if(oldstate != AL_INITIAL && oldstate != AL_STOPPED)
+        {
             ATOMIC_STORE(&source->state, AL_STOPPED, almemory_order_relaxed);
+            SendStateChangeEvent(context, source->id, AL_STOPPED);
+        }
         source->OffsetType = AL_NONE;
         source->Offset = 0.0;
     }
@@ -2677,11 +2720,13 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
         {
             ATOMIC_STORE(&voice->Source, NULL, almemory_order_relaxed);
             ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
-            while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
-                althrd_yield();
+            voice = NULL;
         }
-        if(ATOMIC_LOAD(&source->state, almemory_order_acquire) != AL_INITIAL)
+        if(GetSourceState(source, voice) != AL_INITIAL)
+        {
             ATOMIC_STORE(&source->state, AL_INITIAL, almemory_order_relaxed);
+            SendStateChangeEvent(context, source->id, AL_INITIAL);
+        }
         source->OffsetType = AL_NONE;
         source->Offset = 0.0;
     }

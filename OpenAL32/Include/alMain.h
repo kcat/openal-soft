@@ -99,7 +99,7 @@ typedef ALuint64SOFT ALuint64;
 
 #elif defined(HAVE_BITSCANFORWARD64_INTRINSIC)
 
-static inline int msvc64_ctz64(ALuint64 v)
+inline int msvc64_ctz64(ALuint64 v)
 {
     unsigned long idx = 64;
     _BitScanForward64(&idx, v);
@@ -109,7 +109,7 @@ static inline int msvc64_ctz64(ALuint64 v)
 
 #elif defined(HAVE_BITSCANFORWARD_INTRINSIC)
 
-static inline int msvc_ctz64(ALuint64 v)
+inline int msvc_ctz64(ALuint64 v)
 {
     unsigned long idx = 64;
     if(!_BitScanForward(&idx, v&0xffffffff))
@@ -130,7 +130,7 @@ static inline int msvc_ctz64(ALuint64 v)
  * as the ntz2 variant. These likely aren't the most efficient methods, but
  * they're good enough if the GCC or MSVC intrinsics aren't available.
  */
-static inline int fallback_popcnt64(ALuint64 v)
+inline int fallback_popcnt64(ALuint64 v)
 {
     v = v - ((v >> 1) & U64(0x5555555555555555));
     v = (v & U64(0x3333333333333333)) + ((v >> 2) & U64(0x3333333333333333));
@@ -138,7 +138,7 @@ static inline int fallback_popcnt64(ALuint64 v)
     return (int)((v * U64(0x0101010101010101)) >> 56);
 }
 
-static inline int fallback_ctz64(ALuint64 value)
+inline int fallback_ctz64(ALuint64 value)
 {
     return fallback_popcnt64(~value & (value - 1));
 }

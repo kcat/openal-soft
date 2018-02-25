@@ -1407,7 +1407,7 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             {
                 ALsizei count = 0;
                 do {
-                    ++count;
+                    count += BufferList->num_buffers;
                     BufferList = ATOMIC_LOAD(&BufferList->next, almemory_order_relaxed);
                 } while(BufferList != NULL);
                 *values = count;
@@ -1429,13 +1429,13 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 ALvoice *voice;
 
                 if((voice=GetSourceVoice(Source, Context)) != NULL)
-                    Current = ATOMIC_LOAD_SEQ(&voice->current_buffer);
+                    Current = ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed);
                 else if(Source->state == AL_INITIAL)
                     Current = BufferList;
 
                 while(BufferList && BufferList != Current)
                 {
-                    played++;
+                    played += BufferList->num_buffers;
                     BufferList = ATOMIC_LOAD(&CONST_CAST(ALbufferlistitem*,BufferList)->next,
                                              almemory_order_relaxed);
                 }
@@ -2860,11 +2860,10 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
 {
     ALCcontext *context;
     ALsource *source;
-    ALbufferlistitem *OldHead;
-    ALbufferlistitem *OldTail;
+    ALbufferlistitem *BufferList;
     ALbufferlistitem *Current;
     ALvoice *voice;
-    ALsizei i = 0;
+    ALsizei i;
 
     context = GetContextRef();
     if(!context) return;
@@ -2884,44 +2883,62 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Unqueueing from a non-streaming source %u",
                     src);
 
-    /* Find the new buffer queue head */
-    OldTail = source->queue;
+    /* Make sure enough buffers have been processed to unqueue. */
+    BufferList = source->queue;
     Current = NULL;
     if((voice=GetSourceVoice(source, context)) != NULL)
-        Current = ATOMIC_LOAD_SEQ(&voice->current_buffer);
+        Current = ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed);
     else if(source->state == AL_INITIAL)
-        Current = OldTail;
-    if(OldTail != Current && OldTail->num_buffers == 1)
-    {
-        for(i = 1;i < nb;i++)
-        {
-            ALbufferlistitem *next = ATOMIC_LOAD(&OldTail->next, almemory_order_relaxed);
-            if(!next || next == Current || next->num_buffers != 1) break;
-            OldTail = next;
-        }
-    }
-    if(i != nb)
+        Current = BufferList;
+    if(BufferList == Current)
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Unqueueing pending buffers");
 
-    /* Swap it, and cut the new head from the old. */
-    OldHead = source->queue;
-    source->queue = ATOMIC_EXCHANGE_PTR(&OldTail->next, NULL, almemory_order_acq_rel);
-
-    while(OldHead != NULL)
+    i = BufferList->num_buffers;
+    while(i < nb)
     {
-        ALbufferlistitem *next = ATOMIC_LOAD(&OldHead->next, almemory_order_relaxed);
-        ALbuffer *buffer = OldHead->buffers[0];
+        /* If the next bufferlist to check is NULL or is the current one, it's
+         * trying to unqueue pending buffers.
+         */
+        ALbufferlistitem *next = ATOMIC_LOAD(&BufferList->next, almemory_order_relaxed);
+        if(!next || next == Current)
+            SETERR_GOTO(context, AL_INVALID_VALUE, done, "Unqueueing pending buffers");
+        BufferList = next;
 
-        if(!buffer)
-            *(buffers++) = 0;
-        else
+        i += BufferList->num_buffers;
+    }
+
+    while(nb > 0)
+    {
+        ALbufferlistitem *head = source->queue;
+        ALbufferlistitem *next = ATOMIC_LOAD(&head->next, almemory_order_relaxed);
+        for(i = 0;i < head->num_buffers && nb > 0;i++,nb--)
         {
-            *(buffers++) = buffer->id;
-            DecrementRef(&buffer->ref);
+            ALbuffer *buffer = head->buffers[i];
+            if(!buffer)
+                *(buffers++) = 0;
+            else
+            {
+                *(buffers++) = buffer->id;
+                DecrementRef(&buffer->ref);
+            }
+        }
+        if(i < head->num_buffers)
+        {
+            /* This head has some buffers left over, so move them to the front
+             * and update the count.
+             */
+            ALsizei j = 0;
+            while(i < head->num_buffers)
+                head->buffers[j++] = head->buffers[i++];
+            head->num_buffers = j;
+            break;
         }
 
-        al_free(OldHead);
-        OldHead = next;
+        /* Otherwise, free this item and set the source queue head to the next
+         * one.
+         */
+        al_free(head);
+        source->queue = next;
     }
 
 done:

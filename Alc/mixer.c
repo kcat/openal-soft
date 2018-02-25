@@ -749,7 +749,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
             if(CompLen > DataPosInt)
                 break;
 
-            buffers_done++;
+            buffers_done += BufferListItem->num_buffers;
             BufferListItem = ATOMIC_LOAD(&BufferListItem->next, almemory_order_acquire);
             if(!BufferListItem && !(BufferListItem=BufferLoopItem))
             {

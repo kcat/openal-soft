@@ -774,11 +774,9 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
     enabledevt = ATOMIC_LOAD(&Context->EnabledEvts, almemory_order_acquire);
     if(buffers_done > 0 && (enabledevt&EventType_BufferCompleted))
     {
-        do {
-            SendAsyncEvent(Context, EventType_BufferCompleted,
-                AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, SourceID, 0, "Buffer completed"
-            );
-        } while(--buffers_done > 0);
+        SendAsyncEvent(Context, EventType_BufferCompleted,
+            AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, SourceID, buffers_done, "Buffer completed"
+        );
         alsem_post(&Context->EventSem);
     }
 

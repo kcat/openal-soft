@@ -500,16 +500,20 @@ int main(int argc, char **argv)
             other_dir[1] = local_norm[1] / -2.0f;
             other_dir[2] = local_norm[2] / -2.0f;
 
+            alEffectf(effects[0], AL_EAXREVERB_GAIN, reverb0.flGain);
             alEffectfv(effects[0], AL_EAXREVERB_REFLECTIONS_PAN, this_dir);
             alEffectfv(effects[0], AL_EAXREVERB_LATE_REVERB_PAN, this_dir);
 
+            alEffectf(effects[1], AL_EAXREVERB_GAIN, reverb1.flGain);
             alEffectfv(effects[1], AL_EAXREVERB_REFLECTIONS_PAN, other_dir);
             alEffectfv(effects[1], AL_EAXREVERB_LATE_REVERB_PAN, other_dir);
         }
         else
         {
+            const EFXEAXREVERBPROPERTIES *other_reverb;
+            const EFXEAXREVERBPROPERTIES *this_reverb;
             ALuint other_effect, this_effect;
-            ALfloat spread;
+            ALfloat spread, attn;
 
             /* Normalize the direction to the portal. */
             local_dir[0] /= dist;
@@ -520,6 +524,12 @@ int main(int argc, char **argv)
              * the other zone reduces as the portal becomes perpendicular.
              */
             local_radius = portal_radius * fabsf(dot_product(local_dir, local_norm));
+
+            /* Calculate distance attenuation for the other zone, using the
+             * standard inverse distance model with the radius as a reference.
+             */
+            attn = local_radius / dist;
+            if(attn > 1.0f) attn = 1.0f;
 
             /* Calculate the 'spread' of the portal, which is the amount of
              * coverage the other zone has around the listener.
@@ -534,12 +544,16 @@ int main(int argc, char **argv)
                 /* We're in front of the portal, so we're in Zone 0. */
                 this_effect = effects[0];
                 other_effect = effects[1];
+                this_reverb = &reverb0;
+                other_reverb = &reverb1;
             }
             else
             {
                 /* We're behind the portal, so we're in Zone 1. */
                 this_effect = effects[1];
                 other_effect = effects[0];
+                this_reverb = &reverb1;
+                other_reverb = &reverb0;
             }
 
             /* Scale the other zone's panning vector down as the portal's
@@ -555,10 +569,12 @@ int main(int argc, char **argv)
             this_dir[1] = local_dir[1] * -spread;
             this_dir[2] = local_dir[2] * -spread;
 
-            /* Now set the effects' panning vectors. */
+            /* Now set the effects' panning vectors and distance attenuation. */
+            alEffectf(this_effect, AL_EAXREVERB_GAIN, this_reverb->flGain);
             alEffectfv(this_effect, AL_EAXREVERB_REFLECTIONS_PAN, this_dir);
             alEffectfv(this_effect, AL_EAXREVERB_LATE_REVERB_PAN, this_dir);
 
+            alEffectf(other_effect, AL_EAXREVERB_GAIN, other_reverb->flGain * attn);
             alEffectfv(other_effect, AL_EAXREVERB_REFLECTIONS_PAN, other_dir);
             alEffectfv(other_effect, AL_EAXREVERB_LATE_REVERB_PAN, other_dir);
         }

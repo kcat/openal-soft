@@ -196,11 +196,11 @@ static ALvoid ALequalizerState_process(ALequalizerState *state, ALsizei SamplesT
 }
 
 
-typedef struct ALequalizerStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALequalizerStateFactory;
+typedef struct EqualizerStateFactory {
+    DERIVE_FROM_TYPE(EffectStateFactory);
+} EqualizerStateFactory;
 
-ALeffectState *ALequalizerStateFactory_create(ALequalizerStateFactory *UNUSED(factory))
+ALeffectState *EqualizerStateFactory_create(EqualizerStateFactory *UNUSED(factory))
 {
     ALequalizerState *state;
 
@@ -210,13 +210,13 @@ ALeffectState *ALequalizerStateFactory_create(ALequalizerStateFactory *UNUSED(fa
     return STATIC_CAST(ALeffectState, state);
 }
 
-DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALequalizerStateFactory);
+DEFINE_EFFECTSTATEFACTORY_VTABLE(EqualizerStateFactory);
 
-ALeffectStateFactory *ALequalizerStateFactory_getFactory(void)
+EffectStateFactory *EqualizerStateFactory_getFactory(void)
 {
-    static ALequalizerStateFactory EqualizerFactory = { { GET_VTABLE2(ALequalizerStateFactory, ALeffectStateFactory) } };
+    static EqualizerStateFactory EqualizerFactory = { { GET_VTABLE2(EqualizerStateFactory, EffectStateFactory) } };
 
-    return STATIC_CAST(ALeffectStateFactory, &EqualizerFactory);
+    return STATIC_CAST(EffectStateFactory, &EqualizerFactory);
 }
 
 

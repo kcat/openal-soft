@@ -59,21 +59,22 @@ static const struct ALeffectStateVtable T##_ALeffectState_vtable = {          \
 }
 
 
-struct ALeffectStateFactoryVtable;
+struct EeffectStateFactoryVtable;
 
-typedef struct ALeffectStateFactory {
-    const struct ALeffectStateFactoryVtable *vtbl;
-} ALeffectStateFactory;
+typedef struct EffectStateFactory {
+    const struct EffectStateFactoryVtable *vtab;
+} EffectStateFactory;
 
-struct ALeffectStateFactoryVtable {
-    ALeffectState *(*const create)(ALeffectStateFactory *factory);
+struct EffectStateFactoryVtable {
+    ALeffectState *(*const create)(EffectStateFactory *factory);
 };
+#define EffectStateFactory_create(x) ((x)->vtab->create((x)))
 
-#define DEFINE_ALEFFECTSTATEFACTORY_VTABLE(T)                                 \
-DECLARE_THUNK(T, ALeffectStateFactory, ALeffectState*, create)                \
+#define DEFINE_EFFECTSTATEFACTORY_VTABLE(T)                                   \
+DECLARE_THUNK(T, EffectStateFactory, ALeffectState*, create)                  \
                                                                               \
-static const struct ALeffectStateFactoryVtable T##_ALeffectStateFactory_vtable = { \
-    T##_ALeffectStateFactory_create,                                          \
+static const struct EffectStateFactoryVtable T##_EffectStateFactory_vtable = { \
+    T##_EffectStateFactory_create,                                            \
 }
 
 
@@ -156,17 +157,17 @@ void UpdateAllEffectSlotProps(ALCcontext *context);
 ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context);
 
 
-ALeffectStateFactory *ALnullStateFactory_getFactory(void);
-ALeffectStateFactory *ALreverbStateFactory_getFactory(void);
-ALeffectStateFactory *ALchorusStateFactory_getFactory(void);
-ALeffectStateFactory *ALcompressorStateFactory_getFactory(void);
-ALeffectStateFactory *ALdistortionStateFactory_getFactory(void);
-ALeffectStateFactory *ALechoStateFactory_getFactory(void);
-ALeffectStateFactory *ALequalizerStateFactory_getFactory(void);
-ALeffectStateFactory *ALflangerStateFactory_getFactory(void);
-ALeffectStateFactory *ALmodulatorStateFactory_getFactory(void);
+EffectStateFactory *NullStateFactory_getFactory(void);
+EffectStateFactory *ReverbStateFactory_getFactory(void);
+EffectStateFactory *ChorusStateFactory_getFactory(void);
+EffectStateFactory *CompressorStateFactory_getFactory(void);
+EffectStateFactory *DistortionStateFactory_getFactory(void);
+EffectStateFactory *EchoStateFactory_getFactory(void);
+EffectStateFactory *EqualizerStateFactory_getFactory(void);
+EffectStateFactory *FlangerStateFactory_getFactory(void);
+EffectStateFactory *ModulatorStateFactory_getFactory(void);
 
-ALeffectStateFactory *ALdedicatedStateFactory_getFactory(void);
+EffectStateFactory *DedicatedStateFactory_getFactory(void);
 
 
 ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect);

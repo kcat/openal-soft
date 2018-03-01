@@ -176,11 +176,11 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALsizei Sample
 }
 
 
-typedef struct ALdistortionStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALdistortionStateFactory;
+typedef struct DistortionStateFactory {
+    DERIVE_FROM_TYPE(EffectStateFactory);
+} DistortionStateFactory;
 
-static ALeffectState *ALdistortionStateFactory_create(ALdistortionStateFactory *UNUSED(factory))
+static ALeffectState *DistortionStateFactory_create(DistortionStateFactory *UNUSED(factory))
 {
     ALdistortionState *state;
 
@@ -190,14 +190,14 @@ static ALeffectState *ALdistortionStateFactory_create(ALdistortionStateFactory *
     return STATIC_CAST(ALeffectState, state);
 }
 
-DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALdistortionStateFactory);
+DEFINE_EFFECTSTATEFACTORY_VTABLE(DistortionStateFactory);
 
 
-ALeffectStateFactory *ALdistortionStateFactory_getFactory(void)
+EffectStateFactory *DistortionStateFactory_getFactory(void)
 {
-    static ALdistortionStateFactory DistortionFactory = { { GET_VTABLE2(ALdistortionStateFactory, ALeffectStateFactory) } };
+    static DistortionStateFactory DistortionFactory = { { GET_VTABLE2(DistortionStateFactory, EffectStateFactory) } };
 
-    return STATIC_CAST(ALeffectStateFactory, &DistortionFactory);
+    return STATIC_CAST(EffectStateFactory, &DistortionFactory);
 }
 
 

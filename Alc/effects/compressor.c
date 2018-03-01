@@ -179,11 +179,11 @@ static ALvoid ALcompressorState_process(ALcompressorState *state, ALsizei Sample
 }
 
 
-typedef struct ALcompressorStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALcompressorStateFactory;
+typedef struct CompressorStateFactory {
+    DERIVE_FROM_TYPE(EffectStateFactory);
+} CompressorStateFactory;
 
-static ALeffectState *ALcompressorStateFactory_create(ALcompressorStateFactory *UNUSED(factory))
+static ALeffectState *CompressorStateFactory_create(CompressorStateFactory *UNUSED(factory))
 {
     ALcompressorState *state;
 
@@ -193,13 +193,13 @@ static ALeffectState *ALcompressorStateFactory_create(ALcompressorStateFactory *
     return STATIC_CAST(ALeffectState, state);
 }
 
-DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALcompressorStateFactory);
+DEFINE_EFFECTSTATEFACTORY_VTABLE(CompressorStateFactory);
 
-ALeffectStateFactory *ALcompressorStateFactory_getFactory(void)
+EffectStateFactory *CompressorStateFactory_getFactory(void)
 {
-    static ALcompressorStateFactory CompressorFactory = { { GET_VTABLE2(ALcompressorStateFactory, ALeffectStateFactory) } };
+    static CompressorStateFactory CompressorFactory = { { GET_VTABLE2(CompressorStateFactory, EffectStateFactory) } };
 
-    return STATIC_CAST(ALeffectStateFactory, &CompressorFactory);
+    return STATIC_CAST(EffectStateFactory, &CompressorFactory);
 }
 
 

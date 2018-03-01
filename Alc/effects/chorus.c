@@ -285,11 +285,11 @@ static ALvoid ALchorusState_process(ALchorusState *state, ALsizei SamplesToDo, c
 }
 
 
-typedef struct ALchorusStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALchorusStateFactory;
+typedef struct ChorusStateFactory {
+    DERIVE_FROM_TYPE(EffectStateFactory);
+} ChorusStateFactory;
 
-static ALeffectState *ALchorusStateFactory_create(ALchorusStateFactory *UNUSED(factory))
+static ALeffectState *ChorusStateFactory_create(ChorusStateFactory *UNUSED(factory))
 {
     ALchorusState *state;
 
@@ -299,14 +299,14 @@ static ALeffectState *ALchorusStateFactory_create(ALchorusStateFactory *UNUSED(f
     return STATIC_CAST(ALeffectState, state);
 }
 
-DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALchorusStateFactory);
+DEFINE_EFFECTSTATEFACTORY_VTABLE(ChorusStateFactory);
 
 
-ALeffectStateFactory *ALchorusStateFactory_getFactory(void)
+EffectStateFactory *ChorusStateFactory_getFactory(void)
 {
-    static ALchorusStateFactory ChorusFactory = { { GET_VTABLE2(ALchorusStateFactory, ALeffectStateFactory) } };
+    static ChorusStateFactory ChorusFactory = { { GET_VTABLE2(ChorusStateFactory, EffectStateFactory) } };
 
-    return STATIC_CAST(ALeffectStateFactory, &ChorusFactory);
+    return STATIC_CAST(EffectStateFactory, &ChorusFactory);
 }
 
 
@@ -422,11 +422,11 @@ DEFINE_ALEFFECT_VTABLE(ALchorus);
 /* Flanger is basically a chorus with a really short delay. They can both use
  * the same processing functions, so piggyback flanger on the chorus functions.
  */
-typedef struct ALflangerStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALflangerStateFactory;
+typedef struct FlangerStateFactory {
+    DERIVE_FROM_TYPE(EffectStateFactory);
+} FlangerStateFactory;
 
-ALeffectState *ALflangerStateFactory_create(ALflangerStateFactory *UNUSED(factory))
+ALeffectState *FlangerStateFactory_create(FlangerStateFactory *UNUSED(factory))
 {
     ALchorusState *state;
 
@@ -436,13 +436,13 @@ ALeffectState *ALflangerStateFactory_create(ALflangerStateFactory *UNUSED(factor
     return STATIC_CAST(ALeffectState, state);
 }
 
-DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALflangerStateFactory);
+DEFINE_EFFECTSTATEFACTORY_VTABLE(FlangerStateFactory);
 
-ALeffectStateFactory *ALflangerStateFactory_getFactory(void)
+EffectStateFactory *FlangerStateFactory_getFactory(void)
 {
-    static ALflangerStateFactory FlangerFactory = { { GET_VTABLE2(ALflangerStateFactory, ALeffectStateFactory) } };
+    static FlangerStateFactory FlangerFactory = { { GET_VTABLE2(FlangerStateFactory, EffectStateFactory) } };
 
-    return STATIC_CAST(ALeffectStateFactory, &FlangerFactory);
+    return STATIC_CAST(EffectStateFactory, &FlangerFactory);
 }
 
 

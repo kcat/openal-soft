@@ -43,23 +43,23 @@ static void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcon
 
 static const struct {
     ALenum Type;
-    ALeffectStateFactory* (*GetFactory)(void);
+    EffectStateFactory* (*GetFactory)(void);
 } FactoryList[] = {
-    { AL_EFFECT_NULL, ALnullStateFactory_getFactory },
-    { AL_EFFECT_EAXREVERB, ALreverbStateFactory_getFactory },
-    { AL_EFFECT_REVERB, ALreverbStateFactory_getFactory },
-    { AL_EFFECT_CHORUS, ALchorusStateFactory_getFactory },
-    { AL_EFFECT_COMPRESSOR, ALcompressorStateFactory_getFactory },
-    { AL_EFFECT_DISTORTION, ALdistortionStateFactory_getFactory },
-    { AL_EFFECT_ECHO, ALechoStateFactory_getFactory },
-    { AL_EFFECT_EQUALIZER, ALequalizerStateFactory_getFactory },
-    { AL_EFFECT_FLANGER, ALflangerStateFactory_getFactory },
-    { AL_EFFECT_RING_MODULATOR, ALmodulatorStateFactory_getFactory },
-    { AL_EFFECT_DEDICATED_DIALOGUE, ALdedicatedStateFactory_getFactory },
-    { AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT, ALdedicatedStateFactory_getFactory }
+    { AL_EFFECT_NULL, NullStateFactory_getFactory },
+    { AL_EFFECT_EAXREVERB, ReverbStateFactory_getFactory },
+    { AL_EFFECT_REVERB, ReverbStateFactory_getFactory },
+    { AL_EFFECT_CHORUS, ChorusStateFactory_getFactory },
+    { AL_EFFECT_COMPRESSOR, CompressorStateFactory_getFactory },
+    { AL_EFFECT_DISTORTION, DistortionStateFactory_getFactory },
+    { AL_EFFECT_ECHO, EchoStateFactory_getFactory },
+    { AL_EFFECT_EQUALIZER, EqualizerStateFactory_getFactory },
+    { AL_EFFECT_FLANGER, FlangerStateFactory_getFactory },
+    { AL_EFFECT_RING_MODULATOR, ModulatorStateFactory_getFactory },
+    { AL_EFFECT_DEDICATED_DIALOGUE, DedicatedStateFactory_getFactory },
+    { AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT, DedicatedStateFactory_getFactory }
 };
 
-static inline ALeffectStateFactory *getFactoryByType(ALenum type)
+static inline EffectStateFactory *getFactoryByType(ALenum type)
 {
     size_t i;
     for(i = 0;i < COUNTOF(FactoryList);i++)
@@ -498,7 +498,7 @@ ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
 
     if(newtype != EffectSlot->Effect.Type)
     {
-        ALeffectStateFactory *factory;
+        EffectStateFactory *factory;
 
         factory = getFactoryByType(newtype);
         if(!factory)
@@ -506,7 +506,7 @@ ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
             ERR("Failed to find factory for effect type 0x%04x\n", newtype);
             return AL_INVALID_ENUM;
         }
-        State = V0(factory,create)();
+        State = EffectStateFactory_create(factory);
         if(!State) return AL_OUT_OF_MEMORY;
 
         START_MIXER_MODE();
@@ -659,13 +659,13 @@ static void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcon
 
 ALenum InitEffectSlot(ALeffectslot *slot)
 {
-    ALeffectStateFactory *factory;
+    EffectStateFactory *factory;
 
     slot->Effect.Type = AL_EFFECT_NULL;
 
     factory = getFactoryByType(AL_EFFECT_NULL);
-    if(!(slot->Effect.State=V0(factory,create)()))
-        return AL_OUT_OF_MEMORY;
+    slot->Effect.State = EffectStateFactory_create(factory);
+    if(!slot->Effect.State) return AL_OUT_OF_MEMORY;
 
     slot->Gain = 1.0;
     slot->AuxSendAuto = AL_TRUE;

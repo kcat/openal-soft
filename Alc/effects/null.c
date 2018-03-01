@@ -85,12 +85,12 @@ static void ALnullState_Delete(void *ptr)
 }
 
 
-typedef struct ALnullStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALnullStateFactory;
+typedef struct NullStateFactory {
+    DERIVE_FROM_TYPE(EffectStateFactory);
+} NullStateFactory;
 
 /* Creates ALeffectState objects of the appropriate type. */
-ALeffectState *ALnullStateFactory_create(ALnullStateFactory *UNUSED(factory))
+ALeffectState *NullStateFactory_create(NullStateFactory *UNUSED(factory))
 {
     ALnullState *state;
 
@@ -100,13 +100,13 @@ ALeffectState *ALnullStateFactory_create(ALnullStateFactory *UNUSED(factory))
     return STATIC_CAST(ALeffectState, state);
 }
 
-/* Define the ALeffectStateFactory vtable for this type. */
-DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALnullStateFactory);
+/* Define the EffectStateFactory vtable for this type. */
+DEFINE_EFFECTSTATEFACTORY_VTABLE(NullStateFactory);
 
-ALeffectStateFactory *ALnullStateFactory_getFactory(void)
+EffectStateFactory *NullStateFactory_getFactory(void)
 {
-    static ALnullStateFactory NullFactory = { { GET_VTABLE2(ALnullStateFactory, ALeffectStateFactory) } };
-    return STATIC_CAST(ALeffectStateFactory, &NullFactory);
+    static NullStateFactory NullFactory = { { GET_VTABLE2(NullStateFactory, EffectStateFactory) } };
+    return STATIC_CAST(EffectStateFactory, &NullFactory);
 }
 
 

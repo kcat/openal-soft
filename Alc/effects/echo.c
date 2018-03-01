@@ -206,11 +206,11 @@ static ALvoid ALechoState_process(ALechoState *state, ALsizei SamplesToDo, const
 }
 
 
-typedef struct ALechoStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALechoStateFactory;
+typedef struct EchoStateFactory {
+    DERIVE_FROM_TYPE(EffectStateFactory);
+} EchoStateFactory;
 
-ALeffectState *ALechoStateFactory_create(ALechoStateFactory *UNUSED(factory))
+ALeffectState *EchoStateFactory_create(EchoStateFactory *UNUSED(factory))
 {
     ALechoState *state;
 
@@ -220,13 +220,13 @@ ALeffectState *ALechoStateFactory_create(ALechoStateFactory *UNUSED(factory))
     return STATIC_CAST(ALeffectState, state);
 }
 
-DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALechoStateFactory);
+DEFINE_EFFECTSTATEFACTORY_VTABLE(EchoStateFactory);
 
-ALeffectStateFactory *ALechoStateFactory_getFactory(void)
+EffectStateFactory *EchoStateFactory_getFactory(void)
 {
-    static ALechoStateFactory EchoFactory = { { GET_VTABLE2(ALechoStateFactory, ALeffectStateFactory) } };
+    static EchoStateFactory EchoFactory = { { GET_VTABLE2(EchoStateFactory, EffectStateFactory) } };
 
-    return STATIC_CAST(ALeffectStateFactory, &EchoFactory);
+    return STATIC_CAST(EffectStateFactory, &EchoFactory);
 }
 
 

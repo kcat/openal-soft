@@ -186,11 +186,11 @@ static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALsizei SamplesT
 }
 
 
-typedef struct ALmodulatorStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALmodulatorStateFactory;
+typedef struct ModulatorStateFactory {
+    DERIVE_FROM_TYPE(EffectStateFactory);
+} ModulatorStateFactory;
 
-static ALeffectState *ALmodulatorStateFactory_create(ALmodulatorStateFactory *UNUSED(factory))
+static ALeffectState *ModulatorStateFactory_create(ModulatorStateFactory *UNUSED(factory))
 {
     ALmodulatorState *state;
 
@@ -200,13 +200,13 @@ static ALeffectState *ALmodulatorStateFactory_create(ALmodulatorStateFactory *UN
     return STATIC_CAST(ALeffectState, state);
 }
 
-DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALmodulatorStateFactory);
+DEFINE_EFFECTSTATEFACTORY_VTABLE(ModulatorStateFactory);
 
-ALeffectStateFactory *ALmodulatorStateFactory_getFactory(void)
+EffectStateFactory *ModulatorStateFactory_getFactory(void)
 {
-    static ALmodulatorStateFactory ModulatorFactory = { { GET_VTABLE2(ALmodulatorStateFactory, ALeffectStateFactory) } };
+    static ModulatorStateFactory ModulatorFactory = { { GET_VTABLE2(ModulatorStateFactory, EffectStateFactory) } };
 
-    return STATIC_CAST(ALeffectStateFactory, &ModulatorFactory);
+    return STATIC_CAST(EffectStateFactory, &ModulatorFactory);
 }
 
 

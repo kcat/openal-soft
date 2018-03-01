@@ -114,11 +114,11 @@ static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALsizei SamplesT
 }
 
 
-typedef struct ALdedicatedStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALdedicatedStateFactory;
+typedef struct DedicatedStateFactory {
+    DERIVE_FROM_TYPE(EffectStateFactory);
+} DedicatedStateFactory;
 
-ALeffectState *ALdedicatedStateFactory_create(ALdedicatedStateFactory *UNUSED(factory))
+ALeffectState *DedicatedStateFactory_create(DedicatedStateFactory *UNUSED(factory))
 {
     ALdedicatedState *state;
 
@@ -128,14 +128,14 @@ ALeffectState *ALdedicatedStateFactory_create(ALdedicatedStateFactory *UNUSED(fa
     return STATIC_CAST(ALeffectState, state);
 }
 
-DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALdedicatedStateFactory);
+DEFINE_EFFECTSTATEFACTORY_VTABLE(DedicatedStateFactory);
 
 
-ALeffectStateFactory *ALdedicatedStateFactory_getFactory(void)
+EffectStateFactory *DedicatedStateFactory_getFactory(void)
 {
-    static ALdedicatedStateFactory DedicatedFactory = { { GET_VTABLE2(ALdedicatedStateFactory, ALeffectStateFactory) } };
+    static DedicatedStateFactory DedicatedFactory = { { GET_VTABLE2(DedicatedStateFactory, EffectStateFactory) } };
 
-    return STATIC_CAST(ALeffectStateFactory, &DedicatedFactory);
+    return STATIC_CAST(EffectStateFactory, &DedicatedFactory);
 }
 
 

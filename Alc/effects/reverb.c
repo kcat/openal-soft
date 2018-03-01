@@ -1691,11 +1691,11 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
 }
 
 
-typedef struct ALreverbStateFactory {
-    DERIVE_FROM_TYPE(ALeffectStateFactory);
-} ALreverbStateFactory;
+typedef struct ReverbStateFactory {
+    DERIVE_FROM_TYPE(EffectStateFactory);
+} ReverbStateFactory;
 
-static ALeffectState *ALreverbStateFactory_create(ALreverbStateFactory* UNUSED(factory))
+static ALeffectState *ReverbStateFactory_create(ReverbStateFactory* UNUSED(factory))
 {
     ALreverbState *state;
 
@@ -1705,13 +1705,13 @@ static ALeffectState *ALreverbStateFactory_create(ALreverbStateFactory* UNUSED(f
     return STATIC_CAST(ALeffectState, state);
 }
 
-DEFINE_ALEFFECTSTATEFACTORY_VTABLE(ALreverbStateFactory);
+DEFINE_EFFECTSTATEFACTORY_VTABLE(ReverbStateFactory);
 
-ALeffectStateFactory *ALreverbStateFactory_getFactory(void)
+EffectStateFactory *ReverbStateFactory_getFactory(void)
 {
-    static ALreverbStateFactory ReverbFactory = { { GET_VTABLE2(ALreverbStateFactory, ALeffectStateFactory) } };
+    static ReverbStateFactory ReverbFactory = { { GET_VTABLE2(ReverbStateFactory, EffectStateFactory) } };
 
-    return STATIC_CAST(ALeffectStateFactory, &ReverbFactory);
+    return STATIC_CAST(EffectStateFactory, &ReverbFactory);
 }
 
 

@@ -278,10 +278,7 @@ int main(int argc, char **argv)
     }
     if(argc < 1)
     {
-        fprintf(stderr, "Usage: %s [-device <name>] [options] <filename>\n\n"
-        "Options:\n"
-        "\t-nodirect\tSilence direct path output (easier to hear reverb).\n\n",
-        argv[0]);
+        fprintf(stderr, "No filename spacified.\n");
         CloseAL();
         return 1;
     }

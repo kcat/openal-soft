@@ -139,9 +139,9 @@ typedef struct ALeffectslot {
     BFChannelConfig ChanMap[MAX_EFFECT_CHANNELS];
     /* Wet buffer configuration is ACN channel order with N3D scaling:
      * * Channel 0 is the unattenuated mono signal.
-     * * Channel 1 is OpenAL -X
-     * * Channel 2 is OpenAL Y
-     * * Channel 3 is OpenAL -Z
+     * * Channel 1 is OpenAL -X * sqrt(3)
+     * * Channel 2 is OpenAL Y * sqrt(3)
+     * * Channel 3 is OpenAL -Z * sqrt(3)
      * Consequently, effects that only want to work with mono input can use
      * channel 0 by itself. Effects that want multichannel can process the
      * ambisonics signal and make a B-Format pan (ComputeFirstOrderGains) for

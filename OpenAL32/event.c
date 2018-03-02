@@ -78,7 +78,7 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
         bool isrunning;
         almtx_lock(&context->EventThrdLock);
         if(!context->AsyncEvents)
-            context->AsyncEvents = ll_ringbuffer_create(64, sizeof(AsyncEvent));
+            context->AsyncEvents = ll_ringbuffer_create(63, sizeof(AsyncEvent), false);
         enabledevts = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed);
         isrunning = !!enabledevts;
         while(ATOMIC_COMPARE_EXCHANGE_WEAK(&context->EnabledEvts, &enabledevts, enabledevts|flags,

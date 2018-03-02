@@ -236,7 +236,8 @@ static int ALCjackPlayback_bufferSizeNotify(jack_nframes_t numframes, void *arg)
 
     ll_ringbuffer_free(self->Ring);
     self->Ring = ll_ringbuffer_create(bufsize,
-        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder)
+        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder),
+        true
     );
     if(!self->Ring)
     {
@@ -437,7 +438,8 @@ static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
 
     ll_ringbuffer_free(self->Ring);
     self->Ring = ll_ringbuffer_create(bufsize,
-        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder)
+        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder),
+        true
     );
     if(!self->Ring)
     {

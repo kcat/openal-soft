@@ -10,7 +10,7 @@ typedef struct ll_ringbuffer_data {
     size_t len;
 } ll_ringbuffer_data_t;
 
-ll_ringbuffer_t *ll_ringbuffer_create(size_t sz, size_t elem_sz);
+ll_ringbuffer_t *ll_ringbuffer_create(size_t sz, size_t elem_sz, int limit_writes);
 void ll_ringbuffer_free(ll_ringbuffer_t *rb);
 void ll_ringbuffer_reset(ll_ringbuffer_t *rb);
 

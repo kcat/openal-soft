@@ -48,7 +48,7 @@ struct ll_ringbuffer {
 
 /* Create a new ringbuffer to hold at least `sz' elements of `elem_sz' bytes.
  * The number of elements is rounded up to the next power of two. */
-ll_ringbuffer_t *ll_ringbuffer_create(size_t sz, size_t elem_sz)
+ll_ringbuffer_t *ll_ringbuffer_create(size_t sz, size_t elem_sz, int limit_writes)
 {
     ll_ringbuffer_t *rb;
     size_t power_of_two = 0;
@@ -73,8 +73,8 @@ ll_ringbuffer_t *ll_ringbuffer_create(size_t sz, size_t elem_sz)
 
     ATOMIC_INIT(&rb->write_ptr, 0);
     ATOMIC_INIT(&rb->read_ptr, 0);
-    rb->size = power_of_two;
-    rb->size_mask = rb->size - 1;
+    rb->size = limit_writes ? sz : power_of_two;
+    rb->size_mask = power_of_two - 1;
     rb->elem_size = elem_sz;
     return rb;
 }
@@ -90,7 +90,7 @@ void ll_ringbuffer_reset(ll_ringbuffer_t *rb)
 {
     ATOMIC_STORE(&rb->write_ptr, 0, almemory_order_release);
     ATOMIC_STORE(&rb->read_ptr, 0, almemory_order_release);
-    memset(rb->buf, 0, rb->size*rb->elem_size);
+    memset(rb->buf, 0, (rb->size_mask+1)*rb->elem_size);
 }
 
 /* Return the number of elements available for reading. This is the number of
@@ -107,7 +107,8 @@ size_t ll_ringbuffer_write_space(const ll_ringbuffer_t *rb)
 {
     size_t w = ATOMIC_LOAD(&CONST_CAST(ll_ringbuffer_t*,rb)->write_ptr, almemory_order_acquire);
     size_t r = ATOMIC_LOAD(&CONST_CAST(ll_ringbuffer_t*,rb)->read_ptr, almemory_order_acquire);
-    return (r-w-1) & rb->size_mask;
+    w = (r-w-1) & rb->size_mask;
+    return (w > rb->size) ? rb->size : w;
 }
 
 /* The copying data reader. Copy at most `cnt' elements from `rb' to `dest'.
@@ -127,9 +128,9 @@ size_t ll_ringbuffer_read(ll_ringbuffer_t *rb, char *dest, size_t cnt)
     read_ptr = ATOMIC_LOAD(&rb->read_ptr, almemory_order_relaxed) & rb->size_mask;
 
     cnt2 = read_ptr + to_read;
-    if(cnt2 > rb->size)
+    if(cnt2 > rb->size_mask+1)
     {
-        n1 = rb->size - read_ptr;
+        n1 = rb->size_mask+1 - read_ptr;
         n2 = cnt2 & rb->size_mask;
     }
     else
@@ -168,9 +169,9 @@ size_t ll_ringbuffer_peek(ll_ringbuffer_t *rb, char *dest, size_t cnt)
     read_ptr = ATOMIC_LOAD(&rb->read_ptr, almemory_order_relaxed) & rb->size_mask;
 
     cnt2 = read_ptr + to_read;
-    if(cnt2 > rb->size)
+    if(cnt2 > rb->size_mask+1)
     {
-        n1 = rb->size - read_ptr;
+        n1 = rb->size_mask+1 - read_ptr;
         n2 = cnt2 & rb->size_mask;
     }
     else
@@ -206,9 +207,9 @@ size_t ll_ringbuffer_write(ll_ringbuffer_t *rb, const char *src, size_t cnt)
     write_ptr = ATOMIC_LOAD(&rb->write_ptr, almemory_order_relaxed) & rb->size_mask;
 
     cnt2 = write_ptr + to_write;
-    if(cnt2 > rb->size)
+    if(cnt2 > rb->size_mask+1)
     {
-        n1 = rb->size - write_ptr;
+        n1 = rb->size_mask+1 - write_ptr;
         n2 = cnt2 & rb->size_mask;
     }
     else
@@ -257,12 +258,12 @@ void ll_ringbuffer_get_read_vector(const ll_ringbuffer_t *rb, ll_ringbuffer_data
     free_cnt = (w-r) & rb->size_mask;
 
     cnt2 = r + free_cnt;
-    if(cnt2 > rb->size)
+    if(cnt2 > rb->size_mask+1)
     {
         /* Two part vector: the rest of the buffer after the current write ptr,
          * plus some from the start of the buffer. */
         vec[0].buf = (char*)&rb->buf[r*rb->elem_size];
-        vec[0].len = rb->size - r;
+        vec[0].len = rb->size_mask+1 - r;
         vec[1].buf = (char*)rb->buf;
         vec[1].len = cnt2 & rb->size_mask;
     }
@@ -290,14 +291,15 @@ void ll_ringbuffer_get_write_vector(const ll_ringbuffer_t *rb, ll_ringbuffer_dat
     w &= rb->size_mask;
     r &= rb->size_mask;
     free_cnt = (r-w-1) & rb->size_mask;
+    if(free_cnt > rb->size) free_cnt = rb->size;
 
     cnt2 = w + free_cnt;
-    if(cnt2 > rb->size)
+    if(cnt2 > rb->size_mask+1)
     {
         /* Two part vector: the rest of the buffer after the current write ptr,
          * plus some from the start of the buffer. */
         vec[0].buf = (char*)&rb->buf[w*rb->elem_size];
-        vec[0].len = rb->size - w;
+        vec[0].len = rb->size_mask+1 - w;
         vec[1].buf = (char*)rb->buf;
         vec[1].len = cnt2 & rb->size_mask;
     }

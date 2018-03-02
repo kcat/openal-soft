@@ -857,7 +857,7 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
     if(SUCCEEDED(hr))
     {
          self->Ring = ll_ringbuffer_create(device->UpdateSize*device->NumUpdates + 1,
-                                           InputType.Format.nBlockAlign);
+                                           InputType.Format.nBlockAlign, false);
          if(self->Ring == NULL)
              hr = DSERR_OUTOFMEMORY;
     }

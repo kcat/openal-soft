@@ -1813,7 +1813,8 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
     buffer_len = maxu(device->UpdateSize*device->NumUpdates + 1, buffer_len);
     ll_ringbuffer_free(self->Ring);
     self->Ring = ll_ringbuffer_create(buffer_len,
-        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder)
+        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder),
+        false
     );
     if(!self->Ring)
     {

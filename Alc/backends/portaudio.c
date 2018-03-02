@@ -395,7 +395,7 @@ static ALCenum ALCportCapture_open(ALCportCapture *self, const ALCchar *name)
     samples = maxu(samples, 100 * device->Frequency / 1000);
     frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
 
-    self->ring = ll_ringbuffer_create(samples, frame_size);
+    self->ring = ll_ringbuffer_create(samples, frame_size, false);
     if(self->ring == NULL) return ALC_INVALID_VALUE;
 
     self->params.device = -1;

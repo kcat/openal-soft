@@ -31,6 +31,7 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <math.h>
 
 #include <SDL_sound.h>
 

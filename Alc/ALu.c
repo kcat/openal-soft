@@ -1845,31 +1845,32 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
         if(LIKELY(device->PostProcess))
             device->PostProcess(device, SamplesToDo);
 
+        if(device->Stablizer)
+        {
+            int lidx = GetChannelIdxByName(&device->RealOut, FrontLeft);
+            int ridx = GetChannelIdxByName(&device->RealOut, FrontRight);
+            int cidx = GetChannelIdxByName(&device->RealOut, FrontCenter);
+            assert(lidx >= 0 && ridx >= 0 && cidx >= 0);
+
+            ApplyStablizer(device->Stablizer, device->RealOut.Buffer, lidx, ridx, cidx,
+                           SamplesToDo, device->RealOut.NumChannels);
+        }
+
+        ApplyDistanceComp(device->RealOut.Buffer, device->ChannelDelay, device->TempBuffer[0],
+                          SamplesToDo, device->RealOut.NumChannels);
+
+        if(device->Limiter)
+            ApplyCompression(device->Limiter, device->RealOut.NumChannels, SamplesToDo,
+                             device->RealOut.Buffer);
+
+        if(device->DitherDepth > 0.0f)
+            ApplyDither(device->RealOut.Buffer, &device->DitherSeed, device->DitherDepth,
+                        SamplesToDo, device->RealOut.NumChannels);
+
         if(OutBuffer)
         {
             ALfloat (*Buffer)[BUFFERSIZE] = device->RealOut.Buffer;
             ALsizei Channels = device->RealOut.NumChannels;
-
-            if(device->Stablizer)
-            {
-                int lidx = GetChannelIdxByName(&device->RealOut, FrontLeft);
-                int ridx = GetChannelIdxByName(&device->RealOut, FrontRight);
-                int cidx = GetChannelIdxByName(&device->RealOut, FrontCenter);
-                assert(lidx >= 0 && ridx >= 0 && cidx >= 0);
-
-                ApplyStablizer(device->Stablizer, Buffer, lidx, ridx, cidx,
-                               SamplesToDo, Channels);
-            }
-
-            ApplyDistanceComp(Buffer, device->ChannelDelay, device->TempBuffer[0],
-                              SamplesToDo, Channels);
-
-            if(device->Limiter)
-                ApplyCompression(device->Limiter, Channels, SamplesToDo, Buffer);
-
-            if(device->DitherDepth > 0.0f)
-                ApplyDither(Buffer, &device->DitherSeed, device->DitherDepth, SamplesToDo,
-                            Channels);
 
             switch(device->FmtType)
             {

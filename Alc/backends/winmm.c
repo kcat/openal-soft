@@ -626,7 +626,7 @@ static ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *name)
     if(CapturedDataSize < (self->Format.nSamplesPerSec / 10))
         CapturedDataSize = self->Format.nSamplesPerSec / 10;
 
-    self->Ring = ll_ringbuffer_create(CapturedDataSize+1, self->Format.nBlockAlign, false);
+    self->Ring = ll_ringbuffer_create(CapturedDataSize, self->Format.nBlockAlign, false);
     if(!self->Ring) goto failure;
 
     InitRef(&self->WaveBuffersCommitted, 0);

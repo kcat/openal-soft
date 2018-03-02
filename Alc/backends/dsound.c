@@ -856,7 +856,7 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
         hr = IDirectSoundCapture_CreateCaptureBuffer(self->DSC, &DSCBDescription, &self->DSCbuffer, NULL);
     if(SUCCEEDED(hr))
     {
-         self->Ring = ll_ringbuffer_create(device->UpdateSize*device->NumUpdates + 1,
+         self->Ring = ll_ringbuffer_create(device->UpdateSize*device->NumUpdates,
                                            InputType.Format.nBlockAlign, false);
          if(self->Ring == NULL)
              hr = DSERR_OUTOFMEMORY;

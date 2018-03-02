@@ -566,12 +566,8 @@ static ALCboolean ALCopenslPlayback_start(ALCopenslPlayback *self)
     SLresult result;
 
     ll_ringbuffer_free(self->mRing);
-    /* NOTE: Add an extra update since one period's worth of audio in the ring
-     * buffer will always be left unfilled because one element of the ring
-     * buffer will not be writeable, and we only write in period-sized chunks.
-     */
-    self->mRing = ll_ringbuffer_create(device->NumUpdates + 1,
-                                       self->mFrameSize*device->UpdateSize, true);
+    self->mRing = ll_ringbuffer_create(device->NumUpdates, self->mFrameSize*device->UpdateSize,
+                                       true);
 
     result = VCALL(self->mBufferQueueObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
                                                        &bufferQueue);
@@ -847,8 +843,8 @@ static ALCenum ALCopenslCapture_open(ALCopenslCapture *self, const ALCchar *name
 
     if(SL_RESULT_SUCCESS == result)
     {
-        self->mRing = ll_ringbuffer_create(device->NumUpdates + 1,
-                                           device->UpdateSize * self->mFrameSize, false);
+        self->mRing = ll_ringbuffer_create(device->NumUpdates, device->UpdateSize*self->mFrameSize,
+                                           false);
 
         result = VCALL(self->mRecordObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
                                                       &bufferQueue);

@@ -729,7 +729,7 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
         return ALC_INVALID_VALUE;
     }
 
-    self->ring = ll_ringbuffer_create(device->UpdateSize*device->NumUpdates + 1, frameSize, false);
+    self->ring = ll_ringbuffer_create(device->UpdateSize*device->NumUpdates, frameSize, false);
     if(!self->ring)
     {
         ERR("Ring buffer create failed\n");

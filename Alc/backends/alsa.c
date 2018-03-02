@@ -1123,7 +1123,7 @@ static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
     if(needring)
     {
         self->ring = ll_ringbuffer_create(
-            device->UpdateSize*device->NumUpdates + 1,
+            device->UpdateSize*device->NumUpdates,
             FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder),
             false
         );

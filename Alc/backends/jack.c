@@ -229,8 +229,7 @@ static int ALCjackPlayback_bufferSizeNotify(jack_nframes_t numframes, void *arg)
     bufsize = device->UpdateSize;
     if(ConfigValueUInt(alstr_get_cstr(device->DeviceName), "jack", "buffer-size", &bufsize))
         bufsize = maxu(NextPowerOf2(bufsize), device->UpdateSize);
-    bufsize += device->UpdateSize;
-    device->NumUpdates = bufsize / device->UpdateSize;
+    device->NumUpdates = (bufsize+device->UpdateSize) / device->UpdateSize;
 
     TRACE("%u update size x%u\n", device->UpdateSize, device->NumUpdates);
 
@@ -391,9 +390,7 @@ static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
     }
 
     /* Ignore the requested buffer metrics and just keep one JACK-sized buffer
-     * ready for when requested. Note that one period's worth of audio in the
-     * ring buffer will always be left unfilled because one element of the ring
-     * buffer will not be writeable, and we only write in period-sized chunks.
+     * ready for when requested.
      */
     device->Frequency = jack_get_sample_rate(self->Client);
     device->UpdateSize = jack_get_buffer_size(self->Client);
@@ -402,8 +399,7 @@ static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
     bufsize = device->UpdateSize;
     if(ConfigValueUInt(alstr_get_cstr(device->DeviceName), "jack", "buffer-size", &bufsize))
         bufsize = maxu(NextPowerOf2(bufsize), device->UpdateSize);
-    bufsize += device->UpdateSize;
-    device->NumUpdates = bufsize / device->UpdateSize;
+    device->NumUpdates = (bufsize+device->UpdateSize) / device->UpdateSize;
 
     /* Force 32-bit float output. */
     device->FmtType = DevFmtFloat;

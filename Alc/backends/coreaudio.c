@@ -663,7 +663,7 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
         goto error;
 
     self->ring = ll_ringbuffer_create(
-        device->UpdateSize*self->sampleRateRatio*device->NumUpdates + 1,
+        (size_t)ceil(device->UpdateSize*self->sampleRateRatio*device->NumUpdates),
         self->frameSize, false
     );
     if(!self->ring) goto error;

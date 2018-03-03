@@ -134,10 +134,12 @@ AL_API void AL_APIENTRY alEventCallbackSOFT(ALEVENTPROCSOFT callback, void *user
     context = GetContextRef();
     if(!context) return;
 
+    almtx_lock(&context->PropLock);
     almtx_lock(&context->EventCbLock);
     context->EventCb = callback;
     context->EventParam = userParam;
     almtx_unlock(&context->EventCbLock);
+    almtx_unlock(&context->PropLock);
 
     ALCcontext_DecRef(context);
 }

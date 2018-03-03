@@ -26,7 +26,6 @@
 #include "static_assert.h"
 #include "align.h"
 #include "atomic.h"
-#include "uintmap.h"
 #include "vector.h"
 #include "alstring.h"
 #include "almalloc.h"
@@ -651,7 +650,7 @@ struct ALCcontext_struct {
     ATOMIC_FLAG PropsClean;
     ATOMIC(ALenum) DeferUpdates;
 
-    RWLock PropLock;
+    almtx_t PropLock;
 
     /* Counter for the pre-mixing updates, in 31.1 fixed point (lowest bit
      * indicates if updates are currently happening).

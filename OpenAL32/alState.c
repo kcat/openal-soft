@@ -79,7 +79,7 @@ AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
     context = GetContextRef();
     if(!context) return;
 
-    WriteLock(&context->PropLock);
+    almtx_lock(&context->PropLock);
     switch(capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
@@ -90,7 +90,7 @@ AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
     default:
         alSetError(context, AL_INVALID_VALUE, "Invalid enable property 0x%04x", capability);
     }
-    WriteUnlock(&context->PropLock);
+    almtx_unlock(&context->PropLock);
 
     ALCcontext_DecRef(context);
 }
@@ -102,7 +102,7 @@ AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
     context = GetContextRef();
     if(!context) return;
 
-    WriteLock(&context->PropLock);
+    almtx_lock(&context->PropLock);
     switch(capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
@@ -113,7 +113,7 @@ AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
     default:
         alSetError(context, AL_INVALID_VALUE, "Invalid disable property 0x%04x", capability);
     }
-    WriteUnlock(&context->PropLock);
+    almtx_unlock(&context->PropLock);
 
     ALCcontext_DecRef(context);
 }
@@ -700,10 +700,10 @@ AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
         alSetError(context, AL_INVALID_VALUE, "Doppler factor %f out of range", value);
     else
     {
-        WriteLock(&context->PropLock);
+        almtx_lock(&context->PropLock);
         context->DopplerFactor = value;
         DO_UPDATEPROPS();
-        WriteUnlock(&context->PropLock);
+        almtx_unlock(&context->PropLock);
     }
 
     ALCcontext_DecRef(context);
@@ -734,10 +734,10 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
         alSetError(context, AL_INVALID_VALUE, "Doppler velocity %f out of range", value);
     else
     {
-        WriteLock(&context->PropLock);
+        almtx_lock(&context->PropLock);
         context->DopplerVelocity = value;
         DO_UPDATEPROPS();
-        WriteUnlock(&context->PropLock);
+        almtx_unlock(&context->PropLock);
     }
 
     ALCcontext_DecRef(context);
@@ -754,10 +754,10 @@ AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat value)
         alSetError(context, AL_INVALID_VALUE, "Speed of sound %f out of range", value);
     else
     {
-        WriteLock(&context->PropLock);
+        almtx_lock(&context->PropLock);
         context->SpeedOfSound = value;
         DO_UPDATEPROPS();
-        WriteUnlock(&context->PropLock);
+        almtx_unlock(&context->PropLock);
     }
 
     ALCcontext_DecRef(context);
@@ -777,11 +777,11 @@ AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
         alSetError(context, AL_INVALID_VALUE, "Distance model 0x%04x out of range", value);
     else
     {
-        WriteLock(&context->PropLock);
+        almtx_lock(&context->PropLock);
         context->DistanceModel = value;
         if(!context->SourceDistanceModel)
             DO_UPDATEPROPS();
-        WriteUnlock(&context->PropLock);
+        almtx_unlock(&context->PropLock);
     }
 
     ALCcontext_DecRef(context);

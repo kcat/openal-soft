@@ -244,7 +244,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
     context = GetContextRef();
     if(!context) return;
 
-    WriteLock(&context->PropLock);
+    almtx_lock(&context->PropLock);
     LockEffectSlotList(context);
     if((slot=LookupEffectSlot(context, effectslot)) == NULL)
         SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid effect slot ID %u", effectslot);
@@ -282,7 +282,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
 
 done:
     UnlockEffectSlotList(context);
-    WriteUnlock(&context->PropLock);
+    almtx_unlock(&context->PropLock);
     ALCcontext_DecRef(context);
 }
 
@@ -324,7 +324,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param
     context = GetContextRef();
     if(!context) return;
 
-    WriteLock(&context->PropLock);
+    almtx_lock(&context->PropLock);
     LockEffectSlotList(context);
     if((slot=LookupEffectSlot(context, effectslot)) == NULL)
         SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid effect slot ID %u", effectslot);
@@ -344,7 +344,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param
 
 done:
     UnlockEffectSlotList(context);
-    WriteUnlock(&context->PropLock);
+    almtx_unlock(&context->PropLock);
     ALCcontext_DecRef(context);
 }
 

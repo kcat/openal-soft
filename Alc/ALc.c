@@ -1629,7 +1629,7 @@ void ALCcontext_DeferUpdates(ALCcontext *context)
  */
 void ALCcontext_ProcessUpdates(ALCcontext *context)
 {
-    ReadLock(&context->PropLock);
+    almtx_lock(&context->PropLock);
     if(ATOMIC_EXCHANGE_SEQ(&context->DeferUpdates, AL_FALSE))
     {
         /* Tell the mixer to stop applying updates, then wait for any active
@@ -1651,7 +1651,7 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
          */
         ATOMIC_STORE_SEQ(&context->HoldUpdates, AL_FALSE);
     }
-    ReadUnlock(&context->PropLock);
+    almtx_unlock(&context->PropLock);
 }
 
 
@@ -2244,7 +2244,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 UpdateEffectSlotProps(slot, context);
         }
 
-        WriteLock(&context->PropLock);
+        almtx_lock(&context->PropLock);
         almtx_lock(&context->EffectSlotLock);
         for(pos = 0;pos < (ALsizei)VECTOR_SIZE(context->EffectSlotList);pos++)
         {
@@ -2342,7 +2342,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         ATOMIC_FLAG_TEST_AND_SET(&context->Listener->PropsClean, almemory_order_release);
         UpdateListenerProps(context);
         UpdateAllSourceProps(context);
-        WriteUnlock(&context->PropLock);
+        almtx_unlock(&context->PropLock);
 
         context = ATOMIC_LOAD(&context->next, almemory_order_relaxed);
     }
@@ -2581,7 +2581,7 @@ static ALvoid InitContext(ALCcontext *Context)
     InitRef(&Context->UpdateCount, 0);
     ATOMIC_INIT(&Context->HoldUpdates, AL_FALSE);
     Context->GainBoost = 1.0f;
-    RWLockInit(&Context->PropLock);
+    almtx_init(&Context->PropLock, almtx_plain);
     ATOMIC_INIT(&Context->LastError, AL_NO_ERROR);
     VECTOR_INIT(Context->SourceList);
     Context->NumSources = 0;
@@ -2762,6 +2762,8 @@ static void FreeContext(ALCcontext *context)
 
     ll_ringbuffer_free(context->AsyncEvents);
     context->AsyncEvents = NULL;
+
+    almtx_destroy(&context->PropLock);
 
     ALCdevice_DecRef(context->Device);
     context->Device = NULL;

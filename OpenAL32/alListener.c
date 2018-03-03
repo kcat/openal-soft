@@ -43,7 +43,7 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
     if(!context) return;
 
     listener = context->Listener;
-    WriteLock(&context->PropLock);
+    almtx_lock(&context->PropLock);
     switch(param)
     {
     case AL_GAIN:
@@ -68,7 +68,7 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
     }
 
 done:
-    WriteUnlock(&context->PropLock);
+    almtx_unlock(&context->PropLock);
     ALCcontext_DecRef(context);
 }
 
@@ -82,7 +82,7 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
     if(!context) return;
 
     listener = context->Listener;
-    WriteLock(&context->PropLock);
+    almtx_lock(&context->PropLock);
     switch(param)
     {
     case AL_POSITION:
@@ -108,7 +108,7 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
     }
 
 done:
-    WriteUnlock(&context->PropLock);
+    almtx_unlock(&context->PropLock);
     ALCcontext_DecRef(context);
 }
 
@@ -138,7 +138,7 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
     if(!context) return;
 
     listener = context->Listener;
-    WriteLock(&context->PropLock);
+    almtx_lock(&context->PropLock);
     if(!values) SETERR_GOTO(context, AL_INVALID_VALUE, done, "NULL pointer");
     switch(param)
     {
@@ -161,7 +161,7 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
     }
 
 done:
-    WriteUnlock(&context->PropLock);
+    almtx_unlock(&context->PropLock);
     ALCcontext_DecRef(context);
 }
 
@@ -173,13 +173,13 @@ AL_API ALvoid AL_APIENTRY alListeneri(ALenum param, ALint UNUSED(value))
     context = GetContextRef();
     if(!context) return;
 
-    WriteLock(&context->PropLock);
+    almtx_lock(&context->PropLock);
     switch(param)
     {
     default:
         alSetError(context, AL_INVALID_ENUM, "Invalid listener integer property");
     }
-    WriteUnlock(&context->PropLock);
+    almtx_unlock(&context->PropLock);
 
     ALCcontext_DecRef(context);
 }
@@ -200,13 +200,13 @@ AL_API void AL_APIENTRY alListener3i(ALenum param, ALint value1, ALint value2, A
     context = GetContextRef();
     if(!context) return;
 
-    WriteLock(&context->PropLock);
+    almtx_lock(&context->PropLock);
     switch(param)
     {
     default:
         alSetError(context, AL_INVALID_ENUM, "Invalid listener 3-integer property");
     }
-    WriteUnlock(&context->PropLock);
+    almtx_unlock(&context->PropLock);
 
     ALCcontext_DecRef(context);
 }
@@ -241,7 +241,7 @@ AL_API void AL_APIENTRY alListeneriv(ALenum param, const ALint *values)
     context = GetContextRef();
     if(!context) return;
 
-    WriteLock(&context->PropLock);
+    almtx_lock(&context->PropLock);
     if(!values)
         alSetError(context, AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
@@ -249,7 +249,7 @@ AL_API void AL_APIENTRY alListeneriv(ALenum param, const ALint *values)
     default:
         alSetError(context, AL_INVALID_ENUM, "Invalid listener integer-vector property");
     }
-    WriteUnlock(&context->PropLock);
+    almtx_unlock(&context->PropLock);
 
     ALCcontext_DecRef(context);
 }
@@ -262,7 +262,7 @@ AL_API ALvoid AL_APIENTRY alGetListenerf(ALenum param, ALfloat *value)
     context = GetContextRef();
     if(!context) return;
 
-    ReadLock(&context->PropLock);
+    almtx_lock(&context->PropLock);
     if(!value)
         alSetError(context, AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
@@ -278,7 +278,7 @@ AL_API ALvoid AL_APIENTRY alGetListenerf(ALenum param, ALfloat *value)
     default:
         alSetError(context, AL_INVALID_ENUM, "Invalid listener float property");
     }
-    ReadUnlock(&context->PropLock);
+    almtx_unlock(&context->PropLock);
 
     ALCcontext_DecRef(context);
 }
@@ -291,7 +291,7 @@ AL_API ALvoid AL_APIENTRY alGetListener3f(ALenum param, ALfloat *value1, ALfloat
     context = GetContextRef();
     if(!context) return;
 
-    ReadLock(&context->PropLock);
+    almtx_lock(&context->PropLock);
     if(!value1 || !value2 || !value3)
         alSetError(context, AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
@@ -311,7 +311,7 @@ AL_API ALvoid AL_APIENTRY alGetListener3f(ALenum param, ALfloat *value1, ALfloat
     default:
         alSetError(context, AL_INVALID_ENUM, "Invalid listener 3-float property");
     }
-    ReadUnlock(&context->PropLock);
+    almtx_unlock(&context->PropLock);
 
     ALCcontext_DecRef(context);
 }
@@ -337,7 +337,7 @@ AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum param, ALfloat *values)
     context = GetContextRef();
     if(!context) return;
 
-    ReadLock(&context->PropLock);
+    almtx_lock(&context->PropLock);
     if(!values)
         alSetError(context, AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
@@ -355,7 +355,7 @@ AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum param, ALfloat *values)
     default:
         alSetError(context, AL_INVALID_ENUM, "Invalid listener float-vector property");
     }
-    ReadUnlock(&context->PropLock);
+    almtx_unlock(&context->PropLock);
 
     ALCcontext_DecRef(context);
 }
@@ -368,7 +368,7 @@ AL_API ALvoid AL_APIENTRY alGetListeneri(ALenum param, ALint *value)
     context = GetContextRef();
     if(!context) return;
 
-    ReadLock(&context->PropLock);
+    almtx_lock(&context->PropLock);
     if(!value)
         alSetError(context, AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
@@ -376,7 +376,7 @@ AL_API ALvoid AL_APIENTRY alGetListeneri(ALenum param, ALint *value)
     default:
         alSetError(context, AL_INVALID_ENUM, "Invalid listener integer property");
     }
-    ReadUnlock(&context->PropLock);
+    almtx_unlock(&context->PropLock);
 
     ALCcontext_DecRef(context);
 }
@@ -389,7 +389,7 @@ AL_API void AL_APIENTRY alGetListener3i(ALenum param, ALint *value1, ALint *valu
     context = GetContextRef();
     if(!context) return;
 
-    ReadLock(&context->PropLock);
+    almtx_lock(&context->PropLock);
     if(!value1 || !value2 || !value3)
         alSetError(context, AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
@@ -409,7 +409,7 @@ AL_API void AL_APIENTRY alGetListener3i(ALenum param, ALint *value1, ALint *valu
     default:
         alSetError(context, AL_INVALID_ENUM, "Invalid listener 3-integer property");
     }
-    ReadUnlock(&context->PropLock);
+    almtx_unlock(&context->PropLock);
 
     ALCcontext_DecRef(context);
 }
@@ -430,7 +430,7 @@ AL_API void AL_APIENTRY alGetListeneriv(ALenum param, ALint* values)
     context = GetContextRef();
     if(!context) return;
 
-    ReadLock(&context->PropLock);
+    almtx_lock(&context->PropLock);
     if(!values)
         alSetError(context, AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
@@ -448,7 +448,7 @@ AL_API void AL_APIENTRY alGetListeneriv(ALenum param, ALint* values)
     default:
         alSetError(context, AL_INVALID_ENUM, "Invalid listener integer-vector property");
     }
-    ReadUnlock(&context->PropLock);
+    almtx_unlock(&context->PropLock);
 
     ALCcontext_DecRef(context);
 }

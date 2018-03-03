@@ -2361,9 +2361,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 }
 
 
-static void InitDevice(ALCdevice *device)
+static void InitDevice(ALCdevice *device, enum DeviceType type)
 {
     ALsizei i;
+
+    InitRef(&device->ref, 1);
+    ATOMIC_INIT(&device->Connected, ALC_TRUE);
+    device->Type = type;
+    ATOMIC_INIT(&device->LastError, ALC_NO_ERROR);
 
     device->Flags = 0;
     device->Render_Mode = NormalRender;
@@ -4031,12 +4036,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     }
 
     //Validate device
-    InitRef(&device->ref, 1);
-    ATOMIC_INIT(&device->Connected, ALC_TRUE);
-    device->Type = Playback;
-    ATOMIC_INIT(&device->LastError, ALC_NO_ERROR);
-
-    InitDevice(device);
+    InitDevice(device, Playback);
 
     //Set output format
     device->FmtChans = DevFmtChannelsDefault;
@@ -4284,11 +4284,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     }
 
     //Validate device
-    InitRef(&device->ref, 1);
-    ATOMIC_INIT(&device->Connected, ALC_TRUE);
-    device->Type = Capture;
-
-    InitDevice(device);
+    InitDevice(device, Capture);
 
     device->Frequency = frequency;
     device->Flags |= DEVICE_FREQUENCY_REQUEST;
@@ -4465,12 +4461,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     }
 
     //Validate device
-    InitRef(&device->ref, 1);
-    ATOMIC_INIT(&device->Connected, ALC_TRUE);
-    device->Type = Loopback;
-    ATOMIC_INIT(&device->LastError, ALC_NO_ERROR);
-
-    InitDevice(device);
+    InitDevice(device, Loopback);
 
     device->SourcesMax = 256;
     device->AuxiliaryEffectSlotMax = 64;

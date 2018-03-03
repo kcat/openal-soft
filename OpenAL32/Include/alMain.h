@@ -581,7 +581,7 @@ struct ALCdevice_struct {
     almtx_t BackendLock;
     struct ALCbackend *Backend;
 
-    ALCdevice *volatile next;
+    ATOMIC(ALCdevice*) next;
 };
 
 // Frequency was requested by the app or config file
@@ -692,7 +692,7 @@ struct ALCcontext_struct {
     ALCdevice  *Device;
     const ALCchar *ExtensionList;
 
-    ALCcontext *volatile next;
+    ATOMIC(ALCcontext*) next;
 
     /* Memory space used by the listener (and possibly default effect slot) */
     alignas(16) ALCbyte _listener_mem[];

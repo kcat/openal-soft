@@ -1827,7 +1827,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
                                  state->OutChannels);
             }
 
-            ctx = ctx->next;
+            ctx = ATOMIC_LOAD(&ctx->next, almemory_order_relaxed);
         }
 
         /* Increment the clock time. Every second's worth of samples is
@@ -1965,6 +1965,6 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
             ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
         }
 
-        ctx = ctx->next;
+        ctx = ATOMIC_LOAD(&ctx->next, almemory_order_relaxed);
     }
 }

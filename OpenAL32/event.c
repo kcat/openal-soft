@@ -20,16 +20,16 @@ static int EventThread(void *arg)
 
     while(1)
     {
-        AsyncEvent evt;
         ALbitfieldSOFT enabledevts;
+        AsyncEvent evt;
 
-        if(ll_ringbuffer_read_space(context->AsyncEvents) == 0)
+        if(ll_ringbuffer_read(context->AsyncEvents, (char*)&evt, 1) == 0)
         {
             alsem_wait(&context->EventSem);
             continue;
         }
-        ll_ringbuffer_read(context->AsyncEvents, (char*)&evt, 1);
-        if(!evt.EnumType) break;
+        if(!evt.EnumType)
+            break;
 
         almtx_lock(&context->EventCbLock);
         enabledevts = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_acquire);
@@ -44,7 +44,9 @@ static int EventThread(void *arg)
 AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, ALboolean enable)
 {
     ALCcontext *context;
+    ALbitfieldSOFT enabledevts;
     ALbitfieldSOFT flags = 0;
+    bool isrunning;
     ALsizei i;
 
     context = GetContextRef();
@@ -72,11 +74,9 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
             SETERR_GOTO(context, AL_INVALID_ENUM, done, "Invalid event type 0x%04x", types[i]);
     }
 
+    almtx_lock(&context->EventThrdLock);
     if(enable)
     {
-        ALbitfieldSOFT enabledevts;
-        bool isrunning;
-        almtx_lock(&context->EventThrdLock);
         if(!context->AsyncEvents)
             context->AsyncEvents = ll_ringbuffer_create(63, sizeof(AsyncEvent), false);
         enabledevts = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed);
@@ -90,13 +90,9 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
         }
         if(!isrunning && flags)
             althrd_create(&context->EventThread, EventThread, context);
-        almtx_unlock(&context->EventThrdLock);
     }
     else
     {
-        ALbitfieldSOFT enabledevts;
-        bool isrunning;
-        almtx_lock(&context->EventThrdLock);
         enabledevts = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed);
         isrunning = !!enabledevts;
         while(ATOMIC_COMPARE_EXCHANGE_WEAK(&context->EnabledEvts, &enabledevts, enabledevts&~flags,
@@ -120,8 +116,8 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
             almtx_lock(&context->EventCbLock);
             almtx_unlock(&context->EventCbLock);
         }
-        almtx_unlock(&context->EventThrdLock);
     }
+    almtx_unlock(&context->EventThrdLock);
 
 done:
     ALCcontext_DecRef(context);

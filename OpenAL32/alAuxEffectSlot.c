@@ -598,18 +598,29 @@ static void AddActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontex
     {
         for(j = i;j != 0;)
         {
-            if(newarray->slot[i] == newarray->slot[--j])
+            if(UNLIKELY(newarray->slot[i] == newarray->slot[--j]))
+            {
+                newcount--;
+                for(j = i;j < newcount;j++)
+                    newarray->slot[j] = newarray->slot[j+1];
+                i--;
                 break;
-        }
-        if(j != 0)
-        {
-            newcount--;
-            for(j = i;j < newcount;j++)
-                newarray->slot[j] = newarray->slot[j+1];
-            i--;
+            }
         }
     }
-    newarray->count = newcount;
+
+    /* Reallocate newarray if the new size ended up smaller from duplicate
+     * removal.
+     */
+    if(UNLIKELY(newcount < newarray->count))
+    {
+        struct ALeffectslotArray *tmpnewarray = al_calloc(DEF_ALIGN,
+            FAM_SIZE(struct ALeffectslotArray, slot, newcount));
+        memcpy(tmpnewarray, newarray, FAM_SIZE(struct ALeffectslotArray, slot, newcount));
+        al_free(newarray);
+        newarray = tmpnewarray;
+        newarray->count = newcount;
+    }
 
     curarray = ATOMIC_EXCHANGE_PTR(&context->ActiveAuxSlots, newarray, almemory_order_acq_rel);
     while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
@@ -622,25 +633,28 @@ static void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcon
     struct ALeffectslotArray *curarray = ATOMIC_LOAD(&context->ActiveAuxSlots,
                                                      almemory_order_acquire);
     struct ALeffectslotArray *newarray = NULL;
-    ALsizei newcount = curarray->count - count;
     ALCdevice *device = context->Device;
     ALsizei i, j;
 
-    assert(newcount >= 0);
-    newarray = al_calloc(DEF_ALIGN, FAM_SIZE(struct ALeffectslotArray, slot, newcount));
-    newarray->count = newcount;
-    for(i = j = 0;i < newarray->count;)
+    /* Don't shrink the allocated array size since we don't know how many (if
+     * any) of the effect slots to remove are in the array.
+     */
+    newarray = al_calloc(DEF_ALIGN, FAM_SIZE(struct ALeffectslotArray, slot, curarray->count));
+    newarray->count = 0;
+    for(i = 0;i < curarray->count;i++)
     {
-        ALeffectslot *slot = curarray->slot[j++];
-        ALsizei k = count;
-        while(k != 0)
+        /* Insert this slot into the new array only if it's not one to remove. */
+        ALeffectslot *slot = curarray->slot[i];
+        for(j = count;j != 0;)
         {
-            if(slot->id == slotids[--k])
-                break;
+            if(slot->id == slotids[--j])
+                goto skip_ins;
         }
-        if(k == 0)
-            newarray->slot[i++] = slot;
+        newarray->slot[newarray->count++] = slot;
+    skip_ins: ;
     }
+
+    /* TODO: Could reallocate newarray now that we know it's needed size. */
 
     curarray = ATOMIC_EXCHANGE_PTR(&context->ActiveAuxSlots, newarray, almemory_order_acq_rel);
     while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))

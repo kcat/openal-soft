@@ -4139,6 +4139,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
     ConfigValueUInt(deviceName, NULL, "slots", &device->AuxiliaryEffectSlotMax);
     if(device->AuxiliaryEffectSlotMax == 0) device->AuxiliaryEffectSlotMax = 64;
+    else device->AuxiliaryEffectSlotMax = minu(device->AuxiliaryEffectSlotMax, INT_MAX);
 
     if(ConfigValueInt(deviceName, NULL, "sends", &device->NumAuxSends))
         device->NumAuxSends = clampi(
@@ -4487,6 +4488,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
 
     ConfigValueUInt(NULL, NULL, "slots", &device->AuxiliaryEffectSlotMax);
     if(device->AuxiliaryEffectSlotMax == 0) device->AuxiliaryEffectSlotMax = 64;
+    else device->AuxiliaryEffectSlotMax = minu(device->AuxiliaryEffectSlotMax, INT_MAX);
 
     if(ConfigValueInt(NULL, NULL, "sends", &device->NumAuxSends))
         device->NumAuxSends = clampi(

@@ -109,7 +109,6 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
     ALCdevice *device;
     ALCcontext *context;
     ALsizei cur;
-    ALenum err;
 
     context = GetContextRef();
     if(!context) return;
@@ -131,6 +130,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
         ALeffectslotPtr *iter = VECTOR_BEGIN(context->EffectSlotList);
         ALeffectslotPtr *end = VECTOR_END(context->EffectSlotList);
         ALeffectslot *slot = NULL;
+        ALenum err = AL_OUT_OF_MEMORY;
 
         for(;iter != end;iter++)
         {
@@ -139,18 +139,10 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
         }
         if(iter == end)
         {
-            if(VECTOR_SIZE(context->EffectSlotList) >= INT_MAX)
-            {
-                UnlockEffectSlotList(context);
-
-                alDeleteAuxiliaryEffectSlots(cur, effectslots);
-                SETERR_GOTO(context, err, done, "Too many effect slot objects");
-            }
             VECTOR_PUSH_BACK(context->EffectSlotList, NULL);
             iter = &VECTOR_BACK(context->EffectSlotList);
         }
         slot = al_calloc(16, sizeof(ALeffectslot));
-        err = AL_OUT_OF_MEMORY;
         if(!slot || (err=InitEffectSlot(slot)) != AL_NO_ERROR)
         {
             al_free(slot);

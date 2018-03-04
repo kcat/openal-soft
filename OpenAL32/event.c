@@ -102,9 +102,8 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
         if(isrunning && !(enabledevts&~flags))
         {
             static const AsyncEvent kill_evt = { 0 };
-            while(ll_ringbuffer_write_space(context->AsyncEvents) == 0)
+            while(ll_ringbuffer_write(context->AsyncEvents, (const char*)&kill_evt, 1) == 0)
                 althrd_yield();
-            ll_ringbuffer_write(context->AsyncEvents, (const char*)&kill_evt, 1);
             alsem_post(&context->EventSem);
             althrd_join(context->EventThread, NULL);
         }

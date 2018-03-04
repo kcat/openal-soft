@@ -2749,9 +2749,8 @@ static void FreeContext(ALCcontext *context)
     if(ATOMIC_EXCHANGE(&context->EnabledEvts, 0, almemory_order_acq_rel))
     {
         static const AsyncEvent kill_evt = { 0 };
-        while(ll_ringbuffer_write_space(context->AsyncEvents) == 0)
+        while(ll_ringbuffer_write(context->AsyncEvents, (const char*)&kill_evt, 1) == 0)
             althrd_yield();
-        ll_ringbuffer_write(context->AsyncEvents, (const char*)&kill_evt, 1);
         alsem_post(&context->EventSem);
         althrd_join(context->EventThread, NULL);
     }

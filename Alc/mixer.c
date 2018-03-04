@@ -203,8 +203,8 @@ static void SendAsyncEvent(ALCcontext *context, ALuint enumtype, ALenum type,
     evt.ObjectId = objid;
     evt.Param = param;
     strcpy(evt.Message, msg);
-    if(ll_ringbuffer_write_space(context->AsyncEvents) > 0)
-        ll_ringbuffer_write(context->AsyncEvents, (const char*)&evt, 1);
+    if(ll_ringbuffer_write(context->AsyncEvents, (const char*)&evt, 1) == 1)
+        alsem_post(&context->EventSem);
 }
 
 
@@ -773,12 +773,9 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
     /* Send any events now, after the position/buffer info was updated. */
     enabledevt = ATOMIC_LOAD(&Context->EnabledEvts, almemory_order_acquire);
     if(buffers_done > 0 && (enabledevt&EventType_BufferCompleted))
-    {
         SendAsyncEvent(Context, EventType_BufferCompleted,
             AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, SourceID, buffers_done, "Buffer completed"
         );
-        alsem_post(&Context->EventSem);
-    }
 
     return isplaying;
 }

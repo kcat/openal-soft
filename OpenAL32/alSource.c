@@ -248,9 +248,8 @@ static void SendStateChangeEvent(ALCcontext *context, ALuint id, ALenum state)
      * and we don't want state change messages to occur out of order, so send
      * it through the async queue to ensure proper ordering.
      */
-    if(ll_ringbuffer_write_space(context->AsyncEvents) > 0)
-        ll_ringbuffer_write(context->AsyncEvents, (const char*)&evt, 1);
-    alsem_post(&context->EventSem);
+    if(ll_ringbuffer_write(context->AsyncEvents, (const char*)&evt, 1) == 1)
+        alsem_post(&context->EventSem);
 }
 
 

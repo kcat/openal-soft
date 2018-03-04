@@ -238,9 +238,8 @@ static void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
     }
     strcpy(evt.Message+strpos, " state changed to AL_STOPPED");
 
-    if(ll_ringbuffer_write_space(context->AsyncEvents) > 0)
-        ll_ringbuffer_write(context->AsyncEvents, (const char*)&evt, 1);
-    alsem_post(&context->EventSem);
+    if(ll_ringbuffer_write(context->AsyncEvents, (const char*)&evt, 1) == 1)
+        alsem_post(&context->EventSem);
 }
 
 
@@ -1942,11 +1941,9 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
         ALbitfieldSOFT enabledevt = ATOMIC_LOAD(&ctx->EnabledEvts, almemory_order_acquire);
         ALsizei i;
 
-        if((enabledevt&EventType_Disconnected) && ll_ringbuffer_write_space(ctx->AsyncEvents) > 0)
-        {
-            ll_ringbuffer_write(ctx->AsyncEvents, (const char*)&evt, 1);
+        if((enabledevt&EventType_Disconnected) &&
+           ll_ringbuffer_write(ctx->AsyncEvents, (const char*)&evt, 1) == 1)
             alsem_post(&ctx->EventSem);
-        }
 
         for(i = 0;i < ctx->VoiceCount;i++)
         {

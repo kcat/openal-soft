@@ -59,7 +59,7 @@ static const struct ALeffectStateVtable T##_ALeffectState_vtable = {          \
 }
 
 
-struct EeffectStateFactoryVtable;
+struct EffectStateFactoryVtable;
 
 typedef struct EffectStateFactory {
     const struct EffectStateFactoryVtable *vtab;

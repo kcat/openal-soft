@@ -135,7 +135,7 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCcontext 
 
     state->step = fastf2i(props->Modulator.Frequency*WAVEFORM_FRACONE /
                           device->Frequency);
-    if(state->step == 0) state->step = 1;
+    state->step = clampi(state->step, 1, WAVEFORM_FRACONE-1);
 
     /* Custom filter coeffs, which match the old version instead of a low-shelf. */
     cw = cosf(F_TAU * props->Modulator.HighPassCutoff / device->Frequency);
@@ -177,8 +177,7 @@ static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALsizei SamplesT
                        state->Chans[i].TargetGains, SamplesToDo-base, base, td);
         }
 
-        for(i = 0;i < td;i++)
-            index += step;
+        index += (step*td) & WAVEFORM_FRACMASK;
         index &= WAVEFORM_FRACMASK;
         base += td;
     }

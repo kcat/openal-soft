@@ -30,13 +30,17 @@
 #include "alu.h"
 
 
+#define MAX_UPDATE_SAMPLES 128
+
 typedef struct ALmodulatorState {
     DERIVE_FROM_TYPE(ALeffectState);
 
-    void (*Process)(ALfloat*, const ALfloat*, ALsizei, const ALsizei, ALsizei);
+    void (*GetSamples)(ALfloat*, ALsizei, const ALsizei, ALsizei);
 
     ALsizei index;
     ALsizei step;
+
+    alignas(16) ALfloat ModSamples[MAX_UPDATE_SAMPLES];
 
     struct {
         ALfilterState Filter;
@@ -75,15 +79,15 @@ static inline ALfloat Square(ALsizei index)
 }
 
 #define DECL_TEMPLATE(func)                                                   \
-static void Modulate##func(ALfloat *restrict dst, const ALfloat *restrict src,\
-                           ALsizei index, const ALsizei step, ALsizei todo)   \
+static void Modulate##func(ALfloat *restrict dst, ALsizei index,              \
+                           const ALsizei step, ALsizei todo)                  \
 {                                                                             \
     ALsizei i;                                                                \
     for(i = 0;i < todo;i++)                                                   \
     {                                                                         \
         index += step;                                                        \
         index &= WAVEFORM_FRACMASK;                                           \
-        dst[i] = src[i] * func(index);                                        \
+        dst[i] = func(index);                                                 \
     }                                                                         \
 }
 
@@ -127,11 +131,11 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCcontext 
     ALsizei i;
 
     if(props->Modulator.Waveform == AL_RING_MODULATOR_SINUSOID)
-        state->Process = ModulateSin;
+        state->GetSamples = ModulateSin;
     else if(props->Modulator.Waveform == AL_RING_MODULATOR_SAWTOOTH)
-        state->Process = ModulateSaw;
+        state->GetSamples = ModulateSaw;
     else /*if(Slot->Params.EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SQUARE)*/
-        state->Process = ModulateSquare;
+        state->GetSamples = ModulateSquare;
 
     state->step = fastf2i(props->Modulator.Frequency*WAVEFORM_FRACONE /
                           device->Frequency);
@@ -158,30 +162,32 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCcontext 
 
 static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
+    ALfloat *restrict modsamples = ASSUME_ALIGNED(state->ModSamples, 16);
     const ALsizei step = state->step;
-    ALsizei index = state->index;
     ALsizei base;
 
     for(base = 0;base < SamplesToDo;)
     {
-        ALfloat temps[2][128];
-        ALsizei td = mini(128, SamplesToDo-base);
-        ALsizei i;
+        alignas(16) ALfloat temps[2][MAX_UPDATE_SAMPLES];
+        ALsizei td = mini(MAX_UPDATE_SAMPLES, SamplesToDo-base);
+        ALsizei c, i;
 
-        for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
+        state->GetSamples(modsamples, state->index, step, td);
+        state->index += (step*td) & WAVEFORM_FRACMASK;
+        state->index &= WAVEFORM_FRACMASK;
+
+        for(c = 0;c < MAX_EFFECT_CHANNELS;c++)
         {
-            ALfilterState_process(&state->Chans[i].Filter, temps[0], &SamplesIn[i][base], td);
-            state->Process(temps[1], temps[0], index, step, td);
+            ALfilterState_process(&state->Chans[c].Filter, temps[0], &SamplesIn[c][base], td);
+            for(i = 0;i < td;i++)
+                temps[1][i] = temps[0][i] * modsamples[i];
 
-            MixSamples(temps[1], NumChannels, SamplesOut, state->Chans[i].CurrentGains,
-                       state->Chans[i].TargetGains, SamplesToDo-base, base, td);
+            MixSamples(temps[1], NumChannels, SamplesOut, state->Chans[c].CurrentGains,
+                       state->Chans[c].TargetGains, SamplesToDo-base, base, td);
         }
 
-        index += (step*td) & WAVEFORM_FRACMASK;
-        index &= WAVEFORM_FRACMASK;
         base += td;
     }
-    state->index = index;
 }
 
 

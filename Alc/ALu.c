@@ -1566,7 +1566,7 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
 }
 
 
-static void UpdateContextSources(ALCcontext *ctx, const struct ALeffectslotArray *slots)
+static void ProcessParamUpdates(ALCcontext *ctx, const struct ALeffectslotArray *slots)
 {
     ALvoice **voice, **voice_end;
     ALsource *source;
@@ -1791,7 +1791,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
             const struct ALeffectslotArray *auxslots;
 
             auxslots = ATOMIC_LOAD(&ctx->ActiveAuxSlots, almemory_order_acquire);
-            UpdateContextSources(ctx, auxslots);
+            ProcessParamUpdates(ctx, auxslots);
 
             for(i = 0;i < auxslots->count;i++)
             {

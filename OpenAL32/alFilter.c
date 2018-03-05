@@ -154,7 +154,7 @@ AL_API ALvoid AL_APIENTRY alFilteri(ALuint filter, ALenum param, ALint value)
         else
         {
             /* Call the appropriate handler */
-            V(ALFilter,setParami)(Context, param, value);
+            ALfilter_setParami(ALFilter, Context, param, value);
         }
     }
     UnlockFilterList(Device);
@@ -185,7 +185,7 @@ AL_API ALvoid AL_APIENTRY alFilteriv(ALuint filter, ALenum param, const ALint *v
     else
     {
         /* Call the appropriate handler */
-        V(ALFilter,setParamiv)(Context, param, values);
+        ALfilter_setParamiv(ALFilter, Context, param, values);
     }
     UnlockFilterList(Device);
 
@@ -208,7 +208,7 @@ AL_API ALvoid AL_APIENTRY alFilterf(ALuint filter, ALenum param, ALfloat value)
     else
     {
         /* Call the appropriate handler */
-        V(ALFilter,setParamf)(Context, param, value);
+        ALfilter_setParamf(ALFilter, Context, param, value);
     }
     UnlockFilterList(Device);
 
@@ -231,7 +231,7 @@ AL_API ALvoid AL_APIENTRY alFilterfv(ALuint filter, ALenum param, const ALfloat 
     else
     {
         /* Call the appropriate handler */
-        V(ALFilter,setParamfv)(Context, param, values);
+        ALfilter_setParamfv(ALFilter, Context, param, values);
     }
     UnlockFilterList(Device);
 
@@ -258,7 +258,7 @@ AL_API ALvoid AL_APIENTRY alGetFilteri(ALuint filter, ALenum param, ALint *value
         else
         {
             /* Call the appropriate handler */
-            V(ALFilter,getParami)(Context, param, value);
+            ALfilter_getParami(ALFilter, Context, param, value);
         }
     }
     UnlockFilterList(Device);
@@ -289,7 +289,7 @@ AL_API ALvoid AL_APIENTRY alGetFilteriv(ALuint filter, ALenum param, ALint *valu
     else
     {
         /* Call the appropriate handler */
-        V(ALFilter,getParamiv)(Context, param, values);
+        ALfilter_getParamiv(ALFilter, Context, param, values);
     }
     UnlockFilterList(Device);
 
@@ -312,7 +312,7 @@ AL_API ALvoid AL_APIENTRY alGetFilterf(ALuint filter, ALenum param, ALfloat *val
     else
     {
         /* Call the appropriate handler */
-        V(ALFilter,getParamf)(Context, param, value);
+        ALfilter_getParamf(ALFilter, Context, param, value);
     }
     UnlockFilterList(Device);
 
@@ -335,7 +335,7 @@ AL_API ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *va
     else
     {
         /* Call the appropriate handler */
-        V(ALFilter,getParamfv)(Context, param, values);
+        ALfilter_getParamfv(ALFilter, Context, param, values);
     }
     UnlockFilterList(Device);
 
@@ -720,7 +720,7 @@ static void InitFilterParams(ALfilter *filter, ALenum type)
         filter->HFReference = LOWPASSFREQREF;
         filter->GainLF = 1.0f;
         filter->LFReference = HIGHPASSFREQREF;
-        filter->vtbl = &ALlowpass_vtable;
+        filter->vtab = &ALlowpass_vtable;
     }
     else if(type == AL_FILTER_HIGHPASS)
     {
@@ -729,7 +729,7 @@ static void InitFilterParams(ALfilter *filter, ALenum type)
         filter->HFReference = LOWPASSFREQREF;
         filter->GainLF = AL_HIGHPASS_DEFAULT_GAINLF;
         filter->LFReference = HIGHPASSFREQREF;
-        filter->vtbl = &ALhighpass_vtable;
+        filter->vtab = &ALhighpass_vtable;
     }
     else if(type == AL_FILTER_BANDPASS)
     {
@@ -738,7 +738,7 @@ static void InitFilterParams(ALfilter *filter, ALenum type)
         filter->HFReference = LOWPASSFREQREF;
         filter->GainLF = AL_BANDPASS_DEFAULT_GAINLF;
         filter->LFReference = HIGHPASSFREQREF;
-        filter->vtbl = &ALbandpass_vtable;
+        filter->vtab = &ALbandpass_vtable;
     }
     else
     {
@@ -747,7 +747,7 @@ static void InitFilterParams(ALfilter *filter, ALenum type)
         filter->HFReference = LOWPASSFREQREF;
         filter->GainLF = 1.0f;
         filter->LFReference = HIGHPASSFREQREF;
-        filter->vtbl = &ALnullfilter_vtable;
+        filter->vtab = &ALnullfilter_vtable;
     }
     filter->type = type;
 }

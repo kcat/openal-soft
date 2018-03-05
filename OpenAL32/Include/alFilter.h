@@ -157,11 +157,19 @@ typedef struct ALfilter {
     ALfloat GainLF;
     ALfloat LFReference;
 
-    const struct ALfilterVtable *vtbl;
+    const struct ALfilterVtable *vtab;
 
     /* Self ID */
     ALuint id;
 } ALfilter;
+#define ALfilter_setParami(o, c, p, v)   ((o)->vtab->setParami(o, c, p, v))
+#define ALfilter_setParamf(o, c, p, v)   ((o)->vtab->setParamf(o, c, p, v))
+#define ALfilter_setParamiv(o, c, p, v)  ((o)->vtab->setParamiv(o, c, p, v))
+#define ALfilter_setParamfv(o, c, p, v)  ((o)->vtab->setParamfv(o, c, p, v))
+#define ALfilter_getParami(o, c, p, v)   ((o)->vtab->getParami(o, c, p, v))
+#define ALfilter_getParamf(o, c, p, v)   ((o)->vtab->getParamf(o, c, p, v))
+#define ALfilter_getParamiv(o, c, p, v)  ((o)->vtab->getParamiv(o, c, p, v))
+#define ALfilter_getParamfv(o, c, p, v)  ((o)->vtab->getParamfv(o, c, p, v))
 
 void ReleaseALFilters(ALCdevice *device);
 

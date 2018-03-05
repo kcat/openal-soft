@@ -160,11 +160,19 @@ typedef struct ALeffect {
 
     ALeffectProps Props;
 
-    const struct ALeffectVtable *vtbl;
+    const struct ALeffectVtable *vtab;
 
     /* Self ID */
     ALuint id;
 } ALeffect;
+#define ALeffect_setParami(o, c, p, v)   ((o)->vtab->setParami(o, c, p, v))
+#define ALeffect_setParamf(o, c, p, v)   ((o)->vtab->setParamf(o, c, p, v))
+#define ALeffect_setParamiv(o, c, p, v)  ((o)->vtab->setParamiv(o, c, p, v))
+#define ALeffect_setParamfv(o, c, p, v)  ((o)->vtab->setParamfv(o, c, p, v))
+#define ALeffect_getParami(o, c, p, v)   ((o)->vtab->getParami(o, c, p, v))
+#define ALeffect_getParamf(o, c, p, v)   ((o)->vtab->getParamf(o, c, p, v))
+#define ALeffect_getParamiv(o, c, p, v)  ((o)->vtab->getParamiv(o, c, p, v))
+#define ALeffect_getParamfv(o, c, p, v)  ((o)->vtab->getParamfv(o, c, p, v))
 
 inline ALboolean IsReverbEffect(ALenum type)
 { return type == AL_EFFECT_REVERB || type == AL_EFFECT_EAXREVERB; }

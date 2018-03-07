@@ -77,6 +77,9 @@
 /* Define if we have the Wave Writer backend */
 #cmakedefine HAVE_WAVE
 
+/* Define if we have the SDL2 backend */
+#cmakedefine HAVE_SDL2
+
 /* Define if we have the stat function */
 #cmakedefine HAVE_STAT
 

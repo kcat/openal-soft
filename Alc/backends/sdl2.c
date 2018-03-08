@@ -100,11 +100,32 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
     if (name && strcmp(name, defaultDeviceName) == 0)
         name = NULL; // Passing NULL to SDL_OpenAudioDevice is special and will NOT select the first
                      // device in the list.
-    self->deviceID = SDL_OpenAudioDevice(name, 0, &want, &have, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE);
+    self->deviceID = SDL_OpenAudioDevice(name, 0, &want, &have, SDL_AUDIO_ALLOW_ANY_CHANGE);
     if(want.freq != have.freq)
     {
         TRACE("Frequency changed by SDL2\n");
         device->Frequency = have.freq;
+    }
+    if(have.channels == 1)
+        device->FmtChans = DevFmtMono;
+    else if(have.channels == 2)
+        device->FmtChans = DevFmtStereo;
+    else
+    {
+        ERR("Invalid number of channels\n");
+        return ALC_INVALID_VALUE;
+    }
+    switch(have.format)
+    {
+        case AUDIO_U8:     device->FmtType = DevFmtUByte;  break;
+        case AUDIO_S8:     device->FmtType = DevFmtByte;   break;
+        case AUDIO_U16SYS: device->FmtType = DevFmtUShort; break;
+        case AUDIO_S16SYS: device->FmtType = DevFmtShort;  break;
+        case AUDIO_S32SYS: device->FmtType = DevFmtInt;    break;
+        case AUDIO_F32SYS: device->FmtType = DevFmtFloat;  break;
+        default:
+            ERR("Unsupported format\n");
+            return ALC_INVALID_VALUE;
     }
     if(self->deviceID == 0) {
         ERR("Could not open device\n");

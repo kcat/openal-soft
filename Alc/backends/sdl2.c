@@ -54,6 +54,8 @@ DECLARE_DEFAULT_ALLOCATORS(ALCsdl2Backend)
 
 DEFINE_ALCBACKEND_VTABLE(ALCsdl2Backend);
 
+static const ALCchar defaultDeviceName[] = "Default device";
+
 static void ALCsdl2Backend_Construct(ALCsdl2Backend *self, ALCdevice *device)
 {
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
@@ -95,13 +97,16 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
     want.callback = ALCsdl2Backend_audioCallback;
     want.userdata = self;
 
-    if(!name)
-        name = SDL_GetAudioDeviceName(0, 0);
+    if (name && strcmp(name, defaultDeviceName) == 0)
+        name = NULL; // Passing NULL to SDL_OpenAudioDevice is special and will NOT select the first
+                     // device in the list.
     self->deviceID = SDL_OpenAudioDevice(name, 0, &want, NULL, 0);
     if(self->deviceID == 0) {
         ERR("Could not open device\n");
         return ALC_INVALID_VALUE;
     }
+    if(!name)
+        name = defaultDeviceName;
     alstr_copy_cstr(&STATIC_CAST(ALCbackend, self)->mDevice->DeviceName, name);
 
     return ALC_NO_ERROR;
@@ -173,6 +178,7 @@ static void ALCsdl2BackendFactory_probe(ALCsdl2BackendFactory* UNUSED(self), enu
     }
     else if(!SDL_WasInit(SDL_INIT_AUDIO))
         SDL_InitSubSystem(SDL_INIT_AUDIO);
+    AppendAllDevicesList(defaultDeviceName);
     for(int i = 0; i < SDL_GetNumAudioDevices(0); ++i)
         AppendAllDevicesList(SDL_GetAudioDeviceName(i, 0));
     if(quit)

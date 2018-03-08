@@ -36,7 +36,9 @@ typedef struct ALCsdl2Backend {
 
     SDL_AudioDeviceID deviceID;
     ALCboolean quit;
-    althrd_t thread;
+    ALuint Frequency;
+    enum DevFmtChannels FmtChans;
+    enum DevFmtType     FmtType;
 } ALCsdl2Backend;
 
 static void ALCsdl2Backend_Construct(ALCsdl2Backend *self, ALCdevice *device);
@@ -62,6 +64,9 @@ static void ALCsdl2Backend_Construct(ALCsdl2Backend *self, ALCdevice *device)
     SET_VTABLE2(ALCsdl2Backend, ALCbackend, self);
 
     self->quit = ALC_FALSE;
+    self->Frequency = device->Frequency;
+    self->FmtChans = device->FmtChans;
+    self->FmtType = device->FmtType;
     if(SDL_WasInit(0) == 0) // Is SDL2 initialized at all?
     {
         SDL_Init(SDL_INIT_AUDIO);
@@ -92,7 +97,7 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
     SDL_zero(want);
     want.freq = device->Frequency;
     want.format = AUDIO_F32;
-    want.channels = 2;
+    want.channels = (device->FmtChans == DevFmtMono) ? 1 : 2;
     want.samples = device->UpdateSize;
     want.callback = ALCsdl2Backend_audioCallback;
     want.userdata = self;
@@ -101,6 +106,11 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
         name = NULL; // Passing NULL to SDL_OpenAudioDevice is special and will NOT select the first
                      // device in the list.
     self->deviceID = SDL_OpenAudioDevice(name, 0, &want, &have, SDL_AUDIO_ALLOW_ANY_CHANGE);
+    if(self->deviceID == 0)
+    {
+        ERR("Could not open device\n");
+        return ALC_INVALID_VALUE;
+    }
     if(want.freq != have.freq)
     {
         TRACE("Frequency changed by SDL2\n");
@@ -127,10 +137,9 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
             ERR("Unsupported format\n");
             return ALC_INVALID_VALUE;
     }
-    if(self->deviceID == 0) {
-        ERR("Could not open device\n");
-        return ALC_INVALID_VALUE;
-    }
+    self->Frequency = device->Frequency;
+    self->FmtChans = device->FmtChans;
+    self->FmtType = device->FmtType;
     if(!name)
         name = defaultDeviceName;
     alstr_copy_cstr(&STATIC_CAST(ALCbackend, self)->mDevice->DeviceName, name);
@@ -140,7 +149,11 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
 
 static ALCboolean ALCsdl2Backend_reset(ALCsdl2Backend *self)
 {
-    SetDefaultWFXChannelOrder(STATIC_CAST(ALCbackend, self)->mDevice);
+    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    device->Frequency = self->Frequency;
+    device->FmtChans = self->FmtChans;
+    device->FmtType = self->FmtType;
+    SetDefaultWFXChannelOrder(device);
     return ALC_TRUE;
 }
 

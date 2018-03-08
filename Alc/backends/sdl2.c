@@ -88,7 +88,7 @@ static void ALCsdl2Backend_audioCallback(void *ptr, Uint8* stream, int len)
 static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    SDL_AudioSpec want;
+    SDL_AudioSpec want, have;
     SDL_zero(want);
     want.freq = device->Frequency;
     want.format = AUDIO_F32;
@@ -100,7 +100,12 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
     if (name && strcmp(name, defaultDeviceName) == 0)
         name = NULL; // Passing NULL to SDL_OpenAudioDevice is special and will NOT select the first
                      // device in the list.
-    self->deviceID = SDL_OpenAudioDevice(name, 0, &want, NULL, 0);
+    self->deviceID = SDL_OpenAudioDevice(name, 0, &want, &have, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE);
+    if(want.freq != have.freq)
+    {
+        TRACE("Frequency changed by SDL2\n");
+        device->Frequency = have.freq;
+    }
     if(self->deviceID == 0) {
         ERR("Could not open device\n");
         return ALC_INVALID_VALUE;

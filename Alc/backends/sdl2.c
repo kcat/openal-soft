@@ -36,9 +36,11 @@ typedef struct ALCsdl2Backend {
 
     SDL_AudioDeviceID deviceID;
     ALCboolean quit;
+
     ALuint Frequency;
     enum DevFmtChannels FmtChans;
     enum DevFmtType     FmtType;
+    ALuint UpdateSize;
 } ALCsdl2Backend;
 
 static void ALCsdl2Backend_Construct(ALCsdl2Backend *self, ALCdevice *device);
@@ -123,11 +125,8 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
         ERR("Could not open device\n");
         return ALC_INVALID_VALUE;
     }
-    if(want.freq != have.freq)
-    {
-        TRACE("Frequency changed by SDL2\n");
-        device->Frequency = have.freq;
-    }
+
+    device->Frequency = have.freq;
     if(have.channels == 1)
         device->FmtChans = DevFmtMono;
     else if(have.channels == 2)
@@ -149,12 +148,15 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
             ERR("Unsupported format\n");
             return ALC_INVALID_VALUE;
     }
+    device->UpdateSize = have.samples;
+    device->NumUpdates = 2; /* SDL always (tries to) use two periods. */
+
     self->Frequency = device->Frequency;
     self->FmtChans = device->FmtChans;
     self->FmtType = device->FmtType;
-    if(!name)
-        name = defaultDeviceName;
-    alstr_copy_cstr(&STATIC_CAST(ALCbackend, self)->mDevice->DeviceName, name);
+    self->UpdateSize = device->UpdateSize;
+
+    alstr_copy_cstr(&device->DeviceName, name ? name : defaultDeviceName);
 
     return ALC_NO_ERROR;
 }
@@ -165,6 +167,8 @@ static ALCboolean ALCsdl2Backend_reset(ALCsdl2Backend *self)
     device->Frequency = self->Frequency;
     device->FmtChans = self->FmtChans;
     device->FmtType = self->FmtType;
+    device->UpdateSize = self->UpdateSize;
+    device->NumUpdates = 2;
     SetDefaultWFXChannelOrder(device);
     return ALC_TRUE;
 }

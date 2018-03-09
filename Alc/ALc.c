@@ -1075,27 +1075,33 @@ static void alc_initconfig(void)
             BackendListSize = i;
     }
 
-    for(i = 0;i < BackendListSize && (!PlaybackBackend.name || !CaptureBackend.name);i++)
+    for(n = i = 0;i < BackendListSize && (!PlaybackBackend.name || !CaptureBackend.name);i++)
     {
-        ALCbackendFactory *factory = BackendList[i].getFactory();
+        ALCbackendFactory *factory;
+        BackendList[n] = BackendList[i];
+
+        factory = BackendList[n].getFactory();
         if(!V0(factory,init)())
         {
-            WARN("Failed to initialize backend \"%s\"\n", BackendList[i].name);
+            WARN("Failed to initialize backend \"%s\"\n", BackendList[n].name);
             continue;
         }
 
-        TRACE("Initialized backend \"%s\"\n", BackendList[i].name);
+        TRACE("Initialized backend \"%s\"\n", BackendList[n].name);
         if(!PlaybackBackend.name && V(factory,querySupport)(ALCbackend_Playback))
         {
-            PlaybackBackend = BackendList[i];
+            PlaybackBackend = BackendList[n];
             TRACE("Added \"%s\" for playback\n", PlaybackBackend.name);
         }
         if(!CaptureBackend.name && V(factory,querySupport)(ALCbackend_Capture))
         {
-            CaptureBackend = BackendList[i];
+            CaptureBackend = BackendList[n];
             TRACE("Added \"%s\" for capture\n", CaptureBackend.name);
         }
+        n++;
     }
+    BackendListSize = n;
+
     {
         ALCbackendFactory *factory = ALCloopbackFactory_getFactory();
         V0(factory,init)();

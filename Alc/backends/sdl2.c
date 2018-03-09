@@ -110,10 +110,7 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
                      // device in the list.
     self->deviceID = SDL_OpenAudioDevice(name, 0, &want, &have, SDL_AUDIO_ALLOW_ANY_CHANGE);
     if(self->deviceID == 0)
-    {
-        ERR("Could not open device\n");
         return ALC_INVALID_VALUE;
-    }
 
     device->Frequency = have.freq;
     if(have.channels == 1)
@@ -122,7 +119,7 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
         device->FmtChans = DevFmtStereo;
     else
     {
-        ERR("Invalid number of channels\n");
+        ERR("Got unhandled SDL channel count: %d\n", (int)have.channels);
         return ALC_INVALID_VALUE;
     }
     switch(have.format)
@@ -134,7 +131,7 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
         case AUDIO_S32SYS: device->FmtType = DevFmtInt;    break;
         case AUDIO_F32SYS: device->FmtType = DevFmtFloat;  break;
         default:
-            ERR("Unsupported format\n");
+            ERR("Got unsupported SDL format: 0x%04x\n", have.format);
             return ALC_INVALID_VALUE;
     }
     device->UpdateSize = have.samples;

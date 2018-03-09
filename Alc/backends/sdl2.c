@@ -50,8 +50,8 @@ static void ALCsdl2Backend_stop(ALCsdl2Backend *self);
 static DECLARE_FORWARD2(ALCsdl2Backend, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
 static DECLARE_FORWARD(ALCsdl2Backend, ALCbackend, ALCuint, availableSamples)
 static DECLARE_FORWARD(ALCsdl2Backend, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(ALCsdl2Backend, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCsdl2Backend, ALCbackend, void, unlock)
+static void ALCsdl2Backend_lock(ALCsdl2Backend *self);
+static void ALCsdl2Backend_unlock(ALCsdl2Backend *self);
 DECLARE_DEFAULT_ALLOCATORS(ALCsdl2Backend)
 
 DEFINE_ALCBACKEND_VTABLE(ALCsdl2Backend);
@@ -97,10 +97,9 @@ static void ALCsdl2Backend_audioCallback(void *ptr, Uint8* stream, int len)
     ALsizei frameSize = FrameSizeFromDevFmt(
         device->FmtChans, device->FmtType, device->AmbiOrder
     );
+
     assert(len % frameSize == 0);
-    ALCsdl2Backend_lock(self);
     aluMixData(device, stream, len / frameSize);
-    ALCsdl2Backend_unlock(self);
 }
 
 static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
@@ -179,6 +178,16 @@ static ALCboolean ALCsdl2Backend_start(ALCsdl2Backend *self)
 static void ALCsdl2Backend_stop(ALCsdl2Backend *self)
 {
     SDL_PauseAudioDevice(self->deviceID, 1);
+}
+
+static void ALCsdl2Backend_lock(ALCsdl2Backend *self)
+{
+    SDL_LockAudioDevice(self->deviceID);
+}
+
+static void ALCsdl2Backend_unlock(ALCsdl2Backend *self)
+{
+    SDL_UnlockAudioDevice(self->deviceID);
 }
 
 

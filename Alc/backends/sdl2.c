@@ -35,7 +35,6 @@ typedef struct ALCsdl2Backend {
     DERIVE_FROM_TYPE(ALCbackend);
 
     SDL_AudioDeviceID deviceID;
-    ALCboolean quit;
 
     ALuint Frequency;
     enum DevFmtChannels FmtChans;
@@ -66,17 +65,10 @@ static void ALCsdl2Backend_Construct(ALCsdl2Backend *self, ALCdevice *device)
     SET_VTABLE2(ALCsdl2Backend, ALCbackend, self);
 
     self->deviceID = 0;
-    self->quit = ALC_FALSE;
     self->Frequency = device->Frequency;
     self->FmtChans = device->FmtChans;
     self->FmtType = device->FmtType;
-    if(SDL_WasInit(0) == 0) // Is SDL2 initialized at all?
-    {
-        SDL_Init(SDL_INIT_AUDIO);
-        self->quit = ALC_TRUE;
-    }
-    else if(!SDL_WasInit(SDL_INIT_AUDIO))
-        SDL_InitSubSystem(SDL_INIT_AUDIO);
+    self->UpdateSize = device->UpdateSize;
 }
 
 static void ALCsdl2Backend_Destruct(ALCsdl2Backend *self)
@@ -84,9 +76,6 @@ static void ALCsdl2Backend_Destruct(ALCsdl2Backend *self)
     if(self->deviceID)
         SDL_CloseAudioDevice(self->deviceID);
     self->deviceID = 0;
-
-    if(self->quit)
-        SDL_Quit();
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
@@ -203,7 +192,7 @@ typedef struct ALCsdl2BackendFactory {
 ALCbackendFactory *ALCsdl2BackendFactory_getFactory(void);
 
 static ALCboolean ALCsdl2BackendFactory_init(ALCsdl2BackendFactory *self);
-static DECLARE_FORWARD(ALCsdl2BackendFactory, ALCbackendFactory, void, deinit)
+static void ALCsdl2BackendFactory_deinit(ALCsdl2BackendFactory *self);
 static ALCboolean ALCsdl2BackendFactory_querySupport(ALCsdl2BackendFactory *self, ALCbackend_Type type);
 static void ALCsdl2BackendFactory_probe(ALCsdl2BackendFactory *self, enum DevProbe type);
 static ALCbackend* ALCsdl2BackendFactory_createBackend(ALCsdl2BackendFactory *self, ALCdevice *device, ALCbackend_Type type);
@@ -219,7 +208,14 @@ ALCbackendFactory *ALCsdl2BackendFactory_getFactory(void)
 
 static ALCboolean ALCsdl2BackendFactory_init(ALCsdl2BackendFactory* UNUSED(self))
 {
-    return ALC_TRUE;
+    if(SDL_InitSubSystem(SDL_INIT_AUDIO) == 0)
+        return AL_TRUE;
+    return ALC_FALSE;
+}
+
+static void ALCsdl2BackendFactory_deinit(ALCsdl2BackendFactory* UNUSED(self))
+{
+    SDL_QuitSubSystem(SDL_INIT_AUDIO);
 }
 
 static ALCboolean ALCsdl2BackendFactory_querySupport(ALCsdl2BackendFactory* UNUSED(self), ALCbackend_Type type)
@@ -231,28 +227,16 @@ static ALCboolean ALCsdl2BackendFactory_querySupport(ALCsdl2BackendFactory* UNUS
 
 static void ALCsdl2BackendFactory_probe(ALCsdl2BackendFactory* UNUSED(self), enum DevProbe type)
 {
-    ALCboolean quit = ALC_FALSE;
     int num_devices, i;
 
     if(type != ALL_DEVICE_PROBE)
         return;
-
-    if(SDL_WasInit(0) == 0) // Is SDL2 initialized at all?
-    {
-        SDL_Init(SDL_INIT_AUDIO);
-        quit = ALC_TRUE;
-    }
-    else if(!SDL_WasInit(SDL_INIT_AUDIO))
-        SDL_InitSubSystem(SDL_INIT_AUDIO);
 
     num_devices = SDL_GetNumAudioDevices(SDL_FALSE);
 
     AppendAllDevicesList(defaultDeviceName);
     for(i = 0;i < num_devices;++i)
         AppendAllDevicesList(SDL_GetAudioDeviceName(i, SDL_FALSE));
-
-    if(quit)
-        SDL_Quit();
 }
 
 static ALCbackend* ALCsdl2BackendFactory_createBackend(ALCsdl2BackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)

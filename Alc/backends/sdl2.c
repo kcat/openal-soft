@@ -35,6 +35,7 @@ typedef struct ALCsdl2Backend {
     DERIVE_FROM_TYPE(ALCbackend);
 
     SDL_AudioDeviceID deviceID;
+    ALsizei frameSize;
 
     ALuint Frequency;
     enum DevFmtChannels FmtChans;
@@ -65,6 +66,7 @@ static void ALCsdl2Backend_Construct(ALCsdl2Backend *self, ALCdevice *device)
     SET_VTABLE2(ALCsdl2Backend, ALCbackend, self);
 
     self->deviceID = 0;
+    self->frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
     self->Frequency = device->Frequency;
     self->FmtChans = device->FmtChans;
     self->FmtType = device->FmtType;
@@ -81,16 +83,13 @@ static void ALCsdl2Backend_Destruct(ALCsdl2Backend *self)
 }
 
 
-static void ALCsdl2Backend_audioCallback(void *ptr, Uint8* stream, int len)
+static void ALCsdl2Backend_audioCallback(void *ptr, Uint8 *stream, int len)
 {
     ALCsdl2Backend *self = (ALCsdl2Backend*)ptr;
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    ALsizei frameSize = FrameSizeFromDevFmt(
-        device->FmtChans, device->FmtType, device->AmbiOrder
-    );
 
-    assert(len % frameSize == 0);
-    aluMixData(device, stream, len / frameSize);
+    assert((len % self->frameSize) == 0);
+    aluMixData(device, stream, len / self->frameSize);
 }
 
 static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
@@ -137,6 +136,7 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
     device->UpdateSize = have.samples;
     device->NumUpdates = 2; /* SDL always (tries to) use two periods. */
 
+    self->frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
     self->Frequency = device->Frequency;
     self->FmtChans = device->FmtChans;
     self->FmtType = device->FmtType;

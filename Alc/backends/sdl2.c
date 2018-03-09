@@ -31,6 +31,12 @@
 #include "backends/base.h"
 
 
+#ifdef _WIN32
+#define DEVNAME_PREFIX "OpenAL Soft on "
+#else
+#define DEVNAME_PREFIX ""
+#endif
+
 typedef struct ALCsdl2Backend {
     DERIVE_FROM_TYPE(ALCbackend);
 
@@ -58,7 +64,7 @@ DECLARE_DEFAULT_ALLOCATORS(ALCsdl2Backend)
 
 DEFINE_ALCBACKEND_VTABLE(ALCsdl2Backend);
 
-static const ALCchar defaultDeviceName[] = "Default device";
+static const ALCchar defaultDeviceName[] = DEVNAME_PREFIX "Default Device";
 
 static void ALCsdl2Backend_Construct(ALCsdl2Backend *self, ALCdevice *device)
 {
@@ -116,10 +122,22 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
     want.callback = ALCsdl2Backend_audioCallback;
     want.userdata = self;
 
-    if (name && strcmp(name, defaultDeviceName) == 0)
-        name = NULL; // Passing NULL to SDL_OpenAudioDevice is special and will NOT select the first
-                     // device in the list.
-    self->deviceID = SDL_OpenAudioDevice(name, 0, &want, &have, SDL_AUDIO_ALLOW_ANY_CHANGE);
+    /* Passing NULL to SDL_OpenAudioDevice opens a default, which isn't
+     * necessarily the first in the list.
+     */
+    if(!name || strcmp(name, defaultDeviceName) == 0)
+        self->deviceID = SDL_OpenAudioDevice(NULL, SDL_FALSE, &want, &have,
+                                             SDL_AUDIO_ALLOW_ANY_CHANGE);
+    else
+    {
+        const size_t prefix_len = strlen(DEVNAME_PREFIX);
+        if(strncmp(name, DEVNAME_PREFIX, prefix_len) == 0)
+            self->deviceID = SDL_OpenAudioDevice(name+prefix_len, SDL_FALSE, &want, &have,
+                                                 SDL_AUDIO_ALLOW_ANY_CHANGE);
+        else
+            self->deviceID = SDL_OpenAudioDevice(name, SDL_FALSE, &want, &have,
+                                                 SDL_AUDIO_ALLOW_ANY_CHANGE);
+    }
     if(self->deviceID == 0)
         return ALC_INVALID_VALUE;
 
@@ -237,15 +255,22 @@ static ALCboolean ALCsdl2BackendFactory_querySupport(ALCsdl2BackendFactory* UNUS
 static void ALCsdl2BackendFactory_probe(ALCsdl2BackendFactory* UNUSED(self), enum DevProbe type)
 {
     int num_devices, i;
+    al_string name;
 
     if(type != ALL_DEVICE_PROBE)
         return;
 
+    AL_STRING_INIT(name);
     num_devices = SDL_GetNumAudioDevices(SDL_FALSE);
 
     AppendAllDevicesList(defaultDeviceName);
     for(i = 0;i < num_devices;++i)
-        AppendAllDevicesList(SDL_GetAudioDeviceName(i, SDL_FALSE));
+    {
+        alstr_copy_cstr(&name, DEVNAME_PREFIX);
+        alstr_append_cstr(&name, SDL_GetAudioDeviceName(i, SDL_FALSE));
+        AppendAllDevicesList(alstr_get_cstr(name));
+    }
+    alstr_reset(&name);
 }
 
 static ALCbackend* ALCsdl2BackendFactory_createBackend(ALCsdl2BackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)

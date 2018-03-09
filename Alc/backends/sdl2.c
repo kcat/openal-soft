@@ -96,9 +96,21 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     SDL_AudioSpec want, have;
+
     SDL_zero(want);
+    SDL_zero(have);
+
     want.freq = device->Frequency;
-    want.format = AUDIO_F32;
+    switch(device->FmtType)
+    {
+        case DevFmtUByte: want.format = AUDIO_U8; break;
+        case DevFmtByte: want.format = AUDIO_S8; break;
+        case DevFmtUShort: want.format = AUDIO_U16SYS; break;
+        case DevFmtShort: want.format = AUDIO_S16SYS; break;
+        case DevFmtUInt: /* fall-through */
+        case DevFmtInt: want.format = AUDIO_S32SYS; break;
+        case DevFmtFloat: want.format = AUDIO_F32; break;
+    }
     want.channels = (device->FmtChans == DevFmtMono) ? 1 : 2;
     want.samples = device->UpdateSize;
     want.callback = ALCsdl2Backend_audioCallback;

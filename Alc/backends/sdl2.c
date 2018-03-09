@@ -42,7 +42,7 @@ typedef struct ALCsdl2Backend {
 } ALCsdl2Backend;
 
 static void ALCsdl2Backend_Construct(ALCsdl2Backend *self, ALCdevice *device);
-static DECLARE_FORWARD(ALCsdl2Backend, ALCbackend, void, Destruct)
+static void ALCsdl2Backend_Destruct(ALCsdl2Backend *self);
 static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name);
 static ALCboolean ALCsdl2Backend_reset(ALCsdl2Backend *self);
 static ALCboolean ALCsdl2Backend_start(ALCsdl2Backend *self);
@@ -63,6 +63,7 @@ static void ALCsdl2Backend_Construct(ALCsdl2Backend *self, ALCdevice *device)
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCsdl2Backend, ALCbackend, self);
 
+    self->deviceID = 0;
     self->quit = ALC_FALSE;
     self->Frequency = device->Frequency;
     self->FmtChans = device->FmtChans;
@@ -74,6 +75,18 @@ static void ALCsdl2Backend_Construct(ALCsdl2Backend *self, ALCdevice *device)
     }
     else if(!SDL_WasInit(SDL_INIT_AUDIO))
         SDL_InitSubSystem(SDL_INIT_AUDIO);
+}
+
+static void ALCsdl2Backend_Destruct(ALCsdl2Backend *self)
+{
+    if(self->deviceID)
+        SDL_CloseAudioDevice(self->deviceID);
+    self->deviceID = 0;
+
+    if(self->quit)
+        SDL_Quit();
+
+    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
 
@@ -166,8 +179,6 @@ static ALCboolean ALCsdl2Backend_start(ALCsdl2Backend *self)
 static void ALCsdl2Backend_stop(ALCsdl2Backend *self)
 {
     SDL_PauseAudioDevice(self->deviceID, 1);
-    if(self->quit)
-        SDL_Quit();
 }
 
 
@@ -224,7 +235,7 @@ static void ALCsdl2BackendFactory_probe(ALCsdl2BackendFactory* UNUSED(self), enu
     num_devices = SDL_GetNumAudioDevices(SDL_FALSE);
 
     AppendAllDevicesList(defaultDeviceName);
-    for(i = 0; i < num_devices; ++i)
+    for(i = 0;i < num_devices;++i)
         AppendAllDevicesList(SDL_GetAudioDeviceName(i, SDL_FALSE));
 
     if(quit)

@@ -85,8 +85,8 @@ static struct BackendInfo BackendList[] = {
 #ifdef HAVE_QSA
     { "qsa", ALCqsaBackendFactory_getFactory },
 #endif
-#ifdef HAVE_MMDEVAPI
-    { "mmdevapi", ALCmmdevBackendFactory_getFactory },
+#ifdef HAVE_WASAPI
+    { "wasapi", ALCwasapiBackendFactory_getFactory },
 #endif
 #ifdef HAVE_DSOUND
     { "dsound", ALCdsoundBackendFactory_getFactory },
@@ -1046,6 +1046,16 @@ static void alc_initconfig(void)
             len = (next ? ((size_t)(next-devs)) : strlen(devs));
             while(len > 0 && isspace(devs[len-1]))
                 len--;
+#ifdef HAVE_WASAPI
+            /* HACK: For backwards compatibility, convert backend references of
+             * mmdevapi to wasapi. This should eventually be removed.
+             */
+            if(len == 8 && strncmp(devs, "mmdevapi", len) == 0)
+            {
+                devs = "wasapi";
+                len = 6;
+            }
+#endif
             for(n = i;n < BackendListSize;n++)
             {
                 if(len == strlen(BackendList[n].name) &&

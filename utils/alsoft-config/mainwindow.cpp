@@ -44,8 +44,8 @@ static const struct {
 #ifdef HAVE_QSA
     { "qsa", "QSA" },
 #endif
-#ifdef HAVE_MMDEVAPI
-    { "mmdevapi", "MMDevAPI" },
+#ifdef HAVE_WASAPI
+    { "wasapi", "WASAPI" },
 #endif
 #ifdef HAVE_DSOUND
     { "dsound", "DirectSound" },
@@ -774,7 +774,16 @@ void MainWindow::loadConfig(const QString &fname)
         if(drivers.size() == 1)
             drivers = drivers[0].split(QChar(','));
         for(QStringList::iterator iter = drivers.begin();iter != drivers.end();iter++)
+        {
             *iter = iter->trimmed();
+            /* Convert "mmdevapi" references to "wasapi" for backwards
+             * compatibility.
+             */
+            if(*iter == "-mmdevapi")
+                *iter = "-wasapi";
+            else if(*iter == "mmdevapi")
+                *iter = "wasapi";
+        }
 
         bool lastWasEmpty = false;
         foreach(const QString &backend, drivers)

@@ -344,45 +344,45 @@ static HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ve
 
 
 /* Proxy interface used by the message handler. */
-struct ALCmmdevProxyVtable;
+struct ALCwasapiProxyVtable;
 
-typedef struct ALCmmdevProxy {
-    const struct ALCmmdevProxyVtable *vtbl;
-} ALCmmdevProxy;
+typedef struct ALCwasapiProxy {
+    const struct ALCwasapiProxyVtable *vtbl;
+} ALCwasapiProxy;
 
-struct ALCmmdevProxyVtable {
-    HRESULT (*const openProxy)(ALCmmdevProxy*);
-    void (*const closeProxy)(ALCmmdevProxy*);
+struct ALCwasapiProxyVtable {
+    HRESULT (*const openProxy)(ALCwasapiProxy*);
+    void (*const closeProxy)(ALCwasapiProxy*);
 
-    HRESULT (*const resetProxy)(ALCmmdevProxy*);
-    HRESULT (*const startProxy)(ALCmmdevProxy*);
-    void  (*const stopProxy)(ALCmmdevProxy*);
+    HRESULT (*const resetProxy)(ALCwasapiProxy*);
+    HRESULT (*const startProxy)(ALCwasapiProxy*);
+    void  (*const stopProxy)(ALCwasapiProxy*);
 };
 
-#define DEFINE_ALCMMDEVPROXY_VTABLE(T)                                        \
-DECLARE_THUNK(T, ALCmmdevProxy, HRESULT, openProxy)                           \
-DECLARE_THUNK(T, ALCmmdevProxy, void, closeProxy)                             \
-DECLARE_THUNK(T, ALCmmdevProxy, HRESULT, resetProxy)                          \
-DECLARE_THUNK(T, ALCmmdevProxy, HRESULT, startProxy)                          \
-DECLARE_THUNK(T, ALCmmdevProxy, void, stopProxy)                              \
+#define DEFINE_ALCWASAPIPROXY_VTABLE(T)                                       \
+DECLARE_THUNK(T, ALCwasapiProxy, HRESULT, openProxy)                          \
+DECLARE_THUNK(T, ALCwasapiProxy, void, closeProxy)                            \
+DECLARE_THUNK(T, ALCwasapiProxy, HRESULT, resetProxy)                         \
+DECLARE_THUNK(T, ALCwasapiProxy, HRESULT, startProxy)                         \
+DECLARE_THUNK(T, ALCwasapiProxy, void, stopProxy)                             \
                                                                               \
-static const struct ALCmmdevProxyVtable T##_ALCmmdevProxy_vtable = {          \
-    T##_ALCmmdevProxy_openProxy,                                              \
-    T##_ALCmmdevProxy_closeProxy,                                             \
-    T##_ALCmmdevProxy_resetProxy,                                             \
-    T##_ALCmmdevProxy_startProxy,                                             \
-    T##_ALCmmdevProxy_stopProxy,                                              \
+static const struct ALCwasapiProxyVtable T##_ALCwasapiProxy_vtable = {        \
+    T##_ALCwasapiProxy_openProxy,                                             \
+    T##_ALCwasapiProxy_closeProxy,                                            \
+    T##_ALCwasapiProxy_resetProxy,                                            \
+    T##_ALCwasapiProxy_startProxy,                                            \
+    T##_ALCwasapiProxy_stopProxy,                                             \
 }
 
-static void ALCmmdevProxy_Construct(ALCmmdevProxy* UNUSED(self)) { }
-static void ALCmmdevProxy_Destruct(ALCmmdevProxy* UNUSED(self)) { }
+static void ALCwasapiProxy_Construct(ALCwasapiProxy* UNUSED(self)) { }
+static void ALCwasapiProxy_Destruct(ALCwasapiProxy* UNUSED(self)) { }
 
-static DWORD CALLBACK ALCmmdevProxy_messageHandler(void *ptr)
+static DWORD CALLBACK ALCwasapiProxy_messageHandler(void *ptr)
 {
     ThreadRequest *req = ptr;
     IMMDeviceEnumerator *Enumerator;
     ALuint deviceCount = 0;
-    ALCmmdevProxy *proxy;
+    ALCwasapiProxy *proxy;
     HRESULT hr, cohr;
     MSG msg;
 
@@ -431,7 +431,7 @@ static DWORD CALLBACK ALCmmdevProxy_messageHandler(void *ptr)
         {
         case WM_USER_OpenDevice:
             req = (ThreadRequest*)msg.wParam;
-            proxy = (ALCmmdevProxy*)msg.lParam;
+            proxy = (ALCwasapiProxy*)msg.lParam;
 
             hr = cohr = S_OK;
             if(++deviceCount == 1)
@@ -449,7 +449,7 @@ static DWORD CALLBACK ALCmmdevProxy_messageHandler(void *ptr)
 
         case WM_USER_ResetDevice:
             req = (ThreadRequest*)msg.wParam;
-            proxy = (ALCmmdevProxy*)msg.lParam;
+            proxy = (ALCwasapiProxy*)msg.lParam;
 
             hr = V0(proxy,resetProxy)();
             ReturnMsgResponse(req, hr);
@@ -457,7 +457,7 @@ static DWORD CALLBACK ALCmmdevProxy_messageHandler(void *ptr)
 
         case WM_USER_StartDevice:
             req = (ThreadRequest*)msg.wParam;
-            proxy = (ALCmmdevProxy*)msg.lParam;
+            proxy = (ALCwasapiProxy*)msg.lParam;
 
             hr = V0(proxy,startProxy)();
             ReturnMsgResponse(req, hr);
@@ -465,7 +465,7 @@ static DWORD CALLBACK ALCmmdevProxy_messageHandler(void *ptr)
 
         case WM_USER_StopDevice:
             req = (ThreadRequest*)msg.wParam;
-            proxy = (ALCmmdevProxy*)msg.lParam;
+            proxy = (ALCwasapiProxy*)msg.lParam;
 
             V0(proxy,stopProxy)();
             ReturnMsgResponse(req, S_OK);
@@ -473,7 +473,7 @@ static DWORD CALLBACK ALCmmdevProxy_messageHandler(void *ptr)
 
         case WM_USER_CloseDevice:
             req = (ThreadRequest*)msg.wParam;
-            proxy = (ALCmmdevProxy*)msg.lParam;
+            proxy = (ALCwasapiProxy*)msg.lParam;
 
             V0(proxy,closeProxy)();
             if(--deviceCount == 0)
@@ -520,9 +520,9 @@ static DWORD CALLBACK ALCmmdevProxy_messageHandler(void *ptr)
 }
 
 
-typedef struct ALCmmdevPlayback {
+typedef struct ALCwasapiPlayback {
     DERIVE_FROM_TYPE(ALCbackend);
-    DERIVE_FROM_TYPE(ALCmmdevProxy);
+    DERIVE_FROM_TYPE(ALCwasapiProxy);
 
     WCHAR *devid;
 
@@ -537,38 +537,38 @@ typedef struct ALCmmdevPlayback {
 
     ATOMIC(int) killNow;
     althrd_t thread;
-} ALCmmdevPlayback;
+} ALCwasapiPlayback;
 
-static int ALCmmdevPlayback_mixerProc(void *arg);
+static int ALCwasapiPlayback_mixerProc(void *arg);
 
-static void ALCmmdevPlayback_Construct(ALCmmdevPlayback *self, ALCdevice *device);
-static void ALCmmdevPlayback_Destruct(ALCmmdevPlayback *self);
-static ALCenum ALCmmdevPlayback_open(ALCmmdevPlayback *self, const ALCchar *name);
-static HRESULT ALCmmdevPlayback_openProxy(ALCmmdevPlayback *self);
-static void ALCmmdevPlayback_closeProxy(ALCmmdevPlayback *self);
-static ALCboolean ALCmmdevPlayback_reset(ALCmmdevPlayback *self);
-static HRESULT ALCmmdevPlayback_resetProxy(ALCmmdevPlayback *self);
-static ALCboolean ALCmmdevPlayback_start(ALCmmdevPlayback *self);
-static HRESULT ALCmmdevPlayback_startProxy(ALCmmdevPlayback *self);
-static void ALCmmdevPlayback_stop(ALCmmdevPlayback *self);
-static void ALCmmdevPlayback_stopProxy(ALCmmdevPlayback *self);
-static DECLARE_FORWARD2(ALCmmdevPlayback, ALCbackend, ALCenum, captureSamples, ALCvoid*, ALCuint)
-static DECLARE_FORWARD(ALCmmdevPlayback, ALCbackend, ALCuint, availableSamples)
-static ClockLatency ALCmmdevPlayback_getClockLatency(ALCmmdevPlayback *self);
-static DECLARE_FORWARD(ALCmmdevPlayback, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCmmdevPlayback, ALCbackend, void, unlock)
-DECLARE_DEFAULT_ALLOCATORS(ALCmmdevPlayback)
+static void ALCwasapiPlayback_Construct(ALCwasapiPlayback *self, ALCdevice *device);
+static void ALCwasapiPlayback_Destruct(ALCwasapiPlayback *self);
+static ALCenum ALCwasapiPlayback_open(ALCwasapiPlayback *self, const ALCchar *name);
+static HRESULT ALCwasapiPlayback_openProxy(ALCwasapiPlayback *self);
+static void ALCwasapiPlayback_closeProxy(ALCwasapiPlayback *self);
+static ALCboolean ALCwasapiPlayback_reset(ALCwasapiPlayback *self);
+static HRESULT ALCwasapiPlayback_resetProxy(ALCwasapiPlayback *self);
+static ALCboolean ALCwasapiPlayback_start(ALCwasapiPlayback *self);
+static HRESULT ALCwasapiPlayback_startProxy(ALCwasapiPlayback *self);
+static void ALCwasapiPlayback_stop(ALCwasapiPlayback *self);
+static void ALCwasapiPlayback_stopProxy(ALCwasapiPlayback *self);
+static DECLARE_FORWARD2(ALCwasapiPlayback, ALCbackend, ALCenum, captureSamples, ALCvoid*, ALCuint)
+static DECLARE_FORWARD(ALCwasapiPlayback, ALCbackend, ALCuint, availableSamples)
+static ClockLatency ALCwasapiPlayback_getClockLatency(ALCwasapiPlayback *self);
+static DECLARE_FORWARD(ALCwasapiPlayback, ALCbackend, void, lock)
+static DECLARE_FORWARD(ALCwasapiPlayback, ALCbackend, void, unlock)
+DECLARE_DEFAULT_ALLOCATORS(ALCwasapiPlayback)
 
-DEFINE_ALCMMDEVPROXY_VTABLE(ALCmmdevPlayback);
-DEFINE_ALCBACKEND_VTABLE(ALCmmdevPlayback);
+DEFINE_ALCWASAPIPROXY_VTABLE(ALCwasapiPlayback);
+DEFINE_ALCBACKEND_VTABLE(ALCwasapiPlayback);
 
 
-static void ALCmmdevPlayback_Construct(ALCmmdevPlayback *self, ALCdevice *device)
+static void ALCwasapiPlayback_Construct(ALCwasapiPlayback *self, ALCdevice *device)
 {
-    SET_VTABLE2(ALCmmdevPlayback, ALCbackend, self);
-    SET_VTABLE2(ALCmmdevPlayback, ALCmmdevProxy, self);
+    SET_VTABLE2(ALCwasapiPlayback, ALCbackend, self);
+    SET_VTABLE2(ALCwasapiPlayback, ALCwasapiProxy, self);
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
-    ALCmmdevProxy_Construct(STATIC_CAST(ALCmmdevProxy, self));
+    ALCwasapiProxy_Construct(STATIC_CAST(ALCwasapiProxy, self));
 
     self->devid = NULL;
 
@@ -584,12 +584,12 @@ static void ALCmmdevPlayback_Construct(ALCmmdevPlayback *self, ALCdevice *device
     ATOMIC_INIT(&self->killNow, 0);
 }
 
-static void ALCmmdevPlayback_Destruct(ALCmmdevPlayback *self)
+static void ALCwasapiPlayback_Destruct(ALCwasapiPlayback *self)
 {
     if(self->MsgEvent)
     {
         ThreadRequest req = { self->MsgEvent, 0 };
-        if(PostThreadMessage(ThreadID, WM_USER_CloseDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCmmdevProxy, self)))
+        if(PostThreadMessage(ThreadID, WM_USER_CloseDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCwasapiProxy, self)))
             (void)WaitForResponse(&req);
 
         CloseHandle(self->MsgEvent);
@@ -613,14 +613,14 @@ static void ALCmmdevPlayback_Destruct(ALCmmdevPlayback *self)
     free(self->devid);
     self->devid = NULL;
 
-    ALCmmdevProxy_Destruct(STATIC_CAST(ALCmmdevProxy, self));
+    ALCwasapiProxy_Destruct(STATIC_CAST(ALCwasapiProxy, self));
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
 
-FORCE_ALIGN static int ALCmmdevPlayback_mixerProc(void *arg)
+FORCE_ALIGN static int ALCwasapiPlayback_mixerProc(void *arg)
 {
-    ALCmmdevPlayback *self = arg;
+    ALCwasapiPlayback *self = arg;
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     UINT32 buffer_len, written;
     ALuint update_size, len;
@@ -669,10 +669,10 @@ FORCE_ALIGN static int ALCmmdevPlayback_mixerProc(void *arg)
         hr = IAudioRenderClient_GetBuffer(self->render, len, &buffer);
         if(SUCCEEDED(hr))
         {
-            ALCmmdevPlayback_lock(self);
+            ALCwasapiPlayback_lock(self);
             aluMixData(device, buffer, len);
             ATOMIC_STORE(&self->Padding, written + len, almemory_order_relaxed);
-            ALCmmdevPlayback_unlock(self);
+            ALCwasapiPlayback_unlock(self);
             hr = IAudioRenderClient_ReleaseBuffer(self->render, len, 0);
         }
         if(FAILED(hr))
@@ -730,7 +730,7 @@ static ALCboolean MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *
     return ALC_TRUE;
 }
 
-static ALCenum ALCmmdevPlayback_open(ALCmmdevPlayback *self, const ALCchar *deviceName)
+static ALCenum ALCwasapiPlayback_open(ALCwasapiPlayback *self, const ALCchar *deviceName)
 {
     HRESULT hr = S_OK;
 
@@ -790,7 +790,7 @@ static ALCenum ALCmmdevPlayback_open(ALCmmdevPlayback *self, const ALCchar *devi
         ThreadRequest req = { self->MsgEvent, 0 };
 
         hr = E_FAIL;
-        if(PostThreadMessage(ThreadID, WM_USER_OpenDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCmmdevProxy, self)))
+        if(PostThreadMessage(ThreadID, WM_USER_OpenDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCwasapiProxy, self)))
             hr = WaitForResponse(&req);
         else
             ERR("Failed to post thread message: %lu\n", GetLastError());
@@ -815,7 +815,7 @@ static ALCenum ALCmmdevPlayback_open(ALCmmdevPlayback *self, const ALCchar *devi
     return ALC_NO_ERROR;
 }
 
-static HRESULT ALCmmdevPlayback_openProxy(ALCmmdevPlayback *self)
+static HRESULT ALCwasapiPlayback_openProxy(ALCwasapiPlayback *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     void *ptr;
@@ -852,7 +852,7 @@ static HRESULT ALCmmdevPlayback_openProxy(ALCmmdevPlayback *self)
 }
 
 
-static void ALCmmdevPlayback_closeProxy(ALCmmdevPlayback *self)
+static void ALCwasapiPlayback_closeProxy(ALCwasapiPlayback *self)
 {
     if(self->client)
         IAudioClient_Release(self->client);
@@ -864,18 +864,18 @@ static void ALCmmdevPlayback_closeProxy(ALCmmdevPlayback *self)
 }
 
 
-static ALCboolean ALCmmdevPlayback_reset(ALCmmdevPlayback *self)
+static ALCboolean ALCwasapiPlayback_reset(ALCwasapiPlayback *self)
 {
     ThreadRequest req = { self->MsgEvent, 0 };
     HRESULT hr = E_FAIL;
 
-    if(PostThreadMessage(ThreadID, WM_USER_ResetDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCmmdevProxy, self)))
+    if(PostThreadMessage(ThreadID, WM_USER_ResetDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCwasapiProxy, self)))
         hr = WaitForResponse(&req);
 
     return SUCCEEDED(hr) ? ALC_TRUE : ALC_FALSE;
 }
 
-static HRESULT ALCmmdevPlayback_resetProxy(ALCmmdevPlayback *self)
+static HRESULT ALCwasapiPlayback_resetProxy(ALCwasapiPlayback *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     EndpointFormFactor formfactor = UnknownFormFactor;
@@ -1135,18 +1135,18 @@ static HRESULT ALCmmdevPlayback_resetProxy(ALCmmdevPlayback *self)
 }
 
 
-static ALCboolean ALCmmdevPlayback_start(ALCmmdevPlayback *self)
+static ALCboolean ALCwasapiPlayback_start(ALCwasapiPlayback *self)
 {
     ThreadRequest req = { self->MsgEvent, 0 };
     HRESULT hr = E_FAIL;
 
-    if(PostThreadMessage(ThreadID, WM_USER_StartDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCmmdevProxy, self)))
+    if(PostThreadMessage(ThreadID, WM_USER_StartDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCwasapiProxy, self)))
         hr = WaitForResponse(&req);
 
     return SUCCEEDED(hr) ? ALC_TRUE : ALC_FALSE;
 }
 
-static HRESULT ALCmmdevPlayback_startProxy(ALCmmdevPlayback *self)
+static HRESULT ALCwasapiPlayback_startProxy(ALCwasapiPlayback *self)
 {
     HRESULT hr;
     void *ptr;
@@ -1162,7 +1162,7 @@ static HRESULT ALCmmdevPlayback_startProxy(ALCmmdevPlayback *self)
     {
         self->render = ptr;
         ATOMIC_STORE(&self->killNow, 0, almemory_order_release);
-        if(althrd_create(&self->thread, ALCmmdevPlayback_mixerProc, self) != althrd_success)
+        if(althrd_create(&self->thread, ALCwasapiPlayback_mixerProc, self) != althrd_success)
         {
             if(self->render)
                 IAudioRenderClient_Release(self->render);
@@ -1177,14 +1177,14 @@ static HRESULT ALCmmdevPlayback_startProxy(ALCmmdevPlayback *self)
 }
 
 
-static void ALCmmdevPlayback_stop(ALCmmdevPlayback *self)
+static void ALCwasapiPlayback_stop(ALCwasapiPlayback *self)
 {
     ThreadRequest req = { self->MsgEvent, 0 };
-    if(PostThreadMessage(ThreadID, WM_USER_StopDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCmmdevProxy, self)))
+    if(PostThreadMessage(ThreadID, WM_USER_StopDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCwasapiProxy, self)))
         (void)WaitForResponse(&req);
 }
 
-static void ALCmmdevPlayback_stopProxy(ALCmmdevPlayback *self)
+static void ALCwasapiPlayback_stopProxy(ALCwasapiPlayback *self)
 {
     int res;
 
@@ -1200,24 +1200,24 @@ static void ALCmmdevPlayback_stopProxy(ALCmmdevPlayback *self)
 }
 
 
-static ClockLatency ALCmmdevPlayback_getClockLatency(ALCmmdevPlayback *self)
+static ClockLatency ALCwasapiPlayback_getClockLatency(ALCwasapiPlayback *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     ClockLatency ret;
 
-    ALCmmdevPlayback_lock(self);
+    ALCwasapiPlayback_lock(self);
     ret.ClockTime = GetDeviceClockTime(device);
     ret.Latency = ATOMIC_LOAD(&self->Padding, almemory_order_relaxed) * DEVICE_CLOCK_RES /
                   device->Frequency;
-    ALCmmdevPlayback_unlock(self);
+    ALCwasapiPlayback_unlock(self);
 
     return ret;
 }
 
 
-typedef struct ALCmmdevCapture {
+typedef struct ALCwasapiCapture {
     DERIVE_FROM_TYPE(ALCbackend);
-    DERIVE_FROM_TYPE(ALCmmdevProxy);
+    DERIVE_FROM_TYPE(ALCwasapiProxy);
 
     WCHAR *devid;
 
@@ -1234,38 +1234,38 @@ typedef struct ALCmmdevCapture {
 
     ATOMIC(int) killNow;
     althrd_t thread;
-} ALCmmdevCapture;
+} ALCwasapiCapture;
 
-static int ALCmmdevCapture_recordProc(void *arg);
+static int ALCwasapiCapture_recordProc(void *arg);
 
-static void ALCmmdevCapture_Construct(ALCmmdevCapture *self, ALCdevice *device);
-static void ALCmmdevCapture_Destruct(ALCmmdevCapture *self);
-static ALCenum ALCmmdevCapture_open(ALCmmdevCapture *self, const ALCchar *name);
-static HRESULT ALCmmdevCapture_openProxy(ALCmmdevCapture *self);
-static void ALCmmdevCapture_closeProxy(ALCmmdevCapture *self);
-static DECLARE_FORWARD(ALCmmdevCapture, ALCbackend, ALCboolean, reset)
-static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self);
-static ALCboolean ALCmmdevCapture_start(ALCmmdevCapture *self);
-static HRESULT ALCmmdevCapture_startProxy(ALCmmdevCapture *self);
-static void ALCmmdevCapture_stop(ALCmmdevCapture *self);
-static void ALCmmdevCapture_stopProxy(ALCmmdevCapture *self);
-static ALCenum ALCmmdevCapture_captureSamples(ALCmmdevCapture *self, ALCvoid *buffer, ALCuint samples);
-static ALuint ALCmmdevCapture_availableSamples(ALCmmdevCapture *self);
-static DECLARE_FORWARD(ALCmmdevCapture, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(ALCmmdevCapture, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCmmdevCapture, ALCbackend, void, unlock)
-DECLARE_DEFAULT_ALLOCATORS(ALCmmdevCapture)
+static void ALCwasapiCapture_Construct(ALCwasapiCapture *self, ALCdevice *device);
+static void ALCwasapiCapture_Destruct(ALCwasapiCapture *self);
+static ALCenum ALCwasapiCapture_open(ALCwasapiCapture *self, const ALCchar *name);
+static HRESULT ALCwasapiCapture_openProxy(ALCwasapiCapture *self);
+static void ALCwasapiCapture_closeProxy(ALCwasapiCapture *self);
+static DECLARE_FORWARD(ALCwasapiCapture, ALCbackend, ALCboolean, reset)
+static HRESULT ALCwasapiCapture_resetProxy(ALCwasapiCapture *self);
+static ALCboolean ALCwasapiCapture_start(ALCwasapiCapture *self);
+static HRESULT ALCwasapiCapture_startProxy(ALCwasapiCapture *self);
+static void ALCwasapiCapture_stop(ALCwasapiCapture *self);
+static void ALCwasapiCapture_stopProxy(ALCwasapiCapture *self);
+static ALCenum ALCwasapiCapture_captureSamples(ALCwasapiCapture *self, ALCvoid *buffer, ALCuint samples);
+static ALuint ALCwasapiCapture_availableSamples(ALCwasapiCapture *self);
+static DECLARE_FORWARD(ALCwasapiCapture, ALCbackend, ClockLatency, getClockLatency)
+static DECLARE_FORWARD(ALCwasapiCapture, ALCbackend, void, lock)
+static DECLARE_FORWARD(ALCwasapiCapture, ALCbackend, void, unlock)
+DECLARE_DEFAULT_ALLOCATORS(ALCwasapiCapture)
 
-DEFINE_ALCMMDEVPROXY_VTABLE(ALCmmdevCapture);
-DEFINE_ALCBACKEND_VTABLE(ALCmmdevCapture);
+DEFINE_ALCWASAPIPROXY_VTABLE(ALCwasapiCapture);
+DEFINE_ALCBACKEND_VTABLE(ALCwasapiCapture);
 
 
-static void ALCmmdevCapture_Construct(ALCmmdevCapture *self, ALCdevice *device)
+static void ALCwasapiCapture_Construct(ALCwasapiCapture *self, ALCdevice *device)
 {
-    SET_VTABLE2(ALCmmdevCapture, ALCbackend, self);
-    SET_VTABLE2(ALCmmdevCapture, ALCmmdevProxy, self);
+    SET_VTABLE2(ALCwasapiCapture, ALCbackend, self);
+    SET_VTABLE2(ALCwasapiCapture, ALCwasapiProxy, self);
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
-    ALCmmdevProxy_Construct(STATIC_CAST(ALCmmdevProxy, self));
+    ALCwasapiProxy_Construct(STATIC_CAST(ALCwasapiProxy, self));
 
     self->devid = NULL;
 
@@ -1283,12 +1283,12 @@ static void ALCmmdevCapture_Construct(ALCmmdevCapture *self, ALCdevice *device)
     ATOMIC_INIT(&self->killNow, 0);
 }
 
-static void ALCmmdevCapture_Destruct(ALCmmdevCapture *self)
+static void ALCwasapiCapture_Destruct(ALCwasapiCapture *self)
 {
     if(self->MsgEvent)
     {
         ThreadRequest req = { self->MsgEvent, 0 };
-        if(PostThreadMessage(ThreadID, WM_USER_CloseDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCmmdevProxy, self)))
+        if(PostThreadMessage(ThreadID, WM_USER_CloseDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCwasapiProxy, self)))
             (void)WaitForResponse(&req);
 
         CloseHandle(self->MsgEvent);
@@ -1308,14 +1308,14 @@ static void ALCmmdevCapture_Destruct(ALCmmdevCapture *self)
     free(self->devid);
     self->devid = NULL;
 
-    ALCmmdevProxy_Destruct(STATIC_CAST(ALCmmdevProxy, self));
+    ALCwasapiProxy_Destruct(STATIC_CAST(ALCwasapiProxy, self));
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
 
-FORCE_ALIGN int ALCmmdevCapture_recordProc(void *arg)
+FORCE_ALIGN int ALCwasapiCapture_recordProc(void *arg)
 {
-    ALCmmdevCapture *self = arg;
+    ALCwasapiCapture *self = arg;
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     ALfloat *samples = NULL;
     size_t samplesmax = 0;
@@ -1434,7 +1434,7 @@ FORCE_ALIGN int ALCmmdevCapture_recordProc(void *arg)
 }
 
 
-static ALCenum ALCmmdevCapture_open(ALCmmdevCapture *self, const ALCchar *deviceName)
+static ALCenum ALCwasapiCapture_open(ALCwasapiCapture *self, const ALCchar *deviceName)
 {
     HRESULT hr = S_OK;
 
@@ -1494,7 +1494,7 @@ static ALCenum ALCmmdevCapture_open(ALCmmdevCapture *self, const ALCchar *device
         ThreadRequest req = { self->MsgEvent, 0 };
 
         hr = E_FAIL;
-        if(PostThreadMessage(ThreadID, WM_USER_OpenDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCmmdevProxy, self)))
+        if(PostThreadMessage(ThreadID, WM_USER_OpenDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCwasapiProxy, self)))
             hr = WaitForResponse(&req);
         else
             ERR("Failed to post thread message: %lu\n", GetLastError());
@@ -1520,7 +1520,7 @@ static ALCenum ALCmmdevCapture_open(ALCmmdevCapture *self, const ALCchar *device
         ThreadRequest req = { self->MsgEvent, 0 };
 
         hr = E_FAIL;
-        if(PostThreadMessage(ThreadID, WM_USER_ResetDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCmmdevProxy, self)))
+        if(PostThreadMessage(ThreadID, WM_USER_ResetDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCwasapiProxy, self)))
             hr = WaitForResponse(&req);
         else
             ERR("Failed to post thread message: %lu\n", GetLastError());
@@ -1536,7 +1536,7 @@ static ALCenum ALCmmdevCapture_open(ALCmmdevCapture *self, const ALCchar *device
     return ALC_NO_ERROR;
 }
 
-static HRESULT ALCmmdevCapture_openProxy(ALCmmdevCapture *self)
+static HRESULT ALCwasapiCapture_openProxy(ALCwasapiCapture *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     void *ptr;
@@ -1573,7 +1573,7 @@ static HRESULT ALCmmdevCapture_openProxy(ALCmmdevCapture *self)
 }
 
 
-static void ALCmmdevCapture_closeProxy(ALCmmdevCapture *self)
+static void ALCwasapiCapture_closeProxy(ALCwasapiCapture *self)
 {
     if(self->client)
         IAudioClient_Release(self->client);
@@ -1585,7 +1585,7 @@ static void ALCmmdevCapture_closeProxy(ALCmmdevCapture *self)
 }
 
 
-static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
+static HRESULT ALCwasapiCapture_resetProxy(ALCwasapiCapture *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     WAVEFORMATEXTENSIBLE OutputType;
@@ -1833,18 +1833,18 @@ static HRESULT ALCmmdevCapture_resetProxy(ALCmmdevCapture *self)
 }
 
 
-static ALCboolean ALCmmdevCapture_start(ALCmmdevCapture *self)
+static ALCboolean ALCwasapiCapture_start(ALCwasapiCapture *self)
 {
     ThreadRequest req = { self->MsgEvent, 0 };
     HRESULT hr = E_FAIL;
 
-    if(PostThreadMessage(ThreadID, WM_USER_StartDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCmmdevProxy, self)))
+    if(PostThreadMessage(ThreadID, WM_USER_StartDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCwasapiProxy, self)))
         hr = WaitForResponse(&req);
 
     return SUCCEEDED(hr) ? ALC_TRUE : ALC_FALSE;
 }
 
-static HRESULT ALCmmdevCapture_startProxy(ALCmmdevCapture *self)
+static HRESULT ALCwasapiCapture_startProxy(ALCwasapiCapture *self)
 {
     HRESULT hr;
     void *ptr;
@@ -1862,7 +1862,7 @@ static HRESULT ALCmmdevCapture_startProxy(ALCmmdevCapture *self)
     {
         self->capture = ptr;
         ATOMIC_STORE(&self->killNow, 0, almemory_order_release);
-        if(althrd_create(&self->thread, ALCmmdevCapture_recordProc, self) != althrd_success)
+        if(althrd_create(&self->thread, ALCwasapiCapture_recordProc, self) != althrd_success)
         {
             ERR("Failed to start thread\n");
             IAudioCaptureClient_Release(self->capture);
@@ -1881,14 +1881,14 @@ static HRESULT ALCmmdevCapture_startProxy(ALCmmdevCapture *self)
 }
 
 
-static void ALCmmdevCapture_stop(ALCmmdevCapture *self)
+static void ALCwasapiCapture_stop(ALCwasapiCapture *self)
 {
     ThreadRequest req = { self->MsgEvent, 0 };
-    if(PostThreadMessage(ThreadID, WM_USER_StopDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCmmdevProxy, self)))
+    if(PostThreadMessage(ThreadID, WM_USER_StopDevice, (WPARAM)&req, (LPARAM)STATIC_CAST(ALCwasapiProxy, self)))
         (void)WaitForResponse(&req);
 }
 
-static void ALCmmdevCapture_stopProxy(ALCmmdevCapture *self)
+static void ALCwasapiCapture_stopProxy(ALCwasapiCapture *self)
 {
     int res;
 
@@ -1905,14 +1905,14 @@ static void ALCmmdevCapture_stopProxy(ALCmmdevCapture *self)
 }
 
 
-ALuint ALCmmdevCapture_availableSamples(ALCmmdevCapture *self)
+ALuint ALCwasapiCapture_availableSamples(ALCwasapiCapture *self)
 {
     return (ALuint)ll_ringbuffer_read_space(self->Ring);
 }
 
-ALCenum ALCmmdevCapture_captureSamples(ALCmmdevCapture *self, ALCvoid *buffer, ALCuint samples)
+ALCenum ALCwasapiCapture_captureSamples(ALCwasapiCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    if(ALCmmdevCapture_availableSamples(self) < samples)
+    if(ALCwasapiCapture_availableSamples(self) < samples)
         return ALC_INVALID_VALUE;
     ll_ringbuffer_read(self->Ring, buffer, samples);
     return ALC_NO_ERROR;
@@ -1924,23 +1924,27 @@ static inline void AppendAllDevicesList2(const DevMap *entry)
 static inline void AppendCaptureDeviceList2(const DevMap *entry)
 { AppendCaptureDeviceList(alstr_get_cstr(entry->name)); }
 
-typedef struct ALCmmdevBackendFactory {
+typedef struct ALCwasapiBackendFactory {
     DERIVE_FROM_TYPE(ALCbackendFactory);
-} ALCmmdevBackendFactory;
-#define ALCMMDEVBACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCmmdevBackendFactory, ALCbackendFactory) } }
+} ALCwasapiBackendFactory;
+#define ALCWASAPIBACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCwasapiBackendFactory, ALCbackendFactory) } }
 
-static ALCboolean ALCmmdevBackendFactory_init(ALCmmdevBackendFactory *self);
-static void ALCmmdevBackendFactory_deinit(ALCmmdevBackendFactory *self);
-static ALCboolean ALCmmdevBackendFactory_querySupport(ALCmmdevBackendFactory *self, ALCbackend_Type type);
-static void ALCmmdevBackendFactory_probe(ALCmmdevBackendFactory *self, enum DevProbe type);
-static ALCbackend* ALCmmdevBackendFactory_createBackend(ALCmmdevBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
+static ALCboolean ALCwasapiBackendFactory_init(ALCwasapiBackendFactory *self);
+static void ALCwasapiBackendFactory_deinit(ALCwasapiBackendFactory *self);
+static ALCboolean ALCwasapiBackendFactory_querySupport(ALCwasapiBackendFactory *self, ALCbackend_Type type);
+static void ALCwasapiBackendFactory_probe(ALCwasapiBackendFactory *self, enum DevProbe type);
+static ALCbackend* ALCwasapiBackendFactory_createBackend(ALCwasapiBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
 
-DEFINE_ALCBACKENDFACTORY_VTABLE(ALCmmdevBackendFactory);
+DEFINE_ALCBACKENDFACTORY_VTABLE(ALCwasapiBackendFactory);
 
 
-static BOOL MMDevApiLoad(void)
+static ALCboolean ALCwasapiBackendFactory_init(ALCwasapiBackendFactory* UNUSED(self))
 {
     static HRESULT InitResult;
+
+    VECTOR_INIT(PlaybackDevices);
+    VECTOR_INIT(CaptureDevices);
+
     if(!ThreadHdl)
     {
         ThreadRequest req;
@@ -1951,26 +1955,17 @@ static BOOL MMDevApiLoad(void)
             ERR("Failed to create event: %lu\n", GetLastError());
         else
         {
-            ThreadHdl = CreateThread(NULL, 0, ALCmmdevProxy_messageHandler, &req, 0, &ThreadID);
+            ThreadHdl = CreateThread(NULL, 0, ALCwasapiProxy_messageHandler, &req, 0, &ThreadID);
             if(ThreadHdl != NULL)
                 InitResult = WaitForResponse(&req);
             CloseHandle(req.FinishedEvt);
         }
     }
-    return SUCCEEDED(InitResult);
+
+    return SUCCEEDED(InitResult) ? ALC_TRUE : ALC_FALSE;
 }
 
-static ALCboolean ALCmmdevBackendFactory_init(ALCmmdevBackendFactory* UNUSED(self))
-{
-    VECTOR_INIT(PlaybackDevices);
-    VECTOR_INIT(CaptureDevices);
-
-    if(!MMDevApiLoad())
-        return ALC_FALSE;
-    return ALC_TRUE;
-}
-
-static void ALCmmdevBackendFactory_deinit(ALCmmdevBackendFactory* UNUSED(self))
+static void ALCwasapiBackendFactory_deinit(ALCwasapiBackendFactory* UNUSED(self))
 {
     clear_devlist(&PlaybackDevices);
     VECTOR_DEINIT(PlaybackDevices);
@@ -1987,7 +1982,7 @@ static void ALCmmdevBackendFactory_deinit(ALCmmdevBackendFactory* UNUSED(self))
     }
 }
 
-static ALCboolean ALCmmdevBackendFactory_querySupport(ALCmmdevBackendFactory* UNUSED(self), ALCbackend_Type type)
+static ALCboolean ALCwasapiBackendFactory_querySupport(ALCwasapiBackendFactory* UNUSED(self), ALCbackend_Type type)
 {
     /* TODO: Disable capture with mmdevapi for now, since it doesn't do any
      * rechanneling or resampling; if the device is configured for 48000hz
@@ -1999,7 +1994,7 @@ static ALCboolean ALCmmdevBackendFactory_querySupport(ALCmmdevBackendFactory* UN
     return ALC_FALSE;
 }
 
-static void ALCmmdevBackendFactory_probe(ALCmmdevBackendFactory* UNUSED(self), enum DevProbe type)
+static void ALCwasapiBackendFactory_probe(ALCwasapiBackendFactory* UNUSED(self), enum DevProbe type)
 {
     ThreadRequest req = { NULL, 0 };
 
@@ -2026,19 +2021,19 @@ static void ALCmmdevBackendFactory_probe(ALCmmdevBackendFactory* UNUSED(self), e
     }
 }
 
-static ALCbackend* ALCmmdevBackendFactory_createBackend(ALCmmdevBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+static ALCbackend* ALCwasapiBackendFactory_createBackend(ALCwasapiBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
     {
-        ALCmmdevPlayback *backend;
-        NEW_OBJ(backend, ALCmmdevPlayback)(device);
+        ALCwasapiPlayback *backend;
+        NEW_OBJ(backend, ALCwasapiPlayback)(device);
         if(!backend) return NULL;
         return STATIC_CAST(ALCbackend, backend);
     }
     if(type == ALCbackend_Capture)
     {
-        ALCmmdevCapture *backend;
-        NEW_OBJ(backend, ALCmmdevCapture)(device);
+        ALCwasapiCapture *backend;
+        NEW_OBJ(backend, ALCwasapiCapture)(device);
         if(!backend) return NULL;
         return STATIC_CAST(ALCbackend, backend);
     }
@@ -2047,8 +2042,8 @@ static ALCbackend* ALCmmdevBackendFactory_createBackend(ALCmmdevBackendFactory* 
 }
 
 
-ALCbackendFactory *ALCmmdevBackendFactory_getFactory(void)
+ALCbackendFactory *ALCwasapiBackendFactory_getFactory(void)
 {
-    static ALCmmdevBackendFactory factory = ALCMMDEVBACKENDFACTORY_INITIALIZER;
+    static ALCwasapiBackendFactory factory = ALCWASAPIBACKENDFACTORY_INITIALIZER;
     return STATIC_CAST(ALCbackendFactory, &factory);
 }

@@ -144,7 +144,7 @@ ALCbackendFactory *ALCjackBackendFactory_getFactory(void);
 ALCbackendFactory *ALCsolarisBackendFactory_getFactory(void);
 ALCbackendFactory *ALCsndioBackendFactory_getFactory(void);
 ALCbackendFactory *ALCqsaBackendFactory_getFactory(void);
-ALCbackendFactory *ALCmmdevBackendFactory_getFactory(void);
+ALCbackendFactory *ALCwasapiBackendFactory_getFactory(void);
 ALCbackendFactory *ALCdsoundBackendFactory_getFactory(void);
 ALCbackendFactory *ALCwinmmBackendFactory_getFactory(void);
 ALCbackendFactory *ALCportBackendFactory_getFactory(void);

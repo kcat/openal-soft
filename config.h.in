@@ -50,8 +50,8 @@
 /* Define if we have the QSA backend */
 #cmakedefine HAVE_QSA
 
-/* Define if we have the MMDevApi backend */
-#cmakedefine HAVE_MMDEVAPI
+/* Define if we have the WASAPI backend */
+#cmakedefine HAVE_WASAPI
 
 /* Define if we have the DSound backend */
 #cmakedefine HAVE_DSOUND

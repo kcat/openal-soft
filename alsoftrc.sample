@@ -444,9 +444,9 @@ surround71 =
 #buffer-size = 0
 
 ##
-## MMDevApi backend stuff
+## WASAPI backend stuff
 ##
-[mmdevapi]
+[wasapi]
 
 ##
 ## DirectSound backend stuff

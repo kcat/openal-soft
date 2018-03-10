@@ -64,7 +64,9 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
             break;
 
         case DLL_THREAD_ATTACH:
+            break;
         case DLL_THREAD_DETACH:
+            althrd_thread_detach();
             break;
 
         case DLL_PROCESS_DETACH:
@@ -84,6 +86,8 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
             if(LogFile && LogFile != stderr)
                 fclose(LogFile);
             LogFile = NULL;
+
+            althrd_deinit();
             break;
     }
     return TRUE;

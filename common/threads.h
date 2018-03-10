@@ -65,6 +65,9 @@ typedef LONG alonce_flag;
 int althrd_sleep(const struct timespec *ts, struct timespec *rem);
 void alcall_once(alonce_flag *once, void (*callback)(void));
 
+void althrd_deinit(void);
+void althrd_thread_detach(void);
+
 
 inline althrd_t althrd_current(void)
 {
@@ -215,6 +218,10 @@ inline void alcall_once(alonce_flag *once, void (*callback)(void))
 {
     pthread_once(once, callback);
 }
+
+
+inline void althrd_deinit(void) { }
+inline void althrd_thread_detach(void) { }
 
 #endif
 

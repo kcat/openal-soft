@@ -813,6 +813,7 @@ BOOL APIENTRY DllMain(HINSTANCE hModule, DWORD reason, LPVOID lpReserved)
             break;
 
         case DLL_THREAD_DETACH:
+            althrd_thread_detach();
             break;
 
         case DLL_PROCESS_DETACH:
@@ -1260,6 +1261,8 @@ static void alc_deinit_safe(void)
     if(LogFile != stderr)
         fclose(LogFile);
     LogFile = NULL;
+
+    althrd_deinit();
 }
 
 static void alc_deinit(void)

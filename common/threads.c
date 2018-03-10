@@ -64,6 +64,22 @@ extern inline int altss_set(altss_t tss_id, void *val);
 #include <mmsystem.h>
 
 
+/* An associative map of uint:void* pairs. The key is the unique Thread ID and
+ * the value is the thread HANDLE. The thread ID is passed around as the
+ * althrd_t since there is only one ID per thread, whereas a thread may be
+ * referenced by multiple different HANDLEs. This map allows retrieving the
+ * original handle which is needed to join the thread and get its return value.
+ */
+static UIntMap ThrdIdHandle = UINTMAP_STATIC_INITIALIZE;
+
+/* An associative map of uint:void* pairs. The key is the TLS index (given by
+ * TlsAlloc), and the value is the altss_dtor_t callback. When a thread exits,
+ * we iterate over the TLS indices for their thread-local value and call the
+ * destructor function with it if they're both not NULL.
+ */
+static UIntMap TlsDestructors = UINTMAP_STATIC_INITIALIZE;
+
+
 void althrd_setname(althrd_t thr, const char *name)
 {
 #if defined(_MSC_VER)
@@ -92,23 +108,6 @@ void althrd_setname(althrd_t thr, const char *name)
     (void)name;
 #endif
 }
-
-
-static UIntMap ThrdIdHandle = UINTMAP_STATIC_INITIALIZE;
-
-static void NTAPI althrd_callback(void* UNUSED(handle), DWORD reason, void* UNUSED(reserved))
-{
-    if(reason == DLL_PROCESS_DETACH)
-        ResetUIntMap(&ThrdIdHandle);
-}
-#ifdef _MSC_VER
-#pragma section(".CRT$XLC",read)
-__declspec(allocate(".CRT$XLC")) PIMAGE_TLS_CALLBACK althrd_callback_ = althrd_callback;
-#elif defined(__GNUC__)
-PIMAGE_TLS_CALLBACK althrd_callback_ __attribute__((section(".CRT$XLC"))) = althrd_callback;
-#else
-PIMAGE_TLS_CALLBACK althrd_callback_ = althrd_callback;
-#endif
 
 
 typedef struct thread_cntr {
@@ -363,47 +362,6 @@ int alsem_trywait(alsem_t *sem)
 }
 
 
-/* An associative map of uint:void* pairs. The key is the TLS index (given by
- * TlsAlloc), and the value is the altss_dtor_t callback. When a thread exits,
- * we iterate over the TLS indices for their thread-local value and call the
- * destructor function with it if they're both not NULL. To avoid using
- * DllMain, a PIMAGE_TLS_CALLBACK function pointer is placed in a ".CRT$XLx"
- * section (where x is a character A to Z) which will be called by the CRT.
- */
-static UIntMap TlsDestructors = UINTMAP_STATIC_INITIALIZE;
-
-static void NTAPI altss_callback(void* UNUSED(handle), DWORD reason, void* UNUSED(reserved))
-{
-    ALsizei i;
-
-    if(reason == DLL_PROCESS_DETACH)
-    {
-        ResetUIntMap(&TlsDestructors);
-        return;
-    }
-    if(reason != DLL_THREAD_DETACH)
-        return;
-
-    LockUIntMapRead(&TlsDestructors);
-    for(i = 0;i < TlsDestructors.size;i++)
-    {
-        void *ptr = altss_get(TlsDestructors.keys[i]);
-        altss_dtor_t callback = (altss_dtor_t)TlsDestructors.values[i];
-        if(ptr && callback)
-            callback(ptr);
-    }
-    UnlockUIntMapRead(&TlsDestructors);
-}
-#ifdef _MSC_VER
-#pragma section(".CRT$XLB",read)
-__declspec(allocate(".CRT$XLB")) PIMAGE_TLS_CALLBACK altss_callback_ = altss_callback;
-#elif defined(__GNUC__)
-PIMAGE_TLS_CALLBACK altss_callback_ __attribute__((section(".CRT$XLB"))) = altss_callback;
-#else
-#warning "No TLS callback support, thread-local contexts may leak references on poorly written applications."
-PIMAGE_TLS_CALLBACK altss_callback_ = altss_callback;
-#endif
-
 int altss_create(altss_t *tss_id, altss_dtor_t callback)
 {
     DWORD key = TlsAlloc();
@@ -454,6 +412,27 @@ void alcall_once(alonce_flag *once, void (*callback)(void))
     InterlockedExchange(once, 2);
 }
 
+
+void althrd_deinit(void)
+{
+    ResetUIntMap(&ThrdIdHandle);
+    ResetUIntMap(&TlsDestructors);
+}
+
+void althrd_thread_detach(void)
+{
+    ALsizei i;
+
+    LockUIntMapRead(&TlsDestructors);
+    for(i = 0;i < TlsDestructors.size;i++)
+    {
+        void *ptr = altss_get(TlsDestructors.keys[i]);
+        altss_dtor_t callback = (altss_dtor_t)TlsDestructors.values[i];
+        if(ptr && callback) callback(ptr);
+    }
+    UnlockUIntMapRead(&TlsDestructors);
+}
+
 #else
 
 #include <sys/time.h>
@@ -467,6 +446,8 @@ void alcall_once(alonce_flag *once, void (*callback)(void))
 extern inline int althrd_sleep(const struct timespec *ts, struct timespec *rem);
 extern inline void alcall_once(alonce_flag *once, void (*callback)(void));
 
+extern inline void althrd_deinit(void);
+extern inline void althrd_thread_detach(void);
 
 void althrd_setname(althrd_t thr, const char *name)
 {

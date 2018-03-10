@@ -3,6 +3,10 @@
 
 #include "alstring.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef _WIN32
 
 #define WIN32_LEAN_AND_MEAN
@@ -52,6 +56,10 @@ void *GetSymbol(void *handle, const char *name);
 
 /** Returns a JNIEnv*. */
 void *Android_GetJNIEnv(void);
+#endif
+
+#ifdef __cplusplus
+} /* extern "C" */
 #endif
 
 #endif /* AL_COMPAT_H */

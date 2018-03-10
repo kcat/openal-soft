@@ -6,6 +6,10 @@
 #include "vector.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef char al_string_char_type;
 TYPEDEF_VECTOR(al_string_char_type, al_string)
 TYPEDEF_VECTOR(al_string, vector_al_string)
@@ -45,6 +49,10 @@ void alstr_copy_wcstr(al_string *str, const wchar_t *from);
 void alstr_append_wcstr(al_string *str, const wchar_t *from);
 void alstr_copy_wrange(al_string *str, const wchar_t *from, const wchar_t *to);
 void alstr_append_wrange(al_string *str, const wchar_t *from, const wchar_t *to);
+#endif
+
+#ifdef __cplusplus
+} /* extern "C" */
 #endif
 
 #endif /* ALSTRING_H */

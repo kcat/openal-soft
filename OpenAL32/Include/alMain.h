@@ -49,19 +49,6 @@
 #define UNLIKELY(x) (!!(x))
 #endif
 
-typedef ALint64SOFT ALint64;
-typedef ALuint64SOFT ALuint64;
-
-#ifndef U64
-#if defined(_MSC_VER)
-#define U64(x) ((ALuint64)(x##ui64))
-#elif SIZEOF_LONG == 8
-#define U64(x) ((ALuint64)(x##ul))
-#elif SIZEOF_LONG_LONG == 8
-#define U64(x) ((ALuint64)(x##ull))
-#endif
-#endif
-
 #ifndef UINT64_MAX
 #define UINT64_MAX U64(18446744073709551615)
 #endif
@@ -84,6 +71,23 @@ typedef ALuint64SOFT ALuint64;
  */
 #define FAM_SIZE(T, M, N)  (offsetof(T, M) + sizeof(((T*)NULL)->M[0])*(N))
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef ALint64SOFT ALint64;
+typedef ALuint64SOFT ALuint64;
+
+#ifndef U64
+#if defined(_MSC_VER)
+#define U64(x) ((ALuint64)(x##ui64))
+#elif SIZEOF_LONG == 8
+#define U64(x) ((ALuint64)(x##ul))
+#elif SIZEOF_LONG_LONG == 8
+#define U64(x) ((ALuint64)(x##ull))
+#endif
+#endif
 
 /* Define a CTZ64 macro (count trailing zeros, for 64-bit integers). The result
  * is *UNDEFINED* if the value is 0.
@@ -152,10 +156,6 @@ static const union {
 
 #define COUNTOF(x) (sizeof(x) / sizeof(0[x]))
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 struct ll_ringbuffer;
 struct Hrtf;

@@ -10,6 +10,10 @@
 #define DECL_FORMAT(x, y, z)
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern FILE *LogFile;
 
 #if defined(__GNUC__) && !defined(_WIN32)
@@ -57,5 +61,9 @@ extern enum LogLevel LogLevel;
         AL_PRINT("(EE)", __VA_ARGS__);                                        \
     LOG_ANDROID(ANDROID_LOG_ERROR, __VA_ARGS__);                              \
 } while(0)
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 #endif /* LOGGING_H */

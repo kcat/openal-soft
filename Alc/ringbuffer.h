@@ -4,6 +4,10 @@
 #include <stddef.h>
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct ll_ringbuffer ll_ringbuffer_t;
 typedef struct ll_ringbuffer_data {
     char *buf;
@@ -65,5 +69,9 @@ size_t ll_ringbuffer_write_space(const ll_ringbuffer_t *rb);
 size_t ll_ringbuffer_write(ll_ringbuffer_t *rb, const char *src, size_t cnt);
 /** Advance the write pointer `cnt' places. */
 void ll_ringbuffer_write_advance(ll_ringbuffer_t *rb, size_t cnt);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 #endif /* RINGBUFFER_H */

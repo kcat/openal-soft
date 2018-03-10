@@ -5,6 +5,10 @@
 #include "threads.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct ClockLatency {
     ALint64 ClockTime;
     ALint64 Latency;
@@ -156,5 +160,9 @@ inline void ALCdevice_Lock(ALCdevice *device)
 
 inline void ALCdevice_Unlock(ALCdevice *device)
 { V0(device->Backend,unlock)(); }
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 #endif /* AL_BACKENDS_BASE_H */

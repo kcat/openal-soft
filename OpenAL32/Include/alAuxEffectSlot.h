@@ -127,6 +127,7 @@ typedef struct ALeffectslot {
 
         ALfloat RoomRolloff; /* Added to the source's room rolloff, not multiplied. */
         ALfloat DecayTime;
+        ALfloat DecayLFRatio;
         ALfloat DecayHFRatio;
         ALboolean DecayHFLimit;
         ALfloat AirAbsorptionGainHF;

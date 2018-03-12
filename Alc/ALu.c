@@ -457,6 +457,7 @@ static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool f
         {
             slot->Params.RoomRolloff = props->Props.Reverb.RoomRolloffFactor;
             slot->Params.DecayTime = props->Props.Reverb.DecayTime;
+            slot->Params.DecayLFRatio = props->Props.Reverb.DecayLFRatio;
             slot->Params.DecayHFRatio = props->Props.Reverb.DecayHFRatio;
             slot->Params.DecayHFLimit = props->Props.Reverb.DecayHFLimit;
             slot->Params.AirAbsorptionGainHF = props->Props.Reverb.AirAbsorptionGainHF;
@@ -465,6 +466,7 @@ static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool f
         {
             slot->Params.RoomRolloff = 0.0f;
             slot->Params.DecayTime = 0.0f;
+            slot->Params.DecayLFRatio = 0.0f;
             slot->Params.DecayHFRatio = 0.0f;
             slot->Params.DecayHFLimit = AL_FALSE;
             slot->Params.AirAbsorptionGainHF = 1.0f;
@@ -1186,6 +1188,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
     ALeffectslot *SendSlots[MAX_SENDS];
     ALfloat RoomRolloff[MAX_SENDS];
     ALfloat DecayDistance[MAX_SENDS];
+    ALfloat DecayLFDistance[MAX_SENDS];
     ALfloat DecayHFDistance[MAX_SENDS];
     ALfloat DryGain, DryGainHF, DryGainLF;
     ALfloat WetGain[MAX_SENDS];
@@ -1210,6 +1213,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
             SendSlots[i] = NULL;
             RoomRolloff[i] = 0.0f;
             DecayDistance[i] = 0.0f;
+            DecayLFDistance[i] = 0.0f;
             DecayHFDistance[i] = 0.0f;
         }
         else if(SendSlots[i]->Params.AuxSendAuto)
@@ -1220,6 +1224,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
              */
             DecayDistance[i] = SendSlots[i]->Params.DecayTime *
                                Listener->Params.ReverbSpeedOfSound;
+            DecayLFDistance[i] = DecayDistance[i] * SendSlots[i]->Params.DecayLFRatio;
             DecayHFDistance[i] = DecayDistance[i] * SendSlots[i]->Params.DecayHFRatio;
             if(SendSlots[i]->Params.DecayHFLimit)
             {
@@ -1242,6 +1247,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
              * effect slot is the same as the dry path, sans filter effects */
             RoomRolloff[i] = props->RolloffFactor;
             DecayDistance[i] = 0.0f;
+            DecayLFDistance[i] = 0.0f;
             DecayHFDistance[i] = 0.0f;
         }
 
@@ -1386,7 +1392,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
              */
             for(i = 0;i < NumSends;i++)
             {
-                ALfloat gain;
+                ALfloat gain, gainhf, gainlf;
 
                 if(!(DecayDistance[i] > 0.0f))
                     continue;
@@ -1398,8 +1404,10 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
                  */
                 if(gain > 0.0f)
                 {
-                    ALfloat gainhf = powf(REVERB_DECAY_GAIN, meters_base/DecayHFDistance[i]);
+                    gainhf = powf(REVERB_DECAY_GAIN, meters_base/DecayHFDistance[i]);
                     WetGainHF[i] *= minf(gainhf / gain, 1.0f);
+                    gainlf = powf(REVERB_DECAY_GAIN, meters_base/DecayLFDistance[i]);
+                    WetGainLF[i] *= minf(gainlf / gain, 1.0f);
                 }
             }
         }

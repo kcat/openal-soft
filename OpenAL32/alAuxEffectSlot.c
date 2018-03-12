@@ -686,6 +686,7 @@ ALenum InitEffectSlot(ALeffectslot *slot)
     slot->Params.EffectState = slot->Effect.State;
     slot->Params.RoomRolloff = 0.0f;
     slot->Params.DecayTime = 0.0f;
+    slot->Params.DecayLFRatio = 0.0f;
     slot->Params.DecayHFRatio = 0.0f;
     slot->Params.DecayHFLimit = AL_FALSE;
     slot->Params.AirAbsorptionGainHF = 1.0f;

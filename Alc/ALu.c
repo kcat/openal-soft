@@ -1215,6 +1215,9 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
         else if(SendSlots[i]->Params.AuxSendAuto)
         {
             RoomRolloff[i] = SendSlots[i]->Params.RoomRolloff + props->RoomRolloffFactor;
+            /* Calculate the distances to where this effect's decay reaches
+             * -60dB.
+             */
             DecayDistance[i] = SendSlots[i]->Params.DecayTime *
                                Listener->Params.ReverbSpeedOfSound;
             DecayHFDistance[i] = DecayDistance[i] * SendSlots[i]->Params.DecayHFRatio;
@@ -1223,8 +1226,13 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
                 ALfloat airAbsorption = SendSlots[i]->Params.AirAbsorptionGainHF;
                 if(airAbsorption < 1.0f)
                 {
-                    ALfloat limitRatio = log10f(REVERB_DECAY_GAIN) / log10f(airAbsorption);
-                    DecayHFDistance[i] = minf(limitRatio, DecayHFDistance[i]);
+                    /* Calculate the distance to where this effect's air
+                     * absorption reaches -60dB, and limit the effect's HF
+                     * decay distance (so it doesn't take any longer to decay
+                     * than the air would allow).
+                     */
+                    ALfloat absorb_dist = log10f(REVERB_DECAY_GAIN) / log10f(airAbsorption);
+                    DecayHFDistance[i] = minf(absorb_dist, DecayHFDistance[i]);
                 }
             }
         }

@@ -1301,9 +1301,12 @@ static inline ALfloat FadedDelayLineOut(const DelayLineI *Delay, const ALsizei o
 }
 #define UnfadedDelayLineOut(d, o0, o1, c, mu) DelayLineOut(d, o0, c)
 
-static inline ALvoid DelayLineIn(DelayLineI *Delay, const ALsizei offset, const ALsizei c, const ALfloat in)
+static inline ALvoid DelayLineIn(DelayLineI *Delay, ALsizei offset, const ALsizei c,
+                                 const ALfloat *restrict in, ALsizei count)
 {
-    Delay->Line[offset&Delay->Mask][c] = in;
+    ALsizei i;
+    for(i = 0;i < count;i++)
+        Delay->Line[(offset++)&Delay->Mask][c] = *(in++);
 }
 
 static inline ALvoid DelayLineIn4(DelayLineI *Delay, ALsizei offset, const ALfloat in[NUM_LINES])
@@ -1603,7 +1606,7 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
     ALfloat (*restrict late)[MAX_UPDATE_SAMPLES] = State->ReverbSamples;
     ALsizei fadeCount = State->FadeCount;
     ALfloat fade = (ALfloat)fadeCount / FADE_SAMPLES;
-    ALsizei base, c, i;
+    ALsizei base, c;
 
     /* Process reverb for these samples. */
     for(base = 0;base < SamplesToDo;)
@@ -1630,8 +1633,7 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
             ALfilterState_process(&State->Filter[c].Hp, early[1], early[0], todo);
 
             /* Feed the initial delay line. */
-            for(i = 0;i < todo;i++)
-                DelayLineIn(&State->Delay, State->Offset+i, c, early[1][i]);
+            DelayLineIn(&State->Delay, State->Offset, c, early[1], todo);
         }
 
         if(UNLIKELY(fadeCount < FADE_SAMPLES))

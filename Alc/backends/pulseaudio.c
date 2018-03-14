@@ -833,6 +833,9 @@ static int ALCpulsePlayback_mixerProc(void *ptr)
     while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
           ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
+        void *buf;
+        int ret;
+
         len = pa_stream_writable_size(self->stream);
         if(len < 0)
         {
@@ -863,33 +866,16 @@ static int ALCpulsePlayback_mixerProc(void *ptr)
             pa_threaded_mainloop_wait(self->loop);
             continue;
         }
+
         len -= len%self->attr.minreq;
+        len -= len%frame_size;
 
-        while(len > 0)
-        {
-            size_t newlen = len;
-            int ret;
-            void *buf;
-            pa_free_cb_t free_func = NULL;
+        buf = pa_xmalloc(len);
 
-            if(pa_stream_begin_write(self->stream, &buf, &newlen) < 0)
-            {
-                buf = pa_xmalloc(newlen);
-                free_func = pa_xfree;
-            }
+        aluMixData(device, buf, len/frame_size);
 
-            newlen /= frame_size;
-            aluMixData(device, buf, newlen);
-
-            newlen *= frame_size;
-            ret = pa_stream_write(self->stream, buf, newlen, free_func, 0, PA_SEEK_RELATIVE);
-            if(ret != PA_OK)
-            {
-                ERR("Failed to write to stream: %d, %s\n", ret, pa_strerror(ret));
-                break;
-            }
-            len -= newlen;
-        }
+        ret = pa_stream_write(self->stream, buf, len, pa_xfree, 0, PA_SEEK_RELATIVE);
+        if(ret != PA_OK) ERR("Failed to write to stream: %d, %s\n", ret, pa_strerror(ret));
     }
     pa_threaded_mainloop_unlock(self->loop);
 

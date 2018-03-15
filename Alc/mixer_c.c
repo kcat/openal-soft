@@ -97,26 +97,24 @@ void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const 
     ALsizei i;
     if(LIKELY(numsamples > 1))
     {
-        dst[0] = filter->b0 * src[0] +
-                 filter->b1 * filter->x[0] +
-                 filter->b2 * filter->x[1] -
-                 filter->a1 * filter->y[0] -
-                 filter->a2 * filter->y[1];
-        dst[1] = filter->b0 * src[1] +
-                 filter->b1 * src[0] +
-                 filter->b2 * filter->x[0] -
-                 filter->a1 * dst[0] -
-                 filter->a2 * filter->y[0];
-        for(i = 2;i < numsamples;i++)
-            dst[i] = filter->b0 * src[i] +
-                     filter->b1 * src[i-1] +
-                     filter->b2 * src[i-2] -
-                     filter->a1 * dst[i-1] -
-                     filter->a2 * dst[i-2];
-        filter->x[0] = src[i-1];
-        filter->x[1] = src[i-2];
-        filter->y[0] = dst[i-1];
-        filter->y[1] = dst[i-2];
+        ALfloat x0 = filter->x[0];
+        ALfloat x1 = filter->x[1];
+        ALfloat y0 = filter->y[0];
+        ALfloat y1 = filter->y[1];
+
+        for(i = 0;i < numsamples;i++)
+        {
+            dst[i] = filter->b0* src[i] +
+                     filter->b1*x0 + filter->b2*x1 -
+                     filter->a1*y0 - filter->a2*y1;
+            y1 = y0; y0 = dst[i];
+            x1 = x0; x0 = src[i];
+        }
+
+        filter->x[0] = x0;
+        filter->x[1] = x1;
+        filter->y[0] = y0;
+        filter->y[1] = y1;
     }
     else if(numsamples == 1)
     {

@@ -22,14 +22,22 @@ static void allpass_process(AllPassState *state, ALfloat *restrict dst, const AL
 
     if(LIKELY(todo > 1))
     {
-        dst[0] = aa*(src[0] + state->y[1]) - state->x[1];
-        dst[1] = aa*(src[1] + state->y[0]) - state->x[0];
-        for(i = 2;i < todo;i++)
-            dst[i] = aa*(src[i] + dst[i-2]) - src[i-2];
-        state->x[1] = src[i-2];
-        state->x[0] = src[i-1];
-        state->y[1] = dst[i-2];
-        state->y[0] = dst[i-1];
+        ALfloat x0 = state->x[0];
+        ALfloat x1 = state->x[1];
+        ALfloat y0 = state->y[0];
+        ALfloat y1 = state->y[1];
+
+        for(i = 0;i < todo;i++)
+        {
+            dst[i] = aa*(src[i] + y1) - x1;
+            y1 = y0; y0 = dst[i];
+            x1 = x0; x0 = src[i];
+        }
+
+        state->x[0] = x0;
+        state->x[1] = x1;
+        state->y[0] = y0;
+        state->y[1] = y1;
     }
     else if(todo == 1)
     {

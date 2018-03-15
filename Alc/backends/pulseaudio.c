@@ -1164,13 +1164,16 @@ static void ALCpulsePlayback_stop(ALCpulsePlayback *self)
 
 static ClockLatency ALCpulsePlayback_getClockLatency(ALCpulsePlayback *self)
 {
-    pa_usec_t latency = 0;
     ClockLatency ret;
+    pa_usec_t latency;
     int neg, err;
 
     pa_threaded_mainloop_lock(self->loop);
     ret.ClockTime = GetDeviceClockTime(STATIC_CAST(ALCbackend,self)->mDevice);
-    if((err=pa_stream_get_latency(self->stream, &latency, &neg)) != 0)
+    err = pa_stream_get_latency(self->stream, &latency, &neg);
+    pa_threaded_mainloop_unlock(self->loop);
+
+    if(UNLIKELY(err != 0))
     {
         /* FIXME: if err = -PA_ERR_NODATA, it means we were called too soon
          * after starting the stream and no timing info has been received from
@@ -1181,9 +1184,9 @@ static ClockLatency ALCpulsePlayback_getClockLatency(ALCpulsePlayback *self)
         latency = 0;
         neg = 0;
     }
-    if(neg) latency = 0;
-    ret.Latency = minu64(latency, U64(0xffffffffffffffff)/1000) * 1000;
-    pa_threaded_mainloop_unlock(self->loop);
+    else if(UNLIKELY(neg))
+        latency = 0;
+    ret.Latency = (ALint64)minu64(latency, U64(0x7fffffffffffffff)/1000) * 1000;
 
     return ret;
 }
@@ -1715,21 +1718,24 @@ static ALCuint ALCpulseCapture_availableSamples(ALCpulseCapture *self)
 
 static ClockLatency ALCpulseCapture_getClockLatency(ALCpulseCapture *self)
 {
-    pa_usec_t latency = 0;
     ClockLatency ret;
+    pa_usec_t latency;
     int neg, err;
 
     pa_threaded_mainloop_lock(self->loop);
     ret.ClockTime = GetDeviceClockTime(STATIC_CAST(ALCbackend,self)->mDevice);
-    if((err=pa_stream_get_latency(self->stream, &latency, &neg)) != 0)
+    err = pa_stream_get_latency(self->stream, &latency, &neg);
+    pa_threaded_mainloop_unlock(self->loop);
+
+    if(UNLIKELY(err != 0))
     {
         ERR("Failed to get stream latency: 0x%x\n", err);
         latency = 0;
         neg = 0;
     }
-    if(neg) latency = 0;
-    ret.Latency = minu64(latency, U64(0xffffffffffffffff)/1000) * 1000;
-    pa_threaded_mainloop_unlock(self->loop);
+    else if(UNLIKELY(neg))
+        latency = 0;
+    ret.Latency = (ALint64)minu64(latency, U64(0x7fffffffffffffff)/1000) * 1000;
 
     return ret;
 }

@@ -1379,7 +1379,7 @@ static inline void VectorPartialScatterRev(ALfloat *restrict out, const ALfloat 
     out[0] = xCoeff*in[3] + yCoeff*(in[0] + -in[1] +  in[2]         );
     out[1] = xCoeff*in[2] + yCoeff*(in[0] +  in[1]          + -in[3]);
     out[2] = xCoeff*in[1] + yCoeff*(in[0]          + -in[2] +  in[3]);
-    out[3] = xCoeff*in[0] + yCoeff*(      + -in[1] + -in[2] + -in[3]);
+    out[3] = xCoeff*in[0] + yCoeff*(        -in[1] + -in[2] + -in[3]);
 }
 
 /* This applies a Gerzon multiple-in/multiple-out (MIMO) vector all-pass

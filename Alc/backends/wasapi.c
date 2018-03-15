@@ -1984,11 +1984,6 @@ static void ALCwasapiBackendFactory_deinit(ALCwasapiBackendFactory* UNUSED(self)
 
 static ALCboolean ALCwasapiBackendFactory_querySupport(ALCwasapiBackendFactory* UNUSED(self), ALCbackend_Type type)
 {
-    /* TODO: Disable capture with mmdevapi for now, since it doesn't do any
-     * rechanneling or resampling; if the device is configured for 48000hz
-     * stereo input, for example, and the app asks for 22050hz mono,
-     * initialization will fail.
-     */
     if(type == ALCbackend_Playback || type == ALCbackend_Capture)
         return ALC_TRUE;
     return ALC_FALSE;

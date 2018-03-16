@@ -235,8 +235,8 @@ static ALfloat dot_product(const ALfloat vec0[3], const ALfloat vec1[3])
 int main(int argc, char **argv)
 {
     static const int MaxTransitions = 8;
-    EFXEAXREVERBPROPERTIES reverb0 = EFX_REVERB_PRESET_CASTLE_LARGEROOM;
-    EFXEAXREVERBPROPERTIES reverb1 = EFX_REVERB_PRESET_CASTLE_LONGPASSAGE;
+    EFXEAXREVERBPROPERTIES reverb0 = EFX_REVERB_PRESET_CARPETEDHALLWAY;
+    EFXEAXREVERBPROPERTIES reverb1 = EFX_REVERB_PRESET_BATHROOM;
     struct timespec basetime;
     ALCdevice *device = NULL;
     ALCcontext *context = NULL;

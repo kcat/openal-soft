@@ -167,6 +167,7 @@ EffectStateFactory *EchoStateFactory_getFactory(void);
 EffectStateFactory *EqualizerStateFactory_getFactory(void);
 EffectStateFactory *FlangerStateFactory_getFactory(void);
 EffectStateFactory *ModulatorStateFactory_getFactory(void);
+EffectStateFactory *PshifterStateFactory_getFactory(void);
 
 EffectStateFactory *DedicatedStateFactory_getFactory(void);
 

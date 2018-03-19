@@ -1060,97 +1060,52 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
     }
 }
 
-/* Creates a transform matrix given a reverb vector. This works by first
- * creating an inverse rotation around Y then X, applying a Z-focus transform,
- * then non-inverse rotations back around X then Y, to place the focal point in
- * the direction of the vector, using the vector length as a focus strength.
- *
- * This convoluted construction ultimately results in a B-Format transformation
- * matrix that retains its original orientation, but spatially focuses the
- * signal in the desired direction. There is probably a more efficient way to
- * do this, but let's see how good the optimizer is.
+/* Creates a transform matrix given a reverb vector. The vector pans the reverb
+ * reflections toward the given direction, using its magnitude (up to 1) as a
+ * focal strength. This function results in a B-Format transformation matrix
+ * that spatially focuses the signal in the desired direction.
  */
 static aluMatrixf GetTransformFromVector(const ALfloat *vec)
 {
     const ALfloat sqrt_3 = 1.732050808f;
-    aluMatrixf zfocus, xrot, yrot;
-    aluMatrixf tmp1, tmp2;
-    ALfloat length;
-    ALfloat sa, a;
+    aluMatrixf focus;
+    ALfloat norm[3];
+    ALfloat mag;
 
-    length = sqrtf(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
-
-    /* Define a Z-focus (X in Ambisonics) transform, given the panning vector
-     * length.
+    /* Normalize the panning vector according to the N3D scale, which has an
+     * extra sqrt(3) term on the directional components. Converting from OpenAL
+     * to B-Format also requires negating X (ACN 1) and Z (ACN 3). Note however
+     * that the reverb panning vectors use right-handed coordinates, unlike the
+     * rest of OpenAL which use left-handed. This is fixed by negating Z, which
+     * cancels out with the B-Format Z negation.
      */
-    sa = sinf(minf(length, 1.0f) * (F_PI/2.0f));
-    aluMatrixfSet(&zfocus,
-        1.0f/(1.0f+sa), 0.0f, 0.0f, sa/(1.0f+sa)/sqrt_3,
-        0.0f,  sqrtf((1.0f-sa)/(1.0f+sa)),  0.0f,  0.0f,
-        0.0f,  0.0f,  sqrtf((1.0f-sa)/(1.0f+sa)),  0.0f,
-        sa/(1.0f+sa)*sqrt_3, 0.0f, 0.0f, 1.0f/(1.0f+sa)
+    mag = sqrtf(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
+    if(mag > 1.0f)
+    {
+        norm[0] = vec[0] / mag * -sqrt_3;
+        norm[1] = vec[1] / mag * sqrt_3;
+        norm[2] = vec[2] / mag * sqrt_3;
+        mag = 1.0f;
+    }
+    else
+    {
+        /* If the magnitude is less than or equal to 1, just apply the sqrt(3)
+         * term. There's no need to renormalize the magnitude since it would
+         * just be reapplied in the matrix.
+         */
+        norm[0] = vec[0] * -sqrt_3;
+        norm[1] = vec[1] * sqrt_3;
+        norm[2] = vec[2] * sqrt_3;
+    }
+
+    aluMatrixfSet(&focus,
+        1.0f,   0.0f,    0.0f,   0.0f,
+        norm[0], 1.0f-mag, 0.0f, 0.0f,
+        norm[1], 0.0f, 1.0f-mag, 0.0f,
+        norm[2], 0.0f, 0.0f, 1.0f-mag
     );
 
-    /* Define rotation around X (Y in Ambisonics) */
-    a = atan2f(vec[1], sqrtf(vec[0]*vec[0] + vec[2]*vec[2]));
-    aluMatrixfSet(&xrot,
-        1.0f, 0.0f,     0.0f,    0.0f,
-        0.0f, 1.0f,     0.0f,    0.0f,
-        0.0f, 0.0f,  cosf(a), sinf(a),
-        0.0f, 0.0f, -sinf(a), cosf(a)
-    );
-
-    /* Define rotation around Y (Z in Ambisonics). NOTE: EFX's reverb vectors
-     * use a right-handled coordinate system, compared to the rest of OpenAL
-     * which uses left-handed. This is fixed by negating Z, however it would
-     * need to also be negated to get a proper Ambisonics angle, thus
-     * cancelling it out.
-     */
-    a = atan2f(-vec[0], vec[2]);
-    aluMatrixfSet(&yrot,
-        1.0f,     0.0f, 0.0f,    0.0f,
-        0.0f,  cosf(a), 0.0f, sinf(a),
-        0.0f,     0.0f, 1.0f,    0.0f,
-        0.0f, -sinf(a), 0.0f, cosf(a)
-    );
-
-    /* First, define a matrix that applies the inverse of the Y- then X-
-     * rotation matrices, so that the desired direction lands on Z.
-     */
-#define MATRIX_INVMULT(_res, _m1, _m2) do {                                   \
-    int row, col;                                                             \
-    for(col = 0;col < 4;col++)                                                \
-    {                                                                         \
-        for(row = 0;row < 4;row++)                                            \
-            _res.m[row][col] = _m1.m[0][row]*_m2.m[col][0] +                  \
-                               _m1.m[1][row]*_m2.m[col][1] +                  \
-                               _m1.m[2][row]*_m2.m[col][2] +                  \
-                               _m1.m[3][row]*_m2.m[col][3];                   \
-    }                                                                         \
-} while(0)
-    MATRIX_INVMULT(tmp1, xrot, yrot);
-#undef MATRIX_INVMULT
-
-#define MATRIX_MULT(_res, _m1, _m2) do {                                      \
-    int row, col;                                                             \
-    for(col = 0;col < 4;col++)                                                \
-    {                                                                         \
-        for(row = 0;row < 4;row++)                                            \
-            _res.m[row][col] = _m1.m[row][0]*_m2.m[0][col] +                  \
-                               _m1.m[row][1]*_m2.m[1][col] +                  \
-                               _m1.m[row][2]*_m2.m[2][col] +                  \
-                               _m1.m[row][3]*_m2.m[3][col];                   \
-    }                                                                         \
-} while(0)
-    /* Now apply matrices to focus on Z, then rotate back around X then Y, to
-     * result in a focus in the direction of the vector.
-     */
-    MATRIX_MULT(tmp2, zfocus, tmp1);
-    MATRIX_MULT(tmp1, xrot, tmp2);
-    MATRIX_MULT(tmp2, yrot, tmp1);
-#undef MATRIX_MULT
-
-    return tmp2;
+    return focus;
 }
 
 /* Update the early and late 3D panning gains. */

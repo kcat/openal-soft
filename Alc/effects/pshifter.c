@@ -29,6 +29,7 @@
 #include "alError.h"
 #include "alu.h"
 
+#define MAX_SIZE 2048
 
 typedef struct ALcomplex{
 
@@ -67,17 +68,17 @@ typedef struct ALpshifterState {
     ALfloat   Frequency;
 
     /*Effects buffers*/
-    ALfloat   InFIFO[BUFFERSIZE];
-    ALfloat   OutFIFO[BUFFERSIZE];
-    ALfloat   LastPhase[(BUFFERSIZE>>1) +1];
-    ALfloat   SumPhase[(BUFFERSIZE>>1) +1];
-    ALfloat   OutputAccum[BUFFERSIZE<<1];
-    ALfloat   window[BUFFERSIZE];
+    ALfloat   InFIFO[MAX_SIZE];
+    ALfloat   OutFIFO[MAX_SIZE];
+    ALfloat   LastPhase[(MAX_SIZE>>1) +1];
+    ALfloat   SumPhase[(MAX_SIZE>>1) +1];
+    ALfloat   OutputAccum[MAX_SIZE<<1];
+    ALfloat   window[MAX_SIZE];
 
-    ALcomplex FFTbuffer[BUFFERSIZE];
+    ALcomplex FFTbuffer[MAX_SIZE];
 
-    ALfrequencyDomain Analysis_buffer[BUFFERSIZE];
-    ALfrequencyDomain Syntesis_buffer[BUFFERSIZE];
+    ALfrequencyDomain Analysis_buffer[MAX_SIZE];
+    ALfrequencyDomain Syntesis_buffer[MAX_SIZE];
 
 
 } ALpshifterState;
@@ -102,20 +103,20 @@ static void ALpshifterState_Construct(ALpshifterState *state)
     SET_VTABLE2(ALpshifterState, ALeffectState, state);
 
     /*Initializing parameters and set to zero the buffers */
-    state->STFT_size     =  BUFFERSIZE>>1;
+    state->STFT_size     =  MAX_SIZE>>1;
     state->oversamp      =  1<<2;
 
     state->step          =  state->STFT_size / state->oversamp ;
     state->FIFOLatency   =  state->step * ( state->oversamp-1 );
     state->count         =  state->FIFOLatency;
     
-    memset(state->InFIFO,          0, BUFFERSIZE*sizeof(ALfloat));
-    memset(state->OutFIFO,         0, BUFFERSIZE*sizeof(ALfloat));
-    memset(state->FFTbuffer,       0, BUFFERSIZE*sizeof(ALcomplex));
-    memset(state->LastPhase,       0, ((BUFFERSIZE>>1) +1)*sizeof(ALfloat));
-    memset(state->SumPhase,        0, ((BUFFERSIZE>>1) +1)*sizeof(ALfloat));
-    memset(state->OutputAccum,     0, (BUFFERSIZE<<1)*sizeof(ALfloat));
-    memset(state->Analysis_buffer, 0, BUFFERSIZE*sizeof(ALfrequencyDomain));
+    memset(state->InFIFO,          0, MAX_SIZE*sizeof(ALfloat));
+    memset(state->OutFIFO,         0, MAX_SIZE*sizeof(ALfloat));
+    memset(state->FFTbuffer,       0, MAX_SIZE*sizeof(ALcomplex));
+    memset(state->LastPhase,       0, ((MAX_SIZE>>1) +1)*sizeof(ALfloat));
+    memset(state->SumPhase,        0, ((MAX_SIZE>>1) +1)*sizeof(ALfloat));
+    memset(state->OutputAccum,     0, (MAX_SIZE<<1)*sizeof(ALfloat));
+    memset(state->Analysis_buffer, 0, MAX_SIZE*sizeof(ALfrequencyDomain));
     
     /* Create lockup table of the Hann window for the desired size, i.e. STFT_size */
     for ( i = 0; i < state->STFT_size>>1 ; i++ )

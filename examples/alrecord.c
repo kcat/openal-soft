@@ -184,7 +184,7 @@ int main(int argc, char **argv)
                 return 1;
             }
 
-            recorder.mRecTime = strtof(argv[1], &end);
+            recorder.mRecTime = (float)strtod(argv[1], &end);
             if(!(recorder.mRecTime >= 1.0f && recorder.mRecTime <= 10.0f) || (end && *end != '\0'))
             {
                 fprintf(stderr, "Invalid record time: %s\n", argv[1]);

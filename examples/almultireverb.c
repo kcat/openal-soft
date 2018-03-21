@@ -231,12 +231,227 @@ static ALfloat dot_product(const ALfloat vec0[3], const ALfloat vec1[3])
     return vec0[0]*vec1[0] + vec0[1]*vec1[1] + vec0[2]*vec1[2];
 }
 
+/* Helper to normalize a given vector. */
+static void normalize(ALfloat vec[3])
+{
+    ALfloat mag = sqrtf(dot_product(vec, vec));
+    if(mag > 0.00001f)
+    {
+        vec[0] /= mag;
+        vec[1] /= mag;
+        vec[2] /= mag;
+    }
+    else
+    {
+        vec[0] = 0.0f;
+        vec[1] = 0.0f;
+        vec[2] = 0.0f;
+    }
+}
+
+
+/* The main update function to update the listener and environment effects. */
+static void UpdateListenerAndEffects(float timediff, const ALuint slots[2], const ALuint effects[2], const EFXEAXREVERBPROPERTIES reverbs[2])
+{
+    static const ALfloat listener_move_scale = 10.0f;
+    /* Individual reverb zones are connected via "portals". Each portal has a
+     * position (center point of the connecting area), a normal (facing
+     * direction), and a radius (approximate size of the connecting area).
+     */
+    const ALfloat portal_pos[3] = { 0.0f, 0.0f, 0.0f };
+    const ALfloat portal_norm[3] = { sqrtf(0.5f), 0.0f, -sqrtf(0.5f) };
+    const ALfloat portal_radius = 2.5f;
+    ALfloat other_dir[3], this_dir[3];
+    ALfloat listener_pos[3];
+    ALfloat local_norm[3];
+    ALfloat local_dir[3];
+    ALfloat near_edge[3];
+    ALfloat far_edge[3];
+    ALfloat dist, edist;
+
+    /* Update the listener position for the amount of time passed. This uses a
+     * simple triangular LFO to offset the position (moves along the X axis
+     * between -listener_move_scale and +listener_move_scale for each
+     * transition).
+     */
+    listener_pos[0] = (fabsf(2.0f - timediff/2.0f) - 1.0f) * listener_move_scale;
+    listener_pos[1] = 0.0f;
+    listener_pos[2] = 0.0f;
+    alListenerfv(AL_POSITION, listener_pos);
+
+    /* Calculate local_dir, which represents the listener-relative point to the
+     * adjacent zone (should also include orientation). Because EAX Reverb uses
+     * right-handed coordinates instead of left-handed like the rest of OpenAL,
+     * negate Z for the local values.
+     */
+    local_dir[0] = portal_pos[0] - listener_pos[0];
+    local_dir[1] = portal_pos[1] - listener_pos[1];
+    local_dir[2] = -(portal_pos[2] - listener_pos[2]);
+    /* A normal application would also rotate the portal's normal given the
+     * listener orientation, to get the listener-relative normal.
+     */
+    local_norm[0] = portal_norm[0];
+    local_norm[1] = portal_norm[1];
+    local_norm[2] = -portal_norm[2];
+
+    /* Calculate the distance from the listener to the portal, and ensure it's
+     * far enough away to not suffer severe floating-point precision issues.
+     */
+    dist = sqrtf(dot_product(local_dir, local_dir));
+    if(dist > 0.00001f)
+    {
+        const EFXEAXREVERBPROPERTIES *other_reverb, *this_reverb;
+        ALuint other_effect, this_effect;
+        ALfloat magnitude, dir_dot_norm;
+
+        /* Normalize the direction to the portal. */
+        local_dir[0] /= dist;
+        local_dir[1] /= dist;
+        local_dir[2] /= dist;
+
+        /* Calculate the dot product of the portal's local direction and local
+         * normal, which is used for angular and side checks later on.
+         */
+        dir_dot_norm = dot_product(local_dir, local_norm);
+
+        /* Figure out which zone we're in. */
+        if(dir_dot_norm <= 0.0f)
+        {
+            /* We're in front of the portal, so we're in Zone 0. */
+            this_effect = effects[0];
+            other_effect = effects[1];
+            this_reverb = &reverbs[0];
+            other_reverb = &reverbs[1];
+        }
+        else
+        {
+            /* We're behind the portal, so we're in Zone 1. */
+            this_effect = effects[1];
+            other_effect = effects[0];
+            this_reverb = &reverbs[1];
+            other_reverb = &reverbs[0];
+        }
+
+        /* Calculate the listener-relative extents of the portal. */
+        /* First, project the listener-to-portal vector onto the portal's plane
+         * to get the portal-relative direction along the plane that goes away
+         * from the listener (toward the farthest edge of the portal).
+         */
+        far_edge[0] = local_dir[0] - local_norm[0]*dir_dot_norm;
+        far_edge[1] = local_dir[1] - local_norm[1]*dir_dot_norm;
+        far_edge[2] = local_dir[2] - local_norm[2]*dir_dot_norm;
+
+        edist = sqrtf(dot_product(far_edge, far_edge));
+        if(edist > 0.0001f)
+        {
+            /* Rescale the portal-relative vector to be at the radius edge. */
+            ALfloat mag = portal_radius / edist;
+            far_edge[0] *= mag;
+            far_edge[1] *= mag;
+            far_edge[2] *= mag;
+
+            /* Calculate the closest edge of the portal by negating the
+             * farthest, and add an offset to make them both relative to the
+             * listener.
+             */
+            near_edge[0] = local_dir[0]*dist - far_edge[0];
+            near_edge[1] = local_dir[1]*dist - far_edge[1];
+            near_edge[2] = local_dir[2]*dist - far_edge[2];
+            far_edge[0] += local_dir[0]*dist;
+            far_edge[1] += local_dir[1]*dist;
+            far_edge[2] += local_dir[2]*dist;
+
+            /* Normalize the listener-relative extents of the portal, then
+             * calculate the panning magnitude for the other zone given the
+             * apparent size of the opening. The panning magnitude affects the
+             * envelopment of the environment, with 1 being a point, 0.5 being
+             * half coverage around the listener, and 0 being full coverage.
+             */
+            normalize(far_edge);
+            normalize(near_edge);
+            magnitude = 1.0f - acosf(dot_product(far_edge, near_edge))/(float)(M_PI*2.0);
+
+            /* Recalculate the panning direction, to be directly between the
+             * direction of the two extents.
+             */
+            local_dir[0] = far_edge[0] + near_edge[0];
+            local_dir[1] = far_edge[1] + near_edge[1];
+            local_dir[2] = far_edge[2] + near_edge[2];
+            normalize(local_dir);
+        }
+        else
+        {
+            /* If we get here, the listener is directly in front of or behind
+             * the center of the portal, making all aperture edges effectively
+             * equidistant. Calculating the panning magnitude is simplified,
+             * using the arctangent of the radius and distance.
+             */
+            magnitude = 1.0f - (atan2f(portal_radius, dist) / (float)M_PI);
+        }
+
+        /* Scale the other zone's panning vector. */
+        other_dir[0] = local_dir[0] * magnitude;
+        other_dir[1] = local_dir[1] * magnitude;
+        other_dir[2] = local_dir[2] * magnitude;
+        /* Pan the current zone to the opposite direction of the portal, and
+         * take the remaining percentage of the portal's magnitude.
+         */
+        this_dir[0] = local_dir[0] * (magnitude-1.0f);
+        this_dir[1] = local_dir[1] * (magnitude-1.0f);
+        this_dir[2] = local_dir[2] * (magnitude-1.0f);
+
+        /* Now set the effects' panning vectors and gain. Energy is shared
+         * between environments, so attenuate according to each zone's
+         * contribution (note: gain^2 = energy).
+         */
+        alEffectf(this_effect, AL_EAXREVERB_REFLECTIONS_GAIN, this_reverb->flReflectionsGain * sqrtf(magnitude));
+        alEffectf(this_effect, AL_EAXREVERB_LATE_REVERB_GAIN, this_reverb->flLateReverbGain * sqrtf(magnitude));
+        alEffectfv(this_effect, AL_EAXREVERB_REFLECTIONS_PAN, this_dir);
+        alEffectfv(this_effect, AL_EAXREVERB_LATE_REVERB_PAN, this_dir);
+
+        alEffectf(other_effect, AL_EAXREVERB_REFLECTIONS_GAIN, other_reverb->flReflectionsGain * sqrtf(1.0f-magnitude));
+        alEffectf(other_effect, AL_EAXREVERB_LATE_REVERB_GAIN, other_reverb->flLateReverbGain * sqrtf(1.0f-magnitude));
+        alEffectfv(other_effect, AL_EAXREVERB_REFLECTIONS_PAN, other_dir);
+        alEffectfv(other_effect, AL_EAXREVERB_LATE_REVERB_PAN, other_dir);
+    }
+    else
+    {
+        /* We're practically in the center of the portal. Give the panning
+         * vectors a 50/50 split, with Zone 0 covering the half in front of
+         * the normal, and Zone 1 covering the half behind.
+         */
+        this_dir[0] = local_norm[0] / 2.0f;
+        this_dir[1] = local_norm[1] / 2.0f;
+        this_dir[2] = local_norm[2] / 2.0f;
+
+        other_dir[0] = local_norm[0] / -2.0f;
+        other_dir[1] = local_norm[1] / -2.0f;
+        other_dir[2] = local_norm[2] / -2.0f;
+
+        alEffectf(effects[0], AL_EAXREVERB_REFLECTIONS_GAIN, reverbs[0].flReflectionsGain * sqrtf(0.5f));
+        alEffectf(effects[0], AL_EAXREVERB_LATE_REVERB_GAIN, reverbs[0].flLateReverbGain * sqrtf(0.5f));
+        alEffectfv(effects[0], AL_EAXREVERB_REFLECTIONS_PAN, this_dir);
+        alEffectfv(effects[0], AL_EAXREVERB_LATE_REVERB_PAN, this_dir);
+
+        alEffectf(effects[1], AL_EAXREVERB_REFLECTIONS_GAIN, reverbs[1].flReflectionsGain * sqrtf(0.5f));
+        alEffectf(effects[1], AL_EAXREVERB_LATE_REVERB_GAIN, reverbs[1].flLateReverbGain * sqrtf(0.5f));
+        alEffectfv(effects[1], AL_EAXREVERB_REFLECTIONS_PAN, other_dir);
+        alEffectfv(effects[1], AL_EAXREVERB_LATE_REVERB_PAN, other_dir);
+    }
+
+    /* Finally, update the effect slots with the updated effect parameters. */
+    alAuxiliaryEffectSloti(slots[0], AL_EFFECTSLOT_EFFECT, effects[0]);
+    alAuxiliaryEffectSloti(slots[1], AL_EFFECTSLOT_EFFECT, effects[1]);
+}
+
 
 int main(int argc, char **argv)
 {
     static const int MaxTransitions = 8;
-    EFXEAXREVERBPROPERTIES reverb0 = EFX_REVERB_PRESET_CARPETEDHALLWAY;
-    EFXEAXREVERBPROPERTIES reverb1 = EFX_REVERB_PRESET_BATHROOM;
+    EFXEAXREVERBPROPERTIES reverbs[2] = {
+        EFX_REVERB_PRESET_CARPETEDHALLWAY,
+        EFX_REVERB_PRESET_BATHROOM
+    };
     struct timespec basetime;
     ALCdevice *device = NULL;
     ALCcontext *context = NULL;
@@ -363,7 +578,7 @@ int main(int argc, char **argv)
      * relative to the listener.
      */
     alGenEffects(2, effects);
-    if(!LoadEffect(effects[0], &reverb0) || !LoadEffect(effects[1], &reverb1))
+    if(!LoadEffect(effects[0], &reverbs[0]) || !LoadEffect(effects[1], &reverbs[1]))
     {
         alDeleteEffects(2, effects);
         alDeleteBuffers(1, &buffer);
@@ -396,10 +611,13 @@ int main(int argc, char **argv)
     alFilterf(direct_filter, AL_LOWPASS_GAIN, direct_gain);
     assert(alGetError()==AL_NO_ERROR && "Failed to set direct filter");
 
-    /* Create the source to play the sound with. */
+    /* Create the source to play the sound with, place it in front of the
+     * listener's path in the left zone.
+     */
     source = 0;
     alGenSources(1, &source);
     alSourcei(source, AL_LOOPING, AL_TRUE);
+    alSource3f(source, AL_POSITION, -5.0f, 0.0f, -2.0f);
     alSourcei(source, AL_DIRECT_FILTER, direct_filter);
     alSourcei(source, AL_BUFFER, buffer);
 
@@ -407,7 +625,8 @@ int main(int argc, char **argv)
      * to Zone 0's slot, and send 1 to Zone 1's slot. Filters can be specified
      * to occlude the source from each zone by varying amounts; for example, a
      * source within a particular zone would be unfiltered, while a source that
-     * can only see a zone through a window may be attenuated for that zone.
+     * can only see a zone through a window or thin wall may be attenuated for
+     * that zone.
      */
     alSource3i(source, AL_AUXILIARY_SEND_FILTER, slots[0], 0, AL_FILTER_NULL);
     alSource3i(source, AL_AUXILIARY_SEND_FILTER, slots[1], 1, AL_FILTER_NULL);
@@ -421,23 +640,8 @@ int main(int argc, char **argv)
     /* Play the sound for a while. */
     alSourcePlay(source);
     do {
-        /* Individual reverb zones are connected via "portals". Each portal has
-         * a position (center point of the connecting area), a normal (facing
-         * direction), and a radius (approximate size of the connecting area).
-         * For this example it also has movement velocity, although normally it
-         * would be the listener that moves relative to the portal instead of
-         * the portal itself.
-         */
-        const ALfloat portal_pos[3] = { -10.0f, 0.0f, 0.0f };
-        const ALfloat portal_norm[3] = { 1.0f, 0.0f, 0.0f };
-        const ALfloat portal_vel[3] = { 5.0f, 0.0f, 0.0f };
-        const ALfloat portal_radius = 2.5f;
-        ALfloat other_dir[3], this_dir[3];
-        ALfloat local_norm[3];
-        ALfloat local_dir[3];
-        ALfloat local_radius;
-        ALfloat dist, timediff;
         struct timespec curtime;
+        ALfloat timediff;
 
         /* Start a batch update, to ensure all changes apply simultaneously. */
         alcSuspendContext(context);
@@ -452,136 +656,25 @@ int main(int argc, char **argv)
         /* Avoid negative time deltas, in case of non-monotonic clocks. */
         if(timediff < 0.0f)
             timediff = 0.0f;
-        else while(timediff >= 4.0f)
+        else while(timediff >= 4.0f*((loops&1)+1))
         {
-            /* For this example, each transition occurs over 4 seconds.
-             * Decrease the delta and increase the base time to start a new
-             * transition.
+            /* For this example, each transition occurs over 4 seconds, and
+             * there's 2 transitions per cycle.
              */
-            timediff -= 4.0f;
-            basetime.tv_sec += 4;
             if(++loops < MaxTransitions)
                 printf("Transition %d of %d...\n", loops+1, MaxTransitions);
-        }
-
-        /* Move the portal according to the amount of time passed. local_dir
-         * represents the listener-relative point to the adjacent zone.
-         */
-        local_dir[0] = portal_pos[0] + portal_vel[0]*timediff;
-        local_dir[1] = portal_pos[1] + portal_vel[1]*timediff;
-        local_dir[2] = portal_pos[2] + portal_vel[2]*timediff;
-        /* A normal application would also rotate the portal's normal given the
-         * listener orientation, to get the listener-relative normal.
-         *
-         * For this example, the portal is always head-on but every other
-         * transition negates the normal. This effectively simulates a
-         * different portal moving in closer than the last one that faces the
-         * other way, switching the old adjacent zone to a new one.
-         */
-        local_norm[0] = portal_norm[0] * ((loops&1) ? -1.0f : 1.0f);
-        local_norm[1] = portal_norm[1] * ((loops&1) ? -1.0f : 1.0f);
-        local_norm[2] = portal_norm[2] * ((loops&1) ? -1.0f : 1.0f);
-
-        /* Calculate the distance from the listener to the portal. */
-        dist = sqrtf(dot_product(local_dir, local_dir));
-        if(!(dist > 0.00001f))
-        {
-            /* We're practically in the center of the portal. Give the panning
-             * vectors a 50/50 split, with Zone 0 covering the half in front of
-             * the normal, and Zone 1 covering the half behind.
-             */
-            this_dir[0] = local_norm[0] / 2.0f;
-            this_dir[1] = local_norm[1] / 2.0f;
-            this_dir[2] = local_norm[2] / 2.0f;
-
-            other_dir[0] = local_norm[0] / -2.0f;
-            other_dir[1] = local_norm[1] / -2.0f;
-            other_dir[2] = local_norm[2] / -2.0f;
-
-            alEffectf(effects[0], AL_EAXREVERB_GAIN, reverb0.flGain);
-            alEffectfv(effects[0], AL_EAXREVERB_REFLECTIONS_PAN, this_dir);
-            alEffectfv(effects[0], AL_EAXREVERB_LATE_REVERB_PAN, this_dir);
-
-            alEffectf(effects[1], AL_EAXREVERB_GAIN, reverb1.flGain);
-            alEffectfv(effects[1], AL_EAXREVERB_REFLECTIONS_PAN, other_dir);
-            alEffectfv(effects[1], AL_EAXREVERB_LATE_REVERB_PAN, other_dir);
-        }
-        else
-        {
-            const EFXEAXREVERBPROPERTIES *other_reverb;
-            const EFXEAXREVERBPROPERTIES *this_reverb;
-            ALuint other_effect, this_effect;
-            ALfloat spread, attn;
-
-            /* Normalize the direction to the portal. */
-            local_dir[0] /= dist;
-            local_dir[1] /= dist;
-            local_dir[2] /= dist;
-
-            /* Scale the radius according to its local angle. The visibility to
-             * the other zone reduces as the portal becomes perpendicular.
-             */
-            local_radius = portal_radius * fabsf(dot_product(local_dir, local_norm));
-
-            /* Calculate distance attenuation for the other zone, using the
-             * standard inverse distance model with the radius as a reference.
-             */
-            attn = local_radius / dist;
-            if(attn > 1.0f) attn = 1.0f;
-
-            /* Calculate the 'spread' of the portal, which is the amount of
-             * coverage the other zone has around the listener.
-             */
-            spread = atan2f(local_radius, dist) / (ALfloat)M_PI;
-
-            /* Figure out which zone we're in, given the direction to the
-             * portal and its normal.
-             */
-            if(dot_product(local_dir, local_norm) <= 0.0f)
+            if(!(loops&1))
             {
-                /* We're in front of the portal, so we're in Zone 0. */
-                this_effect = effects[0];
-                other_effect = effects[1];
-                this_reverb = &reverb0;
-                other_reverb = &reverb1;
+                /* Cycle completed. Decrease the delta and increase the base
+                 * time to start a new cycle.
+                 */
+                timediff -= 8.0f;
+                basetime.tv_sec += 8;
             }
-            else
-            {
-                /* We're behind the portal, so we're in Zone 1. */
-                this_effect = effects[1];
-                other_effect = effects[0];
-                this_reverb = &reverb1;
-                other_reverb = &reverb0;
-            }
-
-            /* Scale the other zone's panning vector down as the portal's
-             * spread increases, so that it envelops the listener more.
-             */
-            other_dir[0] = local_dir[0] * (1.0f-spread);
-            other_dir[1] = local_dir[1] * (1.0f-spread);
-            other_dir[2] = local_dir[2] * (1.0f-spread);
-            /* Pan the current zone to the opposite direction of the portal,
-             * and take the remaining percentage of the portal's spread.
-             */
-            this_dir[0] = local_dir[0] * -spread;
-            this_dir[1] = local_dir[1] * -spread;
-            this_dir[2] = local_dir[2] * -spread;
-
-            /* Now set the effects' panning vectors and distance attenuation. */
-            alEffectf(this_effect, AL_EAXREVERB_GAIN, this_reverb->flGain);
-            alEffectfv(this_effect, AL_EAXREVERB_REFLECTIONS_PAN, this_dir);
-            alEffectfv(this_effect, AL_EAXREVERB_LATE_REVERB_PAN, this_dir);
-
-            alEffectf(other_effect, AL_EAXREVERB_GAIN, other_reverb->flGain * attn);
-            alEffectfv(other_effect, AL_EAXREVERB_REFLECTIONS_PAN, other_dir);
-            alEffectfv(other_effect, AL_EAXREVERB_LATE_REVERB_PAN, other_dir);
         }
 
-        /* Finally, update the effect slots with the updated effect parameters,
-         * and finish the update batch.
-         */
-        alAuxiliaryEffectSloti(slots[0], AL_EFFECTSLOT_EFFECT, effects[0]);
-        alAuxiliaryEffectSloti(slots[1], AL_EFFECTSLOT_EFFECT, effects[1]);
+        /* Update the listener and effects, and finish the batch. */
+        UpdateListenerAndEffects(timediff, slots, effects, reverbs);
         alcProcessContext(context);
 
         al_nssleep(10000000);

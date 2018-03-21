@@ -45,6 +45,7 @@ const struct EffectList EffectList[EFFECTLIST_SIZE] = {
     { "equalizer",  EQUALIZER_EFFECT,  AL_EFFECT_EQUALIZER },
     { "flanger",    FLANGER_EFFECT,    AL_EFFECT_FLANGER },
     { "modulator",  MODULATOR_EFFECT,  AL_EFFECT_RING_MODULATOR },
+    { "pshifter",   PSHIFTER_EFFECT,   AL_EFFECT_PITCH_SHIFTER },
     { "dedicated",  DEDICATED_EFFECT,  AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT },
     { "dedicated",  DEDICATED_EFFECT,  AL_EFFECT_DEDICATED_DIALOGUE },
 };
@@ -588,6 +589,11 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         effect->Props.Modulator.HighPassCutoff = AL_RING_MODULATOR_DEFAULT_HIGHPASS_CUTOFF;
         effect->Props.Modulator.Waveform       = AL_RING_MODULATOR_DEFAULT_WAVEFORM;
         effect->vtab = &ALmodulator_vtable;
+        break;
+    case AL_EFFECT_PITCH_SHIFTER:
+        effect->Props.Pshifter.CoarseTune      = AL_PITCH_SHIFTER_DEFAULT_COARSE_TUNE;
+        effect->Props.Pshifter.FineTune        = AL_PITCH_SHIFTER_DEFAULT_FINE_TUNE;
+        effect->vtab = &ALpshifter_vtable;
         break;
     case AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT:
     case AL_EFFECT_DEDICATED_DIALOGUE:

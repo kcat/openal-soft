@@ -244,13 +244,14 @@ static ALvoid ALpshifterState_update(ALpshifterState *state, const ALCcontext *c
 {
     const ALCdevice *device = context->Device;
     ALfloat coeffs[MAX_AMBI_COEFFS];
-    const ALfloat adjust = 0.707945784384f; /*-3dB adjust*/
 
     state->Frequency  = (ALfloat)device->Frequency;
-    state->PitchShift = powf(2.0f,((ALfloat)props->Pshifter.CoarseTune + props->Pshifter.FineTune/100.0f)/12.0f);
+    state->PitchShift = powf(2.0f,
+        (ALfloat)(props->Pshifter.CoarseTune*100 + props->Pshifter.FineTune) / 1200.0f
+    );
 
     CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
-    ComputeDryPanGains(&device->Dry, coeffs, slot->Params.Gain * adjust, state->Gain);
+    ComputeDryPanGains(&device->Dry, coeffs, slot->Params.Gain, state->Gain);
 }
 
 static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

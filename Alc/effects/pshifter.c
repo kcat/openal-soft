@@ -29,7 +29,15 @@
 #include "alError.h"
 #include "alu.h"
 
+
 #define MAX_SIZE 2048
+
+#define STFT_SIZE      (MAX_SIZE>>1)
+#define STFT_HALF_SIZE (STFT_SIZE>>1)
+#define OVERSAMP       (1<<2)
+
+#define STFT_STEP    (STFT_SIZE / OVERSAMP)
+#define FIFO_LATENCY (STFT_STEP * (OVERSAMP-1))
 
 typedef struct ALcomplex {
     ALfloat Real;
@@ -51,10 +59,6 @@ typedef struct ALpshifterState {
 
     /* Effect parameters */
     ALsizei   count;
-    ALsizei   STFT_size;
-    ALsizei   step;
-    ALsizei   FIFOLatency;
-    ALsizei   oversamp;
     ALfloat   PitchShift;
     ALfloat   Frequency;
 
@@ -205,13 +209,10 @@ static void ALpshifterState_Construct(ALpshifterState *state)
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALpshifterState, ALeffectState, state);
 
-    /*Initializing parameters and set to zero the buffers */
-    state->STFT_size     =  MAX_SIZE>>1;
-    state->oversamp      =  1<<2;
-
-    state->step          =  state->STFT_size / state->oversamp ;
-    state->FIFOLatency   =  state->step * ( state->oversamp-1 );
-    state->count         =  state->FIFOLatency;
+    /* Initializing parameters and set to zero the buffers. */
+    state->count      = FIFO_LATENCY;
+    state->PitchShift = 1.0f;
+    state->Frequency  = 1.0f;
 
     memset(state->InFIFO,          0, sizeof(state->InFIFO));
     memset(state->OutFIFO,         0, sizeof(state->OutFIFO));
@@ -222,10 +223,10 @@ static void ALpshifterState_Construct(ALpshifterState *state)
     memset(state->Analysis_buffer, 0, sizeof(state->Analysis_buffer));
 
     /* Create lockup table of the Hann window for the desired size, i.e. STFT_size */
-    for ( i = 0; i < state->STFT_size>>1 ; i++ )
+    for ( i = 0; i < STFT_SIZE>>1 ; i++ )
     {
-         state->window[i] = state->window[state->STFT_size-(i+1)]                                 \
-                          = 0.5f * ( 1 - cosf(F_TAU*(ALfloat)i/(ALfloat)(state->STFT_size-1)));
+         state->window[i] = state->window[STFT_SIZE-(i+1)]
+                          = 0.5f * ( 1 - cosf(F_TAU*(ALfloat)i/(ALfloat)(STFT_SIZE-1)));
     }
 }
 
@@ -258,30 +259,26 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
      * http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/
      */
 
+    static const ALfloat expected = F_TAU / (ALfloat)OVERSAMP;
+    const ALfloat freq_bin = state->Frequency / (ALfloat)STFT_SIZE;
     ALfloat *restrict bufferOut = state->BufferOut;
-    ALsizei i, j, k, STFT_half_size;
-    ALfloat freq_bin, expected, tmp;
-    ALphasor component;
-
-    STFT_half_size = state->STFT_size >> 1;
-    freq_bin       = state->Frequency / (ALfloat)state->STFT_size;
-    expected       = F_TAU / (ALfloat)state->oversamp;
+    ALsizei i, j, k;
 
     for (i = 0; i < SamplesToDo; i++)
     {
         /* Fill FIFO buffer with samples data */
         state->InFIFO[state->count] = SamplesIn[0][i];
-        bufferOut[i]                = state->OutFIFO[state->count - state->FIFOLatency];
+        bufferOut[i]  = state->OutFIFO[state->count - FIFO_LATENCY];
 
         state->count++;
 
         /* Check whether FIFO buffer is filled */
-        if ( state->count >= state->STFT_size )
+        if ( state->count >= STFT_SIZE )
         {
-            state->count = state->FIFOLatency;
+            state->count = FIFO_LATENCY;
 
             /* Real signal windowing and store in FFTbuffer */
-            for ( k = 0; k < state->STFT_size; k++ )
+            for ( k = 0; k < STFT_SIZE; k++ )
             {
                 state->FFTbuffer[k].Real = state->InFIFO[k] * state->window[k];
                 state->FFTbuffer[k].Imag = 0.0f;
@@ -289,13 +286,16 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
 
             /* ANALYSIS */
             /* Apply FFT to FFTbuffer data */
-            FFT( state->FFTbuffer, state->STFT_size, -1 );
+            FFT( state->FFTbuffer, STFT_SIZE, -1 );
 
             /* Analyze the obtained data. Since the real FFT is symmetric, only
              * STFT_half_size+1 samples are needed.
              */
-            for ( k = 0; k <= STFT_half_size; k++ )
+            for ( k = 0; k <= STFT_HALF_SIZE; k++ )
             {
+                ALphasor component;
+                ALfloat tmp;
+
                 /* Compute amplitude and phase */
                 component = rect2polar( state->FFTbuffer[k] );
 
@@ -322,13 +322,13 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
 
             /* PROCESSING */
             /* pitch shifting */
-            memset(state->Syntesis_buffer, 0, state->STFT_size*sizeof(ALfrequencyDomain));
+            memset(state->Syntesis_buffer, 0, STFT_SIZE*sizeof(ALfrequencyDomain));
 
-            for (k = 0; k <= STFT_half_size; k++)
+            for (k = 0; k <= STFT_HALF_SIZE; k++)
             {
                 j = fastf2i( (ALfloat)k*state->PitchShift );
 
-                if ( j <= STFT_half_size )
+                if ( j <= STFT_HALF_SIZE )
                 {
                     state->Syntesis_buffer[j].Amplitude += state->Analysis_buffer[k].Amplitude; 
                     state->Syntesis_buffer[j].Frequency  = state->Analysis_buffer[k].Frequency *
@@ -338,10 +338,13 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
 
             /* SYNTHESIS */
             /* Synthesis the processing data */
-            for ( k = 0; k <= STFT_half_size; k++ )
+            for ( k = 0; k <= STFT_HALF_SIZE; k++ )
             {
+                ALphasor component;
+                ALfloat tmp;
+
                 /* Compute bin deviation from scaled freq */
-                tmp = state->Syntesis_buffer[k].Frequency /freq_bin - (ALfloat)k;
+                tmp = state->Syntesis_buffer[k].Frequency/freq_bin - (ALfloat)k;
 
                 /* Calculate actual delta phase and accumulate it to get bin phase */
                 state->SumPhase[k] += ((ALfloat)k + tmp) * expected;
@@ -354,22 +357,22 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
             }
 
             /* zero negative frequencies for recontruct a real signal */
-            memset( &state->FFTbuffer[STFT_half_size+1], 0, (STFT_half_size-1) * sizeof(ALcomplex) );
+            memset( &state->FFTbuffer[STFT_HALF_SIZE+1], 0, (STFT_HALF_SIZE-1)*sizeof(ALcomplex));
 
             /* Apply iFFT to buffer data */
-            FFT( state->FFTbuffer, state->STFT_size, 1 );
+            FFT( state->FFTbuffer, STFT_SIZE, 1 );
 
             /* Windowing and add to output */
-            for( k=0; k < state->STFT_size; k++ )
+            for( k=0; k < STFT_SIZE; k++ )
             {
                 state->OutputAccum[k] += 2.0f * state->window[k]*state->FFTbuffer[k].Real /
-                                         (STFT_half_size * state->oversamp);
+                                         (STFT_HALF_SIZE * OVERSAMP);
             }
 
             /* Shift accumulator, input & output FIFO */
-            memmove(state->OutFIFO    , state->OutputAccum            , state->step       *sizeof(ALfloat));
-            memmove(state->OutputAccum, state->OutputAccum+state->step, state->STFT_size  *sizeof(ALfloat));
-            memmove(state->InFIFO     , state->InFIFO     +state->step, state->FIFOLatency*sizeof(ALfloat));
+            memmove(state->OutFIFO    , state->OutputAccum          , STFT_STEP   *sizeof(ALfloat));
+            memmove(state->OutputAccum, state->OutputAccum+STFT_STEP, STFT_SIZE   *sizeof(ALfloat));
+            memmove(state->InFIFO     , state->InFIFO     +STFT_STEP, FIFO_LATENCY*sizeof(ALfloat));
         }
     }
 

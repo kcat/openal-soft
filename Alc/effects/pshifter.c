@@ -49,9 +49,6 @@ typedef struct ALFrequencyDomain {
 typedef struct ALpshifterState {
     DERIVE_FROM_TYPE(ALeffectState);
 
-    /* Effect gains for each channel */
-    ALfloat Gain[MAX_OUTPUT_CHANNELS];
-
     /* Effect parameters */
     ALsizei   count;
     ALsizei   STFT_size;
@@ -73,6 +70,11 @@ typedef struct ALpshifterState {
 
     ALfrequencyDomain Analysis_buffer[MAX_SIZE];
     ALfrequencyDomain Syntesis_buffer[MAX_SIZE];
+
+    ALfloat BufferOut[BUFFERSIZE];
+
+    /* Effect gains for each output channel */
+    ALfloat Gain[MAX_OUTPUT_CHANNELS];
 } ALpshifterState;
 
 static ALvoid ALpshifterState_Destruct(ALpshifterState *state);
@@ -256,9 +258,9 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
      * http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/
      */
 
+    ALfloat *restrict bufferOut = state->BufferOut;
     ALsizei i, j, k, STFT_half_size;
     ALfloat freq_bin, expected, tmp;
-    ALfloat bufferOut[BUFFERSIZE];
     ALphasor component;
 
     STFT_half_size = state->STFT_size >> 1;

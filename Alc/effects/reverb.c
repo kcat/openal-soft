@@ -27,10 +27,9 @@
 #include "alMain.h"
 #include "alu.h"
 #include "alAuxEffectSlot.h"
-#include "alEffect.h"
-#include "alFilter.h"
 #include "alListener.h"
 #include "alError.h"
+#include "filters/defs.h"
 
 /* This is a user config option for modifying the overall output of the reverb
  * effect.

@@ -12,13 +12,12 @@
 
 #include "alMain.h"
 #include "alBuffer.h"
-#include "alFilter.h"
-#include "alAuxEffectSlot.h"
 
 #include "hrtf.h"
 #include "align.h"
 #include "nfcfilter.h"
 #include "math_defs.h"
+#include "filters/defs.h"
 
 
 #define MAX_PITCH  (255)

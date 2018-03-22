@@ -34,6 +34,8 @@
 #include "alListener.h"
 #include "alSource.h"
 #include "alBuffer.h"
+#include "alFilter.h"
+#include "alEffect.h"
 #include "alAuxEffectSlot.h"
 #include "alError.h"
 #include "mastering.h"

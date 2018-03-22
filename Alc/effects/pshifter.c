@@ -123,8 +123,8 @@ static inline ALcomplex complex_add( ALcomplex a, ALcomplex b )
     return result;
 }
 
-/* Substraction of two complex numbers (ALcomplex format)*/
-static inline ALcomplex complex_subst( ALcomplex a, ALcomplex b )
+/* Subtraction of two complex numbers (ALcomplex format)*/
+static inline ALcomplex complex_sub( ALcomplex a, ALcomplex b )
 {
     ALcomplex result;
 
@@ -192,7 +192,7 @@ static inline ALvoid FFT(ALcomplex *FFTBuffer, ALsizei FFTSize, ALint Sign)
              for ( k = j; k < FFTSize; k += step )
              {
                   temp               = complex_mult( FFTBuffer[k+step2], u );
-                  FFTBuffer[k+step2] = complex_subst( FFTBuffer[k], temp );
+                  FFTBuffer[k+step2] = complex_sub( FFTBuffer[k], temp );
                   FFTBuffer[k]       = complex_add( FFTBuffer[k], temp );
              }
 

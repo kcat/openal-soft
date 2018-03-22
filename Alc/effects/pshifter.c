@@ -149,7 +149,7 @@ static inline ALcomplex complex_mult( ALcomplex a, ALcomplex b )
    iFFT (inverse). Fills FFTBuffer[0...FFTSize-1] with the Discrete Fourier Transform (DFT) 
    of the time domain data stored in FFTBuffer[0...FFTSize-1]. FFTBuffer is an array of
    complex numbers (ALcomplex), FFTSize MUST BE power of two.*/
-static inline ALvoid FFT(ALcomplex *FFTBuffer, ALsizei FFTSize, ALint Sign)
+static inline ALvoid FFT(ALcomplex *FFTBuffer, ALsizei FFTSize, ALfloat Sign)
 {
     ALfloat arg;
     ALsizei i, j, k, mask, step, step2;
@@ -288,7 +288,7 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
 
         /* ANALYSIS */
         /* Apply FFT to FFTbuffer data */
-        FFT(state->FFTbuffer, STFT_SIZE, -1);
+        FFT(state->FFTbuffer, STFT_SIZE, -1.0f);
 
         /* Analyze the obtained data. Since the real FFT is symmetric, only
          * STFT_half_size+1 samples are needed.
@@ -359,7 +359,7 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
         memset(&state->FFTbuffer[STFT_HALF_SIZE+1], 0, (STFT_HALF_SIZE-1)*sizeof(ALcomplex));
 
         /* Apply iFFT to buffer data */
-        FFT(state->FFTbuffer, STFT_SIZE, 1);
+        FFT(state->FFTbuffer, STFT_SIZE, 1.0f);
 
         /* Windowing and add to output */
         for(k = 0;k < STFT_SIZE;k++)

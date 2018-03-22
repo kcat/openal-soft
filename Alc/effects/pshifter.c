@@ -326,14 +326,18 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
 
         /* PROCESSING */
         /* pitch shifting */
-        memset(state->Syntesis_buffer, 0, sizeof(state->Syntesis_buffer));
+        for(k = 0;k < STFT_HALF_SIZE+1;k++)
+        {
+            state->Syntesis_buffer[k].Amplitude = 0.0f;
+            state->Syntesis_buffer[k].Frequency = 0.0f;
+        }
 
         for(k = 0;k < STFT_HALF_SIZE+1;k++)
         {
             j = fastf2i((ALfloat)k * state->PitchShift);
             if(j >= STFT_HALF_SIZE+1) break;
 
-            state->Syntesis_buffer[j].Amplitude += state->Analysis_buffer[k].Amplitude; 
+            state->Syntesis_buffer[j].Amplitude += state->Analysis_buffer[k].Amplitude;
             state->Syntesis_buffer[j].Frequency  = state->Analysis_buffer[k].Frequency *
                                                    state->PitchShift;
         }
@@ -357,9 +361,12 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
             /* Compute phasor component to cartesian complex number and storage it into FFTbuffer*/
             state->FFTbuffer[k] = polar2rect(component);
         }
-
         /* zero negative frequencies for recontruct a real signal */
-        memset(&state->FFTbuffer[STFT_HALF_SIZE+1], 0, (STFT_HALF_SIZE-1)*sizeof(ALcomplex));
+        for(k = STFT_HALF_SIZE+1;k < STFT_SIZE;k++)
+        {
+            state->FFTbuffer[k].Real = 0.0f;
+            state->FFTbuffer[k].Imag = 0.0f;
+        }
 
         /* Apply iFFT to buffer data */
         FFT(state->FFTbuffer, STFT_SIZE, 1.0f);

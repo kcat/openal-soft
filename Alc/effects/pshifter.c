@@ -58,7 +58,7 @@ typedef struct ALpshifterState {
     /* Effect parameters */
     ALsizei count;
     ALfloat PitchShift;
-    ALfloat Frequency;
+    ALfloat FreqBin;
 
     /*Effects buffers*/
     ALfloat InFIFO[STFT_SIZE];
@@ -226,7 +226,7 @@ static ALboolean ALpshifterState_deviceUpdate(ALpshifterState *state, ALCdevice 
     /* (Re-)initializing parameters and clear the buffers. */
     state->count      = FIFO_LATENCY;
     state->PitchShift = 1.0f;
-    state->Frequency  = (ALfloat)device->Frequency;
+    state->FreqBin    = device->Frequency / (ALfloat)STFT_SIZE;
 
     memset(state->InFIFO,          0, sizeof(state->InFIFO));
     memset(state->OutFIFO,         0, sizeof(state->OutFIFO));
@@ -263,24 +263,24 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
      */
 
     static const ALfloat expected = F_TAU / (ALfloat)OVERSAMP;
-    const ALfloat freq_bin = state->Frequency / (ALfloat)STFT_SIZE;
+    const ALfloat freq_bin = state->FreqBin;
     ALfloat *restrict bufferOut = state->BufferOut;
+    ALsizei count = state->count;
     ALsizei i, j, k;
 
     for(i = 0;i < SamplesToDo;)
     {
         do {
             /* Fill FIFO buffer with samples data */
-            state->InFIFO[state->count] = SamplesIn[0][i];
-            bufferOut[i] = state->OutFIFO[state->count - FIFO_LATENCY];
+            state->InFIFO[count] = SamplesIn[0][i];
+            bufferOut[i] = state->OutFIFO[count - FIFO_LATENCY];
 
-            state->count++;
-        } while(++i < SamplesToDo && state->count < STFT_SIZE);
+            count++;
+        } while(++i < SamplesToDo && count < STFT_SIZE);
 
         /* Check whether FIFO buffer is filled */
-        if(state->count < STFT_SIZE) break;
-
-        state->count = FIFO_LATENCY;
+        if(count < STFT_SIZE) break;
+        count = FIFO_LATENCY;
 
         /* Real signal windowing and store in FFTbuffer */
         for(k = 0;k < STFT_SIZE;k++)
@@ -308,7 +308,8 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
             tmp = (component.Phase - state->LastPhase[k]) - (ALfloat)k*expected;
 
             /* Map delta phase into +/- Pi interval */
-            tmp -= F_PI * (ALfloat)(fastf2i(tmp/F_PI) + (fastf2i(tmp/F_PI)&1));
+            j = fastf2i(tmp / F_PI);
+            tmp -= F_PI * (ALfloat)(j + (j&1));
 
             /* Get deviation from bin frequency from the +/- Pi interval */
             tmp /= expected;
@@ -383,6 +384,7 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
         for(k = 0;k < FIFO_LATENCY;k++)
             state->InFIFO[k] = state->InFIFO[k+STFT_STEP];
     }
+    state->count = count;
 
     /* Now, mix the processed sound data to the output. */
     MixSamples(bufferOut, NumChannels, SamplesOut, state->CurrentGains, state->TargetGains,

@@ -30,9 +30,7 @@
 #include "filters/defs.h"
 
 
-#define MAX_SIZE 2048
-
-#define STFT_SIZE      (MAX_SIZE>>1)
+#define STFT_SIZE      1024
 #define STFT_HALF_SIZE (STFT_SIZE>>1)
 #define OVERSAMP       (1<<2)
 
@@ -58,22 +56,22 @@ typedef struct ALpshifterState {
     DERIVE_FROM_TYPE(ALeffectState);
 
     /* Effect parameters */
-    ALsizei   count;
-    ALfloat   PitchShift;
-    ALfloat   Frequency;
+    ALsizei count;
+    ALfloat PitchShift;
+    ALfloat Frequency;
 
     /*Effects buffers*/
-    ALfloat   InFIFO[MAX_SIZE];
-    ALfloat   OutFIFO[MAX_SIZE];
-    ALfloat   LastPhase[(MAX_SIZE>>1) +1];
-    ALfloat   SumPhase[(MAX_SIZE>>1) +1];
-    ALfloat   OutputAccum[MAX_SIZE<<1];
-    ALfloat   window[MAX_SIZE];
+    ALfloat InFIFO[STFT_SIZE];
+    ALfloat OutFIFO[STFT_STEP];
+    ALfloat LastPhase[STFT_HALF_SIZE+1];
+    ALfloat SumPhase[STFT_HALF_SIZE+1];
+    ALfloat OutputAccum[STFT_SIZE];
+    ALfloat window[STFT_SIZE];
 
-    ALcomplex FFTbuffer[MAX_SIZE];
+    ALcomplex FFTbuffer[STFT_SIZE];
 
-    ALfrequencyDomain Analysis_buffer[MAX_SIZE];
-    ALfrequencyDomain Syntesis_buffer[MAX_SIZE];
+    ALfrequencyDomain Analysis_buffer[STFT_HALF_SIZE+1];
+    ALfrequencyDomain Syntesis_buffer[STFT_HALF_SIZE+1];
 
     alignas(16) ALfloat BufferOut[BUFFERSIZE];
 
@@ -237,6 +235,7 @@ static ALboolean ALpshifterState_deviceUpdate(ALpshifterState *state, ALCdevice 
     memset(state->SumPhase,        0, sizeof(state->SumPhase));
     memset(state->OutputAccum,     0, sizeof(state->OutputAccum));
     memset(state->Analysis_buffer, 0, sizeof(state->Analysis_buffer));
+    memset(state->Syntesis_buffer, 0, sizeof(state->Syntesis_buffer));
 
     memset(state->CurrentGains, 0, sizeof(state->CurrentGains));
     memset(state->TargetGains,  0, sizeof(state->TargetGains));
@@ -295,9 +294,9 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
         FFT(state->FFTbuffer, STFT_SIZE, -1.0f);
 
         /* Analyze the obtained data. Since the real FFT is symmetric, only
-         * STFT_half_size+1 samples are needed.
+         * STFT_HALF_SIZE+1 samples are needed.
          */
-        for(k = 0;k <= STFT_HALF_SIZE;k++)
+        for(k = 0;k < STFT_HALF_SIZE+1;k++)
         {
             ALphasor component;
             ALfloat tmp;
@@ -327,12 +326,12 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
 
         /* PROCESSING */
         /* pitch shifting */
-        memset(state->Syntesis_buffer, 0, STFT_SIZE*sizeof(ALfrequencyDomain));
+        memset(state->Syntesis_buffer, 0, sizeof(state->Syntesis_buffer));
 
-        for(k = 0;k <= STFT_HALF_SIZE;k++)
+        for(k = 0;k < STFT_HALF_SIZE+1;k++)
         {
             j = fastf2i((ALfloat)k * state->PitchShift);
-            if(j > STFT_HALF_SIZE) break;
+            if(j >= STFT_HALF_SIZE+1) break;
 
             state->Syntesis_buffer[j].Amplitude += state->Analysis_buffer[k].Amplitude; 
             state->Syntesis_buffer[j].Frequency  = state->Analysis_buffer[k].Frequency *
@@ -341,7 +340,7 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
 
         /* SYNTHESIS */
         /* Synthesis the processing data */
-        for(k = 0;k <= STFT_HALF_SIZE;k++)
+        for(k = 0;k < STFT_HALF_SIZE+1;k++)
         {
             ALphasor component;
             ALfloat tmp;
@@ -371,9 +370,11 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
                                      (STFT_HALF_SIZE * OVERSAMP);
 
         /* Shift accumulator, input & output FIFO */
-        memmove(state->OutFIFO    , state->OutputAccum          , STFT_STEP   *sizeof(ALfloat));
-        memmove(state->OutputAccum, state->OutputAccum+STFT_STEP, STFT_SIZE   *sizeof(ALfloat));
-        memmove(state->InFIFO     , state->InFIFO     +STFT_STEP, FIFO_LATENCY*sizeof(ALfloat));
+        for(k = 0;k < STFT_STEP;k++) state->OutFIFO[k] = state->OutputAccum[k];
+        for(j = 0;k < STFT_SIZE;k++,j++) state->OutputAccum[j] = state->OutputAccum[k];
+        for(;j < STFT_SIZE;j++) state->OutputAccum[j] = 0.0f;
+        for(k = 0;k < FIFO_LATENCY;k++)
+            state->InFIFO[k] = state->InFIFO[k+STFT_STEP];
     }
 
     /* Now, mix the processed sound data to the output. */

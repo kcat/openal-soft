@@ -309,7 +309,7 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
 
             /* Map delta phase into +/- Pi interval */
             j = fastf2i(tmp / F_PI);
-            tmp -= F_PI * (ALfloat)(j + (j&1));
+            tmp -= F_PI * (ALfloat)(j + (j%2));
 
             /* Get deviation from bin frequency from the +/- Pi interval */
             tmp /= expected;

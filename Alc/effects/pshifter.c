@@ -309,6 +309,7 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
         {
             ALphasor component;
             ALfloat tmp;
+            ALint qpd;
 
             /* Compute amplitude and phase */
             component = rect2polar(state->FFTbuffer[k]);
@@ -317,8 +318,8 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
             tmp = (component.Phase - state->LastPhase[k]) - (ALfloat)k*expected;
 
             /* Map delta phase into +/- Pi interval */
-            j = fastf2i(tmp / F_PI);
-            tmp -= F_PI * (ALfloat)(j + (j%2));
+            qpd = fastf2i(tmp / F_PI);
+            tmp -= F_PI * (ALfloat)(qpd + (qpd%2));
 
             /* Get deviation from bin frequency from the +/- Pi interval */
             tmp /= expected;

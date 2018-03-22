@@ -729,12 +729,12 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/effects/pshifter.c
               Alc/effects/reverb.c
               Alc/filters/filter.c
+              Alc/filters/nfc.c
               Alc/helpers.c
               Alc/hrtf.c
               Alc/uhjfilter.c
               Alc/ambdec.c
               Alc/bformatdec.c
-              Alc/nfcfilter.c
               Alc/panning.c
               Alc/mixvoice.c
               Alc/mixer/mixer_c.c

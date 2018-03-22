@@ -1,9 +1,9 @@
 
 #include "config.h"
 
-#include "nfcfilter.h"
+#include "nfc.h"
 
-#include "alu.h"
+#include <string.h>
 
 
 /* Near-field control filters are the basis for handling the near-field effect.
@@ -221,7 +221,7 @@ void NfcFilterAdjust(NfcFilter *nfc, const float w0)
 }
 
 
-void NfcFilterUpdate1(NfcFilter *nfc, ALfloat *restrict dst, const float *restrict src, const int count)
+void NfcFilterUpdate1(NfcFilter *nfc, float *restrict dst, const float *restrict src, const int count)
 {
     const float b0 = nfc->first.coeffs[0];
     const float a0 = nfc->first.coeffs[1];
@@ -243,7 +243,7 @@ void NfcFilterUpdate1(NfcFilter *nfc, ALfloat *restrict dst, const float *restri
     nfc->first.history[0] = z1;
 }
 
-void NfcFilterUpdate2(NfcFilter *nfc, ALfloat *restrict dst, const float *restrict src, const int count)
+void NfcFilterUpdate2(NfcFilter *nfc, float *restrict dst, const float *restrict src, const int count)
 {
     const float b0 = nfc->second.coeffs[0];
     const float a00 = nfc->second.coeffs[1];
@@ -270,7 +270,7 @@ void NfcFilterUpdate2(NfcFilter *nfc, ALfloat *restrict dst, const float *restri
     nfc->second.history[1] = z2;
 }
 
-void NfcFilterUpdate3(NfcFilter *nfc, ALfloat *restrict dst, const float *restrict src, const int count)
+void NfcFilterUpdate3(NfcFilter *nfc, float *restrict dst, const float *restrict src, const int count)
 {
     const float b0 = nfc->third.coeffs[0];
     const float a00 = nfc->third.coeffs[1];

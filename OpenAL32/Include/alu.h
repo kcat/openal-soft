@@ -15,9 +15,9 @@
 
 #include "hrtf.h"
 #include "align.h"
-#include "nfcfilter.h"
 #include "math_defs.h"
 #include "filters/defs.h"
+#include "filters/nfc.h"
 
 
 #define MAX_PITCH  (255)

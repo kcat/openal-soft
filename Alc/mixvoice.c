@@ -39,7 +39,7 @@
 #include "ringbuffer.h"
 
 #include "cpu_caps.h"
-#include "mixer_defs.h"
+#include "mixer/defs.h"
 
 
 static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,

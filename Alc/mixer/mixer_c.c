@@ -6,6 +6,7 @@
 #include "alu.h"
 #include "alSource.h"
 #include "alAuxEffectSlot.h"
+#include "defs.h"
 
 
 static inline ALfloat do_point(const ALfloat *restrict vals, ALsizei UNUSED(frac))

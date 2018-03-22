@@ -31,7 +31,6 @@
 #include "alFilter.h"
 #include "alListener.h"
 #include "alError.h"
-#include "mixer_defs.h"
 
 /* This is a user config option for modifying the overall output of the reverb
  * effect.

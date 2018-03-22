@@ -40,9 +40,9 @@
 #include "static_assert.h"
 #include "ringbuffer.h"
 
+#include "mixer/defs.h"
 #include "fpu_modes.h"
 #include "cpu_caps.h"
-#include "mixer_defs.h"
 #include "bsinc_inc.h"
 
 #include "backends/base.h"

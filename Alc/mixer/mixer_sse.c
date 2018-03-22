@@ -9,7 +9,7 @@
 
 #include "alSource.h"
 #include "alAuxEffectSlot.h"
-#include "mixer_defs.h"
+#include "defs.h"
 
 
 const ALfloat *Resample_bsinc_SSE(const InterpState *state, const ALfloat *restrict src,

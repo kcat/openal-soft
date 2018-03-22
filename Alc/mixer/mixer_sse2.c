@@ -24,7 +24,7 @@
 #include <emmintrin.h>
 
 #include "alu.h"
-#include "mixer_defs.h"
+#include "defs.h"
 
 
 const ALfloat *Resample_lerp_SSE2(const InterpState* UNUSED(state),

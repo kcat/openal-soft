@@ -4,7 +4,7 @@
 #include "converter.h"
 
 #include "fpu_modes.h"
-#include "mixer_defs.h"
+#include "mixer/defs.h"
 
 
 SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType dstType, ALsizei numchans, ALsizei srcRate, ALsizei dstRate)

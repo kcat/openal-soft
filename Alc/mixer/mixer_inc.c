@@ -4,9 +4,9 @@
 #include "alSource.h"
 
 #include "hrtf.h"
-#include "mixer_defs.h"
 #include "align.h"
 #include "alu.h"
+#include "defs.h"
 
 
 static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*restrict Values)[2],

@@ -7,7 +7,7 @@
 #include "alMain.h"
 #include "alu.h"
 #include "hrtf.h"
-#include "mixer_defs.h"
+#include "defs.h"
 
 
 const ALfloat *Resample_lerp_Neon(const InterpState* UNUSED(state),

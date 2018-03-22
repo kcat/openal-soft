@@ -344,26 +344,47 @@ static int GetLoadedModuleDirectory(const WCHAR *name, WCHAR *moddir, DWORD leng
 
 void LoadDriverList(void)
 {
-    WCHAR path[MAX_PATH+1] = L"";
+    WCHAR dll_path[MAX_PATH+1] = L"";
+    WCHAR cwd_path[MAX_PATH+1] = L"";
+    WCHAR proc_path[MAX_PATH+1] = L"";
+    WCHAR sys_path[MAX_PATH+1] = L"";
     int len;
 
-    if(GetLoadedModuleDirectory(L"OpenAL32.dll", path, MAX_PATH))
-        SearchDrivers(path);
+    if(GetLoadedModuleDirectory(L"OpenAL32.dll", dll_path, MAX_PATH))
+        TRACE("Got DLL path %ls\n", dll_path);
 
-    GetCurrentDirectoryW(MAX_PATH, path);
-    len = lstrlenW(path);
-    if(len > 0 && (path[len-1] == '\\' || path[len-1] == '/'))
-        path[len-1] = '\0';
-    SearchDrivers(path);
+    GetCurrentDirectoryW(MAX_PATH, cwd_path);
+    len = lstrlenW(cwd_path);
+    if(len > 0 && (cwd_path[len-1] == '\\' || cwd_path[len-1] == '/'))
+        cwd_path[len-1] = '\0';
+    TRACE("Got current working directory %ls\n", cwd_path);
 
-    if(GetLoadedModuleDirectory(NULL, path, MAX_PATH))
-        SearchDrivers(path);
+    if(GetLoadedModuleDirectory(NULL, proc_path, MAX_PATH))
+        TRACE("Got proc path %ls\n", proc_path);
 
-    GetSystemDirectoryW(path, MAX_PATH);
-    len = lstrlenW(path);
-    if(len > 0 && (path[len-1] == '\\' || path[len-1] == '/'))
-        path[len-1] = '\0';
-    SearchDrivers(path);
+    GetSystemDirectoryW(sys_path, MAX_PATH);
+    len = lstrlenW(sys_path);
+    if(len > 0 && (sys_path[len-1] == '\\' || sys_path[len-1] == '/'))
+        sys_path[len-1] = '\0';
+    TRACE("Got system path %ls\n", sys_path);
+
+    /* Don't search the DLL's path if it is the same as the current working
+     * directory, app's path, or system path (don't want to do duplicate
+     * searches, or increase the priority of the app or system path).
+     */
+    if(dll_path[0] &&
+       (!cwd_path[0] || wcscmp(dll_path, cwd_path) != 0) &&
+       (!proc_path[0] || wcscmp(dll_path, proc_path) != 0) &&
+       (!sys_path[0] || wcscmp(dll_path, sys_path) != 0))
+        SearchDrivers(dll_path);
+    if(cwd_path[0] &&
+       (!proc_path[0] || wcscmp(cwd_path, proc_path) != 0) &&
+       (!sys_path[0] || wcscmp(cwd_path, sys_path) != 0))
+        SearchDrivers(cwd_path);
+    if(proc_path[0] && (!sys_path[0] || wcscmp(proc_path, sys_path) != 0))
+        SearchDrivers(proc_path);
+    if(sys_path[0])
+        SearchDrivers(sys_path);
 }
 
 

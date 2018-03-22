@@ -75,10 +75,11 @@ typedef struct ALpshifterState {
     ALfrequencyDomain Analysis_buffer[MAX_SIZE];
     ALfrequencyDomain Syntesis_buffer[MAX_SIZE];
 
-    ALfloat BufferOut[BUFFERSIZE];
+    alignas(16) ALfloat BufferOut[BUFFERSIZE];
 
     /* Effect gains for each output channel */
-    ALfloat Gain[MAX_OUTPUT_CHANNELS];
+    ALfloat CurrentGains[MAX_OUTPUT_CHANNELS];
+    ALfloat TargetGains[MAX_OUTPUT_CHANNELS];
 } ALpshifterState;
 
 static ALvoid ALpshifterState_Destruct(ALpshifterState *state);
@@ -237,6 +238,9 @@ static ALboolean ALpshifterState_deviceUpdate(ALpshifterState *state, ALCdevice 
     memset(state->OutputAccum,     0, sizeof(state->OutputAccum));
     memset(state->Analysis_buffer, 0, sizeof(state->Analysis_buffer));
 
+    memset(state->CurrentGains, 0, sizeof(state->CurrentGains));
+    memset(state->TargetGains,  0, sizeof(state->TargetGains));
+
     return AL_TRUE;
 }
 
@@ -250,7 +254,7 @@ static ALvoid ALpshifterState_update(ALpshifterState *state, const ALCcontext *c
     );
 
     CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
-    ComputeDryPanGains(&device->Dry, coeffs, slot->Params.Gain, state->Gain);
+    ComputeDryPanGains(&device->Dry, coeffs, slot->Params.Gain, state->TargetGains);
 }
 
 static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
@@ -372,17 +376,9 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
         memmove(state->InFIFO     , state->InFIFO     +STFT_STEP, FIFO_LATENCY*sizeof(ALfloat));
     }
 
-    /* Now, mix the processed sound data to the output*/
-    for (j = 0; j < NumChannels; j++ )
-    {
-        ALfloat gain = state->Gain[j];
-
-        if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
-             continue;
-
-        for(i = 0;i < SamplesToDo;i++)
-            SamplesOut[j][i] += gain * bufferOut[i];
-    }
+    /* Now, mix the processed sound data to the output. */
+    MixSamples(bufferOut, NumChannels, SamplesOut, state->CurrentGains, state->TargetGains,
+               maxi(SamplesToDo, 512), 0, SamplesToDo);
 }
 
 typedef struct PshifterStateFactory {

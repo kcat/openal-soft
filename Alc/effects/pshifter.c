@@ -58,7 +58,7 @@ typedef struct ALpshifterState {
     /* Effect parameters */
     ALsizei count;
     ALfloat PitchShift;
-    ALfloat FreqBin;
+    ALfloat FreqPerBin;
 
     /*Effects buffers*/
     ALfloat InFIFO[STFT_SIZE];
@@ -105,114 +105,115 @@ static void InitHanningWindow(void)
 static alonce_flag HanningInitOnce = AL_ONCE_FLAG_INIT;
 
 
-/* Converts ALcomplex to ALphasor*/
-static inline ALphasor rect2polar( ALcomplex number )
+/* Converts ALcomplex to ALphasor */
+static inline ALphasor rect2polar(ALcomplex number)
 {
     ALphasor polar;
 
-    polar.Amplitude =  sqrtf ( number.Real*number.Real + number.Imag*number.Imag );
-    polar.Phase     =  atan2f( number.Imag , number.Real );
+    polar.Amplitude = sqrtf(number.Real*number.Real + number.Imag*number.Imag);
+    polar.Phase     = atan2f(number.Imag , number.Real);
 
     return polar;
 }
 
-/* Converts ALphasor to ALcomplex*/
-static inline ALcomplex polar2rect( ALphasor  number )
+/* Converts ALphasor to ALcomplex */
+static inline ALcomplex polar2rect(ALphasor  number)
 {
     ALcomplex cartesian;
 
-    cartesian.Real   = number.Amplitude * cosf( number.Phase );
-    cartesian.Imag   = number.Amplitude * sinf( number.Phase );
+    cartesian.Real = number.Amplitude * cosf(number.Phase);
+    cartesian.Imag = number.Amplitude * sinf(number.Phase);
 
     return cartesian;
 }
 
-/* Addition of two complex numbers (ALcomplex format)*/
-static inline ALcomplex complex_add( ALcomplex a, ALcomplex b )
+/* Addition of two complex numbers (ALcomplex format) */
+static inline ALcomplex complex_add(ALcomplex a, ALcomplex b)
 {
     ALcomplex result;
 
-    result.Real = ( a.Real + b.Real );
-    result.Imag = ( a.Imag + b.Imag );
+    result.Real = a.Real + b.Real;
+    result.Imag = a.Imag + b.Imag;
 
     return result;
 }
 
-/* Subtraction of two complex numbers (ALcomplex format)*/
-static inline ALcomplex complex_sub( ALcomplex a, ALcomplex b )
+/* Subtraction of two complex numbers (ALcomplex format) */
+static inline ALcomplex complex_sub(ALcomplex a, ALcomplex b)
 {
     ALcomplex result;
 
-    result.Real = ( a.Real - b.Real );
-    result.Imag = ( a.Imag - b.Imag );
+    result.Real = a.Real - b.Real;
+    result.Imag = a.Imag - b.Imag;
 
     return result;
 }
 
-/* Multiplication of two complex numbers (ALcomplex format)*/
-static inline ALcomplex complex_mult( ALcomplex a, ALcomplex b )
+/* Multiplication of two complex numbers (ALcomplex format) */
+static inline ALcomplex complex_mult(ALcomplex a, ALcomplex b)
 {
     ALcomplex result;
 
-    result.Real = ( a.Real * b.Real - a.Imag * b.Imag );
-    result.Imag = ( a.Imag * b.Real + a.Real * b.Imag );
+    result.Real = a.Real*b.Real - a.Imag*b.Imag;
+    result.Imag = a.Imag*b.Real + a.Real*b.Imag;
 
     return result;
 }
 
-/* Iterative implementation of 2-radix FFT (In-place algorithm). Sign = -1 is FFT and 1 is
-   iFFT (inverse). Fills FFTBuffer[0...FFTSize-1] with the Discrete Fourier Transform (DFT) 
-   of the time domain data stored in FFTBuffer[0...FFTSize-1]. FFTBuffer is an array of
-   complex numbers (ALcomplex), FFTSize MUST BE power of two.*/
+/* Iterative implementation of 2-radix FFT (In-place algorithm). Sign = -1 is
+ * FFT and 1 is iFFT (inverse). Fills FFTBuffer[0...FFTSize-1] with the
+ * Discrete Fourier Transform (DFT) of the time domain data stored in
+ * FFTBuffer[0...FFTSize-1]. FFTBuffer is an array of complex numbers
+ * (ALcomplex), FFTSize MUST BE power of two.
+ */
 static inline ALvoid FFT(ALcomplex *FFTBuffer, ALsizei FFTSize, ALfloat Sign)
 {
-    ALfloat arg;
     ALsizei i, j, k, mask, step, step2;
     ALcomplex temp, u, w;
+    ALfloat arg;
 
-    /*bit-reversal permutation applied to a sequence of FFTSize items*/
-    for (i = 1; i < FFTSize-1; i++ )
+    /* Bit-reversal permutation applied to a sequence of FFTSize items */
+    for(i = 1;i < FFTSize-1;i++)
     {
-         for ( mask = 0x1, j = 0; mask < FFTSize; mask <<= 1 )
-         {
-              if ( ( i & mask ) != 0 ) j++;
+        for(mask = 0x1, j = 0;mask < FFTSize;mask <<= 1)
+        {
+            if((i&mask) != 0)
+                j++;
+            j <<= 1;
+        }
+        j >>= 1;
 
-              j <<= 1;
-         }
-
-         j >>= 1;
-
-         if ( i < j )
-         {
-              temp         = FFTBuffer[i];
-              FFTBuffer[i] = FFTBuffer[j];
-              FFTBuffer[j] = temp;
-         }
+        if(i < j)
+        {
+            temp         = FFTBuffer[i];
+            FFTBuffer[i] = FFTBuffer[j];
+            FFTBuffer[j] = temp;
+        }
     }
 
     /* Iterative form of Danielson–Lanczos lemma */
-    for ( i = 1, step = 2; i < FFTSize; i<<=1, step <<= 1 )
+    for(i = 1, step = 2;i < FFTSize;i<<=1, step<<=1)
     {
-         step2  = step >> 1;
-         arg    = F_PI / step2;
+        step2 = step >> 1;
+        arg   = F_PI / step2;
 
-         w.Real = cosf( arg );
-         w.Imag = sinf( arg ) * Sign;
+        w.Real = cosf(arg);
+        w.Imag = sinf(arg) * Sign;
 
-         u.Real = 1.0f;
-         u.Imag = 0.0f;
+        u.Real = 1.0f;
+        u.Imag = 0.0f;
 
-         for ( j = 0; j < step2; j++ )
-         {
-             for ( k = j; k < FFTSize; k += step )
-             {
-                  temp               = complex_mult( FFTBuffer[k+step2], u );
-                  FFTBuffer[k+step2] = complex_sub( FFTBuffer[k], temp );
-                  FFTBuffer[k]       = complex_add( FFTBuffer[k], temp );
-             }
+        for(j = 0;j < step2;j++)
+        {
+            for(k = j;k < FFTSize;k+=step)
+            {
+                temp               = complex_mult(FFTBuffer[k+step2], u);
+                FFTBuffer[k+step2] = complex_sub(FFTBuffer[k], temp);
+                FFTBuffer[k]       = complex_add(FFTBuffer[k], temp);
+            }
 
-             u = complex_mult(u,w);
-         }
+            u = complex_mult(u, w);
+        }
     }
 }
 
@@ -235,7 +236,7 @@ static ALboolean ALpshifterState_deviceUpdate(ALpshifterState *state, ALCdevice 
     /* (Re-)initializing parameters and clear the buffers. */
     state->count      = FIFO_LATENCY;
     state->PitchShift = 1.0f;
-    state->FreqBin    = device->Frequency / (ALfloat)STFT_SIZE;
+    state->FreqPerBin = device->Frequency / (ALfloat)STFT_SIZE;
 
     memset(state->InFIFO,          0, sizeof(state->InFIFO));
     memset(state->OutFIFO,         0, sizeof(state->OutFIFO));
@@ -272,7 +273,7 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
      */
 
     static const ALfloat expected = F_TAU / (ALfloat)OVERSAMP;
-    const ALfloat freq_bin = state->FreqBin;
+    const ALfloat freq_per_bin = state->FreqPerBin;
     ALfloat *restrict bufferOut = state->BufferOut;
     ALsizei count = state->count;
     ALsizei i, j, k;
@@ -329,7 +330,7 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
              * amplitude and true frequency in analysis buffer.
              */
             state->Analysis_buffer[k].Amplitude = 2.0f * component.Amplitude;
-            state->Analysis_buffer[k].Frequency = ((ALfloat)k + tmp) * freq_bin;
+            state->Analysis_buffer[k].Frequency = ((ALfloat)k + tmp) * freq_per_bin;
 
             /* Store actual phase[k] for the calculations in the next frame*/
             state->LastPhase[k] = component.Phase;
@@ -361,7 +362,7 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
             ALfloat tmp;
 
             /* Compute bin deviation from scaled freq */
-            tmp = state->Syntesis_buffer[k].Frequency/freq_bin - (ALfloat)k;
+            tmp = state->Syntesis_buffer[k].Frequency/freq_per_bin - (ALfloat)k;
 
             /* Calculate actual delta phase and accumulate it to get bin phase */
             state->SumPhase[k] += ((ALfloat)k + tmp) * expected;

@@ -36,43 +36,7 @@
 #include "backends/base.h"
 
 
-typedef struct {
-    AudioUnit audioUnit;
-
-    ALuint frameSize;
-    ALdouble sampleRateRatio;              // Ratio of hardware sample rate / requested sample rate
-    AudioStreamBasicDescription format;    // This is the OpenAL format as a CoreAudio ASBD
-
-    AudioConverterRef audioConverter;      // Sample rate converter if needed
-    AudioBufferList *bufferList;           // Buffer for data coming from the input device
-    ALCvoid *resampleBuffer;               // Buffer for returned RingBuffer data when resampling
-
-    ll_ringbuffer_t *ring;
-} ca_data;
-
 static const ALCchar ca_device[] = "CoreAudio Default";
-
-
-static AudioBufferList *allocate_buffer_list(UInt32 channelCount, UInt32 byteSize)
-{
-    AudioBufferList *list;
-
-    list = calloc(1, FAM_SIZE(AudioBufferList, mBuffers, 1) + byteSize);
-    if(list)
-    {
-        list->mNumberBuffers = 1;
-
-        list->mBuffers[0].mNumberChannels = channelCount;
-        list->mBuffers[0].mDataByteSize = byteSize;
-        list->mBuffers[0].mData = &list->mBuffers[1];
-    }
-    return list;
-}
-
-static void destroy_buffer_list(AudioBufferList *list)
-{
-    free(list);
-}
 
 
 typedef struct ALCcoreAudioPlayback {
@@ -125,10 +89,10 @@ static OSStatus ALCcoreAudioPlayback_MixerProc(void *inRefCon,
     ALCcoreAudioPlayback *self = inRefCon;
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
 
-    ALCdevice_Lock(device);
+    ALCcoreAudioPlayback_lock(self);
     aluMixData(device, ioData->mBuffers[0].mData,
                ioData->mBuffers[0].mDataByteSize / self->frameSize);
-    ALCdevice_Unlock(device);
+    ALCcoreAudioPlayback_unlock(self);
 
     return noErr;
 }
@@ -379,6 +343,28 @@ static DECLARE_FORWARD(ALCcoreAudioCapture, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCcoreAudioCapture)
 
 DEFINE_ALCBACKEND_VTABLE(ALCcoreAudioCapture);
+
+
+static AudioBufferList *allocate_buffer_list(UInt32 channelCount, UInt32 byteSize)
+{
+    AudioBufferList *list;
+
+    list = calloc(1, FAM_SIZE(AudioBufferList, mBuffers, 1) + byteSize);
+    if(list)
+    {
+        list->mNumberBuffers = 1;
+
+        list->mBuffers[0].mNumberChannels = channelCount;
+        list->mBuffers[0].mDataByteSize = byteSize;
+        list->mBuffers[0].mData = &list->mBuffers[1];
+    }
+    return list;
+}
+
+static void destroy_buffer_list(AudioBufferList *list)
+{
+    free(list);
+}
 
 
 static void ALCcoreAudioCapture_Construct(ALCcoreAudioCapture *self, ALCdevice *device)

@@ -53,36 +53,25 @@ typedef struct {
 static const ALCchar ca_device[] = "CoreAudio Default";
 
 
-static AudioBufferList* allocate_buffer_list(UInt32 channelCount, UInt32 byteSize)
+static AudioBufferList *allocate_buffer_list(UInt32 channelCount, UInt32 byteSize)
 {
     AudioBufferList *list;
 
-    list = calloc(1, sizeof(AudioBufferList) + sizeof(AudioBuffer));
+    list = calloc(1, FAM_SIZE(AudioBufferList, mBuffers, 1) + byteSize);
     if(list)
     {
         list->mNumberBuffers = 1;
 
         list->mBuffers[0].mNumberChannels = channelCount;
         list->mBuffers[0].mDataByteSize = byteSize;
-        list->mBuffers[0].mData = malloc(byteSize);
-        if(list->mBuffers[0].mData == NULL)
-        {
-            free(list);
-            list = NULL;
-        }
+        list->mBuffers[0].mData = &list->mBuffers[1];
     }
     return list;
 }
 
-static void destroy_buffer_list(AudioBufferList* list)
+static void destroy_buffer_list(AudioBufferList *list)
 {
-    if(list)
-    {
-        UInt32 i;
-        for(i = 0;i < list->mNumberBuffers;i++)
-            free(list->mBuffers[i].mData);
-        free(list);
-    }
+    free(list);
 }
 
 

@@ -14,30 +14,30 @@
  * the square root of the desired linear gain (or halve the dB gain).
  */
 
-typedef enum ALfilterType {
+typedef enum BiquadType {
     /** EFX-style low-pass filter, specifying a gain and reference frequency. */
-    ALfilterType_HighShelf,
+    BiquadType_HighShelf,
     /** EFX-style high-pass filter, specifying a gain and reference frequency. */
-    ALfilterType_LowShelf,
+    BiquadType_LowShelf,
     /** Peaking filter, specifying a gain and reference frequency. */
-    ALfilterType_Peaking,
+    BiquadType_Peaking,
 
     /** Low-pass cut-off filter, specifying a cut-off frequency. */
-    ALfilterType_LowPass,
+    BiquadType_LowPass,
     /** High-pass cut-off filter, specifying a cut-off frequency. */
-    ALfilterType_HighPass,
+    BiquadType_HighPass,
     /** Band-pass filter, specifying a center frequency. */
-    ALfilterType_BandPass,
-} ALfilterType;
+    BiquadType_BandPass,
+} BiquadType;
 
-typedef struct ALfilterState {
+typedef struct BiquadState {
     ALfloat x[2]; /* History of two last input samples  */
     ALfloat y[2]; /* History of two last output samples */
     ALfloat b0, b1, b2; /* Transfer function coefficients "b" */
     ALfloat a1, a2; /* Transfer function coefficients "a" (a0 is pre-applied) */
-} ALfilterState;
+} BiquadState;
 /* Currently only a C-based filter process method is implemented. */
-#define ALfilterState_process ALfilterState_processC
+#define BiquadState_process BiquadState_processC
 
 /**
  * Calculates the rcpQ (i.e. 1/Q) coefficient for shelving filters, using the
@@ -61,7 +61,7 @@ inline ALfloat calc_rcpQ_from_bandwidth(ALfloat f0norm, ALfloat bandwidth)
     return 2.0f*sinhf(logf(2.0f)/2.0f*bandwidth*w0/sinf(w0));
 }
 
-inline void ALfilterState_clear(ALfilterState *filter)
+inline void BiquadState_clear(BiquadState *filter)
 {
     filter->x[0] = 0.0f;
     filter->x[1] = 0.0f;
@@ -84,9 +84,9 @@ inline void ALfilterState_clear(ALfilterState *filter)
  *             band. Can be generated from calc_rcpQ_from_slope or
  *             calc_rcpQ_from_bandwidth depending on the available data.
  */
-void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat gain, ALfloat f0norm, ALfloat rcpQ);
+void BiquadState_setParams(BiquadState *filter, BiquadType type, ALfloat gain, ALfloat f0norm, ALfloat rcpQ);
 
-inline void ALfilterState_copyParams(ALfilterState *restrict dst, const ALfilterState *restrict src)
+inline void BiquadState_copyParams(BiquadState *restrict dst, const BiquadState *restrict src)
 {
     dst->b0 = src->b0;
     dst->b1 = src->b1;
@@ -95,9 +95,9 @@ inline void ALfilterState_copyParams(ALfilterState *restrict dst, const ALfilter
     dst->a2 = src->a2;
 }
 
-void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const ALfloat *restrict src, ALsizei numsamples);
+void BiquadState_processC(BiquadState *filter, ALfloat *restrict dst, const ALfloat *restrict src, ALsizei numsamples);
 
-inline void ALfilterState_processPassthru(ALfilterState *filter, const ALfloat *restrict src, ALsizei numsamples)
+inline void BiquadState_processPassthru(BiquadState *filter, const ALfloat *restrict src, ALsizei numsamples)
 {
     if(numsamples >= 2)
     {

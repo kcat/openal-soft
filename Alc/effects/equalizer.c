@@ -81,7 +81,7 @@ typedef struct ALequalizerState {
         ALfloat TargetGains[MAX_OUTPUT_CHANNELS];
 
         /* Effect parameters */
-        ALfilterState filter[4];
+        BiquadState filter[4];
     } Chans[MAX_EFFECT_CHANNELS];
 
     ALfloat SampleBuffer[MAX_EFFECT_CHANNELS][BUFFERSIZE];
@@ -114,7 +114,7 @@ static ALboolean ALequalizerState_deviceUpdate(ALequalizerState *state, ALCdevic
     for(i = 0; i < MAX_EFFECT_CHANNELS;i++)
     {
         for(j = 0;j < 4;j++)
-            ALfilterState_clear(&state->Chans[i].filter[j]);
+            BiquadState_clear(&state->Chans[i].filter[j]);
         for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
             state->Chans[i].CurrentGains[j] = 0.0f;
     }
@@ -140,13 +140,13 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext 
      */
     gain = maxf(sqrtf(props->Equalizer.LowGain), 0.0625f); /* Limit -24dB */
     f0norm = props->Equalizer.LowCutoff/frequency;
-    ALfilterState_setParams(&state->Chans[0].filter[0], ALfilterType_LowShelf,
+    BiquadState_setParams(&state->Chans[0].filter[0], BiquadType_LowShelf,
         gain, f0norm, calc_rcpQ_from_slope(gain, 0.75f)
     );
 
     gain = maxf(props->Equalizer.Mid1Gain, 0.0625f);
     f0norm = props->Equalizer.Mid1Center/frequency;
-    ALfilterState_setParams(&state->Chans[0].filter[1], ALfilterType_Peaking,
+    BiquadState_setParams(&state->Chans[0].filter[1], BiquadType_Peaking,
         gain, f0norm, calc_rcpQ_from_bandwidth(
             f0norm, props->Equalizer.Mid1Width
         )
@@ -154,7 +154,7 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext 
 
     gain = maxf(props->Equalizer.Mid2Gain, 0.0625f);
     f0norm = props->Equalizer.Mid2Center/frequency;
-    ALfilterState_setParams(&state->Chans[0].filter[2], ALfilterType_Peaking,
+    BiquadState_setParams(&state->Chans[0].filter[2], BiquadType_Peaking,
         gain, f0norm, calc_rcpQ_from_bandwidth(
             f0norm, props->Equalizer.Mid2Width
         )
@@ -162,17 +162,17 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext 
 
     gain = maxf(sqrtf(props->Equalizer.HighGain), 0.0625f);
     f0norm = props->Equalizer.HighCutoff/frequency;
-    ALfilterState_setParams(&state->Chans[0].filter[3], ALfilterType_HighShelf,
+    BiquadState_setParams(&state->Chans[0].filter[3], BiquadType_HighShelf,
         gain, f0norm, calc_rcpQ_from_slope(gain, 0.75f)
     );
 
     /* Copy the filter coefficients for the other input channels. */
     for(i = 1;i < MAX_EFFECT_CHANNELS;i++)
     {
-        ALfilterState_copyParams(&state->Chans[i].filter[0], &state->Chans[0].filter[0]);
-        ALfilterState_copyParams(&state->Chans[i].filter[1], &state->Chans[0].filter[1]);
-        ALfilterState_copyParams(&state->Chans[i].filter[2], &state->Chans[0].filter[2]);
-        ALfilterState_copyParams(&state->Chans[i].filter[3], &state->Chans[0].filter[3]);
+        BiquadState_copyParams(&state->Chans[i].filter[0], &state->Chans[0].filter[0]);
+        BiquadState_copyParams(&state->Chans[i].filter[1], &state->Chans[0].filter[1]);
+        BiquadState_copyParams(&state->Chans[i].filter[2], &state->Chans[0].filter[2]);
+        BiquadState_copyParams(&state->Chans[i].filter[3], &state->Chans[0].filter[3]);
     }
 }
 
@@ -183,10 +183,10 @@ static ALvoid ALequalizerState_process(ALequalizerState *state, ALsizei SamplesT
 
     for(c = 0;c < MAX_EFFECT_CHANNELS;c++)
     {
-        ALfilterState_process(&state->Chans[c].filter[0], temps[0], SamplesIn[c], SamplesToDo);
-        ALfilterState_process(&state->Chans[c].filter[1], temps[1], temps[0], SamplesToDo);
-        ALfilterState_process(&state->Chans[c].filter[2], temps[2], temps[1], SamplesToDo);
-        ALfilterState_process(&state->Chans[c].filter[3], temps[3], temps[2], SamplesToDo);
+        BiquadState_process(&state->Chans[c].filter[0], temps[0], SamplesIn[c], SamplesToDo);
+        BiquadState_process(&state->Chans[c].filter[1], temps[1], temps[0], SamplesToDo);
+        BiquadState_process(&state->Chans[c].filter[2], temps[2], temps[1], SamplesToDo);
+        BiquadState_process(&state->Chans[c].filter[3], temps[3], temps[2], SamplesToDo);
 
         MixSamples(temps[3], NumChannels, SamplesOut,
             state->Chans[c].CurrentGains, state->Chans[c].TargetGains,

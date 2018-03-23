@@ -7,14 +7,14 @@
 #include "alMain.h"
 #include "defs.h"
 
-extern inline void ALfilterState_clear(ALfilterState *filter);
-extern inline void ALfilterState_copyParams(ALfilterState *restrict dst, const ALfilterState *restrict src);
-extern inline void ALfilterState_processPassthru(ALfilterState *filter, const ALfloat *restrict src, ALsizei numsamples);
+extern inline void BiquadState_clear(BiquadState *filter);
+extern inline void BiquadState_copyParams(BiquadState *restrict dst, const BiquadState *restrict src);
+extern inline void BiquadState_processPassthru(BiquadState *filter, const ALfloat *restrict src, ALsizei numsamples);
 extern inline ALfloat calc_rcpQ_from_slope(ALfloat gain, ALfloat slope);
 extern inline ALfloat calc_rcpQ_from_bandwidth(ALfloat f0norm, ALfloat bandwidth);
 
 
-void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat gain, ALfloat f0norm, ALfloat rcpQ)
+void BiquadState_setParams(BiquadState *filter, BiquadType type, ALfloat gain, ALfloat f0norm, ALfloat rcpQ)
 {
     ALfloat alpha, sqrtgain_alpha_2;
     ALfloat w0, sin_w0, cos_w0;
@@ -32,7 +32,7 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
     /* Calculate filter coefficients depending on filter type */
     switch(type)
     {
-        case ALfilterType_HighShelf:
+        case BiquadType_HighShelf:
             sqrtgain_alpha_2 = 2.0f * sqrtf(gain) * alpha;
             b[0] =       gain*((gain+1.0f) + (gain-1.0f)*cos_w0 + sqrtgain_alpha_2);
             b[1] = -2.0f*gain*((gain-1.0f) + (gain+1.0f)*cos_w0                   );
@@ -41,7 +41,7 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
             a[1] =  2.0f*     ((gain-1.0f) - (gain+1.0f)*cos_w0                   );
             a[2] =             (gain+1.0f) - (gain-1.0f)*cos_w0 - sqrtgain_alpha_2;
             break;
-        case ALfilterType_LowShelf:
+        case BiquadType_LowShelf:
             sqrtgain_alpha_2 = 2.0f * sqrtf(gain) * alpha;
             b[0] =       gain*((gain+1.0f) - (gain-1.0f)*cos_w0 + sqrtgain_alpha_2);
             b[1] =  2.0f*gain*((gain-1.0f) - (gain+1.0f)*cos_w0                   );
@@ -50,7 +50,7 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
             a[1] = -2.0f*     ((gain-1.0f) + (gain+1.0f)*cos_w0                   );
             a[2] =             (gain+1.0f) + (gain-1.0f)*cos_w0 - sqrtgain_alpha_2;
             break;
-        case ALfilterType_Peaking:
+        case BiquadType_Peaking:
             gain = sqrtf(gain);
             b[0] =  1.0f + alpha * gain;
             b[1] = -2.0f * cos_w0;
@@ -60,7 +60,7 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
             a[2] =  1.0f - alpha / gain;
             break;
 
-        case ALfilterType_LowPass:
+        case BiquadType_LowPass:
             b[0] = (1.0f - cos_w0) / 2.0f;
             b[1] =  1.0f - cos_w0;
             b[2] = (1.0f - cos_w0) / 2.0f;
@@ -68,7 +68,7 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
             a[1] = -2.0f * cos_w0;
             a[2] =  1.0f - alpha;
             break;
-        case ALfilterType_HighPass:
+        case BiquadType_HighPass:
             b[0] =  (1.0f + cos_w0) / 2.0f;
             b[1] = -(1.0f + cos_w0);
             b[2] =  (1.0f + cos_w0) / 2.0f;
@@ -76,7 +76,7 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
             a[1] =  -2.0f * cos_w0;
             a[2] =   1.0f - alpha;
             break;
-        case ALfilterType_BandPass:
+        case BiquadType_BandPass:
             b[0] =  alpha;
             b[1] =  0;
             b[2] = -alpha;
@@ -94,7 +94,7 @@ void ALfilterState_setParams(ALfilterState *filter, ALfilterType type, ALfloat g
 }
 
 
-void ALfilterState_processC(ALfilterState *filter, ALfloat *restrict dst, const ALfloat *restrict src, ALsizei numsamples)
+void BiquadState_processC(BiquadState *filter, ALfloat *restrict dst, const ALfloat *restrict src, ALsizei numsamples)
 {
     ALsizei i;
     if(LIKELY(numsamples > 1))

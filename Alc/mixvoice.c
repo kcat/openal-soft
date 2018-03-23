@@ -263,7 +263,7 @@ static void LoadSamples(ALfloat *restrict dst, const ALvoid *restrict src, ALint
 }
 
 
-static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter,
+static const ALfloat *DoFilters(BiquadState *lpfilter, BiquadState *hpfilter,
                                 ALfloat *restrict dst, const ALfloat *restrict src,
                                 ALsizei numsamples, enum ActiveFilters type)
 {
@@ -271,17 +271,17 @@ static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter
     switch(type)
     {
         case AF_None:
-            ALfilterState_processPassthru(lpfilter, src, numsamples);
-            ALfilterState_processPassthru(hpfilter, src, numsamples);
+            BiquadState_processPassthru(lpfilter, src, numsamples);
+            BiquadState_processPassthru(hpfilter, src, numsamples);
             break;
 
         case AF_LowPass:
-            ALfilterState_process(lpfilter, dst, src, numsamples);
-            ALfilterState_processPassthru(hpfilter, dst, numsamples);
+            BiquadState_process(lpfilter, dst, src, numsamples);
+            BiquadState_processPassthru(hpfilter, dst, numsamples);
             return dst;
         case AF_HighPass:
-            ALfilterState_processPassthru(lpfilter, src, numsamples);
-            ALfilterState_process(hpfilter, dst, src, numsamples);
+            BiquadState_processPassthru(lpfilter, src, numsamples);
+            BiquadState_process(hpfilter, dst, src, numsamples);
             return dst;
 
         case AF_BandPass:
@@ -290,8 +290,8 @@ static const ALfloat *DoFilters(ALfilterState *lpfilter, ALfilterState *hpfilter
                 ALfloat temp[256];
                 ALsizei todo = mini(256, numsamples-i);
 
-                ALfilterState_process(lpfilter, temp, src+i, todo);
-                ALfilterState_process(hpfilter, dst+i, temp, todo);
+                BiquadState_process(lpfilter, temp, src+i, todo);
+                BiquadState_process(hpfilter, dst+i, temp, todo);
                 i += todo;
             }
             return dst;

@@ -37,8 +37,8 @@ typedef struct ALdistortionState {
     ALfloat Gain[MAX_OUTPUT_CHANNELS];
 
     /* Effect parameters */
-    ALfilterState lowpass;
-    ALfilterState bandpass;
+    BiquadState lowpass;
+    BiquadState bandpass;
     ALfloat attenuation;
     ALfloat edge_coeff;
 
@@ -59,8 +59,8 @@ static void ALdistortionState_Construct(ALdistortionState *state)
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALdistortionState, ALeffectState, state);
 
-    ALfilterState_clear(&state->lowpass);
-    ALfilterState_clear(&state->bandpass);
+    BiquadState_clear(&state->lowpass);
+    BiquadState_clear(&state->bandpass);
 }
 
 static ALvoid ALdistortionState_Destruct(ALdistortionState *state)
@@ -93,14 +93,14 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCcontex
     /* Multiply sampling frequency by the amount of oversampling done during
      * processing.
      */
-    ALfilterState_setParams(&state->lowpass, ALfilterType_LowPass, 1.0f,
+    BiquadState_setParams(&state->lowpass, BiquadType_LowPass, 1.0f,
         cutoff / (frequency*4.0f), calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
     );
 
     cutoff = props->Distortion.EQCenter;
     /* Convert bandwidth in Hz to octaves. */
     bandwidth = props->Distortion.EQBandwidth / (cutoff * 0.67f);
-    ALfilterState_setParams(&state->bandpass, ALfilterType_BandPass, 1.0f,
+    BiquadState_setParams(&state->bandpass, BiquadType_BandPass, 1.0f,
         cutoff / (frequency*4.0f), calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
     );
 
@@ -136,7 +136,7 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALsizei Sample
          * (which is fortunately first step of distortion). So combine three
          * operations into the one.
          */
-        ALfilterState_process(&state->lowpass, buffer[1], buffer[0], todo);
+        BiquadState_process(&state->lowpass, buffer[1], buffer[0], todo);
 
         /* Second step, do distortion using waveshaper function to emulate
          * signal processing during tube overdriving. Three steps of
@@ -155,7 +155,7 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALsizei Sample
         }
 
         /* Third step, do bandpass filtering of distorted signal. */
-        ALfilterState_process(&state->bandpass, buffer[1], buffer[0], todo);
+        BiquadState_process(&state->bandpass, buffer[1], buffer[0], todo);
 
         todo >>= 2;
         for(k = 0;k < NumChannels;k++)

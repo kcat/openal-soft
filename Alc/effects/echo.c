@@ -165,7 +165,7 @@ static ALvoid ALechoState_process(ALechoState *state, ALsizei SamplesToDo, const
     y[1] = state->Filter.y[1];
     for(base = 0;base < SamplesToDo;)
     {
-        ALfloat temps[2][128];
+        alignas(16) ALfloat temps[2][128];
         ALsizei td = mini(128, SamplesToDo-base);
 
         for(i = 0;i < td;i++)

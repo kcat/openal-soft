@@ -9,7 +9,7 @@
 
 #include "alSource.h"
 #include "alAuxEffectSlot.h"
-#include "mixer_defs.h"
+#include "defs.h"
 
 
 const ALfloat *Resample_bsinc_SSE(const InterpState *state, const ALfloat *restrict src,
@@ -125,7 +125,7 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*restrict Values)[2],
 #define MixHrtf MixHrtf_SSE
 #define MixHrtfBlend MixHrtfBlend_SSE
 #define MixDirectHrtf MixDirectHrtf_SSE
-#include "mixer_inc.c"
+#include "hrtf_inc.c"
 #undef MixHrtf
 
 

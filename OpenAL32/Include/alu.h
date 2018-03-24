@@ -12,13 +12,12 @@
 
 #include "alMain.h"
 #include "alBuffer.h"
-#include "alFilter.h"
-#include "alAuxEffectSlot.h"
 
 #include "hrtf.h"
 #include "align.h"
-#include "nfcfilter.h"
 #include "math_defs.h"
+#include "filters/defs.h"
+#include "filters/nfc.h"
 
 
 #define MAX_PITCH  (255)
@@ -154,8 +153,8 @@ typedef struct MixHrtfParams {
 
 
 typedef struct DirectParams {
-    ALfilterState LowPass;
-    ALfilterState HighPass;
+    BiquadState LowPass;
+    BiquadState HighPass;
 
     NfcFilter NFCtrlFilter;
 
@@ -172,8 +171,8 @@ typedef struct DirectParams {
 } DirectParams;
 
 typedef struct SendParams {
-    ALfilterState LowPass;
-    ALfilterState HighPass;
+    BiquadState LowPass;
+    BiquadState HighPass;
 
     struct {
         ALfloat Current[MAX_OUTPUT_CHANNELS];

@@ -31,6 +31,7 @@
 #include "alError.h"
 #include "alSource.h"
 #include "alBuffer.h"
+#include "alFilter.h"
 #include "alAuxEffectSlot.h"
 #include "ringbuffer.h"
 

@@ -34,6 +34,8 @@
 #include "alListener.h"
 #include "alSource.h"
 #include "alBuffer.h"
+#include "alFilter.h"
+#include "alEffect.h"
 #include "alAuxEffectSlot.h"
 #include "alError.h"
 #include "mastering.h"
@@ -547,10 +549,10 @@ static const struct {
     DECL(AL_EFFECT_DISTORTION),
     DECL(AL_EFFECT_ECHO),
     DECL(AL_EFFECT_FLANGER),
+    DECL(AL_EFFECT_PITCH_SHIFTER),
 #if 0
     DECL(AL_EFFECT_FREQUENCY_SHIFTER),
     DECL(AL_EFFECT_VOCAL_MORPHER),
-    DECL(AL_EFFECT_PITCH_SHIFTER),
 #endif
     DECL(AL_EFFECT_RING_MODULATOR),
 #if 0
@@ -633,6 +635,9 @@ static const struct {
     DECL(AL_RING_MODULATOR_FREQUENCY),
     DECL(AL_RING_MODULATOR_HIGHPASS_CUTOFF),
     DECL(AL_RING_MODULATOR_WAVEFORM),
+
+    DECL(AL_PITCH_SHIFTER_COARSE_TUNE),
+    DECL(AL_PITCH_SHIFTER_FINE_TUNE),
 
     DECL(AL_COMPRESSOR_ONOFF),
 

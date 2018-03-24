@@ -380,6 +380,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->enableFlangerCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->enableModulatorCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->enableDedicatedCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->enablePitchShifterCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
 
     connect(ui->pulseAutospawnCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->pulseAllowMovesCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
@@ -845,6 +846,7 @@ void MainWindow::loadConfig(const QString &fname)
     ui->enableFlangerCheck->setChecked(!excludefx.contains("flanger", Qt::CaseInsensitive));
     ui->enableModulatorCheck->setChecked(!excludefx.contains("modulator", Qt::CaseInsensitive));
     ui->enableDedicatedCheck->setChecked(!excludefx.contains("dedicated", Qt::CaseInsensitive));
+    ui->enablePitchShifterCheck->setChecked(!excludefx.contains("pshifter", Qt::CaseInsensitive));
 
     ui->pulseAutospawnCheckBox->setChecked(settings.value("pulse/spawn-server", true).toBool());
     ui->pulseAllowMovesCheckBox->setChecked(settings.value("pulse/allow-moves", false).toBool());
@@ -1058,6 +1060,8 @@ void MainWindow::saveConfig(const QString &fname) const
         strlist.append("modulator");
     if(!ui->enableDedicatedCheck->isChecked())
         strlist.append("dedicated");
+    if(!ui->enablePitchShifterCheck->isChecked())
+        strlist.append("pshifter");
     settings.setValue("excludefx", strlist.join(QChar(',')));
 
     settings.setValue("pulse/spawn-server",

@@ -1,7 +1,5 @@
-#ifndef NFCFILTER_H
-#define NFCFILTER_H
-
-#include "alMain.h"
+#ifndef FILTER_NFC_H
+#define FILTER_NFC_H
 
 struct NfcFilter1 {
     float g;
@@ -48,4 +46,4 @@ void NfcFilterUpdate2(NfcFilter *nfc, float *restrict dst, const float *restrict
 /* Near-field control filter for third-order ambisonic channels (9-15). */
 void NfcFilterUpdate3(NfcFilter *nfc, float *restrict dst, const float *restrict src, const int count);
 
-#endif /* NFCFILTER_H */
+#endif /* FILTER_NFC_H */

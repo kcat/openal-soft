@@ -45,6 +45,13 @@
 #endif
 
 
+#if defined(_MSC_VER) && (_MSC_VER < 1900)
+static float msvc_strtof(const char *str, char **end)
+{ return (float)strtod(str, end); }
+#define strtof msvc_strtof
+#endif
+
+
 static void fwrite16le(ALushort val, FILE *f)
 {
     ALubyte data[2] = { val&0xff, (val>>8)&0xff };

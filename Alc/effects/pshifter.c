@@ -88,21 +88,21 @@ DECLARE_DEFAULT_ALLOCATORS(ALpshifterState)
 DEFINE_ALEFFECTSTATE_VTABLE(ALpshifterState);
 
 
-/* Define a Hanning window, used to filter the STFT input and output. */
-alignas(16) static ALfloat HanningWindow[STFT_SIZE];
+/* Define a Hann window, used to filter the STFT input and output. */
+alignas(16) static ALfloat HannWindow[STFT_SIZE];
 
-static void InitHanningWindow(void)
+static void InitHannWindow(void)
 {
     ALsizei i;
 
-    /* Create lookup table of the Hanning window for the desired size, i.e. STFT_SIZE */
+    /* Create lookup table of the Hann window for the desired size, i.e. STFT_SIZE */
     for(i = 0;i < STFT_SIZE>>1;i++)
     {
-        ALdouble val = 1.0 - cos((ALdouble)i / (ALdouble)(STFT_SIZE-1) * (M_PI*2.0));
-        HanningWindow[i] = HanningWindow[STFT_SIZE-(i+1)] = (ALfloat)val * 0.5f;
+        ALdouble val = sin(M_PI * (ALdouble)i / (ALdouble)(STFT_SIZE-1));
+        HannWindow[i] = HannWindow[STFT_SIZE-(i+1)] = (ALfloat)(val * val);
     }
 }
-static alonce_flag HanningInitOnce = AL_ONCE_FLAG_INIT;
+static alonce_flag HannInitOnce = AL_ONCE_FLAG_INIT;
 
 
 /* Converts ALcomplex to ALphasor */
@@ -223,7 +223,7 @@ static void ALpshifterState_Construct(ALpshifterState *state)
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALpshifterState, ALeffectState, state);
 
-    alcall_once(&HanningInitOnce, InitHanningWindow);
+    alcall_once(&HannInitOnce, InitHannWindow);
 }
 
 static ALvoid ALpshifterState_Destruct(ALpshifterState *state)
@@ -295,7 +295,7 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
         /* Real signal windowing and store in FFTbuffer */
         for(k = 0;k < STFT_SIZE;k++)
         {
-            state->FFTbuffer[k].Real = state->InFIFO[k] * HanningWindow[k];
+            state->FFTbuffer[k].Real = state->InFIFO[k] * HannWindow[k];
             state->FFTbuffer[k].Imag = 0.0f;
         }
 
@@ -385,8 +385,8 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
 
         /* Windowing and add to output */
         for(k = 0;k < STFT_SIZE;k++)
-            state->OutputAccum[k] += 2.0f * HanningWindow[k]*state->FFTbuffer[k].Real /
-                                     (STFT_HALF_SIZE * OVERSAMP);
+            state->OutputAccum[k] += HannWindow[k] * state->FFTbuffer[k].Real /
+                                     (0.5f * STFT_HALF_SIZE * OVERSAMP);
 
         /* Shift accumulator, input & output FIFO */
         for(k = 0;k < STFT_STEP;k++) state->OutFIFO[k] = state->OutputAccum[k];

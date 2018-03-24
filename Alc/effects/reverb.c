@@ -1073,9 +1073,9 @@ static aluMatrixf GetTransformFromVector(const ALfloat *vec)
     /* Normalize the panning vector according to the N3D scale, which has an
      * extra sqrt(3) term on the directional components. Converting from OpenAL
      * to B-Format also requires negating X (ACN 1) and Z (ACN 3). Note however
-     * that the reverb panning vectors use right-handed coordinates, unlike the
-     * rest of OpenAL which use left-handed. This is fixed by negating Z, which
-     * cancels out with the B-Format Z negation.
+     * that the reverb panning vectors use left-handed coordinates, unlike the
+     * rest of OpenAL which use right-handed. This is fixed by negating Z,
+     * which cancels out with the B-Format Z negation.
      */
     mag = sqrtf(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
     if(mag > 1.0f)

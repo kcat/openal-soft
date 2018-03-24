@@ -281,7 +281,7 @@ static void UpdateListenerAndEffects(float timediff, const ALuint slots[2], cons
 
     /* Calculate local_dir, which represents the listener-relative point to the
      * adjacent zone (should also include orientation). Because EAX Reverb uses
-     * right-handed coordinates instead of left-handed like the rest of OpenAL,
+     * left-handed coordinates instead of right-handed like the rest of OpenAL,
      * negate Z for the local values.
      */
     local_dir[0] = portal_pos[0] - listener_pos[0];

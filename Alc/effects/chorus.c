@@ -227,7 +227,7 @@ static ALvoid ALchorusState_process(ALchorusState *state, ALsizei SamplesToDo, c
     {
         const ALsizei todo = mini(256, SamplesToDo-base);
         ALint moddelays[2][256];
-        ALfloat temps[2][256];
+        alignas(16) ALfloat temps[2][256];
 
         if(state->waveform == WF_Sinusoid)
         {

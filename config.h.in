@@ -23,6 +23,9 @@
 /* Define if we have the _aligned_malloc function */
 #cmakedefine HAVE__ALIGNED_MALLOC
 
+/* Define if we have the proc_pidpath function */
+#cmakedefine HAVE_PROC_PIDPATH
+
 /* Define if we have the getopt function */
 #cmakedefine HAVE_GETOPT
 

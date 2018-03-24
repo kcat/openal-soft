@@ -39,6 +39,9 @@
 #ifdef HAVE_DIRENT_H
 #include <dirent.h>
 #endif
+#ifdef HAVE_PROC_PIDPATH
+#include <libproc.h>
+#endif
 
 #ifdef __FreeBSD__
 #include <sys/types.h>
@@ -753,6 +756,27 @@ void GetProcBinary(al_string *path, al_string *fname)
         pathname = malloc(pathlen + 1);
         sysctl(mib, 3, (void*)pathname, &pathlen, NULL, 0);
         pathname[pathlen] = 0;
+    }
+#endif
+#ifdef HAVE_PROC_PIDPATH
+    if(!pathname)
+    {
+        const pid_t pid = getpid();
+        char procpath[PROC_PIDPATHINFO_MAXSIZE];
+        int ret;
+
+        ret = proc_pidpath(pid, procpath, sizeof(procpath));
+        if(ret < 1)
+        {
+            WARN("proc_pidpath(%d, ...) failed: %s\n", pid, strerror(errno));
+            free(pathname);
+            pathname = NULL;
+        }
+        else
+        {
+            pathlen = strlen(procpath);
+            pathname = strdup(procpath);
+        }
     }
 #endif
     if(!pathname)

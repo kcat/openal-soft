@@ -331,7 +331,6 @@ typedef struct ALCcoreAudioCapture {
 static void ALCcoreAudioCapture_Construct(ALCcoreAudioCapture *self, ALCdevice *device);
 static void ALCcoreAudioCapture_Destruct(ALCcoreAudioCapture *self);
 static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar *name);
-static void ALCcoreAudioCapture_close(ALCcoreAudioCapture *self);
 static DECLARE_FORWARD(ALCcoreAudioCapture, ALCbackend, ALCboolean, reset)
 static ALCboolean ALCcoreAudioCapture_start(ALCcoreAudioCapture *self);
 static void ALCcoreAudioCapture_stop(ALCcoreAudioCapture *self);
@@ -372,10 +371,32 @@ static void ALCcoreAudioCapture_Construct(ALCcoreAudioCapture *self, ALCdevice *
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCcoreAudioCapture, ALCbackend, self);
 
+    self->audioUnit = 0;
+    self->audioConverter = NULL;
+    self->bufferList = NULL;
+    self->resampleBuffer = NULL;
+    self->ring = NULL;
 }
 
 static void ALCcoreAudioCapture_Destruct(ALCcoreAudioCapture *self)
 {
+    ll_ringbuffer_free(self->ring);
+    self->ring = NULL;
+
+    free(self->resampleBuffer);
+    self->resampleBuffer = NULL;
+
+    destroy_buffer_list(self->bufferList);
+    self->bufferList = NULL;
+
+    if(self->audioConverter)
+        AudioConverterDispose(self->audioConverter);
+    self->audioConverter = NULL;
+
+    if(self->audioUnit)
+        AudioComponentInstanceDispose(self->audioUnit);
+    self->audioUnit = 0;
+
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
@@ -651,29 +672,20 @@ error:
     ll_ringbuffer_free(self->ring);
     self->ring = NULL;
     free(self->resampleBuffer);
+    self->resampleBuffer = NULL;
     destroy_buffer_list(self->bufferList);
+    self->bufferList = NULL;
 
     if(self->audioConverter)
         AudioConverterDispose(self->audioConverter);
+    self->audioConverter = NULL;
     if(self->audioUnit)
         AudioComponentInstanceDispose(self->audioUnit);
+    self->audioUnit = 0;
 
     return ALC_INVALID_VALUE;
 }
 
-
-static void ALCcoreAudioCapture_close(ALCcoreAudioCapture *self)
-{
-    ll_ringbuffer_free(self->ring);
-    self->ring = NULL;
-
-    free(self->resampleBuffer);
-
-    destroy_buffer_list(self->bufferList);
-
-    AudioConverterDispose(self->audioConverter);
-    AudioComponentInstanceDispose(self->audioUnit);
-}
 
 static ALCboolean ALCcoreAudioCapture_start(ALCcoreAudioCapture *self)
 {

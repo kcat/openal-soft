@@ -383,8 +383,8 @@ static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei sp
 static const ChannelMap MonoCfg[1] = {
     { FrontCenter, { 1.0f } },
 }, StereoCfg[2] = {
-    { FrontLeft,   { 5.00000000e-1f,  2.88675135e-1f, 0.0f,  1.19573156e-1f } },
-    { FrontRight,  { 5.00000000e-1f, -2.88675135e-1f, 0.0f,  1.19573156e-1f } },
+    { FrontLeft,   { 5.00000000e-1f,  2.88675135e-1f, 0.0f,  5.77350269e-2f } },
+    { FrontRight,  { 5.00000000e-1f, -2.88675135e-1f, 0.0f,  5.77350269e-2f } },
 }, QuadCfg[4] = {
     { BackLeft,    { 3.53553391e-1f,  2.04124145e-1f, 0.0f, -2.04124145e-1f } },
     { FrontLeft,   { 3.53553391e-1f,  2.04124145e-1f, 0.0f,  2.04124145e-1f } },

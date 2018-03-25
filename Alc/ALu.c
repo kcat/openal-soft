@@ -684,9 +684,10 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
             /* Local B-Format sources have their XYZ channels rotated according
              * to the orientation.
              */
+            const ALfloat sqrt_2 = sqrtf(2.0f);
+            const ALfloat sqrt_3 = sqrtf(3.0f);
             ALfloat N[3], V[3], U[3];
             aluMatrixf matrix;
-            ALfloat scale;
 
             if(Device->AvgSpeakerDist > 0.0f)
             {
@@ -722,13 +723,16 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
             aluCrossproduct(N, V, U);
             aluNormalize(U);
 
-            /* Build a rotate + conversion matrix (FuMa -> ACN+N3D). */
-            scale = 1.732050808f;
+            /* Build a rotate + conversion matrix (FuMa -> ACN+N3D). NOTE: This
+             * matrix is transposed, for the inputs to align on the rows and
+             * outputs on the columns.
+             */
             aluMatrixfSet(&matrix,
-                1.414213562f,        0.0f,        0.0f,        0.0f,
-                        0.0f, -N[0]*scale,  N[1]*scale, -N[2]*scale,
-                        0.0f,  U[0]*scale, -U[1]*scale,  U[2]*scale,
-                        0.0f, -V[0]*scale,  V[1]*scale, -V[2]*scale
+                // ACN0         ACN1          ACN2          ACN3
+                sqrt_2,         0.0f,         0.0f,         0.0f, // Ambi W
+                  0.0f, -N[0]*sqrt_3,  N[1]*sqrt_3, -N[2]*sqrt_3, // Ambi X
+                  0.0f,  U[0]*sqrt_3, -U[1]*sqrt_3,  U[2]*sqrt_3, // Ambi Y
+                  0.0f, -V[0]*sqrt_3,  V[1]*sqrt_3, -V[2]*sqrt_3  // Ambi Z
             );
 
             voice->Direct.Buffer = Device->FOAOut.Buffer;

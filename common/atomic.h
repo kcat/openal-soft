@@ -413,11 +413,11 @@ typedef ATOMIC(uint) RefCount;
 inline void InitRef(RefCount *ptr, uint value)
 { ATOMIC_INIT(ptr, value); }
 inline uint ReadRef(RefCount *ptr)
-{ return ATOMIC_LOAD_SEQ(ptr); }
+{ return ATOMIC_LOAD(ptr, almemory_order_acquire); }
 inline uint IncrementRef(RefCount *ptr)
-{ return ATOMIC_ADD_SEQ(ptr, 1)+1; }
+{ return ATOMIC_ADD(ptr, 1, almemory_order_acq_rel)+1; }
 inline uint DecrementRef(RefCount *ptr)
-{ return ATOMIC_SUB_SEQ(ptr, 1)-1; }
+{ return ATOMIC_SUB(ptr, 1, almemory_order_acq_rel)-1; }
 
 
 /* WARNING: A livelock is theoretically possible if another thread keeps

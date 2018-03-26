@@ -107,6 +107,13 @@ const aluMatrixf IdentityMatrixf = {{
 }};
 
 
+static void ClearArray(ALfloat f[MAX_OUTPUT_CHANNELS])
+{
+    size_t i;
+    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+        f[i] = 0.0f;
+}
+
 struct ChanMap {
     enum Channel channel;
     ALfloat angle;
@@ -544,7 +551,7 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
     ALsizei num_channels = 0;
     bool isbformat = false;
     ALfloat downmix_gain = 1.0f;
-    ALsizei c, i, j;
+    ALsizei c, i;
 
     switch(Buffer->FmtChannels)
     {
@@ -611,6 +618,18 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
         break;
     }
 
+    for(c = 0;c < num_channels;c++)
+    {
+        memset(&voice->Direct.Params[c].Hrtf.Target, 0,
+               sizeof(voice->Direct.Params[c].Hrtf.Target));
+        ClearArray(voice->Direct.Params[c].Gains.Target);
+    }
+    for(i = 0;i < NumSends;i++)
+    {
+        for(c = 0;c < num_channels;c++)
+            ClearArray(voice->Send[i].Params[c].Gains.Target);
+    }
+
     voice->Flags &= ~(VOICE_HAS_HRTF | VOICE_HAS_NFC);
     if(isbformat)
     {
@@ -656,12 +675,6 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
             /* NOTE: W needs to be scaled by sqrt(2) due to FuMa normalization. */
             ComputeDryPanGains(&Device->Dry, coeffs, DryGain*1.414213562f,
                                voice->Direct.Params[0].Gains.Target);
-            for(c = 1;c < num_channels;c++)
-            {
-                for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
-                    voice->Direct.Params[c].Gains.Target[j] = 0.0f;
-            }
-
             for(i = 0;i < NumSends;i++)
             {
                 const ALeffectslot *Slot = SendSlots[i];
@@ -669,14 +682,6 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
                     ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels,
                         coeffs, WetGain[i]*1.414213562f, voice->Send[i].Params[0].Gains.Target
                     );
-                else
-                    for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                        voice->Send[i].Params[0].Gains.Target[j] = 0.0f;
-                for(c = 1;c < num_channels;c++)
-                {
-                    for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                        voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
-                }
             }
         }
         else
@@ -750,12 +755,6 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
                             matrix.m[c], WetGain[i], voice->Send[i].Params[c].Gains.Target
                         );
                 }
-                else
-                {
-                    for(c = 0;c < num_channels;c++)
-                        for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                            voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
-                }
             }
         }
     }
@@ -770,8 +769,6 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
         for(c = 0;c < num_channels;c++)
         {
             int idx;
-            for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
-                voice->Direct.Params[c].Gains.Target[j] = 0.0f;
             if((idx=GetChannelIdxByName(&Device->RealOut, chans[c].channel)) != -1)
                 voice->Direct.Params[c].Gains.Target[idx] = DryGain;
         }
@@ -791,9 +788,6 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
                     ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels,
                         coeffs, WetGain[i], voice->Send[i].Params[c].Gains.Target
                     );
-                else
-                    for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                        voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
             }
         }
     }
@@ -825,10 +819,7 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
             for(c = 1;c < num_channels;c++)
             {
                 /* Skip LFE */
-                if(chans[c].channel == LFE)
-                    memset(&voice->Direct.Params[c].Hrtf.Target, 0,
-                           sizeof(voice->Direct.Params[c].Hrtf.Target));
-                else
+                if(chans[c].channel != LFE)
                     voice->Direct.Params[c].Hrtf.Target = voice->Direct.Params[0].Hrtf.Target;
             }
 
@@ -844,18 +835,12 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
                     for(c = 0;c < num_channels;c++)
                     {
                         /* Skip LFE */
-                        if(chans[c].channel == LFE)
-                            for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                                voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
-                        else
+                        if(chans[c].channel != LFE)
                             ComputePanningGainsBF(Slot->ChanMap,
                                 Slot->NumChannels, coeffs, WetGain[i] * downmix_gain,
                                 voice->Send[i].Params[c].Gains.Target
                             );
                     }
-                else
-                    for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                        voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
             }
         }
         else
@@ -871,13 +856,6 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
                 if(chans[c].channel == LFE)
                 {
                     /* Skip LFE */
-                    memset(&voice->Direct.Params[c].Hrtf.Target, 0,
-                           sizeof(voice->Direct.Params[c].Hrtf.Target));
-                    for(i = 0;i < NumSends;i++)
-                    {
-                        for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                            voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
-                    }
                     continue;
                 }
 
@@ -901,9 +879,6 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
                         ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels,
                             coeffs, WetGain[i], voice->Send[i].Params[c].Gains.Target
                         );
-                    else
-                        for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                            voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
                 }
             }
         }
@@ -958,8 +933,6 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
                 /* Special-case LFE */
                 if(chans[c].channel == LFE)
                 {
-                    for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
-                        voice->Direct.Params[c].Gains.Target[j] = 0.0f;
                     if(Device->Dry.Buffer == Device->RealOut.Buffer)
                     {
                         int idx = GetChannelIdxByName(&Device->RealOut, chans[c].channel);
@@ -980,20 +953,11 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
                     for(c = 0;c < num_channels;c++)
                     {
                         /* Skip LFE */
-                        if(chans[c].channel == LFE)
-                            for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                                voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
-                        else
+                        if(chans[c].channel != LFE)
                             ComputePanningGainsBF(Slot->ChanMap,
                                 Slot->NumChannels, coeffs, WetGain[i] * downmix_gain,
                                 voice->Send[i].Params[c].Gains.Target
                             );
-                    }
-                else
-                    for(c = 0;c < num_channels;c++)
-                    {
-                        for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                            voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
                     }
             }
         }
@@ -1026,18 +990,10 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
                 /* Special-case LFE */
                 if(chans[c].channel == LFE)
                 {
-                    for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
-                        voice->Direct.Params[c].Gains.Target[j] = 0.0f;
                     if(Device->Dry.Buffer == Device->RealOut.Buffer)
                     {
                         int idx = GetChannelIdxByName(&Device->RealOut, chans[c].channel);
                         if(idx != -1) voice->Direct.Params[c].Gains.Target[idx] = DryGain;
-                    }
-
-                    for(i = 0;i < NumSends;i++)
-                    {
-                        for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                            voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
                     }
                     continue;
                 }
@@ -1057,9 +1013,6 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
                         ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels,
                             coeffs, WetGain[i], voice->Send[i].Params[c].Gains.Target
                         );
-                    else
-                        for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
-                            voice->Send[i].Params[c].Gains.Target[j] = 0.0f;
                 }
             }
         }

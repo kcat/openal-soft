@@ -768,9 +768,8 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
 
         for(c = 0;c < num_channels;c++)
         {
-            int idx;
-            if((idx=GetChannelIdxByName(&Device->RealOut, chans[c].channel)) != -1)
-                voice->Direct.Params[c].Gains.Target[idx] = DryGain;
+            int idx = GetChannelIdxByName(&Device->RealOut, chans[c].channel);
+            if(idx != -1) voice->Direct.Params[c].Gains.Target[idx] = DryGain;
         }
 
         /* Auxiliary sends still use normal channel panning since they mix to

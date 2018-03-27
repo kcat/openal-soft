@@ -20,6 +20,7 @@ struct ALsource;
 
 typedef struct ALbufferlistitem {
     ATOMIC(struct ALbufferlistitem*) next;
+    ALsizei max_samples;
     ALsizei num_buffers;
     struct ALbuffer *buffers[];
 } ALbufferlistitem;

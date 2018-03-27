@@ -487,14 +487,12 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                 while(tmpiter && SrcBufferSize > FilledAmt)
                 {
                     ALsizei SizeToDo = SrcBufferSize - FilledAmt;
-                    ALsizei CompLen = 0;
                     ALsizei i;
 
                     for(i = 0;i < tmpiter->num_buffers;i++)
                     {
                         const ALbuffer *ALBuffer = tmpiter->buffers[i];
                         ALsizei DataSize = ALBuffer ? ALBuffer->SampleLen : 0;
-                        CompLen = maxi(CompLen, DataSize);
 
                         if(DataSize > pos)
                         {
@@ -506,11 +504,11 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                                         ALBuffer->FmtType, DataSize);
                         }
                     }
-                    if(pos > CompLen)
-                        pos -= CompLen;
+                    if(pos > tmpiter->max_samples)
+                        pos -= tmpiter->max_samples;
                     else
                     {
-                        FilledAmt += CompLen - pos;
+                        FilledAmt += tmpiter->max_samples - pos;
                         pos = 0;
                     }
                     if(SrcBufferSize > FilledAmt)
@@ -715,16 +713,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
             else
             {
                 /* Handle non-looping static source */
-                ALsizei CompLen = 0;
-                ALsizei i;
-
-                for(i = 0;i < BufferListItem->num_buffers;i++)
-                {
-                    const ALbuffer *buffer = BufferListItem->buffers[i];
-                    if(buffer) CompLen = maxi(CompLen, buffer->SampleLen);
-                }
-
-                if(DataPosInt >= CompLen)
+                if(DataPosInt >= BufferListItem->max_samples)
                 {
                     isplaying = false;
                     BufferListItem = NULL;
@@ -737,16 +726,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
         else while(1)
         {
             /* Handle streaming source */
-            ALsizei CompLen = 0;
-            ALsizei i;
-
-            for(i = 0;i < BufferListItem->num_buffers;i++)
-            {
-                const ALbuffer *buffer = BufferListItem->buffers[i];
-                if(buffer) CompLen = maxi(CompLen, buffer->SampleLen);
-            }
-
-            if(CompLen > DataPosInt)
+            if(BufferListItem->max_samples > DataPosInt)
                 break;
 
             buffers_done += BufferListItem->num_buffers;
@@ -759,7 +739,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                 break;
             }
 
-            DataPosInt -= CompLen;
+            DataPosInt -= BufferListItem->max_samples;
         }
     } while(isplaying && OutPos < SamplesToDo);
 

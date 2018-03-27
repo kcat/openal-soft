@@ -38,12 +38,12 @@ void NfcFilterCreate(NfcFilter *nfc, const float w0, const float w1);
 void NfcFilterAdjust(NfcFilter *nfc, const float w0);
 
 /* Near-field control filter for first-order ambisonic channels (1-3). */
-void NfcFilterUpdate1(NfcFilter *nfc, float *restrict dst, const float *restrict src, const int count);
+void NfcFilterProcess1(NfcFilter *nfc, float *restrict dst, const float *restrict src, const int count);
 
 /* Near-field control filter for second-order ambisonic channels (4-8). */
-void NfcFilterUpdate2(NfcFilter *nfc, float *restrict dst, const float *restrict src, const int count);
+void NfcFilterProcess2(NfcFilter *nfc, float *restrict dst, const float *restrict src, const int count);
 
 /* Near-field control filter for third-order ambisonic channels (9-15). */
-void NfcFilterUpdate3(NfcFilter *nfc, float *restrict dst, const float *restrict src, const int count);
+void NfcFilterProcess3(NfcFilter *nfc, float *restrict dst, const float *restrict src, const int count);
 
 #endif /* FILTER_NFC_H */

@@ -564,7 +564,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
 #define APPLY_NFC_MIX(order)                                                  \
     if(voice->Direct.ChannelsPerOrder[order] > 0)                             \
     {                                                                         \
-        NfcFilterUpdate##order(&parms->NFCtrlFilter, nfcsamples, samples,     \
+        NfcFilterProcess##order(&parms->NFCtrlFilter, nfcsamples, samples,    \
                                DstBufferSize);                                \
         MixSamples(nfcsamples, voice->Direct.ChannelsPerOrder[order],         \
             voice->Direct.Buffer+chanoffset, parms->Gains.Current+chanoffset, \

@@ -1523,8 +1523,11 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
     BufferListItem = ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed);
     while(BufferListItem != NULL)
     {
-        const ALbuffer *buffer;
-        if(BufferListItem->num_buffers >= 1 && (buffer=BufferListItem->buffers[0]) != NULL)
+        const ALbuffer *buffer = NULL;
+        ALsizei i = 0;
+        while(!buffer && i < BufferListItem->num_buffers)
+            buffer = BufferListItem->buffers[i];
+        if(LIKELY(buffer))
         {
             if(props->SpatializeMode == SpatializeOn ||
                (props->SpatializeMode == SpatializeAuto && buffer->FmtChannels == FmtMono))

@@ -1317,48 +1317,6 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
             break;
     }
 
-    /* Distance-based air absorption */
-    if(ClampedDist > props->RefDistance && props->RolloffFactor > 0.0f)
-    {
-        ALfloat meters_base = (ClampedDist-props->RefDistance) * props->RolloffFactor *
-                              Listener->Params.MetersPerUnit;
-        if(props->AirAbsorptionFactor > 0.0f)
-        {
-            ALfloat hfattn = powf(AIRABSORBGAINHF, meters_base * props->AirAbsorptionFactor);
-            DryGainHF *= hfattn;
-            for(i = 0;i < NumSends;i++)
-                WetGainHF[i] *= hfattn;
-        }
-
-        if(props->WetGainAuto)
-        {
-            /* Apply a decay-time transformation to the wet path, based on the
-             * source distance in meters. The initial decay of the reverb
-             * effect is calculated and applied to the wet path.
-             */
-            for(i = 0;i < NumSends;i++)
-            {
-                ALfloat gain, gainhf, gainlf;
-
-                if(!(DecayDistance[i] > 0.0f))
-                    continue;
-
-                gain = powf(REVERB_DECAY_GAIN, meters_base/DecayDistance[i]);
-                WetGain[i] *= gain;
-                /* Yes, the wet path's air absorption is applied with
-                 * WetGainAuto on, rather than WetGainHFAuto.
-                 */
-                if(gain > 0.0f)
-                {
-                    gainhf = powf(REVERB_DECAY_GAIN, meters_base/DecayHFDistance[i]);
-                    WetGainHF[i] *= minf(gainhf / gain, 1.0f);
-                    gainlf = powf(REVERB_DECAY_GAIN, meters_base/DecayLFDistance[i]);
-                    WetGainLF[i] *= minf(gainlf / gain, 1.0f);
-                }
-            }
-        }
-    }
-
     /* Calculate directional soundcones */
     if(directional && props->InnerAngle < 360.0f)
     {
@@ -1412,6 +1370,48 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
         WetGain[i]  = minf(WetGain[i]*props->Send[i].Gain*Listener->Params.Gain, GAIN_MIX_MAX);
         WetGainHF[i] *= props->Send[i].GainHF;
         WetGainLF[i] *= props->Send[i].GainLF;
+    }
+
+    /* Distance-based air absorption and initial send decay. */
+    if(ClampedDist > props->RefDistance && props->RolloffFactor > 0.0f)
+    {
+        ALfloat meters_base = (ClampedDist-props->RefDistance) * props->RolloffFactor *
+                              Listener->Params.MetersPerUnit;
+        if(props->AirAbsorptionFactor > 0.0f)
+        {
+            ALfloat hfattn = powf(AIRABSORBGAINHF, meters_base * props->AirAbsorptionFactor);
+            DryGainHF *= hfattn;
+            for(i = 0;i < NumSends;i++)
+                WetGainHF[i] *= hfattn;
+        }
+
+        if(props->WetGainAuto)
+        {
+            /* Apply a decay-time transformation to the wet path, based on the
+             * source distance in meters. The initial decay of the reverb
+             * effect is calculated and applied to the wet path.
+             */
+            for(i = 0;i < NumSends;i++)
+            {
+                ALfloat gain, gainhf, gainlf;
+
+                if(!(DecayDistance[i] > 0.0f))
+                    continue;
+
+                gain = powf(REVERB_DECAY_GAIN, meters_base/DecayDistance[i]);
+                WetGain[i] *= gain;
+                /* Yes, the wet path's air absorption is applied with
+                 * WetGainAuto on, rather than WetGainHFAuto.
+                 */
+                if(gain > 0.0f)
+                {
+                    gainhf = powf(REVERB_DECAY_GAIN, meters_base/DecayHFDistance[i]);
+                    WetGainHF[i] *= minf(gainhf / gain, 1.0f);
+                    gainlf = powf(REVERB_DECAY_GAIN, meters_base/DecayLFDistance[i]);
+                    WetGainLF[i] *= minf(gainlf / gain, 1.0f);
+                }
+            }
+        }
     }
 
 

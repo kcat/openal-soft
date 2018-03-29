@@ -19,6 +19,7 @@
 #include <deque>
 #include <array>
 #include <cmath>
+#include <string>
 
 extern "C" {
 #include "libavcodec/avcodec.h"

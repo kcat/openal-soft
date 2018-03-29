@@ -34,43 +34,41 @@ void bandsplit_clear(BandSplitter *splitter)
 void bandsplit_process(BandSplitter *splitter, ALfloat *restrict hpout, ALfloat *restrict lpout,
                        const ALfloat *input, ALsizei count)
 {
-    ALfloat coeff, d, x;
-    ALfloat z1, z2;
+    ALfloat lp_coeff, hp_coeff, lp_y, hp_y, d;
+    ALfloat lp_z1, lp_z2, hp_z1;
     ALsizei i;
 
-    coeff = splitter->coeff*0.5f + 0.5f;
-    z1 = splitter->lp_z1;
-    z2 = splitter->lp_z2;
+    hp_coeff = splitter->coeff;
+    lp_coeff = splitter->coeff*0.5f + 0.5f;
+    lp_z1 = splitter->lp_z1;
+    lp_z2 = splitter->lp_z2;
+    hp_z1 = splitter->hp_z1;
     for(i = 0;i < count;i++)
     {
-        x = input[i];
+        ALfloat in = input[i];
 
-        d = (x - z1) * coeff;
-        x = z1 + d;
-        z1 = x + d;
+        /* Low-pass sample processing. */
+        d = (in - lp_z1) * lp_coeff;
+        lp_y = lp_z1 + d;
+        lp_z1 = lp_y + d;
 
-        d = (x - z2) * coeff;
-        x = z2 + d;
-        z2 = x + d;
+        d = (lp_y - lp_z2) * lp_coeff;
+        lp_y = lp_z2 + d;
+        lp_z2 = lp_y + d;
 
-        lpout[i] = x;
+        lpout[i] = lp_y;
+
+        /* All-pass sample processing. */
+        d = in - hp_coeff*hp_z1;
+        hp_y = hp_z1 + hp_coeff*d;
+        hp_z1 = d;
+
+        /* High-pass generated from removing low-passed output. */
+        hpout[i] = hp_y - lp_y;
     }
-    splitter->lp_z1 = z1;
-    splitter->lp_z2 = z2;
-
-    coeff = splitter->coeff;
-    z1 = splitter->hp_z1;
-    for(i = 0;i < count;i++)
-    {
-        x = input[i];
-
-        d = x - coeff*z1;
-        x = z1 + coeff*d;
-        z1 = d;
-
-        hpout[i] = x - lpout[i];
-    }
-    splitter->hp_z1 = z1;
+    splitter->lp_z1 = lp_z1;
+    splitter->lp_z2 = lp_z2;
+    splitter->hp_z1 = hp_z1;
 }
 
 

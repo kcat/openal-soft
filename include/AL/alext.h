@@ -97,6 +97,17 @@ extern "C" {
 
 #ifndef AL_EXT_MCFORMATS
 #define AL_EXT_MCFORMATS 1
+/*
+ * QUAD -> 4.0 quad (FL, FR, BL, BR)
+ * REAR -> rear stereo (BL, BR)
+ * 51CHN -> 5.1 (FL, FR, FC, LFE, SL, SR)
+ * 61CHN -> 6.1 (FL, FR, FC, LFE, BC, SL, SR)
+ * 71CHN -> 7.1 (FL, FR, FC, LFE, BL, BR, SL, SR)
+ *
+ * 8 -> unsigned 8-bit integer
+ * 16 -> signed 16-bit integer
+ * 32 -> IEEE 32-bit float
+ */
 #define AL_FORMAT_QUAD8                          0x1204
 #define AL_FORMAT_QUAD16                         0x1205
 #define AL_FORMAT_QUAD32                         0x1206

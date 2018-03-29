@@ -180,14 +180,16 @@ static inline ALfloat aluDotproduct(const aluVector *vec1, const aluVector *vec2
 static ALfloat aluNormalize(ALfloat *vec)
 {
     ALfloat length = sqrtf(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
-    if(length > 0.0f)
+    if(length > FLT_EPSILON)
     {
         ALfloat inv_length = 1.0f/length;
         vec[0] *= inv_length;
         vec[1] *= inv_length;
         vec[2] *= inv_length;
+        return length;
     }
-    return length;
+    vec[0] = vec[1] = vec[2] = 0.0f;
+    return 0.0f;
 }
 
 static void aluMatrixfFloat3(ALfloat *vec, ALfloat w, const aluMatrixf *mtx)
@@ -532,13 +534,14 @@ static const struct ChanMap MonoMap[1] = {
     { SideRight,   DEG2RAD(  90.0f), DEG2RAD(0.0f) }
 };
 
-static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const ALfloat *Dir,
-                                  const ALfloat Spread, const ALfloat DryGain,
-                                  const ALfloat DryGainHF, const ALfloat DryGainLF,
-                                  const ALfloat *WetGain, const ALfloat *WetGainLF,
-                                  const ALfloat *WetGainHF, ALeffectslot **SendSlots,
-                                  const ALbuffer *Buffer, const struct ALvoiceProps *props,
-                                  const ALlistener *Listener, const ALCdevice *Device)
+static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev,
+                                  const ALfloat Distance, const ALfloat Spread,
+                                  const ALfloat DryGain, const ALfloat DryGainHF,
+                                  const ALfloat DryGainLF, const ALfloat *WetGain,
+                                  const ALfloat *WetGainLF, const ALfloat *WetGainHF,
+                                  ALeffectslot **SendSlots, const ALbuffer *Buffer,
+                                  const struct ALvoiceProps *props, const ALlistener *Listener,
+                                  const ALCdevice *Device)
 {
     struct ChanMap StereoMap[2] = {
         { FrontLeft,  DEG2RAD(-30.0f), DEG2RAD(0.0f) },
@@ -664,13 +667,9 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
             }
 
             if(Device->Render_Mode == StereoPair)
-            {
-                ALfloat ev = asinf(Dir[1]);
-                ALfloat az = atan2f(Dir[0], -Dir[2]);
-                CalcAnglePairwiseCoeffs(az, ev, Spread, coeffs);
-            }
+                CalcAnglePairwiseCoeffs(Azi, Elev, Spread, coeffs);
             else
-                CalcDirectionCoeffs(Dir, Spread, coeffs);
+                CalcAngleCoeffs(Azi, Elev, Spread, coeffs);
 
             /* NOTE: W needs to be scaled by sqrt(2) due to FuMa normalization. */
             ComputeDryPanGains(&Device->Dry, coeffs, DryGain*1.414213562f,
@@ -801,15 +800,11 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
         if(Distance > FLT_EPSILON)
         {
             ALfloat coeffs[MAX_AMBI_COEFFS];
-            ALfloat ev, az;
-
-            ev = asinf(Dir[1]);
-            az = atan2f(Dir[0], -Dir[2]);
 
             /* Get the HRIR coefficients and delays just once, for the given
              * source direction.
              */
-            GetHrtfCoeffs(Device->HrtfHandle, ev, az, Spread,
+            GetHrtfCoeffs(Device->HrtfHandle, Elev, Azi, Spread,
                           voice->Direct.Params[0].Hrtf.Target.Coeffs,
                           voice->Direct.Params[0].Hrtf.Target.Delay);
             voice->Direct.Params[0].Hrtf.Target.Gain = DryGain * downmix_gain;
@@ -825,7 +820,7 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
             /* Calculate the directional coefficients once, which apply to all
              * input channels of the source sends.
              */
-            CalcDirectionCoeffs(Dir, Spread, coeffs);
+            CalcAngleCoeffs(Azi, Elev, Spread, coeffs);
 
             for(i = 0;i < NumSends;i++)
             {
@@ -919,13 +914,9 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
              * input channels.
              */
             if(Device->Render_Mode == StereoPair)
-            {
-                ALfloat ev = asinf(Dir[1]);
-                ALfloat az = atan2f(Dir[0], -Dir[2]);
-                CalcAnglePairwiseCoeffs(az, ev, Spread, coeffs);
-            }
+                CalcAnglePairwiseCoeffs(Azi, Elev, Spread, coeffs);
             else
-                CalcDirectionCoeffs(Dir, Spread, coeffs);
+                CalcAngleCoeffs(Azi, Elev, Spread, coeffs);
 
             for(c = 0;c < num_channels;c++)
             {
@@ -1072,7 +1063,6 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Distance, const 
 
 static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
 {
-    static const ALfloat dir[3] = { 0.0f, 0.0f, -1.0f };
     const ALCdevice *Device = ALContext->Device;
     const ALlistener *Listener = ALContext->Listener;
     ALfloat DryGain, DryGainHF, DryGainLF;
@@ -1130,7 +1120,7 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *p
         WetGainLF[i] = props->Send[i].GainLF;
     }
 
-    CalcPanningAndFilters(voice, 0.0f, dir, 0.0f, DryGain, DryGainHF, DryGainLF, WetGain,
+    CalcPanningAndFilters(voice, 0.0f, 0.0f, 0.0f, 0.0f, DryGain, DryGainHF, DryGainLF, WetGain,
                           WetGainLF, WetGainHF, SendSlots, ALBuffer, props, Listener, Device);
 }
 
@@ -1151,7 +1141,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
     ALfloat WetGainHF[MAX_SENDS];
     ALfloat WetGainLF[MAX_SENDS];
     bool directional;
-    ALfloat dir[3];
+    ALfloat ev, az;
     ALfloat spread;
     ALfloat Pitch;
     ALint i;
@@ -1240,7 +1230,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
         Velocity.v[2] += lvelocity->v[2];
     }
 
-    directional = aluNormalize(Direction.v) > FLT_EPSILON;
+    directional = aluNormalize(Direction.v) > 0.0f;
     SourceToListener.v[0] = -Position.v[0];
     SourceToListener.v[1] = -Position.v[1];
     SourceToListener.v[2] = -Position.v[2];
@@ -1476,29 +1466,29 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
         BsincPrepare(voice->Step, &voice->ResampleState.bsinc, &bsinc12);
     voice->Resampler = SelectResampler(props->Resampler);
 
-    if(Distance > FLT_EPSILON)
+    if(Distance > 0.0f)
     {
-        dir[0] = -SourceToListener.v[0];
         /* Clamp Y, in case rounding errors caused it to end up outside of
          * -1...+1.
          */
-        dir[1] = clampf(-SourceToListener.v[1], -1.0f, 1.0f);
-        dir[2] = -SourceToListener.v[2] * ZScale;
+        ev = asinf(clampf(-SourceToListener.v[1], -1.0f, 1.0f));
+        /* Double negation on Z cancels out; negate once for changing source-
+         * to-listener to listener-to-source, and again for right-handed coords
+         * with -Z in front.
+         */
+        az = atan2f(-SourceToListener.v[0], SourceToListener.v[2]*ZScale);
     }
     else
-    {
-        dir[0] =  0.0f;
-        dir[1] =  0.0f;
-        dir[2] = -1.0f;
-    }
+        ev = az = 0.0f;
+
     if(props->Radius > Distance)
         spread = F_TAU - Distance/props->Radius*F_PI;
-    else if(Distance > FLT_EPSILON)
+    else if(Distance > 0.0f)
         spread = asinf(props->Radius / Distance) * 2.0f;
     else
         spread = 0.0f;
 
-    CalcPanningAndFilters(voice, Distance, dir, spread, DryGain, DryGainHF, DryGainLF, WetGain,
+    CalcPanningAndFilters(voice, az, ev, Distance, spread, DryGain, DryGainHF, DryGainLF, WetGain,
                           WetGainLF, WetGainHF, SendSlots, ALBuffer, props, Listener, Device);
 }
 

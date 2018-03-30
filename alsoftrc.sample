@@ -286,7 +286,7 @@ nfc = true
 nfc-ref-delay =
 
 ## quad:
-#  Decoder configuration file for Quadrophonic channel output. See
+#  Decoder configuration file for Quadraphonic channel output. See
 #  docs/ambdec.txt for a description of the file format.
 quad =
 

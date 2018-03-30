@@ -74,7 +74,7 @@ static const struct NameValuePair {
     { "Autodetect", "" },
     { "Mono", "mono" },
     { "Stereo", "stereo" },
-    { "Quadrophonic", "quad" },
+    { "Quadraphonic", "quad" },
     { "5.1 Surround (Side)", "surround51" },
     { "5.1 Surround (Rear)", "surround51rear" },
     { "6.1 Surround", "surround61" },
@@ -1171,7 +1171,7 @@ void MainWindow::updatePeriodCountSlider()
 
 
 void MainWindow::selectQuadDecoderFile()
-{ selectDecoderFile(ui->decoderQuadLineEdit, "Select Quadrophonic Decoder");}
+{ selectDecoderFile(ui->decoderQuadLineEdit, "Select Quadraphonic Decoder");}
 void MainWindow::select51DecoderFile()
 { selectDecoderFile(ui->decoder51LineEdit, "Select 5.1 Surround Decoder");}
 void MainWindow::select61DecoderFile()

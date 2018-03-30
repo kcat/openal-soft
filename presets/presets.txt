@@ -10,12 +10,12 @@ specified angles do not change the decoder behavior).
 Details of the individual presets are as follows.
 
 square.ambdec
-Specifies a basic square speaker setup for Quadrophonic output, with identical
+Specifies a basic square speaker setup for Quadraphonic output, with identical
 width and depth. Front speakers are placed at +45 and -45 degrees, and back
 speakers are placed at +135 and -135 degrees.
 
 rectangle.ambdec
-Specifies a narrower speaker setup for Quadrophonic output, with a little less
+Specifies a narrower speaker setup for Quadraphonic output, with a little less
 width but a little more depth over a basic square setup. Front speakers are
 placed at +30 and -30 degrees, providing a bit more compatibility for existing
 stereo content, with back speakers at +150 and -150 degrees.

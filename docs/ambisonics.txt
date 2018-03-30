@@ -17,7 +17,7 @@ fully 3D soundfield using as few as 4 channels (or even just 3, if you don't
 mind dropping down to 2 dimensions like many surround sound systems are). This
 representation is called B-Format. It was designed to handle audio independent
 of any specific speaker layout, so with a proper decoder the same recording can
-be played back on a variety of speaker setups, from quadrophonic and hexagonal
+be played back on a variety of speaker setups, from quadraphonic and hexagonal
 to cubic and other periphonic (with height) layouts.
 
 Although it was developed decades ago, various factors held ambisonics back

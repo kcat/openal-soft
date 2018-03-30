@@ -1261,8 +1261,19 @@ SET(libdir "\${exec_prefix}/${CMAKE_INSTALL_LIBDIR}")
 SET(bindir "\${exec_prefix}/${CMAKE_INSTALL_BINDIR}")
 SET(includedir "\${prefix}/${CMAKE_INSTALL_INCLUDEDIR}")
 SET(PACKAGE_VERSION "${LIB_VERSION}")
+SET(PKG_CONFIG_CFLAGS )
+SET(PKG_CONFIG_PRIVATE_LIBS )
 IF(LIBTYPE STREQUAL "STATIC")
-    SET(PKG_CONFIG_CFLAGS -DAL_LIBTYPE_STATIC ${PKG_CONFIG_CFLAGS})
+    SET(PKG_CONFIG_CFLAGS -DAL_LIBTYPE_STATIC)
+    FOREACH(FLAG  ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
+        # If this is already a linker flag, or is a full path+file, add it
+        # as-is. Otherwise, it's a name intended to be dressed as -lname.
+        IF(FLAG MATCHES "^-.*" OR EXISTS "${FLAG}")
+            SET(PKG_CONFIG_PRIVATE_LIBS "${PKG_CONFIG_PRIVATE_LIBS} ${FLAG}")
+        ELSE()
+            SET(PKG_CONFIG_PRIVATE_LIBS "${PKG_CONFIG_PRIVATE_LIBS} -l${FLAG}")
+        ENDIF()
+    ENDFOREACH()
 ENDIF()
 
 # End configuration

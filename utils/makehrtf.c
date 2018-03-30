@@ -2346,25 +2346,26 @@ static void SynthesizeHrirs(HrirDataT *hData)
 {
     uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
     uint n = hData->mIrPoints;
-    uint ti, fi, oi, ai, ei, i;
+    uint ti, fi, ai, ei, i;
     double lp[4], s0, s1;
     double of, b;
     uint a0, a1;
     double af;
 
-    for(ti = 0;ti < channels;ti++)
+    for(fi = 0;fi < hData->mFdCount;fi++)
     {
-        for(fi = 0;fi < hData->mFdCount;fi++)
+        const uint oi = hData->mFds[fi].mEvStart;
+        if(oi <= 0) continue;
+
+        for(ti = 0;ti < channels;ti++)
         {
-            if(hData->mFds[fi].mEvStart <= 0)
-                continue;
-            oi = hData->mFds[fi].mEvStart;
             for(i = 0;i < n;i++)
                 hData->mFds[fi].mEvs[0].mAzs[0].mIrs[ti][i] = 0.0;
             for(ai = 0;ai < hData->mFds[fi].mEvs[oi].mAzCount;ai++)
             {
                 for(i = 0;i < n;i++)
-                    hData->mFds[fi].mEvs[0].mAzs[0].mIrs[ti][i] += hData->mFds[fi].mEvs[oi].mAzs[ai].mIrs[ti][i] / hData->mFds[fi].mEvs[oi].mAzCount;
+                    hData->mFds[fi].mEvs[0].mAzs[0].mIrs[ti][i] += hData->mFds[fi].mEvs[oi].mAzs[ai].mIrs[ti][i] /
+                                                                   hData->mFds[fi].mEvs[oi].mAzCount;
             }
             for(ei = 1;ei < hData->mFds[fi].mEvStart;ei++)
             {
@@ -2380,7 +2381,8 @@ static void SynthesizeHrirs(HrirDataT *hData)
                     for(i = 0;i < n;i++)
                     {
                         s0 = hData->mFds[fi].mEvs[0].mAzs[0].mIrs[ti][i];
-                        s1 = Lerp(hData->mFds[fi].mEvs[oi].mAzs[a0].mIrs[ti][i], hData->mFds[fi].mEvs[oi].mAzs[a1].mIrs[ti][i], af);
+                        s1 = Lerp(hData->mFds[fi].mEvs[oi].mAzs[a0].mIrs[ti][i],
+                                  hData->mFds[fi].mEvs[oi].mAzs[a1].mIrs[ti][i], af);
                         s0 = Lerp(s0, s1, of);
                         lp[0] = Lerp(s0, lp[0], b);
                         lp[1] = Lerp(lp[0], lp[1], b);
@@ -2404,8 +2406,8 @@ static void SynthesizeHrirs(HrirDataT *hData)
                 lp[3] = Lerp(lp[2], lp[3], b);
                 hData->mFds[fi].mEvs[0].mAzs[0].mIrs[ti][i] = lp[3];
             }
-            hData->mFds[fi].mEvStart = 0;
         }
+        hData->mFds[fi].mEvStart = 0;
     }
 }
 

@@ -425,7 +425,7 @@ static void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei orde
         /* NFC is only used when AvgSpeakerDist is greater than 0, and can only
          * be used when rendering to an ambisonic buffer.
          */
-        device->AvgSpeakerDist = ctrl_dist;
+        device->AvgSpeakerDist = minf(ctrl_dist, 10.0f);
 
         device->Dry.NumChannelsPerOrder[0] = 1;
         if(periphonic)
@@ -937,7 +937,7 @@ static void InitHrtfPanning(ALCdevice *device)
         /* NFC is only used when AvgSpeakerDist is greater than 0, and can only
          * be used when rendering to an ambisonic buffer.
          */
-        device->AvgSpeakerDist = device->HrtfHandle->distance;
+        device->AvgSpeakerDist = minf(device->HrtfHandle->distance, 10.0f);
 
         i = 0;
         device->Dry.NumChannelsPerOrder[i++] = 1;

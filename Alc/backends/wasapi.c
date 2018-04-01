@@ -388,7 +388,7 @@ static DWORD CALLBACK ALCwasapiProxy_messageHandler(void *ptr)
 
     TRACE("Starting message thread\n");
 
-    cohr = CoInitialize(NULL);
+    cohr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
     if(FAILED(cohr))
     {
         WARN("Failed to initialize COM: 0x%08lx\n", cohr);
@@ -435,7 +435,7 @@ static DWORD CALLBACK ALCwasapiProxy_messageHandler(void *ptr)
 
             hr = cohr = S_OK;
             if(++deviceCount == 1)
-                hr = cohr = CoInitialize(NULL);
+                hr = cohr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
             if(SUCCEEDED(hr))
                 hr = V0(proxy,openProxy)();
             if(FAILED(hr))
@@ -487,7 +487,7 @@ static DWORD CALLBACK ALCwasapiProxy_messageHandler(void *ptr)
 
             hr = cohr = S_OK;
             if(++deviceCount == 1)
-                hr = cohr = CoInitialize(NULL);
+                hr = cohr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
             if(SUCCEEDED(hr))
                 hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_INPROC_SERVER, &IID_IMMDeviceEnumerator, &ptr);
             if(SUCCEEDED(hr))
@@ -627,10 +627,10 @@ FORCE_ALIGN static int ALCwasapiPlayback_mixerProc(void *arg)
     BYTE *buffer;
     HRESULT hr;
 
-    hr = CoInitialize(NULL);
+    hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
     if(FAILED(hr))
     {
-        ERR("CoInitialize(NULL) failed: 0x%08lx\n", hr);
+        ERR("CoInitializeEx(NULL, COINIT_MULTITHREADED) failed: 0x%08lx\n", hr);
         V0(device->Backend,lock)();
         aluHandleDisconnect(device, "COM init failed: 0x%08lx", hr);
         V0(device->Backend,unlock)();
@@ -1321,10 +1321,10 @@ FORCE_ALIGN int ALCwasapiCapture_recordProc(void *arg)
     size_t samplesmax = 0;
     HRESULT hr;
 
-    hr = CoInitialize(NULL);
+    hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
     if(FAILED(hr))
     {
-        ERR("CoInitialize(NULL) failed: 0x%08lx\n", hr);
+        ERR("CoInitializeEx(NULL, COINIT_MULTITHREADED) failed: 0x%08lx\n", hr);
         V0(device->Backend,lock)();
         aluHandleDisconnect(device, "COM init failed: 0x%08lx", hr);
         V0(device->Backend,unlock)();

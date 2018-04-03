@@ -155,14 +155,12 @@ static ALvoid ALechoState_process(ALechoState *state, ALsizei SamplesToDo, const
     const ALsizei tap2 = state->Tap[1].delay;
     ALfloat *restrict delaybuf = state->SampleBuffer;
     ALsizei offset = state->Offset;
-    ALfloat x[2], y[2], in, out;
+    ALfloat z1, z2, in, out;
     ALsizei base;
     ALsizei c, i;
 
-    x[0] = state->Filter.x[0];
-    x[1] = state->Filter.x[1];
-    y[0] = state->Filter.y[0];
-    y[1] = state->Filter.y[1];
+    z1 = state->Filter.z1;
+    z2 = state->Filter.z2;
     for(base = 0;base < SamplesToDo;)
     {
         alignas(16) ALfloat temps[2][128];
@@ -182,11 +180,9 @@ static ALvoid ALechoState_process(ALechoState *state, ALsizei SamplesToDo, const
              * feedback attenuation.
              */
             in = temps[1][i];
-            out = in*state->Filter.b0 +
-                  x[0]*state->Filter.b1 + x[1]*state->Filter.b2 -
-                  y[0]*state->Filter.a1 - y[1]*state->Filter.a2;
-            x[1] = x[0]; x[0] = in;
-            y[1] = y[0]; y[0] = out;
+            out = in*state->Filter.b0 + z1;
+            z1 = in*state->Filter.b1 - out*state->Filter.a1 + z2;
+            z2 = in*state->Filter.b2 - out*state->Filter.a2;
 
             delaybuf[offset&mask] += out * state->FeedGain;
             offset++;
@@ -198,10 +194,8 @@ static ALvoid ALechoState_process(ALechoState *state, ALsizei SamplesToDo, const
 
         base += td;
     }
-    state->Filter.x[0] = x[0];
-    state->Filter.x[1] = x[1];
-    state->Filter.y[0] = y[0];
-    state->Filter.y[1] = y[1];
+    state->Filter.z1 = z1;
+    state->Filter.z2 = z2;
 
     state->Offset = offset;
 }

@@ -234,11 +234,9 @@ typedef struct T60Filter {
     ALfloat HFCoeffs[3];
     ALfloat LFCoeffs[3];
 
-    /* The HF and LF filters each keep a state of the last input and last
-     * output sample.
-     */
-    ALfloat HFState[2];
-    ALfloat LFState[2];
+    /* The HF and LF filters each keep a delay component. */
+    ALfloat HFState;
+    ALfloat LFState;
 } T60Filter;
 
 typedef struct EarlyReflections {
@@ -407,10 +405,8 @@ static void ALreverbState_Construct(ALreverbState *state)
             state->Late.T60[i].HFCoeffs[j] = 0.0f;
             state->Late.T60[i].LFCoeffs[j] = 0.0f;
         }
-        state->Late.T60[i].HFState[0] = 0.0f;
-        state->Late.T60[i].HFState[1] = 0.0f;
-        state->Late.T60[i].LFState[0] = 0.0f;
-        state->Late.T60[i].LFState[1] = 0.0f;
+        state->Late.T60[i].HFState = 0.0f;
+        state->Late.T60[i].LFState = 0.0f;
     }
 
     for(i = 0;i < NUM_LINES;i++)
@@ -1443,9 +1439,8 @@ DECL_TEMPLATE(Faded)
 static inline ALfloat FirstOrderFilter(const ALfloat in, const ALfloat *restrict coeffs,
                                        ALfloat *restrict state)
 {
-    ALfloat out = coeffs[0]*in + coeffs[1]*state[0] + coeffs[2]*state[1];
-    state[0] = in;
-    state[1] = out;
+    ALfloat out = coeffs[0]*in + *state;
+    *state = coeffs[1]*in + coeffs[2]*out;
     return out;
 }
 
@@ -1456,8 +1451,8 @@ static inline void LateT60Filter(ALfloat *restrict out, const ALfloat *restrict 
     ALsizei i;
     for(i = 0;i < NUM_LINES;i++)
         out[i] = FirstOrderFilter(
-            FirstOrderFilter(in[i], filter[i].HFCoeffs, filter[i].HFState),
-            filter[i].LFCoeffs, filter[i].LFState
+            FirstOrderFilter(in[i], filter[i].HFCoeffs, &filter[i].HFState),
+            filter[i].LFCoeffs, &filter[i].LFState
         );
 }
 

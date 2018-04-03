@@ -31,10 +31,10 @@ typedef enum BiquadType {
 } BiquadType;
 
 typedef struct BiquadState {
-    ALfloat x[2]; /* History of two last input samples  */
-    ALfloat y[2]; /* History of two last output samples */
-    ALfloat b0, b1, b2; /* Transfer function coefficients "b" */
-    ALfloat a1, a2; /* Transfer function coefficients "a" (a0 is pre-applied) */
+    ALfloat z1, z2; /* Last two delayed components for direct form II. */
+    ALfloat b0, b1, b2; /* Transfer function coefficients "b" (numerator) */
+    ALfloat a1, a2; /* Transfer function coefficients "a" (denominator; a0 is
+                     * pre-applied). */
 } BiquadState;
 /* Currently only a C-based filter process method is implemented. */
 #define BiquadState_process BiquadState_processC
@@ -63,10 +63,8 @@ inline ALfloat calc_rcpQ_from_bandwidth(ALfloat f0norm, ALfloat bandwidth)
 
 inline void BiquadState_clear(BiquadState *filter)
 {
-    filter->x[0] = 0.0f;
-    filter->x[1] = 0.0f;
-    filter->y[0] = 0.0f;
-    filter->y[1] = 0.0f;
+    filter->z1 = 0.0f;
+    filter->z2 = 0.0f;
 }
 
 /**
@@ -97,21 +95,17 @@ inline void BiquadState_copyParams(BiquadState *restrict dst, const BiquadState 
 
 void BiquadState_processC(BiquadState *filter, ALfloat *restrict dst, const ALfloat *restrict src, ALsizei numsamples);
 
-inline void BiquadState_processPassthru(BiquadState *filter, const ALfloat *restrict src, ALsizei numsamples)
+inline void BiquadState_processPassthru(BiquadState *filter, ALsizei numsamples)
 {
-    if(numsamples >= 2)
+    if(LIKELY(numsamples >= 2))
     {
-        filter->x[1] = src[numsamples-2];
-        filter->x[0] = src[numsamples-1];
-        filter->y[1] = src[numsamples-2];
-        filter->y[0] = src[numsamples-1];
+        filter->z1 = 0.0f;
+        filter->z2 = 0.0f;
     }
     else if(numsamples == 1)
     {
-        filter->x[1] = filter->x[0];
-        filter->x[0] = src[0];
-        filter->y[1] = filter->y[0];
-        filter->y[0] = src[0];
+        filter->z1 = filter->z2;
+        filter->z2 = 0.0f;
     }
 }
 

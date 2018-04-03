@@ -271,16 +271,16 @@ static const ALfloat *DoFilters(BiquadState *lpfilter, BiquadState *hpfilter,
     switch(type)
     {
         case AF_None:
-            BiquadState_processPassthru(lpfilter, src, numsamples);
-            BiquadState_processPassthru(hpfilter, src, numsamples);
+            BiquadState_processPassthru(lpfilter, numsamples);
+            BiquadState_processPassthru(hpfilter, numsamples);
             break;
 
         case AF_LowPass:
             BiquadState_process(lpfilter, dst, src, numsamples);
-            BiquadState_processPassthru(hpfilter, dst, numsamples);
+            BiquadState_processPassthru(hpfilter, numsamples);
             return dst;
         case AF_HighPass:
-            BiquadState_processPassthru(lpfilter, src, numsamples);
+            BiquadState_processPassthru(lpfilter, numsamples);
             BiquadState_process(hpfilter, dst, src, numsamples);
             return dst;
 

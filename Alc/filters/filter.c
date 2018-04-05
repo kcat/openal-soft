@@ -7,14 +7,14 @@
 #include "alMain.h"
 #include "defs.h"
 
-extern inline void BiquadState_clear(BiquadState *filter);
-extern inline void BiquadState_copyParams(BiquadState *restrict dst, const BiquadState *restrict src);
-extern inline void BiquadState_processPassthru(BiquadState *filter, ALsizei numsamples);
+extern inline void BiquadFilter_clear(BiquadFilter *filter);
+extern inline void BiquadFilter_copyParams(BiquadFilter *restrict dst, const BiquadFilter *restrict src);
+extern inline void BiquadFilter_passthru(BiquadFilter *filter, ALsizei numsamples);
 extern inline ALfloat calc_rcpQ_from_slope(ALfloat gain, ALfloat slope);
 extern inline ALfloat calc_rcpQ_from_bandwidth(ALfloat f0norm, ALfloat bandwidth);
 
 
-void BiquadState_setParams(BiquadState *filter, BiquadType type, ALfloat gain, ALfloat f0norm, ALfloat rcpQ)
+void BiquadFilter_setParams(BiquadFilter *filter, BiquadType type, ALfloat gain, ALfloat f0norm, ALfloat rcpQ)
 {
     ALfloat alpha, sqrtgain_alpha_2;
     ALfloat w0, sin_w0, cos_w0;
@@ -94,7 +94,7 @@ void BiquadState_setParams(BiquadState *filter, BiquadType type, ALfloat gain, A
 }
 
 
-void BiquadState_processC(BiquadState *filter, ALfloat *restrict dst, const ALfloat *restrict src, ALsizei numsamples)
+void BiquadFilter_processC(BiquadFilter *filter, ALfloat *restrict dst, const ALfloat *restrict src, ALsizei numsamples)
 {
     if(LIKELY(numsamples > 1))
     {

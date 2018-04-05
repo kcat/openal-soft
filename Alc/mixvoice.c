@@ -263,7 +263,7 @@ static void LoadSamples(ALfloat *restrict dst, const ALvoid *restrict src, ALint
 }
 
 
-static const ALfloat *DoFilters(BiquadState *lpfilter, BiquadState *hpfilter,
+static const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter,
                                 ALfloat *restrict dst, const ALfloat *restrict src,
                                 ALsizei numsamples, enum ActiveFilters type)
 {
@@ -271,17 +271,17 @@ static const ALfloat *DoFilters(BiquadState *lpfilter, BiquadState *hpfilter,
     switch(type)
     {
         case AF_None:
-            BiquadState_processPassthru(lpfilter, numsamples);
-            BiquadState_processPassthru(hpfilter, numsamples);
+            BiquadFilter_passthru(lpfilter, numsamples);
+            BiquadFilter_passthru(hpfilter, numsamples);
             break;
 
         case AF_LowPass:
-            BiquadState_process(lpfilter, dst, src, numsamples);
-            BiquadState_processPassthru(hpfilter, numsamples);
+            BiquadFilter_process(lpfilter, dst, src, numsamples);
+            BiquadFilter_passthru(hpfilter, numsamples);
             return dst;
         case AF_HighPass:
-            BiquadState_processPassthru(lpfilter, numsamples);
-            BiquadState_process(hpfilter, dst, src, numsamples);
+            BiquadFilter_passthru(lpfilter, numsamples);
+            BiquadFilter_process(hpfilter, dst, src, numsamples);
             return dst;
 
         case AF_BandPass:
@@ -290,8 +290,8 @@ static const ALfloat *DoFilters(BiquadState *lpfilter, BiquadState *hpfilter,
                 ALfloat temp[256];
                 ALsizei todo = mini(256, numsamples-i);
 
-                BiquadState_process(lpfilter, temp, src+i, todo);
-                BiquadState_process(hpfilter, dst+i, temp, todo);
+                BiquadFilter_process(lpfilter, temp, src+i, todo);
+                BiquadFilter_process(hpfilter, dst+i, temp, todo);
                 i += todo;
             }
             return dst;

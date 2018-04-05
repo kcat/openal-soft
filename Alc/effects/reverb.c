@@ -289,8 +289,8 @@ typedef struct ALreverbState {
 
     /* Master effect filters */
     struct {
-        BiquadState Lp;
-        BiquadState Hp;
+        BiquadFilter Lp;
+        BiquadFilter Hp;
     } Filter[NUM_LINES];
 
     /* Core delay line (early reflections and late reverb tap from this). */
@@ -347,8 +347,8 @@ static void ALreverbState_Construct(ALreverbState *state)
 
     for(i = 0;i < NUM_LINES;i++)
     {
-        BiquadState_clear(&state->Filter[i].Lp);
-        BiquadState_clear(&state->Filter[i].Hp);
+        BiquadFilter_clear(&state->Filter[i].Lp);
+        BiquadFilter_clear(&state->Filter[i].Hp);
     }
 
     state->Delay.Mask = 0;
@@ -1156,16 +1156,16 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
      * killing most of the signal.
      */
     gainhf = maxf(props->Reverb.GainHF, 0.001f);
-    BiquadState_setParams(&State->Filter[0].Lp, BiquadType_HighShelf, gainhf, hf0norm,
-                          calc_rcpQ_from_slope(gainhf, 1.0f));
+    BiquadFilter_setParams(&State->Filter[0].Lp, BiquadType_HighShelf, gainhf, hf0norm,
+                           calc_rcpQ_from_slope(gainhf, 1.0f));
     lf0norm = props->Reverb.LFReference / frequency;
     gainlf = maxf(props->Reverb.GainLF, 0.001f);
-    BiquadState_setParams(&State->Filter[0].Hp, BiquadType_LowShelf, gainlf, lf0norm,
-                          calc_rcpQ_from_slope(gainlf, 1.0f));
+    BiquadFilter_setParams(&State->Filter[0].Hp, BiquadType_LowShelf, gainlf, lf0norm,
+                           calc_rcpQ_from_slope(gainlf, 1.0f));
     for(i = 1;i < NUM_LINES;i++)
     {
-        BiquadState_copyParams(&State->Filter[i].Lp, &State->Filter[0].Lp);
-        BiquadState_copyParams(&State->Filter[i].Hp, &State->Filter[0].Hp);
+        BiquadFilter_copyParams(&State->Filter[i].Lp, &State->Filter[0].Lp);
+        BiquadFilter_copyParams(&State->Filter[i].Hp, &State->Filter[0].Hp);
     }
 
     /* Update the main effect delay and associated taps. */
@@ -1547,8 +1547,8 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
             /* Band-pass the incoming samples. Use the early output lines for
              * temp storage.
              */
-            BiquadState_process(&State->Filter[c].Lp, early[0], afmt[c], todo);
-            BiquadState_process(&State->Filter[c].Hp, early[1], early[0], todo);
+            BiquadFilter_process(&State->Filter[c].Lp, early[0], afmt[c], todo);
+            BiquadFilter_process(&State->Filter[c].Hp, early[1], early[0], todo);
 
             /* Feed the initial delay line. */
             DelayLineIn(&State->Delay, State->Offset, c, early[1], todo);

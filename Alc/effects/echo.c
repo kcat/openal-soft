@@ -52,7 +52,7 @@ typedef struct ALechoState {
 
     ALfloat FeedGain;
 
-    BiquadState Filter;
+    BiquadFilter Filter;
 } ALechoState;
 
 static ALvoid ALechoState_Destruct(ALechoState *state);
@@ -76,7 +76,7 @@ static void ALechoState_Construct(ALechoState *state)
     state->Tap[1].delay = 0;
     state->Offset = 0;
 
-    BiquadState_clear(&state->Filter);
+    BiquadFilter_clear(&state->Filter);
 }
 
 static ALvoid ALechoState_Destruct(ALechoState *state)
@@ -135,9 +135,9 @@ static ALvoid ALechoState_update(ALechoState *state, const ALCcontext *context, 
     state->FeedGain = props->Echo.Feedback;
 
     gainhf = maxf(1.0f - props->Echo.Damping, 0.0625f); /* Limit -24dB */
-    BiquadState_setParams(&state->Filter, BiquadType_HighShelf,
-                          gainhf, LOWPASSFREQREF/frequency,
-                          calc_rcpQ_from_slope(gainhf, 1.0f));
+    BiquadFilter_setParams(&state->Filter, BiquadType_HighShelf,
+        gainhf, LOWPASSFREQREF/frequency, calc_rcpQ_from_slope(gainhf, 1.0f)
+    );
 
     /* First tap panning */
     CalcAngleCoeffs(-F_PI_2*lrpan, 0.0f, spread, coeffs);

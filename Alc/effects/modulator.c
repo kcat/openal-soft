@@ -43,7 +43,7 @@ typedef struct ALmodulatorState {
     alignas(16) ALfloat ModSamples[MAX_UPDATE_SAMPLES];
 
     struct {
-        BiquadState Filter;
+        BiquadFilter Filter;
 
         ALfloat CurrentGains[MAX_OUTPUT_CHANNELS];
         ALfloat TargetGains[MAX_OUTPUT_CHANNELS];
@@ -117,7 +117,7 @@ static ALboolean ALmodulatorState_deviceUpdate(ALmodulatorState *state, ALCdevic
     ALsizei i, j;
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
     {
-        BiquadState_clear(&state->Chans[i].Filter);
+        BiquadFilter_clear(&state->Chans[i].Filter);
         for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
             state->Chans[i].CurrentGains[j] = 0.0f;
     }
@@ -151,7 +151,7 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCcontext 
     state->Chans[0].Filter.a1 = -a;
     state->Chans[0].Filter.a2 = 0.0f;
     for(i = 1;i < MAX_EFFECT_CHANNELS;i++)
-        BiquadState_copyParams(&state->Chans[i].Filter, &state->Chans[0].Filter);
+        BiquadFilter_copyParams(&state->Chans[i].Filter, &state->Chans[0].Filter);
 
     STATIC_CAST(ALeffectState,state)->OutBuffer = device->FOAOut.Buffer;
     STATIC_CAST(ALeffectState,state)->OutChannels = device->FOAOut.NumChannels;
@@ -178,7 +178,7 @@ static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALsizei SamplesT
 
         for(c = 0;c < MAX_EFFECT_CHANNELS;c++)
         {
-            BiquadState_process(&state->Chans[c].Filter, temps[0], &SamplesIn[c][base], td);
+            BiquadFilter_process(&state->Chans[c].Filter, temps[0], &SamplesIn[c][base], td);
             for(i = 0;i < td;i++)
                 temps[1][i] = temps[0][i] * modsamples[i];
 

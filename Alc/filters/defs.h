@@ -30,14 +30,14 @@ typedef enum BiquadType {
     BiquadType_BandPass,
 } BiquadType;
 
-typedef struct BiquadState {
+typedef struct BiquadFilter {
     ALfloat z1, z2; /* Last two delayed components for direct form II. */
     ALfloat b0, b1, b2; /* Transfer function coefficients "b" (numerator) */
     ALfloat a1, a2; /* Transfer function coefficients "a" (denominator; a0 is
                      * pre-applied). */
-} BiquadState;
+} BiquadFilter;
 /* Currently only a C-based filter process method is implemented. */
-#define BiquadState_process BiquadState_processC
+#define BiquadFilter_process BiquadFilter_processC
 
 /**
  * Calculates the rcpQ (i.e. 1/Q) coefficient for shelving filters, using the
@@ -61,7 +61,7 @@ inline ALfloat calc_rcpQ_from_bandwidth(ALfloat f0norm, ALfloat bandwidth)
     return 2.0f*sinhf(logf(2.0f)/2.0f*bandwidth*w0/sinf(w0));
 }
 
-inline void BiquadState_clear(BiquadState *filter)
+inline void BiquadFilter_clear(BiquadFilter *filter)
 {
     filter->z1 = 0.0f;
     filter->z2 = 0.0f;
@@ -82,9 +82,9 @@ inline void BiquadState_clear(BiquadState *filter)
  *             band. Can be generated from calc_rcpQ_from_slope or
  *             calc_rcpQ_from_bandwidth depending on the available data.
  */
-void BiquadState_setParams(BiquadState *filter, BiquadType type, ALfloat gain, ALfloat f0norm, ALfloat rcpQ);
+void BiquadFilter_setParams(BiquadFilter *filter, BiquadType type, ALfloat gain, ALfloat f0norm, ALfloat rcpQ);
 
-inline void BiquadState_copyParams(BiquadState *restrict dst, const BiquadState *restrict src)
+inline void BiquadFilter_copyParams(BiquadFilter *restrict dst, const BiquadFilter *restrict src)
 {
     dst->b0 = src->b0;
     dst->b1 = src->b1;
@@ -93,9 +93,9 @@ inline void BiquadState_copyParams(BiquadState *restrict dst, const BiquadState 
     dst->a2 = src->a2;
 }
 
-void BiquadState_processC(BiquadState *filter, ALfloat *restrict dst, const ALfloat *restrict src, ALsizei numsamples);
+void BiquadFilter_processC(BiquadFilter *filter, ALfloat *restrict dst, const ALfloat *restrict src, ALsizei numsamples);
 
-inline void BiquadState_processPassthru(BiquadState *filter, ALsizei numsamples)
+inline void BiquadFilter_passthru(BiquadFilter *filter, ALsizei numsamples)
 {
     if(LIKELY(numsamples >= 2))
     {

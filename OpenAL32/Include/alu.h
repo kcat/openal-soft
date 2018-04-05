@@ -153,8 +153,8 @@ typedef struct MixHrtfParams {
 
 
 typedef struct DirectParams {
-    BiquadState LowPass;
-    BiquadState HighPass;
+    BiquadFilter LowPass;
+    BiquadFilter HighPass;
 
     NfcFilter NFCtrlFilter;
 
@@ -171,8 +171,8 @@ typedef struct DirectParams {
 } DirectParams;
 
 typedef struct SendParams {
-    BiquadState LowPass;
-    BiquadState HighPass;
+    BiquadFilter LowPass;
+    BiquadFilter HighPass;
 
     struct {
         ALfloat Current[MAX_OUTPUT_CHANNELS];

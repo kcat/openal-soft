@@ -1,3 +1,53 @@
+openal-soft-1.19.0:
+
+    Implemented the ALC_SOFT_device_clock extension.
+
+    Added support fot 24-bit, dual-ear HRTF data sets. The built-in data set
+    has been updated to 24-bit.
+
+    Added a 24- to 48-point band-limited Sinc resampler.
+
+    Added an SDL2 playback backend. Disabled by default to avoid a dependency
+    on SDL2.
+
+    Improved the efficiency of the band-limited Sinc resampler.
+
+    Improved the Sinc resampler's transition band to avoid over-attenuating
+    higher frequencies.
+
+    Replaced the 4-point Sinc resampler with a more efficient cubic resampler.
+
+    Fixed compiling on FreeBSD systems that use freebsd-lib 9.1.
+
+    Fixed compiling on NetBSD.
+
+    Improved the performance and quality of the Chorus effect.
+
+    Removed the reverb effect's modulation stage. Due to the lack of reference
+    for its strength.
+
+    Improved AL call error logging with contextualized messages.
+
+    Improved the efficiency of object ID lookups.
+
+    Improved efficienty of internal voice/source synchronization.
+
+    Fixed the reverb effect's density scale.
+
+    Fixed the reverb effect's panning parameters.
+
+    Increased the number of virtual channels for decoding Ambisonics to HRTF
+    output.
+
+    Implemented the Pitch Shifter effect.
+
+    Renamed the MMDevAPI backend to WASAPI.
+
+    Fixed using the WASAPI backend with certain games, which caused odd COM
+    initialization errors.
+
+    Improved the performance of some filter operations.
+
 openal-soft-1.18.2:
 
     Fixed resetting the FPU rounding mode after certain function calls on

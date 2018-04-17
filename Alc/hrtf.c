@@ -204,7 +204,6 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
     BandSplitter splitter;
     ALsizei idx[HRTF_AMBI_MAX_CHANNELS];
     ALsizei min_delay = HRTF_HISTORY_LENGTH;
-    ALsizei max_delay = 0;
     ALfloat temps[3][HRIR_LENGTH];
     ALsizei max_length = 0;
     ALsizei i, c, b;
@@ -229,6 +228,8 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
 
         /* Calculate indices for left and right channels. */
         idx[c] = evoffset + azidx;
+
+        min_delay = mini(min_delay, mini(Hrtf->delays[idx[c]][0], Hrtf->delays[idx[c]][1]));
     }
 
     memset(temps, 0, sizeof(temps));
@@ -236,12 +237,8 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
     for(c = 0;c < AmbiCount;c++)
     {
         const ALfloat (*fir)[2] = &Hrtf->coeffs[idx[c] * Hrtf->irSize];
-        const ALsizei res_delay = mini(Hrtf->delays[idx[c]][0], Hrtf->delays[idx[c]][1]);
-        ALsizei ldelay = Hrtf->delays[idx[c]][0] - res_delay;
-        ALsizei rdelay = Hrtf->delays[idx[c]][1] - res_delay;
-
-        min_delay = mini(min_delay, res_delay);
-        max_delay = maxi(max_delay, res_delay);
+        ALsizei ldelay = Hrtf->delays[idx[c]][0] - min_delay;
+        ALsizei rdelay = Hrtf->delays[idx[c]][1] - min_delay;
 
         max_length = maxi(max_length,
             mini(maxi(ldelay, rdelay) + Hrtf->irSize, HRIR_LENGTH)
@@ -311,8 +308,7 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
     max_length += MOD_IR_SIZE-1;
     max_length -= max_length%MOD_IR_SIZE;
 
-    TRACE("Skipped delay min: %d, max: %d, new FIR length: %d\n", min_delay, max_delay,
-          max_length);
+    TRACE("Skipped delay: %d, new FIR length: %d\n", min_delay, max_length);
     state->IrSize = max_length;
 #undef NUM_BANDS
 }

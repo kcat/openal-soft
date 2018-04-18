@@ -78,6 +78,8 @@ const ALfloat *Resample_bsinc_Neon(const InterpState *state,
     float32x4_t r4;
     ALfloat pf;
 
+    ASSUME(m > 0);
+
     src += state->bsinc.l;
     for(i = 0;i < dstlen;i++)
     {

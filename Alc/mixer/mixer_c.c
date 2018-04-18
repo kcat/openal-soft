@@ -65,6 +65,8 @@ const ALfloat *Resample_bsinc_C(const InterpState *state, const ALfloat *restric
     ALsizei j_f, pi, i;
     ALfloat pf, r;
 
+    ASSUME(m > 0);
+
     src += state->bsinc.l;
     for(i = 0;i < dstlen;i++)
     {

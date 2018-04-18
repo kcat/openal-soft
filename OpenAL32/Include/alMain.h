@@ -42,11 +42,28 @@
 
 
 #ifdef __GNUC__
+/* LIKELY optimizes the case where the condition is true. The condition is not
+ * required to be true, but it can result in more optimal code for the true
+ * path at the expense of a less optimal false path.
+ */
 #define LIKELY(x) __builtin_expect(!!(x), !0)
+/* The opposite of LIKELY, optimizing the case where the condition is false. */
 #define UNLIKELY(x) __builtin_expect(!!(x), 0)
+/* Unlike LIKELY, ASSUME requires the condition to be true or else it invokes
+ * undefined behavior. It's essentially an assert without actually checking the
+ * condition at run-time, allowing for stronger optimizations than LIKELY.
+ */
+#define ASSUME(x) do { if(!(x)) __builtin_unreachable(); } while(0)
+
 #else
+
 #define LIKELY(x) (!!(x))
 #define UNLIKELY(x) (!!(x))
+#ifdef _MSC_VER
+#define ASSUME __assume
+#else
+#define ASSUME(x) ((void)0)
+#endif
 #endif
 
 #ifndef UINT64_MAX

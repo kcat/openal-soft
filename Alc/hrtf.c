@@ -202,6 +202,7 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
  */
 #define NUM_BANDS 2
     BandSplitter splitter;
+    ALdouble (*tmpres)[HRIR_LENGTH][2];
     ALsizei idx[HRTF_AMBI_MAX_CHANNELS];
     ALsizei min_delay = HRTF_HISTORY_LENGTH;
     ALfloat temps[3][HRIR_LENGTH];
@@ -232,6 +233,8 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
         min_delay = mini(min_delay, mini(Hrtf->delays[idx[c]][0], Hrtf->delays[idx[c]][1]));
     }
 
+    tmpres = al_calloc(16, NumChannels * sizeof(*tmpres));
+
     memset(temps, 0, sizeof(temps));
     bandsplit_init(&splitter, 400.0f / (ALfloat)Hrtf->sampleRate);
     for(c = 0;c < AmbiCount;c++)
@@ -248,13 +251,14 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
         {
             for(i = 0;i < NumChannels;++i)
             {
-                ALfloat hfgain = AmbiOrderHFGain[(ALsizei)floor(sqrt(i))];
+                ALdouble mult = (ALdouble)AmbiOrderHFGain[(ALsizei)floor(sqrt(i))] *
+                                AmbiMatrix[c][i];
                 ALsizei lidx = ldelay, ridx = rdelay;
                 ALsizei j = 0;
                 while(lidx < HRIR_LENGTH && ridx < HRIR_LENGTH && j < Hrtf->irSize)
                 {
-                    state->Chan[i].Coeffs[lidx++][0] += fir[j][0] * AmbiMatrix[c][i] * hfgain;
-                    state->Chan[i].Coeffs[ridx++][1] += fir[j][1] * AmbiMatrix[c][i] * hfgain;
+                    tmpres[i][lidx++][0] += fir[j][0] * mult;
+                    tmpres[i][ridx++][1] += fir[j][1] * mult;
                     j++;
                 }
             }
@@ -273,12 +277,11 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
                 ALfloat hfgain = AmbiOrderHFGain[(ALsizei)floor(sqrt(i))];
                 for(b = 0;b < NUM_BANDS;b++)
                 {
+                    ALdouble mult = AmbiMatrix[c][i] * (ALdouble)((b==0) ? hfgain : 1.0);
                     ALsizei lidx = ldelay;
                     ALsizei j = 0;
                     while(lidx < HRIR_LENGTH)
-                        state->Chan[i].Coeffs[lidx++][0] += temps[b][j++] * AmbiMatrix[c][i] *
-                                                            hfgain;
-                    hfgain = 1.0f;
+                        tmpres[i][lidx++][0] += temps[b][j++] * mult;
                 }
             }
 
@@ -294,12 +297,11 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
                 ALfloat hfgain = AmbiOrderHFGain[(ALsizei)floor(sqrt(i))];
                 for(b = 0;b < NUM_BANDS;b++)
                 {
+                    ALdouble mult = AmbiMatrix[c][i] * (ALdouble)((b==0) ? hfgain : 1.0);
                     ALsizei ridx = rdelay;
                     ALsizei j = 0;
                     while(ridx < HRIR_LENGTH)
-                        state->Chan[i].Coeffs[ridx++][1] += temps[b][j++] * AmbiMatrix[c][i] *
-                                                            hfgain;
-                    hfgain = 1.0f;
+                        tmpres[i][ridx++][1] += temps[b][j++] * mult;
                 }
             }
         }
@@ -307,6 +309,19 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
     /* Round up to the next IR size multiple. */
     max_length += MOD_IR_SIZE-1;
     max_length -= max_length%MOD_IR_SIZE;
+
+    for(i = 0;i < NumChannels;++i)
+    {
+        int idx;
+        for(idx = 0;idx < HRIR_LENGTH;idx++)
+        {
+            state->Chan[i].Coeffs[idx][0] = (ALfloat)tmpres[i][idx][0];
+            state->Chan[i].Coeffs[idx][1] = (ALfloat)tmpres[i][idx][1];
+        }
+    }
+
+    al_free(tmpres);
+    tmpres = NULL;
 
     TRACE("Skipped delay: %d, new FIR length: %d\n", min_delay, max_length);
     state->IrSize = max_length;

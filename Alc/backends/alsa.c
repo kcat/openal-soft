@@ -1146,6 +1146,7 @@ error2:
     ll_ringbuffer_free(self->ring);
     self->ring = NULL;
     snd_pcm_close(self->pcmHandle);
+    self->pcmHandle = NULL;
 
     return ALC_INVALID_VALUE;
 }

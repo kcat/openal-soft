@@ -27,6 +27,9 @@ void MixHrtf(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
     ALfloat left, right;
     ALsizei i;
 
+    ASSUME(IrSize >= 4);
+    ASSUME(BufferSize > 0);
+
     LeftOut  += OutPos;
     RightOut += OutPos;
     for(i = 0;i < BufferSize;i++)
@@ -65,6 +68,9 @@ void MixHrtfBlend(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
     ALfloat left, right;
     ALsizei i;
 
+    ASSUME(IrSize >= 4);
+    ASSUME(BufferSize > 0);
+
     LeftOut  += OutPos;
     RightOut += OutPos;
     for(i = 0;i < BufferSize;i++)
@@ -99,6 +105,9 @@ void MixDirectHrtf(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
 {
     ALfloat insample;
     ALsizei i;
+
+    ASSUME(IrSize >= 4);
+    ASSUME(BufferSize > 0);
 
     for(i = 0;i < BufferSize;i++)
     {

@@ -25,6 +25,7 @@ const ALfloat *Resample_bsinc_SSE(const InterpState *state, const ALfloat *restr
     __m128 r4;
 
     ASSUME(m > 0);
+    ASSUME(dstlen > 0);
 
     src += state->bsinc.l;
     for(i = 0;i < dstlen;i++)
@@ -139,6 +140,7 @@ void Mix_SSE(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffer
     __m128 gain4;
     ALsizei c;
 
+    ASSUME(BufferSize > 0);
     delta = (Counter > 0) ? 1.0f/(ALfloat)Counter : 0.0f;
 
     for(c = 0;c < OutChans;c++)
@@ -209,6 +211,8 @@ void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restri
 {
     __m128 gain4;
     ALsizei c;
+
+    ASSUME(BufferSize > 0);
 
     for(c = 0;c < InChans;c++)
     {

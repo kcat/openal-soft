@@ -41,6 +41,8 @@ const ALfloat *Resample_lerp_SSE41(const InterpState* UNUSED(state),
     ALint pos;
     ALsizei i;
 
+    ASSUME(numsamples > 0);
+
     InitiatePositionArrays(frac, increment, frac_.i, pos_.i, 4);
 
     frac4 = _mm_castps_si128(_mm_load_ps(frac_.f));

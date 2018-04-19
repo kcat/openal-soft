@@ -23,6 +23,8 @@ const ALfloat *Resample_lerp_Neon(const InterpState* UNUSED(state),
     int32x4_t frac4;
     ALsizei i;
 
+    ASSUME(numsamples > 0);
+
     InitiatePositionArrays(frac, increment, frac_, pos_, 4);
 
     frac4 = vld1q_s32(frac_);
@@ -79,6 +81,7 @@ const ALfloat *Resample_bsinc_Neon(const InterpState *state,
     ALfloat pf;
 
     ASSUME(m > 0);
+    ASSUME(dstlen > 0);
 
     src += state->bsinc.l;
     for(i = 0;i < dstlen;i++)
@@ -167,6 +170,7 @@ void Mix_Neon(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffe
     float32x4_t gain4;
     ALsizei c;
 
+    ASSUME(BufferSize > 0);
     data = ASSUME_ALIGNED(data, 16);
     OutBuffer = ASSUME_ALIGNED(OutBuffer, 16);
 
@@ -239,6 +243,7 @@ void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restr
     float32x4_t gain4;
     ALsizei c;
 
+    ASSUME(BufferSize > 0);
     data = ASSUME_ALIGNED(data, 16);
     OutBuffer = ASSUME_ALIGNED(OutBuffer, 16);
 

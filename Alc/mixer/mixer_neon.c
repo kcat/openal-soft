@@ -159,7 +159,6 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*restrict Values)[2],
 #define MixHrtfBlend MixHrtfBlend_Neon
 #define MixDirectHrtf MixDirectHrtf_Neon
 #include "hrtf_inc.c"
-#undef MixHrtf
 
 
 void Mix_Neon(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],

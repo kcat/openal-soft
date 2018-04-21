@@ -40,6 +40,11 @@
 #define SZFMT "%zu"
 #endif
 
+#ifdef __has_builtin
+#define HAS_BUILTIN __has_builtin
+#else
+#define HAS_BUILTIN(x) (0)
+#endif
 
 #ifdef __GNUC__
 /* LIKELY optimizes the case where the condition is true. The condition is not
@@ -53,7 +58,11 @@
  * undefined behavior. It's essentially an assert without actually checking the
  * condition at run-time, allowing for stronger optimizations than LIKELY.
  */
+#if HAS_BUILTIN(__builtin_assume)
+#define ASSUME __builtin_assume
+#else
 #define ASSUME(x) do { if(!(x)) __builtin_unreachable(); } while(0)
+#endif
 
 #else
 

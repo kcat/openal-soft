@@ -173,6 +173,7 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
     idx[2] *= Hrtf->irSize;
     idx[3] *= Hrtf->irSize;
 
+    ASSUME(Hrtf->irSize >= MIN_IR_SIZE && (Hrtf->irSize%MOD_IR_SIZE) == 0);
     coeffs = ASSUME_ALIGNED(coeffs, 16);
     /* Calculate the blended HRIR coefficients. */
     coeffs[0][0] = PassthruCoeff * (1.0f-dirfact);

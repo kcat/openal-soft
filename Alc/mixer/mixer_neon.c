@@ -169,6 +169,7 @@ void Mix_Neon(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffe
     float32x4_t gain4;
     ALsizei c;
 
+    ASSUME(OutChans > 0);
     ASSUME(BufferSize > 0);
     data = ASSUME_ALIGNED(data, 16);
     OutBuffer = ASSUME_ALIGNED(OutBuffer, 16);
@@ -242,6 +243,7 @@ void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restr
     float32x4_t gain4;
     ALsizei c;
 
+    ASSUME(InChans > 0);
     ASSUME(BufferSize > 0);
     data = ASSUME_ALIGNED(data, 16);
     OutBuffer = ASSUME_ALIGNED(OutBuffer, 16);

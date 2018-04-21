@@ -139,6 +139,7 @@ void Mix_SSE(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffer
     __m128 gain4;
     ALsizei c;
 
+    ASSUME(OutChans > 0);
     ASSUME(BufferSize > 0);
     delta = (Counter > 0) ? 1.0f/(ALfloat)Counter : 0.0f;
 
@@ -211,6 +212,7 @@ void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restri
     __m128 gain4;
     ALsizei c;
 
+    ASSUME(InChans > 0);
     ASSUME(BufferSize > 0);
 
     for(c = 0;c < InChans;c++)

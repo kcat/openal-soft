@@ -122,6 +122,7 @@ void Mix_C(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffer)[
     ALfloat gain, delta, step;
     ALsizei c;
 
+    ASSUME(OutChans > 0);
     ASSUME(BufferSize > 0);
     delta = (Counter > 0) ? 1.0f/(ALfloat)Counter : 0.0f;
 
@@ -160,6 +161,7 @@ void MixRow_C(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restrict
 {
     ALsizei c, i;
 
+    ASSUME(InChans > 0);
     ASSUME(BufferSize > 0);
 
     for(c = 0;c < InChans;c++)

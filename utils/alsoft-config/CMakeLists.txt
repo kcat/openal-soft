@@ -4,8 +4,10 @@ option(ALSOFT_NO_QT5 "Use Qt4 instead of Qt5 for alsoft-config" FALSE)
 
 include_directories("${alsoft-config_BINARY_DIR}")
 
-set(alsoft-config_SRCS  main.cpp
-                        mainwindow.cpp
+set(alsoft-config_SRCS
+    main.cpp
+    mainwindow.cpp
+    mainwindow.h
 )
 set(alsoft-config_UIS  mainwindow.ui)
 set(alsoft-config_MOCS  mainwindow.h)

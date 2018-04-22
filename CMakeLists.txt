@@ -699,52 +699,96 @@ IF(NOT HAVE_STDINT_H)
 ENDIF()
 
 
-SET(COMMON_OBJS  common/almalloc.c
-                 common/atomic.c
-                 common/rwlock.c
-                 common/threads.c
-                 common/uintmap.c
+SET(COMMON_OBJS
+    common/align.h
+    common/almalloc.c
+    common/almalloc.h
+    common/atomic.c
+    common/atomic.h
+    common/bool.h
+    common/math_defs.h
+    common/rwlock.c
+    common/rwlock.h
+    common/static_assert.h
+    common/threads.c
+    common/threads.h
+    common/uintmap.c
+    common/uintmap.h
 )
-SET(OPENAL_OBJS  OpenAL32/alAuxEffectSlot.c
-                 OpenAL32/alBuffer.c
-                 OpenAL32/alEffect.c
-                 OpenAL32/alError.c
-                 OpenAL32/alExtension.c
-                 OpenAL32/alFilter.c
-                 OpenAL32/alListener.c
-                 OpenAL32/alSource.c
-                 OpenAL32/alState.c
-                 OpenAL32/event.c
-                 OpenAL32/sample_cvt.c
+SET(OPENAL_OBJS
+    OpenAL32/Include/bs2b.h
+    OpenAL32/Include/alMain.h
+    OpenAL32/Include/alu.h
+
+    OpenAL32/Include/alAuxEffectSlot.h
+    OpenAL32/alAuxEffectSlot.c
+    OpenAL32/Include/alBuffer.h
+    OpenAL32/alBuffer.c
+    OpenAL32/Include/alEffect.h
+    OpenAL32/alEffect.c
+    OpenAL32/Include/alError.h
+    OpenAL32/alError.c
+    OpenAL32/alExtension.c
+    OpenAL32/Include/alFilter.h
+    OpenAL32/alFilter.c
+    OpenAL32/Include/alListener.h
+    OpenAL32/alListener.c
+    OpenAL32/Include/alSource.h
+    OpenAL32/alSource.c
+    OpenAL32/alState.c
+    OpenAL32/event.c
+    OpenAL32/Include/sample_cvt.h
+    OpenAL32/sample_cvt.c
 )
-SET(ALC_OBJS  Alc/ALc.c
-              Alc/ALu.c
-              Alc/alconfig.c
-              Alc/bs2b.c
-              Alc/converter.c
-              Alc/mastering.c
-              Alc/ringbuffer.c
-              Alc/effects/chorus.c
-              Alc/effects/compressor.c
-              Alc/effects/dedicated.c
-              Alc/effects/distortion.c
-              Alc/effects/echo.c
-              Alc/effects/equalizer.c
-              Alc/effects/modulator.c
-              Alc/effects/null.c
-              Alc/effects/pshifter.c
-              Alc/effects/reverb.c
-              Alc/filters/filter.c
-              Alc/filters/nfc.c
-              Alc/filters/splitter.c
-              Alc/helpers.c
-              Alc/hrtf.c
-              Alc/uhjfilter.c
-              Alc/ambdec.c
-              Alc/bformatdec.c
-              Alc/panning.c
-              Alc/mixvoice.c
-              Alc/mixer/mixer_c.c
+SET(ALC_OBJS
+    Alc/ALc.c
+    Alc/ALu.c
+    Alc/alconfig.c
+    Alc/alconfig.h
+    Alc/bs2b.c
+    Alc/converter.c
+    Alc/converter.h
+    Alc/inprogext.h
+    Alc/mastering.c
+    Alc/mastering.h
+    Alc/ringbuffer.c
+    Alc/ringbuffer.h
+    Alc/effects/chorus.c
+    Alc/effects/compressor.c
+    Alc/effects/dedicated.c
+    Alc/effects/distortion.c
+    Alc/effects/echo.c
+    Alc/effects/equalizer.c
+    Alc/effects/modulator.c
+    Alc/effects/null.c
+    Alc/effects/pshifter.c
+    Alc/effects/reverb.c
+    Alc/filters/defs.h
+    Alc/filters/filter.c
+    Alc/filters/nfc.c
+    Alc/filters/nfc.h
+    Alc/filters/splitter.c
+    Alc/filters/splitter.h
+    Alc/helpers.c
+    Alc/alstring.h
+    Alc/compat.h
+    Alc/cpu_caps.h
+    Alc/fpu_modes.h
+    Alc/logging.h
+    Alc/vector.h
+    Alc/hrtf.c
+    Alc/hrtf.h
+    Alc/uhjfilter.c
+    Alc/uhjfilter.h
+    Alc/ambdec.c
+    Alc/ambdec.h
+    Alc/bformatdec.c
+    Alc/bformatdec.h
+    Alc/panning.c
+    Alc/polymorphism.h
+    Alc/mixvoice.c
+    Alc/mixer/defs.h
+    Alc/mixer/mixer_c.c
 )
 
 
@@ -884,10 +928,11 @@ ENDIF()
 
 SET(BACKENDS "")
 SET(ALC_OBJS  ${ALC_OBJS}
-              Alc/backends/base.c
-              # Default backends, always available
-              Alc/backends/loopback.c
-              Alc/backends/null.c
+    Alc/backends/base.c
+    Alc/backends/base.h
+    # Default backends, always available
+    Alc/backends/loopback.c
+    Alc/backends/null.c
 )
 
 # Check ALSA backend
@@ -1320,7 +1365,7 @@ ELSE()
     ENDIF()
 
     IF(WIN32 AND ALSOFT_BUILD_ROUTER)
-        ADD_LIBRARY(OpenAL SHARED router/router.c router/alc.c router/al.c)
+        ADD_LIBRARY(OpenAL SHARED router/router.c router/router.h router/alc.c router/al.c)
         TARGET_COMPILE_DEFINITIONS(OpenAL
             PRIVATE AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES ${CPP_DEFS})
         TARGET_COMPILE_OPTIONS(OpenAL PRIVATE ${C_FLAGS})
@@ -1478,7 +1523,7 @@ IF(ALSOFT_UTILS)
 
     SET(MAKEHRTF_SRCS  utils/makehrtf.c)
     IF(NOT HAVE_GETOPT)
-        SET(MAKEHRTF_SRCS  ${MAKEHRTF_SRCS} utils/getopt.c)
+        SET(MAKEHRTF_SRCS  ${MAKEHRTF_SRCS} utils/getopt.c utils/getopt.h)
     ENDIF()
     ADD_EXECUTABLE(makehrtf ${MAKEHRTF_SRCS})
     TARGET_COMPILE_DEFINITIONS(makehrtf PRIVATE ${CPP_DEFS})

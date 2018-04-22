@@ -230,6 +230,21 @@ inline size_t RoundUp(size_t value, size_t r)
  * mode. */
 inline ALint fastf2i(ALfloat f)
 {
+#if (defined(__i386__) && !defined(__SSE_MATH__)) || (defined(_M_IX86_FP) && (_M_IX86_FP == 0))
+/* If using the x87 instruction set, try to use more efficient float-to-int
+ * operations. The fistp instruction converts to integer efficiently enough,
+ * but it isn't IEEE-754-compliant because it uses the current rounding mode
+ * instead of always truncating -- the compiler will generate costly control
+ * word changes with it to get correct behavior. If supported, lrintf converts
+ * to integer using the current rounding mode, i.e. using fistp without control
+ * word changes (if nothing even better is available). As long as the rounding
+ * mode is set to round-to-zero ahead of time, and the call gets inlined, this
+ * works fine.
+ *
+ * Other instruction sets, like SSE and ARM, have opcodes that inherently do
+ * the right thing, and don't suffer from the same excessive performance
+ * degredation from float-to-int conversions.
+ */
 #ifdef HAVE_LRINTF
     return lrintf(f);
 #elif defined(_MSC_VER) && defined(_M_IX86)
@@ -237,6 +252,9 @@ inline ALint fastf2i(ALfloat f)
     __asm fld f
     __asm fistp i
     return i;
+#else
+    return (ALint)f;
+#endif
 #else
     return (ALint)f;
 #endif

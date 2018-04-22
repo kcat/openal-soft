@@ -736,6 +736,7 @@ SET(ALC_OBJS  Alc/ALc.c
               Alc/effects/reverb.c
               Alc/filters/filter.c
               Alc/filters/nfc.c
+              Alc/filters/splitter.c
               Alc/helpers.c
               Alc/hrtf.c
               Alc/uhjfilter.c

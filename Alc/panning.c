@@ -33,6 +33,7 @@
 #include "bool.h"
 #include "ambdec.h"
 #include "bformatdec.h"
+#include "filters/splitter.h"
 #include "uhjfilter.h"
 #include "bs2b.h"
 

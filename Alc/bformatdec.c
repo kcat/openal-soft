@@ -3,112 +3,12 @@
 
 #include "bformatdec.h"
 #include "ambdec.h"
+#include "filters/splitter.h"
 #include "alu.h"
 
 #include "bool.h"
 #include "threads.h"
 #include "almalloc.h"
-
-
-void bandsplit_init(BandSplitter *splitter, ALfloat f0norm)
-{
-    ALfloat w = f0norm * F_TAU;
-    ALfloat cw = cosf(w);
-    if(cw > FLT_EPSILON)
-        splitter->coeff = (sinf(w) - 1.0f) / cw;
-    else
-        splitter->coeff = cw * -0.5f;
-
-    splitter->lp_z1 = 0.0f;
-    splitter->lp_z2 = 0.0f;
-    splitter->hp_z1 = 0.0f;
-}
-
-void bandsplit_clear(BandSplitter *splitter)
-{
-    splitter->lp_z1 = 0.0f;
-    splitter->lp_z2 = 0.0f;
-    splitter->hp_z1 = 0.0f;
-}
-
-void bandsplit_process(BandSplitter *splitter, ALfloat *restrict hpout, ALfloat *restrict lpout,
-                       const ALfloat *input, ALsizei count)
-{
-    ALfloat lp_coeff, hp_coeff, lp_y, hp_y, d;
-    ALfloat lp_z1, lp_z2, hp_z1;
-    ALsizei i;
-
-    hp_coeff = splitter->coeff;
-    lp_coeff = splitter->coeff*0.5f + 0.5f;
-    lp_z1 = splitter->lp_z1;
-    lp_z2 = splitter->lp_z2;
-    hp_z1 = splitter->hp_z1;
-    for(i = 0;i < count;i++)
-    {
-        ALfloat in = input[i];
-
-        /* Low-pass sample processing. */
-        d = (in - lp_z1) * lp_coeff;
-        lp_y = lp_z1 + d;
-        lp_z1 = lp_y + d;
-
-        d = (lp_y - lp_z2) * lp_coeff;
-        lp_y = lp_z2 + d;
-        lp_z2 = lp_y + d;
-
-        lpout[i] = lp_y;
-
-        /* All-pass sample processing. */
-        d = in - hp_coeff*hp_z1;
-        hp_y = hp_z1 + hp_coeff*d;
-        hp_z1 = d;
-
-        /* High-pass generated from removing low-passed output. */
-        hpout[i] = hp_y - lp_y;
-    }
-    splitter->lp_z1 = lp_z1;
-    splitter->lp_z2 = lp_z2;
-    splitter->hp_z1 = hp_z1;
-}
-
-
-void splitterap_init(SplitterAllpass *splitter, ALfloat f0norm)
-{
-    ALfloat w = f0norm * F_TAU;
-    ALfloat cw = cosf(w);
-    if(cw > FLT_EPSILON)
-        splitter->coeff = (sinf(w) - 1.0f) / cw;
-    else
-        splitter->coeff = cw * -0.5f;
-
-    splitter->z1 = 0.0f;
-}
-
-void splitterap_clear(SplitterAllpass *splitter)
-{
-    splitter->z1 = 0.0f;
-}
-
-void splitterap_process(SplitterAllpass *splitter, ALfloat *restrict samples, ALsizei count)
-{
-    ALfloat coeff, d, x;
-    ALfloat z1;
-    ALsizei i;
-
-    coeff = splitter->coeff;
-    z1 = splitter->z1;
-    for(i = 0;i < count;i++)
-    {
-        x = samples[i];
-
-        d = x - coeff*z1;
-        x = z1 + coeff*d;
-        z1 = d;
-
-        samples[i] = x;
-    }
-    splitter->z1 = z1;
-}
 
 
 /* NOTE: These are scale factors as applied to Ambisonics content. Decoder

@@ -28,9 +28,9 @@
 #include "alMain.h"
 #include "alSource.h"
 #include "alu.h"
-#include "bformatdec.h"
 #include "hrtf.h"
 #include "alconfig.h"
+#include "filters/splitter.h"
 
 #include "compat.h"
 #include "almalloc.h"

@@ -305,26 +305,24 @@ static void ProcessUhj(ALCdevice *device, ALsizei SamplesToDo)
 {
     int lidx = GetChannelIdxByName(&device->RealOut, FrontLeft);
     int ridx = GetChannelIdxByName(&device->RealOut, FrontRight);
-    if(LIKELY(lidx != -1 && ridx != -1))
-    {
-        /* Encode to stereo-compatible 2-channel UHJ output. */
-        EncodeUhj2(device->Uhj_Encoder,
-            device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
-            device->Dry.Buffer, SamplesToDo
-        );
-    }
+    assert(lidx != -1 && ridx != -1);
+
+    /* Encode to stereo-compatible 2-channel UHJ output. */
+    EncodeUhj2(device->Uhj_Encoder,
+        device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
+        device->Dry.Buffer, SamplesToDo
+    );
 }
 
 static void ProcessBs2b(ALCdevice *device, ALsizei SamplesToDo)
 {
     int lidx = GetChannelIdxByName(&device->RealOut, FrontLeft);
     int ridx = GetChannelIdxByName(&device->RealOut, FrontRight);
-    if(LIKELY(lidx != -1 && ridx != -1))
-    {
-        /* Apply binaural/crossfeed filter */
-        bs2b_cross_feed(device->Bs2b, device->RealOut.Buffer[lidx],
-                        device->RealOut.Buffer[ridx], SamplesToDo);
-    }
+    assert(lidx != -1 && ridx != -1);
+
+    /* Apply binaural/crossfeed filter */
+    bs2b_cross_feed(device->Bs2b, device->RealOut.Buffer[lidx],
+                    device->RealOut.Buffer[ridx], SamplesToDo);
 }
 
 void aluSelectPostProcess(ALCdevice *device)

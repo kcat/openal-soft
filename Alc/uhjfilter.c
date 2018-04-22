@@ -9,44 +9,32 @@
 #define MAX_UPDATE_SAMPLES  128
 
 
-static const ALfloat Filter1Coeff[4] = {
-    0.6923878f, 0.9360654322959f, 0.9882295226860f, 0.9987488452737f
+static const ALfloat Filter1CoeffSqr[4] = {
+    0.479400865589f, 0.876218493539f, 0.976597589508f, 0.997499255936f
 };
-static const ALfloat Filter2Coeff[4] = {
-    0.4021921162426f, 0.8561710882420f, 0.9722909545651f, 0.9952884791278f
+static const ALfloat Filter2CoeffSqr[4] = {
+    0.161758498368f, 0.733028932341f, 0.945349700329f, 0.990599156685f
 };
 
 static void allpass_process(AllPassState *state, ALfloat *restrict dst, const ALfloat *restrict src, const ALfloat aa, ALsizei todo)
 {
+    ALfloat x0 = state->x[0];
+    ALfloat x1 = state->x[1];
+    ALfloat y0 = state->y[0];
+    ALfloat y1 = state->y[1];
     ALsizei i;
 
-    if(LIKELY(todo > 1))
+    for(i = 0;i < todo;i++)
     {
-        ALfloat x0 = state->x[0];
-        ALfloat x1 = state->x[1];
-        ALfloat y0 = state->y[0];
-        ALfloat y1 = state->y[1];
-
-        for(i = 0;i < todo;i++)
-        {
-            dst[i] = aa*(src[i] + y1) - x1;
-            y1 = y0; y0 = dst[i];
-            x1 = x0; x0 = src[i];
-        }
-
-        state->x[0] = x0;
-        state->x[1] = x1;
-        state->y[0] = y0;
-        state->y[1] = y1;
+        dst[i] = aa*(src[i] + y1) - x1;
+        y1 = y0; y0 = dst[i];
+        x1 = x0; x0 = src[i];
     }
-    else if(todo == 1)
-    {
-        dst[0] = aa*(src[0] + state->y[1]) - state->x[1];
-        state->x[1] = state->x[0];
-        state->x[0] = src[0];
-        state->y[1] = state->y[0];
-        state->y[0] = dst[0];
-    }
+
+    state->x[0] = x0;
+    state->x[1] = x1;
+    state->y[0] = y0;
+    state->y[1] = y1;
 }
 
 
@@ -76,6 +64,8 @@ void EncodeUhj2(Uhj2Encoder *enc, ALfloat *restrict LeftOut, ALfloat *restrict R
     ALfloat temp[2][MAX_UPDATE_SAMPLES];
     ALsizei base, i;
 
+    ASSUME(SamplesToDo > 0);
+
     for(base = 0;base < SamplesToDo;)
     {
         ALsizei todo = mini(SamplesToDo - base, MAX_UPDATE_SAMPLES);
@@ -83,19 +73,15 @@ void EncodeUhj2(Uhj2Encoder *enc, ALfloat *restrict LeftOut, ALfloat *restrict R
         /* D = 0.6554516*Y */
         for(i = 0;i < todo;i++)
             temp[0][i] = 0.6554516f*InSamples[2][base+i];
-        allpass_process(&enc->Filter1_Y[0], temp[1], temp[0],
-                        Filter1Coeff[0]*Filter1Coeff[0], todo);
-        allpass_process(&enc->Filter1_Y[1], temp[0], temp[1],
-                        Filter1Coeff[1]*Filter1Coeff[1], todo);
-        allpass_process(&enc->Filter1_Y[2], temp[1], temp[0],
-                        Filter1Coeff[2]*Filter1Coeff[2], todo);
+        allpass_process(&enc->Filter1_Y[0], temp[1], temp[0], Filter1CoeffSqr[0], todo);
+        allpass_process(&enc->Filter1_Y[1], temp[0], temp[1], Filter1CoeffSqr[1], todo);
+        allpass_process(&enc->Filter1_Y[2], temp[1], temp[0], Filter1CoeffSqr[2], todo);
         /* NOTE: Filter1 requires a 1 sample delay for the final output, so
          * take the last processed sample from the previous run as the first
          * output sample.
          */
         D[0] = enc->Filter1_Y[3].y[0];
-        allpass_process(&enc->Filter1_Y[3], temp[0], temp[1],
-                        Filter1Coeff[3]*Filter1Coeff[3], todo);
+        allpass_process(&enc->Filter1_Y[3], temp[0], temp[1], Filter1CoeffSqr[3], todo);
         for(i = 1;i < todo;i++)
             D[i] = temp[0][i-1];
 
@@ -103,14 +89,10 @@ void EncodeUhj2(Uhj2Encoder *enc, ALfloat *restrict LeftOut, ALfloat *restrict R
         for(i = 0;i < todo;i++)
             temp[0][i] = -0.3420201f*InSamples[0][base+i] +
                           0.5098604f*InSamples[1][base+i];
-        allpass_process(&enc->Filter2_WX[0], temp[1], temp[0],
-                        Filter2Coeff[0]*Filter2Coeff[0], todo);
-        allpass_process(&enc->Filter2_WX[1], temp[0], temp[1],
-                        Filter2Coeff[1]*Filter2Coeff[1], todo);
-        allpass_process(&enc->Filter2_WX[2], temp[1], temp[0],
-                        Filter2Coeff[2]*Filter2Coeff[2], todo);
-        allpass_process(&enc->Filter2_WX[3], temp[0], temp[1],
-                        Filter2Coeff[3]*Filter2Coeff[3], todo);
+        allpass_process(&enc->Filter2_WX[0], temp[1], temp[0], Filter2CoeffSqr[0], todo);
+        allpass_process(&enc->Filter2_WX[1], temp[0], temp[1], Filter2CoeffSqr[1], todo);
+        allpass_process(&enc->Filter2_WX[2], temp[1], temp[0], Filter2CoeffSqr[2], todo);
+        allpass_process(&enc->Filter2_WX[3], temp[0], temp[1], Filter2CoeffSqr[3], todo);
         for(i = 0;i < todo;i++)
             D[i] += temp[0][i];
 
@@ -118,15 +100,11 @@ void EncodeUhj2(Uhj2Encoder *enc, ALfloat *restrict LeftOut, ALfloat *restrict R
         for(i = 0;i < todo;i++)
             temp[0][i] = 0.9396926f*InSamples[0][base+i] +
                          0.1855740f*InSamples[1][base+i];
-        allpass_process(&enc->Filter1_WX[0], temp[1], temp[0],
-                        Filter1Coeff[0]*Filter1Coeff[0], todo);
-        allpass_process(&enc->Filter1_WX[1], temp[0], temp[1],
-                        Filter1Coeff[1]*Filter1Coeff[1], todo);
-        allpass_process(&enc->Filter1_WX[2], temp[1], temp[0],
-                        Filter1Coeff[2]*Filter1Coeff[2], todo);
+        allpass_process(&enc->Filter1_WX[0], temp[1], temp[0], Filter1CoeffSqr[0], todo);
+        allpass_process(&enc->Filter1_WX[1], temp[0], temp[1], Filter1CoeffSqr[1], todo);
+        allpass_process(&enc->Filter1_WX[2], temp[1], temp[0], Filter1CoeffSqr[2], todo);
         S[0] = enc->Filter1_WX[3].y[0];
-        allpass_process(&enc->Filter1_WX[3], temp[0], temp[1],
-                        Filter1Coeff[3]*Filter1Coeff[3], todo);
+        allpass_process(&enc->Filter1_WX[3], temp[0], temp[1], Filter1CoeffSqr[3], todo);
         for(i = 1;i < todo;i++)
             S[i] = temp[0][i-1];
 

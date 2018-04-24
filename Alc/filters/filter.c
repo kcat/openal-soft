@@ -96,43 +96,34 @@ void BiquadFilter_setParams(BiquadFilter *filter, BiquadType type, ALfloat gain,
 
 void BiquadFilter_processC(BiquadFilter *filter, ALfloat *restrict dst, const ALfloat *restrict src, ALsizei numsamples)
 {
-    if(LIKELY(numsamples > 1))
-    {
-        const ALfloat a1 = filter->a1;
-        const ALfloat a2 = filter->a2;
-        const ALfloat b0 = filter->b0;
-        const ALfloat b1 = filter->b1;
-        const ALfloat b2 = filter->b2;
-        ALfloat z1 = filter->z1;
-        ALfloat z2 = filter->z2;
-        ALsizei i;
+    const ALfloat a1 = filter->a1;
+    const ALfloat a2 = filter->a2;
+    const ALfloat b0 = filter->b0;
+    const ALfloat b1 = filter->b1;
+    const ALfloat b2 = filter->b2;
+    ALfloat z1 = filter->z1;
+    ALfloat z2 = filter->z2;
+    ALsizei i;
 
-        /* Processing loop is transposed direct form II. This requires less
-         * storage versus direct form I (only two delay components, instead of
-         * a four-sample history; the last two inputs and outputs), and works
-         * better for floating-point which favors summing similarly-sized
-         * values while being less bothered by overflow.
-         *
-         * See: http://www.earlevel.com/main/2003/02/28/biquads/
-         */
-        for(i = 0;i < numsamples;i++)
-        {
-            ALfloat input = src[i];
-            ALfloat output = input*b0 + z1;
-            z1 = input*b1 - output*a1 + z2;
-            z2 = input*b2 - output*a2;
-            dst[i] = output;
-        }
+    ASSUME(numsamples > 0);
 
-        filter->z1 = z1;
-        filter->z2 = z2;
-    }
-    else if(numsamples == 1)
+    /* Processing loop is Transposed Direct Form II. This requires less storage
+     * compared to Direct Form I (only two delay components, instead of a four-
+     * sample history; the last two inputs and outputs), and works better for
+     * floating-point which favors summing similarly-sized values while being
+     * less bothered by overflow.
+     *
+     * See: http://www.earlevel.com/main/2003/02/28/biquads/
+     */
+    for(i = 0;i < numsamples;i++)
     {
-        ALfloat input = *src;
-        ALfloat output = input*filter->b0 + filter->z1;
-        filter->z1 = input*filter->b1 - output*filter->a1 + filter->z2;
-        filter->z2 = input*filter->b2 - output*filter->a2;
-        *dst = output;
+        ALfloat input = src[i];
+        ALfloat output = input*b0 + z1;
+        z1 = input*b1 - output*a1 + z2;
+        z2 = input*b2 - output*a2;
+        dst[i] = output;
     }
+
+    filter->z1 = z1;
+    filter->z2 = z2;
 }

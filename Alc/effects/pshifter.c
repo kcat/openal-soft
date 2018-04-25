@@ -38,18 +38,18 @@
 #define FIFO_LATENCY (STFT_STEP * (OVERSAMP-1))
 
 typedef struct ALcomplex {
-    ALfloat Real;
-    ALfloat Imag;
+    ALdouble Real;
+    ALdouble Imag;
 } ALcomplex;
 
 typedef struct ALphasor {
-    ALfloat Amplitude;
-    ALfloat Phase;
+    ALdouble Amplitude;
+    ALdouble Phase;
 } ALphasor;
 
 typedef struct ALFrequencyDomain {
-    ALfloat Amplitude;
-    ALfloat Frequency;
+    ALdouble Amplitude;
+    ALdouble Frequency;
 } ALfrequencyDomain;
 
 typedef struct ALpshifterState {
@@ -63,9 +63,9 @@ typedef struct ALpshifterState {
     /*Effects buffers*/
     ALfloat InFIFO[STFT_SIZE];
     ALfloat OutFIFO[STFT_STEP];
-    ALfloat LastPhase[STFT_HALF_SIZE+1];
-    ALfloat SumPhase[STFT_HALF_SIZE+1];
-    ALfloat OutputAccum[STFT_SIZE];
+    ALdouble LastPhase[STFT_HALF_SIZE+1];
+    ALdouble SumPhase[STFT_HALF_SIZE+1];
+    ALdouble OutputAccum[STFT_SIZE];
 
     ALcomplex FFTbuffer[STFT_SIZE];
 
@@ -89,7 +89,7 @@ DEFINE_ALEFFECTSTATE_VTABLE(ALpshifterState);
 
 
 /* Define a Hann window, used to filter the STFT input and output. */
-alignas(16) static ALfloat HannWindow[STFT_SIZE];
+alignas(16) static ALdouble HannWindow[STFT_SIZE];
 
 static void InitHannWindow(void)
 {
@@ -99,10 +99,35 @@ static void InitHannWindow(void)
     for(i = 0;i < STFT_SIZE>>1;i++)
     {
         ALdouble val = sin(M_PI * (ALdouble)i / (ALdouble)(STFT_SIZE-1));
-        HannWindow[i] = HannWindow[STFT_SIZE-(i+1)] = (ALfloat)(val * val);
+        HannWindow[i] = HannWindow[STFT_SIZE-1-i] = val * val;
     }
 }
 static alonce_flag HannInitOnce = AL_ONCE_FLAG_INIT;
+
+
+/* Fast double-to-int conversion. Assumes the FPU is already in round-to-zero
+ * mode. */
+static inline ALint fastd2i(ALdouble d)
+{
+    /* NOTE: SSE2 is required for the efficient double-to-int opcodes on x86.
+     * Otherwise, we need to rely on x87's fistp opcode with it already in
+     * round-to-zero mode. x86-64 guarantees SSE2 support.
+     */
+#if (defined(__i386__) && !defined(__SSE2_MATH__)) || (defined(_M_IX86_FP) && (_M_IX86_FP < 2))
+#ifdef HAVE_LRINTF
+    return lrint(d);
+#elif defined(_MSC_VER) && defined(_M_IX86)
+    ALint i;
+    __asm fld d
+    __asm fistp i
+    return i;
+#else
+    return (ALint)d;
+#endif
+#else
+    return (ALint)d;
+#endif
+}
 
 
 /* Converts ALcomplex to ALphasor */
@@ -110,8 +135,8 @@ static inline ALphasor rect2polar(ALcomplex number)
 {
     ALphasor polar;
 
-    polar.Amplitude = sqrtf(number.Real*number.Real + number.Imag*number.Imag);
-    polar.Phase     = atan2f(number.Imag , number.Real);
+    polar.Amplitude = sqrt(number.Real*number.Real + number.Imag*number.Imag);
+    polar.Phase     = atan2(number.Imag, number.Real);
 
     return polar;
 }
@@ -121,8 +146,8 @@ static inline ALcomplex polar2rect(ALphasor  number)
 {
     ALcomplex cartesian;
 
-    cartesian.Real = number.Amplitude * cosf(number.Phase);
-    cartesian.Imag = number.Amplitude * sinf(number.Phase);
+    cartesian.Real = number.Amplitude * cos(number.Phase);
+    cartesian.Imag = number.Amplitude * sin(number.Phase);
 
     return cartesian;
 }
@@ -166,11 +191,11 @@ static inline ALcomplex complex_mult(ALcomplex a, ALcomplex b)
  * FFTBuffer[0...FFTSize-1]. FFTBuffer is an array of complex numbers
  * (ALcomplex), FFTSize MUST BE power of two.
  */
-static inline ALvoid FFT(ALcomplex *FFTBuffer, ALsizei FFTSize, ALfloat Sign)
+static inline ALvoid FFT(ALcomplex *FFTBuffer, ALsizei FFTSize, ALdouble Sign)
 {
     ALsizei i, j, k, mask, step, step2;
     ALcomplex temp, u, w;
-    ALfloat arg;
+    ALdouble arg;
 
     /* Bit-reversal permutation applied to a sequence of FFTSize items */
     for(i = 1;i < FFTSize-1;i++)
@@ -195,13 +220,13 @@ static inline ALvoid FFT(ALcomplex *FFTBuffer, ALsizei FFTSize, ALfloat Sign)
     for(i = 1, step = 2;i < FFTSize;i<<=1, step<<=1)
     {
         step2 = step >> 1;
-        arg   = F_PI / step2;
+        arg   = M_PI / step2;
 
-        w.Real = cosf(arg);
-        w.Imag = sinf(arg) * Sign;
+        w.Real = cos(arg);
+        w.Imag = sin(arg) * Sign;
 
-        u.Real = 1.0f;
-        u.Imag = 0.0f;
+        u.Real = 1.0;
+        u.Imag = 0.0;
 
         for(j = 0;j < step2;j++)
         {
@@ -272,8 +297,8 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
      * http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/
      */
 
-    static const ALfloat expected = F_TAU / (ALfloat)OVERSAMP;
-    const ALfloat freq_per_bin = state->FreqPerBin;
+    static const ALdouble expected = M_PI*2.0 / OVERSAMP;
+    const ALdouble freq_per_bin = state->FreqPerBin;
     ALfloat *restrict bufferOut = state->BufferOut;
     ALsizei count = state->count;
     ALsizei i, j, k;
@@ -296,12 +321,12 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
         for(k = 0;k < STFT_SIZE;k++)
         {
             state->FFTbuffer[k].Real = state->InFIFO[k] * HannWindow[k];
-            state->FFTbuffer[k].Imag = 0.0f;
+            state->FFTbuffer[k].Imag = 0.0;
         }
 
         /* ANALYSIS */
         /* Apply FFT to FFTbuffer data */
-        FFT(state->FFTbuffer, STFT_SIZE, -1.0f);
+        FFT(state->FFTbuffer, STFT_SIZE, -1.0);
 
         /* Analyze the obtained data. Since the real FFT is symmetric, only
          * STFT_HALF_SIZE+1 samples are needed.
@@ -309,18 +334,18 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
         for(k = 0;k < STFT_HALF_SIZE+1;k++)
         {
             ALphasor component;
-            ALfloat tmp;
+            ALdouble tmp;
             ALint qpd;
 
             /* Compute amplitude and phase */
             component = rect2polar(state->FFTbuffer[k]);
 
             /* Compute phase difference and subtract expected phase difference */
-            tmp = (component.Phase - state->LastPhase[k]) - (ALfloat)k*expected;
+            tmp = (component.Phase - state->LastPhase[k]) - k*expected;
 
             /* Map delta phase into +/- Pi interval */
-            qpd = fastf2i(tmp / F_PI);
-            tmp -= F_PI * (ALfloat)(qpd + (qpd%2));
+            qpd = fastd2i(tmp / M_PI);
+            tmp -= M_PI * (qpd + (qpd%2));
 
             /* Get deviation from bin frequency from the +/- Pi interval */
             tmp /= expected;
@@ -329,8 +354,8 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
              * for maintain the gain (because half of bins are used) and store
              * amplitude and true frequency in analysis buffer.
              */
-            state->Analysis_buffer[k].Amplitude = 2.0f * component.Amplitude;
-            state->Analysis_buffer[k].Frequency = ((ALfloat)k + tmp) * freq_per_bin;
+            state->Analysis_buffer[k].Amplitude = 2.0 * component.Amplitude;
+            state->Analysis_buffer[k].Frequency = (k + tmp) * freq_per_bin;
 
             /* Store actual phase[k] for the calculations in the next frame*/
             state->LastPhase[k] = component.Phase;
@@ -340,8 +365,8 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
         /* pitch shifting */
         for(k = 0;k < STFT_HALF_SIZE+1;k++)
         {
-            state->Syntesis_buffer[k].Amplitude = 0.0f;
-            state->Syntesis_buffer[k].Frequency = 0.0f;
+            state->Syntesis_buffer[k].Amplitude = 0.0;
+            state->Syntesis_buffer[k].Frequency = 0.0;
         }
 
         for(k = 0;k < STFT_HALF_SIZE+1;k++)
@@ -359,13 +384,13 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
         for(k = 0;k < STFT_HALF_SIZE+1;k++)
         {
             ALphasor component;
-            ALfloat tmp;
+            ALdouble tmp;
 
             /* Compute bin deviation from scaled freq */
-            tmp = state->Syntesis_buffer[k].Frequency/freq_per_bin - (ALfloat)k;
+            tmp = state->Syntesis_buffer[k].Frequency/freq_per_bin - k;
 
             /* Calculate actual delta phase and accumulate it to get bin phase */
-            state->SumPhase[k] += ((ALfloat)k + tmp) * expected;
+            state->SumPhase[k] += (k + tmp) * expected;
 
             component.Amplitude = state->Syntesis_buffer[k].Amplitude;
             component.Phase     = state->SumPhase[k];
@@ -376,22 +401,22 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
         /* zero negative frequencies for recontruct a real signal */
         for(k = STFT_HALF_SIZE+1;k < STFT_SIZE;k++)
         {
-            state->FFTbuffer[k].Real = 0.0f;
-            state->FFTbuffer[k].Imag = 0.0f;
+            state->FFTbuffer[k].Real = 0.0;
+            state->FFTbuffer[k].Imag = 0.0;
         }
 
         /* Apply iFFT to buffer data */
-        FFT(state->FFTbuffer, STFT_SIZE, 1.0f);
+        FFT(state->FFTbuffer, STFT_SIZE, 1.0);
 
         /* Windowing and add to output */
         for(k = 0;k < STFT_SIZE;k++)
             state->OutputAccum[k] += HannWindow[k] * state->FFTbuffer[k].Real /
-                                     (0.5f * STFT_HALF_SIZE * OVERSAMP);
+                                     (0.5 * STFT_HALF_SIZE * OVERSAMP);
 
         /* Shift accumulator, input & output FIFO */
-        for(k = 0;k < STFT_STEP;k++) state->OutFIFO[k] = state->OutputAccum[k];
+        for(k = 0;k < STFT_STEP;k++) state->OutFIFO[k] = (ALfloat)state->OutputAccum[k];
         for(j = 0;k < STFT_SIZE;k++,j++) state->OutputAccum[j] = state->OutputAccum[k];
-        for(;j < STFT_SIZE;j++) state->OutputAccum[j] = 0.0f;
+        for(;j < STFT_SIZE;j++) state->OutputAccum[j] = 0.0;
         for(k = 0;k < FIFO_LATENCY;k++)
             state->InFIFO[k] = state->InFIFO[k+STFT_STEP];
     }

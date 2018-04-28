@@ -217,16 +217,14 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
         ALuint azcount;
 
         /* Calculate elevation index. */
-        evidx = (ALsizei)floorf((F_PI_2 + AmbiPoints[c].Elev) *
-                                (Hrtf->evCount-1)/F_PI + 0.5f);
+        evidx = (ALsizei)((F_PI_2+AmbiPoints[c].Elev) * (Hrtf->evCount-1) / F_PI + 0.5f);
         evidx = clampi(evidx, 0, Hrtf->evCount-1);
 
         azcount = Hrtf->azCount[evidx];
         evoffset = Hrtf->evOffset[evidx];
 
         /* Calculate azimuth index for this elevation. */
-        azidx = (ALsizei)floorf((F_TAU+AmbiPoints[c].Azim) *
-                                azcount/F_TAU + 0.5f) % azcount;
+        azidx = (ALsizei)((F_TAU+AmbiPoints[c].Azim) * azcount / F_TAU + 0.5f) % azcount;
 
         /* Calculate indices for left and right channels. */
         idx[c] = evoffset + azidx;

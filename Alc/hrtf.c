@@ -244,16 +244,15 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
         ALsizei ldelay = Hrtf->delays[idx[c]][0] - min_delay;
         ALsizei rdelay = Hrtf->delays[idx[c]][1] - min_delay;
 
-        max_length = maxi(max_length,
-            mini(maxi(ldelay, rdelay) + Hrtf->irSize, HRIR_LENGTH)
-        );
-
         if(NUM_BANDS == 1)
         {
+            max_length = maxi(max_length,
+                mini(maxi(ldelay, rdelay) + Hrtf->irSize, HRIR_LENGTH)
+            );
+
             for(i = 0;i < NumChannels;++i)
             {
-                ALdouble mult = (ALdouble)AmbiOrderHFGain[(ALsizei)floor(sqrt(i))] *
-                                AmbiMatrix[c][i];
+                ALdouble mult = (ALdouble)AmbiOrderHFGain[(ALsizei)sqrt(i)] * AmbiMatrix[c][i];
                 ALsizei lidx = ldelay, ridx = rdelay;
                 ALsizei j = 0;
                 while(lidx < HRIR_LENGTH && ridx < HRIR_LENGTH && j < Hrtf->irSize)
@@ -266,6 +265,15 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
         }
         else
         {
+            /* Increase the IR size by 2/3rds to account for the tail generated
+             * by the band-split filter.
+             */
+            const ALsizei irsize = mini(Hrtf->irSize*5/3, HRIR_LENGTH);
+
+            max_length = maxi(max_length,
+                mini(maxi(ldelay, rdelay) + irsize, HRIR_LENGTH)
+            );
+
             /* Band-split left HRIR into low and high frequency responses. */
             bandsplit_clear(&splitter);
             for(i = 0;i < Hrtf->irSize;i++)
@@ -275,7 +283,7 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
             /* Apply left ear response with delay. */
             for(i = 0;i < NumChannels;++i)
             {
-                ALfloat hfgain = AmbiOrderHFGain[(ALsizei)floor(sqrt(i))];
+                ALfloat hfgain = AmbiOrderHFGain[(ALsizei)sqrt(i)];
                 for(b = 0;b < NUM_BANDS;b++)
                 {
                     ALdouble mult = AmbiMatrix[c][i] * (ALdouble)((b==0) ? hfgain : 1.0);
@@ -295,7 +303,7 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
             /* Apply right ear response with delay. */
             for(i = 0;i < NumChannels;++i)
             {
-                ALfloat hfgain = AmbiOrderHFGain[(ALsizei)floor(sqrt(i))];
+                ALfloat hfgain = AmbiOrderHFGain[(ALsizei)sqrt(i)];
                 for(b = 0;b < NUM_BANDS;b++)
                 {
                     ALdouble mult = AmbiMatrix[c][i] * (ALdouble)((b==0) ? hfgain : 1.0);

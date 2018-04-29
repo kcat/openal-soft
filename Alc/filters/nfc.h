@@ -2,19 +2,19 @@
 #define FILTER_NFC_H
 
 struct NfcFilter1 {
-    float g;
-    float coeffs[1*2 + 1];
-    float history[1];
+    float base_gain, gain;
+    float b1, a1;
+    float z[1];
 };
 struct NfcFilter2 {
-    float g;
-    float coeffs[2*2 + 1];
-    float history[2];
+    float base_gain, gain;
+    float b1, b2, a1, a2;
+    float z[2];
 };
 struct NfcFilter3 {
-    float g;
-    float coeffs[3*2 + 1];
-    float history[3];
+    float base_gain, gain;
+    float b1, b2, b3, a1, a2, a3;
+    float z[3];
 };
 
 typedef struct NfcFilter {

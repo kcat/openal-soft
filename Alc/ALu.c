@@ -1679,9 +1679,10 @@ static inline ALfloat Conv_ALfloat(ALfloat val)
 { return val; }
 static inline ALint Conv_ALint(ALfloat val)
 {
-    /* Floats only have a 24-bit mantissa, so [-16777216, +16777216] is the max
-     * integer range normalized floats can be safely converted to (a bit of the
-     * exponent helps out, effectively giving 25 bits).
+    /* Floats have a 23-bit mantissa. A bit of the exponent helps out along
+     * with the sign bit, giving 25 bits. So [-16777216, +16777216] is the max
+     * integer range normalized floats can be converted to before losing
+     * precision.
      */
     return fastf2i(clampf(val*16777216.0f, -16777216.0f, 16777215.0f))<<7;
 }

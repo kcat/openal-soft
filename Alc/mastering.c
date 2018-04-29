@@ -98,7 +98,7 @@ static void FollowEnvelope(Compressor *Comp, const ALsizei SamplesToDo)
 
     for(i = 0;i < SamplesToDo;i++)
     {
-        ALfloat env = maxf(-6.0f, log10f(Comp->Envelope[i]));
+        ALfloat env = log10f(maxf(Comp->Envelope[i], 0.000001f));
         ALfloat slope = minf(1.0f, fabsf(env - last) / 4.5f);
 
         if(env > last)

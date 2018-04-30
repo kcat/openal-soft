@@ -1831,7 +1831,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
             ApplyDither(device->RealOut.Buffer, &device->DitherSeed, device->DitherDepth,
                         SamplesToDo, device->RealOut.NumChannels);
 
-        if(OutBuffer)
+        if(LIKELY(OutBuffer))
         {
             ALfloat (*Buffer)[BUFFERSIZE] = device->RealOut.Buffer;
             ALsizei Channels = device->RealOut.NumChannels;

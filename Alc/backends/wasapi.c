@@ -540,6 +540,7 @@ typedef struct ALCwasapiPlayback {
 } ALCwasapiPlayback;
 
 static int ALCwasapiPlayback_mixerProc(void *arg);
+static HRESULT ALCwasapiPlayback_resetProxy_forceFlags(ALCwasapiPlayback *self, ALuint forceRequestFlags);
 
 static void ALCwasapiPlayback_Construct(ALCwasapiPlayback *self, ALCdevice *device);
 static void ALCwasapiPlayback_Destruct(ALCwasapiPlayback *self);
@@ -617,6 +618,50 @@ static void ALCwasapiPlayback_Destruct(ALCwasapiPlayback *self)
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
 
+static HRESULT ALCwasapiPlayback_TryRecover(ALCwasapiPlayback* self)
+{
+    ALuint recovery_attempts;
+    unsigned long recovery_sleep;
+    HRESULT hr;
+
+    WARN("AUDCLNT_E_DEVICE_INVALIDATED in mixer proc.\n");
+
+    /* attempt recovery as per https://msdn.microsoft.com/en-us/library/windows/desktop/dd316605(v=vs.85).aspx
+     * (only works when device is reconfigured, not when it is disconnected.)
+     */
+    if (self->render)
+        IAudioRenderClient_Release(self->render);
+    self->render = NULL;
+    ATOMIC_STORE(&self->Padding, 0, almemory_order_relaxed);
+
+    for (recovery_attempts = 0, recovery_sleep = 1; recovery_attempts < 6; recovery_attempts++, recovery_sleep *= 2)    // try for 6.3 seconds before reporting disconnection
+    {
+        TRACE("Attempting playback recovery...\n");
+        al_nssleep(recovery_sleep * 100000000);        // *100ms
+        if (ATOMIC_LOAD(&self->killNow, almemory_order_relaxed))
+            return NOERROR;    // return to ALCwasapiPlayback_mixerProc() and exit the thread.
+        hr = ALCwasapiPlayback_resetProxy_forceFlags(self, DEVICE_CHANNELS_REQUEST|DEVICE_FREQUENCY_REQUEST);
+        if (SUCCEEDED(hr)) {
+            hr = IAudioClient_Start(self->client);
+            if (FAILED(hr)) {
+                ERR("Failed to restart audio client: 0x%08lx\n", hr);
+            }
+            else {
+                ResetEvent(self->NotifyEvent);
+                void *ptr;
+                hr = IAudioClient_GetService(self->client, &IID_IAudioRenderClient, &ptr);
+                if (SUCCEEDED(hr)) {
+                    self->render = ptr;
+                    TRACE("playback recovery succedeed.\n");
+                    break;
+                }
+            }
+        }
+        else if (hr == AUDCLNT_E_UNSUPPORTED_FORMAT)
+            break;    // no need to try again, the format has changed
+    }
+    return hr;
+}
 
 FORCE_ALIGN static int ALCwasapiPlayback_mixerProc(void *arg)
 {
@@ -645,7 +690,16 @@ FORCE_ALIGN static int ALCwasapiPlayback_mixerProc(void *arg)
     while(!ATOMIC_LOAD(&self->killNow, almemory_order_relaxed))
     {
         hr = IAudioClient_GetCurrentPadding(self->client, &written);
-        if(FAILED(hr))
+        if(hr == AUDCLNT_E_DEVICE_INVALIDATED)
+        {
+            hr = ALCwasapiPlayback_TryRecover(self);
+            if (SUCCEEDED(hr)) {
+                update_size = device->UpdateSize;
+                buffer_len = update_size * device->NumUpdates;
+                continue;
+            }
+        }
+        if (FAILED(hr))
         {
             ERR("Failed to get padding: 0x%08lx\n", hr);
             V0(device->Backend,lock)();
@@ -907,6 +961,11 @@ static ALCboolean GetFmtChans(const WAVEFORMATEXTENSIBLE* outputType, enum DevFm
 
 static HRESULT ALCwasapiPlayback_resetProxy(ALCwasapiPlayback *self)
 {
+    return ALCwasapiPlayback_resetProxy_forceFlags(self, 0);
+}
+
+static HRESULT ALCwasapiPlayback_resetProxy_forceFlags(ALCwasapiPlayback *self, ALuint forceRequestFlags)
+{
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     EndpointFormFactor formfactor = UnknownFormFactor;
     WAVEFORMATEXTENSIBLE OutputType;
@@ -946,9 +1005,9 @@ static HRESULT ALCwasapiPlayback_resetProxy(ALCwasapiPlayback *self)
     buf_time = ScaleCeil(device->UpdateSize*device->NumUpdates, REFTIME_PER_SEC,
                          device->Frequency);
 
-    if(!(device->Flags&DEVICE_FREQUENCY_REQUEST))
+    if(!(device->Flags&DEVICE_FREQUENCY_REQUEST) && !(forceRequestFlags&DEVICE_FREQUENCY_REQUEST))
         device->Frequency = OutputType.Format.nSamplesPerSec;
-    if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
+    if(!(device->Flags&DEVICE_CHANNELS_REQUEST) && !(forceRequestFlags&DEVICE_CHANNELS_REQUEST))
     {
         if (!GetFmtChans(&OutputType, &device->FmtChans))
             ERR("Unhandled channel config: %d -- 0x%08lx\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
@@ -1049,12 +1108,12 @@ static HRESULT ALCwasapiPlayback_resetProxy(ALCwasapiPlayback *self)
         CoTaskMemFree(wfx);
         wfx = NULL;
 
-        if ((device->Flags&DEVICE_FREQUENCY_REQUEST)) 
+        if ((device->Flags&DEVICE_FREQUENCY_REQUEST) || (forceRequestFlags&DEVICE_FREQUENCY_REQUEST)) 
         {
             if (device->Frequency != OutputType.Format.nSamplesPerSec)
                 return AUDCLNT_E_UNSUPPORTED_FORMAT;
         }
-        if ((device->Flags&DEVICE_CHANNELS_REQUEST)) 
+        if ((device->Flags&DEVICE_CHANNELS_REQUEST) || (forceRequestFlags&DEVICE_CHANNELS_REQUEST)) 
         {
             enum DevFmtChannels FmtChans;
             if (!GetFmtChans(&OutputType, &FmtChans) || FmtChans != device->FmtChans)
@@ -1208,9 +1267,11 @@ static void ALCwasapiPlayback_stopProxy(ALCwasapiPlayback *self)
     ATOMIC_STORE_SEQ(&self->killNow, 1);
     althrd_join(self->thread, &res);
 
-    IAudioRenderClient_Release(self->render);
+    if (self->render)
+        IAudioRenderClient_Release(self->render);
     self->render = NULL;
-    IAudioClient_Stop(self->client);
+    if (self->client)
+        IAudioClient_Stop(self->client);
 }
 
 

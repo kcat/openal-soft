@@ -416,7 +416,8 @@ static const ChannelMap MonoCfg[1] = {
     { BackRight,   { 2.04124145e-1f, -1.08880247e-1f, 0.0f, -1.88586120e-1f,  1.29099444e-1f, 0.0f, 0.0f, 0.0f,  7.45355993e-2f, -3.73460789e-2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.00000000e+0f } },
 };
 
-static void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei order, bool periphonic)
+static void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei order,
+                              const ALsizei *restrict chans_per_order)
 {
     const char *devname = alstr_get_cstr(device->DeviceName);
     ALsizei i;
@@ -428,13 +429,8 @@ static void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei orde
          */
         device->AvgSpeakerDist = minf(ctrl_dist, 10.0f);
 
-        device->Dry.NumChannelsPerOrder[0] = 1;
-        if(periphonic)
-            for(i = 1;i < order+1;i++)
-                device->Dry.NumChannelsPerOrder[i] = (i+1)*(i+1) - i*i;
-        else
-            for(i = 1;i < order+1;i++)
-                device->Dry.NumChannelsPerOrder[i] = (i*2+1) - ((i-1)*2+1);
+        for(i = 0;i < order+1;i++)
+            device->Dry.NumChannelsPerOrder[i] = chans_per_order[i];
         for(;i < MAX_AMBI_ORDER+1;i++)
             device->Dry.NumChannelsPerOrder[i] = 0;
     }
@@ -610,9 +606,12 @@ static void InitPanning(ALCdevice *device)
 
         if(ConfigValueFloat(devname, "decoder", "nfc-ref-delay", &nfc_delay) && nfc_delay > 0.0f)
         {
+            static const ALsizei chans_per_order[MAX_AMBI_ORDER+1] = {
+                1, 3, 5, 7
+            };
             nfc_delay = clampf(nfc_delay, 0.001f, 1000.0f);
             InitNearFieldCtrl(device, nfc_delay * SPEEDOFSOUNDMETRESPERSEC,
-                              device->AmbiOrder, true);
+                              device->AmbiOrder, chans_per_order);
         }
     }
     else
@@ -728,6 +727,8 @@ static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const A
 
 static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei speakermap[MAX_OUTPUT_CHANNELS])
 {
+    static const ALsizei chans_per_order2d[MAX_AMBI_ORDER+1] = { 1, 2, 2, 2 };
+    static const ALsizei chans_per_order3d[MAX_AMBI_ORDER+1] = { 1, 3, 5, 7 };
     ALfloat avg_dist;
     ALsizei count;
     ALsizei i;
@@ -804,7 +805,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsiz
     avg_dist /= (ALfloat)conf->NumSpeakers;
     InitNearFieldCtrl(device, avg_dist,
         (conf->ChanMask > 0x1ff) ? 3 : (conf->ChanMask > 0xf) ? 2 : 1,
-        !!(conf->ChanMask&AMBI_PERIPHONIC_MASK)
+        (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? chans_per_order3d : chans_per_order2d
     );
 
     InitDistanceComp(device, conf, speakermap);
@@ -878,6 +879,7 @@ static void InitHrtfPanning(ALCdevice *device)
         2.40192231e+00f, 1.86052102e+00f, 9.60768923e-01f
     };
     static const ALsizei IndexMap[6] = { 0, 1, 2, 3, 4, 8 };
+    static const ALsizei ChansPerOrder[MAX_AMBI_ORDER+1] = { 1, 3, 2, 0 };
     const ALfloat (*restrict AmbiMatrix)[MAX_AMBI_COEFFS] = AmbiMatrixFOA;
     const ALfloat *restrict AmbiOrderHFGain = AmbiOrderHFGainFOA;
     ALsizei count = 4;
@@ -932,22 +934,8 @@ static void InitHrtfPanning(ALCdevice *device)
         AmbiOrderHFGain
     );
 
-    if(GetConfigValueBool(alstr_get_cstr(device->DeviceName), "decoder", "nfc", 1) &&
-       device->HrtfHandle->distance > 0.0f)
-    {
-        /* NFC is only used when AvgSpeakerDist is greater than 0, and can only
-         * be used when rendering to an ambisonic buffer.
-         */
-        device->AvgSpeakerDist = minf(device->HrtfHandle->distance, 10.0f);
-
-        i = 0;
-        device->Dry.NumChannelsPerOrder[i++] = 1;
-        device->Dry.NumChannelsPerOrder[i++] = 3;
-        if(device->AmbiUp)
-            device->Dry.NumChannelsPerOrder[i++] = 2;
-        while(i < MAX_AMBI_ORDER+1)
-            device->Dry.NumChannelsPerOrder[i++] = 0;
-    }
+    InitNearFieldCtrl(device, device->HrtfHandle->distance, device->AmbiUp ? 2 : 1,
+                      ChansPerOrder);
 }
 
 static void InitUhjPanning(ALCdevice *device)

@@ -136,6 +136,20 @@ extern inline int fallback_ctz64(ALuint64 value);
 #endif
 
 
+#if defined(HAVE_GCC_GET_CPUID) && (defined(__i386__) || defined(__x86_64__) || \
+                                    defined(_M_IX86) || defined(_M_X64))
+typedef unsigned int reg_type;
+static inline void get_cpuid(int f, reg_type *regs)
+{ __get_cpuid(f, &regs[0], &regs[1], &regs[2], &regs[3]); }
+#define CAN_GET_CPUID
+#elif defined(HAVE_CPUID_INTRINSIC) && (defined(__i386__) || defined(__x86_64__) || \
+                                        defined(_M_IX86) || defined(_M_X64))
+typedef int reg_type;
+static inline void get_cpuid(int f, reg_type *regs)
+{ (__cpuid)(regs, f); }
+#define CAN_GET_CPUID
+#endif
+
 int CPUCapFlags = 0;
 
 void FillCPUCaps(int capfilter)
@@ -144,58 +158,13 @@ void FillCPUCaps(int capfilter)
 
 /* FIXME: We really should get this for all available CPUs in case different
  * CPUs have different caps (is that possible on one machine?). */
-#if defined(HAVE_GCC_GET_CPUID) && (defined(__i386__) || defined(__x86_64__) || \
-                                    defined(_M_IX86) || defined(_M_X64))
+#ifdef CAN_GET_CPUID
     union {
-        unsigned int regs[4];
-        char str[sizeof(unsigned int[4])];
-    } cpuinf[3];
+        reg_type regs[4];
+        char str[sizeof(reg_type[4])];
+    } cpuinf[3] = {{ { 0, 0, 0, 0 } }};
 
-    if(!__get_cpuid(0, &cpuinf[0].regs[0], &cpuinf[0].regs[1], &cpuinf[0].regs[2], &cpuinf[0].regs[3]))
-        ERR("Failed to get CPUID\n");
-    else
-    {
-        unsigned int maxfunc = cpuinf[0].regs[0];
-        unsigned int maxextfunc = 0;
-
-        if(__get_cpuid(0x80000000, &cpuinf[0].regs[0], &cpuinf[0].regs[1], &cpuinf[0].regs[2], &cpuinf[0].regs[3]))
-            maxextfunc = cpuinf[0].regs[0];
-        TRACE("Detected max CPUID function: 0x%x (ext. 0x%x)\n", maxfunc, maxextfunc);
-
-        TRACE("Vendor ID: \"%.4s%.4s%.4s\"\n", cpuinf[0].str+4, cpuinf[0].str+12, cpuinf[0].str+8);
-        if(maxextfunc >= 0x80000004 &&
-           __get_cpuid(0x80000002, &cpuinf[0].regs[0], &cpuinf[0].regs[1], &cpuinf[0].regs[2], &cpuinf[0].regs[3]) &&
-           __get_cpuid(0x80000003, &cpuinf[1].regs[0], &cpuinf[1].regs[1], &cpuinf[1].regs[2], &cpuinf[1].regs[3]) &&
-           __get_cpuid(0x80000004, &cpuinf[2].regs[0], &cpuinf[2].regs[1], &cpuinf[2].regs[2], &cpuinf[2].regs[3]))
-            TRACE("Name: \"%.16s%.16s%.16s\"\n", cpuinf[0].str, cpuinf[1].str, cpuinf[2].str);
-
-        if(maxfunc >= 1 &&
-           __get_cpuid(1, &cpuinf[0].regs[0], &cpuinf[0].regs[1], &cpuinf[0].regs[2], &cpuinf[0].regs[3]))
-        {
-            if((cpuinf[0].regs[3]&(1<<25)))
-            {
-                caps |= CPU_CAP_SSE;
-                if((cpuinf[0].regs[3]&(1<<26)))
-                {
-                    caps |= CPU_CAP_SSE2;
-                    if((cpuinf[0].regs[2]&(1<<0)))
-                    {
-                        caps |= CPU_CAP_SSE3;
-                        if((cpuinf[0].regs[2]&(1<<19)))
-                            caps |= CPU_CAP_SSE4_1;
-                    }
-                }
-            }
-        }
-    }
-#elif defined(HAVE_CPUID_INTRINSIC) && (defined(__i386__) || defined(__x86_64__) || \
-                                        defined(_M_IX86) || defined(_M_X64))
-    union {
-        int regs[4];
-        char str[sizeof(int[4])];
-    } cpuinf[3];
-
-    (__cpuid)(cpuinf[0].regs, 0);
+    get_cpuid(0, cpuinf[0].regs);
     if(cpuinf[0].regs[0] == 0)
         ERR("Failed to get CPUID\n");
     else
@@ -203,7 +172,7 @@ void FillCPUCaps(int capfilter)
         unsigned int maxfunc = cpuinf[0].regs[0];
         unsigned int maxextfunc;
 
-        (__cpuid)(cpuinf[0].regs, 0x80000000);
+        get_cpuid(0x80000000, cpuinf[0].regs);
         maxextfunc = cpuinf[0].regs[0];
 
         TRACE("Detected max CPUID function: 0x%x (ext. 0x%x)\n", maxfunc, maxextfunc);
@@ -211,15 +180,15 @@ void FillCPUCaps(int capfilter)
         TRACE("Vendor ID: \"%.4s%.4s%.4s\"\n", cpuinf[0].str+4, cpuinf[0].str+12, cpuinf[0].str+8);
         if(maxextfunc >= 0x80000004)
         {
-            (__cpuid)(cpuinf[0].regs, 0x80000002);
-            (__cpuid)(cpuinf[1].regs, 0x80000003);
-            (__cpuid)(cpuinf[2].regs, 0x80000004);
+            get_cpuid(0x80000002, cpuinf[0].regs);
+            get_cpuid(0x80000003, cpuinf[1].regs);
+            get_cpuid(0x80000004, cpuinf[2].regs);
             TRACE("Name: \"%.16s%.16s%.16s\"\n", cpuinf[0].str, cpuinf[1].str, cpuinf[2].str);
         }
 
         if(maxfunc >= 1)
         {
-            (__cpuid)(cpuinf[0].regs, 1);
+            get_cpuid(1, cpuinf[0].regs);
             if((cpuinf[0].regs[3]&(1<<25)))
             {
                 caps |= CPU_CAP_SSE;

@@ -190,19 +190,13 @@ void FillCPUCaps(int capfilter)
         {
             get_cpuid(1, cpuinf[0].regs);
             if((cpuinf[0].regs[3]&(1<<25)))
-            {
                 caps |= CPU_CAP_SSE;
-                if((cpuinf[0].regs[3]&(1<<26)))
-                {
-                    caps |= CPU_CAP_SSE2;
-                    if((cpuinf[0].regs[2]&(1<<0)))
-                    {
-                        caps |= CPU_CAP_SSE3;
-                        if((cpuinf[0].regs[2]&(1<<19)))
-                            caps |= CPU_CAP_SSE4_1;
-                    }
-                }
-            }
+            if((caps&CPU_CAP_SSE) && (cpuinf[0].regs[3]&(1<<26)))
+                caps |= CPU_CAP_SSE2;
+            if((caps&CPU_CAP_SSE2) && (cpuinf[0].regs[2]&(1<<0)))
+                caps |= CPU_CAP_SSE3;
+            if((caps&CPU_CAP_SSE3) && (cpuinf[0].regs[2]&(1<<19)))
+                caps |= CPU_CAP_SSE4_1;
         }
     }
 #else

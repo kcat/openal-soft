@@ -74,31 +74,29 @@ static struct HrtfEntry *LoadedHrtfs = NULL;
 
 
 /* Calculate the elevation index given the polar elevation in radians. This
- * will return an index between 0 and (evcount - 1). Assumes the FPU is in
- * round-to-zero mode.
+ * will return an index between 0 and (evcount - 1).
  */
 static ALsizei CalcEvIndex(ALsizei evcount, ALfloat ev, ALfloat *mu)
 {
     ALsizei idx;
     ev = (F_PI_2+ev) * (evcount-1) / F_PI;
-    idx = mini(fastf2i(ev), evcount-1);
+    idx = float2int(ev);
 
     *mu = ev - idx;
-    return idx;
+    return mini(idx, evcount-1);
 }
 
 /* Calculate the azimuth index given the polar azimuth in radians. This will
- * return an index between 0 and (azcount - 1). Assumes the FPU is in round-to-
- * zero mode.
+ * return an index between 0 and (azcount - 1).
  */
 static ALsizei CalcAzIndex(ALsizei azcount, ALfloat az, ALfloat *mu)
 {
     ALsizei idx;
     az = (F_TAU+az) * azcount / F_TAU;
 
-    idx = fastf2i(az) % azcount;
-    *mu = az - floorf(az);
-    return idx;
+    idx = float2int(az);
+    *mu = az - idx;
+    return idx % azcount;
 }
 
 /* Calculates static HRIR coefficients and delays for the given polar elevation
@@ -158,11 +156,11 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
     blend[3] = (     emu) * (     amu[1]) * dirfact;
 
     /* Calculate the blended HRIR delays. */
-    delays[0] = fastf2i(
+    delays[0] = float2int(
         Hrtf->delays[idx[0]][0]*blend[0] + Hrtf->delays[idx[1]][0]*blend[1] +
         Hrtf->delays[idx[2]][0]*blend[2] + Hrtf->delays[idx[3]][0]*blend[3] + 0.5f
     );
-    delays[1] = fastf2i(
+    delays[1] = float2int(
         Hrtf->delays[idx[0]][1]*blend[0] + Hrtf->delays[idx[1]][1]*blend[1] +
         Hrtf->delays[idx[2]][1]*blend[2] + Hrtf->delays[idx[3]][1]*blend[3] + 0.5f
     );

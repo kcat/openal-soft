@@ -463,7 +463,7 @@ static ALuint CalcLineLength(const ALfloat length, const ptrdiff_t offset, const
     /* All line lengths are powers of 2, calculated from their lengths in
      * seconds, rounded up.
      */
-    samples = fastf2i(ceilf(length*frequency));
+    samples = float2int(ceilf(length*frequency));
     samples = NextPowerOf2(samples + extra);
 
     /* All lines share a single sample buffer. */
@@ -565,9 +565,9 @@ static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Dev
     multiplier = CalcDelayLengthMult(AL_EAXREVERB_MAX_DENSITY);
 
     /* The late feed taps are set a fixed position past the latest delay tap. */
-    State->LateFeedTap = fastf2i((AL_EAXREVERB_MAX_REFLECTIONS_DELAY +
-                                  EARLY_TAP_LENGTHS[NUM_LINES-1]*multiplier) *
-                                 frequency);
+    State->LateFeedTap = float2int((AL_EAXREVERB_MAX_REFLECTIONS_DELAY +
+                                    EARLY_TAP_LENGTHS[NUM_LINES-1]*multiplier) *
+                                   frequency);
 
     return AL_TRUE;
 }
@@ -949,13 +949,13 @@ static ALvoid UpdateDelayLine(const ALfloat earlyDelay, const ALfloat lateDelay,
     for(i = 0;i < NUM_LINES;i++)
     {
         length = earlyDelay + EARLY_TAP_LENGTHS[i]*multiplier;
-        State->EarlyDelayTap[i][1] = fastf2i(length * frequency);
+        State->EarlyDelayTap[i][1] = float2int(length * frequency);
 
         length = EARLY_TAP_LENGTHS[i]*multiplier;
         State->EarlyDelayCoeff[i] = CalcDecayCoeff(length, decayTime);
 
         length = lateDelay + (LATE_LINE_LENGTHS[i] - LATE_LINE_LENGTHS[0])*0.25f*multiplier;
-        State->LateDelayTap[i][1] = State->LateFeedTap + fastf2i(length * frequency);
+        State->LateDelayTap[i][1] = State->LateFeedTap + float2int(length * frequency);
     }
 }
 
@@ -973,13 +973,13 @@ static ALvoid UpdateEarlyLines(const ALfloat density, const ALfloat decayTime, c
         length = EARLY_ALLPASS_LENGTHS[i] * multiplier;
 
         /* Calculate the delay offset for each all-pass line. */
-        Early->VecAp.Offset[i][1] = fastf2i(length * frequency);
+        Early->VecAp.Offset[i][1] = float2int(length * frequency);
 
         /* Calculate the length (in seconds) of each delay line. */
         length = EARLY_LINE_LENGTHS[i] * multiplier;
 
         /* Calculate the delay offset for each delay line. */
-        Early->Offset[i][1] = fastf2i(length * frequency);
+        Early->Offset[i][1] = float2int(length * frequency);
 
         /* Calculate the gain (coefficient) for each line. */
         Early->Coeff[i] = CalcDecayCoeff(length, decayTime);
@@ -1026,7 +1026,7 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
         length = LATE_ALLPASS_LENGTHS[i] * multiplier;
 
         /* Calculate the delay offset for each all-pass line. */
-        Late->VecAp.Offset[i][1] = fastf2i(length * frequency);
+        Late->VecAp.Offset[i][1] = float2int(length * frequency);
 
         /* Calculate the length (in seconds) of each delay line.  This also
          * applies the echo transformation.  As the EAX echo depth approaches
@@ -1036,7 +1036,7 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
         length = lerp(LATE_LINE_LENGTHS[i] * multiplier, echoTime, echoDepth);
 
         /* Calculate the delay offset for each delay line. */
-        Late->Offset[i][1] = fastf2i(length*frequency + 0.5f);
+        Late->Offset[i][1] = float2int(length*frequency + 0.5f);
 
         /* Approximate the absorption that the vector all-pass would exhibit
          * given the current diffusion so we don't have to process a full T60

@@ -92,8 +92,8 @@ static ALboolean ALechoState_deviceUpdate(ALechoState *state, ALCdevice *Device)
 
     // Use the next power of 2 for the buffer length, so the tap offsets can be
     // wrapped using a mask instead of a modulo
-    maxlen = fastf2i(AL_ECHO_MAX_DELAY*Device->Frequency + 0.5f) +
-             fastf2i(AL_ECHO_MAX_LRDELAY*Device->Frequency + 0.5f);
+    maxlen = float2int(AL_ECHO_MAX_DELAY*Device->Frequency + 0.5f) +
+             float2int(AL_ECHO_MAX_LRDELAY*Device->Frequency + 0.5f);
     maxlen = NextPowerOf2(maxlen);
     if(maxlen <= 0) return AL_FALSE;
 
@@ -120,8 +120,8 @@ static ALvoid ALechoState_update(ALechoState *state, const ALCcontext *context, 
     ALfloat coeffs[MAX_AMBI_COEFFS];
     ALfloat gainhf, lrpan, spread;
 
-    state->Tap[0].delay = maxi(fastf2i(props->Echo.Delay*frequency + 0.5f), 1);
-    state->Tap[1].delay = fastf2i(props->Echo.LRDelay*frequency + 0.5f);
+    state->Tap[0].delay = maxi(float2int(props->Echo.Delay*frequency + 0.5f), 1);
+    state->Tap[1].delay = float2int(props->Echo.LRDelay*frequency + 0.5f);
     state->Tap[1].delay += state->Tap[0].delay;
 
     spread = props->Echo.Spread;

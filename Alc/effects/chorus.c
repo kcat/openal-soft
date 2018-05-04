@@ -98,7 +98,7 @@ static ALboolean ALchorusState_deviceUpdate(ALchorusState *state, ALCdevice *Dev
     const ALfloat max_delay = maxf(AL_CHORUS_MAX_DELAY, AL_FLANGER_MAX_DELAY);
     ALsizei maxlen;
 
-    maxlen = NextPowerOf2(fastf2i(max_delay*2.0f*Device->Frequency) + 1);
+    maxlen = NextPowerOf2(float2int(max_delay*2.0f*Device->Frequency) + 1u);
     if(maxlen <= 0) return AL_FALSE;
 
     if(maxlen != state->BufferLength)
@@ -140,7 +140,7 @@ static ALvoid ALchorusState_update(ALchorusState *state, const ALCcontext *Conte
     /* The LFO depth is scaled to be relative to the sample delay. Clamp the
      * delay and depth to allow enough padding for resampling.
      */
-    state->delay = maxi(fastf2i(props->Chorus.Delay*frequency*FRACTIONONE + 0.5f),
+    state->delay = maxi(float2int(props->Chorus.Delay*frequency*FRACTIONONE + 0.5f),
                         mindelay);
     state->depth = minf(props->Chorus.Depth * state->delay,
                         (ALfloat)(state->delay - mindelay));
@@ -167,10 +167,10 @@ static ALvoid ALchorusState_update(ALchorusState *state, const ALCcontext *Conte
         /* Calculate LFO coefficient (number of samples per cycle). Limit the
          * max range to avoid overflow when calculating the displacement.
          */
-        ALsizei lfo_range = mini(fastf2i(frequency/rate + 0.5f), INT_MAX/360 - 180);
+        ALsizei lfo_range = float2int(minf(frequency/rate + 0.5f, (ALfloat)(INT_MAX/360 - 180)));
 
-        state->lfo_offset = fastf2i((ALfloat)state->lfo_offset/state->lfo_range*
-                                    lfo_range + 0.5f) % lfo_range;
+        state->lfo_offset = float2int((ALfloat)state->lfo_offset/state->lfo_range*
+                                      lfo_range + 0.5f) % lfo_range;
         state->lfo_range = lfo_range;
         switch(state->waveform)
         {

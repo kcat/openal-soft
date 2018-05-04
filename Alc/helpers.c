@@ -124,6 +124,7 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 extern inline ALuint NextPowerOf2(ALuint value);
 extern inline size_t RoundUp(size_t value, size_t r);
 extern inline ALint fastf2i(ALfloat f);
+extern inline int float2int(float f);
 #ifndef __GNUC__
 #if defined(HAVE_BITSCANFORWARD64_INTRINSIC)
 extern inline int msvc64_ctz64(ALuint64 v);

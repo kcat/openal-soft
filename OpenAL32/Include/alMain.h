@@ -260,6 +260,13 @@ inline ALint fastf2i(ALfloat f)
 #endif
 }
 
+/* Converts float-to-int using standard behavior (truncation). */
+inline int float2int(float f)
+{
+    /* TODO: Make a more efficient method for x87. */
+    return (ALint)f;
+}
+
 
 enum DevProbe {
     ALL_DEVICE_PROBE,

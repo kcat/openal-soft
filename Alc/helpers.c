@@ -269,81 +269,44 @@ void FillCPUCaps(int capfilter)
 
 void SetMixerFPUMode(FPUCtl *ctl)
 {
-#ifdef HAVE_FENV_H
-    fegetenv(&ctl->flt_env);
-#ifdef _WIN32
-    /* HACK: A nasty bug in MinGW-W64 causes fegetenv and fesetenv to not save
-     * and restore the FPU rounding mode, so we have to do it manually. Don't
-     * know if this also applies to MSVC.
-     */
-    ctl->round_mode = fegetround();
-#endif
-#if defined(__GNUC__) && defined(HAVE_SSE)
-    /* FIXME: Some fegetenv implementations can get the SSE environment too?
-     * How to tell when it does? */
-    if((CPUCapFlags&CPU_CAP_SSE))
-        __asm__ __volatile__("stmxcsr %0" : "=m" (*&ctl->sse_state));
-#endif
-
-#ifdef FE_TOWARDZERO
-    fesetround(FE_TOWARDZERO);
-#endif
 #if defined(__GNUC__) && defined(HAVE_SSE)
     if((CPUCapFlags&CPU_CAP_SSE))
     {
-        int sseState = ctl->sse_state;
-        sseState |= 0x6000; /* set round-to-zero */
+        __asm__ __volatile__("stmxcsr %0" : "=m" (*&ctl->sse_state));
+        unsigned int sseState = ctl->sse_state;
         sseState |= 0x8000; /* set flush-to-zero */
         if((CPUCapFlags&CPU_CAP_SSE2))
             sseState |= 0x0040; /* set denormals-are-zero */
         __asm__ __volatile__("ldmxcsr %0" : : "m" (*&sseState));
     }
-#endif
 
 #elif defined(HAVE___CONTROL87_2)
 
-    int mode;
-    __control87_2(0, 0, &ctl->state, NULL);
-    __control87_2(_RC_CHOP, _MCW_RC, &mode, NULL);
-#ifdef HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
-    {
-        __control87_2(0, 0, NULL, &ctl->sse_state);
-        __control87_2(_RC_CHOP|_DN_FLUSH, _MCW_RC|_MCW_DN, NULL, &mode);
-    }
-#endif
+    __control87_2(0, 0, &ctl->state, &ctl->sse_state);
+    _control87(_DN_FLUSH, _MCW_DN);
 
 #elif defined(HAVE__CONTROLFP)
 
     ctl->state = _controlfp(0, 0);
-    (void)_controlfp(_RC_CHOP, _MCW_RC);
+    _controlfp(_DN_FLUSH, _MCW_DN);
 #endif
 }
 
 void RestoreFPUMode(const FPUCtl *ctl)
 {
-#ifdef HAVE_FENV_H
-    fesetenv(&ctl->flt_env);
-#ifdef _WIN32
-    fesetround(ctl->round_mode);
-#endif
 #if defined(__GNUC__) && defined(HAVE_SSE)
     if((CPUCapFlags&CPU_CAP_SSE))
         __asm__ __volatile__("ldmxcsr %0" : : "m" (*&ctl->sse_state));
-#endif
 
 #elif defined(HAVE___CONTROL87_2)
 
     int mode;
-    __control87_2(ctl->state, _MCW_RC, &mode, NULL);
-#ifdef HAVE_SSE
-    if((CPUCapFlags&CPU_CAP_SSE))
-        __control87_2(ctl->sse_state, _MCW_RC|_MCW_DN, NULL, &mode);
-#endif
+    __control87_2(ctl->state, _MCW_DN, &mode, NULL);
+    __control87_2(ctl->sse_state, _MCW_DN, NULL, &mode);
 
 #elif defined(HAVE__CONTROLFP)
 
-    _controlfp(ctl->state, _MCW_RC);
+    _controlfp(ctl->state, _MCW_DN);
 #endif
 }
 

@@ -7,16 +7,13 @@
 
 
 typedef struct FPUCtl {
-#ifdef HAVE_FENV_H
-    fenv_t flt_env;
-#ifdef _WIN32
-    int round_mode;
-#endif
-#else
-    int state;
-#endif
-#ifdef HAVE_SSE
-    int sse_state;
+#if defined(__GNUC__) && defined(HAVE_SSE)
+    unsigned int sse_state;
+#elif defined(HAVE___CONTROL87_2)
+    unsigned int state;
+    unsigned int sse_state;
+#elif defined(HAVE__CONTROLFP)
+    unsigned int state;
 #endif
 } FPUCtl;
 void SetMixerFPUMode(FPUCtl *ctl);

@@ -1092,7 +1092,7 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *p
     if(Pitch > (ALfloat)MAX_PITCH)
         voice->Step = MAX_PITCH<<FRACTIONBITS;
     else
-        voice->Step = maxi(fastf2i(Pitch*FRACTIONONE + 0.5f), 1);
+        voice->Step = maxi(fastf2i(Pitch * FRACTIONONE), 1);
     if(props->Resampler == BSinc24Resampler)
         BsincPrepare(voice->Step, &voice->ResampleState.bsinc, &bsinc24);
     else if(props->Resampler == BSinc12Resampler)
@@ -1453,7 +1453,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
     if(Pitch > (ALfloat)MAX_PITCH)
         voice->Step = MAX_PITCH<<FRACTIONBITS;
     else
-        voice->Step = maxi(fastf2i(Pitch*FRACTIONONE + 0.5f), 1);
+        voice->Step = maxi(fastf2i(Pitch * FRACTIONONE), 1);
     if(props->Resampler == BSinc24Resampler)
         BsincPrepare(voice->Step, &voice->ResampleState.bsinc, &bsinc24);
     else if(props->Resampler == BSinc12Resampler)
@@ -1663,7 +1663,7 @@ static void ApplyDither(ALfloat (*restrict Samples)[BUFFERSIZE], ALuint *dither_
             ALuint rng0 = dither_rng(&seed);
             ALuint rng1 = dither_rng(&seed);
             val += (ALfloat)(rng0*(1.0/UINT_MAX) - rng1*(1.0/UINT_MAX));
-            samples[i] = roundf(val) * invscale;
+            samples[i] = fastf2i(val) * invscale;
         }
     }
     *dither_seed = seed;

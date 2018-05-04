@@ -233,14 +233,14 @@ inline size_t RoundUp(size_t value, size_t r)
  */
 inline ALint fastf2i(ALfloat f)
 {
-#if defined(_MSC_VER) && defined(_M_IX86_FP)
+#if defined(HAVE_INTRIN_H) && ((defined(_M_IX86_FP) && (_M_IX86_FP > 0)) || defined(_M_X64))
+    return _mm_cvt_ss2si(_mm_set1_ps(f));
+
+#elif defined(_MSC_VER) && defined(_M_IX86_FP)
+
     ALint i;
-#if _M_IX86_FP > 0
-    __asm { cvtss2si i, f }
-#else
     __asm fld f
     __asm fistp i
-#endif
     return i;
 
 #elif (defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__))

@@ -57,6 +57,7 @@ typedef struct ALpshifterState {
 
     /* Effect parameters */
     ALsizei count;
+    ALsizei PitchShiftI;
     ALfloat PitchShift;
     ALfloat FreqPerBin;
 
@@ -259,9 +260,10 @@ static ALvoid ALpshifterState_Destruct(ALpshifterState *state)
 static ALboolean ALpshifterState_deviceUpdate(ALpshifterState *state, ALCdevice *device)
 {
     /* (Re-)initializing parameters and clear the buffers. */
-    state->count      = FIFO_LATENCY;
-    state->PitchShift = 1.0f;
-    state->FreqPerBin = device->Frequency / (ALfloat)STFT_SIZE;
+    state->count       = FIFO_LATENCY;
+    state->PitchShiftI = FRACTIONONE;
+    state->PitchShift  = 1.0f;
+    state->FreqPerBin  = device->Frequency / (ALfloat)STFT_SIZE;
 
     memset(state->InFIFO,          0, sizeof(state->InFIFO));
     memset(state->OutFIFO,         0, sizeof(state->OutFIFO));
@@ -282,10 +284,13 @@ static ALvoid ALpshifterState_update(ALpshifterState *state, const ALCcontext *c
 {
     const ALCdevice *device = context->Device;
     ALfloat coeffs[MAX_AMBI_COEFFS];
+    float pitch;
 
-    state->PitchShift = powf(2.0f,
+    pitch = powf(2.0f,
         (ALfloat)(props->Pshifter.CoarseTune*100 + props->Pshifter.FineTune) / 1200.0f
     );
+    state->PitchShiftI = (ALsizei)(pitch*FRACTIONONE + 0.5f);
+    state->PitchShift = state->PitchShiftI * (1.0f/FRACTIONONE);
 
     CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
     ComputeDryPanGains(&device->Dry, coeffs, slot->Params.Gain, state->TargetGains);
@@ -371,7 +376,7 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
 
         for(k = 0;k < STFT_HALF_SIZE+1;k++)
         {
-            j = fastf2i((ALfloat)k * state->PitchShift);
+            j = (k*state->PitchShiftI) >> FRACTIONBITS;
             if(j >= STFT_HALF_SIZE+1) break;
 
             state->Syntesis_buffer[j].Amplitude += state->Analysis_buffer[k].Amplitude;

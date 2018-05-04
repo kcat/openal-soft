@@ -106,28 +106,10 @@ static void InitHannWindow(void)
 static alonce_flag HannInitOnce = AL_ONCE_FLAG_INIT;
 
 
-/* Fast double-to-int conversion. Assumes the FPU is already in round-to-zero
- * mode. */
-static inline ALint fastd2i(ALdouble d)
+static inline ALint double2int(ALdouble d)
 {
-    /* NOTE: SSE2 is required for the efficient double-to-int opcodes on x86.
-     * Otherwise, we need to rely on x87's fistp opcode with it already in
-     * round-to-zero mode. x86-64 guarantees SSE2 support.
-     */
-#if (defined(__i386__) && !defined(__SSE2_MATH__)) || (defined(_M_IX86_FP) && (_M_IX86_FP < 2))
-#ifdef HAVE_LRINTF
-    return lrint(d);
-#elif defined(_MSC_VER) && defined(_M_IX86)
-    ALint i;
-    __asm fld d
-    __asm fistp i
-    return i;
-#else
+    /* TODO: Make a more efficient version for x87. */
     return (ALint)d;
-#endif
-#else
-    return (ALint)d;
-#endif
 }
 
 
@@ -349,7 +331,7 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
             tmp = (component.Phase - state->LastPhase[k]) - k*expected;
 
             /* Map delta phase into +/- Pi interval */
-            qpd = fastd2i(tmp / M_PI);
+            qpd = double2int(tmp / M_PI);
             tmp -= M_PI * (qpd + (qpd%2));
 
             /* Get deviation from bin frequency from the +/- Pi interval */

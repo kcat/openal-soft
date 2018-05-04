@@ -236,7 +236,7 @@ inline ALint fastf2i(ALfloat f)
 #if defined(_MSC_VER) && defined(_M_IX86_FP)
     ALint i;
 #if _M_IX86_FP > 0
-    __asm cvtss2si i, f
+    __asm { cvtss2si i, f }
 #else
     __asm fld f
     __asm fistp i

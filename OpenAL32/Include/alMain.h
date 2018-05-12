@@ -275,6 +275,60 @@ inline int float2int(float f)
     return (ALint)f;
 }
 
+/* Rounds a float to the nearest integral value, according to the current
+ * rounding mode. This is essentially an inlined version of rintf, although
+ * makes fewer promises (e.g. -0 or -0.25 rounded to 0 may result in +0).
+ */
+inline float fast_roundf(float f)
+{
+#if (defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) && \
+    !defined(__SSE_MATH__)
+
+    float out;
+    __asm__ __volatile__("frndint" : "=t"(out) : "0"(f));
+    return out;
+
+#else
+
+    /* Integral limit, where sub-integral precision is not available for
+     * floats.
+     */
+    static const float ilim[2] = {
+         8388608.0f /*  0x1.0p+23 */,
+        -8388608.0f /* -0x1.0p+23 */
+    };
+    uint32_t sign, expo;
+    union {
+        float f;
+        uint32_t i;
+    } conv;
+
+    conv.f = f;
+    sign = (conv.i>>31)&0x01;
+    expo = (conv.i>>23)&0xff;
+
+    if(UNLIKELY(expo >= 150/*+23*/))
+    {
+        /* An exponent (base-2) of 23 or higher is incapable of sub-integral
+         * precision, so it's already an integral value. We don't need to worry
+         * about infinity or NaN here.
+         */
+        return f;
+    }
+    /* Adding the integral limit to the value (with a matching sign) forces a
+     * result that has no sub-integral precision, and is consequently forced to
+     * round to an integral value. Removing the integral limit then restores
+     * the initial value rounded to the integral. The compiler should not
+     * optimize this out because of non-associative rules on floating-point
+     * math (as long as you don't use -fassociative-math,
+     * -funsafe-math-optimizations, -ffast-math, or -Ofast, in which case this
+     * may break).
+     */
+    f += ilim[sign];
+    return f - ilim[sign];
+#endif
+}
+
 
 enum DevProbe {
     ALL_DEVICE_PROBE,

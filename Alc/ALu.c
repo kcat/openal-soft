@@ -1663,7 +1663,7 @@ static void ApplyDither(ALfloat (*restrict Samples)[BUFFERSIZE], ALuint *dither_
             ALuint rng0 = dither_rng(&seed);
             ALuint rng1 = dither_rng(&seed);
             val += (ALfloat)(rng0*(1.0/UINT_MAX) - rng1*(1.0/UINT_MAX));
-            samples[i] = fastf2i(val) * invscale;
+            samples[i] = fast_roundf(val) * invscale;
         }
     }
     *dither_seed = seed;

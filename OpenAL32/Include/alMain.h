@@ -297,10 +297,10 @@ inline float fast_roundf(float f)
          8388608.0f /*  0x1.0p+23 */,
         -8388608.0f /* -0x1.0p+23 */
     };
-    uint32_t sign, expo;
+    ALuint sign, expo;
     union {
-        float f;
-        uint32_t i;
+        ALfloat f;
+        ALuint i;
     } conv;
 
     conv.f = f;

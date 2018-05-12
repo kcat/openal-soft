@@ -249,7 +249,7 @@ inline ALint fastf2i(ALfloat f)
 #ifdef __SSE_MATH__
     __asm__("cvtss2si %1, %0" : "=r"(i) : "x"(f));
 #else
-    __asm__("flds %1\n fistps %0" : "=m"(i) : "m"(f));
+    __asm__ __volatile__("fistpl %0" : "=m"(i) : "t"(f) : "st");
 #endif
     return i;
 

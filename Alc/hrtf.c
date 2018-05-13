@@ -156,13 +156,13 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
     blend[3] = (     emu) * (     amu[1]) * dirfact;
 
     /* Calculate the blended HRIR delays. */
-    delays[0] = float2int(
+    delays[0] = fastf2i(
         Hrtf->delays[idx[0]][0]*blend[0] + Hrtf->delays[idx[1]][0]*blend[1] +
-        Hrtf->delays[idx[2]][0]*blend[2] + Hrtf->delays[idx[3]][0]*blend[3] + 0.5f
+        Hrtf->delays[idx[2]][0]*blend[2] + Hrtf->delays[idx[3]][0]*blend[3]
     );
-    delays[1] = float2int(
+    delays[1] = fastf2i(
         Hrtf->delays[idx[0]][1]*blend[0] + Hrtf->delays[idx[1]][1]*blend[1] +
-        Hrtf->delays[idx[2]][1]*blend[2] + Hrtf->delays[idx[3]][1]*blend[3] + 0.5f
+        Hrtf->delays[idx[2]][1]*blend[2] + Hrtf->delays[idx[3]][1]*blend[3]
     );
 
     /* Calculate the sample offsets for the HRIR indices. */

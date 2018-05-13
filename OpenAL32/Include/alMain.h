@@ -271,8 +271,31 @@ inline ALint fastf2i(ALfloat f)
 /* Converts float-to-int using standard behavior (truncation). */
 inline int float2int(float f)
 {
-    /* TODO: Make a more efficient method for x87. */
+#if ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) && \
+     !defined(__SSE_MATH__)) || (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP == 0)
+    ALint sign, shift, mant;
+    union {
+        ALfloat f;
+        ALint i;
+    } conv;
+
+    conv.f = f;
+    sign = (conv.i>>31) | 1;
+    shift = ((conv.i>>23)&0xff) - (127+23);
+
+    /* Over/underflow */
+    if(UNLIKELY(shift >= 31 || shift < -23))
+        return 0;
+
+    mant = (conv.i&0x7fffff) | 0x800000;
+    if(LIKELY(shift < 0))
+        return (mant >> -shift) * sign;
+    return (mant << shift) * sign;
+
+#else
+
     return (ALint)f;
+#endif
 }
 
 /* Rounds a float to the nearest integral value, according to the current

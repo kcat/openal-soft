@@ -40,7 +40,7 @@ static inline float cbrtf(float f)
 }
 #endif
 
-#define DEG2RAD(x)  ((float)(x) * (F_PI/180.0f))
-#define RAD2DEG(x)  ((float)(x) * (180.0f/F_PI))
+#define DEG2RAD(x)  ((float)(x) * (float)(M_PI/180.0))
+#define RAD2DEG(x)  ((float)(x) * (float)(180.0/M_PI))
 
 #endif /* AL_MATH_DEFS_H */

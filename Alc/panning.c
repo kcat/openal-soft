@@ -816,10 +816,10 @@ static void InitHrtfPanning(ALCdevice *device)
     /* NOTE: azimuth goes clockwise. */
     static const struct AngularPoint AmbiPoints[] = {
         { DEG2RAD( 90.0f), DEG2RAD(   0.0f) },
-        { DEG2RAD( 35.0f), DEG2RAD(  45.0f) },
-        { DEG2RAD( 35.0f), DEG2RAD( 135.0f) },
-        { DEG2RAD( 35.0f), DEG2RAD(-135.0f) },
-        { DEG2RAD( 35.0f), DEG2RAD( -45.0f) },
+        { DEG2RAD( 35.2643897f), DEG2RAD(  45.0f) },
+        { DEG2RAD( 35.2643897f), DEG2RAD( 135.0f) },
+        { DEG2RAD( 35.2643897f), DEG2RAD(-135.0f) },
+        { DEG2RAD( 35.2643897f), DEG2RAD( -45.0f) },
         { DEG2RAD(  0.0f), DEG2RAD(   0.0f) },
         { DEG2RAD(  0.0f), DEG2RAD(  45.0f) },
         { DEG2RAD(  0.0f), DEG2RAD(  90.0f) },
@@ -828,10 +828,10 @@ static void InitHrtfPanning(ALCdevice *device)
         { DEG2RAD(  0.0f), DEG2RAD(-135.0f) },
         { DEG2RAD(  0.0f), DEG2RAD( -90.0f) },
         { DEG2RAD(  0.0f), DEG2RAD( -45.0f) },
-        { DEG2RAD(-35.0f), DEG2RAD(  45.0f) },
-        { DEG2RAD(-35.0f), DEG2RAD( 135.0f) },
-        { DEG2RAD(-35.0f), DEG2RAD(-135.0f) },
-        { DEG2RAD(-35.0f), DEG2RAD( -45.0f) },
+        { DEG2RAD(-35.2643897f), DEG2RAD(  45.0f) },
+        { DEG2RAD(-35.2643897f), DEG2RAD( 135.0f) },
+        { DEG2RAD(-35.2643897f), DEG2RAD(-135.0f) },
+        { DEG2RAD(-35.2643897f), DEG2RAD( -45.0f) },
         { DEG2RAD(-90.0f), DEG2RAD(   0.0f) },
     };
     static const ALfloat AmbiMatrixFOA[][MAX_AMBI_COEFFS] = {

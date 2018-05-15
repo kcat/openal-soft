@@ -121,9 +121,9 @@ typedef ALuint64SOFT ALuint64;
 #ifdef __GNUC__
 
 #if SIZEOF_LONG == 8
-#define CTZ64(x) __builtin_ctzl(x)
+#define CTZ64 __builtin_ctzl
 #else
-#define CTZ64(x) __builtin_ctzll(x)
+#define CTZ64 __builtin_ctzll
 #endif
 
 #elif defined(HAVE_BITSCANFORWARD64_INTRINSIC)
@@ -134,7 +134,7 @@ inline int msvc64_ctz64(ALuint64 v)
     _BitScanForward64(&idx, v);
     return (int)idx;
 }
-#define CTZ64(x) msvc64_ctz64(x)
+#define CTZ64 msvc64_ctz64
 
 #elif defined(HAVE_BITSCANFORWARD_INTRINSIC)
 
@@ -148,7 +148,7 @@ inline int msvc_ctz64(ALuint64 v)
     }
     return (int)idx;
 }
-#define CTZ64(x) msvc_ctz64(x)
+#define CTZ64 msvc_ctz64
 
 #else
 
@@ -171,7 +171,7 @@ inline int fallback_ctz64(ALuint64 value)
 {
     return fallback_popcnt64(~value & (value - 1));
 }
-#define CTZ64(x) fallback_ctz64(x)
+#define CTZ64 fallback_ctz64
 #endif
 
 static const union {

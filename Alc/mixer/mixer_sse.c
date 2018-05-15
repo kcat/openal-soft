@@ -135,55 +135,57 @@ void Mix_SSE(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffer
              ALfloat *CurrentGains, const ALfloat *TargetGains, ALsizei Counter, ALsizei OutPos,
              ALsizei BufferSize)
 {
-    ALfloat gain, delta, step;
-    __m128 gain4;
+    const ALfloat delta = (Counter > 0) ? 1.0f/(ALfloat)Counter : 0.0f;
     ALsizei c;
 
     ASSUME(OutChans > 0);
     ASSUME(BufferSize > 0);
-    delta = (Counter > 0) ? 1.0f/(ALfloat)Counter : 0.0f;
 
     for(c = 0;c < OutChans;c++)
     {
         ALsizei pos = 0;
-        gain = CurrentGains[c];
-        step = (TargetGains[c] - gain) * delta;
+        ALfloat gain = CurrentGains[c];
+        const ALfloat step = (TargetGains[c] - gain) * delta;
+
         if(fabsf(step) > FLT_EPSILON)
         {
             ALsizei minsize = mini(BufferSize, Counter);
+            ALfloat step_count = 0.0f;
             /* Mix with applying gain steps in aligned multiples of 4. */
-            if(minsize-pos > 3)
+            if(LIKELY(minsize > 3))
             {
-                __m128 step4;
-                gain4 = _mm_setr_ps(
-                    gain,
-                    gain + step,
-                    gain + step + step,
-                    gain + step + step + step
-                );
-                step4 = _mm_set1_ps(step + step + step + step);
+                const __m128 four4 = _mm_set1_ps(4.0f);
+                const __m128 step4 = _mm_set1_ps(step);
+                const __m128 gain4 = _mm_set1_ps(gain);
+                __m128 step_count4 = _mm_setr_ps(0.0f, 1.0f, 2.0f, 3.0f);
+                ALsizei todo = minsize >> 2;
                 do {
                     const __m128 val4 = _mm_load_ps(&data[pos]);
                     __m128 dry4 = _mm_load_ps(&OutBuffer[c][OutPos+pos]);
-                    dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain4));
-                    gain4 = _mm_add_ps(gain4, step4);
+#define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))
+                    /* dry += val * (gain + step*step_count) */
+                    dry4 = MLA4(dry4, val4, MLA4(gain4, step4, step_count4));
+#undef MLA4
                     _mm_store_ps(&OutBuffer[c][OutPos+pos], dry4);
+                    step_count4 = _mm_add_ps(step_count4, four4);
                     pos += 4;
-                } while(minsize-pos > 3);
-                /* NOTE: gain4 now represents the next four gains after the
-                 * last four mixed samples, so the lowest element represents
-                 * the next gain to apply.
+                } while(--todo);
+                /* NOTE: step_count4 now represents the next four counts after
+                 * the last four mixed samples, so the lowest element
+                 * represents the next step count to apply.
                  */
-                gain = _mm_cvtss_f32(gain4);
+                step_count = _mm_cvtss_f32(step_count4);
             }
             /* Mix with applying left over gain steps that aren't aligned multiples of 4. */
             for(;pos < minsize;pos++)
             {
-                OutBuffer[c][OutPos+pos] += data[pos]*gain;
-                gain += step;
+                OutBuffer[c][OutPos+pos] += data[pos]*(gain + step*step_count);
+                step_count += 1.0f;
             }
             if(pos == Counter)
                 gain = TargetGains[c];
+            else
+                gain += step*step_count;
             CurrentGains[c] = gain;
 
             /* Mix until pos is aligned with 4 or the mix is done. */
@@ -194,13 +196,17 @@ void Mix_SSE(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffer
 
         if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
-        gain4 = _mm_set1_ps(gain);
-        for(;BufferSize-pos > 3;pos += 4)
+        if(LIKELY(BufferSize-pos > 3))
         {
-            const __m128 val4 = _mm_load_ps(&data[pos]);
-            __m128 dry4 = _mm_load_ps(&OutBuffer[c][OutPos+pos]);
-            dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain4));
-            _mm_store_ps(&OutBuffer[c][OutPos+pos], dry4);
+            ALsizei todo = (BufferSize-pos) >> 2;
+            const __m128 gain4 = _mm_set1_ps(gain);
+            do {
+                const __m128 val4 = _mm_load_ps(&data[pos]);
+                __m128 dry4 = _mm_load_ps(&OutBuffer[c][OutPos+pos]);
+                dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain4));
+                _mm_store_ps(&OutBuffer[c][OutPos+pos], dry4);
+                pos += 4;
+            } while(--todo);
         }
         for(;pos < BufferSize;pos++)
             OutBuffer[c][OutPos+pos] += data[pos]*gain;

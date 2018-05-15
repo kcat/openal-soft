@@ -134,13 +134,16 @@ void Mix_C(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffer)[
         if(fabsf(step) > FLT_EPSILON)
         {
             ALsizei minsize = mini(BufferSize, Counter);
+            ALfloat step_count = 0.0f;
             for(;pos < minsize;pos++)
             {
-                OutBuffer[c][OutPos+pos] += data[pos]*gain;
-                gain += step;
+                OutBuffer[c][OutPos+pos] += data[pos] * (gain + step*step_count);
+                step_count += 1.0f;
             }
             if(pos == Counter)
                 gain = TargetGains[c];
+            else
+                gain += step*step_count;
             CurrentGains[c] = gain;
         }
 

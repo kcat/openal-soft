@@ -115,6 +115,16 @@ typedef ALuint64SOFT ALuint64;
 #endif
 #endif
 
+#ifndef I64
+#if defined(_MSC_VER)
+#define I64(x) ((ALint64)(x##i64))
+#elif SIZEOF_LONG == 8
+#define I64(x) ((ALint64)(x##l))
+#elif SIZEOF_LONG_LONG == 8
+#define I64(x) ((ALint64)(x##ll))
+#endif
+#endif
+
 /* Define a CTZ64 macro (count trailing zeros, for 64-bit integers). The result
  * is *UNDEFINED* if the value is 0.
  */

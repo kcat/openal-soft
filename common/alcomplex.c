@@ -2,8 +2,7 @@
 #include "config.h"
 
 #include "alcomplex.h"
-
-#include <math.h>
+#include "math_defs.h"
 
 
 extern inline ALcomplex complex_add(ALcomplex a, ALcomplex b);

@@ -215,7 +215,6 @@ void Mix_SSE(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffer
 
 void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restrict data)[BUFFERSIZE], ALsizei InChans, ALsizei InPos, ALsizei BufferSize)
 {
-    __m128 gain4;
     ALsizei c;
 
     ASSUME(InChans > 0);
@@ -228,13 +227,17 @@ void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restri
         if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
 
-        gain4 = _mm_set1_ps(gain);
-        for(;BufferSize-pos > 3;pos += 4)
+        if(LIKELY(BufferSize > 3))
         {
-            const __m128 val4 = _mm_load_ps(&data[c][InPos+pos]);
-            __m128 dry4 = _mm_load_ps(&OutBuffer[pos]);
-            dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain4));
-            _mm_store_ps(&OutBuffer[pos], dry4);
+            ALsizei todo = BufferSize >> 2;
+            const __m128 gain4 = _mm_set1_ps(gain);
+            do {
+                const __m128 val4 = _mm_load_ps(&data[c][InPos+pos]);
+                __m128 dry4 = _mm_load_ps(&OutBuffer[pos]);
+                dry4 = _mm_add_ps(dry4, _mm_mul_ps(val4, gain4));
+                _mm_store_ps(&OutBuffer[pos], dry4);
+                pos += 4;
+            } while(--todo);
         }
         for(;pos < BufferSize;pos++)
             OutBuffer[pos] += data[c][InPos+pos]*gain;

@@ -250,13 +250,10 @@ void Mix_Neon(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffe
 
 void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restrict data)[BUFFERSIZE], ALsizei InChans, ALsizei InPos, ALsizei BufferSize)
 {
-    float32x4_t gain4;
     ALsizei c;
 
     ASSUME(InChans > 0);
     ASSUME(BufferSize > 0);
-    data = ASSUME_ALIGNED(data, 16);
-    OutBuffer = ASSUME_ALIGNED(OutBuffer, 16);
 
     for(c = 0;c < InChans;c++)
     {
@@ -265,13 +262,17 @@ void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restr
         if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
 
-        gain4 = vdupq_n_f32(gain);
-        for(;BufferSize-pos > 3;pos += 4)
+        if(LIKELY(BufferSize > 3))
         {
-            const float32x4_t val4 = vld1q_f32(&data[c][InPos+pos]);
-            float32x4_t dry4 = vld1q_f32(&OutBuffer[pos]);
-            dry4 = vmlaq_f32(dry4, val4, gain4);
-            vst1q_f32(&OutBuffer[pos], dry4);
+            ALsizei todo = BufferSize >> 2;
+            float32x4_t gain4 = vdupq_n_f32(gain);
+            do {
+                const float32x4_t val4 = vld1q_f32(&data[c][InPos+pos]);
+                float32x4_t dry4 = vld1q_f32(&OutBuffer[pos]);
+                dry4 = vmlaq_f32(dry4, val4, gain4);
+                vst1q_f32(&OutBuffer[pos], dry4);
+                pos += 4;
+            } while(--todo);
         }
         for(;pos < BufferSize;pos++)
             OutBuffer[pos] += data[c][InPos+pos]*gain;

@@ -1030,12 +1030,12 @@ static void AddFileEntry(vector_EnumeratedHrtf *list, const_al_string filename)
             /* Check if this entry has already been added to the list. */
 #define MATCH_ENTRY(i) (loaded_entry == (i)->hrtf)
             VECTOR_FIND_IF(iter, const EnumeratedHrtf, *list, MATCH_ENTRY);
+#undef MATCH_ENTRY
             if(iter != VECTOR_END(*list))
             {
                 TRACE("Skipping duplicate file entry %s\n", alstr_get_cstr(filename));
                 return;
             }
-#undef MATCH_FNAME
 
             break;
         }
@@ -1109,12 +1109,12 @@ static void AddBuiltInEntry(vector_EnumeratedHrtf *list, const_al_string filenam
         {
 #define MATCH_ENTRY(i) (loaded_entry == (i)->hrtf)
             VECTOR_FIND_IF(iter, const EnumeratedHrtf, *list, MATCH_ENTRY);
+#undef MATCH_ENTRY
             if(iter != VECTOR_END(*list))
             {
                 TRACE("Skipping duplicate file entry %s\n", alstr_get_cstr(filename));
                 return;
             }
-#undef MATCH_FNAME
 
             break;
         }

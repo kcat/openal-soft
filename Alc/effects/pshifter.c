@@ -29,6 +29,8 @@
 #include "alu.h"
 #include "filters/defs.h"
 
+#include "alcomplex.h"
+
 
 #define STFT_SIZE      1024
 #define STFT_HALF_SIZE (STFT_SIZE>>1)
@@ -37,10 +39,6 @@
 #define STFT_STEP    (STFT_SIZE / OVERSAMP)
 #define FIFO_LATENCY (STFT_STEP * (OVERSAMP-1))
 
-typedef struct ALcomplex {
-    ALdouble Real;
-    ALdouble Imag;
-} ALcomplex;
 
 typedef struct ALphasor {
     ALdouble Amplitude;
@@ -51,6 +49,7 @@ typedef struct ALFrequencyDomain {
     ALdouble Amplitude;
     ALdouble Frequency;
 } ALfrequencyDomain;
+
 
 typedef struct ALpshifterState {
     DERIVE_FROM_TYPE(ALeffectState);
@@ -149,7 +148,7 @@ static inline ALphasor rect2polar(ALcomplex number)
 }
 
 /* Converts ALphasor to ALcomplex */
-static inline ALcomplex polar2rect(ALphasor  number)
+static inline ALcomplex polar2rect(ALphasor number)
 {
     ALcomplex cartesian;
 
@@ -157,96 +156,6 @@ static inline ALcomplex polar2rect(ALphasor  number)
     cartesian.Imag = number.Amplitude * sin(number.Phase);
 
     return cartesian;
-}
-
-/* Addition of two complex numbers (ALcomplex format) */
-static inline ALcomplex complex_add(ALcomplex a, ALcomplex b)
-{
-    ALcomplex result;
-
-    result.Real = a.Real + b.Real;
-    result.Imag = a.Imag + b.Imag;
-
-    return result;
-}
-
-/* Subtraction of two complex numbers (ALcomplex format) */
-static inline ALcomplex complex_sub(ALcomplex a, ALcomplex b)
-{
-    ALcomplex result;
-
-    result.Real = a.Real - b.Real;
-    result.Imag = a.Imag - b.Imag;
-
-    return result;
-}
-
-/* Multiplication of two complex numbers (ALcomplex format) */
-static inline ALcomplex complex_mult(ALcomplex a, ALcomplex b)
-{
-    ALcomplex result;
-
-    result.Real = a.Real*b.Real - a.Imag*b.Imag;
-    result.Imag = a.Imag*b.Real + a.Real*b.Imag;
-
-    return result;
-}
-
-/* Iterative implementation of 2-radix FFT (In-place algorithm). Sign = -1 is
- * FFT and 1 is iFFT (inverse). Fills FFTBuffer[0...FFTSize-1] with the
- * Discrete Fourier Transform (DFT) of the time domain data stored in
- * FFTBuffer[0...FFTSize-1]. FFTBuffer is an array of complex numbers
- * (ALcomplex), FFTSize MUST BE power of two.
- */
-static inline ALvoid FFT(ALcomplex *FFTBuffer, ALsizei FFTSize, ALdouble Sign)
-{
-    ALsizei i, j, k, mask, step, step2;
-    ALcomplex temp, u, w;
-    ALdouble arg;
-
-    /* Bit-reversal permutation applied to a sequence of FFTSize items */
-    for(i = 1;i < FFTSize-1;i++)
-    {
-        for(mask = 0x1, j = 0;mask < FFTSize;mask <<= 1)
-        {
-            if((i&mask) != 0)
-                j++;
-            j <<= 1;
-        }
-        j >>= 1;
-
-        if(i < j)
-        {
-            temp         = FFTBuffer[i];
-            FFTBuffer[i] = FFTBuffer[j];
-            FFTBuffer[j] = temp;
-        }
-    }
-
-    /* Iterative form of Danielson–Lanczos lemma */
-    for(i = 1, step = 2;i < FFTSize;i<<=1, step<<=1)
-    {
-        step2 = step >> 1;
-        arg   = M_PI / step2;
-
-        w.Real = cos(arg);
-        w.Imag = sin(arg) * Sign;
-
-        u.Real = 1.0;
-        u.Imag = 0.0;
-
-        for(j = 0;j < step2;j++)
-        {
-            for(k = j;k < FFTSize;k+=step)
-            {
-                temp               = complex_mult(FFTBuffer[k+step2], u);
-                FFTBuffer[k+step2] = complex_sub(FFTBuffer[k], temp);
-                FFTBuffer[k]       = complex_add(FFTBuffer[k], temp);
-            }
-
-            u = complex_mult(u, w);
-        }
-    }
 }
 
 
@@ -295,8 +204,8 @@ static ALvoid ALpshifterState_update(ALpshifterState *state, const ALCcontext *c
     pitch = powf(2.0f,
         (ALfloat)(props->Pshifter.CoarseTune*100 + props->Pshifter.FineTune) / 1200.0f
     );
-    state->PitchShiftI = (ALsizei)(pitch*FRACTIONONE + 0.5f);
-    state->PitchShift = state->PitchShiftI * (1.0f/FRACTIONONE);
+    state->PitchShiftI = fastf2i(pitch*FRACTIONONE);
+    state->PitchShift  = state->PitchShiftI * (1.0f/FRACTIONONE);
 
     CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
     ComputeDryPanGains(&device->Dry, coeffs, slot->Params.Gain, state->TargetGains);
@@ -337,7 +246,7 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
 
         /* ANALYSIS */
         /* Apply FFT to FFTbuffer data */
-        FFT(state->FFTbuffer, STFT_SIZE, -1.0);
+        complex_fft(state->FFTbuffer, STFT_SIZE, -1.0);
 
         /* Analyze the obtained data. Since the real FFT is symmetric, only
          * STFT_HALF_SIZE+1 samples are needed.
@@ -417,7 +326,7 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
         }
 
         /* Apply iFFT to buffer data */
-        FFT(state->FFTbuffer, STFT_SIZE, 1.0);
+        complex_fft(state->FFTbuffer, STFT_SIZE, 1.0);
 
         /* Windowing and add to output */
         for(k = 0;k < STFT_SIZE;k++)

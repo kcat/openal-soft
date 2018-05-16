@@ -81,8 +81,9 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
 
 /**
  * Produces HRTF filter coefficients for decoding B-Format, given a set of
- * virtual speaker positions and HF/LF matrices for decoding to them. The
- * returned coefficients are ordered and scaled according to the matrices.
+ * virtual speaker positions, a matching decoding matrix, and per-order high-
+ * frequency gains for the decoder. The calculated impulse responses are
+ * ordered and scaled according to the matrix input.
  */
 void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei NumChannels, const struct AngularPoint *AmbiPoints, const ALfloat (*restrict AmbiMatrix)[MAX_AMBI_COEFFS], ALsizei AmbiCount, const ALfloat *restrict AmbiOrderHFGain);
 

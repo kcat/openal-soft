@@ -75,6 +75,10 @@ typedef void (AL_APIENTRY*LPALGETPOINTERVSOFT)(ALenum pname, void **values);
 
 namespace {
 
+#ifndef M_PI
+#define M_PI (3.14159265358979323846)
+#endif
+
 using nanoseconds = std::chrono::nanoseconds;
 using microseconds = std::chrono::microseconds;
 using milliseconds = std::chrono::milliseconds;
@@ -84,6 +88,7 @@ using seconds_d64 = std::chrono::duration<double>;
 const std::string AppName("alffplay");
 
 bool EnableDirectOut = false;
+bool EnableWideStereo = false;
 LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
 LPALCGETINTEGER64VSOFT alcGetInteger64vSOFT;
 
@@ -699,7 +704,7 @@ void AL_APIENTRY AudioState::EventCallback(ALenum eventType, ALuint object, ALui
         return;
     }
 
-    std::cout<< "---- AL Event on AudioState "<<self<<" ----\nEvent: ";
+    std::cout<< "\n---- AL Event on AudioState "<<self<<" ----\nEvent: ";
     switch(eventType)
     {
         case AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT: std::cout<< "Buffer completed"; break;
@@ -712,8 +717,8 @@ void AL_APIENTRY AudioState::EventCallback(ALenum eventType, ALuint object, ALui
                              std::dec<<std::setw(0)<<std::setfill(' '); break;
     }
     std::cout<< "\n"
-        "Object ID: "<<object<<'\n'<<
-        "Parameter: "<<param<<'\n'<<
+        "Object ID: "<<object<<"\n"
+        "Parameter: "<<param<<"\n"
         "Message: "<<std::string(message, length)<<"\n----"<<
         std::endl;
 
@@ -885,6 +890,11 @@ int AudioState::handler()
 
     if(EnableDirectOut)
         alSourcei(mSource, AL_DIRECT_CHANNELS_SOFT, AL_TRUE);
+    if(EnableWideStereo)
+    {
+        ALfloat angles[2] = { (ALfloat)(M_PI/3.0), (ALfloat)(-M_PI/3.0) };
+        alSourcefv(mSource, AL_STEREO_ANGLES, angles);
+    }
 
     if(alGetError() != AL_NO_ERROR)
         goto finish;
@@ -1744,16 +1754,30 @@ int main(int argc, char *argv[])
             alGetProcAddress("alEventCallbackSOFT"));
     }
 
-    if(fileidx < argc && strcmp(argv[fileidx], "-direct") == 0)
+    for(;fileidx < argc;++fileidx)
     {
-        ++fileidx;
-        if(!alIsExtensionPresent("AL_SOFT_direct_channels"))
-            std::cerr<< "AL_SOFT_direct_channels not supported for direct output" <<std::endl;
-        else
+        if(strcmp(argv[fileidx], "-direct") == 0)
         {
-            std::cout<< "Found AL_SOFT_direct_channels" <<std::endl;
-            EnableDirectOut = true;
+            if(!alIsExtensionPresent("AL_SOFT_direct_channels"))
+                std::cerr<< "AL_SOFT_direct_channels not supported for direct output" <<std::endl;
+            else
+            {
+                std::cout<< "Found AL_SOFT_direct_channels" <<std::endl;
+                EnableDirectOut = true;
+            }
         }
+        else if(strcmp(argv[fileidx], "-wide") == 0)
+        {
+            if(!alIsExtensionPresent("AL_EXT_STEREO_ANGLES"))
+                std::cerr<< "AL_EXT_STEREO_ANGLES not supported for wide stereo" <<std::endl;
+            else
+            {
+                std::cout<< "Found AL_EXT_STEREO_ANGLES" <<std::endl;
+                EnableWideStereo = true;
+            }
+        }
+        else
+            break;
     }
 
     while(fileidx < argc && !movState)

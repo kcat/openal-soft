@@ -64,7 +64,7 @@ void complex_fft(ALcomplex *FFTBuffer, ALsizei FFTSize, ALdouble Sign)
 void hilbert(ALsizei size, ALcomplex *InOutBuffer )
 {
     ALsizei k;
-    const ALdouble inverse_size = 1.0/(ALfloat)size;
+    const ALdouble inverse_size = 1.0/(ALdouble)size;
 
     for ( k = 0; k < size;k++ ) 
           InOutBuffer[k].Imag = 0.0;

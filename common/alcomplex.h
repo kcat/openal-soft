@@ -55,6 +55,15 @@ inline ALcomplex complex_mult(ALcomplex a, ALcomplex b)
  */
 void complex_fft(ALcomplex *FFTBuffer, ALsizei FFTSize, ALdouble Sign);
 
+/**
+ *Calculate the complex helical sequence (or discrete-time analytical signal)
+ *of the given input using the discrete Hilbert transform (In-place algorithm).
+ *Fills InOutBuffer[0...size-1] with the discrete-time analytical signal stored 
+ *in InOutBuffer[0...size-1]. InOutBuffer is an array of complex numbers, 
+ *size MUST BE power of two.
+ */
+void hilbert(ALsizei size, ALcomplex *InOutBuffer );
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

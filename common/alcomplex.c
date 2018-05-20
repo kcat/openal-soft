@@ -59,3 +59,38 @@ void complex_fft(ALcomplex *FFTBuffer, ALsizei FFTSize, ALdouble Sign)
         }
     }
 }
+
+/*Discrete Hilbert Transform (analytic signal form)*/
+void hilbert(ALsizei size, ALcomplex *InOutBuffer )
+{
+    ALsizei k;
+    const ALdouble inverse_size = 1.0/(ALfloat)size;
+
+    for ( k = 0; k < size;k++ ) 
+          InOutBuffer[k].Imag = 0.0;
+
+    complex_fft( InOutBuffer, size, 1.0 );
+
+    for( k = 0; k < size; k++ )
+    {
+        if( k == 0 || k == size/2 )
+        {
+            InOutBuffer[k].Real *= inverse_size;
+            InOutBuffer[k].Imag *= inverse_size;
+        }
+
+        else if ( k >=1 && k < size/2 )
+        {
+            InOutBuffer[k].Real *= 2.0*inverse_size;
+            InOutBuffer[k].Imag *= 2.0*inverse_size;
+        }
+
+        else
+        {
+            InOutBuffer[k].Real   = 0.0;
+            InOutBuffer[k].Imag   = 0.0;
+        }
+    }
+
+    complex_fft( InOutBuffer, size,-1.0 );
+}

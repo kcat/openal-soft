@@ -43,8 +43,8 @@ typedef struct ALfshifterState {
 
     /* Effect parameters */
     ALsizei  count;
-    ALdouble frac_freq;
-    ALdouble inc;
+    ALsizei  PhaseStep;
+    ALsizei  Phase;
     ALdouble ld_sign;
 
     /*Effects buffers*/ 
@@ -103,8 +103,8 @@ static ALboolean ALfshifterState_deviceUpdate(ALfshifterState *state, ALCdevice 
 {
     /* (Re-)initializing parameters and clear the buffers. */
     state->count     = FIFO_LATENCY;
-    state->frac_freq = 0.0;
-    state->inc       = 0.0;
+    state->PhaseStep = 0;
+    state->Phase     = 0;
     state->ld_sign   = 1.0;
 
     memset(state->InFIFO,      0, sizeof(state->InFIFO));
@@ -122,8 +122,10 @@ static ALvoid ALfshifterState_update(ALfshifterState *state, const ALCcontext *c
 {
     const ALCdevice *device = context->Device;
     ALfloat coeffs[MAX_AMBI_COEFFS];
+    ALfloat step;
 
-    state->frac_freq = props->Fshifter.Frequency/(ALdouble)device->Frequency;
+    step = props->Fshifter.Frequency / (ALfloat)device->Frequency;
+    state->PhaseStep = fastf2i(minf(step, 0.5f) * FRACTIONONE);
 
     switch(props->Fshifter.LeftDirection)
     {
@@ -132,12 +134,12 @@ static ALvoid ALfshifterState_update(ALfshifterState *state, const ALCcontext *c
             break;
 
         case AL_FREQUENCY_SHIFTER_DIRECTION_UP:
-            state->ld_sign =  1.0;
+            state->ld_sign = 1.0;
             break;
 
         case AL_FREQUENCY_SHIFTER_DIRECTION_OFF:
-            state->inc = 0.0;
-            state->frac_freq = 0.0;
+            state->Phase = 0;
+            state->PhaseStep = 0;
             break;
     }
 
@@ -194,16 +196,12 @@ static ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToD
     /* Process frequency shifter using the analytic signal obtained. */
     for(k = 0;k < SamplesToDo;k++)
     {
-        ALdouble phase;
-
-        if(state->inc >= 1.0)
-            state->inc -= 1.0;
-
-        phase = 2.0*M_PI * state->inc;
+        ALdouble phase = state->Phase * ((1.0/FRACTIONONE) * 2.0*M_PI);
         BufferOut[k] = (ALfloat)(state->Outdata[k].Real*cos(phase) +
-                                 state->ld_sign*state->Outdata[k].Imag*sin(phase));
+                                 state->Outdata[k].Imag*sin(phase)*state->ld_sign);
 
-        state->inc += state->frac_freq;
+        state->Phase += state->PhaseStep;
+        state->Phase &= FRACTIONMASK;
     }
 
     /* Now, mix the processed sound data to the output. */

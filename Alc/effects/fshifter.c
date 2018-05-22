@@ -125,7 +125,7 @@ static ALvoid ALfshifterState_update(ALfshifterState *state, const ALCcontext *c
 
     state->frac_freq = props->Fshifter.Frequency/(ALdouble)device->Frequency;
 
-    switch(props->Fshifter.Left_direction)
+    switch(props->Fshifter.LeftDirection)
     {
         case AL_FREQUENCY_SHIFTER_DIRECTION_DOWN:
             state->ld_sign = -1.0;
@@ -242,7 +242,7 @@ void ALfshifter_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, A
         case AL_FREQUENCY_SHIFTER_FREQUENCY:
             if(!(val >= AL_FREQUENCY_SHIFTER_MIN_FREQUENCY && val <= AL_FREQUENCY_SHIFTER_MAX_FREQUENCY))
                 SETERR_RETURN(context, AL_INVALID_VALUE,,"Frequency shifter frequency out of range");
-            props->Fshifter.Frequency = (ALfloat) val;
+            props->Fshifter.Frequency = val;
             break;
 
         default:
@@ -263,13 +263,13 @@ void ALfshifter_setParami(ALeffect *effect, ALCcontext *context, ALenum param, A
         case AL_FREQUENCY_SHIFTER_LEFT_DIRECTION:
             if(!(val >= AL_FREQUENCY_SHIFTER_MIN_LEFT_DIRECTION && val <= AL_FREQUENCY_SHIFTER_MAX_LEFT_DIRECTION))
                 SETERR_RETURN(context, AL_INVALID_VALUE,,"Frequency shifter left direction out of range");
-            props->Fshifter.Left_direction = val;
+            props->Fshifter.LeftDirection = val;
             break;
 
         case AL_FREQUENCY_SHIFTER_RIGHT_DIRECTION:
             if(!(val >= AL_FREQUENCY_SHIFTER_MIN_RIGHT_DIRECTION && val <= AL_FREQUENCY_SHIFTER_MAX_RIGHT_DIRECTION))
                 SETERR_RETURN(context, AL_INVALID_VALUE,,"Frequency shifter right direction out of range");
-            props->Fshifter.Right_direction = val;
+            props->Fshifter.RightDirection = val;
             break;
 
         default:
@@ -287,10 +287,10 @@ void ALfshifter_getParami(const ALeffect *effect, ALCcontext *context, ALenum pa
     switch(param)
     {
         case AL_FREQUENCY_SHIFTER_LEFT_DIRECTION:
-            *val = (ALint)props->Fshifter.Left_direction;
+            *val = props->Fshifter.LeftDirection;
             break;
         case AL_FREQUENCY_SHIFTER_RIGHT_DIRECTION:
-            *val = (ALint)props->Fshifter.Right_direction;
+            *val = props->Fshifter.RightDirection;
             break;
         default:
             alSetError(context, AL_INVALID_ENUM, "Invalid frequency shifter integer property 0x%04x", param);
@@ -308,7 +308,7 @@ void ALfshifter_getParamf(const ALeffect *effect, ALCcontext *context, ALenum pa
     switch(param)
     {
         case AL_FREQUENCY_SHIFTER_FREQUENCY:
-            *val = (ALfloat)props->Fshifter.Frequency;
+            *val = props->Fshifter.Frequency;
             break;
 
         default:

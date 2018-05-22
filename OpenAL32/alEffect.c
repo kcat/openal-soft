@@ -586,9 +586,9 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         effect->vtab = &ALflanger_vtable;
         break;
         case AL_EFFECT_FREQUENCY_SHIFTER:
-        effect->Props.Fshifter.Frequency       = AL_FREQUENCY_SHIFTER_DEFAULT_FREQUENCY;
-        effect->Props.Fshifter.Left_direction  = AL_FREQUENCY_SHIFTER_DEFAULT_LEFT_DIRECTION;
-        effect->Props.Fshifter.Right_direction = AL_FREQUENCY_SHIFTER_DEFAULT_RIGHT_DIRECTION;
+        effect->Props.Fshifter.Frequency      = AL_FREQUENCY_SHIFTER_DEFAULT_FREQUENCY;
+        effect->Props.Fshifter.LeftDirection  = AL_FREQUENCY_SHIFTER_DEFAULT_LEFT_DIRECTION;
+        effect->Props.Fshifter.RightDirection = AL_FREQUENCY_SHIFTER_DEFAULT_RIGHT_DIRECTION;
         effect->vtab = &ALfshifter_vtable;
         break;
     case AL_EFFECT_RING_MODULATOR:

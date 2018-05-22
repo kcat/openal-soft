@@ -147,10 +147,10 @@ typedef union ALeffectProps {
         ALfloat HighGain;
     } Equalizer;
 
-        struct {
+    struct {
         ALfloat Frequency;
-        ALint Left_direction;
-        ALint Right_direction;
+        ALint LeftDirection;
+        ALint RightDirection;
     } Fshifter;
 
     struct {

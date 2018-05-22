@@ -32,9 +32,9 @@
 #include "alcomplex.h"
 
 #define HIL_SIZE 1024
-#define OVERSAMP       (1<<2)
+#define OVERSAMP (1<<2)
 
-#define HIL_STEP    (HIL_SIZE / OVERSAMP)
+#define HIL_STEP     (HIL_SIZE / OVERSAMP)
 #define FIFO_LATENCY (HIL_STEP * (OVERSAMP-1))
 
 
@@ -59,7 +59,6 @@ typedef struct ALfshifterState {
     /* Effect gains for each output channel */
     ALfloat CurrentGains[MAX_OUTPUT_CHANNELS];
     ALfloat TargetGains[MAX_OUTPUT_CHANNELS];
-
 } ALfshifterState;
 
 static ALvoid ALfshifterState_Destruct(ALfshifterState *state);
@@ -100,18 +99,18 @@ static ALvoid ALfshifterState_Destruct(ALfshifterState *state)
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
 }
 
-static ALboolean ALfshifterState_deviceUpdate(ALfshifterState *state, ALCdevice *device)
+static ALboolean ALfshifterState_deviceUpdate(ALfshifterState *state, ALCdevice *UNUSED(device))
 {
     /* (Re-)initializing parameters and clear the buffers. */
-    state->count       =  FIFO_LATENCY;
-    state->frac_freq   =  0.0;
-    state->inc         =  0.0;
-    state->ld_sign     = -1.0;
+    state->count     = FIFO_LATENCY;
+    state->frac_freq = 0.0;
+    state->inc       = 0.0;
+    state->ld_sign   = 1.0;
 
-    memset(state->InFIFO     , 0, HIL_SIZE*sizeof(ALfloat));
-    memset(state->OutFIFO    , 0, HIL_SIZE*sizeof(ALcomplex));
-    memset(state->OutputAccum, 0, 2*HIL_SIZE*sizeof(ALcomplex));
-    memset(state->Analytic   , 0, HIL_SIZE*sizeof(ALcomplex));
+    memset(state->InFIFO,      0, sizeof(state->InFIFO));
+    memset(state->OutFIFO,     0, sizeof(state->OutFIFO));
+    memset(state->OutputAccum, 0, sizeof(state->OutputAccum));
+    memset(state->Analytic,    0, sizeof(state->Analytic));
 
     memset(state->CurrentGains, 0, sizeof(state->CurrentGains));
     memset(state->TargetGains,  0, sizeof(state->TargetGains));
@@ -124,21 +123,22 @@ static ALvoid ALfshifterState_update(ALfshifterState *state, const ALCcontext *c
     const ALCdevice *device = context->Device;
     ALfloat coeffs[MAX_AMBI_COEFFS];
 
-    state->frac_freq = props->Fshifter.Frequency/device->Frequency;
+    state->frac_freq = props->Fshifter.Frequency/(ALdouble)device->Frequency;
 
-    switch (props->Fshifter.Left_direction)
+    switch(props->Fshifter.Left_direction)
     {
-      case AL_FREQUENCY_SHIFTER_DIRECTION_DOWN:
-           state->ld_sign   = -1.0;
-      break;
+        case AL_FREQUENCY_SHIFTER_DIRECTION_DOWN:
+            state->ld_sign = -1.0;
+            break;
 
-      case AL_FREQUENCY_SHIFTER_DIRECTION_UP:
-           state->ld_sign   =  1.0;
-      break;
+        case AL_FREQUENCY_SHIFTER_DIRECTION_UP:
+            state->ld_sign =  1.0;
+            break;
 
-      case AL_FREQUENCY_SHIFTER_DIRECTION_OFF:
-           state->frac_freq =  0.0;
-      break;
+        case AL_FREQUENCY_SHIFTER_DIRECTION_OFF:
+            state->inc = 0.0;
+            state->frac_freq = 0.0;
+            break;
     }
 
     CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
@@ -147,66 +147,69 @@ static ALvoid ALfshifterState_update(ALfshifterState *state, const ALCcontext *c
 
 static ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    ALsizei i,k;
-    ALfloat *restrict BufferOut  = state->BufferOut;
+    ALfloat *restrict BufferOut = state->BufferOut;
+    ALsizei i, k;
 
-    for (i = 0; i < SamplesToDo; i++){
-
+    for(i = 0; i < SamplesToDo;i++)
+    {
         /* Fill FIFO buffer with samples data */
         state->InFIFO[state->count] = SamplesIn[0][i];
         state->Outdata[i]  = state->OutFIFO[state->count-FIFO_LATENCY];
-
         state->count++;
 
         /* Check whether FIFO buffer is filled */
-        if (state->count >= HIL_SIZE ) 
+        if(state->count >= HIL_SIZE)
         {
             state->count = FIFO_LATENCY;
 
             /* Real signal windowing and store in Analytic buffer */
-            for (k = 0; k < HIL_SIZE;k++) 
+            for(k = 0;k < HIL_SIZE;k++)
             {
                 state->Analytic[k].Real = state->InFIFO[k] * HannWindow[k];
-                state->Analytic[k].Imag = 0.0f;
+                state->Analytic[k].Imag = 0.0;
             }
-            /*Processing signal by Discrete Hilbert Transform (analytical signal)*/
+
+            /* Processing signal by Discrete Hilbert Transform (analytical
+             * signal).
+             */
             hilbert(HIL_SIZE, state->Analytic);
 
-            /* Windowing and add to output accumulator */ 
-            for(k=0; k < HIL_SIZE; k++) 
+            /* Windowing and add to output accumulator */
+            for(k = 0;k < HIL_SIZE;k++)
             {
-                state->OutputAccum[k].Real  +=  2.0f*HannWindow[k]*state->Analytic[k].Real / OVERSAMP;
-                state->OutputAccum[k].Imag  +=  2.0f*HannWindow[k]*state->Analytic[k].Imag / OVERSAMP;
+                state->OutputAccum[k].Real += 2.0/OVERSAMP*HannWindow[k]*state->Analytic[k].Real;
+                state->OutputAccum[k].Imag += 2.0/OVERSAMP*HannWindow[k]*state->Analytic[k].Imag;
             }
-            for (k = 0; k < HIL_STEP; k++) 
-            {
+            for(k = 0;k < HIL_STEP;k++)
                 state->OutFIFO[k] = state->OutputAccum[k];
-            }
 
-            /* shift accumulator */
-            memmove(state->OutputAccum, state->OutputAccum + HIL_STEP, HIL_SIZE*sizeof(ALcomplex));
+            /* Shift accumulator */
+            memmove(state->OutputAccum, state->OutputAccum+HIL_STEP, HIL_SIZE*sizeof(ALcomplex));
 
-            /* move input FIFO */
-            for (k = 0; k < FIFO_LATENCY; k++) state->InFIFO[k] = state->InFIFO[k + HIL_STEP];
-            }
+            /* Move input FIFO */
+            for(k = 0;k < FIFO_LATENCY;k++)
+                state->InFIFO[k] = state->InFIFO[k + HIL_STEP];
+        }
     }
-    /*Process frequency shifter using the analytic signal obtained*/
-    for ( k = 0; k < SamplesToDo; k++, state->inc += state->frac_freq ) 
+
+    /* Process frequency shifter using the analytic signal obtained. */
+    for(k = 0;k < SamplesToDo;k++)
     {
         ALdouble phase;
 
-        if( state->inc >= 1.0 )  state->inc -= 1.0;
+        if(state->inc >= 1.0)
+            state->inc -= 1.0;
 
-        phase = (2.0*M_PI*state->inc);
-
-        BufferOut[k] = (ALfloat)(state->Outdata[k].Real*cos(phase) + 
+        phase = 2.0*M_PI * state->inc;
+        BufferOut[k] = (ALfloat)(state->Outdata[k].Real*cos(phase) +
                                  state->ld_sign*state->Outdata[k].Imag*sin(phase));
+
+        state->inc += state->frac_freq;
     }
 
     /* Now, mix the processed sound data to the output. */
     MixSamples(BufferOut, NumChannels, SamplesOut, state->CurrentGains, state->TargetGains,
                maxi(SamplesToDo, 512), 0, SamplesToDo);
-
 }
 
 typedef struct FshifterStateFactory {

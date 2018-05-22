@@ -50,7 +50,7 @@ typedef struct ALfshifterState {
     /*Effects buffers*/ 
     ALfloat   InFIFO[HIL_SIZE];
     ALcomplex OutFIFO[HIL_SIZE];
-    ALcomplex OutputAccum[2*HIL_SIZE];
+    ALcomplex OutputAccum[HIL_SIZE];
     ALcomplex Analytic[HIL_SIZE];
     ALcomplex Outdata[BUFFERSIZE];
 
@@ -147,8 +147,9 @@ static ALvoid ALfshifterState_update(ALfshifterState *state, const ALCcontext *c
 
 static ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
+    static const ALcomplex complex_zero = { 0.0, 0.0 };
     ALfloat *restrict BufferOut = state->BufferOut;
-    ALsizei i, k;
+    ALsizei i, j, k;
 
     for(i = 0; i < SamplesToDo;i++)
     {
@@ -180,15 +181,13 @@ static ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToD
                 state->OutputAccum[k].Real += 2.0/OVERSAMP*HannWindow[k]*state->Analytic[k].Real;
                 state->OutputAccum[k].Imag += 2.0/OVERSAMP*HannWindow[k]*state->Analytic[k].Imag;
             }
-            for(k = 0;k < HIL_STEP;k++)
-                state->OutFIFO[k] = state->OutputAccum[k];
 
-            /* Shift accumulator */
-            memmove(state->OutputAccum, state->OutputAccum+HIL_STEP, HIL_SIZE*sizeof(ALcomplex));
-
-            /* Move input FIFO */
+            /* Shift accumulator, input & output FIFO */
+            for(k = 0;k < HIL_STEP;k++) state->OutFIFO[k] = state->OutputAccum[k];
+            for(j = 0;k < HIL_SIZE;k++,j++) state->OutputAccum[j] = state->OutputAccum[k];
+            for(;j < HIL_SIZE;j++) state->OutputAccum[j] = complex_zero;
             for(k = 0;k < FIFO_LATENCY;k++)
-                state->InFIFO[k] = state->InFIFO[k + HIL_STEP];
+                state->InFIFO[k] = state->InFIFO[k+HIL_STEP];
         }
     }
 

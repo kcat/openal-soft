@@ -184,11 +184,15 @@ inline int fallback_ctz64(ALuint64 value)
 #define CTZ64 fallback_ctz64
 #endif
 
+#if defined(__BYTE_ORDER__) && defined(__LITTLE_ENDIAN__)
+#define IS_LITTLE_ENDIAN (__BYTE_ORDER__ == __LITTLE_ENDIAN__)
+#else
 static const union {
     ALuint u;
     ALubyte b[sizeof(ALuint)];
 } EndianTest = { 1 };
 #define IS_LITTLE_ENDIAN (EndianTest.b[0] == 1)
+#endif
 
 #define COUNTOF(x) (sizeof(x) / sizeof(0[x]))
 

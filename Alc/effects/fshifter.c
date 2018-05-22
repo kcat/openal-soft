@@ -151,46 +151,52 @@ static ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToD
 {
     static const ALcomplex complex_zero = { 0.0, 0.0 };
     ALfloat *restrict BufferOut = state->BufferOut;
-    ALsizei i, j, k;
+    ALsizei j, k, base;
 
-    for(i = 0; i < SamplesToDo;i++)
+    for(base = 0;base < SamplesToDo;)
     {
+        ALsizei todo = mini(HIL_SIZE-state->count, SamplesToDo-base);
+
+        ASSUME(todo > 0);
+
         /* Fill FIFO buffer with samples data */
-        state->InFIFO[state->count] = SamplesIn[0][i];
-        state->Outdata[i]  = state->OutFIFO[state->count-FIFO_LATENCY];
-        state->count++;
+        k = state->count;
+        for(j = 0;j < todo;j++,k++)
+        {
+            state->InFIFO[k] = SamplesIn[0][base+j];
+            state->Outdata[base+j]  = state->OutFIFO[k-FIFO_LATENCY];
+        }
+        state->count += todo;
+        base += todo;
 
         /* Check whether FIFO buffer is filled */
-        if(state->count >= HIL_SIZE)
+        if(state->count < HIL_SIZE) continue;
+
+        state->count = FIFO_LATENCY;
+
+        /* Real signal windowing and store in Analytic buffer */
+        for(k = 0;k < HIL_SIZE;k++)
         {
-            state->count = FIFO_LATENCY;
-
-            /* Real signal windowing and store in Analytic buffer */
-            for(k = 0;k < HIL_SIZE;k++)
-            {
-                state->Analytic[k].Real = state->InFIFO[k] * HannWindow[k];
-                state->Analytic[k].Imag = 0.0;
-            }
-
-            /* Processing signal by Discrete Hilbert Transform (analytical
-             * signal).
-             */
-            hilbert(HIL_SIZE, state->Analytic);
-
-            /* Windowing and add to output accumulator */
-            for(k = 0;k < HIL_SIZE;k++)
-            {
-                state->OutputAccum[k].Real += 2.0/OVERSAMP*HannWindow[k]*state->Analytic[k].Real;
-                state->OutputAccum[k].Imag += 2.0/OVERSAMP*HannWindow[k]*state->Analytic[k].Imag;
-            }
-
-            /* Shift accumulator, input & output FIFO */
-            for(k = 0;k < HIL_STEP;k++) state->OutFIFO[k] = state->OutputAccum[k];
-            for(j = 0;k < HIL_SIZE;k++,j++) state->OutputAccum[j] = state->OutputAccum[k];
-            for(;j < HIL_SIZE;j++) state->OutputAccum[j] = complex_zero;
-            for(k = 0;k < FIFO_LATENCY;k++)
-                state->InFIFO[k] = state->InFIFO[k+HIL_STEP];
+            state->Analytic[k].Real = state->InFIFO[k] * HannWindow[k];
+            state->Analytic[k].Imag = 0.0;
         }
+
+        /* Processing signal by Discrete Hilbert Transform (analytical signal). */
+        hilbert(HIL_SIZE, state->Analytic);
+
+        /* Windowing and add to output accumulator */
+        for(k = 0;k < HIL_SIZE;k++)
+        {
+            state->OutputAccum[k].Real += 2.0/OVERSAMP*HannWindow[k]*state->Analytic[k].Real;
+            state->OutputAccum[k].Imag += 2.0/OVERSAMP*HannWindow[k]*state->Analytic[k].Imag;
+        }
+
+        /* Shift accumulator, input & output FIFO */
+        for(k = 0;k < HIL_STEP;k++) state->OutFIFO[k] = state->OutputAccum[k];
+        for(j = 0;k < HIL_SIZE;k++,j++) state->OutputAccum[j] = state->OutputAccum[k];
+        for(;j < HIL_SIZE;j++) state->OutputAccum[j] = complex_zero;
+        for(k = 0;k < FIFO_LATENCY;k++)
+            state->InFIFO[k] = state->InFIFO[k+HIL_STEP];
     }
 
     /* Process frequency shifter using the analytic signal obtained. */

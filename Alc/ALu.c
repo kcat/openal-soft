@@ -332,9 +332,7 @@ void aluSelectPostProcess(ALCdevice *device)
 }
 
 
-/* Prepares the interpolator for a given rate (determined by increment).  A
- * result of AL_FALSE indicates that the filter output will completely cut
- * the input signal.
+/* Prepares the interpolator for a given rate (determined by increment).
  *
  * With a bit of work, and a trade of memory for CPU cost, this could be
  * modified for use with an interpolated increment for buttery-smooth pitch

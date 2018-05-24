@@ -1610,7 +1610,7 @@ static void ApplyDistanceComp(ALfloat (*restrict Samples)[BUFFERSIZE], DistanceC
             continue;
         }
 
-        if(SamplesToDo >= base)
+        if(LIKELY(SamplesToDo >= base))
         {
             for(i = 0;i < base;i++)
                 Values[i] = distbuf[i];
@@ -1637,6 +1637,9 @@ static void ApplyDither(ALfloat (*restrict Samples)[BUFFERSIZE], ALuint *dither_
     const ALfloat invscale = 1.0f / quant_scale;
     ALuint seed = *dither_seed;
     ALsizei c, i;
+
+    ASSUME(numchans > 0);
+    ASSUME(SamplesToDo > 0);
 
     /* Dithering. Step 1, generate whitenoise (uniform distribution of random
      * values between -1 and +1). Step 2 is to add the noise to the samples,
@@ -1690,6 +1693,10 @@ static void Write##A(const ALfloat (*restrict InBuffer)[BUFFERSIZE],          \
                      ALsizei numchans)                                        \
 {                                                                             \
     ALsizei i, j;                                                             \
+                                                                              \
+    ASSUME(numchans > 0);                                                     \
+    ASSUME(SamplesToDo > 0);                                                  \
+                                                                              \
     for(j = 0;j < numchans;j++)                                               \
     {                                                                         \
         const ALfloat *restrict in = ASSUME_ALIGNED(InBuffer[j], 16);         \

@@ -2217,9 +2217,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                     break;
             }
         }
-        else if(depth > 24)
-            depth = 24;
-        device->DitherDepth = (depth > 0) ? powf(2.0f, (ALfloat)(depth-1)) : 0.0f;
+
+        if(depth > 0)
+        {
+            depth = clampi(depth, 2, 20);
+            device->DitherDepth = powf(2.0f, (ALfloat)(depth-1));
+        }
     }
     if(!(device->DitherDepth > 0.0f))
         TRACE("Dithering disabled\n");

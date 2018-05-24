@@ -182,7 +182,7 @@ static ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToD
         }
 
         /* Processing signal by Discrete Hilbert Transform (analytical signal). */
-        hilbert(HIL_SIZE, state->Analytic);
+        complex_hilbert(state->Analytic, HIL_SIZE);
 
         /* Windowing and add to output accumulator */
         for(k = 0;k < HIL_SIZE;k++)

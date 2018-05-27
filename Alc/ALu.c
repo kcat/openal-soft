@@ -1878,17 +1878,7 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
     va_end(args);
 
     if(msglen < 0 || (size_t)msglen >= sizeof(evt.Message))
-    {
         evt.Message[sizeof(evt.Message)-1] = 0;
-        msglen = (int)strlen(evt.Message);
-    }
-    if(msglen > 0)
-        msg = evt.Message;
-    else
-    {
-        msg = "<internal error constructing message>";
-        msglen = (int)strlen(msg);
-    }
 
     ctx = ATOMIC_LOAD_SEQ(&device->ContextList);
     while(ctx)

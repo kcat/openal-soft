@@ -1828,27 +1828,16 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
 
             switch(device->FmtType)
             {
-                case DevFmtByte:
-                    WriteI8(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
-                    break;
-                case DevFmtUByte:
-                    WriteUI8(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
-                    break;
-                case DevFmtShort:
-                    WriteI16(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
-                    break;
-                case DevFmtUShort:
-                    WriteUI16(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
-                    break;
-                case DevFmtInt:
-                    WriteI32(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
-                    break;
-                case DevFmtUInt:
-                    WriteUI32(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
-                    break;
-                case DevFmtFloat:
-                    WriteF32(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
-                    break;
+#define HANDLE_WRITE(T, S) case T:                                            \
+    Write##S(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels); break;
+                HANDLE_WRITE(DevFmtByte, I8)
+                HANDLE_WRITE(DevFmtUByte, UI8)
+                HANDLE_WRITE(DevFmtShort, I16)
+                HANDLE_WRITE(DevFmtUShort, UI16)
+                HANDLE_WRITE(DevFmtInt, I32)
+                HANDLE_WRITE(DevFmtUInt, UI32)
+                HANDLE_WRITE(DevFmtFloat, F32)
+#undef HANDLE_WRITE
             }
         }
 

@@ -53,7 +53,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>5</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="tab_3">
      <attribute name="title">
@@ -131,8 +131,8 @@ to stereo output.</string>
        <rect>
         <x>380</x>
         <y>20</y>
-        <width>80</width>
-        <height>20</height>
+        <width>93</width>
+        <height>29</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -2011,8 +2011,8 @@ for the system to handle.</string>
       <widget class="QCheckBox" name="enableEchoCheck">
        <property name="geometry">
         <rect>
-         <x>320</x>
-         <y>30</y>
+         <x>70</x>
+         <y>180</y>
          <width>131</width>
          <height>21</height>
         </rect>
@@ -2028,7 +2028,7 @@ for the system to handle.</string>
        <property name="geometry">
         <rect>
          <x>320</x>
-         <y>60</y>
+         <y>30</y>
          <width>131</width>
          <height>21</height>
         </rect>
@@ -2060,7 +2060,7 @@ for the system to handle.</string>
        <property name="geometry">
         <rect>
          <x>320</x>
-         <y>120</y>
+         <y>150</y>
          <width>131</width>
          <height>21</height>
         </rect>
@@ -2076,7 +2076,7 @@ for the system to handle.</string>
        <property name="geometry">
         <rect>
          <x>320</x>
-         <y>150</y>
+         <y>180</y>
          <width>131</width>
          <height>21</height>
         </rect>
@@ -2111,8 +2111,8 @@ added by the ALC_EXT_DEDICATED extension.</string>
       <widget class="QCheckBox" name="enablePitchShifterCheck">
        <property name="geometry">
         <rect>
-         <x>70</x>
-         <y>180</y>
+         <x>320</x>
+         <y>120</y>
          <width>131</width>
          <height>21</height>
         </rect>
@@ -2128,7 +2128,7 @@ added by the ALC_EXT_DEDICATED extension.</string>
        <property name="geometry">
         <rect>
          <x>320</x>
-         <y>180</y>
+         <y>60</y>
          <width>131</width>
          <height>21</height>
         </rect>
@@ -2162,8 +2162,8 @@ added by the ALC_EXT_DEDICATED extension.</string>
        <rect>
         <x>160</x>
         <y>20</y>
-        <width>108</width>
-        <height>20</height>
+        <width>125</width>
+        <height>29</height>
        </rect>
       </property>
       <property name="sizeAdjustPolicy">
@@ -2332,7 +2332,7 @@ added by the ALC_EXT_DEDICATED extension.</string>
      <x>0</x>
      <y>0</y>
      <width>564</width>
-     <height>21</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

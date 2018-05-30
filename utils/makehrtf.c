@@ -988,46 +988,30 @@ static Complex *CreateComplexes(size_t n)
     return a;
 }
 
-/* Fast Fourier transform routines.  The number of points must be a power of
- * two.  In-place operation is possible only if both the real and imaginary
- * parts are in-place together.
+/* Fast Fourier transform routines. The number of points must be a power of
+ * two.
  */
 
 // Performs bit-reversal ordering.
-static void FftArrange(const uint n, const Complex *in, Complex *out)
+static void FftArrange(const uint n, Complex *inout)
 {
     uint rk, k, m;
 
-    if(in == out)
+    // Handle in-place arrangement.
+    rk = 0;
+    for(k = 0;k < n;k++)
     {
-        // Handle in-place arrangement.
-        rk = 0;
-        for(k = 0;k < n;k++)
+        if(rk > k)
         {
-            if(rk > k)
-            {
-                Complex temp = in[rk];
-                out[rk] = in[k];
-                out[k] = temp;
-            }
-            m = n;
-            while(rk&(m >>= 1))
-                rk &= ~m;
-            rk |= m;
+            Complex temp = inout[rk];
+            inout[rk] = inout[k];
+            inout[k] = temp;
         }
-    }
-    else
-    {
-        // Handle copy arrangement.
-        rk = 0;
-        for(k = 0;k < n;k++)
-        {
-            out[rk] = in[k];
-            m = n;
-            while(rk&(m >>= 1))
-                rk &= ~m;
-            rk |= m;
-        }
+
+        m = n;
+        while(rk&(m >>= 1))
+            rk &= ~m;
+        rk |= m;
     }
 }
 
@@ -1061,23 +1045,23 @@ static void FftSummation(const int n, const double s, Complex *cplx)
 }
 
 // Performs a forward FFT.
-static void FftForward(const uint n, const Complex *in, Complex *out)
+static void FftForward(const uint n, Complex *inout)
 {
-    FftArrange(n, in, out);
-    FftSummation(n, 1.0, out);
+    FftArrange(n, inout);
+    FftSummation(n, 1.0, inout);
 }
 
 // Performs an inverse FFT.
-static void FftInverse(const uint n, const Complex *in, Complex *out)
+static void FftInverse(const uint n, Complex *inout)
 {
     double f;
     uint i;
 
-    FftArrange(n, in, out);
-    FftSummation(n, -1.0, out);
+    FftArrange(n, inout);
+    FftSummation(n, -1.0, inout);
     f = 1.0 / n;
     for(i = 0;i < n;i++)
-        out[i] = c_muls(out[i], f);
+        inout[i] = c_muls(inout[i], f);
 }
 
 /* Calculate the complex helical sequence (or discrete-time analytical signal)
@@ -1085,30 +1069,22 @@ static void FftInverse(const uint n, const Complex *in, Complex *out)
  * of a signal's magnitude response, the imaginary components can be used as
  * the angles for minimum-phase reconstruction.
  */
-static void Hilbert(const uint n, const Complex *in, Complex *out)
+static void Hilbert(const uint n, Complex *inout)
 {
     uint i;
 
-    if(in == out)
-    {
-        // Handle in-place operation.
-        for(i = 0;i < n;i++)
-            out[i].Imag = 0.0;
-    }
-    else
-    {
-        // Handle copy operation.
-        for(i = 0;i < n;i++)
-            out[i] = MakeComplex(in[i].Real, 0.0);
-    }
-    FftInverse(n, out, out);
+    // Handle in-place operation.
+    for(i = 0;i < n;i++)
+        inout[i].Imag = 0.0;
+
+    FftInverse(n, inout);
     for(i = 1;i < (n+1)/2;i++)
-        out[i] = c_muls(out[i], 2.0);
+        inout[i] = c_muls(inout[i], 2.0);
     /* Increment i if n is even. */
     i += (n&1)^1;
     for(;i < n;i++)
-        out[i] = MakeComplex(0.0, 0.0);
-    FftForward(n, out, out);
+        inout[i] = MakeComplex(0.0, 0.0);
+    FftForward(n, inout);
 }
 
 /* Calculate the magnitude response of the given input.  This is used in
@@ -1175,7 +1151,7 @@ static void MinimumPhase(const uint n, const double *in, Complex *out)
         mags[i] = mags[n - i];
         out[i] = out[n - i];
     }
-    Hilbert(n, out, out);
+    Hilbert(n, out);
     // Remove any DC offset the filter has.
     mags[0] = EPSILON;
     for(i = 0;i < n;i++)
@@ -2073,7 +2049,7 @@ static void AverageHrirMagnitude(const uint points, const uint n, const double *
         h[i] = MakeComplex(hrir[i], 0.0);
     for(;i < n;i++)
         h[i] = MakeComplex(0.0, 0.0);
-    FftForward(n, h, h);
+    FftForward(n, h);
     MagnitudeResponse(n, h, r);
     for(i = 0;i < m;i++)
         mag[i] = Lerp(mag[i], r[i], f);
@@ -2243,7 +2219,7 @@ static void ReconstructHrirs(const HrirDataT *hData)
                 for(ti = 0;ti < channels;ti++)
                 {
                     MinimumPhase(n, azd->mIrs[ti], h);
-                    FftInverse(n, h, h);
+                    FftInverse(n, h);
                     for(i = 0;i < hData->mIrPoints;i++)
                         azd->mIrs[ti][i] = h[i].Real;
                     pcdone = ++count * 100 / total;

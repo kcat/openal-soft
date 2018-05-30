@@ -137,7 +137,8 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCcontext 
     else /*if(Slot->Params.EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SQUARE)*/
         state->GetSamples = ModulateSquare;
 
-    state->step = float2int(props->Modulator.Frequency*WAVEFORM_FRACONE/device->Frequency + 0.5f);
+    state->step = fastf2i(props->Modulator.Frequency / (ALfloat)device->Frequency *
+                          WAVEFORM_FRACONE);
     state->step = clampi(state->step, 1, WAVEFORM_FRACONE-1);
 
     /* Custom filter coeffs, which match the old version instead of a low-shelf. */

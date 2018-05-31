@@ -145,16 +145,6 @@ static inline HrtfDirectMixerFunc SelectHrtfMixer(void)
 }
 
 
-/* Prior to VS2013, MSVC lacks the round() family of functions. */
-#if defined(_MSC_VER) && _MSC_VER < 1800
-static float roundf(float val)
-{
-    if(val < 0.0f)
-        return ceilf(val-0.5f);
-    return floorf(val+0.5f);
-}
-#endif
-
 /* This RNG method was created based on the math found in opusdec. It's quick,
  * and starting with a seed value of 22222, is suitable for generating
  * whitenoise.
@@ -342,9 +332,7 @@ void aluSelectPostProcess(ALCdevice *device)
 }
 
 
-/* Prepares the interpolator for a given rate (determined by increment).  A
- * result of AL_FALSE indicates that the filter output will completely cut
- * the input signal.
+/* Prepares the interpolator for a given rate (determined by increment).
  *
  * With a bit of work, and a trade of memory for CPU cost, this could be
  * modified for use with an interpolated increment for buttery-smooth pitch
@@ -1622,7 +1610,7 @@ static void ApplyDistanceComp(ALfloat (*restrict Samples)[BUFFERSIZE], DistanceC
             continue;
         }
 
-        if(SamplesToDo >= base)
+        if(LIKELY(SamplesToDo >= base))
         {
             for(i = 0;i < base;i++)
                 Values[i] = distbuf[i];
@@ -1650,6 +1638,9 @@ static void ApplyDither(ALfloat (*restrict Samples)[BUFFERSIZE], ALuint *dither_
     ALuint seed = *dither_seed;
     ALsizei c, i;
 
+    ASSUME(numchans > 0);
+    ASSUME(SamplesToDo > 0);
+
     /* Dithering. Step 1, generate whitenoise (uniform distribution of random
      * values between -1 and +1). Step 2 is to add the noise to the samples,
      * before rounding and after scaling up to the desired quantization depth.
@@ -1674,9 +1665,9 @@ static inline ALfloat Conv_ALfloat(ALfloat val)
 { return val; }
 static inline ALint Conv_ALint(ALfloat val)
 {
-    /* Floats have a 23-bit mantissa. A bit of the exponent helps out along
-     * with the sign bit, giving 25 bits. So [-16777216, +16777216] is the max
-     * integer range normalized floats can be converted to before losing
+    /* Floats have a 23-bit mantissa. There is an implied 1 bit in the mantissa
+     * along with the sign bit, giving 25 bits total, so [-16777216, +16777216]
+     * is the max value a normalized float can be scaled to before losing
      * precision.
      */
     return fastf2i(clampf(val*16777216.0f, -16777216.0f, 16777215.0f))<<7;
@@ -1702,6 +1693,10 @@ static void Write##A(const ALfloat (*restrict InBuffer)[BUFFERSIZE],          \
                      ALsizei numchans)                                        \
 {                                                                             \
     ALsizei i, j;                                                             \
+                                                                              \
+    ASSUME(numchans > 0);                                                     \
+    ASSUME(SamplesToDo > 0);                                                  \
+                                                                              \
     for(j = 0;j < numchans;j++)                                               \
     {                                                                         \
         const ALfloat *restrict in = ASSUME_ALIGNED(InBuffer[j], 16);         \
@@ -1833,27 +1828,16 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
 
             switch(device->FmtType)
             {
-                case DevFmtByte:
-                    WriteI8(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
-                    break;
-                case DevFmtUByte:
-                    WriteUI8(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
-                    break;
-                case DevFmtShort:
-                    WriteI16(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
-                    break;
-                case DevFmtUShort:
-                    WriteUI16(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
-                    break;
-                case DevFmtInt:
-                    WriteI32(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
-                    break;
-                case DevFmtUInt:
-                    WriteUI32(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
-                    break;
-                case DevFmtFloat:
-                    WriteF32(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels);
-                    break;
+#define HANDLE_WRITE(T, S) case T:                                            \
+    Write##S(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels); break;
+                HANDLE_WRITE(DevFmtByte, I8)
+                HANDLE_WRITE(DevFmtUByte, UI8)
+                HANDLE_WRITE(DevFmtShort, I16)
+                HANDLE_WRITE(DevFmtUShort, UI16)
+                HANDLE_WRITE(DevFmtInt, I32)
+                HANDLE_WRITE(DevFmtUInt, UI32)
+                HANDLE_WRITE(DevFmtFloat, F32)
+#undef HANDLE_WRITE
             }
         }
 
@@ -1883,17 +1867,7 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
     va_end(args);
 
     if(msglen < 0 || (size_t)msglen >= sizeof(evt.Message))
-    {
         evt.Message[sizeof(evt.Message)-1] = 0;
-        msglen = (int)strlen(evt.Message);
-    }
-    if(msglen > 0)
-        msg = evt.Message;
-    else
-    {
-        msg = "<internal error constructing message>";
-        msglen = (int)strlen(msg);
-    }
 
     ctx = ATOMIC_LOAD_SEQ(&device->ContextList);
     while(ctx)

@@ -45,17 +45,21 @@ const ALfloat *Resample_bsinc_SSE(const InterpState *state, const ALfloat *restr
         // Apply the scale and phase interpolated filter.
         r4 = _mm_setzero_ps();
         {
+            const ALsizei count = m >> 2;
             const __m128 pf4 = _mm_set1_ps(pf);
+
+            ASSUME(count > 0);
+
 #define MLA4(x, y, z) _mm_add_ps(x, _mm_mul_ps(y, z))
-            for(j = 0;j < m;j+=4,fil++,scd++,phd++,spd++)
+            for(j = 0;j < count;j++)
             {
                 /* f = ((fil + sf*scd) + pf*(phd + sf*spd)) */
                 const __m128 f4 = MLA4(
-                    MLA4(*fil, sf4, *scd),
-                    pf4, MLA4(*phd, sf4, *spd)
+                    MLA4(fil[j], sf4, scd[j]),
+                    pf4, MLA4(phd[j], sf4, spd[j])
                 );
                 /* r += f*src */
-                r4 = MLA4(r4, f4, _mm_loadu_ps(&src[j]));
+                r4 = MLA4(r4, f4, _mm_loadu_ps(&src[j*4]));
             }
 #undef MLA4
         }

@@ -450,11 +450,11 @@ void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device, ALfloat
         {
             for(j = 0;j < device->Dry.NumChannels;j++)
             {
-                ALfloat gain=0.0f;
+                ALdouble gain = 0.0;
                 for(k = 0;k < COUNTOF(Ambi3DDecoder);k++)
-                    gain += Ambi3DDecoder[k][i] * encgains[k][j];
-                ambiup->Gains[i][j][HF_BAND] = gain * Ambi3DDecoderHFScale[i];
-                ambiup->Gains[i][j][LF_BAND] = gain;
+                    gain += (ALdouble)Ambi3DDecoder[k][i] * encgains[k][j];
+                ambiup->Gains[i][j][HF_BAND] = (ALfloat)(gain * Ambi3DDecoderHFScale[i]);
+                ambiup->Gains[i][j][LF_BAND] = (ALfloat)gain;
             }
         }
     }

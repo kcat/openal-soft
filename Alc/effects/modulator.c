@@ -40,8 +40,6 @@ typedef struct ALmodulatorState {
     ALsizei index;
     ALsizei step;
 
-    alignas(16) ALfloat ModSamples[MAX_UPDATE_SAMPLES];
-
     struct {
         BiquadFilter Filter;
 
@@ -137,7 +135,8 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCcontext 
     else /*if(Slot->Params.EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SQUARE)*/
         state->GetSamples = ModulateSquare;
 
-    state->step = float2int(props->Modulator.Frequency*WAVEFORM_FRACONE/device->Frequency + 0.5f);
+    state->step = fastf2i(props->Modulator.Frequency / (ALfloat)device->Frequency *
+                          WAVEFORM_FRACONE);
     state->step = clampi(state->step, 1, WAVEFORM_FRACONE-1);
 
     /* Custom filter coeffs, which match the old version instead of a low-shelf. */
@@ -161,13 +160,12 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCcontext 
 
 static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    ALfloat *restrict modsamples = ASSUME_ALIGNED(state->ModSamples, 16);
     const ALsizei step = state->step;
     ALsizei base;
 
     for(base = 0;base < SamplesToDo;)
     {
-        alignas(16) ALfloat temps[2][MAX_UPDATE_SAMPLES];
+        alignas(16) ALfloat modsamples[MAX_UPDATE_SAMPLES];
         ALsizei td = mini(MAX_UPDATE_SAMPLES, SamplesToDo-base);
         ALsizei c, i;
 
@@ -177,11 +175,13 @@ static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALsizei SamplesT
 
         for(c = 0;c < MAX_EFFECT_CHANNELS;c++)
         {
-            BiquadFilter_process(&state->Chans[c].Filter, temps[0], &SamplesIn[c][base], td);
-            for(i = 0;i < td;i++)
-                temps[1][i] = temps[0][i] * modsamples[i];
+            alignas(16) ALfloat temps[MAX_UPDATE_SAMPLES];
 
-            MixSamples(temps[1], NumChannels, SamplesOut, state->Chans[c].CurrentGains,
+            BiquadFilter_process(&state->Chans[c].Filter, temps, &SamplesIn[c][base], td);
+            for(i = 0;i < td;i++)
+                temps[i] *= modsamples[i];
+
+            MixSamples(temps, NumChannels, SamplesOut, state->Chans[c].CurrentGains,
                        state->Chans[c].TargetGains, SamplesToDo-base, base, td);
         }
 

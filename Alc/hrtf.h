@@ -9,12 +9,6 @@
 #include "atomic.h"
 
 
-/* The maximum number of virtual speakers used to generate HRTF coefficients
- * for decoding B-Format.
- */
-#define HRTF_AMBI_MAX_CHANNELS 18
-
-
 #define HRTF_HISTORY_BITS   (6)
 #define HRTF_HISTORY_LENGTH (1<<HRTF_HISTORY_BITS)
 #define HRTF_HISTORY_MASK   (HRTF_HISTORY_LENGTH-1)

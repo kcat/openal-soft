@@ -18,6 +18,7 @@ enum {
     ECHO_EFFECT,
     EQUALIZER_EFFECT,
     FLANGER_EFFECT,
+    FSHIFTER_EFFECT,
     MODULATOR_EFFECT,
     PSHIFTER_EFFECT,
     DEDICATED_EFFECT,
@@ -33,7 +34,7 @@ struct EffectList {
     int type;
     ALenum val;
 };
-#define EFFECTLIST_SIZE 12
+#define EFFECTLIST_SIZE 13
 extern const struct EffectList EffectList[EFFECTLIST_SIZE];
 
 
@@ -65,6 +66,7 @@ extern const struct ALeffectVtable ALdistortion_vtable;
 extern const struct ALeffectVtable ALecho_vtable;
 extern const struct ALeffectVtable ALequalizer_vtable;
 extern const struct ALeffectVtable ALflanger_vtable;
+extern const struct ALeffectVtable ALfshifter_vtable;
 extern const struct ALeffectVtable ALmodulator_vtable;
 extern const struct ALeffectVtable ALnull_vtable;
 extern const struct ALeffectVtable ALpshifter_vtable;
@@ -144,6 +146,12 @@ typedef union ALeffectProps {
         ALfloat HighCutoff;
         ALfloat HighGain;
     } Equalizer;
+
+    struct {
+        ALfloat Frequency;
+        ALint LeftDirection;
+        ALint RightDirection;
+    } Fshifter;
 
     struct {
         ALfloat Frequency;

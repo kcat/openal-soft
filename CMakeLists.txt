@@ -761,6 +761,7 @@ SET(ALC_OBJS
     Alc/effects/distortion.c
     Alc/effects/echo.c
     Alc/effects/equalizer.c
+    Alc/effects/fshifter.c
     Alc/effects/modulator.c
     Alc/effects/null.c
     Alc/effects/pshifter.c
@@ -857,7 +858,7 @@ IF(ALSOFT_REQUIRE_SSE2 AND NOT HAVE_SSE2)
     MESSAGE(FATAL_ERROR "Failed to enable required SSE2 CPU extensions")
 ENDIF()
 
-OPTION(ALSOFT_REQUIRE_SSE2 "Require SSE3 support" OFF)
+OPTION(ALSOFT_REQUIRE_SSE3 "Require SSE3 support" OFF)
 CHECK_INCLUDE_FILE(pmmintrin.h HAVE_PMMINTRIN_H "${SSE3_SWITCH}")
 IF(HAVE_EMMINTRIN_H)
     OPTION(ALSOFT_CPUEXT_SSE3 "Enable SSE3 support" ON)

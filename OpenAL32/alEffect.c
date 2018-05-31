@@ -44,6 +44,7 @@ const struct EffectList EffectList[EFFECTLIST_SIZE] = {
     { "echo",       ECHO_EFFECT,       AL_EFFECT_ECHO },
     { "equalizer",  EQUALIZER_EFFECT,  AL_EFFECT_EQUALIZER },
     { "flanger",    FLANGER_EFFECT,    AL_EFFECT_FLANGER },
+    { "fshifter",   FSHIFTER_EFFECT,   AL_EFFECT_FREQUENCY_SHIFTER },
     { "modulator",  MODULATOR_EFFECT,  AL_EFFECT_RING_MODULATOR },
     { "pshifter",   PSHIFTER_EFFECT,   AL_EFFECT_PITCH_SHIFTER },
     { "dedicated",  DEDICATED_EFFECT,  AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT },
@@ -583,6 +584,12 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         effect->Props.Chorus.Feedback = AL_FLANGER_DEFAULT_FEEDBACK;
         effect->Props.Chorus.Delay = AL_FLANGER_DEFAULT_DELAY;
         effect->vtab = &ALflanger_vtable;
+        break;
+        case AL_EFFECT_FREQUENCY_SHIFTER:
+        effect->Props.Fshifter.Frequency      = AL_FREQUENCY_SHIFTER_DEFAULT_FREQUENCY;
+        effect->Props.Fshifter.LeftDirection  = AL_FREQUENCY_SHIFTER_DEFAULT_LEFT_DIRECTION;
+        effect->Props.Fshifter.RightDirection = AL_FREQUENCY_SHIFTER_DEFAULT_RIGHT_DIRECTION;
+        effect->vtab = &ALfshifter_vtable;
         break;
     case AL_EFFECT_RING_MODULATOR:
         effect->Props.Modulator.Frequency      = AL_RING_MODULATOR_DEFAULT_FREQUENCY;

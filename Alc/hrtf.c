@@ -202,12 +202,14 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
 #define NUM_BANDS 2
     BandSplitter splitter;
     ALdouble (*tmpres)[HRIR_LENGTH][2];
-    ALsizei idx[HRTF_AMBI_MAX_CHANNELS];
+    ALsizei *restrict idx;
     ALsizei min_delay = HRTF_HISTORY_LENGTH;
     ALsizei max_delay = 0;
     ALfloat temps[3][HRIR_LENGTH];
     ALsizei max_length;
     ALsizei i, c, b;
+
+    idx = al_calloc(DEF_ALIGN, AmbiCount*sizeof(*idx));
 
     for(c = 0;c < AmbiCount;c++)
     {
@@ -312,6 +314,8 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
     }
     al_free(tmpres);
     tmpres = NULL;
+    al_free(idx);
+    idx = NULL;
 
     if(NUM_BANDS == 1)
         max_length = mini(max_delay-min_delay + Hrtf->irSize, HRIR_LENGTH);

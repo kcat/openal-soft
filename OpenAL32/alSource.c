@@ -2826,6 +2826,121 @@ done:
     ALCcontext_DecRef(context);
 }
 
+AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint src, ALsizei nb, const ALuint *buffers)
+{
+    ALCdevice *device;
+    ALCcontext *context;
+    ALbufferlistitem *BufferListStart;
+    ALbufferlistitem *BufferList;
+    ALbuffer *BufferFmt = NULL;
+    ALsource *source;
+    ALsizei i;
+
+    if(nb == 0)
+        return;
+
+    context = GetContextRef();
+    if(!context) return;
+
+    device = context->Device;
+
+    LockSourceList(context);
+    if(!(nb >= 0 && nb < 16))
+        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Queueing %d buffer layers", nb);
+    if((source=LookupSource(context, src)) == NULL)
+        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid source ID %u", src);
+
+    if(source->SourceType == AL_STATIC)
+    {
+        /* Can't queue on a Static Source */
+        SETERR_GOTO(context, AL_INVALID_OPERATION, done, "Queueing onto static source %u", src);
+    }
+
+    /* Check for a valid Buffer, for its frequency and format */
+    BufferList = source->queue;
+    while(BufferList)
+    {
+        for(i = 0;i < BufferList->num_buffers;i++)
+        {
+            if((BufferFmt=BufferList->buffers[i]) != NULL)
+                break;
+        }
+        if(BufferFmt) break;
+        BufferList = ATOMIC_LOAD(&BufferList->next, almemory_order_relaxed);
+    }
+
+    LockBufferList(device);
+    BufferListStart = al_calloc(DEF_ALIGN, FAM_SIZE(ALbufferlistitem, buffers, nb));
+    BufferList = BufferListStart;
+    ATOMIC_INIT(&BufferList->next, NULL);
+    BufferList->max_samples = 0;
+    BufferList->num_buffers = 0;
+    for(i = 0;i < nb;i++)
+    {
+        ALbuffer *buffer = NULL;
+        if(buffers[i] && (buffer=LookupBuffer(device, buffers[i])) == NULL)
+            SETERR_GOTO(context, AL_INVALID_NAME, buffer_error, "Queueing invalid buffer ID %u",
+                        buffers[i]);
+
+        BufferList->buffers[BufferList->num_buffers++] = buffer;
+        if(!buffer) continue;
+
+        IncrementRef(&buffer->ref);
+
+        BufferList->max_samples = maxi(BufferList->max_samples, buffer->SampleLen);
+
+        if(buffer->MappedAccess != 0 && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
+            SETERR_GOTO(context, AL_INVALID_OPERATION, buffer_error,
+                        "Queueing non-persistently mapped buffer %u", buffer->id);
+
+        if(BufferFmt == NULL)
+            BufferFmt = buffer;
+        else if(BufferFmt->Frequency != buffer->Frequency ||
+                BufferFmt->FmtChannels != buffer->FmtChannels ||
+                BufferFmt->OriginalType != buffer->OriginalType)
+        {
+            alSetError(context, AL_INVALID_OPERATION, "Queueing buffer with mismatched format");
+
+        buffer_error:
+            /* A buffer failed (invalid ID or format), so unlock and release
+             * each buffer we had. */
+            while(BufferListStart)
+            {
+                ALbufferlistitem *next = ATOMIC_LOAD(&BufferListStart->next,
+                                                     almemory_order_relaxed);
+                for(i = 0;i < BufferListStart->num_buffers;i++)
+                {
+                    if((buffer=BufferListStart->buffers[i]) != NULL)
+                        DecrementRef(&buffer->ref);
+                }
+                al_free(BufferListStart);
+                BufferListStart = next;
+            }
+            UnlockBufferList(device);
+            goto done;
+        }
+    }
+    /* All buffers good. */
+    UnlockBufferList(device);
+
+    /* Source is now streaming */
+    source->SourceType = AL_STREAMING;
+
+    if(!(BufferList=source->queue))
+        source->queue = BufferListStart;
+    else
+    {
+        ALbufferlistitem *next;
+        while((next=ATOMIC_LOAD(&BufferList->next, almemory_order_relaxed)) != NULL)
+            BufferList = next;
+        ATOMIC_STORE(&BufferList->next, BufferListStart, almemory_order_release);
+    }
+
+done:
+    UnlockSourceList(context);
+    ALCcontext_DecRef(context);
+}
+
 AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint *buffers)
 {
     ALCcontext *context;

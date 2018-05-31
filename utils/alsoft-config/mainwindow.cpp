@@ -378,6 +378,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->enableEchoCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->enableEqualizerCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->enableFlangerCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->enableFrequencyShifterCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->enableModulatorCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->enableDedicatedCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->enablePitchShifterCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
@@ -844,6 +845,7 @@ void MainWindow::loadConfig(const QString &fname)
     ui->enableEchoCheck->setChecked(!excludefx.contains("echo", Qt::CaseInsensitive));
     ui->enableEqualizerCheck->setChecked(!excludefx.contains("equalizer", Qt::CaseInsensitive));
     ui->enableFlangerCheck->setChecked(!excludefx.contains("flanger", Qt::CaseInsensitive));
+    ui->enableFrequencyShifterCheck->setChecked(!excludefx.contains("fshifter", Qt::CaseInsensitive));
     ui->enableModulatorCheck->setChecked(!excludefx.contains("modulator", Qt::CaseInsensitive));
     ui->enableDedicatedCheck->setChecked(!excludefx.contains("dedicated", Qt::CaseInsensitive));
     ui->enablePitchShifterCheck->setChecked(!excludefx.contains("pshifter", Qt::CaseInsensitive));
@@ -1056,6 +1058,8 @@ void MainWindow::saveConfig(const QString &fname) const
         strlist.append("equalizer");
     if(!ui->enableFlangerCheck->isChecked())
         strlist.append("flanger");
+    if(!ui->enableFrequencyShifterCheck->isChecked())
+        strlist.append("fshifter");
     if(!ui->enableModulatorCheck->isChecked())
         strlist.append("modulator");
     if(!ui->enableDedicatedCheck->isChecked())

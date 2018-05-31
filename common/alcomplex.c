@@ -59,3 +59,34 @@ void complex_fft(ALcomplex *FFTBuffer, ALsizei FFTSize, ALdouble Sign)
         }
     }
 }
+
+void complex_hilbert(ALcomplex *Buffer, ALsizei size)
+{
+    const ALdouble inverse_size = 1.0/(ALdouble)size;
+    ALsizei todo, i;
+
+    for(i = 0;i < size;i++)
+        Buffer[i].Imag = 0.0;
+
+    complex_fft(Buffer, size, 1.0);
+
+    todo = size >> 1;
+    Buffer[0].Real *= inverse_size;
+    Buffer[0].Imag *= inverse_size;
+    for(i = 1;i < todo;i++)
+    {
+        Buffer[i].Real *= 2.0*inverse_size;
+        Buffer[i].Imag *= 2.0*inverse_size;
+    }
+    Buffer[i].Real *= inverse_size;
+    Buffer[i].Imag *= inverse_size;
+    i++;
+
+    for(;i < size;i++)
+    {
+        Buffer[i].Real = 0.0;
+        Buffer[i].Imag = 0.0;
+    }
+
+    complex_fft(Buffer, size, -1.0);
+}

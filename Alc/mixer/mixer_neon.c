@@ -101,16 +101,20 @@ const ALfloat *Resample_bsinc_Neon(const InterpState *state,
         // Apply the scale and phase interpolated filter.
         r4 = vdupq_n_f32(0.0f);
         {
+            const ALsizei count = m >> 2;
             const float32x4_t pf4 = vdupq_n_f32(pf);
-            for(j = 0;j < m;j+=4,fil++,scd++,phd++,spd++)
+
+            ASSUME(count > 0);
+
+            for(j = 0;j < count;j++)
             {
                 /* f = ((fil + sf*scd) + pf*(phd + sf*spd)) */
                 const float32x4_t f4 = vmlaq_f32(
-                    vmlaq_f32(*fil, sf4, *scd),
-                    pf4, vmlaq_f32(*phd, sf4, *spd)
+                    vmlaq_f32(fil[j], sf4, scd[j]),
+                    pf4, vmlaq_f32(phd[j], sf4, spd[j])
                 );
                 /* r += f*src */
-                r4 = vmlaq_f32(r4, f4, vld1q_f32(&src[j]));
+                r4 = vmlaq_f32(r4, f4, vld1q_f32(&src[j*4]));
             }
         }
         r4 = vaddq_f32(r4, vcombine_f32(vrev64_f32(vget_high_f32(r4)),

@@ -63,17 +63,17 @@ DEFINE_ALEFFECTSTATE_VTABLE(ALmodulatorState);
 
 static inline ALfloat Sin(ALsizei index)
 {
-    return sinf(index * (F_TAU / WAVEFORM_FRACONE));
+    return sinf((ALfloat)index * (F_TAU / WAVEFORM_FRACONE));
 }
 
 static inline ALfloat Saw(ALsizei index)
 {
-    return index*(2.0f/WAVEFORM_FRACONE) - 1.0f;
+    return (ALfloat)index*(2.0f/WAVEFORM_FRACONE) - 1.0f;
 }
 
 static inline ALfloat Square(ALsizei index)
 {
-    return ((index>>(WAVEFORM_FRACBITS-1))&1)*2.0f - 1.0f;
+    return (ALfloat)(((index>>(WAVEFORM_FRACBITS-2))&2) - 1);
 }
 
 #define DECL_TEMPLATE(func)                                                   \

@@ -125,7 +125,7 @@ static ALboolean ALmodulatorState_deviceUpdate(ALmodulatorState *state, ALCdevic
 static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
 {
     const ALCdevice *device = context->Device;
-    ALfloat cw, a;
+    ALfloat f0norm;
     ALsizei i;
 
     if(props->Modulator.Waveform == AL_RING_MODULATOR_SINUSOID)
@@ -139,15 +139,11 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCcontext 
                           WAVEFORM_FRACONE);
     state->step = clampi(state->step, 1, WAVEFORM_FRACONE-1);
 
-    /* Custom filter coeffs, which match the old version instead of a low-shelf. */
-    cw = cosf(F_TAU * props->Modulator.HighPassCutoff / device->Frequency);
-    a = (2.0f-cw) - sqrtf(powf(2.0f-cw, 2.0f) - 1.0f);
-
-    state->Chans[0].Filter.b0 = a;
-    state->Chans[0].Filter.b1 = -a;
-    state->Chans[0].Filter.b2 = 0.0f;
-    state->Chans[0].Filter.a1 = -a;
-    state->Chans[0].Filter.a2 = 0.0f;
+    f0norm = props->Modulator.HighPassCutoff / (ALfloat)device->Frequency;
+    f0norm = maxf(f0norm, FLT_EPSILON);
+    /* Bandwidth value is constant in octaves. */
+    BiquadFilter_setParams(&state->Chans[0].Filter, BiquadType_HighPass, 1.0f,
+                           f0norm, calc_rcpQ_from_bandwidth(f0norm, 0.75f));
     for(i = 1;i < MAX_EFFECT_CHANNELS;i++)
         BiquadFilter_copyParams(&state->Chans[i].Filter, &state->Chans[0].Filter);
 

@@ -140,7 +140,7 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCcontext 
     state->step = clampi(state->step, 1, WAVEFORM_FRACONE-1);
 
     f0norm = props->Modulator.HighPassCutoff / (ALfloat)device->Frequency;
-    f0norm = maxf(f0norm, FLT_EPSILON);
+    f0norm = maxf(f0norm, 0.003125f);
     /* Bandwidth value is constant in octaves. */
     BiquadFilter_setParams(&state->Chans[0].Filter, BiquadType_HighPass, 1.0f,
                            f0norm, calc_rcpQ_from_bandwidth(f0norm, 0.75f));

@@ -676,13 +676,13 @@ void GetProcBinary(al_string *path, al_string *fname)
     size_t pathlen;
 
 #ifdef __FreeBSD__
-    int mib[4] = { CTL_KERN, KERN_PROC_ARGS, getpid() };
-    if(sysctl(mib, 3, NULL, &pathlen, NULL, 0) == -1)
-        WARN("Failed to sysctl kern.procargs.%d: %s\n", mib[2], strerror(errno));
+    int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_ARGS, getpid() };
+    if(sysctl(mib, 4, NULL, &pathlen, NULL, 0) == -1)
+        WARN("Failed to sysctl kern.proc.args.%d: %s\n", mib[3], strerror(errno));
     else
     {
         pathname = malloc(pathlen + 1);
-        sysctl(mib, 3, (void*)pathname, &pathlen, NULL, 0);
+        sysctl(mib, 4, (void*)pathname, &pathlen, NULL, 0);
         pathname[pathlen] = 0;
     }
 #endif

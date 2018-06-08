@@ -1153,10 +1153,17 @@ error2:
 
 static ALCboolean ALCcaptureAlsa_start(ALCcaptureAlsa *self)
 {
-    int err = snd_pcm_start(self->pcmHandle);
+    int err = snd_pcm_prepare(self->pcmHandle);
+    if(err < 0)
+        ERR("prepare failed: %s\n", snd_strerror(err));
+    else
+    {
+        err = snd_pcm_start(self->pcmHandle);
+        if(err < 0)
+            ERR("start failed: %s\n", snd_strerror(err));
+    }
     if(err < 0)
     {
-        ERR("start failed: %s\n", snd_strerror(err));
         aluHandleDisconnect(STATIC_CAST(ALCbackend, self)->mDevice, "Capture state failure: %s",
                             snd_strerror(err));
         return ALC_FALSE;

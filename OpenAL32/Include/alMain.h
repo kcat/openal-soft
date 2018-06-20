@@ -184,8 +184,8 @@ inline int fallback_ctz64(ALuint64 value)
 #define CTZ64 fallback_ctz64
 #endif
 
-#if defined(__BYTE_ORDER__) && defined(__LITTLE_ENDIAN__)
-#define IS_LITTLE_ENDIAN (__BYTE_ORDER__ == __LITTLE_ENDIAN__)
+#if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__)
+#define IS_LITTLE_ENDIAN (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 #else
 static const union {
     ALuint u;

@@ -75,14 +75,14 @@ static struct BackendInfo BackendList[] = {
 #ifdef HAVE_COREAUDIO
     { "core", ALCcoreAudioBackendFactory_getFactory },
 #endif
-#ifdef HAVE_OSS
-    { "oss", ALCossBackendFactory_getFactory },
-#endif
 #ifdef HAVE_SOLARIS
     { "solaris", ALCsolarisBackendFactory_getFactory },
 #endif
 #ifdef HAVE_SNDIO
     { "sndio", ALCsndioBackendFactory_getFactory },
+#endif
+#ifdef HAVE_OSS
+    { "oss", ALCossBackendFactory_getFactory },
 #endif
 #ifdef HAVE_QSA
     { "qsa", ALCqsaBackendFactory_getFactory },

@@ -85,7 +85,8 @@ static void Modulate##func(ALfloat *restrict dst, ALsizei index,              \
     {                                                                         \
         index += step;                                                        \
         index &= WAVEFORM_FRACMASK;                                           \
-        dst[i] = func(index);                                                 \
+        if(!step) dst[i] = 1.0f;                                              \
+        else dst[i] = func(index);                                            \
     }                                                                         \
 }
 
@@ -137,10 +138,10 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCcontext 
 
     state->step = fastf2i(props->Modulator.Frequency / (ALfloat)device->Frequency *
                           WAVEFORM_FRACONE);
-    state->step = clampi(state->step, 1, WAVEFORM_FRACONE-1);
+    state->step = clampi(state->step, 0, WAVEFORM_FRACONE-1);
 
     f0norm = props->Modulator.HighPassCutoff / (ALfloat)device->Frequency;
-    f0norm = clampf(f0norm, 1.0f/512.0f, 0.5f);
+    f0norm = clampf(f0norm, 1.0f/512.0f, 0.49f);
     /* Bandwidth value is constant in octaves. */
     BiquadFilter_setParams(&state->Chans[0].Filter, BiquadType_HighPass, 1.0f,
                            f0norm, calc_rcpQ_from_bandwidth(f0norm, 0.75f));

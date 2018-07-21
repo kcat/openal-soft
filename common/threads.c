@@ -428,7 +428,11 @@ void althrd_thread_detach(void)
     {
         void *ptr = altss_get(TlsDestructors.keys[i]);
         altss_dtor_t callback = (altss_dtor_t)TlsDestructors.values[i];
-        if(ptr && callback) callback(ptr);
+        if(ptr)
+        {
+            if(callback) callback(ptr);
+            altss_set(TlsDestructors.keys[i], NULL);
+        }
     }
     UnlockUIntMapRead(&TlsDestructors);
 }

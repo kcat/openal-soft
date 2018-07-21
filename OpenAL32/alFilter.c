@@ -28,6 +28,9 @@
 #include "alError.h"
 
 
+#define FILTER_MIN_GAIN 0.0f
+#define FILTER_MAX_GAIN 4.0f /* +12dB */
+
 extern inline void LockFilterList(ALCdevice *device);
 extern inline void UnlockFilterList(ALCdevice *device);
 
@@ -347,7 +350,7 @@ static void ALlowpass_setParamf(ALfilter *filter, ALCcontext *context, ALenum pa
     switch(param)
     {
         case AL_LOWPASS_GAIN:
-            if(!(val >= AL_LOWPASS_MIN_GAIN && val <= AL_LOWPASS_MAX_GAIN))
+            if(!(val >= FILTER_MIN_GAIN && val <= FILTER_MAX_GAIN))
                 SETERR_RETURN(context, AL_INVALID_VALUE,, "Low-pass gain %f out of range", val);
             filter->Gain = val;
             break;
@@ -400,7 +403,7 @@ static void ALhighpass_setParamf(ALfilter *filter, ALCcontext *context, ALenum p
     switch(param)
     {
         case AL_HIGHPASS_GAIN:
-            if(!(val >= AL_HIGHPASS_MIN_GAIN && val <= AL_HIGHPASS_MAX_GAIN))
+            if(!(val >= FILTER_MIN_GAIN && val <= FILTER_MAX_GAIN))
                 SETERR_RETURN(context, AL_INVALID_VALUE,, "High-pass gain out of range");
             filter->Gain = val;
             break;
@@ -453,7 +456,7 @@ static void ALbandpass_setParamf(ALfilter *filter, ALCcontext *context, ALenum p
     switch(param)
     {
         case AL_BANDPASS_GAIN:
-            if(!(val >= AL_BANDPASS_MIN_GAIN && val <= AL_BANDPASS_MAX_GAIN))
+            if(!(val >= FILTER_MIN_GAIN && val <= FILTER_MAX_GAIN))
                 SETERR_RETURN(context, AL_INVALID_VALUE,, "Band-pass gain out of range");
             filter->Gain = val;
             break;

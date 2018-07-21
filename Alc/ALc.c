@@ -75,14 +75,14 @@ static struct BackendInfo BackendList[] = {
 #ifdef HAVE_COREAUDIO
     { "core", ALCcoreAudioBackendFactory_getFactory },
 #endif
-#ifdef HAVE_OSS
-    { "oss", ALCossBackendFactory_getFactory },
-#endif
 #ifdef HAVE_SOLARIS
     { "solaris", ALCsolarisBackendFactory_getFactory },
 #endif
 #ifdef HAVE_SNDIO
     { "sndio", ALCsndioBackendFactory_getFactory },
+#endif
+#ifdef HAVE_OSS
+    { "oss", ALCossBackendFactory_getFactory },
 #endif
 #ifdef HAVE_QSA
     { "qsa", ALCqsaBackendFactory_getFactory },
@@ -725,6 +725,7 @@ static const ALchar alExtList[] =
     "AL_SOFT_deferred_updates "
     "AL_SOFT_direct_channels "
     "AL_SOFTX_events "
+    "AL_SOFTX_filter_gain_ex "
     "AL_SOFT_gain_clamp_ex "
     "AL_SOFT_loop_points "
     "AL_SOFTX_map_buffer "
@@ -4400,6 +4401,12 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device)
         } while(!ATOMIC_COMPARE_EXCHANGE_PTR_STRONG_SEQ(&list->next, &origdev, nextdev));
     }
     UnlockLists();
+
+    almtx_lock(&device->BackendLock);
+    if((device->Flags&DEVICE_RUNNING))
+        V0(device->Backend,stop)();
+    device->Flags &= ~DEVICE_RUNNING;
+    almtx_unlock(&device->BackendLock);
 
     ALCdevice_DecRef(device);
 

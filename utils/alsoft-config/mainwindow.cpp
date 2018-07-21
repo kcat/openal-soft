@@ -372,6 +372,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->defaultReverbComboBox, SIGNAL(currentIndexChanged(const QString&)), this, SLOT(enableApplyButton()));
     connect(ui->enableEaxReverbCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->enableStdReverbCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->enableAutowahCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->enableChorusCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->enableCompressorCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->enableDistortionCheck, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
@@ -839,6 +840,7 @@ void MainWindow::loadConfig(const QString &fname)
         *iter = iter->trimmed();
     ui->enableEaxReverbCheck->setChecked(!excludefx.contains("eaxreverb", Qt::CaseInsensitive));
     ui->enableStdReverbCheck->setChecked(!excludefx.contains("reverb", Qt::CaseInsensitive));
+    ui->enableAutowahCheck->setChecked(!excludefx.contains("autowah", Qt::CaseInsensitive));
     ui->enableChorusCheck->setChecked(!excludefx.contains("chorus", Qt::CaseInsensitive));
     ui->enableCompressorCheck->setChecked(!excludefx.contains("compressor", Qt::CaseInsensitive));
     ui->enableDistortionCheck->setChecked(!excludefx.contains("distortion", Qt::CaseInsensitive));
@@ -1046,6 +1048,8 @@ void MainWindow::saveConfig(const QString &fname) const
         strlist.append("eaxreverb");
     if(!ui->enableStdReverbCheck->isChecked())
         strlist.append("reverb");
+    if(!ui->enableAutowahCheck->isChecked())
+        strlist.append("autowah");
     if(!ui->enableChorusCheck->isChecked())
         strlist.append("chorus");
     if(!ui->enableDistortionCheck->isChecked())

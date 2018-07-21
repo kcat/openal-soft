@@ -38,6 +38,7 @@ extern inline ALboolean IsReverbEffect(ALenum type);
 const struct EffectList EffectList[EFFECTLIST_SIZE] = {
     { "eaxreverb",  EAXREVERB_EFFECT,  AL_EFFECT_EAXREVERB },
     { "reverb",     REVERB_EFFECT,     AL_EFFECT_REVERB },
+    { "autowah",    AUTOWAH_EFFECT,    AL_EFFECT_AUTOWAH },
     { "chorus",     CHORUS_EFFECT,     AL_EFFECT_CHORUS },
     { "compressor", COMPRESSOR_EFFECT, AL_EFFECT_COMPRESSOR },
     { "distortion", DISTORTION_EFFECT, AL_EFFECT_DISTORTION },
@@ -533,6 +534,13 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         effect->Props.Reverb.RoomRolloffFactor = AL_REVERB_DEFAULT_ROOM_ROLLOFF_FACTOR;
         effect->Props.Reverb.DecayHFLimit = AL_REVERB_DEFAULT_DECAY_HFLIMIT;
         effect->vtab = &ALreverb_vtable;
+        break;
+    case AL_EFFECT_AUTOWAH:
+        effect->Props.Autowah.AttackTime = AL_AUTOWAH_DEFAULT_ATTACK_TIME;
+        effect->Props.Autowah.ReleaseTime = AL_AUTOWAH_DEFAULT_RELEASE_TIME;
+        effect->Props.Autowah.Resonance = AL_AUTOWAH_DEFAULT_RESONANCE;
+        effect->Props.Autowah.PeakGain = AL_AUTOWAH_DEFAULT_PEAK_GAIN;
+        effect->vtab = &ALautowah_vtable;
         break;
     case AL_EFFECT_CHORUS:
         effect->Props.Chorus.Waveform = AL_CHORUS_DEFAULT_WAVEFORM;

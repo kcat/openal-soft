@@ -48,6 +48,7 @@ static const struct {
     { AL_EFFECT_NULL, NullStateFactory_getFactory },
     { AL_EFFECT_EAXREVERB, ReverbStateFactory_getFactory },
     { AL_EFFECT_REVERB, ReverbStateFactory_getFactory },
+    { AL_EFFECT_AUTOWAH, AutowahStateFactory_getFactory },
     { AL_EFFECT_CHORUS, ChorusStateFactory_getFactory },
     { AL_EFFECT_COMPRESSOR, CompressorStateFactory_getFactory },
     { AL_EFFECT_DISTORTION, DistortionStateFactory_getFactory },

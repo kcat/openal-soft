@@ -779,6 +779,7 @@ SET(ALC_OBJS
     Alc/mastering.h
     Alc/ringbuffer.c
     Alc/ringbuffer.h
+    Alc/effects/autowah.c
     Alc/effects/chorus.c
     Alc/effects/compressor.c
     Alc/effects/dedicated.c

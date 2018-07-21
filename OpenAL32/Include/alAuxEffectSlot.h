@@ -160,6 +160,7 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context);
 
 EffectStateFactory *NullStateFactory_getFactory(void);
 EffectStateFactory *ReverbStateFactory_getFactory(void);
+EffectStateFactory *AutowahStateFactory_getFactory(void);
 EffectStateFactory *ChorusStateFactory_getFactory(void);
 EffectStateFactory *CompressorStateFactory_getFactory(void);
 EffectStateFactory *DistortionStateFactory_getFactory(void);

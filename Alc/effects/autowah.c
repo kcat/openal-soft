@@ -237,7 +237,7 @@ void ALautowah_setParamiv(ALeffect *UNUSED(effect), ALCcontext *context, ALenum 
     alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer vector property 0x%04x", param);
 }
 
-void ALautowah_getParami(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val)
+void ALautowah_getParami(const ALeffect *UNUSED(effect), ALCcontext *context, ALenum param, ALint *UNUSED(val))
 {
     alSetError(context, AL_INVALID_ENUM, "Invalid autowah integer property 0x%04x", param);
 }

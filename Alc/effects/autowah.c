@@ -33,14 +33,6 @@
 #define MAX_FREQ 2500.0f
 #define Q_FACTOR 5.0f
 
-/*#define EFFECTS*/
-
-#ifndef EFFECTS
-#define CHANNELS 1
-#else
-#define CHANNELS MAX_EFFECT_CHANNELS
-#endif
-
 typedef struct ALautowahState {
     DERIVE_FROM_TYPE(ALeffectState);
 
@@ -51,7 +43,7 @@ typedef struct ALautowahState {
     ALfloat PeakGain;
     ALfloat FreqMinNorm;
     ALfloat BandwidthNorm;
-    ALfloat env_delay[MAX_EFFECT_CHANNELS];
+    ALfloat env_delay;
 
     struct {
         /* Effect gains for each output channel */
@@ -75,15 +67,15 @@ DECLARE_DEFAULT_ALLOCATORS(ALautowahState)
 DEFINE_ALEFFECTSTATE_VTABLE(ALautowahState);
 
 /*Envelope follewer described on the book: Audio Effects, Theory, Implementation and Application*/
-static inline ALfloat envelope_follower(ALautowahState *state, ALfloat SampleIn, ALsizei Index)
+static inline ALfloat envelope_follower(ALautowahState *state, ALfloat SampleIn)
 {
     ALfloat alpha, Sample;
 
     Sample =  state->PeakGain*fabsf(SampleIn);
-    alpha  = (Sample > state->env_delay[Index]) ? state->AttackRate : state->ReleaseRate;
-    state->env_delay[Index] = alpha*state->env_delay[Index] + (1.0f-alpha)*Sample;
+    alpha  = (Sample > state->env_delay) ? state->AttackRate : state->ReleaseRate;
+    state->env_delay = alpha*state->env_delay + (1.0f-alpha)*Sample;
 
-    return state->env_delay[Index];
+    return state->env_delay;
 }
 
 static void ALautowahState_Construct(ALautowahState *state)
@@ -108,10 +100,10 @@ static ALboolean ALautowahState_deviceUpdate(ALautowahState *state, ALCdevice *U
     state->PeakGain      = 4.5f;
     state->FreqMinNorm   = 4.5e-4f;
     state->BandwidthNorm = 0.05f;
+    state->env_delay     = 0.0f;
 
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
     {
-        state->env_delay[i] = 0.0f;
         BiquadFilter_clear(&state->Chans[i].Filter);
         for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
             state->Chans[i].CurrentGains[j] = 0.0f;
@@ -145,19 +137,24 @@ static ALvoid ALautowahState_update(ALautowahState *state, const ALCcontext *con
 static ALvoid ALautowahState_process(ALautowahState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
     ALfloat (*restrict BufferOut)[BUFFERSIZE] = state->BufferOut;
+    ALfloat f0norm[BUFFERSIZE];
     ALsizei c, i;
 
-    for(c = 0;c < CHANNELS; c++)
+    for(i = 0;i < SamplesToDo;i++)
+    {
+            ALfloat env_out;
+            env_out   = envelope_follower(state, SamplesIn[0][i]);
+            f0norm[i] = state->BandwidthNorm*env_out + state->FreqMinNorm;
+    }
+
+    for(c = 0;c < MAX_EFFECT_CHANNELS; c++)
     {
         for(i = 0;i < SamplesToDo;i++)
         {
-            ALfloat env_out, f0norm, temp;
-
-            env_out = envelope_follower(state, SamplesIn[c][i], c);
-            f0norm = state->BandwidthNorm*env_out + state->FreqMinNorm;
+            ALfloat temp;
 
             BiquadFilter_setParams(&state->Chans[c].Filter, BiquadType_Peaking,
-                                   state->ResonanceGain, f0norm, 1.0f/Q_FACTOR);
+                                   state->ResonanceGain, f0norm[i], 1.0f/Q_FACTOR);
             BiquadFilter_process(&state->Chans[c].Filter, &temp, &SamplesIn[c][i], 1);
 
             BufferOut[c][i] = temp;

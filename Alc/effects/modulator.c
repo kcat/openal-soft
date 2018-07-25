@@ -76,6 +76,11 @@ static inline ALfloat Square(ALsizei index)
     return (ALfloat)(((index>>(WAVEFORM_FRACBITS-2))&2) - 1);
 }
 
+static inline ALfloat One(ALsizei UNUSED(index))
+{
+    return 1.0f;
+}
+
 #define DECL_TEMPLATE(func)                                                   \
 static void Modulate##func(ALfloat *restrict dst, ALsizei index,              \
                            const ALsizei step, ALsizei todo)                  \
@@ -92,6 +97,7 @@ static void Modulate##func(ALfloat *restrict dst, ALsizei index,              \
 DECL_TEMPLATE(Sin)
 DECL_TEMPLATE(Saw)
 DECL_TEMPLATE(Square)
+DECL_TEMPLATE(One)
 
 #undef DECL_TEMPLATE
 
@@ -128,19 +134,21 @@ static ALvoid ALmodulatorState_update(ALmodulatorState *state, const ALCcontext 
     ALfloat f0norm;
     ALsizei i;
 
-    if(props->Modulator.Waveform == AL_RING_MODULATOR_SINUSOID)
+    state->step = fastf2i(props->Modulator.Frequency / (ALfloat)device->Frequency *
+                          WAVEFORM_FRACONE);
+    state->step = clampi(state->step, 0, WAVEFORM_FRACONE-1);
+
+    if(state->step == 0)
+        state->GetSamples = ModulateOne;
+    else if(props->Modulator.Waveform == AL_RING_MODULATOR_SINUSOID)
         state->GetSamples = ModulateSin;
     else if(props->Modulator.Waveform == AL_RING_MODULATOR_SAWTOOTH)
         state->GetSamples = ModulateSaw;
     else /*if(Slot->Params.EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SQUARE)*/
         state->GetSamples = ModulateSquare;
 
-    state->step = fastf2i(props->Modulator.Frequency / (ALfloat)device->Frequency *
-                          WAVEFORM_FRACONE);
-    state->step = clampi(state->step, 1, WAVEFORM_FRACONE-1);
-
     f0norm = props->Modulator.HighPassCutoff / (ALfloat)device->Frequency;
-    f0norm = clampf(f0norm, 1.0f/512.0f, 0.5f);
+    f0norm = clampf(f0norm, 1.0f/512.0f, 0.49f);
     /* Bandwidth value is constant in octaves. */
     BiquadFilter_setParams(&state->Chans[0].Filter, BiquadType_HighPass, 1.0f,
                            f0norm, calc_rcpQ_from_bandwidth(f0norm, 0.75f));

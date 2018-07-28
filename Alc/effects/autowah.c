@@ -45,17 +45,23 @@ typedef struct ALautowahState {
     ALfloat BandwidthNorm;
     ALfloat env_delay;
 
+    /* Filter components derived from the envelope. */
+    ALfloat Alpha[BUFFERSIZE];
+    ALfloat CosW0[BUFFERSIZE];
+
     struct {
+        /* Effect filters' history. */
+        struct {
+            ALfloat z1, z2;
+        } Filter;
+
         /* Effect gains for each output channel */
         ALfloat CurrentGains[MAX_OUTPUT_CHANNELS];
         ALfloat TargetGains[MAX_OUTPUT_CHANNELS];
-
-        /* Effect filters */
-        BiquadFilter Filter;
     } Chans[MAX_EFFECT_CHANNELS];
 
-    /*Effects buffers*/ 
-    alignas(16) ALfloat BufferOut[MAX_EFFECT_CHANNELS][BUFFERSIZE];
+    /* Effects buffers */
+    alignas(16) ALfloat BufferOut[BUFFERSIZE];
 } ALautowahState;
 
 static ALvoid ALautowahState_Destruct(ALautowahState *state);
@@ -65,18 +71,6 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALsizei SamplesToDo,
 DECLARE_DEFAULT_ALLOCATORS(ALautowahState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALautowahState);
-
-/*Envelope follewer described on the book: Audio Effects, Theory, Implementation and Application*/
-static inline ALfloat envelope_follower(ALautowahState *state, ALfloat SampleIn)
-{
-    ALfloat alpha, Sample;
-
-    Sample =  state->PeakGain*fabsf(SampleIn);
-    alpha  = (Sample > state->env_delay) ? state->AttackRate : state->ReleaseRate;
-    state->env_delay = alpha*state->env_delay + (1.0f-alpha)*Sample;
-
-    return state->env_delay;
-}
 
 static void ALautowahState_Construct(ALautowahState *state)
 {
@@ -104,9 +98,10 @@ static ALboolean ALautowahState_deviceUpdate(ALautowahState *state, ALCdevice *U
 
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
     {
-        BiquadFilter_clear(&state->Chans[i].Filter);
         for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
             state->Chans[i].CurrentGains[j] = 0.0f;
+        state->Chans[i].Filter.z1 = 0.0f;
+        state->Chans[i].Filter.z2 = 0.0f;
     }
 
     return AL_TRUE;
@@ -116,16 +111,17 @@ static ALvoid ALautowahState_update(ALautowahState *state, const ALCcontext *con
 {
     const ALCdevice *device = context->Device;
     ALfloat ReleaseTime;
-    ALuint i;
+    ALsizei i;
 
-    ReleaseTime = clampf(props->Autowah.ReleaseTime,0.001f,1.0f);
+    ReleaseTime = clampf(props->Autowah.ReleaseTime, 0.001f, 1.0f);
 
-    state->AttackRate    = expf(-1.0f/(props->Autowah.AttackTime*device->Frequency));
-    state->ReleaseRate   = expf(-1.0f/(ReleaseTime*device->Frequency));
-    state->ResonanceGain = 10.0f/3.0f*log10f(props->Autowah.Resonance);/*0-20dB Resonance Peak gain*/
-    state->PeakGain      = 1.0f -log10f(props->Autowah.PeakGain/AL_AUTOWAH_MAX_PEAK_GAIN);
-    state->FreqMinNorm   = MIN_FREQ/device->Frequency;
-    state->BandwidthNorm = (MAX_FREQ - MIN_FREQ)/device->Frequency;
+    state->AttackRate    = expf(-1.0f / (props->Autowah.AttackTime*device->Frequency));
+    state->ReleaseRate   = expf(-1.0f / (ReleaseTime*device->Frequency));
+    /* 0-20dB Resonance Peak gain */
+    state->ResonanceGain = log10f(props->Autowah.Resonance)*10.0f / 3.0f;
+    state->PeakGain      = 1.0f - log10f(props->Autowah.PeakGain/AL_AUTOWAH_MAX_PEAK_GAIN);
+    state->FreqMinNorm   = MIN_FREQ / device->Frequency;
+    state->BandwidthNorm = (MAX_FREQ-MIN_FREQ) / device->Frequency;
 
     STATIC_CAST(ALeffectState,state)->OutBuffer = device->FOAOut.Buffer;
     STATIC_CAST(ALeffectState,state)->OutChannels = device->FOAOut.NumChannels;
@@ -136,31 +132,70 @@ static ALvoid ALautowahState_update(ALautowahState *state, const ALCcontext *con
 
 static ALvoid ALautowahState_process(ALautowahState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    ALfloat (*restrict BufferOut)[BUFFERSIZE] = state->BufferOut;
-    ALfloat f0norm[BUFFERSIZE];
+    const ALfloat peak_gain = state->PeakGain;
+    const ALfloat attack_rate = state->AttackRate;
+    const ALfloat release_rate = state->ReleaseRate;
+    const ALfloat freq_min = state->FreqMinNorm;
+    const ALfloat bandwidth = state->BandwidthNorm;
+    ALfloat env_delay;
     ALsizei c, i;
 
+    env_delay = state->env_delay;
     for(i = 0;i < SamplesToDo;i++)
     {
-            ALfloat env_out;
-            env_out   = envelope_follower(state, SamplesIn[0][i]);
-            f0norm[i] = state->BandwidthNorm*env_out + state->FreqMinNorm;
+        ALfloat w0, sample, a;
+
+        /* Envelope follower described on the book: Audio Effects, Theory,
+         * Implementation and Application.
+         */
+        sample = peak_gain * fabsf(SamplesIn[0][i]);
+        a = (sample > env_delay) ? attack_rate : release_rate;
+        env_delay = lerp(sample, env_delay, a);
+
+        /* Calculate the cos and alpha components for this sample's filter. */
+        w0 = (bandwidth*env_delay + freq_min) * F_TAU;
+        state->CosW0[i] = cosf(w0);
+        state->Alpha[i] = sinf(w0)/(2.0f * Q_FACTOR);
     }
+    state->env_delay = env_delay;
 
     for(c = 0;c < MAX_EFFECT_CHANNELS; c++)
     {
+        /* This effectively inlines BiquadFilter_setParams for a peaking
+         * filter and BiquadFilter_processC. The alpha and cosine components
+         * for the filter coefficients were previously calculated with the
+         * envelope. Because the filter changes for each sample, the
+         * coefficients are transient and don't need to be held.
+         */
+        const ALfloat res_gain = sqrtf(state->ResonanceGain);
+        ALfloat z1 = state->Chans[c].Filter.z1;
+        ALfloat z2 = state->Chans[c].Filter.z2;
+
         for(i = 0;i < SamplesToDo;i++)
         {
-            ALfloat temp;
+            const ALfloat alpha = state->Alpha[i];
+            const ALfloat cos_w0 = state->CosW0[i];
+            ALfloat input, output;
+            ALfloat a[3], b[3];
 
-            BiquadFilter_setParams(&state->Chans[c].Filter, BiquadType_Peaking,
-                                   state->ResonanceGain, f0norm[i], 1.0f/Q_FACTOR);
-            BiquadFilter_process(&state->Chans[c].Filter, &temp, &SamplesIn[c][i], 1);
+            b[0] =  1.0f + alpha*res_gain;
+            b[1] = -2.0f * cos_w0;
+            b[2] =  1.0f - alpha*res_gain;
+            a[0] =  1.0f + alpha/res_gain;
+            a[1] = -2.0f * cos_w0;
+            a[2] =  1.0f - alpha/res_gain;
 
-            BufferOut[c][i] = temp;
+            input = SamplesIn[c][i];
+            output = input*(b[0]/a[0]) + z1;
+            z1 = input*(b[1]/a[0]) - output*(a[1]/a[0]) + z2;
+            z2 = input*(b[2]/a[0]) - output*(a[2]/a[0]);
+            state->BufferOut[i] = output;
         }
+        state->Chans[c].Filter.z1 = z1;
+        state->Chans[c].Filter.z2 = z2;
+
         /* Now, mix the processed sound data to the output. */
-        MixSamples(BufferOut[c], NumChannels, SamplesOut, state->Chans[c].CurrentGains,
+        MixSamples(state->BufferOut, NumChannels, SamplesOut, state->Chans[c].CurrentGains,
                    state->Chans[c].TargetGains, SamplesToDo, 0, SamplesToDo);
     }
 }

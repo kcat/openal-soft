@@ -2,7 +2,7 @@ openal-soft-1.19.0:
 
     Implemented the ALC_SOFT_device_clock extension.
 
-    Implemented the Pitch Shifter and Frequency Shifter effects.
+    Implemented the Pitch Shifter, Frequency Shifter, and Autowah effects.
 
     Fixed compiling on FreeBSD systems that use freebsd-lib 9.1.
 

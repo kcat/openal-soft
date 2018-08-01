@@ -1014,10 +1014,10 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
      */
     bandWeights[0] = lfW;
     bandWeights[1] = hfW - lfW;
-    bandWeights[2] = F_TAU - hfW;
+    bandWeights[2] = F_PI - hfW;
     Late->DensityGain = CalcDensityGain(
         CalcDecayCoeff(length, (bandWeights[0]*lfDecayTime + bandWeights[1]*mfDecayTime +
-                                bandWeights[2]*hfDecayTime) / F_TAU)
+                                bandWeights[2]*hfDecayTime) / F_PI)
     );
 
     for(i = 0;i < NUM_LINES;i++)
@@ -1151,14 +1151,14 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
     ALsizei i;
 
     /* Calculate the master filters */
-    hf0norm = props->Reverb.HFReference / frequency;
+    hf0norm = minf(props->Reverb.HFReference / frequency, 0.49f);
     /* Restrict the filter gains from going below -60dB to keep the filter from
      * killing most of the signal.
      */
     gainhf = maxf(props->Reverb.GainHF, 0.001f);
     BiquadFilter_setParams(&State->Filter[0].Lp, BiquadType_HighShelf, gainhf, hf0norm,
                            calc_rcpQ_from_slope(gainhf, 1.0f));
-    lf0norm = props->Reverb.LFReference / frequency;
+    lf0norm = minf(props->Reverb.LFReference / frequency, 0.49f);
     gainlf = maxf(props->Reverb.GainLF, 0.001f);
     BiquadFilter_setParams(&State->Filter[0].Hp, BiquadType_LowShelf, gainlf, lf0norm,
                            calc_rcpQ_from_slope(gainlf, 1.0f));

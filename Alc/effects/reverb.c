@@ -258,11 +258,6 @@ typedef struct EarlyReflections {
 } EarlyReflections;
 
 typedef struct LateReverb {
-    /* Attenuation to compensate for the modal density and decay rate of the
-     * late lines.
-     */
-    ALfloat DensityGain;
-
     /* A recursive delay line is used fill in the reverb tail. */
     DelayLineI Delay;
     ALsizei    Offset[NUM_LINES][2];
@@ -385,8 +380,6 @@ static void ALreverbState_Construct(ALreverbState *state)
         state->Early.Offset[i][1] = 0;
         state->Early.Coeff[i] = 0.0f;
     }
-
-    state->Late.DensityGain = 0.0f;
 
     state->Late.Delay.Mask = 0;
     state->Late.Delay.Line = NULL;
@@ -987,7 +980,7 @@ static ALvoid UpdateEarlyLines(const ALfloat density, const ALfloat decayTime, c
 }
 
 /* Update the late reverb line lengths and T60 coefficients. */
-static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, const ALfloat lfDecayTime, const ALfloat mfDecayTime, const ALfloat hfDecayTime, const ALfloat lfW, const ALfloat hfW, const ALfloat echoTime, const ALfloat echoDepth, const ALuint frequency, LateReverb *Late)
+static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, const ALfloat lfDecayTime, const ALfloat mfDecayTime, const ALfloat hfDecayTime, const ALfloat lfW, const ALfloat hfW, const ALfloat echoTime, const ALfloat echoDepth, const ALuint frequency, ALfloat *density_gain, LateReverb *Late)
 {
     ALfloat multiplier, length, bandWeights[3];
     ALsizei i;
@@ -1007,15 +1000,16 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
     length = lerp(length, echoTime, echoDepth);
     length += (LATE_ALLPASS_LENGTHS[0] + LATE_ALLPASS_LENGTHS[1] +
                LATE_ALLPASS_LENGTHS[2] + LATE_ALLPASS_LENGTHS[3]) / 4.0f * multiplier;
-    /* The density gain calculation uses an average decay time weighted by
-     * approximate bandwidth.  This attempts to compensate for losses of
-     * energy that reduce decay time due to scattering into highly attenuated
-     * bands.
+    /* Attenuation to compensate for the modal density and decay rate of the
+     * late lines. The density gain calculation uses an average decay time
+     * weighted by approximate bandwidth. This attempts to compensate for
+     * losses of energy that reduce decay time due to scattering into highly
+     * attenuated bands.
      */
     bandWeights[0] = lfW;
     bandWeights[1] = hfW - lfW;
     bandWeights[2] = F_PI - hfW;
-    Late->DensityGain = CalcDensityGain(
+    *density_gain = CalcDensityGain(
         CalcDecayCoeff(length, (bandWeights[0]*lfDecayTime + bandWeights[1]*mfDecayTime +
                                 bandWeights[2]*hfDecayTime) / F_PI)
     );
@@ -1103,7 +1097,7 @@ static aluMatrixf GetTransformFromVector(const ALfloat *vec)
 }
 
 /* Update the early and late 3D panning gains. */
-static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, const ALfloat gain, const ALfloat earlyGain, const ALfloat lateGain, ALreverbState *State)
+static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, const ALfloat earlyGain, const ALfloat lateGain, ALreverbState *State)
 {
     aluMatrixf transform, rot;
     ALsizei i;
@@ -1128,14 +1122,14 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
     MATRIX_MULT(transform, rot, A2B);
     memset(&State->Early.PanGain, 0, sizeof(State->Early.PanGain));
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputeFirstOrderGains(&Device->FOAOut, transform.m[i], gain*earlyGain,
+        ComputeFirstOrderGains(&Device->FOAOut, transform.m[i], earlyGain,
                                State->Early.PanGain[i]);
 
     rot = GetTransformFromVector(LateReverbPan);
     MATRIX_MULT(transform, rot, A2B);
     memset(&State->Late.PanGain, 0, sizeof(State->Late.PanGain));
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputeFirstOrderGains(&Device->FOAOut, transform.m[i], gain*lateGain,
+        ComputeFirstOrderGains(&Device->FOAOut, transform.m[i], lateGain,
                                State->Late.PanGain[i]);
 #undef MATRIX_MULT
 }
@@ -1148,6 +1142,7 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
     ALfloat lf0norm, hf0norm, hfRatio;
     ALfloat lfDecayTime, hfDecayTime;
     ALfloat gain, gainlf, gainhf;
+    ALfloat density_gain;
     ALsizei i;
 
     /* Calculate the master filters */
@@ -1203,14 +1198,14 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
                     lfDecayTime, props->Reverb.DecayTime, hfDecayTime,
                     F_TAU * lf0norm, F_TAU * hf0norm,
                     props->Reverb.EchoTime, props->Reverb.EchoDepth,
-                    frequency, &State->Late);
+                    frequency, &density_gain, &State->Late);
 
     /* Update early and late 3D panning. */
     gain = props->Reverb.Gain * Slot->Params.Gain * ReverbBoost;
-    Update3DPanning(Device, props->Reverb.ReflectionsPan,
-                    props->Reverb.LateReverbPan, gain,
-                    props->Reverb.ReflectionsGain,
-                    props->Reverb.LateReverbGain, State);
+    Update3DPanning(Device, props->Reverb.ReflectionsPan, props->Reverb.LateReverbPan,
+                    props->Reverb.ReflectionsGain * gain,
+                    props->Reverb.LateReverbGain * gain * density_gain,
+                    State);
 
     /* Determine if delay-line cross-fading is required. */
     for(i = 0;i < NUM_LINES;i++)
@@ -1490,7 +1485,7 @@ static void LateReverb_##T(ALreverbState *State, const ALsizei todo,          \
             f[j] = T##DelayLineOut(&State->Delay,                             \
                 offset - State->LateDelayTap[j][0],                           \
                 offset - State->LateDelayTap[j][1], j, fade                   \
-            ) * State->Late.DensityGain;                                      \
+            );                                                                \
                                                                               \
         for(j = 0;j < NUM_LINES;j++)                                          \
             f[j] += T##DelayLineOut(&State->Late.Delay,                       \

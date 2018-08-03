@@ -425,6 +425,7 @@ static void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei orde
          * be used when rendering to an ambisonic buffer.
          */
         device->AvgSpeakerDist = minf(ctrl_dist, 10.0f);
+        TRACE("Using near-field reference distance: %.2f meters\n", device->AvgSpeakerDist);
 
         for(i = 0;i < order+1;i++)
             device->Dry.NumChannelsPerOrder[i] = chans_per_order[i];

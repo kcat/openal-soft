@@ -980,8 +980,12 @@ static ALvoid UpdateEarlyLines(const ALfloat density, const ALfloat decayTime, c
 }
 
 /* Update the late reverb line lengths and T60 coefficients. */
-static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, const ALfloat lfDecayTime, const ALfloat mfDecayTime, const ALfloat hfDecayTime, const ALfloat lfW, const ALfloat hfW, const ALfloat echoTime, const ALfloat echoDepth, const ALuint frequency, ALfloat *density_gain, LateReverb *Late)
+static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, const ALfloat lfDecayTime, const ALfloat mfDecayTime, const ALfloat hfDecayTime, const ALfloat lf0norm, const ALfloat hf0norm, const ALfloat echoTime, const ALfloat echoDepth, const ALuint frequency, ALfloat *density_gain, LateReverb *Late)
 {
+    /* Scaling factor to convert the normalized reference frequencies from
+     * representing 0...freq to 0...max_reference.
+     */
+    const ALfloat norm_weight_factor = (ALfloat)frequency / AL_EAXREVERB_MAX_HFREFERENCE;
     ALfloat multiplier, length, bandWeights[3];
     ALsizei i;
 
@@ -1006,12 +1010,13 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
      * losses of energy that reduce decay time due to scattering into highly
      * attenuated bands.
      */
-    bandWeights[0] = lfW;
-    bandWeights[1] = hfW - lfW;
-    bandWeights[2] = F_PI - hfW;
+    bandWeights[0] = lf0norm*norm_weight_factor;
+    bandWeights[1] = hf0norm*norm_weight_factor - lf0norm*norm_weight_factor;
+    bandWeights[2] = 1.0f - hf0norm*norm_weight_factor;
     *density_gain = CalcDensityGain(
-        CalcDecayCoeff(length, (bandWeights[0]*lfDecayTime + bandWeights[1]*mfDecayTime +
-                                bandWeights[2]*hfDecayTime) / F_PI)
+        CalcDecayCoeff(length,
+            bandWeights[0]*lfDecayTime + bandWeights[1]*mfDecayTime + bandWeights[2]*hfDecayTime
+        )
     );
 
     for(i = 0;i < NUM_LINES;i++)
@@ -1043,7 +1048,7 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
 
         /* Calculate the T60 damping coefficients for each line. */
         CalcT60DampingCoeffs(length, lfDecayTime, mfDecayTime, hfDecayTime,
-                             lfW, hfW, Late->T60[i].LFCoeffs,
+                             lf0norm*F_TAU, hf0norm*F_TAU, Late->T60[i].LFCoeffs,
                              Late->T60[i].HFCoeffs);
     }
 }
@@ -1195,10 +1200,10 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
 
     /* Update the late lines. */
     UpdateLateLines(props->Reverb.Density, props->Reverb.Diffusion,
-                    lfDecayTime, props->Reverb.DecayTime, hfDecayTime,
-                    F_TAU * lf0norm, F_TAU * hf0norm,
-                    props->Reverb.EchoTime, props->Reverb.EchoDepth,
-                    frequency, &density_gain, &State->Late);
+        lfDecayTime, props->Reverb.DecayTime, hfDecayTime, lf0norm, hf0norm,
+        props->Reverb.EchoTime, props->Reverb.EchoDepth, frequency, &density_gain,
+        &State->Late
+    );
 
     /* Update early and late 3D panning. */
     gain = props->Reverb.Gain * Slot->Params.Gain * ReverbBoost;

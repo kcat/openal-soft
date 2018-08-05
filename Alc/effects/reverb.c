@@ -318,8 +318,7 @@ typedef struct ALreverbState {
 
     /* Temporary storage used when processing. */
     alignas(16) ALfloat AFormatSamples[NUM_LINES][MAX_UPDATE_SAMPLES];
-    alignas(16) ALfloat ReverbSamples[NUM_LINES][MAX_UPDATE_SAMPLES];
-    alignas(16) ALfloat EarlySamples[NUM_LINES][MAX_UPDATE_SAMPLES];
+    alignas(16) ALfloat MixSamples[NUM_LINES][MAX_UPDATE_SAMPLES];
 } ALreverbState;
 
 static ALvoid ALreverbState_Destruct(ALreverbState *State);
@@ -1520,8 +1519,7 @@ DECL_TEMPLATE(Faded)
 static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
     ALfloat (*restrict afmt)[MAX_UPDATE_SAMPLES] = State->AFormatSamples;
-    ALfloat (*restrict early)[MAX_UPDATE_SAMPLES] = State->EarlySamples;
-    ALfloat (*restrict late)[MAX_UPDATE_SAMPLES] = State->ReverbSamples;
+    ALfloat (*restrict samples)[MAX_UPDATE_SAMPLES] = State->MixSamples;
     ALsizei fadeCount = State->FadeCount;
     ALfloat fade = (ALfloat)fadeCount / FADE_SAMPLES;
     ALsizei base, c;
@@ -1544,32 +1542,53 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
         /* Process the samples for reverb. */
         for(c = 0;c < NUM_LINES;c++)
         {
-            /* Band-pass the incoming samples. Use the early output lines for
-             * temp storage.
-             */
-            BiquadFilter_process(&State->Filter[c].Lp, early[0], afmt[c], todo);
-            BiquadFilter_process(&State->Filter[c].Hp, early[1], early[0], todo);
+            /* Band-pass the incoming samples. */
+            BiquadFilter_process(&State->Filter[c].Lp, samples[0], afmt[c], todo);
+            BiquadFilter_process(&State->Filter[c].Hp, samples[1], samples[0], todo);
 
             /* Feed the initial delay line. */
-            DelayLineIn(&State->Delay, State->Offset, c, early[1], todo);
+            DelayLineIn(&State->Delay, State->Offset, c, samples[1], todo);
         }
 
         if(UNLIKELY(fadeCount < FADE_SAMPLES))
         {
             /* Generate early reflections. */
-            EarlyReflection_Faded(State, todo, fade, early);
+            EarlyReflection_Faded(State, todo, fade, samples);
+            /* Mix the A-Format results to output, implicitly converting back
+             * to B-Format.
+             */
+            for(c = 0;c < NUM_LINES;c++)
+                MixSamples(samples[c], NumChannels, SamplesOut,
+                    State->Early.CurrentGain[c], State->Early.PanGain[c],
+                    SamplesToDo-base, base, todo
+                );
 
-            /* Generate late reverb. */
-            LateReverb_Faded(State, todo, fade, late);
+            /* Generate and mix late reverb. */
+            LateReverb_Faded(State, todo, fade, samples);
             fade = minf(1.0f, fade + todo*FadeStep);
+            for(c = 0;c < NUM_LINES;c++)
+                MixSamples(samples[c], NumChannels, SamplesOut,
+                    State->Late.CurrentGain[c], State->Late.PanGain[c],
+                    SamplesToDo-base, base, todo
+                );
         }
         else
         {
-            /* Generate early reflections. */
-            EarlyReflection_Unfaded(State, todo, fade, early);
+            /* Generate and mix early reflections. */
+            EarlyReflection_Unfaded(State, todo, fade, samples);
+            for(c = 0;c < NUM_LINES;c++)
+                MixSamples(samples[c], NumChannels, SamplesOut,
+                    State->Early.CurrentGain[c], State->Early.PanGain[c],
+                    SamplesToDo-base, base, todo
+                );
 
-            /* Generate late reverb. */
-            LateReverb_Unfaded(State, todo, fade, late);
+            /* Generate and mix late reverb. */
+            LateReverb_Unfaded(State, todo, fade, samples);
+            for(c = 0;c < NUM_LINES;c++)
+                MixSamples(samples[c], NumChannels, SamplesOut,
+                    State->Late.CurrentGain[c], State->Late.PanGain[c],
+                    SamplesToDo-base, base, todo
+                );
         }
 
         /* Step all delays forward. */
@@ -1590,20 +1609,6 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
                 State->Late.Offset[c][0] = State->Late.Offset[c][1];
             }
         }
-
-        /* Mix the A-Format results to output, implicitly converting back to
-         * B-Format.
-         */
-        for(c = 0;c < NUM_LINES;c++)
-            MixSamples(early[c], NumChannels, SamplesOut,
-                State->Early.CurrentGain[c], State->Early.PanGain[c],
-                SamplesToDo-base, base, todo
-            );
-        for(c = 0;c < NUM_LINES;c++)
-            MixSamples(late[c], NumChannels, SamplesOut,
-                State->Late.CurrentGain[c], State->Late.PanGain[c],
-                SamplesToDo-base, base, todo
-            );
 
         base += todo;
     }

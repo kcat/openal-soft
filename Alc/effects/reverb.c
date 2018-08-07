@@ -366,6 +366,7 @@ static void ALreverbState_Construct(ALreverbState *state)
 
     state->Early.VecAp.Delay.Mask = 0;
     state->Early.VecAp.Delay.Line = NULL;
+    state->Early.VecAp.Coeff = 0.0f;
     state->Early.Delay.Mask = 0;
     state->Early.Delay.Line = NULL;
     for(i = 0;i < NUM_LINES;i++)
@@ -950,12 +951,15 @@ static ALvoid UpdateDelayLine(const ALfloat earlyDelay, const ALfloat lateDelay,
 }
 
 /* Update the early reflection line lengths and gain coefficients. */
-static ALvoid UpdateEarlyLines(const ALfloat density, const ALfloat decayTime, const ALuint frequency, EarlyReflections *Early)
+static ALvoid UpdateEarlyLines(const ALfloat density, const ALfloat diffusion, const ALfloat decayTime, const ALuint frequency, EarlyReflections *Early)
 {
     ALfloat multiplier, length;
     ALsizei i;
 
     multiplier = CalcDelayLengthMult(density);
+
+    /* Calculate the all-pass feed-back/forward coefficient. */
+    Early->VecAp.Coeff = sqrtf(0.5f) * powf(diffusion, 2.0f);
 
     for(i = 0;i < NUM_LINES;i++)
     {
@@ -1179,8 +1183,8 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
                     State);
 
     /* Update the early lines. */
-    UpdateEarlyLines(props->Reverb.Density, props->Reverb.DecayTime,
-                     frequency, &State->Early);
+    UpdateEarlyLines(props->Reverb.Density, props->Reverb.Diffusion,
+                     props->Reverb.DecayTime, frequency, &State->Early);
 
     /* Get the mixing matrix coefficients. */
     CalcMatrixCoeffs(props->Reverb.Diffusion, &State->MixX, &State->MixY);

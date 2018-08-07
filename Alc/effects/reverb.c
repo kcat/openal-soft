@@ -223,6 +223,7 @@ typedef struct DelayLineI {
 
 typedef struct VecAllpass {
     DelayLineI Delay;
+    ALfloat Coeff;
     ALsizei Offset[NUM_LINES][2];
 } VecAllpass;
 
@@ -299,9 +300,6 @@ typedef struct ALreverbState {
     ALsizei LateFeedTap;
     ALsizei LateDelayTap[NUM_LINES][2];
 
-    /* The feed-back and feed-forward all-pass coefficient. */
-    ALfloat ApFeedCoeff;
-
     /* Coefficients for the all-pass and line scattering matrices. */
     ALfloat MixX;
     ALfloat MixY;
@@ -363,7 +361,6 @@ static void ALreverbState_Construct(ALreverbState *state)
         state->LateDelayTap[i][1] = 0;
     }
 
-    state->ApFeedCoeff = 0.0f;
     state->MixX = 0.0f;
     state->MixY = 0.0f;
 
@@ -384,6 +381,7 @@ static void ALreverbState_Construct(ALreverbState *state)
     state->Late.Delay.Line = NULL;
     state->Late.VecAp.Delay.Mask = 0;
     state->Late.VecAp.Delay.Line = NULL;
+    state->Late.VecAp.Coeff = 0.0f;
     for(i = 0;i < NUM_LINES;i++)
     {
         state->Late.Offset[i][0] = 0;
@@ -1018,6 +1016,9 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
         )
     );
 
+    /* Calculate the all-pass feed-back/forward coefficient. */
+    Late->VecAp.Coeff = sqrtf(0.5f) * powf(diffusion, 2.0f);
+
     for(i = 0;i < NUM_LINES;i++)
     {
         /* Calculate the length (in seconds) of each all-pass line. */
@@ -1176,9 +1177,6 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
     UpdateDelayLine(props->Reverb.ReflectionsDelay, props->Reverb.LateReverbDelay,
                     props->Reverb.Density, props->Reverb.DecayTime, frequency,
                     State);
-
-    /* Calculate the all-pass feed-back/forward coefficient. */
-    State->ApFeedCoeff = sqrtf(0.5f) * powf(props->Reverb.Diffusion, 2.0f);
 
     /* Update the early lines. */
     UpdateEarlyLines(props->Reverb.Density, props->Reverb.DecayTime,
@@ -1341,12 +1339,12 @@ static inline void VectorPartialScatterRev(ALfloat *restrict out, const ALfloat 
  * Two static specializations are used for transitional (cross-faded) delay
  * line processing and non-transitional processing.
  */
-static void VectorAllpass_Unfaded(ALfloat (*restrict samples)[MAX_UPDATE_SAMPLES],
-                                  ALsizei offset, const ALfloat feedCoeff,
-                                  const ALfloat xCoeff, const ALfloat yCoeff,
-                                  ALsizei todo, VecAllpass *Vap)
+static void VectorAllpass_Unfaded(ALfloat (*restrict samples)[MAX_UPDATE_SAMPLES], ALsizei offset,
+                                  const ALfloat xCoeff, const ALfloat yCoeff, ALsizei todo,
+                                  VecAllpass *Vap)
 {
     const DelayLineI delay = Vap->Delay;
+    const ALfloat feedCoeff = Vap->Coeff;
     ALsizei vap_offset[NUM_LINES];
     ALsizei i, j;
 
@@ -1371,12 +1369,12 @@ static void VectorAllpass_Unfaded(ALfloat (*restrict samples)[MAX_UPDATE_SAMPLES
         ++offset;
     }
 }
-static void VectorAllpass_Faded(ALfloat (*restrict samples)[MAX_UPDATE_SAMPLES],
-                                ALsizei offset, const ALfloat feedCoeff,
-                                const ALfloat xCoeff, const ALfloat yCoeff,
-                                ALfloat fade, ALsizei todo, VecAllpass *Vap)
+static void VectorAllpass_Faded(ALfloat (*restrict samples)[MAX_UPDATE_SAMPLES], ALsizei offset,
+                                const ALfloat xCoeff, const ALfloat yCoeff, ALfloat fade,
+                                ALsizei todo, VecAllpass *Vap)
 {
     const DelayLineI delay = Vap->Delay;
+    const ALfloat feedCoeff = Vap->Coeff;
     ALsizei vap_offset[NUM_LINES][2];
     ALsizei i, j;
 
@@ -1457,8 +1455,7 @@ static void EarlyReflection_Unfaded(ALreverbState *State, const ALsizei todo,
     /* Apply a vector all-pass, to help color the initial reflections based on
      * the diffusion strength.
      */
-    VectorAllpass_Unfaded(temps, offset, State->ApFeedCoeff, mixX, mixY, todo,
-                          &State->Early.VecAp);
+    VectorAllpass_Unfaded(temps, offset, mixX, mixY, todo, &State->Early.VecAp);
 
     for(j = 0;j < NUM_LINES;j++)
     {
@@ -1518,8 +1515,7 @@ static void EarlyReflection_Faded(ALreverbState *State, const ALsizei todo, ALfl
             ) * coeff;
     }
 
-    VectorAllpass_Faded(temps, offset, State->ApFeedCoeff, mixX, mixY, fade, todo,
-                        &State->Early.VecAp);
+    VectorAllpass_Faded(temps, offset, mixX, mixY, fade, todo, &State->Early.VecAp);
 
     for(j = 0;j < NUM_LINES;j++)
     {
@@ -1624,7 +1620,7 @@ static void LateReverb_Unfaded(ALreverbState *State, const ALsizei todo,
     /* Apply a vector all-pass to improve micro-surface diffusion, and write
      * out the results for mixing.
      */
-    VectorAllpass_Unfaded(temps, offset, State->ApFeedCoeff, mixX, mixY, todo, &State->Late.VecAp);
+    VectorAllpass_Unfaded(temps, offset, mixX, mixY, todo, &State->Late.VecAp);
 
     for(j = 0;j < NUM_LINES;j++)
         memcpy(out[j], temps[j], todo*sizeof(ALfloat));
@@ -1672,8 +1668,7 @@ static void LateReverb_Faded(ALreverbState *State, const ALsizei todo, ALfloat f
         LateT60Filter(temps[j], todo, &State->Late.T60[j]);
     }
 
-    VectorAllpass_Faded(temps, offset, State->ApFeedCoeff, mixX, mixY, fade, todo,
-                        &State->Late.VecAp);
+    VectorAllpass_Faded(temps, offset, mixX, mixY, fade, todo, &State->Late.VecAp);
 
     for(j = 0;j < NUM_LINES;j++)
         memcpy(out[j], temps[j], todo*sizeof(ALfloat));

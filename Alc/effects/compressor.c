@@ -164,7 +164,7 @@ static ALvoid ALcompressorState_process(ALcompressorState *state, ALsizei Sample
                     continue;
 
                 for(i = 0;i < td;i++)
-                    SamplesOut[k][base+i] += SamplesIn[k][base+i] * gains[i] * gain;
+                    SamplesOut[k][base+i] += SamplesIn[j][base+i] * gains[i] * gain;
             }
         }
 

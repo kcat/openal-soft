@@ -263,6 +263,11 @@ typedef struct LateReverb {
     DelayLineI Delay;
     ALsizei    Offset[NUM_LINES][2];
 
+    /* Attenuation to compensate for the modal density and decay rate of the
+     * late lines.
+     */
+    ALfloat DensityGain[2];
+
     /* T60 decay filters are used to simulate absorption. */
     T60Filter T60[NUM_LINES];
 
@@ -378,6 +383,8 @@ static void ALreverbState_Construct(ALreverbState *state)
         state->Early.Coeff[i] = 0.0f;
     }
 
+    state->Late.DensityGain[0] = 0.0f;
+    state->Late.DensityGain[1] = 0.0f;
     state->Late.Delay.Mask = 0;
     state->Late.Delay.Line = NULL;
     state->Late.VecAp.Delay.Mask = 0;
@@ -981,7 +988,7 @@ static ALvoid UpdateEarlyLines(const ALfloat density, const ALfloat diffusion, c
 }
 
 /* Update the late reverb line lengths and T60 coefficients. */
-static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, const ALfloat lfDecayTime, const ALfloat mfDecayTime, const ALfloat hfDecayTime, const ALfloat lf0norm, const ALfloat hf0norm, const ALfloat echoTime, const ALfloat echoDepth, const ALuint frequency, ALfloat *density_gain, LateReverb *Late)
+static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, const ALfloat lfDecayTime, const ALfloat mfDecayTime, const ALfloat hfDecayTime, const ALfloat lf0norm, const ALfloat hf0norm, const ALfloat echoTime, const ALfloat echoDepth, const ALuint frequency, LateReverb *Late)
 {
     /* Scaling factor to convert the normalized reference frequencies from
      * representing 0...freq to 0...max_reference.
@@ -1005,16 +1012,14 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
     length = lerp(length, echoTime, echoDepth);
     length += (LATE_ALLPASS_LENGTHS[0] + LATE_ALLPASS_LENGTHS[1] +
                LATE_ALLPASS_LENGTHS[2] + LATE_ALLPASS_LENGTHS[3]) / 4.0f * multiplier;
-    /* Attenuation to compensate for the modal density and decay rate of the
-     * late lines. The density gain calculation uses an average decay time
-     * weighted by approximate bandwidth. This attempts to compensate for
-     * losses of energy that reduce decay time due to scattering into highly
-     * attenuated bands.
+    /* The density gain calculation uses an average decay time weighted by
+     * approximate bandwidth. This attempts to compensate for losses of energy
+     * that reduce decay time due to scattering into highly attenuated bands.
      */
     bandWeights[0] = lf0norm*norm_weight_factor;
     bandWeights[1] = hf0norm*norm_weight_factor - lf0norm*norm_weight_factor;
     bandWeights[2] = 1.0f - hf0norm*norm_weight_factor;
-    *density_gain = CalcDensityGain(
+    Late->DensityGain[1] = CalcDensityGain(
         CalcDecayCoeff(length,
             bandWeights[0]*lfDecayTime + bandWeights[1]*mfDecayTime + bandWeights[2]*hfDecayTime
         )
@@ -1156,7 +1161,6 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
     ALfloat lf0norm, hf0norm, hfRatio;
     ALfloat lfDecayTime, hfDecayTime;
     ALfloat gain, gainlf, gainhf;
-    ALfloat density_gain;
     ALsizei i;
 
     /* Calculate the master filters */
@@ -1207,15 +1211,13 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
     /* Update the late lines. */
     UpdateLateLines(props->Reverb.Density, props->Reverb.Diffusion,
         lfDecayTime, props->Reverb.DecayTime, hfDecayTime, lf0norm, hf0norm,
-        props->Reverb.EchoTime, props->Reverb.EchoDepth, frequency, &density_gain,
-        &State->Late
+        props->Reverb.EchoTime, props->Reverb.EchoDepth, frequency, &State->Late
     );
 
     /* Update early and late 3D panning. */
     gain = props->Reverb.Gain * Slot->Params.Gain * ReverbBoost;
     Update3DPanning(Device, props->Reverb.ReflectionsPan, props->Reverb.LateReverbPan,
-                    props->Reverb.ReflectionsGain * gain,
-                    props->Reverb.LateReverbGain * gain * density_gain,
+                    props->Reverb.ReflectionsGain*gain, props->Reverb.LateReverbGain*gain,
                     State);
 
     /* Determine if delay-line cross-fading is required. */
@@ -1226,7 +1228,8 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
            State->Early.Offset[i][1] != State->Early.Offset[i][0] ||
            State->LateDelayTap[i][1] != State->LateDelayTap[i][0] ||
            State->Late.VecAp.Offset[i][1] != State->Late.VecAp.Offset[i][0] ||
-           State->Late.Offset[i][1] != State->Late.Offset[i][0])
+           State->Late.Offset[i][1] != State->Late.Offset[i][0] ||
+           State->Late.DensityGain[1] != State->Late.DensityGain[0])
         {
             State->FadeCount = 0;
             break;
@@ -1607,6 +1610,7 @@ static void LateReverb_Unfaded(ALreverbState *State, const ALsizei todo,
     ALfloat (*restrict temps)[MAX_UPDATE_SAMPLES] = State->TempSamples;
     const DelayLineI late_delay = State->Late.Delay;
     const DelayLineI main_delay = State->Delay;
+    const ALfloat densityGain = State->Late.DensityGain[1];
     const ALfloat mixX = State->MixX;
     const ALfloat mixY = State->MixY;
     ALsizei offset = State->Offset;
@@ -1622,7 +1626,7 @@ static void LateReverb_Unfaded(ALreverbState *State, const ALsizei todo,
         ALsizei late_delay_tap = offset - State->LateDelayTap[j][0];
         ALsizei late_feedb_tap = offset - State->Late.Offset[j][0];
         for(i = 0;i < todo;i++)
-            temps[j][i] = DelayLineOut(&main_delay, late_delay_tap++, j) +
+            temps[j][i] = DelayLineOut(&main_delay, late_delay_tap++, j)*densityGain +
                           DelayLineOut(&late_delay, late_feedb_tap++, j);
         LateT60Filter(temps[j], todo, &State->Late.T60[j]);
     }
@@ -1654,6 +1658,10 @@ static void LateReverb_Faded(ALreverbState *State, const ALsizei todo, ALfloat f
     ALfloat (*restrict temps)[MAX_UPDATE_SAMPLES] = State->TempSamples;
     const DelayLineI late_delay = State->Late.Delay;
     const DelayLineI main_delay = State->Delay;
+    const ALfloat oldDensityGain = State->Late.DensityGain[0];
+    const ALfloat densityGain = State->Late.DensityGain[1];
+    const ALfloat oldDensityStep = -oldDensityGain / todo;
+    const ALfloat densityStep = densityGain / todo;
     const ALfloat mixX = State->MixX;
     const ALfloat mixY = State->MixY;
     ALsizei offset = State->Offset;
@@ -1670,15 +1678,21 @@ static void LateReverb_Faded(ALreverbState *State, const ALsizei todo, ALfloat f
         ALfloat fader = fade;
         for(i = 0;i < todo;i++)
         {
+            const ALfloat fade0 = oldDensityGain + oldDensityStep*i;
+            const ALfloat fade1 = densityStep*i;
             temps[j][i] =
                 FadedDelayLineOut(&main_delay, late_delay_tap0++, late_delay_tap1++, j,
-                    1.0f-fader, fader) +
+                    fade0, fade1) +
                 FadedDelayLineOut(&late_delay, late_feedb_tap0++, late_feedb_tap1++, j,
                     1.0f-fader, fader);
             fader += FadeStep;
         }
         LateT60Filter(temps[j], todo, &State->Late.T60[j]);
     }
+    /* Update the old density gain with its now-current level (in case another
+     * update needs to finish the fade).
+     */
+    State->Late.DensityGain[0] = densityStep*todo;
 
     VectorAllpass_Faded(temps, offset, mixX, mixY, fade, todo, &State->Late.VecAp);
 
@@ -1768,6 +1782,7 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
                     State->Late.VecAp.Offset[c][0] = State->Late.VecAp.Offset[c][1];
                     State->Late.Offset[c][0] = State->Late.Offset[c][1];
                 }
+                State->Late.DensityGain[0] = State->Late.DensityGain[1];
             }
         }
         else

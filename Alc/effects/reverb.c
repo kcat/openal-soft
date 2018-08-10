@@ -1521,6 +1521,7 @@ static void EarlyReflection_Faded(ALreverbState *State, const ALsizei todo, ALfl
     const ALfloat mixY = State->MixY;
     ALsizei offset = State->Offset;
     ALsizei late_feed_tap;
+    ALfloat fadeCount;
     ALsizei i, j;
 
     ASSUME(todo > 0);
@@ -1530,15 +1531,18 @@ static void EarlyReflection_Faded(ALreverbState *State, const ALsizei todo, ALfl
         ALsizei early_delay_tap0 = offset - State->EarlyDelayTap[j][0];
         ALsizei early_delay_tap1 = offset - State->EarlyDelayTap[j][1];
         ALfloat oldCoeff = State->EarlyDelayCoeff[j][0];
-        ALfloat oldCoeffStep = -oldCoeff / todo;
-        ALfloat newCoeffStep = State->EarlyDelayCoeff[j][1] / todo;
+        ALfloat oldCoeffStep = -oldCoeff / FADE_SAMPLES;
+        ALfloat newCoeffStep = State->EarlyDelayCoeff[j][1] / FADE_SAMPLES;
+
+        fadeCount = fade * FADE_SAMPLES;
         for(i = 0;i < todo;i++)
         {
-            const ALfloat fade0 = oldCoeff + oldCoeffStep*i;
-            const ALfloat fade1 = newCoeffStep*i;
+            const ALfloat fade0 = oldCoeff + oldCoeffStep*fadeCount;
+            const ALfloat fade1 = newCoeffStep*fadeCount;
             temps[j][i] = FadedDelayLineOut(&main_delay,
                 early_delay_tap0++, early_delay_tap1++, j, fade0, fade1
             );
+            fadeCount += 1.0f;
         }
     }
 
@@ -1549,10 +1553,11 @@ static void EarlyReflection_Faded(ALreverbState *State, const ALsizei todo, ALfl
         feedb_tap[j][0] = offset - State->Early.Offset[j][0];
         feedb_tap[j][1] = offset - State->Early.Offset[j][1];
         feedb_oldCoeff[j] = State->Early.Coeff[j][0];
-        feedb_oldCoeffStep[j] = -feedb_oldCoeff[j] / todo;
-        feedb_newCoeffStep[j] = State->Early.Coeff[j][1] / todo;
+        feedb_oldCoeffStep[j] = -feedb_oldCoeff[j] / FADE_SAMPLES;
+        feedb_newCoeffStep[j] = State->Early.Coeff[j][1] / FADE_SAMPLES;
     }
     late_feed_tap = offset - State->LateFeedTap;
+    fadeCount = fade * FADE_SAMPLES;
     for(i = 0;i < todo;i++)
     {
         ALfloat f[NUM_LINES];
@@ -1563,14 +1568,14 @@ static void EarlyReflection_Faded(ALreverbState *State, const ALsizei todo, ALfl
         DelayLineIn4Rev(&early_delay, offset, f);
         for(j = 0;j < NUM_LINES;j++)
         {
-            const ALfloat fade0 = feedb_oldCoeff[j] + feedb_oldCoeffStep[j]*i;
-            const ALfloat fade1 = feedb_newCoeffStep[j]*i;
+            const ALfloat fade0 = feedb_oldCoeff[j] + feedb_oldCoeffStep[j]*fadeCount;
+            const ALfloat fade1 = feedb_newCoeffStep[j]*fadeCount;
             f[j] += FadedDelayLineOut(&early_delay,
                 feedb_tap[j][0]++, feedb_tap[j][1]++, j, fade0, fade1
             );
             out[j][i] = f[j];
         }
-        fade += FadeStep;
+        fadeCount += 1.0f;
 
         VectorScatterRevDelayIn(&main_delay, late_feed_tap++, f, mixX, mixY);
         offset++;
@@ -1678,8 +1683,8 @@ static void LateReverb_Faded(ALreverbState *State, const ALsizei todo, ALfloat f
     const DelayLineI main_delay = State->Delay;
     const ALfloat oldDensityGain = State->Late.DensityGain[0];
     const ALfloat densityGain = State->Late.DensityGain[1];
-    const ALfloat oldDensityStep = -oldDensityGain / todo;
-    const ALfloat densityStep = densityGain / todo;
+    const ALfloat oldDensityStep = -oldDensityGain / FADE_SAMPLES;
+    const ALfloat densityStep = densityGain / FADE_SAMPLES;
     const ALfloat mixX = State->MixX;
     const ALfloat mixY = State->MixY;
     ALsizei offset = State->Offset;
@@ -1693,17 +1698,19 @@ static void LateReverb_Faded(ALreverbState *State, const ALsizei todo, ALfloat f
         ALsizei late_delay_tap1 = offset - State->LateDelayTap[j][1];
         ALsizei late_feedb_tap0 = offset - State->Late.Offset[j][0];
         ALsizei late_feedb_tap1 = offset - State->Late.Offset[j][1];
+        ALfloat fadeCount = fade * FADE_SAMPLES;
         ALfloat fader = fade;
         for(i = 0;i < todo;i++)
         {
-            const ALfloat fade0 = oldDensityGain + oldDensityStep*i;
-            const ALfloat fade1 = densityStep*i;
+            const ALfloat fade0 = oldDensityGain + oldDensityStep*fadeCount;
+            const ALfloat fade1 = densityStep*fadeCount;
             temps[j][i] =
                 FadedDelayLineOut(&main_delay, late_delay_tap0++, late_delay_tap1++, j,
                     fade0, fade1) +
                 FadedDelayLineOut(&late_delay, late_feedb_tap0++, late_feedb_tap1++, j,
                     1.0f-fader, fader);
             fader += FadeStep;
+            fadeCount += 1.0f;
         }
         LateT60Filter(temps[j], todo, &State->Late.T60[j]);
     }
@@ -1729,7 +1736,6 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
     ALfloat (*restrict afmt)[MAX_UPDATE_SAMPLES] = State->TempSamples;
     ALfloat (*restrict samples)[MAX_UPDATE_SAMPLES] = State->MixSamples;
     ALsizei fadeCount = State->FadeCount;
-    ALfloat fade = (ALfloat)fadeCount / FADE_SAMPLES;
     ALsizei base, c;
 
     /* Process reverb for these samples. */
@@ -1760,6 +1766,8 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
 
         if(UNLIKELY(fadeCount < FADE_SAMPLES))
         {
+            ALfloat fade = (ALfloat)fadeCount / FADE_SAMPLES;
+
             /* Generate early reflections. */
             EarlyReflection_Faded(State, todo, fade, samples);
             /* Mix the A-Format results to output, implicitly converting back
@@ -1779,30 +1787,24 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
                     SamplesToDo-base, base, todo
                 );
 
-            for(c = 0;c < NUM_LINES;c++)
-            {
-                State->EarlyDelayCoeff[c][0] = State->EarlyDelayCoeff[c][1];
-                State->Early.Coeff[c][0] = State->Early.Coeff[c][1];
-            }
-            State->Late.DensityGain[0] = State->Late.DensityGain[1];
-
             /* Step fading forward. */
-            fade += todo*FadeStep;
             fadeCount += todo;
             if(LIKELY(fadeCount >= FADE_SAMPLES))
             {
                 /* Update the cross-fading delay line taps. */
                 fadeCount = FADE_SAMPLES;
-                fade = 1.0f;
                 for(c = 0;c < NUM_LINES;c++)
                 {
                     State->EarlyDelayTap[c][0] = State->EarlyDelayTap[c][1];
+                    State->EarlyDelayCoeff[c][0] = State->EarlyDelayCoeff[c][1];
                     State->Early.VecAp.Offset[c][0] = State->Early.VecAp.Offset[c][1];
                     State->Early.Offset[c][0] = State->Early.Offset[c][1];
+                    State->Early.Coeff[c][0] = State->Early.Coeff[c][1];
                     State->LateDelayTap[c][0] = State->LateDelayTap[c][1];
                     State->Late.VecAp.Offset[c][0] = State->Late.VecAp.Offset[c][1];
                     State->Late.Offset[c][0] = State->Late.Offset[c][1];
                 }
+                State->Late.DensityGain[0] = State->Late.DensityGain[1];
             }
         }
         else

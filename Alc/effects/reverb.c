@@ -1444,7 +1444,7 @@ static void VectorAllpass_Faded(ALfloat (*restrict samples)[MAX_UPDATE_SAMPLES],
  * Two static specializations are used for transitional (cross-faded) delay
  * line processing and non-transitional processing.
  */
-static void EarlyReflection_Unfaded(ALreverbState *State, const ALsizei todo,
+static void EarlyReflection_Unfaded(ALreverbState *State, ALsizei offset, const ALsizei todo,
                                     ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
 {
     ALfloat (*restrict temps)[MAX_UPDATE_SAMPLES] = State->TempSamples;
@@ -1454,7 +1454,6 @@ static void EarlyReflection_Unfaded(ALreverbState *State, const ALsizei todo,
     ALfloat early_feedb_coeff[NUM_LINES];
     const ALfloat mixX = State->MixX;
     const ALfloat mixY = State->MixY;
-    ALsizei offset = State->Offset;
     ALsizei late_feed_tap;
     ALsizei i, j;
 
@@ -1507,8 +1506,8 @@ static void EarlyReflection_Unfaded(ALreverbState *State, const ALsizei todo,
         offset++;
     }
 }
-static void EarlyReflection_Faded(ALreverbState *State, const ALsizei todo, ALfloat fade,
-                                  ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
+static void EarlyReflection_Faded(ALreverbState *State, ALsizei offset, const ALsizei todo,
+                                  const ALfloat fade, ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
 {
     ALfloat (*restrict temps)[MAX_UPDATE_SAMPLES] = State->TempSamples;
     const DelayLineI early_delay = State->Early.Delay;
@@ -1519,7 +1518,6 @@ static void EarlyReflection_Faded(ALreverbState *State, const ALsizei todo, ALfl
     ALfloat feedb_newCoeffStep[NUM_LINES];
     const ALfloat mixX = State->MixX;
     const ALfloat mixY = State->MixY;
-    ALsizei offset = State->Offset;
     ALsizei late_feed_tap;
     ALfloat fadeCount;
     ALsizei i, j;
@@ -1627,7 +1625,7 @@ static inline void LateT60Filter(ALfloat *restrict samples, const ALsizei todo, 
  * Two variations are made, one for for transitional (cross-faded) delay line
  * processing and one for non-transitional processing.
  */
-static void LateReverb_Unfaded(ALreverbState *State, const ALsizei todo,
+static void LateReverb_Unfaded(ALreverbState *State, ALsizei offset, const ALsizei todo,
                                ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
 {
     ALfloat (*restrict temps)[MAX_UPDATE_SAMPLES] = State->TempSamples;
@@ -1636,7 +1634,6 @@ static void LateReverb_Unfaded(ALreverbState *State, const ALsizei todo,
     const ALfloat densityGain = State->Late.DensityGain[0];
     const ALfloat mixX = State->MixX;
     const ALfloat mixY = State->MixY;
-    ALsizei offset = State->Offset;
     ALsizei i, j;
 
     ASSUME(todo > 0);
@@ -1675,8 +1672,8 @@ static void LateReverb_Unfaded(ALreverbState *State, const ALsizei todo,
         offset++;
     }
 }
-static void LateReverb_Faded(ALreverbState *State, const ALsizei todo, ALfloat fade,
-                             ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
+static void LateReverb_Faded(ALreverbState *State, ALsizei offset, const ALsizei todo,
+                             const ALfloat fade, ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
 {
     ALfloat (*restrict temps)[MAX_UPDATE_SAMPLES] = State->TempSamples;
     const DelayLineI late_delay = State->Late.Delay;
@@ -1687,7 +1684,6 @@ static void LateReverb_Faded(ALreverbState *State, const ALsizei todo, ALfloat f
     const ALfloat densityStep = densityGain / FADE_SAMPLES;
     const ALfloat mixX = State->MixX;
     const ALfloat mixY = State->MixY;
-    ALsizei offset = State->Offset;
     ALsizei i, j;
 
     ASSUME(todo > 0);
@@ -1736,6 +1732,7 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
     ALfloat (*restrict afmt)[MAX_UPDATE_SAMPLES] = State->TempSamples;
     ALfloat (*restrict samples)[MAX_UPDATE_SAMPLES] = State->MixSamples;
     ALsizei fadeCount = State->FadeCount;
+    ALsizei offset = State->Offset;
     ALsizei base, c;
 
     /* Process reverb for these samples. */
@@ -1761,7 +1758,7 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
             BiquadFilter_process(&State->Filter[c].Hp, samples[1], samples[0], todo);
 
             /* Feed the initial delay line. */
-            DelayLineIn(&State->Delay, State->Offset, c, samples[1], todo);
+            DelayLineIn(&State->Delay, offset, c, samples[1], todo);
         }
 
         if(UNLIKELY(fadeCount < FADE_SAMPLES))
@@ -1769,7 +1766,7 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
             ALfloat fade = (ALfloat)fadeCount / FADE_SAMPLES;
 
             /* Generate early reflections. */
-            EarlyReflection_Faded(State, todo, fade, samples);
+            EarlyReflection_Faded(State, offset, todo, fade, samples);
             /* Mix the A-Format results to output, implicitly converting back
              * to B-Format.
              */
@@ -1780,7 +1777,7 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
                 );
 
             /* Generate and mix late reverb. */
-            LateReverb_Faded(State, todo, fade, samples);
+            LateReverb_Faded(State, offset, todo, fade, samples);
             for(c = 0;c < NUM_LINES;c++)
                 MixSamples(samples[c], NumChannels, SamplesOut,
                     State->Late.CurrentGain[c], State->Late.PanGain[c],
@@ -1810,7 +1807,7 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
         else
         {
             /* Generate and mix early reflections. */
-            EarlyReflection_Unfaded(State, todo, samples);
+            EarlyReflection_Unfaded(State, offset, todo, samples);
             for(c = 0;c < NUM_LINES;c++)
                 MixSamples(samples[c], NumChannels, SamplesOut,
                     State->Early.CurrentGain[c], State->Early.PanGain[c],
@@ -1818,7 +1815,7 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
                 );
 
             /* Generate and mix late reverb. */
-            LateReverb_Unfaded(State, todo, samples);
+            LateReverb_Unfaded(State, offset, todo, samples);
             for(c = 0;c < NUM_LINES;c++)
                 MixSamples(samples[c], NumChannels, SamplesOut,
                     State->Late.CurrentGain[c], State->Late.PanGain[c],
@@ -1827,10 +1824,11 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
         }
 
         /* Step all delays forward. */
-        State->Offset += todo;
+        offset += todo;
 
         base += todo;
     }
+    State->Offset = offset;
     State->FadeCount = fadeCount;
 }
 

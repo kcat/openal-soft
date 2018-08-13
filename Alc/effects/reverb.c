@@ -232,12 +232,7 @@ typedef struct T60Filter {
      * frequencies, and one to control the high frequencies. The HF filter also
      * adjusts the overall output gain, affecting the remaining mid-band.
      */
-    ALfloat HFCoeffs[3];
-    ALfloat LFCoeffs[3];
-
-    /* The HF and LF filters each keep a delay component. */
-    ALfloat HFState;
-    ALfloat LFState;
+    BiquadFilter HFFilter, LFFilter;
 } T60Filter;
 
 typedef struct EarlyReflections {
@@ -400,13 +395,8 @@ static void ALreverbState_Construct(ALreverbState *state)
         state->Late.VecAp.Offset[i][0] = 0;
         state->Late.VecAp.Offset[i][1] = 0;
 
-        for(j = 0;j < 3;j++)
-        {
-            state->Late.T60[i].HFCoeffs[j] = 0.0f;
-            state->Late.T60[i].LFCoeffs[j] = 0.0f;
-        }
-        state->Late.T60[i].HFState = 0.0f;
-        state->Late.T60[i].LFState = 0.0f;
+        BiquadFilter_clear(&state->Late.T60[i].HFFilter);
+        BiquadFilter_clear(&state->Late.T60[i].LFFilter);
     }
 
     for(i = 0;i < NUM_LINES;i++)
@@ -648,284 +638,27 @@ static ALfloat CalcLimitedHfRatio(const ALfloat hfRatio, const ALfloat airAbsorp
     return minf(limitRatio, hfRatio);
 }
 
-/* Calculates the first-order high-pass coefficients following the I3DL2
- * reference model.  This is the transfer function:
- *
- *                1 - z^-1
- *     H(z) = p ------------
- *               1 - p z^-1
- *
- * And this is the I3DL2 coefficient calculation given gain (g) and reference
- * angular frequency (w):
- *
- *                                    g
- *      p = ------------------------------------------------------
- *          g cos(w) + sqrt((cos(w) - 1) (g^2 cos(w) + g^2 - 2))
- *
- * The coefficient is applied to the partial differential filter equation as:
- *
- *     c_0 = p
- *     c_1 = -p
- *     c_2 = p
- *     y_i = c_0 x_i + c_1 x_(i-1) + c_2 y_(i-1)
- *
- */
-static inline void CalcHighpassCoeffs(const ALfloat gain, const ALfloat w, ALfloat coeffs[3])
-{
-    ALfloat g, g2, cw, p;
-
-    if(gain >= 1.0f)
-    {
-        coeffs[0] = 1.0f;
-        coeffs[1] = 0.0f;
-        coeffs[2] = 0.0f;
-        return;
-    }
-
-    g = maxf(0.001f, gain);
-    g2 = g * g;
-    cw = cosf(w);
-    p = g / (g*cw + sqrtf((cw - 1.0f) * (g2*cw + g2 - 2.0f)));
-
-    coeffs[0] = p;
-    coeffs[1] = -p;
-    coeffs[2] = p;
-}
-
-/* Calculates the first-order low-pass coefficients following the I3DL2
- * reference model.  This is the transfer function:
- *
- *              (1 - a) z^0
- *     H(z) = ----------------
- *             1 z^0 - a z^-1
- *
- * And this is the I3DL2 coefficient calculation given gain (g) and reference
- * angular frequency (w):
- *
- *          1 - g^2 cos(w) - sqrt(2 g^2 (1 - cos(w)) - g^4 (1 - cos(w)^2))
- *     a = ----------------------------------------------------------------
- *                                    1 - g^2
- *
- * The coefficient is applied to the partial differential filter equation as:
- *
- *     c_0 = 1 - a
- *     c_1 = 0
- *     c_2 = a
- *     y_i = c_0 x_i + c_1 x_(i-1) + c_2 y_(i-1)
- *
- */
-static inline void CalcLowpassCoeffs(const ALfloat gain, const ALfloat w, ALfloat coeffs[3])
-{
-    ALfloat g, g2, cw, a;
-
-    if(gain >= 1.0f)
-    {
-        coeffs[0] = 1.0f;
-        coeffs[1] = 0.0f;
-        coeffs[2] = 0.0f;
-        return;
-    }
-
-    /* Be careful with gains < 0.001, as that causes the coefficient
-     * to head towards 1, which will flatten the signal. */
-    g = maxf(0.001f, gain);
-    g2 = g * g;
-    cw = cosf(w);
-    a = (1.0f - g2*cw - sqrtf((2.0f*g2*(1.0f - cw)) - g2*g2*(1.0f - cw*cw))) /
-        (1.0f - g2);
-
-    coeffs[0] = 1.0f - a;
-    coeffs[1] = 0.0f;
-    coeffs[2] = a;
-}
-
-/* Calculates the first-order low-shelf coefficients.  The shelf filters are
- * used in place of low/high-pass filters to preserve the mid-band.  This is
- * the transfer function:
- *
- *             a_0 + a_1 z^-1
- *     H(z) = ----------------
- *              1 + b_1 z^-1
- *
- * And these are the coefficient calculations given cut gain (g) and a center
- * angular frequency (w):
- *
- *          sin(0.5 (pi - w) - 0.25 pi)
- *     p = -----------------------------
- *          sin(0.5 (pi - w) + 0.25 pi)
- *
- *          g + 1           g + 1
- *     a = ------- + sqrt((-------)^2 - 1)
- *          g - 1           g - 1
- *
- *            1 + g + (1 - g) a
- *     b_0 = -------------------
- *                    2
- *
- *            1 - g + (1 + g) a
- *     b_1 = -------------------
- *                    2
- *
- * The coefficients are applied to the partial differential filter equation
- * as:
- *
- *            b_0 + p b_1
- *     c_0 = -------------
- *              1 + p a
- *
- *            -(b_1 + p b_0)
- *     c_1 = ----------------
- *               1 + p a
- *
- *             p + a
- *     c_2 = ---------
- *            1 + p a
- *
- *     y_i = c_0 x_i + c_1 x_(i-1) + c_2 y_(i-1)
- *
- */
-static inline void CalcLowShelfCoeffs(const ALfloat gain, const ALfloat w, ALfloat coeffs[3])
-{
-    ALfloat g, rw, p, n;
-    ALfloat alpha, beta0, beta1;
-
-    if(gain >= 1.0f)
-    {
-        coeffs[0] = 1.0f;
-        coeffs[1] = 0.0f;
-        coeffs[2] = 0.0f;
-        return;
-    }
-
-    g = maxf(0.001f, gain);
-    rw = F_PI - w;
-    p = sinf(0.5f*rw - 0.25f*F_PI) / sinf(0.5f*rw + 0.25f*F_PI);
-    n = (g + 1.0f) / (g - 1.0f);
-    alpha = n + sqrtf(n*n - 1.0f);
-    beta0 = (1.0f + g + (1.0f - g)*alpha) / 2.0f;
-    beta1 = (1.0f - g + (1.0f + g)*alpha) / 2.0f;
-
-    coeffs[0] = (beta0 + p*beta1) / (1.0f + p*alpha);
-    coeffs[1] = -(beta1 + p*beta0) / (1.0f + p*alpha);
-    coeffs[2] = (p + alpha) / (1.0f + p*alpha);
-}
-
-/* Calculates the first-order high-shelf coefficients.  The shelf filters are
- * used in place of low/high-pass filters to preserve the mid-band.  This is
- * the transfer function:
- *
- *             a_0 + a_1 z^-1
- *     H(z) = ----------------
- *              1 + b_1 z^-1
- *
- * And these are the coefficient calculations given cut gain (g) and a center
- * angular frequency (w):
- *
- *          sin(0.5 w - 0.25 pi)
- *     p = ----------------------
- *          sin(0.5 w + 0.25 pi)
- *
- *          g + 1           g + 1
- *     a = ------- + sqrt((-------)^2 - 1)
- *          g - 1           g - 1
- *
- *            1 + g + (1 - g) a
- *     b_0 = -------------------
- *                    2
- *
- *            1 - g + (1 + g) a
- *     b_1 = -------------------
- *                    2
- *
- * The coefficients are applied to the partial differential filter equation
- * as:
- *
- *            b_0 + p b_1
- *     c_0 = -------------
- *              1 + p a
- *
- *            b_1 + p b_0
- *     c_1 = -------------
- *              1 + p a
- *
- *            -(p + a)
- *     c_2 = ----------
- *            1 + p a
- *
- *     y_i = c_0 x_i + c_1 x_(i-1) + c_2 y_(i-1)
- *
- */
-static inline void CalcHighShelfCoeffs(const ALfloat gain, const ALfloat w, ALfloat coeffs[3])
-{
-    ALfloat g, p, n;
-    ALfloat alpha, beta0, beta1;
-
-    if(gain >= 1.0f)
-    {
-        coeffs[0] = 1.0f;
-        coeffs[1] = 0.0f;
-        coeffs[2] = 0.0f;
-        return;
-    }
-
-    g = maxf(0.001f, gain);
-    p = sinf(0.5f*w - 0.25f*F_PI) / sinf(0.5f*w + 0.25f*F_PI);
-    n = (g + 1.0f) / (g - 1.0f);
-    alpha = n + sqrtf(n*n - 1.0f);
-    beta0 = (1.0f + g + (1.0f - g)*alpha) / 2.0f;
-    beta1 = (1.0f - g + (1.0f + g)*alpha) / 2.0f;
-
-    coeffs[0] = (beta0 + p*beta1) / (1.0f + p*alpha);
-    coeffs[1] = (beta1 + p*beta0) / (1.0f + p*alpha);
-    coeffs[2] = -(p + alpha) / (1.0f + p*alpha);
-}
 
 /* Calculates the 3-band T60 damping coefficients for a particular delay line
- * of specified length using a combination of two low/high-pass/shelf or
- * pass-through filter sections (producing 3 coefficients each) given decay
- * times for each band split at two (LF/HF) reference frequencies (w).
+ * of specified length, using a combination of two shelf filter sections given
+ * decay times for each band split at two reference frequencies.
  */
 static void CalcT60DampingCoeffs(const ALfloat length, const ALfloat lfDecayTime,
                                  const ALfloat mfDecayTime, const ALfloat hfDecayTime,
-                                 const ALfloat lfW, const ALfloat hfW, ALfloat lfcoeffs[3],
-                                 ALfloat hfcoeffs[3])
+                                 const ALfloat lf0norm, const ALfloat hf0norm,
+                                 T60Filter *filter)
 {
     ALfloat lfGain = CalcDecayCoeff(length, lfDecayTime);
     ALfloat mfGain = CalcDecayCoeff(length, mfDecayTime);
     ALfloat hfGain = CalcDecayCoeff(length, hfDecayTime);
 
-    if(lfGain <= mfGain)
-    {
-        CalcHighpassCoeffs(lfGain / mfGain, lfW, lfcoeffs);
-        if(mfGain >= hfGain)
-        {
-            CalcLowpassCoeffs(hfGain / mfGain, hfW, hfcoeffs);
-            hfcoeffs[0] *= mfGain; hfcoeffs[1] *= mfGain;
-        }
-        else
-        {
-            CalcLowShelfCoeffs(mfGain / hfGain, hfW, hfcoeffs);
-            hfcoeffs[0] *= hfGain; hfcoeffs[1] *= hfGain;
-        }
-    }
-    else
-    {
-        CalcHighShelfCoeffs(mfGain / lfGain, lfW, lfcoeffs);
-        if(mfGain >= hfGain)
-        {
-            CalcLowpassCoeffs(hfGain / mfGain, hfW, hfcoeffs);
-            hfcoeffs[0] *= lfGain; hfcoeffs[1] *= lfGain;
-        }
-        else
-        {
-            ALfloat hg = mfGain / lfGain;
-            ALfloat lg = mfGain / hfGain;
-            ALfloat mg = maxf(lfGain, hfGain) / maxf(hg, lg);
-
-            CalcLowShelfCoeffs(lg, hfW, hfcoeffs);
-            hfcoeffs[0] *= mg; hfcoeffs[1] *= mg;
-        }
-    }
+    BiquadFilter_setParams(&filter->LFFilter, BiquadType_LowShelf, lfGain/mfGain, lf0norm,
+                           calc_rcpQ_from_slope(lfGain/mfGain, 1.0f));
+    BiquadFilter_setParams(&filter->HFFilter, BiquadType_HighShelf, hfGain/mfGain, hf0norm,
+                           calc_rcpQ_from_slope(hfGain/mfGain, 1.0f));
+    filter->HFFilter.b0 *= mfGain;
+    filter->HFFilter.b1 *= mfGain;
+    filter->HFFilter.b2 *= mfGain;
 }
 
 /* Update the offsets for the main effect delay line. */
@@ -1064,8 +797,7 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
 
         /* Calculate the T60 damping coefficients for each line. */
         CalcT60DampingCoeffs(length, lfDecayTime, mfDecayTime, hfDecayTime,
-                             lf0norm*F_TAU, hf0norm*F_TAU, Late->T60[i].LFCoeffs,
-                             Late->T60[i].HFCoeffs);
+                             lf0norm, hf0norm, &Late->T60[i]);
     }
 }
 
@@ -1583,32 +1315,9 @@ static void EarlyReflection_Faded(ALreverbState *State, ALsizei offset, const AL
 /* Applies the two T60 damping filter sections. */
 static inline void LateT60Filter(ALfloat *restrict samples, const ALsizei todo, T60Filter *filter)
 {
-    const ALfloat hfb0 = filter->HFCoeffs[0];
-    const ALfloat hfb1 = filter->HFCoeffs[1];
-    const ALfloat hfa1 = filter->HFCoeffs[2];
-    const ALfloat lfb0 = filter->LFCoeffs[0];
-    const ALfloat lfb1 = filter->LFCoeffs[1];
-    const ALfloat lfa1 = filter->LFCoeffs[2];
-    ALfloat hfz = filter->HFState;
-    ALfloat lfz = filter->LFState;
-    ALsizei i;
-
-    ASSUME(todo > 0);
-
-    for(i = 0;i < todo;i++)
-    {
-        ALfloat in = samples[i];
-        ALfloat out = in*hfb0 + hfz;
-        hfz = in*hfb1 + out*hfa1;
-
-        in = out;
-        out = in*lfb0 + lfz;
-        lfz = in*lfb1 + out*lfa1;
-
-        samples[i] = out;
-    }
-    filter->HFState = hfz;
-    filter->LFState = lfz;
+    ALfloat temp[MAX_UPDATE_SAMPLES];
+    BiquadFilter_process(&filter->HFFilter, temp, samples, todo);
+    BiquadFilter_process(&filter->LFFilter, samples, temp, todo);
 }
 
 /* This generates the reverb tail using a modified feed-back delay network

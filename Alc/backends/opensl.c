@@ -1039,7 +1039,7 @@ static void ALCopenslBackendFactory_probe(ALCopenslBackendFactory* UNUSED(self),
             break;
 
         case CAPTURE_DEVICE_PROBE:
-            AppendAllDevicesList(opensl_device);
+            AppendCaptureDeviceList(opensl_device);
             break;
     }
 }

@@ -122,7 +122,7 @@ static ALvoid ALautowahState_update(ALautowahState *state, const ALCcontext *con
     state->AttackRate    = expf(-1.0f / (props->Autowah.AttackTime*device->Frequency));
     state->ReleaseRate   = expf(-1.0f / (ReleaseTime*device->Frequency));
     /* 0-20dB Resonance Peak gain */
-    state->ResonanceGain = log10f(props->Autowah.Resonance)*10.0f / 3.0f;
+    state->ResonanceGain = sqrtf(log10f(props->Autowah.Resonance)*10.0f / 3.0f);
     state->PeakGain      = 1.0f - log10f(props->Autowah.PeakGain/AL_AUTOWAH_MAX_PEAK_GAIN);
     state->FreqMinNorm   = MIN_FREQ / device->Frequency;
     state->BandwidthNorm = (MAX_FREQ-MIN_FREQ) / device->Frequency;
@@ -136,9 +136,10 @@ static ALvoid ALautowahState_update(ALautowahState *state, const ALCcontext *con
 
 static ALvoid ALautowahState_process(ALautowahState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    const ALfloat peak_gain = state->PeakGain;
     const ALfloat attack_rate = state->AttackRate;
     const ALfloat release_rate = state->ReleaseRate;
+    const ALfloat res_gain = state->ResonanceGain;
+    const ALfloat peak_gain = state->PeakGain;
     const ALfloat freq_min = state->FreqMinNorm;
     const ALfloat bandwidth = state->BandwidthNorm;
     ALfloat env_delay;
@@ -171,7 +172,6 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALsizei SamplesToDo,
          * envelope. Because the filter changes for each sample, the
          * coefficients are transient and don't need to be held.
          */
-        const ALfloat res_gain = sqrtf(state->ResonanceGain);
         ALfloat z1 = state->Chans[c].Filter.z1;
         ALfloat z2 = state->Chans[c].Filter.z2;
 

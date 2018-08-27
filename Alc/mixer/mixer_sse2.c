@@ -49,7 +49,7 @@ const ALfloat *Resample_lerp_SSE2(const InterpState* UNUSED(state),
 
     for(i = 0;numsamples-i > 3;i += 4)
     {
-        const __m128 val1 = _mm_setr_ps(src[pos_.i[0]], src[pos_.i[1]], src[pos_.i[2]], src[pos_.i[3]]);
+        const __m128 val1 = _mm_setr_ps(src[pos_.i[0]  ], src[pos_.i[1]  ], src[pos_.i[2]  ], src[pos_.i[3]  ]);
         const __m128 val2 = _mm_setr_ps(src[pos_.i[0]+1], src[pos_.i[1]+1], src[pos_.i[2]+1], src[pos_.i[3]+1]);
 
         /* val1 + (val2-val1)*mu */
@@ -63,7 +63,10 @@ const ALfloat *Resample_lerp_SSE2(const InterpState* UNUSED(state),
         pos4 = _mm_add_epi32(pos4, _mm_srli_epi32(frac4, FRACTIONBITS));
         frac4 = _mm_and_si128(frac4, fracMask4);
 
-        _mm_store_ps(pos_.f, _mm_castsi128_ps(pos4));
+        pos_.i[0] = _mm_cvtsi128_si32(_mm_shuffle_epi32(pos4, _MM_SHUFFLE(0, 0, 0, 0)));
+        pos_.i[1] = _mm_cvtsi128_si32(_mm_shuffle_epi32(pos4, _MM_SHUFFLE(1, 1, 1, 1)));
+        pos_.i[2] = _mm_cvtsi128_si32(_mm_shuffle_epi32(pos4, _MM_SHUFFLE(2, 2, 2, 2)));
+        pos_.i[3] = _mm_cvtsi128_si32(_mm_shuffle_epi32(pos4, _MM_SHUFFLE(3, 3, 3, 3)));
     }
 
     /* NOTE: These four elements represent the position *after* the last four

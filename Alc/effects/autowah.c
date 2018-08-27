@@ -153,7 +153,7 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALsizei SamplesToDo,
         env_delay = lerp(sample, env_delay, a);
 
         /* Calculate the cos and alpha components for this sample's filter. */
-        w0 = minf((bandwidth*env_delay + freq_min), 0.49f) * F_TAU;
+        w0 = minf((bandwidth*env_delay + freq_min), 0.46f) * F_TAU;
         state->CosW0[i] = cosf(w0);
         state->Alpha[i] = sinf(w0)/(2.0f * Q_FACTOR);
     }

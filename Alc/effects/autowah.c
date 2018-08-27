@@ -46,8 +46,10 @@ typedef struct ALautowahState {
     ALfloat env_delay;
 
     /* Filter components derived from the envelope. */
-    ALfloat Alpha[BUFFERSIZE];
-    ALfloat CosW0[BUFFERSIZE];
+    struct {
+        ALfloat cos_w0;
+        ALfloat alpha;
+    } Env[BUFFERSIZE];
 
     struct {
         /* Effect filters' history. */
@@ -95,6 +97,8 @@ static ALboolean ALautowahState_deviceUpdate(ALautowahState *state, ALCdevice *U
     state->FreqMinNorm   = 4.5e-4f;
     state->BandwidthNorm = 0.05f;
     state->env_delay     = 0.0f;
+
+    memset(state->Env, 0, sizeof(state->Env));
 
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
     {
@@ -154,8 +158,8 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALsizei SamplesToDo,
 
         /* Calculate the cos and alpha components for this sample's filter. */
         w0 = minf((bandwidth*env_delay + freq_min), 0.46f) * F_TAU;
-        state->CosW0[i] = cosf(w0);
-        state->Alpha[i] = sinf(w0)/(2.0f * Q_FACTOR);
+        state->Env[i].cos_w0 = cosf(w0);
+        state->Env[i].alpha = sinf(w0)/(2.0f * Q_FACTOR);
     }
     state->env_delay = env_delay;
 
@@ -173,8 +177,8 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALsizei SamplesToDo,
 
         for(i = 0;i < SamplesToDo;i++)
         {
-            const ALfloat alpha = state->Alpha[i];
-            const ALfloat cos_w0 = state->CosW0[i];
+            const ALfloat alpha = state->Env[i].alpha;
+            const ALfloat cos_w0 = state->Env[i].cos_w0;
             ALfloat input, output;
             ALfloat a[3], b[3];
 

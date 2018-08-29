@@ -648,10 +648,12 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALflo
                 voice->Flags |= VOICE_HAS_NFC;
             }
 
-            if(Device->Render_Mode == StereoPair)
-                CalcAnglePairwiseCoeffs(Azi, Elev, Spread, coeffs);
-            else
-                CalcAngleCoeffs(Azi, Elev, Spread, coeffs);
+            /* A scalar of 3 for plain stereo results in +/-30 degrees being
+             * moved to +/-90 degrees for direct right and left speaker
+             * responses.
+             */
+            CalcAngleCoeffs((Device->Render_Mode==StereoPair) ? ScaleAzimuthFront(Azi, 3.0f) : Azi,
+                            Elev, Spread, coeffs);
 
             /* NOTE: W needs to be scaled by sqrt(2) due to FuMa normalization. */
             ComputeDryPanGains(&Device->Dry, coeffs, DryGain*1.414213562f,
@@ -895,10 +897,8 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALflo
             /* Calculate the directional coefficients once, which apply to all
              * input channels.
              */
-            if(Device->Render_Mode == StereoPair)
-                CalcAnglePairwiseCoeffs(Azi, Elev, Spread, coeffs);
-            else
-                CalcAngleCoeffs(Azi, Elev, Spread, coeffs);
+            CalcAngleCoeffs((Device->Render_Mode==StereoPair) ? ScaleAzimuthFront(Azi, 3.0f) : Azi,
+                            Elev, Spread, coeffs);
 
             for(c = 0;c < num_channels;c++)
             {
@@ -970,14 +970,15 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALflo
                     continue;
                 }
 
-                if(Device->Render_Mode == StereoPair)
-                    CalcAnglePairwiseCoeffs(chans[c].angle, chans[c].elevation, Spread, coeffs);
-                else
-                    CalcAngleCoeffs(chans[c].angle, chans[c].elevation, Spread, coeffs);
+                CalcAngleCoeffs(
+                    (Device->Render_Mode==StereoPair) ? ScaleAzimuthFront(chans[c].angle, 3.0f)
+                                                      : chans[c].angle,
+                    chans[c].elevation, Spread, coeffs
+                );
+
                 ComputeDryPanGains(&Device->Dry,
                     coeffs, DryGain, voice->Direct.Params[c].Gains.Target
                 );
-
                 for(i = 0;i < NumSends;i++)
                 {
                     const ALeffectslot *Slot = SendSlots[i];

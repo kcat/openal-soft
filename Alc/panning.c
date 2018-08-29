@@ -40,6 +40,7 @@
 
 extern inline void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
 extern inline void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
+extern inline float ScaleAzimuthFront(float azimuth, float scale);
 extern inline void ComputeDryPanGains(const DryMixParams *dry, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 extern inline void ComputeFirstOrderGains(const BFMixParams *foa, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
@@ -148,14 +149,6 @@ void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALf
         coeffs[14] *= ZH3_norm;
         coeffs[15] *= ZH3_norm;
     }
-}
-
-void CalcAnglePairwiseCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS])
-{
-    ALfloat sign = (azimuth < 0.0f) ? -1.0f : 1.0f;
-    if(!(fabsf(azimuth) > F_PI_2))
-        azimuth = minf(fabsf(azimuth) * F_PI_2 / (F_PI/6.0f), F_PI_2) * sign;
-    CalcAngleCoeffs(azimuth, elevation, spread, coeffs);
 }
 
 

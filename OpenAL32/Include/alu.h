@@ -477,14 +477,18 @@ inline void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, 
 }
 
 /**
- * CalcAnglePairwiseCoeffs
+ * ScaleAzimuthFront
  *
- * Calculates ambisonic coefficients based on azimuth and elevation. The
- * azimuth and elevation parameters are in radians, going right and up
- * respectively. This pairwise variant warps the result such that +30 azimuth
- * is full right, and -30 azimuth is full left.
+ * Scales the given azimuth toward the side (+/- pi/2 radians) for positions in
+ * front.
  */
-void CalcAnglePairwiseCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
+inline float ScaleAzimuthFront(float azimuth, float scale)
+{
+    ALfloat sign = (azimuth < 0.0f) ? -1.0f : 1.0f;
+    if(!(fabsf(azimuth) > F_PI_2))
+        return minf(fabsf(azimuth) * scale, F_PI_2) * sign;
+    return azimuth;
+}
 
 
 void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, ALsizei numcoeffs, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);

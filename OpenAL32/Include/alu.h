@@ -484,7 +484,7 @@ inline void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, 
  */
 inline float ScaleAzimuthFront(float azimuth, float scale)
 {
-    ALfloat sign = (azimuth < 0.0f) ? -1.0f : 1.0f;
+    ALfloat sign = copysignf(1.0f, azimuth);
     if(!(fabsf(azimuth) > F_PI_2))
         return minf(fabsf(azimuth) * scale, F_PI_2) * sign;
     return azimuth;

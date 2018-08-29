@@ -98,6 +98,9 @@
 /* Define if we have the cbrtf function */
 #cmakedefine HAVE_CBRTF
 
+/* Define if we have the copysignf function */
+#cmakedefine HAVE_COPYSIGNF
+
 /* Define if we have the strtof function */
 #cmakedefine HAVE_STRTOF
 

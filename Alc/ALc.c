@@ -809,7 +809,7 @@ static inline void UnlockLists(void)
  * Library initialization
  ************************************************/
 #if defined(_WIN32)
-static void alc_init();(void);
+static void alc_init()(void);
 static void alc_deinit(void);
 static void alc_deinit_safe(void);
 

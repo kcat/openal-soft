@@ -48,6 +48,7 @@ static void LoadData(ALCcontext *context, ALbuffer *buffer, ALuint freq, ALsizei
                      const ALvoid *data, ALbitfieldSOFT access);
 static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans, enum UserFmtType *type);
 static ALsizei SanitizeAlignment(enum UserFmtType type, ALsizei align);
+AL_API void AL_APIENTRY alBufferStorageSOFT(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq, ALbitfieldSOFT flags);
 
 static inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
 {

@@ -57,6 +57,7 @@ ALboolean DisabledEffects[MAX_EFFECTS];
 static ALeffect *AllocEffect(ALCcontext *context);
 static void FreeEffect(ALCdevice *device, ALeffect *effect);
 static void InitEffectParams(ALeffect *effect, ALenum type);
+AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects);
 
 static inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
 {

@@ -509,10 +509,10 @@ static ALboolean AllocLines(const ALuint frequency, ALreverbState *State)
     totalSamples += CalcLineLength(length, totalSamples, frequency, 0,
                                    &State->Late.VecAp.Delay);
 
-    /* The late delay lines are calculated from the larger of the maximum
-     * density line length or the maximum echo time.
+    /* The late delay lines are calculated from the largest maximum density
+     * line length.
      */
-    length = maxf(AL_EAXREVERB_MAX_ECHO_TIME, LATE_LINE_LENGTHS[NUM_LINES-1]*multiplier);
+    length = LATE_LINE_LENGTHS[NUM_LINES-1] * multiplier;
     totalSamples += CalcLineLength(length, totalSamples, frequency, 0,
                                    &State->Late.Delay);
 
@@ -723,7 +723,7 @@ static ALvoid UpdateEarlyLines(const ALfloat density, const ALfloat diffusion, c
 }
 
 /* Update the late reverb line lengths and T60 coefficients. */
-static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, const ALfloat lfDecayTime, const ALfloat mfDecayTime, const ALfloat hfDecayTime, const ALfloat lf0norm, const ALfloat hf0norm, const ALfloat echoTime, const ALfloat echoDepth, const ALuint frequency, LateReverb *Late)
+static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, const ALfloat lfDecayTime, const ALfloat mfDecayTime, const ALfloat hfDecayTime, const ALfloat lf0norm, const ALfloat hf0norm, const ALuint frequency, LateReverb *Late)
 {
     /* Scaling factor to convert the normalized reference frequencies from
      * representing 0...freq to 0...max_reference.
@@ -743,8 +743,6 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
     multiplier = CalcDelayLengthMult(density);
     length = (LATE_LINE_LENGTHS[0] + LATE_LINE_LENGTHS[1] +
               LATE_LINE_LENGTHS[2] + LATE_LINE_LENGTHS[3]) / 4.0f * multiplier;
-    /* Include the echo transformation (see below). */
-    length = lerp(length, echoTime, echoDepth);
     length += (LATE_ALLPASS_LENGTHS[0] + LATE_ALLPASS_LENGTHS[1] +
                LATE_ALLPASS_LENGTHS[2] + LATE_ALLPASS_LENGTHS[3]) / 4.0f * multiplier;
     /* The density gain calculation uses an average decay time weighted by
@@ -771,12 +769,8 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
         /* Calculate the delay offset for each all-pass line. */
         Late->VecAp.Offset[i][1] = float2int(length * frequency);
 
-        /* Calculate the length (in seconds) of each delay line.  This also
-         * applies the echo transformation.  As the EAX echo depth approaches
-         * 1, the line lengths approach a length equal to the echoTime.  This
-         * helps to produce distinct echoes along the tail.
-         */
-        length = lerp(LATE_LINE_LENGTHS[i] * multiplier, echoTime, echoDepth);
+        /* Calculate the length (in seconds) of each delay line. */
+        length = LATE_LINE_LENGTHS[i] * multiplier;
 
         /* Calculate the delay offset for each delay line. */
         Late->Offset[i][1] = float2int(length*frequency + 0.5f);
@@ -945,7 +939,7 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
     /* Update the late lines. */
     UpdateLateLines(props->Reverb.Density, props->Reverb.Diffusion,
         lfDecayTime, props->Reverb.DecayTime, hfDecayTime, lf0norm, hf0norm,
-        props->Reverb.EchoTime, props->Reverb.EchoDepth, frequency, &State->Late
+        frequency, &State->Late
     );
 
     /* Update early and late 3D panning. */

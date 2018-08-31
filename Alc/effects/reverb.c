@@ -311,6 +311,9 @@ typedef struct ALreverbState {
     /* Indicates the cross-fade point for delay line reads [0,FADE_SAMPLES]. */
     ALsizei FadeCount;
 
+    /* Maximum number of samples to process at once. */
+    ALsizei MaxUpdate[2];
+
     /* The current write offset for all delay lines. */
     ALsizei Offset;
 
@@ -413,6 +416,8 @@ static void ALreverbState_Construct(ALreverbState *state)
     }
 
     state->FadeCount = 0;
+    state->MaxUpdate[0] = MAX_UPDATE_SAMPLES;
+    state->MaxUpdate[1] = MAX_UPDATE_SAMPLES;
     state->Offset = 0;
 }
 
@@ -774,11 +779,6 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
 
         /* Calculate the delay offset for each delay line. */
         Late->Offset[i][1] = float2int(length*frequency + 0.5f);
-        /* Late reverb is processed in chunks, so ensure the feedback delays
-         * are long enough to avoid needing to read what's written in a given
-         * update.
-         */
-        assert(Late->Offset[i][1] >= MAX_UPDATE_SAMPLES);
 
         /* Approximate the absorption that the vector all-pass would exhibit
          * given the current diffusion so we don't have to process a full T60
@@ -947,6 +947,9 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
     Update3DPanning(Device, props->Reverb.ReflectionsPan, props->Reverb.LateReverbPan,
                     props->Reverb.ReflectionsGain*gain, props->Reverb.LateReverbGain*gain,
                     State);
+
+    /* Calculate the max update size from the smallest relevant delay. */
+    State->MaxUpdate[1] = mini(MAX_UPDATE_SAMPLES, State->Late.Offset[0][1]);
 
     /* Determine if delay-line cross-fading is required. TODO: Add some fuzz
      * for the float comparisons? The math should be stable enough that the
@@ -1447,10 +1450,14 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
     /* Process reverb for these samples. */
     for(base = 0;base < SamplesToDo;)
     {
-        ALsizei todo = mini(SamplesToDo-base, MAX_UPDATE_SAMPLES);
+        ALsizei todo = SamplesToDo - base;
         /* If cross-fading, don't do more samples than there are to fade. */
         if(FADE_SAMPLES-fadeCount > 0)
+        {
             todo = mini(todo, FADE_SAMPLES-fadeCount);
+            todo = mini(todo, State->MaxUpdate[0]);
+        }
+        todo = mini(todo, State->MaxUpdate[1]);
 
         /* Convert B-Format to A-Format for processing. */
         memset(afmt, 0, sizeof(*afmt)*NUM_LINES);
@@ -1512,6 +1519,7 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
                     State->Late.T60[c].MidGain[0] = State->Late.T60[c].MidGain[1];
                 }
                 State->Late.DensityGain[0] = State->Late.DensityGain[1];
+                State->MaxUpdate[0] = State->MaxUpdate[1];
             }
         }
         else

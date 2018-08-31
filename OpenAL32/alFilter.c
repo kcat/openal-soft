@@ -37,6 +37,7 @@ extern inline void UnlockFilterList(ALCdevice *device);
 static ALfilter *AllocFilter(ALCcontext *context);
 static void FreeFilter(ALCdevice *device, ALfilter *filter);
 static void InitFilterParams(ALfilter *filter, ALenum type);
+AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, const ALuint *filters);
 
 static inline ALfilter *LookupFilter(ALCdevice *device, ALuint id)
 {

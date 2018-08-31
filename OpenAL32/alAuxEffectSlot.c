@@ -40,6 +40,7 @@ extern inline void UnlockEffectSlotList(ALCcontext *context);
 
 static void AddActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *context);
 static void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *context);
+AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *effectslots);
 
 static const struct {
     ALenum Type;

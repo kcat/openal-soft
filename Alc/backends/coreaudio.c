@@ -28,7 +28,16 @@
 #include "alu.h"
 #include "ringbuffer.h"
 
+#include "TargetConditionals.h"
+#if TARGET_OS_IPHONE
+#define COREAUDIO_MAC 0
+#else
+#define COREAUDIO_MAC 1
+#endif
+
+#if COREAUDIO_MAC
 #include <CoreServices/CoreServices.h>
+#endif
 #include <unistd.h>
 #include <AudioUnit/AudioUnit.h>
 #include <AudioToolbox/AudioToolbox.h>
@@ -112,7 +121,11 @@ static ALCenum ALCcoreAudioPlayback_open(ALCcoreAudioPlayback *self, const ALCch
 
     /* open the default output unit */
     desc.componentType = kAudioUnitType_Output;
+#if COREAUDIO_MAC
     desc.componentSubType = kAudioUnitSubType_DefaultOutput;
+#else
+    desc.componentSubType = kAudioUnitSubType_RemoteIO;
+#endif
     desc.componentManufacturer = kAudioUnitManufacturer_Apple;
     desc.componentFlags = 0;
     desc.componentFlagsMask = 0;
@@ -451,10 +464,12 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
     AudioStreamBasicDescription outputFormat;     // The AudioUnit output format
     AURenderCallbackStruct input;
     AudioComponentDescription desc;
+#if COREAUDIO_MAC
     AudioDeviceID inputDevice;
+    AudioObjectPropertyAddress propertyAddress;
+#endif
     UInt32 outputFrameCount;
     UInt32 propertySize;
-    AudioObjectPropertyAddress propertyAddress;
     UInt32 enableIO;
     AudioComponent comp;
     OSStatus err;
@@ -465,7 +480,11 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
         return ALC_INVALID_VALUE;
 
     desc.componentType = kAudioUnitType_Output;
+#if COREAUDIO_MAC
     desc.componentSubType = kAudioUnitSubType_HALOutput;
+#else
+    desc.componentSubType = kAudioUnitSubType_RemoteIO;
+#endif
     desc.componentManufacturer = kAudioUnitManufacturer_Apple;
     desc.componentFlags = 0;
     desc.componentFlagsMask = 0;
@@ -505,7 +524,7 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
     }
 
     // Get the default input device
-
+#if COREAUDIO_MAC
     propertySize = sizeof(AudioDeviceID);
     propertyAddress.mSelector = kAudioHardwarePropertyDefaultInputDevice;
     propertyAddress.mScope = kAudioObjectPropertyScopeGlobal;
@@ -531,7 +550,7 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
         ERR("AudioUnitSetProperty failed\n");
         goto error;
     }
-
+#endif
     // set capture callback
     input.inputProc = ALCcoreAudioCapture_RecordProc;
     input.inputProcRefCon = self;

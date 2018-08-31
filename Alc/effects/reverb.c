@@ -229,9 +229,9 @@ typedef struct VecAllpass {
 
 typedef struct T60Filter {
     /* Two filters are used to adjust the signal. One to control the low
-     * frequencies, and one to control the high frequencies. The HF filter also
-     * adjusts the overall output gain, affecting the remaining mid-band.
+     * frequencies, and one to control the high frequencies.
      */
+    ALfloat MidGain[2];
     BiquadFilter HFFilter, LFFilter;
 } T60Filter;
 
@@ -395,6 +395,8 @@ static void ALreverbState_Construct(ALreverbState *state)
         state->Late.VecAp.Offset[i][0] = 0;
         state->Late.VecAp.Offset[i][1] = 0;
 
+        state->Late.T60[i].MidGain[0] = 0.0f;
+        state->Late.T60[i].MidGain[1] = 0.0f;
         BiquadFilter_clear(&state->Late.T60[i].HFFilter);
         BiquadFilter_clear(&state->Late.T60[i].LFFilter);
     }
@@ -652,13 +654,11 @@ static void CalcT60DampingCoeffs(const ALfloat length, const ALfloat lfDecayTime
     ALfloat mfGain = CalcDecayCoeff(length, mfDecayTime);
     ALfloat hfGain = CalcDecayCoeff(length, hfDecayTime);
 
+    filter->MidGain[1] = mfGain;
     BiquadFilter_setParams(&filter->LFFilter, BiquadType_LowShelf, lfGain/mfGain, lf0norm,
                            calc_rcpQ_from_slope(lfGain/mfGain, 1.0f));
     BiquadFilter_setParams(&filter->HFFilter, BiquadType_HighShelf, hfGain/mfGain, hf0norm,
                            calc_rcpQ_from_slope(hfGain/mfGain, 1.0f));
-    filter->HFFilter.b0 *= mfGain;
-    filter->HFFilter.b1 *= mfGain;
-    filter->HFFilter.b2 *= mfGain;
 }
 
 /* Update the offsets for the main effect delay line. */
@@ -965,7 +965,8 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
            State->Early.Coeff[i][1] != State->Early.Coeff[i][0] ||
            State->LateDelayTap[i][1] != State->LateDelayTap[i][0] ||
            State->Late.VecAp.Offset[i][1] != State->Late.VecAp.Offset[i][0] ||
-           State->Late.Offset[i][1] != State->Late.Offset[i][0])
+           State->Late.Offset[i][1] != State->Late.Offset[i][0] ||
+           State->Late.T60[i].MidGain[1] != State->Late.T60[i].MidGain[0])
         {
             State->FadeCount = 0;
             break;
@@ -1348,9 +1349,10 @@ static void LateReverb_Unfaded(ALreverbState *State, ALsizei offset, const ALsiz
     {
         ALsizei late_delay_tap = offset - State->LateDelayTap[j][0];
         ALsizei late_feedb_tap = offset - State->Late.Offset[j][0];
+        ALfloat mid_gain = State->Late.T60[j].MidGain[0];
         for(i = 0;i < todo;i++)
             temps[j][i] = DelayLineOut(&main_delay, late_delay_tap++, j)*densityGain +
-                          DelayLineOut(&late_delay, late_feedb_tap++, j);
+                          DelayLineOut(&late_delay, late_feedb_tap++, j)*mid_gain;
         LateT60Filter(temps[j], todo, &State->Late.T60[j]);
     }
 
@@ -1393,22 +1395,26 @@ static void LateReverb_Faded(ALreverbState *State, ALsizei offset, const ALsizei
 
     for(j = 0;j < NUM_LINES;j++)
     {
+        const ALfloat oldMidGain = State->Late.T60[j].MidGain[0];
+        const ALfloat midGain = State->Late.T60[j].MidGain[1];
+        const ALfloat oldMidStep = -oldMidGain / FADE_SAMPLES;
+        const ALfloat midStep = midGain / FADE_SAMPLES;
         ALsizei late_delay_tap0 = offset - State->LateDelayTap[j][0];
         ALsizei late_delay_tap1 = offset - State->LateDelayTap[j][1];
         ALsizei late_feedb_tap0 = offset - State->Late.Offset[j][0];
         ALsizei late_feedb_tap1 = offset - State->Late.Offset[j][1];
         ALfloat fadeCount = fade * FADE_SAMPLES;
-        ALfloat fader = fade;
         for(i = 0;i < todo;i++)
         {
             const ALfloat fade0 = oldDensityGain + oldDensityStep*fadeCount;
             const ALfloat fade1 = densityStep*fadeCount;
+            const ALfloat gfade0 = oldMidGain + oldMidStep*fadeCount;
+            const ALfloat gfade1 = midStep*fadeCount;
             temps[j][i] =
                 FadedDelayLineOut(&main_delay, late_delay_tap0++, late_delay_tap1++, j,
                     fade0, fade1) +
                 FadedDelayLineOut(&late_delay, late_feedb_tap0++, late_feedb_tap1++, j,
-                    1.0f-fader, fader);
-            fader += FadeStep;
+                    gfade0, gfade1);
             fadeCount += 1.0f;
         }
         LateT60Filter(temps[j], todo, &State->Late.T60[j]);
@@ -1503,6 +1509,7 @@ static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, c
                     State->LateDelayTap[c][0] = State->LateDelayTap[c][1];
                     State->Late.VecAp.Offset[c][0] = State->Late.VecAp.Offset[c][1];
                     State->Late.Offset[c][0] = State->Late.Offset[c][1];
+                    State->Late.T60[c].MidGain[0] = State->Late.T60[c].MidGain[1];
                 }
                 State->Late.DensityGain[0] = State->Late.DensityGain[1];
             }

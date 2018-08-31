@@ -1338,7 +1338,6 @@ static void LateReverb_Unfaded(ALreverbState *State, ALsizei offset, const ALsiz
     ALfloat (*restrict temps)[MAX_UPDATE_SAMPLES] = State->TempSamples;
     const DelayLineI late_delay = State->Late.Delay;
     const DelayLineI main_delay = State->Delay;
-    const ALfloat densityGain = State->Late.DensityGain[0];
     const ALfloat mixX = State->MixX;
     const ALfloat mixY = State->MixY;
     ALsizei i, j;
@@ -1352,10 +1351,11 @@ static void LateReverb_Unfaded(ALreverbState *State, ALsizei offset, const ALsiz
     {
         ALsizei late_delay_tap = offset - State->LateDelayTap[j][0];
         ALsizei late_feedb_tap = offset - State->Late.Offset[j][0];
-        ALfloat mid_gain = State->Late.T60[j].MidGain[0];
+        ALfloat midGain = State->Late.T60[j].MidGain[0];
+        const ALfloat densityGain = State->Late.DensityGain[0] * midGain;
         for(i = 0;i < todo;i++)
             temps[j][i] = DelayLineOut(&main_delay, late_delay_tap++, j)*densityGain +
-                          DelayLineOut(&late_delay, late_feedb_tap++, j)*mid_gain;
+                          DelayLineOut(&late_delay, late_feedb_tap++, j)*midGain;
         LateT60Filter(temps[j], todo, &State->Late.T60[j]);
     }
 
@@ -1386,10 +1386,6 @@ static void LateReverb_Faded(ALreverbState *State, ALsizei offset, const ALsizei
     ALfloat (*restrict temps)[MAX_UPDATE_SAMPLES] = State->TempSamples;
     const DelayLineI late_delay = State->Late.Delay;
     const DelayLineI main_delay = State->Delay;
-    const ALfloat oldDensityGain = State->Late.DensityGain[0];
-    const ALfloat densityGain = State->Late.DensityGain[1];
-    const ALfloat oldDensityStep = -oldDensityGain / FADE_SAMPLES;
-    const ALfloat densityStep = densityGain / FADE_SAMPLES;
     const ALfloat mixX = State->MixX;
     const ALfloat mixY = State->MixY;
     ALsizei i, j;
@@ -1402,6 +1398,10 @@ static void LateReverb_Faded(ALreverbState *State, ALsizei offset, const ALsizei
         const ALfloat midGain = State->Late.T60[j].MidGain[1];
         const ALfloat oldMidStep = -oldMidGain / FADE_SAMPLES;
         const ALfloat midStep = midGain / FADE_SAMPLES;
+        const ALfloat oldDensityGain = State->Late.DensityGain[0] * oldMidGain;
+        const ALfloat densityGain = State->Late.DensityGain[1] * midGain;
+        const ALfloat oldDensityStep = -oldDensityGain / FADE_SAMPLES;
+        const ALfloat densityStep = densityGain / FADE_SAMPLES;
         ALsizei late_delay_tap0 = offset - State->LateDelayTap[j][0];
         ALsizei late_delay_tap1 = offset - State->LateDelayTap[j][1];
         ALsizei late_feedb_tap0 = offset - State->Late.Offset[j][0];

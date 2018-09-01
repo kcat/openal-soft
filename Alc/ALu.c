@@ -648,7 +648,7 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALflo
                 voice->Flags |= VOICE_HAS_NFC;
             }
 
-            /* A scalar of 3 for plain stereo results in +/-30 degrees being
+            /* A scalar of 1.5 for plain stereo results in +/-60 degrees being
              * moved to +/-90 degrees for direct right and left speaker
              * responses.
              */

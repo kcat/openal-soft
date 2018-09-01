@@ -20,7 +20,7 @@ openal-soft-1.19.0:
 
     Renamed the MMDevAPI backend to WASAPI.
 
-    Added support fot 24-bit, dual-ear HRTF data sets. The built-in data set
+    Added support for 24-bit, dual-ear HRTF data sets. The built-in data set
     has been updated to 24-bit.
 
     Added a 24- to 48-point band-limited Sinc resampler.

@@ -32,8 +32,12 @@ const ALfloat *Resample_lerp_Neon(const InterpState* UNUSED(state),
 
     for(i = 0;numsamples-i > 3;i += 4)
     {
-        const float32x4_t val1 = (float32x4_t){src[pos_[0]], src[pos_[1]], src[pos_[2]], src[pos_[3]]};
-        const float32x4_t val2 = (float32x4_t){src[pos_[0]+1], src[pos_[1]+1], src[pos_[2]+1], src[pos_[3]+1]};
+        const int pos0 = vgetq_lane_s32(pos4, 0);
+        const int pos1 = vgetq_lane_s32(pos4, 1);
+        const int pos2 = vgetq_lane_s32(pos4, 2);
+        const int pos3 = vgetq_lane_s32(pos4, 3);
+        const float32x4_t val1 = (float32x4_t){src[pos0], src[pos1], src[pos2], src[pos3]};
+        const float32x4_t val2 = (float32x4_t){src[pos0+1], src[pos1+1], src[pos2+1], src[pos3+1]};
 
         /* val1 + (val2-val1)*mu */
         const float32x4_t r0 = vsubq_f32(val2, val1);
@@ -45,8 +49,6 @@ const ALfloat *Resample_lerp_Neon(const InterpState* UNUSED(state),
         frac4 = vaddq_s32(frac4, increment4);
         pos4 = vaddq_s32(pos4, vshrq_n_s32(frac4, FRACTIONBITS));
         frac4 = vandq_s32(frac4, fracMask4);
-
-        vst1q_s32(pos_, pos4);
     }
 
     if(i < numsamples)
@@ -55,7 +57,7 @@ const ALfloat *Resample_lerp_Neon(const InterpState* UNUSED(state),
          * four samples, so the lowest element is the next position to
          * resample.
          */
-        ALint pos = pos_[0];
+        int pos = vgetq_lane_s32(pos4, 0);
         frac = vgetq_lane_s32(frac4, 0);
         do {
             dst[i] = lerp(src[pos], src[pos+1], frac * (1.0f/FRACTIONONE));

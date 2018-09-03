@@ -1105,8 +1105,8 @@ void alstr_copy_range(al_string *str, const al_string_char_type *from, const al_
 void alstr_append_char(al_string *str, const al_string_char_type c)
 {
     size_t len = alstr_length(*str);
-    VECTOR_RESIZE(*str, len, len+2);
-    VECTOR_PUSH_BACK(*str, c);
+    VECTOR_RESIZE(*str, len+1, len+2);
+    VECTOR_BACK(*str) = c;
     VECTOR_ELEM(*str, len+1) = 0;
 }
 

@@ -16,6 +16,9 @@ openal-soft-1.19.0:
     Increased the number of virtual channels for decoding Ambisonics to HRTF
     output.
 
+    Changed 32-bit x86 builds to use SSE2 math by default for performance.
+    Build-time options are available to use just SSE1 or x87 instead.
+
     Replaced the 4-point Sinc resampler with a more efficient cubic resampler.
 
     Renamed the MMDevAPI backend to WASAPI.

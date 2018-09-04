@@ -19,18 +19,17 @@ const ALfloat *Resample_lerp_Neon(const InterpState* UNUSED(state),
     const int32x4_t fracMask4 = vdupq_n_s32(FRACTIONMASK);
     alignas(16) ALint pos_[4];
     alignas(16) ALsizei frac_[4];
-    int32x4_t pos4;
-    int32x4_t frac4;
-    ALsizei i;
+    int32x4_t pos4, frac4;
+    ALsizei todo, pos, i;
 
     ASSUME(numsamples > 0);
 
     InitiatePositionArrays(frac, increment, frac_, pos_, 4);
-
     frac4 = vld1q_s32(frac_);
     pos4 = vld1q_s32(pos_);
 
-    for(i = 0;numsamples-i > 3;i += 4)
+    todo = numsamples & ~3;
+    for(i = 0;i < todo;i += 4)
     {
         const int pos0 = vgetq_lane_s32(pos4, 0);
         const int pos1 = vgetq_lane_s32(pos4, 1);
@@ -51,21 +50,19 @@ const ALfloat *Resample_lerp_Neon(const InterpState* UNUSED(state),
         frac4 = vandq_s32(frac4, fracMask4);
     }
 
-    if(i < numsamples)
-    {
-        /* NOTE: These four elements represent the position *after* the last
-         * four samples, so the lowest element is the next position to
-         * resample.
-         */
-        int pos = vgetq_lane_s32(pos4, 0);
-        frac = vgetq_lane_s32(frac4, 0);
-        do {
-            dst[i] = lerp(src[pos], src[pos+1], frac * (1.0f/FRACTIONONE));
+    /* NOTE: These four elements represent the position *after* the last four
+     * samples, so the lowest element is the next position to resample.
+     */
+    pos = vgetq_lane_s32(pos4, 0);
+    frac = vgetq_lane_s32(frac4, 0);
 
-            frac += increment;
-            pos  += frac>>FRACTIONBITS;
-            frac &= FRACTIONMASK;
-        } while(++i < numsamples);
+    for(;i < numsamples;++i)
+    {
+        dst[i] = lerp(src[pos], src[pos+1], frac * (1.0f/FRACTIONONE));
+
+        frac += increment;
+        pos  += frac>>FRACTIONBITS;
+        frac &= FRACTIONMASK;
     }
     return dst;
 }

@@ -35,20 +35,19 @@ const ALfloat *Resample_lerp_SSE41(const InterpState* UNUSED(state),
     const __m128i increment4 = _mm_set1_epi32(increment*4);
     const __m128 fracOne4 = _mm_set1_ps(1.0f/FRACTIONONE);
     const __m128i fracMask4 = _mm_set1_epi32(FRACTIONMASK);
-    union { alignas(16) ALint i[4]; float f[4]; } pos_;
-    union { alignas(16) ALsizei i[4]; float f[4]; } frac_;
+    ALint pos_[4];
+    ALsizei frac_[4];
     __m128i frac4, pos4;
-    ALint pos;
-    ALsizei i;
+    ALsizei todo, pos, i;
 
     ASSUME(numsamples > 0);
 
-    InitiatePositionArrays(frac, increment, frac_.i, pos_.i, 4);
+    InitiatePositionArrays(frac, increment, frac_, pos_, 4);
+    frac4 = _mm_setr_epi32(frac_[0], frac_[1], frac_[2], frac_[3]);
+    pos4 = _mm_setr_epi32(pos_[0], pos_[1], pos_[2], pos_[3]);
 
-    frac4 = _mm_castps_si128(_mm_load_ps(frac_.f));
-    pos4 = _mm_castps_si128(_mm_load_ps(pos_.f));
-
-    for(i = 0;numsamples-i > 3;i += 4)
+    todo = numsamples & ~3;
+    for(i = 0;i < todo;i += 4)
     {
         const int pos0 = _mm_extract_epi32(pos4, 0);
         const int pos1 = _mm_extract_epi32(pos4, 1);
@@ -75,7 +74,7 @@ const ALfloat *Resample_lerp_SSE41(const InterpState* UNUSED(state),
     pos = _mm_cvtsi128_si32(pos4);
     frac = _mm_cvtsi128_si32(frac4);
 
-    for(;i < numsamples;i++)
+    for(;i < numsamples;++i)
     {
         dst[i] = lerp(src[pos], src[pos+1], frac * (1.0f/FRACTIONONE));
 

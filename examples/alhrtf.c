@@ -89,6 +89,36 @@ static ALuint LoadSound(const char *filename)
             return 0;
         }
     }
+    else if(sample->actual.channels == 3)
+    {
+        if(sample->actual.format == AUDIO_U8)
+            format = AL_FORMAT_BFORMAT2D_8;
+        else if(sample->actual.format == AUDIO_S16SYS)
+            format = AL_FORMAT_BFORMAT2D_16;
+        else if(sample->actual.format == AUDIO_F32SYS)
+          format = AL_FORMAT_BFORMAT2D_FLOAT32;
+        else
+        {
+            fprintf(stderr, "Unsupported 3 channel sample format: 0x%04x\n", sample->actual.format);
+            Sound_FreeSample(sample);
+            return 0;
+        }
+    }
+    else if(sample->actual.channels == 4)
+    {
+        if(sample->actual.format == AUDIO_U8)
+            format = AL_FORMAT_BFORMAT3D_8;
+        else if(sample->actual.format == AUDIO_S16SYS)
+            format = AL_FORMAT_BFORMAT3D_16;
+        else if(sample->actual.format == AUDIO_F32SYS)
+          format = AL_FORMAT_BFORMAT3D_FLOAT32;
+        else
+        {
+            fprintf(stderr, "Unsupported 4 channel sample format: 0x%04x\n", sample->actual.format);
+            Sound_FreeSample(sample);
+            return 0;
+        }
+    }
     else
     {
         fprintf(stderr, "Unsupported channel count: %d\n", sample->actual.channels);

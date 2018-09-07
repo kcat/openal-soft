@@ -301,6 +301,10 @@ int main(int argc, char **argv)
         /* This only rotates mono sounds. */
         alSource3f(source, AL_POSITION, (ALfloat)sin(angle), 0.0f, -(ALfloat)cos(angle));
 
+        /* This rotates b-format sources. */
+        ALfloat sourceOri[] = { (ALfloat)sin(-angle), 0.0f, -(ALfloat)cos(-angle), 0.0, 1.0, 0.0 };
+        alSourcefv(source, AL_ORIENTATION, sourceOri);
+
         if(has_angle_ext)
         {
             /* This rotates stereo sounds with the AL_EXT_STEREO_ANGLES

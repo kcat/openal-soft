@@ -485,7 +485,7 @@ void ReadALConfig(void)
     CFBundleRef mainBundle = CFBundleGetMainBundle();
     if(mainBundle)
     {
-        unsigned char fileName[MAX_PATH];
+        unsigned char fileName[PATH_MAX];
         CFURLRef configURL;
 
         if((configURL=CFBundleCopyResourceURL(mainBundle, CFSTR(".alsoftrc"), CFSTR(""), NULL)) &&

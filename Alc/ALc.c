@@ -1314,7 +1314,7 @@ static void ProbeDevices(al_string *list, struct BackendInfo *backendinfo, enum 
     if(backendinfo->getFactory)
     {
         ALCbackendFactory *factory = backendinfo->getFactory();
-        V(factory,probe)(type);
+        V(factory,probe)(type, list);
     }
 
     UnlockLists();
@@ -1323,17 +1323,6 @@ static void ProbeAllDevicesList(void)
 { ProbeDevices(&alcAllDevicesList, &PlaybackBackend, ALL_DEVICE_PROBE); }
 static void ProbeCaptureDeviceList(void)
 { ProbeDevices(&alcCaptureDeviceList, &CaptureBackend, CAPTURE_DEVICE_PROBE); }
-
-static void AppendDevice(const ALCchar *name, al_string *devnames)
-{
-    size_t len = strlen(name);
-    if(len > 0)
-        alstr_append_range(devnames, name, name+len+1);
-}
-void AppendAllDevicesList(const ALCchar *name)
-{ AppendDevice(name, &alcAllDevicesList); }
-void AppendCaptureDeviceList(const ALCchar *name)
-{ AppendDevice(name, &alcCaptureDeviceList); }
 
 
 /************************************************

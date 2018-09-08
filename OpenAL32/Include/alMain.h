@@ -856,9 +856,6 @@ void ALCcontext_ProcessUpdates(ALCcontext *context);
 
 void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends);
 
-void AppendAllDevicesList(const ALCchar *name);
-void AppendCaptureDeviceList(const ALCchar *name);
-
 
 extern ALint RTPrioLevel;
 void SetRTPriority(void);

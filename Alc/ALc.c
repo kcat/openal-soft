@@ -79,7 +79,7 @@ static struct BackendInfo BackendList[] = {
     { "solaris", ALCsolarisBackendFactory_getFactory },
 #endif
 #ifdef HAVE_SNDIO
-    { "sndio", ALCsndioBackendFactory_getFactory },
+    { "sndio", SndioBackendFactory_getFactory },
 #endif
 #ifdef HAVE_OSS
     { "oss", ALCossBackendFactory_getFactory },

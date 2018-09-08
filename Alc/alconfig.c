@@ -36,6 +36,9 @@
 #include <windows.h>
 #include <shlobj.h>
 #endif
+#ifdef __APPLE__
+#include <CoreFoundation/CoreFoundation.h>
+#endif
 
 #include "alMain.h"
 #include "alconfig.h"
@@ -477,6 +480,26 @@ void ReadALConfig(void)
         }
         alstr_clear(&fname);
     }
+
+#ifdef __APPLE__
+    CFBundleRef mainBundle = CFBundleGetMainBundle();
+    if(mainBundle)
+    {
+        unsigned char fileName[MAX_PATH];
+        CFURLRef configURL;
+
+        if((configURL=CFBundleCopyResourceURL(mainBundle, CFSTR(".alsoftrc"), CFSTR(""), NULL)) &&
+           CFURLGetFileSystemRepresentation(configURL, true, fileName, sizeof(fileName)))
+        {
+            f = al_fopen((const char*)fileName, "r");
+            if(f)
+            {
+                LoadConfigFromFile(f);
+                fclose(f);
+            }
+        }
+    }
+#endif
 
     if((str=getenv("HOME")) != NULL && *str)
     {

@@ -237,14 +237,14 @@ static inline void Load_##T(ALfloat *restrict dst, const T *restrict src,     \
         dst[i] += Sample_##T(src[i*srcstep]);                                 \
 }
 
-#define DECL_TEMPLATE_SAFE(T)  
+#define DECL_TEMPLATE_SAFE(T)                                                 \
 static inline void Load_##T(ALfloat *restrict dst, const T *restrict src,     \
                             ALint srcstep, ALsizei samples)                   \
 {                                                                             \
     ALsizei i;                                                                \
     T alignedValue;                                                           \
     for(i = 0;i < samples;i++) {                                              \
-        memcpy(&alignedValue, src * i * srcstep, sizeof(alignedValue));       \
+        memcpy(&alignedValue, src + i * srcstep, sizeof(alignedValue));       \
         dst[i] += Sample_##T(alignedValue);                                   \
     }                                                                         \
 }

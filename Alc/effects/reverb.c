@@ -1059,17 +1059,24 @@ static inline void VectorPartialScatter(ALfloat *restrict out, const ALfloat *re
 #define VectorScatterDelayIn(delay, o, in, xcoeff, ycoeff) \
     VectorPartialScatter((delay)->Line[(o)&(delay)->Mask], in, xcoeff, ycoeff)
 
-/* Same as above, but reverses the input. */
-static inline void VectorPartialScatterRev(ALfloat *restrict out, const ALfloat *restrict in,
-                                           const ALfloat xCoeff, const ALfloat yCoeff)
+/* Utilizes the above, but reverses the input channels. */
+static inline void VectorScatterRevDelayIn(const DelayLineI *Delay, ALint offset,
+                                           const ALfloat xCoeff, const ALfloat yCoeff,
+                                           const ALfloat (*restrict in)[MAX_UPDATE_SAMPLES],
+                                           const ALsizei count)
 {
-    out[0] = xCoeff*in[3] + yCoeff*(in[0] + -in[1] +  in[2]         );
-    out[1] = xCoeff*in[2] + yCoeff*(in[0] +  in[1]          + -in[3]);
-    out[2] = xCoeff*in[1] + yCoeff*(in[0]          + -in[2] +  in[3]);
-    out[3] = xCoeff*in[0] + yCoeff*(        -in[1] + -in[2] + -in[3]);
+    const DelayLineI delay = *Delay;
+    ALsizei i, j;
+
+    for(i = 0;i < count;++i)
+    {
+        ALfloat f[NUM_LINES];
+        for(j = 0;j < NUM_LINES;j++)
+            f[NUM_LINES-1-j] = in[j][i];
+
+        VectorScatterDelayIn(&delay, offset++, f, xCoeff, yCoeff);
+    }
 }
-#define VectorScatterRevDelayIn(delay, o, in, xcoeff, ycoeff) \
-    VectorPartialScatterRev((delay)->Line[(o)&(delay)->Mask], in, xcoeff, ycoeff)
 
 /* This applies a Gerzon multiple-in/multiple-out (MIMO) vector all-pass
  * filter to the 4-line input.
@@ -1216,14 +1223,7 @@ static void EarlyReflection_Unfaded(ALreverbState *State, ALsizei offset, const 
      * bounce to improve the initial diffusion in the late reverb.
      */
     late_feed_tap = offset - State->LateFeedTap;
-    for(i = 0;i < todo;i++)
-    {
-        ALfloat f[NUM_LINES];
-        for(j = 0;j < NUM_LINES;j++)
-            f[j] = out[j][i];
-
-        VectorScatterRevDelayIn(&main_delay, late_feed_tap++, f, mixX, mixY);
-    }
+    VectorScatterRevDelayIn(&main_delay, late_feed_tap, mixX, mixY, out, todo);
 }
 static void EarlyReflection_Faded(ALreverbState *State, ALsizei offset, const ALsizei todo,
                                   const ALfloat fade, ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
@@ -1283,14 +1283,7 @@ static void EarlyReflection_Faded(ALreverbState *State, ALsizei offset, const AL
     }
 
     late_feed_tap = offset - State->LateFeedTap;
-    for(i = 0;i < todo;i++)
-    {
-        ALfloat f[NUM_LINES];
-        for(j = 0;j < NUM_LINES;j++)
-            f[j] = out[j][i];
-
-        VectorScatterRevDelayIn(&main_delay, late_feed_tap++, f, mixX, mixY);
-    }
+    VectorScatterRevDelayIn(&main_delay, late_feed_tap, mixX, mixY, out, todo);
 }
 
 /* Applies the two T60 damping filter sections. */
@@ -1350,18 +1343,8 @@ static void LateReverb_Unfaded(ALreverbState *State, ALsizei offset, const ALsiz
     for(j = 0;j < NUM_LINES;j++)
         memcpy(out[j], temps[j], todo*sizeof(ALfloat));
 
-    for(i = 0;i < todo;i++)
-    {
-        ALfloat f[NUM_LINES];
-        for(j = 0;j < NUM_LINES;j++)
-            f[j] = temps[j][i];
-
-        /* Finally, scatter and bounce the results to refeed the feedback
-         * buffer.
-         */
-        VectorScatterRevDelayIn(&late_delay, offset, f, mixX, mixY);
-        offset++;
-    }
+    /* Finally, scatter and bounce the results to refeed the feedback buffer. */
+    VectorScatterRevDelayIn(&late_delay, offset, mixX, mixY, out, todo);
 }
 static void LateReverb_Faded(ALreverbState *State, ALsizei offset, const ALsizei todo,
                              const ALfloat fade, ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
@@ -1411,15 +1394,7 @@ static void LateReverb_Faded(ALreverbState *State, ALsizei offset, const ALsizei
     for(j = 0;j < NUM_LINES;j++)
         memcpy(out[j], temps[j], todo*sizeof(ALfloat));
 
-    for(i = 0;i < todo;i++)
-    {
-        ALfloat f[NUM_LINES];
-        for(j = 0;j < NUM_LINES;j++)
-            f[j] = temps[j][i];
-
-        VectorScatterRevDelayIn(&late_delay, offset, f, mixX, mixY);
-        offset++;
-    }
+    VectorScatterRevDelayIn(&late_delay, offset, mixX, mixY, temps, todo);
 }
 
 static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

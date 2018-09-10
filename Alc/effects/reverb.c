@@ -1215,8 +1215,9 @@ static void EarlyReflection_Unfaded(ALreverbState *State, ALsizei offset, const 
         for(i = 0;i < todo;i++)
             out[j][i] = DelayLineOut(&early_delay, early_feedb_tap++, j)*early_feedb_coeff +
                         temps[j][i];
-        DelayLineIn(&early_delay, offset, NUM_LINES-1-j, temps[j], todo);
     }
+    for(j = 0;j < NUM_LINES;j++)
+        DelayLineIn(&early_delay, offset, NUM_LINES-1-j, temps[j], todo);
 
     /* Also write the result back to the main delay line for the late reverb
      * stage to pick up at the appropriate time, appplying a scatter and
@@ -1279,8 +1280,9 @@ static void EarlyReflection_Faded(ALreverbState *State, ALsizei offset, const AL
             ) + temps[j][i];
             fadeCount += 1.0f;
         }
-        DelayLineIn(&early_delay, offset, NUM_LINES-1-j, temps[j], todo);
     }
+    for(j = 0;j < NUM_LINES;j++)
+        DelayLineIn(&early_delay, offset, NUM_LINES-1-j, temps[j], todo);
 
     late_feed_tap = offset - State->LateFeedTap;
     VectorScatterRevDelayIn(&main_delay, late_feed_tap, mixX, mixY, out, todo);

@@ -1215,7 +1215,7 @@ static void EarlyReflection_Unfaded(ALreverbState *State, ALsizei offset, const 
         for(i = 0;i < todo;i++)
             out[j][i] = DelayLineOut(&early_delay, early_feedb_tap++, j)*early_feedb_coeff +
                         temps[j][i];
-        DelayLineIn(&early_delay, offset, 3-j, temps[j], todo);
+        DelayLineIn(&early_delay, offset, NUM_LINES-1-j, temps[j], todo);
     }
 
     /* Also write the result back to the main delay line for the late reverb
@@ -1279,7 +1279,7 @@ static void EarlyReflection_Faded(ALreverbState *State, ALsizei offset, const AL
             ) + temps[j][i];
             fadeCount += 1.0f;
         }
-        DelayLineIn(&early_delay, offset, 3-j, temps[j], todo);
+        DelayLineIn(&early_delay, offset, NUM_LINES-1-j, temps[j], todo);
     }
 
     late_feed_tap = offset - State->LateFeedTap;

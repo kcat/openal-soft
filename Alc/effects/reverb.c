@@ -948,9 +948,11 @@ static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Conte
                     props->Reverb.ReflectionsGain*gain, props->Reverb.LateReverbGain*gain,
                     State);
 
-    /* Calculate the max update size from the smallest relevant delay. */
+    /* Calculate the max update size from the smallest relevant delay, ensuring
+     * the update size is a multiple of 4 for SIMD.
+     */
     State->MaxUpdate[1] = mini(MAX_UPDATE_SAMPLES,
-        mini(State->Early.Offset[0][1], State->Late.Offset[0][1])
+        mini(State->Early.Offset[0][1], State->Late.Offset[0][1])&~3
     );
 
     /* Determine if delay-line cross-fading is required. TODO: Add some fuzz

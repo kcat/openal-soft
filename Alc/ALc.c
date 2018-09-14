@@ -1167,6 +1167,9 @@ static void alc_initconfig(void)
 
 #ifdef __ANDROID__
 #include <jni.h>
+#ifdef HAVE_SDL2
+#include <SDL.h>
+#endif
 
 static JavaVM *gJavaVM;
 static pthread_key_t gJVMThreadKey;
@@ -1178,6 +1181,9 @@ static void CleanupJNIEnv(void* UNUSED(ptr))
 
 void *Android_GetJNIEnv(void)
 {
+    #ifdef HAVE_SDL2
+    return SDL_AndroidGetJNIEnv();
+    #else
     if(!gJavaVM)
     {
         WARN("gJavaVM is NULL!\n");
@@ -1209,8 +1215,10 @@ void *Android_GetJNIEnv(void)
         pthread_setspecific(gJVMThreadKey, env);
     }
     return env;
+    #endif
 }
 
+#ifndef HAVE_SDL2
 /* Automatically called by JNI. */
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *jvm, void* UNUSED(reserved))
 {
@@ -1232,6 +1240,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *jvm, void* UNUSED(reserved))
     pthread_setspecific(gJVMThreadKey, env);
     return JNI_VERSION_1_4;
 }
+#endif
 #endif
 
 

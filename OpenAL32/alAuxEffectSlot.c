@@ -122,12 +122,6 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
 
     LockEffectSlotList(context);
     device = context->Device;
-    if(device->AuxiliaryEffectSlotMax - VECTOR_SIZE(context->EffectSlotList) < (ALuint)n)
-    {
-        UnlockEffectSlotList(context);
-        SETERR_GOTO(context, AL_OUT_OF_MEMORY, done, "Exceeding %u auxiliary effect slot limit",
-                    device->AuxiliaryEffectSlotMax);
-    }
     for(cur = 0;cur < n;cur++)
     {
         ALeffectslotPtr *iter = VECTOR_BEGIN(context->EffectSlotList);
@@ -142,6 +136,13 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
         }
         if(iter == end)
         {
+            if(device->AuxiliaryEffectSlotMax == VECTOR_SIZE(context->EffectSlotList))
+            {
+                UnlockEffectSlotList(context);
+                alDeleteAuxiliaryEffectSlots(cur, effectslots);
+                SETERR_GOTO(context, AL_OUT_OF_MEMORY, done,
+                    "Exceeding %u auxiliary effect slot limit", device->AuxiliaryEffectSlotMax);
+            }
             VECTOR_PUSH_BACK(context->EffectSlotList, NULL);
             iter = &VECTOR_BACK(context->EffectSlotList);
         }

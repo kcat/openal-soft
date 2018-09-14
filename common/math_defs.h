@@ -27,6 +27,9 @@ static const union msvc_inf_hack {
 #endif
 
 #ifndef HAVE_LOG2F
+#ifdef log2f
+#undef log2f
+#endif
 static inline float log2f(float f)
 {
     return logf(f) / logf(2.0f);

@@ -487,6 +487,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                 while(tmpiter && SrcBufferSize > FilledAmt)
                 {
                     ALsizei SizeToDo = SrcBufferSize - FilledAmt;
+                    ALsizei CompLen = 0;
                     ALsizei i;
 
                     for(i = 0;i < tmpiter->num_buffers;i++)
@@ -499,23 +500,24 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                             const ALubyte *Data = ALBuffer->data;
                             Data += (pos*NumChannels + chan)*SampleSize;
 
-                            DataSize = minu(SizeToDo, DataSize - pos);
+                            DataSize = mini(SizeToDo, DataSize - pos);
+                            CompLen = maxi(CompLen, DataSize);
+
                             LoadSamples(&SrcData[FilledAmt], Data, NumChannels,
                                         ALBuffer->FmtType, DataSize);
                         }
                     }
-                    if(pos > tmpiter->max_samples)
+                    if(UNLIKELY(!CompLen))
                         pos -= tmpiter->max_samples;
                     else
                     {
-                        FilledAmt += tmpiter->max_samples - pos;
+                        FilledAmt += CompLen;
+                        if(SrcBufferSize <= FilledAmt)
+                            break;
                         pos = 0;
                     }
-                    if(SrcBufferSize > FilledAmt)
-                    {
-                        tmpiter = ATOMIC_LOAD(&tmpiter->next, almemory_order_acquire);
-                        if(!tmpiter) tmpiter = BufferLoopItem;
-                    }
+                    tmpiter = ATOMIC_LOAD(&tmpiter->next, almemory_order_acquire);
+                    if(!tmpiter) tmpiter = BufferLoopItem;
                 }
             }
 
@@ -729,8 +731,10 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
             if(BufferListItem->max_samples > DataPosInt)
                 break;
 
+            DataPosInt -= BufferListItem->max_samples;
+
             buffers_done += BufferListItem->num_buffers;
-            BufferListItem = ATOMIC_LOAD(&BufferListItem->next, almemory_order_acquire);
+            BufferListItem = ATOMIC_LOAD(&BufferListItem->next, almemory_order_relaxed);
             if(!BufferListItem && !(BufferListItem=BufferLoopItem))
             {
                 isplaying = false;
@@ -738,8 +742,6 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                 DataPosFrac = 0;
                 break;
             }
-
-            DataPosInt -= BufferListItem->max_samples;
         }
     } while(isplaying && OutPos < SamplesToDo);
 

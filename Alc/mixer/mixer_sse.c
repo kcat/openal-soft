@@ -27,7 +27,7 @@ const ALfloat *Resample_bsinc_SSE(const InterpState *state, const ALfloat *restr
     ASSUME(m > 0);
     ASSUME(dstlen > 0);
 
-    src += state->bsinc.l;
+    src -= state->bsinc.l;
     for(i = 0;i < dstlen;i++)
     {
         // Calculate the phase index and factor.

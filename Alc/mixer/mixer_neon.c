@@ -82,7 +82,7 @@ const ALfloat *Resample_bsinc_Neon(const InterpState *state,
     ASSUME(m > 0);
     ASSUME(dstlen > 0);
 
-    src += state->bsinc.l;
+    src -= state->bsinc.l;
     for(i = 0;i < dstlen;i++)
     {
         // Calculate the phase index and factor.

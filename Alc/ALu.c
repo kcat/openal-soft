@@ -357,7 +357,7 @@ void BsincPrepare(const ALuint increment, BsincState *state, const BSincTable *t
 
     state->sf = sf;
     state->m = table->m[si];
-    state->l = -((state->m/2) - 1);
+    state->l = (state->m/2) - 1;
     state->filter = table->Tab + table->filterOffset[si];
 }
 

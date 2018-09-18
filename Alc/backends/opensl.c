@@ -950,14 +950,16 @@ static ALCenum ALCopenslCapture_captureSamples(ALCopenslCapture *self, ALCvoid *
     SLAndroidSimpleBufferQueueItf bufferQueue;
     ll_ringbuffer_data_t data[2];
     SLresult result;
-    size_t advance;
     ALCuint i;
+
+    result = VCALL(self->mRecordObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
+                                                  &bufferQueue);
+    PRINTERR(result, "recordObj->GetInterface");
 
     /* Read the desired samples from the ring buffer then advance its read
      * pointer.
      */
     ll_ringbuffer_get_read_vector(self->mRing, data);
-    advance = 0;
     for(i = 0;i < samples;)
     {
         ALCuint rem = minu(samples - i, device->UpdateSize - self->mSplOffset);
@@ -970,7 +972,11 @@ static ALCenum ALCopenslCapture_captureSamples(ALCopenslCapture *self, ALCvoid *
         {
             /* Finished a chunk, reset the offset and advance the read pointer. */
             self->mSplOffset = 0;
-            advance++;
+
+            ll_ringbuffer_read_advance(self->mRing, 1);
+            result = VCALL(bufferQueue,Enqueue)(data[0].buf, chunk_size);
+            PRINTERR(result, "bufferQueue->Enqueue");
+            if(SL_RESULT_SUCCESS != result) break;
 
             data[0].len--;
             if(!data[0].len)
@@ -980,35 +986,6 @@ static ALCenum ALCopenslCapture_captureSamples(ALCopenslCapture *self, ALCvoid *
         }
 
         i += rem;
-    }
-    if(!advance)
-        return ALC_NO_ERROR;
-    ll_ringbuffer_read_advance(self->mRing, advance);
-
-    result = VCALL(self->mRecordObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
-                                                  &bufferQueue);
-    PRINTERR(result, "recordObj->GetInterface");
-
-    /* Enqueue any newly-writable chunks in the ring buffer. Limit the number
-     * of enqueued chunks to the number of fully read chunks.
-     */
-    ll_ringbuffer_get_write_vector(self->mRing, data);
-    if(data[0].len > advance)
-    {
-        data[0].len = advance;
-        data[1].len = 0;
-    }
-    else if(data[1].len > advance-data[0].len)
-        data[1].len = advance-data[0].len;
-    for(i = 0;i < data[0].len && SL_RESULT_SUCCESS == result;i++)
-    {
-        result = VCALL(bufferQueue,Enqueue)(data[0].buf + chunk_size*i, chunk_size);
-        PRINTERR(result, "bufferQueue->Enqueue");
-    }
-    for(i = 0;i < data[1].len && SL_RESULT_SUCCESS == result;i++)
-    {
-        result = VCALL(bufferQueue,Enqueue)(data[1].buf + chunk_size*i, chunk_size);
-        PRINTERR(result, "bufferQueue->Enqueue");
     }
 
     if(SL_RESULT_SUCCESS != result)

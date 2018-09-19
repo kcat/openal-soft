@@ -62,7 +62,7 @@ void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains,
                 ALsizei InPos, ALsizei BufferSize);
 
 /* SSE resamplers */
-inline void InitiatePositionArrays(ALsizei frac, ALint increment, ALsizei *restrict frac_arr, ALint *restrict pos_arr, ALsizei size)
+inline void InitiatePositionArrays(ALsizei frac, ALint increment, ALsizei *restrict frac_arr, ALsizei *restrict pos_arr, ALsizei size)
 {
     ALsizei i;
 

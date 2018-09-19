@@ -34,8 +34,7 @@ const ALfloat *Resample_lerp_SSE2(const InterpState* UNUSED(state),
     const __m128i increment4 = _mm_set1_epi32(increment*4);
     const __m128 fracOne4 = _mm_set1_ps(1.0f/FRACTIONONE);
     const __m128i fracMask4 = _mm_set1_epi32(FRACTIONMASK);
-    ALint pos_[4];
-    ALsizei frac_[4];
+    alignas(16) ALsizei pos_[4], frac_[4];
     __m128i frac4, pos4;
     ALsizei todo, pos, i;
 

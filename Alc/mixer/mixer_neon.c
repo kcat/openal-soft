@@ -17,8 +17,7 @@ const ALfloat *Resample_lerp_Neon(const InterpState* UNUSED(state),
     const int32x4_t increment4 = vdupq_n_s32(increment*4);
     const float32x4_t fracOne4 = vdupq_n_f32(1.0f/FRACTIONONE);
     const int32x4_t fracMask4 = vdupq_n_s32(FRACTIONMASK);
-    alignas(16) ALint pos_[4];
-    alignas(16) ALsizei frac_[4];
+    alignas(16) ALsizei pos_[4], frac_[4];
     int32x4_t pos4, frac4;
     ALsizei todo, pos, i;
 

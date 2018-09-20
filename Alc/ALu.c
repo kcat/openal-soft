@@ -732,7 +732,7 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALflo
                 if(Slot)
                 {
                     for(c = 0;c < num_channels;c++)
-                        ComputeFirstOrderGainsBF(Slot->ChanMap, Slot->NumChannels,
+                        ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels,
                             matrix.m[c], WetGain[i], voice->Send[i].Params[c].Gains.Target
                         );
                 }

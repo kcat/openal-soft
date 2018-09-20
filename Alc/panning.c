@@ -152,7 +152,7 @@ void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALf
 }
 
 
-void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, ALsizei numcoeffs, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, ALsizei numcoeffs, const ALfloat*restrict coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     ALsizei i, j;
 
@@ -167,37 +167,12 @@ void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, AL
         gains[i] = 0.0f;
 }
 
-void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat*restrict coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     ALsizei i;
 
     for(i = 0;i < numchans;i++)
         gains[i] = chanmap[i].Scale * coeffs[chanmap[i].Index] * ingain;
-    for(;i < MAX_OUTPUT_CHANNELS;i++)
-        gains[i] = 0.0f;
-}
-
-void ComputeFirstOrderGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
-{
-    ALsizei i, j;
-
-    for(i = 0;i < numchans;i++)
-    {
-        float gain = 0.0f;
-        for(j = 0;j < 4;j++)
-            gain += chancoeffs[i][j] * mtx[j];
-        gains[i] = clampf(gain, 0.0f, 1.0f) * ingain;
-    }
-    for(;i < MAX_OUTPUT_CHANNELS;i++)
-        gains[i] = 0.0f;
-}
-
-void ComputeFirstOrderGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
-{
-    ALsizei i;
-
-    for(i = 0;i < numchans;i++)
-        gains[i] = chanmap[i].Scale * mtx[chanmap[i].Index] * ingain;
     for(;i < MAX_OUTPUT_CHANNELS;i++)
         gains[i] = 0.0f;
 }

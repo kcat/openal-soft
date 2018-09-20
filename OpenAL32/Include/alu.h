@@ -491,8 +491,9 @@ inline float ScaleAzimuthFront(float azimuth, float scale)
 }
 
 
-void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, ALsizei numcoeffs, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
-void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, ALsizei numcoeffs, const ALfloat*restrict coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat*restrict coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+
 /**
  * ComputeDryPanGains
  *
@@ -507,9 +508,6 @@ inline void ComputeDryPanGains(const DryMixParams *dry, const ALfloat coeffs[MAX
     else
         ComputePanningGainsBF(dry->Ambi.Map, dry->NumChannels, coeffs, ingain, gains);
 }
-
-void ComputeFirstOrderGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
-void ComputeFirstOrderGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 /**
  * ComputeFirstOrderGains
  *
@@ -520,9 +518,9 @@ void ComputeFirstOrderGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, 
 inline void ComputeFirstOrderGains(const BFMixParams *foa, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     if(foa->CoeffCount > 0)
-        ComputeFirstOrderGainsMC(foa->Ambi.Coeffs, foa->NumChannels, mtx, ingain, gains);
+        ComputePanningGainsMC(foa->Ambi.Coeffs, foa->NumChannels, 4, mtx, ingain, gains);
     else
-        ComputeFirstOrderGainsBF(foa->Ambi.Map, foa->NumChannels, mtx, ingain, gains);
+        ComputePanningGainsBF(foa->Ambi.Map, foa->NumChannels, mtx, ingain, gains);
 }
 
 

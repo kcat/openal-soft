@@ -41,8 +41,8 @@
 extern inline void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
 extern inline void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
 extern inline float ScaleAzimuthFront(float azimuth, float scale);
-extern inline void ComputeDryPanGains(const DryMixParams *dry, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
-extern inline void ComputeFirstOrderGains(const BFMixParams *foa, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+extern inline void ComputeDryPanGains(const MixParams *dry, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+extern inline void ComputeFirstOrderGains(const MixParams *foa, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 
 static const ALsizei FuMa2ACN[MAX_AMBI_COEFFS] = {
@@ -396,9 +396,9 @@ static void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei orde
         TRACE("Using near-field reference distance: %.2f meters\n", device->AvgSpeakerDist);
 
         for(i = 0;i < order+1;i++)
-            device->Dry.NumChannelsPerOrder[i] = chans_per_order[i];
+            device->NumChannelsPerOrder[i] = chans_per_order[i];
         for(;i < MAX_AMBI_ORDER+1;i++)
-            device->Dry.NumChannelsPerOrder[i] = 0;
+            device->NumChannelsPerOrder[i] = 0;
     }
 }
 
@@ -943,7 +943,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     device->Dry.CoeffCount = 0;
     device->Dry.NumChannels = 0;
     for(i = 0;i < MAX_AMBI_ORDER+1;i++)
-        device->Dry.NumChannelsPerOrder[i] = 0;
+        device->NumChannelsPerOrder[i] = 0;
 
     device->AvgSpeakerDist = 0.0f;
     memset(device->ChannelDelay, 0, sizeof(device->ChannelDelay));

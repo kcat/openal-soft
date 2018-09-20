@@ -582,7 +582,7 @@ typedef struct DistanceComp {
  */
 #define BUFFERSIZE 2048
 
-typedef struct DryMixParams {
+typedef struct MixParams {
     AmbiConfig Ambi;
     /* Number of coefficients in each Ambi.Coeffs to mix together (4 for first-
      * order, 9 for second-order, etc). If the count is 0, Ambi.Map is used
@@ -592,17 +592,7 @@ typedef struct DryMixParams {
 
     ALfloat (*Buffer)[BUFFERSIZE];
     ALsizei NumChannels;
-    ALsizei NumChannelsPerOrder[MAX_AMBI_ORDER+1];
-} DryMixParams;
-
-typedef struct BFMixParams {
-    AmbiConfig Ambi;
-    /* Will only be 4 or 0. */
-    ALsizei CoeffCount;
-
-    ALfloat (*Buffer)[BUFFERSIZE];
-    ALsizei NumChannels;
-} BFMixParams;
+} MixParams;
 
 typedef struct RealMixParams {
     enum Channel ChannelName[MAX_OUTPUT_CHANNELS];
@@ -691,10 +681,11 @@ struct ALCdevice_struct {
     alignas(16) ALfloat TempBuffer[4][BUFFERSIZE];
 
     /* The "dry" path corresponds to the main output. */
-    DryMixParams Dry;
+    MixParams Dry;
+    ALsizei NumChannelsPerOrder[MAX_AMBI_ORDER+1];
 
     /* First-order ambisonics output, to be upsampled to the dry buffer if different. */
-    BFMixParams FOAOut;
+    MixParams FOAOut;
 
     /* "Real" output, which will be written to the device buffer. May alias the
      * dry buffer.

@@ -644,7 +644,7 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALflo
                 NfcFilterAdjust(&voice->Direct.Params[0].NFCtrlFilter, w0);
 
                 for(i = 0;i < MAX_AMBI_ORDER+1;i++)
-                    voice->Direct.ChannelsPerOrder[i] = Device->Dry.NumChannelsPerOrder[i];
+                    voice->Direct.ChannelsPerOrder[i] = Device->NumChannelsPerOrder[i];
                 voice->Flags |= VOICE_HAS_NFC;
             }
 
@@ -888,7 +888,7 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALflo
                     NfcFilterAdjust(&voice->Direct.Params[c].NFCtrlFilter, w0);
 
                 for(i = 0;i < MAX_AMBI_ORDER+1;i++)
-                    voice->Direct.ChannelsPerOrder[i] = Device->Dry.NumChannelsPerOrder[i];
+                    voice->Direct.ChannelsPerOrder[i] = Device->NumChannelsPerOrder[i];
                 voice->Flags |= VOICE_HAS_NFC;
             }
 
@@ -949,7 +949,7 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALflo
                     NfcFilterAdjust(&voice->Direct.Params[c].NFCtrlFilter, w0);
 
                 for(i = 0;i < MAX_AMBI_ORDER+1;i++)
-                    voice->Direct.ChannelsPerOrder[i] = Device->Dry.NumChannelsPerOrder[i];
+                    voice->Direct.ChannelsPerOrder[i] = Device->NumChannelsPerOrder[i];
                 voice->Flags |= VOICE_HAS_NFC;
             }
 

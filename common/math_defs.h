@@ -18,6 +18,12 @@
 #define FLT_EPSILON (1.19209290e-07f)
 #endif
 
+#define SQRT_2 1.41421356237309504880
+#define SQRT_3 1.73205080756887719318
+
+#define SQRTF_2 1.41421356237309504880f
+#define SQRTF_3 1.73205080756887719318f
+
 #ifndef HUGE_VALF
 static const union msvc_inf_hack {
     unsigned char b[4];

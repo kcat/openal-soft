@@ -656,14 +656,14 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALflo
                             Elev, Spread, coeffs);
 
             /* NOTE: W needs to be scaled by sqrt(2) due to FuMa normalization. */
-            ComputeDryPanGains(&Device->Dry, coeffs, DryGain*1.414213562f,
+            ComputeDryPanGains(&Device->Dry, coeffs, DryGain*SQRTF_2,
                                voice->Direct.Params[0].Gains.Target);
             for(i = 0;i < NumSends;i++)
             {
                 const ALeffectslot *Slot = SendSlots[i];
                 if(Slot)
-                    ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels,
-                        coeffs, WetGain[i]*1.414213562f, voice->Send[i].Params[0].Gains.Target
+                    ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, coeffs,
+                        WetGain[i]*SQRTF_2, voice->Send[i].Params[0].Gains.Target
                     );
             }
         }
@@ -672,8 +672,6 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALflo
             /* Local B-Format sources have their XYZ channels rotated according
              * to the orientation.
              */
-            const ALfloat sqrt_2 = sqrtf(2.0f);
-            const ALfloat sqrt_3 = sqrtf(3.0f);
             ALfloat N[3], V[3], U[3];
             aluMatrixf matrix;
 
@@ -717,10 +715,10 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALflo
              */
             aluMatrixfSet(&matrix,
                 // ACN0         ACN1          ACN2          ACN3
-                sqrt_2,         0.0f,         0.0f,         0.0f, // Ambi W
-                  0.0f, -N[0]*sqrt_3,  N[1]*sqrt_3, -N[2]*sqrt_3, // Ambi X
-                  0.0f,  U[0]*sqrt_3, -U[1]*sqrt_3,  U[2]*sqrt_3, // Ambi Y
-                  0.0f, -V[0]*sqrt_3,  V[1]*sqrt_3, -V[2]*sqrt_3  // Ambi Z
+                SQRTF_2,          0.0f,          0.0f,          0.0f, // Ambi W
+                   0.0f, -N[0]*SQRTF_3,  N[1]*SQRTF_3, -N[2]*SQRTF_3, // Ambi X
+                   0.0f,  U[0]*SQRTF_3, -U[1]*SQRTF_3,  U[2]*SQRTF_3, // Ambi Y
+                   0.0f, -V[0]*SQRTF_3,  V[1]*SQRTF_3, -V[2]*SQRTF_3  // Ambi Z
             );
 
             voice->Direct.Buffer = Device->FOAOut.Buffer;

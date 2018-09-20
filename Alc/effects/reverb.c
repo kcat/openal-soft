@@ -802,7 +802,6 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
  */
 static aluMatrixf GetTransformFromVector(const ALfloat *vec)
 {
-    const ALfloat sqrt_3 = 1.732050808f;
     aluMatrixf focus;
     ALfloat norm[3];
     ALfloat mag;
@@ -817,9 +816,9 @@ static aluMatrixf GetTransformFromVector(const ALfloat *vec)
     mag = sqrtf(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
     if(mag > 1.0f)
     {
-        norm[0] = vec[0] / mag * -sqrt_3;
-        norm[1] = vec[1] / mag * sqrt_3;
-        norm[2] = vec[2] / mag * sqrt_3;
+        norm[0] = vec[0] / mag * -SQRTF_3;
+        norm[1] = vec[1] / mag * SQRTF_3;
+        norm[2] = vec[2] / mag * SQRTF_3;
         mag = 1.0f;
     }
     else
@@ -828,9 +827,9 @@ static aluMatrixf GetTransformFromVector(const ALfloat *vec)
          * term. There's no need to renormalize the magnitude since it would
          * just be reapplied in the matrix.
          */
-        norm[0] = vec[0] * -sqrt_3;
-        norm[1] = vec[1] * sqrt_3;
-        norm[2] = vec[2] * sqrt_3;
+        norm[0] = vec[0] * -SQRTF_3;
+        norm[1] = vec[1] * SQRTF_3;
+        norm[2] = vec[2] * SQRTF_3;
     }
 
     aluMatrixfSet(&focus,

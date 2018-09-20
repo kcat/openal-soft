@@ -656,7 +656,7 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALflo
                             Elev, Spread, coeffs);
 
             /* NOTE: W needs to be scaled by sqrt(2) due to FuMa normalization. */
-            ComputeDryPanGains(&Device->Dry, coeffs, DryGain*SQRTF_2,
+            ComputePanGains(&Device->Dry, coeffs, DryGain*SQRTF_2,
                                voice->Direct.Params[0].Gains.Target);
             for(i = 0;i < NumSends;i++)
             {
@@ -724,8 +724,8 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALflo
             voice->Direct.Buffer = Device->FOAOut.Buffer;
             voice->Direct.Channels = Device->FOAOut.NumChannels;
             for(c = 0;c < num_channels;c++)
-                ComputeFirstOrderGains(&Device->FOAOut, matrix.m[c], DryGain,
-                                       voice->Direct.Params[c].Gains.Target);
+                ComputePanGains(&Device->FOAOut, matrix.m[c], DryGain,
+                                voice->Direct.Params[c].Gains.Target);
             for(i = 0;i < NumSends;i++)
             {
                 const ALeffectslot *Slot = SendSlots[i];
@@ -911,9 +911,8 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALflo
                     continue;
                 }
 
-                ComputeDryPanGains(&Device->Dry,
-                    coeffs, DryGain * downmix_gain, voice->Direct.Params[c].Gains.Target
-                );
+                ComputePanGains(&Device->Dry, coeffs, DryGain * downmix_gain,
+                                voice->Direct.Params[c].Gains.Target);
             }
 
             for(i = 0;i < NumSends;i++)
@@ -974,9 +973,8 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALflo
                     chans[c].elevation, Spread, coeffs
                 );
 
-                ComputeDryPanGains(&Device->Dry,
-                    coeffs, DryGain, voice->Direct.Params[c].Gains.Target
-                );
+                ComputePanGains(&Device->Dry, coeffs, DryGain,
+                                voice->Direct.Params[c].Gains.Target);
                 for(i = 0;i < NumSends;i++)
                 {
                     const ALeffectslot *Slot = SendSlots[i];

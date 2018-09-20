@@ -149,9 +149,9 @@ static ALvoid ALchorusState_update(ALchorusState *state, const ALCcontext *Conte
 
     /* Gains for left and right sides */
     CalcAngleCoeffs(-F_PI_2, 0.0f, 0.0f, coeffs);
-    ComputeDryPanGains(&device->Dry, coeffs, Slot->Params.Gain, state->Gains[0].Target);
+    ComputePanGains(&device->Dry, coeffs, Slot->Params.Gain, state->Gains[0].Target);
     CalcAngleCoeffs( F_PI_2, 0.0f, 0.0f, coeffs);
-    ComputeDryPanGains(&device->Dry, coeffs, Slot->Params.Gain, state->Gains[1].Target);
+    ComputePanGains(&device->Dry, coeffs, Slot->Params.Gain, state->Gains[1].Target);
 
     phase = props->Chorus.Phase;
     rate = props->Chorus.Rate;

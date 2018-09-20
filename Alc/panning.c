@@ -41,8 +41,7 @@
 extern inline void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
 extern inline void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
 extern inline float ScaleAzimuthFront(float azimuth, float scale);
-extern inline void ComputeDryPanGains(const MixParams *dry, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
-extern inline void ComputeFirstOrderGains(const MixParams *foa, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+extern inline void ComputePanGains(const MixParams *dry, const ALfloat*restrict coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 
 static const ALsizei FuMa2ACN[MAX_AMBI_COEFFS] = {

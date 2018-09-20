@@ -102,7 +102,7 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCcontext 
 
             STATIC_CAST(ALeffectState,state)->OutBuffer = device->Dry.Buffer;
             STATIC_CAST(ALeffectState,state)->OutChannels = device->Dry.NumChannels;
-            ComputeDryPanGains(&device->Dry, coeffs, Gain, state->TargetGains);
+            ComputePanGains(&device->Dry, coeffs, Gain, state->TargetGains);
         }
     }
 }

@@ -144,7 +144,7 @@ static ALvoid ALfshifterState_update(ALfshifterState *state, const ALCcontext *c
     }
 
     CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
-    ComputeDryPanGains(&device->Dry, coeffs, slot->Params.Gain, state->TargetGains);
+    ComputePanGains(&device->Dry, coeffs, slot->Params.Gain, state->TargetGains);
 }
 
 static ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

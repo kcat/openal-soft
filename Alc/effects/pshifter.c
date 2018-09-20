@@ -208,7 +208,7 @@ static ALvoid ALpshifterState_update(ALpshifterState *state, const ALCcontext *c
     state->PitchShift  = state->PitchShiftI * (1.0f/FRACTIONONE);
 
     CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
-    ComputeDryPanGains(&device->Dry, coeffs, slot->Params.Gain, state->TargetGains);
+    ComputePanGains(&device->Dry, coeffs, slot->Params.Gain, state->TargetGains);
 }
 
 static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

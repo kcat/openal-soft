@@ -104,8 +104,7 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCcontex
     );
 
     CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
-    ComputeDryPanGains(&device->Dry, coeffs, slot->Params.Gain * props->Distortion.Gain,
-                       state->Gain);
+    ComputePanGains(&device->Dry, coeffs, slot->Params.Gain*props->Distortion.Gain, state->Gain);
 }
 
 static ALvoid ALdistortionState_process(ALdistortionState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

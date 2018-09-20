@@ -99,8 +99,7 @@ static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCcontex
     STATIC_CAST(ALeffectState,state)->OutBuffer = device->FOAOut.Buffer;
     STATIC_CAST(ALeffectState,state)->OutChannels = device->FOAOut.NumChannels;
     for(i = 0;i < 4;i++)
-        ComputeFirstOrderGains(&device->FOAOut, IdentityMatrixf.m[i],
-                               slot->Params.Gain, state->Gain[i]);
+        ComputePanGains(&device->FOAOut, IdentityMatrixf.m[i], slot->Params.Gain, state->Gain[i]);
 }
 
 static ALvoid ALcompressorState_process(ALcompressorState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

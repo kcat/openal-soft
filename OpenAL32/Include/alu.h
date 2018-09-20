@@ -495,32 +495,20 @@ void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, AL
 void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat*restrict coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 /**
- * ComputeDryPanGains
+ * ComputePanGains
  *
  * Computes panning gains using the given channel decoder coefficients and the
- * pre-calculated direction or angle coefficients.
+ * pre-calculated direction or angle coefficients. For B-Format sources, the
+ * coeffs are a 'slice' of a transform matrix for the input channel, used to
+ * scale and orient the sound samples.
  */
-inline void ComputeDryPanGains(const MixParams *dry, const ALfloat coeffs[MAX_AMBI_COEFFS], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+inline void ComputePanGains(const MixParams *dry, const ALfloat*restrict coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     if(dry->CoeffCount > 0)
         ComputePanningGainsMC(dry->Ambi.Coeffs, dry->NumChannels, dry->CoeffCount,
                               coeffs, ingain, gains);
     else
         ComputePanningGainsBF(dry->Ambi.Map, dry->NumChannels, coeffs, ingain, gains);
-}
-/**
- * ComputeFirstOrderGains
- *
- * Sets channel gains for a first-order ambisonics input channel. The matrix is
- * a 1x4 'slice' of a transform matrix for the input channel, used to scale and
- * orient the sound samples.
- */
-inline void ComputeFirstOrderGains(const MixParams *foa, const ALfloat mtx[4], ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
-{
-    if(foa->CoeffCount > 0)
-        ComputePanningGainsMC(foa->Ambi.Coeffs, foa->NumChannels, 4, mtx, ingain, gains);
-    else
-        ComputePanningGainsBF(foa->Ambi.Map, foa->NumChannels, mtx, ingain, gains);
 }
 
 

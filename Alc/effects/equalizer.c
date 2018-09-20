@@ -76,12 +76,12 @@ typedef struct ALequalizerState {
     DERIVE_FROM_TYPE(ALeffectState);
 
     struct {
+        /* Effect parameters */
+        BiquadFilter filter[4];
+
         /* Effect gains for each channel */
         ALfloat CurrentGains[MAX_OUTPUT_CHANNELS];
         ALfloat TargetGains[MAX_OUTPUT_CHANNELS];
-
-        /* Effect parameters */
-        BiquadFilter filter[4];
     } Chans[MAX_EFFECT_CHANNELS];
 
     ALfloat SampleBuffer[MAX_EFFECT_CHANNELS][BUFFERSIZE];
@@ -128,12 +128,6 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext 
     ALfloat gain, f0norm;
     ALuint i;
 
-    STATIC_CAST(ALeffectState,state)->OutBuffer = device->FOAOut.Buffer;
-    STATIC_CAST(ALeffectState,state)->OutChannels = device->FOAOut.NumChannels;
-    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputeFirstOrderGains(&device->FOAOut, IdentityMatrixf.m[i],
-                               slot->Params.Gain, state->Chans[i].TargetGains);
-
     /* Calculate coefficients for the each type of filter. Note that the shelf
      * filters' gain is for the reference frequency, which is the centerpoint
      * of the transition band.
@@ -174,6 +168,12 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext 
         BiquadFilter_copyParams(&state->Chans[i].filter[2], &state->Chans[0].filter[2]);
         BiquadFilter_copyParams(&state->Chans[i].filter[3], &state->Chans[0].filter[3]);
     }
+
+    STATIC_CAST(ALeffectState,state)->OutBuffer = device->FOAOut.Buffer;
+    STATIC_CAST(ALeffectState,state)->OutChannels = device->FOAOut.NumChannels;
+    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
+        ComputePanGains(&device->FOAOut, IdentityMatrixf.m[i], slot->Params.Gain,
+                        state->Chans[i].TargetGains);
 }
 
 static ALvoid ALequalizerState_process(ALequalizerState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

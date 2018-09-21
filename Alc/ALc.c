@@ -2680,7 +2680,7 @@ static ALvoid InitContext(ALCcontext *Context)
  */
 static void FreeContext(ALCcontext *context)
 {
-    static const AsyncEvent kill_evt = { 0 };
+    static const AsyncEvent kill_evt = ASYNC_EVENT(EventType_KillThread);
     ALlistener *listener = context->Listener;
     struct ALeffectslotArray *auxslots;
     struct ALeffectslotProps *eprops;

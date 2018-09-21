@@ -211,32 +211,31 @@ void aluInit(void)
 
 static void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
 {
+    AsyncEvent evt = ASYNC_EVENT(EventType_SourceStateChange);
     ALbitfieldSOFT enabledevt;
-    AsyncEvent evt;
     size_t strpos;
     ALuint scale;
 
     enabledevt = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_acquire);
     if(!(enabledevt&EventType_SourceStateChange)) return;
 
-    evt.EnumType = EventType_SourceStateChange;
-    evt.Type = AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT;
-    evt.ObjectId = id;
-    evt.Param = AL_STOPPED;
+    evt.u.user.type = AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT;
+    evt.u.user.id = id;
+    evt.u.user.param = AL_STOPPED;
 
     /* Normally snprintf would be used, but this is called from the mixer and
      * that function's not real-time safe, so we have to construct it manually.
      */
-    strcpy(evt.Message, "Source ID "); strpos = 10;
+    strcpy(evt.u.user.msg, "Source ID "); strpos = 10;
     scale = 1000000000;
     while(scale > 0 && scale > id)
         scale /= 10;
     while(scale > 0)
     {
-        evt.Message[strpos++] = '0' + ((id/scale)%10);
+        evt.u.user.msg[strpos++] = '0' + ((id/scale)%10);
         scale /= 10;
     }
-    strcpy(evt.Message+strpos, " state changed to AL_STOPPED");
+    strcpy(evt.u.user.msg+strpos, " state changed to AL_STOPPED");
 
     if(ll_ringbuffer_write(context->AsyncEvents, (const char*)&evt, 1) == 1)
         alsem_post(&context->EventSem);
@@ -1846,25 +1845,24 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
 
 void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
 {
+    AsyncEvent evt = ASYNC_EVENT(EventType_Disconnected);
     ALCcontext *ctx;
-    AsyncEvent evt;
     va_list args;
     int msglen;
 
     if(!ATOMIC_EXCHANGE(&device->Connected, AL_FALSE, almemory_order_acq_rel))
         return;
 
-    evt.EnumType = EventType_Disconnected;
-    evt.Type = AL_EVENT_TYPE_DISCONNECTED_SOFT;
-    evt.ObjectId = 0;
-    evt.Param = 0;
+    evt.u.user.type = AL_EVENT_TYPE_DISCONNECTED_SOFT;
+    evt.u.user.id = 0;
+    evt.u.user.param = 0;
 
     va_start(args, msg);
-    msglen = vsnprintf(evt.Message, sizeof(evt.Message), msg, args);
+    msglen = vsnprintf(evt.u.user.msg, sizeof(evt.u.user.msg), msg, args);
     va_end(args);
 
-    if(msglen < 0 || (size_t)msglen >= sizeof(evt.Message))
-        evt.Message[sizeof(evt.Message)-1] = 0;
+    if(msglen < 0 || (size_t)msglen >= sizeof(evt.u.user.msg))
+        evt.u.user.msg[sizeof(evt.u.user.msg)-1] = 0;
 
     ctx = ATOMIC_LOAD_SEQ(&device->ContextList);
     while(ctx)

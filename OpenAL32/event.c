@@ -27,13 +27,14 @@ int EventThread(void *arg)
 
         almtx_lock(&context->EventCbLock);
         do {
-            quitnow = !evt.EnumType;
+            quitnow = evt.EnumType == EventType_KillThread;
             if(quitnow) break;
 
             enabledevts = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_acquire);
             if(context->EventCb && (enabledevts&evt.EnumType) == evt.EnumType)
-                context->EventCb(evt.Type, evt.ObjectId, evt.Param, (ALsizei)strlen(evt.Message),
-                                 evt.Message, context->EventParam);
+                context->EventCb(evt.u.user.type, evt.u.user.id, evt.u.user.param,
+                    (ALsizei)strlen(evt.u.user.msg), evt.u.user.msg, context->EventParam
+                );
         } while(ll_ringbuffer_read(context->AsyncEvents, (char*)&evt, 1) != 0);
         almtx_unlock(&context->EventCbLock);
     }

@@ -750,6 +750,10 @@ struct ALCdevice_struct {
 
 
 enum {
+    /* End event thread processing. */
+    EventType_KillThread = 0,
+
+    /* User event types. */
     EventType_SourceStateChange = 1<<0,
     EventType_BufferCompleted   = 1<<1,
     EventType_Error             = 1<<2,
@@ -760,11 +764,17 @@ enum {
 
 typedef struct AsyncEvent {
     unsigned int EnumType;
-    ALenum Type;
-    ALuint ObjectId;
-    ALuint Param;
-    ALchar Message[1008];
+    union {
+        char dummy;
+        struct {
+            ALenum type;
+            ALuint id;
+            ALuint param;
+            ALchar msg[1008];
+        } user;
+    } u;
 } AsyncEvent;
+#define ASYNC_EVENT(t) { t, { 0 } }
 
 struct ALCcontext_struct {
     RefCount ref;

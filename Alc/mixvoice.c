@@ -197,12 +197,11 @@ void aluInitMixer(void)
 static void SendAsyncEvent(ALCcontext *context, ALuint enumtype, ALenum type,
                            ALuint objid, ALuint param, const char *msg)
 {
-    AsyncEvent evt;
-    evt.EnumType = enumtype;
-    evt.Type = type;
-    evt.ObjectId = objid;
-    evt.Param = param;
-    strcpy(evt.Message, msg);
+    AsyncEvent evt = ASYNC_EVENT(enumtype);
+    evt.u.user.type = type;
+    evt.u.user.id = objid;
+    evt.u.user.param = param;
+    strcpy(evt.u.user.msg, msg);
     if(ll_ringbuffer_write(context->AsyncEvents, (const char*)&evt, 1) == 1)
         alsem_post(&context->EventSem);
 }

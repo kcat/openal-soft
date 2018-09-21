@@ -2680,7 +2680,6 @@ static ALvoid InitContext(ALCcontext *Context)
  */
 static void FreeContext(ALCcontext *context)
 {
-    static const AsyncEvent kill_evt = ASYNC_EVENT(EventType_KillThread);
     ALlistener *listener = context->Listener;
     struct ALeffectslotArray *auxslots;
     struct ALeffectslotProps *eprops;
@@ -2691,11 +2690,6 @@ static void FreeContext(ALCcontext *context)
     ALsizei i;
 
     TRACE("%p\n", context);
-
-    while(ll_ringbuffer_write(context->AsyncEvents, (const char*)&kill_evt, 1) == 0)
-        althrd_yield();
-    alsem_post(&context->EventSem);
-    althrd_join(context->EventThread, NULL);
 
     if((cprops=ATOMIC_LOAD(&context->Update, almemory_order_acquire)) != NULL)
     {
@@ -2809,6 +2803,7 @@ static void FreeContext(ALCcontext *context)
  */
 static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
 {
+    static const AsyncEvent kill_evt = ASYNC_EVENT(EventType_KillThread);
     ALCcontext *origctx, *newhead;
     bool ret = true;
 
@@ -2840,6 +2835,11 @@ static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
     else
         ret = !!newhead;
     V0(device->Backend,unlock)();
+
+    while(ll_ringbuffer_write(context->AsyncEvents, (const char*)&kill_evt, 1) == 0)
+        althrd_yield();
+    alsem_post(&context->EventSem);
+    althrd_join(context->EventThread, NULL);
 
     ALCcontext_DecRef(context);
     return ret;

@@ -462,12 +462,40 @@ static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool f
             slot->Params.AirAbsorptionGainHF = 1.0f;
         }
 
-        /* Swap effect states. No need to play with the ref counts since they
-         * keep the same number of refs.
-         */
         state = props->State;
-        props->State = slot->Params.EffectState;
-        slot->Params.EffectState = state;
+
+        if(state == slot->Params.EffectState)
+        {
+            /* If the effect state is the same as current, we can decrement its
+             * count safely to remove it from the update object (it can't reach
+             * 0 refs since the current params also hold a reference).
+             */
+            DecrementRef(&state->Ref);
+            props->State = NULL;
+        }
+        else
+        {
+            /* Otherwise, replace it and send off the old one with a release
+             * event.
+             */
+            AsyncEvent evt = ASYNC_EVENT(EventType_ReleaseEffectState);
+            evt.u.EffectState = slot->Params.EffectState;
+
+            slot->Params.EffectState = state;
+            props->State = NULL;
+
+            if(LIKELY(ll_ringbuffer_write(context->AsyncEvents, (const char*)&evt, 1) != 0))
+                alsem_post(&context->EventSem);
+            else
+            {
+                /* If writing the event failed, the queue was probably full.
+                 * Store the old state in the property object where it can
+                 * eventually be cleaned up sometime later (not ideal, but
+                 * better than blocking or leaking).
+                 */
+                props->State = evt.u.EffectState;
+            }
+        }
 
         ATOMIC_REPLACE_HEAD(struct ALeffectslotProps*, &context->FreeEffectslotProps, props);
     }

@@ -6,6 +6,7 @@
 #include "AL/alext.h"
 #include "alMain.h"
 #include "alError.h"
+#include "alAuxEffectSlot.h"
 #include "ringbuffer.h"
 
 
@@ -29,6 +30,12 @@ int EventThread(void *arg)
         do {
             quitnow = evt.EnumType == EventType_KillThread;
             if(quitnow) break;
+
+            if(evt.EnumType == EventType_ReleaseEffectState)
+            {
+                ALeffectState_DecRef(evt.u.EffectState);
+                continue;
+            }
 
             enabledevts = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_acquire);
             if(context->EventCb && (enabledevts&evt.EnumType) == evt.EnumType)

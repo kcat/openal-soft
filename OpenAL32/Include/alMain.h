@@ -760,6 +760,9 @@ enum {
     EventType_Performance       = 1<<3,
     EventType_Deprecated        = 1<<4,
     EventType_Disconnected      = 1<<5,
+
+    /* Internal events. */
+    EventType_ReleaseEffectState = 65536,
 };
 
 typedef struct AsyncEvent {
@@ -772,6 +775,7 @@ typedef struct AsyncEvent {
             ALuint param;
             ALchar msg[1008];
         } user;
+        struct ALeffectState *EffectState;
     } u;
 } AsyncEvent;
 #define ASYNC_EVENT(t) { t, { 0 } }

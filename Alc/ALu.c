@@ -741,7 +741,7 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALflo
              * outputs on the columns.
              */
             aluMatrixfSet(&matrix,
-                // ACN0         ACN1          ACN2          ACN3
+                // ACN0           ACN1           ACN2           ACN3
                 SQRTF_2,          0.0f,          0.0f,          0.0f, // Ambi W
                    0.0f, -N[0]*SQRTF_3,  N[1]*SQRTF_3, -N[2]*SQRTF_3, // Ambi X
                    0.0f,  U[0]*SQRTF_3, -U[1]*SQRTF_3,  U[2]*SQRTF_3, // Ambi Y

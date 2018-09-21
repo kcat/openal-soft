@@ -827,7 +827,6 @@ struct ALCcontext_struct {
 
     ATOMIC(struct ALeffectslotArray*) ActiveAuxSlots;
 
-    almtx_t EventThrdLock;
     althrd_t EventThread;
     alsem_t EventSem;
     struct ll_ringbuffer *AsyncEvents;

@@ -2638,7 +2638,6 @@ static ALvoid InitContext(ALCcontext *Context)
     Context->MetersPerUnit = AL_DEFAULT_METERS_PER_UNIT;
     ATOMIC_FLAG_TEST_AND_SET(&Context->PropsClean, almemory_order_relaxed);
     ATOMIC_INIT(&Context->DeferUpdates, AL_FALSE);
-    almtx_init(&Context->EventThrdLock, almtx_plain);
     alsem_init(&Context->EventSem, 0);
     Context->AsyncEvents = NULL;
     ATOMIC_INIT(&Context->EnabledEvts, 0);
@@ -2779,7 +2778,6 @@ static void FreeContext(ALCcontext *context)
     TRACE("Freed "SZFMT" listener property object%s\n", count, (count==1)?"":"s");
 
     almtx_destroy(&context->EventCbLock);
-    almtx_destroy(&context->EventThrdLock);
     alsem_destroy(&context->EventSem);
 
     ll_ringbuffer_free(context->AsyncEvents);

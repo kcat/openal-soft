@@ -2665,6 +2665,11 @@ static ALvoid InitContext(ALCcontext *Context)
                                           listener->Params.MetersPerUnit;
     listener->Params.SourceDistanceModel = Context->SourceDistanceModel;
     listener->Params.DistanceModel = Context->DistanceModel;
+
+
+    Context->AsyncEvents = ll_ringbuffer_create(63, sizeof(AsyncEvent), false);
+    if(althrd_create(&Context->EventThread, EventThread, Context) != althrd_success)
+        ERR("Failed to start event thread! Expect problems.\n");
 }
 
 
@@ -2675,6 +2680,7 @@ static ALvoid InitContext(ALCcontext *Context)
  */
 static void FreeContext(ALCcontext *context)
 {
+    static const AsyncEvent kill_evt = { 0 };
     ALlistener *listener = context->Listener;
     struct ALeffectslotArray *auxslots;
     struct ALeffectslotProps *eprops;
@@ -2685,6 +2691,11 @@ static void FreeContext(ALCcontext *context)
     ALsizei i;
 
     TRACE("%p\n", context);
+
+    while(ll_ringbuffer_write(context->AsyncEvents, (const char*)&kill_evt, 1) == 0)
+        althrd_yield();
+    alsem_post(&context->EventSem);
+    althrd_join(context->EventThread, NULL);
 
     if((cprops=ATOMIC_LOAD(&context->Update, almemory_order_acquire)) != NULL)
     {
@@ -2772,15 +2783,6 @@ static void FreeContext(ALCcontext *context)
         ++count;
     }
     TRACE("Freed "SZFMT" listener property object%s\n", count, (count==1)?"":"s");
-
-    if(ATOMIC_EXCHANGE(&context->EnabledEvts, 0, almemory_order_acq_rel))
-    {
-        static const AsyncEvent kill_evt = { 0 };
-        while(ll_ringbuffer_write(context->AsyncEvents, (const char*)&kill_evt, 1) == 0)
-            althrd_yield();
-        alsem_post(&context->EventSem);
-        althrd_join(context->EventThread, NULL);
-    }
 
     almtx_destroy(&context->EventCbLock);
     almtx_destroy(&context->EventThrdLock);

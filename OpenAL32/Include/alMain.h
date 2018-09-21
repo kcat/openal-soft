@@ -892,6 +892,9 @@ inline void UnlockEffectSlotList(ALCcontext *context)
 { almtx_unlock(&context->EffectSlotLock); }
 
 
+int EventThread(void *arg);
+
+
 vector_al_string SearchDataFiles(const char *match, const char *subdir);
 
 #ifdef __cplusplus

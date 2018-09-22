@@ -149,11 +149,12 @@ void Mix_SSE(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffer
     {
         ALsizei pos = 0;
         ALfloat gain = CurrentGains[c];
-        const ALfloat step = (TargetGains[c] - gain) * delta;
+        const ALfloat diff = TargetGains[c] - gain;
 
-        if(fabsf(step) > FLT_EPSILON)
+        if(fabsf(diff) > FLT_EPSILON)
         {
             ALsizei minsize = mini(BufferSize, Counter);
+            const ALfloat step = diff * delta;
             ALfloat step_count = 0.0f;
             /* Mix with applying gain steps in aligned multiples of 4. */
             if(LIKELY(minsize > 3))
@@ -227,7 +228,7 @@ void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restri
     for(c = 0;c < InChans;c++)
     {
         ALsizei pos = 0;
-        ALfloat gain = Gains[c];
+        const ALfloat gain = Gains[c];
         if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
 

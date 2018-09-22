@@ -108,21 +108,22 @@ void Mix_C(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffer)[
            ALfloat *CurrentGains, const ALfloat *TargetGains, ALsizei Counter, ALsizei OutPos,
            ALsizei BufferSize)
 {
-    ALfloat gain, delta, step;
+    const ALfloat delta = (Counter > 0) ? 1.0f/(ALfloat)Counter : 0.0f;
     ALsizei c;
 
     ASSUME(OutChans > 0);
     ASSUME(BufferSize > 0);
-    delta = (Counter > 0) ? 1.0f/(ALfloat)Counter : 0.0f;
 
     for(c = 0;c < OutChans;c++)
     {
         ALsizei pos = 0;
-        gain = CurrentGains[c];
-        step = (TargetGains[c] - gain) * delta;
-        if(fabsf(step) > FLT_EPSILON)
+        ALfloat gain = CurrentGains[c];
+        const ALfloat diff = TargetGains[c] - gain;
+
+        if(fabsf(diff) > FLT_EPSILON)
         {
             ALsizei minsize = mini(BufferSize, Counter);
+            const ALfloat step = diff * delta;
             ALfloat step_count = 0.0f;
             for(;pos < minsize;pos++)
             {
@@ -158,7 +159,7 @@ void MixRow_C(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restrict
 
     for(c = 0;c < InChans;c++)
     {
-        ALfloat gain = Gains[c];
+        const ALfloat gain = Gains[c];
         if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
             continue;
 

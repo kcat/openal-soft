@@ -554,6 +554,7 @@ static ALboolean ReverbState_deviceUpdate(ReverbState *State, ALCdevice *Device)
 {
     ALuint frequency = Device->Frequency;
     ALfloat multiplier;
+    ALsizei i, j;
 
     /* Allocate the delay lines. */
     if(!AllocLines(frequency, State))
@@ -565,6 +566,54 @@ static ALboolean ReverbState_deviceUpdate(ReverbState *State, ALCdevice *Device)
     State->LateFeedTap = float2int((AL_EAXREVERB_MAX_REFLECTIONS_DELAY +
                                     EARLY_TAP_LENGTHS[NUM_LINES-1]*multiplier) *
                                    frequency);
+
+    /* Clear filters and gain coefficients since the delay lines were all just
+     * cleared (if not reallocated).
+     */
+    for(i = 0;i < NUM_LINES;i++)
+    {
+        BiquadFilter_clear(&State->Filter[i].Lp);
+        BiquadFilter_clear(&State->Filter[i].Hp);
+    }
+
+    for(i = 0;i < NUM_LINES;i++)
+    {
+        State->EarlyDelayCoeff[i][0] = 0.0f;
+        State->EarlyDelayCoeff[i][1] = 0.0f;
+    }
+
+    for(i = 0;i < NUM_LINES;i++)
+    {
+        State->Early.Coeff[i][0] = 0.0f;
+        State->Early.Coeff[i][1] = 0.0f;
+    }
+
+    State->Late.DensityGain[0] = 0.0f;
+    State->Late.DensityGain[1] = 0.0f;
+    for(i = 0;i < NUM_LINES;i++)
+    {
+        State->Late.T60[i].MidGain[0] = 0.0f;
+        State->Late.T60[i].MidGain[1] = 0.0f;
+        BiquadFilter_clear(&State->Late.T60[i].HFFilter);
+        BiquadFilter_clear(&State->Late.T60[i].LFFilter);
+    }
+
+    for(i = 0;i < NUM_LINES;i++)
+    {
+        for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
+        {
+            State->Early.CurrentGain[i][j] = 0.0f;
+            State->Early.PanGain[i][j] = 0.0f;
+            State->Late.CurrentGain[i][j] = 0.0f;
+            State->Late.PanGain[i][j] = 0.0f;
+        }
+    }
+
+    /* Reset counters and offset base. */
+    State->FadeCount = 0;
+    State->MaxUpdate[0] = MAX_UPDATE_SAMPLES;
+    State->MaxUpdate[1] = MAX_UPDATE_SAMPLES;
+    State->Offset = 0;
 
     return AL_TRUE;
 }

@@ -1,3 +1,16 @@
+openal-soft-1.19.1:
+
+    Implemented capture support for the SoundIO backend.
+
+    Fixed source buffer queues potentially not playing properly when a queue
+    entry completes.
+
+    Fixed possible unexpected failures when generating auxiliary effect slots.
+
+    Fixed a crash with certain reverb or device settings.
+
+    Fixed OpenSL capture.
+
 openal-soft-1.19.0:
 
     Implemented the ALC_SOFT_device_clock extension.

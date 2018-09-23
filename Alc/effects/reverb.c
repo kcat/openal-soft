@@ -274,7 +274,7 @@ typedef struct LateReverb {
     ALfloat PanGain[NUM_LINES][MAX_OUTPUT_CHANNELS];
 } LateReverb;
 
-typedef struct ALreverbState {
+typedef struct ReverbState {
     DERIVE_FROM_TYPE(ALeffectState);
 
     /* All delay lines are allocated as a single buffer to reduce memory
@@ -320,22 +320,22 @@ typedef struct ALreverbState {
     /* Temporary storage used when processing. */
     alignas(16) ALfloat TempSamples[NUM_LINES][MAX_UPDATE_SAMPLES];
     alignas(16) ALfloat MixSamples[NUM_LINES][MAX_UPDATE_SAMPLES];
-} ALreverbState;
+} ReverbState;
 
-static ALvoid ALreverbState_Destruct(ALreverbState *State);
-static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Device);
-static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props);
-static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
-DECLARE_DEFAULT_ALLOCATORS(ALreverbState)
+static ALvoid ReverbState_Destruct(ReverbState *State);
+static ALboolean ReverbState_deviceUpdate(ReverbState *State, ALCdevice *Device);
+static ALvoid ReverbState_update(ReverbState *State, const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props);
+static ALvoid ReverbState_process(ReverbState *State, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
+DECLARE_DEFAULT_ALLOCATORS(ReverbState)
 
-DEFINE_ALEFFECTSTATE_VTABLE(ALreverbState);
+DEFINE_ALEFFECTSTATE_VTABLE(ReverbState);
 
-static void ALreverbState_Construct(ALreverbState *state)
+static void ReverbState_Construct(ReverbState *state)
 {
     ALsizei i, j;
 
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
-    SET_VTABLE2(ALreverbState, ALeffectState, state);
+    SET_VTABLE2(ReverbState, ALeffectState, state);
 
     state->TotalSamples = 0;
     state->SampleBuffer = NULL;
@@ -421,7 +421,7 @@ static void ALreverbState_Construct(ALreverbState *state)
     state->Offset = 0;
 }
 
-static ALvoid ALreverbState_Destruct(ALreverbState *State)
+static ALvoid ReverbState_Destruct(ReverbState *State)
 {
     al_free(State->SampleBuffer);
     State->SampleBuffer = NULL;
@@ -475,7 +475,7 @@ static ALuint CalcLineLength(const ALfloat length, const ptrdiff_t offset, const
  * for all lines given the sample rate (frequency).  If an allocation failure
  * occurs, it returns AL_FALSE.
  */
-static ALboolean AllocLines(const ALuint frequency, ALreverbState *State)
+static ALboolean AllocLines(const ALuint frequency, ReverbState *State)
 {
     ALuint totalSamples, i;
     ALfloat multiplier, length;
@@ -550,7 +550,7 @@ static ALboolean AllocLines(const ALuint frequency, ALreverbState *State)
     return AL_TRUE;
 }
 
-static ALboolean ALreverbState_deviceUpdate(ALreverbState *State, ALCdevice *Device)
+static ALboolean ReverbState_deviceUpdate(ReverbState *State, ALCdevice *Device)
 {
     ALuint frequency = Device->Frequency;
     ALfloat multiplier;
@@ -667,7 +667,7 @@ static void CalcT60DampingCoeffs(const ALfloat length, const ALfloat lfDecayTime
 }
 
 /* Update the offsets for the main effect delay line. */
-static ALvoid UpdateDelayLine(const ALfloat earlyDelay, const ALfloat lateDelay, const ALfloat density, const ALfloat decayTime, const ALuint frequency, ALreverbState *State)
+static ALvoid UpdateDelayLine(const ALfloat earlyDelay, const ALfloat lateDelay, const ALfloat density, const ALfloat decayTime, const ALuint frequency, ReverbState *State)
 {
     ALfloat multiplier, length;
     ALuint i;
@@ -843,7 +843,7 @@ static aluMatrixf GetTransformFromVector(const ALfloat *vec)
 }
 
 /* Update the early and late 3D panning gains. */
-static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, const ALfloat earlyGain, const ALfloat lateGain, ALreverbState *State)
+static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, const ALfloat earlyGain, const ALfloat lateGain, ReverbState *State)
 {
     aluMatrixf transform, rot;
     ALsizei i;
@@ -880,7 +880,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
 #undef MATRIX_MULT
 }
 
-static ALvoid ALreverbState_update(ALreverbState *State, const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props)
+static ALvoid ReverbState_update(ReverbState *State, const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props)
 {
     const ALCdevice *Device = Context->Device;
     const ALlistener *Listener = Context->Listener;
@@ -1174,7 +1174,7 @@ static void VectorAllpass_Faded(ALfloat (*restrict samples)[MAX_UPDATE_SAMPLES],
  * Two static specializations are used for transitional (cross-faded) delay
  * line processing and non-transitional processing.
  */
-static void EarlyReflection_Unfaded(ALreverbState *State, ALsizei offset, const ALsizei todo,
+static void EarlyReflection_Unfaded(ReverbState *State, ALsizei offset, const ALsizei todo,
                                     ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
 {
     ALfloat (*restrict temps)[MAX_UPDATE_SAMPLES] = State->TempSamples;
@@ -1225,7 +1225,7 @@ static void EarlyReflection_Unfaded(ALreverbState *State, ALsizei offset, const 
     late_feed_tap = offset - State->LateFeedTap;
     VectorScatterRevDelayIn(&main_delay, late_feed_tap, mixX, mixY, out, todo);
 }
-static void EarlyReflection_Faded(ALreverbState *State, ALsizei offset, const ALsizei todo,
+static void EarlyReflection_Faded(ReverbState *State, ALsizei offset, const ALsizei todo,
                                   const ALfloat fade, ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
 {
     ALfloat (*restrict temps)[MAX_UPDATE_SAMPLES] = State->TempSamples;
@@ -1309,7 +1309,7 @@ static inline void LateT60Filter(ALfloat *restrict samples, const ALsizei todo, 
  * Two variations are made, one for for transitional (cross-faded) delay line
  * processing and one for non-transitional processing.
  */
-static void LateReverb_Unfaded(ALreverbState *State, ALsizei offset, const ALsizei todo,
+static void LateReverb_Unfaded(ReverbState *State, ALsizei offset, const ALsizei todo,
                                ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
 {
     ALfloat (*restrict temps)[MAX_UPDATE_SAMPLES] = State->TempSamples;
@@ -1347,7 +1347,7 @@ static void LateReverb_Unfaded(ALreverbState *State, ALsizei offset, const ALsiz
     /* Finally, scatter and bounce the results to refeed the feedback buffer. */
     VectorScatterRevDelayIn(&late_delay, offset, mixX, mixY, out, todo);
 }
-static void LateReverb_Faded(ALreverbState *State, ALsizei offset, const ALsizei todo,
+static void LateReverb_Faded(ReverbState *State, ALsizei offset, const ALsizei todo,
                              const ALfloat fade, ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
 {
     ALfloat (*restrict temps)[MAX_UPDATE_SAMPLES] = State->TempSamples;
@@ -1398,7 +1398,7 @@ static void LateReverb_Faded(ALreverbState *State, ALsizei offset, const ALsizei
     VectorScatterRevDelayIn(&late_delay, offset, mixX, mixY, temps, todo);
 }
 
-static ALvoid ALreverbState_process(ALreverbState *State, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+static ALvoid ReverbState_process(ReverbState *State, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
     ALfloat (*restrict afmt)[MAX_UPDATE_SAMPLES] = State->TempSamples;
     ALfloat (*restrict samples)[MAX_UPDATE_SAMPLES] = State->MixSamples;
@@ -1521,9 +1521,9 @@ typedef struct ReverbStateFactory {
 
 static ALeffectState *ReverbStateFactory_create(ReverbStateFactory* UNUSED(factory))
 {
-    ALreverbState *state;
+    ReverbState *state;
 
-    NEW_OBJ0(state, ALreverbState)();
+    NEW_OBJ0(state, ReverbState)();
     if(!state) return NULL;
 
     return STATIC_CAST(ALeffectState, state);

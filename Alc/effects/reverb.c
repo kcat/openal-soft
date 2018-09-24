@@ -283,6 +283,15 @@ typedef struct ReverbState {
     ALfloat *SampleBuffer;
     ALuint   TotalSamples;
 
+    struct {
+        /* Calculated parameters which indicate if cross-fading is needed after
+         * an update.
+         */
+        ALfloat Density, Diffusion;
+        ALfloat DecayTime, HFDecayTime, LFDecayTime;
+        ALfloat HFReference, LFReference;
+    } Params;
+
     /* Master effect filters */
     struct {
         BiquadFilter Lp;
@@ -339,6 +348,14 @@ static void ReverbState_Construct(ReverbState *state)
 
     state->TotalSamples = 0;
     state->SampleBuffer = NULL;
+
+    state->Params.Density = AL_EAXREVERB_DEFAULT_DENSITY;
+    state->Params.Diffusion = AL_EAXREVERB_DEFAULT_DIFFUSION;
+    state->Params.DecayTime = AL_EAXREVERB_DEFAULT_DECAY_TIME;
+    state->Params.HFDecayTime = AL_EAXREVERB_DEFAULT_DECAY_TIME*AL_EAXREVERB_DEFAULT_DECAY_HFRATIO;
+    state->Params.LFDecayTime = AL_EAXREVERB_DEFAULT_DECAY_TIME*AL_EAXREVERB_DEFAULT_DECAY_LFRATIO;
+    state->Params.HFReference = AL_EAXREVERB_DEFAULT_HFREFERENCE;
+    state->Params.LFReference = AL_EAXREVERB_DEFAULT_LFREFERENCE;
 
     for(i = 0;i < NUM_LINES;i++)
     {
@@ -929,7 +946,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
 #undef MATRIX_MULT
 }
 
-static ALvoid ReverbState_update(ReverbState *State, const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props)
+static void ReverbState_update(ReverbState *State, const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props)
 {
     const ALCdevice *Device = Context->Device;
     const ALlistener *Listener = Context->Listener;
@@ -1001,30 +1018,31 @@ static ALvoid ReverbState_update(ReverbState *State, const ALCcontext *Context, 
         mini(State->Early.Offset[0][1], State->Late.Offset[0][1])
     );
 
-    /* Determine if delay-line cross-fading is required. TODO: Add some fuzz
-     * for the float comparisons? The math should be stable enough that the
-     * result should be the same if nothing's changed, and changes in the float
-     * values should (though may not always) be matched by changes in delay
-     * offsets.
+    /* Determine if delay-line cross-fading is required. Density is essentially
+     * a master control for the feedback delays, so changes the offsets of many
+     * delay lines.
      */
-    if(State->Late.DensityGain[1] != State->Late.DensityGain[0])
+    if(State->Params.Density != props->Reverb.Density ||
+        /* Diffusion and decay times influences the decay rate (gain) of the
+         * late reverb T60 filter.
+         */
+       State->Params.Diffusion != props->Reverb.Diffusion ||
+       State->Params.DecayTime != props->Reverb.DecayTime ||
+       State->Params.HFDecayTime != hfDecayTime ||
+       State->Params.LFDecayTime != lfDecayTime ||
+       /* HF/LF References control the weighting used to calculate the density
+        * gain.
+        */
+       State->Params.HFReference != props->Reverb.HFReference ||
+       State->Params.LFReference != props->Reverb.LFReference)
         State->FadeCount = 0;
-    else for(i = 0;i < NUM_LINES;i++)
-    {
-        if(State->EarlyDelayTap[i][1] != State->EarlyDelayTap[i][0] ||
-           State->EarlyDelayCoeff[i][1] != State->EarlyDelayCoeff[i][0] ||
-           State->Early.VecAp.Offset[i][1] != State->Early.VecAp.Offset[i][0] ||
-           State->Early.Offset[i][1] != State->Early.Offset[i][0] ||
-           State->Early.Coeff[i][1] != State->Early.Coeff[i][0] ||
-           State->LateDelayTap[i][1] != State->LateDelayTap[i][0] ||
-           State->Late.VecAp.Offset[i][1] != State->Late.VecAp.Offset[i][0] ||
-           State->Late.Offset[i][1] != State->Late.Offset[i][0] ||
-           State->Late.T60[i].MidGain[1] != State->Late.T60[i].MidGain[0])
-        {
-            State->FadeCount = 0;
-            break;
-        }
-    }
+    State->Params.Density = props->Reverb.Density;
+    State->Params.Diffusion = props->Reverb.Diffusion;
+    State->Params.DecayTime = props->Reverb.DecayTime;
+    State->Params.HFDecayTime = hfDecayTime;
+    State->Params.LFDecayTime = lfDecayTime;
+    State->Params.HFReference = props->Reverb.HFReference;
+    State->Params.LFReference = props->Reverb.LFReference;
 }
 
 

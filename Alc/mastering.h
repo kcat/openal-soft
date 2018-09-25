@@ -6,50 +6,99 @@
 /* For BUFFERSIZE. */
 #include "alMain.h"
 
+/* These structures assume BUFFERSIZE is a power of 2.
+ */
+typedef struct SlidingHold
+{
+    ALfloat Values[BUFFERSIZE];
+    ALsizei Expiries[BUFFERSIZE];
+    ALsizei LowerIndex;
+    ALsizei UpperIndex;
+    ALsizei Length;
+} SlidingHold;
+
+/* General topology and basic automation was based on the following paper:
+ *
+ *   D. Giannoulis, M. Massberg and J. D. Reiss,
+ *   "Parameter Automation in a Dynamic Range Compressor,"
+ *   Journal of the Audio Engineering Society, v61 (10), Oct. 2013
+ *
+ * Available (along with supplemental reading) at:
+ *
+ *   http://c4dm.eecs.qmul.ac.uk/audioengineering/compressors/
+ */
 typedef struct Compressor {
+    ALsizei NumChans;
+    ALuint SampleRate;
+    struct {
+        ALuint Knee:1;
+        ALuint Attack:1;
+        ALuint Release:1;
+        ALuint PostGain:1;
+        ALuint Declip:1;
+    } Auto;
+    ALsizei LookAhead;
     ALfloat PreGain;
     ALfloat PostGain;
-    ALboolean SummedLink;
-    ALfloat AttackMin;
-    ALfloat AttackMax;
-    ALfloat ReleaseMin;
-    ALfloat ReleaseMax;
-    ALfloat Ratio;
     ALfloat Threshold;
+    ALfloat Slope;
     ALfloat Knee;
-    ALuint SampleRate;
-
-    ALuint RmsSum;
-    ALuint *RmsWindow;
-    ALsizei RmsIndex;
-    ALfloat Envelope[BUFFERSIZE];
-    ALfloat EnvLast;
+    ALfloat Attack;
+    ALfloat Release;
+    ALfloat SideChain[2*BUFFERSIZE];
+    ALsizei SideChainIndex;
+    ALfloat CrestFactor[BUFFERSIZE];
+    SlidingHold *Hold;
+    ALfloat (*Delay)[BUFFERSIZE];
+    ALsizei DelayIndex;
+    ALfloat CrestCoeff;
+    ALfloat GainEstimate;
+    ALfloat AdaptCoeff;
+    ALfloat LastPeakSq;
+    ALfloat LastRmsSq;
+    ALfloat LastRelease;
+    ALfloat LastAttack;
+    ALfloat LastGainDev;
 } Compressor;
 
-/* The compressor requires the following information for proper
- * initialization:
+/* The compressor is initialized with the following settings:
  *
- *   PreGainDb      - Gain applied before detection (in dB).
- *   PostGainDb     - Gain applied after compression (in dB).
- *   SummedLink     - Whether to use summed (true) or maxed (false) linking.
- *   RmsSensing     - Whether to use RMS (true) or Peak (false) sensing.
- *   AttackTimeMin  - Minimum attack time (in seconds).
- *   AttackTimeMax  - Maximum attack time.  Automates when min != max.
- *   ReleaseTimeMin - Minimum release time (in seconds).
- *   ReleaseTimeMax - Maximum release time.  Automates when min != max.
- *   Ratio          - Compression ratio (x:1).  Set to 0 for true limiter.
- *   ThresholdDb    - Triggering threshold (in dB).
- *   KneeDb         - Knee width (below threshold; in dB).
+ *   NumChans       - Number of channels to process.
  *   SampleRate     - Sample rate to process.
+ *   AutoKnee       - Whether to automate the knee width parameter.
+ *   AutoAttack     - Whether to automate the attack time parameter.
+ *   AutoRelease    - Whether to automate the release time parameter.
+ *   AutoPostGain   - Whether to automate the make-up (post) gain parameter.
+ *   AutoDeclip     - Whether to automate clipping reduction.  Ignored when
+ *                    not automating make-up gain.
+ *   LookAheadTime  - Look-ahead time (in seconds).
+ *   HoldTime       - Peak hold-time (in seconds).
+ *   PreGainDb      - Gain applied before detection (in dB).
+ *   PostGainDb     - Make-up gain applied after compression (in dB).
+ *   ThresholdDb    - Triggering threshold (in dB).
+ *   Ratio          - Compression ratio (x:1).  Set to INFINIFTY for true
+ *                    limiting.  Ignored when automating knee width.
+ *   KneeDb         - Knee width (in dB).  Ignored when automating knee
+ *                    width.
+ *   AttackTimeMin  - Attack time (in seconds).  Acts as a maximum when
+ *                    automating attack time.
+ *   ReleaseTimeMin - Release time (in seconds).  Acts as a maximum when
+ *                    automating release time.
  */
-Compressor *CompressorInit(const ALfloat PreGainDb, const ALfloat PostGainDb,
-    const ALboolean SummedLink, const ALboolean RmsSensing, const ALfloat AttackTimeMin,
-    const ALfloat AttackTimeMax, const ALfloat ReleaseTimeMin, const ALfloat ReleaseTimeMax,
-    const ALfloat Ratio, const ALfloat ThresholdDb, const ALfloat KneeDb,
-    const ALuint SampleRate);
+Compressor* CompressorInit(const ALuint NumChans, const ALuint SampleRate,
+    const ALboolean AutoKnee, const ALboolean AutoAttack,
+    const ALboolean AutoRelease, const ALboolean AutoPostGain,
+    const ALboolean AutoDeclip, const ALfloat LookAheadTime,
+    const ALfloat HoldTime, const ALfloat PreGainDb,
+    const ALfloat PostGainDb, const ALfloat ThresholdDb,
+    const ALfloat Ratio, const ALfloat KneeDb,
+    const ALfloat AttackTime, const ALfloat ReleaseTime);
 
-void ApplyCompression(struct Compressor *Comp, const ALsizei NumChans, const ALsizei SamplesToDo,
+void ApplyCompression(struct Compressor *Comp, const ALsizei SamplesToDo,
                       ALfloat (*restrict OutBuffer)[BUFFERSIZE]);
+
+inline ALsizei GetCompressorChannelCount(const Compressor *Comp)
+{ return Comp->NumChans; }
 
 inline ALuint GetCompressorSampleRate(const Compressor *Comp)
 { return Comp->SampleRate; }

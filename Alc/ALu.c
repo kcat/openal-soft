@@ -1838,8 +1838,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
                           SamplesToDo, device->RealOut.NumChannels);
 
         if(device->Limiter)
-            ApplyCompression(device->Limiter, device->RealOut.NumChannels, SamplesToDo,
-                             device->RealOut.Buffer);
+            ApplyCompression(device->Limiter, SamplesToDo, device->RealOut.Buffer);
 
         if(device->DitherDepth > 0.0f)
             ApplyDither(device->RealOut.Buffer, &device->DitherSeed, device->DitherDepth,

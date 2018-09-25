@@ -1706,8 +1706,9 @@ static void alcSetError(ALCdevice *device, ALCenum errorCode)
 
 struct Compressor *CreateDeviceLimiter(const ALCdevice *device)
 {
-    return CompressorInit(0.0f, 0.0f, AL_FALSE, AL_TRUE, 0.0f, 0.0f, 0.5f, 2.0f,
-                          0.0f, -3.0f, 3.0f, device->Frequency);
+    return CompressorInit(device->RealOut.NumChannels, device->Frequency,
+        AL_TRUE, AL_TRUE, AL_TRUE, AL_TRUE, AL_TRUE, 0.001f, 0.002f,
+        0.0f, 0.0f, -0.0003f, INFINITY, 0.0f, 0.020f, 0.200f);
 }
 
 /* UpdateClockBase
@@ -2231,7 +2232,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
      */
     if(gainLimiter != ALC_FALSE)
     {
-        if(!device->Limiter || device->Frequency != GetCompressorSampleRate(device->Limiter))
+        if(!device->Limiter || device->Frequency != GetCompressorSampleRate(device->Limiter) ||
+           device->RealOut.NumChannels != GetCompressorChannelCount(device->Limiter))
         {
             al_free(device->Limiter);
             device->Limiter = CreateDeviceLimiter(device);

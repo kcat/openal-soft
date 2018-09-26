@@ -162,6 +162,15 @@ inline void ALCdevice_Lock(ALCdevice *device)
 inline void ALCdevice_Unlock(ALCdevice *device)
 { V0(device->Backend,unlock)(); }
 
+
+inline ClockLatency GetClockLatency(ALCdevice *device)
+{
+    ClockLatency ret = V0(device->Backend,getClockLatency)();
+    ret.Latency += device->FixedLatency;
+    return ret;
+}
+
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

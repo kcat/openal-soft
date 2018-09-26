@@ -676,6 +676,7 @@ struct ALCdevice_struct {
 
     ALuint64 ClockBase;
     ALuint SamplesDone;
+    ALuint FixedLatency;
 
     /* Temp storage used for mixer processing. */
     alignas(16) ALfloat TempBuffer[4][BUFFERSIZE];

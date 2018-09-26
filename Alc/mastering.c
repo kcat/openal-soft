@@ -344,10 +344,10 @@ Compressor* CompressorInit(const ALuint NumChans, const ALuint SampleRate,
     ALsizei hold;
     size_t size;
 
-    lookAhead = (ALsizei)minf(BUFFERSIZE, roundf(maxf(0.0f, LookAheadTime) * SampleRate));
-    hold = (ALsizei)minf(BUFFERSIZE, roundf(maxf(0.0f, HoldTime) * SampleRate));
-    size = sizeof(*Comp);
+    lookAhead = (ALsizei)clampf(roundf(LookAheadTime*SampleRate), 0.0f, BUFFERSIZE);
+    hold = (ALsizei)clampf(roundf(HoldTime*SampleRate), 0.0f, BUFFERSIZE);
 
+    size = sizeof(*Comp);
     if(lookAhead > 0)
     {
         size += sizeof(*Comp->Delay) * NumChans;

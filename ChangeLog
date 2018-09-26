@@ -11,6 +11,9 @@ openal-soft-1.19.1:
 
     Fixed OpenSL capture.
 
+    Improved output limiter response, better ensuring the sample amplitude is
+    clamped for output.
+
 openal-soft-1.19.0:
 
     Implemented the ALC_SOFT_device_clock extension.

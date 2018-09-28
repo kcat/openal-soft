@@ -186,12 +186,12 @@ static void GainCompressor(Compressor *Comp, const ALsizei SamplesToDo)
     const ALfloat attack = Comp->Attack;
     const ALfloat release = Comp->Release;
     const ALsizei index = Comp->SideChainIndex;
+    const ALfloat c_est = Comp->GainEstimate;
+    const ALfloat a_adp = Comp->AdaptCoeff;
     const ALfloat *restrict crestFactor = Comp->CrestFactor;
     ALfloat *restrict sideChain = Comp->SideChain;
     ALfloat postGain = Comp->PostGain;
     ALfloat knee = Comp->Knee;
-    ALfloat c_est = Comp->GainEstimate;
-    ALfloat a_adp = Comp->AdaptCoeff;
     ALfloat t_att = attack;
     ALfloat t_rel = release - attack;
     ALfloat a_att = expf(-1.0f / t_att);

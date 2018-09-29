@@ -263,8 +263,7 @@ static void GainCompressor(Compressor *Comp, const ALsizei SamplesToDo)
             if(autoDeclip)
             {
                 x_G = sideChain[(index + i) & mask];
-                if((x_G - c_dev - c_est - y_L) > threshold)
-                    c_dev = x_G - c_est - y_L - threshold;
+                c_dev = maxf(c_dev, x_G - y_L - threshold - c_est);
             }
 
             postGain = -(c_dev + c_est);

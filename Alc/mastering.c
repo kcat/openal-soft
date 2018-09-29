@@ -73,8 +73,7 @@ static void ShiftSlidingHold(SlidingHold *Hold, const ALsizei n)
  */
 static void LinkChannels(Compressor *Comp, const ALsizei SamplesToDo, ALfloat (*restrict OutBuffer)[BUFFERSIZE])
 {
-    const ALsizei mask = 2*BUFFERSIZE - 1;
-    const ALsizei index = Comp->SideChainIndex + Comp->LookAhead;
+    const ALsizei index = Comp->LookAhead;
     const ALsizei numChans = Comp->NumChans;
     ALfloat *restrict sideChain = Comp->SideChain;
     ALsizei c, i;
@@ -83,15 +82,15 @@ static void LinkChannels(Compressor *Comp, const ALsizei SamplesToDo, ALfloat (*
     ASSUME(numChans > 0);
 
     for(i = 0;i < SamplesToDo;i++)
-        sideChain[(index + i) & mask] = 0.0f;
+        sideChain[index + i] = 0.0f;
 
     for(c = 0;c < numChans;c++)
     {
+        ALsizei offset = index;
         for(i = 0;i < SamplesToDo;i++)
         {
-            ALsizei offset = (index + i) & mask;
-
             sideChain[offset] = maxf(sideChain[offset], fabsf(OutBuffer[c][i]));
+            ++offset;
         }
     }
 }
@@ -103,9 +102,8 @@ static void LinkChannels(Compressor *Comp, const ALsizei SamplesToDo, ALfloat (*
  */
 static void CrestDetector(Compressor *Comp, const ALsizei SamplesToDo)
 {
-    const ALsizei mask = 2*BUFFERSIZE - 1;
     const ALfloat a_crest = Comp->CrestCoeff;
-    const ALsizei index = Comp->SideChainIndex + Comp->LookAhead;
+    const ALsizei index = Comp->LookAhead;
     const ALfloat *restrict sideChain = Comp->SideChain;
     ALfloat *restrict crestFactor = Comp->CrestFactor;
     ALfloat y2_peak = Comp->LastPeakSq;
@@ -116,7 +114,7 @@ static void CrestDetector(Compressor *Comp, const ALsizei SamplesToDo)
 
     for(i = 0;i < SamplesToDo;i++)
     {
-        ALfloat x_abs = sideChain[(index + i) & mask];
+        ALfloat x_abs = sideChain[index + i];
         ALfloat x2 = maxf(0.000001f, x_abs * x_abs);
 
         y2_peak = maxf(x2, lerp(x2, y2_peak, a_crest));
@@ -134,8 +132,7 @@ static void CrestDetector(Compressor *Comp, const ALsizei SamplesToDo)
  */
 static void PeakDetector(Compressor *Comp, const ALsizei SamplesToDo)
 {
-    const ALsizei mask = 2*BUFFERSIZE - 1;
-    const ALsizei index = Comp->SideChainIndex + Comp->LookAhead;
+    const ALsizei index = Comp->LookAhead;
     ALfloat *restrict sideChain = Comp->SideChain;
     ALsizei i;
 
@@ -143,8 +140,8 @@ static void PeakDetector(Compressor *Comp, const ALsizei SamplesToDo)
 
     for(i = 0;i < SamplesToDo;i++)
     {
-        ALuint offset = (index + i) & mask;
-        ALfloat x_abs = sideChain[offset];
+        const ALuint offset = index + i;
+        const ALfloat x_abs = sideChain[offset];
 
         sideChain[offset] = logf(maxf(0.000001f, x_abs));
     }
@@ -156,8 +153,7 @@ static void PeakDetector(Compressor *Comp, const ALsizei SamplesToDo)
  */
 static void PeakHoldDetector(Compressor *Comp, const ALsizei SamplesToDo)
 {
-    const ALsizei mask = 2*BUFFERSIZE - 1;
-    const ALsizei index = Comp->SideChainIndex + Comp->LookAhead;
+    const ALsizei index = Comp->LookAhead;
     ALfloat *restrict sideChain = Comp->SideChain;
     SlidingHold *hold = Comp->Hold;
     ALsizei i;
@@ -166,9 +162,9 @@ static void PeakHoldDetector(Compressor *Comp, const ALsizei SamplesToDo)
 
     for(i = 0;i < SamplesToDo;i++)
     {
-        ALsizei offset = (index + i) & mask;
-        ALfloat x_abs = sideChain[offset];
-        ALfloat x_G = logf(maxf(0.000001f, x_abs));
+        const ALsizei offset = index + i;
+        const ALfloat x_abs = sideChain[offset];
+        const ALfloat x_G = logf(maxf(0.000001f, x_abs));
 
         sideChain[offset] = UpdateSlidingHold(hold, i, x_G);
     }
@@ -183,7 +179,6 @@ static void PeakHoldDetector(Compressor *Comp, const ALsizei SamplesToDo)
  */
 static void GainCompressor(Compressor *Comp, const ALsizei SamplesToDo)
 {
-    const ALsizei mask = 2*BUFFERSIZE - 1;
     const bool autoKnee = Comp->Auto.Knee;
     const bool autoAttack = Comp->Auto.Attack;
     const bool autoRelease = Comp->Auto.Release;
@@ -194,7 +189,6 @@ static void GainCompressor(Compressor *Comp, const ALsizei SamplesToDo)
     const ALfloat slope = Comp->Slope;
     const ALfloat attack = Comp->Attack;
     const ALfloat release = Comp->Release;
-    const ALsizei index = Comp->SideChainIndex;
     const ALfloat c_est = Comp->GainEstimate;
     const ALfloat a_adp = Comp->AdaptCoeff;
     const ALfloat *restrict crestFactor = Comp->CrestFactor;
@@ -215,8 +209,8 @@ static void GainCompressor(Compressor *Comp, const ALsizei SamplesToDo)
     for(i = 0;i < SamplesToDo;i++)
     {
         const ALfloat y2_crest = crestFactor[i];
-        ALfloat x_G = sideChain[(index + lookAhead + i) & mask];
-        ALfloat x_over = x_G - threshold;
+        const ALfloat x_G = sideChain[lookAhead + i];
+        const ALfloat x_over = x_G - threshold;
         ALfloat knee_h;
         ALfloat y_G;
         ALfloat x_L;
@@ -272,15 +266,12 @@ static void GainCompressor(Compressor *Comp, const ALsizei SamplesToDo)
              * at the same output level.
              */
             if(autoDeclip)
-            {
-                x_G = sideChain[(index + i) & mask];
-                c_dev = maxf(c_dev, x_G - y_L - threshold - c_est);
-            }
+                c_dev = maxf(c_dev, sideChain[i] - y_L - threshold - c_est);
 
             postGain = -(c_dev + c_est);
         }
 
-        sideChain[(index + i) & mask] = expf(postGain - y_L);
+        sideChain[i] = expf(postGain - y_L);
     }
 
     Comp->LastRelease = y_1;
@@ -417,11 +408,9 @@ Compressor* CompressorInit(const ALuint NumChans, const ALuint SampleRate,
 
 void ApplyCompression(Compressor *Comp, const ALsizei SamplesToDo, ALfloat (*restrict OutBuffer)[BUFFERSIZE])
 {
-    const ALsizei mask = 2*BUFFERSIZE - 1;
     const ALsizei numChans = Comp->NumChans;
     const ALfloat preGain = Comp->PreGain;
-    const ALsizei index = Comp->SideChainIndex;
-    ALfloat *restrict sideChain = Comp->SideChain;
+    ALfloat *restrict sideChain;
     ALsizei c, i;
 
     ASSUME(SamplesToDo > 0);
@@ -451,11 +440,12 @@ void ApplyCompression(Compressor *Comp, const ALsizei SamplesToDo, ALfloat (*res
     if(Comp->Delay)
         SignalDelay(Comp, SamplesToDo, OutBuffer);
 
+    sideChain = Comp->SideChain;
     for(c = 0;c < numChans;c++)
     {
         for(i = 0;i < SamplesToDo;i++)
-            OutBuffer[c][i] *= sideChain[(index + i) & mask];
+            OutBuffer[c][i] *= sideChain[i];
     }
 
-    Comp->SideChainIndex = (index + SamplesToDo) & mask;
+    memmove(sideChain, sideChain+SamplesToDo, Comp->LookAhead*sizeof(ALfloat));
 }

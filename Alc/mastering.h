@@ -30,30 +30,38 @@ typedef struct SlidingHold
 typedef struct Compressor {
     ALsizei NumChans;
     ALuint SampleRate;
+
     struct {
-        ALuint Knee:1;
-        ALuint Attack:1;
-        ALuint Release:1;
-        ALuint PostGain:1;
-        ALuint Declip:1;
+        ALuint Knee : 1;
+        ALuint Attack : 1;
+        ALuint Release : 1;
+        ALuint PostGain : 1;
+        ALuint Declip : 1;
     } Auto;
+
     ALsizei LookAhead;
+
     ALfloat PreGain;
     ALfloat PostGain;
+
     ALfloat Threshold;
     ALfloat Slope;
     ALfloat Knee;
+
     ALfloat Attack;
     ALfloat Release;
-    ALfloat SideChain[2*BUFFERSIZE];
-    ALsizei SideChainIndex;
-    ALfloat CrestFactor[BUFFERSIZE];
+
+    alignas(16) ALfloat SideChain[2*BUFFERSIZE];
+    alignas(16) ALfloat CrestFactor[BUFFERSIZE];
+
     SlidingHold *Hold;
     ALfloat (*Delay)[BUFFERSIZE];
     ALsizei DelayIndex;
+
     ALfloat CrestCoeff;
     ALfloat GainEstimate;
     ALfloat AdaptCoeff;
+
     ALfloat LastPeakSq;
     ALfloat LastRmsSq;
     ALfloat LastRelease;

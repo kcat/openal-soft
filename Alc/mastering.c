@@ -79,6 +79,9 @@ static void LinkChannels(Compressor *Comp, const ALsizei SamplesToDo, ALfloat (*
     ALfloat *restrict sideChain = Comp->SideChain;
     ALsizei c, i;
 
+    ASSUME(SamplesToDo > 0);
+    ASSUME(numChans > 0);
+
     for(i = 0;i < SamplesToDo;i++)
         sideChain[(index + i) & mask] = 0.0f;
 
@@ -109,6 +112,8 @@ static void CrestDetector(Compressor *Comp, const ALsizei SamplesToDo)
     ALfloat y2_rms = Comp->LastRmsSq;
     ALsizei i;
 
+    ASSUME(SamplesToDo > 0);
+
     for(i = 0;i < SamplesToDo;i++)
     {
         ALfloat x_abs = sideChain[(index + i) & mask];
@@ -134,6 +139,8 @@ static void PeakDetector(Compressor *Comp, const ALsizei SamplesToDo)
     ALfloat *restrict sideChain = Comp->SideChain;
     ALsizei i;
 
+    ASSUME(SamplesToDo > 0);
+
     for(i = 0;i < SamplesToDo;i++)
     {
         ALuint offset = (index + i) & mask;
@@ -154,6 +161,8 @@ static void PeakHoldDetector(Compressor *Comp, const ALsizei SamplesToDo)
     ALfloat *restrict sideChain = Comp->SideChain;
     SlidingHold *hold = Comp->Hold;
     ALsizei i;
+
+    ASSUME(SamplesToDo > 0);
 
     for(i = 0;i < SamplesToDo;i++)
     {
@@ -200,6 +209,8 @@ static void GainCompressor(Compressor *Comp, const ALsizei SamplesToDo)
     ALfloat y_L = Comp->LastAttack;
     ALfloat c_dev = Comp->LastGainDev;
     ALsizei i;
+
+    ASSUME(SamplesToDo > 0);
 
     for(i = 0;i < SamplesToDo;i++)
     {
@@ -290,6 +301,9 @@ static void SignalDelay(Compressor *Comp, const ALsizei SamplesToDo, ALfloat (*r
     const ALsizei indexOut = Comp->DelayIndex - Comp->LookAhead;
     ALfloat (*restrict delay)[BUFFERSIZE] = Comp->Delay;
     ALsizei c, i;
+
+    ASSUME(SamplesToDo > 0);
+    ASSUME(numChans > 0);
 
     for(c = 0;c < numChans;c++)
     {
@@ -409,6 +423,9 @@ void ApplyCompression(Compressor *Comp, const ALsizei SamplesToDo, ALfloat (*res
     const ALsizei index = Comp->SideChainIndex;
     ALfloat *restrict sideChain = Comp->SideChain;
     ALsizei c, i;
+
+    ASSUME(SamplesToDo > 0);
+    ASSUME(numChans > 0);
 
     if(preGain != 1.0f)
     {

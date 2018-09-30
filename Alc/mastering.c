@@ -18,7 +18,7 @@ extern inline ALuint GetCompressorSampleRate(const Compressor *Comp);
  *
  *   http://www.richardhartersworld.com/cri/2001/slidingmin.html
  */
-static ALfloat UpdateSlidingHold(SlidingHold *Hold, const ALsizei i, const ALfloat in)
+ALfloat UpdateSlidingHold(SlidingHold *Hold, const ALsizei i, const ALfloat in)
 {
     const ALsizei mask = BUFFERSIZE - 1;
     const ALsizei length = Hold->Length;
@@ -38,8 +38,14 @@ static ALfloat UpdateSlidingHold(SlidingHold *Hold, const ALsizei i, const ALflo
     }
     else
     {
-        while(in >= values[lowerIndex])
-            lowerIndex = (lowerIndex - 1) & mask;
+        do {
+            do {
+                if(!(in >= values[lowerIndex]))
+                    goto found_place;
+            } while(lowerIndex--);
+            lowerIndex = mask;
+        } while(1);
+    found_place:
 
         lowerIndex = (lowerIndex + 1) & mask;
         values[lowerIndex] = in;
@@ -54,16 +60,18 @@ static ALfloat UpdateSlidingHold(SlidingHold *Hold, const ALsizei i, const ALflo
 
 static void ShiftSlidingHold(SlidingHold *Hold, const ALsizei n)
 {
-    const ALsizei mask = BUFFERSIZE - 1;
     const ALsizei lowerIndex = Hold->LowerIndex;
     ALsizei *restrict expiries = Hold->Expiries;
     ALsizei i = Hold->UpperIndex;
 
-    while(i != lowerIndex)
+    if(lowerIndex < i)
     {
-        expiries[i] -= n;
-        i = (i + 1) & mask;
+        for(;i != BUFFERSIZE;i++)
+            expiries[i] -= n;
+        i = 0;
     }
+    for(;i != lowerIndex;i++)
+        expiries[i] -= n;
 
     expiries[i] -= n;
 }

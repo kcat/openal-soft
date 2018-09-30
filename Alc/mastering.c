@@ -356,8 +356,14 @@ Compressor* CompressorInit(const ALuint NumChans, const ALuint SampleRate,
     ALsizei hold;
     size_t size;
 
-    lookAhead = (ALsizei)clampf(roundf(LookAheadTime*SampleRate), 0.0f, BUFFERSIZE);
-    hold = (ALsizei)clampf(roundf(HoldTime*SampleRate), 0.0f, BUFFERSIZE);
+    lookAhead = (ALsizei)clampf(roundf(LookAheadTime*SampleRate), 0.0f, BUFFERSIZE-1);
+    hold = (ALsizei)clampf(roundf(HoldTime*SampleRate), 0.0f, BUFFERSIZE-1);
+    /* The sliding hold implementation doesn't handle a length of 1. A 1-sample
+     * hold is useless anyway, it would only ever give back what was just given
+     * to it.
+     */
+    if(hold == 1)
+        hold = 0;
 
     size = sizeof(*Comp);
     if(lookAhead > 0)

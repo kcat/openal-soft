@@ -2254,8 +2254,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         al_free(device->Limiter);
         device->Limiter = CreateDeviceLimiter(device, log10f(thrshld) * 20.0f);
-        device->FixedLatency += (ALuint)(device->Limiter->LookAhead * DEVICE_CLOCK_RES /
-                                         device->Frequency);
+        device->FixedLatency += (ALuint)(GetCompressorLookAhead(device->Limiter) *
+                                         DEVICE_CLOCK_RES / device->Frequency);
     }
     else
     {

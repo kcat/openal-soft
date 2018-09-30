@@ -5,10 +5,12 @@
 #include "mastering.h"
 #include "alu.h"
 #include "almalloc.h"
+#include "static_assert.h"
 
 
-/* These structures assume BUFFERSIZE is a power of 2.
- */
+/* These structures assume BUFFERSIZE is a power of 2. */
+static_assert((BUFFERSIZE & (BUFFERSIZE-1)) == 0, "BUFFERSIZE is not a power of 2");
+
 typedef struct SlidingHold {
     ALfloat Values[BUFFERSIZE];
     ALsizei Expiries[BUFFERSIZE];

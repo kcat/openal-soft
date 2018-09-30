@@ -1195,6 +1195,7 @@ static void VectorAllpass_Faded(ALfloat (*restrict samples)[MAX_UPDATE_SAMPLES],
 
     ASSUME(todo > 0);
 
+    fade *= 1.0f/FADE_SAMPLES;
     for(j = 0;j < NUM_LINES;j++)
     {
         vap_offset[j][0] = offset-Vap->Offset[j][0];
@@ -1301,7 +1302,6 @@ static void EarlyReflection_Faded(ReverbState *State, ALsizei offset, const ALsi
     const ALfloat mixX = State->MixX;
     const ALfloat mixY = State->MixY;
     ALsizei late_feed_tap;
-    ALfloat fadeCount;
     ALsizei i, j;
 
     ASSUME(todo > 0);
@@ -1313,8 +1313,8 @@ static void EarlyReflection_Faded(ReverbState *State, ALsizei offset, const ALsi
         ALfloat oldCoeff = State->EarlyDelayCoeff[j][0];
         ALfloat oldCoeffStep = -oldCoeff / FADE_SAMPLES;
         ALfloat newCoeffStep = State->EarlyDelayCoeff[j][1] / FADE_SAMPLES;
+        ALfloat fadeCount = fade;
 
-        fadeCount = fade * FADE_SAMPLES;
         for(i = 0;i < todo;i++)
         {
             const ALfloat fade0 = oldCoeff + oldCoeffStep*fadeCount;
@@ -1335,8 +1335,8 @@ static void EarlyReflection_Faded(ReverbState *State, ALsizei offset, const ALsi
         ALfloat feedb_oldCoeff = State->Early.Coeff[j][0];
         ALfloat feedb_oldCoeffStep = -feedb_oldCoeff / FADE_SAMPLES;
         ALfloat feedb_newCoeffStep = State->Early.Coeff[j][1] / FADE_SAMPLES;
+        ALfloat fadeCount = fade;
 
-        fadeCount = fade * FADE_SAMPLES;
         for(i = 0;i < todo;i++)
         {
             const ALfloat fade0 = feedb_oldCoeff + feedb_oldCoeffStep*fadeCount;
@@ -1440,7 +1440,8 @@ static void LateReverb_Faded(ReverbState *State, ALsizei offset, const ALsizei t
         ALsizei late_delay_tap1 = offset - State->LateDelayTap[j][1];
         ALsizei late_feedb_tap0 = offset - State->Late.Offset[j][0];
         ALsizei late_feedb_tap1 = offset - State->Late.Offset[j][1];
-        ALfloat fadeCount = fade * FADE_SAMPLES;
+        ALfloat fadeCount = fade;
+
         for(i = 0;i < todo;i++)
         {
             const ALfloat fade0 = oldDensityGain + oldDensityStep*fadeCount;
@@ -1510,7 +1511,7 @@ static ALvoid ReverbState_process(ReverbState *State, ALsizei SamplesToDo, const
 
         if(UNLIKELY(fadeCount < FADE_SAMPLES))
         {
-            ALfloat fade = (ALfloat)fadeCount / FADE_SAMPLES;
+            ALfloat fade = (ALfloat)fadeCount;
 
             /* Generate early reflections. */
             EarlyReflection_Faded(State, offset, todo, fade, samples);

@@ -127,11 +127,11 @@ static void ShiftSlidingHold(SlidingHold *Hold, const ALsizei n)
 
     if(lowerIndex < i)
     {
-        for(;i != BUFFERSIZE;i++)
+        for(;i < BUFFERSIZE;i++)
             expiries[i] -= n;
         i = 0;
     }
-    for(;i != lowerIndex;i++)
+    for(;i < lowerIndex;i++)
         expiries[i] -= n;
 
     expiries[i] -= n;

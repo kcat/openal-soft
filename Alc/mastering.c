@@ -79,7 +79,7 @@ typedef struct Compressor {
  *
  *   http://www.richardhartersworld.com/cri/2001/slidingmin.html
  */
-ALfloat UpdateSlidingHold(SlidingHold *Hold, const ALsizei i, const ALfloat in)
+static ALfloat UpdateSlidingHold(SlidingHold *Hold, const ALsizei i, const ALfloat in)
 {
     const ALsizei mask = BUFFERSIZE - 1;
     const ALsizei length = Hold->Length;

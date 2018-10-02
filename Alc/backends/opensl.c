@@ -391,7 +391,6 @@ static ALCboolean ALCopenslPlayback_reset(ALCopenslPlayback *self)
     SLInterfaceID ids[2];
     SLboolean reqs[2];
     SLresult result;
-    JNIEnv *env;
 
     if(self->mBufferQueueObj != NULL)
         VCALL0(self->mBufferQueueObj,Destroy)();
@@ -401,12 +400,15 @@ static ALCboolean ALCopenslPlayback_reset(ALCopenslPlayback *self)
     self->mRing = NULL;
 
     sampleRate = device->Frequency;
-    if(!(device->Flags&DEVICE_FREQUENCY_REQUEST) && (env=Android_GetJNIEnv()) != NULL)
+#if 0
+    if(!(device->Flags&DEVICE_FREQUENCY_REQUEST))
     {
         /* FIXME: Disabled until I figure out how to get the Context needed for
          * the getSystemService call.
          */
-#if 0
+        JNIEnv *env = Android_GetJNIEnv();
+        jobject jctx = Android_GetContext();
+
         /* Get necessary stuff for using java.lang.Integer,
          * android.content.Context, and android.media.AudioManager.
          */
@@ -442,7 +444,7 @@ static ALCboolean ALCopenslPlayback_reset(ALCopenslPlayback *self)
         /* Now make the calls. */
         //AudioManager audMgr = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
         strobj = JCALL(env,GetStaticObjectField)(ctx_cls, ctx_audsvc);
-        jobject audMgr = JCALL(env,CallObjectMethod)(ctx_cls, ctx_getSysSvc, strobj);
+        jobject audMgr = JCALL(env,CallObjectMethod)(jctx, ctx_getSysSvc, strobj);
         strchars = JCALL(env,GetStringUTFChars)(strobj, NULL);
         TRACE("Context.getSystemService(%s) = %p\n", strchars, audMgr);
         JCALL(env,ReleaseStringUTFChars)(strobj, strchars);
@@ -463,8 +465,8 @@ static ALCboolean ALCopenslPlayback_reset(ALCopenslPlayback *self)
 
         if(!sampleRate) sampleRate = device->Frequency;
         else sampleRate = maxu(sampleRate, MIN_OUTPUT_RATE);
-#endif
     }
+#endif
 
     if(sampleRate != device->Frequency)
     {

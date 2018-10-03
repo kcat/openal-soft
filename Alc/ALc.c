@@ -2146,7 +2146,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         if(depth > 0)
         {
-            depth = clampi(depth, 2, 20);
+            depth = clampi(depth, 2, 24);
             device->DitherDepth = powf(2.0f, (ALfloat)(depth-1));
         }
     }

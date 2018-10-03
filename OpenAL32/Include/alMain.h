@@ -622,6 +622,8 @@ struct ALCdevice_struct {
     enum AmbiLayout AmbiLayout;
     enum AmbiNorm   AmbiScale;
 
+    ALCenum LimiterState;
+
     al_string DeviceName;
 
     ATOMIC(ALCenum) LastError;

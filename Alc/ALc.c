@@ -1666,7 +1666,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 {
     enum HrtfRequestMode hrtf_userreq = Hrtf_Default;
     enum HrtfRequestMode hrtf_appreq = Hrtf_Default;
-    ALCenum gainLimiter = device->Limiter ? ALC_TRUE : ALC_FALSE;
+    ALCenum gainLimiter = device->LimiterState;
     const ALsizei old_sends = device->NumAuxSends;
     ALsizei new_sends = device->NumAuxSends;
     enum DevFmtChannels oldChans;
@@ -2156,12 +2156,32 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         TRACE("Dithering enabled (%g-bit, %g)\n", log2f(device->DitherDepth)+1.0f,
               device->DitherDepth);
 
+    device->LimiterState = gainLimiter;
     if(ConfigValueBool(alstr_get_cstr(device->DeviceName), NULL, "output-limiter", &val))
         gainLimiter = val ? ALC_TRUE : ALC_FALSE;
+
     /* Valid values for gainLimiter are ALC_DONT_CARE_SOFT, ALC_TRUE, and
-     * ALC_FALSE. We default to on, so ALC_DONT_CARE_SOFT is the same as
-     * ALC_TRUE.
+     * ALC_FALSE. For ALC_DONT_CARE_SOFT, use the limiter for integer-based
+     * output (where samples must be clamped), and don't for floating-point
+     * (which can take unclamped samples).
      */
+    if(gainLimiter == ALC_DONT_CARE_SOFT)
+    {
+        switch(device->FmtType)
+        {
+            case DevFmtByte:
+            case DevFmtUByte:
+            case DevFmtShort:
+            case DevFmtUShort:
+            case DevFmtInt:
+            case DevFmtUInt:
+                gainLimiter = ALC_TRUE;
+                break;
+            case DevFmtFloat:
+                gainLimiter = ALC_FALSE;
+                break;
+        }
+    }
     if(gainLimiter != ALC_FALSE)
     {
         ALfloat thrshld = 1.0f;
@@ -2353,6 +2373,7 @@ static void InitDevice(ALCdevice *device, enum DeviceType type)
     device->Flags = 0;
     device->Render_Mode = NormalRender;
     device->AvgSpeakerDist = 0.0f;
+    device->LimiterState = ALC_DONT_CARE_SOFT;
 
     ATOMIC_INIT(&device->ContextList, NULL);
 
@@ -4027,6 +4048,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->IsHeadphones = AL_FALSE;
     device->AmbiLayout = AmbiLayout_Default;
     device->AmbiScale = AmbiNorm_Default;
+    device->LimiterState = ALC_TRUE;
     device->NumUpdates = 3;
     device->UpdateSize = 1024;
 
@@ -4164,8 +4186,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         else
             ERR("Unsupported ambi-format: %s\n", fmt);
     }
-
-    device->Limiter = CreateDeviceLimiter(device, 0.0f);
 
     {
         ALCdevice *head = ATOMIC_LOAD_SEQ(&DeviceList);
@@ -4493,8 +4513,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
 
     // Open the "backend"
     V(device->Backend,open)("Loopback");
-
-    device->Limiter = CreateDeviceLimiter(device, 0.0f);
 
     {
         ALCdevice *head = ATOMIC_LOAD_SEQ(&DeviceList);

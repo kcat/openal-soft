@@ -40,6 +40,13 @@ extern "C" {
 #include "AL/alext.h"
 
 extern "C" {
+/* Undefine this to disable use of experimental extensions. Don't use for
+ * production code! Interfaces and behavior may change prior to being
+ * finalized.
+ */
+#define ALLOW_EXPERIMENTAL_EXTS
+
+#ifdef ALLOW_EXPERIMENTAL_EXTS
 #ifndef AL_SOFT_map_buffer
 #define AL_SOFT_map_buffer 1
 typedef unsigned int ALbitfieldSOFT;
@@ -71,6 +78,7 @@ typedef void (AL_APIENTRY*LPALEVENTCALLBACKSOFT)(ALEVENTPROCSOFT callback, void 
 typedef void* (AL_APIENTRY*LPALGETPOINTERSOFT)(ALenum pname);
 typedef void (AL_APIENTRY*LPALGETPOINTERVSOFT)(ALenum pname, void **values);
 #endif
+#endif /* ALLOW_EXPERIMENTAL_EXTS */
 }
 
 namespace {
@@ -92,12 +100,16 @@ bool EnableWideStereo = false;
 LPALGETSOURCEI64VSOFT alGetSourcei64vSOFT;
 LPALCGETINTEGER64VSOFT alcGetInteger64vSOFT;
 
+#ifdef AL_SOFT_map_buffer
 LPALBUFFERSTORAGESOFT alBufferStorageSOFT;
 LPALMAPBUFFERSOFT alMapBufferSOFT;
 LPALUNMAPBUFFERSOFT alUnmapBufferSOFT;
+#endif
 
+#ifdef AL_SOFT_events
 LPALEVENTCONTROLSOFT alEventControlSOFT;
 LPALEVENTCALLBACKSOFT alEventCallbackSOFT;
+#endif
 
 const seconds AVNoSyncThreshold(10);
 
@@ -263,9 +275,11 @@ struct AudioState {
         av_freep(&mSamples);
     }
 
+#ifdef AL_SOFT_events
     static void AL_APIENTRY EventCallback(ALenum eventType, ALuint object, ALuint param,
                                           ALsizei length, const ALchar *message,
                                           void *userParam);
+#endif
 
     nanoseconds getClockNoLock();
     nanoseconds getClock()
@@ -688,6 +702,7 @@ bool AudioState::readAudio(uint8_t *samples, int length)
 }
 
 
+#ifdef AL_SOFT_events
 void AL_APIENTRY AudioState::EventCallback(ALenum eventType, ALuint object, ALuint param,
                                            ALsizei length, const ALchar *message,
                                            void *userParam)
@@ -731,24 +746,27 @@ void AL_APIENTRY AudioState::EventCallback(ALenum eventType, ALuint object, ALui
         self->mSrcCond.notify_one();
     }
 }
+#endif
 
 int AudioState::handler()
 {
-    const std::array<ALenum,6> types{{
-        AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT,
-        AL_EVENT_TYPE_ERROR_SOFT, AL_EVENT_TYPE_PERFORMANCE_SOFT, AL_EVENT_TYPE_DEPRECATED_SOFT,
-        AL_EVENT_TYPE_DISCONNECTED_SOFT
-    }};
     std::unique_lock<std::mutex> lock(mSrcMutex);
     milliseconds sleep_time = AudioBufferTime / 3;
     ALenum fmt;
 
+#ifdef AL_SOFT_events
+    const std::array<ALenum,6> evt_types{{
+        AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT,
+        AL_EVENT_TYPE_ERROR_SOFT, AL_EVENT_TYPE_PERFORMANCE_SOFT, AL_EVENT_TYPE_DEPRECATED_SOFT,
+        AL_EVENT_TYPE_DISCONNECTED_SOFT
+    }};
     if(alEventControlSOFT)
     {
-        alEventControlSOFT(types.size(), types.data(), AL_TRUE);
+        alEventControlSOFT(evt_types.size(), evt_types.data(), AL_TRUE);
         alEventCallbackSOFT(EventCallback, this);
         sleep_time = AudioBufferTotalTime;
     }
+#endif
 
     /* Find a suitable format for OpenAL. */
     mDstChanLayout = 0;
@@ -899,9 +917,8 @@ int AudioState::handler()
     if(alGetError() != AL_NO_ERROR)
         goto finish;
 
-    if(!alBufferStorageSOFT)
-        samples = av_malloc(buffer_len);
-    else
+#ifdef AL_SOFT_map_buffer
+    if(alBufferStorageSOFT)
     {
         for(ALuint bufid : mBuffers)
             alBufferStorageSOFT(bufid, mFormat, nullptr, buffer_len, mCodecCtx->sample_rate,
@@ -912,6 +929,9 @@ int AudioState::handler()
             samples = av_malloc(buffer_len);
         }
     }
+    else
+#endif
+        samples = av_malloc(buffer_len);
 
     while(alGetError() == AL_NO_ERROR && !mMovie.mQuit.load(std::memory_order_relaxed) &&
           mConnected.test_and_set(std::memory_order_relaxed))
@@ -934,15 +954,19 @@ int AudioState::handler()
         {
             ALuint bufid = mBuffers[mBufferIdx];
 
-            uint8_t *ptr = reinterpret_cast<uint8_t*>(
-                samples ? samples : alMapBufferSOFT(bufid, 0, buffer_len, AL_MAP_WRITE_BIT_SOFT)
+            uint8_t *ptr = reinterpret_cast<uint8_t*>(samples
+#ifdef AL_SOFT_map_buffer
+                ? samples : alMapBufferSOFT(bufid, 0, buffer_len, AL_MAP_WRITE_BIT_SOFT)
+#endif
             );
             if(!ptr) break;
 
             /* Read the next chunk of data, filling the buffer, and queue it on
              * the source */
             bool got_audio = readAudio(ptr, buffer_len);
+#ifdef AL_SOFT_map_buffer
             if(!samples) alUnmapBufferSOFT(bufid);
+#endif
             if(!got_audio) break;
 
             if(samples)
@@ -983,11 +1007,13 @@ int AudioState::handler()
 finish:
     av_freep(&samples);
 
+#ifdef AL_SOFT_events
     if(alEventControlSOFT)
     {
-        alEventControlSOFT(types.size(), types.data(), AL_FALSE);
+        alEventControlSOFT(evt_types.size(), evt_types.data(), AL_FALSE);
         alEventCallbackSOFT(nullptr, nullptr);
     }
+#endif
 
     return 0;
 }
@@ -1735,6 +1761,7 @@ int main(int argc, char *argv[])
             alGetProcAddress("alGetSourcei64vSOFT")
         );
     }
+#ifdef AL_SOFT_map_buffer
     if(alIsExtensionPresent("AL_SOFTX_map_buffer"))
     {
         std::cout<< "Found AL_SOFT_map_buffer" <<std::endl;
@@ -1745,6 +1772,8 @@ int main(int argc, char *argv[])
         alUnmapBufferSOFT = reinterpret_cast<LPALUNMAPBUFFERSOFT>(
             alGetProcAddress("alUnmapBufferSOFT"));
     }
+#endif
+#ifdef AL_SOFT_events
     if(alIsExtensionPresent("AL_SOFTX_events"))
     {
         std::cout<< "Found AL_SOFT_events" <<std::endl;
@@ -1753,6 +1782,7 @@ int main(int argc, char *argv[])
         alEventCallbackSOFT = reinterpret_cast<LPALEVENTCALLBACKSOFT>(
             alGetProcAddress("alEventCallbackSOFT"));
     }
+#endif
 
     for(;fileidx < argc;++fileidx)
     {

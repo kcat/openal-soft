@@ -2809,6 +2809,11 @@ static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
         ret = !!newhead;
     V0(device->Backend,unlock)();
 
+    /* Make sure the context is finished and no longer processing in the mixer
+     * before sending the message queue kill event. The backend's lock does
+     * this, although waiting for a non-odd mix count would work too.
+     */
+
     while(ll_ringbuffer_write(context->AsyncEvents, (const char*)&kill_evt, 1) == 0)
         althrd_yield();
     alsem_post(&context->EventSem);

@@ -39,6 +39,8 @@ extern "C" {
 #include "AL/al.h"
 #include "AL/alext.h"
 
+#include "common/alhelpers.h"
+
 extern "C" {
 /* Undefine this to disable use of experimental extensions. Don't use for
  * production code! Interfaces and behavior may change prior to being
@@ -1717,41 +1719,21 @@ int main(int argc, char *argv[])
     SDL_RenderPresent(renderer);
 
     /* Open an audio device */
-    int fileidx = 1;
-    ALCdevice *device = [argc,argv,&fileidx]() -> ALCdevice*
-    {
-        ALCdevice *dev = NULL;
-        if(argc > 3 && strcmp(argv[1], "-device") == 0)
-        {
-            fileidx = 3;
-            dev = alcOpenDevice(argv[2]);
-            if(dev) return dev;
-            std::cerr<< "Failed to open \""<<argv[2]<<"\" - trying default" <<std::endl;
-        }
-        return alcOpenDevice(nullptr);
-    }();
-    ALCcontext *context = alcCreateContext(device, nullptr);
-    if(!context || alcMakeContextCurrent(context) == ALC_FALSE)
+    ++argv; --argc;
+    if(InitAL(&argv, &argc))
     {
         std::cerr<< "Failed to set up audio device" <<std::endl;
-        if(context)
-            alcDestroyContext(context);
         return 1;
     }
 
-    const ALCchar *name = nullptr;
-    if(alcIsExtensionPresent(device, "ALC_ENUMERATE_ALL_EXT"))
-        name = alcGetString(device, ALC_ALL_DEVICES_SPECIFIER);
-    if(!name || alcGetError(device) != AL_NO_ERROR)
-        name = alcGetString(device, ALC_DEVICE_SPECIFIER);
-    std::cout<< "Opened \""<<name<<"\"" <<std::endl;
-
-    if(alcIsExtensionPresent(device, "ALC_SOFT_device_clock"))
-    {
-        std::cout<< "Found ALC_SOFT_device_clock" <<std::endl;
-        alcGetInteger64vSOFT = reinterpret_cast<LPALCGETINTEGER64VSOFT>(
-            alcGetProcAddress(device, "alcGetInteger64vSOFT")
-        );
+    { auto device = alcGetContextsDevice(alcGetCurrentContext());
+        if(alcIsExtensionPresent(device, "ALC_SOFT_device_clock"))
+        {
+            std::cout<< "Found ALC_SOFT_device_clock" <<std::endl;
+            alcGetInteger64vSOFT = reinterpret_cast<LPALCGETINTEGER64VSOFT>(
+                alcGetProcAddress(device, "alcGetInteger64vSOFT")
+            );
+        }
     }
 
     if(alIsExtensionPresent("AL_SOFT_source_latency"))
@@ -1784,6 +1766,7 @@ int main(int argc, char *argv[])
     }
 #endif
 
+    int fileidx = 0;
     for(;fileidx < argc;++fileidx)
     {
         if(strcmp(argv[fileidx], "-direct") == 0)
@@ -1912,9 +1895,7 @@ int main(int argc, char *argv[])
                 /* Nothing more to play. Shut everything down and quit. */
                 movState = nullptr;
 
-                alcMakeContextCurrent(nullptr);
-                alcDestroyContext(context);
-                alcCloseDevice(device);
+                CloseAL();
 
                 SDL_DestroyRenderer(renderer);
                 renderer = nullptr;

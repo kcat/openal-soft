@@ -1746,7 +1746,8 @@ IF(ALSOFT_EXAMPLES)
                 PRIVATE ${SDL2_INCLUDE_DIR} ${FFMPEG_INCLUDE_DIRS})
             TARGET_COMPILE_OPTIONS(alffplay PRIVATE ${C_FLAGS})
             TARGET_LINK_LIBRARIES(alffplay
-                PRIVATE ${LINKER_FLAGS} ${SDL2_LIBRARY} ${FFMPEG_LIBRARIES} common OpenAL)
+                PRIVATE ${LINKER_FLAGS} ${SDL2_LIBRARY} ${FFMPEG_LIBRARIES} ex-common common
+                        OpenAL)
 
             IF(ALSOFT_INSTALL)
                 INSTALL(TARGETS alffplay

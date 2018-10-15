@@ -130,13 +130,21 @@ inline int altss_set(altss_t tss_id, void *val)
 #include <stdint.h>
 #include <errno.h>
 #include <pthread.h>
+#ifdef __APPLE__
+#include <dispatch/dispatch.h>
+#else /* !__APPLE__ */
 #include <semaphore.h>
+#endif /* __APPLE__ */
 
 
 typedef pthread_t althrd_t;
 typedef pthread_mutex_t almtx_t;
 typedef pthread_cond_t alcnd_t;
+#ifdef __APPLE__
+typedef dispatch_semaphore_t alsem_t;
+#else /* !__APPLE__ */
 typedef sem_t alsem_t;
+#endif /* __APPLE__ */
 typedef pthread_key_t altss_t;
 typedef pthread_once_t alonce_flag;
 

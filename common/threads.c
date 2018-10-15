@@ -631,6 +631,39 @@ void alcnd_destroy(alcnd_t *cond)
 }
 
 
+#ifdef __APPLE__
+
+int alsem_init(alsem_t *sem, unsigned int initial)
+{
+    *sem = dispatch_semaphore_create(initial);
+    return *sem ? althrd_success : althrd_error;
+}
+
+void alsem_destroy(alsem_t *sem)
+{
+    dispatch_release(*sem);
+}
+
+int alsem_post(alsem_t *sem)
+{
+    dispatch_semaphore_signal(*sem);
+    return althrd_success;
+}
+
+int alsem_wait(alsem_t *sem)
+{
+    dispatch_semaphore_wait(*sem, DISPATCH_TIME_FOREVER);
+    return althrd_success;
+}
+
+int alsem_trywait(alsem_t *sem)
+{
+    long value = dispatch_semaphore_wait(*sem, DISPATCH_TIME_NOW);
+    return value == 0 ? althrd_success : althrd_busy;
+}
+
+#else /* !__APPLE__ */
+
 int alsem_init(alsem_t *sem, unsigned int initial)
 {
     if(sem_init(sem, 0, initial) == 0)
@@ -664,6 +697,8 @@ int alsem_trywait(alsem_t *sem)
     if(errno == EINTR) return -2;
     return althrd_error;
 }
+
+#endif /* __APPLE__ */
 
 
 int altss_create(altss_t *tss_id, altss_dtor_t callback)

@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #endif
 
-#ifndef bool
+#if !defined(__cplusplus) && !defined(bool)
 #ifdef HAVE_C99_BOOL
 #define bool _Bool
 #else

@@ -87,8 +87,8 @@ typedef union InterpState {
 } InterpState;
 
 typedef const ALfloat* (*ResamplerFunc)(const InterpState *state,
-    const ALfloat *restrict src, ALsizei frac, ALint increment,
-    ALfloat *restrict dst, ALsizei dstlen
+    const ALfloat *RESTRICT src, ALsizei frac, ALint increment,
+    ALfloat *RESTRICT dst, ALsizei dstlen
 );
 
 void BsincPrepare(const ALuint increment, BsincState *state, const struct BSincTable *table);
@@ -306,25 +306,25 @@ void DeinitVoice(ALvoice *voice);
 
 
 typedef void (*MixerFunc)(const ALfloat *data, ALsizei OutChans,
-                          ALfloat (*restrict OutBuffer)[BUFFERSIZE], ALfloat *CurrentGains,
+                          ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], ALfloat *CurrentGains,
                           const ALfloat *TargetGains, ALsizei Counter, ALsizei OutPos,
                           ALsizei BufferSize);
 typedef void (*RowMixerFunc)(ALfloat *OutBuffer, const ALfloat *gains,
-                             const ALfloat (*restrict data)[BUFFERSIZE], ALsizei InChans,
+                             const ALfloat (*RESTRICT data)[BUFFERSIZE], ALsizei InChans,
                              ALsizei InPos, ALsizei BufferSize);
-typedef void (*HrtfMixerFunc)(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
+typedef void (*HrtfMixerFunc)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                               const ALfloat *data, ALsizei Offset, ALsizei OutPos,
                               const ALsizei IrSize, MixHrtfParams *hrtfparams,
                               HrtfState *hrtfstate, ALsizei BufferSize);
-typedef void (*HrtfMixerBlendFunc)(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
+typedef void (*HrtfMixerBlendFunc)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                                    const ALfloat *data, ALsizei Offset, ALsizei OutPos,
                                    const ALsizei IrSize, const HrtfParams *oldparams,
                                    MixHrtfParams *newparams, HrtfState *hrtfstate,
                                    ALsizei BufferSize);
-typedef void (*HrtfDirectMixerFunc)(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
+typedef void (*HrtfDirectMixerFunc)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                                     const ALfloat *data, ALsizei Offset, const ALsizei IrSize,
-                                    const ALfloat (*restrict Coeffs)[2],
-                                    ALfloat (*restrict Values)[2], ALsizei BufferSize);
+                                    const ALfloat (*RESTRICT Coeffs)[2],
+                                    ALfloat (*RESTRICT Values)[2], ALsizei BufferSize);
 
 
 #define GAIN_MIX_MAX  (16.0f) /* +24dB */
@@ -491,8 +491,8 @@ inline float ScaleAzimuthFront(float azimuth, float scale)
 }
 
 
-void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, ALsizei numcoeffs, const ALfloat*restrict coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
-void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat*restrict coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, ALsizei numcoeffs, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 /**
  * ComputePanGains
@@ -502,7 +502,7 @@ void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, con
  * coeffs are a 'slice' of a transform matrix for the input channel, used to
  * scale and orient the sound samples.
  */
-inline void ComputePanGains(const MixParams *dry, const ALfloat*restrict coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+inline void ComputePanGains(const MixParams *dry, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     if(dry->CoeffCount > 0)
         ComputePanningGainsMC(dry->Ambi.Coeffs, dry->NumChannels, dry->CoeffCount,

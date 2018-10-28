@@ -155,17 +155,17 @@ ENDIF()
 SET(CPP_DEFS ${CPP_DEFS} _LARGEFILE_SOURCE _LARGE_FILES)
 SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -D_LARGEFILE_SOURCE -D_LARGE_FILES")
 
+# C99 has restrict, but C++ does not, so we can only utilize __restrict.
+SET(RESTRICT_DECL )
+CHECK_C_SOURCE_COMPILES("int *__restrict foo;
+                         int main() {return 0;}" HAVE___RESTRICT)
+IF(HAVE___RESTRICT)
+    SET(RESTRICT_DECL "__restrict")
+ENDIF()
+
 # MSVC may need workarounds for C99 restrict and inline
 IF(MSVC)
-    # TODO: Once we truly require C99, these restrict and inline checks should go
-    # away.
-    CHECK_C_SOURCE_COMPILES("int *restrict foo;
-                             int main() {return 0;}" HAVE_RESTRICT)
-    IF(NOT HAVE_RESTRICT)
-        SET(CPP_DEFS ${CPP_DEFS} "restrict=")
-        SET(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -Drestrict=")
-    ENDIF()
-
+    # TODO: Once we truly require C99, this inline check should go away.
     CHECK_C_SOURCE_COMPILES("inline void foo(void) { }
                              int main() {return 0;}" HAVE_INLINE)
     IF(NOT HAVE_INLINE)

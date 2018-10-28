@@ -71,7 +71,7 @@ struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry);
 void Hrtf_IncRef(struct Hrtf *hrtf);
 void Hrtf_DecRef(struct Hrtf *hrtf);
 
-void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat (*coeffs)[2], ALsizei *delays);
+void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat (*RESTRICT coeffs)[2], ALsizei *delays);
 
 /**
  * Produces HRTF filter coefficients for decoding B-Format, given a set of
@@ -79,6 +79,6 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
  * frequency gains for the decoder. The calculated impulse responses are
  * ordered and scaled according to the matrix input.
  */
-void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei NumChannels, const struct AngularPoint *AmbiPoints, const ALfloat (*restrict AmbiMatrix)[MAX_AMBI_COEFFS], ALsizei AmbiCount, const ALfloat *restrict AmbiOrderHFGain);
+void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei NumChannels, const struct AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_COEFFS], ALsizei AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain);
 
 #endif /* ALC_HRTF_H */

@@ -8,6 +8,9 @@
 /* Define a built-in call indicating an aligned data pointer */
 #define ASSUME_ALIGNED(x, y) ${ASSUME_ALIGNED_DECL}
 
+/* Define a restrict macro for non-aliased pointers */
+#define RESTRICT ${RESTRICT_DECL}
+
 /* Define if HRTF data is embedded in the library */
 #cmakedefine ALSOFT_EMBED_HRTF_DATA
 

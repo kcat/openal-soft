@@ -84,7 +84,7 @@ inline void BiquadFilter_clear(BiquadFilter *filter)
  */
 void BiquadFilter_setParams(BiquadFilter *filter, BiquadType type, ALfloat gain, ALfloat f0norm, ALfloat rcpQ);
 
-inline void BiquadFilter_copyParams(BiquadFilter *restrict dst, const BiquadFilter *restrict src)
+inline void BiquadFilter_copyParams(BiquadFilter *RESTRICT dst, const BiquadFilter *RESTRICT src)
 {
     dst->b0 = src->b0;
     dst->b1 = src->b1;
@@ -93,7 +93,7 @@ inline void BiquadFilter_copyParams(BiquadFilter *restrict dst, const BiquadFilt
     dst->a2 = src->a2;
 }
 
-void BiquadFilter_processC(BiquadFilter *filter, ALfloat *restrict dst, const ALfloat *restrict src, ALsizei numsamples);
+void BiquadFilter_processC(BiquadFilter *filter, ALfloat *RESTRICT dst, const ALfloat *RESTRICT src, ALsizei numsamples);
 
 inline void BiquadFilter_passthru(BiquadFilter *filter, ALsizei numsamples)
 {

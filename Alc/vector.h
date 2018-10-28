@@ -26,6 +26,7 @@ typedef const _##N* const_##N;
 #define VECTOR_INIT_STATIC()  NULL
 #define VECTOR_DEINIT(_x)     do { al_free((_x)); (_x) = NULL; } while(0)
 
+#ifndef __cplusplus
 #define VECTOR_RESIZE(_x, _s, _c) do {                                        \
     size_t _size = (_s);                                                      \
     size_t _cap = (_c);                                                       \
@@ -54,6 +55,37 @@ typedef const _##N* const_##N;
     }                                                                         \
     (_x)->Size = _size;                                                       \
 } while(0)                                                                    \
+
+#else
+
+template<typename T>
+inline void do_vector_resize(T *&vec, size_t size, size_t cap)
+{
+    if(size > cap)
+        cap = size;
+
+    if(!vec && cap == 0)
+        return;
+
+    if((vec ? vec->Capacity : 0) < cap)
+    {
+        ptrdiff_t data_offset = vec ? (char*)(vec->Data) - (char*)(vec) : sizeof(*vec);
+        size_t old_size = (vec ? vec->Size : 0);
+        T *temp;
+
+        temp = reinterpret_cast<T*>(al_calloc(16, data_offset + sizeof(vec->Data[0])*cap));
+        assert(temp != nullptr);
+        if(vec)
+            memcpy(temp->Data, vec->Data, sizeof(vec->Data[0])*old_size);
+
+        al_free(vec);
+        vec = temp;
+        vec->Capacity = cap;
+    }
+    vec->Size = size;
+}
+#define VECTOR_RESIZE(_x, _s, _c) do_vector_resize(_x, _s, _c)
+#endif // __cplusplus
 
 #define VECTOR_CAPACITY(_x) ((_x) ? (_x)->Capacity : 0)
 #define VECTOR_SIZE(_x)     ((_x) ? (_x)->Size : 0)

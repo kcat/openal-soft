@@ -4,7 +4,7 @@
 /* Macros to declare inheriting types, and to (down-)cast and up-cast. */
 #define DERIVE_FROM_TYPE(t)          t t##_parent
 #define STATIC_CAST(to, obj)         (&(obj)->to##_parent)
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(__cplusplus)
 #define STATIC_UPCAST(to, from, obj) __extension__({                          \
     static_assert(__builtin_types_compatible_p(from, __typeof(*(obj))),       \
                   "Invalid upcast object from type");                         \
@@ -74,14 +74,14 @@ static void T##_Delete(void *ptr) { al_free(ptr); }
 
 /* Allocate and construct an object, with arguments. */
 #define NEW_OBJ(_res, T) do {                                                 \
-    _res = T##_New(sizeof(T));                                                \
+    _res = (T*)T##_New(sizeof(T));                                            \
     if(_res)                                                                  \
     {                                                                         \
         memset(_res, 0, sizeof(T));                                           \
         T##_Construct(_res, EXTRACT_NEW_ARGS
 /* Allocate and construct an object, with no arguments. */
 #define NEW_OBJ0(_res, T) do {                                                \
-    _res = T##_New(sizeof(T));                                                \
+    _res = (T*)T##_New(sizeof(T));                                            \
     if(_res)                                                                  \
     {                                                                         \
         memset(_res, 0, sizeof(T));                                           \

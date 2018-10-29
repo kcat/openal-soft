@@ -5,7 +5,7 @@
 #include <stdalign.h>
 #endif
 
-#ifndef alignas
+#if !defined(alignas) && !defined(__cplusplus)
 #if defined(HAVE_C11_ALIGNAS)
 #define alignas _Alignas
 #else

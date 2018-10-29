@@ -4,7 +4,7 @@
 #include <assert.h>
 
 
-#ifndef static_assert
+#if !defined(static_assert) && !defined(__cplusplus)
 #ifdef HAVE_C11_STATIC_ASSERT
 #define static_assert _Static_assert
 #else

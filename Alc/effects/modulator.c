@@ -35,7 +35,7 @@
 typedef struct ALmodulatorState {
     DERIVE_FROM_TYPE(ALeffectState);
 
-    void (*GetSamples)(ALfloat*, ALsizei, const ALsizei, ALsizei);
+    void (*GetSamples)(ALfloat*RESTRICT, ALsizei, const ALsizei, ALsizei);
 
     ALsizei index;
     ALsizei step;

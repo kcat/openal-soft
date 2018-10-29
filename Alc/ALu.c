@@ -80,7 +80,7 @@ extern inline size_t clampz(size_t val, size_t min, size_t max);
 extern inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu);
 extern inline ALfloat cubic(ALfloat val1, ALfloat val2, ALfloat val3, ALfloat val4, ALfloat mu);
 
-extern inline void aluVectorSet(aluVector *RESTRICT vector, ALfloat x, ALfloat y, ALfloat z, ALfloat w);
+extern inline void aluVectorSet(aluVector *vector, ALfloat x, ALfloat y, ALfloat z, ALfloat w);
 
 extern inline void aluMatrixfSetRow(aluMatrixf *matrix, ALuint row,
                                     ALfloat m0, ALfloat m1, ALfloat m2, ALfloat m3);

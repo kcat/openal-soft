@@ -1,6 +1,10 @@
 #ifndef ALCONFIG_H
 #define ALCONFIG_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void ReadALConfig(void);
 void FreeALConfig(void);
 
@@ -13,5 +17,9 @@ int ConfigValueInt(const char *devName, const char *blockName, const char *keyNa
 int ConfigValueUInt(const char *devName, const char *blockName, const char *keyName, unsigned int *ret);
 int ConfigValueFloat(const char *devName, const char *blockName, const char *keyName, float *ret);
 int ConfigValueBool(const char *devName, const char *blockName, const char *keyName, int *ret);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* ALCONFIG_H */

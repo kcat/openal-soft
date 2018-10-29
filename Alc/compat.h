@@ -23,7 +23,7 @@ FILE *al_fopen(const char *fname, const char *mode);
 
 #define al_fopen fopen
 
-#if defined(HAVE_DLFCN_H) && !defined(IN_IDE_PARSER)
+#if defined(HAVE_DLFCN_H)
 #define HAVE_DYNLOAD 1
 #endif
 

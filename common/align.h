@@ -6,10 +6,7 @@
 #endif
 
 #ifndef alignas
-#if defined(IN_IDE_PARSER)
-/* KDevelop has problems with our align macro, so just use nothing for parsing. */
-#define alignas(x)
-#elif defined(HAVE_C11_ALIGNAS)
+#if defined(HAVE_C11_ALIGNAS)
 #define alignas _Alignas
 #else
 /* NOTE: Our custom ALIGN macro can't take a type name like alignas can. For

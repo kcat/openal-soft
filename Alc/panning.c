@@ -41,7 +41,7 @@
 extern inline void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
 extern inline void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
 extern inline float ScaleAzimuthFront(float azimuth, float scale);
-extern inline void ComputePanGains(const MixParams *dry, const ALfloat*restrict coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+extern inline void ComputePanGains(const MixParams *dry, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
 
 
 static const ALsizei FuMa2ACN[MAX_AMBI_COEFFS] = {
@@ -151,7 +151,7 @@ void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALf
 }
 
 
-void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, ALsizei numcoeffs, const ALfloat*restrict coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, ALsizei numcoeffs, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     ALsizei i, j;
 
@@ -166,7 +166,7 @@ void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, AL
         gains[i] = 0.0f;
 }
 
-void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat*restrict coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
 {
     ALsizei i;
 
@@ -381,7 +381,7 @@ static const ChannelMap MonoCfg[1] = {
 };
 
 static void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei order,
-                              const ALsizei *restrict chans_per_order)
+                              const ALsizei *RESTRICT chans_per_order)
 {
     const char *devname = alstr_get_cstr(device->DeviceName);
     ALsizei i;
@@ -845,8 +845,8 @@ static void InitHrtfPanning(ALCdevice *device)
     };
     static const ALsizei IndexMap[6] = { 0, 1, 2, 3, 4, 8 };
     static const ALsizei ChansPerOrder[MAX_AMBI_ORDER+1] = { 1, 3, 2, 0 };
-    const ALfloat (*restrict AmbiMatrix)[MAX_AMBI_COEFFS] = AmbiMatrixFOA;
-    const ALfloat *restrict AmbiOrderHFGain = AmbiOrderHFGainFOA;
+    const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_COEFFS] = AmbiMatrixFOA;
+    const ALfloat *RESTRICT AmbiOrderHFGain = AmbiOrderHFGainFOA;
     ALsizei count = 4;
     ALsizei i;
 

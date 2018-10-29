@@ -12,8 +12,8 @@
 #include "defs.h"
 
 
-const ALfloat *Resample_bsinc_SSE(const InterpState *state, const ALfloat *restrict src,
-                                  ALsizei frac, ALint increment, ALfloat *restrict dst,
+const ALfloat *Resample_bsinc_SSE(const InterpState *state, const ALfloat *RESTRICT src,
+                                  ALsizei frac, ALint increment, ALfloat *RESTRICT dst,
                                   ALsizei dstlen)
 {
     const ALfloat *const filter = state->bsinc.filter;
@@ -75,9 +75,9 @@ const ALfloat *Resample_bsinc_SSE(const InterpState *state, const ALfloat *restr
 }
 
 
-static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*restrict Values)[2],
+static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*RESTRICT Values)[2],
                                const ALsizei IrSize,
-                               const ALfloat (*restrict Coeffs)[2],
+                               const ALfloat (*RESTRICT Coeffs)[2],
                                ALfloat left, ALfloat right)
 {
     const __m128 lrlr = _mm_setr_ps(left, right, left, right);
@@ -135,7 +135,7 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*restrict Values)[2],
 #include "hrtf_inc.c"
 
 
-void Mix_SSE(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
+void Mix_SSE(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE],
              ALfloat *CurrentGains, const ALfloat *TargetGains, ALsizei Counter, ALsizei OutPos,
              ALsizei BufferSize)
 {
@@ -218,7 +218,7 @@ void Mix_SSE(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffer
     }
 }
 
-void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restrict data)[BUFFERSIZE], ALsizei InChans, ALsizei InPos, ALsizei BufferSize)
+void MixRow_SSE(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*RESTRICT data)[BUFFERSIZE], ALsizei InChans, ALsizei InPos, ALsizei BufferSize)
 {
     ALsizei c;
 

@@ -83,8 +83,8 @@ static ALfloat UpdateSlidingHold(SlidingHold *Hold, const ALsizei i, const ALflo
 {
     const ALsizei mask = BUFFERSIZE - 1;
     const ALsizei length = Hold->Length;
-    ALfloat *restrict values = Hold->Values;
-    ALsizei *restrict expiries = Hold->Expiries;
+    ALfloat *RESTRICT values = Hold->Values;
+    ALsizei *RESTRICT expiries = Hold->Expiries;
     ALsizei lowerIndex = Hold->LowerIndex;
     ALsizei upperIndex = Hold->UpperIndex;
 
@@ -122,7 +122,7 @@ static ALfloat UpdateSlidingHold(SlidingHold *Hold, const ALsizei i, const ALflo
 static void ShiftSlidingHold(SlidingHold *Hold, const ALsizei n)
 {
     const ALsizei lowerIndex = Hold->LowerIndex;
-    ALsizei *restrict expiries = Hold->Expiries;
+    ALsizei *RESTRICT expiries = Hold->Expiries;
     ALsizei i = Hold->UpperIndex;
 
     if(lowerIndex < i)
@@ -140,11 +140,11 @@ static void ShiftSlidingHold(SlidingHold *Hold, const ALsizei n)
 /* Multichannel compression is linked via the absolute maximum of all
  * channels.
  */
-static void LinkChannels(Compressor *Comp, const ALsizei SamplesToDo, ALfloat (*restrict OutBuffer)[BUFFERSIZE])
+static void LinkChannels(Compressor *Comp, const ALsizei SamplesToDo, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE])
 {
     const ALsizei index = Comp->LookAhead;
     const ALsizei numChans = Comp->NumChans;
-    ALfloat *restrict sideChain = Comp->SideChain;
+    ALfloat *RESTRICT sideChain = Comp->SideChain;
     ALsizei c, i;
 
     ASSUME(SamplesToDo > 0);
@@ -173,8 +173,8 @@ static void CrestDetector(Compressor *Comp, const ALsizei SamplesToDo)
 {
     const ALfloat a_crest = Comp->CrestCoeff;
     const ALsizei index = Comp->LookAhead;
-    const ALfloat *restrict sideChain = Comp->SideChain;
-    ALfloat *restrict crestFactor = Comp->CrestFactor;
+    const ALfloat *RESTRICT sideChain = Comp->SideChain;
+    ALfloat *RESTRICT crestFactor = Comp->CrestFactor;
     ALfloat y2_peak = Comp->LastPeakSq;
     ALfloat y2_rms = Comp->LastRmsSq;
     ALsizei i;
@@ -202,7 +202,7 @@ static void CrestDetector(Compressor *Comp, const ALsizei SamplesToDo)
 static void PeakDetector(Compressor *Comp, const ALsizei SamplesToDo)
 {
     const ALsizei index = Comp->LookAhead;
-    ALfloat *restrict sideChain = Comp->SideChain;
+    ALfloat *RESTRICT sideChain = Comp->SideChain;
     ALsizei i;
 
     ASSUME(SamplesToDo > 0);
@@ -223,7 +223,7 @@ static void PeakDetector(Compressor *Comp, const ALsizei SamplesToDo)
 static void PeakHoldDetector(Compressor *Comp, const ALsizei SamplesToDo)
 {
     const ALsizei index = Comp->LookAhead;
-    ALfloat *restrict sideChain = Comp->SideChain;
+    ALfloat *RESTRICT sideChain = Comp->SideChain;
     SlidingHold *hold = Comp->Hold;
     ALsizei i;
 
@@ -260,8 +260,8 @@ static void GainCompressor(Compressor *Comp, const ALsizei SamplesToDo)
     const ALfloat release = Comp->Release;
     const ALfloat c_est = Comp->GainEstimate;
     const ALfloat a_adp = Comp->AdaptCoeff;
-    const ALfloat *restrict crestFactor = Comp->CrestFactor;
-    ALfloat *restrict sideChain = Comp->SideChain;
+    const ALfloat *RESTRICT crestFactor = Comp->CrestFactor;
+    ALfloat *RESTRICT sideChain = Comp->SideChain;
     ALfloat postGain = Comp->PostGain;
     ALfloat knee = Comp->Knee;
     ALfloat t_att = attack;
@@ -353,13 +353,13 @@ static void GainCompressor(Compressor *Comp, const ALsizei SamplesToDo)
  * reaching the offending impulse.  This is best used when operating as a
  * limiter.
  */
-static void SignalDelay(Compressor *Comp, const ALsizei SamplesToDo, ALfloat (*restrict OutBuffer)[BUFFERSIZE])
+static void SignalDelay(Compressor *Comp, const ALsizei SamplesToDo, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE])
 {
     const ALsizei mask = BUFFERSIZE - 1;
     const ALsizei numChans = Comp->NumChans;
     const ALsizei indexIn = Comp->DelayIndex;
     const ALsizei indexOut = Comp->DelayIndex - Comp->LookAhead;
-    ALfloat (*restrict delay)[BUFFERSIZE] = Comp->Delay;
+    ALfloat (*RESTRICT delay)[BUFFERSIZE] = Comp->Delay;
     ALsizei c, i;
 
     ASSUME(SamplesToDo > 0);
@@ -481,11 +481,11 @@ Compressor* CompressorInit(const ALsizei NumChans, const ALuint SampleRate,
     return Comp;
 }
 
-void ApplyCompression(Compressor *Comp, const ALsizei SamplesToDo, ALfloat (*restrict OutBuffer)[BUFFERSIZE])
+void ApplyCompression(Compressor *Comp, const ALsizei SamplesToDo, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE])
 {
     const ALsizei numChans = Comp->NumChans;
     const ALfloat preGain = Comp->PreGain;
-    ALfloat *restrict sideChain;
+    ALfloat *RESTRICT sideChain;
     ALsizei c, i;
 
     ASSUME(SamplesToDo > 0);

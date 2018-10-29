@@ -80,7 +80,7 @@ extern inline size_t clampz(size_t val, size_t min, size_t max);
 extern inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu);
 extern inline ALfloat cubic(ALfloat val1, ALfloat val2, ALfloat val3, ALfloat val4, ALfloat mu);
 
-extern inline void aluVectorSet(aluVector *restrict vector, ALfloat x, ALfloat y, ALfloat z, ALfloat w);
+extern inline void aluVectorSet(aluVector *RESTRICT vector, ALfloat x, ALfloat y, ALfloat z, ALfloat w);
 
 extern inline void aluMatrixfSetRow(aluMatrixf *matrix, ALuint row,
                                     ALfloat m0, ALfloat m1, ALfloat m2, ALfloat m3);
@@ -1563,12 +1563,12 @@ static void ProcessParamUpdates(ALCcontext *ctx, const struct ALeffectslotArray 
 }
 
 
-static void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*restrict Buffer)[BUFFERSIZE],
+static void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*RESTRICT Buffer)[BUFFERSIZE],
                            int lidx, int ridx, int cidx, ALsizei SamplesToDo,
                            ALsizei NumChannels)
 {
-    ALfloat (*restrict lsplit)[BUFFERSIZE] = ASSUME_ALIGNED(Stablizer->LSplit, 16);
-    ALfloat (*restrict rsplit)[BUFFERSIZE] = ASSUME_ALIGNED(Stablizer->RSplit, 16);
+    ALfloat (*RESTRICT lsplit)[BUFFERSIZE] = ASSUME_ALIGNED(Stablizer->LSplit, 16);
+    ALfloat (*RESTRICT rsplit)[BUFFERSIZE] = ASSUME_ALIGNED(Stablizer->RSplit, 16);
     ALsizei i;
 
     /* Apply an all-pass to all channels, except the front-left and front-
@@ -1611,18 +1611,18 @@ static void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*restrict Buffer)
     }
 }
 
-static void ApplyDistanceComp(ALfloat (*restrict Samples)[BUFFERSIZE], DistanceComp *distcomp,
-                              ALfloat *restrict Values, ALsizei SamplesToDo, ALsizei numchans)
+static void ApplyDistanceComp(ALfloat (*RESTRICT Samples)[BUFFERSIZE], DistanceComp *distcomp,
+                              ALfloat *RESTRICT Values, ALsizei SamplesToDo, ALsizei numchans)
 {
     ALsizei i, c;
 
     Values = ASSUME_ALIGNED(Values, 16);
     for(c = 0;c < numchans;c++)
     {
-        ALfloat *restrict inout = ASSUME_ALIGNED(Samples[c], 16);
+        ALfloat *RESTRICT inout = ASSUME_ALIGNED(Samples[c], 16);
         const ALfloat gain = distcomp[c].Gain;
         const ALsizei base = distcomp[c].Length;
-        ALfloat *restrict distbuf = ASSUME_ALIGNED(distcomp[c].Buffer, 16);
+        ALfloat *RESTRICT distbuf = ASSUME_ALIGNED(distcomp[c].Buffer, 16);
 
         if(base == 0)
         {
@@ -1654,7 +1654,7 @@ static void ApplyDistanceComp(ALfloat (*restrict Samples)[BUFFERSIZE], DistanceC
     }
 }
 
-static void ApplyDither(ALfloat (*restrict Samples)[BUFFERSIZE], ALuint *dither_seed,
+static void ApplyDither(ALfloat (*RESTRICT Samples)[BUFFERSIZE], ALuint *dither_seed,
                         const ALfloat quant_scale, const ALsizei SamplesToDo,
                         const ALsizei numchans)
 {
@@ -1671,7 +1671,7 @@ static void ApplyDither(ALfloat (*restrict Samples)[BUFFERSIZE], ALuint *dither_
      */
     for(c = 0;c < numchans;c++)
     {
-        ALfloat *restrict samples = Samples[c];
+        ALfloat *RESTRICT samples = Samples[c];
         for(i = 0;i < SamplesToDo;i++)
         {
             ALfloat val = samples[i] * quant_scale;
@@ -1712,7 +1712,7 @@ DECL_TEMPLATE(ALuint, Conv_ALint, 2147483648u)
 #undef DECL_TEMPLATE
 
 #define DECL_TEMPLATE(T, A)                                                   \
-static void Write##A(const ALfloat (*restrict InBuffer)[BUFFERSIZE],          \
+static void Write##A(const ALfloat (*RESTRICT InBuffer)[BUFFERSIZE],          \
                      ALvoid *OutBuffer, ALsizei Offset, ALsizei SamplesToDo,  \
                      ALsizei numchans)                                        \
 {                                                                             \
@@ -1723,8 +1723,8 @@ static void Write##A(const ALfloat (*restrict InBuffer)[BUFFERSIZE],          \
                                                                               \
     for(j = 0;j < numchans;j++)                                               \
     {                                                                         \
-        const ALfloat *restrict in = ASSUME_ALIGNED(InBuffer[j], 16);         \
-        T *restrict out = (T*)OutBuffer + Offset*numchans + j;                \
+        const ALfloat *RESTRICT in = ASSUME_ALIGNED(InBuffer[j], 16);         \
+        T *RESTRICT out = (T*)OutBuffer + Offset*numchans + j;                \
                                                                               \
         for(i = 0;i < SamplesToDo;i++)                                        \
             out[i*numchans] = Conv_##T(in[i]);                                \

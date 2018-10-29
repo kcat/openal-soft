@@ -64,7 +64,7 @@ typedef struct ALfshifterState {
 static ALvoid ALfshifterState_Destruct(ALfshifterState *state);
 static ALboolean ALfshifterState_deviceUpdate(ALfshifterState *state, ALCdevice *device);
 static ALvoid ALfshifterState_update(ALfshifterState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props);
-static ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
+static ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ALfshifterState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALfshifterState);
@@ -147,10 +147,10 @@ static ALvoid ALfshifterState_update(ALfshifterState *state, const ALCcontext *c
     ComputePanGains(&device->Dry, coeffs, slot->Params.Gain, state->TargetGains);
 }
 
-static ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+static ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
     static const ALcomplex complex_zero = { 0.0, 0.0 };
-    ALfloat *restrict BufferOut = state->BufferOut;
+    ALfloat *RESTRICT BufferOut = state->BufferOut;
     ALsizei j, k, base;
 
     for(base = 0;base < SamplesToDo;)

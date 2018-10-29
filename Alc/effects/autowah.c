@@ -69,7 +69,7 @@ typedef struct ALautowahState {
 static ALvoid ALautowahState_Destruct(ALautowahState *state);
 static ALboolean ALautowahState_deviceUpdate(ALautowahState *state, ALCdevice *device);
 static ALvoid ALautowahState_update(ALautowahState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props);
-static ALvoid ALautowahState_process(ALautowahState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
+static ALvoid ALautowahState_process(ALautowahState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ALautowahState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALautowahState);
@@ -134,7 +134,7 @@ static ALvoid ALautowahState_update(ALautowahState *state, const ALCcontext *con
                         state->Chans[i].TargetGains);
 }
 
-static ALvoid ALautowahState_process(ALautowahState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+static ALvoid ALautowahState_process(ALautowahState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
     const ALfloat attack_rate = state->AttackRate;
     const ALfloat release_rate = state->ReleaseRate;

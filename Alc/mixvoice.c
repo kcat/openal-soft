@@ -45,7 +45,7 @@
 static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,
               "MAX_PITCH and/or BUFFERSIZE are too large for FRACTIONBITS!");
 
-extern inline void InitiatePositionArrays(ALsizei frac, ALint increment, ALsizei *restrict frac_arr, ALsizei *restrict pos_arr, ALsizei size);
+extern inline void InitiatePositionArrays(ALsizei frac, ALint increment, ALsizei *RESTRICT frac_arr, ALsizei *RESTRICT pos_arr, ALsizei size);
 
 
 /* BSinc24 requires up to 23 extra samples before the current position, and 24 after. */
@@ -228,7 +228,7 @@ static inline ALfloat Sample_ALalaw(ALalaw val)
 { return aLawDecompressionTable[val] * (1.0f/32768.0f); }
 
 #define DECL_TEMPLATE(T)                                                      \
-static inline void Load_##T(ALfloat *restrict dst, const T *restrict src,     \
+static inline void Load_##T(ALfloat *RESTRICT dst, const T *RESTRICT src,     \
                             ALint srcstep, ALsizei samples)                   \
 {                                                                             \
     ALsizei i;                                                                \
@@ -245,7 +245,7 @@ DECL_TEMPLATE(ALalaw)
 
 #undef DECL_TEMPLATE
 
-static void LoadSamples(ALfloat *restrict dst, const ALvoid *restrict src, ALint srcstep,
+static void LoadSamples(ALfloat *RESTRICT dst, const ALvoid *RESTRICT src, ALint srcstep,
                         enum FmtType srctype, ALsizei samples)
 {
 #define HANDLE_FMT(ET, ST) case ET: Load_##ST(dst, src, srcstep, samples); break
@@ -263,7 +263,7 @@ static void LoadSamples(ALfloat *restrict dst, const ALvoid *restrict src, ALint
 
 
 static const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter,
-                                ALfloat *restrict dst, const ALfloat *restrict src,
+                                ALfloat *RESTRICT dst, const ALfloat *RESTRICT src,
                                 ALsizei numsamples, enum ActiveFilters type)
 {
     ALsizei i;

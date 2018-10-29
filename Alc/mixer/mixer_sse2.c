@@ -28,8 +28,8 @@
 
 
 const ALfloat *Resample_lerp_SSE2(const InterpState* UNUSED(state),
-  const ALfloat *restrict src, ALsizei frac, ALint increment,
-  ALfloat *restrict dst, ALsizei numsamples)
+  const ALfloat *RESTRICT src, ALsizei frac, ALint increment,
+  ALfloat *RESTRICT dst, ALsizei numsamples)
 {
     const __m128i increment4 = _mm_set1_epi32(increment*4);
     const __m128 fracOne4 = _mm_set1_ps(1.0f/FRACTIONONE);

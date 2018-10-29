@@ -9,13 +9,13 @@
 #include "defs.h"
 
 
-static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*restrict Values)[2],
+static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*RESTRICT Values)[2],
                                const ALsizei irSize,
-                               const ALfloat (*restrict Coeffs)[2],
+                               const ALfloat (*RESTRICT Coeffs)[2],
                                ALfloat left, ALfloat right);
 
 
-void MixHrtf(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
+void MixHrtf(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
              const ALfloat *data, ALsizei Offset, ALsizei OutPos,
              const ALsizei IrSize, MixHrtfParams *hrtfparams, HrtfState *hrtfstate,
              ALsizei BufferSize)
@@ -54,7 +54,7 @@ void MixHrtf(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
     hrtfparams->Gain = gain + gainstep*stepcount;
 }
 
-void MixHrtfBlend(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
+void MixHrtfBlend(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                   const ALfloat *data, ALsizei Offset, ALsizei OutPos,
                   const ALsizei IrSize, const HrtfParams *oldparams,
                   MixHrtfParams *newparams, HrtfState *hrtfstate,
@@ -103,9 +103,9 @@ void MixHrtfBlend(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
     newparams->Gain = newGain + newGainStep*stepcount;
 }
 
-void MixDirectHrtf(ALfloat *restrict LeftOut, ALfloat *restrict RightOut,
+void MixDirectHrtf(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                    const ALfloat *data, ALsizei Offset, const ALsizei IrSize,
-                   const ALfloat (*restrict Coeffs)[2], ALfloat (*restrict Values)[2],
+                   const ALfloat (*RESTRICT Coeffs)[2], ALfloat (*RESTRICT Values)[2],
                    ALsizei BufferSize)
 {
     ALfloat insample;

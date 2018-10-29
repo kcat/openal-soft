@@ -90,7 +90,7 @@ typedef struct ALequalizerState {
 static ALvoid ALequalizerState_Destruct(ALequalizerState *state);
 static ALboolean ALequalizerState_deviceUpdate(ALequalizerState *state, ALCdevice *device);
 static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props);
-static ALvoid ALequalizerState_process(ALequalizerState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
+static ALvoid ALequalizerState_process(ALequalizerState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ALequalizerState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALequalizerState);
@@ -176,9 +176,9 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext 
                         state->Chans[i].TargetGains);
 }
 
-static ALvoid ALequalizerState_process(ALequalizerState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+static ALvoid ALequalizerState_process(ALequalizerState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    ALfloat (*restrict temps)[BUFFERSIZE] = state->SampleBuffer;
+    ALfloat (*RESTRICT temps)[BUFFERSIZE] = state->SampleBuffer;
     ALsizei c;
 
     for(c = 0;c < MAX_EFFECT_CHANNELS;c++)

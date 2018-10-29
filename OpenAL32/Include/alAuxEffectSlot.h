@@ -30,7 +30,7 @@ struct ALeffectStateVtable {
 
     ALboolean (*const deviceUpdate)(ALeffectState *state, ALCdevice *device);
     void (*const update)(ALeffectState *state, const ALCcontext *context, const struct ALeffectslot *slot, const union ALeffectProps *props);
-    void (*const process)(ALeffectState *state, ALsizei samplesToDo, const ALfloat (*restrict samplesIn)[BUFFERSIZE], ALfloat (*restrict samplesOut)[BUFFERSIZE], ALsizei numChannels);
+    void (*const process)(ALeffectState *state, ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels);
 
     void (*const Delete)(void *ptr);
 };
@@ -44,7 +44,7 @@ typedef ALfloat ALfloatBUFFERSIZE[BUFFERSIZE];
 DECLARE_THUNK(T, ALeffectState, void, Destruct)                               \
 DECLARE_THUNK1(T, ALeffectState, ALboolean, deviceUpdate, ALCdevice*)         \
 DECLARE_THUNK3(T, ALeffectState, void, update, const ALCcontext*, const ALeffectslot*, const ALeffectProps*) \
-DECLARE_THUNK4(T, ALeffectState, void, process, ALsizei, const ALfloatBUFFERSIZE*restrict, ALfloatBUFFERSIZE*restrict, ALsizei) \
+DECLARE_THUNK4(T, ALeffectState, void, process, ALsizei, const ALfloatBUFFERSIZE*RESTRICT, ALfloatBUFFERSIZE*RESTRICT, ALsizei) \
 static void T##_ALeffectState_Delete(void *ptr)                               \
 { return T##_Delete(STATIC_UPCAST(T, ALeffectState, (ALeffectState*)ptr)); }  \
                                                                               \

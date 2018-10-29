@@ -27,7 +27,7 @@ void bandsplit_clear(BandSplitter *splitter)
     splitter->hp_z1 = 0.0f;
 }
 
-void bandsplit_process(BandSplitter *splitter, ALfloat *restrict hpout, ALfloat *restrict lpout,
+void bandsplit_process(BandSplitter *splitter, ALfloat *RESTRICT hpout, ALfloat *RESTRICT lpout,
                        const ALfloat *input, ALsizei count)
 {
     ALfloat lp_coeff, hp_coeff, lp_y, hp_y, d;
@@ -86,7 +86,7 @@ void splitterap_clear(SplitterAllpass *splitter)
     splitter->z1 = 0.0f;
 }
 
-void splitterap_process(SplitterAllpass *splitter, ALfloat *restrict samples, ALsizei count)
+void splitterap_process(SplitterAllpass *splitter, ALfloat *RESTRICT samples, ALsizei count)
 {
     ALfloat coeff, in, out;
     ALfloat z1;

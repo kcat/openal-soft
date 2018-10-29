@@ -334,7 +334,7 @@ typedef struct ReverbState {
 static ALvoid ReverbState_Destruct(ReverbState *State);
 static ALboolean ReverbState_deviceUpdate(ReverbState *State, ALCdevice *Device);
 static ALvoid ReverbState_update(ReverbState *State, const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props);
-static ALvoid ReverbState_process(ReverbState *State, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
+static ALvoid ReverbState_process(ReverbState *State, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ReverbState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ReverbState);
@@ -1069,7 +1069,7 @@ static inline ALfloat FadedDelayLineOut(const DelayLineI *Delay, const ALsizei o
 
 
 static inline void DelayLineIn(const DelayLineI *Delay, ALsizei offset, const ALsizei c,
-                               const ALfloat *restrict in, ALsizei count)
+                               const ALfloat *RESTRICT in, ALsizei count)
 {
     ALsizei i;
     for(i = 0;i < count;i++)
@@ -1114,7 +1114,7 @@ static inline void DelayLineIn(const DelayLineI *Delay, ALsizei offset, const AL
  * Where D is a diagonal matrix (of x), and S is a triangular matrix (of y)
  * whose combination of signs are being iterated.
  */
-static inline void VectorPartialScatter(ALfloat *restrict out, const ALfloat *restrict in,
+static inline void VectorPartialScatter(ALfloat *RESTRICT out, const ALfloat *RESTRICT in,
                                         const ALfloat xCoeff, const ALfloat yCoeff)
 {
     out[0] = xCoeff*in[0] + yCoeff*(          in[1] + -in[2] + in[3]);
@@ -1128,7 +1128,7 @@ static inline void VectorPartialScatter(ALfloat *restrict out, const ALfloat *re
 /* Utilizes the above, but reverses the input channels. */
 static inline void VectorScatterRevDelayIn(const DelayLineI *Delay, ALint offset,
                                            const ALfloat xCoeff, const ALfloat yCoeff,
-                                           const ALfloat (*restrict in)[MAX_UPDATE_SAMPLES],
+                                           const ALfloat (*RESTRICT in)[MAX_UPDATE_SAMPLES],
                                            const ALsizei count)
 {
     const DelayLineI delay = *Delay;
@@ -1154,7 +1154,7 @@ static inline void VectorScatterRevDelayIn(const DelayLineI *Delay, ALint offset
  * Two static specializations are used for transitional (cross-faded) delay
  * line processing and non-transitional processing.
  */
-static void VectorAllpass_Unfaded(ALfloat (*restrict samples)[MAX_UPDATE_SAMPLES], ALsizei offset,
+static void VectorAllpass_Unfaded(ALfloat (*RESTRICT samples)[MAX_UPDATE_SAMPLES], ALsizei offset,
                                   const ALfloat xCoeff, const ALfloat yCoeff, ALsizei todo,
                                   VecAllpass *Vap)
 {
@@ -1184,7 +1184,7 @@ static void VectorAllpass_Unfaded(ALfloat (*restrict samples)[MAX_UPDATE_SAMPLES
         ++offset;
     }
 }
-static void VectorAllpass_Faded(ALfloat (*restrict samples)[MAX_UPDATE_SAMPLES], ALsizei offset,
+static void VectorAllpass_Faded(ALfloat (*RESTRICT samples)[MAX_UPDATE_SAMPLES], ALsizei offset,
                                 const ALfloat xCoeff, const ALfloat yCoeff, ALfloat fade,
                                 ALsizei todo, VecAllpass *Vap)
 {
@@ -1243,9 +1243,9 @@ static void VectorAllpass_Faded(ALfloat (*restrict samples)[MAX_UPDATE_SAMPLES],
  * line processing and non-transitional processing.
  */
 static void EarlyReflection_Unfaded(ReverbState *State, ALsizei offset, const ALsizei todo,
-                                    ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
+                                    ALfloat (*RESTRICT out)[MAX_UPDATE_SAMPLES])
 {
-    ALfloat (*restrict temps)[MAX_UPDATE_SAMPLES] = State->TempSamples;
+    ALfloat (*RESTRICT temps)[MAX_UPDATE_SAMPLES] = State->TempSamples;
     const DelayLineI early_delay = State->Early.Delay;
     const DelayLineI main_delay = State->Delay;
     const ALfloat mixX = State->MixX;
@@ -1294,9 +1294,9 @@ static void EarlyReflection_Unfaded(ReverbState *State, ALsizei offset, const AL
     VectorScatterRevDelayIn(&main_delay, late_feed_tap, mixX, mixY, out, todo);
 }
 static void EarlyReflection_Faded(ReverbState *State, ALsizei offset, const ALsizei todo,
-                                  const ALfloat fade, ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
+                                  const ALfloat fade, ALfloat (*RESTRICT out)[MAX_UPDATE_SAMPLES])
 {
-    ALfloat (*restrict temps)[MAX_UPDATE_SAMPLES] = State->TempSamples;
+    ALfloat (*RESTRICT temps)[MAX_UPDATE_SAMPLES] = State->TempSamples;
     const DelayLineI early_delay = State->Early.Delay;
     const DelayLineI main_delay = State->Delay;
     const ALfloat mixX = State->MixX;
@@ -1355,7 +1355,7 @@ static void EarlyReflection_Faded(ReverbState *State, ALsizei offset, const ALsi
 }
 
 /* Applies the two T60 damping filter sections. */
-static inline void LateT60Filter(ALfloat *restrict samples, const ALsizei todo, T60Filter *filter)
+static inline void LateT60Filter(ALfloat *RESTRICT samples, const ALsizei todo, T60Filter *filter)
 {
     ALfloat temp[MAX_UPDATE_SAMPLES];
     BiquadFilter_process(&filter->HFFilter, temp, samples, todo);
@@ -1377,9 +1377,9 @@ static inline void LateT60Filter(ALfloat *restrict samples, const ALsizei todo, 
  * processing and one for non-transitional processing.
  */
 static void LateReverb_Unfaded(ReverbState *State, ALsizei offset, const ALsizei todo,
-                               ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
+                               ALfloat (*RESTRICT out)[MAX_UPDATE_SAMPLES])
 {
-    ALfloat (*restrict temps)[MAX_UPDATE_SAMPLES] = State->TempSamples;
+    ALfloat (*RESTRICT temps)[MAX_UPDATE_SAMPLES] = State->TempSamples;
     const DelayLineI late_delay = State->Late.Delay;
     const DelayLineI main_delay = State->Delay;
     const ALfloat mixX = State->MixX;
@@ -1415,9 +1415,9 @@ static void LateReverb_Unfaded(ReverbState *State, ALsizei offset, const ALsizei
     VectorScatterRevDelayIn(&late_delay, offset, mixX, mixY, out, todo);
 }
 static void LateReverb_Faded(ReverbState *State, ALsizei offset, const ALsizei todo,
-                             const ALfloat fade, ALfloat (*restrict out)[MAX_UPDATE_SAMPLES])
+                             const ALfloat fade, ALfloat (*RESTRICT out)[MAX_UPDATE_SAMPLES])
 {
-    ALfloat (*restrict temps)[MAX_UPDATE_SAMPLES] = State->TempSamples;
+    ALfloat (*RESTRICT temps)[MAX_UPDATE_SAMPLES] = State->TempSamples;
     const DelayLineI late_delay = State->Late.Delay;
     const DelayLineI main_delay = State->Delay;
     const ALfloat mixX = State->MixX;
@@ -1466,10 +1466,10 @@ static void LateReverb_Faded(ReverbState *State, ALsizei offset, const ALsizei t
     VectorScatterRevDelayIn(&late_delay, offset, mixX, mixY, temps, todo);
 }
 
-static ALvoid ReverbState_process(ReverbState *State, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+static ALvoid ReverbState_process(ReverbState *State, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    ALfloat (*restrict afmt)[MAX_UPDATE_SAMPLES] = State->TempSamples;
-    ALfloat (*restrict samples)[MAX_UPDATE_SAMPLES] = State->MixSamples;
+    ALfloat (*RESTRICT afmt)[MAX_UPDATE_SAMPLES] = State->TempSamples;
+    ALfloat (*RESTRICT samples)[MAX_UPDATE_SAMPLES] = State->MixSamples;
     ALsizei fadeCount = State->FadeCount;
     ALsizei offset = State->Offset;
     ALsizei base, c;

@@ -16,7 +16,7 @@ static const ALfloat Filter2CoeffSqr[4] = {
     0.161758498368f, 0.733028932341f, 0.945349700329f, 0.990599156685f
 };
 
-static void allpass_process(AllPassState *state, ALfloat *restrict dst, const ALfloat *restrict src, const ALfloat aa, ALsizei todo)
+static void allpass_process(AllPassState *state, ALfloat *RESTRICT dst, const ALfloat *RESTRICT src, const ALfloat aa, ALsizei todo)
 {
     ALfloat z1 = state->z[0];
     ALfloat z2 = state->z[1];
@@ -55,7 +55,7 @@ static void allpass_process(AllPassState *state, ALfloat *restrict dst, const AL
  * know which is the intended result.
  */
 
-void EncodeUhj2(Uhj2Encoder *enc, ALfloat *restrict LeftOut, ALfloat *restrict RightOut, ALfloat (*restrict InSamples)[BUFFERSIZE], ALsizei SamplesToDo)
+void EncodeUhj2(Uhj2Encoder *enc, ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, ALfloat (*RESTRICT InSamples)[BUFFERSIZE], ALsizei SamplesToDo)
 {
     ALfloat D[MAX_UPDATE_SAMPLES], S[MAX_UPDATE_SAMPLES];
     ALfloat temp[2][MAX_UPDATE_SAMPLES];

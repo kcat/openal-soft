@@ -945,7 +945,7 @@ static inline uint dither_rng(uint *seed)
 
 // Performs a triangular probability density function dither. The input samples
 // should be normalized (-1 to +1).
-static void TpdfDither(double *restrict out, const double *restrict in, const double scale,
+static void TpdfDither(double *RESTRICT out, const double *RESTRICT in, const double scale,
                        const int count, const int step, uint *seed)
 {
     static const double PRNG_SCALE = 1.0 / UINT_MAX;

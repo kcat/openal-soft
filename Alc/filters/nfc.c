@@ -222,7 +222,7 @@ void NfcFilterAdjust(NfcFilter *nfc, const float w0)
 }
 
 
-void NfcFilterProcess1(NfcFilter *nfc, float *restrict dst, const float *restrict src, const int count)
+void NfcFilterProcess1(NfcFilter *nfc, float *RESTRICT dst, const float *RESTRICT src, const int count)
 {
     const float gain = nfc->first.gain;
     const float b1 = nfc->first.b1;
@@ -243,7 +243,7 @@ void NfcFilterProcess1(NfcFilter *nfc, float *restrict dst, const float *restric
     nfc->first.z[0] = z1;
 }
 
-void NfcFilterProcess2(NfcFilter *nfc, float *restrict dst, const float *restrict src, const int count)
+void NfcFilterProcess2(NfcFilter *nfc, float *RESTRICT dst, const float *RESTRICT src, const int count)
 {
     const float gain = nfc->second.gain;
     const float b1 = nfc->second.b1;
@@ -269,7 +269,7 @@ void NfcFilterProcess2(NfcFilter *nfc, float *restrict dst, const float *restric
     nfc->second.z[1] = z2;
 }
 
-void NfcFilterProcess3(NfcFilter *nfc, float *restrict dst, const float *restrict src, const int count)
+void NfcFilterProcess3(NfcFilter *nfc, float *RESTRICT dst, const float *RESTRICT src, const int count)
 {
     const float gain = nfc->third.gain;
     const float b1 = nfc->third.b1;

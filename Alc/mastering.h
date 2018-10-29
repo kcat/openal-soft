@@ -42,7 +42,7 @@ struct Compressor* CompressorInit(const ALsizei NumChans, const ALuint SampleRat
     const ALfloat AttackTime, const ALfloat ReleaseTime);
 
 void ApplyCompression(struct Compressor *Comp, const ALsizei SamplesToDo,
-                      ALfloat (*restrict OutBuffer)[BUFFERSIZE]);
+                      ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE]);
 
 ALsizei GetCompressorLookAhead(const struct Compressor *Comp);
 

@@ -11,8 +11,8 @@
 
 
 const ALfloat *Resample_lerp_Neon(const InterpState* UNUSED(state),
-  const ALfloat *restrict src, ALsizei frac, ALint increment,
-  ALfloat *restrict dst, ALsizei numsamples)
+  const ALfloat *RESTRICT src, ALsizei frac, ALint increment,
+  ALfloat *RESTRICT dst, ALsizei numsamples)
 {
     const int32x4_t increment4 = vdupq_n_s32(increment*4);
     const float32x4_t fracOne4 = vdupq_n_f32(1.0f/FRACTIONONE);
@@ -67,8 +67,8 @@ const ALfloat *Resample_lerp_Neon(const InterpState* UNUSED(state),
 }
 
 const ALfloat *Resample_bsinc_Neon(const InterpState *state,
-  const ALfloat *restrict src, ALsizei frac, ALint increment,
-  ALfloat *restrict dst, ALsizei dstlen)
+  const ALfloat *RESTRICT src, ALsizei frac, ALint increment,
+  ALfloat *RESTRICT dst, ALsizei dstlen)
 {
     const ALfloat *const filter = state->bsinc.filter;
     const float32x4_t sf4 = vdupq_n_f32(state->bsinc.sf);
@@ -127,9 +127,9 @@ const ALfloat *Resample_bsinc_Neon(const InterpState *state,
 }
 
 
-static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*restrict Values)[2],
+static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*RESTRICT Values)[2],
                                const ALsizei IrSize,
-                               const ALfloat (*restrict Coeffs)[2],
+                               const ALfloat (*RESTRICT Coeffs)[2],
                                ALfloat left, ALfloat right)
 {
     ALsizei c;
@@ -163,7 +163,7 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*restrict Values)[2],
 #include "hrtf_inc.c"
 
 
-void Mix_Neon(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
+void Mix_Neon(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE],
               ALfloat *CurrentGains, const ALfloat *TargetGains, ALsizei Counter, ALsizei OutPos,
               ALsizei BufferSize)
 {
@@ -251,7 +251,7 @@ void Mix_Neon(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffe
     }
 }
 
-void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restrict data)[BUFFERSIZE], ALsizei InChans, ALsizei InPos, ALsizei BufferSize)
+void MixRow_Neon(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*RESTRICT data)[BUFFERSIZE], ALsizei InChans, ALsizei InPos, ALsizei BufferSize)
 {
     ALsizei c;
 

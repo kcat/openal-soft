@@ -103,7 +103,7 @@ static ALsizei CalcAzIndex(ALsizei azcount, ALfloat az, ALfloat *mu)
  * and azimuth in radians. The coefficients are normalized.
  */
 void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread,
-                   ALfloat (*restrict coeffs)[2], ALsizei *delays)
+                   ALfloat (*RESTRICT coeffs)[2], ALsizei *delays)
 {
     ALsizei evidx, azidx, idx[4];
     ALsizei evoffset;
@@ -183,7 +183,7 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
     }
     for(c = 0;c < 4;c++)
     {
-        const ALfloat (*restrict srccoeffs)[2] = ASSUME_ALIGNED(Hrtf->coeffs+idx[c], 16);
+        const ALfloat (*RESTRICT srccoeffs)[2] = ASSUME_ALIGNED(Hrtf->coeffs+idx[c], 16);
         for(i = 0;i < Hrtf->irSize;i++)
         {
             coeffs[i][0] += srccoeffs[i][0] * blend[c];
@@ -193,7 +193,7 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
 }
 
 
-void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei NumChannels, const struct AngularPoint *AmbiPoints, const ALfloat (*restrict AmbiMatrix)[MAX_AMBI_COEFFS], ALsizei AmbiCount, const ALfloat *restrict AmbiOrderHFGain)
+void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei NumChannels, const struct AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_COEFFS], ALsizei AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain)
 {
 /* Set this to 2 for dual-band HRTF processing. May require a higher quality
  * band-splitter, or better calculation of the new IR length to deal with the
@@ -202,7 +202,7 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
 #define NUM_BANDS 2
     BandSplitter splitter;
     ALdouble (*tmpres)[HRIR_LENGTH][2];
-    ALsizei *restrict idx;
+    ALsizei *RESTRICT idx;
     ALsizei min_delay = HRTF_HISTORY_LENGTH;
     ALsizei max_delay = 0;
     ALfloat temps[3][HRIR_LENGTH];

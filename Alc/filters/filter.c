@@ -8,7 +8,7 @@
 #include "defs.h"
 
 extern inline void BiquadFilter_clear(BiquadFilter *filter);
-extern inline void BiquadFilter_copyParams(BiquadFilter *restrict dst, const BiquadFilter *restrict src);
+extern inline void BiquadFilter_copyParams(BiquadFilter *RESTRICT dst, const BiquadFilter *RESTRICT src);
 extern inline void BiquadFilter_passthru(BiquadFilter *filter, ALsizei numsamples);
 extern inline ALfloat calc_rcpQ_from_slope(ALfloat gain, ALfloat slope);
 extern inline ALfloat calc_rcpQ_from_bandwidth(ALfloat f0norm, ALfloat bandwidth);
@@ -94,7 +94,7 @@ void BiquadFilter_setParams(BiquadFilter *filter, BiquadType type, ALfloat gain,
 }
 
 
-void BiquadFilter_processC(BiquadFilter *filter, ALfloat *restrict dst, const ALfloat *restrict src, ALsizei numsamples)
+void BiquadFilter_processC(BiquadFilter *filter, ALfloat *RESTRICT dst, const ALfloat *RESTRICT src, ALsizei numsamples)
 {
     const ALfloat a1 = filter->a1;
     const ALfloat a2 = filter->a2;

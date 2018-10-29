@@ -129,7 +129,7 @@ void bs2b_clear(struct bs2b *bs2b)
     memset(&bs2b->last_sample, 0, sizeof(bs2b->last_sample));
 } /* bs2b_clear */
 
-void bs2b_cross_feed(struct bs2b *bs2b, float *restrict Left, float *restrict Right, int SamplesToDo)
+void bs2b_cross_feed(struct bs2b *bs2b, float *RESTRICT Left, float *RESTRICT Right, int SamplesToDo)
 {
     float lsamples[128][2];
     float rsamples[128][2];

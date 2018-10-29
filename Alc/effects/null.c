@@ -17,7 +17,7 @@ typedef struct ALnullState {
 static ALvoid ALnullState_Destruct(ALnullState *state);
 static ALboolean ALnullState_deviceUpdate(ALnullState *state, ALCdevice *device);
 static ALvoid ALnullState_update(ALnullState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props);
-static ALvoid ALnullState_process(ALnullState *state, ALsizei samplesToDo, const ALfloat (*restrict samplesIn)[BUFFERSIZE], ALfloat (*restrict samplesOut)[BUFFERSIZE], ALsizei mumChannels);
+static ALvoid ALnullState_process(ALnullState *state, ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei mumChannels);
 static void *ALnullState_New(size_t size);
 static void ALnullState_Delete(void *ptr);
 
@@ -64,7 +64,7 @@ static ALvoid ALnullState_update(ALnullState* UNUSED(state), const ALCcontext* U
  * input to the output buffer. The result should be added to the output buffer,
  * not replace it.
  */
-static ALvoid ALnullState_process(ALnullState* UNUSED(state), ALsizei UNUSED(samplesToDo), const ALfloatBUFFERSIZE*restrict UNUSED(samplesIn), ALfloatBUFFERSIZE*restrict UNUSED(samplesOut), ALsizei UNUSED(numChannels))
+static ALvoid ALnullState_process(ALnullState* UNUSED(state), ALsizei UNUSED(samplesToDo), const ALfloatBUFFERSIZE*RESTRICT UNUSED(samplesIn), ALfloatBUFFERSIZE*RESTRICT UNUSED(samplesOut), ALsizei UNUSED(numChannels))
 {
 }
 

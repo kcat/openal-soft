@@ -266,7 +266,7 @@ static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
     todo = minu(numframes, data[0].len);
     for(c = 0;c < numchans;c++)
     {
-        const ALfloat *restrict in = ((ALfloat*)data[0].buf) + c;
+        const ALfloat *RESTRICT in = ((ALfloat*)data[0].buf) + c;
         for(i = 0;(jack_nframes_t)i < todo;i++)
             out[c][i] = in[i*numchans];
         out[c] += todo;
@@ -278,7 +278,7 @@ static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
     {
         for(c = 0;c < numchans;c++)
         {
-            const ALfloat *restrict in = ((ALfloat*)data[1].buf) + c;
+            const ALfloat *RESTRICT in = ((ALfloat*)data[1].buf) + c;
             for(i = 0;(jack_nframes_t)i < todo;i++)
                 out[c][i] = in[i*numchans];
             out[c] += todo;

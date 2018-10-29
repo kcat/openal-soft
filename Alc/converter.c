@@ -72,7 +72,7 @@ static inline ALfloat Sample_ALfloat(ALfloat val)
 { return val; }
 
 #define DECL_TEMPLATE(T)                                                      \
-static inline void Load_##T(ALfloat *restrict dst, const T *restrict src,     \
+static inline void Load_##T(ALfloat *RESTRICT dst, const T *RESTRICT src,     \
                             ALint srcstep, ALsizei samples)                   \
 {                                                                             \
     ALsizei i;                                                                \
@@ -138,7 +138,7 @@ static inline ALfloat ALfloat_Sample(ALfloat val)
 { return val; }
 
 #define DECL_TEMPLATE(T)                                                      \
-static inline void Store_##T(T *restrict dst, const ALfloat *restrict src,    \
+static inline void Store_##T(T *RESTRICT dst, const ALfloat *RESTRICT src,    \
                              ALint dststep, ALsizei samples)                  \
 {                                                                             \
     ALsizei i;                                                                \
@@ -235,8 +235,8 @@ ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALs
     START_MIXER_MODE();
     while(pos < dstframes && *srcframes > 0)
     {
-        ALfloat *restrict SrcData = ASSUME_ALIGNED(converter->mSrcSamples, 16);
-        ALfloat *restrict DstData = ASSUME_ALIGNED(converter->mDstSamples, 16);
+        ALfloat *RESTRICT SrcData = ASSUME_ALIGNED(converter->mSrcSamples, 16);
+        ALfloat *RESTRICT DstData = ASSUME_ALIGNED(converter->mDstSamples, 16);
         ALint prepcount = converter->mSrcPrepCount;
         ALsizei DataPosFrac = converter->mFracOffset;
         ALuint64 DataSize64;
@@ -377,14 +377,14 @@ void DestroyChannelConverter(ChannelConverter **converter)
 
 
 #define DECL_TEMPLATE(T)                                                       \
-static void Mono2Stereo##T(ALfloat *restrict dst, const T *src, ALsizei frames)\
+static void Mono2Stereo##T(ALfloat *RESTRICT dst, const T *src, ALsizei frames)\
 {                                                                              \
     ALsizei i;                                                                 \
     for(i = 0;i < frames;i++)                                                  \
         dst[i*2 + 1] = dst[i*2 + 0] = Sample_##T(src[i]) * 0.707106781187f;    \
 }                                                                              \
                                                                                \
-static void Stereo2Mono##T(ALfloat *restrict dst, const T *src, ALsizei frames)\
+static void Stereo2Mono##T(ALfloat *RESTRICT dst, const T *src, ALsizei frames)\
 {                                                                              \
     ALsizei i;                                                                 \
     for(i = 0;i < frames;i++)                                                  \

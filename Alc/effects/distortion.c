@@ -48,7 +48,7 @@ typedef struct ALdistortionState {
 static ALvoid ALdistortionState_Destruct(ALdistortionState *state);
 static ALboolean ALdistortionState_deviceUpdate(ALdistortionState *state, ALCdevice *device);
 static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props);
-static ALvoid ALdistortionState_process(ALdistortionState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
+static ALvoid ALdistortionState_process(ALdistortionState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ALdistortionState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALdistortionState);
@@ -107,9 +107,9 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCcontex
     ComputePanGains(&device->Dry, coeffs, slot->Params.Gain*props->Distortion.Gain, state->Gain);
 }
 
-static ALvoid ALdistortionState_process(ALdistortionState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+static ALvoid ALdistortionState_process(ALdistortionState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    ALfloat (*restrict buffer)[BUFFERSIZE] = state->Buffer;
+    ALfloat (*RESTRICT buffer)[BUFFERSIZE] = state->Buffer;
     const ALfloat fc = state->edge_coeff;
     ALsizei base;
     ALsizei i, k;

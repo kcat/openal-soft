@@ -82,7 +82,7 @@ typedef struct ALpshifterState {
 static ALvoid ALpshifterState_Destruct(ALpshifterState *state);
 static ALboolean ALpshifterState_deviceUpdate(ALpshifterState *state, ALCdevice *device);
 static ALvoid ALpshifterState_update(ALpshifterState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props);
-static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
+static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ALpshifterState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALpshifterState);
@@ -211,7 +211,7 @@ static ALvoid ALpshifterState_update(ALpshifterState *state, const ALCcontext *c
     ComputePanGains(&device->Dry, coeffs, slot->Params.Gain, state->TargetGains);
 }
 
-static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToDo, const ALfloat (*restrict SamplesIn)[BUFFERSIZE], ALfloat (*restrict SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
     /* Pitch shifter engine based on the work of Stephan Bernsee.
      * http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/
@@ -219,7 +219,7 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
 
     static const ALdouble expected = M_PI*2.0 / OVERSAMP;
     const ALdouble freq_per_bin = state->FreqPerBin;
-    ALfloat *restrict bufferOut = state->BufferOut;
+    ALfloat *RESTRICT bufferOut = state->BufferOut;
     ALsizei count = state->count;
     ALsizei i, j, k;
 

@@ -14,7 +14,7 @@ typedef struct BandSplitter {
 
 void bandsplit_init(BandSplitter *splitter, ALfloat f0norm);
 void bandsplit_clear(BandSplitter *splitter);
-void bandsplit_process(BandSplitter *splitter, ALfloat *restrict hpout, ALfloat *restrict lpout,
+void bandsplit_process(BandSplitter *splitter, ALfloat *RESTRICT hpout, ALfloat *RESTRICT lpout,
                        const ALfloat *input, ALsizei count);
 
 /* The all-pass portion of the band splitter. Applies the same phase shift
@@ -27,7 +27,7 @@ typedef struct SplitterAllpass {
 
 void splitterap_init(SplitterAllpass *splitter, ALfloat f0norm);
 void splitterap_clear(SplitterAllpass *splitter);
-void splitterap_process(SplitterAllpass *splitter, ALfloat *restrict samples, ALsizei count);
+void splitterap_process(SplitterAllpass *splitter, ALfloat *RESTRICT samples, ALsizei count);
 
 
 typedef struct FrontStablizer {

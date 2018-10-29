@@ -9,13 +9,13 @@
 #include "defs.h"
 
 
-static inline ALfloat do_point(const InterpState* UNUSED(state), const ALfloat *restrict vals, ALsizei UNUSED(frac))
+static inline ALfloat do_point(const InterpState* UNUSED(state), const ALfloat *RESTRICT vals, ALsizei UNUSED(frac))
 { return vals[0]; }
-static inline ALfloat do_lerp(const InterpState* UNUSED(state), const ALfloat *restrict vals, ALsizei frac)
+static inline ALfloat do_lerp(const InterpState* UNUSED(state), const ALfloat *RESTRICT vals, ALsizei frac)
 { return lerp(vals[0], vals[1], frac * (1.0f/FRACTIONONE)); }
-static inline ALfloat do_cubic(const InterpState* UNUSED(state), const ALfloat *restrict vals, ALsizei frac)
+static inline ALfloat do_cubic(const InterpState* UNUSED(state), const ALfloat *RESTRICT vals, ALsizei frac)
 { return cubic(vals[0], vals[1], vals[2], vals[3], frac * (1.0f/FRACTIONONE)); }
-static inline ALfloat do_bsinc(const InterpState *state, const ALfloat *restrict vals, ALsizei frac)
+static inline ALfloat do_bsinc(const InterpState *state, const ALfloat *RESTRICT vals, ALsizei frac)
 {
     const ALfloat *fil, *scd, *phd, *spd;
     ALsizei j_f, pi;
@@ -42,8 +42,8 @@ static inline ALfloat do_bsinc(const InterpState *state, const ALfloat *restrict
 }
 
 const ALfloat *Resample_copy_C(const InterpState* UNUSED(state),
-  const ALfloat *restrict src, ALsizei UNUSED(frac), ALint UNUSED(increment),
-  ALfloat *restrict dst, ALsizei numsamples)
+  const ALfloat *RESTRICT src, ALsizei UNUSED(frac), ALint UNUSED(increment),
+  ALfloat *RESTRICT dst, ALsizei numsamples)
 {
 #if defined(HAVE_SSE) || defined(HAVE_NEON)
     /* Avoid copying the source data if it's aligned like the destination. */
@@ -56,8 +56,8 @@ const ALfloat *Resample_copy_C(const InterpState* UNUSED(state),
 
 #define DECL_TEMPLATE(Tag, Sampler, O)                                        \
 const ALfloat *Resample_##Tag##_C(const InterpState *state,                   \
-  const ALfloat *restrict src, ALsizei frac, ALint increment,                 \
-  ALfloat *restrict dst, ALsizei numsamples)                                  \
+  const ALfloat *RESTRICT src, ALsizei frac, ALint increment,                 \
+  ALfloat *RESTRICT dst, ALsizei numsamples)                                  \
 {                                                                             \
     const InterpState istate = *state;                                        \
     ALsizei i;                                                                \
@@ -84,9 +84,9 @@ DECL_TEMPLATE(bsinc, do_bsinc, istate.bsinc.l)
 #undef DECL_TEMPLATE
 
 
-static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*restrict Values)[2],
+static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*RESTRICT Values)[2],
                                const ALsizei IrSize,
-                               const ALfloat (*restrict Coeffs)[2],
+                               const ALfloat (*RESTRICT Coeffs)[2],
                                ALfloat left, ALfloat right)
 {
     ALsizei c;
@@ -104,7 +104,7 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*restrict Values)[2],
 #include "hrtf_inc.c"
 
 
-void Mix_C(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffer)[BUFFERSIZE],
+void Mix_C(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE],
            ALfloat *CurrentGains, const ALfloat *TargetGains, ALsizei Counter, ALsizei OutPos,
            ALsizei BufferSize)
 {
@@ -150,7 +150,7 @@ void Mix_C(const ALfloat *data, ALsizei OutChans, ALfloat (*restrict OutBuffer)[
  * transform. And as the matrices are more or less static once set up, no
  * stepping is necessary.
  */
-void MixRow_C(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*restrict data)[BUFFERSIZE], ALsizei InChans, ALsizei InPos, ALsizei BufferSize)
+void MixRow_C(ALfloat *OutBuffer, const ALfloat *Gains, const ALfloat (*RESTRICT data)[BUFFERSIZE], ALsizei InChans, ALsizei InPos, ALsizei BufferSize)
 {
     ALsizei c, i;
 

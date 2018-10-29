@@ -77,7 +77,7 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
     context = GetContextRef();
     if(!context) return;
 
-    if(!(n >= 0))
+    if(n < 0)
         alSetError(context, AL_INVALID_VALUE, "Generating %d buffers", n);
     else for(cur = 0;cur < n;cur++)
     {

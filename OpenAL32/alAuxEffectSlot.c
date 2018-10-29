@@ -116,7 +116,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
     context = GetContextRef();
     if(!context) return;
 
-    if(!(n >= 0))
+    if(n < 0)
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Generating %d effect slots", n);
     if(n == 0) goto done;
 
@@ -179,7 +179,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *
     if(!context) return;
 
     LockEffectSlotList(context);
-    if(!(n >= 0))
+    if(n < 0)
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Deleting %d effect slots", n);
     if(n == 0) goto done;
 

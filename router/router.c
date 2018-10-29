@@ -419,7 +419,7 @@ ALenum InsertPtrIntMapEntry(PtrIntMap *map, ALvoid *key, ALint value)
         do {
             ALsizei step = count>>1;
             ALsizei i = pos+step;
-            if(!(map->keys[i] < key))
+            if(map->keys[i] >= key)
                 count = step;
             else
             {
@@ -485,7 +485,7 @@ ALint RemovePtrIntMapKey(PtrIntMap *map, ALvoid *key)
         do {
             ALsizei step = count>>1;
             ALsizei i = pos+step;
-            if(!(map->keys[i] < key))
+            if(map->keys[i] >= key)
                 count = step;
             else
             {
@@ -521,7 +521,7 @@ ALint LookupPtrIntMapKey(PtrIntMap *map, ALvoid *key)
         do {
             ALsizei step = count>>1;
             ALsizei i = pos+step;
-            if(!(map->keys[i] < key))
+            if(map->keys[i] >= key)
                 count = step;
             else
             {

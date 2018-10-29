@@ -635,7 +635,7 @@ const char *GetConfigValue(const char *devName, const char *blockName, const cha
 int ConfigValueExists(const char *devName, const char *blockName, const char *keyName)
 {
     const char *val = GetConfigValue(devName, blockName, keyName, "");
-    return !!val[0];
+    return val[0] != 0;
 }
 
 int ConfigValueStr(const char *devName, const char *blockName, const char *keyName, const char **ret)
@@ -692,7 +692,7 @@ int GetConfigValueBool(const char *devName, const char *blockName, const char *k
 {
     const char *val = GetConfigValue(devName, blockName, keyName, "");
 
-    if(!val[0]) return !!def;
+    if(!val[0]) return def != 0;
     return (strcasecmp(val, "true") == 0 || strcasecmp(val, "yes") == 0 ||
             strcasecmp(val, "on") == 0 || atoi(val) != 0);
 }

@@ -916,7 +916,7 @@ void MainWindow::saveConfig(const QString &fname) const
     settings.setValue("channels", getValueFromName(speakerModeList, ui->channelConfigCombo->currentText()));
 
     uint rate = ui->sampleRateCombo->currentText().toUInt();
-    if(!(rate > 0))
+    if(rate <= 0)
         settings.setValue("frequency", QString());
     else
         settings.setValue("frequency", rate);

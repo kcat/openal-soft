@@ -988,7 +988,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid effect ID %u",
                               values[0]);
             }
-            if(!((ALuint)values[1] < (ALuint)device->NumAuxSends))
+            if((ALuint)values[1] >= (ALuint)device->NumAuxSends)
             {
                 UnlockEffectSlotList(Context);
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid send %u", values[1]);
@@ -1683,7 +1683,7 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
     context = GetContextRef();
     if(!context) return;
 
-    if(!(n >= 0))
+    if(n < 0)
         alSetError(context, AL_INVALID_VALUE, "Generating %d sources", n);
     else for(cur = 0;cur < n;cur++)
     {
@@ -1710,7 +1710,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
     if(!context) return;
 
     LockSourceList(context);
-    if(!(n >= 0))
+    if(n < 0)
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Deleting %d sources", n);
 
     /* Check that all Sources are valid */
@@ -1761,7 +1761,7 @@ AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum param, ALfloat value)
     LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!(FloatValsByProp(param) == 1))
+    else if(FloatValsByProp(param) != 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid float property 0x%04x", param);
     else
         SetSourcefv(Source, Context, param, &value);
@@ -1783,7 +1783,7 @@ AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1
     LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!(FloatValsByProp(param) == 3))
+    else if(FloatValsByProp(param) != 3)
         alSetError(Context, AL_INVALID_ENUM, "Invalid 3-float property 0x%04x", param);
     else
     {
@@ -1810,7 +1810,7 @@ AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat 
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
         alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
-    else if(!(FloatValsByProp(param) > 0))
+    else if(FloatValsByProp(param) <= 0)
         alSetError(Context, AL_INVALID_ENUM, "Invalid float-vector property 0x%04x", param);
     else
         SetSourcefv(Source, Context, param, values);
@@ -1833,7 +1833,7 @@ AL_API ALvoid AL_APIENTRY alSourcedSOFT(ALuint source, ALenum param, ALdouble va
     LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!(DoubleValsByProp(param) == 1))
+    else if(DoubleValsByProp(param) != 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid double property 0x%04x", param);
     else
     {
@@ -1858,7 +1858,7 @@ AL_API ALvoid AL_APIENTRY alSource3dSOFT(ALuint source, ALenum param, ALdouble v
     LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!(DoubleValsByProp(param) == 3))
+    else if(DoubleValsByProp(param) != 3)
         alSetError(Context, AL_INVALID_ENUM, "Invalid 3-double property 0x%04x", param);
     else
     {
@@ -1916,7 +1916,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value)
     LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!(IntValsByProp(param) == 1))
+    else if(IntValsByProp(param) != 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer property 0x%04x", param);
     else
         SetSourceiv(Source, Context, param, &value);
@@ -2568,7 +2568,7 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     if(!context) return;
 
     LockSourceList(context);
-    if(!(n >= 0))
+    if(n < 0)
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Pausing %d sources", n);
     for(i = 0;i < n;i++)
     {
@@ -2612,7 +2612,7 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
     if(!context) return;
 
     LockSourceList(context);
-    if(!(n >= 0))
+    if(n < 0)
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Stopping %d sources", n);
     for(i = 0;i < n;i++)
     {
@@ -2664,7 +2664,7 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
     if(!context) return;
 
     LockSourceList(context);
-    if(!(n >= 0))
+    if(n < 0)
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Rewinding %d sources", n);
     for(i = 0;i < n;i++)
     {

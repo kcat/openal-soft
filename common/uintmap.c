@@ -47,7 +47,7 @@ ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value)
         do {
             ALsizei step = count>>1;
             ALsizei i = pos+step;
-            if(!(map->keys[i] < key))
+            if(map->keys[i] >= key)
                 count = step;
             else
             {
@@ -130,7 +130,7 @@ ALvoid *RemoveUIntMapKey(UIntMap *map, ALuint key)
         do {
             ALsizei step = count>>1;
             ALsizei i = pos+step;
-            if(!(map->keys[i] < key))
+            if(map->keys[i] >= key)
                 count = step;
             else
             {
@@ -166,7 +166,7 @@ ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key)
         do {
             ALsizei step = count>>1;
             ALsizei i = pos+step;
-            if(!(map->keys[i] < key))
+            if(map->keys[i] >= key)
                 count = step;
             else
             {

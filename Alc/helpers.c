@@ -842,7 +842,7 @@ static void DirectorySearch(const char *path, const char *ext, vector_al_string 
                 continue;
 
             len = strlen(dirent->d_name);
-            if(!(len > extlen))
+            if(len <= extlen)
                 continue;
             if(strcasecmp(dirent->d_name+len-extlen, ext) != 0)
                 continue;

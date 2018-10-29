@@ -81,7 +81,7 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
     context = GetContextRef();
     if(!context) return;
 
-    if(!(n >= 0))
+    if(n < 0)
         alSetError(context, AL_INVALID_VALUE, "Generating %d effects", n);
     else for(cur = 0;cur < n;cur++)
     {
@@ -109,7 +109,7 @@ AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects)
 
     device = context->Device;
     LockEffectList(device);
-    if(!(n >= 0))
+    if(n < 0)
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Deleting %d effects", n);
     for(i = 0;i < n;i++)
     {

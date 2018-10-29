@@ -61,7 +61,7 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
     context = GetContextRef();
     if(!context) return;
 
-    if(!(n >= 0))
+    if(n < 0)
         alSetError(context, AL_INVALID_VALUE, "Generating %d filters", n);
     else for(cur = 0;cur < n;cur++)
     {
@@ -90,7 +90,7 @@ AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, const ALuint *filters)
 
     device = context->Device;
     LockFilterList(device);
-    if(!(n >= 0))
+    if(n < 0)
         SETERR_GOTO(context, AL_INVALID_VALUE, done, "Deleting %d filters", n);
     for(i = 0;i < n;i++)
     {

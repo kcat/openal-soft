@@ -1810,7 +1810,7 @@ AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat 
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
         alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
-    else if(FloatValsByProp(param) <= 0)
+    else if(FloatValsByProp(param) < 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid float-vector property 0x%04x", param);
     else
         SetSourcefv(Source, Context, param, values);
@@ -1886,7 +1886,7 @@ AL_API ALvoid AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdo
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
         alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
-    else if(!((count=DoubleValsByProp(param)) > 0 && count <= 6))
+    else if((count=DoubleValsByProp(param)) < 1 || count > 6)
         alSetError(Context, AL_INVALID_ENUM, "Invalid double-vector property 0x%04x", param);
     else
     {
@@ -1938,7 +1938,7 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, AL
     LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!(IntValsByProp(param) == 3))
+    else if(IntValsByProp(param) != 3)
         alSetError(Context, AL_INVALID_ENUM, "Invalid 3-integer property 0x%04x", param);
     else
     {
@@ -1965,7 +1965,7 @@ AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum param, const ALint *val
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
         alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
-    else if(!(IntValsByProp(param) > 0))
+    else if(IntValsByProp(param) < 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer-vector property 0x%04x", param);
     else
         SetSourceiv(Source, Context, param, values);
@@ -1988,7 +1988,7 @@ AL_API ALvoid AL_APIENTRY alSourcei64SOFT(ALuint source, ALenum param, ALint64SO
     LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!(Int64ValsByProp(param) == 1))
+    else if(Int64ValsByProp(param) != 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer64 property 0x%04x", param);
     else
         SetSourcei64v(Source, Context, param, &value);
@@ -2010,7 +2010,7 @@ AL_API void AL_APIENTRY alSource3i64SOFT(ALuint source, ALenum param, ALint64SOF
     LockSourceList(Context);
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
-    else if(!(Int64ValsByProp(param) == 3))
+    else if(Int64ValsByProp(param) != 3)
         alSetError(Context, AL_INVALID_ENUM, "Invalid 3-integer64 property 0x%04x", param);
     else
     {
@@ -2037,7 +2037,7 @@ AL_API void AL_APIENTRY alSourcei64vSOFT(ALuint source, ALenum param, const ALin
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
         alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
-    else if(!(Int64ValsByProp(param) > 0))
+    else if(Int64ValsByProp(param) < 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer64-vector property 0x%04x", param);
     else
         SetSourcei64v(Source, Context, param, values);
@@ -2061,7 +2061,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcef(ALuint source, ALenum param, ALfloat *val
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!value)
         alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
-    else if(!(FloatValsByProp(param) == 1))
+    else if(FloatValsByProp(param) != 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid float property 0x%04x", param);
     else
     {
@@ -2088,7 +2088,7 @@ AL_API ALvoid AL_APIENTRY alGetSource3f(ALuint source, ALenum param, ALfloat *va
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(value1 && value2 && value3))
         alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
-    else if(!(FloatValsByProp(param) == 3))
+    else if(FloatValsByProp(param) != 3)
         alSetError(Context, AL_INVALID_ENUM, "Invalid 3-float property 0x%04x", param);
     else
     {
@@ -2120,7 +2120,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *va
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
         alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
-    else if(!((count=FloatValsByProp(param)) > 0 && count <= 6))
+    else if((count=FloatValsByProp(param)) < 1 && count > 6)
         alSetError(Context, AL_INVALID_ENUM, "Invalid float-vector property 0x%04x", param);
     else
     {
@@ -2151,7 +2151,7 @@ AL_API void AL_APIENTRY alGetSourcedSOFT(ALuint source, ALenum param, ALdouble *
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!value)
         alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
-    else if(!(DoubleValsByProp(param) == 1))
+    else if(DoubleValsByProp(param) != 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid double property 0x%04x", param);
     else
         GetSourcedv(Source, Context, param, value);
@@ -2173,7 +2173,7 @@ AL_API void AL_APIENTRY alGetSource3dSOFT(ALuint source, ALenum param, ALdouble 
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(value1 && value2 && value3))
         alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
-    else if(!(DoubleValsByProp(param) == 3))
+    else if(DoubleValsByProp(param) != 3)
         alSetError(Context, AL_INVALID_ENUM, "Invalid 3-double property 0x%04x", param);
     else
     {
@@ -2203,7 +2203,7 @@ AL_API void AL_APIENTRY alGetSourcedvSOFT(ALuint source, ALenum param, ALdouble 
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
         alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
-    else if(!(DoubleValsByProp(param) > 0))
+    else if(DoubleValsByProp(param) < 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid double-vector property 0x%04x", param);
     else
         GetSourcedv(Source, Context, param, values);
@@ -2226,7 +2226,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum param, ALint *value
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!value)
         alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
-    else if(!(IntValsByProp(param) == 1))
+    else if(IntValsByProp(param) != 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer property 0x%04x", param);
     else
         GetSourceiv(Source, Context, param, value);
@@ -2249,7 +2249,7 @@ AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum param, ALint *value1
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(value1 && value2 && value3))
         alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
-    else if(!(IntValsByProp(param) == 3))
+    else if(IntValsByProp(param) != 3)
         alSetError(Context, AL_INVALID_ENUM, "Invalid 3-integer property 0x%04x", param);
     else
     {
@@ -2280,7 +2280,7 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum param, ALint *values
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
         alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
-    else if(!(IntValsByProp(param) > 0))
+    else if(IntValsByProp(param) < 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer-vector property 0x%04x", param);
     else
         GetSourceiv(Source, Context, param, values);
@@ -2303,7 +2303,7 @@ AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64S
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!value)
         alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
-    else if(!(Int64ValsByProp(param) == 1))
+    else if(Int64ValsByProp(param) != 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer64 property 0x%04x", param);
     else
         GetSourcei64v(Source, Context, param, value);
@@ -2325,7 +2325,7 @@ AL_API void AL_APIENTRY alGetSource3i64SOFT(ALuint source, ALenum param, ALint64
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(value1 && value2 && value3))
         alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
-    else if(!(Int64ValsByProp(param) == 3))
+    else if(Int64ValsByProp(param) != 3)
         alSetError(Context, AL_INVALID_ENUM, "Invalid 3-integer64 property 0x%04x", param);
     else
     {
@@ -2355,7 +2355,7 @@ AL_API void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64
         alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
         alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
-    else if(!(Int64ValsByProp(param) > 0))
+    else if(Int64ValsByProp(param) < 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer64-vector property 0x%04x", param);
     else
         GetSourcei64v(Source, Context, param, values);

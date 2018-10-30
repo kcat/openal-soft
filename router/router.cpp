@@ -13,10 +13,7 @@
 
 #include "version.h"
 
-
-DriverIface *DriverList = nullptr;
-int DriverListSize = 0;
-static int DriverListSizeMax = 0;
+std::vector<DriverIface> DriverList;
 
 thread_local DriverIface *ThreadCtxDriver;
 
@@ -29,7 +26,6 @@ static void LoadDriverList(void);
 BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reserved))
 {
     const char *str;
-    int i;
 
     switch(reason)
     {
@@ -70,15 +66,12 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
         case DLL_PROCESS_DETACH:
             ReleaseALC();
 
-            for(i = 0;i < DriverListSize;i++)
+            for(auto &drv : DriverList)
             {
-                if(DriverList[i].Module)
-                    FreeLibrary(DriverList[i].Module);
+                if(drv.Module)
+                    FreeLibrary(drv.Module);
             }
-            al_free(DriverList);
-            DriverList = nullptr;
-            DriverListSize = 0;
-            DriverListSizeMax = 0;
+            DriverList.clear();
 
             if(LogFile && LogFile != stderr)
                 fclose(LogFile);
@@ -90,27 +83,17 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
 }
 
 
-#ifdef __GNUC__
-#define CAST_FUNC(x) (__typeof(x))
-#else
-#define CAST_FUNC(x) (void*)
-#endif
-
 static void AddModule(HMODULE module, const WCHAR *name)
 {
-    DriverIface newdrv;
-    int err = 0;
-    int i;
-
-    for(i = 0;i < DriverListSize;i++)
+    for(auto &drv : DriverList)
     {
-        if(DriverList[i].Module == module)
+        if(drv.Module == module)
         {
             TRACE("Skipping already-loaded module %p\n", module);
             FreeLibrary(module);
             return;
         }
-        if(wcscmp(DriverList[i].Name, name) == 0)
+        if(wcscmp(drv.Name, name) == 0)
         {
             TRACE("Skipping similarly-named module %ls\n", name);
             FreeLibrary(module);
@@ -118,20 +101,11 @@ static void AddModule(HMODULE module, const WCHAR *name)
         }
     }
 
-    if(DriverListSize == DriverListSizeMax)
-    {
-        int newmax = DriverListSizeMax ? DriverListSizeMax<<1 : 4;
-        void *newlist = al_calloc(DEF_ALIGN, sizeof(DriverList[0])*newmax);
-        if(!newlist) return;
+    DriverList.emplace_back();
+    DriverIface &newdrv = DriverList.back();
 
-        memcpy(newlist, DriverList, DriverListSize*sizeof(DriverList[0]));
-        al_free(DriverList);
-        DriverList = reinterpret_cast<DriverIface*>(newlist);
-        DriverListSizeMax = newmax;
-    }
-
-    memset(&newdrv, 0, sizeof(newdrv));
     /* Load required functions. */
+    int err = 0;
 #define LOAD_PROC(x) do {                                                     \
     newdrv.x = reinterpret_cast<decltype(newdrv.x)>(                          \
         GetProcAddress(module, #x));                                          \
@@ -264,12 +238,13 @@ static void AddModule(HMODULE module, const WCHAR *name)
         }
     }
 
-    if(!err)
+    if(err)
     {
-        TRACE("Loaded module %p, %ls, ALC %d.%d\n", module, name,
-              newdrv.ALCVer>>8, newdrv.ALCVer&255);
-        DriverList[DriverListSize++] = newdrv;
+        DriverList.pop_back();
+        return;
     }
+    TRACE("Loaded module %p, %ls, ALC %d.%d\n", module, name,
+          newdrv.ALCVer>>8, newdrv.ALCVer&255);
 #undef LOAD_PROC
 }
 

@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 
+#include <vector>
 #include <atomic>
 
 #include "AL/alc.h"
@@ -137,8 +138,7 @@ typedef struct DriverIface {
     LPALDISTANCEMODEL alDistanceModel;
 } DriverIface;
 
-extern DriverIface *DriverList;
-extern int DriverListSize;
+extern std::vector<DriverIface> DriverList;
 
 extern thread_local DriverIface *ThreadCtxDriver;
 extern std::atomic<DriverIface*> CurrentCtxDriver;

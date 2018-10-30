@@ -15,6 +15,10 @@
 #include "threads.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef UNUSED
 #if defined(__cplusplus)
 #define UNUSED(x)
@@ -193,5 +197,9 @@ extern FILE *LogFile;
         fflush(LogFile);                                  \
     }                                                     \
 } while(0)
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* ROUTER_ROUTER_H */

@@ -17,14 +17,58 @@
 #define CONST_CAST(T, V) ((T)(V))
 #endif
 
+#ifdef HAVE_C11_ATOMIC
+#ifdef __cplusplus
+/* C++11 doesn't support compatibility with C11 atomics. So instead, make C++11
+ * atomic declarations global to emulate C11. There's no standard guarantee of
+ * ABI compatibility, but it's desired behavior that mostly works. See:
+ *
+ * http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0943r1.html
+ *
+ * Any alignment issues arising from this can be fixed with explicit alignas()
+ * specifiers on affected variables.
+ *
+ * Only do this when C11 atomics are supported in C, since MSVC and pre-C11
+ * compilers may use something else that is significantly different in C
+ * despite supporting C++11 atomics.
+ */
+#include <atomic>
+
+#define _Atomic(T) std::atomic<T>
+using std::memory_order;
+using std::memory_order_relaxed;
+using std::memory_order_consume;
+using std::memory_order_acquire;
+using std::memory_order_release;
+using std::memory_order_acq_rel;
+using std::memory_order_seq_cst;
+
+using std::atomic_flag;
+
+using std::atomic_init;
+using std::atomic_load_explicit;
+using std::atomic_store_explicit;
+using std::atomic_fetch_add_explicit;
+using std::atomic_fetch_sub_explicit;
+using std::atomic_exchange_explicit;
+using std::atomic_compare_exchange_strong_explicit;
+using std::atomic_compare_exchange_weak_explicit;
+using std::atomic_flag_test_and_set_explicit;
+using std::atomic_flag_clear_explicit;
+using std::atomic_thread_fence;
+
+#else
+
+#include <stdatomic.h>
+#endif /* __cplusplus */
+#endif /* HAVE_C11_ATOMIC */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* Atomics using C11 */
 #ifdef HAVE_C11_ATOMIC
-
-#include <stdatomic.h>
 
 #define almemory_order memory_order
 #define almemory_order_relaxed memory_order_relaxed
@@ -34,7 +78,7 @@ extern "C" {
 #define almemory_order_acq_rel memory_order_acq_rel
 #define almemory_order_seq_cst memory_order_seq_cst
 
-#define ATOMIC(T)  T _Atomic
+#define ATOMIC(T)  _Atomic(T)
 #define ATOMIC_FLAG atomic_flag
 
 #define ATOMIC_INIT atomic_init
@@ -415,9 +459,9 @@ inline void InitRef(RefCount *ptr, uint value)
 inline uint ReadRef(RefCount *ptr)
 { return ATOMIC_LOAD(ptr, almemory_order_acquire); }
 inline uint IncrementRef(RefCount *ptr)
-{ return ATOMIC_ADD(ptr, 1, almemory_order_acq_rel)+1; }
+{ return ATOMIC_ADD(ptr, 1u, almemory_order_acq_rel)+1; }
 inline uint DecrementRef(RefCount *ptr)
-{ return ATOMIC_SUB(ptr, 1, almemory_order_acq_rel)-1; }
+{ return ATOMIC_SUB(ptr, 1u, almemory_order_acq_rel)-1; }
 
 
 /* WARNING: A livelock is theoretically possible if another thread keeps

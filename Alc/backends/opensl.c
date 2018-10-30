@@ -261,7 +261,7 @@ static int ALCopenslPlayback_mixerProc(void *arg)
 
     while(SL_RESULT_SUCCESS == result &&
           !ATOMIC_LOAD(&self->mKillNow, almemory_order_acquire) &&
-          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+          ATOMIC_LOAD(&device->Connected, almemory_order_acquire) != DeviceConnect_Disconnected)
     {
         size_t todo;
 

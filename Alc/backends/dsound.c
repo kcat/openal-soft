@@ -278,7 +278,7 @@ FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(void *ptr)
 
     IDirectSoundBuffer_GetCurrentPosition(self->Buffer, &LastCursor, NULL);
     while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
-          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+          ATOMIC_LOAD(&device->Connected, almemory_order_acquire) != DeviceConnect_Disconnected)
     {
         // Get current play cursor
         IDirectSoundBuffer_GetCurrentPosition(self->Buffer, &PlayCursor, NULL);
@@ -930,7 +930,7 @@ static ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
     DWORD FrameSize;
     HRESULT hr;
 
-    if(!ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+    if(ATOMIC_LOAD(&device->Connected, almemory_order_acquire) == DeviceConnect_Disconnected)
         goto done;
 
     FrameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);

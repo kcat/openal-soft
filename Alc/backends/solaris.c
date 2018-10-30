@@ -121,7 +121,7 @@ static int ALCsolarisBackend_mixerProc(void *ptr)
 
     ALCsolarisBackend_lock(self);
     while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
-          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+          ATOMIC_LOAD(&device->Connected, almemory_order_acquire) != DeviceConnect_Disconnected)
     {
         FD_ZERO(&wfds);
         FD_SET(self->fd, &wfds);

@@ -490,6 +490,12 @@ enum RenderMode {
     HrtfRender
 };
 
+enum DeviceConnect {
+    DeviceConnect_Disconnected,
+    DeviceConnect_Connecting,
+    DeviceConnect_Connected
+};
+
 
 /* The maximum number of Ambisonics coefficients. For a given order (o), the
  * size needed will be (o+1)**2, thus zero-order has 1, first-order has 4,
@@ -606,7 +612,7 @@ typedef void (*POSTPROCESS)(ALCdevice *device, ALsizei SamplesToDo);
 struct ALCdevice_struct {
     RefCount ref;
 
-    ATOMIC(ALenum) Connected;
+    ATOMIC(enum DeviceConnect) Connected;
     enum DeviceType Type;
 
     ALuint Frequency;

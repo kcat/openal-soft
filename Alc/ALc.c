@@ -2366,7 +2366,7 @@ static void InitDevice(ALCdevice *device, enum DeviceType type)
     ALsizei i;
 
     InitRef(&device->ref, 1);
-    ATOMIC_INIT(&device->Connected, ALC_TRUE);
+    ATOMIC_INIT(&device->Connected, DeviceConnect_Connected);
     device->Type = type;
     ATOMIC_INIT(&device->LastError, ALC_NO_ERROR);
 
@@ -3257,7 +3257,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
                 values[i++] = ALC_CAPTURE_SAMPLES;
                 values[i++] = V0(device->Backend,availableSamples)();
                 values[i++] = ALC_CONNECTED;
-                values[i++] = ATOMIC_LOAD(&device->Connected, almemory_order_relaxed);
+                values[i++] = (ATOMIC_LOAD(&device->Connected, almemory_order_acquire) == DeviceConnect_Connected);
                 almtx_unlock(&device->BackendLock);
 
                 values[i++] = 0;
@@ -3466,7 +3466,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             return 1;
 
         case ALC_CONNECTED:
-            values[0] = ATOMIC_LOAD(&device->Connected, almemory_order_acquire);
+            values[0] = (ATOMIC_LOAD(&device->Connected, almemory_order_acquire) == DeviceConnect_Connected);
             return 1;
 
         case ALC_HRTF_SOFT:
@@ -3774,7 +3774,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
      */
     LockLists();
     if(!VerifyDevice(&device) || device->Type == Capture ||
-       !ATOMIC_LOAD(&device->Connected, almemory_order_relaxed))
+       (ATOMIC_LOAD(&device->Connected, almemory_order_relaxed) != DeviceConnect_Connected))
     {
         UnlockLists();
         alcSetError(device, ALC_INVALID_DEVICE);
@@ -4391,7 +4391,7 @@ ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
     else
     {
         almtx_lock(&device->BackendLock);
-        if(!ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+        if(ATOMIC_LOAD(&device->Connected, almemory_order_acquire) != DeviceConnect_Connected)
             alcSetError(device, ALC_INVALID_DEVICE);
         else if(!(device->Flags&DEVICE_RUNNING))
         {
@@ -4672,7 +4672,7 @@ ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCi
 
     LockLists();
     if(!VerifyDevice(&device) || device->Type == Capture ||
-       !ATOMIC_LOAD(&device->Connected, almemory_order_relaxed))
+       ATOMIC_LOAD(&device->Connected, almemory_order_relaxed) != DeviceConnect_Connected)
     {
         UnlockLists();
         alcSetError(device, ALC_INVALID_DEVICE);

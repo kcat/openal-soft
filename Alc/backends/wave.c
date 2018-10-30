@@ -144,7 +144,7 @@ static int ALCwaveBackend_mixerProc(void *ptr)
         return 1;
     }
     while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
-          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+          ATOMIC_LOAD(&device->Connected, almemory_order_acquire) != DeviceConnect_Disconnected)
     {
         if(altimespec_get(&now, AL_TIME_UTC) != AL_TIME_UTC)
         {

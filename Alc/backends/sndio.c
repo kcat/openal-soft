@@ -103,7 +103,7 @@ static int SndioPlayback_mixerProc(void *ptr)
     frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
 
     while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
-          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+          ATOMIC_LOAD(&device->Connected, almemory_order_acquire) != DeviceConnect_Disconnected)
     {
         ALsizei len = self->data_size;
         ALubyte *WritePtr = self->mix_data;
@@ -344,7 +344,7 @@ static int SndioCapture_recordProc(void* ptr)
     frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
 
     while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
-          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+          ATOMIC_LOAD(&device->Connected, almemory_order_acquire) != DeviceConnect_Disconnected)
     {
         ll_ringbuffer_data_t data[2];
         size_t total, todo;

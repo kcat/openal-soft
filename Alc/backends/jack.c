@@ -313,7 +313,7 @@ static int ALCjackPlayback_mixerProc(void *arg)
 
     ALCjackPlayback_lock(self);
     while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
-          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+          ATOMIC_LOAD(&device->Connected, almemory_order_acquire) != DeviceConnect_Disconnected)
     {
         ALuint todo, len1, len2;
 

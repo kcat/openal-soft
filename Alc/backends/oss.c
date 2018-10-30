@@ -285,7 +285,7 @@ static int ALCplaybackOSS_mixerProc(void *ptr)
 
     ALCplaybackOSS_lock(self);
     while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
-          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+          ATOMIC_LOAD(&device->Connected, almemory_order_acquire) != DeviceConnect_Disconnected)
     {
         FD_ZERO(&wfds);
         FD_SET(self->fd, &wfds);

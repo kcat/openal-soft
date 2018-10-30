@@ -831,7 +831,7 @@ static int ALCpulsePlayback_mixerProc(void *ptr)
     frame_size = pa_frame_size(&self->spec);
 
     while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
-          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+          ATOMIC_LOAD(&device->Connected, almemory_order_acquire) != DeviceConnect_Disconnected)
     {
         void *buf;
         int ret;
@@ -1695,7 +1695,7 @@ static ALCuint ALCpulseCapture_availableSamples(ALCpulseCapture *self)
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
     size_t readable = self->cap_remain;
 
-    if(ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+    if(ATOMIC_LOAD(&device->Connected, almemory_order_acquire) != DeviceConnect_Disconnected)
     {
         ssize_t got;
         pa_threaded_mainloop_lock(self->loop);

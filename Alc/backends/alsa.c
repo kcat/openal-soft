@@ -1216,7 +1216,7 @@ static ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buff
     }
 
     self->last_avail -= samples;
-    while(ATOMIC_LOAD(&device->Connected, almemory_order_acquire) && samples > 0)
+    while(ATOMIC_LOAD(&device->Connected, almemory_order_acquire) != DeviceConnect_Disconnected && samples > 0)
     {
         snd_pcm_sframes_t amt = 0;
 
@@ -1284,7 +1284,7 @@ static ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self)
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     snd_pcm_sframes_t avail = 0;
 
-    if(ATOMIC_LOAD(&device->Connected, almemory_order_acquire) && self->doCapture)
+    if(ATOMIC_LOAD(&device->Connected, almemory_order_acquire) != DeviceConnect_Disconnected && self->doCapture)
         avail = snd_pcm_avail_update(self->pcmHandle);
     if(avail < 0)
     {

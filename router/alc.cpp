@@ -8,6 +8,7 @@
 
 #include <mutex>
 #include <algorithm>
+#include <array>
 
 #include "AL/alc.h"
 #include "router.h"

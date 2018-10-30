@@ -13,13 +13,12 @@
 #include "router.h"
 
 
-#define COUNTOF(x)  (sizeof(x)/sizeof(x[0]))
-
-#define DECL(x) { #x, (ALCvoid*)(x) }
-static const struct {
+#define DECL(x) { #x, reinterpret_cast<void*>(x) }
+struct FuncExportEntry {
     const ALCchar *funcName;
     ALCvoid *address;
-} alcFunctions[] = {
+};
+static const std::array<FuncExportEntry,95> alcFunctions{{
     DECL(alcCreateContext),
     DECL(alcMakeContextCurrent),
     DECL(alcProcessContext),
@@ -117,14 +116,15 @@ static const struct {
     DECL(alDopplerVelocity),
     DECL(alSpeedOfSound),
     DECL(alDistanceModel),
-};
+}};
 #undef DECL
 
 #define DECL(x) { #x, (x) }
-static const struct {
+struct EnumExportEntry {
     const ALCchar *enumName;
     ALCenum value;
-} alcEnumerations[] = {
+};
+static const std::array<EnumExportEntry,92> alcEnumerations{{
     DECL(ALC_INVALID),
     DECL(ALC_FALSE),
     DECL(ALC_TRUE),
@@ -230,7 +230,7 @@ static const struct {
     DECL(AL_LINEAR_DISTANCE_CLAMPED),
     DECL(AL_EXPONENT_DISTANCE),
     DECL(AL_EXPONENT_DISTANCE_CLAMPED),
-};
+}};
 #undef DECL
 
 static const ALCchar alcNoError[] = "No Error";
@@ -562,8 +562,6 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
 
 ALC_API void* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *funcname)
 {
-    size_t i;
-
     if(device)
     {
         ALint idx = LookupPtrIntMapKey(&DeviceIfaceMap, device);
@@ -575,18 +573,15 @@ ALC_API void* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *f
         return DriverList[idx].alcGetProcAddress(device, funcname);
     }
 
-    for(i = 0;i < COUNTOF(alcFunctions);i++)
-    {
-        if(strcmp(funcname, alcFunctions[i].funcName) == 0)
-            return alcFunctions[i].address;
-    }
-    return nullptr;
+    auto entry = std::find_if(alcFunctions.cbegin(), alcFunctions.cend(),
+        [funcname](const FuncExportEntry &entry) -> bool
+        { return strcmp(funcname, entry.funcName) == 0; }
+    );
+    return (entry != alcFunctions.cend()) ? entry->address : nullptr;
 }
 
 ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *enumname)
 {
-    size_t i;
-
     if(device)
     {
         ALint idx = LookupPtrIntMapKey(&DeviceIfaceMap, device);
@@ -598,12 +593,11 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
         return DriverList[idx].alcGetEnumValue(device, enumname);
     }
 
-    for(i = 0;i < COUNTOF(alcEnumerations);i++)
-    {
-        if(strcmp(enumname, alcEnumerations[i].enumName) == 0)
-            return alcEnumerations[i].value;
-    }
-    return 0;
+    auto entry = std::find_if(alcEnumerations.cbegin(), alcEnumerations.cend(),
+        [enumname](const EnumExportEntry &entry) -> bool
+        { return strcmp(enumname, entry.enumName) == 0; }
+    );
+    return (entry != alcEnumerations.cend()) ? entry->value : 0;
 }
 
 ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum param)

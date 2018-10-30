@@ -259,18 +259,18 @@ typedef struct EnumeratedList {
     ALCint *Indicies;
     ALCsizei IndexSize;
 } EnumeratedList;
-static EnumeratedList DevicesList = { NULL, NULL, NULL, 0 };
-static EnumeratedList AllDevicesList = { NULL, NULL, NULL, 0 };
-static EnumeratedList CaptureDevicesList = { NULL, NULL, NULL, 0 };
+static EnumeratedList DevicesList = { nullptr, nullptr, nullptr, 0 };
+static EnumeratedList AllDevicesList = { nullptr, nullptr, nullptr, 0 };
+static EnumeratedList CaptureDevicesList = { nullptr, nullptr, nullptr, 0 };
 
 static void ClearDeviceList(EnumeratedList *list)
 {
     al_free(list->Names);
-    list->Names = NULL;
-    list->NamesEnd = NULL;
+    list->Names = nullptr;
+    list->NamesEnd = nullptr;
 
     al_free(list->Indicies);
-    list->Indicies = NULL;
+    list->Indicies = nullptr;
     list->IndexSize = 0;
 }
 
@@ -295,14 +295,15 @@ static void AppendDeviceList(EnumeratedList *list, const ALCchar *names, ALint i
         return;
 
     len = (list->NamesEnd - list->Names) + (name_end - names);
-    new_list = al_calloc(DEF_ALIGN, len + 1);
+    new_list = reinterpret_cast<ALCchar*>(al_calloc(DEF_ALIGN, len + 1));
     memcpy(new_list,  list->Names, list->NamesEnd - list->Names);
     memcpy(new_list + (list->NamesEnd - list->Names), names, name_end - names);
     al_free(list->Names);
     list->Names = new_list;
     list->NamesEnd = list->Names + len;
 
-    new_indicies = al_calloc(16, sizeof(ALCint)*(list->IndexSize + count));
+    new_indicies = reinterpret_cast<ALCint*>(
+        al_calloc(16, sizeof(ALCint)*(list->IndexSize + count)));
     for(i = 0;i < list->IndexSize;i++)
         new_indicies[i] = list->Indicies[i];
     for(i = 0;i < count;i++)
@@ -349,7 +350,7 @@ void ReleaseALC(void)
 
 ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)
 {
-    ALCdevice *device = NULL;
+    ALCdevice *device = nullptr;
     ALint idx;
 
     /* Prior to the enumeration extension, apps would hardcode these names as a
@@ -360,17 +361,17 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)
                       strcmp(devicename, "DirectSound3D") == 0 ||
                       strcmp(devicename, "DirectSound") == 0 ||
                       strcmp(devicename, "MMSYSTEM") == 0))
-        devicename = NULL;
+        devicename = nullptr;
     if(devicename)
     {
         almtx_lock(&EnumerationLock);
         if(!DevicesList.Names)
-            (void)alcGetString(NULL, ALC_DEVICE_SPECIFIER);
+            (void)alcGetString(nullptr, ALC_DEVICE_SPECIFIER);
         idx = GetDriverIndexForName(&DevicesList, devicename);
         if(idx < 0)
         {
             if(!AllDevicesList.Names)
-                (void)alcGetString(NULL, ALC_ALL_DEVICES_SPECIFIER);
+                (void)alcGetString(nullptr, ALC_ALL_DEVICES_SPECIFIER);
             idx = GetDriverIndexForName(&AllDevicesList, devicename);
         }
         almtx_unlock(&EnumerationLock);
@@ -378,7 +379,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)
         {
             ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_VALUE);
             TRACE("Failed to find driver for name \"%s\"\n", devicename);
-            return NULL;
+            return nullptr;
         }
         TRACE("Found driver %d for name \"%s\"\n", idx, devicename);
         device = DriverList[idx].alcOpenDevice(devicename);
@@ -389,11 +390,11 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)
         for(i = 0;i < DriverListSize;i++)
         {
             if(DriverList[i].ALCVer >= MAKE_ALC_VER(1, 1) ||
-               DriverList[i].alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT"))
+               DriverList[i].alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT"))
             {
                 idx = i;
                 TRACE("Using default device from driver %d\n", idx);
-                device = DriverList[idx].alcOpenDevice(NULL);
+                device = DriverList[idx].alcOpenDevice(nullptr);
                 break;
             }
         }
@@ -404,7 +405,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)
         if(InsertPtrIntMapEntry(&DeviceIfaceMap, device, idx) != ALC_NO_ERROR)
         {
             DriverList[idx].alcCloseDevice(device);
-            device = NULL;
+            device = nullptr;
         }
     }
 
@@ -443,7 +444,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         if(InsertPtrIntMapEntry(&ContextIfaceMap, context, idx) != ALC_NO_ERROR)
         {
             DriverList[idx].alcDestroyContext(context);
-            context = NULL;
+            context = nullptr;
         }
     }
 
@@ -476,22 +477,24 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
      */
     if(idx < 0)
     {
-        DriverIface *oldiface = altss_get(ThreadCtxDriver);
-        if(oldiface) oldiface->alcSetThreadContext(NULL);
-        oldiface = ATOMIC_EXCHANGE_PTR_SEQ(&CurrentCtxDriver, NULL);
-        if(oldiface) oldiface->alcMakeContextCurrent(NULL);
+        DriverIface *oldiface = reinterpret_cast<DriverIface*>(altss_get(ThreadCtxDriver));
+        if(oldiface) oldiface->alcSetThreadContext(nullptr);
+        oldiface = reinterpret_cast<DriverIface*>(
+            ATOMIC_EXCHANGE_PTR_SEQ(&CurrentCtxDriver, (DriverIface*){nullptr}));
+        if(oldiface) oldiface->alcMakeContextCurrent(nullptr);
     }
     else
     {
-        DriverIface *oldiface = altss_get(ThreadCtxDriver);
+        DriverIface *oldiface = reinterpret_cast<DriverIface*>(altss_get(ThreadCtxDriver));
         if(oldiface && oldiface != &DriverList[idx])
-            oldiface->alcSetThreadContext(NULL);
-        oldiface = ATOMIC_EXCHANGE_PTR_SEQ(&CurrentCtxDriver, &DriverList[idx]);
+            oldiface->alcSetThreadContext(nullptr);
+        oldiface = reinterpret_cast<DriverIface*>(
+            ATOMIC_EXCHANGE_PTR_SEQ(&CurrentCtxDriver, &DriverList[idx]));
         if(oldiface && oldiface != &DriverList[idx])
-            oldiface->alcMakeContextCurrent(NULL);
+            oldiface->alcMakeContextCurrent(nullptr);
     }
     almtx_unlock(&ContextSwitchLock);
-    altss_set(ThreadCtxDriver, NULL);
+    altss_set(ThreadCtxDriver, nullptr);
 
     return ALC_TRUE;
 }
@@ -534,9 +537,9 @@ ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 
 ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void)
 {
-    DriverIface *iface = altss_get(ThreadCtxDriver);
+    DriverIface *iface = reinterpret_cast<DriverIface*>(altss_get(ThreadCtxDriver));
     if(!iface) iface = ATOMIC_LOAD_SEQ(&CurrentCtxDriver);
-    return iface ? iface->alcGetCurrentContext() : NULL;
+    return iface ? iface->alcGetCurrentContext() : nullptr;
 }
 
 ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *context)
@@ -548,7 +551,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *context)
             return DriverList[idx].alcGetContextsDevice(context);
     }
     ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_CONTEXT);
-    return NULL;
+    return nullptr;
 }
 
 
@@ -585,7 +588,7 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
     {
         if(strncasecmp(ptr, extname, len) == 0 && (ptr[len] == '\0' || isspace(ptr[len])))
             return ALC_TRUE;
-        if((ptr=strchr(ptr, ' ')) != NULL)
+        if((ptr=strchr(ptr, ' ')) != nullptr)
         {
             do {
                 ++ptr;
@@ -605,7 +608,7 @@ ALC_API void* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *f
         if(idx < 0)
         {
             ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
-            return NULL;
+            return nullptr;
         }
         return DriverList[idx].alcGetProcAddress(device, funcname);
     }
@@ -615,7 +618,7 @@ ALC_API void* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *f
         if(strcmp(funcname, alcFunctions[i].funcName) == 0)
             return alcFunctions[i].address;
     }
-    return NULL;
+    return nullptr;
 }
 
 ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *enumname)
@@ -651,7 +654,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
         if(idx < 0)
         {
             ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
-            return NULL;
+            return nullptr;
         }
         return DriverList[idx].alcGetString(device, param);
     }
@@ -680,9 +683,9 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
         {
             /* Only enumerate names from drivers that support it. */
             if(DriverList[i].ALCVer >= MAKE_ALC_VER(1, 1) ||
-               DriverList[i].alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT"))
+               DriverList[i].alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT"))
                 AppendDeviceList(&DevicesList,
-                    DriverList[i].alcGetString(NULL, ALC_DEVICE_SPECIFIER), i
+                    DriverList[i].alcGetString(nullptr, ALC_DEVICE_SPECIFIER), i
                 );
         }
         almtx_unlock(&EnumerationLock);
@@ -696,14 +699,14 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
             /* If the driver doesn't support ALC_ENUMERATE_ALL_EXT, substitute
              * standard enumeration.
              */
-            if(DriverList[i].alcIsExtensionPresent(NULL, "ALC_ENUMERATE_ALL_EXT"))
+            if(DriverList[i].alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT"))
                 AppendDeviceList(&AllDevicesList,
-                    DriverList[i].alcGetString(NULL, ALC_ALL_DEVICES_SPECIFIER), i
+                    DriverList[i].alcGetString(nullptr, ALC_ALL_DEVICES_SPECIFIER), i
                 );
             else if(DriverList[i].ALCVer >= MAKE_ALC_VER(1, 1) ||
-                    DriverList[i].alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT"))
+                    DriverList[i].alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT"))
                 AppendDeviceList(&AllDevicesList,
-                    DriverList[i].alcGetString(NULL, ALC_DEVICE_SPECIFIER), i
+                    DriverList[i].alcGetString(nullptr, ALC_DEVICE_SPECIFIER), i
                 );
         }
         almtx_unlock(&EnumerationLock);
@@ -715,9 +718,9 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
         for(i = 0;i < DriverListSize;i++)
         {
             if(DriverList[i].ALCVer >= MAKE_ALC_VER(1, 1) ||
-               DriverList[i].alcIsExtensionPresent(NULL, "ALC_EXT_CAPTURE"))
+               DriverList[i].alcIsExtensionPresent(nullptr, "ALC_EXT_CAPTURE"))
                 AppendDeviceList(&CaptureDevicesList,
-                    DriverList[i].alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER), i
+                    DriverList[i].alcGetString(nullptr, ALC_CAPTURE_DEVICE_SPECIFIER), i
                 );
         }
         almtx_unlock(&EnumerationLock);
@@ -727,16 +730,16 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
         for(i = 0;i < DriverListSize;i++)
         {
             if(DriverList[i].ALCVer >= MAKE_ALC_VER(1, 1) ||
-               DriverList[i].alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT"))
-                return DriverList[i].alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER);
+               DriverList[i].alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT"))
+                return DriverList[i].alcGetString(nullptr, ALC_DEFAULT_DEVICE_SPECIFIER);
         }
         return "";
 
     case ALC_DEFAULT_ALL_DEVICES_SPECIFIER:
         for(i = 0;i < DriverListSize;i++)
         {
-            if(DriverList[i].alcIsExtensionPresent(NULL, "ALC_ENUMERATE_ALL_EXT"))
-                return DriverList[i].alcGetString(NULL, ALC_DEFAULT_ALL_DEVICES_SPECIFIER);
+            if(DriverList[i].alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT"))
+                return DriverList[i].alcGetString(nullptr, ALC_DEFAULT_ALL_DEVICES_SPECIFIER);
         }
         return "";
 
@@ -744,8 +747,8 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
         for(i = 0;i < DriverListSize;i++)
         {
             if(DriverList[i].ALCVer >= MAKE_ALC_VER(1, 1) ||
-               DriverList[i].alcIsExtensionPresent(NULL, "ALC_EXT_CAPTURE"))
-                return DriverList[i].alcGetString(NULL, ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER);
+               DriverList[i].alcIsExtensionPresent(nullptr, "ALC_EXT_CAPTURE"))
+                return DriverList[i].alcGetString(nullptr, ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER);
         }
         return "";
 
@@ -753,7 +756,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
         ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_ENUM);
         break;
     }
-    return NULL;
+    return nullptr;
 }
 
 ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values)
@@ -769,7 +772,7 @@ ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsi
         return DriverList[idx].alcGetIntegerv(device, param, size, values);
     }
 
-    if(size <= 0 || values == NULL)
+    if(size <= 0 || values == nullptr)
     {
         ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_VALUE);
         return;
@@ -813,23 +816,23 @@ ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsi
 
 ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, ALCuint frequency, ALCenum format, ALCsizei buffersize)
 {
-    ALCdevice *device = NULL;
+    ALCdevice *device = nullptr;
     ALint idx;
 
     if(devicename && devicename[0] == '\0')
-        devicename = NULL;
+        devicename = nullptr;
     if(devicename)
     {
         almtx_lock(&EnumerationLock);
         if(!CaptureDevicesList.Names)
-            (void)alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER);
+            (void)alcGetString(nullptr, ALC_CAPTURE_DEVICE_SPECIFIER);
         idx = GetDriverIndexForName(&CaptureDevicesList, devicename);
         almtx_unlock(&EnumerationLock);
         if(idx < 0)
         {
             ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_VALUE);
             TRACE("Failed to find driver for name \"%s\"\n", devicename);
-            return NULL;
+            return nullptr;
         }
         TRACE("Found driver %d for name \"%s\"\n", idx, devicename);
         device = DriverList[idx].alcCaptureOpenDevice(
@@ -842,12 +845,12 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, 
         for(i = 0;i < DriverListSize;i++)
         {
             if(DriverList[i].ALCVer >= MAKE_ALC_VER(1, 1) ||
-               DriverList[i].alcIsExtensionPresent(NULL, "ALC_EXT_CAPTURE"))
+               DriverList[i].alcIsExtensionPresent(nullptr, "ALC_EXT_CAPTURE"))
             {
                 idx = i;
                 TRACE("Using default capture device from driver %d\n", idx);
                 device = DriverList[idx].alcCaptureOpenDevice(
-                    NULL, frequency, format, buffersize
+                    nullptr, frequency, format, buffersize
                 );
                 break;
             }
@@ -859,7 +862,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, 
         if(InsertPtrIntMapEntry(&DeviceIfaceMap, device, idx) != ALC_NO_ERROR)
         {
             DriverList[idx].alcCaptureCloseDevice(device);
-            device = NULL;
+            device = nullptr;
         }
     }
 
@@ -922,10 +925,10 @@ ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
 
     if(!context)
     {
-        DriverIface *oldiface = altss_get(ThreadCtxDriver);
-        if(oldiface && !oldiface->alcSetThreadContext(NULL))
+        DriverIface *oldiface = reinterpret_cast<DriverIface*>(altss_get(ThreadCtxDriver));
+        if(oldiface && !oldiface->alcSetThreadContext(nullptr))
             return ALC_FALSE;
-        altss_set(ThreadCtxDriver, NULL);
+        altss_set(ThreadCtxDriver, nullptr);
         return ALC_TRUE;
     }
 
@@ -934,15 +937,15 @@ ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
     {
         if(DriverList[idx].alcSetThreadContext(context))
         {
-            DriverIface *oldiface = altss_get(ThreadCtxDriver);
+            DriverIface *oldiface = reinterpret_cast<DriverIface*>(altss_get(ThreadCtxDriver));
             if(oldiface != &DriverList[idx])
             {
                 altss_set(ThreadCtxDriver, &DriverList[idx]);
-                if(oldiface) oldiface->alcSetThreadContext(NULL);
+                if(oldiface) oldiface->alcSetThreadContext(nullptr);
             }
             return ALC_TRUE;
         }
-        err = DriverList[idx].alcGetError(NULL);
+        err = DriverList[idx].alcGetError(nullptr);
     }
     ATOMIC_STORE_SEQ(&LastError, err);
     return ALC_FALSE;
@@ -950,7 +953,7 @@ ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
 
 ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
 {
-    DriverIface *iface = altss_get(ThreadCtxDriver);
+    DriverIface *iface = reinterpret_cast<DriverIface*>(altss_get(ThreadCtxDriver));
     if(iface) return iface->alcGetThreadContext();
-    return NULL;
+    return nullptr;
 }

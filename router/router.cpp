@@ -14,7 +14,7 @@
 #include "version.h"
 
 
-DriverIface *DriverList = NULL;
+DriverIface *DriverList = nullptr;
 int DriverListSize = 0;
 static int DriverListSizeMax = 0;
 
@@ -39,7 +39,7 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
             if(str && *str != '\0')
             {
                 FILE *f = fopen(str, "w");
-                if(f == NULL)
+                if(f == nullptr)
                     ERR("Could not open log file: %s\n", str);
                 else
                     LogFile = f;
@@ -47,19 +47,19 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
             str = getenv("ALROUTER_LOGLEVEL");
             if(str && *str != '\0')
             {
-                char *end = NULL;
+                char *end = nullptr;
                 long l = strtol(str, &end, 0);
                 if(!end || *end != '\0')
                     ERR("Invalid log level value: %s\n", str);
                 else if(l < LogLevel_None || l > LogLevel_Trace)
                     ERR("Log level out of range: %s\n", str);
                 else
-                    LogLevel = l;
+                    LogLevel = static_cast<enum LogLevel>(l);
             }
             TRACE("Initializing router v0.1-%s %s\n", ALSOFT_GIT_COMMIT_HASH, ALSOFT_GIT_BRANCH);
             LoadDriverList();
 
-            altss_create(&ThreadCtxDriver, NULL);
+            altss_create(&ThreadCtxDriver, nullptr);
             InitALC();
             break;
 
@@ -79,13 +79,13 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
                     FreeLibrary(DriverList[i].Module);
             }
             al_free(DriverList);
-            DriverList = NULL;
+            DriverList = nullptr;
             DriverListSize = 0;
             DriverListSizeMax = 0;
 
             if(LogFile && LogFile != stderr)
                 fclose(LogFile);
-            LogFile = NULL;
+            LogFile = nullptr;
 
             althrd_deinit();
             break;
@@ -130,14 +130,15 @@ static void AddModule(HMODULE module, const WCHAR *name)
 
         memcpy(newlist, DriverList, DriverListSize*sizeof(DriverList[0]));
         al_free(DriverList);
-        DriverList = newlist;
+        DriverList = reinterpret_cast<DriverIface*>(newlist);
         DriverListSizeMax = newmax;
     }
 
     memset(&newdrv, 0, sizeof(newdrv));
     /* Load required functions. */
 #define LOAD_PROC(x) do {                                                     \
-    newdrv.x = CAST_FUNC(newdrv.x) GetProcAddress(module, #x);                \
+    newdrv.x = reinterpret_cast<decltype(newdrv.x)>(                          \
+        GetProcAddress(module, #x));                                          \
     if(!newdrv.x)                                                             \
     {                                                                         \
         ERR("Failed to find entry point for %s in %ls\n", #x, name);          \
@@ -243,23 +244,24 @@ static void AddModule(HMODULE module, const WCHAR *name)
         ALCint alc_ver[2] = { 0, 0 };
         wcsncpy(newdrv.Name, name, 32);
         newdrv.Module = module;
-        newdrv.alcGetIntegerv(NULL, ALC_MAJOR_VERSION, 1, &alc_ver[0]);
-        newdrv.alcGetIntegerv(NULL, ALC_MINOR_VERSION, 1, &alc_ver[1]);
-        if(newdrv.alcGetError(NULL) == ALC_NO_ERROR)
+        newdrv.alcGetIntegerv(nullptr, ALC_MAJOR_VERSION, 1, &alc_ver[0]);
+        newdrv.alcGetIntegerv(nullptr, ALC_MINOR_VERSION, 1, &alc_ver[1]);
+        if(newdrv.alcGetError(nullptr) == ALC_NO_ERROR)
             newdrv.ALCVer = MAKE_ALC_VER(alc_ver[0], alc_ver[1]);
         else
             newdrv.ALCVer = MAKE_ALC_VER(1, 0);
 
 #undef LOAD_PROC
 #define LOAD_PROC(x) do {                                                     \
-    newdrv.x = CAST_FUNC(newdrv.x) newdrv.alcGetProcAddress(NULL, #x);        \
+    newdrv.x = reinterpret_cast<decltype(newdrv.x)>(                          \
+        newdrv.alcGetProcAddress(nullptr, #x));                               \
     if(!newdrv.x)                                                             \
     {                                                                         \
         ERR("Failed to find entry point for %s in %ls\n", #x, name);          \
         err = 1;                                                              \
     }                                                                         \
 } while(0)
-        if(newdrv.alcIsExtensionPresent(NULL, "ALC_EXT_thread_local_context"))
+        if(newdrv.alcIsExtensionPresent(nullptr, "ALC_EXT_thread_local_context"))
         {
             LOAD_PROC(alcSetThreadContext);
             LOAD_PROC(alcGetThreadContext);
@@ -307,7 +309,7 @@ static void SearchDrivers(WCHAR *path)
 
 static WCHAR *strrchrW(WCHAR *str, WCHAR ch)
 {
-    WCHAR *res = NULL;
+    WCHAR *res = nullptr;
     while(str && *str != '\0')
     {
         if(*str == ch)
@@ -319,7 +321,7 @@ static WCHAR *strrchrW(WCHAR *str, WCHAR ch)
 
 static int GetLoadedModuleDirectory(const WCHAR *name, WCHAR *moddir, DWORD length)
 {
-    HMODULE module = NULL;
+    HMODULE module = nullptr;
     WCHAR *sep0, *sep1;
 
     if(name)
@@ -359,7 +361,7 @@ void LoadDriverList(void)
         cwd_path[len-1] = '\0';
     TRACE("Got current working directory %ls\n", cwd_path);
 
-    if(GetLoadedModuleDirectory(NULL, proc_path, MAX_PATH))
+    if(GetLoadedModuleDirectory(nullptr, proc_path, MAX_PATH))
         TRACE("Got proc path %ls\n", proc_path);
 
     GetSystemDirectoryW(sys_path, MAX_PATH);
@@ -390,8 +392,8 @@ void LoadDriverList(void)
 
 void InitPtrIntMap(PtrIntMap *map)
 {
-    map->keys = NULL;
-    map->values = NULL;
+    map->keys = nullptr;
+    map->values = nullptr;
     map->size = 0;
     map->capacity = 0;
     RWLockInit(&map->lock);
@@ -401,8 +403,8 @@ void ResetPtrIntMap(PtrIntMap *map)
 {
     WriteLock(&map->lock);
     al_free(map->keys);
-    map->keys = NULL;
-    map->values = NULL;
+    map->keys = nullptr;
+    map->values = nullptr;
     map->size = 0;
     map->capacity = 0;
     WriteUnlock(&map->lock);
@@ -433,13 +435,15 @@ ALenum InsertPtrIntMapEntry(PtrIntMap *map, ALvoid *key, ALint value)
     {
         if(map->size == map->capacity)
         {
-            ALvoid **keys = NULL;
+            ALvoid **keys = nullptr;
             ALint *values;
             ALsizei newcap;
 
             newcap = (map->capacity ? (map->capacity<<1) : 4);
             if(newcap > map->capacity)
-                keys = al_calloc(16, (sizeof(map->keys[0])+sizeof(map->values[0]))*newcap);
+                keys = reinterpret_cast<ALvoid**>(
+                    al_calloc(16, (sizeof(map->keys[0])+sizeof(map->values[0]))*newcap)
+                );
             if(!keys)
             {
                 WriteUnlock(&map->lock);

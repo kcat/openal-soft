@@ -11,31 +11,31 @@ atomic_DriverIfacePtr CurrentCtxDriver = ATOMIC_INIT_STATIC(NULL);
 
 #define DECL_THUNK1(R,n,T1) AL_API R AL_APIENTRY n(T1 a)                      \
 {                                                                             \
-    DriverIface *iface = altss_get(ThreadCtxDriver);                          \
+    DriverIface *iface = reinterpret_cast<DriverIface*>(altss_get(ThreadCtxDriver));\
     if(!iface) iface = ATOMIC_LOAD(&CurrentCtxDriver, almemory_order_acquire);\
     return iface->n(a);                                                       \
 }
 #define DECL_THUNK2(R,n,T1,T2) AL_API R AL_APIENTRY n(T1 a, T2 b) \
 {                                                                             \
-    DriverIface *iface = altss_get(ThreadCtxDriver);                          \
+    DriverIface *iface = reinterpret_cast<DriverIface*>(altss_get(ThreadCtxDriver));\
     if(!iface) iface = ATOMIC_LOAD(&CurrentCtxDriver, almemory_order_acquire);\
     return iface->n(a, b);                                                    \
 }
 #define DECL_THUNK3(R,n,T1,T2,T3) AL_API R AL_APIENTRY n(T1 a, T2 b, T3 c) \
 {                                                                             \
-    DriverIface *iface = altss_get(ThreadCtxDriver);                          \
+    DriverIface *iface = reinterpret_cast<DriverIface*>(altss_get(ThreadCtxDriver));\
     if(!iface) iface = ATOMIC_LOAD(&CurrentCtxDriver, almemory_order_acquire);\
     return iface->n(a, b, c);                                                 \
 }
 #define DECL_THUNK4(R,n,T1,T2,T3,T4) AL_API R AL_APIENTRY n(T1 a, T2 b, T3 c, T4 d) \
 {                                                                             \
-    DriverIface *iface = altss_get(ThreadCtxDriver);                          \
+    DriverIface *iface = reinterpret_cast<DriverIface*>(altss_get(ThreadCtxDriver));\
     if(!iface) iface = ATOMIC_LOAD(&CurrentCtxDriver, almemory_order_acquire);\
     return iface->n(a, b, c, d);                                              \
 }
 #define DECL_THUNK5(R,n,T1,T2,T3,T4,T5) AL_API R AL_APIENTRY n(T1 a, T2 b, T3 c, T4 d, T5 e) \
 {                                                                             \
-    DriverIface *iface = altss_get(ThreadCtxDriver);                          \
+    DriverIface *iface = reinterpret_cast<DriverIface*>(altss_get(ThreadCtxDriver));\
     if(!iface) iface = ATOMIC_LOAD(&CurrentCtxDriver, almemory_order_acquire);\
     return iface->n(a, b, c, d, e);                                           \
 }
@@ -46,7 +46,7 @@ atomic_DriverIfacePtr CurrentCtxDriver = ATOMIC_INIT_STATIC(NULL);
  */
 AL_API ALenum AL_APIENTRY alGetError(void)
 {
-    DriverIface *iface = altss_get(ThreadCtxDriver);
+    DriverIface *iface = reinterpret_cast<DriverIface*>(altss_get(ThreadCtxDriver));
     if(!iface) iface = ATOMIC_LOAD(&CurrentCtxDriver, almemory_order_acquire);
     return iface ? iface->alGetError() : AL_NO_ERROR;
 }

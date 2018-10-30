@@ -1433,7 +1433,7 @@ ELSE()
     ENDIF()
 
     IF(WIN32 AND ALSOFT_BUILD_ROUTER)
-        ADD_LIBRARY(OpenAL SHARED router/router.c router/router.h router/alc.c router/al.c)
+        ADD_LIBRARY(OpenAL SHARED router/router.cpp router/router.h router/alc.cpp router/al.cpp)
         TARGET_COMPILE_DEFINITIONS(OpenAL
             PRIVATE AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES ${CPP_DEFS})
         TARGET_COMPILE_OPTIONS(OpenAL PRIVATE ${C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${CXX_FLAGS}>)

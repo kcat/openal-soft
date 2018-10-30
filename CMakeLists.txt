@@ -29,6 +29,7 @@ INCLUDE(CheckSymbolExists)
 INCLUDE(CheckCCompilerFlag)
 INCLUDE(CheckCXXCompilerFlag)
 INCLUDE(CheckCSourceCompiles)
+INCLUDE(CheckCXXSourceCompiles)
 INCLUDE(CheckTypeSize)
 include(CheckStructHasMember)
 include(CheckFileOffsetBits)
@@ -163,7 +164,7 @@ IF(HAVE___RESTRICT)
     SET(RESTRICT_DECL "__restrict")
 ENDIF()
 
-# MSVC may need workarounds for C99 restrict and inline
+# MSVC may need workarounds for C99 inline
 IF(MSVC)
     # TODO: Once we truly require C99, this inline check should go away.
     CHECK_C_SOURCE_COMPILES("inline void foo(void) { }
@@ -346,6 +347,25 @@ int main()
         )
         if(HAVE_STATIC_LIBGCC_SWITCH)
             SET(LINKER_FLAGS ${LINKER_FLAGS} -static-libgcc)
+        endif()
+        set(CMAKE_REQUIRED_LIBRARIES ${OLD_REQUIRED_LIBRARIES})
+        unset(OLD_REQUIRED_LIBRARIES)
+    endif()
+
+    option(ALSOFT_STATIC_STDCXX "Static link libstdc++ with -static-libstdc++" OFF)
+    if(ALSOFT_STATIC_STDCXX)
+        set(OLD_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
+        set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} -static-libstdc++)
+        check_cxx_source_compiles(
+"#include <cstdlib>
+int main()
+{
+    return 0;
+}"
+            HAVE_STATIC_LIBSTDCXX_SWITCH
+        )
+        if(HAVE_STATIC_LIBSTDCXX_SWITCH)
+            SET(LINKER_FLAGS ${LINKER_FLAGS} -static-libstdc++)
         endif()
         set(CMAKE_REQUIRED_LIBRARIES ${OLD_REQUIRED_LIBRARIES})
         unset(OLD_REQUIRED_LIBRARIES)

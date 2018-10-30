@@ -93,7 +93,7 @@ static void AddModule(HMODULE module, const WCHAR *name)
             FreeLibrary(module);
             return;
         }
-        if(wcscmp(drv.Name, name) == 0)
+        if(drv.Name == name)
         {
             TRACE("Skipping similarly-named module %ls\n", name);
             FreeLibrary(module);
@@ -212,7 +212,7 @@ static void AddModule(HMODULE module, const WCHAR *name)
     if(!err)
     {
         ALCint alc_ver[2] = { 0, 0 };
-        wcsncpy(newdrv.Name, name, 32);
+        newdrv.Name = name;
         newdrv.Module = module;
         newdrv.alcGetIntegerv(nullptr, ALC_MAJOR_VERSION, 1, &alc_ver[0]);
         newdrv.alcGetIntegerv(nullptr, ALC_MINOR_VERSION, 1, &alc_ver[1]);
@@ -250,27 +250,26 @@ static void AddModule(HMODULE module, const WCHAR *name)
 
 static void SearchDrivers(WCHAR *path)
 {
-    WCHAR srchPath[MAX_PATH+1] = L"";
     WIN32_FIND_DATAW fdata;
-    HANDLE srchHdl;
 
     TRACE("Searching for drivers in %ls...\n", path);
-    wcsncpy(srchPath, path, MAX_PATH);
-    wcsncat(srchPath, L"\\*oal.dll", MAX_PATH - lstrlenW(srchPath));
-    srchHdl = FindFirstFileW(srchPath, &fdata);
+    std::wstring srchPath = path;
+    srchPath += L"\\*oal.dll";
+
+    HANDLE srchHdl = FindFirstFileW(srchPath.c_str(), &fdata);
     if(srchHdl != INVALID_HANDLE_VALUE)
     {
         do {
             HMODULE mod;
 
-            wcsncpy(srchPath, path, MAX_PATH);
-            wcsncat(srchPath, L"\\", MAX_PATH - lstrlenW(srchPath));
-            wcsncat(srchPath, fdata.cFileName, MAX_PATH - lstrlenW(srchPath));
-            TRACE("Found %ls\n", srchPath);
+            srchPath = path;
+            srchPath += L"\\";
+            srchPath += fdata.cFileName;
+            TRACE("Found %ls\n", srchPath.c_str());
 
-            mod = LoadLibraryW(srchPath);
+            mod = LoadLibraryW(srchPath.c_str());
             if(!mod)
-                WARN("Could not load %ls\n", srchPath);
+                WARN("Could not load %ls\n", srchPath.c_str());
             else
                 AddModule(mod, fdata.cFileName);
         } while(FindNextFileW(srchHdl, &fdata));

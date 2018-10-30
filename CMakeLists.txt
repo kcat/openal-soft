@@ -345,17 +345,19 @@ int main()
 }"
             HAVE_STATIC_LIBGCC_SWITCH
         )
-        if(HAVE_STATIC_LIBGCC_SWITCH)
-            SET(LINKER_FLAGS ${LINKER_FLAGS} -static-libgcc)
-        endif()
         set(CMAKE_REQUIRED_LIBRARIES ${OLD_REQUIRED_LIBRARIES})
         unset(OLD_REQUIRED_LIBRARIES)
+
+        if(NOT HAVE_STATIC_LIBGCC_SWITCH)
+            message(FATAL_ERROR "Cannot static link libgcc")
+        endif()
+        set(LINKER_FLAGS ${LINKER_FLAGS} -static-libgcc)
     endif()
 
-    option(ALSOFT_STATIC_STDCXX "Static link libstdc++ with -static-libstdc++" OFF)
+    option(ALSOFT_STATIC_STDCXX "Static link libstdc++" OFF)
     if(ALSOFT_STATIC_STDCXX)
         set(OLD_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
-        set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} -static-libstdc++)
+        set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} "-Wl,--push-state,-Bstatic,-lstdc++,--pop-state")
         check_cxx_source_compiles(
 "#include <cstdlib>
 int main()
@@ -364,11 +366,36 @@ int main()
 }"
             HAVE_STATIC_LIBSTDCXX_SWITCH
         )
-        if(HAVE_STATIC_LIBSTDCXX_SWITCH)
-            SET(LINKER_FLAGS ${LINKER_FLAGS} -static-libstdc++)
-        endif()
         set(CMAKE_REQUIRED_LIBRARIES ${OLD_REQUIRED_LIBRARIES})
         unset(OLD_REQUIRED_LIBRARIES)
+
+        if(NOT HAVE_STATIC_LIBSTDCXX_SWITCH)
+            message(FATAL_ERROR "Cannot static link libstdc++")
+        endif()
+        set(LINKER_FLAGS ${LINKER_FLAGS} "-Wl,--push-state,-Bstatic,-lstdc++,--pop-state")
+    endif()
+
+    if(WIN32)
+        option(ALSOFT_STATIC_WINPTHREAD "Static link libwinpthread" OFF)
+        if(ALSOFT_STATIC_WINPTHREAD)
+            set(OLD_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
+            set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} "-Wl,--push-state,-Bstatic,-lwinpthread,--pop-state")
+            check_cxx_source_compiles(
+"#include <cstdlib>
+int main()
+{
+    return 0;
+}"
+                HAVE_STATIC_LIBWINPTHREAD_SWITCH
+            )
+            set(CMAKE_REQUIRED_LIBRARIES ${OLD_REQUIRED_LIBRARIES})
+            unset(OLD_REQUIRED_LIBRARIES)
+
+            if(NOT HAVE_STATIC_LIBWINPTHREAD_SWITCH)
+                message(FATAL_ERROR "Cannot static link libwinpthread")
+            endif()
+            set(LINKER_FLAGS ${LINKER_FLAGS} "-Wl,--push-state,-Bstatic,-lwinpthread,--pop-state")
+        endif()
     endif()
 ENDIF()
 
@@ -1437,7 +1464,7 @@ ELSE()
         TARGET_COMPILE_DEFINITIONS(OpenAL
             PRIVATE AL_BUILD_LIBRARY AL_ALEXT_PROTOTYPES ${CPP_DEFS})
         TARGET_COMPILE_OPTIONS(OpenAL PRIVATE ${C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${CXX_FLAGS}>)
-        TARGET_LINK_LIBRARIES(OpenAL PRIVATE ${LINKER_FLAGS} ${COMMON_LIB})
+        TARGET_LINK_LIBRARIES(OpenAL PRIVATE ${COMMON_LIB} ${LINKER_FLAGS})
         SET_TARGET_PROPERTIES(OpenAL PROPERTIES PREFIX "")
         SET_TARGET_PROPERTIES(OpenAL PROPERTIES OUTPUT_NAME ${LIBNAME})
         IF(TARGET build_version)
@@ -1464,7 +1491,7 @@ TARGET_INCLUDE_DIRECTORIES(${IMPL_TARGET}
     PRIVATE "${OpenAL_SOURCE_DIR}/OpenAL32/Include" "${OpenAL_SOURCE_DIR}/Alc" ${INC_PATHS})
 TARGET_COMPILE_OPTIONS(${IMPL_TARGET} PRIVATE ${C_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${CXX_FLAGS}>)
 TARGET_LINK_LIBRARIES(${IMPL_TARGET}
-    PRIVATE ${LINKER_FLAGS} ${COMMON_LIB} ${EXTRA_LIBS} ${MATH_LIB})
+    PRIVATE ${COMMON_LIB} ${LINKER_FLAGS} ${EXTRA_LIBS} ${MATH_LIB})
 IF(TARGET build_version)
     ADD_DEPENDENCIES(${IMPL_TARGET} build_version)
 ENDIF()

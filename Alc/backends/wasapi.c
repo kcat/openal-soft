@@ -667,6 +667,15 @@ FORCE_ALIGN static int ALCwasapiPlayback_mixerProc(void *arg)
         len -= len%update_size;
 
         hr = IAudioRenderClient_GetBuffer(self->render, len, &buffer);
+        if (hr == AUDCLNT_E_DEVICE_INVALIDATED)
+        {
+            hr = ALCwasapiPlayback_TryRecover(self);
+            if (SUCCEEDED(hr)) {
+                update_size = device->UpdateSize;
+                buffer_len = update_size * device->NumUpdates;
+                continue;
+            }
+        }
         if(SUCCEEDED(hr))
         {
             ALCwasapiPlayback_lock(self);
@@ -875,6 +884,27 @@ static ALCboolean ALCwasapiPlayback_reset(ALCwasapiPlayback *self)
     return SUCCEEDED(hr) ? ALC_TRUE : ALC_FALSE;
 }
 
+static ALCboolean GetFmtChans(const WAVEFORMATEXTENSIBLE* outputType, enum DevFmtChannels* fmtChans)
+{
+    if (outputType->Format.nChannels == 1 && outputType->dwChannelMask == MONO)
+        *fmtChans = DevFmtMono;
+    else if (outputType->Format.nChannels == 2 && outputType->dwChannelMask == STEREO)
+        *fmtChans = DevFmtStereo;
+    else if (outputType->Format.nChannels == 4 && outputType->dwChannelMask == QUAD)
+        *fmtChans = DevFmtQuad;
+    else if (outputType->Format.nChannels == 6 && outputType->dwChannelMask == X5DOT1)
+        *fmtChans = DevFmtX51;
+    else if (outputType->Format.nChannels == 6 && outputType->dwChannelMask == X5DOT1REAR)
+        *fmtChans = DevFmtX51Rear;
+    else if (outputType->Format.nChannels == 7 && outputType->dwChannelMask == X6DOT1)
+        *fmtChans = DevFmtX61;
+    else if (outputType->Format.nChannels == 8 && (outputType->dwChannelMask == X7DOT1 || outputType->dwChannelMask == X7DOT1_WIDE))
+        *fmtChans = DevFmtX71;
+    else
+        return ALC_FALSE;
+    return ALC_TRUE;
+}
+
 static HRESULT ALCwasapiPlayback_resetProxy(ALCwasapiPlayback *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
@@ -920,21 +950,7 @@ static HRESULT ALCwasapiPlayback_resetProxy(ALCwasapiPlayback *self)
         device->Frequency = OutputType.Format.nSamplesPerSec;
     if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
     {
-        if(OutputType.Format.nChannels == 1 && OutputType.dwChannelMask == MONO)
-            device->FmtChans = DevFmtMono;
-        else if(OutputType.Format.nChannels == 2 && OutputType.dwChannelMask == STEREO)
-            device->FmtChans = DevFmtStereo;
-        else if(OutputType.Format.nChannels == 4 && OutputType.dwChannelMask == QUAD)
-            device->FmtChans = DevFmtQuad;
-        else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1)
-            device->FmtChans = DevFmtX51;
-        else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1REAR)
-            device->FmtChans = DevFmtX51Rear;
-        else if(OutputType.Format.nChannels == 7 && OutputType.dwChannelMask == X6DOT1)
-            device->FmtChans = DevFmtX61;
-        else if(OutputType.Format.nChannels == 8 && (OutputType.dwChannelMask == X7DOT1 || OutputType.dwChannelMask == X7DOT1_WIDE))
-            device->FmtChans = DevFmtX71;
-        else
+        if (!GetFmtChans(&OutputType, &device->FmtChans))
             ERR("Unhandled channel config: %d -- 0x%08lx\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
     }
 
@@ -1023,7 +1039,7 @@ static HRESULT ALCwasapiPlayback_resetProxy(ALCwasapiPlayback *self)
         return hr;
     }
 
-    if(wfx != NULL)
+    if(wfx != NULL)    // Succeeded with a closest match to the specified format.
     {
         if(!MakeExtensible(&OutputType, wfx))
         {
@@ -1033,22 +1049,20 @@ static HRESULT ALCwasapiPlayback_resetProxy(ALCwasapiPlayback *self)
         CoTaskMemFree(wfx);
         wfx = NULL;
 
+        if ((device->Flags&DEVICE_FREQUENCY_REQUEST)) 
+        {
+            if (device->Frequency != OutputType.Format.nSamplesPerSec)
+                return AUDCLNT_E_UNSUPPORTED_FORMAT;
+        }
+        if ((device->Flags&DEVICE_CHANNELS_REQUEST)) 
+        {
+            enum DevFmtChannels FmtChans;
+            if (!GetFmtChans(&OutputType, &FmtChans) || FmtChans != device->FmtChans)
+                return AUDCLNT_E_UNSUPPORTED_FORMAT;
+        }
+
         device->Frequency = OutputType.Format.nSamplesPerSec;
-        if(OutputType.Format.nChannels == 1 && OutputType.dwChannelMask == MONO)
-            device->FmtChans = DevFmtMono;
-        else if(OutputType.Format.nChannels == 2 && OutputType.dwChannelMask == STEREO)
-            device->FmtChans = DevFmtStereo;
-        else if(OutputType.Format.nChannels == 4 && OutputType.dwChannelMask == QUAD)
-            device->FmtChans = DevFmtQuad;
-        else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1)
-            device->FmtChans = DevFmtX51;
-        else if(OutputType.Format.nChannels == 6 && OutputType.dwChannelMask == X5DOT1REAR)
-            device->FmtChans = DevFmtX51Rear;
-        else if(OutputType.Format.nChannels == 7 && OutputType.dwChannelMask == X6DOT1)
-            device->FmtChans = DevFmtX61;
-        else if(OutputType.Format.nChannels == 8 && (OutputType.dwChannelMask == X7DOT1 || OutputType.dwChannelMask == X7DOT1_WIDE))
-            device->FmtChans = DevFmtX71;
-        else
+        if (!GetFmtChans(&OutputType, &device->FmtChans))
         {
             ERR("Unhandled extensible channels: %d -- 0x%08lx\n", OutputType.Format.nChannels, OutputType.dwChannelMask);
             device->FmtChans = DevFmtStereo;

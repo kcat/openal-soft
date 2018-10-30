@@ -8,18 +8,15 @@
 #include <stdio.h>
 
 #include <vector>
-#include <atomic>
 #include <string>
+#include <atomic>
+#include <mutex>
 
 #include "AL/alc.h"
 #include "AL/al.h"
 #include "AL/alext.h"
 #include "rwlock.h"
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #ifndef UNUSED
 #if defined(__cplusplus)
@@ -145,26 +142,23 @@ extern thread_local DriverIface *ThreadCtxDriver;
 extern std::atomic<DriverIface*> CurrentCtxDriver;
 
 
-typedef struct PtrIntMap {
-    ALvoid **keys;
+class PtrIntMap {
+    ALvoid **mKeys{nullptr};
     /* Shares memory with keys. */
-    ALint *values;
+    ALint *mValues{nullptr};
 
-    ALsizei size;
-    ALsizei capacity;
-    RWLock lock;
-} PtrIntMap;
-#define PTRINTMAP_STATIC_INITIALIZE { nullptr, nullptr, 0, 0, RWLOCK_STATIC_INITIALIZE }
+    ALsizei mSize{0};
+    ALsizei mCapacity{0};
+    std::mutex mLock;
 
-void InitPtrIntMap(PtrIntMap *map);
-void ResetPtrIntMap(PtrIntMap *map);
-ALenum InsertPtrIntMapEntry(PtrIntMap *map, ALvoid *key, ALint value);
-ALint RemovePtrIntMapKey(PtrIntMap *map, ALvoid *key);
-ALint LookupPtrIntMapKey(PtrIntMap *map, ALvoid *key);
+public:
+    PtrIntMap() = default;
+    ~PtrIntMap();
 
-
-void InitALC(void);
-void ReleaseALC(void);
+    ALenum insert(ALvoid *key, ALint value);
+    ALint removeByKey(ALvoid *key);
+    ALint lookupByKey(ALvoid *key);
+};
 
 
 enum LogLevel {
@@ -197,9 +191,5 @@ extern FILE *LogFile;
         fflush(LogFile);                                  \
     }                                                     \
 } while(0)
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
 
 #endif /* ROUTER_ROUTER_H */

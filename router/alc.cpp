@@ -251,8 +251,8 @@ static std::mutex EnumerationLock;
 static std::mutex ContextSwitchLock;
 
 static std::atomic<ALCenum> LastError{ALC_NO_ERROR};
-static PtrIntMap DeviceIfaceMap = PTRINTMAP_STATIC_INITIALIZE;
-static PtrIntMap ContextIfaceMap = PTRINTMAP_STATIC_INITIALIZE;
+static PtrIntMap DeviceIfaceMap;
+static PtrIntMap ContextIfaceMap;
 
 
 typedef struct EnumeratedList {
@@ -304,16 +304,6 @@ static ALint GetDriverIndexForName(const EnumeratedList *list, const ALCchar *na
         index++;
     }
     return -1;
-}
-
-void InitALC(void)
-{
-}
-
-void ReleaseALC(void)
-{
-    ResetPtrIntMap(&ContextIfaceMap);
-    ResetPtrIntMap(&DeviceIfaceMap);
 }
 
 
@@ -371,7 +361,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)
 
     if(device)
     {
-        if(InsertPtrIntMapEntry(&DeviceIfaceMap, device, idx) != ALC_NO_ERROR)
+        if(DeviceIfaceMap.insert(device, idx) != ALC_NO_ERROR)
         {
             DriverList[idx].alcCloseDevice(device);
             device = nullptr;
@@ -385,14 +375,14 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device)
 {
     ALint idx;
 
-    if(!device || (idx=LookupPtrIntMapKey(&DeviceIfaceMap, device)) < 0)
+    if(!device || (idx=DeviceIfaceMap.lookupByKey(device)) < 0)
     {
         LastError.store(ALC_INVALID_DEVICE);
         return ALC_FALSE;
     }
     if(!DriverList[idx].alcCloseDevice(device))
         return ALC_FALSE;
-    RemovePtrIntMapKey(&DeviceIfaceMap, device);
+    DeviceIfaceMap.removeByKey(device);
     return ALC_TRUE;
 }
 
@@ -402,7 +392,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     ALCcontext *context;
     ALint idx;
 
-    if(!device || (idx=LookupPtrIntMapKey(&DeviceIfaceMap, device)) < 0)
+    if(!device || (idx=DeviceIfaceMap.lookupByKey(device)) < 0)
     {
         LastError.store(ALC_INVALID_DEVICE);
         return nullptr;
@@ -410,7 +400,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     context = DriverList[idx].alcCreateContext(device, attrlist);
     if(context)
     {
-        if(InsertPtrIntMapEntry(&ContextIfaceMap, context, idx) != ALC_NO_ERROR)
+        if(ContextIfaceMap.insert(context, idx) != ALC_NO_ERROR)
         {
             DriverList[idx].alcDestroyContext(context);
             context = nullptr;
@@ -427,7 +417,7 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
     std::lock_guard<std::mutex> _{ContextSwitchLock};
     if(context)
     {
-        idx = LookupPtrIntMapKey(&ContextIfaceMap, context);
+        idx = ContextIfaceMap.lookupByKey(context);
         if(idx < 0)
         {
             LastError.store(ALC_INVALID_CONTEXT);
@@ -465,7 +455,7 @@ ALC_API void ALC_APIENTRY alcProcessContext(ALCcontext *context)
 {
     if(context)
     {
-        ALint idx = LookupPtrIntMapKey(&ContextIfaceMap, context);
+        ALint idx = ContextIfaceMap.lookupByKey(context);
         if(idx >= 0)
             return DriverList[idx].alcProcessContext(context);
     }
@@ -476,7 +466,7 @@ ALC_API void ALC_APIENTRY alcSuspendContext(ALCcontext *context)
 {
     if(context)
     {
-        ALint idx = LookupPtrIntMapKey(&ContextIfaceMap, context);
+        ALint idx = ContextIfaceMap.lookupByKey(context);
         if(idx >= 0)
             return DriverList[idx].alcSuspendContext(context);
     }
@@ -487,14 +477,14 @@ ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 {
     ALint idx;
 
-    if(!context || (idx=LookupPtrIntMapKey(&ContextIfaceMap, context)) < 0)
+    if(!context || (idx=ContextIfaceMap.lookupByKey(context)) < 0)
     {
         LastError.store(ALC_INVALID_CONTEXT);
         return;
     }
 
     DriverList[idx].alcDestroyContext(context);
-    RemovePtrIntMapKey(&ContextIfaceMap, context);
+    ContextIfaceMap.removeByKey(context);
 }
 
 ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void)
@@ -508,7 +498,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *context)
 {
     if(context)
     {
-        ALint idx = LookupPtrIntMapKey(&ContextIfaceMap, context);
+        ALint idx = ContextIfaceMap.lookupByKey(context);
         if(idx >= 0)
             return DriverList[idx].alcGetContextsDevice(context);
     }
@@ -521,7 +511,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
 {
     if(device)
     {
-        ALint idx = LookupPtrIntMapKey(&DeviceIfaceMap, device);
+        ALint idx = DeviceIfaceMap.lookupByKey(device);
         if(idx < 0) return ALC_INVALID_DEVICE;
         return DriverList[idx].alcGetError(device);
     }
@@ -535,7 +525,7 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
 
     if(device)
     {
-        ALint idx = LookupPtrIntMapKey(&DeviceIfaceMap, device);
+        ALint idx = DeviceIfaceMap.lookupByKey(device);
         if(idx < 0)
         {
             LastError.store(ALC_INVALID_DEVICE);
@@ -564,7 +554,7 @@ ALC_API void* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *f
 {
     if(device)
     {
-        ALint idx = LookupPtrIntMapKey(&DeviceIfaceMap, device);
+        ALint idx = DeviceIfaceMap.lookupByKey(device);
         if(idx < 0)
         {
             LastError.store(ALC_INVALID_DEVICE);
@@ -584,7 +574,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
 {
     if(device)
     {
-        ALint idx = LookupPtrIntMapKey(&DeviceIfaceMap, device);
+        ALint idx = DeviceIfaceMap.lookupByKey(device);
         if(idx < 0)
         {
             LastError.store(ALC_INVALID_DEVICE);
@@ -604,7 +594,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
 {
     if(device)
     {
-        ALint idx = LookupPtrIntMapKey(&DeviceIfaceMap, device);
+        ALint idx = DeviceIfaceMap.lookupByKey(device);
         if(idx < 0)
         {
             LastError.store(ALC_INVALID_DEVICE);
@@ -748,7 +738,7 @@ ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsi
 {
     if(device)
     {
-        ALint idx = LookupPtrIntMapKey(&DeviceIfaceMap, device);
+        ALint idx = DeviceIfaceMap.lookupByKey(device);
         if(idx < 0)
         {
             LastError.store(ALC_INVALID_DEVICE);
@@ -844,7 +834,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, 
 
     if(device)
     {
-        if(InsertPtrIntMapEntry(&DeviceIfaceMap, device, idx) != ALC_NO_ERROR)
+        if(DeviceIfaceMap.insert(device, idx) != ALC_NO_ERROR)
         {
             DriverList[idx].alcCaptureCloseDevice(device);
             device = nullptr;
@@ -858,14 +848,14 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device)
 {
     ALint idx;
 
-    if(!device || (idx=LookupPtrIntMapKey(&DeviceIfaceMap, device)) < 0)
+    if(!device || (idx=DeviceIfaceMap.lookupByKey(device)) < 0)
     {
         LastError.store(ALC_INVALID_DEVICE);
         return ALC_FALSE;
     }
     if(!DriverList[idx].alcCaptureCloseDevice(device))
         return ALC_FALSE;
-    RemovePtrIntMapKey(&DeviceIfaceMap, device);
+    DeviceIfaceMap.removeByKey(device);
     return ALC_TRUE;
 }
 
@@ -873,7 +863,7 @@ ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
 {
     if(device)
     {
-        ALint idx = LookupPtrIntMapKey(&DeviceIfaceMap, device);
+        ALint idx = DeviceIfaceMap.lookupByKey(device);
         if(idx >= 0)
             return DriverList[idx].alcCaptureStart(device);
     }
@@ -884,7 +874,7 @@ ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
 {
     if(device)
     {
-        ALint idx = LookupPtrIntMapKey(&DeviceIfaceMap, device);
+        ALint idx = DeviceIfaceMap.lookupByKey(device);
         if(idx >= 0)
             return DriverList[idx].alcCaptureStop(device);
     }
@@ -895,7 +885,7 @@ ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, 
 {
     if(device)
     {
-        ALint idx = LookupPtrIntMapKey(&DeviceIfaceMap, device);
+        ALint idx = DeviceIfaceMap.lookupByKey(device);
         if(idx >= 0)
             return DriverList[idx].alcCaptureSamples(device, buffer, samples);
     }
@@ -917,7 +907,7 @@ ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
         return ALC_TRUE;
     }
 
-    idx = LookupPtrIntMapKey(&ContextIfaceMap, context);
+    idx = ContextIfaceMap.lookupByKey(context);
     if(idx >= 0)
     {
         if(DriverList[idx].alcSetThreadContext(context))

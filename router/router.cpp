@@ -55,7 +55,6 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
             TRACE("Initializing router v0.1-%s %s\n", ALSOFT_GIT_COMMIT_HASH, ALSOFT_GIT_BRANCH);
             LoadDriverList();
 
-            InitALC();
             break;
 
         case DLL_THREAD_ATTACH:
@@ -64,8 +63,6 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
             break;
 
         case DLL_PROCESS_DETACH:
-            ReleaseALC();
-
             for(auto &drv : DriverList)
             {
                 if(drv.Module)
@@ -360,38 +357,28 @@ void LoadDriverList(void)
 }
 
 
-void InitPtrIntMap(PtrIntMap *map)
+PtrIntMap::~PtrIntMap()
 {
-    map->keys = nullptr;
-    map->values = nullptr;
-    map->size = 0;
-    map->capacity = 0;
-    RWLockInit(&map->lock);
+    std::lock_guard<std::mutex> maplock{mLock};
+    al_free(mKeys);
+    mKeys = nullptr;
+    mValues = nullptr;
+    mSize = 0;
+    mCapacity = 0;
 }
 
-void ResetPtrIntMap(PtrIntMap *map)
-{
-    WriteLock(&map->lock);
-    al_free(map->keys);
-    map->keys = nullptr;
-    map->values = nullptr;
-    map->size = 0;
-    map->capacity = 0;
-    WriteUnlock(&map->lock);
-}
-
-ALenum InsertPtrIntMapEntry(PtrIntMap *map, ALvoid *key, ALint value)
+ALenum PtrIntMap::insert(ALvoid *key, ALint value)
 {
     ALsizei pos = 0;
 
-    WriteLock(&map->lock);
-    if(map->size > 0)
+    std::lock_guard<std::mutex> maplock{mLock};
+    if(mSize > 0)
     {
-        ALsizei count = map->size;
+        ALsizei count = mSize;
         do {
             ALsizei step = count>>1;
             ALsizei i = pos+step;
-            if(map->keys[i] >= key)
+            if(mKeys[i] >= key)
                 count = step;
             else
             {
@@ -401,65 +388,60 @@ ALenum InsertPtrIntMapEntry(PtrIntMap *map, ALvoid *key, ALint value)
         } while(count > 0);
     }
 
-    if(pos == map->size || map->keys[pos] != key)
+    if(pos == mSize || mKeys[pos] != key)
     {
-        if(map->size == map->capacity)
+        if(mSize == mCapacity)
         {
-            ALvoid **keys = nullptr;
-            ALint *values;
+            ALvoid **newkeys = nullptr;
+            ALint *newvalues;
             ALsizei newcap;
 
-            newcap = (map->capacity ? (map->capacity<<1) : 4);
-            if(newcap > map->capacity)
-                keys = reinterpret_cast<ALvoid**>(
-                    al_calloc(16, (sizeof(map->keys[0])+sizeof(map->values[0]))*newcap)
+            newcap = (mCapacity ? (mCapacity<<1) : 4);
+            if(newcap > mCapacity)
+                newkeys = reinterpret_cast<ALvoid**>(
+                    al_calloc(16, (sizeof(mKeys[0])+sizeof(mValues[0]))*newcap)
                 );
-            if(!keys)
-            {
-                WriteUnlock(&map->lock);
+            if(!newkeys)
                 return AL_OUT_OF_MEMORY;
-            }
-            values = (ALint*)&keys[newcap];
+            newvalues = (ALint*)&newkeys[newcap];
 
-            if(map->keys)
+            if(mKeys)
             {
-                memcpy(keys, map->keys, map->size*sizeof(map->keys[0]));
-                memcpy(values, map->values, map->size*sizeof(map->values[0]));
+                memcpy(newkeys, mKeys, mSize*sizeof(mKeys[0]));
+                memcpy(newvalues, mValues, mSize*sizeof(mValues[0]));
             }
-            al_free(map->keys);
-            map->keys = keys;
-            map->values = values;
-            map->capacity = newcap;
+            al_free(mKeys);
+            mKeys = newkeys;
+            mValues = newvalues;
+            mCapacity = newcap;
         }
 
-        if(pos < map->size)
+        if(pos < mSize)
         {
-            memmove(&map->keys[pos+1], &map->keys[pos],
-                    (map->size-pos)*sizeof(map->keys[0]));
-            memmove(&map->values[pos+1], &map->values[pos],
-                    (map->size-pos)*sizeof(map->values[0]));
+            memmove(&mKeys[pos+1], &mKeys[pos], (mSize-pos)*sizeof(mKeys[0]));
+            memmove(&mValues[pos+1], &mValues[pos], (mSize-pos)*sizeof(mValues[0]));
         }
-        map->size++;
+        mSize++;
     }
-    map->keys[pos] = key;
-    map->values[pos] = value;
-    WriteUnlock(&map->lock);
+    mKeys[pos] = key;
+    mValues[pos] = value;
 
     return AL_NO_ERROR;
 }
 
-ALint RemovePtrIntMapKey(PtrIntMap *map, ALvoid *key)
+ALint PtrIntMap::removeByKey(ALvoid *key)
 {
     ALint ret = -1;
-    WriteLock(&map->lock);
-    if(map->size > 0)
+
+    std::lock_guard<std::mutex> maplock{mLock};
+    if(mSize > 0)
     {
         ALsizei pos = 0;
-        ALsizei count = map->size;
+        ALsizei count = mSize;
         do {
             ALsizei step = count>>1;
             ALsizei i = pos+step;
-            if(map->keys[i] >= key)
+            if(mKeys[i] >= key)
                 count = step;
             else
             {
@@ -467,35 +449,33 @@ ALint RemovePtrIntMapKey(PtrIntMap *map, ALvoid *key)
                 count -= step+1;
             }
         } while(count > 0);
-        if(pos < map->size && map->keys[pos] == key)
+        if(pos < mSize && mKeys[pos] == key)
         {
-            ret = map->values[pos];
-            if(pos < map->size-1)
+            ret = mValues[pos];
+            if(pos < mSize-1)
             {
-                memmove(&map->keys[pos], &map->keys[pos+1],
-                        (map->size-1-pos)*sizeof(map->keys[0]));
-                memmove(&map->values[pos], &map->values[pos+1],
-                        (map->size-1-pos)*sizeof(map->values[0]));
+                memmove(&mKeys[pos], &mKeys[pos+1], (mSize-1-pos)*sizeof(mKeys[0]));
+                memmove(&mValues[pos], &mValues[pos+1], (mSize-1-pos)*sizeof(mValues[0]));
             }
-            map->size--;
+            mSize--;
         }
     }
-    WriteUnlock(&map->lock);
     return ret;
 }
 
-ALint LookupPtrIntMapKey(PtrIntMap *map, ALvoid *key)
+ALint PtrIntMap::lookupByKey(ALvoid* key)
 {
     ALint ret = -1;
-    ReadLock(&map->lock);
-    if(map->size > 0)
+
+    std::lock_guard<std::mutex> maplock{mLock};
+    if(mSize > 0)
     {
         ALsizei pos = 0;
-        ALsizei count = map->size;
+        ALsizei count = mSize;
         do {
             ALsizei step = count>>1;
             ALsizei i = pos+step;
-            if(map->keys[i] >= key)
+            if(mKeys[i] >= key)
                 count = step;
             else
             {
@@ -503,9 +483,8 @@ ALint LookupPtrIntMapKey(PtrIntMap *map, ALvoid *key)
                 count -= step+1;
             }
         } while(count > 0);
-        if(pos < map->size && map->keys[pos] == key)
-            ret = map->values[pos];
+        if(pos < mSize && mKeys[pos] == key)
+            ret = mValues[pos];
     }
-    ReadUnlock(&map->lock);
     return ret;
 }

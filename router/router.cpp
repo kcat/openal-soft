@@ -18,7 +18,7 @@ DriverIface *DriverList = nullptr;
 int DriverListSize = 0;
 static int DriverListSizeMax = 0;
 
-altss_t ThreadCtxDriver;
+thread_local DriverIface *ThreadCtxDriver;
 
 enum LogLevel LogLevel = LogLevel_Error;
 FILE *LogFile;
@@ -59,19 +59,16 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
             TRACE("Initializing router v0.1-%s %s\n", ALSOFT_GIT_COMMIT_HASH, ALSOFT_GIT_BRANCH);
             LoadDriverList();
 
-            altss_create(&ThreadCtxDriver, nullptr);
             InitALC();
             break;
 
         case DLL_THREAD_ATTACH:
             break;
         case DLL_THREAD_DETACH:
-            althrd_thread_detach();
             break;
 
         case DLL_PROCESS_DETACH:
             ReleaseALC();
-            altss_delete(ThreadCtxDriver);
 
             for(i = 0;i < DriverListSize;i++)
             {
@@ -87,7 +84,6 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
                 fclose(LogFile);
             LogFile = nullptr;
 
-            althrd_deinit();
             break;
     }
     return TRUE;

@@ -7,12 +7,12 @@
 
 #include <stdio.h>
 
+#include <atomic>
+
 #include "AL/alc.h"
 #include "AL/al.h"
 #include "AL/alext.h"
-#include "atomic.h"
 #include "rwlock.h"
-#include "threads.h"
 
 
 #ifdef __cplusplus
@@ -140,9 +140,8 @@ typedef struct DriverIface {
 extern DriverIface *DriverList;
 extern int DriverListSize;
 
-extern altss_t ThreadCtxDriver;
-typedef ATOMIC(DriverIface*) atomic_DriverIfacePtr;
-extern atomic_DriverIfacePtr CurrentCtxDriver;
+extern thread_local DriverIface *ThreadCtxDriver;
+extern std::atomic<DriverIface*> CurrentCtxDriver;
 
 
 typedef struct PtrIntMap {
@@ -154,7 +153,7 @@ typedef struct PtrIntMap {
     ALsizei capacity;
     RWLock lock;
 } PtrIntMap;
-#define PTRINTMAP_STATIC_INITIALIZE { NULL, NULL, 0, 0, RWLOCK_STATIC_INITIALIZE }
+#define PTRINTMAP_STATIC_INITIALIZE { nullptr, nullptr, 0, 0, RWLOCK_STATIC_INITIALIZE }
 
 void InitPtrIntMap(PtrIntMap *map);
 void ResetPtrIntMap(PtrIntMap *map);

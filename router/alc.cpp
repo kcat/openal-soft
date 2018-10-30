@@ -6,6 +6,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#include <mutex>
+
 #include "AL/alc.h"
 #include "router.h"
 #include "almalloc.h"
@@ -245,10 +247,10 @@ static const ALCint alcMajorVersion = 1;
 static const ALCint alcMinorVersion = 1;
 
 
-static almtx_t EnumerationLock;
-static almtx_t ContextSwitchLock;
+static std::mutex EnumerationLock;
+static std::mutex ContextSwitchLock;
 
-static ATOMIC(ALCenum) LastError = ATOMIC_INIT_STATIC(ALC_NO_ERROR);
+static std::atomic<ALCenum> LastError{ALC_NO_ERROR};
 static PtrIntMap DeviceIfaceMap = PTRINTMAP_STATIC_INITIALIZE;
 static PtrIntMap ContextIfaceMap = PTRINTMAP_STATIC_INITIALIZE;
 
@@ -330,8 +332,6 @@ static ALint GetDriverIndexForName(const EnumeratedList *list, const ALCchar *na
 
 void InitALC(void)
 {
-    almtx_init(&EnumerationLock, almtx_recursive);
-    almtx_init(&ContextSwitchLock, almtx_plain);
 }
 
 void ReleaseALC(void)
@@ -342,9 +342,6 @@ void ReleaseALC(void)
 
     ResetPtrIntMap(&ContextIfaceMap);
     ResetPtrIntMap(&DeviceIfaceMap);
-
-    almtx_destroy(&ContextSwitchLock);
-    almtx_destroy(&EnumerationLock);
 }
 
 
@@ -364,20 +361,21 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *devicename)
         devicename = nullptr;
     if(devicename)
     {
-        almtx_lock(&EnumerationLock);
-        if(!DevicesList.Names)
-            (void)alcGetString(nullptr, ALC_DEVICE_SPECIFIER);
-        idx = GetDriverIndexForName(&DevicesList, devicename);
-        if(idx < 0)
-        {
-            if(!AllDevicesList.Names)
-                (void)alcGetString(nullptr, ALC_ALL_DEVICES_SPECIFIER);
-            idx = GetDriverIndexForName(&AllDevicesList, devicename);
+        { std::lock_guard<std::mutex> _{EnumerationLock};
+            if(!DevicesList.Names)
+                (void)alcGetString(nullptr, ALC_DEVICE_SPECIFIER);
+            idx = GetDriverIndexForName(&DevicesList, devicename);
+            if(idx < 0)
+            {
+                if(!AllDevicesList.Names)
+                    (void)alcGetString(nullptr, ALC_ALL_DEVICES_SPECIFIER);
+                idx = GetDriverIndexForName(&AllDevicesList, devicename);
+            }
         }
-        almtx_unlock(&EnumerationLock);
+
         if(idx < 0)
         {
-            ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_VALUE);
+            LastError.store(ALC_INVALID_VALUE);
             TRACE("Failed to find driver for name \"%s\"\n", devicename);
             return nullptr;
         }
@@ -418,7 +416,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device)
 
     if(!device || (idx=LookupPtrIntMapKey(&DeviceIfaceMap, device)) < 0)
     {
-        ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
+        LastError.store(ALC_INVALID_DEVICE);
         return ALC_FALSE;
     }
     if(!DriverList[idx].alcCloseDevice(device))
@@ -435,8 +433,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
     if(!device || (idx=LookupPtrIntMapKey(&DeviceIfaceMap, device)) < 0)
     {
-        ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
-        return ALC_FALSE;
+        LastError.store(ALC_INVALID_DEVICE);
+        return nullptr;
     }
     context = DriverList[idx].alcCreateContext(device, attrlist);
     if(context)
@@ -455,21 +453,17 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
 {
     ALint idx = -1;
 
-    almtx_lock(&ContextSwitchLock);
+    std::lock_guard<std::mutex> _{ContextSwitchLock};
     if(context)
     {
         idx = LookupPtrIntMapKey(&ContextIfaceMap, context);
         if(idx < 0)
         {
-            ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_CONTEXT);
-            almtx_unlock(&ContextSwitchLock);
+            LastError.store(ALC_INVALID_CONTEXT);
             return ALC_FALSE;
         }
         if(!DriverList[idx].alcMakeContextCurrent(context))
-        {
-            almtx_unlock(&ContextSwitchLock);
             return ALC_FALSE;
-        }
     }
 
     /* Unset the context from the old driver if it's different from the new
@@ -477,24 +471,21 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
      */
     if(idx < 0)
     {
-        DriverIface *oldiface = reinterpret_cast<DriverIface*>(altss_get(ThreadCtxDriver));
+        DriverIface *oldiface = ThreadCtxDriver;
         if(oldiface) oldiface->alcSetThreadContext(nullptr);
-        oldiface = reinterpret_cast<DriverIface*>(
-            ATOMIC_EXCHANGE_PTR_SEQ(&CurrentCtxDriver, (DriverIface*){nullptr}));
+        oldiface = CurrentCtxDriver.exchange(nullptr);
         if(oldiface) oldiface->alcMakeContextCurrent(nullptr);
     }
     else
     {
-        DriverIface *oldiface = reinterpret_cast<DriverIface*>(altss_get(ThreadCtxDriver));
+        DriverIface *oldiface = ThreadCtxDriver;
         if(oldiface && oldiface != &DriverList[idx])
             oldiface->alcSetThreadContext(nullptr);
-        oldiface = reinterpret_cast<DriverIface*>(
-            ATOMIC_EXCHANGE_PTR_SEQ(&CurrentCtxDriver, &DriverList[idx]));
+        oldiface = CurrentCtxDriver.exchange(&DriverList[idx]);
         if(oldiface && oldiface != &DriverList[idx])
             oldiface->alcMakeContextCurrent(nullptr);
     }
-    almtx_unlock(&ContextSwitchLock);
-    altss_set(ThreadCtxDriver, nullptr);
+    ThreadCtxDriver = nullptr;
 
     return ALC_TRUE;
 }
@@ -507,7 +498,7 @@ ALC_API void ALC_APIENTRY alcProcessContext(ALCcontext *context)
         if(idx >= 0)
             return DriverList[idx].alcProcessContext(context);
     }
-    ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_CONTEXT);
+    LastError.store(ALC_INVALID_CONTEXT);
 }
 
 ALC_API void ALC_APIENTRY alcSuspendContext(ALCcontext *context)
@@ -518,7 +509,7 @@ ALC_API void ALC_APIENTRY alcSuspendContext(ALCcontext *context)
         if(idx >= 0)
             return DriverList[idx].alcSuspendContext(context);
     }
-    ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_CONTEXT);
+    LastError.store(ALC_INVALID_CONTEXT);
 }
 
 ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context)
@@ -527,7 +518,7 @@ ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 
     if(!context || (idx=LookupPtrIntMapKey(&ContextIfaceMap, context)) < 0)
     {
-        ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_CONTEXT);
+        LastError.store(ALC_INVALID_CONTEXT);
         return;
     }
 
@@ -537,8 +528,8 @@ ALC_API void ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 
 ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void)
 {
-    DriverIface *iface = reinterpret_cast<DriverIface*>(altss_get(ThreadCtxDriver));
-    if(!iface) iface = ATOMIC_LOAD_SEQ(&CurrentCtxDriver);
+    DriverIface *iface = ThreadCtxDriver;
+    if(!iface) iface = CurrentCtxDriver.load();
     return iface ? iface->alcGetCurrentContext() : nullptr;
 }
 
@@ -550,7 +541,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *context)
         if(idx >= 0)
             return DriverList[idx].alcGetContextsDevice(context);
     }
-    ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_CONTEXT);
+    LastError.store(ALC_INVALID_CONTEXT);
     return nullptr;
 }
 
@@ -563,7 +554,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetError(ALCdevice *device)
         if(idx < 0) return ALC_INVALID_DEVICE;
         return DriverList[idx].alcGetError(device);
     }
-    return ATOMIC_EXCHANGE_SEQ(&LastError, ALC_NO_ERROR);
+    return LastError.exchange(ALC_NO_ERROR);
 }
 
 ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const ALCchar *extname)
@@ -576,7 +567,7 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
         ALint idx = LookupPtrIntMapKey(&DeviceIfaceMap, device);
         if(idx < 0)
         {
-            ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
+            LastError.store(ALC_INVALID_DEVICE);
             return ALC_FALSE;
         }
         return DriverList[idx].alcIsExtensionPresent(device, extname);
@@ -607,7 +598,7 @@ ALC_API void* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar *f
         ALint idx = LookupPtrIntMapKey(&DeviceIfaceMap, device);
         if(idx < 0)
         {
-            ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
+            LastError.store(ALC_INVALID_DEVICE);
             return nullptr;
         }
         return DriverList[idx].alcGetProcAddress(device, funcname);
@@ -630,7 +621,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
         ALint idx = LookupPtrIntMapKey(&DeviceIfaceMap, device);
         if(idx < 0)
         {
-            ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
+            LastError.store(ALC_INVALID_DEVICE);
             return 0;
         }
         return DriverList[idx].alcGetEnumValue(device, enumname);
@@ -653,7 +644,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
         ALint idx = LookupPtrIntMapKey(&DeviceIfaceMap, device);
         if(idx < 0)
         {
-            ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
+            LastError.store(ALC_INVALID_DEVICE);
             return nullptr;
         }
         return DriverList[idx].alcGetString(device, param);
@@ -677,7 +668,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
         return alcExtensionList;
 
     case ALC_DEVICE_SPECIFIER:
-        almtx_lock(&EnumerationLock);
+    { std::lock_guard<std::mutex> _{EnumerationLock};
         ClearDeviceList(&DevicesList);
         for(i = 0;i < DriverListSize;i++)
         {
@@ -688,11 +679,11 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
                     DriverList[i].alcGetString(nullptr, ALC_DEVICE_SPECIFIER), i
                 );
         }
-        almtx_unlock(&EnumerationLock);
         return DevicesList.Names;
+    }
 
     case ALC_ALL_DEVICES_SPECIFIER:
-        almtx_lock(&EnumerationLock);
+    { std::lock_guard<std::mutex> _{EnumerationLock};
         ClearDeviceList(&AllDevicesList);
         for(i = 0;i < DriverListSize;i++)
         {
@@ -709,11 +700,11 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
                     DriverList[i].alcGetString(nullptr, ALC_DEVICE_SPECIFIER), i
                 );
         }
-        almtx_unlock(&EnumerationLock);
         return AllDevicesList.Names;
+    }
 
     case ALC_CAPTURE_DEVICE_SPECIFIER:
-        almtx_lock(&EnumerationLock);
+    { std::lock_guard<std::mutex> _{EnumerationLock};
         ClearDeviceList(&CaptureDevicesList);
         for(i = 0;i < DriverListSize;i++)
         {
@@ -723,8 +714,8 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
                     DriverList[i].alcGetString(nullptr, ALC_CAPTURE_DEVICE_SPECIFIER), i
                 );
         }
-        almtx_unlock(&EnumerationLock);
         return CaptureDevicesList.Names;
+    }
 
     case ALC_DEFAULT_DEVICE_SPECIFIER:
         for(i = 0;i < DriverListSize;i++)
@@ -753,7 +744,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
         return "";
 
     default:
-        ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_ENUM);
+        LastError.store(ALC_INVALID_ENUM);
         break;
     }
     return nullptr;
@@ -766,7 +757,7 @@ ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsi
         ALint idx = LookupPtrIntMapKey(&DeviceIfaceMap, device);
         if(idx < 0)
         {
-            ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
+            LastError.store(ALC_INVALID_DEVICE);
             return;
         }
         return DriverList[idx].alcGetIntegerv(device, param, size, values);
@@ -774,7 +765,7 @@ ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsi
 
     if(size <= 0 || values == nullptr)
     {
-        ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_VALUE);
+        LastError.store(ALC_INVALID_VALUE);
         return;
     }
 
@@ -793,7 +784,7 @@ ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsi
                 values[0] = alcMinorVersion;
                 return;
             }
-            ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_VALUE);
+            LastError.store(ALC_INVALID_VALUE);
             return;
 
         case ALC_ATTRIBUTES_SIZE:
@@ -804,11 +795,11 @@ ALC_API void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsi
         case ALC_MONO_SOURCES:
         case ALC_STEREO_SOURCES:
         case ALC_CAPTURE_SAMPLES:
-            ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
+            LastError.store(ALC_INVALID_DEVICE);
             return;
 
         default:
-            ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_ENUM);
+            LastError.store(ALC_INVALID_ENUM);
             return;
     }
 }
@@ -823,14 +814,15 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *devicename, 
         devicename = nullptr;
     if(devicename)
     {
-        almtx_lock(&EnumerationLock);
-        if(!CaptureDevicesList.Names)
-            (void)alcGetString(nullptr, ALC_CAPTURE_DEVICE_SPECIFIER);
-        idx = GetDriverIndexForName(&CaptureDevicesList, devicename);
-        almtx_unlock(&EnumerationLock);
+        { std::lock_guard<std::mutex> _{EnumerationLock};
+            if(!CaptureDevicesList.Names)
+                (void)alcGetString(nullptr, ALC_CAPTURE_DEVICE_SPECIFIER);
+            idx = GetDriverIndexForName(&CaptureDevicesList, devicename);
+        }
+
         if(idx < 0)
         {
-            ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_VALUE);
+            LastError.store(ALC_INVALID_VALUE);
             TRACE("Failed to find driver for name \"%s\"\n", devicename);
             return nullptr;
         }
@@ -875,7 +867,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device)
 
     if(!device || (idx=LookupPtrIntMapKey(&DeviceIfaceMap, device)) < 0)
     {
-        ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
+        LastError.store(ALC_INVALID_DEVICE);
         return ALC_FALSE;
     }
     if(!DriverList[idx].alcCaptureCloseDevice(device))
@@ -892,7 +884,7 @@ ALC_API void ALC_APIENTRY alcCaptureStart(ALCdevice *device)
         if(idx >= 0)
             return DriverList[idx].alcCaptureStart(device);
     }
-    ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
+    LastError.store(ALC_INVALID_DEVICE);
 }
 
 ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
@@ -903,7 +895,7 @@ ALC_API void ALC_APIENTRY alcCaptureStop(ALCdevice *device)
         if(idx >= 0)
             return DriverList[idx].alcCaptureStop(device);
     }
-    ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
+    LastError.store(ALC_INVALID_DEVICE);
 }
 
 ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples)
@@ -914,7 +906,7 @@ ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, 
         if(idx >= 0)
             return DriverList[idx].alcCaptureSamples(device, buffer, samples);
     }
-    ATOMIC_STORE_SEQ(&LastError, ALC_INVALID_DEVICE);
+    LastError.store(ALC_INVALID_DEVICE);
 }
 
 
@@ -925,10 +917,10 @@ ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
 
     if(!context)
     {
-        DriverIface *oldiface = reinterpret_cast<DriverIface*>(altss_get(ThreadCtxDriver));
+        DriverIface *oldiface = ThreadCtxDriver;
         if(oldiface && !oldiface->alcSetThreadContext(nullptr))
             return ALC_FALSE;
-        altss_set(ThreadCtxDriver, nullptr);
+        ThreadCtxDriver = nullptr;
         return ALC_TRUE;
     }
 
@@ -937,23 +929,23 @@ ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
     {
         if(DriverList[idx].alcSetThreadContext(context))
         {
-            DriverIface *oldiface = reinterpret_cast<DriverIface*>(altss_get(ThreadCtxDriver));
+            DriverIface *oldiface = ThreadCtxDriver;
             if(oldiface != &DriverList[idx])
             {
-                altss_set(ThreadCtxDriver, &DriverList[idx]);
+                ThreadCtxDriver = &DriverList[idx];
                 if(oldiface) oldiface->alcSetThreadContext(nullptr);
             }
             return ALC_TRUE;
         }
         err = DriverList[idx].alcGetError(nullptr);
     }
-    ATOMIC_STORE_SEQ(&LastError, err);
+    LastError.store(err);
     return ALC_FALSE;
 }
 
 ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
 {
-    DriverIface *iface = reinterpret_cast<DriverIface*>(altss_get(ThreadCtxDriver));
+    DriverIface *iface = ThreadCtxDriver;
     if(iface) return iface->alcGetThreadContext();
     return nullptr;
 }

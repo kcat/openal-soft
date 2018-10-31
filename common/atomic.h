@@ -163,26 +163,26 @@ enum almemory_order {
 #elif defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
 
 #define WRAP_ADD(S, ret, dest, incr) __asm__ __volatile__(                    \
-    "lock; xadd"S" %0,(%1)"                                                   \
+    "lock; xadd" S " %0,(%1)"                                                 \
     : "=r" (ret)                                                              \
     : "r" (dest), "0" (incr)                                                  \
     : "memory"                                                                \
 )
 #define WRAP_SUB(S, ret, dest, decr) __asm__ __volatile__(                    \
-    "lock; xadd"S" %0,(%1)"                                                   \
+    "lock; xadd" S " %0,(%1)"                                                 \
     : "=r" (ret)                                                              \
     : "r" (dest), "0" (-(decr))                                               \
     : "memory"                                                                \
 )
 
 #define WRAP_XCHG(S, ret, dest, newval) __asm__ __volatile__(                 \
-    "lock; xchg"S" %0,(%1)"                                                   \
+    "lock; xchg" S " %0,(%1)"                                                 \
     : "=r" (ret)                                                              \
     : "r" (dest), "0" (newval)                                                \
     : "memory"                                                                \
 )
 #define WRAP_CMPXCHG(S, ret, dest, oldval, newval) __asm__ __volatile__(      \
-    "lock; cmpxchg"S" %2,(%1)"                                                \
+    "lock; cmpxchg" S " %2,(%1)"                                              \
     : "=a" (ret)                                                              \
     : "r" (dest), "r" (newval), "0" (oldval)                                  \
     : "memory"                                                                \

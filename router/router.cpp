@@ -63,11 +63,6 @@ BOOL APIENTRY DllMain(HINSTANCE UNUSED(module), DWORD reason, void* UNUSED(reser
             break;
 
         case DLL_PROCESS_DETACH:
-            for(auto &drv : DriverList)
-            {
-                if(drv.Module)
-                    FreeLibrary(drv.Module);
-            }
             DriverList.clear();
 
             if(LogFile && LogFile != stderr)
@@ -98,7 +93,7 @@ static void AddModule(HMODULE module, const WCHAR *name)
         }
     }
 
-    DriverList.emplace_back();
+    DriverList.emplace_back(name, module);
     DriverIface &newdrv = DriverList.back();
 
     /* Load required functions. */
@@ -209,8 +204,6 @@ static void AddModule(HMODULE module, const WCHAR *name)
     if(!err)
     {
         ALCint alc_ver[2] = { 0, 0 };
-        newdrv.Name = name;
-        newdrv.Module = module;
         newdrv.alcGetIntegerv(nullptr, ALC_MAJOR_VERSION, 1, &alc_ver[0]);
         newdrv.alcGetIntegerv(nullptr, ALC_MINOR_VERSION, 1, &alc_ver[1]);
         if(newdrv.alcGetError(nullptr) == ALC_NO_ERROR)

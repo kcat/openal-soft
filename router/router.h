@@ -31,7 +31,7 @@
 
 #define MAKE_ALC_VER(major, minor) (((major)<<8) | (minor))
 
-typedef struct DriverIface {
+struct DriverIface {
     std::wstring Name;
     HMODULE Module{nullptr};
     int ALCVer{0};
@@ -133,7 +133,17 @@ typedef struct DriverIface {
     LPALDOPPLERVELOCITY alDopplerVelocity{nullptr};
     LPALSPEEDOFSOUND alSpeedOfSound{nullptr};
     LPALDISTANCEMODEL alDistanceModel{nullptr};
-} DriverIface;
+
+    DriverIface(std::wstring name, HMODULE mod)
+      : Name(std::move(name)), Module(mod)
+    { }
+    ~DriverIface()
+    {
+        if(Module)
+            FreeLibrary(Module);
+        Module = nullptr;
+    }
+};
 
 extern std::vector<DriverIface> DriverList;
 

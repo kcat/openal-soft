@@ -914,7 +914,41 @@ int EventThread(void *arg);
 vector_al_string SearchDataFiles(const char *match, const char *subdir);
 
 #ifdef __cplusplus
-}
+} // extern "C"
+
+/* Simple RAII context reference. Takes the reference of the provided
+ * ALCcontext, and decrements it when leaving scope. Movable (transfer
+ * reference) but not copyable (no new references).
+ */
+class ContextRef {
+    ALCcontext *mCtx{nullptr};
+
+    void release() noexcept
+    {
+        if(mCtx)
+            ALCcontext_DecRef(mCtx);
+        mCtx = nullptr;
+    }
+
+public:
+    ContextRef() noexcept = default;
+    explicit ContextRef(ALCcontext *ctx) noexcept : mCtx(ctx) { }
+    ~ContextRef() { release(); }
+
+    ContextRef& operator=(const ContextRef&) = delete;
+    ContextRef& operator=(ContextRef&& rhs) noexcept
+    {
+        release();
+        mCtx = rhs.mCtx;
+        rhs.mCtx = nullptr;
+        return *this;
+    }
+
+    operator bool() const noexcept { return static_cast<bool>(mCtx); }
+
+    ALCcontext* operator->() noexcept { return mCtx; }
+    ALCcontext* get() noexcept { return mCtx; }
+};
 #endif
 
 #endif

@@ -28,6 +28,7 @@
 #include <malloc.h>
 #endif
 
+#include <array>
 #include <vector>
 #include <algorithm>
 

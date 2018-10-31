@@ -39,11 +39,6 @@
 #include "sample_cvt.h"
 
 
-extern inline void LockBufferList(ALCdevice *device);
-extern inline void UnlockBufferList(ALCdevice *device);
-extern inline ALsizei FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType type);
-extern inline ALsizei FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type);
-
 static ALbuffer *AllocBuffer(ALCcontext *context);
 static void FreeBuffer(ALCdevice *device, ALbuffer *buffer);
 static const ALchar *NameFromUserFmtType(enum UserFmtType type);

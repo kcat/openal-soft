@@ -1566,6 +1566,14 @@ void SetDefaultChannelOrder(ALCdevice *device)
 extern inline ALint GetChannelIndex(const enum Channel names[MAX_OUTPUT_CHANNELS], enum Channel chan);
 extern inline ALint GetChannelIdxByName(const RealMixParams *real, enum Channel chan);
 
+/* NOTE: These shouldn't really be here, but C++ (alBuffer.cpp) won't turn
+ * these extern inline declarations into callable functions.
+ */
+extern inline void LockBufferList(ALCdevice *device);
+extern inline void UnlockBufferList(ALCdevice *device);
+extern inline ALsizei FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType type);
+extern inline ALsizei FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type);
+
 
 /* ALCcontext_DeferUpdates
  *

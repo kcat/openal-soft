@@ -816,7 +816,7 @@ SET(OPENAL_OBJS
     OpenAL32/Include/alAuxEffectSlot.h
     OpenAL32/alAuxEffectSlot.c
     OpenAL32/Include/alBuffer.h
-    OpenAL32/alBuffer.c
+    OpenAL32/alBuffer.cpp
     OpenAL32/Include/alEffect.h
     OpenAL32/alEffect.c
     OpenAL32/Include/alError.h

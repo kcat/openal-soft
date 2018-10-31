@@ -28,6 +28,9 @@
 #include <malloc.h>
 #endif
 
+#include <vector>
+#include <algorithm>
+
 #include "alMain.h"
 #include "alu.h"
 #include "alError.h"
@@ -51,112 +54,116 @@ static ALsizei SanitizeAlignment(enum UserFmtType type, ALsizei align);
 
 static inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
 {
-    BufferSubList *sublist;
     ALuint lidx = (id-1) >> 6;
     ALsizei slidx = (id-1) & 0x3f;
 
     if(UNLIKELY(lidx >= VECTOR_SIZE(device->BufferList)))
-        return NULL;
-    sublist = &VECTOR_ELEM(device->BufferList, lidx);
+        return nullptr;
+    BufferSubList *sublist = &VECTOR_ELEM(device->BufferList, lidx);
     if(UNLIKELY(sublist->FreeMask & (U64(1)<<slidx)))
-        return NULL;
+        return nullptr;
     return sublist->Buffers + slidx;
 }
-
 
 #define INVALID_STORAGE_MASK ~(AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT | AL_PRESERVE_DATA_BIT_SOFT | AL_MAP_PERSISTENT_BIT_SOFT)
 #define MAP_READ_WRITE_FLAGS (AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT)
 #define INVALID_MAP_FLAGS ~(AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT | AL_MAP_PERSISTENT_BIT_SOFT)
 
-
 AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
 {
-    ALCcontext *context;
-    ALsizei cur = 0;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
-
-    if(n < 0)
-        alSetError(context, AL_INVALID_VALUE, "Generating %d buffers", n);
-    else for(cur = 0;cur < n;cur++)
+    if(UNLIKELY(n < 0))
     {
-        ALbuffer *buffer = AllocBuffer(context);
-        if(!buffer)
-        {
-            alDeleteBuffers(cur, buffers);
-            break;
-        }
-
-        buffers[cur] = buffer->id;
+        alSetError(context.get(), AL_INVALID_VALUE, "Generating %d buffers", n);
+        return;
     }
 
-    ALCcontext_DecRef(context);
+    if(LIKELY(n == 1))
+    {
+        /* Special handling for the easy and normal case. */
+        ALbuffer *buffer = AllocBuffer(context.get());
+        if(buffer) buffers[0] = buffer->id;
+    }
+    else if(n > 1)
+    {
+        /* Store the allocated buffer IDs in a separate local list, to avoid
+         * modifying the user storage in case of failure.
+         */
+        std::vector<ALuint> ids;
+        ids.reserve(n);
+        do {
+            ALbuffer *buffer = AllocBuffer(context.get());
+            if(!buffer)
+            {
+                alDeleteBuffers(ids.size(), ids.data());
+                return;
+            }
+
+            ids.emplace_back(buffer->id);
+        } while(--n);
+        std::copy(ids.begin(), ids.end(), buffers);
+    }
 }
 
 AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
 {
-    ALCdevice *device;
-    ALCcontext *context;
-    ALbuffer *ALBuf;
-    ALsizei i;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
-
-    device = context->Device;
-
-    LockBufferList(device);
     if(UNLIKELY(n < 0))
     {
-        alSetError(context, AL_INVALID_VALUE, "Deleting %d buffers", n);
-        goto done;
+        alSetError(context.get(), AL_INVALID_VALUE, "Deleting %d buffers", n);
+        return;
     }
+    if(UNLIKELY(n == 0))
+        return;
 
-    for(i = 0;i < n;i++)
-    {
-        if(!buffers[i])
-            continue;
+    ALCdevice *device = context->Device;
+    std::lock_guard<almtx_t> _{device->BufferLock};
 
-        /* Check for valid Buffer ID, and make sure it's not in use. */
-        if((ALBuf=LookupBuffer(device, buffers[i])) == NULL)
+    /* First try to find any buffers that are invalid or in-use. */
+    const ALuint *buffers_end = buffers + n;
+    auto invbuf = std::find_if(buffers, buffers_end,
+        [device, &context](ALuint bid) -> bool
         {
-            alSetError(context, AL_INVALID_NAME, "Invalid buffer ID %u", buffers[i]);
-            goto done;
+            if(!bid) return false;
+            ALbuffer *ALBuf = LookupBuffer(device, bid);
+            if(UNLIKELY(!ALBuf))
+            {
+                alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", bid);
+                return true;
+            }
+            if(UNLIKELY(ReadRef(&ALBuf->ref) != 0))
+            {
+                alSetError(context.get(), AL_INVALID_OPERATION, "Deleting in-use buffer %u", bid);
+                return true;
+            }
+            return false;
         }
-        if(ReadRef(&ALBuf->ref) != 0)
-        {
-            alSetError(context, AL_INVALID_OPERATION, "Deleting in-use buffer %u", buffers[i]);
-            goto done;
-        }
-    }
-    for(i = 0;i < n;i++)
+    );
+    if(LIKELY(invbuf == buffers_end))
     {
-        if((ALBuf=LookupBuffer(device, buffers[i])) != NULL)
-            FreeBuffer(device, ALBuf);
+        /* All good. Delete non-0 buffer IDs. */
+        std::for_each(buffers, buffers_end,
+            [device](ALuint bid) -> void
+            { if(bid) FreeBuffer(device, LookupBuffer(device, bid)); }
+        );
     }
-
-done:
-    UnlockBufferList(device);
-    ALCcontext_DecRef(context);
 }
 
 AL_API ALboolean AL_APIENTRY alIsBuffer(ALuint buffer)
 {
-    ALCcontext *context;
-    ALboolean ret;
-
-    context = GetContextRef();
-    if(!context) return AL_FALSE;
-
-    LockBufferList(context->Device);
-    ret = ((!buffer || LookupBuffer(context->Device, buffer)) ?
-           AL_TRUE : AL_FALSE);
-    UnlockBufferList(context->Device);
-
-    ALCcontext_DecRef(context);
-
-    return ret;
+    ContextRef context{GetContextRef()};
+    if(LIKELY(context))
+    {
+        ALCdevice *device = context->Device;
+        std::lock_guard<almtx_t> _{device->BufferLock};
+        if(!buffer || LookupBuffer(device, buffer))
+            return AL_TRUE;
+    }
+    return AL_FALSE;
 }
 
 
@@ -165,138 +172,123 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
 
 AL_API void AL_APIENTRY alBufferStorageSOFT(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq, ALbitfieldSOFT flags)
 {
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
+
+    ALCdevice *device = context->Device;
+    std::lock_guard<almtx_t> _{device->BufferLock};
+
     enum UserFmtChannels srcchannels = UserFmtMono;
     enum UserFmtType srctype = UserFmtUByte;
-    ALCdevice *device;
-    ALCcontext *context;
     ALbuffer *albuf;
 
-    context = GetContextRef();
-    if(!context) return;
-
-    device = context->Device;
-    LockBufferList(device);
-    if(UNLIKELY((albuf=LookupBuffer(device, buffer)) == NULL))
-        alSetError(context, AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    if(UNLIKELY((albuf=LookupBuffer(device, buffer)) == nullptr))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(size < 0))
-        alSetError(context, AL_INVALID_VALUE, "Negative storage size %d", size);
+        alSetError(context.get(), AL_INVALID_VALUE, "Negative storage size %d", size);
     else if(UNLIKELY(freq < 1))
-        alSetError(context, AL_INVALID_VALUE, "Invalid sample rate %d", freq);
+        alSetError(context.get(), AL_INVALID_VALUE, "Invalid sample rate %d", freq);
     else if(UNLIKELY((flags&INVALID_STORAGE_MASK) != 0))
-        alSetError(context, AL_INVALID_VALUE, "Invalid storage flags 0x%x",
+        alSetError(context.get(), AL_INVALID_VALUE, "Invalid storage flags 0x%x",
                    flags&INVALID_STORAGE_MASK);
     else if(UNLIKELY((flags&AL_MAP_PERSISTENT_BIT_SOFT) && !(flags&MAP_READ_WRITE_FLAGS)))
-        alSetError(context, AL_INVALID_VALUE,
+        alSetError(context.get(), AL_INVALID_VALUE,
                    "Declaring persistently mapped storage without read or write access");
     else if(UNLIKELY(DecomposeUserFormat(format, &srcchannels, &srctype) == AL_FALSE))
-        alSetError(context, AL_INVALID_ENUM, "Invalid format 0x%04x", format);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid format 0x%04x", format);
     else
-        LoadData(context, albuf, freq, size, srcchannels, srctype, data, flags);
-
-    UnlockBufferList(device);
-    ALCcontext_DecRef(context);
+        LoadData(context.get(), albuf, freq, size, srcchannels, srctype, data, flags);
 }
 
 AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei length, ALbitfieldSOFT access)
 {
-    void *retval = NULL;
-    ALCdevice *device;
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return nullptr;
+
+    ALCdevice *device = context->Device;
+    std::lock_guard<almtx_t> _{device->BufferLock};
+
     ALbuffer *albuf;
-
-    context = GetContextRef();
-    if(!context) return retval;
-
-    device = context->Device;
-    LockBufferList(device);
-    if(UNLIKELY((albuf=LookupBuffer(device, buffer)) == NULL))
-        alSetError(context, AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    if(UNLIKELY((albuf=LookupBuffer(device, buffer)) == nullptr))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY((access&INVALID_MAP_FLAGS) != 0))
-        alSetError(context, AL_INVALID_VALUE, "Invalid map flags 0x%x", access&INVALID_MAP_FLAGS);
+        alSetError(context.get(), AL_INVALID_VALUE, "Invalid map flags 0x%x", access&INVALID_MAP_FLAGS);
     else if(UNLIKELY(!(access&MAP_READ_WRITE_FLAGS)))
-        alSetError(context, AL_INVALID_VALUE, "Mapping buffer %u without read or write access",
+        alSetError(context.get(), AL_INVALID_VALUE, "Mapping buffer %u without read or write access",
                    buffer);
     else
     {
         ALbitfieldSOFT unavailable = (albuf->Access^access) & access;
         if(UNLIKELY(ReadRef(&albuf->ref) != 0 && !(access&AL_MAP_PERSISTENT_BIT_SOFT)))
-            alSetError(context, AL_INVALID_OPERATION,
+            alSetError(context.get(), AL_INVALID_OPERATION,
                        "Mapping in-use buffer %u without persistent mapping", buffer);
         else if(UNLIKELY(albuf->MappedAccess != 0))
-            alSetError(context, AL_INVALID_OPERATION, "Mapping already-mapped buffer %u", buffer);
+            alSetError(context.get(), AL_INVALID_OPERATION, "Mapping already-mapped buffer %u", buffer);
         else if(UNLIKELY((unavailable&AL_MAP_READ_BIT_SOFT)))
-            alSetError(context, AL_INVALID_VALUE,
+            alSetError(context.get(), AL_INVALID_VALUE,
                        "Mapping buffer %u for reading without read access", buffer);
         else if(UNLIKELY((unavailable&AL_MAP_WRITE_BIT_SOFT)))
-            alSetError(context, AL_INVALID_VALUE,
+            alSetError(context.get(), AL_INVALID_VALUE,
                        "Mapping buffer %u for writing without write access", buffer);
         else if(UNLIKELY((unavailable&AL_MAP_PERSISTENT_BIT_SOFT)))
-            alSetError(context, AL_INVALID_VALUE,
+            alSetError(context.get(), AL_INVALID_VALUE,
                        "Mapping buffer %u persistently without persistent access", buffer);
         else if(UNLIKELY(offset < 0 || offset >= albuf->OriginalSize ||
                          length <= 0 || length > albuf->OriginalSize - offset))
-            alSetError(context, AL_INVALID_VALUE, "Mapping invalid range %d+%d for buffer %u",
+            alSetError(context.get(), AL_INVALID_VALUE, "Mapping invalid range %d+%d for buffer %u",
                        offset, length, buffer);
         else
         {
-            retval = (ALbyte*)albuf->data + offset;
+            void *retval = (ALbyte*)albuf->data + offset;
             albuf->MappedAccess = access;
             albuf->MappedOffset = offset;
             albuf->MappedSize = length;
+            return retval;
         }
     }
-    UnlockBufferList(device);
 
-    ALCcontext_DecRef(context);
-    return retval;
+    return nullptr;
 }
 
 AL_API void AL_APIENTRY alUnmapBufferSOFT(ALuint buffer)
 {
-    ALCdevice *device;
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
+
+    ALCdevice *device = context->Device;
+    std::lock_guard<almtx_t> _{device->BufferLock};
+
     ALbuffer *albuf;
-
-    context = GetContextRef();
-    if(!context) return;
-
-    device = context->Device;
-    LockBufferList(device);
-    if((albuf=LookupBuffer(device, buffer)) == NULL)
-        alSetError(context, AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    if((albuf=LookupBuffer(device, buffer)) == nullptr)
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(albuf->MappedAccess == 0)
-        alSetError(context, AL_INVALID_OPERATION, "Unmapping unmapped buffer %u", buffer);
+        alSetError(context.get(), AL_INVALID_OPERATION, "Unmapping unmapped buffer %u", buffer);
     else
     {
         albuf->MappedAccess = 0;
         albuf->MappedOffset = 0;
         albuf->MappedSize = 0;
     }
-    UnlockBufferList(device);
-
-    ALCcontext_DecRef(context);
 }
 
 AL_API void AL_APIENTRY alFlushMappedBufferSOFT(ALuint buffer, ALsizei offset, ALsizei length)
 {
-    ALCdevice *device;
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
+
+    ALCdevice *device = context->Device;
+    std::lock_guard<almtx_t> _{device->BufferLock};
+
     ALbuffer *albuf;
-
-    context = GetContextRef();
-    if(!context) return;
-
-    device = context->Device;
-    LockBufferList(device);
-    if(UNLIKELY((albuf=LookupBuffer(device, buffer)) == NULL))
-        alSetError(context, AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    if(UNLIKELY((albuf=LookupBuffer(device, buffer)) == nullptr))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(!(albuf->MappedAccess&AL_MAP_WRITE_BIT_SOFT)))
-        alSetError(context, AL_INVALID_OPERATION,
+        alSetError(context.get(), AL_INVALID_OPERATION,
                    "Flushing buffer %u while not mapped for writing", buffer);
     else if(UNLIKELY(offset < albuf->MappedOffset ||
                      offset >= albuf->MappedOffset+albuf->MappedSize ||
                      length <= 0 || length > albuf->MappedOffset+albuf->MappedSize-offset))
-        alSetError(context, AL_INVALID_VALUE, "Flushing invalid range %d+%d on buffer %u",
+        alSetError(context.get(), AL_INVALID_VALUE, "Flushing invalid range %d+%d on buffer %u",
                    offset, length, buffer);
     else
     {
@@ -307,49 +299,44 @@ AL_API void AL_APIENTRY alFlushMappedBufferSOFT(ALuint buffer, ALsizei offset, A
          */
         ATOMIC_THREAD_FENCE(almemory_order_seq_cst);
     }
-    UnlockBufferList(device);
-
-    ALCcontext_DecRef(context);
 }
 
 AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, const ALvoid *data, ALsizei offset, ALsizei length)
 {
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
+
+    ALCdevice *device = context->Device;
+    std::lock_guard<almtx_t> _{device->BufferLock};
+
     enum UserFmtChannels srcchannels = UserFmtMono;
     enum UserFmtType srctype = UserFmtUByte;
-    ALCdevice *device;
-    ALCcontext *context;
     ALbuffer *albuf;
 
-    context = GetContextRef();
-    if(!context) return;
-
-    device = context->Device;
-    LockBufferList(device);
-    if(UNLIKELY((albuf=LookupBuffer(device, buffer)) == NULL))
-        alSetError(context, AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    if(UNLIKELY((albuf=LookupBuffer(device, buffer)) == nullptr))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(DecomposeUserFormat(format, &srcchannels, &srctype) == AL_FALSE))
-        alSetError(context, AL_INVALID_ENUM, "Invalid format 0x%04x", format);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid format 0x%04x", format);
     else
     {
         ALsizei unpack_align, align;
         ALsizei byte_align;
         ALsizei frame_size;
         ALsizei num_chans;
-        void *dst;
 
         unpack_align = ATOMIC_LOAD_SEQ(&albuf->UnpackAlign);
         align = SanitizeAlignment(srctype, unpack_align);
         if(UNLIKELY(align < 1))
-            alSetError(context, AL_INVALID_VALUE, "Invalid unpack alignment %d", unpack_align);
+            alSetError(context.get(), AL_INVALID_VALUE, "Invalid unpack alignment %d", unpack_align);
         else if(UNLIKELY((long)srcchannels != (long)albuf->FmtChannels ||
                          srctype != albuf->OriginalType))
-            alSetError(context, AL_INVALID_ENUM, "Unpacking data with mismatched format");
+            alSetError(context.get(), AL_INVALID_ENUM, "Unpacking data with mismatched format");
         else if(UNLIKELY(align != albuf->OriginalAlign))
-            alSetError(context, AL_INVALID_VALUE,
+            alSetError(context.get(), AL_INVALID_VALUE,
                        "Unpacking data with alignment %u does not match original alignment %u",
                        align, albuf->OriginalAlign);
         else if(UNLIKELY(albuf->MappedAccess != 0))
-            alSetError(context, AL_INVALID_OPERATION, "Unpacking data into mapped buffer %u",
+            alSetError(context.get(), AL_INVALID_OPERATION, "Unpacking data into mapped buffer %u",
                        buffer);
         else
         {
@@ -364,14 +351,14 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
 
             if(UNLIKELY(offset < 0 || length < 0 || offset > albuf->OriginalSize ||
                         length > albuf->OriginalSize-offset))
-                alSetError(context, AL_INVALID_VALUE, "Invalid data sub-range %d+%d on buffer %u",
+                alSetError(context.get(), AL_INVALID_VALUE, "Invalid data sub-range %d+%d on buffer %u",
                             offset, length, buffer);
             else if(UNLIKELY((offset%byte_align) != 0))
-                alSetError(context, AL_INVALID_VALUE,
+                alSetError(context.get(), AL_INVALID_VALUE,
                     "Sub-range offset %d is not a multiple of frame size %d (%d unpack alignment)",
                     offset, byte_align, align);
             else if(UNLIKELY((length%byte_align) != 0))
-                alSetError(context, AL_INVALID_VALUE,
+                alSetError(context.get(), AL_INVALID_VALUE,
                     "Sub-range length %d is not a multiple of frame size %d (%d unpack alignment)",
                     length, byte_align, align);
             else
@@ -380,11 +367,13 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
                 offset = offset/byte_align * align * frame_size;
                 length = length/byte_align * align;
 
-                dst = (ALbyte*)albuf->data + offset;
+                void *dst = static_cast<ALbyte*>(albuf->data) + offset;
                 if(srctype == UserFmtIMA4 && albuf->FmtType == FmtShort)
-                    Convert_ALshort_ALima4(dst, data, num_chans, length, align);
+                    Convert_ALshort_ALima4(static_cast<ALshort*>(dst),
+                        static_cast<const ALubyte*>(data), num_chans, length, align);
                 else if(srctype == UserFmtMSADPCM && albuf->FmtType == FmtShort)
-                    Convert_ALshort_ALmsadpcm(dst, data, num_chans, length, align);
+                    Convert_ALshort_ALmsadpcm(static_cast<ALshort*>(dst),
+                        static_cast<const ALubyte*>(data), num_chans, length, align);
                 else
                 {
                     assert((long)srctype == (long)albuf->FmtType);
@@ -393,9 +382,6 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
             }
         }
     }
-    UnlockBufferList(device);
-
-    ALCcontext_DecRef(context);
 }
 
 
@@ -403,224 +389,181 @@ AL_API void AL_APIENTRY alBufferSamplesSOFT(ALuint UNUSED(buffer),
   ALuint UNUSED(samplerate), ALenum UNUSED(internalformat), ALsizei UNUSED(samples),
   ALenum UNUSED(channels), ALenum UNUSED(type), const ALvoid *UNUSED(data))
 {
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
-
-    alSetError(context, AL_INVALID_OPERATION, "alBufferSamplesSOFT not supported");
-
-    ALCcontext_DecRef(context);
+    alSetError(context.get(), AL_INVALID_OPERATION, "alBufferSamplesSOFT not supported");
 }
 
 AL_API void AL_APIENTRY alBufferSubSamplesSOFT(ALuint UNUSED(buffer),
   ALsizei UNUSED(offset), ALsizei UNUSED(samples),
   ALenum UNUSED(channels), ALenum UNUSED(type), const ALvoid *UNUSED(data))
 {
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
-
-    alSetError(context, AL_INVALID_OPERATION, "alBufferSubSamplesSOFT not supported");
-
-    ALCcontext_DecRef(context);
+    alSetError(context.get(), AL_INVALID_OPERATION, "alBufferSubSamplesSOFT not supported");
 }
 
 AL_API void AL_APIENTRY alGetBufferSamplesSOFT(ALuint UNUSED(buffer),
   ALsizei UNUSED(offset), ALsizei UNUSED(samples),
   ALenum UNUSED(channels), ALenum UNUSED(type), ALvoid *UNUSED(data))
 {
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
-
-    alSetError(context, AL_INVALID_OPERATION, "alGetBufferSamplesSOFT not supported");
-
-    ALCcontext_DecRef(context);
+    alSetError(context.get(), AL_INVALID_OPERATION, "alGetBufferSamplesSOFT not supported");
 }
 
 AL_API ALboolean AL_APIENTRY alIsBufferFormatSupportedSOFT(ALenum UNUSED(format))
 {
-    ALCcontext *context;
-
-    context = GetContextRef();
+    ContextRef context{GetContextRef()};
     if(!context) return AL_FALSE;
 
-    alSetError(context, AL_INVALID_OPERATION, "alIsBufferFormatSupportedSOFT not supported");
-
-    ALCcontext_DecRef(context);
+    alSetError(context.get(), AL_INVALID_OPERATION, "alIsBufferFormatSupportedSOFT not supported");
     return AL_FALSE;
 }
 
 
 AL_API void AL_APIENTRY alBufferf(ALuint buffer, ALenum param, ALfloat UNUSED(value))
 {
-    ALCdevice *device;
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
+    ALCdevice *device = context->Device;
+    std::lock_guard<almtx_t> _{device->BufferLock};
 
-    device = context->Device;
-    LockBufferList(device);
-    if(UNLIKELY(LookupBuffer(device, buffer) == NULL))
-        alSetError(context, AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid buffer float property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer float property 0x%04x", param);
     }
-    UnlockBufferList(device);
-
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API void AL_APIENTRY alBuffer3f(ALuint buffer, ALenum param, ALfloat UNUSED(value1), ALfloat UNUSED(value2), ALfloat UNUSED(value3))
 {
-    ALCdevice *device;
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
+    ALCdevice *device = context->Device;
+    std::lock_guard<almtx_t> _{device->BufferLock};
 
-    device = context->Device;
-    LockBufferList(device);
-    if(UNLIKELY(LookupBuffer(device, buffer) == NULL))
-        alSetError(context, AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid buffer 3-float property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer 3-float property 0x%04x", param);
     }
-    UnlockBufferList(device);
-
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API void AL_APIENTRY alBufferfv(ALuint buffer, ALenum param, const ALfloat *values)
 {
-    ALCdevice *device;
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
+    ALCdevice *device = context->Device;
+    std::lock_guard<almtx_t> _{device->BufferLock};
 
-    device = context->Device;
-    LockBufferList(device);
-    if(UNLIKELY(LookupBuffer(device, buffer) == NULL))
-        alSetError(context, AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(!values))
-        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid buffer float-vector property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer float-vector property 0x%04x", param);
     }
-    UnlockBufferList(device);
-
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API void AL_APIENTRY alBufferi(ALuint buffer, ALenum param, ALint value)
 {
-    ALCdevice *device;
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
+
+    ALCdevice *device = context->Device;
+    std::lock_guard<almtx_t> _{device->BufferLock};
+
     ALbuffer *albuf;
-
-    context = GetContextRef();
-    if(!context) return;
-
-    device = context->Device;
-    LockBufferList(device);
-    if(UNLIKELY((albuf=LookupBuffer(device, buffer)) == NULL))
-        alSetError(context, AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    if(UNLIKELY((albuf=LookupBuffer(device, buffer)) == nullptr))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else switch(param)
     {
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
         if(UNLIKELY(value < 0))
-            alSetError(context, AL_INVALID_VALUE, "Invalid unpack block alignment %d", value);
+            alSetError(context.get(), AL_INVALID_VALUE, "Invalid unpack block alignment %d", value);
         else
             ATOMIC_STORE_SEQ(&albuf->UnpackAlign, value);
         break;
 
     case AL_PACK_BLOCK_ALIGNMENT_SOFT:
         if(UNLIKELY(value < 0))
-            alSetError(context, AL_INVALID_VALUE, "Invalid pack block alignment %d", value);
+            alSetError(context.get(), AL_INVALID_VALUE, "Invalid pack block alignment %d", value);
         else
             ATOMIC_STORE_SEQ(&albuf->PackAlign, value);
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid buffer integer property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer integer property 0x%04x", param);
     }
-    UnlockBufferList(device);
-
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API void AL_APIENTRY alBuffer3i(ALuint buffer, ALenum param, ALint UNUSED(value1), ALint UNUSED(value2), ALint UNUSED(value3))
 {
-    ALCdevice *device;
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
+    ALCdevice *device = context->Device;
+    std::lock_guard<almtx_t> _{device->BufferLock};
 
-    device = context->Device;
-    LockBufferList(device);
-    if(UNLIKELY(LookupBuffer(device, buffer) == NULL))
-        alSetError(context, AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid buffer 3-integer property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer 3-integer property 0x%04x", param);
     }
-    UnlockBufferList(device);
-
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum param, const ALint *values)
 {
-    ALCdevice *device;
-    ALCcontext *context;
-    ALbuffer *albuf;
-
     if(values)
     {
         switch(param)
         {
-            case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
-            case AL_PACK_BLOCK_ALIGNMENT_SOFT:
-                alBufferi(buffer, param, values[0]);
-                return;
+        case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
+        case AL_PACK_BLOCK_ALIGNMENT_SOFT:
+            alBufferi(buffer, param, values[0]);
+            return;
         }
     }
 
-    context = GetContextRef();
-    if(!context) return;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    device = context->Device;
-    LockBufferList(device);
-    if(UNLIKELY((albuf=LookupBuffer(device, buffer)) == NULL))
-        alSetError(context, AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    ALCdevice *device = context->Device;
+    std::lock_guard<almtx_t> _{device->BufferLock};
+
+    ALbuffer *albuf;
+    if(UNLIKELY((albuf=LookupBuffer(device, buffer)) == nullptr))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(!values))
-        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_LOOP_POINTS_SOFT:
         if(UNLIKELY(ReadRef(&albuf->ref) != 0))
-            alSetError(context, AL_INVALID_OPERATION, "Modifying in-use buffer %u's loop points",
+            alSetError(context.get(), AL_INVALID_OPERATION, "Modifying in-use buffer %u's loop points",
                        buffer);
         else if(UNLIKELY(values[0] >= values[1] || values[0] < 0 || values[1] > albuf->SampleLen))
-            alSetError(context, AL_INVALID_VALUE, "Invalid loop point range %d -> %d o buffer %u",
+            alSetError(context.get(), AL_INVALID_VALUE, "Invalid loop point range %d -> %d o buffer %u",
                        values[0], values[1], buffer);
         else
         {
@@ -630,71 +573,55 @@ AL_API void AL_APIENTRY alBufferiv(ALuint buffer, ALenum param, const ALint *val
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid buffer integer-vector property 0x%04x",
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer integer-vector property 0x%04x",
                    param);
     }
-    UnlockBufferList(device);
-
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alGetBufferf(ALuint buffer, ALenum param, ALfloat *value)
 {
-    ALCdevice *device;
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
+
+    ALCdevice *device = context->Device;
+    std::lock_guard<almtx_t> _{device->BufferLock};
+
     ALbuffer *albuf;
-
-    context = GetContextRef();
-    if(!context) return;
-
-    device = context->Device;
-    LockBufferList(device);
-    if(UNLIKELY((albuf=LookupBuffer(device, buffer)) == NULL))
-        alSetError(context, AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    if(UNLIKELY((albuf=LookupBuffer(device, buffer)) == nullptr))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(!value))
-        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid buffer float property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer float property 0x%04x", param);
     }
-    UnlockBufferList(device);
-
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API void AL_APIENTRY alGetBuffer3f(ALuint buffer, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3)
 {
-    ALCdevice *device;
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
+    ALCdevice *device = context->Device;
+    std::lock_guard<almtx_t> _{device->BufferLock};
 
-    device = context->Device;
-    LockBufferList(device);
-    if(UNLIKELY(LookupBuffer(device, buffer) == NULL))
-        alSetError(context, AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(!value1 || !value2 || !value3))
-        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid buffer 3-float property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer 3-float property 0x%04x", param);
     }
-    UnlockBufferList(device);
-
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API void AL_APIENTRY alGetBufferfv(ALuint buffer, ALenum param, ALfloat *values)
 {
-    ALCdevice *device;
-    ALCcontext *context;
-
     switch(param)
     {
     case AL_SEC_LENGTH_SOFT:
@@ -702,41 +629,37 @@ AL_API void AL_APIENTRY alGetBufferfv(ALuint buffer, ALenum param, ALfloat *valu
         return;
     }
 
-    context = GetContextRef();
-    if(!context) return;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    device = context->Device;
-    LockBufferList(device);
-    if(UNLIKELY(LookupBuffer(device, buffer) == NULL))
-        alSetError(context, AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    ALCdevice *device = context->Device;
+    std::lock_guard<almtx_t> _{device->BufferLock};
+
+    if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(!values))
-        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid buffer float-vector property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer float-vector property 0x%04x", param);
     }
-    UnlockBufferList(device);
-
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum param, ALint *value)
 {
-    ALCdevice *device;
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
+
+    ALCdevice *device = context->Device;
+    std::lock_guard<almtx_t> _{device->BufferLock};
+
     ALbuffer *albuf;
-
-    context = GetContextRef();
-    if(!context) return;
-
-    device = context->Device;
-    LockBufferList(device);
-    if(UNLIKELY((albuf=LookupBuffer(device, buffer)) == NULL))
-        alSetError(context, AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    if(UNLIKELY((albuf=LookupBuffer(device, buffer)) == nullptr))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(!value))
-        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_FREQUENCY:
@@ -765,45 +688,33 @@ AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum param, ALint *value
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid buffer integer property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer integer property 0x%04x", param);
     }
-    UnlockBufferList(device);
-
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API void AL_APIENTRY alGetBuffer3i(ALuint buffer, ALenum param, ALint *value1, ALint *value2, ALint *value3)
 {
-    ALCdevice *device;
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
+    ALCdevice *device = context->Device;
+    std::lock_guard<almtx_t> _{device->BufferLock};
 
-    device = context->Device;
-    LockBufferList(device);
-    if(UNLIKELY(LookupBuffer(device, buffer) == NULL))
-        alSetError(context, AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    if(UNLIKELY(LookupBuffer(device, buffer) == nullptr))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(!value1 || !value2 || !value3))
-        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid buffer 3-integer property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer 3-integer property 0x%04x", param);
     }
-    UnlockBufferList(device);
-
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum param, ALint *values)
 {
-    ALCdevice *device;
-    ALCcontext *context;
-    ALbuffer   *albuf;
-
     switch(param)
     {
     case AL_FREQUENCY:
@@ -819,15 +730,17 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum param, ALint *values
         return;
     }
 
-    context = GetContextRef();
-    if(!context) return;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    device = context->Device;
-    LockBufferList(device);
-    if(UNLIKELY((albuf=LookupBuffer(device, buffer)) == NULL))
-        alSetError(context, AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
+    ALCdevice *device = context->Device;
+    std::lock_guard<almtx_t> _{device->BufferLock};
+
+    ALbuffer *albuf;
+    if(UNLIKELY((albuf=LookupBuffer(device, buffer)) == nullptr))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
     else if(UNLIKELY(!values))
-        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_LOOP_POINTS_SOFT:
@@ -836,12 +749,9 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum param, ALint *values
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid buffer integer-vector property 0x%04x",
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid buffer integer-vector property 0x%04x",
                    param);
     }
-    UnlockBufferList(device);
-
-    ALCcontext_DecRef(context);
 }
 
 
@@ -991,21 +901,23 @@ static void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei 
     if(SrcType == UserFmtIMA4)
     {
         assert(DstType == FmtShort);
-        if(data != NULL && ALBuf->data != NULL)
-            Convert_ALshort_ALima4(ALBuf->data, data, NumChannels, frames, align);
+        if(data != nullptr && ALBuf->data != nullptr)
+            Convert_ALshort_ALima4(static_cast<ALshort*>(ALBuf->data),
+                static_cast<const ALubyte*>(data), NumChannels, frames, align);
         ALBuf->OriginalAlign = align;
     }
     else if(SrcType == UserFmtMSADPCM)
     {
         assert(DstType == FmtShort);
-        if(data != NULL && ALBuf->data != NULL)
-            Convert_ALshort_ALmsadpcm(ALBuf->data, data, NumChannels, frames, align);
+        if(data != nullptr && ALBuf->data != nullptr)
+            Convert_ALshort_ALmsadpcm(static_cast<ALshort*>(ALBuf->data),
+                static_cast<const ALubyte*>(data), NumChannels, frames, align);
         ALBuf->OriginalAlign = align;
     }
     else
     {
         assert((long)SrcType == (long)DstType);
-        if(data != NULL && ALBuf->data != NULL)
+        if(data != nullptr && ALBuf->data != nullptr)
             memcpy(ALBuf->data, data, frames*FrameSize);
         ALBuf->OriginalAlign = 1;
     }
@@ -1057,11 +969,12 @@ ALsizei ChannelsFromUserFmt(enum UserFmtChannels chans)
 static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans,
                                      enum UserFmtType *type)
 {
-    static const struct {
+    struct FormatMap {
         ALenum format;
-        enum UserFmtChannels channels;
-        enum UserFmtType type;
-    } list[] = {
+        UserFmtChannels channels;
+        UserFmtType type;
+    };
+    static const std::array<FormatMap,46> list{{
         { AL_FORMAT_MONO8,             UserFmtMono, UserFmtUByte   },
         { AL_FORMAT_MONO16,            UserFmtMono, UserFmtShort   },
         { AL_FORMAT_MONO_FLOAT32,      UserFmtMono, UserFmtFloat   },
@@ -1117,15 +1030,14 @@ static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans,
         { AL_FORMAT_BFORMAT3D_16,      UserFmtBFormat3D, UserFmtShort },
         { AL_FORMAT_BFORMAT3D_FLOAT32, UserFmtBFormat3D, UserFmtFloat },
         { AL_FORMAT_BFORMAT3D_MULAW,   UserFmtBFormat3D, UserFmtMulaw },
-    };
-    ALuint i;
+    }};
 
-    for(i = 0;i < COUNTOF(list);i++)
+    for(const auto &fmt : list)
     {
-        if(list[i].format == format)
+        if(fmt.format == format)
         {
-            *chans = list[i].channels;
-            *type  = list[i].type;
+            *chans = fmt.channels;
+            *type  = fmt.type;
             return AL_TRUE;
         }
     }
@@ -1204,11 +1116,12 @@ static ALbuffer *AllocBuffer(ALCcontext *context)
 {
     ALCdevice *device = context->Device;
     BufferSubList *sublist, *subend;
-    ALbuffer *buffer = NULL;
+    ALbuffer *buffer = nullptr;
     ALsizei lidx = 0;
     ALsizei slidx;
 
-    almtx_lock(&device->BufferLock);
+    std::unique_lock<almtx_t> buflock{device->BufferLock};
+
     sublist = VECTOR_BEGIN(device->BufferList);
     subend = VECTOR_END(device->BufferList);
     for(;sublist != subend;++sublist)
@@ -1223,27 +1136,27 @@ static ALbuffer *AllocBuffer(ALCcontext *context)
     }
     if(UNLIKELY(!buffer))
     {
-        const BufferSubList empty_sublist = { 0, NULL };
+        const BufferSubList empty_sublist = { 0, nullptr };
         /* Don't allocate so many list entries that the 32-bit ID could
          * overflow...
          */
         if(UNLIKELY(VECTOR_SIZE(device->BufferList) >= 1<<25))
         {
-            almtx_unlock(&device->BufferLock);
+            buflock.unlock();
             alSetError(context, AL_OUT_OF_MEMORY, "Too many buffers allocated");
-            return NULL;
+            return nullptr;
         }
         lidx = (ALsizei)VECTOR_SIZE(device->BufferList);
         VECTOR_PUSH_BACK(device->BufferList, empty_sublist);
         sublist = &VECTOR_BACK(device->BufferList);
         sublist->FreeMask = ~U64(0);
-        sublist->Buffers = al_calloc(16, sizeof(ALbuffer)*64);
+        sublist->Buffers = reinterpret_cast<ALbuffer*>(al_calloc(16, sizeof(ALbuffer)*64));
         if(UNLIKELY(!sublist->Buffers))
         {
             VECTOR_POP_BACK(device->BufferList);
-            almtx_unlock(&device->BufferLock);
+            buflock.unlock();
             alSetError(context, AL_OUT_OF_MEMORY, "Failed to allocate buffer batch");
-            return NULL;
+            return nullptr;
         }
 
         slidx = 0;
@@ -1256,7 +1169,6 @@ static ALbuffer *AllocBuffer(ALCcontext *context)
     buffer->id = ((lidx<<6) | slidx) + 1;
 
     sublist->FreeMask &= ~(U64(1)<<slidx);
-    almtx_unlock(&device->BufferLock);
 
     return buffer;
 }
@@ -1301,5 +1213,5 @@ ALvoid ReleaseALBuffers(ALCdevice *device)
         sublist->FreeMask = ~usemask;
     }
     if(leftover > 0)
-        WARN("(%p) Deleted "SZFMT" Buffer%s\n", device, leftover, (leftover==1)?"":"s");
+        WARN("(%p) Deleted " SZFMT " Buffer%s\n", device, leftover, (leftover==1)?"":"s");
 }

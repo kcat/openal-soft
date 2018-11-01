@@ -374,7 +374,7 @@ static pa_proplist *prop_filter;
 /* PulseAudio Event Callbacks */
 static void context_state_callback(pa_context *context, void *pdata)
 {
-    auto loop{reinterpret_cast<pa_threaded_mainloop*>(pdata)};
+    auto loop = reinterpret_cast<pa_threaded_mainloop*>(pdata);
     pa_context_state_t state{pa_context_get_state(context)};
     if(state == PA_CONTEXT_READY || !PA_CONTEXT_IS_GOOD(state))
         pa_threaded_mainloop_signal(loop, 0);
@@ -382,7 +382,7 @@ static void context_state_callback(pa_context *context, void *pdata)
 
 static void stream_state_callback(pa_stream *stream, void *pdata)
 {
-    auto loop{reinterpret_cast<pa_threaded_mainloop*>(pdata)};
+    auto loop = reinterpret_cast<pa_threaded_mainloop*>(pdata);
     pa_stream_state_t state{pa_stream_get_state(stream)};
     if(state == PA_STREAM_READY || !PA_STREAM_IS_GOOD(state))
         pa_threaded_mainloop_signal(loop, 0);
@@ -390,7 +390,7 @@ static void stream_state_callback(pa_stream *stream, void *pdata)
 
 static void stream_success_callback(pa_stream *UNUSED(stream), int UNUSED(success), void *pdata)
 {
-    auto loop{reinterpret_cast<pa_threaded_mainloop*>(pdata)};
+    auto loop = reinterpret_cast<pa_threaded_mainloop*>(pdata);
     pa_threaded_mainloop_signal(loop, 0);
 }
 
@@ -414,7 +414,7 @@ static pa_context *connect_context(pa_threaded_mainloop *loop, ALboolean silent)
     if(!alstr_empty(binname))
         name = alstr_get_cstr(binname);
 
-    auto context{pa_context_new(pa_threaded_mainloop_get_api(loop), name)};
+    pa_context *context{pa_context_new(pa_threaded_mainloop_get_api(loop), name)};
     if(!context)
     {
         ERR("pa_context_new() failed\n");
@@ -458,7 +458,7 @@ static pa_context *connect_context(pa_threaded_mainloop *loop, ALboolean silent)
 using MainloopContextPair = std::pair<pa_threaded_mainloop*,pa_context*>;
 static MainloopContextPair pulse_open(void(*state_cb)(pa_context*,void*), void *ptr)
 {
-    auto loop{pa_threaded_mainloop_new()};
+    pa_threaded_mainloop *loop{pa_threaded_mainloop_new()};
     if(UNLIKELY(!loop))
     {
         ERR("pa_threaded_mainloop_new() failed!\n");
@@ -472,7 +472,7 @@ static MainloopContextPair pulse_open(void(*state_cb)(pa_context*,void*), void *
     }
 
     unique_palock palock{loop};
-    auto context{connect_context(loop, AL_FALSE)};
+    pa_context *context{connect_context(loop, AL_FALSE)};
     if(UNLIKELY(!context))
     {
         palock = unique_palock{};
@@ -587,7 +587,7 @@ static void PulsePlayback_Destruct(PulsePlayback *self)
 
 static void PulsePlayback_deviceCallback(pa_context *UNUSED(context), const pa_sink_info *info, int eol, void *pdata)
 {
-    auto loop{reinterpret_cast<pa_threaded_mainloop*>(pdata)};
+    auto loop = reinterpret_cast<pa_threaded_mainloop*>(pdata);
 
     if(eol)
     {
@@ -630,12 +630,12 @@ static void PulsePlayback_probeDevices(void)
 {
     PlaybackDevices.clear();
 
-    auto loop{pa_threaded_mainloop_new()};
+    pa_threaded_mainloop *loop{pa_threaded_mainloop_new()};
     if(loop && pa_threaded_mainloop_start(loop) >= 0)
     {
         unique_palock palock{loop};
 
-        auto context{connect_context(loop, AL_FALSE)};
+        pa_context *context{connect_context(loop, AL_FALSE)};
         if(context)
         {
             pa_stream_flags_t flags{PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE |
@@ -646,12 +646,12 @@ static void PulsePlayback_probeDevices(void)
             spec.rate = 44100;
             spec.channels = 2;
 
-            auto stream{PulsePlayback_connectStream(nullptr,
+            pa_stream *stream{PulsePlayback_connectStream(nullptr,
                 loop, context, flags, nullptr, &spec, nullptr
             )};
             if(stream)
             {
-                auto op{pa_context_get_sink_info_by_name(context,
+                pa_operation *op{pa_context_get_sink_info_by_name(context,
                     pa_stream_get_device_name(stream), PulsePlayback_deviceCallback, loop
                 )};
                 wait_for_operation(op, loop);
@@ -661,7 +661,7 @@ static void PulsePlayback_probeDevices(void)
                 stream = nullptr;
             }
 
-            auto op{pa_context_get_sink_info_list(context,
+            pa_operation *op{pa_context_get_sink_info_list(context,
                 PulsePlayback_deviceCallback, loop
             )};
             wait_for_operation(op, loop);
@@ -679,7 +679,7 @@ static void PulsePlayback_probeDevices(void)
 
 static void PulsePlayback_bufferAttrCallback(pa_stream *stream, void *pdata)
 {
-    auto self{reinterpret_cast<PulsePlayback*>(pdata)};
+    auto self = reinterpret_cast<PulsePlayback*>(pdata);
 
     self->attr = *pa_stream_get_buffer_attr(stream);
     TRACE("minreq=%d, tlength=%d, prebuf=%d\n", self->attr.minreq, self->attr.tlength, self->attr.prebuf);
@@ -692,7 +692,7 @@ static void PulsePlayback_bufferAttrCallback(pa_stream *stream, void *pdata)
 
 static void PulsePlayback_contextStateCallback(pa_context *context, void *pdata)
 {
-    auto self{reinterpret_cast<PulsePlayback*>(pdata)};
+    auto self = reinterpret_cast<PulsePlayback*>(pdata);
     if(pa_context_get_state(context) == PA_CONTEXT_FAILED)
     {
         ERR("Received context failure!\n");
@@ -703,7 +703,7 @@ static void PulsePlayback_contextStateCallback(pa_context *context, void *pdata)
 
 static void PulsePlayback_streamStateCallback(pa_stream *stream, void *pdata)
 {
-    auto self{reinterpret_cast<PulsePlayback*>(pdata)};
+    auto self = reinterpret_cast<PulsePlayback*>(pdata);
     if(pa_stream_get_state(stream) == PA_STREAM_FAILED)
     {
         ERR("Received stream failure!\n");
@@ -714,7 +714,7 @@ static void PulsePlayback_streamStateCallback(pa_stream *stream, void *pdata)
 
 static void PulsePlayback_streamWriteCallback(pa_stream* UNUSED(p), size_t UNUSED(nbytes), void *pdata)
 {
-    auto self{reinterpret_cast<PulsePlayback*>(pdata)};
+    auto self = reinterpret_cast<PulsePlayback*>(pdata);
     pa_threaded_mainloop_signal(self->loop, 0);
 }
 
@@ -756,7 +756,7 @@ static void PulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const pa
         } } },
         { DevFmtMono, { 1, {PA_CHANNEL_POSITION_MONO} } }
     }};
-    auto self{reinterpret_cast<PulsePlayback*>(pdata)};
+    auto self = reinterpret_cast<PulsePlayback*>(pdata);
 
     if(eol)
     {
@@ -765,10 +765,10 @@ static void PulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const pa
     }
 
     ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
-    auto chanmap{std::find_if(chanmaps.cbegin(), chanmaps.cend(),
+    auto chanmap = std::find_if(chanmaps.cbegin(), chanmaps.cend(),
         [info](const ChannelMap &chanmap) -> bool
         { return pa_channel_map_superset(&info->channel_map, &chanmap.map); }
-    )};
+    );
     if(chanmap != chanmaps.cend())
     {
         if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
@@ -790,7 +790,7 @@ static void PulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const pa
 
 static void PulsePlayback_sinkNameCallback(pa_context *UNUSED(context), const pa_sink_info *info, int eol, void *pdata)
 {
-    auto self{reinterpret_cast<PulsePlayback*>(pdata)};
+    auto self = reinterpret_cast<PulsePlayback*>(pdata);
 
     if(eol)
     {
@@ -805,7 +805,7 @@ static void PulsePlayback_sinkNameCallback(pa_context *UNUSED(context), const pa
 
 static void PulsePlayback_streamMovedCallback(pa_stream *stream, void *pdata)
 {
-    auto self{reinterpret_cast<PulsePlayback*>(pdata)};
+    auto self = reinterpret_cast<PulsePlayback*>(pdata);
 
     self->device_name = pa_stream_get_device_name(stream);
 
@@ -825,7 +825,7 @@ static pa_stream *PulsePlayback_connectStream(const char *device_name,
             device_name = nullptr;
     }
 
-    auto stream{pa_stream_new_with_proplist(context,
+    pa_stream *stream{pa_stream_new_with_proplist(context,
         "Playback Stream", spec, chanmap, prop_filter
     )};
     if(!stream)
@@ -898,7 +898,7 @@ static int PulsePlayback_mixerProc(PulsePlayback *self)
         {
             if(pa_stream_is_corked(self->stream))
             {
-                auto op{pa_stream_cork(self->stream, 0, nullptr, nullptr)};
+                pa_operation *op{pa_stream_cork(self->stream, 0, nullptr, nullptr)};
                 if(op) pa_operation_unref(op);
             }
             pa_threaded_mainloop_wait(self->loop);
@@ -908,7 +908,7 @@ static int PulsePlayback_mixerProc(PulsePlayback *self)
         len -= len%self->attr.minreq;
         len -= len%frame_size;
 
-        auto buf{pa_xmalloc(len)};
+        void *buf{pa_xmalloc(len)};
         aluMixData(device, buf, len/frame_size);
 
         int ret{pa_stream_write(self->stream, buf, len, pa_xfree, 0, PA_SEEK_RELATIVE)};
@@ -930,10 +930,10 @@ static ALCenum PulsePlayback_open(PulsePlayback *self, const ALCchar *name)
         if(PlaybackDevices.empty())
             PulsePlayback_probeDevices();
 
-        auto iter{std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
+        auto iter = std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
             [name](const DevMap &entry) -> bool
             { return entry.name == name; }
-        )};
+        );
         if(iter == PlaybackDevices.cend())
             return ALC_INVALID_VALUE;
         pulse_name = iter->device_name.c_str();
@@ -971,14 +971,14 @@ static ALCenum PulsePlayback_open(PulsePlayback *self, const ALCchar *name)
     self->device_name = pa_stream_get_device_name(self->stream);
     if(!dev_name)
     {
-        auto op = pa_context_get_sink_info_by_name(self->context,
+        pa_operation *op{pa_context_get_sink_info_by_name(self->context,
             self->device_name.c_str(), PulsePlayback_sinkNameCallback, self
-        );
+        )};
         wait_for_operation(op, self->loop);
     }
     else
     {
-        ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
+        ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
         alstr_copy_cstr(&device->DeviceName, dev_name);
     }
 
@@ -1000,7 +1000,7 @@ static ALCboolean PulsePlayback_reset(PulsePlayback *self)
         self->stream = nullptr;
     }
 
-    auto op{pa_context_get_sink_info_by_name(self->context,
+    pa_operation *op{pa_context_get_sink_info_by_name(self->context,
         self->device_name.c_str(), PulsePlayback_sinkInfoCallback, self
     )};
     wait_for_operation(op, self->loop);
@@ -1185,7 +1185,7 @@ static void PulsePlayback_stop(PulsePlayback *self)
 
     palock.lock();
 
-    auto op = pa_stream_cork(self->stream, 1, stream_success_callback, self->loop);
+    pa_operation *op{pa_stream_cork(self->stream, 1, stream_success_callback, self->loop)};
     wait_for_operation(op, self->loop);
 }
 
@@ -1302,7 +1302,7 @@ static void PulseCapture_Destruct(PulseCapture *self)
 
 static void PulseCapture_deviceCallback(pa_context *UNUSED(context), const pa_source_info *info, int eol, void *pdata)
 {
-    auto loop{reinterpret_cast<pa_threaded_mainloop*>(pdata)};
+    auto loop = reinterpret_cast<pa_threaded_mainloop*>(pdata);
 
     if(eol)
     {
@@ -1345,12 +1345,12 @@ static void PulseCapture_probeDevices(void)
 {
     CaptureDevices.clear();
 
-    auto loop{pa_threaded_mainloop_new()};
+    pa_threaded_mainloop *loop{pa_threaded_mainloop_new()};
     if(loop && pa_threaded_mainloop_start(loop) >= 0)
     {
         unique_palock palock{loop};
 
-        auto context{connect_context(loop, AL_FALSE)};
+        pa_context *context{connect_context(loop, AL_FALSE)};
         if(context)
         {
             pa_stream_flags_t flags{PA_STREAM_FIX_FORMAT | PA_STREAM_FIX_RATE |
@@ -1361,12 +1361,12 @@ static void PulseCapture_probeDevices(void)
             spec.rate = 44100;
             spec.channels = 1;
 
-            auto stream{PulseCapture_connectStream(nullptr,
+            pa_stream *stream{PulseCapture_connectStream(nullptr,
                 loop, context, flags, nullptr, &spec, nullptr
             )};
             if(stream)
             {
-                auto op{pa_context_get_source_info_by_name(context,
+                pa_operation *op{pa_context_get_source_info_by_name(context,
                     pa_stream_get_device_name(stream), PulseCapture_deviceCallback, loop
                 )};
                 wait_for_operation(op, loop);
@@ -1376,7 +1376,7 @@ static void PulseCapture_probeDevices(void)
                 stream = nullptr;
             }
 
-            auto op{pa_context_get_source_info_list(context,
+            pa_operation *op{pa_context_get_source_info_list(context,
                 PulseCapture_deviceCallback, loop
             )};
             wait_for_operation(op, loop);
@@ -1394,7 +1394,7 @@ static void PulseCapture_probeDevices(void)
 
 static void PulseCapture_contextStateCallback(pa_context *context, void *pdata)
 {
-    auto self{reinterpret_cast<PulseCapture*>(pdata)};
+    auto self = reinterpret_cast<PulseCapture*>(pdata);
     if(pa_context_get_state(context) == PA_CONTEXT_FAILED)
     {
         ERR("Received context failure!\n");
@@ -1405,7 +1405,7 @@ static void PulseCapture_contextStateCallback(pa_context *context, void *pdata)
 
 static void PulseCapture_streamStateCallback(pa_stream *stream, void *pdata)
 {
-    auto self{reinterpret_cast<PulseCapture*>(pdata)};
+    auto self = reinterpret_cast<PulseCapture*>(pdata);
     if(pa_stream_get_state(stream) == PA_STREAM_FAILED)
     {
         ERR("Received stream failure!\n");
@@ -1417,7 +1417,7 @@ static void PulseCapture_streamStateCallback(pa_stream *stream, void *pdata)
 
 static void PulseCapture_sourceNameCallback(pa_context *UNUSED(context), const pa_source_info *info, int eol, void *pdata)
 {
-    auto self{reinterpret_cast<PulseCapture*>(pdata)};
+    auto self = reinterpret_cast<PulseCapture*>(pdata);
 
     if(eol)
     {
@@ -1432,7 +1432,7 @@ static void PulseCapture_sourceNameCallback(pa_context *UNUSED(context), const p
 
 static void PulseCapture_streamMovedCallback(pa_stream *stream, void *pdata)
 {
-    auto self{reinterpret_cast<PulseCapture*>(pdata)};
+    auto self = reinterpret_cast<PulseCapture*>(pdata);
 
     self->device_name = pa_stream_get_device_name(stream);
 
@@ -1445,7 +1445,7 @@ static pa_stream *PulseCapture_connectStream(const char *device_name,
     pa_stream_flags_t flags, pa_buffer_attr *attr, pa_sample_spec *spec,
     pa_channel_map *chanmap)
 {
-    auto stream{pa_stream_new_with_proplist(context,
+    pa_stream *stream{pa_stream_new_with_proplist(context,
         "Capture Stream", spec, chanmap, prop_filter
     )};
     if(!stream)
@@ -1603,7 +1603,7 @@ static ALCenum PulseCapture_open(PulseCapture *self, const ALCchar *name)
     self->device_name = pa_stream_get_device_name(self->stream);
     if(alstr_empty(device->DeviceName))
     {
-        auto op{pa_context_get_source_info_by_name(self->context,
+        pa_operation *op{pa_context_get_source_info_by_name(self->context,
             self->device_name.c_str(), PulseCapture_sourceNameCallback, self
         )};
         wait_for_operation(op, self->loop);
@@ -1615,7 +1615,7 @@ static ALCenum PulseCapture_open(PulseCapture *self, const ALCchar *name)
 static ALCboolean PulseCapture_start(PulseCapture *self)
 {
     palock_guard _{self->loop};
-    auto op = pa_stream_cork(self->stream, 0, stream_success_callback, self->loop);
+    pa_operation *op{pa_stream_cork(self->stream, 0, stream_success_callback, self->loop)};
     wait_for_operation(op, self->loop);
     return ALC_TRUE;
 }
@@ -1623,14 +1623,14 @@ static ALCboolean PulseCapture_start(PulseCapture *self)
 static void PulseCapture_stop(PulseCapture *self)
 {
     palock_guard _{self->loop};
-    auto op = pa_stream_cork(self->stream, 1, stream_success_callback, self->loop);
+    pa_operation *op{pa_stream_cork(self->stream, 1, stream_success_callback, self->loop)};
     wait_for_operation(op, self->loop);
 }
 
 static ALCenum PulseCapture_captureSamples(PulseCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
-    ALCuint todo = samples * pa_frame_size(&self->spec);
+    ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
+    ALCuint todo{samples * static_cast<ALCuint>(pa_frame_size(&self->spec))};
 
     /* Capture is done in fragment-sized chunks, so we loop until we get all
      * that's available */
@@ -1638,11 +1638,11 @@ static ALCenum PulseCapture_captureSamples(PulseCapture *self, ALCvoid *buffer, 
     unique_palock palock{self->loop};
     while(todo > 0)
     {
-        size_t rem = todo;
+        size_t rem{todo};
 
         if(self->cap_len == 0)
         {
-            auto state{pa_stream_get_state(self->stream)};
+            pa_stream_state_t state{pa_stream_get_state(self->stream)};
             if(!PA_STREAM_IS_GOOD(state))
             {
                 aluHandleDisconnect(device, "Bad capture state: %u", state);
@@ -1683,19 +1683,19 @@ static ALCenum PulseCapture_captureSamples(PulseCapture *self, ALCvoid *buffer, 
 
 static ALCuint PulseCapture_availableSamples(PulseCapture *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
-    size_t readable = self->cap_remain;
+    ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
+    size_t readable{self->cap_remain};
 
     if(ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         palock_guard _{self->loop};
-        ssize_t got{static_cast<ssize_t>(pa_stream_readable_size(self->stream))};
-        if(got < 0)
+        size_t got{pa_stream_readable_size(self->stream)};
+        if(static_cast<ssize_t>(got) < 0)
         {
             ERR("pa_stream_readable_size() failed: %s\n", pa_strerror(got));
             aluHandleDisconnect(device, "Failed getting readable size: %s", pa_strerror(got));
         }
-        else if((size_t)got > self->cap_len)
+        else if(got > self->cap_len)
             readable += got - self->cap_len;
     }
 
@@ -1764,11 +1764,11 @@ static ALCboolean ALCpulseBackendFactory_init(ALCpulseBackendFactory* UNUSED(sel
         if(!GetConfigValueBool(nullptr, "pulse", "spawn-server", 1))
             pulse_ctx_flags |= PA_CONTEXT_NOAUTOSPAWN;
 
-        auto loop{pa_threaded_mainloop_new()};
+        pa_threaded_mainloop *loop{pa_threaded_mainloop_new()};
         if(loop && pa_threaded_mainloop_start(loop) >= 0)
         {
             unique_palock palock{loop};
-            auto context = connect_context(loop, AL_TRUE);
+            pa_context *context{connect_context(loop, AL_TRUE)};
             if(context)
             {
                 ret = ALC_TRUE;
@@ -1815,16 +1815,14 @@ static ALCboolean ALCpulseBackendFactory_querySupport(ALCpulseBackendFactory* UN
 
 static void ALCpulseBackendFactory_probe(ALCpulseBackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames)
 {
-    auto add_device{
-        [outnames](const DevMap &entry) -> void
-        {
-            auto name{entry.name.c_str()};
-            size_t namelen{entry.name.length()};
-            /* +1 to also append the null char (to ensure a null-separated list
-             * and double-null terminated list).
-             */
-            alstr_append_range(outnames, name, name + namelen+1);
-        }
+    auto add_device = [outnames](const DevMap &entry) -> void
+    {
+        auto name{entry.name.c_str()};
+        size_t namelen{entry.name.length()};
+        /* +1 to also append the null char (to ensure a null-separated list
+            * and double-null terminated list).
+            */
+        alstr_append_range(outnames, name, name + namelen+1);
     };
     switch(type)
     {

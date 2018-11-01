@@ -1817,7 +1817,7 @@ static void ALCpulseBackendFactory_probe(ALCpulseBackendFactory* UNUSED(self), e
 {
     auto add_device = [outnames](const DevMap &entry) -> void
     {
-        auto name{entry.name.c_str()};
+        const char *name{entry.name.c_str()};
         size_t namelen{entry.name.length()};
         /* +1 to also append the null char (to ensure a null-separated list
             * and double-null terminated list).

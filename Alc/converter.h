@@ -4,7 +4,7 @@
 #include "alMain.h"
 #include "alu.h"
 
-#ifdef __cpluspluc
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -48,7 +48,7 @@ void DestroyChannelConverter(ChannelConverter **converter);
 
 void ChannelConverterInput(ChannelConverter *converter, const ALvoid *src, ALfloat *dst, ALsizei frames);
 
-#ifdef __cpluspluc
+#ifdef __cplusplus
 }
 #endif
 

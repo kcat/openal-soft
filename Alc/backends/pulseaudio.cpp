@@ -375,7 +375,7 @@ static pa_proplist *prop_filter;
 static void context_state_callback(pa_context *context, void *pdata)
 {
     auto loop{reinterpret_cast<pa_threaded_mainloop*>(pdata)};
-    auto state{pa_context_get_state(context)};
+    pa_context_state_t state{pa_context_get_state(context)};
     if(state == PA_CONTEXT_READY || !PA_CONTEXT_IS_GOOD(state))
         pa_threaded_mainloop_signal(loop, 0);
 }
@@ -383,7 +383,7 @@ static void context_state_callback(pa_context *context, void *pdata)
 static void stream_state_callback(pa_stream *stream, void *pdata)
 {
     auto loop{reinterpret_cast<pa_threaded_mainloop*>(pdata)};
-    auto state{pa_stream_get_state(stream)};
+    pa_stream_state_t state{pa_stream_get_state(stream)};
     if(state == PA_STREAM_READY || !PA_STREAM_IS_GOOD(state))
         pa_threaded_mainloop_signal(loop, 0);
 }
@@ -874,7 +874,7 @@ static int PulsePlayback_mixerProc(PulsePlayback *self)
     while(!self->killNow.load(almemory_order_acquire) &&
           ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
-        auto len{static_cast<ssize_t>(pa_stream_writable_size(self->stream))};
+        ssize_t len{static_cast<ssize_t>(pa_stream_writable_size(self->stream))};
         if(UNLIKELY(len < 0))
         {
             ERR("Failed to get writable size: %ld", (long)len);
@@ -911,7 +911,7 @@ static int PulsePlayback_mixerProc(PulsePlayback *self)
         auto buf{pa_xmalloc(len)};
         aluMixData(device, buf, len/frame_size);
 
-        auto ret{pa_stream_write(self->stream, buf, len, pa_xfree, 0, PA_SEEK_RELATIVE)};
+        int ret{pa_stream_write(self->stream, buf, len, pa_xfree, 0, PA_SEEK_RELATIVE)};
         if(UNLIKELY(ret != PA_OK))
             ERR("Failed to write to stream: %d, %s\n", ret, pa_strerror(ret));
     }
@@ -971,10 +971,10 @@ static ALCenum PulsePlayback_open(PulsePlayback *self, const ALCchar *name)
     self->device_name = pa_stream_get_device_name(self->stream);
     if(!dev_name)
     {
-        auto o = pa_context_get_sink_info_by_name(self->context,
+        auto op = pa_context_get_sink_info_by_name(self->context,
             self->device_name.c_str(), PulsePlayback_sinkNameCallback, self
         );
-        wait_for_operation(o, self->loop);
+        wait_for_operation(op, self->loop);
     }
     else
     {
@@ -1185,8 +1185,8 @@ static void PulsePlayback_stop(PulsePlayback *self)
 
     palock.lock();
 
-    auto o = pa_stream_cork(self->stream, 1, stream_success_callback, self->loop);
-    wait_for_operation(o, self->loop);
+    auto op = pa_stream_cork(self->stream, 1, stream_success_callback, self->loop);
+    wait_for_operation(op, self->loop);
 }
 
 
@@ -1603,10 +1603,10 @@ static ALCenum PulseCapture_open(PulseCapture *self, const ALCchar *name)
     self->device_name = pa_stream_get_device_name(self->stream);
     if(alstr_empty(device->DeviceName))
     {
-        pa_operation *o = pa_context_get_source_info_by_name(self->context,
+        auto op{pa_context_get_source_info_by_name(self->context,
             self->device_name.c_str(), PulseCapture_sourceNameCallback, self
-        );
-        wait_for_operation(o, self->loop);
+        )};
+        wait_for_operation(op, self->loop);
     }
 
     return ALC_NO_ERROR;
@@ -1615,16 +1615,16 @@ static ALCenum PulseCapture_open(PulseCapture *self, const ALCchar *name)
 static ALCboolean PulseCapture_start(PulseCapture *self)
 {
     palock_guard _{self->loop};
-    auto o = pa_stream_cork(self->stream, 0, stream_success_callback, self->loop);
-    wait_for_operation(o, self->loop);
+    auto op = pa_stream_cork(self->stream, 0, stream_success_callback, self->loop);
+    wait_for_operation(op, self->loop);
     return ALC_TRUE;
 }
 
 static void PulseCapture_stop(PulseCapture *self)
 {
     palock_guard _{self->loop};
-    auto o = pa_stream_cork(self->stream, 1, stream_success_callback, self->loop);
-    wait_for_operation(o, self->loop);
+    auto op = pa_stream_cork(self->stream, 1, stream_success_callback, self->loop);
+    wait_for_operation(op, self->loop);
 }
 
 static ALCenum PulseCapture_captureSamples(PulseCapture *self, ALCvoid *buffer, ALCuint samples)
@@ -1689,7 +1689,7 @@ static ALCuint PulseCapture_availableSamples(PulseCapture *self)
     if(ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         palock_guard _{self->loop};
-        auto got{static_cast<ssize_t>(pa_stream_readable_size(self->stream))};
+        ssize_t got{static_cast<ssize_t>(pa_stream_readable_size(self->stream))};
         if(got < 0)
         {
             ERR("pa_stream_readable_size() failed: %s\n", pa_strerror(got));
@@ -1819,7 +1819,7 @@ static void ALCpulseBackendFactory_probe(ALCpulseBackendFactory* UNUSED(self), e
         [outnames](const DevMap &entry) -> void
         {
             auto name{entry.name.c_str()};
-            auto namelen{entry.name.length()};
+            size_t namelen{entry.name.length()};
             /* +1 to also append the null char (to ensure a null-separated list
              * and double-null terminated list).
              */

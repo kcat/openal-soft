@@ -516,6 +516,14 @@ struct DevMap {
     { }
 };
 
+static bool checkName(const std::vector<DevMap> &list, const std::string &name)
+{
+    return std::find_if(list.cbegin(), list.cend(),
+        [&name](const DevMap &entry) -> bool
+        { return entry.name == name; }
+    ) != list.cend();
+}
+
 static std::vector<DevMap> PlaybackDevices;
 static std::vector<DevMap> CaptureDevices;
 
@@ -612,10 +620,7 @@ static void PulsePlayback_deviceCallback(pa_context *UNUSED(context), const pa_s
      */
     int count{1};
     std::string newname{info->description};
-    while(std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
-            [&newname](const DevMap &entry) -> bool
-            { return entry.name == newname; }
-        ) != PlaybackDevices.cend())
+    while(checkName(PlaybackDevices, newname))
     {
         newname = info->description;
         newname += " #";
@@ -1323,10 +1328,7 @@ static void PulseCapture_deviceCallback(pa_context *UNUSED(context), const pa_so
      */
     int count{1};
     std::string newname{info->description};
-    while(std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
-            [&newname](const DevMap &entry) -> bool
-            { return entry.name == newname; }
-        ) != CaptureDevices.cend())
+    while(checkName(CaptureDevices, newname))
     {
         newname = info->description;
         newname += " #";

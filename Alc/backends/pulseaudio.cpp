@@ -602,7 +602,7 @@ static void PulsePlayback_deviceCallback(pa_context *UNUSED(context), const pa_s
         return;
 
     PlaybackDevices.emplace_back();
-    DevMap &newentry{PlaybackDevices.back()};
+    DevMap &newentry = PlaybackDevices.back();
 
     int count{0};
     while(1)
@@ -1317,7 +1317,7 @@ static void PulseCapture_deviceCallback(pa_context *UNUSED(context), const pa_so
         return;
 
     CaptureDevices.emplace_back();
-    DevMap &newentry{CaptureDevices.back()};
+    DevMap &newentry = CaptureDevices.back();
 
     int count{0};
     while(1)

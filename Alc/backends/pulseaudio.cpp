@@ -509,6 +509,10 @@ static void pulse_close(pa_threaded_mainloop *loop, pa_context *context, pa_stre
 struct DevMap {
     std::string name;
     std::string device_name;
+
+    DevMap(std::string name_, std::string devname_)
+      : name{std::move(name_)}, device_name{std::move(devname_)}
+    { }
 };
 
 static std::vector<DevMap> PlaybackDevices;
@@ -595,33 +599,29 @@ static void PulsePlayback_deviceCallback(pa_context *UNUSED(context), const pa_s
         return;
     }
 
+    /* Skip this device is if it's already in the list. */
     if(std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
         [info](const DevMap &entry) -> bool
         { return entry.device_name == info->name; }
     ) != PlaybackDevices.cend())
         return;
 
-    PlaybackDevices.emplace_back();
-    DevMap &newentry = PlaybackDevices.back();
-
-    int count{0};
-    while(1)
+    /* Make sure the display name (description) is unique. Append a number
+     * counter as needed.
+     */
+    int count{1};
+    std::string newname{info->description};
+    while(std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
+            [&newname](const DevMap &entry) -> bool
+            { return entry.name == newname; }
+        ) != PlaybackDevices.cend())
     {
-        newentry.name = info->description;
-        if(count != 0)
-        {
-            newentry.name += " #";
-            newentry.name += std::to_string(count+1);
-        }
-
-        if(std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend()-1,
-            [&newentry](const DevMap &entry) -> bool
-            { return entry.name == newentry.name; }
-        ) == PlaybackDevices.cend()-1)
-            break;
-        count++;
+        newname = info->description;
+        newname += " #";
+        newname += std::to_string(++count);
     }
-    newentry.device_name = info->name;
+    PlaybackDevices.emplace_back(std::move(newname), info->name);
+    DevMap &newentry = PlaybackDevices.back();
 
     TRACE("Got device \"%s\", \"%s\"\n", newentry.name.c_str(), newentry.device_name.c_str());
 }
@@ -1310,33 +1310,29 @@ static void PulseCapture_deviceCallback(pa_context *UNUSED(context), const pa_so
         return;
     }
 
+    /* Skip this device is if it's already in the list. */
     if(std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
         [info](const DevMap &entry) -> bool
         { return entry.device_name == info->name; }
     ) != CaptureDevices.cend())
         return;
 
-    CaptureDevices.emplace_back();
-    DevMap &newentry = CaptureDevices.back();
-
-    int count{0};
-    while(1)
+    /* Make sure the display name (description) is unique. Append a number
+     * counter as needed.
+     */
+    int count{1};
+    std::string newname{info->description};
+    while(std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
+            [&newname](const DevMap &entry) -> bool
+            { return entry.name == newname; }
+        ) != CaptureDevices.cend())
     {
-        newentry.name = info->description;
-        if(count != 0)
-        {
-            newentry.name += " #";
-            newentry.name += std::to_string(count+1);
-        }
-
-        if(std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend()-1,
-            [&newentry](const DevMap &entry) -> bool
-            { return entry.name == newentry.name; }
-        ) == CaptureDevices.cend()-1)
-            break;
-        count++;
+        newname = info->description;
+        newname += " #";
+        newname += std::to_string(++count);
     }
-    newentry.device_name = info->name;
+    CaptureDevices.emplace_back(std::move(newname), std::string{info->name});
+    DevMap &newentry = CaptureDevices.back();
 
     TRACE("Got device \"%s\", \"%s\"\n", newentry.name.c_str(), newentry.device_name.c_str());
 }

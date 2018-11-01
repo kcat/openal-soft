@@ -20,7 +20,6 @@
 
 #include "config.h"
 
-#define COBJMACROS
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
@@ -38,6 +37,8 @@
 #include <ks.h>
 #include <ksmedia.h>
 #endif
+
+#include <vector>
 
 #include "alMain.h"
 #include "alu.h"
@@ -91,7 +92,7 @@ static void clear_devlist(vector_DevMap *list)
     AL_STRING_DEINIT((i)->name); \
     AL_STRING_DEINIT((i)->endpoint_guid); \
     free((i)->devid);            \
-    (i)->devid = NULL;           \
+    (i)->devid = nullptr;           \
 } while(0)
     VECTOR_FOR_EACH(DevMap, *list, CLEAR_DEVMAP);
     VECTOR_RESIZE(*list, 0, 0);
@@ -152,18 +153,18 @@ static void get_device_name_and_guid(IMMDevice *device, al_string *name, al_stri
 
     alstr_copy_cstr(name, DEVNAME_HEAD);
 
-    hr = IMMDevice_OpenPropertyStore(device, STGM_READ, &ps);
+    hr = device->OpenPropertyStore(STGM_READ, &ps);
     if(FAILED(hr))
     {
         WARN("OpenPropertyStore failed: 0x%08lx\n", hr);
         alstr_append_cstr(name, "Unknown Device Name");
-        if(guid!=NULL)alstr_copy_cstr(guid, "Unknown Device GUID");
+        if(guid) alstr_copy_cstr(guid, "Unknown Device GUID");
         return;
     }
 
     PropVariantInit(&pvname);
 
-    hr = IPropertyStore_GetValue(ps, (const PROPERTYKEY*)&DEVPKEY_Device_FriendlyName, &pvname);
+    hr = ps->GetValue(reinterpret_cast<const PROPERTYKEY&>(DEVPKEY_Device_FriendlyName), &pvname);
     if(FAILED(hr))
     {
         WARN("GetValue Device_FriendlyName failed: 0x%08lx\n", hr);
@@ -178,10 +179,11 @@ static void get_device_name_and_guid(IMMDevice *device, al_string *name, al_stri
     }
     PropVariantClear(&pvname);
 
-    if(guid!=NULL){
+    if(guid)
+    {
         PropVariantInit(&pvguid);
 
-        hr = IPropertyStore_GetValue(ps, (const PROPERTYKEY*)&PKEY_AudioEndpoint_GUID, &pvguid);
+        hr = ps->GetValue(reinterpret_cast<const PROPERTYKEY&>(PKEY_AudioEndpoint_GUID), &pvguid);
         if(FAILED(hr))
         {
             WARN("GetValue AudioEndpoint_GUID failed: 0x%08lx\n", hr);
@@ -198,7 +200,7 @@ static void get_device_name_and_guid(IMMDevice *device, al_string *name, al_stri
         PropVariantClear(&pvguid);
     }
 
-    IPropertyStore_Release(ps);
+    ps->Release();
 }
 
 static void get_device_formfactor(IMMDevice *device, EndpointFormFactor *formfactor)
@@ -207,7 +209,7 @@ static void get_device_formfactor(IMMDevice *device, EndpointFormFactor *formfac
     PROPVARIANT pvform;
     HRESULT hr;
 
-    hr = IMMDevice_OpenPropertyStore(device, STGM_READ, &ps);
+    hr = device->OpenPropertyStore(STGM_READ, &ps);
     if(FAILED(hr))
     {
         WARN("OpenPropertyStore failed: 0x%08lx\n", hr);
@@ -216,18 +218,18 @@ static void get_device_formfactor(IMMDevice *device, EndpointFormFactor *formfac
 
     PropVariantInit(&pvform);
 
-    hr = IPropertyStore_GetValue(ps, &PKEY_AudioEndpoint_FormFactor, &pvform);
+    hr = ps->GetValue(reinterpret_cast<const PROPERTYKEY&>(PKEY_AudioEndpoint_FormFactor), &pvform);
     if(FAILED(hr))
         WARN("GetValue AudioEndpoint_FormFactor failed: 0x%08lx\n", hr);
     else if(pvform.vt == VT_UI4)
-        *formfactor = pvform.ulVal;
+        *formfactor = static_cast<EndpointFormFactor>(pvform.ulVal);
     else if(pvform.vt == VT_EMPTY)
         *formfactor = UnknownFormFactor;
     else
         WARN("Unexpected PROPVARIANT type: 0x%04x\n", pvform.vt);
 
     PropVariantClear(&pvform);
-    IPropertyStore_Release(ps);
+    ps->Release();
 }
 
 
@@ -274,11 +276,11 @@ static WCHAR *get_device_id(IMMDevice *device)
     WCHAR *devid;
     HRESULT hr;
 
-    hr = IMMDevice_GetId(device, &devid);
+    hr = device->GetId(&devid);
     if(FAILED(hr))
     {
         ERR("Failed to get device id: %lx\n", hr);
-        return NULL;
+        return nullptr;
     }
 
     return devid;
@@ -287,13 +289,13 @@ static WCHAR *get_device_id(IMMDevice *device)
 static HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, vector_DevMap *list)
 {
     IMMDeviceCollection *coll;
-    IMMDevice *defdev = NULL;
-    WCHAR *defdevid = NULL;
+    IMMDevice *defdev = nullptr;
+    WCHAR *defdevid = nullptr;
     HRESULT hr;
     UINT count;
     UINT i;
 
-    hr = IMMDeviceEnumerator_EnumAudioEndpoints(devenum, flowdir, DEVICE_STATE_ACTIVE, &coll);
+    hr = devenum->EnumAudioEndpoints(flowdir, DEVICE_STATE_ACTIVE, &coll);
     if(FAILED(hr))
     {
         ERR("Failed to enumerate audio endpoints: 0x%08lx\n", hr);
@@ -301,16 +303,15 @@ static HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ve
     }
 
     count = 0;
-    hr = IMMDeviceCollection_GetCount(coll, &count);
+    hr = coll->GetCount(&count);
     if(SUCCEEDED(hr) && count > 0)
     {
         clear_devlist(list);
         VECTOR_RESIZE(*list, 0, count);
 
-        hr = IMMDeviceEnumerator_GetDefaultAudioEndpoint(devenum, flowdir,
-                                                         eMultimedia, &defdev);
+        hr = devenum->GetDefaultAudioEndpoint(flowdir, eMultimedia, &defdev);
     }
-    if(SUCCEEDED(hr) && defdev != NULL)
+    if(SUCCEEDED(hr) && defdev != nullptr)
     {
         defdevid = get_device_id(defdev);
         if(defdevid)
@@ -322,7 +323,7 @@ static HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ve
         IMMDevice *device;
         WCHAR *devid;
 
-        hr = IMMDeviceCollection_Item(coll, i, &device);
+        hr = coll->Item(i, &device);
         if(FAILED(hr)) continue;
 
         devid = get_device_id(device);
@@ -332,12 +333,12 @@ static HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, ve
                 add_device(device, devid, list);
             CoTaskMemFree(devid);
         }
-        IMMDevice_Release(device);
+        device->Release();
     }
 
-    if(defdev) IMMDevice_Release(defdev);
+    if(defdev) defdev->Release();
     if(defdevid) CoTaskMemFree(defdevid);
-    IMMDeviceCollection_Release(coll);
+    coll->Release();
 
     return S_OK;
 }
@@ -379,8 +380,7 @@ static void ALCwasapiProxy_Destruct(ALCwasapiProxy* UNUSED(self)) { }
 
 static DWORD CALLBACK ALCwasapiProxy_messageHandler(void *ptr)
 {
-    ThreadRequest *req = ptr;
-    IMMDeviceEnumerator *Enumerator;
+    auto req = reinterpret_cast<ThreadRequest*>(ptr);
     ALuint deviceCount = 0;
     ALCwasapiProxy *proxy;
     HRESULT hr, cohr;
@@ -388,7 +388,7 @@ static DWORD CALLBACK ALCwasapiProxy_messageHandler(void *ptr)
 
     TRACE("Starting message thread\n");
 
-    cohr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+    cohr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
     if(FAILED(cohr))
     {
         WARN("Failed to initialize COM: 0x%08lx\n", cohr);
@@ -396,7 +396,7 @@ static DWORD CALLBACK ALCwasapiProxy_messageHandler(void *ptr)
         return 0;
     }
 
-    hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_INPROC_SERVER, &IID_IMMDeviceEnumerator, &ptr);
+    hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER, IID_IMMDeviceEnumerator, &ptr);
     if(FAILED(hr))
     {
         WARN("Failed to create IMMDeviceEnumerator instance: 0x%08lx\n", hr);
@@ -404,9 +404,9 @@ static DWORD CALLBACK ALCwasapiProxy_messageHandler(void *ptr)
         ReturnMsgResponse(req, hr);
         return 0;
     }
-    Enumerator = ptr;
-    IMMDeviceEnumerator_Release(Enumerator);
-    Enumerator = NULL;
+    auto Enumerator = reinterpret_cast<IMMDeviceEnumerator*>(ptr);
+    Enumerator->Release();
+    Enumerator = nullptr;
 
     CoUninitialize();
 
@@ -414,13 +414,13 @@ static DWORD CALLBACK ALCwasapiProxy_messageHandler(void *ptr)
      * returning success, otherwise PostThreadMessage may fail if it gets
      * called before GetMessage.
      */
-    PeekMessage(&msg, NULL, WM_USER, WM_USER, PM_NOREMOVE);
+    PeekMessage(&msg, nullptr, WM_USER, WM_USER, PM_NOREMOVE);
 
     TRACE("Message thread initialization complete\n");
     ReturnMsgResponse(req, S_OK);
 
     TRACE("Starting message loop\n");
-    while(GetMessage(&msg, NULL, WM_USER_First, WM_USER_Last))
+    while(GetMessage(&msg, nullptr, WM_USER_First, WM_USER_Last))
     {
         TRACE("Got message \"%s\" (0x%04x, lparam=%p, wparam=%p)\n",
             (msg.message >= WM_USER && msg.message <= WM_USER_Last) ?
@@ -430,12 +430,12 @@ static DWORD CALLBACK ALCwasapiProxy_messageHandler(void *ptr)
         switch(msg.message)
         {
         case WM_USER_OpenDevice:
-            req = (ThreadRequest*)msg.wParam;
-            proxy = (ALCwasapiProxy*)msg.lParam;
+            req = reinterpret_cast<ThreadRequest*>(msg.wParam);
+            proxy = reinterpret_cast<ALCwasapiProxy*>(msg.lParam);
 
             hr = cohr = S_OK;
             if(++deviceCount == 1)
-                hr = cohr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+                hr = cohr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
             if(SUCCEEDED(hr))
                 hr = V0(proxy,openProxy)();
             if(FAILED(hr))
@@ -448,32 +448,32 @@ static DWORD CALLBACK ALCwasapiProxy_messageHandler(void *ptr)
             continue;
 
         case WM_USER_ResetDevice:
-            req = (ThreadRequest*)msg.wParam;
-            proxy = (ALCwasapiProxy*)msg.lParam;
+            req = reinterpret_cast<ThreadRequest*>(msg.wParam);
+            proxy = reinterpret_cast<ALCwasapiProxy*>(msg.lParam);
 
             hr = V0(proxy,resetProxy)();
             ReturnMsgResponse(req, hr);
             continue;
 
         case WM_USER_StartDevice:
-            req = (ThreadRequest*)msg.wParam;
-            proxy = (ALCwasapiProxy*)msg.lParam;
+            req = reinterpret_cast<ThreadRequest*>(msg.wParam);
+            proxy = reinterpret_cast<ALCwasapiProxy*>(msg.lParam);
 
             hr = V0(proxy,startProxy)();
             ReturnMsgResponse(req, hr);
             continue;
 
         case WM_USER_StopDevice:
-            req = (ThreadRequest*)msg.wParam;
-            proxy = (ALCwasapiProxy*)msg.lParam;
+            req = reinterpret_cast<ThreadRequest*>(msg.wParam);
+            proxy = reinterpret_cast<ALCwasapiProxy*>(msg.lParam);
 
             V0(proxy,stopProxy)();
             ReturnMsgResponse(req, S_OK);
             continue;
 
         case WM_USER_CloseDevice:
-            req = (ThreadRequest*)msg.wParam;
-            proxy = (ALCwasapiProxy*)msg.lParam;
+            req = reinterpret_cast<ThreadRequest*>(msg.wParam);
+            proxy = reinterpret_cast<ALCwasapiProxy*>(msg.lParam);
 
             V0(proxy,closeProxy)();
             if(--deviceCount == 0)
@@ -483,24 +483,24 @@ static DWORD CALLBACK ALCwasapiProxy_messageHandler(void *ptr)
             continue;
 
         case WM_USER_Enumerate:
-            req = (ThreadRequest*)msg.wParam;
+            req = reinterpret_cast<ThreadRequest*>(msg.wParam);
 
             hr = cohr = S_OK;
             if(++deviceCount == 1)
-                hr = cohr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+                hr = cohr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
             if(SUCCEEDED(hr))
-                hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_INPROC_SERVER, &IID_IMMDeviceEnumerator, &ptr);
+                hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER, IID_IMMDeviceEnumerator, &ptr);
             if(SUCCEEDED(hr))
             {
-                Enumerator = ptr;
+                Enumerator = reinterpret_cast<IMMDeviceEnumerator*>(ptr);
 
                 if(msg.lParam == ALL_DEVICE_PROBE)
                     hr = probe_devices(Enumerator, eRender, &PlaybackDevices);
                 else if(msg.lParam == CAPTURE_DEVICE_PROBE)
                     hr = probe_devices(Enumerator, eCapture, &CaptureDevices);
 
-                IMMDeviceEnumerator_Release(Enumerator);
-                Enumerator = NULL;
+                Enumerator->Release();
+                Enumerator = nullptr;
             }
 
             if(--deviceCount == 0 && SUCCEEDED(cohr))
@@ -570,16 +570,16 @@ static void ALCwasapiPlayback_Construct(ALCwasapiPlayback *self, ALCdevice *devi
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     ALCwasapiProxy_Construct(STATIC_CAST(ALCwasapiProxy, self));
 
-    self->devid = NULL;
+    self->devid = nullptr;
 
-    self->mmdev = NULL;
-    self->client = NULL;
-    self->render = NULL;
-    self->NotifyEvent = NULL;
+    self->mmdev = nullptr;
+    self->client = nullptr;
+    self->render = nullptr;
+    self->NotifyEvent = nullptr;
 
-    self->MsgEvent = NULL;
+    self->MsgEvent = nullptr;
 
-    ATOMIC_INIT(&self->Padding, 0);
+    ATOMIC_INIT(&self->Padding, 0u);
 
     ATOMIC_INIT(&self->killNow, 0);
 }
@@ -593,25 +593,25 @@ static void ALCwasapiPlayback_Destruct(ALCwasapiPlayback *self)
             (void)WaitForResponse(&req);
 
         CloseHandle(self->MsgEvent);
-        self->MsgEvent = NULL;
+        self->MsgEvent = nullptr;
     }
 
     if(self->NotifyEvent)
         CloseHandle(self->NotifyEvent);
-    self->NotifyEvent = NULL;
+    self->NotifyEvent = nullptr;
 
     free(self->devid);
-    self->devid = NULL;
+    self->devid = nullptr;
 
-    if(self->NotifyEvent != NULL)
+    if(self->NotifyEvent != nullptr)
         CloseHandle(self->NotifyEvent);
-    self->NotifyEvent = NULL;
-    if(self->MsgEvent != NULL)
+    self->NotifyEvent = nullptr;
+    if(self->MsgEvent != nullptr)
         CloseHandle(self->MsgEvent);
-    self->MsgEvent = NULL;
+    self->MsgEvent = nullptr;
 
     free(self->devid);
-    self->devid = NULL;
+    self->devid = nullptr;
 
     ALCwasapiProxy_Destruct(STATIC_CAST(ALCwasapiProxy, self));
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
@@ -620,17 +620,19 @@ static void ALCwasapiPlayback_Destruct(ALCwasapiPlayback *self)
 
 FORCE_ALIGN static int ALCwasapiPlayback_mixerProc(void *arg)
 {
-    ALCwasapiPlayback *self = arg;
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    auto self = reinterpret_cast<ALCwasapiPlayback*>(arg);
+    ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
+    IAudioClient *client = self->client;
+    IAudioRenderClient *render = self->render;
     UINT32 buffer_len, written;
     ALuint update_size, len;
     BYTE *buffer;
     HRESULT hr;
 
-    hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+    hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
     if(FAILED(hr))
     {
-        ERR("CoInitializeEx(NULL, COINIT_MULTITHREADED) failed: 0x%08lx\n", hr);
+        ERR("CoInitializeEx(nullptr, COINIT_MULTITHREADED) failed: 0x%08lx\n", hr);
         V0(device->Backend,lock)();
         aluHandleDisconnect(device, "COM init failed: 0x%08lx", hr);
         V0(device->Backend,unlock)();
@@ -644,7 +646,7 @@ FORCE_ALIGN static int ALCwasapiPlayback_mixerProc(void *arg)
     buffer_len = update_size * device->NumUpdates;
     while(!ATOMIC_LOAD(&self->killNow, almemory_order_relaxed))
     {
-        hr = IAudioClient_GetCurrentPadding(self->client, &written);
+        hr = client->GetCurrentPadding(&written);
         if(FAILED(hr))
         {
             ERR("Failed to get padding: 0x%08lx\n", hr);
@@ -666,14 +668,14 @@ FORCE_ALIGN static int ALCwasapiPlayback_mixerProc(void *arg)
         }
         len -= len%update_size;
 
-        hr = IAudioRenderClient_GetBuffer(self->render, len, &buffer);
+        hr = render->GetBuffer(len, &buffer);
         if(SUCCEEDED(hr))
         {
             ALCwasapiPlayback_lock(self);
             aluMixData(device, buffer, len);
             ATOMIC_STORE(&self->Padding, written + len, almemory_order_relaxed);
             ALCwasapiPlayback_unlock(self);
-            hr = IAudioRenderClient_ReleaseBuffer(self->render, len, 0);
+            hr = render->ReleaseBuffer(len, 0);
         }
         if(FAILED(hr))
         {
@@ -684,7 +686,7 @@ FORCE_ALIGN static int ALCwasapiPlayback_mixerProc(void *arg)
             break;
         }
     }
-    ATOMIC_STORE(&self->Padding, 0, almemory_order_release);
+    ATOMIC_STORE(&self->Padding, 0u, almemory_order_release);
 
     CoUninitialize();
     return 0;
@@ -734,9 +736,9 @@ static ALCenum ALCwasapiPlayback_open(ALCwasapiPlayback *self, const ALCchar *de
 {
     HRESULT hr = S_OK;
 
-    self->NotifyEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
-    self->MsgEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
-    if(self->NotifyEvent == NULL || self->MsgEvent == NULL)
+    self->NotifyEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    self->MsgEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    if(self->NotifyEvent == nullptr || self->MsgEvent == nullptr)
     {
         ERR("Failed to create message events: %lu\n", GetLastError());
         hr = E_FAIL;
@@ -763,14 +765,13 @@ static ALCenum ALCwasapiPlayback_open(ALCwasapiPlayback *self, const ALCchar *de
             if(iter == VECTOR_END(PlaybackDevices))
             {
                 int len;
-                if((len=MultiByteToWideChar(CP_UTF8, 0, deviceName, -1, NULL, 0)) > 0)
+                if((len=MultiByteToWideChar(CP_UTF8, 0, deviceName, -1, nullptr, 0)) > 0)
                 {
-                    WCHAR *wname = calloc(sizeof(WCHAR), len);
-                    MultiByteToWideChar(CP_UTF8, 0, deviceName, -1, wname, len);
-#define MATCH_NAME(i) (wcscmp((i)->devid, wname) == 0)
+                    std::vector<WCHAR> wname(len);
+                    MultiByteToWideChar(CP_UTF8, 0, deviceName, -1, wname.data(), len);
+#define MATCH_NAME(i) (wcscmp((i)->devid, wname.data()) == 0)
                     VECTOR_FIND_IF(iter, const DevMap, PlaybackDevices, MATCH_NAME);
 #undef MATCH_NAME
-                    free(wname);
                 }
             }
             if(iter == VECTOR_END(PlaybackDevices))
@@ -798,15 +799,15 @@ static ALCenum ALCwasapiPlayback_open(ALCwasapiPlayback *self, const ALCchar *de
 
     if(FAILED(hr))
     {
-        if(self->NotifyEvent != NULL)
+        if(self->NotifyEvent != nullptr)
             CloseHandle(self->NotifyEvent);
-        self->NotifyEvent = NULL;
-        if(self->MsgEvent != NULL)
+        self->NotifyEvent = nullptr;
+        if(self->MsgEvent != nullptr)
             CloseHandle(self->MsgEvent);
-        self->MsgEvent = NULL;
+        self->MsgEvent = nullptr;
 
         free(self->devid);
-        self->devid = NULL;
+        self->devid = nullptr;
 
         ERR("Device init failed: 0x%08lx\n", hr);
         return ALC_INVALID_VALUE;
@@ -821,31 +822,30 @@ static HRESULT ALCwasapiPlayback_openProxy(ALCwasapiPlayback *self)
     void *ptr;
     HRESULT hr;
 
-    hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_INPROC_SERVER, &IID_IMMDeviceEnumerator, &ptr);
+    hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER, IID_IMMDeviceEnumerator, &ptr);
     if(SUCCEEDED(hr))
     {
-        IMMDeviceEnumerator *Enumerator = ptr;
+        auto Enumerator = reinterpret_cast<IMMDeviceEnumerator*>(ptr);
         if(!self->devid)
-            hr = IMMDeviceEnumerator_GetDefaultAudioEndpoint(Enumerator, eRender, eMultimedia, &self->mmdev);
+            hr = Enumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &self->mmdev);
         else
-            hr = IMMDeviceEnumerator_GetDevice(Enumerator, self->devid, &self->mmdev);
-        IMMDeviceEnumerator_Release(Enumerator);
-        Enumerator = NULL;
+            hr = Enumerator->GetDevice(self->devid, &self->mmdev);
+        Enumerator->Release();
     }
     if(SUCCEEDED(hr))
-        hr = IMMDevice_Activate(self->mmdev, &IID_IAudioClient, CLSCTX_INPROC_SERVER, NULL, &ptr);
+        hr = self->mmdev->Activate(IID_IAudioClient, CLSCTX_INPROC_SERVER, nullptr, &ptr);
     if(SUCCEEDED(hr))
     {
-        self->client = ptr;
+        self->client = reinterpret_cast<IAudioClient*>(ptr);
         if(alstr_empty(device->DeviceName))
-            get_device_name_and_guid(self->mmdev, &device->DeviceName, NULL);
+            get_device_name_and_guid(self->mmdev, &device->DeviceName, nullptr);
     }
 
     if(FAILED(hr))
     {
         if(self->mmdev)
-            IMMDevice_Release(self->mmdev);
-        self->mmdev = NULL;
+            self->mmdev->Release();
+        self->mmdev = nullptr;
     }
 
     return hr;
@@ -855,12 +855,12 @@ static HRESULT ALCwasapiPlayback_openProxy(ALCwasapiPlayback *self)
 static void ALCwasapiPlayback_closeProxy(ALCwasapiPlayback *self)
 {
     if(self->client)
-        IAudioClient_Release(self->client);
-    self->client = NULL;
+        self->client->Release();
+    self->client = nullptr;
 
     if(self->mmdev)
-        IMMDevice_Release(self->mmdev);
-    self->mmdev = NULL;
+        self->mmdev->Release();
+    self->mmdev = nullptr;
 }
 
 
@@ -880,25 +880,25 @@ static HRESULT ALCwasapiPlayback_resetProxy(ALCwasapiPlayback *self)
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     EndpointFormFactor formfactor = UnknownFormFactor;
     WAVEFORMATEXTENSIBLE OutputType;
-    WAVEFORMATEX *wfx = NULL;
+    WAVEFORMATEX *wfx = nullptr;
     REFERENCE_TIME min_per, buf_time;
     UINT32 buffer_len, min_len;
-    void *ptr = NULL;
+    void *ptr = nullptr;
     HRESULT hr;
 
     if(self->client)
-        IAudioClient_Release(self->client);
-    self->client = NULL;
+        self->client->Release();
+    self->client = nullptr;
 
-    hr = IMMDevice_Activate(self->mmdev, &IID_IAudioClient, CLSCTX_INPROC_SERVER, NULL, &ptr);
+    hr = self->mmdev->Activate(IID_IAudioClient, CLSCTX_INPROC_SERVER, nullptr, &ptr);
     if(FAILED(hr))
     {
         ERR("Failed to reactivate audio client: 0x%08lx\n", hr);
         return hr;
     }
-    self->client = ptr;
+    self->client = reinterpret_cast<IAudioClient*>(ptr);
 
-    hr = IAudioClient_GetMixFormat(self->client, &wfx);
+    hr = self->client->GetMixFormat(&wfx);
     if(FAILED(hr))
     {
         ERR("Failed to get mix format: 0x%08lx\n", hr);
@@ -911,7 +911,7 @@ static HRESULT ALCwasapiPlayback_resetProxy(ALCwasapiPlayback *self)
         return E_FAIL;
     }
     CoTaskMemFree(wfx);
-    wfx = NULL;
+    wfx = nullptr;
 
     buf_time = ScaleCeil(device->UpdateSize*device->NumUpdates, REFTIME_PER_SEC,
                          device->Frequency);
@@ -1011,11 +1011,11 @@ static HRESULT ALCwasapiPlayback_resetProxy(ALCwasapiPlayback *self)
     OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec *
                                         OutputType.Format.nBlockAlign;
 
-    hr = IAudioClient_IsFormatSupported(self->client, AUDCLNT_SHAREMODE_SHARED, &OutputType.Format, &wfx);
+    hr = self->client->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &OutputType.Format, &wfx);
     if(FAILED(hr))
     {
         ERR("Failed to check format support: 0x%08lx\n", hr);
-        hr = IAudioClient_GetMixFormat(self->client, &wfx);
+        hr = self->client->GetMixFormat(&wfx);
     }
     if(FAILED(hr))
     {
@@ -1023,7 +1023,7 @@ static HRESULT ALCwasapiPlayback_resetProxy(ALCwasapiPlayback *self)
         return hr;
     }
 
-    if(wfx != NULL)
+    if(wfx != nullptr)
     {
         if(!MakeExtensible(&OutputType, wfx))
         {
@@ -1031,7 +1031,7 @@ static HRESULT ALCwasapiPlayback_resetProxy(ALCwasapiPlayback *self)
             return E_FAIL;
         }
         CoTaskMemFree(wfx);
-        wfx = NULL;
+        wfx = nullptr;
 
         device->Frequency = OutputType.Format.nSamplesPerSec;
         if(OutputType.Format.nChannels == 1 && OutputType.dwChannelMask == MONO)
@@ -1056,7 +1056,7 @@ static HRESULT ALCwasapiPlayback_resetProxy(ALCwasapiPlayback *self)
             OutputType.dwChannelMask = STEREO;
         }
 
-        if(IsEqualGUID(&OutputType.SubFormat, &KSDATAFORMAT_SUBTYPE_PCM))
+        if(IsEqualGUID(OutputType.SubFormat, KSDATAFORMAT_SUBTYPE_PCM))
         {
             if(OutputType.Format.wBitsPerSample == 8)
                 device->FmtType = DevFmtUByte;
@@ -1070,7 +1070,7 @@ static HRESULT ALCwasapiPlayback_resetProxy(ALCwasapiPlayback *self)
                 OutputType.Format.wBitsPerSample = 16;
             }
         }
-        else if(IsEqualGUID(&OutputType.SubFormat, &KSDATAFORMAT_SUBTYPE_IEEE_FLOAT))
+        else if(IsEqualGUID(OutputType.SubFormat, KSDATAFORMAT_SUBTYPE_IEEE_FLOAT))
         {
             device->FmtType = DevFmtFloat;
             OutputType.Format.wBitsPerSample = 32;
@@ -1091,23 +1091,22 @@ static HRESULT ALCwasapiPlayback_resetProxy(ALCwasapiPlayback *self)
 
     SetDefaultWFXChannelOrder(device);
 
-    hr = IAudioClient_Initialize(self->client, AUDCLNT_SHAREMODE_SHARED,
-                                 AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-                                 buf_time, 0, &OutputType.Format, NULL);
+    hr = self->client->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+                                  buf_time, 0, &OutputType.Format, nullptr);
     if(FAILED(hr))
     {
         ERR("Failed to initialize audio client: 0x%08lx\n", hr);
         return hr;
     }
 
-    hr = IAudioClient_GetDevicePeriod(self->client, &min_per, NULL);
+    hr = self->client->GetDevicePeriod(&min_per, nullptr);
     if(SUCCEEDED(hr))
     {
         min_len = (UINT32)ScaleCeil(min_per, device->Frequency, REFTIME_PER_SEC);
         /* Find the nearest multiple of the period size to the update size */
         if(min_len < device->UpdateSize)
             min_len *= (device->UpdateSize + min_len/2)/min_len;
-        hr = IAudioClient_GetBufferSize(self->client, &buffer_len);
+        hr = self->client->GetBufferSize(&buffer_len);
     }
     if(FAILED(hr))
     {
@@ -1124,7 +1123,7 @@ static HRESULT ALCwasapiPlayback_resetProxy(ALCwasapiPlayback *self)
         device->UpdateSize = buffer_len / device->NumUpdates;
     }
 
-    hr = IAudioClient_SetEventHandle(self->client, self->NotifyEvent);
+    hr = self->client->SetEventHandle(self->NotifyEvent);
     if(FAILED(hr))
     {
         ERR("Failed to set event handle: 0x%08lx\n", hr);
@@ -1152,22 +1151,22 @@ static HRESULT ALCwasapiPlayback_startProxy(ALCwasapiPlayback *self)
     void *ptr;
 
     ResetEvent(self->NotifyEvent);
-    hr = IAudioClient_Start(self->client);
+    hr = self->client->Start();
     if(FAILED(hr))
         ERR("Failed to start audio client: 0x%08lx\n", hr);
 
     if(SUCCEEDED(hr))
-        hr = IAudioClient_GetService(self->client, &IID_IAudioRenderClient, &ptr);
+        hr = self->client->GetService(IID_IAudioRenderClient, &ptr);
     if(SUCCEEDED(hr))
     {
-        self->render = ptr;
+        self->render = reinterpret_cast<IAudioRenderClient*>(ptr);
         ATOMIC_STORE(&self->killNow, 0, almemory_order_release);
         if(althrd_create(&self->thread, ALCwasapiPlayback_mixerProc, self) != althrd_success)
         {
             if(self->render)
-                IAudioRenderClient_Release(self->render);
-            self->render = NULL;
-            IAudioClient_Stop(self->client);
+                self->render->Release();
+            self->render = nullptr;
+            self->client->Stop();
             ERR("Failed to start thread\n");
             hr = E_FAIL;
         }
@@ -1194,9 +1193,9 @@ static void ALCwasapiPlayback_stopProxy(ALCwasapiPlayback *self)
     ATOMIC_STORE_SEQ(&self->killNow, 1);
     althrd_join(self->thread, &res);
 
-    IAudioRenderClient_Release(self->render);
-    self->render = NULL;
-    IAudioClient_Stop(self->client);
+    self->render->Release();
+    self->render = nullptr;
+    self->client->Stop();
 }
 
 
@@ -1267,18 +1266,18 @@ static void ALCwasapiCapture_Construct(ALCwasapiCapture *self, ALCdevice *device
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     ALCwasapiProxy_Construct(STATIC_CAST(ALCwasapiProxy, self));
 
-    self->devid = NULL;
+    self->devid = nullptr;
 
-    self->mmdev = NULL;
-    self->client = NULL;
-    self->capture = NULL;
-    self->NotifyEvent = NULL;
+    self->mmdev = nullptr;
+    self->client = nullptr;
+    self->capture = nullptr;
+    self->NotifyEvent = nullptr;
 
-    self->MsgEvent = NULL;
+    self->MsgEvent = nullptr;
 
-    self->ChannelConv = NULL;
-    self->SampleConv = NULL;
-    self->Ring = NULL;
+    self->ChannelConv = nullptr;
+    self->SampleConv = nullptr;
+    self->Ring = nullptr;
 
     ATOMIC_INIT(&self->killNow, 0);
 }
@@ -1292,21 +1291,21 @@ static void ALCwasapiCapture_Destruct(ALCwasapiCapture *self)
             (void)WaitForResponse(&req);
 
         CloseHandle(self->MsgEvent);
-        self->MsgEvent = NULL;
+        self->MsgEvent = nullptr;
     }
 
-    if(self->NotifyEvent != NULL)
+    if(self->NotifyEvent != nullptr)
         CloseHandle(self->NotifyEvent);
-    self->NotifyEvent = NULL;
+    self->NotifyEvent = nullptr;
 
     ll_ringbuffer_free(self->Ring);
-    self->Ring = NULL;
+    self->Ring = nullptr;
 
     DestroySampleConverter(&self->SampleConv);
     DestroyChannelConverter(&self->ChannelConv);
 
     free(self->devid);
-    self->devid = NULL;
+    self->devid = nullptr;
 
     ALCwasapiProxy_Destruct(STATIC_CAST(ALCwasapiProxy, self));
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
@@ -1315,16 +1314,17 @@ static void ALCwasapiCapture_Destruct(ALCwasapiCapture *self)
 
 FORCE_ALIGN int ALCwasapiCapture_recordProc(void *arg)
 {
-    ALCwasapiCapture *self = arg;
+    auto self = reinterpret_cast<ALCwasapiCapture*>(arg);
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    ALfloat *samples = NULL;
+    IAudioCaptureClient *capture = self->capture;
+    ALfloat *samples = nullptr;
     size_t samplesmax = 0;
     HRESULT hr;
 
-    hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+    hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
     if(FAILED(hr))
     {
-        ERR("CoInitializeEx(NULL, COINIT_MULTITHREADED) failed: 0x%08lx\n", hr);
+        ERR("CoInitializeEx(nullptr, COINIT_MULTITHREADED) failed: 0x%08lx\n", hr);
         V0(device->Backend,lock)();
         aluHandleDisconnect(device, "COM init failed: 0x%08lx", hr);
         V0(device->Backend,unlock)();
@@ -1338,7 +1338,7 @@ FORCE_ALIGN int ALCwasapiCapture_recordProc(void *arg)
         UINT32 avail;
         DWORD res;
 
-        hr = IAudioCaptureClient_GetNextPacketSize(self->capture, &avail);
+        hr = capture->GetNextPacketSize(&avail);
         if(FAILED(hr))
             ERR("Failed to get next packet size: 0x%08lx\n", hr);
         else if(avail > 0)
@@ -1347,9 +1347,7 @@ FORCE_ALIGN int ALCwasapiCapture_recordProc(void *arg)
             DWORD flags;
             BYTE *rdata;
 
-            hr = IAudioCaptureClient_GetBuffer(self->capture,
-                &rdata, &numsamples, &flags, NULL, NULL
-            );
+            hr = capture->GetBuffer(&rdata, &numsamples, &flags, nullptr, nullptr);
             if(FAILED(hr))
                 ERR("Failed to get capture buffer: 0x%08lx\n", hr);
             else
@@ -1362,9 +1360,9 @@ FORCE_ALIGN int ALCwasapiCapture_recordProc(void *arg)
                     if(samplesmax < numsamples)
                     {
                         size_t newmax = RoundUp(numsamples, 4096);
-                        ALfloat *tmp = al_calloc(DEF_ALIGN, newmax*2*sizeof(ALfloat));
+                        void *tmp = al_calloc(DEF_ALIGN, newmax*2*sizeof(ALfloat));
                         al_free(samples);
-                        samples = tmp;
+                        samples = reinterpret_cast<ALfloat*>(tmp);
                         samplesmax = newmax;
                     }
                     ChannelConverterInput(self->ChannelConv, rdata, samples, numsamples);
@@ -1407,7 +1405,7 @@ FORCE_ALIGN int ALCwasapiCapture_recordProc(void *arg)
 
                 ll_ringbuffer_write_advance(self->Ring, dstframes);
 
-                hr = IAudioCaptureClient_ReleaseBuffer(self->capture, numsamples);
+                hr = capture->ReleaseBuffer(numsamples);
                 if(FAILED(hr)) ERR("Failed to release capture buffer: 0x%08lx\n", hr);
             }
         }
@@ -1426,7 +1424,7 @@ FORCE_ALIGN int ALCwasapiCapture_recordProc(void *arg)
     }
 
     al_free(samples);
-    samples = NULL;
+    samples = nullptr;
     samplesmax = 0;
 
     CoUninitialize();
@@ -1438,9 +1436,9 @@ static ALCenum ALCwasapiCapture_open(ALCwasapiCapture *self, const ALCchar *devi
 {
     HRESULT hr = S_OK;
 
-    self->NotifyEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
-    self->MsgEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
-    if(self->NotifyEvent == NULL || self->MsgEvent == NULL)
+    self->NotifyEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    self->MsgEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    if(self->NotifyEvent == nullptr || self->MsgEvent == nullptr)
     {
         ERR("Failed to create message events: %lu\n", GetLastError());
         hr = E_FAIL;
@@ -1467,14 +1465,13 @@ static ALCenum ALCwasapiCapture_open(ALCwasapiCapture *self, const ALCchar *devi
             if(iter == VECTOR_END(CaptureDevices))
             {
                 int len;
-                if((len=MultiByteToWideChar(CP_UTF8, 0, deviceName, -1, NULL, 0)) > 0)
+                if((len=MultiByteToWideChar(CP_UTF8, 0, deviceName, -1, nullptr, 0)) > 0)
                 {
-                    WCHAR *wname = calloc(sizeof(WCHAR), len);
-                    MultiByteToWideChar(CP_UTF8, 0, deviceName, -1, wname, len);
-#define MATCH_NAME(i) (wcscmp((i)->devid, wname) == 0)
+                    std::vector<WCHAR> wname(len);
+                    MultiByteToWideChar(CP_UTF8, 0, deviceName, -1, wname.data(), len);
+#define MATCH_NAME(i) (wcscmp((i)->devid, wname.data()) == 0)
                     VECTOR_FIND_IF(iter, const DevMap, CaptureDevices, MATCH_NAME);
 #undef MATCH_NAME
-                    free(wname);
                 }
             }
             if(iter == VECTOR_END(CaptureDevices))
@@ -1502,15 +1499,15 @@ static ALCenum ALCwasapiCapture_open(ALCwasapiCapture *self, const ALCchar *devi
 
     if(FAILED(hr))
     {
-        if(self->NotifyEvent != NULL)
+        if(self->NotifyEvent != nullptr)
             CloseHandle(self->NotifyEvent);
-        self->NotifyEvent = NULL;
-        if(self->MsgEvent != NULL)
+        self->NotifyEvent = nullptr;
+        if(self->MsgEvent != nullptr)
             CloseHandle(self->MsgEvent);
-        self->MsgEvent = NULL;
+        self->MsgEvent = nullptr;
 
         free(self->devid);
-        self->devid = NULL;
+        self->devid = nullptr;
 
         ERR("Device init failed: 0x%08lx\n", hr);
         return ALC_INVALID_VALUE;
@@ -1542,31 +1539,30 @@ static HRESULT ALCwasapiCapture_openProxy(ALCwasapiCapture *self)
     void *ptr;
     HRESULT hr;
 
-    hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_INPROC_SERVER, &IID_IMMDeviceEnumerator, &ptr);
+    hr = CoCreateInstance(CLSID_MMDeviceEnumerator, nullptr, CLSCTX_INPROC_SERVER, IID_IMMDeviceEnumerator, &ptr);
     if(SUCCEEDED(hr))
     {
-        IMMDeviceEnumerator *Enumerator = ptr;
+        auto Enumerator = reinterpret_cast<IMMDeviceEnumerator*>(ptr);
         if(!self->devid)
-            hr = IMMDeviceEnumerator_GetDefaultAudioEndpoint(Enumerator, eCapture, eMultimedia, &self->mmdev);
+            hr = Enumerator->GetDefaultAudioEndpoint(eCapture, eMultimedia, &self->mmdev);
         else
-            hr = IMMDeviceEnumerator_GetDevice(Enumerator, self->devid, &self->mmdev);
-        IMMDeviceEnumerator_Release(Enumerator);
-        Enumerator = NULL;
+            hr = Enumerator->GetDevice(self->devid, &self->mmdev);
+        Enumerator->Release();
     }
     if(SUCCEEDED(hr))
-        hr = IMMDevice_Activate(self->mmdev, &IID_IAudioClient, CLSCTX_INPROC_SERVER, NULL, &ptr);
+        hr = self->mmdev->Activate(IID_IAudioClient, CLSCTX_INPROC_SERVER, nullptr, &ptr);
     if(SUCCEEDED(hr))
     {
-        self->client = ptr;
+        self->client = reinterpret_cast<IAudioClient*>(ptr);
         if(alstr_empty(device->DeviceName))
-            get_device_name_and_guid(self->mmdev, &device->DeviceName, NULL);
+            get_device_name_and_guid(self->mmdev, &device->DeviceName, nullptr);
     }
 
     if(FAILED(hr))
     {
         if(self->mmdev)
-            IMMDevice_Release(self->mmdev);
-        self->mmdev = NULL;
+            self->mmdev->Release();
+        self->mmdev = nullptr;
     }
 
     return hr;
@@ -1576,12 +1572,12 @@ static HRESULT ALCwasapiCapture_openProxy(ALCwasapiCapture *self)
 static void ALCwasapiCapture_closeProxy(ALCwasapiCapture *self)
 {
     if(self->client)
-        IAudioClient_Release(self->client);
-    self->client = NULL;
+        self->client->Release();
+    self->client = nullptr;
 
     if(self->mmdev)
-        IMMDevice_Release(self->mmdev);
-    self->mmdev = NULL;
+        self->mmdev->Release();
+    self->mmdev = nullptr;
 }
 
 
@@ -1589,24 +1585,24 @@ static HRESULT ALCwasapiCapture_resetProxy(ALCwasapiCapture *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     WAVEFORMATEXTENSIBLE OutputType;
-    WAVEFORMATEX *wfx = NULL;
+    WAVEFORMATEX *wfx = nullptr;
     enum DevFmtType srcType;
     REFERENCE_TIME buf_time;
     UINT32 buffer_len;
-    void *ptr = NULL;
+    void *ptr = nullptr;
     HRESULT hr;
 
     if(self->client)
-        IAudioClient_Release(self->client);
-    self->client = NULL;
+        self->client->Release();
+    self->client = nullptr;
 
-    hr = IMMDevice_Activate(self->mmdev, &IID_IAudioClient, CLSCTX_INPROC_SERVER, NULL, &ptr);
+    hr = self->mmdev->Activate(IID_IAudioClient, CLSCTX_INPROC_SERVER, nullptr, &ptr);
     if(FAILED(hr))
     {
         ERR("Failed to reactivate audio client: 0x%08lx\n", hr);
         return hr;
     }
-    self->client = ptr;
+    self->client = reinterpret_cast<IAudioClient*>(ptr);
 
     buf_time = ScaleCeil(device->UpdateSize*device->NumUpdates, REFTIME_PER_SEC,
                          device->Frequency);
@@ -1682,9 +1678,7 @@ static HRESULT ALCwasapiCapture_resetProxy(ALCwasapiCapture *self)
                                         OutputType.Format.nBlockAlign;
     OutputType.Format.cbSize = sizeof(OutputType) - sizeof(OutputType.Format);
 
-    hr = IAudioClient_IsFormatSupported(self->client,
-        AUDCLNT_SHAREMODE_SHARED, &OutputType.Format, &wfx
-    );
+    hr = self->client->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &OutputType.Format, &wfx);
     if(FAILED(hr))
     {
         ERR("Failed to check format support: 0x%08lx\n", hr);
@@ -1694,7 +1688,7 @@ static HRESULT ALCwasapiCapture_resetProxy(ALCwasapiCapture *self)
     DestroySampleConverter(&self->SampleConv);
     DestroyChannelConverter(&self->ChannelConv);
 
-    if(wfx != NULL)
+    if(wfx != nullptr)
     {
         if(!(wfx->nChannels == OutputType.Format.nChannels ||
              (wfx->nChannels == 1 && OutputType.Format.nChannels == 2) ||
@@ -1714,10 +1708,10 @@ static HRESULT ALCwasapiCapture_resetProxy(ALCwasapiCapture *self)
             return E_FAIL;
         }
         CoTaskMemFree(wfx);
-        wfx = NULL;
+        wfx = nullptr;
     }
 
-    if(IsEqualGUID(&OutputType.SubFormat, &KSDATAFORMAT_SUBTYPE_PCM))
+    if(IsEqualGUID(OutputType.SubFormat, KSDATAFORMAT_SUBTYPE_PCM))
     {
         if(OutputType.Format.wBitsPerSample == 8)
             srcType = DevFmtUByte;
@@ -1731,7 +1725,7 @@ static HRESULT ALCwasapiCapture_resetProxy(ALCwasapiCapture *self)
             return E_FAIL;
         }
     }
-    else if(IsEqualGUID(&OutputType.SubFormat, &KSDATAFORMAT_SUBTYPE_IEEE_FLOAT))
+    else if(IsEqualGUID(OutputType.SubFormat, KSDATAFORMAT_SUBTYPE_IEEE_FLOAT))
     {
         if(OutputType.Format.wBitsPerSample == 32)
             srcType = DevFmtFloat;
@@ -1749,8 +1743,7 @@ static HRESULT ALCwasapiCapture_resetProxy(ALCwasapiCapture *self)
 
     if(device->FmtChans == DevFmtMono && OutputType.Format.nChannels == 2)
     {
-        self->ChannelConv = CreateChannelConverter(srcType, DevFmtStereo,
-                                                   device->FmtChans);
+        self->ChannelConv = CreateChannelConverter(srcType, DevFmtStereo, device->FmtChans);
         if(!self->ChannelConv)
         {
             ERR("Failed to create %s stereo-to-mono converter\n", DevFmtTypeString(srcType));
@@ -1764,8 +1757,7 @@ static HRESULT ALCwasapiCapture_resetProxy(ALCwasapiCapture *self)
     }
     else if(device->FmtChans == DevFmtStereo && OutputType.Format.nChannels == 1)
     {
-        self->ChannelConv = CreateChannelConverter(srcType, DevFmtMono,
-                                                   device->FmtChans);
+        self->ChannelConv = CreateChannelConverter(srcType, DevFmtMono, device->FmtChans);
         if(!self->ChannelConv)
         {
             ERR("Failed to create %s mono-to-stereo converter\n", DevFmtTypeString(srcType));
@@ -1793,17 +1785,15 @@ static HRESULT ALCwasapiCapture_resetProxy(ALCwasapiCapture *self)
               device->Frequency, DevFmtTypeString(srcType), OutputType.Format.nSamplesPerSec);
     }
 
-    hr = IAudioClient_Initialize(self->client,
-        AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
-        buf_time, 0, &OutputType.Format, NULL
-    );
+    hr = self->client->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
+                                  buf_time, 0, &OutputType.Format, nullptr);
     if(FAILED(hr))
     {
         ERR("Failed to initialize audio client: 0x%08lx\n", hr);
         return hr;
     }
 
-    hr = IAudioClient_GetBufferSize(self->client, &buffer_len);
+    hr = self->client->GetBufferSize(&buffer_len);
     if(FAILED(hr))
     {
         ERR("Failed to get buffer size: 0x%08lx\n", hr);
@@ -1822,7 +1812,7 @@ static HRESULT ALCwasapiCapture_resetProxy(ALCwasapiCapture *self)
         return E_OUTOFMEMORY;
     }
 
-    hr = IAudioClient_SetEventHandle(self->client, self->NotifyEvent);
+    hr = self->client->SetEventHandle(self->NotifyEvent);
     if(FAILED(hr))
     {
         ERR("Failed to set event handle: 0x%08lx\n", hr);
@@ -1850,31 +1840,31 @@ static HRESULT ALCwasapiCapture_startProxy(ALCwasapiCapture *self)
     void *ptr;
 
     ResetEvent(self->NotifyEvent);
-    hr = IAudioClient_Start(self->client);
+    hr = self->client->Start();
     if(FAILED(hr))
     {
         ERR("Failed to start audio client: 0x%08lx\n", hr);
         return hr;
     }
 
-    hr = IAudioClient_GetService(self->client, &IID_IAudioCaptureClient, &ptr);
+    hr = self->client->GetService(IID_IAudioCaptureClient, &ptr);
     if(SUCCEEDED(hr))
     {
-        self->capture = ptr;
+        self->capture = reinterpret_cast<IAudioCaptureClient*>(ptr);
         ATOMIC_STORE(&self->killNow, 0, almemory_order_release);
         if(althrd_create(&self->thread, ALCwasapiCapture_recordProc, self) != althrd_success)
         {
             ERR("Failed to start thread\n");
-            IAudioCaptureClient_Release(self->capture);
-            self->capture = NULL;
+            self->capture->Release();
+            self->capture = nullptr;
             hr = E_FAIL;
         }
     }
 
     if(FAILED(hr))
     {
-        IAudioClient_Stop(self->client);
-        IAudioClient_Reset(self->client);
+        self->client->Stop();
+        self->client->Reset();
     }
 
     return hr;
@@ -1898,10 +1888,10 @@ static void ALCwasapiCapture_stopProxy(ALCwasapiCapture *self)
     ATOMIC_STORE_SEQ(&self->killNow, 1);
     althrd_join(self->thread, &res);
 
-    IAudioCaptureClient_Release(self->capture);
-    self->capture = NULL;
-    IAudioClient_Stop(self->client);
-    IAudioClient_Reset(self->client);
+    self->capture->Release();
+    self->capture = nullptr;
+    self->client->Stop();
+    self->client->Reset();
 }
 
 
@@ -1914,7 +1904,7 @@ ALCenum ALCwasapiCapture_captureSamples(ALCwasapiCapture *self, ALCvoid *buffer,
 {
     if(ALCwasapiCapture_availableSamples(self) < samples)
         return ALC_INVALID_VALUE;
-    ll_ringbuffer_read(self->Ring, buffer, samples);
+    ll_ringbuffer_read(self->Ring, reinterpret_cast<char*>(buffer), samples);
     return ALC_NO_ERROR;
 }
 
@@ -1945,13 +1935,13 @@ static ALCboolean ALCwasapiBackendFactory_init(ALCwasapiBackendFactory* UNUSED(s
         ThreadRequest req;
         InitResult = E_FAIL;
 
-        req.FinishedEvt = CreateEventW(NULL, FALSE, FALSE, NULL);
-        if(req.FinishedEvt == NULL)
+        req.FinishedEvt = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+        if(req.FinishedEvt == nullptr)
             ERR("Failed to create event: %lu\n", GetLastError());
         else
         {
-            ThreadHdl = CreateThread(NULL, 0, ALCwasapiProxy_messageHandler, &req, 0, &ThreadID);
-            if(ThreadHdl != NULL)
+            ThreadHdl = CreateThread(nullptr, 0, ALCwasapiProxy_messageHandler, &req, 0, &ThreadID);
+            if(ThreadHdl != nullptr)
                 InitResult = WaitForResponse(&req);
             CloseHandle(req.FinishedEvt);
         }
@@ -1973,7 +1963,7 @@ static void ALCwasapiBackendFactory_deinit(ALCwasapiBackendFactory* UNUSED(self)
         TRACE("Sending WM_QUIT to Thread %04lx\n", ThreadID);
         PostThreadMessage(ThreadID, WM_QUIT, 0, 0);
         CloseHandle(ThreadHdl);
-        ThreadHdl = NULL;
+        ThreadHdl = nullptr;
     }
 }
 
@@ -1986,10 +1976,10 @@ static ALCboolean ALCwasapiBackendFactory_querySupport(ALCwasapiBackendFactory* 
 
 static void ALCwasapiBackendFactory_probe(ALCwasapiBackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames)
 {
-    ThreadRequest req = { NULL, 0 };
+    ThreadRequest req = { nullptr, 0 };
 
-    req.FinishedEvt = CreateEventW(NULL, FALSE, FALSE, NULL);
-    if(req.FinishedEvt == NULL)
+    req.FinishedEvt = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    if(req.FinishedEvt == nullptr)
         ERR("Failed to create event: %lu\n", GetLastError());
     else
     {
@@ -2013,7 +2003,7 @@ static void ALCwasapiBackendFactory_probe(ALCwasapiBackendFactory* UNUSED(self),
 #undef APPEND_OUTNAME
         }
         CloseHandle(req.FinishedEvt);
-        req.FinishedEvt = NULL;
+        req.FinishedEvt = nullptr;
     }
 }
 
@@ -2023,18 +2013,18 @@ static ALCbackend* ALCwasapiBackendFactory_createBackend(ALCwasapiBackendFactory
     {
         ALCwasapiPlayback *backend;
         NEW_OBJ(backend, ALCwasapiPlayback)(device);
-        if(!backend) return NULL;
+        if(!backend) return nullptr;
         return STATIC_CAST(ALCbackend, backend);
     }
     if(type == ALCbackend_Capture)
     {
         ALCwasapiCapture *backend;
         NEW_OBJ(backend, ALCwasapiCapture)(device);
-        if(!backend) return NULL;
+        if(!backend) return nullptr;
         return STATIC_CAST(ALCbackend, backend);
     }
 
-    return NULL;
+    return nullptr;
 }
 
 

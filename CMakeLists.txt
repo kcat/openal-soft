@@ -1158,7 +1158,7 @@ IF(HAVE_WINDOWS_H)
         IF(ALSOFT_BACKEND_WASAPI)
             SET(HAVE_WASAPI 1)
             SET(BACKENDS  "${BACKENDS} WASAPI,")
-            SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/wasapi.c)
+            SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/wasapi.cpp)
         ENDIF()
     ENDIF()
 

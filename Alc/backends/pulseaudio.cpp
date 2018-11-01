@@ -871,7 +871,7 @@ static int PulsePlayback_mixerProc(PulsePlayback *self)
     unique_palock palock{self->loop};
     size_t frame_size{pa_frame_size(&self->spec)};
 
-    while(!self->killNow.load(almemory_order_acquire) &&
+    while(!self->killNow.load(std::memory_order_acquire) &&
           ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         ssize_t len{static_cast<ssize_t>(pa_stream_writable_size(self->stream))};
@@ -1153,7 +1153,7 @@ static ALCboolean PulsePlayback_reset(PulsePlayback *self)
 static ALCboolean PulsePlayback_start(PulsePlayback *self)
 {
     try {
-        self->killNow.store(AL_FALSE, almemory_order_release);
+        self->killNow.store(AL_FALSE, std::memory_order_release);
         self->thread = std::thread(PulsePlayback_mixerProc, self);
         return ALC_TRUE;
     }
@@ -1168,7 +1168,7 @@ static ALCboolean PulsePlayback_start(PulsePlayback *self)
 
 static void PulsePlayback_stop(PulsePlayback *self)
 {
-    self->killNow.store(AL_TRUE, almemory_order_release);
+    self->killNow.store(AL_TRUE, std::memory_order_release);
     if(!self->stream || !self->thread.joinable())
         return;
 

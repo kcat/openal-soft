@@ -510,8 +510,9 @@ struct DevMap {
     std::string name;
     std::string device_name;
 
-    DevMap(std::string name_, std::string devname_)
-      : name{std::move(name_)}, device_name{std::move(devname_)}
+    template<typename StrT0, typename StrT1>
+    DevMap(StrT0&& name_, StrT1&& devname_)
+      : name{std::forward<StrT0>(name_)}, device_name{std::forward<StrT1>(devname_)}
     { }
 };
 
@@ -1331,7 +1332,7 @@ static void PulseCapture_deviceCallback(pa_context *UNUSED(context), const pa_so
         newname += " #";
         newname += std::to_string(++count);
     }
-    CaptureDevices.emplace_back(std::move(newname), std::string{info->name});
+    CaptureDevices.emplace_back(std::move(newname), info->name);
     DevMap &newentry = CaptureDevices.back();
 
     TRACE("Got device \"%s\", \"%s\"\n", newentry.name.c_str(), newentry.device_name.c_str());

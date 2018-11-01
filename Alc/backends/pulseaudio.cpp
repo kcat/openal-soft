@@ -26,6 +26,7 @@
 #include <array>
 #include <string>
 #include <vector>
+#include <atomic>
 #include <thread>
 #include <algorithm>
 

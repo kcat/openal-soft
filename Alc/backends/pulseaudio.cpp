@@ -506,6 +506,8 @@ static void pulse_close(pa_threaded_mainloop *loop, pa_context *context, pa_stre
 }
 
 
+namespace {
+
 struct DevMap {
     std::string name;
     std::string device_name;
@@ -516,7 +518,7 @@ struct DevMap {
     { }
 };
 
-static bool checkName(const std::vector<DevMap> &list, const std::string &name)
+bool checkName(const std::vector<DevMap> &list, const std::string &name)
 {
     return std::find_if(list.cbegin(), list.cend(),
         [&name](const DevMap &entry) -> bool
@@ -524,8 +526,10 @@ static bool checkName(const std::vector<DevMap> &list, const std::string &name)
     ) != list.cend();
 }
 
-static std::vector<DevMap> PlaybackDevices;
-static std::vector<DevMap> CaptureDevices;
+std::vector<DevMap> PlaybackDevices;
+std::vector<DevMap> CaptureDevices;
+
+} // namespace
 
 
 struct PulsePlayback {

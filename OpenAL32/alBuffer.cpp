@@ -20,10 +20,11 @@
 
 #include "config.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
-#include <limits.h>
+#include <cassert>
+#include <climits>
+#include <cstdio>
+#include <cstdlib>
+
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #endif
@@ -42,7 +43,7 @@
 static ALbuffer *AllocBuffer(ALCcontext *context);
 static void FreeBuffer(ALCdevice *device, ALbuffer *buffer);
 static const ALchar *NameFromUserFmtType(enum UserFmtType type);
-static void LoadData(ALCcontext *context, ALbuffer *buffer, ALuint freq, ALsizei size,
+static void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size,
                      enum UserFmtChannels SrcChannels, enum UserFmtType SrcType,
                      const ALvoid *data, ALbitfieldSOFT access);
 static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans, enum UserFmtType *type);

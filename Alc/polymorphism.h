@@ -2,9 +2,15 @@
 #define POLYMORPHISM_H
 
 /* Macros to declare inheriting types, and to (down-)cast and up-cast. */
+#ifdef __cplusplus
+#define STATIC_CAST(to, obj)         static_cast<to*>(obj)
+#define STATIC_UPCAST(to, from, obj) static_cast<to*>(obj)
+#else
+
 #define DERIVE_FROM_TYPE(t)          t t##_parent
 #define STATIC_CAST(to, obj)         (&(obj)->to##_parent)
-#if defined(__GNUC__) && !defined(__cplusplus)
+
+#if defined(__GNUC__)
 #define STATIC_UPCAST(to, from, obj) __extension__({                          \
     static_assert(__builtin_types_compatible_p(from, __typeof(*(obj))),       \
                   "Invalid upcast object from type");                         \
@@ -13,6 +19,7 @@
 #else
 #define STATIC_UPCAST(to, from, obj) ((to*)((char*)(obj) - offsetof(to, from##_parent)))
 #endif
+#endif /* __cplusplus */
 
 /* Defines method forwards, which call the given parent's (T2's) implementation. */
 #define DECLARE_FORWARD(T1, T2, rettype, func)                                \

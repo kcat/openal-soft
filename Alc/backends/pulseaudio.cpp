@@ -532,9 +532,7 @@ std::vector<DevMap> CaptureDevices;
 } // namespace
 
 
-struct PulsePlayback {
-    DERIVE_FROM_TYPE(ALCbackend);
-
+struct PulsePlayback final : public ALCbackend {
     std::string device_name;
 
     pa_buffer_attr attr;
@@ -1241,9 +1239,7 @@ static void PulsePlayback_unlock(PulsePlayback *self)
 }
 
 
-struct PulseCapture {
-    DERIVE_FROM_TYPE(ALCbackend);
-
+struct PulseCapture final : public ALCbackend {
     std::string device_name;
 
     const void *cap_store{nullptr};
@@ -1744,20 +1740,25 @@ static void PulseCapture_unlock(PulseCapture *self)
 }
 
 
-typedef struct ALCpulseBackendFactory {
-    DERIVE_FROM_TYPE(ALCbackendFactory);
-} ALCpulseBackendFactory;
-#define ALCPULSEBACKENDFACTORY_INITIALIZER { GET_VTABLE2(ALCpulseBackendFactory, ALCbackendFactory) }
+struct PulseBackendFactory final : public ALCbackendFactory {
+    PulseBackendFactory() noexcept;
+};
+#define ALCPULSEBACKENDFACTORY_INITIALIZER GET_VTABLE2(PulseBackendFactory, ALCbackendFactory)
 
-static ALCboolean ALCpulseBackendFactory_init(ALCpulseBackendFactory *self);
-static void ALCpulseBackendFactory_deinit(ALCpulseBackendFactory *self);
-static ALCboolean ALCpulseBackendFactory_querySupport(ALCpulseBackendFactory *self, ALCbackend_Type type);
-static void ALCpulseBackendFactory_probe(ALCpulseBackendFactory *self, enum DevProbe type, al_string *outnames);
-static ALCbackend* ALCpulseBackendFactory_createBackend(ALCpulseBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
-DEFINE_ALCBACKENDFACTORY_VTABLE(ALCpulseBackendFactory);
+static ALCboolean PulseBackendFactory_init(PulseBackendFactory *self);
+static void PulseBackendFactory_deinit(PulseBackendFactory *self);
+static ALCboolean PulseBackendFactory_querySupport(PulseBackendFactory *self, ALCbackend_Type type);
+static void PulseBackendFactory_probe(PulseBackendFactory *self, enum DevProbe type, al_string *outnames);
+static ALCbackend* PulseBackendFactory_createBackend(PulseBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
+DEFINE_ALCBACKENDFACTORY_VTABLE(PulseBackendFactory);
+
+PulseBackendFactory::PulseBackendFactory() noexcept
+  : ALCbackendFactory{ALCPULSEBACKENDFACTORY_INITIALIZER}
+{
+}
 
 
-static ALCboolean ALCpulseBackendFactory_init(ALCpulseBackendFactory* UNUSED(self))
+static ALCboolean PulseBackendFactory_init(PulseBackendFactory* UNUSED(self))
 {
     ALCboolean ret{ALC_FALSE};
 
@@ -1797,7 +1798,7 @@ static ALCboolean ALCpulseBackendFactory_init(ALCpulseBackendFactory* UNUSED(sel
     return ret;
 }
 
-static void ALCpulseBackendFactory_deinit(ALCpulseBackendFactory* UNUSED(self))
+static void PulseBackendFactory_deinit(PulseBackendFactory* UNUSED(self))
 {
     PlaybackDevices.clear();
     CaptureDevices.clear();
@@ -1809,14 +1810,14 @@ static void ALCpulseBackendFactory_deinit(ALCpulseBackendFactory* UNUSED(self))
     /* PulseAudio doesn't like being CloseLib'd sometimes */
 }
 
-static ALCboolean ALCpulseBackendFactory_querySupport(ALCpulseBackendFactory* UNUSED(self), ALCbackend_Type type)
+static ALCboolean PulseBackendFactory_querySupport(PulseBackendFactory* UNUSED(self), ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback || type == ALCbackend_Capture)
         return ALC_TRUE;
     return ALC_FALSE;
 }
 
-static void ALCpulseBackendFactory_probe(ALCpulseBackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames)
+static void PulseBackendFactory_probe(PulseBackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames)
 {
     auto add_device = [outnames](const DevMap &entry) -> void
     {
@@ -1841,7 +1842,7 @@ static void ALCpulseBackendFactory_probe(ALCpulseBackendFactory* UNUSED(self), e
     }
 }
 
-static ALCbackend* ALCpulseBackendFactory_createBackend(ALCpulseBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+static ALCbackend* PulseBackendFactory_createBackend(PulseBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
     {
@@ -1866,40 +1867,44 @@ static ALCbackend* ALCpulseBackendFactory_createBackend(ALCpulseBackendFactory* 
 
 #warning "Unsupported API version, backend will be unavailable!"
 
-typedef struct ALCpulseBackendFactory {
-    DERIVE_FROM_TYPE(ALCbackendFactory);
-} ALCpulseBackendFactory;
-#define ALCPULSEBACKENDFACTORY_INITIALIZER { GET_VTABLE2(ALCpulseBackendFactory, ALCbackendFactory) }
+struct PulseBackendFactory final : public ALCbackendFactory {
+    PulseBackendFactory() noexcept;
+};
+#define ALCPULSEBACKENDFACTORY_INITIALIZER GET_VTABLE2(PulseBackendFactory, ALCbackendFactory)
 
-static ALCboolean ALCpulseBackendFactory_init(ALCpulseBackendFactory* UNUSED(self))
+static ALCboolean PulseBackendFactory_init(PulseBackendFactory* UNUSED(self))
 {
     return ALC_FALSE;
 }
 
-static void ALCpulseBackendFactory_deinit(ALCpulseBackendFactory* UNUSED(self))
+static void PulseBackendFactory_deinit(PulseBackendFactory* UNUSED(self))
 {
 }
 
-static ALCboolean ALCpulseBackendFactory_querySupport(ALCpulseBackendFactory* UNUSED(self), ALCbackend_Type UNUSED(type))
+static ALCboolean PulseBackendFactory_querySupport(PulseBackendFactory* UNUSED(self), ALCbackend_Type UNUSED(type))
 {
     return ALC_FALSE;
 }
 
-static void ALCpulseBackendFactory_probe(ALCpulseBackendFactory* UNUSED(self), enum DevProbe UNUSED(type), al_string* UNUSED(outnames))
+static void PulseBackendFactory_probe(PulseBackendFactory* UNUSED(self), enum DevProbe UNUSED(type), al_string* UNUSED(outnames))
 {
 }
 
-static ALCbackend* ALCpulseBackendFactory_createBackend(ALCpulseBackendFactory* UNUSED(self), ALCdevice* UNUSED(device), ALCbackend_Type UNUSED(type))
+static ALCbackend* PulseBackendFactory_createBackend(PulseBackendFactory* UNUSED(self), ALCdevice* UNUSED(device), ALCbackend_Type UNUSED(type))
 {
     return nullptr;
 }
 
-DEFINE_ALCBACKENDFACTORY_VTABLE(ALCpulseBackendFactory);
+DEFINE_ALCBACKENDFACTORY_VTABLE(PulseBackendFactory);
+
+PulseBackendFactory::PulseBackendFactory() noexcept
+  : ALCbackendFactory{ALCPULSEBACKENDFACTORY_INITIALIZER}
+{ }
 
 #endif /* PA_API_VERSION == 12 */
 
 ALCbackendFactory *ALCpulseBackendFactory_getFactory(void)
 {
-    static ALCpulseBackendFactory factory{ALCPULSEBACKENDFACTORY_INITIALIZER};
+    static PulseBackendFactory factory{};
     return STATIC_CAST(ALCbackendFactory, &factory);
 }

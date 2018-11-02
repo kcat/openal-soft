@@ -92,6 +92,24 @@ static inline ALint64 ScaleCeil(ALint64 val, ALint64 new_scale, ALint64 old_scal
 
 namespace {
 
+struct PropVariant {
+    PROPVARIANT mProp;
+
+public:
+    PropVariant() { PropVariantInit(&mProp); }
+    ~PropVariant() { clear(); }
+
+    void clear() { PropVariantClear(&mProp); }
+
+    PROPVARIANT* get() noexcept { return &mProp; }
+
+    PROPVARIANT& operator*() noexcept { return mProp; }
+    const PROPVARIANT& operator*() const noexcept { return mProp; }
+
+    PROPVARIANT* operator->() noexcept { return &mProp; }
+    const PROPVARIANT* operator->() const noexcept { return &mProp; }
+};
+
 struct DevMap {
     std::string name;
     std::string endpoint_guid; // obtained from PKEY_AudioEndpoint_GUID , set to "Unknown device GUID" if absent.
@@ -181,6 +199,7 @@ using NameGUIDPair = std::pair<std::string,std::string>;
 static NameGUIDPair get_device_name_and_guid(IMMDevice *device)
 {
     std::string name{DEVNAME_HEAD};
+    std::string guid;
 
     IPropertyStore *ps;
     HRESULT hr = device->OpenPropertyStore(STGM_READ, &ps);
@@ -190,43 +209,36 @@ static NameGUIDPair get_device_name_and_guid(IMMDevice *device)
         return { name+"Unknown Device Name", "Unknown Device GUID" };
     }
 
-    PROPVARIANT pvname;
-    PropVariantInit(&pvname);
-
-    hr = ps->GetValue(reinterpret_cast<const PROPERTYKEY&>(DEVPKEY_Device_FriendlyName), &pvname);
+    PropVariant pvprop;
+    hr = ps->GetValue(reinterpret_cast<const PROPERTYKEY&>(DEVPKEY_Device_FriendlyName), pvprop.get());
     if(FAILED(hr))
     {
         WARN("GetValue Device_FriendlyName failed: 0x%08lx\n", hr);
         name += "Unknown Device Name";
     }
-    else if(pvname.vt == VT_LPWSTR)
-        name += wstr_to_utf8(pvname.pwszVal);
+    else if(pvprop->vt == VT_LPWSTR)
+        name += wstr_to_utf8(pvprop->pwszVal);
     else
     {
-        WARN("Unexpected PROPVARIANT type: 0x%04x\n", pvname.vt);
+        WARN("Unexpected PROPVARIANT type: 0x%04x\n", pvprop->vt);
         name += "Unknown Device Name";
     }
-    PropVariantClear(&pvname);
 
-    std::string guid;
-    PROPVARIANT pvguid;
-    PropVariantInit(&pvguid);
-
-    hr = ps->GetValue(reinterpret_cast<const PROPERTYKEY&>(PKEY_AudioEndpoint_GUID), &pvguid);
+    pvprop.clear();
+    hr = ps->GetValue(reinterpret_cast<const PROPERTYKEY&>(PKEY_AudioEndpoint_GUID), pvprop.get());
     if(FAILED(hr))
     {
         WARN("GetValue AudioEndpoint_GUID failed: 0x%08lx\n", hr);
         guid = "Unknown Device GUID";
     }
-    else if(pvguid.vt == VT_LPWSTR)
-        guid = wstr_to_utf8(pvguid.pwszVal);
+    else if(pvprop->vt == VT_LPWSTR)
+        guid = wstr_to_utf8(pvprop->pwszVal);
     else
     {
-        WARN("Unexpected PROPVARIANT type: 0x%04x\n", pvguid.vt);
+        WARN("Unexpected PROPVARIANT type: 0x%04x\n", pvprop->vt);
         guid = "Unknown Device GUID";
     }
 
-    PropVariantClear(&pvguid);
     ps->Release();
 
     return {name, guid};
@@ -242,20 +254,17 @@ static void get_device_formfactor(IMMDevice *device, EndpointFormFactor *formfac
         return;
     }
 
-    PROPVARIANT pvform;
-    PropVariantInit(&pvform);
-
-    hr = ps->GetValue(reinterpret_cast<const PROPERTYKEY&>(PKEY_AudioEndpoint_FormFactor), &pvform);
+    PropVariant pvform;
+    hr = ps->GetValue(reinterpret_cast<const PROPERTYKEY&>(PKEY_AudioEndpoint_FormFactor), pvform.get());
     if(FAILED(hr))
         WARN("GetValue AudioEndpoint_FormFactor failed: 0x%08lx\n", hr);
-    else if(pvform.vt == VT_UI4)
-        *formfactor = static_cast<EndpointFormFactor>(pvform.ulVal);
-    else if(pvform.vt == VT_EMPTY)
+    else if(pvform->vt == VT_UI4)
+        *formfactor = static_cast<EndpointFormFactor>(pvform->ulVal);
+    else if(pvform->vt == VT_EMPTY)
         *formfactor = UnknownFormFactor;
     else
-        WARN("Unexpected PROPVARIANT type: 0x%04x\n", pvform.vt);
+        WARN("Unexpected PROPVARIANT type: 0x%04x\n", pvform->vt);
 
-    PropVariantClear(&pvform);
     ps->Release();
 }
 

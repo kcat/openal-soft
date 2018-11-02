@@ -9,6 +9,18 @@
 #include "math_defs.h"
 
 
+/* Early MSVC lacks round/roundf */
+#if defined(_MSC_VER) && _MSC_VER < 1800
+static double round(double val)
+{
+    if(val < 0.0)
+        return ceil(val-0.5);
+    return floor(val+0.5);
+}
+#define roundf(f) ((float)round((float)(f)))
+#endif
+
+
 /* These structures assume BUFFERSIZE is a power of 2. */
 static_assert((BUFFERSIZE & (BUFFERSIZE-1)) == 0, "BUFFERSIZE is not a power of 2");
 

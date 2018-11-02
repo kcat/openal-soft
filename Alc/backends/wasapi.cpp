@@ -117,7 +117,7 @@ std::vector<DevMap> PlaybackDevices;
 std::vector<DevMap> CaptureDevices;
 
 
-std::string wstr_to_string(const WCHAR *wstr)
+std::string wstr_to_utf8(const WCHAR *wstr)
 {
     std::string ret;
 
@@ -200,7 +200,7 @@ static NameGUIDPair get_device_name_and_guid(IMMDevice *device)
         name += "Unknown Device Name";
     }
     else if(pvname.vt == VT_LPWSTR)
-        name += wstr_to_string(pvname.pwszVal);
+        name += wstr_to_utf8(pvname.pwszVal);
     else
     {
         WARN("Unexpected PROPVARIANT type: 0x%04x\n", pvname.vt);
@@ -218,8 +218,8 @@ static NameGUIDPair get_device_name_and_guid(IMMDevice *device)
         WARN("GetValue AudioEndpoint_GUID failed: 0x%08lx\n", hr);
         guid = "Unknown Device GUID";
     }
-    else if(pvname.vt == VT_LPWSTR)
-        guid = wstr_to_string(pvname.pwszVal);
+    else if(pvguid.vt == VT_LPWSTR)
+        guid = wstr_to_utf8(pvguid.pwszVal);
     else
     {
         WARN("Unexpected PROPVARIANT type: 0x%04x\n", pvguid.vt);

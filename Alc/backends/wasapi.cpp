@@ -54,10 +54,16 @@
 #include "backends/base.h"
 
 
-extern "C" {
-extern const GUID KSDATAFORMAT_SUBTYPE_PCM;
-extern const GUID KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
-} // extern "C"
+/* Some headers seem to define these as macros for __uuidof, which is annoying
+ * since some headers don't declare them at all. Hopefully the ifdef is enough
+ * to tell if they need to be declared.
+ */
+#ifndef KSDATAFORMAT_SUBTYPE_PCM
+DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
+#endif
+#ifndef KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
+DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
+#endif
 
 DEFINE_DEVPROPKEY(DEVPKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80,0x20, 0x67,0xd1,0x46,0xa8,0x50,0xe0, 14);
 DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_FormFactor, 0x1da5d803, 0xd492, 0x4edd, 0x8c,0x23, 0xe0,0xc0,0xff,0xee,0x7f,0x0e, 0);

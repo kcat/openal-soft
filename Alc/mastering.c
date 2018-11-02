@@ -6,6 +6,7 @@
 #include "alu.h"
 #include "almalloc.h"
 #include "static_assert.h"
+#include "math_defs.h"
 
 
 /* These structures assume BUFFERSIZE is a power of 2. */
@@ -463,7 +464,7 @@ Compressor* CompressorInit(const ALsizei NumChans, const ALuint SampleRate,
         if(hold > 0)
         {
             Comp->Hold = (SlidingHold*)(Comp + 1);
-            Comp->Hold->Values[0] = -INFINITY;
+            Comp->Hold->Values[0] = -HUGE_VALF;
             Comp->Hold->Expiries[0] = hold;
             Comp->Hold->Length = hold;
             Comp->Delay = (ALfloat(*)[BUFFERSIZE])(Comp->Hold + 1);

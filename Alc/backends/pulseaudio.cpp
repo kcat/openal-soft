@@ -41,9 +41,11 @@
 
 #if PA_API_VERSION == 12
 
+namespace {
+
 #ifdef HAVE_DYNLOAD
-static void *pa_handle;
-#define MAKE_FUNC(x) static decltype(x) * p##x
+void *pa_handle;
+#define MAKE_FUNC(x) decltype(x) * p##x
 MAKE_FUNC(pa_context_unref);
 MAKE_FUNC(pa_sample_spec_valid);
 MAKE_FUNC(pa_frame_size);
@@ -185,7 +187,7 @@ MAKE_FUNC(pa_stream_begin_write);
 
 #endif
 
-static ALCboolean pulse_load(void)
+ALCboolean pulse_load(void)
 {
     ALCboolean ret{ALC_TRUE};
 #ifdef HAVE_DYNLOAD
@@ -312,8 +314,6 @@ inline pa_context_flags_t operator|=(pa_context_flags_t &lhs, pa_context_flags_t
 }
 
 
-namespace {
-
 class palock_guard {
     pa_threaded_mainloop *mLoop;
 
@@ -363,16 +363,14 @@ public:
     }
 };
 
-} // namespace
-
 
 /* Global flags and properties */
-static pa_context_flags_t pulse_ctx_flags;
-static pa_proplist *prop_filter;
+pa_context_flags_t pulse_ctx_flags;
+pa_proplist *prop_filter;
 
 
 /* PulseAudio Event Callbacks */
-static void context_state_callback(pa_context *context, void *pdata)
+void context_state_callback(pa_context *context, void *pdata)
 {
     auto loop = reinterpret_cast<pa_threaded_mainloop*>(pdata);
     pa_context_state_t state{pa_context_get_state(context)};
@@ -380,7 +378,7 @@ static void context_state_callback(pa_context *context, void *pdata)
         pa_threaded_mainloop_signal(loop, 0);
 }
 
-static void stream_state_callback(pa_stream *stream, void *pdata)
+void stream_state_callback(pa_stream *stream, void *pdata)
 {
     auto loop = reinterpret_cast<pa_threaded_mainloop*>(pdata);
     pa_stream_state_t state{pa_stream_get_state(stream)};
@@ -388,13 +386,13 @@ static void stream_state_callback(pa_stream *stream, void *pdata)
         pa_threaded_mainloop_signal(loop, 0);
 }
 
-static void stream_success_callback(pa_stream *UNUSED(stream), int UNUSED(success), void *pdata)
+void stream_success_callback(pa_stream *UNUSED(stream), int UNUSED(success), void *pdata)
 {
     auto loop = reinterpret_cast<pa_threaded_mainloop*>(pdata);
     pa_threaded_mainloop_signal(loop, 0);
 }
 
-static void wait_for_operation(pa_operation *op, pa_threaded_mainloop *loop)
+void wait_for_operation(pa_operation *op, pa_threaded_mainloop *loop)
 {
     if(op)
     {
@@ -405,7 +403,7 @@ static void wait_for_operation(pa_operation *op, pa_threaded_mainloop *loop)
 }
 
 
-static pa_context *connect_context(pa_threaded_mainloop *loop, ALboolean silent)
+pa_context *connect_context(pa_threaded_mainloop *loop, ALboolean silent)
 {
     const char *name{"OpenAL Soft"};
     al_string binname{AL_STRING_INIT_STATIC()};
@@ -456,7 +454,7 @@ static pa_context *connect_context(pa_threaded_mainloop *loop, ALboolean silent)
 
 
 using MainloopContextPair = std::pair<pa_threaded_mainloop*,pa_context*>;
-static MainloopContextPair pulse_open(void(*state_cb)(pa_context*,void*), void *ptr)
+MainloopContextPair pulse_open(void(*state_cb)(pa_context*,void*), void *ptr)
 {
     pa_threaded_mainloop *loop{pa_threaded_mainloop_new()};
     if(UNLIKELY(!loop))
@@ -484,7 +482,7 @@ static MainloopContextPair pulse_open(void(*state_cb)(pa_context*,void*), void *
     return {loop, context};
 }
 
-static void pulse_close(pa_threaded_mainloop *loop, pa_context *context, pa_stream *stream)
+void pulse_close(pa_threaded_mainloop *loop, pa_context *context, pa_stream *stream)
 {
     { palock_guard _{loop};
         if(stream)
@@ -505,8 +503,6 @@ static void pulse_close(pa_threaded_mainloop *loop, pa_context *context, pa_stre
     pa_threaded_mainloop_free(loop);
 }
 
-
-namespace {
 
 struct DevMap {
     std::string name;

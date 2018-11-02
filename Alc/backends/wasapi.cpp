@@ -69,6 +69,9 @@ DEFINE_DEVPROPKEY(DEVPKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80,
 DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_FormFactor, 0x1da5d803, 0xd492, 0x4edd, 0x8c,0x23, 0xe0,0xc0,0xff,0xee,0x7f,0x0e, 0);
 DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x23,0xe0, 0xc0,0xff,0xee,0x7f,0x0e, 4 );
 
+
+namespace {
+
 #define MONO SPEAKER_FRONT_CENTER
 #define STEREO (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT)
 #define QUAD (SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT)
@@ -84,13 +87,11 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 
 
 /* Scales the given value using 64-bit integer math, ceiling the result. */
-static inline ALint64 ScaleCeil(ALint64 val, ALint64 new_scale, ALint64 old_scale)
+inline ALint64 ScaleCeil(ALint64 val, ALint64 new_scale, ALint64 old_scale)
 {
     return (val*new_scale + old_scale-1) / old_scale;
 }
 
-
-namespace {
 
 struct PropVariant {
     PROPVARIANT mProp;
@@ -159,8 +160,6 @@ struct ThreadRequest {
     HRESULT result;
 };
 
-} // namespace
-
 
 #define WM_USER_First       (WM_USER+0)
 #define WM_USER_OpenDevice  (WM_USER+0)
@@ -180,13 +179,13 @@ static const char MessageStr[WM_USER_Last+1-WM_USER][20] = {
     "Enumerate Devices",
 };
 
-static inline void ReturnMsgResponse(ThreadRequest *req, HRESULT res)
+inline void ReturnMsgResponse(ThreadRequest *req, HRESULT res)
 {
     req->result = res;
     SetEvent(req->FinishedEvt);
 }
 
-static HRESULT WaitForResponse(ThreadRequest *req)
+HRESULT WaitForResponse(ThreadRequest *req)
 {
     if(WaitForSingleObject(req->FinishedEvt, INFINITE) == WAIT_OBJECT_0)
         return req->result;
@@ -196,7 +195,7 @@ static HRESULT WaitForResponse(ThreadRequest *req)
 
 
 using NameGUIDPair = std::pair<std::string,std::string>;
-static NameGUIDPair get_device_name_and_guid(IMMDevice *device)
+NameGUIDPair get_device_name_and_guid(IMMDevice *device)
 {
     std::string name{DEVNAME_HEAD};
     std::string guid;
@@ -244,7 +243,7 @@ static NameGUIDPair get_device_name_and_guid(IMMDevice *device)
     return {name, guid};
 }
 
-static void get_device_formfactor(IMMDevice *device, EndpointFormFactor *formfactor)
+void get_device_formfactor(IMMDevice *device, EndpointFormFactor *formfactor)
 {
     IPropertyStore *ps;
     HRESULT hr = device->OpenPropertyStore(STGM_READ, &ps);
@@ -269,7 +268,7 @@ static void get_device_formfactor(IMMDevice *device, EndpointFormFactor *formfac
 }
 
 
-static void add_device(IMMDevice *device, const WCHAR *devid, std::vector<DevMap> &list)
+void add_device(IMMDevice *device, const WCHAR *devid, std::vector<DevMap> &list)
 {
     std::string basename, guidstr;
     std::tie(basename, guidstr) = get_device_name_and_guid(device);
@@ -289,7 +288,7 @@ static void add_device(IMMDevice *device, const WCHAR *devid, std::vector<DevMap
           newentry.endpoint_guid.c_str(), newentry.devid.c_str());
 }
 
-static WCHAR *get_device_id(IMMDevice *device)
+WCHAR *get_device_id(IMMDevice *device)
 {
     WCHAR *devid;
 
@@ -303,7 +302,7 @@ static WCHAR *get_device_id(IMMDevice *device)
     return devid;
 }
 
-static HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, std::vector<DevMap> &list)
+HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, std::vector<DevMap> &list)
 {
     IMMDeviceCollection *coll;
     HRESULT hr = devenum->EnumAudioEndpoints(flowdir, DEVICE_STATE_ACTIVE, &coll);
@@ -365,7 +364,7 @@ struct WasapiProxy {
     virtual void  stopProxy() = 0;
 };
 
-static DWORD CALLBACK WasapiProxy_messageHandler(void *ptr)
+DWORD CALLBACK WasapiProxy_messageHandler(void *ptr)
 {
     auto req = reinterpret_cast<ThreadRequest*>(ptr);
 
@@ -506,6 +505,8 @@ static DWORD CALLBACK WasapiProxy_messageHandler(void *ptr)
 
     return 0;
 }
+
+} // namespace
 
 
 struct ALCwasapiPlayback final : public ALCbackend, WasapiProxy {

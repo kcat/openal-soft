@@ -466,11 +466,11 @@ Compressor* CompressorInit(const ALsizei NumChans, const ALuint SampleRate,
             Comp->Hold->Values[0] = -INFINITY;
             Comp->Hold->Expiries[0] = hold;
             Comp->Hold->Length = hold;
-            Comp->Delay = (ALfloat(*)[])(Comp->Hold + 1);
+            Comp->Delay = (ALfloat(*)[BUFFERSIZE])(Comp->Hold + 1);
         }
         else
         {
-            Comp->Delay = (ALfloat(*)[])(Comp + 1);
+            Comp->Delay = (ALfloat(*)[BUFFERSIZE])(Comp + 1);
         }
     }
 

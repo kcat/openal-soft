@@ -861,7 +861,7 @@ SET(ALC_OBJS
     Alc/filters/filter.c
     Alc/filters/nfc.c
     Alc/filters/nfc.h
-    Alc/filters/splitter.c
+    Alc/filters/splitter.cpp
     Alc/filters/splitter.h
     Alc/helpers.c
     Alc/alstring.h

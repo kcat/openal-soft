@@ -3,6 +3,9 @@
 
 #include "alMain.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* Band splitter. Splits a signal into two phase-matching frequency bands. */
 typedef struct BandSplitter {
@@ -36,5 +39,9 @@ typedef struct FrontStablizer {
     alignas(16) ALfloat LSplit[2][BUFFERSIZE];
     alignas(16) ALfloat RSplit[2][BUFFERSIZE];
 } FrontStablizer;
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* FILTER_SPLITTER_H */

@@ -872,7 +872,7 @@ SET(ALC_OBJS
     Alc/vector.h
     Alc/hrtf.c
     Alc/hrtf.h
-    Alc/uhjfilter.c
+    Alc/uhjfilter.cpp
     Alc/uhjfilter.h
     Alc/ambdec.c
     Alc/ambdec.h

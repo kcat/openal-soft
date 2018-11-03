@@ -5,6 +5,10 @@
 
 #include "alMain.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct AllPassState {
     ALfloat z[2];
 } AllPassState;
@@ -45,5 +49,9 @@ typedef struct Uhj2Encoder {
  * signal. The input must use FuMa channel ordering and scaling.
  */
 void EncodeUhj2(Uhj2Encoder *enc, ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, ALfloat (*RESTRICT InSamples)[BUFFERSIZE], ALsizei SamplesToDo);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* UHJFILTER_H */

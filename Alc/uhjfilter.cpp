@@ -4,19 +4,21 @@
 #include "alu.h"
 #include "uhjfilter.h"
 
+namespace {
+
 /* This is the maximum number of samples processed for each inner loop
  * iteration. */
 #define MAX_UPDATE_SAMPLES  128
 
 
-static const ALfloat Filter1CoeffSqr[4] = {
+constexpr ALfloat Filter1CoeffSqr[4] = {
     0.479400865589f, 0.876218493539f, 0.976597589508f, 0.997499255936f
 };
-static const ALfloat Filter2CoeffSqr[4] = {
+constexpr ALfloat Filter2CoeffSqr[4] = {
     0.161758498368f, 0.733028932341f, 0.945349700329f, 0.990599156685f
 };
 
-static void allpass_process(AllPassState *state, ALfloat *RESTRICT dst, const ALfloat *RESTRICT src, const ALfloat aa, ALsizei todo)
+void allpass_process(AllPassState *state, ALfloat *RESTRICT dst, const ALfloat *RESTRICT src, const ALfloat aa, ALsizei todo)
 {
     ALfloat z1 = state->z[0];
     ALfloat z2 = state->z[1];
@@ -33,6 +35,8 @@ static void allpass_process(AllPassState *state, ALfloat *RESTRICT dst, const AL
     state->z[0] = z1;
     state->z[1] = z2;
 }
+
+} // namespace
 
 
 /* NOTE: There seems to be a bit of an inconsistency in how this encoding is

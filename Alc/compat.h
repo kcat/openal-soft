@@ -19,6 +19,29 @@ FILE *al_fopen(const char *fname, const char *mode);
 
 #define HAVE_DYNLOAD 1
 
+#ifdef __cplusplus
+} // extern "C"
+
+#include <string>
+
+inline std::string wstr_to_utf8(const WCHAR *wstr)
+{
+    std::string ret;
+
+    int len = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, nullptr, 0, nullptr, nullptr);
+    if(len > 0)
+    {
+        ret.resize(len);
+        WideCharToMultiByte(CP_UTF8, 0, wstr, -1, &ret[0], len, nullptr, nullptr);
+        ret.pop_back();
+    }
+
+    return ret;
+}
+
+extern "C" {
+#endif /* __cplusplus */
+
 #else
 
 #define al_fopen fopen

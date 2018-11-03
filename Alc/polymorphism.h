@@ -61,7 +61,7 @@ static rettype T1##_##T2##_##func(T2 *obj, argtype1 a, argtype2 b, argtype3 c, a
 
 /* Defines the default functions used to (de)allocate a polymorphic object. */
 #define DECLARE_DEFAULT_ALLOCATORS(T)                                         \
-static void* T##_New(size_t size) { return al_malloc(16, size); }             \
+static void* T##_New(size_t size) { return al_calloc(16, size); }             \
 static void T##_Delete(void *ptr) { al_free(ptr); }
 
 
@@ -84,14 +84,12 @@ static void T##_Delete(void *ptr) { al_free(ptr); }
     _res = (T*)T##_New(sizeof(T));                                            \
     if(_res)                                                                  \
     {                                                                         \
-        memset(_res, 0, sizeof(T));                                           \
         T##_Construct(_res, EXTRACT_NEW_ARGS
 /* Allocate and construct an object, with no arguments. */
 #define NEW_OBJ0(_res, T) do {                                                \
     _res = (T*)T##_New(sizeof(T));                                            \
     if(_res)                                                                  \
     {                                                                         \
-        memset(_res, 0, sizeof(T));                                           \
         T##_Construct(_res EXTRACT_NEW_ARGS
 
 /* Destructs and deallocate an object. */

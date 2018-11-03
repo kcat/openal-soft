@@ -73,7 +73,7 @@ static ALvoid ALnullState_process(ALnullState* UNUSED(state), ALsizei UNUSED(sam
  */
 static void *ALnullState_New(size_t size)
 {
-    return al_malloc(16, size);
+    return al_calloc(16, size);
 }
 
 /* This frees the memory used by the object, after it has been destructed.

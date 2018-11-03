@@ -116,7 +116,7 @@ typedef struct BFormatDec {
 
 BFormatDec *bformatdec_alloc()
 {
-    return al_calloc(16, sizeof(BFormatDec));
+    return reinterpret_cast<BFormatDec*>(al_calloc(16, sizeof(BFormatDec)));
 }
 
 void bformatdec_free(BFormatDec **dec)
@@ -149,7 +149,8 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
     dec->SamplesLF = NULL;
 
     dec->NumChannels = chancount;
-    dec->Samples = al_calloc(16, dec->NumChannels*2 * sizeof(dec->Samples[0]));
+    dec->Samples = reinterpret_cast<ALfloat(*)[BUFFERSIZE]>(al_calloc(16,
+        dec->NumChannels*2 * sizeof(dec->Samples[0])));
     dec->SamplesHF = dec->Samples;
     dec->SamplesLF = dec->SamplesHF + dec->NumChannels;
 
@@ -308,7 +309,6 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*RESTRICT OutBuffer)[BU
 {
     ALsizei chan, i;
 
-    OutBuffer = ASSUME_ALIGNED(OutBuffer, 16);
     if(dec->DualBand)
     {
         for(i = 0;i < dec->NumChannels;i++)
@@ -406,7 +406,7 @@ typedef struct AmbiUpsampler {
 
 AmbiUpsampler *ambiup_alloc()
 {
-    return al_calloc(16, sizeof(AmbiUpsampler));
+    return reinterpret_cast<AmbiUpsampler*>(al_calloc(16, sizeof(AmbiUpsampler)));
 }
 
 void ambiup_free(struct AmbiUpsampler **ambiup)

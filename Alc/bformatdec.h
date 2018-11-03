@@ -3,6 +3,9 @@
 
 #include "alMain.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* These are the necessary scales for first-order HF responses to play over
  * higher-order 2D (non-periphonic) decoders.
@@ -24,9 +27,9 @@
 /* NOTE: These are scale factors as applied to Ambisonics content. Decoder
  * coefficients should be divided by these values to get proper N3D scalings.
  */
-const ALfloat N3D2N3DScale[MAX_AMBI_COEFFS];
-const ALfloat SN3D2N3DScale[MAX_AMBI_COEFFS];
-const ALfloat FuMa2N3DScale[MAX_AMBI_COEFFS];
+extern const ALfloat N3D2N3DScale[MAX_AMBI_COEFFS];
+extern const ALfloat SN3D2N3DScale[MAX_AMBI_COEFFS];
+extern const ALfloat FuMa2N3DScale[MAX_AMBI_COEFFS];
 
 
 struct AmbDecConf;
@@ -53,5 +56,9 @@ void ambiup_free(struct AmbiUpsampler **ambiup);
 void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device, ALfloat w_scale, ALfloat xyz_scale);
 
 void ambiup_process(struct AmbiUpsampler *ambiup, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], ALsizei OutChannels, const ALfloat (*RESTRICT InSamples)[BUFFERSIZE], ALsizei SamplesToDo);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* BFORMATDEC_H */

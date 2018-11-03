@@ -876,7 +876,7 @@ SET(ALC_OBJS
     Alc/uhjfilter.h
     Alc/ambdec.c
     Alc/ambdec.h
-    Alc/bformatdec.c
+    Alc/bformatdec.cpp
     Alc/bformatdec.h
     Alc/panning.c
     Alc/polymorphism.h

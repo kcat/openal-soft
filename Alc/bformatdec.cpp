@@ -1,6 +1,9 @@
 
 #include "config.h"
 
+#include <array>
+#include <vector>
+
 #include "bformatdec.h"
 #include "ambdec.h"
 #include "filters/splitter.h"
@@ -56,12 +59,14 @@ const ALfloat FuMa2N3DScale[MAX_AMBI_COEFFS] = {
 };
 
 
+namespace {
+
 #define HF_BAND 0
 #define LF_BAND 1
 #define NUM_BANDS 2
 
 /* These points are in AL coordinates! */
-static const ALfloat Ambi3DPoints[8][3] = {
+const ALfloat Ambi3DPoints[8][3] = {
     { -0.577350269f,  0.577350269f, -0.577350269f },
     {  0.577350269f,  0.577350269f, -0.577350269f },
     { -0.577350269f,  0.577350269f,  0.577350269f },
@@ -71,7 +76,7 @@ static const ALfloat Ambi3DPoints[8][3] = {
     { -0.577350269f, -0.577350269f,  0.577350269f },
     {  0.577350269f, -0.577350269f,  0.577350269f },
 };
-static const ALfloat Ambi3DDecoder[8][MAX_AMBI_COEFFS] = {
+const ALfloat Ambi3DDecoder[8][MAX_AMBI_COEFFS] = {
     { 0.125f,  0.125f,  0.125f,  0.125f },
     { 0.125f, -0.125f,  0.125f,  0.125f },
     { 0.125f,  0.125f,  0.125f, -0.125f },
@@ -81,14 +86,61 @@ static const ALfloat Ambi3DDecoder[8][MAX_AMBI_COEFFS] = {
     { 0.125f,  0.125f, -0.125f, -0.125f },
     { 0.125f, -0.125f, -0.125f, -0.125f },
 };
-static const ALfloat Ambi3DDecoderHFScale[MAX_AMBI_COEFFS] = {
+const ALfloat Ambi3DDecoderHFScale[MAX_AMBI_COEFFS] = {
     2.0f,
     1.15470054f, 1.15470054f, 1.15470054f
 };
 
 
+#define INVALID_UPSAMPLE_INDEX INT_MAX
+ALsizei GetACNIndex(const BFChannelConfig *chans, ALsizei numchans, ALsizei acn)
+{
+    ALsizei i;
+    for(i = 0;i < numchans;i++)
+    {
+        if(chans[i].Index == acn)
+            return i;
+    }
+    return INVALID_UPSAMPLE_INDEX;
+}
+#define GetChannelForACN(b, a) GetACNIndex((b).Ambi.Map, (b).NumChannels, (a))
+
+
+template<typename T, size_t alignment>
+class aligned_allocator : public std::allocator<T> {
+public:
+    using size_type = size_t;
+    using pointer = T*;
+    using const_pointer = const T*;
+
+    template<typename U>
+    struct rebind {
+        using other = aligned_allocator<U, alignment>;
+    };
+
+    pointer allocate(size_type n, const void* = nullptr)
+    { return reinterpret_cast<T*>(al_malloc(alignment, n)); }
+
+    void deallocate(pointer p, size_type)
+    { al_free(p); }
+
+    aligned_allocator() : std::allocator<T>() { }
+    aligned_allocator(const aligned_allocator &a) : std::allocator<T>(a) { }
+    template<class U>
+    aligned_allocator(const aligned_allocator<U,alignment> &a)
+      : std::allocator<T>(a)
+    { }
+    ~aligned_allocator() { }
+};
+
+template<typename T, size_t alignment>
+using aligned_vector = std::vector<T, aligned_allocator<T, alignment>>;
+
+} // namespace
+
+
 /* NOTE: BandSplitter filters are unused with single-band decoding */
-typedef struct BFormatDec {
+struct BFormatDec {
     ALuint Enabled; /* Bitfield of enabled channels. */
 
     union {
@@ -98,10 +150,10 @@ typedef struct BFormatDec {
 
     BandSplitter XOver[MAX_AMBI_COEFFS];
 
-    ALfloat (*Samples)[BUFFERSIZE];
+    aligned_vector<std::array<ALfloat,BUFFERSIZE>, 16> Samples;
     /* These two alias into Samples */
-    ALfloat (*SamplesHF)[BUFFERSIZE];
-    ALfloat (*SamplesLF)[BUFFERSIZE];
+    std::array<ALfloat,BUFFERSIZE> *SamplesHF;
+    std::array<ALfloat,BUFFERSIZE> *SamplesLF;
 
     alignas(16) ALfloat ChannelMix[BUFFERSIZE];
 
@@ -112,30 +164,26 @@ typedef struct BFormatDec {
 
     ALsizei NumChannels;
     ALboolean DualBand;
-} BFormatDec;
+
+    void *operator new(size_t size) { return al_malloc(alignof(BFormatDec), size); }
+    void operator delete(void *block) { al_free(block); }
+};
 
 BFormatDec *bformatdec_alloc()
-{
-    return reinterpret_cast<BFormatDec*>(al_calloc(16, sizeof(BFormatDec)));
-}
+{ return new BFormatDec{}; }
 
 void bformatdec_free(BFormatDec **dec)
 {
     if(dec && *dec)
     {
-        al_free((*dec)->Samples);
-        (*dec)->Samples = NULL;
-        (*dec)->SamplesHF = NULL;
-        (*dec)->SamplesLF = NULL;
-
-        al_free(*dec);
-        *dec = NULL;
+        delete *dec;
+        *dec = nullptr;
     }
 }
 
 void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALsizei chanmap[MAX_OUTPUT_CHANNELS])
 {
-    static const ALsizei map2DTo3D[MAX_AMBI2D_COEFFS] = {
+    constexpr ALsizei map2DTo3D[MAX_AMBI2D_COEFFS] = {
         0,  1, 3,  4, 8,  9, 15
     };
     const ALfloat *coeff_scale = N3D2N3DScale;
@@ -143,15 +191,13 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
     ALfloat ratio;
     ALsizei i;
 
-    al_free(dec->Samples);
-    dec->Samples = NULL;
-    dec->SamplesHF = NULL;
-    dec->SamplesLF = NULL;
+    dec->Samples.clear();
+    dec->SamplesHF = nullptr;
+    dec->SamplesLF = nullptr;
 
     dec->NumChannels = chancount;
-    dec->Samples = reinterpret_cast<ALfloat(*)[BUFFERSIZE]>(al_calloc(16,
-        dec->NumChannels*2 * sizeof(dec->Samples[0])));
-    dec->SamplesHF = dec->Samples;
+    dec->Samples.resize(dec->NumChannels * 2);
+    dec->SamplesHF = dec->Samples.data();
     dec->SamplesLF = dec->SamplesHF + dec->NumChannels;
 
     dec->Enabled = 0;
@@ -312,7 +358,7 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*RESTRICT OutBuffer)[BU
     if(dec->DualBand)
     {
         for(i = 0;i < dec->NumChannels;i++)
-            bandsplit_process(&dec->XOver[i], dec->SamplesHF[i], dec->SamplesLF[i],
+            bandsplit_process(&dec->XOver[i], dec->SamplesHF[i].data(), dec->SamplesLF[i].data(),
                               InSamples[i], SamplesToDo);
 
         for(chan = 0;chan < OutChannels;chan++)
@@ -322,10 +368,12 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*RESTRICT OutBuffer)[BU
 
             memset(dec->ChannelMix, 0, SamplesToDo*sizeof(ALfloat));
             MixRowSamples(dec->ChannelMix, dec->Matrix.Dual[chan][HF_BAND],
-                dec->SamplesHF, dec->NumChannels, 0, SamplesToDo
+                &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(dec->SamplesHF[0]),
+                dec->NumChannels, 0, SamplesToDo
             );
             MixRowSamples(dec->ChannelMix, dec->Matrix.Dual[chan][LF_BAND],
-                dec->SamplesLF, dec->NumChannels, 0, SamplesToDo
+                &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(dec->SamplesLF[0]),
+                dec->NumChannels, 0, SamplesToDo
             );
 
             for(i = 0;i < SamplesToDo;i++)
@@ -370,51 +418,39 @@ void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*RESTRICT OutBuffer)[B
          * bands.
          */
         bandsplit_process(&dec->UpSampler[i].XOver,
-            dec->Samples[HF_BAND], dec->Samples[LF_BAND],
+            dec->Samples[HF_BAND].data(), dec->Samples[LF_BAND].data(),
             InSamples[i], SamplesToDo
         );
 
         /* Now write each band to the output. */
         MixRowSamples(OutBuffer[i], dec->UpSampler[i].Gains,
-            dec->Samples, NUM_BANDS, 0, SamplesToDo
+            &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(dec->Samples[0]),
+            NUM_BANDS, 0, SamplesToDo
         );
     }
 }
 
 
-#define INVALID_UPSAMPLE_INDEX INT_MAX
-
-static ALsizei GetACNIndex(const BFChannelConfig *chans, ALsizei numchans, ALsizei acn)
-{
-    ALsizei i;
-    for(i = 0;i < numchans;i++)
-    {
-        if(chans[i].Index == acn)
-            return i;
-    }
-    return INVALID_UPSAMPLE_INDEX;
-}
-#define GetChannelForACN(b, a) GetACNIndex((b).Ambi.Map, (b).NumChannels, (a))
-
-typedef struct AmbiUpsampler {
+struct AmbiUpsampler {
     alignas(16) ALfloat Samples[NUM_BANDS][BUFFERSIZE];
 
     BandSplitter XOver[4];
 
     ALfloat Gains[4][MAX_OUTPUT_CHANNELS][NUM_BANDS];
-} AmbiUpsampler;
+
+    void *operator new(size_t size) { return al_malloc(alignof(AmbiUpsampler), size); }
+    void operator delete(void *block) { al_free(block); }
+};
 
 AmbiUpsampler *ambiup_alloc()
-{
-    return reinterpret_cast<AmbiUpsampler*>(al_calloc(16, sizeof(AmbiUpsampler)));
-}
+{ return new AmbiUpsampler{}; }
 
 void ambiup_free(struct AmbiUpsampler **ambiup)
 {
     if(ambiup)
     {
-        al_free(*ambiup);
-        *ambiup = NULL;
+        delete *ambiup;
+        *ambiup = nullptr;
     }
 }
 

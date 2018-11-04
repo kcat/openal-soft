@@ -3,235 +3,177 @@
 
 #include "ambdec.h"
 
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
+#include <cstring>
+#include <cctype>
 
-#include <vector>
+#include <limits>
+#include <string>
+#include <fstream>
+#include <sstream>
 
 #include "compat.h"
 
 
-static char *lstrip(char *line)
+namespace {
+
+int readline(std::istream &f, std::string &output)
 {
-    while(isspace(line[0]))
-        line++;
-    return line;
+    while(f.good() && f.peek() == '\n')
+        f.ignore();
+
+    std::getline(f, output);
+    return !output.empty();
 }
 
-static char *rstrip(char *line)
-{
-    size_t len = strlen(line);
-    while(len > 0 && isspace(line[len-1]))
-        len--;
-    line[len] = 0;
-    return line;
-}
-
-static int readline(FILE *f, std::vector<char> &output)
-{
-    int c;
-    while((c=fgetc(f)) != EOF && (c == '\r' || c == '\n')) {
-    }
-    if(c == EOF)
-        return 0;
-
-    output.clear();
-    do {
-        output.emplace_back(c);
-    } while((c=fgetc(f)) != EOF && c != '\r' && c != '\n');
-    output.emplace_back((c=0));
-
-    return 1;
-}
-
-
-/* Custom strtok_r, since we can't rely on it existing. */
-static char *my_strtok_r(char *str, const char *delim, char **saveptr)
-{
-    /* Sanity check and update internal pointer. */
-    if(!saveptr || !delim) return nullptr;
-    if(str) *saveptr = str;
-    str = *saveptr;
-
-    /* Nothing more to do with this string. */
-    if(!str) return nullptr;
-
-    /* Find the first non-delimiter character. */
-    while(*str != '\0' && strchr(delim, *str) != nullptr)
-        str++;
-    if(*str == '\0')
-    {
-        /* End of string. */
-        *saveptr = nullptr;
-        return nullptr;
-    }
-
-    /* Find the next delimiter character. */
-    *saveptr = strpbrk(str, delim);
-    if(*saveptr) *((*saveptr)++) = '\0';
-
-    return str;
-}
-
-static char *read_int(ALint *num, const char *line, int base)
-{
-    char *end;
-    *num = strtol(line, &end, base);
-    if(end && *end != '\0')
-        end = lstrip(end);
-    return end;
-}
-
-static char *read_uint(ALuint *num, const char *line, int base)
-{
-    char *end;
-    *num = strtoul(line, &end, base);
-    if(end && *end != '\0')
-        end = lstrip(end);
-    return end;
-}
-
-static char *read_float(ALfloat *num, const char *line)
-{
-    char *end;
-#ifdef HAVE_STRTOF
-    *num = strtof(line, &end);
-#else
-    *num = (ALfloat)strtod(line, &end);
-#endif
-    if(end && *end != '\0')
-        end = lstrip(end);
-    return end;
-}
-
-
-char *read_clipped_line(FILE *f, std::vector<char> &buffer)
+bool read_clipped_line(std::istream &f, std::string &buffer)
 {
     while(readline(f, buffer))
     {
-        char *line, *comment;
+        std::size_t pos{0};
+        while(pos < buffer.length() && std::isspace(buffer[pos]))
+            pos++;
+        buffer.erase(0, pos);
 
-        line = lstrip(buffer.data());
-        comment = strchr(line, '#');
-        if(comment) *(comment++) = 0;
+        std::size_t cmtpos{buffer.find_first_of('#')};
+        if(cmtpos < buffer.length())
+            buffer.resize(cmtpos);
+        while(!buffer.empty() && std::isspace(buffer.back()))
+            buffer.pop_back();
 
-        line = rstrip(line);
-        if(line[0]) return line;
+        if(!buffer.empty())
+            return true;
     }
-    return nullptr;
+    return false;
 }
 
-static int load_ambdec_speakers(AmbDecConf *conf, FILE *f, std::vector<char> &buffer, char **saveptr)
+
+std::string read_word(std::istream &f)
+{
+    std::string ret;
+    f >> ret;
+    return ret;
+}
+
+bool is_at_end(const std::string &buffer, std::size_t endpos)
+{
+    while(endpos < buffer.length() && std::isspace(buffer[endpos]))
+        ++endpos;
+    if(endpos < buffer.length())
+        return false;
+    return true;
+}
+
+
+bool load_ambdec_speakers(AmbDecConf *conf, std::istream &f, std::string &buffer)
 {
     ALsizei cur = 0;
     while(cur < conf->NumSpeakers)
     {
-        const char *cmd = my_strtok_r(nullptr, " \t", saveptr);
-        if(!cmd)
+        std::istringstream istr{buffer};
+
+        std::string cmd = read_word(istr);
+        if(cmd.empty())
         {
-            char *line = read_clipped_line(f, buffer);
-            if(!line)
+            if(!read_clipped_line(f, buffer))
             {
                 ERR("Unexpected end of file\n");
-                return 0;
+                return false;
             }
-            cmd = my_strtok_r(line, " \t", saveptr);
+            istr = std::istringstream{buffer};
+            cmd = read_word(istr);
         }
 
-        if(strcmp(cmd, "add_spkr") == 0)
+        if(cmd == "add_spkr")
         {
-            const char *name = my_strtok_r(nullptr, " \t", saveptr);
-            const char *dist = my_strtok_r(nullptr, " \t", saveptr);
-            const char *az = my_strtok_r(nullptr, " \t", saveptr);
-            const char *elev = my_strtok_r(nullptr, " \t", saveptr);
-            const char *conn = my_strtok_r(nullptr, " \t", saveptr);
-
-            if(!name) WARN("Name not specified for speaker %u\n", cur+1);
-            else conf->Speakers[cur].Name = name;
-            if(!dist) WARN("Distance not specified for speaker %u\n", cur+1);
-            else read_float(&conf->Speakers[cur].Distance, dist);
-            if(!az) WARN("Azimuth not specified for speaker %u\n", cur+1);
-            else read_float(&conf->Speakers[cur].Azimuth, az);
-            if(!elev) WARN("Elevation not specified for speaker %u\n", cur+1);
-            else read_float(&conf->Speakers[cur].Elevation, elev);
-            if(!conn) TRACE("Connection not specified for speaker %u\n", cur+1);
-            else conf->Speakers[cur].Connection = conn;
+            istr >> conf->Speakers[cur].Name;
+            if(istr.fail()) WARN("Name not specified for speaker %u\n", cur+1);
+            istr >> conf->Speakers[cur].Distance;
+            if(istr.fail()) WARN("Distance not specified for speaker %u\n", cur+1);
+            istr >> conf->Speakers[cur].Azimuth;
+            if(istr.fail()) WARN("Azimuth not specified for speaker %u\n", cur+1);
+            istr >> conf->Speakers[cur].Elevation;
+            if(istr.fail()) WARN("Elevation not specified for speaker %u\n", cur+1);
+            istr >> conf->Speakers[cur].Connection;
+            if(istr.fail()) TRACE("Connection not specified for speaker %u\n", cur+1);
 
             cur++;
         }
         else
         {
-            ERR("Unexpected speakers command: %s\n", cmd);
-            return 0;
+            ERR("Unexpected speakers command: %s\n", cmd.c_str());
+            return false;
         }
 
-        cmd = my_strtok_r(nullptr, " \t", saveptr);
-        if(cmd)
+        istr.clear();
+        std::streamsize endpos{istr.tellg()};
+        if(!is_at_end(buffer, endpos))
         {
-            ERR("Unexpected junk on line: %s\n", cmd);
-            return 0;
+            ERR("Unexpected junk on line: %s\n", buffer.c_str()+endpos);
+            return false;
         }
+        buffer.clear();
     }
 
-    return 1;
+    return true;
 }
 
-static int load_ambdec_matrix(ALfloat *gains, ALfloat (*matrix)[MAX_AMBI_COEFFS], ALsizei maxrow, FILE *f, std::vector<char> &buffer, char **saveptr)
+bool load_ambdec_matrix(ALfloat *gains, ALfloat (*matrix)[MAX_AMBI_COEFFS], ALsizei maxrow, std::istream &f, std::string &buffer)
 {
-    int gotgains = 0;
+    bool gotgains = false;
     ALsizei cur = 0;
     while(cur < maxrow)
     {
-        const char *cmd = my_strtok_r(nullptr, " \t", saveptr);
-        if(!cmd)
+        std::istringstream istr{buffer};
+        std::string cmd;
+
+        istr >> cmd;
+        if(cmd.empty())
         {
-            char *line = read_clipped_line(f, buffer);
-            if(!line)
+            if(!read_clipped_line(f, buffer))
             {
                 ERR("Unexpected end of file\n");
-                return 0;
+                return false;
             }
-            cmd = my_strtok_r(line, " \t", saveptr);
+            istr = std::istringstream{buffer};
+            istr >> cmd;
         }
 
-        if(strcmp(cmd, "order_gain") == 0)
+        if(cmd == "order_gain")
         {
             ALuint curgain = 0;
-            char *line;
-            while((line=my_strtok_r(nullptr, " \t", saveptr)) != nullptr)
+            float value;
+            while(istr.good())
             {
-                ALfloat value;
-                line = read_float(&value, line);
-                if(line && *line != '\0')
+                istr >> value;
+                if(istr.fail()) break;
+                if(!istr.eof() && !std::isspace(istr.peek()))
                 {
-                    ERR("Extra junk on gain %u: %s\n", curgain+1, line);
-                    return 0;
+                    ERR("Extra junk on gain %u: %s\n", curgain+1, buffer.c_str()+istr.tellg());
+                    return false;
                 }
                 if(curgain < MAX_AMBI_ORDER+1)
-                    gains[curgain] = value;
-                curgain++;
+                    gains[curgain++] = value;
             }
             while(curgain < MAX_AMBI_ORDER+1)
                 gains[curgain++] = 0.0f;
-            gotgains = 1;
+            gotgains = true;
         }
-        else if(strcmp(cmd, "add_row") == 0)
+        else if(cmd == "add_row")
         {
             ALuint curidx = 0;
-            char *line;
-            while((line=my_strtok_r(nullptr, " \t", saveptr)) != nullptr)
+            float value;
+            while(istr.good())
             {
-                ALfloat value;
-                line = read_float(&value, line);
-                if(line && *line != '\0')
+                istr >> value;
+                if(istr.fail()) break;
+                if(!istr.eof() && !std::isspace(istr.peek()))
                 {
-                    ERR("Extra junk on matrix element %ux%u: %s\n", cur, curidx, line);
-                    return 0;
+                    ERR("Extra junk on matrix element %ux%u: %s\n", cur, curidx,
+                        buffer.c_str()+istr.tellg());
+                    return false;
                 }
                 if(curidx < MAX_AMBI_COEFFS)
-                    matrix[cur][curidx] = value;
-                curidx++;
+                    matrix[cur][curidx++] = value;
             }
             while(curidx < MAX_AMBI_COEFFS)
                 matrix[cur][curidx++] = 0.0f;
@@ -239,282 +181,247 @@ static int load_ambdec_matrix(ALfloat *gains, ALfloat (*matrix)[MAX_AMBI_COEFFS]
         }
         else
         {
-            ERR("Unexpected speakers command: %s\n", cmd);
-            return 0;
+            ERR("Unexpected matrix command: %s\n", cmd.c_str());
+            return false;
         }
 
-        cmd = my_strtok_r(nullptr, " \t", saveptr);
-        if(cmd)
+        istr.clear();
+        std::streamsize endpos{istr.tellg()};
+        if(!is_at_end(buffer, endpos))
         {
-            ERR("Unexpected junk on line: %s\n", cmd);
-            return 0;
+            ERR("Unexpected junk on line: %s\n", buffer.c_str()+endpos);
+            return false;
         }
+        buffer.clear();
     }
 
     if(!gotgains)
     {
         ERR("Matrix order_gain not specified\n");
-        return 0;
+        return false;
     }
 
-    return 1;
+    return true;
 }
+
+} // namespace
 
 int AmbDecConf::load(const char *fname)
 {
-    std::vector<char> buffer;
-    char *line;
-    FILE *f;
-
-    f = al_fopen(fname, "r");
-    if(!f)
+    al::ifstream f{fname};
+    if(!f.is_open())
     {
         ERR("Failed to open: %s\n", fname);
         return 0;
     }
 
-    while((line=read_clipped_line(f, buffer)) != nullptr)
+    std::string buffer;
+    while(read_clipped_line(f, buffer))
     {
-        char *saveptr;
-        char *command;
+        std::istringstream istr{buffer};
+        std::string command;
 
-        command = my_strtok_r(line, "/ \t", &saveptr);
-        if(!command)
+        istr >> command;
+        if(command.empty())
         {
-            ERR("Malformed line: %s\n", line);
-            goto fail;
+            ERR("Malformed line: %s\n", buffer.c_str());
+            return 0;
         }
 
-        if(strcmp(command, "description") == 0)
+        if(command == "/description")
+            istr >> Description;
+        else if(command == "/version")
         {
-            char *value = my_strtok_r(nullptr, "", &saveptr);
-            Description = lstrip(value);
-        }
-        else if(strcmp(command, "version") == 0)
-        {
-            line = my_strtok_r(nullptr, "", &saveptr);
-            line = read_uint(&Version, line, 10);
-            if(line && *line != '\0')
+            istr >> Version;
+            if(!istr.eof() && !std::isspace(istr.peek()))
             {
-                ERR("Extra junk after version: %s\n", line);
-                goto fail;
+                ERR("Extra junk after version: %s\n", buffer.c_str()+istr.tellg());
+                return 0;
             }
             if(Version != 3)
             {
                 ERR("Unsupported version: %u\n", Version);
-                goto fail;
+                return 0;
             }
         }
-        else if(strcmp(command, "dec") == 0)
+        else if(command == "/dec/chan_mask")
         {
-            const char *dec = my_strtok_r(nullptr, "/ \t", &saveptr);
-            if(strcmp(dec, "chan_mask") == 0)
+            istr >> std::hex >> ChanMask >> std::dec;
+            if(!istr.eof() && !std::isspace(istr.peek()))
             {
-                line = my_strtok_r(nullptr, "", &saveptr);
-                line = read_uint(&ChanMask, line, 16);
-                if(line && *line != '\0')
-                {
-                    ERR("Extra junk after mask: %s\n", line);
-                    goto fail;
-                }
+                ERR("Extra junk after mask: %s\n", buffer.c_str()+istr.tellg());
+                return 0;
             }
-            else if(strcmp(dec, "freq_bands") == 0)
+        }
+        else if(command == "/dec/freq_bands")
+        {
+            istr >> FreqBands;
+            if(!istr.eof() && !std::isspace(istr.peek()))
             {
-                line = my_strtok_r(nullptr, "", &saveptr);
-                line = read_uint(&FreqBands, line, 10);
-                if(line && *line != '\0')
-                {
-                    ERR("Extra junk after freq_bands: %s\n", line);
-                    goto fail;
-                }
-                if(FreqBands != 1 && FreqBands != 2)
-                {
-                    ERR("Invalid freq_bands value: %u\n", FreqBands);
-                    goto fail;
-                }
+                ERR("Extra junk after freq_bands: %s\n", buffer.c_str()+istr.tellg());
+                return 0;
             }
-            else if(strcmp(dec, "speakers") == 0)
+            if(FreqBands != 1 && FreqBands != 2)
             {
-                line = my_strtok_r(nullptr, "", &saveptr);
-                line = read_int(&NumSpeakers, line, 10);
-                if(line && *line != '\0')
-                {
-                    ERR("Extra junk after speakers: %s\n", line);
-                    goto fail;
-                }
-                if(NumSpeakers > MAX_OUTPUT_CHANNELS)
-                {
-                    ERR("Unsupported speaker count: %u\n", NumSpeakers);
-                    goto fail;
-                }
+                ERR("Invalid freq_bands value: %u\n", FreqBands);
+                return 0;
             }
-            else if(strcmp(dec, "coeff_scale") == 0)
+        }
+        else if(command == "/dec/speakers")
+        {
+            istr >> NumSpeakers;
+            if(!istr.eof() && !std::isspace(istr.peek()))
             {
-                line = my_strtok_r(nullptr, " \t", &saveptr);
-                if(strcmp(line, "n3d") == 0)
-                    CoeffScale = AmbDecScale::N3D;
-                else if(strcmp(line, "sn3d") == 0)
-                    CoeffScale = AmbDecScale::SN3D;
-                else if(strcmp(line, "fuma") == 0)
-                    CoeffScale = AmbDecScale::FuMa;
-                else
-                {
-                    ERR("Unsupported coeff scale: %s\n", line);
-                    goto fail;
-                }
+                ERR("Extra junk after speakers: %s\n", buffer.c_str()+istr.tellg());
+                return 0;
             }
+            if(NumSpeakers > MAX_OUTPUT_CHANNELS)
+            {
+                ERR("Unsupported speaker count: %u\n", NumSpeakers);
+                return 0;
+            }
+        }
+        else if(command == "/dec/coeff_scale")
+        {
+            std::string scale = read_word(istr);
+            if(scale == "n3d") CoeffScale = AmbDecScale::N3D;
+            else if(scale == "sn3d") CoeffScale = AmbDecScale::SN3D;
+            else if(scale == "fuma") CoeffScale = AmbDecScale::FuMa;
             else
             {
-                ERR("Unexpected /dec option: %s\n", dec);
-                goto fail;
+                ERR("Unsupported coeff scale: %s\n", scale.c_str());
+                return 0;
             }
         }
-        else if(strcmp(command, "opt") == 0)
+        else if(command == "/opt/xover_freq")
         {
-            const char *opt = my_strtok_r(nullptr, "/ \t", &saveptr);
-            if(strcmp(opt, "xover_freq") == 0)
+            istr >> XOverFreq;
+            if(!istr.eof() && !std::isspace(istr.peek()))
             {
-                line = my_strtok_r(nullptr, "", &saveptr);
-                line = read_float(&XOverFreq, line);
-                if(line && *line != '\0')
-                {
-                    ERR("Extra junk after xover_freq: %s\n", line);
-                    goto fail;
-                }
-            }
-            else if(strcmp(opt, "xover_ratio") == 0)
-            {
-                line = my_strtok_r(nullptr, "", &saveptr);
-                line = read_float(&XOverRatio, line);
-                if(line && *line != '\0')
-                {
-                    ERR("Extra junk after xover_ratio: %s\n", line);
-                    goto fail;
-                }
-            }
-            else if(strcmp(opt, "input_scale") == 0 || strcmp(opt, "nfeff_comp") == 0 ||
-                    strcmp(opt, "delay_comp") == 0 || strcmp(opt, "level_comp") == 0)
-            {
-                /* Unused */
-                my_strtok_r(nullptr, " \t", &saveptr);
-            }
-            else
-            {
-                ERR("Unexpected /opt option: %s\n", opt);
-                goto fail;
+                ERR("Extra junk after xover_freq: %s\n", buffer.c_str()+istr.tellg());
+                return 0;
             }
         }
-        else if(strcmp(command, "speakers") == 0)
+        else if(command == "/opt/xover_ratio")
         {
-            const char *value = my_strtok_r(nullptr, "/ \t", &saveptr);
-            if(strcmp(value, "{") != 0)
+            istr >> XOverRatio;
+            if(!istr.eof() && !std::isspace(istr.peek()))
             {
-                ERR("Expected { after %s command, got %s\n", command, value);
-                goto fail;
-            }
-            if(!load_ambdec_speakers(this, f, buffer, &saveptr))
-                goto fail;
-            value = my_strtok_r(nullptr, "/ \t", &saveptr);
-            if(!value)
-            {
-                line = read_clipped_line(f, buffer);
-                if(!line)
-                {
-                    ERR("Unexpected end of file\n");
-                    goto fail;
-                }
-                value = my_strtok_r(line, "/ \t", &saveptr);
-            }
-            if(strcmp(value, "}") != 0)
-            {
-                ERR("Expected } after speaker definitions, got %s\n", value);
-                goto fail;
+                ERR("Extra junk after xover_ratio: %s\n", buffer.c_str()+istr.tellg());
+                return 0;
             }
         }
-        else if(strcmp(command, "lfmatrix") == 0 || strcmp(command, "hfmatrix") == 0 ||
-                strcmp(command, "matrix") == 0)
+        else if(command == "/opt/input_scale" || command == "/opt/nfeff_comp" ||
+                command == "/opt/delay_comp" || command == "/opt/level_comp")
         {
-            const char *value = my_strtok_r(nullptr, "/ \t", &saveptr);
-            if(strcmp(value, "{") != 0)
+            /* Unused */
+            read_word(istr);
+        }
+        else if(command == "/speakers/{")
+        {
+            std::streamsize endpos{istr.tellg()};
+            if(!is_at_end(buffer, endpos))
             {
-                ERR("Expected { after %s command, got %s\n", command, value);
-                goto fail;
+                ERR("Unexpected junk on line: %s\n", buffer.c_str()+endpos);
+                return 0;
             }
+            buffer.clear();
+
+            if(!load_ambdec_speakers(this, f, buffer))
+                return 0;
+
+            if(!read_clipped_line(f, buffer))
+            {
+                ERR("Unexpected end of file\n");
+                return 0;
+            }
+            istr = std::istringstream{buffer};
+            std::string endmark = read_word(istr);
+            if(endmark != "/}")
+            {
+                ERR("Expected /} after speaker definitions, got %s\n", endmark.c_str());
+                return 0;
+            }
+        }
+        else if(command == "/lfmatrix/{" || command == "/hfmatrix/{" || command == "/matrix/{")
+        {
+            std::streamsize endpos{istr.tellg()};
+            if(!is_at_end(buffer, endpos))
+            {
+                ERR("Unexpected junk on line: %s\n", buffer.c_str()+endpos);
+                return 0;
+            }
+            buffer.clear();
+
             if(FreqBands == 1)
             {
-                if(strcmp(command, "matrix") != 0)
+                if(command != "/matrix/{")
                 {
-                    ERR("Unexpected \"%s\" type for a single-band decoder\n", command);
-                    goto fail;
+                    ERR("Unexpected \"%s\" type for a single-band decoder\n", command.c_str());
+                    return 0;
                 }
-                if(!load_ambdec_matrix(HFOrderGain, HFMatrix, NumSpeakers, f, buffer, &saveptr))
-                    goto fail;
+                if(!load_ambdec_matrix(HFOrderGain, HFMatrix, NumSpeakers, f, buffer))
+                    return 0;
             }
             else
             {
-                if(strcmp(command, "lfmatrix") == 0)
+                if(command == "/lfmatrix/{")
                 {
-                    if(!load_ambdec_matrix(LFOrderGain, LFMatrix, NumSpeakers, f, buffer,
-                                           &saveptr))
-                        goto fail;
+                    if(!load_ambdec_matrix(LFOrderGain, LFMatrix, NumSpeakers, f, buffer))
+                        return 0;
                 }
-                else if(strcmp(command, "hfmatrix") == 0)
+                else if(command == "/hfmatrix/{")
                 {
-                    if(!load_ambdec_matrix(HFOrderGain, HFMatrix, NumSpeakers, f, buffer,
-                                           &saveptr))
-                        goto fail;
+                    if(!load_ambdec_matrix(HFOrderGain, HFMatrix, NumSpeakers, f, buffer))
+                        return 0;
                 }
                 else
                 {
-                    ERR("Unexpected \"%s\" type for a dual-band decoder\n", command);
-                    goto fail;
+                    ERR("Unexpected \"%s\" type for a dual-band decoder\n", command.c_str());
+                    return 0;
                 }
-            }
-            value = my_strtok_r(nullptr, "/ \t", &saveptr);
-            if(!value)
-            {
-                line = read_clipped_line(f, buffer);
-                if(!line)
-                {
-                    ERR("Unexpected end of file\n");
-                    goto fail;
-                }
-                value = my_strtok_r(line, "/ \t", &saveptr);
-            }
-            if(strcmp(value, "}") != 0)
-            {
-                ERR("Expected } after matrix definitions, got %s\n", value);
-                goto fail;
-            }
-        }
-        else if(strcmp(command, "end") == 0)
-        {
-            line = my_strtok_r(nullptr, "/ \t", &saveptr);
-            if(line)
-            {
-                ERR("Unexpected junk on end: %s\n", line);
-                goto fail;
             }
 
-            fclose(f);
+            if(!read_clipped_line(f, buffer))
+            {
+                ERR("Unexpected end of file\n");
+                return 0;
+            }
+            istr = std::istringstream{buffer};
+            std::string endmark = read_word(istr);
+            if(endmark != "/}")
+            {
+                ERR("Expected /} after matrix definitions, got %s\n", endmark.c_str());
+                return 0;
+            }
+        }
+        else if(command == "/end")
+        {
+            std::streamsize endpos{istr.tellg()};
+            if(!is_at_end(buffer, endpos))
+            {
+                ERR("Unexpected junk on end: %s\n", buffer.c_str()+endpos);
+                return 0;
+            }
+
             return 1;
         }
         else
         {
-            ERR("Unexpected command: %s\n", command);
-            goto fail;
+            ERR("Unexpected command: %s\n", command.c_str());
+            return 0;
         }
 
-        line = my_strtok_r(nullptr, "/ \t", &saveptr);
-        if(line)
+        istr.clear();
+        std::streamsize endpos{istr.tellg()};
+        if(!is_at_end(buffer, endpos))
         {
-            ERR("Unexpected junk on line: %s\n", line);
-            goto fail;
+            ERR("Unexpected junk on line: %s\n", buffer.c_str()+endpos);
+            return 0;
         }
+        buffer.clear();
     }
     ERR("Unexpected end of file\n");
 
-fail:
-    fclose(f);
     return 0;
 }

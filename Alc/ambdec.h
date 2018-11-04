@@ -4,6 +4,10 @@
 #include "alstring.h"
 #include "alMain.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Helpers to read .ambdec configuration files. */
 
 enum AmbDecScaleType {
@@ -42,5 +46,9 @@ typedef struct AmbDecConf {
 void ambdec_init(AmbDecConf *conf);
 void ambdec_deinit(AmbDecConf *conf);
 int ambdec_load(AmbDecConf *conf, const char *fname);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* AMBDEC_H */

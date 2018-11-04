@@ -38,12 +38,6 @@
 #include "bs2b.h"
 
 
-extern inline void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
-extern inline void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
-extern inline float ScaleAzimuthFront(float azimuth, float scale);
-extern inline void ComputePanGains(const MixParams *dry, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
-
-
 static const ALsizei FuMa2ACN[MAX_AMBI_COEFFS] = {
     0,  /* W */
     3,  /* X */
@@ -324,7 +318,7 @@ static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei sp
             char c;
 
             if(sscanf(name, "AUX%u%c", &n, &c) == 1 && n < 16)
-                ch = Aux0+n;
+                ch = static_cast<enum Channel>(Aux0+n);
             else
             {
                 ERR("AmbDec speaker label \"%s\" not recognized\n", name);
@@ -449,7 +443,8 @@ static void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const AL
 
     if(total > 0)
     {
-        device->ChannelDelay[0].Buffer = al_calloc(16, total * sizeof(ALfloat));
+        device->ChannelDelay[0].Buffer = reinterpret_cast<float*>(
+            al_calloc(16, total * sizeof(ALfloat)));
         for(i = 1;i < MAX_OUTPUT_CHANNELS;i++)
         {
             size_t len = RoundUp(device->ChannelDelay[i-1].Length, 4);
@@ -860,7 +855,8 @@ static void InitHrtfPanning(ALCdevice *device)
         count = COUNTOF(IndexMap);
     }
 
-    device->Hrtf = al_calloc(16, FAM_SIZE(DirectHrtfState, Chan, count));
+    device->Hrtf = reinterpret_cast<DirectHrtfState*>(
+        al_calloc(16, FAM_SIZE(DirectHrtfState, Chan, count)));
 
     for(i = 0;i < count;i++)
     {
@@ -1044,7 +1040,8 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
                  * higher).
                  */
                 ALfloat scale = (ALfloat)(5000.0 / device->Frequency);
-                FrontStablizer *stablizer = al_calloc(16, sizeof(*stablizer));
+                FrontStablizer *stablizer = reinterpret_cast<FrontStablizer*>(
+                    al_calloc(16, sizeof(*stablizer)));
 
                 bandsplit_init(&stablizer->LFilter, scale);
                 stablizer->RFilter = stablizer->LFilter;
@@ -1194,7 +1191,7 @@ no_hrtf:
         ConfigValueInt(alstr_get_cstr(device->DeviceName), NULL, "cf_level", &bs2blevel);
     if(bs2blevel > 0 && bs2blevel <= 6)
     {
-        device->Bs2b = al_calloc(16, sizeof(*device->Bs2b));
+        device->Bs2b = reinterpret_cast<struct bs2b*>(al_calloc(16, sizeof(*device->Bs2b)));
         bs2b_set_params(device->Bs2b, bs2blevel, device->Frequency);
         TRACE("BS2B enabled\n");
         InitPanning(device);
@@ -1212,7 +1209,7 @@ no_hrtf:
     }
     if(device->Render_Mode == NormalRender)
     {
-        device->Uhj_Encoder = al_calloc(16, sizeof(Uhj2Encoder));
+        device->Uhj_Encoder = reinterpret_cast<Uhj2Encoder*>(al_calloc(16, sizeof(Uhj2Encoder)));
         TRACE("UHJ enabled\n");
         InitUhjPanning(device);
         return;

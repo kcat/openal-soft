@@ -9,6 +9,10 @@
 #include "atomic.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define HRTF_HISTORY_BITS   (6)
 #define HRTF_HISTORY_LENGTH (1<<HRTF_HISTORY_BITS)
 #define HRTF_HISTORY_MASK   (HRTF_HISTORY_LENGTH-1)
@@ -80,5 +84,9 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
  * ordered and scaled according to the matrix input.
  */
 void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei NumChannels, const struct AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_COEFFS], ALsizei AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* ALC_HRTF_H */

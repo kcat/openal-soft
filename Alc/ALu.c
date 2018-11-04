@@ -90,6 +90,11 @@ extern inline void aluMatrixfSet(aluMatrixf *matrix,
                                  ALfloat m20, ALfloat m21, ALfloat m22, ALfloat m23,
                                  ALfloat m30, ALfloat m31, ALfloat m32, ALfloat m33);
 
+extern inline void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
+extern inline void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat coeffs[MAX_AMBI_COEFFS]);
+extern inline float ScaleAzimuthFront(float azimuth, float scale);
+extern inline void ComputePanGains(const MixParams *dry, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS]);
+
 
 /* Cone scalar */
 ALfloat ConeScale = 1.0f;

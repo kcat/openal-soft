@@ -119,7 +119,7 @@ public:
     };
 
     pointer allocate(size_type n, const void* = nullptr)
-    { return reinterpret_cast<T*>(al_malloc(alignment, n)); }
+    { return reinterpret_cast<T*>(al_malloc(alignment, n*sizeof(T))); }
 
     void deallocate(pointer p, size_type)
     { al_free(p); }

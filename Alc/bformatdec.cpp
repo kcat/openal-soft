@@ -66,7 +66,7 @@ namespace {
 #define NUM_BANDS 2
 
 /* These points are in AL coordinates! */
-const ALfloat Ambi3DPoints[8][3] = {
+constexpr ALfloat Ambi3DPoints[8][3] = {
     { -0.577350269f,  0.577350269f, -0.577350269f },
     {  0.577350269f,  0.577350269f, -0.577350269f },
     { -0.577350269f,  0.577350269f,  0.577350269f },
@@ -76,7 +76,7 @@ const ALfloat Ambi3DPoints[8][3] = {
     { -0.577350269f, -0.577350269f,  0.577350269f },
     {  0.577350269f, -0.577350269f,  0.577350269f },
 };
-const ALfloat Ambi3DDecoder[8][MAX_AMBI_COEFFS] = {
+constexpr ALfloat Ambi3DDecoder[8][MAX_AMBI_COEFFS] = {
     { 0.125f,  0.125f,  0.125f,  0.125f },
     { 0.125f, -0.125f,  0.125f,  0.125f },
     { 0.125f,  0.125f,  0.125f, -0.125f },
@@ -86,7 +86,7 @@ const ALfloat Ambi3DDecoder[8][MAX_AMBI_COEFFS] = {
     { 0.125f,  0.125f, -0.125f, -0.125f },
     { 0.125f, -0.125f, -0.125f, -0.125f },
 };
-const ALfloat Ambi3DDecoderHFScale[MAX_AMBI_COEFFS] = {
+constexpr ALfloat Ambi3DDecoderHFScale[MAX_AMBI_COEFFS] = {
     2.0f,
     1.15470054f, 1.15470054f, 1.15470054f
 };
@@ -183,7 +183,7 @@ void bformatdec_free(BFormatDec **dec)
 
 void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALsizei chanmap[MAX_OUTPUT_CHANNELS])
 {
-    constexpr ALsizei map2DTo3D[MAX_AMBI2D_COEFFS] = {
+    static constexpr ALsizei map2DTo3D[MAX_AMBI2D_COEFFS] = {
         0,  1, 3,  4, 8,  9, 15
     };
     const ALfloat *coeff_scale = N3D2N3DScale;

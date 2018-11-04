@@ -7,6 +7,8 @@
 #include <string.h>
 #include <ctype.h>
 
+#include <vector>
+
 #include "compat.h"
 
 
@@ -26,37 +28,19 @@ static char *rstrip(char *line)
     return line;
 }
 
-static int readline(FILE *f, char **output, size_t *maxlen)
+static int readline(FILE *f, std::vector<char> &output)
 {
-    size_t len = 0;
     int c;
-
-    while((c=fgetc(f)) != EOF && (c == '\r' || c == '\n'))
-        ;
+    while((c=fgetc(f)) != EOF && (c == '\r' || c == '\n')) {
+    }
     if(c == EOF)
         return 0;
 
+    output.clear();
     do {
-        if(len+1 >= *maxlen)
-        {
-            void *temp = NULL;
-            size_t newmax;
-
-            newmax = (*maxlen ? (*maxlen)<<1 : 32);
-            if(newmax > *maxlen)
-                temp = realloc(*output, newmax);
-            if(!temp)
-            {
-                ERR("Failed to realloc "SZFMT" bytes from "SZFMT"!\n", newmax, *maxlen);
-                return 0;
-            }
-
-            *output = temp;
-            *maxlen = newmax;
-        }
-        (*output)[len++] = c;
-        (*output)[len] = '\0';
+        output.emplace_back(c);
     } while((c=fgetc(f)) != EOF && c != '\r' && c != '\n');
+    output.emplace_back((c=0));
 
     return 1;
 }
@@ -66,21 +50,21 @@ static int readline(FILE *f, char **output, size_t *maxlen)
 static char *my_strtok_r(char *str, const char *delim, char **saveptr)
 {
     /* Sanity check and update internal pointer. */
-    if(!saveptr || !delim) return NULL;
+    if(!saveptr || !delim) return nullptr;
     if(str) *saveptr = str;
     str = *saveptr;
 
     /* Nothing more to do with this string. */
-    if(!str) return NULL;
+    if(!str) return nullptr;
 
     /* Find the first non-delimiter character. */
-    while(*str != '\0' && strchr(delim, *str) != NULL)
+    while(*str != '\0' && strchr(delim, *str) != nullptr)
         str++;
     if(*str == '\0')
     {
         /* End of string. */
-        *saveptr = NULL;
-        return NULL;
+        *saveptr = nullptr;
+        return nullptr;
     }
 
     /* Find the next delimiter character. */
@@ -122,31 +106,31 @@ static char *read_float(ALfloat *num, const char *line)
 }
 
 
-char *read_clipped_line(FILE *f, char **buffer, size_t *maxlen)
+char *read_clipped_line(FILE *f, std::vector<char> &buffer)
 {
-    while(readline(f, buffer, maxlen))
+    while(readline(f, buffer))
     {
         char *line, *comment;
 
-        line = lstrip(*buffer);
+        line = lstrip(buffer.data());
         comment = strchr(line, '#');
         if(comment) *(comment++) = 0;
 
         line = rstrip(line);
         if(line[0]) return line;
     }
-    return NULL;
+    return nullptr;
 }
 
-static int load_ambdec_speakers(AmbDecConf *conf, FILE *f, char **buffer, size_t *maxlen, char **saveptr)
+static int load_ambdec_speakers(AmbDecConf *conf, FILE *f, std::vector<char> &buffer, char **saveptr)
 {
     ALsizei cur = 0;
     while(cur < conf->NumSpeakers)
     {
-        const char *cmd = my_strtok_r(NULL, " \t", saveptr);
+        const char *cmd = my_strtok_r(nullptr, " \t", saveptr);
         if(!cmd)
         {
-            char *line = read_clipped_line(f, buffer, maxlen);
+            char *line = read_clipped_line(f, buffer);
             if(!line)
             {
                 ERR("Unexpected end of file\n");
@@ -157,14 +141,14 @@ static int load_ambdec_speakers(AmbDecConf *conf, FILE *f, char **buffer, size_t
 
         if(strcmp(cmd, "add_spkr") == 0)
         {
-            const char *name = my_strtok_r(NULL, " \t", saveptr);
-            const char *dist = my_strtok_r(NULL, " \t", saveptr);
-            const char *az = my_strtok_r(NULL, " \t", saveptr);
-            const char *elev = my_strtok_r(NULL, " \t", saveptr);
-            const char *conn = my_strtok_r(NULL, " \t", saveptr);
+            const char *name = my_strtok_r(nullptr, " \t", saveptr);
+            const char *dist = my_strtok_r(nullptr, " \t", saveptr);
+            const char *az = my_strtok_r(nullptr, " \t", saveptr);
+            const char *elev = my_strtok_r(nullptr, " \t", saveptr);
+            const char *conn = my_strtok_r(nullptr, " \t", saveptr);
 
             if(!name) WARN("Name not specified for speaker %u\n", cur+1);
-            else alstr_copy_cstr(&conf->Speakers[cur].Name, name);
+            else conf->Speakers[cur].Name = name;
             if(!dist) WARN("Distance not specified for speaker %u\n", cur+1);
             else read_float(&conf->Speakers[cur].Distance, dist);
             if(!az) WARN("Azimuth not specified for speaker %u\n", cur+1);
@@ -172,7 +156,7 @@ static int load_ambdec_speakers(AmbDecConf *conf, FILE *f, char **buffer, size_t
             if(!elev) WARN("Elevation not specified for speaker %u\n", cur+1);
             else read_float(&conf->Speakers[cur].Elevation, elev);
             if(!conn) TRACE("Connection not specified for speaker %u\n", cur+1);
-            else alstr_copy_cstr(&conf->Speakers[cur].Connection, conn);
+            else conf->Speakers[cur].Connection = conn;
 
             cur++;
         }
@@ -182,7 +166,7 @@ static int load_ambdec_speakers(AmbDecConf *conf, FILE *f, char **buffer, size_t
             return 0;
         }
 
-        cmd = my_strtok_r(NULL, " \t", saveptr);
+        cmd = my_strtok_r(nullptr, " \t", saveptr);
         if(cmd)
         {
             ERR("Unexpected junk on line: %s\n", cmd);
@@ -193,16 +177,16 @@ static int load_ambdec_speakers(AmbDecConf *conf, FILE *f, char **buffer, size_t
     return 1;
 }
 
-static int load_ambdec_matrix(ALfloat *gains, ALfloat (*matrix)[MAX_AMBI_COEFFS], ALsizei maxrow, FILE *f, char **buffer, size_t *maxlen, char **saveptr)
+static int load_ambdec_matrix(ALfloat *gains, ALfloat (*matrix)[MAX_AMBI_COEFFS], ALsizei maxrow, FILE *f, std::vector<char> &buffer, char **saveptr)
 {
     int gotgains = 0;
     ALsizei cur = 0;
     while(cur < maxrow)
     {
-        const char *cmd = my_strtok_r(NULL, " \t", saveptr);
+        const char *cmd = my_strtok_r(nullptr, " \t", saveptr);
         if(!cmd)
         {
-            char *line = read_clipped_line(f, buffer, maxlen);
+            char *line = read_clipped_line(f, buffer);
             if(!line)
             {
                 ERR("Unexpected end of file\n");
@@ -215,7 +199,7 @@ static int load_ambdec_matrix(ALfloat *gains, ALfloat (*matrix)[MAX_AMBI_COEFFS]
         {
             ALuint curgain = 0;
             char *line;
-            while((line=my_strtok_r(NULL, " \t", saveptr)) != NULL)
+            while((line=my_strtok_r(nullptr, " \t", saveptr)) != nullptr)
             {
                 ALfloat value;
                 line = read_float(&value, line);
@@ -236,7 +220,7 @@ static int load_ambdec_matrix(ALfloat *gains, ALfloat (*matrix)[MAX_AMBI_COEFFS]
         {
             ALuint curidx = 0;
             char *line;
-            while((line=my_strtok_r(NULL, " \t", saveptr)) != NULL)
+            while((line=my_strtok_r(nullptr, " \t", saveptr)) != nullptr)
             {
                 ALfloat value;
                 line = read_float(&value, line);
@@ -259,7 +243,7 @@ static int load_ambdec_matrix(ALfloat *gains, ALfloat (*matrix)[MAX_AMBI_COEFFS]
             return 0;
         }
 
-        cmd = my_strtok_r(NULL, " \t", saveptr);
+        cmd = my_strtok_r(nullptr, " \t", saveptr);
         if(cmd)
         {
             ERR("Unexpected junk on line: %s\n", cmd);
@@ -276,36 +260,9 @@ static int load_ambdec_matrix(ALfloat *gains, ALfloat (*matrix)[MAX_AMBI_COEFFS]
     return 1;
 }
 
-void ambdec_init(AmbDecConf *conf)
+int AmbDecConf::load(const char *fname)
 {
-    ALsizei i;
-
-    memset(conf, 0, sizeof(*conf));
-    AL_STRING_INIT(conf->Description);
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-    {
-        AL_STRING_INIT(conf->Speakers[i].Name);
-        AL_STRING_INIT(conf->Speakers[i].Connection);
-    }
-}
-
-void ambdec_deinit(AmbDecConf *conf)
-{
-    ALsizei i;
-
-    alstr_reset(&conf->Description);
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-    {
-        alstr_reset(&conf->Speakers[i].Name);
-        alstr_reset(&conf->Speakers[i].Connection);
-    }
-    memset(conf, 0, sizeof(*conf));
-}
-
-int ambdec_load(AmbDecConf *conf, const char *fname)
-{
-    char *buffer = NULL;
-    size_t maxlen = 0;
+    std::vector<char> buffer;
     char *line;
     FILE *f;
 
@@ -316,7 +273,7 @@ int ambdec_load(AmbDecConf *conf, const char *fname)
         return 0;
     }
 
-    while((line=read_clipped_line(f, &buffer, &maxlen)) != NULL)
+    while((line=read_clipped_line(f, buffer)) != nullptr)
     {
         char *saveptr;
         char *command;
@@ -330,31 +287,31 @@ int ambdec_load(AmbDecConf *conf, const char *fname)
 
         if(strcmp(command, "description") == 0)
         {
-            char *value = my_strtok_r(NULL, "", &saveptr);
-            alstr_copy_cstr(&conf->Description, lstrip(value));
+            char *value = my_strtok_r(nullptr, "", &saveptr);
+            Description = lstrip(value);
         }
         else if(strcmp(command, "version") == 0)
         {
-            line = my_strtok_r(NULL, "", &saveptr);
-            line = read_uint(&conf->Version, line, 10);
+            line = my_strtok_r(nullptr, "", &saveptr);
+            line = read_uint(&Version, line, 10);
             if(line && *line != '\0')
             {
                 ERR("Extra junk after version: %s\n", line);
                 goto fail;
             }
-            if(conf->Version != 3)
+            if(Version != 3)
             {
-                ERR("Unsupported version: %u\n", conf->Version);
+                ERR("Unsupported version: %u\n", Version);
                 goto fail;
             }
         }
         else if(strcmp(command, "dec") == 0)
         {
-            const char *dec = my_strtok_r(NULL, "/ \t", &saveptr);
+            const char *dec = my_strtok_r(nullptr, "/ \t", &saveptr);
             if(strcmp(dec, "chan_mask") == 0)
             {
-                line = my_strtok_r(NULL, "", &saveptr);
-                line = read_uint(&conf->ChanMask, line, 16);
+                line = my_strtok_r(nullptr, "", &saveptr);
+                line = read_uint(&ChanMask, line, 16);
                 if(line && *line != '\0')
                 {
                     ERR("Extra junk after mask: %s\n", line);
@@ -363,43 +320,43 @@ int ambdec_load(AmbDecConf *conf, const char *fname)
             }
             else if(strcmp(dec, "freq_bands") == 0)
             {
-                line = my_strtok_r(NULL, "", &saveptr);
-                line = read_uint(&conf->FreqBands, line, 10);
+                line = my_strtok_r(nullptr, "", &saveptr);
+                line = read_uint(&FreqBands, line, 10);
                 if(line && *line != '\0')
                 {
                     ERR("Extra junk after freq_bands: %s\n", line);
                     goto fail;
                 }
-                if(conf->FreqBands != 1 && conf->FreqBands != 2)
+                if(FreqBands != 1 && FreqBands != 2)
                 {
-                    ERR("Invalid freq_bands value: %u\n", conf->FreqBands);
+                    ERR("Invalid freq_bands value: %u\n", FreqBands);
                     goto fail;
                 }
             }
             else if(strcmp(dec, "speakers") == 0)
             {
-                line = my_strtok_r(NULL, "", &saveptr);
-                line = read_int(&conf->NumSpeakers, line, 10);
+                line = my_strtok_r(nullptr, "", &saveptr);
+                line = read_int(&NumSpeakers, line, 10);
                 if(line && *line != '\0')
                 {
                     ERR("Extra junk after speakers: %s\n", line);
                     goto fail;
                 }
-                if(conf->NumSpeakers > MAX_OUTPUT_CHANNELS)
+                if(NumSpeakers > MAX_OUTPUT_CHANNELS)
                 {
-                    ERR("Unsupported speaker count: %u\n", conf->NumSpeakers);
+                    ERR("Unsupported speaker count: %u\n", NumSpeakers);
                     goto fail;
                 }
             }
             else if(strcmp(dec, "coeff_scale") == 0)
             {
-                line = my_strtok_r(NULL, " \t", &saveptr);
+                line = my_strtok_r(nullptr, " \t", &saveptr);
                 if(strcmp(line, "n3d") == 0)
-                    conf->CoeffScale = ADS_N3D;
+                    CoeffScale = AmbDecScale::N3D;
                 else if(strcmp(line, "sn3d") == 0)
-                    conf->CoeffScale = ADS_SN3D;
+                    CoeffScale = AmbDecScale::SN3D;
                 else if(strcmp(line, "fuma") == 0)
-                    conf->CoeffScale = ADS_FuMa;
+                    CoeffScale = AmbDecScale::FuMa;
                 else
                 {
                     ERR("Unsupported coeff scale: %s\n", line);
@@ -414,11 +371,11 @@ int ambdec_load(AmbDecConf *conf, const char *fname)
         }
         else if(strcmp(command, "opt") == 0)
         {
-            const char *opt = my_strtok_r(NULL, "/ \t", &saveptr);
+            const char *opt = my_strtok_r(nullptr, "/ \t", &saveptr);
             if(strcmp(opt, "xover_freq") == 0)
             {
-                line = my_strtok_r(NULL, "", &saveptr);
-                line = read_float(&conf->XOverFreq, line);
+                line = my_strtok_r(nullptr, "", &saveptr);
+                line = read_float(&XOverFreq, line);
                 if(line && *line != '\0')
                 {
                     ERR("Extra junk after xover_freq: %s\n", line);
@@ -427,8 +384,8 @@ int ambdec_load(AmbDecConf *conf, const char *fname)
             }
             else if(strcmp(opt, "xover_ratio") == 0)
             {
-                line = my_strtok_r(NULL, "", &saveptr);
-                line = read_float(&conf->XOverRatio, line);
+                line = my_strtok_r(nullptr, "", &saveptr);
+                line = read_float(&XOverRatio, line);
                 if(line && *line != '\0')
                 {
                     ERR("Extra junk after xover_ratio: %s\n", line);
@@ -439,7 +396,7 @@ int ambdec_load(AmbDecConf *conf, const char *fname)
                     strcmp(opt, "delay_comp") == 0 || strcmp(opt, "level_comp") == 0)
             {
                 /* Unused */
-                my_strtok_r(NULL, " \t", &saveptr);
+                my_strtok_r(nullptr, " \t", &saveptr);
             }
             else
             {
@@ -449,18 +406,18 @@ int ambdec_load(AmbDecConf *conf, const char *fname)
         }
         else if(strcmp(command, "speakers") == 0)
         {
-            const char *value = my_strtok_r(NULL, "/ \t", &saveptr);
+            const char *value = my_strtok_r(nullptr, "/ \t", &saveptr);
             if(strcmp(value, "{") != 0)
             {
                 ERR("Expected { after %s command, got %s\n", command, value);
                 goto fail;
             }
-            if(!load_ambdec_speakers(conf, f, &buffer, &maxlen, &saveptr))
+            if(!load_ambdec_speakers(this, f, buffer, &saveptr))
                 goto fail;
-            value = my_strtok_r(NULL, "/ \t", &saveptr);
+            value = my_strtok_r(nullptr, "/ \t", &saveptr);
             if(!value)
             {
-                line = read_clipped_line(f, &buffer, &maxlen);
+                line = read_clipped_line(f, buffer);
                 if(!line)
                 {
                     ERR("Unexpected end of file\n");
@@ -477,35 +434,34 @@ int ambdec_load(AmbDecConf *conf, const char *fname)
         else if(strcmp(command, "lfmatrix") == 0 || strcmp(command, "hfmatrix") == 0 ||
                 strcmp(command, "matrix") == 0)
         {
-            const char *value = my_strtok_r(NULL, "/ \t", &saveptr);
+            const char *value = my_strtok_r(nullptr, "/ \t", &saveptr);
             if(strcmp(value, "{") != 0)
             {
                 ERR("Expected { after %s command, got %s\n", command, value);
                 goto fail;
             }
-            if(conf->FreqBands == 1)
+            if(FreqBands == 1)
             {
                 if(strcmp(command, "matrix") != 0)
                 {
                     ERR("Unexpected \"%s\" type for a single-band decoder\n", command);
                     goto fail;
                 }
-                if(!load_ambdec_matrix(conf->HFOrderGain, conf->HFMatrix, conf->NumSpeakers,
-                                       f, &buffer, &maxlen, &saveptr))
+                if(!load_ambdec_matrix(HFOrderGain, HFMatrix, NumSpeakers, f, buffer, &saveptr))
                     goto fail;
             }
             else
             {
                 if(strcmp(command, "lfmatrix") == 0)
                 {
-                    if(!load_ambdec_matrix(conf->LFOrderGain, conf->LFMatrix, conf->NumSpeakers,
-                                           f, &buffer, &maxlen, &saveptr))
+                    if(!load_ambdec_matrix(LFOrderGain, LFMatrix, NumSpeakers, f, buffer,
+                                           &saveptr))
                         goto fail;
                 }
                 else if(strcmp(command, "hfmatrix") == 0)
                 {
-                    if(!load_ambdec_matrix(conf->HFOrderGain, conf->HFMatrix, conf->NumSpeakers,
-                                           f, &buffer, &maxlen, &saveptr))
+                    if(!load_ambdec_matrix(HFOrderGain, HFMatrix, NumSpeakers, f, buffer,
+                                           &saveptr))
                         goto fail;
                 }
                 else
@@ -514,10 +470,10 @@ int ambdec_load(AmbDecConf *conf, const char *fname)
                     goto fail;
                 }
             }
-            value = my_strtok_r(NULL, "/ \t", &saveptr);
+            value = my_strtok_r(nullptr, "/ \t", &saveptr);
             if(!value)
             {
-                line = read_clipped_line(f, &buffer, &maxlen);
+                line = read_clipped_line(f, buffer);
                 if(!line)
                 {
                     ERR("Unexpected end of file\n");
@@ -533,7 +489,7 @@ int ambdec_load(AmbDecConf *conf, const char *fname)
         }
         else if(strcmp(command, "end") == 0)
         {
-            line = my_strtok_r(NULL, "/ \t", &saveptr);
+            line = my_strtok_r(nullptr, "/ \t", &saveptr);
             if(line)
             {
                 ERR("Unexpected junk on end: %s\n", line);
@@ -541,7 +497,6 @@ int ambdec_load(AmbDecConf *conf, const char *fname)
             }
 
             fclose(f);
-            free(buffer);
             return 1;
         }
         else
@@ -550,7 +505,7 @@ int ambdec_load(AmbDecConf *conf, const char *fname)
             goto fail;
         }
 
-        line = my_strtok_r(NULL, "/ \t", &saveptr);
+        line = my_strtok_r(nullptr, "/ \t", &saveptr);
         if(line)
         {
             ERR("Unexpected junk on line: %s\n", line);
@@ -561,6 +516,5 @@ int ambdec_load(AmbDecConf *conf, const char *fname)
 
 fail:
     fclose(f);
-    free(buffer);
     return 0;
 }

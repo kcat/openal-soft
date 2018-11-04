@@ -204,9 +204,9 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
     for(i = 0;i < conf->NumSpeakers;i++)
         dec->Enabled |= 1 << chanmap[i];
 
-    if(conf->CoeffScale == ADS_SN3D)
+    if(conf->CoeffScale == AmbDecScale::SN3D)
         coeff_scale = SN3D2N3DScale;
-    else if(conf->CoeffScale == ADS_FuMa)
+    else if(conf->CoeffScale == AmbDecScale::FuMa)
         coeff_scale = FuMa2N3DScale;
 
     memset(dec->UpSampler, 0, sizeof(dec->UpSampler));

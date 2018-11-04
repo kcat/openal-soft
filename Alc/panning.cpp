@@ -275,45 +275,45 @@ static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei sp
          * use the side channels when the device is configured for back,
          * and vice-versa.
          */
-        if(alstr_cmp_cstr(conf->Speakers[i].Name, "LF") == 0)
+        if(conf->Speakers[i].Name == "LF")
             ch = FrontLeft;
-        else if(alstr_cmp_cstr(conf->Speakers[i].Name, "RF") == 0)
+        else if(conf->Speakers[i].Name == "RF")
             ch = FrontRight;
-        else if(alstr_cmp_cstr(conf->Speakers[i].Name, "CE") == 0)
+        else if(conf->Speakers[i].Name == "CE")
             ch = FrontCenter;
-        else if(alstr_cmp_cstr(conf->Speakers[i].Name, "LS") == 0)
+        else if(conf->Speakers[i].Name == "LS")
         {
             if(device->FmtChans == DevFmtX51Rear)
                 ch = BackLeft;
             else
                 ch = SideLeft;
         }
-        else if(alstr_cmp_cstr(conf->Speakers[i].Name, "RS") == 0)
+        else if(conf->Speakers[i].Name == "RS")
         {
             if(device->FmtChans == DevFmtX51Rear)
                 ch = BackRight;
             else
                 ch = SideRight;
         }
-        else if(alstr_cmp_cstr(conf->Speakers[i].Name, "LB") == 0)
+        else if(conf->Speakers[i].Name == "LB")
         {
             if(device->FmtChans == DevFmtX51)
                 ch = SideLeft;
             else
                 ch = BackLeft;
         }
-        else if(alstr_cmp_cstr(conf->Speakers[i].Name, "RB") == 0)
+        else if(conf->Speakers[i].Name == "RB")
         {
             if(device->FmtChans == DevFmtX51)
                 ch = SideRight;
             else
                 ch = BackRight;
         }
-        else if(alstr_cmp_cstr(conf->Speakers[i].Name, "CB") == 0)
+        else if(conf->Speakers[i].Name == "CB")
             ch = BackCenter;
         else
         {
-            const char *name = alstr_get_cstr(conf->Speakers[i].Name);
+            const char *name = conf->Speakers[i].Name.c_str();
             unsigned int n;
             char c;
 
@@ -329,7 +329,7 @@ static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei sp
         if(chidx == -1)
         {
             ERR("Failed to lookup AmbDec speaker label %s\n",
-                alstr_get_cstr(conf->Speakers[i].Name));
+                conf->Speakers[i].Name.c_str());
             return false;
         }
         speakermap[i] = chidx;
@@ -423,14 +423,14 @@ static void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const AL
                            srate + 0.5f);
             if(delay >= (ALfloat)MAX_DELAY_LENGTH)
                 ERR("Delay for speaker \"%s\" exceeds buffer length (%f >= %u)\n",
-                    alstr_get_cstr(conf->Speakers[i].Name), delay, MAX_DELAY_LENGTH);
+                    conf->Speakers[i].Name.c_str(), delay, MAX_DELAY_LENGTH);
 
             device->ChannelDelay[chan].Length = (ALsizei)clampf(
                 delay, 0.0f, (ALfloat)(MAX_DELAY_LENGTH-1)
             );
             device->ChannelDelay[chan].Gain = conf->Speakers[i].Distance / maxdist;
             TRACE("Channel %u \"%s\" distance compensation: %d samples, %f gain\n", chan,
-                  alstr_get_cstr(conf->Speakers[i].Name), device->ChannelDelay[chan].Length,
+                conf->Speakers[i].Name.c_str(), device->ChannelDelay[chan].Length,
                 device->ChannelDelay[chan].Gain
             );
 
@@ -639,9 +639,9 @@ static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const A
         }
     }
 
-    if(conf->CoeffScale == ADS_SN3D)
+    if(conf->CoeffScale == AmbDecScale::SN3D)
         coeff_scale = SN3D2N3DScale;
-    else if(conf->CoeffScale == ADS_FuMa)
+    else if(conf->CoeffScale == AmbDecScale::FuMa)
         coeff_scale = FuMa2N3DScale;
 
     for(i = 0;i < conf->NumSpeakers;i++)
@@ -963,8 +963,6 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         if(hrtf_appreq == Hrtf_Enable)
             device->HrtfStatus = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
 
-        ambdec_init(&conf);
-
         devname = alstr_get_cstr(device->DeviceName);
         switch(device->FmtChans)
         {
@@ -984,7 +982,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
             const char *fname;
             if(ConfigValueStr(devname, "decoder", layout, &fname))
             {
-                if(!ambdec_load(&conf, fname))
+                if(!conf.load(fname))
                     ERR("Failed to load layout file %s\n", fname);
                 else
                 {
@@ -1062,7 +1060,6 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         }
         TRACE("Front stablizer %s\n", device->Stablizer ? "enabled" : "disabled");
 
-        ambdec_deinit(&conf);
         return;
     }
 

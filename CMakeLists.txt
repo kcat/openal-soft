@@ -874,7 +874,7 @@ SET(ALC_OBJS
     Alc/hrtf.h
     Alc/uhjfilter.cpp
     Alc/uhjfilter.h
-    Alc/ambdec.c
+    Alc/ambdec.cpp
     Alc/ambdec.h
     Alc/bformatdec.cpp
     Alc/bformatdec.h

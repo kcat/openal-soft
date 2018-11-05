@@ -71,7 +71,7 @@ bool load_ambdec_speakers(AmbDecConf *conf, std::istream &f, std::string &buffer
     {
         std::istringstream istr{buffer};
 
-        std::string cmd = read_word(istr);
+        std::string cmd{read_word(istr)};
         if(cmd.empty())
         {
             if(!read_clipped_line(f, buffer))
@@ -79,8 +79,7 @@ bool load_ambdec_speakers(AmbDecConf *conf, std::istream &f, std::string &buffer
                 ERR("Unexpected end of file\n");
                 return false;
             }
-            istr = std::istringstream{buffer};
-            cmd = read_word(istr);
+            continue;
         }
 
         if(cmd == "add_spkr")
@@ -124,9 +123,8 @@ bool load_ambdec_matrix(ALfloat *gains, ALfloat (*matrix)[MAX_AMBI_COEFFS], ALsi
     while(cur < maxrow)
     {
         std::istringstream istr{buffer};
-        std::string cmd;
 
-        istr >> cmd;
+        std::string cmd{read_word(istr)};
         if(cmd.empty())
         {
             if(!read_clipped_line(f, buffer))
@@ -134,8 +132,7 @@ bool load_ambdec_matrix(ALfloat *gains, ALfloat (*matrix)[MAX_AMBI_COEFFS], ALsi
                 ERR("Unexpected end of file\n");
                 return false;
             }
-            istr = std::istringstream{buffer};
-            istr >> cmd;
+            continue;
         }
 
         if(cmd == "order_gain")
@@ -219,9 +216,8 @@ int AmbDecConf::load(const char *fname)
     while(read_clipped_line(f, buffer))
     {
         std::istringstream istr{buffer};
-        std::string command;
 
-        istr >> command;
+        std::string command{read_word(istr)};
         if(command.empty())
         {
             ERR("Malformed line: %s\n", buffer.c_str());
@@ -335,13 +331,14 @@ int AmbDecConf::load(const char *fname)
                 ERR("Unexpected end of file\n");
                 return 0;
             }
-            istr = std::istringstream{buffer};
-            std::string endmark = read_word(istr);
+            std::istringstream istr2{buffer};
+            std::string endmark{read_word(istr2)};
             if(endmark != "/}")
             {
                 ERR("Expected /} after speaker definitions, got %s\n", endmark.c_str());
                 return 0;
             }
+            istr.swap(istr2);
         }
         else if(command == "/lfmatrix/{" || command == "/hfmatrix/{" || command == "/matrix/{")
         {
@@ -387,13 +384,14 @@ int AmbDecConf::load(const char *fname)
                 ERR("Unexpected end of file\n");
                 return 0;
             }
-            istr = std::istringstream{buffer};
-            std::string endmark = read_word(istr);
+            std::istringstream istr2{buffer};
+            std::string endmark{read_word(istr2)};
             if(endmark != "/}")
             {
                 ERR("Expected /} after matrix definitions, got %s\n", endmark.c_str());
                 return 0;
             }
+            istr.swap(istr2);
         }
         else if(command == "/end")
         {

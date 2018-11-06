@@ -32,12 +32,16 @@
 #include <ksmedia.h>
 #endif
 
+#include <atomic>
+#include <thread>
+#include <string>
+#include <vector>
+#include <algorithm>
+
 #include "alMain.h"
 #include "alu.h"
 #include "ringbuffer.h"
-#include "threads.h"
 #include "compat.h"
-#include "alstring.h"
 
 #include "backends/base.h"
 
@@ -58,8 +62,18 @@
 #endif
 
 
+/* Some headers seem to define these as macros for __uuidof, which is annoying
+ * since some headers don't declare them at all. Hopefully the ifdef is enough
+ * to tell if they need to be declared.
+ */
+#ifndef KSDATAFORMAT_SUBTYPE_PCM
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_PCM, 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
+#endif
+#ifndef KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
 DEFINE_GUID(KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, 0x00000003, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71);
+#endif
+
+namespace {
 
 #define DEVNAME_HEAD "OpenAL Soft on "
 
@@ -84,17 +98,18 @@ static ALCboolean DSoundLoad(void)
     if(!ds_handle)
     {
         ds_handle = LoadLib("dsound.dll");
-        if(ds_handle == NULL)
+        if(!ds_handle)
         {
             ERR("Failed to load dsound.dll\n");
             return ALC_FALSE;
         }
 
 #define LOAD_FUNC(f) do {                                                     \
-    p##f = GetSymbol(ds_handle, #f);                                          \
-    if(p##f == NULL) {                                                        \
+    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(ds_handle, #f));        \
+    if(!p##f)                                                                 \
+    {                                                                         \
         CloseLib(ds_handle);                                                  \
-        ds_handle = NULL;                                                     \
+        ds_handle = nullptr;                                                  \
         return ALC_FALSE;                                                     \
     }                                                                         \
 } while(0)
@@ -111,85 +126,72 @@ static ALCboolean DSoundLoad(void)
 
 #define MAX_UPDATES 128
 
-typedef struct {
-    al_string name;
+struct DevMap {
+    std::string name;
     GUID guid;
-} DevMap;
-TYPEDEF_VECTOR(DevMap, vector_DevMap)
 
-static vector_DevMap PlaybackDevices;
-static vector_DevMap CaptureDevices;
+    template<typename T0, typename T1>
+    DevMap(T0&& name_, T1&& guid_)
+      : name{std::forward<T0>(name_)}, guid{std::forward<T1>(guid_)}
+    { }
+};
 
-static void clear_devlist(vector_DevMap *list)
+std::vector<DevMap> PlaybackDevices;
+std::vector<DevMap> CaptureDevices;
+
+bool checkName(const std::vector<DevMap> &list, const std::string &name)
 {
-#define DEINIT_STR(i) AL_STRING_DEINIT((i)->name)
-    VECTOR_FOR_EACH(DevMap, *list, DEINIT_STR);
-    VECTOR_RESIZE(*list, 0, 0);
-#undef DEINIT_STR
+    return std::find_if(list.cbegin(), list.cend(),
+        [&name](const DevMap &entry) -> bool
+        { return entry.name == name; }
+    ) != list.cend();
 }
 
-static BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR* UNUSED(drvname), void *data)
+BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR* UNUSED(drvname), void *data)
 {
-    vector_DevMap *devices = data;
-    OLECHAR *guidstr = NULL;
-    DevMap entry;
-    HRESULT hr;
-    int count;
-
     if(!guid)
         return TRUE;
 
-    AL_STRING_INIT(entry.name);
+    auto& devices = *reinterpret_cast<std::vector<DevMap>*>(data);
+    const std::string basename{DEVNAME_HEAD + wstr_to_utf8(desc)};
 
-    count = 0;
-    while(1)
+    int count{1};
+    std::string newname{basename};
+    while(checkName(devices, newname))
     {
-        const DevMap *iter;
-
-        alstr_copy_cstr(&entry.name, DEVNAME_HEAD);
-        alstr_append_wcstr(&entry.name, desc);
-        if(count != 0)
-        {
-            char str[64];
-            snprintf(str, sizeof(str), " #%d", count+1);
-            alstr_append_cstr(&entry.name, str);
-        }
-
-#define MATCH_ENTRY(i) (alstr_cmp(entry.name, (i)->name) == 0)
-        VECTOR_FIND_IF(iter, const DevMap, *devices, MATCH_ENTRY);
-        if(iter == VECTOR_END(*devices)) break;
-#undef MATCH_ENTRY
-        count++;
+        newname = basename;
+        newname += " #";
+        newname += std::to_string(++count);
     }
-    entry.guid = *guid;
+    devices.emplace_back(std::move(newname), *guid);
+    const DevMap &newentry = devices.back();
 
-    hr = StringFromCLSID(guid, &guidstr);
+    OLECHAR *guidstr{nullptr};
+    HRESULT hr{StringFromCLSID(*guid, &guidstr)};
     if(SUCCEEDED(hr))
     {
-        TRACE("Got device \"%s\", GUID \"%ls\"\n", alstr_get_cstr(entry.name), guidstr);
+        TRACE("Got device \"%s\", GUID \"%ls\"\n", newentry.name.c_str(), guidstr);
         CoTaskMemFree(guidstr);
     }
-
-    VECTOR_PUSH_BACK(*devices, entry);
 
     return TRUE;
 }
 
+} // namespace
 
-typedef struct ALCdsoundPlayback {
-    DERIVE_FROM_TYPE(ALCbackend);
 
-    IDirectSound       *DS;
-    IDirectSoundBuffer *PrimaryBuffer;
-    IDirectSoundBuffer *Buffer;
-    IDirectSoundNotify *Notifies;
-    HANDLE             NotifyEvent;
+struct ALCdsoundPlayback final : public ALCbackend {
+    IDirectSound       *DS{nullptr};
+    IDirectSoundBuffer *PrimaryBuffer{nullptr};
+    IDirectSoundBuffer *Buffer{nullptr};
+    IDirectSoundNotify *Notifies{nullptr};
+    HANDLE             NotifyEvent{nullptr};
 
-    ATOMIC(ALenum) killNow;
-    althrd_t thread;
-} ALCdsoundPlayback;
+    std::atomic<ALenum> killNow{AL_TRUE};
+    std::thread thread;
+};
 
-static int ALCdsoundPlayback_mixerProc(void *ptr);
+static int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self);
 
 static void ALCdsoundPlayback_Construct(ALCdsoundPlayback *self, ALCdevice *device);
 static void ALCdsoundPlayback_Destruct(ALCdsoundPlayback *self);
@@ -209,61 +211,47 @@ DEFINE_ALCBACKEND_VTABLE(ALCdsoundPlayback);
 
 static void ALCdsoundPlayback_Construct(ALCdsoundPlayback *self, ALCdevice *device)
 {
+    new (self) ALCdsoundPlayback{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCdsoundPlayback, ALCbackend, self);
-
-    self->DS = NULL;
-    self->PrimaryBuffer = NULL;
-    self->Buffer = NULL;
-    self->Notifies = NULL;
-    self->NotifyEvent = NULL;
-    ATOMIC_INIT(&self->killNow, AL_TRUE);
 }
 
 static void ALCdsoundPlayback_Destruct(ALCdsoundPlayback *self)
 {
     if(self->Notifies)
-        IDirectSoundNotify_Release(self->Notifies);
-    self->Notifies = NULL;
+        self->Notifies->Release();
+    self->Notifies = nullptr;
     if(self->Buffer)
-        IDirectSoundBuffer_Release(self->Buffer);
-    self->Buffer = NULL;
-    if(self->PrimaryBuffer != NULL)
-        IDirectSoundBuffer_Release(self->PrimaryBuffer);
-    self->PrimaryBuffer = NULL;
+        self->Buffer->Release();
+    self->Buffer = nullptr;
+    if(self->PrimaryBuffer)
+        self->PrimaryBuffer->Release();
+    self->PrimaryBuffer = nullptr;
 
     if(self->DS)
-        IDirectSound_Release(self->DS);
-    self->DS = NULL;
+        self->DS->Release();
+    self->DS = nullptr;
     if(self->NotifyEvent)
         CloseHandle(self->NotifyEvent);
-    self->NotifyEvent = NULL;
+    self->NotifyEvent = nullptr;
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+    self->~ALCdsoundPlayback();
 }
 
 
-FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(void *ptr)
+FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self)
 {
-    ALCdsoundPlayback *self = ptr;
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    DSBCAPS DSBCaps;
-    DWORD LastCursor = 0;
-    DWORD PlayCursor;
-    void *WritePtr1, *WritePtr2;
-    DWORD WriteCnt1,  WriteCnt2;
-    BOOL Playing = FALSE;
-    DWORD FrameSize;
-    DWORD FragSize;
-    DWORD avail;
-    HRESULT err;
 
     SetRTPriority();
     althrd_setname(althrd_current(), MIXER_THREAD_NAME);
 
-    memset(&DSBCaps, 0, sizeof(DSBCaps));
+    IDirectSoundBuffer *const Buffer{self->Buffer};
+
+    DSBCAPS DSBCaps{};
     DSBCaps.dwSize = sizeof(DSBCaps);
-    err = IDirectSoundBuffer_GetCaps(self->Buffer, &DSBCaps);
+    HRESULT err{Buffer->GetCaps(&DSBCaps)};
     if(FAILED(err))
     {
         ERR("Failed to get buffer caps: 0x%lx\n", err);
@@ -273,22 +261,25 @@ FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(void *ptr)
         return 1;
     }
 
-    FrameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
-    FragSize = device->UpdateSize * FrameSize;
+    ALsizei FrameSize{FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder)};
+    DWORD FragSize{device->UpdateSize * FrameSize};
 
-    IDirectSoundBuffer_GetCurrentPosition(self->Buffer, &LastCursor, NULL);
-    while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
+    bool Playing{false};
+    DWORD LastCursor{0u};
+    Buffer->GetCurrentPosition(&LastCursor, nullptr);
+    while(!self->killNow.load(almemory_order_acquire) &&
           ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         // Get current play cursor
-        IDirectSoundBuffer_GetCurrentPosition(self->Buffer, &PlayCursor, NULL);
-        avail = (PlayCursor-LastCursor+DSBCaps.dwBufferBytes) % DSBCaps.dwBufferBytes;
+        DWORD PlayCursor;
+        Buffer->GetCurrentPosition(&PlayCursor, nullptr);
+        DWORD avail = (PlayCursor-LastCursor+DSBCaps.dwBufferBytes) % DSBCaps.dwBufferBytes;
 
         if(avail < FragSize)
         {
             if(!Playing)
             {
-                err = IDirectSoundBuffer_Play(self->Buffer, 0, 0, DSBPLAY_LOOPING);
+                err = Buffer->Play(0, 0, DSBPLAY_LOOPING);
                 if(FAILED(err))
                 {
                     ERR("Failed to play buffer: 0x%lx\n", err);
@@ -297,7 +288,7 @@ FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(void *ptr)
                     ALCdevice_Unlock(device);
                     return 1;
                 }
-                Playing = TRUE;
+                Playing = true;
             }
 
             avail = WaitForSingleObjectEx(self->NotifyEvent, 2000, FALSE);
@@ -308,20 +299,21 @@ FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(void *ptr)
         avail -= avail%FragSize;
 
         // Lock output buffer
-        WriteCnt1 = 0;
-        WriteCnt2 = 0;
-        err = IDirectSoundBuffer_Lock(self->Buffer, LastCursor, avail, &WritePtr1, &WriteCnt1, &WritePtr2, &WriteCnt2, 0);
+        void *WritePtr1, *WritePtr2;
+        DWORD WriteCnt1{0u},  WriteCnt2{0u};
+        err = Buffer->Lock(LastCursor, avail, &WritePtr1, &WriteCnt1, &WritePtr2, &WriteCnt2, 0);
 
         // If the buffer is lost, restore it and lock
         if(err == DSERR_BUFFERLOST)
         {
             WARN("Buffer lost, restoring...\n");
-            err = IDirectSoundBuffer_Restore(self->Buffer);
+            err = Buffer->Restore();
             if(SUCCEEDED(err))
             {
-                Playing = FALSE;
+                Playing = false;
                 LastCursor = 0;
-                err = IDirectSoundBuffer_Lock(self->Buffer, 0, DSBCaps.dwBufferBytes, &WritePtr1, &WriteCnt1, &WritePtr2, &WriteCnt2, 0);
+                err = Buffer->Lock(0, DSBCaps.dwBufferBytes, &WritePtr1, &WriteCnt1,
+                                   &WritePtr2, &WriteCnt2, 0);
             }
         }
 
@@ -335,7 +327,7 @@ FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(void *ptr)
             ALCdevice_Unlock(device);
 
             // Unlock output buffer only when successfully locked
-            IDirectSoundBuffer_Unlock(self->Buffer, WritePtr1, WriteCnt1, WritePtr2, WriteCnt2);
+            Buffer->Unlock(WritePtr1, WriteCnt1, WritePtr2, WriteCnt2);
         }
         else
         {
@@ -356,14 +348,13 @@ FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(void *ptr)
 
 static ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *deviceName)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    const GUID *guid = NULL;
-    HRESULT hr, hrcom;
+    ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
 
-    if(VECTOR_SIZE(PlaybackDevices) == 0)
+    HRESULT hr;
+    if(PlaybackDevices.empty())
     {
         /* Initialize COM to prevent name truncation */
-        hrcom = CoInitialize(NULL);
+        HRESULT hrcom{CoInitialize(nullptr)};
         hr = DirectSoundEnumerateW(DSoundEnumDevices, &PlaybackDevices);
         if(FAILED(hr))
             ERR("Error enumerating DirectSound devices (0x%lx)!\n", hr);
@@ -371,42 +362,34 @@ static ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *de
             CoUninitialize();
     }
 
-    if(!deviceName && VECTOR_SIZE(PlaybackDevices) > 0)
+    const GUID *guid{nullptr};
+    if(!deviceName && !PlaybackDevices.empty())
     {
-        deviceName = alstr_get_cstr(VECTOR_FRONT(PlaybackDevices).name);
-        guid = &VECTOR_FRONT(PlaybackDevices).guid;
+        deviceName = PlaybackDevices[0].name.c_str();
+        guid = &PlaybackDevices[0].guid;
     }
     else
     {
-        const DevMap *iter;
-
-#define MATCH_NAME(i)  (alstr_cmp_cstr((i)->name, deviceName) == 0)
-        VECTOR_FIND_IF(iter, const DevMap, PlaybackDevices, MATCH_NAME);
-#undef MATCH_NAME
-        if(iter == VECTOR_END(PlaybackDevices))
+        auto iter = std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
+            [deviceName](const DevMap &entry) -> bool
+            { return entry.name == deviceName; }
+        );
+        if(iter == PlaybackDevices.cend())
             return ALC_INVALID_VALUE;
         guid = &iter->guid;
     }
 
     hr = DS_OK;
-    self->NotifyEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
-    if(self->NotifyEvent == NULL)
-        hr = E_FAIL;
+    self->NotifyEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    if(!self->NotifyEvent) hr = E_FAIL;
 
     //DirectSound Init code
     if(SUCCEEDED(hr))
-        hr = DirectSoundCreate(guid, &self->DS, NULL);
+        hr = DirectSoundCreate(guid, &self->DS, nullptr);
     if(SUCCEEDED(hr))
-        hr = IDirectSound_SetCooperativeLevel(self->DS, GetForegroundWindow(), DSSCL_PRIORITY);
+        hr = self->DS->SetCooperativeLevel(GetForegroundWindow(), DSSCL_PRIORITY);
     if(FAILED(hr))
     {
-        if(self->DS)
-            IDirectSound_Release(self->DS);
-        self->DS = NULL;
-        if(self->NotifyEvent)
-            CloseHandle(self->NotifyEvent);
-        self->NotifyEvent = NULL;
-
         ERR("Device init failed: 0x%08lx\n", hr);
         return ALC_INVALID_VALUE;
     }
@@ -419,22 +402,16 @@ static ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *de
 static ALCboolean ALCdsoundPlayback_reset(ALCdsoundPlayback *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    DSBUFFERDESC DSBDescription;
-    WAVEFORMATEXTENSIBLE OutputType;
-    DWORD speakers;
-    HRESULT hr;
-
-    memset(&OutputType, 0, sizeof(OutputType));
 
     if(self->Notifies)
-        IDirectSoundNotify_Release(self->Notifies);
-    self->Notifies = NULL;
+        self->Notifies->Release();
+    self->Notifies = nullptr;
     if(self->Buffer)
-        IDirectSoundBuffer_Release(self->Buffer);
-    self->Buffer = NULL;
-    if(self->PrimaryBuffer != NULL)
-        IDirectSoundBuffer_Release(self->PrimaryBuffer);
-    self->PrimaryBuffer = NULL;
+        self->Buffer->Release();
+    self->Buffer = nullptr;
+    if(self->PrimaryBuffer)
+        self->PrimaryBuffer->Release();
+    self->PrimaryBuffer = nullptr;
 
     switch(device->FmtType)
     {
@@ -457,7 +434,9 @@ static ALCboolean ALCdsoundPlayback_reset(ALCdsoundPlayback *self)
             break;
     }
 
-    hr = IDirectSound_GetSpeakerConfig(self->DS, &speakers);
+    WAVEFORMATEXTENSIBLE OutputType{};
+    DWORD speakers;
+    HRESULT hr{self->DS->GetSpeakerConfig(&speakers)};
     if(SUCCEEDED(hr))
     {
         speakers = DSSPEAKER_CONFIG(speakers);
@@ -558,20 +537,20 @@ retry_open:
             OutputType.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
 
         if(self->PrimaryBuffer)
-            IDirectSoundBuffer_Release(self->PrimaryBuffer);
-        self->PrimaryBuffer = NULL;
+            self->PrimaryBuffer->Release();
+        self->PrimaryBuffer = nullptr;
     }
     else
     {
         if(SUCCEEDED(hr) && !self->PrimaryBuffer)
         {
-            memset(&DSBDescription,0,sizeof(DSBUFFERDESC));
-            DSBDescription.dwSize=sizeof(DSBUFFERDESC);
-            DSBDescription.dwFlags=DSBCAPS_PRIMARYBUFFER;
-            hr = IDirectSound_CreateSoundBuffer(self->DS, &DSBDescription, &self->PrimaryBuffer, NULL);
+            DSBUFFERDESC DSBDescription{};
+            DSBDescription.dwSize = sizeof(DSBDescription);
+            DSBDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
+            hr = self->DS->CreateSoundBuffer(&DSBDescription, &self->PrimaryBuffer, nullptr);
         }
         if(SUCCEEDED(hr))
-            hr = IDirectSoundBuffer_SetFormat(self->PrimaryBuffer,&OutputType.Format);
+            hr = self->PrimaryBuffer->SetFormat(&OutputType.Format);
     }
 
     if(SUCCEEDED(hr))
@@ -583,13 +562,15 @@ retry_open:
             device->NumUpdates = MAX_UPDATES;
         }
 
-        memset(&DSBDescription,0,sizeof(DSBUFFERDESC));
-        DSBDescription.dwSize=sizeof(DSBUFFERDESC);
-        DSBDescription.dwFlags=DSBCAPS_CTRLPOSITIONNOTIFY|DSBCAPS_GETCURRENTPOSITION2|DSBCAPS_GLOBALFOCUS;
-        DSBDescription.dwBufferBytes=device->UpdateSize * device->NumUpdates *
-                                     OutputType.Format.nBlockAlign;
-        DSBDescription.lpwfxFormat=&OutputType.Format;
-        hr = IDirectSound_CreateSoundBuffer(self->DS, &DSBDescription, &self->Buffer, NULL);
+        DSBUFFERDESC DSBDescription{};
+        DSBDescription.dwSize = sizeof(DSBDescription);
+        DSBDescription.dwFlags = DSBCAPS_CTRLPOSITIONNOTIFY | DSBCAPS_GETCURRENTPOSITION2 |
+                                 DSBCAPS_GLOBALFOCUS;
+        DSBDescription.dwBufferBytes = device->UpdateSize * device->NumUpdates *
+                                       OutputType.Format.nBlockAlign;
+        DSBDescription.lpwfxFormat = &OutputType.Format;
+
+        hr = self->DS->CreateSoundBuffer(&DSBDescription, &self->Buffer, nullptr);
         if(FAILED(hr) && device->FmtType == DevFmtFloat)
         {
             device->FmtType = DevFmtShort;
@@ -599,34 +580,37 @@ retry_open:
 
     if(SUCCEEDED(hr))
     {
-        hr = IDirectSoundBuffer_QueryInterface(self->Buffer, &IID_IDirectSoundNotify, (void**)&self->Notifies);
+        void *ptr;
+        hr = self->Buffer->QueryInterface(IID_IDirectSoundNotify, &ptr);
         if(SUCCEEDED(hr))
         {
-            DSBPOSITIONNOTIFY notifies[MAX_UPDATES];
-            ALuint i;
+            auto Notifies = reinterpret_cast<IDirectSoundNotify*>(ptr);
+            self->Notifies = Notifies;
 
-            for(i = 0;i < device->NumUpdates;++i)
+            device->NumUpdates = minu(device->NumUpdates, MAX_UPDATES);
+
+            std::array<DSBPOSITIONNOTIFY,MAX_UPDATES> nots;
+            for(ALuint i{0};i < device->NumUpdates;++i)
             {
-                notifies[i].dwOffset = i * device->UpdateSize *
-                                       OutputType.Format.nBlockAlign;
-                notifies[i].hEventNotify = self->NotifyEvent;
+                nots[i].dwOffset = i * device->UpdateSize * OutputType.Format.nBlockAlign;
+                nots[i].hEventNotify = self->NotifyEvent;
             }
-            if(IDirectSoundNotify_SetNotificationPositions(self->Notifies, device->NumUpdates, notifies) != DS_OK)
+            if(Notifies->SetNotificationPositions(device->NumUpdates, nots.data()) != DS_OK)
                 hr = E_FAIL;
         }
     }
 
     if(FAILED(hr))
     {
-        if(self->Notifies != NULL)
-            IDirectSoundNotify_Release(self->Notifies);
-        self->Notifies = NULL;
-        if(self->Buffer != NULL)
-            IDirectSoundBuffer_Release(self->Buffer);
-        self->Buffer = NULL;
-        if(self->PrimaryBuffer != NULL)
-            IDirectSoundBuffer_Release(self->PrimaryBuffer);
-        self->PrimaryBuffer = NULL;
+        if(self->Notifies)
+            self->Notifies->Release();
+        self->Notifies = nullptr;
+        if(self->Buffer)
+            self->Buffer->Release();
+        self->Buffer = nullptr;
+        if(self->PrimaryBuffer)
+            self->PrimaryBuffer->Release();
+        self->PrimaryBuffer = nullptr;
         return ALC_FALSE;
     }
 
@@ -638,36 +622,38 @@ retry_open:
 
 static ALCboolean ALCdsoundPlayback_start(ALCdsoundPlayback *self)
 {
-    ATOMIC_STORE(&self->killNow, AL_FALSE, almemory_order_release);
-    if(althrd_create(&self->thread, ALCdsoundPlayback_mixerProc, self) != althrd_success)
-        return ALC_FALSE;
-
-    return ALC_TRUE;
+    try {
+        self->killNow.store(AL_FALSE, almemory_order_release);
+        self->thread = std::thread(ALCdsoundPlayback_mixerProc, self);
+        return ALC_TRUE;
+    }
+    catch(std::exception& e) {
+        ERR("Failed to start mixing thread: %s\n", e.what());
+    }
+    catch(...) {
+    }
+    return ALC_FALSE;
 }
 
 static void ALCdsoundPlayback_stop(ALCdsoundPlayback *self)
 {
-    int res;
-
-    if(ATOMIC_EXCHANGE(&self->killNow, AL_TRUE, almemory_order_acq_rel))
+    if(self->killNow.exchange(AL_TRUE, almemory_order_acq_rel) || !self->thread.joinable())
         return;
-    althrd_join(self->thread, &res);
 
-    IDirectSoundBuffer_Stop(self->Buffer);
+    self->thread.join();
+
+    self->Buffer->Stop();
 }
 
 
+struct ALCdsoundCapture final : public ALCbackend {
+    IDirectSoundCapture *DSC{nullptr};
+    IDirectSoundCaptureBuffer *DSCbuffer{nullptr};
+    DWORD BufferBytes{0u};
+    DWORD Cursor{0u};
 
-typedef struct ALCdsoundCapture {
-    DERIVE_FROM_TYPE(ALCbackend);
-
-    IDirectSoundCapture *DSC;
-    IDirectSoundCaptureBuffer *DSCbuffer;
-    DWORD BufferBytes;
-    DWORD Cursor;
-
-    ll_ringbuffer_t *Ring;
-} ALCdsoundCapture;
+    ll_ringbuffer_t *Ring{nullptr};
+};
 
 static void ALCdsoundCapture_Construct(ALCdsoundCapture *self, ALCdevice *device);
 static void ALCdsoundCapture_Destruct(ALCdsoundCapture *self);
@@ -686,47 +672,41 @@ DEFINE_ALCBACKEND_VTABLE(ALCdsoundCapture);
 
 static void ALCdsoundCapture_Construct(ALCdsoundCapture *self, ALCdevice *device)
 {
+    new (self) ALCdsoundCapture{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCdsoundCapture, ALCbackend, self);
-
-    self->DSC = NULL;
-    self->DSCbuffer = NULL;
-    self->Ring = NULL;
 }
 
 static void ALCdsoundCapture_Destruct(ALCdsoundCapture *self)
 {
     ll_ringbuffer_free(self->Ring);
-    self->Ring = NULL;
+    self->Ring = nullptr;
 
-    if(self->DSCbuffer != NULL)
+    if(self->DSCbuffer)
     {
-        IDirectSoundCaptureBuffer_Stop(self->DSCbuffer);
-        IDirectSoundCaptureBuffer_Release(self->DSCbuffer);
-        self->DSCbuffer = NULL;
+        self->DSCbuffer->Stop();
+        self->DSCbuffer->Release();
+        self->DSCbuffer = nullptr;
     }
 
     if(self->DSC)
-        IDirectSoundCapture_Release(self->DSC);
-    self->DSC = NULL;
+        self->DSC->Release();
+    self->DSC = nullptr;
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+    self->~ALCdsoundCapture();
 }
 
 
 static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *deviceName)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    WAVEFORMATEXTENSIBLE InputType;
-    DSCBUFFERDESC DSCBDescription;
-    const GUID *guid = NULL;
-    HRESULT hr, hrcom;
-    ALuint samples;
 
-    if(VECTOR_SIZE(CaptureDevices) == 0)
+    HRESULT hr;
+    if(CaptureDevices.empty())
     {
         /* Initialize COM to prevent name truncation */
-        hrcom = CoInitialize(NULL);
+        HRESULT hrcom{CoInitialize(nullptr)};
         hr = DirectSoundCaptureEnumerateW(DSoundEnumDevices, &CaptureDevices);
         if(FAILED(hr))
             ERR("Error enumerating DirectSound devices (0x%lx)!\n", hr);
@@ -734,19 +714,19 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
             CoUninitialize();
     }
 
-    if(!deviceName && VECTOR_SIZE(CaptureDevices) > 0)
+    const GUID *guid{nullptr};
+    if(!deviceName && !CaptureDevices.empty())
     {
-        deviceName = alstr_get_cstr(VECTOR_FRONT(CaptureDevices).name);
-        guid = &VECTOR_FRONT(CaptureDevices).guid;
+        deviceName = CaptureDevices[0].name.c_str();
+        guid = &CaptureDevices[0].guid;
     }
     else
     {
-        const DevMap *iter;
-
-#define MATCH_NAME(i)  (alstr_cmp_cstr((i)->name, deviceName) == 0)
-        VECTOR_FIND_IF(iter, const DevMap, CaptureDevices, MATCH_NAME);
-#undef MATCH_NAME
-        if(iter == VECTOR_END(CaptureDevices))
+        auto iter = std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
+            [deviceName](const DevMap &entry) -> bool
+            { return entry.name == deviceName; }
+        );
+        if(iter == CaptureDevices.cend())
             return ALC_INVALID_VALUE;
         guid = &iter->guid;
     }
@@ -766,7 +746,7 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
             break;
     }
 
-    memset(&InputType, 0, sizeof(InputType));
+    WAVEFORMATEXTENSIBLE InputType{};
     switch(device->FmtChans)
     {
         case DevFmtMono:
@@ -841,25 +821,24 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
         InputType.Format.cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
     }
 
-    samples = device->UpdateSize * device->NumUpdates;
+    ALuint samples{device->UpdateSize * device->NumUpdates};
     samples = maxu(samples, 100 * device->Frequency / 1000);
 
-    memset(&DSCBDescription, 0, sizeof(DSCBUFFERDESC));
-    DSCBDescription.dwSize = sizeof(DSCBUFFERDESC);
+    DSCBUFFERDESC DSCBDescription{};
+    DSCBDescription.dwSize = sizeof(DSCBDescription);
     DSCBDescription.dwFlags = 0;
     DSCBDescription.dwBufferBytes = samples * InputType.Format.nBlockAlign;
     DSCBDescription.lpwfxFormat = &InputType.Format;
 
     //DirectSoundCapture Init code
-    hr = DirectSoundCaptureCreate(guid, &self->DSC, NULL);
+    hr = DirectSoundCaptureCreate(guid, &self->DSC, nullptr);
     if(SUCCEEDED(hr))
-        hr = IDirectSoundCapture_CreateCaptureBuffer(self->DSC, &DSCBDescription, &self->DSCbuffer, NULL);
+        self->DSC->CreateCaptureBuffer(&DSCBDescription, &self->DSCbuffer, nullptr);
     if(SUCCEEDED(hr))
     {
          self->Ring = ll_ringbuffer_create(device->UpdateSize*device->NumUpdates,
                                            InputType.Format.nBlockAlign, false);
-         if(self->Ring == NULL)
-             hr = DSERR_OUTOFMEMORY;
+         if(!self->Ring) hr = DSERR_OUTOFMEMORY;
     }
 
     if(FAILED(hr))
@@ -867,13 +846,13 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
         ERR("Device init failed: 0x%08lx\n", hr);
 
         ll_ringbuffer_free(self->Ring);
-        self->Ring = NULL;
-        if(self->DSCbuffer != NULL)
-            IDirectSoundCaptureBuffer_Release(self->DSCbuffer);
-        self->DSCbuffer = NULL;
+        self->Ring = nullptr;
+        if(self->DSCbuffer)
+            self->DSCbuffer->Release();
+        self->DSCbuffer = nullptr;
         if(self->DSC)
-            IDirectSoundCapture_Release(self->DSC);
-        self->DSC = NULL;
+            self->DSC->Release();
+        self->DSC = nullptr;
 
         return ALC_INVALID_VALUE;
     }
@@ -888,9 +867,7 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
 
 static ALCboolean ALCdsoundCapture_start(ALCdsoundCapture *self)
 {
-    HRESULT hr;
-
-    hr = IDirectSoundCaptureBuffer_Start(self->DSCbuffer, DSCBSTART_LOOPING);
+    HRESULT hr{self->DSCbuffer->Start(DSCBSTART_LOOPING)};
     if(FAILED(hr))
     {
         ERR("start failed: 0x%08lx\n", hr);
@@ -904,9 +881,7 @@ static ALCboolean ALCdsoundCapture_start(ALCdsoundCapture *self)
 
 static void ALCdsoundCapture_stop(ALCdsoundCapture *self)
 {
-    HRESULT hr;
-
-    hr = IDirectSoundCaptureBuffer_Stop(self->DSCbuffer);
+    HRESULT hr{self->DSCbuffer->Stop()};
     if(FAILED(hr))
     {
         ERR("stop failed: 0x%08lx\n", hr);
@@ -917,44 +892,40 @@ static void ALCdsoundCapture_stop(ALCdsoundCapture *self)
 
 static ALCenum ALCdsoundCapture_captureSamples(ALCdsoundCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    ll_ringbuffer_read(self->Ring, buffer, samples);
+    ll_ringbuffer_read(self->Ring, reinterpret_cast<char*>(buffer), samples);
     return ALC_NO_ERROR;
 }
 
 static ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    DWORD ReadCursor, LastCursor, BufferBytes, NumBytes;
-    void *ReadPtr1, *ReadPtr2;
-    DWORD ReadCnt1,  ReadCnt2;
-    DWORD FrameSize;
-    HRESULT hr;
 
     if(!ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
-        goto done;
+        return ll_ringbuffer_read_space(self->Ring);
 
-    FrameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
-    BufferBytes = self->BufferBytes;
-    LastCursor = self->Cursor;
+    ALsizei FrameSize{FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder)};
+    DWORD BufferBytes{self->BufferBytes};
+    DWORD LastCursor{self->Cursor};
 
-    hr = IDirectSoundCaptureBuffer_GetCurrentPosition(self->DSCbuffer, NULL, &ReadCursor);
+    DWORD ReadCursor;
+    void *ReadPtr1, *ReadPtr2;
+    DWORD ReadCnt1,  ReadCnt2;
+    HRESULT hr{self->DSCbuffer->GetCurrentPosition(nullptr, &ReadCursor)};
     if(SUCCEEDED(hr))
     {
-        NumBytes = (ReadCursor-LastCursor + BufferBytes) % BufferBytes;
-        if(NumBytes == 0)
-            goto done;
-        hr = IDirectSoundCaptureBuffer_Lock(self->DSCbuffer, LastCursor, NumBytes,
-                                            &ReadPtr1, &ReadCnt1,
-                                            &ReadPtr2, &ReadCnt2, 0);
+        DWORD NumBytes{(ReadCursor-LastCursor + BufferBytes) % BufferBytes};
+        if(!NumBytes) return ll_ringbuffer_read_space(self->Ring);
+        hr = self->DSCbuffer->Lock(LastCursor, NumBytes, &ReadPtr1, &ReadCnt1,
+                                   &ReadPtr2, &ReadCnt2, 0);
     }
     if(SUCCEEDED(hr))
     {
-        ll_ringbuffer_write(self->Ring, ReadPtr1, ReadCnt1/FrameSize);
-        if(ReadPtr2 != NULL)
-            ll_ringbuffer_write(self->Ring, ReadPtr2, ReadCnt2/FrameSize);
-        hr = IDirectSoundCaptureBuffer_Unlock(self->DSCbuffer,
-                                              ReadPtr1, ReadCnt1,
-                                              ReadPtr2, ReadCnt2);
+        ll_ringbuffer_write(self->Ring, reinterpret_cast<const char*>(ReadPtr1),
+                            ReadCnt1/FrameSize);
+        if(ReadPtr2 != nullptr)
+            ll_ringbuffer_write(self->Ring, reinterpret_cast<const char*>(ReadPtr2),
+                                ReadCnt2/FrameSize);
+        hr = self->DSCbuffer->Unlock(ReadPtr1, ReadCnt1, ReadPtr2, ReadCnt2);
         self->Cursor = (LastCursor+ReadCnt1+ReadCnt2) % BufferBytes;
     }
 
@@ -964,15 +935,14 @@ static ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
         aluHandleDisconnect(device, "Failure retrieving capture data: 0x%lx", hr);
     }
 
-done:
-    return (ALCuint)ll_ringbuffer_read_space(self->Ring);
+    return ll_ringbuffer_read_space(self->Ring);
 }
 
 
-typedef struct ALCdsoundBackendFactory {
-    DERIVE_FROM_TYPE(ALCbackendFactory);
-} ALCdsoundBackendFactory;
-#define ALCDSOUNDBACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCdsoundBackendFactory, ALCbackendFactory) } }
+struct ALCdsoundBackendFactory final : public ALCbackendFactory {
+    ALCdsoundBackendFactory() noexcept;
+};
+#define ALCDSOUNDBACKENDFACTORY_INITIALIZER GET_VTABLE2(ALCdsoundBackendFactory, ALCbackendFactory)
 
 ALCbackendFactory *ALCdsoundBackendFactory_getFactory(void);
 
@@ -984,18 +954,20 @@ static ALCbackend* ALCdsoundBackendFactory_createBackend(ALCdsoundBackendFactory
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCdsoundBackendFactory);
 
 
+ALCdsoundBackendFactory::ALCdsoundBackendFactory() noexcept
+  : ALCbackendFactory{ALCDSOUNDBACKENDFACTORY_INITIALIZER}
+{ }
+
+
 ALCbackendFactory *ALCdsoundBackendFactory_getFactory(void)
 {
-    static ALCdsoundBackendFactory factory = ALCDSOUNDBACKENDFACTORY_INITIALIZER;
+    static ALCdsoundBackendFactory factory{};
     return STATIC_CAST(ALCbackendFactory, &factory);
 }
 
 
 static ALCboolean ALCdsoundBackendFactory_init(ALCdsoundBackendFactory* UNUSED(self))
 {
-    VECTOR_INIT(PlaybackDevices);
-    VECTOR_INIT(CaptureDevices);
-
     if(!DSoundLoad())
         return ALC_FALSE;
     return ALC_TRUE;
@@ -1003,16 +975,13 @@ static ALCboolean ALCdsoundBackendFactory_init(ALCdsoundBackendFactory* UNUSED(s
 
 static void ALCdsoundBackendFactory_deinit(ALCdsoundBackendFactory* UNUSED(self))
 {
-    clear_devlist(&PlaybackDevices);
-    VECTOR_DEINIT(PlaybackDevices);
-
-    clear_devlist(&CaptureDevices);
-    VECTOR_DEINIT(CaptureDevices);
+    PlaybackDevices.clear();
+    CaptureDevices.clear();
 
 #ifdef HAVE_DYNLOAD
     if(ds_handle)
         CloseLib(ds_handle);
-    ds_handle = NULL;
+    ds_handle = nullptr;
 #endif
 }
 
@@ -1025,33 +994,36 @@ static ALCboolean ALCdsoundBackendFactory_querySupport(ALCdsoundBackendFactory* 
 
 static void ALCdsoundBackendFactory_probe(ALCdsoundBackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames)
 {
-    HRESULT hr, hrcom;
+    auto add_device = [outnames](const DevMap &entry) -> void
+    {
+        const char *name{entry.name.c_str()};
+        size_t namelen{entry.name.length()};
+        /* +1 to also append the null char (to ensure a null-separated list and
+         * double-null terminated list).
+         */
+        alstr_append_range(outnames, name, name + namelen+1);
+    };
 
     /* Initialize COM to prevent name truncation */
-    hrcom = CoInitialize(NULL);
+    HRESULT hr;
+    HRESULT hrcom{CoInitialize(nullptr)};
     switch(type)
     {
-#define APPEND_OUTNAME(e) do {                                                \
-    if(!alstr_empty((e)->name))                                               \
-        alstr_append_range(outnames, VECTOR_BEGIN((e)->name),                 \
-                           VECTOR_END((e)->name)+1);                          \
-} while(0)
         case ALL_DEVICE_PROBE:
-            clear_devlist(&PlaybackDevices);
+            PlaybackDevices.clear();
             hr = DirectSoundEnumerateW(DSoundEnumDevices, &PlaybackDevices);
             if(FAILED(hr))
                 ERR("Error enumerating DirectSound playback devices (0x%lx)!\n", hr);
-            VECTOR_FOR_EACH(const DevMap, PlaybackDevices, APPEND_OUTNAME);
+            std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
             break;
 
         case CAPTURE_DEVICE_PROBE:
-            clear_devlist(&CaptureDevices);
+            CaptureDevices.clear();
             hr = DirectSoundCaptureEnumerateW(DSoundEnumDevices, &CaptureDevices);
             if(FAILED(hr))
                 ERR("Error enumerating DirectSound capture devices (0x%lx)!\n", hr);
-            VECTOR_FOR_EACH(const DevMap, CaptureDevices, APPEND_OUTNAME);
+            std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
             break;
-#undef APPEND_OUTNAME
     }
     if(SUCCEEDED(hrcom))
         CoUninitialize();
@@ -1063,7 +1035,7 @@ static ALCbackend* ALCdsoundBackendFactory_createBackend(ALCdsoundBackendFactory
     {
         ALCdsoundPlayback *backend;
         NEW_OBJ(backend, ALCdsoundPlayback)(device);
-        if(!backend) return NULL;
+        if(!backend) return nullptr;
         return STATIC_CAST(ALCbackend, backend);
     }
 
@@ -1071,9 +1043,9 @@ static ALCbackend* ALCdsoundBackendFactory_createBackend(ALCdsoundBackendFactory
     {
         ALCdsoundCapture *backend;
         NEW_OBJ(backend, ALCdsoundCapture)(device);
-        if(!backend) return NULL;
+        if(!backend) return nullptr;
         return STATIC_CAST(ALCbackend, backend);
     }
 
-    return NULL;
+    return nullptr;
 }

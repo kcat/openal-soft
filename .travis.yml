@@ -2,7 +2,7 @@ language: c
 matrix:
   include:
     - os: linux
-      dist: trusty
+      dist: xenial
     - os: linux
       dist: trusty
       env:
@@ -24,17 +24,17 @@ install:
     fi
   - >
     if [[ "${TRAVIS_OS_NAME}" == "linux" && "${BUILD_ANDROID}" == "true" ]]; then
-      curl -o ~/android-ndk.zip https://dl.google.com/android/repository/android-ndk-r15-linux-x86_64.zip
+      curl -o ~/android-ndk.zip https://dl.google.com/android/repository/android-ndk-r16b-linux-x86_64.zip
       unzip -q ~/android-ndk.zip -d ~ \
-        'android-ndk-r15/build/cmake/*' \
-        'android-ndk-r15/build/core/toolchains/arm-linux-androideabi-*/*' \
-        'android-ndk-r15/platforms/android-14/arch-arm/*' \
-        'android-ndk-r15/source.properties' \
-        'android-ndk-r15/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a/*' \
-        'android-ndk-r15/sources/cxx-stl/gnu-libstdc++/4.9/include/*' \
-        'android-ndk-r15/sysroot/*' \
-        'android-ndk-r15/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/*' \
-        'android-ndk-r15/toolchains/llvm/prebuilt/linux-x86_64/*'
+        'android-ndk-r16b/build/cmake/*' \
+        'android-ndk-r16b/build/core/toolchains/arm-linux-androideabi-*/*' \
+        'android-ndk-r16b/platforms/android-14/arch-arm/*' \
+        'android-ndk-r16b/source.properties' \
+        'android-ndk-r16b/sources/cxx-stl/llvm-libc++/4.9/libs/armeabi-v7a/*' \
+        'android-ndk-r16b/sources/cxx-stl/llvm-libc++/4.9/include/*' \
+        'android-ndk-r16b/sysroot/*' \
+        'android-ndk-r16b/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/*' \
+        'android-ndk-r16b/toolchains/llvm/prebuilt/linux-x86_64/*'
     fi
 script:
   - >
@@ -51,7 +51,8 @@ script:
   - >
     if [[ "${TRAVIS_OS_NAME}" == "linux" && "${BUILD_ANDROID}" == "true" ]]; then
       cmake \
-        -DCMAKE_TOOLCHAIN_FILE=~/android-ndk-r15/build/cmake/android.toolchain.cmake \
+        -DANDROID_STL=c++_shared \
+        -DCMAKE_TOOLCHAIN_FILE=~/android-ndk-r16b/build/cmake/android.toolchain.cmake \
         -DALSOFT_REQUIRE_OPENSL=ON \
         -DALSOFT_EMBED_HRTF_DATA=YES \
         .

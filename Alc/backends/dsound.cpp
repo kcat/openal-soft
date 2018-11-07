@@ -267,7 +267,7 @@ FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self)
     bool Playing{false};
     DWORD LastCursor{0u};
     Buffer->GetCurrentPosition(&LastCursor, nullptr);
-    while(!self->killNow.load(almemory_order_acquire) &&
+    while(!self->killNow.load(std::memory_order_acquire) &&
           ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         // Get current play cursor
@@ -623,7 +623,7 @@ retry_open:
 static ALCboolean ALCdsoundPlayback_start(ALCdsoundPlayback *self)
 {
     try {
-        self->killNow.store(AL_FALSE, almemory_order_release);
+        self->killNow.store(AL_FALSE, std::memory_order_release);
         self->thread = std::thread(ALCdsoundPlayback_mixerProc, self);
         return ALC_TRUE;
     }
@@ -637,7 +637,7 @@ static ALCboolean ALCdsoundPlayback_start(ALCdsoundPlayback *self)
 
 static void ALCdsoundPlayback_stop(ALCdsoundPlayback *self)
 {
-    if(self->killNow.exchange(AL_TRUE, almemory_order_acq_rel) || !self->thread.joinable())
+    if(self->killNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->thread.joinable())
         return;
 
     self->thread.join();

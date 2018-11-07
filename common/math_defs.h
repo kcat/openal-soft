@@ -33,21 +33,23 @@ static const union msvc_inf_hack {
 #endif
 
 #ifndef HAVE_LOG2F
-static inline float log2f(float f)
+static inline float my_log2f(float f)
 {
     return logf(f) / logf(2.0f);
 }
+#define log2f my_log2f
 #endif
 
 #ifndef HAVE_CBRTF
-static inline float cbrtf(float f)
+static inline float my_cbrtf(float f)
 {
     return powf(f, 1.0f/3.0f);
 }
+#define cbrtf my_cbrtf
 #endif
 
 #ifndef HAVE_COPYSIGNF
-static inline float copysignf(float x, float y)
+static inline float my_copysignf(float x, float y)
 {
     union {
         float f;
@@ -57,6 +59,7 @@ static inline float copysignf(float x, float y)
     ux.u |= (uy.u&0x80000000u);
     return ux.f;
 }
+#define copysignf my_copysignf
 #endif
 
 #define DEG2RAD(x)  ((float)(x) * (float)(M_PI/180.0))

@@ -30,6 +30,7 @@ install:
         'android-ndk-r16b/build/core/toolchains/arm-linux-androideabi-*/*' \
         'android-ndk-r16b/platforms/android-14/arch-arm/*' \
         'android-ndk-r16b/source.properties' \
+        'android-ndk-r16b/sources/android/support/include/*' \
         'android-ndk-r16b/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/*' \
         'android-ndk-r16b/sources/cxx-stl/llvm-libc++/include/*' \
         'android-ndk-r16b/sysroot/*' \

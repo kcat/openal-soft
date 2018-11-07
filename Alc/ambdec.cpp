@@ -104,7 +104,7 @@ bool load_ambdec_speakers(AmbDecConf *conf, std::istream &f, std::string &buffer
         }
 
         istr.clear();
-        std::streamsize endpos{istr.tellg()};
+        std::istream::pos_type endpos{istr.tellg()};
         if(!is_at_end(buffer, endpos))
         {
             ERR("Unexpected junk on line: %s\n", buffer.c_str()+endpos);
@@ -183,7 +183,7 @@ bool load_ambdec_matrix(ALfloat *gains, ALfloat (*matrix)[MAX_AMBI_COEFFS], ALsi
         }
 
         istr.clear();
-        std::streamsize endpos{istr.tellg()};
+        std::istream::pos_type endpos{istr.tellg()};
         if(!is_at_end(buffer, endpos))
         {
             ERR("Unexpected junk on line: %s\n", buffer.c_str()+endpos);
@@ -315,7 +315,7 @@ int AmbDecConf::load(const char *fname)
         }
         else if(command == "/speakers/{")
         {
-            std::streamsize endpos{istr.tellg()};
+            std::istream::pos_type endpos{istr.tellg()};
             if(!is_at_end(buffer, endpos))
             {
                 ERR("Unexpected junk on line: %s\n", buffer.c_str()+endpos);
@@ -342,7 +342,7 @@ int AmbDecConf::load(const char *fname)
         }
         else if(command == "/lfmatrix/{" || command == "/hfmatrix/{" || command == "/matrix/{")
         {
-            std::streamsize endpos{istr.tellg()};
+            std::istream::pos_type endpos{istr.tellg()};
             if(!is_at_end(buffer, endpos))
             {
                 ERR("Unexpected junk on line: %s\n", buffer.c_str()+endpos);
@@ -395,7 +395,7 @@ int AmbDecConf::load(const char *fname)
         }
         else if(command == "/end")
         {
-            std::streamsize endpos{istr.tellg()};
+            std::istream::pos_type endpos{istr.tellg()};
             if(!is_at_end(buffer, endpos))
             {
                 ERR("Unexpected junk on end: %s\n", buffer.c_str()+endpos);
@@ -411,7 +411,7 @@ int AmbDecConf::load(const char *fname)
         }
 
         istr.clear();
-        std::streamsize endpos{istr.tellg()};
+        std::istream::pos_type endpos{istr.tellg()};
         if(!is_at_end(buffer, endpos))
         {
             ERR("Unexpected junk on line: %s\n", buffer.c_str()+endpos);

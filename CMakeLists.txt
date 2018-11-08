@@ -402,7 +402,7 @@ int main()
 IF(HAVE___BUILTIN_ASSUME_ALIGNED)
     SET(ASSUME_ALIGNED_DECL "__builtin_assume_aligned(x, y)")
 ELSE()
-    SET(ASSUME_ALIGNED_DECL "x")
+    SET(ASSUME_ALIGNED_DECL "(x)")
 ENDIF()
 
 SET(SSE_SWITCH "")

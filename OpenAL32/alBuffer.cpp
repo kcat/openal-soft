@@ -27,6 +27,7 @@
 #include <malloc.h>
 #endif
 
+#include <tuple>
 #include <array>
 #include <vector>
 #include <limits>
@@ -341,14 +342,15 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
     ALBuf->LoopEnd = ALBuf->SampleLen;
 }
 
-ALboolean DecomposeUserFormat(ALenum format, UserFmtChannels *chans, UserFmtType *type)
+using DecompResult = std::tuple<bool, UserFmtChannels, UserFmtType>;
+DecompResult DecomposeUserFormat(ALenum format)
 {
     struct FormatMap {
         ALenum format;
         UserFmtChannels channels;
         UserFmtType type;
     };
-    static constexpr std::array<FormatMap,46> list{{
+    static constexpr std::array<FormatMap,46> UserFmtList{{
         { AL_FORMAT_MONO8,             UserFmtMono, UserFmtUByte   },
         { AL_FORMAT_MONO16,            UserFmtMono, UserFmtShort   },
         { AL_FORMAT_MONO_FLOAT32,      UserFmtMono, UserFmtFloat   },
@@ -406,17 +408,18 @@ ALboolean DecomposeUserFormat(ALenum format, UserFmtChannels *chans, UserFmtType
         { AL_FORMAT_BFORMAT3D_MULAW,   UserFmtBFormat3D, UserFmtMulaw },
     }};
 
-    for(const auto &fmt : list)
+    DecompResult ret{};
+    for(const auto &fmt : UserFmtList)
     {
         if(fmt.format == format)
         {
-            *chans = fmt.channels;
-            *type  = fmt.type;
-            return AL_TRUE;
+            std::get<0>(ret) = true;
+            std::get<1>(ret) = fmt.channels;
+            std::get<2>(ret) = fmt.type;
+            break;
         }
     }
-
-    return AL_FALSE;
+    return ret;
 }
 
 } // namespace
@@ -531,9 +534,6 @@ AL_API void AL_APIENTRY alBufferStorageSOFT(ALuint buffer, ALenum format, const 
     ALCdevice *device = context->Device;
     std::lock_guard<almtx_t> _{device->BufferLock};
 
-    UserFmtChannels srcchannels{UserFmtMono};
-    UserFmtType srctype{UserFmtUByte};
-
     ALbuffer *albuf = LookupBuffer(device, buffer);
     if(UNLIKELY(!albuf))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
@@ -547,10 +547,18 @@ AL_API void AL_APIENTRY alBufferStorageSOFT(ALuint buffer, ALenum format, const 
     else if(UNLIKELY((flags&AL_MAP_PERSISTENT_BIT_SOFT) && !(flags&MAP_READ_WRITE_FLAGS)))
         alSetError(context.get(), AL_INVALID_VALUE,
                    "Declaring persistently mapped storage without read or write access");
-    else if(UNLIKELY(DecomposeUserFormat(format, &srcchannels, &srctype) == AL_FALSE))
-        alSetError(context.get(), AL_INVALID_ENUM, "Invalid format 0x%04x", format);
     else
-        LoadData(context.get(), albuf, freq, size, srcchannels, srctype, data, flags);
+    {
+        UserFmtType srctype{UserFmtUByte};
+        UserFmtChannels srcchannels{UserFmtMono};
+        bool success;
+
+        std::tie(success, srcchannels, srctype) = DecomposeUserFormat(format);
+        if(UNLIKELY(!success))
+            alSetError(context.get(), AL_INVALID_ENUM, "Invalid format 0x%04x", format);
+        else
+            LoadData(context.get(), albuf, freq, size, srcchannels, srctype, data, flags);
+    }
 }
 
 AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei length, ALbitfieldSOFT access)
@@ -662,76 +670,76 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
     ALCdevice *device = context->Device;
     std::lock_guard<almtx_t> _{device->BufferLock};
 
-    UserFmtChannels srcchannels{UserFmtMono};
-    UserFmtType srctype{UserFmtUByte};
-
     ALbuffer *albuf = LookupBuffer(device, buffer);
     if(UNLIKELY(!albuf))
+    {
         alSetError(context.get(), AL_INVALID_NAME, "Invalid buffer ID %u", buffer);
-    else if(UNLIKELY(DecomposeUserFormat(format, &srcchannels, &srctype) == AL_FALSE))
+        return;
+    }
+
+    UserFmtType srctype{UserFmtUByte};
+    UserFmtChannels srcchannels{UserFmtMono};
+    bool success;
+    std::tie(success, srcchannels, srctype) = DecomposeUserFormat(format);
+    if(UNLIKELY(!success))
+    {
         alSetError(context.get(), AL_INVALID_ENUM, "Invalid format 0x%04x", format);
+        return;
+    }
+
+    ALsizei unpack_align{ATOMIC_LOAD_SEQ(&albuf->UnpackAlign)};
+    ALsizei align{SanitizeAlignment(srctype, unpack_align)};
+    if(UNLIKELY(align < 1))
+        alSetError(context.get(), AL_INVALID_VALUE, "Invalid unpack alignment %d", unpack_align);
+    else if(UNLIKELY((long)srcchannels != (long)albuf->FmtChannels ||
+                    srctype != albuf->OriginalType))
+        alSetError(context.get(), AL_INVALID_ENUM, "Unpacking data with mismatched format");
+    else if(UNLIKELY(align != albuf->OriginalAlign))
+        alSetError(context.get(), AL_INVALID_VALUE,
+                "Unpacking data with alignment %u does not match original alignment %u",
+                align, albuf->OriginalAlign);
+    else if(UNLIKELY(albuf->MappedAccess != 0))
+        alSetError(context.get(), AL_INVALID_OPERATION, "Unpacking data into mapped buffer %u",
+                buffer);
     else
     {
-        ALsizei unpack_align, align;
-        ALsizei byte_align;
-        ALsizei frame_size;
-        ALsizei num_chans;
+        ALsizei num_chans{ChannelsFromFmt(albuf->FmtChannels)};
+        ALsizei frame_size{num_chans * BytesFromFmt(albuf->FmtType)};
+        ALsizei byte_align{
+            (albuf->OriginalType == UserFmtIMA4) ? ((align-1)/2 + 4) * num_chans :
+            (albuf->OriginalType == UserFmtMSADPCM) ? ((align-2)/2 + 7) * num_chans :
+            (align * frame_size)
+        };
 
-        unpack_align = ATOMIC_LOAD_SEQ(&albuf->UnpackAlign);
-        align = SanitizeAlignment(srctype, unpack_align);
-        if(UNLIKELY(align < 1))
-            alSetError(context.get(), AL_INVALID_VALUE, "Invalid unpack alignment %d", unpack_align);
-        else if(UNLIKELY((long)srcchannels != (long)albuf->FmtChannels ||
-                         srctype != albuf->OriginalType))
-            alSetError(context.get(), AL_INVALID_ENUM, "Unpacking data with mismatched format");
-        else if(UNLIKELY(align != albuf->OriginalAlign))
+        if(UNLIKELY(offset < 0 || length < 0 || offset > albuf->OriginalSize ||
+                    length > albuf->OriginalSize-offset))
+            alSetError(context.get(), AL_INVALID_VALUE, "Invalid data sub-range %d+%d on buffer %u",
+                        offset, length, buffer);
+        else if(UNLIKELY((offset%byte_align) != 0))
             alSetError(context.get(), AL_INVALID_VALUE,
-                       "Unpacking data with alignment %u does not match original alignment %u",
-                       align, albuf->OriginalAlign);
-        else if(UNLIKELY(albuf->MappedAccess != 0))
-            alSetError(context.get(), AL_INVALID_OPERATION, "Unpacking data into mapped buffer %u",
-                       buffer);
+                "Sub-range offset %d is not a multiple of frame size %d (%d unpack alignment)",
+                offset, byte_align, align);
+        else if(UNLIKELY((length%byte_align) != 0))
+            alSetError(context.get(), AL_INVALID_VALUE,
+                "Sub-range length %d is not a multiple of frame size %d (%d unpack alignment)",
+                length, byte_align, align);
         else
         {
-            num_chans = ChannelsFromFmt(albuf->FmtChannels);
-            frame_size = num_chans * BytesFromFmt(albuf->FmtType);
-            if(albuf->OriginalType == UserFmtIMA4)
-                byte_align = ((align-1)/2 + 4) * num_chans;
-            else if(albuf->OriginalType == UserFmtMSADPCM)
-                byte_align = ((align-2)/2 + 7) * num_chans;
-            else
-                byte_align = align * frame_size;
+            /* offset -> byte offset, length -> sample count */
+            offset = offset/byte_align * align * frame_size;
+            length = length/byte_align * align;
 
-            if(UNLIKELY(offset < 0 || length < 0 || offset > albuf->OriginalSize ||
-                        length > albuf->OriginalSize-offset))
-                alSetError(context.get(), AL_INVALID_VALUE, "Invalid data sub-range %d+%d on buffer %u",
-                            offset, length, buffer);
-            else if(UNLIKELY((offset%byte_align) != 0))
-                alSetError(context.get(), AL_INVALID_VALUE,
-                    "Sub-range offset %d is not a multiple of frame size %d (%d unpack alignment)",
-                    offset, byte_align, align);
-            else if(UNLIKELY((length%byte_align) != 0))
-                alSetError(context.get(), AL_INVALID_VALUE,
-                    "Sub-range length %d is not a multiple of frame size %d (%d unpack alignment)",
-                    length, byte_align, align);
+            void *dst = static_cast<ALbyte*>(albuf->data) + offset;
+            if(srctype == UserFmtIMA4 && albuf->FmtType == FmtShort)
+                Convert_ALshort_ALima4(static_cast<ALshort*>(dst),
+                    static_cast<const ALubyte*>(data), num_chans, length, align);
+            else if(srctype == UserFmtMSADPCM && albuf->FmtType == FmtShort)
+                Convert_ALshort_ALmsadpcm(static_cast<ALshort*>(dst),
+                    static_cast<const ALubyte*>(data), num_chans, length, align);
             else
             {
-                /* offset -> byte offset, length -> sample count */
-                offset = offset/byte_align * align * frame_size;
-                length = length/byte_align * align;
-
-                void *dst = static_cast<ALbyte*>(albuf->data) + offset;
-                if(srctype == UserFmtIMA4 && albuf->FmtType == FmtShort)
-                    Convert_ALshort_ALima4(static_cast<ALshort*>(dst),
-                        static_cast<const ALubyte*>(data), num_chans, length, align);
-                else if(srctype == UserFmtMSADPCM && albuf->FmtType == FmtShort)
-                    Convert_ALshort_ALmsadpcm(static_cast<ALshort*>(dst),
-                        static_cast<const ALubyte*>(data), num_chans, length, align);
-                else
-                {
-                    assert((long)srctype == (long)albuf->FmtType);
-                    memcpy(dst, data, length*frame_size);
-                }
+                assert((long)srctype == (long)albuf->FmtType);
+                memcpy(dst, data, length*frame_size);
             }
         }
     }

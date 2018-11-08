@@ -23,13 +23,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-#include <limits.h>
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #endif
 
 #include <array>
 #include <vector>
+#include <limits>
 #include <algorithm>
 
 #include "alMain.h"
@@ -39,31 +39,388 @@
 #include "sample_cvt.h"
 
 
-static ALbuffer *AllocBuffer(ALCcontext *context);
-static void FreeBuffer(ALCdevice *device, ALbuffer *buffer);
-static const ALchar *NameFromUserFmtType(enum UserFmtType type);
-static void LoadData(ALCcontext *context, ALbuffer *buffer, ALuint freq, ALsizei size,
-                     enum UserFmtChannels SrcChannels, enum UserFmtType SrcType,
-                     const ALvoid *data, ALbitfieldSOFT access);
-static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans, enum UserFmtType *type);
-static ALsizei SanitizeAlignment(enum UserFmtType type, ALsizei align);
+namespace {
 
-static inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
+constexpr ALbitfieldSOFT INVALID_STORAGE_MASK{~unsigned(AL_MAP_READ_BIT_SOFT |
+    AL_MAP_WRITE_BIT_SOFT | AL_MAP_PERSISTENT_BIT_SOFT | AL_PRESERVE_DATA_BIT_SOFT)};
+constexpr ALbitfieldSOFT MAP_READ_WRITE_FLAGS{AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT};
+constexpr ALbitfieldSOFT INVALID_MAP_FLAGS{~unsigned(AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT |
+    AL_MAP_PERSISTENT_BIT_SOFT)};
+
+
+ALbuffer *AllocBuffer(ALCcontext *context)
+{
+    ALCdevice *device = context->Device;
+    std::unique_lock<almtx_t> buflock{device->BufferLock};
+
+    ALbuffer *buffer{nullptr};
+    ALsizei lidx{0}, slidx{0};
+    BufferSubList *sublist{VECTOR_BEGIN(device->BufferList)};
+    BufferSubList *subend{VECTOR_END(device->BufferList)};
+    for(;sublist != subend;++sublist)
+    {
+        if(sublist->FreeMask)
+        {
+            slidx = CTZ64(sublist->FreeMask);
+            buffer = sublist->Buffers + slidx;
+            break;
+        }
+        ++lidx;
+    }
+    if(UNLIKELY(!buffer))
+    {
+        static constexpr BufferSubList empty_sublist{ 0, nullptr };
+        /* Don't allocate so many list entries that the 32-bit ID could
+         * overflow...
+         */
+        if(UNLIKELY(VECTOR_SIZE(device->BufferList) >= 1<<25))
+        {
+            buflock.unlock();
+            alSetError(context, AL_OUT_OF_MEMORY, "Too many buffers allocated");
+            return nullptr;
+        }
+        lidx = (ALsizei)VECTOR_SIZE(device->BufferList);
+        VECTOR_PUSH_BACK(device->BufferList, empty_sublist);
+        sublist = &VECTOR_BACK(device->BufferList);
+        sublist->FreeMask = ~U64(0);
+        sublist->Buffers = reinterpret_cast<ALbuffer*>(al_calloc(16, sizeof(ALbuffer)*64));
+        if(UNLIKELY(!sublist->Buffers))
+        {
+            VECTOR_POP_BACK(device->BufferList);
+            buflock.unlock();
+            alSetError(context, AL_OUT_OF_MEMORY, "Failed to allocate buffer batch");
+            return nullptr;
+        }
+
+        slidx = 0;
+        buffer = sublist->Buffers + slidx;
+    }
+
+    memset(buffer, 0, sizeof(*buffer));
+
+    /* Add 1 to avoid buffer ID 0. */
+    buffer->id = ((lidx<<6) | slidx) + 1;
+
+    sublist->FreeMask &= ~(U64(1)<<slidx);
+
+    return buffer;
+}
+
+void FreeBuffer(ALCdevice *device, ALbuffer *buffer)
+{
+    ALuint id{buffer->id - 1};
+    ALsizei lidx = id >> 6;
+    ALsizei slidx = id & 0x3f;
+
+    al_free(buffer->data);
+    memset(buffer, 0, sizeof(*buffer));
+
+    VECTOR_ELEM(device->BufferList, lidx).FreeMask |= U64(1) << slidx;
+}
+
+inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
 {
     ALuint lidx = (id-1) >> 6;
     ALsizei slidx = (id-1) & 0x3f;
 
     if(UNLIKELY(lidx >= VECTOR_SIZE(device->BufferList)))
         return nullptr;
-    BufferSubList *sublist = &VECTOR_ELEM(device->BufferList, lidx);
+    BufferSubList *sublist{&VECTOR_ELEM(device->BufferList, lidx)};
     if(UNLIKELY(sublist->FreeMask & (U64(1)<<slidx)))
         return nullptr;
     return sublist->Buffers + slidx;
 }
 
-#define INVALID_STORAGE_MASK ~(AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT | AL_PRESERVE_DATA_BIT_SOFT | AL_MAP_PERSISTENT_BIT_SOFT)
-#define MAP_READ_WRITE_FLAGS (AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT)
-#define INVALID_MAP_FLAGS ~(AL_MAP_READ_BIT_SOFT | AL_MAP_WRITE_BIT_SOFT | AL_MAP_PERSISTENT_BIT_SOFT)
+
+ALsizei SanitizeAlignment(UserFmtType type, ALsizei align)
+{
+    if(align < 0)
+        return 0;
+
+    if(align == 0)
+    {
+        if(type == UserFmtIMA4)
+        {
+            /* Here is where things vary:
+             * nVidia and Apple use 64+1 sample frames per block -> block_size=36 bytes per channel
+             * Most PC sound software uses 2040+1 sample frames per block -> block_size=1024 bytes per channel
+             */
+            return 65;
+        }
+        if(type == UserFmtMSADPCM)
+            return 64;
+        return 1;
+    }
+
+    if(type == UserFmtIMA4)
+    {
+        /* IMA4 block alignment must be a multiple of 8, plus 1. */
+        if((align&7) == 1) return align;
+        return 0;
+    }
+    if(type == UserFmtMSADPCM)
+    {
+        /* MSADPCM block alignment must be a multiple of 2. */
+        if((align&1) == 0) return align;
+        return 0;
+    }
+
+    return align;
+}
+
+
+const ALchar *NameFromUserFmtType(UserFmtType type)
+{
+    switch(type)
+    {
+    case UserFmtUByte: return "Unsigned Byte";
+    case UserFmtShort: return "Signed Short";
+    case UserFmtFloat: return "Float32";
+    case UserFmtDouble: return "Float64";
+    case UserFmtMulaw: return "muLaw";
+    case UserFmtAlaw: return "aLaw";
+    case UserFmtIMA4: return "IMA4 ADPCM";
+    case UserFmtMSADPCM: return "MSADPCM";
+    }
+    return "<internal type error>";
+}
+
+/*
+ * LoadData
+ *
+ * Loads the specified data into the buffer, using the specified format.
+ */
+void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, UserFmtChannels SrcChannels, UserFmtType SrcType, const ALvoid *data, ALbitfieldSOFT access)
+{
+    if(UNLIKELY(ReadRef(&ALBuf->ref) != 0 || ALBuf->MappedAccess != 0))
+        SETERR_RETURN(context, AL_INVALID_OPERATION,, "Modifying storage for in-use buffer %u",
+                      ALBuf->id);
+
+    /* Currently no channel configurations need to be converted. */
+    FmtChannels DstChannels{FmtMono};
+    switch(SrcChannels)
+    {
+    case UserFmtMono: DstChannels = FmtMono; break;
+    case UserFmtStereo: DstChannels = FmtStereo; break;
+    case UserFmtRear: DstChannels = FmtRear; break;
+    case UserFmtQuad: DstChannels = FmtQuad; break;
+    case UserFmtX51: DstChannels = FmtX51; break;
+    case UserFmtX61: DstChannels = FmtX61; break;
+    case UserFmtX71: DstChannels = FmtX71; break;
+    case UserFmtBFormat2D: DstChannels = FmtBFormat2D; break;
+    case UserFmtBFormat3D: DstChannels = FmtBFormat3D; break;
+    }
+    if(UNLIKELY((long)SrcChannels != (long)DstChannels))
+        SETERR_RETURN(context, AL_INVALID_ENUM,, "Invalid format");
+
+    /* IMA4 and MSADPCM convert to 16-bit short. */
+    FmtType DstType{FmtUByte};
+    switch(SrcType)
+    {
+    case UserFmtUByte: DstType = FmtUByte; break;
+    case UserFmtShort: DstType = FmtShort; break;
+    case UserFmtFloat: DstType = FmtFloat; break;
+    case UserFmtDouble: DstType = FmtDouble; break;
+    case UserFmtAlaw: DstType = FmtAlaw; break;
+    case UserFmtMulaw: DstType = FmtMulaw; break;
+    case UserFmtIMA4: DstType = FmtShort; break;
+    case UserFmtMSADPCM: DstType = FmtShort; break;
+    }
+
+    /* TODO: Currently we can only map samples when they're not converted. To
+     * allow it would need some kind of double-buffering to hold onto a copy of
+     * the original data.
+     */
+    if((access&MAP_READ_WRITE_FLAGS))
+    {
+        if(UNLIKELY((long)SrcType != (long)DstType))
+            SETERR_RETURN(context, AL_INVALID_VALUE,, "%s samples cannot be mapped",
+                          NameFromUserFmtType(SrcType));
+    }
+
+    ALsizei unpackalign{ATOMIC_LOAD_SEQ(&ALBuf->UnpackAlign)};
+    ALsizei align{SanitizeAlignment(SrcType, unpackalign)};
+    if(UNLIKELY(align < 1))
+        SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid unpack alignment %d for %s samples",
+                      unpackalign, NameFromUserFmtType(SrcType));
+
+    if((access&AL_PRESERVE_DATA_BIT_SOFT))
+    {
+        /* Can only preserve data with the same format and alignment. */
+        if(UNLIKELY(ALBuf->FmtChannels != DstChannels || ALBuf->OriginalType != SrcType))
+            SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched format");
+        if(UNLIKELY(ALBuf->OriginalAlign != align))
+            SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched alignment");
+    }
+
+    /* Convert the input/source size in bytes to sample frames using the unpack
+     * block alignment.
+     */
+    ALsizei SrcByteAlign{
+        (SrcType == UserFmtIMA4) ? ((align-1)/2 + 4) * ChannelsFromUserFmt(SrcChannels) :
+        (SrcType == UserFmtMSADPCM) ? ((align-2)/2 + 7) * ChannelsFromUserFmt(SrcChannels) :
+        align * FrameSizeFromUserFmt(SrcChannels, SrcType)
+    };
+    if(UNLIKELY((size%SrcByteAlign) != 0))
+        SETERR_RETURN(context, AL_INVALID_VALUE,,
+            "Data size %d is not a multiple of frame size %d (%d unpack alignment)",
+            size, SrcByteAlign, align);
+
+    if(UNLIKELY(size/SrcByteAlign > std::numeric_limits<ALsizei>::max()/align))
+        SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
+            "Buffer size overflow, %d blocks x %d samples per block", size/SrcByteAlign, align);
+    ALsizei frames{size / SrcByteAlign * align};
+
+    /* Convert the sample frames to the number of bytes needed for internal
+     * storage.
+     */
+    ALsizei NumChannels{ChannelsFromFmt(DstChannels)};
+    ALsizei FrameSize{NumChannels * BytesFromFmt(DstType)};
+    if(UNLIKELY(frames > std::numeric_limits<ALsizei>::max()/FrameSize))
+        SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
+            "Buffer size overflow, %d frames x %d bytes per frame", frames, FrameSize);
+    ALsizei newsize{frames*FrameSize};
+
+    /* Round up to the next 16-byte multiple. This could reallocate only when
+     * increasing or the new size is less than half the current, but then the
+     * buffer's AL_SIZE would not be very reliable for accounting buffer memory
+     * usage, and reporting the real size could cause problems for apps that
+     * use AL_SIZE to try to get the buffer's play length.
+     */
+    if(LIKELY(newsize <= std::numeric_limits<ALsizei>::max()-15))
+        newsize = (newsize+15) & ~0xf;
+    if(newsize != ALBuf->BytesAlloc)
+    {
+        void *temp{al_malloc(16, (size_t)newsize)};
+        if(UNLIKELY(!temp && newsize))
+            SETERR_RETURN(context, AL_OUT_OF_MEMORY,, "Failed to allocate %d bytes of storage",
+                          newsize);
+        if((access&AL_PRESERVE_DATA_BIT_SOFT))
+        {
+            ALsizei tocopy{std::min(newsize, ALBuf->BytesAlloc)};
+            if(tocopy > 0) memcpy(temp, ALBuf->data, tocopy);
+        }
+        al_free(ALBuf->data);
+        ALBuf->data = temp;
+        ALBuf->BytesAlloc = newsize;
+    }
+
+    if(SrcType == UserFmtIMA4)
+    {
+        assert(DstType == FmtShort);
+        if(data != nullptr && ALBuf->data != nullptr)
+            Convert_ALshort_ALima4(static_cast<ALshort*>(ALBuf->data),
+                static_cast<const ALubyte*>(data), NumChannels, frames, align);
+        ALBuf->OriginalAlign = align;
+    }
+    else if(SrcType == UserFmtMSADPCM)
+    {
+        assert(DstType == FmtShort);
+        if(data != nullptr && ALBuf->data != nullptr)
+            Convert_ALshort_ALmsadpcm(static_cast<ALshort*>(ALBuf->data),
+                static_cast<const ALubyte*>(data), NumChannels, frames, align);
+        ALBuf->OriginalAlign = align;
+    }
+    else
+    {
+        assert((long)SrcType == (long)DstType);
+        if(data != nullptr && ALBuf->data != nullptr)
+            memcpy(ALBuf->data, data, frames*FrameSize);
+        ALBuf->OriginalAlign = 1;
+    }
+    ALBuf->OriginalSize = size;
+    ALBuf->OriginalType = SrcType;
+
+    ALBuf->Frequency = freq;
+    ALBuf->FmtChannels = DstChannels;
+    ALBuf->FmtType = DstType;
+    ALBuf->Access = access;
+
+    ALBuf->SampleLen = frames;
+    ALBuf->LoopStart = 0;
+    ALBuf->LoopEnd = ALBuf->SampleLen;
+}
+
+ALboolean DecomposeUserFormat(ALenum format, UserFmtChannels *chans, UserFmtType *type)
+{
+    struct FormatMap {
+        ALenum format;
+        UserFmtChannels channels;
+        UserFmtType type;
+    };
+    static constexpr std::array<FormatMap,46> list{{
+        { AL_FORMAT_MONO8,             UserFmtMono, UserFmtUByte   },
+        { AL_FORMAT_MONO16,            UserFmtMono, UserFmtShort   },
+        { AL_FORMAT_MONO_FLOAT32,      UserFmtMono, UserFmtFloat   },
+        { AL_FORMAT_MONO_DOUBLE_EXT,   UserFmtMono, UserFmtDouble  },
+        { AL_FORMAT_MONO_IMA4,         UserFmtMono, UserFmtIMA4    },
+        { AL_FORMAT_MONO_MSADPCM_SOFT, UserFmtMono, UserFmtMSADPCM },
+        { AL_FORMAT_MONO_MULAW,        UserFmtMono, UserFmtMulaw   },
+        { AL_FORMAT_MONO_ALAW_EXT,     UserFmtMono, UserFmtAlaw    },
+
+        { AL_FORMAT_STEREO8,             UserFmtStereo, UserFmtUByte   },
+        { AL_FORMAT_STEREO16,            UserFmtStereo, UserFmtShort   },
+        { AL_FORMAT_STEREO_FLOAT32,      UserFmtStereo, UserFmtFloat   },
+        { AL_FORMAT_STEREO_DOUBLE_EXT,   UserFmtStereo, UserFmtDouble  },
+        { AL_FORMAT_STEREO_IMA4,         UserFmtStereo, UserFmtIMA4    },
+        { AL_FORMAT_STEREO_MSADPCM_SOFT, UserFmtStereo, UserFmtMSADPCM },
+        { AL_FORMAT_STEREO_MULAW,        UserFmtStereo, UserFmtMulaw   },
+        { AL_FORMAT_STEREO_ALAW_EXT,     UserFmtStereo, UserFmtAlaw    },
+
+        { AL_FORMAT_REAR8,      UserFmtRear, UserFmtUByte },
+        { AL_FORMAT_REAR16,     UserFmtRear, UserFmtShort },
+        { AL_FORMAT_REAR32,     UserFmtRear, UserFmtFloat },
+        { AL_FORMAT_REAR_MULAW, UserFmtRear, UserFmtMulaw },
+
+        { AL_FORMAT_QUAD8_LOKI,  UserFmtQuad, UserFmtUByte },
+        { AL_FORMAT_QUAD16_LOKI, UserFmtQuad, UserFmtShort },
+
+        { AL_FORMAT_QUAD8,      UserFmtQuad, UserFmtUByte },
+        { AL_FORMAT_QUAD16,     UserFmtQuad, UserFmtShort },
+        { AL_FORMAT_QUAD32,     UserFmtQuad, UserFmtFloat },
+        { AL_FORMAT_QUAD_MULAW, UserFmtQuad, UserFmtMulaw },
+
+        { AL_FORMAT_51CHN8,      UserFmtX51, UserFmtUByte },
+        { AL_FORMAT_51CHN16,     UserFmtX51, UserFmtShort },
+        { AL_FORMAT_51CHN32,     UserFmtX51, UserFmtFloat },
+        { AL_FORMAT_51CHN_MULAW, UserFmtX51, UserFmtMulaw },
+
+        { AL_FORMAT_61CHN8,      UserFmtX61, UserFmtUByte },
+        { AL_FORMAT_61CHN16,     UserFmtX61, UserFmtShort },
+        { AL_FORMAT_61CHN32,     UserFmtX61, UserFmtFloat },
+        { AL_FORMAT_61CHN_MULAW, UserFmtX61, UserFmtMulaw },
+
+        { AL_FORMAT_71CHN8,      UserFmtX71, UserFmtUByte },
+        { AL_FORMAT_71CHN16,     UserFmtX71, UserFmtShort },
+        { AL_FORMAT_71CHN32,     UserFmtX71, UserFmtFloat },
+        { AL_FORMAT_71CHN_MULAW, UserFmtX71, UserFmtMulaw },
+
+        { AL_FORMAT_BFORMAT2D_8,       UserFmtBFormat2D, UserFmtUByte },
+        { AL_FORMAT_BFORMAT2D_16,      UserFmtBFormat2D, UserFmtShort },
+        { AL_FORMAT_BFORMAT2D_FLOAT32, UserFmtBFormat2D, UserFmtFloat },
+        { AL_FORMAT_BFORMAT2D_MULAW,   UserFmtBFormat2D, UserFmtMulaw },
+
+        { AL_FORMAT_BFORMAT3D_8,       UserFmtBFormat3D, UserFmtUByte },
+        { AL_FORMAT_BFORMAT3D_16,      UserFmtBFormat3D, UserFmtShort },
+        { AL_FORMAT_BFORMAT3D_FLOAT32, UserFmtBFormat3D, UserFmtFloat },
+        { AL_FORMAT_BFORMAT3D_MULAW,   UserFmtBFormat3D, UserFmtMulaw },
+    }};
+
+    for(const auto &fmt : list)
+    {
+        if(fmt.format == format)
+        {
+            *chans = fmt.channels;
+            *type  = fmt.type;
+            return AL_TRUE;
+        }
+    }
+
+    return AL_FALSE;
+}
+
+} // namespace
+
 
 AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
 {
@@ -174,8 +531,8 @@ AL_API void AL_APIENTRY alBufferStorageSOFT(ALuint buffer, ALenum format, const 
     ALCdevice *device = context->Device;
     std::lock_guard<almtx_t> _{device->BufferLock};
 
-    enum UserFmtChannels srcchannels = UserFmtMono;
-    enum UserFmtType srctype = UserFmtUByte;
+    UserFmtChannels srcchannels{UserFmtMono};
+    UserFmtType srctype{UserFmtUByte};
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
     if(UNLIKELY(!albuf))
@@ -305,8 +662,8 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
     ALCdevice *device = context->Device;
     std::lock_guard<almtx_t> _{device->BufferLock};
 
-    enum UserFmtChannels srcchannels = UserFmtMono;
-    enum UserFmtType srctype = UserFmtUByte;
+    UserFmtChannels srcchannels{UserFmtMono};
+    UserFmtType srctype{UserFmtUByte};
 
     ALbuffer *albuf = LookupBuffer(device, buffer);
     if(UNLIKELY(!albuf))
@@ -751,187 +1108,7 @@ AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum param, ALint *values
 }
 
 
-static const ALchar *NameFromUserFmtType(enum UserFmtType type)
-{
-    switch(type)
-    {
-        case UserFmtUByte: return "Unsigned Byte";
-        case UserFmtShort: return "Signed Short";
-        case UserFmtFloat: return "Float32";
-        case UserFmtDouble: return "Float64";
-        case UserFmtMulaw: return "muLaw";
-        case UserFmtAlaw: return "aLaw";
-        case UserFmtIMA4: return "IMA4 ADPCM";
-        case UserFmtMSADPCM: return "MSADPCM";
-    }
-    return "<internal type error>";
-}
-
-/*
- * LoadData
- *
- * Loads the specified data into the buffer, using the specified format.
- */
-static void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, enum UserFmtChannels SrcChannels, enum UserFmtType SrcType, const ALvoid *data, ALbitfieldSOFT access)
-{
-    enum FmtChannels DstChannels = FmtMono;
-    enum FmtType DstType = FmtUByte;
-    ALsizei NumChannels, FrameSize;
-    ALsizei SrcByteAlign;
-    ALsizei unpackalign;
-    ALsizei newsize;
-    ALsizei frames;
-    ALsizei align;
-
-    if(UNLIKELY(ReadRef(&ALBuf->ref) != 0 || ALBuf->MappedAccess != 0))
-        SETERR_RETURN(context, AL_INVALID_OPERATION,, "Modifying storage for in-use buffer %u",
-                      ALBuf->id);
-
-    /* Currently no channel configurations need to be converted. */
-    switch(SrcChannels)
-    {
-        case UserFmtMono: DstChannels = FmtMono; break;
-        case UserFmtStereo: DstChannels = FmtStereo; break;
-        case UserFmtRear: DstChannels = FmtRear; break;
-        case UserFmtQuad: DstChannels = FmtQuad; break;
-        case UserFmtX51: DstChannels = FmtX51; break;
-        case UserFmtX61: DstChannels = FmtX61; break;
-        case UserFmtX71: DstChannels = FmtX71; break;
-        case UserFmtBFormat2D: DstChannels = FmtBFormat2D; break;
-        case UserFmtBFormat3D: DstChannels = FmtBFormat3D; break;
-    }
-    if(UNLIKELY((long)SrcChannels != (long)DstChannels))
-        SETERR_RETURN(context, AL_INVALID_ENUM,, "Invalid format");
-
-    /* IMA4 and MSADPCM convert to 16-bit short. */
-    switch(SrcType)
-    {
-        case UserFmtUByte: DstType = FmtUByte; break;
-        case UserFmtShort: DstType = FmtShort; break;
-        case UserFmtFloat: DstType = FmtFloat; break;
-        case UserFmtDouble: DstType = FmtDouble; break;
-        case UserFmtAlaw: DstType = FmtAlaw; break;
-        case UserFmtMulaw: DstType = FmtMulaw; break;
-        case UserFmtIMA4: DstType = FmtShort; break;
-        case UserFmtMSADPCM: DstType = FmtShort; break;
-    }
-
-    /* TODO: Currently we can only map samples when they're not converted. To
-     * allow it would need some kind of double-buffering to hold onto a copy of
-     * the original data.
-     */
-    if((access&MAP_READ_WRITE_FLAGS))
-    {
-        if(UNLIKELY((long)SrcType != (long)DstType))
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "%s samples cannot be mapped",
-                          NameFromUserFmtType(SrcType));
-    }
-
-    unpackalign = ATOMIC_LOAD_SEQ(&ALBuf->UnpackAlign);
-    if(UNLIKELY((align=SanitizeAlignment(SrcType, unpackalign)) < 1))
-        SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid unpack alignment %d for %s samples",
-                      unpackalign, NameFromUserFmtType(SrcType));
-
-    if((access&AL_PRESERVE_DATA_BIT_SOFT))
-    {
-        /* Can only preserve data with the same format and alignment. */
-        if(UNLIKELY(ALBuf->FmtChannels != DstChannels || ALBuf->OriginalType != SrcType))
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched format");
-        if(UNLIKELY(ALBuf->OriginalAlign != align))
-            SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched alignment");
-    }
-
-    /* Convert the input/source size in bytes to sample frames using the unpack
-     * block alignment.
-     */
-    if(SrcType == UserFmtIMA4)
-        SrcByteAlign = ((align-1)/2 + 4) * ChannelsFromUserFmt(SrcChannels);
-    else if(SrcType == UserFmtMSADPCM)
-        SrcByteAlign = ((align-2)/2 + 7) * ChannelsFromUserFmt(SrcChannels);
-    else
-        SrcByteAlign = align * FrameSizeFromUserFmt(SrcChannels, SrcType);
-    if(UNLIKELY((size%SrcByteAlign) != 0))
-        SETERR_RETURN(context, AL_INVALID_VALUE,,
-            "Data size %d is not a multiple of frame size %d (%d unpack alignment)",
-            size, SrcByteAlign, align);
-
-    if(UNLIKELY(size / SrcByteAlign > INT_MAX / align))
-        SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
-            "Buffer size overflow, %d blocks x %d samples per block", size/SrcByteAlign, align);
-    frames = size / SrcByteAlign * align;
-
-    /* Convert the sample frames to the number of bytes needed for internal
-     * storage.
-     */
-    NumChannels = ChannelsFromFmt(DstChannels);
-    FrameSize = NumChannels * BytesFromFmt(DstType);
-    if(UNLIKELY(frames > INT_MAX/FrameSize))
-        SETERR_RETURN(context, AL_OUT_OF_MEMORY,,
-            "Buffer size overflow, %d frames x %d bytes per frame", frames, FrameSize);
-    newsize = frames*FrameSize;
-
-    /* Round up to the next 16-byte multiple. This could reallocate only when
-     * increasing or the new size is less than half the current, but then the
-     * buffer's AL_SIZE would not be very reliable for accounting buffer memory
-     * usage, and reporting the real size could cause problems for apps that
-     * use AL_SIZE to try to get the buffer's play length.
-     */
-    if(LIKELY(newsize <= INT_MAX-15))
-        newsize = (newsize+15) & ~0xf;
-    if(newsize != ALBuf->BytesAlloc)
-    {
-        void *temp = al_malloc(16, (size_t)newsize);
-        if(UNLIKELY(!temp && newsize))
-            SETERR_RETURN(context, AL_OUT_OF_MEMORY,, "Failed to allocate %d bytes of storage",
-                          newsize);
-        if((access&AL_PRESERVE_DATA_BIT_SOFT))
-        {
-            ALsizei tocopy = mini(newsize, ALBuf->BytesAlloc);
-            if(tocopy > 0) memcpy(temp, ALBuf->data, tocopy);
-        }
-        al_free(ALBuf->data);
-        ALBuf->data = temp;
-        ALBuf->BytesAlloc = newsize;
-    }
-
-    if(SrcType == UserFmtIMA4)
-    {
-        assert(DstType == FmtShort);
-        if(data != nullptr && ALBuf->data != nullptr)
-            Convert_ALshort_ALima4(static_cast<ALshort*>(ALBuf->data),
-                static_cast<const ALubyte*>(data), NumChannels, frames, align);
-        ALBuf->OriginalAlign = align;
-    }
-    else if(SrcType == UserFmtMSADPCM)
-    {
-        assert(DstType == FmtShort);
-        if(data != nullptr && ALBuf->data != nullptr)
-            Convert_ALshort_ALmsadpcm(static_cast<ALshort*>(ALBuf->data),
-                static_cast<const ALubyte*>(data), NumChannels, frames, align);
-        ALBuf->OriginalAlign = align;
-    }
-    else
-    {
-        assert((long)SrcType == (long)DstType);
-        if(data != nullptr && ALBuf->data != nullptr)
-            memcpy(ALBuf->data, data, frames*FrameSize);
-        ALBuf->OriginalAlign = 1;
-    }
-    ALBuf->OriginalSize = size;
-    ALBuf->OriginalType = SrcType;
-
-    ALBuf->Frequency = freq;
-    ALBuf->FmtChannels = DstChannels;
-    ALBuf->FmtType = DstType;
-    ALBuf->Access = access;
-
-    ALBuf->SampleLen = frames;
-    ALBuf->LoopStart = 0;
-    ALBuf->LoopEnd = ALBuf->SampleLen;
-}
-
-
-ALsizei BytesFromUserFmt(enum UserFmtType type)
+ALsizei BytesFromUserFmt(UserFmtType type)
 {
     switch(type)
     {
@@ -946,7 +1123,7 @@ ALsizei BytesFromUserFmt(enum UserFmtType type)
     }
     return 0;
 }
-ALsizei ChannelsFromUserFmt(enum UserFmtChannels chans)
+ALsizei ChannelsFromUserFmt(UserFmtChannels chans)
 {
     switch(chans)
     {
@@ -962,86 +1139,8 @@ ALsizei ChannelsFromUserFmt(enum UserFmtChannels chans)
     }
     return 0;
 }
-static ALboolean DecomposeUserFormat(ALenum format, enum UserFmtChannels *chans,
-                                     enum UserFmtType *type)
-{
-    struct FormatMap {
-        ALenum format;
-        UserFmtChannels channels;
-        UserFmtType type;
-    };
-    static constexpr std::array<FormatMap,46> list{{
-        { AL_FORMAT_MONO8,             UserFmtMono, UserFmtUByte   },
-        { AL_FORMAT_MONO16,            UserFmtMono, UserFmtShort   },
-        { AL_FORMAT_MONO_FLOAT32,      UserFmtMono, UserFmtFloat   },
-        { AL_FORMAT_MONO_DOUBLE_EXT,   UserFmtMono, UserFmtDouble  },
-        { AL_FORMAT_MONO_IMA4,         UserFmtMono, UserFmtIMA4    },
-        { AL_FORMAT_MONO_MSADPCM_SOFT, UserFmtMono, UserFmtMSADPCM },
-        { AL_FORMAT_MONO_MULAW,        UserFmtMono, UserFmtMulaw   },
-        { AL_FORMAT_MONO_ALAW_EXT,     UserFmtMono, UserFmtAlaw    },
 
-        { AL_FORMAT_STEREO8,             UserFmtStereo, UserFmtUByte   },
-        { AL_FORMAT_STEREO16,            UserFmtStereo, UserFmtShort   },
-        { AL_FORMAT_STEREO_FLOAT32,      UserFmtStereo, UserFmtFloat   },
-        { AL_FORMAT_STEREO_DOUBLE_EXT,   UserFmtStereo, UserFmtDouble  },
-        { AL_FORMAT_STEREO_IMA4,         UserFmtStereo, UserFmtIMA4    },
-        { AL_FORMAT_STEREO_MSADPCM_SOFT, UserFmtStereo, UserFmtMSADPCM },
-        { AL_FORMAT_STEREO_MULAW,        UserFmtStereo, UserFmtMulaw   },
-        { AL_FORMAT_STEREO_ALAW_EXT,     UserFmtStereo, UserFmtAlaw    },
-
-        { AL_FORMAT_REAR8,      UserFmtRear, UserFmtUByte },
-        { AL_FORMAT_REAR16,     UserFmtRear, UserFmtShort },
-        { AL_FORMAT_REAR32,     UserFmtRear, UserFmtFloat },
-        { AL_FORMAT_REAR_MULAW, UserFmtRear, UserFmtMulaw },
-
-        { AL_FORMAT_QUAD8_LOKI,  UserFmtQuad, UserFmtUByte },
-        { AL_FORMAT_QUAD16_LOKI, UserFmtQuad, UserFmtShort },
-
-        { AL_FORMAT_QUAD8,      UserFmtQuad, UserFmtUByte },
-        { AL_FORMAT_QUAD16,     UserFmtQuad, UserFmtShort },
-        { AL_FORMAT_QUAD32,     UserFmtQuad, UserFmtFloat },
-        { AL_FORMAT_QUAD_MULAW, UserFmtQuad, UserFmtMulaw },
-
-        { AL_FORMAT_51CHN8,      UserFmtX51, UserFmtUByte },
-        { AL_FORMAT_51CHN16,     UserFmtX51, UserFmtShort },
-        { AL_FORMAT_51CHN32,     UserFmtX51, UserFmtFloat },
-        { AL_FORMAT_51CHN_MULAW, UserFmtX51, UserFmtMulaw },
-
-        { AL_FORMAT_61CHN8,      UserFmtX61, UserFmtUByte },
-        { AL_FORMAT_61CHN16,     UserFmtX61, UserFmtShort },
-        { AL_FORMAT_61CHN32,     UserFmtX61, UserFmtFloat },
-        { AL_FORMAT_61CHN_MULAW, UserFmtX61, UserFmtMulaw },
-
-        { AL_FORMAT_71CHN8,      UserFmtX71, UserFmtUByte },
-        { AL_FORMAT_71CHN16,     UserFmtX71, UserFmtShort },
-        { AL_FORMAT_71CHN32,     UserFmtX71, UserFmtFloat },
-        { AL_FORMAT_71CHN_MULAW, UserFmtX71, UserFmtMulaw },
-
-        { AL_FORMAT_BFORMAT2D_8,       UserFmtBFormat2D, UserFmtUByte },
-        { AL_FORMAT_BFORMAT2D_16,      UserFmtBFormat2D, UserFmtShort },
-        { AL_FORMAT_BFORMAT2D_FLOAT32, UserFmtBFormat2D, UserFmtFloat },
-        { AL_FORMAT_BFORMAT2D_MULAW,   UserFmtBFormat2D, UserFmtMulaw },
-
-        { AL_FORMAT_BFORMAT3D_8,       UserFmtBFormat3D, UserFmtUByte },
-        { AL_FORMAT_BFORMAT3D_16,      UserFmtBFormat3D, UserFmtShort },
-        { AL_FORMAT_BFORMAT3D_FLOAT32, UserFmtBFormat3D, UserFmtFloat },
-        { AL_FORMAT_BFORMAT3D_MULAW,   UserFmtBFormat3D, UserFmtMulaw },
-    }};
-
-    for(const auto &fmt : list)
-    {
-        if(fmt.format == format)
-        {
-            *chans = fmt.channels;
-            *type  = fmt.type;
-            return AL_TRUE;
-        }
-    }
-
-    return AL_FALSE;
-}
-
-ALsizei BytesFromFmt(enum FmtType type)
+ALsizei BytesFromFmt(FmtType type)
 {
     switch(type)
     {
@@ -1054,7 +1153,7 @@ ALsizei BytesFromFmt(enum FmtType type)
     }
     return 0;
 }
-ALsizei ChannelsFromFmt(enum FmtChannels chans)
+ALsizei ChannelsFromFmt(FmtChannels chans)
 {
     switch(chans)
     {
@@ -1069,116 +1168,6 @@ ALsizei ChannelsFromFmt(enum FmtChannels chans)
     case FmtBFormat3D: return 4;
     }
     return 0;
-}
-
-static ALsizei SanitizeAlignment(enum UserFmtType type, ALsizei align)
-{
-    if(align < 0)
-        return 0;
-
-    if(align == 0)
-    {
-        if(type == UserFmtIMA4)
-        {
-            /* Here is where things vary:
-             * nVidia and Apple use 64+1 sample frames per block -> block_size=36 bytes per channel
-             * Most PC sound software uses 2040+1 sample frames per block -> block_size=1024 bytes per channel
-             */
-            return 65;
-        }
-        if(type == UserFmtMSADPCM)
-            return 64;
-        return 1;
-    }
-
-    if(type == UserFmtIMA4)
-    {
-        /* IMA4 block alignment must be a multiple of 8, plus 1. */
-        if((align&7) == 1) return align;
-        return 0;
-    }
-    if(type == UserFmtMSADPCM)
-    {
-        /* MSADPCM block alignment must be a multiple of 2. */
-        if((align&1) == 0) return align;
-        return 0;
-    }
-
-    return align;
-}
-
-
-static ALbuffer *AllocBuffer(ALCcontext *context)
-{
-    ALCdevice *device = context->Device;
-    BufferSubList *sublist, *subend;
-    ALbuffer *buffer = nullptr;
-    ALsizei lidx = 0;
-    ALsizei slidx;
-
-    std::unique_lock<almtx_t> buflock{device->BufferLock};
-
-    sublist = VECTOR_BEGIN(device->BufferList);
-    subend = VECTOR_END(device->BufferList);
-    for(;sublist != subend;++sublist)
-    {
-        if(sublist->FreeMask)
-        {
-            slidx = CTZ64(sublist->FreeMask);
-            buffer = sublist->Buffers + slidx;
-            break;
-        }
-        ++lidx;
-    }
-    if(UNLIKELY(!buffer))
-    {
-        const BufferSubList empty_sublist = { 0, nullptr };
-        /* Don't allocate so many list entries that the 32-bit ID could
-         * overflow...
-         */
-        if(UNLIKELY(VECTOR_SIZE(device->BufferList) >= 1<<25))
-        {
-            buflock.unlock();
-            alSetError(context, AL_OUT_OF_MEMORY, "Too many buffers allocated");
-            return nullptr;
-        }
-        lidx = (ALsizei)VECTOR_SIZE(device->BufferList);
-        VECTOR_PUSH_BACK(device->BufferList, empty_sublist);
-        sublist = &VECTOR_BACK(device->BufferList);
-        sublist->FreeMask = ~U64(0);
-        sublist->Buffers = reinterpret_cast<ALbuffer*>(al_calloc(16, sizeof(ALbuffer)*64));
-        if(UNLIKELY(!sublist->Buffers))
-        {
-            VECTOR_POP_BACK(device->BufferList);
-            buflock.unlock();
-            alSetError(context, AL_OUT_OF_MEMORY, "Failed to allocate buffer batch");
-            return nullptr;
-        }
-
-        slidx = 0;
-        buffer = sublist->Buffers + slidx;
-    }
-
-    memset(buffer, 0, sizeof(*buffer));
-
-    /* Add 1 to avoid buffer ID 0. */
-    buffer->id = ((lidx<<6) | slidx) + 1;
-
-    sublist->FreeMask &= ~(U64(1)<<slidx);
-
-    return buffer;
-}
-
-static void FreeBuffer(ALCdevice *device, ALbuffer *buffer)
-{
-    ALuint id = buffer->id - 1;
-    ALsizei lidx = id >> 6;
-    ALsizei slidx = id & 0x3f;
-
-    al_free(buffer->data);
-    memset(buffer, 0, sizeof(*buffer));
-
-    VECTOR_ELEM(device->BufferList, lidx).FreeMask |= U64(1) << slidx;
 }
 
 

@@ -260,7 +260,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
     ALsizei SrcByteAlign{
         (SrcType == UserFmtIMA4) ? ((align-1)/2 + 4) * ChannelsFromUserFmt(SrcChannels) :
         (SrcType == UserFmtMSADPCM) ? ((align-2)/2 + 7) * ChannelsFromUserFmt(SrcChannels) :
-        align * FrameSizeFromUserFmt(SrcChannels, SrcType)
+        (align * FrameSizeFromUserFmt(SrcChannels, SrcType))
     };
     if(UNLIKELY((size%SrcByteAlign) != 0))
         SETERR_RETURN(context, AL_INVALID_VALUE,,

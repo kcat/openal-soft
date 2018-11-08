@@ -85,10 +85,12 @@ static HRESULT (WINAPI *pDirectSoundEnumerateW)(LPDSENUMCALLBACKW pDSEnumCallbac
 static HRESULT (WINAPI *pDirectSoundCaptureCreate)(const GUID *pcGuidDevice, IDirectSoundCapture **ppDSC, IUnknown *pUnkOuter);
 static HRESULT (WINAPI *pDirectSoundCaptureEnumerateW)(LPDSENUMCALLBACKW pDSEnumCallback, void *pContext);
 
+#ifndef IN_IDE_PARSER
 #define DirectSoundCreate            pDirectSoundCreate
 #define DirectSoundEnumerateW        pDirectSoundEnumerateW
 #define DirectSoundCaptureCreate     pDirectSoundCaptureCreate
 #define DirectSoundCaptureEnumerateW pDirectSoundCaptureEnumerateW
+#endif
 #endif
 
 

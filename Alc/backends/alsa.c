@@ -119,6 +119,7 @@ static void *alsa_handle;
 ALSA_FUNCS(MAKE_FUNC);
 #undef MAKE_FUNC
 
+#ifndef IN_IDE_PARSER
 #define snd_strerror psnd_strerror
 #define snd_pcm_open psnd_pcm_open
 #define snd_pcm_close psnd_pcm_close
@@ -191,6 +192,7 @@ ALSA_FUNCS(MAKE_FUNC);
 #define snd_ctl_card_info_get_id psnd_ctl_card_info_get_id
 #define snd_card_next psnd_card_next
 #define snd_config_update_free_global psnd_config_update_free_global
+#endif
 #endif
 
 

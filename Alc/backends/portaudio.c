@@ -53,6 +53,7 @@ MAKE_FUNC(Pa_GetDefaultInputDevice);
 MAKE_FUNC(Pa_GetStreamInfo);
 #undef MAKE_FUNC
 
+#ifndef IN_IDE_PARSER
 #define Pa_Initialize                  pPa_Initialize
 #define Pa_Terminate                   pPa_Terminate
 #define Pa_GetErrorText                pPa_GetErrorText
@@ -63,6 +64,7 @@ MAKE_FUNC(Pa_GetStreamInfo);
 #define Pa_GetDefaultOutputDevice      pPa_GetDefaultOutputDevice
 #define Pa_GetDefaultInputDevice       pPa_GetDefaultInputDevice
 #define Pa_GetStreamInfo               pPa_GetStreamInfo
+#endif
 #endif
 
 static ALCboolean pa_load(void)

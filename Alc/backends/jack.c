@@ -68,6 +68,7 @@ JACK_FUNCS(MAKE_FUNC);
 static __typeof(jack_error_callback) * pjack_error_callback;
 #undef MAKE_FUNC
 
+#ifndef IN_IDE_PARSER
 #define jack_client_open pjack_client_open
 #define jack_client_close pjack_client_close
 #define jack_client_name_size pjack_client_name_size
@@ -88,6 +89,7 @@ static __typeof(jack_error_callback) * pjack_error_callback;
 #define jack_set_buffer_size pjack_set_buffer_size
 #define jack_get_buffer_size pjack_get_buffer_size
 #define jack_error_callback (*pjack_error_callback)
+#endif
 #endif
 
 

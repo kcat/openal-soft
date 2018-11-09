@@ -34,43 +34,46 @@
 #include "backends/base.h"
 
 
-static const ALCchar waveDevice[] = "Wave File Writer";
+namespace {
 
-static const ALubyte SUBTYPE_PCM[] = {
+constexpr ALCchar waveDevice[] = "Wave File Writer";
+
+constexpr ALubyte SUBTYPE_PCM[]{
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa,
     0x00, 0x38, 0x9b, 0x71
 };
-static const ALubyte SUBTYPE_FLOAT[] = {
+constexpr ALubyte SUBTYPE_FLOAT[]{
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa,
     0x00, 0x38, 0x9b, 0x71
 };
 
-static const ALubyte SUBTYPE_BFORMAT_PCM[] = {
+constexpr ALubyte SUBTYPE_BFORMAT_PCM[]{
     0x01, 0x00, 0x00, 0x00, 0x21, 0x07, 0xd3, 0x11, 0x86, 0x44, 0xc8, 0xc1,
     0xca, 0x00, 0x00, 0x00
 };
 
-static const ALubyte SUBTYPE_BFORMAT_FLOAT[] = {
+constexpr ALubyte SUBTYPE_BFORMAT_FLOAT[]{
     0x03, 0x00, 0x00, 0x00, 0x21, 0x07, 0xd3, 0x11, 0x86, 0x44, 0xc8, 0xc1,
     0xca, 0x00, 0x00, 0x00
 };
 
-static void fwrite16le(ALushort val, FILE *f)
+void fwrite16le(ALushort val, FILE *f)
 {
-    ALubyte data[2] = { val&0xff, (val>>8)&0xff };
+    ALubyte data[2]{ static_cast<ALubyte>(val&0xff), static_cast<ALubyte>((val>>8)&0xff) };
     fwrite(data, 1, 2, f);
 }
 
-static void fwrite32le(ALuint val, FILE *f)
+void fwrite32le(ALuint val, FILE *f)
 {
-    ALubyte data[4] = { val&0xff, (val>>8)&0xff, (val>>16)&0xff, (val>>24)&0xff };
+    ALubyte data[4]{ static_cast<ALubyte>(val&0xff), static_cast<ALubyte>((val>>8)&0xff),
+        static_cast<ALubyte>((val>>16)&0xff), static_cast<ALubyte>((val>>24)&0xff) };
     fwrite(data, 1, 4, f);
 }
 
+} // namespace
 
-typedef struct ALCwaveBackend {
-    DERIVE_FROM_TYPE(ALCbackend);
 
+struct ALCwaveBackend final : public ALCbackend {
     FILE *mFile;
     long mDataStart;
 
@@ -79,7 +82,7 @@ typedef struct ALCwaveBackend {
 
     ATOMIC(ALenum) killNow;
     althrd_t thread;
-} ALCwaveBackend;
+};
 
 static int ALCwaveBackend_mixerProc(void *ptr);
 
@@ -104,10 +107,10 @@ static void ALCwaveBackend_Construct(ALCwaveBackend *self, ALCdevice *device)
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCwaveBackend, ALCbackend, self);
 
-    self->mFile = NULL;
+    self->mFile = nullptr;
     self->mDataStart = -1;
 
-    self->mBuffer = NULL;
+    self->mBuffer = nullptr;
     self->mSize = 0;
 
     ATOMIC_INIT(&self->killNow, AL_TRUE);
@@ -117,7 +120,7 @@ static void ALCwaveBackend_Destruct(ALCwaveBackend *self)
 {
     if(self->mFile)
         fclose(self->mFile);
-    self->mFile = NULL;
+    self->mFile = nullptr;
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
 }
@@ -178,7 +181,7 @@ static int ALCwaveBackend_mixerProc(void *ptr)
 
                 if(bytesize == 2)
                 {
-                    ALushort *samples = self->mBuffer;
+                    ALushort *samples = static_cast<ALushort*>(self->mBuffer);
                     ALuint len = self->mSize / 2;
                     for(i = 0;i < len;i++)
                     {
@@ -188,7 +191,7 @@ static int ALCwaveBackend_mixerProc(void *ptr)
                 }
                 else if(bytesize == 4)
                 {
-                    ALuint *samples = self->mBuffer;
+                    ALuint *samples = static_cast<ALuint*>(self->mBuffer);
                     ALuint len = self->mSize / 4;
                     for(i = 0;i < len;i++)
                     {
@@ -221,7 +224,7 @@ static ALCenum ALCwaveBackend_open(ALCwaveBackend *self, const ALCchar *name)
     ALCdevice *device;
     const char *fname;
 
-    fname = GetConfigValue(NULL, "wave", "file", "");
+    fname = GetConfigValue(nullptr, "wave", "file", "");
     if(!fname[0]) return ALC_INVALID_VALUE;
 
     if(!name)
@@ -252,7 +255,7 @@ static ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
     fseek(self->mFile, 0, SEEK_SET);
     clearerr(self->mFile);
 
-    if(GetConfigValueBool(NULL, "wave", "bformat", 0))
+    if(GetConfigValueBool(nullptr, "wave", "bformat", 0))
     {
         device->FmtChans = DevFmtAmbi3D;
         device->AmbiOrder = 1;
@@ -360,7 +363,7 @@ static ALCboolean ALCwaveBackend_start(ALCwaveBackend *self)
     if(althrd_create(&self->thread, ALCwaveBackend_mixerProc, self) != althrd_success)
     {
         free(self->mBuffer);
-        self->mBuffer = NULL;
+        self->mBuffer = nullptr;
         self->mSize = 0;
         return ALC_FALSE;
     }
@@ -379,7 +382,7 @@ static void ALCwaveBackend_stop(ALCwaveBackend *self)
     althrd_join(self->thread, &res);
 
     free(self->mBuffer);
-    self->mBuffer = NULL;
+    self->mBuffer = nullptr;
 
     size = ftell(self->mFile);
     if(size > 0)
@@ -393,10 +396,10 @@ static void ALCwaveBackend_stop(ALCwaveBackend *self)
 }
 
 
-typedef struct ALCwaveBackendFactory {
-    DERIVE_FROM_TYPE(ALCbackendFactory);
-} ALCwaveBackendFactory;
-#define ALCWAVEBACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCwaveBackendFactory, ALCbackendFactory) } }
+struct ALCwaveBackendFactory final : public ALCbackendFactory {
+    ALCwaveBackendFactory() noexcept;
+};
+#define ALCWAVEBACKENDFACTORY_INITIALIZER GET_VTABLE2(ALCwaveBackendFactory, ALCbackendFactory)
 
 ALCbackendFactory *ALCwaveBackendFactory_getFactory(void);
 
@@ -408,10 +411,9 @@ static ALCbackend* ALCwaveBackendFactory_createBackend(ALCwaveBackendFactory *se
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCwaveBackendFactory);
 
 
-ALCbackendFactory *ALCwaveBackendFactory_getFactory(void)
+ALCwaveBackendFactory::ALCwaveBackendFactory() noexcept
+  : ALCbackendFactory{ALCWAVEBACKENDFACTORY_INITIALIZER}
 {
-    static ALCwaveBackendFactory factory = ALCWAVEBACKENDFACTORY_INITIALIZER;
-    return STATIC_CAST(ALCbackendFactory, &factory);
 }
 
 
@@ -423,7 +425,7 @@ static ALCboolean ALCwaveBackendFactory_init(ALCwaveBackendFactory* UNUSED(self)
 static ALCboolean ALCwaveBackendFactory_querySupport(ALCwaveBackendFactory* UNUSED(self), ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
-        return !!ConfigValueExists(NULL, "wave", "file");
+        return !!ConfigValueExists(nullptr, "wave", "file");
     return ALC_FALSE;
 }
 
@@ -445,9 +447,15 @@ static ALCbackend* ALCwaveBackendFactory_createBackend(ALCwaveBackendFactory* UN
     {
         ALCwaveBackend *backend;
         NEW_OBJ(backend, ALCwaveBackend)(device);
-        if(!backend) return NULL;
+        if(!backend) return nullptr;
         return STATIC_CAST(ALCbackend, backend);
     }
 
-    return NULL;
+    return nullptr;
+}
+
+ALCbackendFactory *ALCwaveBackendFactory_getFactory(void)
+{
+    static ALCwaveBackendFactory factory{};
+    return STATIC_CAST(ALCbackendFactory, &factory);
 }

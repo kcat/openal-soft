@@ -104,6 +104,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCwaveBackend);
 
 static void ALCwaveBackend_Construct(ALCwaveBackend *self, ALCdevice *device)
 {
+    new (self) ALCwaveBackend{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCwaveBackend, ALCbackend, self);
 
@@ -123,6 +124,7 @@ static void ALCwaveBackend_Destruct(ALCwaveBackend *self)
     self->mFile = nullptr;
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+    self->~ALCwaveBackend();
 }
 
 static int ALCwaveBackend_mixerProc(void *ptr)

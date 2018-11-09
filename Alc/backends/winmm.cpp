@@ -34,6 +34,8 @@
 
 #include "backends/base.h"
 
+namespace {
+
 #ifndef WAVE_FORMAT_IEEE_FLOAT
 #define WAVE_FORMAT_IEEE_FLOAT  0x0003
 #endif
@@ -41,17 +43,17 @@
 #define DEVNAME_HEAD "OpenAL Soft on "
 
 
-static vector_al_string PlaybackDevices;
-static vector_al_string CaptureDevices;
+vector_al_string PlaybackDevices;
+vector_al_string CaptureDevices;
 
-static void clear_devlist(vector_al_string *list)
+void clear_devlist(vector_al_string *list)
 {
     VECTOR_FOR_EACH(al_string, *list, alstr_reset);
     VECTOR_RESIZE(*list, 0, 0);
 }
 
 
-static void ProbePlaybackDevices(void)
+void ProbePlaybackDevices(void)
 {
     ALuint numdevs;
     ALuint i;
@@ -94,7 +96,7 @@ static void ProbePlaybackDevices(void)
     }
 }
 
-static void ProbeCaptureDevices(void)
+void ProbeCaptureDevices(void)
 {
     ALuint numdevs;
     ALuint i;
@@ -137,10 +139,9 @@ static void ProbeCaptureDevices(void)
     }
 }
 
+} // namespace
 
-typedef struct ALCwinmmPlayback {
-    DERIVE_FROM_TYPE(ALCbackend);
-
+struct ALCwinmmPlayback final : public ALCbackend {
     RefCount WaveBuffersCommitted;
     WAVEHDR WaveBuffer[4];
 
@@ -150,7 +151,7 @@ typedef struct ALCwinmmPlayback {
 
     ATOMIC(ALenum) killNow;
     althrd_t thread;
-} ALCwinmmPlayback;
+};
 
 static void ALCwinmmPlayback_Construct(ALCwinmmPlayback *self, ALCdevice *device);
 static void ALCwinmmPlayback_Destruct(ALCwinmmPlayback *self);
@@ -174,6 +175,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCwinmmPlayback);
 
 static void ALCwinmmPlayback_Construct(ALCwinmmPlayback *self, ALCdevice *device)
 {
+    new (self) ALCwinmmPlayback{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCwinmmPlayback, ALCbackend, self);
 
@@ -190,6 +192,7 @@ static void ALCwinmmPlayback_Destruct(ALCwinmmPlayback *self)
     self->OutHdl = 0;
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+    self->~ALCwinmmPlayback();
 }
 
 
@@ -211,7 +214,7 @@ static void CALLBACK ALCwinmmPlayback_waveOutProc(HWAVEOUT UNUSED(device), UINT 
 
 FORCE_ALIGN static int ALCwinmmPlayback_mixerProc(void *arg)
 {
-    ALCwinmmPlayback *self = arg;
+    auto self = static_cast<ALCwinmmPlayback*>(arg);
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     WAVEHDR *WaveHdr;
     MSG msg;
@@ -381,7 +384,7 @@ static ALCboolean ALCwinmmPlayback_start(ALCwinmmPlayback *self)
     BufferSize  = device->UpdateSize*device->NumUpdates / 4;
     BufferSize *= FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
 
-    BufferData = calloc(4, BufferSize);
+    BufferData = static_cast<ALbyte*>(calloc(4, BufferSize));
     for(i = 0;i < 4;i++)
     {
         memset(&self->WaveBuffer[i], 0, sizeof(WAVEHDR));
@@ -418,9 +421,7 @@ static void ALCwinmmPlayback_stop(ALCwinmmPlayback *self)
 
 
 
-typedef struct ALCwinmmCapture {
-    DERIVE_FROM_TYPE(ALCbackend);
-
+struct ALCwinmmCapture final : public ALCbackend {
     RefCount WaveBuffersCommitted;
     WAVEHDR WaveBuffer[4];
 
@@ -432,7 +433,7 @@ typedef struct ALCwinmmCapture {
 
     ATOMIC(ALenum) killNow;
     althrd_t thread;
-} ALCwinmmCapture;
+};
 
 static void ALCwinmmCapture_Construct(ALCwinmmCapture *self, ALCdevice *device);
 static void ALCwinmmCapture_Destruct(ALCwinmmCapture *self);
@@ -456,6 +457,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCwinmmCapture);
 
 static void ALCwinmmCapture_Construct(ALCwinmmCapture *self, ALCdevice *device)
 {
+    new (self) ALCwinmmCapture{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCwinmmCapture, ALCbackend, self);
 
@@ -499,6 +501,7 @@ static void ALCwinmmCapture_Destruct(ALCwinmmCapture *self)
     self->InHdl = 0;
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+    self->~ALCwinmmCapture();
 }
 
 
@@ -520,7 +523,7 @@ static void CALLBACK ALCwinmmCapture_waveInProc(HWAVEIN UNUSED(device), UINT msg
 
 static int ALCwinmmCapture_captureProc(void *arg)
 {
-    ALCwinmmCapture *self = arg;
+    auto self = static_cast<ALCwinmmCapture*>(arg);
     WAVEHDR *WaveHdr;
     MSG msg;
 
@@ -635,7 +638,7 @@ static ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *name)
     BufferSize = self->Format.nAvgBytesPerSec / 20;
     BufferSize -= (BufferSize % self->Format.nBlockAlign);
 
-    BufferData = calloc(4, BufferSize);
+    BufferData = static_cast<ALbyte*>(calloc(4, BufferSize));
     if(!BufferData) goto failure;
 
     for(i = 0;i < 4;i++)
@@ -690,7 +693,7 @@ static void ALCwinmmCapture_stop(ALCwinmmCapture *self)
 
 static ALCenum ALCwinmmCapture_captureSamples(ALCwinmmCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    ll_ringbuffer_read(self->Ring, buffer, samples);
+    ll_ringbuffer_read(self->Ring, static_cast<char*>(buffer), samples);
     return ALC_NO_ERROR;
 }
 
@@ -700,10 +703,10 @@ static ALCuint ALCwinmmCapture_availableSamples(ALCwinmmCapture *self)
 }
 
 
-typedef struct ALCwinmmBackendFactory {
-    DERIVE_FROM_TYPE(ALCbackendFactory);
-} ALCwinmmBackendFactory;
-#define ALCWINMMBACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCwinmmBackendFactory, ALCbackendFactory) } }
+struct ALCwinmmBackendFactory final : public ALCbackendFactory {
+    ALCwinmmBackendFactory() noexcept;
+};
+#define ALCWINMMBACKENDFACTORY_INITIALIZER GET_VTABLE2(ALCwinmmBackendFactory, ALCbackendFactory)
 
 static ALCboolean ALCwinmmBackendFactory_init(ALCwinmmBackendFactory *self);
 static void ALCwinmmBackendFactory_deinit(ALCwinmmBackendFactory *self);
@@ -712,6 +715,10 @@ static void ALCwinmmBackendFactory_probe(ALCwinmmBackendFactory *self, enum DevP
 static ALCbackend* ALCwinmmBackendFactory_createBackend(ALCwinmmBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
 
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCwinmmBackendFactory);
+
+ALCwinmmBackendFactory::ALCwinmmBackendFactory() noexcept
+  : ALCbackendFactory{ALCWINMMBACKENDFACTORY_INITIALIZER}
+{ }
 
 
 static ALCboolean ALCwinmmBackendFactory_init(ALCwinmmBackendFactory* UNUSED(self))
@@ -781,6 +788,6 @@ static ALCbackend* ALCwinmmBackendFactory_createBackend(ALCwinmmBackendFactory* 
 
 ALCbackendFactory *ALCwinmmBackendFactory_getFactory(void)
 {
-    static ALCwinmmBackendFactory factory = ALCWINMMBACKENDFACTORY_INITIALIZER;
+    static ALCwinmmBackendFactory factory{};
     return STATIC_CAST(ALCbackendFactory, &factory);
 }

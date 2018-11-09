@@ -20,20 +20,17 @@
 
 #include "config.h"
 
-#include <stdlib.h>
-
 #include "alMain.h"
 #include "alu.h"
 
 #include "backends/base.h"
 
 
-typedef struct ALCloopback {
-    DERIVE_FROM_TYPE(ALCbackend);
-} ALCloopback;
+struct ALCloopback final : public ALCbackend {
+};
 
 static void ALCloopback_Construct(ALCloopback *self, ALCdevice *device);
-static DECLARE_FORWARD(ALCloopback, ALCbackend, void, Destruct)
+static void ALCloopback_Destruct(ALCloopback *self);
 static ALCenum ALCloopback_open(ALCloopback *self, const ALCchar *name);
 static ALCboolean ALCloopback_reset(ALCloopback *self);
 static ALCboolean ALCloopback_start(ALCloopback *self);
@@ -49,8 +46,15 @@ DEFINE_ALCBACKEND_VTABLE(ALCloopback);
 
 static void ALCloopback_Construct(ALCloopback *self, ALCdevice *device)
 {
+    new (self) ALCloopback{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCloopback, ALCbackend, self);
+}
+
+static void ALCloopback_Destruct(ALCloopback *self)
+{
+    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+    self->~ALCloopback();
 }
 
 
@@ -78,10 +82,9 @@ static void ALCloopback_stop(ALCloopback* UNUSED(self))
 }
 
 
-typedef struct ALCloopbackFactory {
-    DERIVE_FROM_TYPE(ALCbackendFactory);
-} ALCloopbackFactory;
-#define ALCNULLBACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCloopbackFactory, ALCbackendFactory) } }
+struct ALCloopbackFactory final : public ALCbackendFactory {
+    ALCloopbackFactory() noexcept;
+};
 
 ALCbackendFactory *ALCloopbackFactory_getFactory(void);
 static ALCboolean ALCloopbackFactory_init(ALCloopbackFactory *self);
@@ -91,12 +94,10 @@ static void ALCloopbackFactory_probe(ALCloopbackFactory *self, enum DevProbe typ
 static ALCbackend* ALCloopbackFactory_createBackend(ALCloopbackFactory *self, ALCdevice *device, ALCbackend_Type type);
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCloopbackFactory);
 
+ALCloopbackFactory::ALCloopbackFactory() noexcept
+  : ALCbackendFactory{GET_VTABLE2(ALCloopbackFactory, ALCbackendFactory)}
+{ }
 
-ALCbackendFactory *ALCloopbackFactory_getFactory(void)
-{
-    static ALCloopbackFactory factory = ALCNULLBACKENDFACTORY_INITIALIZER;
-    return STATIC_CAST(ALCbackendFactory, &factory);
-}
 
 static ALCboolean ALCloopbackFactory_init(ALCloopbackFactory* UNUSED(self))
 {
@@ -125,4 +126,10 @@ static ALCbackend* ALCloopbackFactory_createBackend(ALCloopbackFactory* UNUSED(s
     }
 
     return NULL;
+}
+
+ALCbackendFactory *ALCloopbackFactory_getFactory(void)
+{
+    static ALCloopbackFactory factory{};
+    return STATIC_CAST(ALCbackendFactory, &factory);
 }

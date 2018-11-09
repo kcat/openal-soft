@@ -33,17 +33,21 @@
 #include "backends/base.h"
 
 
-typedef struct ALCnullBackend {
-    DERIVE_FROM_TYPE(ALCbackend);
+namespace {
 
+constexpr ALCchar nullDevice[] = "No Output";
+
+} // namespace
+
+struct ALCnullBackend final : public ALCbackend {
     ATOMIC(int) killNow;
     althrd_t thread;
-} ALCnullBackend;
+};
 
 static int ALCnullBackend_mixerProc(void *ptr);
 
 static void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device);
-static DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, Destruct)
+static void ALCnullBackend_Destruct(ALCnullBackend *self);
 static ALCenum ALCnullBackend_open(ALCnullBackend *self, const ALCchar *name);
 static ALCboolean ALCnullBackend_reset(ALCnullBackend *self);
 static ALCboolean ALCnullBackend_start(ALCnullBackend *self);
@@ -58,15 +62,19 @@ DECLARE_DEFAULT_ALLOCATORS(ALCnullBackend)
 DEFINE_ALCBACKEND_VTABLE(ALCnullBackend);
 
 
-static const ALCchar nullDevice[] = "No Output";
-
-
 static void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device)
 {
+    new (self) ALCnullBackend{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCnullBackend, ALCbackend, self);
 
     ATOMIC_INIT(&self->killNow, AL_TRUE);
+}
+
+static void ALCnullBackend_Destruct(ALCnullBackend *self)
+{
+    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+    self->~ALCnullBackend();
 }
 
 
@@ -161,10 +169,9 @@ static void ALCnullBackend_stop(ALCnullBackend *self)
 }
 
 
-typedef struct ALCnullBackendFactory {
-    DERIVE_FROM_TYPE(ALCbackendFactory);
-} ALCnullBackendFactory;
-#define ALCNULLBACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCnullBackendFactory, ALCbackendFactory) } }
+struct ALCnullBackendFactory final : public ALCbackendFactory {
+    ALCnullBackendFactory() noexcept;
+};
 
 ALCbackendFactory *ALCnullBackendFactory_getFactory(void);
 
@@ -175,10 +182,15 @@ static void ALCnullBackendFactory_probe(ALCnullBackendFactory *self, enum DevPro
 static ALCbackend* ALCnullBackendFactory_createBackend(ALCnullBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCnullBackendFactory);
 
+ALCnullBackendFactory::ALCnullBackendFactory() noexcept
+  : ALCbackendFactory{GET_VTABLE2(ALCnullBackendFactory, ALCbackendFactory)}
+{
+}
+
 
 ALCbackendFactory *ALCnullBackendFactory_getFactory(void)
 {
-    static ALCnullBackendFactory factory = ALCNULLBACKENDFACTORY_INITIALIZER;
+    static ALCnullBackendFactory factory{};
     return STATIC_CAST(ALCbackendFactory, &factory);
 }
 

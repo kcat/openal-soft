@@ -1032,7 +1032,7 @@ SET(ALC_OBJS  ${ALC_OBJS}
     Alc/backends/base.h
     # Default backends, always available
     Alc/backends/loopback.cpp
-    Alc/backends/null.c
+    Alc/backends/null.cpp
 )
 
 # Check ALSA backend

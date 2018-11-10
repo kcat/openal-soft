@@ -12,8 +12,6 @@ extern "C" {
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-WCHAR *strdupW(const WCHAR *str);
-
 /* Opens a file with standard I/O. The filename is expected to be UTF-8. */
 FILE *al_fopen(const char *fname, const char *mode);
 

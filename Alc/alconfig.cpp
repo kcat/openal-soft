@@ -28,10 +28,9 @@
 
 #include "config.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <ctype.h>
-#include <string.h>
+#include <cstdlib>
+#include <cctype>
+#include <cstring>
 #ifdef _WIN32_IE
 #include <windows.h>
 #include <shlobj.h>
@@ -40,93 +39,61 @@
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
+#include <vector>
+#include <string>
+#include <algorithm>
+
 #include "alMain.h"
 #include "alconfig.h"
 #include "compat.h"
 #include "bool.h"
 
 
-typedef struct ConfigEntry {
-    char *key;
-    char *value;
-} ConfigEntry;
+namespace {
 
-typedef struct ConfigBlock {
-    ConfigEntry *entries;
-    unsigned int entryCount;
-} ConfigBlock;
-static ConfigBlock cfgBlock;
+struct ConfigEntry {
+    std::string key;
+    std::string value;
+
+    template<typename T0, typename T1>
+    ConfigEntry(T0&& key_, T1&& val_)
+      : key{std::forward<T0>(key_)}, value{std::forward<T1>(val_)}
+    { }
+};
+std::vector<ConfigEntry> ConfOpts;
 
 
-static char *lstrip(char *line)
+std::string &lstrip(std::string &line)
 {
-    while(isspace(line[0]))
-        line++;
+    size_t pos{0};
+    while(pos < line.length() && std::isspace(line[pos]))
+        ++pos;
+    line.erase(0, pos);
     return line;
 }
 
-static char *rstrip(char *line)
+bool readline(std::istream &f, std::string &output)
 {
-    size_t len = strlen(line);
-    while(len > 0 && isspace(line[len-1]))
-        len--;
-    line[len] = 0;
-    return line;
+    while(f.good() && f.peek() == '\n')
+        f.ignore();
+
+    return std::getline(f, output) && !output.empty();
 }
 
-static int readline(FILE *f, char **output, size_t *maxlen)
+std:: string expdup(const char *str)
 {
-    size_t len = 0;
-    int c;
-
-    while((c=fgetc(f)) != EOF && (c == '\r' || c == '\n'))
-        ;
-    if(c == EOF)
-        return 0;
-
-    do {
-        if(len+1 >= *maxlen)
-        {
-            void *temp = nullptr;
-            size_t newmax;
-
-            newmax = (*maxlen ? (*maxlen)<<1 : 32);
-            if(newmax > *maxlen)
-                temp = realloc(*output, newmax);
-            if(!temp)
-            {
-                ERR("Failed to realloc " SZFMT " bytes from " SZFMT "!\n", newmax, *maxlen);
-                return 0;
-            }
-
-            *output = static_cast<char*>(temp);
-            *maxlen = newmax;
-        }
-        (*output)[len++] = c;
-        (*output)[len] = '\0';
-    } while((c=fgetc(f)) != EOF && c != '\r' && c != '\n');
-
-    return 1;
-}
-
-
-static char *expdup(const char *str)
-{
-    char *output = nullptr;
-    size_t maxlen = 0;
-    size_t len = 0;
+    std::string output;
 
     while(*str != '\0')
     {
         const char *addstr;
         size_t addstrlen;
-        size_t i;
 
         if(str[0] != '$')
         {
-            const char *next = strchr(str, '$');
+            const char *next = std::strchr(str, '$');
             addstr = str;
-            addstrlen = next ? (size_t)(next-str) : strlen(str);
+            addstrlen = next ? (size_t)(next-str) : std::strlen(str);
 
             str += addstrlen;
         }
@@ -135,86 +102,60 @@ static char *expdup(const char *str)
             str++;
             if(*str == '$')
             {
-                const char *next = strchr(str+1, '$');
+                const char *next = std::strchr(str+1, '$');
                 addstr = str;
-                addstrlen = next ? (size_t)(next-str) : strlen(str);
+                addstrlen = next ? (size_t)(next-str) : std::strlen(str);
 
                 str += addstrlen;
             }
             else
             {
-                bool hasbraces;
-                char envname[1024];
-                size_t k = 0;
-
-                hasbraces = (*str == '{');
+                bool hasbraces{(*str == '{')};
                 if(hasbraces) str++;
 
-                while((isalnum(*str) || *str == '_') && k < sizeof(envname)-1)
-                    envname[k++] = *(str++);
-                envname[k++] = '\0';
+                std::string envname;
+                while((std::isalnum(*str) || *str == '_'))
+                    envname += *(str++);
 
                 if(hasbraces && *str != '}')
                     continue;
 
                 if(hasbraces) str++;
-                if((addstr=getenv(envname)) == nullptr)
+                if((addstr=std::getenv(envname.c_str())) == nullptr)
                     continue;
-                addstrlen = strlen(addstr);
+                addstrlen = std::strlen(addstr);
             }
         }
         if(addstrlen == 0)
             continue;
 
-        if(addstrlen >= maxlen-len)
-        {
-            void *temp = nullptr;
-            size_t newmax;
-
-            newmax = len+addstrlen+1;
-            if(newmax > maxlen)
-                temp = realloc(output, newmax);
-            if(!temp)
-            {
-                ERR("Failed to realloc " SZFMT " bytes from " SZFMT "!\n", newmax, maxlen);
-                return output;
-            }
-
-            output = static_cast<char*>(temp);
-            maxlen = newmax;
-        }
-
-        for(i = 0;i < addstrlen;i++)
-            output[len++] = addstr[i];
-        output[len] = '\0';
+        output.append(addstr, addstrlen);
     }
 
-    return output ? output : static_cast<char*>(calloc(1, 1));
+    return output;
 }
 
-
-static void LoadConfigFromFile(FILE *f)
+void LoadConfigFromFile(std::istream &f)
 {
-    char curSection[128] = "";
-    char *buffer = nullptr;
-    size_t maxlen = 0;
-    ConfigEntry *ent;
+    std::string curSection;
+    std::string buffer;
 
-    while(readline(f, &buffer, &maxlen))
+    while(readline(f, buffer))
     {
-        char *line, *comment;
-        char key[256] = "";
-        char value[256] = "";
+        while(!buffer.empty() && std::isspace(buffer.back()))
+            buffer.pop_back();
+        if(lstrip(buffer).empty())
+            continue;
 
-        line = rstrip(lstrip(buffer));
-        if(!line[0]) continue;
+        buffer.push_back(0);
+        char *line{&buffer[0]};
 
         if(line[0] == '[')
         {
             char *section = line+1;
             char *endsection;
 
-            endsection = strchr(section, ']');
+            endsection = std::strchr(section, ']');
             if(!endsection || section == endsection)
             {
                 ERR("config parse error: bad line \"%s\"\n", line);
@@ -223,7 +164,7 @@ static void LoadConfigFromFile(FILE *f)
             if(endsection[1] != 0)
             {
                 char *end = endsection+1;
-                while(isspace(*end))
+                while(std::isspace(*end))
                     ++end;
                 if(*end != 0 && *end != '#')
                 {
@@ -233,24 +174,18 @@ static void LoadConfigFromFile(FILE *f)
             }
             *endsection = 0;
 
-            if(strcasecmp(section, "general") == 0)
-                curSection[0] = 0;
-            else
+            curSection.clear();
+            if(strcasecmp(section, "general") != 0)
             {
-                size_t len, p = 0;
                 do {
-                    char *nextp = strchr(section, '%');
+                    char *nextp = std::strchr(section, '%');
                     if(!nextp)
                     {
-                        strncpy(curSection+p, section, sizeof(curSection)-1-p);
+                        curSection += section;
                         break;
                     }
 
-                    len = nextp - section;
-                    if(len > sizeof(curSection)-1-p)
-                        len = sizeof(curSection)-1-p;
-                    strncpy(curSection+p, section, len);
-                    p += len;
+                    curSection.append(section, nextp);
                     section = nextp;
 
                     if(((section[1] >= '0' && section[1] <= '9') ||
@@ -273,42 +208,38 @@ static void LoadConfigFromFile(FILE *f)
                             b |= (section[2]-'a'+0xa);
                         else if(section[2] >= 'A' && section[2] <= 'F')
                             b |= (section[2]-'A'+0x0a);
-                        if(p < sizeof(curSection)-1)
-                            curSection[p++] = b;
+                        curSection += static_cast<char>(b);
                         section += 3;
                     }
                     else if(section[1] == '%')
                     {
-                        if(p < sizeof(curSection)-1)
-                            curSection[p++] = '%';
+                        curSection += '%';
                         section += 2;
                     }
                     else
                     {
-                        if(p < sizeof(curSection)-1)
-                            curSection[p++] = '%';
+                        curSection += '%';
                         section += 1;
                     }
-                    if(p < sizeof(curSection)-1)
-                        curSection[p] = 0;
-                } while(p < sizeof(curSection)-1 && *section != 0);
-                curSection[sizeof(curSection)-1] = 0;
+                } while(*section != 0);
             }
 
             continue;
         }
 
-        comment = strchr(line, '#');
+        char *comment{std::strchr(line, '#')};
         if(comment) *(comment++) = 0;
         if(!line[0]) continue;
 
-        if(sscanf(line, "%255[^=] = \"%255[^\"]\"", key, value) == 2 ||
-           sscanf(line, "%255[^=] = '%255[^\']'", key, value) == 2 ||
-           sscanf(line, "%255[^=] = %255[^\n]", key, value) == 2)
+        char key[256]{};
+        char value[256]{};
+        if(std::sscanf(line, "%255[^=] = \"%255[^\"]\"", key, value) == 2 ||
+           std::sscanf(line, "%255[^=] = '%255[^\']'", key, value) == 2 ||
+           std::sscanf(line, "%255[^=] = %255[^\n]", key, value) == 2)
         {
             /* sscanf doesn't handle '' or "" as empty values, so clip it
              * manually. */
-            if(strcmp(value, "\"\"") == 0 || strcmp(value, "''") == 0)
+            if(std::strcmp(value, "\"\"") == 0 || std::strcmp(value, "''") == 0)
                 value[0] = 0;
         }
         else if(sscanf(line, "%255[^=] %255[=]", key, value) == 2)
@@ -321,102 +252,73 @@ static void LoadConfigFromFile(FILE *f)
             ERR("config parse error: malformed option line: \"%s\"\n\n", line);
             continue;
         }
-        rstrip(key);
 
-        if(curSection[0] != 0)
+        std::string fullKey;
+        if(!curSection.empty())
         {
-            size_t len = strlen(curSection);
-            memmove(&key[len+1], key, sizeof(key)-1-len);
-            key[len] = '/';
-            memcpy(key, curSection, len);
+            fullKey += curSection;
+            fullKey += '/';
         }
+        fullKey += key;
+        while(!fullKey.empty() && std::isspace(fullKey.back()))
+            fullKey.pop_back();
 
         /* Check if we already have this option set */
-        ent = cfgBlock.entries;
-        while((unsigned int)(ent-cfgBlock.entries) < cfgBlock.entryCount)
+        auto ent = std::find_if(ConfOpts.begin(), ConfOpts.end(),
+            [&fullKey](const ConfigEntry &entry) -> bool
+            { return entry.key == fullKey; }
+        );
+        if(ent != ConfOpts.end())
+            ent->value = expdup(value);
+        else
         {
-            if(strcasecmp(ent->key, key) == 0)
-                break;
-            ent++;
+            ConfOpts.emplace_back(std::move(fullKey), expdup(value));
+            ent = ConfOpts.end()-1;
         }
 
-        if((unsigned int)(ent-cfgBlock.entries) >= cfgBlock.entryCount)
-        {
-            /* Allocate a new option entry */
-            ent = static_cast<ConfigEntry*>(realloc(cfgBlock.entries,
-                (cfgBlock.entryCount+1)*sizeof(ConfigEntry)));
-            if(!ent)
-            {
-                 ERR("config parse error: error reallocating config entries\n");
-                 continue;
-            }
-            cfgBlock.entries = ent;
-            ent = cfgBlock.entries + cfgBlock.entryCount;
-            cfgBlock.entryCount++;
-
-            ent->key = strdup(key);
-            ent->value = nullptr;
-        }
-
-        free(ent->value);
-        ent->value = expdup(value);
-
-        TRACE("found '%s' = '%s'\n", ent->key, ent->value);
+        TRACE("found '%s' = '%s'\n", ent->key.c_str(), ent->value.c_str());
     }
-
-    free(buffer);
+    ConfOpts.shrink_to_fit();
 }
+
+} // namespace
+
 
 #ifdef _WIN32
 void ReadALConfig(void)
 {
-    al_string ppath = AL_STRING_INIT_STATIC();
     WCHAR buffer[MAX_PATH];
-    const WCHAR *str;
-    FILE *f;
-
     if(SHGetSpecialFolderPathW(nullptr, buffer, CSIDL_APPDATA, FALSE) != FALSE)
     {
-        al_string filepath = AL_STRING_INIT_STATIC();
-        alstr_copy_wcstr(&filepath, buffer);
-        alstr_append_cstr(&filepath, "\\alsoft.ini");
+        std::string filepath{wstr_to_utf8(buffer)};
+        filepath += "\\alsoft.ini";
 
-        TRACE("Loading config %s...\n", alstr_get_cstr(filepath));
-        f = al_fopen(alstr_get_cstr(filepath), "rt");
-        if(f)
-        {
+        TRACE("Loading config %s...\n", filepath.c_str());
+        al::ifstream f{filepath};
+        if(f.is_open())
             LoadConfigFromFile(f);
-            fclose(f);
-        }
-        alstr_reset(&filepath);
     }
 
+    al_string ppath = AL_STRING_INIT_STATIC();
     GetProcBinary(&ppath, nullptr);
     if(!alstr_empty(ppath))
     {
         alstr_append_cstr(&ppath, "\\alsoft.ini");
         TRACE("Loading config %s...\n", alstr_get_cstr(ppath));
-        f = al_fopen(alstr_get_cstr(ppath), "r");
-        if(f)
-        {
+        al::ifstream f{alstr_get_cstr(ppath)};
+        if(f.is_open())
             LoadConfigFromFile(f);
-            fclose(f);
-        }
     }
 
-    if((str=_wgetenv(L"ALSOFT_CONF")) != nullptr && *str)
+    const WCHAR *str{_wgetenv(L"ALSOFT_CONF")};
+    if(str != nullptr && *str)
     {
-        al_string filepath = AL_STRING_INIT_STATIC();
-        alstr_copy_wcstr(&filepath, str);
+        std::string filepath{wstr_to_utf8(str)};
 
-        TRACE("Loading config %s...\n", alstr_get_cstr(filepath));
-        f = al_fopen(alstr_get_cstr(filepath), "rt");
-        if(f)
-        {
+        TRACE("Loading config %s...\n", filepath.c_str());
+        al::ifstream f{filepath};
+        if(f.is_open())
             LoadConfigFromFile(f);
-            fclose(f);
-        }
-        alstr_reset(&filepath);
     }
 
     alstr_reset(&ppath);
@@ -424,62 +326,50 @@ void ReadALConfig(void)
 #else
 void ReadALConfig(void)
 {
-    al_string confpaths = AL_STRING_INIT_STATIC();
-    al_string fname = AL_STRING_INIT_STATIC();
-    const char *str;
-    FILE *f;
-
-    str = "/etc/openal/alsoft.conf";
+    const char *str{"/etc/openal/alsoft.conf"};
 
     TRACE("Loading config %s...\n", str);
-    f = al_fopen(str, "r");
-    if(f)
-    {
+    al::ifstream f{str};
+    if(f.is_open())
         LoadConfigFromFile(f);
-        fclose(f);
-    }
+    f.close();
 
     if(!(str=getenv("XDG_CONFIG_DIRS")) || str[0] == 0)
         str = "/etc/xdg";
-    alstr_copy_cstr(&confpaths, str);
+    std::string confpaths = str;
     /* Go through the list in reverse, since "the order of base directories
      * denotes their importance; the first directory listed is the most
      * important". Ergo, we need to load the settings from the later dirs
      * first so that the settings in the earlier dirs override them.
      */
-    while(!alstr_empty(confpaths))
+    std::string fname;
+    while(!confpaths.empty())
     {
-        char *next = strrchr(alstr_get_cstr(confpaths), ':');
-        if(next)
+        auto next = confpaths.find_last_of(':');
+        if(next < confpaths.length())
         {
-            size_t len = next - alstr_get_cstr(confpaths);
-            alstr_copy_cstr(&fname, next+1);
-            VECTOR_RESIZE(confpaths, len, len+1);
-            VECTOR_ELEM(confpaths, len) = 0;
+            fname = confpaths.substr(next+1);
+            confpaths.erase(next);
         }
         else
         {
-            alstr_reset(&fname);
             fname = confpaths;
-            AL_STRING_INIT(confpaths);
+            confpaths.clear();
         }
 
-        if(alstr_empty(fname) || VECTOR_FRONT(fname) != '/')
-            WARN("Ignoring XDG config dir: %s\n", alstr_get_cstr(fname));
+        if(fname.empty() || fname.front() != '/')
+            WARN("Ignoring XDG config dir: %s\n", fname.c_str());
         else
         {
-            if(VECTOR_BACK(fname) != '/') alstr_append_cstr(&fname, "/alsoft.conf");
-            else alstr_append_cstr(&fname, "alsoft.conf");
+            if(fname.back() != '/') fname += "/alsoft.conf";
+            else fname += "alsoft.conf";
 
-            TRACE("Loading config %s...\n", alstr_get_cstr(fname));
-            f = al_fopen(alstr_get_cstr(fname), "r");
-            if(f)
-            {
+            TRACE("Loading config %s...\n", fname.c_str());
+            al::ifstream f{fname};
+            if(f.is_open())
                 LoadConfigFromFile(f);
-                fclose(f);
-            }
         }
-        alstr_clear(&fname);
+        fname.clear();
     }
 
 #ifdef __APPLE__
@@ -492,142 +382,121 @@ void ReadALConfig(void)
         if((configURL=CFBundleCopyResourceURL(mainBundle, CFSTR(".alsoftrc"), CFSTR(""), nullptr)) &&
            CFURLGetFileSystemRepresentation(configURL, true, fileName, sizeof(fileName)))
         {
-            f = al_fopen((const char*)fileName, "r");
-            if(f)
-            {
+            al::ifstream f{reinterpret_cast<char*>(fileName)};
+            if(f.is_open())
                 LoadConfigFromFile(f);
-                fclose(f);
-            }
         }
     }
 #endif
 
     if((str=getenv("HOME")) != nullptr && *str)
     {
-        alstr_copy_cstr(&fname, str);
-        if(VECTOR_BACK(fname) != '/') alstr_append_cstr(&fname, "/.alsoftrc");
-        else alstr_append_cstr(&fname, ".alsoftrc");
+        fname = str;
+        if(fname.back() != '/') fname += "/.alsoftrc";
+        else fname += ".alsoftrc";
 
-        TRACE("Loading config %s...\n", alstr_get_cstr(fname));
-        f = al_fopen(alstr_get_cstr(fname), "r");
-        if(f)
-        {
+        TRACE("Loading config %s...\n", fname.c_str());
+        al::ifstream f{fname};
+        if(f.is_open())
             LoadConfigFromFile(f);
-            fclose(f);
-        }
     }
 
     if((str=getenv("XDG_CONFIG_HOME")) != nullptr && str[0] != 0)
     {
-        alstr_copy_cstr(&fname, str);
-        if(VECTOR_BACK(fname) != '/') alstr_append_cstr(&fname, "/alsoft.conf");
-        else alstr_append_cstr(&fname, "alsoft.conf");
+        fname = str;
+        if(fname.back() != '/') fname += "/alsoft.conf";
+        else fname += "alsoft.conf";
     }
     else
     {
-        alstr_clear(&fname);
+        fname.clear();
         if((str=getenv("HOME")) != nullptr && str[0] != 0)
         {
-            alstr_copy_cstr(&fname, str);
-            if(VECTOR_BACK(fname) != '/') alstr_append_cstr(&fname, "/.config/alsoft.conf");
-            else alstr_append_cstr(&fname, ".config/alsoft.conf");
+            fname = str;
+            if(fname.back() != '/') fname += "/.config/alsoft.conf";
+            else fname += ".config/alsoft.conf";
         }
     }
-    if(!alstr_empty(fname))
+    if(!fname.empty())
     {
-        TRACE("Loading config %s...\n", alstr_get_cstr(fname));
-        f = al_fopen(alstr_get_cstr(fname), "r");
-        if(f)
-        {
+        TRACE("Loading config %s...\n", fname.c_str());
+        al::ifstream f{fname};
+        if(f.is_open())
             LoadConfigFromFile(f);
-            fclose(f);
-        }
     }
 
-    alstr_clear(&fname);
-    GetProcBinary(&fname, nullptr);
-    if(!alstr_empty(fname))
+    al_string ppath = AL_STRING_INIT_STATIC();
+    GetProcBinary(&ppath, nullptr);
+    if(!alstr_empty(ppath))
     {
-        if(VECTOR_BACK(fname) != '/') alstr_append_cstr(&fname, "/alsoft.conf");
-        else alstr_append_cstr(&fname, "alsoft.conf");
+        if(VECTOR_BACK(ppath) != '/') alstr_append_cstr(&ppath, "/alsoft.conf");
+        else alstr_append_cstr(&ppath, "alsoft.conf");
 
-        TRACE("Loading config %s...\n", alstr_get_cstr(fname));
-        f = al_fopen(alstr_get_cstr(fname), "r");
-        if(f)
-        {
+        TRACE("Loading config %s...\n", alstr_get_cstr(ppath));
+        al::ifstream f{alstr_get_cstr(ppath)};
+        if(f.is_open())
             LoadConfigFromFile(f);
-            fclose(f);
-        }
     }
 
     if((str=getenv("ALSOFT_CONF")) != nullptr && *str)
     {
         TRACE("Loading config %s...\n", str);
-        f = al_fopen(str, "r");
-        if(f)
-        {
+        al::ifstream f{str};
+        if(f.is_open())
             LoadConfigFromFile(f);
-            fclose(f);
-        }
     }
 
-    alstr_reset(&fname);
-    alstr_reset(&confpaths);
+    alstr_reset(&ppath);
 }
 #endif
 
 void FreeALConfig(void)
 {
-    unsigned int i;
-
-    for(i = 0;i < cfgBlock.entryCount;i++)
-    {
-        free(cfgBlock.entries[i].key);
-        free(cfgBlock.entries[i].value);
-    }
-    free(cfgBlock.entries);
+    ConfOpts.clear();
 }
 
 const char *GetConfigValue(const char *devName, const char *blockName, const char *keyName, const char *def)
 {
-    unsigned int i;
-    char key[256];
-
     if(!keyName)
         return def;
 
+    std::string key;
     if(blockName && strcasecmp(blockName, "general") != 0)
     {
+        key = blockName;
         if(devName)
-            snprintf(key, sizeof(key), "%s/%s/%s", blockName, devName, keyName);
-        else
-            snprintf(key, sizeof(key), "%s/%s", blockName, keyName);
+        {
+            key += '/';
+            key += devName;
+        }
+        key += '/';
+        key += keyName;
     }
     else
     {
         if(devName)
-            snprintf(key, sizeof(key), "%s/%s", devName, keyName);
-        else
         {
-            strncpy(key, keyName, sizeof(key)-1);
-            key[sizeof(key)-1] = 0;
+            key = devName;
+            key += '/';
         }
+        key += keyName;
     }
 
-    for(i = 0;i < cfgBlock.entryCount;i++)
+    auto iter = std::find_if(ConfOpts.cbegin(), ConfOpts.cend(),
+        [&key](const ConfigEntry &entry) -> bool
+        { return entry.key == key; }
+    );
+    if(iter != ConfOpts.cend())
     {
-        if(strcmp(cfgBlock.entries[i].key, key) == 0)
-        {
-            TRACE("Found %s = \"%s\"\n", key, cfgBlock.entries[i].value);
-            if(cfgBlock.entries[i].value[0])
-                return cfgBlock.entries[i].value;
-            return def;
-        }
+        TRACE("Found %s = \"%s\"\n", key.c_str(), iter->value.c_str());
+        if(!iter->value.empty())
+            return iter->value.c_str();
+        return def;
     }
 
     if(!devName)
     {
-        TRACE("Key %s not found\n", key);
+        TRACE("Key %s not found\n", key.c_str());
         return def;
     }
     return GetConfigValue(nullptr, blockName, keyName, def);
@@ -653,7 +522,7 @@ int ConfigValueInt(const char *devName, const char *blockName, const char *keyNa
     const char *val = GetConfigValue(devName, blockName, keyName, "");
     if(!val[0]) return 0;
 
-    *ret = strtol(val, nullptr, 0);
+    *ret = std::strtol(val, nullptr, 0);
     return 1;
 }
 
@@ -662,7 +531,7 @@ int ConfigValueUInt(const char *devName, const char *blockName, const char *keyN
     const char *val = GetConfigValue(devName, blockName, keyName, "");
     if(!val[0]) return 0;
 
-    *ret = strtoul(val, nullptr, 0);
+    *ret = std::strtoul(val, nullptr, 0);
     return 1;
 }
 
@@ -671,11 +540,7 @@ int ConfigValueFloat(const char *devName, const char *blockName, const char *key
     const char *val = GetConfigValue(devName, blockName, keyName, "");
     if(!val[0]) return 0;
 
-#ifdef HAVE_STRTOF
-    *ret = strtof(val, nullptr);
-#else
-    *ret = (float)strtod(val, nullptr);
-#endif
+    *ret = std::strtof(val, nullptr);
     return 1;
 }
 

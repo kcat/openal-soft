@@ -87,7 +87,7 @@ static int readline(FILE *f, char **output, size_t *maxlen)
     do {
         if(len+1 >= *maxlen)
         {
-            void *temp = NULL;
+            void *temp = nullptr;
             size_t newmax;
 
             newmax = (*maxlen ? (*maxlen)<<1 : 32);
@@ -95,11 +95,11 @@ static int readline(FILE *f, char **output, size_t *maxlen)
                 temp = realloc(*output, newmax);
             if(!temp)
             {
-                ERR("Failed to realloc "SZFMT" bytes from "SZFMT"!\n", newmax, *maxlen);
+                ERR("Failed to realloc " SZFMT " bytes from " SZFMT "!\n", newmax, *maxlen);
                 return 0;
             }
 
-            *output = temp;
+            *output = static_cast<char*>(temp);
             *maxlen = newmax;
         }
         (*output)[len++] = c;
@@ -112,7 +112,7 @@ static int readline(FILE *f, char **output, size_t *maxlen)
 
 static char *expdup(const char *str)
 {
-    char *output = NULL;
+    char *output = nullptr;
     size_t maxlen = 0;
     size_t len = 0;
 
@@ -158,7 +158,7 @@ static char *expdup(const char *str)
                     continue;
 
                 if(hasbraces) str++;
-                if((addstr=getenv(envname)) == NULL)
+                if((addstr=getenv(envname)) == nullptr)
                     continue;
                 addstrlen = strlen(addstr);
             }
@@ -168,7 +168,7 @@ static char *expdup(const char *str)
 
         if(addstrlen >= maxlen-len)
         {
-            void *temp = NULL;
+            void *temp = nullptr;
             size_t newmax;
 
             newmax = len+addstrlen+1;
@@ -176,11 +176,11 @@ static char *expdup(const char *str)
                 temp = realloc(output, newmax);
             if(!temp)
             {
-                ERR("Failed to realloc "SZFMT" bytes from "SZFMT"!\n", newmax, maxlen);
+                ERR("Failed to realloc " SZFMT " bytes from " SZFMT "!\n", newmax, maxlen);
                 return output;
             }
 
-            output = temp;
+            output = static_cast<char*>(temp);
             maxlen = newmax;
         }
 
@@ -189,14 +189,14 @@ static char *expdup(const char *str)
         output[len] = '\0';
     }
 
-    return output ? output : calloc(1, 1);
+    return output ? output : static_cast<char*>(calloc(1, 1));
 }
 
 
 static void LoadConfigFromFile(FILE *f)
 {
     char curSection[128] = "";
-    char *buffer = NULL;
+    char *buffer = nullptr;
     size_t maxlen = 0;
     ConfigEntry *ent;
 
@@ -343,7 +343,8 @@ static void LoadConfigFromFile(FILE *f)
         if((unsigned int)(ent-cfgBlock.entries) >= cfgBlock.entryCount)
         {
             /* Allocate a new option entry */
-            ent = realloc(cfgBlock.entries, (cfgBlock.entryCount+1)*sizeof(ConfigEntry));
+            ent = static_cast<ConfigEntry*>(realloc(cfgBlock.entries,
+                (cfgBlock.entryCount+1)*sizeof(ConfigEntry)));
             if(!ent)
             {
                  ERR("config parse error: error reallocating config entries\n");
@@ -354,7 +355,7 @@ static void LoadConfigFromFile(FILE *f)
             cfgBlock.entryCount++;
 
             ent->key = strdup(key);
-            ent->value = NULL;
+            ent->value = nullptr;
         }
 
         free(ent->value);
@@ -374,7 +375,7 @@ void ReadALConfig(void)
     const WCHAR *str;
     FILE *f;
 
-    if(SHGetSpecialFolderPathW(NULL, buffer, CSIDL_APPDATA, FALSE) != FALSE)
+    if(SHGetSpecialFolderPathW(nullptr, buffer, CSIDL_APPDATA, FALSE) != FALSE)
     {
         al_string filepath = AL_STRING_INIT_STATIC();
         alstr_copy_wcstr(&filepath, buffer);
@@ -390,7 +391,7 @@ void ReadALConfig(void)
         alstr_reset(&filepath);
     }
 
-    GetProcBinary(&ppath, NULL);
+    GetProcBinary(&ppath, nullptr);
     if(!alstr_empty(ppath))
     {
         alstr_append_cstr(&ppath, "\\alsoft.ini");
@@ -403,7 +404,7 @@ void ReadALConfig(void)
         }
     }
 
-    if((str=_wgetenv(L"ALSOFT_CONF")) != NULL && *str)
+    if((str=_wgetenv(L"ALSOFT_CONF")) != nullptr && *str)
     {
         al_string filepath = AL_STRING_INIT_STATIC();
         alstr_copy_wcstr(&filepath, str);
@@ -488,7 +489,7 @@ void ReadALConfig(void)
         unsigned char fileName[PATH_MAX];
         CFURLRef configURL;
 
-        if((configURL=CFBundleCopyResourceURL(mainBundle, CFSTR(".alsoftrc"), CFSTR(""), NULL)) &&
+        if((configURL=CFBundleCopyResourceURL(mainBundle, CFSTR(".alsoftrc"), CFSTR(""), nullptr)) &&
            CFURLGetFileSystemRepresentation(configURL, true, fileName, sizeof(fileName)))
         {
             f = al_fopen((const char*)fileName, "r");
@@ -501,7 +502,7 @@ void ReadALConfig(void)
     }
 #endif
 
-    if((str=getenv("HOME")) != NULL && *str)
+    if((str=getenv("HOME")) != nullptr && *str)
     {
         alstr_copy_cstr(&fname, str);
         if(VECTOR_BACK(fname) != '/') alstr_append_cstr(&fname, "/.alsoftrc");
@@ -516,7 +517,7 @@ void ReadALConfig(void)
         }
     }
 
-    if((str=getenv("XDG_CONFIG_HOME")) != NULL && str[0] != 0)
+    if((str=getenv("XDG_CONFIG_HOME")) != nullptr && str[0] != 0)
     {
         alstr_copy_cstr(&fname, str);
         if(VECTOR_BACK(fname) != '/') alstr_append_cstr(&fname, "/alsoft.conf");
@@ -525,7 +526,7 @@ void ReadALConfig(void)
     else
     {
         alstr_clear(&fname);
-        if((str=getenv("HOME")) != NULL && str[0] != 0)
+        if((str=getenv("HOME")) != nullptr && str[0] != 0)
         {
             alstr_copy_cstr(&fname, str);
             if(VECTOR_BACK(fname) != '/') alstr_append_cstr(&fname, "/.config/alsoft.conf");
@@ -544,7 +545,7 @@ void ReadALConfig(void)
     }
 
     alstr_clear(&fname);
-    GetProcBinary(&fname, NULL);
+    GetProcBinary(&fname, nullptr);
     if(!alstr_empty(fname))
     {
         if(VECTOR_BACK(fname) != '/') alstr_append_cstr(&fname, "/alsoft.conf");
@@ -559,7 +560,7 @@ void ReadALConfig(void)
         }
     }
 
-    if((str=getenv("ALSOFT_CONF")) != NULL && *str)
+    if((str=getenv("ALSOFT_CONF")) != nullptr && *str)
     {
         TRACE("Loading config %s...\n", str);
         f = al_fopen(str, "r");
@@ -629,7 +630,7 @@ const char *GetConfigValue(const char *devName, const char *blockName, const cha
         TRACE("Key %s not found\n", key);
         return def;
     }
-    return GetConfigValue(NULL, blockName, keyName, def);
+    return GetConfigValue(nullptr, blockName, keyName, def);
 }
 
 int ConfigValueExists(const char *devName, const char *blockName, const char *keyName)
@@ -652,7 +653,7 @@ int ConfigValueInt(const char *devName, const char *blockName, const char *keyNa
     const char *val = GetConfigValue(devName, blockName, keyName, "");
     if(!val[0]) return 0;
 
-    *ret = strtol(val, NULL, 0);
+    *ret = strtol(val, nullptr, 0);
     return 1;
 }
 
@@ -661,7 +662,7 @@ int ConfigValueUInt(const char *devName, const char *blockName, const char *keyN
     const char *val = GetConfigValue(devName, blockName, keyName, "");
     if(!val[0]) return 0;
 
-    *ret = strtoul(val, NULL, 0);
+    *ret = strtoul(val, nullptr, 0);
     return 1;
 }
 
@@ -671,9 +672,9 @@ int ConfigValueFloat(const char *devName, const char *blockName, const char *key
     if(!val[0]) return 0;
 
 #ifdef HAVE_STRTOF
-    *ret = strtof(val, NULL);
+    *ret = strtof(val, nullptr);
 #else
-    *ret = (float)strtod(val, NULL);
+    *ret = (float)strtod(val, nullptr);
 #endif
     return 1;
 }

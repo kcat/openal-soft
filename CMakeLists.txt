@@ -841,7 +841,7 @@ SET(OPENAL_OBJS
 SET(ALC_OBJS
     Alc/ALc.c
     Alc/ALu.c
-    Alc/alconfig.c
+    Alc/alconfig.cpp
     Alc/alconfig.h
     Alc/bs2b.c
     Alc/converter.c

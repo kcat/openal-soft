@@ -876,7 +876,7 @@ SET(ALC_OBJS
     Alc/fpu_modes.h
     Alc/logging.h
     Alc/vector.h
-    Alc/hrtf.c
+    Alc/hrtf.cpp
     Alc/hrtf.h
     Alc/uhjfilter.cpp
     Alc/uhjfilter.h

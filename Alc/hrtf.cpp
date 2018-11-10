@@ -23,8 +23,11 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+#include <mutex>
 #include <array>
 #include <vector>
+#include <memory>
+#include <istream>
 #include <algorithm>
 
 #include "AL/al.h"
@@ -73,10 +76,80 @@ constexpr ALchar magicMarker02[8]{'M','i','n','P','H','R','0','2'};
 
 /* First value for pass-through coefficients (remaining are 0), used for omni-
  * directional sounds. */
-constexpr ALfloat PassthruCoeff = 0.707106781187f/*sqrt(0.5)*/;
+constexpr ALfloat PassthruCoeff{0.707106781187f/*sqrt(0.5)*/};
 
-ATOMIC_FLAG LoadedHrtfLock = ATOMIC_FLAG_INIT;
-struct HrtfEntry *LoadedHrtfs = NULL;
+std::mutex LoadedHrtfLock;
+HrtfEntry *LoadedHrtfs{nullptr};
+
+
+class databuf final : public std::streambuf {
+    int_type underflow() override
+    { return traits_type::eof(); }
+
+    pos_type seekoff(off_type offset, std::ios_base::seekdir whence, std::ios_base::openmode mode) override
+    {
+        if((mode&std::ios_base::out) || !(mode&std::ios_base::in))
+            return traits_type::eof();
+
+        char_type *cur;
+        switch(whence)
+        {
+            case std::ios_base::beg:
+                if(offset < 0 || offset > egptr()-eback())
+                    return traits_type::eof();
+                cur = eback() + offset;
+                break;
+
+            case std::ios_base::cur:
+                if((offset >= 0 && offset > egptr()-gptr()) ||
+                   (offset < 0 && -offset > gptr()-eback()))
+                    return traits_type::eof();
+                cur = gptr() + offset;
+                break;
+
+            case std::ios_base::end:
+                if(offset > 0 || -offset > egptr()-eback())
+                    return traits_type::eof();
+                cur = egptr() + offset;
+                break;
+
+            default:
+                return traits_type::eof();
+        }
+
+        setg(eback(), cur, egptr());
+        return cur - eback();
+    }
+
+    pos_type seekpos(pos_type pos, std::ios_base::openmode mode) override
+    {
+        // Simplified version of seekoff
+        if((mode&std::ios_base::out) || !(mode&std::ios_base::in))
+            return traits_type::eof();
+
+        if(pos < 0 || pos > egptr()-eback())
+            return traits_type::eof();
+
+        setg(eback(), eback() + pos, egptr());
+        return pos;
+    }
+
+public:
+    databuf(const char_type *start, const char_type *end) noexcept
+    {
+        setg(const_cast<char_type*>(start), const_cast<char_type*>(start),
+             const_cast<char_type*>(end));
+    }
+};
+
+class idstream final : public std::istream {
+    databuf mStreamBuf;
+
+public:
+    idstream(const char *start, const char *end)
+      : std::istream{nullptr}, mStreamBuf{start, end}
+    { init(&mStreamBuf); }
+};
 
 
 /* Calculate the elevation index given the polar elevation in radians. This
@@ -84,9 +157,8 @@ struct HrtfEntry *LoadedHrtfs = NULL;
  */
 ALsizei CalcEvIndex(ALsizei evcount, ALfloat ev, ALfloat *mu)
 {
-    ALsizei idx;
     ev = (F_PI_2+ev) * (evcount-1) / F_PI;
-    idx = float2int(ev);
+    ALsizei idx{float2int(ev)};
 
     *mu = ev - idx;
     return mini(idx, evcount-1);
@@ -97,10 +169,9 @@ ALsizei CalcEvIndex(ALsizei evcount, ALfloat ev, ALfloat *mu)
  */
 ALsizei CalcAzIndex(ALsizei azcount, ALfloat az, ALfloat *mu)
 {
-    ALsizei idx;
     az = (F_TAU+az) * azcount / F_TAU;
+    ALsizei idx{float2int(az)};
 
-    idx = float2int(az);
     *mu = az - idx;
     return idx % azcount;
 }
@@ -114,25 +185,22 @@ ALsizei CalcAzIndex(ALsizei azcount, ALfloat az, ALfloat *mu)
 void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread,
                    ALfloat (*RESTRICT coeffs)[2], ALsizei *delays)
 {
-    ALsizei evidx, azidx, idx[4];
-    ALsizei evoffset;
-    ALfloat emu, amu[2];
-    ALfloat blend[4];
-    ALfloat dirfact;
-    ALsizei i, c;
-
-    dirfact = 1.0f - (spread / F_TAU);
+    ALfloat dirfact{1.0f - (spread / F_TAU)};
 
     /* Claculate the lower elevation index. */
-    evidx = CalcEvIndex(Hrtf->evCount, elevation, &emu);
-    evoffset = Hrtf->evOffset[evidx];
+    ALfloat emu;
+    ALsizei evidx{CalcEvIndex(Hrtf->evCount, elevation, &emu)};
+    ALsizei evoffset{Hrtf->evOffset[evidx]};
 
     /* Calculate lower azimuth index. */
-    azidx= CalcAzIndex(Hrtf->azCount[evidx], azimuth, &amu[0]);
+    ALfloat amu[2];
+    ALsizei azidx{CalcAzIndex(Hrtf->azCount[evidx], azimuth, &amu[0])};
 
     /* Calculate the lower HRIR indices. */
-    idx[0] = evoffset + azidx;
-    idx[1] = evoffset + ((azidx+1) % Hrtf->azCount[evidx]);
+    ALsizei idx[4]{
+        evoffset + azidx,
+        evoffset + ((azidx+1) % Hrtf->azCount[evidx])
+    };
     if(evidx < Hrtf->evCount-1)
     {
         /* Increment elevation to the next (upper) index. */
@@ -159,10 +227,12 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
     /* Calculate bilinear blending weights, attenuated according to the
      * directional panning factor.
      */
-    blend[0] = (1.0f-emu) * (1.0f-amu[0]) * dirfact;
-    blend[1] = (1.0f-emu) * (     amu[0]) * dirfact;
-    blend[2] = (     emu) * (1.0f-amu[1]) * dirfact;
-    blend[3] = (     emu) * (     amu[1]) * dirfact;
+    ALfloat blend[4]{
+        (1.0f-emu) * (1.0f-amu[0]) * dirfact,
+        (1.0f-emu) * (     amu[0]) * dirfact,
+        (     emu) * (1.0f-amu[1]) * dirfact,
+        (     emu) * (     amu[1]) * dirfact
+    };
 
     /* Calculate the blended HRIR delays. */
     delays[0] = fastf2i(
@@ -185,15 +255,15 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
     /* Calculate the blended HRIR coefficients. */
     coeffs[0][0] = PassthruCoeff * (1.0f-dirfact);
     coeffs[0][1] = PassthruCoeff * (1.0f-dirfact);
-    for(i = 1;i < Hrtf->irSize;i++)
+    for(ALsizei i{1};i < Hrtf->irSize;i++)
     {
         coeffs[i][0] = 0.0f;
         coeffs[i][1] = 0.0f;
     }
-    for(c = 0;c < 4;c++)
+    for(ALsizei c{0};c < 4;c++)
     {
         const ALfloat (*RESTRICT srccoeffs)[2] = Hrtf->coeffs + idx[c];
-        for(i = 0;i < Hrtf->irSize;i++)
+        for(ALsizei i{0};i < Hrtf->irSize;i++)
         {
             coeffs[i][0] += srccoeffs[i][0] * blend[c];
             coeffs[i][1] += srccoeffs[i][1] * blend[c];
@@ -338,10 +408,11 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
 }
 
 
-static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize,
-  ALfloat distance, ALsizei evCount, ALsizei irCount, const ALubyte *azCount,
-  const ALushort *evOffset, const ALfloat (*coeffs)[2], const ALubyte (*delays)[2],
-  const char *filename)
+namespace {
+
+struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALfloat distance, ALsizei evCount,
+  ALsizei irCount, const ALubyte *azCount, const ALushort *evOffset, const ALfloat (*coeffs)[2],
+  const ALubyte (*delays)[2], const char *filename)
 {
     struct Hrtf *Hrtf;
     size_t total;
@@ -355,7 +426,7 @@ static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize,
     total += sizeof(Hrtf->delays[0])*irCount;
 
     Hrtf = static_cast<struct Hrtf*>(al_calloc(16, total));
-    if(Hrtf == NULL)
+    if(Hrtf == nullptr)
         ERR("Out of memory allocating storage for %s.\n", filename);
     else
     {
@@ -414,76 +485,55 @@ static struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize,
     return Hrtf;
 }
 
-static ALubyte GetLE_ALubyte(const ALubyte **data, size_t *len)
+ALubyte GetLE_ALubyte(std::istream &data)
 {
-    ALubyte ret = (*data)[0];
-    *data += 1; *len -= 1;
+    return static_cast<ALubyte>(data.get());
+}
+
+ALshort GetLE_ALshort(std::istream &data)
+{
+    int ret = data.get();
+    ret |= data.get() << 8;
+    return static_cast<ALshort>((ret^32768) - 32768);
+}
+
+ALushort GetLE_ALushort(std::istream &data)
+{
+    int ret = data.get();
+    ret |= data.get() << 8;
+    return static_cast<ALushort>(ret);
+}
+
+ALint GetLE_ALint24(std::istream &data)
+{
+    int ret = data.get();
+    ret |= data.get() << 8;
+    ret |= data.get() << 16;
+    return (ret^8388608) - 8388608;
+}
+
+ALuint GetLE_ALuint(std::istream &data)
+{
+    int ret = data.get();
+    ret |= data.get() << 8;
+    ret |= data.get() << 16;
+    ret |= data.get() << 24;
     return ret;
 }
 
-static ALshort GetLE_ALshort(const ALubyte **data, size_t *len)
+struct Hrtf *LoadHrtf00(std::istream &data, const char *filename)
 {
-    ALshort ret = (*data)[0] | ((*data)[1]<<8);
-    *data += 2; *len -= 2;
-    return ret;
-}
-
-static ALushort GetLE_ALushort(const ALubyte **data, size_t *len)
-{
-    ALushort ret = (*data)[0] | ((*data)[1]<<8);
-    *data += 2; *len -= 2;
-    return ret;
-}
-
-static ALint GetLE_ALint24(const ALubyte **data, size_t *len)
-{
-    ALint ret = (*data)[0] | ((*data)[1]<<8) | ((*data)[2]<<16);
-    *data += 3; *len -= 3;
-    return (ret^0x800000) - 0x800000;
-}
-
-static ALuint GetLE_ALuint(const ALubyte **data, size_t *len)
-{
-    ALuint ret = (*data)[0] | ((*data)[1]<<8) | ((*data)[2]<<16) | ((*data)[3]<<24);
-    *data += 4; *len -= 4;
-    return ret;
-}
-
-static const ALubyte *Get_ALubytePtr(const ALubyte **data, size_t *len, size_t size)
-{
-    const ALubyte *ret = *data;
-    *data += size; *len -= size;
-    return ret;
-}
-
-static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const char *filename)
-{
-    struct Hrtf *Hrtf = NULL;
-    ALboolean failed = AL_FALSE;
-    ALuint rate = 0;
-    ALushort irCount = 0;
-    ALushort irSize = 0;
-    ALubyte evCount = 0;
-    std::vector<ALubyte> azCount;
-    std::vector<ALushort> evOffset;
-    std::vector<std::array<ALfloat,2>> coeffs;
-    std::vector<std::array<ALubyte,2>> delays;
-    ALsizei i, j;
-
-    if(datalen < 9)
+    ALuint rate{GetLE_ALuint(data)};
+    ALushort irCount{GetLE_ALushort(data)};
+    ALushort irSize{GetLE_ALushort(data)};
+    ALubyte evCount{GetLE_ALubyte(data)};
+    if(!data || data.eof())
     {
-        ERR("Unexpected end of %s data (req %d, rem " SZFMT ")\n", filename, 9, datalen);
-        return NULL;
+        ERR("Failed reading %s\n", filename);
+        return nullptr;
     }
 
-    rate = GetLE_ALuint(&data, &datalen);
-
-    irCount = GetLE_ALushort(&data, &datalen);
-
-    irSize = GetLE_ALushort(&data, &datalen);
-
-    evCount = GetLE_ALubyte(&data, &datalen);
-
+    ALboolean failed{AL_FALSE};
     if(irSize < MIN_IR_SIZE || irSize > MAX_IR_SIZE || (irSize%MOD_IR_SIZE))
     {
         ERR("Unsupported HRIR size: irSize=%d (%d to %d by %d)\n",
@@ -497,28 +547,37 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const char *
         failed = AL_TRUE;
     }
     if(failed)
-        return NULL;
+        return nullptr;
 
-    if(datalen < evCount*2u)
+    std::vector<ALushort> evOffset(evCount);
+    for(auto &val : evOffset)
+        val = GetLE_ALushort(data);
+    if(!data || data.eof())
     {
-        ERR("Unexpected end of %s data (req %d, rem " SZFMT ")\n", filename, evCount*2, datalen);
-        return NULL;
+        ERR("Failed reading %s\n", filename);
+        return nullptr;
     }
-
-    azCount.resize(evCount);
-    evOffset.resize(evCount);
-
-    evOffset[0] = GetLE_ALushort(&data, &datalen);
-    for(i = 1;i < evCount;i++)
+    for(ALsizei i{1};i < evCount;i++)
     {
-        evOffset[i] = GetLE_ALushort(&data, &datalen);
         if(evOffset[i] <= evOffset[i-1])
         {
             ERR("Invalid evOffset: evOffset[%d]=%d (last=%d)\n",
                 i, evOffset[i], evOffset[i-1]);
             failed = AL_TRUE;
         }
+    }
+    if(irCount <= evOffset.back())
+    {
+        ERR("Invalid evOffset: evOffset[" SZFMT "]=%d (irCount=%d)\n",
+            evOffset.size()-1, evOffset.back(), irCount);
+        failed = AL_TRUE;
+    }
+    if(failed)
+        return nullptr;
 
+    std::vector<ALubyte> azCount(evCount);
+    for(ALsizei i{1};i < evCount;i++)
+    {
         azCount[i-1] = evOffset[i] - evOffset[i-1];
         if(azCount[i-1] < MIN_AZ_COUNT || azCount[i-1] > MAX_AZ_COUNT)
         {
@@ -527,107 +586,71 @@ static struct Hrtf *LoadHrtf00(const ALubyte *data, size_t datalen, const char *
             failed = AL_TRUE;
         }
     }
-    if(irCount <= evOffset[i-1])
+    azCount.back() = irCount - evOffset.back();
+    if(azCount.back() < MIN_AZ_COUNT || azCount.back() > MAX_AZ_COUNT)
     {
-        ERR("Invalid evOffset: evOffset[%d]=%d (irCount=%d)\n",
-            i-1, evOffset[i-1], irCount);
+        ERR("Unsupported azimuth count: azCount[" SZFMT "]=%d (%d to %d)\n",
+            azCount.size()-1, azCount.back(), MIN_AZ_COUNT, MAX_AZ_COUNT);
         failed = AL_TRUE;
     }
+    if(failed)
+        return nullptr;
 
-    azCount[i-1] = irCount - evOffset[i-1];
-    if(azCount[i-1] < MIN_AZ_COUNT || azCount[i-1] > MAX_AZ_COUNT)
+    std::vector<std::array<ALfloat,2>> coeffs(irSize*irCount);
+    std::vector<std::array<ALubyte,2>> delays(irCount);
+    for(auto &val : coeffs)
+        val[0] = GetLE_ALshort(data) / 32768.0f;
+    for(auto &val : delays)
+        val[0] = GetLE_ALubyte(data);
+    if(!data || data.eof())
     {
-        ERR("Unsupported azimuth count: azCount[%d]=%d (%d to %d)\n",
-            i-1, azCount[i-1], MIN_AZ_COUNT, MAX_AZ_COUNT);
-        failed = AL_TRUE;
+        ERR("Failed reading %s\n", filename);
+        return nullptr;
     }
-
-    if(!failed)
+    for(ALsizei i{0};i < irCount;i++)
     {
-        coeffs.resize(irSize*irCount);
-        delays.resize(irCount);
-
-        size_t reqsize = 2*irSize*irCount + irCount;
-        if(datalen < reqsize)
+        if(delays[i][0] > MAX_HRIR_DELAY)
         {
-            ERR("Unexpected end of %s data (req " SZFMT ", rem " SZFMT ")\n",
-                filename, reqsize, datalen);
+            ERR("Invalid delays[%d]: %d (%d)\n", i, delays[i][0], MAX_HRIR_DELAY);
             failed = AL_TRUE;
         }
     }
+    if(failed)
+        return nullptr;
 
-    if(!failed)
+    /* Mirror the left ear responses to the right ear. */
+    for(ALsizei i{0};i < evCount;i++)
     {
-        for(i = 0;i < irCount;i++)
+        ALushort evoffset = evOffset[i];
+        ALubyte azcount = azCount[i];
+        for(ALsizei j{0};j < azcount;j++)
         {
-            for(j = 0;j < irSize;j++)
-                coeffs[i*irSize + j][0] = GetLE_ALshort(&data, &datalen) / 32768.0f;
-        }
+            ALsizei lidx = evoffset + j;
+            ALsizei ridx = evoffset + ((azcount-j) % azcount);
 
-        for(i = 0;i < irCount;i++)
-        {
-            delays[i][0] = GetLE_ALubyte(&data, &datalen);
-            if(delays[i][0] > MAX_HRIR_DELAY)
-            {
-                ERR("Invalid delays[%d]: %d (%d)\n", i, delays[i][0], MAX_HRIR_DELAY);
-                failed = AL_TRUE;
-            }
+            for(ALsizei k{0};k < irSize;k++)
+                coeffs[ridx*irSize + k][1] = coeffs[lidx*irSize + k][0];
+            delays[ridx][1] = delays[lidx][0];
         }
     }
 
-    if(!failed)
-    {
-        /* Mirror the left ear responses to the right ear. */
-        for(i = 0;i < evCount;i++)
-        {
-            ALushort evoffset = evOffset[i];
-            ALubyte azcount = azCount[i];
-            for(j = 0;j < azcount;j++)
-            {
-                ALsizei lidx = evoffset + j;
-                ALsizei ridx = evoffset + ((azcount-j) % azcount);
-                ALsizei k;
-
-                for(k = 0;k < irSize;k++)
-                    coeffs[ridx*irSize + k][1] = coeffs[lidx*irSize + k][0];
-                delays[ridx][1] = delays[lidx][0];
-            }
-        }
-
-        Hrtf = CreateHrtfStore(rate, irSize, 0.0f, evCount, irCount, azCount.data(),
-                               evOffset.data(), &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
-                               &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
-    }
-
-    return Hrtf;
+    return CreateHrtfStore(rate, irSize, 0.0f, evCount, irCount, azCount.data(),
+                           evOffset.data(), &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
+                           &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
 }
 
-static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const char *filename)
+static struct Hrtf *LoadHrtf01(std::istream &data, const char *filename)
 {
-    struct Hrtf *Hrtf = NULL;
-    ALboolean failed = AL_FALSE;
-    ALuint rate = 0;
-    ALushort irCount = 0;
-    ALushort irSize = 0;
-    ALubyte evCount = 0;
-    const ALubyte *azCount = NULL;
-    std::vector<ALushort> evOffset;
-    std::vector<std::array<ALfloat,2>> coeffs;
-    std::vector<std::array<ALubyte,2>> delays;
-    ALsizei i, j;
-
-    if(datalen < 6)
+    ALuint rate{GetLE_ALuint(data)};
+    ALushort irSize{GetLE_ALubyte(data)};
+    ALubyte evCount{GetLE_ALubyte(data)};
+    if(!data || data.eof())
     {
-        ERR("Unexpected end of %s data (req %d, rem " SZFMT "\n", filename, 6, datalen);
-        return NULL;
+        ERR("Failed reading %s\n", filename);
+        return nullptr;
     }
 
-    rate = GetLE_ALuint(&data, &datalen);
-
-    irSize = GetLE_ALubyte(&data, &datalen);
-
-    evCount = GetLE_ALubyte(&data, &datalen);
-
+    ALboolean failed{AL_FALSE};
     if(irSize < MIN_IR_SIZE || irSize > MAX_IR_SIZE || (irSize%MOD_IR_SIZE))
     {
         ERR("Unsupported HRIR size: irSize=%d (%d to %d by %d)\n",
@@ -641,19 +664,16 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const char *
         failed = AL_TRUE;
     }
     if(failed)
-        return NULL;
+        return nullptr;
 
-    if(datalen < evCount)
+    std::vector<ALubyte> azCount(evCount);
+    data.read(reinterpret_cast<char*>(azCount.data()), evCount);
+    if(!data || data.eof() || data.gcount() < evCount)
     {
-        ERR("Unexpected end of %s data (req %d, rem " SZFMT "\n", filename, evCount, datalen);
-        return NULL;
+        ERR("Failed reading %s\n", filename);
+        return nullptr;
     }
-
-    azCount = Get_ALubytePtr(&data, &datalen, evCount);
-
-    evOffset.resize(evCount);
-
-    for(i = 0;i < evCount;i++)
+    for(ALsizei i{0};i < evCount;++i)
     {
         if(azCount[i] < MIN_AZ_COUNT || azCount[i] > MAX_AZ_COUNT)
         {
@@ -662,73 +682,59 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const char *
             failed = AL_TRUE;
         }
     }
+    if(failed)
+        return nullptr;
 
-    if(!failed)
+    std::vector<ALushort> evOffset(evCount);
+    evOffset[0] = 0;
+    ALushort irCount{azCount[0]};
+    for(ALsizei i{1};i < evCount;i++)
     {
-        evOffset[0] = 0;
-        irCount = azCount[0];
-        for(i = 1;i < evCount;i++)
-        {
-            evOffset[i] = evOffset[i-1] + azCount[i-1];
-            irCount += azCount[i];
-        }
+        evOffset[i] = evOffset[i-1] + azCount[i-1];
+        irCount += azCount[i];
+    }
 
-        coeffs.resize(irSize*irCount);
-        delays.resize(irCount);
-
-        size_t reqsize = 2*irSize*irCount + irCount;
-        if(datalen < reqsize)
+    std::vector<std::array<ALfloat,2>> coeffs(irSize*irCount);
+    std::vector<std::array<ALubyte,2>> delays(irCount);
+    for(auto &val : coeffs)
+        val[0] = GetLE_ALshort(data) / 32768.0f;
+    for(auto &val : delays)
+        val[0] = GetLE_ALubyte(data);
+    if(!data || data.eof())
+    {
+        ERR("Failed reading %s\n", filename);
+        return nullptr;
+    }
+    for(ALsizei i{0};i < irCount;i++)
+    {
+        if(delays[i][0] > MAX_HRIR_DELAY)
         {
-            ERR("Unexpected end of %s data (req " SZFMT ", rem " SZFMT "\n",
-                filename, reqsize, datalen);
+            ERR("Invalid delays[%d]: %d (%d)\n", i, delays[i][0], MAX_HRIR_DELAY);
             failed = AL_TRUE;
         }
     }
+    if(failed)
+        return nullptr;
 
-    if(!failed)
+    /* Mirror the left ear responses to the right ear. */
+    for(ALsizei i{0};i < evCount;i++)
     {
-        for(i = 0;i < irCount;i++)
+        ALushort evoffset = evOffset[i];
+        ALubyte azcount = azCount[i];
+        for(ALsizei j{0};j < azcount;j++)
         {
-            for(j = 0;j < irSize;j++)
-                coeffs[i*irSize + j][0] = GetLE_ALshort(&data, &datalen) / 32768.0f;
-        }
+            ALsizei lidx = evoffset + j;
+            ALsizei ridx = evoffset + ((azcount-j) % azcount);
 
-        for(i = 0;i < irCount;i++)
-        {
-            delays[i][0] = GetLE_ALubyte(&data, &datalen);
-            if(delays[i][0] > MAX_HRIR_DELAY)
-            {
-                ERR("Invalid delays[%d]: %d (%d)\n", i, delays[i][0], MAX_HRIR_DELAY);
-                failed = AL_TRUE;
-            }
+            for(ALsizei k{0};k < irSize;k++)
+                coeffs[ridx*irSize + k][1] = coeffs[lidx*irSize + k][0];
+            delays[ridx][1] = delays[lidx][0];
         }
     }
 
-    if(!failed)
-    {
-        /* Mirror the left ear responses to the right ear. */
-        for(i = 0;i < evCount;i++)
-        {
-            ALushort evoffset = evOffset[i];
-            ALubyte azcount = azCount[i];
-            for(j = 0;j < azcount;j++)
-            {
-                ALsizei lidx = evoffset + j;
-                ALsizei ridx = evoffset + ((azcount-j) % azcount);
-                ALsizei k;
-
-                for(k = 0;k < irSize;k++)
-                    coeffs[ridx*irSize + k][1] = coeffs[lidx*irSize + k][0];
-                delays[ridx][1] = delays[lidx][0];
-            }
-        }
-
-        Hrtf = CreateHrtfStore(rate, irSize, 0.0f, evCount, irCount, azCount, evOffset.data(),
-                               &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
-                               &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
-    }
-
-    return Hrtf;
+    return CreateHrtfStore(rate, irSize, 0.0f, evCount, irCount, azCount.data(),
+                           evOffset.data(), &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
+                           &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
 }
 
 #define SAMPLETYPE_S16 0
@@ -737,38 +743,20 @@ static struct Hrtf *LoadHrtf01(const ALubyte *data, size_t datalen, const char *
 #define CHANTYPE_LEFTONLY  0
 #define CHANTYPE_LEFTRIGHT 1
 
-static struct Hrtf *LoadHrtf02(const ALubyte *data, size_t datalen, const char *filename)
+struct Hrtf *LoadHrtf02(std::istream &data, const char *filename)
 {
-    struct Hrtf *Hrtf = NULL;
-    ALboolean failed = AL_FALSE;
-    ALuint rate = 0;
-    ALubyte sampleType;
-    ALubyte channelType;
-    ALushort irCount = 0;
-    ALushort irSize = 0;
-    ALubyte fdCount = 0;
-    ALushort distance = 0;
-    ALubyte evCount = 0;
-    const ALubyte *azCount = NULL;
-    std::vector<ALushort> evOffset;
-    std::vector<std::array<ALfloat,2>> coeffs;
-    std::vector<std::array<ALubyte,2>> delays;
-    ALsizei i, j;
-
-    if(datalen < 8)
+    ALuint rate{GetLE_ALuint(data)};
+    ALubyte sampleType{GetLE_ALubyte(data)};
+    ALubyte channelType{GetLE_ALubyte(data)};
+    ALushort irSize{GetLE_ALubyte(data)};
+    ALubyte fdCount{GetLE_ALubyte(data)};
+    if(!data || data.eof())
     {
-        ERR("Unexpected end of %s data (req %d, rem " SZFMT "\n", filename, 8, datalen);
-        return NULL;
+        ERR("Failed reading %s\n", filename);
+        return nullptr;
     }
 
-    rate = GetLE_ALuint(&data, &datalen);
-    sampleType = GetLE_ALubyte(&data, &datalen);
-    channelType = GetLE_ALubyte(&data, &datalen);
-
-    irSize = GetLE_ALubyte(&data, &datalen);
-
-    fdCount = GetLE_ALubyte(&data, &datalen);
-
+    ALboolean failed{AL_FALSE};
     if(sampleType > SAMPLETYPE_S24)
     {
         ERR("Unsupported sample type: %d\n", sampleType);
@@ -789,29 +777,31 @@ static struct Hrtf *LoadHrtf02(const ALubyte *data, size_t datalen, const char *
     if(fdCount != 1)
     {
         ERR("Multiple field-depths not supported: fdCount=%d (%d to %d)\n",
-            evCount, MIN_FD_COUNT, MAX_FD_COUNT);
+            fdCount, MIN_FD_COUNT, MAX_FD_COUNT);
         failed = AL_TRUE;
     }
     if(failed)
-        return NULL;
+        return nullptr;
 
-    for(i = 0;i < fdCount;i++)
+    ALushort distance{};
+    ALubyte evCount{};
+    std::vector<ALubyte> azCount;
+    for(ALsizei i{0};i < fdCount;i++)
     {
-        if(datalen < 3)
+        distance = GetLE_ALushort(data);
+        evCount = GetLE_ALubyte(data);
+        if(!data || data.eof())
         {
-            ERR("Unexpected end of %s data (req %d, rem " SZFMT "\n", filename, 3, datalen);
-            return NULL;
+            ERR("Failed reading %s\n", filename);
+            return nullptr;
         }
 
-        distance = GetLE_ALushort(&data, &datalen);
         if(distance < MIN_FD_DISTANCE || distance > MAX_FD_DISTANCE)
         {
             ERR("Unsupported field distance: distance=%d (%dmm to %dmm)\n",
                 distance, MIN_FD_DISTANCE, MAX_FD_DISTANCE);
             failed = AL_TRUE;
         }
-
-        evCount = GetLE_ALubyte(&data, &datalen);
         if(evCount < MIN_EV_COUNT || evCount > MAX_EV_COUNT)
         {
             ERR("Unsupported elevation count: evCount=%d (%d to %d)\n",
@@ -819,16 +809,17 @@ static struct Hrtf *LoadHrtf02(const ALubyte *data, size_t datalen, const char *
             failed = AL_TRUE;
         }
         if(failed)
-            return NULL;
+            return nullptr;
 
-        if(datalen < evCount)
+        azCount.resize(evCount);
+        data.read(reinterpret_cast<char*>(azCount.data()), evCount);
+        if(!data || data.eof() || data.gcount() < evCount)
         {
-            ERR("Unexpected end of %s data (req %d, rem " SZFMT "\n", filename, evCount, datalen);
-            return NULL;
+            ERR("Failed reading %s\n", filename);
+            return nullptr;
         }
 
-        azCount = Get_ALubytePtr(&data, &datalen, evCount);
-        for(j = 0;j < evCount;j++)
+        for(ALsizei j{0};j < evCount;j++)
         {
             if(azCount[j] < MIN_AZ_COUNT || azCount[j] > MAX_AZ_COUNT)
             {
@@ -837,145 +828,131 @@ static struct Hrtf *LoadHrtf02(const ALubyte *data, size_t datalen, const char *
                 failed = AL_TRUE;
             }
         }
+        if(failed)
+            return nullptr;
     }
-    if(failed)
-        return NULL;
 
-    evOffset.resize(evCount);
-
+    std::vector<ALushort> evOffset(evCount);
     evOffset[0] = 0;
-    irCount = azCount[0];
-    for(i = 1;i < evCount;i++)
+    ALushort irCount{azCount[0]};
+    for(ALsizei i{1};i < evCount;++i)
     {
         evOffset[i] = evOffset[i-1] + azCount[i-1];
         irCount += azCount[i];
     }
 
-    coeffs.resize(irSize*irCount);
-    delays.resize(irCount);
-
-    size_t reqsize = 2*irSize*irCount + irCount;
-    if(datalen < reqsize)
+    std::vector<std::array<ALfloat,2>> coeffs(irSize*irCount);
+    std::vector<std::array<ALubyte,2>> delays(irCount);
+    if(channelType == CHANTYPE_LEFTONLY)
     {
-        ERR("Unexpected end of %s data (req " SZFMT ", rem " SZFMT "\n",
-            filename, reqsize, datalen);
-        failed = AL_TRUE;
-    }
-
-    if(!failed)
-    {
-        if(channelType == CHANTYPE_LEFTONLY)
+        if(sampleType == SAMPLETYPE_S16)
         {
-            if(sampleType == SAMPLETYPE_S16)
-                for(i = 0;i < irCount;i++)
-                {
-                    for(j = 0;j < irSize;j++)
-                        coeffs[i*irSize + j][0] = GetLE_ALshort(&data, &datalen) / 32768.0f;
-                }
-            else if(sampleType == SAMPLETYPE_S24)
-                for(i = 0;i < irCount;i++)
-                {
-                    for(j = 0;j < irSize;j++)
-                        coeffs[i*irSize + j][0] = GetLE_ALint24(&data, &datalen) / 8388608.0f;
-                }
-
-            for(i = 0;i < irCount;i++)
-            {
-                delays[i][0] = GetLE_ALubyte(&data, &datalen);
-                if(delays[i][0] > MAX_HRIR_DELAY)
-                {
-                    ERR("Invalid delays[%d][0]: %d (%d)\n", i, delays[i][0], MAX_HRIR_DELAY);
-                    failed = AL_TRUE;
-                }
-            }
+            for(auto &val : coeffs)
+                val[0] = GetLE_ALshort(data) / 32768.0f;
         }
-        else if(channelType == CHANTYPE_LEFTRIGHT)
+        else if(sampleType == SAMPLETYPE_S24)
         {
-            if(sampleType == SAMPLETYPE_S16)
-                for(i = 0;i < irCount;i++)
-                {
-                    for(j = 0;j < irSize;j++)
-                    {
-                        coeffs[i*irSize + j][0] = GetLE_ALshort(&data, &datalen) / 32768.0f;
-                        coeffs[i*irSize + j][1] = GetLE_ALshort(&data, &datalen) / 32768.0f;
-                    }
-                }
-            else if(sampleType == SAMPLETYPE_S24)
-                for(i = 0;i < irCount;i++)
-                {
-                    for(j = 0;j < irSize;j++)
-                    {
-                        coeffs[i*irSize + j][0] = GetLE_ALint24(&data, &datalen) / 8388608.0f;
-                        coeffs[i*irSize + j][1] = GetLE_ALint24(&data, &datalen) / 8388608.0f;
-                    }
-                }
-
-            for(i = 0;i < irCount;i++)
+            for(auto &val : coeffs)
+                val[0] = GetLE_ALint24(data) / 8388608.0f;
+        }
+        for(auto &val : delays)
+            val[0] = GetLE_ALubyte(data);
+        if(!data || data.eof())
+        {
+            ERR("Failed reading %s\n", filename);
+            return nullptr;
+        }
+        for(ALsizei i{0};i < irCount;++i)
+        {
+            if(delays[i][0] > MAX_HRIR_DELAY)
             {
-                delays[i][0] = GetLE_ALubyte(&data, &datalen);
-                if(delays[i][0] > MAX_HRIR_DELAY)
-                {
-                    ERR("Invalid delays[%d][0]: %d (%d)\n", i, delays[i][0], MAX_HRIR_DELAY);
-                    failed = AL_TRUE;
-                }
-                delays[i][1] = GetLE_ALubyte(&data, &datalen);
-                if(delays[i][1] > MAX_HRIR_DELAY)
-                {
-                    ERR("Invalid delays[%d][1]: %d (%d)\n", i, delays[i][1], MAX_HRIR_DELAY);
-                    failed = AL_TRUE;
-                }
+                ERR("Invalid delays[%d][0]: %d (%d)\n", i, delays[i][0], MAX_HRIR_DELAY);
+                failed = AL_TRUE;
             }
         }
     }
-
-    if(!failed)
+    else if(channelType == CHANTYPE_LEFTRIGHT)
     {
-        if(channelType == CHANTYPE_LEFTONLY)
+        if(sampleType == SAMPLETYPE_S16)
         {
-            /* Mirror the left ear responses to the right ear. */
-            for(i = 0;i < evCount;i++)
+            for(auto &val : coeffs)
             {
-                ALushort evoffset = evOffset[i];
-                ALubyte azcount = azCount[i];
-                for(j = 0;j < azcount;j++)
-                {
-                    ALsizei lidx = evoffset + j;
-                    ALsizei ridx = evoffset + ((azcount-j) % azcount);
-                    ALsizei k;
-
-                    for(k = 0;k < irSize;k++)
-                        coeffs[ridx*irSize + k][1] = coeffs[lidx*irSize + k][0];
-                    delays[ridx][1] = delays[lidx][0];
-                }
+                val[0] = GetLE_ALshort(data) / 32768.0f;
+                val[1] = GetLE_ALshort(data) / 32768.0f;
             }
         }
+        else if(sampleType == SAMPLETYPE_S24)
+        {
+            for(auto &val : coeffs)
+            {
+                val[0] = GetLE_ALint24(data) / 8388608.0f;
+                val[1] = GetLE_ALint24(data) / 8388608.0f;
+            }
+        }
+        for(auto &val : delays)
+        {
+            val[0] = GetLE_ALubyte(data);
+            val[1] = GetLE_ALubyte(data);
+        }
+        if(!data || data.eof())
+        {
+            ERR("Failed reading %s\n", filename);
+            return nullptr;
+        }
 
-        Hrtf = CreateHrtfStore(rate, irSize,
-            (ALfloat)distance / 1000.0f, evCount, irCount, azCount, evOffset.data(),
-            &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
-            &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename
-        );
+        for(ALsizei i{0};i < irCount;++i)
+        {
+            if(delays[i][0] > MAX_HRIR_DELAY)
+            {
+                ERR("Invalid delays[%d][0]: %d (%d)\n", i, delays[i][0], MAX_HRIR_DELAY);
+                failed = AL_TRUE;
+            }
+            if(delays[i][1] > MAX_HRIR_DELAY)
+            {
+                ERR("Invalid delays[%d][1]: %d (%d)\n", i, delays[i][1], MAX_HRIR_DELAY);
+                failed = AL_TRUE;
+            }
+        }
+    }
+    if(failed)
+        return nullptr;
+
+    if(channelType == CHANTYPE_LEFTONLY)
+    {
+        /* Mirror the left ear responses to the right ear. */
+        for(ALsizei i{0};i < evCount;i++)
+        {
+            ALushort evoffset = evOffset[i];
+            ALubyte azcount = azCount[i];
+            for(ALsizei j{0};j < azcount;j++)
+            {
+                ALsizei lidx = evoffset + j;
+                ALsizei ridx = evoffset + ((azcount-j) % azcount);
+
+                for(ALsizei k{0};k < irSize;k++)
+                    coeffs[ridx*irSize + k][1] = coeffs[lidx*irSize + k][0];
+                delays[ridx][1] = delays[lidx][0];
+            }
+        }
     }
 
-    return Hrtf;
+    return CreateHrtfStore(rate, irSize,
+        (ALfloat)distance / 1000.0f, evCount, irCount, azCount.data(), evOffset.data(),
+        &reinterpret_cast<ALfloat(&)[2]>(coeffs[0]),
+        &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename
+    );
 }
 
 
-static void AddFileEntry(vector_EnumeratedHrtf *list, const_al_string filename)
+void AddFileEntry(vector_EnumeratedHrtf *list, const_al_string filename)
 {
-    EnumeratedHrtf entry = { AL_STRING_INIT_STATIC(), NULL };
-    HrtfEntry *loaded_entry;
-    const EnumeratedHrtf *iter;
-    const char *name;
-    const char *ext;
-    int i;
-
     /* Check if this file has already been loaded globally. */
-    loaded_entry = LoadedHrtfs;
+    HrtfEntry *loaded_entry{LoadedHrtfs};
     while(loaded_entry)
     {
         if(alstr_cmp_cstr(filename, loaded_entry->filename) == 0)
         {
+            const EnumeratedHrtf *iter;
             /* Check if this entry has already been added to the list. */
 #define MATCH_ENTRY(i) (loaded_entry == (i)->hrtf)
             VECTOR_FIND_IF(iter, const EnumeratedHrtf, *list, MATCH_ENTRY);
@@ -999,21 +976,23 @@ static void AddFileEntry(vector_EnumeratedHrtf *list, const_al_string filename)
             FAM_SIZE(struct HrtfEntry, filename, alstr_length(filename)+1)
         ));
         loaded_entry->next = LoadedHrtfs;
-        loaded_entry->handle = NULL;
+        loaded_entry->handle = nullptr;
         strcpy(loaded_entry->filename, alstr_get_cstr(filename));
         LoadedHrtfs = loaded_entry;
     }
 
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
      * format update). */
-    name = strrchr(alstr_get_cstr(filename), '/');
+    const char *name{strrchr(alstr_get_cstr(filename), '/')};
     if(!name) name = strrchr(alstr_get_cstr(filename), '\\');
     if(!name) name = alstr_get_cstr(filename);
     else ++name;
 
-    ext = strrchr(name, '.');
+    const char *ext{strrchr(name, '.')};
 
-    i = 0;
+    EnumeratedHrtf entry = { AL_STRING_INIT_STATIC(), nullptr };
+    const EnumeratedHrtf *iter{};
+    int i{0};
     do {
         if(!ext)
             alstr_copy_cstr(&entry.name, name);
@@ -1033,29 +1012,21 @@ static void AddFileEntry(vector_EnumeratedHrtf *list, const_al_string filename)
     } while(iter != VECTOR_END(*list));
     entry.hrtf = loaded_entry;
 
-    TRACE("Adding entry \"%s\" from file \"%s\"\n", alstr_get_cstr(entry.name),
-          alstr_get_cstr(filename));
+    TRACE("Adding file entry \"%s\"\n", alstr_get_cstr(entry.name));
     VECTOR_PUSH_BACK(*list, entry);
 }
 
 /* Unfortunate that we have to duplicate AddFileEntry to take a memory buffer
  * for input instead of opening the given filename.
  */
-static void AddBuiltInEntry(vector_EnumeratedHrtf *list, const_al_string filename, ALuint residx)
+void AddBuiltInEntry(vector_EnumeratedHrtf *list, const_al_string filename, ALuint residx)
 {
-    EnumeratedHrtf entry = { AL_STRING_INIT_STATIC(), NULL };
-    HrtfEntry *loaded_entry;
-    struct Hrtf *hrtf = NULL;
-    const EnumeratedHrtf *iter;
-    const char *name;
-    const char *ext;
-    int i;
-
-    loaded_entry = LoadedHrtfs;
+    HrtfEntry *loaded_entry{LoadedHrtfs};
     while(loaded_entry)
     {
         if(alstr_cmp_cstr(filename, loaded_entry->filename) == 0)
         {
+            const EnumeratedHrtf *iter{};
 #define MATCH_ENTRY(i) (loaded_entry == (i)->hrtf)
             VECTOR_FIND_IF(iter, const EnumeratedHrtf, *list, MATCH_ENTRY);
 #undef MATCH_ENTRY
@@ -1080,7 +1051,7 @@ static void AddBuiltInEntry(vector_EnumeratedHrtf *list, const_al_string filenam
             FAM_SIZE(struct HrtfEntry, filename, namelen)
         ));
         loaded_entry->next = LoadedHrtfs;
-        loaded_entry->handle = hrtf;
+        loaded_entry->handle = nullptr;
         snprintf(loaded_entry->filename, namelen,  "!%u_%s",
                  residx, alstr_get_cstr(filename));
         LoadedHrtfs = loaded_entry;
@@ -1088,14 +1059,16 @@ static void AddBuiltInEntry(vector_EnumeratedHrtf *list, const_al_string filenam
 
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
      * format update). */
-    name = strrchr(alstr_get_cstr(filename), '/');
+    const char *name{strrchr(alstr_get_cstr(filename), '/')};
     if(!name) name = strrchr(alstr_get_cstr(filename), '\\');
     if(!name) name = alstr_get_cstr(filename);
     else ++name;
 
-    ext = strrchr(name, '.');
+    const char *ext{strrchr(name, '.')};
 
-    i = 0;
+    EnumeratedHrtf entry{AL_STRING_INIT_STATIC(), nullptr};
+    const EnumeratedHrtf *iter{};
+    int i{0};
     do {
         if(!ext)
             alstr_copy_cstr(&entry.name, name);
@@ -1123,44 +1096,36 @@ static void AddBuiltInEntry(vector_EnumeratedHrtf *list, const_al_string filenam
 #define IDR_DEFAULT_44100_MHR 1
 #define IDR_DEFAULT_48000_MHR 2
 
+struct ResData { const char *data; size_t size; };
 #ifndef ALSOFT_EMBED_HRTF_DATA
 
-static const ALubyte *GetResource(int UNUSED(name), size_t *size)
-{
-    *size = 0;
-    return NULL;
-}
+ResData GetResource(int UNUSED(name))
+{ return {nullptr, 0u}; }
 
 #else
 
 #include "default-44100.mhr.h"
 #include "default-48000.mhr.h"
 
-static const ALubyte *GetResource(int name, size_t *size)
+ResData GetResource(int name)
 {
     if(name == IDR_DEFAULT_44100_MHR)
-    {
-        *size = sizeof(hrtf_default_44100);
-        return hrtf_default_44100;
-    }
+        return {reinterpret_cast<const char*>(hrtf_default_44100), sizeof(hrtf_default_44100)};
     if(name == IDR_DEFAULT_48000_MHR)
-    {
-        *size = sizeof(hrtf_default_48000);
-        return hrtf_default_48000;
-    }
-    *size = 0;
-    return NULL;
+        return {reinterpret_cast<const char*>(hrtf_default_48000), sizeof(hrtf_default_48000)};
+    return {nullptr, 0u};
 }
 #endif
 
+} // namespace
+
+
 vector_EnumeratedHrtf EnumerateHrtf(const_al_string devname)
 {
-    vector_EnumeratedHrtf list = VECTOR_INIT_STATIC();
-    const char *defaulthrtf = "";
-    const char *pathlist = "";
-    bool usedefaults = true;
-
-    if(ConfigValueStr(alstr_get_cstr(devname), NULL, "hrtf-paths", &pathlist))
+    vector_EnumeratedHrtf list{VECTOR_INIT_STATIC()};
+    bool usedefaults{true};
+    const char *pathlist{""};
+    if(ConfigValueStr(alstr_get_cstr(devname), nullptr, "hrtf-paths", &pathlist))
     {
         al_string pname = AL_STRING_INIT_STATIC();
         while(pathlist && *pathlist)
@@ -1185,13 +1150,10 @@ vector_EnumeratedHrtf EnumerateHrtf(const_al_string devname)
                 --end;
             if(end != pathlist)
             {
-                vector_al_string flist;
-                size_t i;
-
                 alstr_copy_range(&pname, pathlist, end);
 
-                flist = SearchDataFiles(".mhr", alstr_get_cstr(pname));
-                for(i = 0;i < VECTOR_SIZE(flist);i++)
+                vector_al_string flist{SearchDataFiles(".mhr", alstr_get_cstr(pname))};
+                for(size_t i{0};i < VECTOR_SIZE(flist);i++)
                     AddFileEntry(&list, VECTOR_ELEM(flist, i));
                 VECTOR_FOR_EACH(al_string, flist, alstr_reset);
                 VECTOR_DEINIT(flist);
@@ -1202,31 +1164,27 @@ vector_EnumeratedHrtf EnumerateHrtf(const_al_string devname)
 
         alstr_reset(&pname);
     }
-    else if(ConfigValueExists(alstr_get_cstr(devname), NULL, "hrtf_tables"))
+    else if(ConfigValueExists(alstr_get_cstr(devname), nullptr, "hrtf_tables"))
         ERR("The hrtf_tables option is deprecated, please use hrtf-paths instead.\n");
 
     if(usedefaults)
     {
-        al_string ename = AL_STRING_INIT_STATIC();
-        vector_al_string flist;
-        const ALubyte *rdata;
-        size_t rsize, i;
-
-        flist = SearchDataFiles(".mhr", "openal/hrtf");
-        for(i = 0;i < VECTOR_SIZE(flist);i++)
+        vector_al_string flist{SearchDataFiles(".mhr", "openal/hrtf")};
+        for(size_t i{0};i < VECTOR_SIZE(flist);i++)
             AddFileEntry(&list, VECTOR_ELEM(flist, i));
         VECTOR_FOR_EACH(al_string, flist, alstr_reset);
         VECTOR_DEINIT(flist);
 
-        rdata = GetResource(IDR_DEFAULT_44100_MHR, &rsize);
-        if(rdata != NULL && rsize > 0)
+        al_string ename = AL_STRING_INIT_STATIC();
+        ResData res{GetResource(IDR_DEFAULT_44100_MHR)};
+        if(res.data != nullptr && res.size > 0)
         {
             alstr_copy_cstr(&ename, "Built-In 44100hz");
             AddBuiltInEntry(&list, ename, IDR_DEFAULT_44100_MHR);
         }
 
-        rdata = GetResource(IDR_DEFAULT_48000_MHR, &rsize);
-        if(rdata != NULL && rsize > 0)
+        res = GetResource(IDR_DEFAULT_48000_MHR);
+        if(res.data != nullptr && res.size > 0)
         {
             alstr_copy_cstr(&ename, "Built-In 48000hz");
             AddBuiltInEntry(&list, ename, IDR_DEFAULT_48000_MHR);
@@ -1234,9 +1192,10 @@ vector_EnumeratedHrtf EnumerateHrtf(const_al_string devname)
         alstr_reset(&ename);
     }
 
-    if(VECTOR_SIZE(list) > 1 && ConfigValueStr(alstr_get_cstr(devname), NULL, "default-hrtf", &defaulthrtf))
+    const char *defaulthrtf{""};
+    if(VECTOR_SIZE(list) > 1 && ConfigValueStr(alstr_get_cstr(devname), nullptr, "default-hrtf", &defaulthrtf))
     {
-        const EnumeratedHrtf *iter;
+        const EnumeratedHrtf *iter{};
         /* Find the preferred HRTF and move it to the front of the list. */
 #define FIND_ENTRY(i)  (alstr_cmp_cstr((i)->name, defaulthrtf) == 0)
         VECTOR_FIND_IF(iter, const EnumeratedHrtf, list, FIND_ENTRY);
@@ -1245,7 +1204,7 @@ vector_EnumeratedHrtf EnumerateHrtf(const_al_string devname)
             WARN("Failed to find default HRTF \"%s\"\n", defaulthrtf);
         else if(iter != VECTOR_BEGIN(list))
         {
-            EnumeratedHrtf entry = *iter;
+            EnumeratedHrtf entry{*iter};
             memmove(&VECTOR_ELEM(list,1), &VECTOR_ELEM(list,0),
                     (iter-VECTOR_BEGIN(list))*sizeof(EnumeratedHrtf));
             VECTOR_ELEM(list,0) = entry;
@@ -1265,95 +1224,80 @@ void FreeHrtfList(vector_EnumeratedHrtf *list)
 
 struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry)
 {
-    struct Hrtf *hrtf = NULL;
-    struct FileMapping fmap;
-    const ALubyte *rdata;
-    const char *name;
-    ALuint residx;
-    size_t rsize;
-    char ch;
-
-    while(ATOMIC_FLAG_TEST_AND_SET(&LoadedHrtfLock, almemory_order_seq_cst))
-        althrd_yield();
+    std::lock_guard<std::mutex> _{LoadedHrtfLock};
 
     if(entry->handle)
     {
-        hrtf = entry->handle;
+        Hrtf *hrtf{entry->handle};
         Hrtf_IncRef(hrtf);
-        goto done;
+        return hrtf;
     }
 
-    fmap.ptr = NULL;
-    fmap.len = 0;
+    std::unique_ptr<std::istream> stream;
+    const char *name{""};
+    ALuint residx{};
+    char ch{};
     if(sscanf(entry->filename, "!%u%c", &residx, &ch) == 2 && ch == '_')
     {
         name = strchr(entry->filename, ch)+1;
 
         TRACE("Loading %s...\n", name);
-        rdata = GetResource(residx, &rsize);
-        if(rdata == NULL || rsize == 0)
+        ResData res{GetResource(residx)};
+        if(!res.data || res.size == 0)
         {
             ERR("Could not get resource %u, %s\n", residx, name);
-            goto done;
+            return nullptr;
         }
+        stream.reset(new idstream{res.data, res.data+res.size});
     }
     else
     {
         name = entry->filename;
 
         TRACE("Loading %s...\n", entry->filename);
-        fmap = MapFileToMem(entry->filename);
-        if(fmap.ptr == NULL)
+        std::unique_ptr<al::ifstream> fstr{new al::ifstream{entry->filename, std::ios::binary}};
+        if(!fstr->is_open())
         {
             ERR("Could not open %s\n", entry->filename);
-            goto done;
+            return nullptr;
         }
-
-        rdata = static_cast<const ALubyte*>(fmap.ptr);
-        rsize = fmap.len;
+        stream = std::move(fstr);
     }
 
-    if(rsize < sizeof(magicMarker02))
-        ERR("%s data is too short (" SZFMT " bytes)\n", name, rsize);
-    else if(memcmp(rdata, magicMarker02, sizeof(magicMarker02)) == 0)
+    Hrtf *hrtf{};
+    char magic[sizeof(magicMarker02)];
+    stream->read(magic, sizeof(magic));
+    if(stream->gcount() < static_cast<std::streamsize>(sizeof(magicMarker02)))
+        ERR("%s data is too short (" SZFMT " bytes)\n", name, stream->gcount());
+    else if(memcmp(magic, magicMarker02, sizeof(magicMarker02)) == 0)
     {
         TRACE("Detected data set format v2\n");
-        hrtf = LoadHrtf02(rdata+sizeof(magicMarker02),
-            rsize-sizeof(magicMarker02), name
-        );
+        hrtf = LoadHrtf02(*stream, name);
     }
-    else if(memcmp(rdata, magicMarker01, sizeof(magicMarker01)) == 0)
+    else if(memcmp(magic, magicMarker01, sizeof(magicMarker01)) == 0)
     {
         TRACE("Detected data set format v1\n");
-        hrtf = LoadHrtf01(rdata+sizeof(magicMarker01),
-            rsize-sizeof(magicMarker01), name
-        );
+        hrtf = LoadHrtf01(*stream, name);
     }
-    else if(memcmp(rdata, magicMarker00, sizeof(magicMarker00)) == 0)
+    else if(memcmp(magic, magicMarker00, sizeof(magicMarker00)) == 0)
     {
         TRACE("Detected data set format v0\n");
-        hrtf = LoadHrtf00(rdata+sizeof(magicMarker00),
-            rsize-sizeof(magicMarker00), name
-        );
+        hrtf = LoadHrtf00(*stream, name);
     }
     else
-        ERR("Invalid header in %s: \"%.8s\"\n", name, (const char*)rdata);
-    if(fmap.ptr)
-        UnmapFileMem(&fmap);
+        ERR("Invalid header in %s: \"%.8s\"\n", name, magic);
+    stream.reset();
 
     if(!hrtf)
-    {
         ERR("Failed to load %s\n", name);
-        goto done;
+    else
+    {
+        entry->handle = hrtf;
+        Hrtf_IncRef(hrtf);
+        TRACE("Loaded HRTF support for format: %s %uhz\n",
+              DevFmtChannelsString(DevFmtStereo), hrtf->sampleRate);
     }
-    entry->handle = hrtf;
-    Hrtf_IncRef(hrtf);
 
-    TRACE("Loaded HRTF support for format: %s %uhz\n",
-          DevFmtChannelsString(DevFmtStereo), hrtf->sampleRate);
-
-done:
-    ATOMIC_FLAG_CLEAR(&LoadedHrtfLock, almemory_order_seq_cst);
     return hrtf;
 }
 
@@ -1366,16 +1310,14 @@ void Hrtf_IncRef(struct Hrtf *hrtf)
 
 void Hrtf_DecRef(struct Hrtf *hrtf)
 {
-    struct HrtfEntry *Hrtf;
     uint ref = DecrementRef(&hrtf->ref);
     TRACEREF("%p decreasing refcount to %u\n", hrtf, ref);
     if(ref == 0)
     {
-        while(ATOMIC_FLAG_TEST_AND_SET(&LoadedHrtfLock, almemory_order_seq_cst))
-            althrd_yield();
+        std::lock_guard<std::mutex> _{LoadedHrtfLock};
 
-        Hrtf = LoadedHrtfs;
-        while(Hrtf != NULL)
+        struct HrtfEntry *Hrtf{LoadedHrtfs};
+        while(Hrtf != nullptr)
         {
             /* Need to double-check that it's still unused, as another device
              * could've reacquired this HRTF after its reference went to 0 and
@@ -1384,25 +1326,23 @@ void Hrtf_DecRef(struct Hrtf *hrtf)
             if(hrtf == Hrtf->handle && ReadRef(&hrtf->ref) == 0)
             {
                 al_free(Hrtf->handle);
-                Hrtf->handle = NULL;
+                Hrtf->handle = nullptr;
                 TRACE("Unloaded unused HRTF %s\n", Hrtf->filename);
             }
             Hrtf = Hrtf->next;
         }
-
-        ATOMIC_FLAG_CLEAR(&LoadedHrtfLock, almemory_order_seq_cst);
     }
 }
 
 
 void FreeHrtfs(void)
 {
-    struct HrtfEntry *Hrtf = LoadedHrtfs;
-    LoadedHrtfs = NULL;
+    struct HrtfEntry *Hrtf{LoadedHrtfs};
+    LoadedHrtfs = nullptr;
 
-    while(Hrtf != NULL)
+    while(Hrtf != nullptr)
     {
-        struct HrtfEntry *next = Hrtf->next;
+        struct HrtfEntry *next{Hrtf->next};
         al_free(Hrtf->handle);
         al_free(Hrtf);
         Hrtf = next;

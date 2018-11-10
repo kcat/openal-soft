@@ -918,7 +918,22 @@ static void alc_initconfig(void)
     str = getenv("ALSOFT_LOGFILE");
     if(str && str[0])
     {
-        FILE *logfile = al_fopen(str, "wt");
+#ifdef _WIN32
+        FILE *logfile = NULL;
+        int len = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
+        if(len > 0)
+        {
+            WCHAR *wname = calloc(sizeof(WCHAR), len);
+            if(wname)
+            {
+                MultiByteToWideChar(CP_UTF8, 0, str, -1, wname, len);
+                logfile = _wfopen(wname, L"wt");
+                free(wname);
+            }
+        }
+#else
+        FILE *logfile = fopen(str, "wt");
+#endif
         if(logfile) LogFile = logfile;
         else ERR("Failed to open log file '%s'\n", str);
     }

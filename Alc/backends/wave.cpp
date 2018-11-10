@@ -223,10 +223,7 @@ static int ALCwaveBackend_mixerProc(void *ptr)
 
 static ALCenum ALCwaveBackend_open(ALCwaveBackend *self, const ALCchar *name)
 {
-    ALCdevice *device;
-    const char *fname;
-
-    fname = GetConfigValue(nullptr, "wave", "file", "");
+    const char *fname{GetConfigValue(nullptr, "wave", "file", "")};
     if(!fname[0]) return ALC_INVALID_VALUE;
 
     if(!name)
@@ -234,14 +231,21 @@ static ALCenum ALCwaveBackend_open(ALCwaveBackend *self, const ALCchar *name)
     else if(strcmp(name, waveDevice) != 0)
         return ALC_INVALID_VALUE;
 
-    self->mFile = al_fopen(fname, "wb");
+#ifdef _WIN32
+    {
+        std::wstring wname = utf8_to_wstr(fname);
+        self->mFile = _wfopen(wname.c_str(), L"wb");
+    }
+#else
+    self->mFile = fopen(fname, "wb");
+#endif
     if(!self->mFile)
     {
         ERR("Could not open file '%s': %s\n", fname, strerror(errno));
         return ALC_INVALID_VALUE;
     }
 
-    device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
     alstr_copy_cstr(&device->DeviceName, name);
 
     return ALC_NO_ERROR;

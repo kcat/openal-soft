@@ -12,9 +12,6 @@ extern "C" {
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-/* Opens a file with standard I/O. The filename is expected to be UTF-8. */
-FILE *al_fopen(const char *fname, const char *mode);
-
 #define HAVE_DYNLOAD 1
 
 #ifdef __cplusplus
@@ -217,8 +214,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 #else
-
-#define al_fopen fopen
 
 #if defined(HAVE_DLFCN_H)
 #define HAVE_DYNLOAD 1

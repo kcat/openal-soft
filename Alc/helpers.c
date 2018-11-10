@@ -429,26 +429,6 @@ void *GetSymbol(void *handle, const char *name)
     return ret;
 }
 
-FILE *al_fopen(const char *fname, const char *mode)
-{
-    WCHAR *wname=NULL, *wmode=NULL;
-    FILE *file = NULL;
-
-    wname = FromUTF8(fname);
-    wmode = FromUTF8(mode);
-    if(!wname)
-        ERR("Failed to convert UTF-8 filename: \"%s\"\n", fname);
-    else if(!wmode)
-        ERR("Failed to convert UTF-8 mode: \"%s\"\n", mode);
-    else
-        file = _wfopen(wname, wmode);
-
-    free(wname);
-    free(wmode);
-
-    return file;
-}
-
 
 void al_print(const char *type, const char *func, const char *fmt, ...)
 {

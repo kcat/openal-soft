@@ -614,68 +614,6 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
     return results;
 }
 
-
-struct FileMapping MapFileToMem(const char *fname)
-{
-    struct FileMapping ret = { NULL, NULL, NULL, 0 };
-    MEMORY_BASIC_INFORMATION meminfo;
-    HANDLE file, fmap;
-    WCHAR *wname;
-    void *ptr;
-
-    wname = FromUTF8(fname);
-
-    file = CreateFileW(wname, GENERIC_READ, FILE_SHARE_READ, NULL,
-                       OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if(file == INVALID_HANDLE_VALUE)
-    {
-        ERR("Failed to open %s: %lu\n", fname, GetLastError());
-        free(wname);
-        return ret;
-    }
-    free(wname);
-    wname = NULL;
-
-    fmap = CreateFileMappingW(file, NULL, PAGE_READONLY, 0, 0, NULL);
-    if(!fmap)
-    {
-        ERR("Failed to create map for %s: %lu\n", fname, GetLastError());
-        CloseHandle(file);
-        return ret;
-    }
-
-    ptr = MapViewOfFile(fmap, FILE_MAP_READ, 0, 0, 0);
-    if(!ptr)
-    {
-        ERR("Failed to map %s: %lu\n", fname, GetLastError());
-        CloseHandle(fmap);
-        CloseHandle(file);
-        return ret;
-    }
-
-    if(VirtualQuery(ptr, &meminfo, sizeof(meminfo)) != sizeof(meminfo))
-    {
-        ERR("Failed to get map size for %s: %lu\n", fname, GetLastError());
-        UnmapViewOfFile(ptr);
-        CloseHandle(fmap);
-        CloseHandle(file);
-        return ret;
-    }
-
-    ret.file = file;
-    ret.fmap = fmap;
-    ret.ptr = ptr;
-    ret.len = meminfo.RegionSize;
-    return ret;
-}
-
-void UnmapFileMem(const struct FileMapping *mapping)
-{
-    UnmapViewOfFile(mapping->ptr);
-    CloseHandle(mapping->fmap);
-    CloseHandle(mapping->file);
-}
-
 #else
 
 void GetProcBinary(al_string *path, al_string *fname)
@@ -957,47 +895,6 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
     ATOMIC_STORE_SEQ(&search_lock, 0);
 
     return results;
-}
-
-
-struct FileMapping MapFileToMem(const char *fname)
-{
-    struct FileMapping ret = { -1, NULL, 0 };
-    struct stat sbuf;
-    void *ptr;
-    int fd;
-
-    fd = open(fname, O_RDONLY, 0);
-    if(fd == -1)
-    {
-        ERR("Failed to open %s: (%d) %s\n", fname, errno, strerror(errno));
-        return ret;
-    }
-    if(fstat(fd, &sbuf) == -1)
-    {
-        ERR("Failed to stat %s: (%d) %s\n", fname, errno, strerror(errno));
-        close(fd);
-        return ret;
-    }
-
-    ptr = mmap(NULL, sbuf.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    if(ptr == MAP_FAILED)
-    {
-        ERR("Failed to map %s: (%d) %s\n", fname, errno, strerror(errno));
-        close(fd);
-        return ret;
-    }
-
-    ret.fd = fd;
-    ret.ptr = ptr;
-    ret.len = sbuf.st_size;
-    return ret;
-}
-
-void UnmapFileMem(const struct FileMapping *mapping)
-{
-    munmap(mapping->ptr, mapping->len);
-    close(mapping->fd);
 }
 
 #endif

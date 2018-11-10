@@ -147,17 +147,25 @@ class filebuf final : public std::streambuf {
     }
 
 public:
-    bool open(const wchar_t *filename)
+    bool open(const wchar_t *filename, std::ios_base::openmode mode)
     {
-        mFile = CreateFileW(filename, GENERIC_READ, FILE_SHARE_READ, nullptr,
-                            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-        if(mFile == INVALID_HANDLE_VALUE) return false;
+        if((mode&std::ios_base::out) || !(mode&std::ios_base::in))
+            return false;
+        HANDLE f{CreateFileW(filename, GENERIC_READ, FILE_SHARE_READ, nullptr,
+                             OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr)};
+        if(f == INVALID_HANDLE_VALUE) return false;
+
+        if(mFile != INVALID_HANDLE_VALUE)
+            CloseHandle(mFile);
+        mFile = f;
+
+        setg(nullptr, nullptr, nullptr);
         return true;
     }
-    bool open(const char *filename)
+    bool open(const char *filename, std::ios_base::openmode mode)
     {
         std::wstring wname{utf8_to_wstr(filename)};
-        return open(wname.c_str());
+        return open(wname.c_str(), mode);
     }
 
     bool is_open() const noexcept { return mFile != INVALID_HANDLE_VALUE; }
@@ -176,22 +184,30 @@ class ifstream final : public std::istream {
     filebuf mStreamBuf;
 
 public:
-    ifstream(const std::wstring &filename) : ifstream{filename.c_str()} { }
-    ifstream(const wchar_t *filename) : std::istream{nullptr}
+    ifstream(const std::wstring &filename, std::ios_base::openmode mode = std::ios_base::in)
+      : ifstream(filename.c_str(), mode) { }
+    ifstream(const wchar_t *filename, std::ios_base::openmode mode = std::ios_base::in)
+      : std::istream{nullptr}
     {
         init(&mStreamBuf);
 
         // Set the failbit if the file failed to open.
-        if(!mStreamBuf.open(filename)) clear(failbit);
+        if((mode&std::ios_base::out) ||
+           !mStreamBuf.open(filename, mode|std::ios_base::in))
+            clear(failbit);
     }
 
-    ifstream(const std::string &filename) : ifstream{filename.c_str()} { }
-    ifstream(const char *filename) : std::istream{nullptr}
+    ifstream(const std::string &filename, std::ios_base::openmode mode = std::ios_base::in)
+      : ifstream(filename.c_str(), mode) { }
+    ifstream(const char *filename, std::ios_base::openmode mode = std::ios_base::in)
+      : std::istream{nullptr}
     {
         init(&mStreamBuf);
 
         // Set the failbit if the file failed to open.
-        if(!mStreamBuf.open(filename)) clear(failbit);
+        if((mode&std::ios_base::out) ||
+           !mStreamBuf.open(filename, mode|std::ios_base::in))
+            clear(failbit);
     }
 
     bool is_open() const noexcept { return mStreamBuf.is_open(); }

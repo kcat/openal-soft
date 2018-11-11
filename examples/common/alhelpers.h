@@ -18,6 +18,17 @@ const char *FormatName(ALenum type);
 int InitAL(char ***argv, int *argc);
 void CloseAL(void);
 
+/* Cross-platform timeget and sleep functions. */
+#ifndef HAVE_STRUCT_TIMESPEC
+struct timespec {
+    time_t tv_sec;
+    long tv_nsec;
+};
+#endif
+#define AL_TIME_UTC 1
+int altimespec_get(struct timespec *ts, int base);
+void al_nssleep(unsigned long nsec);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

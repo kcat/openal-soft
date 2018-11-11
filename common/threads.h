@@ -34,20 +34,10 @@ typedef int (*althrd_start_t)(void*);
 typedef void (*altss_dtor_t)(void*);
 
 
-#define AL_TIME_UTC 1
-
-
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-
-#ifndef HAVE_STRUCT_TIMESPEC
-struct timespec {
-    time_t tv_sec;
-    long tv_nsec;
-};
-#endif
 
 typedef DWORD althrd_t;
 typedef CRITICAL_SECTION almtx_t;
@@ -62,7 +52,6 @@ typedef LONG alonce_flag;
 
 #define AL_ONCE_FLAG_INIT 0
 
-int althrd_sleep(const struct timespec *ts, struct timespec *rem);
 void alcall_once(alonce_flag *once, void (*callback)(void));
 
 void althrd_deinit(void);
@@ -171,17 +160,6 @@ inline void althrd_yield(void)
     sched_yield();
 }
 
-inline int althrd_sleep(const struct timespec *ts, struct timespec *rem)
-{
-    int ret = nanosleep(ts, rem);
-    if(ret != 0)
-    {
-        ret = ((errno==EINTR) ? -1 : -2);
-        errno = 0;
-    }
-    return ret;
-}
-
 
 inline int almtx_lock(almtx_t *mtx)
 {
@@ -256,10 +234,6 @@ int alsem_trywait(alsem_t *sem);
 
 int altss_create(altss_t *tss_id, altss_dtor_t callback);
 void altss_delete(altss_t tss_id);
-
-int altimespec_get(struct timespec *ts, int base);
-
-void al_nssleep(unsigned long nsec);
 
 #ifdef __cplusplus
 } // extern "C"

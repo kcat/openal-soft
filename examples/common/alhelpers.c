@@ -114,3 +114,72 @@ const char *FormatName(ALenum format)
     }
     return "Unknown Format";
 }
+
+
+#ifdef _WIN32
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <mmsystem.h>
+
+int altimespec_get(struct timespec *ts, int base)
+{
+    if(base == AL_TIME_UTC)
+    {
+        union {
+            FILETIME ftime;
+            ULARGE_INTEGER ulint;
+        } systime;
+        GetSystemTimeAsFileTime(&systime.ftime);
+        /* FILETIME is in 100-nanosecond units, or 1/10th of a microsecond. */
+        ts->tv_sec = systime.ulint.QuadPart/10000000;
+        ts->tv_nsec = (systime.ulint.QuadPart%10000000) * 100;
+        return base;
+    }
+
+    return 0;
+}
+
+void al_nssleep(unsigned long nsec)
+{
+    Sleep(nsec / 1000000);
+}
+
+#else
+
+#include <sys/time.h>
+#include <time.h>
+
+int altimespec_get(struct timespec *ts, int base)
+{
+    if(base == AL_TIME_UTC)
+    {
+        int ret;
+#if _POSIX_TIMERS > 0
+        ret = clock_gettime(CLOCK_REALTIME, ts);
+        if(ret == 0) return base;
+#else /* _POSIX_TIMERS > 0 */
+        struct timeval tv;
+        ret = gettimeofday(&tv, NULL);
+        if(ret == 0)
+        {
+            ts->tv_sec = tv.tv_sec;
+            ts->tv_nsec = tv.tv_usec * 1000;
+            return base;
+        }
+#endif
+    }
+
+    return 0;
+}
+
+void al_nssleep(unsigned long nsec)
+{
+    struct timespec ts, rem;
+    ts.tv_sec = nsec / 1000000000ul;
+    ts.tv_nsec = nsec % 1000000000ul;
+    while(nanosleep(&ts, &rem) == -1 && errno == EINTR)
+        ts = rem;
+}
+
+#endif

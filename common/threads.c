@@ -174,21 +174,6 @@ int althrd_join(althrd_t thr, int *res)
     return althrd_success;
 }
 
-int althrd_sleep(const struct timespec *ts, struct timespec* UNUSED(rem))
-{
-    DWORD msec;
-
-    if(ts->tv_sec < 0 || ts->tv_sec >= (0x7fffffff / 1000) ||
-       ts->tv_nsec < 0 || ts->tv_nsec >= 1000000000)
-        return -2;
-
-    msec  = (DWORD)(ts->tv_sec * 1000);
-    msec += (DWORD)((ts->tv_nsec+999999) / 1000000);
-    Sleep(msec);
-
-    return 0;
-}
-
 
 int almtx_init(almtx_t *mtx, int type)
 {
@@ -381,27 +366,6 @@ void altss_delete(altss_t tss_id)
 }
 
 
-int altimespec_get(struct timespec *ts, int base)
-{
-    static_assert(sizeof(FILETIME) == sizeof(ULARGE_INTEGER),
-                  "Size of FILETIME does not match ULARGE_INTEGER");
-    if(base == AL_TIME_UTC)
-    {
-        union {
-            FILETIME ftime;
-            ULARGE_INTEGER ulint;
-        } systime;
-        GetSystemTimeAsFileTime(&systime.ftime);
-        /* FILETIME is in 100-nanosecond units, or 1/10th of a microsecond. */
-        ts->tv_sec = systime.ulint.QuadPart/10000000;
-        ts->tv_nsec = (systime.ulint.QuadPart%10000000) * 100;
-        return base;
-    }
-
-    return 0;
-}
-
-
 void alcall_once(alonce_flag *once, void (*callback)(void))
 {
     LONG ret;
@@ -447,7 +411,6 @@ void althrd_thread_detach(void)
 #endif
 
 
-extern inline int althrd_sleep(const struct timespec *ts, struct timespec *rem);
 extern inline void alcall_once(alonce_flag *once, void (*callback)(void));
 
 extern inline void althrd_deinit(void);
@@ -713,39 +676,4 @@ void altss_delete(altss_t tss_id)
     pthread_key_delete(tss_id);
 }
 
-
-int altimespec_get(struct timespec *ts, int base)
-{
-    if(base == AL_TIME_UTC)
-    {
-        int ret;
-#if _POSIX_TIMERS > 0
-        ret = clock_gettime(CLOCK_REALTIME, ts);
-        if(ret == 0) return base;
-#else /* _POSIX_TIMERS > 0 */
-        struct timeval tv;
-        ret = gettimeofday(&tv, NULL);
-        if(ret == 0)
-        {
-            ts->tv_sec = tv.tv_sec;
-            ts->tv_nsec = tv.tv_usec * 1000;
-            return base;
-        }
 #endif
-    }
-
-    return 0;
-}
-
-#endif
-
-
-void al_nssleep(unsigned long nsec)
-{
-    struct timespec ts, rem;
-    ts.tv_sec = nsec / 1000000000ul;
-    ts.tv_nsec = nsec % 1000000000ul;
-
-    while(althrd_sleep(&ts, &rem) == -1)
-        ts = rem;
-}

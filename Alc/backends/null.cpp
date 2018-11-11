@@ -30,7 +30,6 @@
 
 #include "alMain.h"
 #include "alu.h"
-#include "threads.h"
 #include "compat.h"
 
 #include "backends/base.h"
@@ -48,10 +47,10 @@ constexpr ALCchar nullDevice[] = "No Output";
 
 struct ALCnullBackend final : public ALCbackend {
     ATOMIC(int) killNow;
-    althrd_t thread;
+    std::thread thread;
 };
 
-static int ALCnullBackend_mixerProc(void *ptr);
+static int ALCnullBackend_mixerProc(ALCnullBackend *self);
 
 static void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device);
 static void ALCnullBackend_Destruct(ALCnullBackend *self);
@@ -85,9 +84,8 @@ static void ALCnullBackend_Destruct(ALCnullBackend *self)
 }
 
 
-static int ALCnullBackend_mixerProc(void *ptr)
+static int ALCnullBackend_mixerProc(ALCnullBackend *self)
 {
-    ALCnullBackend *self = (ALCnullBackend*)ptr;
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     const milliseconds restTime{device->UpdateSize*1000/device->Frequency / 2};
 
@@ -156,19 +154,25 @@ static ALCboolean ALCnullBackend_reset(ALCnullBackend *self)
 
 static ALCboolean ALCnullBackend_start(ALCnullBackend *self)
 {
-    ATOMIC_STORE(&self->killNow, AL_FALSE, almemory_order_release);
-    if(althrd_create(&self->thread, ALCnullBackend_mixerProc, self) != althrd_success)
-        return ALC_FALSE;
-    return ALC_TRUE;
+    try {
+        ATOMIC_STORE(&self->killNow, AL_FALSE, almemory_order_release);
+        self->thread = std::thread(ALCnullBackend_mixerProc, self);
+        return ALC_TRUE;
+    }
+    catch(std::exception& e) {
+        ERR("Failed to start mixing thread: %s\n", e.what());
+    }
+    catch(...) {
+    }
+    return ALC_FALSE;
 }
 
 static void ALCnullBackend_stop(ALCnullBackend *self)
 {
-    int res;
-
-    if(ATOMIC_EXCHANGE(&self->killNow, AL_TRUE, almemory_order_acq_rel))
+    if(ATOMIC_EXCHANGE(&self->killNow, AL_TRUE, almemory_order_acq_rel) ||
+       !self->thread.joinable())
         return;
-    althrd_join(self->thread, &res);
+    self->thread.join();
 }
 
 

@@ -31,7 +31,6 @@
 #include "alMain.h"
 #include "alu.h"
 #include "alconfig.h"
-#include "threads.h"
 #include "compat.h"
 
 #include "backends/base.h"
@@ -88,10 +87,10 @@ struct ALCwaveBackend final : public ALCbackend {
     ALuint mSize;
 
     ATOMIC(ALenum) killNow;
-    althrd_t thread;
+    std::thread thread;
 };
 
-static int ALCwaveBackend_mixerProc(void *ptr);
+static int ALCwaveBackend_mixerProc(ALCwaveBackend *self);
 
 static void ALCwaveBackend_Construct(ALCwaveBackend *self, ALCdevice *device);
 static void ALCwaveBackend_Destruct(ALCwaveBackend *self);
@@ -134,9 +133,8 @@ static void ALCwaveBackend_Destruct(ALCwaveBackend *self)
     self->~ALCwaveBackend();
 }
 
-static int ALCwaveBackend_mixerProc(void *ptr)
+static int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
 {
-    ALCwaveBackend *self = (ALCwaveBackend*)ptr;
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     const milliseconds restTime{device->UpdateSize*1000/device->Frequency / 2};
 
@@ -366,35 +364,37 @@ static ALCboolean ALCwaveBackend_start(ALCwaveBackend *self)
         return ALC_FALSE;
     }
 
-    ATOMIC_STORE(&self->killNow, AL_FALSE, almemory_order_release);
-    if(althrd_create(&self->thread, ALCwaveBackend_mixerProc, self) != althrd_success)
-    {
-        free(self->mBuffer);
-        self->mBuffer = nullptr;
-        self->mSize = 0;
-        return ALC_FALSE;
+    try {
+        ATOMIC_STORE(&self->killNow, AL_FALSE, almemory_order_release);
+        self->thread = std::thread(ALCwaveBackend_mixerProc, self);
+        return ALC_TRUE;
+    }
+    catch(std::exception& e) {
+        ERR("Failed to start mixing thread: %s\n", e.what());
+    }
+    catch(...) {
     }
 
-    return ALC_TRUE;
+    free(self->mBuffer);
+    self->mBuffer = nullptr;
+    self->mSize = 0;
+    return ALC_FALSE;
 }
 
 static void ALCwaveBackend_stop(ALCwaveBackend *self)
 {
-    ALuint dataLen;
-    long size;
-    int res;
-
-    if(ATOMIC_EXCHANGE(&self->killNow, AL_TRUE, almemory_order_acq_rel))
+    if(ATOMIC_EXCHANGE(&self->killNow, AL_TRUE, almemory_order_acq_rel) ||
+       !self->thread.joinable())
         return;
-    althrd_join(self->thread, &res);
+    self->thread.join();
 
     free(self->mBuffer);
     self->mBuffer = nullptr;
 
-    size = ftell(self->mFile);
+    long size{ftell(self->mFile)};
     if(size > 0)
     {
-        dataLen = size - self->mDataStart;
+        long dataLen{size - self->mDataStart};
         if(fseek(self->mFile, self->mDataStart-4, SEEK_SET) == 0)
             fwrite32le(dataLen, self->mFile); // 'data' header len
         if(fseek(self->mFile, 4, SEEK_SET) == 0)

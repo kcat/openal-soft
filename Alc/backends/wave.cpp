@@ -27,6 +27,7 @@
 
 #include <chrono>
 #include <thread>
+#include <vector>
 
 #include "alMain.h"
 #include "alu.h"
@@ -83,8 +84,7 @@ struct ALCwaveBackend final : public ALCbackend {
     FILE *mFile;
     long mDataStart;
 
-    ALvoid *mBuffer;
-    ALuint mSize;
+    std::vector<ALbyte> mBuffer;
 
     ATOMIC(ALenum) killNow;
     std::thread thread;
@@ -116,9 +116,6 @@ static void ALCwaveBackend_Construct(ALCwaveBackend *self, ALCdevice *device)
 
     self->mFile = nullptr;
     self->mDataStart = -1;
-
-    self->mBuffer = nullptr;
-    self->mSize = 0;
 
     ATOMIC_INIT(&self->killNow, AL_TRUE);
 }
@@ -159,7 +156,7 @@ static int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
         while(avail-done >= device->UpdateSize)
         {
             ALCwaveBackend_lock(self);
-            aluMixData(device, self->mBuffer, device->UpdateSize);
+            aluMixData(device, self->mBuffer.data(), device->UpdateSize);
             ALCwaveBackend_unlock(self);
             done += device->UpdateSize;
 
@@ -170,8 +167,8 @@ static int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
 
                 if(bytesize == 2)
                 {
-                    ALushort *samples = static_cast<ALushort*>(self->mBuffer);
-                    ALuint len = self->mSize / 2;
+                    ALushort *samples = reinterpret_cast<ALushort*>(self->mBuffer.data());
+                    ALuint len = self->mBuffer.size() / 2;
                     for(i = 0;i < len;i++)
                     {
                         ALushort samp = samples[i];
@@ -180,8 +177,8 @@ static int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
                 }
                 else if(bytesize == 4)
                 {
-                    ALuint *samples = static_cast<ALuint*>(self->mBuffer);
-                    ALuint len = self->mSize / 4;
+                    ALuint *samples = reinterpret_cast<ALuint*>(self->mBuffer.data());
+                    ALuint len = self->mBuffer.size() / 4;
                     for(i = 0;i < len;i++)
                     {
                         ALuint samp = samples[i];
@@ -191,7 +188,7 @@ static int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
                 }
             }
 
-            size_t fs{fwrite(self->mBuffer, frameSize, device->UpdateSize, self->mFile)};
+            size_t fs{fwrite(self->mBuffer.data(), frameSize, device->UpdateSize, self->mFile)};
             (void)fs;
             if(ferror(self->mFile))
             {
@@ -347,23 +344,16 @@ static ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
 
     SetDefaultWFXChannelOrder(device);
 
+    ALuint bufsize{FrameSizeFromDevFmt(
+        device->FmtChans, device->FmtType, device->AmbiOrder
+    ) * device->UpdateSize};
+    self->mBuffer.resize(bufsize);
+
     return ALC_TRUE;
 }
 
 static ALCboolean ALCwaveBackend_start(ALCwaveBackend *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-
-    self->mSize = device->UpdateSize * FrameSizeFromDevFmt(
-        device->FmtChans, device->FmtType, device->AmbiOrder
-    );
-    self->mBuffer = malloc(self->mSize);
-    if(!self->mBuffer)
-    {
-        ERR("Buffer malloc failed\n");
-        return ALC_FALSE;
-    }
-
     try {
         ATOMIC_STORE(&self->killNow, AL_FALSE, almemory_order_release);
         self->thread = std::thread(ALCwaveBackend_mixerProc, self);
@@ -374,10 +364,6 @@ static ALCboolean ALCwaveBackend_start(ALCwaveBackend *self)
     }
     catch(...) {
     }
-
-    free(self->mBuffer);
-    self->mBuffer = nullptr;
-    self->mSize = 0;
     return ALC_FALSE;
 }
 
@@ -387,9 +373,6 @@ static void ALCwaveBackend_stop(ALCwaveBackend *self)
        !self->thread.joinable())
         return;
     self->thread.join();
-
-    free(self->mBuffer);
-    self->mBuffer = nullptr;
 
     long size{ftell(self->mFile)};
     if(size > 0)

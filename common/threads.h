@@ -41,11 +41,6 @@ typedef void (*altss_dtor_t)(void*);
 
 typedef DWORD althrd_t;
 typedef CRITICAL_SECTION almtx_t;
-#if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x0600
-typedef CONDITION_VARIABLE alcnd_t;
-#else
-typedef struct { void *Ptr; } alcnd_t;
-#endif
 typedef HANDLE alsem_t;
 typedef DWORD altss_t;
 typedef LONG alonce_flag;
@@ -128,7 +123,6 @@ inline int altss_set(altss_t tss_id, void *val)
 
 typedef pthread_t althrd_t;
 typedef pthread_mutex_t almtx_t;
-typedef pthread_cond_t alcnd_t;
 #ifdef __APPLE__
 typedef dispatch_semaphore_t alsem_t;
 #else /* !__APPLE__ */
@@ -219,12 +213,6 @@ void althrd_setname(althrd_t thr, const char *name);
 
 int almtx_init(almtx_t *mtx, int type);
 void almtx_destroy(almtx_t *mtx);
-
-int alcnd_init(alcnd_t *cond);
-int alcnd_signal(alcnd_t *cond);
-int alcnd_broadcast(alcnd_t *cond);
-int alcnd_wait(alcnd_t *cond, almtx_t *mtx);
-void alcnd_destroy(alcnd_t *cond);
 
 int alsem_init(alsem_t *sem, unsigned int initial);
 void alsem_destroy(alsem_t *sem);

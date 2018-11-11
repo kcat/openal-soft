@@ -21,8 +21,7 @@ int readline(std::istream &f, std::string &output)
     while(f.good() && f.peek() == '\n')
         f.ignore();
 
-    std::getline(f, output);
-    return !output.empty();
+    return std::getline(f, output) && !output.empty();
 }
 
 bool read_clipped_line(std::istream &f, std::string &buffer)

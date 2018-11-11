@@ -25,6 +25,9 @@
 #include <memory.h>
 #include <errno.h>
 
+#include <chrono>
+#include <thread>
+
 #include "alMain.h"
 #include "alu.h"
 #include "alconfig.h"
@@ -35,6 +38,10 @@
 
 
 namespace {
+
+using std::chrono::seconds;
+using std::chrono::milliseconds;
+using std::chrono::nanoseconds;
 
 constexpr ALCchar waveDevice[] = "Wave File Writer";
 
@@ -131,45 +138,27 @@ static int ALCwaveBackend_mixerProc(void *ptr)
 {
     ALCwaveBackend *self = (ALCwaveBackend*)ptr;
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    struct timespec now, start;
-    ALint64 avail, done;
-    ALuint frameSize;
-    size_t fs;
-    const long restTime = (long)((ALuint64)device->UpdateSize * 1000000000 /
-                                 device->Frequency / 2);
+    const milliseconds restTime{device->UpdateSize*1000/device->Frequency / 2};
 
     althrd_setname(althrd_current(), MIXER_THREAD_NAME);
 
-    frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
+    ALsizei frameSize{FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder)};
 
-    done = 0;
-    if(altimespec_get(&start, AL_TIME_UTC) != AL_TIME_UTC)
-    {
-        ERR("Failed to get starting time\n");
-        return 1;
-    }
+    ALint64 done{0};
+    auto start = std::chrono::steady_clock::now();
     while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
           ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
-        if(altimespec_get(&now, AL_TIME_UTC) != AL_TIME_UTC)
-        {
-            ERR("Failed to get current time\n");
-            return 1;
-        }
+        auto now = std::chrono::steady_clock::now();
 
-        avail  = (now.tv_sec - start.tv_sec) * device->Frequency;
-        avail += (ALint64)(now.tv_nsec - start.tv_nsec) * device->Frequency / 1000000000;
-        if(avail < done)
-        {
-            /* Oops, time skipped backwards. Reset the number of samples done
-             * with one update available since we (likely) just came back from
-             * sleeping. */
-            done = avail - device->UpdateSize;
-        }
-
+        /* This converts from nanoseconds to nanosamples, then to samples. */
+        ALint64 avail{std::chrono::duration_cast<seconds>((now-start) * device->Frequency).count()};
         if(avail-done < device->UpdateSize)
-            al_nssleep(restTime);
-        else while(avail-done >= device->UpdateSize)
+        {
+            std::this_thread::sleep_for(restTime);
+            continue;
+        }
+        while(avail-done >= device->UpdateSize)
         {
             ALCwaveBackend_lock(self);
             aluMixData(device, self->mBuffer, device->UpdateSize);
@@ -204,7 +193,7 @@ static int ALCwaveBackend_mixerProc(void *ptr)
                 }
             }
 
-            fs = fwrite(self->mBuffer, frameSize, device->UpdateSize, self->mFile);
+            size_t fs{fwrite(self->mBuffer, frameSize, device->UpdateSize, self->mFile)};
             (void)fs;
             if(ferror(self->mFile))
             {
@@ -214,6 +203,18 @@ static int ALCwaveBackend_mixerProc(void *ptr)
                 ALCdevice_Unlock(device);
                 break;
             }
+        }
+
+        /* For every completed second, increment the start time and reduce the
+         * samples done. This prevents the difference between the start time
+         * and current time from growing too large, while maintaining the
+         * correct number of samples to render.
+         */
+        if(done >= device->Frequency)
+        {
+            seconds s{done/device->Frequency};
+            start += s;
+            done -= device->Frequency*s.count();
         }
     }
 

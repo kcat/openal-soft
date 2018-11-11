@@ -869,7 +869,7 @@ SET(ALC_OBJS
     Alc/filters/nfc.h
     Alc/filters/splitter.cpp
     Alc/filters/splitter.h
-    Alc/helpers.c
+    Alc/helpers.cpp
     Alc/alstring.h
     Alc/compat.h
     Alc/cpu_caps.h

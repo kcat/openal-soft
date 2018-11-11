@@ -1,6 +1,10 @@
 #ifndef CPU_CAPS_H
 #define CPU_CAPS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern int CPUCapFlags;
 enum {
     CPU_CAP_SSE    = 1<<0,
@@ -11,5 +15,9 @@ enum {
 };
 
 void FillCPUCaps(int capfilter);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* CPU_CAPS_H */

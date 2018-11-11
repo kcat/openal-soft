@@ -5,6 +5,9 @@
 #include <fenv.h>
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct FPUCtl {
 #if defined(__GNUC__) && defined(HAVE_SSE)
@@ -30,5 +33,9 @@ void RestoreFPUMode(const FPUCtl *ctl);
 #define END_MIXER_MODE() RestoreFPUMode(&_oldMode); } while(0)
 #endif
 #define LEAVE_MIXER_MODE() RestoreFPUMode(&_oldMode)
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* FPU_MODES_H */

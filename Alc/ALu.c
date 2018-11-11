@@ -49,6 +49,22 @@
 #include "backends/base.h"
 
 
+extern inline ALuint NextPowerOf2(ALuint value);
+extern inline size_t RoundUp(size_t value, size_t r);
+extern inline ALint fastf2i(ALfloat f);
+extern inline int float2int(float f);
+extern inline float fast_roundf(float f);
+#ifndef __GNUC__
+#if defined(HAVE_BITSCANFORWARD64_INTRINSIC)
+extern inline int msvc64_ctz64(ALuint64 v);
+#elif defined(HAVE_BITSCANFORWARD_INTRINSIC)
+extern inline int msvc_ctz64(ALuint64 v);
+#else
+extern inline int fallback_popcnt64(ALuint64 v);
+extern inline int fallback_ctz64(ALuint64 value);
+#endif
+#endif
+
 extern inline ALfloat minf(ALfloat a, ALfloat b);
 extern inline ALfloat maxf(ALfloat a, ALfloat b);
 extern inline ALfloat clampf(ALfloat val, ALfloat min, ALfloat max);

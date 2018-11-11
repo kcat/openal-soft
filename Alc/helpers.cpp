@@ -121,23 +121,6 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 #include "threads.h"
 
 
-extern inline ALuint NextPowerOf2(ALuint value);
-extern inline size_t RoundUp(size_t value, size_t r);
-extern inline ALint fastf2i(ALfloat f);
-extern inline int float2int(float f);
-extern inline float fast_roundf(float f);
-#ifndef __GNUC__
-#if defined(HAVE_BITSCANFORWARD64_INTRINSIC)
-extern inline int msvc64_ctz64(ALuint64 v);
-#elif defined(HAVE_BITSCANFORWARD_INTRINSIC)
-extern inline int msvc_ctz64(ALuint64 v);
-#else
-extern inline int fallback_popcnt64(ALuint64 v);
-extern inline int fallback_ctz64(ALuint64 value);
-#endif
-#endif
-
-
 #if defined(HAVE_GCC_GET_CPUID) && (defined(__i386__) || defined(__x86_64__) || \
                                     defined(_M_IX86) || defined(_M_X64))
 typedef unsigned int reg_type;
@@ -346,12 +329,12 @@ void GetProcBinary(al_string *path, al_string *fname)
     DWORD len;
 
     pathlen = 256;
-    pathname = malloc(pathlen * sizeof(pathname[0]));
+    pathname = static_cast<WCHAR*>(malloc(pathlen * sizeof(pathname[0])));
     while(pathlen > 0 && (len=GetModuleFileNameW(NULL, pathname, pathlen)) == pathlen)
     {
         free(pathname);
         pathlen <<= 1;
-        pathname = malloc(pathlen * sizeof(pathname[0]));
+        pathname = static_cast<WCHAR*>(malloc(pathlen * sizeof(pathname[0])));
     }
     if(len == 0)
     {
@@ -395,7 +378,7 @@ static WCHAR *FromUTF8(const char *str)
 
     if((len=MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0)) > 0)
     {
-        out = calloc(sizeof(WCHAR), len);
+        out = static_cast<WCHAR*>(calloc(sizeof(WCHAR), len));
         MultiByteToWideChar(CP_UTF8, 0, str, -1, out, len);
     }
     return out;
@@ -418,14 +401,13 @@ void *LoadLib(const char *name)
     return hdl;
 }
 void CloseLib(void *handle)
-{ FreeLibrary((HANDLE)handle); }
+{ FreeLibrary(reinterpret_cast<HMODULE>(handle)); }
 void *GetSymbol(void *handle, const char *name)
 {
     void *ret;
 
-    ret = (void*)GetProcAddress((HANDLE)handle, name);
-    if(ret == NULL)
-        ERR("Failed to load %s\n", name);
+    ret = reinterpret_cast<void*>(GetProcAddress(reinterpret_cast<HMODULE>(handle), name));
+    if(!ret) ERR("Failed to load %s\n", name);
     return ret;
 }
 
@@ -502,7 +484,7 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
     vector_al_string results = VECTOR_INIT_STATIC();
     size_t i;
 
-    while(ATOMIC_EXCHANGE_SEQ(&search_lock, 1) == 1)
+    while(ATOMIC_EXCHANGE_SEQ(&search_lock, 1u) == 1u)
         althrd_yield();
 
     /* If the path is absolute, use it directly. */
@@ -573,7 +555,7 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
         alstr_reset(&path);
     }
 
-    ATOMIC_STORE_SEQ(&search_lock, 0);
+    ATOMIC_STORE_SEQ(&search_lock, 0u);
 
     return results;
 }
@@ -623,7 +605,7 @@ void GetProcBinary(al_string *path, al_string *fname)
         ssize_t len;
 
         pathlen = 256;
-        pathname = malloc(pathlen);
+        pathname = static_cast<char*>(malloc(pathlen));
 
         selfname = "/proc/self/exe";
         len = readlink(selfname, pathname, pathlen);
@@ -647,7 +629,7 @@ void GetProcBinary(al_string *path, al_string *fname)
         {
             free(pathname);
             pathlen <<= 1;
-            pathname = malloc(pathlen);
+            pathname = static_cast<char*>(malloc(pathlen));
             len = readlink(selfname, pathname, pathlen);
         }
         if(len <= 0)
@@ -770,7 +752,7 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
     static RefCount search_lock;
     vector_al_string results = VECTOR_INIT_STATIC();
 
-    while(ATOMIC_EXCHANGE_SEQ(&search_lock, 1) == 1)
+    while(ATOMIC_EXCHANGE_SEQ(&search_lock, 1u) == 1u)
         althrd_yield();
 
     if(subdir[0] == '/')
@@ -786,7 +768,7 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
         else
         {
             size_t cwdlen = 256;
-            char *cwdbuf = malloc(cwdlen);
+            char *cwdbuf = static_cast<char*>(malloc(cwdlen));
             while(!getcwd(cwdbuf, cwdlen))
             {
                 free(cwdbuf);
@@ -794,7 +776,7 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
                 if(errno != ERANGE)
                     break;
                 cwdlen <<= 1;
-                cwdbuf = malloc(cwdlen);
+                cwdbuf = static_cast<char*>(malloc(cwdlen));
             }
             if(!cwdbuf)
                 DirectorySearch(".", ext, &results);
@@ -856,7 +838,7 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
         alstr_reset(&path);
     }
 
-    ATOMIC_STORE_SEQ(&search_lock, 0);
+    ATOMIC_STORE_SEQ(&search_lock, 0u);
 
     return results;
 }
@@ -888,11 +870,6 @@ void SetRTPriority(void)
         ERR("Failed to set priority level for thread\n");
 }
 
-
-extern inline void alstr_reset(al_string *str);
-extern inline size_t alstr_length(const_al_string str);
-extern inline ALboolean alstr_empty(const_al_string str);
-extern inline const al_string_char_type *alstr_get_cstr(const_al_string str);
 
 void alstr_clear(al_string *str)
 {

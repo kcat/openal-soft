@@ -1672,6 +1672,11 @@ IF(ALSOFT_TESTS)
 ENDIF()
 
 IF(ALSOFT_EXAMPLES)
+    # Add a static library with common functions used by multiple targets
+    ADD_LIBRARY(ex-common STATIC examples/common/alhelpers.c)
+    TARGET_COMPILE_DEFINITIONS(ex-common PRIVATE ${CPP_DEFS})
+    TARGET_COMPILE_OPTIONS(ex-common PRIVATE ${C_FLAGS})
+
     ADD_EXECUTABLE(alrecord examples/alrecord.c)
     TARGET_COMPILE_DEFINITIONS(alrecord PRIVATE ${CPP_DEFS})
     TARGET_COMPILE_OPTIONS(alrecord PRIVATE ${C_FLAGS})
@@ -1689,11 +1694,6 @@ IF(ALSOFT_EXAMPLES)
 
     IF(SDL2_FOUND)
         IF(SDL_SOUND_FOUND)
-            # Add a static library with common functions used by multiple targets
-            ADD_LIBRARY(ex-common STATIC examples/common/alhelpers.c)
-            TARGET_COMPILE_DEFINITIONS(ex-common PRIVATE ${CPP_DEFS})
-            TARGET_COMPILE_OPTIONS(ex-common PRIVATE ${C_FLAGS})
-
             ADD_EXECUTABLE(alplay examples/alplay.c)
             TARGET_COMPILE_DEFINITIONS(alplay PRIVATE ${CPP_DEFS})
             TARGET_INCLUDE_DIRECTORIES(alplay

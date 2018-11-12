@@ -297,7 +297,7 @@ void RestoreFPUMode(const FPUCtl *ctl)
 
 #elif defined(HAVE___CONTROL87_2)
 
-    int mode;
+    unsigned int mode;
     __control87_2(ctl->state, _MCW_DN, &mode, nullptr);
     __control87_2(ctl->sse_state, _MCW_DN, nullptr, &mode);
 

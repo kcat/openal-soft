@@ -237,8 +237,6 @@ extern "C" {
 
 #endif
 
-void GetProcBinary(al_string *path, al_string *fname);
-
 #ifdef HAVE_DYNLOAD
 void *LoadLib(const char *name);
 void CloseLib(void *handle);
@@ -247,6 +245,11 @@ void *GetSymbol(void *handle, const char *name);
 
 #ifdef __cplusplus
 } /* extern "C" */
+
+#include <string>
+
+struct PathNamePair { std::string path, fname; };
+PathNamePair GetProcBinary(void);
 #endif
 
 #endif /* AL_COMPAT_H */

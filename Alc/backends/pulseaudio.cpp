@@ -406,17 +406,15 @@ void wait_for_operation(pa_operation *op, pa_threaded_mainloop *loop)
 pa_context *connect_context(pa_threaded_mainloop *loop, ALboolean silent)
 {
     const char *name{"OpenAL Soft"};
-    al_string binname{AL_STRING_INIT_STATIC()};
 
-    GetProcBinary(nullptr, &binname);
-    if(!alstr_empty(binname))
-        name = alstr_get_cstr(binname);
+    PathNamePair binname = GetProcBinary();
+    if(!binname.fname.empty())
+        name = binname.fname.c_str();
 
     pa_context *context{pa_context_new(pa_threaded_mainloop_get_api(loop), name)};
     if(!context)
     {
         ERR("pa_context_new() failed\n");
-        alstr_reset(&binname);
         return nullptr;
     }
 
@@ -448,7 +446,6 @@ pa_context *connect_context(pa_threaded_mainloop *loop, ALboolean silent)
         context = nullptr;
     }
 
-    alstr_reset(&binname);
     return context;
 }
 

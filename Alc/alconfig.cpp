@@ -299,13 +299,12 @@ void ReadALConfig(void)
             LoadConfigFromFile(f);
     }
 
-    al_string ppath = AL_STRING_INIT_STATIC();
-    GetProcBinary(&ppath, nullptr);
-    if(!alstr_empty(ppath))
+    PathNamePair ppath = GetProcBinary();
+    if(!ppath.path.empty())
     {
-        alstr_append_cstr(&ppath, "\\alsoft.ini");
-        TRACE("Loading config %s...\n", alstr_get_cstr(ppath));
-        al::ifstream f{alstr_get_cstr(ppath)};
+        ppath.path += "\\alsoft.ini";
+        TRACE("Loading config %s...\n", ppath.path.c_str());
+        al::ifstream f{ppath.path.c_str()};
         if(f.is_open())
             LoadConfigFromFile(f);
     }
@@ -320,8 +319,6 @@ void ReadALConfig(void)
         if(f.is_open())
             LoadConfigFromFile(f);
     }
-
-    alstr_reset(&ppath);
 }
 #else
 void ReadALConfig(void)
@@ -425,15 +422,14 @@ void ReadALConfig(void)
             LoadConfigFromFile(f);
     }
 
-    al_string ppath = AL_STRING_INIT_STATIC();
-    GetProcBinary(&ppath, nullptr);
-    if(!alstr_empty(ppath))
+    PathNamePair ppath = GetProcBinary();
+    if(!ppath.path.empty())
     {
-        if(VECTOR_BACK(ppath) != '/') alstr_append_cstr(&ppath, "/alsoft.conf");
-        else alstr_append_cstr(&ppath, "alsoft.conf");
+        if(ppath.path.back() != '/') ppath.path += "/alsoft.conf";
+        else ppath.path += "alsoft.conf";
 
-        TRACE("Loading config %s...\n", alstr_get_cstr(ppath));
-        al::ifstream f{alstr_get_cstr(ppath)};
+        TRACE("Loading config %s...\n", ppath.path.c_str());
+        al::ifstream f{ppath.path};
         if(f.is_open())
             LoadConfigFromFile(f);
     }
@@ -445,8 +441,6 @@ void ReadALConfig(void)
         if(f.is_open())
             LoadConfigFromFile(f);
     }
-
-    alstr_reset(&ppath);
 }
 #endif
 

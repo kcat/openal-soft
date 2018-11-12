@@ -109,6 +109,10 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 #include <shlobj.h>
 #endif
 
+#include <vector>
+#include <string>
+#include <algorithm>
+
 #include "alMain.h"
 #include "alu.h"
 #include "cpu_caps.h"
@@ -310,64 +314,37 @@ static int StringSortCompare(const void *str1, const void *str2)
 
 #ifdef _WIN32
 
-static WCHAR *strrchrW(WCHAR *str, WCHAR ch)
+PathNamePair GetProcBinary()
 {
-    WCHAR *ret = NULL;
-    while(*str)
-    {
-        if(*str == ch)
-            ret = str;
-        ++str;
-    }
-    return ret;
-}
+    PathNamePair ret;
 
-void GetProcBinary(al_string *path, al_string *fname)
-{
-    WCHAR *pathname, *sep;
-    DWORD pathlen;
+    std::vector<WCHAR> fullpath(256);
     DWORD len;
-
-    pathlen = 256;
-    pathname = static_cast<WCHAR*>(malloc(pathlen * sizeof(pathname[0])));
-    while(pathlen > 0 && (len=GetModuleFileNameW(NULL, pathname, pathlen)) == pathlen)
-    {
-        free(pathname);
-        pathlen <<= 1;
-        pathname = static_cast<WCHAR*>(malloc(pathlen * sizeof(pathname[0])));
-    }
+    while((len=GetModuleFileNameW(nullptr, fullpath.data(), fullpath.size())) == fullpath.size())
+        fullpath.resize(fullpath.size() << 1);
     if(len == 0)
     {
-        free(pathname);
         ERR("Failed to get process name: error %lu\n", GetLastError());
-        return;
+        return ret;
     }
 
-    pathname[len] = 0;
-    if((sep=strrchrW(pathname, '\\')) != NULL)
+    fullpath.resize(len);
+    if(fullpath.back() != 0)
+        fullpath.push_back(0);
+
+    auto sep = std::find(fullpath.rbegin()+1, fullpath.rend(), '\\');
+    sep = std::find(fullpath.rbegin()+1, sep, '/');
+    if(sep != fullpath.rend())
     {
-        WCHAR *sep2 = strrchrW(sep+1, '/');
-        if(sep2) sep = sep2;
+        *sep = 0;
+        ret.fname = wstr_to_utf8(&*sep + 1);
+        ret.path = wstr_to_utf8(fullpath.data());
     }
     else
-        sep = strrchrW(pathname, '/');
+        ret.fname = wstr_to_utf8(fullpath.data());
 
-    if(sep)
-    {
-        if(path) alstr_copy_wrange(path, pathname, sep);
-        if(fname) alstr_copy_wcstr(fname, sep+1);
-    }
-    else
-    {
-        if(path) alstr_clear(path);
-        if(fname) alstr_copy_wcstr(fname, pathname);
-    }
-    free(pathname);
-
-    if(path && fname)
-        TRACE("Got: %s, %s\n", alstr_get_cstr(*path), alstr_get_cstr(*fname));
-    else if(path) TRACE("Got path: %s\n", alstr_get_cstr(*path));
-    else if(fname) TRACE("Got filename: %s\n", alstr_get_cstr(*fname));
+    TRACE("Got: %s, %s\n", ret.path.c_str(), ret.fname.c_str());
+    return ret;
 }
 
 
@@ -562,24 +539,25 @@ vector_al_string SearchDataFiles(const char *ext, const char *subdir)
 
 #else
 
-void GetProcBinary(al_string *path, al_string *fname)
+PathNamePair GetProcBinary()
 {
-    char *pathname = NULL;
-    size_t pathlen;
+    PathNamePair ret;
+    std::vector<char> pathname;
 
 #ifdef __FreeBSD__
+    size_t pathlen;
     int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
     if(sysctl(mib, 4, NULL, &pathlen, NULL, 0) == -1)
         WARN("Failed to sysctl kern.proc.pathname: %s\n", strerror(errno));
     else
     {
-        pathname = malloc(pathlen + 1);
-        sysctl(mib, 4, (void*)pathname, &pathlen, NULL, 0);
+        pathname.resize(pathlen + 1);
+        sysctl(mib, 4, pathname.data(), &pathlen, nullptr, 0);
         pathname[pathlen] = 0;
     }
 #endif
 #ifdef HAVE_PROC_PIDPATH
-    if(!pathname)
+    if(pathname.empty())
     {
         const pid_t pid = getpid();
         char procpath[PROC_PIDPATHINFO_MAXSIZE];
@@ -587,78 +565,60 @@ void GetProcBinary(al_string *path, al_string *fname)
 
         ret = proc_pidpath(pid, procpath, sizeof(procpath));
         if(ret < 1)
-        {
             WARN("proc_pidpath(%d, ...) failed: %s\n", pid, strerror(errno));
-            free(pathname);
-            pathname = NULL;
-        }
         else
-        {
-            pathlen = strlen(procpath);
-            pathname = strdup(procpath);
-        }
+            pathname.append(procpath, procpath+strlen(procpath));
     }
 #endif
-    if(!pathname)
+    if(pathname.empty())
     {
-        const char *selfname;
-        ssize_t len;
+        pathname.resize(256);
 
-        pathlen = 256;
-        pathname = static_cast<char*>(malloc(pathlen));
-
-        selfname = "/proc/self/exe";
-        len = readlink(selfname, pathname, pathlen);
+        const char *selfname{"/proc/self/exe"};
+        ssize_t len{readlink(selfname, pathname.data(), pathname.size())};
         if(len == -1 && errno == ENOENT)
         {
             selfname = "/proc/self/file";
-            len = readlink(selfname, pathname, pathlen);
+            len = readlink(selfname, pathname.data(), pathname.size());
         }
         if(len == -1 && errno == ENOENT)
         {
             selfname = "/proc/curproc/exe";
-            len = readlink(selfname, pathname, pathlen);
+            len = readlink(selfname, pathname.data(), pathname.size());
         }
         if(len == -1 && errno == ENOENT)
         {
             selfname = "/proc/curproc/file";
-            len = readlink(selfname, pathname, pathlen);
+            len = readlink(selfname, pathname.data(), pathname.size());
         }
 
-        while(len > 0 && (size_t)len == pathlen)
+        while(len > 0 && (size_t)len == pathname.size())
         {
-            free(pathname);
-            pathlen <<= 1;
-            pathname = static_cast<char*>(malloc(pathlen));
-            len = readlink(selfname, pathname, pathlen);
+            pathname.resize(pathname.size() << 1);
+            len = readlink(selfname, pathname.data(), pathname.size());
         }
         if(len <= 0)
         {
-            free(pathname);
             WARN("Failed to readlink %s: %s\n", selfname, strerror(errno));
-            return;
+            return ret;
         }
 
         pathname[len] = 0;
     }
+    while(!pathname.empty() && pathname.back() == 0)
+        pathname.pop_back();
 
-    char *sep = strrchr(pathname, '/');
-    if(sep)
+    auto sep = std::find(pathname.crbegin(), pathname.crend(), '/');
+    if(sep != pathname.crend())
     {
-        if(path) alstr_copy_range(path, pathname, sep);
-        if(fname) alstr_copy_cstr(fname, sep+1);
+        ret.path = std::string(pathname.cbegin(), sep.base()-1);
+        ret.fname = std::string(sep.base(), pathname.cend());
     }
     else
-    {
-        if(path) alstr_clear(path);
-        if(fname) alstr_copy_cstr(fname, pathname);
-    }
-    free(pathname);
+        ret.fname = std::string(pathname.cbegin(), pathname.cend());
 
-    if(path && fname)
-        TRACE("Got: %s, %s\n", alstr_get_cstr(*path), alstr_get_cstr(*fname));
-    else if(path) TRACE("Got path: %s\n", alstr_get_cstr(*path));
-    else if(fname) TRACE("Got filename: %s\n", alstr_get_cstr(*fname));
+    TRACE("Got: %s, %s\n", ret.path.c_str(), ret.fname.c_str());
+    return ret;
 }
 
 

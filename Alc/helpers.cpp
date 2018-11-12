@@ -109,7 +109,7 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 #include <shlobj.h>
 #endif
 
-#include <atomic>
+#include <mutex>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -118,7 +118,6 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 #include "alu.h"
 #include "cpu_caps.h"
 #include "fpu_modes.h"
-#include "atomic.h"
 #include "uintmap.h"
 #include "vector.h"
 #include "alstring.h"
@@ -407,10 +406,8 @@ static void DirectorySearch(const char *path, const char *ext, std::vector<std::
 
 std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 {
-    static std::atomic<ALenum> search_lock{AL_FALSE};
-
-    while(search_lock.exchange(AL_TRUE) == AL_TRUE)
-        althrd_yield();
+    static std::mutex search_lock;
+    std::lock_guard<std::mutex> _{search_lock};
 
     /* If the path is absolute, use it directly. */
     std::vector<std::string> results;
@@ -419,52 +416,53 @@ std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
         std::string path{subdir};
         std::replace(path.begin(), path.end(), '/', '\\');
         DirectorySearch(path.c_str(), ext, &results);
+        return results;
     }
-    else if(subdir[0] == '\\' && subdir[1] == '\\' && subdir[2] == '?' && subdir[3] == '\\')
+    if(subdir[0] == '\\' && subdir[1] == '\\' && subdir[2] == '?' && subdir[3] == '\\')
+    {
         DirectorySearch(subdir, ext, &results);
+        return results;
+    }
+
+    std::string path;
+
+    /* Search the app-local directory. */
+    WCHAR *cwdbuf{_wgetenv(L"ALSOFT_LOCAL_PATH")};
+    if(cwdbuf && *cwdbuf != '\0')
+    {
+        path = wstr_to_utf8(cwdbuf);
+        if(is_slash(path.back()))
+            path.pop_back();
+    }
+    else if(!(cwdbuf=_wgetcwd(nullptr, 0)))
+        path = ".";
     else
     {
-        std::string path;
+        path = wstr_to_utf8(cwdbuf);
+        if(is_slash(path.back()))
+            path.pop_back();
+        free(cwdbuf);
+    }
+    std::replace(path.begin(), path.end(), '/', '\\');
+    DirectorySearch(path.c_str(), ext, &results);
 
-        /* Search the app-local directory. */
-        WCHAR *cwdbuf{_wgetenv(L"ALSOFT_LOCAL_PATH")};
-        if(cwdbuf && *cwdbuf != '\0')
-        {
-            path = wstr_to_utf8(cwdbuf);
-            if(is_slash(path.back()))
-                path.pop_back();
-        }
-        else if(!(cwdbuf=_wgetcwd(nullptr, 0)))
-            path = ".";
-        else
-        {
-            path = wstr_to_utf8(cwdbuf);
-            if(is_slash(path.back()))
-                path.pop_back();
-            free(cwdbuf);
-        }
+    /* Search the local and global data dirs. */
+    static constexpr int ids[2]{ CSIDL_APPDATA, CSIDL_COMMON_APPDATA };
+    for(int id : ids)
+    {
+        WCHAR buffer[MAX_PATH];
+        if(SHGetSpecialFolderPathW(nullptr, buffer, id, FALSE) == FALSE)
+            continue;
+
+        path = wstr_to_utf8(buffer);
+        if(!is_slash(path.back()))
+            path += '\\';
+        path += subdir;
         std::replace(path.begin(), path.end(), '/', '\\');
+
         DirectorySearch(path.c_str(), ext, &results);
-
-        /* Search the local and global data dirs. */
-        static constexpr int ids[2] = { CSIDL_APPDATA, CSIDL_COMMON_APPDATA };
-        for(int id : ids)
-        {
-            WCHAR buffer[MAX_PATH];
-            if(SHGetSpecialFolderPathW(nullptr, buffer, id, FALSE) == FALSE)
-                continue;
-
-            path = wstr_to_utf8(buffer);
-            if(!is_slash(path.back()))
-                path += '\\';
-            path += subdir;
-            std::replace(path.begin(), path.end(), '/', '\\');
-
-            DirectorySearch(path.c_str(), ext, &results);
-        }
     }
 
-    search_lock.store(AL_FALSE);
     return results;
 }
 
@@ -492,8 +490,7 @@ PathNamePair GetProcBinary()
     {
         char procpath[PROC_PIDPATHINFO_MAXSIZE]{};
         const pid_t pid{getpid()};
-        const int ret{proc_pidpath(pid, procpath, sizeof(procpath))};
-        if(ret < 1)
+        if(proc_pidpath(pid, procpath, sizeof(procpath)) < 1)
             ERR("proc_pidpath(%d, ...) failed: %s\n", pid, strerror(errno));
         else
             pathname.insert(pathname.end(), procpath, procpath+strlen(procpath));
@@ -532,7 +529,7 @@ PathNamePair GetProcBinary()
             return ret;
         }
 
-        pathname[len] = 0;
+        pathname.resize(len);
     }
     while(!pathname.empty() && pathname.back() == 0)
         pathname.pop_back();
@@ -627,86 +624,79 @@ static void DirectorySearch(const char *path, const char *ext, std::vector<std::
 
 std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 {
-    static std::atomic<ALenum> search_lock{AL_FALSE};
-
-    while(search_lock.exchange(AL_TRUE) == AL_TRUE)
-        althrd_yield();
+    static std::mutex search_lock;
+    std::lock_guard<std::mutex> _{search_lock};
 
     std::vector<std::string> results;
     if(subdir[0] == '/')
+    {
         DirectorySearch(subdir, ext, &results);
+        return results;
+    }
+
+    /* Search the app-local directory. */
+    const char *str{getenv("ALSOFT_LOCAL_PATH")};
+    if(str && *str != '\0')
+        DirectorySearch(str, ext, &results);
     else
     {
-        /* Search the app-local directory. */
-        const char *str{getenv("ALSOFT_LOCAL_PATH")};
-        if(str && *str != '\0')
-            DirectorySearch(str, ext, &results);
+        std::vector<char> cwdbuf(256);
+        while(!getcwd(cwdbuf.data(), cwdbuf.size()))
+        {
+            if(errno != ERANGE)
+            {
+                cwdbuf.clear();
+                break;
+            }
+            cwdbuf.resize(cwdbuf.size() << 1);
+        }
+        if(cwdbuf.empty())
+            DirectorySearch(".", ext, &results);
         else
         {
-            std::vector<char> cwdbuf(256);
-            while(!getcwd(cwdbuf.data(), cwdbuf.size()))
-            {
-                if(errno != ERANGE)
-                {
-                    cwdbuf.clear();
-                    break;
-                }
-                cwdbuf.resize(cwdbuf.size() << 1);
-            }
-            if(cwdbuf.empty())
-                DirectorySearch(".", ext, &results);
-            else
-            {
-                DirectorySearch(cwdbuf.data(), ext, &results);
-                cwdbuf.clear();
-            }
-        }
-
-        // Search local data dir
-        if((str=getenv("XDG_DATA_HOME")) != nullptr && str[0] != '\0')
-        {
-            std::string path{str};
-            if(path.back() != '/')
-                path += '/';
-            path += subdir;
-            DirectorySearch(path.c_str(), ext, &results);
-        }
-        else if((str=getenv("HOME")) != nullptr && str[0] != '\0')
-        {
-            std::string path{str};
-            if(path.back() == '/')
-                path.pop_back();
-            path += "/.local/share/";
-            path += subdir;
-            DirectorySearch(path.c_str(), ext, &results);
-        }
-
-        // Search global data dirs
-        if((str=getenv("XDG_DATA_DIRS")) == nullptr || str[0] == '\0')
-            str = "/usr/local/share/:/usr/share/";
-
-        const char *next{str};
-        while((str=next) != nullptr && str[0] != '\0')
-        {
-            next = strchr(str, ':');
-
-            std::string path;
-            if(!next)
-                path = str;
-            else
-                path.append(str, next++);
-            if(!path.empty())
-            {
-                if(path.back() != '/')
-                    path += '/';
-                path += subdir;
-
-                DirectorySearch(path.c_str(), ext, &results);
-            }
+            DirectorySearch(cwdbuf.data(), ext, &results);
+            cwdbuf.clear();
         }
     }
 
-    search_lock.store(AL_FALSE);
+    // Search local data dir
+    if((str=getenv("XDG_DATA_HOME")) != nullptr && str[0] != '\0')
+    {
+        std::string path{str};
+        if(path.back() != '/')
+            path += '/';
+        path += subdir;
+        DirectorySearch(path.c_str(), ext, &results);
+    }
+    else if((str=getenv("HOME")) != nullptr && str[0] != '\0')
+    {
+        std::string path{str};
+        if(path.back() == '/')
+            path.pop_back();
+        path += "/.local/share/";
+        path += subdir;
+        DirectorySearch(path.c_str(), ext, &results);
+    }
+
+    // Search global data dirs
+    if((str=getenv("XDG_DATA_DIRS")) == nullptr || str[0] == '\0')
+        str = "/usr/local/share/:/usr/share/";
+
+    const char *next{str};
+    while((str=next) != nullptr && str[0] != '\0')
+    {
+        next = strchr(str, ':');
+
+        std::string path = (next ? std::string(str, next++) : std::string(str));
+        if(path.empty()) continue;
+
+        if(path.back() != '/')
+            path += '/';
+        path += subdir;
+
+        DirectorySearch(path.c_str(), ext, &results);
+    }
+
     return results;
 }
 
@@ -777,34 +767,28 @@ int alstr_cmp_cstr(const_al_string str1, const al_string_char_type *str2)
 void alstr_copy(al_string *str, const_al_string from)
 {
     size_t len = alstr_length(from);
-    size_t i;
-
     VECTOR_RESIZE(*str, len, len+1);
-    for(i = 0;i < len;i++)
+    for(size_t i{0};i < len;i++)
         VECTOR_ELEM(*str, i) = VECTOR_ELEM(from, i);
-    VECTOR_ELEM(*str, i) = 0;
+    VECTOR_ELEM(*str, len) = 0;
 }
 
 void alstr_copy_cstr(al_string *str, const al_string_char_type *from)
 {
     size_t len = strlen(from);
-    size_t i;
-
     VECTOR_RESIZE(*str, len, len+1);
-    for(i = 0;i < len;i++)
+    for(size_t i{0};i < len;i++)
         VECTOR_ELEM(*str, i) = from[i];
-    VECTOR_ELEM(*str, i) = 0;
+    VECTOR_ELEM(*str, len) = 0;
 }
 
 void alstr_copy_range(al_string *str, const al_string_char_type *from, const al_string_char_type *to)
 {
     size_t len = to - from;
-    size_t i;
-
     VECTOR_RESIZE(*str, len, len+1);
-    for(i = 0;i < len;i++)
+    for(size_t i{0};i < len;i++)
         VECTOR_ELEM(*str, i) = from[i];
-    VECTOR_ELEM(*str, i) = 0;
+    VECTOR_ELEM(*str, len) = 0;
 }
 
 void alstr_append_char(al_string *str, const al_string_char_type c)
@@ -821,12 +805,10 @@ void alstr_append_cstr(al_string *str, const al_string_char_type *from)
     if(len != 0)
     {
         size_t base = alstr_length(*str);
-        size_t i;
-
         VECTOR_RESIZE(*str, base+len, base+len+1);
-        for(i = 0;i < len;i++)
+        for(size_t i{0};i < len;i++)
             VECTOR_ELEM(*str, base+i) = from[i];
-        VECTOR_ELEM(*str, base+i) = 0;
+        VECTOR_ELEM(*str, base+len) = 0;
     }
 }
 
@@ -836,11 +818,9 @@ void alstr_append_range(al_string *str, const al_string_char_type *from, const a
     if(len != 0)
     {
         size_t base = alstr_length(*str);
-        size_t i;
-
         VECTOR_RESIZE(*str, base+len, base+len+1);
-        for(i = 0;i < len;i++)
+        for(size_t i{0};i < len;i++)
             VECTOR_ELEM(*str, base+i) = from[i];
-        VECTOR_ELEM(*str, base+i) = 0;
+        VECTOR_ELEM(*str, base+len) = 0;
     }
 }

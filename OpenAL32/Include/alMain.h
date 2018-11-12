@@ -99,6 +99,9 @@
 
 
 #ifdef __cplusplus
+#include <vector>
+#include <string>
+
 extern "C" {
 #endif
 
@@ -910,11 +913,10 @@ inline void UnlockEffectSlotList(ALCcontext *context)
 
 int EventThread(void *arg);
 
-
-vector_al_string SearchDataFiles(const char *match, const char *subdir);
-
 #ifdef __cplusplus
 } // extern "C"
+
+std::vector<std::string> SearchDataFiles(const char *match, const char *subdir);
 
 /* Simple RAII context reference. Takes the reference of the provided
  * ALCcontext, and decrements it when leaving scope. Movable (transfer

@@ -944,13 +944,13 @@ struct Hrtf *LoadHrtf02(std::istream &data, const char *filename)
 }
 
 
-void AddFileEntry(vector_EnumeratedHrtf *list, const_al_string filename)
+void AddFileEntry(vector_EnumeratedHrtf *list, const std::string &filename)
 {
     /* Check if this file has already been loaded globally. */
     HrtfEntry *loaded_entry{LoadedHrtfs};
     while(loaded_entry)
     {
-        if(alstr_cmp_cstr(filename, loaded_entry->filename) == 0)
+        if(filename == loaded_entry->filename)
         {
             const EnumeratedHrtf *iter;
             /* Check if this entry has already been added to the list. */
@@ -959,7 +959,7 @@ void AddFileEntry(vector_EnumeratedHrtf *list, const_al_string filename)
 #undef MATCH_ENTRY
             if(iter != VECTOR_END(*list))
             {
-                TRACE("Skipping duplicate file entry %s\n", alstr_get_cstr(filename));
+                TRACE("Skipping duplicate file entry %s\n", filename.c_str());
                 return;
             }
 
@@ -970,34 +970,34 @@ void AddFileEntry(vector_EnumeratedHrtf *list, const_al_string filename)
 
     if(!loaded_entry)
     {
-        TRACE("Got new file \"%s\"\n", alstr_get_cstr(filename));
+        TRACE("Got new file \"%s\"\n", filename.c_str());
 
         loaded_entry = static_cast<HrtfEntry*>(al_calloc(DEF_ALIGN,
-            FAM_SIZE(struct HrtfEntry, filename, alstr_length(filename)+1)
+            FAM_SIZE(struct HrtfEntry, filename, filename.length()+1)
         ));
         loaded_entry->next = LoadedHrtfs;
         loaded_entry->handle = nullptr;
-        strcpy(loaded_entry->filename, alstr_get_cstr(filename));
+        strcpy(loaded_entry->filename, filename.c_str());
         LoadedHrtfs = loaded_entry;
     }
 
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
      * format update). */
-    const char *name{strrchr(alstr_get_cstr(filename), '/')};
-    if(!name) name = strrchr(alstr_get_cstr(filename), '\\');
-    if(!name) name = alstr_get_cstr(filename);
-    else ++name;
+    size_t namepos = filename.find_last_of('/')+1;
+    if(!namepos) namepos = filename.find_last_of('\\')+1;
 
-    const char *ext{strrchr(name, '.')};
+    size_t extpos{filename.find_last_of('.')};
+    if(extpos <= namepos) extpos = std::string::npos;
 
     EnumeratedHrtf entry = { AL_STRING_INIT_STATIC(), nullptr };
     const EnumeratedHrtf *iter{};
     int i{0};
     do {
-        if(!ext)
-            alstr_copy_cstr(&entry.name, name);
+        if(extpos == std::string::npos)
+            alstr_copy_range(&entry.name, &*(filename.begin()+namepos), &*filename.end());
         else
-            alstr_copy_range(&entry.name, name, ext);
+            alstr_copy_range(&entry.name, &*(filename.begin()+namepos),
+                             &*(filename.begin()+extpos));
         if(i != 0)
         {
             char str[64];
@@ -1019,12 +1019,12 @@ void AddFileEntry(vector_EnumeratedHrtf *list, const_al_string filename)
 /* Unfortunate that we have to duplicate AddFileEntry to take a memory buffer
  * for input instead of opening the given filename.
  */
-void AddBuiltInEntry(vector_EnumeratedHrtf *list, const_al_string filename, ALuint residx)
+void AddBuiltInEntry(vector_EnumeratedHrtf *list, const std::string &filename, ALuint residx)
 {
     HrtfEntry *loaded_entry{LoadedHrtfs};
     while(loaded_entry)
     {
-        if(alstr_cmp_cstr(filename, loaded_entry->filename) == 0)
+        if(filename == loaded_entry->filename)
         {
             const EnumeratedHrtf *iter{};
 #define MATCH_ENTRY(i) (loaded_entry == (i)->hrtf)
@@ -1032,7 +1032,7 @@ void AddBuiltInEntry(vector_EnumeratedHrtf *list, const_al_string filename, ALui
 #undef MATCH_ENTRY
             if(iter != VECTOR_END(*list))
             {
-                TRACE("Skipping duplicate file entry %s\n", alstr_get_cstr(filename));
+                TRACE("Skipping duplicate file entry %s\n", filename.c_str());
                 return;
             }
 
@@ -1043,9 +1043,9 @@ void AddBuiltInEntry(vector_EnumeratedHrtf *list, const_al_string filename, ALui
 
     if(!loaded_entry)
     {
-        size_t namelen = alstr_length(filename)+32;
+        size_t namelen = filename.length()+32;
 
-        TRACE("Got new file \"%s\"\n", alstr_get_cstr(filename));
+        TRACE("Got new file \"%s\"\n", filename.c_str());
 
         loaded_entry = static_cast<HrtfEntry*>(al_calloc(DEF_ALIGN,
             FAM_SIZE(struct HrtfEntry, filename, namelen)
@@ -1053,27 +1053,18 @@ void AddBuiltInEntry(vector_EnumeratedHrtf *list, const_al_string filename, ALui
         loaded_entry->next = LoadedHrtfs;
         loaded_entry->handle = nullptr;
         snprintf(loaded_entry->filename, namelen,  "!%u_%s",
-                 residx, alstr_get_cstr(filename));
+                 residx, filename.c_str());
         LoadedHrtfs = loaded_entry;
     }
 
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
      * format update). */
-    const char *name{strrchr(alstr_get_cstr(filename), '/')};
-    if(!name) name = strrchr(alstr_get_cstr(filename), '\\');
-    if(!name) name = alstr_get_cstr(filename);
-    else ++name;
-
-    const char *ext{strrchr(name, '.')};
 
     EnumeratedHrtf entry{AL_STRING_INIT_STATIC(), nullptr};
     const EnumeratedHrtf *iter{};
     int i{0};
     do {
-        if(!ext)
-            alstr_copy_cstr(&entry.name, name);
-        else
-            alstr_copy_range(&entry.name, name, ext);
+        alstr_copy_range(&entry.name, &*filename.cbegin(), &*filename.cend());
         if(i != 0)
         {
             char str[64];
@@ -1123,11 +1114,11 @@ ResData GetResource(int name)
 vector_EnumeratedHrtf EnumerateHrtf(const_al_string devname)
 {
     vector_EnumeratedHrtf list{VECTOR_INIT_STATIC()};
+
     bool usedefaults{true};
     const char *pathlist{""};
     if(ConfigValueStr(alstr_get_cstr(devname), nullptr, "hrtf-paths", &pathlist))
     {
-        al_string pname = AL_STRING_INIT_STATIC();
         while(pathlist && *pathlist)
         {
             const char *next, *end;
@@ -1150,46 +1141,29 @@ vector_EnumeratedHrtf EnumerateHrtf(const_al_string devname)
                 --end;
             if(end != pathlist)
             {
-                alstr_copy_range(&pname, pathlist, end);
-
-                vector_al_string flist{SearchDataFiles(".mhr", alstr_get_cstr(pname))};
-                for(size_t i{0};i < VECTOR_SIZE(flist);i++)
-                    AddFileEntry(&list, VECTOR_ELEM(flist, i));
-                VECTOR_FOR_EACH(al_string, flist, alstr_reset);
-                VECTOR_DEINIT(flist);
+                const std::string pname{pathlist, end};
+                for(const auto &fname : SearchDataFiles(".mhr", pname.c_str()))
+                    AddFileEntry(&list, fname);
             }
 
             pathlist = next;
         }
-
-        alstr_reset(&pname);
     }
     else if(ConfigValueExists(alstr_get_cstr(devname), nullptr, "hrtf_tables"))
         ERR("The hrtf_tables option is deprecated, please use hrtf-paths instead.\n");
 
     if(usedefaults)
     {
-        vector_al_string flist{SearchDataFiles(".mhr", "openal/hrtf")};
-        for(size_t i{0};i < VECTOR_SIZE(flist);i++)
-            AddFileEntry(&list, VECTOR_ELEM(flist, i));
-        VECTOR_FOR_EACH(al_string, flist, alstr_reset);
-        VECTOR_DEINIT(flist);
+        for(const auto &fname : SearchDataFiles(".mhr", "openal/hrtf"))
+            AddFileEntry(&list, fname);
 
-        al_string ename = AL_STRING_INIT_STATIC();
         ResData res{GetResource(IDR_DEFAULT_44100_MHR)};
         if(res.data != nullptr && res.size > 0)
-        {
-            alstr_copy_cstr(&ename, "Built-In 44100hz");
-            AddBuiltInEntry(&list, ename, IDR_DEFAULT_44100_MHR);
-        }
+            AddBuiltInEntry(&list, "Built-In 44100hz", IDR_DEFAULT_44100_MHR);
 
         res = GetResource(IDR_DEFAULT_48000_MHR);
         if(res.data != nullptr && res.size > 0)
-        {
-            alstr_copy_cstr(&ename, "Built-In 48000hz");
-            AddBuiltInEntry(&list, ename, IDR_DEFAULT_48000_MHR);
-        }
-        alstr_reset(&ename);
+            AddBuiltInEntry(&list, "Built-In 48000hz", IDR_DEFAULT_48000_MHR);
     }
 
     const char *defaulthrtf{""};

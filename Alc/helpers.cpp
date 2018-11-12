@@ -109,6 +109,7 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 #include <shlobj.h>
 #endif
 
+#include <atomic>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -213,7 +214,7 @@ void FillCPUCaps(int capfilter)
         al_string features = AL_STRING_INIT_STATIC();
         char buf[256];
 
-        while(fgets(buf, sizeof(buf), file) != NULL)
+        while(fgets(buf, sizeof(buf), file) != nullptr)
         {
             if(strncmp(buf, "Features\t:", 10) != 0)
                 continue;
@@ -221,14 +222,14 @@ void FillCPUCaps(int capfilter)
             alstr_copy_cstr(&features, buf+10);
             while(VECTOR_BACK(features) != '\n')
             {
-                if(fgets(buf, sizeof(buf), file) == NULL)
+                if(fgets(buf, sizeof(buf), file) == nullptr)
                     break;
                 alstr_append_cstr(&features, buf);
             }
             break;
         }
         fclose(file);
-        file = NULL;
+        file = nullptr;
 
         if(!alstr_empty(features))
         {
@@ -236,7 +237,7 @@ void FillCPUCaps(int capfilter)
             while(isspace(str[0])) ++str;
 
             TRACE("Got features string:%s\n", str);
-            while((str=strstr(str, "neon")) != NULL)
+            while((str=strstr(str, "neon")) != nullptr)
             {
                 if(isspace(*(str-1)) && (str[4] == 0 || isspace(str[4])))
                 {
@@ -297,8 +298,8 @@ void RestoreFPUMode(const FPUCtl *ctl)
 #elif defined(HAVE___CONTROL87_2)
 
     int mode;
-    __control87_2(ctl->state, _MCW_DN, &mode, NULL);
-    __control87_2(ctl->sse_state, _MCW_DN, NULL, &mode);
+    __control87_2(ctl->state, _MCW_DN, &mode, nullptr);
+    __control87_2(ctl->sse_state, _MCW_DN, nullptr, &mode);
 
 #elif defined(HAVE__CONTROLFP)
 
@@ -306,11 +307,6 @@ void RestoreFPUMode(const FPUCtl *ctl)
 #endif
 }
 
-
-static int StringSortCompare(const void *str1, const void *str2)
-{
-    return alstr_cmp(*(const_al_string*)str1, *(const_al_string*)str2);
-}
 
 #ifdef _WIN32
 
@@ -348,42 +344,16 @@ PathNamePair GetProcBinary()
 }
 
 
-static WCHAR *FromUTF8(const char *str)
-{
-    WCHAR *out = NULL;
-    int len;
-
-    if((len=MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0)) > 0)
-    {
-        out = static_cast<WCHAR*>(calloc(sizeof(WCHAR), len));
-        MultiByteToWideChar(CP_UTF8, 0, str, -1, out, len);
-    }
-    return out;
-}
-
-
 void *LoadLib(const char *name)
 {
-    HANDLE hdl = NULL;
-    WCHAR *wname;
-
-    wname = FromUTF8(name);
-    if(!wname)
-        ERR("Failed to convert UTF-8 filename: \"%s\"\n", name);
-    else
-    {
-        hdl = LoadLibraryW(wname);
-        free(wname);
-    }
-    return hdl;
+    std::wstring wname{utf8_to_wstr(name)};
+    return LoadLibraryW(wname.c_str());
 }
 void CloseLib(void *handle)
-{ FreeLibrary(reinterpret_cast<HMODULE>(handle)); }
+{ FreeLibrary(static_cast<HMODULE>(handle)); }
 void *GetSymbol(void *handle, const char *name)
 {
-    void *ret;
-
-    ret = reinterpret_cast<void*>(GetProcAddress(reinterpret_cast<HMODULE>(handle), name));
+    void *ret{reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(handle), name))};
     if(!ret) ERR("Failed to load %s\n", name);
     return ret;
 }
@@ -392,23 +362,15 @@ void *GetSymbol(void *handle, const char *name)
 void al_print(const char *type, const char *func, const char *fmt, ...)
 {
     char str[1024];
-    WCHAR *wstr;
     va_list ap;
 
     va_start(ap, fmt);
     vsnprintf(str, sizeof(str), fmt, ap);
     va_end(ap);
-
     str[sizeof(str)-1] = 0;
-    wstr = FromUTF8(str);
-    if(!wstr)
-        fprintf(LogFile, "AL lib: %s %s: <UTF-8 error> %s", type, func, str);
-    else
-    {
-        fprintf(LogFile, "AL lib: %s %s: %ls", type, func, wstr);
-        free(wstr);
-        wstr = NULL;
-    }
+
+    std::wstring wstr{utf8_to_wstr(str)};
+    fprintf(LogFile, "AL lib: %s %s: %ls", type, func, wstr.c_str());
     fflush(LogFile);
 }
 
@@ -416,124 +378,93 @@ void al_print(const char *type, const char *func, const char *fmt, ...)
 static inline int is_slash(int c)
 { return (c == '\\' || c == '/'); }
 
-static void DirectorySearch(const char *path, const char *ext, vector_al_string *results)
+static void DirectorySearch(const char *path, const char *ext, std::vector<std::string> *const results)
 {
-    al_string pathstr = AL_STRING_INIT_STATIC();
+    std::string pathstr{path};
+    pathstr += "\\*";
+    pathstr += ext;
+    TRACE("Searching %s\n", pathstr.c_str());
+
+    std::wstring wpath{utf8_to_wstr(pathstr.c_str())};
     WIN32_FIND_DATAW fdata;
-    WCHAR *wpath;
-    HANDLE hdl;
-
-    alstr_copy_cstr(&pathstr, path);
-    alstr_append_cstr(&pathstr, "\\*");
-    alstr_append_cstr(&pathstr, ext);
-
-    TRACE("Searching %s\n", alstr_get_cstr(pathstr));
-
-    wpath = FromUTF8(alstr_get_cstr(pathstr));
-
-    hdl = FindFirstFileW(wpath, &fdata);
+    HANDLE hdl{FindFirstFileW(wpath.c_str(), &fdata)};
     if(hdl != INVALID_HANDLE_VALUE)
     {
-        size_t base = VECTOR_SIZE(*results);
+        size_t base = results->size();
         do {
-            al_string str = AL_STRING_INIT_STATIC();
-            alstr_copy_cstr(&str, path);
-            alstr_append_char(&str, '\\');
-            alstr_append_wcstr(&str, fdata.cFileName);
-            TRACE("Got result %s\n", alstr_get_cstr(str));
-            VECTOR_PUSH_BACK(*results, str);
+            results->emplace_back();
+            std::string &str = results->back();
+            str = path;
+            str += '\\';
+            str += wstr_to_utf8(fdata.cFileName);
+            TRACE("Got result %s\n", str.c_str());
         } while(FindNextFileW(hdl, &fdata));
         FindClose(hdl);
 
-        if(VECTOR_SIZE(*results) > base)
-            qsort(VECTOR_BEGIN(*results)+base, VECTOR_SIZE(*results)-base,
-                    sizeof(VECTOR_FRONT(*results)), StringSortCompare);
+        std::sort(results->begin()+base, results->end());
     }
-
-    free(wpath);
-    alstr_reset(&pathstr);
 }
 
-vector_al_string SearchDataFiles(const char *ext, const char *subdir)
+std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 {
-    static const int ids[2] = { CSIDL_APPDATA, CSIDL_COMMON_APPDATA };
-    static RefCount search_lock;
-    vector_al_string results = VECTOR_INIT_STATIC();
-    size_t i;
+    static std::atomic<ALenum> search_lock{AL_FALSE};
 
-    while(ATOMIC_EXCHANGE_SEQ(&search_lock, 1u) == 1u)
+    while(search_lock.exchange(AL_TRUE) == AL_TRUE)
         althrd_yield();
 
     /* If the path is absolute, use it directly. */
+    std::vector<std::string> results;
     if(isalpha(subdir[0]) && subdir[1] == ':' && is_slash(subdir[2]))
     {
-        al_string path = AL_STRING_INIT_STATIC();
-        alstr_copy_cstr(&path, subdir);
-#define FIX_SLASH(i) do { if(*(i) == '/') *(i) = '\\'; } while(0)
-        VECTOR_FOR_EACH(char, path, FIX_SLASH);
-#undef FIX_SLASH
-
-        DirectorySearch(alstr_get_cstr(path), ext, &results);
-
-        alstr_reset(&path);
+        std::string path{subdir};
+        std::replace(path.begin(), path.end(), '/', '\\');
+        DirectorySearch(path.c_str(), ext, &results);
     }
     else if(subdir[0] == '\\' && subdir[1] == '\\' && subdir[2] == '?' && subdir[3] == '\\')
         DirectorySearch(subdir, ext, &results);
     else
     {
-        al_string path = AL_STRING_INIT_STATIC();
-        WCHAR *cwdbuf;
+        std::string path;
 
         /* Search the app-local directory. */
-        if((cwdbuf=_wgetenv(L"ALSOFT_LOCAL_PATH")) && *cwdbuf != '\0')
+        WCHAR *cwdbuf{_wgetenv(L"ALSOFT_LOCAL_PATH")};
+        if(cwdbuf && *cwdbuf != '\0')
         {
-            alstr_copy_wcstr(&path, cwdbuf);
-            if(is_slash(VECTOR_BACK(path)))
-            {
-                VECTOR_POP_BACK(path);
-                *VECTOR_END(path) = 0;
-            }
+            path = wstr_to_utf8(cwdbuf);
+            if(is_slash(path.back()))
+                path.pop_back();
         }
-        else if(!(cwdbuf=_wgetcwd(NULL, 0)))
-            alstr_copy_cstr(&path, ".");
+        else if(!(cwdbuf=_wgetcwd(nullptr, 0)))
+            path = ".";
         else
         {
-            alstr_copy_wcstr(&path, cwdbuf);
-            if(is_slash(VECTOR_BACK(path)))
-            {
-                VECTOR_POP_BACK(path);
-                *VECTOR_END(path) = 0;
-            }
+            path = wstr_to_utf8(cwdbuf);
+            if(is_slash(path.back()))
+                path.pop_back();
             free(cwdbuf);
         }
-#define FIX_SLASH(i) do { if(*(i) == '/') *(i) = '\\'; } while(0)
-        VECTOR_FOR_EACH(char, path, FIX_SLASH);
-#undef FIX_SLASH
-        DirectorySearch(alstr_get_cstr(path), ext, &results);
+        std::replace(path.begin(), path.end(), '/', '\\');
+        DirectorySearch(path.c_str(), ext, &results);
 
         /* Search the local and global data dirs. */
-        for(i = 0;i < COUNTOF(ids);i++)
+        static constexpr int ids[2] = { CSIDL_APPDATA, CSIDL_COMMON_APPDATA };
+        for(int id : ids)
         {
             WCHAR buffer[MAX_PATH];
-            if(SHGetSpecialFolderPathW(NULL, buffer, ids[i], FALSE) != FALSE)
-            {
-                alstr_copy_wcstr(&path, buffer);
-                if(!is_slash(VECTOR_BACK(path)))
-                    alstr_append_char(&path, '\\');
-                alstr_append_cstr(&path, subdir);
-#define FIX_SLASH(i) do { if(*(i) == '/') *(i) = '\\'; } while(0)
-                VECTOR_FOR_EACH(char, path, FIX_SLASH);
-#undef FIX_SLASH
+            if(SHGetSpecialFolderPathW(nullptr, buffer, id, FALSE) == FALSE)
+                continue;
 
-                DirectorySearch(alstr_get_cstr(path), ext, &results);
-            }
+            path = wstr_to_utf8(buffer);
+            if(!is_slash(path.back()))
+                path += '\\';
+            path += subdir;
+            std::replace(path.begin(), path.end(), '/', '\\');
+
+            DirectorySearch(path.c_str(), ext, &results);
         }
-
-        alstr_reset(&path);
     }
 
-    ATOMIC_STORE_SEQ(&search_lock, 0u);
-
+    search_lock.store(AL_FALSE);
     return results;
 }
 
@@ -547,7 +478,7 @@ PathNamePair GetProcBinary()
 #ifdef __FreeBSD__
     size_t pathlen;
     int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
-    if(sysctl(mib, 4, NULL, &pathlen, NULL, 0) == -1)
+    if(sysctl(mib, 4, nullptr, &pathlen, nullptr, 0) == -1)
         WARN("Failed to sysctl kern.proc.pathname: %s\n", strerror(errno));
     else
     {
@@ -626,28 +557,23 @@ PathNamePair GetProcBinary()
 
 void *LoadLib(const char *name)
 {
-    const char *err;
-    void *handle;
-
     dlerror();
-    handle = dlopen(name, RTLD_NOW);
-    if((err=dlerror()) != NULL)
-        handle = NULL;
+    void *handle{dlopen(name, RTLD_NOW)};
+    const char *err{dlerror()};
+    if(err) handle = nullptr;
     return handle;
 }
 void CloseLib(void *handle)
 { dlclose(handle); }
 void *GetSymbol(void *handle, const char *name)
 {
-    const char *err;
-    void *sym;
-
     dlerror();
-    sym = dlsym(handle, name);
-    if((err=dlerror()) != NULL)
+    void *sym{dlsym(handle, name)};
+    const char *err{dlerror()};
+    if(err)
     {
         WARN("Failed to load %s: %s\n", name, err);
-        sym = NULL;
+        sym = nullptr;
     }
     return sym;
 }
@@ -667,139 +593,122 @@ void al_print(const char *type, const char *func, const char *fmt, ...)
 }
 
 
-static void DirectorySearch(const char *path, const char *ext, vector_al_string *results)
+static void DirectorySearch(const char *path, const char *ext, std::vector<std::string> *const results)
 {
-    size_t extlen = strlen(ext);
-    DIR *dir;
-
     TRACE("Searching %s for *%s\n", path, ext);
-    dir = opendir(path);
-    if(dir != NULL)
+    DIR *dir{opendir(path)};
+    if(dir != nullptr)
     {
-        size_t base = VECTOR_SIZE(*results);
+        const size_t extlen = strlen(ext);
+        size_t base = results->size();
+
         struct dirent *dirent;
-        while((dirent=readdir(dir)) != NULL)
+        while((dirent=readdir(dir)) != nullptr)
         {
-            al_string str;
-            size_t len;
             if(strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0)
                 continue;
 
-            len = strlen(dirent->d_name);
-            if(len <= extlen)
-                continue;
+            size_t len{strlen(dirent->d_name)};
+            if(len <= extlen) continue;
             if(strcasecmp(dirent->d_name+len-extlen, ext) != 0)
                 continue;
 
-            AL_STRING_INIT(str);
-            alstr_copy_cstr(&str, path);
-            if(VECTOR_BACK(str) != '/')
-                alstr_append_char(&str, '/');
-            alstr_append_cstr(&str, dirent->d_name);
-            TRACE("Got result %s\n", alstr_get_cstr(str));
-            VECTOR_PUSH_BACK(*results, str);
+            results->emplace_back();
+            std::string &str = results->back();
+            str = path;
+            if(str.back() != '/')
+                str.push_back('/');
+            str += dirent->d_name;
+            TRACE("Got result %s\n", str.c_str());
         }
         closedir(dir);
 
-        if(VECTOR_SIZE(*results) > base)
-            qsort(VECTOR_BEGIN(*results)+base, VECTOR_SIZE(*results)-base,
-                  sizeof(VECTOR_FRONT(*results)), StringSortCompare);
+        std::sort(results->begin()+base, results->end());
     }
 }
 
-vector_al_string SearchDataFiles(const char *ext, const char *subdir)
+std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
 {
-    static RefCount search_lock;
-    vector_al_string results = VECTOR_INIT_STATIC();
+    static std::atomic<ALenum> search_lock{AL_FALSE};
 
-    while(ATOMIC_EXCHANGE_SEQ(&search_lock, 1u) == 1u)
+    while(search_lock.exchange(AL_TRUE) == AL_TRUE)
         althrd_yield();
 
+    std::vector<std::string> results;
     if(subdir[0] == '/')
         DirectorySearch(subdir, ext, &results);
     else
     {
-        al_string path = AL_STRING_INIT_STATIC();
-        const char *str, *next;
-
         /* Search the app-local directory. */
-        if((str=getenv("ALSOFT_LOCAL_PATH")) && *str != '\0')
+        const char *str{getenv("ALSOFT_LOCAL_PATH")};
+        if(str && *str != '\0')
             DirectorySearch(str, ext, &results);
         else
         {
-            size_t cwdlen = 256;
-            char *cwdbuf = static_cast<char*>(malloc(cwdlen));
-            while(!getcwd(cwdbuf, cwdlen))
+            std::vector<char> cwdbuf(256);
+            while(!getcwd(cwdbuf.data(), cwdbuf.size()))
             {
-                free(cwdbuf);
-                cwdbuf = NULL;
                 if(errno != ERANGE)
+                {
+                    cwdbuf.clear();
                     break;
-                cwdlen <<= 1;
-                cwdbuf = static_cast<char*>(malloc(cwdlen));
+                }
+                cwdbuf.resize(cwdbuf.size() << 1);
             }
-            if(!cwdbuf)
+            if(cwdbuf.empty())
                 DirectorySearch(".", ext, &results);
             else
             {
-                DirectorySearch(cwdbuf, ext, &results);
-                free(cwdbuf);
-                cwdbuf = NULL;
+                DirectorySearch(cwdbuf.data(), ext, &results);
+                cwdbuf.clear();
             }
         }
 
         // Search local data dir
-        if((str=getenv("XDG_DATA_HOME")) != NULL && str[0] != '\0')
+        if((str=getenv("XDG_DATA_HOME")) != nullptr && str[0] != '\0')
         {
-            alstr_copy_cstr(&path, str);
-            if(VECTOR_BACK(path) != '/')
-                alstr_append_char(&path, '/');
-            alstr_append_cstr(&path, subdir);
-            DirectorySearch(alstr_get_cstr(path), ext, &results);
+            std::string path{str};
+            if(path.back() != '/')
+                path += '/';
+            path += subdir;
+            DirectorySearch(path.c_str(), ext, &results);
         }
-        else if((str=getenv("HOME")) != NULL && str[0] != '\0')
+        else if((str=getenv("HOME")) != nullptr && str[0] != '\0')
         {
-            alstr_copy_cstr(&path, str);
-            if(VECTOR_BACK(path) == '/')
-            {
-                VECTOR_POP_BACK(path);
-                *VECTOR_END(path) = 0;
-            }
-            alstr_append_cstr(&path, "/.local/share/");
-            alstr_append_cstr(&path, subdir);
-            DirectorySearch(alstr_get_cstr(path), ext, &results);
+            std::string path{str};
+            if(path.back() == '/')
+                path.pop_back();
+            path += "/.local/share/";
+            path += subdir;
+            DirectorySearch(path.c_str(), ext, &results);
         }
 
         // Search global data dirs
-        if((str=getenv("XDG_DATA_DIRS")) == NULL || str[0] == '\0')
+        if((str=getenv("XDG_DATA_DIRS")) == nullptr || str[0] == '\0')
             str = "/usr/local/share/:/usr/share/";
 
-        next = str;
-        while((str=next) != NULL && str[0] != '\0')
+        const char *next{str};
+        while((str=next) != nullptr && str[0] != '\0')
         {
             next = strchr(str, ':');
-            if(!next)
-                alstr_copy_cstr(&path, str);
-            else
-            {
-                alstr_copy_range(&path, str, next);
-                ++next;
-            }
-            if(!alstr_empty(path))
-            {
-                if(VECTOR_BACK(path) != '/')
-                    alstr_append_char(&path, '/');
-                alstr_append_cstr(&path, subdir);
 
-                DirectorySearch(alstr_get_cstr(path), ext, &results);
+            std::string path;
+            if(!next)
+                path = str;
+            else
+                path.append(str, next++);
+            if(!path.empty())
+            {
+                if(path.back() != '/')
+                    path += '/';
+                path += subdir;
+
+                DirectorySearch(path.c_str(), ext, &results);
             }
         }
-
-        alstr_reset(&path);
     }
 
-    ATOMIC_STORE_SEQ(&search_lock, 0u);
-
+    search_lock.store(AL_FALSE);
     return results;
 }
 
@@ -942,10 +851,10 @@ void alstr_append_range(al_string *str, const al_string_char_type *from, const a
 void alstr_copy_wcstr(al_string *str, const wchar_t *from)
 {
     int len;
-    if((len=WideCharToMultiByte(CP_UTF8, 0, from, -1, NULL, 0, NULL, NULL)) > 0)
+    if((len=WideCharToMultiByte(CP_UTF8, 0, from, -1, nullptr, 0, nullptr, nullptr)) > 0)
     {
         VECTOR_RESIZE(*str, len-1, len);
-        WideCharToMultiByte(CP_UTF8, 0, from, -1, &VECTOR_FRONT(*str), len, NULL, NULL);
+        WideCharToMultiByte(CP_UTF8, 0, from, -1, &VECTOR_FRONT(*str), len, nullptr, nullptr);
         VECTOR_ELEM(*str, len-1) = 0;
     }
 }
@@ -953,11 +862,11 @@ void alstr_copy_wcstr(al_string *str, const wchar_t *from)
 void alstr_append_wcstr(al_string *str, const wchar_t *from)
 {
     int len;
-    if((len=WideCharToMultiByte(CP_UTF8, 0, from, -1, NULL, 0, NULL, NULL)) > 0)
+    if((len=WideCharToMultiByte(CP_UTF8, 0, from, -1, nullptr, 0, nullptr, nullptr)) > 0)
     {
         size_t base = alstr_length(*str);
         VECTOR_RESIZE(*str, base+len-1, base+len);
-        WideCharToMultiByte(CP_UTF8, 0, from, -1, &VECTOR_ELEM(*str, base), len, NULL, NULL);
+        WideCharToMultiByte(CP_UTF8, 0, from, -1, &VECTOR_ELEM(*str, base), len, nullptr, nullptr);
         VECTOR_ELEM(*str, base+len-1) = 0;
     }
 }
@@ -965,10 +874,10 @@ void alstr_append_wcstr(al_string *str, const wchar_t *from)
 void alstr_copy_wrange(al_string *str, const wchar_t *from, const wchar_t *to)
 {
     int len;
-    if((len=WideCharToMultiByte(CP_UTF8, 0, from, (int)(to-from), NULL, 0, NULL, NULL)) > 0)
+    if((len=WideCharToMultiByte(CP_UTF8, 0, from, (int)(to-from), nullptr, 0, nullptr, nullptr)) > 0)
     {
         VECTOR_RESIZE(*str, len, len+1);
-        WideCharToMultiByte(CP_UTF8, 0, from, (int)(to-from), &VECTOR_FRONT(*str), len+1, NULL, NULL);
+        WideCharToMultiByte(CP_UTF8, 0, from, (int)(to-from), &VECTOR_FRONT(*str), len+1, nullptr, nullptr);
         VECTOR_ELEM(*str, len) = 0;
     }
 }
@@ -976,11 +885,11 @@ void alstr_copy_wrange(al_string *str, const wchar_t *from, const wchar_t *to)
 void alstr_append_wrange(al_string *str, const wchar_t *from, const wchar_t *to)
 {
     int len;
-    if((len=WideCharToMultiByte(CP_UTF8, 0, from, (int)(to-from), NULL, 0, NULL, NULL)) > 0)
+    if((len=WideCharToMultiByte(CP_UTF8, 0, from, (int)(to-from), nullptr, 0, nullptr, nullptr)) > 0)
     {
         size_t base = alstr_length(*str);
         VECTOR_RESIZE(*str, base+len, base+len+1);
-        WideCharToMultiByte(CP_UTF8, 0, from, (int)(to-from), &VECTOR_ELEM(*str, base), len+1, NULL, NULL);
+        WideCharToMultiByte(CP_UTF8, 0, from, (int)(to-from), &VECTOR_ELEM(*str, base), len+1, nullptr, nullptr);
         VECTOR_ELEM(*str, base+len) = 0;
     }
 }

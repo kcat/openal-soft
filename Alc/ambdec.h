@@ -39,7 +39,7 @@ struct AmbDecConf {
     ALfloat HFOrderGain[MAX_AMBI_ORDER+1];
     ALfloat HFMatrix[MAX_OUTPUT_CHANNELS][MAX_AMBI_COEFFS];
 
-    int load(const char *fname);
+    int load(const char *fname) noexcept;
 };
 
 #endif /* AMBDEC_H */

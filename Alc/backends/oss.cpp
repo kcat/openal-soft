@@ -79,13 +79,13 @@ struct oss_device {
 static struct oss_device oss_playback = {
     "OSS Default",
     "/dev/dsp",
-    NULL
+    nullptr
 };
 
 static struct oss_device oss_capture = {
     "OSS Default",
     "/dev/dsp",
-    NULL
+    nullptr
 };
 
 #ifdef ALC_OSS_COMPAT
@@ -99,12 +99,13 @@ static void ALCossListPopulate(struct oss_device *UNUSED(devlist), int UNUSED(ty
 #else
 
 #ifndef HAVE_STRNLEN
-static size_t strnlen(const char *str, size_t maxlen)
+static size_t my_strnlen(const char *str, size_t maxlen)
 {
-    const char *end = memchr(str, 0, maxlen);
+    const char *end = static_cast<const char*>(memchr(str, 0, maxlen));
     if(!end) return maxlen;
     return end - str;
 }
+#define strnlen my_strnlen
 #endif
 
 static void ALCossListAppend(struct oss_device *list, const char *handle, size_t hlen, const char *path, size_t plen)
@@ -135,7 +136,7 @@ static void ALCossListAppend(struct oss_device *list, const char *handle, size_t
         hlen = plen;
     }
 
-    while(next != NULL)
+    while(next != nullptr)
     {
         if(strncmp(next->path, path, plen) == 0)
             return;
@@ -146,7 +147,7 @@ static void ALCossListAppend(struct oss_device *list, const char *handle, size_t
     next = (struct oss_device*)malloc(sizeof(struct oss_device) + hlen + plen + 2);
     next->handle = (char*)(next + 1);
     next->path = next->handle + hlen + 1;
-    next->next = NULL;
+    next->next = nullptr;
     last->next = next;
 
     strncpy((char*)next->handle, handle, hlen);
@@ -211,14 +212,14 @@ done:
 static void ALCossListFree(struct oss_device *list)
 {
     struct oss_device *cur;
-    if(list == NULL)
+    if(list == nullptr)
         return;
 
     /* skip the first item "OSS Default" */
     cur = list->next;
-    list->next = NULL;
+    list->next = nullptr;
 
-    while(cur != NULL)
+    while(cur != nullptr)
     {
         struct oss_device *next = cur->next;
         free(cur);
@@ -237,9 +238,7 @@ static int log2i(ALCuint x)
     return y;
 }
 
-typedef struct ALCplaybackOSS {
-    DERIVE_FROM_TYPE(ALCbackend);
-
+struct ALCplaybackOSS final : public ALCbackend {
     int fd;
 
     ALubyte *mix_data;
@@ -247,7 +246,7 @@ typedef struct ALCplaybackOSS {
 
     ATOMIC(ALenum) killNow;
     althrd_t thread;
-} ALCplaybackOSS;
+};
 
 static int ALCplaybackOSS_mixerProc(void *ptr);
 
@@ -266,9 +265,30 @@ DECLARE_DEFAULT_ALLOCATORS(ALCplaybackOSS)
 DEFINE_ALCBACKEND_VTABLE(ALCplaybackOSS);
 
 
+static void ALCplaybackOSS_Construct(ALCplaybackOSS *self, ALCdevice *device)
+{
+    new (self) ALCplaybackOSS{};
+    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    SET_VTABLE2(ALCplaybackOSS, ALCbackend, self);
+
+    self->fd = -1;
+    ATOMIC_INIT(&self->killNow, AL_FALSE);
+}
+
+static void ALCplaybackOSS_Destruct(ALCplaybackOSS *self)
+{
+    if(self->fd != -1)
+        close(self->fd);
+    self->fd = -1;
+
+    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+    self->~ALCplaybackOSS();
+}
+
+
 static int ALCplaybackOSS_mixerProc(void *ptr)
 {
-    ALCplaybackOSS *self = (ALCplaybackOSS*)ptr;
+    ALCplaybackOSS *self = static_cast<ALCplaybackOSS*>(ptr);
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     struct timeval timeout;
     ALubyte *write_ptr;
@@ -293,7 +313,7 @@ static int ALCplaybackOSS_mixerProc(void *ptr)
         timeout.tv_usec = 0;
 
         ALCplaybackOSS_unlock(self);
-        sret = select(self->fd+1, NULL, &wfds, NULL, &timeout);
+        sret = select(self->fd+1, nullptr, &wfds, nullptr, &timeout);
         ALCplaybackOSS_lock(self);
         if(sret < 0)
         {
@@ -335,24 +355,6 @@ static int ALCplaybackOSS_mixerProc(void *ptr)
 }
 
 
-static void ALCplaybackOSS_Construct(ALCplaybackOSS *self, ALCdevice *device)
-{
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
-    SET_VTABLE2(ALCplaybackOSS, ALCbackend, self);
-
-    self->fd = -1;
-    ATOMIC_INIT(&self->killNow, AL_FALSE);
-}
-
-static void ALCplaybackOSS_Destruct(ALCplaybackOSS *self)
-{
-    if(self->fd != -1)
-        close(self->fd);
-    self->fd = -1;
-
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
-}
-
 static ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name)
 {
     struct oss_device *dev = &oss_playback;
@@ -367,13 +369,13 @@ static ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name)
             ALCossListPopulate(&oss_playback, DSP_CAP_OUTPUT);
             dev = &oss_playback;
         }
-        while(dev != NULL)
+        while(dev != nullptr)
         {
             if (strcmp(dev->handle, name) == 0)
                 break;
             dev = dev->next;
         }
-        if(dev == NULL)
+        if(dev == nullptr)
         {
             WARN("Could not find \"%s\" in device list\n", name);
             return ALC_INVALID_VALUE;
@@ -403,7 +405,7 @@ static ALCboolean ALCplaybackOSS_reset(ALCplaybackOSS *self)
     int numChannels;
     int ossFormat;
     int ossSpeed;
-    char *err;
+    const char *err;
 
     switch(device->FmtType)
     {
@@ -481,13 +483,13 @@ static ALCboolean ALCplaybackOSS_start(ALCplaybackOSS *self)
     self->data_size = device->UpdateSize * FrameSizeFromDevFmt(
         device->FmtChans, device->FmtType, device->AmbiOrder
     );
-    self->mix_data = calloc(1, self->data_size);
+    self->mix_data = static_cast<ALubyte*>(calloc(1, self->data_size));
 
     ATOMIC_STORE_SEQ(&self->killNow, AL_FALSE);
     if(althrd_create(&self->thread, ALCplaybackOSS_mixerProc, self) != althrd_success)
     {
         free(self->mix_data);
-        self->mix_data = NULL;
+        self->mix_data = nullptr;
         return ALC_FALSE;
     }
 
@@ -506,20 +508,18 @@ static void ALCplaybackOSS_stop(ALCplaybackOSS *self)
         ERR("Error resetting device: %s\n", strerror(errno));
 
     free(self->mix_data);
-    self->mix_data = NULL;
+    self->mix_data = nullptr;
 }
 
 
-typedef struct ALCcaptureOSS {
-    DERIVE_FROM_TYPE(ALCbackend);
-
+struct ALCcaptureOSS final : public ALCbackend {
     int fd;
 
     ll_ringbuffer_t *ring;
 
     ATOMIC(ALenum) killNow;
     althrd_t thread;
-} ALCcaptureOSS;
+};
 
 static int ALCcaptureOSS_recordProc(void *ptr);
 
@@ -538,9 +538,33 @@ DECLARE_DEFAULT_ALLOCATORS(ALCcaptureOSS)
 DEFINE_ALCBACKEND_VTABLE(ALCcaptureOSS);
 
 
+static void ALCcaptureOSS_Construct(ALCcaptureOSS *self, ALCdevice *device)
+{
+    new (self) ALCcaptureOSS{};
+    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    SET_VTABLE2(ALCcaptureOSS, ALCbackend, self);
+
+    self->fd = -1;
+    self->ring = nullptr;
+    ATOMIC_INIT(&self->killNow, AL_FALSE);
+}
+
+static void ALCcaptureOSS_Destruct(ALCcaptureOSS *self)
+{
+    if(self->fd != -1)
+        close(self->fd);
+    self->fd = -1;
+
+    ll_ringbuffer_free(self->ring);
+    self->ring = nullptr;
+    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+    self->~ALCcaptureOSS();
+}
+
+
 static int ALCcaptureOSS_recordProc(void *ptr)
 {
-    ALCcaptureOSS *self = (ALCcaptureOSS*)ptr;
+    ALCcaptureOSS *self = static_cast<ALCcaptureOSS*>(ptr);
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     struct timeval timeout;
     int frame_size;
@@ -562,7 +586,7 @@ static int ALCcaptureOSS_recordProc(void *ptr)
         timeout.tv_sec = 1;
         timeout.tv_usec = 0;
 
-        sret = select(self->fd+1, &rfds, NULL, NULL, &timeout);
+        sret = select(self->fd+1, &rfds, nullptr, nullptr, &timeout);
         if(sret < 0)
         {
             if(errno == EINTR)
@@ -597,27 +621,6 @@ static int ALCcaptureOSS_recordProc(void *ptr)
 }
 
 
-static void ALCcaptureOSS_Construct(ALCcaptureOSS *self, ALCdevice *device)
-{
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
-    SET_VTABLE2(ALCcaptureOSS, ALCbackend, self);
-
-    self->fd = -1;
-    self->ring = NULL;
-    ATOMIC_INIT(&self->killNow, AL_FALSE);
-}
-
-static void ALCcaptureOSS_Destruct(ALCcaptureOSS *self)
-{
-    if(self->fd != -1)
-        close(self->fd);
-    self->fd = -1;
-
-    ll_ringbuffer_free(self->ring);
-    self->ring = NULL;
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
-}
-
 static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
@@ -630,7 +633,7 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
     int numChannels;
     int ossFormat;
     int ossSpeed;
-    char *err;
+    const char *err;
 
     if(!name || strcmp(name, dev->handle) == 0)
         name = dev->handle;
@@ -641,13 +644,13 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
             ALCossListPopulate(&oss_capture, DSP_CAP_INPUT);
             dev = &oss_capture;
         }
-        while(dev != NULL)
+        while(dev != nullptr)
         {
             if (strcmp(dev->handle, name) == 0)
                 break;
             dev = dev->next;
         }
-        if(dev == NULL)
+        if(dev == nullptr)
         {
             WARN("Could not find \"%s\" in device list\n", name);
             return ALC_INVALID_VALUE;
@@ -766,7 +769,7 @@ static void ALCcaptureOSS_stop(ALCcaptureOSS *self)
 
 static ALCenum ALCcaptureOSS_captureSamples(ALCcaptureOSS *self, ALCvoid *buffer, ALCuint samples)
 {
-    ll_ringbuffer_read(self->ring, buffer, samples);
+    ll_ringbuffer_read(self->ring, static_cast<char*>(buffer), samples);
     return ALC_NO_ERROR;
 }
 
@@ -776,10 +779,9 @@ static ALCuint ALCcaptureOSS_availableSamples(ALCcaptureOSS *self)
 }
 
 
-typedef struct ALCossBackendFactory {
-    DERIVE_FROM_TYPE(ALCbackendFactory);
-} ALCossBackendFactory;
-#define ALCOSSBACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCossBackendFactory, ALCbackendFactory) } }
+struct ALCossBackendFactory final : public ALCbackendFactory {
+    ALCossBackendFactory() noexcept;
+};
 
 ALCbackendFactory *ALCossBackendFactory_getFactory(void);
 
@@ -791,17 +793,21 @@ static ALCbackend* ALCossBackendFactory_createBackend(ALCossBackendFactory *self
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCossBackendFactory);
 
 
+ALCossBackendFactory::ALCossBackendFactory() noexcept
+  : ALCbackendFactory{GET_VTABLE2(ALCossBackendFactory, ALCbackendFactory)}
+{ }
+
 ALCbackendFactory *ALCossBackendFactory_getFactory(void)
 {
-    static ALCossBackendFactory factory = ALCOSSBACKENDFACTORY_INITIALIZER;
+    static ALCossBackendFactory factory{};
     return STATIC_CAST(ALCbackendFactory, &factory);
 }
 
 
 ALCboolean ALCossBackendFactory_init(ALCossBackendFactory* UNUSED(self))
 {
-    ConfigValueStr(NULL, "oss", "device", &oss_playback.path);
-    ConfigValueStr(NULL, "oss", "capture", &oss_capture.path);
+    ConfigValueStr(nullptr, "oss", "device", &oss_playback.path);
+    ConfigValueStr(nullptr, "oss", "capture", &oss_capture.path);
 
     return ALC_TRUE;
 }
@@ -822,7 +828,7 @@ ALCboolean ALCossBackendFactory_querySupport(ALCossBackendFactory* UNUSED(self),
 
 void ALCossBackendFactory_probe(ALCossBackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames)
 {
-    struct oss_device *cur = NULL;
+    struct oss_device *cur = nullptr;
     switch(type)
     {
         case ALL_DEVICE_PROBE:
@@ -837,7 +843,7 @@ void ALCossBackendFactory_probe(ALCossBackendFactory* UNUSED(self), enum DevProb
             cur = &oss_capture;
             break;
     }
-    while(cur != NULL)
+    while(cur != nullptr)
     {
 #ifdef HAVE_STAT
         struct stat buf;
@@ -854,16 +860,16 @@ ALCbackend* ALCossBackendFactory_createBackend(ALCossBackendFactory* UNUSED(self
     {
         ALCplaybackOSS *backend;
         NEW_OBJ(backend, ALCplaybackOSS)(device);
-        if(!backend) return NULL;
+        if(!backend) return nullptr;
         return STATIC_CAST(ALCbackend, backend);
     }
     if(type == ALCbackend_Capture)
     {
         ALCcaptureOSS *backend;
         NEW_OBJ(backend, ALCcaptureOSS)(device);
-        if(!backend) return NULL;
+        if(!backend) return nullptr;
         return STATIC_CAST(ALCbackend, backend);
     }
 
-    return NULL;
+    return nullptr;
 }

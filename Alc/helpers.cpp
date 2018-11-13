@@ -466,6 +466,14 @@ std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
     return results;
 }
 
+void SetRTPriority(void)
+{
+    bool failed = false;
+    if(RTPrioLevel > 0)
+        failed = !SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+    if(failed) ERR("Failed to set priority level for thread\n");
+}
+
 #else
 
 PathNamePair GetProcBinary()
@@ -700,17 +708,10 @@ std::vector<std::string> SearchDataFiles(const char *ext, const char *subdir)
     return results;
 }
 
-#endif
-
-
 void SetRTPriority(void)
 {
-    ALboolean failed = AL_FALSE;
-
-#ifdef _WIN32
-    if(RTPrioLevel > 0)
-        failed = !SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-#elif defined(HAVE_PTHREAD_SETSCHEDPARAM) && !defined(__OpenBSD__)
+    bool failed = false;
+#if defined(HAVE_PTHREAD_SETSCHEDPARAM) && !defined(__OpenBSD__)
     if(RTPrioLevel > 0)
     {
         struct sched_param param;
@@ -726,6 +727,8 @@ void SetRTPriority(void)
     if(failed)
         ERR("Failed to set priority level for thread\n");
 }
+
+#endif
 
 
 void alstr_clear(al_string *str)

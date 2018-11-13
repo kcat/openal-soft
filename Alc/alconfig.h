@@ -2,10 +2,13 @@
 #define ALCONFIG_H
 
 #ifdef __cplusplus
+#define NOEXCEPT noexcept
 extern "C" {
+#else
+#define NOEXCEPT
 #endif
 
-void ReadALConfig(void);
+void ReadALConfig(void) NOEXCEPT;
 void FreeALConfig(void);
 
 int ConfigValueExists(const char *devName, const char *blockName, const char *keyName);

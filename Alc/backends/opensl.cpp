@@ -132,9 +132,7 @@ static const char *res_str(SLresult result)
 } while(0)
 
 
-typedef struct ALCopenslPlayback {
-    DERIVE_FROM_TYPE(ALCbackend);
-
+struct ALCopenslPlayback final : public ALCbackend {
     /* engine interfaces */
     SLObjectItf mEngineObj;
     SLEngineItf mEngine;
@@ -152,7 +150,7 @@ typedef struct ALCopenslPlayback {
 
     ATOMIC(ALenum) mKillNow;
     althrd_t mThread;
-} ALCopenslPlayback;
+};
 
 static void ALCopenslPlayback_process(SLAndroidSimpleBufferQueueItf bq, void *context);
 static int ALCopenslPlayback_mixerProc(void *arg);
@@ -175,6 +173,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCopenslPlayback);
 
 static void ALCopenslPlayback_Construct(ALCopenslPlayback *self, ALCdevice *device)
 {
+    new (self) ALCopenslPlayback{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCopenslPlayback, ALCbackend, self);
 
@@ -212,13 +211,14 @@ static void ALCopenslPlayback_Destruct(ALCopenslPlayback* self)
     alsem_destroy(&self->mSem);
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+    self->~ALCopenslPlayback();
 }
 
 
 /* this callback handler is called every time a buffer finishes playing */
 static void ALCopenslPlayback_process(SLAndroidSimpleBufferQueueItf UNUSED(bq), void *context)
 {
-    ALCopenslPlayback *self = context;
+    ALCopenslPlayback *self = static_cast<ALCopenslPlayback*>(context);
 
     /* A note on the ringbuffer usage: The buffer queue seems to hold on to the
      * pointer passed to the Enqueue method, rather than copying the audio.
@@ -236,7 +236,7 @@ static void ALCopenslPlayback_process(SLAndroidSimpleBufferQueueItf UNUSED(bq), 
 
 static int ALCopenslPlayback_mixerProc(void *arg)
 {
-    ALCopenslPlayback *self = arg;
+    ALCopenslPlayback *self = static_cast<ALCopenslPlayback*>(arg);
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
     SLAndroidSimpleBufferQueueItf bufferQueue;
     ll_ringbuffer_data_t data[2];
@@ -664,9 +664,7 @@ static ClockLatency ALCopenslPlayback_getClockLatency(ALCopenslPlayback *self)
 }
 
 
-typedef struct ALCopenslCapture {
-    DERIVE_FROM_TYPE(ALCbackend);
-
+struct ALCopenslCapture final : public ALCbackend {
     /* engine interfaces */
     SLObjectItf mEngineObj;
     SLEngineItf mEngine;
@@ -678,7 +676,7 @@ typedef struct ALCopenslCapture {
     ALCuint mSplOffset;
 
     ALsizei mFrameSize;
-} ALCopenslCapture;
+};
 
 static void ALCopenslCapture_process(SLAndroidSimpleBufferQueueItf bq, void *context);
 
@@ -697,16 +695,9 @@ DECLARE_DEFAULT_ALLOCATORS(ALCopenslCapture)
 DEFINE_ALCBACKEND_VTABLE(ALCopenslCapture);
 
 
-static void ALCopenslCapture_process(SLAndroidSimpleBufferQueueItf UNUSED(bq), void *context)
-{
-    ALCopenslCapture *self = context;
-    /* A new chunk has been written into the ring buffer, advance it. */
-    ll_ringbuffer_write_advance(self->mRing, 1);
-}
-
-
 static void ALCopenslCapture_Construct(ALCopenslCapture *self, ALCdevice *device)
 {
+    new (self) ALCopenslCapture{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCopenslCapture, ALCbackend, self);
 
@@ -736,7 +727,17 @@ static void ALCopenslCapture_Destruct(ALCopenslCapture *self)
     self->mRing = NULL;
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+    self->~ALCopenslCapture();
 }
+
+
+static void ALCopenslCapture_process(SLAndroidSimpleBufferQueueItf UNUSED(bq), void *context)
+{
+    ALCopenslCapture *self = static_cast<ALCopenslCapture*>(context);
+    /* A new chunk has been written into the ring buffer, advance it. */
+    ll_ringbuffer_write_advance(self->mRing, 1);
+}
+
 
 static ALCenum ALCopenslCapture_open(ALCopenslCapture *self, const ALCchar *name)
 {
@@ -1008,10 +1009,9 @@ static ALCuint ALCopenslCapture_availableSamples(ALCopenslCapture *self)
 }
 
 
-typedef struct ALCopenslBackendFactory {
-    DERIVE_FROM_TYPE(ALCbackendFactory);
-} ALCopenslBackendFactory;
-#define ALCOPENSLBACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCopenslBackendFactory, ALCbackendFactory) } }
+struct ALCopenslBackendFactory final : public ALCbackendFactory {
+    ALCopenslBackendFactory() noexcept;
+};
 
 static ALCboolean ALCopenslBackendFactory_init(ALCopenslBackendFactory* UNUSED(self))
 {
@@ -1063,8 +1063,12 @@ static ALCbackend* ALCopenslBackendFactory_createBackend(ALCopenslBackendFactory
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCopenslBackendFactory);
 
 
+ALCopenslBackendFactory::ALCopenslBackendFactory() noexcept
+  : ALCbackendFactory{GET_VTABLE2(ALCopenslBackendFactory, ALCbackendFactory)}
+{ }
+
 ALCbackendFactory *ALCopenslBackendFactory_getFactory(void)
 {
-    static ALCopenslBackendFactory factory = ALCOPENSLBACKENDFACTORY_INITIALIZER;
+    static ALCopenslBackendFactory factory{};
     return STATIC_CAST(ALCbackendFactory, &factory);
 }

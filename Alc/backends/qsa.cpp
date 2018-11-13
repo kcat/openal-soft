@@ -36,7 +36,9 @@
 #include "backends/base.h"
 
 
-typedef struct {
+namespace {
+
+struct qsa_data {
     snd_pcm_t* pcmHandle;
     int audio_fd;
 
@@ -48,21 +50,21 @@ typedef struct {
 
     ATOMIC(ALenum) killNow;
     althrd_t thread;
-} qsa_data;
+};
 
-typedef struct {
+struct DevMap {
     ALCchar* name;
     int card;
     int dev;
-} DevMap;
+};
 TYPEDEF_VECTOR(DevMap, vector_DevMap)
 
-static vector_DevMap DeviceNameMap;
-static vector_DevMap CaptureNameMap;
+vector_DevMap DeviceNameMap;
+vector_DevMap CaptureNameMap;
 
-static const ALCchar qsaDevice[] = "QSA Default";
+constexpr ALCchar qsaDevice[] = "QSA Default";
 
-static const struct {
+constexpr struct {
     int32_t format;
 } formatlist[] = {
     {SND_PCM_SFMT_FLOAT_LE},
@@ -75,7 +77,7 @@ static const struct {
     {0},
 };
 
-static const struct {
+constexpr struct {
     int32_t rate;
 } ratelist[] = {
     {192000},
@@ -94,7 +96,7 @@ static const struct {
     {0},
 };
 
-static const struct {
+constexpr struct {
     int32_t channels;
 } channellist[] = {
     {8},
@@ -106,7 +108,7 @@ static const struct {
     {0},
 };
 
-static void deviceList(int type, vector_DevMap *devmap)
+void deviceList(int type, vector_DevMap *devmap)
 {
     snd_ctl_t* handle;
     snd_pcm_info_t pcminfo;
@@ -161,12 +163,13 @@ static void deviceList(int type, vector_DevMap *devmap)
     }
 }
 
+} // namespace
+
 
 /* Wrappers to use an old-style backend with the new interface. */
-typedef struct PlaybackWrapper {
-    DERIVE_FROM_TYPE(ALCbackend);
+struct PlaybackWrapper final : public ALCbackend {
     qsa_data *ExtraData;
-} PlaybackWrapper;
+};
 
 static void PlaybackWrapper_Construct(PlaybackWrapper *self, ALCdevice *device);
 static void PlaybackWrapper_Destruct(PlaybackWrapper *self);
@@ -233,7 +236,7 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
         }
 
         len = data->size;
-        write_ptr = data->buffer;
+        write_ptr = static_cast<char*>(data->buffer);
         aluMixData(device, write_ptr, len/frame_size);
         while(len>0 && !ATOMIC_LOAD(&data->killNow, almemory_order_acquire))
         {
@@ -619,6 +622,7 @@ static void qsa_stop_playback(PlaybackWrapper *self)
 
 static void PlaybackWrapper_Construct(PlaybackWrapper *self, ALCdevice *device)
 {
+    new (self) PlaybackWrapper{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(PlaybackWrapper, ALCbackend, self);
 
@@ -631,6 +635,7 @@ static void PlaybackWrapper_Destruct(PlaybackWrapper *self)
         qsa_close_playback(self);
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+    self->~PlaybackWrapper();
 }
 
 static ALCenum PlaybackWrapper_open(PlaybackWrapper *self, const ALCchar *name)
@@ -659,10 +664,9 @@ static void PlaybackWrapper_stop(PlaybackWrapper *self)
 /* Capture */
 /***********/
 
-typedef struct CaptureWrapper {
-    DERIVE_FROM_TYPE(ALCbackend);
+struct CaptureWrapper final : public ALCbackend {
     qsa_data *ExtraData;
-} CaptureWrapper;
+};
 
 static void CaptureWrapper_Construct(CaptureWrapper *self, ALCdevice *device);
 static void CaptureWrapper_Destruct(CaptureWrapper *self);
@@ -877,7 +881,7 @@ static ALCenum qsa_capture_samples(CaptureWrapper *self, ALCvoid *buffer, ALCuin
     ALint len=samples*frame_size;
     int rstatus;
 
-    read_ptr=buffer;
+    read_ptr = static_cast<char*>(buffer);
 
     while (len>0)
     {
@@ -943,6 +947,7 @@ static ALCenum qsa_capture_samples(CaptureWrapper *self, ALCvoid *buffer, ALCuin
 
 static void CaptureWrapper_Construct(CaptureWrapper *self, ALCdevice *device)
 {
+    new (self) CaptureWrapper{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(CaptureWrapper, ALCbackend, self);
 
@@ -955,6 +960,7 @@ static void CaptureWrapper_Destruct(CaptureWrapper *self)
         qsa_close_capture(self);
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+    self->~CaptureWrapper();
 }
 
 static ALCenum CaptureWrapper_open(CaptureWrapper *self, const ALCchar *name)
@@ -984,10 +990,9 @@ static ALCuint CaptureWrapper_availableSamples(CaptureWrapper *self)
 }
 
 
-typedef struct ALCqsaBackendFactory {
-    DERIVE_FROM_TYPE(ALCbackendFactory);
-} ALCqsaBackendFactory;
-#define ALCQSABACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCqsaBackendFactory, ALCbackendFactory) } }
+struct ALCqsaBackendFactory final : public ALCbackendFactory {
+    ALCqsaBackendFactory() noexcept;
+};
 
 static ALCboolean ALCqsaBackendFactory_init(ALCqsaBackendFactory* UNUSED(self));
 static void ALCqsaBackendFactory_deinit(ALCqsaBackendFactory* UNUSED(self));
@@ -995,6 +1000,11 @@ static ALCboolean ALCqsaBackendFactory_querySupport(ALCqsaBackendFactory* UNUSED
 static void ALCqsaBackendFactory_probe(ALCqsaBackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames);
 static ALCbackend* ALCqsaBackendFactory_createBackend(ALCqsaBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type);
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCqsaBackendFactory);
+
+ALCqsaBackendFactory::ALCqsaBackendFactory() noexcept
+  : ALCbackendFactory{GET_VTABLE2(ALCqsaBackendFactory, ALCbackendFactory)}
+{ }
+
 
 static ALCboolean ALCqsaBackendFactory_init(ALCqsaBackendFactory* UNUSED(self))
 {
@@ -1063,6 +1073,6 @@ static ALCbackend* ALCqsaBackendFactory_createBackend(ALCqsaBackendFactory* UNUS
 
 ALCbackendFactory *ALCqsaBackendFactory_getFactory(void)
 {
-    static ALCqsaBackendFactory factory = ALCQSABACKENDFACTORY_INITIALIZER;
+    static ALCqsaBackendFactory factory{};
     return STATIC_CAST(ALCbackendFactory, &factory);
 }

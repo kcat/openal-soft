@@ -38,14 +38,12 @@
 static const ALCchar ca_device[] = "CoreAudio Default";
 
 
-typedef struct ALCcoreAudioPlayback {
-    DERIVE_FROM_TYPE(ALCbackend);
-
+struct ALCcoreAudioPlayback final : public ALCbackend {
     AudioUnit audioUnit;
 
     ALuint frameSize;
     AudioStreamBasicDescription format;    // This is the OpenAL format as a CoreAudio ASBD
-} ALCcoreAudioPlayback;
+};
 
 static void ALCcoreAudioPlayback_Construct(ALCcoreAudioPlayback *self, ALCdevice *device);
 static void ALCcoreAudioPlayback_Destruct(ALCcoreAudioPlayback *self);
@@ -65,6 +63,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCcoreAudioPlayback);
 
 static void ALCcoreAudioPlayback_Construct(ALCcoreAudioPlayback *self, ALCdevice *device)
 {
+    new (self) ALCcoreAudioPlayback{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCcoreAudioPlayback, ALCbackend, self);
 
@@ -78,6 +77,7 @@ static void ALCcoreAudioPlayback_Destruct(ALCcoreAudioPlayback *self)
     AudioComponentInstanceDispose(self->audioUnit);
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+    self->~ALCcoreAudioPlayback();
 }
 
 
@@ -85,7 +85,7 @@ static OSStatus ALCcoreAudioPlayback_MixerProc(void *inRefCon,
   AudioUnitRenderActionFlags* UNUSED(ioActionFlags), const AudioTimeStamp* UNUSED(inTimeStamp),
   UInt32 UNUSED(inBusNumber), UInt32 UNUSED(inNumberFrames), AudioBufferList *ioData)
 {
-    ALCcoreAudioPlayback *self = inRefCon;
+    ALCcoreAudioPlayback *self = static_cast<ALCcoreAudioPlayback*>(inRefCon);
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
 
     ALCcoreAudioPlayback_lock(self);
@@ -313,11 +313,7 @@ static void ALCcoreAudioPlayback_stop(ALCcoreAudioPlayback *self)
 }
 
 
-
-
-typedef struct ALCcoreAudioCapture {
-    DERIVE_FROM_TYPE(ALCbackend);
-
+struct ALCcoreAudioCapture final : public ALCbackend {
     AudioUnit audioUnit;
 
     ALuint frameSize;
@@ -329,7 +325,7 @@ typedef struct ALCcoreAudioCapture {
     ALCvoid *resampleBuffer;               // Buffer for returned RingBuffer data when resampling
 
     ll_ringbuffer_t *ring;
-} ALCcoreAudioCapture;
+};
 
 static void ALCcoreAudioCapture_Construct(ALCcoreAudioCapture *self, ALCdevice *device);
 static void ALCcoreAudioCapture_Destruct(ALCcoreAudioCapture *self);
@@ -351,7 +347,8 @@ static AudioBufferList *allocate_buffer_list(UInt32 channelCount, UInt32 byteSiz
 {
     AudioBufferList *list;
 
-    list = calloc(1, FAM_SIZE(AudioBufferList, mBuffers, 1) + byteSize);
+    list = static_cast<AudioBufferList*>(calloc(1,
+        FAM_SIZE(AudioBufferList, mBuffers, 1) + byteSize));
     if(list)
     {
         list->mNumberBuffers = 1;
@@ -371,6 +368,7 @@ static void destroy_buffer_list(AudioBufferList *list)
 
 static void ALCcoreAudioCapture_Construct(ALCcoreAudioCapture *self, ALCdevice *device)
 {
+    new (self) ALCcoreAudioCapture{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCcoreAudioCapture, ALCbackend, self);
 
@@ -401,6 +399,7 @@ static void ALCcoreAudioCapture_Destruct(ALCcoreAudioCapture *self)
     self->audioUnit = 0;
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+    self->~ALCcoreAudioCapture();
 }
 
 
@@ -409,7 +408,7 @@ static OSStatus ALCcoreAudioCapture_RecordProc(void *inRefCon,
   const AudioTimeStamp *inTimeStamp, UInt32 UNUSED(inBusNumber),
   UInt32 inNumberFrames, AudioBufferList* UNUSED(ioData))
 {
-    ALCcoreAudioCapture *self = inRefCon;
+    ALCcoreAudioCapture *self = static_cast<ALCcoreAudioCapture*>(inRefCon);
     AudioUnitRenderActionFlags flags = 0;
     OSStatus err;
 
@@ -421,8 +420,8 @@ static OSStatus ALCcoreAudioCapture_RecordProc(void *inRefCon,
         return err;
     }
 
-    ll_ringbuffer_write(self->ring, self->bufferList->mBuffers[0].mData, inNumberFrames);
-
+    ll_ringbuffer_write(self->ring, static_cast<const char*>(self->bufferList->mBuffers[0].mData),
+                        inNumberFrames);
     return noErr;
 }
 
@@ -431,10 +430,10 @@ static OSStatus ALCcoreAudioCapture_ConvertCallback(AudioConverterRef UNUSED(inA
   AudioStreamPacketDescription** UNUSED(outDataPacketDescription),
   void *inUserData)
 {
-    ALCcoreAudioCapture *self = inUserData;
+    ALCcoreAudioCapture *self = reinterpret_cast<ALCcoreAudioCapture*>(inUserData);
 
     // Read from the ring buffer and store temporarily in a large buffer
-    ll_ringbuffer_read(self->ring, self->resampleBuffer, *ioNumberDataPackets);
+    ll_ringbuffer_read(self->ring, static_cast<char*>(self->resampleBuffer), *ioNumberDataPackets);
 
     // Set the input data
     ioData->mNumberBuffers = 1;
@@ -511,32 +510,34 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
     }
 
 #if !TARGET_OS_IOS
-    // Get the default input device
-    AudioDeviceID inputDevice = kAudioDeviceUnknown;
-
-    propertySize = sizeof(AudioDeviceID);
-    propertyAddress.mSelector = kAudioHardwarePropertyDefaultInputDevice;
-    propertyAddress.mScope = kAudioObjectPropertyScopeGlobal;
-    propertyAddress.mElement = kAudioObjectPropertyElementMaster;
-
-    err = AudioObjectGetPropertyData(kAudioObjectSystemObject, &propertyAddress, 0, NULL, &propertySize, &inputDevice);
-    if(err != noErr)
     {
-        ERR("AudioObjectGetPropertyData failed\n");
-        goto error;
-    }
-    if(inputDevice == kAudioDeviceUnknown)
-    {
-        ERR("No input device found\n");
-        goto error;
-    }
+        // Get the default input device
+        AudioDeviceID inputDevice = kAudioDeviceUnknown;
 
-    // Track the input device
-    err = AudioUnitSetProperty(self->audioUnit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &inputDevice, sizeof(AudioDeviceID));
-    if(err != noErr)
-    {
-        ERR("AudioUnitSetProperty failed\n");
-        goto error;
+        propertySize = sizeof(AudioDeviceID);
+        propertyAddress.mSelector = kAudioHardwarePropertyDefaultInputDevice;
+        propertyAddress.mScope = kAudioObjectPropertyScopeGlobal;
+        propertyAddress.mElement = kAudioObjectPropertyElementMaster;
+
+        err = AudioObjectGetPropertyData(kAudioObjectSystemObject, &propertyAddress, 0, NULL, &propertySize, &inputDevice);
+        if(err != noErr)
+        {
+            ERR("AudioObjectGetPropertyData failed\n");
+            goto error;
+        }
+        if(inputDevice == kAudioDeviceUnknown)
+        {
+            ERR("No input device found\n");
+            goto error;
+        }
+
+        // Track the input device
+        err = AudioUnitSetProperty(self->audioUnit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &inputDevice, sizeof(AudioDeviceID));
+        if(err != noErr)
+        {
+            ERR("AudioUnitSetProperty failed\n");
+            goto error;
+        }
     }
 #endif
 
@@ -750,10 +751,9 @@ static ALCuint ALCcoreAudioCapture_availableSamples(ALCcoreAudioCapture *self)
 }
 
 
-typedef struct ALCcoreAudioBackendFactory {
-    DERIVE_FROM_TYPE(ALCbackendFactory);
-} ALCcoreAudioBackendFactory;
-#define ALCCOREAUDIOBACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCcoreAudioBackendFactory, ALCbackendFactory) } }
+struct ALCcoreAudioBackendFactory final : public ALCbackendFactory {
+    ALCcoreAudioBackendFactory() noexcept;
+};
 
 ALCbackendFactory *ALCcoreAudioBackendFactory_getFactory(void);
 
@@ -765,9 +765,13 @@ static ALCbackend* ALCcoreAudioBackendFactory_createBackend(ALCcoreAudioBackendF
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCcoreAudioBackendFactory);
 
 
+ALCcoreAudioBackendFactory::ALCcoreAudioBackendFactory() noexcept
+  : ALCbackendFactory{GET_VTABLE2(ALCcoreAudioBackendFactory, ALCbackendFactory)}
+{ }
+
 ALCbackendFactory *ALCcoreAudioBackendFactory_getFactory(void)
 {
-    static ALCcoreAudioBackendFactory factory = ALCCOREAUDIOBACKENDFACTORY_INITIALIZER;
+    static ALCcoreAudioBackendFactory factory{};
     return STATIC_CAST(ALCbackendFactory, &factory);
 }
 

@@ -63,9 +63,9 @@ static const ALCchar jackDevice[] = "JACK Default";
     MAGIC(jack_get_buffer_size);
 
 static void *jack_handle;
-#define MAKE_FUNC(f) static __typeof(f) * p##f
+#define MAKE_FUNC(f) static decltype(f) * p##f
 JACK_FUNCS(MAKE_FUNC);
-static __typeof(jack_error_callback) * pjack_error_callback;
+static decltype(jack_error_callback) * pjack_error_callback;
 #undef MAKE_FUNC
 
 #ifndef IN_IDE_PARSER
@@ -118,8 +118,8 @@ static ALCboolean jack_load(void)
 
         error = ALC_FALSE;
 #define LOAD_FUNC(f) do {                                                     \
-    p##f = GetSymbol(jack_handle, #f);                                        \
-    if(p##f == NULL) {                                                        \
+    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(jack_handle, #f));      \
+    if(p##f == nullptr) {                                                     \
         error = ALC_TRUE;                                                     \
         alstr_append_cstr(&missing_funcs, "\n" #f);                           \
     }                                                                         \
@@ -127,7 +127,7 @@ static ALCboolean jack_load(void)
         JACK_FUNCS(LOAD_FUNC);
 #undef LOAD_FUNC
         /* Optional symbols. These don't exist in all versions of JACK. */
-#define LOAD_SYM(f) p##f = GetSymbol(jack_handle, #f)
+#define LOAD_SYM(f) p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(jack_handle, #f))
         LOAD_SYM(jack_error_callback);
 #undef LOAD_SYM
 
@@ -145,9 +145,7 @@ static ALCboolean jack_load(void)
 }
 
 
-typedef struct ALCjackPlayback {
-    DERIVE_FROM_TYPE(ALCbackend);
-
+struct ALCjackPlayback final : public ALCbackend {
     jack_client_t *Client;
     jack_port_t *Port[MAX_OUTPUT_CHANNELS];
 
@@ -156,7 +154,7 @@ typedef struct ALCjackPlayback {
 
     ATOMIC(ALenum) killNow;
     althrd_t thread;
-} ALCjackPlayback;
+};
 
 static int ALCjackPlayback_bufferSizeNotify(jack_nframes_t numframes, void *arg);
 
@@ -181,15 +179,14 @@ DEFINE_ALCBACKEND_VTABLE(ALCjackPlayback);
 
 static void ALCjackPlayback_Construct(ALCjackPlayback *self, ALCdevice *device)
 {
-    ALuint i;
-
+    new (self) ALCjackPlayback{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCjackPlayback, ALCbackend, self);
 
     alsem_init(&self->Sem, 0);
 
     self->Client = NULL;
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+    for(ALsizei i{0};i < MAX_OUTPUT_CHANNELS;i++)
         self->Port[i] = NULL;
     self->Ring = NULL;
 
@@ -198,11 +195,9 @@ static void ALCjackPlayback_Construct(ALCjackPlayback *self, ALCdevice *device)
 
 static void ALCjackPlayback_Destruct(ALCjackPlayback *self)
 {
-    ALuint i;
-
     if(self->Client)
     {
-        for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+        for(ALsizei i{0};i < MAX_OUTPUT_CHANNELS;i++)
         {
             if(self->Port[i])
                 jack_port_unregister(self->Client, self->Port[i]);
@@ -215,12 +210,13 @@ static void ALCjackPlayback_Destruct(ALCjackPlayback *self)
     alsem_destroy(&self->Sem);
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+    self->~ALCjackPlayback();
 }
 
 
 static int ALCjackPlayback_bufferSizeNotify(jack_nframes_t numframes, void *arg)
 {
-    ALCjackPlayback *self = arg;
+    ALCjackPlayback *self = static_cast<ALCjackPlayback*>(arg);
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
     ALuint bufsize;
 
@@ -252,7 +248,7 @@ static int ALCjackPlayback_bufferSizeNotify(jack_nframes_t numframes, void *arg)
 
 static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
 {
-    ALCjackPlayback *self = arg;
+    ALCjackPlayback *self = static_cast<ALCjackPlayback*>(arg);
     jack_default_audio_sample_t *out[MAX_OUTPUT_CHANNELS];
     ll_ringbuffer_data_t data[2];
     jack_nframes_t total = 0;
@@ -262,7 +258,7 @@ static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
     ll_ringbuffer_get_read_vector(self->Ring, data);
 
     for(c = 0;c < MAX_OUTPUT_CHANNELS && self->Port[c];c++)
-        out[c] = jack_port_get_buffer(self->Port[c], numframes);
+        out[c] = static_cast<float*>(jack_port_get_buffer(self->Port[c], numframes));
     numchans = c;
 
     todo = minu(numframes, data[0].len);
@@ -306,7 +302,7 @@ static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
 
 static int ALCjackPlayback_mixerProc(void *arg)
 {
-    ALCjackPlayback *self = arg;
+    ALCjackPlayback *self = static_cast<ALCjackPlayback*>(arg);
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
     ll_ringbuffer_data_t data[2];
 
@@ -524,10 +520,9 @@ static void jack_msg_handler(const char *message)
     WARN("%s\n", message);
 }
 
-typedef struct ALCjackBackendFactory {
-    DERIVE_FROM_TYPE(ALCbackendFactory);
-} ALCjackBackendFactory;
-#define ALCJACKBACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCjackBackendFactory, ALCbackendFactory) } }
+struct ALCjackBackendFactory final : public ALCbackendFactory {
+    ALCjackBackendFactory() noexcept;
+};
 
 static ALCboolean ALCjackBackendFactory_init(ALCjackBackendFactory* UNUSED(self))
 {
@@ -539,7 +534,7 @@ static ALCboolean ALCjackBackendFactory_init(ALCjackBackendFactory* UNUSED(self)
         return ALC_FALSE;
 
     if(!GetConfigValueBool(NULL, "jack", "spawn-server", 0))
-        ClientOptions |= JackNoStartServer;
+        ClientOptions = static_cast<jack_options_t>(ClientOptions | JackNoStartServer);
 
     old_error_cb = (&jack_error_callback ? jack_error_callback : NULL);
     jack_set_error_function(jack_msg_handler);
@@ -602,8 +597,12 @@ static ALCbackend* ALCjackBackendFactory_createBackend(ALCjackBackendFactory* UN
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCjackBackendFactory);
 
 
+ALCjackBackendFactory::ALCjackBackendFactory() noexcept
+  : ALCbackendFactory{GET_VTABLE2(ALCjackBackendFactory, ALCbackendFactory)}
+{ }
+
 ALCbackendFactory *ALCjackBackendFactory_getFactory(void)
 {
-    static ALCjackBackendFactory factory = ALCJACKBACKENDFACTORY_INITIALIZER;
+    static ALCjackBackendFactory factory{};
     return STATIC_CAST(ALCbackendFactory, &factory);
 }

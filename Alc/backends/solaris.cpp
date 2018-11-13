@@ -43,9 +43,7 @@
 #include <sys/audioio.h>
 
 
-typedef struct ALCsolarisBackend {
-    DERIVE_FROM_TYPE(ALCbackend);
-
+struct ALCsolarisBackend final : public ALCbackend {
     int fd;
 
     ALubyte *mix_data;
@@ -53,7 +51,7 @@ typedef struct ALCsolarisBackend {
 
     ATOMIC(ALenum) killNow;
     althrd_t thread;
-} ALCsolarisBackend;
+};
 
 static int ALCsolarisBackend_mixerProc(void *ptr);
 
@@ -80,11 +78,12 @@ static const char *solaris_driver = "/dev/audio";
 
 static void ALCsolarisBackend_Construct(ALCsolarisBackend *self, ALCdevice *device)
 {
+    new (self) ALCsolarisBackend{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCsolarisBackend, ALCbackend, self);
 
     self->fd = -1;
-    self->mix_data = NULL;
+    self->mix_data = nullptr;
     ATOMIC_INIT(&self->killNow, AL_FALSE);
 }
 
@@ -95,16 +94,17 @@ static void ALCsolarisBackend_Destruct(ALCsolarisBackend *self)
     self->fd = -1;
 
     free(self->mix_data);
-    self->mix_data = NULL;
+    self->mix_data = nullptr;
     self->data_size = 0;
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+    self->~ALCsolarisBackend();
 }
 
 
 static int ALCsolarisBackend_mixerProc(void *ptr)
 {
-    ALCsolarisBackend *self = ptr;
+    ALCsolarisBackend *self = static_cast<ALCsolarisBackend*>(ptr);
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     struct timeval timeout;
     ALubyte *write_ptr;
@@ -129,7 +129,7 @@ static int ALCsolarisBackend_mixerProc(void *ptr)
         timeout.tv_usec = 0;
 
         ALCsolarisBackend_unlock(self);
-        sret = select(self->fd+1, NULL, &wfds, NULL, &timeout);
+        sret = select(self->fd+1, nullptr, &wfds, nullptr, &timeout);
         ALCsolarisBackend_lock(self);
         if(sret < 0)
         {
@@ -265,7 +265,7 @@ static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
     self->data_size = device->UpdateSize * FrameSizeFromDevFmt(
         device->FmtChans, device->FmtType, device->AmbiOrder
     );
-    self->mix_data = calloc(1, self->data_size);
+    self->mix_data = static_cast<ALubyte*>(calloc(1, self->data_size));
 
     return ALC_TRUE;
 }
@@ -292,10 +292,9 @@ static void ALCsolarisBackend_stop(ALCsolarisBackend *self)
 }
 
 
-typedef struct ALCsolarisBackendFactory {
-    DERIVE_FROM_TYPE(ALCbackendFactory);
-} ALCsolarisBackendFactory;
-#define ALCSOLARISBACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCsolarisBackendFactory, ALCbackendFactory) } }
+struct ALCsolarisBackendFactory final : public ALCbackendFactory {
+    ALCsolarisBackendFactory() noexcept;
+};
 
 ALCbackendFactory *ALCsolarisBackendFactory_getFactory(void);
 
@@ -307,16 +306,20 @@ static ALCbackend* ALCsolarisBackendFactory_createBackend(ALCsolarisBackendFacto
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCsolarisBackendFactory);
 
 
+ALCsolarisBackendFactory::ALCsolarisBackendFactory() noexcept
+  : ALCbackendFactory{GET_VTABLE2(ALCsolarisBackendFactory, ALCbackendFactory)}
+{ }
+
 ALCbackendFactory *ALCsolarisBackendFactory_getFactory(void)
 {
-    static ALCsolarisBackendFactory factory = ALCSOLARISBACKENDFACTORY_INITIALIZER;
+    static ALCsolarisBackendFactory factory{};
     return STATIC_CAST(ALCbackendFactory, &factory);
 }
 
 
 static ALCboolean ALCsolarisBackendFactory_init(ALCsolarisBackendFactory* UNUSED(self))
 {
-    ConfigValueStr(NULL, "solaris", "device", &solaris_driver);
+    ConfigValueStr(nullptr, "solaris", "device", &solaris_driver);
     return ALC_TRUE;
 }
 
@@ -352,9 +355,9 @@ ALCbackend* ALCsolarisBackendFactory_createBackend(ALCsolarisBackendFactory* UNU
     {
         ALCsolarisBackend *backend;
         NEW_OBJ(backend, ALCsolarisBackend)(device);
-        if(!backend) return NULL;
+        if(!backend) return nullptr;
         return STATIC_CAST(ALCbackend, backend);
     }
 
-    return NULL;
+    return nullptr;
 }

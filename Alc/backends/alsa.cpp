@@ -115,7 +115,7 @@ static const ALCchar alsaDevice[] = "ALSA Default";
     MAGIC(snd_config_update_free_global)
 
 static void *alsa_handle;
-#define MAKE_FUNC(f) static __typeof(f) * p##f
+#define MAKE_FUNC(f) static decltype(f) * p##f
 ALSA_FUNCS(MAKE_FUNC);
 #undef MAKE_FUNC
 
@@ -214,7 +214,7 @@ static ALCboolean alsa_load(void)
 
         error = ALC_FALSE;
 #define LOAD_FUNC(f) do {                                                     \
-    p##f = GetSymbol(alsa_handle, #f);                                        \
+    p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(alsa_handle, #f));      \
     if(p##f == NULL) {                                                        \
         error = ALC_TRUE;                                                     \
         alstr_append_cstr(&missing_funcs, "\n" #f);                           \
@@ -432,9 +432,7 @@ static int verify_state(snd_pcm_t *handle)
 }
 
 
-typedef struct ALCplaybackAlsa {
-    DERIVE_FROM_TYPE(ALCbackend);
-
+struct ALCplaybackAlsa final : public ALCbackend {
     snd_pcm_t *pcmHandle;
 
     ALvoid *buffer;
@@ -442,7 +440,7 @@ typedef struct ALCplaybackAlsa {
 
     ATOMIC(ALenum) killNow;
     althrd_t thread;
-} ALCplaybackAlsa;
+};
 
 static int ALCplaybackAlsa_mixerProc(void *ptr);
 static int ALCplaybackAlsa_mixerNoMMapProc(void *ptr);
@@ -465,6 +463,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCplaybackAlsa);
 
 static void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device)
 {
+    new (self) ALCplaybackAlsa{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCplaybackAlsa, ALCbackend, self);
 
@@ -480,12 +479,13 @@ void ALCplaybackAlsa_Destruct(ALCplaybackAlsa *self)
         snd_pcm_close(self->pcmHandle);
     self->pcmHandle = NULL;
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+    self->~ALCplaybackAlsa();
 }
 
 
 static int ALCplaybackAlsa_mixerProc(void *ptr)
 {
-    ALCplaybackAlsa *self = (ALCplaybackAlsa*)ptr;
+    ALCplaybackAlsa *self = static_cast<ALCplaybackAlsa*>(ptr);
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     const snd_pcm_channel_area_t *areas = NULL;
     snd_pcm_uframes_t update_size, num_updates;
@@ -577,7 +577,7 @@ static int ALCplaybackAlsa_mixerProc(void *ptr)
 
 static int ALCplaybackAlsa_mixerNoMMapProc(void *ptr)
 {
-    ALCplaybackAlsa *self = (ALCplaybackAlsa*)ptr;
+    ALCplaybackAlsa *self = static_cast<ALCplaybackAlsa*>(ptr);
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     snd_pcm_uframes_t update_size, num_updates;
     snd_pcm_sframes_t avail;
@@ -632,7 +632,7 @@ static int ALCplaybackAlsa_mixerNoMMapProc(void *ptr)
         }
 
         ALCplaybackAlsa_lock(self);
-        WritePtr = self->buffer;
+        WritePtr = static_cast<char*>(self->buffer);
         avail = snd_pcm_bytes_to_frames(self->pcmHandle, self->size);
         aluMixData(device, WritePtr, avail);
 
@@ -723,7 +723,7 @@ static ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
     unsigned int periodLen, bufferLen;
     snd_pcm_sw_params_t *sp = NULL;
     snd_pcm_hw_params_t *hp = NULL;
-    snd_pcm_format_t format = -1;
+    snd_pcm_format_t format = SND_PCM_FORMAT_UNKNOWN;
     snd_pcm_access_t access;
     unsigned int periods;
     unsigned int rate;
@@ -965,9 +965,7 @@ static ClockLatency ALCplaybackAlsa_getClockLatency(ALCplaybackAlsa *self)
 }
 
 
-typedef struct ALCcaptureAlsa {
-    DERIVE_FROM_TYPE(ALCbackend);
-
+struct ALCcaptureAlsa final : public ALCbackend {
     snd_pcm_t *pcmHandle;
 
     ALvoid *buffer;
@@ -977,7 +975,7 @@ typedef struct ALCcaptureAlsa {
     ll_ringbuffer_t *ring;
 
     snd_pcm_sframes_t last_avail;
-} ALCcaptureAlsa;
+};
 
 static void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device);
 static void ALCcaptureAlsa_Destruct(ALCcaptureAlsa *self);
@@ -997,6 +995,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCcaptureAlsa);
 
 static void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device)
 {
+    new (self) ALCcaptureAlsa{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCcaptureAlsa, ALCbackend, self);
 
@@ -1018,6 +1017,7 @@ void ALCcaptureAlsa_Destruct(ALCcaptureAlsa *self)
     self->ring = NULL;
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+    self->~ALCcaptureAlsa();
 }
 
 
@@ -1029,7 +1029,7 @@ static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
     snd_pcm_uframes_t bufferSizeInFrames;
     snd_pcm_uframes_t periodSizeInFrames;
     ALboolean needring = AL_FALSE;
-    snd_pcm_format_t format = -1;
+    snd_pcm_format_t format = SND_PCM_FORMAT_UNKNOWN;
     const char *funcerr;
     int err;
 
@@ -1213,7 +1213,7 @@ static ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buff
 
     if(self->ring)
     {
-        ll_ringbuffer_read(self->ring, buffer, samples);
+        ll_ringbuffer_read(self->ring, static_cast<char*>(buffer), samples);
         return ALC_NO_ERROR;
     }
 
@@ -1233,7 +1233,7 @@ static ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buff
 
             if(self->size > amt)
             {
-                memmove(self->buffer, self->buffer+amt, self->size - amt);
+                memmove(self->buffer, static_cast<char*>(self->buffer)+amt, self->size - amt);
                 self->size -= amt;
             }
             else
@@ -1377,10 +1377,9 @@ static ClockLatency ALCcaptureAlsa_getClockLatency(ALCcaptureAlsa *self)
 }
 
 
-typedef struct ALCalsaBackendFactory {
-    DERIVE_FROM_TYPE(ALCbackendFactory);
-} ALCalsaBackendFactory;
-#define ALCALSABACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCalsaBackendFactory, ALCbackendFactory) } }
+struct ALCalsaBackendFactory final : public ALCbackendFactory {
+    ALCalsaBackendFactory() noexcept;
+};
 
 static ALCboolean ALCalsaBackendFactory_init(ALCalsaBackendFactory* UNUSED(self))
 {
@@ -1459,8 +1458,13 @@ static ALCbackend* ALCalsaBackendFactory_createBackend(ALCalsaBackendFactory* UN
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCalsaBackendFactory);
 
 
+ALCalsaBackendFactory::ALCalsaBackendFactory() noexcept
+  : ALCbackendFactory{GET_VTABLE2(ALCalsaBackendFactory, ALCbackendFactory)}
+{
+}
+
 ALCbackendFactory *ALCalsaBackendFactory_getFactory(void)
 {
-    static ALCalsaBackendFactory factory = ALCALSABACKENDFACTORY_INITIALIZER;
+    static ALCalsaBackendFactory factory{};
     return STATIC_CAST(ALCbackendFactory, &factory);
 }

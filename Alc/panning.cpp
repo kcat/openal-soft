@@ -63,11 +63,11 @@ constexpr ALsizei ACN2ACN[MAX_AMBI_COEFFS] = {
     8,  9, 10, 11, 12, 13, 14, 15
 };
 
-char *alstrdup(const_al_string str)
+char *alstrdup(const char *str)
 {
-    const size_t len{alstr_length(str)};
+    const size_t len{strlen(str)};
     char *ret{static_cast<char*>(al_calloc(DEF_ALIGN, len+1))};
-    memcpy(ret, alstr_get_cstr(str), len);
+    memcpy(ret, str, len);
     return ret;
 }
 

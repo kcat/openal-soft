@@ -562,7 +562,7 @@ TYPEDEF_VECTOR(ALeffectslotPtr, vector_ALeffectslotPtr)
 
 
 typedef struct EnumeratedHrtf {
-    al_string name;
+    char *name;
 
     struct HrtfEntry *hrtf;
 } EnumeratedHrtf;

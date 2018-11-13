@@ -82,6 +82,14 @@ std::mutex LoadedHrtfLock;
 HrtfEntry *LoadedHrtfs{nullptr};
 
 
+char *alstrdup(const std::string &str)
+{
+    const size_t len{str.length()};
+    char *ret{static_cast<char*>(al_calloc(DEF_ALIGN, len+1))};
+    memcpy(ret, str.data(), len);
+    return ret;
+}
+
 class databuf final : public std::streambuf {
     int_type underflow() override
     { return traits_type::eof(); }
@@ -989,30 +997,28 @@ void AddFileEntry(vector_EnumeratedHrtf *list, const std::string &filename)
     size_t extpos{filename.find_last_of('.')};
     if(extpos <= namepos) extpos = std::string::npos;
 
-    EnumeratedHrtf entry = { AL_STRING_INIT_STATIC(), nullptr };
     const EnumeratedHrtf *iter{};
+    std::string newname;
     int i{0};
     do {
         if(extpos == std::string::npos)
-            alstr_copy_range(&entry.name, &*(filename.begin()+namepos), &*filename.end());
+            newname = filename.substr(namepos);
         else
-            alstr_copy_range(&entry.name, &*(filename.begin()+namepos),
-                             &*(filename.begin()+extpos));
+            newname = filename.substr(namepos, extpos-namepos);
         if(i != 0)
         {
-            char str[64];
-            snprintf(str, sizeof(str), " #%d", i+1);
-            alstr_append_cstr(&entry.name, str);
+            newname += " #";
+            newname += std::to_string(i+1);
         }
         ++i;
 
-#define MATCH_NAME(i)  (alstr_cmp(entry.name, (i)->name) == 0)
+#define MATCH_NAME(i)  (newname == (i)->name)
         VECTOR_FIND_IF(iter, const EnumeratedHrtf, *list, MATCH_NAME);
 #undef MATCH_NAME
     } while(iter != VECTOR_END(*list));
-    entry.hrtf = loaded_entry;
+    EnumeratedHrtf entry{ alstrdup(newname), loaded_entry };
 
-    TRACE("Adding file entry \"%s\"\n", alstr_get_cstr(entry.name));
+    TRACE("Adding file entry \"%s\"\n", entry.name);
     VECTOR_PUSH_BACK(*list, entry);
 }
 
@@ -1060,26 +1066,25 @@ void AddBuiltInEntry(vector_EnumeratedHrtf *list, const std::string &filename, A
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
      * format update). */
 
-    EnumeratedHrtf entry{AL_STRING_INIT_STATIC(), nullptr};
     const EnumeratedHrtf *iter{};
+    std::string newname;
     int i{0};
     do {
-        alstr_copy_range(&entry.name, &*filename.cbegin(), &*filename.cend());
+        newname = filename;
         if(i != 0)
         {
-            char str[64];
-            snprintf(str, sizeof(str), " #%d", i+1);
-            alstr_append_cstr(&entry.name, str);
+            newname += " #";
+            newname += std::to_string(i+1);
         }
         ++i;
 
-#define MATCH_NAME(i)  (alstr_cmp(entry.name, (i)->name) == 0)
+#define MATCH_NAME(i)  (newname == (i)->name)
         VECTOR_FIND_IF(iter, const EnumeratedHrtf, *list, MATCH_NAME);
 #undef MATCH_NAME
     } while(iter != VECTOR_END(*list));
-    entry.hrtf = loaded_entry;
+    EnumeratedHrtf entry{ alstrdup(newname), loaded_entry };
 
-    TRACE("Adding built-in entry \"%s\"\n", alstr_get_cstr(entry.name));
+    TRACE("Adding built-in entry \"%s\"\n", entry.name);
     VECTOR_PUSH_BACK(*list, entry);
 }
 
@@ -1171,7 +1176,7 @@ vector_EnumeratedHrtf EnumerateHrtf(const_al_string devname)
     {
         const EnumeratedHrtf *iter{};
         /* Find the preferred HRTF and move it to the front of the list. */
-#define FIND_ENTRY(i)  (alstr_cmp_cstr((i)->name, defaulthrtf) == 0)
+#define FIND_ENTRY(i)  (strcmp((i)->name, defaulthrtf) == 0)
         VECTOR_FIND_IF(iter, const EnumeratedHrtf, list, FIND_ENTRY);
 #undef FIND_ENTRY
         if(iter == VECTOR_END(list))
@@ -1190,7 +1195,7 @@ vector_EnumeratedHrtf EnumerateHrtf(const_al_string devname)
 
 void FreeHrtfList(vector_EnumeratedHrtf *list)
 {
-#define CLEAR_ENTRY(i) alstr_reset(&(i)->name)
+#define CLEAR_ENTRY(i) al_free((i)->name)
     VECTOR_FOR_EACH(EnumeratedHrtf, *list, CLEAR_ENTRY);
     VECTOR_DEINIT(*list);
 #undef CLEAR_ENTRY

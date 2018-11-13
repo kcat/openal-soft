@@ -4677,7 +4677,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum
     {
         case ALC_HRTF_SPECIFIER_SOFT:
             if(index >= 0 && (size_t)index < VECTOR_SIZE(device->HrtfList))
-                str = alstr_get_cstr(VECTOR_ELEM(device->HrtfList, index).name);
+                str = VECTOR_ELEM(device->HrtfList, index).name;
             else
                 alcSetError(device, ALC_INVALID_VALUE);
             break;

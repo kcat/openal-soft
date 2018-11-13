@@ -1028,7 +1028,7 @@ ENDIF()
 
 SET(BACKENDS "")
 SET(ALC_OBJS  ${ALC_OBJS}
-    Alc/backends/base.c
+    Alc/backends/base.cpp
     Alc/backends/base.h
     # Default backends, always available
     Alc/backends/loopback.cpp

@@ -23,6 +23,8 @@
 #include <stdlib.h>
 #include <SDL2/SDL.h>
 
+#include <string>
+
 #include "alMain.h"
 #include "alu.h"
 #include "threads.h"
@@ -37,9 +39,7 @@
 #define DEVNAME_PREFIX ""
 #endif
 
-typedef struct ALCsdl2Backend {
-    DERIVE_FROM_TYPE(ALCbackend);
-
+struct ALCsdl2Backend final : public ALCbackend {
     SDL_AudioDeviceID deviceID;
     ALsizei frameSize;
 
@@ -47,7 +47,7 @@ typedef struct ALCsdl2Backend {
     enum DevFmtChannels FmtChans;
     enum DevFmtType     FmtType;
     ALuint UpdateSize;
-} ALCsdl2Backend;
+};
 
 static void ALCsdl2Backend_Construct(ALCsdl2Backend *self, ALCdevice *device);
 static void ALCsdl2Backend_Destruct(ALCsdl2Backend *self);
@@ -68,6 +68,7 @@ static const ALCchar defaultDeviceName[] = DEVNAME_PREFIX "Default Device";
 
 static void ALCsdl2Backend_Construct(ALCsdl2Backend *self, ALCdevice *device)
 {
+    new (self) ALCsdl2Backend{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCsdl2Backend, ALCbackend, self);
 
@@ -86,12 +87,13 @@ static void ALCsdl2Backend_Destruct(ALCsdl2Backend *self)
     self->deviceID = 0;
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
+    self->~ALCsdl2Backend();
 }
 
 
 static void ALCsdl2Backend_audioCallback(void *ptr, Uint8 *stream, int len)
 {
-    ALCsdl2Backend *self = (ALCsdl2Backend*)ptr;
+    ALCsdl2Backend *self = static_cast<ALCsdl2Backend*>(ptr);
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
     assert((len % self->frameSize) == 0);
@@ -122,11 +124,11 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
     want.callback = ALCsdl2Backend_audioCallback;
     want.userdata = self;
 
-    /* Passing NULL to SDL_OpenAudioDevice opens a default, which isn't
+    /* Passing nullptr to SDL_OpenAudioDevice opens a default, which isn't
      * necessarily the first in the list.
      */
     if(!name || strcmp(name, defaultDeviceName) == 0)
-        self->deviceID = SDL_OpenAudioDevice(NULL, SDL_FALSE, &want, &have,
+        self->deviceID = SDL_OpenAudioDevice(nullptr, SDL_FALSE, &want, &have,
                                              SDL_AUDIO_ALLOW_ANY_CHANGE);
     else
     {
@@ -211,10 +213,9 @@ static void ALCsdl2Backend_unlock(ALCsdl2Backend *self)
 }
 
 
-typedef struct ALCsdl2BackendFactory {
-    DERIVE_FROM_TYPE(ALCbackendFactory);
-} ALCsdl2BackendFactory;
-#define ALCsdl2BACKENDFACTORY_INITIALIZER { { GET_VTABLE2(ALCsdl2BackendFactory, ALCbackendFactory) } }
+struct ALCsdl2BackendFactory final : public ALCbackendFactory {
+    ALCsdl2BackendFactory() noexcept;
+};
 
 ALCbackendFactory *ALCsdl2BackendFactory_getFactory(void);
 
@@ -226,9 +227,13 @@ static ALCbackend* ALCsdl2BackendFactory_createBackend(ALCsdl2BackendFactory *se
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCsdl2BackendFactory);
 
 
+ALCsdl2BackendFactory::ALCsdl2BackendFactory() noexcept
+  : ALCbackendFactory{GET_VTABLE2(ALCsdl2BackendFactory, ALCbackendFactory)}
+{ }
+
 ALCbackendFactory *ALCsdl2BackendFactory_getFactory(void)
 {
-    static ALCsdl2BackendFactory factory = ALCsdl2BACKENDFACTORY_INITIALIZER;
+    static ALCsdl2BackendFactory factory{};
     return STATIC_CAST(ALCbackendFactory, &factory);
 }
 
@@ -254,24 +259,22 @@ static ALCboolean ALCsdl2BackendFactory_querySupport(ALCsdl2BackendFactory* UNUS
 
 static void ALCsdl2BackendFactory_probe(ALCsdl2BackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames)
 {
-    int num_devices, i;
-    al_string name;
-
     if(type != ALL_DEVICE_PROBE)
         return;
 
-    AL_STRING_INIT(name);
-    num_devices = SDL_GetNumAudioDevices(SDL_FALSE);
+    int num_devices{SDL_GetNumAudioDevices(SDL_FALSE)};
 
     alstr_append_range(outnames, defaultDeviceName, defaultDeviceName+sizeof(defaultDeviceName));
-    for(i = 0;i < num_devices;++i)
+    for(int i{0};i < num_devices;++i)
     {
-        alstr_copy_cstr(&name, DEVNAME_PREFIX);
-        alstr_append_cstr(&name, SDL_GetAudioDeviceName(i, SDL_FALSE));
-        if(!alstr_empty(name))
-            alstr_append_range(outnames, VECTOR_BEGIN(name), VECTOR_END(name)+1);
+        std::string name{DEVNAME_PREFIX};
+        name += SDL_GetAudioDeviceName(i, SDL_FALSE);
+        if(!name.empty())
+        {
+            const char *namestr{name.c_str()};
+            alstr_append_range(outnames, namestr, namestr+name.length()+1);
+        }
     }
-    alstr_reset(&name);
 }
 
 static ALCbackend* ALCsdl2BackendFactory_createBackend(ALCsdl2BackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
@@ -280,9 +283,9 @@ static ALCbackend* ALCsdl2BackendFactory_createBackend(ALCsdl2BackendFactory* UN
     {
         ALCsdl2Backend *backend;
         NEW_OBJ(backend, ALCsdl2Backend)(device);
-        if(!backend) return NULL;
+        if(!backend) return nullptr;
         return STATIC_CAST(ALCbackend, backend);
     }
 
-    return NULL;
+    return nullptr;
 }

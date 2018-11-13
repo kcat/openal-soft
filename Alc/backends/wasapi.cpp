@@ -707,16 +707,11 @@ static ALCenum ALCwasapiPlayback_open(ALCwasapiPlayback *self, const ALCchar *de
             );
             if(iter == PlaybackDevices.cend())
             {
-                int len;
-                if((len=MultiByteToWideChar(CP_UTF8, 0, deviceName, -1, nullptr, 0)) > 0)
-                {
-                    std::vector<WCHAR> wname(len);
-                    MultiByteToWideChar(CP_UTF8, 0, deviceName, -1, wname.data(), len);
-                    iter = std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
-                        [&wname](const DevMap &entry) -> bool
-                        { return entry.devid == wname.data(); }
-                    );
-                }
+                std::wstring wname{utf8_to_wstr(deviceName)};
+                iter = std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
+                    [&wname](const DevMap &entry) -> bool
+                    { return entry.devid == wname; }
+                );
             }
             if(iter == PlaybackDevices.cend())
                 WARN("Failed to find device name matching \"%s\"\n", deviceName);
@@ -1378,16 +1373,11 @@ static ALCenum ALCwasapiCapture_open(ALCwasapiCapture *self, const ALCchar *devi
             );
             if(iter == CaptureDevices.cend())
             {
-                int len;
-                if((len=MultiByteToWideChar(CP_UTF8, 0, deviceName, -1, nullptr, 0)) > 0)
-                {
-                    std::vector<WCHAR> wname(len);
-                    MultiByteToWideChar(CP_UTF8, 0, deviceName, -1, wname.data(), len);
-                    iter = std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
-                        [&wname](const DevMap &entry) -> bool
-                        { return entry.devid == wname.data(); }
-                    );
-                }
+                std::wstring wname{utf8_to_wstr(deviceName)};
+                iter = std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
+                    [&wname](const DevMap &entry) -> bool
+                    { return entry.devid == wname; }
+                );
             }
             if(iter == CaptureDevices.cend())
                 WARN("Failed to find device name matching \"%s\"\n", deviceName);

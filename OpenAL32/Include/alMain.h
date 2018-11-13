@@ -656,7 +656,7 @@ struct ALCdevice_struct {
 
     /* HRTF state and info */
     struct DirectHrtfState *Hrtf;
-    al_string HrtfName;
+    char *HrtfName;
     struct Hrtf *HrtfHandle;
     vector_EnumeratedHrtf HrtfList;
     ALCenum HrtfStatus;

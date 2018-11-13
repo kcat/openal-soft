@@ -2429,7 +2429,7 @@ static void InitDevice(ALCdevice *device, enum DeviceType type)
         device->ChannelDelay[i].Buffer = NULL;
     }
 
-    AL_STRING_INIT(device->HrtfName);
+    device->HrtfName = NULL;
     VECTOR_INIT(device->HrtfList);
     device->HrtfHandle = NULL;
     device->Hrtf = NULL;
@@ -2493,7 +2493,8 @@ static ALCvoid FreeDevice(ALCdevice *device)
     VECTOR_DEINIT(device->FilterList);
     almtx_destroy(&device->FilterLock);
 
-    AL_STRING_DEINIT(device->HrtfName);
+    al_free(device->HrtfName);
+    device->HrtfName = NULL;
     FreeHrtfList(&device->HrtfList);
     if(device->HrtfHandle)
         Hrtf_DecRef(device->HrtfHandle);
@@ -3190,7 +3191,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
         else
         {
             almtx_lock(&Device->BackendLock);
-            value = (Device->HrtfHandle ? alstr_get_cstr(Device->HrtfName) : "");
+            value = ((Device->HrtfHandle && Device->HrtfName) ? Device->HrtfName : "");
             almtx_unlock(&Device->BackendLock);
             ALCdevice_DecRef(Device);
         }

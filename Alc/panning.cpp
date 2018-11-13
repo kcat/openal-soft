@@ -38,7 +38,9 @@
 #include "bs2b.h"
 
 
-static const ALsizei FuMa2ACN[MAX_AMBI_COEFFS] = {
+namespace {
+
+constexpr ALsizei FuMa2ACN[MAX_AMBI_COEFFS] = {
     0,  /* W */
     3,  /* X */
     1,  /* Y */
@@ -56,11 +58,20 @@ static const ALsizei FuMa2ACN[MAX_AMBI_COEFFS] = {
     15, /* P */
     9,  /* Q */
 };
-static const ALsizei ACN2ACN[MAX_AMBI_COEFFS] = {
+constexpr ALsizei ACN2ACN[MAX_AMBI_COEFFS] = {
     0,  1,  2,  3,  4,  5,  6,  7,
     8,  9, 10, 11, 12, 13, 14, 15
 };
 
+char *alstrdup(const_al_string str)
+{
+    const size_t len{alstr_length(str)};
+    char *ret{static_cast<char*>(al_calloc(DEF_ALIGN, len+1))};
+    memcpy(ret, alstr_get_cstr(str), len);
+    return ret;
+}
+
+} // namespace
 
 void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALfloat spread,
                     ALfloat coeffs[MAX_AMBI_COEFFS])
@@ -931,7 +942,8 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     al_free(device->Hrtf);
     device->Hrtf = NULL;
     device->HrtfHandle = NULL;
-    alstr_clear(&device->HrtfName);
+    al_free(device->HrtfName);
+    device->HrtfName = NULL;
     device->Render_Mode = NormalRender;
 
     memset(&device->Dry.Ambi, 0, sizeof(device->Dry.Ambi));
@@ -1114,7 +1126,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         if(hrtf && hrtf->sampleRate == device->Frequency)
         {
             device->HrtfHandle = hrtf;
-            alstr_copy(&device->HrtfName, entry->name);
+            device->HrtfName = alstrdup(entry->name);
         }
         else if(hrtf)
             Hrtf_DecRef(hrtf);
@@ -1127,7 +1139,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         if(hrtf && hrtf->sampleRate == device->Frequency)
         {
             device->HrtfHandle = hrtf;
-            alstr_copy(&device->HrtfName, entry->name);
+            device->HrtfName = alstrdup(entry->name);
         }
         else if(hrtf)
             Hrtf_DecRef(hrtf);
@@ -1164,8 +1176,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         }
 
         TRACE("%s HRTF rendering enabled, using \"%s\"\n",
-            ((device->Render_Mode == HrtfRender) ? "Full" : "Basic"),
-            alstr_get_cstr(device->HrtfName)
+            ((device->Render_Mode == HrtfRender) ? "Full" : "Basic"), device->HrtfName
         );
         InitHrtfPanning(device);
         return;

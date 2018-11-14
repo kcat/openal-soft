@@ -1816,9 +1816,9 @@ static void PulseBackendFactory_probe(PulseBackendFactory* UNUSED(self), enum De
     {
         const char *name{entry.name.c_str()};
         size_t namelen{entry.name.length()};
-        /* +1 to also append the null char (to ensure a null-separated list
-            * and double-null terminated list).
-            */
+        /* +1 to also append the null char (to ensure a null-separated list and
+         * double-null terminated list).
+         */
         alstr_append_range(outnames, name, name + namelen+1);
     };
     switch(type)

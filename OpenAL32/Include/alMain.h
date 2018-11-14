@@ -32,6 +32,15 @@
 #include "threads.h"
 
 
+#ifndef __cplusplus
+#define COUNTOF(x) (sizeof(x) / sizeof(0[x]))
+#else
+template<typename T, size_t N>
+constexpr inline size_t countof(const T(&)[N]) noexcept
+{ return N; }
+#define COUNTOF countof
+#endif
+
 #if defined(_WIN64)
 #define SZFMT "%I64u"
 #elif defined(_WIN32)
@@ -196,8 +205,6 @@ static const union {
 } EndianTest = { 1 };
 #define IS_LITTLE_ENDIAN (EndianTest.b[0] == 1)
 #endif
-
-#define COUNTOF(x) (sizeof(x) / sizeof(0[x]))
 
 
 struct ll_ringbuffer;

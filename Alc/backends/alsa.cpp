@@ -1156,7 +1156,7 @@ static ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buff
     {
         snd_pcm_sframes_t amt{0};
 
-        if(self->buffer.size() > 0)
+        if(!self->buffer.empty())
         {
             /* First get any data stored from the last stop */
             amt = snd_pcm_bytes_to_frames(self->pcmHandle, self->buffer.size());

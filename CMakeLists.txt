@@ -839,7 +839,7 @@ SET(OPENAL_OBJS
     OpenAL32/sample_cvt.c
 )
 SET(ALC_OBJS
-    Alc/ALc.c
+    Alc/alc.cpp
     Alc/ALu.c
     Alc/alconfig.cpp
     Alc/alconfig.h

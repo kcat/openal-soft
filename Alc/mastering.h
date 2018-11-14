@@ -6,6 +6,10 @@
 /* For BUFFERSIZE. */
 #include "alMain.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct Compressor;
 
 /* The compressor is initialized with the following settings:
@@ -45,5 +49,9 @@ void ApplyCompression(struct Compressor *Comp, const ALsizei SamplesToDo,
                       ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE]);
 
 ALsizei GetCompressorLookAhead(const struct Compressor *Comp);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* MASTERING_H */

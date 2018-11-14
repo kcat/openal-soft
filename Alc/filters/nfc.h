@@ -1,6 +1,10 @@
 #ifndef FILTER_NFC_H
 #define FILTER_NFC_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct NfcFilter1 {
     float base_gain, gain;
     float b1, a1;
@@ -45,5 +49,9 @@ void NfcFilterProcess2(NfcFilter *nfc, float *RESTRICT dst, const float *RESTRIC
 
 /* Near-field control filter for third-order ambisonic channels (9-15). */
 void NfcFilterProcess3(NfcFilter *nfc, float *RESTRICT dst, const float *RESTRICT src, const int count);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* FILTER_NFC_H */

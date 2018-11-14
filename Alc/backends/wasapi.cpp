@@ -576,9 +576,9 @@ FORCE_ALIGN static int ALCwasapiPlayback_mixerProc(ALCwasapiPlayback *self)
     if(FAILED(hr))
     {
         ERR("CoInitializeEx(nullptr, COINIT_MULTITHREADED) failed: 0x%08lx\n", hr);
-        V0(device->Backend,lock)();
+        ALCwasapiPlayback_lock(self);
         aluHandleDisconnect(device, "COM init failed: 0x%08lx", hr);
-        V0(device->Backend,unlock)();
+        ALCwasapiPlayback_unlock(self);
         return 1;
     }
 
@@ -594,9 +594,9 @@ FORCE_ALIGN static int ALCwasapiPlayback_mixerProc(ALCwasapiPlayback *self)
         if(FAILED(hr))
         {
             ERR("Failed to get padding: 0x%08lx\n", hr);
-            V0(device->Backend,lock)();
+            ALCwasapiPlayback_lock(self);
             aluHandleDisconnect(device, "Failed to retrieve buffer padding: 0x%08lx", hr);
-            V0(device->Backend,unlock)();
+            ALCwasapiPlayback_unlock(self);
             break;
         }
         self->mPadding.store(written, std::memory_order_relaxed);
@@ -625,9 +625,9 @@ FORCE_ALIGN static int ALCwasapiPlayback_mixerProc(ALCwasapiPlayback *self)
         if(FAILED(hr))
         {
             ERR("Failed to buffer data: 0x%08lx\n", hr);
-            V0(device->Backend,lock)();
+            ALCwasapiPlayback_lock(self);
             aluHandleDisconnect(device, "Failed to send playback samples: 0x%08lx", hr);
-            V0(device->Backend,unlock)();
+            ALCwasapiPlayback_unlock(self);
             break;
         }
     }
@@ -1247,9 +1247,9 @@ FORCE_ALIGN int ALCwasapiCapture_recordProc(ALCwasapiCapture *self)
     if(FAILED(hr))
     {
         ERR("CoInitializeEx(nullptr, COINIT_MULTITHREADED) failed: 0x%08lx\n", hr);
-        V0(device->Backend,lock)();
+        ALCwasapiCapture_lock(self);
         aluHandleDisconnect(device, "COM init failed: 0x%08lx", hr);
-        V0(device->Backend,unlock)();
+        ALCwasapiCapture_unlock(self);
         return 1;
     }
 
@@ -1327,9 +1327,9 @@ FORCE_ALIGN int ALCwasapiCapture_recordProc(ALCwasapiCapture *self)
 
         if(FAILED(hr))
         {
-            V0(device->Backend,lock)();
+            ALCwasapiCapture_lock(self);
             aluHandleDisconnect(device, "Failed to capture samples: 0x%08lx", hr);
-            V0(device->Backend,unlock)();
+            ALCwasapiCapture_unlock(self);
             break;
         }
 

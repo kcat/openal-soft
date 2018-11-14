@@ -188,7 +188,7 @@ DEFINE_ALCBACKEND_VTABLE(PlaybackWrapper);
 
 FORCE_ALIGN static int qsa_proc_playback(void *ptr)
 {
-    PlaybackWrapper *self = ptr;
+    PlaybackWrapper *self = static_cast<PlaybackWrapper*>(ptr);
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
     qsa_data *data = self->ExtraData;
     snd_pcm_channel_status_t status;
@@ -211,7 +211,7 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
         device->FmtChans, device->FmtType, device->AmbiOrder
     );
 
-    V0(device->Backend,lock)();
+    PlaybackWrapper_lock(self);
     while(!ATOMIC_LOAD(&data->killNow, almemory_order_acquire))
     {
         FD_ZERO(&wfds);
@@ -220,9 +220,9 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
         timeout.tv_usec=0;
 
         /* Select also works like time slice to OS */
-        V0(device->Backend,unlock)();
+        PlaybackWrapper_unlock(self);
         sret = select(data->audio_fd+1, NULL, &wfds, NULL, &timeout);
-        V0(device->Backend,lock)();
+        PlaybackWrapper_lock(self);
         if(sret == -1)
         {
             ERR("select error: %s\n", strerror(errno));
@@ -269,7 +269,7 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
             }
         }
     }
-    V0(device->Backend,unlock)();
+    PlaybackWrapper_unlock(self);
 
     return 0;
 }

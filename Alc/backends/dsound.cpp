@@ -257,9 +257,9 @@ FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self)
     if(FAILED(err))
     {
         ERR("Failed to get buffer caps: 0x%lx\n", err);
-        ALCdevice_Lock(device);
+        ALCdsoundPlayback_lock(self);
         aluHandleDisconnect(device, "Failure retrieving playback buffer info: 0x%lx", err);
-        ALCdevice_Unlock(device);
+        ALCdsoundPlayback_unlock(self);
         return 1;
     }
 
@@ -285,9 +285,9 @@ FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self)
                 if(FAILED(err))
                 {
                     ERR("Failed to play buffer: 0x%lx\n", err);
-                    ALCdevice_Lock(device);
+                    ALCdsoundPlayback_lock(self);
                     aluHandleDisconnect(device, "Failure starting playback: 0x%lx", err);
-                    ALCdevice_Unlock(device);
+                    ALCdsoundPlayback_unlock(self);
                     return 1;
                 }
                 Playing = true;
@@ -323,10 +323,10 @@ FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self)
         if(SUCCEEDED(err))
         {
             // If we have an active context, mix data directly into output buffer otherwise fill with silence
-            ALCdevice_Lock(device);
+            ALCdsoundPlayback_lock(self);
             aluMixData(device, WritePtr1, WriteCnt1/FrameSize);
             aluMixData(device, WritePtr2, WriteCnt2/FrameSize);
-            ALCdevice_Unlock(device);
+            ALCdsoundPlayback_unlock(self);
 
             // Unlock output buffer only when successfully locked
             Buffer->Unlock(WritePtr1, WriteCnt1, WritePtr2, WriteCnt2);
@@ -334,9 +334,9 @@ FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self)
         else
         {
             ERR("Buffer lock error: %#lx\n", err);
-            ALCdevice_Lock(device);
+            ALCdsoundPlayback_lock(self);
             aluHandleDisconnect(device, "Failed to lock output buffer: 0x%lx", err);
-            ALCdevice_Unlock(device);
+            ALCdsoundPlayback_unlock(self);
             return 1;
         }
 

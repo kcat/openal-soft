@@ -117,9 +117,9 @@ static int SndioPlayback_mixerProc(void *ptr)
             if(wrote == 0)
             {
                 ERR("sio_write failed\n");
-                ALCdevice_Lock(device);
+                SndioPlayback_lock(self);
                 aluHandleDisconnect(device, "Failed to write playback samples");
-                ALCdevice_Unlock(device);
+                SndioPlayback_unlock(self);
                 break;
             }
 

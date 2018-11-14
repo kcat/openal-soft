@@ -193,9 +193,9 @@ static int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
             if(ferror(self->mFile))
             {
                 ERR("Error writing to file\n");
-                ALCdevice_Lock(device);
+                ALCwaveBackend_lock(self);
                 aluHandleDisconnect(device, "Failed to write playback samples");
-                ALCdevice_Unlock(device);
+                ALCwaveBackend_unlock(self);
                 break;
             }
         }

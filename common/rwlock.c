@@ -11,19 +11,19 @@
 /* A simple spinlock. Yield the thread while the given integer is set by
  * another. Could probably be improved... */
 #define LOCK(l) do {                                                          \
-    while(ATOMIC_FLAG_TEST_AND_SET(&(l), almemory_order_acq_rel) == true)     \
+    while(ATOMIC_EXCHANGE(&(l), 1, almemory_order_acq_rel) == true)           \
         althrd_yield();                                                       \
 } while(0)
-#define UNLOCK(l) ATOMIC_FLAG_CLEAR(&(l), almemory_order_release)
+#define UNLOCK(l) ATOMIC_STORE(&(l), 0, almemory_order_release)
 
 
 void RWLockInit(RWLock *lock)
 {
     InitRef(&lock->read_count, 0);
     InitRef(&lock->write_count, 0);
-    ATOMIC_FLAG_CLEAR(&lock->read_lock, almemory_order_relaxed);
-    ATOMIC_FLAG_CLEAR(&lock->read_entry_lock, almemory_order_relaxed);
-    ATOMIC_FLAG_CLEAR(&lock->write_lock, almemory_order_relaxed);
+    ATOMIC_INIT(&lock->read_lock, 0);
+    ATOMIC_INIT(&lock->read_entry_lock, 0);
+    ATOMIC_INIT(&lock->write_lock, 0);
 }
 
 void ReadLock(RWLock *lock)

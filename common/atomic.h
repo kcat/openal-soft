@@ -43,8 +43,6 @@ using std::memory_order_release;
 using std::memory_order_acq_rel;
 using std::memory_order_seq_cst;
 
-using std::atomic_flag;
-
 using std::atomic_init;
 using std::atomic_load_explicit;
 using std::atomic_store_explicit;
@@ -53,8 +51,6 @@ using std::atomic_fetch_sub_explicit;
 using std::atomic_exchange_explicit;
 using std::atomic_compare_exchange_strong_explicit;
 using std::atomic_compare_exchange_weak_explicit;
-using std::atomic_flag_test_and_set_explicit;
-using std::atomic_flag_clear_explicit;
 using std::atomic_thread_fence;
 
 #else
@@ -79,11 +75,9 @@ extern "C" {
 #define almemory_order_seq_cst memory_order_seq_cst
 
 #define ATOMIC(T)  _Atomic(T)
-#define ATOMIC_FLAG atomic_flag
 
 #define ATOMIC_INIT atomic_init
 #define ATOMIC_INIT_STATIC ATOMIC_VAR_INIT
-/*#define ATOMIC_FLAG_INIT ATOMIC_FLAG_INIT*/
 
 #define ATOMIC_LOAD atomic_load_explicit
 #define ATOMIC_STORE atomic_store_explicit
@@ -94,9 +88,6 @@ extern "C" {
 #define ATOMIC_EXCHANGE atomic_exchange_explicit
 #define ATOMIC_COMPARE_EXCHANGE_STRONG atomic_compare_exchange_strong_explicit
 #define ATOMIC_COMPARE_EXCHANGE_WEAK atomic_compare_exchange_weak_explicit
-
-#define ATOMIC_FLAG_TEST_AND_SET atomic_flag_test_and_set_explicit
-#define ATOMIC_FLAG_CLEAR atomic_flag_clear_explicit
 
 #define ATOMIC_THREAD_FENCE atomic_thread_fence
 
@@ -113,11 +104,9 @@ enum almemory_order {
 };
 
 #define ATOMIC(T)  struct { T volatile value; }
-#define ATOMIC_FLAG  ATOMIC(int)
 
 #define ATOMIC_INIT(_val, _newval)  do { (_val)->value = (_newval); } while(0)
 #define ATOMIC_INIT_STATIC(_newval) {(_newval)}
-#define ATOMIC_FLAG_INIT            ATOMIC_INIT_STATIC(0)
 
 #define ATOMIC_LOAD(_val, _MO)  __extension__({ \
     __typeof((_val)->value) _r = (_val)->value; \
@@ -140,15 +129,6 @@ enum almemory_order {
     __typeof(*(_oldval)) _o = *(_oldval);                                     \
     *(_oldval) = __sync_val_compare_and_swap(&(_val)->value, _o, (_newval));  \
     *(_oldval) == _o;                                                         \
-})
-
-#define ATOMIC_FLAG_TEST_AND_SET(_val, _MO)  __extension__({                  \
-    __asm__ __volatile__("" ::: "memory");                                    \
-    __sync_lock_test_and_set(&(_val)->value, 1);                              \
-})
-#define ATOMIC_FLAG_CLEAR(_val, _MO)  __extension__({                         \
-    __sync_lock_release(&(_val)->value);                                      \
-    __asm__ __volatile__("" ::: "memory");                                    \
 })
 
 
@@ -419,16 +399,6 @@ void *_al_invalid_atomic_ptr_size(); /* not defined */
 #endif
 #ifndef ATOMIC_COMPARE_EXCHANGE_PTR_WEAK
 #define ATOMIC_COMPARE_EXCHANGE_PTR_WEAK ATOMIC_COMPARE_EXCHANGE_PTR_STRONG
-#endif
-
-/* If no ATOMIC_FLAG is defined, simulate one with an atomic int using exchange
- * and store ops.
- */
-#ifndef ATOMIC_FLAG
-#define ATOMIC_FLAG      ATOMIC(int)
-#define ATOMIC_FLAG_INIT ATOMIC_INIT_STATIC(0)
-#define ATOMIC_FLAG_TEST_AND_SET(_val, _MO) ATOMIC_EXCHANGE(_val, 1, _MO)
-#define ATOMIC_FLAG_CLEAR(_val, _MO)        ATOMIC_STORE(_val, 0, _MO)
 #endif
 
 

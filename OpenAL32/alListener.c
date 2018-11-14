@@ -30,7 +30,7 @@
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))          \
         UpdateListenerProps(context);                                         \
     else                                                                      \
-        ATOMIC_FLAG_CLEAR(&listener->PropsClean, almemory_order_release);     \
+        ATOMIC_STORE(&listener->PropsClean, AL_FALSE, almemory_order_release);\
 } while(0)
 
 
@@ -60,7 +60,7 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
         if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
             UpdateContextProps(context);
         else
-            ATOMIC_FLAG_CLEAR(&context->PropsClean, almemory_order_release);
+            ATOMIC_STORE(&context->PropsClean, AL_FALSE, almemory_order_release);
         break;
 
     default:

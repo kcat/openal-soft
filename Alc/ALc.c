@@ -1624,9 +1624,9 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
         while((ATOMIC_LOAD(&context->UpdateCount, almemory_order_acquire)&1) != 0)
             althrd_yield();
 
-        if(!ATOMIC_FLAG_TEST_AND_SET(&context->PropsClean, almemory_order_acq_rel))
+        if(!ATOMIC_EXCHANGE(&context->PropsClean, AL_TRUE, almemory_order_acq_rel))
             UpdateContextProps(context);
-        if(!ATOMIC_FLAG_TEST_AND_SET(&context->Listener->PropsClean, almemory_order_acq_rel))
+        if(!ATOMIC_EXCHANGE(&context->Listener->PropsClean, AL_TRUE, almemory_order_acq_rel))
             UpdateListenerProps(context);
         UpdateAllEffectSlotProps(context);
         UpdateAllSourceProps(context);
@@ -2330,7 +2330,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                     }
                 }
 
-                ATOMIC_FLAG_CLEAR(&source->PropsClean, almemory_order_release);
+                ATOMIC_STORE(&source->PropsClean, AL_FALSE, almemory_order_release);
             }
         }
 
@@ -2367,9 +2367,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
         almtx_unlock(&context->SourceLock);
 
-        ATOMIC_FLAG_TEST_AND_SET(&context->PropsClean, almemory_order_release);
+        ATOMIC_STORE(&context->PropsClean, AL_TRUE, almemory_order_release);
         UpdateContextProps(context);
-        ATOMIC_FLAG_TEST_AND_SET(&context->Listener->PropsClean, almemory_order_release);
+        ATOMIC_STORE(&context->Listener->PropsClean, AL_TRUE, almemory_order_release);
         UpdateListenerProps(context);
         UpdateAllSourceProps(context);
         almtx_unlock(&context->PropLock);
@@ -2606,7 +2606,7 @@ static ALvoid InitContext(ALCcontext *Context)
     listener->Up[0] = 0.0f;
     listener->Up[1] = 1.0f;
     listener->Up[2] = 0.0f;
-    ATOMIC_FLAG_TEST_AND_SET(&listener->PropsClean, almemory_order_relaxed);
+    ATOMIC_INIT(&listener->PropsClean, AL_TRUE);
 
     ATOMIC_INIT(&listener->Update, NULL);
 
@@ -2642,7 +2642,7 @@ static ALvoid InitContext(ALCcontext *Context)
     Context->DopplerVelocity = 1.0f;
     Context->SpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
     Context->MetersPerUnit = AL_DEFAULT_METERS_PER_UNIT;
-    ATOMIC_FLAG_TEST_AND_SET(&Context->PropsClean, almemory_order_relaxed);
+    ATOMIC_INIT(&Context->PropsClean, AL_TRUE);
     ATOMIC_INIT(&Context->DeferUpdates, AL_FALSE);
     alsem_init(&Context->EventSem, 0);
     Context->AsyncEvents = NULL;

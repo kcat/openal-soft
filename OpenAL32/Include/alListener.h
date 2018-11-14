@@ -36,7 +36,7 @@ typedef struct ALlistener {
     ALfloat Up[3];
     ALfloat Gain;
 
-    ATOMIC_FLAG PropsClean;
+    ATOMIC(ALenum) PropsClean;
 
     /* Pointer to the most recent property values that are awaiting an update.
      */

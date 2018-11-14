@@ -808,7 +808,7 @@ struct ALCcontext_struct {
     ALfloat SpeedOfSound;
     ALfloat MetersPerUnit;
 
-    ATOMIC_FLAG PropsClean;
+    ATOMIC(ALenum) PropsClean;
     ATOMIC(ALenum) DeferUpdates;
 
     almtx_t PropLock;

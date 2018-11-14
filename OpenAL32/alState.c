@@ -68,7 +68,7 @@ AL_API const ALchar* AL_APIENTRY alsoft_get_version(void)
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))          \
         UpdateContextProps(context);                                          \
     else                                                                      \
-        ATOMIC_FLAG_CLEAR(&context->PropsClean, almemory_order_release);      \
+        ATOMIC_STORE(&context->PropsClean, AL_FALSE, almemory_order_release); \
 } while(0)
 
 

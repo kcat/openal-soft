@@ -103,7 +103,7 @@ static inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
     if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))          \
         UpdateEffectSlotProps(slot, context);                                 \
     else                                                                      \
-        ATOMIC_FLAG_CLEAR(&slot->PropsClean, almemory_order_release);         \
+        ATOMIC_STORE(&slot->PropsClean, AL_FALSE, almemory_order_release);    \
 } while(0)
 
 
@@ -679,7 +679,7 @@ ALenum InitEffectSlot(ALeffectslot *slot)
 
     slot->Gain = 1.0;
     slot->AuxSendAuto = AL_TRUE;
-    ATOMIC_FLAG_TEST_AND_SET(&slot->PropsClean, almemory_order_relaxed);
+    ATOMIC_INIT(&slot->PropsClean, AL_TRUE);
     InitRef(&slot->ref, 0);
 
     ATOMIC_INIT(&slot->Update, NULL);
@@ -773,7 +773,7 @@ void UpdateAllEffectSlotProps(ALCcontext *context)
     for(i = 0;i < auxslots->count;i++)
     {
         ALeffectslot *slot = auxslots->slot[i];
-        if(!ATOMIC_FLAG_TEST_AND_SET(&slot->PropsClean, almemory_order_acq_rel))
+        if(!ATOMIC_EXCHANGE(&slot->PropsClean, AL_TRUE, almemory_order_acq_rel))
             UpdateEffectSlotProps(slot, context);
     }
     UnlockEffectSlotList(context);

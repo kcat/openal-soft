@@ -519,7 +519,7 @@ static ALint Int64ValsByProp(ALenum prop)
        (voice=GetSourceVoice(Source, Context)) != NULL)                       \
         UpdateSourceProps(Source, voice, device->NumAuxSends, Context);       \
     else                                                                      \
-        ATOMIC_FLAG_CLEAR(&Source->PropsClean, almemory_order_release);       \
+        ATOMIC_STORE(&Source->PropsClean, AL_FALSE, almemory_order_release);  \
 } while(0)
 
 static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALfloat *values)
@@ -1036,7 +1036,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 if((voice=GetSourceVoice(Source, Context)) != NULL)
                     UpdateSourceProps(Source, voice, device->NumAuxSends, Context);
                 else
-                    ATOMIC_FLAG_CLEAR(&Source->PropsClean, almemory_order_release);
+                    ATOMIC_STORE(&Source->PropsClean, AL_FALSE, almemory_order_release);
             }
             else
             {
@@ -2488,7 +2488,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         voice = context->Voices[vidx];
         ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
 
-        ATOMIC_FLAG_TEST_AND_SET(&source->PropsClean, almemory_order_acquire);
+        ATOMIC_EXCHANGE(&source->PropsClean, AL_TRUE, almemory_order_acquire);
         UpdateSourceProps(source, voice, device->NumAuxSends, context);
 
         /* A source that's not playing or paused has any offset applied when it
@@ -3109,10 +3109,7 @@ static void InitSourceParams(ALsource *Source, ALsizei num_sends)
 
     Source->queue = NULL;
 
-    /* No way to do an 'init' here, so just test+set with relaxed ordering and
-     * ignore the test.
-     */
-    ATOMIC_FLAG_TEST_AND_SET(&Source->PropsClean, almemory_order_relaxed);
+    ATOMIC_INIT(&Source->PropsClean, AL_TRUE);
 
     Source->VoiceIdx = -1;
 }
@@ -3246,7 +3243,7 @@ void UpdateAllSourceProps(ALCcontext *context)
     {
         ALvoice *voice = context->Voices[pos];
         ALsource *source = ATOMIC_LOAD(&voice->Source, almemory_order_acquire);
-        if(source && !ATOMIC_FLAG_TEST_AND_SET(&source->PropsClean, almemory_order_acq_rel))
+        if(source && !ATOMIC_EXCHANGE(&source->PropsClean, AL_TRUE, almemory_order_acq_rel))
             UpdateSourceProps(source, voice, num_sends, context);
     }
 }

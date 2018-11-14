@@ -111,7 +111,7 @@ typedef struct ALeffectslot {
         ALeffectState *State;
     } Effect;
 
-    ATOMIC_FLAG PropsClean;
+    ATOMIC(ALenum) PropsClean;
 
     RefCount ref;
 

@@ -70,19 +70,21 @@
 #define ALC_OSS_DEVNODE_TRUC
 #endif
 
+namespace {
+
 struct oss_device {
     const ALCchar *handle;
     const char *path;
     struct oss_device *next;
 };
 
-static struct oss_device oss_playback = {
+struct oss_device oss_playback = {
     "OSS Default",
     "/dev/dsp",
     nullptr
 };
 
-static struct oss_device oss_capture = {
+struct oss_device oss_capture = {
     "OSS Default",
     "/dev/dsp",
     nullptr
@@ -92,14 +94,14 @@ static struct oss_device oss_capture = {
 
 #define DSP_CAP_OUTPUT 0x00020000
 #define DSP_CAP_INPUT 0x00010000
-static void ALCossListPopulate(struct oss_device *UNUSED(devlist), int UNUSED(type_flag))
+void ALCossListPopulate(struct oss_device *UNUSED(devlist), int UNUSED(type_flag))
 {
 }
 
 #else
 
 #ifndef HAVE_STRNLEN
-static size_t my_strnlen(const char *str, size_t maxlen)
+size_t my_strnlen(const char *str, size_t maxlen)
 {
     const char *end = static_cast<const char*>(memchr(str, 0, maxlen));
     if(!end) return maxlen;
@@ -108,7 +110,7 @@ static size_t my_strnlen(const char *str, size_t maxlen)
 #define strnlen my_strnlen
 #endif
 
-static void ALCossListAppend(struct oss_device *list, const char *handle, size_t hlen, const char *path, size_t plen)
+void ALCossListAppend(struct oss_device *list, const char *handle, size_t hlen, const char *path, size_t plen)
 {
     struct oss_device *next;
     struct oss_device *last;
@@ -158,7 +160,7 @@ static void ALCossListAppend(struct oss_device *list, const char *handle, size_t
     TRACE("Got device \"%s\", \"%s\"\n", next->handle, next->path);
 }
 
-static void ALCossListPopulate(struct oss_device *devlist, int type_flag)
+void ALCossListPopulate(struct oss_device *devlist, int type_flag)
 {
     struct oss_sysinfo si;
     struct oss_audioinfo ai;
@@ -209,7 +211,7 @@ done:
 
 #endif
 
-static void ALCossListFree(struct oss_device *list)
+void ALCossListFree(struct oss_device *list)
 {
     struct oss_device *cur;
     if(list == nullptr)
@@ -227,7 +229,7 @@ static void ALCossListFree(struct oss_device *list)
     }
 }
 
-static int log2i(ALCuint x)
+int log2i(ALCuint x)
 {
     int y = 0;
     while (x > 1)
@@ -237,6 +239,8 @@ static int log2i(ALCuint x)
     }
     return y;
 }
+
+} // namespace
 
 struct ALCplaybackOSS final : public ALCbackend {
     int fd;

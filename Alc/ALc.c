@@ -1304,7 +1304,6 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans)
     return "(unknown channels)";
 }
 
-extern inline ALsizei FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType type, ALsizei ambiorder);
 ALsizei BytesFromDevFmt(enum DevFmtType type)
 {
     switch(type)
@@ -1577,24 +1576,6 @@ void SetDefaultChannelOrder(ALCdevice *device)
         break;
     }
 }
-
-extern inline ALint GetChannelIndex(const enum Channel names[MAX_OUTPUT_CHANNELS], enum Channel chan);
-extern inline ALint GetChannelIdxByName(const RealMixParams *real, enum Channel chan);
-
-/* NOTE: These shouldn't really be here, but C++ (alBuffer.cpp) won't turn
- * these extern inline declarations into callable functions.
- */
-extern inline void LockBufferList(ALCdevice *device);
-extern inline void UnlockBufferList(ALCdevice *device);
-extern inline ALsizei FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType type);
-extern inline ALsizei FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type);
-
-extern inline ALuint64 GetDeviceClockTime(ALCdevice *device);
-
-extern inline void alstr_reset(al_string *str);
-extern inline size_t alstr_length(const_al_string str);
-extern inline ALboolean alstr_empty(const_al_string str);
-extern inline const al_string_char_type *alstr_get_cstr(const_al_string str);
 
 
 /* ALCcontext_DeferUpdates

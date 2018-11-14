@@ -31,9 +31,6 @@
 #define FILTER_MIN_GAIN 0.0f
 #define FILTER_MAX_GAIN 4.0f /* +12dB */
 
-extern inline void LockFilterList(ALCdevice *device);
-extern inline void UnlockFilterList(ALCdevice *device);
-
 static ALfilter *AllocFilter(ALCcontext *context);
 static void FreeFilter(ALCdevice *device, ALfilter *filter);
 static void InitFilterParams(ALfilter *filter, ALenum type);

@@ -35,9 +35,6 @@
 #include "almalloc.h"
 
 
-extern inline void LockEffectSlotList(ALCcontext *context);
-extern inline void UnlockEffectSlotList(ALCcontext *context);
-
 static void AddActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *context);
 static void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *context);
 

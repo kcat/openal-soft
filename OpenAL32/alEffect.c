@@ -31,10 +31,6 @@
 #include "alError.h"
 
 
-extern inline void LockEffectList(ALCdevice *device);
-extern inline void UnlockEffectList(ALCdevice *device);
-extern inline ALboolean IsReverbEffect(ALenum type);
-
 const struct EffectList EffectList[EFFECTLIST_SIZE] = {
     { "eaxreverb",  EAXREVERB_EFFECT,  AL_EFFECT_EAXREVERB },
     { "reverb",     REVERB_EFFECT,     AL_EFFECT_REVERB },

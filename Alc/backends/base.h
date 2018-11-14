@@ -156,20 +156,10 @@ ALCbackendFactory *ALCsdl2BackendFactory_getFactory(void);
 ALCbackendFactory *ALCloopbackFactory_getFactory(void);
 
 
-inline void ALCdevice_Lock(ALCdevice *device)
-{ V0(device->Backend,lock)(); }
+void ALCdevice_Lock(ALCdevice *device);
+void ALCdevice_Unlock(ALCdevice *device);
 
-inline void ALCdevice_Unlock(ALCdevice *device)
-{ V0(device->Backend,unlock)(); }
-
-
-inline ClockLatency GetClockLatency(ALCdevice *device)
-{
-    ClockLatency ret = V0(device->Backend,getClockLatency)();
-    ret.Latency += device->FixedLatency;
-    return ret;
-}
-
+ClockLatency GetClockLatency(ALCdevice *device);
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -9,6 +9,20 @@
 #include "backends/base.h"
 
 
+void ALCdevice_Lock(ALCdevice *device)
+{ V0(device->Backend,lock)(); }
+
+void ALCdevice_Unlock(ALCdevice *device)
+{ V0(device->Backend,unlock)(); }
+
+ClockLatency GetClockLatency(ALCdevice *device)
+{
+    ClockLatency ret = V0(device->Backend,getClockLatency)();
+    ret.Latency += device->FixedLatency;
+    return ret;
+}
+
+
 /* Base ALCbackend method implementations. */
 void ALCbackend_Construct(ALCbackend *self, ALCdevice *device)
 {

@@ -22,13 +22,13 @@
 
 #include "version.h"
 
-#include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
 #include <ctype.h>
 #include <signal.h>
 
+#include <cmath>
 #include <atomic>
 #include <mutex>
 #include <thread>
@@ -1032,7 +1032,7 @@ static void alc_initconfig(void)
     }
 
     if(ConfigValueFloat(nullptr, "reverb", "boost", &valf))
-        ReverbBoost *= powf(10.0f, valf / 20.0f);
+        ReverbBoost *= std::pow(10.0f, valf / 20.0f);
 
     if(((devs=getenv("ALSOFT_DRIVERS")) && devs[0]) ||
        ConfigValueStr(nullptr, nullptr, "drivers", &devs))
@@ -2137,13 +2137,13 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(depth > 0)
         {
             depth = clampi(depth, 2, 24);
-            device->DitherDepth = powf(2.0f, (ALfloat)(depth-1));
+            device->DitherDepth = std::pow(2.0f, (ALfloat)(depth-1));
         }
     }
     if(!(device->DitherDepth > 0.0f))
         TRACE("Dithering disabled\n");
     else
-        TRACE("Dithering enabled (%g-bit, %g)\n", log2f(device->DitherDepth)+1.0f,
+        TRACE("Dithering enabled (%d-bit, %g)\n", float2int(std::log2(device->DitherDepth)+0.5)+1,
               device->DitherDepth);
 
     device->LimiterState = gainLimiter;
@@ -2194,7 +2194,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             thrshld -= 1.0f / device->DitherDepth;
 
         al_free(device->Limiter);
-        device->Limiter = CreateDeviceLimiter(device, log10f(thrshld) * 20.0f);
+        device->Limiter = CreateDeviceLimiter(device, std::log10(thrshld) * 20.0f);
         device->FixedLatency += (ALuint)(GetCompressorLookAhead(device->Limiter) *
                                          DEVICE_CLOCK_RES / device->Frequency);
     }
@@ -3826,7 +3826,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
             ALfloat db = clampf(valf, -24.0f, 24.0f);
             if(db != valf)
                 WARN("volume-adjust clamped: %f, range: +/-%f\n", valf, 24.0f);
-            ALContext->GainBoost = powf(10.0f, db/20.0f);
+            ALContext->GainBoost = std::pow(10.0f, db/20.0f);
             TRACE("volume-adjust gain: %f\n", ALContext->GainBoost);
         }
     }

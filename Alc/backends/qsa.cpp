@@ -997,7 +997,7 @@ struct ALCqsaBackendFactory final : public ALCbackendFactory {
 static ALCboolean ALCqsaBackendFactory_init(ALCqsaBackendFactory* UNUSED(self));
 static void ALCqsaBackendFactory_deinit(ALCqsaBackendFactory* UNUSED(self));
 static ALCboolean ALCqsaBackendFactory_querySupport(ALCqsaBackendFactory* UNUSED(self), ALCbackend_Type type);
-static void ALCqsaBackendFactory_probe(ALCqsaBackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames);
+static void ALCqsaBackendFactory_probe(ALCqsaBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames);
 static ALCbackend* ALCqsaBackendFactory_createBackend(ALCqsaBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type);
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCqsaBackendFactory);
 
@@ -1029,14 +1029,14 @@ static ALCboolean ALCqsaBackendFactory_querySupport(ALCqsaBackendFactory* UNUSED
     return ALC_FALSE;
 }
 
-static void ALCqsaBackendFactory_probe(ALCqsaBackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames)
+static void ALCqsaBackendFactory_probe(ALCqsaBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
 {
     switch (type)
     {
 #define APPEND_OUTNAME(e) do {                                                \
     const char *n_ = (e)->name;                                               \
     if(n_ && n_[0])                                                           \
-        alstr_append_range(outnames, n_, n_+strlen(n_)+1);                    \
+        outnames->append(n_, strlen(n_)+1);                                   \
 } while(0)
         case ALL_DEVICE_PROBE:
             deviceList(SND_PCM_CHANNEL_PLAYBACK, &DeviceNameMap);

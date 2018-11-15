@@ -951,7 +951,7 @@ ALCbackendFactory *ALCdsoundBackendFactory_getFactory(void);
 static ALCboolean ALCdsoundBackendFactory_init(ALCdsoundBackendFactory *self);
 static void ALCdsoundBackendFactory_deinit(ALCdsoundBackendFactory *self);
 static ALCboolean ALCdsoundBackendFactory_querySupport(ALCdsoundBackendFactory *self, ALCbackend_Type type);
-static void ALCdsoundBackendFactory_probe(ALCdsoundBackendFactory *self, enum DevProbe type, al_string *outnames);
+static void ALCdsoundBackendFactory_probe(ALCdsoundBackendFactory *self, enum DevProbe type, std::string *outnames);
 static ALCbackend* ALCdsoundBackendFactory_createBackend(ALCdsoundBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCdsoundBackendFactory);
 
@@ -994,16 +994,14 @@ static ALCboolean ALCdsoundBackendFactory_querySupport(ALCdsoundBackendFactory* 
     return ALC_FALSE;
 }
 
-static void ALCdsoundBackendFactory_probe(ALCdsoundBackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames)
+static void ALCdsoundBackendFactory_probe(ALCdsoundBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
 {
     auto add_device = [outnames](const DevMap &entry) -> void
     {
-        const char *name{entry.name.c_str()};
-        size_t namelen{entry.name.length()};
         /* +1 to also append the null char (to ensure a null-separated list and
          * double-null terminated list).
          */
-        alstr_append_range(outnames, name, name + namelen+1);
+        outnames->append(entry.name.c_str(), entry.name.length()+1);
     };
 
     /* Initialize COM to prevent name truncation */

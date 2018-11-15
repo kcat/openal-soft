@@ -1741,7 +1741,7 @@ struct PulseBackendFactory final : public ALCbackendFactory {
 static ALCboolean PulseBackendFactory_init(PulseBackendFactory *self);
 static void PulseBackendFactory_deinit(PulseBackendFactory *self);
 static ALCboolean PulseBackendFactory_querySupport(PulseBackendFactory *self, ALCbackend_Type type);
-static void PulseBackendFactory_probe(PulseBackendFactory *self, enum DevProbe type, al_string *outnames);
+static void PulseBackendFactory_probe(PulseBackendFactory *self, enum DevProbe type, std::string *outnames);
 static ALCbackend* PulseBackendFactory_createBackend(PulseBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
 DEFINE_ALCBACKENDFACTORY_VTABLE(PulseBackendFactory);
 
@@ -1810,16 +1810,14 @@ static ALCboolean PulseBackendFactory_querySupport(PulseBackendFactory* UNUSED(s
     return ALC_FALSE;
 }
 
-static void PulseBackendFactory_probe(PulseBackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames)
+static void PulseBackendFactory_probe(PulseBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
 {
     auto add_device = [outnames](const DevMap &entry) -> void
     {
-        const char *name{entry.name.c_str()};
-        size_t namelen{entry.name.length()};
         /* +1 to also append the null char (to ensure a null-separated list and
          * double-null terminated list).
          */
-        alstr_append_range(outnames, name, name + namelen+1);
+        outnames->append(entry.name.c_str(), entry.name.length()+1);
     };
     switch(type)
     {

@@ -544,7 +544,7 @@ ALCbackendFactory *SndioBackendFactory_getFactory(void);
 static ALCboolean SndioBackendFactory_init(SndioBackendFactory *self);
 static DECLARE_FORWARD(SndioBackendFactory, ALCbackendFactory, void, deinit)
 static ALCboolean SndioBackendFactory_querySupport(SndioBackendFactory *self, ALCbackend_Type type);
-static void SndioBackendFactory_probe(SndioBackendFactory *self, enum DevProbe type, al_string *outnames);
+static void SndioBackendFactory_probe(SndioBackendFactory *self, enum DevProbe type, std::string *outnames);
 static ALCbackend* SndioBackendFactory_createBackend(SndioBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
 DEFINE_ALCBACKENDFACTORY_VTABLE(SndioBackendFactory);
 
@@ -571,13 +571,14 @@ static ALCboolean SndioBackendFactory_querySupport(SndioBackendFactory* UNUSED(s
     return ALC_FALSE;
 }
 
-static void SndioBackendFactory_probe(SndioBackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames)
+static void SndioBackendFactory_probe(SndioBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
 {
     switch(type)
     {
         case ALL_DEVICE_PROBE:
         case CAPTURE_DEVICE_PROBE:
-            alstr_append_range(outnames, sndio_device, sndio_device+sizeof(sndio_device));
+            /* Includes null char. */
+            outnames->append(sndio_device, sizeof(sndio_device));
             break;
     }
 }

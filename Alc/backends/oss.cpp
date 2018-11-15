@@ -774,7 +774,7 @@ ALCbackendFactory *ALCossBackendFactory_getFactory(void);
 static ALCboolean ALCossBackendFactory_init(ALCossBackendFactory *self);
 static void ALCossBackendFactory_deinit(ALCossBackendFactory *self);
 static ALCboolean ALCossBackendFactory_querySupport(ALCossBackendFactory *self, ALCbackend_Type type);
-static void ALCossBackendFactory_probe(ALCossBackendFactory *self, enum DevProbe type, al_string *outnames);
+static void ALCossBackendFactory_probe(ALCossBackendFactory *self, enum DevProbe type, std::string *outnames);
 static ALCbackend* ALCossBackendFactory_createBackend(ALCossBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCossBackendFactory);
 
@@ -812,7 +812,7 @@ ALCboolean ALCossBackendFactory_querySupport(ALCossBackendFactory* UNUSED(self),
     return ALC_FALSE;
 }
 
-void ALCossBackendFactory_probe(ALCossBackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames)
+void ALCossBackendFactory_probe(ALCossBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
 {
     auto add_device = [outnames](const DevMap &entry) -> void
     {
@@ -821,8 +821,8 @@ void ALCossBackendFactory_probe(ALCossBackendFactory* UNUSED(self), enum DevProb
         if(stat(entry.device_name.c_str(), &buf) == 0)
 #endif
         {
-            const char *name{entry.name.c_str()};
-            alstr_append_range(outnames, name, name+entry.name.length()+1);
+            /* Includes null char. */
+            outnames->append(entry.name.c_str(), entry.name.length()+1);
         }
     };
 

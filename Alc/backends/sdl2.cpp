@@ -222,7 +222,7 @@ ALCbackendFactory *ALCsdl2BackendFactory_getFactory(void);
 static ALCboolean ALCsdl2BackendFactory_init(ALCsdl2BackendFactory *self);
 static void ALCsdl2BackendFactory_deinit(ALCsdl2BackendFactory *self);
 static ALCboolean ALCsdl2BackendFactory_querySupport(ALCsdl2BackendFactory *self, ALCbackend_Type type);
-static void ALCsdl2BackendFactory_probe(ALCsdl2BackendFactory *self, enum DevProbe type, al_string *outnames);
+static void ALCsdl2BackendFactory_probe(ALCsdl2BackendFactory *self, enum DevProbe type, std::string *outnames);
 static ALCbackend* ALCsdl2BackendFactory_createBackend(ALCsdl2BackendFactory *self, ALCdevice *device, ALCbackend_Type type);
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCsdl2BackendFactory);
 
@@ -257,23 +257,21 @@ static ALCboolean ALCsdl2BackendFactory_querySupport(ALCsdl2BackendFactory* UNUS
     return ALC_FALSE;
 }
 
-static void ALCsdl2BackendFactory_probe(ALCsdl2BackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames)
+static void ALCsdl2BackendFactory_probe(ALCsdl2BackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
 {
     if(type != ALL_DEVICE_PROBE)
         return;
 
     int num_devices{SDL_GetNumAudioDevices(SDL_FALSE)};
 
-    alstr_append_range(outnames, defaultDeviceName, defaultDeviceName+sizeof(defaultDeviceName));
+    /* Includes null char. */
+    outnames->append(defaultDeviceName, sizeof(defaultDeviceName));
     for(int i{0};i < num_devices;++i)
     {
         std::string name{DEVNAME_PREFIX};
         name += SDL_GetAudioDeviceName(i, SDL_FALSE);
         if(!name.empty())
-        {
-            const char *namestr{name.c_str()};
-            alstr_append_range(outnames, namestr, namestr+name.length()+1);
-        }
+            outnames->append(name.c_str(), name.length()+1);
     }
 }
 

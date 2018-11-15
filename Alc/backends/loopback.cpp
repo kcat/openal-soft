@@ -90,7 +90,7 @@ ALCbackendFactory *ALCloopbackFactory_getFactory(void);
 static ALCboolean ALCloopbackFactory_init(ALCloopbackFactory *self);
 static DECLARE_FORWARD(ALCloopbackFactory, ALCbackendFactory, void, deinit)
 static ALCboolean ALCloopbackFactory_querySupport(ALCloopbackFactory *self, ALCbackend_Type type);
-static void ALCloopbackFactory_probe(ALCloopbackFactory *self, enum DevProbe type, al_string *outnames);
+static void ALCloopbackFactory_probe(ALCloopbackFactory *self, enum DevProbe type, std::string *outnames);
 static ALCbackend* ALCloopbackFactory_createBackend(ALCloopbackFactory *self, ALCdevice *device, ALCbackend_Type type);
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCloopbackFactory);
 
@@ -111,7 +111,7 @@ static ALCboolean ALCloopbackFactory_querySupport(ALCloopbackFactory* UNUSED(sel
     return ALC_FALSE;
 }
 
-static void ALCloopbackFactory_probe(ALCloopbackFactory* UNUSED(self), enum DevProbe UNUSED(type), al_string* UNUSED(outnames))
+static void ALCloopbackFactory_probe(ALCloopbackFactory* UNUSED(self), enum DevProbe UNUSED(type), std::string* UNUSED(outnames))
 {
 }
 

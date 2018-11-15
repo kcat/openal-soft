@@ -1824,7 +1824,7 @@ struct ALCwasapiBackendFactory final : public ALCbackendFactory {
 static ALCboolean ALCwasapiBackendFactory_init(ALCwasapiBackendFactory *self);
 static void ALCwasapiBackendFactory_deinit(ALCwasapiBackendFactory *self);
 static ALCboolean ALCwasapiBackendFactory_querySupport(ALCwasapiBackendFactory *self, ALCbackend_Type type);
-static void ALCwasapiBackendFactory_probe(ALCwasapiBackendFactory *self, enum DevProbe type, al_string *outnames);
+static void ALCwasapiBackendFactory_probe(ALCwasapiBackendFactory *self, enum DevProbe type, std::string *outnames);
 static ALCbackend* ALCwasapiBackendFactory_createBackend(ALCwasapiBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
 
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCwasapiBackendFactory);
@@ -1880,7 +1880,7 @@ static ALCboolean ALCwasapiBackendFactory_querySupport(ALCwasapiBackendFactory* 
     return ALC_FALSE;
 }
 
-static void ALCwasapiBackendFactory_probe(ALCwasapiBackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames)
+static void ALCwasapiBackendFactory_probe(ALCwasapiBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
 {
     ThreadRequest req{ nullptr, 0 };
 
@@ -1891,12 +1891,10 @@ static void ALCwasapiBackendFactory_probe(ALCwasapiBackendFactory* UNUSED(self),
     {
         auto add_device = [outnames](const DevMap &entry) -> void
         {
-            const char *name{entry.name.c_str()};
-            size_t namelen{entry.name.length()};
             /* +1 to also append the null char (to ensure a null-separated list
              * and double-null terminated list).
              */
-            alstr_append_range(outnames, name, name + namelen+1);
+            outnames->append(entry.name.c_str(), entry.name.length()+1);
         };
         HRESULT hr = E_FAIL;
         if(PostThreadMessage(ThreadID, WM_USER_Enumerate, (WPARAM)&req, type))

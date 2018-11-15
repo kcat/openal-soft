@@ -484,7 +484,7 @@ struct ALCportBackendFactory final : public ALCbackendFactory {
 static ALCboolean ALCportBackendFactory_init(ALCportBackendFactory *self);
 static void ALCportBackendFactory_deinit(ALCportBackendFactory *self);
 static ALCboolean ALCportBackendFactory_querySupport(ALCportBackendFactory *self, ALCbackend_Type type);
-static void ALCportBackendFactory_probe(ALCportBackendFactory *self, enum DevProbe type, al_string *outnames);
+static void ALCportBackendFactory_probe(ALCportBackendFactory *self, enum DevProbe type, std::string *outnames);
 static ALCbackend* ALCportBackendFactory_createBackend(ALCportBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCportBackendFactory);
 
@@ -521,13 +521,14 @@ static ALCboolean ALCportBackendFactory_querySupport(ALCportBackendFactory* UNUS
     return ALC_FALSE;
 }
 
-static void ALCportBackendFactory_probe(ALCportBackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames)
+static void ALCportBackendFactory_probe(ALCportBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
 {
     switch(type)
     {
         case ALL_DEVICE_PROBE:
         case CAPTURE_DEVICE_PROBE:
-            alstr_append_range(outnames, pa_device, pa_device+sizeof(pa_device));
+            /* Includes null char. */
+            outnames->append(pa_device, sizeof(pa_device));
             break;
     }
 }

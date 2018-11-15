@@ -396,7 +396,7 @@ ALCbackendFactory *ALCwaveBackendFactory_getFactory(void);
 static ALCboolean ALCwaveBackendFactory_init(ALCwaveBackendFactory *self);
 static DECLARE_FORWARD(ALCwaveBackendFactory, ALCbackendFactory, void, deinit)
 static ALCboolean ALCwaveBackendFactory_querySupport(ALCwaveBackendFactory *self, ALCbackend_Type type);
-static void ALCwaveBackendFactory_probe(ALCwaveBackendFactory *self, enum DevProbe type, al_string *outnames);
+static void ALCwaveBackendFactory_probe(ALCwaveBackendFactory *self, enum DevProbe type, std::string *outnames);
 static ALCbackend* ALCwaveBackendFactory_createBackend(ALCwaveBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCwaveBackendFactory);
 
@@ -419,12 +419,13 @@ static ALCboolean ALCwaveBackendFactory_querySupport(ALCwaveBackendFactory* UNUS
     return ALC_FALSE;
 }
 
-static void ALCwaveBackendFactory_probe(ALCwaveBackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames)
+static void ALCwaveBackendFactory_probe(ALCwaveBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
 {
     switch(type)
     {
         case ALL_DEVICE_PROBE:
-            alstr_append_range(outnames, waveDevice, waveDevice+sizeof(waveDevice));
+            /* Includes null char. */
+            outnames->append(waveDevice, sizeof(waveDevice));
             break;
         case CAPTURE_DEVICE_PROBE:
             break;

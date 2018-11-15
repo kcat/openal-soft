@@ -568,12 +568,13 @@ static ALCboolean ALCjackBackendFactory_querySupport(ALCjackBackendFactory* UNUS
     return ALC_FALSE;
 }
 
-static void ALCjackBackendFactory_probe(ALCjackBackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames)
+static void ALCjackBackendFactory_probe(ALCjackBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
 {
     switch(type)
     {
         case ALL_DEVICE_PROBE:
-            alstr_append_range(outnames, jackDevice, jackDevice+sizeof(jackDevice));
+            /* Includes null char. */
+            outnames->append(jackDevice, sizeof(jackDevice));
             break;
 
         case CAPTURE_DEVICE_PROBE:

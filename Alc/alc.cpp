@@ -707,8 +707,8 @@ constexpr ALCchar alcErrOutOfMemory[] = "Out of Memory";
 /* Enumerated device names */
 constexpr ALCchar alcDefaultName[] = "OpenAL Soft\0";
 
-al_string alcAllDevicesList;
-al_string alcCaptureDeviceList;
+std::string alcAllDevicesList;
+std::string alcCaptureDeviceList;
 
 /* Default is always the first in the list */
 std::string alcDefaultAllDevicesSpecifier;
@@ -877,9 +877,6 @@ static void alc_init(void)
     int ret;
 
     LogFile = stderr;
-
-    AL_STRING_INIT(alcAllDevicesList);
-    AL_STRING_INIT(alcCaptureDeviceList);
 
     str = getenv("__ALSOFT_HALF_ANGLE_CONES");
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, nullptr, 0) == 1))
@@ -1173,8 +1170,8 @@ static void alc_initconfig(void)
  ************************************************/
 static void alc_cleanup(void)
 {
-    AL_STRING_DEINIT(alcAllDevicesList);
-    AL_STRING_DEINIT(alcCaptureDeviceList);
+    alcAllDevicesList.clear();
+    alcCaptureDeviceList.clear();
 
     alcDefaultAllDevicesSpecifier.clear();
     alcCaptureDefaultDeviceSpecifier.clear();
@@ -1232,12 +1229,12 @@ static void alc_deinit(void)
 /************************************************
  * Device enumeration
  ************************************************/
-static void ProbeDevices(al_string *list, struct BackendInfo *backendinfo, enum DevProbe type)
+static void ProbeDevices(std::string *list, struct BackendInfo *backendinfo, enum DevProbe type)
 {
     DO_INITCONFIG();
 
     std::lock_guard<std::recursive_mutex> _{ListLock};
-    alstr_clear(list);
+    list->clear();
     if(backendinfo->getFactory)
     {
         ALCbackendFactory *factory = backendinfo->getFactory();
@@ -3077,7 +3074,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
         else
         {
             ProbeAllDevicesList();
-            value = alstr_get_cstr(alcAllDevicesList);
+            value = alcAllDevicesList.c_str();
         }
         break;
 
@@ -3090,7 +3087,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
         else
         {
             ProbeCaptureDeviceList();
-            value = alstr_get_cstr(alcCaptureDeviceList);
+            value = alcCaptureDeviceList.c_str();
         }
         break;
 
@@ -3100,25 +3097,21 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
         break;
 
     case ALC_DEFAULT_ALL_DEVICES_SPECIFIER:
-        if(alstr_empty(alcAllDevicesList))
+        if(alcAllDevicesList.empty())
             ProbeAllDevicesList();
 
-        VerifyDevice(&Device);
-
-        alcDefaultAllDevicesSpecifier = alstr_get_cstr(alcAllDevicesList);
+        /* Copy first entry as default. */
+        alcDefaultAllDevicesSpecifier = alcAllDevicesList.c_str();
         value = alcDefaultAllDevicesSpecifier.c_str();
-        if(Device) ALCdevice_DecRef(Device);
         break;
 
     case ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER:
-        if(alstr_empty(alcCaptureDeviceList))
+        if(alcCaptureDeviceList.empty())
             ProbeCaptureDeviceList();
 
-        VerifyDevice(&Device);
-
-        alcCaptureDefaultDeviceSpecifier = alstr_get_cstr(alcCaptureDeviceList);
+        /* Copy first entry as default. */
+        alcCaptureDefaultDeviceSpecifier = alcCaptureDeviceList.c_str();
         value = alcCaptureDefaultDeviceSpecifier.c_str();
-        if(Device) ALCdevice_DecRef(Device);
         break;
 
     case ALC_EXTENSIONS:

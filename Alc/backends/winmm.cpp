@@ -672,7 +672,7 @@ struct ALCwinmmBackendFactory final : public ALCbackendFactory {
 static ALCboolean ALCwinmmBackendFactory_init(ALCwinmmBackendFactory *self);
 static void ALCwinmmBackendFactory_deinit(ALCwinmmBackendFactory *self);
 static ALCboolean ALCwinmmBackendFactory_querySupport(ALCwinmmBackendFactory *self, ALCbackend_Type type);
-static void ALCwinmmBackendFactory_probe(ALCwinmmBackendFactory *self, enum DevProbe type, al_string *outnames);
+static void ALCwinmmBackendFactory_probe(ALCwinmmBackendFactory *self, enum DevProbe type, std::string *outnames);
 static ALCbackend* ALCwinmmBackendFactory_createBackend(ALCwinmmBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
 
 DEFINE_ALCBACKENDFACTORY_VTABLE(ALCwinmmBackendFactory);
@@ -700,16 +700,15 @@ static ALCboolean ALCwinmmBackendFactory_querySupport(ALCwinmmBackendFactory* UN
     return ALC_FALSE;
 }
 
-static void ALCwinmmBackendFactory_probe(ALCwinmmBackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames)
+static void ALCwinmmBackendFactory_probe(ALCwinmmBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
 {
     auto add_device = [outnames](const std::string &dname) -> void
     {
-        const char *name{dname.c_str()};
-        size_t namelen{dname.length()};
         /* +1 to also append the null char (to ensure a null-separated list and
          * double-null terminated list).
          */
-        alstr_append_range(outnames, name, name + namelen+1);
+        if(!dname.empty())
+            outnames->append(dname.c_str(), dname.length()+1);
     };
     switch(type)
     {

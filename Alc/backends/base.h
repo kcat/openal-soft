@@ -2,10 +2,10 @@
 #define AL_BACKENDS_BASE_H
 
 #include "alMain.h"
-#include "alstring.h"
 
 #ifdef __cplusplus
 
+#include <string>
 #include <mutex>
 
 struct ClockLatency {
@@ -119,7 +119,7 @@ struct ALCbackendFactoryVtable {
 
     ALCboolean (*const querySupport)(ALCbackendFactory *self, ALCbackend_Type type);
 
-    void (*const probe)(ALCbackendFactory *self, enum DevProbe type, al_string *outnames);
+    void (*const probe)(ALCbackendFactory *self, enum DevProbe type, std::string *outnames);
 
     ALCbackend* (*const createBackend)(ALCbackendFactory *self, ALCdevice *device, ALCbackend_Type type);
 };
@@ -128,7 +128,7 @@ struct ALCbackendFactoryVtable {
 DECLARE_THUNK(T, ALCbackendFactory, ALCboolean, init)                         \
 DECLARE_THUNK(T, ALCbackendFactory, void, deinit)                             \
 DECLARE_THUNK1(T, ALCbackendFactory, ALCboolean, querySupport, ALCbackend_Type) \
-DECLARE_THUNK2(T, ALCbackendFactory, void, probe, enum DevProbe, al_string*)  \
+DECLARE_THUNK2(T, ALCbackendFactory, void, probe, enum DevProbe, std::string*) \
 DECLARE_THUNK2(T, ALCbackendFactory, ALCbackend*, createBackend, ALCdevice*, ALCbackend_Type) \
                                                                               \
 static const struct ALCbackendFactoryVtable T##_ALCbackendFactory_vtable = {  \

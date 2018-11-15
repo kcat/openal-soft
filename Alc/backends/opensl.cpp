@@ -1029,13 +1029,14 @@ static ALCboolean ALCopenslBackendFactory_querySupport(ALCopenslBackendFactory* 
     return ALC_FALSE;
 }
 
-static void ALCopenslBackendFactory_probe(ALCopenslBackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames)
+static void ALCopenslBackendFactory_probe(ALCopenslBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
 {
     switch(type)
     {
         case ALL_DEVICE_PROBE:
         case CAPTURE_DEVICE_PROBE:
-            alstr_append_range(outnames, opensl_device, opensl_device+sizeof(opensl_device));
+            /* Includes null char. */
+            outnames->append(opensl_device, sizeof(opensl_device));
             break;
     }
 }

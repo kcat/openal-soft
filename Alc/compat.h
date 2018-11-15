@@ -1,21 +1,12 @@
 #ifndef AL_COMPAT_H
 #define AL_COMPAT_H
 
-#include "alstring.h"
-
 #ifdef __cplusplus
-extern "C" {
-#endif
 
 #ifdef _WIN32
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-
-#define HAVE_DYNLOAD 1
-
-#ifdef __cplusplus
-} // extern "C"
 
 #include <array>
 #include <string>
@@ -210,18 +201,9 @@ public:
 
 } // namespace al
 
-extern "C" {
-#endif /* __cplusplus */
-
-#else
-
-#if defined(HAVE_DLFCN_H)
 #define HAVE_DYNLOAD 1
-#endif
 
-
-#ifdef __cplusplus
-} // extern "C"
+#else /* _WIN32 */
 
 #include <fstream>
 
@@ -232,10 +214,16 @@ using ifstream = std::ifstream;
 
 } // namespace al
 
-extern "C" {
-#endif /* __cplusplus */
-
+#if defined(HAVE_DLFCN_H)
+#define HAVE_DYNLOAD 1
 #endif
+
+#endif /* _WIN32 */
+
+#include <string>
+
+struct PathNamePair { std::string path, fname; };
+PathNamePair GetProcBinary(void);
 
 #ifdef HAVE_DYNLOAD
 void *LoadLib(const char *name);
@@ -243,13 +231,6 @@ void CloseLib(void *handle);
 void *GetSymbol(void *handle, const char *name);
 #endif
 
-#ifdef __cplusplus
-} /* extern "C" */
-
-#include <string>
-
-struct PathNamePair { std::string path, fname; };
-PathNamePair GetProcBinary(void);
-#endif
+#endif /* __cplusplus */
 
 #endif /* AL_COMPAT_H */

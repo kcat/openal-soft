@@ -30,8 +30,6 @@ extern inline void UnlockBufferList(ALCdevice *device);
 extern inline ALsizei FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType type);
 extern inline ALsizei FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type);
 
-extern inline ALuint64 GetDeviceClockTime(ALCdevice *device);
-
 
 extern inline void alstr_reset(al_string *str);
 extern inline size_t alstr_length(const_al_string str);

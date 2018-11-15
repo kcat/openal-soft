@@ -3229,7 +3229,8 @@ static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_send
     }
 
     /* Set the new container for updating internal parameters. */
-    props = ATOMIC_EXCHANGE_PTR(&voice->Update, props, almemory_order_acq_rel);
+    props = static_cast<ALvoiceProps*>(ATOMIC_EXCHANGE_PTR(&voice->Update, props,
+        almemory_order_acq_rel));
     if(props)
     {
         /* If there was an unused update container, put it back in the

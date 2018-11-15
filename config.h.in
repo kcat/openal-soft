@@ -92,20 +92,11 @@
 /* Define if we have the lrintf function */
 #cmakedefine HAVE_LRINTF
 
-/* Define if we have the modff function */
-#cmakedefine HAVE_MODFF
-
-/* Define if we have the log2f function */
-#cmakedefine HAVE_LOG2F
-
 /* Define if we have the cbrtf function */
 #cmakedefine HAVE_CBRTF
 
 /* Define if we have the copysignf function */
 #cmakedefine HAVE_COPYSIGNF
-
-/* Define if we have the strtof function */
-#cmakedefine HAVE_STRTOF
 
 /* Define if we have the strnlen function */
 #cmakedefine HAVE_STRNLEN

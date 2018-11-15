@@ -32,14 +32,6 @@ static const union msvc_inf_hack {
 #define HUGE_VALF (msvc_inf_union.f)
 #endif
 
-#ifndef HAVE_LOG2F
-static inline float my_log2f(float f)
-{
-    return logf(f) / logf(2.0f);
-}
-#define log2f my_log2f
-#endif
-
 #ifndef HAVE_CBRTF
 static inline float my_cbrtf(float f)
 {

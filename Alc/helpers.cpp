@@ -210,7 +210,7 @@ void FillCPUCaps(int capfilter)
         ERR("Failed to open /proc/cpuinfo, cannot check for NEON support\n");
     else
     {
-        al_string features = AL_STRING_INIT_STATIC();
+        std::string features;
         char buf[256];
 
         while(fgets(buf, sizeof(buf), file) != nullptr)
@@ -218,21 +218,21 @@ void FillCPUCaps(int capfilter)
             if(strncmp(buf, "Features\t:", 10) != 0)
                 continue;
 
-            alstr_copy_cstr(&features, buf+10);
-            while(VECTOR_BACK(features) != '\n')
+            features = buf+10;
+            while(features.back() != '\n')
             {
                 if(fgets(buf, sizeof(buf), file) == nullptr)
                     break;
-                alstr_append_cstr(&features, buf);
+                features += buf;
             }
             break;
         }
         fclose(file);
         file = nullptr;
 
-        if(!alstr_empty(features))
+        if(!features.empty())
         {
-            const char *str = alstr_get_cstr(features);
+            const char *str = features.c_str();
             while(isspace(str[0])) ++str;
 
             TRACE("Got features string:%s\n", str);
@@ -246,8 +246,6 @@ void FillCPUCaps(int capfilter)
                 ++str;
             }
         }
-
-        alstr_reset(&features);
     }
 #endif
 

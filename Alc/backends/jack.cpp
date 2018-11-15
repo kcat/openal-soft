@@ -102,7 +102,7 @@ static ALCboolean jack_load(void)
 #ifdef HAVE_DYNLOAD
     if(!jack_handle)
     {
-        al_string missing_funcs = AL_STRING_INIT_STATIC();
+        std::string missing_funcs;
 
 #ifdef _WIN32
 #define JACKLIB "libjack.dll"
@@ -121,7 +121,7 @@ static ALCboolean jack_load(void)
     p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(jack_handle, #f));      \
     if(p##f == nullptr) {                                                     \
         error = ALC_TRUE;                                                     \
-        alstr_append_cstr(&missing_funcs, "\n" #f);                           \
+        missing_funcs += "\n" #f;                                             \
     }                                                                         \
 } while(0)
         JACK_FUNCS(LOAD_FUNC);
@@ -133,11 +133,10 @@ static ALCboolean jack_load(void)
 
         if(error)
         {
-            WARN("Missing expected functions:%s\n", alstr_get_cstr(missing_funcs));
+            WARN("Missing expected functions:%s\n", missing_funcs.c_str());
             CloseLib(jack_handle);
             jack_handle = NULL;
         }
-        alstr_reset(&missing_funcs);
     }
 #endif
 

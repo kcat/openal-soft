@@ -1877,7 +1877,7 @@ static ALCboolean PulseBackendFactory_querySupport(PulseBackendFactory* UNUSED(s
     return ALC_FALSE;
 }
 
-static void PulseBackendFactory_probe(PulseBackendFactory* UNUSED(self), enum DevProbe UNUSED(type), al_string* UNUSED(outnames))
+static void PulseBackendFactory_probe(PulseBackendFactory* UNUSED(self), enum DevProbe UNUSED(type), std::string* UNUSED(outnames))
 {
 }
 

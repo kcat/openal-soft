@@ -27,7 +27,6 @@
 #include "align.h"
 #include "atomic.h"
 #include "vector.h"
-#include "alstring.h"
 #include "almalloc.h"
 #include "threads.h"
 

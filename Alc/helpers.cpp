@@ -120,7 +120,6 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 #include "fpu_modes.h"
 #include "uintmap.h"
 #include "vector.h"
-#include "alstring.h"
 #include "compat.h"
 #include "threads.h"
 
@@ -735,102 +734,4 @@ char *alstrdup(const char *str)
     char *ret{static_cast<char*>(al_calloc(DEF_ALIGN, len+1))};
     memcpy(ret, str, len);
     return ret;
-}
-
-
-void alstr_clear(al_string *str)
-{
-    if(!alstr_empty(*str))
-    {
-        /* Reserve one more character than the total size of the string. This
-         * is to ensure we have space to add a null terminator in the string
-         * data so it can be used as a C-style string.
-         */
-        VECTOR_RESIZE(*str, 0, 1);
-        VECTOR_ELEM(*str, 0) = 0;
-    }
-}
-
-static inline int alstr_compare(const al_string_char_type *str1, size_t str1len,
-                                const al_string_char_type *str2, size_t str2len)
-{
-    size_t complen = (str1len < str2len) ? str1len : str2len;
-    int ret = memcmp(str1, str2, complen);
-    if(ret == 0)
-    {
-        if(str1len > str2len) return  1;
-        if(str1len < str2len) return -1;
-    }
-    return ret;
-}
-int alstr_cmp(const_al_string str1, const_al_string str2)
-{
-    return alstr_compare(&VECTOR_FRONT(str1), alstr_length(str1),
-                         &VECTOR_FRONT(str2), alstr_length(str2));
-}
-int alstr_cmp_cstr(const_al_string str1, const al_string_char_type *str2)
-{
-    return alstr_compare(&VECTOR_FRONT(str1), alstr_length(str1),
-                         str2, strlen(str2));
-}
-
-void alstr_copy(al_string *str, const_al_string from)
-{
-    size_t len = alstr_length(from);
-    VECTOR_RESIZE(*str, len, len+1);
-    for(size_t i{0};i < len;i++)
-        VECTOR_ELEM(*str, i) = VECTOR_ELEM(from, i);
-    VECTOR_ELEM(*str, len) = 0;
-}
-
-void alstr_copy_cstr(al_string *str, const al_string_char_type *from)
-{
-    size_t len = strlen(from);
-    VECTOR_RESIZE(*str, len, len+1);
-    for(size_t i{0};i < len;i++)
-        VECTOR_ELEM(*str, i) = from[i];
-    VECTOR_ELEM(*str, len) = 0;
-}
-
-void alstr_copy_range(al_string *str, const al_string_char_type *from, const al_string_char_type *to)
-{
-    size_t len = to - from;
-    VECTOR_RESIZE(*str, len, len+1);
-    for(size_t i{0};i < len;i++)
-        VECTOR_ELEM(*str, i) = from[i];
-    VECTOR_ELEM(*str, len) = 0;
-}
-
-void alstr_append_char(al_string *str, const al_string_char_type c)
-{
-    size_t len = alstr_length(*str);
-    VECTOR_RESIZE(*str, len+1, len+2);
-    VECTOR_BACK(*str) = c;
-    VECTOR_ELEM(*str, len+1) = 0;
-}
-
-void alstr_append_cstr(al_string *str, const al_string_char_type *from)
-{
-    size_t len = strlen(from);
-    if(len != 0)
-    {
-        size_t base = alstr_length(*str);
-        VECTOR_RESIZE(*str, base+len, base+len+1);
-        for(size_t i{0};i < len;i++)
-            VECTOR_ELEM(*str, base+i) = from[i];
-        VECTOR_ELEM(*str, base+len) = 0;
-    }
-}
-
-void alstr_append_range(al_string *str, const al_string_char_type *from, const al_string_char_type *to)
-{
-    size_t len = to - from;
-    if(len != 0)
-    {
-        size_t base = alstr_length(*str);
-        VECTOR_RESIZE(*str, base+len, base+len+1);
-        for(size_t i{0};i < len;i++)
-            VECTOR_ELEM(*str, base+i) = from[i];
-        VECTOR_ELEM(*str, base+len) = 0;
-    }
 }

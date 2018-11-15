@@ -48,7 +48,6 @@
 #include "alu.h"
 #include "ringbuffer.h"
 #include "compat.h"
-#include "alstring.h"
 #include "converter.h"
 
 #include "backends/base.h"

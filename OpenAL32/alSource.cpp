@@ -788,7 +788,8 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                     if(Source->Looping)
                         ATOMIC_STORE(&voice->loop_buffer, Source->queue, almemory_order_release);
                     else
-                        ATOMIC_STORE(&voice->loop_buffer, NULL, almemory_order_release);
+                        ATOMIC_STORE(&voice->loop_buffer, static_cast<ALbufferlistitem*>(nullptr),
+                                     almemory_order_release);
 
                     /* If the source is playing, wait for the current mix to finish
                      * to ensure it isn't currently looping back or reaching the
@@ -831,9 +832,9 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             if(buffer != NULL)
             {
                 /* Add the selected buffer to a one-item queue */
-                ALbufferlistitem *newlist = al_calloc(DEF_ALIGN,
-                    FAM_SIZE(ALbufferlistitem, buffers, 1));
-                ATOMIC_INIT(&newlist->next, NULL);
+                ALbufferlistitem *newlist = static_cast<ALbufferlistitem*>(al_calloc(DEF_ALIGN,
+                    FAM_SIZE(ALbufferlistitem, buffers, 1)));
+                ATOMIC_INIT(&newlist->next, static_cast<ALbufferlistitem*>(nullptr));
                 newlist->max_samples = buffer->SampleLen;
                 newlist->num_buffers = 1;
                 newlist->buffers[0] = buffer;
@@ -960,7 +961,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                      *values == AL_EXPONENT_DISTANCE ||
                      *values == AL_EXPONENT_DISTANCE_CLAMPED);
 
-            Source->DistanceModel = *values;
+            Source->DistanceModel = static_cast<DistanceModel>(*values);
             if(Context->SourceDistanceModel)
                 DO_UPDATEPROPS();
             return AL_TRUE;
@@ -968,14 +969,14 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_SOURCE_RESAMPLER_SOFT:
             CHECKVAL(*values >= 0 && *values <= ResamplerMax);
 
-            Source->Resampler = *values;
+            Source->Resampler = static_cast<enum Resampler>(*values);
             DO_UPDATEPROPS();
             return AL_TRUE;
 
         case AL_SOURCE_SPATIALIZE_SOFT:
             CHECKVAL(*values >= AL_FALSE && *values <= AL_AUTO_SOFT);
 
-            Source->Spatialize = *values;
+            Source->Spatialize = static_cast<enum SpatializeMode>(*values);
             DO_UPDATEPROPS();
             return AL_TRUE;
 
@@ -1068,7 +1069,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_ROOM_ROLLOFF_FACTOR:
         case AL_SOURCE_RADIUS:
             fvals[0] = (ALfloat)*values;
-            return SetSourcefv(Source, Context, (int)prop, fvals);
+            return SetSourcefv(Source, Context, prop, fvals);
 
         /* 3x float */
         case AL_POSITION:
@@ -1077,7 +1078,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             fvals[0] = (ALfloat)values[0];
             fvals[1] = (ALfloat)values[1];
             fvals[2] = (ALfloat)values[2];
-            return SetSourcefv(Source, Context, (int)prop, fvals);
+            return SetSourcefv(Source, Context, prop, fvals);
 
         /* 6x float */
         case AL_ORIENTATION:
@@ -1087,7 +1088,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             fvals[3] = (ALfloat)values[3];
             fvals[4] = (ALfloat)values[4];
             fvals[5] = (ALfloat)values[5];
-            return SetSourcefv(Source, Context, (int)prop, fvals);
+            return SetSourcefv(Source, Context, prop, fvals);
 
         case AL_SAMPLE_OFFSET_LATENCY_SOFT:
         case AL_SEC_OFFSET_LATENCY_SOFT:
@@ -1135,7 +1136,7 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
             CHECKVAL(*values <= INT_MAX && *values >= INT_MIN);
 
             ivals[0] = (ALint)*values;
-            return SetSourceiv(Source, Context, (int)prop, ivals);
+            return SetSourceiv(Source, Context, prop, ivals);
 
         /* 1x uint */
         case AL_BUFFER:
@@ -1143,7 +1144,7 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
             CHECKVAL(*values <= UINT_MAX && *values >= 0);
 
             ivals[0] = (ALuint)*values;
-            return SetSourceiv(Source, Context, (int)prop, ivals);
+            return SetSourceiv(Source, Context, prop, ivals);
 
         /* 3x uint */
         case AL_AUXILIARY_SEND_FILTER:
@@ -1154,7 +1155,7 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
             ivals[0] = (ALuint)values[0];
             ivals[1] = (ALuint)values[1];
             ivals[2] = (ALuint)values[2];
-            return SetSourceiv(Source, Context, (int)prop, ivals);
+            return SetSourceiv(Source, Context, prop, ivals);
 
         /* 1x float */
         case AL_CONE_INNER_ANGLE:
@@ -1173,7 +1174,7 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
         case AL_ROOM_ROLLOFF_FACTOR:
         case AL_SOURCE_RADIUS:
             fvals[0] = (ALfloat)*values;
-            return SetSourcefv(Source, Context, (int)prop, fvals);
+            return SetSourcefv(Source, Context, prop, fvals);
 
         /* 3x float */
         case AL_POSITION:
@@ -1182,7 +1183,7 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
             fvals[0] = (ALfloat)values[0];
             fvals[1] = (ALfloat)values[1];
             fvals[2] = (ALfloat)values[2];
-            return SetSourcefv(Source, Context, (int)prop, fvals);
+            return SetSourcefv(Source, Context, prop, fvals);
 
         /* 6x float */
         case AL_ORIENTATION:
@@ -1192,7 +1193,7 @@ static ALboolean SetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
             fvals[3] = (ALfloat)values[3];
             fvals[4] = (ALfloat)values[4];
             fvals[5] = (ALfloat)values[5];
-            return SetSourcefv(Source, Context, (int)prop, fvals);
+            return SetSourcefv(Source, Context, prop, fvals);
 
         case AL_SEC_OFFSET_LATENCY_SOFT:
         case AL_SEC_OFFSET_CLOCK_SOFT:
@@ -1357,7 +1358,7 @@ static ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp p
         case AL_DISTANCE_MODEL:
         case AL_SOURCE_RESAMPLER_SOFT:
         case AL_SOURCE_SPATIALIZE_SOFT:
-            if((err=GetSourceiv(Source, Context, (int)prop, ivals)) != AL_FALSE)
+            if((err=GetSourceiv(Source, Context, prop, ivals)) != AL_FALSE)
                 *values = (ALdouble)ivals[0];
             return err;
 
@@ -1764,7 +1765,7 @@ AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum param, ALfloat value)
     else if(FloatValsByProp(param) != 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid float property 0x%04x", param);
     else
-        SetSourcefv(Source, Context, param, &value);
+        SetSourcefv(Source, Context, static_cast<SourceProp>(param), &value);
     UnlockSourceList(Context);
     almtx_unlock(&Context->PropLock);
 
@@ -1788,7 +1789,7 @@ AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1
     else
     {
         ALfloat fvals[3] = { value1, value2, value3 };
-        SetSourcefv(Source, Context, param, fvals);
+        SetSourcefv(Source, Context, static_cast<SourceProp>(param), fvals);
     }
     UnlockSourceList(Context);
     almtx_unlock(&Context->PropLock);
@@ -1813,7 +1814,7 @@ AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat 
     else if(FloatValsByProp(param) < 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid float-vector property 0x%04x", param);
     else
-        SetSourcefv(Source, Context, param, values);
+        SetSourcefv(Source, Context, static_cast<SourceProp>(param), values);
     UnlockSourceList(Context);
     almtx_unlock(&Context->PropLock);
 
@@ -1838,7 +1839,7 @@ AL_API ALvoid AL_APIENTRY alSourcedSOFT(ALuint source, ALenum param, ALdouble va
     else
     {
         ALfloat fval = (ALfloat)value;
-        SetSourcefv(Source, Context, param, &fval);
+        SetSourcefv(Source, Context, static_cast<SourceProp>(param), &fval);
     }
     UnlockSourceList(Context);
     almtx_unlock(&Context->PropLock);
@@ -1863,7 +1864,7 @@ AL_API ALvoid AL_APIENTRY alSource3dSOFT(ALuint source, ALenum param, ALdouble v
     else
     {
         ALfloat fvals[3] = { (ALfloat)value1, (ALfloat)value2, (ALfloat)value3 };
-        SetSourcefv(Source, Context, param, fvals);
+        SetSourcefv(Source, Context, static_cast<SourceProp>(param), fvals);
     }
     UnlockSourceList(Context);
     almtx_unlock(&Context->PropLock);
@@ -1895,7 +1896,7 @@ AL_API ALvoid AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdo
 
         for(i = 0;i < count;i++)
             fvals[i] = (ALfloat)values[i];
-        SetSourcefv(Source, Context, param, fvals);
+        SetSourcefv(Source, Context, static_cast<SourceProp>(param), fvals);
     }
     UnlockSourceList(Context);
     almtx_unlock(&Context->PropLock);
@@ -1919,7 +1920,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value)
     else if(IntValsByProp(param) != 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer property 0x%04x", param);
     else
-        SetSourceiv(Source, Context, param, &value);
+        SetSourceiv(Source, Context, static_cast<SourceProp>(param), &value);
     UnlockSourceList(Context);
     almtx_unlock(&Context->PropLock);
 
@@ -1943,7 +1944,7 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, AL
     else
     {
         ALint ivals[3] = { value1, value2, value3 };
-        SetSourceiv(Source, Context, param, ivals);
+        SetSourceiv(Source, Context, static_cast<SourceProp>(param), ivals);
     }
     UnlockSourceList(Context);
     almtx_unlock(&Context->PropLock);
@@ -1968,7 +1969,7 @@ AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum param, const ALint *val
     else if(IntValsByProp(param) < 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer-vector property 0x%04x", param);
     else
-        SetSourceiv(Source, Context, param, values);
+        SetSourceiv(Source, Context, static_cast<SourceProp>(param), values);
     UnlockSourceList(Context);
     almtx_unlock(&Context->PropLock);
 
@@ -1991,7 +1992,7 @@ AL_API ALvoid AL_APIENTRY alSourcei64SOFT(ALuint source, ALenum param, ALint64SO
     else if(Int64ValsByProp(param) != 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer64 property 0x%04x", param);
     else
-        SetSourcei64v(Source, Context, param, &value);
+        SetSourcei64v(Source, Context, static_cast<SourceProp>(param), &value);
     UnlockSourceList(Context);
     almtx_unlock(&Context->PropLock);
 
@@ -2015,7 +2016,7 @@ AL_API void AL_APIENTRY alSource3i64SOFT(ALuint source, ALenum param, ALint64SOF
     else
     {
         ALint64SOFT i64vals[3] = { value1, value2, value3 };
-        SetSourcei64v(Source, Context, param, i64vals);
+        SetSourcei64v(Source, Context, static_cast<SourceProp>(param), i64vals);
     }
     UnlockSourceList(Context);
     almtx_unlock(&Context->PropLock);
@@ -2040,7 +2041,7 @@ AL_API void AL_APIENTRY alSourcei64vSOFT(ALuint source, ALenum param, const ALin
     else if(Int64ValsByProp(param) < 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer64-vector property 0x%04x", param);
     else
-        SetSourcei64v(Source, Context, param, values);
+        SetSourcei64v(Source, Context, static_cast<SourceProp>(param), values);
     UnlockSourceList(Context);
     almtx_unlock(&Context->PropLock);
 
@@ -2066,7 +2067,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcef(ALuint source, ALenum param, ALfloat *val
     else
     {
         ALdouble dval;
-        if(GetSourcedv(Source, Context, param, &dval))
+        if(GetSourcedv(Source, Context, static_cast<SourceProp>(param), &dval))
             *value = (ALfloat)dval;
     }
     UnlockSourceList(Context);
@@ -2093,7 +2094,7 @@ AL_API ALvoid AL_APIENTRY alGetSource3f(ALuint source, ALenum param, ALfloat *va
     else
     {
         ALdouble dvals[3];
-        if(GetSourcedv(Source, Context, param, dvals))
+        if(GetSourcedv(Source, Context, static_cast<SourceProp>(param), dvals))
         {
             *value1 = (ALfloat)dvals[0];
             *value2 = (ALfloat)dvals[1];
@@ -2125,7 +2126,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *va
     else
     {
         ALdouble dvals[6];
-        if(GetSourcedv(Source, Context, param, dvals))
+        if(GetSourcedv(Source, Context, static_cast<SourceProp>(param), dvals))
         {
             ALint i;
             for(i = 0;i < count;i++)
@@ -2154,7 +2155,7 @@ AL_API void AL_APIENTRY alGetSourcedSOFT(ALuint source, ALenum param, ALdouble *
     else if(DoubleValsByProp(param) != 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid double property 0x%04x", param);
     else
-        GetSourcedv(Source, Context, param, value);
+        GetSourcedv(Source, Context, static_cast<SourceProp>(param), value);
     UnlockSourceList(Context);
 
     ALCcontext_DecRef(Context);
@@ -2178,7 +2179,7 @@ AL_API void AL_APIENTRY alGetSource3dSOFT(ALuint source, ALenum param, ALdouble 
     else
     {
         ALdouble dvals[3];
-        if(GetSourcedv(Source, Context, param, dvals))
+        if(GetSourcedv(Source, Context, static_cast<SourceProp>(param), dvals))
         {
             *value1 = dvals[0];
             *value2 = dvals[1];
@@ -2206,7 +2207,7 @@ AL_API void AL_APIENTRY alGetSourcedvSOFT(ALuint source, ALenum param, ALdouble 
     else if(DoubleValsByProp(param) < 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid double-vector property 0x%04x", param);
     else
-        GetSourcedv(Source, Context, param, values);
+        GetSourcedv(Source, Context, static_cast<SourceProp>(param), values);
     UnlockSourceList(Context);
 
     ALCcontext_DecRef(Context);
@@ -2229,7 +2230,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum param, ALint *value
     else if(IntValsByProp(param) != 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer property 0x%04x", param);
     else
-        GetSourceiv(Source, Context, param, value);
+        GetSourceiv(Source, Context, static_cast<SourceProp>(param), value);
     UnlockSourceList(Context);
 
     ALCcontext_DecRef(Context);
@@ -2254,7 +2255,7 @@ AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum param, ALint *value1
     else
     {
         ALint ivals[3];
-        if(GetSourceiv(Source, Context, param, ivals))
+        if(GetSourceiv(Source, Context, static_cast<SourceProp>(param), ivals))
         {
             *value1 = ivals[0];
             *value2 = ivals[1];
@@ -2283,7 +2284,7 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum param, ALint *values
     else if(IntValsByProp(param) < 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer-vector property 0x%04x", param);
     else
-        GetSourceiv(Source, Context, param, values);
+        GetSourceiv(Source, Context, static_cast<SourceProp>(param), values);
     UnlockSourceList(Context);
 
     ALCcontext_DecRef(Context);
@@ -2306,7 +2307,7 @@ AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64S
     else if(Int64ValsByProp(param) != 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer64 property 0x%04x", param);
     else
-        GetSourcei64v(Source, Context, param, value);
+        GetSourcei64v(Source, Context, static_cast<SourceProp>(param), value);
     UnlockSourceList(Context);
 
     ALCcontext_DecRef(Context);
@@ -2330,7 +2331,7 @@ AL_API void AL_APIENTRY alGetSource3i64SOFT(ALuint source, ALenum param, ALint64
     else
     {
         ALint64 i64vals[3];
-        if(GetSourcei64v(Source, Context, param, i64vals))
+        if(GetSourcei64v(Source, Context, static_cast<SourceProp>(param), i64vals))
         {
             *value1 = i64vals[0];
             *value2 = i64vals[1];
@@ -2358,7 +2359,7 @@ AL_API void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64
     else if(Int64ValsByProp(param) < 1)
         alSetError(Context, AL_INVALID_ENUM, "Invalid integer64-vector property 0x%04x", param);
     else
-        GetSourcei64v(Source, Context, param, values);
+        GetSourcei64v(Source, Context, static_cast<SourceProp>(param), values);
     UnlockSourceList(Context);
 
     ALCcontext_DecRef(Context);
@@ -2457,7 +2458,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
                 assert(voice != NULL);
                 /* A source that's already playing is restarted from the beginning. */
                 ATOMIC_STORE(&voice->current_buffer, BufferList, almemory_order_relaxed);
-                ATOMIC_STORE(&voice->position, 0, almemory_order_relaxed);
+                ATOMIC_STORE(&voice->position, 0u, almemory_order_relaxed);
                 ATOMIC_STORE(&voice->position_fraction, 0, almemory_order_release);
                 continue;
 
@@ -2497,9 +2498,10 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         if(source->Looping)
             ATOMIC_STORE(&voice->loop_buffer, source->queue, almemory_order_relaxed);
         else
-            ATOMIC_STORE(&voice->loop_buffer, NULL, almemory_order_relaxed);
+            ATOMIC_STORE(&voice->loop_buffer, static_cast<ALbufferlistitem*>(nullptr),
+                         almemory_order_relaxed);
         ATOMIC_STORE(&voice->current_buffer, BufferList, almemory_order_relaxed);
-        ATOMIC_STORE(&voice->position, 0, almemory_order_relaxed);
+        ATOMIC_STORE(&voice->position, 0u, almemory_order_relaxed);
         ATOMIC_STORE(&voice->position_fraction, 0, almemory_order_relaxed);
         if(ApplyOffset(source, voice) != AL_FALSE)
             start_fading = ATOMIC_LOAD(&voice->position, almemory_order_relaxed) != 0 ||
@@ -2628,7 +2630,7 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
         source = LookupSource(context, sources[i]);
         if((voice=GetSourceVoice(source, context)) != NULL)
         {
-            ATOMIC_STORE(&voice->Source, NULL, almemory_order_relaxed);
+            ATOMIC_STORE(&voice->Source, static_cast<ALsource*>(nullptr), almemory_order_relaxed);
             ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
             voice = NULL;
         }
@@ -2679,7 +2681,7 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
         source = LookupSource(context, sources[i]);
         if((voice=GetSourceVoice(source, context)) != NULL)
         {
-            ATOMIC_STORE(&voice->Source, NULL, almemory_order_relaxed);
+            ATOMIC_STORE(&voice->Source, static_cast<ALsource*>(nullptr), almemory_order_relaxed);
             ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
             voice = NULL;
         }
@@ -2754,18 +2756,18 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
 
         if(!BufferListStart)
         {
-            BufferListStart = al_calloc(DEF_ALIGN,
-                FAM_SIZE(ALbufferlistitem, buffers, 1));
+            BufferListStart = static_cast<ALbufferlistitem*>(al_calloc(DEF_ALIGN,
+                FAM_SIZE(ALbufferlistitem, buffers, 1)));
             BufferList = BufferListStart;
         }
         else
         {
-            ALbufferlistitem *item = al_calloc(DEF_ALIGN,
-                FAM_SIZE(ALbufferlistitem, buffers, 1));
+            ALbufferlistitem *item = static_cast<ALbufferlistitem*>(al_calloc(DEF_ALIGN,
+                FAM_SIZE(ALbufferlistitem, buffers, 1)));
             ATOMIC_STORE(&BufferList->next, item, almemory_order_relaxed);
             BufferList = item;
         }
-        ATOMIC_INIT(&BufferList->next, NULL);
+        ATOMIC_INIT(&BufferList->next, static_cast<ALbufferlistitem*>(nullptr));
         BufferList->max_samples = buffer ? buffer->SampleLen : 0;
         BufferList->num_buffers = 1;
         BufferList->buffers[0] = buffer;
@@ -2869,9 +2871,10 @@ AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint src, ALsizei nb, co
     }
 
     LockBufferList(device);
-    BufferListStart = al_calloc(DEF_ALIGN, FAM_SIZE(ALbufferlistitem, buffers, nb));
+    BufferListStart = static_cast<ALbufferlistitem*>(al_calloc(DEF_ALIGN,
+        FAM_SIZE(ALbufferlistitem, buffers, nb)));
     BufferList = BufferListStart;
-    ATOMIC_INIT(&BufferList->next, NULL);
+    ATOMIC_INIT(&BufferList->next, static_cast<ALbufferlistitem*>(nullptr));
     BufferList->max_samples = 0;
     BufferList->num_buffers = 0;
     for(i = 0;i < nb;i++)
@@ -3091,7 +3094,8 @@ static void InitSourceParams(ALsource *Source, ALsizei num_sends)
     Source->Direct.HFReference = LOWPASSFREQREF;
     Source->Direct.GainLF = 1.0f;
     Source->Direct.LFReference = HIGHPASSFREQREF;
-    Source->Send = al_calloc(16, num_sends*sizeof(Source->Send[0]));
+    Source->Send = static_cast<decltype(Source->Send)>(al_calloc(16,
+        num_sends*sizeof(Source->Send[0])));
     for(i = 0;i < num_sends;i++)
     {
         Source->Send[i].Slot = NULL;
@@ -3154,7 +3158,8 @@ static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_send
     /* Get an unused property container, or allocate a new one as needed. */
     props = ATOMIC_LOAD(&context->FreeVoiceProps, almemory_order_acquire);
     if(!props)
-        props = al_calloc(16, FAM_SIZE(struct ALvoiceProps, Send, num_sends));
+        props = static_cast<ALvoiceProps*>(al_calloc(16,
+            FAM_SIZE(struct ALvoiceProps, Send, num_sends)));
     else
     {
         struct ALvoiceProps *next;
@@ -3622,7 +3627,7 @@ static ALsource *AllocSource(ALCcontext *context)
         VECTOR_PUSH_BACK(context->SourceList, empty_sublist);
         sublist = &VECTOR_BACK(context->SourceList);
         sublist->FreeMask = ~U64(0);
-        sublist->Sources = al_calloc(16, sizeof(ALsource)*64);
+        sublist->Sources = static_cast<ALsource*>(al_calloc(16, sizeof(ALsource)*64));
         if(UNLIKELY(!sublist->Sources))
         {
             VECTOR_POP_BACK(context->SourceList);
@@ -3659,7 +3664,7 @@ static void FreeSource(ALCcontext *context, ALsource *source)
     ALCdevice_Lock(device);
     if((voice=GetSourceVoice(source, context)) != NULL)
     {
-        ATOMIC_STORE(&voice->Source, NULL, almemory_order_relaxed);
+        ATOMIC_STORE(&voice->Source, static_cast<ALsource*>(nullptr), almemory_order_relaxed);
         ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
     }
     ALCdevice_Unlock(device);
@@ -3698,5 +3703,5 @@ ALvoid ReleaseALSources(ALCcontext *context)
         sublist->FreeMask = ~usemask;
     }
     if(leftover > 0)
-        WARN("(%p) Deleted "SZFMT" Source%s\n", device, leftover, (leftover==1)?"":"s");
+        WARN("(%p) Deleted " SZFMT " Source%s\n", device, leftover, (leftover==1)?"":"s");
 }

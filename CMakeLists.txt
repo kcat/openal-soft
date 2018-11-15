@@ -829,7 +829,7 @@ SET(OPENAL_OBJS
     OpenAL32/Include/alListener.h
     OpenAL32/alListener.c
     OpenAL32/Include/alSource.h
-    OpenAL32/alSource.c
+    OpenAL32/alSource.cpp
     OpenAL32/alState.c
     OpenAL32/event.c
     OpenAL32/Include/sample_cvt.h

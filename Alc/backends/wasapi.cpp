@@ -259,7 +259,7 @@ void add_device(IMMDevice *device, const WCHAR *devid, std::vector<DevMap> &list
 
     int count{1};
     std::string newname{basename};
-    while(checkName(PlaybackDevices, newname))
+    while(checkName(list, newname))
     {
         newname = basename;
         newname += " #";

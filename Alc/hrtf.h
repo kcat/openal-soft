@@ -5,7 +5,6 @@
 #include "AL/alc.h"
 
 #include "alMain.h"
-#include "alstring.h"
 #include "atomic.h"
 
 
@@ -69,7 +68,7 @@ struct AngularPoint {
 
 void FreeHrtfs(void);
 
-vector_EnumeratedHrtf EnumerateHrtf(const_al_string devname);
+vector_EnumeratedHrtf EnumerateHrtf(const char *devname);
 void FreeHrtfList(vector_EnumeratedHrtf *list);
 struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry);
 void Hrtf_IncRef(struct Hrtf *hrtf);

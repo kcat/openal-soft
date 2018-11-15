@@ -1116,13 +1116,13 @@ ResData GetResource(int name)
 } // namespace
 
 
-vector_EnumeratedHrtf EnumerateHrtf(const_al_string devname)
+vector_EnumeratedHrtf EnumerateHrtf(const char *devname)
 {
     vector_EnumeratedHrtf list{VECTOR_INIT_STATIC()};
 
     bool usedefaults{true};
     const char *pathlist{""};
-    if(ConfigValueStr(alstr_get_cstr(devname), nullptr, "hrtf-paths", &pathlist))
+    if(ConfigValueStr(devname, nullptr, "hrtf-paths", &pathlist))
     {
         while(pathlist && *pathlist)
         {
@@ -1154,7 +1154,7 @@ vector_EnumeratedHrtf EnumerateHrtf(const_al_string devname)
             pathlist = next;
         }
     }
-    else if(ConfigValueExists(alstr_get_cstr(devname), nullptr, "hrtf_tables"))
+    else if(ConfigValueExists(devname, nullptr, "hrtf_tables"))
         ERR("The hrtf_tables option is deprecated, please use hrtf-paths instead.\n");
 
     if(usedefaults)
@@ -1172,7 +1172,7 @@ vector_EnumeratedHrtf EnumerateHrtf(const_al_string devname)
     }
 
     const char *defaulthrtf{""};
-    if(VECTOR_SIZE(list) > 1 && ConfigValueStr(alstr_get_cstr(devname), nullptr, "default-hrtf", &defaulthrtf))
+    if(VECTOR_SIZE(list) > 1 && ConfigValueStr(devname, nullptr, "default-hrtf", &defaulthrtf))
     {
         const EnumeratedHrtf *iter{};
         /* Find the preferred HRTF and move it to the front of the list. */

@@ -1116,7 +1116,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     if(VECTOR_SIZE(device->HrtfList) == 0)
     {
         VECTOR_DEINIT(device->HrtfList);
-        device->HrtfList = EnumerateHrtf(device->DeviceName);
+        device->HrtfList = EnumerateHrtf(alstr_get_cstr(device->DeviceName));
     }
 
     if(hrtf_id >= 0 && (size_t)hrtf_id < VECTOR_SIZE(device->HrtfList))

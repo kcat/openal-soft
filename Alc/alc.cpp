@@ -1996,7 +1996,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(VECTOR_SIZE(device->HrtfList) == 0)
             {
                 VECTOR_DEINIT(device->HrtfList);
-                device->HrtfList = EnumerateHrtf(device->DeviceName);
+                device->HrtfList = EnumerateHrtf(alstr_get_cstr(device->DeviceName));
             }
             if(VECTOR_SIZE(device->HrtfList) > 0)
             {
@@ -3448,7 +3448,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
         case ALC_NUM_HRTF_SPECIFIERS_SOFT:
             almtx_lock(&device->BackendLock);
             FreeHrtfList(&device->HrtfList);
-            device->HrtfList = EnumerateHrtf(device->DeviceName);
+            device->HrtfList = EnumerateHrtf(alstr_get_cstr(device->DeviceName));
             values[0] = (ALCint)VECTOR_SIZE(device->HrtfList);
             almtx_unlock(&device->BackendLock);
             return 1;

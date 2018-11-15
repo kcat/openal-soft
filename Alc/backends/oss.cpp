@@ -33,6 +33,8 @@
 #include <errno.h>
 #include <math.h>
 
+#include <atomic>
+#include <thread>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -41,7 +43,6 @@
 #include "alu.h"
 #include "alconfig.h"
 #include "ringbuffer.h"
-#include "threads.h"
 #include "compat.h"
 
 #include "backends/base.h"
@@ -251,16 +252,15 @@ int log2i(ALCuint x)
 } // namespace
 
 struct ALCplaybackOSS final : public ALCbackend {
-    int fd;
+    int fd{-1};
 
-    ALubyte *mix_data;
-    int data_size;
+    std::vector<ALubyte> mix_data;
 
-    ATOMIC(ALenum) killNow;
-    althrd_t thread;
+    std::atomic<ALenum> killNow{AL_TRUE};
+    std::thread thread;
 };
 
-static int ALCplaybackOSS_mixerProc(void *ptr);
+static int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self);
 
 static void ALCplaybackOSS_Construct(ALCplaybackOSS *self, ALCdevice *device);
 static void ALCplaybackOSS_Destruct(ALCplaybackOSS *self);
@@ -282,9 +282,6 @@ static void ALCplaybackOSS_Construct(ALCplaybackOSS *self, ALCdevice *device)
     new (self) ALCplaybackOSS{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCplaybackOSS, ALCbackend, self);
-
-    self->fd = -1;
-    ATOMIC_INIT(&self->killNow, AL_FALSE);
 }
 
 static void ALCplaybackOSS_Destruct(ALCplaybackOSS *self)
@@ -298,9 +295,8 @@ static void ALCplaybackOSS_Destruct(ALCplaybackOSS *self)
 }
 
 
-static int ALCplaybackOSS_mixerProc(void *ptr)
+static int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self)
 {
-    ALCplaybackOSS *self = static_cast<ALCplaybackOSS*>(ptr);
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     struct timeval timeout;
     ALubyte *write_ptr;
@@ -316,7 +312,7 @@ static int ALCplaybackOSS_mixerProc(void *ptr)
     frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
 
     ALCplaybackOSS_lock(self);
-    while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
+    while(!self->killNow.load(std::memory_order_acquire) &&
           ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         FD_ZERO(&wfds);
@@ -341,10 +337,10 @@ static int ALCplaybackOSS_mixerProc(void *ptr)
             continue;
         }
 
-        write_ptr = self->mix_data;
-        to_write = self->data_size;
+        write_ptr = self->mix_data.data();
+        to_write = self->mix_data.size();
         aluMixData(device, write_ptr, to_write/frame_size);
-        while(to_write > 0 && !ATOMIC_LOAD_SEQ(&self->killNow))
+        while(to_write > 0 && !self->killNow.load())
         {
             wrote = write(self->fd, write_ptr, to_write);
             if(wrote < 0)
@@ -486,48 +482,46 @@ static ALCboolean ALCplaybackOSS_start(ALCplaybackOSS *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
-    self->data_size = device->UpdateSize * FrameSizeFromDevFmt(
-        device->FmtChans, device->FmtType, device->AmbiOrder
-    );
-    self->mix_data = static_cast<ALubyte*>(calloc(1, self->data_size));
+    try {
+        self->mix_data.resize(device->UpdateSize * FrameSizeFromDevFmt(
+            device->FmtChans, device->FmtType, device->AmbiOrder
+        ));
 
-    ATOMIC_STORE_SEQ(&self->killNow, AL_FALSE);
-    if(althrd_create(&self->thread, ALCplaybackOSS_mixerProc, self) != althrd_success)
-    {
-        free(self->mix_data);
-        self->mix_data = nullptr;
-        return ALC_FALSE;
+        self->killNow.store(AL_FALSE);
+        self->thread = std::thread(ALCplaybackOSS_mixerProc, self);
+        return ALC_TRUE;
     }
-
-    return ALC_TRUE;
+    catch(std::exception& e) {
+        ERR("Could not create playback thread: %s\n", e.what());
+    }
+    catch(...) {
+    }
+    return ALC_FALSE;
 }
 
 static void ALCplaybackOSS_stop(ALCplaybackOSS *self)
 {
-    int res;
-
-    if(ATOMIC_EXCHANGE_SEQ(&self->killNow, AL_TRUE))
+    if(self->killNow.exchange(AL_TRUE) || !self->thread.joinable())
         return;
-    althrd_join(self->thread, &res);
+    self->thread.join();
 
     if(ioctl(self->fd, SNDCTL_DSP_RESET) != 0)
         ERR("Error resetting device: %s\n", strerror(errno));
 
-    free(self->mix_data);
-    self->mix_data = nullptr;
+    self->mix_data.clear();
 }
 
 
 struct ALCcaptureOSS final : public ALCbackend {
-    int fd;
+    int fd{-1};
 
-    ll_ringbuffer_t *ring;
+    ll_ringbuffer_t *ring{nullptr};
 
-    ATOMIC(ALenum) killNow;
-    althrd_t thread;
+    std::atomic<ALenum> killNow{AL_TRUE};
+    std::thread thread;
 };
 
-static int ALCcaptureOSS_recordProc(void *ptr);
+static int ALCcaptureOSS_recordProc(ALCcaptureOSS *self);
 
 static void ALCcaptureOSS_Construct(ALCcaptureOSS *self, ALCdevice *device);
 static void ALCcaptureOSS_Destruct(ALCcaptureOSS *self);
@@ -549,10 +543,6 @@ static void ALCcaptureOSS_Construct(ALCcaptureOSS *self, ALCdevice *device)
     new (self) ALCcaptureOSS{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCcaptureOSS, ALCbackend, self);
-
-    self->fd = -1;
-    self->ring = nullptr;
-    ATOMIC_INIT(&self->killNow, AL_FALSE);
 }
 
 static void ALCcaptureOSS_Destruct(ALCcaptureOSS *self)
@@ -568,9 +558,8 @@ static void ALCcaptureOSS_Destruct(ALCcaptureOSS *self)
 }
 
 
-static int ALCcaptureOSS_recordProc(void *ptr)
+static int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
 {
-    ALCcaptureOSS *self = static_cast<ALCcaptureOSS*>(ptr);
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     struct timeval timeout;
     int frame_size;
@@ -583,10 +572,8 @@ static int ALCcaptureOSS_recordProc(void *ptr)
 
     frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
 
-    while(!ATOMIC_LOAD_SEQ(&self->killNow))
+    while(!self->killNow.load())
     {
-        ll_ringbuffer_data_t vec[2];
-
         FD_ZERO(&rfds);
         FD_SET(self->fd, &rfds);
         timeout.tv_sec = 1;
@@ -607,6 +594,7 @@ static int ALCcaptureOSS_recordProc(void *ptr)
             continue;
         }
 
+        ll_ringbuffer_data_t vec[2];
         ll_ringbuffer_get_write_vector(self->ring, vec);
         if(vec[0].len > 0)
         {
@@ -741,20 +729,25 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
 
 static ALCboolean ALCcaptureOSS_start(ALCcaptureOSS *self)
 {
-    ATOMIC_STORE_SEQ(&self->killNow, AL_FALSE);
-    if(althrd_create(&self->thread, ALCcaptureOSS_recordProc, self) != althrd_success)
-        return ALC_FALSE;
-    return ALC_TRUE;
+    try {
+        self->killNow.store(AL_FALSE);
+        self->thread = std::thread(ALCcaptureOSS_recordProc, self);
+        return ALC_TRUE;
+    }
+    catch(std::exception& e) {
+        ERR("Could not create record thread: %s\n", e.what());
+    }
+    catch(...) {
+    }
+    return ALC_FALSE;
 }
 
 static void ALCcaptureOSS_stop(ALCcaptureOSS *self)
 {
-    int res;
-
-    if(ATOMIC_EXCHANGE_SEQ(&self->killNow, AL_TRUE))
+    if(self->killNow.exchange(AL_TRUE) || !self->thread.joinable())
         return;
 
-    althrd_join(self->thread, &res);
+    self->thread.join();
 
     if(ioctl(self->fd, SNDCTL_DSP_RESET) != 0)
         ERR("Error resetting device: %s\n", strerror(errno));

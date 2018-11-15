@@ -143,7 +143,8 @@ static ALCenum ALCcoreAudioPlayback_open(ALCcoreAudioPlayback *self, const ALCch
         return ALC_INVALID_VALUE;
     }
 
-    alstr_copy_cstr(&device->DeviceName, name);
+    al_free(device->DeviceName);
+    device->DeviceName = alstrdup(name);
     return ALC_NO_ERROR;
 }
 
@@ -673,7 +674,8 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
     );
     if(!self->ring) goto error;
 
-    alstr_copy_cstr(&device->DeviceName, name);
+    al_free(device->DeviceName);
+    device->DeviceName = alstrdup(name);
 
     return ALC_NO_ERROR;
 

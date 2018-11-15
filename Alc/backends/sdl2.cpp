@@ -174,7 +174,8 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
     self->FmtType = device->FmtType;
     self->UpdateSize = device->UpdateSize;
 
-    alstr_copy_cstr(&device->DeviceName, name ? name : defaultDeviceName);
+    al_free(device->DeviceName);
+    device->DeviceName = alstrdup(name ? name : defaultDeviceName);
 
     return ALC_NO_ERROR;
 }

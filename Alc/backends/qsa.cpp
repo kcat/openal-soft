@@ -328,7 +328,8 @@ static ALCenum qsa_open_playback(PlaybackWrapper *self, const ALCchar* deviceNam
         return ALC_INVALID_DEVICE;
     }
 
-    alstr_copy_cstr(&device->DeviceName, deviceName);
+    al_free(device->DeviceName);
+    device->DeviceName = alstrdup(deviceName);
     self->ExtraData = data;
 
     return ALC_NO_ERROR;
@@ -735,7 +736,8 @@ static ALCenum qsa_open_capture(CaptureWrapper *self, const ALCchar *deviceName)
         return ALC_INVALID_DEVICE;
     }
 
-    alstr_copy_cstr(&device->DeviceName, deviceName);
+    al_free(device->DeviceName);
+    device->DeviceName = alstrdup(deviceName);
     self->ExtraData = data;
 
     switch (device->FmtType)

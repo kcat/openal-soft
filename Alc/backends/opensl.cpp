@@ -375,7 +375,8 @@ static ALCenum ALCopenslPlayback_open(ALCopenslPlayback *self, const ALCchar *na
         return ALC_INVALID_VALUE;
     }
 
-    alstr_copy_cstr(&device->DeviceName, name);
+    al_free(device->DeviceName);
+    device->DeviceName = alstrdup(name);
 
     return ALC_NO_ERROR;
 }
@@ -900,7 +901,8 @@ static ALCenum ALCopenslCapture_open(ALCopenslCapture *self, const ALCchar *name
         return ALC_INVALID_VALUE;
     }
 
-    alstr_copy_cstr(&device->DeviceName, name);
+    al_free(device->DeviceName);
+    device->DeviceName = alstrdup(name);
 
     return ALC_NO_ERROR;
 }

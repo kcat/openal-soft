@@ -396,7 +396,8 @@ static ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *de
         return ALC_INVALID_VALUE;
     }
 
-    alstr_copy_cstr(&device->DeviceName, deviceName);
+    al_free(device->DeviceName);
+    device->DeviceName = alstrdup(deviceName);
 
     return ALC_NO_ERROR;
 }
@@ -862,7 +863,8 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
     self->BufferBytes = DSCBDescription.dwBufferBytes;
     SetDefaultWFXChannelOrder(device);
 
-    alstr_copy_cstr(&device->DeviceName, deviceName);
+    al_free(device->DeviceName);
+    device->DeviceName = alstrdup(deviceName);
 
     return ALC_NO_ERROR;
 }

@@ -729,6 +729,15 @@ void SetRTPriority(void)
 #endif
 
 
+char *alstrdup(const char *str)
+{
+    const size_t len{strlen(str)};
+    char *ret{static_cast<char*>(al_calloc(DEF_ALIGN, len+1))};
+    memcpy(ret, str, len);
+    return ret;
+}
+
+
 void alstr_clear(al_string *str)
 {
     if(!alstr_empty(*str))

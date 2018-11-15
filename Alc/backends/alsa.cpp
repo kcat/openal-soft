@@ -684,7 +684,8 @@ static ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name)
     snd_config_update_free_global();
 
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    alstr_copy_cstr(&device->DeviceName, name);
+    al_free(device->DeviceName);
+    device->DeviceName = alstrdup(name);
 
     return ALC_NO_ERROR;
 }
@@ -719,7 +720,7 @@ static ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
             break;
     }
 
-    bool allowmmap{!!GetConfigValueBool(alstr_get_cstr(device->DeviceName), "alsa", "mmap", 1)};
+    bool allowmmap{!!GetConfigValueBool(device->DeviceName, "alsa", "mmap", 1)};
     ALuint periods{device->NumUpdates};
     ALuint periodLen{static_cast<ALuint>(device->UpdateSize * U64(1000000) / device->Frequency)};
     ALuint bufferLen{periodLen * periods};
@@ -790,7 +791,7 @@ static ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
     }
     CHECK(snd_pcm_hw_params_set_channels(self->pcmHandle, hp, ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder)));
     /* set rate (implicitly constrains period/buffer parameters) */
-    if(!GetConfigValueBool(alstr_get_cstr(device->DeviceName), "alsa", "allow-resampler", 0) ||
+    if(!GetConfigValueBool(device->DeviceName, "alsa", "allow-resampler", 0) ||
        !(device->Flags&DEVICE_FREQUENCY_REQUEST))
     {
         if(snd_pcm_hw_params_set_rate_resample(self->pcmHandle, hp, 0) < 0)
@@ -1082,7 +1083,8 @@ static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
         }
     }
 
-    alstr_copy_cstr(&device->DeviceName, name);
+    al_free(device->DeviceName);
+    device->DeviceName = alstrdup(name);
 
     return ALC_NO_ERROR;
 

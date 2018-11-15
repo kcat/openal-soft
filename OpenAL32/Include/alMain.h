@@ -634,7 +634,7 @@ struct ALCdevice_struct {
 
     ALCenum LimiterState;
 
-    al_string DeviceName;
+    char *DeviceName;
 
     ATOMIC(ALCenum) LastError;
 
@@ -919,6 +919,8 @@ inline void UnlockEffectSlotList(ALCcontext *context)
 
 
 int EventThread(void *arg);
+
+char *alstrdup(const char *str);
 
 #ifdef __cplusplus
 } // extern "C"

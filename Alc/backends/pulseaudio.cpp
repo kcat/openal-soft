@@ -800,7 +800,8 @@ static void PulsePlayback_sinkNameCallback(pa_context *UNUSED(context), const pa
     }
 
     ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
-    alstr_copy_cstr(&device->DeviceName, info->description);
+    al_free(device->DeviceName);
+    device->DeviceName = alstrdup(info->description);
 }
 
 
@@ -980,7 +981,8 @@ static ALCenum PulsePlayback_open(PulsePlayback *self, const ALCchar *name)
     else
     {
         ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
-        alstr_copy_cstr(&device->DeviceName, dev_name);
+        al_free(device->DeviceName);
+        device->DeviceName = alstrdup(dev_name);
     }
 
     return ALC_NO_ERROR;
@@ -1011,7 +1013,7 @@ static ALCboolean PulsePlayback_reset(PulsePlayback *self)
                             PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE};
     if(!GetConfigValueBool(nullptr, "pulse", "allow-moves", 0))
         flags |= PA_STREAM_DONT_MOVE;
-    if(GetConfigValueBool(alstr_get_cstr(device->DeviceName), "pulse", "fix-rate", 0) ||
+    if(GetConfigValueBool(device->DeviceName, "pulse", "fix-rate", 0) ||
        !(device->Flags&DEVICE_FREQUENCY_REQUEST))
         flags |= PA_STREAM_FIX_RATE;
 
@@ -1418,7 +1420,8 @@ static void PulseCapture_sourceNameCallback(pa_context *UNUSED(context), const p
     }
 
     ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
-    alstr_copy_cstr(&device->DeviceName, info->description);
+    al_free(device->DeviceName);
+    device->DeviceName = alstrdup(info->description);
 }
 
 
@@ -1490,7 +1493,8 @@ static ALCenum PulseCapture_open(PulseCapture *self, const ALCchar *name)
         if(iter == CaptureDevices.cend())
             return ALC_INVALID_VALUE;
         pulse_name = iter->device_name.c_str();
-        alstr_copy_cstr(&device->DeviceName, iter->name.c_str());
+        al_free(device->DeviceName);
+        device->DeviceName = alstrdup(iter->name.c_str());
     }
 
     std::tie(self->loop, self->context) = pulse_open(PulseCapture_contextStateCallback, self);
@@ -1593,7 +1597,7 @@ static ALCenum PulseCapture_open(PulseCapture *self, const ALCchar *name)
     pa_stream_set_state_callback(self->stream, PulseCapture_streamStateCallback, self);
 
     self->device_name = pa_stream_get_device_name(self->stream);
-    if(alstr_empty(device->DeviceName))
+    if(!device->DeviceName || device->DeviceName[0] == 0)
     {
         pa_operation *op{pa_context_get_source_info_by_name(self->context,
             self->device_name.c_str(), PulseCapture_sourceNameCallback, self

@@ -249,7 +249,8 @@ retry_open:
         return ALC_INVALID_VALUE;
     }
 
-    alstr_copy_cstr(&device->DeviceName, name);
+    al_free(device->DeviceName);
+    device->DeviceName = alstrdup(name);
 
     return ALC_NO_ERROR;
 
@@ -440,7 +441,8 @@ static ALCenum ALCportCapture_open(ALCportCapture *self, const ALCchar *name)
         return ALC_INVALID_VALUE;
     }
 
-    alstr_copy_cstr(&device->DeviceName, name);
+    al_free(device->DeviceName);
+    device->DeviceName = alstrdup(name);
 
     return ALC_NO_ERROR;
 }

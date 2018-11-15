@@ -1910,7 +1910,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
 #undef TRACE_ATTR
 
-        ConfigValueUInt(alstr_get_cstr(device->DeviceName), nullptr, "frequency", &freq);
+        ConfigValueUInt(device->DeviceName, nullptr, "frequency", &freq);
         freq = maxu(freq, MIN_OUTPUT_RATE);
 
         device->UpdateSize = (ALuint64)device->UpdateSize * freq /
@@ -1924,7 +1924,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(numMono > INT_MAX-numStereo)
             numMono = INT_MAX-numStereo;
         numMono += numStereo;
-        if(ConfigValueInt(alstr_get_cstr(device->DeviceName), nullptr, "sources", &numMono))
+        if(ConfigValueInt(device->DeviceName, nullptr, "sources", &numMono))
         {
             if(numMono <= 0)
                 numMono = 256;
@@ -1938,7 +1938,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->NumMonoSources = numMono;
         device->NumStereoSources = numStereo;
 
-        if(ConfigValueInt(alstr_get_cstr(device->DeviceName), nullptr, "sends", &new_sends))
+        if(ConfigValueInt(device->DeviceName, nullptr, "sends", &new_sends))
             new_sends = mini(numSends, clampi(new_sends, 0, MAX_SENDS));
         else
             new_sends = numSends;
@@ -1980,7 +1980,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     if(device->Type != Loopback)
     {
         const char *hrtf;
-        if(ConfigValueStr(alstr_get_cstr(device->DeviceName), nullptr, "hrtf", &hrtf))
+        if(ConfigValueStr(device->DeviceName, nullptr, "hrtf", &hrtf))
         {
             if(strcasecmp(hrtf, "true") == 0)
                 hrtf_userreq = Hrtf_Enable;
@@ -1996,7 +1996,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(VECTOR_SIZE(device->HrtfList) == 0)
             {
                 VECTOR_DEINIT(device->HrtfList);
-                device->HrtfList = EnumerateHrtf(alstr_get_cstr(device->DeviceName));
+                device->HrtfList = EnumerateHrtf(device->DeviceName);
             }
             if(VECTOR_SIZE(device->HrtfList) > 0)
             {
@@ -2108,10 +2108,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
           device->AuxiliaryEffectSlotMax, device->NumAuxSends);
 
     device->DitherDepth = 0.0f;
-    if(GetConfigValueBool(alstr_get_cstr(device->DeviceName), nullptr, "dither", 1))
+    if(GetConfigValueBool(device->DeviceName, nullptr, "dither", 1))
     {
         ALint depth = 0;
-        ConfigValueInt(alstr_get_cstr(device->DeviceName), nullptr, "dither-depth", &depth);
+        ConfigValueInt(device->DeviceName, nullptr, "dither-depth", &depth);
         if(depth <= 0)
         {
             switch(device->FmtType)
@@ -2144,7 +2144,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
               device->DitherDepth);
 
     device->LimiterState = gainLimiter;
-    if(ConfigValueBool(alstr_get_cstr(device->DeviceName), nullptr, "output-limiter", &val))
+    if(ConfigValueBool(device->DeviceName, nullptr, "output-limiter", &val))
         gainLimiter = val ? ALC_TRUE : ALC_FALSE;
 
     /* Valid values for gainLimiter are ALC_DONT_CARE_SOFT, ALC_TRUE, and
@@ -2381,7 +2381,7 @@ static void InitDevice(ALCdevice *device, enum DeviceType type)
     device->RealOut.Buffer = nullptr;
     device->RealOut.NumChannels = 0;
 
-    AL_STRING_INIT(device->DeviceName);
+    device->DeviceName = nullptr;
 
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
     {
@@ -2486,7 +2486,8 @@ static ALCvoid FreeDevice(ALCdevice *device)
         device->ChannelDelay[i].Buffer = nullptr;
     }
 
-    AL_STRING_DEINIT(device->DeviceName);
+    al_free(device->DeviceName);
+    device->DeviceName = nullptr;
 
     al_free(device->Dry.Buffer);
     device->Dry.Buffer = nullptr;
@@ -3068,7 +3069,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
     case ALC_ALL_DEVICES_SPECIFIER:
         if(VerifyDevice(&Device))
         {
-            value = alstr_get_cstr(Device->DeviceName);
+            value = Device->DeviceName;
             ALCdevice_DecRef(Device);
         }
         else
@@ -3081,7 +3082,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
     case ALC_CAPTURE_DEVICE_SPECIFIER:
         if(VerifyDevice(&Device))
         {
-            value = alstr_get_cstr(Device->DeviceName);
+            value = Device->DeviceName;
             ALCdevice_DecRef(Device);
         }
         else
@@ -3448,7 +3449,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
         case ALC_NUM_HRTF_SPECIFIERS_SOFT:
             almtx_lock(&device->BackendLock);
             FreeHrtfList(&device->HrtfList);
-            device->HrtfList = EnumerateHrtf(alstr_get_cstr(device->DeviceName));
+            device->HrtfList = EnumerateHrtf(device->DeviceName);
             values[0] = (ALCint)VECTOR_SIZE(device->HrtfList);
             almtx_unlock(&device->BackendLock);
             return 1;
@@ -3810,7 +3811,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     ALCdevice_IncRef(ALContext->Device);
     InitContext(ALContext);
 
-    if(ConfigValueFloat(alstr_get_cstr(device->DeviceName), nullptr, "volume-adjust", &valf))
+    if(ConfigValueFloat(device->DeviceName, nullptr, "volume-adjust", &valf))
     {
         if(!isfinite(valf))
             ERR("volume-adjust must be finite: %f\n", valf);
@@ -4131,7 +4132,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         return nullptr;
     }
 
-    if(ConfigValueStr(alstr_get_cstr(device->DeviceName), nullptr, "ambi-format", &fmt))
+    if(ConfigValueStr(device->DeviceName, nullptr, "ambi-format", &fmt))
     {
         if(strcasecmp(fmt, "fuma") == 0)
         {
@@ -4159,7 +4160,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         } while(!DeviceList.compare_exchange_weak(head, device));
     }
 
-    TRACE("Created device %p, \"%s\"\n", device, alstr_get_cstr(device->DeviceName));
+    TRACE("Created device %p, \"%s\"\n", device, device->DeviceName);
     return device;
 }
 
@@ -4295,7 +4296,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         } while(!DeviceList.compare_exchange_weak(head, device));
     }
 
-    TRACE("Created device %p, \"%s\"\n", device, alstr_get_cstr(device->DeviceName));
+    TRACE("Created device %p, \"%s\"\n", device, device->DeviceName);
     return device;
 }
 

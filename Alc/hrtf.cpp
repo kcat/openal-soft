@@ -82,14 +82,6 @@ std::mutex LoadedHrtfLock;
 HrtfEntry *LoadedHrtfs{nullptr};
 
 
-char *alstrdup(const std::string &str)
-{
-    const size_t len{str.length()};
-    char *ret{static_cast<char*>(al_calloc(DEF_ALIGN, len+1))};
-    memcpy(ret, str.data(), len);
-    return ret;
-}
-
 class databuf final : public std::streambuf {
     int_type underflow() override
     { return traits_type::eof(); }
@@ -1016,7 +1008,7 @@ void AddFileEntry(vector_EnumeratedHrtf *list, const std::string &filename)
         VECTOR_FIND_IF(iter, const EnumeratedHrtf, *list, MATCH_NAME);
 #undef MATCH_NAME
     } while(iter != VECTOR_END(*list));
-    EnumeratedHrtf entry{ alstrdup(newname), loaded_entry };
+    EnumeratedHrtf entry{ alstrdup(newname.c_str()), loaded_entry };
 
     TRACE("Adding file entry \"%s\"\n", entry.name);
     VECTOR_PUSH_BACK(*list, entry);
@@ -1082,7 +1074,7 @@ void AddBuiltInEntry(vector_EnumeratedHrtf *list, const std::string &filename, A
         VECTOR_FIND_IF(iter, const EnumeratedHrtf, *list, MATCH_NAME);
 #undef MATCH_NAME
     } while(iter != VECTOR_END(*list));
-    EnumeratedHrtf entry{ alstrdup(newname), loaded_entry };
+    EnumeratedHrtf entry{ alstrdup(newname.c_str()), loaded_entry };
 
     TRACE("Adding built-in entry \"%s\"\n", entry.name);
     VECTOR_PUSH_BACK(*list, entry);

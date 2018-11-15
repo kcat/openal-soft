@@ -719,7 +719,8 @@ static ALCenum ALCwasapiPlayback_open(ALCwasapiPlayback *self, const ALCchar *de
             {
                 ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
                 self->mDevId = iter->devid;
-                alstr_copy_range(&device->DeviceName, &*iter->name.cbegin(), &*iter->name.cend());
+                al_free(device->DeviceName);
+                device->DeviceName = alstrdup(iter->name.c_str());
                 hr = S_OK;
             }
         }
@@ -775,11 +776,11 @@ HRESULT ALCwasapiPlayback::openProxy()
     if(SUCCEEDED(hr))
     {
         mClient = reinterpret_cast<IAudioClient*>(ptr);
-        if(alstr_empty(device->DeviceName))
+        if(!device->DeviceName || device->DeviceName[0] == 0)
         {
-            std::string devname;
-            std::tie(devname, std::ignore) = get_device_name_and_guid(mMMDev);
-            alstr_copy_range(&device->DeviceName, &*devname.cbegin(), &*devname.cend());
+            std::string devname{get_device_name_and_guid(mMMDev).first};
+            al_free(device->DeviceName);
+            device->DeviceName = alstrdup(devname.c_str());
         }
     }
 
@@ -1385,7 +1386,8 @@ static ALCenum ALCwasapiCapture_open(ALCwasapiCapture *self, const ALCchar *devi
             {
                 ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
                 self->mDevId = iter->devid;
-                alstr_copy_range(&device->DeviceName, &*iter->name.cbegin(), &*iter->name.cend());
+                al_free(device->DeviceName);
+                device->DeviceName = alstrdup(iter->name.c_str());
                 hr = S_OK;
             }
         }
@@ -1460,11 +1462,11 @@ HRESULT ALCwasapiCapture::openProxy()
     if(SUCCEEDED(hr))
     {
         mClient = reinterpret_cast<IAudioClient*>(ptr);
-        if(alstr_empty(device->DeviceName))
+        if(!device->DeviceName || device->DeviceName[0] == 0)
         {
-            std::string devname;
-            std::tie(devname, std::ignore) = get_device_name_and_guid(mMMDev);
-            alstr_copy_range(&device->DeviceName, &*devname.cbegin(), &*devname.cend());
+            std::string devname{get_device_name_and_guid(mMMDev).first};
+            al_free(device->DeviceName);
+            device->DeviceName = alstrdup(devname.c_str());
         }
     }
 

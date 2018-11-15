@@ -286,7 +286,8 @@ retry_open:
         return ALC_INVALID_VALUE;
     }
 
-    alstr_copy_cstr(&device->DeviceName, PlaybackDevices[DeviceID].c_str());
+    al_free(device->DeviceName);
+    device->DeviceName = alstrdup(PlaybackDevices[DeviceID].c_str());
     return ALC_NO_ERROR;
 }
 
@@ -606,7 +607,8 @@ static ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *device
         self->WaveBuffer[i].dwBufferLength = self->WaveBuffer[i-1].dwBufferLength;
     }
 
-    alstr_copy_cstr(&device->DeviceName, CaptureDevices[DeviceID].c_str());
+    al_free(device->DeviceName);
+    device->DeviceName = alstrdup(CaptureDevices[DeviceID].c_str());
     return ALC_NO_ERROR;
 }
 

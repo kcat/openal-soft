@@ -2,18 +2,16 @@
 #define AL_BACKENDS_BASE_H
 
 #include "alMain.h"
-#include "threads.h"
 #include "alstring.h"
 
-
 #ifdef __cplusplus
-extern "C" {
-#endif
 
-typedef struct ClockLatency {
+#include <mutex>
+
+struct ClockLatency {
     ALint64 ClockTime;
     ALint64 Latency;
-} ClockLatency;
+};
 
 /* Helper to get the current clock time from the device's ClockBase, and
  * SamplesDone converted from the sample rate.
@@ -29,8 +27,6 @@ void ALCdevice_Unlock(ALCdevice *device);
 
 ClockLatency GetClockLatency(ALCdevice *device);
 
-#ifdef __cplusplus
-} /* extern "C" */
 
 struct ALCbackendVtable;
 
@@ -39,7 +35,7 @@ struct ALCbackend {
 
     ALCdevice *mDevice;
 
-    almtx_t mMutex;
+    std::recursive_mutex mMutex;
 };
 
 void ALCbackend_Construct(ALCbackend *self, ALCdevice *device);

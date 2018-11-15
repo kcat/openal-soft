@@ -26,14 +26,11 @@ ClockLatency GetClockLatency(ALCdevice *device)
 /* Base ALCbackend method implementations. */
 void ALCbackend_Construct(ALCbackend *self, ALCdevice *device)
 {
-    int ret = almtx_init(&self->mMutex, almtx_recursive);
-    assert(ret == althrd_success);
     self->mDevice = device;
 }
 
-void ALCbackend_Destruct(ALCbackend *self)
+void ALCbackend_Destruct(ALCbackend* UNUSED(self))
 {
-    almtx_destroy(&self->mMutex);
 }
 
 ALCboolean ALCbackend_reset(ALCbackend* UNUSED(self))
@@ -76,14 +73,22 @@ ClockLatency ALCbackend_getClockLatency(ALCbackend *self)
 
 void ALCbackend_lock(ALCbackend *self)
 {
-    int ret = almtx_lock(&self->mMutex);
-    assert(ret == althrd_success);
+    try {
+        self->mMutex.lock();
+    }
+    catch(...) {
+        std::terminate();
+    }
 }
 
 void ALCbackend_unlock(ALCbackend *self)
 {
-    int ret = almtx_unlock(&self->mMutex);
-    assert(ret == althrd_success);
+    try {
+        self->mMutex.unlock();
+    }
+    catch(...) {
+        std::terminate();
+    }
 }
 
 

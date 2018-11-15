@@ -33,6 +33,10 @@
 #include <errno.h>
 #include <math.h>
 
+#include <vector>
+#include <string>
+#include <algorithm>
+
 #include "alMain.h"
 #include "alu.h"
 #include "alconfig.h"
@@ -72,30 +76,39 @@
 
 namespace {
 
-struct oss_device {
-    const ALCchar *handle;
-    const char *path;
-    struct oss_device *next;
+constexpr char DefaultName[] = "OSS Default";
+const char *DefaultPlayback{"/dev/dsp"};
+const char *DefaultCapture{"/dev/dsp"};
+
+struct DevMap {
+    std::string name;
+    std::string device_name;
+
+    template<typename StrT0, typename StrT1>
+    DevMap(StrT0&& name_, StrT1&& devname_)
+      : name{std::forward<StrT0>(name_)}, device_name{std::forward<StrT1>(devname_)}
+    { }
 };
 
-struct oss_device oss_playback = {
-    "OSS Default",
-    "/dev/dsp",
-    nullptr
-};
+bool checkName(const std::vector<DevMap> &list, const std::string &name)
+{
+    return std::find_if(list.cbegin(), list.cend(),
+        [&name](const DevMap &entry) -> bool
+        { return entry.name == name; }
+    ) != list.cend();
+}
 
-struct oss_device oss_capture = {
-    "OSS Default",
-    "/dev/dsp",
-    nullptr
-};
+std::vector<DevMap> PlaybackDevices;
+std::vector<DevMap> CaptureDevices;
+
 
 #ifdef ALC_OSS_COMPAT
 
 #define DSP_CAP_OUTPUT 0x00020000
 #define DSP_CAP_INPUT 0x00010000
-void ALCossListPopulate(struct oss_device *UNUSED(devlist), int UNUSED(type_flag))
+void ALCossListPopulate(std::vector<DevMap> *devlist, int type)
 {
+    devlist->emplace_back(DefaultName, (type==DSP_CAP_INPUT) ? DefaultCapture : DefaultPlayback);
 }
 
 #else
@@ -110,17 +123,10 @@ size_t my_strnlen(const char *str, size_t maxlen)
 #define strnlen my_strnlen
 #endif
 
-void ALCossListAppend(struct oss_device *list, const char *handle, size_t hlen, const char *path, size_t plen)
+void ALCossListAppend(std::vector<DevMap> *list, const char *handle, size_t hlen, const char *path, size_t plen)
 {
-    struct oss_device *next;
-    struct oss_device *last;
-    size_t i;
-
-    /* skip the first item "OSS Default" */
-    last = list;
-    next = list->next;
 #ifdef ALC_OSS_DEVNODE_TRUC
-    for(i = 0;i < plen;i++)
+    for(size_t i{0};i < plen;i++)
     {
         if(path[i] == '.')
         {
@@ -129,8 +135,6 @@ void ALCossListAppend(struct oss_device *list, const char *handle, size_t hlen, 
             plen = i;
         }
     }
-#else
-    (void)i;
 #endif
     if(handle[0] == '\0')
     {
@@ -138,58 +142,63 @@ void ALCossListAppend(struct oss_device *list, const char *handle, size_t hlen, 
         hlen = plen;
     }
 
-    while(next != nullptr)
+    std::string basename{handle, hlen};
+    basename.erase(std::find(basename.begin(), basename.end(), '\0'), basename.end());
+    std::string devname{path, plen};
+    devname.erase(std::find(devname.begin(), devname.end(), '\0'), devname.end());
+
+    auto iter = std::find_if(list->cbegin(), list->cend(),
+        [&devname](const DevMap &entry) -> bool
+        { return entry.device_name == devname; }
+    );
+    if(iter != list->cend())
+        return;
+
+    int count{1};
+    std::string newname{basename};
+    while(checkName(PlaybackDevices, newname))
     {
-        if(strncmp(next->path, path, plen) == 0)
-            return;
-        last = next;
-        next = next->next;
+        newname = basename;
+        newname += " #";
+        newname += std::to_string(++count);
     }
 
-    next = (struct oss_device*)malloc(sizeof(struct oss_device) + hlen + plen + 2);
-    next->handle = (char*)(next + 1);
-    next->path = next->handle + hlen + 1;
-    next->next = nullptr;
-    last->next = next;
+    list->emplace_back(std::move(newname), std::move(devname));
+    const DevMap &entry = list->back();
 
-    strncpy((char*)next->handle, handle, hlen);
-    ((char*)next->handle)[hlen] = '\0';
-    strncpy((char*)next->path, path, plen);
-    ((char*)next->path)[plen] = '\0';
-
-    TRACE("Got device \"%s\", \"%s\"\n", next->handle, next->path);
+    TRACE("Got device \"%s\", \"%s\"\n", entry.name.c_str(), entry.device_name.c_str());
 }
 
-void ALCossListPopulate(struct oss_device *devlist, int type_flag)
+void ALCossListPopulate(std::vector<DevMap> *devlist, int type_flag)
 {
-    struct oss_sysinfo si;
-    struct oss_audioinfo ai;
-    int fd, i;
-
-    if((fd=open("/dev/mixer", O_RDONLY)) < 0)
+    int fd{open("/dev/mixer", O_RDONLY)};
+    if(fd < 0)
     {
         TRACE("Could not open /dev/mixer: %s\n", strerror(errno));
-        return;
+        goto done;
     }
+
+    struct oss_sysinfo si;
     if(ioctl(fd, SNDCTL_SYSINFO, &si) == -1)
     {
         TRACE("SNDCTL_SYSINFO failed: %s\n", strerror(errno));
         goto done;
     }
-    for(i = 0;i < si.numaudios;i++)
-    {
-        const char *handle;
-        size_t len;
 
+    for(int i{0};i < si.numaudios;i++)
+    {
+        struct oss_audioinfo ai;
         ai.dev = i;
         if(ioctl(fd, SNDCTL_AUDIOINFO, &ai) == -1)
         {
             ERR("SNDCTL_AUDIOINFO (%d) failed: %s\n", i, strerror(errno));
             continue;
         }
-        if(ai.devnode[0] == '\0')
+        if(!(ai.caps&type_flag) || ai.devnode[0] == '\0')
             continue;
 
+        const char *handle;
+        size_t len;
         if(ai.handle[0] != '\0')
         {
             len = strnlen(ai.handle, sizeof(ai.handle));
@@ -200,34 +209,33 @@ void ALCossListPopulate(struct oss_device *devlist, int type_flag)
             len = strnlen(ai.name, sizeof(ai.name));
             handle = ai.name;
         }
-        if((ai.caps&type_flag))
-            ALCossListAppend(devlist, handle, len, ai.devnode,
-                             strnlen(ai.devnode, sizeof(ai.devnode)));
+
+        ALCossListAppend(devlist, handle, len, ai.devnode,
+                         strnlen(ai.devnode, sizeof(ai.devnode)));
     }
 
 done:
-    close(fd);
+    if(fd >= 0)
+        close(fd);
+    fd = -1;
+
+    const char *defdev{(type_flag==DSP_CAP_INPUT) ? DefaultCapture : DefaultPlayback};
+    auto iter = std::find_if(devlist->cbegin(), devlist->cend(),
+        [defdev](const DevMap &entry) -> bool
+        { return entry.device_name == defdev; }
+    );
+    if(iter == devlist->cend())
+        devlist->insert(devlist->begin(), DevMap{DefaultName, defdev});
+    else
+    {
+        DevMap entry{std::move(*iter)};
+        devlist->erase(iter);
+        devlist->insert(devlist->begin(), std::move(entry));
+    }
+    devlist->shrink_to_fit();
 }
 
 #endif
-
-void ALCossListFree(struct oss_device *list)
-{
-    struct oss_device *cur;
-    if(list == nullptr)
-        return;
-
-    /* skip the first item "OSS Default" */
-    cur = list->next;
-    list->next = nullptr;
-
-    while(cur != nullptr)
-    {
-        struct oss_device *next = cur->next;
-        free(cur);
-        cur = next;
-    }
-}
 
 int log2i(ALCuint x)
 {
@@ -361,35 +369,29 @@ static int ALCplaybackOSS_mixerProc(void *ptr)
 
 static ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name)
 {
-    struct oss_device *dev = &oss_playback;
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
-    if(!name || strcmp(name, dev->handle) == 0)
-        name = dev->handle;
+    const char *devname{DefaultPlayback};
+    if(!name)
+        name = DefaultName;
     else
     {
-        if(!dev->next)
-        {
-            ALCossListPopulate(&oss_playback, DSP_CAP_OUTPUT);
-            dev = &oss_playback;
-        }
-        while(dev != nullptr)
-        {
-            if (strcmp(dev->handle, name) == 0)
-                break;
-            dev = dev->next;
-        }
-        if(dev == nullptr)
-        {
-            WARN("Could not find \"%s\" in device list\n", name);
+        if(PlaybackDevices.empty())
+            ALCossListPopulate(&PlaybackDevices, DSP_CAP_OUTPUT);
+
+        auto iter = std::find_if(PlaybackDevices.cbegin(), PlaybackDevices.cend(),
+            [&name](const DevMap &entry) -> bool
+            { return entry.name == name; }
+        );
+        if(iter == PlaybackDevices.cend())
             return ALC_INVALID_VALUE;
-        }
+        devname = iter->device_name.c_str();
     }
 
-    self->fd = open(dev->path, O_WRONLY);
+    self->fd = open(devname, O_WRONLY);
     if(self->fd == -1)
     {
-        ERR("Could not open %s: %s\n", dev->path, strerror(errno));
+        ERR("Could not open %s: %s\n", devname, strerror(errno));
         return ALC_INVALID_VALUE;
     }
 
@@ -628,46 +630,32 @@ static int ALCcaptureOSS_recordProc(void *ptr)
 static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    struct oss_device *dev = &oss_capture;
-    int numFragmentsLogSize;
-    int log2FragmentSize;
-    unsigned int periods;
-    audio_buf_info info;
-    ALuint frameSize;
-    int numChannels;
-    int ossFormat;
-    int ossSpeed;
-    const char *err;
 
-    if(!name || strcmp(name, dev->handle) == 0)
-        name = dev->handle;
+    const char *devname{DefaultCapture};
+    if(!name)
+        name = DefaultName;
     else
     {
-        if(!dev->next)
-        {
-            ALCossListPopulate(&oss_capture, DSP_CAP_INPUT);
-            dev = &oss_capture;
-        }
-        while(dev != nullptr)
-        {
-            if (strcmp(dev->handle, name) == 0)
-                break;
-            dev = dev->next;
-        }
-        if(dev == nullptr)
-        {
-            WARN("Could not find \"%s\" in device list\n", name);
+        if(CaptureDevices.empty())
+            ALCossListPopulate(&CaptureDevices, DSP_CAP_INPUT);
+
+        auto iter = std::find_if(CaptureDevices.cbegin(), CaptureDevices.cend(),
+            [&name](const DevMap &entry) -> bool
+            { return entry.name == name; }
+        );
+        if(iter == CaptureDevices.cend())
             return ALC_INVALID_VALUE;
-        }
+        devname = iter->device_name.c_str();
     }
 
-    self->fd = open(dev->path, O_RDONLY);
+    self->fd = open(devname, O_RDONLY);
     if(self->fd == -1)
     {
-        ERR("Could not open %s: %s\n", dev->path, strerror(errno));
+        ERR("Could not open %s: %s\n", devname, strerror(errno));
         return ALC_INVALID_VALUE;
     }
 
+    int ossFormat{};
     switch(device->FmtType)
     {
         case DevFmtByte:
@@ -687,18 +675,19 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
             return ALC_INVALID_VALUE;
     }
 
-    periods = 4;
-    numChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
-    frameSize = numChannels * BytesFromDevFmt(device->FmtType);
-    ossSpeed = device->Frequency;
-    log2FragmentSize = log2i(device->UpdateSize * device->NumUpdates *
-                             frameSize / periods);
+    int periods{4};
+    int numChannels{ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder)};
+    int frameSize{numChannels * BytesFromDevFmt(device->FmtType)};
+    int ossSpeed{static_cast<int>(device->Frequency)};
+    int log2FragmentSize{log2i(device->UpdateSize * device->NumUpdates *
+                               frameSize / periods)};
 
     /* according to the OSS spec, 16 bytes are the minimum */
-    if (log2FragmentSize < 4)
-        log2FragmentSize = 4;
-    numFragmentsLogSize = (periods << 16) | log2FragmentSize;
+    log2FragmentSize = std::max(log2FragmentSize, 4);
+    int numFragmentsLogSize{(periods << 16) | log2FragmentSize};
 
+    audio_buf_info info;
+    const char *err;
 #define CHECKERR(func) if((func) < 0) {                                       \
     err = #func;                                                              \
     goto err;                                                                 \
@@ -810,16 +799,16 @@ ALCbackendFactory *ALCossBackendFactory_getFactory(void)
 
 ALCboolean ALCossBackendFactory_init(ALCossBackendFactory* UNUSED(self))
 {
-    ConfigValueStr(nullptr, "oss", "device", &oss_playback.path);
-    ConfigValueStr(nullptr, "oss", "capture", &oss_capture.path);
+    ConfigValueStr(nullptr, "oss", "device", &DefaultPlayback);
+    ConfigValueStr(nullptr, "oss", "capture", &DefaultCapture);
 
     return ALC_TRUE;
 }
 
-void  ALCossBackendFactory_deinit(ALCossBackendFactory* UNUSED(self))
+void ALCossBackendFactory_deinit(ALCossBackendFactory* UNUSED(self))
 {
-    ALCossListFree(&oss_playback);
-    ALCossListFree(&oss_capture);
+    PlaybackDevices.clear();
+    CaptureDevices.clear();
 }
 
 
@@ -832,29 +821,31 @@ ALCboolean ALCossBackendFactory_querySupport(ALCossBackendFactory* UNUSED(self),
 
 void ALCossBackendFactory_probe(ALCossBackendFactory* UNUSED(self), enum DevProbe type, al_string *outnames)
 {
-    struct oss_device *cur = nullptr;
-    switch(type)
-    {
-        case ALL_DEVICE_PROBE:
-            ALCossListFree(&oss_playback);
-            ALCossListPopulate(&oss_playback, DSP_CAP_OUTPUT);
-            cur = &oss_playback;
-            break;
-
-        case CAPTURE_DEVICE_PROBE:
-            ALCossListFree(&oss_capture);
-            ALCossListPopulate(&oss_capture, DSP_CAP_INPUT);
-            cur = &oss_capture;
-            break;
-    }
-    while(cur != nullptr)
+    auto add_device = [outnames](const DevMap &entry) -> void
     {
 #ifdef HAVE_STAT
         struct stat buf;
-        if(stat(cur->path, &buf) == 0)
+        if(stat(entry.device_name.c_str(), &buf) == 0)
 #endif
-            alstr_append_range(outnames, cur->handle, cur->handle+strlen(cur->handle)+1);
-        cur = cur->next;
+        {
+            const char *name{entry.name.c_str()};
+            alstr_append_range(outnames, name, name+entry.name.length()+1);
+        }
+    };
+
+    switch(type)
+    {
+        case ALL_DEVICE_PROBE:
+            PlaybackDevices.clear();
+            ALCossListPopulate(&PlaybackDevices, DSP_CAP_OUTPUT);
+            std::for_each(PlaybackDevices.cbegin(), PlaybackDevices.cend(), add_device);
+            break;
+
+        case CAPTURE_DEVICE_PROBE:
+            CaptureDevices.clear();
+            ALCossListPopulate(&CaptureDevices, DSP_CAP_INPUT);
+            std::for_each(CaptureDevices.cbegin(), CaptureDevices.cend(), add_device);
+            break;
     }
 }
 

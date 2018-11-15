@@ -24,16 +24,23 @@ inline ALuint64 GetDeviceClockTime(ALCdevice *device)
                                 device->Frequency);
 }
 
+void ALCdevice_Lock(ALCdevice *device);
+void ALCdevice_Unlock(ALCdevice *device);
+
+ClockLatency GetClockLatency(ALCdevice *device);
+
+#ifdef __cplusplus
+} /* extern "C" */
 
 struct ALCbackendVtable;
 
-typedef struct ALCbackend {
+struct ALCbackend {
     const struct ALCbackendVtable *vtbl;
 
     ALCdevice *mDevice;
 
     almtx_t mMutex;
-} ALCbackend;
+};
 
 void ALCbackend_Construct(ALCbackend *self, ALCdevice *device);
 void ALCbackend_Destruct(ALCbackend *self);
@@ -95,18 +102,18 @@ static const struct ALCbackendVtable T##_ALCbackend_vtable = {                \
 }
 
 
-typedef enum ALCbackend_Type {
+enum ALCbackend_Type {
     ALCbackend_Playback,
     ALCbackend_Capture,
     ALCbackend_Loopback
-} ALCbackend_Type;
+};
 
 
 struct ALCbackendFactoryVtable;
 
-typedef struct ALCbackendFactory {
+struct ALCbackendFactory {
     const struct ALCbackendFactoryVtable *vtbl;
-} ALCbackendFactory;
+};
 
 void ALCbackendFactory_deinit(ALCbackendFactory *self);
 
@@ -155,14 +162,5 @@ ALCbackendFactory *ALCwaveBackendFactory_getFactory(void);
 ALCbackendFactory *ALCsdl2BackendFactory_getFactory(void);
 ALCbackendFactory *ALCloopbackFactory_getFactory(void);
 
-
-void ALCdevice_Lock(ALCdevice *device);
-void ALCdevice_Unlock(ALCdevice *device);
-
-ClockLatency GetClockLatency(ALCdevice *device);
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
-
+#endif /* __cplusplus */
 #endif /* AL_BACKENDS_BASE_H */

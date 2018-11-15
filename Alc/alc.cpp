@@ -3812,7 +3812,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
     if(ConfigValueFloat(device->DeviceName, nullptr, "volume-adjust", &valf))
     {
-        if(!isfinite(valf))
+        if(!std::isfinite(valf))
             ERR("volume-adjust must be finite: %f\n", valf);
         else
         {

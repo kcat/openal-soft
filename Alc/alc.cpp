@@ -62,6 +62,9 @@
 #ifdef HAVE_PULSEAUDIO
 #include "backends/pulseaudio.h"
 #endif
+#ifdef HAVE_WASAPI
+#include "backends/wasapi.h"
+#endif
 
 
 namespace {
@@ -77,6 +80,9 @@ struct BackendInfo {
 struct BackendInfo BackendList[] = {
 #ifdef HAVE_PULSEAUDIO
     { "pulse", PulseBackendFactory::getFactory },
+#endif
+#ifdef HAVE_WASAPI
+    { "wasapi", WasapiBackendFactory::getFactory },
 #endif
 #if 0
     { "jack", ALCjackBackendFactory_getFactory },

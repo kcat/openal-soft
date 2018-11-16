@@ -20,6 +20,8 @@
 
 #include "config.h"
 
+#include "backends/wasapi.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
@@ -49,8 +51,6 @@
 #include "ringbuffer.h"
 #include "compat.h"
 #include "converter.h"
-
-#include "backends/base.h"
 
 
 /* Some headers seem to define these as macros for __uuidof, which is annoying
@@ -153,7 +153,7 @@ struct ThreadRequest {
 #define WM_USER_Enumerate   (WM_USER+5)
 #define WM_USER_Last        (WM_USER+5)
 
-static const char MessageStr[WM_USER_Last+1-WM_USER][20] = {
+constexpr char MessageStr[WM_USER_Last+1-WM_USER][20] = {
     "Open Device",
     "Reset Device",
     "Start Device",
@@ -489,8 +489,6 @@ DWORD CALLBACK WasapiProxy_messageHandler(void *ptr)
     return 0;
 }
 
-} // namespace
-
 
 struct ALCwasapiPlayback final : public ALCbackend, WasapiProxy {
     HRESULT openProxy() override;
@@ -515,32 +513,32 @@ struct ALCwasapiPlayback final : public ALCbackend, WasapiProxy {
     std::thread mThread;
 };
 
-static int ALCwasapiPlayback_mixerProc(ALCwasapiPlayback *self);
+int ALCwasapiPlayback_mixerProc(ALCwasapiPlayback *self);
 
-static void ALCwasapiPlayback_Construct(ALCwasapiPlayback *self, ALCdevice *device);
-static void ALCwasapiPlayback_Destruct(ALCwasapiPlayback *self);
-static ALCenum ALCwasapiPlayback_open(ALCwasapiPlayback *self, const ALCchar *name);
-static ALCboolean ALCwasapiPlayback_reset(ALCwasapiPlayback *self);
-static ALCboolean ALCwasapiPlayback_start(ALCwasapiPlayback *self);
-static void ALCwasapiPlayback_stop(ALCwasapiPlayback *self);
-static DECLARE_FORWARD2(ALCwasapiPlayback, ALCbackend, ALCenum, captureSamples, ALCvoid*, ALCuint)
-static DECLARE_FORWARD(ALCwasapiPlayback, ALCbackend, ALCuint, availableSamples)
-static ClockLatency ALCwasapiPlayback_getClockLatency(ALCwasapiPlayback *self);
-static DECLARE_FORWARD(ALCwasapiPlayback, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCwasapiPlayback, ALCbackend, void, unlock)
+void ALCwasapiPlayback_Construct(ALCwasapiPlayback *self, ALCdevice *device);
+void ALCwasapiPlayback_Destruct(ALCwasapiPlayback *self);
+ALCenum ALCwasapiPlayback_open(ALCwasapiPlayback *self, const ALCchar *name);
+ALCboolean ALCwasapiPlayback_reset(ALCwasapiPlayback *self);
+ALCboolean ALCwasapiPlayback_start(ALCwasapiPlayback *self);
+void ALCwasapiPlayback_stop(ALCwasapiPlayback *self);
+DECLARE_FORWARD2(ALCwasapiPlayback, ALCbackend, ALCenum, captureSamples, ALCvoid*, ALCuint)
+DECLARE_FORWARD(ALCwasapiPlayback, ALCbackend, ALCuint, availableSamples)
+ClockLatency ALCwasapiPlayback_getClockLatency(ALCwasapiPlayback *self);
+DECLARE_FORWARD(ALCwasapiPlayback, ALCbackend, void, lock)
+DECLARE_FORWARD(ALCwasapiPlayback, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCwasapiPlayback)
 
 DEFINE_ALCBACKEND_VTABLE(ALCwasapiPlayback);
 
 
-static void ALCwasapiPlayback_Construct(ALCwasapiPlayback *self, ALCdevice *device)
+void ALCwasapiPlayback_Construct(ALCwasapiPlayback *self, ALCdevice *device)
 {
     new (self) ALCwasapiPlayback{};
     SET_VTABLE2(ALCwasapiPlayback, ALCbackend, self);
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
 }
 
-static void ALCwasapiPlayback_Destruct(ALCwasapiPlayback *self)
+void ALCwasapiPlayback_Destruct(ALCwasapiPlayback *self)
 {
     if(self->mMsgEvent)
     {
@@ -565,7 +563,7 @@ static void ALCwasapiPlayback_Destruct(ALCwasapiPlayback *self)
 }
 
 
-FORCE_ALIGN static int ALCwasapiPlayback_mixerProc(ALCwasapiPlayback *self)
+FORCE_ALIGN int ALCwasapiPlayback_mixerProc(ALCwasapiPlayback *self)
 {
     ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
     IAudioClient *client{self->mClient};
@@ -637,7 +635,7 @@ FORCE_ALIGN static int ALCwasapiPlayback_mixerProc(ALCwasapiPlayback *self)
 }
 
 
-static ALCboolean MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *in)
+ALCboolean MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *in)
 {
     memset(out, 0, sizeof(*out));
     if(in->wFormatTag == WAVE_FORMAT_EXTENSIBLE)
@@ -676,7 +674,7 @@ static ALCboolean MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *
     return ALC_TRUE;
 }
 
-static ALCenum ALCwasapiPlayback_open(ALCwasapiPlayback *self, const ALCchar *deviceName)
+ALCenum ALCwasapiPlayback_open(ALCwasapiPlayback *self, const ALCchar *deviceName)
 {
     HRESULT hr = S_OK;
 
@@ -805,7 +803,7 @@ void ALCwasapiPlayback::closeProxy()
 }
 
 
-static ALCboolean ALCwasapiPlayback_reset(ALCwasapiPlayback *self)
+ALCboolean ALCwasapiPlayback_reset(ALCwasapiPlayback *self)
 {
     ThreadRequest req{ self->mMsgEvent, 0 };
     HRESULT hr{E_FAIL};
@@ -1076,7 +1074,7 @@ HRESULT ALCwasapiPlayback::resetProxy()
 }
 
 
-static ALCboolean ALCwasapiPlayback_start(ALCwasapiPlayback *self)
+ALCboolean ALCwasapiPlayback_start(ALCwasapiPlayback *self)
 {
     ThreadRequest req{ self->mMsgEvent, 0 };
     HRESULT hr{E_FAIL};
@@ -1123,7 +1121,7 @@ HRESULT ALCwasapiPlayback::startProxy()
 }
 
 
-static void ALCwasapiPlayback_stop(ALCwasapiPlayback *self)
+void ALCwasapiPlayback_stop(ALCwasapiPlayback *self)
 {
     ThreadRequest req{ self->mMsgEvent, 0 };
     auto proxy = static_cast<WasapiProxy*>(self);
@@ -1145,7 +1143,7 @@ void ALCwasapiPlayback::stopProxy()
 }
 
 
-static ClockLatency ALCwasapiPlayback_getClockLatency(ALCwasapiPlayback *self)
+ClockLatency ALCwasapiPlayback_getClockLatency(ALCwasapiPlayback *self)
 {
     ClockLatency ret;
 
@@ -1185,32 +1183,32 @@ struct ALCwasapiCapture final : public ALCbackend, WasapiProxy {
     std::thread mThread;
 };
 
-static int ALCwasapiCapture_recordProc(ALCwasapiCapture *self);
+int ALCwasapiCapture_recordProc(ALCwasapiCapture *self);
 
-static void ALCwasapiCapture_Construct(ALCwasapiCapture *self, ALCdevice *device);
-static void ALCwasapiCapture_Destruct(ALCwasapiCapture *self);
-static ALCenum ALCwasapiCapture_open(ALCwasapiCapture *self, const ALCchar *name);
-static DECLARE_FORWARD(ALCwasapiCapture, ALCbackend, ALCboolean, reset)
-static ALCboolean ALCwasapiCapture_start(ALCwasapiCapture *self);
-static void ALCwasapiCapture_stop(ALCwasapiCapture *self);
-static ALCenum ALCwasapiCapture_captureSamples(ALCwasapiCapture *self, ALCvoid *buffer, ALCuint samples);
-static ALuint ALCwasapiCapture_availableSamples(ALCwasapiCapture *self);
-static DECLARE_FORWARD(ALCwasapiCapture, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(ALCwasapiCapture, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCwasapiCapture, ALCbackend, void, unlock)
+void ALCwasapiCapture_Construct(ALCwasapiCapture *self, ALCdevice *device);
+void ALCwasapiCapture_Destruct(ALCwasapiCapture *self);
+ALCenum ALCwasapiCapture_open(ALCwasapiCapture *self, const ALCchar *name);
+DECLARE_FORWARD(ALCwasapiCapture, ALCbackend, ALCboolean, reset)
+ALCboolean ALCwasapiCapture_start(ALCwasapiCapture *self);
+void ALCwasapiCapture_stop(ALCwasapiCapture *self);
+ALCenum ALCwasapiCapture_captureSamples(ALCwasapiCapture *self, ALCvoid *buffer, ALCuint samples);
+ALuint ALCwasapiCapture_availableSamples(ALCwasapiCapture *self);
+DECLARE_FORWARD(ALCwasapiCapture, ALCbackend, ClockLatency, getClockLatency)
+DECLARE_FORWARD(ALCwasapiCapture, ALCbackend, void, lock)
+DECLARE_FORWARD(ALCwasapiCapture, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCwasapiCapture)
 
 DEFINE_ALCBACKEND_VTABLE(ALCwasapiCapture);
 
 
-static void ALCwasapiCapture_Construct(ALCwasapiCapture *self, ALCdevice *device)
+void ALCwasapiCapture_Construct(ALCwasapiCapture *self, ALCdevice *device)
 {
     new (self) ALCwasapiCapture{};
     SET_VTABLE2(ALCwasapiCapture, ALCbackend, self);
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
 }
 
-static void ALCwasapiCapture_Destruct(ALCwasapiCapture *self)
+void ALCwasapiCapture_Destruct(ALCwasapiCapture *self)
 {
     if(self->mMsgEvent)
     {
@@ -1343,7 +1341,7 @@ FORCE_ALIGN int ALCwasapiCapture_recordProc(ALCwasapiCapture *self)
 }
 
 
-static ALCenum ALCwasapiCapture_open(ALCwasapiCapture *self, const ALCchar *deviceName)
+ALCenum ALCwasapiCapture_open(ALCwasapiCapture *self, const ALCchar *deviceName)
 {
     HRESULT hr{S_OK};
 
@@ -1730,7 +1728,7 @@ HRESULT ALCwasapiCapture::resetProxy()
 }
 
 
-static ALCboolean ALCwasapiCapture_start(ALCwasapiCapture *self)
+ALCboolean ALCwasapiCapture_start(ALCwasapiCapture *self)
 {
     ThreadRequest req{ self->mMsgEvent, 0 };
     HRESULT hr{E_FAIL};
@@ -1780,7 +1778,7 @@ HRESULT ALCwasapiCapture::startProxy()
 }
 
 
-static void ALCwasapiCapture_stop(ALCwasapiCapture *self)
+void ALCwasapiCapture_stop(ALCwasapiCapture *self)
 {
     ThreadRequest req{ self->mMsgEvent, 0 };
     auto proxy = static_cast<WasapiProxy*>(self);
@@ -1803,12 +1801,12 @@ void ALCwasapiCapture::stopProxy()
 }
 
 
-static ALuint ALCwasapiCapture_availableSamples(ALCwasapiCapture *self)
+ALuint ALCwasapiCapture_availableSamples(ALCwasapiCapture *self)
 {
     return (ALuint)ll_ringbuffer_read_space(self->mRing);
 }
 
-static ALCenum ALCwasapiCapture_captureSamples(ALCwasapiCapture *self, ALCvoid *buffer, ALCuint samples)
+ALCenum ALCwasapiCapture_captureSamples(ALCwasapiCapture *self, ALCvoid *buffer, ALCuint samples)
 {
     if(ALCwasapiCapture_availableSamples(self) < samples)
         return ALC_INVALID_VALUE;
@@ -1816,27 +1814,10 @@ static ALCenum ALCwasapiCapture_captureSamples(ALCwasapiCapture *self, ALCvoid *
     return ALC_NO_ERROR;
 }
 
-
-struct ALCwasapiBackendFactory final : public ALCbackendFactory {
-    ALCwasapiBackendFactory() noexcept;
-};
-#define ALCWASAPIBACKENDFACTORY_INITIALIZER GET_VTABLE2(ALCwasapiBackendFactory, ALCbackendFactory)
-
-static ALCboolean ALCwasapiBackendFactory_init(ALCwasapiBackendFactory *self);
-static void ALCwasapiBackendFactory_deinit(ALCwasapiBackendFactory *self);
-static ALCboolean ALCwasapiBackendFactory_querySupport(ALCwasapiBackendFactory *self, ALCbackend_Type type);
-static void ALCwasapiBackendFactory_probe(ALCwasapiBackendFactory *self, enum DevProbe type, std::string *outnames);
-static ALCbackend* ALCwasapiBackendFactory_createBackend(ALCwasapiBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
-
-DEFINE_ALCBACKENDFACTORY_VTABLE(ALCwasapiBackendFactory);
-
-ALCwasapiBackendFactory::ALCwasapiBackendFactory() noexcept
-  : ALCbackendFactory{ALCWASAPIBACKENDFACTORY_INITIALIZER}
-{
-}
+} // namespace
 
 
-static ALCboolean ALCwasapiBackendFactory_init(ALCwasapiBackendFactory* UNUSED(self))
+bool WasapiBackendFactory::init()
 {
     static HRESULT InitResult;
 
@@ -1860,7 +1841,7 @@ static ALCboolean ALCwasapiBackendFactory_init(ALCwasapiBackendFactory* UNUSED(s
     return SUCCEEDED(InitResult) ? ALC_TRUE : ALC_FALSE;
 }
 
-static void ALCwasapiBackendFactory_deinit(ALCwasapiBackendFactory* UNUSED(self))
+void WasapiBackendFactory::deinit()
 {
     PlaybackDevices.clear();
     CaptureDevices.clear();
@@ -1874,14 +1855,10 @@ static void ALCwasapiBackendFactory_deinit(ALCwasapiBackendFactory* UNUSED(self)
     }
 }
 
-static ALCboolean ALCwasapiBackendFactory_querySupport(ALCwasapiBackendFactory* UNUSED(self), ALCbackend_Type type)
-{
-    if(type == ALCbackend_Playback || type == ALCbackend_Capture)
-        return ALC_TRUE;
-    return ALC_FALSE;
-}
+bool WasapiBackendFactory::querySupport(ALCbackend_Type type)
+{ return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
 
-static void ALCwasapiBackendFactory_probe(ALCwasapiBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
+void WasapiBackendFactory::probe(enum DevProbe type, std::string *outnames)
 {
     ThreadRequest req{ nullptr, 0 };
 
@@ -1915,7 +1892,7 @@ static void ALCwasapiBackendFactory_probe(ALCwasapiBackendFactory* UNUSED(self),
     }
 }
 
-static ALCbackend* ALCwasapiBackendFactory_createBackend(ALCwasapiBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+ALCbackend *WasapiBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
     {
@@ -1935,9 +1912,8 @@ static ALCbackend* ALCwasapiBackendFactory_createBackend(ALCwasapiBackendFactory
     return nullptr;
 }
 
-
-ALCbackendFactory *ALCwasapiBackendFactory_getFactory(void)
+BackendFactory &WasapiBackendFactory::getFactory()
 {
-    static ALCwasapiBackendFactory factory{};
-    return STATIC_CAST(ALCbackendFactory, &factory);
+    static WasapiBackendFactory factory{};
+    return factory;
 }

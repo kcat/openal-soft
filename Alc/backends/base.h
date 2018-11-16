@@ -153,10 +153,22 @@ ALCbackendFactory *ALCdsoundBackendFactory_getFactory(void);
 ALCbackendFactory *ALCwinmmBackendFactory_getFactory(void);
 ALCbackendFactory *ALCportBackendFactory_getFactory(void);
 ALCbackendFactory *ALCopenslBackendFactory_getFactory(void);
-ALCbackendFactory *ALCnullBackendFactory_getFactory(void);
 ALCbackendFactory *ALCwaveBackendFactory_getFactory(void);
 ALCbackendFactory *ALCsdl2BackendFactory_getFactory(void);
 ALCbackendFactory *ALCloopbackFactory_getFactory(void);
+
+
+struct BackendFactory {
+    virtual bool init() = 0;
+    virtual void deinit() { }
+
+    virtual bool querySupport(ALCbackend_Type type) = 0;
+
+    virtual void probe(enum DevProbe type, std::string *outnames) = 0;
+
+    virtual ALCbackend *createBackend(ALCdevice *device, ALCbackend_Type type) = 0;
+};
+
 
 #endif /* __cplusplus */
 #endif /* AL_BACKENDS_BASE_H */

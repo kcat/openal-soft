@@ -20,6 +20,8 @@
 
 #include "config.h"
 
+#include "backends/null.h"
+
 #include <stdlib.h>
 #ifdef HAVE_WINDOWS_H
 #include <windows.h>
@@ -32,8 +34,6 @@
 #include "alu.h"
 #include "compat.h"
 
-#include "backends/base.h"
-
 
 namespace {
 
@@ -43,32 +43,31 @@ using std::chrono::nanoseconds;
 
 constexpr ALCchar nullDevice[] = "No Output";
 
-} // namespace
 
 struct ALCnullBackend final : public ALCbackend {
     ATOMIC(int) killNow;
     std::thread thread;
 };
 
-static int ALCnullBackend_mixerProc(ALCnullBackend *self);
+int ALCnullBackend_mixerProc(ALCnullBackend *self);
 
-static void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device);
-static void ALCnullBackend_Destruct(ALCnullBackend *self);
-static ALCenum ALCnullBackend_open(ALCnullBackend *self, const ALCchar *name);
-static ALCboolean ALCnullBackend_reset(ALCnullBackend *self);
-static ALCboolean ALCnullBackend_start(ALCnullBackend *self);
-static void ALCnullBackend_stop(ALCnullBackend *self);
-static DECLARE_FORWARD2(ALCnullBackend, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
-static DECLARE_FORWARD(ALCnullBackend, ALCbackend, ALCuint, availableSamples)
-static DECLARE_FORWARD(ALCnullBackend, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, unlock)
+void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device);
+void ALCnullBackend_Destruct(ALCnullBackend *self);
+ALCenum ALCnullBackend_open(ALCnullBackend *self, const ALCchar *name);
+ALCboolean ALCnullBackend_reset(ALCnullBackend *self);
+ALCboolean ALCnullBackend_start(ALCnullBackend *self);
+void ALCnullBackend_stop(ALCnullBackend *self);
+DECLARE_FORWARD2(ALCnullBackend, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
+DECLARE_FORWARD(ALCnullBackend, ALCbackend, ALCuint, availableSamples)
+DECLARE_FORWARD(ALCnullBackend, ALCbackend, ClockLatency, getClockLatency)
+DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, lock)
+DECLARE_FORWARD(ALCnullBackend, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCnullBackend)
 
 DEFINE_ALCBACKEND_VTABLE(ALCnullBackend);
 
 
-static void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device)
+void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device)
 {
     new (self) ALCnullBackend{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
@@ -77,14 +76,14 @@ static void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device)
     ATOMIC_INIT(&self->killNow, AL_TRUE);
 }
 
-static void ALCnullBackend_Destruct(ALCnullBackend *self)
+void ALCnullBackend_Destruct(ALCnullBackend *self)
 {
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCnullBackend();
 }
 
 
-static int ALCnullBackend_mixerProc(ALCnullBackend *self)
+int ALCnullBackend_mixerProc(ALCnullBackend *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     const milliseconds restTime{device->UpdateSize*1000/device->Frequency / 2};
@@ -131,7 +130,7 @@ static int ALCnullBackend_mixerProc(ALCnullBackend *self)
 }
 
 
-static ALCenum ALCnullBackend_open(ALCnullBackend *self, const ALCchar *name)
+ALCenum ALCnullBackend_open(ALCnullBackend *self, const ALCchar *name)
 {
     ALCdevice *device;
 
@@ -147,13 +146,13 @@ static ALCenum ALCnullBackend_open(ALCnullBackend *self, const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-static ALCboolean ALCnullBackend_reset(ALCnullBackend *self)
+ALCboolean ALCnullBackend_reset(ALCnullBackend *self)
 {
     SetDefaultWFXChannelOrder(STATIC_CAST(ALCbackend, self)->mDevice);
     return ALC_TRUE;
 }
 
-static ALCboolean ALCnullBackend_start(ALCnullBackend *self)
+ALCboolean ALCnullBackend_start(ALCnullBackend *self)
 {
     try {
         ATOMIC_STORE(&self->killNow, AL_FALSE, almemory_order_release);
@@ -168,7 +167,7 @@ static ALCboolean ALCnullBackend_start(ALCnullBackend *self)
     return ALC_FALSE;
 }
 
-static void ALCnullBackend_stop(ALCnullBackend *self)
+void ALCnullBackend_stop(ALCnullBackend *self)
 {
     if(ATOMIC_EXCHANGE(&self->killNow, AL_TRUE, almemory_order_acq_rel) ||
        !self->thread.joinable())
@@ -176,46 +175,22 @@ static void ALCnullBackend_stop(ALCnullBackend *self)
     self->thread.join();
 }
 
+} // namespace
 
-struct ALCnullBackendFactory final : public ALCbackendFactory {
-    ALCnullBackendFactory() noexcept;
-};
 
-ALCbackendFactory *ALCnullBackendFactory_getFactory(void);
-
-static ALCboolean ALCnullBackendFactory_init(ALCnullBackendFactory *self);
-static DECLARE_FORWARD(ALCnullBackendFactory, ALCbackendFactory, void, deinit)
-static ALCboolean ALCnullBackendFactory_querySupport(ALCnullBackendFactory *self, ALCbackend_Type type);
-static void ALCnullBackendFactory_probe(ALCnullBackendFactory *self, enum DevProbe type, std::string *outnames);
-static ALCbackend* ALCnullBackendFactory_createBackend(ALCnullBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
-DEFINE_ALCBACKENDFACTORY_VTABLE(ALCnullBackendFactory);
-
-ALCnullBackendFactory::ALCnullBackendFactory() noexcept
-  : ALCbackendFactory{GET_VTABLE2(ALCnullBackendFactory, ALCbackendFactory)}
+bool NullBackendFactory::init()
 {
+    return true;
 }
 
-
-ALCbackendFactory *ALCnullBackendFactory_getFactory(void)
-{
-    static ALCnullBackendFactory factory{};
-    return STATIC_CAST(ALCbackendFactory, &factory);
-}
-
-
-static ALCboolean ALCnullBackendFactory_init(ALCnullBackendFactory* UNUSED(self))
-{
-    return ALC_TRUE;
-}
-
-static ALCboolean ALCnullBackendFactory_querySupport(ALCnullBackendFactory* UNUSED(self), ALCbackend_Type type)
+bool NullBackendFactory::querySupport(ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
-        return ALC_TRUE;
-    return ALC_FALSE;
+        return true;
+    return false;
 }
 
-static void ALCnullBackendFactory_probe(ALCnullBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
+void NullBackendFactory::probe(enum DevProbe type, std::string *outnames)
 {
     switch(type)
     {
@@ -228,7 +203,7 @@ static void ALCnullBackendFactory_probe(ALCnullBackendFactory* UNUSED(self), enu
     }
 }
 
-static ALCbackend* ALCnullBackendFactory_createBackend(ALCnullBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+ALCbackend *NullBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
     {
@@ -239,4 +214,10 @@ static ALCbackend* ALCnullBackendFactory_createBackend(ALCnullBackendFactory* UN
     }
 
     return NULL;
+}
+
+BackendFactory &NullBackendFactory::getFactory()
+{
+    static NullBackendFactory factory{};
+    return factory;
 }

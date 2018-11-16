@@ -57,6 +57,7 @@
 #include "almalloc.h"
 
 #include "backends/base.h"
+#include "backends/null.h"
 
 
 namespace {
@@ -66,10 +67,11 @@ namespace {
  ************************************************/
 struct BackendInfo {
     const char *name;
-    ALCbackendFactory* (*getFactory)(void);
+    BackendFactory& (*getFactory)(void);
 };
 
 struct BackendInfo BackendList[] = {
+#if 0
 #ifdef HAVE_JACK
     { "jack", ALCjackBackendFactory_getFactory },
 #endif
@@ -117,6 +119,8 @@ struct BackendInfo BackendList[] = {
 #ifdef HAVE_WAVE
     { "wave", ALCwaveBackendFactory_getFactory },
 #endif
+#endif /* 0 */
+    { "null", NullBackendFactory::getFactory },
 };
 ALsizei BackendListSize = COUNTOF(BackendList);
 #undef EmptyFuncs
@@ -1099,23 +1103,22 @@ static void alc_initconfig(void)
 
     for(n = i = 0;i < BackendListSize && (!PlaybackBackend.name || !CaptureBackend.name);i++)
     {
-        ALCbackendFactory *factory;
         BackendList[n] = BackendList[i];
 
-        factory = BackendList[n].getFactory();
-        if(!V0(factory,init)())
+        BackendFactory &factory = BackendList[n].getFactory();
+        if(!factory.init())
         {
             WARN("Failed to initialize backend \"%s\"\n", BackendList[n].name);
             continue;
         }
 
         TRACE("Initialized backend \"%s\"\n", BackendList[n].name);
-        if(!PlaybackBackend.name && V(factory,querySupport)(ALCbackend_Playback))
+        if(!PlaybackBackend.name && factory.querySupport(ALCbackend_Playback))
         {
             PlaybackBackend = BackendList[n];
             TRACE("Added \"%s\" for playback\n", PlaybackBackend.name);
         }
-        if(!CaptureBackend.name && V(factory,querySupport)(ALCbackend_Capture))
+        if(!CaptureBackend.name && factory.querySupport(ALCbackend_Capture))
         {
             CaptureBackend = BackendList[n];
             TRACE("Added \"%s\" for capture\n", CaptureBackend.name);
@@ -1212,10 +1215,8 @@ static void alc_deinit(void)
     memset(&CaptureBackend, 0, sizeof(CaptureBackend));
 
     for(i = 0;i < BackendListSize;i++)
-    {
-        ALCbackendFactory *factory = BackendList[i].getFactory();
-        V0(factory,deinit)();
-    }
+        BackendList[i].getFactory().deinit();
+
     {
         ALCbackendFactory *factory = ALCloopbackFactory_getFactory();
         V0(factory,deinit)();
@@ -1235,10 +1236,7 @@ static void ProbeDevices(std::string *list, struct BackendInfo *backendinfo, enu
     std::lock_guard<std::recursive_mutex> _{ListLock};
     list->clear();
     if(backendinfo->getFactory)
-    {
-        ALCbackendFactory *factory = backendinfo->getFactory();
-        V(factory,probe)(type, list);
-    }
+        backendinfo->getFactory().probe(type, list);
 }
 static void ProbeAllDevicesList(void)
 { ProbeDevices(&alcAllDevicesList, &PlaybackBackend, ALL_DEVICE_PROBE); }
@@ -3971,7 +3969,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *Context)
  */
 ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 {
-    ALCbackendFactory *factory;
     const ALCchar *fmt;
     ALCdevice *device;
     ALCenum err;
@@ -4114,8 +4111,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
 
-    factory = PlaybackBackend.getFactory();
-    device->Backend = V(factory,createBackend)(device, ALCbackend_Playback);
+    device->Backend = PlaybackBackend.getFactory().createBackend(device, ALCbackend_Playback);
     if(!device->Backend)
     {
         FreeDevice(device);
@@ -4219,7 +4215,6 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device)
  ************************************************/
 ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei samples)
 {
-    ALCbackendFactory *factory;
     ALCdevice *device = nullptr;
     ALCenum err;
 
@@ -4268,8 +4263,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->UpdateSize = samples;
     device->NumUpdates = 1;
 
-    factory = CaptureBackend.getFactory();
-    device->Backend = V(factory,createBackend)(device, ALCbackend_Capture);
+    device->Backend = CaptureBackend.getFactory().createBackend(device, ALCbackend_Capture);
     if(!device->Backend)
     {
         FreeDevice(device);
@@ -4409,9 +4403,6 @@ ALC_API void ALC_APIENTRY alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, 
  */
 ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceName)
 {
-    ALCbackendFactory *factory;
-    ALCdevice *device;
-
     DO_INITCONFIG();
 
     /* Make sure the device name, if specified, is us. */
@@ -4421,7 +4412,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
         return nullptr;
     }
 
-    device = static_cast<ALCdevice*>(al_calloc(16, sizeof(ALCdevice)));
+    ALCdevice *device{static_cast<ALCdevice*>(al_calloc(16, sizeof(ALCdevice)))};
     if(!device)
     {
         alcSetError(nullptr, ALC_OUT_OF_MEMORY);
@@ -4461,7 +4452,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
 
-    factory = ALCloopbackFactory_getFactory();
+    ALCbackendFactory *factory = ALCloopbackFactory_getFactory();
     device->Backend = V(factory,createBackend)(device, ALCbackend_Loopback);
     if(!device->Backend)
     {

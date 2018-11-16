@@ -20,6 +20,8 @@
 
 #include "config.h"
 
+#include "backends/solaris.h"
+
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -37,8 +39,6 @@
 #include "alconfig.h"
 #include "threads.h"
 #include "compat.h"
-
-#include "backends/base.h"
 
 #include <sys/audioio.h>
 
@@ -293,45 +293,22 @@ static void ALCsolarisBackend_stop(ALCsolarisBackend *self)
 }
 
 
-struct ALCsolarisBackendFactory final : public ALCbackendFactory {
-    ALCsolarisBackendFactory() noexcept;
-};
-
-ALCbackendFactory *ALCsolarisBackendFactory_getFactory(void);
-
-static ALCboolean ALCsolarisBackendFactory_init(ALCsolarisBackendFactory *self);
-static DECLARE_FORWARD(ALCsolarisBackendFactory, ALCbackendFactory, void, deinit)
-static ALCboolean ALCsolarisBackendFactory_querySupport(ALCsolarisBackendFactory *self, ALCbackend_Type type);
-static void ALCsolarisBackendFactory_probe(ALCsolarisBackendFactory *self, enum DevProbe type, std::string *outnames);
-static ALCbackend* ALCsolarisBackendFactory_createBackend(ALCsolarisBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
-DEFINE_ALCBACKENDFACTORY_VTABLE(ALCsolarisBackendFactory);
-
-
-ALCsolarisBackendFactory::ALCsolarisBackendFactory() noexcept
-  : ALCbackendFactory{GET_VTABLE2(ALCsolarisBackendFactory, ALCbackendFactory)}
-{ }
-
-ALCbackendFactory *ALCsolarisBackendFactory_getFactory(void)
+BackendFactory &SolarisBackendFactory::getFactory()
 {
-    static ALCsolarisBackendFactory factory{};
-    return STATIC_CAST(ALCbackendFactory, &factory);
+    static SolarisBackendFactory factory{};
+    return factory;
 }
 
-
-static ALCboolean ALCsolarisBackendFactory_init(ALCsolarisBackendFactory* UNUSED(self))
+bool SolarisBackendFactory::init()
 {
     ConfigValueStr(nullptr, "solaris", "device", &solaris_driver);
-    return ALC_TRUE;
+    return true;
 }
 
-static ALCboolean ALCsolarisBackendFactory_querySupport(ALCsolarisBackendFactory* UNUSED(self), ALCbackend_Type type)
-{
-    if(type == ALCbackend_Playback)
-        return ALC_TRUE;
-    return ALC_FALSE;
-}
+bool SolarisBackendFactory::querySupport(ALCbackend_Type type)
+{ return (type == ALCbackend_Playback); }
 
-static void ALCsolarisBackendFactory_probe(ALCsolarisBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
+void SolarisBackendFactory::probe(enum DevProbe type, std::string *outnames)
 {
     switch(type)
     {
@@ -350,7 +327,7 @@ static void ALCsolarisBackendFactory_probe(ALCsolarisBackendFactory* UNUSED(self
     }
 }
 
-ALCbackend* ALCsolarisBackendFactory_createBackend(ALCsolarisBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+ALCbackend *SolarisBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
     {

@@ -77,6 +77,9 @@
 #ifdef HAVE_OPENSL
 #include "backends/opensl.h"
 #endif
+#ifdef HAVE_SOLARIS
+#include "backends/solaris.h"
+#endif
 #ifdef HAVE_SDL2
 #include "backends/sdl2.h"
 #endif
@@ -114,13 +117,14 @@ struct BackendInfo BackendList[] = {
 #ifdef HAVE_OPENSL
     { "opensl", OSLBackendFactory::getFactory },
 #endif
+#ifdef HAVE_SOLARIS
+    { "solaris", SolarisBackendFactory::getFactory },
+#endif
 
 #if 0
-    { "solaris", ALCsolarisBackendFactory_getFactory },
     { "sndio", SndioBackendFactory_getFactory },
     { "oss", ALCossBackendFactory_getFactory },
     { "qsa", ALCqsaBackendFactory_getFactory },
-    { "wasapi", ALCwasapiBackendFactory_getFactory },
     { "dsound", ALCdsoundBackendFactory_getFactory },
     { "winmm", ALCwinmmBackendFactory_getFactory },
     { "port", ALCportBackendFactory_getFactory },

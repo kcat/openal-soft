@@ -20,6 +20,8 @@
 
 #include "config.h"
 
+#include "backends/sndio.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,8 +30,6 @@
 #include "alu.h"
 #include "threads.h"
 #include "ringbuffer.h"
-
-#include "backends/base.h"
 
 #include <sndio.h>
 
@@ -537,43 +537,19 @@ static ALCuint SndioCapture_availableSamples(SndioCapture *self)
 }
 
 
-struct SndioBackendFactory final : public ALCbackendFactory {
-    SndioBackendFactory() noexcept;
-};
-
-ALCbackendFactory *SndioBackendFactory_getFactory(void);
-
-static ALCboolean SndioBackendFactory_init(SndioBackendFactory *self);
-static DECLARE_FORWARD(SndioBackendFactory, ALCbackendFactory, void, deinit)
-static ALCboolean SndioBackendFactory_querySupport(SndioBackendFactory *self, ALCbackend_Type type);
-static void SndioBackendFactory_probe(SndioBackendFactory *self, enum DevProbe type, std::string *outnames);
-static ALCbackend* SndioBackendFactory_createBackend(SndioBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
-DEFINE_ALCBACKENDFACTORY_VTABLE(SndioBackendFactory);
-
-SndioBackendFactory::SndioBackendFactory() noexcept
-  : ALCbackendFactory{GET_VTABLE2(SndioBackendFactory, ALCbackendFactory)}
-{ }
-
-ALCbackendFactory *SndioBackendFactory_getFactory(void)
+BackendFactory &SndIOBackendFactory::getFactory()
 {
-    static SndioBackendFactory factory{};
-    return STATIC_CAST(ALCbackendFactory, &factory);
+    static SndIOBackendFactory factory{};
+    return factory;
 }
 
-static ALCboolean SndioBackendFactory_init(SndioBackendFactory* UNUSED(self))
-{
-    /* No dynamic loading */
-    return ALC_TRUE;
-}
+bool SndIOBackendFactory::init()
+{ return true; }
 
-static ALCboolean SndioBackendFactory_querySupport(SndioBackendFactory* UNUSED(self), ALCbackend_Type type)
-{
-    if(type == ALCbackend_Playback || type == ALCbackend_Capture)
-        return ALC_TRUE;
-    return ALC_FALSE;
-}
+bool SndIOBackendFactory::querySupport(ALCbackend_Type type)
+{ return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
 
-static void SndioBackendFactory_probe(SndioBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
+void SndIOBackendFactory::probe(enum DevProbe type, std::string *outnames)
 {
     switch(type)
     {
@@ -585,7 +561,7 @@ static void SndioBackendFactory_probe(SndioBackendFactory* UNUSED(self), enum De
     }
 }
 
-static ALCbackend* SndioBackendFactory_createBackend(SndioBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+ALCbackend *SndIOBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
     {

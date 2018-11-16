@@ -80,6 +80,9 @@
 #ifdef HAVE_SOLARIS
 #include "backends/solaris.h"
 #endif
+#ifdef HAVE_SNDIO
+#include "backends/sndio.h"
+#endif
 #ifdef HAVE_SDL2
 #include "backends/sdl2.h"
 #endif
@@ -120,9 +123,11 @@ struct BackendInfo BackendList[] = {
 #ifdef HAVE_SOLARIS
     { "solaris", SolarisBackendFactory::getFactory },
 #endif
+#ifdef HAVE_SNDIO
+    { "sndio", SndIOBackendFactory::getFactory },
+#endif
 
 #if 0
-    { "sndio", SndioBackendFactory_getFactory },
     { "oss", ALCossBackendFactory_getFactory },
     { "qsa", ALCqsaBackendFactory_getFactory },
     { "dsound", ALCdsoundBackendFactory_getFactory },

@@ -1267,7 +1267,7 @@ ENDIF()
 OPTION(ALSOFT_BACKEND_WAVE "Enable Wave Writer backend" ON)
 IF(ALSOFT_BACKEND_WAVE)
     SET(HAVE_WAVE 1)
-    SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/wave.cpp)
+    SET(ALC_OBJS  ${ALC_OBJS} Alc/backends/wave.cpp Alc/backends/wave.h)
     SET(BACKENDS  "${BACKENDS} WaveFile,")
 ENDIF()
 

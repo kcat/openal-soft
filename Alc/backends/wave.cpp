@@ -20,6 +20,8 @@
 
 #include "config.h"
 
+#include "backends/wave.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
@@ -33,8 +35,6 @@
 #include "alu.h"
 #include "alconfig.h"
 #include "compat.h"
-
-#include "backends/base.h"
 
 
 namespace {
@@ -77,8 +77,6 @@ void fwrite32le(ALuint val, FILE *f)
     fwrite(data, 1, 4, f);
 }
 
-} // namespace
-
 
 struct ALCwaveBackend final : public ALCbackend {
     FILE *mFile;
@@ -90,25 +88,25 @@ struct ALCwaveBackend final : public ALCbackend {
     std::thread thread;
 };
 
-static int ALCwaveBackend_mixerProc(ALCwaveBackend *self);
+int ALCwaveBackend_mixerProc(ALCwaveBackend *self);
 
-static void ALCwaveBackend_Construct(ALCwaveBackend *self, ALCdevice *device);
-static void ALCwaveBackend_Destruct(ALCwaveBackend *self);
-static ALCenum ALCwaveBackend_open(ALCwaveBackend *self, const ALCchar *name);
-static ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self);
-static ALCboolean ALCwaveBackend_start(ALCwaveBackend *self);
-static void ALCwaveBackend_stop(ALCwaveBackend *self);
-static DECLARE_FORWARD2(ALCwaveBackend, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
-static DECLARE_FORWARD(ALCwaveBackend, ALCbackend, ALCuint, availableSamples)
-static DECLARE_FORWARD(ALCwaveBackend, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(ALCwaveBackend, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCwaveBackend, ALCbackend, void, unlock)
+void ALCwaveBackend_Construct(ALCwaveBackend *self, ALCdevice *device);
+void ALCwaveBackend_Destruct(ALCwaveBackend *self);
+ALCenum ALCwaveBackend_open(ALCwaveBackend *self, const ALCchar *name);
+ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self);
+ALCboolean ALCwaveBackend_start(ALCwaveBackend *self);
+void ALCwaveBackend_stop(ALCwaveBackend *self);
+DECLARE_FORWARD2(ALCwaveBackend, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
+DECLARE_FORWARD(ALCwaveBackend, ALCbackend, ALCuint, availableSamples)
+DECLARE_FORWARD(ALCwaveBackend, ALCbackend, ClockLatency, getClockLatency)
+DECLARE_FORWARD(ALCwaveBackend, ALCbackend, void, lock)
+DECLARE_FORWARD(ALCwaveBackend, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCwaveBackend)
 
 DEFINE_ALCBACKEND_VTABLE(ALCwaveBackend);
 
 
-static void ALCwaveBackend_Construct(ALCwaveBackend *self, ALCdevice *device)
+void ALCwaveBackend_Construct(ALCwaveBackend *self, ALCdevice *device)
 {
     new (self) ALCwaveBackend{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
@@ -120,7 +118,7 @@ static void ALCwaveBackend_Construct(ALCwaveBackend *self, ALCdevice *device)
     ATOMIC_INIT(&self->killNow, AL_TRUE);
 }
 
-static void ALCwaveBackend_Destruct(ALCwaveBackend *self)
+void ALCwaveBackend_Destruct(ALCwaveBackend *self)
 {
     if(self->mFile)
         fclose(self->mFile);
@@ -130,7 +128,7 @@ static void ALCwaveBackend_Destruct(ALCwaveBackend *self)
     self->~ALCwaveBackend();
 }
 
-static int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
+int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     const milliseconds restTime{device->UpdateSize*1000/device->Frequency / 2};
@@ -217,7 +215,7 @@ static int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
 }
 
 
-static ALCenum ALCwaveBackend_open(ALCwaveBackend *self, const ALCchar *name)
+ALCenum ALCwaveBackend_open(ALCwaveBackend *self, const ALCchar *name)
 {
     const char *fname{GetConfigValue(nullptr, "wave", "file", "")};
     if(!fname[0]) return ALC_INVALID_VALUE;
@@ -248,7 +246,7 @@ static ALCenum ALCwaveBackend_open(ALCwaveBackend *self, const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-static ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
+ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     ALuint channels=0, bits=0, chanmask=0;
@@ -353,7 +351,7 @@ static ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
     return ALC_TRUE;
 }
 
-static ALCboolean ALCwaveBackend_start(ALCwaveBackend *self)
+ALCboolean ALCwaveBackend_start(ALCwaveBackend *self)
 {
     try {
         ATOMIC_STORE(&self->killNow, AL_FALSE, almemory_order_release);
@@ -368,7 +366,7 @@ static ALCboolean ALCwaveBackend_start(ALCwaveBackend *self)
     return ALC_FALSE;
 }
 
-static void ALCwaveBackend_stop(ALCwaveBackend *self)
+void ALCwaveBackend_stop(ALCwaveBackend *self)
 {
     if(ATOMIC_EXCHANGE(&self->killNow, AL_TRUE, almemory_order_acq_rel) ||
        !self->thread.joinable())
@@ -386,41 +384,16 @@ static void ALCwaveBackend_stop(ALCwaveBackend *self)
     }
 }
 
-
-struct ALCwaveBackendFactory final : public ALCbackendFactory {
-    ALCwaveBackendFactory() noexcept;
-};
-#define ALCWAVEBACKENDFACTORY_INITIALIZER GET_VTABLE2(ALCwaveBackendFactory, ALCbackendFactory)
-
-ALCbackendFactory *ALCwaveBackendFactory_getFactory(void);
-
-static ALCboolean ALCwaveBackendFactory_init(ALCwaveBackendFactory *self);
-static DECLARE_FORWARD(ALCwaveBackendFactory, ALCbackendFactory, void, deinit)
-static ALCboolean ALCwaveBackendFactory_querySupport(ALCwaveBackendFactory *self, ALCbackend_Type type);
-static void ALCwaveBackendFactory_probe(ALCwaveBackendFactory *self, enum DevProbe type, std::string *outnames);
-static ALCbackend* ALCwaveBackendFactory_createBackend(ALCwaveBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
-DEFINE_ALCBACKENDFACTORY_VTABLE(ALCwaveBackendFactory);
+} // namespace
 
 
-ALCwaveBackendFactory::ALCwaveBackendFactory() noexcept
-  : ALCbackendFactory{ALCWAVEBACKENDFACTORY_INITIALIZER}
-{
-}
+bool WaveBackendFactory::init()
+{ return true; }
 
+bool WaveBackendFactory::querySupport(ALCbackend_Type type)
+{ return (type == ALCbackend_Playback); }
 
-static ALCboolean ALCwaveBackendFactory_init(ALCwaveBackendFactory* UNUSED(self))
-{
-    return ALC_TRUE;
-}
-
-static ALCboolean ALCwaveBackendFactory_querySupport(ALCwaveBackendFactory* UNUSED(self), ALCbackend_Type type)
-{
-    if(type == ALCbackend_Playback)
-        return !!ConfigValueExists(nullptr, "wave", "file");
-    return ALC_FALSE;
-}
-
-static void ALCwaveBackendFactory_probe(ALCwaveBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
+void WaveBackendFactory::probe(enum DevProbe type, std::string *outnames)
 {
     switch(type)
     {
@@ -433,7 +406,7 @@ static void ALCwaveBackendFactory_probe(ALCwaveBackendFactory* UNUSED(self), enu
     }
 }
 
-static ALCbackend* ALCwaveBackendFactory_createBackend(ALCwaveBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+ALCbackend *WaveBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
     {
@@ -446,8 +419,8 @@ static ALCbackend* ALCwaveBackendFactory_createBackend(ALCwaveBackendFactory* UN
     return nullptr;
 }
 
-ALCbackendFactory *ALCwaveBackendFactory_getFactory(void)
+BackendFactory &WaveBackendFactory::getFactory()
 {
-    static ALCwaveBackendFactory factory{};
-    return STATIC_CAST(ALCbackendFactory, &factory);
+    static WaveBackendFactory factory{};
+    return factory;
 }

@@ -74,6 +74,9 @@
 #ifdef HAVE_OPENSL
 #include "backends/opensl.h"
 #endif
+#ifdef HAVE_WAVE
+#include "backends/wave.h"
+#endif
 
 
 namespace {
@@ -117,12 +120,12 @@ struct BackendInfo BackendList[] = {
     { "port", ALCportBackendFactory_getFactory },
     { "opensl", ALCopenslBackendFactory_getFactory },
     { "sdl2", ALCsdl2BackendFactory_getFactory },
-
-    { "null", ALCnullBackendFactory_getFactory },
-    { "wave", ALCwaveBackendFactory_getFactory },
 #endif /* 0 */
 
     { "null", NullBackendFactory::getFactory },
+#ifdef HAVE_WAVE
+    { "wave", WaveBackendFactory::getFactory },
+#endif
 };
 ALsizei BackendListSize = COUNTOF(BackendList);
 #undef EmptyFuncs

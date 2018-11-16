@@ -21,6 +21,8 @@
 
 #include "config.h"
 
+#include "backends/opensl.h"
+
 #include <stdlib.h>
 #include <jni.h>
 
@@ -29,8 +31,6 @@
 #include "ringbuffer.h"
 #include "threads.h"
 #include "compat.h"
-
-#include "backends/base.h"
 
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
@@ -1011,27 +1011,12 @@ static ALCuint ALCopenslCapture_availableSamples(ALCopenslCapture *self)
 }
 
 
-struct ALCopenslBackendFactory final : public ALCbackendFactory {
-    ALCopenslBackendFactory() noexcept;
-};
+bool OSLBackendFactory::init() { return true; }
 
-static ALCboolean ALCopenslBackendFactory_init(ALCopenslBackendFactory* UNUSED(self))
-{
-    return ALC_TRUE;
-}
+bool OSLBackendFactory::querySupport(ALCbackend_Type type)
+{ return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
 
-static void ALCopenslBackendFactory_deinit(ALCopenslBackendFactory* UNUSED(self))
-{
-}
-
-static ALCboolean ALCopenslBackendFactory_querySupport(ALCopenslBackendFactory* UNUSED(self), ALCbackend_Type type)
-{
-    if(type == ALCbackend_Playback || type == ALCbackend_Capture)
-        return ALC_TRUE;
-    return ALC_FALSE;
-}
-
-static void ALCopenslBackendFactory_probe(ALCopenslBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
+void OSLBackendFactory::probe(enum DevProbe type, std::string *outnames)
 {
     switch(type)
     {
@@ -1043,35 +1028,28 @@ static void ALCopenslBackendFactory_probe(ALCopenslBackendFactory* UNUSED(self),
     }
 }
 
-static ALCbackend* ALCopenslBackendFactory_createBackend(ALCopenslBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+ALCbackend *OSLBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
     {
         ALCopenslPlayback *backend;
         NEW_OBJ(backend, ALCopenslPlayback)(device);
-        if(!backend) return NULL;
+        if(!backend) return nullptr;
         return STATIC_CAST(ALCbackend, backend);
     }
     if(type == ALCbackend_Capture)
     {
         ALCopenslCapture *backend;
         NEW_OBJ(backend, ALCopenslCapture)(device);
-        if(!backend) return NULL;
+        if(!backend) return nullptr;
         return STATIC_CAST(ALCbackend, backend);
     }
 
-    return NULL;
+    return nullptr;
 }
 
-DEFINE_ALCBACKENDFACTORY_VTABLE(ALCopenslBackendFactory);
-
-
-ALCopenslBackendFactory::ALCopenslBackendFactory() noexcept
-  : ALCbackendFactory{GET_VTABLE2(ALCopenslBackendFactory, ALCbackendFactory)}
-{ }
-
-ALCbackendFactory *ALCopenslBackendFactory_getFactory(void)
+BackendFactory &OSLBackendFactory::getFactory()
 {
-    static ALCopenslBackendFactory factory{};
-    return STATIC_CAST(ALCbackendFactory, &factory);
+    static OSLBackendFactory factory{};
+    return factory;
 }

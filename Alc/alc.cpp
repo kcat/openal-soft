@@ -71,6 +71,9 @@
 #ifdef HAVE_COREAUDIO
 #include "backends/coreaudio.h"
 #endif
+#ifdef HAVE_OPENSL
+#include "backends/opensl.h"
+#endif
 
 
 namespace {
@@ -95,6 +98,9 @@ struct BackendInfo BackendList[] = {
 #endif
 #ifdef HAVE_COREAUDIO
     { "core", CoreAudioBackendFactory::getFactory },
+#endif
+#ifdef HAVE_OPENSL
+    { "opensl", OSLBackendFactory::getFactory },
 #endif
 #if 0
     { "jack", ALCjackBackendFactory_getFactory },

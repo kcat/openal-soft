@@ -20,6 +20,8 @@
 
 #include "config.h"
 
+#include "backends/alsa.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
@@ -35,8 +37,6 @@
 #include "alconfig.h"
 #include "ringbuffer.h"
 #include "compat.h"
-
-#include "backends/base.h"
 
 #include <alsa/asoundlib.h>
 
@@ -421,8 +421,6 @@ int verify_state(snd_pcm_t *handle)
     return state;
 }
 
-} // namespace
-
 
 struct ALCplaybackAlsa final : public ALCbackend {
     snd_pcm_t *pcmHandle{nullptr};
@@ -433,26 +431,25 @@ struct ALCplaybackAlsa final : public ALCbackend {
     std::thread thread;
 };
 
-static int ALCplaybackAlsa_mixerProc(ALCplaybackAlsa *self);
-static int ALCplaybackAlsa_mixerNoMMapProc(ALCplaybackAlsa *self);
+int ALCplaybackAlsa_mixerProc(ALCplaybackAlsa *self);
+int ALCplaybackAlsa_mixerNoMMapProc(ALCplaybackAlsa *self);
 
-static void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device);
-static void ALCplaybackAlsa_Destruct(ALCplaybackAlsa *self);
-static ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name);
-static ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self);
-static ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self);
-static void ALCplaybackAlsa_stop(ALCplaybackAlsa *self);
-static DECLARE_FORWARD2(ALCplaybackAlsa, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
-static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, ALCuint, availableSamples)
-static ClockLatency ALCplaybackAlsa_getClockLatency(ALCplaybackAlsa *self);
-static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, void, unlock)
+void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device);
+void ALCplaybackAlsa_Destruct(ALCplaybackAlsa *self);
+ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name);
+ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self);
+ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self);
+void ALCplaybackAlsa_stop(ALCplaybackAlsa *self);
+DECLARE_FORWARD2(ALCplaybackAlsa, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
+DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, ALCuint, availableSamples)
+ClockLatency ALCplaybackAlsa_getClockLatency(ALCplaybackAlsa *self);
+DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, void, lock)
+DECLARE_FORWARD(ALCplaybackAlsa, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCplaybackAlsa)
-
 DEFINE_ALCBACKEND_VTABLE(ALCplaybackAlsa);
 
 
-static void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device)
+void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device)
 {
     new (self) ALCplaybackAlsa{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
@@ -470,7 +467,7 @@ void ALCplaybackAlsa_Destruct(ALCplaybackAlsa *self)
 }
 
 
-static int ALCplaybackAlsa_mixerProc(ALCplaybackAlsa *self)
+int ALCplaybackAlsa_mixerProc(ALCplaybackAlsa *self)
 {
     ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
 
@@ -557,7 +554,7 @@ static int ALCplaybackAlsa_mixerProc(ALCplaybackAlsa *self)
     return 0;
 }
 
-static int ALCplaybackAlsa_mixerNoMMapProc(ALCplaybackAlsa *self)
+int ALCplaybackAlsa_mixerNoMMapProc(ALCplaybackAlsa *self)
 {
     ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
 
@@ -650,7 +647,7 @@ static int ALCplaybackAlsa_mixerNoMMapProc(ALCplaybackAlsa *self)
 }
 
 
-static ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name)
+ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name)
 {
     const char *driver{};
     if(name)
@@ -690,7 +687,7 @@ static ALCenum ALCplaybackAlsa_open(ALCplaybackAlsa *self, const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-static ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
+ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
 {
     ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
 
@@ -842,7 +839,7 @@ error:
     return ALC_FALSE;
 }
 
-static ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self)
+ALCboolean ALCplaybackAlsa_start(ALCplaybackAlsa *self)
 {
     ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
     int (*thread_func)(ALCplaybackAlsa*){};
@@ -895,7 +892,7 @@ error:
     return ALC_FALSE;
 }
 
-static void ALCplaybackAlsa_stop(ALCplaybackAlsa *self)
+void ALCplaybackAlsa_stop(ALCplaybackAlsa *self)
 {
     if(self->killNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->thread.joinable())
         return;
@@ -905,7 +902,7 @@ static void ALCplaybackAlsa_stop(ALCplaybackAlsa *self)
     self->buffer.clear();
 }
 
-static ClockLatency ALCplaybackAlsa_getClockLatency(ALCplaybackAlsa *self)
+ClockLatency ALCplaybackAlsa_getClockLatency(ALCplaybackAlsa *self)
 {
     ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
     ClockLatency ret;
@@ -937,23 +934,23 @@ struct ALCcaptureAlsa final : public ALCbackend {
     snd_pcm_sframes_t last_avail{0};
 };
 
-static void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device);
-static void ALCcaptureAlsa_Destruct(ALCcaptureAlsa *self);
-static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name);
-static DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, ALCboolean, reset)
-static ALCboolean ALCcaptureAlsa_start(ALCcaptureAlsa *self);
-static void ALCcaptureAlsa_stop(ALCcaptureAlsa *self);
-static ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buffer, ALCuint samples);
-static ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self);
-static ClockLatency ALCcaptureAlsa_getClockLatency(ALCcaptureAlsa *self);
-static DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, void, unlock)
+void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device);
+void ALCcaptureAlsa_Destruct(ALCcaptureAlsa *self);
+ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name);
+DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, ALCboolean, reset)
+ALCboolean ALCcaptureAlsa_start(ALCcaptureAlsa *self);
+void ALCcaptureAlsa_stop(ALCcaptureAlsa *self);
+ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buffer, ALCuint samples);
+ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self);
+ClockLatency ALCcaptureAlsa_getClockLatency(ALCcaptureAlsa *self);
+DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, void, lock)
+DECLARE_FORWARD(ALCcaptureAlsa, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCcaptureAlsa)
 
 DEFINE_ALCBACKEND_VTABLE(ALCcaptureAlsa);
 
 
-static void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device)
+void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device)
 {
     new (self) ALCcaptureAlsa{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
@@ -974,7 +971,7 @@ void ALCcaptureAlsa_Destruct(ALCcaptureAlsa *self)
 }
 
 
-static ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
+ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     const char *driver{};
@@ -1101,7 +1098,7 @@ error2:
     return ALC_INVALID_VALUE;
 }
 
-static ALCboolean ALCcaptureAlsa_start(ALCcaptureAlsa *self)
+ALCboolean ALCcaptureAlsa_start(ALCcaptureAlsa *self)
 {
     int err{snd_pcm_prepare(self->pcmHandle)};
     if(err < 0)
@@ -1123,7 +1120,7 @@ static ALCboolean ALCcaptureAlsa_start(ALCcaptureAlsa *self)
     return ALC_TRUE;
 }
 
-static void ALCcaptureAlsa_stop(ALCcaptureAlsa *self)
+void ALCcaptureAlsa_stop(ALCcaptureAlsa *self)
 {
     /* OpenAL requires access to unread audio after stopping, but ALSA's
      * snd_pcm_drain is unreliable and snd_pcm_drop drops it. Capture what's
@@ -1143,7 +1140,7 @@ static void ALCcaptureAlsa_stop(ALCcaptureAlsa *self)
     self->doCapture = false;
 }
 
-static ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buffer, ALCuint samples)
+ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buffer, ALCuint samples)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
@@ -1207,7 +1204,7 @@ static ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buff
     return ALC_NO_ERROR;
 }
 
-static ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self)
+ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
@@ -1278,7 +1275,7 @@ static ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self)
     return ll_ringbuffer_read_space(self->ring);
 }
 
-static ClockLatency ALCcaptureAlsa_getClockLatency(ALCcaptureAlsa *self)
+ClockLatency ALCcaptureAlsa_getClockLatency(ALCcaptureAlsa *self)
 {
     ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
     ClockLatency ret;
@@ -1298,19 +1295,13 @@ static ClockLatency ALCcaptureAlsa_getClockLatency(ALCcaptureAlsa *self)
     return ret;
 }
 
+} // namespace
 
-struct ALCalsaBackendFactory final : public ALCbackendFactory {
-    ALCalsaBackendFactory() noexcept;
-};
 
-static ALCboolean ALCalsaBackendFactory_init(ALCalsaBackendFactory* UNUSED(self))
-{
-    if(!alsa_load())
-        return ALC_FALSE;
-    return ALC_TRUE;
-}
+bool AlsaBackendFactory::init()
+{ return !!alsa_load(); }
 
-static void ALCalsaBackendFactory_deinit(ALCalsaBackendFactory* UNUSED(self))
+void AlsaBackendFactory::deinit()
 {
     PlaybackDevices.clear();
     CaptureDevices.clear();
@@ -1322,14 +1313,10 @@ static void ALCalsaBackendFactory_deinit(ALCalsaBackendFactory* UNUSED(self))
 #endif
 }
 
-static ALCboolean ALCalsaBackendFactory_querySupport(ALCalsaBackendFactory* UNUSED(self), ALCbackend_Type type)
-{
-    if(type == ALCbackend_Playback || type == ALCbackend_Capture)
-        return ALC_TRUE;
-    return ALC_FALSE;
-}
+bool AlsaBackendFactory::querySupport(ALCbackend_Type type)
+{ return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
 
-static void ALCalsaBackendFactory_probe(ALCalsaBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
+void AlsaBackendFactory::probe(enum DevProbe type, std::string *outnames)
 {
     auto add_device = [outnames](const DevMap &entry) -> void
     {
@@ -1352,7 +1339,7 @@ static void ALCalsaBackendFactory_probe(ALCalsaBackendFactory* UNUSED(self), enu
     }
 }
 
-static ALCbackend* ALCalsaBackendFactory_createBackend(ALCalsaBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+ALCbackend *AlsaBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
     {
@@ -1372,16 +1359,8 @@ static ALCbackend* ALCalsaBackendFactory_createBackend(ALCalsaBackendFactory* UN
     return nullptr;
 }
 
-DEFINE_ALCBACKENDFACTORY_VTABLE(ALCalsaBackendFactory);
-
-
-ALCalsaBackendFactory::ALCalsaBackendFactory() noexcept
-  : ALCbackendFactory{GET_VTABLE2(ALCalsaBackendFactory, ALCbackendFactory)}
+BackendFactory &AlsaBackendFactory::getFactory()
 {
-}
-
-ALCbackendFactory *ALCalsaBackendFactory_getFactory(void)
-{
-    static ALCalsaBackendFactory factory{};
-    return STATIC_CAST(ALCbackendFactory, &factory);
+    static AlsaBackendFactory factory{};
+    return factory;
 }

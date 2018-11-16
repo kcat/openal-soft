@@ -62,6 +62,9 @@
 #ifdef HAVE_PULSEAUDIO
 #include "backends/pulseaudio.h"
 #endif
+#ifdef HAVE_ALSA
+#include "backends/alsa.h"
+#endif
 #ifdef HAVE_WASAPI
 #include "backends/wasapi.h"
 #endif
@@ -83,6 +86,9 @@ struct BackendInfo {
 struct BackendInfo BackendList[] = {
 #ifdef HAVE_PULSEAUDIO
     { "pulse", PulseBackendFactory::getFactory },
+#endif
+#ifdef HAVE_ALSA
+    { "alsa", AlsaBackendFactory::getFactory },
 #endif
 #ifdef HAVE_WASAPI
     { "wasapi", WasapiBackendFactory::getFactory },

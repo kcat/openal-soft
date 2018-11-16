@@ -20,45 +20,47 @@
 
 #include "config.h"
 
+#include "backends/loopback.h"
+
 #include "alMain.h"
 #include "alu.h"
 
-#include "backends/base.h"
 
+namespace {
 
 struct ALCloopback final : public ALCbackend {
 };
 
-static void ALCloopback_Construct(ALCloopback *self, ALCdevice *device);
-static void ALCloopback_Destruct(ALCloopback *self);
-static ALCenum ALCloopback_open(ALCloopback *self, const ALCchar *name);
-static ALCboolean ALCloopback_reset(ALCloopback *self);
-static ALCboolean ALCloopback_start(ALCloopback *self);
-static void ALCloopback_stop(ALCloopback *self);
-static DECLARE_FORWARD2(ALCloopback, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
-static DECLARE_FORWARD(ALCloopback, ALCbackend, ALCuint, availableSamples)
-static DECLARE_FORWARD(ALCloopback, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(ALCloopback, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCloopback, ALCbackend, void, unlock)
+void ALCloopback_Construct(ALCloopback *self, ALCdevice *device);
+void ALCloopback_Destruct(ALCloopback *self);
+ALCenum ALCloopback_open(ALCloopback *self, const ALCchar *name);
+ALCboolean ALCloopback_reset(ALCloopback *self);
+ALCboolean ALCloopback_start(ALCloopback *self);
+void ALCloopback_stop(ALCloopback *self);
+DECLARE_FORWARD2(ALCloopback, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
+DECLARE_FORWARD(ALCloopback, ALCbackend, ALCuint, availableSamples)
+DECLARE_FORWARD(ALCloopback, ALCbackend, ClockLatency, getClockLatency)
+DECLARE_FORWARD(ALCloopback, ALCbackend, void, lock)
+DECLARE_FORWARD(ALCloopback, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCloopback)
 DEFINE_ALCBACKEND_VTABLE(ALCloopback);
 
 
-static void ALCloopback_Construct(ALCloopback *self, ALCdevice *device)
+void ALCloopback_Construct(ALCloopback *self, ALCdevice *device)
 {
     new (self) ALCloopback{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCloopback, ALCbackend, self);
 }
 
-static void ALCloopback_Destruct(ALCloopback *self)
+void ALCloopback_Destruct(ALCloopback *self)
 {
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCloopback();
 }
 
 
-static ALCenum ALCloopback_open(ALCloopback *self, const ALCchar *name)
+ALCenum ALCloopback_open(ALCloopback *self, const ALCchar *name)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
@@ -67,70 +69,55 @@ static ALCenum ALCloopback_open(ALCloopback *self, const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-static ALCboolean ALCloopback_reset(ALCloopback *self)
+ALCboolean ALCloopback_reset(ALCloopback *self)
 {
     SetDefaultWFXChannelOrder(STATIC_CAST(ALCbackend, self)->mDevice);
     return ALC_TRUE;
 }
 
-static ALCboolean ALCloopback_start(ALCloopback* UNUSED(self))
+ALCboolean ALCloopback_start(ALCloopback* UNUSED(self))
 {
     return ALC_TRUE;
 }
 
-static void ALCloopback_stop(ALCloopback* UNUSED(self))
+void ALCloopback_stop(ALCloopback* UNUSED(self))
 {
 }
 
-
-struct ALCloopbackFactory final : public ALCbackendFactory {
-    ALCloopbackFactory() noexcept;
-};
-
-ALCbackendFactory *ALCloopbackFactory_getFactory(void);
-static ALCboolean ALCloopbackFactory_init(ALCloopbackFactory *self);
-static DECLARE_FORWARD(ALCloopbackFactory, ALCbackendFactory, void, deinit)
-static ALCboolean ALCloopbackFactory_querySupport(ALCloopbackFactory *self, ALCbackend_Type type);
-static void ALCloopbackFactory_probe(ALCloopbackFactory *self, enum DevProbe type, std::string *outnames);
-static ALCbackend* ALCloopbackFactory_createBackend(ALCloopbackFactory *self, ALCdevice *device, ALCbackend_Type type);
-DEFINE_ALCBACKENDFACTORY_VTABLE(ALCloopbackFactory);
-
-ALCloopbackFactory::ALCloopbackFactory() noexcept
-  : ALCbackendFactory{GET_VTABLE2(ALCloopbackFactory, ALCbackendFactory)}
-{ }
+} // namespace
 
 
-static ALCboolean ALCloopbackFactory_init(ALCloopbackFactory* UNUSED(self))
+bool LoopbackBackendFactory::init()
 {
-    return ALC_TRUE;
+    return true;
 }
 
-static ALCboolean ALCloopbackFactory_querySupport(ALCloopbackFactory* UNUSED(self), ALCbackend_Type type)
+bool LoopbackBackendFactory::querySupport(ALCbackend_Type type)
 {
     if(type == ALCbackend_Loopback)
-        return ALC_TRUE;
-    return ALC_FALSE;
+        return true;
+    return false;
 }
 
-static void ALCloopbackFactory_probe(ALCloopbackFactory* UNUSED(self), enum DevProbe UNUSED(type), std::string* UNUSED(outnames))
+void LoopbackBackendFactory::probe(enum DevProbe, std::string*)
 {
 }
 
-static ALCbackend* ALCloopbackFactory_createBackend(ALCloopbackFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+ALCbackend *LoopbackBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Loopback)
     {
         ALCloopback *backend;
         NEW_OBJ(backend, ALCloopback)(device);
-        if(!backend) return NULL;
+        if(!backend) return nullptr;
         return STATIC_CAST(ALCbackend, backend);
     }
 
-    return NULL;
+    return nullptr;
 }
 
-ALCbackendFactory *ALCloopbackFactory_getFactory(void)
+BackendFactory &LoopbackBackendFactory::getFactory()
 {
-    static ALCloopbackFactory factory{};
-    return STATIC_CAST(ALCbackendFactory, &factory);
+    static LoopbackBackendFactory factory{};
+    return factory;
 }

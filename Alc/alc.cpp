@@ -58,6 +58,7 @@
 
 #include "backends/base.h"
 #include "backends/null.h"
+#include "backends/loopback.h"
 
 
 namespace {
@@ -1127,10 +1128,7 @@ static void alc_initconfig(void)
     }
     BackendListSize = n;
 
-    {
-        ALCbackendFactory *factory = ALCloopbackFactory_getFactory();
-        V0(factory,init)();
-    }
+    LoopbackBackendFactory::getFactory().init();
 
     if(!PlaybackBackend.name)
         WARN("No playback backend available!\n");
@@ -1217,10 +1215,7 @@ static void alc_deinit(void)
     for(i = 0;i < BackendListSize;i++)
         BackendList[i].getFactory().deinit();
 
-    {
-        ALCbackendFactory *factory = ALCloopbackFactory_getFactory();
-        V0(factory,deinit)();
-    }
+    LoopbackBackendFactory::getFactory().deinit();
 
     alc_deinit_safe();
 }
@@ -4452,8 +4447,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->NumStereoSources = 1;
     device->NumMonoSources = device->SourcesMax - device->NumStereoSources;
 
-    ALCbackendFactory *factory = ALCloopbackFactory_getFactory();
-    device->Backend = V(factory,createBackend)(device, ALCbackend_Loopback);
+    device->Backend = LoopbackBackendFactory::getFactory().createBackend(
+        device, ALCbackend_Loopback);
     if(!device->Backend)
     {
         al_free(device);

@@ -155,7 +155,6 @@ ALCbackendFactory *ALCportBackendFactory_getFactory(void);
 ALCbackendFactory *ALCopenslBackendFactory_getFactory(void);
 ALCbackendFactory *ALCwaveBackendFactory_getFactory(void);
 ALCbackendFactory *ALCsdl2BackendFactory_getFactory(void);
-ALCbackendFactory *ALCloopbackFactory_getFactory(void);
 
 
 struct BackendFactory {

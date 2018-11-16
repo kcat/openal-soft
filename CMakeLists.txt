@@ -991,6 +991,7 @@ SET(ALC_OBJS  ${ALC_OBJS}
     Alc/backends/base.h
     # Default backends, always available
     Alc/backends/loopback.cpp
+    Alc/backends/loopback.h
     Alc/backends/null.cpp
     Alc/backends/null.h
 )

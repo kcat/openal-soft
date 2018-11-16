@@ -20,11 +20,12 @@
 
 #include "config.h"
 
+#include "backends/dsound.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
 
-#include <dsound.h>
 #include <cguid.h>
 #include <mmreg.h>
 #ifndef _WAVEFORMATEXTENSIBLE_
@@ -43,7 +44,10 @@
 #include "ringbuffer.h"
 #include "compat.h"
 
-#include "backends/base.h"
+/* MinGW-w64 needs this for some unknown reason now. */
+typedef const WAVEFORMATEX *LPCWAVEFORMATEX;
+#include <dsound.h>
+
 
 #ifndef DSSPEAKER_5POINT1
 #   define DSSPEAKER_5POINT1          0x00000006
@@ -79,11 +83,11 @@ namespace {
 
 
 #ifdef HAVE_DYNLOAD
-static void *ds_handle;
-static HRESULT (WINAPI *pDirectSoundCreate)(const GUID *pcGuidDevice, IDirectSound **ppDS, IUnknown *pUnkOuter);
-static HRESULT (WINAPI *pDirectSoundEnumerateW)(LPDSENUMCALLBACKW pDSEnumCallback, void *pContext);
-static HRESULT (WINAPI *pDirectSoundCaptureCreate)(const GUID *pcGuidDevice, IDirectSoundCapture **ppDSC, IUnknown *pUnkOuter);
-static HRESULT (WINAPI *pDirectSoundCaptureEnumerateW)(LPDSENUMCALLBACKW pDSEnumCallback, void *pContext);
+void *ds_handle;
+HRESULT (WINAPI *pDirectSoundCreate)(const GUID *pcGuidDevice, IDirectSound **ppDS, IUnknown *pUnkOuter);
+HRESULT (WINAPI *pDirectSoundEnumerateW)(LPDSENUMCALLBACKW pDSEnumCallback, void *pContext);
+HRESULT (WINAPI *pDirectSoundCaptureCreate)(const GUID *pcGuidDevice, IDirectSoundCapture **ppDSC, IUnknown *pUnkOuter);
+HRESULT (WINAPI *pDirectSoundCaptureEnumerateW)(LPDSENUMCALLBACKW pDSEnumCallback, void *pContext);
 
 #ifndef IN_IDE_PARSER
 #define DirectSoundCreate            pDirectSoundCreate
@@ -94,7 +98,7 @@ static HRESULT (WINAPI *pDirectSoundCaptureEnumerateW)(LPDSENUMCALLBACKW pDSEnum
 #endif
 
 
-static ALCboolean DSoundLoad(void)
+bool DSoundLoad(void)
 {
 #ifdef HAVE_DYNLOAD
     if(!ds_handle)
@@ -103,7 +107,7 @@ static ALCboolean DSoundLoad(void)
         if(!ds_handle)
         {
             ERR("Failed to load dsound.dll\n");
-            return ALC_FALSE;
+            return false;
         }
 
 #define LOAD_FUNC(f) do {                                                     \
@@ -112,7 +116,7 @@ static ALCboolean DSoundLoad(void)
     {                                                                         \
         CloseLib(ds_handle);                                                  \
         ds_handle = nullptr;                                                  \
-        return ALC_FALSE;                                                     \
+        return false;                                                         \
     }                                                                         \
 } while(0)
         LOAD_FUNC(DirectSoundCreate);
@@ -122,7 +126,7 @@ static ALCboolean DSoundLoad(void)
 #undef LOAD_FUNC
     }
 #endif
-    return ALC_TRUE;
+    return true;
 }
 
 
@@ -179,8 +183,6 @@ BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR* UNUS
     return TRUE;
 }
 
-} // namespace
-
 
 struct ALCdsoundPlayback final : public ALCbackend {
     IDirectSound       *DS{nullptr};
@@ -193,32 +195,32 @@ struct ALCdsoundPlayback final : public ALCbackend {
     std::thread thread;
 };
 
-static int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self);
+int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self);
 
-static void ALCdsoundPlayback_Construct(ALCdsoundPlayback *self, ALCdevice *device);
-static void ALCdsoundPlayback_Destruct(ALCdsoundPlayback *self);
-static ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *name);
-static ALCboolean ALCdsoundPlayback_reset(ALCdsoundPlayback *self);
-static ALCboolean ALCdsoundPlayback_start(ALCdsoundPlayback *self);
-static void ALCdsoundPlayback_stop(ALCdsoundPlayback *self);
-static DECLARE_FORWARD2(ALCdsoundPlayback, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
-static DECLARE_FORWARD(ALCdsoundPlayback, ALCbackend, ALCuint, availableSamples)
-static DECLARE_FORWARD(ALCdsoundPlayback, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(ALCdsoundPlayback, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCdsoundPlayback, ALCbackend, void, unlock)
+void ALCdsoundPlayback_Construct(ALCdsoundPlayback *self, ALCdevice *device);
+void ALCdsoundPlayback_Destruct(ALCdsoundPlayback *self);
+ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *name);
+ALCboolean ALCdsoundPlayback_reset(ALCdsoundPlayback *self);
+ALCboolean ALCdsoundPlayback_start(ALCdsoundPlayback *self);
+void ALCdsoundPlayback_stop(ALCdsoundPlayback *self);
+DECLARE_FORWARD2(ALCdsoundPlayback, ALCbackend, ALCenum, captureSamples, void*, ALCuint)
+DECLARE_FORWARD(ALCdsoundPlayback, ALCbackend, ALCuint, availableSamples)
+DECLARE_FORWARD(ALCdsoundPlayback, ALCbackend, ClockLatency, getClockLatency)
+DECLARE_FORWARD(ALCdsoundPlayback, ALCbackend, void, lock)
+DECLARE_FORWARD(ALCdsoundPlayback, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCdsoundPlayback)
 
 DEFINE_ALCBACKEND_VTABLE(ALCdsoundPlayback);
 
 
-static void ALCdsoundPlayback_Construct(ALCdsoundPlayback *self, ALCdevice *device)
+void ALCdsoundPlayback_Construct(ALCdsoundPlayback *self, ALCdevice *device)
 {
     new (self) ALCdsoundPlayback{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCdsoundPlayback, ALCbackend, self);
 }
 
-static void ALCdsoundPlayback_Destruct(ALCdsoundPlayback *self)
+void ALCdsoundPlayback_Destruct(ALCdsoundPlayback *self)
 {
     if(self->Notifies)
         self->Notifies->Release();
@@ -242,7 +244,7 @@ static void ALCdsoundPlayback_Destruct(ALCdsoundPlayback *self)
 }
 
 
-FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self)
+FORCE_ALIGN int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
@@ -348,7 +350,7 @@ FORCE_ALIGN static int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self)
     return 0;
 }
 
-static ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *deviceName)
+ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *deviceName)
 {
     ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
 
@@ -402,7 +404,7 @@ static ALCenum ALCdsoundPlayback_open(ALCdsoundPlayback *self, const ALCchar *de
     return ALC_NO_ERROR;
 }
 
-static ALCboolean ALCdsoundPlayback_reset(ALCdsoundPlayback *self)
+ALCboolean ALCdsoundPlayback_reset(ALCdsoundPlayback *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
@@ -623,7 +625,7 @@ retry_open:
     return ALC_TRUE;
 }
 
-static ALCboolean ALCdsoundPlayback_start(ALCdsoundPlayback *self)
+ALCboolean ALCdsoundPlayback_start(ALCdsoundPlayback *self)
 {
     try {
         self->killNow.store(AL_FALSE, std::memory_order_release);
@@ -638,7 +640,7 @@ static ALCboolean ALCdsoundPlayback_start(ALCdsoundPlayback *self)
     return ALC_FALSE;
 }
 
-static void ALCdsoundPlayback_stop(ALCdsoundPlayback *self)
+void ALCdsoundPlayback_stop(ALCdsoundPlayback *self)
 {
     if(self->killNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->thread.joinable())
         return;
@@ -658,29 +660,28 @@ struct ALCdsoundCapture final : public ALCbackend {
     ll_ringbuffer_t *Ring{nullptr};
 };
 
-static void ALCdsoundCapture_Construct(ALCdsoundCapture *self, ALCdevice *device);
-static void ALCdsoundCapture_Destruct(ALCdsoundCapture *self);
-static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *name);
-static DECLARE_FORWARD(ALCdsoundCapture, ALCbackend, ALCboolean, reset)
-static ALCboolean ALCdsoundCapture_start(ALCdsoundCapture *self);
-static void ALCdsoundCapture_stop(ALCdsoundCapture *self);
-static ALCenum ALCdsoundCapture_captureSamples(ALCdsoundCapture *self, ALCvoid *buffer, ALCuint samples);
-static ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self);
-static DECLARE_FORWARD(ALCdsoundCapture, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(ALCdsoundCapture, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCdsoundCapture, ALCbackend, void, unlock)
+void ALCdsoundCapture_Construct(ALCdsoundCapture *self, ALCdevice *device);
+void ALCdsoundCapture_Destruct(ALCdsoundCapture *self);
+ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *name);
+DECLARE_FORWARD(ALCdsoundCapture, ALCbackend, ALCboolean, reset)
+ALCboolean ALCdsoundCapture_start(ALCdsoundCapture *self);
+void ALCdsoundCapture_stop(ALCdsoundCapture *self);
+ALCenum ALCdsoundCapture_captureSamples(ALCdsoundCapture *self, ALCvoid *buffer, ALCuint samples);
+ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self);
+DECLARE_FORWARD(ALCdsoundCapture, ALCbackend, ClockLatency, getClockLatency)
+DECLARE_FORWARD(ALCdsoundCapture, ALCbackend, void, lock)
+DECLARE_FORWARD(ALCdsoundCapture, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCdsoundCapture)
-
 DEFINE_ALCBACKEND_VTABLE(ALCdsoundCapture);
 
-static void ALCdsoundCapture_Construct(ALCdsoundCapture *self, ALCdevice *device)
+void ALCdsoundCapture_Construct(ALCdsoundCapture *self, ALCdevice *device)
 {
     new (self) ALCdsoundCapture{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCdsoundCapture, ALCbackend, self);
 }
 
-static void ALCdsoundCapture_Destruct(ALCdsoundCapture *self)
+void ALCdsoundCapture_Destruct(ALCdsoundCapture *self)
 {
     ll_ringbuffer_free(self->Ring);
     self->Ring = nullptr;
@@ -701,7 +702,7 @@ static void ALCdsoundCapture_Destruct(ALCdsoundCapture *self)
 }
 
 
-static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *deviceName)
+ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *deviceName)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
@@ -869,7 +870,7 @@ static ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *devi
     return ALC_NO_ERROR;
 }
 
-static ALCboolean ALCdsoundCapture_start(ALCdsoundCapture *self)
+ALCboolean ALCdsoundCapture_start(ALCdsoundCapture *self)
 {
     HRESULT hr{self->DSCbuffer->Start(DSCBSTART_LOOPING)};
     if(FAILED(hr))
@@ -883,7 +884,7 @@ static ALCboolean ALCdsoundCapture_start(ALCdsoundCapture *self)
     return ALC_TRUE;
 }
 
-static void ALCdsoundCapture_stop(ALCdsoundCapture *self)
+void ALCdsoundCapture_stop(ALCdsoundCapture *self)
 {
     HRESULT hr{self->DSCbuffer->Stop()};
     if(FAILED(hr))
@@ -894,13 +895,13 @@ static void ALCdsoundCapture_stop(ALCdsoundCapture *self)
     }
 }
 
-static ALCenum ALCdsoundCapture_captureSamples(ALCdsoundCapture *self, ALCvoid *buffer, ALCuint samples)
+ALCenum ALCdsoundCapture_captureSamples(ALCdsoundCapture *self, ALCvoid *buffer, ALCuint samples)
 {
     ll_ringbuffer_read(self->Ring, reinterpret_cast<char*>(buffer), samples);
     return ALC_NO_ERROR;
 }
 
-static ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
+ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
@@ -942,42 +943,19 @@ static ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
     return ll_ringbuffer_read_space(self->Ring);
 }
 
-
-struct ALCdsoundBackendFactory final : public ALCbackendFactory {
-    ALCdsoundBackendFactory() noexcept;
-};
-#define ALCDSOUNDBACKENDFACTORY_INITIALIZER GET_VTABLE2(ALCdsoundBackendFactory, ALCbackendFactory)
-
-ALCbackendFactory *ALCdsoundBackendFactory_getFactory(void);
-
-static ALCboolean ALCdsoundBackendFactory_init(ALCdsoundBackendFactory *self);
-static void ALCdsoundBackendFactory_deinit(ALCdsoundBackendFactory *self);
-static ALCboolean ALCdsoundBackendFactory_querySupport(ALCdsoundBackendFactory *self, ALCbackend_Type type);
-static void ALCdsoundBackendFactory_probe(ALCdsoundBackendFactory *self, enum DevProbe type, std::string *outnames);
-static ALCbackend* ALCdsoundBackendFactory_createBackend(ALCdsoundBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
-DEFINE_ALCBACKENDFACTORY_VTABLE(ALCdsoundBackendFactory);
+} // namespace
 
 
-ALCdsoundBackendFactory::ALCdsoundBackendFactory() noexcept
-  : ALCbackendFactory{ALCDSOUNDBACKENDFACTORY_INITIALIZER}
-{ }
-
-
-ALCbackendFactory *ALCdsoundBackendFactory_getFactory(void)
+BackendFactory &DSoundBackendFactory::getFactory()
 {
-    static ALCdsoundBackendFactory factory{};
-    return STATIC_CAST(ALCbackendFactory, &factory);
+    static DSoundBackendFactory factory{};
+    return factory;
 }
 
+bool DSoundBackendFactory::init()
+{ return DSoundLoad(); }
 
-static ALCboolean ALCdsoundBackendFactory_init(ALCdsoundBackendFactory* UNUSED(self))
-{
-    if(!DSoundLoad())
-        return ALC_FALSE;
-    return ALC_TRUE;
-}
-
-static void ALCdsoundBackendFactory_deinit(ALCdsoundBackendFactory* UNUSED(self))
+void DSoundBackendFactory::deinit()
 {
     PlaybackDevices.clear();
     CaptureDevices.clear();
@@ -989,14 +967,10 @@ static void ALCdsoundBackendFactory_deinit(ALCdsoundBackendFactory* UNUSED(self)
 #endif
 }
 
-static ALCboolean ALCdsoundBackendFactory_querySupport(ALCdsoundBackendFactory* UNUSED(self), ALCbackend_Type type)
-{
-    if(type == ALCbackend_Playback || type == ALCbackend_Capture)
-        return ALC_TRUE;
-    return ALC_FALSE;
-}
+bool DSoundBackendFactory::querySupport(ALCbackend_Type type)
+{ return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
 
-static void ALCdsoundBackendFactory_probe(ALCdsoundBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
+void DSoundBackendFactory::probe(enum DevProbe type, std::string *outnames)
 {
     auto add_device = [outnames](const DevMap &entry) -> void
     {
@@ -1031,7 +1005,7 @@ static void ALCdsoundBackendFactory_probe(ALCdsoundBackendFactory* UNUSED(self),
         CoUninitialize();
 }
 
-static ALCbackend* ALCdsoundBackendFactory_createBackend(ALCdsoundBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+ALCbackend *DSoundBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
     {

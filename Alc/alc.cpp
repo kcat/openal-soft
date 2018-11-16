@@ -89,6 +89,9 @@
 #ifdef HAVE_QSA
 #include "backends/qsa.h"
 #endif
+#ifdef HAVE_DSOUND
+#include "backends/dsound.h"
+#endif
 #ifdef HAVE_SDL2
 #include "backends/sdl2.h"
 #endif
@@ -138,9 +141,11 @@ struct BackendInfo BackendList[] = {
 #ifdef HAVE_QSA
     { "qsa", QSABackendFactory::getFactory },
 #endif
+#ifdef HAVE_DSOUND
+    { "dsound", DSoundBackendFactory::getFactory },
+#endif
 
 #if 0
-    { "dsound", ALCdsoundBackendFactory_getFactory },
     { "winmm", ALCwinmmBackendFactory_getFactory },
     { "port", ALCportBackendFactory_getFactory },
 #endif /* 0 */

@@ -37,27 +37,20 @@
 
 AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
 {
-    ALboolean ret = AL_FALSE;
-    ALCcontext *context;
-    const char *ptr;
-    size_t len;
-
-    context = GetContextRef();
-    if(!context) return AL_FALSE;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return AL_FALSE;
 
     if(!extName)
-        SETERR_GOTO(context, AL_INVALID_VALUE, done, "NULL pointer");
+        SETERR_RETURN(context.get(), AL_INVALID_VALUE, AL_FALSE, "NULL pointer");
 
-    len = strlen(extName);
-    ptr = context->ExtensionList;
+    size_t len{strlen(extName)};
+    const char *ptr{context->ExtensionList};
     while(ptr && *ptr)
     {
         if(strncasecmp(ptr, extName, len) == 0 &&
            (ptr[len] == '\0' || isspace(ptr[len])))
-        {
-            ret = AL_TRUE;
-            break;
-        }
+            return AL_TRUE;
+
         if((ptr=strchr(ptr, ' ')) != NULL)
         {
             do {
@@ -66,22 +59,18 @@ AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
         }
     }
 
-done:
-    ALCcontext_DecRef(context);
-    return ret;
+    return AL_FALSE;
 }
 
 
 AL_API ALvoid* AL_APIENTRY alGetProcAddress(const ALchar *funcName)
 {
-    if(!funcName)
-        return NULL;
-    return alcGetProcAddress(NULL, funcName);
+    if(!funcName) return nullptr;
+    return alcGetProcAddress(nullptr, funcName);
 }
 
 AL_API ALenum AL_APIENTRY alGetEnumValue(const ALchar *enumName)
 {
-    if(!enumName)
-        return (ALenum)0;
-    return alcGetEnumValue(NULL, enumName);
+    if(!enumName) return (ALenum)0;
+    return alcGetEnumValue(nullptr, enumName);
 }

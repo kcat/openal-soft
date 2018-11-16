@@ -281,7 +281,7 @@ inline ALint fastf2i(ALfloat f)
      * libc call, while MSVC's implementation is horribly slow, so always fall
      * back to a normal integer conversion for them.
      */
-#elif defined(HAVE_LRINTF) && !defined(_MSC_VER) && !defined(__clang__)
+#elif !defined(_MSC_VER) && !defined(__clang__)
 
     return lrintf(f);
 

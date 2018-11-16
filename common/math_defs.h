@@ -32,28 +32,6 @@ static const union msvc_inf_hack {
 #define HUGE_VALF (msvc_inf_union.f)
 #endif
 
-#ifndef HAVE_CBRTF
-static inline float my_cbrtf(float f)
-{
-    return powf(f, 1.0f/3.0f);
-}
-#define cbrtf my_cbrtf
-#endif
-
-#ifndef HAVE_COPYSIGNF
-static inline float my_copysignf(float x, float y)
-{
-    union {
-        float f;
-        unsigned int u;
-    } ux = { x }, uy = { y };
-    ux.u &= 0x7fffffffu;
-    ux.u |= (uy.u&0x80000000u);
-    return ux.f;
-}
-#define copysignf my_copysignf
-#endif
-
 #define DEG2RAD(x)  ((float)(x) * (float)(M_PI/180.0))
 #define RAD2DEG(x)  ((float)(x) * (float)(180.0/M_PI))
 

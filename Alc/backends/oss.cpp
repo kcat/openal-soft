@@ -114,16 +114,6 @@ void ALCossListPopulate(std::vector<DevMap> *devlist, int type)
 
 #else
 
-#ifndef HAVE_STRNLEN
-size_t my_strnlen(const char *str, size_t maxlen)
-{
-    const char *end = static_cast<const char*>(memchr(str, 0, maxlen));
-    if(!end) return maxlen;
-    return end - str;
-}
-#define strnlen my_strnlen
-#endif
-
 void ALCossListAppend(std::vector<DevMap> *list, const char *handle, size_t hlen, const char *path, size_t plen)
 {
 #ifdef ALC_OSS_DEVNODE_TRUC

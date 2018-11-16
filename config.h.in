@@ -89,18 +89,6 @@
 /* Define if we have the stat function */
 #cmakedefine HAVE_STAT
 
-/* Define if we have the lrintf function */
-#cmakedefine HAVE_LRINTF
-
-/* Define if we have the cbrtf function */
-#cmakedefine HAVE_CBRTF
-
-/* Define if we have the copysignf function */
-#cmakedefine HAVE_COPYSIGNF
-
-/* Define if we have the strnlen function */
-#cmakedefine HAVE_STRNLEN
-
 /* Define if we have the __int64 type */
 #cmakedefine HAVE___INT64
 

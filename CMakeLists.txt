@@ -795,7 +795,7 @@ SET(OPENAL_OBJS
     OpenAL32/alState.c
     OpenAL32/event.c
     OpenAL32/Include/sample_cvt.h
-    OpenAL32/sample_cvt.c
+    OpenAL32/sample_cvt.cpp
 )
 SET(ALC_OBJS
     Alc/alc.cpp

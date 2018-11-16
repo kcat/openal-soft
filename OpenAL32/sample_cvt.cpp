@@ -8,50 +8,6 @@
 #include "alBuffer.h"
 
 
-/* IMA ADPCM Stepsize table */
-static const int IMAStep_size[89] = {
-       7,    8,    9,   10,   11,   12,   13,   14,   16,   17,   19,
-      21,   23,   25,   28,   31,   34,   37,   41,   45,   50,   55,
-      60,   66,   73,   80,   88,   97,  107,  118,  130,  143,  157,
-     173,  190,  209,  230,  253,  279,  307,  337,  371,  408,  449,
-     494,  544,  598,  658,  724,  796,  876,  963, 1060, 1166, 1282,
-    1411, 1552, 1707, 1878, 2066, 2272, 2499, 2749, 3024, 3327, 3660,
-    4026, 4428, 4871, 5358, 5894, 6484, 7132, 7845, 8630, 9493,10442,
-   11487,12635,13899,15289,16818,18500,20350,22358,24633,27086,29794,
-   32767
-};
-
-/* IMA4 ADPCM Codeword decode table */
-static const int IMA4Codeword[16] = {
-    1, 3, 5, 7, 9, 11, 13, 15,
-   -1,-3,-5,-7,-9,-11,-13,-15,
-};
-
-/* IMA4 ADPCM Step index adjust decode table */
-static const int IMA4Index_adjust[16] = {
-   -1,-1,-1,-1, 2, 4, 6, 8,
-   -1,-1,-1,-1, 2, 4, 6, 8
-};
-
-
-/* MSADPCM Adaption table */
-static const int MSADPCMAdaption[16] = {
-    230, 230, 230, 230, 307, 409, 512, 614,
-    768, 614, 512, 409, 307, 230, 230, 230
-};
-
-/* MSADPCM Adaption Coefficient tables */
-static const int MSADPCMAdaptionCoeff[7][2] = {
-    { 256,    0 },
-    { 512, -256 },
-    {   0,    0 },
-    { 192,   64 },
-    { 240,    0 },
-    { 460, -208 },
-    { 392, -232 }
-};
-
-
 /* A quick'n'dirty lookup table to decode a muLaw-encoded byte sample into a
  * signed 16-bit sample */
 const ALshort muLawDecompressionTable[256] = {
@@ -88,7 +44,6 @@ const ALshort muLawDecompressionTable[256] = {
        120,   112,   104,    96,    88,    80,    72,    64,
         56,    48,    40,    32,    24,    16,     8,     0
 };
-
 
 /* A quick'n'dirty lookup table to decode an aLaw-encoded byte sample into a
  * signed 16-bit sample */
@@ -127,15 +82,58 @@ const ALshort aLawDecompressionTable[256] = {
        944,   912,  1008,   976,   816,   784,   880,   848
 };
 
+namespace {
 
-static void DecodeIMA4Block(ALshort *dst, const ALubyte *src, ALint numchans, ALsizei align)
+/* IMA ADPCM Stepsize table */
+constexpr int IMAStep_size[89] = {
+       7,    8,    9,   10,   11,   12,   13,   14,   16,   17,   19,
+      21,   23,   25,   28,   31,   34,   37,   41,   45,   50,   55,
+      60,   66,   73,   80,   88,   97,  107,  118,  130,  143,  157,
+     173,  190,  209,  230,  253,  279,  307,  337,  371,  408,  449,
+     494,  544,  598,  658,  724,  796,  876,  963, 1060, 1166, 1282,
+    1411, 1552, 1707, 1878, 2066, 2272, 2499, 2749, 3024, 3327, 3660,
+    4026, 4428, 4871, 5358, 5894, 6484, 7132, 7845, 8630, 9493,10442,
+   11487,12635,13899,15289,16818,18500,20350,22358,24633,27086,29794,
+   32767
+};
+
+/* IMA4 ADPCM Codeword decode table */
+constexpr int IMA4Codeword[16] = {
+    1, 3, 5, 7, 9, 11, 13, 15,
+   -1,-3,-5,-7,-9,-11,-13,-15,
+};
+
+/* IMA4 ADPCM Step index adjust decode table */
+constexpr int IMA4Index_adjust[16] = {
+   -1,-1,-1,-1, 2, 4, 6, 8,
+   -1,-1,-1,-1, 2, 4, 6, 8
+};
+
+
+/* MSADPCM Adaption table */
+constexpr int MSADPCMAdaption[16] = {
+    230, 230, 230, 230, 307, 409, 512, 614,
+    768, 614, 512, 409, 307, 230, 230, 230
+};
+
+/* MSADPCM Adaption Coefficient tables */
+constexpr int MSADPCMAdaptionCoeff[7][2] = {
+    { 256,    0 },
+    { 512, -256 },
+    {   0,    0 },
+    { 192,   64 },
+    { 240,    0 },
+    { 460, -208 },
+    { 392, -232 }
+};
+
+void DecodeIMA4Block(ALshort *dst, const ALubyte *src, ALint numchans, ALsizei align)
 {
-    ALint sample[MAX_INPUT_CHANNELS] = { 0 };
-    ALint index[MAX_INPUT_CHANNELS] = { 0 };
-    ALuint code[MAX_INPUT_CHANNELS] = { 0 };
-    ALsizei c, i;
+    ALint sample[MAX_INPUT_CHANNELS]{};
+    ALint index[MAX_INPUT_CHANNELS]{};
+    ALuint code[MAX_INPUT_CHANNELS]{};
 
-    for(c = 0;c < numchans;c++)
+    for(int c{0};c < numchans;c++)
     {
         sample[c]  = *(src++);
         sample[c] |= *(src++) << 8;
@@ -149,11 +147,11 @@ static void DecodeIMA4Block(ALshort *dst, const ALubyte *src, ALint numchans, AL
         dst[c] = sample[c];
     }
 
-    for(i = 1;i < align;i++)
+    for(int i{1};i < align;i++)
     {
         if((i&7) == 1)
         {
-            for(c = 0;c < numchans;c++)
+            for(int c{0};c < numchans;c++)
             {
                 code[c]  = *(src++);
                 code[c] |= *(src++) << 8;
@@ -162,7 +160,7 @@ static void DecodeIMA4Block(ALshort *dst, const ALubyte *src, ALint numchans, AL
             }
         }
 
-        for(c = 0;c < numchans;c++)
+        for(int c{0};c < numchans;c++)
         {
             int nibble = code[c]&0xf;
             code[c] >>= 4;
@@ -178,31 +176,30 @@ static void DecodeIMA4Block(ALshort *dst, const ALubyte *src, ALint numchans, AL
     }
 }
 
-static void DecodeMSADPCMBlock(ALshort *dst, const ALubyte *src, ALint numchans, ALsizei align)
+void DecodeMSADPCMBlock(ALshort *dst, const ALubyte *src, ALint numchans, ALsizei align)
 {
-    ALubyte blockpred[MAX_INPUT_CHANNELS] = { 0 };
-    ALint delta[MAX_INPUT_CHANNELS] = { 0 };
-    ALshort samples[MAX_INPUT_CHANNELS][2] = { { 0, 0 } };
-    ALint c, i;
+    ALubyte blockpred[MAX_INPUT_CHANNELS]{};
+    ALint delta[MAX_INPUT_CHANNELS]{};
+    ALshort samples[MAX_INPUT_CHANNELS][2]{};
 
-    for(c = 0;c < numchans;c++)
+    for(int c{0};c < numchans;c++)
     {
         blockpred[c] = *(src++);
         blockpred[c] = minu(blockpred[c], 6);
     }
-    for(c = 0;c < numchans;c++)
+    for(int c{0};c < numchans;c++)
     {
         delta[c]  = *(src++);
         delta[c] |= *(src++) << 8;
         delta[c]  = (delta[c]^0x8000) - 32768;
     }
-    for(c = 0;c < numchans;c++)
+    for(int c{0};c < numchans;c++)
     {
         samples[c][0]  = *(src++);
         samples[c][0] |= *(src++) << 8;
         samples[c][0]  = (samples[c][0]^0x8000) - 32768;
     }
-    for(c = 0;c < numchans;c++)
+    for(int c{0};c < numchans;c++)
     {
         samples[c][1]  = *(src++);
         samples[c][1] |= *(src++) << 8;
@@ -210,14 +207,14 @@ static void DecodeMSADPCMBlock(ALshort *dst, const ALubyte *src, ALint numchans,
     }
 
     /* Second sample is written first. */
-    for(c = 0;c < numchans;c++)
+    for(int c{0};c < numchans;c++)
         *(dst++) = samples[c][1];
-    for(c = 0;c < numchans;c++)
+    for(int c{0};c < numchans;c++)
         *(dst++) = samples[c][0];
 
-    for(i = 2;i < align;i++)
+    for(int i{2};i < align;i++)
     {
-        for(c = 0;c < numchans;c++)
+        for(int c{0};c < numchans;c++)
         {
             const ALint num = (i*numchans) + c;
             ALint nibble, pred;
@@ -244,15 +241,16 @@ static void DecodeMSADPCMBlock(ALshort *dst, const ALubyte *src, ALint numchans,
     }
 }
 
+} // namespace
 
 void Convert_ALshort_ALima4(ALshort *dst, const ALubyte *src, ALsizei numchans, ALsizei len,
                             ALsizei align)
 {
     ALsizei byte_align = ((align-1)/2 + 4) * numchans;
-    ALsizei i;
 
     assert(align > 0 && (len%align) == 0);
-    for(i = 0;i < len;i += align)
+    len /= align;
+    while(len--)
     {
         DecodeIMA4Block(dst, src, numchans, align);
         src += byte_align;
@@ -263,11 +261,11 @@ void Convert_ALshort_ALima4(ALshort *dst, const ALubyte *src, ALsizei numchans, 
 void Convert_ALshort_ALmsadpcm(ALshort *dst, const ALubyte *src, ALsizei numchans, ALsizei len,
                                ALsizei align)
 {
-    ALsizei byte_align = ((align-2)/2 + 7) * numchans;
-    ALsizei i;
+    const ALsizei byte_align = ((align-2)/2 + 7) * numchans;
 
     assert(align > 1 && (len%align) == 0);
-    for(i = 0;i < len;i += align)
+    len /= align;
+    while(len--)
     {
         DecodeMSADPCMBlock(dst, src, numchans, align);
         src += byte_align;

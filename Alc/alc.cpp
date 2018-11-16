@@ -77,6 +77,9 @@
 #ifdef HAVE_OPENSL
 #include "backends/opensl.h"
 #endif
+#ifdef HAVE_SDL2
+#include "backends/sdl2.h"
+#endif
 #ifdef HAVE_WAVE
 #include "backends/wave.h"
 #endif
@@ -121,9 +124,10 @@ struct BackendInfo BackendList[] = {
     { "dsound", ALCdsoundBackendFactory_getFactory },
     { "winmm", ALCwinmmBackendFactory_getFactory },
     { "port", ALCportBackendFactory_getFactory },
-    { "opensl", ALCopenslBackendFactory_getFactory },
-    { "sdl2", ALCsdl2BackendFactory_getFactory },
 #endif /* 0 */
+#ifdef HAVE_SDL2
+    { "sdl2", SDL2BackendFactory::getFactory },
+#endif
 
     { "null", NullBackendFactory::getFactory },
 #ifdef HAVE_WAVE

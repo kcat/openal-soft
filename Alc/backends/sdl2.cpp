@@ -20,6 +20,8 @@
 
 #include "config.h"
 
+#include "backends/sdl2.h"
+
 #include <stdlib.h>
 #include <SDL2/SDL.h>
 
@@ -29,8 +31,6 @@
 #include "alu.h"
 #include "threads.h"
 #include "compat.h"
-
-#include "backends/base.h"
 
 
 #ifdef _WIN32
@@ -214,51 +214,28 @@ static void ALCsdl2Backend_unlock(ALCsdl2Backend *self)
 }
 
 
-struct ALCsdl2BackendFactory final : public ALCbackendFactory {
-    ALCsdl2BackendFactory() noexcept;
-};
-
-ALCbackendFactory *ALCsdl2BackendFactory_getFactory(void);
-
-static ALCboolean ALCsdl2BackendFactory_init(ALCsdl2BackendFactory *self);
-static void ALCsdl2BackendFactory_deinit(ALCsdl2BackendFactory *self);
-static ALCboolean ALCsdl2BackendFactory_querySupport(ALCsdl2BackendFactory *self, ALCbackend_Type type);
-static void ALCsdl2BackendFactory_probe(ALCsdl2BackendFactory *self, enum DevProbe type, std::string *outnames);
-static ALCbackend* ALCsdl2BackendFactory_createBackend(ALCsdl2BackendFactory *self, ALCdevice *device, ALCbackend_Type type);
-DEFINE_ALCBACKENDFACTORY_VTABLE(ALCsdl2BackendFactory);
-
-
-ALCsdl2BackendFactory::ALCsdl2BackendFactory() noexcept
-  : ALCbackendFactory{GET_VTABLE2(ALCsdl2BackendFactory, ALCbackendFactory)}
-{ }
-
-ALCbackendFactory *ALCsdl2BackendFactory_getFactory(void)
+BackendFactory &SDL2BackendFactory::getFactory()
 {
-    static ALCsdl2BackendFactory factory{};
-    return STATIC_CAST(ALCbackendFactory, &factory);
+    static SDL2BackendFactory factory{};
+    return factory;
 }
 
-
-static ALCboolean ALCsdl2BackendFactory_init(ALCsdl2BackendFactory* UNUSED(self))
+bool SDL2BackendFactory::init()
 {
-    if(SDL_InitSubSystem(SDL_INIT_AUDIO) == 0)
-        return AL_TRUE;
-    return ALC_FALSE;
+    return (SDL_InitSubSystem(SDL_INIT_AUDIO) == 0);
 }
 
-static void ALCsdl2BackendFactory_deinit(ALCsdl2BackendFactory* UNUSED(self))
+void SDL2BackendFactory::deinit()
 {
     SDL_QuitSubSystem(SDL_INIT_AUDIO);
 }
 
-static ALCboolean ALCsdl2BackendFactory_querySupport(ALCsdl2BackendFactory* UNUSED(self), ALCbackend_Type type)
+bool SDL2BackendFactory::querySupport(ALCbackend_Type type)
 {
-    if(type == ALCbackend_Playback)
-        return ALC_TRUE;
-    return ALC_FALSE;
+    return (type == ALCbackend_Playback);
 }
 
-static void ALCsdl2BackendFactory_probe(ALCsdl2BackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
+void SDL2BackendFactory::probe(enum DevProbe type, std::string *outnames)
 {
     if(type != ALL_DEVICE_PROBE)
         return;
@@ -276,7 +253,7 @@ static void ALCsdl2BackendFactory_probe(ALCsdl2BackendFactory* UNUSED(self), enu
     }
 }
 
-static ALCbackend* ALCsdl2BackendFactory_createBackend(ALCsdl2BackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+ALCbackend *SDL2BackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
     {

@@ -59,6 +59,9 @@
 #include "backends/base.h"
 #include "backends/null.h"
 #include "backends/loopback.h"
+#ifdef HAVE_PULSEAUDIO
+#include "backends/pulseaudio.h"
+#endif
 
 
 namespace {
@@ -72,55 +75,29 @@ struct BackendInfo {
 };
 
 struct BackendInfo BackendList[] = {
-#if 0
-#ifdef HAVE_JACK
-    { "jack", ALCjackBackendFactory_getFactory },
-#endif
 #ifdef HAVE_PULSEAUDIO
+    { "pulse", PulseBackendFactory::getFactory },
+#endif
+#if 0
+    { "jack", ALCjackBackendFactory_getFactory },
     { "pulse", ALCpulseBackendFactory_getFactory },
-#endif
-#ifdef HAVE_ALSA
     { "alsa", ALCalsaBackendFactory_getFactory },
-#endif
-#ifdef HAVE_COREAUDIO
     { "core", ALCcoreAudioBackendFactory_getFactory },
-#endif
-#ifdef HAVE_SOLARIS
     { "solaris", ALCsolarisBackendFactory_getFactory },
-#endif
-#ifdef HAVE_SNDIO
     { "sndio", SndioBackendFactory_getFactory },
-#endif
-#ifdef HAVE_OSS
     { "oss", ALCossBackendFactory_getFactory },
-#endif
-#ifdef HAVE_QSA
     { "qsa", ALCqsaBackendFactory_getFactory },
-#endif
-#ifdef HAVE_WASAPI
     { "wasapi", ALCwasapiBackendFactory_getFactory },
-#endif
-#ifdef HAVE_DSOUND
     { "dsound", ALCdsoundBackendFactory_getFactory },
-#endif
-#ifdef HAVE_WINMM
     { "winmm", ALCwinmmBackendFactory_getFactory },
-#endif
-#ifdef HAVE_PORTAUDIO
     { "port", ALCportBackendFactory_getFactory },
-#endif
-#ifdef HAVE_OPENSL
     { "opensl", ALCopenslBackendFactory_getFactory },
-#endif
-#ifdef HAVE_SDL2
     { "sdl2", ALCsdl2BackendFactory_getFactory },
-#endif
 
     { "null", ALCnullBackendFactory_getFactory },
-#ifdef HAVE_WAVE
     { "wave", ALCwaveBackendFactory_getFactory },
-#endif
 #endif /* 0 */
+
     { "null", NullBackendFactory::getFactory },
 };
 ALsizei BackendListSize = COUNTOF(BackendList);

@@ -3,8 +3,6 @@
 
 #include "alMain.h"
 
-#ifdef __cplusplus
-
 #include <string>
 #include <mutex>
 
@@ -116,6 +114,4 @@ struct BackendFactory {
     virtual ALCbackend *createBackend(ALCdevice *device, ALCbackend_Type type) = 0;
 };
 
-
-#endif /* __cplusplus */
 #endif /* AL_BACKENDS_BASE_H */

@@ -8,8 +8,6 @@
 #include "alBuffer.h"
 #include "alEffect.h"
 
-#include "backends/base.h"
-
 /* This is a place to dump inline function instantiations, to generate function
  * bodies for calls that can't be inlined. C++ does not have a way to do this
  * explicitly, so as long as there is C code calling inline functions, a body

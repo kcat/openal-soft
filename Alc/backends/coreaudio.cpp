@@ -20,6 +20,8 @@
 
 #include "config.h"
 
+#include "backends/coreaudio.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,8 +33,6 @@
 #include <unistd.h>
 #include <AudioUnit/AudioUnit.h>
 #include <AudioToolbox/AudioToolbox.h>
-
-#include "backends/base.h"
 
 
 static const ALCchar ca_device[] = "CoreAudio Default";
@@ -753,44 +753,18 @@ static ALCuint ALCcoreAudioCapture_availableSamples(ALCcoreAudioCapture *self)
 }
 
 
-struct ALCcoreAudioBackendFactory final : public ALCbackendFactory {
-    ALCcoreAudioBackendFactory() noexcept;
-};
-
-ALCbackendFactory *ALCcoreAudioBackendFactory_getFactory(void);
-
-static ALCboolean ALCcoreAudioBackendFactory_init(ALCcoreAudioBackendFactory *self);
-static DECLARE_FORWARD(ALCcoreAudioBackendFactory, ALCbackendFactory, void, deinit)
-static ALCboolean ALCcoreAudioBackendFactory_querySupport(ALCcoreAudioBackendFactory *self, ALCbackend_Type type);
-static void ALCcoreAudioBackendFactory_probe(ALCcoreAudioBackendFactory *self, enum DevProbe type, std::string *outnames);
-static ALCbackend* ALCcoreAudioBackendFactory_createBackend(ALCcoreAudioBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
-DEFINE_ALCBACKENDFACTORY_VTABLE(ALCcoreAudioBackendFactory);
-
-
-ALCcoreAudioBackendFactory::ALCcoreAudioBackendFactory() noexcept
-  : ALCbackendFactory{GET_VTABLE2(ALCcoreAudioBackendFactory, ALCbackendFactory)}
-{ }
-
-ALCbackendFactory *ALCcoreAudioBackendFactory_getFactory(void)
+BackendFactory &CoreAudioBackendFactory::getFactory()
 {
-    static ALCcoreAudioBackendFactory factory{};
-    return STATIC_CAST(ALCbackendFactory, &factory);
+    static CoreAudioBackendFactory factory{};
+    return factory;
 }
 
+bool CoreAudioBackendFactory::init() { return true; }
 
-static ALCboolean ALCcoreAudioBackendFactory_init(ALCcoreAudioBackendFactory* UNUSED(self))
-{
-    return ALC_TRUE;
-}
+bool CoreAudioBackendFactory::querySupport(ALCbackend_Type type)
+{ return (type == ALCbackend_Playback || ALCbackend_Capture); }
 
-static ALCboolean ALCcoreAudioBackendFactory_querySupport(ALCcoreAudioBackendFactory* UNUSED(self), ALCbackend_Type type)
-{
-    if(type == ALCbackend_Playback || ALCbackend_Capture)
-        return ALC_TRUE;
-    return ALC_FALSE;
-}
-
-static void ALCcoreAudioBackendFactory_probe(ALCcoreAudioBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
+void CoreAudioBackendFactory::probe(enum DevProbe type, std::string *outnames)
 {
     switch(type)
     {
@@ -802,22 +776,22 @@ static void ALCcoreAudioBackendFactory_probe(ALCcoreAudioBackendFactory* UNUSED(
     }
 }
 
-static ALCbackend* ALCcoreAudioBackendFactory_createBackend(ALCcoreAudioBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+ALCbackend *CoreAudioBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
     {
         ALCcoreAudioPlayback *backend;
         NEW_OBJ(backend, ALCcoreAudioPlayback)(device);
-        if(!backend) return NULL;
+        if(!backend) return nullptr;
         return STATIC_CAST(ALCbackend, backend);
     }
     if(type == ALCbackend_Capture)
     {
         ALCcoreAudioCapture *backend;
         NEW_OBJ(backend, ALCcoreAudioCapture)(device);
-        if(!backend) return NULL;
+        if(!backend) return nullptr;
         return STATIC_CAST(ALCbackend, backend);
     }
 
-    return NULL;
+    return nullptr;
 }

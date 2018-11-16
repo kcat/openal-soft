@@ -20,6 +20,8 @@
 
 #include "config.h"
 
+#include "backends/winmm.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
@@ -39,8 +41,6 @@
 #include "ringbuffer.h"
 #include "threads.h"
 #include "compat.h"
-
-#include "backends/base.h"
 
 #ifndef WAVE_FORMAT_IEEE_FLOAT
 #define WAVE_FORMAT_IEEE_FLOAT  0x0003
@@ -119,7 +119,6 @@ void ProbeCaptureDevices(void)
     }
 }
 
-} // namespace
 
 struct ALCwinmmPlayback final : public ALCbackend {
     std::atomic<ALuint> Writable{0u};
@@ -135,27 +134,27 @@ struct ALCwinmmPlayback final : public ALCbackend {
     std::thread thread;
 };
 
-static void ALCwinmmPlayback_Construct(ALCwinmmPlayback *self, ALCdevice *device);
-static void ALCwinmmPlayback_Destruct(ALCwinmmPlayback *self);
+void ALCwinmmPlayback_Construct(ALCwinmmPlayback *self, ALCdevice *device);
+void ALCwinmmPlayback_Destruct(ALCwinmmPlayback *self);
 
-static void CALLBACK ALCwinmmPlayback_waveOutProc(HWAVEOUT device, UINT msg, DWORD_PTR instance, DWORD_PTR param1, DWORD_PTR param2);
-static int ALCwinmmPlayback_mixerProc(ALCwinmmPlayback *self);
+void CALLBACK ALCwinmmPlayback_waveOutProc(HWAVEOUT device, UINT msg, DWORD_PTR instance, DWORD_PTR param1, DWORD_PTR param2);
+int ALCwinmmPlayback_mixerProc(ALCwinmmPlayback *self);
 
-static ALCenum ALCwinmmPlayback_open(ALCwinmmPlayback *self, const ALCchar *name);
-static ALCboolean ALCwinmmPlayback_reset(ALCwinmmPlayback *self);
-static ALCboolean ALCwinmmPlayback_start(ALCwinmmPlayback *self);
-static void ALCwinmmPlayback_stop(ALCwinmmPlayback *self);
-static DECLARE_FORWARD2(ALCwinmmPlayback, ALCbackend, ALCenum, captureSamples, ALCvoid*, ALCuint)
-static DECLARE_FORWARD(ALCwinmmPlayback, ALCbackend, ALCuint, availableSamples)
-static DECLARE_FORWARD(ALCwinmmPlayback, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(ALCwinmmPlayback, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCwinmmPlayback, ALCbackend, void, unlock)
+ALCenum ALCwinmmPlayback_open(ALCwinmmPlayback *self, const ALCchar *name);
+ALCboolean ALCwinmmPlayback_reset(ALCwinmmPlayback *self);
+ALCboolean ALCwinmmPlayback_start(ALCwinmmPlayback *self);
+void ALCwinmmPlayback_stop(ALCwinmmPlayback *self);
+DECLARE_FORWARD2(ALCwinmmPlayback, ALCbackend, ALCenum, captureSamples, ALCvoid*, ALCuint)
+DECLARE_FORWARD(ALCwinmmPlayback, ALCbackend, ALCuint, availableSamples)
+DECLARE_FORWARD(ALCwinmmPlayback, ALCbackend, ClockLatency, getClockLatency)
+DECLARE_FORWARD(ALCwinmmPlayback, ALCbackend, void, lock)
+DECLARE_FORWARD(ALCwinmmPlayback, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCwinmmPlayback)
 
 DEFINE_ALCBACKEND_VTABLE(ALCwinmmPlayback);
 
 
-static void ALCwinmmPlayback_Construct(ALCwinmmPlayback *self, ALCdevice *device)
+void ALCwinmmPlayback_Construct(ALCwinmmPlayback *self, ALCdevice *device)
 {
     new (self) ALCwinmmPlayback{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
@@ -165,7 +164,7 @@ static void ALCwinmmPlayback_Construct(ALCwinmmPlayback *self, ALCdevice *device
     std::fill(self->WaveBuffer.begin(), self->WaveBuffer.end(), WAVEHDR{});
 }
 
-static void ALCwinmmPlayback_Destruct(ALCwinmmPlayback *self)
+void ALCwinmmPlayback_Destruct(ALCwinmmPlayback *self)
 {
     if(self->OutHdl)
         waveOutClose(self->OutHdl);
@@ -186,9 +185,9 @@ static void ALCwinmmPlayback_Destruct(ALCwinmmPlayback *self)
  * Posts a message to 'ALCwinmmPlayback_mixerProc' everytime a WaveOut Buffer
  * is completed and returns to the application (for more data)
  */
-static void CALLBACK ALCwinmmPlayback_waveOutProc(HWAVEOUT UNUSED(device), UINT msg,
-                                                  DWORD_PTR instance, DWORD_PTR UNUSED(param1),
-                                                  DWORD_PTR UNUSED(param2))
+void CALLBACK ALCwinmmPlayback_waveOutProc(HWAVEOUT UNUSED(device), UINT msg,
+                                           DWORD_PTR instance, DWORD_PTR UNUSED(param1),
+                                           DWORD_PTR UNUSED(param2))
 {
     if(msg != WOM_DONE)
         return;
@@ -198,7 +197,7 @@ static void CALLBACK ALCwinmmPlayback_waveOutProc(HWAVEOUT UNUSED(device), UINT 
     alsem_post(&self->Sem);
 }
 
-FORCE_ALIGN static int ALCwinmmPlayback_mixerProc(ALCwinmmPlayback *self)
+FORCE_ALIGN int ALCwinmmPlayback_mixerProc(ALCwinmmPlayback *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
@@ -235,7 +234,7 @@ FORCE_ALIGN static int ALCwinmmPlayback_mixerProc(ALCwinmmPlayback *self)
 }
 
 
-static ALCenum ALCwinmmPlayback_open(ALCwinmmPlayback *self, const ALCchar *deviceName)
+ALCenum ALCwinmmPlayback_open(ALCwinmmPlayback *self, const ALCchar *deviceName)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
@@ -291,7 +290,7 @@ retry_open:
     return ALC_NO_ERROR;
 }
 
-static ALCboolean ALCwinmmPlayback_reset(ALCwinmmPlayback *self)
+ALCboolean ALCwinmmPlayback_reset(ALCwinmmPlayback *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
@@ -361,7 +360,7 @@ static ALCboolean ALCwinmmPlayback_reset(ALCwinmmPlayback *self)
     return ALC_TRUE;
 }
 
-static ALCboolean ALCwinmmPlayback_start(ALCwinmmPlayback *self)
+ALCboolean ALCwinmmPlayback_start(ALCwinmmPlayback *self)
 {
     try {
         std::for_each(self->WaveBuffer.begin(), self->WaveBuffer.end(),
@@ -382,7 +381,7 @@ static ALCboolean ALCwinmmPlayback_start(ALCwinmmPlayback *self)
     return ALC_FALSE;
 }
 
-static void ALCwinmmPlayback_stop(ALCwinmmPlayback *self)
+void ALCwinmmPlayback_stop(ALCwinmmPlayback *self)
 {
     if(self->killNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->thread.joinable())
         return;
@@ -414,27 +413,27 @@ struct ALCwinmmCapture final : public ALCbackend {
     std::thread thread;
 };
 
-static void ALCwinmmCapture_Construct(ALCwinmmCapture *self, ALCdevice *device);
-static void ALCwinmmCapture_Destruct(ALCwinmmCapture *self);
+void ALCwinmmCapture_Construct(ALCwinmmCapture *self, ALCdevice *device);
+void ALCwinmmCapture_Destruct(ALCwinmmCapture *self);
 
-static void CALLBACK ALCwinmmCapture_waveInProc(HWAVEIN device, UINT msg, DWORD_PTR instance, DWORD_PTR param1, DWORD_PTR param2);
-static int ALCwinmmCapture_captureProc(ALCwinmmCapture *self);
+void CALLBACK ALCwinmmCapture_waveInProc(HWAVEIN device, UINT msg, DWORD_PTR instance, DWORD_PTR param1, DWORD_PTR param2);
+int ALCwinmmCapture_captureProc(ALCwinmmCapture *self);
 
-static ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *deviceName);
-static DECLARE_FORWARD(ALCwinmmCapture, ALCbackend, ALCboolean, reset)
-static ALCboolean ALCwinmmCapture_start(ALCwinmmCapture *self);
-static void ALCwinmmCapture_stop(ALCwinmmCapture *self);
-static ALCenum ALCwinmmCapture_captureSamples(ALCwinmmCapture *self, ALCvoid *buffer, ALCuint samples);
-static ALCuint ALCwinmmCapture_availableSamples(ALCwinmmCapture *self);
-static DECLARE_FORWARD(ALCwinmmCapture, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(ALCwinmmCapture, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCwinmmCapture, ALCbackend, void, unlock)
+ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *deviceName);
+DECLARE_FORWARD(ALCwinmmCapture, ALCbackend, ALCboolean, reset)
+ALCboolean ALCwinmmCapture_start(ALCwinmmCapture *self);
+void ALCwinmmCapture_stop(ALCwinmmCapture *self);
+ALCenum ALCwinmmCapture_captureSamples(ALCwinmmCapture *self, ALCvoid *buffer, ALCuint samples);
+ALCuint ALCwinmmCapture_availableSamples(ALCwinmmCapture *self);
+DECLARE_FORWARD(ALCwinmmCapture, ALCbackend, ClockLatency, getClockLatency)
+DECLARE_FORWARD(ALCwinmmCapture, ALCbackend, void, lock)
+DECLARE_FORWARD(ALCwinmmCapture, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCwinmmCapture)
 
 DEFINE_ALCBACKEND_VTABLE(ALCwinmmCapture);
 
 
-static void ALCwinmmCapture_Construct(ALCwinmmCapture *self, ALCdevice *device)
+void ALCwinmmCapture_Construct(ALCwinmmCapture *self, ALCdevice *device)
 {
     new (self) ALCwinmmCapture{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
@@ -444,7 +443,7 @@ static void ALCwinmmCapture_Construct(ALCwinmmCapture *self, ALCdevice *device)
     std::fill(self->WaveBuffer.begin(), self->WaveBuffer.end(), WAVEHDR{});
 }
 
-static void ALCwinmmCapture_Destruct(ALCwinmmCapture *self)
+void ALCwinmmCapture_Destruct(ALCwinmmCapture *self)
 {
     // Close the Wave device
     if(self->InHdl)
@@ -469,9 +468,9 @@ static void ALCwinmmCapture_Destruct(ALCwinmmCapture *self)
  * Posts a message to 'ALCwinmmCapture_captureProc' everytime a WaveIn Buffer
  * is completed and returns to the application (with more data).
  */
-static void CALLBACK ALCwinmmCapture_waveInProc(HWAVEIN UNUSED(device), UINT msg,
-                                                DWORD_PTR instance, DWORD_PTR UNUSED(param1),
-                                                DWORD_PTR UNUSED(param2))
+void CALLBACK ALCwinmmCapture_waveInProc(HWAVEIN UNUSED(device), UINT msg,
+                                         DWORD_PTR instance, DWORD_PTR UNUSED(param1),
+                                         DWORD_PTR UNUSED(param2))
 {
     if(msg != WIM_DATA)
         return;
@@ -481,7 +480,7 @@ static void CALLBACK ALCwinmmCapture_waveInProc(HWAVEIN UNUSED(device), UINT msg
     alsem_post(&self->Sem);
 }
 
-static int ALCwinmmCapture_captureProc(ALCwinmmCapture *self)
+int ALCwinmmCapture_captureProc(ALCwinmmCapture *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
@@ -519,7 +518,7 @@ static int ALCwinmmCapture_captureProc(ALCwinmmCapture *self)
 }
 
 
-static ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *deviceName)
+ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *deviceName)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
@@ -612,7 +611,7 @@ static ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *device
     return ALC_NO_ERROR;
 }
 
-static ALCboolean ALCwinmmCapture_start(ALCwinmmCapture *self)
+ALCboolean ALCwinmmCapture_start(ALCwinmmCapture *self)
 {
     try {
         for(size_t i{0};i < self->WaveBuffer.size();++i)
@@ -635,7 +634,7 @@ static ALCboolean ALCwinmmCapture_start(ALCwinmmCapture *self)
     return ALC_FALSE;
 }
 
-static void ALCwinmmCapture_stop(ALCwinmmCapture *self)
+void ALCwinmmCapture_stop(ALCwinmmCapture *self)
 {
     waveInStop(self->InHdl);
 
@@ -654,55 +653,33 @@ static void ALCwinmmCapture_stop(ALCwinmmCapture *self)
     self->Idx = 0;
 }
 
-static ALCenum ALCwinmmCapture_captureSamples(ALCwinmmCapture *self, ALCvoid *buffer, ALCuint samples)
+ALCenum ALCwinmmCapture_captureSamples(ALCwinmmCapture *self, ALCvoid *buffer, ALCuint samples)
 {
     ll_ringbuffer_read(self->Ring, static_cast<char*>(buffer), samples);
     return ALC_NO_ERROR;
 }
 
-static ALCuint ALCwinmmCapture_availableSamples(ALCwinmmCapture *self)
+ALCuint ALCwinmmCapture_availableSamples(ALCwinmmCapture *self)
 {
     return (ALCuint)ll_ringbuffer_read_space(self->Ring);
 }
 
-
-struct ALCwinmmBackendFactory final : public ALCbackendFactory {
-    ALCwinmmBackendFactory() noexcept;
-};
-#define ALCWINMMBACKENDFACTORY_INITIALIZER GET_VTABLE2(ALCwinmmBackendFactory, ALCbackendFactory)
-
-static ALCboolean ALCwinmmBackendFactory_init(ALCwinmmBackendFactory *self);
-static void ALCwinmmBackendFactory_deinit(ALCwinmmBackendFactory *self);
-static ALCboolean ALCwinmmBackendFactory_querySupport(ALCwinmmBackendFactory *self, ALCbackend_Type type);
-static void ALCwinmmBackendFactory_probe(ALCwinmmBackendFactory *self, enum DevProbe type, std::string *outnames);
-static ALCbackend* ALCwinmmBackendFactory_createBackend(ALCwinmmBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
-
-DEFINE_ALCBACKENDFACTORY_VTABLE(ALCwinmmBackendFactory);
-
-ALCwinmmBackendFactory::ALCwinmmBackendFactory() noexcept
-  : ALCbackendFactory{ALCWINMMBACKENDFACTORY_INITIALIZER}
-{ }
+} // namespace
 
 
-static ALCboolean ALCwinmmBackendFactory_init(ALCwinmmBackendFactory* UNUSED(self))
-{
-    return ALC_TRUE;
-}
+bool WinMMBackendFactory::init()
+{ return true; }
 
-static void ALCwinmmBackendFactory_deinit(ALCwinmmBackendFactory* UNUSED(self))
+void WinMMBackendFactory::deinit()
 {
     PlaybackDevices.clear();
     CaptureDevices.clear();
 }
 
-static ALCboolean ALCwinmmBackendFactory_querySupport(ALCwinmmBackendFactory* UNUSED(self), ALCbackend_Type type)
-{
-    if(type == ALCbackend_Playback || type == ALCbackend_Capture)
-        return ALC_TRUE;
-    return ALC_FALSE;
-}
+bool WinMMBackendFactory::querySupport(ALCbackend_Type type)
+{ return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
 
-static void ALCwinmmBackendFactory_probe(ALCwinmmBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
+void WinMMBackendFactory::probe(enum DevProbe type, std::string *outnames)
 {
     auto add_device = [outnames](const std::string &dname) -> void
     {
@@ -726,7 +703,7 @@ static void ALCwinmmBackendFactory_probe(ALCwinmmBackendFactory* UNUSED(self), e
     }
 }
 
-static ALCbackend* ALCwinmmBackendFactory_createBackend(ALCwinmmBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+ALCbackend *WinMMBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
     {
@@ -746,8 +723,8 @@ static ALCbackend* ALCwinmmBackendFactory_createBackend(ALCwinmmBackendFactory* 
     return nullptr;
 }
 
-ALCbackendFactory *ALCwinmmBackendFactory_getFactory(void)
+BackendFactory &WinMMBackendFactory::getFactory()
 {
-    static ALCwinmmBackendFactory factory{};
-    return STATIC_CAST(ALCbackendFactory, &factory);
+    static WinMMBackendFactory factory{};
+    return factory;
 }

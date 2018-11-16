@@ -34,6 +34,7 @@
 #include <thread>
 #include <vector>
 #include <string>
+#include <algorithm>
 
 #include "alMain.h"
 #include "alSource.h"
@@ -4053,7 +4054,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     const ALCchar *fmt{};
     if(ConfigValueStr(deviceName, nullptr, "channels", &fmt))
     {
-        static constexpr struct {
+        static constexpr struct ChannelMap {
             const char name[16];
             enum DevFmtChannels chans;
             ALsizei order;
@@ -4069,24 +4070,23 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
             { "ambi2", DevFmtAmbi3D, 2 },
             { "ambi3", DevFmtAmbi3D, 3 },
         };
-        size_t i;
 
-        for(i = 0;i < COUNTOF(chanlist);i++)
-        {
-            if(strcasecmp(chanlist[i].name, fmt) == 0)
-            {
-                device->FmtChans = chanlist[i].chans;
-                device->AmbiOrder = chanlist[i].order;
-                device->Flags |= DEVICE_CHANNELS_REQUEST;
-                break;
-            }
-        }
-        if(i == COUNTOF(chanlist))
+        auto iter = std::find_if(std::begin(chanlist), std::end(chanlist),
+            [fmt](const ChannelMap &entry) -> bool
+            { return strcasecmp(entry.name, fmt) == 0; }
+        );
+        if(iter == std::end(chanlist))
             ERR("Unsupported channels: %s\n", fmt);
+        else
+        {
+            device->FmtChans = iter->chans;
+            device->AmbiOrder = iter->order;
+            device->Flags |= DEVICE_CHANNELS_REQUEST;
+        }
     }
     if(ConfigValueStr(deviceName, nullptr, "sample-type", &fmt))
     {
-        static constexpr struct {
+        static constexpr struct TypeMap {
             const char name[16];
             enum DevFmtType type;
         } typelist[] = {
@@ -4098,19 +4098,18 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
             { "uint32",  DevFmtUInt   },
             { "float32", DevFmtFloat  },
         };
-        size_t i;
 
-        for(i = 0;i < COUNTOF(typelist);i++)
-        {
-            if(strcasecmp(typelist[i].name, fmt) == 0)
-            {
-                device->FmtType = typelist[i].type;
-                device->Flags |= DEVICE_SAMPLE_TYPE_REQUEST;
-                break;
-            }
-        }
-        if(i == COUNTOF(typelist))
+        auto iter = std::find_if(std::begin(typelist), std::end(typelist),
+            [fmt](const TypeMap &entry) -> bool
+            { return strcasecmp(entry.name, fmt) == 0; }
+        );
+        if(iter == std::end(typelist))
             ERR("Unsupported sample-type: %s\n", fmt);
+        else
+        {
+            device->FmtType = iter->type;
+            device->Flags |= DEVICE_SAMPLE_TYPE_REQUEST;
+        }
     }
 
     if(ConfigValueUInt(deviceName, nullptr, "frequency", &device->Frequency))

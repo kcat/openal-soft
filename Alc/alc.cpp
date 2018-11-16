@@ -59,6 +59,9 @@
 #include "backends/base.h"
 #include "backends/null.h"
 #include "backends/loopback.h"
+#ifdef HAVE_JACK
+#include "backends/jack.h"
+#endif
 #ifdef HAVE_PULSEAUDIO
 #include "backends/pulseaudio.h"
 #endif
@@ -90,6 +93,9 @@ struct BackendInfo {
 };
 
 struct BackendInfo BackendList[] = {
+#ifdef HAVE_JACK
+    { "jack", JackBackendFactory::getFactory },
+#endif
 #ifdef HAVE_PULSEAUDIO
     { "pulse", PulseBackendFactory::getFactory },
 #endif
@@ -105,11 +111,8 @@ struct BackendInfo BackendList[] = {
 #ifdef HAVE_OPENSL
     { "opensl", OSLBackendFactory::getFactory },
 #endif
+
 #if 0
-    { "jack", ALCjackBackendFactory_getFactory },
-    { "pulse", ALCpulseBackendFactory_getFactory },
-    { "alsa", ALCalsaBackendFactory_getFactory },
-    { "core", ALCcoreAudioBackendFactory_getFactory },
     { "solaris", ALCsolarisBackendFactory_getFactory },
     { "sndio", SndioBackendFactory_getFactory },
     { "oss", ALCossBackendFactory_getFactory },

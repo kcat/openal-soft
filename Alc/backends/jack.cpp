@@ -20,6 +20,8 @@
 
 #include "config.h"
 
+#include "backends/jack.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
@@ -30,8 +32,6 @@
 #include "ringbuffer.h"
 #include "threads.h"
 #include "compat.h"
-
-#include "backends/base.h"
 
 #include <jack/jack.h>
 #include <jack/ringbuffer.h>
@@ -520,18 +520,14 @@ static void jack_msg_handler(const char *message)
     WARN("%s\n", message);
 }
 
-struct ALCjackBackendFactory final : public ALCbackendFactory {
-    ALCjackBackendFactory() noexcept;
-};
-
-static ALCboolean ALCjackBackendFactory_init(ALCjackBackendFactory* UNUSED(self))
+bool JackBackendFactory::init()
 {
     void (*old_error_cb)(const char*);
     jack_client_t *client;
     jack_status_t status;
 
     if(!jack_load())
-        return ALC_FALSE;
+        return false;
 
     if(!GetConfigValueBool(NULL, "jack", "spawn-server", 0))
         ClientOptions = static_cast<jack_options_t>(ClientOptions | JackNoStartServer);
@@ -540,35 +536,31 @@ static ALCboolean ALCjackBackendFactory_init(ALCjackBackendFactory* UNUSED(self)
     jack_set_error_function(jack_msg_handler);
     client = jack_client_open("alsoft", ClientOptions, &status, NULL);
     jack_set_error_function(old_error_cb);
-    if(client == NULL)
+    if(!client)
     {
         WARN("jack_client_open() failed, 0x%02x\n", status);
         if((status&JackServerFailed) && !(ClientOptions&JackNoStartServer))
             ERR("Unable to connect to JACK server\n");
-        return ALC_FALSE;
+        return false;
     }
 
     jack_client_close(client);
-    return ALC_TRUE;
+    return true;
 }
 
-static void ALCjackBackendFactory_deinit(ALCjackBackendFactory* UNUSED(self))
+void JackBackendFactory::deinit()
 {
 #ifdef HAVE_DYNLOAD
     if(jack_handle)
         CloseLib(jack_handle);
-    jack_handle = NULL;
+    jack_handle = nullptr;
 #endif
 }
 
-static ALCboolean ALCjackBackendFactory_querySupport(ALCjackBackendFactory* UNUSED(self), ALCbackend_Type type)
-{
-    if(type == ALCbackend_Playback)
-        return ALC_TRUE;
-    return ALC_FALSE;
-}
+bool JackBackendFactory::querySupport(ALCbackend_Type type)
+{ return (type == ALCbackend_Playback); }
 
-static void ALCjackBackendFactory_probe(ALCjackBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
+void JackBackendFactory::probe(enum DevProbe type, std::string *outnames)
 {
     switch(type)
     {
@@ -582,28 +574,21 @@ static void ALCjackBackendFactory_probe(ALCjackBackendFactory* UNUSED(self), enu
     }
 }
 
-static ALCbackend* ALCjackBackendFactory_createBackend(ALCjackBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+ALCbackend *JackBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
     {
         ALCjackPlayback *backend;
         NEW_OBJ(backend, ALCjackPlayback)(device);
-        if(!backend) return NULL;
+        if(!backend) return nullptr;
         return STATIC_CAST(ALCbackend, backend);
     }
 
-    return NULL;
+    return nullptr;
 }
 
-DEFINE_ALCBACKENDFACTORY_VTABLE(ALCjackBackendFactory);
-
-
-ALCjackBackendFactory::ALCjackBackendFactory() noexcept
-  : ALCbackendFactory{GET_VTABLE2(ALCjackBackendFactory, ALCbackendFactory)}
-{ }
-
-ALCbackendFactory *ALCjackBackendFactory_getFactory(void)
+BackendFactory &JackBackendFactory::getFactory()
 {
-    static ALCjackBackendFactory factory{};
-    return STATIC_CAST(ALCbackendFactory, &factory);
+    static JackBackendFactory factory{};
+    return factory;
 }

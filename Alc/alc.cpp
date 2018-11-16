@@ -86,6 +86,9 @@
 #ifdef HAVE_OSS
 #include "backends/oss.h"
 #endif
+#ifdef HAVE_QSA
+#include "backends/qsa.h"
+#endif
 #ifdef HAVE_SDL2
 #include "backends/sdl2.h"
 #endif
@@ -132,9 +135,11 @@ struct BackendInfo BackendList[] = {
 #ifdef HAVE_OSS
     { "oss", OSSBackendFactory::getFactory },
 #endif
+#ifdef HAVE_QSA
+    { "qsa", QSABackendFactory::getFactory },
+#endif
 
 #if 0
-    { "qsa", ALCqsaBackendFactory_getFactory },
     { "dsound", ALCdsoundBackendFactory_getFactory },
     { "winmm", ALCwinmmBackendFactory_getFactory },
     { "port", ALCportBackendFactory_getFactory },

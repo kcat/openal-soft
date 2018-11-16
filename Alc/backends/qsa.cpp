@@ -20,6 +20,8 @@
 
 #include "config.h"
 
+#include "backends/qsa.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <sched.h>
@@ -32,8 +34,6 @@
 #include "alMain.h"
 #include "alu.h"
 #include "threads.h"
-
-#include "backends/base.h"
 
 
 namespace {
@@ -162,8 +162,6 @@ void deviceList(int type, vector_DevMap *devmap)
         snd_ctl_close(handle);
     }
 }
-
-} // namespace
 
 
 /* Wrappers to use an old-style backend with the new interface. */
@@ -991,29 +989,13 @@ static ALCuint CaptureWrapper_availableSamples(CaptureWrapper *self)
     return qsa_available_samples(self);
 }
 
-
-struct ALCqsaBackendFactory final : public ALCbackendFactory {
-    ALCqsaBackendFactory() noexcept;
-};
-
-static ALCboolean ALCqsaBackendFactory_init(ALCqsaBackendFactory* UNUSED(self));
-static void ALCqsaBackendFactory_deinit(ALCqsaBackendFactory* UNUSED(self));
-static ALCboolean ALCqsaBackendFactory_querySupport(ALCqsaBackendFactory* UNUSED(self), ALCbackend_Type type);
-static void ALCqsaBackendFactory_probe(ALCqsaBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames);
-static ALCbackend* ALCqsaBackendFactory_createBackend(ALCqsaBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type);
-DEFINE_ALCBACKENDFACTORY_VTABLE(ALCqsaBackendFactory);
-
-ALCqsaBackendFactory::ALCqsaBackendFactory() noexcept
-  : ALCbackendFactory{GET_VTABLE2(ALCqsaBackendFactory, ALCbackendFactory)}
-{ }
+} // namespace
 
 
-static ALCboolean ALCqsaBackendFactory_init(ALCqsaBackendFactory* UNUSED(self))
-{
-    return ALC_TRUE;
-}
+bool QSABackendFactory::init()
+{ return true; }
 
-static void ALCqsaBackendFactory_deinit(ALCqsaBackendFactory* UNUSED(self))
+void QSABackendFactory::deinit()
 {
 #define FREE_NAME(iter) free((iter)->name)
     VECTOR_FOR_EACH(DevMap, DeviceNameMap, FREE_NAME);
@@ -1024,14 +1006,10 @@ static void ALCqsaBackendFactory_deinit(ALCqsaBackendFactory* UNUSED(self))
 #undef FREE_NAME
 }
 
-static ALCboolean ALCqsaBackendFactory_querySupport(ALCqsaBackendFactory* UNUSED(self), ALCbackend_Type type)
-{
-    if(type == ALCbackend_Playback || type == ALCbackend_Capture)
-        return ALC_TRUE;
-    return ALC_FALSE;
-}
+bool QSABackendFactory::querySupport(ALCbackend_Type type)
+{ return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
 
-static void ALCqsaBackendFactory_probe(ALCqsaBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
+void QSABackendFactory::probe(enum DevProbe type, std::string *outnames)
 {
     switch (type)
     {
@@ -1053,7 +1031,7 @@ static void ALCqsaBackendFactory_probe(ALCqsaBackendFactory* UNUSED(self), enum 
     }
 }
 
-static ALCbackend* ALCqsaBackendFactory_createBackend(ALCqsaBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+ALCbackend *QSABackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
     {
@@ -1073,8 +1051,8 @@ static ALCbackend* ALCqsaBackendFactory_createBackend(ALCqsaBackendFactory* UNUS
     return NULL;
 }
 
-ALCbackendFactory *ALCqsaBackendFactory_getFactory(void)
+BackendFactory &QSABackendFactory::getFactory()
 {
-    static ALCqsaBackendFactory factory{};
-    return STATIC_CAST(ALCbackendFactory, &factory);
+    static QSABackendFactory factory{};
+    return factory;
 }

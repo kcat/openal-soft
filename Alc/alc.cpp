@@ -4005,10 +4005,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *Context)
  */
 ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 {
-    const ALCchar *fmt;
-    ALCdevice *device;
-    ALCenum err;
-
     DO_INITCONFIG();
 
     if(!PlaybackBackend.name)
@@ -4029,7 +4025,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     ))
         deviceName = nullptr;
 
-    device = static_cast<ALCdevice*>(al_calloc(16, sizeof(ALCdevice)));
+    auto device = static_cast<ALCdevice*>(al_calloc(16, sizeof(ALCdevice)));
     if(!device)
     {
         alcSetError(nullptr, ALC_OUT_OF_MEMORY);
@@ -4054,9 +4050,10 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->AuxiliaryEffectSlotMax = 64;
     device->NumAuxSends = DEFAULT_SENDS;
 
+    const ALCchar *fmt{};
     if(ConfigValueStr(deviceName, nullptr, "channels", &fmt))
     {
-        static const struct {
+        static constexpr struct {
             const char name[16];
             enum DevFmtChannels chans;
             ALsizei order;
@@ -4089,7 +4086,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     }
     if(ConfigValueStr(deviceName, nullptr, "sample-type", &fmt))
     {
-        static const struct {
+        static constexpr struct {
             const char name[16];
             enum DevFmtType type;
         } typelist[] = {
@@ -4156,7 +4153,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     }
 
     // Find a playback device to open
-    if((err=V(device->Backend,open)(deviceName)) != ALC_NO_ERROR)
+    ALCenum err{V(device->Backend,open)(deviceName)};
+    if(err != ALC_NO_ERROR)
     {
         FreeDevice(device);
         alcSetError(nullptr, err);
@@ -4251,9 +4249,6 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device)
  ************************************************/
 ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, ALCuint frequency, ALCenum format, ALCsizei samples)
 {
-    ALCdevice *device = nullptr;
-    ALCenum err;
-
     DO_INITCONFIG();
 
     if(!CaptureBackend.name)
@@ -4271,7 +4266,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     if(deviceName && (!deviceName[0] || strcasecmp(deviceName, alcDefaultName) == 0 || strcasecmp(deviceName, "openal-soft") == 0))
         deviceName = nullptr;
 
-    device = static_cast<ALCdevice*>(al_calloc(16, sizeof(ALCdevice)));
+    auto device = static_cast<ALCdevice*>(al_calloc(16, sizeof(ALCdevice)));
     if(!device)
     {
         alcSetError(nullptr, ALC_OUT_OF_MEMORY);
@@ -4311,7 +4306,8 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         DevFmtChannelsString(device->FmtChans), DevFmtTypeString(device->FmtType),
         device->Frequency, device->UpdateSize, device->NumUpdates
     );
-    if((err=V(device->Backend,open)(deviceName)) != ALC_NO_ERROR)
+    ALCenum err{V(device->Backend,open)(deviceName)};
+    if(err != ALC_NO_ERROR)
     {
         FreeDevice(device);
         alcSetError(nullptr, err);
@@ -4448,7 +4444,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
         return nullptr;
     }
 
-    ALCdevice *device{static_cast<ALCdevice*>(al_calloc(16, sizeof(ALCdevice)))};
+    auto device = static_cast<ALCdevice*>(al_calloc(16, sizeof(ALCdevice)));
     if(!device)
     {
         alcSetError(nullptr, ALC_OUT_OF_MEMORY);
@@ -4517,7 +4513,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
  */
 ALC_API ALCboolean ALC_APIENTRY alcIsRenderFormatSupportedSOFT(ALCdevice *device, ALCsizei freq, ALCenum channels, ALCenum type)
 {
-    ALCboolean ret = ALC_FALSE;
+    ALCboolean ret{ALC_FALSE};
 
     if(!VerifyDevice(&device) || device->Type != Loopback)
         alcSetError(device, ALC_INVALID_DEVICE);
@@ -4621,7 +4617,7 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device)
  */
 ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum paramName, ALCsizei index)
 {
-    const ALCchar *str = nullptr;
+    const ALCchar *str{nullptr};
 
     if(!VerifyDevice(&device) || device->Type == Capture)
         alcSetError(device, ALC_INVALID_DEVICE);
@@ -4649,8 +4645,6 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum
  */
 ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCint *attribs)
 {
-    ALCenum err;
-
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
     if(!VerifyDevice(&device) || device->Type == Capture ||
        !ATOMIC_LOAD(&device->Connected, almemory_order_relaxed))
@@ -4663,7 +4657,7 @@ ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCi
     almtx_lock(&device->BackendLock);
     listlock.unlock();
 
-    err = UpdateDeviceParams(device, attribs);
+    ALCenum err{UpdateDeviceParams(device, attribs)};
     almtx_unlock(&device->BackendLock);
 
     if(err != ALC_NO_ERROR)

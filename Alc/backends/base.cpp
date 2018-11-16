@@ -90,9 +90,3 @@ void ALCbackend_unlock(ALCbackend *self)
         std::terminate();
     }
 }
-
-
-/* Base ALCbackendFactory method implementations. */
-void ALCbackendFactory_deinit(ALCbackendFactory* UNUSED(self))
-{
-}

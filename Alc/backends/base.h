@@ -105,56 +105,6 @@ enum ALCbackend_Type {
 };
 
 
-struct ALCbackendFactoryVtable;
-
-struct ALCbackendFactory {
-    const struct ALCbackendFactoryVtable *vtbl;
-};
-
-void ALCbackendFactory_deinit(ALCbackendFactory *self);
-
-struct ALCbackendFactoryVtable {
-    ALCboolean (*const init)(ALCbackendFactory *self);
-    void (*const deinit)(ALCbackendFactory *self);
-
-    ALCboolean (*const querySupport)(ALCbackendFactory *self, ALCbackend_Type type);
-
-    void (*const probe)(ALCbackendFactory *self, enum DevProbe type, std::string *outnames);
-
-    ALCbackend* (*const createBackend)(ALCbackendFactory *self, ALCdevice *device, ALCbackend_Type type);
-};
-
-#define DEFINE_ALCBACKENDFACTORY_VTABLE(T)                                    \
-DECLARE_THUNK(T, ALCbackendFactory, ALCboolean, init)                         \
-DECLARE_THUNK(T, ALCbackendFactory, void, deinit)                             \
-DECLARE_THUNK1(T, ALCbackendFactory, ALCboolean, querySupport, ALCbackend_Type) \
-DECLARE_THUNK2(T, ALCbackendFactory, void, probe, enum DevProbe, std::string*) \
-DECLARE_THUNK2(T, ALCbackendFactory, ALCbackend*, createBackend, ALCdevice*, ALCbackend_Type) \
-                                                                              \
-static const struct ALCbackendFactoryVtable T##_ALCbackendFactory_vtable = {  \
-    T##_ALCbackendFactory_init,                                               \
-    T##_ALCbackendFactory_deinit,                                             \
-    T##_ALCbackendFactory_querySupport,                                       \
-    T##_ALCbackendFactory_probe,                                              \
-    T##_ALCbackendFactory_createBackend,                                      \
-}
-
-
-ALCbackendFactory *ALCalsaBackendFactory_getFactory(void);
-ALCbackendFactory *ALCcoreAudioBackendFactory_getFactory(void);
-ALCbackendFactory *ALCossBackendFactory_getFactory(void);
-ALCbackendFactory *ALCjackBackendFactory_getFactory(void);
-ALCbackendFactory *ALCsolarisBackendFactory_getFactory(void);
-ALCbackendFactory *SndioBackendFactory_getFactory(void);
-ALCbackendFactory *ALCqsaBackendFactory_getFactory(void);
-ALCbackendFactory *ALCdsoundBackendFactory_getFactory(void);
-ALCbackendFactory *ALCwinmmBackendFactory_getFactory(void);
-ALCbackendFactory *ALCportBackendFactory_getFactory(void);
-ALCbackendFactory *ALCopenslBackendFactory_getFactory(void);
-ALCbackendFactory *ALCwaveBackendFactory_getFactory(void);
-ALCbackendFactory *ALCsdl2BackendFactory_getFactory(void);
-
-
 struct BackendFactory {
     virtual bool init() = 0;
     virtual void deinit() { }

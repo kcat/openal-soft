@@ -36,13 +36,11 @@ ALboolean TrapALError = AL_FALSE;
 
 void alSetError(ALCcontext *context, ALenum errorCode, const char *msg, ...)
 {
-    ALenum curerr = AL_NO_ERROR;
-    char message[1024] = { 0 };
-    va_list args;
-    int msglen;
+    char message[1024]{};
 
+    va_list args;
     va_start(args, msg);
-    msglen = vsnprintf(message, sizeof(message), msg, args);
+    int msglen{snprintf(message, sizeof(message), msg, args)};
     va_end(args);
 
     if(msglen < 0 || (size_t)msglen >= sizeof(message))
@@ -71,28 +69,24 @@ void alSetError(ALCcontext *context, ALenum errorCode, const char *msg, ...)
 #endif
     }
 
+    ALenum curerr{AL_NO_ERROR};
     ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(&context->LastError, &curerr, errorCode);
     if((ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed)&EventType_Error))
     {
-        ALbitfieldSOFT enabledevts;
-        almtx_lock(&context->EventCbLock);
-        enabledevts = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed);
+        std::lock_guard<almtx_t> _{context->EventCbLock};
+        ALbitfieldSOFT enabledevts{ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed)};
         if((enabledevts&EventType_Error) && context->EventCb)
             (*context->EventCb)(AL_EVENT_TYPE_ERROR_SOFT, 0, errorCode, msglen, msg,
                                 context->EventParam);
-        almtx_unlock(&context->EventCbLock);
     }
 }
 
 AL_API ALenum AL_APIENTRY alGetError(void)
 {
-    ALCcontext *context;
-    ALenum errorCode;
-
-    context = GetContextRef();
-    if(!context)
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context))
     {
-        const ALenum deferror = AL_INVALID_OPERATION;
+        constexpr ALenum deferror{AL_INVALID_OPERATION};
         WARN("Querying error state on null context (implicitly 0x%04x)\n", deferror);
         if(TrapALError)
         {
@@ -106,8 +100,5 @@ AL_API ALenum AL_APIENTRY alGetError(void)
         return deferror;
     }
 
-    errorCode = ATOMIC_EXCHANGE_SEQ(&context->LastError, AL_NO_ERROR);
-
-    ALCcontext_DecRef(context);
-    return errorCode;
+    return ATOMIC_EXCHANGE_SEQ(&context->LastError, AL_NO_ERROR);
 }

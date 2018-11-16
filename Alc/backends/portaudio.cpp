@@ -20,6 +20,8 @@
 
 #include "config.h"
 
+#include "backends/portaudio.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,17 +32,17 @@
 #include "ringbuffer.h"
 #include "compat.h"
 
-#include "backends/base.h"
-
 #include <portaudio.h>
 
 
-static const ALCchar pa_device[] = "PortAudio Default";
+namespace {
+
+constexpr ALCchar pa_device[] = "PortAudio Default";
 
 
 #ifdef HAVE_DYNLOAD
-static void *pa_handle;
-#define MAKE_FUNC(x) static __typeof(x) * p##x
+void *pa_handle;
+#define MAKE_FUNC(x) decltype(x) * p##x
 MAKE_FUNC(Pa_Initialize);
 MAKE_FUNC(Pa_Terminate);
 MAKE_FUNC(Pa_GetErrorText);
@@ -67,7 +69,7 @@ MAKE_FUNC(Pa_GetStreamInfo);
 #endif
 #endif
 
-static ALCboolean pa_load(void)
+bool pa_load(void)
 {
     PaError err;
 
@@ -86,7 +88,7 @@ static ALCboolean pa_load(void)
 
         pa_handle = LoadLib(PALIB);
         if(!pa_handle)
-            return ALC_FALSE;
+            return false;
 
 #define LOAD_FUNC(f) do {                                                     \
     p##f = reinterpret_cast<decltype(p##f)>(GetSymbol(pa_handle, #f));        \
@@ -94,7 +96,7 @@ static ALCboolean pa_load(void)
     {                                                                         \
         CloseLib(pa_handle);                                                  \
         pa_handle = nullptr;                                                  \
-        return ALC_FALSE;                                                     \
+        return false;                                                         \
     }                                                                         \
 } while(0)
         LOAD_FUNC(Pa_Initialize);
@@ -114,17 +116,17 @@ static ALCboolean pa_load(void)
             ERR("Pa_Initialize() returned an error: %s\n", Pa_GetErrorText(err));
             CloseLib(pa_handle);
             pa_handle = nullptr;
-            return ALC_FALSE;
+            return false;
         }
     }
 #else
     if((err=Pa_Initialize()) != paNoError)
     {
         ERR("Pa_Initialize() returned an error: %s\n", Pa_GetErrorText(err));
-        return ALC_FALSE;
+        return false;
     }
 #endif
-    return ALC_TRUE;
+    return true;
 }
 
 
@@ -134,27 +136,27 @@ struct ALCportPlayback final : public ALCbackend {
     ALuint update_size;
 };
 
-static int ALCportPlayback_WriteCallback(const void *inputBuffer, void *outputBuffer,
+int ALCportPlayback_WriteCallback(const void *inputBuffer, void *outputBuffer,
     unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
     const PaStreamCallbackFlags statusFlags, void *userData);
 
-static void ALCportPlayback_Construct(ALCportPlayback *self, ALCdevice *device);
-static void ALCportPlayback_Destruct(ALCportPlayback *self);
-static ALCenum ALCportPlayback_open(ALCportPlayback *self, const ALCchar *name);
-static ALCboolean ALCportPlayback_reset(ALCportPlayback *self);
-static ALCboolean ALCportPlayback_start(ALCportPlayback *self);
-static void ALCportPlayback_stop(ALCportPlayback *self);
-static DECLARE_FORWARD2(ALCportPlayback, ALCbackend, ALCenum, captureSamples, ALCvoid*, ALCuint)
-static DECLARE_FORWARD(ALCportPlayback, ALCbackend, ALCuint, availableSamples)
-static DECLARE_FORWARD(ALCportPlayback, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(ALCportPlayback, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCportPlayback, ALCbackend, void, unlock)
+void ALCportPlayback_Construct(ALCportPlayback *self, ALCdevice *device);
+void ALCportPlayback_Destruct(ALCportPlayback *self);
+ALCenum ALCportPlayback_open(ALCportPlayback *self, const ALCchar *name);
+ALCboolean ALCportPlayback_reset(ALCportPlayback *self);
+ALCboolean ALCportPlayback_start(ALCportPlayback *self);
+void ALCportPlayback_stop(ALCportPlayback *self);
+DECLARE_FORWARD2(ALCportPlayback, ALCbackend, ALCenum, captureSamples, ALCvoid*, ALCuint)
+DECLARE_FORWARD(ALCportPlayback, ALCbackend, ALCuint, availableSamples)
+DECLARE_FORWARD(ALCportPlayback, ALCbackend, ClockLatency, getClockLatency)
+DECLARE_FORWARD(ALCportPlayback, ALCbackend, void, lock)
+DECLARE_FORWARD(ALCportPlayback, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCportPlayback)
 
 DEFINE_ALCBACKEND_VTABLE(ALCportPlayback);
 
 
-static void ALCportPlayback_Construct(ALCportPlayback *self, ALCdevice *device)
+void ALCportPlayback_Construct(ALCportPlayback *self, ALCdevice *device)
 {
     new (self) ALCportPlayback{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
@@ -163,7 +165,7 @@ static void ALCportPlayback_Construct(ALCportPlayback *self, ALCdevice *device)
     self->stream = nullptr;
 }
 
-static void ALCportPlayback_Destruct(ALCportPlayback *self)
+void ALCportPlayback_Destruct(ALCportPlayback *self)
 {
     PaError err = self->stream ? Pa_CloseStream(self->stream) : paNoError;
     if(err != paNoError)
@@ -175,7 +177,7 @@ static void ALCportPlayback_Destruct(ALCportPlayback *self)
 }
 
 
-static int ALCportPlayback_WriteCallback(const void *UNUSED(inputBuffer), void *outputBuffer,
+int ALCportPlayback_WriteCallback(const void *UNUSED(inputBuffer), void *outputBuffer,
     unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *UNUSED(timeInfo),
     const PaStreamCallbackFlags UNUSED(statusFlags), void *userData)
 {
@@ -188,7 +190,7 @@ static int ALCportPlayback_WriteCallback(const void *UNUSED(inputBuffer), void *
 }
 
 
-static ALCenum ALCportPlayback_open(ALCportPlayback *self, const ALCchar *name)
+ALCenum ALCportPlayback_open(ALCportPlayback *self, const ALCchar *name)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     PaError err;
@@ -256,7 +258,7 @@ retry_open:
 
 }
 
-static ALCboolean ALCportPlayback_reset(ALCportPlayback *self)
+ALCboolean ALCportPlayback_reset(ALCportPlayback *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     const PaStreamInfo *streamInfo;
@@ -295,7 +297,7 @@ static ALCboolean ALCportPlayback_reset(ALCportPlayback *self)
     return ALC_TRUE;
 }
 
-static ALCboolean ALCportPlayback_start(ALCportPlayback *self)
+ALCboolean ALCportPlayback_start(ALCportPlayback *self)
 {
     PaError err;
 
@@ -309,7 +311,7 @@ static ALCboolean ALCportPlayback_start(ALCportPlayback *self)
     return ALC_TRUE;
 }
 
-static void ALCportPlayback_stop(ALCportPlayback *self)
+void ALCportPlayback_stop(ALCportPlayback *self)
 {
     PaError err = Pa_StopStream(self->stream);
     if(err != paNoError)
@@ -324,27 +326,27 @@ struct ALCportCapture final : public ALCbackend {
     ll_ringbuffer_t *ring;
 };
 
-static int ALCportCapture_ReadCallback(const void *inputBuffer, void *outputBuffer,
+int ALCportCapture_ReadCallback(const void *inputBuffer, void *outputBuffer,
     unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *timeInfo,
     const PaStreamCallbackFlags statusFlags, void *userData);
 
-static void ALCportCapture_Construct(ALCportCapture *self, ALCdevice *device);
-static void ALCportCapture_Destruct(ALCportCapture *self);
-static ALCenum ALCportCapture_open(ALCportCapture *self, const ALCchar *name);
-static DECLARE_FORWARD(ALCportCapture, ALCbackend, ALCboolean, reset)
-static ALCboolean ALCportCapture_start(ALCportCapture *self);
-static void ALCportCapture_stop(ALCportCapture *self);
-static ALCenum ALCportCapture_captureSamples(ALCportCapture *self, ALCvoid *buffer, ALCuint samples);
-static ALCuint ALCportCapture_availableSamples(ALCportCapture *self);
-static DECLARE_FORWARD(ALCportCapture, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(ALCportCapture, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCportCapture, ALCbackend, void, unlock)
+void ALCportCapture_Construct(ALCportCapture *self, ALCdevice *device);
+void ALCportCapture_Destruct(ALCportCapture *self);
+ALCenum ALCportCapture_open(ALCportCapture *self, const ALCchar *name);
+DECLARE_FORWARD(ALCportCapture, ALCbackend, ALCboolean, reset)
+ALCboolean ALCportCapture_start(ALCportCapture *self);
+void ALCportCapture_stop(ALCportCapture *self);
+ALCenum ALCportCapture_captureSamples(ALCportCapture *self, ALCvoid *buffer, ALCuint samples);
+ALCuint ALCportCapture_availableSamples(ALCportCapture *self);
+DECLARE_FORWARD(ALCportCapture, ALCbackend, ClockLatency, getClockLatency)
+DECLARE_FORWARD(ALCportCapture, ALCbackend, void, lock)
+DECLARE_FORWARD(ALCportCapture, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCportCapture)
 
 DEFINE_ALCBACKEND_VTABLE(ALCportCapture);
 
 
-static void ALCportCapture_Construct(ALCportCapture *self, ALCdevice *device)
+void ALCportCapture_Construct(ALCportCapture *self, ALCdevice *device)
 {
     new (self) ALCportCapture{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
@@ -354,7 +356,7 @@ static void ALCportCapture_Construct(ALCportCapture *self, ALCdevice *device)
     self->ring = nullptr;
 }
 
-static void ALCportCapture_Destruct(ALCportCapture *self)
+void ALCportCapture_Destruct(ALCportCapture *self)
 {
     PaError err = self->stream ? Pa_CloseStream(self->stream) : paNoError;
     if(err != paNoError)
@@ -369,7 +371,7 @@ static void ALCportCapture_Destruct(ALCportCapture *self)
 }
 
 
-static int ALCportCapture_ReadCallback(const void *inputBuffer, void *UNUSED(outputBuffer),
+int ALCportCapture_ReadCallback(const void *inputBuffer, void *UNUSED(outputBuffer),
     unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *UNUSED(timeInfo),
     const PaStreamCallbackFlags UNUSED(statusFlags), void *userData)
 {
@@ -382,7 +384,7 @@ static int ALCportCapture_ReadCallback(const void *inputBuffer, void *UNUSED(out
 }
 
 
-static ALCenum ALCportCapture_open(ALCportCapture *self, const ALCchar *name)
+ALCenum ALCportCapture_open(ALCportCapture *self, const ALCchar *name)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     ALuint samples, frame_size;
@@ -448,7 +450,7 @@ static ALCenum ALCportCapture_open(ALCportCapture *self, const ALCchar *name)
 }
 
 
-static ALCboolean ALCportCapture_start(ALCportCapture *self)
+ALCboolean ALCportCapture_start(ALCportCapture *self)
 {
     PaError err = Pa_StartStream(self->stream);
     if(err != paNoError)
@@ -459,7 +461,7 @@ static ALCboolean ALCportCapture_start(ALCportCapture *self)
     return ALC_TRUE;
 }
 
-static void ALCportCapture_stop(ALCportCapture *self)
+void ALCportCapture_stop(ALCportCapture *self)
 {
     PaError err = Pa_StopStream(self->stream);
     if(err != paNoError)
@@ -467,42 +469,24 @@ static void ALCportCapture_stop(ALCportCapture *self)
 }
 
 
-static ALCuint ALCportCapture_availableSamples(ALCportCapture *self)
+ALCuint ALCportCapture_availableSamples(ALCportCapture *self)
 {
     return ll_ringbuffer_read_space(self->ring);
 }
 
-static ALCenum ALCportCapture_captureSamples(ALCportCapture *self, ALCvoid *buffer, ALCuint samples)
+ALCenum ALCportCapture_captureSamples(ALCportCapture *self, ALCvoid *buffer, ALCuint samples)
 {
     ll_ringbuffer_read(self->ring, static_cast<char*>(buffer), samples);
     return ALC_NO_ERROR;
 }
 
-
-struct ALCportBackendFactory final : public ALCbackendFactory {
-    ALCportBackendFactory() noexcept;
-};
-
-static ALCboolean ALCportBackendFactory_init(ALCportBackendFactory *self);
-static void ALCportBackendFactory_deinit(ALCportBackendFactory *self);
-static ALCboolean ALCportBackendFactory_querySupport(ALCportBackendFactory *self, ALCbackend_Type type);
-static void ALCportBackendFactory_probe(ALCportBackendFactory *self, enum DevProbe type, std::string *outnames);
-static ALCbackend* ALCportBackendFactory_createBackend(ALCportBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
-DEFINE_ALCBACKENDFACTORY_VTABLE(ALCportBackendFactory);
+} // namespace
 
 
-ALCportBackendFactory::ALCportBackendFactory() noexcept
-  : ALCbackendFactory{GET_VTABLE2(ALCportBackendFactory, ALCbackendFactory)}
-{ }
+bool PortBackendFactory::init()
+{ return pa_load(); }
 
-static ALCboolean ALCportBackendFactory_init(ALCportBackendFactory* UNUSED(self))
-{
-    if(!pa_load())
-        return ALC_FALSE;
-    return ALC_TRUE;
-}
-
-static void ALCportBackendFactory_deinit(ALCportBackendFactory* UNUSED(self))
+void PortBackendFactory::deinit()
 {
 #ifdef HAVE_DYNLOAD
     if(pa_handle)
@@ -516,14 +500,10 @@ static void ALCportBackendFactory_deinit(ALCportBackendFactory* UNUSED(self))
 #endif
 }
 
-static ALCboolean ALCportBackendFactory_querySupport(ALCportBackendFactory* UNUSED(self), ALCbackend_Type type)
-{
-    if(type == ALCbackend_Playback || type == ALCbackend_Capture)
-        return ALC_TRUE;
-    return ALC_FALSE;
-}
+bool PortBackendFactory::querySupport(ALCbackend_Type type)
+{ return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
 
-static void ALCportBackendFactory_probe(ALCportBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
+void PortBackendFactory::probe(enum DevProbe type, std::string *outnames)
 {
     switch(type)
     {
@@ -535,7 +515,7 @@ static void ALCportBackendFactory_probe(ALCportBackendFactory* UNUSED(self), enu
     }
 }
 
-static ALCbackend* ALCportBackendFactory_createBackend(ALCportBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+ALCbackend *PortBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
     {
@@ -555,8 +535,8 @@ static ALCbackend* ALCportBackendFactory_createBackend(ALCportBackendFactory* UN
     return nullptr;
 }
 
-ALCbackendFactory *ALCportBackendFactory_getFactory(void)
+BackendFactory &PortBackendFactory::getFactory()
 {
-    static ALCportBackendFactory factory{};
-    return STATIC_CAST(ALCbackendFactory, &factory);
+    static PortBackendFactory factory{};
+    return factory;
 }

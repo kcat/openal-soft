@@ -95,6 +95,9 @@
 #ifdef HAVE_WINMM
 #include "backends/winmm.h"
 #endif
+#ifdef HAVE_PORTAUDIO
+#include "backends/portaudio.h"
+#endif
 #ifdef HAVE_SDL2
 #include "backends/sdl2.h"
 #endif
@@ -150,9 +153,9 @@ struct BackendInfo BackendList[] = {
 #ifdef HAVE_WINMM
     { "winmm", WinMMBackendFactory::getFactory },
 #endif
-#if 0
-    { "port", ALCportBackendFactory_getFactory },
-#endif /* 0 */
+#ifdef HAVE_PORTAUDIO
+    { "port", PortBackendFactory::getFactory },
+#endif
 #ifdef HAVE_SDL2
     { "sdl2", SDL2BackendFactory::getFactory },
 #endif
@@ -163,7 +166,6 @@ struct BackendInfo BackendList[] = {
 #endif
 };
 ALsizei BackendListSize = COUNTOF(BackendList);
-#undef EmptyFuncs
 
 struct BackendInfo PlaybackBackend;
 struct BackendInfo CaptureBackend;

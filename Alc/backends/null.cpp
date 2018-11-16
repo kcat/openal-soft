@@ -179,16 +179,10 @@ void ALCnullBackend_stop(ALCnullBackend *self)
 
 
 bool NullBackendFactory::init()
-{
-    return true;
-}
+{ return true; }
 
 bool NullBackendFactory::querySupport(ALCbackend_Type type)
-{
-    if(type == ALCbackend_Playback)
-        return true;
-    return false;
-}
+{ return (type == ALCbackend_Playback); }
 
 void NullBackendFactory::probe(enum DevProbe type, std::string *outnames)
 {

@@ -88,20 +88,13 @@ void ALCloopback_stop(ALCloopback* UNUSED(self))
 
 
 bool LoopbackBackendFactory::init()
-{
-    return true;
-}
+{ return true; }
 
 bool LoopbackBackendFactory::querySupport(ALCbackend_Type type)
-{
-    if(type == ALCbackend_Loopback)
-        return true;
-    return false;
-}
+{ return (type == ALCbackend_Loopback); }
 
 void LoopbackBackendFactory::probe(enum DevProbe, std::string*)
-{
-}
+{ }
 
 ALCbackend *LoopbackBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {

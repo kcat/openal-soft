@@ -81,7 +81,7 @@ AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    almtx_lock(&context->PropLock);
+    std::lock_guard<almtx_t> _{context->PropLock};
     switch(capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
@@ -92,7 +92,6 @@ AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
     default:
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid enable property 0x%04x", capability);
     }
-    almtx_unlock(&context->PropLock);
 }
 
 AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
@@ -100,7 +99,7 @@ AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    almtx_lock(&context->PropLock);
+    std::lock_guard<almtx_t> _{context->PropLock};
     switch(capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
@@ -111,7 +110,6 @@ AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
     default:
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid disable property 0x%04x", capability);
     }
-    almtx_unlock(&context->PropLock);
 }
 
 AL_API ALboolean AL_APIENTRY alIsEnabled(ALenum capability)
@@ -119,8 +117,8 @@ AL_API ALboolean AL_APIENTRY alIsEnabled(ALenum capability)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return AL_FALSE;
 
+    std::lock_guard<almtx_t> _{context->PropLock};
     ALboolean value{AL_FALSE};
-    almtx_lock(&context->PropLock);
     switch(capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
@@ -130,7 +128,6 @@ AL_API ALboolean AL_APIENTRY alIsEnabled(ALenum capability)
     default:
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid is enabled property 0x%04x", capability);
     }
-    almtx_unlock(&context->PropLock);
 
     return value;
 }
@@ -140,8 +137,8 @@ AL_API ALboolean AL_APIENTRY alGetBoolean(ALenum pname)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return AL_FALSE;
 
+    std::lock_guard<almtx_t> _{context->PropLock};
     ALboolean value{AL_FALSE};
-    almtx_lock(&context->PropLock);
     switch(pname)
     {
     case AL_DOPPLER_FACTOR:
@@ -186,7 +183,6 @@ AL_API ALboolean AL_APIENTRY alGetBoolean(ALenum pname)
     default:
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid boolean property 0x%04x", pname);
     }
-    almtx_unlock(&context->PropLock);
 
     return value;
 }
@@ -196,8 +192,8 @@ AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return 0.0;
 
+    std::lock_guard<almtx_t> _{context->PropLock};
     ALdouble value{0.0};
-    almtx_lock(&context->PropLock);
     switch(pname)
     {
     case AL_DOPPLER_FACTOR:
@@ -236,7 +232,6 @@ AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
     default:
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid double property 0x%04x", pname);
     }
-    almtx_unlock(&context->PropLock);
 
     return value;
 }
@@ -246,8 +241,8 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return 0.0f;
 
+    std::lock_guard<almtx_t> _{context->PropLock};
     ALfloat value{0.0f};
-    almtx_lock(&context->PropLock);
     switch(pname)
     {
     case AL_DOPPLER_FACTOR:
@@ -286,7 +281,6 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
     default:
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid float property 0x%04x", pname);
     }
-    almtx_unlock(&context->PropLock);
 
     return value;
 }
@@ -296,8 +290,8 @@ AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return 0;
 
+    std::lock_guard<almtx_t> _{context->PropLock};
     ALint value{0};
-    almtx_lock(&context->PropLock);
     switch(pname)
     {
     case AL_DOPPLER_FACTOR:
@@ -336,7 +330,6 @@ AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
     default:
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid integer property 0x%04x", pname);
     }
-    almtx_unlock(&context->PropLock);
 
     return value;
 }
@@ -346,8 +339,8 @@ extern "C" AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return 0;
 
+    std::lock_guard<almtx_t> _{context->PropLock};
     ALint64SOFT value{0};
-    almtx_lock(&context->PropLock);
     switch(pname)
     {
     case AL_DOPPLER_FACTOR:
@@ -386,7 +379,6 @@ extern "C" AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname)
     default:
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid integer64 property 0x%04x", pname);
     }
-    almtx_unlock(&context->PropLock);
 
     return value;
 }
@@ -396,8 +388,8 @@ AL_API void* AL_APIENTRY alGetPointerSOFT(ALenum pname)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return nullptr;
 
+    std::lock_guard<almtx_t> _{context->PropLock};
     void *value{nullptr};
-    almtx_lock(&context->PropLock);
     switch(pname)
     {
     case AL_EVENT_CALLBACK_FUNCTION_SOFT:
@@ -411,7 +403,6 @@ AL_API void* AL_APIENTRY alGetPointerSOFT(ALenum pname)
     default:
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid pointer property 0x%04x", pname);
     }
-    almtx_unlock(&context->PropLock);
 
     return value;
 }
@@ -659,10 +650,9 @@ AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
         alSetError(context.get(), AL_INVALID_VALUE, "Doppler factor %f out of range", value);
     else
     {
-        almtx_lock(&context->PropLock);
+        std::lock_guard<almtx_t> _{context->PropLock};
         context->DopplerFactor = value;
         DO_UPDATEPROPS();
-        almtx_unlock(&context->PropLock);
     }
 }
 
@@ -676,23 +666,20 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
         static constexpr ALCchar msg[] =
             "alDopplerVelocity is deprecated in AL1.1, use alSpeedOfSound";
         const ALsizei msglen = (ALsizei)strlen(msg);
-        ALbitfieldSOFT enabledevts;
-        almtx_lock(&context->EventCbLock);
-        enabledevts = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed);
+        std::lock_guard<almtx_t> _{context->EventCbLock};
+        ALbitfieldSOFT enabledevts{ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed)};
         if((enabledevts&EventType_Deprecated) && context->EventCb)
             (*context->EventCb)(AL_EVENT_TYPE_DEPRECATED_SOFT, 0, 0, msglen, msg,
                                 context->EventParam);
-        almtx_unlock(&context->EventCbLock);
     }
 
     if(!(value >= 0.0f && isfinite(value)))
         alSetError(context.get(), AL_INVALID_VALUE, "Doppler velocity %f out of range", value);
     else
     {
-        almtx_lock(&context->PropLock);
+        std::lock_guard<almtx_t> _{context->PropLock};
         context->DopplerVelocity = value;
         DO_UPDATEPROPS();
-        almtx_unlock(&context->PropLock);
     }
 }
 
@@ -705,10 +692,9 @@ AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat value)
         alSetError(context.get(), AL_INVALID_VALUE, "Speed of sound %f out of range", value);
     else
     {
-        almtx_lock(&context->PropLock);
+        std::lock_guard<almtx_t> _{context->PropLock};
         context->SpeedOfSound = value;
         DO_UPDATEPROPS();
-        almtx_unlock(&context->PropLock);
     }
 }
 
@@ -724,11 +710,10 @@ AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
         alSetError(context.get(), AL_INVALID_VALUE, "Distance model 0x%04x out of range", value);
     else
     {
-        almtx_lock(&context->PropLock);
+        std::lock_guard<almtx_t> _{context->PropLock};
         context->DistanceModel = static_cast<enum DistanceModel>(value);
         if(!context->SourceDistanceModel)
             DO_UPDATEPROPS();
-        almtx_unlock(&context->PropLock);
     }
 }
 

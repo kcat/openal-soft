@@ -20,6 +20,8 @@
 
 #include "config.h"
 
+#include "backends/oss.h"
+
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -44,8 +46,6 @@
 #include "alconfig.h"
 #include "ringbuffer.h"
 #include "compat.h"
-
-#include "backends/base.h"
 
 #include <sys/soundcard.h>
 
@@ -239,7 +239,6 @@ int log2i(ALCuint x)
     return y;
 }
 
-} // namespace
 
 struct ALCplaybackOSS final : public ALCbackend {
     int fd{-1};
@@ -250,31 +249,31 @@ struct ALCplaybackOSS final : public ALCbackend {
     std::thread thread;
 };
 
-static int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self);
+int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self);
 
-static void ALCplaybackOSS_Construct(ALCplaybackOSS *self, ALCdevice *device);
-static void ALCplaybackOSS_Destruct(ALCplaybackOSS *self);
-static ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name);
-static ALCboolean ALCplaybackOSS_reset(ALCplaybackOSS *self);
-static ALCboolean ALCplaybackOSS_start(ALCplaybackOSS *self);
-static void ALCplaybackOSS_stop(ALCplaybackOSS *self);
-static DECLARE_FORWARD2(ALCplaybackOSS, ALCbackend, ALCenum, captureSamples, ALCvoid*, ALCuint)
-static DECLARE_FORWARD(ALCplaybackOSS, ALCbackend, ALCuint, availableSamples)
-static DECLARE_FORWARD(ALCplaybackOSS, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(ALCplaybackOSS, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCplaybackOSS, ALCbackend, void, unlock)
+void ALCplaybackOSS_Construct(ALCplaybackOSS *self, ALCdevice *device);
+void ALCplaybackOSS_Destruct(ALCplaybackOSS *self);
+ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name);
+ALCboolean ALCplaybackOSS_reset(ALCplaybackOSS *self);
+ALCboolean ALCplaybackOSS_start(ALCplaybackOSS *self);
+void ALCplaybackOSS_stop(ALCplaybackOSS *self);
+DECLARE_FORWARD2(ALCplaybackOSS, ALCbackend, ALCenum, captureSamples, ALCvoid*, ALCuint)
+DECLARE_FORWARD(ALCplaybackOSS, ALCbackend, ALCuint, availableSamples)
+DECLARE_FORWARD(ALCplaybackOSS, ALCbackend, ClockLatency, getClockLatency)
+DECLARE_FORWARD(ALCplaybackOSS, ALCbackend, void, lock)
+DECLARE_FORWARD(ALCplaybackOSS, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCplaybackOSS)
 DEFINE_ALCBACKEND_VTABLE(ALCplaybackOSS);
 
 
-static void ALCplaybackOSS_Construct(ALCplaybackOSS *self, ALCdevice *device)
+void ALCplaybackOSS_Construct(ALCplaybackOSS *self, ALCdevice *device)
 {
     new (self) ALCplaybackOSS{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCplaybackOSS, ALCbackend, self);
 }
 
-static void ALCplaybackOSS_Destruct(ALCplaybackOSS *self)
+void ALCplaybackOSS_Destruct(ALCplaybackOSS *self)
 {
     if(self->fd != -1)
         close(self->fd);
@@ -285,7 +284,7 @@ static void ALCplaybackOSS_Destruct(ALCplaybackOSS *self)
 }
 
 
-static int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self)
+int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     struct timeval timeout;
@@ -353,7 +352,7 @@ static int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self)
 }
 
 
-static ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name)
+ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
@@ -387,7 +386,7 @@ static ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-static ALCboolean ALCplaybackOSS_reset(ALCplaybackOSS *self)
+ALCboolean ALCplaybackOSS_reset(ALCplaybackOSS *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     int numFragmentsLogSize;
@@ -469,7 +468,7 @@ static ALCboolean ALCplaybackOSS_reset(ALCplaybackOSS *self)
     return ALC_TRUE;
 }
 
-static ALCboolean ALCplaybackOSS_start(ALCplaybackOSS *self)
+ALCboolean ALCplaybackOSS_start(ALCplaybackOSS *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
@@ -490,7 +489,7 @@ static ALCboolean ALCplaybackOSS_start(ALCplaybackOSS *self)
     return ALC_FALSE;
 }
 
-static void ALCplaybackOSS_stop(ALCplaybackOSS *self)
+void ALCplaybackOSS_stop(ALCplaybackOSS *self)
 {
     if(self->killNow.exchange(AL_TRUE) || !self->thread.joinable())
         return;
@@ -512,31 +511,31 @@ struct ALCcaptureOSS final : public ALCbackend {
     std::thread thread;
 };
 
-static int ALCcaptureOSS_recordProc(ALCcaptureOSS *self);
+int ALCcaptureOSS_recordProc(ALCcaptureOSS *self);
 
-static void ALCcaptureOSS_Construct(ALCcaptureOSS *self, ALCdevice *device);
-static void ALCcaptureOSS_Destruct(ALCcaptureOSS *self);
-static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name);
-static DECLARE_FORWARD(ALCcaptureOSS, ALCbackend, ALCboolean, reset)
-static ALCboolean ALCcaptureOSS_start(ALCcaptureOSS *self);
-static void ALCcaptureOSS_stop(ALCcaptureOSS *self);
-static ALCenum ALCcaptureOSS_captureSamples(ALCcaptureOSS *self, ALCvoid *buffer, ALCuint samples);
-static ALCuint ALCcaptureOSS_availableSamples(ALCcaptureOSS *self);
-static DECLARE_FORWARD(ALCcaptureOSS, ALCbackend, ClockLatency, getClockLatency)
-static DECLARE_FORWARD(ALCcaptureOSS, ALCbackend, void, lock)
-static DECLARE_FORWARD(ALCcaptureOSS, ALCbackend, void, unlock)
+void ALCcaptureOSS_Construct(ALCcaptureOSS *self, ALCdevice *device);
+void ALCcaptureOSS_Destruct(ALCcaptureOSS *self);
+ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name);
+DECLARE_FORWARD(ALCcaptureOSS, ALCbackend, ALCboolean, reset)
+ALCboolean ALCcaptureOSS_start(ALCcaptureOSS *self);
+void ALCcaptureOSS_stop(ALCcaptureOSS *self);
+ALCenum ALCcaptureOSS_captureSamples(ALCcaptureOSS *self, ALCvoid *buffer, ALCuint samples);
+ALCuint ALCcaptureOSS_availableSamples(ALCcaptureOSS *self);
+DECLARE_FORWARD(ALCcaptureOSS, ALCbackend, ClockLatency, getClockLatency)
+DECLARE_FORWARD(ALCcaptureOSS, ALCbackend, void, lock)
+DECLARE_FORWARD(ALCcaptureOSS, ALCbackend, void, unlock)
 DECLARE_DEFAULT_ALLOCATORS(ALCcaptureOSS)
 DEFINE_ALCBACKEND_VTABLE(ALCcaptureOSS);
 
 
-static void ALCcaptureOSS_Construct(ALCcaptureOSS *self, ALCdevice *device)
+void ALCcaptureOSS_Construct(ALCcaptureOSS *self, ALCdevice *device)
 {
     new (self) ALCcaptureOSS{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCcaptureOSS, ALCbackend, self);
 }
 
-static void ALCcaptureOSS_Destruct(ALCcaptureOSS *self)
+void ALCcaptureOSS_Destruct(ALCcaptureOSS *self)
 {
     if(self->fd != -1)
         close(self->fd);
@@ -549,7 +548,7 @@ static void ALCcaptureOSS_Destruct(ALCcaptureOSS *self)
 }
 
 
-static int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
+int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     struct timeval timeout;
@@ -606,7 +605,7 @@ static int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
 }
 
 
-static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
+ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
@@ -719,7 +718,7 @@ static ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
     return ALC_NO_ERROR;
 }
 
-static ALCboolean ALCcaptureOSS_start(ALCcaptureOSS *self)
+ALCboolean ALCcaptureOSS_start(ALCcaptureOSS *self)
 {
     try {
         self->killNow.store(AL_FALSE);
@@ -734,7 +733,7 @@ static ALCboolean ALCcaptureOSS_start(ALCcaptureOSS *self)
     return ALC_FALSE;
 }
 
-static void ALCcaptureOSS_stop(ALCcaptureOSS *self)
+void ALCcaptureOSS_stop(ALCcaptureOSS *self)
 {
     if(self->killNow.exchange(AL_TRUE) || !self->thread.joinable())
         return;
@@ -745,66 +744,44 @@ static void ALCcaptureOSS_stop(ALCcaptureOSS *self)
         ERR("Error resetting device: %s\n", strerror(errno));
 }
 
-static ALCenum ALCcaptureOSS_captureSamples(ALCcaptureOSS *self, ALCvoid *buffer, ALCuint samples)
+ALCenum ALCcaptureOSS_captureSamples(ALCcaptureOSS *self, ALCvoid *buffer, ALCuint samples)
 {
     ll_ringbuffer_read(self->ring, static_cast<char*>(buffer), samples);
     return ALC_NO_ERROR;
 }
 
-static ALCuint ALCcaptureOSS_availableSamples(ALCcaptureOSS *self)
+ALCuint ALCcaptureOSS_availableSamples(ALCcaptureOSS *self)
 {
     return ll_ringbuffer_read_space(self->ring);
 }
 
-
-struct ALCossBackendFactory final : public ALCbackendFactory {
-    ALCossBackendFactory() noexcept;
-};
-
-ALCbackendFactory *ALCossBackendFactory_getFactory(void);
-
-static ALCboolean ALCossBackendFactory_init(ALCossBackendFactory *self);
-static void ALCossBackendFactory_deinit(ALCossBackendFactory *self);
-static ALCboolean ALCossBackendFactory_querySupport(ALCossBackendFactory *self, ALCbackend_Type type);
-static void ALCossBackendFactory_probe(ALCossBackendFactory *self, enum DevProbe type, std::string *outnames);
-static ALCbackend* ALCossBackendFactory_createBackend(ALCossBackendFactory *self, ALCdevice *device, ALCbackend_Type type);
-DEFINE_ALCBACKENDFACTORY_VTABLE(ALCossBackendFactory);
+} // namespace
 
 
-ALCossBackendFactory::ALCossBackendFactory() noexcept
-  : ALCbackendFactory{GET_VTABLE2(ALCossBackendFactory, ALCbackendFactory)}
-{ }
-
-ALCbackendFactory *ALCossBackendFactory_getFactory(void)
+BackendFactory &OSSBackendFactory::getFactory()
 {
-    static ALCossBackendFactory factory{};
-    return STATIC_CAST(ALCbackendFactory, &factory);
+    static OSSBackendFactory factory{};
+    return factory;
 }
 
-
-ALCboolean ALCossBackendFactory_init(ALCossBackendFactory* UNUSED(self))
+bool OSSBackendFactory::init()
 {
     ConfigValueStr(nullptr, "oss", "device", &DefaultPlayback);
     ConfigValueStr(nullptr, "oss", "capture", &DefaultCapture);
 
-    return ALC_TRUE;
+    return true;
 }
 
-void ALCossBackendFactory_deinit(ALCossBackendFactory* UNUSED(self))
+void OSSBackendFactory::deinit()
 {
     PlaybackDevices.clear();
     CaptureDevices.clear();
 }
 
+bool OSSBackendFactory::querySupport(ALCbackend_Type type)
+{ return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
 
-ALCboolean ALCossBackendFactory_querySupport(ALCossBackendFactory* UNUSED(self), ALCbackend_Type type)
-{
-    if(type == ALCbackend_Playback || type == ALCbackend_Capture)
-        return ALC_TRUE;
-    return ALC_FALSE;
-}
-
-void ALCossBackendFactory_probe(ALCossBackendFactory* UNUSED(self), enum DevProbe type, std::string *outnames)
+void OSSBackendFactory::probe(enum DevProbe type, std::string *outnames)
 {
     auto add_device = [outnames](const DevMap &entry) -> void
     {
@@ -834,7 +811,7 @@ void ALCossBackendFactory_probe(ALCossBackendFactory* UNUSED(self), enum DevProb
     }
 }
 
-ALCbackend* ALCossBackendFactory_createBackend(ALCossBackendFactory* UNUSED(self), ALCdevice *device, ALCbackend_Type type)
+ALCbackend *OSSBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)
 {
     if(type == ALCbackend_Playback)
     {

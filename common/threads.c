@@ -38,9 +38,6 @@ extern inline int almtx_lock(almtx_t *mtx);
 extern inline int almtx_unlock(almtx_t *mtx);
 extern inline int almtx_trylock(almtx_t *mtx);
 
-extern inline void *altss_get(altss_t tss_id);
-extern inline int altss_set(altss_t tss_id, void *val);
-
 
 #ifndef UNUSED
 #if defined(__cplusplus)
@@ -71,13 +68,6 @@ extern inline int altss_set(altss_t tss_id, void *val);
  * original handle which is needed to join the thread and get its return value.
  */
 static UIntMap ThrdIdHandle = UINTMAP_STATIC_INITIALIZE;
-
-/* An associative map of uint:void* pairs. The key is the TLS index (given by
- * TlsAlloc), and the value is the altss_dtor_t callback. When a thread exits,
- * we iterate over the TLS indices for their thread-local value and call the
- * destructor function with it if they're both not NULL.
- */
-static UIntMap TlsDestructors = UINTMAP_STATIC_INITIALIZE;
 
 
 void althrd_setname(althrd_t thr, const char *name)
@@ -228,25 +218,6 @@ int alsem_trywait(alsem_t *sem)
 }
 
 
-int altss_create(altss_t *tss_id, altss_dtor_t callback)
-{
-    DWORD key = TlsAlloc();
-    if(key == TLS_OUT_OF_INDEXES)
-        return althrd_error;
-
-    *tss_id = key;
-    if(callback != NULL)
-        InsertUIntMapEntry(&TlsDestructors, key, callback);
-    return althrd_success;
-}
-
-void altss_delete(altss_t tss_id)
-{
-    RemoveUIntMapKey(&TlsDestructors, tss_id);
-    TlsFree(tss_id);
-}
-
-
 void alcall_once(alonce_flag *once, void (*callback)(void))
 {
     LONG ret;
@@ -261,25 +232,6 @@ void alcall_once(alonce_flag *once, void (*callback)(void))
 void althrd_deinit(void)
 {
     ResetUIntMap(&ThrdIdHandle);
-    ResetUIntMap(&TlsDestructors);
-}
-
-void althrd_thread_detach(void)
-{
-    ALsizei i;
-
-    LockUIntMapRead(&TlsDestructors);
-    for(i = 0;i < TlsDestructors.size;i++)
-    {
-        void *ptr = altss_get(TlsDestructors.keys[i]);
-        altss_dtor_t callback = (altss_dtor_t)TlsDestructors.values[i];
-        if(ptr)
-        {
-            if(callback) callback(ptr);
-            altss_set(TlsDestructors.keys[i], NULL);
-        }
-    }
-    UnlockUIntMapRead(&TlsDestructors);
 }
 
 #else
@@ -295,7 +247,6 @@ void althrd_thread_detach(void)
 extern inline void alcall_once(alonce_flag *once, void (*callback)(void));
 
 extern inline void althrd_deinit(void);
-extern inline void althrd_thread_detach(void);
 
 void althrd_setname(althrd_t thr, const char *name)
 {
@@ -510,18 +461,5 @@ int alsem_trywait(alsem_t *sem)
 }
 
 #endif /* __APPLE__ */
-
-
-int altss_create(altss_t *tss_id, altss_dtor_t callback)
-{
-    if(pthread_key_create(tss_id, callback) != 0)
-        return althrd_error;
-    return althrd_success;
-}
-
-void altss_delete(altss_t tss_id)
-{
-    pthread_key_delete(tss_id);
-}
 
 #endif

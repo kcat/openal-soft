@@ -886,10 +886,6 @@ BOOL APIENTRY DllMain(HINSTANCE hModule, DWORD reason, LPVOID lpReserved)
             alc_init();
             break;
 
-        case DLL_THREAD_DETACH:
-            althrd_thread_detach();
-            break;
-
         case DLL_PROCESS_DETACH:
             if(!lpReserved)
                 alc_deinit();

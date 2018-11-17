@@ -31,7 +31,6 @@ enum {
 };
 
 typedef int (*althrd_start_t)(void*);
-typedef void (*altss_dtor_t)(void*);
 
 
 #ifdef _WIN32
@@ -42,7 +41,6 @@ typedef void (*altss_dtor_t)(void*);
 typedef DWORD althrd_t;
 typedef CRITICAL_SECTION almtx_t;
 typedef HANDLE alsem_t;
-typedef DWORD altss_t;
 typedef LONG alonce_flag;
 
 #define AL_ONCE_FLAG_INIT 0
@@ -50,8 +48,6 @@ typedef LONG alonce_flag;
 void alcall_once(alonce_flag *once, void (*callback)(void));
 
 void althrd_deinit(void);
-void althrd_thread_detach(void);
-
 
 inline althrd_t althrd_current(void)
 {
@@ -96,19 +92,6 @@ inline int almtx_trylock(almtx_t *mtx)
     return althrd_success;
 }
 
-
-inline void *altss_get(altss_t tss_id)
-{
-    return TlsGetValue(tss_id);
-}
-
-inline int altss_set(altss_t tss_id, void *val)
-{
-    if(TlsSetValue(tss_id, val) == 0)
-        return althrd_error;
-    return althrd_success;
-}
-
 #else
 
 #include <stdint.h>
@@ -128,7 +111,6 @@ typedef dispatch_semaphore_t alsem_t;
 #else /* !__APPLE__ */
 typedef sem_t alsem_t;
 #endif /* __APPLE__ */
-typedef pthread_key_t altss_t;
 typedef pthread_once_t alonce_flag;
 
 #define AL_ONCE_FLAG_INIT PTHREAD_ONCE_INIT
@@ -181,19 +163,6 @@ inline int almtx_trylock(almtx_t *mtx)
 }
 
 
-inline void *altss_get(altss_t tss_id)
-{
-    return pthread_getspecific(tss_id);
-}
-
-inline int altss_set(altss_t tss_id, void *val)
-{
-    if(pthread_setspecific(tss_id, val) != 0)
-        return althrd_error;
-    return althrd_success;
-}
-
-
 inline void alcall_once(alonce_flag *once, void (*callback)(void))
 {
     pthread_once(once, callback);
@@ -201,7 +170,6 @@ inline void alcall_once(alonce_flag *once, void (*callback)(void))
 
 
 inline void althrd_deinit(void) { }
-inline void althrd_thread_detach(void) { }
 
 #endif
 
@@ -219,9 +187,6 @@ void alsem_destroy(alsem_t *sem);
 int alsem_post(alsem_t *sem);
 int alsem_wait(alsem_t *sem);
 int alsem_trywait(alsem_t *sem);
-
-int altss_create(altss_t *tss_id, altss_dtor_t callback);
-void altss_delete(altss_t tss_id);
 
 #ifdef __cplusplus
 } // extern "C"

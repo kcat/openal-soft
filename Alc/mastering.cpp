@@ -447,7 +447,7 @@ Compressor* CompressorInit(const ALsizei NumChans, const ALuint SampleRate,
             size += sizeof(*Comp->Hold);
     }
 
-    Comp = al_calloc(16, size);
+    Comp = static_cast<Compressor*>(al_calloc(16, size));
     Comp->NumChans = NumChans;
     Comp->SampleRate = SampleRate;
     Comp->Auto.Knee = AutoKnee;

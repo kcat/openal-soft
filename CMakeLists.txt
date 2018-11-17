@@ -804,7 +804,7 @@ SET(ALC_OBJS
     Alc/converter.h
     Alc/inldefs.c
     Alc/inprogext.h
-    Alc/mastering.c
+    Alc/mastering.cpp
     Alc/mastering.h
     Alc/ringbuffer.c
     Alc/ringbuffer.h

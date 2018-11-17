@@ -22,6 +22,7 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <array>
 #include <complex>
 #include <algorithm>
 

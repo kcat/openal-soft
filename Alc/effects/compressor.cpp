@@ -34,9 +34,7 @@
 #define RELEASE_TIME 0.2f /* 200ms to drop from max to min */
 
 
-typedef struct ALcompressorState {
-    DERIVE_FROM_TYPE(ALeffectState);
-
+struct ALcompressorState final : public ALeffectState {
     /* Effect gains for each channel */
     ALfloat Gain[MAX_EFFECT_CHANNELS][MAX_OUTPUT_CHANNELS];
 
@@ -45,7 +43,7 @@ typedef struct ALcompressorState {
     ALfloat AttackMult;
     ALfloat ReleaseMult;
     ALfloat EnvFollower;
-} ALcompressorState;
+};
 
 static ALvoid ALcompressorState_Destruct(ALcompressorState *state);
 static ALboolean ALcompressorState_deviceUpdate(ALcompressorState *state, ALCdevice *device);
@@ -58,6 +56,7 @@ DEFINE_ALEFFECTSTATE_VTABLE(ALcompressorState);
 
 static void ALcompressorState_Construct(ALcompressorState *state)
 {
+    new (state) ALcompressorState{};
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALcompressorState, ALeffectState, state);
 
@@ -70,6 +69,7 @@ static void ALcompressorState_Construct(ALcompressorState *state)
 static ALvoid ALcompressorState_Destruct(ALcompressorState *state)
 {
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
+    state->~ALcompressorState();
 }
 
 static ALboolean ALcompressorState_deviceUpdate(ALcompressorState *state, ALCdevice *device)
@@ -172,9 +172,9 @@ static ALvoid ALcompressorState_process(ALcompressorState *state, ALsizei Sample
 }
 
 
-typedef struct CompressorStateFactory {
-    DERIVE_FROM_TYPE(EffectStateFactory);
-} CompressorStateFactory;
+struct CompressorStateFactory final : public EffectStateFactory {
+    CompressorStateFactory() noexcept;
+};
 
 static ALeffectState *CompressorStateFactory_create(CompressorStateFactory *UNUSED(factory))
 {
@@ -188,10 +188,14 @@ static ALeffectState *CompressorStateFactory_create(CompressorStateFactory *UNUS
 
 DEFINE_EFFECTSTATEFACTORY_VTABLE(CompressorStateFactory);
 
+CompressorStateFactory::CompressorStateFactory() noexcept
+  : EffectStateFactory{GET_VTABLE2(CompressorStateFactory, EffectStateFactory)}
+{
+}
+
 EffectStateFactory *CompressorStateFactory_getFactory(void)
 {
-    static CompressorStateFactory CompressorFactory = { { GET_VTABLE2(CompressorStateFactory, EffectStateFactory) } };
-
+    static CompressorStateFactory CompressorFactory{};
     return STATIC_CAST(EffectStateFactory, &CompressorFactory);
 }
 

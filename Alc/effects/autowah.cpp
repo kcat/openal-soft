@@ -33,9 +33,7 @@
 #define MAX_FREQ 2500.0f
 #define Q_FACTOR 5.0f
 
-typedef struct ALautowahState {
-    DERIVE_FROM_TYPE(ALeffectState);
-
+struct ALautowahState final : public ALeffectState {
     /* Effect parameters */
     ALfloat AttackRate;
     ALfloat ReleaseRate;
@@ -64,7 +62,7 @@ typedef struct ALautowahState {
 
     /* Effects buffers */
     alignas(16) ALfloat BufferOut[BUFFERSIZE];
-} ALautowahState;
+};
 
 static ALvoid ALautowahState_Destruct(ALautowahState *state);
 static ALboolean ALautowahState_deviceUpdate(ALautowahState *state, ALCdevice *device);
@@ -76,6 +74,7 @@ DEFINE_ALEFFECTSTATE_VTABLE(ALautowahState);
 
 static void ALautowahState_Construct(ALautowahState *state)
 {
+    new (state) ALautowahState{};
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALautowahState, ALeffectState, state);
 }
@@ -83,6 +82,7 @@ static void ALautowahState_Construct(ALautowahState *state)
 static ALvoid ALautowahState_Destruct(ALautowahState *state)
 {
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
+    state->~ALautowahState();
 }
 
 static ALboolean ALautowahState_deviceUpdate(ALautowahState *state, ALCdevice *UNUSED(device))
@@ -204,9 +204,9 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALsizei SamplesToDo,
     }
 }
 
-typedef struct AutowahStateFactory {
-    DERIVE_FROM_TYPE(EffectStateFactory);
-} AutowahStateFactory;
+struct AutowahStateFactory final : public EffectStateFactory {
+    AutowahStateFactory() noexcept;
+};
 
 static ALeffectState *AutowahStateFactory_create(AutowahStateFactory *UNUSED(factory))
 {
@@ -220,9 +220,14 @@ static ALeffectState *AutowahStateFactory_create(AutowahStateFactory *UNUSED(fac
 
 DEFINE_EFFECTSTATEFACTORY_VTABLE(AutowahStateFactory);
 
+AutowahStateFactory::AutowahStateFactory() noexcept
+  : EffectStateFactory{GET_VTABLE2(AutowahStateFactory, EffectStateFactory)}
+{
+}
+
 EffectStateFactory *AutowahStateFactory_getFactory(void)
 {
-    static AutowahStateFactory AutowahFactory = { { GET_VTABLE2(AutowahStateFactory, EffectStateFactory) } };
+    static AutowahStateFactory AutowahFactory{};
 
     return STATIC_CAST(EffectStateFactory, &AutowahFactory);
 }

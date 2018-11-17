@@ -808,9 +808,9 @@ SET(ALC_OBJS
     Alc/mastering.h
     Alc/ringbuffer.c
     Alc/ringbuffer.h
-    Alc/effects/autowah.c
-    Alc/effects/chorus.c
-    Alc/effects/compressor.c
+    Alc/effects/autowah.cpp
+    Alc/effects/chorus.cpp
+    Alc/effects/compressor.cpp
     Alc/effects/dedicated.cpp
     Alc/effects/distortion.cpp
     Alc/effects/echo.cpp

@@ -38,9 +38,7 @@ enum WaveForm {
     WF_Triangle
 };
 
-typedef struct ALchorusState {
-    DERIVE_FROM_TYPE(ALeffectState);
-
+struct ALchorusState final : public ALeffectState {
     ALfloat *SampleBuffer;
     ALsizei BufferLength;
     ALsizei offset;
@@ -61,7 +59,7 @@ typedef struct ALchorusState {
     ALint delay;
     ALfloat depth;
     ALfloat feedback;
-} ALchorusState;
+};
 
 static ALvoid ALchorusState_Destruct(ALchorusState *state);
 static ALboolean ALchorusState_deviceUpdate(ALchorusState *state, ALCdevice *Device);
@@ -74,6 +72,7 @@ DEFINE_ALEFFECTSTATE_VTABLE(ALchorusState);
 
 static void ALchorusState_Construct(ALchorusState *state)
 {
+    new (state) ALchorusState{};
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALchorusState, ALeffectState, state);
 
@@ -91,6 +90,7 @@ static ALvoid ALchorusState_Destruct(ALchorusState *state)
     state->SampleBuffer = NULL;
 
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
+    state->~ALchorusState();
 }
 
 static ALboolean ALchorusState_deviceUpdate(ALchorusState *state, ALCdevice *Device)
@@ -107,8 +107,7 @@ static ALboolean ALchorusState_deviceUpdate(ALchorusState *state, ALCdevice *Dev
         if(!temp) return AL_FALSE;
 
         al_free(state->SampleBuffer);
-        state->SampleBuffer = temp;
-
+        state->SampleBuffer = static_cast<float*>(temp);
         state->BufferLength = maxlen;
     }
 
@@ -285,9 +284,9 @@ static ALvoid ALchorusState_process(ALchorusState *state, ALsizei SamplesToDo, c
 }
 
 
-typedef struct ChorusStateFactory {
-    DERIVE_FROM_TYPE(EffectStateFactory);
-} ChorusStateFactory;
+struct ChorusStateFactory final : public EffectStateFactory {
+    ChorusStateFactory() noexcept;
+};
 
 static ALeffectState *ChorusStateFactory_create(ChorusStateFactory *UNUSED(factory))
 {
@@ -301,11 +300,14 @@ static ALeffectState *ChorusStateFactory_create(ChorusStateFactory *UNUSED(facto
 
 DEFINE_EFFECTSTATEFACTORY_VTABLE(ChorusStateFactory);
 
+ChorusStateFactory::ChorusStateFactory() noexcept
+  : EffectStateFactory{GET_VTABLE2(ChorusStateFactory, EffectStateFactory)}
+{
+}
 
 EffectStateFactory *ChorusStateFactory_getFactory(void)
 {
-    static ChorusStateFactory ChorusFactory = { { GET_VTABLE2(ChorusStateFactory, EffectStateFactory) } };
-
+    static ChorusStateFactory ChorusFactory{};
     return STATIC_CAST(EffectStateFactory, &ChorusFactory);
 }
 
@@ -422,9 +424,9 @@ DEFINE_ALEFFECT_VTABLE(ALchorus);
 /* Flanger is basically a chorus with a really short delay. They can both use
  * the same processing functions, so piggyback flanger on the chorus functions.
  */
-typedef struct FlangerStateFactory {
-    DERIVE_FROM_TYPE(EffectStateFactory);
-} FlangerStateFactory;
+struct FlangerStateFactory final : public EffectStateFactory {
+    FlangerStateFactory() noexcept;
+};
 
 ALeffectState *FlangerStateFactory_create(FlangerStateFactory *UNUSED(factory))
 {
@@ -438,10 +440,14 @@ ALeffectState *FlangerStateFactory_create(FlangerStateFactory *UNUSED(factory))
 
 DEFINE_EFFECTSTATEFACTORY_VTABLE(FlangerStateFactory);
 
+FlangerStateFactory::FlangerStateFactory() noexcept
+  : EffectStateFactory{GET_VTABLE2(FlangerStateFactory, EffectStateFactory)}
+{
+}
+
 EffectStateFactory *FlangerStateFactory_getFactory(void)
 {
-    static FlangerStateFactory FlangerFactory = { { GET_VTABLE2(FlangerStateFactory, EffectStateFactory) } };
-
+    static FlangerStateFactory FlangerFactory{};
     return STATIC_CAST(EffectStateFactory, &FlangerFactory);
 }
 

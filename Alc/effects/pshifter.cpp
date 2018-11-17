@@ -51,9 +51,7 @@ typedef struct ALFrequencyDomain {
 } ALfrequencyDomain;
 
 
-typedef struct ALpshifterState {
-    DERIVE_FROM_TYPE(ALeffectState);
-
+struct ALpshifterState final : public ALeffectState {
     /* Effect parameters */
     ALsizei count;
     ALsizei PitchShiftI;
@@ -77,7 +75,7 @@ typedef struct ALpshifterState {
     /* Effect gains for each output channel */
     ALfloat CurrentGains[MAX_OUTPUT_CHANNELS];
     ALfloat TargetGains[MAX_OUTPUT_CHANNELS];
-} ALpshifterState;
+};
 
 static ALvoid ALpshifterState_Destruct(ALpshifterState *state);
 static ALboolean ALpshifterState_deviceUpdate(ALpshifterState *state, ALCdevice *device);
@@ -161,6 +159,7 @@ static inline ALcomplex polar2rect(ALphasor number)
 
 static void ALpshifterState_Construct(ALpshifterState *state)
 {
+    new (state) ALpshifterState{};
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALpshifterState, ALeffectState, state);
 
@@ -170,6 +169,7 @@ static void ALpshifterState_Construct(ALpshifterState *state)
 static ALvoid ALpshifterState_Destruct(ALpshifterState *state)
 {
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
+    state->~ALpshifterState();
 }
 
 static ALboolean ALpshifterState_deviceUpdate(ALpshifterState *state, ALCdevice *device)
@@ -347,9 +347,9 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
                maxi(SamplesToDo, 512), 0, SamplesToDo);
 }
 
-typedef struct PshifterStateFactory {
-    DERIVE_FROM_TYPE(EffectStateFactory);
-} PshifterStateFactory;
+struct PshifterStateFactory final : public EffectStateFactory {
+    PshifterStateFactory() noexcept;
+};
 
 static ALeffectState *PshifterStateFactory_create(PshifterStateFactory *UNUSED(factory))
 {
@@ -363,10 +363,15 @@ static ALeffectState *PshifterStateFactory_create(PshifterStateFactory *UNUSED(f
 
 DEFINE_EFFECTSTATEFACTORY_VTABLE(PshifterStateFactory);
 
+
+PshifterStateFactory::PshifterStateFactory() noexcept
+  : EffectStateFactory{GET_VTABLE2(PshifterStateFactory, EffectStateFactory)}
+{
+}
+
 EffectStateFactory *PshifterStateFactory_getFactory(void)
 {
-    static PshifterStateFactory PshifterFactory = { { GET_VTABLE2(PshifterStateFactory, EffectStateFactory) } };
-
+    static PshifterStateFactory PshifterFactory{};
     return STATIC_CAST(EffectStateFactory, &PshifterFactory);
 }
 

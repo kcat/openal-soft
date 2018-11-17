@@ -462,7 +462,7 @@ void UpdateListenerProps(ALCcontext *context)
     /* Get an unused proprty container, or allocate a new one as needed. */
     props = ATOMIC_LOAD(&context->FreeListenerProps, almemory_order_acquire);
     if(!props)
-        props = al_calloc(16, sizeof(*props));
+        props = static_cast<ALlistenerProps*>(al_calloc(16, sizeof(*props)));
     else
     {
         struct ALlistenerProps *next;
@@ -491,7 +491,8 @@ void UpdateListenerProps(ALCcontext *context)
     props->Gain = listener->Gain;
 
     /* Set the new container for updating internal parameters. */
-    props = ATOMIC_EXCHANGE_PTR(&listener->Update, props, almemory_order_acq_rel);
+    props = static_cast<ALlistenerProps*>(ATOMIC_EXCHANGE_PTR(&listener->Update, props,
+        almemory_order_acq_rel));
     if(props)
     {
         /* If there was an unused update container, put it back in the

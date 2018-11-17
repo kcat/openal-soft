@@ -1211,7 +1211,7 @@ static void alc_initconfig(void)
     if((str && str[0]) || ConfigValueStr(nullptr, nullptr, "default-reverb", &str))
         LoadReverbPreset(str, &DefaultEffect);
 }
-#define DO_INITCONFIG() std::call_once(alc_config_once, alc_initconfig)
+#define DO_INITCONFIG() std::call_once(alc_config_once, [](){alc_initconfig();})
 
 
 /************************************************

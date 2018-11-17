@@ -624,7 +624,8 @@ static void AddActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontex
         newarray->count = newcount;
     }
 
-    curarray = ATOMIC_EXCHANGE_PTR(&context->ActiveAuxSlots, newarray, almemory_order_acq_rel);
+    curarray = static_cast<ALeffectslotArray*>(ATOMIC_EXCHANGE_PTR(&context->ActiveAuxSlots,
+        newarray, almemory_order_acq_rel));
     while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
         althrd_yield();
     al_free(curarray);
@@ -659,7 +660,8 @@ static void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcon
 
     /* TODO: Could reallocate newarray now that we know it's needed size. */
 
-    curarray = ATOMIC_EXCHANGE_PTR(&context->ActiveAuxSlots, newarray, almemory_order_acq_rel);
+    curarray = static_cast<ALeffectslotArray*>(ATOMIC_EXCHANGE_PTR(&context->ActiveAuxSlots,
+        newarray, almemory_order_acq_rel));
     while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
         althrd_yield();
     al_free(curarray);

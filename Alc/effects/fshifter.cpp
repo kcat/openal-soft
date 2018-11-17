@@ -20,8 +20,8 @@
 
 #include "config.h"
 
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 
 #include "alMain.h"
 #include "alAuxEffectSlot.h"
@@ -31,11 +31,28 @@
 
 #include "alcomplex.h"
 
+namespace {
+
 #define HIL_SIZE 1024
 #define OVERSAMP (1<<2)
 
 #define HIL_STEP     (HIL_SIZE / OVERSAMP)
 #define FIFO_LATENCY (HIL_STEP * (OVERSAMP-1))
+
+/* Define a Hann window, used to filter the HIL input and output. */
+/* Making this constexpr seems to require C++14. */
+std::array<ALdouble,HIL_SIZE> InitHannWindow(void)
+{
+    std::array<ALdouble,HIL_SIZE> ret;
+    /* Create lookup table of the Hann window for the desired size, i.e. HIL_SIZE */
+    for(ALsizei i{0};i < HIL_SIZE>>1;i++)
+    {
+        ALdouble val = std::sin(M_PI * (ALdouble)i / (ALdouble)(HIL_SIZE-1));
+        ret[i] = ret[HIL_SIZE-1-i] = val * val;
+    }
+    return ret;
+}
+alignas(16) const std::array<ALdouble,HIL_SIZE> HannWindow = InitHannWindow();
 
 
 struct ALfshifterState final : public ALeffectState {
@@ -59,47 +76,28 @@ struct ALfshifterState final : public ALeffectState {
     ALfloat TargetGains[MAX_OUTPUT_CHANNELS];
 };
 
-static ALvoid ALfshifterState_Destruct(ALfshifterState *state);
-static ALboolean ALfshifterState_deviceUpdate(ALfshifterState *state, ALCdevice *device);
-static ALvoid ALfshifterState_update(ALfshifterState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props);
-static ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
+ALvoid ALfshifterState_Destruct(ALfshifterState *state);
+ALboolean ALfshifterState_deviceUpdate(ALfshifterState *state, ALCdevice *device);
+ALvoid ALfshifterState_update(ALfshifterState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props);
+ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
 DECLARE_DEFAULT_ALLOCATORS(ALfshifterState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALfshifterState);
 
-/* Define a Hann window, used to filter the HIL input and output. */
-alignas(16) static ALdouble HannWindow[HIL_SIZE];
-
-static void InitHannWindow(void)
-{
-    ALsizei i;
-
-    /* Create lookup table of the Hann window for the desired size, i.e. HIL_SIZE */
-    for(i = 0;i < HIL_SIZE>>1;i++)
-    {
-        ALdouble val = sin(M_PI * (ALdouble)i / (ALdouble)(HIL_SIZE-1));
-        HannWindow[i] = HannWindow[HIL_SIZE-1-i] = val * val;
-    }
-}
-
-static alonce_flag HannInitOnce = AL_ONCE_FLAG_INIT;
-
-static void ALfshifterState_Construct(ALfshifterState *state)
+void ALfshifterState_Construct(ALfshifterState *state)
 {
     new (state) ALfshifterState{};
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALfshifterState, ALeffectState, state);
-
-    alcall_once(&HannInitOnce, InitHannWindow);
 }
 
-static ALvoid ALfshifterState_Destruct(ALfshifterState *state)
+ALvoid ALfshifterState_Destruct(ALfshifterState *state)
 {
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
     state->~ALfshifterState();
 }
 
-static ALboolean ALfshifterState_deviceUpdate(ALfshifterState *state, ALCdevice *UNUSED(device))
+ALboolean ALfshifterState_deviceUpdate(ALfshifterState *state, ALCdevice *UNUSED(device))
 {
     /* (Re-)initializing parameters and clear the buffers. */
     state->count     = FIFO_LATENCY;
@@ -118,7 +116,7 @@ static ALboolean ALfshifterState_deviceUpdate(ALfshifterState *state, ALCdevice 
     return AL_TRUE;
 }
 
-static ALvoid ALfshifterState_update(ALfshifterState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
+ALvoid ALfshifterState_update(ALfshifterState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
 {
     const ALCdevice *device = context->Device;
     ALfloat coeffs[MAX_AMBI_COEFFS];
@@ -147,7 +145,7 @@ static ALvoid ALfshifterState_update(ALfshifterState *state, const ALCcontext *c
     ComputePanGains(&device->Dry, coeffs, slot->Params.Gain, state->TargetGains);
 }
 
-static ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
     static const ALcomplex complex_zero = { 0.0, 0.0 };
     ALfloat *RESTRICT BufferOut = state->BufferOut;
@@ -214,6 +212,8 @@ static ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToD
     MixSamples(BufferOut, NumChannels, SamplesOut, state->CurrentGains, state->TargetGains,
                maxi(SamplesToDo, 512), 0, SamplesToDo);
 }
+
+} // namespace
 
 struct FshifterStateFactory final : public EffectStateFactory {
     FshifterStateFactory() noexcept;

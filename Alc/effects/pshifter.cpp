@@ -20,8 +20,8 @@
 
 #include "config.h"
 
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 
 #include "alMain.h"
 #include "alAuxEffectSlot.h"
@@ -32,6 +32,8 @@
 #include "alcomplex.h"
 
 
+namespace {
+
 #define STFT_SIZE      1024
 #define STFT_HALF_SIZE (STFT_SIZE>>1)
 #define OVERSAMP       (1<<2)
@@ -39,16 +41,85 @@
 #define STFT_STEP    (STFT_SIZE / OVERSAMP)
 #define FIFO_LATENCY (STFT_STEP * (OVERSAMP-1))
 
+inline ALint double2int(ALdouble d)
+{
+#if ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) && \
+     !defined(__SSE2_MATH__)) || (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP < 2)
+    ALint sign, shift;
+    ALint64 mant;
+    union {
+        ALdouble d;
+        ALint64 i64;
+    } conv;
 
-typedef struct ALphasor {
+    conv.d = d;
+    sign = (conv.i64>>63) | 1;
+    shift = ((conv.i64>>52)&0x7ff) - (1023+52);
+
+    /* Over/underflow */
+    if(UNLIKELY(shift >= 63 || shift < -52))
+        return 0;
+
+    mant = (conv.i64&I64(0xfffffffffffff)) | I64(0x10000000000000);
+    if(LIKELY(shift < 0))
+        return (ALint)(mant >> -shift) * sign;
+    return (ALint)(mant << shift) * sign;
+
+#else
+
+    return (ALint)d;
+#endif
+}
+
+/* Define a Hann window, used to filter the STFT input and output. */
+/* Making this constexpr seems to require C++14. */
+std::array<ALdouble,STFT_SIZE> InitHannWindow(void)
+{
+    std::array<ALdouble,STFT_SIZE> ret;
+    /* Create lookup table of the Hann window for the desired size, i.e. HIL_SIZE */
+    for(ALsizei i{0};i < STFT_SIZE>>1;i++)
+    {
+        ALdouble val = std::sin(M_PI * (ALdouble)i / (ALdouble)(STFT_SIZE-1));
+        ret[i] = ret[STFT_SIZE-1-i] = val * val;
+    }
+    return ret;
+}
+alignas(16) const std::array<ALdouble,STFT_SIZE> HannWindow = InitHannWindow();
+
+
+struct ALphasor {
     ALdouble Amplitude;
     ALdouble Phase;
-} ALphasor;
+};
 
-typedef struct ALFrequencyDomain {
+struct ALfrequencyDomain {
     ALdouble Amplitude;
     ALdouble Frequency;
-} ALfrequencyDomain;
+};
+
+
+/* Converts ALcomplex to ALphasor */
+inline ALphasor rect2polar(ALcomplex number)
+{
+    ALphasor polar;
+
+    polar.Amplitude = std::sqrt(number.Real*number.Real + number.Imag*number.Imag);
+    polar.Phase     = std::atan2(number.Imag, number.Real);
+
+    return polar;
+}
+
+/* Converts ALphasor to ALcomplex */
+inline ALcomplex polar2rect(ALphasor number)
+{
+    ALcomplex cartesian;
+
+    cartesian.Real = number.Amplitude * std::cos(number.Phase);
+    cartesian.Imag = number.Amplitude * std::sin(number.Phase);
+
+    return cartesian;
+}
+
 
 
 struct ALpshifterState final : public ALeffectState {
@@ -85,94 +156,20 @@ DECLARE_DEFAULT_ALLOCATORS(ALpshifterState)
 
 DEFINE_ALEFFECTSTATE_VTABLE(ALpshifterState);
 
-
-/* Define a Hann window, used to filter the STFT input and output. */
-alignas(16) static ALdouble HannWindow[STFT_SIZE];
-
-static void InitHannWindow(void)
-{
-    ALsizei i;
-
-    /* Create lookup table of the Hann window for the desired size, i.e. STFT_SIZE */
-    for(i = 0;i < STFT_SIZE>>1;i++)
-    {
-        ALdouble val = sin(M_PI * (ALdouble)i / (ALdouble)(STFT_SIZE-1));
-        HannWindow[i] = HannWindow[STFT_SIZE-1-i] = val * val;
-    }
-}
-static alonce_flag HannInitOnce = AL_ONCE_FLAG_INIT;
-
-
-static inline ALint double2int(ALdouble d)
-{
-#if ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) && \
-     !defined(__SSE2_MATH__)) || (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP < 2)
-    ALint sign, shift;
-    ALint64 mant;
-    union {
-        ALdouble d;
-        ALint64 i64;
-    } conv;
-
-    conv.d = d;
-    sign = (conv.i64>>63) | 1;
-    shift = ((conv.i64>>52)&0x7ff) - (1023+52);
-
-    /* Over/underflow */
-    if(UNLIKELY(shift >= 63 || shift < -52))
-        return 0;
-
-    mant = (conv.i64&I64(0xfffffffffffff)) | I64(0x10000000000000);
-    if(LIKELY(shift < 0))
-        return (ALint)(mant >> -shift) * sign;
-    return (ALint)(mant << shift) * sign;
-
-#else
-
-    return (ALint)d;
-#endif
-}
-
-
-/* Converts ALcomplex to ALphasor */
-static inline ALphasor rect2polar(ALcomplex number)
-{
-    ALphasor polar;
-
-    polar.Amplitude = sqrt(number.Real*number.Real + number.Imag*number.Imag);
-    polar.Phase     = atan2(number.Imag, number.Real);
-
-    return polar;
-}
-
-/* Converts ALphasor to ALcomplex */
-static inline ALcomplex polar2rect(ALphasor number)
-{
-    ALcomplex cartesian;
-
-    cartesian.Real = number.Amplitude * cos(number.Phase);
-    cartesian.Imag = number.Amplitude * sin(number.Phase);
-
-    return cartesian;
-}
-
-
-static void ALpshifterState_Construct(ALpshifterState *state)
+void ALpshifterState_Construct(ALpshifterState *state)
 {
     new (state) ALpshifterState{};
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALpshifterState, ALeffectState, state);
-
-    alcall_once(&HannInitOnce, InitHannWindow);
 }
 
-static ALvoid ALpshifterState_Destruct(ALpshifterState *state)
+ALvoid ALpshifterState_Destruct(ALpshifterState *state)
 {
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
     state->~ALpshifterState();
 }
 
-static ALboolean ALpshifterState_deviceUpdate(ALpshifterState *state, ALCdevice *device)
+ALboolean ALpshifterState_deviceUpdate(ALpshifterState *state, ALCdevice *device)
 {
     /* (Re-)initializing parameters and clear the buffers. */
     state->count       = FIFO_LATENCY;
@@ -195,13 +192,13 @@ static ALboolean ALpshifterState_deviceUpdate(ALpshifterState *state, ALCdevice 
     return AL_TRUE;
 }
 
-static ALvoid ALpshifterState_update(ALpshifterState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
+ALvoid ALpshifterState_update(ALpshifterState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
 {
     const ALCdevice *device = context->Device;
     ALfloat coeffs[MAX_AMBI_COEFFS];
     float pitch;
 
-    pitch = powf(2.0f,
+    pitch = std::pow(2.0f,
         (ALfloat)(props->Pshifter.CoarseTune*100 + props->Pshifter.FineTune) / 1200.0f
     );
     state->PitchShiftI = fastf2i(pitch*FRACTIONONE);
@@ -211,7 +208,7 @@ static ALvoid ALpshifterState_update(ALpshifterState *state, const ALCcontext *c
     ComputePanGains(&device->Dry, coeffs, slot->Params.Gain, state->TargetGains);
 }
 
-static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
     /* Pitch shifter engine based on the work of Stephan Bernsee.
      * http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/
@@ -346,6 +343,8 @@ static ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToD
     MixSamples(bufferOut, NumChannels, SamplesOut, state->CurrentGains, state->TargetGains,
                maxi(SamplesToDo, 512), 0, SamplesToDo);
 }
+
+} // namespace
 
 struct PshifterStateFactory final : public EffectStateFactory {
     PshifterStateFactory() noexcept;

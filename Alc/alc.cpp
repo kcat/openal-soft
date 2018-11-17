@@ -795,7 +795,22 @@ constexpr ALchar alExtList[] =
 std::atomic<ALCenum> LastNullDeviceError{ALC_NO_ERROR};
 
 /* Thread-local current context */
-altss_t LocalContext;
+std::atomic<void(*)(ALCcontext*)> ThreadCtxProc{nullptr};
+thread_local class ThreadCtx {
+    ALCcontext *ctx{nullptr};
+
+public:
+    ~ThreadCtx()
+    {
+        auto destruct = ThreadCtxProc.load();
+        if(destruct && ctx)
+            destruct(ctx);
+        ctx = nullptr;
+    }
+
+    ALCcontext *get() const noexcept { return ctx; }
+    void set(ALCcontext *ctx_) noexcept { ctx = ctx_; }
+} LocalContext;
 /* Process-wide current context */
 std::atomic<ALCcontext*> GlobalContext{nullptr};
 
@@ -916,15 +931,12 @@ static void alc_deinit(void) __attribute__((destructor));
 #error "No global initialization available on this platform!"
 #endif
 
-static void ReleaseThreadCtx(void *ptr);
+static void ReleaseThreadCtx(ALCcontext *ctx);
 static void alc_init(void)
 {
-    const char *str;
-    int ret;
-
     LogFile = stderr;
 
-    str = getenv("__ALSOFT_HALF_ANGLE_CONES");
+    const char *str{getenv("__ALSOFT_HALF_ANGLE_CONES")};
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, nullptr, 0) == 1))
         ConeScale *= 0.5f;
 
@@ -936,8 +948,7 @@ static void alc_init(void)
     if(str && (strcasecmp(str, "true") == 0 || strtol(str, nullptr, 0) == 1))
         OverrideReverbSpeedOfSound = AL_TRUE;
 
-    ret = altss_create(&LocalContext, ReleaseThreadCtx);
-    assert(ret == althrd_success);
+    ThreadCtxProc = ReleaseThreadCtx;
 }
 
 static void alc_initconfig(void)
@@ -1236,7 +1247,7 @@ static void alc_deinit_safe(void)
     FreeHrtfs();
     FreeALConfig();
 
-    altss_delete(LocalContext);
+    ThreadCtxProc = nullptr;
 
     if(LogFile != stderr)
         fclose(LogFile);
@@ -2802,10 +2813,10 @@ static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
     ALCcontext *origctx, *newhead;
     bool ret = true;
 
-    if(altss_get(LocalContext) == context)
+    if(LocalContext.get() == context)
     {
         WARN("%p released while current on thread\n", context);
-        altss_set(LocalContext, nullptr);
+        LocalContext.set(nullptr);
         ALCcontext_DecRef(context);
     }
 
@@ -2858,9 +2869,8 @@ void ALCcontext_DecRef(ALCcontext *context)
     if(ref == 0) FreeContext(context);
 }
 
-static void ReleaseThreadCtx(void *ptr)
+static void ReleaseThreadCtx(ALCcontext *context)
 {
-    ALCcontext *context = static_cast<ALCcontext*>(ptr);
     uint ref = DecrementRef(&context->ref);
     TRACEREF("%p decreasing refcount to %u\n", context, ref);
     ERR("Context %p current for thread being destroyed, possible leak!\n", context);
@@ -2901,7 +2911,7 @@ static ALCboolean VerifyContext(ALCcontext **context)
  */
 ALCcontext *GetContextRef(void)
 {
-    ALCcontext *context{static_cast<ALCcontext*>(altss_get(LocalContext))};
+    ALCcontext *context{LocalContext.get()};
     if(context)
         ALCcontext_IncRef(context);
     else
@@ -3920,7 +3930,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
  */
 ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void)
 {
-    ALCcontext *Context{static_cast<ALCcontext*>(altss_get(LocalContext))};
+    ALCcontext *Context{LocalContext.get()};
     if(!Context) Context = GlobalContext.load();
     return Context;
 }
@@ -3931,7 +3941,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void)
  */
 ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
 {
-    return static_cast<ALCcontext*>(altss_get(LocalContext));
+    return LocalContext.get();
 }
 
 
@@ -3952,9 +3962,9 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
     context = GlobalContext.exchange(context);
     if(context) ALCcontext_DecRef(context);
 
-    if((context=static_cast<ALCcontext*>(altss_get(LocalContext))) != nullptr)
+    if((context=LocalContext.get()) != nullptr)
     {
-        altss_set(LocalContext, nullptr);
+        LocalContext.set(nullptr);
         ALCcontext_DecRef(context);
     }
 
@@ -3974,8 +3984,8 @@ ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
         return ALC_FALSE;
     }
     /* context's reference count is already incremented */
-    ALCcontext *old{static_cast<ALCcontext*>(altss_get(LocalContext))};
-    altss_set(LocalContext, context);
+    ALCcontext *old{LocalContext.get()};
+    LocalContext.set(context);
     if(old) ALCcontext_DecRef(old);
 
     return ALC_TRUE;

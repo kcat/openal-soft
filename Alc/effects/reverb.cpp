@@ -274,9 +274,7 @@ typedef struct LateReverb {
     ALfloat PanGain[NUM_LINES][MAX_OUTPUT_CHANNELS];
 } LateReverb;
 
-typedef struct ReverbState {
-    DERIVE_FROM_TYPE(ALeffectState);
-
+struct ReverbState final : public ALeffectState {
     /* All delay lines are allocated as a single buffer to reduce memory
      * fragmentation and management code.
      */
@@ -329,7 +327,7 @@ typedef struct ReverbState {
     /* Temporary storage used when processing. */
     alignas(16) ALfloat TempSamples[NUM_LINES][MAX_UPDATE_SAMPLES];
     alignas(16) ALfloat MixSamples[NUM_LINES][MAX_UPDATE_SAMPLES];
-} ReverbState;
+};
 
 static ALvoid ReverbState_Destruct(ReverbState *State);
 static ALboolean ReverbState_deviceUpdate(ReverbState *State, ALCdevice *Device);
@@ -341,7 +339,7 @@ DEFINE_ALEFFECTSTATE_VTABLE(ReverbState);
 
 static void ReverbState_Construct(ReverbState *state)
 {
-    ALsizei i, j;
+    new (state) ReverbState{};
 
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ReverbState, ALeffectState, state);
@@ -357,7 +355,7 @@ static void ReverbState_Construct(ReverbState *state)
     state->Params.HFReference = AL_EAXREVERB_DEFAULT_HFREFERENCE;
     state->Params.LFReference = AL_EAXREVERB_DEFAULT_LFREFERENCE;
 
-    for(i = 0;i < NUM_LINES;i++)
+    for(ALsizei i{0};i < NUM_LINES;i++)
     {
         BiquadFilter_clear(&state->Filter[i].Lp);
         BiquadFilter_clear(&state->Filter[i].Hp);
@@ -366,7 +364,7 @@ static void ReverbState_Construct(ReverbState *state)
     state->Delay.Mask = 0;
     state->Delay.Line = NULL;
 
-    for(i = 0;i < NUM_LINES;i++)
+    for(ALsizei i{0};i < NUM_LINES;i++)
     {
         state->EarlyDelayTap[i][0] = 0;
         state->EarlyDelayTap[i][1] = 0;
@@ -376,7 +374,7 @@ static void ReverbState_Construct(ReverbState *state)
 
     state->LateFeedTap = 0;
 
-    for(i = 0;i < NUM_LINES;i++)
+    for(ALsizei i{0};i < NUM_LINES;i++)
     {
         state->LateDelayTap[i][0] = 0;
         state->LateDelayTap[i][1] = 0;
@@ -390,7 +388,7 @@ static void ReverbState_Construct(ReverbState *state)
     state->Early.VecAp.Coeff = 0.0f;
     state->Early.Delay.Mask = 0;
     state->Early.Delay.Line = NULL;
-    for(i = 0;i < NUM_LINES;i++)
+    for(ALsizei i{0};i < NUM_LINES;i++)
     {
         state->Early.VecAp.Offset[i][0] = 0;
         state->Early.VecAp.Offset[i][1] = 0;
@@ -407,7 +405,7 @@ static void ReverbState_Construct(ReverbState *state)
     state->Late.VecAp.Delay.Mask = 0;
     state->Late.VecAp.Delay.Line = NULL;
     state->Late.VecAp.Coeff = 0.0f;
-    for(i = 0;i < NUM_LINES;i++)
+    for(ALsizei i{0};i < NUM_LINES;i++)
     {
         state->Late.Offset[i][0] = 0;
         state->Late.Offset[i][1] = 0;
@@ -421,9 +419,9 @@ static void ReverbState_Construct(ReverbState *state)
         BiquadFilter_clear(&state->Late.T60[i].LFFilter);
     }
 
-    for(i = 0;i < NUM_LINES;i++)
+    for(ALsizei i{0};i < NUM_LINES;i++)
     {
-        for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
+        for(ALsizei j{0};j < MAX_OUTPUT_CHANNELS;j++)
         {
             state->Early.CurrentGain[i][j] = 0.0f;
             state->Early.PanGain[i][j] = 0.0f;
@@ -444,6 +442,7 @@ static ALvoid ReverbState_Destruct(ReverbState *State)
     State->SampleBuffer = NULL;
 
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,State));
+    State->~ReverbState();
 }
 
 /**************************************
@@ -545,7 +544,8 @@ static ALboolean AllocLines(const ALuint frequency, ReverbState *State)
         ALfloat *newBuffer;
 
         TRACE("New reverb buffer length: %ux4 samples\n", totalSamples);
-        newBuffer = al_calloc(16, sizeof(ALfloat[NUM_LINES]) * totalSamples);
+        newBuffer = static_cast<ALfloat*>(al_calloc(16,
+            sizeof(ALfloat[NUM_LINES]) * totalSamples));
         if(!newBuffer) return AL_FALSE;
 
         al_free(State->SampleBuffer);
@@ -1583,9 +1583,9 @@ static ALvoid ReverbState_process(ReverbState *State, ALsizei SamplesToDo, const
 }
 
 
-typedef struct ReverbStateFactory {
-    DERIVE_FROM_TYPE(EffectStateFactory);
-} ReverbStateFactory;
+struct ReverbStateFactory final : public EffectStateFactory {
+    ReverbStateFactory() noexcept;
+};
 
 static ALeffectState *ReverbStateFactory_create(ReverbStateFactory* UNUSED(factory))
 {
@@ -1599,10 +1599,14 @@ static ALeffectState *ReverbStateFactory_create(ReverbStateFactory* UNUSED(facto
 
 DEFINE_EFFECTSTATEFACTORY_VTABLE(ReverbStateFactory);
 
+ReverbStateFactory::ReverbStateFactory() noexcept
+  : EffectStateFactory{GET_VTABLE2(ReverbStateFactory, EffectStateFactory)}
+{
+}
+
 EffectStateFactory *ReverbStateFactory_getFactory(void)
 {
-    static ReverbStateFactory ReverbFactory = { { GET_VTABLE2(ReverbStateFactory, EffectStateFactory) } };
-
+    static ReverbStateFactory ReverbFactory{};
     return STATIC_CAST(EffectStateFactory, &ReverbFactory);
 }
 

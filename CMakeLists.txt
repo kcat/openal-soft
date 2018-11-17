@@ -822,7 +822,7 @@ SET(ALC_OBJS
     Alc/effects/modulator.c
     Alc/effects/null.c
     Alc/effects/pshifter.c
-    Alc/effects/reverb.c
+    Alc/effects/reverb.cpp
     Alc/filters/defs.h
     Alc/filters/filter.c
     Alc/filters/nfc.c

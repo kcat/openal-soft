@@ -30,9 +30,7 @@
 #include "filters/defs.h"
 
 
-typedef struct ALdistortionState {
-    DERIVE_FROM_TYPE(ALeffectState);
-
+struct ALdistortionState final : public ALeffectState {
     /* Effect gains for each channel */
     ALfloat Gain[MAX_OUTPUT_CHANNELS];
 
@@ -43,7 +41,7 @@ typedef struct ALdistortionState {
     ALfloat edge_coeff;
 
     ALfloat Buffer[2][BUFFERSIZE];
-} ALdistortionState;
+};
 
 static ALvoid ALdistortionState_Destruct(ALdistortionState *state);
 static ALboolean ALdistortionState_deviceUpdate(ALdistortionState *state, ALCdevice *device);
@@ -56,6 +54,7 @@ DEFINE_ALEFFECTSTATE_VTABLE(ALdistortionState);
 
 static void ALdistortionState_Construct(ALdistortionState *state)
 {
+    new (state) ALdistortionState{};
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALdistortionState, ALeffectState, state);
 }
@@ -63,6 +62,7 @@ static void ALdistortionState_Construct(ALdistortionState *state)
 static ALvoid ALdistortionState_Destruct(ALdistortionState *state)
 {
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
+    state->~ALdistortionState();
 }
 
 static ALboolean ALdistortionState_deviceUpdate(ALdistortionState *state, ALCdevice *UNUSED(device))
@@ -174,9 +174,9 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALsizei Sample
 }
 
 
-typedef struct DistortionStateFactory {
-    DERIVE_FROM_TYPE(EffectStateFactory);
-} DistortionStateFactory;
+struct DistortionStateFactory final : public EffectStateFactory {
+    DistortionStateFactory() noexcept;
+};
 
 static ALeffectState *DistortionStateFactory_create(DistortionStateFactory *UNUSED(factory))
 {
@@ -190,11 +190,14 @@ static ALeffectState *DistortionStateFactory_create(DistortionStateFactory *UNUS
 
 DEFINE_EFFECTSTATEFACTORY_VTABLE(DistortionStateFactory);
 
+DistortionStateFactory::DistortionStateFactory() noexcept
+  : EffectStateFactory{GET_VTABLE2(DistortionStateFactory, EffectStateFactory)}
+{
+}
 
 EffectStateFactory *DistortionStateFactory_getFactory(void)
 {
-    static DistortionStateFactory DistortionFactory = { { GET_VTABLE2(DistortionStateFactory, EffectStateFactory) } };
-
+    static DistortionStateFactory DistortionFactory{};
     return STATIC_CAST(EffectStateFactory, &DistortionFactory);
 }
 

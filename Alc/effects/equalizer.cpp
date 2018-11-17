@@ -72,9 +72,7 @@
  * http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt                   */
 
 
-typedef struct ALequalizerState {
-    DERIVE_FROM_TYPE(ALeffectState);
-
+struct ALequalizerState final : public ALeffectState {
     struct {
         /* Effect parameters */
         BiquadFilter filter[4];
@@ -85,7 +83,7 @@ typedef struct ALequalizerState {
     } Chans[MAX_EFFECT_CHANNELS];
 
     ALfloat SampleBuffer[MAX_EFFECT_CHANNELS][BUFFERSIZE];
-} ALequalizerState;
+};
 
 static ALvoid ALequalizerState_Destruct(ALequalizerState *state);
 static ALboolean ALequalizerState_deviceUpdate(ALequalizerState *state, ALCdevice *device);
@@ -98,6 +96,7 @@ DEFINE_ALEFFECTSTATE_VTABLE(ALequalizerState);
 
 static void ALequalizerState_Construct(ALequalizerState *state)
 {
+    new (state) ALequalizerState{};
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALequalizerState, ALeffectState, state);
 }
@@ -105,6 +104,7 @@ static void ALequalizerState_Construct(ALequalizerState *state)
 static ALvoid ALequalizerState_Destruct(ALequalizerState *state)
 {
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
+    state->~ALequalizerState();
 }
 
 static ALboolean ALequalizerState_deviceUpdate(ALequalizerState *state, ALCdevice *UNUSED(device))
@@ -196,9 +196,9 @@ static ALvoid ALequalizerState_process(ALequalizerState *state, ALsizei SamplesT
 }
 
 
-typedef struct EqualizerStateFactory {
-    DERIVE_FROM_TYPE(EffectStateFactory);
-} EqualizerStateFactory;
+struct EqualizerStateFactory final : public EffectStateFactory {
+    EqualizerStateFactory() noexcept;
+};
 
 ALeffectState *EqualizerStateFactory_create(EqualizerStateFactory *UNUSED(factory))
 {
@@ -212,10 +212,14 @@ ALeffectState *EqualizerStateFactory_create(EqualizerStateFactory *UNUSED(factor
 
 DEFINE_EFFECTSTATEFACTORY_VTABLE(EqualizerStateFactory);
 
+EqualizerStateFactory::EqualizerStateFactory() noexcept
+  : EffectStateFactory{GET_VTABLE2(EqualizerStateFactory, EffectStateFactory)}
+{
+}
+
 EffectStateFactory *EqualizerStateFactory_getFactory(void)
 {
-    static EqualizerStateFactory EqualizerFactory = { { GET_VTABLE2(EqualizerStateFactory, EffectStateFactory) } };
-
+    static EqualizerStateFactory EqualizerFactory{};
     return STATIC_CAST(EffectStateFactory, &EqualizerFactory);
 }
 

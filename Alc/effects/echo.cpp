@@ -31,9 +31,7 @@
 #include "filters/defs.h"
 
 
-typedef struct ALechoState {
-    DERIVE_FROM_TYPE(ALeffectState);
-
+struct ALechoState final : public ALeffectState {
     ALfloat *SampleBuffer;
     ALsizei BufferLength;
 
@@ -53,7 +51,7 @@ typedef struct ALechoState {
     ALfloat FeedGain;
 
     BiquadFilter Filter;
-} ALechoState;
+};
 
 static ALvoid ALechoState_Destruct(ALechoState *state);
 static ALboolean ALechoState_deviceUpdate(ALechoState *state, ALCdevice *Device);
@@ -66,6 +64,7 @@ DEFINE_ALEFFECTSTATE_VTABLE(ALechoState);
 
 static void ALechoState_Construct(ALechoState *state)
 {
+    new (state) ALechoState{};
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALechoState, ALeffectState, state);
 
@@ -84,6 +83,7 @@ static ALvoid ALechoState_Destruct(ALechoState *state)
     al_free(state->SampleBuffer);
     state->SampleBuffer = NULL;
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
+    state->~ALechoState();
 }
 
 static ALboolean ALechoState_deviceUpdate(ALechoState *state, ALCdevice *Device)
@@ -103,7 +103,7 @@ static ALboolean ALechoState_deviceUpdate(ALechoState *state, ALCdevice *Device)
         if(!temp) return AL_FALSE;
 
         al_free(state->SampleBuffer);
-        state->SampleBuffer = temp;
+        state->SampleBuffer = static_cast<float*>(temp);
         state->BufferLength = maxlen;
     }
 
@@ -201,9 +201,9 @@ static ALvoid ALechoState_process(ALechoState *state, ALsizei SamplesToDo, const
 }
 
 
-typedef struct EchoStateFactory {
-    DERIVE_FROM_TYPE(EffectStateFactory);
-} EchoStateFactory;
+struct EchoStateFactory final : public EffectStateFactory {
+    EchoStateFactory() noexcept;
+};
 
 ALeffectState *EchoStateFactory_create(EchoStateFactory *UNUSED(factory))
 {
@@ -217,10 +217,14 @@ ALeffectState *EchoStateFactory_create(EchoStateFactory *UNUSED(factory))
 
 DEFINE_EFFECTSTATEFACTORY_VTABLE(EchoStateFactory);
 
+EchoStateFactory::EchoStateFactory() noexcept
+  : EffectStateFactory{GET_VTABLE2(EchoStateFactory, EffectStateFactory)}
+{
+}
+
 EffectStateFactory *EchoStateFactory_getFactory(void)
 {
-    static EchoStateFactory EchoFactory = { { GET_VTABLE2(EchoStateFactory, EffectStateFactory) } };
-
+    static EchoStateFactory EchoFactory{};
     return STATIC_CAST(EffectStateFactory, &EchoFactory);
 }
 

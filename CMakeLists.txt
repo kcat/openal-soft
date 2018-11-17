@@ -811,10 +811,10 @@ SET(ALC_OBJS
     Alc/effects/autowah.c
     Alc/effects/chorus.c
     Alc/effects/compressor.c
-    Alc/effects/dedicated.c
-    Alc/effects/distortion.c
-    Alc/effects/echo.c
-    Alc/effects/equalizer.c
+    Alc/effects/dedicated.cpp
+    Alc/effects/distortion.cpp
+    Alc/effects/echo.cpp
+    Alc/effects/equalizer.cpp
     Alc/effects/fshifter.cpp
     Alc/effects/modulator.cpp
     Alc/effects/null.cpp

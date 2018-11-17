@@ -29,12 +29,10 @@
 #include "filters/defs.h"
 
 
-typedef struct ALdedicatedState {
-    DERIVE_FROM_TYPE(ALeffectState);
-
+struct ALdedicatedState final : public ALeffectState {
     ALfloat CurrentGains[MAX_OUTPUT_CHANNELS];
     ALfloat TargetGains[MAX_OUTPUT_CHANNELS];
-} ALdedicatedState;
+};
 
 static ALvoid ALdedicatedState_Destruct(ALdedicatedState *state);
 static ALboolean ALdedicatedState_deviceUpdate(ALdedicatedState *state, ALCdevice *device);
@@ -47,6 +45,7 @@ DEFINE_ALEFFECTSTATE_VTABLE(ALdedicatedState);
 
 static void ALdedicatedState_Construct(ALdedicatedState *state)
 {
+    new (state) ALdedicatedState{};
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALdedicatedState, ALeffectState, state);
 }
@@ -54,6 +53,7 @@ static void ALdedicatedState_Construct(ALdedicatedState *state)
 static ALvoid ALdedicatedState_Destruct(ALdedicatedState *state)
 {
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
+    state->~ALdedicatedState();
 }
 
 static ALboolean ALdedicatedState_deviceUpdate(ALdedicatedState *state, ALCdevice *UNUSED(device))
@@ -114,9 +114,9 @@ static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALsizei SamplesT
 }
 
 
-typedef struct DedicatedStateFactory {
-    DERIVE_FROM_TYPE(EffectStateFactory);
-} DedicatedStateFactory;
+struct DedicatedStateFactory final : public EffectStateFactory {
+    DedicatedStateFactory() noexcept;
+};
 
 ALeffectState *DedicatedStateFactory_create(DedicatedStateFactory *UNUSED(factory))
 {
@@ -130,11 +130,14 @@ ALeffectState *DedicatedStateFactory_create(DedicatedStateFactory *UNUSED(factor
 
 DEFINE_EFFECTSTATEFACTORY_VTABLE(DedicatedStateFactory);
 
+DedicatedStateFactory::DedicatedStateFactory() noexcept
+  : EffectStateFactory{GET_VTABLE2(DedicatedStateFactory, EffectStateFactory)}
+{
+}
 
 EffectStateFactory *DedicatedStateFactory_getFactory(void)
 {
-    static DedicatedStateFactory DedicatedFactory = { { GET_VTABLE2(DedicatedStateFactory, EffectStateFactory) } };
-
+    static DedicatedStateFactory DedicatedFactory{};
     return STATIC_CAST(EffectStateFactory, &DedicatedFactory);
 }
 

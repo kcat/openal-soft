@@ -755,7 +755,7 @@ ENDIF()
 
 
 SET(COMMON_OBJS
-    common/alcomplex.c
+    common/alcomplex.cpp
     common/alcomplex.h
     common/align.h
     common/almalloc.c

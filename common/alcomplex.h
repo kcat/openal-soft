@@ -1,17 +1,7 @@
 #ifndef ALCOMPLEX_H
 #define ALCOMPLEX_H
 
-#include "AL/al.h"
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-typedef struct ALcomplex {
-    ALdouble Real;
-    ALdouble Imag;
-} ALcomplex;
+#include <complex>
 
 /**
  * Iterative implementation of 2-radix FFT (In-place algorithm). Sign = -1 is
@@ -20,7 +10,7 @@ typedef struct ALcomplex {
  * FFTBuffer[0...FFTSize-1]. FFTBuffer is an array of complex numbers, FFTSize
  * MUST BE power of two.
  */
-void complex_fft(ALcomplex *FFTBuffer, ALsizei FFTSize, ALdouble Sign);
+void complex_fft(std::complex<double> *FFTBuffer, int FFTSize, double Sign);
 
 /**
  * Calculate the complex helical sequence (discrete-time analytical signal) of
@@ -29,10 +19,6 @@ void complex_fft(ALcomplex *FFTBuffer, ALsizei FFTSize, ALdouble Sign);
  * Buffer[0...size-1]. Buffer is an array of complex numbers, size MUST BE
  * power of two.
  */
-void complex_hilbert(ALcomplex *Buffer, ALsizei size);
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
+void complex_hilbert(std::complex<double> *Buffer, int size);
 
 #endif /* ALCOMPLEX_H */

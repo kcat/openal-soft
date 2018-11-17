@@ -22,6 +22,8 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <complex>
+#include <algorithm>
 
 #include "alMain.h"
 #include "alAuxEffectSlot.h"
@@ -32,6 +34,8 @@
 #include "alcomplex.h"
 
 namespace {
+
+using complex_d = std::complex<double>;
 
 #define HIL_SIZE 1024
 #define OVERSAMP (1<<2)
@@ -64,10 +68,10 @@ struct ALfshifterState final : public ALeffectState {
 
     /*Effects buffers*/ 
     ALfloat   InFIFO[HIL_SIZE];
-    ALcomplex OutFIFO[HIL_SIZE];
-    ALcomplex OutputAccum[HIL_SIZE];
-    ALcomplex Analytic[HIL_SIZE];
-    ALcomplex Outdata[BUFFERSIZE];
+    complex_d OutFIFO[HIL_SIZE];
+    complex_d OutputAccum[HIL_SIZE];
+    complex_d Analytic[HIL_SIZE];
+    complex_d Outdata[BUFFERSIZE];
 
     alignas(16) ALfloat BufferOut[BUFFERSIZE];
 
@@ -105,13 +109,13 @@ ALboolean ALfshifterState_deviceUpdate(ALfshifterState *state, ALCdevice *UNUSED
     state->Phase     = 0;
     state->ld_sign   = 1.0;
 
-    memset(state->InFIFO,      0, sizeof(state->InFIFO));
-    memset(state->OutFIFO,     0, sizeof(state->OutFIFO));
-    memset(state->OutputAccum, 0, sizeof(state->OutputAccum));
-    memset(state->Analytic,    0, sizeof(state->Analytic));
+    std::fill(std::begin(state->InFIFO),      std::end(state->InFIFO),      0.0f);
+    std::fill(std::begin(state->OutFIFO),     std::end(state->OutFIFO),     complex_d{});
+    std::fill(std::begin(state->OutputAccum), std::end(state->OutputAccum), complex_d{});
+    std::fill(std::begin(state->Analytic),    std::end(state->Analytic),    complex_d{});
 
-    memset(state->CurrentGains, 0, sizeof(state->CurrentGains));
-    memset(state->TargetGains,  0, sizeof(state->TargetGains));
+    std::fill(std::begin(state->CurrentGains), std::end(state->CurrentGains), 0.0f);
+    std::fill(std::begin(state->TargetGains),  std::end(state->TargetGains),  0.0f);
 
     return AL_TRUE;
 }
@@ -147,7 +151,7 @@ ALvoid ALfshifterState_update(ALfshifterState *state, const ALCcontext *context,
 
 ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    static const ALcomplex complex_zero = { 0.0, 0.0 };
+    static const complex_d complex_zero{0.0, 0.0};
     ALfloat *RESTRICT BufferOut = state->BufferOut;
     ALsizei j, k, base;
 
@@ -175,8 +179,8 @@ ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToDo, cons
         /* Real signal windowing and store in Analytic buffer */
         for(k = 0;k < HIL_SIZE;k++)
         {
-            state->Analytic[k].Real = state->InFIFO[k] * HannWindow[k];
-            state->Analytic[k].Imag = 0.0;
+            state->Analytic[k].real(state->InFIFO[k] * HannWindow[k]);
+            state->Analytic[k].imag(0.0);
         }
 
         /* Processing signal by Discrete Hilbert Transform (analytical signal). */
@@ -184,10 +188,7 @@ ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToDo, cons
 
         /* Windowing and add to output accumulator */
         for(k = 0;k < HIL_SIZE;k++)
-        {
-            state->OutputAccum[k].Real += 2.0/OVERSAMP*HannWindow[k]*state->Analytic[k].Real;
-            state->OutputAccum[k].Imag += 2.0/OVERSAMP*HannWindow[k]*state->Analytic[k].Imag;
-        }
+            state->OutputAccum[k] += 2.0/OVERSAMP*HannWindow[k]*state->Analytic[k];
 
         /* Shift accumulator, input & output FIFO */
         for(k = 0;k < HIL_STEP;k++) state->OutFIFO[k] = state->OutputAccum[k];
@@ -200,9 +201,9 @@ ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToDo, cons
     /* Process frequency shifter using the analytic signal obtained. */
     for(k = 0;k < SamplesToDo;k++)
     {
-        ALdouble phase = state->Phase * ((1.0/FRACTIONONE) * 2.0*M_PI);
-        BufferOut[k] = (ALfloat)(state->Outdata[k].Real*cos(phase) +
-                                 state->Outdata[k].Imag*sin(phase)*state->ld_sign);
+        double phase = state->Phase * ((1.0/FRACTIONONE) * 2.0*M_PI);
+        BufferOut[k] = (float)(state->Outdata[k].real()*std::cos(phase) +
+                               state->Outdata[k].imag()*std::sin(phase)*state->ld_sign);
 
         state->Phase += state->PhaseStep;
         state->Phase &= FRACTIONMASK;

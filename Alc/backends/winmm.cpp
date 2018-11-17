@@ -202,7 +202,7 @@ FORCE_ALIGN int ALCwinmmPlayback_mixerProc(ALCwinmmPlayback *self)
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
     SetRTPriority();
-    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
+    althrd_setname(MIXER_THREAD_NAME);
 
     ALCwinmmPlayback_lock(self);
     while(!self->killNow.load(std::memory_order_acquire) &&
@@ -484,7 +484,7 @@ int ALCwinmmCapture_captureProc(ALCwinmmCapture *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
-    althrd_setname(althrd_current(), RECORD_THREAD_NAME);
+    althrd_setname(RECORD_THREAD_NAME);
 
     ALCwinmmCapture_lock(self);
     while(!self->killNow.load(std::memory_order_acquire) &&

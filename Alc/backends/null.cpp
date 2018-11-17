@@ -89,7 +89,7 @@ int ALCnullBackend_mixerProc(ALCnullBackend *self)
     const milliseconds restTime{device->UpdateSize*1000/device->Frequency / 2};
 
     SetRTPriority();
-    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
+    althrd_setname(MIXER_THREAD_NAME);
 
     ALint64 done{0};
     auto start = std::chrono::steady_clock::now();

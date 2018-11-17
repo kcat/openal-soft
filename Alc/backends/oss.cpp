@@ -296,7 +296,7 @@ int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self)
     int sret;
 
     SetRTPriority();
-    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
+    althrd_setname(MIXER_THREAD_NAME);
 
     frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
 
@@ -558,7 +558,7 @@ int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
     int sret;
 
     SetRTPriority();
-    althrd_setname(althrd_current(), RECORD_THREAD_NAME);
+    althrd_setname(RECORD_THREAD_NAME);
 
     frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
 

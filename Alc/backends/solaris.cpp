@@ -115,7 +115,7 @@ static int ALCsolarisBackend_mixerProc(void *ptr)
     int sret;
 
     SetRTPriority();
-    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
+    althrd_setname(MIXER_THREAD_NAME);
 
     frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
 

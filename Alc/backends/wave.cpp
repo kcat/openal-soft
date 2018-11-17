@@ -133,7 +133,7 @@ int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     const milliseconds restTime{device->UpdateSize*1000/device->Frequency / 2};
 
-    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
+    althrd_setname(MIXER_THREAD_NAME);
 
     ALsizei frameSize{FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder)};
 

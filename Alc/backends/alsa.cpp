@@ -472,7 +472,7 @@ int ALCplaybackAlsa_mixerProc(ALCplaybackAlsa *self)
     ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
 
     SetRTPriority();
-    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
+    althrd_setname(MIXER_THREAD_NAME);
 
     snd_pcm_uframes_t update_size{device->UpdateSize};
     snd_pcm_uframes_t num_updates{device->NumUpdates};
@@ -559,7 +559,7 @@ int ALCplaybackAlsa_mixerNoMMapProc(ALCplaybackAlsa *self)
     ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
 
     SetRTPriority();
-    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
+    althrd_setname(MIXER_THREAD_NAME);
 
     snd_pcm_uframes_t update_size{device->UpdateSize};
     snd_pcm_uframes_t num_updates{device->NumUpdates};

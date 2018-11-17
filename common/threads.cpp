@@ -60,7 +60,7 @@
 static ThrSafeMap<DWORD,HANDLE> ThrdIdHandle{};
 
 
-void althrd_setname(althrd_t thr, const char *name)
+void althrd_setname(const char *name)
 {
 #if defined(_MSC_VER)
 #define MS_VC_EXCEPTION 0x406D1388
@@ -74,7 +74,7 @@ void althrd_setname(althrd_t thr, const char *name)
 #pragma pack(pop)
     info.dwType = 0x1000;
     info.szName = name;
-    info.dwThreadID = thr;
+    info.dwThreadID = -1;
     info.dwFlags = 0;
 
     __try {
@@ -84,7 +84,6 @@ void althrd_setname(althrd_t thr, const char *name)
     }
 #undef MS_VC_EXCEPTION
 #else
-    (void)thr;
     (void)name;
 #endif
 }
@@ -207,11 +206,6 @@ int alsem_trywait(alsem_t *sem)
     return althrd_error;
 }
 
-
-void althrd_deinit(void)
-{
-}
-
 #else
 
 #include <sys/time.h>
@@ -222,21 +216,19 @@ void althrd_deinit(void)
 #endif
 
 
-void althrd_setname(althrd_t thr, const char *name)
+void althrd_setname(const char *name)
 {
 #if defined(HAVE_PTHREAD_SETNAME_NP)
 #if defined(PTHREAD_SETNAME_NP_ONE_PARAM)
-    if(althrd_equal(thr, althrd_current()))
-        pthread_setname_np(name);
+    pthread_setname_np(name);
 #elif defined(PTHREAD_SETNAME_NP_THREE_PARAMS)
-    pthread_setname_np(thr, "%s", (void*)name);
+    pthread_setname_np(pthread_self(), "%s", (void*)name);
 #else
-    pthread_setname_np(thr, name);
+    pthread_setname_np(pthread_self(), name);
 #endif
 #elif defined(HAVE_PTHREAD_SET_NAME_NP)
-    pthread_set_name_np(thr, name);
+    pthread_set_name_np(pthread_self(), name);
 #else
-    (void)thr;
     (void)name;
 #endif
 }
@@ -435,8 +427,5 @@ int alsem_trywait(alsem_t *sem)
 }
 
 #endif /* __APPLE__ */
-
-void althrd_deinit(void)
-{ }
 
 #endif

@@ -249,7 +249,7 @@ FORCE_ALIGN int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self)
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
     SetRTPriority();
-    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
+    althrd_setname(MIXER_THREAD_NAME);
 
     IDirectSoundBuffer *const Buffer{self->Buffer};
 

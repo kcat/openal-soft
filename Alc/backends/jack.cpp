@@ -306,7 +306,7 @@ static int ALCjackPlayback_mixerProc(void *arg)
     ll_ringbuffer_data_t data[2];
 
     SetRTPriority();
-    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
+    althrd_setname(MIXER_THREAD_NAME);
 
     ALCjackPlayback_lock(self);
     while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&

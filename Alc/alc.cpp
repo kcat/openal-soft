@@ -1248,8 +1248,6 @@ static void alc_deinit_safe(void)
     if(LogFile != stderr)
         fclose(LogFile);
     LogFile = nullptr;
-
-    althrd_deinit();
 }
 
 static void alc_deinit(void)

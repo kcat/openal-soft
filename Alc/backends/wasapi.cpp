@@ -580,7 +580,7 @@ FORCE_ALIGN int ALCwasapiPlayback_mixerProc(ALCwasapiPlayback *self)
     }
 
     SetRTPriority();
-    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
+    althrd_setname(MIXER_THREAD_NAME);
 
     ALuint update_size{device->UpdateSize};
     UINT32 buffer_len{update_size * device->NumUpdates};
@@ -1251,7 +1251,7 @@ FORCE_ALIGN int ALCwasapiCapture_recordProc(ALCwasapiCapture *self)
         return 1;
     }
 
-    althrd_setname(althrd_current(), RECORD_THREAD_NAME);
+    althrd_setname(RECORD_THREAD_NAME);
 
     std::vector<float> samples;
     while(!self->mKillNow.load(std::memory_order_relaxed))

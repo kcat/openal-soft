@@ -98,7 +98,7 @@ static int SndioPlayback_mixerProc(void *ptr)
     size_t wrote;
 
     SetRTPriority();
-    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
+    althrd_setname(MIXER_THREAD_NAME);
 
     frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
 
@@ -340,7 +340,7 @@ static int SndioCapture_recordProc(void* ptr)
     ALsizei frameSize;
 
     SetRTPriority();
-    althrd_setname(althrd_current(), RECORD_THREAD_NAME);
+    althrd_setname(RECORD_THREAD_NAME);
 
     frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
 

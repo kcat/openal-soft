@@ -866,7 +866,7 @@ int PulsePlayback_mixerProc(PulsePlayback *self)
     ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
 
     SetRTPriority();
-    althrd_setname(althrd_current(), MIXER_THREAD_NAME);
+    althrd_setname(MIXER_THREAD_NAME);
 
     unique_palock palock{self->loop};
     size_t frame_size{pa_frame_size(&self->spec)};

@@ -42,18 +42,6 @@ typedef CRITICAL_SECTION almtx_t;
 typedef HANDLE alsem_t;
 
 
-void althrd_deinit(void);
-
-inline althrd_t althrd_current(void)
-{
-    return GetCurrentThreadId();
-}
-
-inline int althrd_equal(althrd_t thr0, althrd_t thr1)
-{
-    return thr0 == thr1;
-}
-
 inline void althrd_yield(void)
 {
     SwitchToThread();
@@ -94,18 +82,6 @@ typedef sem_t alsem_t;
 #endif /* __APPLE__ */
 
 
-void althrd_deinit(void);
-
-inline althrd_t althrd_current(void)
-{
-    return pthread_self();
-}
-
-inline int althrd_equal(althrd_t thr0, althrd_t thr1)
-{
-    return pthread_equal(thr0, thr1);
-}
-
 inline void althrd_yield(void)
 {
     sched_yield();
@@ -132,7 +108,7 @@ inline int almtx_unlock(almtx_t *mtx)
 int althrd_create(althrd_t *thr, althrd_start_t func, void *arg);
 int althrd_detach(althrd_t thr);
 int althrd_join(althrd_t thr, int *res);
-void althrd_setname(althrd_t thr, const char *name);
+void althrd_setname(const char *name);
 
 int almtx_init(almtx_t *mtx, int type);
 void almtx_destroy(almtx_t *mtx);

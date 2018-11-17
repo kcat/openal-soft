@@ -800,7 +800,7 @@ SET(ALC_OBJS
     Alc/alconfig.cpp
     Alc/alconfig.h
     Alc/bs2b.c
-    Alc/converter.c
+    Alc/converter.cpp
     Alc/converter.h
     Alc/inldefs.c
     Alc/inprogext.h

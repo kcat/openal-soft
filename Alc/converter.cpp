@@ -15,7 +15,8 @@ SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType 
     if(numchans <= 0 || srcRate <= 0 || dstRate <= 0)
         return NULL;
 
-    converter = al_calloc(16, FAM_SIZE(SampleConverter, Chan, numchans));
+    converter = static_cast<SampleConverter*>(al_calloc(16,
+        FAM_SIZE(SampleConverter, Chan, numchans)));
     converter->mSrcType = srcType;
     converter->mDstType = dstType;
     converter->mNumChannels = numchans;
@@ -95,25 +96,25 @@ static void LoadSamples(ALfloat *dst, const ALvoid *src, ALint srcstep, enum Dev
     switch(srctype)
     {
         case DevFmtByte:
-            Load_ALbyte(dst, src, srcstep, samples);
+            Load_ALbyte(dst, static_cast<const ALbyte*>(src), srcstep, samples);
             break;
         case DevFmtUByte:
-            Load_ALubyte(dst, src, srcstep, samples);
+            Load_ALubyte(dst, static_cast<const ALubyte*>(src), srcstep, samples);
             break;
         case DevFmtShort:
-            Load_ALshort(dst, src, srcstep, samples);
+            Load_ALshort(dst, static_cast<const ALshort*>(src), srcstep, samples);
             break;
         case DevFmtUShort:
-            Load_ALushort(dst, src, srcstep, samples);
+            Load_ALushort(dst, static_cast<const ALushort*>(src), srcstep, samples);
             break;
         case DevFmtInt:
-            Load_ALint(dst, src, srcstep, samples);
+            Load_ALint(dst, static_cast<const ALint*>(src), srcstep, samples);
             break;
         case DevFmtUInt:
-            Load_ALuint(dst, src, srcstep, samples);
+            Load_ALuint(dst, static_cast<const ALuint*>(src), srcstep, samples);
             break;
         case DevFmtFloat:
-            Load_ALfloat(dst, src, srcstep, samples);
+            Load_ALfloat(dst, static_cast<const ALfloat*>(src), srcstep, samples);
             break;
     }
 }
@@ -161,25 +162,25 @@ static void StoreSamples(ALvoid *dst, const ALfloat *src, ALint dststep, enum De
     switch(dsttype)
     {
         case DevFmtByte:
-            Store_ALbyte(dst, src, dststep, samples);
+            Store_ALbyte(static_cast<ALbyte*>(dst), src, dststep, samples);
             break;
         case DevFmtUByte:
-            Store_ALubyte(dst, src, dststep, samples);
+            Store_ALubyte(static_cast<ALubyte*>(dst), src, dststep, samples);
             break;
         case DevFmtShort:
-            Store_ALshort(dst, src, dststep, samples);
+            Store_ALshort(static_cast<ALshort*>(dst), src, dststep, samples);
             break;
         case DevFmtUShort:
-            Store_ALushort(dst, src, dststep, samples);
+            Store_ALushort(static_cast<ALushort*>(dst), src, dststep, samples);
             break;
         case DevFmtInt:
-            Store_ALint(dst, src, dststep, samples);
+            Store_ALint(static_cast<ALint*>(dst), src, dststep, samples);
             break;
         case DevFmtUInt:
-            Store_ALuint(dst, src, dststep, samples);
+            Store_ALuint(static_cast<ALuint*>(dst), src, dststep, samples);
             break;
         case DevFmtFloat:
-            Store_ALfloat(dst, src, dststep, samples);
+            Store_ALfloat(static_cast<ALfloat*>(dst), src, dststep, samples);
             break;
     }
 }
@@ -235,8 +236,8 @@ ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALs
     START_MIXER_MODE();
     while(pos < dstframes && *srcframes > 0)
     {
-        ALfloat *RESTRICT SrcData = ASSUME_ALIGNED(converter->mSrcSamples, 16);
-        ALfloat *RESTRICT DstData = ASSUME_ALIGNED(converter->mDstSamples, 16);
+        ALfloat *RESTRICT SrcData = converter->mSrcSamples;
+        ALfloat *RESTRICT DstData = converter->mDstSamples;
         ALint prepcount = converter->mSrcPrepCount;
         ALsizei DataPosFrac = converter->mFracOffset;
         ALuint64 DataSize64;
@@ -358,7 +359,7 @@ ChannelConverter *CreateChannelConverter(enum DevFmtType srcType, enum DevFmtCha
                                  (srcChans == DevFmtStereo && dstChans == DevFmtMono)))
         return NULL;
 
-    converter = al_calloc(DEF_ALIGN, sizeof(*converter));
+    converter = static_cast<ChannelConverter*>(al_calloc(DEF_ALIGN, sizeof(*converter)));
     converter->mSrcType = srcType;
     converter->mSrcChans = srcChans;
     converter->mDstChans = dstChans;
@@ -415,54 +416,54 @@ void ChannelConverterInput(ChannelConverter *converter, const ALvoid *src, ALflo
     {
         switch(converter->mSrcType)
         {
-            case DevFmtByte:
-                Stereo2MonoALbyte(dst, src, frames);
-                break;
-            case DevFmtUByte:
-                Stereo2MonoALubyte(dst, src, frames);
-                break;
-            case DevFmtShort:
-                Stereo2MonoALshort(dst, src, frames);
-                break;
-            case DevFmtUShort:
-                Stereo2MonoALushort(dst, src, frames);
-                break;
-            case DevFmtInt:
-                Stereo2MonoALint(dst, src, frames);
-                break;
-            case DevFmtUInt:
-                Stereo2MonoALuint(dst, src, frames);
-                break;
-            case DevFmtFloat:
-                Stereo2MonoALfloat(dst, src, frames);
-                break;
+        case DevFmtByte:
+            Stereo2MonoALbyte(dst, static_cast<const ALbyte*>(src), frames);
+            break;
+        case DevFmtUByte:
+            Stereo2MonoALubyte(dst, static_cast<const ALubyte*>(src), frames);
+            break;
+        case DevFmtShort:
+            Stereo2MonoALshort(dst, static_cast<const ALshort*>(src), frames);
+            break;
+        case DevFmtUShort:
+            Stereo2MonoALushort(dst, static_cast<const ALushort*>(src), frames);
+            break;
+        case DevFmtInt:
+            Stereo2MonoALint(dst, static_cast<const ALint*>(src), frames);
+            break;
+        case DevFmtUInt:
+            Stereo2MonoALuint(dst, static_cast<const ALuint*>(src), frames);
+            break;
+        case DevFmtFloat:
+            Stereo2MonoALfloat(dst, static_cast<const ALfloat*>(src), frames);
+            break;
         }
     }
     else /*if(converter->mSrcChans == DevFmtMono && converter->mDstChans == DevFmtStereo)*/
     {
         switch(converter->mSrcType)
         {
-            case DevFmtByte:
-                Mono2StereoALbyte(dst, src, frames);
-                break;
-            case DevFmtUByte:
-                Mono2StereoALubyte(dst, src, frames);
-                break;
-            case DevFmtShort:
-                Mono2StereoALshort(dst, src, frames);
-                break;
-            case DevFmtUShort:
-                Mono2StereoALushort(dst, src, frames);
-                break;
-            case DevFmtInt:
-                Mono2StereoALint(dst, src, frames);
-                break;
-            case DevFmtUInt:
-                Mono2StereoALuint(dst, src, frames);
-                break;
-            case DevFmtFloat:
-                Mono2StereoALfloat(dst, src, frames);
-                break;
+        case DevFmtByte:
+            Mono2StereoALbyte(dst, static_cast<const ALbyte*>(src), frames);
+            break;
+        case DevFmtUByte:
+            Mono2StereoALubyte(dst, static_cast<const ALubyte*>(src), frames);
+            break;
+        case DevFmtShort:
+            Mono2StereoALshort(dst, static_cast<const ALshort*>(src), frames);
+            break;
+        case DevFmtUShort:
+            Mono2StereoALushort(dst, static_cast<const ALushort*>(src), frames);
+            break;
+        case DevFmtInt:
+            Mono2StereoALint(dst, static_cast<const ALint*>(src), frames);
+            break;
+        case DevFmtUInt:
+            Mono2StereoALuint(dst, static_cast<const ALuint*>(src), frames);
+            break;
+        case DevFmtFloat:
+            Mono2StereoALfloat(dst, static_cast<const ALfloat*>(src), frames);
+            break;
         }
     }
 }

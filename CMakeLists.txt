@@ -764,12 +764,9 @@ SET(COMMON_OBJS
     common/atomic.h
     common/bool.h
     common/math_defs.h
-    common/rwlock.c
-    common/rwlock.h
     common/static_assert.h
-    common/threads.c
+    common/threads.cpp
     common/threads.h
-    common/uintmap.c
     common/uintmap.h
 )
 SET(OPENAL_OBJS

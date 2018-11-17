@@ -1,41 +1,35 @@
 #ifndef AL_UINTMAP_H
 #define AL_UINTMAP_H
 
-#include <limits.h>
+#include <unordered_map>
+#include <mutex>
 
 #include "AL/al.h"
-#include "rwlock.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+template<typename T0, typename T1>
+class ThrSafeMap {
+    std::unordered_map<T0, T1> mValues;
+    std::mutex mLock;
 
-typedef struct UIntMap {
-    ALuint *keys;
-    /* Shares memory with keys. */
-    ALvoid **values;
+public:
+    void InsertEntry(T0 key, T1 value) noexcept
+    {
+        std::lock_guard<std::mutex> _{mLock};
+        mValues[key] = value;
+    }
 
-    ALsizei size;
-    ALsizei capacity;
-    ALsizei limit;
-    RWLock lock;
-} UIntMap;
-#define UINTMAP_STATIC_INITIALIZE_N(_n) { NULL, NULL, 0, 0, (_n), RWLOCK_STATIC_INITIALIZE }
-#define UINTMAP_STATIC_INITIALIZE UINTMAP_STATIC_INITIALIZE_N(INT_MAX)
+    T1 RemoveKey(T0 key) noexcept
+    {
+        T1 retval{};
 
-void InitUIntMap(UIntMap *map, ALsizei limit);
-void ResetUIntMap(UIntMap *map);
-ALenum InsertUIntMapEntry(UIntMap *map, ALuint key, ALvoid *value);
-ALvoid *RemoveUIntMapKey(UIntMap *map, ALuint key);
-ALvoid *LookupUIntMapKey(UIntMap *map, ALuint key);
+        std::lock_guard<std::mutex> _{mLock};
+        auto iter = mValues.find(key);
+        if(iter != mValues.end())
+            retval = iter->second;
+        mValues.erase(iter);
 
-inline void LockUIntMapRead(UIntMap *map) { ReadLock(&map->lock); }
-inline void UnlockUIntMapRead(UIntMap *map) { ReadUnlock(&map->lock); }
-inline void LockUIntMapWrite(UIntMap *map) { WriteLock(&map->lock); }
-inline void UnlockUIntMapWrite(UIntMap *map) { WriteUnlock(&map->lock); }
-
-#ifdef __cplusplus
-}
-#endif
+        return retval;
+    }
+};
 
 #endif /* AL_UINTMAP_H */

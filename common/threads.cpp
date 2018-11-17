@@ -29,11 +29,6 @@
 #include "uintmap.h"
 
 
-extern inline althrd_t althrd_current(void);
-extern inline int althrd_equal(althrd_t thr0, althrd_t thr1);
-extern inline void althrd_yield(void);
-
-
 #ifndef UNUSED
 #if defined(__cplusplus)
 #define UNUSED(x)
@@ -62,7 +57,7 @@ extern inline void althrd_yield(void);
  * referenced by multiple different HANDLEs. This map allows retrieving the
  * original handle which is needed to join the thread and get its return value.
  */
-static UIntMap ThrdIdHandle = UINTMAP_STATIC_INITIALIZE;
+static ThrSafeMap<DWORD,HANDLE> ThrdIdHandle{};
 
 
 void althrd_setname(althrd_t thr, const char *name)
@@ -116,7 +111,7 @@ int althrd_create(althrd_t *thr, althrd_start_t func, void *arg)
     DWORD thrid;
     HANDLE hdl;
 
-    cntr = malloc(sizeof(*cntr));
+    cntr = static_cast<thread_cntr*>(malloc(sizeof(*cntr)));
     if(!cntr) return althrd_nomem;
 
     cntr->func = func;
@@ -128,7 +123,7 @@ int althrd_create(althrd_t *thr, althrd_start_t func, void *arg)
         free(cntr);
         return althrd_error;
     }
-    InsertUIntMapEntry(&ThrdIdHandle, thrid, hdl);
+    ThrdIdHandle.InsertEntry(thrid, hdl);
 
     *thr = thrid;
     return althrd_success;
@@ -136,7 +131,7 @@ int althrd_create(althrd_t *thr, althrd_start_t func, void *arg)
 
 int althrd_detach(althrd_t thr)
 {
-    HANDLE hdl = RemoveUIntMapKey(&ThrdIdHandle, thr);
+    HANDLE hdl = ThrdIdHandle.RemoveKey(thr);
     if(!hdl) return althrd_error;
 
     CloseHandle(hdl);
@@ -147,7 +142,7 @@ int althrd_join(althrd_t thr, int *res)
 {
     DWORD code;
 
-    HANDLE hdl = RemoveUIntMapKey(&ThrdIdHandle, thr);
+    HANDLE hdl = ThrdIdHandle.RemoveKey(thr);
     if(!hdl) return althrd_error;
 
     WaitForSingleObject(hdl, INFINITE);
@@ -215,7 +210,6 @@ int alsem_trywait(alsem_t *sem)
 
 void althrd_deinit(void)
 {
-    ResetUIntMap(&ThrdIdHandle);
 }
 
 #else
@@ -270,7 +264,7 @@ int althrd_create(althrd_t *thr, althrd_start_t func, void *arg)
     size_t stackmult = 1;
     int err;
 
-    cntr = malloc(sizeof(*cntr));
+    cntr = static_cast<thread_cntr*>(malloc(sizeof(*cntr)));
     if(!cntr) return althrd_nomem;
 
     if(pthread_attr_init(&attr) != 0)

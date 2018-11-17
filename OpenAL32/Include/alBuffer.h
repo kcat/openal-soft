@@ -7,7 +7,6 @@
 
 #include "inprogext.h"
 #include "atomic.h"
-#include "rwlock.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -136,7 +136,7 @@ inline void aluMatrixfSet(aluMatrixf *matrix, ALfloat m00, ALfloat m01, ALfloat 
 }
 
 
-enum ActiveFilters {
+enum {
     AF_None = 0,
     AF_LowPass = 1,
     AF_HighPass = 2,
@@ -285,7 +285,7 @@ typedef struct ALvoice {
     InterpState ResampleState;
 
     struct {
-        enum ActiveFilters FilterType;
+        int FilterType;
         DirectParams Params[MAX_INPUT_CHANNELS];
 
         ALfloat (*Buffer)[BUFFERSIZE];
@@ -294,7 +294,7 @@ typedef struct ALvoice {
     } Direct;
 
     struct {
-        enum ActiveFilters FilterType;
+        int FilterType;
         SendParams Params[MAX_INPUT_CHANNELS];
 
         ALfloat (*Buffer)[BUFFERSIZE];

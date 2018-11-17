@@ -6,6 +6,10 @@
 #include "alMain.h"
 #include "alu.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct MixGains;
 
 struct MixHrtfParams;
@@ -115,5 +119,9 @@ const ALfloat *Resample_lerp_Neon(const InterpState *state, const ALfloat *RESTR
 const ALfloat *Resample_bsinc_Neon(const InterpState *state, const ALfloat *RESTRICT src,
                                    ALsizei frac, ALint increment, ALfloat *RESTRICT dst,
                                    ALsizei dstlen);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* MIXER_DEFS_H */

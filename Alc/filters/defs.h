@@ -4,6 +4,10 @@
 #include "AL/al.h"
 #include "math_defs.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Filters implementation is based on the "Cookbook formulae for audio
  * EQ biquad filter coefficients" by Robert Bristow-Johnson
  * http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt
@@ -108,5 +112,9 @@ inline void BiquadFilter_passthru(BiquadFilter *filter, ALsizei numsamples)
         filter->z2 = 0.0f;
     }
 }
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* ALC_FILTER_H */

@@ -799,7 +799,7 @@ SET(OPENAL_OBJS
 )
 SET(ALC_OBJS
     Alc/alc.cpp
-    Alc/ALu.c
+    Alc/alu.cpp
     Alc/alconfig.cpp
     Alc/alconfig.h
     Alc/bs2b.c

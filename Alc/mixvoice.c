@@ -261,7 +261,7 @@ static void LoadSamples(ALfloat *RESTRICT dst, const ALvoid *RESTRICT src, ALint
 
 static const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter,
                                 ALfloat *RESTRICT dst, const ALfloat *RESTRICT src,
-                                ALsizei numsamples, enum ActiveFilters type)
+                                ALsizei numsamples, int type)
 {
     ALsizei i;
     switch(type)

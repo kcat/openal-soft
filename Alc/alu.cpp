@@ -82,7 +82,7 @@ static HrtfDirectMixerFunc MixDirectHrtf = MixDirectHrtf_C;
 
 void DeinitVoice(ALvoice *voice)
 {
-    al_free(ATOMIC_EXCHANGE_PTR_SEQ(&voice->Update, NULL));
+    al_free(ATOMIC_EXCHANGE_PTR_SEQ(&voice->Update, static_cast<ALvoiceProps*>(nullptr)));
 }
 
 
@@ -322,7 +322,8 @@ static bool CalcContextParams(ALCcontext *Context)
     ALlistener *Listener = Context->Listener;
     struct ALcontextProps *props;
 
-    props = ATOMIC_EXCHANGE_PTR(&Context->Update, NULL, almemory_order_acq_rel);
+    props = static_cast<ALcontextProps*>(ATOMIC_EXCHANGE_PTR(&Context->Update,
+        static_cast<ALcontextProps*>(nullptr), almemory_order_acq_rel));
     if(!props) return false;
 
     Listener->Params.MetersPerUnit = props->MetersPerUnit;
@@ -347,7 +348,8 @@ static bool CalcListenerParams(ALCcontext *Context)
     struct ALlistenerProps *props;
     aluVector vel;
 
-    props = ATOMIC_EXCHANGE_PTR(&Listener->Update, NULL, almemory_order_acq_rel);
+    props = static_cast<ALlistenerProps*>(ATOMIC_EXCHANGE_PTR(&Listener->Update,
+        static_cast<ALlistenerProps*>(nullptr), almemory_order_acq_rel));
     if(!props) return false;
 
     /* AT then UP */
@@ -390,7 +392,8 @@ static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool f
     struct ALeffectslotProps *props;
     ALeffectState *state;
 
-    props = ATOMIC_EXCHANGE_PTR(&slot->Update, NULL, almemory_order_acq_rel);
+    props = static_cast<ALeffectslotProps*>(ATOMIC_EXCHANGE_PTR(&slot->Update,
+        static_cast<ALeffectslotProps*>(nullptr), almemory_order_acq_rel));
     if(!props && !force) return false;
 
     if(props)
@@ -1459,7 +1462,8 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
     ALbufferlistitem *BufferListItem;
     struct ALvoiceProps *props;
 
-    props = ATOMIC_EXCHANGE_PTR(&voice->Update, NULL, almemory_order_acq_rel);
+    props = static_cast<ALvoiceProps*>(ATOMIC_EXCHANGE_PTR(&voice->Update,
+        static_cast<ALvoiceProps*>(nullptr), almemory_order_acq_rel));
     if(!props && !force) return;
 
     if(props)
@@ -1523,8 +1527,8 @@ static void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*RESTRICT Buffer)
                            int lidx, int ridx, int cidx, ALsizei SamplesToDo,
                            ALsizei NumChannels)
 {
-    ALfloat (*RESTRICT lsplit)[BUFFERSIZE] = ASSUME_ALIGNED(Stablizer->LSplit, 16);
-    ALfloat (*RESTRICT rsplit)[BUFFERSIZE] = ASSUME_ALIGNED(Stablizer->RSplit, 16);
+    ALfloat (*RESTRICT lsplit)[BUFFERSIZE] = Stablizer->LSplit;
+    ALfloat (*RESTRICT rsplit)[BUFFERSIZE] = Stablizer->RSplit;
     ALsizei i;
 
     /* Apply an all-pass to all channels, except the front-left and front-
@@ -1572,13 +1576,12 @@ static void ApplyDistanceComp(ALfloat (*RESTRICT Samples)[BUFFERSIZE], DistanceC
 {
     ALsizei i, c;
 
-    Values = ASSUME_ALIGNED(Values, 16);
     for(c = 0;c < numchans;c++)
     {
-        ALfloat *RESTRICT inout = ASSUME_ALIGNED(Samples[c], 16);
+        ALfloat *RESTRICT inout = Samples[c];
         const ALfloat gain = distcomp[c].Gain;
         const ALsizei base = distcomp[c].Length;
-        ALfloat *RESTRICT distbuf = ASSUME_ALIGNED(distcomp[c].Buffer, 16);
+        ALfloat *RESTRICT distbuf = distcomp[c].Buffer;
 
         if(base == 0)
         {
@@ -1679,7 +1682,7 @@ static void Write##A(const ALfloat (*RESTRICT InBuffer)[BUFFERSIZE],          \
                                                                               \
     for(j = 0;j < numchans;j++)                                               \
     {                                                                         \
-        const ALfloat *RESTRICT in = ASSUME_ALIGNED(InBuffer[j], 16);         \
+        const ALfloat *RESTRICT in = InBuffer[j];                             \
         T *RESTRICT out = (T*)OutBuffer + Offset*numchans + j;                \
                                                                               \
         for(i = 0;i < SamplesToDo;i++)                                        \
@@ -1745,7 +1748,8 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
                 {
                     if(!MixSource(voice, source->id, ctx, SamplesToDo))
                     {
-                        ATOMIC_STORE(&voice->Source, NULL, almemory_order_relaxed);
+                        ATOMIC_STORE(&voice->Source, static_cast<ALsource*>(nullptr),
+                                     almemory_order_relaxed);
                         ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
                         SendSourceStoppedEvent(ctx, source->id);
                     }
@@ -1862,7 +1866,8 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
             ALvoice *voice = ctx->Voices[i];
             ALsource *source;
 
-            source = ATOMIC_EXCHANGE_PTR(&voice->Source, NULL, almemory_order_relaxed);
+            source = static_cast<ALsource*>(ATOMIC_EXCHANGE_PTR(&voice->Source,
+                static_cast<ALsource*>(nullptr), almemory_order_relaxed));
             if(source && ATOMIC_LOAD(&voice->Playing, almemory_order_relaxed))
             {
                 /* If the source's voice was playing, it's now effectively

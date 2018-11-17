@@ -249,6 +249,11 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
     for(si = 0; si < BSINC_SCALE_COUNT; si++)
         mt[si] = (mt[si]+3) & ~3;
 
+    // Calculate the table size.
+    i = 0;
+    for(si = 0; si < BSINC_SCALE_COUNT; si++)
+        i += 4 * BSINC_PHASE_COUNT * mt[si];
+
     fprintf(output,
 "/* This %d%s order filter has a rejection of -%.0fdB, yielding a transition width\n"
 " * of ~%.3f (normalized frequency). Order increases when downsampling to a\n"
@@ -256,12 +261,36 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
 " * width) suffers to reduce the CPU cost. The bandlimiting will cut all sound\n"
 " * after downsampling by ~%.2f octaves.\n"
 " */\n"
-"const BSincTable %s = {\n",
+"alignas(16) constexpr float %s_tab[%d] = {\n",
             order, (((order%100)/10) == 1) ? "th" :
                    ((order%10) == 1) ? "st" :
                    ((order%10) == 2) ? "nd" :
                    ((order%10) == 3) ? "rd" : "th",
-            rejection, width, log2(1.0/scaleBase), tabname);
+            rejection, width, log2(1.0/scaleBase), tabname, i);
+    for(si = 0; si < BSINC_SCALE_COUNT; si++)
+    {
+        const int m = mt[si];
+        const int o = num_points_min - (m / 2);
+
+        for(pi = 0; pi < BSINC_PHASE_COUNT; pi++)
+        {
+            fprintf(output, "    /* %2d,%2d (%d) */", si, pi, m);
+            fprintf(output, "\n   ");
+            for(i = 0; i < m; i++)
+                fprintf(output, " %+14.9ef,", filter[si][pi][o + i]);
+            fprintf(output, "\n       ");
+            for(i = 0; i < m; i++)
+                fprintf(output, " %+14.9ef,", scDeltas[si][pi][o + i]);
+            fprintf(output, "\n       ");
+            for(i = 0; i < m; i++)
+                fprintf(output, " %+14.9ef,", phDeltas[si][pi][o + i]);
+            fprintf(output, "\n       ");
+            for(i = 0; i < m; i++)
+                fprintf(output, " %+14.9ef,", spDeltas[si][pi][o + i]);
+            fprintf(output, "\n");
+        }
+    }
+    fprintf(output, "};\nconstexpr BSincTable %s = {\n", tabname);
 
     /* The scaleBase is calculated from the Kaiser window transition width.
        It represents the absolute limit to the filter before it fully cuts
@@ -286,37 +315,8 @@ static void BsiGenerateTables(FILE *output, const char *tabname, const double re
     }
 
     fprintf(output, " },\n");
-
-    // Calculate the table size.
-    i = 0;
-    for(si = 0; si < BSINC_SCALE_COUNT; si++)
-        i += 4 * BSINC_PHASE_COUNT * mt[si];
-
-    fprintf(output, "\n    /* Tab (%d entries) */ {\n", i);
-    for(si = 0; si < BSINC_SCALE_COUNT; si++)
-    {
-        const int m = mt[si];
-        const int o = num_points_min - (m / 2);
-
-        for(pi = 0; pi < BSINC_PHASE_COUNT; pi++)
-        {
-            fprintf(output, "        /* %2d,%2d (%d) */", si, pi, m);
-            fprintf(output, "\n       ");
-            for(i = 0; i < m; i++)
-                fprintf(output, " %+14.9ef,", filter[si][pi][o + i]);
-            fprintf(output, "\n       ");
-            for(i = 0; i < m; i++)
-                fprintf(output, " %+14.9ef,", scDeltas[si][pi][o + i]);
-            fprintf(output, "\n       ");
-            for(i = 0; i < m; i++)
-                fprintf(output, " %+14.9ef,", phDeltas[si][pi][o + i]);
-            fprintf(output, "\n       ");
-            for(i = 0; i < m; i++)
-                fprintf(output, " %+14.9ef,", spDeltas[si][pi][o + i]);
-            fprintf(output, "\n");
-        }
-    }
-    fprintf(output, "    }\n};\n\n");
+    fprintf(output, "    %s_tab\n", tabname);
+    fprintf(output, "};\n\n");
 }
 
 
@@ -348,12 +348,12 @@ int main(int argc, char *argv[])
 "static_assert(BSINC_SCALE_COUNT == %d, \"Unexpected BSINC_SCALE_COUNT value!\");\n"
 "static_assert(BSINC_PHASE_COUNT == %d, \"Unexpected BSINC_PHASE_COUNT value!\");\n"
 "static_assert(FRACTIONONE == %d, \"Unexpected FRACTIONONE value!\");\n\n"
-"typedef struct BSincTable {\n"
+"struct BSincTable {\n"
 "    const float scaleBase, scaleRange;\n"
 "    const int m[BSINC_SCALE_COUNT];\n"
 "    const int filterOffset[BSINC_SCALE_COUNT];\n"
-"    alignas(16) const float Tab[];\n"
-"} BSincTable;\n\n", BSINC_SCALE_COUNT, BSINC_PHASE_COUNT, FRACTIONONE);
+"    const float *Tab;\n"
+"};\n\n", BSINC_SCALE_COUNT, BSINC_PHASE_COUNT, FRACTIONONE);
     /* A 23rd order filter with a -60dB drop at nyquist. */
     BsiGenerateTables(output, "bsinc24", 60.0, 23);
     /* An 11th order filter with a -40dB drop at nyquist. */

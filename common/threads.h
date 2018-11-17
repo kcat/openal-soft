@@ -59,11 +59,6 @@ inline int althrd_equal(althrd_t thr0, althrd_t thr1)
     return thr0 == thr1;
 }
 
-inline void althrd_exit(int res)
-{
-    ExitThread(res);
-}
-
 inline void althrd_yield(void)
 {
     SwitchToThread();
@@ -81,14 +76,6 @@ inline int almtx_unlock(almtx_t *mtx)
 {
     if(!mtx) return althrd_error;
     LeaveCriticalSection(mtx);
-    return althrd_success;
-}
-
-inline int almtx_trylock(almtx_t *mtx)
-{
-    if(!mtx) return althrd_error;
-    if(!TryEnterCriticalSection(mtx))
-        return althrd_busy;
     return althrd_success;
 }
 
@@ -126,11 +113,6 @@ inline int althrd_equal(althrd_t thr0, althrd_t thr1)
     return pthread_equal(thr0, thr1);
 }
 
-inline void althrd_exit(int res)
-{
-    pthread_exit((void*)(intptr_t)res);
-}
-
 inline void althrd_yield(void)
 {
     sched_yield();
@@ -149,17 +131,6 @@ inline int almtx_unlock(almtx_t *mtx)
     if(pthread_mutex_unlock(mtx) != 0)
         return althrd_error;
     return althrd_success;
-}
-
-inline int almtx_trylock(almtx_t *mtx)
-{
-    int ret = pthread_mutex_trylock(mtx);
-    switch(ret)
-    {
-        case 0: return althrd_success;
-        case EBUSY: return althrd_busy;
-    }
-    return althrd_error;
 }
 
 

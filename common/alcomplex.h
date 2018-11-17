@@ -13,39 +13,6 @@ typedef struct ALcomplex {
     ALdouble Imag;
 } ALcomplex;
 
-/** Addition of two complex numbers. */
-inline ALcomplex complex_add(ALcomplex a, ALcomplex b)
-{
-    ALcomplex result;
-
-    result.Real = a.Real + b.Real;
-    result.Imag = a.Imag + b.Imag;
-
-    return result;
-}
-
-/** Subtraction of two complex numbers. */
-inline ALcomplex complex_sub(ALcomplex a, ALcomplex b)
-{
-    ALcomplex result;
-
-    result.Real = a.Real - b.Real;
-    result.Imag = a.Imag - b.Imag;
-
-    return result;
-}
-
-/** Multiplication of two complex numbers. */
-inline ALcomplex complex_mult(ALcomplex a, ALcomplex b)
-{
-    ALcomplex result;
-
-    result.Real = a.Real*b.Real - a.Imag*b.Imag;
-    result.Imag = a.Imag*b.Real + a.Real*b.Imag;
-
-    return result;
-}
-
 /**
  * Iterative implementation of 2-radix FFT (In-place algorithm). Sign = -1 is
  * FFT and 1 is iFFT (inverse). Fills FFTBuffer[0...FFTSize-1] with the

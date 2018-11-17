@@ -5,9 +5,39 @@
 #include "math_defs.h"
 
 
-extern inline ALcomplex complex_add(ALcomplex a, ALcomplex b);
-extern inline ALcomplex complex_sub(ALcomplex a, ALcomplex b);
-extern inline ALcomplex complex_mult(ALcomplex a, ALcomplex b);
+/** Addition of two complex numbers. */
+static inline ALcomplex complex_add(ALcomplex a, ALcomplex b)
+{
+    ALcomplex result;
+
+    result.Real = a.Real + b.Real;
+    result.Imag = a.Imag + b.Imag;
+
+    return result;
+}
+
+/** Subtraction of two complex numbers. */
+static inline ALcomplex complex_sub(ALcomplex a, ALcomplex b)
+{
+    ALcomplex result;
+
+    result.Real = a.Real - b.Real;
+    result.Imag = a.Imag - b.Imag;
+
+    return result;
+}
+
+/** Multiplication of two complex numbers. */
+static inline ALcomplex complex_mult(ALcomplex a, ALcomplex b)
+{
+    ALcomplex result;
+
+    result.Real = a.Real*b.Real - a.Imag*b.Imag;
+    result.Imag = a.Imag*b.Real + a.Real*b.Imag;
+
+    return result;
+}
+
 
 void complex_fft(ALcomplex *FFTBuffer, ALsizei FFTSize, ALdouble Sign)
 {

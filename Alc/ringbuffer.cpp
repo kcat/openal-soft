@@ -66,11 +66,11 @@ ll_ringbuffer_t *ll_ringbuffer_create(size_t sz, size_t elem_sz, int limit_write
     power_of_two++;
     if(power_of_two < sz) return NULL;
 
-    rb = al_malloc(16, sizeof(*rb) + power_of_two*elem_sz);
+    rb = static_cast<ll_ringbuffer_t*>(al_malloc(16, sizeof(*rb) + power_of_two*elem_sz));
     if(!rb) return NULL;
 
-    ATOMIC_INIT(&rb->write_ptr, 0);
-    ATOMIC_INIT(&rb->read_ptr, 0);
+    ATOMIC_INIT(&rb->write_ptr, static_cast<size_t>(0));
+    ATOMIC_INIT(&rb->read_ptr, static_cast<size_t>(0));
     rb->size = limit_writes ? sz : power_of_two;
     rb->size_mask = power_of_two - 1;
     rb->elem_size = elem_sz;
@@ -84,8 +84,8 @@ void ll_ringbuffer_free(ll_ringbuffer_t *rb)
 
 void ll_ringbuffer_reset(ll_ringbuffer_t *rb)
 {
-    ATOMIC_STORE(&rb->write_ptr, 0, almemory_order_release);
-    ATOMIC_STORE(&rb->read_ptr, 0, almemory_order_release);
+    ATOMIC_STORE(&rb->write_ptr, static_cast<size_t>(0), almemory_order_release);
+    ATOMIC_STORE(&rb->read_ptr, static_cast<size_t>(0), almemory_order_release);
     memset(rb->buf, 0, (rb->size_mask+1)*rb->elem_size);
 }
 

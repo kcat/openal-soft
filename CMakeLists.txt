@@ -806,7 +806,7 @@ SET(ALC_OBJS
     Alc/inprogext.h
     Alc/mastering.cpp
     Alc/mastering.h
-    Alc/ringbuffer.c
+    Alc/ringbuffer.cpp
     Alc/ringbuffer.h
     Alc/effects/autowah.cpp
     Alc/effects/chorus.cpp

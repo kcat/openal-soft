@@ -819,7 +819,7 @@ SET(ALC_OBJS
     Alc/effects/echo.c
     Alc/effects/equalizer.c
     Alc/effects/fshifter.c
-    Alc/effects/modulator.c
+    Alc/effects/modulator.cpp
     Alc/effects/null.cpp
     Alc/effects/pshifter.cpp
     Alc/effects/reverb.cpp

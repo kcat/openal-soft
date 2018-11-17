@@ -32,9 +32,7 @@
 
 #define MAX_UPDATE_SAMPLES 128
 
-typedef struct ALmodulatorState {
-    DERIVE_FROM_TYPE(ALeffectState);
-
+struct ALmodulatorState final : public ALeffectState {
     void (*GetSamples)(ALfloat*RESTRICT, ALsizei, const ALsizei, ALsizei);
 
     ALsizei index;
@@ -46,7 +44,7 @@ typedef struct ALmodulatorState {
         ALfloat CurrentGains[MAX_OUTPUT_CHANNELS];
         ALfloat TargetGains[MAX_OUTPUT_CHANNELS];
     } Chans[MAX_EFFECT_CHANNELS];
-} ALmodulatorState;
+};
 
 static ALvoid ALmodulatorState_Destruct(ALmodulatorState *state);
 static ALboolean ALmodulatorState_deviceUpdate(ALmodulatorState *state, ALCdevice *device);
@@ -104,6 +102,7 @@ DECL_TEMPLATE(One)
 
 static void ALmodulatorState_Construct(ALmodulatorState *state)
 {
+    new (state) ALmodulatorState{};
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALmodulatorState, ALeffectState, state);
 
@@ -114,6 +113,7 @@ static void ALmodulatorState_Construct(ALmodulatorState *state)
 static ALvoid ALmodulatorState_Destruct(ALmodulatorState *state)
 {
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
+    state->~ALmodulatorState();
 }
 
 static ALboolean ALmodulatorState_deviceUpdate(ALmodulatorState *state, ALCdevice *UNUSED(device))
@@ -194,9 +194,9 @@ static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALsizei SamplesT
 }
 
 
-typedef struct ModulatorStateFactory {
-    DERIVE_FROM_TYPE(EffectStateFactory);
-} ModulatorStateFactory;
+struct ModulatorStateFactory final : public EffectStateFactory {
+    ModulatorStateFactory() noexcept;
+};
 
 static ALeffectState *ModulatorStateFactory_create(ModulatorStateFactory *UNUSED(factory))
 {
@@ -210,10 +210,13 @@ static ALeffectState *ModulatorStateFactory_create(ModulatorStateFactory *UNUSED
 
 DEFINE_EFFECTSTATEFACTORY_VTABLE(ModulatorStateFactory);
 
+ModulatorStateFactory::ModulatorStateFactory() noexcept
+  : EffectStateFactory{GET_VTABLE2(ModulatorStateFactory, EffectStateFactory)}
+{ }
+
 EffectStateFactory *ModulatorStateFactory_getFactory(void)
 {
-    static ModulatorStateFactory ModulatorFactory = { { GET_VTABLE2(ModulatorStateFactory, EffectStateFactory) } };
-
+    static ModulatorStateFactory ModulatorFactory{};
     return STATIC_CAST(EffectStateFactory, &ModulatorFactory);
 }
 

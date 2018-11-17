@@ -406,7 +406,7 @@ static ALeffect *AllocEffect(ALCcontext *context)
         VECTOR_PUSH_BACK(device->EffectList, empty_sublist);
         sublist = &VECTOR_BACK(device->EffectList);
         sublist->FreeMask = ~U64(0);
-        sublist->Effects = al_calloc(16, sizeof(ALeffect)*64);
+        sublist->Effects = static_cast<ALeffect*>(al_calloc(16, sizeof(ALeffect)*64));
         if(UNLIKELY(!sublist->Effects))
         {
             VECTOR_POP_BACK(device->EffectList);
@@ -463,7 +463,7 @@ void ReleaseALEffects(ALCdevice *device)
         sublist->FreeMask = ~usemask;
     }
     if(leftover > 0)
-        WARN("(%p) Deleted "SZFMT" Effect%s\n", device, leftover, (leftover==1)?"":"s");
+        WARN("(%p) Deleted " SZFMT " Effect%s\n", device, leftover, (leftover==1)?"":"s");
 }
 
 

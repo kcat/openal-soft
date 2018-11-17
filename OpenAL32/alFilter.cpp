@@ -565,7 +565,7 @@ static ALfilter *AllocFilter(ALCcontext *context)
         VECTOR_PUSH_BACK(device->FilterList, empty_sublist);
         sublist = &VECTOR_BACK(device->FilterList);
         sublist->FreeMask = ~U64(0);
-        sublist->Filters = al_calloc(16, sizeof(ALfilter)*64);
+        sublist->Filters = static_cast<ALfilter*>(al_calloc(16, sizeof(ALfilter)*64));
         if(UNLIKELY(!sublist->Filters))
         {
             VECTOR_POP_BACK(device->FilterList);
@@ -622,7 +622,7 @@ void ReleaseALFilters(ALCdevice *device)
         sublist->FreeMask = ~usemask;
     }
     if(leftover > 0)
-        WARN("(%p) Deleted "SZFMT" Filter%s\n", device, leftover, (leftover==1)?"":"s");
+        WARN("(%p) Deleted " SZFMT " Filter%s\n", device, leftover, (leftover==1)?"":"s");
 }
 
 

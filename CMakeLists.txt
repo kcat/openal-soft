@@ -782,12 +782,12 @@ SET(OPENAL_OBJS
     OpenAL32/Include/alBuffer.h
     OpenAL32/alBuffer.cpp
     OpenAL32/Include/alEffect.h
-    OpenAL32/alEffect.c
+    OpenAL32/alEffect.cpp
     OpenAL32/Include/alError.h
     OpenAL32/alError.cpp
     OpenAL32/alExtension.cpp
     OpenAL32/Include/alFilter.h
-    OpenAL32/alFilter.c
+    OpenAL32/alFilter.cpp
     OpenAL32/Include/alListener.h
     OpenAL32/alListener.cpp
     OpenAL32/Include/alSource.h

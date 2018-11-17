@@ -178,7 +178,7 @@ void aluInitMixer(void)
             char *end;
             long n = strtol(str, &end, 0);
             if(*end == '\0' && (n == PointResampler || n == LinearResampler || n == FIR4Resampler))
-                ResamplerDefault = n;
+                ResamplerDefault = static_cast<enum Resampler>(n);
             else
                 WARN("Invalid resampler: %s\n", str);
         }
@@ -245,7 +245,9 @@ DECL_TEMPLATE(ALalaw)
 static void LoadSamples(ALfloat *RESTRICT dst, const ALvoid *RESTRICT src, ALint srcstep,
                         enum FmtType srctype, ALsizei samples)
 {
-#define HANDLE_FMT(ET, ST) case ET: Load_##ST(dst, src, srcstep, samples); break
+#define HANDLE_FMT(ET, ST)                                                    \
+    case ET: Load_##ST(dst, static_cast<const ST*>(src), srcstep, samples);   \
+    break
     switch(srctype)
     {
         HANDLE_FMT(FmtUByte, ALubyte);
@@ -405,7 +407,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                     for(i = 0;i < BufferListItem->num_buffers;i++)
                     {
                         const ALbuffer *buffer = BufferListItem->buffers[i];
-                        const ALubyte *Data = buffer->data;
+                        const ALubyte *Data = static_cast<const ALubyte*>(buffer->data);
                         ALsizei DataSize;
 
                         if(DataPosInt >= buffer->SampleLen)
@@ -431,7 +433,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                     for(i = 0;i < BufferListItem->num_buffers;i++)
                     {
                         const ALbuffer *buffer = BufferListItem->buffers[i];
-                        const ALubyte *Data = buffer->data;
+                        const ALubyte *Data = static_cast<const ALubyte*>(buffer->data);
                         ALsizei DataSize;
 
                         if(DataPosInt >= buffer->SampleLen)
@@ -456,7 +458,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                         for(i = 0;i < BufferListItem->num_buffers;i++)
                         {
                             const ALbuffer *buffer = BufferListItem->buffers[i];
-                            const ALubyte *Data = buffer->data;
+                            const ALubyte *Data = static_cast<const ALubyte*>(buffer->data);
                             ALsizei DataSize;
 
                             if(LoopStart >= buffer->SampleLen)
@@ -493,7 +495,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
 
                         if(DataSize > pos)
                         {
-                            const ALubyte *Data = ALBuffer->data;
+                            const ALubyte *Data = static_cast<const ALubyte*>(ALBuffer->data);
                             Data += (pos*NumChannels + chan)*SampleSize;
 
                             DataSize = mini(SizeToDo, DataSize - pos);
@@ -744,7 +746,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
     voice->Flags |= VOICE_IS_FADING;
 
     /* Update source info */
-    ATOMIC_STORE(&voice->position,          DataPosInt, almemory_order_relaxed);
+    ATOMIC_STORE(&voice->position, static_cast<ALuint>(DataPosInt), almemory_order_relaxed);
     ATOMIC_STORE(&voice->position_fraction, DataPosFrac, almemory_order_relaxed);
     ATOMIC_STORE(&voice->current_buffer,    BufferListItem, almemory_order_release);
 

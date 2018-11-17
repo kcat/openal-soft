@@ -38,9 +38,7 @@
 #define FIFO_LATENCY (HIL_STEP * (OVERSAMP-1))
 
 
-typedef struct ALfshifterState {
-    DERIVE_FROM_TYPE(ALeffectState);
-
+struct ALfshifterState final : public ALeffectState {
     /* Effect parameters */
     ALsizei  count;
     ALsizei  PhaseStep;
@@ -59,7 +57,7 @@ typedef struct ALfshifterState {
     /* Effect gains for each output channel */
     ALfloat CurrentGains[MAX_OUTPUT_CHANNELS];
     ALfloat TargetGains[MAX_OUTPUT_CHANNELS];
-} ALfshifterState;
+};
 
 static ALvoid ALfshifterState_Destruct(ALfshifterState *state);
 static ALboolean ALfshifterState_deviceUpdate(ALfshifterState *state, ALCdevice *device);
@@ -88,6 +86,7 @@ static alonce_flag HannInitOnce = AL_ONCE_FLAG_INIT;
 
 static void ALfshifterState_Construct(ALfshifterState *state)
 {
+    new (state) ALfshifterState{};
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALfshifterState, ALeffectState, state);
 
@@ -97,6 +96,7 @@ static void ALfshifterState_Construct(ALfshifterState *state)
 static ALvoid ALfshifterState_Destruct(ALfshifterState *state)
 {
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
+    state->~ALfshifterState();
 }
 
 static ALboolean ALfshifterState_deviceUpdate(ALfshifterState *state, ALCdevice *UNUSED(device))
@@ -215,9 +215,9 @@ static ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToD
                maxi(SamplesToDo, 512), 0, SamplesToDo);
 }
 
-typedef struct FshifterStateFactory {
-    DERIVE_FROM_TYPE(EffectStateFactory);
-} FshifterStateFactory;
+struct FshifterStateFactory final : public EffectStateFactory {
+    FshifterStateFactory() noexcept;
+};
 
 static ALeffectState *FshifterStateFactory_create(FshifterStateFactory *UNUSED(factory))
 {
@@ -231,10 +231,14 @@ static ALeffectState *FshifterStateFactory_create(FshifterStateFactory *UNUSED(f
 
 DEFINE_EFFECTSTATEFACTORY_VTABLE(FshifterStateFactory);
 
+FshifterStateFactory::FshifterStateFactory() noexcept
+  : EffectStateFactory{GET_VTABLE2(FshifterStateFactory, EffectStateFactory)}
+{
+}
+
 EffectStateFactory *FshifterStateFactory_getFactory(void)
 {
-    static FshifterStateFactory FshifterFactory = { { GET_VTABLE2(FshifterStateFactory, EffectStateFactory) } };
-
+    static FshifterStateFactory FshifterFactory{};
     return STATIC_CAST(EffectStateFactory, &FshifterFactory);
 }
 

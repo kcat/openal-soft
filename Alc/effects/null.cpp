@@ -9,9 +9,8 @@
 #include "alError.h"
 
 
-typedef struct ALnullState {
-    DERIVE_FROM_TYPE(ALeffectState);
-} ALnullState;
+struct ALnullState final : public ALeffectState {
+};
 
 /* Forward-declare "virtual" functions to define the vtable with. */
 static ALvoid ALnullState_Destruct(ALnullState *state);
@@ -31,6 +30,7 @@ DEFINE_ALEFFECTSTATE_VTABLE(ALnullState);
  */
 static void ALnullState_Construct(ALnullState *state)
 {
+    new (state) ALnullState{};
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALnullState, ALeffectState, state);
 }
@@ -42,6 +42,7 @@ static void ALnullState_Construct(ALnullState *state)
 static ALvoid ALnullState_Destruct(ALnullState *state)
 {
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
+    state->~ALnullState();
 }
 
 /* This updates the device-dependant effect state. This is called on
@@ -85,9 +86,9 @@ static void ALnullState_Delete(void *ptr)
 }
 
 
-typedef struct NullStateFactory {
-    DERIVE_FROM_TYPE(EffectStateFactory);
-} NullStateFactory;
+struct NullStateFactory final : public EffectStateFactory {
+    NullStateFactory() noexcept;
+};
 
 /* Creates ALeffectState objects of the appropriate type. */
 ALeffectState *NullStateFactory_create(NullStateFactory *UNUSED(factory))
@@ -103,9 +104,15 @@ ALeffectState *NullStateFactory_create(NullStateFactory *UNUSED(factory))
 /* Define the EffectStateFactory vtable for this type. */
 DEFINE_EFFECTSTATEFACTORY_VTABLE(NullStateFactory);
 
+NullStateFactory::NullStateFactory() noexcept
+  : EffectStateFactory{GET_VTABLE2(NullStateFactory, EffectStateFactory)}
+{
+}
+
+
 EffectStateFactory *NullStateFactory_getFactory(void)
 {
-    static NullStateFactory NullFactory = { { GET_VTABLE2(NullStateFactory, EffectStateFactory) } };
+    static NullStateFactory NullFactory{};
     return STATIC_CAST(EffectStateFactory, &NullFactory);
 }
 

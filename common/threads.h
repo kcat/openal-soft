@@ -37,15 +37,10 @@ typedef int (*althrd_start_t)(void*);
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-
 typedef DWORD althrd_t;
 typedef CRITICAL_SECTION almtx_t;
 typedef HANDLE alsem_t;
-typedef LONG alonce_flag;
 
-#define AL_ONCE_FLAG_INIT 0
-
-void alcall_once(alonce_flag *once, void (*callback)(void));
 
 void althrd_deinit(void);
 
@@ -90,7 +85,6 @@ inline int almtx_unlock(almtx_t *mtx)
 #include <semaphore.h>
 #endif /* __APPLE__ */
 
-
 typedef pthread_t althrd_t;
 typedef pthread_mutex_t almtx_t;
 #ifdef __APPLE__
@@ -98,10 +92,9 @@ typedef dispatch_semaphore_t alsem_t;
 #else /* !__APPLE__ */
 typedef sem_t alsem_t;
 #endif /* __APPLE__ */
-typedef pthread_once_t alonce_flag;
 
-#define AL_ONCE_FLAG_INIT PTHREAD_ONCE_INIT
 
+void althrd_deinit(void);
 
 inline althrd_t althrd_current(void)
 {
@@ -132,15 +125,6 @@ inline int almtx_unlock(almtx_t *mtx)
         return althrd_error;
     return althrd_success;
 }
-
-
-inline void alcall_once(alonce_flag *once, void (*callback)(void))
-{
-    pthread_once(once, callback);
-}
-
-
-inline void althrd_deinit(void) { }
 
 #endif
 

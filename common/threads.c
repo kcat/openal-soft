@@ -213,17 +213,6 @@ int alsem_trywait(alsem_t *sem)
 }
 
 
-void alcall_once(alonce_flag *once, void (*callback)(void))
-{
-    LONG ret;
-    while((ret=InterlockedExchange(once, 1)) == 1)
-        althrd_yield();
-    if(ret == 0)
-        (*callback)();
-    InterlockedExchange(once, 2);
-}
-
-
 void althrd_deinit(void)
 {
     ResetUIntMap(&ThrdIdHandle);
@@ -238,10 +227,6 @@ void althrd_deinit(void)
 #include <pthread_np.h>
 #endif
 
-
-extern inline void alcall_once(alonce_flag *once, void (*callback)(void));
-
-extern inline void althrd_deinit(void);
 
 void althrd_setname(althrd_t thr, const char *name)
 {
@@ -456,5 +441,8 @@ int alsem_trywait(alsem_t *sem)
 }
 
 #endif /* __APPLE__ */
+
+void althrd_deinit(void)
+{ }
 
 #endif

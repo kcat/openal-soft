@@ -831,7 +831,7 @@ SET(ALC_OBJS
     Alc/polymorphism.h
     Alc/mixvoice.cpp
     Alc/mixer/defs.h
-    Alc/mixer/mixer_c.c
+    Alc/mixer/mixer_c.cpp
 )
 
 
@@ -865,9 +865,9 @@ IF(HAVE_XMMINTRIN_H)
     IF(ALSOFT_CPUEXT_SSE)
         IF(ALIGN_DECL OR HAVE_C11_ALIGNAS)
             SET(HAVE_SSE 1)
-            SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_sse.c)
+            SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_sse.cpp)
             IF(SSE_SWITCH)
-                SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_sse.c PROPERTIES
+                SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_sse.cpp PROPERTIES
                                             COMPILE_FLAGS "${SSE_SWITCH}")
             ENDIF()
             SET(CPU_EXTS "${CPU_EXTS}, SSE")
@@ -885,9 +885,9 @@ IF(HAVE_EMMINTRIN_H)
     IF(HAVE_SSE AND ALSOFT_CPUEXT_SSE2)
         IF(ALIGN_DECL OR HAVE_C11_ALIGNAS)
             SET(HAVE_SSE2 1)
-            SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_sse2.c)
+            SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_sse2.cpp)
             IF(SSE2_SWITCH)
-                SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_sse2.c PROPERTIES
+                SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_sse2.cpp PROPERTIES
                                             COMPILE_FLAGS "${SSE2_SWITCH}")
             ENDIF()
             SET(CPU_EXTS "${CPU_EXTS}, SSE2")
@@ -905,9 +905,9 @@ IF(HAVE_EMMINTRIN_H)
     IF(HAVE_SSE2 AND ALSOFT_CPUEXT_SSE3)
         IF(ALIGN_DECL OR HAVE_C11_ALIGNAS)
             SET(HAVE_SSE3 1)
-            SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_sse3.c)
+            SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_sse3.cpp)
             IF(SSE2_SWITCH)
-                SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_sse3.c PROPERTIES
+                SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_sse3.cpp PROPERTIES
                                             COMPILE_FLAGS "${SSE3_SWITCH}")
             ENDIF()
             SET(CPU_EXTS "${CPU_EXTS}, SSE3")
@@ -925,9 +925,9 @@ IF(HAVE_SMMINTRIN_H)
     IF(HAVE_SSE2 AND ALSOFT_CPUEXT_SSE4_1)
         IF(ALIGN_DECL OR HAVE_C11_ALIGNAS)
             SET(HAVE_SSE4_1 1)
-            SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_sse41.c)
+            SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_sse41.cpp)
             IF(SSE4_1_SWITCH)
-                SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_sse41.c PROPERTIES
+                SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_sse41.cpp PROPERTIES
                                             COMPILE_FLAGS "${SSE4_1_SWITCH}")
             ENDIF()
             SET(CPU_EXTS "${CPU_EXTS}, SSE4.1")
@@ -945,9 +945,9 @@ IF(HAVE_ARM_NEON_H)
     OPTION(ALSOFT_CPUEXT_NEON "Enable ARM Neon support" ON)
     IF(ALSOFT_CPUEXT_NEON)
         SET(HAVE_NEON 1)
-        SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_neon.c)
+        SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_neon.cpp)
         IF(FPU_NEON_SWITCH)
-            SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_neon.c PROPERTIES
+            SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_neon.cpp PROPERTIES
                                         COMPILE_FLAGS "${FPU_NEON_SWITCH}")
         ENDIF()
         SET(CPU_EXTS "${CPU_EXTS}, Neon")

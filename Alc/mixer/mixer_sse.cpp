@@ -130,7 +130,7 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*RESTRICT Values)[2],
 #define MixHrtf MixHrtf_SSE
 #define MixHrtfBlend MixHrtfBlend_SSE
 #define MixDirectHrtf MixDirectHrtf_SSE
-#include "hrtf_inc.c"
+#include "hrtf_inc.cpp"
 
 
 void Mix_SSE(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE],

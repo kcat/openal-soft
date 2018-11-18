@@ -1,65 +1,32 @@
 #ifndef AL_VECTOR_H
 #define AL_VECTOR_H
 
-#include <stdlib.h>
-
-#include <AL/al.h>
+#include <cstring>
+#include <vector>
 
 #include "almalloc.h"
 
 
 #define TYPEDEF_VECTOR(T, N) typedef struct {                                 \
-    size_t Capacity;                                                          \
-    size_t Size;                                                              \
+    std::size_t Capacity;                                                     \
+    std::size_t Size;                                                         \
     T Data[];                                                                 \
 } _##N;                                                                       \
 typedef _##N* N;                                                              \
 typedef const _##N* const_##N;
 
 #define VECTOR(T) struct {                                                    \
-    size_t Capacity;                                                          \
-    size_t Size;                                                              \
+    std::size_t Capacity;                                                     \
+    std::size_t Size;                                                         \
     T Data[];                                                                 \
 }*
 
-#define VECTOR_INIT(_x)       do { (_x) = NULL; } while(0)
-#define VECTOR_INIT_STATIC()  NULL
-#define VECTOR_DEINIT(_x)     do { al_free((_x)); (_x) = NULL; } while(0)
-
-#ifndef __cplusplus
-#define VECTOR_RESIZE(_x, _s, _c) do {                                        \
-    size_t _size = (_s);                                                      \
-    size_t _cap = (_c);                                                       \
-    if(_size > _cap)                                                          \
-        _cap = _size;                                                         \
-                                                                              \
-    if(!(_x) && _cap == 0)                                                    \
-        break;                                                                \
-                                                                              \
-    if(((_x) ? (_x)->Capacity : 0) < _cap)                                    \
-    {                                                                         \
-        ptrdiff_t data_offset = (_x) ? (char*)((_x)->Data) - (char*)(_x) :    \
-                                sizeof(*(_x));                                \
-        size_t old_size = ((_x) ? (_x)->Size : 0);                            \
-        void *temp;                                                           \
-                                                                              \
-        temp = al_calloc(16, data_offset + sizeof((_x)->Data[0])*_cap);       \
-        assert(temp != NULL);                                                 \
-        if((_x))                                                              \
-            memcpy(((char*)temp)+data_offset, (_x)->Data,                     \
-                   sizeof((_x)->Data[0])*old_size);                           \
-                                                                              \
-        al_free((_x));                                                        \
-        (_x) = temp;                                                          \
-        (_x)->Capacity = _cap;                                                \
-    }                                                                         \
-    (_x)->Size = _size;                                                       \
-} while(0)                                                                    \
-
-#else
+#define VECTOR_INIT(_x)       do { (_x) = nullptr; } while(0)
+#define VECTOR_INIT_STATIC()  nullptr
+#define VECTOR_DEINIT(_x)     do { al_free((_x)); (_x) = nullptr; } while(0)
 
 template<typename T>
-inline void do_vector_resize(T *&vec, size_t size, size_t cap)
+inline void do_vector_resize(T *&vec, std::size_t size, std::size_t cap)
 {
     if(size > cap)
         cap = size;
@@ -71,12 +38,9 @@ inline void do_vector_resize(T *&vec, size_t size, size_t cap)
     {
         ptrdiff_t data_offset = vec ? (char*)(vec->Data) - (char*)(vec) : sizeof(*vec);
         size_t old_size = (vec ? vec->Size : 0);
-        T *temp;
 
-        temp = reinterpret_cast<T*>(al_calloc(16, data_offset + sizeof(vec->Data[0])*cap));
-        assert(temp != nullptr);
-        if(vec)
-            memcpy(temp->Data, vec->Data, sizeof(vec->Data[0])*old_size);
+        auto temp = static_cast<T*>(al_calloc(16, data_offset + sizeof(vec->Data[0])*cap));
+        if(vec) std::memcpy(temp->Data, vec->Data, sizeof(vec->Data[0])*old_size);
 
         al_free(vec);
         vec = temp;
@@ -85,7 +49,6 @@ inline void do_vector_resize(T *&vec, size_t size, size_t cap)
     vec->Size = size;
 }
 #define VECTOR_RESIZE(_x, _s, _c) do_vector_resize(_x, _s, _c)
-#endif // __cplusplus
 
 #define VECTOR_CAPACITY(_x) ((_x) ? (_x)->Capacity : 0)
 #define VECTOR_SIZE(_x)     ((_x) ? (_x)->Size : 0)
@@ -94,7 +57,7 @@ inline void do_vector_resize(T *&vec, size_t size, size_t cap)
 #define VECTOR_END(_x)   ((_x) ? (_x)->Data + (_x)->Size : NULL)
 
 #define VECTOR_PUSH_BACK(_x, _obj) do {      \
-    size_t _pbsize = VECTOR_SIZE(_x)+1;      \
+    std::size_t _pbsize = VECTOR_SIZE(_x)+1; \
     VECTOR_RESIZE(_x, _pbsize, _pbsize);     \
     (_x)->Data[(_x)->Size-1] = (_obj);       \
 } while(0)
@@ -122,5 +85,13 @@ inline void do_vector_resize(T *&vec, size_t size, size_t cap)
     }                                                                         \
     (_i) = _iter;                                                             \
 } while(0)
+
+
+namespace al {
+
+template<typename T, size_t alignment=DEF_ALIGN>
+using vector = std::vector<T, al::allocator<T, alignment>>;
+
+} // namespace al
 
 #endif /* AL_VECTOR_H */

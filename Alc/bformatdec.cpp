@@ -104,37 +104,6 @@ ALsizei GetACNIndex(const BFChannelConfig *chans, ALsizei numchans, ALsizei acn)
 }
 #define GetChannelForACN(b, a) GetACNIndex((b).Ambi.Map, (b).NumChannels, (a))
 
-
-template<typename T, size_t alignment>
-class aligned_allocator : public std::allocator<T> {
-public:
-    using size_type = size_t;
-    using pointer = T*;
-    using const_pointer = const T*;
-
-    template<typename U>
-    struct rebind {
-        using other = aligned_allocator<U, alignment>;
-    };
-
-    pointer allocate(size_type n, const void* = nullptr)
-    { return reinterpret_cast<T*>(al_malloc(alignment, n*sizeof(T))); }
-
-    void deallocate(pointer p, size_type)
-    { al_free(p); }
-
-    aligned_allocator() : std::allocator<T>() { }
-    aligned_allocator(const aligned_allocator &a) : std::allocator<T>(a) { }
-    template<class U>
-    aligned_allocator(const aligned_allocator<U,alignment> &a)
-      : std::allocator<T>(a)
-    { }
-    ~aligned_allocator() { }
-};
-
-template<typename T, size_t alignment>
-using aligned_vector = std::vector<T, aligned_allocator<T, alignment>>;
-
 } // namespace
 
 
@@ -149,7 +118,7 @@ struct BFormatDec {
 
     BandSplitter XOver[MAX_AMBI_COEFFS];
 
-    aligned_vector<std::array<ALfloat,BUFFERSIZE>, 16> Samples;
+    al::vector<std::array<ALfloat,BUFFERSIZE>, 16> Samples;
     /* These two alias into Samples */
     std::array<ALfloat,BUFFERSIZE> *SamplesHF;
     std::array<ALfloat,BUFFERSIZE> *SamplesLF;

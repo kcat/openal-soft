@@ -3,6 +3,9 @@
 
 #include <stddef.h>
 
+#include <memory>
+#include <limits>
+
 /* Minimum alignment required by posix_memalign. */
 #define DEF_ALIGN sizeof(void*)
 
@@ -27,5 +30,40 @@ int al_is_sane_alignment_allocator(void) noexcept;
         return ret;                                                           \
     }                                                                         \
     void operator delete(void *block) noexcept { al_free(block); }
+
+namespace al {
+
+template<typename T, size_t alignment=DEF_ALIGN>
+struct allocator : public std::allocator<T> {
+    using size_type = size_t;
+    using pointer = T*;
+    using const_pointer = const T*;
+
+    template<typename U>
+    struct rebind {
+        using other = allocator<U, alignment>;
+    };
+
+    pointer allocate(size_type n, const void* = nullptr)
+    {
+        if(n > std::numeric_limits<size_t>::max() / sizeof(T))
+            throw std::bad_alloc();
+
+        void *ret{al_malloc(alignment, n*sizeof(T))};
+        if(!ret) throw std::bad_alloc();
+        return static_cast<pointer>(ret);
+    }
+
+    void deallocate(pointer p, size_type)
+    { al_free(p); }
+
+    allocator() : std::allocator<T>() { }
+    allocator(const allocator &a) : std::allocator<T>(a) { }
+    template<class U>
+    allocator(const allocator<U,alignment> &a) : std::allocator<T>(a)
+    { }
+};
+
+} // namespace al
 
 #endif /* AL_MALLOC_H */

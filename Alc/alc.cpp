@@ -2254,7 +2254,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     context = ATOMIC_LOAD_SEQ(&device->ContextList);
     while(context)
     {
-        SourceSubList *sublist, *subend;
         struct ALvoiceProps *vprops;
         ALsizei pos;
 
@@ -2288,15 +2287,13 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         almtx_unlock(&context->EffectSlotLock);
 
         almtx_lock(&context->SourceLock);
-        sublist = VECTOR_BEGIN(context->SourceList);
-        subend = VECTOR_END(context->SourceList);
-        for(;sublist != subend;++sublist)
+        for(auto &sublist : context->SourceList)
         {
-            ALuint64 usemask = ~sublist->FreeMask;
+            uint64_t usemask = ~sublist.FreeMask;
             while(usemask)
             {
                 ALsizei idx = CTZ64(usemask);
-                ALsource *source = sublist->Sources + idx;
+                ALsource *source = sublist.Sources + idx;
 
                 usemask &= ~(U64(1) << idx);
 
@@ -2612,7 +2609,6 @@ static ALvoid InitContext(ALCcontext *Context)
     Context->GainBoost = 1.0f;
     almtx_init(&Context->PropLock, almtx_plain);
     ATOMIC_INIT(&Context->LastError, AL_NO_ERROR);
-    VECTOR_INIT(Context->SourceList);
     Context->NumSources = 0;
     almtx_init(&Context->SourceLock, almtx_plain);
     VECTOR_INIT(Context->EffectSlotList);
@@ -2720,10 +2716,11 @@ static void FreeContext(ALCcontext *context)
         static_cast<ALeffectslotArray*>(nullptr), almemory_order_relaxed));
 
     ReleaseALSources(context);
-#define FREE_SOURCESUBLIST(x) al_free((x)->Sources)
-    VECTOR_FOR_EACH(SourceSubList, context->SourceList, FREE_SOURCESUBLIST);
-#undef FREE_SOURCESUBLIST
-    VECTOR_DEINIT(context->SourceList);
+    std::for_each(context->SourceList.begin(), context->SourceList.end(),
+        [](const SourceSubList &entry) noexcept -> void
+        { al_free(entry.Sources); }
+    );
+    context->SourceList.clear();
     context->NumSources = 0;
     almtx_destroy(&context->SourceLock);
 

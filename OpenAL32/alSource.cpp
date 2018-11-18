@@ -25,6 +25,8 @@
 #include <math.h>
 #include <float.h>
 
+#include <algorithm>
+
 #include "AL/al.h"
 #include "AL/alc.h"
 
@@ -61,16 +63,15 @@ static inline void UnlockSourceList(ALCcontext *context)
 
 static inline ALsource *LookupSource(ALCcontext *context, ALuint id)
 {
-    SourceSubList *sublist;
     ALuint lidx = (id-1) >> 6;
     ALsizei slidx = (id-1) & 0x3f;
 
-    if(UNLIKELY(lidx >= VECTOR_SIZE(context->SourceList)))
-        return NULL;
-    sublist = &VECTOR_ELEM(context->SourceList, lidx);
-    if(UNLIKELY(sublist->FreeMask & (U64(1)<<slidx)))
-        return NULL;
-    return sublist->Sources + slidx;
+    if(UNLIKELY(lidx >= context->SourceList.size()))
+        return nullptr;
+    SourceSubList &sublist{context->SourceList[lidx]};
+    if(UNLIKELY(sublist.FreeMask & (U64(1)<<slidx)))
+        return nullptr;
+    return sublist.Sources + slidx;
 }
 
 static inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
@@ -3589,61 +3590,55 @@ static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALsizei *frac
 
 static ALsource *AllocSource(ALCcontext *context)
 {
-    ALCdevice *device = context->Device;
-    SourceSubList *sublist, *subend;
-    ALsource *source = NULL;
-    ALsizei lidx = 0;
-    ALsizei slidx;
-
+    ALCdevice *device{context->Device};
     almtx_lock(&context->SourceLock);
     if(context->NumSources >= device->SourcesMax)
     {
         almtx_unlock(&context->SourceLock);
         alSetError(context, AL_OUT_OF_MEMORY, "Exceeding %u source limit", device->SourcesMax);
-        return NULL;
+        return nullptr;
     }
-    sublist = VECTOR_BEGIN(context->SourceList);
-    subend = VECTOR_END(context->SourceList);
-    for(;sublist != subend;++sublist)
+    auto sublist = std::find_if(context->SourceList.begin(), context->SourceList.end(),
+        [](const SourceSubList &entry) -> bool
+        { return entry.FreeMask != 0; }
+    );
+    ALsizei lidx = std::distance(context->SourceList.begin(), sublist);
+    ALsource *source;
+    ALsizei slidx;
+    if(LIKELY(sublist != context->SourceList.end()))
     {
-        if(sublist->FreeMask)
-        {
-            slidx = CTZ64(sublist->FreeMask);
-            source = sublist->Sources + slidx;
-            break;
-        }
-        ++lidx;
+        slidx = CTZ64(sublist->FreeMask);
+        source = sublist->Sources + slidx;
     }
-    if(UNLIKELY(!source))
+    else
     {
-        const SourceSubList empty_sublist = { 0, NULL };
         /* Don't allocate so many list entries that the 32-bit ID could
          * overflow...
          */
-        if(UNLIKELY(VECTOR_SIZE(context->SourceList) >= 1<<25))
+        if(UNLIKELY(context->SourceList.size() >= 1<<25))
         {
             almtx_unlock(&device->BufferLock);
             alSetError(context, AL_OUT_OF_MEMORY, "Too many sources allocated");
-            return NULL;
+            return nullptr;
         }
-        lidx = (ALsizei)VECTOR_SIZE(context->SourceList);
-        VECTOR_PUSH_BACK(context->SourceList, empty_sublist);
-        sublist = &VECTOR_BACK(context->SourceList);
+        context->SourceList.emplace_back();
+        sublist = context->SourceList.end() - 1;
+
         sublist->FreeMask = ~U64(0);
         sublist->Sources = static_cast<ALsource*>(al_calloc(16, sizeof(ALsource)*64));
         if(UNLIKELY(!sublist->Sources))
         {
-            VECTOR_POP_BACK(context->SourceList);
+            context->SourceList.pop_back();
             almtx_unlock(&context->SourceLock);
             alSetError(context, AL_OUT_OF_MEMORY, "Failed to allocate source batch");
-            return NULL;
+            return nullptr;
         }
 
         slidx = 0;
         source = sublist->Sources + slidx;
     }
 
-    memset(source, 0, sizeof(*source));
+    source = new (source) ALsource{};
     InitSourceParams(source, device->NumAuxSends);
 
     /* Add 1 to avoid source ID 0. */
@@ -3673,9 +3668,9 @@ static void FreeSource(ALCcontext *context, ALsource *source)
     ALCdevice_Unlock(device);
 
     DeinitSource(source, device->NumAuxSends);
-    memset(source, 0, sizeof(*source));
+    source->~ALsource();
 
-    VECTOR_ELEM(context->SourceList, lidx).FreeMask |= U64(1) << slidx;
+    context->SourceList[lidx].FreeMask |= U64(1) << slidx;
     context->NumSources--;
 }
 
@@ -3686,24 +3681,22 @@ static void FreeSource(ALCcontext *context, ALsource *source)
 ALvoid ReleaseALSources(ALCcontext *context)
 {
     ALCdevice *device = context->Device;
-    SourceSubList *sublist = VECTOR_BEGIN(context->SourceList);
-    SourceSubList *subend = VECTOR_END(context->SourceList);
     size_t leftover = 0;
-    for(;sublist != subend;++sublist)
+    for(auto &sublist : context->SourceList)
     {
-        ALuint64 usemask = ~sublist->FreeMask;
+        ALuint64 usemask = ~sublist.FreeMask;
         while(usemask)
         {
             ALsizei idx = CTZ64(usemask);
-            ALsource *source = sublist->Sources + idx;
+            ALsource *source = sublist.Sources + idx;
 
             DeinitSource(source, device->NumAuxSends);
-            memset(source, 0, sizeof(*source));
+            source->~ALsource();
             ++leftover;
 
             usemask &= ~(U64(1) << idx);
         }
-        sublist->FreeMask = ~usemask;
+        sublist.FreeMask = ~usemask;
     }
     if(leftover > 0)
         WARN("(%p) Deleted " SZFMT " Source%s\n", device, leftover, (leftover==1)?"":"s");

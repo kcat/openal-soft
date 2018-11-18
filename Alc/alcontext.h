@@ -37,10 +37,9 @@ enum class DistanceModel {
 };
 
 struct SourceSubList {
-    uint64_t FreeMask;
-    ALsource *Sources; /* 64 */
+    uint64_t FreeMask{0u};
+    ALsource *Sources{nullptr}; /* 64 */
 };
-TYPEDEF_VECTOR(SourceSubList, vector_SourceSubList)
 
 /* Effect slots are rather large, and apps aren't likely to have more than one
  * or two (let alone 64), so hold them individually.
@@ -51,7 +50,7 @@ TYPEDEF_VECTOR(ALeffectslotPtr, vector_ALeffectslotPtr)
 struct ALCcontext_struct {
     RefCount ref;
 
-    vector_SourceSubList SourceList;
+    al::vector<SourceSubList> SourceList;
     ALuint NumSources;
     almtx_t SourceLock;
 

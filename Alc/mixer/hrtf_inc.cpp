@@ -4,7 +4,6 @@
 #include "alSource.h"
 
 #include "hrtf.h"
-#include "align.h"
 #include "alu.h"
 #include "defs.h"
 

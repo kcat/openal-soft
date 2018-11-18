@@ -37,7 +37,6 @@
 #include "mastering.h"
 #include "uhjfilter.h"
 #include "bformatdec.h"
-#include "static_assert.h"
 #include "ringbuffer.h"
 #include "filters/splitter.h"
 

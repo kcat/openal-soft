@@ -3,9 +3,6 @@
 
 #include <atomic>
 
-#include "static_assert.h"
-#include "bool.h"
-
 #ifdef __GNUC__
 /* This helps cast away the const-ness of a pointer without accidentally
  * changing the pointer type. This is necessary due to Clang's inability to use

@@ -95,18 +95,6 @@
 /* Define to the size of a long long int type */
 #cmakedefine SIZEOF_LONG_LONG ${SIZEOF_LONG_LONG}
 
-/* Define if we have C99 _Bool support */
-#cmakedefine HAVE_C99_BOOL
-
-/* Define if we have C11 _Static_assert support */
-#cmakedefine HAVE_C11_STATIC_ASSERT
-
-/* Define if we have C11 _Alignas support */
-#cmakedefine HAVE_C11_ALIGNAS
-
-/* Define if we have C11 _Atomic support */
-#cmakedefine HAVE_C11_ATOMIC
-
 /* Define if we have GCC's destructor attribute */
 #cmakedefine HAVE_GCC_DESTRUCTOR
 
@@ -115,12 +103,6 @@
 
 /* Define if we have stdint.h */
 #cmakedefine HAVE_STDINT_H
-
-/* Define if we have stdbool.h */
-#cmakedefine HAVE_STDBOOL_H
-
-/* Define if we have stdalign.h */
-#cmakedefine HAVE_STDALIGN_H
 
 /* Define if we have windows.h */
 #cmakedefine HAVE_WINDOWS_H

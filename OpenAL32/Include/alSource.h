@@ -1,7 +1,6 @@
 #ifndef _AL_SOURCE_H_
 #define _AL_SOURCE_H_
 
-#include "bool.h"
 #include "alMain.h"
 #include "alu.h"
 #include "hrtf.h"

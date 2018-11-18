@@ -23,8 +23,6 @@
 #include "inprogext.h"
 #include "logging.h"
 #include "polymorphism.h"
-#include "static_assert.h"
-#include "align.h"
 #include "atomic.h"
 #include "vector.h"
 #include "almalloc.h"

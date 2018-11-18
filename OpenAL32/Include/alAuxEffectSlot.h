@@ -5,7 +5,6 @@
 #include "alEffect.h"
 
 #include "atomic.h"
-#include "align.h"
 
 #ifdef __cplusplus
 extern "C" {

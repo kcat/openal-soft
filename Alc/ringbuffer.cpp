@@ -25,7 +25,6 @@
 #include <limits.h>
 
 #include "ringbuffer.h"
-#include "align.h"
 #include "atomic.h"
 #include "threads.h"
 #include "almalloc.h"

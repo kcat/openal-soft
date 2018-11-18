@@ -9,7 +9,6 @@
 #include "filters/splitter.h"
 #include "alu.h"
 
-#include "bool.h"
 #include "threads.h"
 #include "almalloc.h"
 

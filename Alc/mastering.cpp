@@ -5,7 +5,6 @@
 #include "mastering.h"
 #include "alu.h"
 #include "almalloc.h"
-#include "static_assert.h"
 #include "math_defs.h"
 
 

@@ -235,45 +235,6 @@ IF(HAVE_LIBLOG)
     SET(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} log)
 ENDIF()
 
-# Check if we have C99 bool
-CHECK_C_SOURCE_COMPILES(
-"int main(int argc, char *argv[])
- {
-     volatile _Bool ret;
-     ret = (argc > 1) ? 1 : 0;
-     return ret ? -1 : 0;
- }"
-HAVE_C99_BOOL)
-
-# Check if we have C11 static_assert
-CHECK_C_SOURCE_COMPILES(
-"int main()
- {
-     _Static_assert(sizeof(int) == sizeof(int), \"What\");
-     return 0;
- }"
-HAVE_C11_STATIC_ASSERT)
-
-# Check if we have C11 alignas
-CHECK_C_SOURCE_COMPILES(
-"_Alignas(16) int foo;
- int main()
- {
-     return 0;
- }"
-HAVE_C11_ALIGNAS)
-
-# Check if we have C11 _Atomic
-CHECK_C_SOURCE_COMPILES(
-"#include <stdatomic.h>
- int _Atomic foo = ATOMIC_VAR_INIT(0);
- int main()
- {
-     atomic_fetch_add(&foo, 2);
-     return 0;
- }"
-HAVE_C11_ATOMIC)
-
 # Add definitions, compiler switches, etc.
 INCLUDE_DIRECTORIES("${OpenAL_SOURCE_DIR}/include" "${OpenAL_SOURCE_DIR}/common" "${OpenAL_BINARY_DIR}")
 
@@ -517,8 +478,6 @@ ENDIF()
 CHECK_C_SOURCE_COMPILES("int foo(const char *str, ...) __attribute__((format(printf, 1, 2)));
                          int main() {return 0;}" HAVE_GCC_FORMAT)
 
-CHECK_INCLUDE_FILE(stdbool.h HAVE_STDBOOL_H)
-CHECK_INCLUDE_FILE(stdalign.h HAVE_STDALIGN_H)
 CHECK_INCLUDE_FILE(malloc.h HAVE_MALLOC_H)
 CHECK_INCLUDE_FILE(dirent.h HAVE_DIRENT_H)
 CHECK_INCLUDE_FILE(strings.h HAVE_STRINGS_H)
@@ -744,13 +703,10 @@ ENDIF()
 SET(COMMON_OBJS
     common/alcomplex.cpp
     common/alcomplex.h
-    common/align.h
     common/almalloc.cpp
     common/almalloc.h
     common/atomic.h
-    common/bool.h
     common/math_defs.h
-    common/static_assert.h
     common/threads.cpp
     common/threads.h
     common/uintmap.h
@@ -861,15 +817,13 @@ CHECK_INCLUDE_FILE(xmmintrin.h HAVE_XMMINTRIN_H "${SSE_SWITCH}")
 IF(HAVE_XMMINTRIN_H)
     OPTION(ALSOFT_CPUEXT_SSE "Enable SSE support" ON)
     IF(ALSOFT_CPUEXT_SSE)
-        IF(ALIGN_DECL OR HAVE_C11_ALIGNAS)
-            SET(HAVE_SSE 1)
-            SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_sse.cpp)
-            IF(SSE_SWITCH)
-                SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_sse.cpp PROPERTIES
-                                            COMPILE_FLAGS "${SSE_SWITCH}")
-            ENDIF()
-            SET(CPU_EXTS "${CPU_EXTS}, SSE")
+        SET(HAVE_SSE 1)
+        SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_sse.cpp)
+        IF(SSE_SWITCH)
+            SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_sse.cpp PROPERTIES
+                                        COMPILE_FLAGS "${SSE_SWITCH}")
         ENDIF()
+        SET(CPU_EXTS "${CPU_EXTS}, SSE")
     ENDIF()
 ENDIF()
 IF(ALSOFT_REQUIRE_SSE AND NOT HAVE_SSE)
@@ -881,15 +835,13 @@ CHECK_INCLUDE_FILE(emmintrin.h HAVE_EMMINTRIN_H "${SSE2_SWITCH}")
 IF(HAVE_EMMINTRIN_H)
     OPTION(ALSOFT_CPUEXT_SSE2 "Enable SSE2 support" ON)
     IF(HAVE_SSE AND ALSOFT_CPUEXT_SSE2)
-        IF(ALIGN_DECL OR HAVE_C11_ALIGNAS)
-            SET(HAVE_SSE2 1)
-            SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_sse2.cpp)
-            IF(SSE2_SWITCH)
-                SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_sse2.cpp PROPERTIES
-                                            COMPILE_FLAGS "${SSE2_SWITCH}")
-            ENDIF()
-            SET(CPU_EXTS "${CPU_EXTS}, SSE2")
+        SET(HAVE_SSE2 1)
+        SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_sse2.cpp)
+        IF(SSE2_SWITCH)
+            SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_sse2.cpp PROPERTIES
+                                        COMPILE_FLAGS "${SSE2_SWITCH}")
         ENDIF()
+        SET(CPU_EXTS "${CPU_EXTS}, SSE2")
     ENDIF()
 ENDIF()
 IF(ALSOFT_REQUIRE_SSE2 AND NOT HAVE_SSE2)
@@ -901,15 +853,13 @@ CHECK_INCLUDE_FILE(pmmintrin.h HAVE_PMMINTRIN_H "${SSE3_SWITCH}")
 IF(HAVE_EMMINTRIN_H)
     OPTION(ALSOFT_CPUEXT_SSE3 "Enable SSE3 support" ON)
     IF(HAVE_SSE2 AND ALSOFT_CPUEXT_SSE3)
-        IF(ALIGN_DECL OR HAVE_C11_ALIGNAS)
-            SET(HAVE_SSE3 1)
-            SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_sse3.cpp)
-            IF(SSE2_SWITCH)
-                SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_sse3.cpp PROPERTIES
-                                            COMPILE_FLAGS "${SSE3_SWITCH}")
-            ENDIF()
-            SET(CPU_EXTS "${CPU_EXTS}, SSE3")
+        SET(HAVE_SSE3 1)
+        SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_sse3.cpp)
+        IF(SSE2_SWITCH)
+            SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_sse3.cpp PROPERTIES
+                                        COMPILE_FLAGS "${SSE3_SWITCH}")
         ENDIF()
+        SET(CPU_EXTS "${CPU_EXTS}, SSE3")
     ENDIF()
 ENDIF()
 IF(ALSOFT_REQUIRE_SSE3 AND NOT HAVE_SSE3)
@@ -921,15 +871,13 @@ CHECK_INCLUDE_FILE(smmintrin.h HAVE_SMMINTRIN_H "${SSE4_1_SWITCH}")
 IF(HAVE_SMMINTRIN_H)
     OPTION(ALSOFT_CPUEXT_SSE4_1 "Enable SSE4.1 support" ON)
     IF(HAVE_SSE2 AND ALSOFT_CPUEXT_SSE4_1)
-        IF(ALIGN_DECL OR HAVE_C11_ALIGNAS)
-            SET(HAVE_SSE4_1 1)
-            SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_sse41.cpp)
-            IF(SSE4_1_SWITCH)
-                SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_sse41.cpp PROPERTIES
-                                            COMPILE_FLAGS "${SSE4_1_SWITCH}")
-            ENDIF()
-            SET(CPU_EXTS "${CPU_EXTS}, SSE4.1")
+        SET(HAVE_SSE4_1 1)
+        SET(ALC_OBJS  ${ALC_OBJS} Alc/mixer/mixer_sse41.cpp)
+        IF(SSE4_1_SWITCH)
+            SET_SOURCE_FILES_PROPERTIES(Alc/mixer/mixer_sse41.cpp PROPERTIES
+                                        COMPILE_FLAGS "${SSE4_1_SWITCH}")
         ENDIF()
+        SET(CPU_EXTS "${CPU_EXTS}, SSE4.1")
     ENDIF()
 ENDIF()
 IF(ALSOFT_REQUIRE_SSE4_1 AND NOT HAVE_SSE4_1)

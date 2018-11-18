@@ -56,13 +56,6 @@ ALfloat ZScale = 1.0f;
 /* Force default speed of sound for distance-related reverb decay. */
 ALboolean OverrideReverbSpeedOfSound = AL_FALSE;
 
-const aluMatrixf IdentityMatrixf = {{
-    { 1.0f, 0.0f, 0.0f, 0.0f },
-    { 0.0f, 1.0f, 0.0f, 0.0f },
-    { 0.0f, 0.0f, 1.0f, 0.0f },
-    { 0.0f, 0.0f, 0.0f, 1.0f },
-}};
-
 
 static void ClearArray(ALfloat f[MAX_OUTPUT_CHANNELS])
 {

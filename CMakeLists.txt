@@ -710,6 +710,8 @@ SET(COMMON_OBJS
     common/threads.cpp
     common/threads.h
     common/uintmap.h
+    common/vecmat.cpp
+    common/vecmat.h
 )
 SET(OPENAL_OBJS
     OpenAL32/Include/bs2b.h

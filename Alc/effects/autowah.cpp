@@ -29,6 +29,7 @@
 #include "alError.h"
 #include "alu.h"
 #include "filters/defs.h"
+#include "vecmat.h"
 
 #define MIN_FREQ 20.0f
 #define MAX_FREQ 2500.0f
@@ -131,7 +132,7 @@ static ALvoid ALautowahState_update(ALautowahState *state, const ALCcontext *con
     STATIC_CAST(ALeffectState,state)->OutBuffer = device->FOAOut.Buffer;
     STATIC_CAST(ALeffectState,state)->OutChannels = device->FOAOut.NumChannels;
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputePanGains(&device->FOAOut, IdentityMatrixf.m[i], slot->Params.Gain,
+        ComputePanGains(&device->FOAOut, aluMatrixf::Identity.m[i], slot->Params.Gain,
                         state->Chans[i].TargetGains);
 }
 

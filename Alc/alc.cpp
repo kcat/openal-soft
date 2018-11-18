@@ -2658,7 +2658,7 @@ static ALvoid InitContext(ALCcontext *Context)
     Context->ExtensionList = alExtList;
 
 
-    listener->Params.Matrix = IdentityMatrixf;
+    listener->Params.Matrix = aluMatrixf::Identity;
     aluVectorSet(&listener->Params.Velocity, 0.0f, 0.0f, 0.0f, 0.0f);
     listener->Params.Gain = listener->Gain;
     listener->Params.MetersPerUnit = Context->MetersPerUnit;

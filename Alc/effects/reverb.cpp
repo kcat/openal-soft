@@ -31,6 +31,7 @@
 #include "alListener.h"
 #include "alError.h"
 #include "filters/defs.h"
+#include "vecmat.h"
 
 /* This is a user config option for modifying the overall output of the reverb
  * effect.

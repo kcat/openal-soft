@@ -2707,6 +2707,7 @@ static void FreeContext(ALCcontext *context)
     if(context->DefaultSlot)
     {
         DeinitEffectSlot(context->DefaultSlot);
+        delete context->DefaultSlot;
         context->DefaultSlot = nullptr;
     }
 
@@ -3812,14 +3813,14 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     }
     AllocateVoices(ALContext, 256, device->NumAuxSends);
 
-    // FIXME: Reenable after the default effect slot is handled again
-    if(0 && DefaultEffect.type != AL_EFFECT_NULL && device->Type == Playback)
+    if(DefaultEffect.type != AL_EFFECT_NULL && device->Type == Playback)
     {
-        ALContext->DefaultSlot = nullptr;
+        ALContext->DefaultSlot = new ALeffectslot{};
         if(InitEffectSlot(ALContext->DefaultSlot) == AL_NO_ERROR)
             aluInitEffectPanning(ALContext->DefaultSlot);
         else
         {
+            delete ALContext->DefaultSlot;
             ALContext->DefaultSlot = nullptr;
             ERR("Failed to initialize the default effect slot\n");
         }

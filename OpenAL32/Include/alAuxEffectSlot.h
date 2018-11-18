@@ -4,6 +4,7 @@
 #include "alMain.h"
 #include "alEffect.h"
 
+#include "almalloc.h"
 #include "atomic.h"
 
 #ifdef __cplusplus
@@ -99,7 +100,7 @@ struct ALeffectslotProps {
 };
 
 
-typedef struct ALeffectslot {
+struct ALeffectslot {
     ALfloat   Gain;
     ALboolean AuxSendAuto;
 
@@ -148,7 +149,9 @@ typedef struct ALeffectslot {
      * output (FOAOut).
      */
     alignas(16) ALfloat WetBuffer[MAX_EFFECT_CHANNELS][BUFFERSIZE];
-} ALeffectslot;
+
+    DEF_NEWDEL(ALeffectslot)
+};
 
 ALenum InitEffectSlot(ALeffectslot *slot);
 void DeinitEffectSlot(ALeffectslot *slot);

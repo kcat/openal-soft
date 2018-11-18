@@ -142,13 +142,11 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
             iter = context->EffectSlotList.end() - 1;
         }
 
-        ALenum err{AL_OUT_OF_MEMORY};
-        auto slot = static_cast<ALeffectslot*>(al_calloc(16, sizeof(ALeffectslot)));
-        if(slot) slot = new (slot) ALeffectslot{};
-        if(!slot || (err=InitEffectSlot(slot)) != AL_NO_ERROR)
+        auto slot = new ALeffectslot{};
+        ALenum err{InitEffectSlot(slot)};
+        if(err != AL_NO_ERROR)
         {
-            slot->~ALeffectslot();
-            al_free(slot);
+            delete slot;
             UnlockEffectSlotList(context);
 
             alDeleteAuxiliaryEffectSlots(cur, effectslots);
@@ -201,9 +199,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *
         context->EffectSlotList[effectslots[i]-1] = nullptr;
 
         DeinitEffectSlot(slot);
-
-        slot->~ALeffectslot();
-        al_free(slot);
+        delete slot;
     }
 
 done:
@@ -793,9 +789,8 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *context)
         entry = nullptr;
 
         DeinitEffectSlot(slot);
+        delete slot;
 
-        slot->~ALeffectslot();
-        al_free(slot);
         ++leftover;
     }
     if(leftover > 0)

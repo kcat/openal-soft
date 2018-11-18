@@ -104,10 +104,10 @@ static inline ALfilter *LookupFilter(ALCdevice *device, ALuint id)
 
 static inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id)
 {
-    id--;
-    if(UNLIKELY(id >= VECTOR_SIZE(context->EffectSlotList)))
-        return NULL;
-    return VECTOR_ELEM(context->EffectSlotList, id);
+    --id;
+    if(UNLIKELY(id >= context->EffectSlotList.size()))
+        return nullptr;
+    return context->EffectSlotList[id];
 }
 
 

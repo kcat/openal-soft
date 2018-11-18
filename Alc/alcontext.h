@@ -54,7 +54,7 @@ struct ALCcontext_struct {
     ALuint NumSources;
     almtx_t SourceLock;
 
-    vector_ALeffectslotPtr EffectSlotList;
+    al::vector<ALeffectslotPtr> EffectSlotList;
     almtx_t EffectSlotLock;
 
     ATOMIC(ALenum) LastError;

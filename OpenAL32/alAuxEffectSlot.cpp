@@ -23,6 +23,8 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include <algorithm>
+
 #include "AL/al.h"
 #include "AL/alc.h"
 
@@ -77,10 +79,10 @@ static void ALeffectState_IncRef(ALeffectState *state);
 
 static inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id)
 {
-    id--;
-    if(UNLIKELY(id >= VECTOR_SIZE(context->EffectSlotList)))
+    --id;
+    if(UNLIKELY(id >= context->EffectSlotList.size()))
         return nullptr;
-    return VECTOR_ELEM(context->EffectSlotList, id);
+    return context->EffectSlotList[id];
 }
 
 static inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
@@ -123,31 +125,29 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
     device = context->Device;
     for(cur = 0;cur < n;cur++)
     {
-        ALeffectslotPtr *iter = VECTOR_BEGIN(context->EffectSlotList);
-        ALeffectslotPtr *end = VECTOR_END(context->EffectSlotList);
-        ALeffectslot *slot = nullptr;
-        ALenum err = AL_OUT_OF_MEMORY;
-
-        for(;iter != end;iter++)
+        auto iter = std::find_if(context->EffectSlotList.begin(), context->EffectSlotList.end(),
+            [](const ALeffectslotPtr &entry) noexcept -> bool
+            { return !entry; }
+        );
+        if(iter == context->EffectSlotList.end())
         {
-            if(!*iter)
-                break;
-        }
-        if(iter == end)
-        {
-            if(device->AuxiliaryEffectSlotMax == VECTOR_SIZE(context->EffectSlotList))
+            if(device->AuxiliaryEffectSlotMax == context->EffectSlotList.size())
             {
                 UnlockEffectSlotList(context);
                 alDeleteAuxiliaryEffectSlots(cur, effectslots);
                 SETERR_GOTO(context, AL_OUT_OF_MEMORY, done,
                     "Exceeding %u auxiliary effect slot limit", device->AuxiliaryEffectSlotMax);
             }
-            VECTOR_PUSH_BACK(context->EffectSlotList, nullptr);
-            iter = &VECTOR_BACK(context->EffectSlotList);
+            context->EffectSlotList.emplace_back(nullptr);
+            iter = context->EffectSlotList.end() - 1;
         }
-        slot = static_cast<ALeffectslot*>(al_calloc(16, sizeof(ALeffectslot)));
+
+        ALenum err{AL_OUT_OF_MEMORY};
+        auto slot = static_cast<ALeffectslot*>(al_calloc(16, sizeof(ALeffectslot)));
+        if(slot) slot = new (slot) ALeffectslot{};
         if(!slot || (err=InitEffectSlot(slot)) != AL_NO_ERROR)
         {
+            slot->~ALeffectslot();
             al_free(slot);
             UnlockEffectSlotList(context);
 
@@ -156,7 +156,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
         }
         aluInitEffectPanning(slot);
 
-        slot->id = (iter - VECTOR_BEGIN(context->EffectSlotList)) + 1;
+        slot->id = std::distance(context->EffectSlotList.begin(), iter) + 1;
         *iter = slot;
 
         effectslots[cur] = slot->id;
@@ -198,11 +198,11 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *
     {
         if((slot=LookupEffectSlot(context, effectslots[i])) == nullptr)
             continue;
-        VECTOR_ELEM(context->EffectSlotList, effectslots[i]-1) = nullptr;
+        context->EffectSlotList[effectslots[i]-1] = nullptr;
 
         DeinitEffectSlot(slot);
 
-        memset(slot, 0, sizeof(*slot));
+        slot->~ALeffectslot();
         al_free(slot);
     }
 
@@ -785,19 +785,16 @@ void UpdateAllEffectSlotProps(ALCcontext *context)
 
 ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *context)
 {
-    ALeffectslotPtr *iter = VECTOR_BEGIN(context->EffectSlotList);
-    ALeffectslotPtr *end = VECTOR_END(context->EffectSlotList);
     size_t leftover = 0;
-
-    for(;iter != end;iter++)
+    for(auto &entry : context->EffectSlotList)
     {
-        ALeffectslot *slot = *iter;
+        ALeffectslot *slot = entry;
         if(!slot) continue;
-        *iter = nullptr;
+        entry = nullptr;
 
         DeinitEffectSlot(slot);
 
-        memset(slot, 0, sizeof(*slot));
+        slot->~ALeffectslot();
         al_free(slot);
         ++leftover;
     }

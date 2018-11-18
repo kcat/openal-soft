@@ -2272,9 +2272,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         almtx_lock(&context->PropLock);
         almtx_lock(&context->EffectSlotLock);
-        for(pos = 0;pos < (ALsizei)VECTOR_SIZE(context->EffectSlotList);pos++)
+        for(auto &slot : context->EffectSlotList)
         {
-            ALeffectslot *slot = VECTOR_ELEM(context->EffectSlotList, pos);
             ALeffectState *state = slot->Effect.State;
 
             state->OutBuffer = device->Dry.Buffer;
@@ -2611,7 +2610,6 @@ static ALvoid InitContext(ALCcontext *Context)
     ATOMIC_INIT(&Context->LastError, AL_NO_ERROR);
     Context->NumSources = 0;
     almtx_init(&Context->SourceLock, almtx_plain);
-    VECTOR_INIT(Context->EffectSlotList);
     almtx_init(&Context->EffectSlotLock, almtx_plain);
 
     if(Context->DefaultSlot)
@@ -2737,10 +2735,7 @@ static void FreeContext(ALCcontext *context)
     TRACE("Freed " SZFMT " AuxiliaryEffectSlot property object%s\n", count, (count==1)?"":"s");
 
     ReleaseALAuxiliaryEffectSlots(context);
-#define FREE_EFFECTSLOTPTR(x) al_free(*(x))
-    VECTOR_FOR_EACH(ALeffectslotPtr, context->EffectSlotList, FREE_EFFECTSLOTPTR);
-#undef FREE_EFFECTSLOTPTR
-    VECTOR_DEINIT(context->EffectSlotList);
+    context->EffectSlotList.clear();
     almtx_destroy(&context->EffectSlotLock);
 
     count = 0;

@@ -2182,7 +2182,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     if(!(device->DitherDepth > 0.0f))
         TRACE("Dithering disabled\n");
     else
-        TRACE("Dithering enabled (%d-bit, %g)\n", float2int(std::log2(device->DitherDepth)+0.5)+1,
+        TRACE("Dithering enabled (%d-bit, %g)\n", float2int(std::log2(device->DitherDepth)+0.5f)+1,
               device->DitherDepth);
 
     device->LimiterState = gainLimiter;

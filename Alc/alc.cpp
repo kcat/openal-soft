@@ -980,14 +980,15 @@ static void alc_initconfig(void)
     TRACE("Initializing library v%s-%s %s\n", ALSOFT_VERSION,
           ALSOFT_GIT_COMMIT_HASH, ALSOFT_GIT_BRANCH);
     {
-        char buf[1024] = "";
-        int len = 0;
-
+        std::string names;
         if(BackendListSize > 0)
-            len += snprintf(buf, sizeof(buf), "%s", BackendList[0].name);
+            names += BackendList[0].name;
         for(i = 1;i < BackendListSize;i++)
-            len += snprintf(buf+len, sizeof(buf)-len, ", %s", BackendList[i].name);
-        TRACE("Supported backends: %s\n", buf);
+        {
+            names += ", ";
+            names += BackendList[i].name;
+        }
+        TRACE("Supported backends: %s\n", names.c_str());
     }
     ReadALConfig();
 

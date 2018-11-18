@@ -45,7 +45,6 @@ struct SourceSubList {
  * or two (let alone 64), so hold them individually.
  */
 using ALeffectslotPtr = struct ALeffectslot*;
-TYPEDEF_VECTOR(ALeffectslotPtr, vector_ALeffectslotPtr)
 
 struct ALCcontext_struct {
     RefCount ref;

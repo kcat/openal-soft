@@ -91,10 +91,10 @@ const ALfloat *Resample_bsinc_Neon(const InterpState *state,
 #undef FRAC_PHASE_BITDIFF
 
         offset = m*pi*4;
-        fil = ASSUME_ALIGNED(filter + offset, 16); offset += m;
-        scd = ASSUME_ALIGNED(filter + offset, 16); offset += m;
-        phd = ASSUME_ALIGNED(filter + offset, 16); offset += m;
-        spd = ASSUME_ALIGNED(filter + offset, 16);
+        fil = (const float32x4_t*)(filter + offset); offset += m;
+        scd = (const float32x4_t*)(filter + offset); offset += m;
+        phd = (const float32x4_t*)(filter + offset); offset += m;
+        spd = (const float32x4_t*)(filter + offset);
 
         // Apply the scale and phase interpolated filter.
         r4 = vdupq_n_f32(0.0f);
@@ -140,8 +140,7 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*RESTRICT Values)[2],
         leftright2 = vset_lane_f32(right, leftright2, 1);
         leftright4 = vcombine_f32(leftright2, leftright2);
     }
-    Values = ASSUME_ALIGNED(Values, 16);
-    Coeffs = ASSUME_ALIGNED(Coeffs, 16);
+
     for(c = 0;c < IrSize;c += 2)
     {
         const ALsizei o0 = (Offset+c)&HRIR_MASK;
@@ -172,8 +171,6 @@ void Mix_Neon(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffe
 
     ASSUME(OutChans > 0);
     ASSUME(BufferSize > 0);
-    data = ASSUME_ALIGNED(data, 16);
-    OutBuffer = ASSUME_ALIGNED(OutBuffer, 16);
 
     for(c = 0;c < OutChans;c++)
     {

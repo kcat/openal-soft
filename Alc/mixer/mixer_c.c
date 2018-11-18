@@ -29,10 +29,10 @@ static inline ALfloat do_bsinc(const InterpState *state, const ALfloat *RESTRICT
     pf = (frac & ((1<<FRAC_PHASE_BITDIFF)-1)) * (1.0f/(1<<FRAC_PHASE_BITDIFF));
 #undef FRAC_PHASE_BITDIFF
 
-    fil = ASSUME_ALIGNED(state->bsinc.filter + state->bsinc.m*pi*4, 16);
-    scd = ASSUME_ALIGNED(fil + state->bsinc.m, 16);
-    phd = ASSUME_ALIGNED(scd + state->bsinc.m, 16);
-    spd = ASSUME_ALIGNED(phd + state->bsinc.m, 16);
+    fil = state->bsinc.filter + state->bsinc.m*pi*4;
+    scd = fil + state->bsinc.m;
+    phd = scd + state->bsinc.m;
+    spd = phd + state->bsinc.m;
 
     // Apply the scale and phase interpolated filter.
     r = 0.0f;

@@ -445,19 +445,6 @@ ELSE()
     SET(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS}")
 ENDIF()
 
-CHECK_C_SOURCE_COMPILES("
-int main()
-{
-    float *ptr;
-    ptr = __builtin_assume_aligned(ptr, 16);
-    return 0;
-}" HAVE___BUILTIN_ASSUME_ALIGNED)
-IF(HAVE___BUILTIN_ASSUME_ALIGNED)
-    SET(ASSUME_ALIGNED_DECL "__builtin_assume_aligned(x, y)")
-ELSE()
-    SET(ASSUME_ALIGNED_DECL "(x)")
-ENDIF()
-
 SET(SSE_SWITCH "")
 SET(SSE2_SWITCH "")
 SET(SSE3_SWITCH "")

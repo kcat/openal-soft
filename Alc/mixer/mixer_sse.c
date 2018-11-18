@@ -37,10 +37,10 @@ const ALfloat *Resample_bsinc_SSE(const InterpState *state, const ALfloat *RESTR
 #undef FRAC_PHASE_BITDIFF
 
         offset = m*pi*4;
-        fil = (const __m128*)ASSUME_ALIGNED(filter + offset, 16); offset += m;
-        scd = (const __m128*)ASSUME_ALIGNED(filter + offset, 16); offset += m;
-        phd = (const __m128*)ASSUME_ALIGNED(filter + offset, 16); offset += m;
-        spd = (const __m128*)ASSUME_ALIGNED(filter + offset, 16);
+        fil = (const __m128*)(filter + offset); offset += m;
+        scd = (const __m128*)(filter + offset); offset += m;
+        phd = (const __m128*)(filter + offset); offset += m;
+        spd = (const __m128*)(filter + offset);
 
         // Apply the scale and phase interpolated filter.
         r4 = _mm_setzero_ps();
@@ -85,8 +85,6 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*RESTRICT Values)[2],
     __m128 coeffs;
     ALsizei i;
 
-    Values = ASSUME_ALIGNED(Values, 16);
-    Coeffs = ASSUME_ALIGNED(Coeffs, 16);
     if((Offset&1))
     {
         const ALsizei o0 = Offset&HRIR_MASK;

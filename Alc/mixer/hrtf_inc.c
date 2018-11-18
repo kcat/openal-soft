@@ -20,7 +20,7 @@ void MixHrtf(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
              const ALsizei IrSize, MixHrtfParams *hrtfparams, HrtfState *hrtfstate,
              ALsizei BufferSize)
 {
-    const ALfloat (*Coeffs)[2] = ASSUME_ALIGNED(hrtfparams->Coeffs, 16);
+    const ALfloat (*Coeffs)[2] = hrtfparams->Coeffs;
     const ALsizei Delay[2] = { hrtfparams->Delay[0], hrtfparams->Delay[1] };
     const ALfloat gainstep = hrtfparams->GainStep;
     const ALfloat gain = hrtfparams->Gain;
@@ -60,11 +60,11 @@ void MixHrtfBlend(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                   MixHrtfParams *newparams, HrtfState *hrtfstate,
                   ALsizei BufferSize)
 {
-    const ALfloat (*OldCoeffs)[2] = ASSUME_ALIGNED(oldparams->Coeffs, 16);
+    const ALfloat (*OldCoeffs)[2] = oldparams->Coeffs;
     const ALsizei OldDelay[2] = { oldparams->Delay[0], oldparams->Delay[1] };
     const ALfloat oldGain = oldparams->Gain;
     const ALfloat oldGainStep = -oldGain / (ALfloat)BufferSize;
-    const ALfloat (*NewCoeffs)[2] = ASSUME_ALIGNED(newparams->Coeffs, 16);
+    const ALfloat (*NewCoeffs)[2] = newparams->Coeffs;
     const ALsizei NewDelay[2] = { newparams->Delay[0], newparams->Delay[1] };
     const ALfloat newGain = newparams->Gain;
     const ALfloat newGainStep = newparams->GainStep;

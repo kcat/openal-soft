@@ -821,8 +821,8 @@ SET(ALC_OBJS
     Alc/effects/pshifter.cpp
     Alc/effects/reverb.cpp
     Alc/filters/defs.h
-    Alc/filters/filter.c
-    Alc/filters/nfc.c
+    Alc/filters/filter.cpp
+    Alc/filters/nfc.cpp
     Alc/filters/nfc.h
     Alc/filters/splitter.cpp
     Alc/filters/splitter.h

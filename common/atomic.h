@@ -61,14 +61,6 @@ using std::atomic_thread_fence;
 #define ATOMIC_THREAD_FENCE atomic_thread_fence
 
 
-/* If no PTR xchg variants are provided, the normal ones can handle it. */
-#ifndef ATOMIC_EXCHANGE_PTR
-#define ATOMIC_EXCHANGE_PTR ATOMIC_EXCHANGE
-#define ATOMIC_COMPARE_EXCHANGE_PTR_STRONG ATOMIC_COMPARE_EXCHANGE_STRONG
-#define ATOMIC_COMPARE_EXCHANGE_PTR_WEAK ATOMIC_COMPARE_EXCHANGE_WEAK
-#endif
-
-
 #define ATOMIC_LOAD_SEQ(_val) ATOMIC_LOAD(_val, almemory_order_seq_cst)
 #define ATOMIC_STORE_SEQ(_val, _newval) ATOMIC_STORE(_val, _newval, almemory_order_seq_cst)
 
@@ -80,12 +72,6 @@ using std::atomic_thread_fence;
     ATOMIC_COMPARE_EXCHANGE_STRONG(_val, _oldval, _newval, almemory_order_seq_cst, almemory_order_seq_cst)
 #define ATOMIC_COMPARE_EXCHANGE_WEAK_SEQ(_val, _oldval, _newval) \
     ATOMIC_COMPARE_EXCHANGE_WEAK(_val, _oldval, _newval, almemory_order_seq_cst, almemory_order_seq_cst)
-
-#define ATOMIC_EXCHANGE_PTR_SEQ(_val, _newval) ATOMIC_EXCHANGE_PTR(_val, _newval, almemory_order_seq_cst)
-#define ATOMIC_COMPARE_EXCHANGE_PTR_STRONG_SEQ(_val, _oldval, _newval) \
-    ATOMIC_COMPARE_EXCHANGE_PTR_STRONG(_val, _oldval, _newval, almemory_order_seq_cst, almemory_order_seq_cst)
-#define ATOMIC_COMPARE_EXCHANGE_PTR_WEAK_SEQ(_val, _oldval, _newval) \
-    ATOMIC_COMPARE_EXCHANGE_PTR_WEAK(_val, _oldval, _newval, almemory_order_seq_cst, almemory_order_seq_cst)
 
 
 typedef unsigned int uint;
@@ -109,7 +95,7 @@ inline uint DecrementRef(RefCount *ptr)
     T _first = ATOMIC_LOAD(_head, almemory_order_acquire);                    \
     do {                                                                      \
         ATOMIC_STORE(&(_entry)->next, _first, almemory_order_relaxed);        \
-    } while(ATOMIC_COMPARE_EXCHANGE_PTR_WEAK(_head, &_first, _entry,          \
+    } while(ATOMIC_COMPARE_EXCHANGE_WEAK(_head, &_first, _entry,              \
             almemory_order_acq_rel, almemory_order_acquire) == 0);            \
 } while(0)
 

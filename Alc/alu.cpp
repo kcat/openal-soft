@@ -75,7 +75,7 @@ static HrtfDirectMixerFunc MixDirectHrtf = MixDirectHrtf_C;
 
 void DeinitVoice(ALvoice *voice)
 {
-    al_free(ATOMIC_EXCHANGE_PTR_SEQ(&voice->Update, static_cast<ALvoiceProps*>(nullptr)));
+    al_free(ATOMIC_EXCHANGE_SEQ(&voice->Update, static_cast<ALvoiceProps*>(nullptr)));
 }
 
 
@@ -315,8 +315,8 @@ static bool CalcContextParams(ALCcontext *Context)
     ALlistener &Listener = Context->Listener;
     struct ALcontextProps *props;
 
-    props = static_cast<ALcontextProps*>(ATOMIC_EXCHANGE_PTR(&Context->Update,
-        static_cast<ALcontextProps*>(nullptr), almemory_order_acq_rel));
+    props = ATOMIC_EXCHANGE(&Context->Update, static_cast<ALcontextProps*>(nullptr),
+                            almemory_order_acq_rel);
     if(!props) return false;
 
     Listener.Params.MetersPerUnit = props->MetersPerUnit;
@@ -341,8 +341,8 @@ static bool CalcListenerParams(ALCcontext *Context)
     struct ALlistenerProps *props;
     aluVector vel;
 
-    props = static_cast<ALlistenerProps*>(ATOMIC_EXCHANGE_PTR(&Listener.Update,
-        static_cast<ALlistenerProps*>(nullptr), almemory_order_acq_rel));
+    props = ATOMIC_EXCHANGE(&Listener.Update, static_cast<ALlistenerProps*>(nullptr),
+                            almemory_order_acq_rel);
     if(!props) return false;
 
     /* AT then UP */
@@ -385,8 +385,8 @@ static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool f
     struct ALeffectslotProps *props;
     ALeffectState *state;
 
-    props = static_cast<ALeffectslotProps*>(ATOMIC_EXCHANGE_PTR(&slot->Update,
-        static_cast<ALeffectslotProps*>(nullptr), almemory_order_acq_rel));
+    props = ATOMIC_EXCHANGE(&slot->Update, static_cast<ALeffectslotProps*>(nullptr),
+                            almemory_order_acq_rel);
     if(!props && !force) return false;
 
     if(props)
@@ -1455,8 +1455,8 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
     ALbufferlistitem *BufferListItem;
     struct ALvoiceProps *props;
 
-    props = static_cast<ALvoiceProps*>(ATOMIC_EXCHANGE_PTR(&voice->Update,
-        static_cast<ALvoiceProps*>(nullptr), almemory_order_acq_rel));
+    props = ATOMIC_EXCHANGE(&voice->Update, static_cast<ALvoiceProps*>(nullptr),
+                            almemory_order_acq_rel);
     if(!props && !force) return;
 
     if(props)
@@ -1857,10 +1857,8 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
         for(i = 0;i < ctx->VoiceCount;i++)
         {
             ALvoice *voice = ctx->Voices[i];
-            ALsource *source;
-
-            source = static_cast<ALsource*>(ATOMIC_EXCHANGE_PTR(&voice->Source,
-                static_cast<ALsource*>(nullptr), almemory_order_relaxed));
+            ALsource *source = ATOMIC_EXCHANGE(&voice->Source, static_cast<ALsource*>(nullptr),
+                                               almemory_order_relaxed);
             if(source && ATOMIC_LOAD(&voice->Playing, almemory_order_relaxed))
             {
                 /* If the source's voice was playing, it's now effectively

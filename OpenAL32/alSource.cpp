@@ -3168,7 +3168,7 @@ static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_send
         struct ALvoiceProps *next;
         do {
             next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
-        } while(ATOMIC_COMPARE_EXCHANGE_PTR_WEAK(&context->FreeVoiceProps, &props, next,
+        } while(ATOMIC_COMPARE_EXCHANGE_WEAK(&context->FreeVoiceProps, &props, next,
                 almemory_order_acq_rel, almemory_order_acquire) == 0);
     }
 
@@ -3232,8 +3232,7 @@ static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_send
     }
 
     /* Set the new container for updating internal parameters. */
-    props = static_cast<ALvoiceProps*>(ATOMIC_EXCHANGE_PTR(&voice->Update, props,
-        almemory_order_acq_rel));
+    props = ATOMIC_EXCHANGE(&voice->Update, props, almemory_order_acq_rel);
     if(props)
     {
         /* If there was an unused update container, put it back in the

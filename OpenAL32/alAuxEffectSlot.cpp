@@ -622,8 +622,7 @@ static void AddActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontex
         newarray->count = newcount;
     }
 
-    curarray = static_cast<ALeffectslotArray*>(ATOMIC_EXCHANGE_PTR(&context->ActiveAuxSlots,
-        newarray, almemory_order_acq_rel));
+    curarray = ATOMIC_EXCHANGE(&context->ActiveAuxSlots, newarray, almemory_order_acq_rel);
     while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
         althrd_yield();
     al_free(curarray);
@@ -658,8 +657,7 @@ static void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcon
 
     /* TODO: Could reallocate newarray now that we know it's needed size. */
 
-    curarray = static_cast<ALeffectslotArray*>(ATOMIC_EXCHANGE_PTR(&context->ActiveAuxSlots,
-        newarray, almemory_order_acq_rel));
+    curarray = ATOMIC_EXCHANGE(&context->ActiveAuxSlots, newarray, almemory_order_acq_rel);
     while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
         althrd_yield();
     al_free(curarray);
@@ -728,7 +726,7 @@ void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context)
         struct ALeffectslotProps *next;
         do {
             next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
-        } while(ATOMIC_COMPARE_EXCHANGE_PTR_WEAK(&context->FreeEffectslotProps, &props, next,
+        } while(ATOMIC_COMPARE_EXCHANGE_WEAK(&context->FreeEffectslotProps, &props, next,
                 almemory_order_seq_cst, almemory_order_acquire) == 0);
     }
 
@@ -746,8 +744,7 @@ void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context)
     props->State = slot->Effect.State;
 
     /* Set the new container for updating internal parameters. */
-    props = static_cast<ALeffectslotProps*>(ATOMIC_EXCHANGE_PTR(&slot->Update, props,
-        almemory_order_acq_rel));
+    props = ATOMIC_EXCHANGE(&slot->Update, props, almemory_order_acq_rel);
     if(props)
     {
         /* If there was an unused update container, put it back in the

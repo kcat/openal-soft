@@ -2331,8 +2331,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
          * auxiliary sends is changing. Active sources will have updates
          * respecified in UpdateAllSourceProps.
          */
-        vprops = static_cast<ALvoiceProps*>(ATOMIC_EXCHANGE_PTR(&context->FreeVoiceProps,
-            static_cast<ALvoiceProps*>(nullptr), almemory_order_acq_rel));
+        vprops = ATOMIC_EXCHANGE(&context->FreeVoiceProps, static_cast<ALvoiceProps*>(nullptr),
+                                 almemory_order_acq_rel);
         while(vprops)
         {
             struct ALvoiceProps *next = ATOMIC_LOAD(&vprops->next, almemory_order_relaxed);
@@ -2345,8 +2345,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         {
             ALvoice *voice = context->Voices[pos];
 
-            al_free(ATOMIC_EXCHANGE_PTR(&voice->Update, static_cast<ALvoiceProps*>(nullptr),
-                                        almemory_order_acq_rel));
+            al_free(ATOMIC_EXCHANGE(&voice->Update, static_cast<ALvoiceProps*>(nullptr),
+                                    almemory_order_acq_rel));
 
             if(ATOMIC_LOAD(&voice->Source, almemory_order_acquire) == nullptr)
                 continue;
@@ -2711,7 +2711,7 @@ static void FreeContext(ALCcontext *context)
         context->DefaultSlot = nullptr;
     }
 
-    al_free(ATOMIC_EXCHANGE_PTR(&context->ActiveAuxSlots,
+    al_free(ATOMIC_EXCHANGE(&context->ActiveAuxSlots,
         static_cast<ALeffectslotArray*>(nullptr), almemory_order_relaxed));
 
     ReleaseALSources(context);
@@ -2813,7 +2813,7 @@ static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
     V0(device->Backend,lock)();
     origctx = context;
     newhead = ATOMIC_LOAD(&context->next, almemory_order_relaxed);
-    if(!ATOMIC_COMPARE_EXCHANGE_PTR_STRONG_SEQ(&device->ContextList, &origctx, newhead))
+    if(!ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(&device->ContextList, &origctx, newhead))
     {
         ALCcontext *list;
         do {
@@ -2822,7 +2822,7 @@ static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
              */
             list = origctx;
             origctx = context;
-        } while(!ATOMIC_COMPARE_EXCHANGE_PTR_STRONG_SEQ(&list->next, &origctx, newhead));
+        } while(!ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(&list->next, &origctx, newhead));
     }
     else
         ret = !!newhead;
@@ -3848,8 +3848,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         ALCcontext *head = ATOMIC_LOAD_SEQ(&device->ContextList);
         do {
             ATOMIC_STORE(&ALContext->next, head, almemory_order_relaxed);
-        } while(ATOMIC_COMPARE_EXCHANGE_PTR_WEAK_SEQ(&device->ContextList, &head,
-                                                     ALContext) == 0);
+        } while(ATOMIC_COMPARE_EXCHANGE_WEAK_SEQ(&device->ContextList, &head,
+                                                 ALContext) == 0);
     }
     almtx_unlock(&device->BackendLock);
 
@@ -4204,7 +4204,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device)
         do {
             list = origdev;
             origdev = device;
-        } while(!ATOMIC_COMPARE_EXCHANGE_PTR_STRONG_SEQ(&list->next, &origdev, nextdev));
+        } while(!ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(&list->next, &origdev, nextdev));
     }
     listlock.unlock();
 
@@ -4332,7 +4332,7 @@ ALC_API ALCboolean ALC_APIENTRY alcCaptureCloseDevice(ALCdevice *device)
         do {
             list = origdev;
             origdev = device;
-        } while(!ATOMIC_COMPARE_EXCHANGE_PTR_STRONG_SEQ(&list->next, &origdev, nextdev));
+        } while(!ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(&list->next, &origdev, nextdev));
     }
     listlock.unlock();
 

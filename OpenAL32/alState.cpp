@@ -773,7 +773,7 @@ void UpdateContextProps(ALCcontext *context)
         struct ALcontextProps *next;
         do {
             next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
-        } while(ATOMIC_COMPARE_EXCHANGE_PTR_WEAK(&context->FreeContextProps, &props, next,
+        } while(ATOMIC_COMPARE_EXCHANGE_WEAK(&context->FreeContextProps, &props, next,
                 almemory_order_seq_cst, almemory_order_acquire) == 0);
     }
 
@@ -788,8 +788,7 @@ void UpdateContextProps(ALCcontext *context)
     props->mDistanceModel = context->mDistanceModel;
 
     /* Set the new container for updating internal parameters. */
-    props = static_cast<ALcontextProps*>(ATOMIC_EXCHANGE_PTR(&context->Update, props,
-        almemory_order_acq_rel));
+    props = ATOMIC_EXCHANGE(&context->Update, props, almemory_order_acq_rel);
     if(props)
     {
         /* If there was an unused update container, put it back in the

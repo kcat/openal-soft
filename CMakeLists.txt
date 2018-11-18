@@ -789,7 +789,6 @@ SET(ALC_OBJS
     Alc/bs2b.c
     Alc/converter.cpp
     Alc/converter.h
-    Alc/inldefs.c
     Alc/inprogext.h
     Alc/mastering.cpp
     Alc/mastering.h

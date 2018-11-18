@@ -23,11 +23,12 @@
 
 #include "config.h"
 
-#include <math.h>
-#include <string.h>
+#include <cmath>
+#include <cstring>
+#include <algorithm>
 
 #include "bs2b.h"
-#include "alu.h"
+#include "math_defs.h"
 
 
 /* Set up all data. */
@@ -90,11 +91,11 @@ static void init(struct bs2b *bs2b)
      * $d  = 1 / 2 / pi / $fc;
      * $x  = exp(-1 / $d);
      */
-    x           = expf(-2.0f * F_PI * Fc_lo / bs2b->srate);
+    x           = std::exp(-2.0f * F_PI * Fc_lo / bs2b->srate);
     bs2b->b1_lo = x;
     bs2b->a0_lo = G_lo * (1.0f - x) * g;
 
-    x           = expf(-2.0f * F_PI * Fc_hi / bs2b->srate);
+    x           = std::exp(-2.0f * F_PI * Fc_hi / bs2b->srate);
     bs2b->b1_hi = x;
     bs2b->a0_hi = (1.0f - G_hi * (1.0f - x)) * g;
     bs2b->a1_hi = -x * g;
@@ -126,7 +127,7 @@ int bs2b_get_srate(struct bs2b *bs2b)
 
 void bs2b_clear(struct bs2b *bs2b)
 {
-    memset(&bs2b->last_sample, 0, sizeof(bs2b->last_sample));
+    std::memset(&bs2b->last_sample, 0, sizeof(bs2b->last_sample));
 } /* bs2b_clear */
 
 void bs2b_cross_feed(struct bs2b *bs2b, float *RESTRICT Left, float *RESTRICT Right, int SamplesToDo)
@@ -137,7 +138,7 @@ void bs2b_cross_feed(struct bs2b *bs2b, float *RESTRICT Left, float *RESTRICT Ri
 
     for(base = 0;base < SamplesToDo;)
     {
-        int todo = mini(128, SamplesToDo-base);
+        int todo = std::min(128, SamplesToDo-base);
         int i;
 
         /* Process left input */

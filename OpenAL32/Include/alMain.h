@@ -952,7 +952,7 @@ public:
         return *this;
     }
 
-    operator bool() const noexcept { return static_cast<bool>(mCtx); }
+    operator bool() const noexcept { return mCtx; }
 
     ALCcontext* operator->() noexcept { return mCtx; }
     ALCcontext* get() noexcept { return mCtx; }

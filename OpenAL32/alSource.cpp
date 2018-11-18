@@ -964,7 +964,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                      *values == AL_EXPONENT_DISTANCE ||
                      *values == AL_EXPONENT_DISTANCE_CLAMPED);
 
-            Source->DistanceModel = static_cast<DistanceModel>(*values);
+            Source->mDistanceModel = static_cast<DistanceModel>(*values);
             if(Context->SourceDistanceModel)
                 DO_UPDATEPROPS();
             return AL_TRUE;
@@ -1468,7 +1468,7 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             return AL_TRUE;
 
         case AL_DISTANCE_MODEL:
-            *values = static_cast<int>(Source->DistanceModel);
+            *values = static_cast<int>(Source->mDistanceModel);
             return AL_TRUE;
 
         case AL_SOURCE_RESAMPLER_SOFT:
@@ -3082,7 +3082,7 @@ static void InitSourceParams(ALsource *Source, ALsizei num_sends)
     Source->DopplerFactor = 1.0f;
     Source->HeadRelative = AL_FALSE;
     Source->Looping = AL_FALSE;
-    Source->DistanceModel = DistanceModel::Default;
+    Source->mDistanceModel = DistanceModel::Default;
     Source->Resampler = ResamplerDefault;
     Source->DirectChannels = AL_FALSE;
     Source->Spatialize = SpatializeAuto;
@@ -3196,7 +3196,7 @@ static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_send
             props->Orientation[i][j] = source->Orientation[i][j];
     }
     props->HeadRelative = source->HeadRelative;
-    props->DistanceModel = source->DistanceModel;
+    props->mDistanceModel = source->mDistanceModel;
     props->Resampler = source->Resampler;
     props->DirectChannels = source->DirectChannels;
     props->SpatializeMode = source->Spatialize;

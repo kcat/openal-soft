@@ -149,7 +149,7 @@ AL_API ALboolean AL_APIENTRY alGetBoolean(ALenum pname)
         break;
 
     case AL_DISTANCE_MODEL:
-        if(context->DistanceModel == DistanceModel::Default)
+        if(context->mDistanceModel == DistanceModel::Default)
             value = AL_TRUE;
         break;
 
@@ -202,7 +202,7 @@ AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
         break;
 
     case AL_DISTANCE_MODEL:
-        value = (ALdouble)context->DistanceModel;
+        value = (ALdouble)context->mDistanceModel;
         break;
 
     case AL_SPEED_OF_SOUND:
@@ -251,7 +251,7 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
         break;
 
     case AL_DISTANCE_MODEL:
-        value = (ALfloat)context->DistanceModel;
+        value = (ALfloat)context->mDistanceModel;
         break;
 
     case AL_SPEED_OF_SOUND:
@@ -300,7 +300,7 @@ AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
         break;
 
     case AL_DISTANCE_MODEL:
-        value = (ALint)context->DistanceModel;
+        value = (ALint)context->mDistanceModel;
         break;
 
     case AL_SPEED_OF_SOUND:
@@ -349,7 +349,7 @@ extern "C" AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname)
         break;
 
     case AL_DISTANCE_MODEL:
-        value = (ALint64SOFT)context->DistanceModel;
+        value = (ALint64SOFT)context->mDistanceModel;
         break;
 
     case AL_SPEED_OF_SOUND:
@@ -708,7 +708,7 @@ AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
     else
     {
         std::lock_guard<almtx_t> _{context->PropLock};
-        context->DistanceModel = static_cast<enum DistanceModel>(value);
+        context->mDistanceModel = static_cast<DistanceModel>(value);
         if(!context->SourceDistanceModel)
             DO_UPDATEPROPS();
     }
@@ -785,7 +785,7 @@ void UpdateContextProps(ALCcontext *context)
     props->SpeedOfSound = context->SpeedOfSound;
 
     props->SourceDistanceModel = context->SourceDistanceModel;
-    props->DistanceModel = context->DistanceModel;
+    props->mDistanceModel = context->mDistanceModel;
 
     /* Set the new container for updating internal parameters. */
     props = static_cast<ALcontextProps*>(ATOMIC_EXCHANGE_PTR(&context->Update, props,

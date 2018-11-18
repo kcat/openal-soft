@@ -59,7 +59,7 @@ struct ALCcontext_struct {
 
     ATOMIC(ALenum) LastError;
 
-    enum DistanceModel DistanceModel;
+    DistanceModel mDistanceModel;
     ALboolean SourceDistanceModel;
 
     ALfloat DopplerFactor;
@@ -171,7 +171,7 @@ struct ALcontextProps {
     ALfloat DopplerVelocity;
     ALfloat SpeedOfSound;
     ALboolean SourceDistanceModel;
-    enum DistanceModel DistanceModel;
+    DistanceModel mDistanceModel;
     ALfloat MetersPerUnit;
 
     ATOMIC(struct ALcontextProps*) next;

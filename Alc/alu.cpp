@@ -328,7 +328,7 @@ static bool CalcContextParams(ALCcontext *Context)
                                              Listener.Params.MetersPerUnit;
 
     Listener.Params.SourceDistanceModel = props->SourceDistanceModel;
-    Listener.Params.DistanceModel = props->DistanceModel;
+    Listener.Params.mDistanceModel = props->mDistanceModel;
 
     ATOMIC_REPLACE_HEAD(struct ALcontextProps*, &Context->FreeContextProps, props);
     return true;
@@ -1210,7 +1210,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
     ClampedDist = Distance;
 
     switch(Listener.Params.SourceDistanceModel ?
-           props->DistanceModel : Listener.Params.DistanceModel)
+           props->mDistanceModel : Listener.Params.mDistanceModel)
     {
         case DistanceModel::InverseClamped:
             ClampedDist = clampf(ClampedDist, props->RefDistance, props->MaxDistance);

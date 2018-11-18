@@ -161,7 +161,7 @@ struct ALvoiceProps {
     ALfloat Direction[3];
     ALfloat Orientation[2][3];
     ALboolean HeadRelative;
-    enum DistanceModel DistanceModel;
+    DistanceModel mDistanceModel;
     enum Resampler Resampler;
     ALboolean DirectChannels;
     enum SpatializeMode SpatializeMode;

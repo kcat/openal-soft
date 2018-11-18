@@ -46,7 +46,7 @@ struct ALlistener {
         ALfloat ReverbSpeedOfSound; /* in meters per sec! */
 
         ALboolean SourceDistanceModel;
-        enum DistanceModel DistanceModel;
+        DistanceModel mDistanceModel;
     } Params;
 };
 

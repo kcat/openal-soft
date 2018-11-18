@@ -43,7 +43,7 @@ typedef struct ALsource {
     ALfloat   Orientation[2][3];
     ALboolean HeadRelative;
     ALboolean Looping;
-    enum DistanceModel DistanceModel;
+    DistanceModel mDistanceModel;
     enum Resampler Resampler;
     ALboolean DirectChannels;
     enum SpatializeMode Spatialize;

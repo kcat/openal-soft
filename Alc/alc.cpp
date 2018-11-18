@@ -2628,7 +2628,7 @@ static ALvoid InitContext(ALCcontext *Context)
     ATOMIC_INIT(&Context->ActiveAuxSlots, auxslots);
 
     //Set globals
-    Context->DistanceModel = DistanceModel::Default;
+    Context->mDistanceModel = DistanceModel::Default;
     Context->SourceDistanceModel = AL_FALSE;
     Context->DopplerFactor = 1.0f;
     Context->DopplerVelocity = 1.0f;
@@ -2661,7 +2661,7 @@ static ALvoid InitContext(ALCcontext *Context)
     listener.Params.ReverbSpeedOfSound = listener.Params.SpeedOfSound *
                                          listener.Params.MetersPerUnit;
     listener.Params.SourceDistanceModel = Context->SourceDistanceModel;
-    listener.Params.DistanceModel = Context->DistanceModel;
+    listener.Params.mDistanceModel = Context->mDistanceModel;
 
 
     Context->AsyncEvents = ll_ringbuffer_create(63, sizeof(AsyncEvent), false);

@@ -797,7 +797,7 @@ std::atomic<ALCenum> LastNullDeviceError{ALC_NO_ERROR};
 
 /* Thread-local current context */
 std::atomic<void(*)(ALCcontext*)> ThreadCtxProc{nullptr};
-thread_local class ThreadCtx {
+class ThreadCtx {
     ALCcontext *ctx{nullptr};
 
 public:
@@ -811,7 +811,8 @@ public:
 
     ALCcontext *get() const noexcept { return ctx; }
     void set(ALCcontext *ctx_) noexcept { ctx = ctx_; }
-} LocalContext;
+};
+thread_local ThreadCtx LocalContext;
 /* Process-wide current context */
 std::atomic<ALCcontext*> GlobalContext{nullptr};
 

@@ -22,9 +22,9 @@
 
 #include <stdlib.h>
 #include <limits.h>
-#include <math.h>
 #include <float.h>
 
+#include <cmath>
 #include <algorithm>
 
 #include "AL/al.h"
@@ -666,14 +666,14 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
             return AL_TRUE;
 
         case AL_SOURCE_RADIUS:
-            CHECKVAL(*values >= 0.0f && isfinite(*values));
+            CHECKVAL(*values >= 0.0f && std::isfinite(*values));
 
             Source->Radius = *values;
             DO_UPDATEPROPS();
             return AL_TRUE;
 
         case AL_STEREO_ANGLES:
-            CHECKVAL(isfinite(values[0]) && isfinite(values[1]));
+            CHECKVAL(std::isfinite(values[0]) && std::isfinite(values[1]));
 
             Source->StereoPan[0] = values[0];
             Source->StereoPan[1] = values[1];
@@ -682,7 +682,7 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
 
 
         case AL_POSITION:
-            CHECKVAL(isfinite(values[0]) && isfinite(values[1]) && isfinite(values[2]));
+            CHECKVAL(std::isfinite(values[0]) && std::isfinite(values[1]) && std::isfinite(values[2]));
 
             Source->Position[0] = values[0];
             Source->Position[1] = values[1];
@@ -691,7 +691,7 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
             return AL_TRUE;
 
         case AL_VELOCITY:
-            CHECKVAL(isfinite(values[0]) && isfinite(values[1]) && isfinite(values[2]));
+            CHECKVAL(std::isfinite(values[0]) && std::isfinite(values[1]) && std::isfinite(values[2]));
 
             Source->Velocity[0] = values[0];
             Source->Velocity[1] = values[1];
@@ -700,7 +700,7 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
             return AL_TRUE;
 
         case AL_DIRECTION:
-            CHECKVAL(isfinite(values[0]) && isfinite(values[1]) && isfinite(values[2]));
+            CHECKVAL(std::isfinite(values[0]) && std::isfinite(values[1]) && std::isfinite(values[2]));
 
             Source->Direction[0] = values[0];
             Source->Direction[1] = values[1];
@@ -709,8 +709,8 @@ static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp p
             return AL_TRUE;
 
         case AL_ORIENTATION:
-            CHECKVAL(isfinite(values[0]) && isfinite(values[1]) && isfinite(values[2]) &&
-                     isfinite(values[3]) && isfinite(values[4]) && isfinite(values[5]));
+            CHECKVAL(std::isfinite(values[0]) && std::isfinite(values[1]) && std::isfinite(values[2]) &&
+                     std::isfinite(values[3]) && std::isfinite(values[4]) && std::isfinite(values[5]));
 
             Source->Orientation[0][0] = values[0];
             Source->Orientation[0][1] = values[1];

@@ -47,71 +47,77 @@ struct SourceSubList {
 using ALeffectslotPtr = struct ALeffectslot*;
 
 struct ALCcontext_struct {
-    RefCount ref;
+    RefCount ref{1u};
 
     al::vector<SourceSubList> SourceList;
-    ALuint NumSources;
+    ALuint NumSources{0};
     almtx_t SourceLock;
 
     al::vector<ALeffectslotPtr> EffectSlotList;
     almtx_t EffectSlotLock;
 
-    ATOMIC(ALenum) LastError;
+    ATOMIC(ALenum) LastError{AL_NO_ERROR};
 
-    DistanceModel mDistanceModel;
-    ALboolean SourceDistanceModel;
+    DistanceModel mDistanceModel{DistanceModel::Default};
+    ALboolean SourceDistanceModel{AL_FALSE};
 
-    ALfloat DopplerFactor;
-    ALfloat DopplerVelocity;
-    ALfloat SpeedOfSound;
-    ALfloat MetersPerUnit;
+    ALfloat DopplerFactor{1.0f};
+    ALfloat DopplerVelocity{1.0f};
+    ALfloat SpeedOfSound{};
+    ALfloat MetersPerUnit{1.0f};
 
-    ATOMIC(ALenum) PropsClean;
-    ATOMIC(ALenum) DeferUpdates;
+    ATOMIC(ALenum) PropsClean{AL_TRUE};
+    ATOMIC(ALenum) DeferUpdates{AL_FALSE};
 
     almtx_t PropLock;
 
     /* Counter for the pre-mixing updates, in 31.1 fixed point (lowest bit
      * indicates if updates are currently happening).
      */
-    RefCount UpdateCount;
-    ATOMIC(ALenum) HoldUpdates;
+    RefCount UpdateCount{0u};
+    ATOMIC(ALenum) HoldUpdates{AL_FALSE};
 
-    ALfloat GainBoost;
+    ALfloat GainBoost{1.0f};
 
-    ATOMIC(ALcontextProps*) Update;
+    ATOMIC(ALcontextProps*) Update{nullptr};
 
     /* Linked lists of unused property containers, free to use for future
      * updates.
      */
-    ATOMIC(ALcontextProps*) FreeContextProps;
-    ATOMIC(ALlistenerProps*) FreeListenerProps;
-    ATOMIC(ALvoiceProps*) FreeVoiceProps;
-    ATOMIC(ALeffectslotProps*) FreeEffectslotProps;
+    ATOMIC(ALcontextProps*) FreeContextProps{nullptr};
+    ATOMIC(ALlistenerProps*) FreeListenerProps{nullptr};
+    ATOMIC(ALvoiceProps*) FreeVoiceProps{nullptr};
+    ATOMIC(ALeffectslotProps*) FreeEffectslotProps{nullptr};
 
-    ALvoice **Voices;
-    ALsizei VoiceCount;
-    ALsizei MaxVoices;
+    ALvoice **Voices{nullptr};
+    ALsizei VoiceCount{0};
+    ALsizei MaxVoices{0};
 
-    ATOMIC(ALeffectslotArray*) ActiveAuxSlots;
+    ATOMIC(ALeffectslotArray*) ActiveAuxSlots{nullptr};
 
     althrd_t EventThread;
     alsem_t EventSem;
-    ll_ringbuffer *AsyncEvents;
-    ATOMIC(ALbitfieldSOFT) EnabledEvts;
+    ll_ringbuffer *AsyncEvents{nullptr};
+    ATOMIC(ALbitfieldSOFT) EnabledEvts{0u};
     almtx_t EventCbLock;
-    ALEVENTPROCSOFT EventCb;
-    void *EventParam;
+    ALEVENTPROCSOFT EventCb{};
+    void *EventParam{nullptr};
 
     /* Default effect slot */
-    ALeffectslot *DefaultSlot;
+    ALeffectslot *DefaultSlot{nullptr};
 
-    ALCdevice  *Device;
-    const ALCchar *ExtensionList;
+    ALCdevice *const Device;
+    const ALCchar *ExtensionList{nullptr};
 
-    ATOMIC(ALCcontext*) next;
+    ATOMIC(ALCcontext*) next{nullptr};
 
-    ALlistener Listener;
+    ALlistener Listener{};
+
+
+    ALCcontext_struct(ALCdevice *device) : Device{device} { }
+    ALCcontext_struct(const ALCcontext_struct&) = delete;
+    ALCcontext_struct& operator=(const ALCcontext_struct&) = delete;
+    ~ALCcontext_struct();
 
     DEF_NEWDEL(ALCcontext)
 };

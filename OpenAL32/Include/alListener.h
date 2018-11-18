@@ -22,17 +22,17 @@ struct ALlistenerProps {
 };
 
 struct ALlistener {
-    alignas(16) ALfloat Position[3];
-    ALfloat Velocity[3];
-    ALfloat Forward[3];
-    ALfloat Up[3];
-    ALfloat Gain;
+    ALfloat Position[3]{0.0f, 0.0f, 0.0f};
+    ALfloat Velocity[3]{0.0f, 0.0f, 0.0f};
+    ALfloat Forward[3]{0.0f, 0.0f, -1.0f};
+    ALfloat Up[3]{0.0f, 1.0f, 0.0f};
+    ALfloat Gain{1.0f};
 
-    ATOMIC(ALenum) PropsClean;
+    ATOMIC(ALenum) PropsClean{AL_TRUE};
 
     /* Pointer to the most recent property values that are awaiting an update.
      */
-    ATOMIC(ALlistenerProps*) Update;
+    ATOMIC(ALlistenerProps*) Update{nullptr};
 
     struct {
         aluMatrixf Matrix;

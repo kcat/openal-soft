@@ -2670,64 +2670,55 @@ static ALvoid InitContext(ALCcontext *Context)
 }
 
 
-/* FreeContext
+/* ALCcontext_struct::~ALCcontext_struct()
  *
  * Cleans up the context, and destroys any remaining objects the app failed to
  * delete. Called once there's no more references on the context.
  */
-static void FreeContext(ALCcontext *context)
+ALCcontext_struct::~ALCcontext_struct()
 {
-    ALlistener &listener = context->Listener;
-    struct ALeffectslotProps *eprops;
-    struct ALlistenerProps *lprops;
-    struct ALcontextProps *cprops;
-    struct ALvoiceProps *vprops;
-    size_t count;
-    ALsizei i;
+    TRACE("%p\n", this);
 
-    TRACE("%p\n", context);
-
-    if((cprops=ATOMIC_LOAD(&context->Update, almemory_order_acquire)) != nullptr)
+    struct ALcontextProps *cprops{Update.load(std::memory_order_relaxed)};
+    if(cprops)
     {
         TRACE("Freed unapplied context update %p\n", cprops);
         al_free(cprops);
     }
-
-    count = 0;
-    cprops = ATOMIC_LOAD(&context->FreeContextProps, almemory_order_acquire);
+    size_t count{0};
+    cprops = FreeContextProps.load(std::memory_order_acquire);
     while(cprops)
     {
-        struct ALcontextProps *next = ATOMIC_LOAD(&cprops->next, almemory_order_acquire);
+        struct ALcontextProps *next{cprops->next.load(std::memory_order_relaxed)};
         al_free(cprops);
         cprops = next;
         ++count;
     }
     TRACE("Freed " SZFMT " context property object%s\n", count, (count==1)?"":"s");
 
-    if(context->DefaultSlot)
+    if(DefaultSlot)
     {
-        DeinitEffectSlot(context->DefaultSlot);
-        delete context->DefaultSlot;
-        context->DefaultSlot = nullptr;
+        DeinitEffectSlot(DefaultSlot);
+        delete DefaultSlot;
+        DefaultSlot = nullptr;
     }
 
-    al_free(ATOMIC_EXCHANGE(&context->ActiveAuxSlots,
-        static_cast<ALeffectslotArray*>(nullptr), almemory_order_relaxed));
+    al_free(ActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed));
 
-    ReleaseALSources(context);
-    std::for_each(context->SourceList.begin(), context->SourceList.end(),
+    ReleaseALSources(this);
+    std::for_each(SourceList.begin(), SourceList.end(),
         [](const SourceSubList &entry) noexcept -> void
         { al_free(entry.Sources); }
     );
-    context->SourceList.clear();
-    context->NumSources = 0;
-    almtx_destroy(&context->SourceLock);
+    SourceList.clear();
+    NumSources = 0;
+    almtx_destroy(&SourceLock);
 
     count = 0;
-    eprops = ATOMIC_LOAD(&context->FreeEffectslotProps, almemory_order_relaxed);
+    struct ALeffectslotProps *eprops{FreeEffectslotProps.load(std::memory_order_acquire)};
     while(eprops)
     {
-        struct ALeffectslotProps *next = ATOMIC_LOAD(&eprops->next, almemory_order_relaxed);
+        struct ALeffectslotProps *next{eprops->next.load(std::memory_order_relaxed)};
         if(eprops->State) ALeffectState_DecRef(eprops->State);
         al_free(eprops);
         eprops = next;
@@ -2735,56 +2726,54 @@ static void FreeContext(ALCcontext *context)
     }
     TRACE("Freed " SZFMT " AuxiliaryEffectSlot property object%s\n", count, (count==1)?"":"s");
 
-    ReleaseALAuxiliaryEffectSlots(context);
-    context->EffectSlotList.clear();
-    almtx_destroy(&context->EffectSlotLock);
+    ReleaseALAuxiliaryEffectSlots(this);
+    EffectSlotList.clear();
+    almtx_destroy(&EffectSlotLock);
 
     count = 0;
-    vprops = ATOMIC_LOAD(&context->FreeVoiceProps, almemory_order_relaxed);
+    struct ALvoiceProps *vprops{FreeVoiceProps.load(std::memory_order_acquire)};
     while(vprops)
     {
-        struct ALvoiceProps *next = ATOMIC_LOAD(&vprops->next, almemory_order_relaxed);
+        struct ALvoiceProps *next{vprops->next.load(std::memory_order_relaxed)};
         al_free(vprops);
         vprops = next;
         ++count;
     }
     TRACE("Freed " SZFMT " voice property object%s\n", count, (count==1)?"":"s");
 
-    for(i = 0;i < context->VoiceCount;i++)
-        DeinitVoice(context->Voices[i]);
-    al_free(context->Voices);
-    context->Voices = nullptr;
-    context->VoiceCount = 0;
-    context->MaxVoices = 0;
+    for(ALsizei i{0};i < VoiceCount;i++)
+        DeinitVoice(Voices[i]);
+    al_free(Voices);
+    Voices = nullptr;
+    VoiceCount = 0;
+    MaxVoices = 0;
 
-    if((lprops=ATOMIC_LOAD(&listener.Update, almemory_order_acquire)) != nullptr)
+    struct ALlistenerProps *lprops{Listener.Update.load(std::memory_order_relaxed)};
+    if(lprops)
     {
         TRACE("Freed unapplied listener update %p\n", lprops);
         al_free(lprops);
     }
     count = 0;
-    lprops = ATOMIC_LOAD(&context->FreeListenerProps, almemory_order_acquire);
+    lprops = FreeListenerProps.load(std::memory_order_acquire);
     while(lprops)
     {
-        struct ALlistenerProps *next = ATOMIC_LOAD(&lprops->next, almemory_order_acquire);
+        struct ALlistenerProps *next{lprops->next.load(std::memory_order_relaxed)};
         al_free(lprops);
         lprops = next;
         ++count;
     }
     TRACE("Freed " SZFMT " listener property object%s\n", count, (count==1)?"":"s");
 
-    almtx_destroy(&context->EventCbLock);
-    alsem_destroy(&context->EventSem);
+    almtx_destroy(&EventCbLock);
+    alsem_destroy(&EventSem);
 
-    ll_ringbuffer_free(context->AsyncEvents);
-    context->AsyncEvents = nullptr;
+    ll_ringbuffer_free(AsyncEvents);
+    AsyncEvents = nullptr;
 
-    almtx_destroy(&context->PropLock);
+    almtx_destroy(&PropLock);
 
-    ALCdevice_DecRef(context->Device);
-    context->Device = nullptr;
-
-    delete context;
+    ALCdevice_DecRef(Device);
 }
 
 /* ReleaseContext
@@ -2852,7 +2841,7 @@ void ALCcontext_DecRef(ALCcontext *context)
 {
     uint ref = DecrementRef(&context->ref);
     TRACEREF("%p decreasing refcount to %u\n", context, ref);
-    if(ref == 0) FreeContext(context);
+    if(ref == 0) delete context;
 }
 
 static void ReleaseThreadCtx(ALCcontext *context)
@@ -3782,23 +3771,14 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
     ATOMIC_STORE_SEQ(&device->LastError, ALC_NO_ERROR);
 
-    ALContext = new ALCcontext{};
-
-    InitRef(&ALContext->ref, 1);
-    ALContext->DefaultSlot = nullptr;
-
-    ALContext->Voices = nullptr;
-    ALContext->VoiceCount = 0;
-    ALContext->MaxVoices = 0;
-    ATOMIC_INIT(&ALContext->ActiveAuxSlots, static_cast<ALeffectslotArray*>(nullptr));
-    ALContext->Device = device;
-    ATOMIC_INIT(&ALContext->next, static_cast<ALCcontext*>(nullptr));
+    ALContext = new ALCcontext{device};
+    ALCdevice_IncRef(ALContext->Device);
 
     if((err=UpdateDeviceParams(device, attrList)) != ALC_NO_ERROR)
     {
         almtx_unlock(&device->BackendLock);
 
-        al_free(ALContext);
+        delete ALContext;
         ALContext = nullptr;
 
         alcSetError(device, err);
@@ -3826,7 +3806,6 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         }
     }
 
-    ALCdevice_IncRef(ALContext->Device);
     InitContext(ALContext);
 
     if(ConfigValueFloat(device->DeviceName, nullptr, "volume-adjust", &valf))

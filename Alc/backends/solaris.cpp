@@ -117,7 +117,7 @@ static int ALCsolarisBackend_mixerProc(void *ptr)
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
+    frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder);
 
     ALCsolarisBackend_lock(self);
     while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
@@ -207,7 +207,7 @@ static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
 
     if(device->FmtChans != DevFmtMono)
         device->FmtChans = DevFmtStereo;
-    numChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
+    numChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
     info.play.channels = numChannels;
 
     switch(device->FmtType)
@@ -241,7 +241,7 @@ static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
         return ALC_FALSE;
     }
 
-    if(ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder) != (ALsizei)info.play.channels)
+    if(ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder) != (ALsizei)info.play.channels)
     {
         ERR("Failed to set %s, got %u channels instead\n", DevFmtChannelsString(device->FmtChans), info.play.channels);
         return ALC_FALSE;
@@ -264,7 +264,7 @@ static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
 
     free(self->mix_data);
     self->data_size = device->UpdateSize * FrameSizeFromDevFmt(
-        device->FmtChans, device->FmtType, device->AmbiOrder
+        device->FmtChans, device->FmtType, device->mAmbiOrder
     );
     self->mix_data = static_cast<ALubyte*>(calloc(1, self->data_size));
 

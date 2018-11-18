@@ -397,7 +397,7 @@ ALCenum ALCportCapture_open(ALCportCapture *self, const ALCchar *name)
 
     samples = device->UpdateSize * device->NumUpdates;
     samples = maxu(samples, 100 * device->Frequency / 1000);
-    frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
+    frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder);
 
     self->ring = ll_ringbuffer_create(samples, frame_size, false);
     if(self->ring == nullptr) return ALC_INVALID_VALUE;
@@ -431,7 +431,7 @@ ALCenum ALCportCapture_open(ALCportCapture *self, const ALCchar *name)
             ERR("%s samples not supported\n", DevFmtTypeString(device->FmtType));
             return ALC_INVALID_VALUE;
     }
-    self->params.channelCount = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
+    self->params.channelCount = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
 
     err = Pa_OpenStream(&self->stream, &self->params, nullptr,
         device->Frequency, paFramesPerBufferUnspecified, paNoFlag,

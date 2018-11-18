@@ -265,7 +265,7 @@ FORCE_ALIGN int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self)
         return 1;
     }
 
-    ALsizei FrameSize{FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder)};
+    ALsizei FrameSize{FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder)};
     DWORD FragSize{device->UpdateSize * FrameSize};
 
     bool Playing{false};
@@ -523,7 +523,7 @@ ALCboolean ALCdsoundPlayback_reset(ALCdsoundPlayback *self)
 retry_open:
         hr = S_OK;
         OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
-        OutputType.Format.nChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
+        OutputType.Format.nChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
         OutputType.Format.wBitsPerSample = BytesFromDevFmt(device->FmtType) * 8;
         OutputType.Format.nBlockAlign = OutputType.Format.nChannels*OutputType.Format.wBitsPerSample/8;
         OutputType.Format.nSamplesPerSec = device->Frequency;
@@ -807,7 +807,7 @@ ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *deviceName)
     }
 
     InputType.Format.wFormatTag = WAVE_FORMAT_PCM;
-    InputType.Format.nChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
+    InputType.Format.nChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
     InputType.Format.wBitsPerSample = BytesFromDevFmt(device->FmtType) * 8;
     InputType.Format.nBlockAlign = InputType.Format.nChannels*InputType.Format.wBitsPerSample/8;
     InputType.Format.nSamplesPerSec = device->Frequency;
@@ -908,7 +908,7 @@ ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
     if(!ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
         return ll_ringbuffer_read_space(self->Ring);
 
-    ALsizei FrameSize{FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder)};
+    ALsizei FrameSize{FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder)};
     DWORD BufferBytes{self->BufferBytes};
     DWORD LastCursor{self->Cursor};
 

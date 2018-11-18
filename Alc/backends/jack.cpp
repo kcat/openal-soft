@@ -232,7 +232,7 @@ static int ALCjackPlayback_bufferSizeNotify(jack_nframes_t numframes, void *arg)
 
     ll_ringbuffer_free(self->Ring);
     self->Ring = ll_ringbuffer_create(bufsize,
-        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder),
+        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder),
         true
     );
     if(!self->Ring)
@@ -402,7 +402,7 @@ static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
     /* Force 32-bit float output. */
     device->FmtType = DevFmtFloat;
 
-    numchans = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
+    numchans = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
     for(i = 0;i < numchans;i++)
     {
         char name[64];
@@ -432,7 +432,7 @@ static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
 
     ll_ringbuffer_free(self->Ring);
     self->Ring = ll_ringbuffer_create(bufsize,
-        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder),
+        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder),
         true
     );
     if(!self->Ring)

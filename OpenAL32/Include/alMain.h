@@ -584,12 +584,12 @@ struct ALCdevice_struct {
     DevFmtChannels FmtChans{};
     DevFmtType     FmtType{};
     ALboolean IsHeadphones{};
-    ALsizei AmbiOrder{};
+    ALsizei mAmbiOrder{};
     /* For DevFmtAmbi* output only, specifies the channel order and
      * normalization.
      */
-    AmbiLayout AmbiLayout{};
-    AmbiNorm   AmbiScale{};
+    AmbiLayout mAmbiLayout{};
+    AmbiNorm   mAmbiScale{};
 
     ALCenum LimiterState{ALC_DONT_CARE_SOFT};
 

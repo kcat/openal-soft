@@ -481,7 +481,7 @@ static ALCboolean ALCopenslPlayback_reset(ALCopenslPlayback *self)
     device->FmtType = DevFmtShort;
 
     SetDefaultWFXChannelOrder(device);
-    self->mFrameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
+    self->mFrameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder);
 
 
     loc_bufq.locatorType = SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE;
@@ -490,7 +490,7 @@ static ALCboolean ALCopenslPlayback_reset(ALCopenslPlayback *self)
 #ifdef SL_DATAFORMAT_PCM_EX
     SLDataFormat_PCM_EX format_pcm;
     format_pcm.formatType = SL_DATAFORMAT_PCM_EX;
-    format_pcm.numChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
+    format_pcm.numChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
     format_pcm.sampleRate = device->Frequency * 1000;
     format_pcm.bitsPerSample = BytesFromDevFmt(device->FmtType) * 8;
     format_pcm.containerSize = format_pcm.bitsPerSample;
@@ -501,7 +501,7 @@ static ALCboolean ALCopenslPlayback_reset(ALCopenslPlayback *self)
 #else
     SLDataFormat_PCM format_pcm;
     format_pcm.formatType = SL_DATAFORMAT_PCM;
-    format_pcm.numChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
+    format_pcm.numChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
     format_pcm.samplesPerSec = device->Frequency * 1000;
     format_pcm.bitsPerSample = BytesFromDevFmt(device->FmtType) * 8;
     format_pcm.containerSize = format_pcm.bitsPerSample;
@@ -780,7 +780,7 @@ static ALCenum ALCopenslCapture_open(ALCopenslCapture *self, const ALCchar *name
         device->UpdateSize = update_len;
         device->NumUpdates = (length+update_len-1) / update_len;
 
-        self->mFrameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
+        self->mFrameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder);
     }
     loc_dev.locatorType = SL_DATALOCATOR_IODEVICE;
     loc_dev.deviceType = SL_IODEVICE_AUDIOINPUT;
@@ -796,7 +796,7 @@ static ALCenum ALCopenslCapture_open(ALCopenslCapture *self, const ALCchar *name
 #ifdef SL_DATAFORMAT_PCM_EX
     SLDataFormat_PCM_EX format_pcm;
     format_pcm.formatType = SL_DATAFORMAT_PCM_EX;
-    format_pcm.numChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
+    format_pcm.numChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
     format_pcm.sampleRate = device->Frequency * 1000;
     format_pcm.bitsPerSample = BytesFromDevFmt(device->FmtType) * 8;
     format_pcm.containerSize = format_pcm.bitsPerSample;
@@ -807,7 +807,7 @@ static ALCenum ALCopenslCapture_open(ALCopenslCapture *self, const ALCchar *name
 #else
     SLDataFormat_PCM format_pcm;
     format_pcm.formatType = SL_DATAFORMAT_PCM;
-    format_pcm.numChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
+    format_pcm.numChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
     format_pcm.samplesPerSec = device->Frequency * 1000;
     format_pcm.bitsPerSample = BytesFromDevFmt(device->FmtType) * 8;
     format_pcm.containerSize = format_pcm.bitsPerSample;

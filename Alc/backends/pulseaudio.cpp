@@ -1040,7 +1040,7 @@ ALCboolean PulsePlayback_reset(PulsePlayback *self)
             break;
     }
     self->spec.rate = device->Frequency;
-    self->spec.channels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
+    self->spec.channels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
 
     if(pa_sample_spec_valid(&self->spec) == 0)
     {
@@ -1557,7 +1557,7 @@ ALCenum PulseCapture_open(PulseCapture *self, const ALCchar *name)
     }
 
     self->spec.rate = device->Frequency;
-    self->spec.channels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
+    self->spec.channels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
 
     if(pa_sample_spec_valid(&self->spec) == 0)
     {

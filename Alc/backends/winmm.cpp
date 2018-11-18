@@ -341,7 +341,7 @@ ALCboolean ALCwinmmPlayback_reset(ALCwinmmPlayback *self)
     SetDefaultWFXChannelOrder(device);
 
     ALuint BufferSize{device->UpdateSize *
-        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder)};
+        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder)};
 
     al_free(self->WaveBuffer[0].lpData);
     self->WaveBuffer[0] = WAVEHDR{};
@@ -564,7 +564,7 @@ ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *deviceName)
     memset(&self->Format, 0, sizeof(WAVEFORMATEX));
     self->Format.wFormatTag = (device->FmtType == DevFmtFloat) ?
                               WAVE_FORMAT_IEEE_FLOAT : WAVE_FORMAT_PCM;
-    self->Format.nChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
+    self->Format.nChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
     self->Format.wBitsPerSample = BytesFromDevFmt(device->FmtType) * 8;
     self->Format.nBlockAlign = self->Format.wBitsPerSample *
                                self->Format.nChannels / 8;

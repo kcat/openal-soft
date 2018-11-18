@@ -100,7 +100,7 @@ static int SndioPlayback_mixerProc(void *ptr)
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
+    frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder);
 
     while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
           ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
@@ -244,7 +244,7 @@ static ALCboolean SndioPlayback_start(SndioPlayback *self)
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
 
     self->data_size = device->UpdateSize * FrameSizeFromDevFmt(
-        device->FmtChans, device->FmtType, device->AmbiOrder
+        device->FmtChans, device->FmtType, device->mAmbiOrder
     );
     al_free(self->mix_data);
     self->mix_data = al_calloc(16, self->data_size);
@@ -342,7 +342,7 @@ static int SndioCapture_recordProc(void* ptr)
     SetRTPriority();
     althrd_setname(RECORD_THREAD_NAME);
 
-    frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder);
+    frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder);
 
     while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
           ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
@@ -442,7 +442,7 @@ static ALCenum SndioCapture_open(SndioCapture *self, const ALCchar *name)
     par.bits = par.bps * 8;
     par.le = SIO_LE_NATIVE;
     par.msb = SIO_LE_NATIVE ? 0 : 1;
-    par.rchan = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
+    par.rchan = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
     par.rate = device->Frequency;
 
     par.appbufsz = maxu(device->UpdateSize*device->NumUpdates, (device->Frequency+9)/10);
@@ -470,7 +470,7 @@ static ALCenum SndioCapture_open(SndioCapture *self, const ALCchar *name)
          (device->FmtType == DevFmtUShort && par.bits == 16 && par.sig == 0) ||
          (device->FmtType == DevFmtInt && par.bits == 32 && par.sig != 0) ||
          (device->FmtType == DevFmtUInt && par.bits == 32 && par.sig == 0)) ||
-       ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder) != (ALsizei)par.rchan ||
+       ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder) != (ALsizei)par.rchan ||
        device->Frequency != par.rate)
     {
         ERR("Failed to set format %s %s %uhz, got %c%u %u-channel %uhz instead\n",

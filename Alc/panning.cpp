@@ -513,15 +513,15 @@ static void InitPanning(ALCdevice *device)
     if(device->FmtChans == DevFmtAmbi3D)
     {
         const char *devname = device->DeviceName;
-        const ALsizei *acnmap = (device->AmbiLayout == AmbiLayout_FuMa) ? FuMa2ACN : ACN2ACN;
-        const ALfloat *n3dscale = (device->AmbiScale == AmbiNorm_FuMa) ? FuMa2N3DScale :
-                                  (device->AmbiScale == AmbiNorm_SN3D) ? SN3D2N3DScale :
-                                  /*(device->AmbiScale == AmbiNorm_N3D) ?*/ N3D2N3DScale;
+        const ALsizei *acnmap = (device->mAmbiLayout == AmbiLayout_FuMa) ? FuMa2ACN : ACN2ACN;
+        const ALfloat *n3dscale = (device->mAmbiScale == AmbiNorm_FuMa) ? FuMa2N3DScale :
+                                  (device->mAmbiScale == AmbiNorm_SN3D) ? SN3D2N3DScale :
+                                  /*(device->mAmbiScale == AmbiNorm_N3D) ?*/ N3D2N3DScale;
         ALfloat nfc_delay = 0.0f;
 
-        count = (device->AmbiOrder == 3) ? 16 :
-                (device->AmbiOrder == 2) ? 9 :
-                (device->AmbiOrder == 1) ? 4 : 1;
+        count = (device->mAmbiOrder == 3) ? 16 :
+                (device->mAmbiOrder == 2) ? 9 :
+                (device->mAmbiOrder == 1) ? 4 : 1;
         for(i = 0;i < count;i++)
         {
             ALsizei acn = acnmap[i];
@@ -531,7 +531,7 @@ static void InitPanning(ALCdevice *device)
         device->Dry.CoeffCount = 0;
         device->Dry.NumChannels = count;
 
-        if(device->AmbiOrder < 2)
+        if(device->mAmbiOrder < 2)
         {
             device->FOAOut.Ambi = device->Dry.Ambi;
             device->FOAOut.CoeffCount = device->Dry.CoeffCount;
@@ -553,7 +553,7 @@ static void InitPanning(ALCdevice *device)
             device->FOAOut.CoeffCount = 0;
             device->FOAOut.NumChannels = 4;
 
-            if(device->AmbiOrder >= 3)
+            if(device->mAmbiOrder >= 3)
             {
                 w_scale = W_SCALE_3H3P;
                 xyz_scale = XYZ_SCALE_3H3P;
@@ -573,7 +573,7 @@ static void InitPanning(ALCdevice *device)
             };
             nfc_delay = clampf(nfc_delay, 0.001f, 1000.0f);
             InitNearFieldCtrl(device, nfc_delay * SPEEDOFSOUNDMETRESPERSEC,
-                              device->AmbiOrder, chans_per_order);
+                              device->mAmbiOrder, chans_per_order);
         }
     }
     else
@@ -759,7 +759,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsiz
         device->FOAOut.NumChannels = count;
     }
 
-    device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
+    device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
 
     avg_dist = 0.0f;
     for(i = 0;i < conf->NumSpeakers;i++)
@@ -889,7 +889,7 @@ static void InitHrtfPanning(ALCdevice *device)
         device->FOAOut.NumChannels = 0;
     }
 
-    device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
+    device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
 
     BuildBFormatHrtf(device->HrtfHandle,
         device->Hrtf, device->Dry.NumChannels, AmbiPoints, AmbiMatrix, COUNTOF(AmbiPoints),
@@ -918,7 +918,7 @@ static void InitUhjPanning(ALCdevice *device)
     device->FOAOut.CoeffCount = device->Dry.CoeffCount;
     device->FOAOut.NumChannels = 0;
 
-    device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder);
+    device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
 }
 
 void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf_appreq, enum HrtfRequestMode hrtf_userreq)
@@ -1009,7 +1009,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         else
         {
             bformatdec_free(&device->AmbiDecoder);
-            if(device->FmtChans != DevFmtAmbi3D || device->AmbiOrder < 2)
+            if(device->FmtChans != DevFmtAmbi3D || device->mAmbiOrder < 2)
                 ambiup_free(&device->AmbiUp);
             else
             {

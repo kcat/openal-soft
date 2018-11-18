@@ -1306,7 +1306,7 @@ FORCE_ALIGN int ALCwasapiCapture_recordProc(ALCwasapiCapture *self)
                 else
                 {
                     ALuint framesize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType,
-                                                           device->AmbiOrder);
+                                                           device->mAmbiOrder);
                     size_t len1 = minz(data[0].len, numsamples);
                     size_t len2 = minz(data[1].len, numsamples-len1);
 
@@ -1674,7 +1674,7 @@ HRESULT ALCwasapiCapture::resetProxy()
     if(device->Frequency != OutputType.Format.nSamplesPerSec || device->FmtType != srcType)
     {
         mSampleConv = CreateSampleConverter(
-            srcType, device->FmtType, ChannelsFromDevFmt(device->FmtChans, device->AmbiOrder),
+            srcType, device->FmtType, ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder),
             OutputType.Format.nSamplesPerSec, device->Frequency
         );
         if(!mSampleConv)
@@ -1708,7 +1708,7 @@ HRESULT ALCwasapiCapture::resetProxy()
     buffer_len = maxu(device->UpdateSize*device->NumUpdates, buffer_len);
     ll_ringbuffer_free(mRing);
     mRing = ll_ringbuffer_create(buffer_len,
-        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->AmbiOrder),
+        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder),
         false
     );
     if(!mRing)

@@ -2388,154 +2388,101 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 }
 
 
-static void InitDevice(ALCdevice *device, enum DeviceType type)
+ALCdevice_struct::ALCdevice_struct(DeviceType type)
+  : Type{type}
 {
-    ALsizei i;
+    VECTOR_INIT(HrtfList);
 
-    InitRef(&device->ref, 1);
-    ATOMIC_INIT(&device->Connected, ALC_TRUE);
-    device->Type = type;
-    ATOMIC_INIT(&device->LastError, ALC_NO_ERROR);
+    VECTOR_INIT(BufferList);
+    almtx_init(&BufferLock, almtx_plain);
 
-    device->Flags = 0;
-    device->Render_Mode = NormalRender;
-    device->AvgSpeakerDist = 0.0f;
-    device->LimiterState = ALC_DONT_CARE_SOFT;
+    VECTOR_INIT(EffectList);
+    almtx_init(&EffectLock, almtx_plain);
 
-    ATOMIC_INIT(&device->ContextList, static_cast<ALCcontext*>(nullptr));
+    VECTOR_INIT(FilterList);
+    almtx_init(&FilterLock, almtx_plain);
 
-    device->ClockBase = 0;
-    device->SamplesDone = 0;
-    device->FixedLatency = 0;
-
-    device->SourcesMax = 0;
-    device->AuxiliaryEffectSlotMax = 0;
-    device->NumAuxSends = 0;
-
-    device->Dry.Buffer = nullptr;
-    device->Dry.NumChannels = 0;
-    device->FOAOut.Buffer = nullptr;
-    device->FOAOut.NumChannels = 0;
-    device->RealOut.Buffer = nullptr;
-    device->RealOut.NumChannels = 0;
-
-    device->DeviceName = nullptr;
-
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-    {
-        device->ChannelDelay[i].Gain   = 1.0f;
-        device->ChannelDelay[i].Length = 0;
-        device->ChannelDelay[i].Buffer = nullptr;
-    }
-
-    device->HrtfName = nullptr;
-    VECTOR_INIT(device->HrtfList);
-    device->HrtfHandle = nullptr;
-    device->Hrtf = nullptr;
-    device->Bs2b = nullptr;
-    device->Uhj_Encoder = nullptr;
-    device->AmbiDecoder = nullptr;
-    device->AmbiUp = nullptr;
-    device->Stablizer = nullptr;
-    device->Limiter = nullptr;
-
-    VECTOR_INIT(device->BufferList);
-    almtx_init(&device->BufferLock, almtx_plain);
-
-    VECTOR_INIT(device->EffectList);
-    almtx_init(&device->EffectLock, almtx_plain);
-
-    VECTOR_INIT(device->FilterList);
-    almtx_init(&device->FilterLock, almtx_plain);
-
-    almtx_init(&device->BackendLock, almtx_plain);
-    device->Backend = nullptr;
-
-    ATOMIC_INIT(&device->next, static_cast<ALCdevice*>(nullptr));
+    almtx_init(&BackendLock, almtx_plain);
 }
 
-/* FreeDevice
+/* ALCdevice_struct::~ALCdevice_struct
  *
  * Frees the device structure, and destroys any objects the app failed to
  * delete. Called once there's no more references on the device.
  */
-static ALCvoid FreeDevice(ALCdevice *device)
+ALCdevice_struct::~ALCdevice_struct()
 {
-    ALsizei i;
+    TRACE("%p\n", this);
 
-    TRACE("%p\n", device);
+    if(Backend)
+        DELETE_OBJ(Backend);
+    Backend = nullptr;
 
-    if(device->Backend)
-        DELETE_OBJ(device->Backend);
-    device->Backend = nullptr;
+    almtx_destroy(&BackendLock);
 
-    almtx_destroy(&device->BackendLock);
-
-    ReleaseALBuffers(device);
+    ReleaseALBuffers(this);
 #define FREE_BUFFERSUBLIST(x) al_free((x)->Buffers)
-    VECTOR_FOR_EACH(BufferSubList, device->BufferList, FREE_BUFFERSUBLIST);
+    VECTOR_FOR_EACH(BufferSubList, BufferList, FREE_BUFFERSUBLIST);
 #undef FREE_BUFFERSUBLIST
-    VECTOR_DEINIT(device->BufferList);
-    almtx_destroy(&device->BufferLock);
+    VECTOR_DEINIT(BufferList);
+    almtx_destroy(&BufferLock);
 
-    ReleaseALEffects(device);
+    ReleaseALEffects(this);
 #define FREE_EFFECTSUBLIST(x) al_free((x)->Effects)
-    VECTOR_FOR_EACH(EffectSubList, device->EffectList, FREE_EFFECTSUBLIST);
+    VECTOR_FOR_EACH(EffectSubList, EffectList, FREE_EFFECTSUBLIST);
 #undef FREE_EFFECTSUBLIST
-    VECTOR_DEINIT(device->EffectList);
-    almtx_destroy(&device->EffectLock);
+    VECTOR_DEINIT(EffectList);
+    almtx_destroy(&EffectLock);
 
-    ReleaseALFilters(device);
+    ReleaseALFilters(this);
 #define FREE_FILTERSUBLIST(x) al_free((x)->Filters)
-    VECTOR_FOR_EACH(FilterSubList, device->FilterList, FREE_FILTERSUBLIST);
+    VECTOR_FOR_EACH(FilterSubList, FilterList, FREE_FILTERSUBLIST);
 #undef FREE_FILTERSUBLIST
-    VECTOR_DEINIT(device->FilterList);
-    almtx_destroy(&device->FilterLock);
+    VECTOR_DEINIT(FilterList);
+    almtx_destroy(&FilterLock);
 
-    al_free(device->HrtfName);
-    device->HrtfName = nullptr;
-    FreeHrtfList(&device->HrtfList);
-    if(device->HrtfHandle)
-        Hrtf_DecRef(device->HrtfHandle);
-    device->HrtfHandle = nullptr;
-    al_free(device->Hrtf);
-    device->Hrtf = nullptr;
+    al_free(HrtfName);
+    HrtfName = nullptr;
+    FreeHrtfList(&HrtfList);
+    if(HrtfHandle)
+        Hrtf_DecRef(HrtfHandle);
+    HrtfHandle = nullptr;
+    al_free(Hrtf);
+    Hrtf = nullptr;
 
-    al_free(device->Bs2b);
-    device->Bs2b = nullptr;
+    al_free(Bs2b);
+    Bs2b = nullptr;
 
-    al_free(device->Uhj_Encoder);
-    device->Uhj_Encoder = nullptr;
+    al_free(Uhj_Encoder);
+    Uhj_Encoder = nullptr;
 
-    bformatdec_free(&device->AmbiDecoder);
-    ambiup_free(&device->AmbiUp);
+    bformatdec_free(&AmbiDecoder);
+    ambiup_free(&AmbiUp);
 
-    al_free(device->Stablizer);
-    device->Stablizer = nullptr;
+    al_free(Stablizer);
+    Stablizer = nullptr;
 
-    al_free(device->Limiter);
-    device->Limiter = nullptr;
+    al_free(Limiter);
+    Limiter = nullptr;
 
-    al_free(device->ChannelDelay[0].Buffer);
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
+    al_free(ChannelDelay[0].Buffer);
+    for(ALsizei i{0};i < MAX_OUTPUT_CHANNELS;i++)
     {
-        device->ChannelDelay[i].Gain   = 1.0f;
-        device->ChannelDelay[i].Length = 0;
-        device->ChannelDelay[i].Buffer = nullptr;
+        ChannelDelay[i].Gain   = 1.0f;
+        ChannelDelay[i].Length = 0;
+        ChannelDelay[i].Buffer = nullptr;
     }
 
-    al_free(device->DeviceName);
-    device->DeviceName = nullptr;
+    al_free(DeviceName);
+    DeviceName = nullptr;
 
-    al_free(device->Dry.Buffer);
-    device->Dry.Buffer = nullptr;
-    device->Dry.NumChannels = 0;
-    device->FOAOut.Buffer = nullptr;
-    device->FOAOut.NumChannels = 0;
-    device->RealOut.Buffer = nullptr;
-    device->RealOut.NumChannels = 0;
-
-    al_free(device);
+    al_free(Dry.Buffer);
+    Dry.Buffer = nullptr;
+    Dry.NumChannels = 0;
+    FOAOut.Buffer = nullptr;
+    FOAOut.NumChannels = 0;
+    RealOut.Buffer = nullptr;
+    RealOut.NumChannels = 0;
 }
 
 
@@ -2551,7 +2498,7 @@ void ALCdevice_DecRef(ALCdevice *device)
     uint ref;
     ref = DecrementRef(&device->ref);
     TRACEREF("%p decreasing refcount to %u\n", device, ref);
-    if(ref == 0) FreeDevice(device);
+    if(ref == 0) delete device;
 }
 
 /* VerifyDevice
@@ -3954,15 +3901,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     ))
         deviceName = nullptr;
 
-    auto device = static_cast<ALCdevice*>(al_calloc(16, sizeof(ALCdevice)));
-    if(!device)
-    {
-        alcSetError(nullptr, ALC_OUT_OF_MEMORY);
-        return nullptr;
-    }
-
-    //Validate device
-    InitDevice(device, Playback);
+    auto device = new ALCdevice{Playback};
 
     //Set output format
     device->FmtChans = DevFmtChannelsDefault;
@@ -4074,7 +4013,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->Backend = PlaybackBackend.getFactory().createBackend(device, ALCbackend_Playback);
     if(!device->Backend)
     {
-        FreeDevice(device);
+        delete device;
         alcSetError(nullptr, ALC_OUT_OF_MEMORY);
         return nullptr;
     }
@@ -4083,7 +4022,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     ALCenum err{V(device->Backend,open)(deviceName)};
     if(err != ALC_NO_ERROR)
     {
-        FreeDevice(device);
+        delete device;
         alcSetError(nullptr, err);
         return nullptr;
     }
@@ -4193,22 +4132,14 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     if(deviceName && (!deviceName[0] || strcasecmp(deviceName, alcDefaultName) == 0 || strcasecmp(deviceName, "openal-soft") == 0))
         deviceName = nullptr;
 
-    auto device = static_cast<ALCdevice*>(al_calloc(16, sizeof(ALCdevice)));
-    if(!device)
-    {
-        alcSetError(nullptr, ALC_OUT_OF_MEMORY);
-        return nullptr;
-    }
-
-    //Validate device
-    InitDevice(device, Capture);
+    auto device = new ALCdevice{Capture};
 
     device->Frequency = frequency;
     device->Flags |= DEVICE_FREQUENCY_REQUEST;
 
     if(DecomposeDevFormat(format, &device->FmtChans, &device->FmtType) == AL_FALSE)
     {
-        FreeDevice(device);
+        delete device;
         alcSetError(nullptr, ALC_INVALID_ENUM);
         return nullptr;
     }
@@ -4224,7 +4155,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     device->Backend = CaptureBackend.getFactory().createBackend(device, ALCbackend_Capture);
     if(!device->Backend)
     {
-        FreeDevice(device);
+        delete device;
         alcSetError(nullptr, ALC_OUT_OF_MEMORY);
         return nullptr;
     }
@@ -4236,7 +4167,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
     ALCenum err{V(device->Backend,open)(deviceName)};
     if(err != ALC_NO_ERROR)
     {
-        FreeDevice(device);
+        delete device;
         alcSetError(nullptr, err);
         return nullptr;
     }
@@ -4371,15 +4302,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
         return nullptr;
     }
 
-    auto device = static_cast<ALCdevice*>(al_calloc(16, sizeof(ALCdevice)));
-    if(!device)
-    {
-        alcSetError(nullptr, ALC_OUT_OF_MEMORY);
-        return nullptr;
-    }
-
-    //Validate device
-    InitDevice(device, Loopback);
+    auto device = new ALCdevice{Loopback};
 
     device->SourcesMax = 256;
     device->AuxiliaryEffectSlotMax = 64;

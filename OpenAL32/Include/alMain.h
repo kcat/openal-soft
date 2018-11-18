@@ -16,6 +16,9 @@
 #include <intrin.h>
 #endif
 
+#include <vector>
+#include <string>
+
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
@@ -29,14 +32,10 @@
 #include "threads.h"
 
 
-#ifndef __cplusplus
-#define COUNTOF(x) (sizeof(x) / sizeof(0[x]))
-#else
 template<typename T, size_t N>
 constexpr inline size_t countof(const T(&)[N]) noexcept
 { return N; }
 #define COUNTOF countof
-#endif
 
 #if defined(_WIN64)
 #define SZFMT "%I64u"
@@ -103,13 +102,6 @@ constexpr inline size_t countof(const T(&)[N]) noexcept
  */
 #define FAM_SIZE(T, M, N)  (offsetof(T, M) + sizeof(((T*)NULL)->M[0])*(N))
 
-
-#ifdef __cplusplus
-#include <vector>
-#include <string>
-
-extern "C" {
-#endif
 
 typedef ALint64SOFT ALint64;
 typedef ALuint64SOFT ALuint64;
@@ -547,9 +539,9 @@ TYPEDEF_VECTOR(EnumeratedHrtf, vector_EnumeratedHrtf)
 #define MAX_DELAY_LENGTH 1024
 
 typedef struct DistanceComp {
-    ALfloat Gain;
-    ALsizei Length; /* Valid range is [0...MAX_DELAY_LENGTH). */
-    ALfloat *Buffer;
+    ALfloat Gain{1.0f};
+    ALsizei Length{0}; /* Valid range is [0...MAX_DELAY_LENGTH). */
+    ALfloat *Buffer{nullptr};
 } DistanceComp;
 
 /* Size for temporary storage of buffer data, in ALfloats. Larger values need
@@ -560,109 +552,109 @@ typedef struct DistanceComp {
 #define BUFFERSIZE 2048
 
 typedef struct MixParams {
-    AmbiConfig Ambi;
+    AmbiConfig Ambi{};
     /* Number of coefficients in each Ambi.Coeffs to mix together (4 for first-
      * order, 9 for second-order, etc). If the count is 0, Ambi.Map is used
      * instead to map each output to a coefficient index.
      */
-    ALsizei CoeffCount;
+    ALsizei CoeffCount{0};
 
-    ALfloat (*Buffer)[BUFFERSIZE];
-    ALsizei NumChannels;
+    ALfloat (*Buffer)[BUFFERSIZE]{nullptr};
+    ALsizei NumChannels{0};
 } MixParams;
 
 typedef struct RealMixParams {
-    enum Channel ChannelName[MAX_OUTPUT_CHANNELS];
+    enum Channel ChannelName[MAX_OUTPUT_CHANNELS]{};
 
-    ALfloat (*Buffer)[BUFFERSIZE];
-    ALsizei NumChannels;
+    ALfloat (*Buffer)[BUFFERSIZE]{nullptr};
+    ALsizei NumChannels{0};
 } RealMixParams;
 
 typedef void (*POSTPROCESS)(ALCdevice *device, ALsizei SamplesToDo);
 
 struct ALCdevice_struct {
-    RefCount ref;
+    RefCount ref{0u};
 
-    ATOMIC(ALenum) Connected;
-    enum DeviceType Type;
+    ATOMIC(ALenum) Connected{AL_TRUE};
+    DeviceType Type{};
 
-    ALuint Frequency;
-    ALuint UpdateSize;
-    ALuint NumUpdates;
-    enum DevFmtChannels FmtChans;
-    enum DevFmtType     FmtType;
-    ALboolean IsHeadphones;
-    ALsizei AmbiOrder;
+    ALuint Frequency{};
+    ALuint UpdateSize{};
+    ALuint NumUpdates{};
+    DevFmtChannels FmtChans{};
+    DevFmtType     FmtType{};
+    ALboolean IsHeadphones{};
+    ALsizei AmbiOrder{};
     /* For DevFmtAmbi* output only, specifies the channel order and
      * normalization.
      */
-    enum AmbiLayout AmbiLayout;
-    enum AmbiNorm   AmbiScale;
+    AmbiLayout AmbiLayout{};
+    AmbiNorm   AmbiScale{};
 
-    ALCenum LimiterState;
+    ALCenum LimiterState{ALC_DONT_CARE_SOFT};
 
-    char *DeviceName;
+    char *DeviceName{nullptr};
 
-    ATOMIC(ALCenum) LastError;
+    ATOMIC(ALCenum) LastError{ALC_NO_ERROR};
 
     // Maximum number of sources that can be created
-    ALuint SourcesMax;
+    ALuint SourcesMax{};
     // Maximum number of slots that can be created
-    ALuint AuxiliaryEffectSlotMax;
+    ALuint AuxiliaryEffectSlotMax{};
 
-    ALCuint NumMonoSources;
-    ALCuint NumStereoSources;
-    ALsizei NumAuxSends;
+    ALCuint NumMonoSources{};
+    ALCuint NumStereoSources{};
+    ALsizei NumAuxSends{};
 
     // Map of Buffers for this device
-    vector_BufferSubList BufferList;
+    vector_BufferSubList BufferList{};
     almtx_t BufferLock;
 
     // Map of Effects for this device
-    vector_EffectSubList EffectList;
+    vector_EffectSubList EffectList{};
     almtx_t EffectLock;
 
     // Map of Filters for this device
-    vector_FilterSubList FilterList;
+    vector_FilterSubList FilterList{};
     almtx_t FilterLock;
 
-    POSTPROCESS PostProcess;
+    POSTPROCESS PostProcess{};
 
     /* HRTF state and info */
-    struct DirectHrtfState *Hrtf;
-    char *HrtfName;
-    struct Hrtf *HrtfHandle;
-    vector_EnumeratedHrtf HrtfList;
-    ALCenum HrtfStatus;
+    struct DirectHrtfState *Hrtf{nullptr};
+    char *HrtfName{nullptr};
+    struct Hrtf *HrtfHandle{nullptr};
+    vector_EnumeratedHrtf HrtfList{};
+    ALCenum HrtfStatus{ALC_FALSE};
 
     /* UHJ encoder state */
-    struct Uhj2Encoder *Uhj_Encoder;
+    struct Uhj2Encoder *Uhj_Encoder{nullptr};
 
     /* High quality Ambisonic decoder */
-    struct BFormatDec *AmbiDecoder;
+    struct BFormatDec *AmbiDecoder{nullptr};
 
     /* Stereo-to-binaural filter */
-    struct bs2b *Bs2b;
+    struct bs2b *Bs2b{nullptr};
 
     /* First-order ambisonic upsampler for higher-order output */
-    struct AmbiUpsampler *AmbiUp;
+    struct AmbiUpsampler *AmbiUp{nullptr};
 
     /* Rendering mode. */
-    enum RenderMode Render_Mode;
+    RenderMode Render_Mode{NormalRender};
 
     // Device flags
-    ALuint Flags;
+    ALuint Flags{0u};
 
-    ALuint64 ClockBase;
-    ALuint SamplesDone;
-    ALuint FixedLatency;
+    ALuint64 ClockBase{0u};
+    ALuint SamplesDone{0u};
+    ALuint FixedLatency{0u};
 
     /* Temp storage used for mixer processing. */
     alignas(16) ALfloat TempBuffer[4][BUFFERSIZE];
 
     /* The "dry" path corresponds to the main output. */
     MixParams Dry;
-    ALsizei NumChannelsPerOrder[MAX_AMBI_ORDER+1];
+    ALsizei NumChannelsPerOrder[MAX_AMBI_ORDER+1]{};
 
     /* First-order ambisonics output, to be upsampled to the dry buffer if different. */
     MixParams FOAOut;
@@ -672,36 +664,44 @@ struct ALCdevice_struct {
      */
     RealMixParams RealOut;
 
-    struct FrontStablizer *Stablizer;
+    struct FrontStablizer *Stablizer{nullptr};
 
-    struct Compressor *Limiter;
+    struct Compressor *Limiter{nullptr};
 
     /* The average speaker distance as determined by the ambdec configuration
      * (or alternatively, by the NFC-HOA reference delay). Only used for NFC.
      */
-    ALfloat AvgSpeakerDist;
+    ALfloat AvgSpeakerDist{0.0f};
 
     /* Delay buffers used to compensate for speaker distances. */
     DistanceComp ChannelDelay[MAX_OUTPUT_CHANNELS];
 
     /* Dithering control. */
-    ALfloat DitherDepth;
-    ALuint DitherSeed;
+    ALfloat DitherDepth{0.0f};
+    ALuint DitherSeed{0u};
 
     /* Running count of the mixer invocations, in 31.1 fixed point. This
      * actually increments *twice* when mixing, first at the start and then at
      * the end, so the bottom bit indicates if the device is currently mixing
      * and the upper bits indicates how many mixes have been done.
      */
-    RefCount MixCount;
+    RefCount MixCount{0u};
 
     // Contexts created on this device
-    ATOMIC(ALCcontext*) ContextList;
+    ATOMIC(ALCcontext*) ContextList{nullptr};
 
     almtx_t BackendLock;
-    struct ALCbackend *Backend;
+    struct ALCbackend *Backend{nullptr};
 
-    ATOMIC(ALCdevice*) next;
+    ATOMIC(ALCdevice*) next{nullptr};
+
+
+    ALCdevice_struct(DeviceType type);
+    ALCdevice_struct(const ALCdevice_struct&) = delete;
+    ALCdevice_struct& operator=(const ALCdevice_struct&) = delete;
+    ~ALCdevice_struct();
+
+    DEF_NEWDEL(ALCdevice)
 };
 
 // Frequency was requested by the app or config file
@@ -807,10 +807,7 @@ int EventThread(void *arg);
 
 char *alstrdup(const char *str);
 
-#ifdef __cplusplus
-} // extern "C"
 
 std::vector<std::string> SearchDataFiles(const char *match, const char *subdir);
-#endif
 
 #endif

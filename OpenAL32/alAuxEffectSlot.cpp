@@ -198,7 +198,6 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *
             continue;
         context->EffectSlotList[effectslots[i]-1] = nullptr;
 
-        DeinitEffectSlot(slot);
         delete slot;
     }
 
@@ -666,40 +665,18 @@ static void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcon
 
 ALenum InitEffectSlot(ALeffectslot *slot)
 {
-    EffectStateFactory *factory;
-
-    slot->Effect.Type = AL_EFFECT_NULL;
-
-    factory = getFactoryByType(AL_EFFECT_NULL);
+    EffectStateFactory *factory{getFactoryByType(slot->Effect.Type)};
     slot->Effect.State = EffectStateFactory_create(factory);
     if(!slot->Effect.State) return AL_OUT_OF_MEMORY;
 
-    slot->Gain = 1.0;
-    slot->AuxSendAuto = AL_TRUE;
-    ATOMIC_INIT(&slot->PropsClean, AL_TRUE);
-    InitRef(&slot->ref, 0);
-
-    ATOMIC_INIT(&slot->Update, static_cast<ALeffectslotProps*>(nullptr));
-
-    slot->Params.Gain = 1.0f;
-    slot->Params.AuxSendAuto = AL_TRUE;
     ALeffectState_IncRef(slot->Effect.State);
     slot->Params.EffectState = slot->Effect.State;
-    slot->Params.RoomRolloff = 0.0f;
-    slot->Params.DecayTime = 0.0f;
-    slot->Params.DecayLFRatio = 0.0f;
-    slot->Params.DecayHFRatio = 0.0f;
-    slot->Params.DecayHFLimit = AL_FALSE;
-    slot->Params.AirAbsorptionGainHF = 1.0f;
-
     return AL_NO_ERROR;
 }
 
-void DeinitEffectSlot(ALeffectslot *slot)
+ALeffectslot::~ALeffectslot()
 {
-    struct ALeffectslotProps *props;
-
-    props = ATOMIC_LOAD_SEQ(&slot->Update);
+    struct ALeffectslotProps *props{Update.load()};
     if(props)
     {
         if(props->State) ALeffectState_DecRef(props->State);
@@ -707,9 +684,10 @@ void DeinitEffectSlot(ALeffectslot *slot)
         al_free(props);
     }
 
-    ALeffectState_DecRef(slot->Effect.State);
-    if(slot->Params.EffectState)
-        ALeffectState_DecRef(slot->Params.EffectState);
+    if(Effect.State)
+        ALeffectState_DecRef(Effect.State);
+    if(Params.EffectState)
+        ALeffectState_DecRef(Params.EffectState);
 }
 
 void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context)
@@ -781,12 +759,9 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *context)
     size_t leftover = 0;
     for(auto &entry : context->EffectSlotList)
     {
-        ALeffectslot *slot = entry;
-        if(!slot) continue;
+        if(!entry) continue;
+        delete entry;
         entry = nullptr;
-
-        DeinitEffectSlot(slot);
-        delete slot;
 
         ++leftover;
     }

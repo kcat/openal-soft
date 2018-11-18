@@ -101,42 +101,42 @@ struct ALeffectslotProps {
 
 
 struct ALeffectslot {
-    ALfloat   Gain;
-    ALboolean AuxSendAuto;
+    ALfloat   Gain{1.0f};
+    ALboolean AuxSendAuto{AL_TRUE};
 
     struct {
-        ALenum Type;
-        ALeffectProps Props;
+        ALenum Type{AL_EFFECT_NULL};
+        ALeffectProps Props{};
 
-        ALeffectState *State;
+        ALeffectState *State{nullptr};
     } Effect;
 
-    ATOMIC(ALenum) PropsClean;
+    ATOMIC(ALenum) PropsClean{AL_TRUE};
 
-    RefCount ref;
+    RefCount ref{0u};
 
-    ATOMIC(struct ALeffectslotProps*) Update;
+    ATOMIC(struct ALeffectslotProps*) Update{nullptr};
 
     struct {
-        ALfloat   Gain;
-        ALboolean AuxSendAuto;
+        ALfloat   Gain{1.0f};
+        ALboolean AuxSendAuto{AL_TRUE};
 
-        ALenum EffectType;
-        ALeffectProps EffectProps;
-        ALeffectState *EffectState;
+        ALenum EffectType{AL_EFFECT_NULL};
+        ALeffectProps EffectProps{};
+        ALeffectState *EffectState{nullptr};
 
-        ALfloat RoomRolloff; /* Added to the source's room rolloff, not multiplied. */
-        ALfloat DecayTime;
-        ALfloat DecayLFRatio;
-        ALfloat DecayHFRatio;
-        ALboolean DecayHFLimit;
-        ALfloat AirAbsorptionGainHF;
+        ALfloat RoomRolloff{0.0f}; /* Added to the source's room rolloff, not multiplied. */
+        ALfloat DecayTime{0.0f};
+        ALfloat DecayLFRatio{0.0f};
+        ALfloat DecayHFRatio{0.0f};
+        ALboolean DecayHFLimit{AL_FALSE};
+        ALfloat AirAbsorptionGainHF{1.0f};
     } Params;
 
     /* Self ID */
-    ALuint id;
+    ALuint id{};
 
-    ALsizei NumChannels;
+    ALsizei NumChannels{};
     BFChannelConfig ChanMap[MAX_EFFECT_CHANNELS];
     /* Wet buffer configuration is ACN channel order with N3D scaling:
      * * Channel 0 is the unattenuated mono signal.
@@ -150,11 +150,15 @@ struct ALeffectslot {
      */
     alignas(16) ALfloat WetBuffer[MAX_EFFECT_CHANNELS][BUFFERSIZE];
 
+    ALeffectslot() = default;
+    ALeffectslot(const ALeffectslot&) = delete;
+    ALeffectslot& operator=(const ALeffectslot&) = delete;
+    ~ALeffectslot();
+
     DEF_NEWDEL(ALeffectslot)
 };
 
 ALenum InitEffectSlot(ALeffectslot *slot);
-void DeinitEffectSlot(ALeffectslot *slot);
 void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context);
 void UpdateAllEffectSlotProps(ALCcontext *context);
 ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context);

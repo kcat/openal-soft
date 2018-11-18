@@ -2584,31 +2584,8 @@ static ALvoid InitContext(ALCcontext *Context)
     ALlistener &listener = Context->Listener;
     struct ALeffectslotArray *auxslots;
 
-    //Initialise listener
-    listener.Gain = 1.0f;
-    listener.Position[0] = 0.0f;
-    listener.Position[1] = 0.0f;
-    listener.Position[2] = 0.0f;
-    listener.Velocity[0] = 0.0f;
-    listener.Velocity[1] = 0.0f;
-    listener.Velocity[2] = 0.0f;
-    listener.Forward[0] = 0.0f;
-    listener.Forward[1] = 0.0f;
-    listener.Forward[2] = -1.0f;
-    listener.Up[0] = 0.0f;
-    listener.Up[1] = 1.0f;
-    listener.Up[2] = 0.0f;
-    ATOMIC_INIT(&listener.PropsClean, AL_TRUE);
-
-    ATOMIC_INIT(&listener.Update, static_cast<ALlistenerProps*>(nullptr));
-
     //Validate Context
-    InitRef(&Context->UpdateCount, 0);
-    ATOMIC_INIT(&Context->HoldUpdates, AL_FALSE);
-    Context->GainBoost = 1.0f;
     almtx_init(&Context->PropLock, almtx_plain);
-    ATOMIC_INIT(&Context->LastError, AL_NO_ERROR);
-    Context->NumSources = 0;
     almtx_init(&Context->SourceLock, almtx_plain);
     almtx_init(&Context->EffectSlotLock, almtx_plain);
 
@@ -2637,17 +2614,7 @@ static ALvoid InitContext(ALCcontext *Context)
     ATOMIC_INIT(&Context->PropsClean, AL_TRUE);
     ATOMIC_INIT(&Context->DeferUpdates, AL_FALSE);
     alsem_init(&Context->EventSem, 0);
-    Context->AsyncEvents = nullptr;
-    ATOMIC_INIT(&Context->EnabledEvts, 0u);
     almtx_init(&Context->EventCbLock, almtx_plain);
-    Context->EventCb = nullptr;
-    Context->EventParam = nullptr;
-
-    ATOMIC_INIT(&Context->Update, static_cast<ALcontextProps*>(nullptr));
-    ATOMIC_INIT(&Context->FreeContextProps, static_cast<ALcontextProps*>(nullptr));
-    ATOMIC_INIT(&Context->FreeListenerProps, static_cast<ALlistenerProps*>(nullptr));
-    ATOMIC_INIT(&Context->FreeVoiceProps, static_cast<ALvoiceProps*>(nullptr));
-    ATOMIC_INIT(&Context->FreeEffectslotProps, static_cast<ALeffectslotProps*>(nullptr));
 
     Context->ExtensionList = alExtList;
 
@@ -2696,12 +2663,8 @@ ALCcontext_struct::~ALCcontext_struct()
     }
     TRACE("Freed " SZFMT " context property object%s\n", count, (count==1)?"":"s");
 
-    if(DefaultSlot)
-    {
-        DeinitEffectSlot(DefaultSlot);
-        delete DefaultSlot;
-        DefaultSlot = nullptr;
-    }
+    delete DefaultSlot;
+    DefaultSlot = nullptr;
 
     al_free(ActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed));
 

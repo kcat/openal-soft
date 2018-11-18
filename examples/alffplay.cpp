@@ -992,6 +992,18 @@ int AudioState::handler()
              */
             alSourceRewind(mSource);
             alSourcei(mSource, AL_BUFFER, 0);
+            if(alcGetInteger64vSOFT)
+            {
+                /* Also update the device start time with the current device
+                 * clock, so the decoder knows we're running behind.
+                 */
+                int64_t devtime{};
+                alcGetInteger64vSOFT(alcGetContextsDevice(alcGetCurrentContext()),
+                                     ALC_DEVICE_CLOCK_SOFT, 1, &devtime);
+                auto device_time = nanoseconds{devtime};
+
+                mDeviceStartTime = device_time - mCurrentPts;
+            }
             continue;
         }
 

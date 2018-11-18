@@ -8,6 +8,8 @@
 #include "atomic.h"
 #include "vecmat.h"
 
+enum class DistanceModel;
+
 
 struct ALlistenerProps {
     ALfloat Position[3];

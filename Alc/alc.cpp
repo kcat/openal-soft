@@ -1623,7 +1623,7 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
 
         if(!ATOMIC_EXCHANGE(&context->PropsClean, AL_TRUE, almemory_order_acq_rel))
             UpdateContextProps(context);
-        if(!ATOMIC_EXCHANGE(&context->Listener->PropsClean, AL_TRUE, almemory_order_acq_rel))
+        if(!ATOMIC_EXCHANGE(&context->Listener.PropsClean, AL_TRUE, almemory_order_acq_rel))
             UpdateListenerProps(context);
         UpdateAllEffectSlotProps(context);
         UpdateAllSourceProps(context);
@@ -2368,7 +2368,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         ATOMIC_STORE(&context->PropsClean, AL_TRUE, almemory_order_release);
         UpdateContextProps(context);
-        ATOMIC_STORE(&context->Listener->PropsClean, AL_TRUE, almemory_order_release);
+        ATOMIC_STORE(&context->Listener.PropsClean, AL_TRUE, almemory_order_release);
         UpdateListenerProps(context);
         UpdateAllSourceProps(context);
         almtx_unlock(&context->PropLock);
@@ -2585,26 +2585,26 @@ static ALCboolean VerifyDevice(ALCdevice **device)
  */
 static ALvoid InitContext(ALCcontext *Context)
 {
-    ALlistener *listener = Context->Listener;
+    ALlistener &listener = Context->Listener;
     struct ALeffectslotArray *auxslots;
 
     //Initialise listener
-    listener->Gain = 1.0f;
-    listener->Position[0] = 0.0f;
-    listener->Position[1] = 0.0f;
-    listener->Position[2] = 0.0f;
-    listener->Velocity[0] = 0.0f;
-    listener->Velocity[1] = 0.0f;
-    listener->Velocity[2] = 0.0f;
-    listener->Forward[0] = 0.0f;
-    listener->Forward[1] = 0.0f;
-    listener->Forward[2] = -1.0f;
-    listener->Up[0] = 0.0f;
-    listener->Up[1] = 1.0f;
-    listener->Up[2] = 0.0f;
-    ATOMIC_INIT(&listener->PropsClean, AL_TRUE);
+    listener.Gain = 1.0f;
+    listener.Position[0] = 0.0f;
+    listener.Position[1] = 0.0f;
+    listener.Position[2] = 0.0f;
+    listener.Velocity[0] = 0.0f;
+    listener.Velocity[1] = 0.0f;
+    listener.Velocity[2] = 0.0f;
+    listener.Forward[0] = 0.0f;
+    listener.Forward[1] = 0.0f;
+    listener.Forward[2] = -1.0f;
+    listener.Up[0] = 0.0f;
+    listener.Up[1] = 1.0f;
+    listener.Up[2] = 0.0f;
+    ATOMIC_INIT(&listener.PropsClean, AL_TRUE);
 
-    ATOMIC_INIT(&listener->Update, static_cast<ALlistenerProps*>(nullptr));
+    ATOMIC_INIT(&listener.Update, static_cast<ALlistenerProps*>(nullptr));
 
     //Validate Context
     InitRef(&Context->UpdateCount, 0);
@@ -2658,16 +2658,16 @@ static ALvoid InitContext(ALCcontext *Context)
     Context->ExtensionList = alExtList;
 
 
-    listener->Params.Matrix = aluMatrixf::Identity;
-    aluVectorSet(&listener->Params.Velocity, 0.0f, 0.0f, 0.0f, 0.0f);
-    listener->Params.Gain = listener->Gain;
-    listener->Params.MetersPerUnit = Context->MetersPerUnit;
-    listener->Params.DopplerFactor = Context->DopplerFactor;
-    listener->Params.SpeedOfSound = Context->SpeedOfSound * Context->DopplerVelocity;
-    listener->Params.ReverbSpeedOfSound = listener->Params.SpeedOfSound *
-                                          listener->Params.MetersPerUnit;
-    listener->Params.SourceDistanceModel = Context->SourceDistanceModel;
-    listener->Params.DistanceModel = Context->DistanceModel;
+    listener.Params.Matrix = aluMatrixf::Identity;
+    aluVectorSet(&listener.Params.Velocity, 0.0f, 0.0f, 0.0f, 0.0f);
+    listener.Params.Gain = listener.Gain;
+    listener.Params.MetersPerUnit = Context->MetersPerUnit;
+    listener.Params.DopplerFactor = Context->DopplerFactor;
+    listener.Params.SpeedOfSound = Context->SpeedOfSound * Context->DopplerVelocity;
+    listener.Params.ReverbSpeedOfSound = listener.Params.SpeedOfSound *
+                                         listener.Params.MetersPerUnit;
+    listener.Params.SourceDistanceModel = Context->SourceDistanceModel;
+    listener.Params.DistanceModel = Context->DistanceModel;
 
 
     Context->AsyncEvents = ll_ringbuffer_create(63, sizeof(AsyncEvent), false);
@@ -2683,7 +2683,7 @@ static ALvoid InitContext(ALCcontext *Context)
  */
 static void FreeContext(ALCcontext *context)
 {
-    ALlistener *listener = context->Listener;
+    ALlistener &listener = context->Listener;
     struct ALeffectslotProps *eprops;
     struct ALlistenerProps *lprops;
     struct ALcontextProps *cprops;
@@ -2764,7 +2764,7 @@ static void FreeContext(ALCcontext *context)
     context->VoiceCount = 0;
     context->MaxVoices = 0;
 
-    if((lprops=ATOMIC_LOAD(&listener->Update, almemory_order_acquire)) != nullptr)
+    if((lprops=ATOMIC_LOAD(&listener.Update, almemory_order_acquire)) != nullptr)
     {
         TRACE("Freed unapplied listener update %p\n", lprops);
         al_free(lprops);
@@ -3806,7 +3806,6 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     }
 
     InitRef(&ALContext->ref, 1);
-    ALContext->Listener = (ALlistener*)ALContext->_listener_mem;
     ALContext->DefaultSlot = nullptr;
 
     ALContext->Voices = nullptr;
@@ -3835,9 +3834,10 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
     }
     AllocateVoices(ALContext, 256, device->NumAuxSends);
 
-    if(DefaultEffect.type != AL_EFFECT_NULL && device->Type == Playback)
+    // FIXME: Reenable after the default effect slot is handled again
+    if(0 && DefaultEffect.type != AL_EFFECT_NULL && device->Type == Playback)
     {
-        ALContext->DefaultSlot = (ALeffectslot*)(ALContext->_listener_mem + sizeof(ALlistener));
+        ALContext->DefaultSlot = nullptr;
         if(InitEffectSlot(ALContext->DefaultSlot) == AL_NO_ERROR)
             aluInitEffectPanning(ALContext->DefaultSlot);
         else

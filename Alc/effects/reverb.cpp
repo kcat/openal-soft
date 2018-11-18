@@ -951,7 +951,7 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
 static void ReverbState_update(ReverbState *State, const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props)
 {
     const ALCdevice *Device = Context->Device;
-    const ALlistener *Listener = Context->Listener;
+    const ALlistener &Listener = Context->Listener;
     ALuint frequency = Device->Frequency;
     ALfloat lf0norm, hf0norm, hfRatio;
     ALfloat lfDecayTime, hfDecayTime;
@@ -994,7 +994,7 @@ static void ReverbState_update(ReverbState *State, const ALCcontext *Context, co
     hfRatio = props->Reverb.DecayHFRatio;
     if(props->Reverb.DecayHFLimit && props->Reverb.AirAbsorptionGainHF < 1.0f)
         hfRatio = CalcLimitedHfRatio(hfRatio, props->Reverb.AirAbsorptionGainHF,
-            props->Reverb.DecayTime, Listener->Params.ReverbSpeedOfSound
+            props->Reverb.DecayTime, Listener.Params.ReverbSpeedOfSound
         );
 
     /* Calculate the LF/HF decay times. */

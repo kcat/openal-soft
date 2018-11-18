@@ -10,8 +10,9 @@
 #include "vector.h"
 #include "threads.h"
 
+#include "alListener.h"
 
-struct ALlistener;
+
 struct ALsource;
 struct ALeffectslot;
 struct ALcontextProps;
@@ -48,8 +49,6 @@ TYPEDEF_VECTOR(ALeffectslotPtr, vector_ALeffectslotPtr)
 
 struct ALCcontext_struct {
     RefCount ref;
-
-    ALlistener *Listener;
 
     vector_SourceSubList SourceList;
     ALuint NumSources;
@@ -113,8 +112,7 @@ struct ALCcontext_struct {
 
     ATOMIC(ALCcontext*) next;
 
-    /* Memory space used by the listener (and possibly default effect slot) */
-    alignas(16) ALCbyte _listener_mem[];
+    ALlistener Listener;
 };
 
 ALCcontext *GetContextRef(void);

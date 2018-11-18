@@ -43,7 +43,7 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
     context = GetContextRef();
     if(!context) return;
 
-    listener = context->Listener;
+    listener = &context->Listener;
     almtx_lock(&context->PropLock);
     switch(param)
     {
@@ -82,7 +82,7 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
     context = GetContextRef();
     if(!context) return;
 
-    listener = context->Listener;
+    listener = &context->Listener;
     almtx_lock(&context->PropLock);
     switch(param)
     {
@@ -138,7 +138,7 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
     context = GetContextRef();
     if(!context) return;
 
-    listener = context->Listener;
+    listener = &context->Listener;
     almtx_lock(&context->PropLock);
     if(!values) SETERR_GOTO(context, AL_INVALID_VALUE, done, "NULL pointer");
     switch(param)
@@ -269,7 +269,7 @@ AL_API ALvoid AL_APIENTRY alGetListenerf(ALenum param, ALfloat *value)
     else switch(param)
     {
     case AL_GAIN:
-        *value = context->Listener->Gain;
+        *value = context->Listener.Gain;
         break;
 
     case AL_METERS_PER_UNIT:
@@ -298,15 +298,15 @@ AL_API ALvoid AL_APIENTRY alGetListener3f(ALenum param, ALfloat *value1, ALfloat
     else switch(param)
     {
     case AL_POSITION:
-        *value1 = context->Listener->Position[0];
-        *value2 = context->Listener->Position[1];
-        *value3 = context->Listener->Position[2];
+        *value1 = context->Listener.Position[0];
+        *value2 = context->Listener.Position[1];
+        *value3 = context->Listener.Position[2];
         break;
 
     case AL_VELOCITY:
-        *value1 = context->Listener->Velocity[0];
-        *value2 = context->Listener->Velocity[1];
-        *value3 = context->Listener->Velocity[2];
+        *value1 = context->Listener.Velocity[0];
+        *value2 = context->Listener.Velocity[1];
+        *value3 = context->Listener.Velocity[2];
         break;
 
     default:
@@ -345,12 +345,12 @@ AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum param, ALfloat *values)
     {
     case AL_ORIENTATION:
         // AT then UP
-        values[0] = context->Listener->Forward[0];
-        values[1] = context->Listener->Forward[1];
-        values[2] = context->Listener->Forward[2];
-        values[3] = context->Listener->Up[0];
-        values[4] = context->Listener->Up[1];
-        values[5] = context->Listener->Up[2];
+        values[0] = context->Listener.Forward[0];
+        values[1] = context->Listener.Forward[1];
+        values[2] = context->Listener.Forward[2];
+        values[3] = context->Listener.Up[0];
+        values[4] = context->Listener.Up[1];
+        values[5] = context->Listener.Up[2];
         break;
 
     default:
@@ -396,15 +396,15 @@ AL_API void AL_APIENTRY alGetListener3i(ALenum param, ALint *value1, ALint *valu
     else switch(param)
     {
     case AL_POSITION:
-        *value1 = (ALint)context->Listener->Position[0];
-        *value2 = (ALint)context->Listener->Position[1];
-        *value3 = (ALint)context->Listener->Position[2];
+        *value1 = (ALint)context->Listener.Position[0];
+        *value2 = (ALint)context->Listener.Position[1];
+        *value3 = (ALint)context->Listener.Position[2];
         break;
 
     case AL_VELOCITY:
-        *value1 = (ALint)context->Listener->Velocity[0];
-        *value2 = (ALint)context->Listener->Velocity[1];
-        *value3 = (ALint)context->Listener->Velocity[2];
+        *value1 = (ALint)context->Listener.Velocity[0];
+        *value2 = (ALint)context->Listener.Velocity[1];
+        *value3 = (ALint)context->Listener.Velocity[2];
         break;
 
     default:
@@ -438,12 +438,12 @@ AL_API void AL_APIENTRY alGetListeneriv(ALenum param, ALint* values)
     {
     case AL_ORIENTATION:
         // AT then UP
-        values[0] = (ALint)context->Listener->Forward[0];
-        values[1] = (ALint)context->Listener->Forward[1];
-        values[2] = (ALint)context->Listener->Forward[2];
-        values[3] = (ALint)context->Listener->Up[0];
-        values[4] = (ALint)context->Listener->Up[1];
-        values[5] = (ALint)context->Listener->Up[2];
+        values[0] = (ALint)context->Listener.Forward[0];
+        values[1] = (ALint)context->Listener.Forward[1];
+        values[2] = (ALint)context->Listener.Forward[2];
+        values[3] = (ALint)context->Listener.Up[0];
+        values[4] = (ALint)context->Listener.Up[1];
+        values[5] = (ALint)context->Listener.Up[2];
         break;
 
     default:
@@ -457,7 +457,7 @@ AL_API void AL_APIENTRY alGetListeneriv(ALenum param, ALint* values)
 
 void UpdateListenerProps(ALCcontext *context)
 {
-    ALlistener *listener = context->Listener;
+    ALlistener *listener{&context->Listener};
     struct ALlistenerProps *props;
 
     /* Get an unused proprty container, or allocate a new one as needed. */

@@ -18,13 +18,15 @@
  * Or go to http://www.gnu.org/copyleft/lgpl.html
  */
 
+#include "config.h"
+
 #include <stdlib.h>
 
-#include "config.h"
-#include "alError.h"
 #include "alMain.h"
-#include "alAuxEffectSlot.h"
+#include "alcontext.h"
 #include "alu.h"
+#include "alAuxEffectSlot.h"
+#include "alError.h"
 
 
 #define AMP_ENVELOPE_MIN  0.5f

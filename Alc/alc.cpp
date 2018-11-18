@@ -37,6 +37,7 @@
 #include <algorithm>
 
 #include "alMain.h"
+#include "alcontext.h"
 #include "alSource.h"
 #include "alListener.h"
 #include "alSource.h"
@@ -2633,7 +2634,7 @@ static ALvoid InitContext(ALCcontext *Context)
     ATOMIC_INIT(&Context->ActiveAuxSlots, auxslots);
 
     //Set globals
-    Context->DistanceModel = DefaultDistanceModel;
+    Context->DistanceModel = DistanceModel::Default;
     Context->SourceDistanceModel = AL_FALSE;
     Context->DopplerFactor = 1.0f;
     Context->DopplerVelocity = 1.0f;

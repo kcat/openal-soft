@@ -34,6 +34,7 @@
 #include <algorithm>
 
 #include "alMain.h"
+#include "alcontext.h"
 #include "alu.h"
 #include "alError.h"
 #include "alBuffer.h"

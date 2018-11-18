@@ -19,6 +19,8 @@
 #include "filters/nfc.h"
 
 
+enum class DistanceModel;
+
 #define MAX_PITCH  (255)
 
 /* Maximum number of samples to pad on either end of a buffer for resampling.
@@ -516,8 +518,6 @@ ALboolean MixSource(struct ALvoice *voice, ALuint SourceID, ALCcontext *Context,
 void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples);
 /* Caller must lock the device, and the mixer must not be running. */
 void aluHandleDisconnect(ALCdevice *device, const char *msg, ...) DECL_FORMAT(printf, 2, 3);
-
-void UpdateContextProps(ALCcontext *context);
 
 extern MixerFunc MixSamples;
 extern RowMixerFunc MixRowSamples;

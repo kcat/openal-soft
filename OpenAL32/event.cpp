@@ -6,7 +6,9 @@
 #include "AL/alc.h"
 #include "AL/al.h"
 #include "AL/alext.h"
+
 #include "alMain.h"
+#include "alcontext.h"
 #include "alError.h"
 #include "alAuxEffectSlot.h"
 #include "ringbuffer.h"

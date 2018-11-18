@@ -24,16 +24,12 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "alError.h"
-#include "alMain.h"
-#include "alFilter.h"
-#include "alEffect.h"
-#include "alAuxEffectSlot.h"
-#include "alSource.h"
-#include "alBuffer.h"
 #include "AL/al.h"
 #include "AL/alc.h"
 
+#include "alMain.h"
+#include "alcontext.h"
+#include "alError.h"
 
 AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
 {

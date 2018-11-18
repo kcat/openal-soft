@@ -23,6 +23,7 @@
 #include <stdlib.h>
 
 #include "alMain.h"
+#include "alcontext.h"
 #include "alu.h"
 #include "alFilter.h"
 #include "alError.h"

@@ -21,6 +21,7 @@
 #include "config.h"
 
 #include "alMain.h"
+#include "alcontext.h"
 #include "alu.h"
 #include "alError.h"
 #include "alListener.h"

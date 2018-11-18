@@ -24,6 +24,7 @@
 #include <stdlib.h>
 
 #include "alMain.h"
+#include "alcontext.h"
 #include "alAuxEffectSlot.h"
 #include "alError.h"
 #include "alu.h"

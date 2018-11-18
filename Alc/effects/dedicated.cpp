@@ -23,10 +23,10 @@
 #include <stdlib.h>
 
 #include "alMain.h"
+#include "alcontext.h"
 #include "alAuxEffectSlot.h"
 #include "alError.h"
 #include "alu.h"
-#include "filters/defs.h"
 
 
 struct ALdedicatedState final : public ALeffectState {

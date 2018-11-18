@@ -8,17 +8,6 @@
 extern "C" {
 #endif
 
-struct ALcontextProps {
-    ALfloat DopplerFactor;
-    ALfloat DopplerVelocity;
-    ALfloat SpeedOfSound;
-    ALboolean SourceDistanceModel;
-    enum DistanceModel DistanceModel;
-    ALfloat MetersPerUnit;
-
-    ATOMIC(struct ALcontextProps*) next;
-};
-
 struct ALlistenerProps {
     ALfloat Position[3];
     ALfloat Velocity[3];

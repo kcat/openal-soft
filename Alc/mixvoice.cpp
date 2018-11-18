@@ -26,9 +26,11 @@
 #include <ctype.h>
 #include <assert.h>
 
-#include "alMain.h"
 #include "AL/al.h"
 #include "AL/alc.h"
+
+#include "alMain.h"
+#include "alcontext.h"
 #include "alSource.h"
 #include "alBuffer.h"
 #include "alListener.h"

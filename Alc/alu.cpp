@@ -27,6 +27,7 @@
 #include <assert.h>
 
 #include "alMain.h"
+#include "alcontext.h"
 #include "alSource.h"
 #include "alBuffer.h"
 #include "alListener.h"
@@ -1218,12 +1219,12 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
     switch(Listener->Params.SourceDistanceModel ?
            props->DistanceModel : Listener->Params.DistanceModel)
     {
-        case InverseDistanceClamped:
+        case DistanceModel::InverseClamped:
             ClampedDist = clampf(ClampedDist, props->RefDistance, props->MaxDistance);
             if(props->MaxDistance < props->RefDistance)
                 break;
             /*fall-through*/
-        case InverseDistance:
+        case DistanceModel::Inverse:
             if(!(props->RefDistance > 0.0f))
                 ClampedDist = props->RefDistance;
             else
@@ -1238,12 +1239,12 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
             }
             break;
 
-        case LinearDistanceClamped:
+        case DistanceModel::LinearClamped:
             ClampedDist = clampf(ClampedDist, props->RefDistance, props->MaxDistance);
             if(props->MaxDistance < props->RefDistance)
                 break;
             /*fall-through*/
-        case LinearDistance:
+        case DistanceModel::Linear:
             if(!(props->MaxDistance != props->RefDistance))
                 ClampedDist = props->RefDistance;
             else
@@ -1260,12 +1261,12 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
             }
             break;
 
-        case ExponentDistanceClamped:
+        case DistanceModel::ExponentClamped:
             ClampedDist = clampf(ClampedDist, props->RefDistance, props->MaxDistance);
             if(props->MaxDistance < props->RefDistance)
                 break;
             /*fall-through*/
-        case ExponentDistance:
+        case DistanceModel::Exponent:
             if(!(ClampedDist > 0.0f && props->RefDistance > 0.0f))
                 ClampedDist = props->RefDistance;
             else
@@ -1276,7 +1277,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
             }
             break;
 
-        case DisableDistance:
+        case DistanceModel::Disable:
             ClampedDist = props->RefDistance;
             break;
     }

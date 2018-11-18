@@ -29,7 +29,7 @@
 #endif
 
 #include "alMain.h"
-#include "AL/alc.h"
+#include "alcontext.h"
 #include "alError.h"
 
 ALboolean TrapALError = AL_FALSE;

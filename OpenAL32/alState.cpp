@@ -23,14 +23,11 @@
 #include "version.h"
 
 #include <stdlib.h>
+
 #include "alMain.h"
-#include "AL/alc.h"
-#include "AL/al.h"
-#include "AL/alext.h"
+#include "alcontext.h"
+#include "alu.h"
 #include "alError.h"
-#include "alListener.h"
-#include "alSource.h"
-#include "alAuxEffectSlot.h"
 
 #include "backends/base.h"
 
@@ -152,7 +149,7 @@ AL_API ALboolean AL_APIENTRY alGetBoolean(ALenum pname)
         break;
 
     case AL_DISTANCE_MODEL:
-        if(context->DistanceModel == AL_INVERSE_DISTANCE_CLAMPED)
+        if(context->DistanceModel == DistanceModel::Default)
             value = AL_TRUE;
         break;
 

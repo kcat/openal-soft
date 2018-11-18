@@ -25,6 +25,7 @@
 #include <math.h>
 
 #include "alMain.h"
+#include "alcontext.h"
 #include "alu.h"
 #include "alAuxEffectSlot.h"
 #include "alListener.h"

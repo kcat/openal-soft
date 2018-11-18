@@ -204,7 +204,6 @@ static const union {
 #endif
 
 
-struct ll_ringbuffer;
 struct Hrtf;
 struct HrtfEntry;
 struct DirectHrtfState;
@@ -214,11 +213,6 @@ struct ALCbackend;
 struct ALbuffer;
 struct ALeffect;
 struct ALfilter;
-struct ALsource;
-struct ALcontextProps;
-struct ALlistenerProps;
-struct ALvoiceProps;
-struct ALeffectslotProps;
 
 
 #define DEFAULT_OUTPUT_RATE  (44100)
@@ -380,18 +374,6 @@ enum DevProbe {
 };
 
 
-enum DistanceModel {
-    InverseDistanceClamped  = AL_INVERSE_DISTANCE_CLAMPED,
-    LinearDistanceClamped   = AL_LINEAR_DISTANCE_CLAMPED,
-    ExponentDistanceClamped = AL_EXPONENT_DISTANCE_CLAMPED,
-    InverseDistance  = AL_INVERSE_DISTANCE,
-    LinearDistance   = AL_LINEAR_DISTANCE,
-    ExponentDistance = AL_EXPONENT_DISTANCE,
-    DisableDistance  = AL_NONE,
-
-    DefaultDistanceModel = InverseDistanceClamped
-};
-
 enum Channel {
     FrontLeft = 0,
     FrontRight,
@@ -551,18 +533,6 @@ typedef struct FilterSubList {
     struct ALfilter *Filters; /* 64 */
 } FilterSubList;
 TYPEDEF_VECTOR(FilterSubList, vector_FilterSubList)
-
-typedef struct SourceSubList {
-    ALuint64 FreeMask;
-    struct ALsource *Sources; /* 64 */
-} SourceSubList;
-TYPEDEF_VECTOR(SourceSubList, vector_SourceSubList)
-
-/* Effect slots are rather large, and apps aren't likely to have more than one
- * or two (let alone 64), so hold them individually.
- */
-typedef struct ALeffectslot *ALeffectslotPtr;
-TYPEDEF_VECTOR(ALeffectslotPtr, vector_ALeffectslotPtr)
 
 
 typedef struct EnumeratedHrtf {
@@ -790,83 +760,6 @@ typedef struct AsyncEvent {
 } AsyncEvent;
 #define ASYNC_EVENT(t) { t, { 0 } }
 
-struct ALCcontext_struct {
-    RefCount ref;
-
-    struct ALlistener *Listener;
-
-    vector_SourceSubList SourceList;
-    ALuint NumSources;
-    almtx_t SourceLock;
-
-    vector_ALeffectslotPtr EffectSlotList;
-    almtx_t EffectSlotLock;
-
-    ATOMIC(ALenum) LastError;
-
-    enum DistanceModel DistanceModel;
-    ALboolean SourceDistanceModel;
-
-    ALfloat DopplerFactor;
-    ALfloat DopplerVelocity;
-    ALfloat SpeedOfSound;
-    ALfloat MetersPerUnit;
-
-    ATOMIC(ALenum) PropsClean;
-    ATOMIC(ALenum) DeferUpdates;
-
-    almtx_t PropLock;
-
-    /* Counter for the pre-mixing updates, in 31.1 fixed point (lowest bit
-     * indicates if updates are currently happening).
-     */
-    RefCount UpdateCount;
-    ATOMIC(ALenum) HoldUpdates;
-
-    ALfloat GainBoost;
-
-    ATOMIC(struct ALcontextProps*) Update;
-
-    /* Linked lists of unused property containers, free to use for future
-     * updates.
-     */
-    ATOMIC(struct ALcontextProps*) FreeContextProps;
-    ATOMIC(struct ALlistenerProps*) FreeListenerProps;
-    ATOMIC(struct ALvoiceProps*) FreeVoiceProps;
-    ATOMIC(struct ALeffectslotProps*) FreeEffectslotProps;
-
-    struct ALvoice **Voices;
-    ALsizei VoiceCount;
-    ALsizei MaxVoices;
-
-    ATOMIC(struct ALeffectslotArray*) ActiveAuxSlots;
-
-    althrd_t EventThread;
-    alsem_t EventSem;
-    struct ll_ringbuffer *AsyncEvents;
-    ATOMIC(ALbitfieldSOFT) EnabledEvts;
-    almtx_t EventCbLock;
-    ALEVENTPROCSOFT EventCb;
-    void *EventParam;
-
-    /* Default effect slot */
-    struct ALeffectslot *DefaultSlot;
-
-    ALCdevice  *Device;
-    const ALCchar *ExtensionList;
-
-    ATOMIC(ALCcontext*) next;
-
-    /* Memory space used by the listener (and possibly default effect slot) */
-    alignas(16) ALCbyte _listener_mem[];
-};
-
-ALCcontext *GetContextRef(void);
-
-void ALCcontext_DecRef(ALCcontext *context);
-
-void ALCcontext_DeferUpdates(ALCcontext *context);
-void ALCcontext_ProcessUpdates(ALCcontext *context);
 
 void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends);
 
@@ -909,11 +802,6 @@ inline void UnlockEffectList(ALCdevice *device) { almtx_unlock(&device->EffectLo
 inline void LockFilterList(ALCdevice *device) { almtx_lock(&device->FilterLock); }
 inline void UnlockFilterList(ALCdevice *device) { almtx_unlock(&device->FilterLock); }
 
-inline void LockEffectSlotList(ALCcontext *context)
-{ almtx_lock(&context->EffectSlotLock); }
-inline void UnlockEffectSlotList(ALCcontext *context)
-{ almtx_unlock(&context->EffectSlotLock); }
-
 
 int EventThread(void *arg);
 
@@ -923,40 +811,6 @@ char *alstrdup(const char *str);
 } // extern "C"
 
 std::vector<std::string> SearchDataFiles(const char *match, const char *subdir);
-
-/* Simple RAII context reference. Takes the reference of the provided
- * ALCcontext, and decrements it when leaving scope. Movable (transfer
- * reference) but not copyable (no new references).
- */
-class ContextRef {
-    ALCcontext *mCtx{nullptr};
-
-    void release() noexcept
-    {
-        if(mCtx)
-            ALCcontext_DecRef(mCtx);
-        mCtx = nullptr;
-    }
-
-public:
-    ContextRef() noexcept = default;
-    explicit ContextRef(ALCcontext *ctx) noexcept : mCtx(ctx) { }
-    ~ContextRef() { release(); }
-
-    ContextRef& operator=(const ContextRef&) = delete;
-    ContextRef& operator=(ContextRef&& rhs) noexcept
-    {
-        release();
-        mCtx = rhs.mCtx;
-        rhs.mCtx = nullptr;
-        return *this;
-    }
-
-    operator bool() const noexcept { return mCtx != nullptr; }
-
-    ALCcontext* operator->() noexcept { return mCtx; }
-    ALCcontext* get() noexcept { return mCtx; }
-};
 #endif
 
 #endif

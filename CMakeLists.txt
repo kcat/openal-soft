@@ -741,6 +741,7 @@ SET(ALC_OBJS
     Alc/alu.cpp
     Alc/alconfig.cpp
     Alc/alconfig.h
+    Alc/alcontext.h
     Alc/bs2b.cpp
     Alc/converter.cpp
     Alc/converter.h

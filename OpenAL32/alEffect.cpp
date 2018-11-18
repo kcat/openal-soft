@@ -26,7 +26,9 @@
 
 #include "AL/al.h"
 #include "AL/alc.h"
+
 #include "alMain.h"
+#include "alcontext.h"
 #include "alEffect.h"
 #include "alError.h"
 

@@ -27,7 +27,9 @@
 
 #include "AL/al.h"
 #include "AL/alc.h"
+
 #include "alMain.h"
+#include "alcontext.h"
 #include "alError.h"
 #include "alSource.h"
 #include "alBuffer.h"
@@ -1465,7 +1467,7 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
             return AL_TRUE;
 
         case AL_DISTANCE_MODEL:
-            *values = Source->DistanceModel;
+            *values = static_cast<int>(Source->DistanceModel);
             return AL_TRUE;
 
         case AL_SOURCE_RESAMPLER_SOFT:
@@ -3079,7 +3081,7 @@ static void InitSourceParams(ALsource *Source, ALsizei num_sends)
     Source->DopplerFactor = 1.0f;
     Source->HeadRelative = AL_FALSE;
     Source->Looping = AL_FALSE;
-    Source->DistanceModel = DefaultDistanceModel;
+    Source->DistanceModel = DistanceModel::Default;
     Source->Resampler = ResamplerDefault;
     Source->DirectChannels = AL_FALSE;
     Source->Spatialize = SpatializeAuto;

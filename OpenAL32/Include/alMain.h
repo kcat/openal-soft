@@ -952,7 +952,7 @@ public:
         return *this;
     }
 
-    operator bool() const noexcept { return mCtx; }
+    operator bool() const noexcept { return mCtx != nullptr; }
 
     ALCcontext* operator->() noexcept { return mCtx; }
     ALCcontext* get() noexcept { return mCtx; }

@@ -2791,9 +2791,7 @@ static void FreeContext(ALCcontext *context)
     ALCdevice_DecRef(context->Device);
     context->Device = nullptr;
 
-    //Invalidate context
-    memset(context, 0, sizeof(ALCcontext));
-    al_free(context);
+    delete context;
 }
 
 /* ReleaseContext
@@ -3791,19 +3789,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
     ATOMIC_STORE_SEQ(&device->LastError, ALC_NO_ERROR);
 
-    if(device->Type == Playback && DefaultEffect.type != AL_EFFECT_NULL)
-        ALContext = static_cast<ALCcontext*>(al_calloc(16,
-            sizeof(ALCcontext)+sizeof(ALlistener)+sizeof(ALeffectslot)));
-    else
-        ALContext = static_cast<ALCcontext*>(al_calloc(16, sizeof(ALCcontext)+sizeof(ALlistener)));
-    if(!ALContext)
-    {
-        almtx_unlock(&device->BackendLock);
-
-        alcSetError(device, ALC_OUT_OF_MEMORY);
-        ALCdevice_DecRef(device);
-        return nullptr;
-    }
+    ALContext = new ALCcontext{};
 
     InitRef(&ALContext->ref, 1);
     ALContext->DefaultSlot = nullptr;

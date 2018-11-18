@@ -55,7 +55,7 @@ void *al_calloc(size_t alignment, size_t size)
     return ret;
 }
 
-void al_free(void *ptr)
+void al_free(void *ptr) noexcept
 {
 #if defined(HAVE_ALIGNED_ALLOC) || defined(HAVE_POSIX_MEMALIGN)
     free(ptr);
@@ -73,7 +73,7 @@ void al_free(void *ptr)
 #endif
 }
 
-size_t al_get_page_size(void)
+size_t al_get_page_size(void) noexcept
 {
     static size_t psize = 0;
     if(UNLIKELY(!psize))
@@ -100,7 +100,7 @@ size_t al_get_page_size(void)
     return psize;
 }
 
-int al_is_sane_alignment_allocator(void)
+int al_is_sane_alignment_allocator(void) noexcept
 {
 #if defined(HAVE_ALIGNED_ALLOC) || defined(HAVE_POSIX_MEMALIGN) || defined(HAVE__ALIGNED_MALLOC)
     return 1;

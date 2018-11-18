@@ -164,8 +164,7 @@ struct BFormatDec {
     ALsizei NumChannels;
     ALboolean DualBand;
 
-    void *operator new(size_t size) { return al_malloc(alignof(BFormatDec), size); }
-    void operator delete(void *block) { al_free(block); }
+    DEF_NEWDEL(BFormatDec)
 };
 
 BFormatDec *bformatdec_alloc()
@@ -437,8 +436,7 @@ struct AmbiUpsampler {
 
     ALfloat Gains[4][MAX_OUTPUT_CHANNELS][NUM_BANDS];
 
-    void *operator new(size_t size) { return al_malloc(alignof(AmbiUpsampler), size); }
-    void operator delete(void *block) { al_free(block); }
+    DEF_NEWDEL(AmbiUpsampler)
 };
 
 AmbiUpsampler *ambiup_alloc()

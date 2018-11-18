@@ -9,6 +9,7 @@
 #include "atomic.h"
 #include "vector.h"
 #include "threads.h"
+#include "almalloc.h"
 
 #include "alListener.h"
 
@@ -113,6 +114,8 @@ struct ALCcontext_struct {
     ATOMIC(ALCcontext*) next;
 
     ALlistener Listener;
+
+    DEF_NEWDEL(ALCcontext)
 };
 
 ALCcontext *GetContextRef(void);

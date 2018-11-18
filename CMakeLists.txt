@@ -747,7 +747,6 @@ SET(COMMON_OBJS
     common/align.h
     common/almalloc.c
     common/almalloc.h
-    common/atomic.c
     common/atomic.h
     common/bool.h
     common/math_defs.h

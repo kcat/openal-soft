@@ -573,7 +573,7 @@ typedef struct RealMixParams {
 typedef void (*POSTPROCESS)(ALCdevice *device, ALsizei SamplesToDo);
 
 struct ALCdevice_struct {
-    RefCount ref{0u};
+    RefCount ref{1u};
 
     ATOMIC(ALenum) Connected{AL_TRUE};
     DeviceType Type{};

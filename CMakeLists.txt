@@ -745,7 +745,7 @@ SET(COMMON_OBJS
     common/alcomplex.cpp
     common/alcomplex.h
     common/align.h
-    common/almalloc.c
+    common/almalloc.cpp
     common/almalloc.h
     common/atomic.h
     common/bool.h

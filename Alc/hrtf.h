@@ -66,7 +66,6 @@ struct AngularPoint {
 void FreeHrtfs(void);
 
 al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname);
-void FreeHrtfList(al::vector<EnumeratedHrtf> &list);
 struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry);
 void Hrtf_IncRef(struct Hrtf *hrtf);
 void Hrtf_DecRef(struct Hrtf *hrtf);

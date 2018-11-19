@@ -528,7 +528,7 @@ TYPEDEF_VECTOR(FilterSubList, vector_FilterSubList)
 
 
 typedef struct EnumeratedHrtf {
-    char *name;
+    std::string name;
 
     struct HrtfEntry *hrtf;
 } EnumeratedHrtf;
@@ -804,8 +804,6 @@ inline void UnlockFilterList(ALCdevice *device) { almtx_unlock(&device->FilterLo
 
 void StartEventThrd(ALCcontext *ctx);
 void StopEventThrd(ALCcontext *ctx);
-
-char *alstrdup(const char *str);
 
 
 std::vector<std::string> SearchDataFiles(const char *match, const char *subdir);

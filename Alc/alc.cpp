@@ -2436,7 +2436,7 @@ ALCdevice_struct::~ALCdevice_struct()
     VECTOR_DEINIT(FilterList);
     almtx_destroy(&FilterLock);
 
-    FreeHrtfList(HrtfList);
+    HrtfList.clear();
     if(HrtfHandle)
         Hrtf_DecRef(HrtfHandle);
     HrtfHandle = nullptr;
@@ -3364,7 +3364,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
 
         case ALC_NUM_HRTF_SPECIFIERS_SOFT:
             almtx_lock(&device->BackendLock);
-            FreeHrtfList(device->HrtfList);
+            device->HrtfList.clear();
             device->HrtfList = EnumerateHrtf(device->DeviceName.c_str());
             values[0] = (ALCint)device->HrtfList.size();
             almtx_unlock(&device->BackendLock);
@@ -4460,7 +4460,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum
     {
         case ALC_HRTF_SPECIFIER_SOFT:
             if(index >= 0 && (size_t)index < device->HrtfList.size())
-                str = device->HrtfList[index].name;
+                str = device->HrtfList[index].name.c_str();
             else
                 alcSetError(device, ALC_INVALID_VALUE);
             break;

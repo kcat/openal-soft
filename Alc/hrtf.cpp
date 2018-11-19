@@ -1007,10 +1007,10 @@ void AddFileEntry(al::vector<EnumeratedHrtf> &list, const std::string &filename)
         newname += " #";
         newname += std::to_string(++count);
     }
-    list.push_back(EnumeratedHrtf{alstrdup(newname.c_str()), loaded_entry});
+    list.emplace_back(EnumeratedHrtf{newname, loaded_entry});
     const EnumeratedHrtf &entry = list.back();
 
-    TRACE("Adding file entry \"%s\"\n", entry.name);
+    TRACE("Adding file entry \"%s\"\n", entry.name.c_str());
 }
 
 /* Unfortunate that we have to duplicate AddFileEntry to take a memory buffer
@@ -1066,10 +1066,10 @@ void AddBuiltInEntry(al::vector<EnumeratedHrtf> &list, const std::string &filena
         newname += " #";
         newname += std::to_string(++count);
     }
-    list.push_back(EnumeratedHrtf{alstrdup(newname.c_str()), loaded_entry});
+    list.emplace_back(EnumeratedHrtf{newname, loaded_entry});
     const EnumeratedHrtf &entry = list.back();
 
-    TRACE("Adding built-in entry \"%s\"\n", entry.name);
+    TRACE("Adding built-in entry \"%s\"\n", entry.name.c_str());
 }
 
 
@@ -1160,7 +1160,7 @@ al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname)
     {
         auto iter = std::find_if(list.begin(), list.end(),
             [defaulthrtf](const EnumeratedHrtf &entry) -> bool
-            { return strcmp(entry.name, defaulthrtf) == 0; }
+            { return entry.name == defaulthrtf; }
         );
         if(iter == list.end())
             WARN("Failed to find default HRTF \"%s\"\n", defaulthrtf);
@@ -1173,15 +1173,6 @@ al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname)
     }
 
     return list;
-}
-
-void FreeHrtfList(al::vector<EnumeratedHrtf> &list)
-{
-    std::for_each(list.begin(), list.end(),
-        [](EnumeratedHrtf &entry) noexcept -> void
-        { al_free(entry.name); }
-    );
-    list.clear();
 }
 
 struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry)

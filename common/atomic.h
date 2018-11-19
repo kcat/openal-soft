@@ -74,17 +74,16 @@ using std::atomic_thread_fence;
     ATOMIC_COMPARE_EXCHANGE_WEAK(_val, _oldval, _newval, almemory_order_seq_cst, almemory_order_seq_cst)
 
 
-typedef unsigned int uint;
-typedef ATOMIC(uint) RefCount;
+using RefCount = std::atomic<unsigned int>;
 
-inline void InitRef(RefCount *ptr, uint value)
+inline void InitRef(RefCount *ptr, unsigned int value)
 { ATOMIC_INIT(ptr, value); }
-inline uint ReadRef(RefCount *ptr)
-{ return ATOMIC_LOAD(ptr, almemory_order_acquire); }
-inline uint IncrementRef(RefCount *ptr)
-{ return ATOMIC_ADD(ptr, 1u, almemory_order_acq_rel)+1; }
-inline uint DecrementRef(RefCount *ptr)
-{ return ATOMIC_SUB(ptr, 1u, almemory_order_acq_rel)-1; }
+inline unsigned int ReadRef(RefCount *ptr)
+{ return ptr->load(std::memory_order_acquire); }
+inline unsigned int IncrementRef(RefCount *ptr)
+{ return ptr->fetch_add(1u, std::memory_order_acq_rel)+1u; }
+inline unsigned int DecrementRef(RefCount *ptr)
+{ return ptr->fetch_sub(1u, std::memory_order_acq_rel)-1u; }
 
 
 /* WARNING: A livelock is theoretically possible if another thread keeps

@@ -545,15 +545,13 @@ ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
 
 static void ALeffectState_IncRef(ALeffectState *state)
 {
-    uint ref;
-    ref = IncrementRef(&state->Ref);
+    auto ref = IncrementRef(&state->Ref);
     TRACEREF("%p increasing refcount to %u\n", state, ref);
 }
 
 void ALeffectState_DecRef(ALeffectState *state)
 {
-    uint ref;
-    ref = DecrementRef(&state->Ref);
+    auto ref = DecrementRef(&state->Ref);
     TRACEREF("%p decreasing refcount to %u\n", state, ref);
     if(ref == 0) DELETE_OBJ(state);
 }

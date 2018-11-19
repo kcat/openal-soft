@@ -1257,13 +1257,13 @@ struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry)
 
 void Hrtf_IncRef(struct Hrtf *hrtf)
 {
-    uint ref = IncrementRef(&hrtf->ref);
+    auto ref = IncrementRef(&hrtf->ref);
     TRACEREF("%p increasing refcount to %u\n", hrtf, ref);
 }
 
 void Hrtf_DecRef(struct Hrtf *hrtf)
 {
-    uint ref = DecrementRef(&hrtf->ref);
+    auto ref = DecrementRef(&hrtf->ref);
     TRACEREF("%p decreasing refcount to %u\n", hrtf, ref);
     if(ref == 0)
     {

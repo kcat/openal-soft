@@ -36,8 +36,8 @@
  * size or count is in 'elements', not bytes. Additionally, it only supports
  * single-consumer/single-provider operation. */
 struct ll_ringbuffer {
-    ATOMIC(size_t) write_ptr;
-    ATOMIC(size_t) read_ptr;
+    std::atomic<size_t> write_ptr;
+    std::atomic<size_t> read_ptr;
     size_t size;
     size_t size_mask;
     size_t elem_size;
@@ -83,23 +83,23 @@ void ll_ringbuffer_free(ll_ringbuffer_t *rb)
 
 void ll_ringbuffer_reset(ll_ringbuffer_t *rb)
 {
-    ATOMIC_STORE(&rb->write_ptr, static_cast<size_t>(0), almemory_order_release);
-    ATOMIC_STORE(&rb->read_ptr, static_cast<size_t>(0), almemory_order_release);
+    rb->write_ptr.store(0, std::memory_order_release);
+    rb->read_ptr.store(0, std::memory_order_release);
     memset(rb->buf, 0, (rb->size_mask+1)*rb->elem_size);
 }
 
 
 size_t ll_ringbuffer_read_space(const ll_ringbuffer_t *rb)
 {
-    size_t w = ATOMIC_LOAD(&CONST_CAST(ll_ringbuffer_t*,rb)->write_ptr, almemory_order_acquire);
-    size_t r = ATOMIC_LOAD(&CONST_CAST(ll_ringbuffer_t*,rb)->read_ptr, almemory_order_acquire);
+    size_t w = rb->write_ptr.load(std::memory_order_acquire);
+    size_t r = rb->read_ptr.load(std::memory_order_acquire);
     return (w-r) & rb->size_mask;
 }
 
 size_t ll_ringbuffer_write_space(const ll_ringbuffer_t *rb)
 {
-    size_t w = ATOMIC_LOAD(&CONST_CAST(ll_ringbuffer_t*,rb)->write_ptr, almemory_order_acquire);
-    size_t r = ATOMIC_LOAD(&CONST_CAST(ll_ringbuffer_t*,rb)->read_ptr, almemory_order_acquire);
+    size_t w = rb->write_ptr.load(std::memory_order_acquire);
+    size_t r = rb->read_ptr.load(std::memory_order_acquire);
     w = (r-w-1) & rb->size_mask;
     return (w > rb->size) ? rb->size : w;
 }
@@ -117,7 +117,7 @@ size_t ll_ringbuffer_read(ll_ringbuffer_t *rb, char *dest, size_t cnt)
     if(free_cnt == 0) return 0;
 
     to_read = (cnt > free_cnt) ? free_cnt : cnt;
-    read_ptr = ATOMIC_LOAD(&rb->read_ptr, almemory_order_relaxed) & rb->size_mask;
+    read_ptr = rb->read_ptr.load(std::memory_order_relaxed) & rb->size_mask;
 
     cnt2 = read_ptr + to_read;
     if(cnt2 > rb->size_mask+1)
@@ -139,7 +139,7 @@ size_t ll_ringbuffer_read(ll_ringbuffer_t *rb, char *dest, size_t cnt)
                n2*rb->elem_size);
         read_ptr += n2;
     }
-    ATOMIC_STORE(&rb->read_ptr, read_ptr, almemory_order_release);
+    rb->read_ptr.store(read_ptr, std::memory_order_release);
     return to_read;
 }
 
@@ -155,7 +155,7 @@ size_t ll_ringbuffer_peek(ll_ringbuffer_t *rb, char *dest, size_t cnt)
     if(free_cnt == 0) return 0;
 
     to_read = (cnt > free_cnt) ? free_cnt : cnt;
-    read_ptr = ATOMIC_LOAD(&rb->read_ptr, almemory_order_relaxed) & rb->size_mask;
+    read_ptr = rb->read_ptr.load(std::memory_order_relaxed) & rb->size_mask;
 
     cnt2 = read_ptr + to_read;
     if(cnt2 > rb->size_mask+1)
@@ -191,7 +191,7 @@ size_t ll_ringbuffer_write(ll_ringbuffer_t *rb, const char *src, size_t cnt)
     if(free_cnt == 0) return 0;
 
     to_write = (cnt > free_cnt) ? free_cnt : cnt;
-    write_ptr = ATOMIC_LOAD(&rb->write_ptr, almemory_order_relaxed) & rb->size_mask;
+    write_ptr = rb->write_ptr.load(std::memory_order_relaxed) & rb->size_mask;
 
     cnt2 = write_ptr + to_write;
     if(cnt2 > rb->size_mask+1)
@@ -213,19 +213,19 @@ size_t ll_ringbuffer_write(ll_ringbuffer_t *rb, const char *src, size_t cnt)
                n2*rb->elem_size);
         write_ptr += n2;
     }
-    ATOMIC_STORE(&rb->write_ptr, write_ptr, almemory_order_release);
+    rb->write_ptr.store(write_ptr, std::memory_order_release);
     return to_write;
 }
 
 
 void ll_ringbuffer_read_advance(ll_ringbuffer_t *rb, size_t cnt)
 {
-    ATOMIC_ADD(&rb->read_ptr, cnt, almemory_order_acq_rel);
+    rb->read_ptr.fetch_add(cnt, std::memory_order_acq_rel);
 }
 
 void ll_ringbuffer_write_advance(ll_ringbuffer_t *rb, size_t cnt)
 {
-    ATOMIC_ADD(&rb->write_ptr, cnt, almemory_order_acq_rel);
+    rb->write_ptr.fetch_add(cnt, std::memory_order_acq_rel);
 }
 
 
@@ -233,10 +233,9 @@ void ll_ringbuffer_get_read_vector(const ll_ringbuffer_t *rb, ll_ringbuffer_data
 {
     size_t free_cnt;
     size_t cnt2;
-    size_t w, r;
 
-    w = ATOMIC_LOAD(&CONST_CAST(ll_ringbuffer_t*,rb)->write_ptr, almemory_order_acquire);
-    r = ATOMIC_LOAD(&CONST_CAST(ll_ringbuffer_t*,rb)->read_ptr, almemory_order_acquire);
+    size_t w = rb->write_ptr.load(std::memory_order_acquire);
+    size_t r = rb->read_ptr.load(std::memory_order_acquire);
     w &= rb->size_mask;
     r &= rb->size_mask;
     free_cnt = (w-r) & rb->size_mask;
@@ -246,17 +245,17 @@ void ll_ringbuffer_get_read_vector(const ll_ringbuffer_t *rb, ll_ringbuffer_data
     {
         /* Two part vector: the rest of the buffer after the current write ptr,
          * plus some from the start of the buffer. */
-        vec[0].buf = (char*)&rb->buf[r*rb->elem_size];
+        vec[0].buf = const_cast<char*>(&rb->buf[r*rb->elem_size]);
         vec[0].len = rb->size_mask+1 - r;
-        vec[1].buf = (char*)rb->buf;
+        vec[1].buf = const_cast<char*>(rb->buf);
         vec[1].len = cnt2 & rb->size_mask;
     }
     else
     {
         /* Single part vector: just the rest of the buffer */
-        vec[0].buf = (char*)&rb->buf[r*rb->elem_size];
+        vec[0].buf = const_cast<char*>(&rb->buf[r*rb->elem_size]);
         vec[0].len = free_cnt;
-        vec[1].buf = NULL;
+        vec[1].buf = nullptr;
         vec[1].len = 0;
     }
 }
@@ -265,10 +264,9 @@ void ll_ringbuffer_get_write_vector(const ll_ringbuffer_t *rb, ll_ringbuffer_dat
 {
     size_t free_cnt;
     size_t cnt2;
-    size_t w, r;
 
-    w = ATOMIC_LOAD(&CONST_CAST(ll_ringbuffer_t*,rb)->write_ptr, almemory_order_acquire);
-    r = ATOMIC_LOAD(&CONST_CAST(ll_ringbuffer_t*,rb)->read_ptr, almemory_order_acquire);
+    size_t w = rb->write_ptr.load(std::memory_order_acquire);
+    size_t r = rb->read_ptr.load(std::memory_order_acquire);
     w &= rb->size_mask;
     r &= rb->size_mask;
     free_cnt = (r-w-1) & rb->size_mask;
@@ -279,16 +277,16 @@ void ll_ringbuffer_get_write_vector(const ll_ringbuffer_t *rb, ll_ringbuffer_dat
     {
         /* Two part vector: the rest of the buffer after the current write ptr,
          * plus some from the start of the buffer. */
-        vec[0].buf = (char*)&rb->buf[w*rb->elem_size];
+        vec[0].buf = const_cast<char*>(&rb->buf[w*rb->elem_size]);
         vec[0].len = rb->size_mask+1 - w;
-        vec[1].buf = (char*)rb->buf;
+        vec[1].buf = const_cast<char*>(rb->buf);
         vec[1].len = cnt2 & rb->size_mask;
     }
     else
     {
-        vec[0].buf = (char*)&rb->buf[w*rb->elem_size];
+        vec[0].buf = const_cast<char*>(&rb->buf[w*rb->elem_size]);
         vec[0].len = free_cnt;
-        vec[1].buf = NULL;
+        vec[1].buf = nullptr;
         vec[1].len = 0;
     }
 }

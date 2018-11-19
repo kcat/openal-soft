@@ -1438,8 +1438,7 @@ static ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 while(BufferList && BufferList != Current)
                 {
                     played += BufferList->num_buffers;
-                    BufferList = ATOMIC_LOAD(&CONST_CAST(ALbufferlistitem*,BufferList)->next,
-                                             almemory_order_relaxed);
+                    BufferList = BufferList->next.load(std::memory_order_relaxed);
                 }
                 *values = played;
             }
@@ -3294,8 +3293,7 @@ static ALint64 GetSourceSampleOffset(ALsource *Source, ALCcontext *context, ALui
         while(BufferList && BufferList != Current)
         {
             readPos += (ALuint64)BufferList->max_samples << 32;
-            BufferList = ATOMIC_LOAD(&CONST_CAST(ALbufferlistitem*,BufferList)->next,
-                                     almemory_order_relaxed);
+            BufferList = BufferList->next.load(std::memory_order_relaxed);
         }
         readPos = minu64(readPos, U64(0x7fffffffffffffff));
     }
@@ -3347,8 +3345,7 @@ static ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, ALuint
             while(!BufferFmt && i < BufferList->num_buffers)
                 BufferFmt = BufferList->buffers[i++];
             readPos += (ALuint64)BufferList->max_samples << FRACTIONBITS;
-            BufferList = ATOMIC_LOAD(&CONST_CAST(ALbufferlistitem*,BufferList)->next,
-                                     almemory_order_relaxed);
+            BufferList = BufferList->next.load(std::memory_order_relaxed);
         }
 
         while(BufferList && !BufferFmt)
@@ -3356,8 +3353,7 @@ static ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, ALuint
             ALsizei i = 0;
             while(!BufferFmt && i < BufferList->num_buffers)
                 BufferFmt = BufferList->buffers[i++];
-            BufferList = ATOMIC_LOAD(&CONST_CAST(ALbufferlistitem*,BufferList)->next,
-                                     almemory_order_relaxed);
+            BufferList = BufferList->next.load(std::memory_order_relaxed);
         }
         assert(BufferFmt != NULL);
 
@@ -3418,8 +3414,7 @@ static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *conte
             totalBufferLen += BufferList->max_samples;
             if(!readFin) readPos += BufferList->max_samples;
 
-            BufferList = ATOMIC_LOAD(&CONST_CAST(ALbufferlistitem*,BufferList)->next,
-                                     almemory_order_relaxed);
+            BufferList = BufferList->next.load(std::memory_order_relaxed);
         }
         assert(BufferFmt != NULL);
 
@@ -3534,8 +3529,7 @@ static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALsizei *frac
         for(i = 0;i < BufferList->num_buffers && !BufferFmt;i++)
             BufferFmt = BufferList->buffers[i];
         if(BufferFmt) break;
-        BufferList = ATOMIC_LOAD(&CONST_CAST(ALbufferlistitem*,BufferList)->next,
-                                 almemory_order_relaxed);
+        BufferList = BufferList->next.load(std::memory_order_relaxed);
     }
     if(!BufferFmt)
     {

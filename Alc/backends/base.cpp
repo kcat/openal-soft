@@ -55,11 +55,11 @@ ClockLatency ALCbackend_getClockLatency(ALCbackend *self)
     ClockLatency ret;
 
     do {
-        while(((refcount=ATOMIC_LOAD(&device->MixCount, almemory_order_acquire))&1))
+        while(((refcount=device->MixCount.load(std::memory_order_acquire))&1))
             althrd_yield();
         ret.ClockTime = GetDeviceClockTime(device);
-        ATOMIC_THREAD_FENCE(almemory_order_acquire);
-    } while(refcount != ATOMIC_LOAD(&device->MixCount, almemory_order_relaxed));
+        std::atomic_thread_fence(std::memory_order_acquire);
+    } while(refcount != device->MixCount.load(std::memory_order_relaxed));
 
     /* NOTE: The device will generally have about all but one periods filled at
      * any given time during playback. Without a more accurate measurement from

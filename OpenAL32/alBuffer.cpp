@@ -656,7 +656,7 @@ AL_API void AL_APIENTRY alFlushMappedBufferSOFT(ALuint buffer, ALsizei offset, A
          * asynchronously. Currently we just say the app shouldn't write where
          * OpenAL's reading, and hope for the best...
          */
-        ATOMIC_THREAD_FENCE(almemory_order_seq_cst);
+        std::atomic_thread_fence(std::memory_order_seq_cst);
     }
 }
 

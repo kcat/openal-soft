@@ -15,15 +15,12 @@
 #define ATOMIC(T)  std::atomic<T>
 
 #define ATOMIC_INIT std::atomic_init
-#define ATOMIC_INIT_STATIC ATOMIC_VAR_INIT
 
 #define ATOMIC_LOAD std::atomic_load_explicit
 #define ATOMIC_STORE std::atomic_store_explicit
 
 #define ATOMIC_ADD std::atomic_fetch_add_explicit
 #define ATOMIC_SUB std::atomic_fetch_sub_explicit
-
-#define ATOMIC_THREAD_FENCE std::atomic_thread_fence
 
 
 #define ATOMIC_LOAD_SEQ(_val) ATOMIC_LOAD(_val, almemory_order_seq_cst)

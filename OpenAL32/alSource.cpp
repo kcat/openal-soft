@@ -3284,7 +3284,7 @@ static ALint64 GetSourceSampleOffset(ALsource *Source, ALCcontext *context, ALui
             readPos |= (ALuint64)ATOMIC_LOAD(&voice->position_fraction, almemory_order_relaxed) <<
                        (32-FRACTIONBITS);
         }
-        ATOMIC_THREAD_FENCE(almemory_order_acquire);
+        std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != ATOMIC_LOAD(&device->MixCount, almemory_order_relaxed));
 
     if(voice)
@@ -3331,7 +3331,7 @@ static ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, ALuint
                        FRACTIONBITS;
             readPos |= ATOMIC_LOAD(&voice->position_fraction, almemory_order_relaxed);
         }
-        ATOMIC_THREAD_FENCE(almemory_order_acquire);
+        std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != ATOMIC_LOAD(&device->MixCount, almemory_order_relaxed));
 
     offset = 0.0;
@@ -3393,7 +3393,7 @@ static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *conte
             readPos = ATOMIC_LOAD(&voice->position, almemory_order_relaxed);
             readPosFrac = ATOMIC_LOAD(&voice->position_fraction, almemory_order_relaxed);
         }
-        ATOMIC_THREAD_FENCE(almemory_order_acquire);
+        std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != ATOMIC_LOAD(&device->MixCount, almemory_order_relaxed));
 
     offset = 0.0;

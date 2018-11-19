@@ -532,7 +532,6 @@ typedef struct EnumeratedHrtf {
 
     struct HrtfEntry *hrtf;
 } EnumeratedHrtf;
-TYPEDEF_VECTOR(EnumeratedHrtf, vector_EnumeratedHrtf)
 
 
 /* Maximum delay in samples for speaker distance compensation. */
@@ -624,7 +623,7 @@ struct ALCdevice_struct {
     struct DirectHrtfState *Hrtf{nullptr};
     char *HrtfName{nullptr};
     struct Hrtf *HrtfHandle{nullptr};
-    vector_EnumeratedHrtf HrtfList{};
+    al::vector<EnumeratedHrtf> HrtfList;
     ALCenum HrtfStatus{ALC_FALSE};
 
     /* UHJ encoder state */

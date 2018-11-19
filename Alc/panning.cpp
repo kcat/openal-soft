@@ -1104,33 +1104,30 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         device->HrtfStatus = ALC_HRTF_REQUIRED_SOFT;
     }
 
-    if(VECTOR_SIZE(device->HrtfList) == 0)
-    {
-        VECTOR_DEINIT(device->HrtfList);
+    if(device->HrtfList.empty())
         device->HrtfList = EnumerateHrtf(device->DeviceName.c_str());
-    }
 
-    if(hrtf_id >= 0 && (size_t)hrtf_id < VECTOR_SIZE(device->HrtfList))
+    if(hrtf_id >= 0 && (size_t)hrtf_id < device->HrtfList.size())
     {
-        const EnumeratedHrtf *entry = &VECTOR_ELEM(device->HrtfList, hrtf_id);
-        struct Hrtf *hrtf = GetLoadedHrtf(entry->hrtf);
+        const EnumeratedHrtf &entry = device->HrtfList[hrtf_id];
+        struct Hrtf *hrtf = GetLoadedHrtf(entry.hrtf);
         if(hrtf && hrtf->sampleRate == device->Frequency)
         {
             device->HrtfHandle = hrtf;
-            device->HrtfName = alstrdup(entry->name);
+            device->HrtfName = alstrdup(entry.name);
         }
         else if(hrtf)
             Hrtf_DecRef(hrtf);
     }
 
-    for(i = 0;!device->HrtfHandle && i < VECTOR_SIZE(device->HrtfList);i++)
+    for(i = 0;!device->HrtfHandle && i < device->HrtfList.size();i++)
     {
-        const EnumeratedHrtf *entry = &VECTOR_ELEM(device->HrtfList, i);
-        struct Hrtf *hrtf = GetLoadedHrtf(entry->hrtf);
+        const EnumeratedHrtf &entry = device->HrtfList[i];
+        struct Hrtf *hrtf = GetLoadedHrtf(entry.hrtf);
         if(hrtf && hrtf->sampleRate == device->Frequency)
         {
             device->HrtfHandle = hrtf;
-            device->HrtfName = alstrdup(entry->name);
+            device->HrtfName = alstrdup(entry.name);
         }
         else if(hrtf)
             Hrtf_DecRef(hrtf);

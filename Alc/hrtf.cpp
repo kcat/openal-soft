@@ -944,7 +944,15 @@ struct Hrtf *LoadHrtf02(std::istream &data, const char *filename)
 }
 
 
-void AddFileEntry(vector_EnumeratedHrtf *list, const std::string &filename)
+static bool checkName(al::vector<EnumeratedHrtf> &list, const std::string &name)
+{
+    return std::find_if(list.cbegin(), list.cend(),
+        [&name](const EnumeratedHrtf &entry)
+        { return name == entry.name; }
+    ) != list.cend();
+}
+
+void AddFileEntry(al::vector<EnumeratedHrtf> &list, const std::string &filename)
 {
     /* Check if this file has already been loaded globally. */
     HrtfEntry *loaded_entry{LoadedHrtfs};
@@ -952,12 +960,12 @@ void AddFileEntry(vector_EnumeratedHrtf *list, const std::string &filename)
     {
         if(filename == loaded_entry->filename)
         {
-            const EnumeratedHrtf *iter;
             /* Check if this entry has already been added to the list. */
-#define MATCH_ENTRY(i) (loaded_entry == (i)->hrtf)
-            VECTOR_FIND_IF(iter, const EnumeratedHrtf, *list, MATCH_ENTRY);
-#undef MATCH_ENTRY
-            if(iter != VECTOR_END(*list))
+            auto iter = std::find_if(list.cbegin(), list.cend(),
+                [loaded_entry](const EnumeratedHrtf &entry) -> bool
+                { return loaded_entry == entry.hrtf; }
+            );
+            if(iter != list.cend())
             {
                 TRACE("Skipping duplicate file entry %s\n", filename.c_str());
                 return;
@@ -989,46 +997,38 @@ void AddFileEntry(vector_EnumeratedHrtf *list, const std::string &filename)
     size_t extpos{filename.find_last_of('.')};
     if(extpos <= namepos) extpos = std::string::npos;
 
-    const EnumeratedHrtf *iter{};
-    std::string newname;
-    int i{0};
-    do {
-        if(extpos == std::string::npos)
-            newname = filename.substr(namepos);
-        else
-            newname = filename.substr(namepos, extpos-namepos);
-        if(i != 0)
-        {
-            newname += " #";
-            newname += std::to_string(i+1);
-        }
-        ++i;
-
-#define MATCH_NAME(i)  (newname == (i)->name)
-        VECTOR_FIND_IF(iter, const EnumeratedHrtf, *list, MATCH_NAME);
-#undef MATCH_NAME
-    } while(iter != VECTOR_END(*list));
-    EnumeratedHrtf entry{ alstrdup(newname.c_str()), loaded_entry };
+    const std::string basename{(extpos == std::string::npos) ?
+        filename.substr(namepos) : filename.substr(namepos, extpos-namepos)};
+    std::string newname{basename};
+    int count{1};
+    while(checkName(list, newname))
+    {
+        newname = basename;
+        newname += " #";
+        newname += std::to_string(++count);
+    }
+    list.push_back(EnumeratedHrtf{alstrdup(newname.c_str()), loaded_entry});
+    const EnumeratedHrtf &entry = list.back();
 
     TRACE("Adding file entry \"%s\"\n", entry.name);
-    VECTOR_PUSH_BACK(*list, entry);
 }
 
 /* Unfortunate that we have to duplicate AddFileEntry to take a memory buffer
  * for input instead of opening the given filename.
  */
-void AddBuiltInEntry(vector_EnumeratedHrtf *list, const std::string &filename, ALuint residx)
+void AddBuiltInEntry(al::vector<EnumeratedHrtf> &list, const std::string &filename, ALuint residx)
 {
     HrtfEntry *loaded_entry{LoadedHrtfs};
     while(loaded_entry)
     {
         if(filename == loaded_entry->filename)
         {
-            const EnumeratedHrtf *iter{};
-#define MATCH_ENTRY(i) (loaded_entry == (i)->hrtf)
-            VECTOR_FIND_IF(iter, const EnumeratedHrtf, *list, MATCH_ENTRY);
-#undef MATCH_ENTRY
-            if(iter != VECTOR_END(*list))
+            /* Check if this entry has already been added to the list. */
+            auto iter = std::find_if(list.cbegin(), list.cend(),
+                [loaded_entry](const EnumeratedHrtf &entry) -> bool
+                { return loaded_entry == entry.hrtf; }
+            );
+            if(iter != list.cend())
             {
                 TRACE("Skipping duplicate file entry %s\n", filename.c_str());
                 return;
@@ -1058,26 +1058,18 @@ void AddBuiltInEntry(vector_EnumeratedHrtf *list, const std::string &filename, A
     /* TODO: Get a human-readable name from the HRTF data (possibly coming in a
      * format update). */
 
-    const EnumeratedHrtf *iter{};
-    std::string newname;
-    int i{0};
-    do {
+    std::string newname{filename};
+    int count{1};
+    while(checkName(list, newname))
+    {
         newname = filename;
-        if(i != 0)
-        {
-            newname += " #";
-            newname += std::to_string(i+1);
-        }
-        ++i;
-
-#define MATCH_NAME(i)  (newname == (i)->name)
-        VECTOR_FIND_IF(iter, const EnumeratedHrtf, *list, MATCH_NAME);
-#undef MATCH_NAME
-    } while(iter != VECTOR_END(*list));
-    EnumeratedHrtf entry{ alstrdup(newname.c_str()), loaded_entry };
+        newname += " #";
+        newname += std::to_string(++count);
+    }
+    list.push_back(EnumeratedHrtf{alstrdup(newname.c_str()), loaded_entry});
+    const EnumeratedHrtf &entry = list.back();
 
     TRACE("Adding built-in entry \"%s\"\n", entry.name);
-    VECTOR_PUSH_BACK(*list, entry);
 }
 
 
@@ -1108,9 +1100,9 @@ ResData GetResource(int name)
 } // namespace
 
 
-vector_EnumeratedHrtf EnumerateHrtf(const char *devname)
+al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname)
 {
-    vector_EnumeratedHrtf list{VECTOR_INIT_STATIC()};
+    al::vector<EnumeratedHrtf> list;
 
     bool usedefaults{true};
     const char *pathlist{""};
@@ -1140,7 +1132,7 @@ vector_EnumeratedHrtf EnumerateHrtf(const char *devname)
             {
                 const std::string pname{pathlist, end};
                 for(const auto &fname : SearchDataFiles(".mhr", pname.c_str()))
-                    AddFileEntry(&list, fname);
+                    AddFileEntry(list, fname);
             }
 
             pathlist = next;
@@ -1152,45 +1144,44 @@ vector_EnumeratedHrtf EnumerateHrtf(const char *devname)
     if(usedefaults)
     {
         for(const auto &fname : SearchDataFiles(".mhr", "openal/hrtf"))
-            AddFileEntry(&list, fname);
+            AddFileEntry(list, fname);
 
         ResData res{GetResource(IDR_DEFAULT_44100_MHR)};
         if(res.data != nullptr && res.size > 0)
-            AddBuiltInEntry(&list, "Built-In 44100hz", IDR_DEFAULT_44100_MHR);
+            AddBuiltInEntry(list, "Built-In 44100hz", IDR_DEFAULT_44100_MHR);
 
         res = GetResource(IDR_DEFAULT_48000_MHR);
         if(res.data != nullptr && res.size > 0)
-            AddBuiltInEntry(&list, "Built-In 48000hz", IDR_DEFAULT_48000_MHR);
+            AddBuiltInEntry(list, "Built-In 48000hz", IDR_DEFAULT_48000_MHR);
     }
 
     const char *defaulthrtf{""};
-    if(VECTOR_SIZE(list) > 1 && ConfigValueStr(devname, nullptr, "default-hrtf", &defaulthrtf))
+    if(!list.empty() && ConfigValueStr(devname, nullptr, "default-hrtf", &defaulthrtf))
     {
-        const EnumeratedHrtf *iter{};
-        /* Find the preferred HRTF and move it to the front of the list. */
-#define FIND_ENTRY(i)  (strcmp((i)->name, defaulthrtf) == 0)
-        VECTOR_FIND_IF(iter, const EnumeratedHrtf, list, FIND_ENTRY);
-#undef FIND_ENTRY
-        if(iter == VECTOR_END(list))
+        auto iter = std::find_if(list.begin(), list.end(),
+            [defaulthrtf](const EnumeratedHrtf &entry) -> bool
+            { return strcmp(entry.name, defaulthrtf) == 0; }
+        );
+        if(iter == list.end())
             WARN("Failed to find default HRTF \"%s\"\n", defaulthrtf);
-        else if(iter != VECTOR_BEGIN(list))
+        else if(iter != list.begin())
         {
             EnumeratedHrtf entry{*iter};
-            memmove(&VECTOR_ELEM(list,1), &VECTOR_ELEM(list,0),
-                    (iter-VECTOR_BEGIN(list))*sizeof(EnumeratedHrtf));
-            VECTOR_ELEM(list,0) = entry;
+            list.erase(iter);
+            list.insert(list.begin(), entry);
         }
     }
 
     return list;
 }
 
-void FreeHrtfList(vector_EnumeratedHrtf *list)
+void FreeHrtfList(al::vector<EnumeratedHrtf> &list)
 {
-#define CLEAR_ENTRY(i) al_free((i)->name)
-    VECTOR_FOR_EACH(EnumeratedHrtf, *list, CLEAR_ENTRY);
-    VECTOR_DEINIT(*list);
-#undef CLEAR_ENTRY
+    std::for_each(list.begin(), list.end(),
+        [](EnumeratedHrtf &entry) noexcept -> void
+        { al_free(entry.name); }
+    );
+    list.clear();
 }
 
 struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry)

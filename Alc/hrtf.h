@@ -6,11 +6,8 @@
 
 #include "alMain.h"
 #include "atomic.h"
+#include "vector.h"
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #define HRTF_HISTORY_BITS   (6)
 #define HRTF_HISTORY_LENGTH (1<<HRTF_HISTORY_BITS)
@@ -68,8 +65,8 @@ struct AngularPoint {
 
 void FreeHrtfs(void);
 
-vector_EnumeratedHrtf EnumerateHrtf(const char *devname);
-void FreeHrtfList(vector_EnumeratedHrtf *list);
+al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname);
+void FreeHrtfList(al::vector<EnumeratedHrtf> &list);
 struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry);
 void Hrtf_IncRef(struct Hrtf *hrtf);
 void Hrtf_DecRef(struct Hrtf *hrtf);
@@ -83,9 +80,5 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
  * ordered and scaled according to the matrix input.
  */
 void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei NumChannels, const struct AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_COEFFS], ALsizei AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain);
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
 
 #endif /* ALC_HRTF_H */

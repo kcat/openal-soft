@@ -2035,17 +2035,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(hrtf_userreq == Hrtf_Enable || (hrtf_userreq != Hrtf_Disable && hrtf_appreq == Hrtf_Enable))
         {
             struct Hrtf *hrtf = nullptr;
-            if(VECTOR_SIZE(device->HrtfList) == 0)
-            {
-                VECTOR_DEINIT(device->HrtfList);
+            if(device->HrtfList.empty())
                 device->HrtfList = EnumerateHrtf(device->DeviceName.c_str());
-            }
-            if(VECTOR_SIZE(device->HrtfList) > 0)
+            if(!device->HrtfList.empty())
             {
-                if(hrtf_id >= 0 && (size_t)hrtf_id < VECTOR_SIZE(device->HrtfList))
-                    hrtf = GetLoadedHrtf(VECTOR_ELEM(device->HrtfList, hrtf_id).hrtf);
+                if(hrtf_id >= 0 && (size_t)hrtf_id < device->HrtfList.size())
+                    hrtf = GetLoadedHrtf(device->HrtfList[hrtf_id].hrtf);
                 else
-                    hrtf = GetLoadedHrtf(VECTOR_ELEM(device->HrtfList, 0).hrtf);
+                    hrtf = GetLoadedHrtf(device->HrtfList.front().hrtf);
             }
 
             if(hrtf)
@@ -2391,8 +2388,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 ALCdevice_struct::ALCdevice_struct(DeviceType type)
   : Type{type}
 {
-    VECTOR_INIT(HrtfList);
-
     VECTOR_INIT(BufferList);
     almtx_init(&BufferLock, almtx_plain);
 
@@ -2443,7 +2438,7 @@ ALCdevice_struct::~ALCdevice_struct()
 
     al_free(HrtfName);
     HrtfName = nullptr;
-    FreeHrtfList(&HrtfList);
+    FreeHrtfList(HrtfList);
     if(HrtfHandle)
         Hrtf_DecRef(HrtfHandle);
     HrtfHandle = nullptr;
@@ -3371,9 +3366,9 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
 
         case ALC_NUM_HRTF_SPECIFIERS_SOFT:
             almtx_lock(&device->BackendLock);
-            FreeHrtfList(&device->HrtfList);
+            FreeHrtfList(device->HrtfList);
             device->HrtfList = EnumerateHrtf(device->DeviceName.c_str());
-            values[0] = (ALCint)VECTOR_SIZE(device->HrtfList);
+            values[0] = (ALCint)device->HrtfList.size();
             almtx_unlock(&device->BackendLock);
             return 1;
 
@@ -4466,8 +4461,8 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetStringiSOFT(ALCdevice *device, ALCenum
     else switch(paramName)
     {
         case ALC_HRTF_SPECIFIER_SOFT:
-            if(index >= 0 && (size_t)index < VECTOR_SIZE(device->HrtfList))
-                str = VECTOR_ELEM(device->HrtfList, index).name;
+            if(index >= 0 && (size_t)index < device->HrtfList.size())
+                str = device->HrtfList[index].name;
             else
                 alcSetError(device, ALC_INVALID_VALUE);
             break;

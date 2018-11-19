@@ -345,11 +345,10 @@ static int SndioCapture_recordProc(void* ptr)
     while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
           ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
-        ll_ringbuffer_data_t data[2];
         size_t total, todo;
 
-        ll_ringbuffer_get_write_vector(self->ring, data);
-        todo = data[0].len + data[1].len;
+        auto data = ll_ringbuffer_get_write_vector(self->ring);
+        todo = data.first.len + data.second.len;
         if(todo == 0)
         {
             static char junk[4096];
@@ -358,17 +357,17 @@ static int SndioCapture_recordProc(void* ptr)
         }
 
         total = 0;
-        data[0].len *= frameSize;
-        data[1].len *= frameSize;
+        data.first.len  *= frameSize;
+        data.second.len *= frameSize;
         todo = minz(todo, device->UpdateSize) * frameSize;
         while(total < todo)
         {
             size_t got;
 
-            if(!data[0].len)
-                data[0] = data[1];
+            if(!data.first.len)
+                data.first = data.second;
 
-            got = sio_read(self->sndHandle, data[0].buf, minz(todo-total, data[0].len));
+            got = sio_read(self->sndHandle, data.first.buf, minz(todo-total, data.first.len));
             if(!got)
             {
                 SndioCapture_lock(self);
@@ -377,8 +376,8 @@ static int SndioCapture_recordProc(void* ptr)
                 break;
             }
 
-            data[0].buf += got;
-            data[0].len -= got;
+            data.first.buf += got;
+            data.first.len -= got;
             total += got;
         }
         ll_ringbuffer_write_advance(self->ring, total / frameSize);

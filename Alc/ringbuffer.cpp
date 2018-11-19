@@ -232,8 +232,9 @@ void ll_ringbuffer_write_advance(ll_ringbuffer_t *rb, size_t cnt)
 }
 
 
-void ll_ringbuffer_get_read_vector(const ll_ringbuffer_t *rb, ll_ringbuffer_data_t vec[2])
+ll_ringbuffer_data_pair ll_ringbuffer_get_read_vector(const ll_ringbuffer_t *rb)
 {
+    ll_ringbuffer_data_pair ret;
     size_t free_cnt;
     size_t cnt2;
 
@@ -248,23 +249,26 @@ void ll_ringbuffer_get_read_vector(const ll_ringbuffer_t *rb, ll_ringbuffer_data
     {
         /* Two part vector: the rest of the buffer after the current write ptr,
          * plus some from the start of the buffer. */
-        vec[0].buf = const_cast<char*>(&rb->buf[r*rb->elem_size]);
-        vec[0].len = rb->size_mask+1 - r;
-        vec[1].buf = const_cast<char*>(rb->buf);
-        vec[1].len = cnt2 & rb->size_mask;
+        ret.first.buf = const_cast<char*>(&rb->buf[r*rb->elem_size]);
+        ret.first.len = rb->size_mask+1 - r;
+        ret.second.buf = const_cast<char*>(rb->buf);
+        ret.second.len = cnt2 & rb->size_mask;
     }
     else
     {
         /* Single part vector: just the rest of the buffer */
-        vec[0].buf = const_cast<char*>(&rb->buf[r*rb->elem_size]);
-        vec[0].len = free_cnt;
-        vec[1].buf = nullptr;
-        vec[1].len = 0;
+        ret.first.buf = const_cast<char*>(&rb->buf[r*rb->elem_size]);
+        ret.first.len = free_cnt;
+        ret.second.buf = nullptr;
+        ret.second.len = 0;
     }
+
+    return ret;
 }
 
-void ll_ringbuffer_get_write_vector(const ll_ringbuffer_t *rb, ll_ringbuffer_data_t vec[2])
+ll_ringbuffer_data_pair ll_ringbuffer_get_write_vector(const ll_ringbuffer_t *rb)
 {
+    ll_ringbuffer_data_pair ret;
     size_t free_cnt;
     size_t cnt2;
 
@@ -280,16 +284,18 @@ void ll_ringbuffer_get_write_vector(const ll_ringbuffer_t *rb, ll_ringbuffer_dat
     {
         /* Two part vector: the rest of the buffer after the current write ptr,
          * plus some from the start of the buffer. */
-        vec[0].buf = const_cast<char*>(&rb->buf[w*rb->elem_size]);
-        vec[0].len = rb->size_mask+1 - w;
-        vec[1].buf = const_cast<char*>(rb->buf);
-        vec[1].len = cnt2 & rb->size_mask;
+        ret.first.buf = const_cast<char*>(&rb->buf[w*rb->elem_size]);
+        ret.first.len = rb->size_mask+1 - w;
+        ret.second.buf = const_cast<char*>(rb->buf);
+        ret.second.len = cnt2 & rb->size_mask;
     }
     else
     {
-        vec[0].buf = const_cast<char*>(&rb->buf[w*rb->elem_size]);
-        vec[0].len = free_cnt;
-        vec[1].buf = nullptr;
-        vec[1].len = 0;
+        ret.first.buf = const_cast<char*>(&rb->buf[w*rb->elem_size]);
+        ret.first.len = free_cnt;
+        ret.second.buf = nullptr;
+        ret.second.len = 0;
     }
+
+    return ret;
 }

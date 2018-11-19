@@ -3,16 +3,18 @@
 
 #include <stddef.h>
 
+#include <utility>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
-typedef struct ll_ringbuffer ll_ringbuffer_t;
-typedef struct ll_ringbuffer_data {
+struct ll_ringbuffer;
+using ll_ringbuffer_t = struct ll_ringbuffer;
+
+struct ll_ringbuffer_data {
     char *buf;
     size_t len;
-} ll_ringbuffer_data_t;
+};
+using ll_ringbuffer_data_pair = std::pair<ll_ringbuffer_data,ll_ringbuffer_data>;
+using ll_ringbuffer_data_t = struct ll_ringbuffer_data;
 
 
 /**
@@ -27,17 +29,17 @@ void ll_ringbuffer_free(ll_ringbuffer_t *rb);
 void ll_ringbuffer_reset(ll_ringbuffer_t *rb);
 
 /**
- * The non-copying data reader. `vec' is an array of two places. Set the values
- * at `vec' to hold the current readable data at `rb'. If the readable data is
- * in one segment the second segment has zero length.
+ * The non-copying data reader. Returns two ringbuffer data pointers that hold
+ * the current readable data at `rb'. If the readable data is in one segment
+ * the second segment has zero length.
  */
-void ll_ringbuffer_get_read_vector(const ll_ringbuffer_t *rb, ll_ringbuffer_data_t vec[2]);
+ll_ringbuffer_data_pair ll_ringbuffer_get_read_vector(const ll_ringbuffer_t *rb);
 /**
- * The non-copying data writer. `vec' is an array of two places. Set the values
- * at `vec' to hold the current writeable data at `rb'. If the writeable data
- * is in one segment the second segment has zero length.
+ * The non-copying data writer. Returns two ringbuffer data pointers that hold
+ * the current writeable data at `rb'. If the writeable data is in one segment
+ * the second segment has zero length.
  */
-void ll_ringbuffer_get_write_vector(const ll_ringbuffer_t *rb, ll_ringbuffer_data_t vec[2]);
+ll_ringbuffer_data_pair ll_ringbuffer_get_write_vector(const ll_ringbuffer_t *rb);
 
 /**
  * Return the number of elements available for reading. This is the number of
@@ -69,9 +71,5 @@ size_t ll_ringbuffer_write_space(const ll_ringbuffer_t *rb);
 size_t ll_ringbuffer_write(ll_ringbuffer_t *rb, const void *src, size_t cnt);
 /** Advance the write pointer `cnt' places. */
 void ll_ringbuffer_write_advance(ll_ringbuffer_t *rb, size_t cnt);
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
 
 #endif /* RINGBUFFER_H */

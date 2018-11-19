@@ -249,33 +249,32 @@ static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
 {
     ALCjackPlayback *self = static_cast<ALCjackPlayback*>(arg);
     jack_default_audio_sample_t *out[MAX_OUTPUT_CHANNELS];
-    ll_ringbuffer_data_t data[2];
-    jack_nframes_t total = 0;
+    jack_nframes_t total{0};
     jack_nframes_t todo;
     ALsizei i, c, numchans;
 
-    ll_ringbuffer_get_read_vector(self->Ring, data);
+    auto data = ll_ringbuffer_get_read_vector(self->Ring);
 
     for(c = 0;c < MAX_OUTPUT_CHANNELS && self->Port[c];c++)
         out[c] = static_cast<float*>(jack_port_get_buffer(self->Port[c], numframes));
     numchans = c;
 
-    todo = minu(numframes, data[0].len);
+    todo = minu(numframes, data.first.len);
     for(c = 0;c < numchans;c++)
     {
-        const ALfloat *RESTRICT in = ((ALfloat*)data[0].buf) + c;
+        const ALfloat *RESTRICT in = ((ALfloat*)data.first.buf) + c;
         for(i = 0;(jack_nframes_t)i < todo;i++)
             out[c][i] = in[i*numchans];
         out[c] += todo;
     }
     total += todo;
 
-    todo = minu(numframes-total, data[1].len);
+    todo = minu(numframes-total, data.second.len);
     if(todo > 0)
     {
         for(c = 0;c < numchans;c++)
         {
-            const ALfloat *RESTRICT in = ((ALfloat*)data[1].buf) + c;
+            const ALfloat *RESTRICT in = ((ALfloat*)data.second.buf) + c;
             for(i = 0;(jack_nframes_t)i < todo;i++)
                 out[c][i] = in[i*numchans];
             out[c] += todo;
@@ -303,7 +302,6 @@ static int ALCjackPlayback_mixerProc(void *arg)
 {
     ALCjackPlayback *self = static_cast<ALCjackPlayback*>(arg);
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
-    ll_ringbuffer_data_t data[2];
 
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
@@ -322,16 +320,16 @@ static int ALCjackPlayback_mixerProc(void *arg)
             continue;
         }
 
-        ll_ringbuffer_get_write_vector(self->Ring, data);
-        todo  = data[0].len + data[1].len;
+        auto data = ll_ringbuffer_get_write_vector(self->Ring);
+        todo  = data.first.len + data.second.len;
         todo -= todo%device->UpdateSize;
 
-        len1 = minu(data[0].len, todo);
-        len2 = minu(data[1].len, todo-len1);
+        len1 = minu(data.first.len, todo);
+        len2 = minu(data.second.len, todo-len1);
 
-        aluMixData(device, data[0].buf, len1);
+        aluMixData(device, data.first.buf, len1);
         if(len2 > 0)
-            aluMixData(device, data[1].buf, len2);
+            aluMixData(device, data.second.buf, len2);
         ll_ringbuffer_write_advance(self->Ring, todo);
     }
     ALCjackPlayback_unlock(self);

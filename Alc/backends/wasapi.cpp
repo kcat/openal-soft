@@ -1275,8 +1275,7 @@ FORCE_ALIGN int ALCwasapiCapture_recordProc(ALCwasapiCapture *self)
                     rdata = reinterpret_cast<BYTE*>(samples.data());
                 }
 
-                ll_ringbuffer_data_t data[2];
-                ll_ringbuffer_get_write_vector(self->mRing, data);
+                auto data = ll_ringbuffer_get_write_vector(self->mRing);
 
                 size_t dstframes;
                 if(self->mSampleConv)
@@ -1285,16 +1284,18 @@ FORCE_ALIGN int ALCwasapiCapture_recordProc(ALCwasapiCapture *self)
                     ALsizei srcframes = numsamples;
 
                     dstframes = SampleConverterInput(self->mSampleConv,
-                        &srcdata, &srcframes, data[0].buf, (ALsizei)minz(data[0].len, INT_MAX)
+                        &srcdata, &srcframes, data.first.buf,
+                        (ALsizei)minz(data.first.len, INT_MAX)
                     );
-                    if(srcframes > 0 && dstframes == data[0].len && data[1].len > 0)
+                    if(srcframes > 0 && dstframes == data.first.len && data.second.len > 0)
                     {
                         /* If some source samples remain, all of the first dest
                          * block was filled, and there's space in the second
                          * dest block, do another run for the second block.
                          */
                         dstframes += SampleConverterInput(self->mSampleConv,
-                            &srcdata, &srcframes, data[1].buf, (ALsizei)minz(data[1].len, INT_MAX)
+                            &srcdata, &srcframes, data.second.buf,
+                            (ALsizei)minz(data.second.len, INT_MAX)
                         );
                     }
                 }
@@ -1302,12 +1303,12 @@ FORCE_ALIGN int ALCwasapiCapture_recordProc(ALCwasapiCapture *self)
                 {
                     ALuint framesize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType,
                                                            device->mAmbiOrder);
-                    size_t len1 = minz(data[0].len, numsamples);
-                    size_t len2 = minz(data[1].len, numsamples-len1);
+                    size_t len1 = minz(data.first.len, numsamples);
+                    size_t len2 = minz(data.second.len, numsamples-len1);
 
-                    memcpy(data[0].buf, rdata, len1*framesize);
+                    memcpy(data.first.buf, rdata, len1*framesize);
                     if(len2 > 0)
-                        memcpy(data[1].buf, rdata+len1*framesize, len2*framesize);
+                        memcpy(data.second.buf, rdata+len1*framesize, len2*framesize);
                     dstframes = len1 + len2;
                 }
 

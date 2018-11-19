@@ -1237,12 +1237,11 @@ ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self)
 
     while(avail > 0)
     {
-        ll_ringbuffer_data_t vec[2];
-        ll_ringbuffer_get_write_vector(self->ring, vec);
-        if(vec[0].len == 0) break;
+        auto vec = ll_ringbuffer_get_write_vector(self->ring);
+        if(vec.first.len == 0) break;
 
-        snd_pcm_sframes_t amt{std::min<snd_pcm_sframes_t>(vec[0].len, avail)};
-        amt = snd_pcm_readi(self->pcmHandle, vec[0].buf, amt);
+        snd_pcm_sframes_t amt{std::min<snd_pcm_sframes_t>(vec.first.len, avail)};
+        amt = snd_pcm_readi(self->pcmHandle, vec.first.buf, amt);
         if(amt < 0)
         {
             ERR("read error: %s\n", snd_strerror(amt));

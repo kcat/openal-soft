@@ -239,7 +239,6 @@ static int ALCopenslPlayback_mixerProc(void *arg)
     ALCopenslPlayback *self = static_cast<ALCopenslPlayback*>(arg);
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
     SLAndroidSimpleBufferQueueItf bufferQueue;
-    ll_ringbuffer_data_t data[2];
     SLPlayItf player;
     SLresult result;
 
@@ -291,13 +290,12 @@ static int ALCopenslPlayback_mixerProc(void *arg)
             }
         }
 
-        ll_ringbuffer_get_write_vector(self->mRing, data);
+        auto data = ll_ringbuffer_get_write_vector(self->mRing);
+        aluMixData(device, data.first.buf, data.first.len*device->UpdateSize);
+        if(data.second.len > 0)
+            aluMixData(device, data.second.buf, data.second.len*device->UpdateSize);
 
-        aluMixData(device, data[0].buf, data[0].len*device->UpdateSize);
-        if(data[1].len > 0)
-            aluMixData(device, data[1].buf, data[1].len*device->UpdateSize);
-
-        todo = data[0].len+data[1].len;
+        todo = data.first.len+data.second.len;
         ll_ringbuffer_write_advance(self->mRing, todo);
 
         for(size_t i = 0;i < todo;i++)
@@ -869,18 +867,17 @@ static ALCenum ALCopenslCapture_open(ALCopenslCapture *self, const ALCchar *name
     if(SL_RESULT_SUCCESS == result)
     {
         ALsizei chunk_size = device->UpdateSize * self->mFrameSize;
-        ll_ringbuffer_data_t data[2];
         size_t i;
 
-        ll_ringbuffer_get_write_vector(self->mRing, data);
-        for(i = 0;i < data[0].len && SL_RESULT_SUCCESS == result;i++)
+        auto data = ll_ringbuffer_get_write_vector(self->mRing);
+        for(i = 0;i < data.first.len && SL_RESULT_SUCCESS == result;i++)
         {
-            result = VCALL(bufferQueue,Enqueue)(data[0].buf + chunk_size*i, chunk_size);
+            result = VCALL(bufferQueue,Enqueue)(data.first.buf + chunk_size*i, chunk_size);
             PRINTERR(result, "bufferQueue->Enqueue");
         }
-        for(i = 0;i < data[1].len && SL_RESULT_SUCCESS == result;i++)
+        for(i = 0;i < data.second.len && SL_RESULT_SUCCESS == result;i++)
         {
-            result = VCALL(bufferQueue,Enqueue)(data[1].buf + chunk_size*i, chunk_size);
+            result = VCALL(bufferQueue,Enqueue)(data.second.buf + chunk_size*i, chunk_size);
             PRINTERR(result, "bufferQueue->Enqueue");
         }
     }
@@ -949,7 +946,6 @@ static ALCenum ALCopenslCapture_captureSamples(ALCopenslCapture *self, ALCvoid *
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     ALsizei chunk_size = device->UpdateSize * self->mFrameSize;
     SLAndroidSimpleBufferQueueItf bufferQueue;
-    ll_ringbuffer_data_t data[2];
     SLresult result;
     ALCuint i;
 
@@ -960,12 +956,12 @@ static ALCenum ALCopenslCapture_captureSamples(ALCopenslCapture *self, ALCvoid *
     /* Read the desired samples from the ring buffer then advance its read
      * pointer.
      */
-    ll_ringbuffer_get_read_vector(self->mRing, data);
+    auto data = ll_ringbuffer_get_read_vector(self->mRing);
     for(i = 0;i < samples;)
     {
         ALCuint rem = minu(samples - i, device->UpdateSize - self->mSplOffset);
         memcpy((ALCbyte*)buffer + i*self->mFrameSize,
-               data[0].buf + self->mSplOffset*self->mFrameSize,
+               data.first.buf + self->mSplOffset*self->mFrameSize,
                rem * self->mFrameSize);
 
         self->mSplOffset += rem;
@@ -975,15 +971,15 @@ static ALCenum ALCopenslCapture_captureSamples(ALCopenslCapture *self, ALCvoid *
             self->mSplOffset = 0;
 
             ll_ringbuffer_read_advance(self->mRing, 1);
-            result = VCALL(bufferQueue,Enqueue)(data[0].buf, chunk_size);
+            result = VCALL(bufferQueue,Enqueue)(data.first.buf, chunk_size);
             PRINTERR(result, "bufferQueue->Enqueue");
             if(SL_RESULT_SUCCESS != result) break;
 
-            data[0].len--;
-            if(!data[0].len)
-                data[0] = data[1];
+            data.first.len--;
+            if(!data.first.len)
+                data.first = data.second;
             else
-                data[0].buf += chunk_size;
+                data.first.buf += chunk_size;
         }
 
         i += rem;

@@ -582,11 +582,10 @@ int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
             continue;
         }
 
-        ll_ringbuffer_data_t vec[2];
-        ll_ringbuffer_get_write_vector(self->ring, vec);
-        if(vec[0].len > 0)
+        auto vec = ll_ringbuffer_get_write_vector(self->ring);
+        if(vec.first.len > 0)
         {
-            amt = read(self->fd, vec[0].buf, vec[0].len*frame_size);
+            amt = read(self->fd, vec.first.buf, vec.first.len*frame_size);
             if(amt < 0)
             {
                 ERR("read failed: %s\n", strerror(errno));

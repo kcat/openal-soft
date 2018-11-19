@@ -3236,7 +3236,7 @@ static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_send
         /* If there was an unused update container, put it back in the
          * freelist.
          */
-        ATOMIC_REPLACE_HEAD(struct ALvoiceProps*, &context->FreeVoiceProps, props);
+        AtomicReplaceHead(context->FreeVoiceProps, props);
     }
 }
 

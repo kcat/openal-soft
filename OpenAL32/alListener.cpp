@@ -498,6 +498,6 @@ void UpdateListenerProps(ALCcontext *context)
         /* If there was an unused update container, put it back in the
          * freelist.
          */
-        ATOMIC_REPLACE_HEAD(struct ALlistenerProps*, &context->FreeListenerProps, props);
+        AtomicReplaceHead(context->FreeListenerProps, props);
     }
 }

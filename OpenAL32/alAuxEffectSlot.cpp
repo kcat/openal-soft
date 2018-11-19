@@ -730,7 +730,7 @@ void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context)
         if(props->State)
             ALeffectState_DecRef(props->State);
         props->State = nullptr;
-        ATOMIC_REPLACE_HEAD(struct ALeffectslotProps*, &context->FreeEffectslotProps, props);
+        AtomicReplaceHead(context->FreeEffectslotProps, props);
     }
 
     if(oldstate)

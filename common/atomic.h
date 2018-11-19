@@ -91,12 +91,14 @@ inline uint DecrementRef(RefCount *ptr)
  * changing the head without giving this a chance to actually swap in the new
  * one (practically impossible with this little code, but...).
  */
-#define ATOMIC_REPLACE_HEAD(T, _head, _entry) do {                            \
-    T _first = ATOMIC_LOAD(_head, almemory_order_acquire);                    \
-    do {                                                                      \
-        ATOMIC_STORE(&(_entry)->next, _first, almemory_order_relaxed);        \
-    } while(ATOMIC_COMPARE_EXCHANGE_WEAK(_head, &_first, _entry,              \
-            almemory_order_acq_rel, almemory_order_acquire) == 0);            \
-} while(0)
+template<typename T>
+inline void AtomicReplaceHead(std::atomic<T> &head, T newhead)
+{
+    T first_ = head.load(std::memory_order_acquire);
+    do {
+        newhead->next.store(first_, std::memory_order_relaxed);
+    } while(!head.compare_exchange_weak(first_, newhead,
+            std::memory_order_acq_rel, std::memory_order_acquire));
+}
 
 #endif /* AL_ATOMIC_H */

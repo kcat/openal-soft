@@ -330,7 +330,7 @@ static bool CalcContextParams(ALCcontext *Context)
     Listener.Params.SourceDistanceModel = props->SourceDistanceModel;
     Listener.Params.mDistanceModel = props->mDistanceModel;
 
-    ATOMIC_REPLACE_HEAD(struct ALcontextProps*, &Context->FreeContextProps, props);
+    AtomicReplaceHead(Context->FreeContextProps, props);
     return true;
 }
 
@@ -376,7 +376,7 @@ static bool CalcListenerParams(ALCcontext *Context)
 
     Listener.Params.Gain = props->Gain * Context->GainBoost;
 
-    ATOMIC_REPLACE_HEAD(struct ALlistenerProps*, &Context->FreeListenerProps, props);
+    AtomicReplaceHead(Context->FreeListenerProps, props);
     return true;
 }
 
@@ -449,7 +449,7 @@ static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool f
             }
         }
 
-        ATOMIC_REPLACE_HEAD(struct ALeffectslotProps*, &context->FreeEffectslotProps, props);
+        AtomicReplaceHead(context->FreeEffectslotProps, props);
     }
     else
         state = slot->Params.EffectState;
@@ -1465,7 +1465,7 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
             FAM_SIZE(struct ALvoiceProps, Send, context->Device->NumAuxSends)
         );
 
-        ATOMIC_REPLACE_HEAD(struct ALvoiceProps*, &context->FreeVoiceProps, props);
+        AtomicReplaceHead(context->FreeVoiceProps, props);
     }
     props = voice->Props;
 

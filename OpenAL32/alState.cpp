@@ -794,6 +794,6 @@ void UpdateContextProps(ALCcontext *context)
         /* If there was an unused update container, put it back in the
          * freelist.
          */
-        ATOMIC_REPLACE_HEAD(struct ALcontextProps*, &context->FreeContextProps, props);
+        AtomicReplaceHead(context->FreeContextProps, props);
     }
 }

@@ -16,6 +16,7 @@
 #include <intrin.h>
 #endif
 
+#include <array>
 #include <vector>
 #include <string>
 

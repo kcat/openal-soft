@@ -24,6 +24,8 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include <algorithm>
+
 #include "alMain.h"
 #include "alcontext.h"
 #include "alu.h"
@@ -31,6 +33,7 @@
 #include "alListener.h"
 #include "alError.h"
 #include "filters/defs.h"
+#include "vector.h"
 #include "vecmat.h"
 
 /* This is a user config option for modifying the overall output of the reverb
@@ -280,8 +283,7 @@ struct ReverbState final : public ALeffectState {
     /* All delay lines are allocated as a single buffer to reduce memory
      * fragmentation and management code.
      */
-    ALfloat *mSampleBuffer;
-    ALuint   mTotalSamples;
+    al::vector<ALfloat,16> mSampleBuffer;
 
     struct {
         /* Calculated parameters which indicate if cross-fading is needed after
@@ -345,9 +347,6 @@ static void ReverbState_Construct(ReverbState *state)
 
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ReverbState, ALeffectState, state);
-
-    state->mTotalSamples = 0;
-    state->mSampleBuffer = NULL;
 
     state->mParams.Density = AL_EAXREVERB_DEFAULT_DENSITY;
     state->mParams.Diffusion = AL_EAXREVERB_DEFAULT_DIFFUSION;
@@ -440,9 +439,6 @@ static void ReverbState_Construct(ReverbState *state)
 
 static ALvoid ReverbState_Destruct(ReverbState *State)
 {
-    al_free(State->mSampleBuffer);
-    State->mSampleBuffer = NULL;
-
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,State));
     State->~ReverbState();
 }
@@ -495,27 +491,24 @@ static ALuint CalcLineLength(const ALfloat length, const ptrdiff_t offset, const
  */
 static ALboolean AllocLines(const ALuint frequency, ReverbState *State)
 {
-    ALuint totalSamples, i;
-    ALfloat multiplier, length;
-
     /* All delay line lengths are calculated to accomodate the full range of
      * lengths given their respective paramters.
      */
-    totalSamples = 0;
+    ALuint totalSamples{0u};
 
     /* Multiplier for the maximum density value, i.e. density=1, which is
      * actually the least density...
      */
-    multiplier = CalcDelayLengthMult(AL_EAXREVERB_MAX_DENSITY);
+    ALfloat multiplier{CalcDelayLengthMult(AL_EAXREVERB_MAX_DENSITY)};
 
     /* The main delay length includes the maximum early reflection delay, the
      * largest early tap width, the maximum late reverb delay, and the
      * largest late tap width.  Finally, it must also be extended by the
      * update size (MAX_UPDATE_SAMPLES) for block processing.
      */
-    length = AL_EAXREVERB_MAX_REFLECTIONS_DELAY + EARLY_TAP_LENGTHS[NUM_LINES-1]*multiplier +
-             AL_EAXREVERB_MAX_LATE_REVERB_DELAY +
-             (LATE_LINE_LENGTHS[NUM_LINES-1] - LATE_LINE_LENGTHS[0])*0.25f*multiplier;
+    ALfloat length{AL_EAXREVERB_MAX_REFLECTIONS_DELAY + EARLY_TAP_LENGTHS[NUM_LINES-1]*multiplier +
+                   AL_EAXREVERB_MAX_LATE_REVERB_DELAY +
+                   (LATE_LINE_LENGTHS[NUM_LINES-1] - LATE_LINE_LENGTHS[0])*0.25f*multiplier};
     totalSamples += CalcLineLength(length, totalSamples, frequency, MAX_UPDATE_SAMPLES,
                                    &State->mDelay);
 
@@ -541,30 +534,21 @@ static ALboolean AllocLines(const ALuint frequency, ReverbState *State)
     totalSamples += CalcLineLength(length, totalSamples, frequency, 0,
                                    &State->mLate.Delay);
 
-    if(totalSamples != State->mTotalSamples)
+    if(totalSamples != State->mSampleBuffer.size())
     {
-        ALfloat *newBuffer;
-
-        TRACE("New reverb buffer length: %ux4 samples\n", totalSamples);
-        newBuffer = static_cast<ALfloat*>(al_calloc(16,
-            sizeof(ALfloat[NUM_LINES]) * totalSamples));
-        if(!newBuffer) return AL_FALSE;
-
-        al_free(State->mSampleBuffer);
-        State->mSampleBuffer = newBuffer;
-        State->mTotalSamples = totalSamples;
+        State->mSampleBuffer.resize(sizeof(ALfloat[NUM_LINES]) * totalSamples);
+        State->mSampleBuffer.shrink_to_fit();
     }
 
-    /* Update all delays to reflect the new sample buffer. */
-    RealizeLineOffset(State->mSampleBuffer, &State->mDelay);
-    RealizeLineOffset(State->mSampleBuffer, &State->mEarly.VecAp.Delay);
-    RealizeLineOffset(State->mSampleBuffer, &State->mEarly.Delay);
-    RealizeLineOffset(State->mSampleBuffer, &State->mLate.VecAp.Delay);
-    RealizeLineOffset(State->mSampleBuffer, &State->mLate.Delay);
-
     /* Clear the sample buffer. */
-    for(i = 0;i < State->mTotalSamples;i++)
-        State->mSampleBuffer[i] = 0.0f;
+    std::fill(State->mSampleBuffer.begin(), State->mSampleBuffer.end(), 0.0f);
+
+    /* Update all delays to reflect the new sample buffer. */
+    RealizeLineOffset(State->mSampleBuffer.data(), &State->mDelay);
+    RealizeLineOffset(State->mSampleBuffer.data(), &State->mEarly.VecAp.Delay);
+    RealizeLineOffset(State->mSampleBuffer.data(), &State->mEarly.Delay);
+    RealizeLineOffset(State->mSampleBuffer.data(), &State->mLate.VecAp.Delay);
+    RealizeLineOffset(State->mSampleBuffer.data(), &State->mLate.Delay);
 
     return AL_TRUE;
 }

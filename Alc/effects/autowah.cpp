@@ -23,6 +23,8 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include <algorithm>
+
 #include "alMain.h"
 #include "alcontext.h"
 #include "alAuxEffectSlot.h"
@@ -37,19 +39,19 @@
 
 struct ALautowahState final : public ALeffectState {
     /* Effect parameters */
-    ALfloat AttackRate;
-    ALfloat ReleaseRate;
-    ALfloat ResonanceGain;
-    ALfloat PeakGain;
-    ALfloat FreqMinNorm;
-    ALfloat BandwidthNorm;
-    ALfloat env_delay;
+    ALfloat mAttackRate;
+    ALfloat mReleaseRate;
+    ALfloat mResonanceGain;
+    ALfloat mPeakGain;
+    ALfloat mFreqMinNorm;
+    ALfloat mBandwidthNorm;
+    ALfloat mEnvDelay;
 
     /* Filter components derived from the envelope. */
     struct {
         ALfloat cos_w0;
         ALfloat alpha;
-    } Env[BUFFERSIZE];
+    } mEnv[BUFFERSIZE];
 
     struct {
         /* Effect filters' history. */
@@ -60,10 +62,10 @@ struct ALautowahState final : public ALeffectState {
         /* Effect gains for each output channel */
         ALfloat CurrentGains[MAX_OUTPUT_CHANNELS];
         ALfloat TargetGains[MAX_OUTPUT_CHANNELS];
-    } Chans[MAX_EFFECT_CHANNELS];
+    } mChans[MAX_EFFECT_CHANNELS];
 
     /* Effects buffers */
-    alignas(16) ALfloat BufferOut[BUFFERSIZE];
+    alignas(16) ALfloat mBufferOut[BUFFERSIZE];
 };
 
 static ALvoid ALautowahState_Destruct(ALautowahState *state);
@@ -77,37 +79,39 @@ DEFINE_ALEFFECTSTATE_VTABLE(ALautowahState);
 static void ALautowahState_Construct(ALautowahState *state)
 {
     new (state) ALautowahState{};
-    ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
+    ALeffectState_Construct(state);
     SET_VTABLE2(ALautowahState, ALeffectState, state);
 }
 
 static ALvoid ALautowahState_Destruct(ALautowahState *state)
 {
-    ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
+    ALeffectState_Destruct(state);
     state->~ALautowahState();
 }
 
 static ALboolean ALautowahState_deviceUpdate(ALautowahState *state, ALCdevice *UNUSED(device))
 {
     /* (Re-)initializing parameters and clear the buffers. */
-    ALsizei i, j;
 
-    state->AttackRate    = 1.0f;
-    state->ReleaseRate   = 1.0f;
-    state->ResonanceGain = 10.0f;
-    state->PeakGain      = 4.5f;
-    state->FreqMinNorm   = 4.5e-4f;
-    state->BandwidthNorm = 0.05f;
-    state->env_delay     = 0.0f;
+    state->mAttackRate    = 1.0f;
+    state->mReleaseRate   = 1.0f;
+    state->mResonanceGain = 10.0f;
+    state->mPeakGain      = 4.5f;
+    state->mFreqMinNorm   = 4.5e-4f;
+    state->mBandwidthNorm = 0.05f;
+    state->mEnvDelay      = 0.0f;
 
-    memset(state->Env, 0, sizeof(state->Env));
-
-    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
+    for(auto &e : state->mEnv)
     {
-        for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
-            state->Chans[i].CurrentGains[j] = 0.0f;
-        state->Chans[i].Filter.z1 = 0.0f;
-        state->Chans[i].Filter.z2 = 0.0f;
+        e.cos_w0 = 0.0f;
+        e.alpha = 0.0f;
+    }
+
+    for(auto &chan : state->mChans)
+    {
+        std::fill(std::begin(chan.CurrentGains), std::end(chan.CurrentGains), 0.0f);
+        chan.Filter.z1 = 0.0f;
+        chan.Filter.z2 = 0.0f;
     }
 
     return AL_TRUE;
@@ -121,33 +125,33 @@ static ALvoid ALautowahState_update(ALautowahState *state, const ALCcontext *con
 
     ReleaseTime = clampf(props->Autowah.ReleaseTime, 0.001f, 1.0f);
 
-    state->AttackRate    = expf(-1.0f / (props->Autowah.AttackTime*device->Frequency));
-    state->ReleaseRate   = expf(-1.0f / (ReleaseTime*device->Frequency));
+    state->mAttackRate    = expf(-1.0f / (props->Autowah.AttackTime*device->Frequency));
+    state->mReleaseRate   = expf(-1.0f / (ReleaseTime*device->Frequency));
     /* 0-20dB Resonance Peak gain */
-    state->ResonanceGain = sqrtf(log10f(props->Autowah.Resonance)*10.0f / 3.0f);
-    state->PeakGain      = 1.0f - log10f(props->Autowah.PeakGain/AL_AUTOWAH_MAX_PEAK_GAIN);
-    state->FreqMinNorm   = MIN_FREQ / device->Frequency;
-    state->BandwidthNorm = (MAX_FREQ-MIN_FREQ) / device->Frequency;
+    state->mResonanceGain = sqrtf(log10f(props->Autowah.Resonance)*10.0f / 3.0f);
+    state->mPeakGain      = 1.0f - log10f(props->Autowah.PeakGain/AL_AUTOWAH_MAX_PEAK_GAIN);
+    state->mFreqMinNorm   = MIN_FREQ / device->Frequency;
+    state->mBandwidthNorm = (MAX_FREQ-MIN_FREQ) / device->Frequency;
 
-    STATIC_CAST(ALeffectState,state)->OutBuffer = device->FOAOut.Buffer;
-    STATIC_CAST(ALeffectState,state)->OutChannels = device->FOAOut.NumChannels;
+    state->OutBuffer = device->FOAOut.Buffer;
+    state->OutChannels = device->FOAOut.NumChannels;
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
         ComputePanGains(&device->FOAOut, aluMatrixf::Identity.m[i], slot->Params.Gain,
-                        state->Chans[i].TargetGains);
+                        state->mChans[i].TargetGains);
 }
 
 static ALvoid ALautowahState_process(ALautowahState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    const ALfloat attack_rate = state->AttackRate;
-    const ALfloat release_rate = state->ReleaseRate;
-    const ALfloat res_gain = state->ResonanceGain;
-    const ALfloat peak_gain = state->PeakGain;
-    const ALfloat freq_min = state->FreqMinNorm;
-    const ALfloat bandwidth = state->BandwidthNorm;
+    const ALfloat attack_rate = state->mAttackRate;
+    const ALfloat release_rate = state->mReleaseRate;
+    const ALfloat res_gain = state->mResonanceGain;
+    const ALfloat peak_gain = state->mPeakGain;
+    const ALfloat freq_min = state->mFreqMinNorm;
+    const ALfloat bandwidth = state->mBandwidthNorm;
     ALfloat env_delay;
     ALsizei c, i;
 
-    env_delay = state->env_delay;
+    env_delay = state->mEnvDelay;
     for(i = 0;i < SamplesToDo;i++)
     {
         ALfloat w0, sample, a;
@@ -161,10 +165,10 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALsizei SamplesToDo,
 
         /* Calculate the cos and alpha components for this sample's filter. */
         w0 = minf((bandwidth*env_delay + freq_min), 0.46f) * F_TAU;
-        state->Env[i].cos_w0 = cosf(w0);
-        state->Env[i].alpha = sinf(w0)/(2.0f * Q_FACTOR);
+        state->mEnv[i].cos_w0 = cosf(w0);
+        state->mEnv[i].alpha = sinf(w0)/(2.0f * Q_FACTOR);
     }
-    state->env_delay = env_delay;
+    state->mEnvDelay = env_delay;
 
     for(c = 0;c < MAX_EFFECT_CHANNELS; c++)
     {
@@ -174,13 +178,13 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALsizei SamplesToDo,
          * envelope. Because the filter changes for each sample, the
          * coefficients are transient and don't need to be held.
          */
-        ALfloat z1 = state->Chans[c].Filter.z1;
-        ALfloat z2 = state->Chans[c].Filter.z2;
+        ALfloat z1 = state->mChans[c].Filter.z1;
+        ALfloat z2 = state->mChans[c].Filter.z2;
 
         for(i = 0;i < SamplesToDo;i++)
         {
-            const ALfloat alpha = state->Env[i].alpha;
-            const ALfloat cos_w0 = state->Env[i].cos_w0;
+            const ALfloat alpha = state->mEnv[i].alpha;
+            const ALfloat cos_w0 = state->mEnv[i].cos_w0;
             ALfloat input, output;
             ALfloat a[3], b[3];
 
@@ -195,14 +199,14 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALsizei SamplesToDo,
             output = input*(b[0]/a[0]) + z1;
             z1 = input*(b[1]/a[0]) - output*(a[1]/a[0]) + z2;
             z2 = input*(b[2]/a[0]) - output*(a[2]/a[0]);
-            state->BufferOut[i] = output;
+            state->mBufferOut[i] = output;
         }
-        state->Chans[c].Filter.z1 = z1;
-        state->Chans[c].Filter.z2 = z2;
+        state->mChans[c].Filter.z1 = z1;
+        state->mChans[c].Filter.z2 = z2;
 
         /* Now, mix the processed sound data to the output. */
-        MixSamples(state->BufferOut, NumChannels, SamplesOut, state->Chans[c].CurrentGains,
-                   state->Chans[c].TargetGains, SamplesToDo, 0, SamplesToDo);
+        MixSamples(state->mBufferOut, NumChannels, SamplesOut, state->mChans[c].CurrentGains,
+                   state->mChans[c].TargetGains, SamplesToDo, 0, SamplesToDo);
     }
 }
 

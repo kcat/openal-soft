@@ -380,9 +380,7 @@ ALCenum ALCplaybackOSS_open(ALCplaybackOSS *self, const ALCchar *name)
         return ALC_INVALID_VALUE;
     }
 
-    al_free(device->DeviceName);
-    device->DeviceName = alstrdup(name);
-
+    device->DeviceName = name;
     return ALC_NO_ERROR;
 }
 
@@ -712,9 +710,7 @@ ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
         return ALC_OUT_OF_MEMORY;
     }
 
-    al_free(device->DeviceName);
-    device->DeviceName = alstrdup(name);
-
+    device->DeviceName = name;
     return ALC_NO_ERROR;
 }
 

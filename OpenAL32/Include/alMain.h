@@ -593,7 +593,7 @@ struct ALCdevice_struct {
 
     ALCenum LimiterState{ALC_DONT_CARE_SOFT};
 
-    char *DeviceName{nullptr};
+    std::string DeviceName;
 
     ATOMIC(ALCenum) LastError{ALC_NO_ERROR};
 

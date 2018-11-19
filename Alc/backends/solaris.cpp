@@ -188,8 +188,7 @@ static ALCenum ALCsolarisBackend_open(ALCsolarisBackend *self, const ALCchar *na
     }
 
     device = STATIC_CAST(ALCbackend,self)->mDevice;
-    al_free(device->DeviceName);
-    device->DeviceName = alstrdup(name);
+    device->DeviceName = name;
 
     return ALC_NO_ERROR;
 }

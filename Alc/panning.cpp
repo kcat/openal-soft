@@ -379,7 +379,7 @@ static const ChannelMap MonoCfg[1] = {
 static void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei order,
                               const ALsizei *RESTRICT chans_per_order)
 {
-    const char *devname = device->DeviceName;
+    const char *devname = device->DeviceName.c_str();
     ALsizei i;
 
     if(GetConfigValueBool(devname, "decoder", "nfc", 1) && ctrl_dist > 0.0f)
@@ -399,7 +399,7 @@ static void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei orde
 
 static void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei speakermap[MAX_OUTPUT_CHANNELS])
 {
-    const char *devname = device->DeviceName;
+    const char *devname = device->DeviceName.c_str();
     ALfloat maxdist = 0.0f;
     size_t total = 0;
     ALsizei i;
@@ -512,7 +512,7 @@ static void InitPanning(ALCdevice *device)
 
     if(device->FmtChans == DevFmtAmbi3D)
     {
-        const char *devname = device->DeviceName;
+        const char *devname = device->DeviceName.c_str();
         const ALsizei *acnmap = (device->mAmbiLayout == AmbiLayout_FuMa) ? FuMa2ACN : ACN2ACN;
         const ALfloat *n3dscale = (device->mAmbiScale == AmbiNorm_FuMa) ? FuMa2N3DScale :
                                   (device->mAmbiScale == AmbiNorm_SN3D) ? SN3D2N3DScale :
@@ -966,7 +966,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         if(hrtf_appreq == Hrtf_Enable)
             device->HrtfStatus = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
 
-        devname = device->DeviceName;
+        devname = device->DeviceName.c_str();
         switch(device->FmtChans)
         {
             case DevFmtQuad: layout = "quad"; break;
@@ -1072,7 +1072,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     if(device->Type != Loopback)
     {
         const char *mode;
-        if(ConfigValueStr(device->DeviceName, NULL, "stereo-mode", &mode))
+        if(ConfigValueStr(device->DeviceName.c_str(), NULL, "stereo-mode", &mode))
         {
             if(strcasecmp(mode, "headphones") == 0)
                 headphones = true;
@@ -1107,7 +1107,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     if(VECTOR_SIZE(device->HrtfList) == 0)
     {
         VECTOR_DEINIT(device->HrtfList);
-        device->HrtfList = EnumerateHrtf(device->DeviceName);
+        device->HrtfList = EnumerateHrtf(device->DeviceName.c_str());
     }
 
     if(hrtf_id >= 0 && (size_t)hrtf_id < VECTOR_SIZE(device->HrtfList))
@@ -1143,7 +1143,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         old_hrtf = NULL;
 
         device->Render_Mode = HrtfRender;
-        if(ConfigValueStr(device->DeviceName, NULL, "hrtf-mode", &mode))
+        if(ConfigValueStr(device->DeviceName.c_str(), NULL, "hrtf-mode", &mode))
         {
             if(strcasecmp(mode, "full") == 0)
                 device->Render_Mode = HrtfRender;
@@ -1187,7 +1187,7 @@ no_hrtf:
     bs2blevel = ((headphones && hrtf_appreq != Hrtf_Disable) ||
                  (hrtf_appreq == Hrtf_Enable)) ? 5 : 0;
     if(device->Type != Loopback)
-        ConfigValueInt(device->DeviceName, NULL, "cf_level", &bs2blevel);
+        ConfigValueInt(device->DeviceName.c_str(), NULL, "cf_level", &bs2blevel);
     if(bs2blevel > 0 && bs2blevel <= 6)
     {
         device->Bs2b = reinterpret_cast<struct bs2b*>(al_calloc(16, sizeof(*device->Bs2b)));
@@ -1199,7 +1199,7 @@ no_hrtf:
 
     TRACE("BS2B disabled\n");
 
-    if(ConfigValueStr(device->DeviceName, NULL, "stereo-encoding", &mode))
+    if(ConfigValueStr(device->DeviceName.c_str(), NULL, "stereo-encoding", &mode))
     {
         if(strcasecmp(mode, "uhj") == 0)
             device->Render_Mode = NormalRender;

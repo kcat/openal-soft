@@ -224,7 +224,7 @@ static int ALCjackPlayback_bufferSizeNotify(jack_nframes_t numframes, void *arg)
     device->NumUpdates = 2;
 
     bufsize = device->UpdateSize;
-    if(ConfigValueUInt(device->DeviceName, "jack", "buffer-size", &bufsize))
+    if(ConfigValueUInt(device->DeviceName.c_str(), "jack", "buffer-size", &bufsize))
         bufsize = maxu(NextPowerOf2(bufsize), device->UpdateSize);
     device->NumUpdates = (bufsize+device->UpdateSize) / device->UpdateSize;
 
@@ -368,9 +368,7 @@ static ALCenum ALCjackPlayback_open(ALCjackPlayback *self, const ALCchar *name)
     jack_set_process_callback(self->Client, ALCjackPlayback_process, self);
     jack_set_buffer_size_callback(self->Client, ALCjackPlayback_bufferSizeNotify, self);
 
-    al_free(device->DeviceName);
-    device->DeviceName = alstrdup(name);
-
+    device->DeviceName = name;
     return ALC_NO_ERROR;
 }
 
@@ -395,7 +393,7 @@ static ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
     device->NumUpdates = 2;
 
     bufsize = device->UpdateSize;
-    if(ConfigValueUInt(device->DeviceName, "jack", "buffer-size", &bufsize))
+    if(ConfigValueUInt(device->DeviceName.c_str(), "jack", "buffer-size", &bufsize))
         bufsize = maxu(NextPowerOf2(bufsize), device->UpdateSize);
     device->NumUpdates = (bufsize+device->UpdateSize) / device->UpdateSize;
 

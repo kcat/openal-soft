@@ -148,9 +148,7 @@ static ALCenum SndioPlayback_open(SndioPlayback *self, const ALCchar *name)
         return ALC_INVALID_VALUE;
     }
 
-    al_free(device->DeviceName);
-    device->DeviceName = alstrdup(name);
-
+    device->DeviceName = name;
     return ALC_NO_ERROR;
 }
 
@@ -489,9 +487,7 @@ static ALCenum SndioCapture_open(SndioCapture *self, const ALCchar *name)
 
     SetDefaultChannelOrder(device);
 
-    al_free(device->DeviceName);
-    device->DeviceName = alstrdup(name);
-
+    device->DeviceName = name;
     return ALC_NO_ERROR;
 }
 

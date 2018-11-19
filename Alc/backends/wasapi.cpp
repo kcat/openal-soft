@@ -716,8 +716,7 @@ ALCenum ALCwasapiPlayback_open(ALCwasapiPlayback *self, const ALCchar *deviceNam
             {
                 ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
                 self->mDevId = iter->devid;
-                al_free(device->DeviceName);
-                device->DeviceName = alstrdup(iter->name.c_str());
+                device->DeviceName = iter->name;
                 hr = S_OK;
             }
         }
@@ -773,12 +772,8 @@ HRESULT ALCwasapiPlayback::openProxy()
     if(SUCCEEDED(hr))
     {
         mClient = reinterpret_cast<IAudioClient*>(ptr);
-        if(!device->DeviceName || device->DeviceName[0] == 0)
-        {
-            std::string devname{get_device_name_and_guid(mMMDev).first};
-            al_free(device->DeviceName);
-            device->DeviceName = alstrdup(devname.c_str());
-        }
+        if(device->DeviceName.empty())
+            device->DeviceName = get_device_name_and_guid(mMMDev).first;
     }
 
     if(FAILED(hr))
@@ -1383,8 +1378,7 @@ ALCenum ALCwasapiCapture_open(ALCwasapiCapture *self, const ALCchar *deviceName)
             {
                 ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
                 self->mDevId = iter->devid;
-                al_free(device->DeviceName);
-                device->DeviceName = alstrdup(iter->name.c_str());
+                device->DeviceName = iter->name;
                 hr = S_OK;
             }
         }
@@ -1459,12 +1453,8 @@ HRESULT ALCwasapiCapture::openProxy()
     if(SUCCEEDED(hr))
     {
         mClient = reinterpret_cast<IAudioClient*>(ptr);
-        if(!device->DeviceName || device->DeviceName[0] == 0)
-        {
-            std::string devname{get_device_name_and_guid(mMMDev).first};
-            al_free(device->DeviceName);
-            device->DeviceName = alstrdup(devname.c_str());
-        }
+        if(device->DeviceName.empty())
+            device->DeviceName = get_device_name_and_guid(mMMDev).first;
     }
 
     if(FAILED(hr))

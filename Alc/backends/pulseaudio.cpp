@@ -798,8 +798,7 @@ void PulsePlayback_sinkNameCallback(pa_context *UNUSED(context), const pa_sink_i
     }
 
     ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
-    al_free(device->DeviceName);
-    device->DeviceName = alstrdup(info->description);
+    device->DeviceName = info->description;
 }
 
 
@@ -979,8 +978,7 @@ ALCenum PulsePlayback_open(PulsePlayback *self, const ALCchar *name)
     else
     {
         ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
-        al_free(device->DeviceName);
-        device->DeviceName = alstrdup(dev_name);
+        device->DeviceName = dev_name;
     }
 
     return ALC_NO_ERROR;
@@ -1011,7 +1009,7 @@ ALCboolean PulsePlayback_reset(PulsePlayback *self)
                             PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE};
     if(!GetConfigValueBool(nullptr, "pulse", "allow-moves", 0))
         flags |= PA_STREAM_DONT_MOVE;
-    if(GetConfigValueBool(device->DeviceName, "pulse", "fix-rate", 0) ||
+    if(GetConfigValueBool(device->DeviceName.c_str(), "pulse", "fix-rate", 0) ||
        !(device->Flags&DEVICE_FREQUENCY_REQUEST))
         flags |= PA_STREAM_FIX_RATE;
 
@@ -1418,8 +1416,7 @@ void PulseCapture_sourceNameCallback(pa_context *UNUSED(context), const pa_sourc
     }
 
     ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
-    al_free(device->DeviceName);
-    device->DeviceName = alstrdup(info->description);
+    device->DeviceName = info->description;
 }
 
 
@@ -1491,8 +1488,7 @@ ALCenum PulseCapture_open(PulseCapture *self, const ALCchar *name)
         if(iter == CaptureDevices.cend())
             return ALC_INVALID_VALUE;
         pulse_name = iter->device_name.c_str();
-        al_free(device->DeviceName);
-        device->DeviceName = alstrdup(iter->name.c_str());
+        device->DeviceName = iter->name;
     }
 
     std::tie(self->loop, self->context) = pulse_open(PulseCapture_contextStateCallback, self);
@@ -1595,7 +1591,7 @@ ALCenum PulseCapture_open(PulseCapture *self, const ALCchar *name)
     pa_stream_set_state_callback(self->stream, PulseCapture_streamStateCallback, self);
 
     self->device_name = pa_stream_get_device_name(self->stream);
-    if(!device->DeviceName || device->DeviceName[0] == 0)
+    if(device->DeviceName.empty())
     {
         pa_operation *op{pa_context_get_source_info_by_name(self->context,
             self->device_name.c_str(), PulseCapture_sourceNameCallback, self

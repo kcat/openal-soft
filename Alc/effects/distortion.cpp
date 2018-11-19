@@ -176,30 +176,20 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALsizei Sample
 
 
 struct DistortionStateFactory final : public EffectStateFactory {
-    DistortionStateFactory() noexcept;
+    ALeffectState *create() override;
 };
 
-static ALeffectState *DistortionStateFactory_create(DistortionStateFactory *UNUSED(factory))
+ALeffectState *DistortionStateFactory::create()
 {
     ALdistortionState *state;
-
     NEW_OBJ0(state, ALdistortionState)();
-    if(!state) return NULL;
-
-    return STATIC_CAST(ALeffectState, state);
-}
-
-DEFINE_EFFECTSTATEFACTORY_VTABLE(DistortionStateFactory);
-
-DistortionStateFactory::DistortionStateFactory() noexcept
-  : EffectStateFactory{GET_VTABLE2(DistortionStateFactory, EffectStateFactory)}
-{
+    return state;
 }
 
 EffectStateFactory *DistortionStateFactory_getFactory(void)
 {
     static DistortionStateFactory DistortionFactory{};
-    return STATIC_CAST(EffectStateFactory, &DistortionFactory);
+    return &DistortionFactory;
 }
 
 

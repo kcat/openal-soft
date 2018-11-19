@@ -197,29 +197,20 @@ static ALvoid ALmodulatorState_process(ALmodulatorState *state, ALsizei SamplesT
 
 
 struct ModulatorStateFactory final : public EffectStateFactory {
-    ModulatorStateFactory() noexcept;
+    ALeffectState *create() override;
 };
 
-static ALeffectState *ModulatorStateFactory_create(ModulatorStateFactory *UNUSED(factory))
+ALeffectState *ModulatorStateFactory::create()
 {
     ALmodulatorState *state;
-
     NEW_OBJ0(state, ALmodulatorState)();
-    if(!state) return NULL;
-
-    return STATIC_CAST(ALeffectState, state);
+    return state;
 }
-
-DEFINE_EFFECTSTATEFACTORY_VTABLE(ModulatorStateFactory);
-
-ModulatorStateFactory::ModulatorStateFactory() noexcept
-  : EffectStateFactory{GET_VTABLE2(ModulatorStateFactory, EffectStateFactory)}
-{ }
 
 EffectStateFactory *ModulatorStateFactory_getFactory(void)
 {
     static ModulatorStateFactory ModulatorFactory{};
-    return STATIC_CAST(EffectStateFactory, &ModulatorFactory);
+    return &ModulatorFactory;
 }
 
 

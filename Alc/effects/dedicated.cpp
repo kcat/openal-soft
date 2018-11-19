@@ -115,30 +115,20 @@ static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALsizei SamplesT
 
 
 struct DedicatedStateFactory final : public EffectStateFactory {
-    DedicatedStateFactory() noexcept;
+    ALeffectState *create() override;
 };
 
-ALeffectState *DedicatedStateFactory_create(DedicatedStateFactory *UNUSED(factory))
+ALeffectState *DedicatedStateFactory::create()
 {
     ALdedicatedState *state;
-
     NEW_OBJ0(state, ALdedicatedState)();
-    if(!state) return NULL;
-
-    return STATIC_CAST(ALeffectState, state);
-}
-
-DEFINE_EFFECTSTATEFACTORY_VTABLE(DedicatedStateFactory);
-
-DedicatedStateFactory::DedicatedStateFactory() noexcept
-  : EffectStateFactory{GET_VTABLE2(DedicatedStateFactory, EffectStateFactory)}
-{
+    return state;
 }
 
 EffectStateFactory *DedicatedStateFactory_getFactory(void)
 {
     static DedicatedStateFactory DedicatedFactory{};
-    return STATIC_CAST(EffectStateFactory, &DedicatedFactory);
+    return &DedicatedFactory;
 }
 
 

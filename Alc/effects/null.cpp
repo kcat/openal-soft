@@ -89,33 +89,21 @@ static void ALnullState_Delete(void *ptr)
 
 
 struct NullStateFactory final : public EffectStateFactory {
-    NullStateFactory() noexcept;
+    ALeffectState *create() override;
 };
 
 /* Creates ALeffectState objects of the appropriate type. */
-ALeffectState *NullStateFactory_create(NullStateFactory *UNUSED(factory))
+ALeffectState *NullStateFactory::create()
 {
     ALnullState *state;
-
     NEW_OBJ0(state, ALnullState)();
-    if(!state) return NULL;
-
-    return STATIC_CAST(ALeffectState, state);
+    return state;
 }
-
-/* Define the EffectStateFactory vtable for this type. */
-DEFINE_EFFECTSTATEFACTORY_VTABLE(NullStateFactory);
-
-NullStateFactory::NullStateFactory() noexcept
-  : EffectStateFactory{GET_VTABLE2(NullStateFactory, EffectStateFactory)}
-{
-}
-
 
 EffectStateFactory *NullStateFactory_getFactory(void)
 {
     static NullStateFactory NullFactory{};
-    return STATIC_CAST(EffectStateFactory, &NullFactory);
+    return &NullFactory;
 }
 
 

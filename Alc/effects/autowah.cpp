@@ -207,32 +207,22 @@ static ALvoid ALautowahState_process(ALautowahState *state, ALsizei SamplesToDo,
 }
 
 struct AutowahStateFactory final : public EffectStateFactory {
-    AutowahStateFactory() noexcept;
+    ALeffectState *create() override;
 };
 
-static ALeffectState *AutowahStateFactory_create(AutowahStateFactory *UNUSED(factory))
+ALeffectState *AutowahStateFactory::create()
 {
     ALautowahState *state;
-
     NEW_OBJ0(state, ALautowahState)();
-    if(!state) return NULL;
-
-    return STATIC_CAST(ALeffectState, state);
-}
-
-DEFINE_EFFECTSTATEFACTORY_VTABLE(AutowahStateFactory);
-
-AutowahStateFactory::AutowahStateFactory() noexcept
-  : EffectStateFactory{GET_VTABLE2(AutowahStateFactory, EffectStateFactory)}
-{
+    return state;
 }
 
 EffectStateFactory *AutowahStateFactory_getFactory(void)
 {
     static AutowahStateFactory AutowahFactory{};
-
-    return STATIC_CAST(EffectStateFactory, &AutowahFactory);
+    return &AutowahFactory;
 }
+
 
 void ALautowah_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {

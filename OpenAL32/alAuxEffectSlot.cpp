@@ -487,15 +487,13 @@ ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
 
     if(newtype != EffectSlot->Effect.Type)
     {
-        EffectStateFactory *factory;
-
-        factory = getFactoryByType(newtype);
+        EffectStateFactory *factory = getFactoryByType(newtype);
         if(!factory)
         {
             ERR("Failed to find factory for effect type 0x%04x\n", newtype);
             return AL_INVALID_ENUM;
         }
-        State = EffectStateFactory_create(factory);
+        State = factory->create();
         if(!State) return AL_OUT_OF_MEMORY;
 
         START_MIXER_MODE();
@@ -663,7 +661,7 @@ static void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcon
 ALenum InitEffectSlot(ALeffectslot *slot)
 {
     EffectStateFactory *factory{getFactoryByType(slot->Effect.Type)};
-    slot->Effect.State = EffectStateFactory_create(factory);
+    slot->Effect.State = factory->create();
     if(!slot->Effect.State) return AL_OUT_OF_MEMORY;
 
     ALeffectState_IncRef(slot->Effect.State);

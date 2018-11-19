@@ -199,30 +199,20 @@ static ALvoid ALequalizerState_process(ALequalizerState *state, ALsizei SamplesT
 
 
 struct EqualizerStateFactory final : public EffectStateFactory {
-    EqualizerStateFactory() noexcept;
+    ALeffectState *create() override;
 };
 
-ALeffectState *EqualizerStateFactory_create(EqualizerStateFactory *UNUSED(factory))
+ALeffectState *EqualizerStateFactory::create()
 {
     ALequalizerState *state;
-
     NEW_OBJ0(state, ALequalizerState)();
-    if(!state) return NULL;
-
-    return STATIC_CAST(ALeffectState, state);
-}
-
-DEFINE_EFFECTSTATEFACTORY_VTABLE(EqualizerStateFactory);
-
-EqualizerStateFactory::EqualizerStateFactory() noexcept
-  : EffectStateFactory{GET_VTABLE2(EqualizerStateFactory, EffectStateFactory)}
-{
+    return state;
 }
 
 EffectStateFactory *EqualizerStateFactory_getFactory(void)
 {
     static EqualizerStateFactory EqualizerFactory{};
-    return STATIC_CAST(EffectStateFactory, &EqualizerFactory);
+    return &EqualizerFactory;
 }
 
 

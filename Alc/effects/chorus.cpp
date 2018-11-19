@@ -286,30 +286,20 @@ static ALvoid ALchorusState_process(ALchorusState *state, ALsizei SamplesToDo, c
 
 
 struct ChorusStateFactory final : public EffectStateFactory {
-    ChorusStateFactory() noexcept;
+    ALeffectState *create() override;
 };
 
-static ALeffectState *ChorusStateFactory_create(ChorusStateFactory *UNUSED(factory))
+ALeffectState *ChorusStateFactory::create()
 {
     ALchorusState *state;
-
     NEW_OBJ0(state, ALchorusState)();
-    if(!state) return NULL;
-
-    return STATIC_CAST(ALeffectState, state);
-}
-
-DEFINE_EFFECTSTATEFACTORY_VTABLE(ChorusStateFactory);
-
-ChorusStateFactory::ChorusStateFactory() noexcept
-  : EffectStateFactory{GET_VTABLE2(ChorusStateFactory, EffectStateFactory)}
-{
+    return state;
 }
 
 EffectStateFactory *ChorusStateFactory_getFactory(void)
 {
     static ChorusStateFactory ChorusFactory{};
-    return STATIC_CAST(EffectStateFactory, &ChorusFactory);
+    return &ChorusFactory;
 }
 
 
@@ -426,30 +416,20 @@ DEFINE_ALEFFECT_VTABLE(ALchorus);
  * the same processing functions, so piggyback flanger on the chorus functions.
  */
 struct FlangerStateFactory final : public EffectStateFactory {
-    FlangerStateFactory() noexcept;
+    ALeffectState *create() override;
 };
 
-ALeffectState *FlangerStateFactory_create(FlangerStateFactory *UNUSED(factory))
+ALeffectState *FlangerStateFactory::create()
 {
     ALchorusState *state;
-
     NEW_OBJ0(state, ALchorusState)();
-    if(!state) return NULL;
-
-    return STATIC_CAST(ALeffectState, state);
-}
-
-DEFINE_EFFECTSTATEFACTORY_VTABLE(FlangerStateFactory);
-
-FlangerStateFactory::FlangerStateFactory() noexcept
-  : EffectStateFactory{GET_VTABLE2(FlangerStateFactory, EffectStateFactory)}
-{
+    return state;
 }
 
 EffectStateFactory *FlangerStateFactory_getFactory(void)
 {
     static FlangerStateFactory FlangerFactory{};
-    return STATIC_CAST(EffectStateFactory, &FlangerFactory);
+    return &FlangerFactory;
 }
 
 

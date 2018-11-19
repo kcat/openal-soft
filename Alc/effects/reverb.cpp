@@ -1586,30 +1586,20 @@ static ALvoid ReverbState_process(ReverbState *State, ALsizei SamplesToDo, const
 
 
 struct ReverbStateFactory final : public EffectStateFactory {
-    ReverbStateFactory() noexcept;
+    ALeffectState *create() override;
 };
 
-static ALeffectState *ReverbStateFactory_create(ReverbStateFactory* UNUSED(factory))
+ALeffectState *ReverbStateFactory::create()
 {
     ReverbState *state;
-
     NEW_OBJ0(state, ReverbState)();
-    if(!state) return NULL;
-
-    return STATIC_CAST(ALeffectState, state);
-}
-
-DEFINE_EFFECTSTATEFACTORY_VTABLE(ReverbStateFactory);
-
-ReverbStateFactory::ReverbStateFactory() noexcept
-  : EffectStateFactory{GET_VTABLE2(ReverbStateFactory, EffectStateFactory)}
-{
+    return state;
 }
 
 EffectStateFactory *ReverbStateFactory_getFactory(void)
 {
     static ReverbStateFactory ReverbFactory{};
-    return STATIC_CAST(EffectStateFactory, &ReverbFactory);
+    return &ReverbFactory;
 }
 
 

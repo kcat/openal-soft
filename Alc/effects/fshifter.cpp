@@ -218,31 +218,22 @@ ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToDo, cons
 } // namespace
 
 struct FshifterStateFactory final : public EffectStateFactory {
-    FshifterStateFactory() noexcept;
+    ALeffectState *create() override;
 };
 
-static ALeffectState *FshifterStateFactory_create(FshifterStateFactory *UNUSED(factory))
+ALeffectState *FshifterStateFactory::create()
 {
     ALfshifterState *state;
-
     NEW_OBJ0(state, ALfshifterState)();
-    if(!state) return NULL;
-
-    return STATIC_CAST(ALeffectState, state);
-}
-
-DEFINE_EFFECTSTATEFACTORY_VTABLE(FshifterStateFactory);
-
-FshifterStateFactory::FshifterStateFactory() noexcept
-  : EffectStateFactory{GET_VTABLE2(FshifterStateFactory, EffectStateFactory)}
-{
+    return state;
 }
 
 EffectStateFactory *FshifterStateFactory_getFactory(void)
 {
     static FshifterStateFactory FshifterFactory{};
-    return STATIC_CAST(EffectStateFactory, &FshifterFactory);
+    return &FshifterFactory;
 }
+
 
 void ALfshifter_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val)
 {

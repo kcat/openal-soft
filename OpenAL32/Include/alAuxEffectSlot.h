@@ -7,9 +7,6 @@
 #include "almalloc.h"
 #include "atomic.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 struct ALeffectStateVtable;
 struct ALeffectslot;
@@ -59,23 +56,11 @@ static const struct ALeffectStateVtable T##_ALeffectState_vtable = {          \
 }
 
 
-struct EffectStateFactoryVtable;
+struct EffectStateFactory {
+    virtual ~EffectStateFactory() { }
 
-typedef struct EffectStateFactory {
-    const struct EffectStateFactoryVtable *vtab;
-} EffectStateFactory;
-
-struct EffectStateFactoryVtable {
-    ALeffectState *(*const create)(EffectStateFactory *factory);
+    virtual ALeffectState *create() = 0;
 };
-#define EffectStateFactory_create(x) ((x)->vtab->create((x)))
-
-#define DEFINE_EFFECTSTATEFACTORY_VTABLE(T)                                   \
-DECLARE_THUNK(T, EffectStateFactory, ALeffectState*, create)                  \
-                                                                              \
-static const struct EffectStateFactoryVtable T##_EffectStateFactory_vtable = { \
-    T##_EffectStateFactory_create,                                            \
-}
 
 
 #define MAX_EFFECT_CHANNELS (4)
@@ -183,9 +168,5 @@ EffectStateFactory *DedicatedStateFactory_getFactory(void);
 ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect);
 
 void ALeffectState_DecRef(ALeffectState *state);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

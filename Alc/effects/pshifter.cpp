@@ -335,31 +335,20 @@ ALvoid ALpshifterState_process(ALpshifterState *state, ALsizei SamplesToDo, cons
 } // namespace
 
 struct PshifterStateFactory final : public EffectStateFactory {
-    PshifterStateFactory() noexcept;
+    ALeffectState *create() override;
 };
 
-static ALeffectState *PshifterStateFactory_create(PshifterStateFactory *UNUSED(factory))
+ALeffectState *PshifterStateFactory::create()
 {
     ALpshifterState *state;
-
     NEW_OBJ0(state, ALpshifterState)();
-    if(!state) return NULL;
-
-    return STATIC_CAST(ALeffectState, state);
-}
-
-DEFINE_EFFECTSTATEFACTORY_VTABLE(PshifterStateFactory);
-
-
-PshifterStateFactory::PshifterStateFactory() noexcept
-  : EffectStateFactory{GET_VTABLE2(PshifterStateFactory, EffectStateFactory)}
-{
+    return state;
 }
 
 EffectStateFactory *PshifterStateFactory_getFactory(void)
 {
     static PshifterStateFactory PshifterFactory{};
-    return STATIC_CAST(EffectStateFactory, &PshifterFactory);
+    return &PshifterFactory;
 }
 
 

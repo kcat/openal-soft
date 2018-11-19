@@ -177,30 +177,20 @@ static ALvoid ALcompressorState_process(ALcompressorState *state, ALsizei Sample
 
 
 struct CompressorStateFactory final : public EffectStateFactory {
-    CompressorStateFactory() noexcept;
+    ALeffectState *create() override;
 };
 
-static ALeffectState *CompressorStateFactory_create(CompressorStateFactory *UNUSED(factory))
+ALeffectState *CompressorStateFactory::create()
 {
     ALcompressorState *state;
-
     NEW_OBJ0(state, ALcompressorState)();
-    if(!state) return NULL;
-
-    return STATIC_CAST(ALeffectState, state);
-}
-
-DEFINE_EFFECTSTATEFACTORY_VTABLE(CompressorStateFactory);
-
-CompressorStateFactory::CompressorStateFactory() noexcept
-  : EffectStateFactory{GET_VTABLE2(CompressorStateFactory, EffectStateFactory)}
-{
+    return state;
 }
 
 EffectStateFactory *CompressorStateFactory_getFactory(void)
 {
     static CompressorStateFactory CompressorFactory{};
-    return STATIC_CAST(EffectStateFactory, &CompressorFactory);
+    return &CompressorFactory;
 }
 
 

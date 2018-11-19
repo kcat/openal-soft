@@ -203,30 +203,20 @@ static ALvoid ALechoState_process(ALechoState *state, ALsizei SamplesToDo, const
 
 
 struct EchoStateFactory final : public EffectStateFactory {
-    EchoStateFactory() noexcept;
+    ALeffectState *create() override;
 };
 
-ALeffectState *EchoStateFactory_create(EchoStateFactory *UNUSED(factory))
+ALeffectState *EchoStateFactory::create()
 {
     ALechoState *state;
-
     NEW_OBJ0(state, ALechoState)();
-    if(!state) return NULL;
-
-    return STATIC_CAST(ALeffectState, state);
-}
-
-DEFINE_EFFECTSTATEFACTORY_VTABLE(EchoStateFactory);
-
-EchoStateFactory::EchoStateFactory() noexcept
-  : EffectStateFactory{GET_VTABLE2(EchoStateFactory, EffectStateFactory)}
-{
+    return state;
 }
 
 EffectStateFactory *EchoStateFactory_getFactory(void)
 {
     static EchoStateFactory EchoFactory{};
-    return STATIC_CAST(EffectStateFactory, &EchoFactory);
+    return &EchoFactory;
 }
 
 

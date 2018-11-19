@@ -2581,8 +2581,7 @@ static ALvoid InitContext(ALCcontext *Context)
 
 
     Context->AsyncEvents = ll_ringbuffer_create(63, sizeof(AsyncEvent), false);
-    if(althrd_create(&Context->EventThread, EventThread, Context) != althrd_success)
-        ERR("Failed to start event thread! Expect problems.\n");
+    StartEventThrd(Context);
 }
 
 
@@ -2696,7 +2695,6 @@ ALCcontext_struct::~ALCcontext_struct()
  */
 static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
 {
-    static const AsyncEvent kill_evt = ASYNC_EVENT(EventType_KillThread);
     ALCcontext *origctx, *newhead;
     bool ret = true;
 
@@ -2734,10 +2732,7 @@ static bool ReleaseContext(ALCcontext *context, ALCdevice *device)
      * this, although waiting for a non-odd mix count would work too.
      */
 
-    while(ll_ringbuffer_write(context->AsyncEvents, (const char*)&kill_evt, 1) == 0)
-        althrd_yield();
-    alsem_post(&context->EventSem);
-    althrd_join(context->EventThread, nullptr);
+    StopEventThrd(context);
 
     ALCcontext_DecRef(context);
     return ret;

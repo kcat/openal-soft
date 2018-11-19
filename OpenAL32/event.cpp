@@ -15,10 +15,8 @@
 #include "threads.h"
 
 
-int EventThread(void *arg)
+static int EventThread(ALCcontext *context)
 {
-    auto context = static_cast<ALCcontext*>(arg);
-
     bool quitnow{false};
     while(LIKELY(!quitnow))
     {
@@ -48,6 +46,29 @@ int EventThread(void *arg)
         } while(ll_ringbuffer_read(context->AsyncEvents, (char*)&evt, 1) != 0);
     }
     return 0;
+}
+
+void StartEventThrd(ALCcontext *ctx)
+{
+    try {
+        ctx->EventThread = std::thread(EventThread, ctx);
+    }
+    catch(std::exception& e) {
+        ERR("Failed to start event thread: %s\n", e.what());
+    }
+    catch(...) {
+        ERR("Failed to start event thread! Expect problems.\n");
+    }
+}
+
+void StopEventThrd(ALCcontext *ctx)
+{
+    static constexpr AsyncEvent kill_evt = ASYNC_EVENT(EventType_KillThread);
+    while(ll_ringbuffer_write(ctx->AsyncEvents, (const char*)&kill_evt, 1) == 0)
+        althrd_yield();
+    alsem_post(&ctx->EventSem);
+    if(ctx->EventThread.joinable())
+        ctx->EventThread.join();
 }
 
 AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, ALboolean enable)

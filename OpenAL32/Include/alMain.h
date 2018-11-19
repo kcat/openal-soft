@@ -803,7 +803,8 @@ inline void LockFilterList(ALCdevice *device) { almtx_lock(&device->FilterLock);
 inline void UnlockFilterList(ALCdevice *device) { almtx_unlock(&device->FilterLock); }
 
 
-int EventThread(void *arg);
+void StartEventThrd(ALCcontext *ctx);
+void StopEventThrd(ALCcontext *ctx);
 
 char *alstrdup(const char *str);
 

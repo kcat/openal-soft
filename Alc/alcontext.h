@@ -1,6 +1,8 @@
 #ifndef ALCONTEXT_H
 #define ALCONTEXT_H
 
+#include <thread>
+
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "AL/alext.h"
@@ -95,7 +97,7 @@ struct ALCcontext_struct {
 
     ATOMIC(ALeffectslotArray*) ActiveAuxSlots{nullptr};
 
-    althrd_t EventThread;
+    std::thread EventThread;
     alsem_t EventSem;
     ll_ringbuffer *AsyncEvents{nullptr};
     ATOMIC(ALbitfieldSOFT) EnabledEvts{0u};

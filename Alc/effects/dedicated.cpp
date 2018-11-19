@@ -21,6 +21,7 @@
 #include "config.h"
 
 #include <stdlib.h>
+#include <cmath>
 
 #include "alMain.h"
 #include "alcontext.h"
@@ -142,7 +143,7 @@ void ALdedicated_setParamf(ALeffect *effect, ALCcontext *context, ALenum param, 
     switch(param)
     {
         case AL_DEDICATED_GAIN:
-            if(!(val >= 0.0f && isfinite(val)))
+            if(!(val >= 0.0f && std::isfinite(val)))
                 SETERR_RETURN(context, AL_INVALID_VALUE,, "Dedicated gain out of range");
             props->Dedicated.Gain = val;
             break;

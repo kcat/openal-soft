@@ -20,6 +20,8 @@
 
 #include "config.h"
 
+#include <cmath>
+
 #include "alMain.h"
 #include "alcontext.h"
 #include "alu.h"
@@ -48,7 +50,7 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
     switch(param)
     {
     case AL_GAIN:
-        if(!(value >= 0.0f && isfinite(value)))
+        if(!(value >= 0.0f && std::isfinite(value)))
             SETERR_GOTO(context, AL_INVALID_VALUE, done, "Listener gain out of range");
         listener->Gain = value;
         DO_UPDATEPROPS();
@@ -87,7 +89,7 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
     switch(param)
     {
     case AL_POSITION:
-        if(!(isfinite(value1) && isfinite(value2) && isfinite(value3)))
+        if(!(std::isfinite(value1) && std::isfinite(value2) && std::isfinite(value3)))
             SETERR_GOTO(context, AL_INVALID_VALUE, done, "Listener position out of range");
         listener->Position[0] = value1;
         listener->Position[1] = value2;
@@ -96,7 +98,7 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
         break;
 
     case AL_VELOCITY:
-        if(!(isfinite(value1) && isfinite(value2) && isfinite(value3)))
+        if(!(std::isfinite(value1) && std::isfinite(value2) && std::isfinite(value3)))
             SETERR_GOTO(context, AL_INVALID_VALUE, done, "Listener velocity out of range");
         listener->Velocity[0] = value1;
         listener->Velocity[1] = value2;
@@ -144,8 +146,8 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
     switch(param)
     {
     case AL_ORIENTATION:
-        if(!(isfinite(values[0]) && isfinite(values[1]) && isfinite(values[2]) &&
-             isfinite(values[3]) && isfinite(values[4]) && isfinite(values[5])))
+        if(!(std::isfinite(values[0]) && std::isfinite(values[1]) && std::isfinite(values[2]) &&
+             std::isfinite(values[3]) && std::isfinite(values[4]) && std::isfinite(values[5])))
             SETERR_GOTO(context, AL_INVALID_VALUE, done, "Listener orientation out of range");
         /* AT then UP */
         listener->Forward[0] = values[0];

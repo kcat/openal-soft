@@ -23,6 +23,7 @@
 #include "version.h"
 
 #include <stdlib.h>
+#include <cmath>
 
 #include "alMain.h"
 #include "alcontext.h"
@@ -643,7 +644,7 @@ AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    if(!(value >= 0.0f && isfinite(value)))
+    if(!(value >= 0.0f && std::isfinite(value)))
         alSetError(context.get(), AL_INVALID_VALUE, "Doppler factor %f out of range", value);
     else
     {
@@ -670,7 +671,7 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
                                 context->EventParam);
     }
 
-    if(!(value >= 0.0f && isfinite(value)))
+    if(!(value >= 0.0f && std::isfinite(value)))
         alSetError(context.get(), AL_INVALID_VALUE, "Doppler velocity %f out of range", value);
     else
     {
@@ -685,7 +686,7 @@ AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat value)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    if(!(value > 0.0f && isfinite(value)))
+    if(!(value > 0.0f && std::isfinite(value)))
         alSetError(context.get(), AL_INVALID_VALUE, "Speed of sound %f out of range", value);
     else
     {

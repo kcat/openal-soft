@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include <cmath>
 #include <algorithm>
 
 #include "alMain.h"
@@ -1741,14 +1742,14 @@ void ALeaxreverb_setParamfv(ALeffect *effect, ALCcontext *context, ALenum param,
     switch(param)
     {
         case AL_EAXREVERB_REFLECTIONS_PAN:
-            if(!(isfinite(vals[0]) && isfinite(vals[1]) && isfinite(vals[2])))
+            if(!(std::isfinite(vals[0]) && std::isfinite(vals[1]) && std::isfinite(vals[2])))
                 SETERR_RETURN(context, AL_INVALID_VALUE,, "EAX Reverb reflections pan out of range");
             props->Reverb.ReflectionsPan[0] = vals[0];
             props->Reverb.ReflectionsPan[1] = vals[1];
             props->Reverb.ReflectionsPan[2] = vals[2];
             break;
         case AL_EAXREVERB_LATE_REVERB_PAN:
-            if(!(isfinite(vals[0]) && isfinite(vals[1]) && isfinite(vals[2])))
+            if(!(std::isfinite(vals[0]) && std::isfinite(vals[1]) && std::isfinite(vals[2])))
                 SETERR_RETURN(context, AL_INVALID_VALUE,, "EAX Reverb late reverb pan out of range");
             props->Reverb.LateReverbPan[0] = vals[0];
             props->Reverb.LateReverbPan[1] = vals[1];

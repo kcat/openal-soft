@@ -621,7 +621,7 @@ struct ALCdevice_struct {
 
     /* HRTF state and info */
     struct DirectHrtfState *Hrtf{nullptr};
-    char *HrtfName{nullptr};
+    std::string HrtfName;
     struct Hrtf *HrtfHandle{nullptr};
     al::vector<EnumeratedHrtf> HrtfList;
     ALCenum HrtfStatus{ALC_FALSE};

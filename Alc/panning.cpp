@@ -933,8 +933,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     al_free(device->Hrtf);
     device->Hrtf = NULL;
     device->HrtfHandle = NULL;
-    al_free(device->HrtfName);
-    device->HrtfName = NULL;
+    device->HrtfName.clear();
     device->Render_Mode = NormalRender;
 
     memset(&device->Dry.Ambi, 0, sizeof(device->Dry.Ambi));
@@ -1114,7 +1113,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         if(hrtf && hrtf->sampleRate == device->Frequency)
         {
             device->HrtfHandle = hrtf;
-            device->HrtfName = alstrdup(entry.name);
+            device->HrtfName = entry.name;
         }
         else if(hrtf)
             Hrtf_DecRef(hrtf);
@@ -1127,7 +1126,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         if(hrtf && hrtf->sampleRate == device->Frequency)
         {
             device->HrtfHandle = hrtf;
-            device->HrtfName = alstrdup(entry.name);
+            device->HrtfName = entry.name;
         }
         else if(hrtf)
             Hrtf_DecRef(hrtf);
@@ -1164,7 +1163,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         }
 
         TRACE("%s HRTF rendering enabled, using \"%s\"\n",
-            ((device->Render_Mode == HrtfRender) ? "Full" : "Basic"), device->HrtfName
+            ((device->Render_Mode == HrtfRender) ? "Full" : "Basic"), device->HrtfName.c_str()
         );
         InitHrtfPanning(device);
         return;

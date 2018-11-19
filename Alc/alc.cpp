@@ -2436,8 +2436,6 @@ ALCdevice_struct::~ALCdevice_struct()
     VECTOR_DEINIT(FilterList);
     almtx_destroy(&FilterLock);
 
-    al_free(HrtfName);
-    HrtfName = nullptr;
     FreeHrtfList(HrtfList);
     if(HrtfHandle)
         Hrtf_DecRef(HrtfHandle);
@@ -3049,7 +3047,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
         else
         {
             almtx_lock(&Device->BackendLock);
-            value = ((Device->HrtfHandle && Device->HrtfName) ? Device->HrtfName : "");
+            value = (Device->HrtfHandle ? Device->HrtfName.c_str() : "");
             almtx_unlock(&Device->BackendLock);
             ALCdevice_DecRef(Device);
         }

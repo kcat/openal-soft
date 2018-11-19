@@ -1,6 +1,8 @@
 
 #include "config.h"
 
+#include <cmath>
+
 #include "AL/alc.h"
 #include "AL/al.h"
 
@@ -19,15 +21,15 @@ void BiquadFilter_setParams(BiquadFilter *filter, BiquadType type, ALfloat gain,
     assert(gain > 0.00001f);
 
     w0 = F_TAU * f0norm;
-    sin_w0 = sinf(w0);
-    cos_w0 = cosf(w0);
+    sin_w0 = std::sin(w0);
+    cos_w0 = std::cos(w0);
     alpha = sin_w0/2.0f * rcpQ;
 
     /* Calculate filter coefficients depending on filter type */
     switch(type)
     {
-        case BiquadType_HighShelf:
-            sqrtgain_alpha_2 = 2.0f * sqrtf(gain) * alpha;
+        case BiquadType::HighShelf:
+            sqrtgain_alpha_2 = 2.0f * std::sqrt(gain) * alpha;
             b[0] =       gain*((gain+1.0f) + (gain-1.0f)*cos_w0 + sqrtgain_alpha_2);
             b[1] = -2.0f*gain*((gain-1.0f) + (gain+1.0f)*cos_w0                   );
             b[2] =       gain*((gain+1.0f) + (gain-1.0f)*cos_w0 - sqrtgain_alpha_2);
@@ -35,8 +37,8 @@ void BiquadFilter_setParams(BiquadFilter *filter, BiquadType type, ALfloat gain,
             a[1] =  2.0f*     ((gain-1.0f) - (gain+1.0f)*cos_w0                   );
             a[2] =             (gain+1.0f) - (gain-1.0f)*cos_w0 - sqrtgain_alpha_2;
             break;
-        case BiquadType_LowShelf:
-            sqrtgain_alpha_2 = 2.0f * sqrtf(gain) * alpha;
+        case BiquadType::LowShelf:
+            sqrtgain_alpha_2 = 2.0f * std::sqrt(gain) * alpha;
             b[0] =       gain*((gain+1.0f) - (gain-1.0f)*cos_w0 + sqrtgain_alpha_2);
             b[1] =  2.0f*gain*((gain-1.0f) - (gain+1.0f)*cos_w0                   );
             b[2] =       gain*((gain+1.0f) - (gain-1.0f)*cos_w0 - sqrtgain_alpha_2);
@@ -44,8 +46,8 @@ void BiquadFilter_setParams(BiquadFilter *filter, BiquadType type, ALfloat gain,
             a[1] = -2.0f*     ((gain-1.0f) + (gain+1.0f)*cos_w0                   );
             a[2] =             (gain+1.0f) + (gain-1.0f)*cos_w0 - sqrtgain_alpha_2;
             break;
-        case BiquadType_Peaking:
-            gain = sqrtf(gain);
+        case BiquadType::Peaking:
+            gain = std::sqrt(gain);
             b[0] =  1.0f + alpha * gain;
             b[1] = -2.0f * cos_w0;
             b[2] =  1.0f - alpha * gain;
@@ -54,7 +56,7 @@ void BiquadFilter_setParams(BiquadFilter *filter, BiquadType type, ALfloat gain,
             a[2] =  1.0f - alpha / gain;
             break;
 
-        case BiquadType_LowPass:
+        case BiquadType::LowPass:
             b[0] = (1.0f - cos_w0) / 2.0f;
             b[1] =  1.0f - cos_w0;
             b[2] = (1.0f - cos_w0) / 2.0f;
@@ -62,7 +64,7 @@ void BiquadFilter_setParams(BiquadFilter *filter, BiquadType type, ALfloat gain,
             a[1] = -2.0f * cos_w0;
             a[2] =  1.0f - alpha;
             break;
-        case BiquadType_HighPass:
+        case BiquadType::HighPass:
             b[0] =  (1.0f + cos_w0) / 2.0f;
             b[1] = -(1.0f + cos_w0);
             b[2] =  (1.0f + cos_w0) / 2.0f;
@@ -70,7 +72,7 @@ void BiquadFilter_setParams(BiquadFilter *filter, BiquadType type, ALfloat gain,
             a[1] =  -2.0f * cos_w0;
             a[2] =   1.0f - alpha;
             break;
-        case BiquadType_BandPass:
+        case BiquadType::BandPass:
             b[0] =  alpha;
             b[1] =  0;
             b[2] = -alpha;

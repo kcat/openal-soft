@@ -728,9 +728,9 @@ static void CalcT60DampingCoeffs(const ALfloat length, const ALfloat lfDecayTime
     ALfloat hfGain = CalcDecayCoeff(length, hfDecayTime);
 
     filter->MidGain[1] = mfGain;
-    BiquadFilter_setParams(&filter->LFFilter, BiquadType_LowShelf, lfGain/mfGain, lf0norm,
+    BiquadFilter_setParams(&filter->LFFilter, BiquadType::LowShelf, lfGain/mfGain, lf0norm,
                            calc_rcpQ_from_slope(lfGain/mfGain, 1.0f));
-    BiquadFilter_setParams(&filter->HFFilter, BiquadType_HighShelf, hfGain/mfGain, hf0norm,
+    BiquadFilter_setParams(&filter->HFFilter, BiquadType::HighShelf, hfGain/mfGain, hf0norm,
                            calc_rcpQ_from_slope(hfGain/mfGain, 1.0f));
 }
 
@@ -964,11 +964,11 @@ static void ReverbState_update(ReverbState *State, const ALCcontext *Context, co
      * killing most of the signal.
      */
     gainhf = maxf(props->Reverb.GainHF, 0.001f);
-    BiquadFilter_setParams(&State->Filter[0].Lp, BiquadType_HighShelf, gainhf, hf0norm,
+    BiquadFilter_setParams(&State->Filter[0].Lp, BiquadType::HighShelf, gainhf, hf0norm,
                            calc_rcpQ_from_slope(gainhf, 1.0f));
     lf0norm = minf(props->Reverb.LFReference / frequency, 0.49f);
     gainlf = maxf(props->Reverb.GainLF, 0.001f);
-    BiquadFilter_setParams(&State->Filter[0].Hp, BiquadType_LowShelf, gainlf, lf0norm,
+    BiquadFilter_setParams(&State->Filter[0].Hp, BiquadType::LowShelf, gainlf, lf0norm,
                            calc_rcpQ_from_slope(gainlf, 1.0f));
     for(i = 1;i < NUM_LINES;i++)
     {

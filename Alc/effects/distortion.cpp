@@ -93,14 +93,14 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCcontex
     /* Multiply sampling frequency by the amount of oversampling done during
      * processing.
      */
-    BiquadFilter_setParams(&state->lowpass, BiquadType_LowPass, 1.0f,
+    BiquadFilter_setParams(&state->lowpass, BiquadType::LowPass, 1.0f,
         cutoff / (frequency*4.0f), calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
     );
 
     cutoff = props->Distortion.EQCenter;
     /* Convert bandwidth in Hz to octaves. */
     bandwidth = props->Distortion.EQBandwidth / (cutoff * 0.67f);
-    BiquadFilter_setParams(&state->bandpass, BiquadType_BandPass, 1.0f,
+    BiquadFilter_setParams(&state->bandpass, BiquadType::BandPass, 1.0f,
         cutoff / (frequency*4.0f), calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
     );
 

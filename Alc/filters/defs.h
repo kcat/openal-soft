@@ -1,12 +1,11 @@
 #ifndef ALC_FILTER_H
 #define ALC_FILTER_H
 
+#include <cmath>
+
 #include "AL/al.h"
 #include "math_defs.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /* Filters implementation is based on the "Cookbook formulae for audio
  * EQ biquad filter coefficients" by Robert Bristow-Johnson
@@ -18,28 +17,30 @@ extern "C" {
  * the square root of the desired linear gain (or halve the dB gain).
  */
 
-typedef enum BiquadType {
+enum class BiquadType {
     /** EFX-style low-pass filter, specifying a gain and reference frequency. */
-    BiquadType_HighShelf,
+    HighShelf,
     /** EFX-style high-pass filter, specifying a gain and reference frequency. */
-    BiquadType_LowShelf,
+    LowShelf,
     /** Peaking filter, specifying a gain and reference frequency. */
-    BiquadType_Peaking,
+    Peaking,
 
     /** Low-pass cut-off filter, specifying a cut-off frequency. */
-    BiquadType_LowPass,
+    LowPass,
     /** High-pass cut-off filter, specifying a cut-off frequency. */
-    BiquadType_HighPass,
+    HighPass,
     /** Band-pass filter, specifying a center frequency. */
-    BiquadType_BandPass,
-} BiquadType;
+    BandPass,
+};
 
-typedef struct BiquadFilter {
-    ALfloat z1, z2; /* Last two delayed components for direct form II. */
-    ALfloat b0, b1, b2; /* Transfer function coefficients "b" (numerator) */
-    ALfloat a1, a2; /* Transfer function coefficients "a" (denominator; a0 is
-                     * pre-applied). */
-} BiquadFilter;
+struct BiquadFilter {
+    /* Last two delayed components for direct form II. */
+    ALfloat z1{0.0f}, z2{0.0f};
+    /* Transfer function coefficients "b" (numerator) */
+    ALfloat b0{1.0f}, b1{0.0f}, b2{0.0f};
+    /* Transfer function coefficients "a" (denominator; a0 is pre-applied). */
+    ALfloat a1{0.0f}, a2{0.0f};
+};
 /* Currently only a C-based filter process method is implemented. */
 #define BiquadFilter_process BiquadFilter_processC
 
@@ -51,7 +52,7 @@ typedef struct BiquadFilter {
  */
 inline ALfloat calc_rcpQ_from_slope(ALfloat gain, ALfloat slope)
 {
-    return sqrtf((gain + 1.0f/gain)*(1.0f/slope - 1.0f) + 2.0f);
+    return std::sqrt((gain + 1.0f/gain)*(1.0f/slope - 1.0f) + 2.0f);
 }
 /**
  * Calculates the rcpQ (i.e. 1/Q) coefficient for filters, using the normalized
@@ -62,7 +63,7 @@ inline ALfloat calc_rcpQ_from_slope(ALfloat gain, ALfloat slope)
 inline ALfloat calc_rcpQ_from_bandwidth(ALfloat f0norm, ALfloat bandwidth)
 {
     ALfloat w0 = F_TAU * f0norm;
-    return 2.0f*sinhf(logf(2.0f)/2.0f*bandwidth*w0/sinf(w0));
+    return 2.0f*std::sinh(std::log(2.0f)/2.0f*bandwidth*w0/std::sin(w0));
 }
 
 inline void BiquadFilter_clear(BiquadFilter *filter)
@@ -112,9 +113,5 @@ inline void BiquadFilter_passthru(BiquadFilter *filter, ALsizei numsamples)
         filter->z2 = 0.0f;
     }
 }
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
 
 #endif /* ALC_FILTER_H */

@@ -136,7 +136,7 @@ static ALvoid ALechoState_update(ALechoState *state, const ALCcontext *context, 
     state->FeedGain = props->Echo.Feedback;
 
     gainhf = maxf(1.0f - props->Echo.Damping, 0.0625f); /* Limit -24dB */
-    BiquadFilter_setParams(&state->Filter, BiquadType_HighShelf,
+    BiquadFilter_setParams(&state->Filter, BiquadType::HighShelf,
         gainhf, LOWPASSFREQREF/frequency, calc_rcpQ_from_slope(gainhf, 1.0f)
     );
 

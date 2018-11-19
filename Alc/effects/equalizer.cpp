@@ -136,13 +136,13 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext 
      */
     gain = maxf(sqrtf(props->Equalizer.LowGain), 0.0625f); /* Limit -24dB */
     f0norm = props->Equalizer.LowCutoff/frequency;
-    BiquadFilter_setParams(&state->Chans[0].filter[0], BiquadType_LowShelf,
+    BiquadFilter_setParams(&state->Chans[0].filter[0], BiquadType::LowShelf,
         gain, f0norm, calc_rcpQ_from_slope(gain, 0.75f)
     );
 
     gain = maxf(props->Equalizer.Mid1Gain, 0.0625f);
     f0norm = props->Equalizer.Mid1Center/frequency;
-    BiquadFilter_setParams(&state->Chans[0].filter[1], BiquadType_Peaking,
+    BiquadFilter_setParams(&state->Chans[0].filter[1], BiquadType::Peaking,
         gain, f0norm, calc_rcpQ_from_bandwidth(
             f0norm, props->Equalizer.Mid1Width
         )
@@ -150,7 +150,7 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext 
 
     gain = maxf(props->Equalizer.Mid2Gain, 0.0625f);
     f0norm = props->Equalizer.Mid2Center/frequency;
-    BiquadFilter_setParams(&state->Chans[0].filter[2], BiquadType_Peaking,
+    BiquadFilter_setParams(&state->Chans[0].filter[2], BiquadType::Peaking,
         gain, f0norm, calc_rcpQ_from_bandwidth(
             f0norm, props->Equalizer.Mid2Width
         )
@@ -158,7 +158,7 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext 
 
     gain = maxf(sqrtf(props->Equalizer.HighGain), 0.0625f);
     f0norm = props->Equalizer.HighCutoff/frequency;
-    BiquadFilter_setParams(&state->Chans[0].filter[3], BiquadType_HighShelf,
+    BiquadFilter_setParams(&state->Chans[0].filter[3], BiquadType::HighShelf,
         gain, f0norm, calc_rcpQ_from_slope(gain, 0.75f)
     );
 

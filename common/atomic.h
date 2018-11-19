@@ -16,45 +16,26 @@
 #define CONST_CAST(T, V) ((T)(V))
 #endif
 
-#define _Atomic(T) std::atomic<T>
-using std::memory_order;
-using std::memory_order_relaxed;
-using std::memory_order_consume;
-using std::memory_order_acquire;
-using std::memory_order_release;
-using std::memory_order_acq_rel;
-using std::memory_order_seq_cst;
+#define almemory_order std::memory_order
+#define almemory_order_relaxed std::memory_order_relaxed
+#define almemory_order_consume std::memory_order_consume
+#define almemory_order_acquire std::memory_order_acquire
+#define almemory_order_release std::memory_order_release
+#define almemory_order_acq_rel std::memory_order_acq_rel
+#define almemory_order_seq_cst std::memory_order_seq_cst
 
-using std::atomic_init;
-using std::atomic_load_explicit;
-using std::atomic_store_explicit;
-using std::atomic_fetch_add_explicit;
-using std::atomic_fetch_sub_explicit;
-using std::atomic_exchange_explicit;
-using std::atomic_compare_exchange_strong_explicit;
-using std::atomic_compare_exchange_weak_explicit;
-using std::atomic_thread_fence;
+#define ATOMIC(T)  std::atomic<T>
 
-#define almemory_order memory_order
-#define almemory_order_relaxed memory_order_relaxed
-#define almemory_order_consume memory_order_consume
-#define almemory_order_acquire memory_order_acquire
-#define almemory_order_release memory_order_release
-#define almemory_order_acq_rel memory_order_acq_rel
-#define almemory_order_seq_cst memory_order_seq_cst
-
-#define ATOMIC(T)  _Atomic(T)
-
-#define ATOMIC_INIT atomic_init
+#define ATOMIC_INIT std::atomic_init
 #define ATOMIC_INIT_STATIC ATOMIC_VAR_INIT
 
-#define ATOMIC_LOAD atomic_load_explicit
-#define ATOMIC_STORE atomic_store_explicit
+#define ATOMIC_LOAD std::atomic_load_explicit
+#define ATOMIC_STORE std::atomic_store_explicit
 
-#define ATOMIC_ADD atomic_fetch_add_explicit
-#define ATOMIC_SUB atomic_fetch_sub_explicit
+#define ATOMIC_ADD std::atomic_fetch_add_explicit
+#define ATOMIC_SUB std::atomic_fetch_sub_explicit
 
-#define ATOMIC_THREAD_FENCE atomic_thread_fence
+#define ATOMIC_THREAD_FENCE std::atomic_thread_fence
 
 
 #define ATOMIC_LOAD_SEQ(_val) ATOMIC_LOAD(_val, almemory_order_seq_cst)

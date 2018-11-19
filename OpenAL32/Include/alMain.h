@@ -519,10 +519,9 @@ typedef struct EffectSubList {
 } EffectSubList;
 
 typedef struct FilterSubList {
-    ALuint64 FreeMask;
-    struct ALfilter *Filters; /* 64 */
+    ALuint64 FreeMask{0u};
+    struct ALfilter *Filters{nullptr}; /* 64 */
 } FilterSubList;
-TYPEDEF_VECTOR(FilterSubList, vector_FilterSubList)
 
 
 typedef struct EnumeratedHrtf {
@@ -612,7 +611,7 @@ struct ALCdevice_struct {
     almtx_t EffectLock;
 
     // Map of Filters for this device
-    vector_FilterSubList FilterList{};
+    al::vector<FilterSubList> FilterList;
     almtx_t FilterLock;
 
     POSTPROCESS PostProcess{};

@@ -2389,10 +2389,7 @@ ALCdevice_struct::ALCdevice_struct(DeviceType type)
   : Type{type}
 {
     almtx_init(&BufferLock, almtx_plain);
-
     almtx_init(&EffectLock, almtx_plain);
-
-    VECTOR_INIT(FilterList);
     almtx_init(&FilterLock, almtx_plain);
 
     almtx_init(&BackendLock, almtx_plain);
@@ -2430,10 +2427,11 @@ ALCdevice_struct::~ALCdevice_struct()
     almtx_destroy(&EffectLock);
 
     ReleaseALFilters(this);
-#define FREE_FILTERSUBLIST(x) al_free((x)->Filters)
-    VECTOR_FOR_EACH(FilterSubList, FilterList, FREE_FILTERSUBLIST);
-#undef FREE_FILTERSUBLIST
-    VECTOR_DEINIT(FilterList);
+    std::for_each(FilterList.begin(), FilterList.end(),
+        [](FilterSubList &entry) noexcept -> void
+        { al_free(entry.Filters); }
+    );
+    FilterList.clear();
     almtx_destroy(&FilterLock);
 
     HrtfList.clear();

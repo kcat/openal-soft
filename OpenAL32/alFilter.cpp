@@ -22,6 +22,8 @@
 
 #include <stdlib.h>
 
+#include <algorithm>
+
 #include "alMain.h"
 #include "alcontext.h"
 #include "alu.h"
@@ -38,16 +40,15 @@ static void InitFilterParams(ALfilter *filter, ALenum type);
 
 static inline ALfilter *LookupFilter(ALCdevice *device, ALuint id)
 {
-    FilterSubList *sublist;
     ALuint lidx = (id-1) >> 6;
     ALsizei slidx = (id-1) & 0x3f;
 
-    if(UNLIKELY(lidx >= VECTOR_SIZE(device->FilterList)))
-        return NULL;
-    sublist = &VECTOR_ELEM(device->FilterList, lidx);
-    if(UNLIKELY(sublist->FreeMask & (U64(1)<<slidx)))
-        return NULL;
-    return sublist->Filters + slidx;
+    if(UNLIKELY(lidx >= device->FilterList.size()))
+        return nullptr;
+    FilterSubList &sublist = device->FilterList[lidx];
+    if(UNLIKELY(sublist.FreeMask & (U64(1)<<slidx)))
+        return nullptr;
+    return sublist.Filters + slidx;
 }
 
 
@@ -532,44 +533,39 @@ DEFINE_ALFILTER_VTABLE(ALnullfilter);
 static ALfilter *AllocFilter(ALCcontext *context)
 {
     ALCdevice *device = context->Device;
-    FilterSubList *sublist, *subend;
-    ALfilter *filter = NULL;
-    ALsizei lidx = 0;
-    ALsizei slidx;
-
     almtx_lock(&device->FilterLock);
-    sublist = VECTOR_BEGIN(device->FilterList);
-    subend = VECTOR_END(device->FilterList);
-    for(;sublist != subend;++sublist)
+
+    auto sublist = std::find_if(device->FilterList.begin(), device->FilterList.end(),
+        [](const FilterSubList &entry) noexcept -> bool
+        { return entry.FreeMask != 0; }
+    );
+
+    auto lidx = std::distance(device->FilterList.begin(), sublist);
+    ALfilter *filter{nullptr};
+    ALsizei slidx{0};
+    if(LIKELY(sublist != device->FilterList.end()))
     {
-        if(sublist->FreeMask)
-        {
-            slidx = CTZ64(sublist->FreeMask);
-            filter = sublist->Filters + slidx;
-            break;
-        }
-        ++lidx;
+        slidx = CTZ64(sublist->FreeMask);
+        filter = sublist->Filters + slidx;
     }
-    if(UNLIKELY(!filter))
+    else
     {
-        const FilterSubList empty_sublist = { 0, NULL };
         /* Don't allocate so many list entries that the 32-bit ID could
          * overflow...
          */
-        if(UNLIKELY(VECTOR_SIZE(device->FilterList) >= 1<<25))
+        if(UNLIKELY(device->FilterList.size() >= 1<<25))
         {
             almtx_unlock(&device->FilterLock);
             alSetError(context, AL_OUT_OF_MEMORY, "Too many filters allocated");
             return NULL;
         }
-        lidx = (ALsizei)VECTOR_SIZE(device->FilterList);
-        VECTOR_PUSH_BACK(device->FilterList, empty_sublist);
-        sublist = &VECTOR_BACK(device->FilterList);
+        device->FilterList.emplace_back();
+        sublist = device->FilterList.end() - 1;
         sublist->FreeMask = ~U64(0);
         sublist->Filters = static_cast<ALfilter*>(al_calloc(16, sizeof(ALfilter)*64));
         if(UNLIKELY(!sublist->Filters))
         {
-            VECTOR_POP_BACK(device->FilterList);
+            device->FilterList.pop_back();
             almtx_unlock(&device->FilterLock);
             alSetError(context, AL_OUT_OF_MEMORY, "Failed to allocate filter batch");
             return NULL;
@@ -579,7 +575,7 @@ static ALfilter *AllocFilter(ALCcontext *context)
         filter = sublist->Filters + slidx;
     }
 
-    memset(filter, 0, sizeof(*filter));
+    filter = new (filter) ALfilter{};
     InitFilterParams(filter, AL_FILTER_NULL);
 
     /* Add 1 to avoid filter ID 0. */
@@ -597,30 +593,28 @@ static void FreeFilter(ALCdevice *device, ALfilter *filter)
     ALsizei lidx = id >> 6;
     ALsizei slidx = id & 0x3f;
 
-    memset(filter, 0, sizeof(*filter));
+    filter->~ALfilter();
 
-    VECTOR_ELEM(device->FilterList, lidx).FreeMask |= U64(1) << slidx;
+    device->FilterList[lidx].FreeMask |= U64(1) << slidx;
 }
 
 void ReleaseALFilters(ALCdevice *device)
 {
-    FilterSubList *sublist = VECTOR_BEGIN(device->FilterList);
-    FilterSubList *subend = VECTOR_END(device->FilterList);
     size_t leftover = 0;
-    for(;sublist != subend;++sublist)
+    for(auto &sublist : device->FilterList)
     {
-        ALuint64 usemask = ~sublist->FreeMask;
+        ALuint64 usemask = ~sublist.FreeMask;
         while(usemask)
         {
             ALsizei idx = CTZ64(usemask);
-            ALfilter *filter = sublist->Filters + idx;
+            ALfilter *filter = sublist.Filters + idx;
 
-            memset(filter, 0, sizeof(*filter));
+            filter->~ALfilter();
             ++leftover;
 
             usemask &= ~(U64(1) << idx);
         }
-        sublist->FreeMask = ~usemask;
+        sublist.FreeMask = ~usemask;
     }
     if(leftover > 0)
         WARN("(%p) Deleted " SZFMT " Filter%s\n", device, leftover, (leftover==1)?"":"s");

@@ -89,16 +89,15 @@ static inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
 
 static inline ALfilter *LookupFilter(ALCdevice *device, ALuint id)
 {
-    FilterSubList *sublist;
     ALuint lidx = (id-1) >> 6;
     ALsizei slidx = (id-1) & 0x3f;
 
-    if(UNLIKELY(lidx >= VECTOR_SIZE(device->FilterList)))
-        return NULL;
-    sublist = &VECTOR_ELEM(device->FilterList, lidx);
-    if(UNLIKELY(sublist->FreeMask & (U64(1)<<slidx)))
-        return NULL;
-    return sublist->Filters + slidx;
+    if(UNLIKELY(lidx >= device->FilterList.size()))
+        return nullptr;
+    FilterSubList &sublist = device->FilterList[lidx];
+    if(UNLIKELY(sublist.FreeMask & (U64(1)<<slidx)))
+        return nullptr;
+    return sublist.Filters + slidx;
 }
 
 static inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id)

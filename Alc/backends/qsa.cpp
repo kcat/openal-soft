@@ -27,13 +27,16 @@
 #include <sched.h>
 #include <errno.h>
 #include <memory.h>
-#include <sys/select.h>
-#include <sys/asoundlib.h>
-#include <sys/neutrino.h>
+
+#include <algorithm>
 
 #include "alMain.h"
 #include "alu.h"
 #include "threads.h"
+
+#include <sys/select.h>
+#include <sys/asoundlib.h>
+#include <sys/neutrino.h>
 
 
 namespace {
@@ -57,10 +60,9 @@ struct DevMap {
     int card;
     int dev;
 };
-TYPEDEF_VECTOR(DevMap, vector_DevMap)
 
-vector_DevMap DeviceNameMap;
-vector_DevMap CaptureNameMap;
+al::vector<DevMap> DeviceNameMap;
+al::vector<DevMap> CaptureNameMap;
 
 constexpr ALCchar qsaDevice[] = "QSA Default";
 
@@ -108,7 +110,7 @@ constexpr struct {
     {0},
 };
 
-void deviceList(int type, vector_DevMap *devmap)
+void deviceList(int type, al::vector<DevMap> *devmap)
 {
     snd_ctl_t* handle;
     snd_pcm_info_t pcminfo;
@@ -121,15 +123,16 @@ void deviceList(int type, vector_DevMap *devmap)
     if(max_cards < 0)
         return;
 
-#define FREE_NAME(iter) free((iter)->name)
-    VECTOR_FOR_EACH(DevMap, *devmap, FREE_NAME);
-#undef FREE_NAME
-    VECTOR_RESIZE(*devmap, 0, max_cards+1);
+    std::for_each(devmap->begin(), devmap->end(),
+        [](const DevMap &entry) -> void
+        { free(entry.name); }
+    );
+    devmap->clear();
 
     entry.name = strdup(qsaDevice);
     entry.card = 0;
     entry.dev = 0;
-    VECTOR_PUSH_BACK(*devmap, entry);
+    devmap->push_back(entry);
 
     for(card = 0;card < max_cards;card++)
     {
@@ -155,7 +158,7 @@ void deviceList(int type, vector_DevMap *devmap)
                 entry.card = card;
                 entry.dev = dev;
 
-                VECTOR_PUSH_BACK(*devmap, entry);
+                devmap->push_back(entry);
                 TRACE("Got device \"%s\", card %d, dev %d\n", name, card, dev);
             }
         }
@@ -295,15 +298,14 @@ static ALCenum qsa_open_playback(PlaybackWrapper *self, const ALCchar* deviceNam
         status = snd_pcm_open_preferred(&data->pcmHandle, &card, &dev, SND_PCM_OPEN_PLAYBACK);
     else
     {
-        const DevMap *iter;
-
-        if(VECTOR_SIZE(DeviceNameMap) == 0)
+        if(DeviceNameMap.empty())
             deviceList(SND_PCM_CHANNEL_PLAYBACK, &DeviceNameMap);
 
-#define MATCH_DEVNAME(iter) ((iter)->name && strcmp(deviceName, (iter)->name)==0)
-        VECTOR_FIND_IF(iter, const DevMap, DeviceNameMap, MATCH_DEVNAME);
-#undef MATCH_DEVNAME
-        if(iter == VECTOR_END(DeviceNameMap))
+        auto iter = std::find_if(DeviceNameMap.begin(), DeviceNameMap.end(),
+            [deviceName](const DevMap &entry) -> bool
+            { return entry.name && strcmp(deviceName, entry.name) == 0; }
+        );
+        if(iter == DeviceNameMap.cend())
         {
             free(data);
             return ALC_INVALID_DEVICE;
@@ -702,15 +704,14 @@ static ALCenum qsa_open_capture(CaptureWrapper *self, const ALCchar *deviceName)
         status = snd_pcm_open_preferred(&data->pcmHandle, &card, &dev, SND_PCM_OPEN_CAPTURE);
     else
     {
-        const DevMap *iter;
-
-        if(VECTOR_SIZE(CaptureNameMap) == 0)
+        if(CaptureNameMap.empty())
             deviceList(SND_PCM_CHANNEL_CAPTURE, &CaptureNameMap);
 
-#define MATCH_DEVNAME(iter) ((iter)->name && strcmp(deviceName, (iter)->name)==0)
-        VECTOR_FIND_IF(iter, const DevMap, CaptureNameMap, MATCH_DEVNAME);
-#undef MATCH_DEVNAME
-        if(iter == VECTOR_END(CaptureNameMap))
+        auto iter = std::find_if(CaptureNameMap.cbegin(), CaptureNameMap.cend(),
+            [deviceName](const DevMap &entry) -> bool
+            { return entry.name && strcmp(deviceName, entry.name) == 0; }
+        );
+        if(iter == CaptureNameMap.cend())
         {
             free(data);
             return ALC_INVALID_DEVICE;
@@ -995,13 +996,15 @@ bool QSABackendFactory::init()
 
 void QSABackendFactory::deinit()
 {
-#define FREE_NAME(iter) free((iter)->name)
-    VECTOR_FOR_EACH(DevMap, DeviceNameMap, FREE_NAME);
-    VECTOR_DEINIT(DeviceNameMap);
+    std::for_each(DeviceNameMap.begin(), DeviceNameMap.end(),
+        [](DevMap &entry) -> void { free(entry.name); }
+    );
+    DeviceNameMap.clear();
 
-    VECTOR_FOR_EACH(DevMap, CaptureNameMap, FREE_NAME);
-    VECTOR_DEINIT(CaptureNameMap);
-#undef FREE_NAME
+    std::for_each(CaptureNameMap.begin(), CaptureNameMap.end(),
+        [](DevMap &entry) -> void { free(entry.name); }
+    );
+    CaptureNameMap.clear();
 }
 
 bool QSABackendFactory::querySupport(ALCbackend_Type type)
@@ -1009,23 +1012,23 @@ bool QSABackendFactory::querySupport(ALCbackend_Type type)
 
 void QSABackendFactory::probe(enum DevProbe type, std::string *outnames)
 {
+    auto add_device = [outnames](const DevMap &entry) -> void
+    {
+        const char *n = entry.name;
+        if(n && n[0])
+            outnames->append(n, strlen(n)+1);
+    };
+
     switch (type)
     {
-#define APPEND_OUTNAME(e) do {                                                \
-    const char *n_ = (e)->name;                                               \
-    if(n_ && n_[0])                                                           \
-        outnames->append(n_, strlen(n_)+1);                                   \
-} while(0)
         case ALL_DEVICE_PROBE:
             deviceList(SND_PCM_CHANNEL_PLAYBACK, &DeviceNameMap);
-            VECTOR_FOR_EACH(const DevMap, DeviceNameMap, APPEND_OUTNAME);
+            std::for_each(DeviceNameMap.cbegin(), DeviceNameMap.cend(), add_device);
             break;
-
         case CAPTURE_DEVICE_PROBE:
             deviceList(SND_PCM_CHANNEL_CAPTURE, &CaptureNameMap);
-            VECTOR_FOR_EACH(const DevMap, CaptureNameMap, APPEND_OUTNAME);
+            std::for_each(CaptureNameMap.cbegin(), CaptureNameMap.cend(), add_device);
             break;
-#undef APPEND_OUTNAME
     }
 }
 

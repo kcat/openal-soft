@@ -514,10 +514,9 @@ typedef struct BufferSubList {
 } BufferSubList;
 
 typedef struct EffectSubList {
-    ALuint64 FreeMask;
-    struct ALeffect *Effects; /* 64 */
+    ALuint64 FreeMask{0u};
+    struct ALeffect *Effects{nullptr}; /* 64 */
 } EffectSubList;
-TYPEDEF_VECTOR(EffectSubList, vector_EffectSubList)
 
 typedef struct FilterSubList {
     ALuint64 FreeMask;
@@ -609,7 +608,7 @@ struct ALCdevice_struct {
     almtx_t BufferLock;
 
     // Map of Effects for this device
-    vector_EffectSubList EffectList{};
+    al::vector<EffectSubList> EffectList;
     almtx_t EffectLock;
 
     // Map of Filters for this device

@@ -87,16 +87,15 @@ static inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id)
 
 static inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
 {
-    EffectSubList *sublist;
     ALuint lidx = (id-1) >> 6;
     ALsizei slidx = (id-1) & 0x3f;
 
-    if(UNLIKELY(lidx >= VECTOR_SIZE(device->EffectList)))
+    if(UNLIKELY(lidx >= device->EffectList.size()))
         return nullptr;
-    sublist = &VECTOR_ELEM(device->EffectList, lidx);
-    if(UNLIKELY(sublist->FreeMask & (U64(1)<<slidx)))
+    EffectSubList &sublist = device->EffectList[lidx];
+    if(UNLIKELY(sublist.FreeMask & (U64(1)<<slidx)))
         return nullptr;
-    return sublist->Effects + slidx;
+    return sublist.Effects + slidx;
 }
 
 

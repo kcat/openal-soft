@@ -2390,7 +2390,6 @@ ALCdevice_struct::ALCdevice_struct(DeviceType type)
 {
     almtx_init(&BufferLock, almtx_plain);
 
-    VECTOR_INIT(EffectList);
     almtx_init(&EffectLock, almtx_plain);
 
     VECTOR_INIT(FilterList);
@@ -2423,10 +2422,11 @@ ALCdevice_struct::~ALCdevice_struct()
     almtx_destroy(&BufferLock);
 
     ReleaseALEffects(this);
-#define FREE_EFFECTSUBLIST(x) al_free((x)->Effects)
-    VECTOR_FOR_EACH(EffectSubList, EffectList, FREE_EFFECTSUBLIST);
-#undef FREE_EFFECTSUBLIST
-    VECTOR_DEINIT(EffectList);
+    std::for_each(EffectList.begin(), EffectList.end(),
+        [](EffectSubList &entry) noexcept -> void
+        { al_free(entry.Effects); }
+    );
+    EffectList.clear();
     almtx_destroy(&EffectLock);
 
     ReleaseALFilters(this);

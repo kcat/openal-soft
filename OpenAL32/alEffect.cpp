@@ -24,6 +24,8 @@
 #include <math.h>
 #include <float.h>
 
+#include <algorithm>
+
 #include "AL/al.h"
 #include "AL/alc.h"
 
@@ -58,16 +60,15 @@ static void InitEffectParams(ALeffect *effect, ALenum type);
 
 static inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
 {
-    EffectSubList *sublist;
     ALuint lidx = (id-1) >> 6;
     ALsizei slidx = (id-1) & 0x3f;
 
-    if(UNLIKELY(lidx >= VECTOR_SIZE(device->EffectList)))
-        return NULL;
-    sublist = &VECTOR_ELEM(device->EffectList, lidx);
-    if(UNLIKELY(sublist->FreeMask & (U64(1)<<slidx)))
-        return NULL;
-    return sublist->Effects + slidx;
+    if(UNLIKELY(lidx >= device->EffectList.size()))
+        return nullptr;
+    EffectSubList &sublist = device->EffectList[lidx];
+    if(UNLIKELY(sublist.FreeMask & (U64(1)<<slidx)))
+        return nullptr;
+    return sublist.Effects + slidx;
 }
 
 
@@ -374,44 +375,39 @@ void InitEffect(ALeffect *effect)
 static ALeffect *AllocEffect(ALCcontext *context)
 {
     ALCdevice *device = context->Device;
-    EffectSubList *sublist, *subend;
-    ALeffect *effect = NULL;
-    ALsizei lidx = 0;
-    ALsizei slidx;
-
     almtx_lock(&device->EffectLock);
-    sublist = VECTOR_BEGIN(device->EffectList);
-    subend = VECTOR_END(device->EffectList);
-    for(;sublist != subend;++sublist)
+
+    auto sublist = std::find_if(device->EffectList.begin(), device->EffectList.end(),
+        [](const EffectSubList &entry) noexcept -> bool
+        { return entry.FreeMask != 0; }
+    );
+
+    auto lidx = std::distance(device->EffectList.begin(), sublist);
+    ALeffect *effect{nullptr};
+    ALsizei slidx{0};
+    if(LIKELY(sublist != device->EffectList.end()))
     {
-        if(sublist->FreeMask)
-        {
-            slidx = CTZ64(sublist->FreeMask);
-            effect = sublist->Effects + slidx;
-            break;
-        }
-        ++lidx;
+        slidx = CTZ64(sublist->FreeMask);
+        effect = sublist->Effects + slidx;
     }
-    if(UNLIKELY(!effect))
+    else
     {
-        const EffectSubList empty_sublist = { 0, NULL };
         /* Don't allocate so many list entries that the 32-bit ID could
          * overflow...
          */
-        if(UNLIKELY(VECTOR_SIZE(device->EffectList) >= 1<<25))
+        if(UNLIKELY(device->EffectList.size() >= 1<<25))
         {
             almtx_unlock(&device->EffectLock);
             alSetError(context, AL_OUT_OF_MEMORY, "Too many effects allocated");
             return NULL;
         }
-        lidx = (ALsizei)VECTOR_SIZE(device->EffectList);
-        VECTOR_PUSH_BACK(device->EffectList, empty_sublist);
-        sublist = &VECTOR_BACK(device->EffectList);
+        device->EffectList.emplace_back();
+        sublist = device->EffectList.end() - 1;
         sublist->FreeMask = ~U64(0);
         sublist->Effects = static_cast<ALeffect*>(al_calloc(16, sizeof(ALeffect)*64));
         if(UNLIKELY(!sublist->Effects))
         {
-            VECTOR_POP_BACK(device->EffectList);
+            device->EffectList.pop_back();
             almtx_unlock(&device->EffectLock);
             alSetError(context, AL_OUT_OF_MEMORY, "Failed to allocate effect batch");
             return NULL;
@@ -421,7 +417,7 @@ static ALeffect *AllocEffect(ALCcontext *context)
         effect = sublist->Effects + slidx;
     }
 
-    memset(effect, 0, sizeof(*effect));
+    effect = new (effect) ALeffect{};
     InitEffectParams(effect, AL_EFFECT_NULL);
 
     /* Add 1 to avoid effect ID 0. */
@@ -439,30 +435,28 @@ static void FreeEffect(ALCdevice *device, ALeffect *effect)
     ALsizei lidx = id >> 6;
     ALsizei slidx = id & 0x3f;
 
-    memset(effect, 0, sizeof(*effect));
+    effect->~ALeffect();
 
-    VECTOR_ELEM(device->EffectList, lidx).FreeMask |= U64(1) << slidx;
+    device->EffectList[lidx].FreeMask |= U64(1) << slidx;
 }
 
 void ReleaseALEffects(ALCdevice *device)
 {
-    EffectSubList *sublist = VECTOR_BEGIN(device->EffectList);
-    EffectSubList *subend = VECTOR_END(device->EffectList);
     size_t leftover = 0;
-    for(;sublist != subend;++sublist)
+    for(auto &sublist : device->EffectList)
     {
-        ALuint64 usemask = ~sublist->FreeMask;
+        ALuint64 usemask = ~sublist.FreeMask;
         while(usemask)
         {
             ALsizei idx = CTZ64(usemask);
-            ALeffect *effect = sublist->Effects + idx;
+            ALeffect *effect = sublist.Effects + idx;
 
-            memset(effect, 0, sizeof(*effect));
+            effect->~ALeffect();
             ++leftover;
 
             usemask &= ~(U64(1) << idx);
         }
-        sublist->FreeMask = ~usemask;
+        sublist.FreeMask = ~usemask;
     }
     if(leftover > 0)
         WARN("(%p) Deleted " SZFMT " Effect%s\n", device, leftover, (leftover==1)?"":"s");

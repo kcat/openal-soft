@@ -2388,7 +2388,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 ALCdevice_struct::ALCdevice_struct(DeviceType type)
   : Type{type}
 {
-    VECTOR_INIT(BufferList);
     almtx_init(&BufferLock, almtx_plain);
 
     VECTOR_INIT(EffectList);
@@ -2416,10 +2415,11 @@ ALCdevice_struct::~ALCdevice_struct()
     almtx_destroy(&BackendLock);
 
     ReleaseALBuffers(this);
-#define FREE_BUFFERSUBLIST(x) al_free((x)->Buffers)
-    VECTOR_FOR_EACH(BufferSubList, BufferList, FREE_BUFFERSUBLIST);
-#undef FREE_BUFFERSUBLIST
-    VECTOR_DEINIT(BufferList);
+    std::for_each(BufferList.begin(), BufferList.end(),
+        [](BufferSubList &entry) noexcept -> void
+        { al_free(entry.Buffers); }
+    );
+    BufferList.clear();
     almtx_destroy(&BufferLock);
 
     ReleaseALEffects(this);

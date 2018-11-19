@@ -509,10 +509,9 @@ typedef union AmbiConfig {
 
 
 typedef struct BufferSubList {
-    ALuint64 FreeMask;
-    struct ALbuffer *Buffers; /* 64 */
+    ALuint64 FreeMask{0u};
+    struct ALbuffer *Buffers{nullptr}; /* 64 */
 } BufferSubList;
-TYPEDEF_VECTOR(BufferSubList, vector_BufferSubList)
 
 typedef struct EffectSubList {
     ALuint64 FreeMask;
@@ -606,7 +605,7 @@ struct ALCdevice_struct {
     ALsizei NumAuxSends{};
 
     // Map of Buffers for this device
-    vector_BufferSubList BufferList{};
+    al::vector<BufferSubList> BufferList;
     almtx_t BufferLock;
 
     // Map of Effects for this device

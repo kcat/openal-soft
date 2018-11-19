@@ -55,40 +55,37 @@ ALbuffer *AllocBuffer(ALCcontext *context)
     ALCdevice *device = context->Device;
     std::unique_lock<almtx_t> buflock{device->BufferLock};
 
+    auto sublist = std::find_if(device->BufferList.begin(), device->BufferList.end(),
+        [](const BufferSubList &entry) noexcept -> bool
+        { return entry.FreeMask != 0; }
+    );
+
+    auto lidx = std::distance(device->BufferList.begin(), sublist);
     ALbuffer *buffer{nullptr};
-    ALsizei lidx{0}, slidx{0};
-    BufferSubList *sublist{VECTOR_BEGIN(device->BufferList)};
-    BufferSubList *subend{VECTOR_END(device->BufferList)};
-    for(;sublist != subend;++sublist)
+    ALsizei slidx{0};
+    if(LIKELY(sublist != device->BufferList.end()))
     {
-        if(sublist->FreeMask)
-        {
-            slidx = CTZ64(sublist->FreeMask);
-            buffer = sublist->Buffers + slidx;
-            break;
-        }
-        ++lidx;
+        slidx = CTZ64(sublist->FreeMask);
+        buffer = sublist->Buffers + slidx;
     }
-    if(UNLIKELY(!buffer))
+    else
     {
-        static constexpr BufferSubList empty_sublist{ 0, nullptr };
         /* Don't allocate so many list entries that the 32-bit ID could
          * overflow...
          */
-        if(UNLIKELY(VECTOR_SIZE(device->BufferList) >= 1<<25))
+        if(UNLIKELY(device->BufferList.size() >= 1<<25))
         {
             buflock.unlock();
             alSetError(context, AL_OUT_OF_MEMORY, "Too many buffers allocated");
             return nullptr;
         }
-        lidx = (ALsizei)VECTOR_SIZE(device->BufferList);
-        VECTOR_PUSH_BACK(device->BufferList, empty_sublist);
-        sublist = &VECTOR_BACK(device->BufferList);
+        device->BufferList.emplace_back();
+        sublist = device->BufferList.end() - 1;
         sublist->FreeMask = ~U64(0);
         sublist->Buffers = reinterpret_cast<ALbuffer*>(al_calloc(16, sizeof(ALbuffer)*64));
         if(UNLIKELY(!sublist->Buffers))
         {
-            VECTOR_POP_BACK(device->BufferList);
+            device->BufferList.pop_back();
             buflock.unlock();
             alSetError(context, AL_OUT_OF_MEMORY, "Failed to allocate buffer batch");
             return nullptr;
@@ -98,8 +95,7 @@ ALbuffer *AllocBuffer(ALCcontext *context)
         buffer = sublist->Buffers + slidx;
     }
 
-    memset(buffer, 0, sizeof(*buffer));
-
+    buffer = new (buffer) ALbuffer{};
     /* Add 1 to avoid buffer ID 0. */
     buffer->id = ((lidx<<6) | slidx) + 1;
 
@@ -115,9 +111,10 @@ void FreeBuffer(ALCdevice *device, ALbuffer *buffer)
     ALsizei slidx = id & 0x3f;
 
     al_free(buffer->data);
-    memset(buffer, 0, sizeof(*buffer));
+    buffer->data = nullptr;
+    buffer->~ALbuffer();
 
-    VECTOR_ELEM(device->BufferList, lidx).FreeMask |= U64(1) << slidx;
+    device->BufferList[lidx].FreeMask |= U64(1) << slidx;
 }
 
 inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
@@ -125,12 +122,12 @@ inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
     ALuint lidx = (id-1) >> 6;
     ALsizei slidx = (id-1) & 0x3f;
 
-    if(UNLIKELY(lidx >= VECTOR_SIZE(device->BufferList)))
+    if(UNLIKELY(lidx >= device->BufferList.size()))
         return nullptr;
-    BufferSubList *sublist{&VECTOR_ELEM(device->BufferList, lidx)};
-    if(UNLIKELY(sublist->FreeMask & (U64(1)<<slidx)))
+    BufferSubList &sublist = device->BufferList[lidx];
+    if(UNLIKELY(sublist.FreeMask & (U64(1)<<slidx)))
         return nullptr;
-    return sublist->Buffers + slidx;
+    return sublist.Buffers + slidx;
 }
 
 
@@ -1187,24 +1184,24 @@ ALsizei ChannelsFromFmt(FmtChannels chans)
  */
 ALvoid ReleaseALBuffers(ALCdevice *device)
 {
-    BufferSubList *sublist = VECTOR_BEGIN(device->BufferList);
-    BufferSubList *subend = VECTOR_END(device->BufferList);
     size_t leftover = 0;
-    for(;sublist != subend;++sublist)
+    for(auto &sublist : device->BufferList)
     {
-        ALuint64 usemask = ~sublist->FreeMask;
+        ALuint64 usemask = ~sublist.FreeMask;
         while(usemask)
         {
             ALsizei idx = CTZ64(usemask);
-            ALbuffer *buffer = sublist->Buffers + idx;
+            ALbuffer *buffer = sublist.Buffers + idx;
 
             al_free(buffer->data);
-            memset(buffer, 0, sizeof(*buffer));
+            buffer->data = nullptr;
+            buffer->~ALbuffer();
+
             ++leftover;
 
             usemask &= ~(U64(1) << idx);
         }
-        sublist->FreeMask = ~usemask;
+        sublist.FreeMask = ~usemask;
     }
     if(leftover > 0)
         WARN("(%p) Deleted " SZFMT " Buffer%s\n", device, leftover, (leftover==1)?"":"s");

@@ -76,16 +76,15 @@ static inline ALsource *LookupSource(ALCcontext *context, ALuint id)
 
 static inline ALbuffer *LookupBuffer(ALCdevice *device, ALuint id)
 {
-    BufferSubList *sublist;
     ALuint lidx = (id-1) >> 6;
     ALsizei slidx = (id-1) & 0x3f;
 
-    if(UNLIKELY(lidx >= VECTOR_SIZE(device->BufferList)))
-        return NULL;
-    sublist = &VECTOR_ELEM(device->BufferList, lidx);
-    if(UNLIKELY(sublist->FreeMask & (U64(1)<<slidx)))
-        return NULL;
-    return sublist->Buffers + slidx;
+    if(UNLIKELY(lidx >= device->BufferList.size()))
+        return nullptr;
+    BufferSubList &sublist = device->BufferList[lidx];
+    if(UNLIKELY(sublist.FreeMask & (U64(1)<<slidx)))
+        return nullptr;
+    return sublist.Buffers + slidx;
 }
 
 static inline ALfilter *LookupFilter(ALCdevice *device, ALuint id)

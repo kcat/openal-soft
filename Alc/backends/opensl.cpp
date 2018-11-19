@@ -300,14 +300,15 @@ static int ALCopenslPlayback_mixerProc(void *arg)
 
         for(size_t i = 0;i < todo;i++)
         {
-            if(!data[0].len)
+            if(!data.first.len)
             {
-                data[0] = data[1];
-                data[1].buf = NULL;
-                data[1].len = 0;
+                data.first = data.second;
+                data.second.buf = nullptr;
+                data.second.len = 0;
             }
 
-            result = VCALL(bufferQueue,Enqueue)(data[0].buf, device->UpdateSize*self->mFrameSize);
+            result = VCALL(bufferQueue,Enqueue)(data.first.buf,
+                device->UpdateSize*self->mFrameSize);
             PRINTERR(result, "bufferQueue->Enqueue");
             if(SL_RESULT_SUCCESS != result)
             {
@@ -315,8 +316,8 @@ static int ALCopenslPlayback_mixerProc(void *arg)
                 break;
             }
 
-            data[0].len--;
-            data[0].buf += device->UpdateSize*self->mFrameSize;
+            data.first.len--;
+            data.first.buf += device->UpdateSize*self->mFrameSize;
         }
     }
     ALCopenslPlayback_unlock(self);

@@ -107,9 +107,9 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
 
     if(enable)
     {
-        ALbitfieldSOFT enabledevts{ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed)};
-        while(ATOMIC_COMPARE_EXCHANGE_WEAK(&context->EnabledEvts, &enabledevts, enabledevts|flags,
-                                           almemory_order_acq_rel, almemory_order_acquire) == 0)
+        ALbitfieldSOFT enabledevts{context->EnabledEvts.load(std::memory_order_relaxed)};
+        while(context->EnabledEvts.compare_exchange_weak(enabledevts, enabledevts|flags,
+            std::memory_order_acq_rel, std::memory_order_acquire) == 0)
         {
             /* enabledevts is (re-)filled with the current value on failure, so
              * just try again.
@@ -118,9 +118,9 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
     }
     else
     {
-        ALbitfieldSOFT enabledevts{ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed)};
-        while(ATOMIC_COMPARE_EXCHANGE_WEAK(&context->EnabledEvts, &enabledevts, enabledevts&~flags,
-                                           almemory_order_acq_rel, almemory_order_acquire) == 0)
+        ALbitfieldSOFT enabledevts{context->EnabledEvts.load(std::memory_order_relaxed)};
+        while(context->EnabledEvts.compare_exchange_weak(enabledevts, enabledevts&~flags,
+            std::memory_order_acq_rel, std::memory_order_acquire) == 0)
         {
         }
         /* Wait to ensure the event handler sees the changed flags before

@@ -70,11 +70,11 @@ void alSetError(ALCcontext *context, ALenum errorCode, const char *msg, ...)
     }
 
     ALenum curerr{AL_NO_ERROR};
-    ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(&context->LastError, &curerr, errorCode);
-    if((ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed)&EventType_Error))
+    context->LastError.compare_exchange_strong(curerr, errorCode);
+    if((context->EnabledEvts.load(std::memory_order_relaxed)&EventType_Error))
     {
         std::lock_guard<almtx_t> _{context->EventCbLock};
-        ALbitfieldSOFT enabledevts{ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed)};
+        ALbitfieldSOFT enabledevts{context->EnabledEvts.load(std::memory_order_relaxed)};
         if((enabledevts&EventType_Error) && context->EventCb)
             (*context->EventCb)(AL_EVENT_TYPE_ERROR_SOFT, 0, errorCode, msglen, msg,
                                 context->EventParam);
@@ -100,5 +100,5 @@ AL_API ALenum AL_APIENTRY alGetError(void)
         return deferror;
     }
 
-    return ATOMIC_EXCHANGE_SEQ(&context->LastError, AL_NO_ERROR);
+    return context->LastError.exchange(AL_NO_ERROR);
 }

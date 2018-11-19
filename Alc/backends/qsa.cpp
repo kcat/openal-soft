@@ -614,7 +614,7 @@ static void qsa_stop_playback(PlaybackWrapper *self)
     qsa_data *data = self->ExtraData;
     int res;
 
-    if(ATOMIC_EXCHANGE(&data->killNow, AL_TRUE, almemory_order_acq_rel))
+    if(data->killNow.exchange(AL_TRUE, std::memory_order_acq_rel))
         return;
     althrd_join(data->thread, &res);
 }

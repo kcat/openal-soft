@@ -488,7 +488,7 @@ static void ALCjackPlayback_stop(ALCjackPlayback *self)
 {
     int res;
 
-    if(ATOMIC_EXCHANGE(&self->killNow, AL_TRUE, almemory_order_acq_rel))
+    if(self->killNow.exchange(AL_TRUE, std::memory_order_acq_rel))
         return;
 
     alsem_post(&self->Sem);

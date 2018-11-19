@@ -610,7 +610,7 @@ static void ALCopenslPlayback_stop(ALCopenslPlayback *self)
     SLresult result;
     int res;
 
-    if(ATOMIC_EXCHANGE_SEQ(&self->mKillNow, AL_TRUE))
+    if(self->mKillNow.exchange(AL_TRUE))
         return;
 
     alsem_post(&self->mSem);

@@ -2488,9 +2488,9 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         if(vidx == -1)
             vidx = context->VoiceCount++;
         voice = context->Voices[vidx];
-        ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
+        voice->Playing.store(false, std::memory_order_release);
 
-        ATOMIC_EXCHANGE(&source->PropsClean, AL_TRUE, almemory_order_acquire);
+        source->PropsClean.exchange(AL_TRUE, std::memory_order_acquire);
         UpdateSourceProps(source, voice, device->NumAuxSends, context);
 
         /* A source that's not playing or paused has any offset applied when it
@@ -3157,7 +3157,7 @@ static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_send
     ALsizei i;
 
     /* Get an unused property container, or allocate a new one as needed. */
-    props = ATOMIC_LOAD(&context->FreeVoiceProps, almemory_order_acquire);
+    props = context->FreeVoiceProps.load(std::memory_order_acquire);
     if(!props)
         props = static_cast<ALvoiceProps*>(al_calloc(16,
             FAM_SIZE(struct ALvoiceProps, Send, num_sends)));
@@ -3165,9 +3165,9 @@ static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_send
     {
         struct ALvoiceProps *next;
         do {
-            next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
-        } while(ATOMIC_COMPARE_EXCHANGE_WEAK(&context->FreeVoiceProps, &props, next,
-                almemory_order_acq_rel, almemory_order_acquire) == 0);
+            next = props->next.load(std::memory_order_relaxed);
+        } while(context->FreeVoiceProps.compare_exchange_weak(props, next,
+                std::memory_order_acq_rel, std::memory_order_acquire) == 0);
     }
 
     /* Copy in current property values. */
@@ -3230,7 +3230,7 @@ static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_send
     }
 
     /* Set the new container for updating internal parameters. */
-    props = ATOMIC_EXCHANGE(&voice->Update, props, almemory_order_acq_rel);
+    props = voice->Update.exchange(props, std::memory_order_acq_rel);
     if(props)
     {
         /* If there was an unused update container, put it back in the
@@ -3249,7 +3249,7 @@ void UpdateAllSourceProps(ALCcontext *context)
     {
         ALvoice *voice = context->Voices[pos];
         ALsource *source = ATOMIC_LOAD(&voice->Source, almemory_order_acquire);
-        if(source && !ATOMIC_EXCHANGE(&source->PropsClean, AL_TRUE, almemory_order_acq_rel))
+        if(source && !source->PropsClean.exchange(AL_TRUE, std::memory_order_acq_rel))
             UpdateSourceProps(source, voice, num_sends, context);
     }
 }

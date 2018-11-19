@@ -282,7 +282,7 @@ static void ALCsolarisBackend_stop(ALCsolarisBackend *self)
 {
     int res;
 
-    if(ATOMIC_EXCHANGE_SEQ(&self->killNow, AL_TRUE))
+    if(self->killNow.exchange(AL_TRUE))
         return;
 
     althrd_join(self->thread, &res);

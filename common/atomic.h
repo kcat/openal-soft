@@ -54,10 +54,6 @@ using std::atomic_thread_fence;
 #define ATOMIC_ADD atomic_fetch_add_explicit
 #define ATOMIC_SUB atomic_fetch_sub_explicit
 
-#define ATOMIC_EXCHANGE atomic_exchange_explicit
-#define ATOMIC_COMPARE_EXCHANGE_STRONG atomic_compare_exchange_strong_explicit
-#define ATOMIC_COMPARE_EXCHANGE_WEAK atomic_compare_exchange_weak_explicit
-
 #define ATOMIC_THREAD_FENCE atomic_thread_fence
 
 
@@ -66,12 +62,6 @@ using std::atomic_thread_fence;
 
 #define ATOMIC_ADD_SEQ(_val, _incr) ATOMIC_ADD(_val, _incr, almemory_order_seq_cst)
 #define ATOMIC_SUB_SEQ(_val, _decr) ATOMIC_SUB(_val, _decr, almemory_order_seq_cst)
-
-#define ATOMIC_EXCHANGE_SEQ(_val, _newval) ATOMIC_EXCHANGE(_val, _newval, almemory_order_seq_cst)
-#define ATOMIC_COMPARE_EXCHANGE_STRONG_SEQ(_val, _oldval, _newval) \
-    ATOMIC_COMPARE_EXCHANGE_STRONG(_val, _oldval, _newval, almemory_order_seq_cst, almemory_order_seq_cst)
-#define ATOMIC_COMPARE_EXCHANGE_WEAK_SEQ(_val, _oldval, _newval) \
-    ATOMIC_COMPARE_EXCHANGE_WEAK(_val, _oldval, _newval, almemory_order_seq_cst, almemory_order_seq_cst)
 
 
 using RefCount = std::atomic<unsigned int>;

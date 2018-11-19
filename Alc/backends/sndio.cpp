@@ -267,7 +267,7 @@ static void SndioPlayback_stop(SndioPlayback *self)
 {
     int res;
 
-    if(ATOMIC_EXCHANGE(&self->killNow, AL_TRUE, almemory_order_acq_rel))
+    if(self->killNow.exchange(AL_TRUE, std::memory_order_acq_rel))
         return;
     althrd_join(self->thread, &res);
 
@@ -513,7 +513,7 @@ static void SndioCapture_stop(SndioCapture *self)
 {
     int res;
 
-    if(ATOMIC_EXCHANGE(&self->killNow, AL_TRUE, almemory_order_acq_rel))
+    if(self->killNow.exchange(AL_TRUE, std::memory_order_acq_rel))
         return;
     althrd_join(self->thread, &res);
 

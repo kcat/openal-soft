@@ -168,8 +168,7 @@ ALCboolean ALCnullBackend_start(ALCnullBackend *self)
 
 void ALCnullBackend_stop(ALCnullBackend *self)
 {
-    if(ATOMIC_EXCHANGE(&self->killNow, AL_TRUE, almemory_order_acq_rel) ||
-       !self->thread.joinable())
+    if(self->killNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->thread.joinable())
         return;
     self->thread.join();
 }

@@ -75,7 +75,7 @@ static HrtfDirectMixerFunc MixDirectHrtf = MixDirectHrtf_C;
 
 void DeinitVoice(ALvoice *voice)
 {
-    al_free(ATOMIC_EXCHANGE_SEQ(&voice->Update, static_cast<ALvoiceProps*>(nullptr)));
+    al_free(voice->Update.exchange(nullptr));
 }
 
 
@@ -315,8 +315,7 @@ static bool CalcContextParams(ALCcontext *Context)
     ALlistener &Listener = Context->Listener;
     struct ALcontextProps *props;
 
-    props = ATOMIC_EXCHANGE(&Context->Update, static_cast<ALcontextProps*>(nullptr),
-                            almemory_order_acq_rel);
+    props = Context->Update.exchange(nullptr, std::memory_order_acq_rel);
     if(!props) return false;
 
     Listener.Params.MetersPerUnit = props->MetersPerUnit;
@@ -341,8 +340,7 @@ static bool CalcListenerParams(ALCcontext *Context)
     struct ALlistenerProps *props;
     aluVector vel;
 
-    props = ATOMIC_EXCHANGE(&Listener.Update, static_cast<ALlistenerProps*>(nullptr),
-                            almemory_order_acq_rel);
+    props = Listener.Update.exchange(nullptr, std::memory_order_acq_rel);
     if(!props) return false;
 
     /* AT then UP */
@@ -385,8 +383,7 @@ static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool f
     struct ALeffectslotProps *props;
     ALeffectState *state;
 
-    props = ATOMIC_EXCHANGE(&slot->Update, static_cast<ALeffectslotProps*>(nullptr),
-                            almemory_order_acq_rel);
+    props = slot->Update.exchange(nullptr, std::memory_order_acq_rel);
     if(!props && !force) return false;
 
     if(props)
@@ -1455,8 +1452,7 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
     ALbufferlistitem *BufferListItem;
     struct ALvoiceProps *props;
 
-    props = ATOMIC_EXCHANGE(&voice->Update, static_cast<ALvoiceProps*>(nullptr),
-                            almemory_order_acq_rel);
+    props = voice->Update.exchange(nullptr, std::memory_order_acq_rel);
     if(!props && !force) return;
 
     if(props)
@@ -1830,7 +1826,7 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
     va_list args;
     int msglen;
 
-    if(!ATOMIC_EXCHANGE(&device->Connected, AL_FALSE, almemory_order_acq_rel))
+    if(!device->Connected.exchange(AL_FALSE, std::memory_order_acq_rel))
         return;
 
     evt.u.user.type = AL_EVENT_TYPE_DISCONNECTED_SOFT;
@@ -1857,9 +1853,8 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
         for(i = 0;i < ctx->VoiceCount;i++)
         {
             ALvoice *voice = ctx->Voices[i];
-            ALsource *source = ATOMIC_EXCHANGE(&voice->Source, static_cast<ALsource*>(nullptr),
-                                               almemory_order_relaxed);
-            if(source && ATOMIC_LOAD(&voice->Playing, almemory_order_relaxed))
+            ALsource *source = voice->Source.exchange(nullptr, std::memory_order_relaxed);
+            if(source && voice->Playing.load(std::memory_order_relaxed))
             {
                 /* If the source's voice was playing, it's now effectively
                  * stopped (the source state will be updated the next time it's
@@ -1867,7 +1862,7 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
                  */
                 SendSourceStoppedEvent(ctx, source->id);
             }
-            ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
+            voice->Playing.store(false, std::memory_order_release);
         }
 
         ctx = ATOMIC_LOAD(&ctx->next, almemory_order_relaxed);

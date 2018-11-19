@@ -367,8 +367,7 @@ ALCboolean ALCwaveBackend_start(ALCwaveBackend *self)
 
 void ALCwaveBackend_stop(ALCwaveBackend *self)
 {
-    if(ATOMIC_EXCHANGE(&self->killNow, AL_TRUE, almemory_order_acq_rel) ||
-       !self->thread.joinable())
+    if(self->killNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->thread.joinable())
         return;
     self->thread.join();
 

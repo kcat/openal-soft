@@ -618,7 +618,7 @@ static void AddActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontex
         newarray->count = newcount;
     }
 
-    curarray = ATOMIC_EXCHANGE(&context->ActiveAuxSlots, newarray, almemory_order_acq_rel);
+    curarray = context->ActiveAuxSlots.exchange(newarray, std::memory_order_acq_rel);
     while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
         althrd_yield();
     al_free(curarray);
@@ -653,7 +653,7 @@ static void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcon
 
     /* TODO: Could reallocate newarray now that we know it's needed size. */
 
-    curarray = ATOMIC_EXCHANGE(&context->ActiveAuxSlots, newarray, almemory_order_acq_rel);
+    curarray = context->ActiveAuxSlots.exchange(newarray, std::memory_order_acq_rel);
     while((ATOMIC_LOAD(&device->MixCount, almemory_order_acquire)&1))
         althrd_yield();
     al_free(curarray);
@@ -693,16 +693,16 @@ void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context)
     ALeffectState *oldstate;
 
     /* Get an unused property container, or allocate a new one as needed. */
-    props = ATOMIC_LOAD(&context->FreeEffectslotProps, almemory_order_relaxed);
+    props = context->FreeEffectslotProps.load(std::memory_order_relaxed);
     if(!props)
         props = static_cast<ALeffectslotProps*>(al_calloc(16, sizeof(*props)));
     else
     {
         struct ALeffectslotProps *next;
         do {
-            next = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
-        } while(ATOMIC_COMPARE_EXCHANGE_WEAK(&context->FreeEffectslotProps, &props, next,
-                almemory_order_seq_cst, almemory_order_acquire) == 0);
+            next = props->next.load(std::memory_order_relaxed);
+        } while(context->FreeEffectslotProps.compare_exchange_weak(props, next,
+                std::memory_order_seq_cst, std::memory_order_acquire) == 0);
     }
 
     /* Copy in current property values. */
@@ -719,7 +719,7 @@ void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context)
     props->State = slot->Effect.State;
 
     /* Set the new container for updating internal parameters. */
-    props = ATOMIC_EXCHANGE(&slot->Update, props, almemory_order_acq_rel);
+    props = slot->Update.exchange(props, std::memory_order_acq_rel);
     if(props)
     {
         /* If there was an unused update container, put it back in the
@@ -741,11 +741,11 @@ void UpdateAllEffectSlotProps(ALCcontext *context)
     ALsizei i;
 
     LockEffectSlotList(context);
-    auxslots = ATOMIC_LOAD(&context->ActiveAuxSlots, almemory_order_acquire);
+    auxslots = context->ActiveAuxSlots.load(std::memory_order_acquire);
     for(i = 0;i < auxslots->count;i++)
     {
         ALeffectslot *slot = auxslots->slot[i];
-        if(!ATOMIC_EXCHANGE(&slot->PropsClean, AL_TRUE, almemory_order_acq_rel))
+        if(!slot->PropsClean.exchange(AL_TRUE, std::memory_order_acq_rel))
             UpdateEffectSlotProps(slot, context);
     }
     UnlockEffectSlotList(context);

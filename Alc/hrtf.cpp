@@ -639,7 +639,7 @@ struct Hrtf *LoadHrtf00(std::istream &data, const char *filename)
                            &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
 }
 
-static struct Hrtf *LoadHrtf01(std::istream &data, const char *filename)
+struct Hrtf *LoadHrtf01(std::istream &data, const char *filename)
 {
     ALuint rate{GetLE_ALuint(data)};
     ALushort irSize{GetLE_ALubyte(data)};
@@ -944,7 +944,7 @@ struct Hrtf *LoadHrtf02(std::istream &data, const char *filename)
 }
 
 
-static bool checkName(al::vector<EnumeratedHrtf> &list, const std::string &name)
+bool checkName(al::vector<EnumeratedHrtf> &list, const std::string &name)
 {
     return std::find_if(list.cbegin(), list.cend(),
         [&name](const EnumeratedHrtf &entry)

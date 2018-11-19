@@ -420,8 +420,7 @@ static OSStatus ALCcoreAudioCapture_RecordProc(void *inRefCon,
         return err;
     }
 
-    ll_ringbuffer_write(self->ring, static_cast<const char*>(self->bufferList->mBuffers[0].mData),
-                        inNumberFrames);
+    ll_ringbuffer_write(self->ring, self->bufferList->mBuffers[0].mData, inNumberFrames);
     return noErr;
 }
 
@@ -433,7 +432,7 @@ static OSStatus ALCcoreAudioCapture_ConvertCallback(AudioConverterRef UNUSED(inA
     ALCcoreAudioCapture *self = reinterpret_cast<ALCcoreAudioCapture*>(inUserData);
 
     // Read from the ring buffer and store temporarily in a large buffer
-    ll_ringbuffer_read(self->ring, static_cast<char*>(self->resampleBuffer), *ioNumberDataPackets);
+    ll_ringbuffer_read(self->ring, self->resampleBuffer, *ioNumberDataPackets);
 
     // Set the input data
     ioData->mNumberBuffers = 1;

@@ -21,7 +21,7 @@ static int EventThread(ALCcontext *context)
     while(LIKELY(!quitnow))
     {
         AsyncEvent evt;
-        if(ll_ringbuffer_read(context->AsyncEvents, (char*)&evt, 1) == 0)
+        if(ll_ringbuffer_read(context->AsyncEvents, &evt, 1) == 0)
         {
             alsem_wait(&context->EventSem);
             continue;
@@ -43,7 +43,7 @@ static int EventThread(ALCcontext *context)
                 context->EventCb(evt.u.user.type, evt.u.user.id, evt.u.user.param,
                     (ALsizei)strlen(evt.u.user.msg), evt.u.user.msg, context->EventParam
                 );
-        } while(ll_ringbuffer_read(context->AsyncEvents, (char*)&evt, 1) != 0);
+        } while(ll_ringbuffer_read(context->AsyncEvents, &evt, 1) != 0);
     }
     return 0;
 }
@@ -64,7 +64,7 @@ void StartEventThrd(ALCcontext *ctx)
 void StopEventThrd(ALCcontext *ctx)
 {
     static constexpr AsyncEvent kill_evt = ASYNC_EVENT(EventType_KillThread);
-    while(ll_ringbuffer_write(ctx->AsyncEvents, (const char*)&kill_evt, 1) == 0)
+    while(ll_ringbuffer_write(ctx->AsyncEvents, &kill_evt, 1) == 0)
         althrd_yield();
     alsem_post(&ctx->EventSem);
     if(ctx->EventThread.joinable())

@@ -893,7 +893,7 @@ void ALCdsoundCapture_stop(ALCdsoundCapture *self)
 
 ALCenum ALCdsoundCapture_captureSamples(ALCdsoundCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    ll_ringbuffer_read(self->Ring, reinterpret_cast<char*>(buffer), samples);
+    ll_ringbuffer_read(self->Ring, buffer, samples);
     return ALC_NO_ERROR;
 }
 
@@ -921,11 +921,9 @@ ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
     }
     if(SUCCEEDED(hr))
     {
-        ll_ringbuffer_write(self->Ring, reinterpret_cast<const char*>(ReadPtr1),
-                            ReadCnt1/FrameSize);
+        ll_ringbuffer_write(self->Ring, ReadPtr1, ReadCnt1/FrameSize);
         if(ReadPtr2 != nullptr)
-            ll_ringbuffer_write(self->Ring, reinterpret_cast<const char*>(ReadPtr2),
-                                ReadCnt2/FrameSize);
+            ll_ringbuffer_write(self->Ring, ReadPtr2, ReadCnt2/FrameSize);
         hr = self->DSCbuffer->Unlock(ReadPtr1, ReadCnt1, ReadPtr2, ReadCnt2);
         self->Cursor = (LastCursor+ReadCnt1+ReadCnt2) % BufferBytes;
     }

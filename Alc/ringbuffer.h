@@ -48,12 +48,12 @@ size_t ll_ringbuffer_read_space(const ll_ringbuffer_t *rb);
  * The copying data reader. Copy at most `cnt' elements from `rb' to `dest'.
  * Returns the actual number of elements copied.
  */
-size_t ll_ringbuffer_read(ll_ringbuffer_t *rb, char *dest, size_t cnt);
+size_t ll_ringbuffer_read(ll_ringbuffer_t *rb, void *dest, size_t cnt);
 /**
  * The copying data reader w/o read pointer advance. Copy at most `cnt'
  * elements from `rb' to `dest'. Returns the actual number of elements copied.
  */
-size_t ll_ringbuffer_peek(ll_ringbuffer_t *rb, char *dest, size_t cnt);
+size_t ll_ringbuffer_peek(ll_ringbuffer_t *rb, void *dest, size_t cnt);
 /** Advance the read pointer `cnt' places. */
 void ll_ringbuffer_read_advance(ll_ringbuffer_t *rb, size_t cnt);
 
@@ -66,7 +66,7 @@ size_t ll_ringbuffer_write_space(const ll_ringbuffer_t *rb);
  * The copying data writer. Copy at most `cnt' elements to `rb' from `src'.
  * Returns the actual number of elements copied.
  */
-size_t ll_ringbuffer_write(ll_ringbuffer_t *rb, const char *src, size_t cnt);
+size_t ll_ringbuffer_write(ll_ringbuffer_t *rb, const void *src, size_t cnt);
 /** Advance the write pointer `cnt' places. */
 void ll_ringbuffer_write_advance(ll_ringbuffer_t *rb, size_t cnt);
 

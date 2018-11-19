@@ -105,7 +105,7 @@ size_t ll_ringbuffer_write_space(const ll_ringbuffer_t *rb)
 }
 
 
-size_t ll_ringbuffer_read(ll_ringbuffer_t *rb, char *dest, size_t cnt)
+size_t ll_ringbuffer_read(ll_ringbuffer_t *rb, void *dest, size_t cnt)
 {
     size_t read_ptr;
     size_t free_cnt;
@@ -135,7 +135,8 @@ size_t ll_ringbuffer_read(ll_ringbuffer_t *rb, char *dest, size_t cnt)
     read_ptr += n1;
     if(n2)
     {
-        memcpy(dest + n1*rb->elem_size, &rb->buf[(read_ptr&rb->size_mask)*rb->elem_size],
+        memcpy(static_cast<char*>(dest) + n1*rb->elem_size,
+               &rb->buf[(read_ptr&rb->size_mask)*rb->elem_size],
                n2*rb->elem_size);
         read_ptr += n2;
     }
@@ -143,7 +144,7 @@ size_t ll_ringbuffer_read(ll_ringbuffer_t *rb, char *dest, size_t cnt)
     return to_read;
 }
 
-size_t ll_ringbuffer_peek(ll_ringbuffer_t *rb, char *dest, size_t cnt)
+size_t ll_ringbuffer_peek(ll_ringbuffer_t *rb, void *dest, size_t cnt)
 {
     size_t free_cnt;
     size_t cnt2;
@@ -173,13 +174,14 @@ size_t ll_ringbuffer_peek(ll_ringbuffer_t *rb, char *dest, size_t cnt)
     if(n2)
     {
         read_ptr += n1;
-        memcpy(dest + n1*rb->elem_size, &rb->buf[(read_ptr&rb->size_mask)*rb->elem_size],
+        memcpy(static_cast<char*>(dest) + n1*rb->elem_size,
+               &rb->buf[(read_ptr&rb->size_mask)*rb->elem_size],
                n2*rb->elem_size);
     }
     return to_read;
 }
 
-size_t ll_ringbuffer_write(ll_ringbuffer_t *rb, const char *src, size_t cnt)
+size_t ll_ringbuffer_write(ll_ringbuffer_t *rb, const void *src, size_t cnt)
 {
     size_t write_ptr;
     size_t free_cnt;
@@ -209,7 +211,8 @@ size_t ll_ringbuffer_write(ll_ringbuffer_t *rb, const char *src, size_t cnt)
     write_ptr += n1;
     if(n2)
     {
-        memcpy(&rb->buf[(write_ptr&rb->size_mask)*rb->elem_size], src + n1*rb->elem_size,
+        memcpy(&rb->buf[(write_ptr&rb->size_mask)*rb->elem_size],
+               static_cast<const char*>(src) + n1*rb->elem_size,
                n2*rb->elem_size);
         write_ptr += n2;
     }

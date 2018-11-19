@@ -377,7 +377,7 @@ int ALCportCapture_ReadCallback(const void *inputBuffer, void *UNUSED(outputBuff
     size_t writable = ll_ringbuffer_write_space(self->ring);
 
     if(framesPerBuffer > writable) framesPerBuffer = writable;
-    ll_ringbuffer_write(self->ring, static_cast<const char*>(inputBuffer), framesPerBuffer);
+    ll_ringbuffer_write(self->ring, inputBuffer, framesPerBuffer);
     return 0;
 }
 
@@ -472,7 +472,7 @@ ALCuint ALCportCapture_availableSamples(ALCportCapture *self)
 
 ALCenum ALCportCapture_captureSamples(ALCportCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    ll_ringbuffer_read(self->ring, static_cast<char*>(buffer), samples);
+    ll_ringbuffer_read(self->ring, buffer, samples);
     return ALC_NO_ERROR;
 }
 

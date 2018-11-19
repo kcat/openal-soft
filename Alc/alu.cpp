@@ -186,7 +186,7 @@ static void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
     }
     strcpy(evt.u.user.msg+strpos, " state changed to AL_STOPPED");
 
-    if(ll_ringbuffer_write(context->AsyncEvents, (const char*)&evt, 1) == 1)
+    if(ll_ringbuffer_write(context->AsyncEvents, &evt, 1) == 1)
         alsem_post(&context->EventSem);
 }
 
@@ -433,7 +433,7 @@ static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool f
             slot->Params.EffectState = state;
             props->State = NULL;
 
-            if(LIKELY(ll_ringbuffer_write(context->AsyncEvents, (const char*)&evt, 1) != 0))
+            if(LIKELY(ll_ringbuffer_write(context->AsyncEvents, &evt, 1) != 0))
                 alsem_post(&context->EventSem);
             else
             {
@@ -1847,7 +1847,7 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
         ALsizei i;
 
         if((enabledevt&EventType_Disconnected) &&
-           ll_ringbuffer_write(ctx->AsyncEvents, (const char*)&evt, 1) == 1)
+           ll_ringbuffer_write(ctx->AsyncEvents, &evt, 1) == 1)
             alsem_post(&ctx->EventSem);
 
         for(i = 0;i < ctx->VoiceCount;i++)

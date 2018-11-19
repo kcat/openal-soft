@@ -653,7 +653,7 @@ void ALCwinmmCapture_stop(ALCwinmmCapture *self)
 
 ALCenum ALCwinmmCapture_captureSamples(ALCwinmmCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    ll_ringbuffer_read(self->Ring, static_cast<char*>(buffer), samples);
+    ll_ringbuffer_read(self->Ring, buffer, samples);
     return ALC_NO_ERROR;
 }
 

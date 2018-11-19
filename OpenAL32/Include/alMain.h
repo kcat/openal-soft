@@ -648,6 +648,9 @@ struct ALCdevice_struct {
     /* Temp storage used for mixer processing. */
     alignas(16) ALfloat TempBuffer[4][BUFFERSIZE];
 
+    /* Mixing buffer used by the Dry mix, FOAOut, and Real out. */
+    al::vector<std::array<ALfloat,BUFFERSIZE>, 16> MixBuffer;
+
     /* The "dry" path corresponds to the main output. */
     MixParams Dry;
     ALsizei NumChannelsPerOrder[MAX_AMBI_ORDER+1]{};

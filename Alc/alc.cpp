@@ -1704,7 +1704,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     ALCsizei hrtf_id = -1;
     ALCcontext *context;
     ALCuint oldFreq;
-    size_t size;
     ALCsizei i;
     int val;
 
@@ -2002,13 +2001,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->ChannelDelay[i].Buffer = nullptr;
     }
 
-    al_free(device->Dry.Buffer);
     device->Dry.Buffer = nullptr;
     device->Dry.NumChannels = 0;
     device->FOAOut.Buffer = nullptr;
     device->FOAOut.NumChannels = 0;
     device->RealOut.Buffer = nullptr;
     device->RealOut.NumChannels = 0;
+    device->MixBuffer.clear();
+    device->MixBuffer.shrink_to_fit();
 
     UpdateClockBase(device);
     device->FixedLatency = 0;
@@ -2113,17 +2113,14 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
           device->FOAOut.NumChannels, device->RealOut.NumChannels);
 
     /* Allocate extra channels for any post-filter output. */
-    size = (device->Dry.NumChannels + device->FOAOut.NumChannels +
-            device->RealOut.NumChannels)*sizeof(device->Dry.Buffer[0]);
+    ALsizei num_chans{device->Dry.NumChannels + device->FOAOut.NumChannels +
+                      device->RealOut.NumChannels};
 
-    TRACE("Allocating " SZFMT " channels, " SZFMT " bytes\n", size/sizeof(device->Dry.Buffer[0]), size);
-    device->Dry.Buffer = static_cast<float(*)[BUFFERSIZE]>(al_calloc(16, size));
-    if(!device->Dry.Buffer)
-    {
-        ERR("Failed to allocate " SZFMT " bytes for mix buffer\n", size);
-        return ALC_INVALID_DEVICE;
-    }
+    TRACE("Allocating %d channels, " SZFMT " bytes\n", num_chans,
+          num_chans*sizeof(device->MixBuffer[0]));
+    device->MixBuffer.resize(num_chans);
 
+    device->Dry.Buffer = &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(device->MixBuffer[0]);
     if(device->RealOut.NumChannels != 0)
         device->RealOut.Buffer = device->Dry.Buffer + device->Dry.NumChannels +
                                  device->FOAOut.NumChannels;
@@ -2461,14 +2458,6 @@ ALCdevice_struct::~ALCdevice_struct()
         ChannelDelay[i].Length = 0;
         ChannelDelay[i].Buffer = nullptr;
     }
-
-    al_free(Dry.Buffer);
-    Dry.Buffer = nullptr;
-    Dry.NumChannels = 0;
-    FOAOut.Buffer = nullptr;
-    FOAOut.NumChannels = 0;
-    RealOut.Buffer = nullptr;
-    RealOut.NumChannels = 0;
 }
 
 

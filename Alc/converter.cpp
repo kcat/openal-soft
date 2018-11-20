@@ -7,6 +7,133 @@
 #include "mixer/defs.h"
 
 
+namespace {
+
+/* Base template left undefined. Should be marked =delete, but Clang 3.8.1
+ * chokes on that given the inline specializations.
+ */
+template<DevFmtType T>
+inline ALfloat LoadSample(typename DevFmtTypeTraits<T>::Type val);
+
+template<> inline ALfloat LoadSample<DevFmtByte>(DevFmtTypeTraits<DevFmtByte>::Type val)
+{ return val * (1.0f/128.0f); }
+template<> inline ALfloat LoadSample<DevFmtShort>(DevFmtTypeTraits<DevFmtShort>::Type val)
+{ return val * (1.0f/32768.0f); }
+template<> inline ALfloat LoadSample<DevFmtInt>(DevFmtTypeTraits<DevFmtInt>::Type val)
+{ return (val>>7) * (1.0f/16777216.0f); }
+template<> inline ALfloat LoadSample<DevFmtFloat>(DevFmtTypeTraits<DevFmtFloat>::Type val)
+{ return val; }
+
+template<> inline ALfloat LoadSample<DevFmtUByte>(DevFmtTypeTraits<DevFmtUByte>::Type val)
+{ return LoadSample<DevFmtByte>(val - 128); }
+template<> inline ALfloat LoadSample<DevFmtUShort>(DevFmtTypeTraits<DevFmtUShort>::Type val)
+{ return LoadSample<DevFmtByte>(val - 32768); }
+template<> inline ALfloat LoadSample<DevFmtUInt>(DevFmtTypeTraits<DevFmtUInt>::Type val)
+{ return LoadSample<DevFmtByte>(val - 2147483648u); }
+
+
+template<DevFmtType T>
+inline void LoadSampleArray(ALfloat *RESTRICT dst, const void *src, ALint srcstep, ALsizei samples)
+{
+    using SampleType = typename DevFmtTypeTraits<T>::Type;
+
+    const SampleType *ssrc = static_cast<const SampleType*>(src);
+    for(ALsizei i{0};i < samples;i++)
+        dst[i] = LoadSample<T>(ssrc[i*srcstep]);
+}
+
+void LoadSamples(ALfloat *dst, const ALvoid *src, ALint srcstep, enum DevFmtType srctype,
+                 ALsizei samples)
+{
+#define HANDLE_FMT(T)                                                         \
+    case T: LoadSampleArray<T>(dst, src, srcstep, samples); break
+    switch(srctype)
+    {
+        HANDLE_FMT(DevFmtByte);
+        HANDLE_FMT(DevFmtUByte);
+        HANDLE_FMT(DevFmtShort);
+        HANDLE_FMT(DevFmtUShort);
+        HANDLE_FMT(DevFmtInt);
+        HANDLE_FMT(DevFmtUInt);
+        HANDLE_FMT(DevFmtFloat);
+    }
+#undef HANDLE_FMT
+}
+
+
+template<DevFmtType T>
+inline typename DevFmtTypeTraits<T>::Type StoreSample(ALfloat);
+
+template<> inline ALfloat StoreSample<DevFmtFloat>(ALfloat val)
+{ return val; }
+template<> inline ALint StoreSample<DevFmtInt>(ALfloat val)
+{ return fastf2i(clampf(val*16777216.0f, -16777216.0f, 16777215.0f))<<7; }
+template<> inline ALshort StoreSample<DevFmtShort>(ALfloat val)
+{ return fastf2i(clampf(val*32768.0f, -32768.0f, 32767.0f)); }
+template<> inline ALbyte StoreSample<DevFmtByte>(ALfloat val)
+{ return fastf2i(clampf(val*128.0f, -128.0f, 127.0f)); }
+
+/* Define unsigned output variations. */
+template<> inline ALuint StoreSample<DevFmtUInt>(ALfloat val)
+{ return StoreSample<DevFmtInt>(val) + 2147483648u; }
+template<> inline ALushort StoreSample<DevFmtUShort>(ALfloat val)
+{ return StoreSample<DevFmtShort>(val) + 32768; }
+template<> inline ALubyte StoreSample<DevFmtUByte>(ALfloat val)
+{ return StoreSample<DevFmtByte>(val) + 128; }
+
+template<DevFmtType T>
+inline void StoreSampleArray(void *dst, const ALfloat *RESTRICT src, ALint dststep,
+                             ALsizei samples)
+{
+    using SampleType = typename DevFmtTypeTraits<T>::Type;
+
+    SampleType *sdst = static_cast<SampleType*>(dst);
+    for(ALsizei i{0};i < samples;i++)
+        sdst[i*dststep] = StoreSample<T>(src[i]);
+}
+
+
+void StoreSamples(ALvoid *dst, const ALfloat *src, ALint dststep, enum DevFmtType dsttype, ALsizei samples)
+{
+#define HANDLE_FMT(T)                                                         \
+    case T: StoreSampleArray<T>(dst, src, dststep, samples); break
+    switch(dsttype)
+    {
+        HANDLE_FMT(DevFmtByte);
+        HANDLE_FMT(DevFmtUByte);
+        HANDLE_FMT(DevFmtShort);
+        HANDLE_FMT(DevFmtUShort);
+        HANDLE_FMT(DevFmtInt);
+        HANDLE_FMT(DevFmtUInt);
+        HANDLE_FMT(DevFmtFloat);
+    }
+#undef HANDLE_FMT
+}
+
+
+template<DevFmtType T>
+void Mono2Stereo(ALfloat *RESTRICT dst, const void *src, ALsizei frames)
+{
+    using SampleType = typename DevFmtTypeTraits<T>::Type;
+
+    const SampleType *ssrc = static_cast<const SampleType*>(src);
+    for(ALsizei i{0};i < frames;i++)
+        dst[i*2 + 1] = dst[i*2 + 0] = LoadSample<T>(ssrc[i]) * 0.707106781187f;
+}
+
+template<DevFmtType T>
+void Stereo2Mono(ALfloat *RESTRICT dst, const void *src, ALsizei frames)
+{
+    using SampleType = typename DevFmtTypeTraits<T>::Type;
+
+    const SampleType *ssrc = static_cast<const SampleType*>(src);
+    for(ALsizei i{0};i < frames;i++)
+        dst[i] = (LoadSample<T>(ssrc[i*2 + 0])+LoadSample<T>(ssrc[i*2 + 1])) *
+                 0.707106781187f;
+}
+
+} // namespace
+
 SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType dstType, ALsizei numchans, ALsizei srcRate, ALsizei dstRate)
 {
     SampleConverter *converter;
@@ -54,138 +181,6 @@ void DestroySampleConverter(SampleConverter **converter)
 }
 
 
-static inline ALfloat Sample_ALbyte(ALbyte val)
-{ return val * (1.0f/128.0f); }
-static inline ALfloat Sample_ALubyte(ALubyte val)
-{ return Sample_ALbyte((ALint)val - 128); }
-
-static inline ALfloat Sample_ALshort(ALshort val)
-{ return val * (1.0f/32768.0f); }
-static inline ALfloat Sample_ALushort(ALushort val)
-{ return Sample_ALshort((ALint)val - 32768); }
-
-static inline ALfloat Sample_ALint(ALint val)
-{ return (val>>7) * (1.0f/16777216.0f); }
-static inline ALfloat Sample_ALuint(ALuint val)
-{ return Sample_ALint(val - INT_MAX - 1); }
-
-static inline ALfloat Sample_ALfloat(ALfloat val)
-{ return val; }
-
-#define DECL_TEMPLATE(T)                                                      \
-static inline void Load_##T(ALfloat *RESTRICT dst, const T *RESTRICT src,     \
-                            ALint srcstep, ALsizei samples)                   \
-{                                                                             \
-    ALsizei i;                                                                \
-    for(i = 0;i < samples;i++)                                                \
-        dst[i] = Sample_##T(src[i*srcstep]);                                  \
-}
-
-DECL_TEMPLATE(ALbyte)
-DECL_TEMPLATE(ALubyte)
-DECL_TEMPLATE(ALshort)
-DECL_TEMPLATE(ALushort)
-DECL_TEMPLATE(ALint)
-DECL_TEMPLATE(ALuint)
-DECL_TEMPLATE(ALfloat)
-
-#undef DECL_TEMPLATE
-
-static void LoadSamples(ALfloat *dst, const ALvoid *src, ALint srcstep, enum DevFmtType srctype, ALsizei samples)
-{
-    switch(srctype)
-    {
-        case DevFmtByte:
-            Load_ALbyte(dst, static_cast<const ALbyte*>(src), srcstep, samples);
-            break;
-        case DevFmtUByte:
-            Load_ALubyte(dst, static_cast<const ALubyte*>(src), srcstep, samples);
-            break;
-        case DevFmtShort:
-            Load_ALshort(dst, static_cast<const ALshort*>(src), srcstep, samples);
-            break;
-        case DevFmtUShort:
-            Load_ALushort(dst, static_cast<const ALushort*>(src), srcstep, samples);
-            break;
-        case DevFmtInt:
-            Load_ALint(dst, static_cast<const ALint*>(src), srcstep, samples);
-            break;
-        case DevFmtUInt:
-            Load_ALuint(dst, static_cast<const ALuint*>(src), srcstep, samples);
-            break;
-        case DevFmtFloat:
-            Load_ALfloat(dst, static_cast<const ALfloat*>(src), srcstep, samples);
-            break;
-    }
-}
-
-
-static inline ALbyte ALbyte_Sample(ALfloat val)
-{ return fastf2i(clampf(val*128.0f, -128.0f, 127.0f)); }
-static inline ALubyte ALubyte_Sample(ALfloat val)
-{ return ALbyte_Sample(val)+128; }
-
-static inline ALshort ALshort_Sample(ALfloat val)
-{ return fastf2i(clampf(val*32768.0f, -32768.0f, 32767.0f)); }
-static inline ALushort ALushort_Sample(ALfloat val)
-{ return ALshort_Sample(val)+32768; }
-
-static inline ALint ALint_Sample(ALfloat val)
-{ return fastf2i(clampf(val*16777216.0f, -16777216.0f, 16777215.0f)) << 7; }
-static inline ALuint ALuint_Sample(ALfloat val)
-{ return ALint_Sample(val)+INT_MAX+1; }
-
-static inline ALfloat ALfloat_Sample(ALfloat val)
-{ return val; }
-
-#define DECL_TEMPLATE(T)                                                      \
-static inline void Store_##T(T *RESTRICT dst, const ALfloat *RESTRICT src,    \
-                             ALint dststep, ALsizei samples)                  \
-{                                                                             \
-    ALsizei i;                                                                \
-    for(i = 0;i < samples;i++)                                                \
-        dst[i*dststep] = T##_Sample(src[i]);                                  \
-}
-
-DECL_TEMPLATE(ALbyte)
-DECL_TEMPLATE(ALubyte)
-DECL_TEMPLATE(ALshort)
-DECL_TEMPLATE(ALushort)
-DECL_TEMPLATE(ALint)
-DECL_TEMPLATE(ALuint)
-DECL_TEMPLATE(ALfloat)
-
-#undef DECL_TEMPLATE
-
-static void StoreSamples(ALvoid *dst, const ALfloat *src, ALint dststep, enum DevFmtType dsttype, ALsizei samples)
-{
-    switch(dsttype)
-    {
-        case DevFmtByte:
-            Store_ALbyte(static_cast<ALbyte*>(dst), src, dststep, samples);
-            break;
-        case DevFmtUByte:
-            Store_ALubyte(static_cast<ALubyte*>(dst), src, dststep, samples);
-            break;
-        case DevFmtShort:
-            Store_ALshort(static_cast<ALshort*>(dst), src, dststep, samples);
-            break;
-        case DevFmtUShort:
-            Store_ALushort(static_cast<ALushort*>(dst), src, dststep, samples);
-            break;
-        case DevFmtInt:
-            Store_ALint(static_cast<ALint*>(dst), src, dststep, samples);
-            break;
-        case DevFmtUInt:
-            Store_ALuint(static_cast<ALuint*>(dst), src, dststep, samples);
-            break;
-        case DevFmtFloat:
-            Store_ALfloat(static_cast<ALfloat*>(dst), src, dststep, samples);
-            break;
-    }
-}
-
-
 ALsizei SampleConverterAvailableOut(SampleConverter *converter, ALsizei srcframes)
 {
     ALint prepcount = converter->mSrcPrepCount;
@@ -224,7 +219,6 @@ ALsizei SampleConverterAvailableOut(SampleConverter *converter, ALsizei srcframe
     /* If we have a full prep, we can generate at least one sample. */
     return (ALsizei)clampu64((DataSize64 + increment-1)/increment, 1, BUFFERSIZE);
 }
-
 
 ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALsizei *srcframes, ALvoid *dst, ALsizei dstframes)
 {
@@ -376,33 +370,6 @@ void DestroyChannelConverter(ChannelConverter **converter)
     }
 }
 
-
-#define DECL_TEMPLATE(T)                                                       \
-static void Mono2Stereo##T(ALfloat *RESTRICT dst, const T *src, ALsizei frames)\
-{                                                                              \
-    ALsizei i;                                                                 \
-    for(i = 0;i < frames;i++)                                                  \
-        dst[i*2 + 1] = dst[i*2 + 0] = Sample_##T(src[i]) * 0.707106781187f;    \
-}                                                                              \
-                                                                               \
-static void Stereo2Mono##T(ALfloat *RESTRICT dst, const T *src, ALsizei frames)\
-{                                                                              \
-    ALsizei i;                                                                 \
-    for(i = 0;i < frames;i++)                                                  \
-        dst[i] = (Sample_##T(src[i*2 + 0])+Sample_##T(src[i*2 + 1])) *         \
-                 0.707106781187f;                                              \
-}
-
-DECL_TEMPLATE(ALbyte)
-DECL_TEMPLATE(ALubyte)
-DECL_TEMPLATE(ALshort)
-DECL_TEMPLATE(ALushort)
-DECL_TEMPLATE(ALint)
-DECL_TEMPLATE(ALuint)
-DECL_TEMPLATE(ALfloat)
-
-#undef DECL_TEMPLATE
-
 void ChannelConverterInput(ChannelConverter *converter, const ALvoid *src, ALfloat *dst, ALsizei frames)
 {
     if(converter->mSrcChans == converter->mDstChans)
@@ -416,54 +383,30 @@ void ChannelConverterInput(ChannelConverter *converter, const ALvoid *src, ALflo
     {
         switch(converter->mSrcType)
         {
-        case DevFmtByte:
-            Stereo2MonoALbyte(dst, static_cast<const ALbyte*>(src), frames);
-            break;
-        case DevFmtUByte:
-            Stereo2MonoALubyte(dst, static_cast<const ALubyte*>(src), frames);
-            break;
-        case DevFmtShort:
-            Stereo2MonoALshort(dst, static_cast<const ALshort*>(src), frames);
-            break;
-        case DevFmtUShort:
-            Stereo2MonoALushort(dst, static_cast<const ALushort*>(src), frames);
-            break;
-        case DevFmtInt:
-            Stereo2MonoALint(dst, static_cast<const ALint*>(src), frames);
-            break;
-        case DevFmtUInt:
-            Stereo2MonoALuint(dst, static_cast<const ALuint*>(src), frames);
-            break;
-        case DevFmtFloat:
-            Stereo2MonoALfloat(dst, static_cast<const ALfloat*>(src), frames);
-            break;
+#define HANDLE_FMT(T) case T: Stereo2Mono<T>(dst, src, frames); break
+        HANDLE_FMT(DevFmtByte);
+        HANDLE_FMT(DevFmtUByte);
+        HANDLE_FMT(DevFmtShort);
+        HANDLE_FMT(DevFmtUShort);
+        HANDLE_FMT(DevFmtInt);
+        HANDLE_FMT(DevFmtUInt);
+        HANDLE_FMT(DevFmtFloat);
+#undef HANDLE_FMT
         }
     }
     else /*if(converter->mSrcChans == DevFmtMono && converter->mDstChans == DevFmtStereo)*/
     {
         switch(converter->mSrcType)
         {
-        case DevFmtByte:
-            Mono2StereoALbyte(dst, static_cast<const ALbyte*>(src), frames);
-            break;
-        case DevFmtUByte:
-            Mono2StereoALubyte(dst, static_cast<const ALubyte*>(src), frames);
-            break;
-        case DevFmtShort:
-            Mono2StereoALshort(dst, static_cast<const ALshort*>(src), frames);
-            break;
-        case DevFmtUShort:
-            Mono2StereoALushort(dst, static_cast<const ALushort*>(src), frames);
-            break;
-        case DevFmtInt:
-            Mono2StereoALint(dst, static_cast<const ALint*>(src), frames);
-            break;
-        case DevFmtUInt:
-            Mono2StereoALuint(dst, static_cast<const ALuint*>(src), frames);
-            break;
-        case DevFmtFloat:
-            Mono2StereoALfloat(dst, static_cast<const ALfloat*>(src), frames);
-            break;
+#define HANDLE_FMT(T) case T: Mono2Stereo<T>(dst, src, frames); break
+        HANDLE_FMT(DevFmtByte);
+        HANDLE_FMT(DevFmtUByte);
+        HANDLE_FMT(DevFmtShort);
+        HANDLE_FMT(DevFmtUShort);
+        HANDLE_FMT(DevFmtInt);
+        HANDLE_FMT(DevFmtUInt);
+        HANDLE_FMT(DevFmtFloat);
+#undef HANDLE_FMT
         }
     }
 }

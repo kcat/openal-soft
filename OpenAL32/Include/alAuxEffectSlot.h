@@ -8,58 +8,31 @@
 #include "atomic.h"
 
 
-struct ALeffectStateVtable;
 struct ALeffectslot;
 
-typedef struct ALeffectState {
-    RefCount Ref;
-    const struct ALeffectStateVtable *vtbl;
 
-    ALfloat (*OutBuffer)[BUFFERSIZE];
-    ALsizei OutChannels;
-} ALeffectState;
+struct EffectState {
+    RefCount mRef{1u};
 
-void ALeffectState_Construct(ALeffectState *state);
-void ALeffectState_Destruct(ALeffectState *state);
+    ALfloat (*mOutBuffer)[BUFFERSIZE]{nullptr};
+    ALsizei mOutChannels{0};
 
-struct ALeffectStateVtable {
-    void (*const Destruct)(ALeffectState *state);
 
-    ALboolean (*const deviceUpdate)(ALeffectState *state, ALCdevice *device);
-    void (*const update)(ALeffectState *state, const ALCcontext *context, const struct ALeffectslot *slot, const union ALeffectProps *props);
-    void (*const process)(ALeffectState *state, ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels);
+    virtual ~EffectState() = default;
 
-    void (*const Delete)(void *ptr);
+    virtual ALboolean deviceUpdate(ALCdevice *device) = 0;
+    virtual void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) = 0;
+    virtual void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) = 0;
+
+    void IncRef() noexcept;
+    void DecRef() noexcept;
 };
-
-/* Small hack to use a pointer-to-array types as a normal argument type.
- * Shouldn't be used directly.
- */
-typedef ALfloat ALfloatBUFFERSIZE[BUFFERSIZE];
-
-#define DEFINE_ALEFFECTSTATE_VTABLE(T)                                        \
-DECLARE_THUNK(T, ALeffectState, void, Destruct)                               \
-DECLARE_THUNK1(T, ALeffectState, ALboolean, deviceUpdate, ALCdevice*)         \
-DECLARE_THUNK3(T, ALeffectState, void, update, const ALCcontext*, const ALeffectslot*, const ALeffectProps*) \
-DECLARE_THUNK4(T, ALeffectState, void, process, ALsizei, const ALfloatBUFFERSIZE*RESTRICT, ALfloatBUFFERSIZE*RESTRICT, ALsizei) \
-static void T##_ALeffectState_Delete(void *ptr)                               \
-{ return T##_Delete(STATIC_UPCAST(T, ALeffectState, (ALeffectState*)ptr)); }  \
-                                                                              \
-static const struct ALeffectStateVtable T##_ALeffectState_vtable = {          \
-    T##_ALeffectState_Destruct,                                               \
-                                                                              \
-    T##_ALeffectState_deviceUpdate,                                           \
-    T##_ALeffectState_update,                                                 \
-    T##_ALeffectState_process,                                                \
-                                                                              \
-    T##_ALeffectState_Delete,                                                 \
-}
 
 
 struct EffectStateFactory {
     virtual ~EffectStateFactory() { }
 
-    virtual ALeffectState *create() = 0;
+    virtual EffectState *create() = 0;
 };
 
 
@@ -79,7 +52,7 @@ struct ALeffectslotProps {
     ALenum Type;
     ALeffectProps Props;
 
-    ALeffectState *State;
+    EffectState *State;
 
     ATOMIC(struct ALeffectslotProps*) next;
 };
@@ -93,7 +66,7 @@ struct ALeffectslot {
         ALenum Type{AL_EFFECT_NULL};
         ALeffectProps Props{};
 
-        ALeffectState *State{nullptr};
+        EffectState *State{nullptr};
     } Effect;
 
     ATOMIC(ALenum) PropsClean{AL_TRUE};
@@ -108,7 +81,7 @@ struct ALeffectslot {
 
         ALenum EffectType{AL_EFFECT_NULL};
         ALeffectProps EffectProps{};
-        ALeffectState *EffectState{nullptr};
+        EffectState *EffectState{nullptr};
 
         ALfloat RoomRolloff{0.0f}; /* Added to the source's room rolloff, not multiplied. */
         ALfloat DecayTime{0.0f};
@@ -166,7 +139,5 @@ EffectStateFactory *DedicatedStateFactory_getFactory(void);
 
 
 ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect *effect);
-
-void ALeffectState_DecRef(ALeffectState *state);
 
 #endif

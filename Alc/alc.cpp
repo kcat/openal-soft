@@ -2256,11 +2256,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(context->DefaultSlot)
         {
             ALeffectslot *slot = context->DefaultSlot;
-            ALeffectState *state = slot->Effect.State;
+            EffectState *state = slot->Effect.State;
 
-            state->OutBuffer = device->Dry.Buffer;
-            state->OutChannels = device->Dry.NumChannels;
-            if(V(state,deviceUpdate)(device) == AL_FALSE)
+            state->mOutBuffer = device->Dry.Buffer;
+            state->mOutChannels = device->Dry.NumChannels;
+            if(state->deviceUpdate(device) == AL_FALSE)
                 update_failed = AL_TRUE;
             else
                 UpdateEffectSlotProps(slot, context);
@@ -2270,11 +2270,11 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         almtx_lock(&context->EffectSlotLock);
         for(auto &slot : context->EffectSlotList)
         {
-            ALeffectState *state = slot->Effect.State;
+            EffectState *state = slot->Effect.State;
 
-            state->OutBuffer = device->Dry.Buffer;
-            state->OutChannels = device->Dry.NumChannels;
-            if(V(state,deviceUpdate)(device) == AL_FALSE)
+            state->mOutBuffer = device->Dry.Buffer;
+            state->mOutChannels = device->Dry.NumChannels;
+            if(state->deviceUpdate(device) == AL_FALSE)
                 update_failed = AL_TRUE;
             else
                 UpdateEffectSlotProps(slot, context);
@@ -2603,7 +2603,7 @@ ALCcontext_struct::~ALCcontext_struct()
     while(eprops)
     {
         struct ALeffectslotProps *next{eprops->next.load(std::memory_order_relaxed)};
-        if(eprops->State) ALeffectState_DecRef(eprops->State);
+        if(eprops->State) eprops->State->DecRef();
         al_free(eprops);
         eprops = next;
         ++count;

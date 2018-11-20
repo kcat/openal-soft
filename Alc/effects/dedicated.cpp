@@ -31,45 +31,30 @@
 #include "alu.h"
 
 
-struct ALdedicatedState final : public ALeffectState {
+struct ALdedicatedState final : public EffectState {
     ALfloat mCurrentGains[MAX_OUTPUT_CHANNELS];
     ALfloat mTargetGains[MAX_OUTPUT_CHANNELS];
+
+
+    ALboolean deviceUpdate(ALCdevice *device) override;
+    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
+    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
+
+    DEF_NEWDEL(ALdedicatedState)
 };
 
-static ALvoid ALdedicatedState_Destruct(ALdedicatedState *state);
-static ALboolean ALdedicatedState_deviceUpdate(ALdedicatedState *state, ALCdevice *device);
-static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props);
-static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
-DECLARE_DEFAULT_ALLOCATORS(ALdedicatedState)
-
-DEFINE_ALEFFECTSTATE_VTABLE(ALdedicatedState);
-
-
-static void ALdedicatedState_Construct(ALdedicatedState *state)
+ALboolean ALdedicatedState::deviceUpdate(ALCdevice *UNUSED(device))
 {
-    new (state) ALdedicatedState{};
-    ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
-    SET_VTABLE2(ALdedicatedState, ALeffectState, state);
-}
-
-static ALvoid ALdedicatedState_Destruct(ALdedicatedState *state)
-{
-    ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
-    state->~ALdedicatedState();
-}
-
-static ALboolean ALdedicatedState_deviceUpdate(ALdedicatedState *state, ALCdevice *UNUSED(device))
-{
-    std::fill(std::begin(state->mCurrentGains), std::end(state->mCurrentGains), 0.0f);
+    std::fill(std::begin(mCurrentGains), std::end(mCurrentGains), 0.0f);
     return AL_TRUE;
 }
 
-static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
+void ALdedicatedState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
 {
     const ALCdevice *device = context->Device;
     ALfloat Gain;
 
-    std::fill(std::begin(state->mTargetGains), std::end(state->mTargetGains), 0.0f);
+    std::fill(std::begin(mTargetGains), std::end(mTargetGains), 0.0f);
 
     Gain = slot->Params.Gain * props->Dedicated.Gain;
     if(slot->Params.EffectType == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
@@ -77,9 +62,9 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCcontext 
         int idx;
         if((idx=GetChannelIdxByName(&device->RealOut, LFE)) != -1)
         {
-            state->OutBuffer = device->RealOut.Buffer;
-            state->OutChannels = device->RealOut.NumChannels;
-            state->mTargetGains[idx] = Gain;
+            mOutBuffer = device->RealOut.Buffer;
+            mOutChannels = device->RealOut.NumChannels;
+            mTargetGains[idx] = Gain;
         }
     }
     else if(slot->Params.EffectType == AL_EFFECT_DEDICATED_DIALOGUE)
@@ -89,39 +74,35 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCcontext 
         int idx{GetChannelIdxByName(&device->RealOut, FrontCenter)};
         if(idx != -1)
         {
-            state->OutBuffer = device->RealOut.Buffer;
-            state->OutChannels = device->RealOut.NumChannels;
-            state->mTargetGains[idx] = Gain;
+            mOutBuffer = device->RealOut.Buffer;
+            mOutChannels = device->RealOut.NumChannels;
+            mTargetGains[idx] = Gain;
         }
         else
         {
             ALfloat coeffs[MAX_AMBI_COEFFS];
             CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
 
-            state->OutBuffer = device->Dry.Buffer;
-            state->OutChannels = device->Dry.NumChannels;
-            ComputePanGains(&device->Dry, coeffs, Gain, state->mTargetGains);
+            mOutBuffer = device->Dry.Buffer;
+            mOutChannels = device->Dry.NumChannels;
+            ComputePanGains(&device->Dry, coeffs, Gain, mTargetGains);
         }
     }
 }
 
-static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+void ALdedicatedState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    MixSamples(SamplesIn[0], NumChannels, SamplesOut, state->mCurrentGains,
-               state->mTargetGains, SamplesToDo, 0, SamplesToDo);
+    MixSamples(SamplesIn[0], NumChannels, SamplesOut, mCurrentGains,
+               mTargetGains, SamplesToDo, 0, SamplesToDo);
 }
 
 
 struct DedicatedStateFactory final : public EffectStateFactory {
-    ALeffectState *create() override;
+    EffectState *create() override;
 };
 
-ALeffectState *DedicatedStateFactory::create()
-{
-    ALdedicatedState *state;
-    NEW_OBJ0(state, ALdedicatedState)();
-    return state;
-}
+EffectState *DedicatedStateFactory::create()
+{ return new ALdedicatedState{}; }
 
 EffectStateFactory *DedicatedStateFactory_getFactory(void)
 {

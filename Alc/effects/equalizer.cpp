@@ -76,7 +76,7 @@
  * http://www.musicdsp.org/files/Audio-EQ-Cookbook.txt                   */
 
 
-struct ALequalizerState final : public ALeffectState {
+struct ALequalizerState final : public EffectState {
     struct {
         /* Effect parameters */
         BiquadFilter filter[4];
@@ -87,33 +87,18 @@ struct ALequalizerState final : public ALeffectState {
     } mChans[MAX_EFFECT_CHANNELS];
 
     ALfloat mSampleBuffer[MAX_EFFECT_CHANNELS][BUFFERSIZE]{};
+
+
+    ALboolean deviceUpdate(ALCdevice *device) override;
+    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
+    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
+
+    DEF_NEWDEL(ALequalizerState)
 };
 
-static ALvoid ALequalizerState_Destruct(ALequalizerState *state);
-static ALboolean ALequalizerState_deviceUpdate(ALequalizerState *state, ALCdevice *device);
-static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props);
-static ALvoid ALequalizerState_process(ALequalizerState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
-DECLARE_DEFAULT_ALLOCATORS(ALequalizerState)
-
-DEFINE_ALEFFECTSTATE_VTABLE(ALequalizerState);
-
-
-static void ALequalizerState_Construct(ALequalizerState *state)
+ALboolean ALequalizerState::deviceUpdate(ALCdevice *UNUSED(device))
 {
-    new (state) ALequalizerState{};
-    ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
-    SET_VTABLE2(ALequalizerState, ALeffectState, state);
-}
-
-static ALvoid ALequalizerState_Destruct(ALequalizerState *state)
-{
-    ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
-    state->~ALequalizerState();
-}
-
-static ALboolean ALequalizerState_deviceUpdate(ALequalizerState *state, ALCdevice *UNUSED(device))
-{
-    for(auto &e : state->mChans)
+    for(auto &e : mChans)
     {
         std::for_each(std::begin(e.filter), std::end(e.filter),
             [](BiquadFilter &f) -> void
@@ -124,7 +109,7 @@ static ALboolean ALequalizerState_deviceUpdate(ALequalizerState *state, ALCdevic
     return AL_TRUE;
 }
 
-static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
+void ALequalizerState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
 {
     const ALCdevice *device = context->Device;
     ALfloat frequency = (ALfloat)device->Frequency;
@@ -137,78 +122,68 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext 
      */
     gain = maxf(sqrtf(props->Equalizer.LowGain), 0.0625f); /* Limit -24dB */
     f0norm = props->Equalizer.LowCutoff/frequency;
-    BiquadFilter_setParams(&state->mChans[0].filter[0], BiquadType::LowShelf,
+    BiquadFilter_setParams(&mChans[0].filter[0], BiquadType::LowShelf,
         gain, f0norm, calc_rcpQ_from_slope(gain, 0.75f)
     );
 
     gain = maxf(props->Equalizer.Mid1Gain, 0.0625f);
     f0norm = props->Equalizer.Mid1Center/frequency;
-    BiquadFilter_setParams(&state->mChans[0].filter[1], BiquadType::Peaking,
-        gain, f0norm, calc_rcpQ_from_bandwidth(
-            f0norm, props->Equalizer.Mid1Width
-        )
+    BiquadFilter_setParams(&mChans[0].filter[1], BiquadType::Peaking,
+        gain, f0norm, calc_rcpQ_from_bandwidth(f0norm, props->Equalizer.Mid1Width)
     );
 
     gain = maxf(props->Equalizer.Mid2Gain, 0.0625f);
     f0norm = props->Equalizer.Mid2Center/frequency;
-    BiquadFilter_setParams(&state->mChans[0].filter[2], BiquadType::Peaking,
-        gain, f0norm, calc_rcpQ_from_bandwidth(
-            f0norm, props->Equalizer.Mid2Width
-        )
+    BiquadFilter_setParams(&mChans[0].filter[2], BiquadType::Peaking,
+        gain, f0norm, calc_rcpQ_from_bandwidth(f0norm, props->Equalizer.Mid2Width)
     );
 
     gain = maxf(sqrtf(props->Equalizer.HighGain), 0.0625f);
     f0norm = props->Equalizer.HighCutoff/frequency;
-    BiquadFilter_setParams(&state->mChans[0].filter[3], BiquadType::HighShelf,
+    BiquadFilter_setParams(&mChans[0].filter[3], BiquadType::HighShelf,
         gain, f0norm, calc_rcpQ_from_slope(gain, 0.75f)
     );
 
     /* Copy the filter coefficients for the other input channels. */
     for(i = 1;i < MAX_EFFECT_CHANNELS;i++)
     {
-        BiquadFilter_copyParams(&state->mChans[i].filter[0], &state->mChans[0].filter[0]);
-        BiquadFilter_copyParams(&state->mChans[i].filter[1], &state->mChans[0].filter[1]);
-        BiquadFilter_copyParams(&state->mChans[i].filter[2], &state->mChans[0].filter[2]);
-        BiquadFilter_copyParams(&state->mChans[i].filter[3], &state->mChans[0].filter[3]);
+        BiquadFilter_copyParams(&mChans[i].filter[0], &mChans[0].filter[0]);
+        BiquadFilter_copyParams(&mChans[i].filter[1], &mChans[0].filter[1]);
+        BiquadFilter_copyParams(&mChans[i].filter[2], &mChans[0].filter[2]);
+        BiquadFilter_copyParams(&mChans[i].filter[3], &mChans[0].filter[3]);
     }
 
-    state->OutBuffer = device->FOAOut.Buffer;
-    state->OutChannels = device->FOAOut.NumChannels;
+    mOutBuffer = device->FOAOut.Buffer;
+    mOutChannels = device->FOAOut.NumChannels;
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
         ComputePanGains(&device->FOAOut, aluMatrixf::Identity.m[i], slot->Params.Gain,
-                        state->mChans[i].TargetGains);
+                        mChans[i].TargetGains);
 }
 
-static ALvoid ALequalizerState_process(ALequalizerState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+void ALequalizerState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    ALfloat (*RESTRICT temps)[BUFFERSIZE] = state->mSampleBuffer;
+    ALfloat (*RESTRICT temps)[BUFFERSIZE] = mSampleBuffer;
     ALsizei c;
 
     for(c = 0;c < MAX_EFFECT_CHANNELS;c++)
     {
-        BiquadFilter_process(&state->mChans[c].filter[0], temps[0], SamplesIn[c], SamplesToDo);
-        BiquadFilter_process(&state->mChans[c].filter[1], temps[1], temps[0], SamplesToDo);
-        BiquadFilter_process(&state->mChans[c].filter[2], temps[2], temps[1], SamplesToDo);
-        BiquadFilter_process(&state->mChans[c].filter[3], temps[3], temps[2], SamplesToDo);
+        BiquadFilter_process(&mChans[c].filter[0], temps[0], SamplesIn[c], SamplesToDo);
+        BiquadFilter_process(&mChans[c].filter[1], temps[1], temps[0], SamplesToDo);
+        BiquadFilter_process(&mChans[c].filter[2], temps[2], temps[1], SamplesToDo);
+        BiquadFilter_process(&mChans[c].filter[3], temps[3], temps[2], SamplesToDo);
 
-        MixSamples(temps[3], NumChannels, SamplesOut,
-            state->mChans[c].CurrentGains, state->mChans[c].TargetGains,
-            SamplesToDo, 0, SamplesToDo
-        );
+        MixSamples(temps[3], NumChannels, SamplesOut, mChans[c].CurrentGains,
+                   mChans[c].TargetGains, SamplesToDo, 0, SamplesToDo);
     }
 }
 
 
 struct EqualizerStateFactory final : public EffectStateFactory {
-    ALeffectState *create() override;
+    EffectState *create() override;
 };
 
-ALeffectState *EqualizerStateFactory::create()
-{
-    ALequalizerState *state;
-    NEW_OBJ0(state, ALequalizerState)();
-    return state;
-}
+EffectState *EqualizerStateFactory::create()
+{ return new ALequalizerState{}; }
 
 EffectStateFactory *EqualizerStateFactory_getFactory(void)
 {

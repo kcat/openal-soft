@@ -37,7 +37,7 @@
 #define RELEASE_TIME 0.2f /* 200ms to drop from max to min */
 
 
-struct ALcompressorState final : public ALeffectState {
+struct ALcompressorState final : public EffectState {
     /* Effect gains for each channel */
     ALfloat mGain[MAX_EFFECT_CHANNELS][MAX_OUTPUT_CHANNELS]{};
 
@@ -46,31 +46,16 @@ struct ALcompressorState final : public ALeffectState {
     ALfloat mAttackMult{1.0f};
     ALfloat mReleaseMult{1.0f};
     ALfloat mEnvFollower{1.0f};
+
+
+    ALboolean deviceUpdate(ALCdevice *device) override;
+    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
+    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
+
+    DEF_NEWDEL(ALcompressorState)
 };
 
-static ALvoid ALcompressorState_Destruct(ALcompressorState *state);
-static ALboolean ALcompressorState_deviceUpdate(ALcompressorState *state, ALCdevice *device);
-static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props);
-static ALvoid ALcompressorState_process(ALcompressorState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
-DECLARE_DEFAULT_ALLOCATORS(ALcompressorState)
-
-DEFINE_ALEFFECTSTATE_VTABLE(ALcompressorState);
-
-
-static void ALcompressorState_Construct(ALcompressorState *state)
-{
-    new (state) ALcompressorState{};
-    ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
-    SET_VTABLE2(ALcompressorState, ALeffectState, state);
-}
-
-static ALvoid ALcompressorState_Destruct(ALcompressorState *state)
-{
-    ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
-    state->~ALcompressorState();
-}
-
-static ALboolean ALcompressorState_deviceUpdate(ALcompressorState *state, ALCdevice *device)
+ALboolean ALcompressorState::deviceUpdate(ALCdevice *device)
 {
     /* Number of samples to do a full attack and release (non-integer sample
      * counts are okay).
@@ -81,27 +66,25 @@ static ALboolean ALcompressorState_deviceUpdate(ALcompressorState *state, ALCdev
     /* Calculate per-sample multipliers to attack and release at the desired
      * rates.
      */
-    state->mAttackMult  = powf(AMP_ENVELOPE_MAX/AMP_ENVELOPE_MIN, 1.0f/attackCount);
-    state->mReleaseMult = powf(AMP_ENVELOPE_MIN/AMP_ENVELOPE_MAX, 1.0f/releaseCount);
+    mAttackMult  = powf(AMP_ENVELOPE_MAX/AMP_ENVELOPE_MIN, 1.0f/attackCount);
+    mReleaseMult = powf(AMP_ENVELOPE_MIN/AMP_ENVELOPE_MAX, 1.0f/releaseCount);
 
     return AL_TRUE;
 }
 
-static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
+void ALcompressorState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
 {
     const ALCdevice *device = context->Device;
-    ALuint i;
 
-    state->mEnabled = props->Compressor.OnOff;
+    mEnabled = props->Compressor.OnOff;
 
-    state->OutBuffer = device->FOAOut.Buffer;
-    state->OutChannels = device->FOAOut.NumChannels;
-    for(i = 0;i < 4;i++)
-        ComputePanGains(&device->FOAOut, aluMatrixf::Identity.m[i], slot->Params.Gain,
-                        state->mGain[i]);
+    mOutBuffer = device->FOAOut.Buffer;
+    mOutChannels = device->FOAOut.NumChannels;
+    for(ALsizei i{0};i < 4;i++)
+        ComputePanGains(&device->FOAOut, aluMatrixf::Identity.m[i], slot->Params.Gain, mGain[i]);
 }
 
-static ALvoid ALcompressorState_process(ALcompressorState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+void ALcompressorState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
     ALsizei i, j, k;
     ALsizei base;
@@ -110,10 +93,10 @@ static ALvoid ALcompressorState_process(ALcompressorState *state, ALsizei Sample
     {
         ALfloat gains[256];
         ALsizei td = mini(256, SamplesToDo-base);
-        ALfloat env = state->mEnvFollower;
+        ALfloat env = mEnvFollower;
 
         /* Generate the per-sample gains from the signal envelope. */
-        if(state->mEnabled)
+        if(mEnabled)
         {
             for(i = 0;i < td;++i)
             {
@@ -123,9 +106,9 @@ static ALvoid ALcompressorState_process(ALcompressorState *state, ALsizei Sample
                 ALfloat amplitude = clampf(fabsf(SamplesIn[0][base+i]),
                                            AMP_ENVELOPE_MIN, AMP_ENVELOPE_MAX);
                 if(amplitude > env)
-                    env = minf(env*state->mAttackMult, amplitude);
+                    env = minf(env*mAttackMult, amplitude);
                 else if(amplitude < env)
-                    env = maxf(env*state->mReleaseMult, amplitude);
+                    env = maxf(env*mReleaseMult, amplitude);
 
                 /* Apply the reciprocal of the envelope to normalize the volume
                  * (compress the dynamic range).
@@ -143,21 +126,21 @@ static ALvoid ALcompressorState_process(ALcompressorState *state, ALsizei Sample
             {
                 ALfloat amplitude = 1.0f;
                 if(amplitude > env)
-                    env = minf(env*state->mAttackMult, amplitude);
+                    env = minf(env*mAttackMult, amplitude);
                 else if(amplitude < env)
-                    env = maxf(env*state->mReleaseMult, amplitude);
+                    env = maxf(env*mReleaseMult, amplitude);
 
                 gains[i] = 1.0f / env;
             }
         }
-        state->mEnvFollower = env;
+        mEnvFollower = env;
 
         /* Now compress the signal amplitude to output. */
         for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
         {
             for(k = 0;k < NumChannels;k++)
             {
-                ALfloat gain = state->mGain[j][k];
+                ALfloat gain = mGain[j][k];
                 if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
                     continue;
 
@@ -172,15 +155,11 @@ static ALvoid ALcompressorState_process(ALcompressorState *state, ALsizei Sample
 
 
 struct CompressorStateFactory final : public EffectStateFactory {
-    ALeffectState *create() override;
+    EffectState *create() override;
 };
 
-ALeffectState *CompressorStateFactory::create()
-{
-    ALcompressorState *state;
-    NEW_OBJ0(state, ALcompressorState)();
-    return state;
-}
+EffectState *CompressorStateFactory::create()
+{ return new ALcompressorState{}; }
 
 EffectStateFactory *CompressorStateFactory_getFactory(void)
 {

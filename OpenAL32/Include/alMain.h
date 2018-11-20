@@ -206,6 +206,7 @@ struct ALCbackend;
 struct ALbuffer;
 struct ALeffect;
 struct ALfilter;
+struct EffectState;
 
 
 #define DEFAULT_OUTPUT_RATE  (44100)
@@ -755,7 +756,7 @@ typedef struct AsyncEvent {
             ALuint param;
             ALchar msg[1008];
         } user;
-        struct ALeffectState *EffectState;
+        EffectState *mEffectState;
     } u;
 } AsyncEvent;
 #define ASYNC_EVENT(t) { t, { 0 } }

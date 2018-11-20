@@ -34,7 +34,7 @@ static int EventThread(ALCcontext *context)
 
             if(evt.EnumType == EventType_ReleaseEffectState)
             {
-                ALeffectState_DecRef(evt.u.EffectState);
+                evt.u.mEffectState->DecRef();
                 continue;
             }
 

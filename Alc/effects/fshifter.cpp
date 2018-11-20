@@ -60,7 +60,7 @@ std::array<ALdouble,HIL_SIZE> InitHannWindow(void)
 alignas(16) const std::array<ALdouble,HIL_SIZE> HannWindow = InitHannWindow();
 
 
-struct ALfshifterState final : public ALeffectState {
+struct ALfshifterState final : public EffectState {
     /* Effect parameters */
     ALsizei  mCount{};
     ALsizei  mPhaseStep{};
@@ -79,152 +79,134 @@ struct ALfshifterState final : public ALeffectState {
     /* Effect gains for each output channel */
     ALfloat mCurrentGains[MAX_OUTPUT_CHANNELS]{};
     ALfloat mTargetGains[MAX_OUTPUT_CHANNELS]{};
+
+
+    ALboolean deviceUpdate(ALCdevice *device) override;
+    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
+    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
+
+    DEF_NEWDEL(ALfshifterState)
 };
 
-ALvoid ALfshifterState_Destruct(ALfshifterState *state);
-ALboolean ALfshifterState_deviceUpdate(ALfshifterState *state, ALCdevice *device);
-ALvoid ALfshifterState_update(ALfshifterState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props);
-ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels);
-DECLARE_DEFAULT_ALLOCATORS(ALfshifterState)
-
-DEFINE_ALEFFECTSTATE_VTABLE(ALfshifterState);
-
-void ALfshifterState_Construct(ALfshifterState *state)
-{
-    new (state) ALfshifterState{};
-    ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
-    SET_VTABLE2(ALfshifterState, ALeffectState, state);
-}
-
-ALvoid ALfshifterState_Destruct(ALfshifterState *state)
-{
-    ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
-    state->~ALfshifterState();
-}
-
-ALboolean ALfshifterState_deviceUpdate(ALfshifterState *state, ALCdevice *UNUSED(device))
+ALboolean ALfshifterState::deviceUpdate(ALCdevice *UNUSED(device))
 {
     /* (Re-)initializing parameters and clear the buffers. */
-    state->mCount     = FIFO_LATENCY;
-    state->mPhaseStep = 0;
-    state->mPhase     = 0;
-    state->mLdSign    = 1.0;
+    mCount     = FIFO_LATENCY;
+    mPhaseStep = 0;
+    mPhase     = 0;
+    mLdSign    = 1.0;
 
-    std::fill(std::begin(state->mInFIFO),      std::end(state->mInFIFO),      0.0f);
-    std::fill(std::begin(state->mOutFIFO),     std::end(state->mOutFIFO),     complex_d{});
-    std::fill(std::begin(state->mOutputAccum), std::end(state->mOutputAccum), complex_d{});
-    std::fill(std::begin(state->mAnalytic),    std::end(state->mAnalytic),    complex_d{});
+    std::fill(std::begin(mInFIFO),      std::end(mInFIFO),      0.0f);
+    std::fill(std::begin(mOutFIFO),     std::end(mOutFIFO),     complex_d{});
+    std::fill(std::begin(mOutputAccum), std::end(mOutputAccum), complex_d{});
+    std::fill(std::begin(mAnalytic),    std::end(mAnalytic),    complex_d{});
 
-    std::fill(std::begin(state->mCurrentGains), std::end(state->mCurrentGains), 0.0f);
-    std::fill(std::begin(state->mTargetGains),  std::end(state->mTargetGains),  0.0f);
+    std::fill(std::begin(mCurrentGains), std::end(mCurrentGains), 0.0f);
+    std::fill(std::begin(mTargetGains),  std::end(mTargetGains),  0.0f);
 
     return AL_TRUE;
 }
 
-ALvoid ALfshifterState_update(ALfshifterState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
+void ALfshifterState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
 {
     const ALCdevice *device{context->Device};
 
     ALfloat step{props->Fshifter.Frequency / (ALfloat)device->Frequency};
-    state->mPhaseStep = fastf2i(minf(step, 0.5f) * FRACTIONONE);
+    mPhaseStep = fastf2i(minf(step, 0.5f) * FRACTIONONE);
 
     switch(props->Fshifter.LeftDirection)
     {
         case AL_FREQUENCY_SHIFTER_DIRECTION_DOWN:
-            state->mLdSign = -1.0;
+            mLdSign = -1.0;
             break;
 
         case AL_FREQUENCY_SHIFTER_DIRECTION_UP:
-            state->mLdSign = 1.0;
+            mLdSign = 1.0;
             break;
 
         case AL_FREQUENCY_SHIFTER_DIRECTION_OFF:
-            state->mPhase = 0;
-            state->mPhaseStep = 0;
+            mPhase = 0;
+            mPhaseStep = 0;
             break;
     }
 
     ALfloat coeffs[MAX_AMBI_COEFFS];
     CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
-    ComputePanGains(&device->Dry, coeffs, slot->Params.Gain, state->mTargetGains);
+    ComputePanGains(&device->Dry, coeffs, slot->Params.Gain, mTargetGains);
 }
 
-ALvoid ALfshifterState_process(ALfshifterState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
+void ALfshifterState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
     static const complex_d complex_zero{0.0, 0.0};
-    ALfloat *RESTRICT BufferOut = state->mBufferOut;
+    ALfloat *RESTRICT BufferOut = mBufferOut;
     ALsizei j, k, base;
 
     for(base = 0;base < SamplesToDo;)
     {
-        ALsizei todo = mini(HIL_SIZE-state->mCount, SamplesToDo-base);
+        ALsizei todo = mini(HIL_SIZE-mCount, SamplesToDo-base);
 
         ASSUME(todo > 0);
 
         /* Fill FIFO buffer with samples data */
-        k = state->mCount;
+        k = mCount;
         for(j = 0;j < todo;j++,k++)
         {
-            state->mInFIFO[k] = SamplesIn[0][base+j];
-            state->mOutdata[base+j]  = state->mOutFIFO[k-FIFO_LATENCY];
+            mInFIFO[k] = SamplesIn[0][base+j];
+            mOutdata[base+j]  = mOutFIFO[k-FIFO_LATENCY];
         }
-        state->mCount += todo;
+        mCount += todo;
         base += todo;
 
         /* Check whether FIFO buffer is filled */
-        if(state->mCount < HIL_SIZE) continue;
-        state->mCount = FIFO_LATENCY;
+        if(mCount < HIL_SIZE) continue;
+        mCount = FIFO_LATENCY;
 
         /* Real signal windowing and store in Analytic buffer */
         for(k = 0;k < HIL_SIZE;k++)
         {
-            state->mAnalytic[k].real(state->mInFIFO[k] * HannWindow[k]);
-            state->mAnalytic[k].imag(0.0);
+            mAnalytic[k].real(mInFIFO[k] * HannWindow[k]);
+            mAnalytic[k].imag(0.0);
         }
 
         /* Processing signal by Discrete Hilbert Transform (analytical signal). */
-        complex_hilbert(state->mAnalytic, HIL_SIZE);
+        complex_hilbert(mAnalytic, HIL_SIZE);
 
         /* Windowing and add to output accumulator */
         for(k = 0;k < HIL_SIZE;k++)
-            state->mOutputAccum[k] += 2.0/OVERSAMP*HannWindow[k]*state->mAnalytic[k];
+            mOutputAccum[k] += 2.0/OVERSAMP*HannWindow[k]*mAnalytic[k];
 
         /* Shift accumulator, input & output FIFO */
-        for(k = 0;k < HIL_STEP;k++) state->mOutFIFO[k] = state->mOutputAccum[k];
-        for(j = 0;k < HIL_SIZE;k++,j++) state->mOutputAccum[j] = state->mOutputAccum[k];
-        for(;j < HIL_SIZE;j++) state->mOutputAccum[j] = complex_zero;
+        for(k = 0;k < HIL_STEP;k++) mOutFIFO[k] = mOutputAccum[k];
+        for(j = 0;k < HIL_SIZE;k++,j++) mOutputAccum[j] = mOutputAccum[k];
+        for(;j < HIL_SIZE;j++) mOutputAccum[j] = complex_zero;
         for(k = 0;k < FIFO_LATENCY;k++)
-            state->mInFIFO[k] = state->mInFIFO[k+HIL_STEP];
+            mInFIFO[k] = mInFIFO[k+HIL_STEP];
     }
 
     /* Process frequency shifter using the analytic signal obtained. */
     for(k = 0;k < SamplesToDo;k++)
     {
-        double phase = state->mPhase * ((1.0/FRACTIONONE) * 2.0*M_PI);
-        BufferOut[k] = (float)(state->mOutdata[k].real()*std::cos(phase) +
-                               state->mOutdata[k].imag()*std::sin(phase)*state->mLdSign);
+        double phase = mPhase * ((1.0/FRACTIONONE) * 2.0*M_PI);
+        BufferOut[k] = (float)(mOutdata[k].real()*std::cos(phase) +
+                               mOutdata[k].imag()*std::sin(phase)*mLdSign);
 
-        state->mPhase += state->mPhaseStep;
-        state->mPhase &= FRACTIONMASK;
+        mPhase += mPhaseStep;
+        mPhase &= FRACTIONMASK;
     }
 
     /* Now, mix the processed sound data to the output. */
-    MixSamples(BufferOut, NumChannels, SamplesOut, state->mCurrentGains, state->mTargetGains,
+    MixSamples(BufferOut, NumChannels, SamplesOut, mCurrentGains, mTargetGains,
                maxi(SamplesToDo, 512), 0, SamplesToDo);
 }
 
 } // namespace
 
 struct FshifterStateFactory final : public EffectStateFactory {
-    ALeffectState *create() override;
+    EffectState *create() override;
 };
 
-ALeffectState *FshifterStateFactory::create()
-{
-    ALfshifterState *state;
-    NEW_OBJ0(state, ALfshifterState)();
-    return state;
-}
+EffectState *FshifterStateFactory::create()
+{ return new ALfshifterState{}; }
 
 EffectStateFactory *FshifterStateFactory_getFactory(void)
 {

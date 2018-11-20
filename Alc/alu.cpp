@@ -381,7 +381,7 @@ static bool CalcListenerParams(ALCcontext *Context)
 static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
 {
     struct ALeffectslotProps *props;
-    ALeffectState *state;
+    EffectState *state;
 
     props = slot->Update.exchange(nullptr, std::memory_order_acq_rel);
     if(!props && !force) return false;
@@ -419,8 +419,8 @@ static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool f
              * count safely to remove it from the update object (it can't reach
              * 0 refs since the current params also hold a reference).
              */
-            DecrementRef(&state->Ref);
-            props->State = NULL;
+            DecrementRef(&state->mRef);
+            props->State = nullptr;
         }
         else
         {
@@ -428,7 +428,7 @@ static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool f
              * event.
              */
             AsyncEvent evt = ASYNC_EVENT(EventType_ReleaseEffectState);
-            evt.u.EffectState = slot->Params.EffectState;
+            evt.u.mEffectState = slot->Params.EffectState;
 
             slot->Params.EffectState = state;
             props->State = NULL;
@@ -442,7 +442,7 @@ static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool f
                  * eventually be cleaned up sometime later (not ideal, but
                  * better than blocking or leaking).
                  */
-                props->State = evt.u.EffectState;
+                props->State = evt.u.mEffectState;
             }
         }
 
@@ -451,7 +451,7 @@ static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool f
     else
         state = slot->Params.EffectState;
 
-    V(state,update)(context, slot, &slot->Params.EffectProps);
+    state->update(context, slot, &slot->Params.EffectProps);
     return true;
 }
 
@@ -1749,9 +1749,9 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
             for(i = 0;i < auxslots->count;i++)
             {
                 const ALeffectslot *slot = auxslots->slot[i];
-                ALeffectState *state = slot->Params.EffectState;
-                V(state,process)(SamplesToDo, slot->WetBuffer, state->OutBuffer,
-                                 state->OutChannels);
+                EffectState *state = slot->Params.EffectState;
+                state->process(SamplesToDo, slot->WetBuffer, state->mOutBuffer,
+                               state->mOutChannels);
             }
 
             ctx = ATOMIC_LOAD(&ctx->next, almemory_order_relaxed);

@@ -11,47 +11,36 @@
 #include "alError.h"
 
 
-struct ALnullState final : public ALeffectState {
+struct ALnullState final : public EffectState {
+    ALnullState();
+    ~ALnullState() override;
+
+    ALboolean deviceUpdate(ALCdevice *device) override;
+    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
+    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
+
+    DEF_NEWDEL(ALnullState)
 };
 
-/* Forward-declare "virtual" functions to define the vtable with. */
-static ALvoid ALnullState_Destruct(ALnullState *state);
-static ALboolean ALnullState_deviceUpdate(ALnullState *state, ALCdevice *device);
-static ALvoid ALnullState_update(ALnullState *state, const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props);
-static ALvoid ALnullState_process(ALnullState *state, ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei mumChannels);
-static void *ALnullState_New(size_t size);
-static void ALnullState_Delete(void *ptr);
-
-/* Define the ALeffectState vtable for this type. */
-DEFINE_ALEFFECTSTATE_VTABLE(ALnullState);
-
-
 /* This constructs the effect state. It's called when the object is first
- * created. Make sure to call the parent Construct function first, and set the
- * vtable!
+ * created.
  */
-static void ALnullState_Construct(ALnullState *state)
+ALnullState::ALnullState()
 {
-    new (state) ALnullState{};
-    ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
-    SET_VTABLE2(ALnullState, ALeffectState, state);
 }
 
-/* This destructs (not free!) the effect state. It's called only when the
- * effect slot is no longer used. Make sure to call the parent Destruct
- * function before returning!
+/* This destructs the effect state. It's called only when the effect slot is no
+ * longer used prior to being freed.
  */
-static ALvoid ALnullState_Destruct(ALnullState *state)
+ALnullState::~ALnullState()
 {
-    ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
-    state->~ALnullState();
 }
 
 /* This updates the device-dependant effect state. This is called on
  * initialization and any time the device parameters (eg. playback frequency,
  * format) have been changed.
  */
-static ALboolean ALnullState_deviceUpdate(ALnullState* UNUSED(state), ALCdevice* UNUSED(device))
+ALboolean ALnullState::deviceUpdate(ALCdevice* UNUSED(device))
 {
     return AL_TRUE;
 }
@@ -59,7 +48,7 @@ static ALboolean ALnullState_deviceUpdate(ALnullState* UNUSED(state), ALCdevice*
 /* This updates the effect state. This is called any time the effect is
  * (re)loaded into a slot.
  */
-static ALvoid ALnullState_update(ALnullState* UNUSED(state), const ALCcontext* UNUSED(context), const ALeffectslot* UNUSED(slot), const ALeffectProps* UNUSED(props))
+void ALnullState::update(const ALCcontext* UNUSED(context), const ALeffectslot* UNUSED(slot), const ALeffectProps* UNUSED(props))
 {
 }
 
@@ -67,38 +56,18 @@ static ALvoid ALnullState_update(ALnullState* UNUSED(state), const ALCcontext* U
  * input to the output buffer. The result should be added to the output buffer,
  * not replace it.
  */
-static ALvoid ALnullState_process(ALnullState* UNUSED(state), ALsizei UNUSED(samplesToDo), const ALfloatBUFFERSIZE*RESTRICT UNUSED(samplesIn), ALfloatBUFFERSIZE*RESTRICT UNUSED(samplesOut), ALsizei UNUSED(numChannels))
+void ALnullState::process(ALsizei UNUSED(samplesToDo), const ALfloat (*RESTRICT UNUSED(samplesIn))[BUFFERSIZE], ALfloat (*RESTRICT UNUSED(samplesOut))[BUFFERSIZE], ALsizei UNUSED(numChannels))
 {
-}
-
-/* This allocates memory to store the object, before it gets constructed.
- * DECLARE_DEFAULT_ALLOCATORS can be used to declare a default method.
- */
-static void *ALnullState_New(size_t size)
-{
-    return al_calloc(16, size);
-}
-
-/* This frees the memory used by the object, after it has been destructed.
- * DECLARE_DEFAULT_ALLOCATORS can be used to declare a default method.
- */
-static void ALnullState_Delete(void *ptr)
-{
-    al_free(ptr);
 }
 
 
 struct NullStateFactory final : public EffectStateFactory {
-    ALeffectState *create() override;
+    EffectState *create() override;
 };
 
 /* Creates ALeffectState objects of the appropriate type. */
-ALeffectState *NullStateFactory::create()
-{
-    ALnullState *state;
-    NEW_OBJ0(state, ALnullState)();
-    return state;
-}
+EffectState *NullStateFactory::create()
+{ return new ALnullState{}; }
 
 EffectStateFactory *NullStateFactory_getFactory(void)
 {

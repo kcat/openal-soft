@@ -23,6 +23,8 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include <algorithm>
+
 #include "alMain.h"
 #include "alcontext.h"
 #include "alAuxEffectSlot.h"
@@ -80,11 +82,11 @@ struct ALequalizerState final : public ALeffectState {
         BiquadFilter filter[4];
 
         /* Effect gains for each channel */
-        ALfloat CurrentGains[MAX_OUTPUT_CHANNELS];
-        ALfloat TargetGains[MAX_OUTPUT_CHANNELS];
-    } Chans[MAX_EFFECT_CHANNELS];
+        ALfloat CurrentGains[MAX_OUTPUT_CHANNELS]{};
+        ALfloat TargetGains[MAX_OUTPUT_CHANNELS]{};
+    } mChans[MAX_EFFECT_CHANNELS];
 
-    ALfloat SampleBuffer[MAX_EFFECT_CHANNELS][BUFFERSIZE];
+    ALfloat mSampleBuffer[MAX_EFFECT_CHANNELS][BUFFERSIZE]{};
 };
 
 static ALvoid ALequalizerState_Destruct(ALequalizerState *state);
@@ -111,14 +113,13 @@ static ALvoid ALequalizerState_Destruct(ALequalizerState *state)
 
 static ALboolean ALequalizerState_deviceUpdate(ALequalizerState *state, ALCdevice *UNUSED(device))
 {
-    ALsizei i, j;
-
-    for(i = 0; i < MAX_EFFECT_CHANNELS;i++)
+    for(auto &e : state->mChans)
     {
-        for(j = 0;j < 4;j++)
-            BiquadFilter_clear(&state->Chans[i].filter[j]);
-        for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
-            state->Chans[i].CurrentGains[j] = 0.0f;
+        std::for_each(std::begin(e.filter), std::end(e.filter),
+            [](BiquadFilter &f) -> void
+            { BiquadFilter_clear(&f); }
+        );
+        std::fill(std::begin(e.CurrentGains), std::end(e.CurrentGains), 0.0f);
     }
     return AL_TRUE;
 }
@@ -136,13 +137,13 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext 
      */
     gain = maxf(sqrtf(props->Equalizer.LowGain), 0.0625f); /* Limit -24dB */
     f0norm = props->Equalizer.LowCutoff/frequency;
-    BiquadFilter_setParams(&state->Chans[0].filter[0], BiquadType::LowShelf,
+    BiquadFilter_setParams(&state->mChans[0].filter[0], BiquadType::LowShelf,
         gain, f0norm, calc_rcpQ_from_slope(gain, 0.75f)
     );
 
     gain = maxf(props->Equalizer.Mid1Gain, 0.0625f);
     f0norm = props->Equalizer.Mid1Center/frequency;
-    BiquadFilter_setParams(&state->Chans[0].filter[1], BiquadType::Peaking,
+    BiquadFilter_setParams(&state->mChans[0].filter[1], BiquadType::Peaking,
         gain, f0norm, calc_rcpQ_from_bandwidth(
             f0norm, props->Equalizer.Mid1Width
         )
@@ -150,7 +151,7 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext 
 
     gain = maxf(props->Equalizer.Mid2Gain, 0.0625f);
     f0norm = props->Equalizer.Mid2Center/frequency;
-    BiquadFilter_setParams(&state->Chans[0].filter[2], BiquadType::Peaking,
+    BiquadFilter_setParams(&state->mChans[0].filter[2], BiquadType::Peaking,
         gain, f0norm, calc_rcpQ_from_bandwidth(
             f0norm, props->Equalizer.Mid2Width
         )
@@ -158,40 +159,40 @@ static ALvoid ALequalizerState_update(ALequalizerState *state, const ALCcontext 
 
     gain = maxf(sqrtf(props->Equalizer.HighGain), 0.0625f);
     f0norm = props->Equalizer.HighCutoff/frequency;
-    BiquadFilter_setParams(&state->Chans[0].filter[3], BiquadType::HighShelf,
+    BiquadFilter_setParams(&state->mChans[0].filter[3], BiquadType::HighShelf,
         gain, f0norm, calc_rcpQ_from_slope(gain, 0.75f)
     );
 
     /* Copy the filter coefficients for the other input channels. */
     for(i = 1;i < MAX_EFFECT_CHANNELS;i++)
     {
-        BiquadFilter_copyParams(&state->Chans[i].filter[0], &state->Chans[0].filter[0]);
-        BiquadFilter_copyParams(&state->Chans[i].filter[1], &state->Chans[0].filter[1]);
-        BiquadFilter_copyParams(&state->Chans[i].filter[2], &state->Chans[0].filter[2]);
-        BiquadFilter_copyParams(&state->Chans[i].filter[3], &state->Chans[0].filter[3]);
+        BiquadFilter_copyParams(&state->mChans[i].filter[0], &state->mChans[0].filter[0]);
+        BiquadFilter_copyParams(&state->mChans[i].filter[1], &state->mChans[0].filter[1]);
+        BiquadFilter_copyParams(&state->mChans[i].filter[2], &state->mChans[0].filter[2]);
+        BiquadFilter_copyParams(&state->mChans[i].filter[3], &state->mChans[0].filter[3]);
     }
 
-    STATIC_CAST(ALeffectState,state)->OutBuffer = device->FOAOut.Buffer;
-    STATIC_CAST(ALeffectState,state)->OutChannels = device->FOAOut.NumChannels;
+    state->OutBuffer = device->FOAOut.Buffer;
+    state->OutChannels = device->FOAOut.NumChannels;
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
         ComputePanGains(&device->FOAOut, aluMatrixf::Identity.m[i], slot->Params.Gain,
-                        state->Chans[i].TargetGains);
+                        state->mChans[i].TargetGains);
 }
 
 static ALvoid ALequalizerState_process(ALequalizerState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    ALfloat (*RESTRICT temps)[BUFFERSIZE] = state->SampleBuffer;
+    ALfloat (*RESTRICT temps)[BUFFERSIZE] = state->mSampleBuffer;
     ALsizei c;
 
     for(c = 0;c < MAX_EFFECT_CHANNELS;c++)
     {
-        BiquadFilter_process(&state->Chans[c].filter[0], temps[0], SamplesIn[c], SamplesToDo);
-        BiquadFilter_process(&state->Chans[c].filter[1], temps[1], temps[0], SamplesToDo);
-        BiquadFilter_process(&state->Chans[c].filter[2], temps[2], temps[1], SamplesToDo);
-        BiquadFilter_process(&state->Chans[c].filter[3], temps[3], temps[2], SamplesToDo);
+        BiquadFilter_process(&state->mChans[c].filter[0], temps[0], SamplesIn[c], SamplesToDo);
+        BiquadFilter_process(&state->mChans[c].filter[1], temps[1], temps[0], SamplesToDo);
+        BiquadFilter_process(&state->mChans[c].filter[2], temps[2], temps[1], SamplesToDo);
+        BiquadFilter_process(&state->mChans[c].filter[3], temps[3], temps[2], SamplesToDo);
 
         MixSamples(temps[3], NumChannels, SamplesOut,
-            state->Chans[c].CurrentGains, state->Chans[c].TargetGains,
+            state->mChans[c].CurrentGains, state->mChans[c].TargetGains,
             SamplesToDo, 0, SamplesToDo
         );
     }

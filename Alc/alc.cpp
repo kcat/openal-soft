@@ -1604,7 +1604,7 @@ void SetDefaultChannelOrder(ALCdevice *device)
  */
 void ALCcontext_DeferUpdates(ALCcontext *context)
 {
-    ATOMIC_STORE_SEQ(&context->DeferUpdates, AL_TRUE);
+    context->DeferUpdates.store(true);
 }
 
 /* ALCcontext_ProcessUpdates
@@ -1614,7 +1614,7 @@ void ALCcontext_DeferUpdates(ALCcontext *context)
 void ALCcontext_ProcessUpdates(ALCcontext *context)
 {
     almtx_lock(&context->PropLock);
-    if(context->DeferUpdates.exchange(AL_FALSE))
+    if(context->DeferUpdates.exchange(false))
     {
         /* Tell the mixer to stop applying updates, then wait for any active
          * updating to finish, before providing updates.
@@ -1623,9 +1623,9 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
         while((ATOMIC_LOAD(&context->UpdateCount, almemory_order_acquire)&1) != 0)
             althrd_yield();
 
-        if(!context->PropsClean.exchange(AL_TRUE, std::memory_order_acq_rel))
+        if(!context->PropsClean.test_and_set(std::memory_order_acq_rel))
             UpdateContextProps(context);
-        if(!context->Listener.PropsClean.exchange(AL_TRUE, std::memory_order_acq_rel))
+        if(!context->Listener.PropsClean.test_and_set(std::memory_order_acq_rel))
             UpdateListenerProps(context);
         UpdateAllEffectSlotProps(context);
         UpdateAllSourceProps(context);
@@ -2319,7 +2319,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                     }
                 }
 
-                ATOMIC_STORE(&source->PropsClean, AL_FALSE, almemory_order_release);
+                source->PropsClean.clear(std::memory_order_release);
             }
         }
 
@@ -2356,9 +2356,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
         almtx_unlock(&context->SourceLock);
 
-        ATOMIC_STORE(&context->PropsClean, AL_TRUE, almemory_order_release);
+        context->PropsClean.test_and_set(std::memory_order_release);
         UpdateContextProps(context);
-        ATOMIC_STORE(&context->Listener.PropsClean, AL_TRUE, almemory_order_release);
+        context->Listener.PropsClean.test_and_set(std::memory_order_release);
         UpdateListenerProps(context);
         UpdateAllSourceProps(context);
         almtx_unlock(&context->PropLock);
@@ -2538,8 +2538,6 @@ static ALvoid InitContext(ALCcontext *Context)
     Context->DopplerVelocity = 1.0f;
     Context->SpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
     Context->MetersPerUnit = AL_DEFAULT_METERS_PER_UNIT;
-    ATOMIC_INIT(&Context->PropsClean, AL_TRUE);
-    ATOMIC_INIT(&Context->DeferUpdates, AL_FALSE);
     alsem_init(&Context->EventSem, 0);
     almtx_init(&Context->EventCbLock, almtx_plain);
 

@@ -69,8 +69,8 @@ struct ALCcontext_struct {
     ALfloat SpeedOfSound{};
     ALfloat MetersPerUnit{1.0f};
 
-    ATOMIC(ALenum) PropsClean{AL_TRUE};
-    ATOMIC(ALenum) DeferUpdates{AL_FALSE};
+    std::atomic_flag PropsClean{true};
+    std::atomic<bool> DeferUpdates{false};
 
     almtx_t PropLock;
 

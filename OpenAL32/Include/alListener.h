@@ -28,7 +28,7 @@ struct ALlistener {
     ALfloat Up[3]{0.0f, 1.0f, 0.0f};
     ALfloat Gain{1.0f};
 
-    ATOMIC(ALenum) PropsClean{AL_TRUE};
+    std::atomic_flag PropsClean{true};
 
     /* Pointer to the most recent property values that are awaiting an update.
      */

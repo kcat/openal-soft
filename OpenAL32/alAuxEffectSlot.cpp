@@ -175,7 +175,7 @@ inline EffectStateFactory *getFactoryByType(ALenum type)
     if(!context->DeferUpdates.load(std::memory_order_acquire))                \
         UpdateEffectSlotProps(slot, context.get());                           \
     else                                                                      \
-        slot->PropsClean.store(AL_FALSE, std::memory_order_release);          \
+        slot->PropsClean.clear(std::memory_order_release);                    \
 } while(0)
 
 } // namespace
@@ -652,7 +652,7 @@ void UpdateAllEffectSlotProps(ALCcontext *context)
     for(ALsizei i{0};i < auxslots->count;i++)
     {
         ALeffectslot *slot = auxslots->slot[i];
-        if(!slot->PropsClean.exchange(AL_TRUE, std::memory_order_acq_rel))
+        if(!slot->PropsClean.test_and_set(std::memory_order_acq_rel))
             UpdateEffectSlotProps(slot, context);
     }
 }

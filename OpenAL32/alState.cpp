@@ -67,10 +67,10 @@ extern "C" AL_API const ALchar* AL_APIENTRY alsoft_get_version(void)
 }
 
 #define DO_UPDATEPROPS() do {                                                 \
-    if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))          \
+    if(!context->DeferUpdates.load(std::memory_order_acquire))                \
         UpdateContextProps(context.get());                                    \
     else                                                                      \
-        ATOMIC_STORE(&context->PropsClean, AL_FALSE, almemory_order_release); \
+        context->PropsClean.clear(std::memory_order_release);                 \
 } while(0)
 
 
@@ -160,7 +160,7 @@ AL_API ALboolean AL_APIENTRY alGetBoolean(ALenum pname)
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
+        if(context->DeferUpdates.load(std::memory_order_acquire))
             value = AL_TRUE;
         break;
 
@@ -211,7 +211,7 @@ AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
+        if(context->DeferUpdates.load(std::memory_order_acquire))
             value = (ALdouble)AL_TRUE;
         break;
 
@@ -260,7 +260,7 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
+        if(context->DeferUpdates.load(std::memory_order_acquire))
             value = (ALfloat)AL_TRUE;
         break;
 
@@ -309,7 +309,7 @@ AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
+        if(context->DeferUpdates.load(std::memory_order_acquire))
             value = (ALint)AL_TRUE;
         break;
 
@@ -358,7 +358,7 @@ extern "C" AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname)
         break;
 
     case AL_DEFERRED_UPDATES_SOFT:
-        if(ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
+        if(context->DeferUpdates.load(std::memory_order_acquire))
             value = (ALint64SOFT)AL_TRUE;
         break;
 

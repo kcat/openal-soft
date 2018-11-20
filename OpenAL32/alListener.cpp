@@ -30,10 +30,10 @@
 #include "alSource.h"
 
 #define DO_UPDATEPROPS() do {                                                 \
-    if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))          \
+    if(!context->DeferUpdates.load(std::memory_order_acquire))                \
         UpdateListenerProps(context);                                         \
     else                                                                      \
-        ATOMIC_STORE(&listener->PropsClean, AL_FALSE, almemory_order_release);\
+        listener->PropsClean.clear(std::memory_order_release);                \
 } while(0)
 
 
@@ -60,10 +60,10 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
         if(!(value >= AL_MIN_METERS_PER_UNIT && value <= AL_MAX_METERS_PER_UNIT))
             SETERR_GOTO(context, AL_INVALID_VALUE, done, "Listener meters per unit out of range");
         context->MetersPerUnit = value;
-        if(!ATOMIC_LOAD(&context->DeferUpdates, almemory_order_acquire))
+        if(!context->DeferUpdates.load(std::memory_order_acquire))
             UpdateContextProps(context);
         else
-            ATOMIC_STORE(&context->PropsClean, AL_FALSE, almemory_order_release);
+            context->PropsClean.clear(std::memory_order_release);
         break;
 
     default:

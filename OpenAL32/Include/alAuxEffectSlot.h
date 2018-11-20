@@ -69,7 +69,7 @@ struct ALeffectslot {
         EffectState *State{nullptr};
     } Effect;
 
-    ATOMIC(ALenum) PropsClean{AL_TRUE};
+    std::atomic_flag PropsClean{true};
 
     RefCount ref{0u};
 

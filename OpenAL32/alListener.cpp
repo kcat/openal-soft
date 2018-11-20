@@ -31,96 +31,80 @@
 
 #define DO_UPDATEPROPS() do {                                                 \
     if(!context->DeferUpdates.load(std::memory_order_acquire))                \
-        UpdateListenerProps(context);                                         \
+        UpdateListenerProps(context.get());                                   \
     else                                                                      \
-        listener->PropsClean.clear(std::memory_order_release);                \
+        listener.PropsClean.clear(std::memory_order_release);                 \
 } while(0)
 
 
 AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
 {
-    ALlistener *listener;
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
-
-    listener = &context->Listener;
-    almtx_lock(&context->PropLock);
+    ALlistener &listener = context->Listener;
+    std::lock_guard<almtx_t> _{context->PropLock};
     switch(param)
     {
     case AL_GAIN:
         if(!(value >= 0.0f && std::isfinite(value)))
-            SETERR_GOTO(context, AL_INVALID_VALUE, done, "Listener gain out of range");
-        listener->Gain = value;
+            SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Listener gain out of range");
+        listener.Gain = value;
         DO_UPDATEPROPS();
         break;
 
     case AL_METERS_PER_UNIT:
         if(!(value >= AL_MIN_METERS_PER_UNIT && value <= AL_MAX_METERS_PER_UNIT))
-            SETERR_GOTO(context, AL_INVALID_VALUE, done, "Listener meters per unit out of range");
+            SETERR_RETURN(context.get(), AL_INVALID_VALUE,,
+                          "Listener meters per unit out of range");
         context->MetersPerUnit = value;
         if(!context->DeferUpdates.load(std::memory_order_acquire))
-            UpdateContextProps(context);
+            UpdateContextProps(context.get());
         else
             context->PropsClean.clear(std::memory_order_release);
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid listener float property");
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener float property");
     }
-
-done:
-    almtx_unlock(&context->PropLock);
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat value2, ALfloat value3)
 {
-    ALlistener *listener;
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
-
-    listener = &context->Listener;
-    almtx_lock(&context->PropLock);
+    ALlistener &listener = context->Listener;
+    std::lock_guard<almtx_t> _{context->PropLock};
     switch(param)
     {
     case AL_POSITION:
         if(!(std::isfinite(value1) && std::isfinite(value2) && std::isfinite(value3)))
-            SETERR_GOTO(context, AL_INVALID_VALUE, done, "Listener position out of range");
-        listener->Position[0] = value1;
-        listener->Position[1] = value2;
-        listener->Position[2] = value3;
+            SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Listener position out of range");
+        listener.Position[0] = value1;
+        listener.Position[1] = value2;
+        listener.Position[2] = value3;
         DO_UPDATEPROPS();
         break;
 
     case AL_VELOCITY:
         if(!(std::isfinite(value1) && std::isfinite(value2) && std::isfinite(value3)))
-            SETERR_GOTO(context, AL_INVALID_VALUE, done, "Listener velocity out of range");
-        listener->Velocity[0] = value1;
-        listener->Velocity[1] = value2;
-        listener->Velocity[2] = value3;
+            SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Listener velocity out of range");
+        listener.Velocity[0] = value1;
+        listener.Velocity[1] = value2;
+        listener.Velocity[2] = value3;
         DO_UPDATEPROPS();
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid listener 3-float property");
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener 3-float property");
     }
-
-done:
-    almtx_unlock(&context->PropLock);
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
 {
-    ALlistener *listener;
-    ALCcontext *context;
-
     if(values)
     {
         switch(param)
@@ -137,61 +121,50 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
         }
     }
 
-    context = GetContextRef();
-    if(!context) return;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    listener = &context->Listener;
-    almtx_lock(&context->PropLock);
-    if(!values) SETERR_GOTO(context, AL_INVALID_VALUE, done, "NULL pointer");
+    ALlistener &listener = context->Listener;
+    std::lock_guard<almtx_t> _{context->PropLock};
+    if(!values) SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "NULL pointer");
     switch(param)
     {
     case AL_ORIENTATION:
         if(!(std::isfinite(values[0]) && std::isfinite(values[1]) && std::isfinite(values[2]) &&
              std::isfinite(values[3]) && std::isfinite(values[4]) && std::isfinite(values[5])))
-            SETERR_GOTO(context, AL_INVALID_VALUE, done, "Listener orientation out of range");
+            SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Listener orientation out of range");
         /* AT then UP */
-        listener->Forward[0] = values[0];
-        listener->Forward[1] = values[1];
-        listener->Forward[2] = values[2];
-        listener->Up[0] = values[3];
-        listener->Up[1] = values[4];
-        listener->Up[2] = values[5];
+        listener.Forward[0] = values[0];
+        listener.Forward[1] = values[1];
+        listener.Forward[2] = values[2];
+        listener.Up[0] = values[3];
+        listener.Up[1] = values[4];
+        listener.Up[2] = values[5];
         DO_UPDATEPROPS();
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid listener float-vector property");
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener float-vector property");
     }
-
-done:
-    almtx_unlock(&context->PropLock);
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alListeneri(ALenum param, ALint UNUSED(value))
 {
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
-
-    almtx_lock(&context->PropLock);
+    std::lock_guard<almtx_t> _{context->PropLock};
     switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid listener integer property");
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener integer property");
     }
-    almtx_unlock(&context->PropLock);
-
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API void AL_APIENTRY alListener3i(ALenum param, ALint value1, ALint value2, ALint value3)
 {
-    ALCcontext *context;
-
     switch(param)
     {
     case AL_POSITION:
@@ -200,25 +173,20 @@ AL_API void AL_APIENTRY alListener3i(ALenum param, ALint value1, ALint value2, A
         return;
     }
 
-    context = GetContextRef();
-    if(!context) return;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    almtx_lock(&context->PropLock);
+    std::lock_guard<almtx_t> _{context->PropLock};
     switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid listener 3-integer property");
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener 3-integer property");
     }
-    almtx_unlock(&context->PropLock);
-
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API void AL_APIENTRY alListeneriv(ALenum param, const ALint *values)
 {
-    ALCcontext *context;
-
     if(values)
     {
         ALfloat fvals[6];
@@ -241,37 +209,33 @@ AL_API void AL_APIENTRY alListeneriv(ALenum param, const ALint *values)
         }
     }
 
-    context = GetContextRef();
-    if(!context) return;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    almtx_lock(&context->PropLock);
+    std::lock_guard<almtx_t> _{context->PropLock};
     if(!values)
-        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid listener integer-vector property");
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener integer-vector property");
     }
-    almtx_unlock(&context->PropLock);
-
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alGetListenerf(ALenum param, ALfloat *value)
 {
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
-
-    almtx_lock(&context->PropLock);
+    ALlistener &listener = context->Listener;
+    std::lock_guard<almtx_t> _{context->PropLock};
     if(!value)
-        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_GAIN:
-        *value = context->Listener.Gain;
+        *value = listener.Gain;
         break;
 
     case AL_METERS_PER_UNIT:
@@ -279,51 +243,42 @@ AL_API ALvoid AL_APIENTRY alGetListenerf(ALenum param, ALfloat *value)
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid listener float property");
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener float property");
     }
-    almtx_unlock(&context->PropLock);
-
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alGetListener3f(ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3)
 {
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
-
-    almtx_lock(&context->PropLock);
+    ALlistener &listener = context->Listener;
+    std::lock_guard<almtx_t> _{context->PropLock};
     if(!value1 || !value2 || !value3)
-        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_POSITION:
-        *value1 = context->Listener.Position[0];
-        *value2 = context->Listener.Position[1];
-        *value3 = context->Listener.Position[2];
+        *value1 = listener.Position[0];
+        *value2 = listener.Position[1];
+        *value3 = listener.Position[2];
         break;
 
     case AL_VELOCITY:
-        *value1 = context->Listener.Velocity[0];
-        *value2 = context->Listener.Velocity[1];
-        *value3 = context->Listener.Velocity[2];
+        *value1 = listener.Velocity[0];
+        *value2 = listener.Velocity[1];
+        *value3 = listener.Velocity[2];
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid listener 3-float property");
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener 3-float property");
     }
-    almtx_unlock(&context->PropLock);
-
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum param, ALfloat *values)
 {
-    ALCcontext *context;
-
     switch(param)
     {
     case AL_GAIN:
@@ -337,91 +292,78 @@ AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum param, ALfloat *values)
         return;
     }
 
-    context = GetContextRef();
-    if(!context) return;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    almtx_lock(&context->PropLock);
+    ALlistener &listener = context->Listener;
+    std::lock_guard<almtx_t> _{context->PropLock};
     if(!values)
-        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_ORIENTATION:
         // AT then UP
-        values[0] = context->Listener.Forward[0];
-        values[1] = context->Listener.Forward[1];
-        values[2] = context->Listener.Forward[2];
-        values[3] = context->Listener.Up[0];
-        values[4] = context->Listener.Up[1];
-        values[5] = context->Listener.Up[2];
+        values[0] = listener.Forward[0];
+        values[1] = listener.Forward[1];
+        values[2] = listener.Forward[2];
+        values[3] = listener.Up[0];
+        values[4] = listener.Up[1];
+        values[5] = listener.Up[2];
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid listener float-vector property");
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener float-vector property");
     }
-    almtx_unlock(&context->PropLock);
-
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alGetListeneri(ALenum param, ALint *value)
 {
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
-
-    almtx_lock(&context->PropLock);
+    std::lock_guard<almtx_t> _{context->PropLock};
     if(!value)
-        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid listener integer property");
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener integer property");
     }
-    almtx_unlock(&context->PropLock);
-
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API void AL_APIENTRY alGetListener3i(ALenum param, ALint *value1, ALint *value2, ALint *value3)
 {
-    ALCcontext *context;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
-
-    almtx_lock(&context->PropLock);
+    ALlistener &listener = context->Listener;
+    std::lock_guard<almtx_t> _{context->PropLock};
     if(!value1 || !value2 || !value3)
-        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_POSITION:
-        *value1 = (ALint)context->Listener.Position[0];
-        *value2 = (ALint)context->Listener.Position[1];
-        *value3 = (ALint)context->Listener.Position[2];
+        *value1 = (ALint)listener.Position[0];
+        *value2 = (ALint)listener.Position[1];
+        *value3 = (ALint)listener.Position[2];
         break;
 
     case AL_VELOCITY:
-        *value1 = (ALint)context->Listener.Velocity[0];
-        *value2 = (ALint)context->Listener.Velocity[1];
-        *value3 = (ALint)context->Listener.Velocity[2];
+        *value1 = (ALint)listener.Velocity[0];
+        *value2 = (ALint)listener.Velocity[1];
+        *value3 = (ALint)listener.Velocity[2];
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid listener 3-integer property");
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener 3-integer property");
     }
-    almtx_unlock(&context->PropLock);
-
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API void AL_APIENTRY alGetListeneriv(ALenum param, ALint* values)
 {
-    ALCcontext *context;
-
     switch(param)
     {
     case AL_POSITION:
@@ -430,40 +372,35 @@ AL_API void AL_APIENTRY alGetListeneriv(ALenum param, ALint* values)
         return;
     }
 
-    context = GetContextRef();
-    if(!context) return;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    almtx_lock(&context->PropLock);
+    ALlistener &listener = context->Listener;
+    std::lock_guard<almtx_t> _{context->PropLock};
     if(!values)
-        alSetError(context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
     {
     case AL_ORIENTATION:
         // AT then UP
-        values[0] = (ALint)context->Listener.Forward[0];
-        values[1] = (ALint)context->Listener.Forward[1];
-        values[2] = (ALint)context->Listener.Forward[2];
-        values[3] = (ALint)context->Listener.Up[0];
-        values[4] = (ALint)context->Listener.Up[1];
-        values[5] = (ALint)context->Listener.Up[2];
+        values[0] = (ALint)listener.Forward[0];
+        values[1] = (ALint)listener.Forward[1];
+        values[2] = (ALint)listener.Forward[2];
+        values[3] = (ALint)listener.Up[0];
+        values[4] = (ALint)listener.Up[1];
+        values[5] = (ALint)listener.Up[2];
         break;
 
     default:
-        alSetError(context, AL_INVALID_ENUM, "Invalid listener integer-vector property");
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid listener integer-vector property");
     }
-    almtx_unlock(&context->PropLock);
-
-    ALCcontext_DecRef(context);
 }
 
 
 void UpdateListenerProps(ALCcontext *context)
 {
-    ALlistener *listener{&context->Listener};
-    struct ALlistenerProps *props;
-
     /* Get an unused proprty container, or allocate a new one as needed. */
-    props = context->FreeListenerProps.load(std::memory_order_acquire);
+    ALlistenerProps *props{context->FreeListenerProps.load(std::memory_order_acquire)};
     if(!props)
         props = static_cast<ALlistenerProps*>(al_calloc(16, sizeof(*props)));
     else
@@ -476,25 +413,26 @@ void UpdateListenerProps(ALCcontext *context)
     }
 
     /* Copy in current property values. */
-    props->Position[0] = listener->Position[0];
-    props->Position[1] = listener->Position[1];
-    props->Position[2] = listener->Position[2];
+    ALlistener &listener = context->Listener;
+    props->Position[0] = listener.Position[0];
+    props->Position[1] = listener.Position[1];
+    props->Position[2] = listener.Position[2];
 
-    props->Velocity[0] = listener->Velocity[0];
-    props->Velocity[1] = listener->Velocity[1];
-    props->Velocity[2] = listener->Velocity[2];
+    props->Velocity[0] = listener.Velocity[0];
+    props->Velocity[1] = listener.Velocity[1];
+    props->Velocity[2] = listener.Velocity[2];
 
-    props->Forward[0] = listener->Forward[0];
-    props->Forward[1] = listener->Forward[1];
-    props->Forward[2] = listener->Forward[2];
-    props->Up[0] = listener->Up[0];
-    props->Up[1] = listener->Up[1];
-    props->Up[2] = listener->Up[2];
+    props->Forward[0] = listener.Forward[0];
+    props->Forward[1] = listener.Forward[1];
+    props->Forward[2] = listener.Forward[2];
+    props->Up[0] = listener.Up[0];
+    props->Up[1] = listener.Up[1];
+    props->Up[2] = listener.Up[2];
 
-    props->Gain = listener->Gain;
+    props->Gain = listener.Gain;
 
     /* Set the new container for updating internal parameters. */
-    props = listener->Update.exchange(props, std::memory_order_acq_rel);
+    props = listener.Update.exchange(props, std::memory_order_acq_rel);
     if(props)
     {
         /* If there was an unused update container, put it back in the

@@ -32,11 +32,11 @@
 #include "alError.h"
 #include "alu.h"
 #include "filters/defs.h"
+#include "vector.h"
 
 
 struct ALechoState final : public ALeffectState {
-    ALfloat *mSampleBuffer{nullptr};
-    ALsizei mBufferLength{0};
+    al::vector<ALfloat,16> mSampleBuffer;
 
     // The echo is two tap. The delay is the number of samples from before the
     // current offset
@@ -74,15 +74,13 @@ static void ALechoState_Construct(ALechoState *state)
 
 static ALvoid ALechoState_Destruct(ALechoState *state)
 {
-    al_free(state->mSampleBuffer);
-    state->mSampleBuffer = NULL;
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
     state->~ALechoState();
 }
 
 static ALboolean ALechoState_deviceUpdate(ALechoState *state, ALCdevice *Device)
 {
-    ALsizei maxlen;
+    ALuint maxlen;
 
     // Use the next power of 2 for the buffer length, so the tap offsets can be
     // wrapped using a mask instead of a modulo
@@ -91,17 +89,13 @@ static ALboolean ALechoState_deviceUpdate(ALechoState *state, ALCdevice *Device)
     maxlen = NextPowerOf2(maxlen);
     if(maxlen <= 0) return AL_FALSE;
 
-    if(maxlen != state->mBufferLength)
+    if(maxlen != state->mSampleBuffer.size())
     {
-        void *temp = al_calloc(16, maxlen * sizeof(ALfloat));
-        if(!temp) return AL_FALSE;
-
-        al_free(state->mSampleBuffer);
-        state->mSampleBuffer = static_cast<float*>(temp);
-        state->mBufferLength = maxlen;
+        state->mSampleBuffer.resize(maxlen);
+        state->mSampleBuffer.shrink_to_fit();
     }
 
-    std::fill_n(state->mSampleBuffer, state->mBufferLength, 0.0f);
+    std::fill(state->mSampleBuffer.begin(), state->mSampleBuffer.end(), 0.0f);
     for(auto &e : state->mGains)
     {
         std::fill(std::begin(e.Current), std::end(e.Current), 0.0f);
@@ -148,10 +142,10 @@ static ALvoid ALechoState_update(ALechoState *state, const ALCcontext *context, 
 
 static ALvoid ALechoState_process(ALechoState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    const ALsizei mask = state->mBufferLength-1;
+    const ALsizei mask = state->mSampleBuffer.size()-1;
     const ALsizei tap1 = state->mTap[0].delay;
     const ALsizei tap2 = state->mTap[1].delay;
-    ALfloat *RESTRICT delaybuf = state->mSampleBuffer;
+    ALfloat *RESTRICT delaybuf = state->mSampleBuffer.data();
     ALsizei offset = state->mOffset;
     ALfloat z1, z2, in, out;
     ALsizei base;

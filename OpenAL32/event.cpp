@@ -27,7 +27,7 @@ static int EventThread(ALCcontext *context)
             continue;
         }
 
-        std::lock_guard<almtx_t> _{context->EventCbLock};
+        std::lock_guard<std::mutex> _{context->EventCbLock};
         do {
             quitnow = evt.EnumType == EventType_KillThread;
             if(UNLIKELY(quitnow)) break;
@@ -126,7 +126,7 @@ AL_API void AL_APIENTRY alEventControlSOFT(ALsizei count, const ALenum *types, A
         /* Wait to ensure the event handler sees the changed flags before
          * returning.
          */
-        std::lock_guard<almtx_t>{context->EventCbLock};
+        std::lock_guard<std::mutex>{context->EventCbLock};
     }
 }
 
@@ -136,7 +136,7 @@ AL_API void AL_APIENTRY alEventCallbackSOFT(ALEVENTPROCSOFT callback, void *user
     if(UNLIKELY(!context)) return;
 
     std::lock_guard<almtx_t> _{context->PropLock};
-    std::lock_guard<almtx_t> __{context->EventCbLock};
+    std::lock_guard<std::mutex> __{context->EventCbLock};
     context->EventCb = callback;
     context->EventParam = userParam;
 }

@@ -1,6 +1,8 @@
 #ifndef ALCONTEXT_H
 #define ALCONTEXT_H
 
+#include <mutex>
+#include <atomic>
 #include <memory>
 #include <thread>
 
@@ -102,7 +104,7 @@ struct ALCcontext_struct {
     alsem_t EventSem;
     ll_ringbuffer *AsyncEvents{nullptr};
     ATOMIC(ALbitfieldSOFT) EnabledEvts{0u};
-    almtx_t EventCbLock;
+    std::mutex EventCbLock;
     ALEVENTPROCSOFT EventCb{};
     void *EventParam{nullptr};
 

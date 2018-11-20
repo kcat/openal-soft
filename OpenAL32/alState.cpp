@@ -664,8 +664,8 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
         static constexpr ALCchar msg[] =
             "alDopplerVelocity is deprecated in AL1.1, use alSpeedOfSound";
         const ALsizei msglen = (ALsizei)strlen(msg);
-        std::lock_guard<almtx_t> _{context->EventCbLock};
-        ALbitfieldSOFT enabledevts{ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed)};
+        std::lock_guard<std::mutex> _{context->EventCbLock};
+        ALbitfieldSOFT enabledevts{context->EnabledEvts.load(std::memory_order_relaxed)};
         if((enabledevts&EventType_Deprecated) && context->EventCb)
             (*context->EventCb)(AL_EVENT_TYPE_DEPRECATED_SOFT, 0, 0, msglen, msg,
                                 context->EventParam);

@@ -73,7 +73,7 @@ void alSetError(ALCcontext *context, ALenum errorCode, const char *msg, ...)
     context->LastError.compare_exchange_strong(curerr, errorCode);
     if((context->EnabledEvts.load(std::memory_order_relaxed)&EventType_Error))
     {
-        std::lock_guard<almtx_t> _{context->EventCbLock};
+        std::lock_guard<std::mutex> _{context->EventCbLock};
         ALbitfieldSOFT enabledevts{context->EnabledEvts.load(std::memory_order_relaxed)};
         if((enabledevts&EventType_Error) && context->EventCb)
             (*context->EventCb)(AL_EVENT_TYPE_ERROR_SOFT, 0, errorCode, msglen, msg,

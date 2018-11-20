@@ -57,7 +57,9 @@ ALfloat ZScale = 1.0f;
 ALboolean OverrideReverbSpeedOfSound = AL_FALSE;
 
 
-static void ClearArray(ALfloat f[MAX_OUTPUT_CHANNELS])
+namespace {
+
+void ClearArray(ALfloat f[MAX_OUTPUT_CHANNELS])
 {
     size_t i;
     for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
@@ -70,16 +72,10 @@ struct ChanMap {
     ALfloat elevation;
 };
 
-static HrtfDirectMixerFunc MixDirectHrtf = MixDirectHrtf_C;
+HrtfDirectMixerFunc MixDirectHrtf = MixDirectHrtf_C;
 
 
-void DeinitVoice(ALvoice *voice)
-{
-    al_free(voice->Update.exchange(nullptr));
-}
-
-
-static inline HrtfDirectMixerFunc SelectHrtfMixer(void)
+inline HrtfDirectMixerFunc SelectHrtfMixer(void)
 {
 #ifdef HAVE_NEON
     if((CPUCapFlags&CPU_CAP_NEON))
@@ -93,64 +89,7 @@ static inline HrtfDirectMixerFunc SelectHrtfMixer(void)
     return MixDirectHrtf_C;
 }
 
-
-/* This RNG method was created based on the math found in opusdec. It's quick,
- * and starting with a seed value of 22222, is suitable for generating
- * whitenoise.
- */
-static inline ALuint dither_rng(ALuint *seed)
-{
-    *seed = (*seed * 96314165) + 907633515;
-    return *seed;
-}
-
-
-static inline void aluCrossproduct(const ALfloat *inVector1, const ALfloat *inVector2, ALfloat *outVector)
-{
-    outVector[0] = inVector1[1]*inVector2[2] - inVector1[2]*inVector2[1];
-    outVector[1] = inVector1[2]*inVector2[0] - inVector1[0]*inVector2[2];
-    outVector[2] = inVector1[0]*inVector2[1] - inVector1[1]*inVector2[0];
-}
-
-static inline ALfloat aluDotproduct(const aluVector *vec1, const aluVector *vec2)
-{
-    return vec1->v[0]*vec2->v[0] + vec1->v[1]*vec2->v[1] + vec1->v[2]*vec2->v[2];
-}
-
-static ALfloat aluNormalize(ALfloat *vec)
-{
-    ALfloat length = sqrtf(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
-    if(length > FLT_EPSILON)
-    {
-        ALfloat inv_length = 1.0f/length;
-        vec[0] *= inv_length;
-        vec[1] *= inv_length;
-        vec[2] *= inv_length;
-        return length;
-    }
-    vec[0] = vec[1] = vec[2] = 0.0f;
-    return 0.0f;
-}
-
-static void aluMatrixfFloat3(ALfloat *vec, ALfloat w, const aluMatrixf *mtx)
-{
-    ALfloat v[4] = { vec[0], vec[1], vec[2], w };
-
-    vec[0] = v[0]*mtx->m[0][0] + v[1]*mtx->m[1][0] + v[2]*mtx->m[2][0] + v[3]*mtx->m[3][0];
-    vec[1] = v[0]*mtx->m[0][1] + v[1]*mtx->m[1][1] + v[2]*mtx->m[2][1] + v[3]*mtx->m[3][1];
-    vec[2] = v[0]*mtx->m[0][2] + v[1]*mtx->m[1][2] + v[2]*mtx->m[2][2] + v[3]*mtx->m[3][2];
-}
-
-static aluVector aluMatrixfVector(const aluMatrixf *mtx, const aluVector *vec)
-{
-    aluVector v;
-    v.v[0] = vec->v[0]*mtx->m[0][0] + vec->v[1]*mtx->m[1][0] + vec->v[2]*mtx->m[2][0] + vec->v[3]*mtx->m[3][0];
-    v.v[1] = vec->v[0]*mtx->m[0][1] + vec->v[1]*mtx->m[1][1] + vec->v[2]*mtx->m[2][1] + vec->v[3]*mtx->m[3][1];
-    v.v[2] = vec->v[0]*mtx->m[0][2] + vec->v[1]*mtx->m[1][2] + vec->v[2]*mtx->m[2][2] + vec->v[3]*mtx->m[3][2];
-    v.v[3] = vec->v[0]*mtx->m[0][3] + vec->v[1]*mtx->m[1][3] + vec->v[2]*mtx->m[2][3] + vec->v[3]*mtx->m[3][3];
-    return v;
-}
-
+} // namespace
 
 void aluInit(void)
 {
@@ -158,40 +97,15 @@ void aluInit(void)
 }
 
 
-static void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
+void DeinitVoice(ALvoice *voice)
 {
-    AsyncEvent evt = ASYNC_EVENT(EventType_SourceStateChange);
-    ALbitfieldSOFT enabledevt;
-    size_t strpos;
-    ALuint scale;
-
-    enabledevt = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_acquire);
-    if(!(enabledevt&EventType_SourceStateChange)) return;
-
-    evt.u.user.type = AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT;
-    evt.u.user.id = id;
-    evt.u.user.param = AL_STOPPED;
-
-    /* Normally snprintf would be used, but this is called from the mixer and
-     * that function's not real-time safe, so we have to construct it manually.
-     */
-    strcpy(evt.u.user.msg, "Source ID "); strpos = 10;
-    scale = 1000000000;
-    while(scale > 0 && scale > id)
-        scale /= 10;
-    while(scale > 0)
-    {
-        evt.u.user.msg[strpos++] = '0' + ((id/scale)%10);
-        scale /= 10;
-    }
-    strcpy(evt.u.user.msg+strpos, " state changed to AL_STOPPED");
-
-    if(ll_ringbuffer_write(context->AsyncEvents, &evt, 1) == 1)
-        alsem_post(&context->EventSem);
+    al_free(voice->Update.exchange(nullptr));
 }
 
 
-static void ProcessHrtf(ALCdevice *device, ALsizei SamplesToDo)
+namespace {
+
+void ProcessHrtf(ALCdevice *device, ALsizei SamplesToDo)
 {
     DirectHrtfState *state;
     int lidx, ridx;
@@ -218,7 +132,7 @@ static void ProcessHrtf(ALCdevice *device, ALsizei SamplesToDo)
     state->Offset += SamplesToDo;
 }
 
-static void ProcessAmbiDec(ALCdevice *device, ALsizei SamplesToDo)
+void ProcessAmbiDec(ALCdevice *device, ALsizei SamplesToDo)
 {
     if(device->Dry.Buffer != device->FOAOut.Buffer)
         bformatdec_upSample(device->AmbiDecoder,
@@ -231,7 +145,7 @@ static void ProcessAmbiDec(ALCdevice *device, ALsizei SamplesToDo)
     );
 }
 
-static void ProcessAmbiUp(ALCdevice *device, ALsizei SamplesToDo)
+void ProcessAmbiUp(ALCdevice *device, ALsizei SamplesToDo)
 {
     ambiup_process(device->AmbiUp,
         device->RealOut.Buffer, device->RealOut.NumChannels, device->FOAOut.Buffer,
@@ -239,7 +153,7 @@ static void ProcessAmbiUp(ALCdevice *device, ALsizei SamplesToDo)
     );
 }
 
-static void ProcessUhj(ALCdevice *device, ALsizei SamplesToDo)
+void ProcessUhj(ALCdevice *device, ALsizei SamplesToDo)
 {
     int lidx = GetChannelIdxByName(&device->RealOut, FrontLeft);
     int ridx = GetChannelIdxByName(&device->RealOut, FrontRight);
@@ -252,7 +166,7 @@ static void ProcessUhj(ALCdevice *device, ALsizei SamplesToDo)
     );
 }
 
-static void ProcessBs2b(ALCdevice *device, ALsizei SamplesToDo)
+void ProcessBs2b(ALCdevice *device, ALsizei SamplesToDo)
 {
     int lidx = GetChannelIdxByName(&device->RealOut, FrontLeft);
     int ridx = GetChannelIdxByName(&device->RealOut, FrontRight);
@@ -262,6 +176,8 @@ static void ProcessBs2b(ALCdevice *device, ALsizei SamplesToDo)
     bs2b_cross_feed(device->Bs2b, device->RealOut.Buffer[lidx],
                     device->RealOut.Buffer[ridx], SamplesToDo);
 }
+
+} // namespace
 
 void aluSelectPostProcess(ALCdevice *device)
 {
@@ -310,7 +226,100 @@ void BsincPrepare(const ALuint increment, BsincState *state, const BSincTable *t
 }
 
 
-static bool CalcContextParams(ALCcontext *Context)
+namespace {
+
+/* This RNG method was created based on the math found in opusdec. It's quick,
+ * and starting with a seed value of 22222, is suitable for generating
+ * whitenoise.
+ */
+inline ALuint dither_rng(ALuint *seed)
+{
+    *seed = (*seed * 96314165) + 907633515;
+    return *seed;
+}
+
+
+inline void aluCrossproduct(const ALfloat *inVector1, const ALfloat *inVector2, ALfloat *outVector)
+{
+    outVector[0] = inVector1[1]*inVector2[2] - inVector1[2]*inVector2[1];
+    outVector[1] = inVector1[2]*inVector2[0] - inVector1[0]*inVector2[2];
+    outVector[2] = inVector1[0]*inVector2[1] - inVector1[1]*inVector2[0];
+}
+
+inline ALfloat aluDotproduct(const aluVector *vec1, const aluVector *vec2)
+{
+    return vec1->v[0]*vec2->v[0] + vec1->v[1]*vec2->v[1] + vec1->v[2]*vec2->v[2];
+}
+
+ALfloat aluNormalize(ALfloat *vec)
+{
+    ALfloat length = sqrtf(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
+    if(length > FLT_EPSILON)
+    {
+        ALfloat inv_length = 1.0f/length;
+        vec[0] *= inv_length;
+        vec[1] *= inv_length;
+        vec[2] *= inv_length;
+        return length;
+    }
+    vec[0] = vec[1] = vec[2] = 0.0f;
+    return 0.0f;
+}
+
+void aluMatrixfFloat3(ALfloat *vec, ALfloat w, const aluMatrixf *mtx)
+{
+    ALfloat v[4] = { vec[0], vec[1], vec[2], w };
+
+    vec[0] = v[0]*mtx->m[0][0] + v[1]*mtx->m[1][0] + v[2]*mtx->m[2][0] + v[3]*mtx->m[3][0];
+    vec[1] = v[0]*mtx->m[0][1] + v[1]*mtx->m[1][1] + v[2]*mtx->m[2][1] + v[3]*mtx->m[3][1];
+    vec[2] = v[0]*mtx->m[0][2] + v[1]*mtx->m[1][2] + v[2]*mtx->m[2][2] + v[3]*mtx->m[3][2];
+}
+
+aluVector aluMatrixfVector(const aluMatrixf *mtx, const aluVector *vec)
+{
+    aluVector v;
+    v.v[0] = vec->v[0]*mtx->m[0][0] + vec->v[1]*mtx->m[1][0] + vec->v[2]*mtx->m[2][0] + vec->v[3]*mtx->m[3][0];
+    v.v[1] = vec->v[0]*mtx->m[0][1] + vec->v[1]*mtx->m[1][1] + vec->v[2]*mtx->m[2][1] + vec->v[3]*mtx->m[3][1];
+    v.v[2] = vec->v[0]*mtx->m[0][2] + vec->v[1]*mtx->m[1][2] + vec->v[2]*mtx->m[2][2] + vec->v[3]*mtx->m[3][2];
+    v.v[3] = vec->v[0]*mtx->m[0][3] + vec->v[1]*mtx->m[1][3] + vec->v[2]*mtx->m[2][3] + vec->v[3]*mtx->m[3][3];
+    return v;
+}
+
+
+void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
+{
+    AsyncEvent evt = ASYNC_EVENT(EventType_SourceStateChange);
+    ALbitfieldSOFT enabledevt;
+    size_t strpos;
+    ALuint scale;
+
+    enabledevt = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_acquire);
+    if(!(enabledevt&EventType_SourceStateChange)) return;
+
+    evt.u.user.type = AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT;
+    evt.u.user.id = id;
+    evt.u.user.param = AL_STOPPED;
+
+    /* Normally snprintf would be used, but this is called from the mixer and
+     * that function's not real-time safe, so we have to construct it manually.
+     */
+    strcpy(evt.u.user.msg, "Source ID "); strpos = 10;
+    scale = 1000000000;
+    while(scale > 0 && scale > id)
+        scale /= 10;
+    while(scale > 0)
+    {
+        evt.u.user.msg[strpos++] = '0' + ((id/scale)%10);
+        scale /= 10;
+    }
+    strcpy(evt.u.user.msg+strpos, " state changed to AL_STOPPED");
+
+    if(ll_ringbuffer_write(context->AsyncEvents, &evt, 1) == 1)
+        alsem_post(&context->EventSem);
+}
+
+
+bool CalcContextParams(ALCcontext *Context)
 {
     ALlistener &Listener = Context->Listener;
     struct ALcontextProps *props;
@@ -333,7 +342,7 @@ static bool CalcContextParams(ALCcontext *Context)
     return true;
 }
 
-static bool CalcListenerParams(ALCcontext *Context)
+bool CalcListenerParams(ALCcontext *Context)
 {
     ALlistener &Listener = Context->Listener;
     ALfloat N[3], V[3], U[3], P[3];
@@ -378,7 +387,7 @@ static bool CalcListenerParams(ALCcontext *Context)
     return true;
 }
 
-static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
+bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
 {
     struct ALeffectslotProps *props;
     EffectState *state;
@@ -456,7 +465,7 @@ static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool f
 }
 
 
-static const struct ChanMap MonoMap[1] = {
+constexpr struct ChanMap MonoMap[1] = {
     { FrontCenter, 0.0f, 0.0f }
 }, RearMap[2] = {
     { BackLeft,  DEG2RAD(-150.0f), DEG2RAD(0.0f) },
@@ -492,14 +501,14 @@ static const struct ChanMap MonoMap[1] = {
     { SideRight,   DEG2RAD(  90.0f), DEG2RAD(0.0f) }
 };
 
-static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev,
-                                  const ALfloat Distance, const ALfloat Spread,
-                                  const ALfloat DryGain, const ALfloat DryGainHF,
-                                  const ALfloat DryGainLF, const ALfloat *WetGain,
-                                  const ALfloat *WetGainLF, const ALfloat *WetGainHF,
-                                  ALeffectslot **SendSlots, const ALbuffer *Buffer,
-                                  const struct ALvoiceProps *props, const ALlistener &Listener,
-                                  const ALCdevice *Device)
+void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev,
+                           const ALfloat Distance, const ALfloat Spread,
+                           const ALfloat DryGain, const ALfloat DryGainHF,
+                           const ALfloat DryGainLF, const ALfloat *WetGain,
+                           const ALfloat *WetGainLF, const ALfloat *WetGainHF,
+                           ALeffectslot **SendSlots, const ALbuffer *Buffer,
+                           const struct ALvoiceProps *props, const ALlistener &Listener,
+                           const ALCdevice *Device)
 {
     struct ChanMap StereoMap[2] = {
         { FrontLeft,  DEG2RAD(-30.0f), DEG2RAD(0.0f) },
@@ -1016,7 +1025,7 @@ static void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALflo
     }
 }
 
-static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
+void CalcNonAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
 {
     const ALCdevice *Device = ALContext->Device;
     const ALlistener &Listener = ALContext->Listener;
@@ -1079,7 +1088,7 @@ static void CalcNonAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *p
                           WetGainLF, WetGainHF, SendSlots, ALBuffer, props, Listener, Device);
 }
 
-static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
+void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
 {
     const ALCdevice *Device = ALContext->Device;
     const ALlistener &Listener = ALContext->Listener;
@@ -1447,7 +1456,7 @@ static void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *prop
                           WetGainLF, WetGainHF, SendSlots, ALBuffer, props, Listener, Device);
 }
 
-static void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
+void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
 {
     ALbufferlistitem *BufferListItem;
     struct ALvoiceProps *props;
@@ -1486,7 +1495,7 @@ static void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
 }
 
 
-static void ProcessParamUpdates(ALCcontext *ctx, const struct ALeffectslotArray *slots)
+void ProcessParamUpdates(ALCcontext *ctx, const struct ALeffectslotArray *slots)
 {
     ALvoice **voice, **voice_end;
     ALsource *source;
@@ -1512,9 +1521,8 @@ static void ProcessParamUpdates(ALCcontext *ctx, const struct ALeffectslotArray 
 }
 
 
-static void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*RESTRICT Buffer)[BUFFERSIZE],
-                           int lidx, int ridx, int cidx, ALsizei SamplesToDo,
-                           ALsizei NumChannels)
+void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*RESTRICT Buffer)[BUFFERSIZE],
+                    int lidx, int ridx, int cidx, ALsizei SamplesToDo, ALsizei NumChannels)
 {
     ALfloat (*RESTRICT lsplit)[BUFFERSIZE] = Stablizer->LSplit;
     ALfloat (*RESTRICT rsplit)[BUFFERSIZE] = Stablizer->RSplit;
@@ -1560,8 +1568,8 @@ static void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*RESTRICT Buffer)
     }
 }
 
-static void ApplyDistanceComp(ALfloat (*RESTRICT Samples)[BUFFERSIZE], DistanceComp *distcomp,
-                              ALfloat *RESTRICT Values, ALsizei SamplesToDo, ALsizei numchans)
+void ApplyDistanceComp(ALfloat (*RESTRICT Samples)[BUFFERSIZE], DistanceComp *distcomp,
+                       ALfloat *RESTRICT Values, ALsizei SamplesToDo, ALsizei numchans)
 {
     ALsizei i, c;
 
@@ -1602,9 +1610,8 @@ static void ApplyDistanceComp(ALfloat (*RESTRICT Samples)[BUFFERSIZE], DistanceC
     }
 }
 
-static void ApplyDither(ALfloat (*RESTRICT Samples)[BUFFERSIZE], ALuint *dither_seed,
-                        const ALfloat quant_scale, const ALsizei SamplesToDo,
-                        const ALsizei numchans)
+void ApplyDither(ALfloat (*RESTRICT Samples)[BUFFERSIZE], ALuint *dither_seed,
+                 const ALfloat quant_scale, const ALsizei SamplesToDo, const ALsizei numchans)
 {
     const ALfloat invscale = 1.0f / quant_scale;
     ALuint seed = *dither_seed;
@@ -1633,9 +1640,15 @@ static void ApplyDither(ALfloat (*RESTRICT Samples)[BUFFERSIZE], ALuint *dither_
 }
 
 
-static inline ALfloat Conv_ALfloat(ALfloat val)
+/* Base template left undefined. Should be marked =delete, but Clang 3.8.1
+ * chokes on that given the inline specializations.
+ */
+template<typename T>
+inline T SampleConv(ALfloat);
+
+template<> inline ALfloat SampleConv(ALfloat val)
 { return val; }
-static inline ALint Conv_ALint(ALfloat val)
+template<> inline ALint SampleConv(ALfloat val)
 {
     /* Floats have a 23-bit mantissa. There is an implied 1 bit in the mantissa
      * along with the sign bit, giving 25 bits total, so [-16777216, +16777216]
@@ -1644,51 +1657,39 @@ static inline ALint Conv_ALint(ALfloat val)
      */
     return fastf2i(clampf(val*16777216.0f, -16777216.0f, 16777215.0f))<<7;
 }
-static inline ALshort Conv_ALshort(ALfloat val)
+template<> inline ALshort SampleConv(ALfloat val)
 { return fastf2i(clampf(val*32768.0f, -32768.0f, 32767.0f)); }
-static inline ALbyte Conv_ALbyte(ALfloat val)
+template<> inline ALbyte SampleConv(ALfloat val)
 { return fastf2i(clampf(val*128.0f, -128.0f, 127.0f)); }
 
 /* Define unsigned output variations. */
-#define DECL_TEMPLATE(T, func, O)                             \
-static inline T Conv_##T(ALfloat val) { return func(val)+O; }
+template<> inline ALuint SampleConv(ALfloat val)
+{ return SampleConv<ALint>(val) + 2147483648u; }
+template<> inline ALushort SampleConv(ALfloat val)
+{ return SampleConv<ALshort>(val) + 32768; }
+template<> inline ALubyte SampleConv(ALfloat val)
+{ return SampleConv<ALbyte>(val) + 128; }
 
-DECL_TEMPLATE(ALubyte, Conv_ALbyte, 128)
-DECL_TEMPLATE(ALushort, Conv_ALshort, 32768)
-DECL_TEMPLATE(ALuint, Conv_ALint, 2147483648u)
+template<DevFmtType T>
+void Write(const ALfloat (*RESTRICT InBuffer)[BUFFERSIZE], ALvoid *OutBuffer,
+           ALsizei Offset, ALsizei SamplesToDo, ALsizei numchans)
+{
+    using SampleType = typename DevFmtTypeTraits<T>::Type;
 
-#undef DECL_TEMPLATE
+    ASSUME(numchans > 0);
+    ASSUME(SamplesToDo > 0);
 
-#define DECL_TEMPLATE(T, A)                                                   \
-static void Write##A(const ALfloat (*RESTRICT InBuffer)[BUFFERSIZE],          \
-                     ALvoid *OutBuffer, ALsizei Offset, ALsizei SamplesToDo,  \
-                     ALsizei numchans)                                        \
-{                                                                             \
-    ALsizei i, j;                                                             \
-                                                                              \
-    ASSUME(numchans > 0);                                                     \
-    ASSUME(SamplesToDo > 0);                                                  \
-                                                                              \
-    for(j = 0;j < numchans;j++)                                               \
-    {                                                                         \
-        const ALfloat *RESTRICT in = InBuffer[j];                             \
-        T *RESTRICT out = (T*)OutBuffer + Offset*numchans + j;                \
-                                                                              \
-        for(i = 0;i < SamplesToDo;i++)                                        \
-            out[i*numchans] = Conv_##T(in[i]);                                \
-    }                                                                         \
+    for(ALsizei j{0};j < numchans;j++)
+    {
+        const ALfloat *RESTRICT in = InBuffer[j];
+        SampleType *RESTRICT out = static_cast<SampleType*>(OutBuffer) + Offset*numchans + j;
+
+        for(ALsizei i{0};i < SamplesToDo;i++)
+            out[i*numchans] = SampleConv<SampleType>(in[i]);
+    }
 }
 
-DECL_TEMPLATE(ALfloat, F32)
-DECL_TEMPLATE(ALuint, UI32)
-DECL_TEMPLATE(ALint, I32)
-DECL_TEMPLATE(ALushort, UI16)
-DECL_TEMPLATE(ALshort, I16)
-DECL_TEMPLATE(ALubyte, UI8)
-DECL_TEMPLATE(ALbyte, I8)
-
-#undef DECL_TEMPLATE
-
+} // namespace
 
 void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
 {
@@ -1800,15 +1801,15 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
 
             switch(device->FmtType)
             {
-#define HANDLE_WRITE(T, S) case T:                                            \
-    Write##S(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels); break;
-                HANDLE_WRITE(DevFmtByte, I8)
-                HANDLE_WRITE(DevFmtUByte, UI8)
-                HANDLE_WRITE(DevFmtShort, I16)
-                HANDLE_WRITE(DevFmtUShort, UI16)
-                HANDLE_WRITE(DevFmtInt, I32)
-                HANDLE_WRITE(DevFmtUInt, UI32)
-                HANDLE_WRITE(DevFmtFloat, F32)
+#define HANDLE_WRITE(T) case T:                                            \
+    Write<T>(Buffer, OutBuffer, SamplesDone, SamplesToDo, Channels); break;
+                HANDLE_WRITE(DevFmtByte)
+                HANDLE_WRITE(DevFmtUByte)
+                HANDLE_WRITE(DevFmtShort)
+                HANDLE_WRITE(DevFmtUShort)
+                HANDLE_WRITE(DevFmtInt)
+                HANDLE_WRITE(DevFmtUInt)
+                HANDLE_WRITE(DevFmtFloat)
 #undef HANDLE_WRITE
             }
         }

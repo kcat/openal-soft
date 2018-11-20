@@ -47,9 +47,7 @@
 
 static ALsource *AllocSource(ALCcontext *context);
 static void FreeSource(ALCcontext *context, ALsource *source);
-static void InitSourceParams(ALsource *Source, ALsizei num_sends);
-static void DeinitSource(ALsource *source, ALsizei num_sends);
-static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_sends, ALCcontext *context);
+static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALCcontext *context);
 static ALint64 GetSourceSampleOffset(ALsource *Source, ALCcontext *context, ALuint64 *clocktime);
 static ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, ALuint64 *clocktime);
 static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context);
@@ -518,14 +516,13 @@ static ALint Int64ValsByProp(ALenum prop)
     ALvoice *voice;                                                           \
     if(SourceShouldUpdate(Source, Context) &&                                 \
        (voice=GetSourceVoice(Source, Context)) != NULL)                       \
-        UpdateSourceProps(Source, voice, device->NumAuxSends, Context);       \
+        UpdateSourceProps(Source, voice, Context);                            \
     else                                                                      \
         Source->PropsClean.clear(std::memory_order_release);                  \
 } while(0)
 
 static ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, const ALfloat *values)
 {
-    ALCdevice *device = Context->Device;
     ALint ival;
 
     switch(prop)
@@ -1036,7 +1033,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                  * active source, in case the slot is about to be deleted.
                  */
                 if((voice=GetSourceVoice(Source, Context)) != NULL)
-                    UpdateSourceProps(Source, voice, device->NumAuxSends, Context);
+                    UpdateSourceProps(Source, voice, Context);
                 else
                     Source->PropsClean.clear(std::memory_order_release);
             }
@@ -2490,7 +2487,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         voice->Playing.store(false, std::memory_order_release);
 
         source->PropsClean.test_and_set(std::memory_order_acquire);
-        UpdateSourceProps(source, voice, device->NumAuxSends, context);
+        UpdateSourceProps(source, voice, context);
 
         /* A source that's not playing or paused has any offset applied when it
          * starts playing.
@@ -3040,124 +3037,112 @@ done:
 }
 
 
-static void InitSourceParams(ALsource *Source, ALsizei num_sends)
+ALsource::ALsource(ALsizei num_sends)
 {
-    ALsizei i;
+    InnerAngle = 360.0f;
+    OuterAngle = 360.0f;
+    Pitch = 1.0f;
+    Position[0] = 0.0f;
+    Position[1] = 0.0f;
+    Position[2] = 0.0f;
+    Velocity[0] = 0.0f;
+    Velocity[1] = 0.0f;
+    Velocity[2] = 0.0f;
+    Direction[0] = 0.0f;
+    Direction[1] = 0.0f;
+    Direction[2] = 0.0f;
+    Orientation[0][0] =  0.0f;
+    Orientation[0][1] =  0.0f;
+    Orientation[0][2] = -1.0f;
+    Orientation[1][0] =  0.0f;
+    Orientation[1][1] =  1.0f;
+    Orientation[1][2] =  0.0f;
+    RefDistance = 1.0f;
+    MaxDistance = FLT_MAX;
+    RolloffFactor = 1.0f;
+    Gain = 1.0f;
+    MinGain = 0.0f;
+    MaxGain = 1.0f;
+    OuterGain = 0.0f;
+    OuterGainHF = 1.0f;
 
-    Source->InnerAngle = 360.0f;
-    Source->OuterAngle = 360.0f;
-    Source->Pitch = 1.0f;
-    Source->Position[0] = 0.0f;
-    Source->Position[1] = 0.0f;
-    Source->Position[2] = 0.0f;
-    Source->Velocity[0] = 0.0f;
-    Source->Velocity[1] = 0.0f;
-    Source->Velocity[2] = 0.0f;
-    Source->Direction[0] = 0.0f;
-    Source->Direction[1] = 0.0f;
-    Source->Direction[2] = 0.0f;
-    Source->Orientation[0][0] =  0.0f;
-    Source->Orientation[0][1] =  0.0f;
-    Source->Orientation[0][2] = -1.0f;
-    Source->Orientation[1][0] =  0.0f;
-    Source->Orientation[1][1] =  1.0f;
-    Source->Orientation[1][2] =  0.0f;
-    Source->RefDistance = 1.0f;
-    Source->MaxDistance = FLT_MAX;
-    Source->RolloffFactor = 1.0f;
-    Source->Gain = 1.0f;
-    Source->MinGain = 0.0f;
-    Source->MaxGain = 1.0f;
-    Source->OuterGain = 0.0f;
-    Source->OuterGainHF = 1.0f;
+    DryGainHFAuto = AL_TRUE;
+    WetGainAuto = AL_TRUE;
+    WetGainHFAuto = AL_TRUE;
+    AirAbsorptionFactor = 0.0f;
+    RoomRolloffFactor = 0.0f;
+    DopplerFactor = 1.0f;
+    HeadRelative = AL_FALSE;
+    Looping = AL_FALSE;
+    mDistanceModel = DistanceModel::Default;
+    Resampler = ResamplerDefault;
+    DirectChannels = AL_FALSE;
+    Spatialize = SpatializeAuto;
 
-    Source->DryGainHFAuto = AL_TRUE;
-    Source->WetGainAuto = AL_TRUE;
-    Source->WetGainHFAuto = AL_TRUE;
-    Source->AirAbsorptionFactor = 0.0f;
-    Source->RoomRolloffFactor = 0.0f;
-    Source->DopplerFactor = 1.0f;
-    Source->HeadRelative = AL_FALSE;
-    Source->Looping = AL_FALSE;
-    Source->mDistanceModel = DistanceModel::Default;
-    Source->Resampler = ResamplerDefault;
-    Source->DirectChannels = AL_FALSE;
-    Source->Spatialize = SpatializeAuto;
+    StereoPan[0] = DEG2RAD( 30.0f);
+    StereoPan[1] = DEG2RAD(-30.0f);
 
-    Source->StereoPan[0] = DEG2RAD( 30.0f);
-    Source->StereoPan[1] = DEG2RAD(-30.0f);
+    Radius = 0.0f;
 
-    Source->Radius = 0.0f;
-
-    Source->Direct.Gain = 1.0f;
-    Source->Direct.GainHF = 1.0f;
-    Source->Direct.HFReference = LOWPASSFREQREF;
-    Source->Direct.GainLF = 1.0f;
-    Source->Direct.LFReference = HIGHPASSFREQREF;
-    Source->Send = static_cast<decltype(Source->Send)>(al_calloc(16,
-        num_sends*sizeof(Source->Send[0])));
-    for(i = 0;i < num_sends;i++)
+    Direct.Gain = 1.0f;
+    Direct.GainHF = 1.0f;
+    Direct.HFReference = LOWPASSFREQREF;
+    Direct.GainLF = 1.0f;
+    Direct.LFReference = HIGHPASSFREQREF;
+    Send.resize(num_sends);
+    for(auto &send : Send)
     {
-        Source->Send[i].Slot = NULL;
-        Source->Send[i].Gain = 1.0f;
-        Source->Send[i].GainHF = 1.0f;
-        Source->Send[i].HFReference = LOWPASSFREQREF;
-        Source->Send[i].GainLF = 1.0f;
-        Source->Send[i].LFReference = HIGHPASSFREQREF;
+        send.Slot = nullptr;
+        send.Gain = 1.0f;
+        send.GainHF = 1.0f;
+        send.HFReference = LOWPASSFREQREF;
+        send.GainLF = 1.0f;
+        send.LFReference = HIGHPASSFREQREF;
     }
 
-    Source->Offset = 0.0;
-    Source->OffsetType = AL_NONE;
-    Source->SourceType = AL_UNDETERMINED;
-    Source->state = AL_INITIAL;
+    Offset = 0.0;
+    OffsetType = AL_NONE;
+    SourceType = AL_UNDETERMINED;
+    state = AL_INITIAL;
 
-    Source->queue = NULL;
+    queue = NULL;
 
-    Source->VoiceIdx = -1;
+    VoiceIdx = -1;
 }
 
-static void DeinitSource(ALsource *source, ALsizei num_sends)
+ALsource::~ALsource()
 {
-    ALbufferlistitem *BufferList;
-    ALsizei i;
-
-    BufferList = source->queue;
+    ALbufferlistitem *BufferList{queue};
     while(BufferList != NULL)
     {
-        ALbufferlistitem *next = ATOMIC_LOAD(&BufferList->next, almemory_order_relaxed);
-        for(i = 0;i < BufferList->num_buffers;i++)
+        ALbufferlistitem *next = BufferList->next.load(std::memory_order_relaxed);
+        for(ALsizei i{0};i < BufferList->num_buffers;i++)
         {
-            if(BufferList->buffers[i] != NULL)
+            if(BufferList->buffers[i])
                 DecrementRef(&BufferList->buffers[i]->ref);
         }
         al_free(BufferList);
         BufferList = next;
     }
-    source->queue = NULL;
+    queue = nullptr;
 
-    if(source->Send)
-    {
-        for(i = 0;i < num_sends;i++)
+    std::for_each(Send.begin(), Send.end(),
+        [](ALsource::SendData &send) -> void
         {
-            if(source->Send[i].Slot)
-                DecrementRef(&source->Send[i].Slot->ref);
-            source->Send[i].Slot = NULL;
+            if(send.Slot)
+                DecrementRef(&send.Slot->ref);
+            send.Slot = nullptr;
         }
-        al_free(source->Send);
-        source->Send = NULL;
-    }
+    );
 }
 
-static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_sends, ALCcontext *context)
+static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALCcontext *context)
 {
-    struct ALvoiceProps *props;
-    ALsizei i;
-
     /* Get an unused property container, or allocate a new one as needed. */
-    props = context->FreeVoiceProps.load(std::memory_order_acquire);
+    ALvoiceProps *props{context->FreeVoiceProps.load(std::memory_order_acquire)};
     if(!props)
         props = static_cast<ALvoiceProps*>(al_calloc(16,
-            FAM_SIZE(struct ALvoiceProps, Send, num_sends)));
+            FAM_SIZE(struct ALvoiceProps, Send, source->Send.size())));
     else
     {
         struct ALvoiceProps *next;
@@ -3178,16 +3163,15 @@ static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_send
     props->RefDistance = source->RefDistance;
     props->MaxDistance = source->MaxDistance;
     props->RolloffFactor = source->RolloffFactor;
-    for(i = 0;i < 3;i++)
+    for(ALsizei i{0};i < 3;i++)
         props->Position[i] = source->Position[i];
-    for(i = 0;i < 3;i++)
+    for(ALsizei i{0};i < 3;i++)
         props->Velocity[i] = source->Velocity[i];
-    for(i = 0;i < 3;i++)
+    for(ALsizei i{0};i < 3;i++)
         props->Direction[i] = source->Direction[i];
-    for(i = 0;i < 2;i++)
+    for(ALsizei i{0};i < 2;i++)
     {
-        ALsizei j;
-        for(j = 0;j < 3;j++)
+        for(ALsizei j{0};j < 3;j++)
             props->Orientation[i][j] = source->Orientation[i][j];
     }
     props->HeadRelative = source->HeadRelative;
@@ -3216,7 +3200,7 @@ static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_send
     props->Direct.GainLF = source->Direct.GainLF;
     props->Direct.LFReference = source->Direct.LFReference;
 
-    for(i = 0;i < num_sends;i++)
+    for(size_t i{0u};i < source->Send.size();i++)
     {
         props->Send[i].Slot = source->Send[i].Slot;
         props->Send[i].Gain = source->Send[i].Gain;
@@ -3239,15 +3223,12 @@ static void UpdateSourceProps(ALsource *source, ALvoice *voice, ALsizei num_send
 
 void UpdateAllSourceProps(ALCcontext *context)
 {
-    ALsizei num_sends = context->Device->NumAuxSends;
-    ALsizei pos;
-
-    for(pos = 0;pos < context->VoiceCount;pos++)
+    for(ALsizei i{0};i < context->VoiceCount;++i)
     {
-        ALvoice *voice = context->Voices[pos];
-        ALsource *source = ATOMIC_LOAD(&voice->Source, almemory_order_acquire);
+        ALvoice *voice = context->Voices[i];
+        ALsource *source = voice->Source.load(std::memory_order_acquire);
         if(source && !source->PropsClean.test_and_set(std::memory_order_acq_rel))
-            UpdateSourceProps(source, voice, num_sends, context);
+            UpdateSourceProps(source, voice, context);
     }
 }
 
@@ -3627,8 +3608,7 @@ static ALsource *AllocSource(ALCcontext *context)
         source = sublist->Sources + slidx;
     }
 
-    source = new (source) ALsource{};
-    InitSourceParams(source, device->NumAuxSends);
+    source = new (source) ALsource{device->NumAuxSends};
 
     /* Add 1 to avoid source ID 0. */
     source->id = ((lidx<<6) | slidx) + 1;
@@ -3656,7 +3636,6 @@ static void FreeSource(ALCcontext *context, ALsource *source)
     }
     ALCdevice_Unlock(device);
 
-    DeinitSource(source, device->NumAuxSends);
     source->~ALsource();
 
     context->SourceList[lidx].FreeMask |= U64(1) << slidx;
@@ -3669,7 +3648,6 @@ static void FreeSource(ALCcontext *context, ALsource *source)
  */
 ALvoid ReleaseALSources(ALCcontext *context)
 {
-    ALCdevice *device = context->Device;
     size_t leftover = 0;
     for(auto &sublist : context->SourceList)
     {
@@ -3679,7 +3657,6 @@ ALvoid ReleaseALSources(ALCcontext *context)
             ALsizei idx = CTZ64(usemask);
             ALsource *source = sublist.Sources + idx;
 
-            DeinitSource(source, device->NumAuxSends);
             source->~ALsource();
             ++leftover;
 
@@ -3688,5 +3665,5 @@ ALvoid ReleaseALSources(ALCcontext *context)
         sublist.FreeMask = ~usemask;
     }
     if(leftover > 0)
-        WARN("(%p) Deleted " SZFMT " Source%s\n", device, leftover, (leftover==1)?"":"s");
+        WARN("(%p) Deleted " SZFMT " Source%s\n", context, leftover, (leftover==1)?"":"s");
 }

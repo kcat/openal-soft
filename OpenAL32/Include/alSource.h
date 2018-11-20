@@ -4,6 +4,7 @@
 #include "alMain.h"
 #include "alu.h"
 #include "hrtf.h"
+#include "almalloc.h"
 #include "atomic.h"
 
 #define MAX_SENDS      16
@@ -72,14 +73,15 @@ typedef struct ALsource {
         ALfloat GainLF;
         ALfloat LFReference;
     } Direct;
-    struct {
+    struct SendData {
         struct ALeffectslot *Slot;
         ALfloat Gain;
         ALfloat GainHF;
         ALfloat HFReference;
         ALfloat GainLF;
         ALfloat LFReference;
-    } *Send;
+    };
+    al::vector<SendData> Send;
 
     /**
      * Last user-specified offset, and the offset type (bytes, samples, or
@@ -106,6 +108,13 @@ typedef struct ALsource {
 
     /** Self ID */
     ALuint id;
+
+
+    ALsource(ALsizei num_sends);
+    ~ALsource();
+
+    ALsource(const ALsource&) = delete;
+    ALsource& operator=(const ALsource&) = delete;
 } ALsource;
 
 void UpdateAllSourceProps(ALCcontext *context);

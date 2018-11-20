@@ -2294,20 +2294,15 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
                 if(old_sends != device->NumAuxSends)
                 {
-                    ALvoid *sends = al_calloc(16, device->NumAuxSends*sizeof(source->Send[0]));
                     ALsizei s;
-
-                    memcpy(sends, source->Send,
-                        mini(device->NumAuxSends, old_sends)*sizeof(source->Send[0])
-                    );
                     for(s = device->NumAuxSends;s < old_sends;s++)
                     {
                         if(source->Send[s].Slot)
                             DecrementRef(&source->Send[s].Slot->ref);
                         source->Send[s].Slot = nullptr;
                     }
-                    al_free(source->Send);
-                    source->Send = static_cast<decltype(source->Send)>(sends);
+                    source->Send.resize(device->NumAuxSends);
+                    source->Send.shrink_to_fit();
                     for(s = old_sends;s < device->NumAuxSends;s++)
                     {
                         source->Send[s].Slot = nullptr;

@@ -8,9 +8,6 @@
 #include "inprogext.h"
 #include "atomic.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /* User formats */
 enum UserFmtType {
@@ -65,6 +62,24 @@ enum FmtChannels {
 };
 #define MAX_INPUT_CHANNELS  (8)
 
+/* DevFmtType traits, providing the type, etc given a DevFmtType. */
+template<FmtType T>
+struct FmtTypeTraits { };
+
+template<>
+struct FmtTypeTraits<FmtUByte> { using Type = ALubyte; };
+template<>
+struct FmtTypeTraits<FmtShort> { using Type = ALshort; };
+template<>
+struct FmtTypeTraits<FmtFloat> { using Type = ALfloat; };
+template<>
+struct FmtTypeTraits<FmtDouble> { using Type = ALdouble; };
+template<>
+struct FmtTypeTraits<FmtMulaw> { using Type = ALubyte; };
+template<>
+struct FmtTypeTraits<FmtAlaw> { using Type = ALubyte; };
+
+
 ALsizei BytesFromFmt(enum FmtType type);
 ALsizei ChannelsFromFmt(enum FmtChannels chans);
 inline ALsizei FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type)
@@ -106,9 +121,5 @@ typedef struct ALbuffer {
 } ALbuffer;
 
 ALvoid ReleaseALBuffers(ALCdevice *device);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

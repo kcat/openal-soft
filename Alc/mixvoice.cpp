@@ -193,6 +193,8 @@ void aluInitMixer(void)
 }
 
 
+namespace {
+
 static void SendAsyncEvent(ALCcontext *context, ALuint enumtype, ALenum type,
                            ALuint objid, ALuint param, const char *msg)
 {
@@ -206,66 +208,56 @@ static void SendAsyncEvent(ALCcontext *context, ALuint enumtype, ALenum type,
 }
 
 
-static inline ALfloat Sample_ALubyte(ALubyte val)
+/* Base template left undefined. Should be marked =delete, but Clang 3.8.1
+ * chokes on that given the inline specializations.
+ */
+template<FmtType T>
+inline ALfloat LoadSample(typename FmtTypeTraits<T>::Type val);
+
+template<> inline ALfloat LoadSample<FmtUByte>(FmtTypeTraits<FmtUByte>::Type val)
 { return (val-128) * (1.0f/128.0f); }
-
-static inline ALfloat Sample_ALshort(ALshort val)
+template<> inline ALfloat LoadSample<FmtShort>(FmtTypeTraits<FmtShort>::Type val)
 { return val * (1.0f/32768.0f); }
-
-static inline ALfloat Sample_ALfloat(ALfloat val)
+template<> inline ALfloat LoadSample<FmtFloat>(FmtTypeTraits<FmtFloat>::Type val)
 { return val; }
-
-static inline ALfloat Sample_ALdouble(ALdouble val)
+template<> inline ALfloat LoadSample<FmtDouble>(FmtTypeTraits<FmtDouble>::Type val)
 { return (ALfloat)val; }
-
-typedef ALubyte ALmulaw;
-static inline ALfloat Sample_ALmulaw(ALmulaw val)
+template<> inline ALfloat LoadSample<FmtMulaw>(FmtTypeTraits<FmtMulaw>::Type val)
 { return muLawDecompressionTable[val] * (1.0f/32768.0f); }
-
-typedef ALubyte ALalaw;
-static inline ALfloat Sample_ALalaw(ALalaw val)
+template<> inline ALfloat LoadSample<FmtAlaw>(FmtTypeTraits<FmtAlaw>::Type val)
 { return aLawDecompressionTable[val] * (1.0f/32768.0f); }
 
-#define DECL_TEMPLATE(T)                                                      \
-static inline void Load_##T(ALfloat *RESTRICT dst, const T *RESTRICT src,     \
-                            ALint srcstep, ALsizei samples)                   \
-{                                                                             \
-    ALsizei i;                                                                \
-    for(i = 0;i < samples;i++)                                                \
-        dst[i] += Sample_##T(src[i*srcstep]);                                 \
+template<FmtType T>
+inline void LoadSampleArray(ALfloat *RESTRICT dst, const void *src, ALint srcstep, ALsizei samples)
+{
+    using SampleType = typename FmtTypeTraits<T>::Type;
+
+    const SampleType *ssrc = static_cast<const SampleType*>(src);
+    for(ALsizei i{0};i < samples;i++)
+        dst[i] += LoadSample<T>(ssrc[i*srcstep]);
 }
-
-DECL_TEMPLATE(ALubyte)
-DECL_TEMPLATE(ALshort)
-DECL_TEMPLATE(ALfloat)
-DECL_TEMPLATE(ALdouble)
-DECL_TEMPLATE(ALmulaw)
-DECL_TEMPLATE(ALalaw)
-
-#undef DECL_TEMPLATE
 
 static void LoadSamples(ALfloat *RESTRICT dst, const ALvoid *RESTRICT src, ALint srcstep,
                         enum FmtType srctype, ALsizei samples)
 {
-#define HANDLE_FMT(ET, ST)                                                    \
-    case ET: Load_##ST(dst, static_cast<const ST*>(src), srcstep, samples);   \
-    break
+#define HANDLE_FMT(T)                                                         \
+    case T: LoadSampleArray<T>(dst, src, srcstep, samples); break
     switch(srctype)
     {
-        HANDLE_FMT(FmtUByte, ALubyte);
-        HANDLE_FMT(FmtShort, ALshort);
-        HANDLE_FMT(FmtFloat, ALfloat);
-        HANDLE_FMT(FmtDouble, ALdouble);
-        HANDLE_FMT(FmtMulaw, ALmulaw);
-        HANDLE_FMT(FmtAlaw, ALalaw);
+        HANDLE_FMT(FmtUByte);
+        HANDLE_FMT(FmtShort);
+        HANDLE_FMT(FmtFloat);
+        HANDLE_FMT(FmtDouble);
+        HANDLE_FMT(FmtMulaw);
+        HANDLE_FMT(FmtAlaw);
     }
 #undef HANDLE_FMT
 }
 
 
-static const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter,
-                                ALfloat *RESTRICT dst, const ALfloat *RESTRICT src,
-                                ALsizei numsamples, int type)
+const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter,
+                         ALfloat *RESTRICT dst, const ALfloat *RESTRICT src,
+                         ALsizei numsamples, int type)
 {
     ALsizei i;
     switch(type)
@@ -299,6 +291,7 @@ static const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter,
     return src;
 }
 
+} // namespace
 
 /* This function uses these device temp buffers. */
 #define SOURCE_DATA_BUF 0

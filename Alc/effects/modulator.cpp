@@ -37,28 +37,6 @@
 
 #define MAX_UPDATE_SAMPLES 128
 
-struct ALmodulatorState final : public EffectState {
-    void (*mGetSamples)(ALfloat*RESTRICT, ALsizei, const ALsizei, ALsizei){};
-
-    ALsizei mIndex{0};
-    ALsizei mStep{1};
-
-    struct {
-        BiquadFilter Filter;
-
-        ALfloat CurrentGains[MAX_OUTPUT_CHANNELS]{};
-        ALfloat TargetGains[MAX_OUTPUT_CHANNELS]{};
-    } mChans[MAX_EFFECT_CHANNELS];
-
-
-    ALboolean deviceUpdate(ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
-    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
-
-    DEF_NEWDEL(ALmodulatorState)
-};
-
-
 #define WAVEFORM_FRACBITS  24
 #define WAVEFORM_FRACONE   (1<<WAVEFORM_FRACBITS)
 #define WAVEFORM_FRACMASK  (WAVEFORM_FRACONE-1)
@@ -83,26 +61,39 @@ static inline ALfloat One(ALsizei UNUSED(index))
     return 1.0f;
 }
 
-#define DECL_TEMPLATE(func)                                                   \
-static void Modulate##func(ALfloat *RESTRICT dst, ALsizei index,              \
-                           const ALsizei step, ALsizei todo)                  \
-{                                                                             \
-    ALsizei i;                                                                \
-    for(i = 0;i < todo;i++)                                                   \
-    {                                                                         \
-        index += step;                                                        \
-        index &= WAVEFORM_FRACMASK;                                           \
-        dst[i] = func(index);                                                 \
-    }                                                                         \
+template<ALfloat func(ALsizei)>
+static void Modulate(ALfloat *RESTRICT dst, ALsizei index, const ALsizei step, ALsizei todo)
+{
+    ALsizei i;
+    for(i = 0;i < todo;i++)
+    {
+        index += step;
+        index &= WAVEFORM_FRACMASK;
+        dst[i] = func(index);
+    }
 }
 
-DECL_TEMPLATE(Sin)
-DECL_TEMPLATE(Saw)
-DECL_TEMPLATE(Square)
-DECL_TEMPLATE(One)
 
-#undef DECL_TEMPLATE
+struct ALmodulatorState final : public EffectState {
+    void (*mGetSamples)(ALfloat*RESTRICT, ALsizei, const ALsizei, ALsizei){};
 
+    ALsizei mIndex{0};
+    ALsizei mStep{1};
+
+    struct {
+        BiquadFilter Filter;
+
+        ALfloat CurrentGains[MAX_OUTPUT_CHANNELS]{};
+        ALfloat TargetGains[MAX_OUTPUT_CHANNELS]{};
+    } mChans[MAX_EFFECT_CHANNELS];
+
+
+    ALboolean deviceUpdate(ALCdevice *device) override;
+    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
+    void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
+
+    DEF_NEWDEL(ALmodulatorState)
+};
 
 ALboolean ALmodulatorState::deviceUpdate(ALCdevice *UNUSED(device))
 {
@@ -124,13 +115,13 @@ void ALmodulatorState::update(const ALCcontext *context, const ALeffectslot *slo
     mStep = clampi(mStep, 0, WAVEFORM_FRACONE-1);
 
     if(mStep == 0)
-        mGetSamples = ModulateOne;
+        mGetSamples = Modulate<One>;
     else if(props->Modulator.Waveform == AL_RING_MODULATOR_SINUSOID)
-        mGetSamples = ModulateSin;
+        mGetSamples = Modulate<Sin>;
     else if(props->Modulator.Waveform == AL_RING_MODULATOR_SAWTOOTH)
-        mGetSamples = ModulateSaw;
+        mGetSamples = Modulate<Saw>;
     else /*if(Slot->Params.EffectProps.Modulator.Waveform == AL_RING_MODULATOR_SQUARE)*/
-        mGetSamples = ModulateSquare;
+        mGetSamples = Modulate<Square>;
 
     f0norm = props->Modulator.HighPassCutoff / (ALfloat)device->Frequency;
     f0norm = clampf(f0norm, 1.0f/512.0f, 0.49f);

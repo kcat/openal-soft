@@ -39,13 +39,13 @@
 
 struct ALcompressorState final : public ALeffectState {
     /* Effect gains for each channel */
-    ALfloat Gain[MAX_EFFECT_CHANNELS][MAX_OUTPUT_CHANNELS];
+    ALfloat mGain[MAX_EFFECT_CHANNELS][MAX_OUTPUT_CHANNELS]{};
 
     /* Effect parameters */
-    ALboolean Enabled;
-    ALfloat AttackMult;
-    ALfloat ReleaseMult;
-    ALfloat EnvFollower;
+    ALboolean mEnabled{AL_TRUE};
+    ALfloat mAttackMult{1.0f};
+    ALfloat mReleaseMult{1.0f};
+    ALfloat mEnvFollower{1.0f};
 };
 
 static ALvoid ALcompressorState_Destruct(ALcompressorState *state);
@@ -62,11 +62,6 @@ static void ALcompressorState_Construct(ALcompressorState *state)
     new (state) ALcompressorState{};
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALcompressorState, ALeffectState, state);
-
-    state->Enabled = AL_TRUE;
-    state->AttackMult = 1.0f;
-    state->ReleaseMult = 1.0f;
-    state->EnvFollower = 1.0f;
 }
 
 static ALvoid ALcompressorState_Destruct(ALcompressorState *state)
@@ -86,8 +81,8 @@ static ALboolean ALcompressorState_deviceUpdate(ALcompressorState *state, ALCdev
     /* Calculate per-sample multipliers to attack and release at the desired
      * rates.
      */
-    state->AttackMult  = powf(AMP_ENVELOPE_MAX/AMP_ENVELOPE_MIN, 1.0f/attackCount);
-    state->ReleaseMult = powf(AMP_ENVELOPE_MIN/AMP_ENVELOPE_MAX, 1.0f/releaseCount);
+    state->mAttackMult  = powf(AMP_ENVELOPE_MAX/AMP_ENVELOPE_MIN, 1.0f/attackCount);
+    state->mReleaseMult = powf(AMP_ENVELOPE_MIN/AMP_ENVELOPE_MAX, 1.0f/releaseCount);
 
     return AL_TRUE;
 }
@@ -97,13 +92,13 @@ static ALvoid ALcompressorState_update(ALcompressorState *state, const ALCcontex
     const ALCdevice *device = context->Device;
     ALuint i;
 
-    state->Enabled = props->Compressor.OnOff;
+    state->mEnabled = props->Compressor.OnOff;
 
-    STATIC_CAST(ALeffectState,state)->OutBuffer = device->FOAOut.Buffer;
-    STATIC_CAST(ALeffectState,state)->OutChannels = device->FOAOut.NumChannels;
+    state->OutBuffer = device->FOAOut.Buffer;
+    state->OutChannels = device->FOAOut.NumChannels;
     for(i = 0;i < 4;i++)
         ComputePanGains(&device->FOAOut, aluMatrixf::Identity.m[i], slot->Params.Gain,
-                        state->Gain[i]);
+                        state->mGain[i]);
 }
 
 static ALvoid ALcompressorState_process(ALcompressorState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
@@ -115,10 +110,10 @@ static ALvoid ALcompressorState_process(ALcompressorState *state, ALsizei Sample
     {
         ALfloat gains[256];
         ALsizei td = mini(256, SamplesToDo-base);
-        ALfloat env = state->EnvFollower;
+        ALfloat env = state->mEnvFollower;
 
         /* Generate the per-sample gains from the signal envelope. */
-        if(state->Enabled)
+        if(state->mEnabled)
         {
             for(i = 0;i < td;++i)
             {
@@ -128,9 +123,9 @@ static ALvoid ALcompressorState_process(ALcompressorState *state, ALsizei Sample
                 ALfloat amplitude = clampf(fabsf(SamplesIn[0][base+i]),
                                            AMP_ENVELOPE_MIN, AMP_ENVELOPE_MAX);
                 if(amplitude > env)
-                    env = minf(env*state->AttackMult, amplitude);
+                    env = minf(env*state->mAttackMult, amplitude);
                 else if(amplitude < env)
-                    env = maxf(env*state->ReleaseMult, amplitude);
+                    env = maxf(env*state->mReleaseMult, amplitude);
 
                 /* Apply the reciprocal of the envelope to normalize the volume
                  * (compress the dynamic range).
@@ -148,21 +143,21 @@ static ALvoid ALcompressorState_process(ALcompressorState *state, ALsizei Sample
             {
                 ALfloat amplitude = 1.0f;
                 if(amplitude > env)
-                    env = minf(env*state->AttackMult, amplitude);
+                    env = minf(env*state->mAttackMult, amplitude);
                 else if(amplitude < env)
-                    env = maxf(env*state->ReleaseMult, amplitude);
+                    env = maxf(env*state->mReleaseMult, amplitude);
 
                 gains[i] = 1.0f / env;
             }
         }
-        state->EnvFollower = env;
+        state->mEnvFollower = env;
 
         /* Now compress the signal amplitude to output. */
         for(j = 0;j < MAX_EFFECT_CHANNELS;j++)
         {
             for(k = 0;k < NumChannels;k++)
             {
-                ALfloat gain = state->Gain[j][k];
+                ALfloat gain = state->mGain[j][k];
                 if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
                     continue;
 

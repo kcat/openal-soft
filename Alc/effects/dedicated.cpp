@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <cmath>
+#include <algorithm>
 
 #include "alMain.h"
 #include "alcontext.h"
@@ -31,8 +32,8 @@
 
 
 struct ALdedicatedState final : public ALeffectState {
-    ALfloat CurrentGains[MAX_OUTPUT_CHANNELS];
-    ALfloat TargetGains[MAX_OUTPUT_CHANNELS];
+    ALfloat mCurrentGains[MAX_OUTPUT_CHANNELS];
+    ALfloat mTargetGains[MAX_OUTPUT_CHANNELS];
 };
 
 static ALvoid ALdedicatedState_Destruct(ALdedicatedState *state);
@@ -59,9 +60,7 @@ static ALvoid ALdedicatedState_Destruct(ALdedicatedState *state)
 
 static ALboolean ALdedicatedState_deviceUpdate(ALdedicatedState *state, ALCdevice *UNUSED(device))
 {
-    ALsizei i;
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-        state->CurrentGains[i] = 0.0f;
+    std::fill(std::begin(state->mCurrentGains), std::end(state->mCurrentGains), 0.0f);
     return AL_TRUE;
 }
 
@@ -69,10 +68,8 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCcontext 
 {
     const ALCdevice *device = context->Device;
     ALfloat Gain;
-    ALsizei i;
 
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-        state->TargetGains[i] = 0.0f;
+    std::fill(std::begin(state->mTargetGains), std::end(state->mTargetGains), 0.0f);
 
     Gain = slot->Params.Gain * props->Dedicated.Gain;
     if(slot->Params.EffectType == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
@@ -80,38 +77,38 @@ static ALvoid ALdedicatedState_update(ALdedicatedState *state, const ALCcontext 
         int idx;
         if((idx=GetChannelIdxByName(&device->RealOut, LFE)) != -1)
         {
-            STATIC_CAST(ALeffectState,state)->OutBuffer = device->RealOut.Buffer;
-            STATIC_CAST(ALeffectState,state)->OutChannels = device->RealOut.NumChannels;
-            state->TargetGains[idx] = Gain;
+            state->OutBuffer = device->RealOut.Buffer;
+            state->OutChannels = device->RealOut.NumChannels;
+            state->mTargetGains[idx] = Gain;
         }
     }
     else if(slot->Params.EffectType == AL_EFFECT_DEDICATED_DIALOGUE)
     {
-        int idx;
         /* Dialog goes to the front-center speaker if it exists, otherwise it
          * plays from the front-center location. */
-        if((idx=GetChannelIdxByName(&device->RealOut, FrontCenter)) != -1)
+        int idx{GetChannelIdxByName(&device->RealOut, FrontCenter)};
+        if(idx != -1)
         {
-            STATIC_CAST(ALeffectState,state)->OutBuffer = device->RealOut.Buffer;
-            STATIC_CAST(ALeffectState,state)->OutChannels = device->RealOut.NumChannels;
-            state->TargetGains[idx] = Gain;
+            state->OutBuffer = device->RealOut.Buffer;
+            state->OutChannels = device->RealOut.NumChannels;
+            state->mTargetGains[idx] = Gain;
         }
         else
         {
             ALfloat coeffs[MAX_AMBI_COEFFS];
             CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
 
-            STATIC_CAST(ALeffectState,state)->OutBuffer = device->Dry.Buffer;
-            STATIC_CAST(ALeffectState,state)->OutChannels = device->Dry.NumChannels;
-            ComputePanGains(&device->Dry, coeffs, Gain, state->TargetGains);
+            state->OutBuffer = device->Dry.Buffer;
+            state->OutChannels = device->Dry.NumChannels;
+            ComputePanGains(&device->Dry, coeffs, Gain, state->mTargetGains);
         }
     }
 }
 
 static ALvoid ALdedicatedState_process(ALdedicatedState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    MixSamples(SamplesIn[0], NumChannels, SamplesOut, state->CurrentGains,
-               state->TargetGains, SamplesToDo, 0, SamplesToDo);
+    MixSamples(SamplesIn[0], NumChannels, SamplesOut, state->mCurrentGains,
+               state->mTargetGains, SamplesToDo, 0, SamplesToDo);
 }
 
 

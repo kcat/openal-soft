@@ -33,15 +33,15 @@
 
 struct ALdistortionState final : public ALeffectState {
     /* Effect gains for each channel */
-    ALfloat Gain[MAX_OUTPUT_CHANNELS];
+    ALfloat mGain[MAX_OUTPUT_CHANNELS]{};
 
     /* Effect parameters */
-    BiquadFilter lowpass;
-    BiquadFilter bandpass;
-    ALfloat attenuation;
-    ALfloat edge_coeff;
+    BiquadFilter mLowpass;
+    BiquadFilter mBandpass;
+    ALfloat mAttenuation{};
+    ALfloat mEdgeCoeff{};
 
-    ALfloat Buffer[2][BUFFERSIZE];
+    ALfloat Buffer[2][BUFFERSIZE]{};
 };
 
 static ALvoid ALdistortionState_Destruct(ALdistortionState *state);
@@ -68,8 +68,8 @@ static ALvoid ALdistortionState_Destruct(ALdistortionState *state)
 
 static ALboolean ALdistortionState_deviceUpdate(ALdistortionState *state, ALCdevice *UNUSED(device))
 {
-    BiquadFilter_clear(&state->lowpass);
-    BiquadFilter_clear(&state->bandpass);
+    BiquadFilter_clear(&state->mLowpass);
+    BiquadFilter_clear(&state->mBandpass);
     return AL_TRUE;
 }
 
@@ -85,7 +85,7 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCcontex
     /* Store waveshaper edge settings. */
     edge = sinf(props->Distortion.Edge * (F_PI_2));
     edge = minf(edge, 0.99f);
-    state->edge_coeff = 2.0f * edge / (1.0f-edge);
+    state->mEdgeCoeff = 2.0f * edge / (1.0f-edge);
 
     cutoff = props->Distortion.LowpassCutoff;
     /* Bandwidth value is constant in octaves. */
@@ -93,25 +93,25 @@ static ALvoid ALdistortionState_update(ALdistortionState *state, const ALCcontex
     /* Multiply sampling frequency by the amount of oversampling done during
      * processing.
      */
-    BiquadFilter_setParams(&state->lowpass, BiquadType::LowPass, 1.0f,
+    BiquadFilter_setParams(&state->mLowpass, BiquadType::LowPass, 1.0f,
         cutoff / (frequency*4.0f), calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
     );
 
     cutoff = props->Distortion.EQCenter;
     /* Convert bandwidth in Hz to octaves. */
     bandwidth = props->Distortion.EQBandwidth / (cutoff * 0.67f);
-    BiquadFilter_setParams(&state->bandpass, BiquadType::BandPass, 1.0f,
+    BiquadFilter_setParams(&state->mBandpass, BiquadType::BandPass, 1.0f,
         cutoff / (frequency*4.0f), calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
     );
 
     CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
-    ComputePanGains(&device->Dry, coeffs, slot->Params.Gain*props->Distortion.Gain, state->Gain);
+    ComputePanGains(&device->Dry, coeffs, slot->Params.Gain*props->Distortion.Gain, state->mGain);
 }
 
 static ALvoid ALdistortionState_process(ALdistortionState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
     ALfloat (*RESTRICT buffer)[BUFFERSIZE] = state->Buffer;
-    const ALfloat fc = state->edge_coeff;
+    const ALfloat fc = state->mEdgeCoeff;
     ALsizei base;
     ALsizei i, k;
 
@@ -135,7 +135,7 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALsizei Sample
          * (which is fortunately first step of distortion). So combine three
          * operations into the one.
          */
-        BiquadFilter_process(&state->lowpass, buffer[1], buffer[0], todo);
+        BiquadFilter_process(&state->mLowpass, buffer[1], buffer[0], todo);
 
         /* Second step, do distortion using waveshaper function to emulate
          * signal processing during tube overdriving. Three steps of
@@ -154,7 +154,7 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALsizei Sample
         }
 
         /* Third step, do bandpass filtering of distorted signal. */
-        BiquadFilter_process(&state->bandpass, buffer[1], buffer[0], todo);
+        BiquadFilter_process(&state->mBandpass, buffer[1], buffer[0], todo);
 
         todo >>= 2;
         for(k = 0;k < NumChannels;k++)
@@ -162,7 +162,7 @@ static ALvoid ALdistortionState_process(ALdistortionState *state, ALsizei Sample
             /* Fourth step, final, do attenuation and perform decimation,
              * storing only one sample out of four.
              */
-            ALfloat gain = state->Gain[k];
+            ALfloat gain = state->mGain[k];
             if(!(fabsf(gain) > GAIN_SILENCE_THRESHOLD))
                 continue;
 

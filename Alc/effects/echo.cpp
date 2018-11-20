@@ -23,6 +23,8 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include <algorithm>
+
 #include "alMain.h"
 #include "alcontext.h"
 #include "alFilter.h"
@@ -33,25 +35,25 @@
 
 
 struct ALechoState final : public ALeffectState {
-    ALfloat *SampleBuffer;
-    ALsizei BufferLength;
+    ALfloat *mSampleBuffer{nullptr};
+    ALsizei mBufferLength{0};
 
     // The echo is two tap. The delay is the number of samples from before the
     // current offset
     struct {
-        ALsizei delay;
-    } Tap[2];
-    ALsizei Offset;
+        ALsizei delay{0};
+    } mTap[2];
+    ALsizei mOffset{0};
 
     /* The panning gains for the two taps */
     struct {
-        ALfloat Current[MAX_OUTPUT_CHANNELS];
-        ALfloat Target[MAX_OUTPUT_CHANNELS];
-    } Gains[2];
+        ALfloat Current[MAX_OUTPUT_CHANNELS]{};
+        ALfloat Target[MAX_OUTPUT_CHANNELS]{};
+    } mGains[2];
 
-    ALfloat FeedGain;
+    ALfloat mFeedGain{0.0f};
 
-    BiquadFilter Filter;
+    BiquadFilter mFilter;
 };
 
 static ALvoid ALechoState_Destruct(ALechoState *state);
@@ -68,21 +70,12 @@ static void ALechoState_Construct(ALechoState *state)
     new (state) ALechoState{};
     ALeffectState_Construct(STATIC_CAST(ALeffectState, state));
     SET_VTABLE2(ALechoState, ALeffectState, state);
-
-    state->BufferLength = 0;
-    state->SampleBuffer = NULL;
-
-    state->Tap[0].delay = 0;
-    state->Tap[1].delay = 0;
-    state->Offset = 0;
-
-    BiquadFilter_clear(&state->Filter);
 }
 
 static ALvoid ALechoState_Destruct(ALechoState *state)
 {
-    al_free(state->SampleBuffer);
-    state->SampleBuffer = NULL;
+    al_free(state->mSampleBuffer);
+    state->mSampleBuffer = NULL;
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
     state->~ALechoState();
 }
@@ -98,18 +91,22 @@ static ALboolean ALechoState_deviceUpdate(ALechoState *state, ALCdevice *Device)
     maxlen = NextPowerOf2(maxlen);
     if(maxlen <= 0) return AL_FALSE;
 
-    if(maxlen != state->BufferLength)
+    if(maxlen != state->mBufferLength)
     {
         void *temp = al_calloc(16, maxlen * sizeof(ALfloat));
         if(!temp) return AL_FALSE;
 
-        al_free(state->SampleBuffer);
-        state->SampleBuffer = static_cast<float*>(temp);
-        state->BufferLength = maxlen;
+        al_free(state->mSampleBuffer);
+        state->mSampleBuffer = static_cast<float*>(temp);
+        state->mBufferLength = maxlen;
     }
 
-    memset(state->SampleBuffer, 0, state->BufferLength*sizeof(ALfloat));
-    memset(state->Gains, 0, sizeof(state->Gains));
+    std::fill_n(state->mSampleBuffer, state->mBufferLength, 0.0f);
+    for(auto &e : state->mGains)
+    {
+        std::fill(std::begin(e.Current), std::end(e.Current), 0.0f);
+        std::fill(std::begin(e.Target), std::end(e.Target), 0.0f);
+    }
 
     return AL_TRUE;
 }
@@ -121,9 +118,9 @@ static ALvoid ALechoState_update(ALechoState *state, const ALCcontext *context, 
     ALfloat coeffs[MAX_AMBI_COEFFS];
     ALfloat gainhf, lrpan, spread;
 
-    state->Tap[0].delay = maxi(float2int(props->Echo.Delay*frequency + 0.5f), 1);
-    state->Tap[1].delay = float2int(props->Echo.LRDelay*frequency + 0.5f);
-    state->Tap[1].delay += state->Tap[0].delay;
+    state->mTap[0].delay = maxi(float2int(props->Echo.Delay*frequency + 0.5f), 1);
+    state->mTap[1].delay = float2int(props->Echo.LRDelay*frequency + 0.5f);
+    state->mTap[1].delay += state->mTap[0].delay;
 
     spread = props->Echo.Spread;
     if(spread < 0.0f) lrpan = -1.0f;
@@ -133,35 +130,35 @@ static ALvoid ALechoState_update(ALechoState *state, const ALCcontext *context, 
      */
     spread = asinf(1.0f - fabsf(spread))*4.0f;
 
-    state->FeedGain = props->Echo.Feedback;
+    state->mFeedGain = props->Echo.Feedback;
 
     gainhf = maxf(1.0f - props->Echo.Damping, 0.0625f); /* Limit -24dB */
-    BiquadFilter_setParams(&state->Filter, BiquadType::HighShelf,
+    BiquadFilter_setParams(&state->mFilter, BiquadType::HighShelf,
         gainhf, LOWPASSFREQREF/frequency, calc_rcpQ_from_slope(gainhf, 1.0f)
     );
 
     /* First tap panning */
     CalcAngleCoeffs(-F_PI_2*lrpan, 0.0f, spread, coeffs);
-    ComputePanGains(&device->Dry, coeffs, slot->Params.Gain, state->Gains[0].Target);
+    ComputePanGains(&device->Dry, coeffs, slot->Params.Gain, state->mGains[0].Target);
 
     /* Second tap panning */
     CalcAngleCoeffs( F_PI_2*lrpan, 0.0f, spread, coeffs);
-    ComputePanGains(&device->Dry, coeffs, slot->Params.Gain, state->Gains[1].Target);
+    ComputePanGains(&device->Dry, coeffs, slot->Params.Gain, state->mGains[1].Target);
 }
 
 static ALvoid ALechoState_process(ALechoState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    const ALsizei mask = state->BufferLength-1;
-    const ALsizei tap1 = state->Tap[0].delay;
-    const ALsizei tap2 = state->Tap[1].delay;
-    ALfloat *RESTRICT delaybuf = state->SampleBuffer;
-    ALsizei offset = state->Offset;
+    const ALsizei mask = state->mBufferLength-1;
+    const ALsizei tap1 = state->mTap[0].delay;
+    const ALsizei tap2 = state->mTap[1].delay;
+    ALfloat *RESTRICT delaybuf = state->mSampleBuffer;
+    ALsizei offset = state->mOffset;
     ALfloat z1, z2, in, out;
     ALsizei base;
     ALsizei c, i;
 
-    z1 = state->Filter.z1;
-    z2 = state->Filter.z2;
+    z1 = state->mFilter.z1;
+    z2 = state->mFilter.z2;
     for(base = 0;base < SamplesToDo;)
     {
         alignas(16) ALfloat temps[2][128];
@@ -181,24 +178,24 @@ static ALvoid ALechoState_process(ALechoState *state, ALsizei SamplesToDo, const
              * feedback attenuation.
              */
             in = temps[1][i];
-            out = in*state->Filter.b0 + z1;
-            z1 = in*state->Filter.b1 - out*state->Filter.a1 + z2;
-            z2 = in*state->Filter.b2 - out*state->Filter.a2;
+            out = in*state->mFilter.b0 + z1;
+            z1 = in*state->mFilter.b1 - out*state->mFilter.a1 + z2;
+            z2 = in*state->mFilter.b2 - out*state->mFilter.a2;
 
-            delaybuf[offset&mask] += out * state->FeedGain;
+            delaybuf[offset&mask] += out * state->mFeedGain;
             offset++;
         }
 
         for(c = 0;c < 2;c++)
-            MixSamples(temps[c], NumChannels, SamplesOut, state->Gains[c].Current,
-                       state->Gains[c].Target, SamplesToDo-base, base, td);
+            MixSamples(temps[c], NumChannels, SamplesOut, state->mGains[c].Current,
+                       state->mGains[c].Target, SamplesToDo-base, base, td);
 
         base += td;
     }
-    state->Filter.z1 = z1;
-    state->Filter.z2 = z2;
+    state->mFilter.z1 = z1;
+    state->mFilter.z2 = z2;
 
-    state->Offset = offset;
+    state->mOffset = offset;
 }
 
 

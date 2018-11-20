@@ -2255,7 +2255,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         if(context->DefaultSlot)
         {
-            ALeffectslot *slot = context->DefaultSlot;
+            ALeffectslot *slot = context->DefaultSlot.get();
             EffectState *state = slot->Effect.State;
 
             state->mOutBuffer = device->Dry.Buffer;
@@ -2497,6 +2497,11 @@ static ALCboolean VerifyDevice(ALCdevice **device)
 }
 
 
+ALCcontext_struct::ALCcontext_struct(ALCdevice *device)
+  : Device{device}
+{
+}
+
 /* InitContext
  *
  * Initializes context fields
@@ -2516,7 +2521,7 @@ static ALvoid InitContext(ALCcontext *Context)
         auxslots = static_cast<ALeffectslotArray*>(al_calloc(DEF_ALIGN,
             FAM_SIZE(struct ALeffectslotArray, slot, 1)));
         auxslots->count = 1;
-        auxslots->slot[0] = Context->DefaultSlot;
+        auxslots->slot[0] = Context->DefaultSlot.get();
     }
     else
     {
@@ -2584,10 +2589,8 @@ ALCcontext_struct::~ALCcontext_struct()
     }
     TRACE("Freed " SZFMT " context property object%s\n", count, (count==1)?"":"s");
 
-    delete DefaultSlot;
-    DefaultSlot = nullptr;
-
     al_free(ActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed));
+    DefaultSlot = nullptr;
 
     ReleaseALSources(this);
     std::for_each(SourceList.begin(), SourceList.end(),
@@ -3675,12 +3678,11 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
     if(DefaultEffect.type != AL_EFFECT_NULL && device->Type == Playback)
     {
-        ALContext->DefaultSlot = new ALeffectslot{};
-        if(InitEffectSlot(ALContext->DefaultSlot) == AL_NO_ERROR)
-            aluInitEffectPanning(ALContext->DefaultSlot);
+        ALContext->DefaultSlot.reset(new ALeffectslot{});
+        if(InitEffectSlot(ALContext->DefaultSlot.get()) == AL_NO_ERROR)
+            aluInitEffectPanning(ALContext->DefaultSlot.get());
         else
         {
-            delete ALContext->DefaultSlot;
             ALContext->DefaultSlot = nullptr;
             ERR("Failed to initialize the default effect slot\n");
         }
@@ -3713,8 +3715,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
     if(ALContext->DefaultSlot)
     {
-        if(InitializeEffect(ALContext, ALContext->DefaultSlot, &DefaultEffect) == AL_NO_ERROR)
-            UpdateEffectSlotProps(ALContext->DefaultSlot, ALContext);
+        if(InitializeEffect(ALContext, ALContext->DefaultSlot.get(), &DefaultEffect) == AL_NO_ERROR)
+            UpdateEffectSlotProps(ALContext->DefaultSlot.get(), ALContext);
         else
             ERR("Failed to initialize the default effect\n");
     }

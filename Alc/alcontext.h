@@ -1,6 +1,7 @@
 #ifndef ALCONTEXT_H
 #define ALCONTEXT_H
 
+#include <memory>
 #include <thread>
 
 #include "AL/al.h"
@@ -106,7 +107,7 @@ struct ALCcontext_struct {
     void *EventParam{nullptr};
 
     /* Default effect slot */
-    ALeffectslot *DefaultSlot{nullptr};
+    std::unique_ptr<ALeffectslot> DefaultSlot;
 
     ALCdevice *const Device;
     const ALCchar *ExtensionList{nullptr};
@@ -116,7 +117,7 @@ struct ALCcontext_struct {
     ALlistener Listener{};
 
 
-    ALCcontext_struct(ALCdevice *device) : Device{device} { }
+    ALCcontext_struct(ALCdevice *device);
     ALCcontext_struct(const ALCcontext_struct&) = delete;
     ALCcontext_struct& operator=(const ALCcontext_struct&) = delete;
     ~ALCcontext_struct();

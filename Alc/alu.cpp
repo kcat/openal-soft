@@ -1043,7 +1043,7 @@ void CalcNonAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *props, c
     {
         SendSlots[i] = props->Send[i].Slot;
         if(!SendSlots[i] && i == 0)
-            SendSlots[i] = ALContext->DefaultSlot;
+            SendSlots[i] = ALContext->DefaultSlot.get();
         if(!SendSlots[i] || SendSlots[i]->Params.EffectType == AL_EFFECT_NULL)
         {
             SendSlots[i] = NULL;
@@ -1117,7 +1117,7 @@ void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *props, cons
     {
         SendSlots[i] = props->Send[i].Slot;
         if(!SendSlots[i] && i == 0)
-            SendSlots[i] = ALContext->DefaultSlot;
+            SendSlots[i] = ALContext->DefaultSlot.get();
         if(!SendSlots[i] || SendSlots[i]->Params.EffectType == AL_EFFECT_NULL)
         {
             SendSlots[i] = NULL;

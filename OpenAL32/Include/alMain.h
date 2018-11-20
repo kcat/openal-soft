@@ -437,6 +437,26 @@ enum DevFmtChannels {
 };
 #define MAX_OUTPUT_CHANNELS  (16)
 
+/* DevFmtType traits, providing the type, etc given a DevFmtType. */
+template<DevFmtType T>
+struct DevFmtTypeTraits { };
+
+template<>
+struct DevFmtTypeTraits<DevFmtByte> { using Type = ALbyte; };
+template<>
+struct DevFmtTypeTraits<DevFmtUByte> { using Type = ALubyte; };
+template<>
+struct DevFmtTypeTraits<DevFmtShort> { using Type = ALshort; };
+template<>
+struct DevFmtTypeTraits<DevFmtUShort> { using Type = ALushort; };
+template<>
+struct DevFmtTypeTraits<DevFmtInt> { using Type = ALint; };
+template<>
+struct DevFmtTypeTraits<DevFmtUInt> { using Type = ALuint; };
+template<>
+struct DevFmtTypeTraits<DevFmtFloat> { using Type = ALfloat; };
+
+
 ALsizei BytesFromDevFmt(enum DevFmtType type);
 ALsizei ChannelsFromDevFmt(enum DevFmtChannels chans, ALsizei ambiorder);
 inline ALsizei FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType type, ALsizei ambiorder)

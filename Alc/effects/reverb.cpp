@@ -223,21 +223,21 @@ typedef struct DelayLineI {
     /* The delay lines use interleaved samples, with the lengths being powers
      * of 2 to allow the use of bit-masking instead of a modulus for wrapping.
      */
-    ALsizei  Mask;
-    ALfloat (*Line)[NUM_LINES];
+    ALsizei  Mask{0};
+    ALfloat (*Line)[NUM_LINES]{nullptr};
 } DelayLineI;
 
 typedef struct VecAllpass {
     DelayLineI Delay;
-    ALfloat Coeff;
-    ALsizei Offset[NUM_LINES][2];
+    ALfloat Coeff{0.0f};
+    ALsizei Offset[NUM_LINES][2]{};
 } VecAllpass;
 
 typedef struct T60Filter {
     /* Two filters are used to adjust the signal. One to control the low
      * frequencies, and one to control the high frequencies.
      */
-    ALfloat MidGain[2];
+    ALfloat MidGain[2]{0.0f, 0.0f};
     BiquadFilter HFFilter, LFFilter;
 } T60Filter;
 
@@ -251,23 +251,23 @@ typedef struct EarlyReflections {
      * reflections.
      */
     DelayLineI Delay;
-    ALsizei    Offset[NUM_LINES][2];
-    ALfloat    Coeff[NUM_LINES][2];
+    ALsizei    Offset[NUM_LINES][2]{};
+    ALfloat    Coeff[NUM_LINES][2]{};
 
     /* The gain for each output channel based on 3D panning. */
-    ALfloat CurrentGain[NUM_LINES][MAX_OUTPUT_CHANNELS];
-    ALfloat PanGain[NUM_LINES][MAX_OUTPUT_CHANNELS];
+    ALfloat CurrentGain[NUM_LINES][MAX_OUTPUT_CHANNELS]{};
+    ALfloat PanGain[NUM_LINES][MAX_OUTPUT_CHANNELS]{};
 } EarlyReflections;
 
 typedef struct LateReverb {
     /* A recursive delay line is used fill in the reverb tail. */
     DelayLineI Delay;
-    ALsizei    Offset[NUM_LINES][2];
+    ALsizei    Offset[NUM_LINES][2]{};
 
     /* Attenuation to compensate for the modal density and decay rate of the
      * late lines.
      */
-    ALfloat DensityGain[2];
+    ALfloat DensityGain[2]{0.0f, 0.0f};
 
     /* T60 decay filters are used to simulate absorption. */
     T60Filter T60[NUM_LINES];
@@ -276,8 +276,8 @@ typedef struct LateReverb {
     VecAllpass VecAp;
 
     /* The gain for each output channel based on 3D panning. */
-    ALfloat CurrentGain[NUM_LINES][MAX_OUTPUT_CHANNELS];
-    ALfloat PanGain[NUM_LINES][MAX_OUTPUT_CHANNELS];
+    ALfloat CurrentGain[NUM_LINES][MAX_OUTPUT_CHANNELS]{};
+    ALfloat PanGain[NUM_LINES][MAX_OUTPUT_CHANNELS]{};
 } LateReverb;
 
 struct ReverbState final : public EffectState {
@@ -290,9 +290,13 @@ struct ReverbState final : public EffectState {
         /* Calculated parameters which indicate if cross-fading is needed after
          * an update.
          */
-        ALfloat Density, Diffusion;
-        ALfloat DecayTime, HFDecayTime, LFDecayTime;
-        ALfloat HFReference, LFReference;
+        ALfloat Density{AL_EAXREVERB_DEFAULT_DENSITY};
+        ALfloat Diffusion{AL_EAXREVERB_DEFAULT_DIFFUSION};
+        ALfloat DecayTime{AL_EAXREVERB_DEFAULT_DECAY_TIME};
+        ALfloat HFDecayTime{AL_EAXREVERB_DEFAULT_DECAY_HFRATIO * AL_EAXREVERB_DEFAULT_DECAY_TIME};
+        ALfloat LFDecayTime{AL_EAXREVERB_DEFAULT_DECAY_LFRATIO * AL_EAXREVERB_DEFAULT_DECAY_TIME};
+        ALfloat HFReference{AL_EAXREVERB_DEFAULT_HFREFERENCE};
+        ALfloat LFReference{AL_EAXREVERB_DEFAULT_LFREFERENCE};
     } mParams;
 
     /* Master effect filters */
@@ -305,36 +309,34 @@ struct ReverbState final : public EffectState {
     DelayLineI mDelay;
 
     /* Tap points for early reflection delay. */
-    ALsizei mEarlyDelayTap[NUM_LINES][2];
-    ALfloat mEarlyDelayCoeff[NUM_LINES][2];
+    ALsizei mEarlyDelayTap[NUM_LINES][2]{};
+    ALfloat mEarlyDelayCoeff[NUM_LINES][2]{};
 
     /* Tap points for late reverb feed and delay. */
-    ALsizei mLateFeedTap;
-    ALsizei mLateDelayTap[NUM_LINES][2];
+    ALsizei mLateFeedTap{};
+    ALsizei mLateDelayTap[NUM_LINES][2]{};
 
     /* Coefficients for the all-pass and line scattering matrices. */
-    ALfloat mMixX;
-    ALfloat mMixY;
+    ALfloat mMixX{0.0f};
+    ALfloat mMixY{0.0f};
 
     EarlyReflections mEarly;
 
     LateReverb mLate;
 
     /* Indicates the cross-fade point for delay line reads [0,FADE_SAMPLES]. */
-    ALsizei mFadeCount;
+    ALsizei mFadeCount{0};
 
     /* Maximum number of samples to process at once. */
-    ALsizei mMaxUpdate[2];
+    ALsizei mMaxUpdate[2]{MAX_UPDATE_SAMPLES, MAX_UPDATE_SAMPLES};
 
     /* The current write offset for all delay lines. */
-    ALsizei mOffset;
+    ALsizei mOffset{0};
 
     /* Temporary storage used when processing. */
-    alignas(16) ALfloat mTempSamples[NUM_LINES][MAX_UPDATE_SAMPLES];
-    alignas(16) ALfloat mMixBuffer[NUM_LINES][MAX_UPDATE_SAMPLES];
+    alignas(16) ALfloat mTempSamples[NUM_LINES][MAX_UPDATE_SAMPLES]{};
+    alignas(16) ALfloat mMixBuffer[NUM_LINES][MAX_UPDATE_SAMPLES]{};
 
-
-    ReverbState();
 
     ALboolean deviceUpdate(ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
@@ -342,97 +344,6 @@ struct ReverbState final : public EffectState {
 
     DEF_NEWDEL(ReverbState)
 };
-
-ReverbState::ReverbState()
-{
-    mParams.Density = AL_EAXREVERB_DEFAULT_DENSITY;
-    mParams.Diffusion = AL_EAXREVERB_DEFAULT_DIFFUSION;
-    mParams.DecayTime = AL_EAXREVERB_DEFAULT_DECAY_TIME;
-    mParams.HFDecayTime = AL_EAXREVERB_DEFAULT_DECAY_TIME*AL_EAXREVERB_DEFAULT_DECAY_HFRATIO;
-    mParams.LFDecayTime = AL_EAXREVERB_DEFAULT_DECAY_TIME*AL_EAXREVERB_DEFAULT_DECAY_LFRATIO;
-    mParams.HFReference = AL_EAXREVERB_DEFAULT_HFREFERENCE;
-    mParams.LFReference = AL_EAXREVERB_DEFAULT_LFREFERENCE;
-
-    for(ALsizei i{0};i < NUM_LINES;i++)
-    {
-        BiquadFilter_clear(&mFilter[i].Lp);
-        BiquadFilter_clear(&mFilter[i].Hp);
-    }
-
-    mDelay.Mask = 0;
-    mDelay.Line = NULL;
-
-    for(ALsizei i{0};i < NUM_LINES;i++)
-    {
-        mEarlyDelayTap[i][0] = 0;
-        mEarlyDelayTap[i][1] = 0;
-        mEarlyDelayCoeff[i][0] = 0.0f;
-        mEarlyDelayCoeff[i][1] = 0.0f;
-    }
-
-    mLateFeedTap = 0;
-
-    for(ALsizei i{0};i < NUM_LINES;i++)
-    {
-        mLateDelayTap[i][0] = 0;
-        mLateDelayTap[i][1] = 0;
-    }
-
-    mMixX = 0.0f;
-    mMixY = 0.0f;
-
-    mEarly.VecAp.Delay.Mask = 0;
-    mEarly.VecAp.Delay.Line = NULL;
-    mEarly.VecAp.Coeff = 0.0f;
-    mEarly.Delay.Mask = 0;
-    mEarly.Delay.Line = NULL;
-    for(ALsizei i{0};i < NUM_LINES;i++)
-    {
-        mEarly.VecAp.Offset[i][0] = 0;
-        mEarly.VecAp.Offset[i][1] = 0;
-        mEarly.Offset[i][0] = 0;
-        mEarly.Offset[i][1] = 0;
-        mEarly.Coeff[i][0] = 0.0f;
-        mEarly.Coeff[i][1] = 0.0f;
-    }
-
-    mLate.DensityGain[0] = 0.0f;
-    mLate.DensityGain[1] = 0.0f;
-    mLate.Delay.Mask = 0;
-    mLate.Delay.Line = NULL;
-    mLate.VecAp.Delay.Mask = 0;
-    mLate.VecAp.Delay.Line = NULL;
-    mLate.VecAp.Coeff = 0.0f;
-    for(ALsizei i{0};i < NUM_LINES;i++)
-    {
-        mLate.Offset[i][0] = 0;
-        mLate.Offset[i][1] = 0;
-
-        mLate.VecAp.Offset[i][0] = 0;
-        mLate.VecAp.Offset[i][1] = 0;
-
-        mLate.T60[i].MidGain[0] = 0.0f;
-        mLate.T60[i].MidGain[1] = 0.0f;
-        BiquadFilter_clear(&mLate.T60[i].HFFilter);
-        BiquadFilter_clear(&mLate.T60[i].LFFilter);
-    }
-
-    for(ALsizei i{0};i < NUM_LINES;i++)
-    {
-        for(ALsizei j{0};j < MAX_OUTPUT_CHANNELS;j++)
-        {
-            mEarly.CurrentGain[i][j] = 0.0f;
-            mEarly.PanGain[i][j] = 0.0f;
-            mLate.CurrentGain[i][j] = 0.0f;
-            mLate.PanGain[i][j] = 0.0f;
-        }
-    }
-
-    mFadeCount = 0;
-    mMaxUpdate[0] = MAX_UPDATE_SAMPLES;
-    mMaxUpdate[1] = MAX_UPDATE_SAMPLES;
-    mOffset = 0;
-}
 
 /**************************************
  *  Device Update                     *

@@ -31,6 +31,7 @@
 #include "alError.h"
 #include "alu.h"
 #include "filters/defs.h"
+#include "vector.h"
 
 
 static_assert(AL_CHORUS_WAVEFORM_SINUSOID == AL_FLANGER_WAVEFORM_SINUSOID, "Chorus/Flanger waveform value mismatch");
@@ -42,8 +43,7 @@ enum WaveForm {
 };
 
 struct ALchorusState final : public ALeffectState {
-    ALfloat *mSampleBuffer{nullptr};
-    ALsizei mBufferLength{0};
+    al::vector<ALfloat,16> mSampleBuffer;
     ALsizei mOffset{0};
 
     ALsizei mLfoOffset{0};
@@ -82,9 +82,6 @@ static void ALchorusState_Construct(ALchorusState *state)
 
 static ALvoid ALchorusState_Destruct(ALchorusState *state)
 {
-    al_free(state->mSampleBuffer);
-    state->mSampleBuffer = NULL;
-
     ALeffectState_Destruct(STATIC_CAST(ALeffectState,state));
     state->~ALchorusState();
 }
@@ -92,22 +89,18 @@ static ALvoid ALchorusState_Destruct(ALchorusState *state)
 static ALboolean ALchorusState_deviceUpdate(ALchorusState *state, ALCdevice *Device)
 {
     const ALfloat max_delay = maxf(AL_CHORUS_MAX_DELAY, AL_FLANGER_MAX_DELAY);
-    ALsizei maxlen;
+    size_t maxlen;
 
     maxlen = NextPowerOf2(float2int(max_delay*2.0f*Device->Frequency) + 1u);
     if(maxlen <= 0) return AL_FALSE;
 
-    if(maxlen != state->mBufferLength)
+    if(maxlen != state->mSampleBuffer.size())
     {
-        void *temp = al_calloc(16, maxlen * sizeof(ALfloat));
-        if(!temp) return AL_FALSE;
-
-        al_free(state->mSampleBuffer);
-        state->mSampleBuffer = static_cast<float*>(temp);
-        state->mBufferLength = maxlen;
+        state->mSampleBuffer.resize(maxlen);
+        state->mSampleBuffer.shrink_to_fit();
     }
 
-    std::fill_n(state->mSampleBuffer, state->mBufferLength, 0.0f);
+    std::fill(state->mSampleBuffer.begin(), state->mSampleBuffer.end(), 0.0f);
     for(auto &e : state->mGains)
     {
         std::fill(std::begin(e.Current), std::end(e.Current), 0.0f);
@@ -214,10 +207,10 @@ static void GetSinusoidDelays(ALint *RESTRICT delays, ALsizei offset, const ALsi
 
 static ALvoid ALchorusState_process(ALchorusState *state, ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    const ALsizei bufmask = state->mBufferLength-1;
+    const ALsizei bufmask = state->mSampleBuffer.size()-1;
     const ALfloat feedback = state->mFeedback;
     const ALsizei avgdelay = (state->mDelay + (FRACTIONONE>>1)) >> FRACTIONBITS;
-    ALfloat *RESTRICT delaybuf = state->mSampleBuffer;
+    ALfloat *RESTRICT delaybuf = state->mSampleBuffer.data();
     ALsizei offset = state->mOffset;
     ALsizei i, c;
     ALsizei base;

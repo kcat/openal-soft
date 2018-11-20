@@ -1002,7 +1002,7 @@ int AudioState::handler()
                                      ALC_DEVICE_CLOCK_SOFT, 1, &devtime);
                 auto device_time = nanoseconds{devtime};
 
-                mDeviceStartTime = device_time - mCurrentPts;
+                mDeviceStartTime = device_time - mCurrentPts + AudioBufferTotalTime;
             }
             continue;
         }

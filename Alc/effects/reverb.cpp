@@ -535,9 +535,10 @@ static ALboolean AllocLines(const ALuint frequency, ReverbState *State)
     totalSamples += CalcLineLength(length, totalSamples, frequency, 0,
                                    &State->mLate.Delay);
 
+    totalSamples *= NUM_LINES;
     if(totalSamples != State->mSampleBuffer.size())
     {
-        State->mSampleBuffer.resize(sizeof(ALfloat[NUM_LINES]) * totalSamples);
+        State->mSampleBuffer.resize(totalSamples);
         State->mSampleBuffer.shrink_to_fit();
     }
 

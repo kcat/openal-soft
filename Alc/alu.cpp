@@ -413,7 +413,7 @@ static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool f
 
         state = props->State;
 
-        if(state == slot->Params.EffectState)
+        if(state == slot->Params.mEffectState)
         {
             /* If the effect state is the same as current, we can decrement its
              * count safely to remove it from the update object (it can't reach
@@ -428,9 +428,9 @@ static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool f
              * event.
              */
             AsyncEvent evt = ASYNC_EVENT(EventType_ReleaseEffectState);
-            evt.u.mEffectState = slot->Params.EffectState;
+            evt.u.mEffectState = slot->Params.mEffectState;
 
-            slot->Params.EffectState = state;
+            slot->Params.mEffectState = state;
             props->State = NULL;
 
             if(LIKELY(ll_ringbuffer_write(context->AsyncEvents, &evt, 1) != 0))
@@ -449,7 +449,7 @@ static bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool f
         AtomicReplaceHead(context->FreeEffectslotProps, props);
     }
     else
-        state = slot->Params.EffectState;
+        state = slot->Params.mEffectState;
 
     state->update(context, slot, &slot->Params.EffectProps);
     return true;
@@ -1749,7 +1749,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
             for(i = 0;i < auxslots->count;i++)
             {
                 const ALeffectslot *slot = auxslots->slot[i];
-                EffectState *state = slot->Params.EffectState;
+                EffectState *state = slot->Params.mEffectState;
                 state->process(SamplesToDo, slot->WetBuffer, state->mOutBuffer,
                                state->mOutChannels);
             }

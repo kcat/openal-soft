@@ -81,7 +81,7 @@ struct ALeffectslot {
 
         ALenum EffectType{AL_EFFECT_NULL};
         ALeffectProps EffectProps{};
-        EffectState *EffectState{nullptr};
+        EffectState *mEffectState{nullptr};
 
         ALfloat RoomRolloff{0.0f}; /* Added to the source's room rolloff, not multiplied. */
         ALfloat DecayTime{0.0f};

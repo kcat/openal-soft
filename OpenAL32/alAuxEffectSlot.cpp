@@ -650,7 +650,7 @@ ALenum InitEffectSlot(ALeffectslot *slot)
     if(!slot->Effect.State) return AL_OUT_OF_MEMORY;
 
     slot->Effect.State->IncRef();
-    slot->Params.EffectState = slot->Effect.State;
+    slot->Params.mEffectState = slot->Effect.State;
     return AL_NO_ERROR;
 }
 
@@ -666,8 +666,8 @@ ALeffectslot::~ALeffectslot()
 
     if(Effect.State)
         Effect.State->DecRef();
-    if(Params.EffectState)
-        Params.EffectState->DecRef();
+    if(Params.mEffectState)
+        Params.mEffectState->DecRef();
 }
 
 void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context)

@@ -47,7 +47,7 @@ struct SourceSubList {
 /* Effect slots are rather large, and apps aren't likely to have more than one
  * or two (let alone 64), so hold them individually.
  */
-using ALeffectslotPtr = struct ALeffectslot*;
+using ALeffectslotPtr = std::unique_ptr<ALeffectslot>;
 
 struct ALCcontext_struct {
     RefCount ref{1u};

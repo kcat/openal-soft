@@ -105,7 +105,7 @@ static inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id)
     --id;
     if(UNLIKELY(id >= context->EffectSlotList.size()))
         return nullptr;
-    return context->EffectSlotList[id];
+    return context->EffectSlotList[id].get();
 }
 
 

@@ -2277,7 +2277,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             if(state->deviceUpdate(device) == AL_FALSE)
                 update_failed = AL_TRUE;
             else
-                UpdateEffectSlotProps(slot, context);
+                UpdateEffectSlotProps(slot.get(), context);
         }
         almtx_unlock(&context->EffectSlotLock);
 

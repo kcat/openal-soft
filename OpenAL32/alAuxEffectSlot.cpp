@@ -46,7 +46,7 @@ inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id) noexcept
     --id;
     if(UNLIKELY(id >= context->EffectSlotList.size()))
         return nullptr;
-    return context->EffectSlotList[id];
+    return context->EffectSlotList[id].get();
 }
 
 inline ALeffect *LookupEffect(ALCdevice *device, ALuint id) noexcept
@@ -211,23 +211,22 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
             iter = context->EffectSlotList.end() - 1;
         }
 
-        auto slot = new ALeffectslot{};
-        ALenum err{InitEffectSlot(slot)};
+        *iter = std::unique_ptr<ALeffectslot>(new ALeffectslot{});
+        ALenum err{InitEffectSlot(iter->get())};
         if(err != AL_NO_ERROR)
         {
-            delete slot;
+            *iter = nullptr;
             slotlock.unlock();
 
             alDeleteAuxiliaryEffectSlots(cur, effectslots);
             alSetError(context.get(), err, "Effect slot object allocation failed");
             return;
         }
-        aluInitEffectPanning(slot);
+        aluInitEffectPanning(iter->get());
 
-        slot->id = std::distance(context->EffectSlotList.begin(), iter) + 1;
-        *iter = slot;
-
-        effectslots[cur] = slot->id;
+        ALuint id = std::distance(context->EffectSlotList.begin(), iter) + 1;
+        (*iter)->id = id;
+        effectslots[cur] = id;
     }
     AddActiveEffectSlots(effectslots, n, context.get());
 }
@@ -266,14 +265,8 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *
     // All effectslots are valid, remove and delete them
     RemoveActiveEffectSlots(effectslots, n, context.get());
     std::for_each(effectslots, effectslots_end,
-        [&context](ALuint id) -> void
-        {
-            ALeffectslot *slot{LookupEffectSlot(context.get(), id)};
-            if(!slot) return;
-
-            context->EffectSlotList[id-1] = nullptr;
-            delete slot;
-        }
+        [&context](ALuint id) noexcept -> void
+        { context->EffectSlotList[id-1] = nullptr; }
     );
 }
 
@@ -669,11 +662,11 @@ ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *context)
     size_t leftover = 0;
     for(auto &entry : context->EffectSlotList)
     {
-        if(!entry) continue;
-        delete entry;
-        entry = nullptr;
-
-        ++leftover;
+        if(entry)
+        {
+            entry = nullptr;
+            ++leftover;
+        }
     }
     if(leftover > 0)
         WARN("(%p) Deleted " SZFMT " AuxiliaryEffectSlot%s\n", context, leftover, (leftover==1)?"":"s");

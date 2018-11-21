@@ -2241,7 +2241,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
      * allocated with the appropriate size.
      */
     update_failed = AL_FALSE;
-    START_MIXER_MODE();
+    FPUCtl mixer_mode{};
     context = device->ContextList.load();
     while(context)
     {
@@ -2354,7 +2354,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         context = context->next.load(std::memory_order_relaxed);
     }
-    END_MIXER_MODE();
+    mixer_mode.leave();
     if(update_failed)
         return ALC_INVALID_DEVICE;
 

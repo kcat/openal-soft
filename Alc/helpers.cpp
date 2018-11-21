@@ -260,13 +260,13 @@ void FillCPUCaps(int capfilter)
 }
 
 
-void SetMixerFPUMode(FPUCtl *ctl)
+FPUCtl::FPUCtl() noexcept
 {
 #if defined(__GNUC__) && defined(HAVE_SSE)
     if((CPUCapFlags&CPU_CAP_SSE))
     {
-        __asm__ __volatile__("stmxcsr %0" : "=m" (*&ctl->sse_state));
-        unsigned int sseState = ctl->sse_state;
+        __asm__ __volatile__("stmxcsr %0" : "=m" (*&this->sse_state));
+        unsigned int sseState = this->sse_state;
         sseState |= 0x8000; /* set flush-to-zero */
         if((CPUCapFlags&CPU_CAP_SSE2))
             sseState |= 0x0040; /* set denormals-are-zero */
@@ -275,32 +275,37 @@ void SetMixerFPUMode(FPUCtl *ctl)
 
 #elif defined(HAVE___CONTROL87_2)
 
-    __control87_2(0, 0, &ctl->state, &ctl->sse_state);
+    __control87_2(0, 0, &this->state, &this->sse_state);
     _control87(_DN_FLUSH, _MCW_DN);
 
 #elif defined(HAVE__CONTROLFP)
 
-    ctl->state = _controlfp(0, 0);
+    this->state = _controlfp(0, 0);
     _controlfp(_DN_FLUSH, _MCW_DN);
 #endif
+
+    this->in_mode = true;
 }
 
-void RestoreFPUMode(const FPUCtl *ctl)
+void FPUCtl::leave() noexcept
 {
+    if(!this->in_mode) return;
+
 #if defined(__GNUC__) && defined(HAVE_SSE)
     if((CPUCapFlags&CPU_CAP_SSE))
-        __asm__ __volatile__("ldmxcsr %0" : : "m" (*&ctl->sse_state));
+        __asm__ __volatile__("ldmxcsr %0" : : "m" (*&this->sse_state));
 
 #elif defined(HAVE___CONTROL87_2)
 
     unsigned int mode;
-    __control87_2(ctl->state, _MCW_DN, &mode, nullptr);
-    __control87_2(ctl->sse_state, _MCW_DN, nullptr, &mode);
+    __control87_2(this->state, _MCW_DN, &mode, nullptr);
+    __control87_2(this->sse_state, _MCW_DN, nullptr, &mode);
 
 #elif defined(HAVE__CONTROLFP)
 
-    _controlfp(ctl->state, _MCW_DN);
+    _controlfp(this->state, _MCW_DN);
 #endif
+    this->in_mode = false;
 }
 
 

@@ -556,11 +556,34 @@ typedef struct EnumeratedHrtf {
 /* Maximum delay in samples for speaker distance compensation. */
 #define MAX_DELAY_LENGTH 1024
 
-typedef struct DistanceComp {
-    ALfloat Gain{1.0f};
-    ALsizei Length{0}; /* Valid range is [0...MAX_DELAY_LENGTH). */
-    ALfloat *Buffer{nullptr};
-} DistanceComp;
+class DistanceComp {
+    struct DistData {
+        ALfloat Gain{1.0f};
+        ALsizei Length{0}; /* Valid range is [0...MAX_DELAY_LENGTH). */
+        ALfloat *Buffer{nullptr};
+    } mChannel[MAX_OUTPUT_CHANNELS];
+    al::vector<ALfloat,16> mSamples;
+
+public:
+    void resize(size_t amt) { mSamples.resize(amt); }
+    void shrink_to_fit() { mSamples.shrink_to_fit(); }
+    void clear() noexcept
+    {
+        for(auto &chan : mChannel)
+        {
+            chan.Gain = 1.0f;
+            chan.Length = 0;
+            chan.Buffer = nullptr;
+        }
+        mSamples.clear();
+    }
+
+    ALfloat *data() noexcept { return mSamples.data(); }
+    const ALfloat *data() const noexcept { return mSamples.data(); }
+
+    DistData& operator[](size_t o) noexcept { return mChannel[o]; }
+    const DistData& operator[](size_t o) const noexcept { return mChannel[o]; }
+};
 
 /* Size for temporary storage of buffer data, in ALfloats. Larger values need
  * more memory, while smaller values may need more iterations. The value needs
@@ -695,7 +718,7 @@ struct ALCdevice_struct {
     ALfloat AvgSpeakerDist{0.0f};
 
     /* Delay buffers used to compensate for speaker distances. */
-    DistanceComp ChannelDelay[MAX_OUTPUT_CHANNELS];
+    DistanceComp ChannelDelay;
 
     /* Dithering control. */
     ALfloat DitherDepth{0.0f};

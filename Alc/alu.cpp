@@ -26,6 +26,8 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include <algorithm>
+
 #include "alMain.h"
 #include "alcontext.h"
 #include "alSource.h"
@@ -1568,12 +1570,10 @@ void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*RESTRICT Buffer)[BUFFER
     }
 }
 
-void ApplyDistanceComp(ALfloat (*RESTRICT Samples)[BUFFERSIZE], DistanceComp *distcomp,
+void ApplyDistanceComp(ALfloat (*RESTRICT Samples)[BUFFERSIZE], const DistanceComp &distcomp,
                        ALfloat *RESTRICT Values, ALsizei SamplesToDo, ALsizei numchans)
 {
-    ALsizei i, c;
-
-    for(c = 0;c < numchans;c++)
+    for(ALsizei c{0};c < numchans;c++)
     {
         ALfloat *RESTRICT inout = Samples[c];
         const ALfloat gain = distcomp[c].Gain;
@@ -1583,30 +1583,29 @@ void ApplyDistanceComp(ALfloat (*RESTRICT Samples)[BUFFERSIZE], DistanceComp *di
         if(base == 0)
         {
             if(gain < 1.0f)
-            {
-                for(i = 0;i < SamplesToDo;i++)
-                    inout[i] *= gain;
-            }
+                std::for_each(inout, inout+SamplesToDo,
+                    [gain](ALfloat &in) noexcept -> void
+                    { in *= gain; }
+                );
             continue;
         }
 
         if(LIKELY(SamplesToDo >= base))
         {
-            for(i = 0;i < base;i++)
-                Values[i] = distbuf[i];
-            for(;i < SamplesToDo;i++)
-                Values[i] = inout[i-base];
-            memcpy(distbuf, &inout[SamplesToDo-base], base*sizeof(ALfloat));
+            auto out = std::copy_n(distbuf, base, Values);
+            std::copy_n(inout, SamplesToDo-base, out);
+            std::copy_n(inout+SamplesToDo-base, base, distbuf);
         }
         else
         {
-            for(i = 0;i < SamplesToDo;i++)
-                Values[i] = distbuf[i];
-            memmove(distbuf, distbuf+SamplesToDo, (base-SamplesToDo)*sizeof(ALfloat));
-            memcpy(distbuf+base-SamplesToDo, inout, SamplesToDo*sizeof(ALfloat));
+            std::copy_n(distbuf, SamplesToDo, Values);
+            auto out = std::copy(distbuf+SamplesToDo, distbuf+base, distbuf);
+            std::copy_n(inout, SamplesToDo, out);
         }
-        for(i = 0;i < SamplesToDo;i++)
-            inout[i] = Values[i]*gain;
+        std::transform(Values, Values+SamplesToDo, inout,
+            [gain](ALfloat in) noexcept -> ALfloat
+            { return in * gain; }
+        );
     }
 }
 

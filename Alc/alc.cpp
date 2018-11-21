@@ -1994,12 +1994,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     al_free(device->Bs2b);
     device->Bs2b = nullptr;
 
-    al_free(device->ChannelDelay[0].Buffer);
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-    {
-        device->ChannelDelay[i].Length = 0;
-        device->ChannelDelay[i].Buffer = nullptr;
-    }
+    device->ChannelDelay.clear();
+    device->ChannelDelay.shrink_to_fit();
 
     device->Dry.Buffer = nullptr;
     device->Dry.NumChannels = 0;
@@ -2445,14 +2441,6 @@ ALCdevice_struct::~ALCdevice_struct()
 
     al_free(Limiter);
     Limiter = nullptr;
-
-    al_free(ChannelDelay[0].Buffer);
-    for(ALsizei i{0};i < MAX_OUTPUT_CHANNELS;i++)
-    {
-        ChannelDelay[i].Gain   = 1.0f;
-        ChannelDelay[i].Length = 0;
-        ChannelDelay[i].Buffer = nullptr;
-    }
 }
 
 

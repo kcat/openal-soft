@@ -445,8 +445,8 @@ static void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const AL
 
     if(total > 0)
     {
-        device->ChannelDelay[0].Buffer = reinterpret_cast<float*>(
-            al_calloc(16, total * sizeof(ALfloat)));
+        device->ChannelDelay.resize(total);
+        device->ChannelDelay[0].Buffer = device->ChannelDelay.data();
         for(i = 1;i < MAX_OUTPUT_CHANNELS;i++)
         {
             size_t len = RoundUp(device->ChannelDelay[i-1].Length, 4);
@@ -943,12 +943,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         device->NumChannelsPerOrder[i] = 0;
 
     device->AvgSpeakerDist = 0.0f;
-    memset(device->ChannelDelay, 0, sizeof(device->ChannelDelay));
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-    {
-        device->ChannelDelay[i].Gain = 1.0f;
-        device->ChannelDelay[i].Length = 0;
-    }
+    device->ChannelDelay.clear();
 
     al_free(device->Stablizer);
     device->Stablizer = NULL;

@@ -2263,7 +2263,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
 
         almtx_lock(&context->PropLock);
-        almtx_lock(&context->EffectSlotLock);
+        std::unique_lock<almtx_t> slotlock{context->EffectSlotLock};
         for(auto &slot : context->EffectSlotList)
         {
             EffectState *state = slot->Effect.State;
@@ -2275,7 +2275,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             else
                 UpdateEffectSlotProps(slot.get(), context);
         }
-        almtx_unlock(&context->EffectSlotLock);
+        slotlock.unlock();
 
         almtx_lock(&context->SourceLock);
         for(auto &sublist : context->SourceList)

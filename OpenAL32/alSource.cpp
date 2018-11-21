@@ -755,6 +755,7 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
     ALfilter  *filter = NULL;
     ALeffectslot *slot = NULL;
     ALbufferlistitem *oldlist;
+    std::unique_lock<almtx_t> slotlock;
     ALfloat fvals[6];
 
     switch(prop)
@@ -980,23 +981,23 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
 
 
         case AL_AUXILIARY_SEND_FILTER:
-            LockEffectSlotList(Context);
+            slotlock = std::unique_lock<almtx_t>{Context->EffectSlotLock};
             if(!(values[0] == 0 || (slot=LookupEffectSlot(Context, values[0])) != NULL))
             {
-                UnlockEffectSlotList(Context);
+                slotlock.unlock();
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid effect ID %u",
                               values[0]);
             }
             if((ALuint)values[1] >= (ALuint)device->NumAuxSends)
             {
-                UnlockEffectSlotList(Context);
+                slotlock.unlock();
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid send %u", values[1]);
             }
             LockFilterList(device);
             if(!(values[2] == 0 || (filter=LookupFilter(device, values[2])) != NULL))
             {
                 UnlockFilterList(device);
-                UnlockEffectSlotList(Context);
+                slotlock.unlock();
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid filter ID %u",
                               values[2]);
             }
@@ -1045,7 +1046,6 @@ static ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp p
                 Source->Send[values[1]].Slot = slot;
                 DO_UPDATEPROPS();
             }
-            UnlockEffectSlotList(Context);
 
             return AL_TRUE;
 

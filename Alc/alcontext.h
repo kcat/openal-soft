@@ -135,11 +135,6 @@ void UpdateContextProps(ALCcontext *context);
 void ALCcontext_DeferUpdates(ALCcontext *context);
 void ALCcontext_ProcessUpdates(ALCcontext *context);
 
-inline void LockEffectSlotList(ALCcontext *context)
-{ almtx_lock(&context->EffectSlotLock); }
-inline void UnlockEffectSlotList(ALCcontext *context)
-{ almtx_unlock(&context->EffectSlotLock); }
-
 
 /* Simple RAII context reference. Takes the reference of the provided
  * ALCcontext, and decrements it when leaving scope. Movable (transfer

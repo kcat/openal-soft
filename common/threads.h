@@ -137,7 +137,7 @@ public:
     using mutex_type = almtx_t;
 
     explicit lock_guard(almtx_t &mtx) : mMtx(mtx) { almtx_lock(&mMtx); }
-    lock_guard(almtx_t &mtx, std::adopt_lock_t) : mMtx(mtx) { }
+    lock_guard(almtx_t &mtx, std::adopt_lock_t) noexcept : mMtx(mtx) { }
     ~lock_guard() { almtx_unlock(&mMtx); }
 
     lock_guard(const lock_guard&) = delete;
@@ -152,8 +152,9 @@ class unique_lock<almtx_t> {
 public:
     using mutex_type = almtx_t;
 
+    unique_lock() noexcept = default;
     explicit unique_lock(almtx_t &mtx) : mMtx(&mtx) { almtx_lock(mMtx); mLocked = true; }
-    unique_lock(unique_lock&& rhs) : mMtx(rhs.mMtx), mLocked(rhs.mLocked)
+    unique_lock(unique_lock&& rhs) noexcept : mMtx(rhs.mMtx), mLocked(rhs.mLocked)
     { rhs.mMtx = nullptr; rhs.mLocked = false; }
     ~unique_lock() { if(mLocked) almtx_unlock(mMtx); }
 

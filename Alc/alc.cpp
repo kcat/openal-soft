@@ -1613,7 +1613,7 @@ void ALCcontext_DeferUpdates(ALCcontext *context)
  */
 void ALCcontext_ProcessUpdates(ALCcontext *context)
 {
-    almtx_lock(&context->PropLock);
+    std::lock_guard<almtx_t> _{context->PropLock};
     if(context->DeferUpdates.exchange(false))
     {
         /* Tell the mixer to stop applying updates, then wait for any active
@@ -1635,7 +1635,6 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
          */
         ATOMIC_STORE_SEQ(&context->HoldUpdates, AL_FALSE);
     }
-    almtx_unlock(&context->PropLock);
 }
 
 
@@ -2262,7 +2261,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 UpdateEffectSlotProps(slot, context);
         }
 
-        almtx_lock(&context->PropLock);
+        std::unique_lock<almtx_t> proplock{context->PropLock};
         std::unique_lock<almtx_t> slotlock{context->EffectSlotLock};
         for(auto &slot : context->EffectSlotList)
         {
@@ -2277,7 +2276,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
         slotlock.unlock();
 
-        almtx_lock(&context->SourceLock);
+        std::unique_lock<almtx_t> srclock{context->SourceLock};
         for(auto &sublist : context->SourceList)
         {
             uint64_t usemask = ~sublist.FreeMask;
@@ -2345,14 +2344,13 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                     NfcFilterCreate(&voice->Direct.Params[i].NFCtrlFilter, 0.0f, w1);
             }
         }
-        almtx_unlock(&context->SourceLock);
+        srclock.unlock();
 
         context->PropsClean.test_and_set(std::memory_order_release);
         UpdateContextProps(context);
         context->Listener.PropsClean.test_and_set(std::memory_order_release);
         UpdateListenerProps(context);
         UpdateAllSourceProps(context);
-        almtx_unlock(&context->PropLock);
 
         context = ATOMIC_LOAD(&context->next, almemory_order_relaxed);
     }

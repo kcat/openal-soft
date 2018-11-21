@@ -162,7 +162,7 @@ void ProcessUhj(ALCdevice *device, ALsizei SamplesToDo)
     assert(lidx != -1 && ridx != -1);
 
     /* Encode to stereo-compatible 2-channel UHJ output. */
-    EncodeUhj2(device->Uhj_Encoder,
+    EncodeUhj2(device->Uhj_Encoder.get(),
         device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
         device->Dry.Buffer, SamplesToDo
     );

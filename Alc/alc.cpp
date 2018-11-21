@@ -48,6 +48,7 @@
 #include "alError.h"
 #include "mastering.h"
 #include "bformatdec.h"
+#include "uhjfilter.h"
 #include "alu.h"
 #include "alconfig.h"
 #include "ringbuffer.h"
@@ -1987,7 +1988,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     if((device->Flags&DEVICE_RUNNING))
         return ALC_NO_ERROR;
 
-    al_free(device->Uhj_Encoder);
     device->Uhj_Encoder = nullptr;
 
     al_free(device->Bs2b);
@@ -2427,9 +2427,6 @@ ALCdevice_struct::~ALCdevice_struct()
 
     al_free(Bs2b);
     Bs2b = nullptr;
-
-    al_free(Uhj_Encoder);
-    Uhj_Encoder = nullptr;
 
     bformatdec_free(&AmbiDecoder);
     ambiup_free(&AmbiUp);

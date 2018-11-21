@@ -1199,7 +1199,7 @@ no_hrtf:
     }
     if(device->Render_Mode == NormalRender)
     {
-        device->Uhj_Encoder = reinterpret_cast<Uhj2Encoder*>(al_calloc(16, sizeof(Uhj2Encoder)));
+        device->Uhj_Encoder.reset(new Uhj2Encoder{});
         TRACE("UHJ enabled\n");
         InitUhjPanning(device);
         return;

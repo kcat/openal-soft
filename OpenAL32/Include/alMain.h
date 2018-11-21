@@ -207,6 +207,7 @@ struct ALbuffer;
 struct ALeffect;
 struct ALfilter;
 struct EffectState;
+struct Uhj2Encoder;
 
 
 #define DEFAULT_OUTPUT_RATE  (44100)
@@ -669,7 +670,7 @@ struct ALCdevice_struct {
     ALCenum HrtfStatus{ALC_FALSE};
 
     /* UHJ encoder state */
-    struct Uhj2Encoder *Uhj_Encoder{nullptr};
+    std::unique_ptr<Uhj2Encoder> Uhj_Encoder;
 
     /* High quality Ambisonic decoder */
     struct BFormatDec *AmbiDecoder{nullptr};

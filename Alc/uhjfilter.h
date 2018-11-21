@@ -4,14 +4,12 @@
 #include "AL/al.h"
 
 #include "alMain.h"
+#include "almalloc.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
-typedef struct AllPassState {
-    ALfloat z[2];
-} AllPassState;
+struct AllPassState {
+    ALfloat z[2]{0.0f, 0.0f};
+};
 
 /* Encoding 2-channel UHJ from B-Format is done as:
  *
@@ -38,20 +36,18 @@ typedef struct AllPassState {
  * other inputs.
  */
 
-typedef struct Uhj2Encoder {
+struct Uhj2Encoder {
     AllPassState Filter1_Y[4];
     AllPassState Filter2_WX[4];
     AllPassState Filter1_WX[4];
-    ALfloat LastY, LastWX;
-} Uhj2Encoder;
+    ALfloat LastY{0.0f}, LastWX{0.0f};
+
+    DEF_NEWDEL(Uhj2Encoder)
+};
 
 /* Encodes a 2-channel UHJ (stereo-compatible) signal from a B-Format input
  * signal. The input must use FuMa channel ordering and scaling.
  */
 void EncodeUhj2(Uhj2Encoder *enc, ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, ALfloat (*RESTRICT InSamples)[BUFFERSIZE], ALsizei SamplesToDo);
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
 
 #endif /* UHJFILTER_H */

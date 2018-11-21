@@ -502,7 +502,10 @@ AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
         /* All good. Delete non-0 buffer IDs. */
         std::for_each(buffers, buffers_end,
             [device](ALuint bid) -> void
-            { if(bid) FreeBuffer(device, LookupBuffer(device, bid)); }
+            {
+                ALbuffer *buffer{bid ? LookupBuffer(device, bid) : nullptr};
+                if(buffer) FreeBuffer(device, buffer);
+            }
         );
     }
 }

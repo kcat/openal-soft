@@ -54,11 +54,6 @@ static ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *conte
 static ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALsizei *frac);
 static ALboolean ApplyOffset(ALsource *Source, ALvoice *voice);
 
-static inline void LockSourceList(ALCcontext *context)
-{ almtx_lock(&context->SourceLock); }
-static inline void UnlockSourceList(ALCcontext *context)
-{ almtx_unlock(&context->SourceLock); }
-
 static inline ALsource *LookupSource(ALCcontext *context, ALuint id)
 {
     ALuint lidx = (id-1) >> 6;
@@ -1675,691 +1670,572 @@ static ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp
 
 AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
 {
-    ALCcontext *context;
-    ALsizei cur = 0;
-
-    context = GetContextRef();
-    if(!context) return;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
     if(n < 0)
-        alSetError(context, AL_INVALID_VALUE, "Generating %d sources", n);
-    else for(cur = 0;cur < n;cur++)
+        alSetError(context.get(), AL_INVALID_VALUE, "Generating %d sources", n);
+    else if(n == 1)
     {
-        ALsource *source = AllocSource(context);
-        if(!source)
-        {
-            alDeleteSources(cur, sources);
-            break;
-        }
-        sources[cur] = source->id;
+        ALsource *source = AllocSource(context.get());
+        if(source) sources[0] = source->id;
     }
-
-    ALCcontext_DecRef(context);
+    else
+    {
+        al::vector<ALuint> tempids(n);
+        auto alloc_end = std::find_if_not(tempids.begin(), tempids.end(),
+            [&context](ALuint &id) -> bool
+            {
+                ALsource *source = AllocSource(context.get());
+                if(!source) return false;
+                id = source->id;
+                return true;
+            }
+        );
+        if(alloc_end != tempids.end())
+            alDeleteSources(std::distance(tempids.begin(), alloc_end), tempids.data());
+        else
+            std::copy(tempids.cbegin(), tempids.cend(), sources);
+    }
 }
 
 
 AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
 {
-    ALCcontext *context;
-    ALsource *Source;
-    ALsizei i;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
-
-    LockSourceList(context);
     if(n < 0)
-        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Deleting %d sources", n);
+        SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Deleting %d sources", n);
+
+    std::lock_guard<almtx_t> _{context->SourceLock};
 
     /* Check that all Sources are valid */
-    for(i = 0;i < n;i++)
+    const ALuint *sources_end = sources + n;
+    auto invsrc = std::find_if_not(sources, sources_end,
+        [&context](ALuint sid) -> bool
+        {
+            if(!LookupSource(context.get(), sid))
+            {
+                alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", sid);
+                return false;
+            }
+            return true;
+        }
+    );
+    if(LIKELY(invsrc == sources_end))
     {
-        if(LookupSource(context, sources[i]) == NULL)
-            SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid source ID %u", sources[i]);
+        /* All good. Delete source IDs. */
+        std::for_each(sources, sources_end,
+            [&context](ALuint sid) -> void
+            {
+                ALsource *src = LookupSource(context.get(), sid);
+                if(src) FreeSource(context.get(), src);
+            }
+        );
     }
-    for(i = 0;i < n;i++)
-    {
-        if((Source=LookupSource(context, sources[i])) != NULL)
-            FreeSource(context, Source);
-    }
-
-done:
-    UnlockSourceList(context);
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API ALboolean AL_APIENTRY alIsSource(ALuint source)
 {
-    ALCcontext *context;
-    ALboolean ret;
-
-    context = GetContextRef();
-    if(!context) return AL_FALSE;
-
-    LockSourceList(context);
-    ret = (LookupSource(context, source) ? AL_TRUE : AL_FALSE);
-    UnlockSourceList(context);
-
-    ALCcontext_DecRef(context);
-
-    return ret;
+    ContextRef context{GetContextRef()};
+    if(LIKELY(context))
+    {
+        std::lock_guard<almtx_t> _{context->SourceLock};
+        if(LookupSource(context.get(), source) != nullptr)
+            return AL_TRUE;
+    }
+    return AL_FALSE;
 }
 
 
 AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum param, ALfloat value)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    almtx_lock(&Context->PropLock);
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<almtx_t> __{context->SourceLock};
+    ALsource *Source = LookupSource(context.get(), source);
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(FloatValsByProp(param) != 1)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid float property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid float property 0x%04x", param);
     else
-        SetSourcefv(Source, Context, static_cast<SourceProp>(param), &value);
-    UnlockSourceList(Context);
-    almtx_unlock(&Context->PropLock);
-
-    ALCcontext_DecRef(Context);
+        SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), &value);
 }
 
 AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    almtx_lock(&Context->PropLock);
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<almtx_t> __{context->SourceLock};
+    ALsource *Source = LookupSource(context.get(), source);
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(FloatValsByProp(param) != 3)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid 3-float property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid 3-float property 0x%04x", param);
     else
     {
         ALfloat fvals[3] = { value1, value2, value3 };
-        SetSourcefv(Source, Context, static_cast<SourceProp>(param), fvals);
+        SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), fvals);
     }
-    UnlockSourceList(Context);
-    almtx_unlock(&Context->PropLock);
-
-    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat *values)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    almtx_lock(&Context->PropLock);
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<almtx_t> __{context->SourceLock};
+    ALsource *Source = LookupSource(context.get(), source);
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else if(FloatValsByProp(param) < 1)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid float-vector property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid float-vector property 0x%04x", param);
     else
-        SetSourcefv(Source, Context, static_cast<SourceProp>(param), values);
-    UnlockSourceList(Context);
-    almtx_unlock(&Context->PropLock);
-
-    ALCcontext_DecRef(Context);
+        SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), values);
 }
 
 
 AL_API ALvoid AL_APIENTRY alSourcedSOFT(ALuint source, ALenum param, ALdouble value)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    almtx_lock(&Context->PropLock);
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<almtx_t> __{context->SourceLock};
+    ALsource *Source = LookupSource(context.get(), source);
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(DoubleValsByProp(param) != 1)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid double property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid double property 0x%04x", param);
     else
     {
         ALfloat fval = (ALfloat)value;
-        SetSourcefv(Source, Context, static_cast<SourceProp>(param), &fval);
+        SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), &fval);
     }
-    UnlockSourceList(Context);
-    almtx_unlock(&Context->PropLock);
-
-    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alSource3dSOFT(ALuint source, ALenum param, ALdouble value1, ALdouble value2, ALdouble value3)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    almtx_lock(&Context->PropLock);
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<almtx_t> __{context->SourceLock};
+    ALsource *Source = LookupSource(context.get(), source);
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(DoubleValsByProp(param) != 3)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid 3-double property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid 3-double property 0x%04x", param);
     else
     {
         ALfloat fvals[3] = { (ALfloat)value1, (ALfloat)value2, (ALfloat)value3 };
-        SetSourcefv(Source, Context, static_cast<SourceProp>(param), fvals);
+        SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), fvals);
     }
-    UnlockSourceList(Context);
-    almtx_unlock(&Context->PropLock);
-
-    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdouble *values)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
-    ALint      count;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    almtx_lock(&Context->PropLock);
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<almtx_t> __{context->SourceLock};
+    ALsource *Source = LookupSource(context.get(), source);
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
-    else if((count=DoubleValsByProp(param)) < 1 || count > 6)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid double-vector property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else
     {
-        ALfloat fvals[6];
-        ALint i;
+        ALint count{DoubleValsByProp(param)};
+        if(count < 1 || count > 6)
+            alSetError(context.get(), AL_INVALID_ENUM, "Invalid double-vector property 0x%04x", param);
+        else
+        {
+            ALfloat fvals[6];
+            ALint i;
 
-        for(i = 0;i < count;i++)
-            fvals[i] = (ALfloat)values[i];
-        SetSourcefv(Source, Context, static_cast<SourceProp>(param), fvals);
+            for(i = 0;i < count;i++)
+                fvals[i] = (ALfloat)values[i];
+            SetSourcefv(Source, context.get(), static_cast<SourceProp>(param), fvals);
+        }
     }
-    UnlockSourceList(Context);
-    almtx_unlock(&Context->PropLock);
-
-    ALCcontext_DecRef(Context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    almtx_lock(&Context->PropLock);
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<almtx_t> __{context->SourceLock};
+    ALsource *Source = LookupSource(context.get(), source);
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(IntValsByProp(param) != 1)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid integer property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid integer property 0x%04x", param);
     else
-        SetSourceiv(Source, Context, static_cast<SourceProp>(param), &value);
-    UnlockSourceList(Context);
-    almtx_unlock(&Context->PropLock);
-
-    ALCcontext_DecRef(Context);
+        SetSourceiv(Source, context.get(), static_cast<SourceProp>(param), &value);
 }
 
 AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, ALint value2, ALint value3)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    almtx_lock(&Context->PropLock);
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<almtx_t> __{context->SourceLock};
+    ALsource *Source = LookupSource(context.get(), source);
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(IntValsByProp(param) != 3)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid 3-integer property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid 3-integer property 0x%04x", param);
     else
     {
         ALint ivals[3] = { value1, value2, value3 };
-        SetSourceiv(Source, Context, static_cast<SourceProp>(param), ivals);
+        SetSourceiv(Source, context.get(), static_cast<SourceProp>(param), ivals);
     }
-    UnlockSourceList(Context);
-    almtx_unlock(&Context->PropLock);
-
-    ALCcontext_DecRef(Context);
 }
 
 AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum param, const ALint *values)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    almtx_lock(&Context->PropLock);
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<almtx_t> __{context->SourceLock};
+    ALsource *Source = LookupSource(context.get(), source);
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else if(IntValsByProp(param) < 1)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid integer-vector property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid integer-vector property 0x%04x", param);
     else
-        SetSourceiv(Source, Context, static_cast<SourceProp>(param), values);
-    UnlockSourceList(Context);
-    almtx_unlock(&Context->PropLock);
-
-    ALCcontext_DecRef(Context);
+        SetSourceiv(Source, context.get(), static_cast<SourceProp>(param), values);
 }
 
 
 AL_API ALvoid AL_APIENTRY alSourcei64SOFT(ALuint source, ALenum param, ALint64SOFT value)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    almtx_lock(&Context->PropLock);
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<almtx_t> __{context->SourceLock};
+    ALsource *Source{LookupSource(context.get(), source)};
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(Int64ValsByProp(param) != 1)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid integer64 property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid integer64 property 0x%04x", param);
     else
-        SetSourcei64v(Source, Context, static_cast<SourceProp>(param), &value);
-    UnlockSourceList(Context);
-    almtx_unlock(&Context->PropLock);
-
-    ALCcontext_DecRef(Context);
+        SetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), &value);
 }
 
 AL_API void AL_APIENTRY alSource3i64SOFT(ALuint source, ALenum param, ALint64SOFT value1, ALint64SOFT value2, ALint64SOFT value3)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    almtx_lock(&Context->PropLock);
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<almtx_t> __{context->SourceLock};
+    ALsource *Source{LookupSource(context.get(), source)};
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(Int64ValsByProp(param) != 3)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid 3-integer64 property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid 3-integer64 property 0x%04x", param);
     else
     {
         ALint64SOFT i64vals[3] = { value1, value2, value3 };
-        SetSourcei64v(Source, Context, static_cast<SourceProp>(param), i64vals);
+        SetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), i64vals);
     }
-    UnlockSourceList(Context);
-    almtx_unlock(&Context->PropLock);
-
-    ALCcontext_DecRef(Context);
 }
 
 AL_API void AL_APIENTRY alSourcei64vSOFT(ALuint source, ALenum param, const ALint64SOFT *values)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    almtx_lock(&Context->PropLock);
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<almtx_t> __{context->SourceLock};
+    ALsource *Source{LookupSource(context.get(), source)};
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else if(Int64ValsByProp(param) < 1)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid integer64-vector property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid integer64-vector property 0x%04x", param);
     else
-        SetSourcei64v(Source, Context, static_cast<SourceProp>(param), values);
-    UnlockSourceList(Context);
-    almtx_unlock(&Context->PropLock);
-
-    ALCcontext_DecRef(Context);
+        SetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), values);
 }
 
 
 AL_API ALvoid AL_APIENTRY alGetSourcef(ALuint source, ALenum param, ALfloat *value)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->SourceLock};
+    ALsource *Source{LookupSource(context.get(), source)};
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!value)
-        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else if(FloatValsByProp(param) != 1)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid float property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid float property 0x%04x", param);
     else
     {
         ALdouble dval;
-        if(GetSourcedv(Source, Context, static_cast<SourceProp>(param), &dval))
+        if(GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), &dval))
             *value = (ALfloat)dval;
     }
-    UnlockSourceList(Context);
-
-    ALCcontext_DecRef(Context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alGetSource3f(ALuint source, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->SourceLock};
+    ALsource *Source{LookupSource(context.get(), source)};
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(value1 && value2 && value3))
-        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else if(FloatValsByProp(param) != 3)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid 3-float property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid 3-float property 0x%04x", param);
     else
     {
         ALdouble dvals[3];
-        if(GetSourcedv(Source, Context, static_cast<SourceProp>(param), dvals))
+        if(GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), dvals))
         {
             *value1 = (ALfloat)dvals[0];
             *value2 = (ALfloat)dvals[1];
             *value3 = (ALfloat)dvals[2];
         }
     }
-    UnlockSourceList(Context);
-
-    ALCcontext_DecRef(Context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *values)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
-    ALint      count;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->SourceLock};
+    ALsource *Source{LookupSource(context.get(), source)};
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
-    else if((count=FloatValsByProp(param)) < 1 && count > 6)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid float-vector property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else
     {
-        ALdouble dvals[6];
-        if(GetSourcedv(Source, Context, static_cast<SourceProp>(param), dvals))
+        ALint count{FloatValsByProp(param)};
+        if(count < 1 && count > 6)
+            alSetError(context.get(), AL_INVALID_ENUM, "Invalid float-vector property 0x%04x", param);
+        else
         {
-            ALint i;
-            for(i = 0;i < count;i++)
-                values[i] = (ALfloat)dvals[i];
+            ALdouble dvals[6];
+            if(GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), dvals))
+            {
+                for(ALint i{0};i < count;i++)
+                    values[i] = (ALfloat)dvals[i];
+            }
         }
     }
-    UnlockSourceList(Context);
-
-    ALCcontext_DecRef(Context);
 }
 
 
 AL_API void AL_APIENTRY alGetSourcedSOFT(ALuint source, ALenum param, ALdouble *value)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->SourceLock};
+    ALsource *Source{LookupSource(context.get(), source)};
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!value)
-        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else if(DoubleValsByProp(param) != 1)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid double property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid double property 0x%04x", param);
     else
-        GetSourcedv(Source, Context, static_cast<SourceProp>(param), value);
-    UnlockSourceList(Context);
-
-    ALCcontext_DecRef(Context);
+        GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), value);
 }
 
 AL_API void AL_APIENTRY alGetSource3dSOFT(ALuint source, ALenum param, ALdouble *value1, ALdouble *value2, ALdouble *value3)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->SourceLock};
+    ALsource *Source{LookupSource(context.get(), source)};
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(value1 && value2 && value3))
-        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else if(DoubleValsByProp(param) != 3)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid 3-double property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid 3-double property 0x%04x", param);
     else
     {
         ALdouble dvals[3];
-        if(GetSourcedv(Source, Context, static_cast<SourceProp>(param), dvals))
+        if(GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), dvals))
         {
             *value1 = dvals[0];
             *value2 = dvals[1];
             *value3 = dvals[2];
         }
     }
-    UnlockSourceList(Context);
-
-    ALCcontext_DecRef(Context);
 }
 
 AL_API void AL_APIENTRY alGetSourcedvSOFT(ALuint source, ALenum param, ALdouble *values)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->SourceLock};
+    ALsource *Source{LookupSource(context.get(), source)};
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else if(DoubleValsByProp(param) < 1)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid double-vector property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid double-vector property 0x%04x", param);
     else
-        GetSourcedv(Source, Context, static_cast<SourceProp>(param), values);
-    UnlockSourceList(Context);
-
-    ALCcontext_DecRef(Context);
+        GetSourcedv(Source, context.get(), static_cast<SourceProp>(param), values);
 }
 
 
 AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum param, ALint *value)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->SourceLock};
+    ALsource *Source{LookupSource(context.get(), source)};
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!value)
-        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else if(IntValsByProp(param) != 1)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid integer property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid integer property 0x%04x", param);
     else
-        GetSourceiv(Source, Context, static_cast<SourceProp>(param), value);
-    UnlockSourceList(Context);
-
-    ALCcontext_DecRef(Context);
+        GetSourceiv(Source, context.get(), static_cast<SourceProp>(param), value);
 }
 
 
 AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum param, ALint *value1, ALint *value2, ALint *value3)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->SourceLock};
+    ALsource *Source{LookupSource(context.get(), source)};
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(value1 && value2 && value3))
-        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else if(IntValsByProp(param) != 3)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid 3-integer property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid 3-integer property 0x%04x", param);
     else
     {
         ALint ivals[3];
-        if(GetSourceiv(Source, Context, static_cast<SourceProp>(param), ivals))
+        if(GetSourceiv(Source, context.get(), static_cast<SourceProp>(param), ivals))
         {
             *value1 = ivals[0];
             *value2 = ivals[1];
             *value3 = ivals[2];
         }
     }
-    UnlockSourceList(Context);
-
-    ALCcontext_DecRef(Context);
 }
 
 
 AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum param, ALint *values)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->SourceLock};
+    ALsource *Source{LookupSource(context.get(), source)};
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else if(IntValsByProp(param) < 1)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid integer-vector property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid integer-vector property 0x%04x", param);
     else
-        GetSourceiv(Source, Context, static_cast<SourceProp>(param), values);
-    UnlockSourceList(Context);
-
-    ALCcontext_DecRef(Context);
+        GetSourceiv(Source, context.get(), static_cast<SourceProp>(param), values);
 }
 
 
 AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64SOFT *value)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->SourceLock};
+    ALsource *Source{LookupSource(context.get(), source)};
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!value)
-        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else if(Int64ValsByProp(param) != 1)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid integer64 property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid integer64 property 0x%04x", param);
     else
-        GetSourcei64v(Source, Context, static_cast<SourceProp>(param), value);
-    UnlockSourceList(Context);
-
-    ALCcontext_DecRef(Context);
+        GetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), value);
 }
 
 AL_API void AL_APIENTRY alGetSource3i64SOFT(ALuint source, ALenum param, ALint64SOFT *value1, ALint64SOFT *value2, ALint64SOFT *value3)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->SourceLock};
+    ALsource *Source{LookupSource(context.get(), source)};
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!(value1 && value2 && value3))
-        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else if(Int64ValsByProp(param) != 3)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid 3-integer64 property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid 3-integer64 property 0x%04x", param);
     else
     {
         ALint64 i64vals[3];
-        if(GetSourcei64v(Source, Context, static_cast<SourceProp>(param), i64vals))
+        if(GetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), i64vals))
         {
             *value1 = i64vals[0];
             *value2 = i64vals[1];
             *value3 = i64vals[2];
         }
     }
-    UnlockSourceList(Context);
-
-    ALCcontext_DecRef(Context);
 }
 
 AL_API void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64SOFT *values)
 {
-    ALCcontext *Context;
-    ALsource   *Source;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    Context = GetContextRef();
-    if(!Context) return;
-
-    LockSourceList(Context);
-    if((Source=LookupSource(Context, source)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid source ID %u", source);
+    std::lock_guard<almtx_t> _{context->SourceLock};
+    ALsource *Source{LookupSource(context.get(), source)};
+    if(UNLIKELY(!Source))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
     else if(!values)
-        alSetError(Context, AL_INVALID_VALUE, "NULL pointer");
+        alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else if(Int64ValsByProp(param) < 1)
-        alSetError(Context, AL_INVALID_ENUM, "Invalid integer64-vector property 0x%04x", param);
+        alSetError(context.get(), AL_INVALID_ENUM, "Invalid integer64-vector property 0x%04x", param);
     else
-        GetSourcei64v(Source, Context, static_cast<SourceProp>(param), values);
-    UnlockSourceList(Context);
-
-    ALCcontext_DecRef(Context);
+        GetSourcei64v(Source, context.get(), static_cast<SourceProp>(param), values);
 }
 
 
@@ -2369,39 +2245,35 @@ AL_API ALvoid AL_APIENTRY alSourcePlay(ALuint source)
 }
 AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 {
-    ALCcontext *context;
-    ALCdevice *device;
-    ALsource *source;
-    ALvoice *voice;
-    ALsizei i, j;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
+    if(n < 0)
+        SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Playing %d sources", n);
+    if(n == 0) return;
 
-    LockSourceList(context);
-    if(!(n >= 0))
-        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Playing %d sources", n);
-    for(i = 0;i < n;i++)
+    std::lock_guard<almtx_t> _{context->SourceLock};
+    for(ALsizei i{0};i < n;i++)
     {
-        if(!LookupSource(context, sources[i]))
-            SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid source ID %u", sources[i]);
+        if(!LookupSource(context.get(), sources[i]))
+            SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
     }
 
-    device = context->Device;
+    ALCdevice *device{context->Device};
     ALCdevice_Lock(device);
     /* If the device is disconnected, go right to stopped. */
     if(!ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         /* TODO: Send state change event? */
-        for(i = 0;i < n;i++)
+        for(ALsizei i{0};i < n;i++)
         {
-            source = LookupSource(context, sources[i]);
+            ALsource *source{LookupSource(context.get(), sources[i])};
             source->OffsetType = AL_NONE;
             source->Offset = 0.0;
             source->state = AL_STOPPED;
         }
         ALCdevice_Unlock(device);
-        goto done;
+        return;
     }
 
     while(n > context->MaxVoices-context->VoiceCount)
@@ -2410,23 +2282,19 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         if(context->MaxVoices >= newcount)
         {
             ALCdevice_Unlock(device);
-            SETERR_GOTO(context, AL_OUT_OF_MEMORY, done,
-                        "Overflow increasing voice count %d -> %d", context->MaxVoices, newcount);
+            SETERR_RETURN(context.get(), AL_OUT_OF_MEMORY,,
+                "Overflow increasing voice count %d -> %d", context->MaxVoices, newcount);
         }
-        AllocateVoices(context, newcount, device->NumAuxSends);
+        AllocateVoices(context.get(), newcount, device->NumAuxSends);
     }
 
-    for(i = 0;i < n;i++)
+    for(ALsizei i{0};i < n;i++)
     {
-        ALbufferlistitem *BufferList;
-        bool start_fading = false;
-        ALint vidx = -1;
-
-        source = LookupSource(context, sources[i]);
+        ALsource *source{LookupSource(context.get(), sources[i])};
         /* Check that there is a queue containing at least one valid, non zero
          * length buffer.
          */
-        BufferList = source->queue;
+        ALbufferlistitem *BufferList{source->queue};
         while(BufferList && BufferList->max_samples == 0)
             BufferList = ATOMIC_LOAD(&BufferList->next, almemory_order_relaxed);
 
@@ -2443,12 +2311,12 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
             if(oldstate != AL_STOPPED)
             {
                 source->state = AL_STOPPED;
-                SendStateChangeEvent(context, source->id, AL_STOPPED);
+                SendStateChangeEvent(context.get(), source->id, AL_STOPPED);
             }
             continue;
         }
 
-        voice = GetSourceVoice(source, context);
+        ALvoice *voice{GetSourceVoice(source, context.get())};
         switch(GetSourceState(source, voice))
         {
             case AL_PLAYING:
@@ -2464,7 +2332,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
                 /* A source that's paused simply resumes. */
                 ATOMIC_STORE(&voice->Playing, true, almemory_order_release);
                 source->state = AL_PLAYING;
-                SendStateChangeEvent(context, source->id, AL_PLAYING);
+                SendStateChangeEvent(context.get(), source->id, AL_PLAYING);
                 continue;
 
             default:
@@ -2473,7 +2341,8 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 
         /* Look for an unused voice to play this source with. */
         assert(voice == NULL);
-        for(j = 0;j < context->VoiceCount;j++)
+        ALint vidx{-1};
+        for(ALsizei j{0};j < context->VoiceCount;j++)
         {
             if(ATOMIC_LOAD(&context->Voices[j]->Source, almemory_order_acquire) == NULL)
             {
@@ -2487,7 +2356,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         voice->Playing.store(false, std::memory_order_release);
 
         source->PropsClean.test_and_set(std::memory_order_acquire);
-        UpdateSourceProps(source, voice, context);
+        UpdateSourceProps(source, voice, context.get());
 
         /* A source that's not playing or paused has any offset applied when it
          * starts playing.
@@ -2500,12 +2369,13 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         ATOMIC_STORE(&voice->current_buffer, BufferList, almemory_order_relaxed);
         ATOMIC_STORE(&voice->position, 0u, almemory_order_relaxed);
         ATOMIC_STORE(&voice->position_fraction, 0, almemory_order_relaxed);
+        bool start_fading{false};
         if(ApplyOffset(source, voice) != AL_FALSE)
             start_fading = ATOMIC_LOAD(&voice->position, almemory_order_relaxed) != 0 ||
                 ATOMIC_LOAD(&voice->position_fraction, almemory_order_relaxed) != 0 ||
                 ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed) != BufferList;
 
-        for(j = 0;j < BufferList->num_buffers;j++)
+        for(ALsizei j{0};j < BufferList->num_buffers;j++)
         {
             ALbuffer *buffer = BufferList->buffers[j];
             if(buffer)
@@ -2527,13 +2397,13 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         voice->Flags = start_fading ? VOICE_IS_FADING : 0;
         if(source->SourceType == AL_STATIC) voice->Flags |= VOICE_IS_STATIC;
         memset(voice->Direct.Params, 0, sizeof(voice->Direct.Params[0])*voice->NumChannels);
-        for(j = 0;j < device->NumAuxSends;j++)
+        for(ALsizei j{0};j < device->NumAuxSends;j++)
             memset(voice->Send[j].Params, 0, sizeof(voice->Send[j].Params[0])*voice->NumChannels);
         if(device->AvgSpeakerDist > 0.0f)
         {
             ALfloat w1 = SPEEDOFSOUNDMETRESPERSEC /
                          (device->AvgSpeakerDist * device->Frequency);
-            for(j = 0;j < voice->NumChannels;j++)
+            for(ALsizei j{0};j < voice->NumChannels;j++)
                 NfcFilterCreate(&voice->Direct.Params[j].NFCtrlFilter, 0.0f, w1);
         }
 
@@ -2542,13 +2412,9 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         source->state = AL_PLAYING;
         source->VoiceIdx = vidx;
 
-        SendStateChangeEvent(context, source->id, AL_PLAYING);
+        SendStateChangeEvent(context.get(), source->id, AL_PLAYING);
     }
     ALCdevice_Unlock(device);
-
-done:
-    UnlockSourceList(context);
-    ALCcontext_DecRef(context);
 }
 
 AL_API ALvoid AL_APIENTRY alSourcePause(ALuint source)
@@ -2557,42 +2423,33 @@ AL_API ALvoid AL_APIENTRY alSourcePause(ALuint source)
 }
 AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
 {
-    ALCcontext *context;
-    ALCdevice *device;
-    ALsource *source;
-    ALvoice *voice;
-    ALsizei i;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
-
-    LockSourceList(context);
     if(n < 0)
-        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Pausing %d sources", n);
-    for(i = 0;i < n;i++)
+        SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Pausing %d sources", n);
+    if(n == 0) return;
+
+    for(ALsizei i{0};i < n;i++)
     {
-        if(!LookupSource(context, sources[i]))
-            SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid source ID %u", sources[i]);
+        if(!LookupSource(context.get(), sources[i]))
+            SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
     }
 
-    device = context->Device;
+    ALCdevice *device{context->Device};
     ALCdevice_Lock(device);
-    for(i = 0;i < n;i++)
+    for(ALsizei i{0};i < n;i++)
     {
-        source = LookupSource(context, sources[i]);
-        if((voice=GetSourceVoice(source, context)) != NULL)
-            ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
+        ALsource *source{LookupSource(context.get(), sources[i])};
+        ALvoice *voice{GetSourceVoice(source, context.get())};
+        if(!voice) voice->Playing.store(false, std::memory_order_release);
         if(GetSourceState(source, voice) == AL_PLAYING)
         {
             source->state = AL_PAUSED;
-            SendStateChangeEvent(context, source->id, AL_PAUSED);
+            SendStateChangeEvent(context.get(), source->id, AL_PAUSED);
         }
     }
     ALCdevice_Unlock(device);
-
-done:
-    UnlockSourceList(context);
-    ALCcontext_DecRef(context);
 }
 
 AL_API ALvoid AL_APIENTRY alSourceStop(ALuint source)
@@ -2601,50 +2458,41 @@ AL_API ALvoid AL_APIENTRY alSourceStop(ALuint source)
 }
 AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
 {
-    ALCcontext *context;
-    ALCdevice *device;
-    ALsource *source;
-    ALvoice *voice;
-    ALsizei i;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
-
-    LockSourceList(context);
     if(n < 0)
-        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Stopping %d sources", n);
-    for(i = 0;i < n;i++)
+        SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Stopping %d sources", n);
+    if(n == 0) return;
+
+    for(ALsizei i{0};i < n;i++)
     {
-        if(!LookupSource(context, sources[i]))
-            SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid source ID %u", sources[i]);
+        if(!LookupSource(context.get(), sources[i]))
+            SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
     }
 
-    device = context->Device;
+    ALCdevice *device{context->Device};
     ALCdevice_Lock(device);
-    for(i = 0;i < n;i++)
+    for(ALsizei i{0};i < n;i++)
     {
-        ALenum oldstate;
-        source = LookupSource(context, sources[i]);
-        if((voice=GetSourceVoice(source, context)) != NULL)
+        ALsource *source{LookupSource(context.get(), sources[i])};
+        ALvoice *voice{GetSourceVoice(source, context.get())};
+        if(voice != nullptr)
         {
-            ATOMIC_STORE(&voice->Source, static_cast<ALsource*>(nullptr), almemory_order_relaxed);
-            ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
-            voice = NULL;
+            voice->Source.store(nullptr, std::memory_order_relaxed);
+            voice->Playing.store(false, std::memory_order_release);
+            voice = nullptr;
         }
-        oldstate = GetSourceState(source, voice);
+        ALenum oldstate{GetSourceState(source, voice)};
         if(oldstate != AL_INITIAL && oldstate != AL_STOPPED)
         {
             source->state = AL_STOPPED;
-            SendStateChangeEvent(context, source->id, AL_STOPPED);
+            SendStateChangeEvent(context.get(), source->id, AL_STOPPED);
         }
         source->OffsetType = AL_NONE;
         source->Offset = 0.0;
     }
     ALCdevice_Unlock(device);
-
-done:
-    UnlockSourceList(context);
-    ALCcontext_DecRef(context);
 }
 
 AL_API ALvoid AL_APIENTRY alSourceRewind(ALuint source)
@@ -2653,103 +2501,87 @@ AL_API ALvoid AL_APIENTRY alSourceRewind(ALuint source)
 }
 AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
 {
-    ALCcontext *context;
-    ALCdevice *device;
-    ALsource *source;
-    ALvoice *voice;
-    ALsizei i;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
-
-    LockSourceList(context);
     if(n < 0)
-        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Rewinding %d sources", n);
-    for(i = 0;i < n;i++)
+        SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Rewinding %d sources", n);
+    if(n == 0) return;
+
+    for(ALsizei i{0};i < n;i++)
     {
-        if(!LookupSource(context, sources[i]))
-            SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid source ID %u", sources[i]);
+        if(!LookupSource(context.get(), sources[i]))
+            SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
     }
 
-    device = context->Device;
+    ALCdevice *device{context->Device};
     ALCdevice_Lock(device);
-    for(i = 0;i < n;i++)
+    for(ALsizei i{0};i < n;i++)
     {
-        source = LookupSource(context, sources[i]);
-        if((voice=GetSourceVoice(source, context)) != NULL)
+        ALsource *source{LookupSource(context.get(), sources[i])};
+        ALvoice *voice{GetSourceVoice(source, context.get())};
+        if(voice != nullptr)
         {
-            ATOMIC_STORE(&voice->Source, static_cast<ALsource*>(nullptr), almemory_order_relaxed);
-            ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
-            voice = NULL;
+            voice->Source.store(nullptr, std::memory_order_relaxed);
+            voice->Playing.store(false, std::memory_order_release);
+            voice = nullptr;
         }
         if(GetSourceState(source, voice) != AL_INITIAL)
         {
             source->state = AL_INITIAL;
-            SendStateChangeEvent(context, source->id, AL_INITIAL);
+            SendStateChangeEvent(context.get(), source->id, AL_INITIAL);
         }
         source->OffsetType = AL_NONE;
         source->Offset = 0.0;
     }
     ALCdevice_Unlock(device);
-
-done:
-    UnlockSourceList(context);
-    ALCcontext_DecRef(context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALuint *buffers)
 {
-    ALCdevice *device;
-    ALCcontext *context;
-    ALsource *source;
-    ALsizei i;
-    ALbufferlistitem *BufferListStart;
-    ALbufferlistitem *BufferList;
-    ALbuffer *BufferFmt = NULL;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    if(nb == 0)
-        return;
+    if(nb < 0)
+        SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Queueing %d buffers", nb);
+    if(nb == 0) return;
 
-    context = GetContextRef();
-    if(!context) return;
-
-    device = context->Device;
-
-    LockSourceList(context);
-    if(!(nb >= 0))
-        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Queueing %d buffers", nb);
-    if((source=LookupSource(context, src)) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid source ID %u", src);
+    std::lock_guard<almtx_t> _{context->SourceLock};
+    ALsource *source{LookupSource(context.get(),src)};
+    if(!source)
+        SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", src);
 
     if(source->SourceType == AL_STATIC)
     {
         /* Can't queue on a Static Source */
-        SETERR_GOTO(context, AL_INVALID_OPERATION, done, "Queueing onto static source %u", src);
+        SETERR_RETURN(context.get(), AL_INVALID_OPERATION,, "Queueing onto static source %u", src);
     }
 
     /* Check for a valid Buffer, for its frequency and format */
-    BufferList = source->queue;
+    ALCdevice *device{context->Device};
+    ALbuffer *BufferFmt{nullptr};
+    ALbufferlistitem *BufferList{source->queue};
     while(BufferList)
     {
-        for(i = 0;i < BufferList->num_buffers;i++)
+        for(ALsizei i{0};i < BufferList->num_buffers;i++)
         {
-            if((BufferFmt=BufferList->buffers[i]) != NULL)
+            if((BufferFmt=BufferList->buffers[i]) != nullptr)
                 break;
         }
         if(BufferFmt) break;
-        BufferList = ATOMIC_LOAD(&BufferList->next, almemory_order_relaxed);
+        BufferList = BufferList->next.load(std::memory_order_relaxed);
     }
 
-    LockBufferList(device);
-    BufferListStart = NULL;
-    BufferList = NULL;
-    for(i = 0;i < nb;i++)
+    std::unique_lock<almtx_t> buflock{device->BufferLock};
+    ALbufferlistitem *BufferListStart{nullptr};
+    BufferList = nullptr;
+    for(ALsizei i{0};i < nb;i++)
     {
-        ALbuffer *buffer = NULL;
+        ALbuffer *buffer{nullptr};
         if(buffers[i] && (buffer=LookupBuffer(device, buffers[i])) == NULL)
-            SETERR_GOTO(context, AL_INVALID_NAME, buffer_error, "Queueing invalid buffer ID %u",
-                        buffers[i]);
+            SETERR_GOTO(context.get(), AL_INVALID_NAME, buffer_error,
+                        "Queueing invalid buffer ID %u", buffers[i]);
 
         if(!BufferListStart)
         {
@@ -2759,9 +2591,9 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         }
         else
         {
-            ALbufferlistitem *item = static_cast<ALbufferlistitem*>(al_calloc(DEF_ALIGN,
+            auto item = static_cast<ALbufferlistitem*>(al_calloc(DEF_ALIGN,
                 FAM_SIZE(ALbufferlistitem, buffers, 1)));
-            ATOMIC_STORE(&BufferList->next, item, almemory_order_relaxed);
+            BufferList->next.store(item, std::memory_order_relaxed);
             BufferList = item;
         }
         ATOMIC_INIT(&BufferList->next, static_cast<ALbufferlistitem*>(nullptr));
@@ -2773,7 +2605,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         IncrementRef(&buffer->ref);
 
         if(buffer->MappedAccess != 0 && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
-            SETERR_GOTO(context, AL_INVALID_OPERATION, buffer_error,
+            SETERR_GOTO(context.get(), AL_INVALID_OPERATION, buffer_error,
                         "Queueing non-persistently mapped buffer %u", buffer->id);
 
         if(BufferFmt == NULL)
@@ -2782,15 +2614,15 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
                 BufferFmt->FmtChannels != buffer->FmtChannels ||
                 BufferFmt->OriginalType != buffer->OriginalType)
         {
-            alSetError(context, AL_INVALID_OPERATION, "Queueing buffer with mismatched format");
+            alSetError(context.get(), AL_INVALID_OPERATION,
+                       "Queueing buffer with mismatched format");
 
         buffer_error:
             /* A buffer failed (invalid ID or format), so unlock and release
              * each buffer we had. */
             while(BufferListStart)
             {
-                ALbufferlistitem *next = ATOMIC_LOAD(&BufferListStart->next,
-                                                     almemory_order_relaxed);
+                ALbufferlistitem *next = BufferListStart->next.load(std::memory_order_relaxed);
                 for(i = 0;i < BufferListStart->num_buffers;i++)
                 {
                     if((buffer=BufferListStart->buffers[i]) != NULL)
@@ -2799,12 +2631,11 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
                 al_free(BufferListStart);
                 BufferListStart = next;
             }
-            UnlockBufferList(device);
-            goto done;
+            return;
         }
     }
     /* All buffers good. */
-    UnlockBufferList(device);
+    buflock.unlock();
 
     /* Source is now streaming */
     source->SourceType = AL_STREAMING;
@@ -2814,72 +2645,61 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
     else
     {
         ALbufferlistitem *next;
-        while((next=ATOMIC_LOAD(&BufferList->next, almemory_order_relaxed)) != NULL)
+        while((next=BufferList->next.load(std::memory_order_relaxed)) != nullptr)
             BufferList = next;
-        ATOMIC_STORE(&BufferList->next, BufferListStart, almemory_order_release);
+        BufferList->next.store(BufferListStart, std::memory_order_release);
     }
-
-done:
-    UnlockSourceList(context);
-    ALCcontext_DecRef(context);
 }
 
 AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint src, ALsizei nb, const ALuint *buffers)
 {
-    ALCdevice *device;
-    ALCcontext *context;
-    ALbufferlistitem *BufferListStart;
-    ALbufferlistitem *BufferList;
-    ALbuffer *BufferFmt = NULL;
-    ALsource *source;
-    ALsizei i;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    if(nb == 0)
-        return;
+    if(nb < 0)
+        SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Queueing %d buffer layers", nb);
+    if(nb == 0) return;
 
-    context = GetContextRef();
-    if(!context) return;
-
-    device = context->Device;
-
-    LockSourceList(context);
-    if(!(nb >= 0 && nb < 16))
-        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Queueing %d buffer layers", nb);
-    if((source=LookupSource(context, src)) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid source ID %u", src);
+    std::lock_guard<almtx_t> _{context->SourceLock};
+    ALsource *source{LookupSource(context.get(),src)};
+    if(!source)
+        SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", src);
 
     if(source->SourceType == AL_STATIC)
     {
         /* Can't queue on a Static Source */
-        SETERR_GOTO(context, AL_INVALID_OPERATION, done, "Queueing onto static source %u", src);
+        SETERR_RETURN(context.get(), AL_INVALID_OPERATION,, "Queueing onto static source %u", src);
     }
 
     /* Check for a valid Buffer, for its frequency and format */
-    BufferList = source->queue;
+    ALCdevice *device{context->Device};
+    ALbuffer *BufferFmt{nullptr};
+    ALbufferlistitem *BufferList{source->queue};
     while(BufferList)
     {
-        for(i = 0;i < BufferList->num_buffers;i++)
+        for(ALsizei i{0};i < BufferList->num_buffers;i++)
         {
-            if((BufferFmt=BufferList->buffers[i]) != NULL)
+            if((BufferFmt=BufferList->buffers[i]) != nullptr)
                 break;
         }
         if(BufferFmt) break;
-        BufferList = ATOMIC_LOAD(&BufferList->next, almemory_order_relaxed);
+        BufferList = BufferList->next.load(std::memory_order_relaxed);
     }
 
-    LockBufferList(device);
-    BufferListStart = static_cast<ALbufferlistitem*>(al_calloc(DEF_ALIGN,
+    std::unique_lock<almtx_t> buflock{device->BufferLock};
+    auto BufferListStart = static_cast<ALbufferlistitem*>(al_calloc(DEF_ALIGN,
         FAM_SIZE(ALbufferlistitem, buffers, nb)));
     BufferList = BufferListStart;
     ATOMIC_INIT(&BufferList->next, static_cast<ALbufferlistitem*>(nullptr));
     BufferList->max_samples = 0;
     BufferList->num_buffers = 0;
-    for(i = 0;i < nb;i++)
+
+    for(ALsizei i{0};i < nb;i++)
     {
-        ALbuffer *buffer = NULL;
-        if(buffers[i] && (buffer=LookupBuffer(device, buffers[i])) == NULL)
-            SETERR_GOTO(context, AL_INVALID_NAME, buffer_error, "Queueing invalid buffer ID %u",
-                        buffers[i]);
+        ALbuffer *buffer{nullptr};
+        if(buffers[i] && (buffer=LookupBuffer(device, buffers[i])) == nullptr)
+            SETERR_GOTO(context.get(), AL_INVALID_NAME, buffer_error,
+                        "Queueing invalid buffer ID %u", buffers[i]);
 
         BufferList->buffers[BufferList->num_buffers++] = buffer;
         if(!buffer) continue;
@@ -2889,7 +2709,7 @@ AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint src, ALsizei nb, co
         BufferList->max_samples = maxi(BufferList->max_samples, buffer->SampleLen);
 
         if(buffer->MappedAccess != 0 && !(buffer->MappedAccess&AL_MAP_PERSISTENT_BIT_SOFT))
-            SETERR_GOTO(context, AL_INVALID_OPERATION, buffer_error,
+            SETERR_GOTO(context.get(), AL_INVALID_OPERATION, buffer_error,
                         "Queueing non-persistently mapped buffer %u", buffer->id);
 
         if(BufferFmt == NULL)
@@ -2898,7 +2718,8 @@ AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint src, ALsizei nb, co
                 BufferFmt->FmtChannels != buffer->FmtChannels ||
                 BufferFmt->OriginalType != buffer->OriginalType)
         {
-            alSetError(context, AL_INVALID_OPERATION, "Queueing buffer with mismatched format");
+            alSetError(context.get(), AL_INVALID_OPERATION,
+                       "Queueing buffer with mismatched format");
 
         buffer_error:
             /* A buffer failed (invalid ID or format), so unlock and release
@@ -2915,12 +2736,11 @@ AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint src, ALsizei nb, co
                 al_free(BufferListStart);
                 BufferListStart = next;
             }
-            UnlockBufferList(device);
-            goto done;
+            return;
         }
     }
     /* All buffers good. */
-    UnlockBufferList(device);
+    buflock.unlock();
 
     /* Source is now streaming */
     source->SourceType = AL_STREAMING;
@@ -2934,58 +2754,48 @@ AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint src, ALsizei nb, co
             BufferList = next;
         ATOMIC_STORE(&BufferList->next, BufferListStart, almemory_order_release);
     }
-
-done:
-    UnlockSourceList(context);
-    ALCcontext_DecRef(context);
 }
 
 AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint *buffers)
 {
-    ALCcontext *context;
-    ALsource *source;
-    ALbufferlistitem *BufferList;
-    ALbufferlistitem *Current;
-    ALvoice *voice;
-    ALsizei i;
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
 
-    context = GetContextRef();
-    if(!context) return;
+    if(nb < 0)
+        SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Unqueueing %d buffers", nb);
+    if(nb == 0) return;
 
-    LockSourceList(context);
-    if(!(nb >= 0))
-        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Unqueueing %d buffers", nb);
-    if((source=LookupSource(context, src)) == NULL)
-        SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid source ID %u", src);
-
-    /* Nothing to unqueue. */
-    if(nb == 0) goto done;
+    std::lock_guard<almtx_t> _{context->SourceLock};
+    ALsource *source{LookupSource(context.get(),src)};
+    if(!source)
+        SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", src);
 
     if(source->Looping)
-        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Unqueueing from looping source %u", src);
+        SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Unqueueing from looping source %u", src);
     if(source->SourceType != AL_STREAMING)
-        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Unqueueing from a non-streaming source %u",
-                    src);
+        SETERR_RETURN(context.get(), AL_INVALID_VALUE,,
+            "Unqueueing from a non-streaming source %u", src);
 
     /* Make sure enough buffers have been processed to unqueue. */
-    BufferList = source->queue;
-    Current = NULL;
-    if((voice=GetSourceVoice(source, context)) != NULL)
-        Current = ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed);
+    ALbufferlistitem *BufferList{source->queue};
+    ALvoice *voice{GetSourceVoice(source, context.get())};
+    ALbufferlistitem *Current{nullptr};
+    if(voice)
+        Current = voice->current_buffer.load(std::memory_order_relaxed);
     else if(source->state == AL_INITIAL)
         Current = BufferList;
     if(BufferList == Current)
-        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Unqueueing pending buffers");
+        SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Unqueueing pending buffers");
 
-    i = BufferList->num_buffers;
+    ALsizei i{BufferList->num_buffers};
     while(i < nb)
     {
         /* If the next bufferlist to check is NULL or is the current one, it's
          * trying to unqueue pending buffers.
          */
-        ALbufferlistitem *next = ATOMIC_LOAD(&BufferList->next, almemory_order_relaxed);
+        ALbufferlistitem *next = BufferList->next.load(std::memory_order_relaxed);
         if(!next || next == Current)
-            SETERR_GOTO(context, AL_INVALID_VALUE, done, "Unqueueing pending buffers");
+            SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Unqueueing pending buffers");
         BufferList = next;
 
         i += BufferList->num_buffers;
@@ -2994,7 +2804,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
     while(nb > 0)
     {
         ALbufferlistitem *head = source->queue;
-        ALbufferlistitem *next = ATOMIC_LOAD(&head->next, almemory_order_relaxed);
+        ALbufferlistitem *next = head->next.load(std::memory_order_relaxed);
         for(i = 0;i < head->num_buffers && nb > 0;i++,nb--)
         {
             ALbuffer *buffer = head->buffers[i];
@@ -3030,10 +2840,6 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
         al_free(head);
         source->queue = next;
     }
-
-done:
-    UnlockSourceList(context);
-    ALCcontext_DecRef(context);
 }
 
 

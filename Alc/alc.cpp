@@ -2727,29 +2727,28 @@ static void ReleaseThreadCtx(ALCcontext *context)
 
 /* VerifyContext
  *
- * Checks that the given context is valid, and increments its reference count.
+ * Checks if the given context is valid, returning a new reference to it if so.
  */
-static ALCboolean VerifyContext(ALCcontext **context)
+static ContextRef VerifyContext(ALCcontext *context)
 {
     std::lock_guard<std::recursive_mutex> _{ListLock};
     ALCdevice *dev{DeviceList.load()};
     while(dev)
     {
-        ALCcontext *ctx = ATOMIC_LOAD(&dev->ContextList, almemory_order_acquire);
+        ALCcontext *ctx = dev->ContextList.load(std::memory_order_acquire);
         while(ctx)
         {
-            if(ctx == *context)
+            if(ctx == context)
             {
                 ALCcontext_IncRef(ctx);
-                return ALC_TRUE;
+                return ContextRef{ctx};
             }
-            ctx = ATOMIC_LOAD(&ctx->next, almemory_order_relaxed);
+            ctx = ctx->next.load(std::memory_order_relaxed);
         }
-        dev = ATOMIC_LOAD(&dev->next, almemory_order_relaxed);
+        dev = dev->next.load(std::memory_order_relaxed);
     }
 
-    *context = nullptr;
-    return ALC_FALSE;
+    return ContextRef{};
 }
 
 
@@ -2893,13 +2892,11 @@ ALC_API ALCvoid ALC_APIENTRY alcSuspendContext(ALCcontext *context)
     if(!SuspendDefers)
         return;
 
-    if(!VerifyContext(&context))
+    ContextRef ctx{VerifyContext(context)};
+    if(!ctx)
         alcSetError(nullptr, ALC_INVALID_CONTEXT);
     else
-    {
-        ALCcontext_DeferUpdates(context);
-        ALCcontext_DecRef(context);
-    }
+        ALCcontext_DeferUpdates(ctx.get());
 }
 
 /* alcProcessContext
@@ -2911,13 +2908,11 @@ ALC_API ALCvoid ALC_APIENTRY alcProcessContext(ALCcontext *context)
     if(!SuspendDefers)
         return;
 
-    if(!VerifyContext(&context))
+    ContextRef ctx{VerifyContext(context)};
+    if(!ctx)
         alcSetError(nullptr, ALC_INVALID_CONTEXT);
     else
-    {
-        ALCcontext_ProcessUpdates(context);
-        ALCcontext_DecRef(context);
-    }
+        ALCcontext_ProcessUpdates(ctx.get());
 }
 
 
@@ -3712,26 +3707,25 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 {
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
-    if(!VerifyContext(&context))
+    ContextRef ctx{VerifyContext(context)};
+    if(!ctx)
     {
         listlock.unlock();
         alcSetError(nullptr, ALC_INVALID_CONTEXT);
         return;
     }
 
-    ALCdevice* Device{context->Device};
+    ALCdevice* Device{ctx->Device};
     if(Device)
     {
         std::lock_guard<almtx_t> _{Device->BackendLock};
-        if(!ReleaseContext(context, Device))
+        if(!ReleaseContext(ctx.get(), Device))
         {
             V0(Device->Backend,stop)();
             Device->Flags &= ~DEVICE_RUNNING;
         }
     }
     listlock.unlock();
-
-    ALCcontext_DecRef(context);
 }
 
 
@@ -3764,20 +3758,29 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
 ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
 {
     /* context must be valid or nullptr */
-    if(context && !VerifyContext(&context))
+    ContextRef ctx;
+    if(context)
     {
-        alcSetError(nullptr, ALC_INVALID_CONTEXT);
-        return ALC_FALSE;
+        ctx = VerifyContext(context);
+        if(!ctx)
+        {
+            alcSetError(nullptr, ALC_INVALID_CONTEXT);
+            return ALC_FALSE;
+        }
     }
-    /* context's reference count is already incremented */
-    context = GlobalContext.exchange(context);
-    if(context) ALCcontext_DecRef(context);
+    /* Release this reference (if any) to store it in the GlobalContext
+     * pointer. Take ownership of the reference (if any) that was previously
+     * stored there.
+     */
+    ctx = ContextRef{GlobalContext.exchange(ctx.release())};
 
-    if((context=LocalContext.get()) != nullptr)
-    {
-        LocalContext.set(nullptr);
-        ALCcontext_DecRef(context);
-    }
+    /* Reset (decrement) the previous global reference by replacing it with the
+     * thread-local context. Take ownership of the thread-local context
+     * reference (if any), clearing the storage to null.
+     */
+    ctx = ContextRef{LocalContext.get()};
+    if(ctx) LocalContext.set(nullptr);
+    /* Reset (decrement) the previous thread-local reference. */
 
     return ALC_TRUE;
 }
@@ -3789,15 +3792,19 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
 ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
 {
     /* context must be valid or nullptr */
-    if(context && !VerifyContext(&context))
+    ContextRef ctx;
+    if(context)
     {
-        alcSetError(nullptr, ALC_INVALID_CONTEXT);
-        return ALC_FALSE;
+        ctx = VerifyContext(context);
+        if(!ctx)
+        {
+            alcSetError(nullptr, ALC_INVALID_CONTEXT);
+            return ALC_FALSE;
+        }
     }
     /* context's reference count is already incremented */
-    ALCcontext *old{LocalContext.get()};
-    LocalContext.set(context);
-    if(old) ALCcontext_DecRef(old);
+    ContextRef old{LocalContext.get()};
+    LocalContext.set(ctx.release());
 
     return ALC_TRUE;
 }
@@ -3809,15 +3816,13 @@ ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
  */
 ALC_API ALCdevice* ALC_APIENTRY alcGetContextsDevice(ALCcontext *Context)
 {
-    if(!VerifyContext(&Context))
+    ContextRef ctx{VerifyContext(Context)};
+    if(!ctx)
     {
         alcSetError(nullptr, ALC_INVALID_CONTEXT);
         return nullptr;
     }
-    ALCdevice *Device{Context->Device};
-    ALCcontext_DecRef(Context);
-
-    return Device;
+    return ctx->Device;
 }
 
 

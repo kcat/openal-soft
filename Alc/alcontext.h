@@ -157,6 +157,8 @@ class ContextRef {
 
 public:
     ContextRef() noexcept = default;
+    ContextRef(ContextRef&& rhs) noexcept : mCtx{rhs.mCtx}
+    { rhs.mCtx = nullptr; }
     explicit ContextRef(ALCcontext *ctx) noexcept : mCtx(ctx) { }
     ~ContextRef() { reset(); }
 
@@ -173,6 +175,13 @@ public:
 
     ALCcontext* operator->() noexcept { return mCtx; }
     ALCcontext* get() noexcept { return mCtx; }
+
+    ALCcontext* release() noexcept
+    {
+        ALCcontext *ret{mCtx};
+        mCtx = nullptr;
+        return ret;
+    }
 };
 
 

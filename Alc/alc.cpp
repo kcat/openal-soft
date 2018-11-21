@@ -1847,8 +1847,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(schans == ALC_BFORMAT3D_SOFT)
         {
             device->mAmbiOrder = aorder;
-            device->mAmbiLayout = static_cast<enum AmbiLayout>(alayout);
-            device->mAmbiScale = static_cast<enum AmbiNorm>(ascale);
+            device->mAmbiLayout = static_cast<AmbiLayout>(alayout);
+            device->mAmbiScale = static_cast<AmbiNorm>(ascale);
         }
 
         if(numMono > INT_MAX-numStereo)
@@ -3189,10 +3189,10 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
                 if(device->FmtChans == DevFmtAmbi3D)
                 {
                     values[i++] = ALC_AMBISONIC_LAYOUT_SOFT;
-                    values[i++] = device->mAmbiLayout;
+                    values[i++] = static_cast<ALCint>(device->mAmbiLayout);
 
                     values[i++] = ALC_AMBISONIC_SCALING_SOFT;
-                    values[i++] = device->mAmbiScale;
+                    values[i++] = static_cast<ALCint>(device->mAmbiScale);
 
                     values[i++] = ALC_AMBISONIC_ORDER_SOFT;
                     values[i++] = device->mAmbiOrder;
@@ -3294,7 +3294,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
                 alcSetError(device, ALC_INVALID_DEVICE);
                 return 0;
             }
-            values[0] = device->mAmbiLayout;
+            values[0] = static_cast<ALCint>(device->mAmbiLayout);
             return 1;
 
         case ALC_AMBISONIC_SCALING_SOFT:
@@ -3303,7 +3303,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
                 alcSetError(device, ALC_INVALID_DEVICE);
                 return 0;
             }
-            values[0] = device->mAmbiScale;
+            values[0] = static_cast<ALCint>(device->mAmbiScale);
             return 1;
 
         case ALC_AMBISONIC_ORDER_SOFT:
@@ -3426,10 +3426,10 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                         if(device->FmtChans == DevFmtAmbi3D)
                         {
                             values[i++] = ALC_AMBISONIC_LAYOUT_SOFT;
-                            values[i++] = device->mAmbiLayout;
+                            values[i++] = static_cast<ALCint64SOFT>(device->mAmbiLayout);
 
                             values[i++] = ALC_AMBISONIC_SCALING_SOFT;
-                            values[i++] = device->mAmbiScale;
+                            values[i++] = static_cast<ALCint64SOFT>(device->mAmbiScale);
 
                             values[i++] = ALC_AMBISONIC_ORDER_SOFT;
                             values[i++] = device->mAmbiOrder;
@@ -3867,9 +3867,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->FmtChans = DevFmtChannelsDefault;
     device->FmtType = DevFmtTypeDefault;
     device->Frequency = DEFAULT_OUTPUT_RATE;
-    device->IsHeadphones = AL_FALSE;
-    device->mAmbiLayout = AmbiLayout_Default;
-    device->mAmbiScale = AmbiNorm_Default;
     device->LimiterState = ALC_TRUE;
     device->NumUpdates = 3;
     device->UpdateSize = 1024;
@@ -3991,18 +3988,18 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     {
         if(strcasecmp(fmt, "fuma") == 0)
         {
-            device->mAmbiLayout = AmbiLayout_FuMa;
-            device->mAmbiScale = AmbiNorm_FuMa;
+            device->mAmbiLayout = AmbiLayout::FuMa;
+            device->mAmbiScale = AmbiNorm::FuMa;
         }
         else if(strcasecmp(fmt, "acn+sn3d") == 0)
         {
-            device->mAmbiLayout = AmbiLayout_ACN;
-            device->mAmbiScale = AmbiNorm_SN3D;
+            device->mAmbiLayout = AmbiLayout::ACN;
+            device->mAmbiScale = AmbiNorm::SN3D;
         }
         else if(strcasecmp(fmt, "acn+n3d") == 0)
         {
-            device->mAmbiLayout = AmbiLayout_ACN;
-            device->mAmbiScale = AmbiNorm_N3D;
+            device->mAmbiLayout = AmbiLayout::ACN;
+            device->mAmbiScale = AmbiNorm::N3D;
         }
         else
             ERR("Unsupported ambi-format: %s\n", fmt);
@@ -4011,7 +4008,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     {
         ALCdevice *head{DeviceList.load()};
         do {
-            ATOMIC_STORE(&device->next, head, almemory_order_relaxed);
+            device->next.store(head, std::memory_order_relaxed);
         } while(!DeviceList.compare_exchange_weak(head, device));
     }
 
@@ -4104,10 +4101,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         return nullptr;
     }
     device->Flags |= DEVICE_CHANNELS_REQUEST | DEVICE_SAMPLE_TYPE_REQUEST;
-    device->IsHeadphones = AL_FALSE;
-    device->mAmbiOrder = 0;
-    device->mAmbiLayout = AmbiLayout_Default;
-    device->mAmbiScale = AmbiNorm_Default;
 
     device->UpdateSize = samples;
     device->NumUpdates = 1;
@@ -4275,9 +4268,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcLoopbackOpenDeviceSOFT(const ALCchar *deviceN
     device->Frequency = DEFAULT_OUTPUT_RATE;
     device->FmtChans = DevFmtChannelsDefault;
     device->FmtType = DevFmtTypeDefault;
-    device->IsHeadphones = AL_FALSE;
-    device->mAmbiLayout = AmbiLayout_Default;
-    device->mAmbiScale = AmbiNorm_Default;
 
     ConfigValueUInt(nullptr, nullptr, "sources", &device->SourcesMax);
     if(device->SourcesMax == 0) device->SourcesMax = 256;

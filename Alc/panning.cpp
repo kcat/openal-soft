@@ -513,10 +513,10 @@ static void InitPanning(ALCdevice *device)
     if(device->FmtChans == DevFmtAmbi3D)
     {
         const char *devname = device->DeviceName.c_str();
-        const ALsizei *acnmap = (device->mAmbiLayout == AmbiLayout_FuMa) ? FuMa2ACN : ACN2ACN;
-        const ALfloat *n3dscale = (device->mAmbiScale == AmbiNorm_FuMa) ? FuMa2N3DScale :
-                                  (device->mAmbiScale == AmbiNorm_SN3D) ? SN3D2N3DScale :
-                                  /*(device->mAmbiScale == AmbiNorm_N3D) ?*/ N3D2N3DScale;
+        const ALsizei *acnmap = (device->mAmbiLayout == AmbiLayout::FuMa) ? FuMa2ACN : ACN2ACN;
+        const ALfloat *n3dscale = (device->mAmbiScale == AmbiNorm::FuMa) ? FuMa2N3DScale :
+                                  (device->mAmbiScale == AmbiNorm::SN3D) ? SN3D2N3DScale :
+                                  /*(device->mAmbiScale == AmbiNorm::N3D) ?*/ N3D2N3DScale;
         ALfloat nfc_delay = 0.0f;
 
         count = (device->mAmbiOrder == 3) ? 16 :

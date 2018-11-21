@@ -464,19 +464,19 @@ inline ALsizei FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType ty
     return ChannelsFromDevFmt(chans, ambiorder) * BytesFromDevFmt(type);
 }
 
-enum AmbiLayout {
-    AmbiLayout_FuMa = ALC_FUMA_SOFT, /* FuMa channel order */
-    AmbiLayout_ACN = ALC_ACN_SOFT,   /* ACN channel order */
+enum class AmbiLayout {
+    FuMa = ALC_FUMA_SOFT, /* FuMa channel order */
+    ACN = ALC_ACN_SOFT,   /* ACN channel order */
 
-    AmbiLayout_Default = AmbiLayout_ACN
+    Default = ACN
 };
 
-enum AmbiNorm {
-    AmbiNorm_FuMa = ALC_FUMA_SOFT, /* FuMa normalization */
-    AmbiNorm_SN3D = ALC_SN3D_SOFT, /* SN3D normalization */
-    AmbiNorm_N3D = ALC_N3D_SOFT,   /* N3D normalization */
+enum class AmbiNorm {
+    FuMa = ALC_FUMA_SOFT, /* FuMa normalization */
+    SN3D = ALC_SN3D_SOFT, /* SN3D normalization */
+    N3D = ALC_N3D_SOFT,   /* N3D normalization */
 
-    AmbiNorm_Default = AmbiNorm_SN3D
+    Default = SN3D
 };
 
 
@@ -601,13 +601,13 @@ struct ALCdevice_struct {
     ALuint NumUpdates{};
     DevFmtChannels FmtChans{};
     DevFmtType     FmtType{};
-    ALboolean IsHeadphones{};
-    ALsizei mAmbiOrder{};
+    ALboolean IsHeadphones{AL_FALSE};
+    ALsizei mAmbiOrder{0};
     /* For DevFmtAmbi* output only, specifies the channel order and
      * normalization.
      */
-    AmbiLayout mAmbiLayout{};
-    AmbiNorm   mAmbiScale{};
+    AmbiLayout mAmbiLayout{AmbiLayout::Default};
+    AmbiNorm   mAmbiScale{AmbiNorm::Default};
 
     ALCenum LimiterState{ALC_DONT_CARE_SOFT};
 

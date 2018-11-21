@@ -148,7 +148,7 @@ inline void UnlockEffectSlotList(ALCcontext *context)
 class ContextRef {
     ALCcontext *mCtx{nullptr};
 
-    void release() noexcept
+    void reset() noexcept
     {
         if(mCtx)
             ALCcontext_DecRef(mCtx);
@@ -158,12 +158,12 @@ class ContextRef {
 public:
     ContextRef() noexcept = default;
     explicit ContextRef(ALCcontext *ctx) noexcept : mCtx(ctx) { }
-    ~ContextRef() { release(); }
+    ~ContextRef() { reset(); }
 
     ContextRef& operator=(const ContextRef&) = delete;
     ContextRef& operator=(ContextRef&& rhs) noexcept
     {
-        release();
+        reset();
         mCtx = rhs.mCtx;
         rhs.mCtx = nullptr;
         return *this;

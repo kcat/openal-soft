@@ -666,9 +666,9 @@ struct ALCdevice_struct {
     POSTPROCESS PostProcess{};
 
     /* HRTF state and info */
-    struct DirectHrtfState *Hrtf{nullptr};
+    DirectHrtfState *mHrtfState{nullptr};
     std::string HrtfName;
-    struct Hrtf *HrtfHandle{nullptr};
+    Hrtf *HrtfHandle{nullptr};
     al::vector<EnumeratedHrtf> HrtfList;
     ALCenum HrtfStatus{ALC_FALSE};
 
@@ -739,7 +739,7 @@ struct ALCdevice_struct {
     ATOMIC(ALCcontext*) ContextList{nullptr};
 
     almtx_t BackendLock;
-    struct ALCbackend *Backend{nullptr};
+    ALCbackend *Backend{nullptr};
 
     ATOMIC(ALCdevice*) next{nullptr};
 

@@ -857,7 +857,7 @@ static void InitHrtfPanning(ALCdevice *device)
         count = COUNTOF(IndexMap);
     }
 
-    device->Hrtf = reinterpret_cast<DirectHrtfState*>(
+    device->mHrtfState = reinterpret_cast<DirectHrtfState*>(
         al_calloc(16, FAM_SIZE(DirectHrtfState, Chan, count)));
 
     for(i = 0;i < count;i++)
@@ -892,7 +892,7 @@ static void InitHrtfPanning(ALCdevice *device)
     device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
 
     BuildBFormatHrtf(device->HrtfHandle,
-        device->Hrtf, device->Dry.NumChannels, AmbiPoints, AmbiMatrix, COUNTOF(AmbiPoints),
+        device->mHrtfState, device->Dry.NumChannels, AmbiPoints, AmbiMatrix, COUNTOF(AmbiPoints),
         AmbiOrderHFGain
     );
 
@@ -930,8 +930,8 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     int bs2blevel;
     size_t i;
 
-    al_free(device->Hrtf);
-    device->Hrtf = nullptr;
+    al_free(device->mHrtfState);
+    device->mHrtfState = nullptr;
     device->HrtfHandle = nullptr;
     device->HrtfName.clear();
     device->Render_Mode = NormalRender;

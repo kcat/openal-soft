@@ -109,22 +109,18 @@ namespace {
 
 void ProcessHrtf(ALCdevice *device, ALsizei SamplesToDo)
 {
-    DirectHrtfState *state;
-    int lidx, ridx;
-    ALsizei c;
-
     if(device->AmbiUp)
         ambiup_process(device->AmbiUp.get(),
             device->Dry.Buffer, device->Dry.NumChannels, device->FOAOut.Buffer,
             SamplesToDo
         );
 
-    lidx = GetChannelIdxByName(&device->RealOut, FrontLeft);
-    ridx = GetChannelIdxByName(&device->RealOut, FrontRight);
+    int lidx{GetChannelIdxByName(&device->RealOut, FrontLeft)};
+    int ridx{GetChannelIdxByName(&device->RealOut, FrontRight)};
     assert(lidx != -1 && ridx != -1);
 
-    state = device->Hrtf;
-    for(c = 0;c < device->Dry.NumChannels;c++)
+    DirectHrtfState *state{device->mHrtfState};
+    for(ALsizei c{0};c < device->Dry.NumChannels;c++)
     {
         MixDirectHrtf(device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],
             device->Dry.Buffer[c], state->Offset, state->IrSize,

@@ -36,18 +36,18 @@ struct Hrtf {
 };
 
 
-typedef struct HrtfState {
+struct HrtfState {
     alignas(16) ALfloat History[HRTF_HISTORY_LENGTH];
     alignas(16) ALfloat Values[HRIR_LENGTH][2];
-} HrtfState;
+};
 
-typedef struct HrtfParams {
+struct HrtfParams {
     alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
     ALsizei Delay[2];
     ALfloat Gain;
-} HrtfParams;
+};
 
-typedef struct DirectHrtfState {
+struct DirectHrtfState {
     /* HRTF filter state for dry buffer content */
     ALsizei Offset;
     ALsizei IrSize;
@@ -55,7 +55,7 @@ typedef struct DirectHrtfState {
         alignas(16) ALfloat Values[HRIR_LENGTH][2];
         alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
     } Chan[];
-} DirectHrtfState;
+};
 
 struct AngularPoint {
     ALfloat Elev;

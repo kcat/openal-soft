@@ -3,14 +3,68 @@
 
 #include "AL/al.h"
 
+#include "almalloc.h"
 /* For BUFFERSIZE. */
 #include "alMain.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
-struct Compressor;
+struct SlidingHold;
+
+/* General topology and basic automation was based on the following paper:
+ *
+ *   D. Giannoulis, M. Massberg and J. D. Reiss,
+ *   "Parameter Automation in a Dynamic Range Compressor,"
+ *   Journal of the Audio Engineering Society, v61 (10), Oct. 2013
+ *
+ * Available (along with supplemental reading) at:
+ *
+ *   http://c4dm.eecs.qmul.ac.uk/audioengineering/compressors/
+ */
+struct Compressor {
+    ALsizei NumChans;
+    ALuint SampleRate;
+
+    struct {
+        ALuint Knee : 1;
+        ALuint Attack : 1;
+        ALuint Release : 1;
+        ALuint PostGain : 1;
+        ALuint Declip : 1;
+    } Auto;
+
+    ALsizei LookAhead;
+
+    ALfloat PreGain;
+    ALfloat PostGain;
+
+    ALfloat Threshold;
+    ALfloat Slope;
+    ALfloat Knee;
+
+    ALfloat Attack;
+    ALfloat Release;
+
+    alignas(16) ALfloat SideChain[2*BUFFERSIZE];
+    alignas(16) ALfloat CrestFactor[BUFFERSIZE];
+
+    SlidingHold *Hold;
+    ALfloat (*Delay)[BUFFERSIZE];
+    ALsizei DelayIndex;
+
+    ALfloat CrestCoeff;
+    ALfloat GainEstimate;
+    ALfloat AdaptCoeff;
+
+    ALfloat LastPeakSq;
+    ALfloat LastRmsSq;
+    ALfloat LastRelease;
+    ALfloat LastAttack;
+    ALfloat LastGainDev;
+
+    void *operator new(size_t size) = delete;
+    void *operator new(size_t /*size*/, void *ptr) noexcept { return ptr; }
+    void operator delete(void *block) noexcept { al_free(block); }
+};
 
 /* The compressor is initialized with the following settings:
  *
@@ -36,7 +90,7 @@ struct Compressor;
  *   ReleaseTimeMin - Release time (in seconds).  Acts as a maximum when
  *                    automating release time.
  */
-struct Compressor* CompressorInit(const ALsizei NumChans, const ALuint SampleRate,
+Compressor* CompressorInit(const ALsizei NumChans, const ALuint SampleRate,
     const ALboolean AutoKnee, const ALboolean AutoAttack,
     const ALboolean AutoRelease, const ALboolean AutoPostGain,
     const ALboolean AutoDeclip, const ALfloat LookAheadTime,
@@ -49,9 +103,5 @@ void ApplyCompression(struct Compressor *Comp, const ALsizei SamplesToDo,
                       ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE]);
 
 ALsizei GetCompressorLookAhead(const struct Compressor *Comp);
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
 
 #endif /* MASTERING_H */

@@ -2,6 +2,8 @@
 
 #include <math.h>
 
+#include <algorithm>
+
 #include "mastering.h"
 #include "alu.h"
 #include "almalloc.h"
@@ -23,65 +25,13 @@ static double round(double val)
 /* These structures assume BUFFERSIZE is a power of 2. */
 static_assert((BUFFERSIZE & (BUFFERSIZE-1)) == 0, "BUFFERSIZE is not a power of 2");
 
-typedef struct SlidingHold {
+struct SlidingHold {
     ALfloat Values[BUFFERSIZE];
     ALsizei Expiries[BUFFERSIZE];
     ALsizei LowerIndex;
     ALsizei UpperIndex;
     ALsizei Length;
-} SlidingHold;
-
-/* General topology and basic automation was based on the following paper:
- *
- *   D. Giannoulis, M. Massberg and J. D. Reiss,
- *   "Parameter Automation in a Dynamic Range Compressor,"
- *   Journal of the Audio Engineering Society, v61 (10), Oct. 2013
- *
- * Available (along with supplemental reading) at:
- *
- *   http://c4dm.eecs.qmul.ac.uk/audioengineering/compressors/
- */
-typedef struct Compressor {
-    ALsizei NumChans;
-    ALuint SampleRate;
-
-    struct {
-        ALuint Knee : 1;
-        ALuint Attack : 1;
-        ALuint Release : 1;
-        ALuint PostGain : 1;
-        ALuint Declip : 1;
-    } Auto;
-
-    ALsizei LookAhead;
-
-    ALfloat PreGain;
-    ALfloat PostGain;
-
-    ALfloat Threshold;
-    ALfloat Slope;
-    ALfloat Knee;
-
-    ALfloat Attack;
-    ALfloat Release;
-
-    alignas(16) ALfloat SideChain[2*BUFFERSIZE];
-    alignas(16) ALfloat CrestFactor[BUFFERSIZE];
-
-    SlidingHold *Hold;
-    ALfloat (*Delay)[BUFFERSIZE];
-    ALsizei DelayIndex;
-
-    ALfloat CrestCoeff;
-    ALfloat GainEstimate;
-    ALfloat AdaptCoeff;
-
-    ALfloat LastPeakSq;
-    ALfloat LastRmsSq;
-    ALfloat LastRelease;
-    ALfloat LastAttack;
-    ALfloat LastGainDev;
-} Compressor;
+};
 
 
 /* This sliding hold follows the input level with an instant attack and a
@@ -446,7 +396,7 @@ Compressor* CompressorInit(const ALsizei NumChans, const ALuint SampleRate,
             size += sizeof(*Comp->Hold);
     }
 
-    Comp = static_cast<Compressor*>(al_calloc(16, size));
+    Comp = new (al_calloc(16, size)) Compressor{};
     Comp->NumChans = NumChans;
     Comp->SampleRate = SampleRate;
     Comp->Auto.Knee = AutoKnee;
@@ -474,7 +424,7 @@ Compressor* CompressorInit(const ALsizei NumChans, const ALuint SampleRate,
     {
         if(hold > 0)
         {
-            Comp->Hold = (SlidingHold*)(Comp + 1);
+            Comp->Hold = new ((void*)(Comp + 1)) SlidingHold{};
             Comp->Hold->Values[0] = -HUGE_VALF;
             Comp->Hold->Expiries[0] = hold;
             Comp->Hold->Length = hold;
@@ -495,21 +445,23 @@ Compressor* CompressorInit(const ALsizei NumChans, const ALuint SampleRate,
 
 void ApplyCompression(Compressor *Comp, const ALsizei SamplesToDo, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE])
 {
-    const ALsizei numChans = Comp->NumChans;
-    const ALfloat preGain = Comp->PreGain;
-    ALfloat *RESTRICT sideChain;
-    ALsizei c, i;
+    const ALsizei numChans{Comp->NumChans};
 
     ASSUME(SamplesToDo > 0);
     ASSUME(numChans > 0);
 
+    const ALfloat preGain{Comp->PreGain};
     if(preGain != 1.0f)
     {
-        for(c = 0;c < numChans;c++)
-        {
-            for(i = 0;i < SamplesToDo;i++)
-                OutBuffer[c][i] *= preGain;
-        }
+        std::for_each(OutBuffer, OutBuffer+numChans,
+            [SamplesToDo, preGain](ALfloat *buffer) noexcept -> void
+            {
+                std::for_each(buffer, buffer+SamplesToDo,
+                    [preGain](ALfloat &samp) noexcept -> void
+                    { samp *= preGain; }
+                );
+            }
+        );
     }
 
     LinkChannels(Comp, SamplesToDo, OutBuffer);
@@ -527,14 +479,22 @@ void ApplyCompression(Compressor *Comp, const ALsizei SamplesToDo, ALfloat (*RES
     if(Comp->Delay)
         SignalDelay(Comp, SamplesToDo, OutBuffer);
 
-    sideChain = Comp->SideChain;
-    for(c = 0;c < numChans;c++)
-    {
-        for(i = 0;i < SamplesToDo;i++)
-            OutBuffer[c][i] *= sideChain[i];
-    }
+    ALfloat *RESTRICT sideChain{Comp->SideChain};
+    std::for_each(OutBuffer, OutBuffer+numChans,
+        [SamplesToDo, sideChain](ALfloat *buffer) noexcept -> void
+        {
+            /* Mark the sideChain "input-1 type" as restrict, so the compiler
+             * can vectorize this loop (otherwise it assumes a write to
+             * buffer[n] can change sideChain[n+1]).
+             */
+            std::transform<ALfloat*RESTRICT>(sideChain, sideChain+SamplesToDo, buffer, buffer,
+                [](const ALfloat gain, const ALfloat samp) noexcept -> ALfloat
+                { return samp * gain; }
+            );
+        }
+    );
 
-    memmove(sideChain, sideChain+SamplesToDo, Comp->LookAhead*sizeof(ALfloat));
+    std::copy(sideChain+SamplesToDo, sideChain+SamplesToDo+Comp->LookAhead, sideChain);
 }
 
 

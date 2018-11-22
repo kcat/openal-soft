@@ -2221,16 +2221,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(device->DitherDepth > 0.0f)
             thrshld -= 1.0f / device->DitherDepth;
 
-        al_free(device->Limiter);
-        device->Limiter = CreateDeviceLimiter(device, std::log10(thrshld) * 20.0f);
-        device->FixedLatency += (ALuint)(GetCompressorLookAhead(device->Limiter) *
+        device->Limiter.reset(CreateDeviceLimiter(device, std::log10(thrshld) * 20.0f));
+        device->FixedLatency += (ALuint)(GetCompressorLookAhead(device->Limiter.get()) *
                                          DEVICE_CLOCK_RES / device->Frequency);
     }
     else
-    {
-        al_free(device->Limiter);
         device->Limiter = nullptr;
-    }
     TRACE("Output limiter %s\n", device->Limiter ? "enabled" : "disabled");
 
     aluSelectPostProcess(device);
@@ -2433,9 +2429,6 @@ ALCdevice_struct::~ALCdevice_struct()
 
     al_free(Stablizer);
     Stablizer = nullptr;
-
-    al_free(Limiter);
-    Limiter = nullptr;
 }
 
 

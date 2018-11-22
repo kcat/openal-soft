@@ -711,7 +711,7 @@ struct ALCdevice_struct {
 
     struct FrontStablizer *Stablizer{nullptr};
 
-    struct Compressor *Limiter{nullptr};
+    std::unique_ptr<Compressor> Limiter;
 
     /* The average speaker distance as determined by the ambdec configuration
      * (or alternatively, by the NFC-HOA reference delay). Only used for NFC.

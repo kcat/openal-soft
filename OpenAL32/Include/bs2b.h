@@ -24,6 +24,8 @@
 #ifndef BS2B_H
 #define BS2B_H
 
+#include "almalloc.h"
+
 /* Number of crossfeed levels */
 #define BS2B_CLEVELS           3
 
@@ -41,10 +43,6 @@
 #define BS2B_DEFAULT_CLEVEL    BS2B_HIGH_ECLEVEL
 /* Default sample rate (Hz) */
 #define BS2B_DEFAULT_SRATE     44100
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
 
 struct bs2b {
     int level;  /* Crossfeed level */
@@ -67,6 +65,8 @@ struct bs2b {
         float lo;
         float hi;
     } last_sample[2];
+
+    DEF_NEWDEL(bs2b)
 };
 
 /* Clear buffers and set new coefficients with new crossfeed level and sample
@@ -74,21 +74,17 @@ struct bs2b {
  * level - crossfeed level of *LEVEL values.
  * srate - sample rate by Hz.
  */
-void bs2b_set_params(struct bs2b *bs2b, int level, int srate);
+void bs2b_set_params(bs2b *bs2b, int level, int srate);
 
 /* Return current crossfeed level value */
-int bs2b_get_level(struct bs2b *bs2b);
+int bs2b_get_level(bs2b *bs2b);
 
 /* Return current sample rate value */
-int bs2b_get_srate(struct bs2b *bs2b);
+int bs2b_get_srate(bs2b *bs2b);
 
 /* Clear buffer */
-void bs2b_clear(struct bs2b *bs2b);
+void bs2b_clear(bs2b *bs2b);
 
-void bs2b_cross_feed(struct bs2b *bs2b, float *RESTRICT Left, float *RESTRICT Right, int SamplesToDo);
-
-#ifdef __cplusplus
-}    /* extern "C" */
-#endif /* __cplusplus */
+void bs2b_cross_feed(bs2b *bs2b, float *RESTRICT Left, float *RESTRICT Right, int SamplesToDo);
 
 #endif /* BS2B_H */

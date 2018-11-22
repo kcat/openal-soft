@@ -175,7 +175,7 @@ void ProcessBs2b(ALCdevice *device, ALsizei SamplesToDo)
     assert(lidx != -1 && ridx != -1);
 
     /* Apply binaural/crossfeed filter */
-    bs2b_cross_feed(device->Bs2b, device->RealOut.Buffer[lidx],
+    bs2b_cross_feed(device->Bs2b.get(), device->RealOut.Buffer[lidx],
                     device->RealOut.Buffer[ridx], SamplesToDo);
 }
 

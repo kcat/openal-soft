@@ -53,6 +53,7 @@
 #include "alconfig.h"
 #include "ringbuffer.h"
 #include "filters/splitter.h"
+#include "bs2b.h"
 
 #include "fpu_modes.h"
 #include "cpu_caps.h"
@@ -1990,8 +1991,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         return ALC_NO_ERROR;
 
     device->Uhj_Encoder = nullptr;
-
-    al_free(device->Bs2b);
     device->Bs2b = nullptr;
 
     device->ChannelDelay.clear();
@@ -2421,9 +2420,6 @@ ALCdevice_struct::~ALCdevice_struct()
     HrtfHandle = nullptr;
     al_free(Hrtf);
     Hrtf = nullptr;
-
-    al_free(Bs2b);
-    Bs2b = nullptr;
 }
 
 

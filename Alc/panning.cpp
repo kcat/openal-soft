@@ -1163,7 +1163,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
 no_hrtf:
     if(old_hrtf)
         Hrtf_DecRef(old_hrtf);
-    old_hrtf = NULL;
+    old_hrtf = nullptr;
     TRACE("HRTF disabled\n");
 
     device->Render_Mode = StereoPair;
@@ -1176,8 +1176,8 @@ no_hrtf:
         ConfigValueInt(device->DeviceName.c_str(), NULL, "cf_level", &bs2blevel);
     if(bs2blevel > 0 && bs2blevel <= 6)
     {
-        device->Bs2b = reinterpret_cast<struct bs2b*>(al_calloc(16, sizeof(*device->Bs2b)));
-        bs2b_set_params(device->Bs2b, bs2blevel, device->Frequency);
+        device->Bs2b.reset(new bs2b{});
+        bs2b_set_params(device->Bs2b.get(), bs2blevel, device->Frequency);
         TRACE("BS2B enabled\n");
         InitPanning(device);
         return;

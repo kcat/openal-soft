@@ -7,6 +7,9 @@
 #include <mutex>
 
 struct ClockLatency {
+    /* FIXME: These should be nanoseconds. Will require changing backends that
+     * provide this info.
+     */
     ALint64 ClockTime;
     ALint64 Latency;
 };
@@ -16,8 +19,12 @@ struct ClockLatency {
  */
 inline ALuint64 GetDeviceClockTime(ALCdevice *device)
 {
-    return device->ClockBase + (device->SamplesDone * DEVICE_CLOCK_RES /
-                                device->Frequency);
+    using std::chrono::seconds;
+    using std::chrono::nanoseconds;
+    using std::chrono::duration_cast;
+
+    auto ns = duration_cast<nanoseconds>(seconds{device->SamplesDone}) / device->Frequency;
+    return (device->ClockBase + ns).count();
 }
 
 void ALCdevice_Lock(ALCdevice *device);

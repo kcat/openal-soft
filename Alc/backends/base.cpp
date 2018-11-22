@@ -18,7 +18,7 @@ void ALCdevice_Unlock(ALCdevice *device)
 ClockLatency GetClockLatency(ALCdevice *device)
 {
     ClockLatency ret = V0(device->Backend,getClockLatency)();
-    ret.Latency += device->FixedLatency;
+    ret.Latency += device->FixedLatency.count();
     return ret;
 }
 

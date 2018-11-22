@@ -1758,7 +1758,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
          * overflow during conversion. This also guarantees an exact, stable
          * conversion. */
         device->SamplesDone += SamplesToDo;
-        device->ClockBase += (device->SamplesDone/device->Frequency) * DEVICE_CLOCK_RES;
+        device->ClockBase += std::chrono::seconds{device->SamplesDone / device->Frequency};
         device->SamplesDone %= device->Frequency;
         IncrementRef(&device->MixCount);
 

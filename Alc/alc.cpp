@@ -1682,8 +1682,13 @@ static struct Compressor *CreateDeviceLimiter(const ALCdevice *device, const ALf
  */
 static inline void UpdateClockBase(ALCdevice *device)
 {
+    using std::chrono::seconds;
+    using std::chrono::nanoseconds;
+    using std::chrono::duration_cast;
+
     IncrementRef(&device->MixCount);
-    device->ClockBase += device->SamplesDone * DEVICE_CLOCK_RES / device->Frequency;
+    device->ClockBase += duration_cast<nanoseconds>(seconds{device->SamplesDone}) /
+                         device->Frequency;
     device->SamplesDone = 0;
     IncrementRef(&device->MixCount);
 }
@@ -2006,7 +2011,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     device->MixBuffer.shrink_to_fit();
 
     UpdateClockBase(device);
-    device->FixedLatency = 0;
+    device->FixedLatency = std::chrono::nanoseconds::zero();
 
     device->DitherSeed = DITHER_RNG_SEED;
 
@@ -2222,8 +2227,10 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             thrshld -= 1.0f / device->DitherDepth;
 
         device->Limiter.reset(CreateDeviceLimiter(device, std::log10(thrshld) * 20.0f));
-        device->FixedLatency += (ALuint)(GetCompressorLookAhead(device->Limiter.get()) *
-                                         DEVICE_CLOCK_RES / device->Frequency);
+        /* Convert the lookahead from samples to nanosamples to nanoseconds. */
+        device->FixedLatency += std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::seconds(GetCompressorLookAhead(device->Limiter.get()))
+        ) / device->Frequency;
     }
     else
         device->Limiter = nullptr;
@@ -2231,7 +2238,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
     aluSelectPostProcess(device);
 
-    TRACE("Fixed device latency: %uns\n", device->FixedLatency);
+    TRACE("Fixed device latency: %ldns\n", (long)device->FixedLatency.count());
 
     /* Need to delay returning failure until replacement Send arrays have been
      * allocated with the appropriate size.
@@ -3420,7 +3427,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
 
             case ALC_DEVICE_CLOCK_SOFT:
                 { std::lock_guard<almtx_t> _{device->BackendLock};
-                    ALuint64 basecount;
+                    std::chrono::nanoseconds basecount;
                     ALuint samplecount;
                     ALuint refcount;
                     do {
@@ -3429,7 +3436,8 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                         basecount = device->ClockBase;
                         samplecount = device->SamplesDone;
                     } while(refcount != ReadRef(&device->MixCount));
-                    *values = basecount + (samplecount*DEVICE_CLOCK_RES/device->Frequency);
+                    *values = (basecount + std::chrono::duration_cast<std::chrono::nanoseconds>(
+                        std::chrono::seconds{samplecount}) / device->Frequency).count();
                 }
                 break;
 

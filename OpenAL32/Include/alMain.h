@@ -19,6 +19,7 @@
 #include <array>
 #include <vector>
 #include <string>
+#include <chrono>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -690,9 +691,9 @@ struct ALCdevice_struct {
     // Device flags
     ALuint Flags{0u};
 
-    ALuint64 ClockBase{0u};
     ALuint SamplesDone{0u};
-    ALuint FixedLatency{0u};
+    std::chrono::nanoseconds ClockBase{0};
+    std::chrono::nanoseconds FixedLatency{0};
 
     /* Temp storage used for mixer processing. */
     alignas(16) ALfloat TempBuffer[4][BUFFERSIZE];

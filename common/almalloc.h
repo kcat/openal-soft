@@ -31,6 +31,10 @@ int al_is_sane_alignment_allocator(void) noexcept;
     }                                                                         \
     void operator delete(void *block) noexcept { al_free(block); }
 
+#define DEF_PLACE_NEWDEL()                                                    \
+    void *operator new(size_t /*size*/, void *ptr) noexcept { return ptr; }   \
+    void operator delete(void *block) noexcept { al_free(block); }
+
 namespace al {
 
 template<typename T, size_t alignment=DEF_ALIGN>

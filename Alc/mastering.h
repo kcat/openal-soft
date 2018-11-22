@@ -61,9 +61,7 @@ struct Compressor {
     ALfloat LastAttack;
     ALfloat LastGainDev;
 
-    void *operator new(size_t size) = delete;
-    void *operator new(size_t /*size*/, void *ptr) noexcept { return ptr; }
-    void operator delete(void *block) noexcept { al_free(block); }
+    DEF_PLACE_NEWDEL()
 };
 
 /* The compressor is initialized with the following settings:

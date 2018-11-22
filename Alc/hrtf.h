@@ -50,12 +50,14 @@ struct HrtfParams {
 
 struct DirectHrtfState {
     /* HRTF filter state for dry buffer content */
-    ALsizei Offset;
-    ALsizei IrSize;
+    ALsizei Offset{0};
+    ALsizei IrSize{0};
     struct {
         alignas(16) ALfloat Values[HRIR_LENGTH][2];
         alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
     } Chan[];
+
+    DirectHrtfState() noexcept { }
 
     DEF_PLACE_NEWDEL()
 };

@@ -62,7 +62,8 @@ namespace {
 
 #define HF_BAND 0
 #define LF_BAND 1
-#define NUM_BANDS 2
+static_assert(BFormatDec::NumBands == 2, "Unexpected BFormatDec::NumBands");
+static_assert(AmbiUpsampler::NumBands == 2, "Unexpected AmbiUpsampler::NumBands");
 
 /* These points are in AL coordinates! */
 constexpr ALfloat Ambi3DPoints[8][3] = {
@@ -106,47 +107,6 @@ ALsizei GetACNIndex(const BFChannelConfig *chans, ALsizei numchans, ALsizei acn)
 
 } // namespace
 
-
-/* NOTE: BandSplitter filters are unused with single-band decoding */
-struct BFormatDec {
-    ALuint Enabled; /* Bitfield of enabled channels. */
-
-    union {
-        alignas(16) ALfloat Dual[MAX_OUTPUT_CHANNELS][NUM_BANDS][MAX_AMBI_COEFFS];
-        alignas(16) ALfloat Single[MAX_OUTPUT_CHANNELS][MAX_AMBI_COEFFS];
-    } Matrix;
-
-    BandSplitter XOver[MAX_AMBI_COEFFS];
-
-    al::vector<std::array<ALfloat,BUFFERSIZE>, 16> Samples;
-    /* These two alias into Samples */
-    std::array<ALfloat,BUFFERSIZE> *SamplesHF;
-    std::array<ALfloat,BUFFERSIZE> *SamplesLF;
-
-    alignas(16) ALfloat ChannelMix[BUFFERSIZE];
-
-    struct {
-        BandSplitter XOver;
-        ALfloat Gains[NUM_BANDS];
-    } UpSampler[4];
-
-    ALsizei NumChannels;
-    ALboolean DualBand;
-
-    DEF_NEWDEL(BFormatDec)
-};
-
-BFormatDec *bformatdec_alloc()
-{ return new BFormatDec{}; }
-
-void bformatdec_free(BFormatDec **dec)
-{
-    if(dec && *dec)
-    {
-        delete *dec;
-        *dec = nullptr;
-    }
-}
 
 void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALsizei chanmap[MAX_OUTPUT_CHANNELS])
 {
@@ -392,33 +352,11 @@ void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*RESTRICT OutBuffer)[B
         /* Now write each band to the output. */
         MixRowSamples(OutBuffer[i], dec->UpSampler[i].Gains,
             &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(dec->Samples[0]),
-            NUM_BANDS, 0, SamplesToDo
+            BFormatDec::NumBands, 0, SamplesToDo
         );
     }
 }
 
-
-struct AmbiUpsampler {
-    alignas(16) ALfloat Samples[NUM_BANDS][BUFFERSIZE];
-
-    BandSplitter XOver[4];
-
-    ALfloat Gains[4][MAX_OUTPUT_CHANNELS][NUM_BANDS];
-
-    DEF_NEWDEL(AmbiUpsampler)
-};
-
-AmbiUpsampler *ambiup_alloc()
-{ return new AmbiUpsampler{}; }
-
-void ambiup_free(struct AmbiUpsampler **ambiup)
-{
-    if(ambiup)
-    {
-        delete *ambiup;
-        *ambiup = nullptr;
-    }
-}
 
 void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device, ALfloat w_scale, ALfloat xyz_scale)
 {
@@ -488,7 +426,7 @@ void ambiup_process(struct AmbiUpsampler *ambiup, ALfloat (*RESTRICT OutBuffer)[
 
         for(j = 0;j < OutChannels;j++)
             MixRowSamples(OutBuffer[j], ambiup->Gains[i][j],
-                ambiup->Samples, NUM_BANDS, 0, SamplesToDo
+                ambiup->Samples, AmbiUpsampler::NumBands, 0, SamplesToDo
             );
     }
 }

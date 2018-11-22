@@ -563,7 +563,7 @@ static void InitPanning(ALCdevice *device)
                 w_scale = W_SCALE_2H2P;
                 xyz_scale = XYZ_SCALE_2H2P;
             }
-            ambiup_reset(device->AmbiUp, device, w_scale, xyz_scale);
+            ambiup_reset(device->AmbiUp.get(), device, w_scale, xyz_scale);
         }
 
         if(ConfigValueFloat(devname, "decoder", "nfc-ref-delay", &nfc_delay) && nfc_delay > 0.0f)
@@ -725,7 +725,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsiz
         (conf->ChanMask > 0xf) ? (conf->ChanMask > 0x1ff) ? "third" : "second" : "first",
         (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? " periphonic" : ""
     );
-    bformatdec_reset(device->AmbiDecoder, conf, count, device->Frequency, speakermap);
+    bformatdec_reset(device->AmbiDecoder.get(), conf, count, device->Frequency, speakermap);
 
     if(conf->ChanMask <= 0xf)
     {
@@ -879,7 +879,7 @@ static void InitHrtfPanning(ALCdevice *device)
         device->FOAOut.CoeffCount = 0;
         device->FOAOut.NumChannels = 4;
 
-        ambiup_reset(device->AmbiUp, device, AmbiOrderHFGainFOA[0] / AmbiOrderHFGain[0],
+        ambiup_reset(device->AmbiUp.get(), device, AmbiOrderHFGainFOA[0] / AmbiOrderHFGain[0],
                      AmbiOrderHFGainFOA[1] / AmbiOrderHFGain[1]);
     }
     else
@@ -995,20 +995,17 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
 
         if(pconf && GetConfigValueBool(devname, "decoder", "hq-mode", 0))
         {
-            ambiup_free(&device->AmbiUp);
+            device->AmbiUp = nullptr;
             if(!device->AmbiDecoder)
-                device->AmbiDecoder = bformatdec_alloc();
+                device->AmbiDecoder.reset(new BFormatDec{});
         }
         else
         {
-            bformatdec_free(&device->AmbiDecoder);
+            device->AmbiDecoder = nullptr;
             if(device->FmtChans != DevFmtAmbi3D || device->mAmbiOrder < 2)
-                ambiup_free(&device->AmbiUp);
-            else
-            {
-                if(!device->AmbiUp)
-                    device->AmbiUp = ambiup_alloc();
-            }
+                device->AmbiUp = nullptr;
+            else if(!device->AmbiUp)
+                device->AmbiUp.reset(new AmbiUpsampler{});
         }
 
         if(!pconf)
@@ -1058,7 +1055,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         return;
     }
 
-    bformatdec_free(&device->AmbiDecoder);
+    device->AmbiDecoder = nullptr;
 
     headphones = device->IsHeadphones;
     if(device->Type != Loopback)
@@ -1147,12 +1144,12 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
             /* Don't bother with HOA when using full HRTF rendering. Nothing
              * needs it, and it eases the CPU/memory load.
              */
-            ambiup_free(&device->AmbiUp);
+            device->AmbiUp = nullptr;
         }
         else
         {
             if(!device->AmbiUp)
-                device->AmbiUp = ambiup_alloc();
+                device->AmbiUp.reset(new AmbiUpsampler{});
         }
 
         TRACE("%s HRTF rendering enabled, using \"%s\"\n",
@@ -1171,7 +1168,7 @@ no_hrtf:
 
     device->Render_Mode = StereoPair;
 
-    ambiup_free(&device->AmbiUp);
+    device->AmbiUp = nullptr;
 
     bs2blevel = ((headphones && hrtf_appreq != Hrtf_Disable) ||
                  (hrtf_appreq == Hrtf_Enable)) ? 5 : 0;

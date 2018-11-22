@@ -208,6 +208,8 @@ struct ALeffect;
 struct ALfilter;
 struct EffectState;
 struct Uhj2Encoder;
+struct BFormatDec;
+struct AmbiUpsampler;
 
 
 #define DEFAULT_OUTPUT_RATE  (44100)
@@ -673,13 +675,13 @@ struct ALCdevice_struct {
     std::unique_ptr<Uhj2Encoder> Uhj_Encoder;
 
     /* High quality Ambisonic decoder */
-    struct BFormatDec *AmbiDecoder{nullptr};
+    std::unique_ptr<BFormatDec> AmbiDecoder;
 
     /* Stereo-to-binaural filter */
     struct bs2b *Bs2b{nullptr};
 
     /* First-order ambisonic upsampler for higher-order output */
-    struct AmbiUpsampler *AmbiUp{nullptr};
+    std::unique_ptr<AmbiUpsampler> AmbiUp;
 
     /* Rendering mode. */
     RenderMode Render_Mode{NormalRender};

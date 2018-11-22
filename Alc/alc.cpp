@@ -2424,9 +2424,6 @@ ALCdevice_struct::~ALCdevice_struct()
 
     al_free(Bs2b);
     Bs2b = nullptr;
-
-    bformatdec_free(&AmbiDecoder);
-    ambiup_free(&AmbiUp);
 }
 
 

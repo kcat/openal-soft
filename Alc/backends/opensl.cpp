@@ -654,8 +654,8 @@ static ClockLatency ALCopenslPlayback_getClockLatency(ALCopenslPlayback *self)
 
     ALCopenslPlayback_lock(self);
     ret.ClockTime = GetDeviceClockTime(device);
-    ret.Latency = ll_ringbuffer_read_space(self->mRing)*device->UpdateSize *
-                  DEVICE_CLOCK_RES / device->Frequency;
+    ret.Latency  = std::chrono::seconds{ll_ringbuffer_read_space(self->mRing)*device->UpdateSize};
+    ret.Latency /= device->Frequency;
     ALCopenslPlayback_unlock(self);
 
     return ret;

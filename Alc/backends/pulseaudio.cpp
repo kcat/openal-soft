@@ -1213,7 +1213,7 @@ ClockLatency PulsePlayback_getClockLatency(PulsePlayback *self)
     }
     else if(UNLIKELY(neg))
         latency = 0;
-    ret.Latency = (ALint64)minu64(latency, U64(0x7fffffffffffffff)/1000) * 1000;
+    ret.Latency = std::chrono::microseconds{latency};
 
     return ret;
 }
@@ -1714,7 +1714,7 @@ ClockLatency PulseCapture_getClockLatency(PulseCapture *self)
     }
     else if(UNLIKELY(neg))
         latency = 0;
-    ret.Latency = (ALint64)minu64(latency, U64(0x7fffffffffffffff)/1000) * 1000;
+    ret.Latency = std::chrono::microseconds{latency};
 
     return ret;
 }

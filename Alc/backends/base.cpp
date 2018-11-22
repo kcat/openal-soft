@@ -18,7 +18,7 @@ void ALCdevice_Unlock(ALCdevice *device)
 ClockLatency GetClockLatency(ALCdevice *device)
 {
     ClockLatency ret = V0(device->Backend,getClockLatency)();
-    ret.Latency += device->FixedLatency.count();
+    ret.Latency += device->FixedLatency;
     return ret;
 }
 
@@ -65,8 +65,8 @@ ClockLatency ALCbackend_getClockLatency(ALCbackend *self)
      * any given time during playback. Without a more accurate measurement from
      * the output, this is an okay approximation.
      */
-    ret.Latency = device->UpdateSize * DEVICE_CLOCK_RES / device->Frequency *
-                  maxu(device->NumUpdates-1, 1);
+    ret.Latency  = std::chrono::seconds{device->UpdateSize*maxi(device->NumUpdates-1, 0)};
+    ret.Latency /= device->Frequency;
 
     return ret;
 }

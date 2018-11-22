@@ -3416,10 +3416,10 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
 
                     ClockLatency clock{GetClockLatency(device)};
                     values[i++] = ALC_DEVICE_CLOCK_SOFT;
-                    values[i++] = clock.ClockTime;
+                    values[i++] = clock.ClockTime.count();
 
                     values[i++] = ALC_DEVICE_LATENCY_SOFT;
-                    values[i++] = clock.Latency;
+                    values[i++] = clock.Latency.count();
 
                     values[i++] = 0;
                 }
@@ -3444,7 +3444,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
             case ALC_DEVICE_LATENCY_SOFT:
                 { std::lock_guard<almtx_t> _{device->BackendLock};
                     ClockLatency clock{GetClockLatency(device)};
-                    *values = clock.Latency;
+                    *values = clock.Latency.count();
                 }
                 break;
 
@@ -3455,8 +3455,8 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                 {
                     std::lock_guard<almtx_t> _{device->BackendLock};
                     ClockLatency clock{GetClockLatency(device)};
-                    values[0] = clock.ClockTime;
-                    values[1] = clock.Latency;
+                    values[0] = clock.ClockTime.count();
+                    values[1] = clock.Latency.count();
                 }
                 break;
 

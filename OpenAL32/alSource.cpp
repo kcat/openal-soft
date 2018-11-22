@@ -147,7 +147,7 @@ void UpdateSourceProps(ALsource *source, ALvoice *voice, ALCcontext *context)
  * samples. The offset is relative to the start of the queue (not the start of
  * the current buffer).
  */
-ALint64 GetSourceSampleOffset(ALsource *Source, ALCcontext *context, ALuint64 *clocktime)
+ALint64 GetSourceSampleOffset(ALsource *Source, ALCcontext *context, std::chrono::nanoseconds *clocktime)
 {
     ALCdevice *device{context->Device};
     const ALbufferlistitem *Current;
@@ -193,7 +193,7 @@ ALint64 GetSourceSampleOffset(ALsource *Source, ALCcontext *context, ALuint64 *c
  * Gets the current read offset for the given Source, in seconds. The offset is
  * relative to the start of the queue (not the start of the current buffer).
  */
-ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, ALuint64 *clocktime)
+ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, std::chrono::nanoseconds *clocktime)
 {
     ALCdevice *device{context->Device};
     const ALbufferlistitem *Current;
@@ -1654,7 +1654,7 @@ ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, AL
 {
     ALCdevice *device{Context->Device};
     ClockLatency clocktime;
-    ALuint64 srcclock;
+    std::chrono::nanoseconds srcclock;
     ALint ivals[3];
     ALboolean err;
 
@@ -1739,23 +1739,23 @@ ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, AL
             { std::lock_guard<almtx_t> _{device->BackendLock};
                 clocktime = GetClockLatency(device);
             }
-            if(srcclock == (ALuint64)clocktime.ClockTime)
-                values[1] = (ALdouble)clocktime.Latency / 1000000000.0;
+            if(srcclock == clocktime.ClockTime)
+                values[1] = (ALdouble)clocktime.Latency.count() / 1000000000.0;
             else
             {
                 /* If the clock time incremented, reduce the latency by that
                  * much since it's that much closer to the source offset it got
                  * earlier.
                  */
-                ALuint64 diff = clocktime.ClockTime - srcclock;
-                values[1] = (ALdouble)(clocktime.Latency - minu64(clocktime.Latency, diff)) /
+                std::chrono::nanoseconds diff = clocktime.ClockTime - srcclock;
+                values[1] = (ALdouble)(clocktime.Latency - std::min(clocktime.Latency, diff)).count() /
                             1000000000.0;
             }
             return AL_TRUE;
 
         case AL_SEC_OFFSET_CLOCK_SOFT:
             values[0] = GetSourceSecOffset(Source, Context, &srcclock);
-            values[1] = srcclock / 1000000000.0;
+            values[1] = srcclock.count() / 1000000000.0;
             return AL_TRUE;
 
         case AL_POSITION:
@@ -1987,7 +1987,7 @@ ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
 {
     ALCdevice *device = Context->Device;
     ClockLatency clocktime;
-    ALuint64 srcclock;
+    std::chrono::nanoseconds srcclock;
     ALdouble dvals[6];
     ALint ivals[3];
     ALboolean err;
@@ -2002,22 +2002,22 @@ ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
             { std::lock_guard<almtx_t> _{device->BackendLock};
                 clocktime = GetClockLatency(device);
             }
-            if(srcclock == (ALuint64)clocktime.ClockTime)
-                values[1] = clocktime.Latency;
+            if(srcclock == clocktime.ClockTime)
+                values[1] = clocktime.Latency.count();
             else
             {
                 /* If the clock time incremented, reduce the latency by that
                  * much since it's that much closer to the source offset it got
                  * earlier.
                  */
-                ALuint64 diff{clocktime.ClockTime - srcclock};
-                values[1] = clocktime.Latency - minu64(clocktime.Latency, diff);
+                auto diff = clocktime.ClockTime - srcclock;
+                values[1] = (clocktime.Latency - std::min(clocktime.Latency, diff)).count();
             }
             return AL_TRUE;
 
         case AL_SAMPLE_OFFSET_CLOCK_SOFT:
             values[0] = GetSourceSampleOffset(Source, Context, &srcclock);
-            values[1] = srcclock;
+            values[1] = srcclock.count();
             return AL_TRUE;
 
         /* 1x float/double */

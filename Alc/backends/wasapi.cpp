@@ -1145,8 +1145,8 @@ ClockLatency ALCwasapiPlayback_getClockLatency(ALCwasapiPlayback *self)
     ALCwasapiPlayback_lock(self);
     ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
     ret.ClockTime = GetDeviceClockTime(device);
-    ret.Latency = self->mPadding.load(std::memory_order_relaxed) * DEVICE_CLOCK_RES /
-                  device->Frequency;
+    ret.Latency  = std::chrono::seconds{self->mPadding.load(std::memory_order_relaxed)};
+    ret.Latency /= device->Frequency;
     ALCwasapiPlayback_unlock(self);
 
     return ret;

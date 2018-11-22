@@ -915,7 +915,8 @@ ClockLatency ALCplaybackAlsa_getClockLatency(ALCplaybackAlsa *self)
         ERR("Failed to get pcm delay: %s\n", snd_strerror(err));
         delay = 0;
     }
-    ret.Latency = std::max<snd_pcm_sframes_t>(0, delay) * DEVICE_CLOCK_RES / device->Frequency;
+    ret.Latency  = std::chrono::seconds{std::max<snd_pcm_sframes_t>(0, delay)};
+    ret.Latency /= device->Frequency;
     ALCplaybackAlsa_unlock(self);
 
     return ret;
@@ -1286,7 +1287,8 @@ ClockLatency ALCcaptureAlsa_getClockLatency(ALCcaptureAlsa *self)
         ERR("Failed to get pcm delay: %s\n", snd_strerror(err));
         delay = 0;
     }
-    ret.Latency = std::max<snd_pcm_sframes_t>(0, delay) * DEVICE_CLOCK_RES / device->Frequency;
+    ret.Latency  = std::chrono::seconds{std::max<snd_pcm_sframes_t>(0, delay)};
+    ret.Latency /= device->Frequency;
     ALCcaptureAlsa_unlock(self);
 
     return ret;

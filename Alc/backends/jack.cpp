@@ -503,8 +503,8 @@ static ClockLatency ALCjackPlayback_getClockLatency(ALCjackPlayback *self)
 
     ALCjackPlayback_lock(self);
     ret.ClockTime = GetDeviceClockTime(device);
-    ret.Latency = ll_ringbuffer_read_space(self->Ring) * DEVICE_CLOCK_RES /
-                  device->Frequency;
+    ret.Latency  = std::chrono::seconds{ll_ringbuffer_read_space(self->Ring)};
+    ret.Latency /= device->Frequency;
     ALCjackPlayback_unlock(self);
 
     return ret;

@@ -3,28 +3,26 @@
 
 #include "alMain.h"
 
+#include <chrono>
 #include <string>
 #include <mutex>
 
 struct ClockLatency {
-    /* FIXME: These should be nanoseconds. Will require changing backends that
-     * provide this info.
-     */
-    ALint64 ClockTime;
-    ALint64 Latency;
+    std::chrono::nanoseconds ClockTime;
+    std::chrono::nanoseconds Latency;
 };
 
 /* Helper to get the current clock time from the device's ClockBase, and
  * SamplesDone converted from the sample rate.
  */
-inline ALuint64 GetDeviceClockTime(ALCdevice *device)
+inline std::chrono::nanoseconds GetDeviceClockTime(ALCdevice *device)
 {
     using std::chrono::seconds;
     using std::chrono::nanoseconds;
     using std::chrono::duration_cast;
 
     auto ns = duration_cast<nanoseconds>(seconds{device->SamplesDone}) / device->Frequency;
-    return (device->ClockBase + ns).count();
+    return device->ClockBase + ns;
 }
 
 void ALCdevice_Lock(ALCdevice *device);

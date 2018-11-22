@@ -2418,8 +2418,6 @@ ALCdevice_struct::~ALCdevice_struct()
     if(HrtfHandle)
         Hrtf_DecRef(HrtfHandle);
     HrtfHandle = nullptr;
-    al_free(mHrtfState);
-    mHrtfState = nullptr;
 }
 
 

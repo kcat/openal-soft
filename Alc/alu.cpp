@@ -119,7 +119,7 @@ void ProcessHrtf(ALCdevice *device, ALsizei SamplesToDo)
     int ridx{GetChannelIdxByName(&device->RealOut, FrontRight)};
     assert(lidx != -1 && ridx != -1);
 
-    DirectHrtfState *state{device->mHrtfState};
+    DirectHrtfState *state{device->mHrtfState.get()};
     for(ALsizei c{0};c < device->Dry.NumChannels;c++)
     {
         MixDirectHrtf(device->RealOut.Buffer[lidx], device->RealOut.Buffer[ridx],

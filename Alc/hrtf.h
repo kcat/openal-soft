@@ -7,6 +7,7 @@
 #include "alMain.h"
 #include "atomic.h"
 #include "vector.h"
+#include "almalloc.h"
 
 
 #define HRTF_HISTORY_BITS   (6)
@@ -55,6 +56,8 @@ struct DirectHrtfState {
         alignas(16) ALfloat Values[HRIR_LENGTH][2];
         alignas(16) ALfloat Coeffs[HRIR_LENGTH][2];
     } Chan[];
+
+    DEF_PLACE_NEWDEL()
 };
 
 struct AngularPoint {

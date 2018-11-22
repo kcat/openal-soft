@@ -666,7 +666,7 @@ struct ALCdevice_struct {
     POSTPROCESS PostProcess{};
 
     /* HRTF state and info */
-    DirectHrtfState *mHrtfState{nullptr};
+    std::unique_ptr<DirectHrtfState> mHrtfState;
     std::string HrtfName;
     Hrtf *HrtfHandle{nullptr};
     al::vector<EnumeratedHrtf> HrtfList;

@@ -1779,7 +1779,7 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
             int cidx = GetChannelIdxByName(&device->RealOut, FrontCenter);
             assert(lidx >= 0 && ridx >= 0 && cidx >= 0);
 
-            ApplyStablizer(device->Stablizer, device->RealOut.Buffer, lidx, ridx, cidx,
+            ApplyStablizer(device->Stablizer.get(), device->RealOut.Buffer, lidx, ridx, cidx,
                            SamplesToDo, device->RealOut.NumChannels);
         }
 

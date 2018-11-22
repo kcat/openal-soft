@@ -52,6 +52,7 @@
 #include "alu.h"
 #include "alconfig.h"
 #include "ringbuffer.h"
+#include "filters/splitter.h"
 
 #include "fpu_modes.h"
 #include "cpu_caps.h"
@@ -2426,9 +2427,6 @@ ALCdevice_struct::~ALCdevice_struct()
 
     bformatdec_free(&AmbiDecoder);
     ambiup_free(&AmbiUp);
-
-    al_free(Stablizer);
-    Stablizer = nullptr;
 }
 
 

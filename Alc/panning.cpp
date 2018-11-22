@@ -931,8 +931,8 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     size_t i;
 
     al_free(device->Hrtf);
-    device->Hrtf = NULL;
-    device->HrtfHandle = NULL;
+    device->Hrtf = nullptr;
+    device->HrtfHandle = nullptr;
     device->HrtfName.clear();
     device->Render_Mode = NormalRender;
 
@@ -945,8 +945,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     device->AvgSpeakerDist = 0.0f;
     device->ChannelDelay.clear();
 
-    al_free(device->Stablizer);
-    device->Stablizer = NULL;
+    device->Stablizer = nullptr;
 
     if(device->FmtChans != DevFmtStereo)
     {
@@ -1035,8 +1034,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
                  * higher).
                  */
                 ALfloat scale = (ALfloat)(5000.0 / device->Frequency);
-                FrontStablizer *stablizer = reinterpret_cast<FrontStablizer*>(
-                    al_calloc(16, sizeof(*stablizer)));
+                std::unique_ptr<FrontStablizer> stablizer{new FrontStablizer{}};
 
                 bandsplit_init(&stablizer->LFilter, scale);
                 stablizer->RFilter = stablizer->LFilter;
@@ -1046,7 +1044,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
                 for(i = 1;i < (size_t)device->RealOut.NumChannels;i++)
                     stablizer->APFilter[i] = stablizer->APFilter[0];
 
-                device->Stablizer = stablizer;
+                device->Stablizer = std::move(stablizer);
             }
             break;
         case DevFmtMono:

@@ -709,7 +709,7 @@ struct ALCdevice_struct {
      */
     RealMixParams RealOut;
 
-    struct FrontStablizer *Stablizer{nullptr};
+    std::unique_ptr<FrontStablizer> Stablizer;
 
     std::unique_ptr<Compressor> Limiter;
 

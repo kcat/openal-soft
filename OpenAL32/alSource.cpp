@@ -2890,7 +2890,7 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
     {
         ALsource *source{LookupSource(context.get(), sources[i])};
         ALvoice *voice{GetSourceVoice(source, context.get())};
-        if(!voice) voice->Playing.store(false, std::memory_order_release);
+        if(voice) voice->Playing.store(false, std::memory_order_release);
         if(GetSourceState(source, voice) == AL_PLAYING)
         {
             source->state = AL_PAUSED;

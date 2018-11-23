@@ -230,7 +230,7 @@ namespace {
  * and starting with a seed value of 22222, is suitable for generating
  * whitenoise.
  */
-inline ALuint dither_rng(ALuint *seed)
+inline ALuint dither_rng(ALuint *seed) noexcept
 {
     *seed = (*seed * 96314165) + 907633515;
     return *seed;
@@ -291,7 +291,7 @@ void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
     size_t strpos;
     ALuint scale;
 
-    enabledevt = ATOMIC_LOAD(&context->EnabledEvts, almemory_order_acquire);
+    enabledevt = context->EnabledEvts.load(std::memory_order_acquire);
     if(!(enabledevt&EventType_SourceStateChange)) return;
 
     evt.u.user.type = AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT;
@@ -1456,10 +1456,7 @@ void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *props, cons
 
 void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
 {
-    ALbufferlistitem *BufferListItem;
-    struct ALvoiceProps *props;
-
-    props = voice->Update.exchange(nullptr, std::memory_order_acq_rel);
+    ALvoiceProps *props{voice->Update.exchange(nullptr, std::memory_order_acq_rel)};
     if(!props && !force) return;
 
     if(props)
@@ -1472,50 +1469,96 @@ void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
     }
     props = voice->Props;
 
-    BufferListItem = ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed);
-    while(BufferListItem != NULL)
+    ALbufferlistitem *BufferListItem{voice->current_buffer.load(std::memory_order_relaxed)};
+    while(BufferListItem)
     {
-        const ALbuffer *buffer = NULL;
-        ALsizei i = 0;
-        while(!buffer && i < BufferListItem->num_buffers)
-            buffer = BufferListItem->buffers[i];
-        if(LIKELY(buffer))
+        auto buffers_end = BufferListItem->buffers+BufferListItem->num_buffers;
+        auto buffer = std::find_if(BufferListItem->buffers, buffers_end,
+            [](const ALbuffer *buffer) noexcept -> bool
+            { return buffer != nullptr; }
+        );
+        if(LIKELY(buffer != buffers_end))
         {
             if(props->SpatializeMode == SpatializeOn ||
-               (props->SpatializeMode == SpatializeAuto && buffer->FmtChannels == FmtMono))
-                CalcAttnSourceParams(voice, props, buffer, context);
+               (props->SpatializeMode == SpatializeAuto && (*buffer)->FmtChannels == FmtMono))
+                CalcAttnSourceParams(voice, props, *buffer, context);
             else
-                CalcNonAttnSourceParams(voice, props, buffer, context);
+                CalcNonAttnSourceParams(voice, props, *buffer, context);
             break;
         }
-        BufferListItem = ATOMIC_LOAD(&BufferListItem->next, almemory_order_acquire);
+        BufferListItem = BufferListItem->next.load(std::memory_order_acquire);
     }
 }
 
 
-void ProcessParamUpdates(ALCcontext *ctx, const struct ALeffectslotArray *slots)
+void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray *slots)
 {
-    ALvoice **voice, **voice_end;
-    ALsource *source;
-    ALsizei i;
-
     IncrementRef(&ctx->UpdateCount);
-    if(!ATOMIC_LOAD(&ctx->HoldUpdates, almemory_order_acquire))
+    if(LIKELY(!ctx->HoldUpdates.load(std::memory_order_acquire)))
     {
         bool cforce = CalcContextParams(ctx);
         bool force = CalcListenerParams(ctx) | cforce;
-        for(i = 0;i < slots->count;i++)
-            force |= CalcEffectSlotParams(slots->slot[i], ctx, cforce);
+        std::for_each(slots->slot, slots->slot+slots->count,
+            [ctx,cforce,&force](ALeffectslot *slot) -> void
+            { force |= CalcEffectSlotParams(slot, ctx, cforce); }
+        );
 
-        voice = ctx->Voices;
-        voice_end = voice + ctx->VoiceCount;
-        for(;voice != voice_end;++voice)
-        {
-            source = ATOMIC_LOAD(&(*voice)->Source, almemory_order_acquire);
-            if(source) CalcSourceParams(*voice, ctx, force);
-        }
+        std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount,
+            [ctx,force](ALvoice *voice) -> void
+            {
+                ALsource *source{voice->Source.load(std::memory_order_acquire)};
+                if(source) CalcSourceParams(voice, ctx, force);
+            }
+        );
     }
     IncrementRef(&ctx->UpdateCount);
+}
+
+void ProcessContext(ALCcontext *ctx, ALsizei SamplesToDo)
+{
+    const ALeffectslotArray *auxslots{ctx->ActiveAuxSlots.load(std::memory_order_acquire)};
+
+    /* Process pending propery updates for objects on the context. */
+    ProcessParamUpdates(ctx, auxslots);
+
+    /* Clear auxiliary effect slot mixing buffers. */
+    std::for_each(auxslots->slot, auxslots->slot+auxslots->count,
+        [SamplesToDo](ALeffectslot *slot) -> void
+        {
+            std::for_each(slot->WetBuffer, slot->WetBuffer+slot->NumChannels,
+                [SamplesToDo](ALfloat *buffer) -> void
+                { std::fill_n(buffer, SamplesToDo, 0.0f); }
+            );
+        }
+    );
+
+    /* Process voices that have a playing source. */
+    std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount,
+        [SamplesToDo,ctx](ALvoice *voice) -> void
+        {
+            ALsource *source{voice->Source.load(std::memory_order_acquire)};
+            if(!source) return;
+            if(!voice->Playing.load(std::memory_order_relaxed) || voice->Step < 1)
+                return;
+
+            if(!MixSource(voice, source->id, ctx, SamplesToDo))
+            {
+                voice->Source.store(nullptr, std::memory_order_relaxed);
+                voice->Playing.store(false, std::memory_order_release);
+                SendSourceStoppedEvent(ctx, source->id);
+            }
+        }
+    );
+
+    /* Process effects. */
+    std::for_each(auxslots->slot, auxslots->slot+auxslots->count,
+        [SamplesToDo](const ALeffectslot *slot) -> void
+        {
+            EffectState *state{slot->Params.mEffectState};
+            state->process(SamplesToDo, slot->WetBuffer, state->mOutBuffer,
+                           state->mOutChannels);
+        }
+    );
 }
 
 
@@ -1598,7 +1641,7 @@ void ApplyDistanceComp(ALfloat (*RESTRICT Samples)[BUFFERSIZE], const DistanceCo
             auto out = std::copy(distbuf+SamplesToDo, distbuf+base, distbuf);
             std::copy_n(inout, SamplesToDo, out);
         }
-        std::transform(Values, Values+SamplesToDo, inout,
+        std::transform<ALfloat*RESTRICT>(Values, Values+SamplesToDo, inout,
             [gain](ALfloat in) noexcept -> ALfloat
             { return in * gain; }
         );
@@ -1608,29 +1651,29 @@ void ApplyDistanceComp(ALfloat (*RESTRICT Samples)[BUFFERSIZE], const DistanceCo
 void ApplyDither(ALfloat (*RESTRICT Samples)[BUFFERSIZE], ALuint *dither_seed,
                  const ALfloat quant_scale, const ALsizei SamplesToDo, const ALsizei numchans)
 {
+    ASSUME(numchans > 0);
+
+    /* Dithering. Generate whitenoise (uniform distribution of random values
+     * between -1 and +1) and add it to the sample values, after scaling up to
+     * the desired quantization depth amd before rounding.
+     */
     const ALfloat invscale = 1.0f / quant_scale;
     ALuint seed = *dither_seed;
-    ALsizei c, i;
-
-    ASSUME(numchans > 0);
-    ASSUME(SamplesToDo > 0);
-
-    /* Dithering. Step 1, generate whitenoise (uniform distribution of random
-     * values between -1 and +1). Step 2 is to add the noise to the samples,
-     * before rounding and after scaling up to the desired quantization depth.
-     */
-    for(c = 0;c < numchans;c++)
+    auto dither_channel = [&seed,invscale,quant_scale,SamplesToDo](ALfloat *buffer) -> void
     {
-        ALfloat *RESTRICT samples = Samples[c];
-        for(i = 0;i < SamplesToDo;i++)
-        {
-            ALfloat val = samples[i] * quant_scale;
-            ALuint rng0 = dither_rng(&seed);
-            ALuint rng1 = dither_rng(&seed);
-            val += (ALfloat)(rng0*(1.0/UINT_MAX) - rng1*(1.0/UINT_MAX));
-            samples[i] = fast_roundf(val) * invscale;
-        }
-    }
+        ASSUME(SamplesToDo > 0);
+        std::transform(buffer, buffer+SamplesToDo, buffer,
+            [&seed,invscale,quant_scale](ALfloat sample) noexcept -> ALfloat
+            {
+                ALfloat val = sample * quant_scale;
+                ALuint rng0 = dither_rng(&seed);
+                ALuint rng1 = dither_rng(&seed);
+                val += (ALfloat)(rng0*(1.0/UINT_MAX) - rng1*(1.0/UINT_MAX));
+                return fast_roundf(val) * invscale;
+            }
+        );
+    };
+    std::for_each(Samples, Samples+numchans, dither_channel);
     *dither_seed = seed;
 }
 
@@ -1639,11 +1682,11 @@ void ApplyDither(ALfloat (*RESTRICT Samples)[BUFFERSIZE], ALuint *dither_seed,
  * chokes on that given the inline specializations.
  */
 template<typename T>
-inline T SampleConv(ALfloat);
+inline T SampleConv(ALfloat) noexcept;
 
-template<> inline ALfloat SampleConv(ALfloat val)
+template<> inline ALfloat SampleConv(ALfloat val) noexcept
 { return val; }
-template<> inline ALint SampleConv(ALfloat val)
+template<> inline ALint SampleConv(ALfloat val) noexcept
 {
     /* Floats have a 23-bit mantissa. There is an implied 1 bit in the mantissa
      * along with the sign bit, giving 25 bits total, so [-16777216, +16777216]
@@ -1652,17 +1695,17 @@ template<> inline ALint SampleConv(ALfloat val)
      */
     return fastf2i(clampf(val*16777216.0f, -16777216.0f, 16777215.0f))<<7;
 }
-template<> inline ALshort SampleConv(ALfloat val)
+template<> inline ALshort SampleConv(ALfloat val) noexcept
 { return fastf2i(clampf(val*32768.0f, -32768.0f, 32767.0f)); }
-template<> inline ALbyte SampleConv(ALfloat val)
+template<> inline ALbyte SampleConv(ALfloat val) noexcept
 { return fastf2i(clampf(val*128.0f, -128.0f, 127.0f)); }
 
 /* Define unsigned output variations. */
-template<> inline ALuint SampleConv(ALfloat val)
+template<> inline ALuint SampleConv(ALfloat val) noexcept
 { return SampleConv<ALint>(val) + 2147483648u; }
-template<> inline ALushort SampleConv(ALfloat val)
+template<> inline ALushort SampleConv(ALfloat val) noexcept
 { return SampleConv<ALshort>(val) + 32768; }
-template<> inline ALubyte SampleConv(ALfloat val)
+template<> inline ALubyte SampleConv(ALfloat val) noexcept
 { return SampleConv<ALbyte>(val) + 128; }
 
 template<DevFmtType T>
@@ -1672,102 +1715,70 @@ void Write(const ALfloat (*RESTRICT InBuffer)[BUFFERSIZE], ALvoid *OutBuffer,
     using SampleType = typename DevFmtTypeTraits<T>::Type;
 
     ASSUME(numchans > 0);
-    ASSUME(SamplesToDo > 0);
-
-    for(ALsizei j{0};j < numchans;j++)
+    SampleType *outbase = static_cast<SampleType*>(OutBuffer) + Offset*numchans;
+    auto conv_channel = [&outbase,SamplesToDo,numchans](const ALfloat *inbuf) -> void
     {
-        const ALfloat *RESTRICT in = InBuffer[j];
-        SampleType *RESTRICT out = static_cast<SampleType*>(OutBuffer) + Offset*numchans + j;
-
-        for(ALsizei i{0};i < SamplesToDo;i++)
-            out[i*numchans] = SampleConv<SampleType>(in[i]);
-    }
+        ASSUME(SamplesToDo > 0);
+        SampleType *out{outbase++};
+        std::for_each<const ALfloat*RESTRICT>(inbuf, inbuf+SamplesToDo,
+            [numchans,&out](const ALfloat s) noexcept -> void
+            {
+                *out = SampleConv<SampleType>(s);
+                out += numchans;
+            }
+        );
+    };
+    std::for_each(InBuffer, InBuffer+numchans, conv_channel);
 }
 
 } // namespace
 
 void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
 {
-    ALsizei SamplesToDo;
-    ALsizei SamplesDone;
-    ALCcontext *ctx;
-    ALsizei i, c;
-
     FPUCtl mixer_mode{};
-    for(SamplesDone = 0;SamplesDone < NumSamples;)
+    for(ALsizei SamplesDone{0};SamplesDone < NumSamples;)
     {
-        SamplesToDo = mini(NumSamples-SamplesDone, BUFFERSIZE);
-        for(c = 0;c < device->Dry.NumChannels;c++)
-            memset(device->Dry.Buffer[c], 0, SamplesToDo*sizeof(ALfloat));
-        if(device->Dry.Buffer != device->FOAOut.Buffer)
-            for(c = 0;c < device->FOAOut.NumChannels;c++)
-                memset(device->FOAOut.Buffer[c], 0, SamplesToDo*sizeof(ALfloat));
-        if(device->Dry.Buffer != device->RealOut.Buffer)
-            for(c = 0;c < device->RealOut.NumChannels;c++)
-                memset(device->RealOut.Buffer[c], 0, SamplesToDo*sizeof(ALfloat));
+        const ALsizei SamplesToDo{mini(NumSamples-SamplesDone, BUFFERSIZE)};
 
+        /* Clear main mixing buffers. */
+        std::for_each(device->MixBuffer.begin(), device->MixBuffer.end(),
+            [SamplesToDo](std::array<ALfloat,BUFFERSIZE> &buffer) -> void
+            { std::fill_n(buffer.begin(), SamplesToDo, 0.0f); }
+        );
+
+        /* Increment the mix count at the start (lsb should now be 1). */
         IncrementRef(&device->MixCount);
 
-        ctx = ATOMIC_LOAD(&device->ContextList, almemory_order_acquire);
+        /* For each context on this device, process and mix its sources and
+         * effects.
+         */
+        ALCcontext *ctx{device->ContextList.load(std::memory_order_acquire)};
         while(ctx)
         {
-            const struct ALeffectslotArray *auxslots;
+            ProcessContext(ctx, SamplesToDo);
 
-            auxslots = ATOMIC_LOAD(&ctx->ActiveAuxSlots, almemory_order_acquire);
-            ProcessParamUpdates(ctx, auxslots);
-
-            for(i = 0;i < auxslots->count;i++)
-            {
-                ALeffectslot *slot = auxslots->slot[i];
-                for(c = 0;c < slot->NumChannels;c++)
-                    memset(slot->WetBuffer[c], 0, SamplesToDo*sizeof(ALfloat));
-            }
-
-            /* source processing */
-            for(i = 0;i < ctx->VoiceCount;i++)
-            {
-                ALvoice *voice = ctx->Voices[i];
-                ALsource *source = ATOMIC_LOAD(&voice->Source, almemory_order_acquire);
-                if(source && ATOMIC_LOAD(&voice->Playing, almemory_order_relaxed) &&
-                   voice->Step > 0)
-                {
-                    if(!MixSource(voice, source->id, ctx, SamplesToDo))
-                    {
-                        ATOMIC_STORE(&voice->Source, static_cast<ALsource*>(nullptr),
-                                     almemory_order_relaxed);
-                        ATOMIC_STORE(&voice->Playing, false, almemory_order_release);
-                        SendSourceStoppedEvent(ctx, source->id);
-                    }
-                }
-            }
-
-            /* effect slot processing */
-            for(i = 0;i < auxslots->count;i++)
-            {
-                const ALeffectslot *slot = auxslots->slot[i];
-                EffectState *state = slot->Params.mEffectState;
-                state->process(SamplesToDo, slot->WetBuffer, state->mOutBuffer,
-                               state->mOutChannels);
-            }
-
-            ctx = ATOMIC_LOAD(&ctx->next, almemory_order_relaxed);
+            ctx = ctx->next.load(std::memory_order_relaxed);
         }
 
         /* Increment the clock time. Every second's worth of samples is
          * converted and added to clock base so that large sample counts don't
-         * overflow during conversion. This also guarantees an exact, stable
-         * conversion. */
+         * overflow during conversion. This also guarantees a stable
+         * conversion.
+         */
         device->SamplesDone += SamplesToDo;
         device->ClockBase += std::chrono::seconds{device->SamplesDone / device->Frequency};
         device->SamplesDone %= device->Frequency;
+
+        /* Increment the mix count at the end (lsb should now be 0). */
         IncrementRef(&device->MixCount);
 
-        /* Apply post-process for finalizing the Dry mix to the RealOut
-         * (Ambisonic decode, UHJ encode, etc).
+        /* Apply any needed post-process for finalizing the Dry mix to the
+         * RealOut (Ambisonic decode, UHJ encode, etc).
          */
         if(LIKELY(device->PostProcess))
             device->PostProcess(device, SamplesToDo);
 
+        /* Apply front image stablization for surround sound, if applicable. */
         if(device->Stablizer)
         {
             int lidx = GetChannelIdxByName(&device->RealOut, FrontLeft);
@@ -1779,12 +1790,17 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
                            SamplesToDo, device->RealOut.NumChannels);
         }
 
+        /* Apply delays and attenuation for mismatched speaker distances. */
         ApplyDistanceComp(device->RealOut.Buffer, device->ChannelDelay, device->TempBuffer[0],
                           SamplesToDo, device->RealOut.NumChannels);
 
+        /* Apply compression, limiting final sample amplitude, if desired. */
         if(device->Limiter)
             ApplyCompression(device->Limiter.get(), SamplesToDo, device->RealOut.Buffer);
 
+        /* Apply dithering. The compressor should have left enough headroom for
+         * the dither noise to not saturate.
+         */
         if(device->DitherDepth > 0.0f)
             ApplyDither(device->RealOut.Buffer, &device->DitherSeed, device->DitherDepth,
                         SamplesToDo, device->RealOut.NumChannels);
@@ -1794,6 +1810,9 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
             ALfloat (*Buffer)[BUFFERSIZE] = device->RealOut.Buffer;
             ALsizei Channels = device->RealOut.NumChannels;
 
+            /* Finally, interleave and convert samples, writing to the device's
+             * output buffer.
+             */
             switch(device->FmtType)
             {
 #define HANDLE_WRITE(T) case T:                                            \
@@ -1816,50 +1835,46 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
 
 void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
 {
-    AsyncEvent evt = ASYNC_EVENT(EventType_Disconnected);
-    ALCcontext *ctx;
-    va_list args;
-    int msglen;
-
     if(!device->Connected.exchange(AL_FALSE, std::memory_order_acq_rel))
         return;
 
+    AsyncEvent evt = ASYNC_EVENT(EventType_Disconnected);
     evt.u.user.type = AL_EVENT_TYPE_DISCONNECTED_SOFT;
     evt.u.user.id = 0;
     evt.u.user.param = 0;
 
+    va_list args;
     va_start(args, msg);
-    msglen = vsnprintf(evt.u.user.msg, sizeof(evt.u.user.msg), msg, args);
+    int msglen{vsnprintf(evt.u.user.msg, sizeof(evt.u.user.msg), msg, args)};
     va_end(args);
 
     if(msglen < 0 || (size_t)msglen >= sizeof(evt.u.user.msg))
         evt.u.user.msg[sizeof(evt.u.user.msg)-1] = 0;
 
-    ctx = ATOMIC_LOAD_SEQ(&device->ContextList);
+    ALCcontext *ctx{device->ContextList.load()};
     while(ctx)
     {
-        ALbitfieldSOFT enabledevt = ATOMIC_LOAD(&ctx->EnabledEvts, almemory_order_acquire);
-        ALsizei i;
-
+        ALbitfieldSOFT enabledevt = ctx->EnabledEvts.load(std::memory_order_acquire);
         if((enabledevt&EventType_Disconnected) &&
            ll_ringbuffer_write(ctx->AsyncEvents, &evt, 1) == 1)
             alsem_post(&ctx->EventSem);
 
-        for(i = 0;i < ctx->VoiceCount;i++)
-        {
-            ALvoice *voice = ctx->Voices[i];
-            ALsource *source = voice->Source.exchange(nullptr, std::memory_order_relaxed);
-            if(source && voice->Playing.load(std::memory_order_relaxed))
+        std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount,
+            [ctx](ALvoice *voice) -> void
             {
-                /* If the source's voice was playing, it's now effectively
-                 * stopped (the source state will be updated the next time it's
-                 * checked).
-                 */
-                SendSourceStoppedEvent(ctx, source->id);
+                ALsource *source{voice->Source.exchange(nullptr, std::memory_order_relaxed)};
+                if(source && voice->Playing.load(std::memory_order_relaxed))
+                {
+                    /* If the source's voice was playing, it's now effectively
+                     * stopped (the source state will be updated the next time
+                     * it's checked).
+                    */
+                    SendSourceStoppedEvent(ctx, source->id);
+                }
+                voice->Playing.store(false, std::memory_order_release);
             }
-            voice->Playing.store(false, std::memory_order_release);
-        }
+        );
 
-        ctx = ATOMIC_LOAD(&ctx->next, almemory_order_relaxed);
+        ctx = ctx->next.load(std::memory_order_relaxed);
     }
 }

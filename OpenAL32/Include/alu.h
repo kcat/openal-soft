@@ -304,61 +304,61 @@ typedef void (*HrtfDirectMixerFunc)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT
 #define FRACTIONMASK (FRACTIONONE-1)
 
 
-inline ALfloat minf(ALfloat a, ALfloat b)
+inline ALfloat minf(ALfloat a, ALfloat b) noexcept
 { return ((a > b) ? b : a); }
-inline ALfloat maxf(ALfloat a, ALfloat b)
+inline ALfloat maxf(ALfloat a, ALfloat b) noexcept
 { return ((a > b) ? a : b); }
-inline ALfloat clampf(ALfloat val, ALfloat min, ALfloat max)
+inline ALfloat clampf(ALfloat val, ALfloat min, ALfloat max) noexcept
 { return minf(max, maxf(min, val)); }
 
-inline ALdouble mind(ALdouble a, ALdouble b)
+inline ALdouble mind(ALdouble a, ALdouble b) noexcept
 { return ((a > b) ? b : a); }
-inline ALdouble maxd(ALdouble a, ALdouble b)
+inline ALdouble maxd(ALdouble a, ALdouble b) noexcept
 { return ((a > b) ? a : b); }
-inline ALdouble clampd(ALdouble val, ALdouble min, ALdouble max)
+inline ALdouble clampd(ALdouble val, ALdouble min, ALdouble max) noexcept
 { return mind(max, maxd(min, val)); }
 
-inline ALuint minu(ALuint a, ALuint b)
+inline ALuint minu(ALuint a, ALuint b) noexcept
 { return ((a > b) ? b : a); }
-inline ALuint maxu(ALuint a, ALuint b)
+inline ALuint maxu(ALuint a, ALuint b) noexcept
 { return ((a > b) ? a : b); }
-inline ALuint clampu(ALuint val, ALuint min, ALuint max)
+inline ALuint clampu(ALuint val, ALuint min, ALuint max) noexcept
 { return minu(max, maxu(min, val)); }
 
-inline ALint mini(ALint a, ALint b)
+inline ALint mini(ALint a, ALint b) noexcept
 { return ((a > b) ? b : a); }
-inline ALint maxi(ALint a, ALint b)
+inline ALint maxi(ALint a, ALint b) noexcept
 { return ((a > b) ? a : b); }
-inline ALint clampi(ALint val, ALint min, ALint max)
+inline ALint clampi(ALint val, ALint min, ALint max) noexcept
 { return mini(max, maxi(min, val)); }
 
-inline ALint64 mini64(ALint64 a, ALint64 b)
+inline ALint64 mini64(ALint64 a, ALint64 b) noexcept
 { return ((a > b) ? b : a); }
-inline ALint64 maxi64(ALint64 a, ALint64 b)
+inline ALint64 maxi64(ALint64 a, ALint64 b) noexcept
 { return ((a > b) ? a : b); }
-inline ALint64 clampi64(ALint64 val, ALint64 min, ALint64 max)
+inline ALint64 clampi64(ALint64 val, ALint64 min, ALint64 max) noexcept
 { return mini64(max, maxi64(min, val)); }
 
-inline ALuint64 minu64(ALuint64 a, ALuint64 b)
+inline ALuint64 minu64(ALuint64 a, ALuint64 b) noexcept
 { return ((a > b) ? b : a); }
-inline ALuint64 maxu64(ALuint64 a, ALuint64 b)
+inline ALuint64 maxu64(ALuint64 a, ALuint64 b) noexcept
 { return ((a > b) ? a : b); }
-inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max)
+inline ALuint64 clampu64(ALuint64 val, ALuint64 min, ALuint64 max) noexcept
 { return minu64(max, maxu64(min, val)); }
 
-inline size_t minz(size_t a, size_t b)
+inline size_t minz(size_t a, size_t b) noexcept
 { return ((a > b) ? b : a); }
-inline size_t maxz(size_t a, size_t b)
+inline size_t maxz(size_t a, size_t b) noexcept
 { return ((a > b) ? a : b); }
-inline size_t clampz(size_t val, size_t min, size_t max)
+inline size_t clampz(size_t val, size_t min, size_t max) noexcept
 { return minz(max, maxz(min, val)); }
 
 
-inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu)
+inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu) noexcept
 {
     return val1 + (val2-val1)*mu;
 }
-inline ALfloat cubic(ALfloat val1, ALfloat val2, ALfloat val3, ALfloat val4, ALfloat mu)
+inline ALfloat cubic(ALfloat val1, ALfloat val2, ALfloat val3, ALfloat val4, ALfloat mu) noexcept
 {
     ALfloat mu2 = mu*mu, mu3 = mu2*mu;
     ALfloat a0 = -0.5f*mu3 +       mu2 + -0.5f*mu;

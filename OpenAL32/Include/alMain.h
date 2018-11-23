@@ -219,7 +219,7 @@ struct bs2b;
 
 
 /* Find the next power-of-2 for non-power-of-2 numbers. */
-inline ALuint NextPowerOf2(ALuint value)
+inline ALuint NextPowerOf2(ALuint value) noexcept
 {
     if(value > 0)
     {
@@ -234,7 +234,7 @@ inline ALuint NextPowerOf2(ALuint value)
 }
 
 /** Round up a value to the next multiple. */
-inline size_t RoundUp(size_t value, size_t r)
+inline size_t RoundUp(size_t value, size_t r) noexcept
 {
     value += r-1;
     return value - (value%r);
@@ -245,7 +245,7 @@ inline size_t RoundUp(size_t value, size_t r)
  * change it on its own threads. On some systems, a truncating conversion may
  * always be the fastest method.
  */
-inline ALint fastf2i(ALfloat f)
+inline ALint fastf2i(ALfloat f) noexcept
 {
 #if defined(HAVE_INTRIN_H) && ((defined(_M_IX86_FP) && (_M_IX86_FP > 0)) || defined(_M_X64))
     return _mm_cvt_ss2si(_mm_set1_ps(f));
@@ -283,7 +283,7 @@ inline ALint fastf2i(ALfloat f)
 }
 
 /* Converts float-to-int using standard behavior (truncation). */
-inline int float2int(float f)
+inline int float2int(float f) noexcept
 {
 #if ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) && \
      !defined(__SSE_MATH__)) || (defined(_MSC_VER) && defined(_M_IX86_FP) && _M_IX86_FP == 0)
@@ -316,7 +316,7 @@ inline int float2int(float f)
  * rounding mode. This is essentially an inlined version of rintf, although
  * makes fewer promises (e.g. -0 or -0.25 rounded to 0 may result in +0).
  */
-inline float fast_roundf(float f)
+inline float fast_roundf(float f) noexcept
 {
 #if (defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__)) && \
     !defined(__SSE_MATH__)

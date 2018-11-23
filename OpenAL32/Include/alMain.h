@@ -20,6 +20,7 @@
 #include <vector>
 #include <string>
 #include <chrono>
+#include <algorithm>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -822,15 +823,11 @@ void SetDefaultWFXChannelOrder(ALCdevice *device);
 const ALCchar *DevFmtTypeString(enum DevFmtType type);
 const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans);
 
-inline ALint GetChannelIndex(const enum Channel names[MAX_OUTPUT_CHANNELS], enum Channel chan)
+inline ALint GetChannelIndex(const enum Channel (&names)[MAX_OUTPUT_CHANNELS], enum Channel chan)
 {
-    ALint i;
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-    {
-        if(names[i] == chan)
-            return i;
-    }
-    return -1;
+    auto iter = std::find(std::begin(names), std::end(names), chan);
+    if(iter == std::end(names)) return -1;
+    return std::distance(names, iter);
 }
 /**
  * GetChannelIdxByName

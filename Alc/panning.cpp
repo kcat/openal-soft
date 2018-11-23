@@ -219,32 +219,31 @@ static inline const char *GetLabelFromChannel(enum Channel channel)
 }
 
 
-typedef struct ChannelMap {
-    enum Channel ChanName;
+struct ChannelMap {
+    Channel ChanName;
     ChannelConfig Config;
-} ChannelMap;
+};
 
-static void SetChannelMap(const enum Channel devchans[MAX_OUTPUT_CHANNELS],
+static void SetChannelMap(const Channel (&devchans)[MAX_OUTPUT_CHANNELS],
                           ChannelConfig *ambicoeffs, const ChannelMap *chanmap,
                           ALsizei count, ALsizei *outcount)
 {
-    ALsizei maxchans = 0;
-    ALsizei i, j;
-
-    for(i = 0;i < count;i++)
-    {
-        ALint idx = GetChannelIndex(devchans, chanmap[i].ChanName);
-        if(idx < 0)
+    ALsizei maxchans{0};
+    std::for_each(chanmap, chanmap+count,
+        [&maxchans,&devchans,ambicoeffs](const ChannelMap &channel) -> void
         {
-            ERR("Failed to find %s channel in device\n",
-                GetLabelFromChannel(chanmap[i].ChanName));
-            continue;
-        }
+            ALint idx = GetChannelIndex(devchans, channel.ChanName);
+            if(idx < 0)
+            {
+                ERR("Failed to find %s channel in device\n",
+                    GetLabelFromChannel(channel.ChanName));
+                return;
+            }
 
-        maxchans = maxi(maxchans, idx+1);
-        for(j = 0;j < MAX_AMBI_COEFFS;j++)
-            ambicoeffs[idx][j] = chanmap[i].Config[j];
-    }
+            maxchans = maxi(maxchans, idx+1);
+            std::copy_n(channel.Config, MAX_AMBI_COEFFS, ambicoeffs[idx]);
+        }
+    );
     *outcount = mini(maxchans, MAX_OUTPUT_CHANNELS);
 }
 

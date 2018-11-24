@@ -584,7 +584,7 @@ inline ALeffectslot *LookupEffectSlot(ALCcontext *context, ALuint id) noexcept
 }
 
 
-enum SourceProp {
+enum SourceProp : ALenum {
     srcPitch = AL_PITCH,
     srcGain = AL_GAIN,
     srcMinGain = AL_MIN_GAIN,
@@ -710,9 +710,7 @@ void SendStateChangeEvent(ALCcontext *context, ALuint id, ALenum state)
 
 ALint FloatValsByProp(ALenum prop)
 {
-    if(prop != (ALenum)((SourceProp)prop))
-        return 0;
-    switch((SourceProp)prop)
+    switch(static_cast<SourceProp>(prop))
     {
         case AL_PITCH:
         case AL_GAIN:
@@ -774,9 +772,7 @@ ALint FloatValsByProp(ALenum prop)
 }
 ALint DoubleValsByProp(ALenum prop)
 {
-    if(prop != (ALenum)((SourceProp)prop))
-        return 0;
-    switch((SourceProp)prop)
+    switch(static_cast<SourceProp>(prop))
     {
         case AL_PITCH:
         case AL_GAIN:
@@ -837,9 +833,7 @@ ALint DoubleValsByProp(ALenum prop)
 
 ALint IntValsByProp(ALenum prop)
 {
-    if(prop != (ALenum)((SourceProp)prop))
-        return 0;
-    switch((SourceProp)prop)
+    switch(static_cast<SourceProp>(prop))
     {
         case AL_PITCH:
         case AL_GAIN:
@@ -898,9 +892,7 @@ ALint IntValsByProp(ALenum prop)
 }
 ALint Int64ValsByProp(ALenum prop)
 {
-    if(prop != (ALenum)((SourceProp)prop))
-        return 0;
-    switch((SourceProp)prop)
+    switch(static_cast<SourceProp>(prop))
     {
         case AL_PITCH:
         case AL_GAIN:

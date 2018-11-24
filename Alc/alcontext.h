@@ -127,7 +127,6 @@ struct ALCcontext_struct {
     DEF_NEWDEL(ALCcontext)
 };
 
-ALCcontext *GetContextRef(void);
 void ALCcontext_DecRef(ALCcontext *context);
 
 void UpdateContextProps(ALCcontext *context);
@@ -178,6 +177,8 @@ public:
         return ret;
     }
 };
+
+ContextRef GetContextRef(void);
 
 
 struct ALcontextProps {

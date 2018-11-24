@@ -2769,10 +2769,9 @@ static ContextRef VerifyContext(ALCcontext *context)
 
 /* GetContextRef
  *
- * Returns the currently active context for this thread, and adds a reference
- * without locking it.
+ * Returns a new reference to the currently active context for this thread.
  */
-ALCcontext *GetContextRef(void)
+ContextRef GetContextRef(void)
 {
     ALCcontext *context{LocalContext.get()};
     if(context)
@@ -2783,8 +2782,7 @@ ALCcontext *GetContextRef(void)
         context = GlobalContext.load(std::memory_order_acquire);
         if(context) ALCcontext_IncRef(context);
     }
-
-    return context;
+    return ContextRef{context};
 }
 
 

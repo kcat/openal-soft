@@ -1711,7 +1711,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     ALCsizei hrtf_id = -1;
     ALCcontext *context;
     ALCuint oldFreq;
-    ALCsizei i;
     int val;
 
     // Check for attributes
@@ -2248,9 +2247,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     context = device->ContextList.load();
     while(context)
     {
-        struct ALvoiceProps *vprops;
-        ALsizei pos;
-
         if(context->DefaultSlot)
         {
             ALeffectslot *slot = context->DefaultSlot.get();
@@ -2320,7 +2316,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
          * auxiliary sends is changing. Active sources will have updates
          * respecified in UpdateAllSourceProps.
          */
-        vprops = context->FreeVoiceProps.exchange(nullptr, std::memory_order_acq_rel);
+        ALvoiceProps *vprops{context->FreeVoiceProps.exchange(nullptr, std::memory_order_acq_rel)};
         while(vprops)
         {
             struct ALvoiceProps *next = vprops->next.load(std::memory_order_relaxed);
@@ -2329,24 +2325,27 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
 
         AllocateVoices(context, context->MaxVoices, old_sends);
-        for(pos = 0;pos < context->VoiceCount;pos++)
-        {
-            ALvoice *voice = context->Voices[pos];
-
-            al_free(voice->Update.exchange(nullptr, std::memory_order_acq_rel));
-
-            if(voice->Source.load(std::memory_order_acquire) == nullptr)
-                continue;
-
-            if(device->AvgSpeakerDist > 0.0f)
+        auto voices_end = context->Voices + context->VoiceCount.load(std::memory_order_relaxed);
+        std::for_each(context->Voices, voices_end,
+            [device](ALvoice *voice) -> void
             {
-                /* Reinitialize the NFC filters for new parameters. */
-                ALfloat w1 = SPEEDOFSOUNDMETRESPERSEC /
-                             (device->AvgSpeakerDist * device->Frequency);
-                for(i = 0;i < voice->NumChannels;i++)
-                    NfcFilterCreate(&voice->Direct.Params[i].NFCtrlFilter, 0.0f, w1);
+                al_free(voice->Update.exchange(nullptr, std::memory_order_acq_rel));
+
+                if(voice->Source.load(std::memory_order_acquire) == nullptr)
+                    return;
+
+                if(device->AvgSpeakerDist > 0.0f)
+                {
+                    /* Reinitialize the NFC filters for new parameters. */
+                    ALfloat w1 = SPEEDOFSOUNDMETRESPERSEC /
+                                 (device->AvgSpeakerDist * device->Frequency);
+                    std::for_each(voice->Direct.Params, voice->Direct.Params+voice->NumChannels,
+                        [w1](DirectParams &params) -> void
+                        { NfcFilterCreate(&params.NFCtrlFilter, 0.0f, w1); }
+                    );
+                }
             }
-        }
+        );
         srclock.unlock();
 
         context->PropsClean.test_and_set(std::memory_order_release);
@@ -2592,11 +2591,12 @@ ALCcontext_struct::~ALCcontext_struct()
     }
     TRACE("Freed " SZFMT " voice property object%s\n", count, (count==1)?"":"s");
 
-    for(ALsizei i{0};i < VoiceCount;i++)
-        DeinitVoice(Voices[i]);
+    std::for_each(Voices, Voices + VoiceCount.load(std::memory_order_relaxed),
+        [](ALvoice *voice) -> void { DeinitVoice(voice); }
+    );
     al_free(Voices);
     Voices = nullptr;
-    VoiceCount = 0;
+    VoiceCount.store(0, std::memory_order_relaxed);
     MaxVoices = 0;
 
     struct ALlistenerProps *lprops{Listener.Update.load(std::memory_order_relaxed)};
@@ -2747,15 +2747,8 @@ ALCcontext *GetContextRef(void)
 
 void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
 {
-    ALCdevice *device = context->Device;
-    ALsizei num_sends = device->NumAuxSends;
-    struct ALvoiceProps *props;
-    size_t sizeof_props;
-    size_t sizeof_voice;
-    ALvoice **voices;
-    ALvoice *voice;
-    ALsizei v = 0;
-    size_t size;
+    ALCdevice *device{context->Device};
+    ALsizei num_sends{device->NumAuxSends};
 
     if(num_voices == context->MaxVoices && num_sends == old_sends)
         return;
@@ -2764,53 +2757,54 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
      * property set (including the dynamically-sized Send[] array) in one
      * chunk.
      */
-    sizeof_voice = RoundUp(FAM_SIZE(ALvoice, Send, num_sends), 16);
-    sizeof_props = RoundUp(FAM_SIZE(struct ALvoiceProps, Send, num_sends), 16);
-    size = sizeof(ALvoice*) + sizeof_voice + sizeof_props;
+    size_t sizeof_voice{RoundUp(FAM_SIZE(ALvoice, Send, num_sends), 16)};
+    size_t sizeof_props{RoundUp(FAM_SIZE(struct ALvoiceProps, Send, num_sends), 16)};
+    size_t size{sizeof(ALvoice*) + sizeof_voice + sizeof_props};
 
-    voices = static_cast<ALvoice**>(al_calloc(16, RoundUp(size*num_voices, 16)));
+    auto voices = static_cast<ALvoice**>(al_calloc(16, RoundUp(size*num_voices, 16)));
     /* The voice and property objects are stored interleaved since they're
      * paired together.
      */
-    voice = (ALvoice*)((char*)voices + RoundUp(num_voices*sizeof(ALvoice*), 16));
-    props = (struct ALvoiceProps*)((char*)voice + sizeof_voice);
+    auto voice = reinterpret_cast<ALvoice*>((char*)voices + RoundUp(num_voices*sizeof(ALvoice*), 16));
+    auto props = reinterpret_cast<ALvoiceProps*>((char*)voice + sizeof_voice);
 
+    ALsizei v{0};
     if(context->Voices)
     {
-        const ALsizei v_count = mini(context->VoiceCount, num_voices);
+        const ALsizei v_count = mini(context->VoiceCount.load(std::memory_order_relaxed),
+                                     num_voices);
         const ALsizei s_count = mini(old_sends, num_sends);
 
         for(;v < v_count;v++)
         {
-            ALvoice *old_voice = context->Voices[v];
-            ALsizei i;
+            ALvoice *old_voice{context->Voices[v]};
 
             /* Copy the old voice data and source property set to the new
              * storage.
              */
             memcpy(voice, old_voice, sizeof(*voice));
-            for(i = 0;i < s_count;i++)
-                voice->Send[i] = old_voice->Send[i];
+            std::copy_n(old_voice->Send, s_count, voice->Send);
             
             memcpy(props, old_voice->Props, sizeof(*props));
-            for(i = 0;i < s_count;i++)
-                props->Send[i] = old_voice->Props->Send[i];
+            std::copy_n(old_voice->Props->Send, s_count, props->Send);
 
             /* Set this voice's property set pointer and voice reference. */
             voice->Props = props;
             voices[v] = voice;
 
             /* Increment pointers to the next storage space. */
-            voice = (ALvoice*)((char*)props + sizeof_props);
-            props = (struct ALvoiceProps*)((char*)voice + sizeof_voice);
+            voice = reinterpret_cast<ALvoice*>((char*)props + sizeof_props);
+            props = reinterpret_cast<ALvoiceProps*>((char*)voice + sizeof_voice);
         }
         /* Deinit any left over voices that weren't copied over to the new
          * array. NOTE: If this does anything, v equals num_voices and
          * num_voices is less than VoiceCount, so the following loop won't do
          * anything.
          */
-        for(;v < context->VoiceCount;v++)
-            DeinitVoice(context->Voices[v]);
+        auto voices_end = context->Voices + context->VoiceCount.load(std::memory_order_relaxed);
+        std::for_each(context->Voices + v, voices_end,
+            [](ALvoice *voice) -> void { DeinitVoice(voice); }
+        );
     }
     /* Finish setting the voices' property set pointers and references. */
     for(;v < num_voices;v++)
@@ -2820,14 +2814,14 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
         voice->Props = props;
         voices[v] = voice;
 
-        voice = (ALvoice*)((char*)props + sizeof_props);
-        props = (struct ALvoiceProps*)((char*)voice + sizeof_voice);
+        voice = reinterpret_cast<ALvoice*>((char*)props + sizeof_props);
+        props = reinterpret_cast<ALvoiceProps*>((char*)voice + sizeof_voice);
     }
 
     al_free(context->Voices);
     context->Voices = voices;
     context->MaxVoices = num_voices;
-    context->VoiceCount = mini(context->VoiceCount, num_voices);
+    context->VoiceCount = mini(context->VoiceCount.load(std::memory_order_relaxed), num_voices);
 }
 
 

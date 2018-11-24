@@ -95,7 +95,7 @@ struct ALCcontext_struct {
     ATOMIC(ALeffectslotProps*) FreeEffectslotProps{nullptr};
 
     ALvoice **Voices{nullptr};
-    ALsizei VoiceCount{0};
+    std::atomic<ALsizei> VoiceCount{0};
     ALsizei MaxVoices{0};
 
     ATOMIC(ALeffectslotArray*) ActiveAuxSlots{nullptr};

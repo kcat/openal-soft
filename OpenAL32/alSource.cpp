@@ -51,7 +51,7 @@ namespace {
 inline ALvoice *GetSourceVoice(ALsource *source, ALCcontext *context)
 {
     ALint idx{source->VoiceIdx};
-    if(idx >= 0 && idx < context->VoiceCount)
+    if(idx >= 0 && idx < context->VoiceCount.load(std::memory_order_relaxed))
     {
         ALvoice *voice{context->Voices[idx]};
         if(voice->Source.load(std::memory_order_acquire) == source)
@@ -2725,7 +2725,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         return;
     }
 
-    while(n > context->MaxVoices-context->VoiceCount)
+    while(n > context->MaxVoices-context->VoiceCount.load(std::memory_order_relaxed))
     {
         ALsizei newcount = context->MaxVoices << 1;
         if(context->MaxVoices >= newcount)
@@ -2790,19 +2790,15 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 
         /* Look for an unused voice to play this source with. */
         assert(voice == nullptr);
-        ALint vidx{-1};
-        for(ALsizei j{0};j < context->VoiceCount;j++)
-        {
-            if(context->Voices[j]->Source.load(std::memory_order_acquire) == nullptr)
-            {
-                vidx = j;
-                break;
-            }
-        }
-        if(vidx == -1)
-            vidx = context->VoiceCount++;
-        voice = context->Voices[vidx];
+        auto voices_end = context->Voices + context->VoiceCount.load(std::memory_order_relaxed);
+        auto voice_iter = std::find_if(context->Voices, voices_end,
+            [](const ALvoice *voice) noexcept -> bool
+            { return voice->Source.load(std::memory_order_relaxed) == nullptr; }
+        );
+        auto vidx = static_cast<ALint>(std::distance(context->Voices, voice_iter));
+        voice = *voice_iter;
         voice->Playing.store(false, std::memory_order_release);
+        if(voice_iter == voices_end) context->VoiceCount.fetch_add(1, std::memory_order_acq_rel);
 
         source->PropsClean.test_and_set(std::memory_order_acquire);
         UpdateSourceProps(source, voice, context.get());
@@ -2823,19 +2819,20 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
                 voice->position_fraction.load(std::memory_order_relaxed) != 0 ||
                 voice->current_buffer.load(std::memory_order_relaxed) != BufferList;
 
-        for(ALsizei j{0};j < BufferList->num_buffers;j++)
+        auto buffers_end = BufferList->buffers + BufferList->num_buffers;
+        auto buffer = std::find_if(BufferList->buffers, buffers_end,
+            [](const ALbuffer *buffer) noexcept -> bool
+            { return buffer != nullptr; }
+        );
+        if(buffer != buffers_end)
         {
-            ALbuffer *buffer = BufferList->buffers[j];
-            if(buffer)
-            {
-                voice->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
-                voice->SampleSize  = BytesFromFmt(buffer->FmtType);
-                break;
-            }
+            voice->NumChannels = ChannelsFromFmt((*buffer)->FmtChannels);
+            voice->SampleSize  = BytesFromFmt((*buffer)->FmtType);
         }
 
         /* Clear previous samples. */
-        memset(voice->PrevSamples, 0, sizeof(voice->PrevSamples));
+        for(auto &samples : voice->PrevSamples)
+            std::fill(std::begin(samples), std::end(samples), 0.0f);
 
         /* Clear the stepping value so the mixer knows not to mix this until
          * the update gets applied.
@@ -3399,13 +3396,15 @@ ALsource::~ALsource()
 
 void UpdateAllSourceProps(ALCcontext *context)
 {
-    for(ALsizei i{0};i < context->VoiceCount;++i)
-    {
-        ALvoice *voice{context->Voices[i]};
-        ALsource *source{voice->Source.load(std::memory_order_acquire)};
-        if(source && !source->PropsClean.test_and_set(std::memory_order_acq_rel))
-            UpdateSourceProps(source, voice, context);
-    }
+    auto voices_end = context->Voices + context->VoiceCount.load(std::memory_order_relaxed);
+    std::for_each(context->Voices, voices_end,
+        [context](ALvoice *voice) -> void
+        {
+            ALsource *source{voice->Source.load(std::memory_order_acquire)};
+            if(source && !source->PropsClean.test_and_set(std::memory_order_acq_rel))
+                UpdateSourceProps(source, voice, context);
+        }
+    );
 }
 
 /* ReleaseALSources

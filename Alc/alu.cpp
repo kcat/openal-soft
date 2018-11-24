@@ -1503,7 +1503,7 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray *slots)
             { force |= CalcEffectSlotParams(slot, ctx, cforce); }
         );
 
-        std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount,
+        std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount.load(std::memory_order_acquire),
             [ctx,force](ALvoice *voice) -> void
             {
                 ALsource *source{voice->Source.load(std::memory_order_acquire)};
@@ -1533,7 +1533,7 @@ void ProcessContext(ALCcontext *ctx, ALsizei SamplesToDo)
     );
 
     /* Process voices that have a playing source. */
-    std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount,
+    std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount.load(std::memory_order_acquire),
         [SamplesToDo,ctx](ALvoice *voice) -> void
         {
             ALsource *source{voice->Source.load(std::memory_order_acquire)};
@@ -1859,7 +1859,7 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
            ll_ringbuffer_write(ctx->AsyncEvents, &evt, 1) == 1)
             alsem_post(&ctx->EventSem);
 
-        std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount,
+        std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount.load(std::memory_order_acquire),
             [ctx](ALvoice *voice) -> void
             {
                 ALsource *source{voice->Source.exchange(nullptr, std::memory_order_relaxed)};

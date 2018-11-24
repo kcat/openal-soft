@@ -3,9 +3,6 @@
 
 #include "alMain.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 struct ALeffect;
 
@@ -36,43 +33,43 @@ struct EffectList {
     ALenum val;
 };
 #define EFFECTLIST_SIZE 14
-extern const struct EffectList EffectList[EFFECTLIST_SIZE];
+extern const EffectList EffectList[EFFECTLIST_SIZE];
 
 
 struct ALeffectVtable {
-    void (*const setParami)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
-    void (*const setParamiv)(struct ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
-    void (*const setParamf)(struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
-    void (*const setParamfv)(struct ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
+    void (*const setParami)(ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
+    void (*const setParamiv)(ALeffect *effect, ALCcontext *context, ALenum param, const ALint *vals);
+    void (*const setParamf)(ALeffect *effect, ALCcontext *context, ALenum param, ALfloat val);
+    void (*const setParamfv)(ALeffect *effect, ALCcontext *context, ALenum param, const ALfloat *vals);
 
-    void (*const getParami)(const struct ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
-    void (*const getParamiv)(const struct ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
-    void (*const getParamf)(const struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
-    void (*const getParamfv)(const struct ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
+    void (*const getParami)(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *val);
+    void (*const getParamiv)(const ALeffect *effect, ALCcontext *context, ALenum param, ALint *vals);
+    void (*const getParamf)(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *val);
+    void (*const getParamfv)(const ALeffect *effect, ALCcontext *context, ALenum param, ALfloat *vals);
 };
 
 #define DEFINE_ALEFFECT_VTABLE(T)           \
-const struct ALeffectVtable T##_vtable = {  \
+const ALeffectVtable T##_vtable = {         \
     T##_setParami, T##_setParamiv,          \
     T##_setParamf, T##_setParamfv,          \
     T##_getParami, T##_getParamiv,          \
     T##_getParamf, T##_getParamfv,          \
 }
 
-extern const struct ALeffectVtable ALeaxreverb_vtable;
-extern const struct ALeffectVtable ALreverb_vtable;
-extern const struct ALeffectVtable ALautowah_vtable;
-extern const struct ALeffectVtable ALchorus_vtable;
-extern const struct ALeffectVtable ALcompressor_vtable;
-extern const struct ALeffectVtable ALdistortion_vtable;
-extern const struct ALeffectVtable ALecho_vtable;
-extern const struct ALeffectVtable ALequalizer_vtable;
-extern const struct ALeffectVtable ALflanger_vtable;
-extern const struct ALeffectVtable ALfshifter_vtable;
-extern const struct ALeffectVtable ALmodulator_vtable;
-extern const struct ALeffectVtable ALnull_vtable;
-extern const struct ALeffectVtable ALpshifter_vtable;
-extern const struct ALeffectVtable ALdedicated_vtable;
+extern const ALeffectVtable ALeaxreverb_vtable;
+extern const ALeffectVtable ALreverb_vtable;
+extern const ALeffectVtable ALautowah_vtable;
+extern const ALeffectVtable ALchorus_vtable;
+extern const ALeffectVtable ALcompressor_vtable;
+extern const ALeffectVtable ALdistortion_vtable;
+extern const ALeffectVtable ALecho_vtable;
+extern const ALeffectVtable ALequalizer_vtable;
+extern const ALeffectVtable ALflanger_vtable;
+extern const ALeffectVtable ALfshifter_vtable;
+extern const ALeffectVtable ALmodulator_vtable;
+extern const ALeffectVtable ALnull_vtable;
+extern const ALeffectVtable ALpshifter_vtable;
+extern const ALeffectVtable ALdedicated_vtable;
 
 
 typedef union ALeffectProps {
@@ -178,17 +175,17 @@ typedef union ALeffectProps {
     } Dedicated;
 } ALeffectProps;
 
-typedef struct ALeffect {
+struct ALeffect {
     // Effect type (AL_EFFECT_NULL, ...)
-    ALenum type;
+    ALenum type{AL_EFFECT_NULL};
 
-    ALeffectProps Props;
+    ALeffectProps Props{};
 
-    const struct ALeffectVtable *vtab;
+    const ALeffectVtable *vtab{nullptr};
 
     /* Self ID */
-    ALuint id;
-} ALeffect;
+    ALuint id{0u};
+};
 #define ALeffect_setParami(o, c, p, v)   ((o)->vtab->setParami(o, c, p, v))
 #define ALeffect_setParamf(o, c, p, v)   ((o)->vtab->setParamf(o, c, p, v))
 #define ALeffect_setParamiv(o, c, p, v)  ((o)->vtab->setParamiv(o, c, p, v))
@@ -205,9 +202,5 @@ void InitEffect(ALeffect *effect);
 void ReleaseALEffects(ALCdevice *device);
 
 void LoadReverbPreset(const char *name, ALeffect *effect);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

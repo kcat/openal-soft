@@ -54,416 +54,9 @@ const struct EffectList EffectList[EFFECTLIST_SIZE] = {
 
 ALboolean DisabledEffects[MAX_EFFECTS];
 
-static ALeffect *AllocEffect(ALCcontext *context);
-static void FreeEffect(ALCdevice *device, ALeffect *effect);
-static void InitEffectParams(ALeffect *effect, ALenum type);
+namespace {
 
-static inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
-{
-    ALuint lidx = (id-1) >> 6;
-    ALsizei slidx = (id-1) & 0x3f;
-
-    if(UNLIKELY(lidx >= device->EffectList.size()))
-        return nullptr;
-    EffectSubList &sublist = device->EffectList[lidx];
-    if(UNLIKELY(sublist.FreeMask & (U64(1)<<slidx)))
-        return nullptr;
-    return sublist.Effects + slidx;
-}
-
-
-AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
-{
-    ALCcontext *context;
-    ALsizei cur;
-
-    context = GetContextRef();
-    if(!context) return;
-
-    if(n < 0)
-        alSetError(context, AL_INVALID_VALUE, "Generating %d effects", n);
-    else for(cur = 0;cur < n;cur++)
-    {
-        ALeffect *effect = AllocEffect(context);
-        if(!effect)
-        {
-            alDeleteEffects(cur, effects);
-            break;
-        }
-        effects[cur] = effect->id;
-    }
-
-    ALCcontext_DecRef(context);
-}
-
-AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects)
-{
-    ALCdevice *device;
-    ALCcontext *context;
-    ALeffect *effect;
-    ALsizei i;
-
-    context = GetContextRef();
-    if(!context) return;
-
-    device = context->Device;
-    LockEffectList(device);
-    if(n < 0)
-        SETERR_GOTO(context, AL_INVALID_VALUE, done, "Deleting %d effects", n);
-    for(i = 0;i < n;i++)
-    {
-        if(effects[i] && LookupEffect(device, effects[i]) == NULL)
-            SETERR_GOTO(context, AL_INVALID_NAME, done, "Invalid effect ID %u", effects[i]);
-    }
-    for(i = 0;i < n;i++)
-    {
-        if((effect=LookupEffect(device, effects[i])) != NULL)
-            FreeEffect(device, effect);
-    }
-
-done:
-    UnlockEffectList(device);
-    ALCcontext_DecRef(context);
-}
-
-AL_API ALboolean AL_APIENTRY alIsEffect(ALuint effect)
-{
-    ALCcontext *Context;
-    ALboolean  result;
-
-    Context = GetContextRef();
-    if(!Context) return AL_FALSE;
-
-    LockEffectList(Context->Device);
-    result = ((!effect || LookupEffect(Context->Device, effect)) ?
-              AL_TRUE : AL_FALSE);
-    UnlockEffectList(Context->Device);
-
-    ALCcontext_DecRef(Context);
-
-    return result;
-}
-
-AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint value)
-{
-    ALCcontext *Context;
-    ALCdevice  *Device;
-    ALeffect   *ALEffect;
-
-    Context = GetContextRef();
-    if(!Context) return;
-
-    Device = Context->Device;
-    LockEffectList(Device);
-    if((ALEffect=LookupEffect(Device, effect)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else
-    {
-        if(param == AL_EFFECT_TYPE)
-        {
-            ALboolean isOk = (value == AL_EFFECT_NULL);
-            ALint i;
-            for(i = 0;!isOk && i < EFFECTLIST_SIZE;i++)
-            {
-                if(value == EffectList[i].val &&
-                   !DisabledEffects[EffectList[i].type])
-                    isOk = AL_TRUE;
-            }
-
-            if(isOk)
-                InitEffectParams(ALEffect, value);
-            else
-                alSetError(Context, AL_INVALID_VALUE, "Effect type 0x%04x not supported", value);
-        }
-        else
-        {
-            /* Call the appropriate handler */
-            ALeffect_setParami(ALEffect, Context, param, value);
-        }
-    }
-    UnlockEffectList(Device);
-
-    ALCcontext_DecRef(Context);
-}
-
-AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, const ALint *values)
-{
-    ALCcontext *Context;
-    ALCdevice  *Device;
-    ALeffect   *ALEffect;
-
-    switch(param)
-    {
-        case AL_EFFECT_TYPE:
-            alEffecti(effect, param, values[0]);
-            return;
-    }
-
-    Context = GetContextRef();
-    if(!Context) return;
-
-    Device = Context->Device;
-    LockEffectList(Device);
-    if((ALEffect=LookupEffect(Device, effect)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else
-    {
-        /* Call the appropriate handler */
-        ALeffect_setParamiv(ALEffect, Context, param, values);
-    }
-    UnlockEffectList(Device);
-
-    ALCcontext_DecRef(Context);
-}
-
-AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat value)
-{
-    ALCcontext *Context;
-    ALCdevice  *Device;
-    ALeffect   *ALEffect;
-
-    Context = GetContextRef();
-    if(!Context) return;
-
-    Device = Context->Device;
-    LockEffectList(Device);
-    if((ALEffect=LookupEffect(Device, effect)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else
-    {
-        /* Call the appropriate handler */
-        ALeffect_setParamf(ALEffect, Context, param, value);
-    }
-    UnlockEffectList(Device);
-
-    ALCcontext_DecRef(Context);
-}
-
-AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, const ALfloat *values)
-{
-    ALCcontext *Context;
-    ALCdevice  *Device;
-    ALeffect   *ALEffect;
-
-    Context = GetContextRef();
-    if(!Context) return;
-
-    Device = Context->Device;
-    LockEffectList(Device);
-    if((ALEffect=LookupEffect(Device, effect)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else
-    {
-        /* Call the appropriate handler */
-        ALeffect_setParamfv(ALEffect, Context, param, values);
-    }
-    UnlockEffectList(Device);
-
-    ALCcontext_DecRef(Context);
-}
-
-AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *value)
-{
-    ALCcontext *Context;
-    ALCdevice  *Device;
-    ALeffect   *ALEffect;
-
-    Context = GetContextRef();
-    if(!Context) return;
-
-    Device = Context->Device;
-    LockEffectList(Device);
-    if((ALEffect=LookupEffect(Device, effect)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else
-    {
-        if(param == AL_EFFECT_TYPE)
-            *value = ALEffect->type;
-        else
-        {
-            /* Call the appropriate handler */
-            ALeffect_getParami(ALEffect, Context, param, value);
-        }
-    }
-    UnlockEffectList(Device);
-
-    ALCcontext_DecRef(Context);
-}
-
-AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *values)
-{
-    ALCcontext *Context;
-    ALCdevice  *Device;
-    ALeffect   *ALEffect;
-
-    switch(param)
-    {
-        case AL_EFFECT_TYPE:
-            alGetEffecti(effect, param, values);
-            return;
-    }
-
-    Context = GetContextRef();
-    if(!Context) return;
-
-    Device = Context->Device;
-    LockEffectList(Device);
-    if((ALEffect=LookupEffect(Device, effect)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else
-    {
-        /* Call the appropriate handler */
-        ALeffect_getParamiv(ALEffect, Context, param, values);
-    }
-    UnlockEffectList(Device);
-
-    ALCcontext_DecRef(Context);
-}
-
-AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *value)
-{
-    ALCcontext *Context;
-    ALCdevice  *Device;
-    ALeffect   *ALEffect;
-
-    Context = GetContextRef();
-    if(!Context) return;
-
-    Device = Context->Device;
-    LockEffectList(Device);
-    if((ALEffect=LookupEffect(Device, effect)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else
-    {
-        /* Call the appropriate handler */
-        ALeffect_getParamf(ALEffect, Context, param, value);
-    }
-    UnlockEffectList(Device);
-
-    ALCcontext_DecRef(Context);
-}
-
-AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *values)
-{
-    ALCcontext *Context;
-    ALCdevice  *Device;
-    ALeffect   *ALEffect;
-
-    Context = GetContextRef();
-    if(!Context) return;
-
-    Device = Context->Device;
-    LockEffectList(Device);
-    if((ALEffect=LookupEffect(Device, effect)) == NULL)
-        alSetError(Context, AL_INVALID_NAME, "Invalid effect ID %u", effect);
-    else
-    {
-        /* Call the appropriate handler */
-        ALeffect_getParamfv(ALEffect, Context, param, values);
-    }
-    UnlockEffectList(Device);
-
-    ALCcontext_DecRef(Context);
-}
-
-
-void InitEffect(ALeffect *effect)
-{
-    InitEffectParams(effect, AL_EFFECT_NULL);
-}
-
-static ALeffect *AllocEffect(ALCcontext *context)
-{
-    ALCdevice *device = context->Device;
-    almtx_lock(&device->EffectLock);
-
-    auto sublist = std::find_if(device->EffectList.begin(), device->EffectList.end(),
-        [](const EffectSubList &entry) noexcept -> bool
-        { return entry.FreeMask != 0; }
-    );
-
-    auto lidx = std::distance(device->EffectList.begin(), sublist);
-    ALeffect *effect{nullptr};
-    ALsizei slidx{0};
-    if(LIKELY(sublist != device->EffectList.end()))
-    {
-        slidx = CTZ64(sublist->FreeMask);
-        effect = sublist->Effects + slidx;
-    }
-    else
-    {
-        /* Don't allocate so many list entries that the 32-bit ID could
-         * overflow...
-         */
-        if(UNLIKELY(device->EffectList.size() >= 1<<25))
-        {
-            almtx_unlock(&device->EffectLock);
-            alSetError(context, AL_OUT_OF_MEMORY, "Too many effects allocated");
-            return NULL;
-        }
-        device->EffectList.emplace_back();
-        sublist = device->EffectList.end() - 1;
-        sublist->FreeMask = ~U64(0);
-        sublist->Effects = static_cast<ALeffect*>(al_calloc(16, sizeof(ALeffect)*64));
-        if(UNLIKELY(!sublist->Effects))
-        {
-            device->EffectList.pop_back();
-            almtx_unlock(&device->EffectLock);
-            alSetError(context, AL_OUT_OF_MEMORY, "Failed to allocate effect batch");
-            return NULL;
-        }
-
-        slidx = 0;
-        effect = sublist->Effects + slidx;
-    }
-
-    effect = new (effect) ALeffect{};
-    InitEffectParams(effect, AL_EFFECT_NULL);
-
-    /* Add 1 to avoid effect ID 0. */
-    effect->id = ((lidx<<6) | slidx) + 1;
-
-    sublist->FreeMask &= ~(U64(1)<<slidx);
-    almtx_unlock(&device->EffectLock);
-
-    return effect;
-}
-
-static void FreeEffect(ALCdevice *device, ALeffect *effect)
-{
-    ALuint id = effect->id - 1;
-    ALsizei lidx = id >> 6;
-    ALsizei slidx = id & 0x3f;
-
-    effect->~ALeffect();
-
-    device->EffectList[lidx].FreeMask |= U64(1) << slidx;
-}
-
-void ReleaseALEffects(ALCdevice *device)
-{
-    size_t leftover = 0;
-    for(auto &sublist : device->EffectList)
-    {
-        ALuint64 usemask = ~sublist.FreeMask;
-        while(usemask)
-        {
-            ALsizei idx = CTZ64(usemask);
-            ALeffect *effect = sublist.Effects + idx;
-
-            effect->~ALeffect();
-            ++leftover;
-
-            usemask &= ~(U64(1) << idx);
-        }
-        sublist.FreeMask = ~usemask;
-    }
-    if(leftover > 0)
-        WARN("(%p) Deleted " SZFMT " Effect%s\n", device, leftover, (leftover==1)?"":"s");
-}
-
-
-static void InitEffectParams(ALeffect *effect, ALenum type)
+void InitEffectParams(ALeffect *effect, ALenum type)
 {
     switch(type)
     {
@@ -612,6 +205,392 @@ static void InitEffectParams(ALeffect *effect, ALenum type)
         break;
     }
     effect->type = type;
+}
+
+ALeffect *AllocEffect(ALCcontext *context)
+{
+    ALCdevice *device = context->Device;
+    almtx_lock(&device->EffectLock);
+
+    auto sublist = std::find_if(device->EffectList.begin(), device->EffectList.end(),
+        [](const EffectSubList &entry) noexcept -> bool
+        { return entry.FreeMask != 0; }
+    );
+
+    auto lidx = std::distance(device->EffectList.begin(), sublist);
+    ALeffect *effect{nullptr};
+    ALsizei slidx{0};
+    if(LIKELY(sublist != device->EffectList.end()))
+    {
+        slidx = CTZ64(sublist->FreeMask);
+        effect = sublist->Effects + slidx;
+    }
+    else
+    {
+        /* Don't allocate so many list entries that the 32-bit ID could
+         * overflow...
+         */
+        if(UNLIKELY(device->EffectList.size() >= 1<<25))
+        {
+            almtx_unlock(&device->EffectLock);
+            alSetError(context, AL_OUT_OF_MEMORY, "Too many effects allocated");
+            return NULL;
+        }
+        device->EffectList.emplace_back();
+        sublist = device->EffectList.end() - 1;
+        sublist->FreeMask = ~U64(0);
+        sublist->Effects = static_cast<ALeffect*>(al_calloc(16, sizeof(ALeffect)*64));
+        if(UNLIKELY(!sublist->Effects))
+        {
+            device->EffectList.pop_back();
+            almtx_unlock(&device->EffectLock);
+            alSetError(context, AL_OUT_OF_MEMORY, "Failed to allocate effect batch");
+            return NULL;
+        }
+
+        slidx = 0;
+        effect = sublist->Effects + slidx;
+    }
+
+    effect = new (effect) ALeffect{};
+    InitEffectParams(effect, AL_EFFECT_NULL);
+
+    /* Add 1 to avoid effect ID 0. */
+    effect->id = ((lidx<<6) | slidx) + 1;
+
+    sublist->FreeMask &= ~(U64(1)<<slidx);
+    almtx_unlock(&device->EffectLock);
+
+    return effect;
+}
+
+void FreeEffect(ALCdevice *device, ALeffect *effect)
+{
+    ALuint id = effect->id - 1;
+    ALsizei lidx = id >> 6;
+    ALsizei slidx = id & 0x3f;
+
+    effect->~ALeffect();
+
+    device->EffectList[lidx].FreeMask |= U64(1) << slidx;
+}
+
+inline ALeffect *LookupEffect(ALCdevice *device, ALuint id)
+{
+    ALuint lidx = (id-1) >> 6;
+    ALsizei slidx = (id-1) & 0x3f;
+
+    if(UNLIKELY(lidx >= device->EffectList.size()))
+        return nullptr;
+    EffectSubList &sublist = device->EffectList[lidx];
+    if(UNLIKELY(sublist.FreeMask & (U64(1)<<slidx)))
+        return nullptr;
+    return sublist.Effects + slidx;
+}
+
+} // namespace
+
+AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
+{
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
+
+    if(UNLIKELY(n < 0))
+    {
+        alSetError(context.get(), AL_INVALID_VALUE, "Generating %d effects", n);
+        return;
+    }
+
+    if(LIKELY(n == 1))
+    {
+        /* Special handling for the easy and normal case. */
+        ALeffect *effect = AllocEffect(context.get());
+        if(effect) effects[0] = effect->id;
+    }
+    else if(n > 1)
+    {
+        /* Store the allocated buffer IDs in a separate local list, to avoid
+         * modifying the user storage in case of failure.
+         */
+        std::vector<ALuint> ids;
+        ids.reserve(n);
+        do {
+            ALeffect *effect = AllocEffect(context.get());
+            if(!effect)
+            {
+                alDeleteEffects(ids.size(), ids.data());
+                return;
+            }
+
+            ids.emplace_back(effect->id);
+        } while(--n);
+        std::copy(ids.begin(), ids.end(), effects);
+    }
+}
+
+AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects)
+{
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
+
+    if(UNLIKELY(n < 0))
+    {
+        alSetError(context.get(), AL_INVALID_VALUE, "Deleting %d effects", n);
+        return;
+    }
+    if(UNLIKELY(n == 0))
+        return;
+
+    ALCdevice *device{context->Device};
+    std::lock_guard<almtx_t> _{device->EffectLock};
+
+    /* First try to find any effects that are invalid. */
+    const ALuint *effects_end = effects + n;
+    auto inveffect = std::find_if(effects, effects_end,
+        [device, &context](ALuint eid) -> bool
+        {
+            if(!eid) return false;
+            ALeffect *effect{LookupEffect(device, eid)};
+            if(UNLIKELY(!effect))
+            {
+                alSetError(context.get(), AL_INVALID_NAME, "Invalid effect ID %u", eid);
+                return true;
+            }
+            return false;
+        }
+    );
+    if(LIKELY(inveffect == effects_end))
+    {
+        /* All good. Delete non-0 effect IDs. */
+        std::for_each(effects, effects_end,
+            [device](ALuint eid) -> void
+            {
+                ALeffect *effect{eid ? LookupEffect(device, eid) : nullptr};
+                if(effect) FreeEffect(device, effect);
+            }
+        );
+    }
+}
+
+AL_API ALboolean AL_APIENTRY alIsEffect(ALuint effect)
+{
+    ContextRef context{GetContextRef()};
+    if(LIKELY(context))
+    {
+        ALCdevice *device{context->Device};
+        std::lock_guard<almtx_t> _{device->EffectLock};
+        if(!effect || LookupEffect(device, effect))
+            return AL_TRUE;
+    }
+    return AL_FALSE;
+}
+
+AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint value)
+{
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
+
+    ALCdevice *device{context->Device};
+    std::lock_guard<almtx_t> _{device->EffectLock};
+
+    ALeffect *aleffect{LookupEffect(device, effect)};
+    if(UNLIKELY(!aleffect))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid effect ID %u", effect);
+    else
+    {
+        if(param == AL_EFFECT_TYPE)
+        {
+            ALboolean isOk = (value == AL_EFFECT_NULL);
+            for(ALsizei i{0};!isOk && i < EFFECTLIST_SIZE;i++)
+            {
+                if(value == EffectList[i].val && !DisabledEffects[EffectList[i].type])
+                    isOk = AL_TRUE;
+            }
+
+            if(isOk)
+                InitEffectParams(aleffect, value);
+            else
+                alSetError(context.get(), AL_INVALID_VALUE, "Effect type 0x%04x not supported", value);
+        }
+        else
+        {
+            /* Call the appropriate handler */
+            ALeffect_setParami(aleffect, context.get(), param, value);
+        }
+    }
+}
+
+AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, const ALint *values)
+{
+    switch(param)
+    {
+        case AL_EFFECT_TYPE:
+            alEffecti(effect, param, values[0]);
+            return;
+    }
+
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
+
+    ALCdevice *device{context->Device};
+    std::lock_guard<almtx_t> _{device->EffectLock};
+
+    ALeffect *aleffect{LookupEffect(device, effect)};
+    if(UNLIKELY(!aleffect))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid effect ID %u", effect);
+    else
+    {
+        /* Call the appropriate handler */
+        ALeffect_setParamiv(aleffect, context.get(), param, values);
+    }
+}
+
+AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat value)
+{
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
+
+    ALCdevice *device{context->Device};
+    std::lock_guard<almtx_t> _{device->EffectLock};
+
+    ALeffect *aleffect{LookupEffect(device, effect)};
+    if(UNLIKELY(!aleffect))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid effect ID %u", effect);
+    else
+    {
+        /* Call the appropriate handler */
+        ALeffect_setParamf(aleffect, context.get(), param, value);
+    }
+}
+
+AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, const ALfloat *values)
+{
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
+
+    ALCdevice *device{context->Device};
+    std::lock_guard<almtx_t> _{device->EffectLock};
+
+    ALeffect *aleffect{LookupEffect(device, effect)};
+    if(UNLIKELY(!aleffect))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid effect ID %u", effect);
+    else
+    {
+        /* Call the appropriate handler */
+        ALeffect_setParamfv(aleffect, context.get(), param, values);
+    }
+}
+
+AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *value)
+{
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
+
+    ALCdevice *device{context->Device};
+    std::lock_guard<almtx_t> _{device->EffectLock};
+
+    const ALeffect *aleffect{LookupEffect(device, effect)};
+    if(UNLIKELY(!aleffect))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid effect ID %u", effect);
+    else
+    {
+        if(param == AL_EFFECT_TYPE)
+            *value = aleffect->type;
+        else
+        {
+            /* Call the appropriate handler */
+            ALeffect_getParami(aleffect, context.get(), param, value);
+        }
+    }
+}
+
+AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *values)
+{
+    switch(param)
+    {
+        case AL_EFFECT_TYPE:
+            alGetEffecti(effect, param, values);
+            return;
+    }
+
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
+
+    ALCdevice *device{context->Device};
+    std::lock_guard<almtx_t> _{device->EffectLock};
+
+    const ALeffect *aleffect{LookupEffect(device, effect)};
+    if(UNLIKELY(!aleffect))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid effect ID %u", effect);
+    else
+    {
+        /* Call the appropriate handler */
+        ALeffect_getParamiv(aleffect, context.get(), param, values);
+    }
+}
+
+AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *value)
+{
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
+
+    ALCdevice *device{context->Device};
+    std::lock_guard<almtx_t> _{device->EffectLock};
+
+    const ALeffect *aleffect{LookupEffect(device, effect)};
+    if(UNLIKELY(!aleffect))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid effect ID %u", effect);
+    else
+    {
+        /* Call the appropriate handler */
+        ALeffect_getParamf(aleffect, context.get(), param, value);
+    }
+}
+
+AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *values)
+{
+    ContextRef context{GetContextRef()};
+    if(UNLIKELY(!context)) return;
+
+    ALCdevice *device{context->Device};
+    std::lock_guard<almtx_t> _{device->EffectLock};
+
+    const ALeffect *aleffect{LookupEffect(device, effect)};
+    if(UNLIKELY(!aleffect))
+        alSetError(context.get(), AL_INVALID_NAME, "Invalid effect ID %u", effect);
+    else
+    {
+        /* Call the appropriate handler */
+        ALeffect_getParamfv(aleffect, context.get(), param, values);
+    }
+}
+
+
+void InitEffect(ALeffect *effect)
+{
+    InitEffectParams(effect, AL_EFFECT_NULL);
+}
+
+void ReleaseALEffects(ALCdevice *device)
+{
+    size_t leftover = 0;
+    for(auto &sublist : device->EffectList)
+    {
+        ALuint64 usemask = ~sublist.FreeMask;
+        while(usemask)
+        {
+            ALsizei idx = CTZ64(usemask);
+            ALeffect *effect = sublist.Effects + idx;
+
+            effect->~ALeffect();
+            ++leftover;
+
+            usemask &= ~(U64(1) << idx);
+        }
+        sublist.FreeMask = ~usemask;
+    }
+    if(leftover > 0)
+        WARN("(%p) Deleted " SZFMT " Effect%s\n", device, leftover, (leftover==1)?"":"s");
 }
 
 

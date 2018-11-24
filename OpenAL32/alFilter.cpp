@@ -405,7 +405,7 @@ AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, const ALuint *filters)
     ALCdevice *device{context->Device};
     std::lock_guard<almtx_t> _{device->FilterLock};
 
-    /* First try to find any buffers that are invalid or in-use. */
+    /* First try to find any filters that are invalid. */
     const ALuint *filters_end = filters + n;
     auto invflt = std::find_if(filters, filters_end,
         [device, &context](ALuint fid) -> bool
@@ -422,7 +422,7 @@ AL_API ALvoid AL_APIENTRY alDeleteFilters(ALsizei n, const ALuint *filters)
     );
     if(LIKELY(invflt == filters_end))
     {
-        /* All good. Delete non-0 buffer IDs. */
+        /* All good. Delete non-0 filter IDs. */
         std::for_each(filters, filters_end,
             [device](ALuint fid) -> void
             {

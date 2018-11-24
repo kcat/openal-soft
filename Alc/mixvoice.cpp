@@ -315,7 +315,6 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
     ALsizei OutPos;
     ALsizei IrSize;
     bool isplaying;
-    bool firstpass;
     bool isstatic;
     ALsizei chan;
     ALsizei send;
@@ -337,7 +336,6 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                 Resample_copy_C : voice->Resampler);
 
     Counter = (voice->Flags&VOICE_IS_FADING) ? SamplesToDo : 0;
-    firstpass = true;
     OutPos = 0;
 
     do {
@@ -595,11 +593,9 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                         parms->Hrtf.Old = parms->Hrtf.Target;
                         parms->Hrtf.Old.Gain = 0.0f;
                     }
-                    else if(firstpass)
+                    else if(OutPos == 0)
                     {
-                        ALfloat gain;
-
-                        /* Fade between the coefficients over 128 samples. */
+                        /* First mixing pass, fade between the coefficients. */
                         fademix = mini(DstBufferSize, 128);
 
                         /* The new coefficients need to fade in completely
@@ -608,8 +604,8 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                          * and new target gains given how much of the fade time
                          * this mix handles.
                          */
-                        gain = lerp(parms->Hrtf.Old.Gain, parms->Hrtf.Target.Gain,
-                                    minf(1.0f, (ALfloat)fademix/Counter));
+                        ALfloat gain{lerp(parms->Hrtf.Old.Gain, parms->Hrtf.Target.Gain,
+                                          minf(1.0f, (ALfloat)fademix/Counter))};
                         hrtfparams.Coeffs = parms->Hrtf.Target.Coeffs;
                         hrtfparams.Delay[0] = parms->Hrtf.Target.Delay[0];
                         hrtfparams.Delay[1] = parms->Hrtf.Target.Delay[1];
@@ -689,7 +685,6 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
         OutPos += DstBufferSize;
         voice->Offset += DstBufferSize;
         Counter = maxi(DstBufferSize, Counter) - DstBufferSize;
-        firstpass = false;
 
         if(isstatic)
         {

@@ -110,8 +110,6 @@ void FreeBuffer(ALCdevice *device, ALbuffer *buffer)
     ALsizei lidx = id >> 6;
     ALsizei slidx = id & 0x3f;
 
-    al_free(buffer->data);
-    buffer->data = nullptr;
     buffer->~ALbuffer();
 
     device->BufferList[lidx].FreeMask |= U64(1) << slidx;
@@ -290,41 +288,37 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
         newsize = (newsize+15) & ~0xf;
     if(newsize != ALBuf->BytesAlloc)
     {
-        void *temp{al_malloc(16, (size_t)newsize)};
-        if(UNLIKELY(!temp && newsize))
-            SETERR_RETURN(context, AL_OUT_OF_MEMORY,, "Failed to allocate %d bytes of storage",
-                          newsize);
+        al::vector<ALbyte,16> newdata(newsize);
         if((access&AL_PRESERVE_DATA_BIT_SOFT))
         {
             ALsizei tocopy{std::min(newsize, ALBuf->BytesAlloc)};
-            if(tocopy > 0) memcpy(temp, ALBuf->data, tocopy);
+            std::copy_n(ALBuf->mData.begin(), tocopy, newdata.begin());
         }
-        al_free(ALBuf->data);
-        ALBuf->data = temp;
+        ALBuf->mData = std::move(newdata);
         ALBuf->BytesAlloc = newsize;
     }
 
     if(SrcType == UserFmtIMA4)
     {
         assert(DstType == FmtShort);
-        if(data != nullptr && ALBuf->data != nullptr)
-            Convert_ALshort_ALima4(static_cast<ALshort*>(ALBuf->data),
+        if(data != nullptr && !ALBuf->mData.empty())
+            Convert_ALshort_ALima4(reinterpret_cast<ALshort*>(ALBuf->mData.data()),
                 static_cast<const ALubyte*>(data), NumChannels, frames, align);
         ALBuf->OriginalAlign = align;
     }
     else if(SrcType == UserFmtMSADPCM)
     {
         assert(DstType == FmtShort);
-        if(data != nullptr && ALBuf->data != nullptr)
-            Convert_ALshort_ALmsadpcm(static_cast<ALshort*>(ALBuf->data),
+        if(data != nullptr && !ALBuf->mData.empty())
+            Convert_ALshort_ALmsadpcm(reinterpret_cast<ALshort*>(ALBuf->mData.data()),
                 static_cast<const ALubyte*>(data), NumChannels, frames, align);
         ALBuf->OriginalAlign = align;
     }
     else
     {
         assert((long)SrcType == (long)DstType);
-        if(data != nullptr && ALBuf->data != nullptr)
-            memcpy(ALBuf->data, data, frames*FrameSize);
+        if(data != nullptr && !ALBuf->mData.empty())
+            std::copy_n(static_cast<const ALbyte*>(data), frames*FrameSize, ALBuf->mData.begin());
         ALBuf->OriginalAlign = 1;
     }
     ALBuf->OriginalSize = size;
@@ -601,7 +595,7 @@ AL_API void* AL_APIENTRY alMapBufferSOFT(ALuint buffer, ALsizei offset, ALsizei 
                        offset, length, buffer);
         else
         {
-            void *retval = (ALbyte*)albuf->data + offset;
+            void *retval = albuf->mData.data() + offset;
             albuf->MappedAccess = access;
             albuf->MappedOffset = offset;
             albuf->MappedSize = length;
@@ -730,7 +724,7 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
             offset = offset/byte_align * align * frame_size;
             length = length/byte_align * align;
 
-            void *dst = static_cast<ALbyte*>(albuf->data) + offset;
+            void *dst = albuf->mData.data() + offset;
             if(srctype == UserFmtIMA4 && albuf->FmtType == FmtShort)
                 Convert_ALshort_ALima4(static_cast<ALshort*>(dst),
                     static_cast<const ALubyte*>(data), num_chans, length, align);
@@ -1196,8 +1190,6 @@ ALvoid ReleaseALBuffers(ALCdevice *device)
             ALsizei idx = CTZ64(usemask);
             ALbuffer *buffer = sublist.Buffers + idx;
 
-            al_free(buffer->data);
-            buffer->data = nullptr;
             buffer->~ALbuffer();
 
             ++leftover;

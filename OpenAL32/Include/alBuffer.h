@@ -7,6 +7,7 @@
 
 #include "inprogext.h"
 #include "atomic.h"
+#include "vector.h"
 
 
 /* User formats */
@@ -88,37 +89,37 @@ inline ALsizei FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type)
 }
 
 
-typedef struct ALbuffer {
-    ALvoid  *data;
+struct ALbuffer {
+    al::vector<ALbyte,16> mData;
 
-    ALsizei Frequency;
-    ALbitfieldSOFT Access;
-    ALsizei SampleLen;
+    ALsizei Frequency{0};
+    ALbitfieldSOFT Access{0u};
+    ALsizei SampleLen{0};
 
-    enum FmtChannels FmtChannels;
-    enum FmtType     FmtType;
-    ALsizei BytesAlloc;
+    enum FmtChannels FmtChannels{};
+    enum FmtType     FmtType{};
+    ALsizei BytesAlloc{0};
 
-    enum UserFmtType OriginalType;
-    ALsizei OriginalSize;
-    ALsizei OriginalAlign;
+    enum UserFmtType OriginalType{};
+    ALsizei OriginalSize{0};
+    ALsizei OriginalAlign{0};
 
-    ALsizei LoopStart;
-    ALsizei LoopEnd;
+    ALsizei LoopStart{0};
+    ALsizei LoopEnd{0};
 
-    ATOMIC(ALsizei) UnpackAlign;
-    ATOMIC(ALsizei) PackAlign;
+    std::atomic<ALsizei> UnpackAlign{0};
+    std::atomic<ALsizei> PackAlign{0};
 
-    ALbitfieldSOFT MappedAccess;
-    ALsizei MappedOffset;
-    ALsizei MappedSize;
+    ALbitfieldSOFT MappedAccess{0u};
+    ALsizei MappedOffset{0};
+    ALsizei MappedSize{0};
 
     /* Number of times buffer was attached to a source (deletion can only occur when 0) */
-    RefCount ref;
+    RefCount ref{0u};
 
     /* Self ID */
-    ALuint id;
-} ALbuffer;
+    ALuint id{0};
+};
 
 ALvoid ReleaseALBuffers(ALCdevice *device);
 

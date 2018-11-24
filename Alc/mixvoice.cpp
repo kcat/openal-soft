@@ -402,7 +402,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                     for(i = 0;i < BufferListItem->num_buffers;i++)
                     {
                         const ALbuffer *buffer = BufferListItem->buffers[i];
-                        const ALubyte *Data = static_cast<const ALubyte*>(buffer->data);
+                        const ALbyte *Data = buffer->mData.data();
                         ALsizei DataSize;
 
                         if(DataPosInt >= buffer->SampleLen)
@@ -428,7 +428,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                     for(i = 0;i < BufferListItem->num_buffers;i++)
                     {
                         const ALbuffer *buffer = BufferListItem->buffers[i];
-                        const ALubyte *Data = static_cast<const ALubyte*>(buffer->data);
+                        const ALbyte *Data = buffer->mData.data();
                         ALsizei DataSize;
 
                         if(DataPosInt >= buffer->SampleLen)
@@ -453,7 +453,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                         for(i = 0;i < BufferListItem->num_buffers;i++)
                         {
                             const ALbuffer *buffer = BufferListItem->buffers[i];
-                            const ALubyte *Data = static_cast<const ALubyte*>(buffer->data);
+                            const ALbyte *Data = buffer->mData.data();
                             ALsizei DataSize;
 
                             if(LoopStart >= buffer->SampleLen)
@@ -490,7 +490,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
 
                         if(DataSize > pos)
                         {
-                            const ALubyte *Data = static_cast<const ALubyte*>(ALBuffer->data);
+                            const ALbyte *Data = ALBuffer->mData.data();
                             Data += (pos*NumChannels + chan)*SampleSize;
 
                             DataSize = mini(SizeToDo, DataSize - pos);

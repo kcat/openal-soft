@@ -714,7 +714,6 @@ SET(COMMON_OBJS
     common/vecmat.h
 )
 SET(OPENAL_OBJS
-    OpenAL32/Include/bs2b.h
     OpenAL32/Include/alMain.h
     OpenAL32/Include/alu.h
 
@@ -745,6 +744,7 @@ SET(ALC_OBJS
     Alc/alconfig.h
     Alc/alcontext.h
     Alc/bs2b.cpp
+    Alc/bs2b.h
     Alc/converter.cpp
     Alc/converter.h
     Alc/inprogext.h

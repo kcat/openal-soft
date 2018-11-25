@@ -40,7 +40,7 @@ void alSetError(ALCcontext *context, ALenum errorCode, const char *msg, ...)
 
     va_list args;
     va_start(args, msg);
-    int msglen{snprintf(message, sizeof(message), msg, args)};
+    int msglen{vsnprintf(message, sizeof(message), msg, args)};
     va_end(args);
 
     if(msglen < 0 || (size_t)msglen >= sizeof(message))

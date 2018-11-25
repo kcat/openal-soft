@@ -2396,11 +2396,11 @@ ALCdevice_struct::~ALCdevice_struct()
 
     almtx_destroy(&BackendLock);
 
-    ReleaseALBuffers(this);
-    std::for_each(BufferList.begin(), BufferList.end(),
-        [](BufferSubList &entry) noexcept -> void
-        { al_free(entry.Buffers); }
-    );
+    size_t count{0u};
+    for(auto &sublist : BufferList)
+        count += POPCNT64(~sublist.FreeMask);
+    if(count > 0)
+        WARN(SZFMT " Buffer%s not deleted\n", count, (count==1)?"":"s");
     BufferList.clear();
     almtx_destroy(&BufferLock);
 

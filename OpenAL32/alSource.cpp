@@ -3405,10 +3405,7 @@ SourceSubList::~SourceSubList()
     while(usemask)
     {
         ALsizei idx{CTZ64(usemask)};
-        ALsource *source{Sources + idx};
-
-        source->~ALsource();
-
+        Sources[idx].~ALsource();
         usemask &= ~(U64(1) << idx);
     }
     FreeMask = ~usemask;

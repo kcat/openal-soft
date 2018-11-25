@@ -121,6 +121,4 @@ struct ALbuffer {
     ALuint id{0};
 };
 
-ALvoid ReleaseALBuffers(ALCdevice *device);
-
 #endif

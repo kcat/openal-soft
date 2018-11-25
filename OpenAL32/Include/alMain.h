@@ -551,10 +551,20 @@ typedef union AmbiConfig {
 } AmbiConfig;
 
 
-typedef struct BufferSubList {
-    ALuint64 FreeMask{~ALuint64{}};
+struct BufferSubList {
+    uint64_t FreeMask{~uint64_t{}};
     struct ALbuffer *Buffers{nullptr}; /* 64 */
-} BufferSubList;
+
+    BufferSubList() noexcept = default;
+    BufferSubList(const BufferSubList&) = delete;
+    BufferSubList(BufferSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Buffers{rhs.Buffers}
+    { rhs.FreeMask = ~uint64_t{}; rhs.Buffers = nullptr; }
+    ~BufferSubList();
+
+    BufferSubList& operator=(const BufferSubList&) = delete;
+    BufferSubList& operator=(BufferSubList&& rhs) noexcept
+    { std::swap(FreeMask, rhs.FreeMask); std::swap(Buffers, rhs.Buffers); return *this; }
+};
 
 typedef struct EffectSubList {
     ALuint64 FreeMask{~ALuint64{}};

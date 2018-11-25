@@ -1174,30 +1174,16 @@ ALsizei ChannelsFromFmt(FmtChannels chans)
 }
 
 
-/*
- *    ReleaseALBuffers()
- *
- *    INTERNAL: Called to destroy any buffers that still exist on the device
- */
-ALvoid ReleaseALBuffers(ALCdevice *device)
+BufferSubList::~BufferSubList()
 {
-    size_t leftover = 0;
-    for(auto &sublist : device->BufferList)
+    ALuint64 usemask = ~FreeMask;
+    while(usemask)
     {
-        ALuint64 usemask = ~sublist.FreeMask;
-        while(usemask)
-        {
-            ALsizei idx = CTZ64(usemask);
-            ALbuffer *buffer = sublist.Buffers + idx;
-
-            buffer->~ALbuffer();
-
-            ++leftover;
-
-            usemask &= ~(U64(1) << idx);
-        }
-        sublist.FreeMask = ~usemask;
+        ALsizei idx{CTZ64(usemask)};
+        Buffers[idx].~ALbuffer();
+        usemask &= ~(U64(1) << idx);
     }
-    if(leftover > 0)
-        WARN("(%p) Deleted " SZFMT " Buffer%s\n", device, leftover, (leftover==1)?"":"s");
+    FreeMask = ~usemask;
+    al_free(Buffers);
+    Buffers = nullptr;
 }

@@ -300,62 +300,51 @@ const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter,
 #define NFC_DATA_BUF 3
 ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsizei SamplesToDo)
 {
-    ALCdevice *Device = Context->Device;
-    ALbufferlistitem *BufferListItem;
-    ALbufferlistitem *BufferLoopItem;
-    ALsizei NumChannels, SampleSize;
-    ALbitfieldSOFT enabledevt;
-    ALsizei buffers_done = 0;
-    ResamplerFunc Resample;
-    ALsizei DataPosInt;
-    ALsizei DataPosFrac;
-    ALint64 DataSize64;
-    ALint increment;
-    ALsizei Counter;
-    ALsizei OutPos;
-    ALsizei IrSize;
-    bool isplaying;
-    bool isstatic;
-    ALsizei chan;
-    ALsizei send;
+    ASSUME(SamplesToDo > 0);
 
     /* Get source info */
-    isplaying      = true; /* Will only be called while playing. */
-    isstatic       = !!(voice->Flags&VOICE_IS_STATIC);
-    DataPosInt     = ATOMIC_LOAD(&voice->position, almemory_order_acquire);
-    DataPosFrac    = ATOMIC_LOAD(&voice->position_fraction, almemory_order_relaxed);
-    BufferListItem = ATOMIC_LOAD(&voice->current_buffer, almemory_order_relaxed);
-    BufferLoopItem = ATOMIC_LOAD(&voice->loop_buffer, almemory_order_relaxed);
-    NumChannels    = voice->NumChannels;
-    SampleSize     = voice->SampleSize;
-    increment      = voice->Step;
+    bool isplaying{true}; /* Will only be called while playing. */
+    bool isstatic{(voice->Flags&VOICE_IS_STATIC) != 0};
+    ALsizei DataPosInt{(ALsizei)voice->position.load(std::memory_order_acquire)};
+    ALsizei DataPosFrac{voice->position_fraction.load(std::memory_order_relaxed)};
+    ALbufferlistitem *BufferListItem{voice->current_buffer.load(std::memory_order_relaxed)};
+    ALbufferlistitem *BufferLoopItem{voice->loop_buffer.load(std::memory_order_relaxed)};
+    ALsizei NumChannels{voice->NumChannels};
+    ALsizei SampleSize{voice->SampleSize};
+    ALint increment{voice->Step};
 
-    IrSize = (Device->HrtfHandle ? Device->HrtfHandle->irSize : 0);
+    ASSUME(DataPosInt >= 0);
+    ASSUME(DataPosFrac >= 0);
+    ASSUME(NumChannels > 0);
+    ASSUME(SampleSize > 0);
+    ASSUME(increment > 0);
 
-    Resample = ((increment == FRACTIONONE && DataPosFrac == 0) ?
-                Resample_copy_C : voice->Resampler);
+    ALCdevice *Device{Context->Device};
+    ALsizei IrSize{Device->HrtfHandle ? Device->HrtfHandle->irSize : 0};
 
-    Counter = (voice->Flags&VOICE_IS_FADING) ? SamplesToDo : 0;
-    OutPos = 0;
+    ResamplerFunc Resample{(increment == FRACTIONONE && DataPosFrac == 0) ?
+                           Resample_copy_C : voice->Resampler};
+
+    ALsizei Counter{(voice->Flags&VOICE_IS_FADING) ? SamplesToDo : 0};
+    ALsizei buffers_done{0};
+    ALsizei OutPos{0};
 
     do {
-        ALsizei SrcBufferSize, DstBufferSize;
-
         /* Figure out how many buffer samples will be needed */
-        DataSize64  = SamplesToDo-OutPos;
+        ALint64 DataSize64{SamplesToDo - OutPos};
         DataSize64 *= increment;
         DataSize64 += DataPosFrac+FRACTIONMASK;
         DataSize64 >>= FRACTIONBITS;
         DataSize64 += MAX_RESAMPLE_PADDING*2;
-        SrcBufferSize = (ALsizei)mini64(DataSize64, BUFFERSIZE);
+        ALsizei SrcBufferSize{(ALsizei)mini64(DataSize64, BUFFERSIZE)};
 
         /* Figure out how many samples we can actually mix from this. */
         DataSize64  = SrcBufferSize;
         DataSize64 -= MAX_RESAMPLE_PADDING*2;
         DataSize64 <<= FRACTIONBITS;
         DataSize64 -= DataPosFrac;
-        DstBufferSize = (ALsizei)mini64((DataSize64+(increment-1)) / increment,
-                                        SamplesToDo - OutPos);
+        ALsizei DstBufferSize{(ALsizei)mini64((DataSize64+(increment-1)) / increment,
+                                              SamplesToDo - OutPos)};
 
         /* Some mixers like having a multiple of 4, so try to give that unless
          * this is the last update. */
@@ -365,7 +354,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
         /* It's impossible to have a buffer list item with no entries. */
         assert(BufferListItem->num_buffers > 0);
 
-        for(chan = 0;chan < NumChannels;chan++)
+        for(ALsizei chan{0};chan < NumChannels;chan++)
         {
             ALfloat *SrcData{Device->TempBuffer[SOURCE_DATA_BUF]};
 
@@ -380,21 +369,21 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                  * first buffer (should be adjusted by any buffer offset, to
                  * possibly be added later).
                  */
-                const ALbuffer *Buffer0 = BufferListItem->buffers[0];
-                const ALsizei LoopStart = Buffer0->LoopStart;
-                const ALsizei LoopEnd   = Buffer0->LoopEnd;
-                const ALsizei LoopSize  = LoopEnd - LoopStart;
+                const ALbuffer *Buffer0{BufferListItem->buffers[0]};
+                const ALsizei LoopStart{Buffer0->LoopStart};
+                const ALsizei LoopEnd{Buffer0->LoopEnd};
+                ASSUME(LoopStart >= 0);
+                ASSUME(LoopEnd > LoopStart);
 
                 /* If current pos is beyond the loop range, do not loop */
                 if(!BufferLoopItem || DataPosInt >= LoopEnd)
                 {
                     ALsizei SizeToDo = SrcBufferSize - FilledAmt;
-                    ALsizei CompLen = 0;
-                    ALsizei i;
 
-                    BufferLoopItem = NULL;
+                    BufferLoopItem = nullptr;
 
-                    for(i = 0;i < BufferListItem->num_buffers;i++)
+                    ALsizei CompLen{0};
+                    for(ALsizei i{0};i < BufferListItem->num_buffers;i++)
                     {
                         const ALbuffer *buffer = BufferListItem->buffers[i];
                         const ALbyte *Data = buffer->mData.data();
@@ -416,11 +405,11 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                 }
                 else
                 {
+                    const ALsizei LoopSize{LoopEnd - LoopStart};
                     ALsizei SizeToDo = mini(SrcBufferSize - FilledAmt, LoopEnd - DataPosInt);
-                    ALsizei CompLen = 0;
-                    ALsizei i;
 
-                    for(i = 0;i < BufferListItem->num_buffers;i++)
+                    ALsizei CompLen{0};
+                    for(ALsizei i{0};i < BufferListItem->num_buffers;i++)
                     {
                         const ALbuffer *buffer = BufferListItem->buffers[i];
                         const ALbyte *Data = buffer->mData.data();
@@ -445,7 +434,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                         const ALsizei SizeToDo = mini(SrcBufferSize - FilledAmt, LoopSize);
 
                         CompLen = 0;
-                        for(i = 0;i < BufferListItem->num_buffers;i++)
+                        for(ALsizei i{0};i < BufferListItem->num_buffers;i++)
                         {
                             const ALbuffer *buffer = BufferListItem->buffers[i];
                             const ALbyte *Data = buffer->mData.data();
@@ -469,42 +458,43 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
             else
             {
                 /* Crawl the buffer queue to fill in the temp buffer */
-                ALbufferlistitem *tmpiter = BufferListItem;
-                ALsizei pos = DataPosInt;
+                ALbufferlistitem *tmpiter{BufferListItem};
+                ALsizei pos{DataPosInt};
 
                 while(tmpiter && SrcBufferSize > FilledAmt)
                 {
-                    ALsizei SizeToDo = SrcBufferSize - FilledAmt;
-                    ALsizei CompLen = 0;
-                    ALsizei i;
-
-                    for(i = 0;i < tmpiter->num_buffers;i++)
+                    if(pos >= tmpiter->max_samples)
                     {
-                        const ALbuffer *ALBuffer = tmpiter->buffers[i];
-                        ALsizei DataSize = ALBuffer ? ALBuffer->SampleLen : 0;
-
-                        if(DataSize > pos)
-                        {
-                            const ALbyte *Data = ALBuffer->mData.data();
-                            Data += (pos*NumChannels + chan)*SampleSize;
-
-                            DataSize = mini(SizeToDo, DataSize - pos);
-                            CompLen = maxi(CompLen, DataSize);
-
-                            LoadSamples(&SrcData[FilledAmt], Data, NumChannels,
-                                        ALBuffer->FmtType, DataSize);
-                        }
-                    }
-                    if(UNLIKELY(!CompLen))
                         pos -= tmpiter->max_samples;
-                    else
-                    {
-                        FilledAmt += CompLen;
-                        if(SrcBufferSize <= FilledAmt)
-                            break;
-                        pos = 0;
+                        tmpiter = tmpiter->next.load(std::memory_order_acquire);
+                        if(!tmpiter) tmpiter = BufferLoopItem;
+                        continue;
                     }
-                    tmpiter = ATOMIC_LOAD(&tmpiter->next, almemory_order_acquire);
+
+                    const ALsizei SizeToDo{SrcBufferSize - FilledAmt};
+                    ALsizei CompLen{0};
+                    for(ALsizei i{0};i < tmpiter->num_buffers;i++)
+                    {
+                        const ALbuffer *ALBuffer{tmpiter->buffers[i]};
+                        ALsizei DataSize{ALBuffer ? ALBuffer->SampleLen : 0};
+
+                        if(pos >= DataSize)
+                            continue;
+
+                        const ALbyte *Data{ALBuffer->mData.data()};
+                        Data += (pos*NumChannels + chan)*SampleSize;
+
+                        DataSize = mini(SizeToDo, DataSize - pos);
+                        CompLen = maxi(CompLen, DataSize);
+
+                        LoadSamples(&SrcData[FilledAmt], Data, NumChannels,
+                                    ALBuffer->FmtType, DataSize);
+                    }
+                    FilledAmt += CompLen;
+                    if(SrcBufferSize <= FilledAmt)
+                        break;
+                    pos = 0;
+                    tmpiter = tmpiter->next.load(std::memory_order_acquire);
                     if(!tmpiter) tmpiter = BufferLoopItem;
                 }
             }
@@ -519,18 +509,18 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                 Device->TempBuffer[RESAMPLED_BUF], DstBufferSize
             )};
             {
-                DirectParams *parms = &voice->Direct.Params[chan];
-                const ALfloat *samples;
+                DirectParams *parms{&voice->Direct.Params[chan]};
+                const ALfloat *samples{DoFilters(&parms->LowPass, &parms->HighPass,
+                    Device->TempBuffer[FILTERED_BUF], ResampledData, DstBufferSize,
+                    voice->Direct.FilterType
+                )};
 
-                samples = DoFilters(
-                    &parms->LowPass, &parms->HighPass, Device->TempBuffer[FILTERED_BUF],
-                    ResampledData, DstBufferSize, voice->Direct.FilterType
-                );
                 if(!(voice->Flags&VOICE_HAS_HRTF))
                 {
                     if(!Counter)
-                        memcpy(parms->Gains.Current, parms->Gains.Target,
-                               sizeof(parms->Gains.Current));
+                        std::copy(std::begin(parms->Gains.Target), std::end(parms->Gains.Target),
+                                  std::begin(parms->Gains.Current));
+
                     if(!(voice->Flags&VOICE_HAS_NFC))
                         MixSamples(samples, voice->Direct.Channels, voice->Direct.Buffer,
                             parms->Gains.Current, parms->Gains.Target, Counter, OutPos,
@@ -651,22 +641,21 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                 }
             }
 
-            for(send = 0;send < Device->NumAuxSends;send++)
+            for(ALsizei send{0};send < Device->NumAuxSends;send++)
             {
                 SendParams *parms = &voice->Send[send].Params[chan];
-                const ALfloat *samples;
 
                 if(!voice->Send[send].Buffer)
                     continue;
 
-                samples = DoFilters(
-                    &parms->LowPass, &parms->HighPass, Device->TempBuffer[FILTERED_BUF],
-                    ResampledData, DstBufferSize, voice->Send[send].FilterType
-                );
+                const ALfloat *samples{DoFilters(&parms->LowPass, &parms->HighPass,
+                    Device->TempBuffer[FILTERED_BUF], ResampledData, DstBufferSize,
+                    voice->Send[send].FilterType
+                )};
 
                 if(!Counter)
-                    memcpy(parms->Gains.Current, parms->Gains.Target,
-                           sizeof(parms->Gains.Current));
+                    std::copy(std::begin(parms->Gains.Target), std::end(parms->Gains.Target),
+                              std::begin(parms->Gains.Current));
                 MixSamples(samples, voice->Send[send].Channels, voice->Send[send].Buffer,
                     parms->Gains.Current, parms->Gains.Target, Counter, OutPos, DstBufferSize
                 );
@@ -686,9 +675,9 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
             if(BufferLoopItem)
             {
                 /* Handle looping static source */
-                const ALbuffer *Buffer = BufferListItem->buffers[0];
-                ALsizei LoopStart = Buffer->LoopStart;
-                ALsizei LoopEnd = Buffer->LoopEnd;
+                const ALbuffer *Buffer{BufferListItem->buffers[0]};
+                ALsizei LoopStart{Buffer->LoopStart};
+                ALsizei LoopEnd{Buffer->LoopEnd};
                 if(DataPosInt >= LoopEnd)
                 {
                     assert(LoopEnd > LoopStart);
@@ -731,12 +720,12 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
     voice->Flags |= VOICE_IS_FADING;
 
     /* Update source info */
-    ATOMIC_STORE(&voice->position, static_cast<ALuint>(DataPosInt), almemory_order_relaxed);
-    ATOMIC_STORE(&voice->position_fraction, DataPosFrac, almemory_order_relaxed);
-    ATOMIC_STORE(&voice->current_buffer,    BufferListItem, almemory_order_release);
+    voice->position.store(DataPosInt, std::memory_order_relaxed);
+    voice->position_fraction.store(DataPosFrac, std::memory_order_relaxed);
+    voice->current_buffer.store(BufferListItem, std::memory_order_release);
 
     /* Send any events now, after the position/buffer info was updated. */
-    enabledevt = ATOMIC_LOAD(&Context->EnabledEvts, almemory_order_acquire);
+    ALbitfieldSOFT enabledevt{Context->EnabledEvts.load(std::memory_order_acquire)};
     if(buffers_done > 0 && (enabledevt&EventType_BufferCompleted))
         SendAsyncEvent(Context, EventType_BufferCompleted,
             AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, SourceID, buffers_done, "Buffer completed"

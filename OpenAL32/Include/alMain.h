@@ -135,12 +135,20 @@ typedef ALuint64SOFT ALuint64;
 #ifdef __GNUC__
 
 #if SIZEOF_LONG == 8
+#define POPCNT64 __builtin_popcountl
 #define CTZ64 __builtin_ctzl
 #else
+#define POPCNT64 __builtin_popcountll
 #define CTZ64 __builtin_ctzll
 #endif
 
 #elif defined(HAVE_BITSCANFORWARD64_INTRINSIC)
+
+inline int msvc64_popcnt64(ALuint64 v)
+{
+    return __popcnt64(v);
+}
+#define POPCNT64 msvc64_popcnt64
 
 inline int msvc64_ctz64(ALuint64 v)
 {
@@ -151,6 +159,12 @@ inline int msvc64_ctz64(ALuint64 v)
 #define CTZ64 msvc64_ctz64
 
 #elif defined(HAVE_BITSCANFORWARD_INTRINSIC)
+
+inline int msvc_popcnt64(ALuint64 v)
+{
+    return __popcnt((ALuint)v) + __popcnt((ALuint)(v>>32));
+}
+#define POPCNT64 msvc_popcnt64
 
 inline int msvc_ctz64(ALuint64 v)
 {
@@ -180,6 +194,7 @@ inline int fallback_popcnt64(ALuint64 v)
     v = (v + (v >> 4)) & U64(0x0f0f0f0f0f0f0f0f);
     return (int)((v * U64(0x0101010101010101)) >> 56);
 }
+#define POPCNT64 fallback_popcnt64
 
 inline int fallback_ctz64(ALuint64 value)
 {

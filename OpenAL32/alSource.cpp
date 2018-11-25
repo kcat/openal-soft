@@ -3399,28 +3399,19 @@ void UpdateAllSourceProps(ALCcontext *context)
     );
 }
 
-/* ReleaseALSources
- *
- * Destroys all sources in the source map.
- */
-ALvoid ReleaseALSources(ALCcontext *context)
+SourceSubList::~SourceSubList()
 {
-    size_t leftover = 0;
-    for(auto &sublist : context->SourceList)
+    ALuint64 usemask = ~FreeMask;
+    while(usemask)
     {
-        ALuint64 usemask = ~sublist.FreeMask;
-        while(usemask)
-        {
-            ALsizei idx{CTZ64(usemask)};
-            ALsource *source{sublist.Sources + idx};
+        ALsizei idx{CTZ64(usemask)};
+        ALsource *source{Sources + idx};
 
-            source->~ALsource();
-            ++leftover;
+        source->~ALsource();
 
-            usemask &= ~(U64(1) << idx);
-        }
-        sublist.FreeMask = ~usemask;
+        usemask &= ~(U64(1) << idx);
     }
-    if(leftover > 0)
-        WARN("(%p) Deleted " SZFMT " Source%s\n", context, leftover, (leftover==1)?"":"s");
+    FreeMask = ~usemask;
+    al_free(Sources);
+    Sources = nullptr;
 }

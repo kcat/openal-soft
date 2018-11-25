@@ -2598,11 +2598,11 @@ ALCcontext_struct::~ALCcontext_struct()
     al_free(ActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed));
     DefaultSlot = nullptr;
 
-    ReleaseALSources(this);
-    std::for_each(SourceList.begin(), SourceList.end(),
-        [](const SourceSubList &entry) noexcept -> void
-        { al_free(entry.Sources); }
-    );
+    count = 0;
+    for(auto &sublist : SourceList)
+        count += POPCNT64(~sublist.FreeMask);
+    if(count > 0)
+        WARN(SZFMT " Source%s not deleted\n", count, (count==1)?"":"s");
     SourceList.clear();
     NumSources = 0;
     almtx_destroy(&SourceLock);

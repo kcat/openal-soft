@@ -44,6 +44,16 @@ enum class DistanceModel {
 struct SourceSubList {
     uint64_t FreeMask{~uint64_t{}};
     ALsource *Sources{nullptr}; /* 64 */
+
+    SourceSubList() noexcept = default;
+    SourceSubList(const SourceSubList&) = delete;
+    SourceSubList(SourceSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Sources{rhs.Sources}
+    { rhs.FreeMask = ~uint64_t{}; rhs.Sources = nullptr; }
+    ~SourceSubList();
+
+    SourceSubList& operator=(const SourceSubList&) = delete;
+    SourceSubList& operator=(SourceSubList&& rhs) noexcept
+    { std::swap(FreeMask, rhs.FreeMask); std::swap(Sources, rhs.Sources); return *this; }
 };
 
 /* Effect slots are rather large, and apps aren't likely to have more than one

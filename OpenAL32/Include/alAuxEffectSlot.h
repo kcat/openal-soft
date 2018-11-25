@@ -119,7 +119,6 @@ struct ALeffectslot {
 ALenum InitEffectSlot(ALeffectslot *slot);
 void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context);
 void UpdateAllEffectSlotProps(ALCcontext *context);
-ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *Context);
 
 
 EffectStateFactory *NullStateFactory_getFactory(void);

@@ -656,18 +656,3 @@ void UpdateAllEffectSlotProps(ALCcontext *context)
             UpdateEffectSlotProps(slot, context);
     }
 }
-
-ALvoid ReleaseALAuxiliaryEffectSlots(ALCcontext *context)
-{
-    size_t leftover = 0;
-    for(auto &entry : context->EffectSlotList)
-    {
-        if(entry)
-        {
-            entry = nullptr;
-            ++leftover;
-        }
-    }
-    if(leftover > 0)
-        WARN("(%p) Deleted " SZFMT " AuxiliaryEffectSlot%s\n", context, leftover, (leftover==1)?"":"s");
-}

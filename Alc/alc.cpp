@@ -2619,7 +2619,11 @@ ALCcontext_struct::~ALCcontext_struct()
     }
     TRACE("Freed " SZFMT " AuxiliaryEffectSlot property object%s\n", count, (count==1)?"":"s");
 
-    ReleaseALAuxiliaryEffectSlots(this);
+    count = 0;
+    for(auto &slot : EffectSlotList)
+        count += slot ? 1 : 0;
+    if(count > 0)
+        WARN(SZFMT " AuxiliaryEffectSlot%s not deleted\n", count, (count==1)?"":"s");
     EffectSlotList.clear();
     almtx_destroy(&EffectSlotLock);
 

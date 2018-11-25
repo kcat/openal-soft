@@ -3535,11 +3535,10 @@ ALC_API ALCvoid* ALC_APIENTRY alcGetProcAddress(ALCdevice *device, const ALCchar
     }
     else
     {
-        size_t i = 0;
-        for(i = 0;i < COUNTOF(alcFunctions);i++)
+        for(const auto &func : alcFunctions)
         {
-            if(strcmp(alcFunctions[i].funcName, funcName) == 0)
-                return alcFunctions[i].address;
+            if(strcmp(func.funcName, funcName) == 0)
+                return func.address;
         }
     }
 
@@ -3560,11 +3559,10 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
     }
     else
     {
-        size_t i = 0;
-        for(i = 0;i < COUNTOF(alcEnumerations);i++)
+        for(const auto &enm : alcEnumerations)
         {
-            if(strcmp(alcEnumerations[i].enumName, enumName) == 0)
-                return alcEnumerations[i].value;
+            if(strcmp(enm.enumName, enumName) == 0)
+                return enm.value;
         }
     }
 

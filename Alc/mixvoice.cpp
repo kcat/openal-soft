@@ -367,15 +367,12 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
 
         for(chan = 0;chan < NumChannels;chan++)
         {
-            const ALfloat *ResampledData;
-            ALfloat *SrcData = Device->TempBuffer[SOURCE_DATA_BUF];
-            ALsizei FilledAmt;
+            ALfloat *SrcData{Device->TempBuffer[SOURCE_DATA_BUF]};
 
             /* Load the previous samples into the source data first, and clear the rest. */
-            memcpy(SrcData, voice->PrevSamples[chan], MAX_RESAMPLE_PADDING*sizeof(ALfloat));
-            memset(SrcData+MAX_RESAMPLE_PADDING, 0, (BUFFERSIZE-MAX_RESAMPLE_PADDING)*
-                                                    sizeof(ALfloat));
-            FilledAmt = MAX_RESAMPLE_PADDING;
+            std::copy_n(voice->PrevSamples[chan], MAX_RESAMPLE_PADDING, SrcData);
+            std::fill_n(SrcData+MAX_RESAMPLE_PADDING, BUFFERSIZE-MAX_RESAMPLE_PADDING, 0.0f);
+            ALsizei FilledAmt{MAX_RESAMPLE_PADDING};
 
             if(isstatic)
             {
@@ -513,16 +510,14 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
             }
 
             /* Store the last source samples used for next time. */
-            memcpy(voice->PrevSamples[chan],
-                &SrcData[(increment*DstBufferSize + DataPosFrac)>>FRACTIONBITS],
-                MAX_RESAMPLE_PADDING*sizeof(ALfloat)
-            );
+            std::copy_n(&SrcData[(increment*DstBufferSize + DataPosFrac)>>FRACTIONBITS],
+                        MAX_RESAMPLE_PADDING, voice->PrevSamples[chan]);
 
             /* Now resample, then filter and mix to the appropriate outputs. */
-            ResampledData = Resample(&voice->ResampleState,
+            const ALfloat *ResampledData{Resample(&voice->ResampleState,
                 &SrcData[MAX_RESAMPLE_PADDING], DataPosFrac, increment,
                 Device->TempBuffer[RESAMPLED_BUF], DstBufferSize
-            );
+            )};
             {
                 DirectParams *parms = &voice->Direct.Params[chan];
                 const ALfloat *samples;

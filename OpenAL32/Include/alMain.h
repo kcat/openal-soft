@@ -552,17 +552,17 @@ typedef union AmbiConfig {
 
 
 typedef struct BufferSubList {
-    ALuint64 FreeMask{0u};
+    ALuint64 FreeMask{~ALuint64{}};
     struct ALbuffer *Buffers{nullptr}; /* 64 */
 } BufferSubList;
 
 typedef struct EffectSubList {
-    ALuint64 FreeMask{0u};
+    ALuint64 FreeMask{~ALuint64{}};
     struct ALeffect *Effects{nullptr}; /* 64 */
 } EffectSubList;
 
 typedef struct FilterSubList {
-    ALuint64 FreeMask{0u};
+    ALuint64 FreeMask{~ALuint64{}};
     struct ALfilter *Filters{nullptr}; /* 64 */
 } FilterSubList;
 

@@ -42,7 +42,7 @@ enum class DistanceModel {
 };
 
 struct SourceSubList {
-    uint64_t FreeMask{0u};
+    uint64_t FreeMask{~uint64_t{}};
     ALsource *Sources{nullptr}; /* 64 */
 };
 

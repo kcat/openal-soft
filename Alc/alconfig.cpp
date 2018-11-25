@@ -59,7 +59,7 @@ struct ConfigEntry {
       : key{std::forward<T0>(key_)}, value{std::forward<T1>(val_)}
     { }
 };
-std::vector<ConfigEntry> ConfOpts;
+al::vector<ConfigEntry> ConfOpts;
 
 
 std::string &lstrip(std::string &line)

@@ -142,10 +142,10 @@ struct DevMap {
     { }
 };
 
-std::vector<DevMap> PlaybackDevices;
-std::vector<DevMap> CaptureDevices;
+al::vector<DevMap> PlaybackDevices;
+al::vector<DevMap> CaptureDevices;
 
-bool checkName(const std::vector<DevMap> &list, const std::string &name)
+bool checkName(const al::vector<DevMap> &list, const std::string &name)
 {
     return std::find_if(list.cbegin(), list.cend(),
         [&name](const DevMap &entry) -> bool
@@ -158,7 +158,7 @@ BOOL CALLBACK DSoundEnumDevices(GUID *guid, const WCHAR *desc, const WCHAR* UNUS
     if(!guid)
         return TRUE;
 
-    auto& devices = *reinterpret_cast<std::vector<DevMap>*>(data);
+    auto& devices = *reinterpret_cast<al::vector<DevMap>*>(data);
     const std::string basename{DEVNAME_HEAD + wstr_to_utf8(desc)};
 
     int count{1};

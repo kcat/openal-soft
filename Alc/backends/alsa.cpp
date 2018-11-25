@@ -253,8 +253,8 @@ struct DevMap {
     { }
 };
 
-std::vector<DevMap> PlaybackDevices;
-std::vector<DevMap> CaptureDevices;
+al::vector<DevMap> PlaybackDevices;
+al::vector<DevMap> CaptureDevices;
 
 
 const char *prefix_name(snd_pcm_stream_t stream)
@@ -263,9 +263,9 @@ const char *prefix_name(snd_pcm_stream_t stream)
     return (stream==SND_PCM_STREAM_PLAYBACK) ? "device-prefix" : "capture-prefix";
 }
 
-std::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
+al::vector<DevMap> probe_devices(snd_pcm_stream_t stream)
 {
-    std::vector<DevMap> devlist;
+    al::vector<DevMap> devlist;
 
     snd_ctl_card_info_t *info;
     snd_ctl_card_info_malloc(&info);
@@ -425,7 +425,7 @@ int verify_state(snd_pcm_t *handle)
 struct ALCplaybackAlsa final : public ALCbackend {
     snd_pcm_t *pcmHandle{nullptr};
 
-    std::vector<char> buffer;
+    al::vector<char> buffer;
 
     std::atomic<ALenum> killNow{AL_TRUE};
     std::thread thread;
@@ -926,7 +926,7 @@ ClockLatency ALCplaybackAlsa_getClockLatency(ALCplaybackAlsa *self)
 struct ALCcaptureAlsa final : public ALCbackend {
     snd_pcm_t *pcmHandle{nullptr};
 
-    std::vector<char> buffer;
+    al::vector<char> buffer;
 
     bool doCapture{false};
     ll_ringbuffer_t *ring{nullptr};
@@ -1129,7 +1129,7 @@ void ALCcaptureAlsa_stop(ALCcaptureAlsa *self)
     {
         /* The ring buffer implicitly captures when checking availability.
          * Direct access needs to explicitly capture it into temp storage. */
-        std::vector<char> temp(snd_pcm_frames_to_bytes(self->pcmHandle, avail));
+        al::vector<char> temp(snd_pcm_frames_to_bytes(self->pcmHandle, avail));
         ALCcaptureAlsa_captureSamples(self, temp.data(), avail);
         self->buffer = std::move(temp);
     }

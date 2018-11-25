@@ -312,7 +312,7 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
         /* Store the allocated buffer IDs in a separate local list, to avoid
          * modifying the user storage in case of failure.
          */
-        std::vector<ALuint> ids;
+        al::vector<ALuint> ids;
         ids.reserve(n);
         do {
             ALeffect *effect = AllocEffect(context.get());

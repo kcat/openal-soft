@@ -281,7 +281,7 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
 #define NUM_BANDS 2
     ALsizei min_delay{HRTF_HISTORY_LENGTH};
     ALsizei max_delay{0};
-    std::vector<ALsizei> idx(AmbiCount);
+    al::vector<ALsizei> idx(AmbiCount);
     for(ALsizei c{0};c < AmbiCount;c++)
     {
         ALuint evidx, azidx;
@@ -305,7 +305,7 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
         max_delay = maxi(max_delay, maxi(Hrtf->delays[idx[c]][0], Hrtf->delays[idx[c]][1]));
     }
 
-    std::vector<std::array<std::array<ALdouble,2>,HRIR_LENGTH>> tmpres(NumChannels);
+    al::vector<std::array<std::array<ALdouble,2>,HRIR_LENGTH>> tmpres(NumChannels);
     ALfloat temps[3][HRIR_LENGTH]{};
 
     BandSplitter splitter;
@@ -549,7 +549,7 @@ struct Hrtf *LoadHrtf00(std::istream &data, const char *filename)
     if(failed)
         return nullptr;
 
-    std::vector<ALushort> evOffset(evCount);
+    al::vector<ALushort> evOffset(evCount);
     for(auto &val : evOffset)
         val = GetLE_ALushort(data);
     if(!data || data.eof())
@@ -575,7 +575,7 @@ struct Hrtf *LoadHrtf00(std::istream &data, const char *filename)
     if(failed)
         return nullptr;
 
-    std::vector<ALubyte> azCount(evCount);
+    al::vector<ALubyte> azCount(evCount);
     for(ALsizei i{1};i < evCount;i++)
     {
         azCount[i-1] = evOffset[i] - evOffset[i-1];
@@ -596,8 +596,8 @@ struct Hrtf *LoadHrtf00(std::istream &data, const char *filename)
     if(failed)
         return nullptr;
 
-    std::vector<std::array<ALfloat,2>> coeffs(irSize*irCount);
-    std::vector<std::array<ALubyte,2>> delays(irCount);
+    al::vector<std::array<ALfloat,2>> coeffs(irSize*irCount);
+    al::vector<std::array<ALubyte,2>> delays(irCount);
     for(auto &val : coeffs)
         val[0] = GetLE_ALshort(data) / 32768.0f;
     for(auto &val : delays)
@@ -666,7 +666,7 @@ struct Hrtf *LoadHrtf01(std::istream &data, const char *filename)
     if(failed)
         return nullptr;
 
-    std::vector<ALubyte> azCount(evCount);
+    al::vector<ALubyte> azCount(evCount);
     data.read(reinterpret_cast<char*>(azCount.data()), evCount);
     if(!data || data.eof() || data.gcount() < evCount)
     {
@@ -685,7 +685,7 @@ struct Hrtf *LoadHrtf01(std::istream &data, const char *filename)
     if(failed)
         return nullptr;
 
-    std::vector<ALushort> evOffset(evCount);
+    al::vector<ALushort> evOffset(evCount);
     evOffset[0] = 0;
     ALushort irCount{azCount[0]};
     for(ALsizei i{1};i < evCount;i++)
@@ -694,8 +694,8 @@ struct Hrtf *LoadHrtf01(std::istream &data, const char *filename)
         irCount += azCount[i];
     }
 
-    std::vector<std::array<ALfloat,2>> coeffs(irSize*irCount);
-    std::vector<std::array<ALubyte,2>> delays(irCount);
+    al::vector<std::array<ALfloat,2>> coeffs(irSize*irCount);
+    al::vector<std::array<ALubyte,2>> delays(irCount);
     for(auto &val : coeffs)
         val[0] = GetLE_ALshort(data) / 32768.0f;
     for(auto &val : delays)
@@ -785,7 +785,7 @@ struct Hrtf *LoadHrtf02(std::istream &data, const char *filename)
 
     ALushort distance{};
     ALubyte evCount{};
-    std::vector<ALubyte> azCount;
+    al::vector<ALubyte> azCount;
     for(ALsizei i{0};i < fdCount;i++)
     {
         distance = GetLE_ALushort(data);
@@ -832,7 +832,7 @@ struct Hrtf *LoadHrtf02(std::istream &data, const char *filename)
             return nullptr;
     }
 
-    std::vector<ALushort> evOffset(evCount);
+    al::vector<ALushort> evOffset(evCount);
     evOffset[0] = 0;
     ALushort irCount{azCount[0]};
     for(ALsizei i{1};i < evCount;++i)
@@ -841,8 +841,8 @@ struct Hrtf *LoadHrtf02(std::istream &data, const char *filename)
         irCount += azCount[i];
     }
 
-    std::vector<std::array<ALfloat,2>> coeffs(irSize*irCount);
-    std::vector<std::array<ALubyte,2>> delays(irCount);
+    al::vector<std::array<ALfloat,2>> coeffs(irSize*irCount);
+    al::vector<std::array<ALubyte,2>> delays(irCount);
     if(channelType == CHANTYPE_LEFTONLY)
     {
         if(sampleType == SAMPLETYPE_S16)

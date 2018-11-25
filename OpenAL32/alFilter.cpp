@@ -373,7 +373,7 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
         /* Store the allocated buffer IDs in a separate local list, to avoid
          * modifying the user storage in case of failure.
          */
-        std::vector<ALuint> ids;
+        al::vector<ALuint> ids;
         ids.reserve(n);
         do {
             ALfilter *filter = AllocFilter(context.get());

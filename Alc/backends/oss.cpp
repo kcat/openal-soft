@@ -91,7 +91,7 @@ struct DevMap {
     { }
 };
 
-bool checkName(const std::vector<DevMap> &list, const std::string &name)
+bool checkName(const al::vector<DevMap> &list, const std::string &name)
 {
     return std::find_if(list.cbegin(), list.cend(),
         [&name](const DevMap &entry) -> bool
@@ -99,22 +99,22 @@ bool checkName(const std::vector<DevMap> &list, const std::string &name)
     ) != list.cend();
 }
 
-std::vector<DevMap> PlaybackDevices;
-std::vector<DevMap> CaptureDevices;
+al::vector<DevMap> PlaybackDevices;
+al::vector<DevMap> CaptureDevices;
 
 
 #ifdef ALC_OSS_COMPAT
 
 #define DSP_CAP_OUTPUT 0x00020000
 #define DSP_CAP_INPUT 0x00010000
-void ALCossListPopulate(std::vector<DevMap> *devlist, int type)
+void ALCossListPopulate(al::vector<DevMap> *devlist, int type)
 {
     devlist->emplace_back(DefaultName, (type==DSP_CAP_INPUT) ? DefaultCapture : DefaultPlayback);
 }
 
 #else
 
-void ALCossListAppend(std::vector<DevMap> *list, const char *handle, size_t hlen, const char *path, size_t plen)
+void ALCossListAppend(al::vector<DevMap> *list, const char *handle, size_t hlen, const char *path, size_t plen)
 {
 #ifdef ALC_OSS_DEVNODE_TRUC
     for(size_t i{0};i < plen;i++)
@@ -160,7 +160,7 @@ void ALCossListAppend(std::vector<DevMap> *list, const char *handle, size_t hlen
     TRACE("Got device \"%s\", \"%s\"\n", entry.name.c_str(), entry.device_name.c_str());
 }
 
-void ALCossListPopulate(std::vector<DevMap> *devlist, int type_flag)
+void ALCossListPopulate(al::vector<DevMap> *devlist, int type_flag)
 {
     int fd{open("/dev/mixer", O_RDONLY)};
     if(fd < 0)
@@ -243,7 +243,7 @@ int log2i(ALCuint x)
 struct ALCplaybackOSS final : public ALCbackend {
     int fd{-1};
 
-    std::vector<ALubyte> mix_data;
+    al::vector<ALubyte> mix_data;
 
     std::atomic<ALenum> killNow{AL_TRUE};
     std::thread thread;

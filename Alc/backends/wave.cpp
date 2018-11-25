@@ -82,7 +82,7 @@ struct ALCwaveBackend final : public ALCbackend {
     FILE *mFile;
     long mDataStart;
 
-    std::vector<ALbyte> mBuffer;
+    al::vector<ALbyte> mBuffer;
 
     ATOMIC(ALenum) killNow;
     std::thread thread;

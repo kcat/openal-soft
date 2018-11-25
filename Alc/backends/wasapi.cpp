@@ -123,7 +123,7 @@ struct DevMap {
     { }
 };
 
-bool checkName(const std::vector<DevMap> &list, const std::string &name)
+bool checkName(const al::vector<DevMap> &list, const std::string &name)
 {
     return std::find_if(list.cbegin(), list.cend(),
         [&name](const DevMap &entry) -> bool
@@ -131,8 +131,8 @@ bool checkName(const std::vector<DevMap> &list, const std::string &name)
     ) != list.cend();
 }
 
-std::vector<DevMap> PlaybackDevices;
-std::vector<DevMap> CaptureDevices;
+al::vector<DevMap> PlaybackDevices;
+al::vector<DevMap> CaptureDevices;
 
 
 HANDLE ThreadHdl;
@@ -251,7 +251,7 @@ void get_device_formfactor(IMMDevice *device, EndpointFormFactor *formfactor)
 }
 
 
-void add_device(IMMDevice *device, const WCHAR *devid, std::vector<DevMap> &list)
+void add_device(IMMDevice *device, const WCHAR *devid, al::vector<DevMap> &list)
 {
     std::string basename, guidstr;
     std::tie(basename, guidstr) = get_device_name_and_guid(device);
@@ -285,7 +285,7 @@ WCHAR *get_device_id(IMMDevice *device)
     return devid;
 }
 
-HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, std::vector<DevMap> &list)
+HRESULT probe_devices(IMMDeviceEnumerator *devenum, EDataFlow flowdir, al::vector<DevMap> &list)
 {
     IMMDeviceCollection *coll;
     HRESULT hr = devenum->EnumAudioEndpoints(flowdir, DEVICE_STATE_ACTIVE, &coll);
@@ -1248,7 +1248,7 @@ FORCE_ALIGN int ALCwasapiCapture_recordProc(ALCwasapiCapture *self)
 
     althrd_setname(RECORD_THREAD_NAME);
 
-    std::vector<float> samples;
+    al::vector<float> samples;
     while(!self->mKillNow.load(std::memory_order_relaxed))
     {
         UINT32 avail;

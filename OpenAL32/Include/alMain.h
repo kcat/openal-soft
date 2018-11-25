@@ -853,6 +853,6 @@ void StartEventThrd(ALCcontext *ctx);
 void StopEventThrd(ALCcontext *ctx);
 
 
-std::vector<std::string> SearchDataFiles(const char *match, const char *subdir);
+al::vector<std::string> SearchDataFiles(const char *match, const char *subdir);
 
 #endif

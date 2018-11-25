@@ -439,7 +439,7 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
         /* Store the allocated buffer IDs in a separate local list, to avoid
          * modifying the user storage in case of failure.
          */
-        std::vector<ALuint> ids;
+        al::vector<ALuint> ids;
         ids.reserve(n);
         do {
             ALbuffer *buffer = AllocBuffer(context.get());

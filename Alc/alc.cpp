@@ -3362,7 +3362,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
         alcSetError(dev.get(), ALC_INVALID_VALUE);
     else if(!dev || dev->Type == Capture)
     {
-        std::vector<ALCint> ivals(size);
+        al::vector<ALCint> ivals(size);
         size = GetIntegerv(dev.get(), pname, size, ivals.data());
         std::copy(ivals.begin(), ivals.begin()+size, values);
     }
@@ -3482,7 +3482,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                 break;
 
             default:
-                std::vector<ALCint> ivals(size);
+                al::vector<ALCint> ivals(size);
                 size = GetIntegerv(dev.get(), pname, size, ivals.data());
                 std::copy(ivals.begin(), ivals.begin()+size, values);
                 break;

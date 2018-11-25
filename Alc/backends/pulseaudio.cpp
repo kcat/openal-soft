@@ -511,7 +511,7 @@ struct DevMap {
     { }
 };
 
-bool checkName(const std::vector<DevMap> &list, const std::string &name)
+bool checkName(const al::vector<DevMap> &list, const std::string &name)
 {
     return std::find_if(list.cbegin(), list.cend(),
         [&name](const DevMap &entry) -> bool
@@ -519,8 +519,8 @@ bool checkName(const std::vector<DevMap> &list, const std::string &name)
     ) != list.cend();
 }
 
-std::vector<DevMap> PlaybackDevices;
-std::vector<DevMap> CaptureDevices;
+al::vector<DevMap> PlaybackDevices;
+al::vector<DevMap> CaptureDevices;
 
 
 struct PulsePlayback final : public ALCbackend {

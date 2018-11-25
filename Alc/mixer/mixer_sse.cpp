@@ -26,6 +26,8 @@ const ALfloat *Resample_bsinc_SSE(const InterpState *state, const ALfloat *RESTR
 
     ASSUME(m > 0);
     ASSUME(dstlen > 0);
+    ASSUME(increment > 0);
+    ASSUME(frac >= 0);
 
     src -= state->bsinc.l;
     for(i = 0;i < dstlen;i++)

@@ -9,13 +9,13 @@
 #include "defs.h"
 
 
-static inline ALfloat do_point(const InterpState* UNUSED(state), const ALfloat *RESTRICT vals, ALsizei UNUSED(frac))
+static inline ALfloat do_point(const InterpState*, const ALfloat *RESTRICT vals, ALsizei) noexcept
 { return vals[0]; }
-static inline ALfloat do_lerp(const InterpState* UNUSED(state), const ALfloat *RESTRICT vals, ALsizei frac)
+static inline ALfloat do_lerp(const InterpState*, const ALfloat *RESTRICT vals, ALsizei frac) noexcept
 { return lerp(vals[0], vals[1], frac * (1.0f/FRACTIONONE)); }
-static inline ALfloat do_cubic(const InterpState* UNUSED(state), const ALfloat *RESTRICT vals, ALsizei frac)
+static inline ALfloat do_cubic(const InterpState*, const ALfloat *RESTRICT vals, ALsizei frac) noexcept
 { return cubic(vals[0], vals[1], vals[2], vals[3], frac * (1.0f/FRACTIONONE)); }
-static inline ALfloat do_bsinc(const InterpState *state, const ALfloat *RESTRICT vals, ALsizei frac)
+static inline ALfloat do_bsinc(const InterpState *state, const ALfloat *RESTRICT vals, ALsizei frac) noexcept
 {
     const ALfloat *fil, *scd, *phd, *spd;
     ALsizei j_f, pi;
@@ -45,43 +45,60 @@ const ALfloat *Resample_copy_C(const InterpState* UNUSED(state),
   const ALfloat *RESTRICT src, ALsizei UNUSED(frac), ALint UNUSED(increment),
   ALfloat *RESTRICT dst, ALsizei numsamples)
 {
+    ASSUME(numsamples > 0);
 #if defined(HAVE_SSE) || defined(HAVE_NEON)
     /* Avoid copying the source data if it's aligned like the destination. */
     if((((intptr_t)src)&15) == (((intptr_t)dst)&15))
         return src;
 #endif
-    memcpy(dst, src, numsamples*sizeof(ALfloat));
+    std::copy_n(src, numsamples, dst);
     return dst;
 }
 
-#define DECL_TEMPLATE(Tag, Sampler, O)                                        \
-const ALfloat *Resample_##Tag##_C(const InterpState *state,                   \
-  const ALfloat *RESTRICT src, ALsizei frac, ALint increment,                 \
-  ALfloat *RESTRICT dst, ALsizei numsamples)                                  \
-{                                                                             \
-    const InterpState istate = *state;                                        \
-    ALsizei i;                                                                \
-                                                                              \
-    ASSUME(numsamples > 0);                                                   \
-                                                                              \
-    src -= O;                                                                 \
-    for(i = 0;i < numsamples;i++)                                             \
-    {                                                                         \
-        dst[i] = Sampler(&istate, src, frac);                                 \
-                                                                              \
-        frac += increment;                                                    \
-        src  += frac>>FRACTIONBITS;                                           \
-        frac &= FRACTIONMASK;                                                 \
-    }                                                                         \
-    return dst;                                                               \
+template<ALfloat Sampler(const InterpState*, const ALfloat*RESTRICT, ALsizei) noexcept>
+static const ALfloat *DoResample(const InterpState *state, const ALfloat *RESTRICT src,
+                                 ALsizei frac, ALint increment, ALfloat *RESTRICT dst,
+                                 ALsizei numsamples)
+{
+    ASSUME(numsamples > 0);
+    ASSUME(increment > 0);
+    ASSUME(frac >= 0);
+
+    const InterpState istate = *state;
+    std::generate_n<ALfloat*RESTRICT>(dst, numsamples,
+        [&src,&frac,istate,increment]() noexcept -> ALfloat
+        {
+            ALfloat ret{Sampler(&istate, src, frac)};
+
+            frac += increment;
+            src  += frac>>FRACTIONBITS;
+            frac &= FRACTIONMASK;
+
+            return ret;
+        }
+    );
+    return dst;
 }
 
-DECL_TEMPLATE(point, do_point, 0)
-DECL_TEMPLATE(lerp, do_lerp, 0)
-DECL_TEMPLATE(cubic, do_cubic, 1)
-DECL_TEMPLATE(bsinc, do_bsinc, istate.bsinc.l)
+const ALfloat *Resample_point_C(const InterpState *state, const ALfloat *RESTRICT src,
+                                ALsizei frac, ALint increment, ALfloat *RESTRICT dst,
+                                ALsizei numsamples)
+{ return DoResample<do_point>(state, src, frac, increment, dst, numsamples); }
 
-#undef DECL_TEMPLATE
+const ALfloat *Resample_lerp_C(const InterpState *state, const ALfloat *RESTRICT src,
+                               ALsizei frac, ALint increment, ALfloat *RESTRICT dst,
+                               ALsizei numsamples)
+{ return DoResample<do_lerp>(state, src, frac, increment, dst, numsamples); }
+
+const ALfloat *Resample_cubic_C(const InterpState *state, const ALfloat *RESTRICT src,
+                                ALsizei frac, ALint increment, ALfloat *RESTRICT dst,
+                                ALsizei numsamples)
+{ return DoResample<do_cubic>(state, src-1, frac, increment, dst, numsamples); }
+
+const ALfloat *Resample_bsinc_C(const InterpState *state, const ALfloat *RESTRICT src,
+                                ALsizei frac, ALint increment, ALfloat *RESTRICT dst,
+                                ALsizei numsamples)
+{ return DoResample<do_bsinc>(state, src-state->bsinc.l, frac, increment, dst, numsamples); }
 
 
 static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*RESTRICT Values)[2],

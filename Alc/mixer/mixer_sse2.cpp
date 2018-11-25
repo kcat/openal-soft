@@ -39,6 +39,8 @@ const ALfloat *Resample_lerp_SSE2(const InterpState* UNUSED(state),
     ALsizei todo, pos, i;
 
     ASSUME(numsamples > 0);
+    ASSUME(increment > 0);
+    ASSUME(frac >= 0);
 
     InitiatePositionArrays(frac, increment, frac_, pos_, 4);
     frac4 = _mm_setr_epi32(frac_[0], frac_[1], frac_[2], frac_[3]);

@@ -22,6 +22,8 @@ const ALfloat *Resample_lerp_Neon(const InterpState* UNUSED(state),
     ALsizei todo, pos, i;
 
     ASSUME(numsamples > 0);
+    ASSUME(increment > 0);
+    ASSUME(frac >= 0);
 
     InitiatePositionArrays(frac, increment, frac_, pos_, 4);
     frac4 = vld1q_s32(frac_);
@@ -80,6 +82,8 @@ const ALfloat *Resample_bsinc_Neon(const InterpState *state,
 
     ASSUME(m > 0);
     ASSUME(dstlen > 0);
+    ASSUME(increment > 0);
+    ASSUME(frac >= 0);
 
     src -= state->bsinc.l;
     for(i = 0;i < dstlen;i++)

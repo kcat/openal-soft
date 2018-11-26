@@ -2390,37 +2390,33 @@ ALCdevice_struct::~ALCdevice_struct()
 {
     TRACE("%p\n", this);
 
-    if(Backend)
-        DELETE_OBJ(Backend);
+    DELETE_OBJ(Backend);
     Backend = nullptr;
-
-    almtx_destroy(&BackendLock);
 
     size_t count{0u};
     for(auto &sublist : BufferList)
         count += POPCNT64(~sublist.FreeMask);
     if(count > 0)
         WARN(SZFMT " Buffer%s not deleted\n", count, (count==1)?"":"s");
-    BufferList.clear();
-    almtx_destroy(&BufferLock);
 
     count = 0;
     for(auto &sublist : EffectList)
         count += POPCNT64(~sublist.FreeMask);
     if(count > 0)
         WARN(SZFMT " Effect%s not deleted\n", count, (count==1)?"":"s");
-    EffectList.clear();
-    almtx_destroy(&EffectLock);
 
     count = 0;
     for(auto &sublist : FilterList)
         count += POPCNT64(~sublist.FreeMask);
     if(count > 0)
         WARN(SZFMT " Filter%s not deleted\n", count, (count==1)?"":"s");
-    FilterList.clear();
+
+    almtx_destroy(&BackendLock);
+
+    almtx_destroy(&BufferLock);
+    almtx_destroy(&EffectLock);
     almtx_destroy(&FilterLock);
 
-    HrtfList.clear();
     if(HrtfHandle)
         Hrtf_DecRef(HrtfHandle);
     HrtfHandle = nullptr;

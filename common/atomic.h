@@ -15,15 +15,8 @@
 #define ATOMIC_LOAD std::atomic_load_explicit
 #define ATOMIC_STORE std::atomic_store_explicit
 
-#define ATOMIC_ADD std::atomic_fetch_add_explicit
-#define ATOMIC_SUB std::atomic_fetch_sub_explicit
-
-
 #define ATOMIC_LOAD_SEQ(_val) ATOMIC_LOAD(_val, almemory_order_seq_cst)
 #define ATOMIC_STORE_SEQ(_val, _newval) ATOMIC_STORE(_val, _newval, almemory_order_seq_cst)
-
-#define ATOMIC_ADD_SEQ(_val, _incr) ATOMIC_ADD(_val, _incr, almemory_order_seq_cst)
-#define ATOMIC_SUB_SEQ(_val, _decr) ATOMIC_SUB(_val, _decr, almemory_order_seq_cst)
 
 
 using RefCount = std::atomic<unsigned int>;

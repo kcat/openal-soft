@@ -289,7 +289,7 @@ static ALCenum qsa_open_playback(PlaybackWrapper *self, const ALCchar* deviceNam
     data = (qsa_data*)calloc(1, sizeof(qsa_data));
     if(data == NULL)
         return ALC_OUT_OF_MEMORY;
-    ATOMIC_INIT(&data->killNow, AL_TRUE);
+    data->killNow.store(AL_TRUE, std::memory_order_relaxed);
 
     if(!deviceName)
         deviceName = qsaDevice;

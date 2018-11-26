@@ -2534,7 +2534,7 @@ static ALvoid InitContext(ALCcontext *Context)
             sizeof(struct ALeffectslotArray)));
         auxslots->count = 0;
     }
-    ATOMIC_INIT(&Context->ActiveAuxSlots, auxslots);
+    Context->ActiveAuxSlots.store(auxslots, std::memory_order_relaxed);
 
     //Set globals
     Context->mDistanceModel = DistanceModel::Default;
@@ -2850,7 +2850,7 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
     /* Finish setting the voices' property set pointers and references. */
     for(;v < num_voices;v++)
     {
-        ATOMIC_INIT(&voice->Update, static_cast<ALvoiceProps*>(nullptr));
+        voice->Update.store(nullptr, std::memory_order_relaxed);
 
         voice->Props = props;
         voices[v] = voice;

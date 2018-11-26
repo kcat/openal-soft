@@ -145,13 +145,13 @@ static ALCboolean jack_load(void)
 
 
 struct ALCjackPlayback final : public ALCbackend {
-    jack_client_t *Client;
-    jack_port_t *Port[MAX_OUTPUT_CHANNELS];
+    jack_client_t *Client{nullptr};
+    jack_port_t *Port[MAX_OUTPUT_CHANNELS]{};
 
-    ll_ringbuffer_t *Ring;
+    ll_ringbuffer_t *Ring{nullptr};
     alsem_t Sem;
 
-    ATOMIC(ALenum) killNow;
+    ATOMIC(ALenum) killNow{AL_TRUE};
     althrd_t thread;
 };
 
@@ -183,13 +183,6 @@ static void ALCjackPlayback_Construct(ALCjackPlayback *self, ALCdevice *device)
     SET_VTABLE2(ALCjackPlayback, ALCbackend, self);
 
     alsem_init(&self->Sem, 0);
-
-    self->Client = NULL;
-    for(ALsizei i{0};i < MAX_OUTPUT_CHANNELS;i++)
-        self->Port[i] = NULL;
-    self->Ring = NULL;
-
-    ATOMIC_INIT(&self->killNow, AL_TRUE);
 }
 
 static void ALCjackPlayback_Destruct(ALCjackPlayback *self)

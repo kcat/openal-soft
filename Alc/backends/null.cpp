@@ -45,7 +45,7 @@ constexpr ALCchar nullDevice[] = "No Output";
 
 
 struct ALCnullBackend final : public ALCbackend {
-    ATOMIC(int) killNow;
+    ATOMIC(int) killNow{AL_TRUE};
     std::thread thread;
 };
 
@@ -72,8 +72,6 @@ void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device)
     new (self) ALCnullBackend{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCnullBackend, ALCbackend, self);
-
-    ATOMIC_INIT(&self->killNow, AL_TRUE);
 }
 
 void ALCnullBackend_Destruct(ALCnullBackend *self)

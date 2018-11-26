@@ -1276,7 +1276,7 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
                 /* Add the selected buffer to a one-item queue */
                 auto newlist = static_cast<ALbufferlistitem*>(al_calloc(DEF_ALIGN,
                     FAM_SIZE(ALbufferlistitem, buffers, 1)));
-                ATOMIC_INIT(&newlist->next, static_cast<ALbufferlistitem*>(nullptr));
+                newlist->next.store(nullptr, std::memory_order_relaxed);
                 newlist->max_samples = buffer->SampleLen;
                 newlist->num_buffers = 1;
                 newlist->buffers[0] = buffer;
@@ -3034,7 +3034,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
             BufferList->next.store(item, std::memory_order_relaxed);
             BufferList = item;
         }
-        ATOMIC_INIT(&BufferList->next, static_cast<ALbufferlistitem*>(nullptr));
+        BufferList->next.store(nullptr, std::memory_order_relaxed);
         BufferList->max_samples = buffer ? buffer->SampleLen : 0;
         BufferList->num_buffers = 1;
         BufferList->buffers[0] = buffer;
@@ -3129,7 +3129,7 @@ AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint src, ALsizei nb, co
     auto BufferListStart = static_cast<ALbufferlistitem*>(al_calloc(DEF_ALIGN,
         FAM_SIZE(ALbufferlistitem, buffers, nb)));
     BufferList = BufferListStart;
-    ATOMIC_INIT(&BufferList->next, static_cast<ALbufferlistitem*>(nullptr));
+    BufferList->next.store(nullptr, std::memory_order_relaxed);
     BufferList->max_samples = 0;
     BufferList->num_buffers = 0;
 

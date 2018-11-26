@@ -14,8 +14,6 @@
 
 #define ATOMIC(T)  std::atomic<T>
 
-#define ATOMIC_INIT std::atomic_init
-
 #define ATOMIC_LOAD std::atomic_load_explicit
 #define ATOMIC_STORE std::atomic_store_explicit
 
@@ -33,7 +31,7 @@
 using RefCount = std::atomic<unsigned int>;
 
 inline void InitRef(RefCount *ptr, unsigned int value)
-{ ATOMIC_INIT(ptr, value); }
+{ ptr->store(value, std::memory_order_relaxed); }
 inline unsigned int ReadRef(RefCount *ptr)
 { return ptr->load(std::memory_order_acquire); }
 inline unsigned int IncrementRef(RefCount *ptr)

@@ -44,12 +44,12 @@
 
 
 struct ALCsolarisBackend final : public ALCbackend {
-    int fd;
+    int fd{-1};
 
-    ALubyte *mix_data;
-    int data_size;
+    ALubyte *mix_data{nullptr};
+    int data_size{0};
 
-    ATOMIC(ALenum) killNow;
+    ATOMIC(ALenum) killNow{AL_TRUE};
     althrd_t thread;
 };
 
@@ -81,10 +81,6 @@ static void ALCsolarisBackend_Construct(ALCsolarisBackend *self, ALCdevice *devi
     new (self) ALCsolarisBackend{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCsolarisBackend, ALCbackend, self);
-
-    self->fd = -1;
-    self->mix_data = nullptr;
-    ATOMIC_INIT(&self->killNow, AL_FALSE);
 }
 
 static void ALCsolarisBackend_Destruct(ALCsolarisBackend *self)

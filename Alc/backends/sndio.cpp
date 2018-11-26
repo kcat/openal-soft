@@ -38,12 +38,12 @@ static const ALCchar sndio_device[] = "SndIO Default";
 
 
 struct SndioPlayback final : public ALCbackend {
-    struct sio_hdl *sndHandle;
+    struct sio_hdl *sndHandle{nullptr};
 
-    ALvoid *mix_data;
-    ALsizei data_size;
+    ALvoid *mix_data{nullptr};
+    ALsizei data_size{0};
 
-    ATOMIC(int) killNow;
+    ATOMIC(int) killNow{AL_TRUE};
     althrd_t thread;
 };
 
@@ -70,10 +70,6 @@ static void SndioPlayback_Construct(SndioPlayback *self, ALCdevice *device)
     new (self) SndioPlayback{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(SndioPlayback, ALCbackend, self);
-
-    self->sndHandle = nullptr;
-    self->mix_data = nullptr;
-    ATOMIC_INIT(&self->killNow, AL_TRUE);
 }
 
 static void SndioPlayback_Destruct(SndioPlayback *self)
@@ -280,11 +276,11 @@ static void SndioPlayback_stop(SndioPlayback *self)
 
 
 struct SndioCapture final : public ALCbackend {
-    struct sio_hdl *sndHandle;
+    struct sio_hdl *sndHandle{nullptr};
 
-    ll_ringbuffer_t *ring;
+    ll_ringbuffer_t *ring{nullptr};
 
-    ATOMIC(int) killNow;
+    ATOMIC(int) killNow{AL_TRUE};
     althrd_t thread;
 };
 
@@ -311,10 +307,6 @@ static void SndioCapture_Construct(SndioCapture *self, ALCdevice *device)
     new (self) SndioCapture{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(SndioCapture, ALCbackend, self);
-
-    self->sndHandle = nullptr;
-    self->ring = nullptr;
-    ATOMIC_INIT(&self->killNow, AL_TRUE);
 }
 
 static void SndioCapture_Destruct(SndioCapture *self)

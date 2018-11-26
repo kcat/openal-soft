@@ -79,12 +79,12 @@ void fwrite32le(ALuint val, FILE *f)
 
 
 struct ALCwaveBackend final : public ALCbackend {
-    FILE *mFile;
-    long mDataStart;
+    FILE *mFile{nullptr};
+    long mDataStart{-1};
 
     al::vector<ALbyte> mBuffer;
 
-    ATOMIC(ALenum) killNow;
+    ATOMIC(ALenum) killNow{AL_TRUE};
     std::thread thread;
 };
 
@@ -111,11 +111,6 @@ void ALCwaveBackend_Construct(ALCwaveBackend *self, ALCdevice *device)
     new (self) ALCwaveBackend{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCwaveBackend, ALCbackend, self);
-
-    self->mFile = nullptr;
-    self->mDataStart = -1;
-
-    ATOMIC_INIT(&self->killNow, AL_TRUE);
 }
 
 void ALCwaveBackend_Destruct(ALCwaveBackend *self)

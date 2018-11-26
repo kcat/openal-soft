@@ -134,21 +134,21 @@ static const char *res_str(SLresult result)
 
 struct ALCopenslPlayback final : public ALCbackend {
     /* engine interfaces */
-    SLObjectItf mEngineObj;
-    SLEngineItf mEngine;
+    SLObjectItf mEngineObj{nullptr};
+    SLEngineItf mEngine{nullptr};
 
     /* output mix interfaces */
-    SLObjectItf mOutputMix;
+    SLObjectItf mOutputMix{nullptr};
 
     /* buffer queue player interfaces */
-    SLObjectItf mBufferQueueObj;
+    SLObjectItf mBufferQueueObj{nullptr};
 
-    ll_ringbuffer_t *mRing;
+    ll_ringbuffer_t *mRing{nullptr};
     alsem_t mSem;
 
-    ALsizei mFrameSize;
+    ALsizei mFrameSize{0};
 
-    ATOMIC(ALenum) mKillNow;
+    ATOMIC(ALenum) mKillNow{AL_TRUE};
     althrd_t mThread;
 };
 
@@ -177,17 +177,7 @@ static void ALCopenslPlayback_Construct(ALCopenslPlayback *self, ALCdevice *devi
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCopenslPlayback, ALCbackend, self);
 
-    self->mEngineObj = NULL;
-    self->mEngine = NULL;
-    self->mOutputMix = NULL;
-    self->mBufferQueueObj = NULL;
-
-    self->mRing = NULL;
     alsem_init(&self->mSem, 0);
-
-    self->mFrameSize = 0;
-
-    ATOMIC_INIT(&self->mKillNow, AL_FALSE);
 }
 
 static void ALCopenslPlayback_Destruct(ALCopenslPlayback* self)
@@ -664,16 +654,16 @@ static ClockLatency ALCopenslPlayback_getClockLatency(ALCopenslPlayback *self)
 
 struct ALCopenslCapture final : public ALCbackend {
     /* engine interfaces */
-    SLObjectItf mEngineObj;
+    SLObjectItf mEngineObj{nullptr};
     SLEngineItf mEngine;
 
     /* recording interfaces */
-    SLObjectItf mRecordObj;
+    SLObjectItf mRecordObj{nullptr};
 
-    ll_ringbuffer_t *mRing;
-    ALCuint mSplOffset;
+    ll_ringbuffer_t *mRing{nullptr};
+    ALCuint mSplOffset{0u};
 
-    ALsizei mFrameSize;
+    ALsizei mFrameSize{0};
 };
 
 static void ALCopenslCapture_process(SLAndroidSimpleBufferQueueItf bq, void *context);
@@ -698,16 +688,6 @@ static void ALCopenslCapture_Construct(ALCopenslCapture *self, ALCdevice *device
     new (self) ALCopenslCapture{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCopenslCapture, ALCbackend, self);
-
-    self->mEngineObj = NULL;
-    self->mEngine = NULL;
-
-    self->mRecordObj = NULL;
-
-    self->mRing = NULL;
-    self->mSplOffset = 0;
-
-    self->mFrameSize = 0;
 }
 
 static void ALCopenslCapture_Destruct(ALCopenslCapture *self)

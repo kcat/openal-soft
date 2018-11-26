@@ -36,13 +36,15 @@
  * size or count is in 'elements', not bytes. Additionally, it only supports
  * single-consumer/single-provider operation. */
 struct ll_ringbuffer {
-    std::atomic<size_t> write_ptr;
-    std::atomic<size_t> read_ptr;
-    size_t size;
-    size_t size_mask;
-    size_t elem_size;
+    std::atomic<size_t> write_ptr{0u};
+    std::atomic<size_t> read_ptr{0u};
+    size_t size{0u};
+    size_t size_mask{0u};
+    size_t elem_size{0u};
 
     alignas(16) char buf[];
+
+    DEF_PLACE_NEWDEL()
 };
 
 ll_ringbuffer_t *ll_ringbuffer_create(size_t sz, size_t elem_sz, int limit_writes)
@@ -65,11 +67,8 @@ ll_ringbuffer_t *ll_ringbuffer_create(size_t sz, size_t elem_sz, int limit_write
     power_of_two++;
     if(power_of_two < sz) return NULL;
 
-    rb = static_cast<ll_ringbuffer_t*>(al_malloc(16, sizeof(*rb) + power_of_two*elem_sz));
-    if(!rb) return NULL;
+    rb = new (al_malloc(16, sizeof(*rb) + power_of_two*elem_sz)) ll_ringbuffer{};
 
-    ATOMIC_INIT(&rb->write_ptr, static_cast<size_t>(0));
-    ATOMIC_INIT(&rb->read_ptr, static_cast<size_t>(0));
     rb->size = limit_writes ? sz : power_of_two;
     rb->size_mask = power_of_two - 1;
     rb->elem_size = elem_sz;
@@ -78,13 +77,13 @@ ll_ringbuffer_t *ll_ringbuffer_create(size_t sz, size_t elem_sz, int limit_write
 
 void ll_ringbuffer_free(ll_ringbuffer_t *rb)
 {
-    al_free(rb);
+    delete rb;
 }
 
 void ll_ringbuffer_reset(ll_ringbuffer_t *rb)
 {
-    rb->write_ptr.store(0, std::memory_order_release);
-    rb->read_ptr.store(0, std::memory_order_release);
+    rb->write_ptr.store(0, std::memory_order_relaxed);
+    rb->read_ptr.store(0, std::memory_order_relaxed);
     memset(rb->buf, 0, (rb->size_mask+1)*rb->elem_size);
 }
 

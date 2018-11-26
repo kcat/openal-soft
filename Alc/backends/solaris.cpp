@@ -49,7 +49,7 @@ struct ALCsolarisBackend final : public ALCbackend {
     ALubyte *mix_data{nullptr};
     int data_size{0};
 
-    ATOMIC(ALenum) killNow{AL_TRUE};
+    std::atomic<ALenum> killNow{AL_TRUE};
     althrd_t thread;
 };
 

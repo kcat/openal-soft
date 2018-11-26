@@ -144,7 +144,7 @@ typedef struct SendParams {
 
 
 struct ALvoiceProps {
-    ATOMIC(struct ALvoiceProps*) next;
+    std::atomic<ALvoiceProps*> next;
 
     ALfloat Pitch;
     ALfloat Gain;
@@ -203,28 +203,28 @@ struct ALvoiceProps {
 #define VOICE_HAS_NFC   (1<<3)
 
 typedef struct ALvoice {
-    struct ALvoiceProps *Props;
+    ALvoiceProps *Props;
 
-    ATOMIC(struct ALvoiceProps*) Update;
+    std::atomic<ALvoiceProps*> Update;
 
-    ATOMIC(struct ALsource*) Source;
-    ATOMIC(bool) Playing;
+    std::atomic<ALsource*> Source;
+    std::atomic<bool> Playing;
 
     /**
      * Source offset in samples, relative to the currently playing buffer, NOT
      * the whole queue, and the fractional (fixed-point) offset to the next
      * sample.
      */
-    ATOMIC(ALuint) position;
-    ATOMIC(ALsizei) position_fraction;
+    std::atomic<ALuint> position;
+    std::atomic<ALsizei> position_fraction;
 
     /* Current buffer queue item being played. */
-    ATOMIC(struct ALbufferlistitem*) current_buffer;
+    std::atomic<ALbufferlistitem*> current_buffer;
 
     /* Buffer queue item to loop to at end of queue (will be NULL for non-
      * looping voices).
      */
-    ATOMIC(struct ALbufferlistitem*) loop_buffer;
+    std::atomic<ALbufferlistitem*> loop_buffer;
 
     /**
      * Number of channels and bytes-per-sample for the attached source's

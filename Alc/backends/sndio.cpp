@@ -43,7 +43,7 @@ struct SndioPlayback final : public ALCbackend {
     ALvoid *mix_data{nullptr};
     ALsizei data_size{0};
 
-    ATOMIC(int) killNow{AL_TRUE};
+    std::atomic<ALenum> killNow{AL_TRUE};
     althrd_t thread;
 };
 
@@ -280,7 +280,7 @@ struct SndioCapture final : public ALCbackend {
 
     ll_ringbuffer_t *ring{nullptr};
 
-    ATOMIC(int) killNow{AL_TRUE};
+    std::atomic<ALenum> killNow{AL_TRUE};
     althrd_t thread;
 };
 

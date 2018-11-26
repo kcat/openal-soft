@@ -54,7 +54,7 @@ struct ALeffectslotProps {
 
     EffectState *State;
 
-    ATOMIC(struct ALeffectslotProps*) next;
+    std::atomic<ALeffectslotProps*> next;
 };
 
 
@@ -73,7 +73,7 @@ struct ALeffectslot {
 
     RefCount ref{0u};
 
-    ATOMIC(struct ALeffectslotProps*) Update{nullptr};
+    std::atomic<ALeffectslotProps*> Update{nullptr};
 
     struct {
         ALfloat   Gain{1.0f};

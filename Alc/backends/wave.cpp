@@ -84,7 +84,7 @@ struct ALCwaveBackend final : public ALCbackend {
 
     al::vector<ALbyte> mBuffer;
 
-    ATOMIC(ALenum) killNow{AL_TRUE};
+    std::atomic<ALenum> killNow{AL_TRUE};
     std::thread thread;
 };
 

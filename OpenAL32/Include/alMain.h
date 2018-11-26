@@ -667,7 +667,7 @@ typedef void (*POSTPROCESS)(ALCdevice *device, ALsizei SamplesToDo);
 struct ALCdevice_struct {
     RefCount ref{1u};
 
-    ATOMIC(ALenum) Connected{AL_TRUE};
+    std::atomic<ALenum> Connected{AL_TRUE};
     DeviceType Type{};
 
     ALuint Frequency{};
@@ -687,7 +687,7 @@ struct ALCdevice_struct {
 
     std::string DeviceName;
 
-    ATOMIC(ALCenum) LastError{ALC_NO_ERROR};
+    std::atomic<ALCenum> LastError{ALC_NO_ERROR};
 
     // Maximum number of sources that can be created
     ALuint SourcesMax{};
@@ -783,12 +783,12 @@ struct ALCdevice_struct {
     RefCount MixCount{0u};
 
     // Contexts created on this device
-    ATOMIC(ALCcontext*) ContextList{nullptr};
+    std::atomic<ALCcontext*> ContextList{nullptr};
 
     almtx_t BackendLock;
     ALCbackend *Backend{nullptr};
 
-    ATOMIC(ALCdevice*) next{nullptr};
+    std::atomic<ALCdevice*> next{nullptr};
 
 
     ALCdevice_struct(DeviceType type);

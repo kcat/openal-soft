@@ -71,7 +71,7 @@ struct ALCcontext_struct {
     al::vector<ALeffectslotPtr> EffectSlotList;
     almtx_t EffectSlotLock;
 
-    ATOMIC(ALenum) LastError{AL_NO_ERROR};
+    std::atomic<ALenum> LastError{AL_NO_ERROR};
 
     DistanceModel mDistanceModel{DistanceModel::Default};
     ALboolean SourceDistanceModel{AL_FALSE};
@@ -90,30 +90,30 @@ struct ALCcontext_struct {
      * indicates if updates are currently happening).
      */
     RefCount UpdateCount{0u};
-    ATOMIC(ALenum) HoldUpdates{AL_FALSE};
+    std::atomic<ALenum> HoldUpdates{AL_FALSE};
 
     ALfloat GainBoost{1.0f};
 
-    ATOMIC(ALcontextProps*) Update{nullptr};
+    std::atomic<ALcontextProps*> Update{nullptr};
 
     /* Linked lists of unused property containers, free to use for future
      * updates.
      */
-    ATOMIC(ALcontextProps*) FreeContextProps{nullptr};
-    ATOMIC(ALlistenerProps*) FreeListenerProps{nullptr};
-    ATOMIC(ALvoiceProps*) FreeVoiceProps{nullptr};
-    ATOMIC(ALeffectslotProps*) FreeEffectslotProps{nullptr};
+    std::atomic<ALcontextProps*> FreeContextProps{nullptr};
+    std::atomic<ALlistenerProps*> FreeListenerProps{nullptr};
+    std::atomic<ALvoiceProps*> FreeVoiceProps{nullptr};
+    std::atomic<ALeffectslotProps*> FreeEffectslotProps{nullptr};
 
     ALvoice **Voices{nullptr};
     std::atomic<ALsizei> VoiceCount{0};
     ALsizei MaxVoices{0};
 
-    ATOMIC(ALeffectslotArray*) ActiveAuxSlots{nullptr};
+    std::atomic<ALeffectslotArray*> ActiveAuxSlots{nullptr};
 
     std::thread EventThread;
     alsem_t EventSem;
     ll_ringbuffer *AsyncEvents{nullptr};
-    ATOMIC(ALbitfieldSOFT) EnabledEvts{0u};
+    std::atomic<ALbitfieldSOFT> EnabledEvts{0u};
     std::mutex EventCbLock;
     ALEVENTPROCSOFT EventCb{};
     void *EventParam{nullptr};
@@ -124,7 +124,7 @@ struct ALCcontext_struct {
     ALCdevice *const Device;
     const ALCchar *ExtensionList{nullptr};
 
-    ATOMIC(ALCcontext*) next{nullptr};
+    std::atomic<ALCcontext*> next{nullptr};
 
     ALlistener Listener{};
 
@@ -199,7 +199,7 @@ struct ALcontextProps {
     DistanceModel mDistanceModel;
     ALfloat MetersPerUnit;
 
-    ATOMIC(struct ALcontextProps*) next;
+    std::atomic<ALcontextProps*> next;
 };
 
 #endif /* ALCONTEXT_H */

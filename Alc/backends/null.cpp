@@ -45,7 +45,7 @@ constexpr ALCchar nullDevice[] = "No Output";
 
 
 struct ALCnullBackend final : public ALCbackend {
-    ATOMIC(int) killNow{AL_TRUE};
+    std::atomic<ALenum> killNow{AL_TRUE};
     std::thread thread;
 };
 

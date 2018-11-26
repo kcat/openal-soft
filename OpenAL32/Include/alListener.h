@@ -18,7 +18,7 @@ struct ALlistenerProps {
     ALfloat Up[3];
     ALfloat Gain;
 
-    ATOMIC(ALlistenerProps*) next;
+    std::atomic<ALlistenerProps*> next;
 };
 
 struct ALlistener {
@@ -32,7 +32,7 @@ struct ALlistener {
 
     /* Pointer to the most recent property values that are awaiting an update.
      */
-    ATOMIC(ALlistenerProps*) Update{nullptr};
+    std::atomic<ALlistenerProps*> Update{nullptr};
 
     struct {
         aluMatrixf Matrix;

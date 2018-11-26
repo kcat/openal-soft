@@ -12,8 +12,6 @@
 #define almemory_order_acq_rel std::memory_order_acq_rel
 #define almemory_order_seq_cst std::memory_order_seq_cst
 
-#define ATOMIC(T)  std::atomic<T>
-
 #define ATOMIC_LOAD std::atomic_load_explicit
 #define ATOMIC_STORE std::atomic_store_explicit
 

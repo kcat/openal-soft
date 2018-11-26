@@ -148,7 +148,7 @@ struct ALCopenslPlayback final : public ALCbackend {
 
     ALsizei mFrameSize{0};
 
-    ATOMIC(ALenum) mKillNow{AL_TRUE};
+    std::atomic<ALenum> mKillNow{AL_TRUE};
     althrd_t mThread;
 };
 

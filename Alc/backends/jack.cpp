@@ -151,7 +151,7 @@ struct ALCjackPlayback final : public ALCbackend {
     ll_ringbuffer_t *Ring{nullptr};
     alsem_t Sem;
 
-    ATOMIC(ALenum) killNow{AL_TRUE};
+    std::atomic<ALenum> killNow{AL_TRUE};
     althrd_t thread;
 };
 

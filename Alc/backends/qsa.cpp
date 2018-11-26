@@ -51,7 +51,7 @@ struct qsa_data {
     ALvoid* buffer;
     ALsizei size;
 
-    ATOMIC(ALenum) killNow;
+    std::atomic<ALenum> killNow;
     althrd_t thread;
 };
 

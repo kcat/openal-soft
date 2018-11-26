@@ -622,24 +622,16 @@ AL_API ALvoid AL_APIENTRY alGetFilterfv(ALuint filter, ALenum param, ALfloat *va
 }
 
 
-void ReleaseALFilters(ALCdevice *device)
+FilterSubList::~FilterSubList()
 {
-    size_t leftover = 0;
-    for(auto &sublist : device->FilterList)
+    ALuint64 usemask = ~FreeMask;
+    while(usemask)
     {
-        ALuint64 usemask = ~sublist.FreeMask;
-        while(usemask)
-        {
-            ALsizei idx = CTZ64(usemask);
-            ALfilter *filter = sublist.Filters + idx;
-
-            filter->~ALfilter();
-            ++leftover;
-
-            usemask &= ~(U64(1) << idx);
-        }
-        sublist.FreeMask = ~usemask;
+        ALsizei idx = CTZ64(usemask);
+        Filters[idx].~ALfilter();
+        usemask &= ~(U64(1) << idx);
     }
-    if(leftover > 0)
-        WARN("(%p) Deleted " SZFMT " Filter%s\n", device, leftover, (leftover==1)?"":"s");
+    FreeMask = ~usemask;
+    al_free(Filters);
+    Filters = nullptr;
 }

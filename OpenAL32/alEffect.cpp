@@ -571,26 +571,18 @@ void InitEffect(ALeffect *effect)
     InitEffectParams(effect, AL_EFFECT_NULL);
 }
 
-void ReleaseALEffects(ALCdevice *device)
+EffectSubList::~EffectSubList()
 {
-    size_t leftover = 0;
-    for(auto &sublist : device->EffectList)
+    ALuint64 usemask = ~FreeMask;
+    while(usemask)
     {
-        ALuint64 usemask = ~sublist.FreeMask;
-        while(usemask)
-        {
-            ALsizei idx = CTZ64(usemask);
-            ALeffect *effect = sublist.Effects + idx;
-
-            effect->~ALeffect();
-            ++leftover;
-
-            usemask &= ~(U64(1) << idx);
-        }
-        sublist.FreeMask = ~usemask;
+        ALsizei idx = CTZ64(usemask);
+        Effects[idx].~ALeffect();
+        usemask &= ~(U64(1) << idx);
     }
-    if(leftover > 0)
-        WARN("(%p) Deleted " SZFMT " Effect%s\n", device, leftover, (leftover==1)?"":"s");
+    FreeMask = ~usemask;
+    al_free(Effects);
+    Effects = nullptr;
 }
 
 

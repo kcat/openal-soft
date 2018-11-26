@@ -2404,19 +2404,19 @@ ALCdevice_struct::~ALCdevice_struct()
     BufferList.clear();
     almtx_destroy(&BufferLock);
 
-    ReleaseALEffects(this);
-    std::for_each(EffectList.begin(), EffectList.end(),
-        [](EffectSubList &entry) noexcept -> void
-        { al_free(entry.Effects); }
-    );
+    count = 0;
+    for(auto &sublist : EffectList)
+        count += POPCNT64(~sublist.FreeMask);
+    if(count > 0)
+        WARN(SZFMT " Effect%s not deleted\n", count, (count==1)?"":"s");
     EffectList.clear();
     almtx_destroy(&EffectLock);
 
-    ReleaseALFilters(this);
-    std::for_each(FilterList.begin(), FilterList.end(),
-        [](FilterSubList &entry) noexcept -> void
-        { al_free(entry.Filters); }
-    );
+    count = 0;
+    for(auto &sublist : FilterList)
+        count += POPCNT64(~sublist.FreeMask);
+    if(count > 0)
+        WARN(SZFMT " Filter%s not deleted\n", count, (count==1)?"":"s");
     FilterList.clear();
     almtx_destroy(&FilterLock);
 

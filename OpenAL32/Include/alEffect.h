@@ -199,7 +199,6 @@ inline ALboolean IsReverbEffect(ALenum type)
 { return type == AL_EFFECT_REVERB || type == AL_EFFECT_EAXREVERB; }
 
 void InitEffect(ALeffect *effect);
-void ReleaseALEffects(ALCdevice *device);
 
 void LoadReverbPreset(const char *name, ALeffect *effect);
 

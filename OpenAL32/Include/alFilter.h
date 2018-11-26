@@ -4,9 +4,6 @@
 #include "AL/alc.h"
 #include "AL/al.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #define LOWPASSFREQREF  (5000.0f)
 #define HIGHPASSFREQREF  (250.0f)
@@ -57,11 +54,5 @@ typedef struct ALfilter {
 #define ALfilter_getParamf(o, c, p, v)   ((o)->vtab->getParamf(o, c, p, v))
 #define ALfilter_getParamiv(o, c, p, v)  ((o)->vtab->getParamiv(o, c, p, v))
 #define ALfilter_getParamfv(o, c, p, v)  ((o)->vtab->getParamfv(o, c, p, v))
-
-void ReleaseALFilters(ALCdevice *device);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

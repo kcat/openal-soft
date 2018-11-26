@@ -566,15 +566,35 @@ struct BufferSubList {
     { std::swap(FreeMask, rhs.FreeMask); std::swap(Buffers, rhs.Buffers); return *this; }
 };
 
-typedef struct EffectSubList {
-    ALuint64 FreeMask{~ALuint64{}};
+struct EffectSubList {
+    uint64_t FreeMask{~uint64_t{}};
     struct ALeffect *Effects{nullptr}; /* 64 */
-} EffectSubList;
 
-typedef struct FilterSubList {
-    ALuint64 FreeMask{~ALuint64{}};
+    EffectSubList() noexcept = default;
+    EffectSubList(const EffectSubList&) = delete;
+    EffectSubList(EffectSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Effects{rhs.Effects}
+    { rhs.FreeMask = ~uint64_t{}; rhs.Effects = nullptr; }
+    ~EffectSubList();
+
+    EffectSubList& operator=(const EffectSubList&) = delete;
+    EffectSubList& operator=(EffectSubList&& rhs) noexcept
+    { std::swap(FreeMask, rhs.FreeMask); std::swap(Effects, rhs.Effects); return *this; }
+};
+
+struct FilterSubList {
+    uint64_t FreeMask{~uint64_t{}};
     struct ALfilter *Filters{nullptr}; /* 64 */
-} FilterSubList;
+
+    FilterSubList() noexcept = default;
+    FilterSubList(const FilterSubList&) = delete;
+    FilterSubList(FilterSubList&& rhs) noexcept : FreeMask{rhs.FreeMask}, Filters{rhs.Filters}
+    { rhs.FreeMask = ~uint64_t{}; rhs.Filters = nullptr; }
+    ~FilterSubList();
+
+    FilterSubList& operator=(const FilterSubList&) = delete;
+    FilterSubList& operator=(FilterSubList&& rhs) noexcept
+    { std::swap(FreeMask, rhs.FreeMask); std::swap(Filters, rhs.Filters); return *this; }
+};
 
 
 typedef struct EnumeratedHrtf {

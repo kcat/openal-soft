@@ -149,6 +149,7 @@ void al_nssleep(unsigned long nsec)
 #else
 
 #include <sys/time.h>
+#include <unistd.h>
 #include <time.h>
 
 unsigned int altime_get(void)

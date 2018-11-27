@@ -168,12 +168,7 @@ public:
 
     ContextRef& operator=(const ContextRef&) = delete;
     ContextRef& operator=(ContextRef&& rhs) noexcept
-    {
-        reset();
-        mCtx = rhs.mCtx;
-        rhs.mCtx = nullptr;
-        return *this;
-    }
+    { std::swap(mCtx, rhs.mCtx); return *this; }
 
     operator bool() const noexcept { return mCtx != nullptr; }
 

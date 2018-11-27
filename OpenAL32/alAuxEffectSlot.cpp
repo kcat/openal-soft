@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include <thread>
 #include <algorithm>
 
 #include "AL/al.h"
@@ -108,7 +109,7 @@ void AddActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *cont
     curarray = context->ActiveAuxSlots.exchange(newarray, std::memory_order_acq_rel);
     ALCdevice *device{context->Device};
     while((device->MixCount.load(std::memory_order_acquire)&1))
-        althrd_yield();
+        std::this_thread::yield();
     al_free(curarray);
 }
 
@@ -136,7 +137,7 @@ void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *c
     curarray = context->ActiveAuxSlots.exchange(newarray, std::memory_order_acq_rel);
     ALCdevice *device{context->Device};
     while((device->MixCount.load(std::memory_order_acquire)&1))
-        althrd_yield();
+        std::this_thread::yield();
     al_free(curarray);
 }
 

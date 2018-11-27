@@ -65,7 +65,7 @@ void StopEventThrd(ALCcontext *ctx)
 {
     static constexpr AsyncEvent kill_evt = ASYNC_EVENT(EventType_KillThread);
     while(ll_ringbuffer_write(ctx->AsyncEvents, &kill_evt, 1) == 0)
-        althrd_yield();
+        std::this_thread::yield();
     alsem_post(&ctx->EventSem);
     if(ctx->EventThread.joinable())
         ctx->EventThread.join();

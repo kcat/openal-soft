@@ -3,6 +3,8 @@
 
 #include <stdlib.h>
 
+#include <thread>
+
 #include "alMain.h"
 #include "alu.h"
 
@@ -56,7 +58,7 @@ ClockLatency ALCbackend_getClockLatency(ALCbackend *self)
 
     do {
         while(((refcount=device->MixCount.load(std::memory_order_acquire))&1))
-            althrd_yield();
+            std::this_thread::yield();
         ret.ClockTime = GetDeviceClockTime(device);
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device->MixCount.load(std::memory_order_relaxed));

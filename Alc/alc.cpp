@@ -1624,7 +1624,7 @@ void ALCcontext_ProcessUpdates(ALCcontext *context)
          */
         context->HoldUpdates.store(AL_TRUE);
         while((context->UpdateCount.load(std::memory_order_acquire)&1) != 0)
-            althrd_yield();
+            std::this_thread::yield();
 
         if(!context->PropsClean.test_and_set(std::memory_order_acq_rel))
             UpdateContextProps(context);
@@ -3434,7 +3434,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                     ALuint refcount;
                     do {
                         while(((refcount=ReadRef(&dev->MixCount))&1) != 0)
-                            althrd_yield();
+                            std::this_thread::yield();
                         basecount = dev->ClockBase;
                         samplecount = dev->SamplesDone;
                     } while(refcount != ReadRef(&dev->MixCount));

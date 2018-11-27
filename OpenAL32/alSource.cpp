@@ -25,6 +25,7 @@
 #include <float.h>
 
 #include <cmath>
+#include <thread>
 #include <limits>
 #include <algorithm>
 
@@ -159,7 +160,7 @@ ALint64 GetSourceSampleOffset(ALsource *Source, ALCcontext *context, std::chrono
         Current = nullptr;
         readPos = 0;
         while(((refcount=device->MixCount.load(std::memory_order_acquire))&1))
-            althrd_yield();
+            std::this_thread::yield();
         *clocktime = GetDeviceClockTime(device);
 
         voice = GetSourceVoice(Source, context);
@@ -205,7 +206,7 @@ ALdouble GetSourceSecOffset(ALsource *Source, ALCcontext *context, std::chrono::
         Current = nullptr;
         readPos = 0;
         while(((refcount=device->MixCount.load(std::memory_order_acquire))&1))
-            althrd_yield();
+            std::this_thread::yield();
         *clocktime = GetDeviceClockTime(device);
 
         voice = GetSourceVoice(Source, context);
@@ -266,7 +267,7 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
         Current = nullptr;
         readPos = readPosFrac = 0;
         while(((refcount=device->MixCount.load(std::memory_order_acquire))&1))
-            althrd_yield();
+            std::this_thread::yield();
         voice = GetSourceVoice(Source, context);
         if(voice)
         {
@@ -1248,7 +1249,7 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
                      * end.
                      */
                     while((device->MixCount.load(std::memory_order_acquire)&1))
-                        althrd_yield();
+                        std::this_thread::yield();
                 }
             }
             return AL_TRUE;

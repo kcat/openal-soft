@@ -34,12 +34,6 @@ enum {
 
 typedef HANDLE alsem_t;
 
-
-inline void althrd_yield(void)
-{
-    SwitchToThread();
-}
-
 #else
 
 #include <stdint.h>
@@ -56,13 +50,6 @@ typedef dispatch_semaphore_t alsem_t;
 #else /* !__APPLE__ */
 typedef sem_t alsem_t;
 #endif /* __APPLE__ */
-
-
-inline void althrd_yield(void)
-{
-    sched_yield();
-}
-
 
 #endif
 

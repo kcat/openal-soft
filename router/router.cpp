@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <algorithm>
+
 #include "AL/alc.h"
 #include "AL/al.h"
 #include "almalloc.h"
@@ -362,46 +364,28 @@ PtrIntMap::~PtrIntMap()
 
 ALenum PtrIntMap::insert(ALvoid *key, ALint value)
 {
-    ALsizei pos = 0;
-
     std::lock_guard<std::mutex> maplock{mLock};
-    if(mSize > 0)
-    {
-        ALsizei count = mSize;
-        do {
-            ALsizei step = count>>1;
-            ALsizei i = pos+step;
-            if(mKeys[i] >= key)
-                count = step;
-            else
-            {
-                pos = i+1;
-                count -= step+1;
-            }
-        } while(count > 0);
-    }
+    auto iter = std::lower_bound(mKeys, mKeys+mSize, key);
+    auto pos = static_cast<ALsizei>(std::distance(mKeys, iter));
 
     if(pos == mSize || mKeys[pos] != key)
     {
         if(mSize == mCapacity)
         {
-            ALvoid **newkeys = nullptr;
-            ALint *newvalues;
-            ALsizei newcap;
-
-            newcap = (mCapacity ? (mCapacity<<1) : 4);
+            ALvoid **newkeys{nullptr};
+            ALsizei newcap{mCapacity ? (mCapacity<<1) : 4};
             if(newcap > mCapacity)
-                newkeys = reinterpret_cast<ALvoid**>(
+                newkeys = static_cast<ALvoid**>(
                     al_calloc(16, (sizeof(mKeys[0])+sizeof(mValues[0]))*newcap)
                 );
             if(!newkeys)
                 return AL_OUT_OF_MEMORY;
-            newvalues = (ALint*)&newkeys[newcap];
+            auto newvalues = reinterpret_cast<ALint*>(&newkeys[newcap]);
 
             if(mKeys)
             {
-                memcpy(newkeys, mKeys, mSize*sizeof(mKeys[0]));
-                memcpy(newvalues, mValues, mSize*sizeof(mValues[0]));
+                std::copy_n(mKeys, mSize, newkeys);
+                std::copy_n(mValues, mSize, newvalues);
             }
             al_free(mKeys);
             mKeys = newkeys;
@@ -411,8 +395,8 @@ ALenum PtrIntMap::insert(ALvoid *key, ALint value)
 
         if(pos < mSize)
         {
-            memmove(&mKeys[pos+1], &mKeys[pos], (mSize-pos)*sizeof(mKeys[0]));
-            memmove(&mValues[pos+1], &mValues[pos], (mSize-pos)*sizeof(mValues[0]));
+            std::copy_backward(mKeys+pos, mKeys+mSize, mKeys+mSize+1);
+            std::copy_backward(mValues+pos, mValues+mSize, mValues+mSize+1);
         }
         mSize++;
     }
@@ -427,57 +411,31 @@ ALint PtrIntMap::removeByKey(ALvoid *key)
     ALint ret = -1;
 
     std::lock_guard<std::mutex> maplock{mLock};
-    if(mSize > 0)
+    auto iter = std::lower_bound(mKeys, mKeys+mSize, key);
+    auto pos = static_cast<ALsizei>(std::distance(mKeys, iter));
+    if(pos < mSize && mKeys[pos] == key)
     {
-        ALsizei pos = 0;
-        ALsizei count = mSize;
-        do {
-            ALsizei step = count>>1;
-            ALsizei i = pos+step;
-            if(mKeys[i] >= key)
-                count = step;
-            else
-            {
-                pos = i+1;
-                count -= step+1;
-            }
-        } while(count > 0);
-        if(pos < mSize && mKeys[pos] == key)
+        ret = mValues[pos];
+        if(pos+1 < mSize)
         {
-            ret = mValues[pos];
-            if(pos < mSize-1)
-            {
-                memmove(&mKeys[pos], &mKeys[pos+1], (mSize-1-pos)*sizeof(mKeys[0]));
-                memmove(&mValues[pos], &mValues[pos+1], (mSize-1-pos)*sizeof(mValues[0]));
-            }
-            mSize--;
+            std::copy(mKeys+pos+1, mKeys+mSize, mKeys+pos);
+            std::copy(mValues+pos+1, mValues+mSize, mValues+pos);
         }
+        mSize--;
     }
+
     return ret;
 }
 
-ALint PtrIntMap::lookupByKey(ALvoid* key)
+ALint PtrIntMap::lookupByKey(ALvoid *key)
 {
     ALint ret = -1;
 
     std::lock_guard<std::mutex> maplock{mLock};
-    if(mSize > 0)
-    {
-        ALsizei pos = 0;
-        ALsizei count = mSize;
-        do {
-            ALsizei step = count>>1;
-            ALsizei i = pos+step;
-            if(mKeys[i] >= key)
-                count = step;
-            else
-            {
-                pos = i+1;
-                count -= step+1;
-            }
-        } while(count > 0);
-        if(pos < mSize && mKeys[pos] == key)
-            ret = mValues[pos];
-    }
+    auto iter = std::lower_bound(mKeys, mKeys+mSize, key);
+    auto pos = static_cast<ALsizei>(std::distance(mKeys, iter));
+    if(pos < mSize && mKeys[pos] == key)
+        ret = mValues[pos];
+
     return ret;
 }

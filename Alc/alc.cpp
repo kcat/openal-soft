@@ -2261,7 +2261,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
 
         std::unique_lock<std::mutex> proplock{context->PropLock};
-        std::unique_lock<almtx_t> slotlock{context->EffectSlotLock};
+        std::unique_lock<std::mutex> slotlock{context->EffectSlotLock};
         for(auto &slot : context->EffectSlotList)
         {
             EffectState *state = slot->Effect.State;
@@ -2275,7 +2275,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         }
         slotlock.unlock();
 
-        std::unique_lock<almtx_t> srclock{context->SourceLock};
+        std::unique_lock<std::mutex> srclock{context->SourceLock};
         for(auto &sublist : context->SourceList)
         {
             uint64_t usemask = ~sublist.FreeMask;
@@ -2513,9 +2513,6 @@ static ALvoid InitContext(ALCcontext *Context)
     struct ALeffectslotArray *auxslots;
 
     //Validate Context
-    almtx_init(&Context->SourceLock, almtx_plain);
-    almtx_init(&Context->EffectSlotLock, almtx_plain);
-
     if(Context->DefaultSlot)
     {
         auxslots = static_cast<ALeffectslotArray*>(al_calloc(DEF_ALIGN,
@@ -2596,7 +2593,6 @@ ALCcontext_struct::~ALCcontext_struct()
         WARN(SZFMT " Source%s not deleted\n", count, (count==1)?"":"s");
     SourceList.clear();
     NumSources = 0;
-    almtx_destroy(&SourceLock);
 
     count = 0;
     struct ALeffectslotProps *eprops{FreeEffectslotProps.load(std::memory_order_acquire)};
@@ -2616,7 +2612,6 @@ ALCcontext_struct::~ALCcontext_struct()
     if(count > 0)
         WARN(SZFMT " AuxiliaryEffectSlot%s not deleted\n", count, (count==1)?"":"s");
     EffectSlotList.clear();
-    almtx_destroy(&EffectSlotLock);
 
     count = 0;
     struct ALvoiceProps *vprops{FreeVoiceProps.load(std::memory_order_acquire)};

@@ -458,7 +458,7 @@ ALboolean ApplyOffset(ALsource *Source, ALvoice *voice)
 ALsource *AllocSource(ALCcontext *context)
 {
     ALCdevice *device{context->Device};
-    std::lock_guard<almtx_t> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->SourceLock};
     if(context->NumSources >= device->SourcesMax)
     {
         alSetError(context, AL_OUT_OF_MEMORY, "Exceeding %u source limit", device->SourcesMax);
@@ -1207,7 +1207,7 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
     ALfilter *filter{nullptr};
     ALeffectslot *slot{nullptr};
     ALbufferlistitem *oldlist{nullptr};
-    std::unique_lock<almtx_t> slotlock;
+    std::unique_lock<std::mutex> slotlock;
     std::unique_lock<almtx_t> filtlock;
     std::unique_lock<almtx_t> buflock;
     ALfloat fvals[6];
@@ -1419,7 +1419,7 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
 
 
         case AL_AUXILIARY_SEND_FILTER:
-            slotlock = std::unique_lock<almtx_t>{Context->EffectSlotLock};
+            slotlock = std::unique_lock<std::mutex>{Context->EffectSlotLock};
             if(!(values[0] == 0 || (slot=LookupEffectSlot(Context, values[0])) != nullptr))
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid effect ID %u",
                               values[0]);
@@ -2145,7 +2145,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources)
     if(n < 0)
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Deleting %d sources", n);
 
-    std::lock_guard<almtx_t> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->SourceLock};
 
     /* Check that all Sources are valid */
     const ALuint *sources_end = sources + n;
@@ -2179,7 +2179,7 @@ AL_API ALboolean AL_APIENTRY alIsSource(ALuint source)
     ContextRef context{GetContextRef()};
     if(LIKELY(context))
     {
-        std::lock_guard<almtx_t> _{context->SourceLock};
+        std::lock_guard<std::mutex> _{context->SourceLock};
         if(LookupSource(context.get(), source) != nullptr)
             return AL_TRUE;
     }
@@ -2193,7 +2193,7 @@ AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum param, ALfloat value)
     if(UNLIKELY(!context)) return;
 
     std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<almtx_t> __{context->SourceLock};
+    std::lock_guard<std::mutex> __{context->SourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2209,7 +2209,7 @@ AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1
     if(UNLIKELY(!context)) return;
 
     std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<almtx_t> __{context->SourceLock};
+    std::lock_guard<std::mutex> __{context->SourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2228,7 +2228,7 @@ AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat 
     if(UNLIKELY(!context)) return;
 
     std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<almtx_t> __{context->SourceLock};
+    std::lock_guard<std::mutex> __{context->SourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2247,7 +2247,7 @@ AL_API ALvoid AL_APIENTRY alSourcedSOFT(ALuint source, ALenum param, ALdouble va
     if(UNLIKELY(!context)) return;
 
     std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<almtx_t> __{context->SourceLock};
+    std::lock_guard<std::mutex> __{context->SourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2266,7 +2266,7 @@ AL_API ALvoid AL_APIENTRY alSource3dSOFT(ALuint source, ALenum param, ALdouble v
     if(UNLIKELY(!context)) return;
 
     std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<almtx_t> __{context->SourceLock};
+    std::lock_guard<std::mutex> __{context->SourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2285,7 +2285,7 @@ AL_API ALvoid AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdo
     if(UNLIKELY(!context)) return;
 
     std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<almtx_t> __{context->SourceLock};
+    std::lock_guard<std::mutex> __{context->SourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2315,7 +2315,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value)
     if(UNLIKELY(!context)) return;
 
     std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<almtx_t> __{context->SourceLock};
+    std::lock_guard<std::mutex> __{context->SourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2331,7 +2331,7 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, AL
     if(UNLIKELY(!context)) return;
 
     std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<almtx_t> __{context->SourceLock};
+    std::lock_guard<std::mutex> __{context->SourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2350,7 +2350,7 @@ AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum param, const ALint *val
     if(UNLIKELY(!context)) return;
 
     std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<almtx_t> __{context->SourceLock};
+    std::lock_guard<std::mutex> __{context->SourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2369,7 +2369,7 @@ AL_API ALvoid AL_APIENTRY alSourcei64SOFT(ALuint source, ALenum param, ALint64SO
     if(UNLIKELY(!context)) return;
 
     std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<almtx_t> __{context->SourceLock};
+    std::lock_guard<std::mutex> __{context->SourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2385,7 +2385,7 @@ AL_API void AL_APIENTRY alSource3i64SOFT(ALuint source, ALenum param, ALint64SOF
     if(UNLIKELY(!context)) return;
 
     std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<almtx_t> __{context->SourceLock};
+    std::lock_guard<std::mutex> __{context->SourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2404,7 +2404,7 @@ AL_API void AL_APIENTRY alSourcei64vSOFT(ALuint source, ALenum param, const ALin
     if(UNLIKELY(!context)) return;
 
     std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<almtx_t> __{context->SourceLock};
+    std::lock_guard<std::mutex> __{context->SourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2422,7 +2422,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcef(ALuint source, ALenum param, ALfloat *val
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->SourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2444,7 +2444,7 @@ AL_API ALvoid AL_APIENTRY alGetSource3f(ALuint source, ALenum param, ALfloat *va
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->SourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2470,7 +2470,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *va
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->SourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2499,7 +2499,7 @@ AL_API void AL_APIENTRY alGetSourcedSOFT(ALuint source, ALenum param, ALdouble *
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->SourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2516,7 +2516,7 @@ AL_API void AL_APIENTRY alGetSource3dSOFT(ALuint source, ALenum param, ALdouble 
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->SourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2541,7 +2541,7 @@ AL_API void AL_APIENTRY alGetSourcedvSOFT(ALuint source, ALenum param, ALdouble 
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->SourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2559,7 +2559,7 @@ AL_API ALvoid AL_APIENTRY alGetSourcei(ALuint source, ALenum param, ALint *value
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->SourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2577,7 +2577,7 @@ AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum param, ALint *value1
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->SourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2603,7 +2603,7 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum param, ALint *values
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->SourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2621,7 +2621,7 @@ AL_API void AL_APIENTRY alGetSourcei64SOFT(ALuint source, ALenum param, ALint64S
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->SourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2638,7 +2638,7 @@ AL_API void AL_APIENTRY alGetSource3i64SOFT(ALuint source, ALenum param, ALint64
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->SourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2663,7 +2663,7 @@ AL_API void AL_APIENTRY alGetSourcei64vSOFT(ALuint source, ALenum param, ALint64
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->SourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
         alSetError(context.get(), AL_INVALID_NAME, "Invalid source ID %u", source);
@@ -2689,7 +2689,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Playing %d sources", n);
     if(n == 0) return;
 
-    std::lock_guard<almtx_t> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->SourceLock};
     for(ALsizei i{0};i < n;i++)
     {
         if(!LookupSource(context.get(), sources[i]))
@@ -2980,7 +2980,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Queueing %d buffers", nb);
     if(nb == 0) return;
 
-    std::lock_guard<almtx_t> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->SourceLock};
     ALsource *source{LookupSource(context.get(),src)};
     if(!source)
         SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", src);
@@ -3097,7 +3097,7 @@ AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint src, ALsizei nb, co
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Queueing %d buffer layers", nb);
     if(nb == 0) return;
 
-    std::lock_guard<almtx_t> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->SourceLock};
     ALsource *source{LookupSource(context.get(),src)};
     if(!source)
         SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", src);
@@ -3205,7 +3205,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Unqueueing %d buffers", nb);
     if(nb == 0) return;
 
-    std::lock_guard<almtx_t> _{context->SourceLock};
+    std::lock_guard<std::mutex> _{context->SourceLock};
     ALsource *source{LookupSource(context.get(),src)};
     if(!source)
         SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", src);

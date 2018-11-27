@@ -66,10 +66,10 @@ struct ALCcontext_struct {
 
     al::vector<SourceSubList> SourceList;
     ALuint NumSources{0};
-    almtx_t SourceLock;
+    std::mutex SourceLock;
 
     al::vector<ALeffectslotPtr> EffectSlotList;
-    almtx_t EffectSlotLock;
+    std::mutex EffectSlotLock;
 
     std::atomic<ALenum> LastError{AL_NO_ERROR};
 

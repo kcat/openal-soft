@@ -189,7 +189,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Generating %d effect slots", n);
     if(n == 0) return;
 
-    std::unique_lock<almtx_t> slotlock{context->EffectSlotLock};
+    std::unique_lock<std::mutex> slotlock{context->EffectSlotLock};
     ALCdevice *device{context->Device};
     for(ALsizei cur{0};cur < n;cur++)
     {
@@ -240,7 +240,7 @@ AL_API ALvoid AL_APIENTRY alDeleteAuxiliaryEffectSlots(ALsizei n, const ALuint *
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Deleting %d effect slots", n);
     if(n == 0) return;
 
-    std::lock_guard<almtx_t> _{context->EffectSlotLock};
+    std::lock_guard<std::mutex> _{context->EffectSlotLock};
     auto effectslots_end = effectslots + n;
     auto bad_slot = std::find_if(effectslots, effectslots_end,
         [&context](ALuint id) -> bool
@@ -275,7 +275,7 @@ AL_API ALboolean AL_APIENTRY alIsAuxiliaryEffectSlot(ALuint effectslot)
     ContextRef context{GetContextRef()};
     if(LIKELY(context))
     {
-        std::lock_guard<almtx_t> _{context->EffectSlotLock};
+        std::lock_guard<std::mutex> _{context->EffectSlotLock};
         if(LookupEffectSlot(context.get(), effectslot) != nullptr)
             return AL_TRUE;
     }
@@ -288,7 +288,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
     if(UNLIKELY(!context)) return;
 
     std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<almtx_t> __{context->EffectSlotLock};
+    std::lock_guard<std::mutex> __{context->EffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context.get(), effectslot);
     if(UNLIKELY(!slot))
         SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid effect slot ID %u", effectslot);
@@ -340,7 +340,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum para
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> __{context->EffectSlotLock};
+    std::lock_guard<std::mutex> _{context->EffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context.get(), effectslot);
     if(UNLIKELY(!slot))
         SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid effect slot ID %u", effectslot);
@@ -359,7 +359,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param
     if(UNLIKELY(!context)) return;
 
     std::lock_guard<std::mutex> _{context->PropLock};
-    std::lock_guard<almtx_t> __{context->EffectSlotLock};
+    std::lock_guard<std::mutex> __{context->EffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context.get(), effectslot);
     if(UNLIKELY(!slot))
         SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid effect slot ID %u", effectslot);
@@ -391,7 +391,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotfv(ALuint effectslot, ALenum para
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->EffectSlotLock};
+    std::lock_guard<std::mutex> _{context->EffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context.get(), effectslot);
     if(UNLIKELY(!slot))
         SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid effect slot ID %u", effectslot);
@@ -409,7 +409,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum pa
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> __{context->EffectSlotLock};
+    std::lock_guard<std::mutex> _{context->EffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context.get(), effectslot);
     if(UNLIKELY(!slot))
         SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid effect slot ID %u", effectslot);
@@ -439,7 +439,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum p
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->EffectSlotLock};
+    std::lock_guard<std::mutex> _{context->EffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context.get(), effectslot);
     if(UNLIKELY(!slot))
         SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid effect slot ID %u", effectslot);
@@ -457,7 +457,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotf(ALuint effectslot, ALenum pa
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->EffectSlotLock};
+    std::lock_guard<std::mutex> _{context->EffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context.get(), effectslot);
     if(UNLIKELY(!slot))
         SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid effect slot ID %u", effectslot);
@@ -486,7 +486,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotfv(ALuint effectslot, ALenum p
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->EffectSlotLock};
+    std::lock_guard<std::mutex> _{context->EffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context.get(), effectslot);
     if(UNLIKELY(!slot))
         SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid effect slot ID %u", effectslot);
@@ -647,7 +647,7 @@ void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context)
 
 void UpdateAllEffectSlotProps(ALCcontext *context)
 {
-    std::lock_guard<almtx_t> _{context->EffectSlotLock};
+    std::lock_guard<std::mutex> _{context->EffectSlotLock};
     ALeffectslotArray *auxslots{context->ActiveAuxSlots.load(std::memory_order_acquire)};
     for(ALsizei i{0};i < auxslots->count;i++)
     {

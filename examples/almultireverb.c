@@ -452,7 +452,6 @@ int main(int argc, char **argv)
         EFX_REVERB_PRESET_CARPETEDHALLWAY,
         EFX_REVERB_PRESET_BATHROOM
     };
-    unsigned int basetime;
     ALCdevice *device = NULL;
     ALCcontext *context = NULL;
     ALuint effects[2] = { 0, 0 };
@@ -463,6 +462,7 @@ int main(int argc, char **argv)
     ALCint num_sends = 0;
     ALenum state = AL_INITIAL;
     ALfloat direct_gain = 1.0f;
+    int basetime = 0;
     int loops = 0;
 
     /* Print out usage if no arguments were specified */
@@ -640,7 +640,7 @@ int main(int argc, char **argv)
     /* Play the sound for a while. */
     alSourcePlay(source);
     do {
-        unsigned int curtime;
+        int curtime;
         ALfloat timediff;
 
         /* Start a batch update, to ensure all changes apply simultaneously. */

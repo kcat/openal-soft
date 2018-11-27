@@ -124,17 +124,17 @@ const char *FormatName(ALenum format)
 #include <windows.h>
 #include <mmsystem.h>
 
-unsigned int altime_get(void)
+int altime_get(void)
 {
-    static unsigned int start_time = 0;
-    unsigned int cur_time;
+    static int start_time = 0;
+    int cur_time;
     union {
         FILETIME ftime;
         ULARGE_INTEGER ulint;
     } systime;
     GetSystemTimeAsFileTime(&systime.ftime);
     /* FILETIME is in 100-nanosecond units, or 1/10th of a microsecond. */
-    cur_time = (unsigned int)(systime.ulint.QuadPart/10000);
+    cur_time = (int)(systime.ulint.QuadPart/10000);
 
     if(!start_time)
         start_time = cur_time;
@@ -152,10 +152,10 @@ void al_nssleep(unsigned long nsec)
 #include <unistd.h>
 #include <time.h>
 
-unsigned int altime_get(void)
+int altime_get(void)
 {
-    static unsigned int start_time = 0u;
-    unsigned int cur_time;
+    static int start_time = 0u;
+    int cur_time;
 
 #if _POSIX_TIMERS > 0
     struct timespec ts;

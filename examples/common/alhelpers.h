@@ -17,7 +17,7 @@ int InitAL(char ***argv, int *argc);
 void CloseAL(void);
 
 /* Cross-platform timeget and sleep functions. */
-unsigned int altime_get(void);
+int altime_get(void);
 void al_nssleep(unsigned long nsec);
 
 #ifdef __cplusplus

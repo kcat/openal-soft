@@ -130,8 +130,8 @@ struct ALCwinmmPlayback final : public ALCbackend {
 
     WAVEFORMATEX Format{};
 
-    std::atomic<ALenum> killNow{AL_TRUE};
-    std::thread thread;
+    std::atomic<ALenum> mKillNow{AL_TRUE};
+    std::thread mThread;
 };
 
 void ALCwinmmPlayback_Construct(ALCwinmmPlayback *self, ALCdevice *device);
@@ -205,7 +205,7 @@ FORCE_ALIGN int ALCwinmmPlayback_mixerProc(ALCwinmmPlayback *self)
     althrd_setname(MIXER_THREAD_NAME);
 
     ALCwinmmPlayback_lock(self);
-    while(!self->killNow.load(std::memory_order_acquire) &&
+    while(!self->mKillNow.load(std::memory_order_acquire) &&
           ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         ALsizei todo = self->Writable.load(std::memory_order_acquire);
@@ -368,8 +368,8 @@ ALCboolean ALCwinmmPlayback_start(ALCwinmmPlayback *self)
         );
         self->Writable.store(self->WaveBuffer.size(), std::memory_order_release);
 
-        self->killNow.store(AL_FALSE, std::memory_order_release);
-        self->thread = std::thread(ALCwinmmPlayback_mixerProc, self);
+        self->mKillNow.store(AL_FALSE, std::memory_order_release);
+        self->mThread = std::thread(ALCwinmmPlayback_mixerProc, self);
         return ALC_TRUE;
     }
     catch(std::exception& e) {
@@ -382,9 +382,9 @@ ALCboolean ALCwinmmPlayback_start(ALCwinmmPlayback *self)
 
 void ALCwinmmPlayback_stop(ALCwinmmPlayback *self)
 {
-    if(self->killNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->thread.joinable())
+    if(self->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->mThread.joinable())
         return;
-    self->thread.join();
+    self->mThread.join();
 
     while(self->Writable.load(std::memory_order_acquire) < self->WaveBuffer.size())
         alsem_wait(&self->Sem);
@@ -408,8 +408,8 @@ struct ALCwinmmCapture final : public ALCbackend {
 
     WAVEFORMATEX Format{};
 
-    std::atomic<ALenum> killNow{AL_TRUE};
-    std::thread thread;
+    std::atomic<ALenum> mKillNow{AL_TRUE};
+    std::thread mThread;
 };
 
 void ALCwinmmCapture_Construct(ALCwinmmCapture *self, ALCdevice *device);
@@ -486,7 +486,7 @@ int ALCwinmmCapture_captureProc(ALCwinmmCapture *self)
     althrd_setname(RECORD_THREAD_NAME);
 
     ALCwinmmCapture_lock(self);
-    while(!self->killNow.load(std::memory_order_acquire) &&
+    while(!self->mKillNow.load(std::memory_order_acquire) &&
           ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         ALsizei todo = self->Readable.load(std::memory_order_acquire);
@@ -618,8 +618,8 @@ ALCboolean ALCwinmmCapture_start(ALCwinmmCapture *self)
             waveInAddBuffer(self->InHdl, &self->WaveBuffer[i], sizeof(WAVEHDR));
         }
 
-        self->killNow.store(AL_FALSE, std::memory_order_release);
-        self->thread = std::thread(ALCwinmmCapture_captureProc, self);
+        self->mKillNow.store(AL_FALSE, std::memory_order_release);
+        self->mThread = std::thread(ALCwinmmCapture_captureProc, self);
 
         waveInStart(self->InHdl);
         return ALC_TRUE;
@@ -636,11 +636,11 @@ void ALCwinmmCapture_stop(ALCwinmmCapture *self)
 {
     waveInStop(self->InHdl);
 
-    self->killNow.store(AL_TRUE, std::memory_order_release);
-    if(self->thread.joinable())
+    self->mKillNow.store(AL_TRUE, std::memory_order_release);
+    if(self->mThread.joinable())
     {
         alsem_post(&self->Sem);
-        self->thread.join();
+        self->mThread.join();
     }
 
     waveInReset(self->InHdl);

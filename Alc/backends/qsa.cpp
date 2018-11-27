@@ -51,7 +51,7 @@ struct qsa_data {
     ALvoid* buffer;
     ALsizei size;
 
-    std::atomic<ALenum> killNow;
+    std::atomic<ALenum> mKillNow;
     althrd_t thread;
 };
 
@@ -213,7 +213,7 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
     );
 
     PlaybackWrapper_lock(self);
-    while(!ATOMIC_LOAD(&data->killNow, almemory_order_acquire))
+    while(!data->mKillNow.load(std::memory_order_acquire))
     {
         FD_ZERO(&wfds);
         FD_SET(data->audio_fd, &wfds);
@@ -239,7 +239,7 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
         len = data->size;
         write_ptr = static_cast<char*>(data->buffer);
         aluMixData(device, write_ptr, len/frame_size);
-        while(len>0 && !ATOMIC_LOAD(&data->killNow, almemory_order_acquire))
+        while(len>0 && !data->mKillNow.load(std::memory_order_acquire))
         {
             int wrote = snd_pcm_plugin_write(data->pcmHandle, write_ptr, len);
             if(wrote <= 0)
@@ -289,7 +289,7 @@ static ALCenum qsa_open_playback(PlaybackWrapper *self, const ALCchar* deviceNam
     data = (qsa_data*)calloc(1, sizeof(qsa_data));
     if(data == NULL)
         return ALC_OUT_OF_MEMORY;
-    data->killNow.store(AL_TRUE, std::memory_order_relaxed);
+    data->mKillNow.store(AL_TRUE, std::memory_order_relaxed);
 
     if(!deviceName)
         deviceName = qsaDevice;
@@ -602,7 +602,7 @@ static ALCboolean qsa_start_playback(PlaybackWrapper *self)
 {
     qsa_data *data = self->ExtraData;
 
-    ATOMIC_STORE(&data->killNow, AL_FALSE, almemory_order_release);
+    data->mKillNow.store(AL_FALSE, std::memory_order_release);
     if(althrd_create(&data->thread, qsa_proc_playback, self) != althrd_success)
         return ALC_FALSE;
 
@@ -614,7 +614,7 @@ static void qsa_stop_playback(PlaybackWrapper *self)
     qsa_data *data = self->ExtraData;
     int res;
 
-    if(data->killNow.exchange(AL_TRUE, std::memory_order_acq_rel))
+    if(data->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel))
         return;
     althrd_join(data->thread, &res);
 }

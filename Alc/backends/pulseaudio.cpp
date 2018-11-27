@@ -534,8 +534,8 @@ struct PulsePlayback final : public ALCbackend {
     pa_stream *stream{nullptr};
     pa_context *context{nullptr};
 
-    std::atomic<ALenum> killNow{ALC_TRUE};
-    std::thread thread;
+    std::atomic<ALenum> mKillNow{ALC_TRUE};
+    std::thread mThread;
 };
 
 void PulsePlayback_deviceCallback(pa_context *context, const pa_sink_info *info, int eol, void *pdata);
@@ -870,7 +870,7 @@ int PulsePlayback_mixerProc(PulsePlayback *self)
     unique_palock palock{self->loop};
     size_t frame_size{pa_frame_size(&self->spec)};
 
-    while(!self->killNow.load(std::memory_order_acquire) &&
+    while(!self->mKillNow.load(std::memory_order_acquire) &&
           ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         ssize_t len{static_cast<ssize_t>(pa_stream_writable_size(self->stream))};
@@ -1152,8 +1152,8 @@ ALCboolean PulsePlayback_reset(PulsePlayback *self)
 ALCboolean PulsePlayback_start(PulsePlayback *self)
 {
     try {
-        self->killNow.store(AL_FALSE, std::memory_order_release);
-        self->thread = std::thread(PulsePlayback_mixerProc, self);
+        self->mKillNow.store(AL_FALSE, std::memory_order_release);
+        self->mThread = std::thread(PulsePlayback_mixerProc, self);
         return ALC_TRUE;
     }
     catch(std::exception& e) {
@@ -1167,20 +1167,20 @@ ALCboolean PulsePlayback_start(PulsePlayback *self)
 
 void PulsePlayback_stop(PulsePlayback *self)
 {
-    self->killNow.store(AL_TRUE, std::memory_order_release);
-    if(!self->stream || !self->thread.joinable())
+    self->mKillNow.store(AL_TRUE, std::memory_order_release);
+    if(!self->stream || !self->mThread.joinable())
         return;
 
     /* Signal the main loop in case PulseAudio isn't sending us audio requests
      * (e.g. if the device is suspended). We need to lock the mainloop in case
-     * the mixer is between checking the killNow flag but before waiting for
+     * the mixer is between checking the mKillNow flag but before waiting for
      * the signal.
      */
     unique_palock palock{self->loop};
     palock.unlock();
 
     pa_threaded_mainloop_signal(self->loop, 0);
-    self->thread.join();
+    self->mThread.join();
 
     palock.lock();
 

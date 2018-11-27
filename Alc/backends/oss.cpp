@@ -243,10 +243,10 @@ int log2i(ALCuint x)
 struct ALCplaybackOSS final : public ALCbackend {
     int fd{-1};
 
-    al::vector<ALubyte> mix_data;
+    al::vector<ALubyte> mMixData;
 
-    std::atomic<ALenum> killNow{AL_TRUE};
-    std::thread thread;
+    std::atomic<ALenum> mKillNow{AL_TRUE};
+    std::thread mThread;
 };
 
 int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self);
@@ -301,7 +301,7 @@ int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self)
     frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder);
 
     ALCplaybackOSS_lock(self);
-    while(!self->killNow.load(std::memory_order_acquire) &&
+    while(!self->mKillNow.load(std::memory_order_acquire) &&
           ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         FD_ZERO(&wfds);
@@ -326,10 +326,10 @@ int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self)
             continue;
         }
 
-        write_ptr = self->mix_data.data();
-        to_write = self->mix_data.size();
+        write_ptr = self->mMixData.data();
+        to_write = self->mMixData.size();
         aluMixData(device, write_ptr, to_write/frame_size);
-        while(to_write > 0 && !self->killNow.load())
+        while(to_write > 0 && !self->mKillNow.load())
         {
             wrote = write(self->fd, write_ptr, to_write);
             if(wrote < 0)
@@ -471,12 +471,12 @@ ALCboolean ALCplaybackOSS_start(ALCplaybackOSS *self)
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
     try {
-        self->mix_data.resize(device->UpdateSize * FrameSizeFromDevFmt(
+        self->mMixData.resize(device->UpdateSize * FrameSizeFromDevFmt(
             device->FmtChans, device->FmtType, device->mAmbiOrder
         ));
 
-        self->killNow.store(AL_FALSE);
-        self->thread = std::thread(ALCplaybackOSS_mixerProc, self);
+        self->mKillNow.store(AL_FALSE);
+        self->mThread = std::thread(ALCplaybackOSS_mixerProc, self);
         return ALC_TRUE;
     }
     catch(std::exception& e) {
@@ -489,24 +489,24 @@ ALCboolean ALCplaybackOSS_start(ALCplaybackOSS *self)
 
 void ALCplaybackOSS_stop(ALCplaybackOSS *self)
 {
-    if(self->killNow.exchange(AL_TRUE) || !self->thread.joinable())
+    if(self->mKillNow.exchange(AL_TRUE) || !self->mThread.joinable())
         return;
-    self->thread.join();
+    self->mThread.join();
 
     if(ioctl(self->fd, SNDCTL_DSP_RESET) != 0)
         ERR("Error resetting device: %s\n", strerror(errno));
 
-    self->mix_data.clear();
+    self->mMixData.clear();
 }
 
 
 struct ALCcaptureOSS final : public ALCbackend {
     int fd{-1};
 
-    ll_ringbuffer_t *ring{nullptr};
+    ll_ringbuffer_t *mRing{nullptr};
 
-    std::atomic<ALenum> killNow{AL_TRUE};
-    std::thread thread;
+    std::atomic<ALenum> mKillNow{AL_TRUE};
+    std::thread mThread;
 };
 
 int ALCcaptureOSS_recordProc(ALCcaptureOSS *self);
@@ -539,8 +539,8 @@ void ALCcaptureOSS_Destruct(ALCcaptureOSS *self)
         close(self->fd);
     self->fd = -1;
 
-    ll_ringbuffer_free(self->ring);
-    self->ring = nullptr;
+    ll_ringbuffer_free(self->mRing);
+    self->mRing = nullptr;
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCcaptureOSS();
 }
@@ -560,7 +560,7 @@ int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
 
     frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder);
 
-    while(!self->killNow.load())
+    while(!self->mKillNow.load())
     {
         FD_ZERO(&rfds);
         FD_SET(self->fd, &rfds);
@@ -582,7 +582,7 @@ int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
             continue;
         }
 
-        auto vec = ll_ringbuffer_get_write_vector(self->ring);
+        auto vec = ll_ringbuffer_get_write_vector(self->mRing);
         if(vec.first.len > 0)
         {
             amt = read(self->fd, vec.first.buf, vec.first.len*frame_size);
@@ -594,7 +594,7 @@ int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
                 ALCcaptureOSS_unlock(self);
                 break;
             }
-            ll_ringbuffer_write_advance(self->ring, amt/frame_size);
+            ll_ringbuffer_write_advance(self->mRing, amt/frame_size);
         }
     }
 
@@ -700,8 +700,8 @@ ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
         return ALC_INVALID_VALUE;
     }
 
-    self->ring = ll_ringbuffer_create(device->UpdateSize*device->NumUpdates, frameSize, false);
-    if(!self->ring)
+    self->mRing = ll_ringbuffer_create(device->UpdateSize*device->NumUpdates, frameSize, false);
+    if(!self->mRing)
     {
         ERR("Ring buffer create failed\n");
         close(self->fd);
@@ -716,8 +716,8 @@ ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
 ALCboolean ALCcaptureOSS_start(ALCcaptureOSS *self)
 {
     try {
-        self->killNow.store(AL_FALSE);
-        self->thread = std::thread(ALCcaptureOSS_recordProc, self);
+        self->mKillNow.store(AL_FALSE);
+        self->mThread = std::thread(ALCcaptureOSS_recordProc, self);
         return ALC_TRUE;
     }
     catch(std::exception& e) {
@@ -730,10 +730,10 @@ ALCboolean ALCcaptureOSS_start(ALCcaptureOSS *self)
 
 void ALCcaptureOSS_stop(ALCcaptureOSS *self)
 {
-    if(self->killNow.exchange(AL_TRUE) || !self->thread.joinable())
+    if(self->mKillNow.exchange(AL_TRUE) || !self->mThread.joinable())
         return;
 
-    self->thread.join();
+    self->mThread.join();
 
     if(ioctl(self->fd, SNDCTL_DSP_RESET) != 0)
         ERR("Error resetting device: %s\n", strerror(errno));
@@ -741,13 +741,13 @@ void ALCcaptureOSS_stop(ALCcaptureOSS *self)
 
 ALCenum ALCcaptureOSS_captureSamples(ALCcaptureOSS *self, ALCvoid *buffer, ALCuint samples)
 {
-    ll_ringbuffer_read(self->ring, static_cast<char*>(buffer), samples);
+    ll_ringbuffer_read(self->mRing, static_cast<char*>(buffer), samples);
     return ALC_NO_ERROR;
 }
 
 ALCuint ALCcaptureOSS_availableSamples(ALCcaptureOSS *self)
 {
-    return ll_ringbuffer_read_space(self->ring);
+    return ll_ringbuffer_read_space(self->mRing);
 }
 
 } // namespace

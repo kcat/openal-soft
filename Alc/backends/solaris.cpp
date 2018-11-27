@@ -49,7 +49,7 @@ struct ALCsolarisBackend final : public ALCbackend {
     ALubyte *mix_data{nullptr};
     int data_size{0};
 
-    std::atomic<ALenum> killNow{AL_TRUE};
+    std::atomic<ALenum> mKillNow{AL_TRUE};
     althrd_t thread;
 };
 
@@ -116,7 +116,7 @@ static int ALCsolarisBackend_mixerProc(void *ptr)
     frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder);
 
     ALCsolarisBackend_lock(self);
-    while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
+    while(!self->mKillNow.load(std::memory_order_acquire) &&
           ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         FD_ZERO(&wfds);
@@ -144,7 +144,7 @@ static int ALCsolarisBackend_mixerProc(void *ptr)
         write_ptr = self->mix_data;
         to_write = self->data_size;
         aluMixData(device, write_ptr, to_write/frame_size);
-        while(to_write > 0 && !ATOMIC_LOAD_SEQ(&self->killNow))
+        while(to_write > 0 && !self->mKillNow.load())
         {
             wrote = write(self->fd, write_ptr, to_write);
             if(wrote < 0)
@@ -268,7 +268,7 @@ static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
 
 static ALCboolean ALCsolarisBackend_start(ALCsolarisBackend *self)
 {
-    ATOMIC_STORE_SEQ(&self->killNow, AL_FALSE);
+    self->mKillNow.store(AL_FALSE);
     if(althrd_create(&self->thread, ALCsolarisBackend_mixerProc, self) != althrd_success)
         return ALC_FALSE;
     return ALC_TRUE;
@@ -278,7 +278,7 @@ static void ALCsolarisBackend_stop(ALCsolarisBackend *self)
 {
     int res;
 
-    if(self->killNow.exchange(AL_TRUE))
+    if(self->mKillNow.exchange(AL_TRUE))
         return;
 
     althrd_join(self->thread, &res);

@@ -191,8 +191,8 @@ struct ALCdsoundPlayback final : public ALCbackend {
     IDirectSoundNotify *Notifies{nullptr};
     HANDLE             NotifyEvent{nullptr};
 
-    std::atomic<ALenum> killNow{AL_TRUE};
-    std::thread thread;
+    std::atomic<ALenum> mKillNow{AL_TRUE};
+    std::thread mThread;
 };
 
 int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self);
@@ -271,7 +271,7 @@ FORCE_ALIGN int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self)
     bool Playing{false};
     DWORD LastCursor{0u};
     Buffer->GetCurrentPosition(&LastCursor, nullptr);
-    while(!self->killNow.load(std::memory_order_acquire) &&
+    while(!self->mKillNow.load(std::memory_order_acquire) &&
           ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         // Get current play cursor
@@ -626,8 +626,8 @@ retry_open:
 ALCboolean ALCdsoundPlayback_start(ALCdsoundPlayback *self)
 {
     try {
-        self->killNow.store(AL_FALSE, std::memory_order_release);
-        self->thread = std::thread(ALCdsoundPlayback_mixerProc, self);
+        self->mKillNow.store(AL_FALSE, std::memory_order_release);
+        self->mThread = std::thread(ALCdsoundPlayback_mixerProc, self);
         return ALC_TRUE;
     }
     catch(std::exception& e) {
@@ -640,10 +640,10 @@ ALCboolean ALCdsoundPlayback_start(ALCdsoundPlayback *self)
 
 void ALCdsoundPlayback_stop(ALCdsoundPlayback *self)
 {
-    if(self->killNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->thread.joinable())
+    if(self->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->mThread.joinable())
         return;
 
-    self->thread.join();
+    self->mThread.join();
 
     self->Buffer->Stop();
 }

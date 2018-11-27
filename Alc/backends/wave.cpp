@@ -84,8 +84,8 @@ struct ALCwaveBackend final : public ALCbackend {
 
     al::vector<ALbyte> mBuffer;
 
-    std::atomic<ALenum> killNow{AL_TRUE};
-    std::thread thread;
+    std::atomic<ALenum> mKillNow{AL_TRUE};
+    std::thread mThread;
 };
 
 int ALCwaveBackend_mixerProc(ALCwaveBackend *self);
@@ -134,7 +134,7 @@ int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
 
     ALint64 done{0};
     auto start = std::chrono::steady_clock::now();
-    while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
+    while(!self->mKillNow.load(std::memory_order_acquire) &&
           ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         auto now = std::chrono::steady_clock::now();
@@ -348,8 +348,8 @@ ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
 ALCboolean ALCwaveBackend_start(ALCwaveBackend *self)
 {
     try {
-        ATOMIC_STORE(&self->killNow, AL_FALSE, almemory_order_release);
-        self->thread = std::thread(ALCwaveBackend_mixerProc, self);
+        self->mKillNow.store(AL_FALSE, std::memory_order_release);
+        self->mThread = std::thread(ALCwaveBackend_mixerProc, self);
         return ALC_TRUE;
     }
     catch(std::exception& e) {
@@ -362,9 +362,9 @@ ALCboolean ALCwaveBackend_start(ALCwaveBackend *self)
 
 void ALCwaveBackend_stop(ALCwaveBackend *self)
 {
-    if(self->killNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->thread.joinable())
+    if(self->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->mThread.joinable())
         return;
-    self->thread.join();
+    self->mThread.join();
 
     long size{ftell(self->mFile)};
     if(size > 0)

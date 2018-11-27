@@ -43,7 +43,7 @@ struct SndioPlayback final : public ALCbackend {
     ALvoid *mix_data{nullptr};
     ALsizei data_size{0};
 
-    std::atomic<ALenum> killNow{AL_TRUE};
+    std::atomic<ALenum> mKillNow{AL_TRUE};
     althrd_t thread;
 };
 
@@ -98,7 +98,7 @@ static int SndioPlayback_mixerProc(void *ptr)
 
     frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder);
 
-    while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
+    while(!self->mKillNow.load(std::memory_order_acquire) &&
           ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         ALsizei len = self->data_size;
@@ -107,7 +107,7 @@ static int SndioPlayback_mixerProc(void *ptr)
         SndioPlayback_lock(self);
         aluMixData(device, WritePtr, len/frameSize);
         SndioPlayback_unlock(self);
-        while(len > 0 && !ATOMIC_LOAD(&self->killNow, almemory_order_acquire))
+        while(len > 0 && !self->mKillNow.load(std::memory_order_acquire))
         {
             wrote = sio_write(self->sndHandle, WritePtr, len);
             if(wrote == 0)
@@ -249,7 +249,7 @@ static ALCboolean SndioPlayback_start(SndioPlayback *self)
         return ALC_FALSE;
     }
 
-    ATOMIC_STORE(&self->killNow, AL_FALSE, almemory_order_release);
+    self->mKillNow.store(AL_FALSE, std::memory_order_release);
     if(althrd_create(&self->thread, SndioPlayback_mixerProc, self) != althrd_success)
     {
         sio_stop(self->sndHandle);
@@ -263,7 +263,7 @@ static void SndioPlayback_stop(SndioPlayback *self)
 {
     int res;
 
-    if(self->killNow.exchange(AL_TRUE, std::memory_order_acq_rel))
+    if(self->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel))
         return;
     althrd_join(self->thread, &res);
 
@@ -280,7 +280,7 @@ struct SndioCapture final : public ALCbackend {
 
     ll_ringbuffer_t *ring{nullptr};
 
-    std::atomic<ALenum> killNow{AL_TRUE};
+    std::atomic<ALenum> mKillNow{AL_TRUE};
     althrd_t thread;
 };
 
@@ -334,7 +334,7 @@ static int SndioCapture_recordProc(void* ptr)
 
     frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder);
 
-    while(!ATOMIC_LOAD(&self->killNow, almemory_order_acquire) &&
+    while(!self->mKillNow.load(std::memory_order_acquire) &&
           ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
     {
         size_t total, todo;
@@ -490,7 +490,7 @@ static ALCboolean SndioCapture_start(SndioCapture *self)
         return ALC_FALSE;
     }
 
-    ATOMIC_STORE(&self->killNow, AL_FALSE, almemory_order_release);
+    self->mKillNow.store(AL_FALSE, std::memory_order_release);
     if(althrd_create(&self->thread, SndioCapture_recordProc, self) != althrd_success)
     {
         sio_stop(self->sndHandle);
@@ -504,7 +504,7 @@ static void SndioCapture_stop(SndioCapture *self)
 {
     int res;
 
-    if(self->killNow.exchange(AL_TRUE, std::memory_order_acq_rel))
+    if(self->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel))
         return;
     althrd_join(self->thread, &res);
 

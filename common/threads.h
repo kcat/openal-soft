@@ -70,15 +70,12 @@ inline int almtx_unlock(almtx_t *mtx)
 #include <semaphore.h>
 #endif /* __APPLE__ */
 
-typedef pthread_t althrd_t;
 typedef pthread_mutex_t almtx_t;
 #ifdef __APPLE__
 typedef dispatch_semaphore_t alsem_t;
 #else /* !__APPLE__ */
 typedef sem_t alsem_t;
 #endif /* __APPLE__ */
-
-typedef int (*althrd_start_t)(void*);
 
 
 inline void althrd_yield(void)
@@ -100,10 +97,6 @@ inline int almtx_unlock(almtx_t *mtx)
         return althrd_error;
     return althrd_success;
 }
-
-int althrd_create(althrd_t *thr, althrd_start_t func, void *arg);
-int althrd_detach(althrd_t thr);
-int althrd_join(althrd_t thr, int *res);
 
 #endif
 

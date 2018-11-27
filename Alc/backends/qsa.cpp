@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <memory.h>
 
+#include <thread>
 #include <memory>
 #include <algorithm>
 
@@ -53,7 +54,7 @@ struct qsa_data {
     ALsizei size{0};
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
-    althrd_t thread;
+    std::thread mThread;
 };
 
 struct DevMap {
@@ -592,21 +593,26 @@ static ALCboolean qsa_start_playback(PlaybackWrapper *self)
 {
     qsa_data *data = self->ExtraData.get();
 
-    data->mKillNow.store(AL_FALSE, std::memory_order_release);
-    if(althrd_create(&data->thread, qsa_proc_playback, self) != althrd_success)
-        return ALC_FALSE;
-
-    return ALC_TRUE;
+    try {
+        data->mKillNow.store(AL_FALSE, std::memory_order_release);
+        data->mThread = std::thread(qsa_proc_playback, self);
+        return ALC_TRUE;
+    }
+    catch(std::exception& e) {
+        ERR("Could not create playback thread: %s\n", e.what());
+    }
+    catch(...) {
+    }
+    return ALC_FALSE;
 }
 
 static void qsa_stop_playback(PlaybackWrapper *self)
 {
     qsa_data *data = self->ExtraData.get();
-    int res;
 
-    if(data->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel))
+    if(data->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !data->mThread.joinable())
         return;
-    althrd_join(data->thread, &res);
+    data->mThread.join();
 }
 
 

@@ -34,6 +34,8 @@
 #include <errno.h>
 #include <math.h>
 
+#include <thread>
+
 #include "alMain.h"
 #include "alu.h"
 #include "alconfig.h"
@@ -50,10 +52,10 @@ struct ALCsolarisBackend final : public ALCbackend {
     int data_size{0};
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
-    althrd_t thread;
+    std::thread mThread;
 };
 
-static int ALCsolarisBackend_mixerProc(void *ptr);
+static int ALCsolarisBackend_mixerProc(ALCsolarisBackend *self);
 
 static void ALCsolarisBackend_Construct(ALCsolarisBackend *self, ALCdevice *device);
 static void ALCsolarisBackend_Destruct(ALCsolarisBackend *self);
@@ -98,9 +100,8 @@ static void ALCsolarisBackend_Destruct(ALCsolarisBackend *self)
 }
 
 
-static int ALCsolarisBackend_mixerProc(void *ptr)
+static int ALCsolarisBackend_mixerProc(ALCsolarisBackend *self)
 {
-    ALCsolarisBackend *self = static_cast<ALCsolarisBackend*>(ptr);
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     struct timeval timeout;
     ALubyte *write_ptr;
@@ -268,20 +269,25 @@ static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
 
 static ALCboolean ALCsolarisBackend_start(ALCsolarisBackend *self)
 {
-    self->mKillNow.store(AL_FALSE);
-    if(althrd_create(&self->thread, ALCsolarisBackend_mixerProc, self) != althrd_success)
-        return ALC_FALSE;
-    return ALC_TRUE;
+    try {
+        self->mKillNow.store(AL_FALSE);
+        self->mThread = std::thread(ALCsolarisBackend_mixerProc, self);
+        return ALC_TRUE;
+    }
+    catch(std::exception& e) {
+        ERR("Could not create playback thread: %s\n", e.what());
+    }
+    catch(...) {
+    }
+    return ALC_FALSE;
 }
 
 static void ALCsolarisBackend_stop(ALCsolarisBackend *self)
 {
-    int res;
-
-    if(self->mKillNow.exchange(AL_TRUE))
+    if(self->mKillNow.exchange(AL_TRUE) || !self->mThread.joinable())
         return;
 
-    althrd_join(self->thread, &res);
+    self->mThread.join();
 
     if(ioctl(self->fd, AUDIO_DRAIN) < 0)
         ERR("Error draining device: %s\n", strerror(errno));

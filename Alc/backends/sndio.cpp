@@ -26,6 +26,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <thread>
+
 #include "alMain.h"
 #include "alu.h"
 #include "threads.h"
@@ -44,10 +46,10 @@ struct SndioPlayback final : public ALCbackend {
     ALsizei data_size{0};
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
-    althrd_t thread;
+    std::thread mThread;
 };
 
-static int SndioPlayback_mixerProc(void *ptr);
+static int SndioPlayback_mixerProc(SndioPlayback *self);
 
 static void SndioPlayback_Construct(SndioPlayback *self, ALCdevice *device);
 static void SndioPlayback_Destruct(SndioPlayback *self);
@@ -86,9 +88,8 @@ static void SndioPlayback_Destruct(SndioPlayback *self)
 }
 
 
-static int SndioPlayback_mixerProc(void *ptr)
+static int SndioPlayback_mixerProc(SndioPlayback *self)
 {
-    SndioPlayback *self = static_cast<SndioPlayback*>(ptr);
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     ALsizei frameSize;
     size_t wrote;
@@ -249,23 +250,25 @@ static ALCboolean SndioPlayback_start(SndioPlayback *self)
         return ALC_FALSE;
     }
 
-    self->mKillNow.store(AL_FALSE, std::memory_order_release);
-    if(althrd_create(&self->thread, SndioPlayback_mixerProc, self) != althrd_success)
-    {
-        sio_stop(self->sndHandle);
-        return ALC_FALSE;
+    try {
+        self->mKillNow.store(AL_FALSE, std::memory_order_release);
+        self->mThread = std::thread(SndioPlayback_mixerProc, self);
+        return ALC_TRUE;
     }
-
-    return ALC_TRUE;
+    catch(std::exception& e) {
+        ERR("Could not create playback thread: %s\n", e.what());
+    }
+    catch(...) {
+    }
+    sio_stop(self->sndHandle);
+    return ALC_FALSE;
 }
 
 static void SndioPlayback_stop(SndioPlayback *self)
 {
-    int res;
-
-    if(self->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel))
+    if(self->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->mThread.joinable())
         return;
-    althrd_join(self->thread, &res);
+    self->mThread.join();
 
     if(!sio_stop(self->sndHandle))
         ERR("Error stopping device\n");
@@ -281,10 +284,10 @@ struct SndioCapture final : public ALCbackend {
     ll_ringbuffer_t *ring{nullptr};
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
-    althrd_t thread;
+    std::thread mThread;
 };
 
-static int SndioCapture_recordProc(void *ptr);
+static int SndioCapture_recordProc(SndioCapture *self);
 
 static void SndioCapture_Construct(SndioCapture *self, ALCdevice *device);
 static void SndioCapture_Destruct(SndioCapture *self);
@@ -323,9 +326,8 @@ static void SndioCapture_Destruct(SndioCapture *self)
 }
 
 
-static int SndioCapture_recordProc(void* ptr)
+static int SndioCapture_recordProc(SndioCapture *self)
 {
-    SndioCapture *self = static_cast<SndioCapture*>(ptr);
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
     ALsizei frameSize;
 
@@ -490,23 +492,25 @@ static ALCboolean SndioCapture_start(SndioCapture *self)
         return ALC_FALSE;
     }
 
-    self->mKillNow.store(AL_FALSE, std::memory_order_release);
-    if(althrd_create(&self->thread, SndioCapture_recordProc, self) != althrd_success)
-    {
-        sio_stop(self->sndHandle);
-        return ALC_FALSE;
+    try {
+        self->mKillNow.store(AL_FALSE, std::memory_order_release);
+        self->mThread = std::thread(SndioCapture_recordProc, self);
+        return ALC_TRUE;
     }
-
-    return ALC_TRUE;
+    catch(std::exception& e) {
+        ERR("Could not create record thread: %s\n", e.what());
+    }
+    catch(...) {
+    }
+    sio_stop(self->sndHandle);
+    return ALC_FALSE;
 }
 
 static void SndioCapture_stop(SndioCapture *self)
 {
-    int res;
-
-    if(self->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel))
+    if(self->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->mThread.joinable())
         return;
-    althrd_join(self->thread, &res);
+    self->mThread.join();
 
     if(!sio_stop(self->sndHandle))
         ERR("Error stopping device\n");

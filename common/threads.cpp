@@ -22,14 +22,11 @@
 
 #include "threads.h"
 
+#include <limits>
 #include <system_error>
 
+
 #ifdef _WIN32
-
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <mmsystem.h>
-
 
 void althrd_setname(const char *name)
 {
@@ -59,51 +56,41 @@ void althrd_setname(const char *name)
 #endif
 }
 
+namespace al {
 
-int alsem_init(alsem_t *sem, unsigned int initial)
+semaphore::semaphore(unsigned int initial)
 {
-    *sem = CreateSemaphore(NULL, initial, INT_MAX, NULL);
-    if(*sem != NULL) return althrd_success;
-    return althrd_error;
+    if(initial > static_cast<unsigned int>(std::numeric_limits<int>::max()))
+        throw std::system_error(std::make_error_code(std::errc::value_too_large));
+    mSem = CreateSemaphore(nullptr, initial, std::numeric_limits<int>::max(), nullptr);
+    if(mSem == nullptr)
+        throw std::system_error(std::make_error_code(std::errc::resource_unavailable_try_again));
 }
 
-void alsem_destroy(alsem_t *sem)
+semaphore::~semaphore()
+{ CloseHandle(mSem); }
+
+void semaphore::post()
 {
-    CloseHandle(*sem);
+    if(!ReleaseSemaphore(mSem, 1, nullptr))
+        throw std::system_error(std::make_error_code(std::errc::value_too_large));
 }
 
-int alsem_post(alsem_t *sem)
-{
-    DWORD ret = ReleaseSemaphore(*sem, 1, NULL);
-    if(ret) return althrd_success;
-    return althrd_error;
-}
+void semaphore::wait() noexcept
+{ WaitForSingleObject(mSem, INFINITE); }
 
-int alsem_wait(alsem_t *sem)
-{
-    DWORD ret = WaitForSingleObject(*sem, INFINITE);
-    if(ret == WAIT_OBJECT_0) return althrd_success;
-    return althrd_error;
-}
+int semaphore::trywait() noexcept
+{ return WaitForSingleObject(mSem, 0) == WAIT_OBJECT_0; }
 
-int alsem_trywait(alsem_t *sem)
-{
-    DWORD ret = WaitForSingleObject(*sem, 0);
-    if(ret == WAIT_OBJECT_0) return althrd_success;
-    if(ret == WAIT_TIMEOUT) return althrd_busy;
-    return althrd_error;
-}
+} // namespace al
 
 #else
 
-#include <sys/time.h>
-#include <unistd.h>
 #include <errno.h>
 #include <pthread.h>
 #ifdef HAVE_PTHREAD_NP_H
 #include <pthread_np.h>
 #endif
-
 
 void althrd_setname(const char *name)
 {
@@ -122,103 +109,57 @@ void althrd_setname(const char *name)
 #endif
 }
 
+namespace al {
 
 #ifdef __APPLE__
 
-int alsem_init(alsem_t *sem, unsigned int initial)
-{
-    *sem = dispatch_semaphore_create(initial);
-    return *sem ? althrd_success : althrd_error;
-}
-
-void alsem_destroy(alsem_t *sem)
-{
-    dispatch_release(*sem);
-}
-
-int alsem_post(alsem_t *sem)
-{
-    dispatch_semaphore_signal(*sem);
-    return althrd_success;
-}
-
-int alsem_wait(alsem_t *sem)
-{
-    dispatch_semaphore_wait(*sem, DISPATCH_TIME_FOREVER);
-    return althrd_success;
-}
-
-int alsem_trywait(alsem_t *sem)
-{
-    long value = dispatch_semaphore_wait(*sem, DISPATCH_TIME_NOW);
-    return value == 0 ? althrd_success : althrd_busy;
-}
-
-#else /* !__APPLE__ */
-
-int alsem_init(alsem_t *sem, unsigned int initial)
-{
-    if(sem_init(sem, 0, initial) == 0)
-        return althrd_success;
-    return althrd_error;
-}
-
-void alsem_destroy(alsem_t *sem)
-{
-    sem_destroy(sem);
-}
-
-int alsem_post(alsem_t *sem)
-{
-    if(sem_post(sem) == 0)
-        return althrd_success;
-    return althrd_error;
-}
-
-int alsem_wait(alsem_t *sem)
-{
-    if(sem_wait(sem) == 0) return althrd_success;
-    if(errno == EINTR) return -2;
-    return althrd_error;
-}
-
-int alsem_trywait(alsem_t *sem)
-{
-    if(sem_trywait(sem) == 0) return althrd_success;
-    if(errno == EWOULDBLOCK) return althrd_busy;
-    if(errno == EINTR) return -2;
-    return althrd_error;
-}
-
-#endif /* __APPLE__ */
-
-#endif
-
-
-namespace al {
-
 semaphore::semaphore(unsigned int initial)
 {
-    if(alsem_init(&mSem, initial) != althrd_success)
+    mSem = dispatch_semaphore_create(initial);
+    if(!mSem)
         throw std::system_error(std::make_error_code(std::errc::resource_unavailable_try_again));
 }
 
 semaphore::~semaphore()
-{ alsem_destroy(&mSem); }
+{ dispatch_release(mSem); }
+
+void semaphore::post()
+{ dispatch_semaphore_signal(mSem); }
+
+void semaphore::wait() noexcept
+{ dispatch_semaphore_wait(mSem, DISPATCH_TIME_FOREVER); }
+
+int semaphore::trywait() noexcept
+{ return dispatch_semaphore_wait(mSem, DISPATCH_TIME_NOW) == 0; }
+
+#else /* !__APPLE__ */
+
+semaphore::semaphore(unsigned int initial)
+{
+    if(sem_init(&mSem, 0, initial) != 0)
+        throw std::system_error(std::make_error_code(std::errc::resource_unavailable_try_again));
+}
+
+semaphore::~semaphore()
+{ sem_destroy(&mSem); }
 
 void semaphore::post()
 {
-    if(alsem_post(&mSem) != althrd_success)
+    if(sem_post(&mSem) != 0)
         throw std::system_error(std::make_error_code(std::errc::value_too_large));
 }
 
 void semaphore::wait() noexcept
 {
-    while(alsem_wait(&mSem) == -2) {
+    while(sem_wait(&mSem) == -1 && errno == EINTR) {
     }
 }
 
 int semaphore::trywait() noexcept
-{ return alsem_wait(&mSem) == althrd_success; }
+{ return sem_trywait(&mSem) == 0; }
+
+#endif /* __APPLE__ */
 
 } // namespace al
+
+#endif /* _WIN32 */

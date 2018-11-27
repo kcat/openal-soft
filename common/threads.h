@@ -3,6 +3,8 @@
 
 #include <time.h>
 
+#include <mutex>
+
 #if defined(__GNUC__) && defined(__i386__)
 /* force_align_arg_pointer is required for proper function arguments aligning
  * when SSE code is used. Some systems (Windows, QNX) do not guarantee our
@@ -13,61 +15,28 @@
 #define FORCE_ALIGN
 #endif
 
-#ifdef __cplusplus
-#include <mutex>
-
-extern "C" {
-#endif
-
-enum {
-    althrd_success = 0,
-    althrd_error,
-    althrd_nomem,
-    althrd_timedout,
-    althrd_busy
-};
-
-
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-
-typedef HANDLE alsem_t;
-
-#else
-
-#include <stdint.h>
-#include <errno.h>
-#include <pthread.h>
-#ifdef __APPLE__
+#elif defined(__APPLE__)
 #include <dispatch/dispatch.h>
-#else /* !__APPLE__ */
+#else
 #include <semaphore.h>
-#endif /* __APPLE__ */
-
-#ifdef __APPLE__
-typedef dispatch_semaphore_t alsem_t;
-#else /* !__APPLE__ */
-typedef sem_t alsem_t;
-#endif /* __APPLE__ */
-
 #endif
 
 void althrd_setname(const char *name);
 
-int alsem_init(alsem_t *sem, unsigned int initial);
-void alsem_destroy(alsem_t *sem);
-int alsem_post(alsem_t *sem);
-int alsem_wait(alsem_t *sem);
-int alsem_trywait(alsem_t *sem);
-
-#ifdef __cplusplus
-} // extern "C"
-
 namespace al {
 
 class semaphore {
-    alsem_t mSem;
+#ifdef _WIN32
+    using native_type = HANDLE;
+#elif defined(__APPLE__)
+    using native_type = dispatch_semaphore_t;
+#else
+    using native_type = sem_t;
+#endif
+    native_type mSem;
 
 public:
     semaphore(unsigned int initial=0);
@@ -82,7 +51,5 @@ public:
 };
 
 } // namespace al
-
-#endif
 
 #endif /* AL_THREADS_H */

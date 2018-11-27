@@ -452,7 +452,7 @@ int main(int argc, char **argv)
         EFX_REVERB_PRESET_CARPETEDHALLWAY,
         EFX_REVERB_PRESET_BATHROOM
     };
-    struct timespec basetime;
+    unsigned int basetime;
     ALCdevice *device = NULL;
     ALCcontext *context = NULL;
     ALuint effects[2] = { 0, 0 };
@@ -633,14 +633,14 @@ int main(int argc, char **argv)
     assert(alGetError()==AL_NO_ERROR && "Failed to setup sound source");
 
     /* Get the current time as the base for timing in the main loop. */
-    altimespec_get(&basetime, AL_TIME_UTC);
+    basetime = altime_get();
     loops = 0;
     printf("Transition %d of %d...\n", loops+1, MaxTransitions);
 
     /* Play the sound for a while. */
     alSourcePlay(source);
     do {
-        struct timespec curtime;
+        unsigned int curtime;
         ALfloat timediff;
 
         /* Start a batch update, to ensure all changes apply simultaneously. */
@@ -649,9 +649,8 @@ int main(int argc, char **argv)
         /* Get the current time to track the amount of time that passed.
          * Convert the difference to seconds.
          */
-        altimespec_get(&curtime, AL_TIME_UTC);
-        timediff = (ALfloat)(curtime.tv_sec - basetime.tv_sec);
-        timediff += (ALfloat)(curtime.tv_nsec - basetime.tv_nsec) / 1000000000.0f;
+        curtime = altime_get();
+        timediff = (ALfloat)(curtime - basetime) / 1000.0f;
 
         /* Avoid negative time deltas, in case of non-monotonic clocks. */
         if(timediff < 0.0f)
@@ -669,7 +668,7 @@ int main(int argc, char **argv)
                  * time to start a new cycle.
                  */
                 timediff -= 8.0f;
-                basetime.tv_sec += 8;
+                basetime += 8000;
             }
         }
 

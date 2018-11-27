@@ -204,13 +204,6 @@ IF(CMAKE_COMPILER_IS_GNUCC)
     SET(CMAKE_REQUIRED_FLAGS "${OLD_REQUIRED_FLAGS}")
 ENDIF()
 
-# Check if we have a proper timespec declaration
-CHECK_STRUCT_HAS_MEMBER("struct timespec" tv_sec time.h HAVE_STRUCT_TIMESPEC)
-IF(HAVE_STRUCT_TIMESPEC)
-    # Define it here so we don't have to include config.h for it
-    SET(CPP_DEFS ${CPP_DEFS} HAVE_STRUCT_TIMESPEC)
-ENDIF()
-
 # Some systems may need libatomic for C11 atomic functions to work
 SET(OLD_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
 SET(CMAKE_REQUIRED_LIBRARIES ${OLD_REQUIRED_LIBRARIES} atomic)

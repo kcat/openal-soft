@@ -1,8 +1,6 @@
 #ifndef ALHELPERS_H
 #define ALHELPERS_H
 
-#include <time.h>
-
 #include "AL/alc.h"
 #include "AL/al.h"
 #include "AL/alext.h"
@@ -19,14 +17,7 @@ int InitAL(char ***argv, int *argc);
 void CloseAL(void);
 
 /* Cross-platform timeget and sleep functions. */
-#ifndef HAVE_STRUCT_TIMESPEC
-struct timespec {
-    time_t tv_sec;
-    long tv_nsec;
-};
-#endif
-#define AL_TIME_UTC 1
-int altimespec_get(struct timespec *ts, int base);
+unsigned int altime_get(void);
 void al_nssleep(unsigned long nsec);
 
 #ifdef __cplusplus

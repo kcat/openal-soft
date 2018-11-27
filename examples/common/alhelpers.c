@@ -28,6 +28,7 @@
  * finding an appropriate buffer format, and getting readable strings for
  * channel configs and sample types. */
 
+#include <time.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
@@ -123,22 +124,21 @@ const char *FormatName(ALenum format)
 #include <windows.h>
 #include <mmsystem.h>
 
-int altimespec_get(struct timespec *ts, int base)
+unsigned int altime_get(void)
 {
-    if(base == AL_TIME_UTC)
-    {
-        union {
-            FILETIME ftime;
-            ULARGE_INTEGER ulint;
-        } systime;
-        GetSystemTimeAsFileTime(&systime.ftime);
-        /* FILETIME is in 100-nanosecond units, or 1/10th of a microsecond. */
-        ts->tv_sec = systime.ulint.QuadPart/10000000;
-        ts->tv_nsec = (systime.ulint.QuadPart%10000000) * 100;
-        return base;
-    }
+    static unsigned int start_time = 0;
+    unsigned int cur_time;
+    union {
+        FILETIME ftime;
+        ULARGE_INTEGER ulint;
+    } systime;
+    GetSystemTimeAsFileTime(&systime.ftime);
+    /* FILETIME is in 100-nanosecond units, or 1/10th of a microsecond. */
+    cur_time = (unsigned int)(systime.ulint.QuadPart/10000);
 
-    return 0;
+    if(!start_time)
+        start_time = cur_time;
+    return cur_time - start_time;
 }
 
 void al_nssleep(unsigned long nsec)
@@ -151,27 +151,26 @@ void al_nssleep(unsigned long nsec)
 #include <sys/time.h>
 #include <time.h>
 
-int altimespec_get(struct timespec *ts, int base)
+unsigned int altime_get(void)
 {
-    if(base == AL_TIME_UTC)
-    {
-        int ret;
-#if _POSIX_TIMERS > 0
-        ret = clock_gettime(CLOCK_REALTIME, ts);
-        if(ret == 0) return base;
-#else /* _POSIX_TIMERS > 0 */
-        struct timeval tv;
-        ret = gettimeofday(&tv, NULL);
-        if(ret == 0)
-        {
-            ts->tv_sec = tv.tv_sec;
-            ts->tv_nsec = tv.tv_usec * 1000;
-            return base;
-        }
-#endif
-    }
+    static unsigned int start_time = 0u;
+    unsigned int cur_time;
 
-    return 0;
+#if _POSIX_TIMERS > 0
+    struct timespec ts;
+    int ret = clock_gettime(CLOCK_REALTIME, ts);
+    if(ret != 0) return 0;
+    cur_time = ts.ts_sec*1000 + ts.ts_nsec/1000000;
+#else /* _POSIX_TIMERS > 0 */
+    struct timeval tv;
+    int ret = gettimeofday(&tv, NULL);
+    if(ret != 0) return 0;
+    cur_time = tv.tv_sec*1000 + tv.tv_usec/1000;
+#endif
+
+    if(!start_time)
+        start_time = cur_time;
+    return cur_time - start_time;
 }
 
 void al_nssleep(unsigned long nsec)

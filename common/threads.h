@@ -14,6 +14,8 @@
 #endif
 
 #ifdef __cplusplus
+#include <mutex>
+
 extern "C" {
 #endif
 
@@ -25,38 +27,17 @@ enum {
     althrd_busy
 };
 
-enum {
-    almtx_plain = 0,
-    almtx_recursive = 1,
-};
-
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-typedef CRITICAL_SECTION almtx_t;
 typedef HANDLE alsem_t;
 
 
 inline void althrd_yield(void)
 {
     SwitchToThread();
-}
-
-
-inline int almtx_lock(almtx_t *mtx)
-{
-    if(!mtx) return althrd_error;
-    EnterCriticalSection(mtx);
-    return althrd_success;
-}
-
-inline int almtx_unlock(almtx_t *mtx)
-{
-    if(!mtx) return althrd_error;
-    LeaveCriticalSection(mtx);
-    return althrd_success;
 }
 
 #else
@@ -70,7 +51,6 @@ inline int almtx_unlock(almtx_t *mtx)
 #include <semaphore.h>
 #endif /* __APPLE__ */
 
-typedef pthread_mutex_t almtx_t;
 #ifdef __APPLE__
 typedef dispatch_semaphore_t alsem_t;
 #else /* !__APPLE__ */
@@ -84,26 +64,9 @@ inline void althrd_yield(void)
 }
 
 
-inline int almtx_lock(almtx_t *mtx)
-{
-    if(pthread_mutex_lock(mtx) != 0)
-        return althrd_error;
-    return althrd_success;
-}
-
-inline int almtx_unlock(almtx_t *mtx)
-{
-    if(pthread_mutex_unlock(mtx) != 0)
-        return althrd_error;
-    return althrd_success;
-}
-
 #endif
 
 void althrd_setname(const char *name);
-
-int almtx_init(almtx_t *mtx, int type);
-void almtx_destroy(almtx_t *mtx);
 
 int alsem_init(alsem_t *sem, unsigned int initial);
 void alsem_destroy(alsem_t *sem);
@@ -113,66 +76,6 @@ int alsem_trywait(alsem_t *sem);
 
 #ifdef __cplusplus
 } // extern "C"
-
-#include <mutex>
-
-/* Add specializations for std::lock_guard and std::unique_lock which take an
- * almtx_t and call the appropriate almtx_* functions.
- */
-namespace std {
-
-template<>
-class lock_guard<almtx_t> {
-    almtx_t &mMtx;
-
-public:
-    using mutex_type = almtx_t;
-
-    explicit lock_guard(almtx_t &mtx) : mMtx(mtx) { almtx_lock(&mMtx); }
-    lock_guard(almtx_t &mtx, std::adopt_lock_t) noexcept : mMtx(mtx) { }
-    ~lock_guard() { almtx_unlock(&mMtx); }
-
-    lock_guard(const lock_guard&) = delete;
-    lock_guard& operator=(const lock_guard&) = delete;
-};
-
-template<>
-class unique_lock<almtx_t> {
-    almtx_t *mMtx{nullptr};
-    bool mLocked{false};
-
-public:
-    using mutex_type = almtx_t;
-
-    unique_lock() noexcept = default;
-    explicit unique_lock(almtx_t &mtx) : mMtx(&mtx) { almtx_lock(mMtx); mLocked = true; }
-    unique_lock(unique_lock&& rhs) noexcept : mMtx(rhs.mMtx), mLocked(rhs.mLocked)
-    { rhs.mMtx = nullptr; rhs.mLocked = false; }
-    ~unique_lock() { if(mLocked) almtx_unlock(mMtx); }
-
-    unique_lock& operator=(const unique_lock&) = delete;
-    unique_lock& operator=(unique_lock&& rhs)
-    {
-        if(mLocked)
-            almtx_unlock(mMtx);
-        mMtx = rhs.mMtx; rhs.mMtx = nullptr;
-        mLocked = rhs.mLocked; rhs.mLocked = false;
-        return *this;
-    }
-
-    void lock()
-    {
-        almtx_lock(mMtx);
-        mLocked = true;
-    }
-    void unlock()
-    {
-        mLocked = false;
-        almtx_unlock(mMtx);
-    }
-};
-
-} // namespace std
 #endif
 
 #endif /* AL_THREADS_H */

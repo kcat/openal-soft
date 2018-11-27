@@ -78,24 +78,6 @@ void althrd_setname(const char *name)
 }
 
 
-int almtx_init(almtx_t *mtx, int type)
-{
-    if(!mtx) return althrd_error;
-
-    type &= ~almtx_recursive;
-    if(type != almtx_plain)
-        return althrd_error;
-
-    InitializeCriticalSection(mtx);
-    return althrd_success;
-}
-
-void almtx_destroy(almtx_t *mtx)
-{
-    DeleteCriticalSection(mtx);
-}
-
-
 int alsem_init(alsem_t *sem, unsigned int initial)
 {
     *sem = CreateSemaphore(NULL, initial, INT_MAX, NULL);
@@ -155,46 +137,6 @@ void althrd_setname(const char *name)
 #else
     (void)name;
 #endif
-}
-
-
-int almtx_init(almtx_t *mtx, int type)
-{
-    int ret;
-
-    if(!mtx) return althrd_error;
-    if((type&~almtx_recursive) != 0)
-        return althrd_error;
-
-    if(type == almtx_plain)
-        ret = pthread_mutex_init(mtx, NULL);
-    else
-    {
-        pthread_mutexattr_t attr;
-
-        ret = pthread_mutexattr_init(&attr);
-        if(ret) return althrd_error;
-
-        if(type == almtx_recursive)
-        {
-            ret = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-#ifdef HAVE_PTHREAD_MUTEXATTR_SETKIND_NP
-            if(ret != 0)
-                ret = pthread_mutexattr_setkind_np(&attr, PTHREAD_MUTEX_RECURSIVE);
-#endif
-        }
-        else
-            ret = 1;
-        if(ret == 0)
-            ret = pthread_mutex_init(mtx, &attr);
-        pthread_mutexattr_destroy(&attr);
-    }
-    return ret ? althrd_error : althrd_success;
-}
-
-void almtx_destroy(almtx_t *mtx)
-{
-    pthread_mutex_destroy(mtx);
 }
 
 

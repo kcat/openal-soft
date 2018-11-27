@@ -30,14 +30,11 @@ enum {
     almtx_recursive = 1,
 };
 
-typedef int (*althrd_start_t)(void*);
-
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-typedef DWORD althrd_t;
 typedef CRITICAL_SECTION almtx_t;
 typedef HANDLE alsem_t;
 
@@ -81,6 +78,8 @@ typedef dispatch_semaphore_t alsem_t;
 typedef sem_t alsem_t;
 #endif /* __APPLE__ */
 
+typedef int (*althrd_start_t)(void*);
+
 
 inline void althrd_yield(void)
 {
@@ -102,12 +101,12 @@ inline int almtx_unlock(almtx_t *mtx)
     return althrd_success;
 }
 
-#endif
-
-
 int althrd_create(althrd_t *thr, althrd_start_t func, void *arg);
 int althrd_detach(althrd_t thr);
 int althrd_join(althrd_t thr, int *res);
+
+#endif
+
 void althrd_setname(const char *name);
 
 int almtx_init(almtx_t *mtx, int type);

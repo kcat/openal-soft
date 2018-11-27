@@ -26,8 +26,6 @@
 #include <string.h>
 #include <errno.h>
 
-#include "uintmap.h"
-
 
 #ifndef UNUSED
 #if defined(__cplusplus)
@@ -49,15 +47,6 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <mmsystem.h>
-
-
-/* An associative map of uint:void* pairs. The key is the unique Thread ID and
- * the value is the thread HANDLE. The thread ID is passed around as the
- * althrd_t since there is only one ID per thread, whereas a thread may be
- * referenced by multiple different HANDLEs. This map allows retrieving the
- * original handle which is needed to join the thread and get its return value.
- */
-static ThrSafeMap<DWORD,HANDLE> ThrdIdHandle{};
 
 
 void althrd_setname(const char *name)
@@ -86,71 +75,6 @@ void althrd_setname(const char *name)
 #else
     (void)name;
 #endif
-}
-
-
-typedef struct thread_cntr {
-    althrd_start_t func;
-    void *arg;
-} thread_cntr;
-
-static DWORD WINAPI althrd_starter(void *arg)
-{
-    thread_cntr cntr;
-    memcpy(&cntr, arg, sizeof(cntr));
-    free(arg);
-
-    return (DWORD)((*cntr.func)(cntr.arg));
-}
-
-
-int althrd_create(althrd_t *thr, althrd_start_t func, void *arg)
-{
-    thread_cntr *cntr;
-    DWORD thrid;
-    HANDLE hdl;
-
-    cntr = static_cast<thread_cntr*>(malloc(sizeof(*cntr)));
-    if(!cntr) return althrd_nomem;
-
-    cntr->func = func;
-    cntr->arg = arg;
-
-    hdl = CreateThread(NULL, THREAD_STACK_SIZE, althrd_starter, cntr, 0, &thrid);
-    if(!hdl)
-    {
-        free(cntr);
-        return althrd_error;
-    }
-    ThrdIdHandle.InsertEntry(thrid, hdl);
-
-    *thr = thrid;
-    return althrd_success;
-}
-
-int althrd_detach(althrd_t thr)
-{
-    HANDLE hdl = ThrdIdHandle.RemoveKey(thr);
-    if(!hdl) return althrd_error;
-
-    CloseHandle(hdl);
-    return althrd_success;
-}
-
-int althrd_join(althrd_t thr, int *res)
-{
-    DWORD code;
-
-    HANDLE hdl = ThrdIdHandle.RemoveKey(thr);
-    if(!hdl) return althrd_error;
-
-    WaitForSingleObject(hdl, INFINITE);
-    GetExitCodeThread(hdl, &code);
-    CloseHandle(hdl);
-
-    if(res != NULL)
-        *res = (int)code;
-    return althrd_success;
 }
 
 

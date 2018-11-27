@@ -118,7 +118,6 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 #include "alu.h"
 #include "cpu_caps.h"
 #include "fpu_modes.h"
-#include "uintmap.h"
 #include "vector.h"
 #include "compat.h"
 #include "threads.h"

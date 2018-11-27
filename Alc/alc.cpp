@@ -2528,7 +2528,6 @@ static ALvoid InitContext(ALCcontext *Context)
     Context->DopplerVelocity = 1.0f;
     Context->SpeedOfSound = SPEEDOFSOUNDMETRESPERSEC;
     Context->MetersPerUnit = AL_DEFAULT_METERS_PER_UNIT;
-    alsem_init(&Context->EventSem, 0);
 
     Context->ExtensionList = alExtList;
 
@@ -2641,8 +2640,6 @@ ALCcontext_struct::~ALCcontext_struct()
         ++count;
     }
     TRACE("Freed " SZFMT " listener property object%s\n", count, (count==1)?"":"s");
-
-    alsem_destroy(&EventSem);
 
     ll_ringbuffer_free(AsyncEvents);
     AsyncEvents = nullptr;

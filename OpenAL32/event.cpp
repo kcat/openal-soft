@@ -23,7 +23,7 @@ static int EventThread(ALCcontext *context)
         AsyncEvent evt;
         if(ll_ringbuffer_read(context->AsyncEvents, &evt, 1) == 0)
         {
-            alsem_wait(&context->EventSem);
+            context->EventSem.wait();
             continue;
         }
 
@@ -66,7 +66,7 @@ void StopEventThrd(ALCcontext *ctx)
     static constexpr AsyncEvent kill_evt = ASYNC_EVENT(EventType_KillThread);
     while(ll_ringbuffer_write(ctx->AsyncEvents, &kill_evt, 1) == 0)
         std::this_thread::yield();
-    alsem_post(&ctx->EventSem);
+    ctx->EventSem.post();
     if(ctx->EventThread.joinable())
         ctx->EventThread.join();
 }

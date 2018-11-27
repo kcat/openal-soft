@@ -22,25 +22,7 @@
 
 #include "threads.h"
 
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-
-
-#ifndef UNUSED
-#if defined(__cplusplus)
-#define UNUSED(x)
-#elif defined(__GNUC__)
-#define UNUSED(x) UNUSED_##x __attribute__((unused))
-#elif defined(__LCLINT__)
-#define UNUSED(x) /*@unused@*/ x
-#else
-#define UNUSED(x) x
-#endif
-#endif
-
-
-#define THREAD_STACK_SIZE (2*1024*1024) /* 2MB */
+#include <system_error>
 
 #ifdef _WIN32
 
@@ -116,6 +98,7 @@ int alsem_trywait(alsem_t *sem)
 
 #include <sys/time.h>
 #include <unistd.h>
+#include <errno.h>
 #include <pthread.h>
 #ifdef HAVE_PTHREAD_NP_H
 #include <pthread_np.h>
@@ -210,3 +193,32 @@ int alsem_trywait(alsem_t *sem)
 #endif /* __APPLE__ */
 
 #endif
+
+
+namespace al {
+
+semaphore::semaphore(unsigned int initial)
+{
+    if(alsem_init(&mSem, initial) != althrd_success)
+        throw std::system_error(std::make_error_code(std::errc::resource_unavailable_try_again));
+}
+
+semaphore::~semaphore()
+{ alsem_destroy(&mSem); }
+
+void semaphore::post()
+{
+    if(alsem_post(&mSem) != althrd_success)
+        throw std::system_error(std::make_error_code(std::errc::value_too_large));
+}
+
+void semaphore::wait() noexcept
+{
+    while(alsem_wait(&mSem) == -2) {
+    }
+}
+
+int semaphore::trywait() noexcept
+{ return alsem_wait(&mSem) == althrd_success; }
+
+} // namespace al

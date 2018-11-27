@@ -313,7 +313,7 @@ void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
     strcpy(evt.u.user.msg+strpos, " state changed to AL_STOPPED");
 
     if(ll_ringbuffer_write(context->AsyncEvents, &evt, 1) == 1)
-        alsem_post(&context->EventSem);
+        context->EventSem.post();
 }
 
 
@@ -441,7 +441,7 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
             props->State = NULL;
 
             if(LIKELY(ll_ringbuffer_write(context->AsyncEvents, &evt, 1) != 0))
-                alsem_post(&context->EventSem);
+                context->EventSem.post();
             else
             {
                 /* If writing the event failed, the queue was probably full.
@@ -1857,7 +1857,7 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
         ALbitfieldSOFT enabledevt = ctx->EnabledEvts.load(std::memory_order_acquire);
         if((enabledevt&EventType_Disconnected) &&
            ll_ringbuffer_write(ctx->AsyncEvents, &evt, 1) == 1)
-            alsem_post(&ctx->EventSem);
+            ctx->EventSem.post();
 
         std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount.load(std::memory_order_acquire),
             [ctx](ALvoice *voice) -> void

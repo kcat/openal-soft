@@ -111,7 +111,7 @@ struct ALCcontext_struct {
     std::atomic<ALeffectslotArray*> ActiveAuxSlots{nullptr};
 
     std::thread EventThread;
-    alsem_t EventSem;
+    al::semaphore EventSem;
     ll_ringbuffer *AsyncEvents{nullptr};
     std::atomic<ALbitfieldSOFT> EnabledEvts{0u};
     std::mutex EventCbLock;

@@ -705,7 +705,7 @@ void SendStateChangeEvent(ALCcontext *context, ALuint id, ALenum state)
      * it through the async queue to ensure proper ordering.
      */
     if(ll_ringbuffer_write(context->AsyncEvents, &evt, 1) == 1)
-        alsem_post(&context->EventSem);
+        context->EventSem.post();
 }
 
 

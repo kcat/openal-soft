@@ -204,7 +204,7 @@ static void SendAsyncEvent(ALCcontext *context, ALuint enumtype, ALenum type,
     evt.u.user.param = param;
     strcpy(evt.u.user.msg, msg);
     if(ll_ringbuffer_write(context->AsyncEvents, &evt, 1) == 1)
-        alsem_post(&context->EventSem);
+        context->EventSem.post();
 }
 
 

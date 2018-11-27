@@ -63,6 +63,26 @@ int alsem_trywait(alsem_t *sem);
 
 #ifdef __cplusplus
 } // extern "C"
+
+namespace al {
+
+class semaphore {
+    alsem_t mSem;
+
+public:
+    semaphore(unsigned int initial=0);
+    semaphore(const semaphore&) = delete;
+    ~semaphore();
+
+    semaphore& operator=(const semaphore&) = delete;
+
+    void post();
+    void wait() noexcept;
+    int trywait() noexcept;
+};
+
+} // namespace al
+
 #endif
 
 #endif /* AL_THREADS_H */

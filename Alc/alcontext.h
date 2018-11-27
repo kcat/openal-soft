@@ -84,7 +84,7 @@ struct ALCcontext_struct {
     std::atomic_flag PropsClean{true};
     std::atomic<bool> DeferUpdates{false};
 
-    almtx_t PropLock;
+    std::mutex PropLock;
 
     /* Counter for the pre-mixing updates, in 31.1 fixed point (lowest bit
      * indicates if updates are currently happening).

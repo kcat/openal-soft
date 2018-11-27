@@ -135,7 +135,7 @@ AL_API void AL_APIENTRY alEventCallbackSOFT(ALEVENTPROCSOFT callback, void *user
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     std::lock_guard<std::mutex> __{context->EventCbLock};
     context->EventCb = callback;
     context->EventParam = userParam;

@@ -1616,7 +1616,7 @@ void ALCcontext_DeferUpdates(ALCcontext *context)
  */
 void ALCcontext_ProcessUpdates(ALCcontext *context)
 {
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     if(context->DeferUpdates.exchange(false))
     {
         /* Tell the mixer to stop applying updates, then wait for any active
@@ -2260,7 +2260,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 UpdateEffectSlotProps(slot, context);
         }
 
-        std::unique_lock<almtx_t> proplock{context->PropLock};
+        std::unique_lock<std::mutex> proplock{context->PropLock};
         std::unique_lock<almtx_t> slotlock{context->EffectSlotLock};
         for(auto &slot : context->EffectSlotList)
         {
@@ -2513,7 +2513,6 @@ static ALvoid InitContext(ALCcontext *Context)
     struct ALeffectslotArray *auxslots;
 
     //Validate Context
-    almtx_init(&Context->PropLock, almtx_plain);
     almtx_init(&Context->SourceLock, almtx_plain);
     almtx_init(&Context->EffectSlotLock, almtx_plain);
 
@@ -2659,8 +2658,6 @@ ALCcontext_struct::~ALCcontext_struct()
 
     ll_ringbuffer_free(AsyncEvents);
     AsyncEvents = nullptr;
-
-    almtx_destroy(&PropLock);
 
     ALCdevice_DecRef(Device);
 }

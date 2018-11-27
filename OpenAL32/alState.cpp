@@ -79,7 +79,7 @@ AL_API ALvoid AL_APIENTRY alEnable(ALenum capability)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     switch(capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
@@ -97,7 +97,7 @@ AL_API ALvoid AL_APIENTRY alDisable(ALenum capability)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     switch(capability)
     {
     case AL_SOURCE_DISTANCE_MODEL:
@@ -115,7 +115,7 @@ AL_API ALboolean AL_APIENTRY alIsEnabled(ALenum capability)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return AL_FALSE;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     ALboolean value{AL_FALSE};
     switch(capability)
     {
@@ -135,7 +135,7 @@ AL_API ALboolean AL_APIENTRY alGetBoolean(ALenum pname)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return AL_FALSE;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     ALboolean value{AL_FALSE};
     switch(pname)
     {
@@ -190,7 +190,7 @@ AL_API ALdouble AL_APIENTRY alGetDouble(ALenum pname)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return 0.0;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     ALdouble value{0.0};
     switch(pname)
     {
@@ -239,7 +239,7 @@ AL_API ALfloat AL_APIENTRY alGetFloat(ALenum pname)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return 0.0f;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     ALfloat value{0.0f};
     switch(pname)
     {
@@ -288,7 +288,7 @@ AL_API ALint AL_APIENTRY alGetInteger(ALenum pname)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return 0;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     ALint value{0};
     switch(pname)
     {
@@ -337,7 +337,7 @@ extern "C" AL_API ALint64SOFT AL_APIENTRY alGetInteger64SOFT(ALenum pname)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return 0;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     ALint64SOFT value{0};
     switch(pname)
     {
@@ -386,7 +386,7 @@ AL_API void* AL_APIENTRY alGetPointerSOFT(ALenum pname)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return nullptr;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     void *value{nullptr};
     switch(pname)
     {
@@ -648,7 +648,7 @@ AL_API ALvoid AL_APIENTRY alDopplerFactor(ALfloat value)
         alSetError(context.get(), AL_INVALID_VALUE, "Doppler factor %f out of range", value);
     else
     {
-        std::lock_guard<almtx_t> _{context->PropLock};
+        std::lock_guard<std::mutex> _{context->PropLock};
         context->DopplerFactor = value;
         DO_UPDATEPROPS();
     }
@@ -675,7 +675,7 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
         alSetError(context.get(), AL_INVALID_VALUE, "Doppler velocity %f out of range", value);
     else
     {
-        std::lock_guard<almtx_t> _{context->PropLock};
+        std::lock_guard<std::mutex> _{context->PropLock};
         context->DopplerVelocity = value;
         DO_UPDATEPROPS();
     }
@@ -690,7 +690,7 @@ AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat value)
         alSetError(context.get(), AL_INVALID_VALUE, "Speed of sound %f out of range", value);
     else
     {
-        std::lock_guard<almtx_t> _{context->PropLock};
+        std::lock_guard<std::mutex> _{context->PropLock};
         context->SpeedOfSound = value;
         DO_UPDATEPROPS();
     }
@@ -708,7 +708,7 @@ AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
         alSetError(context.get(), AL_INVALID_VALUE, "Distance model 0x%04x out of range", value);
     else
     {
-        std::lock_guard<almtx_t> _{context->PropLock};
+        std::lock_guard<std::mutex> _{context->PropLock};
         context->mDistanceModel = static_cast<DistanceModel>(value);
         if(!context->SourceDistanceModel)
             DO_UPDATEPROPS();

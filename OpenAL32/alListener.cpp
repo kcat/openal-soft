@@ -43,7 +43,7 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
     if(UNLIKELY(!context)) return;
 
     ALlistener &listener = context->Listener;
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     switch(param)
     {
     case AL_GAIN:
@@ -76,7 +76,7 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
     if(UNLIKELY(!context)) return;
 
     ALlistener &listener = context->Listener;
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     switch(param)
     {
     case AL_POSITION:
@@ -125,7 +125,7 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
     if(UNLIKELY(!context)) return;
 
     ALlistener &listener = context->Listener;
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     if(!values) SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "NULL pointer");
     switch(param)
     {
@@ -154,7 +154,7 @@ AL_API ALvoid AL_APIENTRY alListeneri(ALenum param, ALint UNUSED(value))
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     switch(param)
     {
     default:
@@ -176,7 +176,7 @@ AL_API void AL_APIENTRY alListener3i(ALenum param, ALint value1, ALint value2, A
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     switch(param)
     {
     default:
@@ -212,7 +212,7 @@ AL_API void AL_APIENTRY alListeneriv(ALenum param, const ALint *values)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     if(!values)
         alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
@@ -229,7 +229,7 @@ AL_API ALvoid AL_APIENTRY alGetListenerf(ALenum param, ALfloat *value)
     if(UNLIKELY(!context)) return;
 
     ALlistener &listener = context->Listener;
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     if(!value)
         alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
@@ -254,7 +254,7 @@ AL_API ALvoid AL_APIENTRY alGetListener3f(ALenum param, ALfloat *value1, ALfloat
     if(UNLIKELY(!context)) return;
 
     ALlistener &listener = context->Listener;
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     if(!value1 || !value2 || !value3)
         alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
@@ -296,7 +296,7 @@ AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum param, ALfloat *values)
     if(UNLIKELY(!context)) return;
 
     ALlistener &listener = context->Listener;
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     if(!values)
         alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
@@ -322,7 +322,7 @@ AL_API ALvoid AL_APIENTRY alGetListeneri(ALenum param, ALint *value)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     if(!value)
         alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
@@ -339,7 +339,7 @@ AL_API void AL_APIENTRY alGetListener3i(ALenum param, ALint *value1, ALint *valu
     if(UNLIKELY(!context)) return;
 
     ALlistener &listener = context->Listener;
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     if(!value1 || !value2 || !value3)
         alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)
@@ -376,7 +376,7 @@ AL_API void AL_APIENTRY alGetListeneriv(ALenum param, ALint* values)
     if(UNLIKELY(!context)) return;
 
     ALlistener &listener = context->Listener;
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     if(!values)
         alSetError(context.get(), AL_INVALID_VALUE, "NULL pointer");
     else switch(param)

@@ -287,7 +287,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     std::lock_guard<almtx_t> __{context->EffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context.get(), effectslot);
     if(UNLIKELY(!slot))
@@ -358,7 +358,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotf(ALuint effectslot, ALenum param
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     std::lock_guard<almtx_t> __{context->EffectSlotLock};
     ALeffectslot *slot = LookupEffectSlot(context.get(), effectslot);
     if(UNLIKELY(!slot))

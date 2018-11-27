@@ -2192,7 +2192,7 @@ AL_API ALvoid AL_APIENTRY alSourcef(ALuint source, ALenum param, ALfloat value)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     std::lock_guard<almtx_t> __{context->SourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
@@ -2208,7 +2208,7 @@ AL_API ALvoid AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     std::lock_guard<almtx_t> __{context->SourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
@@ -2227,7 +2227,7 @@ AL_API ALvoid AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat 
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     std::lock_guard<almtx_t> __{context->SourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
@@ -2246,7 +2246,7 @@ AL_API ALvoid AL_APIENTRY alSourcedSOFT(ALuint source, ALenum param, ALdouble va
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     std::lock_guard<almtx_t> __{context->SourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
@@ -2265,7 +2265,7 @@ AL_API ALvoid AL_APIENTRY alSource3dSOFT(ALuint source, ALenum param, ALdouble v
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     std::lock_guard<almtx_t> __{context->SourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
@@ -2284,7 +2284,7 @@ AL_API ALvoid AL_APIENTRY alSourcedvSOFT(ALuint source, ALenum param, const ALdo
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     std::lock_guard<almtx_t> __{context->SourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
@@ -2314,7 +2314,7 @@ AL_API ALvoid AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     std::lock_guard<almtx_t> __{context->SourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
@@ -2330,7 +2330,7 @@ AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, AL
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     std::lock_guard<almtx_t> __{context->SourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
@@ -2349,7 +2349,7 @@ AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum param, const ALint *val
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     std::lock_guard<almtx_t> __{context->SourceLock};
     ALsource *Source = LookupSource(context.get(), source);
     if(UNLIKELY(!Source))
@@ -2368,7 +2368,7 @@ AL_API ALvoid AL_APIENTRY alSourcei64SOFT(ALuint source, ALenum param, ALint64SO
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     std::lock_guard<almtx_t> __{context->SourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
@@ -2384,7 +2384,7 @@ AL_API void AL_APIENTRY alSource3i64SOFT(ALuint source, ALenum param, ALint64SOF
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     std::lock_guard<almtx_t> __{context->SourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))
@@ -2403,7 +2403,7 @@ AL_API void AL_APIENTRY alSourcei64vSOFT(ALuint source, ALenum param, const ALin
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    std::lock_guard<almtx_t> _{context->PropLock};
+    std::lock_guard<std::mutex> _{context->PropLock};
     std::lock_guard<almtx_t> __{context->SourceLock};
     ALsource *Source{LookupSource(context.get(), source)};
     if(UNLIKELY(!Source))

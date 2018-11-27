@@ -1208,6 +1208,7 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
     ALeffectslot *slot{nullptr};
     ALbufferlistitem *oldlist{nullptr};
     std::unique_lock<almtx_t> slotlock;
+    std::unique_lock<almtx_t> filtlock;
     std::unique_lock<almtx_t> buflock;
     ALfloat fvals[6];
 
@@ -1335,13 +1336,10 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
             return AL_TRUE;
 
         case AL_DIRECT_FILTER:
-            LockFilterList(device);
+            filtlock = std::unique_lock<almtx_t>{device->FilterLock};
             if(!(*values == 0 || (filter=LookupFilter(device, *values)) != nullptr))
-            {
-                UnlockFilterList(device);
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid filter ID %u",
                               *values);
-            }
 
             if(!filter)
             {
@@ -1359,7 +1357,7 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
                 Source->Direct.GainLF = filter->GainLF;
                 Source->Direct.LFReference = filter->LFReference;
             }
-            UnlockFilterList(device);
+            filtlock.unlock();
             DO_UPDATEPROPS();
             return AL_TRUE;
 
@@ -1427,13 +1425,11 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
                               values[0]);
             if((ALuint)values[1] >= (ALuint)device->NumAuxSends)
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid send %u", values[1]);
-            LockFilterList(device);
+
+            filtlock = std::unique_lock<almtx_t>{device->FilterLock};
             if(!(values[2] == 0 || (filter=LookupFilter(device, values[2])) != nullptr))
-            {
-                UnlockFilterList(device);
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid filter ID %u",
                               values[2]);
-            }
 
             if(!filter)
             {
@@ -1452,7 +1448,7 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
                 Source->Send[values[1]].GainLF = filter->GainLF;
                 Source->Send[values[1]].LFReference = filter->LFReference;
             }
-            UnlockFilterList(device);
+            filtlock.unlock();
 
             if(slot != Source->Send[values[1]].Slot && IsPlayingOrPaused(Source))
             {

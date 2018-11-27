@@ -158,9 +158,9 @@ unsigned int altime_get(void)
 
 #if _POSIX_TIMERS > 0
     struct timespec ts;
-    int ret = clock_gettime(CLOCK_REALTIME, ts);
+    int ret = clock_gettime(CLOCK_REALTIME, &ts);
     if(ret != 0) return 0;
-    cur_time = ts.ts_sec*1000 + ts.ts_nsec/1000000;
+    cur_time = ts.tv_sec*1000 + ts.tv_nsec/1000000;
 #else /* _POSIX_TIMERS > 0 */
     struct timeval tv;
     int ret = gettimeofday(&tv, NULL);

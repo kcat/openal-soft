@@ -872,7 +872,7 @@ inline ALint GetChannelIndex(const enum Channel (&names)[MAX_OUTPUT_CHANNELS], e
 {
     auto iter = std::find(std::begin(names), std::end(names), chan);
     if(iter == std::end(names)) return -1;
-    return std::distance(names, iter);
+    return std::distance(std::begin(names), iter);
 }
 /**
  * GetChannelIdxByName

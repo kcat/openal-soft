@@ -636,7 +636,6 @@ int main()
                 PTHREAD_SETNAME_NP_THREE_PARAMS
             )
         ENDIF()
-        CHECK_SYMBOL_EXISTS(pthread_mutexattr_setkind_np "pthread.h;pthread_np.h" HAVE_PTHREAD_MUTEXATTR_SETKIND_NP)
     ELSE()
         CHECK_SYMBOL_EXISTS(pthread_setname_np pthread.h HAVE_PTHREAD_SETNAME_NP)
         IF(NOT HAVE_PTHREAD_SETNAME_NP)
@@ -661,10 +660,7 @@ int main()
                 PTHREAD_SETNAME_NP_THREE_PARAMS
             )
         ENDIF()
-        CHECK_SYMBOL_EXISTS(pthread_mutexattr_setkind_np pthread.h HAVE_PTHREAD_MUTEXATTR_SETKIND_NP)
     ENDIF()
-
-    CHECK_SYMBOL_EXISTS(pthread_mutex_timedlock pthread.h HAVE_PTHREAD_MUTEX_TIMEDLOCK)
 
     CHECK_LIBRARY_EXISTS(rt clock_gettime "" HAVE_LIBRT)
     IF(HAVE_LIBRT)

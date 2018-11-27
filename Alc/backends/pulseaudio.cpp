@@ -871,7 +871,7 @@ int PulsePlayback_mixerProc(PulsePlayback *self)
     size_t frame_size{pa_frame_size(&self->spec)};
 
     while(!self->mKillNow.load(std::memory_order_acquire) &&
-          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+          device->Connected.load(std::memory_order_acquire))
     {
         ssize_t len{static_cast<ssize_t>(pa_stream_writable_size(self->stream))};
         if(UNLIKELY(len < 0))
@@ -1676,7 +1676,7 @@ ALCuint PulseCapture_availableSamples(PulseCapture *self)
     ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
     size_t readable{self->cap_remain};
 
-    if(ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+    if(device->Connected.load(std::memory_order_acquire))
     {
         palock_guard _{self->loop};
         size_t got{pa_stream_readable_size(self->stream)};

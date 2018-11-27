@@ -301,7 +301,7 @@ static int ALCjackPlayback_mixerProc(void *arg)
 
     ALCjackPlayback_lock(self);
     while(!self->mKillNow.load(std::memory_order_acquire) &&
-          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+          device->Connected.load(std::memory_order_acquire))
     {
         ALuint todo, len1, len2;
 

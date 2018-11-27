@@ -1150,7 +1150,7 @@ ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buffer, ALC
     }
 
     self->mLastAvail -= samples;
-    while(ATOMIC_LOAD(&device->Connected, almemory_order_acquire) && samples > 0)
+    while(device->Connected.load(std::memory_order_acquire) && samples > 0)
     {
         snd_pcm_sframes_t amt{0};
 
@@ -1208,7 +1208,7 @@ ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self)
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
     snd_pcm_sframes_t avail{0};
-    if(ATOMIC_LOAD(&device->Connected, almemory_order_acquire) && self->DoCapture)
+    if(device->Connected.load(std::memory_order_acquire) && self->DoCapture)
         avail = snd_pcm_avail_update(self->PcmHandle);
     if(avail < 0)
     {

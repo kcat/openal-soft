@@ -135,7 +135,7 @@ int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
     ALint64 done{0};
     auto start = std::chrono::steady_clock::now();
     while(!self->mKillNow.load(std::memory_order_acquire) &&
-          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+          device->Connected.load(std::memory_order_acquire))
     {
         auto now = std::chrono::steady_clock::now();
 

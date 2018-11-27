@@ -99,7 +99,7 @@ static int SndioPlayback_mixerProc(void *ptr)
     frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder);
 
     while(!self->mKillNow.load(std::memory_order_acquire) &&
-          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+          device->Connected.load(std::memory_order_acquire))
     {
         ALsizei len = self->data_size;
         ALubyte *WritePtr = static_cast<ALubyte*>(self->mix_data);
@@ -335,7 +335,7 @@ static int SndioCapture_recordProc(void* ptr)
     frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder);
 
     while(!self->mKillNow.load(std::memory_order_acquire) &&
-          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+          device->Connected.load(std::memory_order_acquire))
     {
         size_t total, todo;
 

@@ -206,7 +206,7 @@ FORCE_ALIGN int ALCwinmmPlayback_mixerProc(ALCwinmmPlayback *self)
 
     ALCwinmmPlayback_lock(self);
     while(!self->mKillNow.load(std::memory_order_acquire) &&
-          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+          device->Connected.load(std::memory_order_acquire))
     {
         ALsizei todo = self->Writable.load(std::memory_order_acquire);
         if(todo < 1)
@@ -487,7 +487,7 @@ int ALCwinmmCapture_captureProc(ALCwinmmCapture *self)
 
     ALCwinmmCapture_lock(self);
     while(!self->mKillNow.load(std::memory_order_acquire) &&
-          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+          device->Connected.load(std::memory_order_acquire))
     {
         ALsizei todo = self->Readable.load(std::memory_order_acquire);
         if(todo < 1)

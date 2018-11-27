@@ -248,9 +248,8 @@ static int ALCopenslPlayback_mixerProc(void *arg)
     if(SL_RESULT_SUCCESS != result)
         aluHandleDisconnect(device, "Failed to get playback buffer: 0x%08x", result);
 
-    while(SL_RESULT_SUCCESS == result &&
-          !ATOMIC_LOAD(&self->mKillNow, almemory_order_acquire) &&
-          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+    while(SL_RESULT_SUCCESS == result && !self->mKillNow.load(std::memory_order_acquire) &&
+          device->Connected.load(std::memory_order_acquire))
     {
         size_t todo;
 

@@ -272,7 +272,7 @@ FORCE_ALIGN int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self)
     DWORD LastCursor{0u};
     Buffer->GetCurrentPosition(&LastCursor, nullptr);
     while(!self->mKillNow.load(std::memory_order_acquire) &&
-          ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+          device->Connected.load(std::memory_order_acquire))
     {
         // Get current play cursor
         DWORD PlayCursor;
@@ -901,7 +901,7 @@ ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
-    if(!ATOMIC_LOAD(&device->Connected, almemory_order_acquire))
+    if(!device->Connected.load(std::memory_order_acquire))
         return ll_ringbuffer_read_space(self->Ring);
 
     ALsizei FrameSize{FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder)};

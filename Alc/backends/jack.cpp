@@ -26,6 +26,8 @@
 #include <stdio.h>
 #include <memory.h>
 
+#include <thread>
+
 #include "alMain.h"
 #include "alu.h"
 #include "alconfig.h"
@@ -152,13 +154,13 @@ struct ALCjackPlayback final : public ALCbackend {
     alsem_t Sem;
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
-    althrd_t thread;
+    std::thread mThread;
 };
 
 static int ALCjackPlayback_bufferSizeNotify(jack_nframes_t numframes, void *arg);
 
 static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg);
-static int ALCjackPlayback_mixerProc(void *arg);
+static int ALCjackPlayback_mixerProc(ALCjackPlayback *self);
 
 static void ALCjackPlayback_Construct(ALCjackPlayback *self, ALCdevice *device);
 static void ALCjackPlayback_Destruct(ALCjackPlayback *self);
@@ -291,9 +293,8 @@ static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
     return 0;
 }
 
-static int ALCjackPlayback_mixerProc(void *arg)
+static int ALCjackPlayback_mixerProc(ALCjackPlayback *self)
 {
-    ALCjackPlayback *self = static_cast<ALCjackPlayback*>(arg);
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
 
     SetRTPriority();
@@ -465,25 +466,27 @@ static ALCboolean ALCjackPlayback_start(ALCjackPlayback *self)
     }
     jack_free(ports);
 
-    self->mKillNow.store(AL_FALSE, std::memory_order_release);
-    if(althrd_create(&self->thread, ALCjackPlayback_mixerProc, self) != althrd_success)
-    {
-        jack_deactivate(self->Client);
-        return ALC_FALSE;
+    try {
+        self->mKillNow.store(AL_FALSE, std::memory_order_release);
+        self->mThread = std::thread(ALCjackPlayback_mixerProc, self);
+        return ALC_TRUE;
     }
-
-    return ALC_TRUE;
+    catch(std::exception& e) {
+        ERR("Could not create playback thread: %s\n", e.what());
+    }
+    catch(...) {
+    }
+    jack_deactivate(self->Client);
+    return ALC_FALSE;
 }
 
 static void ALCjackPlayback_stop(ALCjackPlayback *self)
 {
-    int res;
-
-    if(self->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel))
+    if(self->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->mThread.joinable())
         return;
 
     alsem_post(&self->Sem);
-    althrd_join(self->thread, &res);
+    self->mThread.join();
 
     jack_deactivate(self->Client);
 }

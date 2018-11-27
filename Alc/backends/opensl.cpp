@@ -26,6 +26,8 @@
 #include <stdlib.h>
 #include <jni.h>
 
+#include <thread>
+
 #include "alMain.h"
 #include "alu.h"
 #include "ringbuffer.h"
@@ -149,11 +151,11 @@ struct ALCopenslPlayback final : public ALCbackend {
     ALsizei mFrameSize{0};
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
-    althrd_t mThread;
+    std::thread mThread;
 };
 
 static void ALCopenslPlayback_process(SLAndroidSimpleBufferQueueItf bq, void *context);
-static int ALCopenslPlayback_mixerProc(void *arg);
+static int ALCopenslPlayback_mixerProc(ALCopenslPlayback *self);
 
 static void ALCopenslPlayback_Construct(ALCopenslPlayback *self, ALCdevice *device);
 static void ALCopenslPlayback_Destruct(ALCopenslPlayback *self);
@@ -224,9 +226,8 @@ static void ALCopenslPlayback_process(SLAndroidSimpleBufferQueueItf UNUSED(bq), 
 }
 
 
-static int ALCopenslPlayback_mixerProc(void *arg)
+static int ALCopenslPlayback_mixerProc(ALCopenslPlayback *self)
 {
-    ALCopenslPlayback *self = static_cast<ALCopenslPlayback*>(arg);
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
     SLAndroidSimpleBufferQueueItf bufferQueue;
     SLPlayItf player;
@@ -580,14 +581,17 @@ static ALCboolean ALCopenslPlayback_start(ALCopenslPlayback *self)
     if(SL_RESULT_SUCCESS != result)
         return ALC_FALSE;
 
-    self->mKillNow.store(AL_FALSE);
-    if(althrd_create(&self->mThread, ALCopenslPlayback_mixerProc, self) != althrd_success)
-    {
-        ERR("Failed to start mixer thread\n");
-        return ALC_FALSE;
+    try {
+        self->mKillNow.store(AL_FALSE);
+        self->mThread = std::thread(ALCopenslPlayback_mixerProc, self);
+        return ALC_TRUE;
     }
-
-    return ALC_TRUE;
+    catch(std::exception& e) {
+        ERR("Could not create playback thread: %s\n", e.what());
+    }
+    catch(...) {
+    }
+    return ALC_FALSE;
 }
 
 
@@ -596,13 +600,12 @@ static void ALCopenslPlayback_stop(ALCopenslPlayback *self)
     SLAndroidSimpleBufferQueueItf bufferQueue;
     SLPlayItf player;
     SLresult result;
-    int res;
 
-    if(self->mKillNow.exchange(AL_TRUE))
+    if(self->mKillNow.exchange(AL_TRUE) || !self->mThread.joinable())
         return;
 
     alsem_post(&self->mSem);
-    althrd_join(self->mThread, &res);
+    self->mThread.join();
 
     result = VCALL(self->mBufferQueueObj,GetInterface)(SL_IID_PLAY, &player);
     PRINTERR(result, "bufferQueue->GetInterface");

@@ -4,21 +4,6 @@
 #include <atomic>
 
 
-#define almemory_order std::memory_order
-#define almemory_order_relaxed std::memory_order_relaxed
-#define almemory_order_consume std::memory_order_consume
-#define almemory_order_acquire std::memory_order_acquire
-#define almemory_order_release std::memory_order_release
-#define almemory_order_acq_rel std::memory_order_acq_rel
-#define almemory_order_seq_cst std::memory_order_seq_cst
-
-#define ATOMIC_LOAD std::atomic_load_explicit
-#define ATOMIC_STORE std::atomic_store_explicit
-
-#define ATOMIC_LOAD_SEQ(_val) ATOMIC_LOAD(_val, almemory_order_seq_cst)
-#define ATOMIC_STORE_SEQ(_val, _newval) ATOMIC_STORE(_val, _newval, almemory_order_seq_cst)
-
-
 using RefCount = std::atomic<unsigned int>;
 
 inline void InitRef(RefCount *ptr, unsigned int value)

@@ -552,7 +552,7 @@ ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
         if(props->State)
             props->State->DecRef();
         props->State = nullptr;
-        props = ATOMIC_LOAD(&props->next, almemory_order_relaxed);
+        props = props->next.load(std::memory_order_relaxed);
     }
 
     return AL_NO_ERROR;

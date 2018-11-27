@@ -38,7 +38,7 @@ static int EventThread(ALCcontext *context)
                 continue;
             }
 
-            ALbitfieldSOFT enabledevts{ATOMIC_LOAD(&context->EnabledEvts, almemory_order_acquire)};
+            ALbitfieldSOFT enabledevts{context->EnabledEvts.load(std::memory_order_acquire)};
             if(context->EventCb && (enabledevts&evt.EnumType) == evt.EnumType)
                 context->EventCb(evt.u.user.type, evt.u.user.id, evt.u.user.param,
                     (ALsizei)strlen(evt.u.user.msg), evt.u.user.msg, context->EventParam

@@ -580,7 +580,7 @@ static ALCboolean ALCopenslPlayback_start(ALCopenslPlayback *self)
     if(SL_RESULT_SUCCESS != result)
         return ALC_FALSE;
 
-    ATOMIC_STORE_SEQ(&self->mKillNow, AL_FALSE);
+    self->mKillNow.store(AL_FALSE);
     if(althrd_create(&self->mThread, ALCopenslPlayback_mixerProc, self) != althrd_success)
     {
         ERR("Failed to start mixer thread\n");

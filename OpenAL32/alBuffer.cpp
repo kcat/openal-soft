@@ -235,7 +235,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
                           NameFromUserFmtType(SrcType));
     }
 
-    ALsizei unpackalign{ATOMIC_LOAD_SEQ(&ALBuf->UnpackAlign)};
+    ALsizei unpackalign{ALBuf->UnpackAlign.load()};
     ALsizei align{SanitizeAlignment(SrcType, unpackalign)};
     if(UNLIKELY(align < 1))
         SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid unpack alignment %d for %s samples",
@@ -682,7 +682,7 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
         return;
     }
 
-    ALsizei unpack_align{ATOMIC_LOAD_SEQ(&albuf->UnpackAlign)};
+    ALsizei unpack_align{albuf->UnpackAlign.load()};
     ALsizei align{SanitizeAlignment(srctype, unpack_align)};
     if(UNLIKELY(align < 1))
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid unpack alignment %d", unpack_align);
@@ -854,14 +854,14 @@ AL_API void AL_APIENTRY alBufferi(ALuint buffer, ALenum param, ALint value)
         if(UNLIKELY(value < 0))
             alSetError(context.get(), AL_INVALID_VALUE, "Invalid unpack block alignment %d", value);
         else
-            ATOMIC_STORE_SEQ(&albuf->UnpackAlign, value);
+            albuf->UnpackAlign.store(value);
         break;
 
     case AL_PACK_BLOCK_ALIGNMENT_SOFT:
         if(UNLIKELY(value < 0))
             alSetError(context.get(), AL_INVALID_VALUE, "Invalid pack block alignment %d", value);
         else
-            ATOMIC_STORE_SEQ(&albuf->PackAlign, value);
+            albuf->PackAlign.store(value);
         break;
 
     default:
@@ -1036,11 +1036,11 @@ AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum param, ALint *value
         break;
 
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:
-        *value = ATOMIC_LOAD_SEQ(&albuf->UnpackAlign);
+        *value = albuf->UnpackAlign.load();
         break;
 
     case AL_PACK_BLOCK_ALIGNMENT_SOFT:
-        *value = ATOMIC_LOAD_SEQ(&albuf->PackAlign);
+        *value = albuf->PackAlign.load();
         break;
 
     default:

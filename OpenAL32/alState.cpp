@@ -659,7 +659,7 @@ AL_API ALvoid AL_APIENTRY alDopplerVelocity(ALfloat value)
     ContextRef context{GetContextRef()};
     if(UNLIKELY(!context)) return;
 
-    if((ATOMIC_LOAD(&context->EnabledEvts, almemory_order_relaxed)&EventType_Deprecated))
+    if((context->EnabledEvts.load(std::memory_order_relaxed)&EventType_Deprecated))
     {
         static constexpr ALCchar msg[] =
             "alDopplerVelocity is deprecated in AL1.1, use alSpeedOfSound";

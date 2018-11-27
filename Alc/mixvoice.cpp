@@ -706,7 +706,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
             DataPosInt -= BufferListItem->max_samples;
 
             buffers_done += BufferListItem->num_buffers;
-            BufferListItem = ATOMIC_LOAD(&BufferListItem->next, almemory_order_relaxed);
+            BufferListItem = BufferListItem->next.load(std::memory_order_relaxed);
             if(!BufferListItem && !(BufferListItem=BufferLoopItem))
             {
                 isplaying = false;

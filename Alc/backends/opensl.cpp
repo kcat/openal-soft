@@ -146,7 +146,7 @@ struct ALCopenslPlayback final : public ALCbackend {
     SLObjectItf mBufferQueueObj{nullptr};
 
     ll_ringbuffer_t *mRing{nullptr};
-    alsem_t mSem;
+    al::semaphore mSem;
 
     ALsizei mFrameSize{0};
 
@@ -178,8 +178,6 @@ static void ALCopenslPlayback_Construct(ALCopenslPlayback *self, ALCdevice *devi
     new (self) ALCopenslPlayback{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCopenslPlayback, ALCbackend, self);
-
-    alsem_init(&self->mSem, 0);
 }
 
 static void ALCopenslPlayback_Destruct(ALCopenslPlayback* self)
@@ -199,8 +197,6 @@ static void ALCopenslPlayback_Destruct(ALCopenslPlayback* self)
 
     ll_ringbuffer_free(self->mRing);
     self->mRing = NULL;
-
-    alsem_destroy(&self->mSem);
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCopenslPlayback();
@@ -222,7 +218,7 @@ static void ALCopenslPlayback_process(SLAndroidSimpleBufferQueueItf UNUSED(bq), 
      */
     ll_ringbuffer_read_advance(self->mRing, 1);
 
-    alsem_post(&self->mSem);
+    self->mSem.post();
 }
 
 
@@ -274,7 +270,7 @@ static int ALCopenslPlayback_mixerProc(ALCopenslPlayback *self)
             if(ll_ringbuffer_write_space(self->mRing) == 0)
             {
                 ALCopenslPlayback_unlock(self);
-                alsem_wait(&self->mSem);
+                self->mSem.wait();
                 ALCopenslPlayback_lock(self);
                 continue;
             }
@@ -604,7 +600,7 @@ static void ALCopenslPlayback_stop(ALCopenslPlayback *self)
     if(self->mKillNow.exchange(AL_TRUE) || !self->mThread.joinable())
         return;
 
-    alsem_post(&self->mSem);
+    self->mSem.post();
     self->mThread.join();
 
     result = VCALL(self->mBufferQueueObj,GetInterface)(SL_IID_PLAY, &player);

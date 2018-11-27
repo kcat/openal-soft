@@ -151,7 +151,7 @@ struct ALCjackPlayback final : public ALCbackend {
     jack_port_t *Port[MAX_OUTPUT_CHANNELS]{};
 
     ll_ringbuffer_t *Ring{nullptr};
-    alsem_t Sem;
+    al::semaphore Sem;
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
@@ -183,8 +183,6 @@ static void ALCjackPlayback_Construct(ALCjackPlayback *self, ALCdevice *device)
     new (self) ALCjackPlayback{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCjackPlayback, ALCbackend, self);
-
-    alsem_init(&self->Sem, 0);
 }
 
 static void ALCjackPlayback_Destruct(ALCjackPlayback *self)
@@ -200,8 +198,6 @@ static void ALCjackPlayback_Destruct(ALCjackPlayback *self)
         jack_client_close(self->Client);
         self->Client = NULL;
     }
-
-    alsem_destroy(&self->Sem);
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCjackPlayback();
@@ -278,7 +274,7 @@ static int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
     }
 
     ll_ringbuffer_read_advance(self->Ring, total);
-    alsem_post(&self->Sem);
+    self->Sem.post();
 
     if(numframes > total)
     {
@@ -309,7 +305,7 @@ static int ALCjackPlayback_mixerProc(ALCjackPlayback *self)
         if(ll_ringbuffer_write_space(self->Ring) < device->UpdateSize)
         {
             ALCjackPlayback_unlock(self);
-            alsem_wait(&self->Sem);
+            self->Sem.wait();
             ALCjackPlayback_lock(self);
             continue;
         }
@@ -485,7 +481,7 @@ static void ALCjackPlayback_stop(ALCjackPlayback *self)
     if(self->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel) || !self->mThread.joinable())
         return;
 
-    alsem_post(&self->Sem);
+    self->Sem.post();
     self->mThread.join();
 
     jack_deactivate(self->Client);

@@ -122,7 +122,7 @@ void ProbeCaptureDevices(void)
 
 struct ALCwinmmPlayback final : public ALCbackend {
     std::atomic<ALuint> Writable{0u};
-    alsem_t Sem;
+    al::semaphore Sem;
     int Idx{0};
     std::array<WAVEHDR,4> WaveBuffer;
 
@@ -160,7 +160,6 @@ void ALCwinmmPlayback_Construct(ALCwinmmPlayback *self, ALCdevice *device)
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCwinmmPlayback, ALCbackend, self);
 
-    alsem_init(&self->Sem, 0);
     std::fill(self->WaveBuffer.begin(), self->WaveBuffer.end(), WAVEHDR{});
 }
 
@@ -172,8 +171,6 @@ void ALCwinmmPlayback_Destruct(ALCwinmmPlayback *self)
 
     al_free(self->WaveBuffer[0].lpData);
     std::fill(self->WaveBuffer.begin(), self->WaveBuffer.end(), WAVEHDR{});
-
-    alsem_destroy(&self->Sem);
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCwinmmPlayback();
@@ -194,7 +191,7 @@ void CALLBACK ALCwinmmPlayback_waveOutProc(HWAVEOUT UNUSED(device), UINT msg,
 
     auto self = reinterpret_cast<ALCwinmmPlayback*>(instance);
     self->Writable.fetch_add(1, std::memory_order_acq_rel);
-    alsem_post(&self->Sem);
+    self->Sem.post();
 }
 
 FORCE_ALIGN int ALCwinmmPlayback_mixerProc(ALCwinmmPlayback *self)
@@ -212,7 +209,7 @@ FORCE_ALIGN int ALCwinmmPlayback_mixerProc(ALCwinmmPlayback *self)
         if(todo < 1)
         {
             ALCwinmmPlayback_unlock(self);
-            alsem_wait(&self->Sem);
+            self->Sem.wait();
             ALCwinmmPlayback_lock(self);
             continue;
         }
@@ -387,7 +384,7 @@ void ALCwinmmPlayback_stop(ALCwinmmPlayback *self)
     self->mThread.join();
 
     while(self->Writable.load(std::memory_order_acquire) < self->WaveBuffer.size())
-        alsem_wait(&self->Sem);
+        self->Sem.wait();
     std::for_each(self->WaveBuffer.begin(), self->WaveBuffer.end(),
         [self](WAVEHDR &waveHdr) -> void
         { waveOutUnprepareHeader(self->OutHdl, &waveHdr, sizeof(WAVEHDR)); }
@@ -398,7 +395,7 @@ void ALCwinmmPlayback_stop(ALCwinmmPlayback *self)
 
 struct ALCwinmmCapture final : public ALCbackend {
     std::atomic<ALuint> Readable{0u};
-    alsem_t Sem;
+    al::semaphore Sem;
     int Idx{0};
     std::array<WAVEHDR,4> WaveBuffer;
 
@@ -438,7 +435,6 @@ void ALCwinmmCapture_Construct(ALCwinmmCapture *self, ALCdevice *device)
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(ALCwinmmCapture, ALCbackend, self);
 
-    alsem_init(&self->Sem, 0);
     std::fill(self->WaveBuffer.begin(), self->WaveBuffer.end(), WAVEHDR{});
 }
 
@@ -454,8 +450,6 @@ void ALCwinmmCapture_Destruct(ALCwinmmCapture *self)
 
     ll_ringbuffer_free(self->Ring);
     self->Ring = nullptr;
-
-    alsem_destroy(&self->Sem);
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCwinmmCapture();
@@ -476,7 +470,7 @@ void CALLBACK ALCwinmmCapture_waveInProc(HWAVEIN UNUSED(device), UINT msg,
 
     auto self = reinterpret_cast<ALCwinmmCapture*>(instance);
     self->Readable.fetch_add(1, std::memory_order_acq_rel);
-    alsem_post(&self->Sem);
+    self->Sem.post();
 }
 
 int ALCwinmmCapture_captureProc(ALCwinmmCapture *self)
@@ -493,7 +487,7 @@ int ALCwinmmCapture_captureProc(ALCwinmmCapture *self)
         if(todo < 1)
         {
             ALCwinmmCapture_unlock(self);
-            alsem_wait(&self->Sem);
+            self->Sem.wait();
             ALCwinmmCapture_lock(self);
             continue;
         }
@@ -639,7 +633,7 @@ void ALCwinmmCapture_stop(ALCwinmmCapture *self)
     self->mKillNow.store(AL_TRUE, std::memory_order_release);
     if(self->mThread.joinable())
     {
-        alsem_post(&self->Sem);
+        self->Sem.post();
         self->mThread.join();
     }
 

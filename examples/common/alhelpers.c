@@ -29,6 +29,7 @@
  * channel configs and sample types. */
 
 #include <stdio.h>
+#include <errno.h>
 #include <string.h>
 
 #include "AL/al.h"

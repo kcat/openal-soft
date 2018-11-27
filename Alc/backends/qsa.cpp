@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <memory.h>
 
+#include <memory>
 #include <algorithm>
 
 #include "alMain.h"
@@ -42,16 +43,16 @@
 namespace {
 
 struct qsa_data {
-    snd_pcm_t* pcmHandle;
-    int audio_fd;
+    snd_pcm_t* pcmHandle{nullptr};
+    int audio_fd{-1};
 
-    snd_pcm_channel_setup_t  csetup;
-    snd_pcm_channel_params_t cparams;
+    snd_pcm_channel_setup_t  csetup{};
+    snd_pcm_channel_params_t cparams{};
 
-    ALvoid* buffer;
-    ALsizei size;
+    ALvoid* buffer{nullptr};
+    ALsizei size{0};
 
-    std::atomic<ALenum> mKillNow;
+    std::atomic<ALenum> mKillNow{AL_TRUE};
     althrd_t thread;
 };
 
@@ -169,7 +170,7 @@ void deviceList(int type, al::vector<DevMap> *devmap)
 
 /* Wrappers to use an old-style backend with the new interface. */
 struct PlaybackWrapper final : public ALCbackend {
-    qsa_data *ExtraData;
+    std::unique_ptr<qsa_data> ExtraData;
 };
 
 static void PlaybackWrapper_Construct(PlaybackWrapper *self, ALCdevice *device);
@@ -282,13 +283,10 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
 static ALCenum qsa_open_playback(PlaybackWrapper *self, const ALCchar* deviceName)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
-    qsa_data *data;
     int card, dev;
     int status;
 
-    data = (qsa_data*)calloc(1, sizeof(qsa_data));
-    if(data == NULL)
-        return ALC_OUT_OF_MEMORY;
+    std::unique_ptr<qsa_data> data{new qsa_data{}};
     data->mKillNow.store(AL_TRUE, std::memory_order_relaxed);
 
     if(!deviceName)
@@ -306,37 +304,30 @@ static ALCenum qsa_open_playback(PlaybackWrapper *self, const ALCchar* deviceNam
             { return entry.name && strcmp(deviceName, entry.name) == 0; }
         );
         if(iter == DeviceNameMap.cend())
-        {
-            free(data);
             return ALC_INVALID_DEVICE;
-        }
 
         status = snd_pcm_open(&data->pcmHandle, iter->card, iter->dev, SND_PCM_OPEN_PLAYBACK);
     }
 
     if(status < 0)
-    {
-        free(data);
         return ALC_INVALID_DEVICE;
-    }
 
     data->audio_fd = snd_pcm_file_descriptor(data->pcmHandle, SND_PCM_CHANNEL_PLAYBACK);
     if(data->audio_fd < 0)
     {
         snd_pcm_close(data->pcmHandle);
-        free(data);
         return ALC_INVALID_DEVICE;
     }
 
     device->DeviceName = deviceName;
-    self->ExtraData = data;
+    self->ExtraData = std::move(data);
 
     return ALC_NO_ERROR;
 }
 
 static void qsa_close_playback(PlaybackWrapper *self)
 {
-    qsa_data *data = self->ExtraData;
+    qsa_data *data = self->ExtraData.get();
 
     if (data->buffer!=NULL)
     {
@@ -345,15 +336,14 @@ static void qsa_close_playback(PlaybackWrapper *self)
     }
 
     snd_pcm_close(data->pcmHandle);
-    free(data);
 
-    self->ExtraData = NULL;
+    self->ExtraData = nullptr;
 }
 
 static ALCboolean qsa_reset_playback(PlaybackWrapper *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
-    qsa_data *data = self->ExtraData;
+    qsa_data *data = self->ExtraData.get();
     int32_t format=-1;
 
     switch(device->FmtType)
@@ -600,7 +590,7 @@ static ALCboolean qsa_reset_playback(PlaybackWrapper *self)
 
 static ALCboolean qsa_start_playback(PlaybackWrapper *self)
 {
-    qsa_data *data = self->ExtraData;
+    qsa_data *data = self->ExtraData.get();
 
     data->mKillNow.store(AL_FALSE, std::memory_order_release);
     if(althrd_create(&data->thread, qsa_proc_playback, self) != althrd_success)
@@ -611,7 +601,7 @@ static ALCboolean qsa_start_playback(PlaybackWrapper *self)
 
 static void qsa_stop_playback(PlaybackWrapper *self)
 {
-    qsa_data *data = self->ExtraData;
+    qsa_data *data = self->ExtraData.get();
     int res;
 
     if(data->mKillNow.exchange(AL_TRUE, std::memory_order_acq_rel))
@@ -665,7 +655,7 @@ static void PlaybackWrapper_stop(PlaybackWrapper *self)
 /***********/
 
 struct CaptureWrapper final : public ALCbackend {
-    qsa_data *ExtraData;
+    std::unique_ptr<qsa_data> ExtraData;
 };
 
 static void CaptureWrapper_Construct(CaptureWrapper *self, ALCdevice *device);
@@ -686,16 +676,11 @@ DEFINE_ALCBACKEND_VTABLE(CaptureWrapper);
 static ALCenum qsa_open_capture(CaptureWrapper *self, const ALCchar *deviceName)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
-    qsa_data *data;
     int card, dev;
     int format=-1;
     int status;
 
-    data=(qsa_data*)calloc(1, sizeof(qsa_data));
-    if (data==NULL)
-    {
-        return ALC_OUT_OF_MEMORY;
-    }
+    std::unique_ptr<qsa_data> data{new qsa_data{}};
 
     if(!deviceName)
         deviceName = qsaDevice;
@@ -712,30 +697,22 @@ static ALCenum qsa_open_capture(CaptureWrapper *self, const ALCchar *deviceName)
             { return entry.name && strcmp(deviceName, entry.name) == 0; }
         );
         if(iter == CaptureNameMap.cend())
-        {
-            free(data);
             return ALC_INVALID_DEVICE;
-        }
 
         status = snd_pcm_open(&data->pcmHandle, iter->card, iter->dev, SND_PCM_OPEN_CAPTURE);
     }
 
     if(status < 0)
-    {
-        free(data);
         return ALC_INVALID_DEVICE;
-    }
 
     data->audio_fd = snd_pcm_file_descriptor(data->pcmHandle, SND_PCM_CHANNEL_CAPTURE);
     if(data->audio_fd < 0)
     {
         snd_pcm_close(data->pcmHandle);
-        free(data);
         return ALC_INVALID_DEVICE;
     }
 
     device->DeviceName = deviceName;
-    self->ExtraData = data;
 
     switch (device->FmtType)
     {
@@ -787,28 +764,28 @@ static ALCenum qsa_open_capture(CaptureWrapper *self, const ALCchar *deviceName)
     if(snd_pcm_plugin_params(data->pcmHandle, &data->cparams) < 0)
     {
         snd_pcm_close(data->pcmHandle);
-        free(data);
-
         return ALC_INVALID_VALUE;
     }
+
+    self->ExtraData = std::move(data);
 
     return ALC_NO_ERROR;
 }
 
 static void qsa_close_capture(CaptureWrapper *self)
 {
-    qsa_data *data = self->ExtraData;
+    qsa_data *data = self->ExtraData.get();
 
-    if (data->pcmHandle!=NULL)
+    if (data->pcmHandle!=nullptr)
         snd_pcm_close(data->pcmHandle);
+    data->pcmHandle = nullptr
 
-    free(data);
-    self->ExtraData = NULL;
+    self->ExtraData = nullptr;
 }
 
 static void qsa_start_capture(CaptureWrapper *self)
 {
-    qsa_data *data = self->ExtraData;
+    qsa_data *data = self->ExtraData.get();
     int rstatus;
 
     if ((rstatus=snd_pcm_plugin_prepare(data->pcmHandle, SND_PCM_CHANNEL_CAPTURE))<0)
@@ -830,14 +807,14 @@ static void qsa_start_capture(CaptureWrapper *self)
 
 static void qsa_stop_capture(CaptureWrapper *self)
 {
-    qsa_data *data = self->ExtraData;
+    qsa_data *data = self->ExtraData.get();
     snd_pcm_capture_flush(data->pcmHandle);
 }
 
 static ALCuint qsa_available_samples(CaptureWrapper *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
-    qsa_data *data = self->ExtraData;
+    qsa_data *data = self->ExtraData.get();
     snd_pcm_channel_status_t status;
     ALint frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder);
     ALint free_size;
@@ -869,7 +846,7 @@ static ALCuint qsa_available_samples(CaptureWrapper *self)
 static ALCenum qsa_capture_samples(CaptureWrapper *self, ALCvoid *buffer, ALCuint samples)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
-    qsa_data *data = self->ExtraData;
+    qsa_data *data = self->ExtraData.get();
     char* read_ptr;
     snd_pcm_channel_status_t status;
     fd_set rfds;
@@ -949,8 +926,6 @@ static void CaptureWrapper_Construct(CaptureWrapper *self, ALCdevice *device)
     new (self) CaptureWrapper{};
     ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
     SET_VTABLE2(CaptureWrapper, ALCbackend, self);
-
-    self->ExtraData = NULL;
 }
 
 static void CaptureWrapper_Destruct(CaptureWrapper *self)

@@ -1724,7 +1724,7 @@ ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, AL
              * clock time with the device latency. Order is important.
              */
             values[0] = GetSourceSecOffset(Source, Context, &srcclock);
-            { std::lock_guard<almtx_t> _{device->BackendLock};
+            { std::lock_guard<std::mutex> _{device->BackendLock};
                 clocktime = GetClockLatency(device);
             }
             if(srcclock == clocktime.ClockTime)
@@ -1987,7 +1987,7 @@ ALboolean GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, 
              * clock time with the device latency. Order is important.
              */
             values[0] = GetSourceSampleOffset(Source, Context, &srcclock);
-            { std::lock_guard<almtx_t> _{device->BackendLock};
+            { std::lock_guard<std::mutex> _{device->BackendLock};
                 clocktime = GetClockLatency(device);
             }
             if(srcclock == clocktime.ClockTime)

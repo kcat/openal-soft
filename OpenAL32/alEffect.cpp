@@ -209,9 +209,8 @@ void InitEffectParams(ALeffect *effect, ALenum type)
 
 ALeffect *AllocEffect(ALCcontext *context)
 {
-    ALCdevice *device = context->Device;
-    almtx_lock(&device->EffectLock);
-
+    ALCdevice *device{context->Device};
+    std::lock_guard<std::mutex> _{device->EffectLock};
     auto sublist = std::find_if(device->EffectList.begin(), device->EffectList.end(),
         [](const EffectSubList &entry) noexcept -> bool
         { return entry.FreeMask != 0; }
@@ -232,7 +231,6 @@ ALeffect *AllocEffect(ALCcontext *context)
          */
         if(UNLIKELY(device->EffectList.size() >= 1<<25))
         {
-            almtx_unlock(&device->EffectLock);
             alSetError(context, AL_OUT_OF_MEMORY, "Too many effects allocated");
             return NULL;
         }
@@ -243,7 +241,6 @@ ALeffect *AllocEffect(ALCcontext *context)
         if(UNLIKELY(!sublist->Effects))
         {
             device->EffectList.pop_back();
-            almtx_unlock(&device->EffectLock);
             alSetError(context, AL_OUT_OF_MEMORY, "Failed to allocate effect batch");
             return NULL;
         }
@@ -259,7 +256,6 @@ ALeffect *AllocEffect(ALCcontext *context)
     effect->id = ((lidx<<6) | slidx) + 1;
 
     sublist->FreeMask &= ~(U64(1)<<slidx);
-    almtx_unlock(&device->EffectLock);
 
     return effect;
 }
@@ -342,7 +338,7 @@ AL_API ALvoid AL_APIENTRY alDeleteEffects(ALsizei n, const ALuint *effects)
         return;
 
     ALCdevice *device{context->Device};
-    std::lock_guard<almtx_t> _{device->EffectLock};
+    std::lock_guard<std::mutex> _{device->EffectLock};
 
     /* First try to find any effects that are invalid. */
     const ALuint *effects_end = effects + n;
@@ -378,7 +374,7 @@ AL_API ALboolean AL_APIENTRY alIsEffect(ALuint effect)
     if(LIKELY(context))
     {
         ALCdevice *device{context->Device};
-        std::lock_guard<almtx_t> _{device->EffectLock};
+        std::lock_guard<std::mutex> _{device->EffectLock};
         if(!effect || LookupEffect(device, effect))
             return AL_TRUE;
     }
@@ -391,7 +387,7 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint value)
     if(UNLIKELY(!context)) return;
 
     ALCdevice *device{context->Device};
-    std::lock_guard<almtx_t> _{device->EffectLock};
+    std::lock_guard<std::mutex> _{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
     if(UNLIKELY(!aleffect))
@@ -433,7 +429,7 @@ AL_API ALvoid AL_APIENTRY alEffectiv(ALuint effect, ALenum param, const ALint *v
     if(UNLIKELY(!context)) return;
 
     ALCdevice *device{context->Device};
-    std::lock_guard<almtx_t> _{device->EffectLock};
+    std::lock_guard<std::mutex> _{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
     if(UNLIKELY(!aleffect))
@@ -451,7 +447,7 @@ AL_API ALvoid AL_APIENTRY alEffectf(ALuint effect, ALenum param, ALfloat value)
     if(UNLIKELY(!context)) return;
 
     ALCdevice *device{context->Device};
-    std::lock_guard<almtx_t> _{device->EffectLock};
+    std::lock_guard<std::mutex> _{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
     if(UNLIKELY(!aleffect))
@@ -469,7 +465,7 @@ AL_API ALvoid AL_APIENTRY alEffectfv(ALuint effect, ALenum param, const ALfloat 
     if(UNLIKELY(!context)) return;
 
     ALCdevice *device{context->Device};
-    std::lock_guard<almtx_t> _{device->EffectLock};
+    std::lock_guard<std::mutex> _{device->EffectLock};
 
     ALeffect *aleffect{LookupEffect(device, effect)};
     if(UNLIKELY(!aleffect))
@@ -487,7 +483,7 @@ AL_API ALvoid AL_APIENTRY alGetEffecti(ALuint effect, ALenum param, ALint *value
     if(UNLIKELY(!context)) return;
 
     ALCdevice *device{context->Device};
-    std::lock_guard<almtx_t> _{device->EffectLock};
+    std::lock_guard<std::mutex> _{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if(UNLIKELY(!aleffect))
@@ -517,7 +513,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectiv(ALuint effect, ALenum param, ALint *valu
     if(UNLIKELY(!context)) return;
 
     ALCdevice *device{context->Device};
-    std::lock_guard<almtx_t> _{device->EffectLock};
+    std::lock_guard<std::mutex> _{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if(UNLIKELY(!aleffect))
@@ -535,7 +531,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectf(ALuint effect, ALenum param, ALfloat *val
     if(UNLIKELY(!context)) return;
 
     ALCdevice *device{context->Device};
-    std::lock_guard<almtx_t> _{device->EffectLock};
+    std::lock_guard<std::mutex> _{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if(UNLIKELY(!aleffect))
@@ -553,7 +549,7 @@ AL_API ALvoid AL_APIENTRY alGetEffectfv(ALuint effect, ALenum param, ALfloat *va
     if(UNLIKELY(!context)) return;
 
     ALCdevice *device{context->Device};
-    std::lock_guard<almtx_t> _{device->EffectLock};
+    std::lock_guard<std::mutex> _{device->EffectLock};
 
     const ALeffect *aleffect{LookupEffect(device, effect)};
     if(UNLIKELY(!aleffect))

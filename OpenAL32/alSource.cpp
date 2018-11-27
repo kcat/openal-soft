@@ -1208,8 +1208,8 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
     ALeffectslot *slot{nullptr};
     ALbufferlistitem *oldlist{nullptr};
     std::unique_lock<std::mutex> slotlock;
-    std::unique_lock<almtx_t> filtlock;
-    std::unique_lock<almtx_t> buflock;
+    std::unique_lock<std::mutex> filtlock;
+    std::unique_lock<std::mutex> buflock;
     ALfloat fvals[6];
 
     switch(prop)
@@ -1254,7 +1254,7 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
             return AL_TRUE;
 
         case AL_BUFFER:
-            buflock = std::unique_lock<almtx_t>{device->BufferLock};
+            buflock = std::unique_lock<std::mutex>{device->BufferLock};
             if(!(*values == 0 || (buffer=LookupBuffer(device, *values)) != nullptr))
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid buffer ID %u",
                               *values);
@@ -1336,7 +1336,7 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
             return AL_TRUE;
 
         case AL_DIRECT_FILTER:
-            filtlock = std::unique_lock<almtx_t>{device->FilterLock};
+            filtlock = std::unique_lock<std::mutex>{device->FilterLock};
             if(!(*values == 0 || (filter=LookupFilter(device, *values)) != nullptr))
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid filter ID %u",
                               *values);
@@ -1426,7 +1426,7 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
             if((ALuint)values[1] >= (ALuint)device->NumAuxSends)
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid send %u", values[1]);
 
-            filtlock = std::unique_lock<almtx_t>{device->FilterLock};
+            filtlock = std::unique_lock<std::mutex>{device->FilterLock};
             if(!(values[2] == 0 || (filter=LookupFilter(device, values[2])) != nullptr))
                 SETERR_RETURN(Context, AL_INVALID_VALUE, AL_FALSE, "Invalid filter ID %u",
                               values[2]);
@@ -3004,7 +3004,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         BufferList = BufferList->next.load(std::memory_order_relaxed);
     }
 
-    std::unique_lock<almtx_t> buflock{device->BufferLock};
+    std::unique_lock<std::mutex> buflock{device->BufferLock};
     ALbufferlistitem *BufferListStart{nullptr};
     BufferList = nullptr;
     for(ALsizei i{0};i < nb;i++)
@@ -3121,7 +3121,7 @@ AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint src, ALsizei nb, co
         BufferList = BufferList->next.load(std::memory_order_relaxed);
     }
 
-    std::unique_lock<almtx_t> buflock{device->BufferLock};
+    std::unique_lock<std::mutex> buflock{device->BufferLock};
     auto BufferListStart = static_cast<ALbufferlistitem*>(al_calloc(DEF_ALIGN,
         FAM_SIZE(ALbufferlistitem, buffers, nb)));
     BufferList = BufferListStart;

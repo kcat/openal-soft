@@ -2374,9 +2374,6 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 ALCdevice_struct::ALCdevice_struct(DeviceType type)
   : Type{type}
 {
-    almtx_init(&BufferLock, almtx_plain);
-    almtx_init(&EffectLock, almtx_plain);
-    almtx_init(&FilterLock, almtx_plain);
 }
 
 /* ALCdevice_struct::~ALCdevice_struct
@@ -2408,10 +2405,6 @@ ALCdevice_struct::~ALCdevice_struct()
         count += POPCNT64(~sublist.FreeMask);
     if(count > 0)
         WARN(SZFMT " Filter%s not deleted\n", count, (count==1)?"":"s");
-
-    almtx_destroy(&BufferLock);
-    almtx_destroy(&EffectLock);
-    almtx_destroy(&FilterLock);
 
     if(HrtfHandle)
         Hrtf_DecRef(HrtfHandle);

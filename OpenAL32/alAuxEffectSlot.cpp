@@ -300,7 +300,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
     case AL_EFFECTSLOT_EFFECT:
         device = context->Device;
 
-        { std::lock_guard<almtx_t> ___{device->EffectLock};
+        { std::lock_guard<std::mutex> ___{device->EffectLock};
             ALeffect *effect{value ? LookupEffect(device, value) : nullptr};
             if(!(value == 0 || effect != nullptr))
                 SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Invalid effect ID %u", value);

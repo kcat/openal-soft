@@ -700,15 +700,15 @@ struct ALCdevice_struct {
 
     // Map of Buffers for this device
     al::vector<BufferSubList> BufferList;
-    almtx_t BufferLock;
+    std::mutex BufferLock;
 
     // Map of Effects for this device
     al::vector<EffectSubList> EffectList;
-    almtx_t EffectLock;
+    std::mutex EffectLock;
 
     // Map of Filters for this device
     al::vector<FilterSubList> FilterList;
-    almtx_t FilterLock;
+    std::mutex FilterLock;
 
     POSTPROCESS PostProcess{};
 

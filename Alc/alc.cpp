@@ -4315,27 +4315,27 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device)
 {
     DeviceRef dev{VerifyDevice(device)};
     if(!dev || dev->Type != Playback)
-        alcSetError(dev.get(), ALC_INVALID_DEVICE);
-    else
     {
-        std::lock_guard<std::mutex> _{dev->BackendLock};
-        if((dev->Flags&DEVICE_PAUSED))
-        {
-            dev->Flags &= ~DEVICE_PAUSED;
-            if(dev->ContextList.load() != nullptr)
-            {
-                if(V0(dev->Backend,start)() != ALC_FALSE)
-                    dev->Flags |= DEVICE_RUNNING;
-                else
-                {
-                    V0(dev->Backend,lock)();
-                    aluHandleDisconnect(dev.get(), "Device start failure");
-                    V0(dev->Backend,unlock)();
-                    alcSetError(dev.get(), ALC_INVALID_DEVICE);
-                }
-            }
-        }
+        alcSetError(dev.get(), ALC_INVALID_DEVICE);
+        return;
     }
+
+    std::lock_guard<std::mutex> _{dev->BackendLock};
+    if(!(dev->Flags&DEVICE_PAUSED))
+        return;
+    dev->Flags &= ~DEVICE_PAUSED;
+    if(dev->ContextList.load() == nullptr)
+        return;
+
+    if(V0(dev->Backend,start)() == ALC_FALSE)
+    {
+        V0(dev->Backend,lock)();
+        aluHandleDisconnect(dev.get(), "Device start failure");
+        V0(dev->Backend,unlock)();
+        alcSetError(dev.get(), ALC_INVALID_DEVICE);
+        return;
+    }
+    dev->Flags |= DEVICE_RUNNING;
 }
 
 
@@ -4382,23 +4382,18 @@ ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCi
         alcSetError(dev.get(), ALC_INVALID_DEVICE);
         return ALC_FALSE;
     }
-    std::unique_lock<std::mutex> backlock{dev->BackendLock};
+    std::lock_guard<std::mutex> _{dev->BackendLock};
     listlock.unlock();
 
     ALCenum err{UpdateDeviceParams(dev.get(), attribs)};
-    backlock.unlock();
+    if(LIKELY(err == ALC_NO_ERROR)) return ALC_TRUE;
 
-    if(err != ALC_NO_ERROR)
+    alcSetError(dev.get(), err);
+    if(err == ALC_INVALID_DEVICE)
     {
-        alcSetError(dev.get(), err);
-        if(err == ALC_INVALID_DEVICE)
-        {
-            V0(dev->Backend,lock)();
-            aluHandleDisconnect(dev.get(), "Device start failure");
-            V0(dev->Backend,unlock)();
-        }
-        return ALC_FALSE;
+        V0(dev->Backend,lock)();
+        aluHandleDisconnect(dev.get(), "Device start failure");
+        V0(dev->Backend,unlock)();
     }
-
-    return ALC_TRUE;
+    return ALC_FALSE;
 }

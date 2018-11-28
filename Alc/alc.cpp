@@ -2616,9 +2616,7 @@ ALCcontext_struct::~ALCcontext_struct()
     }
     TRACE("Freed " SZFMT " voice property object%s\n", count, (count==1)?"":"s");
 
-    std::for_each(Voices, Voices + VoiceCount.load(std::memory_order_relaxed),
-        [](ALvoice *voice) noexcept -> void { DeinitVoice(voice); }
-    );
+    std::for_each(Voices, Voices + VoiceCount.load(std::memory_order_relaxed), DeinitVoice);
     al_free(Voices);
     Voices = nullptr;
     VoiceCount.store(0, std::memory_order_relaxed);

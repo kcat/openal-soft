@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 
+#include <memory>
 #include <utility>
 
 
@@ -71,5 +72,12 @@ size_t ll_ringbuffer_write_space(const ll_ringbuffer_t *rb);
 size_t ll_ringbuffer_write(ll_ringbuffer_t *rb, const void *src, size_t cnt);
 /** Advance the write pointer `cnt' places. */
 void ll_ringbuffer_write_advance(ll_ringbuffer_t *rb, size_t cnt);
+
+
+struct RingBufferDeleter {
+    void operator()(ll_ringbuffer_t *ring) const
+    { ll_ringbuffer_free(ring); }
+};
+using RingBufferPtr = std::unique_ptr<ll_ringbuffer_t,RingBufferDeleter>;
 
 #endif /* RINGBUFFER_H */

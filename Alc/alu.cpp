@@ -1862,16 +1862,17 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
         std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount.load(std::memory_order_acquire),
             [ctx](ALvoice *voice) -> void
             {
-                ALsource *source{voice->Source.exchange(nullptr, std::memory_order_relaxed)};
-                if(source && voice->Playing.load(std::memory_order_relaxed))
-                {
-                    /* If the source's voice was playing, it's now effectively
-                     * stopped (the source state will be updated the next time
-                     * it's checked).
-                    */
-                    SendSourceStoppedEvent(ctx, source->id);
-                }
+                ALsource *source{voice->Source.load(std::memory_order_relaxed)};
+                if(!source || !voice->Playing.load(std::memory_order_relaxed))
+                    return;
+
+                voice->Source.store(nullptr, std::memory_order_relaxed);
                 voice->Playing.store(false, std::memory_order_release);
+                /* If the source's voice was playing, it's now effectively
+                 * stopped (the source state will be updated the next time it's
+                 * checked).
+                 */
+                SendSourceStoppedEvent(ctx, source->id);
             }
         );
 

@@ -2558,25 +2558,22 @@ ALCcontext_struct::~ALCcontext_struct()
 {
     TRACE("%p\n", this);
 
-    struct ALcontextProps *cprops{Update.load(std::memory_order_relaxed)};
+    ALcontextProps *cprops{Update.exchange(nullptr, std::memory_order_relaxed)};
     if(cprops)
     {
         TRACE("Freed unapplied context update %p\n", cprops);
         al_free(cprops);
     }
     size_t count{0};
-    cprops = FreeContextProps.load(std::memory_order_acquire);
+    cprops = FreeContextProps.exchange(nullptr, std::memory_order_acquire);
     while(cprops)
     {
-        struct ALcontextProps *next{cprops->next.load(std::memory_order_relaxed)};
+        ALcontextProps *next{cprops->next.load(std::memory_order_relaxed)};
         al_free(cprops);
         cprops = next;
         ++count;
     }
     TRACE("Freed " SZFMT " context property object%s\n", count, (count==1)?"":"s");
-
-    al_free(ActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed));
-    DefaultSlot = nullptr;
 
     count = 0;
     for(auto &sublist : SourceList)
@@ -2587,10 +2584,10 @@ ALCcontext_struct::~ALCcontext_struct()
     NumSources = 0;
 
     count = 0;
-    struct ALeffectslotProps *eprops{FreeEffectslotProps.load(std::memory_order_acquire)};
+    ALeffectslotProps *eprops{FreeEffectslotProps.exchange(nullptr, std::memory_order_acquire)};
     while(eprops)
     {
-        struct ALeffectslotProps *next{eprops->next.load(std::memory_order_relaxed)};
+        ALeffectslotProps *next{eprops->next.load(std::memory_order_relaxed)};
         if(eprops->State) eprops->State->DecRef();
         al_free(eprops);
         eprops = next;
@@ -2598,18 +2595,21 @@ ALCcontext_struct::~ALCcontext_struct()
     }
     TRACE("Freed " SZFMT " AuxiliaryEffectSlot property object%s\n", count, (count==1)?"":"s");
 
-    count = 0;
-    for(auto &slot : EffectSlotList)
-        count += slot ? 1 : 0;
+    al_free(ActiveAuxSlots.exchange(nullptr, std::memory_order_relaxed));
+    DefaultSlot = nullptr;
+
+    count = std::count_if(EffectSlotList.cbegin(), EffectSlotList.cend(),
+        [](const ALeffectslotPtr &slot) noexcept -> bool { return slot != nullptr; }
+    );
     if(count > 0)
         WARN(SZFMT " AuxiliaryEffectSlot%s not deleted\n", count, (count==1)?"":"s");
     EffectSlotList.clear();
 
     count = 0;
-    struct ALvoiceProps *vprops{FreeVoiceProps.load(std::memory_order_acquire)};
+    ALvoiceProps *vprops{FreeVoiceProps.exchange(nullptr, std::memory_order_acquire)};
     while(vprops)
     {
-        struct ALvoiceProps *next{vprops->next.load(std::memory_order_relaxed)};
+        ALvoiceProps *next{vprops->next.load(std::memory_order_relaxed)};
         al_free(vprops);
         vprops = next;
         ++count;
@@ -2617,24 +2617,24 @@ ALCcontext_struct::~ALCcontext_struct()
     TRACE("Freed " SZFMT " voice property object%s\n", count, (count==1)?"":"s");
 
     std::for_each(Voices, Voices + VoiceCount.load(std::memory_order_relaxed),
-        [](ALvoice *voice) -> void { DeinitVoice(voice); }
+        [](ALvoice *voice) noexcept -> void { DeinitVoice(voice); }
     );
     al_free(Voices);
     Voices = nullptr;
     VoiceCount.store(0, std::memory_order_relaxed);
     MaxVoices = 0;
 
-    struct ALlistenerProps *lprops{Listener.Update.load(std::memory_order_relaxed)};
+    ALlistenerProps *lprops{Listener.Update.exchange(nullptr, std::memory_order_relaxed)};
     if(lprops)
     {
         TRACE("Freed unapplied listener update %p\n", lprops);
         al_free(lprops);
     }
     count = 0;
-    lprops = FreeListenerProps.load(std::memory_order_acquire);
+    lprops = FreeListenerProps.exchange(nullptr, std::memory_order_acquire);
     while(lprops)
     {
-        struct ALlistenerProps *next{lprops->next.load(std::memory_order_relaxed)};
+        ALlistenerProps *next{lprops->next.load(std::memory_order_relaxed)};
         al_free(lprops);
         lprops = next;
         ++count;

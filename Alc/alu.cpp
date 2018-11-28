@@ -99,7 +99,7 @@ void aluInit(void)
 }
 
 
-void DeinitVoice(ALvoice *voice)
+void DeinitVoice(ALvoice *voice) noexcept
 {
     al_free(voice->Update.exchange(nullptr));
 }

@@ -264,7 +264,7 @@ typedef struct ALvoice {
     } Send[];
 } ALvoice;
 
-void DeinitVoice(ALvoice *voice);
+void DeinitVoice(ALvoice *voice) noexcept;
 
 
 typedef void (*MixerFunc)(const ALfloat *data, ALsizei OutChans,

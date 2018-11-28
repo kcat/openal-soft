@@ -39,7 +39,6 @@
 
 #include <pulse/pulseaudio.h>
 
-#if PA_API_VERSION == 12
 
 namespace {
 
@@ -1834,24 +1833,6 @@ ALCbackend *PulseBackendFactory::createBackend(ALCdevice *device, ALCbackend_Typ
 
     return nullptr;
 }
-
-
-#else /* PA_API_VERSION == 12 */
-
-#warning "Unsupported API version, backend will be unavailable!"
-
-bool PulseBackendFactory::init() { return false; }
-
-void PulseBackendFactory::deinit() { }
-
-bool PulseBackendFactory::querySupport(ALCbackend_Type) { return false; }
-
-void PulseBackendFactory::probe(enum DevProbe, std::string*) { }
-
-ALCbackend *PulseBackendFactory::createBackend(ALCdevice*, ALCbackend_Type)
-{ return nullptr; }
-
-#endif /* PA_API_VERSION == 12 */
 
 BackendFactory &PulseBackendFactory::getFactory()
 {

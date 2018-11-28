@@ -34,6 +34,7 @@
 #include <thread>
 #include <vector>
 #include <string>
+#include <numeric>
 #include <algorithm>
 
 #include "alMain.h"
@@ -2388,21 +2389,24 @@ ALCdevice_struct::~ALCdevice_struct()
     DELETE_OBJ(Backend);
     Backend = nullptr;
 
-    size_t count{0u};
-    for(auto &sublist : BufferList)
-        count += POPCNT64(~sublist.FreeMask);
+    size_t count{std::accumulate(BufferList.cbegin(), BufferList.cend(), size_t{0u},
+        [](size_t cur, const BufferSubList &sublist) noexcept -> size_t
+        { return cur + POPCNT64(~sublist.FreeMask); }
+    )};
     if(count > 0)
         WARN(SZFMT " Buffer%s not deleted\n", count, (count==1)?"":"s");
 
-    count = 0;
-    for(auto &sublist : EffectList)
-        count += POPCNT64(~sublist.FreeMask);
+    count = std::accumulate(EffectList.cbegin(), EffectList.cend(), size_t{0u},
+        [](size_t cur, const EffectSubList &sublist) noexcept -> size_t
+        { return cur + POPCNT64(~sublist.FreeMask); }
+    );
     if(count > 0)
         WARN(SZFMT " Effect%s not deleted\n", count, (count==1)?"":"s");
 
-    count = 0;
-    for(auto &sublist : FilterList)
-        count += POPCNT64(~sublist.FreeMask);
+    count = std::accumulate(FilterList.cbegin(), FilterList.cend(), size_t{0u},
+        [](size_t cur, const FilterSubList &sublist) noexcept -> size_t
+        { return cur + POPCNT64(~sublist.FreeMask); }
+    );
     if(count > 0)
         WARN(SZFMT " Filter%s not deleted\n", count, (count==1)?"":"s");
 
@@ -2575,9 +2579,10 @@ ALCcontext_struct::~ALCcontext_struct()
     }
     TRACE("Freed " SZFMT " context property object%s\n", count, (count==1)?"":"s");
 
-    count = 0;
-    for(auto &sublist : SourceList)
-        count += POPCNT64(~sublist.FreeMask);
+    count = std::accumulate(SourceList.cbegin(), SourceList.cend(), size_t{0u},
+        [](size_t cur, const SourceSubList &sublist) noexcept -> size_t
+        { return cur + POPCNT64(~sublist.FreeMask); }
+    );
     if(count > 0)
         WARN(SZFMT " Source%s not deleted\n", count, (count==1)?"":"s");
     SourceList.clear();

@@ -3102,7 +3102,9 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
                 return 1;
 
             case ALC_CONNECTED:
-                values[0] = device->Connected.load(std::memory_order_acquire);
+                { std::lock_guard<std::mutex> _{device->BackendLock};
+                    values[0] = device->Connected.load(std::memory_order_acquire);
+                }
                 return 1;
 
             default:
@@ -3289,7 +3291,9 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             return 1;
 
         case ALC_CONNECTED:
-            values[0] = device->Connected.load(std::memory_order_acquire);
+            { std::lock_guard<std::mutex> _{device->BackendLock};
+                values[0] = device->Connected.load(std::memory_order_acquire);
+            }
             return 1;
 
         case ALC_HRTF_SOFT:
@@ -3583,11 +3587,6 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
 
     if((err=UpdateDeviceParams(dev.get(), attrList)) != ALC_NO_ERROR)
     {
-        backlock.unlock();
-
-        delete ALContext;
-        ALContext = nullptr;
-
         alcSetError(dev.get(), err);
         if(err == ALC_INVALID_DEVICE)
         {
@@ -3595,6 +3594,11 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
             aluHandleDisconnect(dev.get(), "Device update failure");
             V0(dev->Backend,unlock)();
         }
+        backlock.unlock();
+
+        delete ALContext;
+        ALContext = nullptr;
+
         return nullptr;
     }
     AllocateVoices(ALContext, 256, dev->NumAuxSends);
@@ -4384,6 +4388,14 @@ ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCi
     }
     std::lock_guard<std::mutex> _{dev->BackendLock};
     listlock.unlock();
+
+    /* Force the backend to stop mixing first since we're resetting. Also reset
+     * the connected state so lost devices can attempt recover.
+     */
+    if((dev->Flags&DEVICE_RUNNING))
+        V0(dev->Backend,stop)();
+    dev->Flags &= ~DEVICE_RUNNING;
+    device->Connected.store(AL_TRUE);
 
     ALCenum err{UpdateDeviceParams(dev.get(), attribs)};
     if(LIKELY(err == ALC_NO_ERROR)) return ALC_TRUE;

@@ -1040,7 +1040,7 @@ HRESULT ALCwasapiPlayback::resetProxy()
         min_len = (UINT32)ScaleCeil(min_per, device->Frequency, REFTIME_PER_SEC);
         /* Find the nearest multiple of the period size to the update size */
         if(min_len < device->UpdateSize)
-            min_len *= (device->UpdateSize + min_len/2)/min_len;
+            min_len *= maxu((device->UpdateSize + min_len/2) / min_len, 1u);
         hr = mClient->GetBufferSize(&buffer_len);
     }
     if(FAILED(hr))

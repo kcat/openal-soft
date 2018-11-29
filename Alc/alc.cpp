@@ -4380,7 +4380,7 @@ ALC_API ALCboolean ALC_APIENTRY alcResetDeviceSOFT(ALCdevice *device, const ALCi
 {
     std::unique_lock<std::recursive_mutex> listlock{ListLock};
     DeviceRef dev{VerifyDevice(device)};
-    if(!dev || dev->Type == Capture || !dev->Connected.load(std::memory_order_relaxed))
+    if(!dev || dev->Type == Capture)
     {
         listlock.unlock();
         alcSetError(dev.get(), ALC_INVALID_DEVICE);

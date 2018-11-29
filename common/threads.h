@@ -47,7 +47,7 @@ public:
 
     void post();
     void wait() noexcept;
-    int trywait() noexcept;
+    bool try_wait() noexcept;
 };
 
 } // namespace al

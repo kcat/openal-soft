@@ -79,7 +79,7 @@ void semaphore::post()
 void semaphore::wait() noexcept
 { WaitForSingleObject(mSem, INFINITE); }
 
-int semaphore::trywait() noexcept
+bool semaphore::try_wait() noexcept
 { return WaitForSingleObject(mSem, 0) == WAIT_OBJECT_0; }
 
 } // namespace al
@@ -129,7 +129,7 @@ void semaphore::post()
 void semaphore::wait() noexcept
 { dispatch_semaphore_wait(mSem, DISPATCH_TIME_FOREVER); }
 
-int semaphore::trywait() noexcept
+bool semaphore::try_wait() noexcept
 { return dispatch_semaphore_wait(mSem, DISPATCH_TIME_NOW) == 0; }
 
 #else /* !__APPLE__ */
@@ -155,7 +155,7 @@ void semaphore::wait() noexcept
     }
 }
 
-int semaphore::trywait() noexcept
+bool semaphore::try_wait() noexcept
 { return sem_trywait(&mSem) == 0; }
 
 #endif /* __APPLE__ */

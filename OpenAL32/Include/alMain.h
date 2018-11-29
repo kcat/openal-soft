@@ -687,6 +687,13 @@ struct ALCdevice_struct {
 
     std::string DeviceName;
 
+    // Device flags
+    ALuint Flags{0u};
+
+    std::string HrtfName;
+    al::vector<EnumeratedHrtf> HrtfList;
+    ALCenum HrtfStatus{ALC_FALSE};
+
     std::atomic<ALCenum> LastError{ALC_NO_ERROR};
 
     // Maximum number of sources that can be created
@@ -710,32 +717,13 @@ struct ALCdevice_struct {
     al::vector<FilterSubList> FilterList;
     std::mutex FilterLock;
 
-    POSTPROCESS PostProcess{};
-
-    /* HRTF state and info */
-    std::unique_ptr<DirectHrtfState> mHrtfState;
-    std::string HrtfName;
-    Hrtf *HrtfHandle{nullptr};
-    al::vector<EnumeratedHrtf> HrtfList;
-    ALCenum HrtfStatus{ALC_FALSE};
-
-    /* UHJ encoder state */
-    std::unique_ptr<Uhj2Encoder> Uhj_Encoder;
-
-    /* High quality Ambisonic decoder */
-    std::unique_ptr<BFormatDec> AmbiDecoder;
-
-    /* Stereo-to-binaural filter */
-    std::unique_ptr<bs2b> Bs2b;
-
-    /* First-order ambisonic upsampler for higher-order output */
-    std::unique_ptr<AmbiUpsampler> AmbiUp;
-
     /* Rendering mode. */
     RenderMode Render_Mode{NormalRender};
 
-    // Device flags
-    ALuint Flags{0u};
+    /* The average speaker distance as determined by the ambdec configuration
+     * (or alternatively, by the NFC-HOA reference delay). Only used for NFC.
+     */
+    ALfloat AvgSpeakerDist{0.0f};
 
     ALuint SamplesDone{0u};
     std::chrono::nanoseconds ClockBase{0};
@@ -759,17 +747,30 @@ struct ALCdevice_struct {
      */
     RealMixParams RealOut;
 
+    /* HRTF state and info */
+    std::unique_ptr<DirectHrtfState> mHrtfState;
+    Hrtf *HrtfHandle{nullptr};
+
+    /* UHJ encoder state */
+    std::unique_ptr<Uhj2Encoder> Uhj_Encoder;
+
+    /* High quality Ambisonic decoder */
+    std::unique_ptr<BFormatDec> AmbiDecoder;
+
+    /* Stereo-to-binaural filter */
+    std::unique_ptr<bs2b> Bs2b;
+
+    /* First-order ambisonic upsampler for higher-order output */
+    std::unique_ptr<AmbiUpsampler> AmbiUp;
+
+    POSTPROCESS PostProcess{};
+
     std::unique_ptr<FrontStablizer> Stablizer;
-
-    std::unique_ptr<Compressor> Limiter;
-
-    /* The average speaker distance as determined by the ambdec configuration
-     * (or alternatively, by the NFC-HOA reference delay). Only used for NFC.
-     */
-    ALfloat AvgSpeakerDist{0.0f};
 
     /* Delay buffers used to compensate for speaker distances. */
     DistanceComp ChannelDelay;
+
+    std::unique_ptr<Compressor> Limiter;
 
     /* Dithering control. */
     ALfloat DitherDepth{0.0f};

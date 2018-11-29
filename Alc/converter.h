@@ -29,7 +29,9 @@ struct SampleConverter {
     DEF_PLACE_NEWDEL()
 };
 
-SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType dstType, ALsizei numchans, ALsizei srcRate, ALsizei dstRate);
+SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType dstType,
+                                       ALsizei numchans, ALsizei srcRate, ALsizei dstRate,
+                                       Resampler resampler);
 void DestroySampleConverter(SampleConverter **converter);
 
 ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALsizei *srcframes, ALvoid *dst, ALsizei dstframes);

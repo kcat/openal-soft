@@ -136,7 +136,9 @@ void Stereo2Mono(ALfloat *RESTRICT dst, const void *src, ALsizei frames)
 
 } // namespace
 
-SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType dstType, ALsizei numchans, ALsizei srcRate, ALsizei dstRate)
+SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType dstType,
+                                       ALsizei numchans, ALsizei srcRate, ALsizei dstRate,
+                                       Resampler resampler)
 {
     if(numchans <= 0 || srcRate <= 0 || dstRate <= 0)
         return nullptr;
@@ -161,9 +163,11 @@ SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType 
         converter->mResample = Resample_copy_C;
     else
     {
-        /* TODO: Allow other resamplers. */
-        BsincPrepare(converter->mIncrement, &converter->mState.bsinc, &bsinc12);
-        converter->mResample = SelectResampler(BSinc12Resampler);
+        if(resampler == BSinc24Resampler)
+            BsincPrepare(converter->mIncrement, &converter->mState.bsinc, &bsinc24);
+        else if(resampler == BSinc12Resampler)
+            BsincPrepare(converter->mIncrement, &converter->mState.bsinc, &bsinc12);
+        converter->mResample = SelectResampler(resampler);
     }
 
     return converter;

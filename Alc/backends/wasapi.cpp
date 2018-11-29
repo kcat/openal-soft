@@ -1666,7 +1666,7 @@ HRESULT ALCwasapiCapture::resetProxy()
     {
         mSampleConv = CreateSampleConverter(
             srcType, device->FmtType, ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder),
-            OutputType.Format.nSamplesPerSec, device->Frequency
+            OutputType.Format.nSamplesPerSec, device->Frequency, BSinc24Resampler
         );
         if(!mSampleConv)
         {

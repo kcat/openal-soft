@@ -3,6 +3,8 @@
 
 #include "converter.h"
 
+#include <algorithm>
+
 #include "fpu_modes.h"
 #include "mixer/defs.h"
 
@@ -136,14 +138,11 @@ void Stereo2Mono(ALfloat *RESTRICT dst, const void *src, ALsizei frames)
 
 SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType dstType, ALsizei numchans, ALsizei srcRate, ALsizei dstRate)
 {
-    SampleConverter *converter;
-    ALsizei step;
-
     if(numchans <= 0 || srcRate <= 0 || dstRate <= 0)
-        return NULL;
+        return nullptr;
 
-    converter = static_cast<SampleConverter*>(al_calloc(16,
-        FAM_SIZE(SampleConverter, Chan, numchans)));
+    size_t alloc_size{FAM_SIZE(SampleConverter, Chan, numchans)};
+    auto converter = new (al_calloc(16, alloc_size)) SampleConverter{};
     converter->mSrcType = srcType;
     converter->mDstType = dstType;
     converter->mNumChannels = numchans;
@@ -155,8 +154,8 @@ SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType 
 
     /* Have to set the mixer FPU mode since that's what the resampler code expects. */
     FPUCtl mixer_mode{};
-    step = (ALsizei)mind(((ALdouble)srcRate/dstRate*FRACTIONONE) + 0.5,
-                         MAX_PITCH * FRACTIONONE);
+    auto step = static_cast<ALsizei>(
+        mind((ALdouble)srcRate/dstRate*FRACTIONONE + 0.5, MAX_PITCH*FRACTIONONE));
     converter->mIncrement = maxi(step, 1);
     if(converter->mIncrement == FRACTIONONE)
         converter->mResample = Resample_copy_C;
@@ -174,19 +173,15 @@ void DestroySampleConverter(SampleConverter **converter)
 {
     if(converter)
     {
-        al_free(*converter);
-        *converter = NULL;
+        delete *converter;
+        *converter = nullptr;
     }
 }
 
 
 ALsizei SampleConverterAvailableOut(SampleConverter *converter, ALsizei srcframes)
 {
-    ALint prepcount = converter->mSrcPrepCount;
-    ALsizei increment = converter->mIncrement;
-    ALsizei DataPosFrac = converter->mFracOffset;
-    ALuint64 DataSize64;
-
+    ALint prepcount{converter->mSrcPrepCount};
     if(prepcount < 0)
     {
         /* Negative prepcount means we need to skip that many input samples. */
@@ -209,7 +204,9 @@ ALsizei SampleConverterAvailableOut(SampleConverter *converter, ALsizei srcframe
         return 0;
     }
 
-    DataSize64  = prepcount;
+    ALsizei increment{converter->mIncrement};
+    ALsizei DataPosFrac{converter->mFracOffset};
+    auto DataSize64 = static_cast<ALuint64>(prepcount);
     DataSize64 += srcframes;
     DataSize64 -= MAX_RESAMPLE_PADDING*2;
     DataSize64 <<= FRACTIONBITS;
@@ -221,38 +218,32 @@ ALsizei SampleConverterAvailableOut(SampleConverter *converter, ALsizei srcframe
 
 ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALsizei *srcframes, ALvoid *dst, ALsizei dstframes)
 {
-    const ALsizei SrcFrameSize = converter->mNumChannels * converter->mSrcTypeSize;
-    const ALsizei DstFrameSize = converter->mNumChannels * converter->mDstTypeSize;
-    const ALsizei increment = converter->mIncrement;
-    ALsizei pos = 0;
+    const ALsizei SrcFrameSize{converter->mNumChannels * converter->mSrcTypeSize};
+    const ALsizei DstFrameSize{converter->mNumChannels * converter->mDstTypeSize};
+    const ALsizei increment{converter->mIncrement};
+    auto SamplesIn = static_cast<const ALbyte*>(*src);
+    ALsizei NumSrcSamples{*srcframes};
 
     FPUCtl mixer_mode{};
-    while(pos < dstframes && *srcframes > 0)
+    ALsizei pos{0};
+    while(pos < dstframes && NumSrcSamples > 0)
     {
-        ALfloat *RESTRICT SrcData = converter->mSrcSamples;
-        ALfloat *RESTRICT DstData = converter->mDstSamples;
-        ALint prepcount = converter->mSrcPrepCount;
-        ALsizei DataPosFrac = converter->mFracOffset;
-        ALuint64 DataSize64;
-        ALsizei DstSize;
-        ALint toread;
-        ALsizei chan;
-
+        ALint prepcount{converter->mSrcPrepCount};
         if(prepcount < 0)
         {
             /* Negative prepcount means we need to skip that many input samples. */
-            if(-prepcount >= *srcframes)
+            if(-prepcount >= NumSrcSamples)
             {
-                converter->mSrcPrepCount = prepcount + *srcframes;
-                *srcframes = 0;
+                converter->mSrcPrepCount = prepcount + NumSrcSamples;
+                NumSrcSamples = 0;
                 break;
             }
-            *src = (const ALbyte*)*src + SrcFrameSize*-prepcount;
-            *srcframes += prepcount;
+            SamplesIn += SrcFrameSize*-prepcount;
+            NumSrcSamples += prepcount;
             converter->mSrcPrepCount = 0;
             continue;
         }
-        toread = mini(*srcframes, BUFFERSIZE - MAX_RESAMPLE_PADDING*2);
+        ALint toread{mini(NumSrcSamples, BUFFERSIZE - MAX_RESAMPLE_PADDING*2)};
 
         if(prepcount < MAX_RESAMPLE_PADDING*2 &&
            MAX_RESAMPLE_PADDING*2 - prepcount >= toread)
@@ -260,39 +251,40 @@ ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALs
             /* Not enough input samples to generate an output sample. Store
              * what we're given for later.
              */
-            for(chan = 0;chan < converter->mNumChannels;chan++)
+            for(ALsizei chan{0};chan < converter->mNumChannels;chan++)
                 LoadSamples(&converter->Chan[chan].mPrevSamples[prepcount],
-                    (const ALbyte*)*src + converter->mSrcTypeSize*chan,
+                    SamplesIn + converter->mSrcTypeSize*chan,
                     converter->mNumChannels, converter->mSrcType, toread
                 );
 
             converter->mSrcPrepCount = prepcount + toread;
-            *srcframes = 0;
+            NumSrcSamples = 0;
             break;
         }
 
-        DataSize64  = prepcount;
+        ALfloat *RESTRICT SrcData{converter->mSrcSamples};
+        ALfloat *RESTRICT DstData{converter->mDstSamples};
+        ALsizei DataPosFrac{converter->mFracOffset};
+        auto DataSize64 = static_cast<ALuint64>(prepcount);
         DataSize64 += toread;
         DataSize64 -= MAX_RESAMPLE_PADDING*2;
         DataSize64 <<= FRACTIONBITS;
         DataSize64 -= DataPosFrac;
 
         /* If we have a full prep, we can generate at least one sample. */
-        DstSize = (ALsizei)clampu64((DataSize64 + increment-1)/increment, 1, BUFFERSIZE);
+        auto DstSize = static_cast<ALsizei>(
+            clampu64((DataSize64 + increment-1)/increment, 1, BUFFERSIZE));
         DstSize = mini(DstSize, dstframes-pos);
 
-        for(chan = 0;chan < converter->mNumChannels;chan++)
+        for(ALsizei chan{0};chan < converter->mNumChannels;chan++)
         {
-            const ALbyte *SrcSamples = (const ALbyte*)*src + converter->mSrcTypeSize*chan;
+            const ALbyte *SrcSamples = SamplesIn + converter->mSrcTypeSize*chan;
             ALbyte *DstSamples = (ALbyte*)dst + converter->mDstTypeSize*chan;
-            const ALfloat *ResampledData;
-            ALsizei SrcDataEnd;
 
             /* Load the previous samples into the source data first, then the
              * new samples from the input buffer.
              */
-            memcpy(SrcData, converter->Chan[chan].mPrevSamples,
-                   prepcount*sizeof(ALfloat));
+            std::copy_n(converter->Chan[chan].mPrevSamples, prepcount, SrcData);
             LoadSamples(SrcData + prepcount, SrcSamples,
                 converter->mNumChannels, converter->mSrcType, toread
             );
@@ -300,24 +292,23 @@ ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALs
             /* Store as many prep samples for next time as possible, given the
              * number of output samples being generated.
              */
-            SrcDataEnd = (DataPosFrac + increment*DstSize)>>FRACTIONBITS;
+            ALsizei SrcDataEnd{(DstSize*increment + DataPosFrac)>>FRACTIONBITS};
             if(SrcDataEnd >= prepcount+toread)
-                memset(converter->Chan[chan].mPrevSamples, 0,
-                       sizeof(converter->Chan[chan].mPrevSamples));
+                std::fill(std::begin(converter->Chan[chan].mPrevSamples),
+                          std::end(converter->Chan[chan].mPrevSamples), 0.0f);
             else
             {
                 size_t len = mini(MAX_RESAMPLE_PADDING*2, prepcount+toread-SrcDataEnd);
-                memcpy(converter->Chan[chan].mPrevSamples, &SrcData[SrcDataEnd],
-                       len*sizeof(ALfloat));
-                memset(converter->Chan[chan].mPrevSamples+len, 0,
-                       sizeof(converter->Chan[chan].mPrevSamples) - len*sizeof(ALfloat));
+                std::copy_n(SrcData+SrcDataEnd, len, converter->Chan[chan].mPrevSamples);
+                std::fill(std::begin(converter->Chan[chan].mPrevSamples)+len,
+                          std::end(converter->Chan[chan].mPrevSamples), 0.0f);
             }
 
             /* Now resample, and store the result in the output buffer. */
-            ResampledData = converter->mResample(&converter->mState,
+            const ALfloat *ResampledData{converter->mResample(&converter->mState,
                 SrcData+MAX_RESAMPLE_PADDING, DataPosFrac, increment,
                 DstData, DstSize
-            );
+            )};
 
             StoreSamples(DstSamples, ResampledData, converter->mNumChannels,
                          converter->mDstType, DstSize);
@@ -332,12 +323,15 @@ ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALs
         converter->mFracOffset = DataPosFrac & FRACTIONMASK;
 
         /* Update the src and dst pointers in case there's still more to do. */
-        *src = (const ALbyte*)*src + SrcFrameSize*(DataPosFrac>>FRACTIONBITS);
-        *srcframes -= mini(*srcframes, (DataPosFrac>>FRACTIONBITS));
+        SamplesIn += SrcFrameSize*(DataPosFrac>>FRACTIONBITS);
+        NumSrcSamples -= mini(NumSrcSamples, (DataPosFrac>>FRACTIONBITS));
 
         dst = (ALbyte*)dst + DstFrameSize*DstSize;
         pos += DstSize;
     }
+
+    *src = SamplesIn;
+    *srcframes = NumSrcSamples;
 
     return pos;
 }
@@ -345,13 +339,11 @@ ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALs
 
 ChannelConverter *CreateChannelConverter(enum DevFmtType srcType, enum DevFmtChannels srcChans, enum DevFmtChannels dstChans)
 {
-    ChannelConverter *converter;
-
     if(srcChans != dstChans && !((srcChans == DevFmtMono && dstChans == DevFmtStereo) ||
                                  (srcChans == DevFmtStereo && dstChans == DevFmtMono)))
-        return NULL;
+        return nullptr;
 
-    converter = static_cast<ChannelConverter*>(al_calloc(DEF_ALIGN, sizeof(*converter)));
+    auto converter = new (al_calloc(DEF_ALIGN, sizeof(ChannelConverter))) ChannelConverter{};
     converter->mSrcType = srcType;
     converter->mSrcChans = srcChans;
     converter->mDstChans = dstChans;
@@ -363,8 +355,8 @@ void DestroyChannelConverter(ChannelConverter **converter)
 {
     if(converter)
     {
-        al_free(*converter);
-        *converter = NULL;
+        delete *converter;
+        *converter = nullptr;
     }
 }
 

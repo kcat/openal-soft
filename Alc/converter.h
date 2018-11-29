@@ -3,6 +3,7 @@
 
 #include "alMain.h"
 #include "alu.h"
+#include "almalloc.h"
 
 struct SampleConverter {
     enum DevFmtType mSrcType;
@@ -24,6 +25,8 @@ struct SampleConverter {
     struct {
         alignas(16) ALfloat mPrevSamples[MAX_RESAMPLE_PADDING*2];
     } Chan[];
+
+    DEF_PLACE_NEWDEL()
 };
 
 SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType dstType, ALsizei numchans, ALsizei srcRate, ALsizei dstRate);
@@ -37,6 +40,8 @@ struct ChannelConverter {
     enum DevFmtType mSrcType;
     enum DevFmtChannels mSrcChans;
     enum DevFmtChannels mDstChans;
+
+    DEF_PLACE_NEWDEL()
 };
 
 ChannelConverter *CreateChannelConverter(enum DevFmtType srcType, enum DevFmtChannels srcChans, enum DevFmtChannels dstChans);

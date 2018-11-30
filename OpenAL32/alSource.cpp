@@ -52,9 +52,9 @@ namespace {
 inline ALvoice *GetSourceVoice(ALsource *source, ALCcontext *context)
 {
     ALint idx{source->VoiceIdx};
-    ALuint sid{source->id};
     if(idx >= 0 && idx < context->VoiceCount.load(std::memory_order_relaxed))
     {
+        ALuint sid{source->id};
         ALvoice *voice{context->Voices[idx]};
         if(voice->SourceID.load(std::memory_order_acquire) == sid)
             return voice;

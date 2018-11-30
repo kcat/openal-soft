@@ -91,11 +91,11 @@ void UpdateSourceProps(ALsource *source, ALvoice *voice, ALCcontext *context)
     props->RefDistance = source->RefDistance;
     props->MaxDistance = source->MaxDistance;
     props->RolloffFactor = source->RolloffFactor;
-    std::copy_n(source->Position, 3, props->Position);
-    std::copy_n(source->Velocity, 3, props->Velocity);
-    std::copy_n(source->Direction, 3, props->Direction);
-    for(ALsizei i{0};i < 2;i++)
-        std::copy_n(source->Orientation[i], 3, props->Orientation[i]);
+    std::copy(std::begin(source->Position), std::end(source->Position), props->Position);
+    std::copy(std::begin(source->Velocity), std::end(source->Velocity), props->Velocity);
+    std::copy(std::begin(source->Direction), std::end(source->Direction), props->Direction);
+    std::copy(std::begin(source->Orientation[0]), std::end(source->Orientation[0]), props->Orientation[0]);
+    std::copy(std::begin(source->Orientation[1]), std::end(source->Orientation[1]), props->Orientation[1]);
     props->HeadRelative = source->HeadRelative;
     props->mDistanceModel = source->mDistanceModel;
     props->Resampler = source->Resampler;
@@ -111,7 +111,7 @@ void UpdateSourceProps(ALsource *source, ALvoice *voice, ALCcontext *context)
     props->RoomRolloffFactor = source->RoomRolloffFactor;
     props->DopplerFactor = source->DopplerFactor;
 
-    std::copy_n(source->StereoPan, 2, props->StereoPan);
+    std::copy(std::begin(source->StereoPan), std::end(source->StereoPan), props->StereoPan);
 
     props->Radius = source->Radius;
 

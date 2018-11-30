@@ -52,10 +52,11 @@ namespace {
 inline ALvoice *GetSourceVoice(ALsource *source, ALCcontext *context)
 {
     ALint idx{source->VoiceIdx};
+    ALuint sid{source->id};
     if(idx >= 0 && idx < context->VoiceCount.load(std::memory_order_relaxed))
     {
         ALvoice *voice{context->Voices[idx]};
-        if(voice->Source.load(std::memory_order_acquire) == source)
+        if(voice->SourceID.load(std::memory_order_acquire) == sid)
             return voice;
     }
     source->VoiceIdx = -1;
@@ -525,7 +526,7 @@ void FreeSource(ALCcontext *context, ALsource *source)
     ALvoice *voice{GetSourceVoice(source, context)};
     if(voice)
     {
-        voice->Source.store(nullptr, std::memory_order_relaxed);
+        voice->SourceID.store(0u, std::memory_order_relaxed);
         voice->Playing.store(false, std::memory_order_release);
     }
     ALCdevice_Unlock(device);
@@ -2782,7 +2783,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         auto voices_end = context->Voices + context->VoiceCount.load(std::memory_order_relaxed);
         auto voice_iter = std::find_if(context->Voices, voices_end,
             [](const ALvoice *voice) noexcept -> bool
-            { return voice->Source.load(std::memory_order_relaxed) == nullptr; }
+            { return voice->SourceID.load(std::memory_order_relaxed) == 0u; }
         );
         auto vidx = static_cast<ALint>(std::distance(context->Voices, voice_iter));
         voice = *voice_iter;
@@ -2841,7 +2842,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
                 NfcFilterCreate(&voice->Direct.Params[j].NFCtrlFilter, 0.0f, w1);
         }
 
-        voice->Source.store(source, std::memory_order_relaxed);
+        voice->SourceID.store(source->id, std::memory_order_relaxed);
         voice->Playing.store(true, std::memory_order_release);
         source->state = AL_PLAYING;
         source->VoiceIdx = vidx;
@@ -2913,7 +2914,7 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
         ALvoice *voice{GetSourceVoice(source, context.get())};
         if(voice != nullptr)
         {
-            voice->Source.store(nullptr, std::memory_order_relaxed);
+            voice->SourceID.store(0u, std::memory_order_relaxed);
             voice->Playing.store(false, std::memory_order_release);
             voice = nullptr;
         }
@@ -2956,7 +2957,7 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
         ALvoice *voice{GetSourceVoice(source, context.get())};
         if(voice != nullptr)
         {
-            voice->Source.store(nullptr, std::memory_order_relaxed);
+            voice->SourceID.store(0u, std::memory_order_relaxed);
             voice->Playing.store(false, std::memory_order_release);
             voice = nullptr;
         }
@@ -3389,7 +3390,8 @@ void UpdateAllSourceProps(ALCcontext *context)
     std::for_each(context->Voices, voices_end,
         [context](ALvoice *voice) -> void
         {
-            ALsource *source{voice->Source.load(std::memory_order_acquire)};
+            ALuint sid{voice->SourceID.load(std::memory_order_acquire)};
+            ALsource *source = sid ? LookupSource(context, sid) : nullptr;
             if(source && !source->PropsClean.test_and_set(std::memory_order_acq_rel))
                 UpdateSourceProps(source, voice, context);
         }

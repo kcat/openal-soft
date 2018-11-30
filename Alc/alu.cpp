@@ -1506,8 +1506,8 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray *slots)
         std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount.load(std::memory_order_acquire),
             [ctx,force](ALvoice *voice) -> void
             {
-                ALsource *source{voice->Source.load(std::memory_order_acquire)};
-                if(source) CalcSourceParams(voice, ctx, force);
+                ALuint sid{voice->SourceID.load(std::memory_order_acquire)};
+                if(sid) CalcSourceParams(voice, ctx, force);
             }
         );
     }
@@ -1536,16 +1536,16 @@ void ProcessContext(ALCcontext *ctx, ALsizei SamplesToDo)
     std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount.load(std::memory_order_acquire),
         [SamplesToDo,ctx](ALvoice *voice) -> void
         {
-            ALsource *source{voice->Source.load(std::memory_order_acquire)};
-            if(!source) return;
+            ALuint sid{voice->SourceID.load(std::memory_order_acquire)};
+            if(!sid) return;
             if(!voice->Playing.load(std::memory_order_relaxed) || voice->Step < 1)
                 return;
 
-            if(!MixSource(voice, source->id, ctx, SamplesToDo))
+            if(!MixSource(voice, sid, ctx, SamplesToDo))
             {
-                voice->Source.store(nullptr, std::memory_order_relaxed);
+                voice->SourceID.store(0u, std::memory_order_relaxed);
                 voice->Playing.store(false, std::memory_order_release);
-                SendSourceStoppedEvent(ctx, source->id);
+                SendSourceStoppedEvent(ctx, sid);
             }
         }
     );
@@ -1862,17 +1862,17 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
         std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount.load(std::memory_order_acquire),
             [ctx](ALvoice *voice) -> void
             {
-                ALsource *source{voice->Source.load(std::memory_order_relaxed)};
-                if(!source || !voice->Playing.load(std::memory_order_relaxed))
+                ALuint sid{voice->SourceID.load(std::memory_order_relaxed)};
+                if(!sid || !voice->Playing.load(std::memory_order_relaxed))
                     return;
 
-                voice->Source.store(nullptr, std::memory_order_relaxed);
+                voice->SourceID.store(0u, std::memory_order_relaxed);
                 voice->Playing.store(false, std::memory_order_release);
                 /* If the source's voice was playing, it's now effectively
                  * stopped (the source state will be updated the next time it's
                  * checked).
                  */
-                SendSourceStoppedEvent(ctx, source->id);
+                SendSourceStoppedEvent(ctx, sid);
             }
         );
 

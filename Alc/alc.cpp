@@ -2332,7 +2332,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
             {
                 al_free(voice->Update.exchange(nullptr, std::memory_order_acq_rel));
 
-                if(voice->Source.load(std::memory_order_acquire) == nullptr)
+                if(voice->SourceID.load(std::memory_order_acquire) == 0u)
                     return;
 
                 if(device->AvgSpeakerDist > 0.0f)

@@ -207,7 +207,7 @@ typedef struct ALvoice {
 
     std::atomic<ALvoiceProps*> Update;
 
-    std::atomic<ALsource*> Source;
+    std::atomic<ALuint> SourceID;
     std::atomic<bool> Playing;
 
     /**

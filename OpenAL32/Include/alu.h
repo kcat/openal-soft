@@ -10,6 +10,8 @@
 #include <ieeefp.h>
 #endif
 
+#include <array>
+
 #include "alMain.h"
 #include "alBuffer.h"
 

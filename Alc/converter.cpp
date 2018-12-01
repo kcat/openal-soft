@@ -341,18 +341,13 @@ ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALs
 }
 
 
-ChannelConverter *CreateChannelConverter(enum DevFmtType srcType, enum DevFmtChannels srcChans, enum DevFmtChannels dstChans)
+ChannelConverter *CreateChannelConverter(DevFmtType srcType, DevFmtChannels srcChans, DevFmtChannels dstChans)
 {
     if(srcChans != dstChans && !((srcChans == DevFmtMono && dstChans == DevFmtStereo) ||
                                  (srcChans == DevFmtStereo && dstChans == DevFmtMono)))
         return nullptr;
 
-    auto converter = new (al_calloc(DEF_ALIGN, sizeof(ChannelConverter))) ChannelConverter{};
-    converter->mSrcType = srcType;
-    converter->mSrcChans = srcChans;
-    converter->mDstChans = dstChans;
-
-    return converter;
+    return new ChannelConverter{srcType, srcChans, dstChans};
 }
 
 void DestroyChannelConverter(ChannelConverter **converter)

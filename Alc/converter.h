@@ -6,21 +6,21 @@
 #include "almalloc.h"
 
 struct SampleConverter {
-    enum DevFmtType mSrcType;
-    enum DevFmtType mDstType;
-    ALsizei mNumChannels;
-    ALsizei mSrcTypeSize;
-    ALsizei mDstTypeSize;
+    DevFmtType mSrcType{};
+    DevFmtType mDstType{};
+    ALsizei mNumChannels{};
+    ALsizei mSrcTypeSize{};
+    ALsizei mDstTypeSize{};
 
-    ALint mSrcPrepCount;
+    ALint mSrcPrepCount{};
 
-    ALsizei mFracOffset;
-    ALsizei mIncrement;
-    InterpState mState;
-    ResamplerFunc mResample;
+    ALsizei mFracOffset{};
+    ALsizei mIncrement{};
+    InterpState mState{};
+    ResamplerFunc mResample{};
 
-    alignas(16) ALfloat mSrcSamples[BUFFERSIZE];
-    alignas(16) ALfloat mDstSamples[BUFFERSIZE];
+    alignas(16) ALfloat mSrcSamples[BUFFERSIZE]{};
+    alignas(16) ALfloat mDstSamples[BUFFERSIZE]{};
 
     struct {
         alignas(16) ALfloat mPrevSamples[MAX_RESAMPLE_PADDING*2];
@@ -39,11 +39,14 @@ ALsizei SampleConverterAvailableOut(SampleConverter *converter, ALsizei srcframe
 
 
 struct ChannelConverter {
-    enum DevFmtType mSrcType;
-    enum DevFmtChannels mSrcChans;
-    enum DevFmtChannels mDstChans;
+    DevFmtType mSrcType;
+    DevFmtChannels mSrcChans;
+    DevFmtChannels mDstChans;
 
-    DEF_PLACE_NEWDEL()
+    ChannelConverter(DevFmtType srctype, DevFmtChannels srcchans, DevFmtChannels dstchans)
+      : mSrcType(srctype), mSrcChans(srcchans), mDstChans(dstchans)
+    { }
+    DEF_NEWDEL(ChannelConverter)
 };
 
 ChannelConverter *CreateChannelConverter(enum DevFmtType srcType, enum DevFmtChannels srcChans, enum DevFmtChannels dstChans);

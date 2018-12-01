@@ -331,25 +331,33 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
 
     do {
         /* Figure out how many buffer samples will be needed */
-        ALint64 DataSize64{SamplesToDo - OutPos};
-        DataSize64 *= increment;
-        DataSize64 += DataPosFrac+FRACTIONMASK;
-        DataSize64 >>= FRACTIONBITS;
-        DataSize64 += MAX_RESAMPLE_PADDING*2;
-        ALsizei SrcBufferSize{(ALsizei)mini64(DataSize64, BUFFERSIZE)};
+        ALsizei DstBufferSize{SamplesToDo - OutPos};
 
-        /* Figure out how many samples we can actually mix from this. */
-        DataSize64  = SrcBufferSize;
-        DataSize64 -= MAX_RESAMPLE_PADDING*2;
-        DataSize64 <<= FRACTIONBITS;
-        DataSize64 -= DataPosFrac;
-        ALsizei DstBufferSize{(ALsizei)mini64((DataSize64+(increment-1)) / increment,
-                                              SamplesToDo - OutPos)};
+        /* Calculate the last written dst sample pos. */
+        ALint64 DataSize64{DstBufferSize - 1};
+        /* Calculate the last read src sample pos. */
+        DataSize64 = (DataSize64*increment + DataPosFrac) >> FRACTIONBITS;
+        /* +1 to get the src sample count, include padding. */
+        DataSize64 += 1 + MAX_RESAMPLE_PADDING*2;
 
-        /* Some mixers like having a multiple of 4, so try to give that unless
-         * this is the last update. */
-        if(DstBufferSize < SamplesToDo-OutPos)
-            DstBufferSize &= ~3;
+        auto SrcBufferSize = static_cast<ALsizei>(mini64(DataSize64, BUFFERSIZE+1));
+        if(SrcBufferSize > BUFFERSIZE)
+        {
+            SrcBufferSize = BUFFERSIZE;
+            /* If the source buffer got saturated, we can't fill the desired
+             * dst size. Figure out how many samples we can actually mix from
+             * this.
+             */
+            DataSize64 = SrcBufferSize - MAX_RESAMPLE_PADDING*2;
+            DataSize64 = ((DataSize64<<FRACTIONBITS) - DataPosFrac + increment-1) / increment;
+            DstBufferSize = static_cast<ALsizei>(mini64(DataSize64, DstBufferSize));
+
+            /* Some mixers like having a multiple of 4, so try to give that
+             * unless this is the last update.
+             */
+            if(DstBufferSize < SamplesToDo-OutPos)
+                DstBufferSize &= ~3;
+        }
 
         /* It's impossible to have a buffer list item with no entries. */
         assert(BufferListItem->num_buffers > 0);

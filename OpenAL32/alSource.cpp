@@ -684,21 +684,13 @@ inline bool SourceShouldUpdate(ALsource *source, ALCcontext *context)
 /** Can only be called while the mixer is locked! */
 void SendStateChangeEvent(ALCcontext *context, ALuint id, ALenum state)
 {
-    AsyncEvent evt = ASYNC_EVENT(EventType_SourceStateChange);
-    ALbitfieldSOFT enabledevt;
-
-    enabledevt = context->EnabledEvts.load(std::memory_order_acquire);
+    ALbitfieldSOFT enabledevt{context->EnabledEvts.load(std::memory_order_acquire)};
     if(!(enabledevt&EventType_SourceStateChange)) return;
 
-    evt.u.user.type = AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT;
-    evt.u.user.id = id;
-    evt.u.user.param = state;
-    snprintf(evt.u.user.msg, sizeof(evt.u.user.msg), "Source ID %u state changed to %s", id,
-        (state==AL_INITIAL) ? "AL_INITIAL" :
-        (state==AL_PLAYING) ? "AL_PLAYING" :
-        (state==AL_PAUSED) ? "AL_PAUSED" :
-        (state==AL_STOPPED) ? "AL_STOPPED" : "<unknown>"
-    );
+    AsyncEvent evt{ASYNC_EVENT(EventType_SourceStateChange)};
+    evt.u.srcstate.id = id;
+    evt.u.srcstate.state = state;
+
     /* The mixer may have queued a state change that's not yet been processed,
      * and we don't want state change messages to occur out of order, so send
      * it through the async queue to ensure proper ordering.

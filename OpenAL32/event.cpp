@@ -39,7 +39,26 @@ static int EventThread(ALCcontext *context)
             }
 
             ALbitfieldSOFT enabledevts{context->EnabledEvts.load(std::memory_order_acquire)};
-            if(context->EventCb && (enabledevts&evt.EnumType) == evt.EnumType)
+            if(!context->EventCb) continue;
+
+            if(evt.EnumType == EventType_SourceStateChange)
+            {
+                if(!(enabledevts&EventType_SourceStateChange))
+                    continue;
+                char msg[1024]{};
+                int msglen{snprintf(msg, sizeof(msg), "Source ID %u state changed to %s",
+                    evt.u.srcstate.id,
+                    (evt.u.srcstate.state==AL_INITIAL) ? "AL_INITIAL" :
+                    (evt.u.srcstate.state==AL_PLAYING) ? "AL_PLAYING" :
+                    (evt.u.srcstate.state==AL_PAUSED) ? "AL_PAUSED" :
+                    (evt.u.srcstate.state==AL_STOPPED) ? "AL_STOPPED" : "<unknown>"
+                )};
+                if(msglen < 1) msglen = strlen(msg);
+                context->EventCb(AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT, evt.u.srcstate.id,
+                    evt.u.srcstate.state, msglen, msg, context->EventParam
+                );
+            }
+            else if((enabledevts&evt.EnumType) == evt.EnumType)
                 context->EventCb(evt.u.user.type, evt.u.user.id, evt.u.user.param,
                     (ALsizei)strlen(evt.u.user.msg), evt.u.user.msg, context->EventParam
                 );

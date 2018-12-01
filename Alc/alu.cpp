@@ -287,31 +287,12 @@ aluVector aluMatrixfVector(const aluMatrixf *mtx, const aluVector *vec)
 
 void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
 {
-    AsyncEvent evt = ASYNC_EVENT(EventType_SourceStateChange);
-    ALbitfieldSOFT enabledevt;
-    size_t strpos;
-    ALuint scale;
-
-    enabledevt = context->EnabledEvts.load(std::memory_order_acquire);
+    ALbitfieldSOFT enabledevt{context->EnabledEvts.load(std::memory_order_acquire)};
     if(!(enabledevt&EventType_SourceStateChange)) return;
 
-    evt.u.user.type = AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT;
-    evt.u.user.id = id;
-    evt.u.user.param = AL_STOPPED;
-
-    /* Normally snprintf would be used, but this is called from the mixer and
-     * that function's not real-time safe, so we have to construct it manually.
-     */
-    strcpy(evt.u.user.msg, "Source ID "); strpos = 10;
-    scale = 1000000000;
-    while(scale > 0 && scale > id)
-        scale /= 10;
-    while(scale > 0)
-    {
-        evt.u.user.msg[strpos++] = '0' + ((id/scale)%10);
-        scale /= 10;
-    }
-    strcpy(evt.u.user.msg+strpos, " state changed to AL_STOPPED");
+    AsyncEvent evt{ASYNC_EVENT(EventType_SourceStateChange)};
+    evt.u.srcstate.id = id;
+    evt.u.srcstate.state = AL_STOPPED;
 
     if(ll_ringbuffer_write(context->AsyncEvents, &evt, 1) == 1)
         context->EventSem.post();

@@ -841,10 +841,14 @@ enum {
     EventType_ReleaseEffectState = 65536,
 };
 
-typedef struct AsyncEvent {
+struct AsyncEvent {
     unsigned int EnumType;
     union {
         char dummy;
+        struct {
+            ALuint id;
+            ALenum state;
+        } srcstate;
         struct {
             ALenum type;
             ALuint id;
@@ -853,8 +857,8 @@ typedef struct AsyncEvent {
         } user;
         EffectState *mEffectState;
     } u;
-} AsyncEvent;
-#define ASYNC_EVENT(t) { t, { 0 } }
+};
+#define ASYNC_EVENT(t) AsyncEvent{ t, { 0 } }
 
 
 void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends);

@@ -2795,11 +2795,51 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
         for(;v < v_count;v++)
         {
             ALvoice *old_voice{context->Voices[v]};
+            voice = new (voice) ALvoice{};
 
             /* Copy the old voice data and source property set to the new
-             * storage.
+             * storage. Make sure the old voice's Update (if any) is cleared so
+             * it doesn't get deleted on deinit.
              */
-            memcpy(voice, old_voice, sizeof(*voice));
+            voice->Update.store(old_voice->Update.exchange(nullptr, std::memory_order_relaxed),
+                                std::memory_order_relaxed);
+
+            voice->SourceID.store(old_voice->SourceID.load(std::memory_order_relaxed),
+                                  std::memory_order_relaxed);
+            voice->Playing.store(old_voice->Playing.load(std::memory_order_relaxed),
+                                 std::memory_order_relaxed);
+
+            voice->Props = old_voice->Props;
+            /* Clear extraneous property set sends. */
+            std::fill(std::begin(voice->Props.Send)+s_count, std::end(voice->Props.Send),
+                ALvoiceProps::SendData{});
+
+            voice->position.store(old_voice->position.load(std::memory_order_relaxed),
+                                  std::memory_order_relaxed);
+            voice->position_fraction.store(
+                old_voice->position_fraction.load(std::memory_order_relaxed),
+                std::memory_order_relaxed);
+
+            voice->current_buffer.store(old_voice->current_buffer.load(std::memory_order_relaxed),
+                std::memory_order_relaxed);
+            voice->loop_buffer.store(old_voice->loop_buffer.load(std::memory_order_relaxed),
+                std::memory_order_relaxed);
+
+            voice->NumChannels = old_voice->NumChannels;
+            voice->SampleSize = old_voice->SampleSize;
+
+            voice->Step = old_voice->Step;
+            voice->Resampler = old_voice->Resampler;
+
+            voice->Flags = old_voice->Flags;
+
+            voice->Offset = old_voice->Offset;
+
+            memcpy(voice->PrevSamples, old_voice->PrevSamples, sizeof(voice->PrevSamples));
+
+            voice->ResampleState = old_voice->ResampleState;
+
+            voice->Direct = old_voice->Direct;
             std::copy_n(old_voice->Send, s_count, voice->Send);
 
             /* Set this voice's reference. */
@@ -2808,21 +2848,14 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
             /* Increment pointer to the next storage space. */
             voice = reinterpret_cast<ALvoice*>((char*)voice + sizeof_voice);
         }
-        /* Deinit any left over voices that weren't copied over to the new
-         * array. NOTE: If this does anything, v equals num_voices and
-         * num_voices is less than VoiceCount, so the following loop won't do
-         * anything.
-         */
+        /* Deinit old voices. */
         auto voices_end = context->Voices + context->VoiceCount.load(std::memory_order_relaxed);
-        std::for_each(context->Voices + v, voices_end,
-            [](ALvoice *voice) -> void { DeinitVoice(voice); }
-        );
+        std::for_each(context->Voices, voices_end, DeinitVoice);
     }
     /* Finish setting the voices' property set pointers and references. */
     for(;v < num_voices;v++)
     {
-        voice->Update.store(nullptr, std::memory_order_relaxed);
-
+        voice = new (voice) ALvoice{};
         voices[v] = voice;
 
         voice = reinterpret_cast<ALvoice*>((char*)voice + sizeof_voice);

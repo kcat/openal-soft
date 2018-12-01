@@ -102,6 +102,7 @@ void aluInit(void)
 void DeinitVoice(ALvoice *voice) noexcept
 {
     delete voice->Update.exchange(nullptr, std::memory_order_acq_rel);
+    voice->~ALvoice();
 }
 
 
@@ -505,7 +506,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                            const ALfloat DryGainLF, const ALfloat *WetGain,
                            const ALfloat *WetGainLF, const ALfloat *WetGainHF,
                            ALeffectslot **SendSlots, const ALbuffer *Buffer,
-                           const ALvoiceProps *props, const ALlistener &Listener,
+                           const ALvoicePropsBase *props, const ALlistener &Listener,
                            const ALCdevice *Device)
 {
     struct ChanMap StereoMap[2] = {
@@ -1023,7 +1024,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
     }
 }
 
-void CalcNonAttnSourceParams(ALvoice *voice, const ALvoiceProps *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
+void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
 {
     const ALCdevice *Device = ALContext->Device;
     const ALlistener &Listener = ALContext->Listener;
@@ -1086,7 +1087,7 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoiceProps *props, const AL
                           WetGainLF, WetGainHF, SendSlots, ALBuffer, props, Listener, Device);
 }
 
-void CalcAttnSourceParams(ALvoice *voice, const ALvoiceProps *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
+void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
 {
     const ALCdevice *Device = ALContext->Device;
     const ALlistener &Listener = ALContext->Listener;
@@ -1461,11 +1462,10 @@ void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
 
     if(props)
     {
-        memcpy(&voice->Props, props, FAM_SIZE(ALvoiceProps, Send, context->Device->NumAuxSends));
+        voice->Props = *props;
 
         AtomicReplaceHead(context->FreeVoiceProps, props);
     }
-    props = &voice->Props;
 
     ALbufferlistitem *BufferListItem{voice->current_buffer.load(std::memory_order_relaxed)};
     while(BufferListItem)
@@ -1477,11 +1477,11 @@ void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
         );
         if(LIKELY(buffer != buffers_end))
         {
-            if(props->SpatializeMode == SpatializeOn ||
-               (props->SpatializeMode == SpatializeAuto && (*buffer)->FmtChannels == FmtMono))
-                CalcAttnSourceParams(voice, props, *buffer, context);
+            if(voice->Props.SpatializeMode == SpatializeOn ||
+               (voice->Props.SpatializeMode == SpatializeAuto && (*buffer)->FmtChannels == FmtMono))
+                CalcAttnSourceParams(voice, &voice->Props, *buffer, context);
             else
-                CalcNonAttnSourceParams(voice, props, *buffer, context);
+                CalcNonAttnSourceParams(voice, &voice->Props, *buffer, context);
             break;
         }
         BufferListItem = BufferListItem->next.load(std::memory_order_acquire);

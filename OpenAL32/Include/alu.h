@@ -141,7 +141,7 @@ typedef struct SendParams {
 } SendParams;
 
 
-struct ALvoiceProps {
+struct ALvoicePropsBase {
     ALfloat Pitch;
     ALfloat Gain;
     ALfloat OuterGain;
@@ -183,7 +183,7 @@ struct ALvoiceProps {
         ALfloat GainLF;
         ALfloat LFReference;
     } Direct;
-    struct {
+    struct SendData {
         struct ALeffectslot *Slot;
         ALfloat Gain;
         ALfloat GainHF;
@@ -191,8 +191,10 @@ struct ALvoiceProps {
         ALfloat GainLF;
         ALfloat LFReference;
     } Send[MAX_SENDS];
+};
 
-    std::atomic<ALvoiceProps*> next;
+struct ALvoiceProps : public ALvoicePropsBase {
+    std::atomic<ALvoiceProps*> next{nullptr};
 
     DEF_NEWDEL(ALvoiceProps)
 };
@@ -202,13 +204,13 @@ struct ALvoiceProps {
 #define VOICE_HAS_HRTF  (1<<2)
 #define VOICE_HAS_NFC   (1<<3)
 
-typedef struct ALvoice {
-    std::atomic<ALvoiceProps*> Update;
+struct ALvoice {
+    std::atomic<ALvoiceProps*> Update{nullptr};
 
-    std::atomic<ALuint> SourceID;
-    std::atomic<bool> Playing;
+    std::atomic<ALuint> SourceID{0u};
+    std::atomic<bool> Playing{false};
 
-    ALvoiceProps Props;
+    ALvoicePropsBase Props;
 
     /**
      * Source offset in samples, relative to the currently playing buffer, NOT
@@ -262,7 +264,7 @@ typedef struct ALvoice {
         ALfloat (*Buffer)[BUFFERSIZE];
         ALsizei Channels;
     } Send[];
-} ALvoice;
+};
 
 void DeinitVoice(ALvoice *voice) noexcept;
 

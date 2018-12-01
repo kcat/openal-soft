@@ -356,13 +356,14 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
 
         for(ALsizei chan{0};chan < NumChannels;chan++)
         {
-            ALfloat *SrcData{Device->TempBuffer[SOURCE_DATA_BUF]};
+            ALfloat (&SrcData)[BUFFERSIZE] = Device->TempBuffer[SOURCE_DATA_BUF];
 
             /* Load the previous samples into the source data first, and clear the rest. */
-            std::copy_n(voice->PrevSamples[chan], MAX_RESAMPLE_PADDING, SrcData);
-            std::fill_n(SrcData+MAX_RESAMPLE_PADDING, BUFFERSIZE-MAX_RESAMPLE_PADDING, 0.0f);
-            ALsizei FilledAmt{MAX_RESAMPLE_PADDING};
+            auto srciter = std::copy(std::begin(voice->PrevSamples[chan]),
+                std::end(voice->PrevSamples[chan]), std::begin(SrcData));
+            std::fill(srciter, std::end(SrcData), 0.0f);
 
+            auto FilledAmt = static_cast<ALsizei>(voice->PrevSamples[chan].size());
             if(isstatic)
             {
                 /* TODO: For static sources, loop points are taken from the
@@ -501,7 +502,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
 
             /* Store the last source samples used for next time. */
             std::copy_n(&SrcData[(increment*DstBufferSize + DataPosFrac)>>FRACTIONBITS],
-                        MAX_RESAMPLE_PADDING, voice->PrevSamples[chan]);
+                        voice->PrevSamples[chan].size(), std::begin(voice->PrevSamples[chan]));
 
             /* Now resample, then filter and mix to the appropriate outputs. */
             const ALfloat *ResampledData{Resample(&voice->ResampleState,

@@ -2835,7 +2835,8 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
 
             voice->Offset = old_voice->Offset;
 
-            memcpy(voice->PrevSamples, old_voice->PrevSamples, sizeof(voice->PrevSamples));
+            std::copy(std::begin(old_voice->PrevSamples), std::end(old_voice->PrevSamples),
+                      std::begin(voice->PrevSamples));
 
             voice->ResampleState = old_voice->ResampleState;
 

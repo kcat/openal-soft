@@ -7,7 +7,6 @@
 #include "almalloc.h"
 #include "atomic.h"
 
-#define MAX_SENDS      16
 #define DEFAULT_SENDS  2
 
 #ifdef __cplusplus

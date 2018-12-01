@@ -17,21 +17,19 @@
 #include "math_defs.h"
 #include "filters/defs.h"
 #include "filters/nfc.h"
+#include "almalloc.h"
 
 
 enum class DistanceModel;
 
-#define MAX_PITCH  (255)
+#define MAX_PITCH  255
+#define MAX_SENDS  16
 
 /* Maximum number of samples to pad on either end of a buffer for resampling.
  * Note that both the beginning and end need padding!
  */
 #define MAX_RESAMPLE_PADDING 24
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 struct BSincTable;
 struct ALsource;
@@ -144,8 +142,6 @@ typedef struct SendParams {
 
 
 struct ALvoiceProps {
-    std::atomic<ALvoiceProps*> next;
-
     ALfloat Pitch;
     ALfloat Gain;
     ALfloat OuterGain;
@@ -194,7 +190,11 @@ struct ALvoiceProps {
         ALfloat HFReference;
         ALfloat GainLF;
         ALfloat LFReference;
-    } Send[];
+    } Send[MAX_SENDS];
+
+    std::atomic<ALvoiceProps*> next;
+
+    DEF_NEWDEL(ALvoiceProps)
 };
 
 #define VOICE_IS_STATIC (1<<0)
@@ -203,12 +203,12 @@ struct ALvoiceProps {
 #define VOICE_HAS_NFC   (1<<3)
 
 typedef struct ALvoice {
-    ALvoiceProps *Props;
-
     std::atomic<ALvoiceProps*> Update;
 
     std::atomic<ALuint> SourceID;
     std::atomic<bool> Playing;
+
+    ALvoiceProps Props;
 
     /**
      * Source offset in samples, relative to the currently playing buffer, NOT
@@ -486,9 +486,5 @@ extern RowMixerFunc MixRowSamples;
 extern ALfloat ConeScale;
 extern ALfloat ZScale;
 extern ALboolean OverrideReverbSpeedOfSound;
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

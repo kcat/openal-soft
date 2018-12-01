@@ -68,9 +68,7 @@ void UpdateSourceProps(ALsource *source, ALvoice *voice, ALCcontext *context)
     /* Get an unused property container, or allocate a new one as needed. */
     ALvoiceProps *props{context->FreeVoiceProps.load(std::memory_order_acquire)};
     if(!props)
-        props = static_cast<ALvoiceProps*>(al_calloc(16,
-            FAM_SIZE(ALvoiceProps, Send, source->Send.size()))
-        );
+        props = new ALvoiceProps{};
     else
     {
         ALvoiceProps *next;

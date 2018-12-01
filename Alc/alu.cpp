@@ -101,7 +101,7 @@ void aluInit(void)
 
 void DeinitVoice(ALvoice *voice) noexcept
 {
-    al_free(voice->Update.exchange(nullptr));
+    delete voice->Update.exchange(nullptr, std::memory_order_acq_rel);
 }
 
 
@@ -505,7 +505,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                            const ALfloat DryGainLF, const ALfloat *WetGain,
                            const ALfloat *WetGainLF, const ALfloat *WetGainHF,
                            ALeffectslot **SendSlots, const ALbuffer *Buffer,
-                           const struct ALvoiceProps *props, const ALlistener &Listener,
+                           const ALvoiceProps *props, const ALlistener &Listener,
                            const ALCdevice *Device)
 {
     struct ChanMap StereoMap[2] = {
@@ -1023,7 +1023,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
     }
 }
 
-void CalcNonAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
+void CalcNonAttnSourceParams(ALvoice *voice, const ALvoiceProps *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
 {
     const ALCdevice *Device = ALContext->Device;
     const ALlistener &Listener = ALContext->Listener;
@@ -1086,7 +1086,7 @@ void CalcNonAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *props, c
                           WetGainLF, WetGainHF, SendSlots, ALBuffer, props, Listener, Device);
 }
 
-void CalcAttnSourceParams(ALvoice *voice, const struct ALvoiceProps *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
+void CalcAttnSourceParams(ALvoice *voice, const ALvoiceProps *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
 {
     const ALCdevice *Device = ALContext->Device;
     const ALlistener &Listener = ALContext->Listener;
@@ -1461,13 +1461,11 @@ void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
 
     if(props)
     {
-        memcpy(voice->Props, props,
-            FAM_SIZE(struct ALvoiceProps, Send, context->Device->NumAuxSends)
-        );
+        memcpy(&voice->Props, props, FAM_SIZE(ALvoiceProps, Send, context->Device->NumAuxSends));
 
         AtomicReplaceHead(context->FreeVoiceProps, props);
     }
-    props = voice->Props;
+    props = &voice->Props;
 
     ALbufferlistitem *BufferListItem{voice->current_buffer.load(std::memory_order_relaxed)};
     while(BufferListItem)

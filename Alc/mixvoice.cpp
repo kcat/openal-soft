@@ -537,30 +537,29 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                         );
                     else
                     {
-                        ALfloat *nfcsamples = Device->TempBuffer[NFC_DATA_BUF];
-                        ALsizei chanoffset = 0;
-
                         MixSamples(samples,
                             voice->Direct.ChannelsPerOrder[0], voice->Direct.Buffer,
                             parms->Gains.Current, parms->Gains.Target, Counter, OutPos,
                             DstBufferSize
                         );
-                        chanoffset += voice->Direct.ChannelsPerOrder[0];
-#define APPLY_NFC_MIX(order)                                                  \
-    if(voice->Direct.ChannelsPerOrder[order] > 0)                             \
-    {                                                                         \
-        NfcFilterProcess##order(&parms->NFCtrlFilter, nfcsamples, samples,    \
-                               DstBufferSize);                                \
-        MixSamples(nfcsamples, voice->Direct.ChannelsPerOrder[order],         \
-            voice->Direct.Buffer+chanoffset, parms->Gains.Current+chanoffset, \
-            parms->Gains.Target+chanoffset, Counter, OutPos, DstBufferSize    \
-        );                                                                    \
-        chanoffset += voice->Direct.ChannelsPerOrder[order];                  \
-    }
-                        APPLY_NFC_MIX(1)
-                        APPLY_NFC_MIX(2)
-                        APPLY_NFC_MIX(3)
-#undef APPLY_NFC_MIX
+
+                        ALfloat *nfcsamples{Device->TempBuffer[NFC_DATA_BUF]};
+                        ALsizei chanoffset{voice->Direct.ChannelsPerOrder[0]};
+                        using FilterProc = void(NfcFilter*,ALfloat*,const ALfloat*,ALsizei);
+                        auto apply_nfc = [voice,parms,samples,DstBufferSize,Counter,OutPos,&chanoffset,nfcsamples](FilterProc &process, ALsizei order) -> void
+                        {
+                            if(voice->Direct.ChannelsPerOrder[order] < 1)
+                                return;
+                            process(&parms->NFCtrlFilter, nfcsamples, samples, DstBufferSize);
+                            MixSamples(nfcsamples, voice->Direct.ChannelsPerOrder[order],
+                                voice->Direct.Buffer+chanoffset, parms->Gains.Current+chanoffset,
+                                parms->Gains.Target+chanoffset, Counter, OutPos, DstBufferSize
+                            );
+                            chanoffset += voice->Direct.ChannelsPerOrder[order];
+                        };
+                        apply_nfc(NfcFilterProcess1, 1);
+                        apply_nfc(NfcFilterProcess2, 2);
+                        apply_nfc(NfcFilterProcess3, 3);
                     }
                 }
                 else

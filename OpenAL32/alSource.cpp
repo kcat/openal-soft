@@ -2855,6 +2855,7 @@ AL_API ALvoid AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources)
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Pausing %d sources", n);
     if(n == 0) return;
 
+    std::lock_guard<std::mutex> _{context->SourceLock};
     for(ALsizei i{0};i < n;i++)
     {
         if(!LookupSource(context.get(), sources[i]))
@@ -2890,6 +2891,7 @@ AL_API ALvoid AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources)
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Stopping %d sources", n);
     if(n == 0) return;
 
+    std::lock_guard<std::mutex> _{context->SourceLock};
     for(ALsizei i{0};i < n;i++)
     {
         if(!LookupSource(context.get(), sources[i]))
@@ -2933,6 +2935,7 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Rewinding %d sources", n);
     if(n == 0) return;
 
+    std::lock_guard<std::mutex> _{context->SourceLock};
     for(ALsizei i{0};i < n;i++)
     {
         if(!LookupSource(context.get(), sources[i]))

@@ -2977,11 +2977,11 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
 
     std::lock_guard<std::mutex> _{context->SourceLock};
     ALsource *source{LookupSource(context.get(),src)};
-    if(!source)
+    if(UNLIKELY(!source))
         SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", src);
 
     /* Can't queue on a Static Source */
-    if(source->SourceType == AL_STATIC)
+    if(UNLIKELY(source->SourceType == AL_STATIC))
         SETERR_RETURN(context.get(), AL_INVALID_OPERATION,, "Queueing onto static source %u", src);
 
     /* Check for a valid Buffer, for its frequency and format */
@@ -3094,11 +3094,11 @@ AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint src, ALsizei nb, co
 
     std::lock_guard<std::mutex> _{context->SourceLock};
     ALsource *source{LookupSource(context.get(),src)};
-    if(!source)
+    if(UNLIKELY(!source))
         SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", src);
 
     /* Can't queue on a Static Source */
-    if(source->SourceType == AL_STATIC)
+    if(UNLIKELY(source->SourceType == AL_STATIC))
         SETERR_RETURN(context.get(), AL_INVALID_OPERATION,, "Queueing onto static source %u", src);
 
     /* Check for a valid Buffer, for its frequency and format */
@@ -3202,12 +3202,12 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
 
     std::lock_guard<std::mutex> _{context->SourceLock};
     ALsource *source{LookupSource(context.get(),src)};
-    if(!source)
+    if(UNLIKELY(!source))
         SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", src);
 
-    if(source->Looping)
+    if(UNLIKELY(source->Looping))
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Unqueueing from looping source %u", src);
-    if(source->SourceType != AL_STREAMING)
+    if(UNLIKELY(source->SourceType != AL_STREAMING))
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,,
             "Unqueueing from a non-streaming source %u", src);
 
@@ -3219,7 +3219,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
         Current = voice->current_buffer.load(std::memory_order_relaxed);
     else if(source->state == AL_INITIAL)
         Current = BufferList;
-    if(BufferList == Current)
+    if(UNLIKELY(BufferList == Current))
         SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Unqueueing pending buffers");
 
     ALsizei i{BufferList->num_buffers};
@@ -3229,7 +3229,7 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint src, ALsizei nb, ALuint 
          * trying to unqueue pending buffers.
          */
         ALbufferlistitem *next{BufferList->next.load(std::memory_order_relaxed)};
-        if(!next || next == Current)
+        if(UNLIKELY(!next) || UNLIKELY(next == Current))
             SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Unqueueing pending buffers");
         BufferList = next;
 

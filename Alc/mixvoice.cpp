@@ -482,7 +482,8 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                     ALsizei CompLen{0};
                     auto load_buffer = [pos,&SrcData,NumChannels,SampleSize,chan,FilledAmt,SizeToDo,&CompLen](const ALbuffer *buffer) -> void
                     {
-                        ALsizei DataSize{buffer ? buffer->SampleLen : 0};
+                        if(!buffer) return;
+                        ALsizei DataSize{buffer->SampleLen};
                         if(pos >= DataSize) return;
 
                         DataSize = mini(SizeToDo, DataSize - pos);

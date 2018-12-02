@@ -577,6 +577,7 @@ void EffectState::DecRef() noexcept
 ALenum InitEffectSlot(ALeffectslot *slot)
 {
     EffectStateFactory *factory{getFactoryByType(slot->Effect.Type)};
+    if(!factory) return AL_INVALID_VALUE;
     slot->Effect.State = factory->create();
     if(!slot->Effect.State) return AL_OUT_OF_MEMORY;
 

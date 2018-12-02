@@ -259,7 +259,7 @@ struct ALvoice {
         ALsizei ChannelsPerOrder[MAX_AMBI_ORDER+1];
     } Direct;
 
-    struct {
+    struct SendData {
         int FilterType;
         SendParams Params[MAX_INPUT_CHANNELS];
 

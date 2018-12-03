@@ -2682,44 +2682,51 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
     if(n == 0) return;
 
     std::lock_guard<std::mutex> _{context->SourceLock};
-    for(ALsizei i{0};i < n;i++)
-    {
-        if(!LookupSource(context.get(), sources[i]))
-            SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", sources[i]);
-    }
+    auto sources_end = sources+n;
+    auto bad_sid = std::find_if_not(sources, sources_end,
+        [&context](ALuint sid) -> bool
+        {
+            ALsource *source{LookupSource(context.get(), sid)};
+            return LIKELY(source != nullptr);
+        }
+    );
+    if(UNLIKELY(bad_sid != sources+n))
+        SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid source ID %u", *bad_sid);
 
     ALCdevice *device{context->Device};
     ALCdevice_Lock(device);
     /* If the device is disconnected, go right to stopped. */
-    if(!device->Connected.load(std::memory_order_acquire))
+    if(UNLIKELY(!device->Connected.load(std::memory_order_acquire)))
     {
         /* TODO: Send state change event? */
-        for(ALsizei i{0};i < n;i++)
-        {
-            ALsource *source{LookupSource(context.get(), sources[i])};
-            source->OffsetType = AL_NONE;
-            source->Offset = 0.0;
-            source->state = AL_STOPPED;
-        }
+        std::for_each(sources, sources_end,
+            [&context](ALuint sid) -> void
+            {
+                ALsource *source{LookupSource(context.get(), sid)};
+                source->OffsetType = AL_NONE;
+                source->Offset = 0.0;
+                source->state = AL_STOPPED;
+            }
+        );
         ALCdevice_Unlock(device);
         return;
     }
 
     while(n > context->MaxVoices-context->VoiceCount.load(std::memory_order_relaxed))
     {
-        ALsizei newcount = context->MaxVoices << 1;
-        if(context->MaxVoices >= newcount)
+        if(UNLIKELY(context->MaxVoices > std::numeric_limits<ALsizei>::max()>>1))
         {
             ALCdevice_Unlock(device);
             SETERR_RETURN(context.get(), AL_OUT_OF_MEMORY,,
-                "Overflow increasing voice count %d -> %d", context->MaxVoices, newcount);
+                "Overflow increasing voice count from %d", context->MaxVoices);
         }
+        ALsizei newcount = context->MaxVoices << 1;
         AllocateVoices(context.get(), newcount, device->NumAuxSends);
     }
 
-    for(ALsizei i{0};i < n;i++)
+    auto start_source = [&context,device](ALuint sid) -> void
     {
-        ALsource *source{LookupSource(context.get(), sources[i])};
+        ALsource *source{LookupSource(context.get(), sid)};
         /* Check that there is a queue containing at least one valid, non zero
          * length buffer.
          */
@@ -2742,34 +2749,34 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
                 source->state = AL_STOPPED;
                 SendStateChangeEvent(context.get(), source->id, AL_STOPPED);
             }
-            continue;
+            return;
         }
 
         ALvoice *voice{GetSourceVoice(source, context.get())};
         switch(GetSourceState(source, voice))
         {
-            case AL_PLAYING:
-                assert(voice != nullptr);
-                /* A source that's already playing is restarted from the beginning. */
-                voice->current_buffer.store(BufferList, std::memory_order_relaxed);
-                voice->position.store(0u, std::memory_order_relaxed);
-                voice->position_fraction.store(0, std::memory_order_release);
-                continue;
+        case AL_PLAYING:
+            assert(voice != nullptr);
+            /* A source that's already playing is restarted from the beginning. */
+            voice->current_buffer.store(BufferList, std::memory_order_relaxed);
+            voice->position.store(0u, std::memory_order_relaxed);
+            voice->position_fraction.store(0, std::memory_order_release);
+            return;
 
-            case AL_PAUSED:
-                assert(voice != nullptr);
-                /* A source that's paused simply resumes. */
-                voice->Playing.store(true, std::memory_order_release);
-                source->state = AL_PLAYING;
-                SendStateChangeEvent(context.get(), source->id, AL_PLAYING);
-                continue;
+        case AL_PAUSED:
+            assert(voice != nullptr);
+            /* A source that's paused simply resumes. */
+            voice->Playing.store(true, std::memory_order_release);
+            source->state = AL_PLAYING;
+            SendStateChangeEvent(context.get(), source->id, AL_PLAYING);
+            return;
 
-            default:
-                break;
+        default:
+            assert(voice == nullptr);
+            break;
         }
 
         /* Look for an unused voice to play this source with. */
-        assert(voice == nullptr);
         auto voices_end = context->Voices + context->VoiceCount.load(std::memory_order_relaxed);
         auto voice_iter = std::find_if(context->Voices, voices_end,
             [](const ALvoice *voice) noexcept -> bool
@@ -2821,15 +2828,21 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 
         voice->Flags = start_fading ? VOICE_IS_FADING : 0;
         if(source->SourceType == AL_STATIC) voice->Flags |= VOICE_IS_STATIC;
-        memset(voice->Direct.Params, 0, sizeof(voice->Direct.Params[0])*voice->NumChannels);
-        for(ALsizei j{0};j < device->NumAuxSends;j++)
-            memset(voice->Send[j].Params, 0, sizeof(voice->Send[j].Params[0])*voice->NumChannels);
+
+        std::fill_n(std::begin(voice->Direct.Params), voice->NumChannels, DirectParams{});
+        std::for_each(voice->Send+0, voice->Send+source->Send.size(),
+            [voice](ALvoice::SendData &send) -> void
+            { std::fill_n(std::begin(send.Params), voice->NumChannels, SendParams{}); }
+        );
+
         if(device->AvgSpeakerDist > 0.0f)
         {
             ALfloat w1 = SPEEDOFSOUNDMETRESPERSEC /
                          (device->AvgSpeakerDist * device->Frequency);
-            for(ALsizei j{0};j < voice->NumChannels;j++)
-                NfcFilterCreate(&voice->Direct.Params[j].NFCtrlFilter, 0.0f, w1);
+            std::for_each(voice->Direct.Params+0, voice->Direct.Params+voice->NumChannels,
+                [w1](DirectParams &parms) -> void
+                { NfcFilterCreate(&parms.NFCtrlFilter, 0.0f, w1); }
+            );
         }
 
         voice->SourceID.store(source->id, std::memory_order_relaxed);
@@ -2838,7 +2851,8 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         source->VoiceIdx = vidx;
 
         SendStateChangeEvent(context.get(), source->id, AL_PLAYING);
-    }
+    };
+    std::for_each(sources, sources_end, start_source);
     ALCdevice_Unlock(device);
 }
 

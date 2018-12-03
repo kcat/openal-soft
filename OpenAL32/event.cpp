@@ -45,17 +45,14 @@ static int EventThread(ALCcontext *context)
             {
                 if(!(enabledevts&EventType_SourceStateChange))
                     continue;
-                char msg[1024]{};
-                int msglen{snprintf(msg, sizeof(msg), "Source ID %u state changed to %s",
-                    evt.u.srcstate.id,
-                    (evt.u.srcstate.state==AL_INITIAL) ? "AL_INITIAL" :
+                std::string msg{"Source ID " + std::to_string(evt.u.srcstate.id)};
+                msg += " state has changed to ";
+                msg += (evt.u.srcstate.state==AL_INITIAL) ? "AL_INITIAL" :
                     (evt.u.srcstate.state==AL_PLAYING) ? "AL_PLAYING" :
                     (evt.u.srcstate.state==AL_PAUSED) ? "AL_PAUSED" :
-                    (evt.u.srcstate.state==AL_STOPPED) ? "AL_STOPPED" : "<unknown>"
-                )};
-                if(msglen < 1) msglen = strlen(msg);
+                    (evt.u.srcstate.state==AL_STOPPED) ? "AL_STOPPED" : "<unknown>";
                 context->EventCb(AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT, evt.u.srcstate.id,
-                    evt.u.srcstate.state, msglen, msg, context->EventParam
+                    evt.u.srcstate.state, msg.length(), msg.c_str(), context->EventParam
                 );
             }
             else if((enabledevts&evt.EnumType) == evt.EnumType)

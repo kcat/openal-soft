@@ -1515,10 +1515,9 @@ void ProcessContext(ALCcontext *ctx, ALsizei SamplesToDo)
     std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount.load(std::memory_order_acquire),
         [SamplesToDo,ctx](ALvoice *voice) -> void
         {
-            ALuint sid{voice->SourceID.load(std::memory_order_acquire)};
-            if(!sid) return;
-            if(!voice->Playing.load(std::memory_order_relaxed) || voice->Step < 1)
-                return;
+            if(!voice->Playing.load(std::memory_order_acquire)) return;
+            ALuint sid{voice->SourceID.load(std::memory_order_relaxed)};
+            if(!sid || voice->Step < 1) return;
 
             if(!MixSource(voice, sid, ctx, SamplesToDo))
             {
@@ -1841,9 +1840,9 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
         std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount.load(std::memory_order_acquire),
             [ctx](ALvoice *voice) -> void
             {
+                if(!voice->Playing.load(std::memory_order_acquire)) return;
                 ALuint sid{voice->SourceID.load(std::memory_order_relaxed)};
-                if(!sid || !voice->Playing.load(std::memory_order_relaxed))
-                    return;
+                if(!sid) return;
 
                 voice->SourceID.store(0u, std::memory_order_relaxed);
                 voice->Playing.store(false, std::memory_order_release);

@@ -61,11 +61,9 @@ ALboolean OverrideReverbSpeedOfSound = AL_FALSE;
 
 namespace {
 
-void ClearArray(ALfloat f[MAX_OUTPUT_CHANNELS])
+void ClearArray(ALfloat (&f)[MAX_OUTPUT_CHANNELS])
 {
-    size_t i;
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-        f[i] = 0.0f;
+    std::fill(std::begin(f), std::end(f), 0.0f);
 }
 
 struct ChanMap {
@@ -568,17 +566,21 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
         break;
     }
 
-    for(c = 0;c < num_channels;c++)
-    {
-        memset(&voice->Direct.Params[c].Hrtf.Target, 0,
-               sizeof(voice->Direct.Params[c].Hrtf.Target));
-        ClearArray(voice->Direct.Params[c].Gains.Target);
-    }
-    for(i = 0;i < NumSends;i++)
-    {
-        for(c = 0;c < num_channels;c++)
-            ClearArray(voice->Send[i].Params[c].Gains.Target);
-    }
+    std::for_each(std::begin(voice->Direct.Params), std::begin(voice->Direct.Params)+num_channels,
+        [](DirectParams &params) -> void
+        {
+            params.Hrtf.Target = HrtfParams{};
+            ClearArray(params.Gains.Target);
+        }
+    );
+    std::for_each(voice->Send+0, voice->Send+NumSends,
+        [num_channels](ALvoice::SendData &send) -> void
+        {
+            std::for_each(std::begin(send.Params), std::begin(send.Params)+num_channels,
+                [](SendParams &params) -> void { ClearArray(params.Gains.Target); }
+            );
+        }
+    );
 
     voice->Flags &= ~(VOICE_HAS_HRTF | VOICE_HAS_NFC);
     if(isbformat)
@@ -608,8 +610,9 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 /* Only need to adjust the first channel of a B-Format source. */
                 NfcFilterAdjust(&voice->Direct.Params[0].NFCtrlFilter, w0);
 
-                for(i = 0;i < MAX_AMBI_ORDER+1;i++)
-                    voice->Direct.ChannelsPerOrder[i] = Device->NumChannelsPerOrder[i];
+                std::copy(std::begin(Device->NumChannelsPerOrder),
+                          std::end(Device->NumChannelsPerOrder),
+                          std::begin(voice->Direct.ChannelsPerOrder));
                 voice->Flags |= VOICE_HAS_NFC;
             }
 
@@ -650,8 +653,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
 
                 voice->Direct.ChannelsPerOrder[0] = 1;
                 voice->Direct.ChannelsPerOrder[1] = mini(voice->Direct.Channels-1, 3);
-                for(i = 2;i < MAX_AMBI_ORDER+1;i++)
-                    voice->Direct.ChannelsPerOrder[i] = 0;
+                std::fill(std::begin(voice->Direct.ChannelsPerOrder)+2,
+                          std::end(voice->Direct.ChannelsPerOrder), 0);
                 voice->Flags |= VOICE_HAS_NFC;
             }
 

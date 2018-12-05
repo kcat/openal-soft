@@ -10,12 +10,12 @@
 #include "defs.h"
 
 
-void BiquadFilter_setParams(BiquadFilter *filter, BiquadType type, ALfloat gain, ALfloat f0norm, ALfloat rcpQ)
+void BiquadFilter_setParams(BiquadFilter *filter, BiquadType type, float gain, float f0norm, float rcpQ)
 {
-    ALfloat alpha, sqrtgain_alpha_2;
-    ALfloat w0, sin_w0, cos_w0;
-    ALfloat a[3] = { 1.0f, 0.0f, 0.0f };
-    ALfloat b[3] = { 1.0f, 0.0f, 0.0f };
+    float alpha, sqrtgain_alpha_2;
+    float w0, sin_w0, cos_w0;
+    float a[3] = { 1.0f, 0.0f, 0.0f };
+    float b[3] = { 1.0f, 0.0f, 0.0f };
 
     // Limit gain to -100dB
     assert(gain > 0.00001f);
@@ -90,17 +90,17 @@ void BiquadFilter_setParams(BiquadFilter *filter, BiquadType type, ALfloat gain,
 }
 
 
-void BiquadFilter_processC(BiquadFilter *filter, ALfloat *RESTRICT dst, const ALfloat *RESTRICT src, ALsizei numsamples)
+void BiquadFilter_processC(BiquadFilter *filter, float *RESTRICT dst, const float *RESTRICT src, int numsamples)
 {
-    const ALfloat b0 = filter->b0;
-    const ALfloat b1 = filter->b1;
-    const ALfloat b2 = filter->b2;
-    const ALfloat a1 = filter->a1;
-    const ALfloat a2 = filter->a2;
-    ALfloat z1 = filter->z1;
-    ALfloat z2 = filter->z2;
-
     ASSUME(numsamples > 0);
+
+    const float b0{filter->b0};
+    const float b1{filter->b1};
+    const float b2{filter->b2};
+    const float a1{filter->a1};
+    const float a2{filter->a2};
+    float z1{filter->z1};
+    float z2{filter->z2};
 
     /* Processing loop is Transposed Direct Form II. This requires less storage
      * compared to Direct Form I (only two delay components, instead of a four-
@@ -110,14 +110,14 @@ void BiquadFilter_processC(BiquadFilter *filter, ALfloat *RESTRICT dst, const AL
      *
      * See: http://www.earlevel.com/main/2003/02/28/biquads/
      */
-    auto proc_sample = [b0,b1,b2,a1,a2,&z1,&z2](ALfloat input) noexcept -> ALfloat
+    auto proc_sample = [b0,b1,b2,a1,a2,&z1,&z2](float input) noexcept -> float
     {
-        ALfloat output = input*b0 + z1;
+        float output = input*b0 + z1;
         z1 = input*b1 - output*a1 + z2;
         z2 = input*b2 - output*a2;
         return output;
     };
-    std::transform<const ALfloat*RESTRICT>(src, src+numsamples, dst, proc_sample);
+    std::transform<const float*RESTRICT>(src, src+numsamples, dst, proc_sample);
 
     filter->z1 = z1;
     filter->z2 = z2;

@@ -35,11 +35,11 @@ enum class BiquadType {
 
 struct BiquadFilter {
     /* Last two delayed components for direct form II. */
-    ALfloat z1{0.0f}, z2{0.0f};
+    float z1{0.0f}, z2{0.0f};
     /* Transfer function coefficients "b" (numerator) */
-    ALfloat b0{1.0f}, b1{0.0f}, b2{0.0f};
+    float b0{1.0f}, b1{0.0f}, b2{0.0f};
     /* Transfer function coefficients "a" (denominator; a0 is pre-applied). */
-    ALfloat a1{0.0f}, a2{0.0f};
+    float a1{0.0f}, a2{0.0f};
 };
 /* Currently only a C-based filter process method is implemented. */
 #define BiquadFilter_process BiquadFilter_processC
@@ -50,7 +50,7 @@ struct BiquadFilter {
  * \param gain 0 < gain
  * \param slope 0 < slope <= 1
  */
-inline ALfloat calc_rcpQ_from_slope(ALfloat gain, ALfloat slope)
+inline float calc_rcpQ_from_slope(float gain, float slope)
 {
     return std::sqrt((gain + 1.0f/gain)*(1.0f/slope - 1.0f) + 2.0f);
 }
@@ -60,9 +60,9 @@ inline ALfloat calc_rcpQ_from_slope(ALfloat gain, ALfloat slope)
  * \param f0norm 0 < f0norm < 0.5.
  * \param bandwidth 0 < bandwidth
  */
-inline ALfloat calc_rcpQ_from_bandwidth(ALfloat f0norm, ALfloat bandwidth)
+inline ALfloat calc_rcpQ_from_bandwidth(float f0norm, float bandwidth)
 {
-    ALfloat w0 = F_TAU * f0norm;
+    float w0 = F_TAU * f0norm;
     return 2.0f*std::sinh(std::log(2.0f)/2.0f*bandwidth*w0/std::sin(w0));
 }
 
@@ -87,7 +87,7 @@ inline void BiquadFilter_clear(BiquadFilter *filter)
  *             band. Can be generated from calc_rcpQ_from_slope or
  *             calc_rcpQ_from_bandwidth depending on the available data.
  */
-void BiquadFilter_setParams(BiquadFilter *filter, BiquadType type, ALfloat gain, ALfloat f0norm, ALfloat rcpQ);
+void BiquadFilter_setParams(BiquadFilter *filter, BiquadType type, float gain, float f0norm, float rcpQ);
 
 inline void BiquadFilter_copyParams(BiquadFilter *RESTRICT dst, const BiquadFilter *RESTRICT src)
 {
@@ -98,9 +98,9 @@ inline void BiquadFilter_copyParams(BiquadFilter *RESTRICT dst, const BiquadFilt
     dst->a2 = src->a2;
 }
 
-void BiquadFilter_processC(BiquadFilter *filter, ALfloat *RESTRICT dst, const ALfloat *RESTRICT src, ALsizei numsamples);
+void BiquadFilter_processC(BiquadFilter *filter, float *RESTRICT dst, const float *RESTRICT src, int numsamples);
 
-inline void BiquadFilter_passthru(BiquadFilter *filter, ALsizei numsamples)
+inline void BiquadFilter_passthru(BiquadFilter *filter, int numsamples)
 {
     if(LIKELY(numsamples >= 2))
     {

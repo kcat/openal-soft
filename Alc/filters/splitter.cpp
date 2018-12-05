@@ -9,10 +9,10 @@
 #include "math_defs.h"
 
 
-void bandsplit_init(BandSplitter *splitter, ALfloat f0norm)
+void bandsplit_init(BandSplitter *splitter, float f0norm)
 {
-    ALfloat w = f0norm * F_TAU;
-    ALfloat cw = std::cos(w);
+    float w = f0norm * F_TAU;
+    float cw = std::cos(w);
     if(cw > FLT_EPSILON)
         splitter->coeff = (std::sin(w) - 1.0f) / cw;
     else
@@ -30,8 +30,8 @@ void bandsplit_clear(BandSplitter *splitter)
     splitter->hp_z1 = 0.0f;
 }
 
-void bandsplit_process(BandSplitter *splitter, ALfloat *RESTRICT hpout, ALfloat *RESTRICT lpout,
-                       const ALfloat *input, ALsizei count)
+void bandsplit_process(BandSplitter *splitter, float *RESTRICT hpout, float *RESTRICT lpout,
+                       const ALfloat *input, int count)
 {
     ASSUME(count > 0);
 
@@ -67,10 +67,10 @@ void bandsplit_process(BandSplitter *splitter, ALfloat *RESTRICT hpout, ALfloat 
 }
 
 
-void splitterap_init(SplitterAllpass *splitter, ALfloat f0norm)
+void splitterap_init(SplitterAllpass *splitter, float f0norm)
 {
-    ALfloat w = f0norm * F_TAU;
-    ALfloat cw = std::cos(w);
+    float w = f0norm * F_TAU;
+    float cw = std::cos(w);
     if(cw > FLT_EPSILON)
         splitter->coeff = (std::sin(w) - 1.0f) / cw;
     else
@@ -84,7 +84,7 @@ void splitterap_clear(SplitterAllpass *splitter)
     splitter->z1 = 0.0f;
 }
 
-void splitterap_process(SplitterAllpass *splitter, ALfloat *RESTRICT samples, ALsizei count)
+void splitterap_process(SplitterAllpass *splitter, float *RESTRICT samples, int count)
 {
     ASSUME(count > 0);
 

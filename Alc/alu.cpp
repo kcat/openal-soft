@@ -964,20 +964,16 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
         voice->Direct.FilterType = AF_None;
         if(gainHF != 1.0f) voice->Direct.FilterType |= AF_LowPass;
         if(gainLF != 1.0f) voice->Direct.FilterType |= AF_HighPass;
-        BiquadFilter_setParams(
-            &voice->Direct.Params[0].LowPass, BiquadType::HighShelf,
+        voice->Direct.Params[0].LowPass.setParams(BiquadType::HighShelf,
             gainHF, hfScale, calc_rcpQ_from_slope(gainHF, 1.0f)
         );
-        BiquadFilter_setParams(
-            &voice->Direct.Params[0].HighPass, BiquadType::LowShelf,
+        voice->Direct.Params[0].HighPass.setParams(BiquadType::LowShelf,
             gainLF, lfScale, calc_rcpQ_from_slope(gainLF, 1.0f)
         );
         for(c = 1;c < num_channels;c++)
         {
-            BiquadFilter_copyParams(&voice->Direct.Params[c].LowPass,
-                                    &voice->Direct.Params[0].LowPass);
-            BiquadFilter_copyParams(&voice->Direct.Params[c].HighPass,
-                                    &voice->Direct.Params[0].HighPass);
+            voice->Direct.Params[c].LowPass.copyParamsFrom(voice->Direct.Params[0].LowPass);
+            voice->Direct.Params[c].HighPass.copyParamsFrom(voice->Direct.Params[0].HighPass);
         }
     }
     for(i = 0;i < NumSends;i++)
@@ -990,20 +986,16 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
         voice->Send[i].FilterType = AF_None;
         if(gainHF != 1.0f) voice->Send[i].FilterType |= AF_LowPass;
         if(gainLF != 1.0f) voice->Send[i].FilterType |= AF_HighPass;
-        BiquadFilter_setParams(
-            &voice->Send[i].Params[0].LowPass, BiquadType::HighShelf,
+        voice->Send[i].Params[0].LowPass.setParams(BiquadType::HighShelf,
             gainHF, hfScale, calc_rcpQ_from_slope(gainHF, 1.0f)
         );
-        BiquadFilter_setParams(
-            &voice->Send[i].Params[0].HighPass, BiquadType::LowShelf,
+        voice->Send[i].Params[0].HighPass.setParams(BiquadType::LowShelf,
             gainLF, lfScale, calc_rcpQ_from_slope(gainLF, 1.0f)
         );
         for(c = 1;c < num_channels;c++)
         {
-            BiquadFilter_copyParams(&voice->Send[i].Params[c].LowPass,
-                                    &voice->Send[i].Params[0].LowPass);
-            BiquadFilter_copyParams(&voice->Send[i].Params[c].HighPass,
-                                    &voice->Send[i].Params[0].HighPass);
+            voice->Send[i].Params[c].LowPass.copyParamsFrom(voice->Send[i].Params[0].LowPass);
+            voice->Send[i].Params[c].HighPass.copyParamsFrom(voice->Send[i].Params[0].HighPass);
         }
     }
 }

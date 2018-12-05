@@ -478,8 +478,8 @@ ALboolean ReverbState::deviceUpdate(ALCdevice *Device)
      */
     for(i = 0;i < NUM_LINES;i++)
     {
-        BiquadFilter_clear(&mFilter[i].Lp);
-        BiquadFilter_clear(&mFilter[i].Hp);
+        mFilter[i].Lp.clear();
+        mFilter[i].Hp.clear();
     }
 
     for(i = 0;i < NUM_LINES;i++)
@@ -500,8 +500,8 @@ ALboolean ReverbState::deviceUpdate(ALCdevice *Device)
     {
         mLate.T60[i].MidGain[0] = 0.0f;
         mLate.T60[i].MidGain[1] = 0.0f;
-        BiquadFilter_clear(&mLate.T60[i].HFFilter);
-        BiquadFilter_clear(&mLate.T60[i].LFFilter);
+        mLate.T60[i].HFFilter.clear();
+        mLate.T60[i].LFFilter.clear();
     }
 
     for(i = 0;i < NUM_LINES;i++)
@@ -615,10 +615,10 @@ static void CalcT60DampingCoeffs(const ALfloat length, const ALfloat lfDecayTime
     ALfloat hfGain = CalcDecayCoeff(length, hfDecayTime);
 
     filter->MidGain[1] = mfGain;
-    BiquadFilter_setParams(&filter->LFFilter, BiquadType::LowShelf, lfGain/mfGain, lf0norm,
-                           calc_rcpQ_from_slope(lfGain/mfGain, 1.0f));
-    BiquadFilter_setParams(&filter->HFFilter, BiquadType::HighShelf, hfGain/mfGain, hf0norm,
-                           calc_rcpQ_from_slope(hfGain/mfGain, 1.0f));
+    filter->LFFilter.setParams(BiquadType::LowShelf, lfGain/mfGain, lf0norm,
+        calc_rcpQ_from_slope(lfGain/mfGain, 1.0f));
+    filter->HFFilter.setParams(BiquadType::HighShelf, hfGain/mfGain, hf0norm,
+        calc_rcpQ_from_slope(hfGain/mfGain, 1.0f));
 }
 
 /* Update the offsets for the main effect delay line. */
@@ -851,16 +851,16 @@ void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
      * killing most of the signal.
      */
     gainhf = maxf(props->Reverb.GainHF, 0.001f);
-    BiquadFilter_setParams(&mFilter[0].Lp, BiquadType::HighShelf, gainhf, hf0norm,
-                           calc_rcpQ_from_slope(gainhf, 1.0f));
+    mFilter[0].Lp.setParams(BiquadType::HighShelf, gainhf, hf0norm,
+        calc_rcpQ_from_slope(gainhf, 1.0f));
     lf0norm = minf(props->Reverb.LFReference / frequency, 0.49f);
     gainlf = maxf(props->Reverb.GainLF, 0.001f);
-    BiquadFilter_setParams(&mFilter[0].Hp, BiquadType::LowShelf, gainlf, lf0norm,
-                           calc_rcpQ_from_slope(gainlf, 1.0f));
+    mFilter[0].Hp.setParams(BiquadType::LowShelf, gainlf, lf0norm,
+        calc_rcpQ_from_slope(gainlf, 1.0f));
     for(i = 1;i < NUM_LINES;i++)
     {
-        BiquadFilter_copyParams(&mFilter[i].Lp, &mFilter[0].Lp);
-        BiquadFilter_copyParams(&mFilter[i].Hp, &mFilter[0].Hp);
+        mFilter[i].Lp.copyParamsFrom(mFilter[0].Lp);
+        mFilter[i].Hp.copyParamsFrom(mFilter[0].Hp);
     }
 
     /* Update the main effect delay and associated taps. */
@@ -1245,8 +1245,8 @@ static void EarlyReflection_Faded(ReverbState *State, ALsizei offset, const ALsi
 static inline void LateT60Filter(ALfloat *RESTRICT samples, const ALsizei todo, T60Filter *filter)
 {
     ALfloat temp[MAX_UPDATE_SAMPLES];
-    BiquadFilter_process(&filter->HFFilter, temp, samples, todo);
-    BiquadFilter_process(&filter->LFFilter, samples, temp, todo);
+    filter->HFFilter.process(temp, samples, todo);
+    filter->LFFilter.process(samples, temp, todo);
 }
 
 /* This generates the reverb tail using a modified feed-back delay network
@@ -1389,8 +1389,8 @@ void ReverbState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesI
         for(c = 0;c < NUM_LINES;c++)
         {
             /* Band-pass the incoming samples. */
-            BiquadFilter_process(&mFilter[c].Lp, samples[0], afmt[c], todo);
-            BiquadFilter_process(&mFilter[c].Hp, samples[1], samples[0], todo);
+            mFilter[c].Lp.process(samples[0], afmt[c], todo);
+            mFilter[c].Hp.process(samples[1], samples[0], todo);
 
             /* Feed the initial delay line. */
             DelayLineIn(&mDelay, offset, c, samples[1], todo);

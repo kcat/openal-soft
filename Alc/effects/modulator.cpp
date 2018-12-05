@@ -99,7 +99,7 @@ ALboolean ALmodulatorState::deviceUpdate(ALCdevice *UNUSED(device))
 {
     for(auto &e : mChans)
     {
-        BiquadFilter_clear(&e.Filter);
+        e.Filter.clear();
         std::fill(std::begin(e.CurrentGains), std::end(e.CurrentGains), 0.0f);
     }
     return AL_TRUE;
@@ -126,10 +126,10 @@ void ALmodulatorState::update(const ALCcontext *context, const ALeffectslot *slo
     f0norm = props->Modulator.HighPassCutoff / (ALfloat)device->Frequency;
     f0norm = clampf(f0norm, 1.0f/512.0f, 0.49f);
     /* Bandwidth value is constant in octaves. */
-    BiquadFilter_setParams(&mChans[0].Filter, BiquadType::HighPass, 1.0f,
-                           f0norm, calc_rcpQ_from_bandwidth(f0norm, 0.75f));
+    mChans[0].Filter.setParams(BiquadType::HighPass, 1.0f, f0norm,
+        calc_rcpQ_from_bandwidth(f0norm, 0.75f));
     for(i = 1;i < MAX_EFFECT_CHANNELS;i++)
-        BiquadFilter_copyParams(&mChans[i].Filter, &mChans[0].Filter);
+        mChans[i].Filter.copyParamsFrom(mChans[0].Filter);
 
     mOutBuffer = device->FOAOut.Buffer;
     mOutChannels = device->FOAOut.NumChannels;
@@ -157,7 +157,7 @@ void ALmodulatorState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT Sam
         {
             alignas(16) ALfloat temps[MAX_UPDATE_SAMPLES];
 
-            BiquadFilter_process(&mChans[c].Filter, temps, &SamplesIn[c][base], td);
+            mChans[c].Filter.process(temps, &SamplesIn[c][base], td);
             for(i = 0;i < td;i++)
                 temps[i] *= modsamples[i];
 

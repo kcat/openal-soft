@@ -112,8 +112,8 @@ void ALechoState::update(const ALCcontext *context, const ALeffectslot *slot, co
     mFeedGain = props->Echo.Feedback;
 
     gainhf = maxf(1.0f - props->Echo.Damping, 0.0625f); /* Limit -24dB */
-    BiquadFilter_setParams(&mFilter, BiquadType::HighShelf,
-        gainhf, LOWPASSFREQREF/frequency, calc_rcpQ_from_slope(gainhf, 1.0f)
+    mFilter.setParams(BiquadType::HighShelf, gainhf, LOWPASSFREQREF/frequency,
+        calc_rcpQ_from_slope(gainhf, 1.0f)
     );
 
     /* First tap panning */
@@ -132,12 +132,11 @@ void ALechoState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesI
     const ALsizei tap2 = mTap[1].delay;
     ALfloat *RESTRICT delaybuf = mSampleBuffer.data();
     ALsizei offset = mOffset;
-    ALfloat z1, z2, in, out;
+    ALfloat z1, z2;
     ALsizei base;
     ALsizei c, i;
 
-    z1 = mFilter.z1;
-    z2 = mFilter.z2;
+    std::tie(z1, z2) = mFilter.getComponents();
     for(base = 0;base < SamplesToDo;)
     {
         alignas(16) ALfloat temps[2][128];
@@ -156,10 +155,7 @@ void ALechoState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesI
             /* Apply damping to the second tap, then add it to the buffer with
              * feedback attenuation.
              */
-            in = temps[1][i];
-            out = in*mFilter.b0 + z1;
-            z1 = in*mFilter.b1 - out*mFilter.a1 + z2;
-            z2 = in*mFilter.b2 - out*mFilter.a2;
+            float out{mFilter.processOne(temps[1][i], z1, z2)};
 
             delaybuf[offset&mask] += out * mFeedGain;
             offset++;
@@ -171,8 +167,7 @@ void ALechoState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesI
 
         base += td;
     }
-    mFilter.z1 = z1;
-    mFilter.z2 = z2;
+    mFilter.setComponents(z1, z2);
 
     mOffset = offset;
 }

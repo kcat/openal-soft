@@ -10,7 +10,7 @@
 #include "defs.h"
 
 
-void BiquadFilter_setParams(BiquadFilter *filter, BiquadType type, float gain, float f0norm, float rcpQ)
+void BiquadFilter::setParams(BiquadType type, float gain, float f0norm, float rcpQ)
 {
     float alpha, sqrtgain_alpha_2;
     float w0, sin_w0, cos_w0;
@@ -82,25 +82,25 @@ void BiquadFilter_setParams(BiquadFilter *filter, BiquadType type, float gain, f
             break;
     }
 
-    filter->a1 = a[1] / a[0];
-    filter->a2 = a[2] / a[0];
-    filter->b0 = b[0] / a[0];
-    filter->b1 = b[1] / a[0];
-    filter->b2 = b[2] / a[0];
+    a1 = a[1] / a[0];
+    a2 = a[2] / a[0];
+    b0 = b[0] / a[0];
+    b1 = b[1] / a[0];
+    b2 = b[2] / a[0];
 }
 
 
-void BiquadFilter_processC(BiquadFilter *filter, float *RESTRICT dst, const float *RESTRICT src, int numsamples)
+void BiquadFilter::process(float *RESTRICT dst, const float *RESTRICT src, int numsamples)
 {
     ASSUME(numsamples > 0);
 
-    const float b0{filter->b0};
-    const float b1{filter->b1};
-    const float b2{filter->b2};
-    const float a1{filter->a1};
-    const float a2{filter->a2};
-    float z1{filter->z1};
-    float z2{filter->z2};
+    const float b0{this->b0};
+    const float b1{this->b1};
+    const float b2{this->b2};
+    const float a1{this->a1};
+    const float a2{this->a2};
+    float z1{this->z1};
+    float z2{this->z2};
 
     /* Processing loop is Transposed Direct Form II. This requires less storage
      * compared to Direct Form I (only two delay components, instead of a four-
@@ -117,8 +117,8 @@ void BiquadFilter_processC(BiquadFilter *filter, float *RESTRICT dst, const floa
         z2 = input*b2 - output*a2;
         return output;
     };
-    std::transform<const float*RESTRICT>(src, src+numsamples, dst, proc_sample);
+    std::transform(src, src+numsamples, dst, proc_sample);
 
-    filter->z1 = z1;
-    filter->z2 = z2;
+    this->z1 = z1;
+    this->z2 = z2;
 }

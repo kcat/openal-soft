@@ -101,9 +101,7 @@ ALboolean ALequalizerState::deviceUpdate(ALCdevice *UNUSED(device))
     for(auto &e : mChans)
     {
         std::for_each(std::begin(e.filter), std::end(e.filter),
-            [](BiquadFilter &f) -> void
-            { BiquadFilter_clear(&f); }
-        );
+                      std::mem_fun_ref(&BiquadFilter::clear));
         std::fill(std::begin(e.CurrentGains), std::end(e.CurrentGains), 0.0f);
     }
     return AL_TRUE;
@@ -122,35 +120,35 @@ void ALequalizerState::update(const ALCcontext *context, const ALeffectslot *slo
      */
     gain = maxf(sqrtf(props->Equalizer.LowGain), 0.0625f); /* Limit -24dB */
     f0norm = props->Equalizer.LowCutoff/frequency;
-    BiquadFilter_setParams(&mChans[0].filter[0], BiquadType::LowShelf,
-        gain, f0norm, calc_rcpQ_from_slope(gain, 0.75f)
+    mChans[0].filter[0].setParams(BiquadType::LowShelf, gain, f0norm,
+        calc_rcpQ_from_slope(gain, 0.75f)
     );
 
     gain = maxf(props->Equalizer.Mid1Gain, 0.0625f);
     f0norm = props->Equalizer.Mid1Center/frequency;
-    BiquadFilter_setParams(&mChans[0].filter[1], BiquadType::Peaking,
-        gain, f0norm, calc_rcpQ_from_bandwidth(f0norm, props->Equalizer.Mid1Width)
+    mChans[0].filter[1].setParams(BiquadType::Peaking, gain, f0norm,
+        calc_rcpQ_from_bandwidth(f0norm, props->Equalizer.Mid1Width)
     );
 
     gain = maxf(props->Equalizer.Mid2Gain, 0.0625f);
     f0norm = props->Equalizer.Mid2Center/frequency;
-    BiquadFilter_setParams(&mChans[0].filter[2], BiquadType::Peaking,
-        gain, f0norm, calc_rcpQ_from_bandwidth(f0norm, props->Equalizer.Mid2Width)
+    mChans[0].filter[2].setParams(BiquadType::Peaking, gain, f0norm,
+        calc_rcpQ_from_bandwidth(f0norm, props->Equalizer.Mid2Width)
     );
 
     gain = maxf(sqrtf(props->Equalizer.HighGain), 0.0625f);
     f0norm = props->Equalizer.HighCutoff/frequency;
-    BiquadFilter_setParams(&mChans[0].filter[3], BiquadType::HighShelf,
-        gain, f0norm, calc_rcpQ_from_slope(gain, 0.75f)
+    mChans[0].filter[3].setParams(BiquadType::HighShelf, gain, f0norm,
+        calc_rcpQ_from_slope(gain, 0.75f)
     );
 
     /* Copy the filter coefficients for the other input channels. */
     for(i = 1;i < MAX_EFFECT_CHANNELS;i++)
     {
-        BiquadFilter_copyParams(&mChans[i].filter[0], &mChans[0].filter[0]);
-        BiquadFilter_copyParams(&mChans[i].filter[1], &mChans[0].filter[1]);
-        BiquadFilter_copyParams(&mChans[i].filter[2], &mChans[0].filter[2]);
-        BiquadFilter_copyParams(&mChans[i].filter[3], &mChans[0].filter[3]);
+        mChans[i].filter[0].copyParamsFrom(mChans[0].filter[0]);
+        mChans[i].filter[1].copyParamsFrom(mChans[0].filter[1]);
+        mChans[i].filter[2].copyParamsFrom(mChans[0].filter[2]);
+        mChans[i].filter[3].copyParamsFrom(mChans[0].filter[3]);
     }
 
     mOutBuffer = device->FOAOut.Buffer;
@@ -167,10 +165,10 @@ void ALequalizerState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT Sam
 
     for(c = 0;c < MAX_EFFECT_CHANNELS;c++)
     {
-        BiquadFilter_process(&mChans[c].filter[0], temps[0], SamplesIn[c], SamplesToDo);
-        BiquadFilter_process(&mChans[c].filter[1], temps[1], temps[0], SamplesToDo);
-        BiquadFilter_process(&mChans[c].filter[2], temps[2], temps[1], SamplesToDo);
-        BiquadFilter_process(&mChans[c].filter[3], temps[3], temps[2], SamplesToDo);
+        mChans[c].filter[0].process(temps[0], SamplesIn[c], SamplesToDo);
+        mChans[c].filter[1].process(temps[1], temps[0], SamplesToDo);
+        mChans[c].filter[2].process(temps[2], temps[1], SamplesToDo);
+        mChans[c].filter[3].process(temps[3], temps[2], SamplesToDo);
 
         MixSamples(temps[3], NumChannels, SamplesOut, mChans[c].CurrentGains,
                    mChans[c].TargetGains, SamplesToDo, 0, SamplesToDo);

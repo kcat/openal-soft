@@ -53,8 +53,8 @@ struct ALdistortionState final : public EffectState {
 
 ALboolean ALdistortionState::deviceUpdate(ALCdevice *UNUSED(device))
 {
-    BiquadFilter_clear(&mLowpass);
-    BiquadFilter_clear(&mBandpass);
+    mLowpass.clear();
+    mBandpass.clear();
     return AL_TRUE;
 }
 
@@ -78,15 +78,15 @@ void ALdistortionState::update(const ALCcontext *context, const ALeffectslot *sl
     /* Multiply sampling frequency by the amount of oversampling done during
      * processing.
      */
-    BiquadFilter_setParams(&mLowpass, BiquadType::LowPass, 1.0f,
-        cutoff / (frequency*4.0f), calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
+    mLowpass.setParams(BiquadType::LowPass, 1.0f, cutoff / (frequency*4.0f),
+        calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
     );
 
     cutoff = props->Distortion.EQCenter;
     /* Convert bandwidth in Hz to octaves. */
     bandwidth = props->Distortion.EQBandwidth / (cutoff * 0.67f);
-    BiquadFilter_setParams(&mBandpass, BiquadType::BandPass, 1.0f,
-        cutoff / (frequency*4.0f), calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
+    mBandpass.setParams(BiquadType::BandPass, 1.0f, cutoff / (frequency*4.0f),
+        calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
     );
 
     CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
@@ -120,7 +120,7 @@ void ALdistortionState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT Sa
          * (which is fortunately first step of distortion). So combine three
          * operations into the one.
          */
-        BiquadFilter_process(&mLowpass, buffer[1], buffer[0], todo);
+        mLowpass.process(buffer[1], buffer[0], todo);
 
         /* Second step, do distortion using waveshaper function to emulate
          * signal processing during tube overdriving. Three steps of
@@ -139,7 +139,7 @@ void ALdistortionState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT Sa
         }
 
         /* Third step, do bandpass filtering of distorted signal. */
-        BiquadFilter_process(&mBandpass, buffer[1], buffer[0], todo);
+        mBandpass.process(buffer[1], buffer[0], todo);
 
         todo >>= 2;
         for(k = 0;k < NumChannels;k++)

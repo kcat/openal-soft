@@ -250,17 +250,17 @@ const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter,
     switch(type)
     {
         case AF_None:
-            BiquadFilter_passthru(lpfilter, numsamples);
-            BiquadFilter_passthru(hpfilter, numsamples);
+            lpfilter->passthru(numsamples);
+            hpfilter->passthru(numsamples);
             break;
 
         case AF_LowPass:
-            BiquadFilter_process(lpfilter, dst, src, numsamples);
-            BiquadFilter_passthru(hpfilter, numsamples);
+            lpfilter->process(dst, src, numsamples);
+            hpfilter->passthru(numsamples);
             return dst;
         case AF_HighPass:
-            BiquadFilter_passthru(lpfilter, numsamples);
-            BiquadFilter_process(hpfilter, dst, src, numsamples);
+            lpfilter->passthru(numsamples);
+            hpfilter->process(dst, src, numsamples);
             return dst;
 
         case AF_BandPass:
@@ -269,8 +269,8 @@ const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter,
                 ALfloat temp[256];
                 ALsizei todo = mini(256, numsamples-i);
 
-                BiquadFilter_process(lpfilter, temp, src+i, todo);
-                BiquadFilter_process(hpfilter, dst+i, temp, todo);
+                lpfilter->process(temp, src+i, todo);
+                hpfilter->process(dst+i, temp, todo);
                 i += todo;
             }
             return dst;

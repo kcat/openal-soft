@@ -139,7 +139,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
     memset(dec->UpSampler, 0, sizeof(dec->UpSampler));
     ratio = 400.0f / (ALfloat)srate;
     for(i = 0;i < 4;i++)
-        bandsplit_init(&dec->UpSampler[i].XOver, ratio);
+        dec->UpSampler[i].XOver.init(ratio);
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
         periphonic = true;
@@ -216,7 +216,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
 
         ratio = conf->XOverFreq / (ALfloat)srate;
         for(i = 0;i < MAX_AMBI_COEFFS;i++)
-            bandsplit_init(&dec->XOver[i], ratio);
+            dec->XOver[i].init(ratio);
 
         ratio = powf(10.0f, conf->XOverRatio / 40.0f);
         for(i = 0;i < conf->NumSpeakers;i++)
@@ -285,8 +285,8 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*RESTRICT OutBuffer)[BU
     if(dec->DualBand)
     {
         for(i = 0;i < dec->NumChannels;i++)
-            bandsplit_process(&dec->XOver[i], dec->SamplesHF[i].data(), dec->SamplesLF[i].data(),
-                              InSamples[i], SamplesToDo);
+            dec->XOver[i].process(dec->SamplesHF[i].data(), dec->SamplesLF[i].data(), InSamples[i],
+                                  SamplesToDo);
 
         for(chan = 0;chan < OutChannels;chan++)
         {
@@ -344,8 +344,7 @@ void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*RESTRICT OutBuffer)[B
         /* First, split the first-order components into low and high frequency
          * bands.
          */
-        bandsplit_process(&dec->UpSampler[i].XOver,
-            dec->Samples[HF_BAND].data(), dec->Samples[LF_BAND].data(),
+        dec->UpSampler[i].XOver.process(dec->Samples[HF_BAND].data(), dec->Samples[LF_BAND].data(),
             InSamples[i], SamplesToDo
         );
 
@@ -365,7 +364,7 @@ void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device, ALfloat
 
     ratio = 400.0f / (ALfloat)device->Frequency;
     for(i = 0;i < 4;i++)
-        bandsplit_init(&ambiup->XOver[i], ratio);
+        ambiup->XOver[i].init(ratio);
 
     memset(ambiup->Gains, 0, sizeof(ambiup->Gains));
     if(device->Dry.CoeffCount > 0)
@@ -419,10 +418,8 @@ void ambiup_process(struct AmbiUpsampler *ambiup, ALfloat (*RESTRICT OutBuffer)[
 
     for(i = 0;i < 4;i++)
     {
-        bandsplit_process(&ambiup->XOver[i],
-            ambiup->Samples[HF_BAND], ambiup->Samples[LF_BAND],
-            InSamples[i], SamplesToDo
-        );
+        ambiup->XOver[i].process(ambiup->Samples[HF_BAND], ambiup->Samples[LF_BAND], InSamples[i],
+                                 SamplesToDo);
 
         for(j = 0;j < OutChannels;j++)
             MixRowSamples(OutBuffer[j], ambiup->Gains[i][j],

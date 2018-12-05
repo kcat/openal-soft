@@ -1549,11 +1549,11 @@ void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*RESTRICT Buffer)[BUFFER
     {
         if(i == lidx || i == ridx)
             continue;
-        splitterap_process(&Stablizer->APFilter[i], Buffer[i], SamplesToDo);
+        Stablizer->APFilter[i].process(Buffer[i], SamplesToDo);
     }
 
-    bandsplit_process(&Stablizer->LFilter, lsplit[1], lsplit[0], Buffer[lidx], SamplesToDo);
-    bandsplit_process(&Stablizer->RFilter, rsplit[1], rsplit[0], Buffer[ridx], SamplesToDo);
+    Stablizer->LFilter.process(lsplit[1], lsplit[0], Buffer[lidx], SamplesToDo);
+    Stablizer->RFilter.process(rsplit[1], rsplit[0], Buffer[ridx], SamplesToDo);
 
     for(i = 0;i < SamplesToDo;i++)
     {

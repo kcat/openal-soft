@@ -309,7 +309,7 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
     ALfloat temps[3][HRIR_LENGTH]{};
 
     BandSplitter splitter;
-    bandsplit_init(&splitter, 400.0f / (ALfloat)Hrtf->sampleRate);
+    splitter.init(400.0f / (ALfloat)Hrtf->sampleRate);
     for(ALsizei c{0};c < AmbiCount;++c)
     {
         const ALfloat (*fir)[2] = &Hrtf->coeffs[idx[c] * Hrtf->irSize];
@@ -334,10 +334,10 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
         else
         {
             /* Band-split left HRIR into low and high frequency responses. */
-            bandsplit_clear(&splitter);
+            splitter.clear();
             for(ALsizei i{0};i < Hrtf->irSize;++i)
                 temps[2][i] = fir[i][0];
-            bandsplit_process(&splitter, temps[0], temps[1], temps[2], HRIR_LENGTH);
+            splitter.process(temps[0], temps[1], temps[2], HRIR_LENGTH);
 
             /* Apply left ear response with delay. */
             for(ALsizei i{0};i < NumChannels;++i)
@@ -354,10 +354,10 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
             }
 
             /* Band-split right HRIR into low and high frequency responses. */
-            bandsplit_clear(&splitter);
+            splitter.clear();
             for(ALsizei i{0};i < Hrtf->irSize;++i)
                 temps[2][i] = fir[i][1];
-            bandsplit_process(&splitter, temps[0], temps[1], temps[2], HRIR_LENGTH);
+            splitter.process(temps[0], temps[1], temps[2], HRIR_LENGTH);
 
             /* Apply right ear response with delay. */
             for(ALsizei i{0};i < NumChannels;++i)

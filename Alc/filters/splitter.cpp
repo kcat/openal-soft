@@ -9,37 +9,36 @@
 #include "math_defs.h"
 
 
-void bandsplit_init(BandSplitter *splitter, float f0norm)
+void BandSplitter::init(float f0norm)
 {
     float w = f0norm * F_TAU;
     float cw = std::cos(w);
     if(cw > FLT_EPSILON)
-        splitter->coeff = (std::sin(w) - 1.0f) / cw;
+        coeff = (std::sin(w) - 1.0f) / cw;
     else
-        splitter->coeff = cw * -0.5f;
+        coeff = cw * -0.5f;
 
-    splitter->lp_z1 = 0.0f;
-    splitter->lp_z2 = 0.0f;
-    splitter->hp_z1 = 0.0f;
+    lp_z1 = 0.0f;
+    lp_z2 = 0.0f;
+    hp_z1 = 0.0f;
 }
 
-void bandsplit_clear(BandSplitter *splitter)
+void BandSplitter::clear()
 {
-    splitter->lp_z1 = 0.0f;
-    splitter->lp_z2 = 0.0f;
-    splitter->hp_z1 = 0.0f;
+    lp_z1 = 0.0f;
+    lp_z2 = 0.0f;
+    hp_z1 = 0.0f;
 }
 
-void bandsplit_process(BandSplitter *splitter, float *RESTRICT hpout, float *RESTRICT lpout,
-                       const ALfloat *input, int count)
+void BandSplitter::process(float *RESTRICT hpout, float *RESTRICT lpout, const float *input, int count)
 {
     ASSUME(count > 0);
 
-    const float ap_coeff{splitter->coeff};
-    const float lp_coeff{splitter->coeff*0.5f + 0.5f};
-    float lp_z1{splitter->lp_z1};
-    float lp_z2{splitter->lp_z2};
-    float ap_z1{splitter->hp_z1};
+    const float ap_coeff{this->coeff};
+    const float lp_coeff{this->coeff*0.5f + 0.5f};
+    float lp_z1{this->lp_z1};
+    float lp_z2{this->lp_z2};
+    float ap_z1{this->hp_z1};
     auto proc_sample = [ap_coeff,lp_coeff,&lp_z1,&lp_z2,&ap_z1,&lpout](const float in) noexcept -> float
     {
         /* Low-pass sample processing. */
@@ -60,36 +59,34 @@ void bandsplit_process(BandSplitter *splitter, float *RESTRICT hpout, float *RES
         /* High-pass generated from removing low-passed output. */
         return ap_y - lp_y;
     };
-    std::transform<const float*RESTRICT>(input, input+count, hpout, proc_sample);
-    splitter->lp_z1 = lp_z1;
-    splitter->lp_z2 = lp_z2;
-    splitter->hp_z1 = ap_z1;
+    std::transform(input, input+count, hpout, proc_sample);
+    this->lp_z1 = lp_z1;
+    this->lp_z2 = lp_z2;
+    this->hp_z1 = ap_z1;
 }
 
 
-void splitterap_init(SplitterAllpass *splitter, float f0norm)
+void SplitterAllpass::init(float f0norm)
 {
     float w = f0norm * F_TAU;
     float cw = std::cos(w);
     if(cw > FLT_EPSILON)
-        splitter->coeff = (std::sin(w) - 1.0f) / cw;
+        coeff = (std::sin(w) - 1.0f) / cw;
     else
-        splitter->coeff = cw * -0.5f;
+        coeff = cw * -0.5f;
 
-    splitter->z1 = 0.0f;
+    z1 = 0.0f;
 }
 
-void splitterap_clear(SplitterAllpass *splitter)
-{
-    splitter->z1 = 0.0f;
-}
+void SplitterAllpass::clear()
+{ z1 = 0.0f; }
 
-void splitterap_process(SplitterAllpass *splitter, float *RESTRICT samples, int count)
+void SplitterAllpass::process(float *RESTRICT samples, int count)
 {
     ASSUME(count > 0);
 
-    const float coeff{splitter->coeff};
-    float z1{splitter->z1};
+    const float coeff{this->coeff};
+    float z1{this->z1};
     auto proc_sample = [coeff,&z1](const float in) noexcept -> float
     {
         float out{in*coeff + z1};
@@ -97,5 +94,5 @@ void splitterap_process(SplitterAllpass *splitter, float *RESTRICT samples, int 
         return out;
     };
     std::transform(samples, samples+count, samples, proc_sample);
-    splitter->z1 = z1;
+    this->z1 = z1;
 }

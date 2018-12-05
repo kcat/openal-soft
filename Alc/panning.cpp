@@ -1031,11 +1031,11 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
                 ALfloat scale = (ALfloat)(5000.0 / device->Frequency);
                 std::unique_ptr<FrontStablizer> stablizer{new FrontStablizer{}};
 
-                bandsplit_init(&stablizer->LFilter, scale);
+                stablizer->LFilter.init(scale);
                 stablizer->RFilter = stablizer->LFilter;
 
                 /* Initialize all-pass filters for all other channels. */
-                splitterap_init(&stablizer->APFilter[0], scale);
+                stablizer->APFilter[0].init(scale);
                 for(i = 1;i < (size_t)device->RealOut.NumChannels;i++)
                     stablizer->APFilter[i] = stablizer->APFilter[0];
 

@@ -2621,7 +2621,7 @@ ALCcontext_struct::~ALCcontext_struct()
     }
     TRACE("Freed " SZFMT " voice property object%s\n", count, (count==1)?"":"s");
 
-    std::for_each(Voices, Voices + VoiceCount.load(std::memory_order_relaxed), DeinitVoice);
+    std::for_each(Voices, Voices + MaxVoices, DeinitVoice);
     al_free(Voices);
     Voices = nullptr;
     VoiceCount.store(0, std::memory_order_relaxed);
@@ -2770,7 +2770,7 @@ ContextRef GetContextRef(void)
 void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
 {
     ALCdevice *device{context->Device};
-    ALsizei num_sends{device->NumAuxSends};
+    const ALsizei num_sends{device->NumAuxSends};
 
     if(num_voices == context->MaxVoices && num_sends == old_sends)
         return;
@@ -2779,27 +2779,26 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
      * property set (including the dynamically-sized Send[] array) in one
      * chunk.
      */
-    size_t sizeof_voice{RoundUp(FAM_SIZE(ALvoice, Send, num_sends), 16)};
-    size_t size{sizeof(ALvoice*) + sizeof_voice};
+    const size_t sizeof_voice{RoundUp(FAM_SIZE(ALvoice, Send, num_sends), 16)};
+    const size_t size{sizeof(ALvoice*) + sizeof_voice};
 
     auto voices = static_cast<ALvoice**>(al_calloc(16, RoundUp(size*num_voices, 16)));
     auto voice = reinterpret_cast<ALvoice*>((char*)voices + RoundUp(num_voices*sizeof(ALvoice*), 16));
 
-    ALsizei v{0};
+    auto viter = voices;
     if(context->Voices)
     {
         const ALsizei v_count = mini(context->VoiceCount.load(std::memory_order_relaxed),
                                      num_voices);
         const ALsizei s_count = mini(old_sends, num_sends);
 
-        for(;v < v_count;v++)
+        /* Copy the old voice data to the new storage. */
+        auto copy_voice = [&voice,sizeof_voice,s_count](ALvoice *old_voice) -> ALvoice*
         {
-            ALvoice *old_voice{context->Voices[v]};
             voice = new (voice) ALvoice{};
 
-            /* Copy the old voice data and source property set to the new
-             * storage. Make sure the old voice's Update (if any) is cleared so
-             * it doesn't get deleted on deinit.
+            /* Make sure the old voice's Update (if any) is cleared so it
+             * doesn't get deleted on deinit.
              */
             voice->Update.store(old_voice->Update.exchange(nullptr, std::memory_order_relaxed),
                                 std::memory_order_relaxed);
@@ -2844,23 +2843,25 @@ void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends)
             std::copy_n(old_voice->Send, s_count, voice->Send);
 
             /* Set this voice's reference. */
-            voices[v] = voice;
-
+            ALvoice *ret = voice;
             /* Increment pointer to the next storage space. */
             voice = reinterpret_cast<ALvoice*>((char*)voice + sizeof_voice);
-        }
+            return ret;
+        };
+        viter = std::transform(context->Voices, context->Voices+v_count, viter, copy_voice);
+
         /* Deinit old voices. */
-        auto voices_end = context->Voices + context->VoiceCount.load(std::memory_order_relaxed);
+        auto voices_end = context->Voices + context->MaxVoices;
         std::for_each(context->Voices, voices_end, DeinitVoice);
     }
-    /* Finish setting the voices' property set pointers and references. */
-    for(;v < num_voices;v++)
+    /* Finish setting the voices and references. */
+    auto init_voice = [&voice,sizeof_voice]() -> ALvoice*
     {
-        voice = new (voice) ALvoice{};
-        voices[v] = voice;
-
+        ALvoice *ret = new (voice) ALvoice{};
         voice = reinterpret_cast<ALvoice*>((char*)voice + sizeof_voice);
-    }
+        return ret;
+    };
+    std::generate(viter, voices+num_voices, init_voice);
 
     al_free(context->Voices);
     context->Voices = voices;

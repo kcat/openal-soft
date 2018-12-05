@@ -2548,7 +2548,7 @@ static ALvoid InitContext(ALCcontext *Context)
     listener.Params.mDistanceModel = Context->mDistanceModel;
 
 
-    Context->AsyncEvents = ll_ringbuffer_create(63, sizeof(AsyncEvent), false);
+    Context->AsyncEvents = ll_ringbuffer_create(511, sizeof(AsyncEvent), false);
     StartEventThrd(Context);
 }
 

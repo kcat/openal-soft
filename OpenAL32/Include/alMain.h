@@ -850,6 +850,10 @@ struct AsyncEvent {
             ALenum state;
         } srcstate;
         struct {
+            ALuint id;
+            ALsizei count;
+        } bufcomp;
+        struct {
             ALenum type;
             ALuint id;
             ALuint param;

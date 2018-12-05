@@ -55,6 +55,17 @@ static int EventThread(ALCcontext *context)
                     evt.u.srcstate.state, msg.length(), msg.c_str(), context->EventParam
                 );
             }
+            else if(evt.EnumType == EventType_BufferCompleted)
+            {
+                if(!(enabledevts&EventType_BufferCompleted))
+                    continue;
+                std::string msg{std::to_string(evt.u.bufcomp.count)};
+                if(evt.u.bufcomp.count == 1) msg += " buffer completed";
+                else msg += " buffers completed";
+                context->EventCb(AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, evt.u.bufcomp.id,
+                    evt.u.bufcomp.count, msg.length(), msg.c_str(), context->EventParam
+                );
+            }
             else if((enabledevts&evt.EnumType) == evt.EnumType)
                 context->EventCb(evt.u.user.type, evt.u.user.id, evt.u.user.param,
                     (ALsizei)strlen(evt.u.user.msg), evt.u.user.msg, context->EventParam

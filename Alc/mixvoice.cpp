@@ -195,19 +195,6 @@ void aluInitMixer(void)
 
 namespace {
 
-static void SendAsyncEvent(ALCcontext *context, ALuint enumtype, ALenum type,
-                           ALuint objid, ALuint param, const char *msg)
-{
-    AsyncEvent evt = ASYNC_EVENT(enumtype);
-    evt.u.user.type = type;
-    evt.u.user.id = objid;
-    evt.u.user.param = param;
-    strcpy(evt.u.user.msg, msg);
-    if(ll_ringbuffer_write(context->AsyncEvents, &evt, 1) == 1)
-        context->EventSem.post();
-}
-
-
 /* Base template left undefined. Should be marked =delete, but Clang 3.8.1
  * chokes on that given the inline specializations.
  */
@@ -237,8 +224,8 @@ inline void LoadSampleArray(ALfloat *RESTRICT dst, const void *src, ALint srcste
         dst[i] += LoadSample<T>(ssrc[i*srcstep]);
 }
 
-static void LoadSamples(ALfloat *RESTRICT dst, const ALvoid *RESTRICT src, ALint srcstep,
-                        enum FmtType srctype, ALsizei samples)
+void LoadSamples(ALfloat *RESTRICT dst, const ALvoid *RESTRICT src, ALint srcstep, FmtType srctype,
+                 ALsizei samples)
 {
 #define HANDLE_FMT(T)                                                         \
     case T: LoadSampleArray<T>(dst, src, srcstep, samples); break
@@ -734,9 +721,13 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
     /* Send any events now, after the position/buffer info was updated. */
     ALbitfieldSOFT enabledevt{Context->EnabledEvts.load(std::memory_order_acquire)};
     if(buffers_done > 0 && (enabledevt&EventType_BufferCompleted))
-        SendAsyncEvent(Context, EventType_BufferCompleted,
-            AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, SourceID, buffers_done, "Buffer completed"
-        );
+    {
+        AsyncEvent evt{ASYNC_EVENT(EventType_BufferCompleted)};
+        evt.u.bufcomp.id = SourceID;
+        evt.u.bufcomp.count = buffers_done;
+        if(ll_ringbuffer_write(Context->AsyncEvents, &evt, 1) == 1)
+            Context->EventSem.post();
+    }
 
     return isplaying;
 }

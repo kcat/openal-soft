@@ -608,7 +608,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 w0 = minf(w0, w1*4.0f);
 
                 /* Only need to adjust the first channel of a B-Format source. */
-                NfcFilterAdjust(&voice->Direct.Params[0].NFCtrlFilter, w0);
+                voice->Direct.Params[0].NFCtrlFilter.adjust(w0);
 
                 std::copy(std::begin(Device->NumChannelsPerOrder),
                           std::end(Device->NumChannelsPerOrder),
@@ -649,7 +649,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                  * is what we want for FOA input. The first channel may have
                  * been previously re-adjusted if panned, so reset it.
                  */
-                NfcFilterAdjust(&voice->Direct.Params[0].NFCtrlFilter, 0.0f);
+                voice->Direct.Params[0].NFCtrlFilter.adjust(0.0f);
 
                 voice->Direct.ChannelsPerOrder[0] = 1;
                 voice->Direct.ChannelsPerOrder[1] = mini(voice->Direct.Channels-1, 3);
@@ -853,7 +853,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
 
                 /* Adjust NFC filters. */
                 for(c = 0;c < num_channels;c++)
-                    NfcFilterAdjust(&voice->Direct.Params[c].NFCtrlFilter, w0);
+                    voice->Direct.Params[c].NFCtrlFilter.adjust(w0);
 
                 for(i = 0;i < MAX_AMBI_ORDER+1;i++)
                     voice->Direct.ChannelsPerOrder[i] = Device->NumChannelsPerOrder[i];
@@ -913,7 +913,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                      (Device->AvgSpeakerDist * (ALfloat)Device->Frequency);
 
                 for(c = 0;c < num_channels;c++)
-                    NfcFilterAdjust(&voice->Direct.Params[c].NFCtrlFilter, w0);
+                    voice->Direct.Params[c].NFCtrlFilter.adjust(w0);
 
                 for(i = 0;i < MAX_AMBI_ORDER+1;i++)
                     voice->Direct.ChannelsPerOrder[i] = Device->NumChannelsPerOrder[i];

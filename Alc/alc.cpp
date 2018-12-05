@@ -2341,8 +2341,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                     ALfloat w1 = SPEEDOFSOUNDMETRESPERSEC /
                                  (device->AvgSpeakerDist * device->Frequency);
                     std::for_each(voice->Direct.Params, voice->Direct.Params+voice->NumChannels,
-                        [w1](DirectParams &params) -> void
-                        { NfcFilterCreate(&params.NFCtrlFilter, 0.0f, w1); }
+                        [w1](DirectParams &params) noexcept -> void
+                        { params.NFCtrlFilter.init(0.0f, w1); }
                     );
                 }
             }

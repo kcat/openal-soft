@@ -531,21 +531,21 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
 
                         ALfloat *nfcsamples{Device->TempBuffer[NFC_DATA_BUF]};
                         ALsizei chanoffset{voice->Direct.ChannelsPerOrder[0]};
-                        using FilterProc = void(NfcFilter*,ALfloat*,const ALfloat*,ALsizei);
-                        auto apply_nfc = [voice,parms,samples,DstBufferSize,Counter,OutPos,&chanoffset,nfcsamples](FilterProc &process, ALsizei order) -> void
+                        using FilterProc = void (NfcFilter::*)(float*,const float*,int);
+                        auto apply_nfc = [voice,parms,samples,DstBufferSize,Counter,OutPos,&chanoffset,nfcsamples](FilterProc process, ALsizei order) -> void
                         {
                             if(voice->Direct.ChannelsPerOrder[order] < 1)
                                 return;
-                            process(&parms->NFCtrlFilter, nfcsamples, samples, DstBufferSize);
+                            (parms->NFCtrlFilter.*process)(nfcsamples, samples, DstBufferSize);
                             MixSamples(nfcsamples, voice->Direct.ChannelsPerOrder[order],
                                 voice->Direct.Buffer+chanoffset, parms->Gains.Current+chanoffset,
                                 parms->Gains.Target+chanoffset, Counter, OutPos, DstBufferSize
                             );
                             chanoffset += voice->Direct.ChannelsPerOrder[order];
                         };
-                        apply_nfc(NfcFilterProcess1, 1);
-                        apply_nfc(NfcFilterProcess2, 2);
-                        apply_nfc(NfcFilterProcess3, 3);
+                        apply_nfc(&NfcFilter::process1, 1);
+                        apply_nfc(&NfcFilter::process2, 2);
+                        apply_nfc(&NfcFilter::process3, 3);
                     }
                 }
                 else

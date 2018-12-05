@@ -2840,8 +2840,8 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
             ALfloat w1 = SPEEDOFSOUNDMETRESPERSEC /
                          (device->AvgSpeakerDist * device->Frequency);
             std::for_each(voice->Direct.Params+0, voice->Direct.Params+voice->NumChannels,
-                [w1](DirectParams &parms) -> void
-                { NfcFilterCreate(&parms.NFCtrlFilter, 0.0f, w1); }
+                [w1](DirectParams &parms) noexcept -> void
+                { parms.NFCtrlFilter.init(0.0f, w1); }
             );
         }
 

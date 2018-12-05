@@ -2,6 +2,9 @@
 #include "config.h"
 
 #include "nfc.h"
+
+#include <algorithm>
+
 #include "alMain.h"
 
 #include <string.h>
@@ -228,18 +231,17 @@ void NfcFilterProcess1(NfcFilter *nfc, float *RESTRICT dst, const float *RESTRIC
     const float b1 = nfc->first.b1;
     const float a1 = nfc->first.a1;
     float z1 = nfc->first.z[0];
-    int i;
 
     ASSUME(count > 0);
 
-    for(i = 0;i < count;i++)
+    auto proc_sample = [gain,b1,a1,&z1](float in) noexcept -> float
     {
-        float y = src[i]*gain - a1*z1;
+        float y = in*gain - a1*z1;
         float out = y + b1*z1;
         z1 += y;
-
-        dst[i] = out;
-    }
+        return out;
+    };
+    std::transform<const float*RESTRICT>(src, src+count, dst, proc_sample);
     nfc->first.z[0] = z1;
 }
 
@@ -252,19 +254,18 @@ void NfcFilterProcess2(NfcFilter *nfc, float *RESTRICT dst, const float *RESTRIC
     const float a2 = nfc->second.a2;
     float z1 = nfc->second.z[0];
     float z2 = nfc->second.z[1];
-    int i;
 
     ASSUME(count > 0);
 
-    for(i = 0;i < count;i++)
+    auto proc_sample = [gain,b1,b2,a1,a2,&z1,&z2](float in) noexcept -> float
     {
-        float y = src[i]*gain - a1*z1 - a2*z2;
+        float y = in*gain - a1*z1 - a2*z2;
         float out = y + b1*z1 + b2*z2;
         z2 += z1;
         z1 += y;
-
-        dst[i] = out;
-    }
+        return out;
+    };
+    std::transform<const float*RESTRICT>(src, src+count, dst, proc_sample);
     nfc->second.z[0] = z1;
     nfc->second.z[1] = z2;
 }
@@ -281,13 +282,12 @@ void NfcFilterProcess3(NfcFilter *nfc, float *RESTRICT dst, const float *RESTRIC
     float z1 = nfc->third.z[0];
     float z2 = nfc->third.z[1];
     float z3 = nfc->third.z[2];
-    int i;
 
     ASSUME(count > 0);
 
-    for(i = 0;i < count;i++)
+    auto proc_sample = [gain,b1,b2,b3,a1,a2,a3,&z1,&z2,&z3](float in) noexcept -> float
     {
-        float y = src[i]*gain - a1*z1 - a2*z2;
+        float y = in*gain - a1*z1 - a2*z2;
         float out = y + b1*z1 + b2*z2;
         z2 += z1;
         z1 += y;
@@ -296,8 +296,9 @@ void NfcFilterProcess3(NfcFilter *nfc, float *RESTRICT dst, const float *RESTRIC
         out = y + b3*z3;
         z3 += y;
 
-        dst[i] = out;
-    }
+        return out;
+    };
+    std::transform<const float*RESTRICT>(src, src+count, dst, proc_sample);
     nfc->third.z[0] = z1;
     nfc->third.z[1] = z2;
     nfc->third.z[2] = z3;

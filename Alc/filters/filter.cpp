@@ -92,14 +92,13 @@ void BiquadFilter_setParams(BiquadFilter *filter, BiquadType type, ALfloat gain,
 
 void BiquadFilter_processC(BiquadFilter *filter, ALfloat *RESTRICT dst, const ALfloat *RESTRICT src, ALsizei numsamples)
 {
-    const ALfloat a1 = filter->a1;
-    const ALfloat a2 = filter->a2;
     const ALfloat b0 = filter->b0;
     const ALfloat b1 = filter->b1;
     const ALfloat b2 = filter->b2;
+    const ALfloat a1 = filter->a1;
+    const ALfloat a2 = filter->a2;
     ALfloat z1 = filter->z1;
     ALfloat z2 = filter->z2;
-    ALsizei i;
 
     ASSUME(numsamples > 0);
 
@@ -111,14 +110,14 @@ void BiquadFilter_processC(BiquadFilter *filter, ALfloat *RESTRICT dst, const AL
      *
      * See: http://www.earlevel.com/main/2003/02/28/biquads/
      */
-    for(i = 0;i < numsamples;i++)
+    auto proc_sample = [b0,b1,b2,a1,a2,&z1,&z2](ALfloat input) noexcept -> ALfloat
     {
-        ALfloat input = src[i];
         ALfloat output = input*b0 + z1;
         z1 = input*b1 - output*a1 + z2;
         z2 = input*b2 - output*a2;
-        dst[i] = output;
-    }
+        return output;
+    };
+    std::transform<const ALfloat*RESTRICT>(src, src+numsamples, dst, proc_sample);
 
     filter->z1 = z1;
     filter->z2 = z2;

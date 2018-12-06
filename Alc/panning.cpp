@@ -924,21 +924,16 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
 {
     /* Hold the HRTF the device last used, in case it's used again. */
     struct Hrtf *old_hrtf = device->HrtfHandle;
-    const char *mode;
-    bool headphones;
-    int bs2blevel;
-    size_t i;
 
     device->mHrtfState = nullptr;
     device->HrtfHandle = nullptr;
     device->HrtfName.clear();
     device->Render_Mode = NormalRender;
 
-    memset(&device->Dry.Ambi, 0, sizeof(device->Dry.Ambi));
+    device->Dry.Ambi = AmbiConfig{};
     device->Dry.CoeffCount = 0;
     device->Dry.NumChannels = 0;
-    for(i = 0;i < MAX_AMBI_ORDER+1;i++)
-        device->NumChannelsPerOrder[i] = 0;
+    std::fill(std::begin(device->NumChannelsPerOrder), std::end(device->NumChannelsPerOrder), 0);
 
     device->AvgSpeakerDist = 0.0f;
     device->ChannelDelay.clear();
@@ -1036,8 +1031,8 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
 
                 /* Initialize all-pass filters for all other channels. */
                 stablizer->APFilter[0].init(scale);
-                for(i = 1;i < (size_t)device->RealOut.NumChannels;i++)
-                    stablizer->APFilter[i] = stablizer->APFilter[0];
+                std::fill(std::begin(stablizer->APFilter)+1, std::end(stablizer->APFilter),
+                          stablizer->APFilter[0]);
 
                 device->Stablizer = std::move(stablizer);
             }
@@ -1055,7 +1050,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
 
     device->AmbiDecoder = nullptr;
 
-    headphones = device->IsHeadphones;
+    bool headphones{device->IsHeadphones != AL_FALSE};
     if(device->Type != Loopback)
     {
         const char *mode;
@@ -1107,17 +1102,22 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
             Hrtf_DecRef(hrtf);
     }
 
-    for(i = 0;!device->HrtfHandle && i < device->HrtfList.size();i++)
+    if(!device->HrtfHandle)
     {
-        const EnumeratedHrtf &entry = device->HrtfList[i];
-        struct Hrtf *hrtf = GetLoadedHrtf(entry.hrtf);
-        if(hrtf && hrtf->sampleRate == device->Frequency)
+        auto find_hrtf = [device](const EnumeratedHrtf &entry) -> bool
         {
+            struct Hrtf *hrtf = GetLoadedHrtf(entry.hrtf);
+            if(!hrtf) return false;
+            if(hrtf->sampleRate != device->Frequency)
+            {
+                Hrtf_DecRef(hrtf);
+                return false;
+            }
             device->HrtfHandle = hrtf;
             device->HrtfName = entry.name;
-        }
-        else if(hrtf)
-            Hrtf_DecRef(hrtf);
+            return true;
+        };
+        std::find_if(device->HrtfList.cbegin(), device->HrtfList.cend(), find_hrtf);
     }
 
     if(device->HrtfHandle)
@@ -1127,6 +1127,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         old_hrtf = NULL;
 
         device->Render_Mode = HrtfRender;
+        const char *mode;
         if(ConfigValueStr(device->DeviceName.c_str(), NULL, "hrtf-mode", &mode))
         {
             if(strcasecmp(mode, "full") == 0)
@@ -1168,8 +1169,8 @@ no_hrtf:
 
     device->AmbiUp = nullptr;
 
-    bs2blevel = ((headphones && hrtf_appreq != Hrtf_Disable) ||
-                 (hrtf_appreq == Hrtf_Enable)) ? 5 : 0;
+    int bs2blevel{((headphones && hrtf_appreq != Hrtf_Disable) ||
+                   (hrtf_appreq == Hrtf_Enable)) ? 5 : 0};
     if(device->Type != Loopback)
         ConfigValueInt(device->DeviceName.c_str(), NULL, "cf_level", &bs2blevel);
     if(bs2blevel > 0 && bs2blevel <= 6)
@@ -1183,6 +1184,7 @@ no_hrtf:
 
     TRACE("BS2B disabled\n");
 
+    const char *mode;
     if(ConfigValueStr(device->DeviceName.c_str(), NULL, "stereo-encoding", &mode))
     {
         if(strcasecmp(mode, "uhj") == 0)

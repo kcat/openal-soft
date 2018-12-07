@@ -288,7 +288,7 @@ void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
     ALbitfieldSOFT enabledevt{context->EnabledEvts.load(std::memory_order_acquire)};
     if(!(enabledevt&EventType_SourceStateChange)) return;
 
-    AsyncEvent evt{ASYNC_EVENT(EventType_SourceStateChange)};
+    AsyncEvent evt{EventType_SourceStateChange};
     evt.u.srcstate.id = id;
     evt.u.srcstate.state = AL_STOPPED;
 
@@ -414,7 +414,7 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
             /* Otherwise, replace it and send off the old one with a release
              * event.
              */
-            AsyncEvent evt = ASYNC_EVENT(EventType_ReleaseEffectState);
+            AsyncEvent evt{EventType_ReleaseEffectState};
             evt.u.mEffectState = slot->Params.mEffectState;
 
             slot->Params.mEffectState = state;
@@ -1811,7 +1811,7 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
     if(!device->Connected.exchange(AL_FALSE, std::memory_order_acq_rel))
         return;
 
-    AsyncEvent evt = ASYNC_EVENT(EventType_Disconnected);
+    AsyncEvent evt{EventType_Disconnected};
     evt.u.user.type = AL_EVENT_TYPE_DISCONNECTED_SOFT;
     evt.u.user.id = 0;
     evt.u.user.param = 0;

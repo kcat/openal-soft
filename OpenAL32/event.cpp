@@ -18,9 +18,9 @@
 static int EventThread(ALCcontext *context)
 {
     bool quitnow{false};
+    AsyncEvent evt{};
     while(LIKELY(!quitnow))
     {
-        AsyncEvent evt;
         if(ll_ringbuffer_read(context->AsyncEvents, &evt, 1) == 0)
         {
             context->EventSem.wait();
@@ -90,7 +90,7 @@ void StartEventThrd(ALCcontext *ctx)
 
 void StopEventThrd(ALCcontext *ctx)
 {
-    static constexpr AsyncEvent kill_evt = ASYNC_EVENT(EventType_KillThread);
+    static constexpr AsyncEvent kill_evt{EventType_KillThread};
     while(ll_ringbuffer_write(ctx->AsyncEvents, &kill_evt, 1) == 0)
         std::this_thread::yield();
     ctx->EventSem.post();

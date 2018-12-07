@@ -687,7 +687,7 @@ void SendStateChangeEvent(ALCcontext *context, ALuint id, ALenum state)
     ALbitfieldSOFT enabledevt{context->EnabledEvts.load(std::memory_order_acquire)};
     if(!(enabledevt&EventType_SourceStateChange)) return;
 
-    AsyncEvent evt{ASYNC_EVENT(EventType_SourceStateChange)};
+    AsyncEvent evt{EventType_SourceStateChange};
     evt.u.srcstate.id = id;
     evt.u.srcstate.state = state;
 

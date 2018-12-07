@@ -842,7 +842,7 @@ enum {
 };
 
 struct AsyncEvent {
-    unsigned int EnumType;
+    unsigned int EnumType{0u};
     union {
         char dummy;
         struct {
@@ -860,9 +860,11 @@ struct AsyncEvent {
             ALchar msg[1008];
         } user;
         EffectState *mEffectState;
-    } u;
+    } u{};
+
+    AsyncEvent() noexcept = default;
+    constexpr AsyncEvent(unsigned int type) noexcept : EnumType{type} { }
 };
-#define ASYNC_EVENT(t) AsyncEvent{ t, { 0 } }
 
 
 void AllocateVoices(ALCcontext *context, ALsizei num_voices, ALsizei old_sends);

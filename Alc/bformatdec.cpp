@@ -1,9 +1,11 @@
 
 #include "config.h"
 
+#include <cmath>
 #include <array>
 #include <vector>
 #include <numeric>
+#include <algorithm>
 #include <functional>
 
 #include "bformatdec.h"
@@ -136,13 +138,9 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
     else if(conf->CoeffScale == AmbDecScale::FuMa)
         coeff_scale = FuMa2N3DScale;
 
-    float ratio{400.0f / (float)srate};
-    for(auto &chan : mUpSampler)
-    {
-        chan.XOver.init(ratio);
-        chan.XOver.clear();
-        std::fill(std::begin(chan.Gains), std::end(chan.Gains), 0.0f);
-    }
+    mUpSampler[0].XOver.init(400.0f / (float)srate);
+    std::fill(std::begin(mUpSampler[0].Gains), std::end(mUpSampler[0].Gains), 0.0f);
+    std::fill(std::begin(mUpSampler)+1, std::end(mUpSampler), mUpSampler[0]);
 
     const bool periphonic{(conf->ChanMask&AMBI_PERIPHONIC_MASK) != 0};
     if(periphonic)
@@ -211,23 +209,20 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
     }
     else
     {
-        using namespace std::placeholders;
         mDualBand = AL_TRUE;
 
-        ratio = conf->XOverFreq / (ALfloat)srate;
-        std::for_each(std::begin(mXOver), std::end(mXOver),
-            std::bind(std::mem_fn(&BandSplitter::init), _1, ratio));
+        mXOver[0].init(conf->XOverFreq / (float)srate);
+        std::fill(std::begin(mXOver)+1, std::end(mXOver), mXOver[0]);
 
-        ratio = powf(10.0f, conf->XOverRatio / 40.0f);
+        float ratio{std::pow(10.0f, conf->XOverRatio / 40.0f)};
         for(ALsizei i{0};i < conf->NumSpeakers;i++)
         {
             ALsizei chan = chanmap[i];
-            ALfloat gain;
-            ALsizei j, k;
 
+            ALfloat gain{};
             if(!periphonic)
             {
-                for(j = 0,k = 0;j < MAX_AMBI2D_COEFFS;j++)
+                for(ALsizei j{0},k{0};j < MAX_AMBI2D_COEFFS;j++)
                 {
                     ALsizei l = map2DTo3D[j];
                     if(j == 0) gain = conf->HFOrderGain[0] * ratio;
@@ -238,7 +233,7 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
                         mMatrix.Dual[chan][HF_BAND][j] = conf->HFMatrix[i][k++] / coeff_scale[l] *
                                                          gain;
                 }
-                for(j = 0,k = 0;j < MAX_AMBI2D_COEFFS;j++)
+                for(ALsizei j{0},k{0};j < MAX_AMBI2D_COEFFS;j++)
                 {
                     ALsizei l = map2DTo3D[j];
                     if(j == 0) gain = conf->LFOrderGain[0] / ratio;
@@ -252,7 +247,7 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
             }
             else
             {
-                for(j = 0,k = 0;j < MAX_AMBI_COEFFS;j++)
+                for(ALsizei j{0},k{0};j < MAX_AMBI_COEFFS;j++)
                 {
                     if(j == 0) gain = conf->HFOrderGain[0] * ratio;
                     else if(j == 1) gain = conf->HFOrderGain[1] * ratio;
@@ -262,7 +257,7 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
                         mMatrix.Dual[chan][HF_BAND][j] = conf->HFMatrix[i][k++] / coeff_scale[j] *
                                                          gain;
                 }
-                for(j = 0,k = 0;j < MAX_AMBI_COEFFS;j++)
+                for(ALsizei j{0},k{0};j < MAX_AMBI_COEFFS;j++)
                 {
                     if(j == 0) gain = conf->LFOrderGain[0] / ratio;
                     else if(j == 1) gain = conf->LFOrderGain[1] / ratio;
@@ -360,9 +355,8 @@ void AmbiUpsampler::reset(const ALCdevice *device, const ALfloat w_scale, const 
 {
     using namespace std::placeholders;
 
-    float ratio{400.0f / (float)device->Frequency};
-    std::for_each(std::begin(mXOver), std::end(mXOver),
-        std::bind(std::mem_fn(&BandSplitter::init), _1, ratio));
+    mXOver[0].init(400.0f / (float)device->Frequency);
+    std::fill(std::begin(mXOver)+1, std::end(mXOver), mXOver[0]);
 
     memset(mGains, 0, sizeof(mGains));
     if(device->Dry.CoeffCount > 0)

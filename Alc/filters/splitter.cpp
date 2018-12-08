@@ -23,13 +23,6 @@ void BandSplitter::init(float f0norm)
     hp_z1 = 0.0f;
 }
 
-void BandSplitter::clear()
-{
-    lp_z1 = 0.0f;
-    lp_z2 = 0.0f;
-    hp_z1 = 0.0f;
-}
-
 void BandSplitter::process(float *RESTRICT hpout, float *RESTRICT lpout, const float *input, int count)
 {
     ASSUME(count > 0);

@@ -14,7 +14,7 @@ class BandSplitter {
 
 public:
     void init(float f0norm);
-    void clear();
+    void clear() noexcept { lp_z1 = lp_z2 = hp_z1 = 0.0f; }
     void process(float *RESTRICT hpout, float *RESTRICT lpout, const float *input, int count);
 };
 

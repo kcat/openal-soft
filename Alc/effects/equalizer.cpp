@@ -101,7 +101,7 @@ ALboolean ALequalizerState::deviceUpdate(ALCdevice *UNUSED(device))
     for(auto &e : mChans)
     {
         std::for_each(std::begin(e.filter), std::end(e.filter),
-                      std::mem_fun_ref(&BiquadFilter::clear));
+                      std::mem_fn(&BiquadFilter::clear));
         std::fill(std::begin(e.CurrentGains), std::end(e.CurrentGains), 0.0f);
     }
     return AL_TRUE;

@@ -3,6 +3,8 @@
 
 #include <array>
 #include <vector>
+#include <numeric>
+#include <functional>
 
 #include "bformatdec.h"
 #include "ambdec.h"
@@ -108,15 +110,12 @@ ALsizei GetACNIndex(const BFChannelConfig *chans, ALsizei numchans, ALsizei acn)
 } // namespace
 
 
-void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALsizei chanmap[MAX_OUTPUT_CHANNELS])
+void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS])
 {
     static constexpr ALsizei map2DTo3D[MAX_AMBI2D_COEFFS] = {
         0,  1, 3,  4, 8,  9, 15
     };
     const ALfloat *coeff_scale = N3D2N3DScale;
-    bool periphonic;
-    ALfloat ratio;
-    ALsizei i;
 
     dec->Samples.clear();
     dec->SamplesHF = nullptr;
@@ -127,27 +126,31 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
     dec->SamplesHF = dec->Samples.data();
     dec->SamplesLF = dec->SamplesHF + dec->NumChannels;
 
-    dec->Enabled = 0;
-    for(i = 0;i < conf->NumSpeakers;i++)
-        dec->Enabled |= 1 << chanmap[i];
+    dec->Enabled = std::accumulate(std::begin(chanmap), std::begin(chanmap)+conf->NumSpeakers, 0u,
+        [](ALuint mask, const ALsizei &chan) noexcept -> ALuint
+        { return mask | (1 << chan); }
+    );
 
     if(conf->CoeffScale == AmbDecScale::SN3D)
         coeff_scale = SN3D2N3DScale;
     else if(conf->CoeffScale == AmbDecScale::FuMa)
         coeff_scale = FuMa2N3DScale;
 
-    memset(dec->UpSampler, 0, sizeof(dec->UpSampler));
-    ratio = 400.0f / (ALfloat)srate;
-    for(i = 0;i < 4;i++)
-        dec->UpSampler[i].XOver.init(ratio);
-    if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
+    float ratio{400.0f / (float)srate};
+    for(auto &chan : dec->UpSampler)
     {
-        periphonic = true;
+        chan.XOver.init(ratio);
+        chan.XOver.clear();
+        std::fill(std::begin(chan.Gains), std::end(chan.Gains), 0.0f);
+    }
 
+    const bool periphonic{(conf->ChanMask&AMBI_PERIPHONIC_MASK) != 0};
+    if(periphonic)
+    {
         dec->UpSampler[0].Gains[HF_BAND] = (conf->ChanMask > 0x1ff) ? W_SCALE_3H3P :
                                            (conf->ChanMask > 0xf) ? W_SCALE_2H2P : 1.0f;
         dec->UpSampler[0].Gains[LF_BAND] = 1.0f;
-        for(i = 1;i < 4;i++)
+        for(ALsizei i{1};i < 4;i++)
         {
             dec->UpSampler[i].Gains[HF_BAND] = (conf->ChanMask > 0x1ff) ? XYZ_SCALE_3H3P :
                                                (conf->ChanMask > 0xf) ? XYZ_SCALE_2H2P : 1.0f;
@@ -156,12 +159,10 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
     }
     else
     {
-        periphonic = false;
-
         dec->UpSampler[0].Gains[HF_BAND] = (conf->ChanMask > 0x1ff) ? W_SCALE_3H0P :
                                            (conf->ChanMask > 0xf) ? W_SCALE_2H0P : 1.0f;
         dec->UpSampler[0].Gains[LF_BAND] = 1.0f;
-        for(i = 1;i < 3;i++)
+        for(ALsizei i{1};i < 3;i++)
         {
             dec->UpSampler[i].Gains[HF_BAND] = (conf->ChanMask > 0x1ff) ? XYZ_SCALE_3H0P :
                                                (conf->ChanMask > 0xf) ? XYZ_SCALE_2H0P : 1.0f;
@@ -175,7 +176,7 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
     if(conf->FreqBands == 1)
     {
         dec->DualBand = AL_FALSE;
-        for(i = 0;i < conf->NumSpeakers;i++)
+        for(ALsizei i{0};i < conf->NumSpeakers;i++)
         {
             ALsizei chan = chanmap[i];
             ALfloat gain;
@@ -212,14 +213,15 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
     }
     else
     {
+        using namespace std::placeholders;
         dec->DualBand = AL_TRUE;
 
         ratio = conf->XOverFreq / (ALfloat)srate;
-        for(i = 0;i < MAX_AMBI_COEFFS;i++)
-            dec->XOver[i].init(ratio);
+        std::for_each(std::begin(dec->XOver), std::end(dec->XOver),
+            std::bind(std::mem_fn(&BandSplitter::init), _1, ratio));
 
         ratio = powf(10.0f, conf->XOverRatio / 40.0f);
-        for(i = 0;i < conf->NumSpeakers;i++)
+        for(ALsizei i{0};i < conf->NumSpeakers;i++)
         {
             ALsizei chan = chanmap[i];
             ALfloat gain;
@@ -280,8 +282,10 @@ void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount
 
 void bformatdec_process(struct BFormatDec *dec, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], ALsizei OutChannels, const ALfloat (*RESTRICT InSamples)[BUFFERSIZE], ALsizei SamplesToDo)
 {
-    ALsizei chan, i;
+    ASSUME(OutChannels > 0);
+    ASSUME(SamplesToDo > 0);
 
+    ALsizei chan, i;
     if(dec->DualBand)
     {
         for(i = 0;i < dec->NumChannels;i++)
@@ -290,10 +294,10 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*RESTRICT OutBuffer)[BU
 
         for(chan = 0;chan < OutChannels;chan++)
         {
-            if(!(dec->Enabled&(1<<chan)))
+            if(UNLIKELY(!(dec->Enabled&(1<<chan))))
                 continue;
 
-            memset(dec->ChannelMix, 0, SamplesToDo*sizeof(ALfloat));
+            std::fill(std::begin(dec->ChannelMix), std::begin(dec->ChannelMix)+SamplesToDo, 0.0f);
             MixRowSamples(dec->ChannelMix, dec->Matrix.Dual[chan][HF_BAND],
                 &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(dec->SamplesHF[0]),
                 dec->NumChannels, 0, SamplesToDo
@@ -303,23 +307,23 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*RESTRICT OutBuffer)[BU
                 dec->NumChannels, 0, SamplesToDo
             );
 
-            for(i = 0;i < SamplesToDo;i++)
-                OutBuffer[chan][i] += dec->ChannelMix[i];
+            std::transform(std::begin(dec->ChannelMix), std::begin(dec->ChannelMix)+SamplesToDo,
+                OutBuffer[chan], OutBuffer[chan], std::plus<float>());
         }
     }
     else
     {
         for(chan = 0;chan < OutChannels;chan++)
         {
-            if(!(dec->Enabled&(1<<chan)))
+            if(UNLIKELY(!(dec->Enabled&(1<<chan))))
                 continue;
 
-            memset(dec->ChannelMix, 0, SamplesToDo*sizeof(ALfloat));
+            std::fill(std::begin(dec->ChannelMix), std::begin(dec->ChannelMix)+SamplesToDo, 0.0f);
             MixRowSamples(dec->ChannelMix, dec->Matrix.Single[chan], InSamples,
                           dec->NumChannels, 0, SamplesToDo);
 
-            for(i = 0;i < SamplesToDo;i++)
-                OutBuffer[chan][i] += dec->ChannelMix[i];
+            std::transform(std::begin(dec->ChannelMix), std::begin(dec->ChannelMix)+SamplesToDo,
+                OutBuffer[chan], OutBuffer[chan], std::plus<float>());
         }
     }
 }
@@ -327,7 +331,8 @@ void bformatdec_process(struct BFormatDec *dec, ALfloat (*RESTRICT OutBuffer)[BU
 
 void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALfloat (*RESTRICT InSamples)[BUFFERSIZE], ALsizei InChannels, ALsizei SamplesToDo)
 {
-    ALsizei i;
+    ASSUME(InChannels > 0);
+    ASSUME(SamplesToDo > 0);
 
     /* This up-sampler leverages the differences observed in dual-band second-
      * and third-order decoder matrices compared to first-order. For the same
@@ -339,7 +344,7 @@ void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*RESTRICT OutBuffer)[B
      * subsequent higher-order decode generating the same response as a first-
      * order decode.
      */
-    for(i = 0;i < InChannels;i++)
+    for(ALsizei i{0};i < InChannels;i++)
     {
         /* First, split the first-order components into low and high frequency
          * bands.
@@ -359,21 +364,17 @@ void bformatdec_upSample(struct BFormatDec *dec, ALfloat (*RESTRICT OutBuffer)[B
 
 void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device, ALfloat w_scale, ALfloat xyz_scale)
 {
-    ALfloat ratio;
-    ALsizei i;
+    using namespace std::placeholders;
 
-    ratio = 400.0f / (ALfloat)device->Frequency;
-    for(i = 0;i < 4;i++)
-        ambiup->XOver[i].init(ratio);
+    float ratio{400.0f / (float)device->Frequency};
+    std::for_each(std::begin(ambiup->XOver), std::end(ambiup->XOver),
+        std::bind(std::mem_fn(&BandSplitter::init), _1, ratio));
 
     memset(ambiup->Gains, 0, sizeof(ambiup->Gains));
     if(device->Dry.CoeffCount > 0)
     {
         ALfloat encgains[8][MAX_OUTPUT_CHANNELS];
-        ALsizei j;
-        size_t k;
-
-        for(k = 0;k < COUNTOF(Ambi3DPoints);k++)
+        for(size_t k{0u};k < COUNTOF(Ambi3DPoints);k++)
         {
             ALfloat coeffs[MAX_AMBI_COEFFS] = { 0.0f };
             CalcDirectionCoeffs(Ambi3DPoints[k], 0.0f, coeffs);
@@ -385,12 +386,12 @@ void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device, ALfloat
          * (encgains) and output are transposed, so the input channels line up
          * with the rows and the output channels line up with the columns.
          */
-        for(i = 0;i < 4;i++)
+        for(ALsizei i{0};i < 4;i++)
         {
-            for(j = 0;j < device->Dry.NumChannels;j++)
+            for(ALsizei j{0};j < device->Dry.NumChannels;j++)
             {
                 ALdouble gain = 0.0;
-                for(k = 0;k < COUNTOF(Ambi3DDecoder);k++)
+                for(size_t k{0u};k < COUNTOF(Ambi3DDecoder);k++)
                     gain += (ALdouble)Ambi3DDecoder[k][i] * encgains[k][j];
                 ambiup->Gains[i][j][HF_BAND] = (ALfloat)(gain * Ambi3DDecoderHFScale[i]);
                 ambiup->Gains[i][j][LF_BAND] = (ALfloat)gain;
@@ -399,7 +400,7 @@ void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device, ALfloat
     }
     else
     {
-        for(i = 0;i < 4;i++)
+        for(ALsizei i{0};i < 4;i++)
         {
             ALsizei index = GetChannelForACN(device->Dry, i);
             if(index != INVALID_UPSAMPLE_INDEX)
@@ -414,14 +415,15 @@ void ambiup_reset(struct AmbiUpsampler *ambiup, const ALCdevice *device, ALfloat
 
 void ambiup_process(struct AmbiUpsampler *ambiup, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], ALsizei OutChannels, const ALfloat (*RESTRICT InSamples)[BUFFERSIZE], ALsizei SamplesToDo)
 {
-    ALsizei i, j;
+    ASSUME(OutChannels > 0);
+    ASSUME(SamplesToDo > 0);
 
-    for(i = 0;i < 4;i++)
+    for(ALsizei i{0};i < 4;i++)
     {
         ambiup->XOver[i].process(ambiup->Samples[HF_BAND], ambiup->Samples[LF_BAND], InSamples[i],
                                  SamplesToDo);
 
-        for(j = 0;j < OutChannels;j++)
+        for(ALsizei j{0};j < OutChannels;j++)
             MixRowSamples(OutBuffer[j], ambiup->Gains[i][j],
                 ambiup->Samples, AmbiUpsampler::NumBands, 0, SamplesToDo
             );

@@ -24,6 +24,7 @@
 #include <stdlib.h>
 
 #include <algorithm>
+#include <functional>
 
 #include "alMain.h"
 #include "alcontext.h"

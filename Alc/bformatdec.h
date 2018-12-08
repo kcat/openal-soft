@@ -34,62 +34,68 @@ extern const ALfloat SN3D2N3DScale[MAX_AMBI_COEFFS];
 extern const ALfloat FuMa2N3DScale[MAX_AMBI_COEFFS];
 
 
-struct BFormatDec {
-    static constexpr size_t NumBands{2};
+class BFormatDec {
+public:
+    static constexpr size_t sNumBands{2};
 
-    ALuint Enabled; /* Bitfield of enabled channels. */
+private:
+    ALuint mEnabled; /* Bitfield of enabled channels. */
 
     union {
-        alignas(16) ALfloat Dual[MAX_OUTPUT_CHANNELS][NumBands][MAX_AMBI_COEFFS];
+        alignas(16) ALfloat Dual[MAX_OUTPUT_CHANNELS][sNumBands][MAX_AMBI_COEFFS];
         alignas(16) ALfloat Single[MAX_OUTPUT_CHANNELS][MAX_AMBI_COEFFS];
-    } Matrix;
+    } mMatrix;
 
     /* NOTE: BandSplitter filters are unused with single-band decoding */
-    BandSplitter XOver[MAX_AMBI_COEFFS];
+    BandSplitter mXOver[MAX_AMBI_COEFFS];
 
-    al::vector<std::array<ALfloat,BUFFERSIZE>, 16> Samples;
+    al::vector<std::array<ALfloat,BUFFERSIZE>, 16> mSamples;
     /* These two alias into Samples */
-    std::array<ALfloat,BUFFERSIZE> *SamplesHF;
-    std::array<ALfloat,BUFFERSIZE> *SamplesLF;
+    std::array<ALfloat,BUFFERSIZE> *mSamplesHF;
+    std::array<ALfloat,BUFFERSIZE> *mSamplesLF;
 
-    alignas(16) ALfloat ChannelMix[BUFFERSIZE];
+    alignas(16) ALfloat mChannelMix[BUFFERSIZE];
 
     struct {
         BandSplitter XOver;
-        ALfloat Gains[NumBands];
-    } UpSampler[4];
+        ALfloat Gains[sNumBands];
+    } mUpSampler[4];
 
-    ALsizei NumChannels;
-    ALboolean DualBand;
+    ALsizei mNumChannels;
+    ALboolean mDualBand;
+
+public:
+    void reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS]);
+
+    /* Decodes the ambisonic input to the given output channels. */
+    void process(ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*RESTRICT InSamples)[BUFFERSIZE], const ALsizei SamplesToDo);
+
+    /* Up-samples a first-order input to the decoder's configuration. */
+    void upSample(ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALfloat (*RESTRICT InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo);
 
     DEF_NEWDEL(BFormatDec)
 };
-
-void bformatdec_reset(BFormatDec *dec, const AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS]);
-
-/* Decodes the ambisonic input to the given output channels. */
-void bformatdec_process(BFormatDec *dec, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], ALsizei OutChannels, const ALfloat (*RESTRICT InSamples)[BUFFERSIZE], ALsizei SamplesToDo);
-
-/* Up-samples a first-order input to the decoder's configuration. */
-void bformatdec_upSample(BFormatDec *dec, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALfloat (*RESTRICT InSamples)[BUFFERSIZE], ALsizei InChannels, ALsizei SamplesToDo);
 
 
 /* Stand-alone first-order upsampler. Kept here because it shares some stuff
  * with bformatdec. Assumes a periphonic (4-channel) input mix!
  */
-struct AmbiUpsampler {
-    static constexpr size_t NumBands{2};
+class AmbiUpsampler {
+public:
+    static constexpr size_t sNumBands{2};
 
-    alignas(16) ALfloat Samples[NumBands][BUFFERSIZE];
+private:
+    alignas(16) ALfloat mSamples[sNumBands][BUFFERSIZE];
 
-    BandSplitter XOver[4];
+    BandSplitter mXOver[4];
 
-    ALfloat Gains[4][MAX_OUTPUT_CHANNELS][NumBands];
+    ALfloat mGains[4][MAX_OUTPUT_CHANNELS][sNumBands];
+
+public:
+    void reset(const ALCdevice *device, const ALfloat w_scale, const ALfloat xyz_scale);
+    void process(ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*RESTRICT InSamples)[BUFFERSIZE], const ALsizei SamplesToDo);
 
     DEF_NEWDEL(AmbiUpsampler)
 };
-
-void ambiup_reset(AmbiUpsampler *ambiup, const ALCdevice *device, ALfloat w_scale, ALfloat xyz_scale);
-void ambiup_process(AmbiUpsampler *ambiup, ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], ALsizei OutChannels, const ALfloat (*RESTRICT InSamples)[BUFFERSIZE], ALsizei SamplesToDo);
 
 #endif /* BFORMATDEC_H */

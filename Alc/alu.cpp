@@ -109,9 +109,8 @@ namespace {
 void ProcessHrtf(ALCdevice *device, ALsizei SamplesToDo)
 {
     if(device->AmbiUp)
-        ambiup_process(device->AmbiUp.get(),
-            device->Dry.Buffer, device->Dry.NumChannels, device->FOAOut.Buffer,
-            SamplesToDo
+        device->AmbiUp->process(device->Dry.Buffer, device->Dry.NumChannels,
+            device->FOAOut.Buffer, SamplesToDo
         );
 
     int lidx{GetChannelIdxByName(&device->RealOut, FrontLeft)};
@@ -132,21 +131,18 @@ void ProcessHrtf(ALCdevice *device, ALsizei SamplesToDo)
 void ProcessAmbiDec(ALCdevice *device, ALsizei SamplesToDo)
 {
     if(device->Dry.Buffer != device->FOAOut.Buffer)
-        bformatdec_upSample(device->AmbiDecoder.get(),
-            device->Dry.Buffer, device->FOAOut.Buffer, device->FOAOut.NumChannels,
-            SamplesToDo
+        device->AmbiDecoder->upSample(device->Dry.Buffer, device->FOAOut.Buffer,
+            device->FOAOut.NumChannels, SamplesToDo
         );
-    bformatdec_process(device->AmbiDecoder.get(),
-        device->RealOut.Buffer, device->RealOut.NumChannels, device->Dry.Buffer,
-        SamplesToDo
+    device->AmbiDecoder->process(device->RealOut.Buffer, device->RealOut.NumChannels,
+        device->Dry.Buffer, SamplesToDo
     );
 }
 
 void ProcessAmbiUp(ALCdevice *device, ALsizei SamplesToDo)
 {
-    ambiup_process(device->AmbiUp.get(),
-        device->RealOut.Buffer, device->RealOut.NumChannels, device->FOAOut.Buffer,
-        SamplesToDo
+    device->AmbiUp->process(device->RealOut.Buffer, device->RealOut.NumChannels,
+        device->FOAOut.Buffer, SamplesToDo
     );
 }
 

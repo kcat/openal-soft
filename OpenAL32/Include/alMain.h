@@ -225,8 +225,8 @@ struct ALeffect;
 struct ALfilter;
 struct EffectState;
 struct Uhj2Encoder;
-struct BFormatDec;
-struct AmbiUpsampler;
+class BFormatDec;
+class AmbiUpsampler;
 struct bs2b;
 
 

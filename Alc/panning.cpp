@@ -562,7 +562,7 @@ static void InitPanning(ALCdevice *device)
                 w_scale = W_SCALE_2H2P;
                 xyz_scale = XYZ_SCALE_2H2P;
             }
-            ambiup_reset(device->AmbiUp.get(), device, w_scale, xyz_scale);
+            device->AmbiUp->reset(device, w_scale, xyz_scale);
         }
 
         if(ConfigValueFloat(devname, "decoder", "nfc-ref-delay", &nfc_delay) && nfc_delay > 0.0f)
@@ -724,7 +724,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsiz
         (conf->ChanMask > 0xf) ? (conf->ChanMask > 0x1ff) ? "third" : "second" : "first",
         (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? " periphonic" : ""
     );
-    bformatdec_reset(device->AmbiDecoder.get(), conf, count, device->Frequency, speakermap);
+    device->AmbiDecoder->reset(conf, count, device->Frequency, speakermap);
 
     if(conf->ChanMask <= 0xf)
     {
@@ -878,8 +878,8 @@ static void InitHrtfPanning(ALCdevice *device)
         device->FOAOut.CoeffCount = 0;
         device->FOAOut.NumChannels = 4;
 
-        ambiup_reset(device->AmbiUp.get(), device, AmbiOrderHFGainFOA[0] / AmbiOrderHFGain[0],
-                     AmbiOrderHFGainFOA[1] / AmbiOrderHFGain[1]);
+        device->AmbiUp->reset(device, AmbiOrderHFGainFOA[0] / AmbiOrderHFGain[0],
+            AmbiOrderHFGainFOA[1] / AmbiOrderHFGain[1]);
     }
     else
     {

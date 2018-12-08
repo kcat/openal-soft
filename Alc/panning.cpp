@@ -26,6 +26,8 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include <algorithm>
+
 #include "alMain.h"
 #include "alAuxEffectSlot.h"
 #include "alu.h"
@@ -147,29 +149,25 @@ void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALf
 }
 
 
-void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, ALsizei numcoeffs, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, ALsizei numcoeffs, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS])
 {
-    ALsizei i, j;
-
+    ALsizei i;
     for(i = 0;i < numchans;i++)
     {
         float gain = 0.0f;
-        for(j = 0;j < numcoeffs;j++)
+        for(ALsizei j{0};j < numcoeffs;j++)
             gain += chancoeffs[i][j]*coeffs[j];
         gains[i] = clampf(gain, 0.0f, 1.0f) * ingain;
     }
-    for(;i < MAX_OUTPUT_CHANNELS;i++)
-        gains[i] = 0.0f;
+    std::fill(std::begin(gains)+i, std::end(gains), 0.0f);
 }
 
-void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat gains[MAX_OUTPUT_CHANNELS])
+void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS])
 {
     ALsizei i;
-
     for(i = 0;i < numchans;i++)
         gains[i] = chanmap[i].Scale * coeffs[chanmap[i].Index] * ingain;
-    for(;i < MAX_OUTPUT_CHANNELS;i++)
-        gains[i] = 0.0f;
+    std::fill(std::begin(gains)+i, std::end(gains), 0.0f);
 }
 
 
@@ -543,7 +541,7 @@ static void InitPanning(ALCdevice *device)
             /* FOA output is always ACN+N3D for higher-order ambisonic output.
              * The upsampler expects this and will convert it for output.
              */
-            memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
+            device->FOAOut.Ambi = AmbiConfig{};
             for(i = 0;i < 4;i++)
             {
                 device->FOAOut.Ambi.Map[i].Scale = 1.0f;
@@ -588,7 +586,7 @@ static void InitPanning(ALCdevice *device)
         xyz_scale = (device->Dry.CoeffCount > 9) ? XYZ_SCALE_3H0P :
                     (device->Dry.CoeffCount > 4) ? XYZ_SCALE_2H0P : 1.0f;
 
-        memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
+        device->FOAOut.Ambi = AmbiConfig{};
         for(i = 0;i < device->Dry.NumChannels;i++)
         {
             device->FOAOut.Ambi.Coeffs[i][0] = device->Dry.Ambi.Coeffs[i][0] * w_scale;
@@ -671,7 +669,7 @@ static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const A
     device->Dry.CoeffCount = (conf->ChanMask > 0x1ff) ? 16 :
                              (conf->ChanMask > 0xf) ? 9 : 4;
 
-    memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
+    device->FOAOut.Ambi = AmbiConfig{};
     for(i = 0;i < device->Dry.NumChannels;i++)
     {
         device->FOAOut.Ambi.Coeffs[i][0] = device->Dry.Ambi.Coeffs[i][0] * w_scale;
@@ -734,7 +732,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsiz
     }
     else
     {
-        memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
+        device->FOAOut.Ambi = AmbiConfig{};
         if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
         {
             count = 4;
@@ -869,7 +867,7 @@ static void InitHrtfPanning(ALCdevice *device)
 
     if(device->AmbiUp)
     {
-        memset(&device->FOAOut.Ambi, 0, sizeof(device->FOAOut.Ambi));
+        device->FOAOut.Ambi = AmbiConfig{};
         for(i = 0;i < 4;i++)
         {
             device->FOAOut.Ambi.Map[i].Scale = 1.0f;
@@ -1207,15 +1205,11 @@ no_hrtf:
 
 void aluInitEffectPanning(ALeffectslot *slot)
 {
-    ALsizei i;
-
-    memset(slot->ChanMap, 0, sizeof(slot->ChanMap));
-    slot->NumChannels = 0;
-
-    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
+    ALsizei i{0};
+    for(auto &chanmap : slot->ChanMap)
     {
-        slot->ChanMap[i].Scale = 1.0f;
-        slot->ChanMap[i].Index = i;
+        chanmap.Scale = 1.0f;
+        chanmap.Index = i++;
     }
     slot->NumChannels = i;
 }

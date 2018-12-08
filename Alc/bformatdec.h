@@ -41,7 +41,7 @@ public:
 private:
     ALuint mEnabled; /* Bitfield of enabled channels. */
 
-    union {
+    union MatrixU {
         alignas(16) ALfloat Dual[MAX_OUTPUT_CHANNELS][sNumBands][MAX_AMBI_COEFFS];
         alignas(16) ALfloat Single[MAX_OUTPUT_CHANNELS][MAX_AMBI_COEFFS];
     } mMatrix;
@@ -89,7 +89,7 @@ private:
 
     BandSplitter mXOver[4];
 
-    ALfloat mGains[4][MAX_OUTPUT_CHANNELS][sNumBands];
+    std::array<std::array<std::array<ALfloat,sNumBands>,MAX_OUTPUT_CHANNELS>,4> mGains;
 
 public:
     void reset(const ALCdevice *device, const ALfloat w_scale, const ALfloat xyz_scale);

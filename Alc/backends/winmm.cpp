@@ -246,7 +246,7 @@ ALCenum ALCwinmmPlayback_open(ALCwinmmPlayback *self, const ALCchar *deviceName)
     UINT DeviceID{static_cast<UINT>(std::distance(PlaybackDevices.cbegin(), iter))};
 
 retry_open:
-    memset(&self->Format, 0, sizeof(WAVEFORMATEX));
+    self->Format = WAVEFORMATEX{};
     if(device->FmtType == DevFmtFloat)
     {
         self->Format.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
@@ -554,7 +554,7 @@ ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *deviceName)
             return ALC_INVALID_ENUM;
     }
 
-    memset(&self->Format, 0, sizeof(WAVEFORMATEX));
+    self->Format = WAVEFORMATEX{};
     self->Format.wFormatTag = (device->FmtType == DevFmtFloat) ?
                               WAVE_FORMAT_IEEE_FLOAT : WAVE_FORMAT_PCM;
     self->Format.nChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);

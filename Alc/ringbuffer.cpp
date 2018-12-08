@@ -84,7 +84,7 @@ void ll_ringbuffer_reset(ll_ringbuffer_t *rb)
 {
     rb->write_ptr.store(0, std::memory_order_relaxed);
     rb->read_ptr.store(0, std::memory_order_relaxed);
-    memset(rb->buf, 0, (rb->size_mask+1)*rb->elem_size);
+    std::fill_n(rb->buf+0, (rb->size_mask+1)*rb->elem_size, 0);
 }
 
 

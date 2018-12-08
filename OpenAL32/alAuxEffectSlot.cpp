@@ -532,7 +532,7 @@ ALenum InitializeEffect(ALCcontext *Context, ALeffectslot *EffectSlot, ALeffect 
         if(!effect)
         {
             EffectSlot->Effect.Type = AL_EFFECT_NULL;
-            memset(&EffectSlot->Effect.Props, 0, sizeof(EffectSlot->Effect.Props));
+            EffectSlot->Effect.Props = ALeffectProps{};
         }
         else
         {

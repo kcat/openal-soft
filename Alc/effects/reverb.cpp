@@ -821,14 +821,12 @@ static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *Reflection
      */
     rot = GetTransformFromVector(ReflectionsPan);
     MATRIX_MULT(transform, rot, A2B);
-    memset(&State->mEarly.PanGain, 0, sizeof(State->mEarly.PanGain));
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
         ComputePanGains(&Device->FOAOut, transform.m[i], earlyGain,
                         State->mEarly.PanGain[i]);
 
     rot = GetTransformFromVector(LateReverbPan);
     MATRIX_MULT(transform, rot, A2B);
-    memset(&State->mLate.PanGain, 0, sizeof(State->mLate.PanGain));
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
         ComputePanGains(&Device->FOAOut, transform.m[i], lateGain,
                         State->mLate.PanGain[i]);
@@ -1379,11 +1377,13 @@ void ReverbState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesI
             todo &= ~3;
 
         /* Convert B-Format to A-Format for processing. */
-        memset(afmt, 0, sizeof(*afmt)*NUM_LINES);
         for(c = 0;c < NUM_LINES;c++)
+        {
+            std::fill(std::begin(afmt[c]), std::end(afmt[c]), 0.0f);
             MixRowSamples(afmt[c], B2A.m[c],
                 SamplesIn, MAX_EFFECT_CHANNELS, base, todo
             );
+        }
 
         /* Process the samples for reverb. */
         for(c = 0;c < NUM_LINES;c++)

@@ -88,9 +88,7 @@ size_t al_get_page_size(void) noexcept
 #ifdef _WIN32
         if(!psize)
         {
-            SYSTEM_INFO sysinfo;
-            memset(&sysinfo, 0, sizeof(sysinfo));
-
+            SYSTEM_INFO sysinfo{};
             GetSystemInfo(&sysinfo);
             psize = sysinfo.dwPageSize;
         }

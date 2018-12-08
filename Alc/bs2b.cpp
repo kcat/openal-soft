@@ -127,7 +127,7 @@ int bs2b_get_srate(struct bs2b *bs2b)
 
 void bs2b_clear(struct bs2b *bs2b)
 {
-    std::memset(&bs2b->last_sample, 0, sizeof(bs2b->last_sample));
+    std::fill(std::begin(bs2b->last_sample), std::end(bs2b->last_sample), bs2b::t_last_sample{});
 } /* bs2b_clear */
 
 void bs2b_cross_feed(struct bs2b *bs2b, float *RESTRICT Left, float *RESTRICT Right, int SamplesToDo)

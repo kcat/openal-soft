@@ -1263,8 +1263,8 @@ static void alc_deinit(void)
 
     alc_cleanup();
 
-    memset(&PlaybackBackend, 0, sizeof(PlaybackBackend));
-    memset(&CaptureBackend, 0, sizeof(CaptureBackend));
+    PlaybackBackend = BackendInfo{};
+    CaptureBackend = BackendInfo{};
 
     for(i = 0;i < BackendListSize;i++)
         BackendList[i].getFactory().deinit();

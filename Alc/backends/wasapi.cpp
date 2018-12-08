@@ -637,7 +637,7 @@ FORCE_ALIGN int ALCwasapiPlayback_mixerProc(ALCwasapiPlayback *self)
 
 ALCboolean MakeExtensible(WAVEFORMATEXTENSIBLE *out, const WAVEFORMATEX *in)
 {
-    memset(out, 0, sizeof(*out));
+    *out = WAVEFORMATEXTENSIBLE{};
     if(in->wFormatTag == WAVE_FORMAT_EXTENSIBLE)
         *out = *(const WAVEFORMATEXTENSIBLE*)in;
     else if(in->wFormatTag == WAVE_FORMAT_PCM)

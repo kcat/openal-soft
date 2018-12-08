@@ -170,7 +170,7 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
         mUpSampler[3].Gains[LF_BAND] = 0.0f;
     }
 
-    memset(&mMatrix, 0, sizeof(mMatrix));
+    mMatrix = MatrixU{};
     if(conf->FreqBands == 1)
     {
         mDualBand = AL_FALSE;
@@ -358,7 +358,7 @@ void AmbiUpsampler::reset(const ALCdevice *device, const ALfloat w_scale, const 
     mXOver[0].init(400.0f / (float)device->Frequency);
     std::fill(std::begin(mXOver)+1, std::end(mXOver), mXOver[0]);
 
-    memset(mGains, 0, sizeof(mGains));
+    mGains.fill({});
     if(device->Dry.CoeffCount > 0)
     {
         ALfloat encgains[8][MAX_OUTPUT_CHANNELS];
@@ -411,6 +411,6 @@ void AmbiUpsampler::process(ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALs
         mXOver[i].process(mSamples[HF_BAND], mSamples[LF_BAND], InSamples[i], SamplesToDo);
 
         for(ALsizei j{0};j < OutChannels;j++)
-            MixRowSamples(OutBuffer[j], mGains[i][j], mSamples, sNumBands, 0, SamplesToDo);
+            MixRowSamples(OutBuffer[j], mGains[i][j].data(), mSamples, sNumBands, 0, SamplesToDo);
     }
 }

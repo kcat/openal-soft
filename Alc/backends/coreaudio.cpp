@@ -68,7 +68,7 @@ static void ALCcoreAudioPlayback_Construct(ALCcoreAudioPlayback *self, ALCdevice
     SET_VTABLE2(ALCcoreAudioPlayback, ALCbackend, self);
 
     self->FrameSize = 0;
-    memset(&self->Format, 0, sizeof(self->Format));
+    self->Format = AudioStreamBasicDescription{};
 }
 
 static void ALCcoreAudioPlayback_Destruct(ALCcoreAudioPlayback *self)

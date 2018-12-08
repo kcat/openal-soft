@@ -50,12 +50,12 @@
 
 namespace {
 
-constexpr float B[4][3] = {
+constexpr float B[5][4] = {
     {    0.0f                             },
     {    1.0f                             },
     {    3.0f,     3.0f                   },
     { 3.6778f,  6.4595f, 2.3222f          },
-  /*{ 4.2076f, 11.4877f, 5.7924f, 9.1401f }*/
+    { 4.2076f, 11.4877f, 5.7924f, 9.1401f }
 };
 
 NfcFilter1 NfcFilterCreate1(const float w0, const float w1) noexcept
@@ -219,6 +219,81 @@ void NfcFilterAdjust3(NfcFilter3 *nfc, const float w0) noexcept
     nfc->b3 = 2.0f * b_00 / g_0;
 }
 
+
+NfcFilter4 NfcFilterCreate4(const float w0, const float w1) noexcept
+{
+    NfcFilter4 nfc{};
+    float b_10, b_11, g_1;
+    float r;
+
+    nfc.base_gain = 1.0f;
+    nfc.gain = 1.0f;
+
+    /* Calculate bass-boost coefficients. */
+    r = 0.5f * w0;
+    b_10 = B[4][0] * r;
+    b_11 = B[4][1] * r * r;
+    g_1 = 1.0f + b_10 + b_11;
+
+    nfc.gain *= g_1;
+    nfc.b1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
+    nfc.b2 = 4.0f * b_11 / g_1;
+
+    b_10 = B[4][2] * r;
+    b_11 = B[4][3] * r * r;
+    g_1 = 1.0f + b_10 + b_11;
+
+    nfc.gain *= g_1;
+    nfc.b3 = (2.0f*b_10 + 4.0f*b_11) / g_1;
+    nfc.b4 = 4.0f * b_11 / g_1;
+
+    /* Calculate bass-cut coefficients. */
+    r = 0.5f * w1;
+    b_10 = B[4][0] * r;
+    b_11 = B[4][1] * r * r;
+    g_1 = 1.0f + b_10 + b_11;
+
+    nfc.base_gain /= g_1;
+    nfc.gain /= g_1;
+    nfc.a1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
+    nfc.a2 = 4.0f * b_11 / g_1;
+
+    b_10 = B[4][2] * r;
+    b_11 = B[4][3] * r * r;
+    g_1 = 1.0f + b_10 + b_11;
+
+    nfc.base_gain /= g_1;
+    nfc.gain /= g_1;
+    nfc.a3 = (2.0f*b_10 + 4.0f*b_11) / g_1;
+    nfc.a4 = 4.0f * b_11 / g_1;
+
+    return nfc;
+}
+
+void NfcFilterAdjust4(NfcFilter4 *nfc, const float w0) noexcept
+{
+    float b_10, b_11, g_1;
+    float r;
+
+    r = 0.5f * w0;
+    b_10 = B[4][0] * r;
+    b_11 = B[4][1] * r * r;
+    g_1 = 1.0f + b_10 + b_11;
+
+    nfc->gain = nfc->base_gain * g_1;
+    nfc->b1 = (2.0f*b_10 + 4.0f*b_11) / g_1;
+    nfc->b2 = 4.0f * b_11 / g_1;
+
+    b_10 = B[4][2] * r;
+    b_11 = B[4][3] * r * r;
+    g_1 = 1.0f + b_10 + b_11;
+
+    nfc->gain *= nfc->base_gain * g_1;
+    nfc->b3 = (2.0f*b_10 + 4.0f*b_11) / g_1;
+    nfc->b4 = 4.0f * b_11 / g_1;
+}
+
+
 } // namespace
 
 void NfcFilter::init(const float w0, const float w1) noexcept
@@ -226,6 +301,7 @@ void NfcFilter::init(const float w0, const float w1) noexcept
     first = NfcFilterCreate1(w0, w1);
     second = NfcFilterCreate2(w0, w1);
     third = NfcFilterCreate3(w0, w1);
+    fourth = NfcFilterCreate4(w0, w1);
 }
 
 void NfcFilter::adjust(const float w0) noexcept
@@ -233,6 +309,7 @@ void NfcFilter::adjust(const float w0) noexcept
     NfcFilterAdjust1(&first, w0);
     NfcFilterAdjust2(&second, w0);
     NfcFilterAdjust3(&third, w0);
+    NfcFilterAdjust4(&fourth, w0);
 }
 
 
@@ -311,124 +388,39 @@ void NfcFilter::process3(float *RESTRICT dst, const float *RESTRICT src, const i
     third.z[2] = z3;
 }
 
-#if 0 /* Original methods the above are derived from. */
-static void NfcFilterCreate(NfcFilter *nfc, const ALsizei order, const float src_dist, const float ctl_dist, const float rate)
+void NfcFilter::process4(float *RESTRICT dst, const float *RESTRICT src, const int count)
 {
-    static const float B[4][5] = {
-        {                                     },
-        {    1.0f                             },
-        {    3.0f,     3.0f                   },
-        { 3.6778f,  6.4595f, 2.3222f          },
-        { 4.2076f, 11.4877f, 5.7924f, 9.1401f }
+    ASSUME(count > 0);
+
+    const float gain{fourth.gain};
+    const float b1{fourth.b1};
+    const float b2{fourth.b2};
+    const float b3{fourth.b3};
+    const float b4{fourth.b4};
+    const float a1{fourth.a1};
+    const float a2{fourth.a2};
+    const float a3{fourth.a3};
+    const float a4{fourth.a4};
+    float z1{fourth.z[0]};
+    float z2{fourth.z[1]};
+    float z3{fourth.z[2]};
+    float z4{fourth.z[3]};
+    auto proc_sample = [gain,b1,b2,b3,b4,a1,a2,a3,a4,&z1,&z2,&z3,&z4](const float in) noexcept -> float
+    {
+        float y{in*gain - a1*z1 - a2*z2};
+        float out{y + b1*z1 + b2*z2};
+        z2 += z1;
+        z1 += y;
+
+        y = out - a3*z3 - a4*z4;
+        out = y + b3*z3 + b4*z4;
+        z4 += z3;
+        z3 += y;
+        return out;
     };
-    float w0 = SPEEDOFSOUNDMETRESPERSEC / (src_dist * rate);
-    float w1 = SPEEDOFSOUNDMETRESPERSEC / (ctl_dist * rate);
-    ALsizei i;
-    float r;
-
-    nfc->g = 1.0f;
-    nfc->coeffs[0] = 1.0f;
-
-    /* NOTE: Slight adjustment from the literature to raise the center
-     * frequency a bit (0.5 -> 1.0).
-     */
-    r = 1.0f * w0;
-    for(i = 0; i < (order-1);i += 2)
-    {
-        float b_10 = B[order][i  ] * r;
-        float b_11 = B[order][i+1] * r * r;
-        float g_1 = 1.0f + b_10 + b_11;
-
-        nfc->b[i] = b_10;
-        nfc->b[i + 1] = b_11;
-        nfc->coeffs[0] *= g_1;
-        nfc->coeffs[i+1] = ((2.0f * b_10) + (4.0f * b_11)) / g_1;
-        nfc->coeffs[i+2] = (4.0f * b_11) / g_1;
-    }
-    if(i < order)
-    {
-        float b_00 = B[order][i] * r;
-        float g_0 = 1.0f + b_00;
-
-        nfc->b[i] = b_00;
-        nfc->coeffs[0] *= g_0;
-        nfc->coeffs[i+1] = (2.0f * b_00) / g_0;
-    }
-
-    r = 1.0f * w1;
-    for(i = 0;i < (order-1);i += 2)
-    {
-        float b_10 = B[order][i  ] * r;
-        float b_11 = B[order][i+1] * r * r;
-        float g_1 = 1.0f + b_10 + b_11;
-
-        nfc->g /= g_1;
-        nfc->coeffs[0] /= g_1;
-        nfc->coeffs[order+i+1] = ((2.0f * b_10) + (4.0f * b_11)) / g_1;
-        nfc->coeffs[order+i+2] = (4.0f * b_11) / g_1;
-    }
-    if(i < order)
-    {
-        float b_00 = B[order][i] * r;
-        float g_0 = 1.0f + b_00;
-
-        nfc->g /= g_0;
-        nfc->coeffs[0] /= g_0;
-        nfc->coeffs[order+i+1] = (2.0f * b_00) / g_0;
-    }
-
-    for(i = 0; i < MAX_AMBI_ORDER; i++)
-        nfc->history[i] = 0.0f;
+    std::transform(src, src+count, dst, proc_sample);
+    fourth.z[0] = z1;
+    fourth.z[1] = z2;
+    fourth.z[2] = z3;
+    fourth.z[3] = z4;
 }
-
-static void NfcFilterAdjust(NfcFilter *nfc, const float distance)
-{
-    int i;
-
-    nfc->coeffs[0] = nfc->g;
-
-    for(i = 0;i < (nfc->order-1);i += 2)
-    {
-        float b_10 = nfc->b[i] / distance;
-        float b_11 = nfc->b[i+1] / (distance * distance);
-        float g_1 = 1.0f + b_10 + b_11;
-
-        nfc->coeffs[0] *= g_1;
-        nfc->coeffs[i+1] = ((2.0f * b_10) + (4.0f * b_11)) / g_1;
-        nfc->coeffs[i+2] = (4.0f * b_11) / g_1;
-    }
-    if(i < nfc->order)
-    {
-        float b_00 = nfc->b[i] / distance;
-        float g_0 = 1.0f + b_00;
-
-        nfc->coeffs[0] *= g_0;
-        nfc->coeffs[i+1] = (2.0f * b_00) / g_0;
-    }
-}
-
-static float NfcFilterProcess(const float in, NfcFilter *nfc)
-{
-    int i;
-    float out = in * nfc->coeffs[0];
-
-    for(i = 0;i < (nfc->order-1);i += 2)
-    {
-        float y = out - (nfc->coeffs[nfc->order+i+1] * nfc->history[i]) -
-                        (nfc->coeffs[nfc->order+i+2] * nfc->history[i+1]) + 1.0e-30f;
-        out = y + (nfc->coeffs[i+1]*nfc->history[i]) + (nfc->coeffs[i+2]*nfc->history[i+1]);
-
-        nfc->history[i+1] += nfc->history[i];
-        nfc->history[i] += y;
-    }
-    if(i < nfc->order)
-    {
-        float y = out - (nfc->coeffs[nfc->order+i+1] * nfc->history[i]) + 1.0e-30f;
-
-        out = y + (nfc->coeffs[i+1] * nfc->history[i]);
-        nfc->history[i] += y;
-    }
-
-    return out;
-}
-#endif

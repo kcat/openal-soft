@@ -14,10 +14,10 @@
 extern "C" {
 #endif
 
-extern FILE *LogFile;
+extern FILE *gLogFile;
 
 #if defined(__GNUC__) && !defined(_WIN32)
-#define AL_PRINT(T, MSG, ...) fprintf(LogFile, "AL lib: %s %s: " MSG, T, __FUNCTION__ , ## __VA_ARGS__)
+#define AL_PRINT(T, MSG, ...) fprintf(gLogFile, "AL lib: %s %s: " MSG, T, __FUNCTION__ , ## __VA_ARGS__)
 #else
 void al_print(const char *type, const char *func, const char *fmt, ...) DECL_FORMAT(printf, 3,4);
 #define AL_PRINT(T, ...) al_print((T), __FUNCTION__, __VA_ARGS__)
@@ -37,27 +37,27 @@ enum LogLevel {
     LogTrace,
     LogRef
 };
-extern enum LogLevel LogLevel;
+extern LogLevel gLogLevel;
 
 #define TRACEREF(...) do {                                                    \
-    if(LogLevel >= LogRef)                                                    \
+    if(gLogLevel >= LogRef)                                                   \
         AL_PRINT("(--)", __VA_ARGS__);                                        \
 } while(0)
 
 #define TRACE(...) do {                                                       \
-    if(LogLevel >= LogTrace)                                                  \
+    if(gLogLevel >= LogTrace)                                                 \
         AL_PRINT("(II)", __VA_ARGS__);                                        \
     LOG_ANDROID(ANDROID_LOG_DEBUG, __VA_ARGS__);                              \
 } while(0)
 
 #define WARN(...) do {                                                        \
-    if(LogLevel >= LogWarning)                                                \
+    if(gLogLevel >= LogWarning)                                               \
         AL_PRINT("(WW)", __VA_ARGS__);                                        \
     LOG_ANDROID(ANDROID_LOG_WARN, __VA_ARGS__);                               \
 } while(0)
 
 #define ERR(...) do {                                                         \
-    if(LogLevel >= LogError)                                                  \
+    if(gLogLevel >= LogError)                                                 \
         AL_PRINT("(EE)", __VA_ARGS__);                                        \
     LOG_ANDROID(ANDROID_LOG_ERROR, __VA_ARGS__);                              \
 } while(0)

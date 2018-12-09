@@ -872,11 +872,11 @@ std::recursive_mutex ListLock;
 /* Mixing thread piority level */
 ALint RTPrioLevel;
 
-FILE *LogFile{stderr};
+FILE *gLogFile{stderr};
 #ifdef _DEBUG
-enum LogLevel LogLevel{LogWarning};
+LogLevel gLogLevel{LogWarning};
 #else
-enum LogLevel LogLevel{LogError};
+LogLevel gLogLevel{LogError};
 #endif
 
 /************************************************
@@ -912,7 +912,7 @@ static void alc_initconfig(void)
     {
         long lvl = strtol(str, nullptr, 0);
         if(lvl >= NoLog && lvl <= LogRef)
-            LogLevel = static_cast<enum LogLevel>(lvl);
+            gLogLevel = static_cast<LogLevel>(lvl);
     }
 
     str = getenv("ALSOFT_LOGFILE");
@@ -924,7 +924,7 @@ static void alc_initconfig(void)
 #else
         FILE *logfile = fopen(str, "wt");
 #endif
-        if(logfile) LogFile = logfile;
+        if(logfile) gLogFile = logfile;
         else ERR("Failed to open log file '%s'\n", str);
     }
 

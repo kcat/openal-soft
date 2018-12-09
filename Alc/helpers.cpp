@@ -370,8 +370,8 @@ void al_print(const char *type, const char *func, const char *fmt, ...)
     str[sizeof(str)-1] = 0;
 
     std::wstring wstr{utf8_to_wstr(str)};
-    fprintf(LogFile, "AL lib: %s %s: %ls", type, func, wstr.c_str());
-    fflush(LogFile);
+    fprintf(gLogFile, "AL lib: %s %s: %ls", type, func, wstr.c_str());
+    fflush(gLogFile);
 }
 
 
@@ -589,11 +589,11 @@ void al_print(const char *type, const char *func, const char *fmt, ...)
     va_list ap;
 
     va_start(ap, fmt);
-    fprintf(LogFile, "AL lib: %s %s: ", type, func);
-    vfprintf(LogFile, fmt, ap);
+    fprintf(gLogFile, "AL lib: %s %s: ", type, func);
+    vfprintf(gLogFile, fmt, ap);
     va_end(ap);
 
-    fflush(LogFile);
+    fflush(gLogFile);
 }
 
 

@@ -1216,22 +1216,30 @@ ELSE()
         "${OpenAL_BINARY_DIR}/version.h")
 ENDIF()
 
-SET(NATIVE_SRC_DIR  "${OpenAL_SOURCE_DIR}/native-tools/")
-SET(NATIVE_BIN_DIR  "${OpenAL_BINARY_DIR}/native-tools/")
-FILE(MAKE_DIRECTORY "${NATIVE_BIN_DIR}")
 
-SET(BIN2H_COMMAND  "${NATIVE_BIN_DIR}bin2h")
-SET(BSINCGEN_COMMAND  "${NATIVE_BIN_DIR}bsincgen")
-ADD_CUSTOM_COMMAND(OUTPUT "${BIN2H_COMMAND}" "${BSINCGEN_COMMAND}"
-    COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" "${NATIVE_SRC_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E remove "${BIN2H_COMMAND}" "${BSINCGEN_COMMAND}"
-    COMMAND ${CMAKE_COMMAND} --build . --config "Release"
-    WORKING_DIRECTORY "${NATIVE_BIN_DIR}"
-    DEPENDS "${NATIVE_SRC_DIR}CMakeLists.txt"
-    IMPLICIT_DEPENDS C "${NATIVE_SRC_DIR}bin2h.c"
-                     C "${NATIVE_SRC_DIR}bsincgen.c"
-    VERBATIM
-)
+SET(NATIVE_SRC_DIR  "${OpenAL_SOURCE_DIR}/native-tools")
+
+SET(ALSOFT_NATIVE_TOOLS_PATH "" CACHE STRING "Path to prebuilt native tools (leave blank to auto-build)")
+IF(ALSOFT_NATIVE_TOOLS_PATH)
+    SET(BIN2H_COMMAND  "${ALSOFT_NATIVE_TOOLS_PATH}/bin2h")
+    SET(BSINCGEN_COMMAND  "${ALSOFT_NATIVE_TOOLS_PATH}/bsincgen")
+ELSE()
+    SET(NATIVE_BIN_DIR  "${OpenAL_BINARY_DIR}/native-tools")
+    FILE(MAKE_DIRECTORY "${NATIVE_BIN_DIR}")
+
+    SET(BIN2H_COMMAND  "${NATIVE_BIN_DIR}/bin2h")
+    SET(BSINCGEN_COMMAND  "${NATIVE_BIN_DIR}/bsincgen")
+    ADD_CUSTOM_COMMAND(OUTPUT "${BIN2H_COMMAND}" "${BSINCGEN_COMMAND}"
+        COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" "${NATIVE_SRC_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E remove "${BIN2H_COMMAND}" "${BSINCGEN_COMMAND}"
+        COMMAND ${CMAKE_COMMAND} --build . --config "Release"
+        WORKING_DIRECTORY "${NATIVE_BIN_DIR}"
+        DEPENDS "${NATIVE_SRC_DIR}/CMakeLists.txt"
+        IMPLICIT_DEPENDS C "${NATIVE_SRC_DIR}/bin2h.c"
+                         C "${NATIVE_SRC_DIR}/bsincgen.c"
+        VERBATIM
+    )
+ENDIF()
 ADD_CUSTOM_TARGET(native-tools
     DEPENDS "${BIN2H_COMMAND}" "${BSINCGEN_COMMAND}"
     VERBATIM
@@ -1257,7 +1265,7 @@ endif()
 
 ADD_CUSTOM_COMMAND(OUTPUT "${OpenAL_BINARY_DIR}/bsinc_inc.h"
     COMMAND "${BSINCGEN_COMMAND}" "${OpenAL_BINARY_DIR}/bsinc_inc.h"
-    DEPENDS native-tools "${NATIVE_SRC_DIR}bsincgen.c"
+    DEPENDS native-tools "${NATIVE_SRC_DIR}/bsincgen.c"
     VERBATIM
 )
 SET(ALC_OBJS  ${ALC_OBJS} "${OpenAL_BINARY_DIR}/bsinc_inc.h")

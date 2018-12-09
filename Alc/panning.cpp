@@ -67,7 +67,7 @@ constexpr ALsizei ACN2ACN[MAX_AMBI_COEFFS] = {
 } // namespace
 
 void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALfloat spread,
-                    ALfloat coeffs[MAX_AMBI_COEFFS])
+                    ALfloat (&coeffs)[MAX_AMBI_COEFFS])
 {
     /* Zeroth-order */
     coeffs[0]  = 1.0f; /* ACN 0 = 1 */

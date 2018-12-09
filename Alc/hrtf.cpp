@@ -44,7 +44,7 @@
 
 
 struct HrtfEntry {
-    Hrtf *handle;
+    Hrtf *handle{nullptr};
     char filename[];
 
     DEF_PLACE_NEWDEL()
@@ -986,7 +986,6 @@ void AddFileEntry(al::vector<EnumeratedHrtf> &list, const std::string &filename)
             (al_calloc(DEF_ALIGN, FAM_SIZE(HrtfEntry, filename, filename.length()+1)))
         HrtfEntry{}});
         loaded_entry = LoadedHrtfs.end()-1;
-        (*loaded_entry)->handle = nullptr;
         strcpy((*loaded_entry)->filename, filename.c_str());
     }
 
@@ -1049,7 +1048,6 @@ void AddBuiltInEntry(al::vector<EnumeratedHrtf> &list, const std::string &filena
             (al_calloc(DEF_ALIGN, FAM_SIZE(HrtfEntry, filename, namelen)))
         HrtfEntry{}});
         loaded_entry = LoadedHrtfs.end()-1;
-        (*loaded_entry)->handle = nullptr;
         snprintf((*loaded_entry)->filename, namelen,  "!%u_%s",
                  residx, filename.c_str());
     }

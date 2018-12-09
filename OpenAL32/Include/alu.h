@@ -487,8 +487,8 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...) DECL_FORMAT(pr
 extern MixerFunc MixSamples;
 extern RowMixerFunc MixRowSamples;
 
-extern ALfloat ConeScale;
-extern ALfloat ZScale;
-extern ALboolean OverrideReverbSpeedOfSound;
+extern const ALfloat ConeScale;
+extern const ALfloat ZScale;
+extern const ALboolean OverrideReverbSpeedOfSound;
 
 #endif

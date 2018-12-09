@@ -443,11 +443,6 @@ void ReadALConfig(void) noexcept
 }
 #endif
 
-void FreeALConfig(void)
-{
-    ConfOpts.clear();
-}
-
 const char *GetConfigValue(const char *devName, const char *blockName, const char *keyName, const char *def)
 {
     if(!keyName)

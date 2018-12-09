@@ -9,7 +9,6 @@ extern "C" {
 #endif
 
 void ReadALConfig(void) NOEXCEPT;
-void FreeALConfig(void);
 
 int ConfigValueExists(const char *devName, const char *blockName, const char *keyName);
 const char *GetConfigValue(const char *devName, const char *blockName, const char *keyName, const char *def);

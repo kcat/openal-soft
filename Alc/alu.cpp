@@ -49,14 +49,45 @@
 #include "bsinc_inc.h"
 
 
+namespace {
+
+ALfloat InitConeScale()
+{
+    ALfloat ret{1.0f};
+    const char *str{getenv("__ALSOFT_HALF_ANGLE_CONES")};
+    if(str && (strcasecmp(str, "true") == 0 || strtol(str, nullptr, 0) == 1))
+        ret *= 0.5f;
+    return ret;
+}
+
+ALfloat InitZScale()
+{
+    ALfloat ret{1.0f};
+    const char *str{getenv("__ALSOFT_REVERSE_Z")};
+    if(str && (strcasecmp(str, "true") == 0 || strtol(str, nullptr, 0) == 1))
+        ret *= -1.0f;
+    return ret;
+}
+
+ALboolean InitReverbSOS()
+{
+    ALboolean ret{AL_FALSE};
+    const char *str{getenv("__ALSOFT_REVERB_IGNORES_SOUND_SPEED")};
+    if(str && (strcasecmp(str, "true") == 0 || strtol(str, nullptr, 0) == 1))
+        ret = AL_TRUE;
+    return ret;
+}
+
+} // namespace
+
 /* Cone scalar */
-ALfloat ConeScale = 1.0f;
+const ALfloat ConeScale{InitConeScale()};
 
 /* Localized Z scalar for mono sources */
-ALfloat ZScale = 1.0f;
+const ALfloat ZScale{InitZScale()};
 
 /* Force default speed of sound for distance-related reverb decay. */
-ALboolean OverrideReverbSpeedOfSound = AL_FALSE;
+const ALboolean OverrideReverbSpeedOfSound{InitReverbSOS()};
 
 
 namespace {

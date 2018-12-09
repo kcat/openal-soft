@@ -800,7 +800,14 @@ constexpr ALchar alExtList[] =
 std::atomic<ALCenum> LastNullDeviceError{ALC_NO_ERROR};
 
 /* Thread-local current context */
-std::atomic<void(*)(ALCcontext*)> ThreadCtxProc{nullptr};
+void ReleaseThreadCtx(ALCcontext *context)
+{
+    auto ref = DecrementRef(&context->ref);
+    TRACEREF("%p decreasing refcount to %u\n", context, ref);
+    ERR("Context %p current for thread being destroyed, possible leak!\n", context);
+}
+
+std::atomic<void(*)(ALCcontext*)> ThreadCtxProc{ReleaseThreadCtx};
 class ThreadCtx {
     ALCcontext *ctx{nullptr};
 
@@ -865,93 +872,33 @@ std::recursive_mutex ListLock;
 /* Mixing thread piority level */
 ALint RTPrioLevel;
 
-FILE *LogFile;
+FILE *LogFile{stderr};
 #ifdef _DEBUG
-enum LogLevel LogLevel = LogWarning;
+enum LogLevel LogLevel{LogWarning};
 #else
-enum LogLevel LogLevel = LogError;
+enum LogLevel LogLevel{LogError};
 #endif
 
 /************************************************
  * Library initialization
  ************************************************/
-#if defined(_WIN32)
-static void alc_init(void);
-static void alc_deinit(void);
-static void alc_deinit_safe(void);
-
-#ifndef AL_LIBTYPE_STATIC
-BOOL APIENTRY DllMain(HINSTANCE hModule, DWORD reason, LPVOID lpReserved)
+#if defined(_WIN32) && !defined(AL_LIBTYPE_STATIC)
+BOOL APIENTRY DllMain(HINSTANCE module, DWORD reason, LPVOID /*reserved*/)
 {
     switch(reason)
     {
         case DLL_PROCESS_ATTACH:
             /* Pin the DLL so we won't get unloaded until the process terminates */
             GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
-                               (WCHAR*)hModule, &hModule);
-            alc_init();
+                               (WCHAR*)module, &module);
             break;
 
         case DLL_PROCESS_DETACH:
-            if(!lpReserved)
-                alc_deinit();
-            else
-                alc_deinit_safe();
             break;
     }
     return TRUE;
 }
-#elif defined(_MSC_VER)
-#pragma section(".CRT$XCU",read)
-static void alc_constructor(void);
-static void alc_destructor(void);
-__declspec(allocate(".CRT$XCU")) void (__cdecl* alc_constructor_)(void) = alc_constructor;
-
-static void alc_constructor(void)
-{
-    atexit(alc_destructor);
-    alc_init();
-}
-
-static void alc_destructor(void)
-{
-    alc_deinit();
-}
-#elif defined(HAVE_GCC_DESTRUCTOR)
-static void alc_init(void) __attribute__((constructor));
-static void alc_deinit(void) __attribute__((destructor));
-#else
-#error "No static initialization available on this platform!"
 #endif
-
-#elif defined(HAVE_GCC_DESTRUCTOR)
-
-static void alc_init(void) __attribute__((constructor));
-static void alc_deinit(void) __attribute__((destructor));
-
-#else
-#error "No global initialization available on this platform!"
-#endif
-
-static void ReleaseThreadCtx(ALCcontext *ctx);
-static void alc_init(void)
-{
-    LogFile = stderr;
-
-    const char *str{getenv("__ALSOFT_HALF_ANGLE_CONES")};
-    if(str && (strcasecmp(str, "true") == 0 || strtol(str, nullptr, 0) == 1))
-        ConeScale *= 0.5f;
-
-    str = getenv("__ALSOFT_REVERSE_Z");
-    if(str && (strcasecmp(str, "true") == 0 || strtol(str, nullptr, 0) == 1))
-        ZScale *= -1.0f;
-
-    str = getenv("__ALSOFT_REVERB_IGNORES_SOUND_SPEED");
-    if(str && (strcasecmp(str, "true") == 0 || strtol(str, nullptr, 0) == 1))
-        OverrideReverbSpeedOfSound = AL_TRUE;
-
-    ThreadCtxProc = ReleaseThreadCtx;
-}
 
 static void alc_initconfig(void)
 {
@@ -1027,9 +974,7 @@ static void alc_initconfig(void)
             capfilter = 0;
         else
         {
-            size_t len;
             const char *next = str;
-
             do {
                 str = next;
                 while(isspace(str[0]))
@@ -1039,7 +984,7 @@ static void alc_initconfig(void)
                 if(!str[0] || str[0] == ',')
                     continue;
 
-                len = (next ? ((size_t)(next-str)) : strlen(str));
+                size_t len{next ? (size_t)(next-str) : strlen(str)};
                 while(len > 0 && isspace(str[len-1]))
                     len--;
                 if(len == 3 && strncasecmp(str, "sse", len) == 0)
@@ -1193,9 +1138,7 @@ static void alc_initconfig(void)
 
     if(ConfigValueStr(nullptr, nullptr, "excludefx", &str))
     {
-        size_t len;
         const char *next = str;
-
         do {
             str = next;
             next = strchr(str, ',');
@@ -1203,7 +1146,7 @@ static void alc_initconfig(void)
             if(!str[0] || next == str)
                 continue;
 
-            len = (next ? ((size_t)(next-str)) : strlen(str));
+            size_t len{next ? (size_t)(next-str) : strlen(str)};
             for(n = 0;n < EFFECTLIST_SIZE;n++)
             {
                 if(len == strlen(EffectList[n].name) &&
@@ -1219,60 +1162,6 @@ static void alc_initconfig(void)
         LoadReverbPreset(str, &DefaultEffect);
 }
 #define DO_INITCONFIG() std::call_once(alc_config_once, [](){alc_initconfig();})
-
-
-/************************************************
- * Library deinitialization
- ************************************************/
-static void alc_cleanup(void)
-{
-    alcAllDevicesList.clear();
-    alcCaptureDeviceList.clear();
-
-    alcDefaultAllDevicesSpecifier.clear();
-    alcCaptureDefaultDeviceSpecifier.clear();
-
-    if(ALCdevice *dev{DeviceList.exchange(nullptr)})
-    {
-        ALCuint num = 0;
-        do {
-            num++;
-            dev = dev->next.load(std::memory_order_relaxed);
-        } while(dev != nullptr);
-        ERR("%u device%s not closed\n", num, (num>1)?"s":"");
-    }
-}
-
-static void alc_deinit_safe(void)
-{
-    alc_cleanup();
-
-    FreeHrtfs();
-    FreeALConfig();
-
-    ThreadCtxProc = nullptr;
-
-    if(LogFile != stderr)
-        fclose(LogFile);
-    LogFile = nullptr;
-}
-
-static void alc_deinit(void)
-{
-    int i;
-
-    alc_cleanup();
-
-    PlaybackBackend = BackendInfo{};
-    CaptureBackend = BackendInfo{};
-
-    for(i = 0;i < BackendListSize;i++)
-        BackendList[i].getFactory().deinit();
-
-    LoopbackBackendFactory::getFactory().deinit();
-
-    alc_deinit_safe();
-}
 
 
 /************************************************
@@ -2712,13 +2601,6 @@ void ALCcontext_DecRef(ALCcontext *context)
     auto ref = DecrementRef(&context->ref);
     TRACEREF("%p decreasing refcount to %u\n", context, ref);
     if(ref == 0) delete context;
-}
-
-static void ReleaseThreadCtx(ALCcontext *context)
-{
-    auto ref = DecrementRef(&context->ref);
-    TRACEREF("%p decreasing refcount to %u\n", context, ref);
-    ERR("Context %p current for thread being destroyed, possible leak!\n", context);
 }
 
 /* VerifyContext

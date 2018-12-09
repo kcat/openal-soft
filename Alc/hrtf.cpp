@@ -1286,18 +1286,3 @@ void Hrtf_DecRef(struct Hrtf *hrtf)
         }
     }
 }
-
-
-void FreeHrtfs(void)
-{
-    struct HrtfEntry *Hrtf{LoadedHrtfs};
-    LoadedHrtfs = nullptr;
-
-    while(Hrtf != nullptr)
-    {
-        struct HrtfEntry *next{Hrtf->next};
-        al_free(Hrtf->handle);
-        al_free(Hrtf);
-        Hrtf = next;
-    }
-}

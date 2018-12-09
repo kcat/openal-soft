@@ -10,11 +10,11 @@ class BandSplitter {
     float coeff{0.0f};
     float lp_z1{0.0f};
     float lp_z2{0.0f};
-    float hp_z1{0.0f};
+    float ap_z1{0.0f};
 
 public:
     void init(float f0norm);
-    void clear() noexcept { lp_z1 = lp_z2 = hp_z1 = 0.0f; }
+    void clear() noexcept { lp_z1 = lp_z2 = ap_z1 = 0.0f; }
     void process(float *RESTRICT hpout, float *RESTRICT lpout, const float *input, int count);
 };
 
@@ -27,7 +27,7 @@ class SplitterAllpass {
 
 public:
     void init(float f0norm);
-    void clear();
+    void clear() noexcept { z1 = 0.0f; }
     void process(float *RESTRICT samples, int count);
 };
 

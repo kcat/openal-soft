@@ -20,7 +20,7 @@ void BandSplitter::init(float f0norm)
 
     lp_z1 = 0.0f;
     lp_z2 = 0.0f;
-    hp_z1 = 0.0f;
+    ap_z1 = 0.0f;
 }
 
 void BandSplitter::process(float *RESTRICT hpout, float *RESTRICT lpout, const float *input, int count)
@@ -31,7 +31,7 @@ void BandSplitter::process(float *RESTRICT hpout, float *RESTRICT lpout, const f
     const float lp_coeff{this->coeff*0.5f + 0.5f};
     float lp_z1{this->lp_z1};
     float lp_z2{this->lp_z2};
-    float ap_z1{this->hp_z1};
+    float ap_z1{this->ap_z1};
     auto proc_sample = [ap_coeff,lp_coeff,&lp_z1,&lp_z2,&ap_z1,&lpout](const float in) noexcept -> float
     {
         /* Low-pass sample processing. */
@@ -55,7 +55,7 @@ void BandSplitter::process(float *RESTRICT hpout, float *RESTRICT lpout, const f
     std::transform(input, input+count, hpout, proc_sample);
     this->lp_z1 = lp_z1;
     this->lp_z2 = lp_z2;
-    this->hp_z1 = ap_z1;
+    this->ap_z1 = ap_z1;
 }
 
 
@@ -70,9 +70,6 @@ void SplitterAllpass::init(float f0norm)
 
     z1 = 0.0f;
 }
-
-void SplitterAllpass::clear()
-{ z1 = 0.0f; }
 
 void SplitterAllpass::process(float *RESTRICT samples, int count)
 {

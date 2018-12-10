@@ -693,31 +693,25 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsiz
 {
     static constexpr ALsizei chans_per_order2d[MAX_AMBI_ORDER+1] = { 1, 2, 2, 2 };
     static constexpr ALsizei chans_per_order3d[MAX_AMBI_ORDER+1] = { 1, 3, 5, 7 };
-    ALfloat avg_dist;
     ALsizei count;
-    ALsizei i;
 
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
+        static constexpr int map[MAX_AMBI_COEFFS] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
         count = (conf->ChanMask > 0x1ff) ? 16 :
                 (conf->ChanMask > 0xf) ? 9 : 4;
-        for(i = 0;i < count;i++)
-        {
-            device->Dry.Ambi.Map[i].Scale = 1.0f;
-            device->Dry.Ambi.Map[i].Index = i;
-        }
+        std::transform(std::begin(map), std::begin(map)+count, std::begin(device->Dry.Ambi.Map),
+            [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
+        );
     }
     else
     {
-        static const int map[MAX_AMBI2D_COEFFS] = { 0, 1, 3, 4, 8, 9, 15 };
-
+        static constexpr int map[MAX_AMBI2D_COEFFS] = { 0, 1, 3, 4, 8, 9, 15 };
         count = (conf->ChanMask > 0x1ff) ? 7 :
                 (conf->ChanMask > 0xf) ? 5 : 3;
-        for(i = 0;i < count;i++)
-        {
-            device->Dry.Ambi.Map[i].Scale = 1.0f;
-            device->Dry.Ambi.Map[i].Index = map[i];
-        }
+        std::transform(std::begin(map), std::begin(map)+count, std::begin(device->Dry.Ambi.Map),
+            [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
+        );
     }
     device->Dry.CoeffCount = 0;
     device->Dry.NumChannels = count;
@@ -740,22 +734,19 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsiz
         device->FOAOut.Ambi = AmbiConfig{};
         if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
         {
+            static constexpr int map[4] = { 0, 1, 2, 3 };
             count = 4;
-            for(i = 0;i < count;i++)
-            {
-                device->FOAOut.Ambi.Map[i].Scale = 1.0f;
-                device->FOAOut.Ambi.Map[i].Index = i;
-            }
+            std::transform(std::begin(map), std::begin(map)+count, std::begin(device->FOAOut.Ambi.Map),
+                [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
+            );
         }
         else
         {
-            static const int map[3] = { 0, 1, 3 };
+            static constexpr int map[3] = { 0, 1, 3 };
             count = 3;
-            for(i = 0;i < count;i++)
-            {
-                device->FOAOut.Ambi.Map[i].Scale = 1.0f;
-                device->FOAOut.Ambi.Map[i].Index = map[i];
-            }
+            std::transform(std::begin(map), std::begin(map)+count, std::begin(device->FOAOut.Ambi.Map),
+                [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
+            );
         }
         device->FOAOut.CoeffCount = 0;
         device->FOAOut.NumChannels = count;
@@ -763,10 +754,14 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsiz
 
     device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
 
-    avg_dist = 0.0f;
-    for(i = 0;i < conf->NumSpeakers;i++)
-        avg_dist += conf->Speakers[i].Distance;
-    avg_dist /= (ALfloat)conf->NumSpeakers;
+    using namespace std::placeholders;
+    auto accum_spkr_dist = std::bind(
+        std::plus<float>{}, _1, std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2)
+    );
+    const ALfloat avg_dist{
+        std::accumulate(std::begin(conf->Speakers), std::begin(conf->Speakers)+conf->NumSpeakers,
+            float{0.0f}, accum_spkr_dist) / (ALfloat)conf->NumSpeakers
+    };
     InitNearFieldCtrl(device, avg_dist,
         (conf->ChanMask > 0x1ff) ? 3 : (conf->ChanMask > 0xf) ? 2 : 1,
         (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? chans_per_order3d : chans_per_order2d
@@ -778,7 +773,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsiz
 static void InitHrtfPanning(ALCdevice *device)
 {
     /* NOTE: azimuth goes clockwise. */
-    static const struct AngularPoint AmbiPoints[] = {
+    static constexpr struct AngularPoint AmbiPoints[] = {
         { DEG2RAD( 90.0f), DEG2RAD(   0.0f) },
         { DEG2RAD( 35.2643897f), DEG2RAD(  45.0f) },
         { DEG2RAD( 35.2643897f), DEG2RAD( 135.0f) },
@@ -798,7 +793,7 @@ static void InitHrtfPanning(ALCdevice *device)
         { DEG2RAD(-35.2643897f), DEG2RAD( -45.0f) },
         { DEG2RAD(-90.0f), DEG2RAD(   0.0f) },
     };
-    static const ALfloat AmbiMatrixFOA[][MAX_AMBI_COEFFS] = {
+    static constexpr ALfloat AmbiMatrixFOA[][MAX_AMBI_COEFFS] = {
         { 5.55555556e-02f,  0.00000000e+00f,  1.23717915e-01f,  0.00000000e+00f },
         { 5.55555556e-02f, -5.00000000e-02f,  7.14285715e-02f,  5.00000000e-02f },
         { 5.55555556e-02f, -5.00000000e-02f,  7.14285715e-02f, -5.00000000e-02f },
@@ -837,17 +832,16 @@ static void InitHrtfPanning(ALCdevice *device)
         { 5.55555556e-02f,  5.00000000e-02f, -7.14285715e-02f,  5.00000000e-02f,  4.55645099e-02f,  0.00000000e+00f },
         { 5.55555556e-02f,  0.00000000e+00f, -1.23717915e-01f,  0.00000000e+00f,  0.00000000e+00f,  0.00000000e+00f },
     };
-    static const ALfloat AmbiOrderHFGainFOA[MAX_AMBI_ORDER+1] = {
+    static constexpr ALfloat AmbiOrderHFGainFOA[MAX_AMBI_ORDER+1] = {
         3.00000000e+00f, 1.73205081e+00f
     }, AmbiOrderHFGainHOA[MAX_AMBI_ORDER+1] = {
         2.40192231e+00f, 1.86052102e+00f, 9.60768923e-01f
     };
-    static const ALsizei IndexMap[6] = { 0, 1, 2, 3, 4, 8 };
-    static const ALsizei ChansPerOrder[MAX_AMBI_ORDER+1] = { 1, 3, 2, 0 };
+    static constexpr ALsizei IndexMap[6] = { 0, 1, 2, 3, 4, 8 };
+    static constexpr ALsizei ChansPerOrder[MAX_AMBI_ORDER+1] = { 1, 3, 2, 0 };
     const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_COEFFS] = AmbiMatrixFOA;
     const ALfloat *RESTRICT AmbiOrderHFGain = AmbiOrderHFGainFOA;
-    ALsizei count = 4;
-    ALsizei i;
+    ALsizei count{4};
 
     static_assert(COUNTOF(AmbiPoints) == COUNTOF(AmbiMatrixFOA), "FOA Ambisonic HRTF mismatch");
     static_assert(COUNTOF(AmbiPoints) == COUNTOF(AmbiMatrixHOA), "HOA Ambisonic HRTF mismatch");
@@ -862,22 +856,18 @@ static void InitHrtfPanning(ALCdevice *device)
     device->mHrtfState.reset(
         new (al_calloc(16, FAM_SIZE(DirectHrtfState, Chan, count))) DirectHrtfState{});
 
-    for(i = 0;i < count;i++)
-    {
-        device->Dry.Ambi.Map[i].Scale = 1.0f;
-        device->Dry.Ambi.Map[i].Index = IndexMap[i];
-    }
+    std::transform(std::begin(IndexMap), std::begin(IndexMap)+count, std::begin(device->Dry.Ambi.Map),
+        [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
+    );
     device->Dry.CoeffCount = 0;
     device->Dry.NumChannels = count;
 
     if(device->AmbiUp)
     {
         device->FOAOut.Ambi = AmbiConfig{};
-        for(i = 0;i < 4;i++)
-        {
-            device->FOAOut.Ambi.Map[i].Scale = 1.0f;
-            device->FOAOut.Ambi.Map[i].Index = i;
-        }
+        std::transform(std::begin(IndexMap), std::begin(IndexMap)+4, std::begin(device->FOAOut.Ambi.Map),
+            [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
+        );
         device->FOAOut.CoeffCount = 0;
         device->FOAOut.NumChannels = 4;
 
@@ -904,15 +894,12 @@ static void InitHrtfPanning(ALCdevice *device)
 
 static void InitUhjPanning(ALCdevice *device)
 {
-    ALsizei count = 3;
-    ALsizei i;
+    static constexpr ALsizei count{3};
 
-    for(i = 0;i < count;i++)
-    {
-        ALsizei acn = FuMa2ACN[i];
-        device->Dry.Ambi.Map[i].Scale = 1.0f/FuMa2N3DScale[acn];
-        device->Dry.Ambi.Map[i].Index = acn;
-    }
+    std::transform(std::begin(FuMa2ACN), std::begin(FuMa2ACN)+count, std::begin(device->Dry.Ambi.Map),
+        [](const ALsizei &acn) noexcept -> BFChannelConfig
+        { return BFChannelConfig{1.0f/FuMa2N3DScale[acn], acn}; }
+    );
     device->Dry.CoeffCount = 0;
     device->Dry.NumChannels = count;
 

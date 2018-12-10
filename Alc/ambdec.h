@@ -24,7 +24,7 @@ struct AmbDecConf {
     ALfloat XOverFreq;
     ALfloat XOverRatio;
 
-    struct {
+    struct SpeakerConf {
         std::string Name;
         ALfloat Distance;
         ALfloat Azimuth;

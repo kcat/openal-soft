@@ -136,13 +136,10 @@ void SetChannelMap(const Channel (&devchans)[MAX_OUTPUT_CHANNELS], ChannelConfig
     *outcount = mini(maxcount, MAX_OUTPUT_CHANNELS);
 }
 
-bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei speakermap[MAX_OUTPUT_CHANNELS])
+bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei (&speakermap)[MAX_OUTPUT_CHANNELS])
 {
-    for(ALsizei i{0};i < conf->NumSpeakers;i++)
+    auto map_spkr = [device](const AmbDecConf::SpeakerConf &speaker) -> ALsizei
     {
-        enum Channel ch;
-        int chidx = -1;
-
         /* NOTE: AmbDec does not define any standard speaker names, however
          * for this to work we have to by able to find the output channel
          * the speaker definition corresponds to. Therefore, OpenAL Soft
@@ -163,67 +160,67 @@ bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei speakerma
          * use the side channels when the device is configured for back,
          * and vice-versa.
          */
-        if(conf->Speakers[i].Name == "LF")
+        Channel ch{};
+        if(speaker.Name == "LF")
             ch = FrontLeft;
-        else if(conf->Speakers[i].Name == "RF")
+        else if(speaker.Name == "RF")
             ch = FrontRight;
-        else if(conf->Speakers[i].Name == "CE")
+        else if(speaker.Name == "CE")
             ch = FrontCenter;
-        else if(conf->Speakers[i].Name == "LS")
+        else if(speaker.Name == "LS")
         {
             if(device->FmtChans == DevFmtX51Rear)
                 ch = BackLeft;
             else
                 ch = SideLeft;
         }
-        else if(conf->Speakers[i].Name == "RS")
+        else if(speaker.Name == "RS")
         {
             if(device->FmtChans == DevFmtX51Rear)
                 ch = BackRight;
             else
                 ch = SideRight;
         }
-        else if(conf->Speakers[i].Name == "LB")
+        else if(speaker.Name == "LB")
         {
             if(device->FmtChans == DevFmtX51)
                 ch = SideLeft;
             else
                 ch = BackLeft;
         }
-        else if(conf->Speakers[i].Name == "RB")
+        else if(speaker.Name == "RB")
         {
             if(device->FmtChans == DevFmtX51)
                 ch = SideRight;
             else
                 ch = BackRight;
         }
-        else if(conf->Speakers[i].Name == "CB")
+        else if(speaker.Name == "CB")
             ch = BackCenter;
         else
         {
-            const char *name = conf->Speakers[i].Name.c_str();
+            const char *name{speaker.Name.c_str()};
             unsigned int n;
             char c;
 
             if(sscanf(name, "AUX%u%c", &n, &c) == 1 && n < 16)
-                ch = static_cast<enum Channel>(Aux0+n);
+                ch = static_cast<Channel>(Aux0+n);
             else
             {
                 ERR("AmbDec speaker label \"%s\" not recognized\n", name);
-                return false;
+                return -1;
             }
         }
-        chidx = GetChannelIdxByName(&device->RealOut, ch);
+        const int chidx{GetChannelIdxByName(&device->RealOut, ch)};
         if(chidx == -1)
-        {
-            ERR("Failed to lookup AmbDec speaker label %s\n",
-                conf->Speakers[i].Name.c_str());
-            return false;
-        }
-        speakermap[i] = chidx;
-    }
-
-    return true;
+            ERR("Failed to lookup AmbDec speaker label %s\n", speaker.Name.c_str());
+        return chidx;
+    };
+    auto speakers_end = std::begin(conf->Speakers) + conf->NumSpeakers;
+    std::transform(std::begin(conf->Speakers), speakers_end, std::begin(speakermap), map_spkr);
+    /* Return success if no invalid entries are found. */
+    auto speakermap_end = std::begin(speakermap) + conf->NumSpeakers;
+    return std::find(std::begin(speakermap), speakermap_end, -1) == speakermap_end;
 }
 
 
@@ -264,79 +261,83 @@ constexpr ChannelMap MonoCfg[1] = {
 
 void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei order, const ALsizei *RESTRICT chans_per_order)
 {
-    const char *devname = device->DeviceName.c_str();
-    ALsizei i;
+    /* NFC is only used when AvgSpeakerDist is greater than 0, and can only be
+     * used when rendering to an ambisonic buffer.
+     */
+    const char *devname{device->DeviceName.c_str()};
+    if(!GetConfigValueBool(devname, "decoder", "nfc", 1) || !(ctrl_dist > 0.0f))
+        return;
 
-    if(GetConfigValueBool(devname, "decoder", "nfc", 1) && ctrl_dist > 0.0f)
-    {
-        /* NFC is only used when AvgSpeakerDist is greater than 0, and can only
-         * be used when rendering to an ambisonic buffer.
-         */
-        device->AvgSpeakerDist = minf(ctrl_dist, 10.0f);
-        TRACE("Using near-field reference distance: %.2f meters\n", device->AvgSpeakerDist);
+    device->AvgSpeakerDist = minf(ctrl_dist, 10.0f);
+    TRACE("Using near-field reference distance: %.2f meters\n", device->AvgSpeakerDist);
 
-        for(i = 0;i < order+1;i++)
-            device->NumChannelsPerOrder[i] = chans_per_order[i];
-        for(;i < MAX_AMBI_ORDER+1;i++)
-            device->NumChannelsPerOrder[i] = 0;
-    }
+    auto iter = std::copy(chans_per_order, chans_per_order+order+1,
+        std::begin(device->NumChannelsPerOrder));
+    std::fill(iter, std::end(device->NumChannelsPerOrder), 0);
 }
 
-void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei speakermap[MAX_OUTPUT_CHANNELS])
+void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&speakermap)[MAX_OUTPUT_CHANNELS])
 {
-    const char *devname = device->DeviceName.c_str();
-    ALfloat maxdist = 0.0f;
-    size_t total = 0;
-    ALsizei i;
+    using namespace std::placeholders;
 
-    for(i = 0;i < conf->NumSpeakers;i++)
-        maxdist = maxf(maxdist, conf->Speakers[i].Distance);
+    auto speakers_end = std::begin(conf->Speakers) + conf->NumSpeakers;
+    const ALfloat maxdist{
+        std::accumulate(std::begin(conf->Speakers), speakers_end, float{0.0f},
+            std::bind(maxf, _1, std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2))
+        )
+    };
 
-    if(GetConfigValueBool(devname, "decoder", "distance-comp", 1) && maxdist > 0.0f)
+    const char *devname{device->DeviceName.c_str()};
+    if(!GetConfigValueBool(devname, "decoder", "distance-comp", 1) || !(maxdist > 0.0f))
+        return;
+
+    auto srate = static_cast<ALfloat>(device->Frequency);
+    size_t total{0u};
+    for(ALsizei i{0};i < conf->NumSpeakers;i++)
     {
-        ALfloat srate = (ALfloat)device->Frequency;
-        for(i = 0;i < conf->NumSpeakers;i++)
-        {
-            ALsizei chan = speakermap[i];
-            ALfloat delay;
+        const AmbDecConf::SpeakerConf &speaker = conf->Speakers[i];
+        const ALsizei chan{speakermap[i]};
 
-            /* Distance compensation only delays in steps of the sample rate.
-             * This is a bit less accurate since the delay time falls to the
-             * nearest sample time, but it's far simpler as it doesn't have to
-             * deal with phase offsets. This means at 48khz, for instance, the
-             * distance delay will be in steps of about 7 millimeters.
-             */
-            delay = floorf((maxdist-conf->Speakers[i].Distance) / SPEEDOFSOUNDMETRESPERSEC *
-                           srate + 0.5f);
-            if(delay >= (ALfloat)MAX_DELAY_LENGTH)
-                ERR("Delay for speaker \"%s\" exceeds buffer length (%f >= %u)\n",
-                    conf->Speakers[i].Name.c_str(), delay, MAX_DELAY_LENGTH);
+        /* Distance compensation only delays in steps of the sample rate. This
+         * is a bit less accurate since the delay time falls to the nearest
+         * sample time, but it's far simpler as it doesn't have to deal with
+         * phase offsets. This means at 48khz, for instance, the distance delay
+         * will be in steps of about 7 millimeters.
+         */
+        const ALfloat delay{
+            std::floor((maxdist - speaker.Distance)/SPEEDOFSOUNDMETRESPERSEC*srate + 0.5f)
+        };
+        if(delay >= (ALfloat)MAX_DELAY_LENGTH)
+            ERR("Delay for speaker \"%s\" exceeds buffer length (%f >= %d)\n",
+                speaker.Name.c_str(), delay, MAX_DELAY_LENGTH);
 
-            device->ChannelDelay[chan].Length = (ALsizei)clampf(
-                delay, 0.0f, (ALfloat)(MAX_DELAY_LENGTH-1)
-            );
-            device->ChannelDelay[chan].Gain = conf->Speakers[i].Distance / maxdist;
-            TRACE("Channel %u \"%s\" distance compensation: %d samples, %f gain\n", chan,
-                conf->Speakers[i].Name.c_str(), device->ChannelDelay[chan].Length,
-                device->ChannelDelay[chan].Gain
-            );
+        device->ChannelDelay[chan].Length = static_cast<ALsizei>(clampf(
+            delay, 0.0f, (ALfloat)(MAX_DELAY_LENGTH-1)
+        ));
+        device->ChannelDelay[chan].Gain = speaker.Distance / maxdist;
+        TRACE("Channel %u \"%s\" distance compensation: %d samples, %f gain\n", chan,
+            speaker.Name.c_str(), device->ChannelDelay[chan].Length,
+            device->ChannelDelay[chan].Gain
+        );
 
-            /* Round up to the next 4th sample, so each channel buffer starts
-             * 16-byte aligned.
-             */
-            total += RoundUp(device->ChannelDelay[chan].Length, 4);
-        }
+        /* Round up to the next 4th sample, so each channel buffer starts
+         * 16-byte aligned.
+         */
+        total += RoundUp(device->ChannelDelay[chan].Length, 4);
     }
 
     if(total > 0)
     {
         device->ChannelDelay.resize(total);
         device->ChannelDelay[0].Buffer = device->ChannelDelay.data();
-        for(i = 1;i < MAX_OUTPUT_CHANNELS;i++)
+        auto set_bufptr = [](const DistanceComp::DistData &last, const DistanceComp::DistData &cur) -> DistanceComp::DistData
         {
-            size_t len = RoundUp(device->ChannelDelay[i-1].Length, 4);
-            device->ChannelDelay[i].Buffer = device->ChannelDelay[i-1].Buffer + len;
-        }
+            DistanceComp::DistData ret{cur};
+            ret.Buffer = last.Buffer + RoundUp(last.Length, 4);
+            return ret;
+        };
+        std::partial_sum(device->ChannelDelay.begin(), device->ChannelDelay.end(),
+            device->ChannelDelay.begin(), set_bufptr);
     }
 }
 

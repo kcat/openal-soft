@@ -608,15 +608,19 @@ typedef struct EnumeratedHrtf {
 #define MAX_DELAY_LENGTH 1024
 
 class DistanceComp {
+public:
     struct DistData {
         ALfloat Gain{1.0f};
         ALsizei Length{0}; /* Valid range is [0...MAX_DELAY_LENGTH). */
         ALfloat *Buffer{nullptr};
-    } mChannel[MAX_OUTPUT_CHANNELS];
+    };
+
+private:
+    DistData mChannel[MAX_OUTPUT_CHANNELS];
     al::vector<ALfloat,16> mSamples;
 
 public:
-    void resize(size_t amt) { mSamples.resize(amt); }
+    void resize(size_t new_size) { mSamples.resize(new_size); }
     void shrink_to_fit() { mSamples.shrink_to_fit(); }
     void clear() noexcept
     {
@@ -628,6 +632,13 @@ public:
         }
         mSamples.clear();
     }
+
+    DistData *begin() noexcept { return std::begin(mChannel); }
+    const DistData *begin() const noexcept { return std::begin(mChannel); }
+    const DistData *cbegin() const noexcept { return std::begin(mChannel); }
+    DistData *end() noexcept { return std::end(mChannel); }
+    const DistData *end() const noexcept { return std::end(mChannel); }
+    const DistData *cend() const noexcept { return std::end(mChannel); }
 
     ALfloat *data() noexcept { return mSamples.data(); }
     const ALfloat *data() const noexcept { return mSamples.data(); }

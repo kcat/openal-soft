@@ -28,6 +28,7 @@
 
 #include <numeric>
 #include <algorithm>
+#include <functional>
 
 #include "alMain.h"
 #include "alAuxEffectSlot.h"

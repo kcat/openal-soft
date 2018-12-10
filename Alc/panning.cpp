@@ -65,121 +65,7 @@ constexpr ALsizei ACN2ACN[MAX_AMBI_COEFFS] = {
     8,  9, 10, 11, 12, 13, 14, 15
 };
 
-} // namespace
-
-void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALfloat spread,
-                    ALfloat (&coeffs)[MAX_AMBI_COEFFS])
-{
-    /* Zeroth-order */
-    coeffs[0]  = 1.0f; /* ACN 0 = 1 */
-    /* First-order */
-    coeffs[1]  = SQRTF_3 * y; /* ACN 1 = sqrt(3) * Y */
-    coeffs[2]  = SQRTF_3 * z; /* ACN 2 = sqrt(3) * Z */
-    coeffs[3]  = SQRTF_3 * x; /* ACN 3 = sqrt(3) * X */
-    /* Second-order */
-    coeffs[4]  = 3.872983346f * x * y;             /* ACN 4 = sqrt(15) * X * Y */
-    coeffs[5]  = 3.872983346f * y * z;             /* ACN 5 = sqrt(15) * Y * Z */
-    coeffs[6]  = 1.118033989f * (3.0f*z*z - 1.0f); /* ACN 6 = sqrt(5)/2 * (3*Z*Z - 1) */
-    coeffs[7]  = 3.872983346f * x * z;             /* ACN 7 = sqrt(15) * X * Z */
-    coeffs[8]  = 1.936491673f * (x*x - y*y);       /* ACN 8 = sqrt(15)/2 * (X*X - Y*Y) */
-    /* Third-order */
-    coeffs[9]  =  2.091650066f * y * (3.0f*x*x - y*y);  /* ACN  9 = sqrt(35/8) * Y * (3*X*X - Y*Y) */
-    coeffs[10] = 10.246950766f * z * x * y;             /* ACN 10 = sqrt(105) * Z * X * Y */
-    coeffs[11] =  1.620185175f * y * (5.0f*z*z - 1.0f); /* ACN 11 = sqrt(21/8) * Y * (5*Z*Z - 1) */
-    coeffs[12] =  1.322875656f * z * (5.0f*z*z - 3.0f); /* ACN 12 = sqrt(7)/2 * Z * (5*Z*Z - 3) */
-    coeffs[13] =  1.620185175f * x * (5.0f*z*z - 1.0f); /* ACN 13 = sqrt(21/8) * X * (5*Z*Z - 1) */
-    coeffs[14] =  5.123475383f * z * (x*x - y*y);       /* ACN 14 = sqrt(105)/2 * Z * (X*X - Y*Y) */
-    coeffs[15] =  2.091650066f * x * (x*x - 3.0f*y*y);  /* ACN 15 = sqrt(35/8) * X * (X*X - 3*Y*Y) */
-
-    if(spread > 0.0f)
-    {
-        /* Implement the spread by using a spherical source that subtends the
-         * angle spread. See:
-         * http://www.ppsloan.org/publications/StupidSH36.pdf - Appendix A3
-         *
-         * When adjusted for N3D normalization instead of SN3D, these
-         * calculations are:
-         *
-         * ZH0 = -sqrt(pi) * (-1+ca);
-         * ZH1 =  0.5*sqrt(pi) * sa*sa;
-         * ZH2 = -0.5*sqrt(pi) * ca*(-1+ca)*(ca+1);
-         * ZH3 = -0.125*sqrt(pi) * (-1+ca)*(ca+1)*(5*ca*ca - 1);
-         * ZH4 = -0.125*sqrt(pi) * ca*(-1+ca)*(ca+1)*(7*ca*ca - 3);
-         * ZH5 = -0.0625*sqrt(pi) * (-1+ca)*(ca+1)*(21*ca*ca*ca*ca - 14*ca*ca + 1);
-         *
-         * The gain of the source is compensated for size, so that the
-         * loundness doesn't depend on the spread. Thus:
-         *
-         * ZH0 = 1.0f;
-         * ZH1 = 0.5f * (ca+1.0f);
-         * ZH2 = 0.5f * (ca+1.0f)*ca;
-         * ZH3 = 0.125f * (ca+1.0f)*(5.0f*ca*ca - 1.0f);
-         * ZH4 = 0.125f * (ca+1.0f)*(7.0f*ca*ca - 3.0f)*ca;
-         * ZH5 = 0.0625f * (ca+1.0f)*(21.0f*ca*ca*ca*ca - 14.0f*ca*ca + 1.0f);
-         */
-        ALfloat ca = cosf(spread * 0.5f);
-        /* Increase the source volume by up to +3dB for a full spread. */
-        ALfloat scale = sqrtf(1.0f + spread/F_TAU);
-
-        ALfloat ZH0_norm = scale;
-        ALfloat ZH1_norm = 0.5f * (ca+1.f) * scale;
-        ALfloat ZH2_norm = 0.5f * (ca+1.f)*ca * scale;
-        ALfloat ZH3_norm = 0.125f * (ca+1.f)*(5.f*ca*ca-1.f) * scale;
-
-        /* Zeroth-order */
-        coeffs[0]  *= ZH0_norm;
-        /* First-order */
-        coeffs[1]  *= ZH1_norm;
-        coeffs[2]  *= ZH1_norm;
-        coeffs[3]  *= ZH1_norm;
-        /* Second-order */
-        coeffs[4]  *= ZH2_norm;
-        coeffs[5]  *= ZH2_norm;
-        coeffs[6]  *= ZH2_norm;
-        coeffs[7]  *= ZH2_norm;
-        coeffs[8]  *= ZH2_norm;
-        /* Third-order */
-        coeffs[9]  *= ZH3_norm;
-        coeffs[10] *= ZH3_norm;
-        coeffs[11] *= ZH3_norm;
-        coeffs[12] *= ZH3_norm;
-        coeffs[13] *= ZH3_norm;
-        coeffs[14] *= ZH3_norm;
-        coeffs[15] *= ZH3_norm;
-    }
-}
-
-
-void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, ALsizei numcoeffs, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS])
-{
-    ASSUME(numchans > 0);
-    auto iter = std::transform(chancoeffs, chancoeffs+numchans, std::begin(gains),
-        [numcoeffs,coeffs,ingain](const ChannelConfig &chancoeffs) -> ALfloat
-        {
-            ASSUME(numcoeffs > 0);
-            float gain{std::inner_product(std::begin(chancoeffs), std::begin(chancoeffs)+numcoeffs,
-                coeffs, float{0.0f})};
-            return clampf(gain, 0.0f, 1.0f) * ingain;
-        }
-    );
-    std::fill(iter, std::end(gains), 0.0f);
-}
-
-void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS])
-{
-    ASSUME(numchans > 0);
-    auto iter = std::transform(chanmap, chanmap+numchans, std::begin(gains),
-        [coeffs,ingain](const BFChannelConfig &chanmap) noexcept -> ALfloat
-        {
-            ASSUME(chanmap.Index >= 0);
-            return chanmap.Scale * coeffs[chanmap.Index] * ingain;
-        }
-    );
-    std::fill(iter, std::end(gains), 0.0f);
-}
-
-
-static inline const char *GetLabelFromChannel(enum Channel channel)
+inline const char *GetLabelFromChannel(enum Channel channel)
 {
     switch(channel)
     {
@@ -230,9 +116,8 @@ struct ChannelMap {
     ChannelConfig Config;
 };
 
-static void SetChannelMap(const Channel (&devchans)[MAX_OUTPUT_CHANNELS],
-                          ChannelConfig *ambicoeffs, const ChannelMap *chanmap,
-                          ALsizei count, ALsizei *outcount)
+void SetChannelMap(const Channel (&devchans)[MAX_OUTPUT_CHANNELS], ChannelConfig *ambicoeffs,
+                   const ChannelMap *chanmap, ALsizei count, ALsizei *outcount)
 {
     auto copy_coeffs = [&devchans,ambicoeffs](ALsizei maxchans, const ChannelMap &channel) -> ALsizei
     {
@@ -250,11 +135,9 @@ static void SetChannelMap(const Channel (&devchans)[MAX_OUTPUT_CHANNELS],
     *outcount = mini(maxcount, MAX_OUTPUT_CHANNELS);
 }
 
-static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei speakermap[MAX_OUTPUT_CHANNELS])
+bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei speakermap[MAX_OUTPUT_CHANNELS])
 {
-    ALsizei i;
-
-    for(i = 0;i < conf->NumSpeakers;i++)
+    for(ALsizei i{0};i < conf->NumSpeakers;i++)
     {
         enum Channel ch;
         int chidx = -1;
@@ -343,7 +226,7 @@ static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei sp
 }
 
 
-static const ChannelMap MonoCfg[1] = {
+constexpr ChannelMap MonoCfg[1] = {
     { FrontCenter, { 1.0f } },
 }, StereoCfg[2] = {
     { FrontLeft,   { 5.00000000e-1f,  2.88675135e-1f, 0.0f,  5.52305643e-2f } },
@@ -378,8 +261,7 @@ static const ChannelMap MonoCfg[1] = {
     { BackRight,   { 2.04124145e-1f, -1.08880247e-1f, 0.0f, -1.88586120e-1f,  1.29099444e-1f, 0.0f, 0.0f, 0.0f,  7.45355993e-2f, -3.73460789e-2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.00000000e+0f } },
 };
 
-static void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei order,
-                              const ALsizei *RESTRICT chans_per_order)
+void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei order, const ALsizei *RESTRICT chans_per_order)
 {
     const char *devname = device->DeviceName.c_str();
     ALsizei i;
@@ -399,7 +281,7 @@ static void InitNearFieldCtrl(ALCdevice *device, ALfloat ctrl_dist, ALsizei orde
     }
 }
 
-static void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei speakermap[MAX_OUTPUT_CHANNELS])
+void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei speakermap[MAX_OUTPUT_CHANNELS])
 {
     const char *devname = device->DeviceName.c_str();
     ALfloat maxdist = 0.0f;
@@ -457,7 +339,7 @@ static void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const AL
     }
 }
 
-static void InitPanning(ALCdevice *device)
+void InitPanning(ALCdevice *device)
 {
     const ChannelMap *chanmap = NULL;
     ALsizei coeffcount = 0;
@@ -604,7 +486,7 @@ static void InitPanning(ALCdevice *device)
     device->RealOut.NumChannels = 0;
 }
 
-static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&speakermap)[MAX_OUTPUT_CHANNELS])
+void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&speakermap)[MAX_OUTPUT_CHANNELS])
 {
     ChannelMap chanmap[MAX_OUTPUT_CHANNELS];
     const ALfloat *coeff_scale = N3D2N3DScale;
@@ -689,7 +571,7 @@ static void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const A
     InitDistanceComp(device, conf, speakermap);
 }
 
-static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&speakermap)[MAX_OUTPUT_CHANNELS])
+void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&speakermap)[MAX_OUTPUT_CHANNELS])
 {
     static constexpr ALsizei chans_per_order2d[MAX_AMBI_ORDER+1] = { 1, 2, 2, 2 };
     static constexpr ALsizei chans_per_order3d[MAX_AMBI_ORDER+1] = { 1, 3, 5, 7 };
@@ -770,7 +652,7 @@ static void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsiz
     InitDistanceComp(device, conf, speakermap);
 }
 
-static void InitHrtfPanning(ALCdevice *device)
+void InitHrtfPanning(ALCdevice *device)
 {
     /* NOTE: azimuth goes clockwise. */
     static constexpr struct AngularPoint AmbiPoints[] = {
@@ -892,7 +774,7 @@ static void InitHrtfPanning(ALCdevice *device)
                       ChansPerOrder);
 }
 
-static void InitUhjPanning(ALCdevice *device)
+void InitUhjPanning(ALCdevice *device)
 {
     static constexpr ALsizei count{3};
 
@@ -909,6 +791,121 @@ static void InitUhjPanning(ALCdevice *device)
 
     device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
 }
+
+} // namespace
+
+
+void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALfloat spread,
+                    ALfloat (&coeffs)[MAX_AMBI_COEFFS])
+{
+    /* Zeroth-order */
+    coeffs[0]  = 1.0f; /* ACN 0 = 1 */
+    /* First-order */
+    coeffs[1]  = SQRTF_3 * y; /* ACN 1 = sqrt(3) * Y */
+    coeffs[2]  = SQRTF_3 * z; /* ACN 2 = sqrt(3) * Z */
+    coeffs[3]  = SQRTF_3 * x; /* ACN 3 = sqrt(3) * X */
+    /* Second-order */
+    coeffs[4]  = 3.872983346f * x * y;             /* ACN 4 = sqrt(15) * X * Y */
+    coeffs[5]  = 3.872983346f * y * z;             /* ACN 5 = sqrt(15) * Y * Z */
+    coeffs[6]  = 1.118033989f * (3.0f*z*z - 1.0f); /* ACN 6 = sqrt(5)/2 * (3*Z*Z - 1) */
+    coeffs[7]  = 3.872983346f * x * z;             /* ACN 7 = sqrt(15) * X * Z */
+    coeffs[8]  = 1.936491673f * (x*x - y*y);       /* ACN 8 = sqrt(15)/2 * (X*X - Y*Y) */
+    /* Third-order */
+    coeffs[9]  =  2.091650066f * y * (3.0f*x*x - y*y);  /* ACN  9 = sqrt(35/8) * Y * (3*X*X - Y*Y) */
+    coeffs[10] = 10.246950766f * z * x * y;             /* ACN 10 = sqrt(105) * Z * X * Y */
+    coeffs[11] =  1.620185175f * y * (5.0f*z*z - 1.0f); /* ACN 11 = sqrt(21/8) * Y * (5*Z*Z - 1) */
+    coeffs[12] =  1.322875656f * z * (5.0f*z*z - 3.0f); /* ACN 12 = sqrt(7)/2 * Z * (5*Z*Z - 3) */
+    coeffs[13] =  1.620185175f * x * (5.0f*z*z - 1.0f); /* ACN 13 = sqrt(21/8) * X * (5*Z*Z - 1) */
+    coeffs[14] =  5.123475383f * z * (x*x - y*y);       /* ACN 14 = sqrt(105)/2 * Z * (X*X - Y*Y) */
+    coeffs[15] =  2.091650066f * x * (x*x - 3.0f*y*y);  /* ACN 15 = sqrt(35/8) * X * (X*X - 3*Y*Y) */
+
+    if(spread > 0.0f)
+    {
+        /* Implement the spread by using a spherical source that subtends the
+         * angle spread. See:
+         * http://www.ppsloan.org/publications/StupidSH36.pdf - Appendix A3
+         *
+         * When adjusted for N3D normalization instead of SN3D, these
+         * calculations are:
+         *
+         * ZH0 = -sqrt(pi) * (-1+ca);
+         * ZH1 =  0.5*sqrt(pi) * sa*sa;
+         * ZH2 = -0.5*sqrt(pi) * ca*(-1+ca)*(ca+1);
+         * ZH3 = -0.125*sqrt(pi) * (-1+ca)*(ca+1)*(5*ca*ca - 1);
+         * ZH4 = -0.125*sqrt(pi) * ca*(-1+ca)*(ca+1)*(7*ca*ca - 3);
+         * ZH5 = -0.0625*sqrt(pi) * (-1+ca)*(ca+1)*(21*ca*ca*ca*ca - 14*ca*ca + 1);
+         *
+         * The gain of the source is compensated for size, so that the
+         * loundness doesn't depend on the spread. Thus:
+         *
+         * ZH0 = 1.0f;
+         * ZH1 = 0.5f * (ca+1.0f);
+         * ZH2 = 0.5f * (ca+1.0f)*ca;
+         * ZH3 = 0.125f * (ca+1.0f)*(5.0f*ca*ca - 1.0f);
+         * ZH4 = 0.125f * (ca+1.0f)*(7.0f*ca*ca - 3.0f)*ca;
+         * ZH5 = 0.0625f * (ca+1.0f)*(21.0f*ca*ca*ca*ca - 14.0f*ca*ca + 1.0f);
+         */
+        ALfloat ca = cosf(spread * 0.5f);
+        /* Increase the source volume by up to +3dB for a full spread. */
+        ALfloat scale = sqrtf(1.0f + spread/F_TAU);
+
+        ALfloat ZH0_norm = scale;
+        ALfloat ZH1_norm = 0.5f * (ca+1.f) * scale;
+        ALfloat ZH2_norm = 0.5f * (ca+1.f)*ca * scale;
+        ALfloat ZH3_norm = 0.125f * (ca+1.f)*(5.f*ca*ca-1.f) * scale;
+
+        /* Zeroth-order */
+        coeffs[0]  *= ZH0_norm;
+        /* First-order */
+        coeffs[1]  *= ZH1_norm;
+        coeffs[2]  *= ZH1_norm;
+        coeffs[3]  *= ZH1_norm;
+        /* Second-order */
+        coeffs[4]  *= ZH2_norm;
+        coeffs[5]  *= ZH2_norm;
+        coeffs[6]  *= ZH2_norm;
+        coeffs[7]  *= ZH2_norm;
+        coeffs[8]  *= ZH2_norm;
+        /* Third-order */
+        coeffs[9]  *= ZH3_norm;
+        coeffs[10] *= ZH3_norm;
+        coeffs[11] *= ZH3_norm;
+        coeffs[12] *= ZH3_norm;
+        coeffs[13] *= ZH3_norm;
+        coeffs[14] *= ZH3_norm;
+        coeffs[15] *= ZH3_norm;
+    }
+}
+
+
+void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, ALsizei numcoeffs, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS])
+{
+    ASSUME(numchans > 0);
+    auto iter = std::transform(chancoeffs, chancoeffs+numchans, std::begin(gains),
+        [numcoeffs,coeffs,ingain](const ChannelConfig &chancoeffs) -> ALfloat
+        {
+            ASSUME(numcoeffs > 0);
+            float gain{std::inner_product(std::begin(chancoeffs), std::begin(chancoeffs)+numcoeffs,
+                coeffs, float{0.0f})};
+            return clampf(gain, 0.0f, 1.0f) * ingain;
+        }
+    );
+    std::fill(iter, std::end(gains), 0.0f);
+}
+
+void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS])
+{
+    ASSUME(numchans > 0);
+    auto iter = std::transform(chanmap, chanmap+numchans, std::begin(gains),
+        [coeffs,ingain](const BFChannelConfig &chanmap) noexcept -> ALfloat
+        {
+            ASSUME(chanmap.Index >= 0);
+            return chanmap.Scale * coeffs[chanmap.Index] * ingain;
+        }
+    );
+    std::fill(iter, std::end(gains), 0.0f);
+}
+
 
 void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf_appreq, enum HrtfRequestMode hrtf_userreq)
 {

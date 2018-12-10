@@ -26,6 +26,7 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include <numeric>
 #include <algorithm>
 
 #include "alMain.h"
@@ -151,23 +152,30 @@ void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALf
 
 void ComputePanningGainsMC(const ChannelConfig *chancoeffs, ALsizei numchans, ALsizei numcoeffs, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS])
 {
-    ALsizei i;
-    for(i = 0;i < numchans;i++)
-    {
-        float gain = 0.0f;
-        for(ALsizei j{0};j < numcoeffs;j++)
-            gain += chancoeffs[i][j]*coeffs[j];
-        gains[i] = clampf(gain, 0.0f, 1.0f) * ingain;
-    }
-    std::fill(std::begin(gains)+i, std::end(gains), 0.0f);
+    ASSUME(numchans > 0);
+    auto iter = std::transform(chancoeffs, chancoeffs+numchans, std::begin(gains),
+        [numcoeffs,coeffs,ingain](const ChannelConfig &chancoeffs) -> ALfloat
+        {
+            ASSUME(numcoeffs > 0);
+            float gain{std::inner_product(std::begin(chancoeffs), std::begin(chancoeffs)+numcoeffs,
+                coeffs, float{0.0f})};
+            return clampf(gain, 0.0f, 1.0f) * ingain;
+        }
+    );
+    std::fill(iter, std::end(gains), 0.0f);
 }
 
 void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS])
 {
-    ALsizei i;
-    for(i = 0;i < numchans;i++)
-        gains[i] = chanmap[i].Scale * coeffs[chanmap[i].Index] * ingain;
-    std::fill(std::begin(gains)+i, std::end(gains), 0.0f);
+    ASSUME(numchans > 0);
+    auto iter = std::transform(chanmap, chanmap+numchans, std::begin(gains),
+        [coeffs,ingain](const BFChannelConfig &chanmap) noexcept -> ALfloat
+        {
+            ASSUME(chanmap.Index >= 0);
+            return chanmap.Scale * coeffs[chanmap.Index] * ingain;
+        }
+    );
+    std::fill(iter, std::end(gains), 0.0f);
 }
 
 

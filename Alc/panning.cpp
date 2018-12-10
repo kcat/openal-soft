@@ -234,23 +234,20 @@ static void SetChannelMap(const Channel (&devchans)[MAX_OUTPUT_CHANNELS],
                           ChannelConfig *ambicoeffs, const ChannelMap *chanmap,
                           ALsizei count, ALsizei *outcount)
 {
-    ALsizei maxchans{0};
-    std::for_each(chanmap, chanmap+count,
-        [&maxchans,&devchans,ambicoeffs](const ChannelMap &channel) -> void
+    auto copy_coeffs = [&devchans,ambicoeffs](ALsizei maxchans, const ChannelMap &channel) -> ALsizei
+    {
+        const ALint idx{GetChannelIndex(devchans, channel.ChanName)};
+        if(idx < 0)
         {
-            ALint idx = GetChannelIndex(devchans, channel.ChanName);
-            if(idx < 0)
-            {
-                ERR("Failed to find %s channel in device\n",
-                    GetLabelFromChannel(channel.ChanName));
-                return;
-            }
-
-            maxchans = maxi(maxchans, idx+1);
-            std::copy_n(channel.Config, MAX_AMBI_COEFFS, ambicoeffs[idx]);
+            ERR("Failed to find %s channel in device\n", GetLabelFromChannel(channel.ChanName));
+            return maxchans;
         }
-    );
-    *outcount = mini(maxchans, MAX_OUTPUT_CHANNELS);
+
+        std::copy(std::begin(channel.Config), std::end(channel.Config), ambicoeffs[idx]);
+        return maxi(maxchans, idx+1);
+    };
+    ALsizei maxcount{std::accumulate(chanmap, chanmap+count, ALsizei{0}, copy_coeffs)};
+    *outcount = mini(maxcount, MAX_OUTPUT_CHANNELS);
 }
 
 static bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei speakermap[MAX_OUTPUT_CHANNELS])

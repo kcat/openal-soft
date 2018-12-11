@@ -17,49 +17,9 @@
 #include "almalloc.h"
 
 
-/* NOTE: These are scale factors as applied to Ambisonics content. Decoder
- * coefficients should be divided by these values to get proper N3D scalings.
- */
-const ALfloat N3D2N3DScale[MAX_AMBI_COEFFS] = {
-    1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-    1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
-};
-const ALfloat SN3D2N3DScale[MAX_AMBI_COEFFS] = {
-    1.000000000f, /* ACN  0 (W), sqrt(1) */
-    1.732050808f, /* ACN  1 (Y), sqrt(3) */
-    1.732050808f, /* ACN  2 (Z), sqrt(3) */
-    1.732050808f, /* ACN  3 (X), sqrt(3) */
-    2.236067978f, /* ACN  4 (V), sqrt(5) */
-    2.236067978f, /* ACN  5 (T), sqrt(5) */
-    2.236067978f, /* ACN  6 (R), sqrt(5) */
-    2.236067978f, /* ACN  7 (S), sqrt(5) */
-    2.236067978f, /* ACN  8 (U), sqrt(5) */
-    2.645751311f, /* ACN  9 (Q), sqrt(7) */
-    2.645751311f, /* ACN 10 (O), sqrt(7) */
-    2.645751311f, /* ACN 11 (M), sqrt(7) */
-    2.645751311f, /* ACN 12 (K), sqrt(7) */
-    2.645751311f, /* ACN 13 (L), sqrt(7) */
-    2.645751311f, /* ACN 14 (N), sqrt(7) */
-    2.645751311f, /* ACN 15 (P), sqrt(7) */
-};
-const ALfloat FuMa2N3DScale[MAX_AMBI_COEFFS] = {
-    1.414213562f, /* ACN  0 (W), sqrt(2) */
-    1.732050808f, /* ACN  1 (Y), sqrt(3) */
-    1.732050808f, /* ACN  2 (Z), sqrt(3) */
-    1.732050808f, /* ACN  3 (X), sqrt(3) */
-    1.936491673f, /* ACN  4 (V), sqrt(15)/2 */
-    1.936491673f, /* ACN  5 (T), sqrt(15)/2 */
-    2.236067978f, /* ACN  6 (R), sqrt(5) */
-    1.936491673f, /* ACN  7 (S), sqrt(15)/2 */
-    1.936491673f, /* ACN  8 (U), sqrt(15)/2 */
-    2.091650066f, /* ACN  9 (Q), sqrt(35/8) */
-    1.972026594f, /* ACN 10 (O), sqrt(35)/3 */
-    2.231093404f, /* ACN 11 (M), sqrt(224/45) */
-    2.645751311f, /* ACN 12 (K), sqrt(7) */
-    2.231093404f, /* ACN 13 (L), sqrt(224/45) */
-    1.972026594f, /* ACN 14 (N), sqrt(35)/3 */
-    2.091650066f, /* ACN 15 (P), sqrt(35/8) */
-};
+constexpr float AmbiScale::N3D2N3D[MAX_AMBI_COEFFS];
+constexpr float AmbiScale::SN3D2N3D[MAX_AMBI_COEFFS];
+constexpr float AmbiScale::FuMa2N3D[MAX_AMBI_COEFFS];
 
 
 namespace {
@@ -114,10 +74,7 @@ ALsizei GetACNIndex(const BFChannelConfig *chans, ALsizei numchans, ALsizei acn)
 
 void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS])
 {
-    static constexpr ALsizei map2DTo3D[MAX_AMBI2D_COEFFS] = {
-        0,  1, 3,  4, 8,  9, 15
-    };
-    const ALfloat *coeff_scale = N3D2N3DScale;
+    static constexpr ALsizei map2DTo3D[MAX_AMBI2D_COEFFS]{ 0,  1, 3,  4, 8,  9, 15 };
 
     mSamples.clear();
     mSamplesHF = nullptr;
@@ -132,11 +89,6 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
         [](ALuint mask, const ALsizei &chan) noexcept -> ALuint
         { return mask | (1 << chan); }
     );
-
-    if(conf->CoeffScale == AmbDecScale::SN3D)
-        coeff_scale = SN3D2N3DScale;
-    else if(conf->CoeffScale == AmbDecScale::FuMa)
-        coeff_scale = FuMa2N3DScale;
 
     mUpSampler[0].XOver.init(400.0f / (float)srate);
     std::fill(std::begin(mUpSampler[0].Gains), std::end(mUpSampler[0].Gains), 0.0f);
@@ -170,23 +122,25 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
         mUpSampler[3].Gains[LF_BAND] = 0.0f;
     }
 
+    const ALfloat (&coeff_scale)[MAX_AMBI_COEFFS] =
+        (conf->CoeffScale == AmbDecScale::FuMa) ? AmbiScale::FuMa2N3D :
+        (conf->CoeffScale == AmbDecScale::SN3D) ? AmbiScale::SN3D2N3D :
+        /*(conf->CoeffScale == AmbDecScale::N3D) ?*/ AmbiScale::N3D2N3D;
+
     mMatrix = MatrixU{};
     if(conf->FreqBands == 1)
     {
         mDualBand = AL_FALSE;
         for(ALsizei i{0};i < conf->NumSpeakers;i++)
         {
-            ALsizei chan = chanmap[i];
-            ALfloat gain;
-            ALsizei j, k;
-
+            const ALsizei chan{chanmap[i]};
             if(!periphonic)
             {
-                for(j = 0,k = 0;j < MAX_AMBI2D_COEFFS;j++)
+                ALfloat gain{conf->HFOrderGain[0]};
+                for(ALsizei j{0},k{0};j < MAX_AMBI2D_COEFFS;j++)
                 {
-                    ALsizei l = map2DTo3D[j];
-                    if(j == 0) gain = conf->HFOrderGain[0];
-                    else if(j == 1) gain = conf->HFOrderGain[1];
+                    const ALsizei l{map2DTo3D[j]};
+                    if(j == 1) gain = conf->HFOrderGain[1];
                     else if(j == 3) gain = conf->HFOrderGain[2];
                     else if(j == 5) gain = conf->HFOrderGain[3];
                     if((conf->ChanMask&(1<<l)))
@@ -195,10 +149,10 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
             }
             else
             {
-                for(j = 0,k = 0;j < MAX_AMBI_COEFFS;j++)
+                ALfloat gain{conf->HFOrderGain[0]};
+                for(ALsizei j{0},k{0};j < MAX_AMBI_COEFFS;j++)
                 {
-                    if(j == 0) gain = conf->HFOrderGain[0];
-                    else if(j == 1) gain = conf->HFOrderGain[1];
+                    if(j == 1) gain = conf->HFOrderGain[1];
                     else if(j == 4) gain = conf->HFOrderGain[2];
                     else if(j == 9) gain = conf->HFOrderGain[3];
                     if((conf->ChanMask&(1<<j)))
@@ -214,30 +168,28 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
         mXOver[0].init(conf->XOverFreq / (float)srate);
         std::fill(std::begin(mXOver)+1, std::end(mXOver), mXOver[0]);
 
-        float ratio{std::pow(10.0f, conf->XOverRatio / 40.0f)};
+        const float ratio{std::pow(10.0f, conf->XOverRatio / 40.0f)};
         for(ALsizei i{0};i < conf->NumSpeakers;i++)
         {
-            ALsizei chan = chanmap[i];
-
-            ALfloat gain{};
+            const ALsizei chan{chanmap[i]};
             if(!periphonic)
             {
+                ALfloat gain{conf->HFOrderGain[0] * ratio};
                 for(ALsizei j{0},k{0};j < MAX_AMBI2D_COEFFS;j++)
                 {
                     ALsizei l = map2DTo3D[j];
-                    if(j == 0) gain = conf->HFOrderGain[0] * ratio;
-                    else if(j == 1) gain = conf->HFOrderGain[1] * ratio;
+                    if(j == 1) gain = conf->HFOrderGain[1] * ratio;
                     else if(j == 3) gain = conf->HFOrderGain[2] * ratio;
                     else if(j == 5) gain = conf->HFOrderGain[3] * ratio;
                     if((conf->ChanMask&(1<<l)))
                         mMatrix.Dual[chan][HF_BAND][j] = conf->HFMatrix[i][k++] / coeff_scale[l] *
                                                          gain;
                 }
+                gain = conf->HFOrderGain[0] / ratio;
                 for(ALsizei j{0},k{0};j < MAX_AMBI2D_COEFFS;j++)
                 {
                     ALsizei l = map2DTo3D[j];
-                    if(j == 0) gain = conf->LFOrderGain[0] / ratio;
-                    else if(j == 1) gain = conf->LFOrderGain[1] / ratio;
+                    if(j == 1) gain = conf->LFOrderGain[1] / ratio;
                     else if(j == 3) gain = conf->LFOrderGain[2] / ratio;
                     else if(j == 5) gain = conf->LFOrderGain[3] / ratio;
                     if((conf->ChanMask&(1<<l)))
@@ -247,20 +199,20 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
             }
             else
             {
+                ALfloat gain{conf->HFOrderGain[0] * ratio};
                 for(ALsizei j{0},k{0};j < MAX_AMBI_COEFFS;j++)
                 {
-                    if(j == 0) gain = conf->HFOrderGain[0] * ratio;
-                    else if(j == 1) gain = conf->HFOrderGain[1] * ratio;
+                    if(j == 1) gain = conf->HFOrderGain[1] * ratio;
                     else if(j == 4) gain = conf->HFOrderGain[2] * ratio;
                     else if(j == 9) gain = conf->HFOrderGain[3] * ratio;
                     if((conf->ChanMask&(1<<j)))
                         mMatrix.Dual[chan][HF_BAND][j] = conf->HFMatrix[i][k++] / coeff_scale[j] *
                                                          gain;
                 }
+                gain = conf->HFOrderGain[0] / ratio;
                 for(ALsizei j{0},k{0};j < MAX_AMBI_COEFFS;j++)
                 {
-                    if(j == 0) gain = conf->LFOrderGain[0] / ratio;
-                    else if(j == 1) gain = conf->LFOrderGain[1] / ratio;
+                    if(j == 1) gain = conf->LFOrderGain[1] / ratio;
                     else if(j == 4) gain = conf->LFOrderGain[2] / ratio;
                     else if(j == 9) gain = conf->LFOrderGain[3] / ratio;
                     if((conf->ChanMask&(1<<j)))
@@ -277,14 +229,13 @@ void BFormatDec::process(ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALsize
     ASSUME(OutChannels > 0);
     ASSUME(SamplesToDo > 0);
 
-    ALsizei chan, i;
     if(mDualBand)
     {
-        for(i = 0;i < mNumChannels;i++)
+        for(ALsizei i{0};i < mNumChannels;i++)
             mXOver[i].process(mSamplesHF[i].data(), mSamplesLF[i].data(), InSamples[i],
                               SamplesToDo);
 
-        for(chan = 0;chan < OutChannels;chan++)
+        for(ALsizei chan{0};chan < OutChannels;chan++)
         {
             if(UNLIKELY(!(mEnabled&(1<<chan))))
                 continue;
@@ -305,7 +256,7 @@ void BFormatDec::process(ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALsize
     }
     else
     {
-        for(chan = 0;chan < OutChannels;chan++)
+        for(ALsizei chan{0};chan < OutChannels;chan++)
         {
             if(UNLIKELY(!(mEnabled&(1<<chan))))
                 continue;
@@ -364,7 +315,7 @@ void AmbiUpsampler::reset(const ALCdevice *device, const ALfloat w_scale, const 
         ALfloat encgains[8][MAX_OUTPUT_CHANNELS];
         for(size_t k{0u};k < COUNTOF(Ambi3DPoints);k++)
         {
-            ALfloat coeffs[MAX_AMBI_COEFFS] = { 0.0f };
+            ALfloat coeffs[MAX_AMBI_COEFFS];
             CalcDirectionCoeffs(Ambi3DPoints[k], 0.0f, coeffs);
             ComputePanGains(&device->Dry, coeffs, 1.0f, encgains[k]);
         }
@@ -378,7 +329,7 @@ void AmbiUpsampler::reset(const ALCdevice *device, const ALfloat w_scale, const 
         {
             for(ALsizei j{0};j < device->Dry.NumChannels;j++)
             {
-                ALdouble gain = 0.0;
+                ALdouble gain{0.0};
                 for(size_t k{0u};k < COUNTOF(Ambi3DDecoder);k++)
                     gain += (ALdouble)Ambi3DDecoder[k][i] * encgains[k][j];
                 mGains[i][j][HF_BAND] = (ALfloat)(gain * Ambi3DDecoderHFScale[i]);
@@ -390,10 +341,10 @@ void AmbiUpsampler::reset(const ALCdevice *device, const ALfloat w_scale, const 
     {
         for(ALsizei i{0};i < 4;i++)
         {
-            ALsizei index = GetChannelForACN(device->Dry, i);
+            const ALsizei index{GetChannelForACN(device->Dry, i)};
             if(index != INVALID_UPSAMPLE_INDEX)
             {
-                ALfloat scale = device->Dry.Ambi.Map[index].Scale;
+                const ALfloat scale{device->Dry.Ambi.Map[index].Scale};
                 mGains[i][index][HF_BAND] = scale * ((i==0) ? w_scale : xyz_scale);
                 mGains[i][index][LF_BAND] = scale;
             }

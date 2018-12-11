@@ -94,8 +94,8 @@ typedef const ALfloat* (*ResamplerFunc)(const InterpState *state,
 
 void BsincPrepare(const ALuint increment, BsincState *state, const struct BSincTable *table);
 
-extern const struct BSincTable bsinc12;
-extern const struct BSincTable bsinc24;
+extern const BSincTable bsinc12;
+extern const BSincTable bsinc24;
 
 
 enum {

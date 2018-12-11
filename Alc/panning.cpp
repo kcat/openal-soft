@@ -26,6 +26,7 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include <cmath>
 #include <numeric>
 #include <algorithm>
 #include <functional>
@@ -398,12 +399,13 @@ void InitPanning(ALCdevice *device)
 
     if(device->FmtChans == DevFmtAmbi3D)
     {
-        const char *devname = device->DeviceName.c_str();
-        const ALsizei *acnmap = (device->mAmbiLayout == AmbiLayout::FuMa) ? FuMa2ACN : ACN2ACN;
-        const ALfloat *n3dscale = (device->mAmbiScale == AmbiNorm::FuMa) ? FuMa2N3DScale :
-                                  (device->mAmbiScale == AmbiNorm::SN3D) ? SN3D2N3DScale :
-                                  /*(device->mAmbiScale == AmbiNorm::N3D) ?*/ N3D2N3DScale;
-        ALfloat nfc_delay = 0.0f;
+        const char *devname{device->DeviceName.c_str()};
+        const ALsizei (&acnmap)[MAX_AMBI_COEFFS] =
+            (device->mAmbiLayout == AmbiLayout::FuMa) ? FuMa2ACN : ACN2ACN;
+        const ALfloat (&n3dscale)[MAX_AMBI_COEFFS] =
+            (device->mAmbiScale == AmbiNorm::FuMa) ? AmbiScale::FuMa2N3D :
+            (device->mAmbiScale == AmbiNorm::SN3D) ? AmbiScale::SN3D2N3D :
+            /*(device->mAmbiScale == AmbiNorm::N3D) ?*/ AmbiScale::N3D2N3D;
 
         count = (device->mAmbiOrder == 3) ? 16 :
                 (device->mAmbiOrder == 2) ? 9 :
@@ -425,8 +427,6 @@ void InitPanning(ALCdevice *device)
         }
         else
         {
-            ALfloat w_scale=1.0f, xyz_scale=1.0f;
-
             /* FOA output is always ACN+N3D for higher-order ambisonic output.
              * The upsampler expects this and will convert it for output.
              */
@@ -439,6 +439,7 @@ void InitPanning(ALCdevice *device)
             device->FOAOut.CoeffCount = 0;
             device->FOAOut.NumChannels = 4;
 
+            ALfloat w_scale{1.0f}, xyz_scale{1.0f};
             if(device->mAmbiOrder >= 3)
             {
                 w_scale = W_SCALE_3H3P;
@@ -452,11 +453,10 @@ void InitPanning(ALCdevice *device)
             device->AmbiUp->reset(device, w_scale, xyz_scale);
         }
 
+        ALfloat nfc_delay{0.0f};
         if(ConfigValueFloat(devname, "decoder", "nfc-ref-delay", &nfc_delay) && nfc_delay > 0.0f)
         {
-            static const ALsizei chans_per_order[MAX_AMBI_ORDER+1] = {
-                1, 3, 5, 7
-            };
+            static constexpr ALsizei chans_per_order[MAX_AMBI_ORDER+1]{ 1, 3, 5, 7 };
             nfc_delay = clampf(nfc_delay, 0.001f, 1000.0f);
             InitNearFieldCtrl(device, nfc_delay * SPEEDOFSOUNDMETRESPERSEC,
                               device->mAmbiOrder, chans_per_order);
@@ -464,16 +464,14 @@ void InitPanning(ALCdevice *device)
     }
     else
     {
-        ALfloat w_scale, xyz_scale;
-
         SetChannelMap(device->RealOut.ChannelName, device->Dry.Ambi.Coeffs,
                       chanmap, count, &device->Dry.NumChannels);
         device->Dry.CoeffCount = coeffcount;
 
-        w_scale = (device->Dry.CoeffCount > 9) ? W_SCALE_3H0P :
-                  (device->Dry.CoeffCount > 4) ? W_SCALE_2H0P : 1.0f;
-        xyz_scale = (device->Dry.CoeffCount > 9) ? XYZ_SCALE_3H0P :
-                    (device->Dry.CoeffCount > 4) ? XYZ_SCALE_2H0P : 1.0f;
+        const ALfloat w_scale{(device->Dry.CoeffCount > 9) ? W_SCALE_3H0P :
+                              (device->Dry.CoeffCount > 4) ? W_SCALE_2H0P : 1.0f};
+        const ALfloat xyz_scale{(device->Dry.CoeffCount > 9) ? XYZ_SCALE_3H0P :
+                                (device->Dry.CoeffCount > 4) ? XYZ_SCALE_2H0P : 1.0f};
 
         device->FOAOut.Ambi = AmbiConfig{};
         for(i = 0;i < device->Dry.NumChannels;i++)
@@ -490,16 +488,11 @@ void InitPanning(ALCdevice *device)
 
 void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&speakermap)[MAX_OUTPUT_CHANNELS])
 {
-    ChannelMap chanmap[MAX_OUTPUT_CHANNELS];
-    const ALfloat *coeff_scale = N3D2N3DScale;
-    ALfloat w_scale = 1.0f;
-    ALfloat xyz_scale = 1.0f;
-    ALsizei i, j;
-
     if(conf->FreqBands != 1)
         ERR("Basic renderer uses the high-frequency matrix as single-band (xover_freq = %.0fhz)\n",
             conf->XOverFreq);
 
+    ALfloat w_scale{1.0f}, xyz_scale{1.0f};
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
         if(conf->ChanMask > 0x1ff)
@@ -527,25 +520,23 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
         }
     }
 
-    if(conf->CoeffScale == AmbDecScale::SN3D)
-        coeff_scale = SN3D2N3DScale;
-    else if(conf->CoeffScale == AmbDecScale::FuMa)
-        coeff_scale = FuMa2N3DScale;
-
-    for(i = 0;i < conf->NumSpeakers;i++)
+    const ALfloat (&coeff_scale)[MAX_AMBI_COEFFS] =
+        (conf->CoeffScale == AmbDecScale::FuMa) ? AmbiScale::FuMa2N3D :
+        (conf->CoeffScale == AmbDecScale::SN3D) ? AmbiScale::SN3D2N3D :
+        /*(conf->CoeffScale == AmbDecScale::N3D) ?*/ AmbiScale::N3D2N3D;
+    ChannelMap chanmap[MAX_OUTPUT_CHANNELS]{};
+    for(ALsizei i{0};i < conf->NumSpeakers;i++)
     {
-        ALsizei chan = speakermap[i];
-        ALfloat gain;
-        ALsizei k = 0;
-
-        for(j = 0;j < MAX_AMBI_COEFFS;j++)
-            chanmap[i].Config[j] = 0.0f;
+        const ALsizei chan{speakermap[i]};
 
         chanmap[i].ChanName = device->RealOut.ChannelName[chan];
-        for(j = 0;j < MAX_AMBI_COEFFS;j++)
+        std::fill(std::begin(chanmap[i].Config), std::end(chanmap[i].Config), 0.0f);
+
+        ALsizei k{0};
+        ALfloat gain{conf->HFOrderGain[0]};
+        for(ALsizei j{0};j < MAX_AMBI_COEFFS;j++)
         {
-            if(j == 0) gain = conf->HFOrderGain[0];
-            else if(j == 1) gain = conf->HFOrderGain[1];
+            if(j == 1) gain = conf->HFOrderGain[1];
             else if(j == 4) gain = conf->HFOrderGain[2];
             else if(j == 9) gain = conf->HFOrderGain[3];
             if((conf->ChanMask&(1<<j)))
@@ -559,10 +550,10 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
                              (conf->ChanMask > 0xf) ? 9 : 4;
 
     device->FOAOut.Ambi = AmbiConfig{};
-    for(i = 0;i < device->Dry.NumChannels;i++)
+    for(ALsizei i{0};i < device->Dry.NumChannels;i++)
     {
         device->FOAOut.Ambi.Coeffs[i][0] = device->Dry.Ambi.Coeffs[i][0] * w_scale;
-        for(j = 1;j < 4;j++)
+        for(ALsizei j{1};j < 4;j++)
             device->FOAOut.Ambi.Coeffs[i][j] = device->Dry.Ambi.Coeffs[i][j] * xyz_scale;
     }
     device->FOAOut.CoeffCount = 4;
@@ -577,8 +568,8 @@ void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&sp
 {
     static constexpr ALsizei chans_per_order2d[MAX_AMBI_ORDER+1] = { 1, 2, 2, 2 };
     static constexpr ALsizei chans_per_order3d[MAX_AMBI_ORDER+1] = { 1, 3, 5, 7 };
-    ALsizei count;
 
+    ALsizei count;
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
         static constexpr int map[MAX_AMBI_COEFFS] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
@@ -782,7 +773,7 @@ void InitUhjPanning(ALCdevice *device)
 
     std::transform(std::begin(FuMa2ACN), std::begin(FuMa2ACN)+count, std::begin(device->Dry.Ambi.Map),
         [](const ALsizei &acn) noexcept -> BFChannelConfig
-        { return BFChannelConfig{1.0f/FuMa2N3DScale[acn], acn}; }
+        { return BFChannelConfig{1.0f/AmbiScale::FuMa2N3D[acn], acn}; }
     );
     device->Dry.CoeffCount = 0;
     device->Dry.NumChannels = count;
@@ -847,9 +838,9 @@ void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALf
          * ZH4 = 0.125f * (ca+1.0f)*(7.0f*ca*ca - 3.0f)*ca;
          * ZH5 = 0.0625f * (ca+1.0f)*(21.0f*ca*ca*ca*ca - 14.0f*ca*ca + 1.0f);
          */
-        ALfloat ca = cosf(spread * 0.5f);
+        ALfloat ca = std::cos(spread * 0.5f);
         /* Increase the source volume by up to +3dB for a full spread. */
-        ALfloat scale = sqrtf(1.0f + spread/F_TAU);
+        ALfloat scale = std::sqrt(1.0f + spread/F_TAU);
 
         ALfloat ZH0_norm = scale;
         ALfloat ZH1_norm = 0.5f * (ca+1.f) * scale;

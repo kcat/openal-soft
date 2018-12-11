@@ -342,6 +342,27 @@ void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei (
     }
 }
 
+auto GetAmbiScales(AmbDecScale scaletype) noexcept -> const float(&)[MAX_AMBI_COEFFS]
+{
+    if(scaletype == AmbDecScale::FuMa) return AmbiScale::FuMa2N3D;
+    if(scaletype == AmbDecScale::SN3D) return AmbiScale::SN3D2N3D;
+    return AmbiScale::N3D2N3D;
+}
+
+auto GetAmbiScales(AmbiNorm scaletype) noexcept -> const float(&)[MAX_AMBI_COEFFS]
+{
+    if(scaletype == AmbiNorm::FuMa) return AmbiScale::FuMa2N3D;
+    if(scaletype == AmbiNorm::SN3D) return AmbiScale::SN3D2N3D;
+    return AmbiScale::N3D2N3D;
+}
+
+auto GetAmbiLayout(AmbiLayout layouttype) noexcept -> const ALsizei(&)[MAX_AMBI_COEFFS]
+{
+    if(layouttype == AmbiLayout::FuMa) return FuMa2ACN;
+    return ACN2ACN;
+}
+
+
 void InitPanning(ALCdevice *device)
 {
     const ChannelMap *chanmap = NULL;
@@ -400,12 +421,8 @@ void InitPanning(ALCdevice *device)
     if(device->FmtChans == DevFmtAmbi3D)
     {
         const char *devname{device->DeviceName.c_str()};
-        const ALsizei (&acnmap)[MAX_AMBI_COEFFS] =
-            (device->mAmbiLayout == AmbiLayout::FuMa) ? FuMa2ACN : ACN2ACN;
-        const ALfloat (&n3dscale)[MAX_AMBI_COEFFS] =
-            (device->mAmbiScale == AmbiNorm::FuMa) ? AmbiScale::FuMa2N3D :
-            (device->mAmbiScale == AmbiNorm::SN3D) ? AmbiScale::SN3D2N3D :
-            /*(device->mAmbiScale == AmbiNorm::N3D) ?*/ AmbiScale::N3D2N3D;
+        const ALsizei (&acnmap)[MAX_AMBI_COEFFS] = GetAmbiLayout(device->mAmbiLayout);
+        const ALfloat (&n3dscale)[MAX_AMBI_COEFFS] = GetAmbiScales(device->mAmbiScale);
 
         count = (device->mAmbiOrder == 3) ? 16 :
                 (device->mAmbiOrder == 2) ? 9 :
@@ -520,10 +537,7 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
         }
     }
 
-    const ALfloat (&coeff_scale)[MAX_AMBI_COEFFS] =
-        (conf->CoeffScale == AmbDecScale::FuMa) ? AmbiScale::FuMa2N3D :
-        (conf->CoeffScale == AmbDecScale::SN3D) ? AmbiScale::SN3D2N3D :
-        /*(conf->CoeffScale == AmbDecScale::N3D) ?*/ AmbiScale::N3D2N3D;
+    const ALfloat (&coeff_scale)[MAX_AMBI_COEFFS] = GetAmbiScales(conf->CoeffScale);
     ChannelMap chanmap[MAX_OUTPUT_CHANNELS]{};
     for(ALsizei i{0};i < conf->NumSpeakers;i++)
     {

@@ -69,6 +69,13 @@ ALsizei GetACNIndex(const BFChannelConfig *chans, ALsizei numchans, ALsizei acn)
 }
 #define GetChannelForACN(b, a) GetACNIndex((b).Ambi.Map, (b).NumChannels, (a))
 
+auto GetAmbiScales(AmbDecScale scaletype) noexcept -> decltype(AmbiScale::N3D2N3D)&
+{
+    if(scaletype == AmbDecScale::FuMa) return AmbiScale::FuMa2N3D;
+    if(scaletype == AmbDecScale::SN3D) return AmbiScale::SN3D2N3D;
+    return AmbiScale::N3D2N3D;
+}
+
 } // namespace
 
 
@@ -122,10 +129,7 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
         mUpSampler[3].Gains[LF_BAND] = 0.0f;
     }
 
-    const ALfloat (&coeff_scale)[MAX_AMBI_COEFFS] =
-        (conf->CoeffScale == AmbDecScale::FuMa) ? AmbiScale::FuMa2N3D :
-        (conf->CoeffScale == AmbDecScale::SN3D) ? AmbiScale::SN3D2N3D :
-        /*(conf->CoeffScale == AmbDecScale::N3D) ?*/ AmbiScale::N3D2N3D;
+    const ALfloat (&coeff_scale)[MAX_AMBI_COEFFS] = GetAmbiScales(conf->CoeffScale);
 
     mMatrix = MatrixU{};
     if(conf->FreqBands == 1)

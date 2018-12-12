@@ -122,7 +122,7 @@ void ALautowahState::update(const ALCcontext *context, const ALeffectslot *slot,
     mOutBuffer = device->FOAOut.Buffer;
     mOutChannels = device->FOAOut.NumChannels;
     for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputePanGains(&device->FOAOut, aluMatrixf::Identity.m[i], slot->Params.Gain,
+        ComputePanGains(&device->FOAOut, alu::Matrix::Identity()[i].data(), slot->Params.Gain,
                         mChans[i].TargetGains);
 }
 

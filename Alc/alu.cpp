@@ -260,50 +260,30 @@ inline ALuint dither_rng(ALuint *seed) noexcept
 }
 
 
-inline void aluCrossproduct(const ALfloat *inVector1, const ALfloat *inVector2, ALfloat *outVector)
+inline alu::Vector aluCrossproduct(const alu::Vector &in1, const alu::Vector &in2)
 {
-    outVector[0] = inVector1[1]*inVector2[2] - inVector1[2]*inVector2[1];
-    outVector[1] = inVector1[2]*inVector2[0] - inVector1[0]*inVector2[2];
-    outVector[2] = inVector1[0]*inVector2[1] - inVector1[1]*inVector2[0];
+    return alu::Vector{
+        in1[1]*in2[2] - in1[2]*in2[1],
+        in1[2]*in2[0] - in1[0]*in2[2],
+        in1[0]*in2[1] - in1[1]*in2[0],
+        0.0f
+    };
 }
 
-inline ALfloat aluDotproduct(const aluVector *vec1, const aluVector *vec2)
+inline ALfloat aluDotproduct(const alu::Vector &vec1, const alu::Vector &vec2)
 {
-    return vec1->v[0]*vec2->v[0] + vec1->v[1]*vec2->v[1] + vec1->v[2]*vec2->v[2];
+    return vec1[0]*vec2[0] + vec1[1]*vec2[1] + vec1[2]*vec2[2];
 }
 
-ALfloat aluNormalize(ALfloat *vec)
-{
-    const ALfloat length{std::sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2])};
-    if(length > FLT_EPSILON)
-    {
-        ALfloat inv_length = 1.0f/length;
-        vec[0] *= inv_length;
-        vec[1] *= inv_length;
-        vec[2] *= inv_length;
-        return length;
-    }
-    vec[0] = vec[1] = vec[2] = 0.0f;
-    return 0.0f;
-}
 
-void aluMatrixfFloat3(ALfloat *vec, ALfloat w, const aluMatrixf *mtx)
+alu::Vector operator*(const alu::Matrix &mtx, const alu::Vector &vec) noexcept
 {
-    const ALfloat v[4]{ vec[0], vec[1], vec[2], w };
-
-    vec[0] = v[0]*mtx->m[0][0] + v[1]*mtx->m[1][0] + v[2]*mtx->m[2][0] + v[3]*mtx->m[3][0];
-    vec[1] = v[0]*mtx->m[0][1] + v[1]*mtx->m[1][1] + v[2]*mtx->m[2][1] + v[3]*mtx->m[3][1];
-    vec[2] = v[0]*mtx->m[0][2] + v[1]*mtx->m[1][2] + v[2]*mtx->m[2][2] + v[3]*mtx->m[3][2];
-}
-
-aluVector aluMatrixfVector(const aluMatrixf *mtx, const aluVector *vec)
-{
-    aluVector v;
-    v.v[0] = vec->v[0]*mtx->m[0][0] + vec->v[1]*mtx->m[1][0] + vec->v[2]*mtx->m[2][0] + vec->v[3]*mtx->m[3][0];
-    v.v[1] = vec->v[0]*mtx->m[0][1] + vec->v[1]*mtx->m[1][1] + vec->v[2]*mtx->m[2][1] + vec->v[3]*mtx->m[3][1];
-    v.v[2] = vec->v[0]*mtx->m[0][2] + vec->v[1]*mtx->m[1][2] + vec->v[2]*mtx->m[2][2] + vec->v[3]*mtx->m[3][2];
-    v.v[3] = vec->v[0]*mtx->m[0][3] + vec->v[1]*mtx->m[1][3] + vec->v[2]*mtx->m[2][3] + vec->v[3]*mtx->m[3][3];
-    return v;
+    return alu::Vector{
+        vec[0]*mtx[0][0] + vec[1]*mtx[1][0] + vec[2]*mtx[2][0] + vec[3]*mtx[3][0],
+        vec[0]*mtx[0][1] + vec[1]*mtx[1][1] + vec[2]*mtx[2][1] + vec[3]*mtx[3][1],
+        vec[0]*mtx[0][2] + vec[1]*mtx[1][2] + vec[2]*mtx[2][2] + vec[3]*mtx[3][2],
+        vec[0]*mtx[0][3] + vec[1]*mtx[1][3] + vec[2]*mtx[2][3] + vec[3]*mtx[3][3]
+    };
 }
 
 
@@ -350,29 +330,27 @@ bool CalcListenerParams(ALCcontext *Context)
     if(!props) return false;
 
     /* AT then UP */
-    ALfloat N[3]{ props->Forward[0], props->Forward[1], props->Forward[2] };
-    aluNormalize(N);
-    ALfloat V[3]{ props->Up[0], props->Up[1], props->Up[2] };
-    aluNormalize(V);
+    alu::Vector N{props->Forward[0], props->Forward[1], props->Forward[2], 0.0f};
+    N.normalize();
+    alu::Vector V{props->Up[0], props->Up[1], props->Up[2], 0.0f};
+    V.normalize();
     /* Build and normalize right-vector */
-    ALfloat U[3];
-    aluCrossproduct(N, V, U);
-    aluNormalize(U);
+    alu::Vector U{aluCrossproduct(N, V)};
+    U.normalize();
 
-    aluMatrixfSet(&Listener.Params.Matrix,
-        U[0], V[0], -N[0], 0.0,
-        U[1], V[1], -N[1], 0.0,
-        U[2], V[2], -N[2], 0.0,
-         0.0,  0.0,   0.0, 1.0
-    );
+    Listener.Params.Matrix = alu::Matrix{
+        U[0], V[0], -N[0], 0.0f,
+        U[1], V[1], -N[1], 0.0f,
+        U[2], V[2], -N[2], 0.0f,
+        0.0f, 0.0f,  0.0f, 1.0f
+    };
 
-    ALfloat P[3]{ props->Position[0], props->Position[1], props->Position[2] };
-    aluMatrixfFloat3(P, 1.0, &Listener.Params.Matrix);
-    aluMatrixfSetRow(&Listener.Params.Matrix, 3, -P[0], -P[1], -P[2], 1.0f);
+    alu::Vector P{props->Position[0], props->Position[1], props->Position[2], 1.0f};
+    P = Listener.Params.Matrix * P;
+    Listener.Params.Matrix.setRow(3, -P[0], -P[1], -P[2], 1.0f);
 
-    aluVector vel;
-    aluVectorSet(&vel, props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0f);
-    Listener.Params.Velocity = aluMatrixfVector(&Listener.Params.Matrix, &vel);
+    alu::Vector vel{props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0f};
+    Listener.Params.Velocity = Listener.Params.Matrix * vel;
 
     Listener.Params.Gain = props->Gain * Context->GainBoost;
 
@@ -666,46 +644,43 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
              * to the orientation.
              */
             /* AT then UP */
-            ALfloat N[3]{ props->Orientation[0][0], props->Orientation[0][1],
-                props->Orientation[0][2] };
-            aluNormalize(N);
-            ALfloat V[3]{ props->Orientation[1][0], props->Orientation[1][1],
-                props->Orientation[1][2] };
-            aluNormalize(V);
+            alu::Vector N{props->Orientation[0][0], props->Orientation[0][1],
+                props->Orientation[0][2], 0.0f};
+            N.normalize();
+            alu::Vector V{props->Orientation[1][0], props->Orientation[1][1],
+                props->Orientation[1][2], 0.0f};
+            V.normalize();
             if(!props->HeadRelative)
             {
-                const aluMatrixf *lmatrix = &Listener.Params.Matrix;
-                aluMatrixfFloat3(N, 0.0f, lmatrix);
-                aluMatrixfFloat3(V, 0.0f, lmatrix);
+                N = Listener.Params.Matrix * N;
+                V = Listener.Params.Matrix * V;
             }
             /* Build and normalize right-vector */
-            ALfloat U[3];
-            aluCrossproduct(N, V, U);
-            aluNormalize(U);
+            alu::Vector U{aluCrossproduct(N, V)};
+            U.normalize();
 
             /* Build a rotate + conversion matrix (FuMa -> ACN+N3D). NOTE: This
              * matrix is transposed, for the inputs to align on the rows and
              * outputs on the columns.
              */
-            aluMatrixf matrix;
-            aluMatrixfSet(&matrix,
+            const alu::Matrix matrix{
                 // ACN0           ACN1           ACN2           ACN3
                 SQRTF_2,          0.0f,          0.0f,          0.0f, // Ambi W
                    0.0f, -N[0]*SQRTF_3,  N[1]*SQRTF_3, -N[2]*SQRTF_3, // Ambi X
                    0.0f,  U[0]*SQRTF_3, -U[1]*SQRTF_3,  U[2]*SQRTF_3, // Ambi Y
                    0.0f, -V[0]*SQRTF_3,  V[1]*SQRTF_3, -V[2]*SQRTF_3  // Ambi Z
-            );
+            };
 
             voice->Direct.Buffer = Device->FOAOut.Buffer;
             voice->Direct.Channels = Device->FOAOut.NumChannels;
             for(ALsizei c{0};c < num_channels;c++)
-                ComputePanGains(&Device->FOAOut, matrix.m[c], DryGain,
+                ComputePanGains(&Device->FOAOut, matrix[c].data(), DryGain,
                                 voice->Direct.Params[c].Gains.Target);
             for(ALsizei i{0};i < NumSends;i++)
             {
                 if(const ALeffectslot *Slot{SendSlots[i]})
                     for(ALsizei c{0};c < num_channels;c++)
-                        ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, matrix.m[c],
+                        ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, matrix[c].data(),
                             WetGain[i], voice->Send[i].Params[c].Gains.Target
                         );
             }
@@ -1125,34 +1100,25 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     }
 
     /* Transform source to listener space (convert to head relative) */
-    aluVector Position, Velocity, Direction;
-    aluVectorSet(&Position, props->Position[0], props->Position[1], props->Position[2], 1.0f);
-    aluVectorSet(&Direction, props->Direction[0], props->Direction[1], props->Direction[2], 0.0f);
-    aluVectorSet(&Velocity, props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0f);
+    alu::Vector Position{props->Position[0], props->Position[1], props->Position[2], 1.0f};
+    alu::Vector Velocity{props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0f};
+    alu::Vector Direction{props->Direction[0], props->Direction[1], props->Direction[2], 0.0f};
     if(props->HeadRelative == AL_FALSE)
     {
-        const aluMatrixf *Matrix = &Listener.Params.Matrix;
         /* Transform source vectors */
-        Position = aluMatrixfVector(Matrix, &Position);
-        Velocity = aluMatrixfVector(Matrix, &Velocity);
-        Direction = aluMatrixfVector(Matrix, &Direction);
+        Position = Listener.Params.Matrix * Position;
+        Velocity = Listener.Params.Matrix * Velocity;
+        Direction = Listener.Params.Matrix * Direction;
     }
     else
     {
-        const aluVector *lvelocity = &Listener.Params.Velocity;
         /* Offset the source velocity to be relative of the listener velocity */
-        Velocity.v[0] += lvelocity->v[0];
-        Velocity.v[1] += lvelocity->v[1];
-        Velocity.v[2] += lvelocity->v[2];
+        Velocity += Listener.Params.Velocity;
     }
 
-    bool directional{aluNormalize(Direction.v) > 0.0f};
-    aluVector SourceToListener;
-    SourceToListener.v[0] = -Position.v[0];
-    SourceToListener.v[1] = -Position.v[1];
-    SourceToListener.v[2] = -Position.v[2];
-    SourceToListener.v[3] = 0.0f;
-    ALfloat Distance{aluNormalize(SourceToListener.v)};
+    const bool directional{Direction.normalize() > 0.0f};
+    alu::Vector SourceToListener{-Position[0], -Position[1], -Position[2], 0.0f};
+    const ALfloat Distance{SourceToListener.normalize()};
 
     /* Initial source gain */
     ALfloat DryGain{props->Gain};
@@ -1235,7 +1201,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     /* Calculate directional soundcones */
     if(directional && props->InnerAngle < 360.0f)
     {
-        ALfloat Angle{std::acos(aluDotproduct(&Direction, &SourceToListener))};
+        ALfloat Angle{std::acos(aluDotproduct(Direction, SourceToListener))};
         Angle = RAD2DEG(Angle * ConeScale * 2.0f);
 
         ALfloat ConeVolume, ConeHF;
@@ -1334,9 +1300,9 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     ALfloat DopplerFactor{props->DopplerFactor * Listener.Params.DopplerFactor};
     if(DopplerFactor > 0.0f)
     {
-        const aluVector *lvelocity = &Listener.Params.Velocity;
-        ALfloat vss{aluDotproduct(&Velocity, &SourceToListener) * DopplerFactor};
-        ALfloat vls{aluDotproduct(lvelocity, &SourceToListener) * DopplerFactor};
+        const alu::Vector &lvelocity = Listener.Params.Velocity;
+        ALfloat vss{aluDotproduct(Velocity, SourceToListener) * DopplerFactor};
+        ALfloat vls{aluDotproduct(lvelocity, SourceToListener) * DopplerFactor};
 
         const ALfloat SpeedOfSound{Listener.Params.SpeedOfSound};
         if(!(vls < SpeedOfSound))
@@ -1382,12 +1348,12 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
         /* Clamp Y, in case rounding errors caused it to end up outside of
          * -1...+1.
          */
-        ev = std::asin(clampf(-SourceToListener.v[1], -1.0f, 1.0f));
+        ev = std::asin(clampf(-SourceToListener[1], -1.0f, 1.0f));
         /* Double negation on Z cancels out; negate once for changing source-
          * to-listener to listener-to-source, and again for right-handed coords
          * with -Z in front.
          */
-        az = std::atan2(-SourceToListener.v[0], SourceToListener.v[2]*ZScale);
+        az = std::atan2(-SourceToListener[0], SourceToListener[2]*ZScale);
     }
 
     ALfloat spread{0.0f};

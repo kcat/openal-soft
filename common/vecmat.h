@@ -1,46 +1,102 @@
 #ifndef COMMON_VECMAT_H
 #define COMMON_VECMAT_H
 
-#include "AL/al.h"
+#include <cmath>
+#include <array>
+#include <algorithm>
 
+#include "math_defs.h"
 
-struct aluVector {
-    alignas(16) ALfloat v[4];
+namespace alu {
+
+class Vector {
+    alignas(16) std::array<float,4> mVals{};
+
+public:
+    constexpr Vector() noexcept = default;
+    constexpr Vector(float a, float b, float c, float d) noexcept
+      : mVals{{a, b, c, d}}
+    { }
+    Vector(const Vector &rhs) noexcept
+    { std::copy(rhs.mVals.begin(), rhs.mVals.end(), mVals.begin()); }
+
+    Vector& operator=(const Vector &rhs) noexcept
+    {
+        std::copy(rhs.mVals.begin(), rhs.mVals.end(), mVals.begin());
+        return *this;
+    }
+
+    float& operator[](size_t idx) noexcept { return mVals[idx]; }
+    constexpr const float& operator[](size_t idx) const noexcept { return mVals[idx]; }
+
+    Vector& operator+=(const Vector &rhs) noexcept
+    {
+        mVals[0] += rhs.mVals[0];
+        mVals[1] += rhs.mVals[1];
+        mVals[2] += rhs.mVals[2];
+        mVals[3] += rhs.mVals[3];
+        return *this;
+    }
+
+    float normalize()
+    {
+        const float length{std::sqrt(mVals[0]*mVals[0] + mVals[1]*mVals[1] + mVals[2]*mVals[2])};
+        if(length > FLT_EPSILON)
+        {
+            float inv_length = 1.0f/length;
+            mVals[0] *= inv_length;
+            mVals[1] *= inv_length;
+            mVals[2] *= inv_length;
+            return length;
+        }
+        mVals[0] = mVals[1] = mVals[2] = 0.0f;
+        return 0.0f;
+    }
 };
 
-inline void aluVectorSet(aluVector *vector, ALfloat x, ALfloat y, ALfloat z, ALfloat w)
-{
-    vector->v[0] = x;
-    vector->v[1] = y;
-    vector->v[2] = z;
-    vector->v[3] = w;
-}
+class Matrix {
+    alignas(16) std::array<std::array<float,4>,4> mVals{};
 
+public:
+    constexpr Matrix() noexcept = default;
+    constexpr Matrix(float aa, float ab, float ac, float ad,
+                     float ba, float bb, float bc, float bd,
+                     float ca, float cb, float cc, float cd,
+                     float da, float db, float dc, float dd) noexcept
+      : mVals{{{{aa, ab, ac, ad}}, {{ba, bb, bc, bd}}, {{ca, cb, cc, cd}}, {{da, db, dc, dd}}}}
+    { }
+    Matrix(const Matrix &rhs) noexcept
+    { std::copy(rhs.mVals.begin(), rhs.mVals.end(), mVals.begin()); }
 
-struct aluMatrixf {
-    alignas(16) ALfloat m[4][4];
+    Matrix& operator=(const Matrix &rhs) noexcept
+    {
+        std::copy(rhs.mVals.begin(), rhs.mVals.end(), mVals.begin());
+        return *this;
+    }
 
-    static const aluMatrixf Identity;
+    std::array<float,4>& operator[](size_t idx) noexcept { return mVals[idx]; }
+    constexpr const std::array<float,4>& operator[](size_t idx) const noexcept { return mVals[idx]; }
+
+    void setRow(size_t idx, float a, float b, float c, float d) noexcept
+    {
+        mVals[idx][0] = a;
+        mVals[idx][1] = b;
+        mVals[idx][2] = c;
+        mVals[idx][3] = d;
+    }
+
+    static const Matrix &Identity() noexcept
+    {
+        static constexpr Matrix identity{
+            1.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 1.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f
+        };
+        return identity;
+    }
 };
 
-inline void aluMatrixfSetRow(aluMatrixf *matrix, ALuint row,
-                             ALfloat m0, ALfloat m1, ALfloat m2, ALfloat m3)
-{
-    matrix->m[row][0] = m0;
-    matrix->m[row][1] = m1;
-    matrix->m[row][2] = m2;
-    matrix->m[row][3] = m3;
-}
-
-inline void aluMatrixfSet(aluMatrixf *matrix, ALfloat m00, ALfloat m01, ALfloat m02, ALfloat m03,
-                                              ALfloat m10, ALfloat m11, ALfloat m12, ALfloat m13,
-                                              ALfloat m20, ALfloat m21, ALfloat m22, ALfloat m23,
-                                              ALfloat m30, ALfloat m31, ALfloat m32, ALfloat m33)
-{
-    aluMatrixfSetRow(matrix, 0, m00, m01, m02, m03);
-    aluMatrixfSetRow(matrix, 1, m10, m11, m12, m13);
-    aluMatrixfSetRow(matrix, 2, m20, m21, m22, m23);
-    aluMatrixfSetRow(matrix, 3, m30, m31, m32, m33);
-}
+} // namespace alu
 
 #endif /* COMMON_VECMAT_H */

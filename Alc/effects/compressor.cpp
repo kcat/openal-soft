@@ -81,7 +81,8 @@ void ALcompressorState::update(const ALCcontext *context, const ALeffectslot *sl
     mOutBuffer = device->FOAOut.Buffer;
     mOutChannels = device->FOAOut.NumChannels;
     for(ALsizei i{0};i < 4;i++)
-        ComputePanGains(&device->FOAOut, aluMatrixf::Identity.m[i], slot->Params.Gain, mGain[i]);
+        ComputePanGains(&device->FOAOut, alu::Matrix::Identity()[i].data(),
+            slot->Params.Gain, mGain[i]);
 }
 
 void ALcompressorState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

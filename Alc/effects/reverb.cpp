@@ -68,20 +68,20 @@ ALfloat ReverbBoost = 1.0f;
  * tetrahedron, but it's close enough. Should the model be extended to 8-lines
  * in the future, true opposites can be used.
  */
-static const aluMatrixf B2A = {{
-    { 0.288675134595f,  0.288675134595f,  0.288675134595f,  0.288675134595f },
-    { 0.288675134595f, -0.288675134595f, -0.288675134595f,  0.288675134595f },
-    { 0.288675134595f,  0.288675134595f, -0.288675134595f, -0.288675134595f },
-    { 0.288675134595f, -0.288675134595f,  0.288675134595f, -0.288675134595f }
-}};
+static constexpr alu::Matrix B2A{
+    0.288675134595f,  0.288675134595f,  0.288675134595f,  0.288675134595f,
+    0.288675134595f, -0.288675134595f, -0.288675134595f,  0.288675134595f,
+    0.288675134595f,  0.288675134595f, -0.288675134595f, -0.288675134595f,
+    0.288675134595f, -0.288675134595f,  0.288675134595f, -0.288675134595f
+};
 
 /* Converts A-Format to B-Format. */
-static const aluMatrixf A2B = {{
-    { 0.866025403785f,  0.866025403785f,  0.866025403785f,  0.866025403785f },
-    { 0.866025403785f, -0.866025403785f,  0.866025403785f, -0.866025403785f },
-    { 0.866025403785f, -0.866025403785f, -0.866025403785f,  0.866025403785f },
-    { 0.866025403785f,  0.866025403785f, -0.866025403785f, -0.866025403785f }
-}};
+static constexpr alu::Matrix A2B{
+    0.866025403785f,  0.866025403785f,  0.866025403785f,  0.866025403785f,
+    0.866025403785f, -0.866025403785f,  0.866025403785f, -0.866025403785f,
+    0.866025403785f, -0.866025403785f, -0.866025403785f,  0.866025403785f,
+    0.866025403785f,  0.866025403785f, -0.866025403785f, -0.866025403785f
+};
 
 static const ALfloat FadeStep = 1.0f / FADE_SAMPLES;
 
@@ -755,12 +755,8 @@ static ALvoid UpdateLateLines(const ALfloat density, const ALfloat diffusion, co
  * focal strength. This function results in a B-Format transformation matrix
  * that spatially focuses the signal in the desired direction.
  */
-static aluMatrixf GetTransformFromVector(const ALfloat *vec)
+static alu::Matrix GetTransformFromVector(const ALfloat *vec)
 {
-    aluMatrixf focus;
-    ALfloat norm[3];
-    ALfloat mag;
-
     /* Normalize the panning vector according to the N3D scale, which has an
      * extra sqrt(3) term on the directional components. Converting from OpenAL
      * to B-Format also requires negating X (ACN 1) and Z (ACN 3). Note however
@@ -768,7 +764,8 @@ static aluMatrixf GetTransformFromVector(const ALfloat *vec)
      * rest of OpenAL which use right-handed. This is fixed by negating Z,
      * which cancels out with the B-Format Z negation.
      */
-    mag = sqrtf(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
+    ALfloat norm[3];
+    ALfloat mag{sqrtf(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2])};
     if(mag > 1.0f)
     {
         norm[0] = vec[0] / mag * -SQRTF_3;
@@ -787,50 +784,47 @@ static aluMatrixf GetTransformFromVector(const ALfloat *vec)
         norm[2] = vec[2] * SQRTF_3;
     }
 
-    aluMatrixfSet(&focus,
+    return alu::Matrix{
         1.0f,   0.0f,    0.0f,   0.0f,
         norm[0], 1.0f-mag, 0.0f, 0.0f,
         norm[1], 0.0f, 1.0f-mag, 0.0f,
         norm[2], 0.0f, 0.0f, 1.0f-mag
-    );
-
-    return focus;
+    };
 }
 
 /* Update the early and late 3D panning gains. */
 static ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, const ALfloat earlyGain, const ALfloat lateGain, ReverbState *State)
 {
-    aluMatrixf transform, rot;
-    ALsizei i;
-
     State->mOutBuffer = Device->FOAOut.Buffer;
     State->mOutChannels = Device->FOAOut.NumChannels;
 
-    /* Note: _res is transposed. */
-#define MATRIX_MULT(_res, _m1, _m2) do {                                                   \
-    int row, col;                                                                          \
-    for(col = 0;col < 4;col++)                                                             \
-    {                                                                                      \
-        for(row = 0;row < 4;row++)                                                         \
-            _res.m[col][row] = _m1.m[row][0]*_m2.m[0][col] + _m1.m[row][1]*_m2.m[1][col] + \
-                               _m1.m[row][2]*_m2.m[2][col] + _m1.m[row][3]*_m2.m[3][col];  \
-    }                                                                                      \
-} while(0)
+    /* Note: ret is transposed. */
+    auto MatrixMult = [](const alu::Matrix &m1, const alu::Matrix &m2) noexcept -> alu::Matrix
+    {
+        alu::Matrix ret;
+        for(int col{0};col < 4;col++)
+        {
+            for(int row{0};row < 4;row++)
+                ret[col][row] = m1[row][0]*m2[0][col] + m1[row][1]*m2[1][col] +
+                                m1[row][2]*m2[2][col] + m1[row][3]*m2[3][col];
+        }
+        return ret;
+    };
+
     /* Create a matrix that first converts A-Format to B-Format, then
      * transforms the B-Format signal according to the panning vector.
      */
-    rot = GetTransformFromVector(ReflectionsPan);
-    MATRIX_MULT(transform, rot, A2B);
-    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputePanGains(&Device->FOAOut, transform.m[i], earlyGain,
+    alu::Matrix rot{GetTransformFromVector(ReflectionsPan)};
+    alu::Matrix transform{MatrixMult(rot, A2B)};
+    for(ALsizei i{0};i < MAX_EFFECT_CHANNELS;i++)
+        ComputePanGains(&Device->FOAOut, transform[i].data(), earlyGain,
                         State->mEarly.PanGain[i]);
 
     rot = GetTransformFromVector(LateReverbPan);
-    MATRIX_MULT(transform, rot, A2B);
-    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputePanGains(&Device->FOAOut, transform.m[i], lateGain,
+    transform = MatrixMult(rot, A2B);
+    for(ALsizei i{0};i < MAX_EFFECT_CHANNELS;i++)
+        ComputePanGains(&Device->FOAOut, transform[i].data(), lateGain,
                         State->mLate.PanGain[i]);
-#undef MATRIX_MULT
 }
 
 void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props)
@@ -1380,7 +1374,7 @@ void ReverbState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesI
         for(c = 0;c < NUM_LINES;c++)
         {
             std::fill(std::begin(afmt[c]), std::end(afmt[c]), 0.0f);
-            MixRowSamples(afmt[c], B2A.m[c],
+            MixRowSamples(afmt[c], B2A[c].data(),
                 SamplesIn, MAX_EFFECT_CHANNELS, base, todo
             );
         }

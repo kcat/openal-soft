@@ -35,8 +35,8 @@ struct ALlistener {
     std::atomic<ALlistenerProps*> Update{nullptr};
 
     struct {
-        aluMatrixf Matrix;
-        aluVector  Velocity;
+        alu::Matrix Matrix;
+        alu::Vector Velocity;
 
         ALfloat Gain;
         ALfloat MetersPerUnit;

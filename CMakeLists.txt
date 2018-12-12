@@ -698,7 +698,6 @@ SET(COMMON_OBJS
     common/math_defs.h
     common/threads.cpp
     common/threads.h
-    common/vecmat.cpp
     common/vecmat.h
 )
 SET(OPENAL_OBJS

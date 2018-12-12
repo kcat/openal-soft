@@ -26,6 +26,7 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include <cmath>
 #include <algorithm>
 
 #include "alMain.h"
@@ -105,7 +106,6 @@ struct ChanMap {
 
 HrtfDirectMixerFunc MixDirectHrtf = MixDirectHrtf_C;
 
-
 inline HrtfDirectMixerFunc SelectHrtfMixer(void)
 {
 #ifdef HAVE_NEON
@@ -120,22 +120,6 @@ inline HrtfDirectMixerFunc SelectHrtfMixer(void)
     return MixDirectHrtf_C;
 }
 
-} // namespace
-
-void aluInit(void)
-{
-    MixDirectHrtf = SelectHrtfMixer();
-}
-
-
-void DeinitVoice(ALvoice *voice) noexcept
-{
-    delete voice->Update.exchange(nullptr, std::memory_order_acq_rel);
-    voice->~ALvoice();
-}
-
-
-namespace {
 
 void ProcessHrtf(ALCdevice *device, ALsizei SamplesToDo)
 {
@@ -203,6 +187,19 @@ void ProcessBs2b(ALCdevice *device, ALsizei SamplesToDo)
 
 } // namespace
 
+void aluInit(void)
+{
+    MixDirectHrtf = SelectHrtfMixer();
+}
+
+
+void DeinitVoice(ALvoice *voice) noexcept
+{
+    delete voice->Update.exchange(nullptr, std::memory_order_acq_rel);
+    voice->~ALvoice();
+}
+
+
 void aluSelectPostProcess(ALCdevice *device)
 {
     if(device->HrtfHandle)
@@ -216,7 +213,7 @@ void aluSelectPostProcess(ALCdevice *device)
     else if(device->Bs2b)
         device->PostProcess = ProcessBs2b;
     else
-        device->PostProcess = NULL;
+        device->PostProcess = nullptr;
 }
 
 
@@ -228,8 +225,8 @@ void aluSelectPostProcess(ALCdevice *device)
  */
 void BsincPrepare(const ALuint increment, BsincState *state, const BSincTable *table)
 {
-    ALfloat sf = 0.0f;
-    ALsizei si = BSINC_SCALE_COUNT-1;
+    ALsizei si{BSINC_SCALE_COUNT - 1};
+    ALfloat sf{0.0f};
 
     if(increment > FRACTIONONE)
     {
@@ -240,7 +237,7 @@ void BsincPrepare(const ALuint increment, BsincState *state, const BSincTable *t
          * to reduce the transition ripple caused by interpolating different
          * scales of the sinc function.
          */
-        sf = 1.0f - cosf(asinf(sf - si));
+        sf = 1.0f - std::cos(std::asin(sf - si));
     }
 
     state->sf = sf;
@@ -277,7 +274,7 @@ inline ALfloat aluDotproduct(const aluVector *vec1, const aluVector *vec2)
 
 ALfloat aluNormalize(ALfloat *vec)
 {
-    ALfloat length = sqrtf(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
+    const ALfloat length{std::sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2])};
     if(length > FLT_EPSILON)
     {
         ALfloat inv_length = 1.0f/length;
@@ -292,7 +289,7 @@ ALfloat aluNormalize(ALfloat *vec)
 
 void aluMatrixfFloat3(ALfloat *vec, ALfloat w, const aluMatrixf *mtx)
 {
-    ALfloat v[4] = { vec[0], vec[1], vec[2], w };
+    const ALfloat v[4]{ vec[0], vec[1], vec[2], w };
 
     vec[0] = v[0]*mtx->m[0][0] + v[1]*mtx->m[1][0] + v[2]*mtx->m[2][0] + v[3]*mtx->m[3][0];
     vec[1] = v[0]*mtx->m[0][1] + v[1]*mtx->m[1][1] + v[2]*mtx->m[2][1] + v[3]*mtx->m[3][1];
@@ -326,12 +323,10 @@ void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
 
 bool CalcContextParams(ALCcontext *Context)
 {
-    ALlistener &Listener = Context->Listener;
-    struct ALcontextProps *props;
-
-    props = Context->Update.exchange(nullptr, std::memory_order_acq_rel);
+    ALcontextProps *props{Context->Update.exchange(nullptr, std::memory_order_acq_rel)};
     if(!props) return false;
 
+    ALlistener &Listener = Context->Listener;
     Listener.Params.MetersPerUnit = props->MetersPerUnit;
 
     Listener.Params.DopplerFactor = props->DopplerFactor;
@@ -350,23 +345,17 @@ bool CalcContextParams(ALCcontext *Context)
 bool CalcListenerParams(ALCcontext *Context)
 {
     ALlistener &Listener = Context->Listener;
-    ALfloat N[3], V[3], U[3], P[3];
-    struct ALlistenerProps *props;
-    aluVector vel;
 
-    props = Listener.Update.exchange(nullptr, std::memory_order_acq_rel);
+    ALlistenerProps *props{Listener.Update.exchange(nullptr, std::memory_order_acq_rel)};
     if(!props) return false;
 
     /* AT then UP */
-    N[0] = props->Forward[0];
-    N[1] = props->Forward[1];
-    N[2] = props->Forward[2];
+    ALfloat N[3]{ props->Forward[0], props->Forward[1], props->Forward[2] };
     aluNormalize(N);
-    V[0] = props->Up[0];
-    V[1] = props->Up[1];
-    V[2] = props->Up[2];
+    ALfloat V[3]{ props->Up[0], props->Up[1], props->Up[2] };
     aluNormalize(V);
     /* Build and normalize right-vector */
+    ALfloat U[3];
     aluCrossproduct(N, V, U);
     aluNormalize(U);
 
@@ -377,12 +366,11 @@ bool CalcListenerParams(ALCcontext *Context)
          0.0,  0.0,   0.0, 1.0
     );
 
-    P[0] = props->Position[0];
-    P[1] = props->Position[1];
-    P[2] = props->Position[2];
+    ALfloat P[3]{ props->Position[0], props->Position[1], props->Position[2] };
     aluMatrixfFloat3(P, 1.0, &Listener.Params.Matrix);
     aluMatrixfSetRow(&Listener.Params.Matrix, 3, -P[0], -P[1], -P[2], 1.0f);
 
+    aluVector vel;
     aluVectorSet(&vel, props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0f);
     Listener.Params.Velocity = aluMatrixfVector(&Listener.Params.Matrix, &vel);
 
@@ -394,13 +382,13 @@ bool CalcListenerParams(ALCcontext *Context)
 
 bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
 {
-    struct ALeffectslotProps *props;
-    EffectState *state;
-
-    props = slot->Update.exchange(nullptr, std::memory_order_acq_rel);
+    ALeffectslotProps *props{slot->Update.exchange(nullptr, std::memory_order_acq_rel)};
     if(!props && !force) return false;
 
-    if(props)
+    EffectState *state;
+    if(!props)
+        state = slot->Params.mEffectState;
+    else
     {
         slot->Params.Gain = props->Gain;
         slot->Params.AuxSendAuto = props->AuxSendAuto;
@@ -462,40 +450,38 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
 
         AtomicReplaceHead(context->FreeEffectslotProps, props);
     }
-    else
-        state = slot->Params.mEffectState;
 
     state->update(context, slot, &slot->Params.EffectProps);
     return true;
 }
 
 
-constexpr struct ChanMap MonoMap[1] = {
+constexpr struct ChanMap MonoMap[1]{
     { FrontCenter, 0.0f, 0.0f }
-}, RearMap[2] = {
+}, RearMap[2]{
     { BackLeft,  DEG2RAD(-150.0f), DEG2RAD(0.0f) },
     { BackRight, DEG2RAD( 150.0f), DEG2RAD(0.0f) }
-}, QuadMap[4] = {
+}, QuadMap[4]{
     { FrontLeft,  DEG2RAD( -45.0f), DEG2RAD(0.0f) },
     { FrontRight, DEG2RAD(  45.0f), DEG2RAD(0.0f) },
     { BackLeft,   DEG2RAD(-135.0f), DEG2RAD(0.0f) },
     { BackRight,  DEG2RAD( 135.0f), DEG2RAD(0.0f) }
-}, X51Map[6] = {
+}, X51Map[6]{
     { FrontLeft,   DEG2RAD( -30.0f), DEG2RAD(0.0f) },
     { FrontRight,  DEG2RAD(  30.0f), DEG2RAD(0.0f) },
     { FrontCenter, DEG2RAD(   0.0f), DEG2RAD(0.0f) },
     { LFE, 0.0f, 0.0f },
     { SideLeft,    DEG2RAD(-110.0f), DEG2RAD(0.0f) },
     { SideRight,   DEG2RAD( 110.0f), DEG2RAD(0.0f) }
-}, X61Map[7] = {
-    { FrontLeft,    DEG2RAD(-30.0f), DEG2RAD(0.0f) },
-    { FrontRight,   DEG2RAD( 30.0f), DEG2RAD(0.0f) },
-    { FrontCenter,  DEG2RAD(  0.0f), DEG2RAD(0.0f) },
+}, X61Map[7]{
+    { FrontLeft,   DEG2RAD(-30.0f), DEG2RAD(0.0f) },
+    { FrontRight,  DEG2RAD( 30.0f), DEG2RAD(0.0f) },
+    { FrontCenter, DEG2RAD(  0.0f), DEG2RAD(0.0f) },
     { LFE, 0.0f, 0.0f },
-    { BackCenter,   DEG2RAD(180.0f), DEG2RAD(0.0f) },
-    { SideLeft,     DEG2RAD(-90.0f), DEG2RAD(0.0f) },
-    { SideRight,    DEG2RAD( 90.0f), DEG2RAD(0.0f) }
-}, X71Map[8] = {
+    { BackCenter,  DEG2RAD(180.0f), DEG2RAD(0.0f) },
+    { SideLeft,    DEG2RAD(-90.0f), DEG2RAD(0.0f) },
+    { SideRight,   DEG2RAD( 90.0f), DEG2RAD(0.0f) }
+}, X71Map[8]{
     { FrontLeft,   DEG2RAD( -30.0f), DEG2RAD(0.0f) },
     { FrontRight,  DEG2RAD(  30.0f), DEG2RAD(0.0f) },
     { FrontCenter, DEG2RAD(   0.0f), DEG2RAD(0.0f) },
@@ -515,19 +501,16 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                            const ALvoicePropsBase *props, const ALlistener &Listener,
                            const ALCdevice *Device)
 {
-    struct ChanMap StereoMap[2] = {
+    ChanMap StereoMap[2]{
         { FrontLeft,  DEG2RAD(-30.0f), DEG2RAD(0.0f) },
         { FrontRight, DEG2RAD( 30.0f), DEG2RAD(0.0f) }
     };
-    bool DirectChannels = props->DirectChannels;
-    const ALsizei NumSends = Device->NumAuxSends;
-    const ALuint Frequency = Device->Frequency;
-    const struct ChanMap *chans = NULL;
-    ALsizei num_channels = 0;
-    bool isbformat = false;
-    ALfloat downmix_gain = 1.0f;
-    ALsizei c, i;
 
+    bool DirectChannels{props->DirectChannels != AL_FALSE};
+    const ChanMap *chans{nullptr};
+    ALsizei num_channels{0};
+    bool isbformat{false};
+    ALfloat downmix_gain{1.0f};
     switch(Buffer->FmtChannels)
     {
     case FmtMono:
@@ -600,6 +583,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
             ClearArray(params.Gains.Target);
         }
     );
+    const ALsizei NumSends{Device->NumAuxSends};
     std::for_each(voice->Send+0, voice->Send+NumSends,
         [num_channels](ALvoice::SendData &send) -> void
         {
@@ -620,15 +604,14 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
              * the first (W) channel as a normal mono sound and silence the
              * others.
              */
-            ALfloat coeffs[MAX_AMBI_COEFFS];
 
             if(Device->AvgSpeakerDist > 0.0f)
             {
-                ALfloat mdist = Distance * Listener.Params.MetersPerUnit;
-                ALfloat w0 = SPEEDOFSOUNDMETRESPERSEC /
-                             (mdist * (ALfloat)Device->Frequency);
-                ALfloat w1 = SPEEDOFSOUNDMETRESPERSEC /
-                             (Device->AvgSpeakerDist * (ALfloat)Device->Frequency);
+                const ALfloat mdist{Distance * Listener.Params.MetersPerUnit};
+                const ALfloat w1{SPEEDOFSOUNDMETRESPERSEC /
+                    (Device->AvgSpeakerDist * (ALfloat)Device->Frequency)};
+                ALfloat w0{SPEEDOFSOUNDMETRESPERSEC /
+                    (mdist * (ALfloat)Device->Frequency)};
                 /* Clamp w0 for really close distances, to prevent excessive
                  * bass.
                  */
@@ -647,16 +630,16 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
              * moved to +/-90 degrees for direct right and left speaker
              * responses.
              */
+            ALfloat coeffs[MAX_AMBI_COEFFS];
             CalcAngleCoeffs((Device->Render_Mode==StereoPair) ? ScaleAzimuthFront(Azi, 1.5f) : Azi,
                             Elev, Spread, coeffs);
 
             /* NOTE: W needs to be scaled by sqrt(2) due to FuMa normalization. */
             ComputePanGains(&Device->Dry, coeffs, DryGain*SQRTF_2,
-                               voice->Direct.Params[0].Gains.Target);
-            for(i = 0;i < NumSends;i++)
+                voice->Direct.Params[0].Gains.Target);
+            for(ALsizei i{0};i < NumSends;i++)
             {
-                const ALeffectslot *Slot = SendSlots[i];
-                if(Slot)
+                if(const ALeffectslot *Slot{SendSlots[i]})
                     ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, coeffs,
                         WetGain[i]*SQRTF_2, voice->Send[i].Params[0].Gains.Target
                     );
@@ -664,12 +647,6 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
         }
         else
         {
-            /* Local B-Format sources have their XYZ channels rotated according
-             * to the orientation.
-             */
-            ALfloat N[3], V[3], U[3];
-            aluMatrixf matrix;
-
             if(Device->AvgSpeakerDist > 0.0f)
             {
                 /* NOTE: The NFCtrlFilters were created with a w0 of 0, which
@@ -685,14 +662,15 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 voice->Flags |= VOICE_HAS_NFC;
             }
 
+            /* Local B-Format sources have their XYZ channels rotated according
+             * to the orientation.
+             */
             /* AT then UP */
-            N[0] = props->Orientation[0][0];
-            N[1] = props->Orientation[0][1];
-            N[2] = props->Orientation[0][2];
+            ALfloat N[3]{ props->Orientation[0][0], props->Orientation[0][1],
+                props->Orientation[0][2] };
             aluNormalize(N);
-            V[0] = props->Orientation[1][0];
-            V[1] = props->Orientation[1][1];
-            V[2] = props->Orientation[1][2];
+            ALfloat V[3]{ props->Orientation[1][0], props->Orientation[1][1],
+                props->Orientation[1][2] };
             aluNormalize(V);
             if(!props->HeadRelative)
             {
@@ -701,6 +679,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 aluMatrixfFloat3(V, 0.0f, lmatrix);
             }
             /* Build and normalize right-vector */
+            ALfloat U[3];
             aluCrossproduct(N, V, U);
             aluNormalize(U);
 
@@ -708,6 +687,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
              * matrix is transposed, for the inputs to align on the rows and
              * outputs on the columns.
              */
+            aluMatrixf matrix;
             aluMatrixfSet(&matrix,
                 // ACN0           ACN1           ACN2           ACN3
                 SQRTF_2,          0.0f,          0.0f,          0.0f, // Ambi W
@@ -718,19 +698,16 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
 
             voice->Direct.Buffer = Device->FOAOut.Buffer;
             voice->Direct.Channels = Device->FOAOut.NumChannels;
-            for(c = 0;c < num_channels;c++)
+            for(ALsizei c{0};c < num_channels;c++)
                 ComputePanGains(&Device->FOAOut, matrix.m[c], DryGain,
                                 voice->Direct.Params[c].Gains.Target);
-            for(i = 0;i < NumSends;i++)
+            for(ALsizei i{0};i < NumSends;i++)
             {
-                const ALeffectslot *Slot = SendSlots[i];
-                if(Slot)
-                {
-                    for(c = 0;c < num_channels;c++)
-                        ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels,
-                            matrix.m[c], WetGain[i], voice->Send[i].Params[c].Gains.Target
+                if(const ALeffectslot *Slot{SendSlots[i]})
+                    for(ALsizei c{0};c < num_channels;c++)
+                        ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, matrix.m[c],
+                            WetGain[i], voice->Send[i].Params[c].Gains.Target
                         );
-                }
             }
         }
     }
@@ -742,26 +719,25 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
         voice->Direct.Buffer = Device->RealOut.Buffer;
         voice->Direct.Channels = Device->RealOut.NumChannels;
 
-        for(c = 0;c < num_channels;c++)
+        for(ALsizei c{0};c < num_channels;c++)
         {
-            int idx = GetChannelIdxByName(&Device->RealOut, chans[c].channel);
+            int idx{GetChannelIdxByName(&Device->RealOut, chans[c].channel)};
             if(idx != -1) voice->Direct.Params[c].Gains.Target[idx] = DryGain;
         }
 
         /* Auxiliary sends still use normal channel panning since they mix to
          * B-Format, which can't channel-match.
          */
-        for(c = 0;c < num_channels;c++)
+        for(ALsizei c{0};c < num_channels;c++)
         {
             ALfloat coeffs[MAX_AMBI_COEFFS];
             CalcAngleCoeffs(chans[c].angle, chans[c].elevation, 0.0f, coeffs);
 
-            for(i = 0;i < NumSends;i++)
+            for(ALsizei i{0};i < NumSends;i++)
             {
-                const ALeffectslot *Slot = SendSlots[i];
-                if(Slot)
-                    ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels,
-                        coeffs, WetGain[i], voice->Send[i].Params[c].Gains.Target
+                if(const ALeffectslot *Slot{SendSlots[i]})
+                    ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, coeffs,
+                        WetGain[i], voice->Send[i].Params[c].Gains.Target
                     );
             }
         }
@@ -776,8 +752,6 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
 
         if(Distance > FLT_EPSILON)
         {
-            ALfloat coeffs[MAX_AMBI_COEFFS];
-
             /* Get the HRIR coefficients and delays just once, for the given
              * source direction.
              */
@@ -787,7 +761,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
             voice->Direct.Params[0].Hrtf.Target.Gain = DryGain * downmix_gain;
 
             /* Remaining channels use the same results as the first. */
-            for(c = 1;c < num_channels;c++)
+            for(ALsizei c{1};c < num_channels;c++)
             {
                 /* Skip LFE */
                 if(chans[c].channel != LFE)
@@ -797,19 +771,18 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
             /* Calculate the directional coefficients once, which apply to all
              * input channels of the source sends.
              */
+            ALfloat coeffs[MAX_AMBI_COEFFS];
             CalcAngleCoeffs(Azi, Elev, Spread, coeffs);
 
-            for(i = 0;i < NumSends;i++)
+            for(ALsizei i{0};i < NumSends;i++)
             {
-                const ALeffectslot *Slot = SendSlots[i];
-                if(Slot)
-                    for(c = 0;c < num_channels;c++)
+                if(const ALeffectslot *Slot{SendSlots[i]})
+                    for(ALsizei c{0};c < num_channels;c++)
                     {
                         /* Skip LFE */
                         if(chans[c].channel != LFE)
-                            ComputePanningGainsBF(Slot->ChanMap,
-                                Slot->NumChannels, coeffs, WetGain[i] * downmix_gain,
-                                voice->Send[i].Params[c].Gains.Target
+                            ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, coeffs,
+                                WetGain[i]*downmix_gain, voice->Send[i].Params[c].Gains.Target
                             );
                     }
             }
@@ -820,15 +793,11 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
              * relative location around the listener, providing "virtual
              * speaker" responses.
              */
-            for(c = 0;c < num_channels;c++)
+            for(ALsizei c{0};c < num_channels;c++)
             {
-                ALfloat coeffs[MAX_AMBI_COEFFS];
-
+                /* Skip LFE */
                 if(chans[c].channel == LFE)
-                {
-                    /* Skip LFE */
                     continue;
-                }
 
                 /* Get the HRIR coefficients and delays for this channel
                  * position.
@@ -841,14 +810,14 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 voice->Direct.Params[c].Hrtf.Target.Gain = DryGain;
 
                 /* Normal panning for auxiliary sends. */
+                ALfloat coeffs[MAX_AMBI_COEFFS];
                 CalcAngleCoeffs(chans[c].angle, chans[c].elevation, Spread, coeffs);
 
-                for(i = 0;i < NumSends;i++)
+                for(ALsizei i{0};i < NumSends;i++)
                 {
-                    const ALeffectslot *Slot = SendSlots[i];
-                    if(Slot)
-                        ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels,
-                            coeffs, WetGain[i], voice->Send[i].Params[c].Gains.Target
+                    if(const ALeffectslot *Slot{SendSlots[i]})
+                        ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, coeffs,
+                            WetGain[i], voice->Send[i].Params[c].Gains.Target
                         );
                 }
             }
@@ -862,38 +831,37 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
 
         if(Distance > FLT_EPSILON)
         {
-            ALfloat coeffs[MAX_AMBI_COEFFS];
-            ALfloat w0 = 0.0f;
-
             /* Calculate NFC filter coefficient if needed. */
             if(Device->AvgSpeakerDist > 0.0f)
             {
-                ALfloat mdist = Distance * Listener.Params.MetersPerUnit;
-                ALfloat w1 = SPEEDOFSOUNDMETRESPERSEC /
-                             (Device->AvgSpeakerDist * (ALfloat)Device->Frequency);
-                w0 = SPEEDOFSOUNDMETRESPERSEC /
-                     (mdist * (ALfloat)Device->Frequency);
+                const ALfloat mdist{Distance * Listener.Params.MetersPerUnit};
+                const ALfloat w1{SPEEDOFSOUNDMETRESPERSEC /
+                    (Device->AvgSpeakerDist * (ALfloat)Device->Frequency)};
+                ALfloat w0{SPEEDOFSOUNDMETRESPERSEC /
+                    (mdist * (ALfloat)Device->Frequency)};
                 /* Clamp w0 for really close distances, to prevent excessive
                  * bass.
                  */
                 w0 = minf(w0, w1*4.0f);
 
                 /* Adjust NFC filters. */
-                for(c = 0;c < num_channels;c++)
+                for(ALsizei c{0};c < num_channels;c++)
                     voice->Direct.Params[c].NFCtrlFilter.adjust(w0);
 
-                for(i = 0;i < MAX_AMBI_ORDER+1;i++)
-                    voice->Direct.ChannelsPerOrder[i] = Device->NumChannelsPerOrder[i];
+                std::copy(std::begin(Device->NumChannelsPerOrder),
+                    std::end(Device->NumChannelsPerOrder),
+                    std::begin(voice->Direct.ChannelsPerOrder));
                 voice->Flags |= VOICE_HAS_NFC;
             }
 
             /* Calculate the directional coefficients once, which apply to all
              * input channels.
              */
+            ALfloat coeffs[MAX_AMBI_COEFFS];
             CalcAngleCoeffs((Device->Render_Mode==StereoPair) ? ScaleAzimuthFront(Azi, 1.5f) : Azi,
                             Elev, Spread, coeffs);
 
-            for(c = 0;c < num_channels;c++)
+            for(ALsizei c{0};c < num_channels;c++)
             {
                 /* Special-case LFE */
                 if(chans[c].channel == LFE)
@@ -910,25 +878,21 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                                 voice->Direct.Params[c].Gains.Target);
             }
 
-            for(i = 0;i < NumSends;i++)
+            for(ALsizei i{0};i < NumSends;i++)
             {
-                const ALeffectslot *Slot = SendSlots[i];
-                if(Slot)
-                    for(c = 0;c < num_channels;c++)
+                if(const ALeffectslot *Slot{SendSlots[i]})
+                    for(ALsizei c{0};c < num_channels;c++)
                     {
                         /* Skip LFE */
                         if(chans[c].channel != LFE)
-                            ComputePanningGainsBF(Slot->ChanMap,
-                                Slot->NumChannels, coeffs, WetGain[i] * downmix_gain,
-                                voice->Send[i].Params[c].Gains.Target
+                            ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, coeffs,
+                                WetGain[i]*downmix_gain, voice->Send[i].Params[c].Gains.Target
                             );
                     }
             }
         }
         else
         {
-            ALfloat w0 = 0.0f;
-
             if(Device->AvgSpeakerDist > 0.0f)
             {
                 /* If the source distance is 0, set w0 to w1 to act as a pass-
@@ -936,21 +900,20 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                  * filters so they keep an appropriate history, in case the
                  * source moves away from the listener.
                  */
-                w0 = SPEEDOFSOUNDMETRESPERSEC /
-                     (Device->AvgSpeakerDist * (ALfloat)Device->Frequency);
+                const ALfloat w0{SPEEDOFSOUNDMETRESPERSEC /
+                    (Device->AvgSpeakerDist * (ALfloat)Device->Frequency)};
 
-                for(c = 0;c < num_channels;c++)
+                for(ALsizei c{0};c < num_channels;c++)
                     voice->Direct.Params[c].NFCtrlFilter.adjust(w0);
 
-                for(i = 0;i < MAX_AMBI_ORDER+1;i++)
-                    voice->Direct.ChannelsPerOrder[i] = Device->NumChannelsPerOrder[i];
+                std::copy(std::begin(Device->NumChannelsPerOrder),
+                    std::end(Device->NumChannelsPerOrder),
+                    std::begin(voice->Direct.ChannelsPerOrder));
                 voice->Flags |= VOICE_HAS_NFC;
             }
 
-            for(c = 0;c < num_channels;c++)
+            for(ALsizei c{0};c < num_channels;c++)
             {
-                ALfloat coeffs[MAX_AMBI_COEFFS];
-
                 /* Special-case LFE */
                 if(chans[c].channel == LFE)
                 {
@@ -962,6 +925,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                     continue;
                 }
 
+                ALfloat coeffs[MAX_AMBI_COEFFS];
                 CalcAngleCoeffs(
                     (Device->Render_Mode==StereoPair) ? ScaleAzimuthFront(chans[c].angle, 3.0f)
                                                       : chans[c].angle,
@@ -969,11 +933,10 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 );
 
                 ComputePanGains(&Device->Dry, coeffs, DryGain,
-                                voice->Direct.Params[c].Gains.Target);
-                for(i = 0;i < NumSends;i++)
+                    voice->Direct.Params[c].Gains.Target);
+                for(ALsizei i{0};i < NumSends;i++)
                 {
-                    const ALeffectslot *Slot = SendSlots[i];
-                    if(Slot)
+                    if(const ALeffectslot *Slot{SendSlots[i]})
                         ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels,
                             coeffs, WetGain[i], voice->Send[i].Params[c].Gains.Target
                         );
@@ -982,11 +945,12 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
         }
     }
 
+    const auto Frequency = static_cast<ALfloat>(Device->Frequency);
     {
-        ALfloat hfScale = props->Direct.HFReference / Frequency;
-        ALfloat lfScale = props->Direct.LFReference / Frequency;
-        ALfloat gainHF = maxf(DryGainHF, 0.001f); /* Limit -60dB */
-        ALfloat gainLF = maxf(DryGainLF, 0.001f);
+        const ALfloat hfScale{props->Direct.HFReference / Frequency};
+        const ALfloat lfScale{props->Direct.LFReference / Frequency};
+        const ALfloat gainHF{maxf(DryGainHF, 0.001f)}; /* Limit -60dB */
+        const ALfloat gainLF{maxf(DryGainLF, 0.001f)};
 
         voice->Direct.FilterType = AF_None;
         if(gainHF != 1.0f) voice->Direct.FilterType |= AF_LowPass;
@@ -997,18 +961,18 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
         voice->Direct.Params[0].HighPass.setParams(BiquadType::LowShelf,
             gainLF, lfScale, calc_rcpQ_from_slope(gainLF, 1.0f)
         );
-        for(c = 1;c < num_channels;c++)
+        for(ALsizei c{1};c < num_channels;c++)
         {
             voice->Direct.Params[c].LowPass.copyParamsFrom(voice->Direct.Params[0].LowPass);
             voice->Direct.Params[c].HighPass.copyParamsFrom(voice->Direct.Params[0].HighPass);
         }
     }
-    for(i = 0;i < NumSends;i++)
+    for(ALsizei i{0};i < NumSends;i++)
     {
-        ALfloat hfScale = props->Send[i].HFReference / Frequency;
-        ALfloat lfScale = props->Send[i].LFReference / Frequency;
-        ALfloat gainHF = maxf(WetGainHF[i], 0.001f);
-        ALfloat gainLF = maxf(WetGainLF[i], 0.001f);
+        const ALfloat hfScale{props->Send[i].HFReference / Frequency};
+        const ALfloat lfScale{props->Send[i].LFReference / Frequency};
+        const ALfloat gainHF{maxf(WetGainHF[i], 0.001f)};
+        const ALfloat gainLF{maxf(WetGainLF[i], 0.001f)};
 
         voice->Send[i].FilterType = AF_None;
         if(gainHF != 1.0f) voice->Send[i].FilterType |= AF_LowPass;
@@ -1019,7 +983,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
         voice->Send[i].Params[0].HighPass.setParams(BiquadType::LowShelf,
             gainLF, lfScale, calc_rcpQ_from_slope(gainLF, 1.0f)
         );
-        for(c = 1;c < num_channels;c++)
+        for(ALsizei c{1};c < num_channels;c++)
         {
             voice->Send[i].Params[c].LowPass.copyParamsFrom(voice->Send[i].Params[0].LowPass);
             voice->Send[i].Params[c].HighPass.copyParamsFrom(voice->Send[i].Params[0].HighPass);
@@ -1029,19 +993,12 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
 
 void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
 {
-    const ALCdevice *Device = ALContext->Device;
-    const ALlistener &Listener = ALContext->Listener;
-    ALfloat DryGain, DryGainHF, DryGainLF;
-    ALfloat WetGain[MAX_SENDS];
-    ALfloat WetGainHF[MAX_SENDS];
-    ALfloat WetGainLF[MAX_SENDS];
+    const ALCdevice *Device{ALContext->Device};
     ALeffectslot *SendSlots[MAX_SENDS];
-    ALfloat Pitch;
-    ALsizei i;
 
     voice->Direct.Buffer = Device->Dry.Buffer;
     voice->Direct.Channels = Device->Dry.NumChannels;
-    for(i = 0;i < Device->NumAuxSends;i++)
+    for(ALsizei i{0};i < Device->NumAuxSends;i++)
     {
         SendSlots[i] = props->Send[i].Slot;
         if(!SendSlots[i] && i == 0)
@@ -1060,7 +1017,8 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
     }
 
     /* Calculate the stepping value */
-    Pitch = (ALfloat)ALBuffer->Frequency/(ALfloat)Device->Frequency * props->Pitch;
+    const auto Pitch = static_cast<ALfloat>(ALBuffer->Frequency) /
+        static_cast<ALfloat>(Device->Frequency) * props->Pitch;
     if(Pitch > (ALfloat)MAX_PITCH)
         voice->Step = MAX_PITCH<<FRACTIONBITS;
     else
@@ -1072,12 +1030,14 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
     voice->Resampler = SelectResampler(props->Resampler);
 
     /* Calculate gains */
-    DryGain  = clampf(props->Gain, props->MinGain, props->MaxGain);
+    const ALlistener &Listener = ALContext->Listener;
+    ALfloat DryGain{clampf(props->Gain, props->MinGain, props->MaxGain)};
     DryGain *= props->Direct.Gain * Listener.Params.Gain;
     DryGain  = minf(DryGain, GAIN_MIX_MAX);
-    DryGainHF = props->Direct.GainHF;
-    DryGainLF = props->Direct.GainLF;
-    for(i = 0;i < Device->NumAuxSends;i++)
+    ALfloat DryGainHF{props->Direct.GainHF};
+    ALfloat DryGainLF{props->Direct.GainLF};
+    ALfloat WetGain[MAX_SENDS], WetGainHF[MAX_SENDS], WetGainLF[MAX_SENDS];
+    for(ALsizei i{0};i < Device->NumAuxSends;i++)
     {
         WetGain[i]  = clampf(props->Gain, props->MinGain, props->MaxGain);
         WetGain[i] *= props->Send[i].Gain * Listener.Params.Gain;
@@ -1092,37 +1052,26 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
 
 void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const ALbuffer *ALBuffer, const ALCcontext *ALContext)
 {
-    const ALCdevice *Device = ALContext->Device;
+    const ALCdevice *Device{ALContext->Device};
+    const ALsizei NumSends{Device->NumAuxSends};
     const ALlistener &Listener = ALContext->Listener;
-    const ALsizei NumSends = Device->NumAuxSends;
-    aluVector Position, Velocity, Direction, SourceToListener;
-    ALfloat Distance, ClampedDist, DopplerFactor;
+
+    /* Set mixing buffers and get send parameters. */
+    voice->Direct.Buffer = Device->Dry.Buffer;
+    voice->Direct.Channels = Device->Dry.NumChannels;
     ALeffectslot *SendSlots[MAX_SENDS];
     ALfloat RoomRolloff[MAX_SENDS];
     ALfloat DecayDistance[MAX_SENDS];
     ALfloat DecayLFDistance[MAX_SENDS];
     ALfloat DecayHFDistance[MAX_SENDS];
-    ALfloat DryGain, DryGainHF, DryGainLF;
-    ALfloat WetGain[MAX_SENDS];
-    ALfloat WetGainHF[MAX_SENDS];
-    ALfloat WetGainLF[MAX_SENDS];
-    bool directional;
-    ALfloat ev, az;
-    ALfloat spread;
-    ALfloat Pitch;
-    ALint i;
-
-    /* Set mixing buffers and get send parameters. */
-    voice->Direct.Buffer = Device->Dry.Buffer;
-    voice->Direct.Channels = Device->Dry.NumChannels;
-    for(i = 0;i < NumSends;i++)
+    for(ALsizei i{0};i < NumSends;i++)
     {
         SendSlots[i] = props->Send[i].Slot;
         if(!SendSlots[i] && i == 0)
             SendSlots[i] = ALContext->DefaultSlot.get();
         if(!SendSlots[i] || SendSlots[i]->Params.EffectType == AL_EFFECT_NULL)
         {
-            SendSlots[i] = NULL;
+            SendSlots[i] = nullptr;
             RoomRolloff[i] = 0.0f;
             DecayDistance[i] = 0.0f;
             DecayLFDistance[i] = 0.0f;
@@ -1165,7 +1114,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
 
         if(!SendSlots[i])
         {
-            voice->Send[i].Buffer = NULL;
+            voice->Send[i].Buffer = nullptr;
             voice->Send[i].Channels = 0;
         }
         else
@@ -1176,6 +1125,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     }
 
     /* Transform source to listener space (convert to head relative) */
+    aluVector Position, Velocity, Direction;
     aluVectorSet(&Position, props->Position[0], props->Position[1], props->Position[2], 1.0f);
     aluVectorSet(&Direction, props->Direction[0], props->Direction[1], props->Direction[2], 0.0f);
     aluVectorSet(&Velocity, props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0f);
@@ -1196,18 +1146,20 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
         Velocity.v[2] += lvelocity->v[2];
     }
 
-    directional = aluNormalize(Direction.v) > 0.0f;
+    bool directional{aluNormalize(Direction.v) > 0.0f};
+    aluVector SourceToListener;
     SourceToListener.v[0] = -Position.v[0];
     SourceToListener.v[1] = -Position.v[1];
     SourceToListener.v[2] = -Position.v[2];
     SourceToListener.v[3] = 0.0f;
-    Distance = aluNormalize(SourceToListener.v);
+    ALfloat Distance{aluNormalize(SourceToListener.v)};
 
     /* Initial source gain */
-    DryGain = props->Gain;
-    DryGainHF = 1.0f;
-    DryGainLF = 1.0f;
-    for(i = 0;i < NumSends;i++)
+    ALfloat DryGain{props->Gain};
+    ALfloat DryGainHF{1.0f};
+    ALfloat DryGainLF{1.0f};
+    ALfloat WetGain[MAX_SENDS], WetGainHF[MAX_SENDS], WetGainLF[MAX_SENDS];
+    for(ALsizei i{0};i < NumSends;i++)
     {
         WetGain[i] = props->Gain;
         WetGainHF[i] = 1.0f;
@@ -1215,15 +1167,14 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     }
 
     /* Calculate distance attenuation */
-    ClampedDist = Distance;
+    ALfloat ClampedDist{Distance};
 
     switch(Listener.Params.SourceDistanceModel ?
            props->mDistanceModel : Listener.Params.mDistanceModel)
     {
         case DistanceModel::InverseClamped:
             ClampedDist = clampf(ClampedDist, props->RefDistance, props->MaxDistance);
-            if(props->MaxDistance < props->RefDistance)
-                break;
+            if(props->MaxDistance < props->RefDistance) break;
             /*fall-through*/
         case DistanceModel::Inverse:
             if(!(props->RefDistance > 0.0f))
@@ -1232,7 +1183,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
             {
                 ALfloat dist = lerp(props->RefDistance, ClampedDist, props->RolloffFactor);
                 if(dist > 0.0f) DryGain *= props->RefDistance / dist;
-                for(i = 0;i < NumSends;i++)
+                for(ALsizei i{0};i < NumSends;i++)
                 {
                     dist = lerp(props->RefDistance, ClampedDist, RoomRolloff[i]);
                     if(dist > 0.0f) WetGain[i] *= props->RefDistance / dist;
@@ -1242,8 +1193,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
 
         case DistanceModel::LinearClamped:
             ClampedDist = clampf(ClampedDist, props->RefDistance, props->MaxDistance);
-            if(props->MaxDistance < props->RefDistance)
-                break;
+            if(props->MaxDistance < props->RefDistance) break;
             /*fall-through*/
         case DistanceModel::Linear:
             if(!(props->MaxDistance != props->RefDistance))
@@ -1253,7 +1203,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
                 ALfloat attn = props->RolloffFactor * (ClampedDist-props->RefDistance) /
                                (props->MaxDistance-props->RefDistance);
                 DryGain *= maxf(1.0f - attn, 0.0f);
-                for(i = 0;i < NumSends;i++)
+                for(ALsizei i{0};i < NumSends;i++)
                 {
                     attn = RoomRolloff[i] * (ClampedDist-props->RefDistance) /
                            (props->MaxDistance-props->RefDistance);
@@ -1264,17 +1214,16 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
 
         case DistanceModel::ExponentClamped:
             ClampedDist = clampf(ClampedDist, props->RefDistance, props->MaxDistance);
-            if(props->MaxDistance < props->RefDistance)
-                break;
+            if(props->MaxDistance < props->RefDistance) break;
             /*fall-through*/
         case DistanceModel::Exponent:
             if(!(ClampedDist > 0.0f && props->RefDistance > 0.0f))
                 ClampedDist = props->RefDistance;
             else
             {
-                DryGain *= powf(ClampedDist/props->RefDistance, -props->RolloffFactor);
-                for(i = 0;i < NumSends;i++)
-                    WetGain[i] *= powf(ClampedDist/props->RefDistance, -RoomRolloff[i]);
+                DryGain *= std::pow(ClampedDist/props->RefDistance, -props->RolloffFactor);
+                for(ALsizei i{0};i < NumSends;i++)
+                    WetGain[i] *= std::pow(ClampedDist/props->RefDistance, -RoomRolloff[i]);
             }
             break;
 
@@ -1286,12 +1235,10 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     /* Calculate directional soundcones */
     if(directional && props->InnerAngle < 360.0f)
     {
-        ALfloat ConeVolume;
-        ALfloat ConeHF;
-        ALfloat Angle;
-
-        Angle = acosf(aluDotproduct(&Direction, &SourceToListener));
+        ALfloat Angle{std::acos(aluDotproduct(&Direction, &SourceToListener))};
         Angle = RAD2DEG(Angle * ConeScale * 2.0f);
+
+        ALfloat ConeVolume, ConeHF;
         if(!(Angle > props->InnerAngle))
         {
             ConeVolume = 1.0f;
@@ -1314,26 +1261,25 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
         if(props->DryGainHFAuto)
             DryGainHF *= ConeHF;
         if(props->WetGainAuto)
-        {
-            for(i = 0;i < NumSends;i++)
-                WetGain[i] *= ConeVolume;
-        }
+            std::transform(std::begin(WetGain), std::begin(WetGain)+NumSends, std::begin(WetGain),
+                [ConeVolume](ALfloat gain) noexcept -> ALfloat { return gain * ConeVolume; }
+            );
         if(props->WetGainHFAuto)
-        {
-            for(i = 0;i < NumSends;i++)
-                WetGainHF[i] *= ConeHF;
-        }
+            std::transform(std::begin(WetGainHF), std::begin(WetGainHF)+NumSends,
+                std::begin(WetGainHF),
+                [ConeHF](ALfloat gain) noexcept -> ALfloat { return gain * ConeHF; }
+            );
     }
 
     /* Apply gain and frequency filters */
-    DryGain  = clampf(DryGain, props->MinGain, props->MaxGain);
-    DryGain  = minf(DryGain*props->Direct.Gain*Listener.Params.Gain, GAIN_MIX_MAX);
+    DryGain = clampf(DryGain, props->MinGain, props->MaxGain);
+    DryGain = minf(DryGain*props->Direct.Gain*Listener.Params.Gain, GAIN_MIX_MAX);
     DryGainHF *= props->Direct.GainHF;
     DryGainLF *= props->Direct.GainLF;
-    for(i = 0;i < NumSends;i++)
+    for(ALsizei i{0};i < NumSends;i++)
     {
-        WetGain[i]  = clampf(WetGain[i], props->MinGain, props->MaxGain);
-        WetGain[i]  = minf(WetGain[i]*props->Send[i].Gain*Listener.Params.Gain, GAIN_MIX_MAX);
+        WetGain[i] = clampf(WetGain[i], props->MinGain, props->MaxGain);
+        WetGain[i] = minf(WetGain[i]*props->Send[i].Gain*Listener.Params.Gain, GAIN_MIX_MAX);
         WetGainHF[i] *= props->Send[i].GainHF;
         WetGainLF[i] *= props->Send[i].GainLF;
     }
@@ -1341,14 +1287,16 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     /* Distance-based air absorption and initial send decay. */
     if(ClampedDist > props->RefDistance && props->RolloffFactor > 0.0f)
     {
-        ALfloat meters_base = (ClampedDist-props->RefDistance) * props->RolloffFactor *
-                              Listener.Params.MetersPerUnit;
+        ALfloat meters_base{(ClampedDist-props->RefDistance) * props->RolloffFactor *
+                            Listener.Params.MetersPerUnit};
         if(props->AirAbsorptionFactor > 0.0f)
         {
-            ALfloat hfattn = powf(AIRABSORBGAINHF, meters_base * props->AirAbsorptionFactor);
+            ALfloat hfattn{std::pow(AIRABSORBGAINHF, meters_base * props->AirAbsorptionFactor)};
             DryGainHF *= hfattn;
-            for(i = 0;i < NumSends;i++)
-                WetGainHF[i] *= hfattn;
+            std::transform(std::begin(WetGainHF), std::begin(WetGainHF)+NumSends,
+                std::begin(WetGainHF),
+                [hfattn](ALfloat gain) noexcept -> ALfloat { return gain * hfattn; }
+            );
         }
 
         if(props->WetGainAuto)
@@ -1357,23 +1305,21 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
              * source distance in meters. The initial decay of the reverb
              * effect is calculated and applied to the wet path.
              */
-            for(i = 0;i < NumSends;i++)
+            for(ALsizei i{0};i < NumSends;i++)
             {
-                ALfloat gain, gainhf, gainlf;
-
                 if(!(DecayDistance[i] > 0.0f))
                     continue;
 
-                gain = powf(REVERB_DECAY_GAIN, meters_base/DecayDistance[i]);
+                const ALfloat gain{std::pow(REVERB_DECAY_GAIN, meters_base/DecayDistance[i])};
                 WetGain[i] *= gain;
                 /* Yes, the wet path's air absorption is applied with
                  * WetGainAuto on, rather than WetGainHFAuto.
                  */
                 if(gain > 0.0f)
                 {
-                    gainhf = powf(REVERB_DECAY_GAIN, meters_base/DecayHFDistance[i]);
+                    ALfloat gainhf{std::pow(REVERB_DECAY_GAIN, meters_base/DecayHFDistance[i])};
                     WetGainHF[i] *= minf(gainhf / gain, 1.0f);
-                    gainlf = powf(REVERB_DECAY_GAIN, meters_base/DecayLFDistance[i]);
+                    ALfloat gainlf{std::pow(REVERB_DECAY_GAIN, meters_base/DecayLFDistance[i])};
                     WetGainLF[i] *= minf(gainlf / gain, 1.0f);
                 }
             }
@@ -1382,19 +1328,17 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
 
 
     /* Initial source pitch */
-    Pitch = props->Pitch;
+    ALfloat Pitch{props->Pitch};
 
     /* Calculate velocity-based doppler effect */
-    DopplerFactor = props->DopplerFactor * Listener.Params.DopplerFactor;
+    ALfloat DopplerFactor{props->DopplerFactor * Listener.Params.DopplerFactor};
     if(DopplerFactor > 0.0f)
     {
         const aluVector *lvelocity = &Listener.Params.Velocity;
-        const ALfloat SpeedOfSound = Listener.Params.SpeedOfSound;
-        ALfloat vss, vls;
+        ALfloat vss{aluDotproduct(&Velocity, &SourceToListener) * DopplerFactor};
+        ALfloat vls{aluDotproduct(lvelocity, &SourceToListener) * DopplerFactor};
 
-        vss = aluDotproduct(&Velocity, &SourceToListener) * DopplerFactor;
-        vls = aluDotproduct(lvelocity, &SourceToListener) * DopplerFactor;
-
+        const ALfloat SpeedOfSound{Listener.Params.SpeedOfSound};
         if(!(vls < SpeedOfSound))
         {
             /* Listener moving away from the source at the speed of sound.
@@ -1432,27 +1376,25 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
         BsincPrepare(voice->Step, &voice->ResampleState.bsinc, &bsinc12);
     voice->Resampler = SelectResampler(props->Resampler);
 
+    ALfloat ev{0.0f}, az{0.0f};
     if(Distance > 0.0f)
     {
         /* Clamp Y, in case rounding errors caused it to end up outside of
          * -1...+1.
          */
-        ev = asinf(clampf(-SourceToListener.v[1], -1.0f, 1.0f));
+        ev = std::asin(clampf(-SourceToListener.v[1], -1.0f, 1.0f));
         /* Double negation on Z cancels out; negate once for changing source-
          * to-listener to listener-to-source, and again for right-handed coords
          * with -Z in front.
          */
-        az = atan2f(-SourceToListener.v[0], SourceToListener.v[2]*ZScale);
+        az = std::atan2(-SourceToListener.v[0], SourceToListener.v[2]*ZScale);
     }
-    else
-        ev = az = 0.0f;
 
+    ALfloat spread{0.0f};
     if(props->Radius > Distance)
         spread = F_TAU - Distance/props->Radius*F_PI;
     else if(Distance > 0.0f)
-        spread = asinf(props->Radius / Distance) * 2.0f;
-    else
-        spread = 0.0f;
+        spread = std::asin(props->Radius/Distance) * 2.0f;
 
     CalcPanningAndFilters(voice, az, ev, Distance, spread, DryGain, DryGainHF, DryGainLF, WetGain,
                           WetGainLF, WetGainHF, SendSlots, ALBuffer, props, Listener, Device);
@@ -1480,8 +1422,8 @@ void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
         );
         if(LIKELY(buffer != buffers_end))
         {
-            if(voice->Props.SpatializeMode == SpatializeOn ||
-               (voice->Props.SpatializeMode == SpatializeAuto && (*buffer)->FmtChannels == FmtMono))
+            if(voice->Props.SpatializeMode==SpatializeOn ||
+               (voice->Props.SpatializeMode==SpatializeAuto && (*buffer)->FmtChannels==FmtMono))
                 CalcAttnSourceParams(voice, &voice->Props, *buffer, context);
             else
                 CalcNonAttnSourceParams(voice, &voice->Props, *buffer, context);
@@ -1497,8 +1439,8 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray *slots)
     IncrementRef(&ctx->UpdateCount);
     if(LIKELY(!ctx->HoldUpdates.load(std::memory_order_acquire)))
     {
-        bool cforce = CalcContextParams(ctx);
-        bool force = CalcListenerParams(ctx) | cforce;
+        bool cforce{CalcContextParams(ctx)};
+        bool force{CalcListenerParams(ctx) || cforce};
         std::for_each(slots->slot, slots->slot+slots->count,
             [ctx,cforce,&force](ALeffectslot *slot) -> void
             { force |= CalcEffectSlotParams(slot, ctx, cforce); }
@@ -1565,31 +1507,26 @@ void ProcessContext(ALCcontext *ctx, ALsizei SamplesToDo)
 void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*RESTRICT Buffer)[BUFFERSIZE],
                     int lidx, int ridx, int cidx, ALsizei SamplesToDo, ALsizei NumChannels)
 {
-    ALfloat (*RESTRICT lsplit)[BUFFERSIZE] = Stablizer->LSplit;
-    ALfloat (*RESTRICT rsplit)[BUFFERSIZE] = Stablizer->RSplit;
-    ALsizei i;
-
     /* Apply an all-pass to all channels, except the front-left and front-
      * right, so they maintain the same relative phase.
      */
-    for(i = 0;i < NumChannels;i++)
+    for(ALsizei i{0};i < NumChannels;i++)
     {
         if(i == lidx || i == ridx)
             continue;
         Stablizer->APFilter[i].process(Buffer[i], SamplesToDo);
     }
 
+    ALfloat (*RESTRICT lsplit)[BUFFERSIZE]{Stablizer->LSplit};
+    ALfloat (*RESTRICT rsplit)[BUFFERSIZE]{Stablizer->RSplit};
     Stablizer->LFilter.process(lsplit[1], lsplit[0], Buffer[lidx], SamplesToDo);
     Stablizer->RFilter.process(rsplit[1], rsplit[0], Buffer[ridx], SamplesToDo);
 
-    for(i = 0;i < SamplesToDo;i++)
+    for(ALsizei i{0};i < SamplesToDo;i++)
     {
-        ALfloat lfsum, hfsum;
-        ALfloat m, s, c;
-
-        lfsum = lsplit[0][i] + rsplit[0][i];
-        hfsum = lsplit[1][i] + rsplit[1][i];
-        s = lsplit[0][i] + lsplit[1][i] - rsplit[0][i] - rsplit[1][i];
+        ALfloat lfsum{lsplit[0][i] + rsplit[0][i]};
+        ALfloat hfsum{lsplit[1][i] + rsplit[1][i]};
+        ALfloat s{lsplit[0][i] + lsplit[1][i] - rsplit[0][i] - rsplit[1][i]};
 
         /* This pans the separate low- and high-frequency sums between being on
          * the center channel and the left/right channels. The low-frequency
@@ -1597,8 +1534,8 @@ void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*RESTRICT Buffer)[BUFFER
          * frequency sum is 1/4th toward center (3/4ths on left/right). These
          * values can be tweaked.
          */
-        m = lfsum*cosf(1.0f/3.0f * F_PI_2) + hfsum*cosf(1.0f/4.0f * F_PI_2);
-        c = lfsum*sinf(1.0f/3.0f * F_PI_2) + hfsum*sinf(1.0f/4.0f * F_PI_2);
+        ALfloat m{lfsum*std::cos(1.0f/3.0f * F_PI_2) + hfsum*std::cos(1.0f/4.0f * F_PI_2)};
+        ALfloat c{lfsum*std::sin(1.0f/3.0f * F_PI_2) + hfsum*std::sin(1.0f/4.0f * F_PI_2)};
 
         /* The generated center channel signal adds to the existing signal,
          * while the modified left and right channels replace.
@@ -1614,10 +1551,10 @@ void ApplyDistanceComp(ALfloat (*RESTRICT Samples)[BUFFERSIZE], const DistanceCo
 {
     for(ALsizei c{0};c < numchans;c++)
     {
-        ALfloat *RESTRICT inout = Samples[c];
-        const ALfloat gain = distcomp[c].Gain;
-        const ALsizei base = distcomp[c].Length;
-        ALfloat *RESTRICT distbuf = distcomp[c].Buffer;
+        ALfloat *RESTRICT inout{Samples[c]};
+        const ALfloat gain{distcomp[c].Gain};
+        const ALsizei base{distcomp[c].Length};
+        ALfloat *RESTRICT distbuf{distcomp[c].Buffer};
 
         if(base == 0)
         {
@@ -1642,8 +1579,7 @@ void ApplyDistanceComp(ALfloat (*RESTRICT Samples)[BUFFERSIZE], const DistanceCo
             std::copy_n(inout, SamplesToDo, out);
         }
         std::transform<ALfloat*RESTRICT>(Values, Values+SamplesToDo, inout,
-            [gain](ALfloat in) noexcept -> ALfloat
-            { return in * gain; }
+            [gain](ALfloat in) noexcept -> ALfloat { return in * gain; }
         );
     }
 }
@@ -1657,8 +1593,8 @@ void ApplyDither(ALfloat (*RESTRICT Samples)[BUFFERSIZE], ALuint *dither_seed,
      * between -1 and +1) and add it to the sample values, after scaling up to
      * the desired quantization depth amd before rounding.
      */
-    const ALfloat invscale = 1.0f / quant_scale;
-    ALuint seed = *dither_seed;
+    const ALfloat invscale{1.0f / quant_scale};
+    ALuint seed{*dither_seed};
     auto dither_channel = [&seed,invscale,quant_scale,SamplesToDo](ALfloat *buffer) -> void
     {
         ASSUME(SamplesToDo > 0);
@@ -1709,8 +1645,8 @@ template<> inline ALubyte SampleConv(ALfloat val) noexcept
 { return SampleConv<ALbyte>(val) + 128; }
 
 template<DevFmtType T>
-void Write(const ALfloat (*RESTRICT InBuffer)[BUFFERSIZE], ALvoid *OutBuffer,
-           ALsizei Offset, ALsizei SamplesToDo, ALsizei numchans)
+void Write(const ALfloat (*InBuffer)[BUFFERSIZE], ALvoid *OutBuffer, ALsizei Offset,
+           ALsizei SamplesToDo, ALsizei numchans)
 {
     using SampleType = typename DevFmtTypeTraits<T>::Type;
 
@@ -1781,9 +1717,9 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
         /* Apply front image stablization for surround sound, if applicable. */
         if(device->Stablizer)
         {
-            int lidx = GetChannelIdxByName(&device->RealOut, FrontLeft);
-            int ridx = GetChannelIdxByName(&device->RealOut, FrontRight);
-            int cidx = GetChannelIdxByName(&device->RealOut, FrontCenter);
+            const int lidx{GetChannelIdxByName(&device->RealOut, FrontLeft)};
+            const int ridx{GetChannelIdxByName(&device->RealOut, FrontRight)};
+            const int cidx{GetChannelIdxByName(&device->RealOut, FrontCenter)};
             assert(lidx >= 0 && ridx >= 0 && cidx >= 0);
 
             ApplyStablizer(device->Stablizer.get(), device->RealOut.Buffer, lidx, ridx, cidx,
@@ -1807,8 +1743,8 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
 
         if(LIKELY(OutBuffer))
         {
-            ALfloat (*Buffer)[BUFFERSIZE] = device->RealOut.Buffer;
-            ALsizei Channels = device->RealOut.NumChannels;
+            ALfloat (*Buffer)[BUFFERSIZE]{device->RealOut.Buffer};
+            ALsizei Channels{device->RealOut.NumChannels};
 
             /* Finally, interleave and convert samples, writing to the device's
              * output buffer.
@@ -1854,7 +1790,7 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
     ALCcontext *ctx{device->ContextList.load()};
     while(ctx)
     {
-        ALbitfieldSOFT enabledevt = ctx->EnabledEvts.load(std::memory_order_acquire);
+        const ALbitfieldSOFT enabledevt{ctx->EnabledEvts.load(std::memory_order_acquire)};
         if((enabledevt&EventType_Disconnected) &&
            ll_ringbuffer_write(ctx->AsyncEvents, &evt, 1) == 1)
             ctx->EventSem.post();

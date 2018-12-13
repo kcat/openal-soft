@@ -59,7 +59,7 @@ ALbuffer *AllocBuffer(ALCcontext *context)
         { return entry.FreeMask != 0; }
     );
 
-    auto lidx = std::distance(device->BufferList.begin(), sublist);
+    auto lidx = static_cast<ALsizei>(std::distance(device->BufferList.begin(), sublist));
     ALbuffer *buffer{nullptr};
     ALsizei slidx{0};
     if(LIKELY(sublist != device->BufferList.end()))
@@ -442,7 +442,7 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
             ALbuffer *buffer = AllocBuffer(context.get());
             if(!buffer)
             {
-                alDeleteBuffers(ids.size(), ids.data());
+                alDeleteBuffers(static_cast<ALsizei>(ids.size()), ids.data());
                 return;
             }
 

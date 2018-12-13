@@ -276,7 +276,7 @@ ALfilter *AllocFilter(ALCcontext *context)
         { return entry.FreeMask != 0; }
     );
 
-    auto lidx = std::distance(device->FilterList.begin(), sublist);
+    auto lidx = static_cast<ALsizei>(std::distance(device->FilterList.begin(), sublist));
     ALfilter *filter{nullptr};
     ALsizei slidx{0};
     if(LIKELY(sublist != device->FilterList.end()))
@@ -375,7 +375,7 @@ AL_API ALvoid AL_APIENTRY alGenFilters(ALsizei n, ALuint *filters)
             ALfilter *filter = AllocFilter(context.get());
             if(!filter)
             {
-                alDeleteFilters(ids.size(), ids.data());
+                alDeleteFilters(static_cast<ALsizei>(ids.size()), ids.data());
                 return;
             }
 

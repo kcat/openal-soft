@@ -468,7 +468,7 @@ ALsource *AllocSource(ALCcontext *context)
         [](const SourceSubList &entry) -> bool
         { return entry.FreeMask != 0; }
     );
-    ALsizei lidx = std::distance(context->SourceList.begin(), sublist);
+    auto lidx = static_cast<ALsizei>(std::distance(context->SourceList.begin(), sublist));
     ALsource *source;
     ALsizei slidx;
     if(LIKELY(sublist != context->SourceList.end()))
@@ -2122,7 +2122,8 @@ AL_API ALvoid AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
             }
         );
         if(alloc_end != tempids.end())
-            alDeleteSources(std::distance(tempids.begin(), alloc_end), tempids.data());
+            alDeleteSources(static_cast<ALsizei>(std::distance(tempids.begin(), alloc_end)),
+                tempids.data());
         else
             std::copy(tempids.cbegin(), tempids.cend(), sources);
     }

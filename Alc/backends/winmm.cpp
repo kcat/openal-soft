@@ -361,7 +361,7 @@ ALCboolean ALCwinmmPlayback_start(ALCwinmmPlayback *self)
     try {
         std::for_each(self->WaveBuffer.begin(), self->WaveBuffer.end(),
             [self](WAVEHDR &waveHdr) -> void
-            { waveOutPrepareHeader(self->OutHdl, &waveHdr, sizeof(WAVEHDR)); }
+            { waveOutPrepareHeader(self->OutHdl, &waveHdr, static_cast<UINT>(sizeof(WAVEHDR))); }
         );
         self->Writable.store(self->WaveBuffer.size(), std::memory_order_release);
 
@@ -581,8 +581,9 @@ ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *deviceName)
 
     // Allocate circular memory buffer for the captured audio
     // Make sure circular buffer is at least 100ms in size
-    DWORD CapturedDataSize{std::max<DWORD>(device->UpdateSize*device->NumUpdates,
-                                           BufferSize*self->WaveBuffer.size())};
+    auto CapturedDataSize = static_cast<DWORD>(
+        std::max<size_t>(device->UpdateSize*device->NumUpdates, BufferSize*self->WaveBuffer.size())
+    );
 
     self->Ring = ll_ringbuffer_create(CapturedDataSize, self->Format.nBlockAlign, false);
     if(!self->Ring) return ALC_INVALID_VALUE;

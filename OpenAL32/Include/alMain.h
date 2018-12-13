@@ -146,7 +146,7 @@ typedef ALuint64SOFT ALuint64;
 
 inline int msvc64_popcnt64(ALuint64 v)
 {
-    return __popcnt64(v);
+    return (int)__popcnt64(v);
 }
 #define POPCNT64 msvc64_popcnt64
 
@@ -162,7 +162,7 @@ inline int msvc64_ctz64(ALuint64 v)
 
 inline int msvc_popcnt64(ALuint64 v)
 {
-    return __popcnt((ALuint)v) + __popcnt((ALuint)(v>>32));
+    return (int)(__popcnt((ALuint)v) + __popcnt((ALuint)(v>>32)));
 }
 #define POPCNT64 msvc_popcnt64
 
@@ -887,14 +887,14 @@ void SetRTPriority(void);
 void SetDefaultChannelOrder(ALCdevice *device);
 void SetDefaultWFXChannelOrder(ALCdevice *device);
 
-const ALCchar *DevFmtTypeString(enum DevFmtType type);
-const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans);
+const ALCchar *DevFmtTypeString(DevFmtType type);
+const ALCchar *DevFmtChannelsString(DevFmtChannels chans);
 
-inline ALint GetChannelIndex(const enum Channel (&names)[MAX_OUTPUT_CHANNELS], enum Channel chan)
+inline ALint GetChannelIndex(const Channel (&names)[MAX_OUTPUT_CHANNELS], Channel chan)
 {
     auto iter = std::find(std::begin(names), std::end(names), chan);
     if(iter == std::end(names)) return -1;
-    return std::distance(std::begin(names), iter);
+    return static_cast<ALint>(std::distance(std::begin(names), iter));
 }
 /**
  * GetChannelIdxByName

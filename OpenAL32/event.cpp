@@ -52,7 +52,8 @@ static int EventThread(ALCcontext *context)
                     (evt.u.srcstate.state==AL_PAUSED) ? "AL_PAUSED" :
                     (evt.u.srcstate.state==AL_STOPPED) ? "AL_STOPPED" : "<unknown>";
                 context->EventCb(AL_EVENT_TYPE_SOURCE_STATE_CHANGED_SOFT, evt.u.srcstate.id,
-                    evt.u.srcstate.state, msg.length(), msg.c_str(), context->EventParam
+                    evt.u.srcstate.state, static_cast<ALsizei>(msg.length()), msg.c_str(),
+                    context->EventParam
                 );
             }
             else if(evt.EnumType == EventType_BufferCompleted)
@@ -63,12 +64,14 @@ static int EventThread(ALCcontext *context)
                 if(evt.u.bufcomp.count == 1) msg += " buffer completed";
                 else msg += " buffers completed";
                 context->EventCb(AL_EVENT_TYPE_BUFFER_COMPLETED_SOFT, evt.u.bufcomp.id,
-                    evt.u.bufcomp.count, msg.length(), msg.c_str(), context->EventParam
+                    evt.u.bufcomp.count, static_cast<ALsizei>(msg.length()), msg.c_str(),
+                    context->EventParam
                 );
             }
             else if((enabledevts&evt.EnumType) == evt.EnumType)
                 context->EventCb(evt.u.user.type, evt.u.user.id, evt.u.user.param,
-                    (ALsizei)strlen(evt.u.user.msg), evt.u.user.msg, context->EventParam
+                    static_cast<ALsizei>(strlen(evt.u.user.msg)), evt.u.user.msg,
+                    context->EventParam
                 );
         } while(ll_ringbuffer_read(context->AsyncEvents, &evt, 1) != 0);
     }

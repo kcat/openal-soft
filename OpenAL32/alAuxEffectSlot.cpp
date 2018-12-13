@@ -90,7 +90,7 @@ void AddActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *cont
         if(start == last) break;
         ++start;
     }
-    newcount = std::distance(newarray->slot, last);
+    newcount = static_cast<ALsizei>(std::distance(newarray->slot, last));
 
     /* Reallocate newarray if the new size ended up smaller from duplicate
      * removal.
@@ -130,7 +130,7 @@ void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *c
         [slotids, slotids_end](const ALeffectslot *slot) -> bool
         { return std::find(slotids, slotids_end, slot->id) == slotids_end; }
     );
-    newarray->count = std::distance(newarray->slot, slotiter);
+    newarray->count = static_cast<ALsizei>(std::distance(newarray->slot, slotiter));
 
     /* TODO: Could reallocate newarray now that we know it's needed size. */
 
@@ -225,7 +225,7 @@ AL_API ALvoid AL_APIENTRY alGenAuxiliaryEffectSlots(ALsizei n, ALuint *effectslo
         }
         aluInitEffectPanning(iter->get());
 
-        ALuint id = std::distance(context->EffectSlotList.begin(), iter) + 1;
+        auto id = static_cast<ALuint>(std::distance(context->EffectSlotList.begin(), iter) + 1);
         (*iter)->id = id;
         effectslots[cur] = id;
     }

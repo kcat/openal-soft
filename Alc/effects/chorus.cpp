@@ -188,11 +188,11 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
 
 void ChorusState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    const ALsizei bufmask = mSampleBuffer.size()-1;
-    const ALfloat feedback = mFeedback;
-    const ALsizei avgdelay = (mDelay + (FRACTIONONE>>1)) >> FRACTIONBITS;
-    ALfloat *RESTRICT delaybuf = mSampleBuffer.data();
-    ALsizei offset = mOffset;
+    const auto bufmask = static_cast<ALsizei>(mSampleBuffer.size()-1);
+    const ALfloat feedback{mFeedback};
+    const ALsizei avgdelay{(mDelay + (FRACTIONONE>>1)) >> FRACTIONBITS};
+    ALfloat *RESTRICT delaybuf{mSampleBuffer.data()};
+    ALsizei offset{mOffset};
     ALsizei i, c;
     ALsizei base;
 

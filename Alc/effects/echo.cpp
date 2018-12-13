@@ -127,11 +127,11 @@ void ALechoState::update(const ALCcontext *context, const ALeffectslot *slot, co
 
 void ALechoState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)
 {
-    const ALsizei mask = mSampleBuffer.size()-1;
-    const ALsizei tap1 = mTap[0].delay;
-    const ALsizei tap2 = mTap[1].delay;
-    ALfloat *RESTRICT delaybuf = mSampleBuffer.data();
-    ALsizei offset = mOffset;
+    const auto mask = static_cast<ALsizei>(mSampleBuffer.size()-1);
+    const ALsizei tap1{mTap[0].delay};
+    const ALsizei tap2{mTap[1].delay};
+    ALfloat *RESTRICT delaybuf{mSampleBuffer.data()};
+    ALsizei offset{mOffset};
     ALfloat z1, z2;
     ALsizei base;
     ALsizei c, i;

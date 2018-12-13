@@ -373,43 +373,43 @@ void InitPanning(ALCdevice *device)
     switch(device->FmtChans)
     {
         case DevFmtMono:
-            count = COUNTOF(MonoCfg);
+            count = static_cast<ALsizei>(COUNTOF(MonoCfg));
             chanmap = MonoCfg;
             coeffcount = 1;
             break;
 
         case DevFmtStereo:
-            count = COUNTOF(StereoCfg);
+            count = static_cast<ALsizei>(COUNTOF(StereoCfg));
             chanmap = StereoCfg;
             coeffcount = 4;
             break;
 
         case DevFmtQuad:
-            count = COUNTOF(QuadCfg);
+            count = static_cast<ALsizei>(COUNTOF(QuadCfg));
             chanmap = QuadCfg;
             coeffcount = 4;
             break;
 
         case DevFmtX51:
-            count = COUNTOF(X51SideCfg);
+            count = static_cast<ALsizei>(COUNTOF(X51SideCfg));
             chanmap = X51SideCfg;
             coeffcount = 9;
             break;
 
         case DevFmtX51Rear:
-            count = COUNTOF(X51RearCfg);
+            count = static_cast<ALsizei>(COUNTOF(X51RearCfg));
             chanmap = X51RearCfg;
             coeffcount = 9;
             break;
 
         case DevFmtX61:
-            count = COUNTOF(X61Cfg);
+            count = static_cast<ALsizei>(COUNTOF(X61Cfg));
             chanmap = X61Cfg;
             coeffcount = 9;
             break;
 
         case DevFmtX71:
-            count = COUNTOF(X71Cfg);
+            count = static_cast<ALsizei>(COUNTOF(X71Cfg));
             chanmap = X71Cfg;
             coeffcount = 16;
             break;
@@ -739,7 +739,7 @@ void InitHrtfPanning(ALCdevice *device)
     {
         AmbiMatrix = AmbiMatrixHOA;
         AmbiOrderHFGain = AmbiOrderHFGainHOA;
-        count = COUNTOF(IndexMap);
+        count = static_cast<ALsizei>(COUNTOF(IndexMap));
     }
 
     device->mHrtfState.reset(
@@ -774,7 +774,7 @@ void InitHrtfPanning(ALCdevice *device)
 
     BuildBFormatHrtf(device->HrtfHandle,
         device->mHrtfState.get(), device->Dry.NumChannels, AmbiPoints, AmbiMatrix,
-        COUNTOF(AmbiPoints), AmbiOrderHFGain
+        static_cast<ALsizei>(COUNTOF(AmbiPoints)), AmbiOrderHFGain
     );
 
     InitNearFieldCtrl(device, device->HrtfHandle->distance, device->AmbiUp ? 2 : 1,

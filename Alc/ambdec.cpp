@@ -57,9 +57,7 @@ bool is_at_end(const std::string &buffer, std::size_t endpos)
 {
     while(endpos < buffer.length() && std::isspace(buffer[endpos]))
         ++endpos;
-    if(endpos < buffer.length())
-        return false;
-    return true;
+    return !(endpos < buffer.length());
 }
 
 
@@ -103,7 +101,7 @@ bool load_ambdec_speakers(AmbDecConf *conf, std::istream &f, std::string &buffer
         }
 
         istr.clear();
-        std::istream::pos_type endpos{istr.tellg()};
+        const auto endpos = static_cast<std::size_t>(istr.tellg());
         if(!is_at_end(buffer, endpos))
         {
             ERR("Unexpected junk on line: %s\n", buffer.c_str()+endpos);
@@ -182,7 +180,7 @@ bool load_ambdec_matrix(ALfloat *gains, ALfloat (*matrix)[MAX_AMBI_COEFFS], ALsi
         }
 
         istr.clear();
-        std::istream::pos_type endpos{istr.tellg()};
+        const auto endpos = static_cast<std::size_t>(istr.tellg());
         if(!is_at_end(buffer, endpos))
         {
             ERR("Unexpected junk on line: %s\n", buffer.c_str()+endpos);
@@ -314,7 +312,7 @@ int AmbDecConf::load(const char *fname) noexcept
         }
         else if(command == "/speakers/{")
         {
-            std::istream::pos_type endpos{istr.tellg()};
+            const auto endpos = static_cast<std::size_t>(istr.tellg());
             if(!is_at_end(buffer, endpos))
             {
                 ERR("Unexpected junk on line: %s\n", buffer.c_str()+endpos);
@@ -341,7 +339,7 @@ int AmbDecConf::load(const char *fname) noexcept
         }
         else if(command == "/lfmatrix/{" || command == "/hfmatrix/{" || command == "/matrix/{")
         {
-            std::istream::pos_type endpos{istr.tellg()};
+            const auto endpos = static_cast<std::size_t>(istr.tellg());
             if(!is_at_end(buffer, endpos))
             {
                 ERR("Unexpected junk on line: %s\n", buffer.c_str()+endpos);
@@ -394,7 +392,7 @@ int AmbDecConf::load(const char *fname) noexcept
         }
         else if(command == "/end")
         {
-            std::istream::pos_type endpos{istr.tellg()};
+            const auto endpos = static_cast<std::size_t>(istr.tellg());
             if(!is_at_end(buffer, endpos))
             {
                 ERR("Unexpected junk on end: %s\n", buffer.c_str()+endpos);
@@ -410,7 +408,7 @@ int AmbDecConf::load(const char *fname) noexcept
         }
 
         istr.clear();
-        std::istream::pos_type endpos{istr.tellg()};
+        const auto endpos = static_cast<std::size_t>(istr.tellg());
         if(!is_at_end(buffer, endpos))
         {
             ERR("Unexpected junk on line: %s\n", buffer.c_str()+endpos);

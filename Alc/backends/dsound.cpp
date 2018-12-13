@@ -902,7 +902,7 @@ ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
     if(!device->Connected.load(std::memory_order_acquire))
-        return ll_ringbuffer_read_space(self->Ring);
+        return static_cast<ALCuint>(ll_ringbuffer_read_space(self->Ring));
 
     ALsizei FrameSize{FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder)};
     DWORD BufferBytes{self->BufferBytes};
@@ -915,7 +915,7 @@ ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
     if(SUCCEEDED(hr))
     {
         DWORD NumBytes{(ReadCursor-LastCursor + BufferBytes) % BufferBytes};
-        if(!NumBytes) return ll_ringbuffer_read_space(self->Ring);
+        if(!NumBytes) return static_cast<ALCubyte>(ll_ringbuffer_read_space(self->Ring));
         hr = self->DSCbuffer->Lock(LastCursor, NumBytes, &ReadPtr1, &ReadCnt1,
                                    &ReadPtr2, &ReadCnt2, 0);
     }
@@ -934,7 +934,7 @@ ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
         aluHandleDisconnect(device, "Failure retrieving capture data: 0x%lx", hr);
     }
 
-    return ll_ringbuffer_read_space(self->Ring);
+    return static_cast<ALCuint>(ll_ringbuffer_read_space(self->Ring));
 }
 
 } // namespace

@@ -216,7 +216,7 @@ ALeffect *AllocEffect(ALCcontext *context)
         { return entry.FreeMask != 0; }
     );
 
-    auto lidx = std::distance(device->EffectList.begin(), sublist);
+    auto lidx = static_cast<ALsizei>(std::distance(device->EffectList.begin(), sublist));
     ALeffect *effect{nullptr};
     ALsizei slidx{0};
     if(LIKELY(sublist != device->EffectList.end()))
@@ -314,7 +314,7 @@ AL_API ALvoid AL_APIENTRY alGenEffects(ALsizei n, ALuint *effects)
             ALeffect *effect = AllocEffect(context.get());
             if(!effect)
             {
-                alDeleteEffects(ids.size(), ids.data());
+                alDeleteEffects(static_cast<ALsizei>(ids.size()), ids.data());
                 return;
             }
 

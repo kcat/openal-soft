@@ -155,13 +155,13 @@ int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
 
             if(!IS_LITTLE_ENDIAN)
             {
-                ALuint bytesize = BytesFromDevFmt(device->FmtType);
-                ALuint i;
+                const ALsizei bytesize{BytesFromDevFmt(device->FmtType)};
+                ALsizei i;
 
                 if(bytesize == 2)
                 {
                     ALushort *samples = reinterpret_cast<ALushort*>(self->mBuffer.data());
-                    ALuint len = self->mBuffer.size() / 2;
+                    const auto len = static_cast<ALsizei>(self->mBuffer.size() / 2);
                     for(i = 0;i < len;i++)
                     {
                         ALushort samp = samples[i];
@@ -171,7 +171,7 @@ int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
                 else if(bytesize == 4)
                 {
                     ALuint *samples = reinterpret_cast<ALuint*>(self->mBuffer.data());
-                    ALuint len = self->mBuffer.size() / 4;
+                    const auto len = static_cast<ALsizei>(self->mBuffer.size() / 4);
                     for(i = 0;i < len;i++)
                     {
                         ALuint samp = samples[i];

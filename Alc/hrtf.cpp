@@ -133,7 +133,7 @@ class databuf final : public std::streambuf {
         if(pos < 0 || pos > egptr()-eback())
             return traits_type::eof();
 
-        setg(eback(), eback() + pos, egptr());
+        setg(eback(), eback() + static_cast<size_t>(pos), egptr());
         return pos;
     }
 

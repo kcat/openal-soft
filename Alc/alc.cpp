@@ -171,7 +171,7 @@ struct BackendInfo BackendList[] = {
     { "wave", WaveBackendFactory::getFactory },
 #endif
 };
-ALsizei BackendListSize = COUNTOF(BackendList);
+ALsizei BackendListSize = static_cast<ALsizei>(COUNTOF(BackendList));
 
 struct BackendInfo PlaybackBackend;
 struct BackendInfo CaptureBackend;

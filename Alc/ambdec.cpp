@@ -142,7 +142,8 @@ bool load_ambdec_matrix(ALfloat *gains, ALfloat (*matrix)[MAX_AMBI_COEFFS], ALsi
                 if(istr.fail()) break;
                 if(!istr.eof() && !std::isspace(istr.peek()))
                 {
-                    ERR("Extra junk on gain %u: %s\n", curgain+1, buffer.c_str()+istr.tellg());
+                    ERR("Extra junk on gain %u: %s\n", curgain+1,
+                        buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
                     return false;
                 }
                 if(curgain < MAX_AMBI_ORDER+1)
@@ -163,7 +164,7 @@ bool load_ambdec_matrix(ALfloat *gains, ALfloat (*matrix)[MAX_AMBI_COEFFS], ALsi
                 if(!istr.eof() && !std::isspace(istr.peek()))
                 {
                     ERR("Extra junk on matrix element %ux%u: %s\n", cur, curidx,
-                        buffer.c_str()+istr.tellg());
+                        buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
                     return false;
                 }
                 if(curidx < MAX_AMBI_COEFFS)
@@ -228,7 +229,8 @@ int AmbDecConf::load(const char *fname) noexcept
             istr >> Version;
             if(!istr.eof() && !std::isspace(istr.peek()))
             {
-                ERR("Extra junk after version: %s\n", buffer.c_str()+istr.tellg());
+                ERR("Extra junk after version: %s\n",
+                    buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
                 return 0;
             }
             if(Version != 3)
@@ -242,7 +244,8 @@ int AmbDecConf::load(const char *fname) noexcept
             istr >> std::hex >> ChanMask >> std::dec;
             if(!istr.eof() && !std::isspace(istr.peek()))
             {
-                ERR("Extra junk after mask: %s\n", buffer.c_str()+istr.tellg());
+                ERR("Extra junk after mask: %s\n",
+                    buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
                 return 0;
             }
         }
@@ -251,7 +254,8 @@ int AmbDecConf::load(const char *fname) noexcept
             istr >> FreqBands;
             if(!istr.eof() && !std::isspace(istr.peek()))
             {
-                ERR("Extra junk after freq_bands: %s\n", buffer.c_str()+istr.tellg());
+                ERR("Extra junk after freq_bands: %s\n",
+                    buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
                 return 0;
             }
             if(FreqBands != 1 && FreqBands != 2)
@@ -265,7 +269,8 @@ int AmbDecConf::load(const char *fname) noexcept
             istr >> NumSpeakers;
             if(!istr.eof() && !std::isspace(istr.peek()))
             {
-                ERR("Extra junk after speakers: %s\n", buffer.c_str()+istr.tellg());
+                ERR("Extra junk after speakers: %s\n",
+                    buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
                 return 0;
             }
             if(NumSpeakers > MAX_OUTPUT_CHANNELS)
@@ -291,7 +296,8 @@ int AmbDecConf::load(const char *fname) noexcept
             istr >> XOverFreq;
             if(!istr.eof() && !std::isspace(istr.peek()))
             {
-                ERR("Extra junk after xover_freq: %s\n", buffer.c_str()+istr.tellg());
+                ERR("Extra junk after xover_freq: %s\n",
+                    buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
                 return 0;
             }
         }
@@ -300,7 +306,8 @@ int AmbDecConf::load(const char *fname) noexcept
             istr >> XOverRatio;
             if(!istr.eof() && !std::isspace(istr.peek()))
             {
-                ERR("Extra junk after xover_ratio: %s\n", buffer.c_str()+istr.tellg());
+                ERR("Extra junk after xover_ratio: %s\n",
+                    buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
                 return 0;
             }
         }

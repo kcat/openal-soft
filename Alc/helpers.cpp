@@ -316,7 +316,7 @@ PathNamePair GetProcBinary()
 
     al::vector<WCHAR> fullpath(256);
     DWORD len;
-    while((len=GetModuleFileNameW(nullptr, fullpath.data(), fullpath.size())) == fullpath.size())
+    while((len=GetModuleFileNameW(nullptr, fullpath.data(), static_cast<DWORD>(fullpath.size()))) == fullpath.size())
         fullpath.resize(fullpath.size() << 1);
     if(len == 0)
     {

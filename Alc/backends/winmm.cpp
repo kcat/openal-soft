@@ -363,7 +363,8 @@ ALCboolean ALCwinmmPlayback_start(ALCwinmmPlayback *self)
             [self](WAVEHDR &waveHdr) -> void
             { waveOutPrepareHeader(self->OutHdl, &waveHdr, static_cast<UINT>(sizeof(WAVEHDR))); }
         );
-        self->Writable.store(self->WaveBuffer.size(), std::memory_order_release);
+        self->Writable.store(static_cast<ALuint>(self->WaveBuffer.size()),
+            std::memory_order_release);
 
         self->mKillNow.store(AL_FALSE, std::memory_order_release);
         self->mThread = std::thread(ALCwinmmPlayback_mixerProc, self);

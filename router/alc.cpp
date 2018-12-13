@@ -707,7 +707,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum para
     {
         auto drv = std::find_if(DriverList.cbegin(), DriverList.cend(),
             [](const DriverIface &drv) -> bool
-            { return drv.alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT"); }
+            { return drv.alcIsExtensionPresent(nullptr, "ALC_ENUMERATE_ALL_EXT") != ALC_FALSE; }
         );
         if(drv != DriverList.cend())
             return drv->alcGetString(nullptr, ALC_DEFAULT_ALL_DEVICES_SPECIFIER);

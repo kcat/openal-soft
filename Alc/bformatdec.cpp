@@ -59,8 +59,7 @@ constexpr ALfloat Ambi3DDecoderHFScale[MAX_AMBI_COEFFS] = {
 #define INVALID_UPSAMPLE_INDEX INT_MAX
 ALsizei GetACNIndex(const BFChannelConfig *chans, ALsizei numchans, ALsizei acn)
 {
-    ALsizei i;
-    for(i = 0;i < numchans;i++)
+    for(ALsizei i{0};i < numchans;i++)
     {
         if(chans[i].Index == acn)
             return i;
@@ -69,7 +68,7 @@ ALsizei GetACNIndex(const BFChannelConfig *chans, ALsizei numchans, ALsizei acn)
 }
 #define GetChannelForACN(b, a) GetACNIndex((b).Ambi.Map, (b).NumChannels, (a))
 
-auto GetAmbiScales(AmbDecScale scaletype) noexcept -> decltype(AmbiScale::N3D2N3D)&
+auto GetAmbiScales(AmbDecScale scaletype) noexcept -> const float(&)[MAX_AMBI_COEFFS]
 {
     if(scaletype == AmbDecScale::FuMa) return AmbiScale::FuMa2N3D;
     if(scaletype == AmbDecScale::SN3D) return AmbiScale::SN3D2N3D;
@@ -88,9 +87,9 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
     mSamplesLF = nullptr;
 
     mNumChannels = chancount;
-    mSamples.resize(mNumChannels * 2);
+    mSamples.resize(chancount * 2);
     mSamplesHF = mSamples.data();
-    mSamplesLF = mSamplesHF + mNumChannels;
+    mSamplesLF = mSamplesHF + chancount;
 
     mEnabled = std::accumulate(std::begin(chanmap), std::begin(chanmap)+conf->NumSpeakers, 0u,
         [](ALuint mask, const ALsizei &chan) noexcept -> ALuint
@@ -129,100 +128,50 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
         mUpSampler[3].Gains[LF_BAND] = 0.0f;
     }
 
-    const ALfloat (&coeff_scale)[MAX_AMBI_COEFFS] = GetAmbiScales(conf->CoeffScale);
+    const float (&coeff_scale)[MAX_AMBI_COEFFS] = GetAmbiScales(conf->CoeffScale);
+    const ALsizei coeff_count{periphonic ? MAX_AMBI_COEFFS : MAX_AMBI2D_COEFFS};
 
     mMatrix = MatrixU{};
-    if(conf->FreqBands == 1)
+    mDualBand = (conf->FreqBands == 2);
+    if(!mDualBand)
     {
-        mDualBand = AL_FALSE;
         for(ALsizei i{0};i < conf->NumSpeakers;i++)
         {
-            const ALsizei chan{chanmap[i]};
-            if(!periphonic)
+            ALfloat (&mtx)[MAX_AMBI_COEFFS] = mMatrix.Single[chanmap[i]];
+            for(ALsizei j{0},k{0};j < coeff_count;j++)
             {
-                ALfloat gain{conf->HFOrderGain[0]};
-                for(ALsizei j{0},k{0};j < MAX_AMBI2D_COEFFS;j++)
-                {
-                    const ALsizei l{map2DTo3D[j]};
-                    if(j == 1) gain = conf->HFOrderGain[1];
-                    else if(j == 3) gain = conf->HFOrderGain[2];
-                    else if(j == 5) gain = conf->HFOrderGain[3];
-                    if((conf->ChanMask&(1<<l)))
-                        mMatrix.Single[chan][j] = conf->HFMatrix[i][k++] / coeff_scale[l] * gain;
-                }
-            }
-            else
-            {
-                ALfloat gain{conf->HFOrderGain[0]};
-                for(ALsizei j{0},k{0};j < MAX_AMBI_COEFFS;j++)
-                {
-                    if(j == 1) gain = conf->HFOrderGain[1];
-                    else if(j == 4) gain = conf->HFOrderGain[2];
-                    else if(j == 9) gain = conf->HFOrderGain[3];
-                    if((conf->ChanMask&(1<<j)))
-                        mMatrix.Single[chan][j] = conf->HFMatrix[i][k++] / coeff_scale[j] * gain;
-                }
+                const ALsizei l{periphonic ? j : map2DTo3D[j]};
+                if(!(conf->ChanMask&(1<<l))) continue;
+                mtx[j] = conf->HFMatrix[i][k] / coeff_scale[l] *
+                    ((l>=9) ? conf->HFOrderGain[3] :
+                    (l>=4) ? conf->HFOrderGain[2] :
+                    (l>=1) ? conf->HFOrderGain[1] : conf->HFOrderGain[0]);
+                ++k;
             }
         }
     }
     else
     {
-        mDualBand = AL_TRUE;
-
         mXOver[0].init(conf->XOverFreq / (float)srate);
         std::fill(std::begin(mXOver)+1, std::end(mXOver), mXOver[0]);
 
         const float ratio{std::pow(10.0f, conf->XOverRatio / 40.0f)};
         for(ALsizei i{0};i < conf->NumSpeakers;i++)
         {
-            const ALsizei chan{chanmap[i]};
-            if(!periphonic)
+            ALfloat (&mtx)[sNumBands][MAX_AMBI_COEFFS] = mMatrix.Dual[chanmap[i]];
+            for(ALsizei j{0},k{0};j < coeff_count;j++)
             {
-                ALfloat gain{conf->HFOrderGain[0] * ratio};
-                for(ALsizei j{0},k{0};j < MAX_AMBI2D_COEFFS;j++)
-                {
-                    ALsizei l = map2DTo3D[j];
-                    if(j == 1) gain = conf->HFOrderGain[1] * ratio;
-                    else if(j == 3) gain = conf->HFOrderGain[2] * ratio;
-                    else if(j == 5) gain = conf->HFOrderGain[3] * ratio;
-                    if((conf->ChanMask&(1<<l)))
-                        mMatrix.Dual[chan][HF_BAND][j] = conf->HFMatrix[i][k++] / coeff_scale[l] *
-                                                         gain;
-                }
-                gain = conf->HFOrderGain[0] / ratio;
-                for(ALsizei j{0},k{0};j < MAX_AMBI2D_COEFFS;j++)
-                {
-                    ALsizei l = map2DTo3D[j];
-                    if(j == 1) gain = conf->LFOrderGain[1] / ratio;
-                    else if(j == 3) gain = conf->LFOrderGain[2] / ratio;
-                    else if(j == 5) gain = conf->LFOrderGain[3] / ratio;
-                    if((conf->ChanMask&(1<<l)))
-                        mMatrix.Dual[chan][LF_BAND][j] = conf->LFMatrix[i][k++] / coeff_scale[l] *
-                                                         gain;
-                }
-            }
-            else
-            {
-                ALfloat gain{conf->HFOrderGain[0] * ratio};
-                for(ALsizei j{0},k{0};j < MAX_AMBI_COEFFS;j++)
-                {
-                    if(j == 1) gain = conf->HFOrderGain[1] * ratio;
-                    else if(j == 4) gain = conf->HFOrderGain[2] * ratio;
-                    else if(j == 9) gain = conf->HFOrderGain[3] * ratio;
-                    if((conf->ChanMask&(1<<j)))
-                        mMatrix.Dual[chan][HF_BAND][j] = conf->HFMatrix[i][k++] / coeff_scale[j] *
-                                                         gain;
-                }
-                gain = conf->HFOrderGain[0] / ratio;
-                for(ALsizei j{0},k{0};j < MAX_AMBI_COEFFS;j++)
-                {
-                    if(j == 1) gain = conf->LFOrderGain[1] / ratio;
-                    else if(j == 4) gain = conf->LFOrderGain[2] / ratio;
-                    else if(j == 9) gain = conf->LFOrderGain[3] / ratio;
-                    if((conf->ChanMask&(1<<j)))
-                        mMatrix.Dual[chan][LF_BAND][j] = conf->LFMatrix[i][k++] / coeff_scale[j] *
-                                                         gain;
-                }
+                const ALsizei l{periphonic ? j : map2DTo3D[j]};
+                if(!(conf->ChanMask&(1<<l))) continue;
+                mtx[HF_BAND][j] = conf->HFMatrix[i][k] / coeff_scale[l] *
+                    ((l>=9) ? conf->HFOrderGain[3] :
+                    (l>=4) ? conf->HFOrderGain[2] :
+                    (l>=1) ? conf->HFOrderGain[1] : conf->HFOrderGain[0]) * ratio;
+                mtx[LF_BAND][j] = conf->LFMatrix[i][k] / coeff_scale[l] *
+                    ((l>=9) ? conf->LFOrderGain[3] :
+                    (l>=4) ? conf->LFOrderGain[2] :
+                    (l>=1) ? conf->LFOrderGain[1] : conf->LFOrderGain[0]) / ratio;
+                ++k;
             }
         }
     }

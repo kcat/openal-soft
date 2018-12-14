@@ -129,11 +129,14 @@ typedef ALuint64SOFT ALuint64;
 #endif
 #endif
 
-/* Define a CTZ64 macro (count trailing zeros, for 64-bit integers). The result
- * is *UNDEFINED* if the value is 0.
+/* Define CTZ macros (count trailing zeros), and POPCNT macros (population
+ * count/count 1 bits), for 32- and 64-bit integers. The CTZ macros' results
+ * are *UNDEFINED* if the value is 0.
  */
 #ifdef __GNUC__
 
+#define POPCNT32 __builtin_popcount
+#define CTZ32 __builtin_ctz
 #if SIZEOF_LONG == 8
 #define POPCNT64 __builtin_popcountl
 #define CTZ64 __builtin_ctzl
@@ -144,12 +147,20 @@ typedef ALuint64SOFT ALuint64;
 
 #elif defined(HAVE_BITSCANFORWARD64_INTRINSIC)
 
-inline int msvc64_popcnt64(ALuint64 v)
+inline int msvc64_popcnt32(ALuint v)
+{ return (int)__popcnt(v); }
+#define POPCNT32 msvc64_popcnt32
+inline int msvc64_ctz32(ALuint v)
 {
-    return (int)__popcnt64(v);
+    unsigned long idx = 32;
+    _BitScanForward(&idx, v);
+    return (int)idx;
 }
-#define POPCNT64 msvc64_popcnt64
+#define CTZ32 msvc64_ctz32
 
+inline int msvc64_popcnt64(ALuint64 v)
+{ return (int)__popcnt64(v); }
+#define POPCNT64 msvc64_popcnt64
 inline int msvc64_ctz64(ALuint64 v)
 {
     unsigned long idx = 64;
@@ -160,12 +171,20 @@ inline int msvc64_ctz64(ALuint64 v)
 
 #elif defined(HAVE_BITSCANFORWARD_INTRINSIC)
 
-inline int msvc_popcnt64(ALuint64 v)
+inline int msvc_popcnt32(ALuint v)
+{ return (int)__popcnt(v); }
+#define POPCNT32 msvc_popcnt32
+inline int msvc_ctz32(ALuint v)
 {
-    return (int)(__popcnt((ALuint)v) + __popcnt((ALuint)(v>>32)));
+    unsigned long idx = 32;
+    _BitScanForward(&idx, v);
+    return (int)idx;
 }
-#define POPCNT64 msvc_popcnt64
+#define CTZ32 msvc_ctz32
 
+inline int msvc_popcnt64(ALuint64 v)
+{ return (int)(__popcnt((ALuint)v) + __popcnt((ALuint)(v>>32))); }
+#define POPCNT64 msvc_popcnt64
 inline int msvc_ctz64(ALuint64 v)
 {
     unsigned long idx = 64;
@@ -180,13 +199,25 @@ inline int msvc_ctz64(ALuint64 v)
 
 #else
 
-/* There be black magics here. The popcnt64 method is derived from
+/* There be black magics here. The popcnt method is derived from
  * https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
  * while the ctz-utilizing-popcnt algorithm is shown here
  * http://www.hackersdelight.org/hdcodetxt/ntz.c.txt
  * as the ntz2 variant. These likely aren't the most efficient methods, but
  * they're good enough if the GCC or MSVC intrinsics aren't available.
  */
+inline int fallback_popcnt32(ALuint v)
+{
+    v = v - ((v >> 1) & 0x55555555u);
+    v = (v & 0x33333333u) + ((v >> 2) & 0x33333333u);
+    v = (v + (v >> 4)) & 0x0f0f0f0fu;
+    return (int)((v * 0x01010101u) >> 24);
+}
+#define POPCNT32 fallback_popcnt32
+inline int fallback_ctz32(ALuint value)
+{ return fallback_popcnt32(~value & (value - 1)); }
+#define CTZ32 fallback_ctz32
+
 inline int fallback_popcnt64(ALuint64 v)
 {
     v = v - ((v >> 1) & U64(0x5555555555555555));
@@ -195,11 +226,8 @@ inline int fallback_popcnt64(ALuint64 v)
     return (int)((v * U64(0x0101010101010101)) >> 56);
 }
 #define POPCNT64 fallback_popcnt64
-
 inline int fallback_ctz64(ALuint64 value)
-{
-    return fallback_popcnt64(~value & (value - 1));
-}
+{ return fallback_popcnt64(~value & (value - 1)); }
 #define CTZ64 fallback_ctz64
 #endif
 

@@ -67,7 +67,7 @@ constexpr ALsizei ACN2ACN[MAX_AMBI_COEFFS] = {
     8,  9, 10, 11, 12, 13, 14, 15
 };
 
-inline const char *GetLabelFromChannel(enum Channel channel)
+inline const char *GetLabelFromChannel(Channel channel)
 {
     switch(channel)
     {
@@ -365,10 +365,9 @@ auto GetAmbiLayout(AmbiLayout layouttype) noexcept -> const ALsizei(&)[MAX_AMBI_
 
 void InitPanning(ALCdevice *device)
 {
-    const ChannelMap *chanmap = NULL;
-    ALsizei coeffcount = 0;
-    ALsizei count = 0;
-    ALsizei i, j;
+    const ChannelMap *chanmap{nullptr};
+    ALsizei coeffcount{0};
+    ALsizei count{0};
 
     switch(device->FmtChans)
     {
@@ -427,12 +426,11 @@ void InitPanning(ALCdevice *device)
         count = (device->mAmbiOrder == 3) ? 16 :
                 (device->mAmbiOrder == 2) ? 9 :
                 (device->mAmbiOrder == 1) ? 4 : 1;
-        for(i = 0;i < count;i++)
-        {
-            ALsizei acn = acnmap[i];
-            device->Dry.Ambi.Map[i].Scale = 1.0f/n3dscale[acn];
-            device->Dry.Ambi.Map[i].Index = acn;
-        }
+        auto acnmap_end = std::begin(acnmap) + count;
+        std::transform(std::begin(acnmap), acnmap_end, std::begin(device->Dry.Ambi.Map),
+            [&n3dscale](const ALsizei &acn) noexcept -> BFChannelConfig
+            { return BFChannelConfig{1.0f/n3dscale[acn], acn}; }
+        );
         device->Dry.CoeffCount = 0;
         device->Dry.NumChannels = count;
 
@@ -448,11 +446,10 @@ void InitPanning(ALCdevice *device)
              * The upsampler expects this and will convert it for output.
              */
             device->FOAOut.Ambi = AmbiConfig{};
-            for(i = 0;i < 4;i++)
-            {
-                device->FOAOut.Ambi.Map[i].Scale = 1.0f;
-                device->FOAOut.Ambi.Map[i].Index = i;
-            }
+            acnmap_end = std::begin(ACN2ACN) + 4;
+            std::transform(std::begin(ACN2ACN), acnmap_end, std::begin(device->FOAOut.Ambi.Map),
+                [](const ALsizei &acn) noexcept { return BFChannelConfig{1.0f, acn}; }
+            );
             device->FOAOut.CoeffCount = 0;
             device->FOAOut.NumChannels = 4;
 
@@ -491,10 +488,10 @@ void InitPanning(ALCdevice *device)
                                 (device->Dry.CoeffCount > 4) ? XYZ_SCALE_2H0P : 1.0f};
 
         device->FOAOut.Ambi = AmbiConfig{};
-        for(i = 0;i < device->Dry.NumChannels;i++)
+        for(ALsizei i{0};i < device->Dry.NumChannels;i++)
         {
             device->FOAOut.Ambi.Coeffs[i][0] = device->Dry.Ambi.Coeffs[i][0] * w_scale;
-            for(j = 1;j < 4;j++)
+            for(ALsizei j{1};j < 4;j++)
                 device->FOAOut.Ambi.Coeffs[i][j] = device->Dry.Ambi.Coeffs[i][j] * xyz_scale;
         }
         device->FOAOut.CoeffCount = 4;
@@ -541,20 +538,17 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
     ChannelMap chanmap[MAX_OUTPUT_CHANNELS]{};
     for(ALsizei i{0};i < conf->NumSpeakers;i++)
     {
-        const ALsizei chan{speakermap[i]};
-
-        chanmap[i].ChanName = device->RealOut.ChannelName[chan];
+        chanmap[i].ChanName = device->RealOut.ChannelName[speakermap[i]];
         std::fill(std::begin(chanmap[i].Config), std::end(chanmap[i].Config), 0.0f);
 
-        ALsizei k{0};
-        ALfloat gain{conf->HFOrderGain[0]};
-        for(ALsizei j{0};j < MAX_AMBI_COEFFS;j++)
+        for(ALsizei j{0},k{0};j < MAX_AMBI_COEFFS;j++)
         {
-            if(j == 1) gain = conf->HFOrderGain[1];
-            else if(j == 4) gain = conf->HFOrderGain[2];
-            else if(j == 9) gain = conf->HFOrderGain[3];
-            if((conf->ChanMask&(1<<j)))
-                chanmap[i].Config[j] = conf->HFMatrix[i][k++] / coeff_scale[j] * gain;
+            if(!(conf->ChanMask&(1<<j)))
+                continue;
+            chanmap[i].Config[j] = conf->HFMatrix[i][k++] / coeff_scale[j] *
+                ((j >= 9) ? conf->HFOrderGain[3] :
+                (j >= 4) ? conf->HFOrderGain[2] :
+                (j >= 1) ? conf->HFOrderGain[1] : conf->HFOrderGain[0]);
         }
     }
 
@@ -664,7 +658,7 @@ void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&sp
 void InitHrtfPanning(ALCdevice *device)
 {
     /* NOTE: azimuth goes clockwise. */
-    static constexpr struct AngularPoint AmbiPoints[] = {
+    static constexpr AngularPoint AmbiPoints[] = {
         { DEG2RAD( 90.0f), DEG2RAD(   0.0f) },
         { DEG2RAD( 35.2643897f), DEG2RAD(  45.0f) },
         { DEG2RAD( 35.2643897f), DEG2RAD( 135.0f) },
@@ -916,10 +910,10 @@ void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, con
 }
 
 
-void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf_appreq, enum HrtfRequestMode hrtf_userreq)
+void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appreq, HrtfRequestMode hrtf_userreq)
 {
     /* Hold the HRTF the device last used, in case it's used again. */
-    struct Hrtf *old_hrtf = device->HrtfHandle;
+    Hrtf *old_hrtf{device->HrtfHandle};
 
     device->mHrtfState = nullptr;
     device->HrtfHandle = nullptr;
@@ -938,17 +932,13 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
 
     if(device->FmtChans != DevFmtStereo)
     {
-        ALsizei speakermap[MAX_OUTPUT_CHANNELS];
-        const char *devname, *layout = NULL;
-        AmbDecConf conf, *pconf = NULL;
-
         if(old_hrtf)
             Hrtf_DecRef(old_hrtf);
-        old_hrtf = NULL;
+        old_hrtf = nullptr;
         if(hrtf_appreq == Hrtf_Enable)
             device->HrtfStatus = ALC_HRTF_UNSUPPORTED_FORMAT_SOFT;
 
-        devname = device->DeviceName.c_str();
+        const char *layout{nullptr};
         switch(device->FmtChans)
         {
             case DevFmtQuad: layout = "quad"; break;
@@ -962,6 +952,11 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
             case DevFmtAmbi3D:
                 break;
         }
+
+        const char *devname{device->DeviceName.c_str()};
+        ALsizei speakermap[MAX_OUTPUT_CHANNELS];
+        AmbDecConf *pconf{nullptr};
+        AmbDecConf conf{};
         if(layout)
         {
             const char *fname;
@@ -969,17 +964,11 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
             {
                 if(!conf.load(fname))
                     ERR("Failed to load layout file %s\n", fname);
-                else
-                {
-                    if(conf.ChanMask > AMBI_3ORDER_MASK)
-                        ERR("Unsupported channel mask 0x%04x (max 0x%x)\n", conf.ChanMask,
-                            AMBI_3ORDER_MASK);
-                    else
-                    {
-                        if(MakeSpeakerMap(device, &conf, speakermap))
-                            pconf = &conf;
-                    }
-                }
+                else if(conf.ChanMask > AMBI_3ORDER_MASK)
+                    ERR("Unsupported channel mask 0x%04x (max 0x%x)\n", conf.ChanMask,
+                        AMBI_3ORDER_MASK);
+                else if(MakeSpeakerMap(device, &conf, speakermap))
+                    pconf = &conf;
             }
         }
 
@@ -1014,7 +1003,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
         case DevFmtX51Rear:
         case DevFmtX61:
         case DevFmtX71:
-            if(GetConfigValueBool(devname, NULL, "front-stablizer", 0))
+            if(GetConfigValueBool(devname, nullptr, "front-stablizer", 0))
             {
                 /* Initialize band-splitting filters for the front-left and
                  * front-right channels, with a crossover at 5khz (could be
@@ -1051,7 +1040,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     if(device->Type != Loopback)
     {
         const char *mode;
-        if(ConfigValueStr(device->DeviceName.c_str(), NULL, "stereo-mode", &mode))
+        if(ConfigValueStr(device->DeviceName.c_str(), nullptr, "stereo-mode", &mode))
         {
             if(strcasecmp(mode, "headphones") == 0)
                 headphones = true;
@@ -1089,7 +1078,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     if(hrtf_id >= 0 && (size_t)hrtf_id < device->HrtfList.size())
     {
         const EnumeratedHrtf &entry = device->HrtfList[hrtf_id];
-        struct Hrtf *hrtf = GetLoadedHrtf(entry.hrtf);
+        Hrtf *hrtf{GetLoadedHrtf(entry.hrtf)};
         if(hrtf && hrtf->sampleRate == device->Frequency)
         {
             device->HrtfHandle = hrtf;
@@ -1103,7 +1092,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     {
         auto find_hrtf = [device](const EnumeratedHrtf &entry) -> bool
         {
-            struct Hrtf *hrtf = GetLoadedHrtf(entry.hrtf);
+            Hrtf *hrtf{GetLoadedHrtf(entry.hrtf)};
             if(!hrtf) return false;
             if(hrtf->sampleRate != device->Frequency)
             {
@@ -1121,11 +1110,11 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
     {
         if(old_hrtf)
             Hrtf_DecRef(old_hrtf);
-        old_hrtf = NULL;
+        old_hrtf = nullptr;
 
         device->Render_Mode = HrtfRender;
         const char *mode;
-        if(ConfigValueStr(device->DeviceName.c_str(), NULL, "hrtf-mode", &mode))
+        if(ConfigValueStr(device->DeviceName.c_str(), nullptr, "hrtf-mode", &mode))
         {
             if(strcasecmp(mode, "full") == 0)
                 device->Render_Mode = HrtfRender;
@@ -1169,7 +1158,7 @@ no_hrtf:
     int bs2blevel{((headphones && hrtf_appreq != Hrtf_Disable) ||
                    (hrtf_appreq == Hrtf_Enable)) ? 5 : 0};
     if(device->Type != Loopback)
-        ConfigValueInt(device->DeviceName.c_str(), NULL, "cf_level", &bs2blevel);
+        ConfigValueInt(device->DeviceName.c_str(), nullptr, "cf_level", &bs2blevel);
     if(bs2blevel > 0 && bs2blevel <= 6)
     {
         device->Bs2b.reset(new bs2b{});
@@ -1182,7 +1171,7 @@ no_hrtf:
     TRACE("BS2B disabled\n");
 
     const char *mode;
-    if(ConfigValueStr(device->DeviceName.c_str(), NULL, "stereo-encoding", &mode))
+    if(ConfigValueStr(device->DeviceName.c_str(), nullptr, "stereo-encoding", &mode))
     {
         if(strcasecmp(mode, "uhj") == 0)
             device->Render_Mode = NormalRender;
@@ -1204,11 +1193,9 @@ no_hrtf:
 
 void aluInitEffectPanning(ALeffectslot *slot)
 {
-    ALsizei i{0};
-    for(auto &chanmap : slot->ChanMap)
-    {
-        chanmap.Scale = 1.0f;
-        chanmap.Index = i++;
-    }
-    slot->NumChannels = i;
+    const size_t count{countof(slot->ChanMap)};
+    std::transform(std::begin(ACN2ACN), std::begin(ACN2ACN)+count, std::begin(slot->ChanMap),
+        [](const ALsizei &acn) noexcept { return BFChannelConfig{1.0f, acn}; }
+    );
+    slot->NumChannels = static_cast<ALsizei>(count);
 }

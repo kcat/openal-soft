@@ -3,8 +3,9 @@
 
 #include "ambdec.h"
 
-#include <cstring>
 #include <cctype>
+#include <cstring>
+#include <algorithm>
 
 #include <limits>
 #include <string>
@@ -61,10 +62,9 @@ bool is_at_end(const std::string &buffer, std::size_t endpos)
 }
 
 
-bool load_ambdec_speakers(AmbDecConf *conf, std::istream &f, std::string &buffer)
+bool load_ambdec_speakers(al::vector<AmbDecConf::SpeakerConf> &spkrs, const std::size_t num_speakers, std::istream &f, std::string &buffer)
 {
-    ALsizei cur = 0;
-    while(cur < conf->NumSpeakers)
+    while(spkrs.size() < num_speakers)
     {
         std::istringstream istr{buffer};
 
@@ -81,18 +81,20 @@ bool load_ambdec_speakers(AmbDecConf *conf, std::istream &f, std::string &buffer
 
         if(cmd == "add_spkr")
         {
-            istr >> conf->Speakers[cur].Name;
-            if(istr.fail()) WARN("Name not specified for speaker %u\n", cur+1);
-            istr >> conf->Speakers[cur].Distance;
-            if(istr.fail()) WARN("Distance not specified for speaker %u\n", cur+1);
-            istr >> conf->Speakers[cur].Azimuth;
-            if(istr.fail()) WARN("Azimuth not specified for speaker %u\n", cur+1);
-            istr >> conf->Speakers[cur].Elevation;
-            if(istr.fail()) WARN("Elevation not specified for speaker %u\n", cur+1);
-            istr >> conf->Speakers[cur].Connection;
-            if(istr.fail()) TRACE("Connection not specified for speaker %u\n", cur+1);
+            spkrs.emplace_back();
+            AmbDecConf::SpeakerConf &spkr = spkrs.back();
+            const size_t spkr_num{spkrs.size()};
 
-            cur++;
+            istr >> spkr.Name;
+            if(istr.fail()) WARN("Name not specified for speaker " SZFMT "\n", spkr_num);
+            istr >> spkr.Distance;
+            if(istr.fail()) WARN("Distance not specified for speaker " SZFMT "\n", spkr_num);
+            istr >> spkr.Azimuth;
+            if(istr.fail()) WARN("Azimuth not specified for speaker " SZFMT "\n", spkr_num);
+            istr >> spkr.Elevation;
+            if(istr.fail()) WARN("Elevation not specified for speaker " SZFMT "\n", spkr_num);
+            istr >> spkr.Connection;
+            if(istr.fail()) TRACE("Connection not specified for speaker " SZFMT "\n", spkr_num);
         }
         else
         {
@@ -113,10 +115,10 @@ bool load_ambdec_speakers(AmbDecConf *conf, std::istream &f, std::string &buffer
     return true;
 }
 
-bool load_ambdec_matrix(ALfloat *gains, ALfloat (*matrix)[MAX_AMBI_COEFFS], ALsizei maxrow, std::istream &f, std::string &buffer)
+bool load_ambdec_matrix(float (&gains)[MAX_AMBI_ORDER+1], al::vector<AmbDecConf::CoeffArray> &matrix, const std::size_t maxrow, std::istream &f, std::string &buffer)
 {
-    bool gotgains = false;
-    ALsizei cur = 0;
+    bool gotgains{false};
+    std::size_t cur{0u};
     while(cur < maxrow)
     {
         std::istringstream istr{buffer};
@@ -134,7 +136,7 @@ bool load_ambdec_matrix(ALfloat *gains, ALfloat (*matrix)[MAX_AMBI_COEFFS], ALsi
 
         if(cmd == "order_gain")
         {
-            ALuint curgain = 0;
+            std::size_t curgain{0u};
             float value;
             while(istr.good())
             {
@@ -142,36 +144,37 @@ bool load_ambdec_matrix(ALfloat *gains, ALfloat (*matrix)[MAX_AMBI_COEFFS], ALsi
                 if(istr.fail()) break;
                 if(!istr.eof() && !std::isspace(istr.peek()))
                 {
-                    ERR("Extra junk on gain %u: %s\n", curgain+1,
+                    ERR("Extra junk on gain " SZFMT ": %s\n", curgain+1,
                         buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
                     return false;
                 }
-                if(curgain < MAX_AMBI_ORDER+1)
+                if(curgain < countof(gains))
                     gains[curgain++] = value;
             }
-            while(curgain < MAX_AMBI_ORDER+1)
-                gains[curgain++] = 0.0f;
+            std::fill(std::begin(gains)+curgain, std::end(gains), 0.0f);
             gotgains = true;
         }
         else if(cmd == "add_row")
         {
-            ALuint curidx = 0;
-            float value;
+            matrix.emplace_back();
+            AmbDecConf::CoeffArray &mtxrow = matrix.back();
+            std::size_t curidx{0u};
+            float value{};
             while(istr.good())
             {
                 istr >> value;
                 if(istr.fail()) break;
                 if(!istr.eof() && !std::isspace(istr.peek()))
                 {
-                    ERR("Extra junk on matrix element %ux%u: %s\n", cur, curidx,
-                        buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
+                    ERR("Extra junk on matrix element " SZFMT "x" SZFMT ": %s\n", curidx,
+                        matrix.size(), buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
+                    matrix.pop_back();
                     return false;
                 }
-                if(curidx < MAX_AMBI_COEFFS)
-                    matrix[cur][curidx++] = value;
+                if(curidx < mtxrow.size())
+                    mtxrow[curidx++] = value;
             }
-            while(curidx < MAX_AMBI_COEFFS)
-                matrix[cur][curidx++] = 0.0f;
+            std::fill(mtxrow.begin()+curidx, mtxrow.end(), 0.0f);
             cur++;
         }
         else
@@ -210,6 +213,7 @@ int AmbDecConf::load(const char *fname) noexcept
         return 0;
     }
 
+    std::size_t num_speakers{0u};
     std::string buffer;
     while(read_clipped_line(f, buffer))
     {
@@ -266,18 +270,16 @@ int AmbDecConf::load(const char *fname) noexcept
         }
         else if(command == "/dec/speakers")
         {
-            istr >> NumSpeakers;
+            istr >> num_speakers;
             if(!istr.eof() && !std::isspace(istr.peek()))
             {
                 ERR("Extra junk after speakers: %s\n",
                     buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
                 return 0;
             }
-            if(NumSpeakers > MAX_OUTPUT_CHANNELS)
-            {
-                ERR("Unsupported speaker count: %u\n", NumSpeakers);
-                return 0;
-            }
+            Speakers.reserve(num_speakers);
+            LFMatrix.reserve(num_speakers);
+            HFMatrix.reserve(num_speakers);
         }
         else if(command == "/dec/coeff_scale")
         {
@@ -327,7 +329,7 @@ int AmbDecConf::load(const char *fname) noexcept
             }
             buffer.clear();
 
-            if(!load_ambdec_speakers(this, f, buffer))
+            if(!load_ambdec_speakers(Speakers, num_speakers, f, buffer))
                 return 0;
 
             if(!read_clipped_line(f, buffer))
@@ -361,19 +363,19 @@ int AmbDecConf::load(const char *fname) noexcept
                     ERR("Unexpected \"%s\" type for a single-band decoder\n", command.c_str());
                     return 0;
                 }
-                if(!load_ambdec_matrix(HFOrderGain, HFMatrix, NumSpeakers, f, buffer))
+                if(!load_ambdec_matrix(HFOrderGain, HFMatrix, num_speakers, f, buffer))
                     return 0;
             }
             else
             {
                 if(command == "/lfmatrix/{")
                 {
-                    if(!load_ambdec_matrix(LFOrderGain, LFMatrix, NumSpeakers, f, buffer))
+                    if(!load_ambdec_matrix(LFOrderGain, LFMatrix, num_speakers, f, buffer))
                         return 0;
                 }
                 else if(command == "/hfmatrix/{")
                 {
-                    if(!load_ambdec_matrix(HFOrderGain, HFMatrix, NumSpeakers, f, buffer))
+                    if(!load_ambdec_matrix(HFOrderGain, HFMatrix, num_speakers, f, buffer))
                         return 0;
                 }
                 else

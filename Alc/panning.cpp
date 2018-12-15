@@ -119,7 +119,7 @@ struct ChannelMap {
 };
 
 void SetChannelMap(const Channel (&devchans)[MAX_OUTPUT_CHANNELS], ChannelConfig *ambicoeffs,
-                   const ChannelMap *chanmap, ALsizei count, ALsizei *outcount)
+                   const ChannelMap *chanmap, const size_t count, ALsizei *outcount)
 {
     auto copy_coeffs = [&devchans,ambicoeffs](ALsizei maxchans, const ChannelMap &channel) -> ALsizei
     {
@@ -217,10 +217,9 @@ bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei (&speaker
             ERR("Failed to lookup AmbDec speaker label %s\n", speaker.Name.c_str());
         return chidx;
     };
-    auto speakers_end = std::begin(conf->Speakers) + conf->NumSpeakers;
-    std::transform(std::begin(conf->Speakers), speakers_end, std::begin(speakermap), map_spkr);
+    std::transform(conf->Speakers.begin(), conf->Speakers.end(), std::begin(speakermap), map_spkr);
     /* Return success if no invalid entries are found. */
-    auto speakermap_end = std::begin(speakermap) + conf->NumSpeakers;
+    auto speakermap_end = std::begin(speakermap) + conf->Speakers.size();
     return std::find(std::begin(speakermap), speakermap_end, -1) == speakermap_end;
 }
 
@@ -281,9 +280,8 @@ void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei (
 {
     using namespace std::placeholders;
 
-    auto speakers_end = std::begin(conf->Speakers) + conf->NumSpeakers;
     const ALfloat maxdist{
-        std::accumulate(std::begin(conf->Speakers), speakers_end, float{0.0f},
+        std::accumulate(conf->Speakers.begin(), conf->Speakers.end(), float{0.0f},
             std::bind(maxf, _1, std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2))
         )
     };
@@ -294,7 +292,7 @@ void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei (
 
     auto srate = static_cast<ALfloat>(device->Frequency);
     size_t total{0u};
-    for(ALsizei i{0};i < conf->NumSpeakers;i++)
+    for(size_t i{0u};i < conf->Speakers.size();i++)
     {
         const AmbDecConf::SpeakerConf &speaker = conf->Speakers[i];
         const ALsizei chan{speakermap[i]};
@@ -536,7 +534,7 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
 
     const ALfloat (&coeff_scale)[MAX_AMBI_COEFFS] = GetAmbiScales(conf->CoeffScale);
     ChannelMap chanmap[MAX_OUTPUT_CHANNELS]{};
-    for(ALsizei i{0};i < conf->NumSpeakers;i++)
+    for(size_t i{0u};i < conf->Speakers.size();i++)
     {
         chanmap[i].ChanName = device->RealOut.ChannelName[speakermap[i]];
         std::fill(std::begin(chanmap[i].Config), std::end(chanmap[i].Config), 0.0f);
@@ -553,7 +551,7 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
     }
 
     SetChannelMap(device->RealOut.ChannelName, device->Dry.Ambi.Coeffs, chanmap,
-                  conf->NumSpeakers, &device->Dry.NumChannels);
+                  conf->Speakers.size(), &device->Dry.NumChannels);
     device->Dry.CoeffCount = (conf->ChanMask > AMBI_2ORDER_MASK) ? 16 :
                              (conf->ChanMask > AMBI_1ORDER_MASK) ? 9 : 4;
 
@@ -643,8 +641,8 @@ void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&sp
         std::plus<float>{}, _1, std::bind(std::mem_fn(&AmbDecConf::SpeakerConf::Distance), _2)
     );
     const ALfloat avg_dist{
-        std::accumulate(std::begin(conf->Speakers), std::begin(conf->Speakers)+conf->NumSpeakers,
-            float{0.0f}, accum_spkr_dist) / (ALfloat)conf->NumSpeakers
+        std::accumulate(conf->Speakers.begin(), conf->Speakers.end(), float{0.0f},
+            accum_spkr_dist) / static_cast<ALfloat>(conf->Speakers.size())
     };
     InitNearFieldCtrl(device, avg_dist,
         (conf->ChanMask > AMBI_2ORDER_MASK) ? 3 :
@@ -964,6 +962,9 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
             {
                 if(!conf.load(fname))
                     ERR("Failed to load layout file %s\n", fname);
+                else if(conf.Speakers.size() > MAX_OUTPUT_CHANNELS)
+                    ERR("Unsupported speaker count " SZFMT " (max %d)\n", conf.Speakers.size(),
+                        MAX_OUTPUT_CHANNELS);
                 else if(conf.ChanMask > AMBI_3ORDER_MASK)
                     ERR("Unsupported channel mask 0x%04x (max 0x%x)\n", conf.ChanMask,
                         AMBI_3ORDER_MASK);

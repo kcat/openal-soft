@@ -91,7 +91,7 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
     mSamplesHF = mSamples.data();
     mSamplesLF = mSamplesHF + chancount;
 
-    mEnabled = std::accumulate(std::begin(chanmap), std::begin(chanmap)+conf->NumSpeakers, 0u,
+    mEnabled = std::accumulate(std::begin(chanmap), std::begin(chanmap)+conf->Speakers.size(), 0u,
         [](ALuint mask, const ALsizei &chan) noexcept -> ALuint
         { return mask | (1 << chan); }
     );
@@ -139,7 +139,7 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
     mDualBand = (conf->FreqBands == 2);
     if(!mDualBand)
     {
-        for(ALsizei i{0};i < conf->NumSpeakers;i++)
+        for(size_t i{0u};i < conf->Speakers.size();i++)
         {
             ALfloat (&mtx)[MAX_AMBI_COEFFS] = mMatrix.Single[chanmap[i]];
             for(ALsizei j{0},k{0};j < coeff_count;j++)
@@ -160,7 +160,7 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
         std::fill(std::begin(mXOver)+1, std::end(mXOver), mXOver[0]);
 
         const float ratio{std::pow(10.0f, conf->XOverRatio / 40.0f)};
-        for(ALsizei i{0};i < conf->NumSpeakers;i++)
+        for(size_t i{0u};i < conf->Speakers.size();i++)
         {
             ALfloat (&mtx)[sNumBands][MAX_AMBI_COEFFS] = mMatrix.Dual[chanmap[i]];
             for(ALsizei j{0},k{0};j < coeff_count;j++)

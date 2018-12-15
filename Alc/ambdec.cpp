@@ -12,10 +12,15 @@
 #include <fstream>
 #include <sstream>
 
+#include "logging.h"
 #include "compat.h"
 
 
 namespace {
+
+template<typename T, std::size_t N>
+constexpr inline std::size_t size(const T(&)[N]) noexcept
+{ return N; }
 
 int readline(std::istream &f, std::string &output)
 {
@@ -148,7 +153,7 @@ bool load_ambdec_matrix(float (&gains)[MAX_AMBI_ORDER+1], al::vector<AmbDecConf:
                         buffer.c_str()+static_cast<std::size_t>(istr.tellg()));
                     return false;
                 }
-                if(curgain < countof(gains))
+                if(curgain < size(gains))
                     gains[curgain++] = value;
             }
             std::fill(std::begin(gains)+curgain, std::end(gains), 0.0f);

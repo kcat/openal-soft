@@ -4,7 +4,7 @@
 #include <array>
 #include <string>
 
-#include "alMain.h"
+#include "ambidefs.h"
 #include "vector.h"
 
 /* Helpers to read .ambdec configuration files. */
@@ -16,14 +16,14 @@ enum class AmbDecScale {
 };
 struct AmbDecConf {
     std::string Description;
-    int Version; /* Must be 3 */
+    int Version{0}; /* Must be 3 */
 
-    unsigned int ChanMask;
-    unsigned int FreqBands; /* Must be 1 or 2 */
-    AmbDecScale CoeffScale;
+    unsigned int ChanMask{0u};
+    unsigned int FreqBands{0u}; /* Must be 1 or 2 */
+    AmbDecScale CoeffScale{};
 
-    float XOverFreq;
-    float XOverRatio;
+    float XOverFreq{0.0f};
+    float XOverRatio{0.0f};
 
     struct SpeakerConf {
         std::string Name;
@@ -36,10 +36,10 @@ struct AmbDecConf {
 
     using CoeffArray = std::array<float,MAX_AMBI_COEFFS>;
     /* Unused when FreqBands == 1 */
-    float LFOrderGain[MAX_AMBI_ORDER+1];
+    float LFOrderGain[MAX_AMBI_ORDER+1]{};
     al::vector<CoeffArray> LFMatrix;
 
-    float HFOrderGain[MAX_AMBI_ORDER+1];
+    float HFOrderGain[MAX_AMBI_ORDER+1]{};
     al::vector<CoeffArray> HFMatrix;
 
     int load(const char *fname) noexcept;

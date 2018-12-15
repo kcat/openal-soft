@@ -730,6 +730,7 @@ SET(ALC_OBJS
     Alc/alconfig.cpp
     Alc/alconfig.h
     Alc/alcontext.h
+    Alc/ambidefs.h
     Alc/bs2b.cpp
     Alc/bs2b.h
     Alc/converter.cpp

@@ -512,12 +512,12 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
     ALfloat w_scale{1.0f}, xyz_scale{1.0f};
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
-        if(conf->ChanMask > 0x1ff)
+        if(conf->ChanMask > AMBI_2ORDER_MASK)
         {
             w_scale = W_SCALE_3H3P;
             xyz_scale = XYZ_SCALE_3H3P;
         }
-        else if(conf->ChanMask > 0xf)
+        else if(conf->ChanMask > AMBI_1ORDER_MASK)
         {
             w_scale = W_SCALE_2H2P;
             xyz_scale = XYZ_SCALE_2H2P;
@@ -525,12 +525,12 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
     }
     else
     {
-        if(conf->ChanMask > 0x1ff)
+        if(conf->ChanMask > AMBI_2ORDER_MASK)
         {
             w_scale = W_SCALE_3H0P;
             xyz_scale = XYZ_SCALE_3H0P;
         }
-        else if(conf->ChanMask > 0xf)
+        else if(conf->ChanMask > AMBI_1ORDER_MASK)
         {
             w_scale = W_SCALE_2H0P;
             xyz_scale = XYZ_SCALE_2H0P;
@@ -560,8 +560,8 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
 
     SetChannelMap(device->RealOut.ChannelName, device->Dry.Ambi.Coeffs, chanmap,
                   conf->NumSpeakers, &device->Dry.NumChannels);
-    device->Dry.CoeffCount = (conf->ChanMask > 0x1ff) ? 16 :
-                             (conf->ChanMask > 0xf) ? 9 : 4;
+    device->Dry.CoeffCount = (conf->ChanMask > AMBI_2ORDER_MASK) ? 16 :
+                             (conf->ChanMask > AMBI_1ORDER_MASK) ? 9 : 4;
 
     device->FOAOut.Ambi = AmbiConfig{};
     for(ALsizei i{0};i < device->Dry.NumChannels;i++)
@@ -587,8 +587,8 @@ void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&sp
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
         static constexpr int map[MAX_AMBI_COEFFS] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-        count = (conf->ChanMask > 0x1ff) ? 16 :
-                (conf->ChanMask > 0xf) ? 9 : 4;
+        count = (conf->ChanMask > AMBI_2ORDER_MASK) ? 16 :
+                (conf->ChanMask > AMBI_1ORDER_MASK) ? 9 : 4;
         std::transform(std::begin(map), std::begin(map)+count, std::begin(device->Dry.Ambi.Map),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
         );
@@ -596,8 +596,8 @@ void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&sp
     else
     {
         static constexpr int map[MAX_AMBI2D_COEFFS] = { 0, 1, 3, 4, 8, 9, 15 };
-        count = (conf->ChanMask > 0x1ff) ? 7 :
-                (conf->ChanMask > 0xf) ? 5 : 3;
+        count = (conf->ChanMask > AMBI_2ORDER_MASK) ? 7 :
+                (conf->ChanMask > AMBI_1ORDER_MASK) ? 5 : 3;
         std::transform(std::begin(map), std::begin(map)+count, std::begin(device->Dry.Ambi.Map),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
         );
@@ -607,12 +607,13 @@ void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&sp
 
     TRACE("Enabling %s-band %s-order%s ambisonic decoder\n",
         (conf->FreqBands == 1) ? "single" : "dual",
-        (conf->ChanMask > 0xf) ? (conf->ChanMask > 0x1ff) ? "third" : "second" : "first",
+        (conf->ChanMask > AMBI_2ORDER_MASK) ? "third" :
+        (conf->ChanMask > AMBI_1ORDER_MASK) ? "second" : "first",
         (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? " periphonic" : ""
     );
     device->AmbiDecoder->reset(conf, count, device->Frequency, speakermap);
 
-    if(conf->ChanMask <= 0xf)
+    if(conf->ChanMask <= AMBI_1ORDER_MASK)
     {
         device->FOAOut.Ambi = device->Dry.Ambi;
         device->FOAOut.CoeffCount = device->Dry.CoeffCount;
@@ -652,7 +653,8 @@ void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&sp
             float{0.0f}, accum_spkr_dist) / (ALfloat)conf->NumSpeakers
     };
     InitNearFieldCtrl(device, avg_dist,
-        (conf->ChanMask > 0x1ff) ? 3 : (conf->ChanMask > 0xf) ? 2 : 1,
+        (conf->ChanMask > AMBI_2ORDER_MASK) ? 3 :
+        (conf->ChanMask > AMBI_1ORDER_MASK) ? 2 : 1,
         (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? chans_per_order3d : chans_per_order2d
     );
 
@@ -969,8 +971,9 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf
                     ERR("Failed to load layout file %s\n", fname);
                 else
                 {
-                    if(conf.ChanMask > 0xffff)
-                        ERR("Unsupported channel mask 0x%04x (max 0xffff)\n", conf.ChanMask);
+                    if(conf.ChanMask > AMBI_3ORDER_MASK)
+                        ERR("Unsupported channel mask 0x%04x (max 0x%x)\n", conf.ChanMask,
+                            AMBI_3ORDER_MASK);
                     else
                     {
                         if(MakeSpeakerMap(device, &conf, speakermap))

@@ -103,25 +103,29 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
     const bool periphonic{(conf->ChanMask&AMBI_PERIPHONIC_MASK) != 0};
     if(periphonic)
     {
-        mUpSampler[0].Gains[HF_BAND] = (conf->ChanMask > 0x1ff) ? W_SCALE_3H3P :
-                                       (conf->ChanMask > 0xf) ? W_SCALE_2H2P : 1.0f;
+        mUpSampler[0].Gains[HF_BAND] =
+            (conf->ChanMask > AMBI_2ORDER_MASK) ? W_SCALE_3H3P :
+            (conf->ChanMask > AMBI_1ORDER_MASK) ? W_SCALE_2H2P : 1.0f;
         mUpSampler[0].Gains[LF_BAND] = 1.0f;
         for(ALsizei i{1};i < 4;i++)
         {
-            mUpSampler[i].Gains[HF_BAND] = (conf->ChanMask > 0x1ff) ? XYZ_SCALE_3H3P :
-                                           (conf->ChanMask > 0xf) ? XYZ_SCALE_2H2P : 1.0f;
+            mUpSampler[i].Gains[HF_BAND] =
+                (conf->ChanMask > AMBI_2ORDER_MASK) ? XYZ_SCALE_3H3P :
+                (conf->ChanMask > AMBI_1ORDER_MASK) ? XYZ_SCALE_2H2P : 1.0f;
             mUpSampler[i].Gains[LF_BAND] = 1.0f;
         }
     }
     else
     {
-        mUpSampler[0].Gains[HF_BAND] = (conf->ChanMask > 0x1ff) ? W_SCALE_3H0P :
-                                       (conf->ChanMask > 0xf) ? W_SCALE_2H0P : 1.0f;
+        mUpSampler[0].Gains[HF_BAND] =
+            (conf->ChanMask > AMBI_2ORDER_MASK) ? W_SCALE_3H0P :
+            (conf->ChanMask > AMBI_1ORDER_MASK) ? W_SCALE_2H0P : 1.0f;
         mUpSampler[0].Gains[LF_BAND] = 1.0f;
         for(ALsizei i{1};i < 3;i++)
         {
-            mUpSampler[i].Gains[HF_BAND] = (conf->ChanMask > 0x1ff) ? XYZ_SCALE_3H0P :
-                                           (conf->ChanMask > 0xf) ? XYZ_SCALE_2H0P : 1.0f;
+            mUpSampler[i].Gains[HF_BAND] =
+                (conf->ChanMask > AMBI_2ORDER_MASK) ? XYZ_SCALE_3H0P :
+                (conf->ChanMask > AMBI_1ORDER_MASK) ? XYZ_SCALE_2H0P : 1.0f;
             mUpSampler[i].Gains[LF_BAND] = 1.0f;
         }
         mUpSampler[3].Gains[HF_BAND] = 0.0f;

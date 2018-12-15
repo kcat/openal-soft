@@ -458,15 +458,13 @@ static ALboolean AllocLines(const ALuint frequency, ReverbState *State)
 
 ALboolean ReverbState::deviceUpdate(ALCdevice *Device)
 {
-    ALuint frequency = Device->Frequency;
-    ALfloat multiplier;
-    ALsizei i, j;
+    const ALuint frequency{Device->Frequency};
 
     /* Allocate the delay lines. */
     if(!AllocLines(frequency, this))
         return AL_FALSE;
 
-    multiplier = CalcDelayLengthMult(AL_EAXREVERB_MAX_DENSITY);
+    const ALfloat multiplier{CalcDelayLengthMult(AL_EAXREVERB_MAX_DENSITY)};
 
     /* The late feed taps are set a fixed position past the latest delay tap. */
     mLateFeedTap = float2int((AL_EAXREVERB_MAX_REFLECTIONS_DELAY +
@@ -476,49 +474,39 @@ ALboolean ReverbState::deviceUpdate(ALCdevice *Device)
     /* Clear filters and gain coefficients since the delay lines were all just
      * cleared (if not reallocated).
      */
-    for(i = 0;i < NUM_LINES;i++)
+    for(auto &filter : mFilter)
     {
-        mFilter[i].Lp.clear();
-        mFilter[i].Hp.clear();
+        filter.Lp.clear();
+        filter.Hp.clear();
     }
 
-    for(i = 0;i < NUM_LINES;i++)
-    {
-        mEarlyDelayCoeff[i][0] = 0.0f;
-        mEarlyDelayCoeff[i][1] = 0.0f;
-    }
-
-    for(i = 0;i < NUM_LINES;i++)
-    {
-        mEarly.Coeff[i][0] = 0.0f;
-        mEarly.Coeff[i][1] = 0.0f;
-    }
+    for(auto &coeff : mEarlyDelayCoeff)
+        std::fill(std::begin(coeff), std::end(coeff), 0.0f);
+    for(auto &coeff : mEarly.Coeff)
+        std::fill(std::begin(coeff), std::end(coeff), 0.0f);
 
     mLate.DensityGain[0] = 0.0f;
     mLate.DensityGain[1] = 0.0f;
-    for(i = 0;i < NUM_LINES;i++)
+    for(auto &t60 : mLate.T60)
     {
-        mLate.T60[i].MidGain[0] = 0.0f;
-        mLate.T60[i].MidGain[1] = 0.0f;
-        mLate.T60[i].HFFilter.clear();
-        mLate.T60[i].LFFilter.clear();
+        t60.MidGain[0] = 0.0f;
+        t60.MidGain[1] = 0.0f;
+        t60.HFFilter.clear();
+        t60.LFFilter.clear();
     }
 
-    for(i = 0;i < NUM_LINES;i++)
-    {
-        for(j = 0;j < MAX_OUTPUT_CHANNELS;j++)
-        {
-            mEarly.CurrentGain[i][j] = 0.0f;
-            mEarly.PanGain[i][j] = 0.0f;
-            mLate.CurrentGain[i][j] = 0.0f;
-            mLate.PanGain[i][j] = 0.0f;
-        }
-    }
+    for(auto &gains : mEarly.CurrentGain)
+        std::fill(std::begin(gains), std::end(gains), 0.0f);
+    for(auto &gains : mEarly.PanGain)
+        std::fill(std::begin(gains), std::end(gains), 0.0f);
+    for(auto &gains : mLate.CurrentGain)
+        std::fill(std::begin(gains), std::end(gains), 0.0f);
+    for(auto &gains : mLate.PanGain)
+        std::fill(std::begin(gains), std::end(gains), 0.0f);
 
     /* Reset counters and offset base. */
     mFadeCount = 0;
-    mMaxUpdate[0] = MAX_UPDATE_SAMPLES;
-    mMaxUpdate[1] = MAX_UPDATE_SAMPLES;
+    std::fill(std::begin(mMaxUpdate), std::end(mMaxUpdate), MAX_UPDATE_SAMPLES);
     mOffset = 0;
 
     return AL_TRUE;

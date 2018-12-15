@@ -1359,10 +1359,8 @@ static ALCboolean IsValidAmbiScaling(ALCenum scaling)
  */
 void SetDefaultWFXChannelOrder(ALCdevice *device)
 {
-    ALsizei i;
-
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-        device->RealOut.ChannelName[i] = InvalidChannel;
+    std::fill(std::begin(device->RealOut.ChannelName), std::end(device->RealOut.ChannelName),
+        InvalidChannel);
 
     switch(device->FmtChans)
     {
@@ -1450,10 +1448,8 @@ void SetDefaultWFXChannelOrder(ALCdevice *device)
  */
 void SetDefaultChannelOrder(ALCdevice *device)
 {
-    ALsizei i;
-
-    for(i = 0;i < MAX_OUTPUT_CHANNELS;i++)
-        device->RealOut.ChannelName[i] = InvalidChannel;
+    std::fill(std::begin(device->RealOut.ChannelName), std::end(device->RealOut.ChannelName),
+        InvalidChannel);
 
     switch(device->FmtChans)
     {

@@ -34,8 +34,8 @@ private:
     ALuint mEnabled; /* Bitfield of enabled channels. */
 
     union MatrixU {
-        alignas(16) ALfloat Dual[MAX_OUTPUT_CHANNELS][sNumBands][MAX_AMBI_COEFFS];
-        alignas(16) ALfloat Single[MAX_OUTPUT_CHANNELS][MAX_AMBI_COEFFS];
+        ALfloat Dual[MAX_OUTPUT_CHANNELS][sNumBands][MAX_AMBI_COEFFS];
+        ALfloat Single[MAX_OUTPUT_CHANNELS][MAX_AMBI_COEFFS];
     } mMatrix;
 
     /* NOTE: BandSplitter filters are unused with single-band decoding */

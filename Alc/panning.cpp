@@ -819,6 +819,16 @@ void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALf
     coeffs[13] =  1.620185175f * x * (5.0f*z*z - 1.0f); /* ACN 13 = sqrt(21/8) * X * (5*Z*Z - 1) */
     coeffs[14] =  5.123475383f * z * (x*x - y*y);       /* ACN 14 = sqrt(105)/2 * Z * (X*X - Y*Y) */
     coeffs[15] =  2.091650066f * x * (x*x - 3.0f*y*y);  /* ACN 15 = sqrt(35/8) * X * (X*X - 3*Y*Y) */
+    /* Fourth-order */
+    /* ACN 16 = sqrt(35)*3/2 * X * Y * (X*X - Y*Y) */
+    /* ACN 17 = sqrt(35/2)*3/2 * (3*X*X - Y*Y) * Y * Z */
+    /* ACN 18 = sqrt(5)*3/2 * X * Y * (7*Z*Z - 1) */
+    /* ACN 19 = sqrt(5/2)*3/2 * Y * Z * (7*Z*Z - 3)  */
+    /* ACN 20 = 3/8 * (35*Z*Z*Z*Z - 30*Z*Z + 3) */
+    /* ACN 21 = sqrt(5/2)*3/2 * X * Z * (7*Z*Z - 3) */
+    /* ACN 22 = sqrt(5)*3/4 * (X*X - Y*Y) * (7*Z*Z - 1) */
+    /* ACN 23 = sqrt(35/2)*3/2 * (X*X - 3*Y*Y) * X * Z */
+    /* ACN 24 = sqrt(35)*3/8 * (X*X*X*X - 6*X*X*Y*Y + Y*Y*Y*Y) */
 
     if(spread > 0.0f)
     {
@@ -837,7 +847,7 @@ void CalcAmbiCoeffs(const ALfloat y, const ALfloat z, const ALfloat x, const ALf
          * ZH5 = -0.0625*sqrt(pi) * (-1+ca)*(ca+1)*(21*ca*ca*ca*ca - 14*ca*ca + 1);
          *
          * The gain of the source is compensated for size, so that the
-         * loundness doesn't depend on the spread. Thus:
+         * loudness doesn't depend on the spread. Thus:
          *
          * ZH0 = 1.0f;
          * ZH1 = 0.5f * (ca+1.0f);

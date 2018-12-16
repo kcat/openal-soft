@@ -17,11 +17,6 @@
 #include "almalloc.h"
 
 
-constexpr float AmbiScale::N3D2N3D[MAX_AMBI_COEFFS];
-constexpr float AmbiScale::SN3D2N3D[MAX_AMBI_COEFFS];
-constexpr float AmbiScale::FuMa2N3D[MAX_AMBI_COEFFS];
-
-
 namespace {
 
 #define HF_BAND 0

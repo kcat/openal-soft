@@ -270,22 +270,21 @@ void AmbiUpsampler::reset(const ALCdevice *device)
             ALdouble gain{0.0};
             for(size_t k{0u};k < COUNTOF(Ambi3DDecoder);k++)
                 gain += (ALdouble)Ambi3DDecoder[k][i] * encgains[k][j];
-            mGains[i][j][HF_BAND] = (ALfloat)(gain * Ambi3DDecoderHFScale[i]);
-            mGains[i][j][LF_BAND] = (ALfloat)gain;
+            mGains[i][HF_BAND][j] = (ALfloat)(gain * Ambi3DDecoderHFScale[i]);
+            mGains[i][LF_BAND][j] = (ALfloat)gain;
         }
     }
 }
 
 void AmbiUpsampler::process(ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*RESTRICT InSamples)[BUFFERSIZE], const ALsizei SamplesToDo)
 {
-    ASSUME(OutChannels > 0);
-    ASSUME(SamplesToDo > 0);
-
     for(ALsizei i{0};i < 4;i++)
     {
         mXOver[i].process(mSamples[HF_BAND], mSamples[LF_BAND], InSamples[i], SamplesToDo);
 
-        for(ALsizei j{0};j < OutChannels;j++)
-            MixRowSamples(OutBuffer[j], mGains[i][j].data(), mSamples, sNumBands, 0, SamplesToDo);
+        MixSamples(mSamples[HF_BAND], OutChannels, OutBuffer, mGains[i][HF_BAND].data(),
+            mGains[i][HF_BAND].data(), 0, 0, SamplesToDo);
+        MixSamples(mSamples[LF_BAND], OutChannels, OutBuffer, mGains[i][LF_BAND].data(),
+            mGains[i][LF_BAND].data(), 0, 0, SamplesToDo);
     }
 }

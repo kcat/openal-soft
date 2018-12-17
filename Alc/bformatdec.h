@@ -81,7 +81,7 @@ private:
 
     BandSplitter mXOver[4];
 
-    std::array<std::array<std::array<ALfloat,sNumBands>,MAX_OUTPUT_CHANNELS>,4> mGains;
+    std::array<std::array<std::array<ALfloat,MAX_OUTPUT_CHANNELS>,sNumBands>,4> mGains;
 
 public:
     void reset(const ALCdevice *device);

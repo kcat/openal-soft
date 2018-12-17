@@ -51,18 +51,6 @@ constexpr ALfloat Ambi3DDecoderHFScale[MAX_AMBI_COEFFS] = {
 };
 
 
-#define INVALID_UPSAMPLE_INDEX INT_MAX
-ALsizei GetACNIndex(const BFChannelConfig *chans, ALsizei numchans, ALsizei acn)
-{
-    for(ALsizei i{0};i < numchans;i++)
-    {
-        if(chans[i].Index == acn)
-            return i;
-    }
-    return INVALID_UPSAMPLE_INDEX;
-}
-#define GetChannelForACN(b, a) GetACNIndex((b).Ambi.Map, (b).NumChannels, (a))
-
 auto GetAmbiScales(AmbDecScale scaletype) noexcept -> const float(&)[MAX_AMBI_COEFFS]
 {
     if(scaletype == AmbDecScale::FuMa) return AmbiScale::FuMa2N3D;
@@ -254,52 +242,36 @@ void BFormatDec::upSample(ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALflo
 }
 
 
-void AmbiUpsampler::reset(const ALCdevice *device, const ALfloat w_scale, const ALfloat xyz_scale)
+void AmbiUpsampler::reset(const ALCdevice *device)
 {
     using namespace std::placeholders;
 
     mXOver[0].init(400.0f / (float)device->Frequency);
     std::fill(std::begin(mXOver)+1, std::end(mXOver), mXOver[0]);
 
-    mGains.fill({});
-    if(device->Dry.CoeffCount > 0)
+    ALfloat encgains[8][MAX_OUTPUT_CHANNELS];
+    for(size_t k{0u};k < COUNTOF(Ambi3DPoints);k++)
     {
-        ALfloat encgains[8][MAX_OUTPUT_CHANNELS];
-        for(size_t k{0u};k < COUNTOF(Ambi3DPoints);k++)
-        {
-            ALfloat coeffs[MAX_AMBI_COEFFS];
-            CalcDirectionCoeffs(Ambi3DPoints[k], 0.0f, coeffs);
-            ComputePanGains(&device->Dry, coeffs, 1.0f, encgains[k]);
-        }
-
-        /* Combine the matrices that do the in->virt and virt->out conversions
-         * so we get a single in->out conversion. NOTE: the Encoder matrix
-         * (encgains) and output are transposed, so the input channels line up
-         * with the rows and the output channels line up with the columns.
-         */
-        for(ALsizei i{0};i < 4;i++)
-        {
-            for(ALsizei j{0};j < device->Dry.NumChannels;j++)
-            {
-                ALdouble gain{0.0};
-                for(size_t k{0u};k < COUNTOF(Ambi3DDecoder);k++)
-                    gain += (ALdouble)Ambi3DDecoder[k][i] * encgains[k][j];
-                mGains[i][j][HF_BAND] = (ALfloat)(gain * Ambi3DDecoderHFScale[i]);
-                mGains[i][j][LF_BAND] = (ALfloat)gain;
-            }
-        }
+        ALfloat coeffs[MAX_AMBI_COEFFS];
+        CalcDirectionCoeffs(Ambi3DPoints[k], 0.0f, coeffs);
+        ComputePanGains(&device->Dry, coeffs, 1.0f, encgains[k]);
     }
-    else
+
+    /* Combine the matrices that do the in->virt and virt->out conversions so
+     * we get a single in->out conversion. NOTE: the Encoder matrix (encgains)
+     * and output are transposed, so the input channels line up with the rows
+     * and the output channels line up with the columns.
+     */
+    mGains.fill({});
+    for(ALsizei i{0};i < 4;i++)
     {
-        for(ALsizei i{0};i < 4;i++)
+        for(ALsizei j{0};j < device->Dry.NumChannels;j++)
         {
-            const ALsizei index{GetChannelForACN(device->Dry, i)};
-            if(index != INVALID_UPSAMPLE_INDEX)
-            {
-                const ALfloat scale{device->Dry.Ambi.Map[index].Scale};
-                mGains[i][index][HF_BAND] = scale * ((i==0) ? w_scale : xyz_scale);
-                mGains[i][index][LF_BAND] = scale;
-            }
+            ALdouble gain{0.0};
+            for(size_t k{0u};k < COUNTOF(Ambi3DDecoder);k++)
+                gain += (ALdouble)Ambi3DDecoder[k][i] * encgains[k][j];
+            mGains[i][j][HF_BAND] = (ALfloat)(gain * Ambi3DDecoderHFScale[i]);
+            mGains[i][j][LF_BAND] = (ALfloat)gain;
         }
     }
 }

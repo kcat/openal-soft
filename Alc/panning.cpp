@@ -435,18 +435,7 @@ void InitPanning(ALCdevice *device)
             device->FOAOut.CoeffCount = 0;
             device->FOAOut.NumChannels = 4;
 
-            ALfloat w_scale{1.0f}, xyz_scale{1.0f};
-            if(device->mAmbiOrder >= 3)
-            {
-                w_scale = W_SCALE_3H3P;
-                xyz_scale = XYZ_SCALE_3H3P;
-            }
-            else
-            {
-                w_scale = W_SCALE_2H2P;
-                xyz_scale = XYZ_SCALE_2H2P;
-            }
-            device->AmbiUp->reset(device, w_scale, xyz_scale);
+            device->AmbiUp->reset(device);
         }
 
         ALfloat nfc_delay{0.0f};
@@ -738,8 +727,7 @@ void InitHrtfPanning(ALCdevice *device)
         device->FOAOut.CoeffCount = 0;
         device->FOAOut.NumChannels = 4;
 
-        device->AmbiUp->reset(device, AmbiOrderHFGainFOA[0] / AmbiOrderHFGain[0],
-            AmbiOrderHFGainFOA[1] / AmbiOrderHFGain[1]);
+        device->AmbiUp->reset(device);
     }
     else
     {

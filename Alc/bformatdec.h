@@ -84,7 +84,7 @@ private:
     std::array<std::array<std::array<ALfloat,sNumBands>,MAX_OUTPUT_CHANNELS>,4> mGains;
 
 public:
-    void reset(const ALCdevice *device, const ALfloat w_scale, const ALfloat xyz_scale);
+    void reset(const ALCdevice *device);
     void process(ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*RESTRICT InSamples)[BUFFERSIZE], const ALsizei SamplesToDo);
 
     DEF_NEWDEL(AmbiUpsampler)

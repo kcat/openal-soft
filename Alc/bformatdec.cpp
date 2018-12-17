@@ -86,30 +86,45 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
     const bool periphonic{(conf->ChanMask&AMBI_PERIPHONIC_MASK) != 0};
     if(periphonic)
     {
-        mUpSampler[0].Gains[HF_BAND] =
-            (conf->ChanMask > AMBI_2ORDER_MASK) ? W_SCALE_3H3P :
-            (conf->ChanMask > AMBI_1ORDER_MASK) ? W_SCALE_2H2P : 1.0f;
-        mUpSampler[0].Gains[LF_BAND] = 1.0f;
-        for(ALsizei i{1};i < 4;i++)
+        ALfloat encgains[8][MAX_OUTPUT_CHANNELS]{};
+        for(size_t k{0u};k < COUNTOF(Ambi3DPoints);k++)
         {
-            mUpSampler[i].Gains[HF_BAND] =
-                (conf->ChanMask > AMBI_2ORDER_MASK) ? XYZ_SCALE_3H3P :
-                (conf->ChanMask > AMBI_1ORDER_MASK) ? XYZ_SCALE_2H2P : 1.0f;
-            mUpSampler[i].Gains[LF_BAND] = 1.0f;
+            ALfloat coeffs[MAX_AMBI_COEFFS];
+            CalcDirectionCoeffs(Ambi3DPoints[k], 0.0f, coeffs);
+            std::copy(std::begin(coeffs), std::begin(coeffs)+chancount, std::begin(encgains[k]));
+        }
+        assert(chancount >= 4);
+        for(ALsizei i{0};i < 4;i++)
+        {
+            ALdouble gain{0.0};
+            for(size_t k{0u};k < COUNTOF(Ambi3DDecoder);k++)
+                gain += (ALdouble)Ambi3DDecoder[k][i] * encgains[k][i];
+            mUpSampler[i].Gains[HF_BAND] = (ALfloat)(gain * Ambi3DDecoderHFScale[i]);
+            mUpSampler[i].Gains[LF_BAND] = (ALfloat)gain;
         }
     }
     else
     {
-        mUpSampler[0].Gains[HF_BAND] =
-            (conf->ChanMask > AMBI_2ORDER_MASK) ? W_SCALE_3H0P :
-            (conf->ChanMask > AMBI_1ORDER_MASK) ? W_SCALE_2H0P : 1.0f;
-        mUpSampler[0].Gains[LF_BAND] = 1.0f;
-        for(ALsizei i{1};i < 3;i++)
+        ALfloat encgains[8][MAX_OUTPUT_CHANNELS]{};
+        for(size_t k{0u};k < COUNTOF(Ambi3DPoints);k++)
         {
-            mUpSampler[i].Gains[HF_BAND] =
-                (conf->ChanMask > AMBI_2ORDER_MASK) ? XYZ_SCALE_3H0P :
-                (conf->ChanMask > AMBI_1ORDER_MASK) ? XYZ_SCALE_2H0P : 1.0f;
-            mUpSampler[i].Gains[LF_BAND] = 1.0f;
+            ALfloat coeffs[MAX_AMBI_COEFFS];
+            CalcDirectionCoeffs(Ambi3DPoints[k], 0.0f, coeffs);
+            auto ambimap_end = std::begin(map2DTo3D) + chancount;
+            std::transform(std::begin(map2DTo3D), ambimap_end, std::begin(encgains[k]),
+                [&coeffs](const ALsizei &index) noexcept -> ALfloat
+                { ASSUME(index > 0); return coeffs[index]; }
+            );
+        }
+        assert(chancount >= 3);
+        for(ALsizei c{0};c < 3;c++)
+        {
+            const ALsizei i{map2DTo3D[c]};
+            ALdouble gain{0.0};
+            for(size_t k{0u};k < COUNTOF(Ambi3DDecoder);k++)
+                gain += (ALdouble)Ambi3DDecoder[k][i] * encgains[k][c];
+            mUpSampler[c].Gains[HF_BAND] = (ALfloat)(gain * Ambi3DDecoderHFScale[i]);
+            mUpSampler[c].Gains[LF_BAND] = (ALfloat)gain;
         }
         mUpSampler[3].Gains[HF_BAND] = 0.0f;
         mUpSampler[3].Gains[LF_BAND] = 0.0f;
@@ -216,9 +231,9 @@ void BFormatDec::upSample(ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALflo
     ASSUME(InChannels > 0);
     ASSUME(SamplesToDo > 0);
 
-    /* This up-sampler leverages the differences observed in dual-band second-
-     * and third-order decoder matrices compared to first-order. For the same
-     * output channel configuration, the low-frequency matrix has identical
+    /* This up-sampler leverages the differences observed in dual-band higher-
+     * order decoder matrices compared to first-order. For the same output
+     * channel configuration, the low-frequency matrix has identical
      * coefficients in the shared input channels, while the high-frequency
      * matrix has extra scalars applied to the W channel and X/Y/Z channels.
      * Mixing the first-order content into the higher-order stream with the
@@ -244,8 +259,6 @@ void BFormatDec::upSample(ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALflo
 
 void AmbiUpsampler::reset(const ALCdevice *device)
 {
-    using namespace std::placeholders;
-
     mXOver[0].init(400.0f / (float)device->Frequency);
     std::fill(std::begin(mXOver)+1, std::end(mXOver), mXOver[0]);
 

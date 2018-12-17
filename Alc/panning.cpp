@@ -435,6 +435,7 @@ void InitPanning(ALCdevice *device)
             device->FOAOut.CoeffCount = 0;
             device->FOAOut.NumChannels = 4;
 
+            device->AmbiUp.reset(new AmbiUpsampler{});
             device->AmbiUp->reset(device);
         }
 
@@ -453,20 +454,25 @@ void InitPanning(ALCdevice *device)
                       chanmap, count, &device->Dry.NumChannels);
         device->Dry.CoeffCount = coeffcount;
 
-        const ALfloat w_scale{(device->Dry.CoeffCount > 9) ? W_SCALE_3H0P :
-                              (device->Dry.CoeffCount > 4) ? W_SCALE_2H0P : 1.0f};
-        const ALfloat xyz_scale{(device->Dry.CoeffCount > 9) ? XYZ_SCALE_3H0P :
-                                (device->Dry.CoeffCount > 4) ? XYZ_SCALE_2H0P : 1.0f};
-
-        device->FOAOut.Ambi = AmbiConfig{};
-        for(ALsizei i{0};i < device->Dry.NumChannels;i++)
+        if(coeffcount <= 4)
         {
-            device->FOAOut.Ambi.Coeffs[i][0] = device->Dry.Ambi.Coeffs[i][0] * w_scale;
-            for(ALsizei j{1};j < 4;j++)
-                device->FOAOut.Ambi.Coeffs[i][j] = device->Dry.Ambi.Coeffs[i][j] * xyz_scale;
+            device->FOAOut.Ambi = device->Dry.Ambi;
+            device->FOAOut.CoeffCount = device->Dry.CoeffCount;
+            device->FOAOut.NumChannels = 0;
         }
-        device->FOAOut.CoeffCount = 4;
-        device->FOAOut.NumChannels = 0;
+        else
+        {
+            device->FOAOut.Ambi = AmbiConfig{};
+            auto acnmap_end = std::begin(AmbiIndex::ACN2ACN) + 4;
+            std::transform(std::begin(AmbiIndex::ACN2ACN), acnmap_end, std::begin(device->FOAOut.Ambi.Map),
+                [](const ALsizei &acn) noexcept { return BFChannelConfig{1.0f, acn}; }
+            );
+            device->FOAOut.CoeffCount = 0;
+            device->FOAOut.NumChannels = 4;
+
+            device->AmbiUp.reset(new AmbiUpsampler{});
+            device->AmbiUp->reset(device);
+        }
     }
     device->RealOut.NumChannels = 0;
 }
@@ -476,34 +482,6 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
     if(conf->FreqBands != 1)
         ERR("Basic renderer uses the high-frequency matrix as single-band (xover_freq = %.0fhz)\n",
             conf->XOverFreq);
-
-    ALfloat w_scale{1.0f}, xyz_scale{1.0f};
-    if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
-    {
-        if(conf->ChanMask > AMBI_2ORDER_MASK)
-        {
-            w_scale = W_SCALE_3H3P;
-            xyz_scale = XYZ_SCALE_3H3P;
-        }
-        else if(conf->ChanMask > AMBI_1ORDER_MASK)
-        {
-            w_scale = W_SCALE_2H2P;
-            xyz_scale = XYZ_SCALE_2H2P;
-        }
-    }
-    else
-    {
-        if(conf->ChanMask > AMBI_2ORDER_MASK)
-        {
-            w_scale = W_SCALE_3H0P;
-            xyz_scale = XYZ_SCALE_3H0P;
-        }
-        else if(conf->ChanMask > AMBI_1ORDER_MASK)
-        {
-            w_scale = W_SCALE_2H0P;
-            xyz_scale = XYZ_SCALE_2H0P;
-        }
-    }
 
     const ALfloat (&coeff_scale)[MAX_AMBI_COEFFS] = GetAmbiScales(conf->CoeffScale);
     ChannelMap chanmap[MAX_OUTPUT_CHANNELS]{};
@@ -528,15 +506,27 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
     device->Dry.CoeffCount = (conf->ChanMask > AMBI_2ORDER_MASK) ? 16 :
                              (conf->ChanMask > AMBI_1ORDER_MASK) ? 9 : 4;
 
-    device->FOAOut.Ambi = AmbiConfig{};
-    for(ALsizei i{0};i < device->Dry.NumChannels;i++)
+    if(conf->ChanMask <= AMBI_1ORDER_MASK)
     {
-        device->FOAOut.Ambi.Coeffs[i][0] = device->Dry.Ambi.Coeffs[i][0] * w_scale;
-        for(ALsizei j{1};j < 4;j++)
-            device->FOAOut.Ambi.Coeffs[i][j] = device->Dry.Ambi.Coeffs[i][j] * xyz_scale;
+        device->FOAOut.Ambi = device->Dry.Ambi;
+        device->FOAOut.CoeffCount = device->Dry.CoeffCount;
+        device->FOAOut.NumChannels = 0;
     }
-    device->FOAOut.CoeffCount = 4;
-    device->FOAOut.NumChannels = 0;
+    else
+    {
+        static constexpr int map[4] = { 0, 1, 2, 3 };
+        static constexpr ALsizei count{4};
+
+        device->FOAOut.Ambi = AmbiConfig{};
+        std::transform(std::begin(map), std::begin(map)+count, std::begin(device->FOAOut.Ambi.Map),
+            [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
+        );
+        device->FOAOut.CoeffCount = 0;
+        device->FOAOut.NumChannels = count;
+
+        device->AmbiUp.reset(new AmbiUpsampler{});
+        device->AmbiUp->reset(device);
+    }
 
     device->RealOut.NumChannels = 0;
 
@@ -576,6 +566,7 @@ void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&sp
         (conf->ChanMask > AMBI_1ORDER_MASK) ? "second" : "first",
         (conf->ChanMask&AMBI_PERIPHONIC_MASK) ? " periphonic" : ""
     );
+    device->AmbiDecoder.reset(new BFormatDec{});
     device->AmbiDecoder->reset(conf, count, device->Frequency, speakermap);
 
     if(conf->ChanMask <= AMBI_1ORDER_MASK)
@@ -702,8 +693,13 @@ void InitHrtfPanning(ALCdevice *device)
     static_assert(COUNTOF(AmbiPoints) == COUNTOF(AmbiMatrixFOA), "FOA Ambisonic HRTF mismatch");
     static_assert(COUNTOF(AmbiPoints) == COUNTOF(AmbiMatrixHOA), "HOA Ambisonic HRTF mismatch");
 
-    if(device->AmbiUp)
+    /* Don't bother with HOA when using full HRTF rendering. Nothing needs it,
+     * and it eases the CPU/memory load.
+     */
+    if(device->Render_Mode != HrtfRender)
     {
+        device->AmbiUp.reset(new AmbiUpsampler{});
+
         AmbiMatrix = AmbiMatrixHOA;
         AmbiOrderHFGain = AmbiOrderHFGainHOA;
         count = static_cast<ALsizei>(COUNTOF(IndexMap));
@@ -909,6 +905,8 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
     device->AvgSpeakerDist = 0.0f;
     device->ChannelDelay.clear();
 
+    device->AmbiDecoder = nullptr;
+    device->AmbiUp = nullptr;
     device->Stablizer = nullptr;
 
     if(device->FmtChans != DevFmtStereo)
@@ -956,24 +954,9 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
             }
         }
 
-        if(pconf && GetConfigValueBool(devname, "decoder", "hq-mode", 0))
-        {
-            device->AmbiUp = nullptr;
-            if(!device->AmbiDecoder)
-                device->AmbiDecoder.reset(new BFormatDec{});
-        }
-        else
-        {
-            device->AmbiDecoder = nullptr;
-            if(device->FmtChans != DevFmtAmbi3D || device->mAmbiOrder < 2)
-                device->AmbiUp = nullptr;
-            else if(!device->AmbiUp)
-                device->AmbiUp.reset(new AmbiUpsampler{});
-        }
-
         if(!pconf)
             InitPanning(device);
-        else if(device->AmbiDecoder)
+        else if(GetConfigValueBool(devname, "decoder", "hq-mode", 0))
             InitHQPanning(device, pconf, speakermap);
         else
             InitCustomPanning(device, pconf, speakermap);
@@ -1108,19 +1091,6 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
                 ERR("Unexpected hrtf-mode: %s\n", mode);
         }
 
-        if(device->Render_Mode == HrtfRender)
-        {
-            /* Don't bother with HOA when using full HRTF rendering. Nothing
-             * needs it, and it eases the CPU/memory load.
-             */
-            device->AmbiUp = nullptr;
-        }
-        else
-        {
-            if(!device->AmbiUp)
-                device->AmbiUp.reset(new AmbiUpsampler{});
-        }
-
         TRACE("%s HRTF rendering enabled, using \"%s\"\n",
             ((device->Render_Mode == HrtfRender) ? "Full" : "Basic"), device->HrtfName.c_str()
         );
@@ -1136,8 +1106,6 @@ no_hrtf:
     TRACE("HRTF disabled\n");
 
     device->Render_Mode = StereoPair;
-
-    device->AmbiUp = nullptr;
 
     int bs2blevel{((headphones && hrtf_appreq != Hrtf_Disable) ||
                    (hrtf_appreq == Hrtf_Enable)) ? 5 : 0};

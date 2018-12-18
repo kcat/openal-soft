@@ -1599,10 +1599,15 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     ALCuint oldFreq;
     int val;
 
-    // Check for attributes
-    if(device->Type == Loopback)
+    if((!attrList || !attrList[0]) && device->Type == Loopback)
     {
-        ALCsizei numMono, numStereo, numSends;
+        WARN("Missing attributes for loopback device\n");
+        return ALC_INVALID_VALUE;
+    }
+
+    // Check for attributes
+    if(attrList && attrList[0])
+    {
         ALCenum alayout = AL_NONE;
         ALCenum ascale = AL_NONE;
         ALCenum schans = AL_NONE;
@@ -1611,253 +1616,178 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         ALCsizei aorder = 0;
         ALCuint freq = 0;
 
-        if(!attrList)
+        const char *devname{nullptr};
+        const bool loopback{device->Type == Loopback};
+        if(!loopback)
         {
-            WARN("Missing attributes for loopback device\n");
-            return ALC_INVALID_VALUE;
+            devname = device->DeviceName.c_str();
+            /* If a context is already running on the device, stop playback so
+             * the device attributes can be updated.
+             */
+            if((device->Flags&DEVICE_RUNNING))
+                V0(device->Backend,stop)();
+            device->Flags &= ~DEVICE_RUNNING;
         }
 
-        numMono = device->NumMonoSources;
-        numStereo = device->NumStereoSources;
-        numSends = old_sends;
-
-#define TRACE_ATTR(a, v) TRACE("Loopback %s = %d\n", #a, v)
-        while(attrList[attrIdx])
-        {
-            switch(attrList[attrIdx])
-            {
-                case ALC_FORMAT_CHANNELS_SOFT:
-                    schans = attrList[attrIdx + 1];
-                    TRACE_ATTR(ALC_FORMAT_CHANNELS_SOFT, schans);
-                    if(!IsValidALCChannels(schans))
-                        return ALC_INVALID_VALUE;
-                    break;
-
-                case ALC_FORMAT_TYPE_SOFT:
-                    stype = attrList[attrIdx + 1];
-                    TRACE_ATTR(ALC_FORMAT_TYPE_SOFT, stype);
-                    if(!IsValidALCType(stype))
-                        return ALC_INVALID_VALUE;
-                    break;
-
-                case ALC_FREQUENCY:
-                    freq = attrList[attrIdx + 1];
-                    TRACE_ATTR(ALC_FREQUENCY, freq);
-                    if(freq < MIN_OUTPUT_RATE)
-                        return ALC_INVALID_VALUE;
-                    break;
-
-                case ALC_AMBISONIC_LAYOUT_SOFT:
-                    alayout = attrList[attrIdx + 1];
-                    TRACE_ATTR(ALC_AMBISONIC_LAYOUT_SOFT, alayout);
-                    if(!IsValidAmbiLayout(alayout))
-                        return ALC_INVALID_VALUE;
-                    break;
-
-                case ALC_AMBISONIC_SCALING_SOFT:
-                    ascale = attrList[attrIdx + 1];
-                    TRACE_ATTR(ALC_AMBISONIC_SCALING_SOFT, ascale);
-                    if(!IsValidAmbiScaling(ascale))
-                        return ALC_INVALID_VALUE;
-                    break;
-
-                case ALC_AMBISONIC_ORDER_SOFT:
-                    aorder = attrList[attrIdx + 1];
-                    TRACE_ATTR(ALC_AMBISONIC_ORDER_SOFT, aorder);
-                    if(aorder < 1 || aorder > MAX_AMBI_ORDER)
-                        return ALC_INVALID_VALUE;
-                    break;
-
-                case ALC_MONO_SOURCES:
-                    numMono = attrList[attrIdx + 1];
-                    TRACE_ATTR(ALC_MONO_SOURCES, numMono);
-                    numMono = maxi(numMono, 0);
-                    break;
-
-                case ALC_STEREO_SOURCES:
-                    numStereo = attrList[attrIdx + 1];
-                    TRACE_ATTR(ALC_STEREO_SOURCES, numStereo);
-                    numStereo = maxi(numStereo, 0);
-                    break;
-
-                case ALC_MAX_AUXILIARY_SENDS:
-                    numSends = attrList[attrIdx + 1];
-                    TRACE_ATTR(ALC_MAX_AUXILIARY_SENDS, numSends);
-                    numSends = clampi(numSends, 0, MAX_SENDS);
-                    break;
-
-                case ALC_HRTF_SOFT:
-                    TRACE_ATTR(ALC_HRTF_SOFT, attrList[attrIdx + 1]);
-                    if(attrList[attrIdx + 1] == ALC_FALSE)
-                        hrtf_appreq = Hrtf_Disable;
-                    else if(attrList[attrIdx + 1] == ALC_TRUE)
-                        hrtf_appreq = Hrtf_Enable;
-                    else
-                        hrtf_appreq = Hrtf_Default;
-                    break;
-
-                case ALC_HRTF_ID_SOFT:
-                    hrtf_id = attrList[attrIdx + 1];
-                    TRACE_ATTR(ALC_HRTF_ID_SOFT, hrtf_id);
-                    break;
-
-                case ALC_OUTPUT_LIMITER_SOFT:
-                    gainLimiter = attrList[attrIdx + 1];
-                    TRACE_ATTR(ALC_OUTPUT_LIMITER_SOFT, gainLimiter);
-                    break;
-
-                default:
-                    TRACE("Loopback 0x%04X = %d (0x%x)\n", attrList[attrIdx],
-                          attrList[attrIdx + 1], attrList[attrIdx + 1]);
-                    break;
-            }
-
-            attrIdx += 2;
-        }
-#undef TRACE_ATTR
-
-        if(!schans || !stype || !freq)
-        {
-            WARN("Missing format for loopback device\n");
-            return ALC_INVALID_VALUE;
-        }
-        if(schans == ALC_BFORMAT3D_SOFT && (!alayout || !ascale || !aorder))
-        {
-            WARN("Missing ambisonic info for loopback device\n");
-            return ALC_INVALID_VALUE;
-        }
-
-        if((device->Flags&DEVICE_RUNNING))
-            V0(device->Backend,stop)();
-        device->Flags &= ~DEVICE_RUNNING;
-
-        UpdateClockBase(device);
-
-        device->Frequency = freq;
-        device->FmtChans = static_cast<enum DevFmtChannels>(schans);
-        device->FmtType = static_cast<enum DevFmtType>(stype);
-        if(schans == ALC_BFORMAT3D_SOFT)
-        {
-            device->mAmbiOrder = aorder;
-            device->mAmbiLayout = static_cast<AmbiLayout>(alayout);
-            device->mAmbiScale = static_cast<AmbiNorm>(ascale);
-        }
-
-        if(numMono > INT_MAX-numStereo)
-            numMono = INT_MAX-numStereo;
-        numMono += numStereo;
-        if(ConfigValueInt(nullptr, nullptr, "sources", &numMono))
-        {
-            if(numMono <= 0)
-                numMono = 256;
-        }
-        else
-            numMono = maxi(numMono, 256);
-        numStereo = mini(numStereo, numMono);
-        numMono -= numStereo;
-        device->SourcesMax = numMono + numStereo;
-
-        device->NumMonoSources = numMono;
-        device->NumStereoSources = numStereo;
-
-        if(ConfigValueInt(nullptr, nullptr, "sends", &new_sends))
-            new_sends = mini(numSends, clampi(new_sends, 0, MAX_SENDS));
-        else
-            new_sends = numSends;
-    }
-    else if(attrList && attrList[0])
-    {
-        ALCsizei numMono, numStereo, numSends;
-        ALCsizei attrIdx = 0;
-        ALCuint freq;
-
-        /* If a context is already running on the device, stop playback so the
-         * device attributes can be updated. */
-        if((device->Flags&DEVICE_RUNNING))
-            V0(device->Backend,stop)();
-        device->Flags &= ~DEVICE_RUNNING;
-
-        UpdateClockBase(device);
-
-        freq = device->Frequency;
-        numMono = device->NumMonoSources;
-        numStereo = device->NumStereoSources;
-        numSends = old_sends;
+        auto numMono = static_cast<ALsizei>(device->NumMonoSources);
+        auto numStereo = static_cast<ALsizei>(device->NumStereoSources);
+        auto numSends = ALsizei{old_sends};
 
 #define TRACE_ATTR(a, v) TRACE("%s = %d\n", #a, v)
         while(attrList[attrIdx])
         {
             switch(attrList[attrIdx])
             {
-                case ALC_FREQUENCY:
-                    freq = attrList[attrIdx + 1];
-                    TRACE_ATTR(ALC_FREQUENCY, freq);
-                    device->Flags |= DEVICE_FREQUENCY_REQUEST;
-                    break;
+            case ALC_FORMAT_CHANNELS_SOFT:
+                schans = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_FORMAT_CHANNELS_SOFT, schans);
+                break;
 
-                case ALC_MONO_SOURCES:
-                    numMono = attrList[attrIdx + 1];
-                    TRACE_ATTR(ALC_MONO_SOURCES, numMono);
-                    numMono = maxi(numMono, 0);
-                    break;
+            case ALC_FORMAT_TYPE_SOFT:
+                stype = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_FORMAT_TYPE_SOFT, stype);
+                break;
 
-                case ALC_STEREO_SOURCES:
-                    numStereo = attrList[attrIdx + 1];
-                    TRACE_ATTR(ALC_STEREO_SOURCES, numStereo);
-                    numStereo = maxi(numStereo, 0);
-                    break;
+            case ALC_FREQUENCY:
+                freq = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_FREQUENCY, freq);
+                break;
 
-                case ALC_MAX_AUXILIARY_SENDS:
-                    numSends = attrList[attrIdx + 1];
-                    TRACE_ATTR(ALC_MAX_AUXILIARY_SENDS, numSends);
-                    numSends = clampi(numSends, 0, MAX_SENDS);
-                    break;
+            case ALC_AMBISONIC_LAYOUT_SOFT:
+                alayout = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_AMBISONIC_LAYOUT_SOFT, alayout);
+                break;
 
-                case ALC_HRTF_SOFT:
-                    TRACE_ATTR(ALC_HRTF_SOFT, attrList[attrIdx + 1]);
-                    if(attrList[attrIdx + 1] == ALC_FALSE)
-                        hrtf_appreq = Hrtf_Disable;
-                    else if(attrList[attrIdx + 1] == ALC_TRUE)
-                        hrtf_appreq = Hrtf_Enable;
-                    else
-                        hrtf_appreq = Hrtf_Default;
-                    break;
+            case ALC_AMBISONIC_SCALING_SOFT:
+                ascale = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_AMBISONIC_SCALING_SOFT, ascale);
+                break;
 
-                case ALC_HRTF_ID_SOFT:
-                    hrtf_id = attrList[attrIdx + 1];
-                    TRACE_ATTR(ALC_HRTF_ID_SOFT, hrtf_id);
-                    break;
+            case ALC_AMBISONIC_ORDER_SOFT:
+                aorder = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_AMBISONIC_ORDER_SOFT, aorder);
+                break;
 
-                case ALC_OUTPUT_LIMITER_SOFT:
-                    gainLimiter = attrList[attrIdx + 1];
-                    TRACE_ATTR(ALC_OUTPUT_LIMITER_SOFT, gainLimiter);
-                    break;
+            case ALC_MONO_SOURCES:
+                numMono = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_MONO_SOURCES, numMono);
+                numMono = maxi(numMono, 0);
+                break;
 
-                default:
-                    TRACE("0x%04X = %d (0x%x)\n", attrList[attrIdx],
-                          attrList[attrIdx + 1], attrList[attrIdx + 1]);
-                    break;
+            case ALC_STEREO_SOURCES:
+                numStereo = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_STEREO_SOURCES, numStereo);
+                numStereo = maxi(numStereo, 0);
+                break;
+
+            case ALC_MAX_AUXILIARY_SENDS:
+                numSends = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_MAX_AUXILIARY_SENDS, numSends);
+                numSends = clampi(numSends, 0, MAX_SENDS);
+                break;
+
+            case ALC_HRTF_SOFT:
+                TRACE_ATTR(ALC_HRTF_SOFT, attrList[attrIdx + 1]);
+                if(attrList[attrIdx + 1] == ALC_FALSE)
+                    hrtf_appreq = Hrtf_Disable;
+                else if(attrList[attrIdx + 1] == ALC_TRUE)
+                    hrtf_appreq = Hrtf_Enable;
+                else
+                    hrtf_appreq = Hrtf_Default;
+                break;
+
+            case ALC_HRTF_ID_SOFT:
+                hrtf_id = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_HRTF_ID_SOFT, hrtf_id);
+                break;
+
+            case ALC_OUTPUT_LIMITER_SOFT:
+                gainLimiter = attrList[attrIdx + 1];
+                TRACE_ATTR(ALC_OUTPUT_LIMITER_SOFT, gainLimiter);
+                break;
+
+            default:
+                TRACE("0x%04X = %d (0x%x)\n", attrList[attrIdx],
+                    attrList[attrIdx + 1], attrList[attrIdx + 1]);
+                break;
             }
 
             attrIdx += 2;
         }
 #undef TRACE_ATTR
 
-        ConfigValueUInt(device->DeviceName.c_str(), nullptr, "frequency", &freq);
-        freq = maxu(freq, MIN_OUTPUT_RATE);
+        if(loopback)
+        {
+            if(!schans || !stype || !freq)
+            {
+                WARN("Missing format for loopback device\n");
+                return ALC_INVALID_VALUE;
+            }
+            if(schans == ALC_BFORMAT3D_SOFT && (!alayout || !ascale || !aorder))
+            {
+                WARN("Missing ambisonic info for loopback device\n");
+                return ALC_INVALID_VALUE;
+            }
+            if(!IsValidALCChannels(schans) || !IsValidALCType(stype) || freq < MIN_OUTPUT_RATE)
+                return ALC_INVALID_VALUE;
+            if(!IsValidAmbiLayout(alayout) || !IsValidAmbiScaling(ascale))
+                return ALC_INVALID_VALUE;
+            if(aorder < 1 || aorder > MAX_AMBI_ORDER)
+                return ALC_INVALID_VALUE;
+        }
 
-        device->UpdateSize = (ALuint64)device->UpdateSize * freq /
-                             device->Frequency;
-        /* SSE and Neon do best with the update size being a multiple of 4 */
-        if((CPUCapFlags&(CPU_CAP_SSE|CPU_CAP_NEON)) != 0)
-            device->UpdateSize = (device->UpdateSize+3)&~3;
+        if((device->Flags&DEVICE_RUNNING))
+            V0(device->Backend,stop)();
+        device->Flags &= ~DEVICE_RUNNING;
 
-        device->Frequency = freq;
+        UpdateClockBase(device);
+
+        if(!loopback)
+        {
+            device->NumUpdates = DEFAULT_NUM_UPDATES;
+            device->UpdateSize = DEFAULT_UPDATE_SIZE;
+            device->Frequency = DEFAULT_OUTPUT_RATE;
+
+            ConfigValueUInt(devname, nullptr, "frequency", &freq);
+            if(freq < 1)
+                device->Flags &= ~DEVICE_FREQUENCY_REQUEST;
+            else
+            {
+                freq = maxi(freq, MIN_OUTPUT_RATE);
+
+                device->NumUpdates = (device->NumUpdates*freq + device->NumUpdates/2) /
+                                     device->Frequency;
+
+                device->Frequency = freq;
+                device->Flags |= DEVICE_FREQUENCY_REQUEST;
+            }
+
+            ConfigValueUInt(devname, nullptr, "periods", &device->NumUpdates);
+            device->NumUpdates = clampu(device->NumUpdates, 2, 16);
+
+            ConfigValueUInt(devname, nullptr, "period_size", &device->UpdateSize);
+            device->UpdateSize = clampu(device->UpdateSize, 64, 8192);
+            /* SSE and Neon do best with the update size being a multiple of 4. */
+            if((CPUCapFlags&(CPU_CAP_SSE|CPU_CAP_NEON)) != 0)
+                device->UpdateSize = (device->UpdateSize+3u)&~3u;
+        }
+        else
+        {
+            device->Frequency = freq;
+            device->FmtChans = static_cast<enum DevFmtChannels>(schans);
+            device->FmtType = static_cast<enum DevFmtType>(stype);
+            if(schans == ALC_BFORMAT3D_SOFT)
+            {
+                device->mAmbiOrder = aorder;
+                device->mAmbiLayout = static_cast<AmbiLayout>(alayout);
+                device->mAmbiScale = static_cast<AmbiNorm>(ascale);
+            }
+        }
 
         if(numMono > INT_MAX-numStereo)
             numMono = INT_MAX-numStereo;
         numMono += numStereo;
-        if(ConfigValueInt(device->DeviceName.c_str(), nullptr, "sources", &numMono))
+        if(ConfigValueInt(devname, nullptr, "sources", &numMono))
         {
             if(numMono <= 0)
                 numMono = 256;
@@ -1871,7 +1801,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         device->NumMonoSources = numMono;
         device->NumStereoSources = numStereo;
 
-        if(ConfigValueInt(device->DeviceName.c_str(), nullptr, "sends", &new_sends))
+        if(ConfigValueInt(devname, nullptr, "sends", &new_sends))
             new_sends = mini(numSends, clampi(new_sends, 0, MAX_SENDS));
         else
             new_sends = numSends;
@@ -3711,9 +3641,9 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     device->FmtChans = DevFmtChannelsDefault;
     device->FmtType = DevFmtTypeDefault;
     device->Frequency = DEFAULT_OUTPUT_RATE;
+    device->UpdateSize = DEFAULT_UPDATE_SIZE;
+    device->NumUpdates = DEFAULT_NUM_UPDATES;
     device->LimiterState = ALC_TRUE;
-    device->NumUpdates = 3;
-    device->UpdateSize = 1024;
 
     device->SourcesMax = 256;
     device->AuxiliaryEffectSlotMax = 64;
@@ -3780,12 +3710,17 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         }
     }
 
-    if(ConfigValueUInt(deviceName, nullptr, "frequency", &device->Frequency))
+    ALuint freq{};
+    if(ConfigValueUInt(deviceName, nullptr, "frequency", &freq) && freq > 0)
     {
+        if(freq < MIN_OUTPUT_RATE)
+        {
+            ERR("%uhz request clamped to %uhz minimum\n", freq, MIN_OUTPUT_RATE);
+            freq = MIN_OUTPUT_RATE;
+        }
+        device->NumUpdates = (device->NumUpdates*freq + device->Frequency/2) / device->Frequency;
+        device->Frequency = freq;
         device->Flags |= DEVICE_FREQUENCY_REQUEST;
-        if(device->Frequency < MIN_OUTPUT_RATE)
-            ERR("%uhz request clamped to %uhz minimum\n", device->Frequency, MIN_OUTPUT_RATE);
-        device->Frequency = maxu(device->Frequency, MIN_OUTPUT_RATE);
     }
 
     ConfigValueUInt(deviceName, nullptr, "periods", &device->NumUpdates);
@@ -3794,7 +3729,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     ConfigValueUInt(deviceName, nullptr, "period_size", &device->UpdateSize);
     device->UpdateSize = clampu(device->UpdateSize, 64, 8192);
     if((CPUCapFlags&(CPU_CAP_SSE|CPU_CAP_NEON)) != 0)
-        device->UpdateSize = (device->UpdateSize+3)&~3;
+        device->UpdateSize = (device->UpdateSize+3u)&~3u;
 
     ConfigValueUInt(deviceName, nullptr, "sources", &device->SourcesMax);
     if(device->SourcesMax == 0) device->SourcesMax = 256;

@@ -252,6 +252,8 @@ class AmbiUpsampler;
 struct bs2b;
 
 
+#define DEFAULT_UPDATE_SIZE  (1024)
+#define DEFAULT_NUM_UPDATES  (3)
 #define DEFAULT_OUTPUT_RATE  (44100)
 #define MIN_OUTPUT_RATE      (8000)
 

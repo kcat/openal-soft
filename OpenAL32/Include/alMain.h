@@ -502,12 +502,10 @@ template<>
 struct DevFmtTypeTraits<DevFmtFloat> { using Type = ALfloat; };
 
 
-ALsizei BytesFromDevFmt(enum DevFmtType type);
-ALsizei ChannelsFromDevFmt(enum DevFmtChannels chans, ALsizei ambiorder);
-inline ALsizei FrameSizeFromDevFmt(enum DevFmtChannels chans, enum DevFmtType type, ALsizei ambiorder)
-{
-    return ChannelsFromDevFmt(chans, ambiorder) * BytesFromDevFmt(type);
-}
+ALsizei BytesFromDevFmt(DevFmtType type) noexcept;
+ALsizei ChannelsFromDevFmt(DevFmtChannels chans, ALsizei ambiorder) noexcept;
+inline ALsizei FrameSizeFromDevFmt(DevFmtChannels chans, DevFmtType type, ALsizei ambiorder) noexcept
+{ return ChannelsFromDevFmt(chans, ambiorder) * BytesFromDevFmt(type); }
 
 enum class AmbiLayout {
     FuMa = ALC_FUMA_SOFT, /* FuMa channel order */
@@ -810,6 +808,11 @@ struct ALCdevice_struct {
     ALCdevice_struct& operator=(const ALCdevice_struct&) = delete;
     ~ALCdevice_struct();
 
+    ALsizei bytesFromFmt() const noexcept { return BytesFromDevFmt(FmtType); }
+    ALsizei channelsFromFmt() const noexcept { return ChannelsFromDevFmt(FmtChans, mAmbiOrder); }
+    ALsizei frameSizeFromFmt() const noexcept
+    { return FrameSizeFromDevFmt(FmtChans, FmtType, mAmbiOrder); }
+
     DEF_NEWDEL(ALCdevice)
 };
 
@@ -889,8 +892,8 @@ void SetRTPriority(void);
 void SetDefaultChannelOrder(ALCdevice *device);
 void SetDefaultWFXChannelOrder(ALCdevice *device);
 
-const ALCchar *DevFmtTypeString(DevFmtType type);
-const ALCchar *DevFmtChannelsString(DevFmtChannels chans);
+const ALCchar *DevFmtTypeString(DevFmtType type) noexcept;
+const ALCchar *DevFmtChannelsString(DevFmtChannels chans) noexcept;
 
 inline ALint GetChannelIndex(const Channel (&names)[MAX_OUTPUT_CHANNELS], Channel chan)
 {

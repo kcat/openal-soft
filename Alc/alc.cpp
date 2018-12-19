@@ -1185,7 +1185,7 @@ static void ProbeCaptureDeviceList(void)
 /************************************************
  * Device format information
  ************************************************/
-const ALCchar *DevFmtTypeString(enum DevFmtType type)
+const ALCchar *DevFmtTypeString(DevFmtType type) noexcept
 {
     switch(type)
     {
@@ -1199,7 +1199,7 @@ const ALCchar *DevFmtTypeString(enum DevFmtType type)
     }
     return "(unknown type)";
 }
-const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans)
+const ALCchar *DevFmtChannelsString(DevFmtChannels chans) noexcept
 {
     switch(chans)
     {
@@ -1215,7 +1215,7 @@ const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans)
     return "(unknown channels)";
 }
 
-ALsizei BytesFromDevFmt(enum DevFmtType type)
+ALsizei BytesFromDevFmt(DevFmtType type) noexcept
 {
     switch(type)
     {
@@ -1229,7 +1229,7 @@ ALsizei BytesFromDevFmt(enum DevFmtType type)
     }
     return 0;
 }
-ALsizei ChannelsFromDevFmt(enum DevFmtChannels chans, ALsizei ambiorder)
+ALsizei ChannelsFromDevFmt(DevFmtChannels chans, ALsizei ambiorder) noexcept
 {
     switch(chans)
     {
@@ -1240,9 +1240,7 @@ ALsizei ChannelsFromDevFmt(enum DevFmtChannels chans, ALsizei ambiorder)
     case DevFmtX51Rear: return 6;
     case DevFmtX61: return 7;
     case DevFmtX71: return 8;
-    case DevFmtAmbi3D: return (ambiorder >= 3) ? 16 :
-                              (ambiorder == 2) ? 9 :
-                              (ambiorder == 1) ? 4 : 1;
+    case DevFmtAmbi3D: return (ambiorder+1) * (ambiorder+1);
     }
     return 0;
 }

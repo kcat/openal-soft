@@ -1734,6 +1734,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 return ALC_INVALID_VALUE;
             if(aorder < 1 || aorder > MAX_AMBI_ORDER)
                 return ALC_INVALID_VALUE;
+            if((alayout == ALC_FUMA_SOFT || ascale == ALC_FUMA_SOFT) && aorder > 3)
+                return ALC_INVALID_VALUE;
         }
 
         if((device->Flags&DEVICE_RUNNING))
@@ -3768,8 +3770,18 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     {
         if(strcasecmp(fmt, "fuma") == 0)
         {
-            device->mAmbiLayout = AmbiLayout::FuMa;
-            device->mAmbiScale = AmbiNorm::FuMa;
+            if(device->mAmbiOrder > 3)
+                ERR("FuMa is incompatible with %d%s order ambisonics (up to third-order only)\n",
+                    device->mAmbiOrder,
+                    (((device->mAmbiOrder%100)/10) == 1) ? "th" :
+                    ((device->mAmbiOrder%10) == 1) ? "st" :
+                    ((device->mAmbiOrder%10) == 2) ? "nd" :
+                    ((device->mAmbiOrder%10) == 3) ? "rd" : "th");
+            else
+            {
+                device->mAmbiLayout = AmbiLayout::FuMa;
+                device->mAmbiScale = AmbiNorm::FuMa;
+            }
         }
         else if(strcasecmp(fmt, "acn+sn3d") == 0)
         {

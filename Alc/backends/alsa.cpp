@@ -765,7 +765,7 @@ ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
     }
     CHECK(snd_pcm_hw_params_set_format(self->PcmHandle, hp, format));
     /* test and set channels (implicitly sets frame bits) */
-    if(snd_pcm_hw_params_test_channels(self->PcmHandle, hp, ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder)) < 0)
+    if(snd_pcm_hw_params_test_channels(self->PcmHandle, hp, device->channelsFromFmt()) < 0)
     {
         static const enum DevFmtChannels channellist[] = {
             DevFmtStereo,
@@ -785,7 +785,7 @@ ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
             }
         }
     }
-    CHECK(snd_pcm_hw_params_set_channels(self->PcmHandle, hp, ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder)));
+    CHECK(snd_pcm_hw_params_set_channels(self->PcmHandle, hp, device->channelsFromFmt()));
     /* set rate (implicitly constrains period/buffer parameters) */
     if(!GetConfigValueBool(device->DeviceName.c_str(), "alsa", "allow-resampler", 0) ||
        !(device->Flags&DEVICE_FREQUENCY_REQUEST))
@@ -1046,7 +1046,7 @@ ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
     /* set format (implicitly sets sample bits) */
     CHECK(snd_pcm_hw_params_set_format(self->PcmHandle, hp, format));
     /* set channels (implicitly sets frame bits) */
-    CHECK(snd_pcm_hw_params_set_channels(self->PcmHandle, hp, ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder)));
+    CHECK(snd_pcm_hw_params_set_channels(self->PcmHandle, hp, device->channelsFromFmt()));
     /* set rate (implicitly constrains period/buffer parameters) */
     CHECK(snd_pcm_hw_params_set_rate(self->PcmHandle, hp, device->Frequency, 0));
     /* set buffer size in frame units (implicitly sets period size/bytes/time and buffer time/bytes) */
@@ -1068,11 +1068,8 @@ ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
 
     if(needring)
     {
-        self->Ring = ll_ringbuffer_create(
-            device->UpdateSize*device->NumUpdates,
-            FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder),
-            false
-        );
+        self->Ring = ll_ringbuffer_create(device->UpdateSize*device->NumUpdates,
+            device->frameSizeFromFmt(), false);
         if(!self->Ring)
         {
             ERR("ring buffer create failed\n");

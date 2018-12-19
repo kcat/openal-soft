@@ -222,10 +222,7 @@ int ALCjackPlayback_bufferSizeNotify(jack_nframes_t numframes, void *arg)
     TRACE("%u update size x%u\n", device->UpdateSize, device->NumUpdates);
 
     self->mRing = nullptr;
-    self->mRing.reset(ll_ringbuffer_create(bufsize,
-        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder),
-        true
-    ));
+    self->mRing.reset(ll_ringbuffer_create(bufsize, device->frameSizeFromFmt(), true));
     if(!self->mRing)
     {
         ERR("Failed to reallocate ringbuffer\n");
@@ -400,7 +397,7 @@ ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
     /* Force 32-bit float output. */
     device->FmtType = DevFmtFloat;
 
-    ALsizei numchans{ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder)};
+    ALsizei numchans{device->channelsFromFmt()};
     auto ports_end = std::begin(self->mPort) + numchans;
     auto bad_port = std::find_if_not(std::begin(self->mPort), ports_end,
         [self](jack_port_t *&port) -> bool
@@ -432,10 +429,7 @@ ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
     }
 
     self->mRing = nullptr;
-    self->mRing.reset(ll_ringbuffer_create(bufsize,
-        FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder),
-        true
-    ));
+    self->mRing.reset(ll_ringbuffer_create(bufsize, device->frameSizeFromFmt(), true));
     if(!self->mRing)
     {
         ERR("Failed to allocate ringbuffer\n");

@@ -271,7 +271,7 @@ static ALCboolean ALCcoreAudioPlayback_reset(ALCcoreAudioPlayback *self)
     }
 
     /* setup callback */
-    self->FrameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder);
+    self->FrameSize = device->frameSizeFromFmt();
     input.inputProc = ALCcoreAudioPlayback_MixerProc;
     input.inputProcRefCon = self;
 
@@ -622,7 +622,7 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
 
     // save requested format description for later use
     self->Format = requestedFormat;
-    self->FrameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder);
+    self->FrameSize = device->frameSizeFromFmt();
 
     // Use intermediate format for sample rate conversion (outputFormat)
     // Set sample rate to the same as hardware for resampling later

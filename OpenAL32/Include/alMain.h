@@ -810,8 +810,7 @@ struct ALCdevice_struct {
 
     ALsizei bytesFromFmt() const noexcept { return BytesFromDevFmt(FmtType); }
     ALsizei channelsFromFmt() const noexcept { return ChannelsFromDevFmt(FmtChans, mAmbiOrder); }
-    ALsizei frameSizeFromFmt() const noexcept
-    { return FrameSizeFromDevFmt(FmtChans, FmtType, mAmbiOrder); }
+    ALsizei frameSizeFromFmt() const noexcept { return bytesFromFmt() * channelsFromFmt(); }
 
     DEF_NEWDEL(ALCdevice)
 };

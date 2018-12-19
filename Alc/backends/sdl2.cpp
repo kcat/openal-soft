@@ -73,7 +73,7 @@ static void ALCsdl2Backend_Construct(ALCsdl2Backend *self, ALCdevice *device)
     SET_VTABLE2(ALCsdl2Backend, ALCbackend, self);
 
     self->deviceID = 0;
-    self->frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder);
+    self->frameSize = device->frameSizeFromFmt();
     self->Frequency = device->Frequency;
     self->FmtChans = device->FmtChans;
     self->FmtType = device->FmtType;
@@ -168,7 +168,7 @@ static ALCenum ALCsdl2Backend_open(ALCsdl2Backend *self, const ALCchar *name)
     device->UpdateSize = have.samples;
     device->NumUpdates = 2; /* SDL always (tries to) use two periods. */
 
-    self->frameSize = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder);
+    self->frameSize = device->frameSizeFromFmt();
     self->Frequency = device->Frequency;
     self->FmtChans = device->FmtChans;
     self->FmtType = device->FmtType;

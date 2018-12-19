@@ -265,7 +265,7 @@ FORCE_ALIGN int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self)
         return 1;
     }
 
-    ALsizei FrameSize{FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder)};
+    ALsizei FrameSize{device->frameSizeFromFmt()};
     DWORD FragSize{device->UpdateSize * FrameSize};
 
     bool Playing{false};
@@ -521,8 +521,8 @@ ALCboolean ALCdsoundPlayback_reset(ALCdsoundPlayback *self)
 retry_open:
         hr = S_OK;
         OutputType.Format.wFormatTag = WAVE_FORMAT_PCM;
-        OutputType.Format.nChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
-        OutputType.Format.wBitsPerSample = BytesFromDevFmt(device->FmtType) * 8;
+        OutputType.Format.nChannels = device->channelsFromFmt();
+        OutputType.Format.wBitsPerSample = device->bytesFromFmt() * 8;
         OutputType.Format.nBlockAlign = OutputType.Format.nChannels*OutputType.Format.wBitsPerSample/8;
         OutputType.Format.nSamplesPerSec = device->Frequency;
         OutputType.Format.nAvgBytesPerSec = OutputType.Format.nSamplesPerSec*OutputType.Format.nBlockAlign;
@@ -805,8 +805,8 @@ ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *deviceName)
     }
 
     InputType.Format.wFormatTag = WAVE_FORMAT_PCM;
-    InputType.Format.nChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
-    InputType.Format.wBitsPerSample = BytesFromDevFmt(device->FmtType) * 8;
+    InputType.Format.nChannels = device->channelsFromFmt();
+    InputType.Format.wBitsPerSample = device->bytesFromFmt() * 8;
     InputType.Format.nBlockAlign = InputType.Format.nChannels*InputType.Format.wBitsPerSample/8;
     InputType.Format.nSamplesPerSec = device->Frequency;
     InputType.Format.nAvgBytesPerSec = InputType.Format.nSamplesPerSec*InputType.Format.nBlockAlign;
@@ -904,7 +904,7 @@ ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
     if(!device->Connected.load(std::memory_order_acquire))
         return static_cast<ALCuint>(ll_ringbuffer_read_space(self->Ring));
 
-    ALsizei FrameSize{FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder)};
+    ALsizei FrameSize{device->frameSizeFromFmt()};
     DWORD BufferBytes{self->BufferBytes};
     DWORD LastCursor{self->Cursor};
 

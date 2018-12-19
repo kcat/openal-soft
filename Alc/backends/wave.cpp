@@ -130,7 +130,7 @@ int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
 
     althrd_setname(MIXER_THREAD_NAME);
 
-    ALsizei frameSize{FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder)};
+    const ALsizei frameSize{device->frameSizeFromFmt()};
 
     ALint64 done{0};
     auto start = std::chrono::steady_clock::now();
@@ -155,7 +155,7 @@ int ALCwaveBackend_mixerProc(ALCwaveBackend *self)
 
             if(!IS_LITTLE_ENDIAN)
             {
-                const ALsizei bytesize{BytesFromDevFmt(device->FmtType)};
+                const ALsizei bytesize{device->bytesFromFmt()};
                 ALsizei i;
 
                 if(bytesize == 2)
@@ -284,14 +284,15 @@ ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
         case DevFmtX71: chanmask = 0x01 | 0x02 | 0x04 | 0x08 | 0x010 | 0x020 | 0x200 | 0x400; break;
         case DevFmtAmbi3D:
             /* .amb output requires FuMa */
+            device->mAmbiOrder = mini(device->mAmbiOrder, 3);
             device->mAmbiLayout = AmbiLayout::FuMa;
             device->mAmbiScale = AmbiNorm::FuMa;
             isbformat = 1;
             chanmask = 0;
             break;
     }
-    bits = BytesFromDevFmt(device->FmtType) * 8;
-    channels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
+    bits = device->bytesFromFmt() * 8;
+    channels = device->channelsFromFmt();
 
     fputs("RIFF", self->mFile);
     fwrite32le(0xFFFFFFFF, self->mFile); // 'RIFF' header len; filled in at close
@@ -337,9 +338,7 @@ ALCboolean ALCwaveBackend_reset(ALCwaveBackend *self)
 
     SetDefaultWFXChannelOrder(device);
 
-    ALuint bufsize{FrameSizeFromDevFmt(
-        device->FmtChans, device->FmtType, device->mAmbiOrder
-    ) * device->UpdateSize};
+    const ALuint bufsize{device->frameSizeFromFmt() * device->UpdateSize};
     self->mBuffer.resize(bufsize);
 
     return ALC_TRUE;

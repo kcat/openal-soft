@@ -598,7 +598,7 @@ void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&sp
         device->FOAOut.NumChannels = count;
     }
 
-    device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
+    device->RealOut.NumChannels = device->channelsFromFmt();
 
     using namespace std::placeholders;
     auto accum_spkr_dist = std::bind(
@@ -732,7 +732,7 @@ void InitHrtfPanning(ALCdevice *device)
         device->FOAOut.NumChannels = 0;
     }
 
-    device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
+    device->RealOut.NumChannels = device->channelsFromFmt();
 
     BuildBFormatHrtf(device->HrtfHandle,
         device->mHrtfState.get(), device->Dry.NumChannels, AmbiPoints, AmbiMatrix,
@@ -759,7 +759,7 @@ void InitUhjPanning(ALCdevice *device)
     device->FOAOut.CoeffCount = device->Dry.CoeffCount;
     device->FOAOut.NumChannels = 0;
 
-    device->RealOut.NumChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
+    device->RealOut.NumChannels = device->channelsFromFmt();
 }
 
 } // namespace

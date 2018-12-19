@@ -114,7 +114,7 @@ static int ALCsolarisBackend_mixerProc(ALCsolarisBackend *self)
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    frame_size = FrameSizeFromDevFmt(device->FmtChans, device->FmtType, device->mAmbiOrder);
+    frame_size = device->frameSizeFromFmt();
 
     ALCsolarisBackend_lock(self);
     while(!self->mKillNow.load(std::memory_order_acquire) &&
@@ -203,7 +203,7 @@ static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
 
     if(device->FmtChans != DevFmtMono)
         device->FmtChans = DevFmtStereo;
-    numChannels = ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder);
+    numChannels = device->channelsFromFmt();
     info.play.channels = numChannels;
 
     switch(device->FmtType)
@@ -228,7 +228,7 @@ static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
             break;
     }
 
-    frameSize = numChannels * BytesFromDevFmt(device->FmtType);
+    frameSize = numChannels * device->bytesFromFmt();
     info.play.buffer_size = device->UpdateSize*device->NumUpdates * frameSize;
 
     if(ioctl(self->fd, AUDIO_SETINFO, &info) < 0)
@@ -237,9 +237,10 @@ static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
         return ALC_FALSE;
     }
 
-    if(ChannelsFromDevFmt(device->FmtChans, device->mAmbiOrder) != (ALsizei)info.play.channels)
+    if(device->channelsFromFmt() != (ALsizei)info.play.channels)
     {
-        ERR("Failed to set %s, got %u channels instead\n", DevFmtChannelsString(device->FmtChans), info.play.channels);
+        ERR("Failed to set %s, got %u channels instead\n", DevFmtChannelsString(device->FmtChans),
+            info.play.channels);
         return ALC_FALSE;
     }
 
@@ -259,9 +260,7 @@ static ALCboolean ALCsolarisBackend_reset(ALCsolarisBackend *self)
     SetDefaultChannelOrder(device);
 
     free(self->mix_data);
-    self->data_size = device->UpdateSize * FrameSizeFromDevFmt(
-        device->FmtChans, device->FmtType, device->mAmbiOrder
-    );
+    self->data_size = device->UpdateSize * device->frameSizeFromFmt();
     self->mix_data = static_cast<ALubyte*>(calloc(1, self->data_size));
 
     return ALC_TRUE;

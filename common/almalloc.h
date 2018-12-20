@@ -68,6 +68,21 @@ struct allocator : public std::allocator<T> {
     { }
 };
 
+template<size_t alignment, typename T>
+inline T* assume_aligned(T *ptr) noexcept
+{
+    static_assert((alignment & (alignment-1)) == 0, "alignment must be a power of 2");
+#ifdef __GNUC__
+    return reinterpret_cast<T*>(__builtin_assume_aligned(ptr, alignment));
+#elif defined(_MSC_VER)
+    auto ptrval = reinterpret_cast<uintptr_t>(ptr);
+    if((ptrval&(alignment-1)) != 0) __assume(0);
+    return reinterpret_cast<T*>(ptrval);
+#else
+    return ptr;
+#endif
+}
+
 } // namespace al
 
 #endif /* AL_MALLOC_H */

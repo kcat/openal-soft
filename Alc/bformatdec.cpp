@@ -63,8 +63,6 @@ auto GetAmbiScales(AmbDecScale scaletype) noexcept -> const std::array<float,MAX
 
 void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS])
 {
-    static constexpr ALsizei map2DTo3D[MAX_AMBI2D_COEFFS]{ 0,  1, 3,  4, 8,  9, 15 };
-
     mSamples.clear();
     mSamplesHF = nullptr;
     mSamplesLF = nullptr;
@@ -110,16 +108,16 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
         {
             ALfloat coeffs[MAX_AMBI_COEFFS];
             CalcDirectionCoeffs(Ambi3DPoints[k], 0.0f, coeffs);
-            auto ambimap_end = std::begin(map2DTo3D) + chancount;
-            std::transform(std::begin(map2DTo3D), ambimap_end, std::begin(encgains[k]),
+            auto ambimap_end = AmbiIndex::From2D.begin() + chancount;
+            std::transform(AmbiIndex::From2D.begin(), ambimap_end, std::begin(encgains[k]),
                 [&coeffs](const ALsizei &index) noexcept -> ALfloat
-                { ASSUME(index > 0); return coeffs[index]; }
+                { ASSUME(index >= 0); return coeffs[index]; }
             );
         }
         assert(chancount >= 3);
         for(ALsizei c{0};c < 3;c++)
         {
-            const ALsizei i{map2DTo3D[c]};
+            const ALsizei i{AmbiIndex::From2D[c]};
             ALdouble gain{0.0};
             for(size_t k{0u};k < COUNTOF(Ambi3DDecoder);k++)
                 gain += (ALdouble)Ambi3DDecoder[k][i] * encgains[k][c];
@@ -142,7 +140,7 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
             ALfloat (&mtx)[MAX_AMBI_COEFFS] = mMatrix.Single[chanmap[i]];
             for(ALsizei j{0},k{0};j < coeff_count;j++)
             {
-                const ALsizei l{periphonic ? j : map2DTo3D[j]};
+                const ALsizei l{periphonic ? j : AmbiIndex::From2D[j]};
                 if(!(conf->ChanMask&(1<<l))) continue;
                 mtx[j] = conf->HFMatrix[i][k] / coeff_scale[l] *
                     ((l>=9) ? conf->HFOrderGain[3] :
@@ -163,7 +161,7 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
             ALfloat (&mtx)[sNumBands][MAX_AMBI_COEFFS] = mMatrix.Dual[chanmap[i]];
             for(ALsizei j{0},k{0};j < coeff_count;j++)
             {
-                const ALsizei l{periphonic ? j : map2DTo3D[j]};
+                const ALsizei l{periphonic ? j : AmbiIndex::From2D[j]};
                 if(!(conf->ChanMask&(1<<l))) continue;
                 mtx[HF_BAND][j] = conf->HFMatrix[i][k] / coeff_scale[l] *
                     ((l>=9) ? conf->HFOrderGain[3] :

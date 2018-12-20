@@ -47,6 +47,8 @@ constexpr std::array<float,MAX_AMBI_COEFFS> AmbiScale::FromSN3D;
 constexpr std::array<float,MAX_AMBI_COEFFS> AmbiScale::FromFuMa;
 constexpr std::array<int,MAX_AMBI_COEFFS> AmbiIndex::FromFuMa;
 constexpr std::array<int,MAX_AMBI_COEFFS> AmbiIndex::FromACN;
+constexpr std::array<int,MAX_AMBI2D_COEFFS> AmbiIndex::From2D;
+constexpr std::array<int,MAX_AMBI_COEFFS> AmbiIndex::From3D;
 
 
 namespace {
@@ -423,11 +425,8 @@ void InitPanning(ALCdevice *device)
         }
         else
         {
-            /* FOA output is always ACN+N3D for higher-order ambisonic output.
-             * The upsampler expects this and will convert it for output.
-             */
             device->FOAOut.Ambi = AmbiConfig{};
-            std::transform(AmbiIndex::FromACN.begin(), AmbiIndex::FromACN.begin()+4,
+            std::transform(AmbiIndex::From3D.begin(), AmbiIndex::From3D.begin()+4,
                 std::begin(device->FOAOut.Ambi.Map),
                 [](const ALsizei &acn) noexcept { return BFChannelConfig{1.0f, acn}; }
             );
@@ -462,7 +461,7 @@ void InitPanning(ALCdevice *device)
         else
         {
             device->FOAOut.Ambi = AmbiConfig{};
-            std::transform(AmbiIndex::FromACN.begin(), AmbiIndex::FromACN.begin()+4,
+            std::transform(AmbiIndex::From3D.begin(), AmbiIndex::From3D.begin()+4,
                 std::begin(device->FOAOut.Ambi.Map),
                 [](const ALsizei &acn) noexcept { return BFChannelConfig{1.0f, acn}; }
             );
@@ -513,11 +512,11 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
     }
     else
     {
-        static constexpr int map[4] = { 0, 1, 2, 3 };
         static constexpr ALsizei count{4};
 
         device->FOAOut.Ambi = AmbiConfig{};
-        std::transform(std::begin(map), std::begin(map)+count, std::begin(device->FOAOut.Ambi.Map),
+        std::transform(AmbiIndex::From3D.begin(), AmbiIndex::From3D.begin()+count,
+            std::begin(device->FOAOut.Ambi.Map),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
         );
         device->FOAOut.CoeffCount = 0;
@@ -540,19 +539,19 @@ void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&sp
     ALsizei count;
     if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
     {
-        static constexpr int map[MAX_AMBI_COEFFS] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
         count = (conf->ChanMask > AMBI_2ORDER_MASK) ? 16 :
                 (conf->ChanMask > AMBI_1ORDER_MASK) ? 9 : 4;
-        std::transform(std::begin(map), std::begin(map)+count, std::begin(device->Dry.Ambi.Map),
+        std::transform(AmbiIndex::From3D.begin(), AmbiIndex::From3D.begin()+count,
+            std::begin(device->Dry.Ambi.Map),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
         );
     }
     else
     {
-        static constexpr int map[MAX_AMBI2D_COEFFS] = { 0, 1, 3, 4, 8, 9, 15 };
         count = (conf->ChanMask > AMBI_2ORDER_MASK) ? 7 :
                 (conf->ChanMask > AMBI_1ORDER_MASK) ? 5 : 3;
-        std::transform(std::begin(map), std::begin(map)+count, std::begin(device->Dry.Ambi.Map),
+        std::transform(AmbiIndex::From2D.begin(), AmbiIndex::From2D.begin()+count,
+            std::begin(device->Dry.Ambi.Map),
             [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
         );
     }
@@ -579,17 +578,17 @@ void InitHQPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei (&sp
         device->FOAOut.Ambi = AmbiConfig{};
         if((conf->ChanMask&AMBI_PERIPHONIC_MASK))
         {
-            static constexpr int map[4] = { 0, 1, 2, 3 };
             count = 4;
-            std::transform(std::begin(map), std::begin(map)+count, std::begin(device->FOAOut.Ambi.Map),
+            std::transform(AmbiIndex::From3D.begin(), AmbiIndex::From3D.begin()+count,
+                std::begin(device->FOAOut.Ambi.Map),
                 [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
             );
         }
         else
         {
-            static constexpr int map[3] = { 0, 1, 3 };
             count = 3;
-            std::transform(std::begin(map), std::begin(map)+count, std::begin(device->FOAOut.Ambi.Map),
+            std::transform(AmbiIndex::From2D.begin(), AmbiIndex::From2D.begin()+count,
+                std::begin(device->FOAOut.Ambi.Map),
                 [](const ALsizei &index) noexcept { return BFChannelConfig{1.0f, index}; }
             );
         }
@@ -1145,8 +1144,8 @@ no_hrtf:
 void aluInitEffectPanning(ALeffectslot *slot)
 {
     const size_t count{countof(slot->ChanMap)};
-    auto acnmap_end = AmbiIndex::FromACN.begin() + count;
-    std::transform(AmbiIndex::FromACN.begin(), acnmap_end, std::begin(slot->ChanMap),
+    auto acnmap_end = AmbiIndex::From3D.begin() + count;
+    std::transform(AmbiIndex::From3D.begin(), acnmap_end, std::begin(slot->ChanMap),
         [](const ALsizei &acn) noexcept { return BFChannelConfig{1.0f, acn}; }
     );
     slot->NumChannels = static_cast<ALsizei>(count);

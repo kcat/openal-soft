@@ -128,8 +128,8 @@ void ProcessHrtf(ALCdevice *device, ALsizei SamplesToDo)
             device->FOAOut.Buffer, SamplesToDo
         );
 
-    int lidx{GetChannelIdxByName(&device->RealOut, FrontLeft)};
-    int ridx{GetChannelIdxByName(&device->RealOut, FrontRight)};
+    int lidx{GetChannelIdxByName(device->RealOut, FrontLeft)};
+    int ridx{GetChannelIdxByName(device->RealOut, FrontRight)};
     assert(lidx != -1 && ridx != -1);
 
     DirectHrtfState *state{device->mHrtfState.get()};
@@ -163,8 +163,8 @@ void ProcessAmbiUp(ALCdevice *device, ALsizei SamplesToDo)
 
 void ProcessUhj(ALCdevice *device, ALsizei SamplesToDo)
 {
-    int lidx = GetChannelIdxByName(&device->RealOut, FrontLeft);
-    int ridx = GetChannelIdxByName(&device->RealOut, FrontRight);
+    int lidx = GetChannelIdxByName(device->RealOut, FrontLeft);
+    int ridx = GetChannelIdxByName(device->RealOut, FrontRight);
     assert(lidx != -1 && ridx != -1);
 
     /* Encode to stereo-compatible 2-channel UHJ output. */
@@ -176,8 +176,8 @@ void ProcessUhj(ALCdevice *device, ALsizei SamplesToDo)
 
 void ProcessBs2b(ALCdevice *device, ALsizei SamplesToDo)
 {
-    int lidx = GetChannelIdxByName(&device->RealOut, FrontLeft);
-    int ridx = GetChannelIdxByName(&device->RealOut, FrontRight);
+    int lidx = GetChannelIdxByName(device->RealOut, FrontLeft);
+    int ridx = GetChannelIdxByName(device->RealOut, FrontRight);
     assert(lidx != -1 && ridx != -1);
 
     /* Apply binaural/crossfeed filter */
@@ -696,7 +696,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
 
         for(ALsizei c{0};c < num_channels;c++)
         {
-            int idx{GetChannelIdxByName(&Device->RealOut, chans[c].channel)};
+            int idx{GetChannelIdxByName(Device->RealOut, chans[c].channel)};
             if(idx != -1) voice->Direct.Params[c].Gains.Target[idx] = DryGain;
         }
 
@@ -843,7 +843,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 {
                     if(Device->Dry.Buffer == Device->RealOut.Buffer)
                     {
-                        int idx = GetChannelIdxByName(&Device->RealOut, chans[c].channel);
+                        int idx = GetChannelIdxByName(Device->RealOut, chans[c].channel);
                         if(idx != -1) voice->Direct.Params[c].Gains.Target[idx] = DryGain;
                     }
                     continue;
@@ -894,7 +894,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 {
                     if(Device->Dry.Buffer == Device->RealOut.Buffer)
                     {
-                        int idx = GetChannelIdxByName(&Device->RealOut, chans[c].channel);
+                        int idx = GetChannelIdxByName(Device->RealOut, chans[c].channel);
                         if(idx != -1) voice->Direct.Params[c].Gains.Target[idx] = DryGain;
                     }
                     continue;
@@ -1683,9 +1683,9 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
         /* Apply front image stablization for surround sound, if applicable. */
         if(device->Stablizer)
         {
-            const int lidx{GetChannelIdxByName(&device->RealOut, FrontLeft)};
-            const int ridx{GetChannelIdxByName(&device->RealOut, FrontRight)};
-            const int cidx{GetChannelIdxByName(&device->RealOut, FrontCenter)};
+            const int lidx{GetChannelIdxByName(device->RealOut, FrontLeft)};
+            const int ridx{GetChannelIdxByName(device->RealOut, FrontRight)};
+            const int cidx{GetChannelIdxByName(device->RealOut, FrontCenter)};
             assert(lidx >= 0 && ridx >= 0 && cidx >= 0);
 
             ApplyStablizer(device->Stablizer.get(), device->RealOut.Buffer, lidx, ridx, cidx,

@@ -198,7 +198,7 @@ bool MakeSpeakerMap(ALCdevice *device, const AmbDecConf *conf, ALsizei (&speaker
                 return -1;
             }
         }
-        const int chidx{GetChannelIdxByName(&device->RealOut, ch)};
+        const int chidx{GetChannelIdxByName(device->RealOut, ch)};
         if(chidx == -1)
             ERR("Failed to lookup AmbDec speaker label %s\n", speaker.Name.c_str());
         return chidx;

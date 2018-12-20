@@ -550,8 +550,8 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                 }
                 else
                 {
-                    const int lidx{GetChannelIdxByName(&Device->RealOut, FrontLeft)};
-                    const int ridx{GetChannelIdxByName(&Device->RealOut, FrontRight)};
+                    const int lidx{GetChannelIdxByName(Device->RealOut, FrontLeft)};
+                    const int ridx{GetChannelIdxByName(Device->RealOut, FrontRight)};
                     assert(lidx != -1 && ridx != -1);
 
                     ALsizei fademix{0};

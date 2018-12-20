@@ -906,8 +906,8 @@ inline ALint GetChannelIndex(const Channel (&names)[MAX_OUTPUT_CHANNELS], Channe
  * Returns the index for the given channel name (e.g. FrontCenter), or -1 if it
  * doesn't exist.
  */
-inline ALint GetChannelIdxByName(const RealMixParams *real, enum Channel chan)
-{ return GetChannelIndex(real->ChannelName, chan); }
+inline ALint GetChannelIdxByName(const RealMixParams &real, Channel chan)
+{ return GetChannelIndex(real.ChannelName, chan); }
 
 
 void StartEventThrd(ALCcontext *ctx);

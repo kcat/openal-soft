@@ -42,11 +42,11 @@
 #include "bs2b.h"
 
 
-constexpr float AmbiScale::N3D2N3D[MAX_AMBI_COEFFS];
-constexpr float AmbiScale::SN3D2N3D[MAX_AMBI_COEFFS];
-constexpr float AmbiScale::FuMa2N3D[MAX_AMBI_COEFFS];
-constexpr int AmbiIndex::FuMa2ACN[MAX_AMBI_COEFFS];
-constexpr int AmbiIndex::ACN2ACN[MAX_AMBI_COEFFS];
+constexpr float AmbiScale::FromN3D[MAX_AMBI_COEFFS];
+constexpr float AmbiScale::FromSN3D[MAX_AMBI_COEFFS];
+constexpr float AmbiScale::FromFuMa[MAX_AMBI_COEFFS];
+constexpr int AmbiIndex::FromFuMa[MAX_AMBI_COEFFS];
+constexpr int AmbiIndex::FromACN[MAX_AMBI_COEFFS];
 
 
 namespace {
@@ -326,22 +326,22 @@ void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei (
 
 auto GetAmbiScales(AmbDecScale scaletype) noexcept -> const float(&)[MAX_AMBI_COEFFS]
 {
-    if(scaletype == AmbDecScale::FuMa) return AmbiScale::FuMa2N3D;
-    if(scaletype == AmbDecScale::SN3D) return AmbiScale::SN3D2N3D;
-    return AmbiScale::N3D2N3D;
+    if(scaletype == AmbDecScale::FuMa) return AmbiScale::FromFuMa;
+    if(scaletype == AmbDecScale::SN3D) return AmbiScale::FromSN3D;
+    return AmbiScale::FromN3D;
 }
 
 auto GetAmbiScales(AmbiNorm scaletype) noexcept -> const float(&)[MAX_AMBI_COEFFS]
 {
-    if(scaletype == AmbiNorm::FuMa) return AmbiScale::FuMa2N3D;
-    if(scaletype == AmbiNorm::SN3D) return AmbiScale::SN3D2N3D;
-    return AmbiScale::N3D2N3D;
+    if(scaletype == AmbiNorm::FuMa) return AmbiScale::FromFuMa;
+    if(scaletype == AmbiNorm::SN3D) return AmbiScale::FromSN3D;
+    return AmbiScale::FromN3D;
 }
 
 auto GetAmbiLayout(AmbiLayout layouttype) noexcept -> const int(&)[MAX_AMBI_COEFFS]
 {
-    if(layouttype == AmbiLayout::FuMa) return AmbiIndex::FuMa2ACN;
-    return AmbiIndex::ACN2ACN;
+    if(layouttype == AmbiLayout::FuMa) return AmbiIndex::FromFuMa;
+    return AmbiIndex::FromACN;
 }
 
 
@@ -428,8 +428,8 @@ void InitPanning(ALCdevice *device)
              * The upsampler expects this and will convert it for output.
              */
             device->FOAOut.Ambi = AmbiConfig{};
-            acnmap_end = std::begin(AmbiIndex::ACN2ACN) + 4;
-            std::transform(std::begin(AmbiIndex::ACN2ACN), acnmap_end, std::begin(device->FOAOut.Ambi.Map),
+            std::transform(std::begin(AmbiIndex::FromACN), std::begin(AmbiIndex::FromACN)+4,
+                std::begin(device->FOAOut.Ambi.Map),
                 [](const ALsizei &acn) noexcept { return BFChannelConfig{1.0f, acn}; }
             );
             device->FOAOut.CoeffCount = 0;
@@ -463,8 +463,8 @@ void InitPanning(ALCdevice *device)
         else
         {
             device->FOAOut.Ambi = AmbiConfig{};
-            auto acnmap_end = std::begin(AmbiIndex::ACN2ACN) + 4;
-            std::transform(std::begin(AmbiIndex::ACN2ACN), acnmap_end, std::begin(device->FOAOut.Ambi.Map),
+            std::transform(std::begin(AmbiIndex::FromACN), std::begin(AmbiIndex::FromACN)+4,
+                std::begin(device->FOAOut.Ambi.Map),
                 [](const ALsizei &acn) noexcept { return BFChannelConfig{1.0f, acn}; }
             );
             device->FOAOut.CoeffCount = 0;
@@ -747,10 +747,10 @@ void InitUhjPanning(ALCdevice *device)
 {
     static constexpr ALsizei count{3};
 
-    auto acnmap_end = std::begin(AmbiIndex::FuMa2ACN) + count;
-    std::transform(std::begin(AmbiIndex::FuMa2ACN), acnmap_end, std::begin(device->Dry.Ambi.Map),
+    auto acnmap_end = std::begin(AmbiIndex::FromFuMa) + count;
+    std::transform(std::begin(AmbiIndex::FromFuMa), acnmap_end, std::begin(device->Dry.Ambi.Map),
         [](const ALsizei &acn) noexcept -> BFChannelConfig
-        { return BFChannelConfig{1.0f/AmbiScale::FuMa2N3D[acn], acn}; }
+        { return BFChannelConfig{1.0f/AmbiScale::FromFuMa[acn], acn}; }
     );
     device->Dry.CoeffCount = 0;
     device->Dry.NumChannels = count;
@@ -1146,8 +1146,8 @@ no_hrtf:
 void aluInitEffectPanning(ALeffectslot *slot)
 {
     const size_t count{countof(slot->ChanMap)};
-    auto acnmap_end = std::begin(AmbiIndex::ACN2ACN) + count;
-    std::transform(std::begin(AmbiIndex::ACN2ACN), acnmap_end, std::begin(slot->ChanMap),
+    auto acnmap_end = std::begin(AmbiIndex::FromACN) + count;
+    std::transform(std::begin(AmbiIndex::FromACN), acnmap_end, std::begin(slot->ChanMap),
         [](const ALsizei &acn) noexcept { return BFChannelConfig{1.0f, acn}; }
     );
     slot->NumChannels = static_cast<ALsizei>(count);

@@ -53,9 +53,9 @@ constexpr ALfloat Ambi3DDecoderHFScale[MAX_AMBI_COEFFS] = {
 
 auto GetAmbiScales(AmbDecScale scaletype) noexcept -> const float(&)[MAX_AMBI_COEFFS]
 {
-    if(scaletype == AmbDecScale::FuMa) return AmbiScale::FuMa2N3D;
-    if(scaletype == AmbDecScale::SN3D) return AmbiScale::SN3D2N3D;
-    return AmbiScale::N3D2N3D;
+    if(scaletype == AmbDecScale::FuMa) return AmbiScale::FromFuMa;
+    if(scaletype == AmbDecScale::SN3D) return AmbiScale::FromSN3D;
+    return AmbiScale::FromN3D;
 }
 
 } // namespace

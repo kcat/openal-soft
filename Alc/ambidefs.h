@@ -32,14 +32,14 @@
 
 
 /* NOTE: These are scale factors as applied to Ambisonics content. Decoder
- * coefficients should be divided by these values to get proper N3D scalings.
+ * coefficients should be divided by these values to get proper scalings.
  */
 struct AmbiScale {
-    static constexpr float N3D2N3D[MAX_AMBI_COEFFS]{
+    static constexpr float FromN3D[MAX_AMBI_COEFFS]{
         1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
         1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
     };
-    static constexpr float SN3D2N3D[MAX_AMBI_COEFFS]{
+    static constexpr float FromSN3D[MAX_AMBI_COEFFS]{
         1.000000000f, /* ACN  0, sqrt(1) */
         1.732050808f, /* ACN  1, sqrt(3) */
         1.732050808f, /* ACN  2, sqrt(3) */
@@ -57,7 +57,7 @@ struct AmbiScale {
         2.645751311f, /* ACN 14, sqrt(7) */
         2.645751311f, /* ACN 15, sqrt(7) */
     };
-    static constexpr float FuMa2N3D[MAX_AMBI_COEFFS]{
+    static constexpr float FromFuMa[MAX_AMBI_COEFFS]{
         1.414213562f, /* ACN  0 (W), sqrt(2) */
         1.732050808f, /* ACN  1 (Y), sqrt(3) */
         1.732050808f, /* ACN  2 (Z), sqrt(3) */
@@ -78,7 +78,7 @@ struct AmbiScale {
 };
 
 struct AmbiIndex {
-    static constexpr int FuMa2ACN[MAX_AMBI_COEFFS]{
+    static constexpr int FromFuMa[MAX_AMBI_COEFFS]{
         0,  /* W */
         3,  /* X */
         1,  /* Y */
@@ -96,7 +96,7 @@ struct AmbiIndex {
         15, /* P */
         9,  /* Q */
     };
-    static constexpr int ACN2ACN[MAX_AMBI_COEFFS]{
+    static constexpr int FromACN[MAX_AMBI_COEFFS]{
         0,  1,  2,  3,  4,  5,  6,  7,
         8,  9, 10, 11, 12, 13, 14, 15
     };

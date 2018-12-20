@@ -86,7 +86,7 @@ static void ShiftSlidingHold(SlidingHold *Hold, const ALsizei n)
             std::bind(std::minus<ALsizei>{}, _1, n));
         exp_begin = std::begin(Hold->Expiries);
     }
-    std::transform(exp_begin, exp_last+1, exp_begin, std::bind(std::minus<float>{}, _1, n));
+    std::transform(exp_begin, exp_last+1, exp_begin, std::bind(std::minus<ALsizei>{}, _1, n));
 }
 
 /* Multichannel compression is linked via the absolute maximum of all

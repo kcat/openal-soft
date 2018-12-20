@@ -83,7 +83,7 @@ static void ShiftSlidingHold(SlidingHold *Hold, const ALsizei n)
     if(exp_last < exp_begin)
     {
         std::transform(exp_begin, std::end(Hold->Expiries), exp_begin,
-            std::bind(std::minus<float>{}, _1, n));
+            std::bind(std::minus<ALsizei>{}, _1, n));
         exp_begin = std::begin(Hold->Expiries);
     }
     std::transform(exp_begin, exp_last+1, exp_begin, std::bind(std::minus<float>{}, _1, n));

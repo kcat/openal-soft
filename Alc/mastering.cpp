@@ -369,10 +369,10 @@ Compressor* CompressorInit(const ALsizei NumChans, const ALuint SampleRate,
     Comp = new (al_calloc(16, size)) Compressor{};
     Comp->NumChans = NumChans;
     Comp->SampleRate = SampleRate;
-    Comp->Auto.Knee = AutoKnee;
-    Comp->Auto.Attack = AutoAttack;
-    Comp->Auto.Release = AutoRelease;
-    Comp->Auto.PostGain = AutoPostGain;
+    Comp->Auto.Knee = AutoKnee != AL_FALSE;
+    Comp->Auto.Attack = AutoAttack != AL_FALSE;
+    Comp->Auto.Release = AutoRelease != AL_FALSE;
+    Comp->Auto.PostGain = AutoPostGain != AL_FALSE;
     Comp->Auto.Declip = AutoPostGain && AutoDeclip;
     Comp->LookAhead = lookAhead;
     Comp->PreGain = std::pow(10.0f, PreGainDb / 20.0f);

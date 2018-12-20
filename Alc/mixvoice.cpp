@@ -26,6 +26,9 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include <numeric>
+#include <algorithm>
+
 #include "AL/al.h"
 #include "AL/alc.h"
 
@@ -374,18 +377,17 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                 /* If current pos is beyond the loop range, do not loop */
                 if(!BufferLoopItem || DataPosInt >= LoopEnd)
                 {
-                    ALsizei SizeToDo = SrcBufferSize - FilledAmt;
+                    const ALsizei SizeToDo{SrcBufferSize - FilledAmt};
 
                     BufferLoopItem = nullptr;
 
-                    ALsizei CompLen{0};
-                    auto load_buffer = [DataPosInt,&SrcData,NumChannels,SampleSize,chan,FilledAmt,SizeToDo,&CompLen](const ALbuffer *buffer) -> void
+                    auto load_buffer = [DataPosInt,&SrcData,NumChannels,SampleSize,chan,FilledAmt,SizeToDo](ALsizei CompLen, const ALbuffer *buffer) -> ALsizei
                     {
                         if(DataPosInt >= buffer->SampleLen)
-                            return;
+                            return CompLen;
 
                         /* Load what's left to play from the buffer */
-                        ALsizei DataSize{mini(SizeToDo, buffer->SampleLen - DataPosInt)};
+                        const ALsizei DataSize{mini(SizeToDo, buffer->SampleLen - DataPosInt)};
                         CompLen = maxi(CompLen, DataSize);
 
                         const ALbyte *Data{buffer->mData.data()};
@@ -393,23 +395,23 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                             &Data[(DataPosInt*NumChannels + chan)*SampleSize],
                             NumChannels, buffer->FmtType, DataSize
                         );
+                        return CompLen;
                     };
                     auto buffers_end = BufferListItem->buffers + BufferListItem->num_buffers;
-                    std::for_each(BufferListItem->buffers, buffers_end, load_buffer);
-                    FilledAmt += CompLen;
+                    FilledAmt += std::accumulate(BufferListItem->buffers, buffers_end, ALsizei{0},
+                        load_buffer);
                 }
                 else
                 {
                     const ALsizei SizeToDo{mini(SrcBufferSize - FilledAmt, LoopEnd - DataPosInt)};
 
-                    ALsizei CompLen{0};
-                    auto load_buffer = [DataPosInt,&SrcData,NumChannels,SampleSize,chan,FilledAmt,SizeToDo,&CompLen](const ALbuffer *buffer) -> void
+                    auto load_buffer = [DataPosInt,&SrcData,NumChannels,SampleSize,chan,FilledAmt,SizeToDo](ALsizei CompLen, const ALbuffer *buffer) -> ALsizei
                     {
                         if(DataPosInt >= buffer->SampleLen)
-                            return;
+                            return CompLen;
 
                         /* Load what's left of this loop iteration */
-                        ALsizei DataSize{mini(SizeToDo, buffer->SampleLen - DataPosInt)};
+                        const ALsizei DataSize{mini(SizeToDo, buffer->SampleLen - DataPosInt)};
                         CompLen = maxi(CompLen, DataSize);
 
                         const ALbyte *Data{buffer->mData.data()};
@@ -417,35 +419,33 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                             &Data[(DataPosInt*NumChannels + chan)*SampleSize],
                             NumChannels, buffer->FmtType, DataSize
                         );
+                        return CompLen;
                     };
                     auto buffers_end = BufferListItem->buffers + BufferListItem->num_buffers;
-                    std::for_each(BufferListItem->buffers, buffers_end, load_buffer);
-                    FilledAmt += CompLen;
+                    FilledAmt = std::accumulate(BufferListItem->buffers, buffers_end, ALsizei{0}, load_buffer);
 
                     const ALsizei LoopSize{LoopEnd - LoopStart};
                     while(SrcBufferSize > FilledAmt)
                     {
                         const ALsizei SizeToDo{mini(SrcBufferSize - FilledAmt, LoopSize)};
 
-                        CompLen = 0;
-                        auto load_buffer_loop = [LoopStart,&SrcData,NumChannels,SampleSize,chan,FilledAmt,SizeToDo,&CompLen](const ALbuffer *buffer) -> void
+                        auto load_buffer_loop = [LoopStart,&SrcData,NumChannels,SampleSize,chan,FilledAmt,SizeToDo](ALsizei CompLen, const ALbuffer *buffer) -> ALsizei
                         {
-                            const ALbyte *Data = buffer->mData.data();
-                            ALsizei DataSize;
-
                             if(LoopStart >= buffer->SampleLen)
-                                return;
+                                return CompLen;
 
-                            DataSize = mini(SizeToDo, buffer->SampleLen - LoopStart);
+                            const ALsizei DataSize{mini(SizeToDo, buffer->SampleLen - LoopStart)};
                             CompLen = maxi(CompLen, DataSize);
 
+                            const ALbyte *Data{buffer->mData.data()};
                             LoadSamples(&SrcData[FilledAmt],
                                 &Data[(LoopStart*NumChannels + chan)*SampleSize],
                                 NumChannels, buffer->FmtType, DataSize
                             );
+                            return CompLen;
                         };
-                        std::for_each(BufferListItem->buffers, buffers_end, load_buffer_loop);
-                        FilledAmt += CompLen;
+                        FilledAmt += std::accumulate(BufferListItem->buffers, buffers_end,
+                            ALsizei{0}, load_buffer_loop);
                     }
                 }
             }
@@ -466,12 +466,11 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                     }
 
                     const ALsizei SizeToDo{SrcBufferSize - FilledAmt};
-                    ALsizei CompLen{0};
-                    auto load_buffer = [pos,&SrcData,NumChannels,SampleSize,chan,FilledAmt,SizeToDo,&CompLen](const ALbuffer *buffer) -> void
+                    auto load_buffer = [pos,&SrcData,NumChannels,SampleSize,chan,FilledAmt,SizeToDo](ALsizei CompLen, const ALbuffer *buffer) -> ALsizei
                     {
-                        if(!buffer) return;
+                        if(!buffer) return CompLen;
                         ALsizei DataSize{buffer->SampleLen};
-                        if(pos >= DataSize) return;
+                        if(pos >= DataSize) return CompLen;
 
                         DataSize = mini(SizeToDo, DataSize - pos);
                         CompLen = maxi(CompLen, DataSize);
@@ -481,10 +480,11 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
 
                         LoadSamples(&SrcData[FilledAmt], Data, NumChannels,
                                     buffer->FmtType, DataSize);
+                        return CompLen;
                     };
                     auto buffers_end = tmpiter->buffers + tmpiter->num_buffers;
-                    std::for_each(tmpiter->buffers, buffers_end, load_buffer);
-                    FilledAmt += CompLen;
+                    FilledAmt += std::accumulate(tmpiter->buffers, buffers_end, ALsizei{0},
+                        load_buffer);
 
                     if(SrcBufferSize <= FilledAmt)
                         break;
@@ -550,14 +550,11 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                 }
                 else
                 {
-                    MixHrtfParams hrtfparams;
-                    ALsizei fademix = 0;
-                    int lidx, ridx;
-
-                    lidx = GetChannelIdxByName(&Device->RealOut, FrontLeft);
-                    ridx = GetChannelIdxByName(&Device->RealOut, FrontRight);
+                    const int lidx{GetChannelIdxByName(&Device->RealOut, FrontLeft)};
+                    const int ridx{GetChannelIdxByName(&Device->RealOut, FrontRight)};
                     assert(lidx != -1 && ridx != -1);
 
+                    ALsizei fademix{0};
                     if(!Counter)
                     {
                         /* No fading, just overwrite the old HRTF params. */
@@ -585,6 +582,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                          */
                         ALfloat gain{lerp(parms->Hrtf.Old.Gain, parms->Hrtf.Target.Gain,
                                           minf(1.0f, (ALfloat)fademix/Counter))};
+                        MixHrtfParams hrtfparams;
                         hrtfparams.Coeffs = parms->Hrtf.Target.Coeffs;
                         hrtfparams.Delay[0] = parms->Hrtf.Target.Delay[0];
                         hrtfparams.Delay[1] = parms->Hrtf.Target.Delay[1];
@@ -604,8 +602,8 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
 
                     if(fademix < DstBufferSize)
                     {
-                        ALsizei todo = DstBufferSize - fademix;
-                        ALfloat gain = parms->Hrtf.Target.Gain;
+                        const ALsizei todo{DstBufferSize - fademix};
+                        ALfloat gain{parms->Hrtf.Target.Gain};
 
                         /* Interpolate the target gain if the gain fading lasts
                          * longer than this mix.
@@ -614,6 +612,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                             gain = lerp(parms->Hrtf.Old.Gain, gain,
                                         (ALfloat)todo/(Counter-fademix));
 
+                        MixHrtfParams hrtfparams;
                         hrtfparams.Coeffs = parms->Hrtf.Target.Coeffs;
                         hrtfparams.Delay[0] = parms->Hrtf.Target.Delay[0];
                         hrtfparams.Delay[1] = parms->Hrtf.Target.Delay[1];

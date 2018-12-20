@@ -51,7 +51,7 @@ constexpr ALfloat Ambi3DDecoderHFScale[MAX_AMBI_COEFFS] = {
 };
 
 
-auto GetAmbiScales(AmbDecScale scaletype) noexcept -> const float(&)[MAX_AMBI_COEFFS]
+auto GetAmbiScales(AmbDecScale scaletype) noexcept -> const std::array<float,MAX_AMBI_COEFFS>&
 {
     if(scaletype == AmbDecScale::FuMa) return AmbiScale::FromFuMa;
     if(scaletype == AmbDecScale::SN3D) return AmbiScale::FromSN3D;
@@ -130,7 +130,7 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
         mUpSampler[3].Gains[LF_BAND] = 0.0f;
     }
 
-    const float (&coeff_scale)[MAX_AMBI_COEFFS] = GetAmbiScales(conf->CoeffScale);
+    const std::array<float,MAX_AMBI_COEFFS> &coeff_scale = GetAmbiScales(conf->CoeffScale);
     const ALsizei coeff_count{periphonic ? MAX_AMBI_COEFFS : MAX_AMBI2D_COEFFS};
 
     mMatrix = MatrixU{};

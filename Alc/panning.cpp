@@ -42,11 +42,11 @@
 #include "bs2b.h"
 
 
-constexpr float AmbiScale::FromN3D[MAX_AMBI_COEFFS];
-constexpr float AmbiScale::FromSN3D[MAX_AMBI_COEFFS];
-constexpr float AmbiScale::FromFuMa[MAX_AMBI_COEFFS];
-constexpr int AmbiIndex::FromFuMa[MAX_AMBI_COEFFS];
-constexpr int AmbiIndex::FromACN[MAX_AMBI_COEFFS];
+constexpr std::array<float,MAX_AMBI_COEFFS> AmbiScale::FromN3D;
+constexpr std::array<float,MAX_AMBI_COEFFS> AmbiScale::FromSN3D;
+constexpr std::array<float,MAX_AMBI_COEFFS> AmbiScale::FromFuMa;
+constexpr std::array<int,MAX_AMBI_COEFFS> AmbiIndex::FromFuMa;
+constexpr std::array<int,MAX_AMBI_COEFFS> AmbiIndex::FromACN;
 
 
 namespace {
@@ -324,21 +324,21 @@ void InitDistanceComp(ALCdevice *device, const AmbDecConf *conf, const ALsizei (
     }
 }
 
-auto GetAmbiScales(AmbDecScale scaletype) noexcept -> const float(&)[MAX_AMBI_COEFFS]
+auto GetAmbiScales(AmbDecScale scaletype) noexcept -> const std::array<float,MAX_AMBI_COEFFS>&
 {
     if(scaletype == AmbDecScale::FuMa) return AmbiScale::FromFuMa;
     if(scaletype == AmbDecScale::SN3D) return AmbiScale::FromSN3D;
     return AmbiScale::FromN3D;
 }
 
-auto GetAmbiScales(AmbiNorm scaletype) noexcept -> const float(&)[MAX_AMBI_COEFFS]
+auto GetAmbiScales(AmbiNorm scaletype) noexcept -> const std::array<float,MAX_AMBI_COEFFS>&
 {
     if(scaletype == AmbiNorm::FuMa) return AmbiScale::FromFuMa;
     if(scaletype == AmbiNorm::SN3D) return AmbiScale::FromSN3D;
     return AmbiScale::FromN3D;
 }
 
-auto GetAmbiLayout(AmbiLayout layouttype) noexcept -> const int(&)[MAX_AMBI_COEFFS]
+auto GetAmbiLayout(AmbiLayout layouttype) noexcept -> const std::array<int,MAX_AMBI_COEFFS>&
 {
     if(layouttype == AmbiLayout::FuMa) return AmbiIndex::FromFuMa;
     return AmbiIndex::FromACN;
@@ -402,14 +402,13 @@ void InitPanning(ALCdevice *device)
     if(device->FmtChans == DevFmtAmbi3D)
     {
         const char *devname{device->DeviceName.c_str()};
-        const ALsizei (&acnmap)[MAX_AMBI_COEFFS] = GetAmbiLayout(device->mAmbiLayout);
-        const ALfloat (&n3dscale)[MAX_AMBI_COEFFS] = GetAmbiScales(device->mAmbiScale);
+        const std::array<int,MAX_AMBI_COEFFS> &acnmap = GetAmbiLayout(device->mAmbiLayout);
+        const std::array<float,MAX_AMBI_COEFFS> &n3dscale = GetAmbiScales(device->mAmbiScale);
 
         count = (device->mAmbiOrder == 3) ? 16 :
                 (device->mAmbiOrder == 2) ? 9 :
                 (device->mAmbiOrder == 1) ? 4 : 1;
-        auto acnmap_end = std::begin(acnmap) + count;
-        std::transform(std::begin(acnmap), acnmap_end, std::begin(device->Dry.Ambi.Map),
+        std::transform(acnmap.begin(), acnmap.begin()+count, std::begin(device->Dry.Ambi.Map),
             [&n3dscale](const ALsizei &acn) noexcept -> BFChannelConfig
             { return BFChannelConfig{1.0f/n3dscale[acn], acn}; }
         );
@@ -428,7 +427,7 @@ void InitPanning(ALCdevice *device)
              * The upsampler expects this and will convert it for output.
              */
             device->FOAOut.Ambi = AmbiConfig{};
-            std::transform(std::begin(AmbiIndex::FromACN), std::begin(AmbiIndex::FromACN)+4,
+            std::transform(AmbiIndex::FromACN.begin(), AmbiIndex::FromACN.begin()+4,
                 std::begin(device->FOAOut.Ambi.Map),
                 [](const ALsizei &acn) noexcept { return BFChannelConfig{1.0f, acn}; }
             );
@@ -463,7 +462,7 @@ void InitPanning(ALCdevice *device)
         else
         {
             device->FOAOut.Ambi = AmbiConfig{};
-            std::transform(std::begin(AmbiIndex::FromACN), std::begin(AmbiIndex::FromACN)+4,
+            std::transform(AmbiIndex::FromACN.begin(), AmbiIndex::FromACN.begin()+4,
                 std::begin(device->FOAOut.Ambi.Map),
                 [](const ALsizei &acn) noexcept { return BFChannelConfig{1.0f, acn}; }
             );
@@ -483,7 +482,7 @@ void InitCustomPanning(ALCdevice *device, const AmbDecConf *conf, const ALsizei 
         ERR("Basic renderer uses the high-frequency matrix as single-band (xover_freq = %.0fhz)\n",
             conf->XOverFreq);
 
-    const ALfloat (&coeff_scale)[MAX_AMBI_COEFFS] = GetAmbiScales(conf->CoeffScale);
+    const std::array<float,MAX_AMBI_COEFFS> &coeff_scale = GetAmbiScales(conf->CoeffScale);
     ChannelMap chanmap[MAX_OUTPUT_CHANNELS]{};
     for(size_t i{0u};i < conf->Speakers.size();i++)
     {
@@ -747,8 +746,8 @@ void InitUhjPanning(ALCdevice *device)
 {
     static constexpr ALsizei count{3};
 
-    auto acnmap_end = std::begin(AmbiIndex::FromFuMa) + count;
-    std::transform(std::begin(AmbiIndex::FromFuMa), acnmap_end, std::begin(device->Dry.Ambi.Map),
+    auto acnmap_end = AmbiIndex::FromFuMa.begin() + count;
+    std::transform(AmbiIndex::FromFuMa.begin(), acnmap_end, std::begin(device->Dry.Ambi.Map),
         [](const ALsizei &acn) noexcept -> BFChannelConfig
         { return BFChannelConfig{1.0f/AmbiScale::FromFuMa[acn], acn}; }
     );
@@ -1146,8 +1145,8 @@ no_hrtf:
 void aluInitEffectPanning(ALeffectslot *slot)
 {
     const size_t count{countof(slot->ChanMap)};
-    auto acnmap_end = std::begin(AmbiIndex::FromACN) + count;
-    std::transform(std::begin(AmbiIndex::FromACN), acnmap_end, std::begin(slot->ChanMap),
+    auto acnmap_end = AmbiIndex::FromACN.begin() + count;
+    std::transform(AmbiIndex::FromACN.begin(), acnmap_end, std::begin(slot->ChanMap),
         [](const ALsizei &acn) noexcept { return BFChannelConfig{1.0f, acn}; }
     );
     slot->NumChannels = static_cast<ALsizei>(count);

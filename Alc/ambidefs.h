@@ -1,6 +1,8 @@
 #ifndef AMBIDEFS_H
 #define AMBIDEFS_H
 
+#include <array>
+
 /* The maximum number of Ambisonics coefficients. For a given order (o), the
  * size needed will be (o+1)**2, thus zero-order has 1, first-order has 4,
  * second-order has 9, third-order has 16, and fourth-order has 25.
@@ -35,11 +37,11 @@
  * coefficients should be divided by these values to get proper scalings.
  */
 struct AmbiScale {
-    static constexpr float FromN3D[MAX_AMBI_COEFFS]{
+    static constexpr std::array<float,MAX_AMBI_COEFFS> FromN3D{{
         1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
         1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
-    };
-    static constexpr float FromSN3D[MAX_AMBI_COEFFS]{
+    }};
+    static constexpr std::array<float,MAX_AMBI_COEFFS> FromSN3D{{
         1.000000000f, /* ACN  0, sqrt(1) */
         1.732050808f, /* ACN  1, sqrt(3) */
         1.732050808f, /* ACN  2, sqrt(3) */
@@ -56,8 +58,8 @@ struct AmbiScale {
         2.645751311f, /* ACN 13, sqrt(7) */
         2.645751311f, /* ACN 14, sqrt(7) */
         2.645751311f, /* ACN 15, sqrt(7) */
-    };
-    static constexpr float FromFuMa[MAX_AMBI_COEFFS]{
+    }};
+    static constexpr std::array<float,MAX_AMBI_COEFFS> FromFuMa{{
         1.414213562f, /* ACN  0 (W), sqrt(2) */
         1.732050808f, /* ACN  1 (Y), sqrt(3) */
         1.732050808f, /* ACN  2 (Z), sqrt(3) */
@@ -74,11 +76,11 @@ struct AmbiScale {
         2.231093404f, /* ACN 13 (L), sqrt(224/45) */
         1.972026594f, /* ACN 14 (N), sqrt(35)/3 */
         2.091650066f, /* ACN 15 (P), sqrt(35/8) */
-    };
+    }};
 };
 
 struct AmbiIndex {
-    static constexpr int FromFuMa[MAX_AMBI_COEFFS]{
+    static constexpr std::array<int,MAX_AMBI_COEFFS> FromFuMa{{
         0,  /* W */
         3,  /* X */
         1,  /* Y */
@@ -95,11 +97,11 @@ struct AmbiIndex {
         10, /* O */
         15, /* P */
         9,  /* Q */
-    };
-    static constexpr int FromACN[MAX_AMBI_COEFFS]{
+    }};
+    static constexpr std::array<int,MAX_AMBI_COEFFS> FromACN{{
         0,  1,  2,  3,  4,  5,  6,  7,
         8,  9, 10, 11, 12, 13, 14, 15
-    };
+    }};
 };
 
 #endif /* AMBIDEFS_H */

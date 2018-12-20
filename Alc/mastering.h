@@ -25,11 +25,11 @@ struct Compressor {
     ALuint SampleRate;
 
     struct {
-        ALuint Knee : 1;
-        ALuint Attack : 1;
-        ALuint Release : 1;
-        ALuint PostGain : 1;
-        ALuint Declip : 1;
+        bool Knee : 1;
+        bool Attack : 1;
+        bool Release : 1;
+        bool PostGain : 1;
+        bool Declip : 1;
     } Auto;
 
     ALsizei LookAhead;
@@ -97,9 +97,9 @@ Compressor* CompressorInit(const ALsizei NumChans, const ALuint SampleRate,
     const ALfloat Ratio, const ALfloat KneeDb,
     const ALfloat AttackTime, const ALfloat ReleaseTime);
 
-void ApplyCompression(struct Compressor *Comp, const ALsizei SamplesToDo,
-                      ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE]);
+void ApplyCompression(Compressor *Comp, const ALsizei SamplesToDo,
+                      ALfloat (*OutBuffer)[BUFFERSIZE]);
 
-ALsizei GetCompressorLookAhead(const struct Compressor *Comp);
+ALsizei GetCompressorLookAhead(const Compressor *Comp);
 
 #endif /* MASTERING_H */

@@ -275,7 +275,7 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
 }
 
 
-void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei NumChannels, const struct AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_COEFFS], ALsizei AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain)
+void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, const ALsizei NumChannels, const AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_COEFFS], const ALsizei AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain)
 {
 /* Set this to 2 for dual-band HRTF processing. May require a higher quality
  * band-splitter, or better calculation of the new IR length to deal with the
@@ -287,19 +287,17 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, ALsizei N
     al::vector<ALsizei> idx(AmbiCount);
     for(ALsizei c{0};c < AmbiCount;c++)
     {
-        ALuint evidx, azidx;
-        ALuint evoffset;
-        ALuint azcount;
-
         /* Calculate elevation index. */
-        evidx = (ALsizei)((F_PI_2+AmbiPoints[c].Elev) * (Hrtf->evCount-1) / F_PI + 0.5f);
-        evidx = clampi(evidx, 0, Hrtf->evCount-1);
+        const auto evidx = clampi(
+            static_cast<ALsizei>((90.0f+AmbiPoints[c].Elev)*(Hrtf->evCount-1)/180.0f + 0.5f),
+            0, Hrtf->evCount-1);
 
-        azcount = Hrtf->azCount[evidx];
-        evoffset = Hrtf->evOffset[evidx];
+        const ALsizei azcount{Hrtf->azCount[evidx]};
+        const ALsizei evoffset{Hrtf->evOffset[evidx]};
 
         /* Calculate azimuth index for this elevation. */
-        azidx = (ALsizei)((F_TAU+AmbiPoints[c].Azim) * azcount / F_TAU + 0.5f) % azcount;
+        const auto azidx = static_cast<ALsizei>(
+            (360.0f+AmbiPoints[c].Azim)*azcount/360.0f + 0.5f) % azcount;
 
         /* Calculate indices for left and right channels. */
         idx[c] = evoffset + azidx;

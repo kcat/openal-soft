@@ -929,7 +929,7 @@ struct ALCcaptureAlsa final : public ALCbackend {
     al::vector<char> Buffer;
 
     bool DoCapture{false};
-    ll_ringbuffer_t *Ring{nullptr};
+    RingBufferPtr Ring{nullptr};
 
     snd_pcm_sframes_t mLastAvail{0};
 };
@@ -962,9 +962,6 @@ void ALCcaptureAlsa_Destruct(ALCcaptureAlsa *self)
     if(self->PcmHandle)
         snd_pcm_close(self->PcmHandle);
     self->PcmHandle = nullptr;
-
-    ll_ringbuffer_free(self->Ring);
-    self->Ring = nullptr;
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCcaptureAlsa();
@@ -1068,8 +1065,8 @@ ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
 
     if(needring)
     {
-        self->Ring = ll_ringbuffer_create(device->UpdateSize*device->NumUpdates,
-            device->frameSizeFromFmt(), false);
+        self->Ring.reset(ll_ringbuffer_create(device->UpdateSize*device->NumUpdates,
+            device->frameSizeFromFmt(), false));
         if(!self->Ring)
         {
             ERR("ring buffer create failed\n");
@@ -1086,7 +1083,6 @@ error:
     if(hp) snd_pcm_hw_params_free(hp);
 
 error2:
-    ll_ringbuffer_free(self->Ring);
     self->Ring = nullptr;
     snd_pcm_close(self->PcmHandle);
     self->PcmHandle = nullptr;
@@ -1142,7 +1138,7 @@ ALCenum ALCcaptureAlsa_captureSamples(ALCcaptureAlsa *self, ALCvoid *buffer, ALC
 
     if(self->Ring)
     {
-        ll_ringbuffer_read(self->Ring, static_cast<char*>(buffer), samples);
+        ll_ringbuffer_read(self->Ring.get(), static_cast<char*>(buffer), samples);
         return ALC_NO_ERROR;
     }
 
@@ -1235,7 +1231,7 @@ ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self)
 
     while(avail > 0)
     {
-        auto vec = ll_ringbuffer_get_write_vector(self->Ring);
+        auto vec = ll_ringbuffer_get_write_vector(self->Ring.get());
         if(vec.first.len == 0) break;
 
         snd_pcm_sframes_t amt{std::min<snd_pcm_sframes_t>(vec.first.len, avail)};
@@ -1263,11 +1259,11 @@ ALCuint ALCcaptureAlsa_availableSamples(ALCcaptureAlsa *self)
             continue;
         }
 
-        ll_ringbuffer_write_advance(self->Ring, amt);
+        ll_ringbuffer_write_advance(self->Ring.get(), amt);
         avail -= amt;
     }
 
-    return ll_ringbuffer_read_space(self->Ring);
+    return ll_ringbuffer_read_space(self->Ring.get());
 }
 
 ClockLatency ALCcaptureAlsa_getClockLatency(ALCcaptureAlsa *self)

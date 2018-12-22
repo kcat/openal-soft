@@ -324,7 +324,7 @@ struct ALCcoreAudioCapture final : public ALCbackend {
     AudioBufferList *BufferList;           // Buffer for data coming from the input device
     ALCvoid *ResampleBuffer;               // Buffer for returned RingBuffer data when resampling
 
-    ll_ringbuffer_t *Ring;
+    RingBufferPtr Ring{nullptr};
 };
 
 static void ALCcoreAudioCapture_Construct(ALCcoreAudioCapture *self, ALCdevice *device);
@@ -376,14 +376,10 @@ static void ALCcoreAudioCapture_Construct(ALCcoreAudioCapture *self, ALCdevice *
     self->AudioConverter = NULL;
     self->BufferList = NULL;
     self->ResampleBuffer = NULL;
-    self->Ring = NULL;
 }
 
 static void ALCcoreAudioCapture_Destruct(ALCcoreAudioCapture *self)
 {
-    ll_ringbuffer_free(self->Ring);
-    self->Ring = NULL;
-
     free(self->ResampleBuffer);
     self->ResampleBuffer = NULL;
 
@@ -420,7 +416,7 @@ static OSStatus ALCcoreAudioCapture_RecordProc(void *inRefCon,
         return err;
     }
 
-    ll_ringbuffer_write(self->Ring, self->BufferList->mBuffers[0].mData, inNumberFrames);
+    ll_ringbuffer_write(self->Ring.get(), self->BufferList->mBuffers[0].mData, inNumberFrames);
     return noErr;
 }
 
@@ -432,7 +428,7 @@ static OSStatus ALCcoreAudioCapture_ConvertCallback(AudioConverterRef UNUSED(inA
     ALCcoreAudioCapture *self = reinterpret_cast<ALCcoreAudioCapture*>(inUserData);
 
     // Read from the ring buffer and store temporarily in a large buffer
-    ll_ringbuffer_read(self->Ring, self->ResampleBuffer, *ioNumberDataPackets);
+    ll_ringbuffer_read(self->Ring.get(), self->ResampleBuffer, *ioNumberDataPackets);
 
     // Set the input data
     ioData->mNumberBuffers = 1;
@@ -666,18 +662,16 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
     if(self->BufferList == NULL)
         goto error;
 
-    self->Ring = ll_ringbuffer_create(
+    self->Ring.reset(ll_ringbuffer_create(
         (size_t)ceil(device->UpdateSize*self->SampleRateRatio*device->NumUpdates),
-        self->FrameSize, false
-    );
+        self->FrameSize, false));
     if(!self->Ring) goto error;
 
     device->DeviceName = name;
     return ALC_NO_ERROR;
 
 error:
-    ll_ringbuffer_free(self->Ring);
-    self->Ring = NULL;
+    self->Ring = nullptr;
     free(self->ResampleBuffer);
     self->ResampleBuffer = NULL;
     destroy_buffer_list(self->BufferList);
@@ -745,7 +739,7 @@ static ALCenum ALCcoreAudioCapture_captureSamples(ALCcoreAudioCapture *self, ALC
 
 static ALCuint ALCcoreAudioCapture_availableSamples(ALCcoreAudioCapture *self)
 {
-    return ll_ringbuffer_read_space(self->Ring) / self->SampleRateRatio;
+    return ll_ringbuffer_read_space(self->Ring.get()) / self->SampleRateRatio;
 }
 
 

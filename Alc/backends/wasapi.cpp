@@ -1172,7 +1172,7 @@ struct ALCwasapiCapture final : public ALCbackend, WasapiProxy {
 
     ChannelConverter *mChannelConv{nullptr};
     SampleConverter *mSampleConv{nullptr};
-    ll_ringbuffer_t *mRing{nullptr};
+    RingBufferPtr mRing{nullptr};
 
     std::atomic<int> mKillNow{AL_TRUE};
     std::thread mThread;
@@ -1219,9 +1219,6 @@ void ALCwasapiCapture_Destruct(ALCwasapiCapture *self)
     if(self->mNotifyEvent != nullptr)
         CloseHandle(self->mNotifyEvent);
     self->mNotifyEvent = nullptr;
-
-    ll_ringbuffer_free(self->mRing);
-    self->mRing = nullptr;
 
     DestroySampleConverter(&self->mSampleConv);
     DestroyChannelConverter(&self->mChannelConv);
@@ -1275,7 +1272,7 @@ FORCE_ALIGN int ALCwasapiCapture_recordProc(ALCwasapiCapture *self)
                     rdata = reinterpret_cast<BYTE*>(samples.data());
                 }
 
-                auto data = ll_ringbuffer_get_write_vector(self->mRing);
+                auto data = ll_ringbuffer_get_write_vector(self->mRing.get());
 
                 size_t dstframes;
                 if(self->mSampleConv)
@@ -1311,7 +1308,7 @@ FORCE_ALIGN int ALCwasapiCapture_recordProc(ALCwasapiCapture *self)
                     dstframes = len1 + len2;
                 }
 
-                ll_ringbuffer_write_advance(self->mRing, dstframes);
+                ll_ringbuffer_write_advance(self->mRing.get(), dstframes);
 
                 hr = capture->ReleaseBuffer(numsamples);
                 if(FAILED(hr)) ERR("Failed to release capture buffer: 0x%08lx\n", hr);
@@ -1696,8 +1693,7 @@ HRESULT ALCwasapiCapture::resetProxy()
     }
 
     buffer_len = maxu(device->UpdateSize*device->NumUpdates, buffer_len);
-    ll_ringbuffer_free(mRing);
-    mRing = ll_ringbuffer_create(buffer_len, device->frameSizeFromFmt(), false);
+    mRing.reset(ll_ringbuffer_create(buffer_len, device->frameSizeFromFmt(), false));
     if(!mRing)
     {
         ERR("Failed to allocate capture ring buffer\n");
@@ -1790,14 +1786,12 @@ void ALCwasapiCapture::stopProxy()
 
 ALuint ALCwasapiCapture_availableSamples(ALCwasapiCapture *self)
 {
-    return (ALuint)ll_ringbuffer_read_space(self->mRing);
+    return (ALuint)ll_ringbuffer_read_space(self->mRing.get());
 }
 
 ALCenum ALCwasapiCapture_captureSamples(ALCwasapiCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    if(ALCwasapiCapture_availableSamples(self) < samples)
-        return ALC_INVALID_VALUE;
-    ll_ringbuffer_read(self->mRing, reinterpret_cast<char*>(buffer), samples);
+    ll_ringbuffer_read(self->mRing.get(), reinterpret_cast<char*>(buffer), samples);
     return ALC_NO_ERROR;
 }
 

@@ -501,7 +501,7 @@ void ALCplaybackOSS_stop(ALCplaybackOSS *self)
 struct ALCcaptureOSS final : public ALCbackend {
     int fd{-1};
 
-    ll_ringbuffer_t *mRing{nullptr};
+    RingBufferPtr mRing{nullptr};
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
@@ -537,8 +537,6 @@ void ALCcaptureOSS_Destruct(ALCcaptureOSS *self)
         close(self->fd);
     self->fd = -1;
 
-    ll_ringbuffer_free(self->mRing);
-    self->mRing = nullptr;
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCcaptureOSS();
 }
@@ -580,7 +578,7 @@ int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
             continue;
         }
 
-        auto vec = ll_ringbuffer_get_write_vector(self->mRing);
+        auto vec = ll_ringbuffer_get_write_vector(self->mRing.get());
         if(vec.first.len > 0)
         {
             amt = read(self->fd, vec.first.buf, vec.first.len*frame_size);
@@ -592,7 +590,7 @@ int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
                 ALCcaptureOSS_unlock(self);
                 break;
             }
-            ll_ringbuffer_write_advance(self->mRing, amt/frame_size);
+            ll_ringbuffer_write_advance(self->mRing.get(), amt/frame_size);
         }
     }
 
@@ -698,7 +696,8 @@ ALCenum ALCcaptureOSS_open(ALCcaptureOSS *self, const ALCchar *name)
         return ALC_INVALID_VALUE;
     }
 
-    self->mRing = ll_ringbuffer_create(device->UpdateSize*device->NumUpdates, frameSize, false);
+    self->mRing.reset(ll_ringbuffer_create(device->UpdateSize*device->NumUpdates, frameSize,
+        false));
     if(!self->mRing)
     {
         ERR("Ring buffer create failed\n");
@@ -739,13 +738,13 @@ void ALCcaptureOSS_stop(ALCcaptureOSS *self)
 
 ALCenum ALCcaptureOSS_captureSamples(ALCcaptureOSS *self, ALCvoid *buffer, ALCuint samples)
 {
-    ll_ringbuffer_read(self->mRing, static_cast<char*>(buffer), samples);
+    ll_ringbuffer_read(self->mRing.get(), static_cast<char*>(buffer), samples);
     return ALC_NO_ERROR;
 }
 
 ALCuint ALCcaptureOSS_availableSamples(ALCcaptureOSS *self)
 {
-    return ll_ringbuffer_read_space(self->mRing);
+    return ll_ringbuffer_read_space(self->mRing.get());
 }
 
 } // namespace

@@ -145,7 +145,7 @@ struct ALCopenslPlayback final : public ALCbackend {
     /* buffer queue player interfaces */
     SLObjectItf mBufferQueueObj{nullptr};
 
-    ll_ringbuffer_t *mRing{nullptr};
+    RingBufferPtr mRing{nullptr};
     al::semaphore mSem;
 
     ALsizei mFrameSize{0};
@@ -195,9 +195,6 @@ static void ALCopenslPlayback_Destruct(ALCopenslPlayback* self)
     self->mEngineObj = NULL;
     self->mEngine = NULL;
 
-    ll_ringbuffer_free(self->mRing);
-    self->mRing = NULL;
-
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCopenslPlayback();
 }
@@ -216,7 +213,7 @@ static void ALCopenslPlayback_process(SLAndroidSimpleBufferQueueItf UNUSED(bq), 
      * available for writing again, and wake up the mixer thread to mix and
      * queue more audio.
      */
-    ll_ringbuffer_read_advance(self->mRing, 1);
+    ll_ringbuffer_read_advance(self->mRing.get(), 1);
 
     self->mSem.post();
 }
@@ -250,7 +247,7 @@ static int ALCopenslPlayback_mixerProc(ALCopenslPlayback *self)
     {
         size_t todo;
 
-        if(ll_ringbuffer_write_space(self->mRing) == 0)
+        if(ll_ringbuffer_write_space(self->mRing.get()) == 0)
         {
             SLuint32 state = 0;
 
@@ -267,7 +264,7 @@ static int ALCopenslPlayback_mixerProc(ALCopenslPlayback *self)
                 break;
             }
 
-            if(ll_ringbuffer_write_space(self->mRing) == 0)
+            if(ll_ringbuffer_write_space(self->mRing.get()) == 0)
             {
                 ALCopenslPlayback_unlock(self);
                 self->mSem.wait();
@@ -276,13 +273,13 @@ static int ALCopenslPlayback_mixerProc(ALCopenslPlayback *self)
             }
         }
 
-        auto data = ll_ringbuffer_get_write_vector(self->mRing);
+        auto data = ll_ringbuffer_get_write_vector(self->mRing.get());
         aluMixData(device, data.first.buf, data.first.len*device->UpdateSize);
         if(data.second.len > 0)
             aluMixData(device, data.second.buf, data.second.len*device->UpdateSize);
 
         todo = data.first.len+data.second.len;
-        ll_ringbuffer_write_advance(self->mRing, todo);
+        ll_ringbuffer_write_advance(self->mRing.get(), todo);
 
         for(size_t i = 0;i < todo;i++)
         {
@@ -380,8 +377,7 @@ static ALCboolean ALCopenslPlayback_reset(ALCopenslPlayback *self)
         VCALL0(self->mBufferQueueObj,Destroy)();
     self->mBufferQueueObj = NULL;
 
-    ll_ringbuffer_free(self->mRing);
-    self->mRing = NULL;
+    self->mRing = nullptr;
 
     sampleRate = device->Frequency;
 #if 0
@@ -536,9 +532,8 @@ static ALCboolean ALCopenslPlayback_reset(ALCopenslPlayback *self)
     }
     if(SL_RESULT_SUCCESS == result)
     {
-        self->mRing = ll_ringbuffer_create(device->NumUpdates,
-            self->mFrameSize*device->UpdateSize, true
-        );
+        self->mRing.reset(ll_ringbuffer_create(device->NumUpdates,
+            self->mFrameSize*device->UpdateSize, true));
         if(!self->mRing)
         {
             ERR("Out of memory allocating ring buffer %ux%u %u\n", device->UpdateSize,
@@ -564,7 +559,7 @@ static ALCboolean ALCopenslPlayback_start(ALCopenslPlayback *self)
     SLAndroidSimpleBufferQueueItf bufferQueue;
     SLresult result;
 
-    ll_ringbuffer_reset(self->mRing);
+    ll_ringbuffer_reset(self->mRing.get());
 
     result = VCALL(self->mBufferQueueObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
                                                        &bufferQueue);
@@ -642,7 +637,8 @@ static ClockLatency ALCopenslPlayback_getClockLatency(ALCopenslPlayback *self)
 
     ALCopenslPlayback_lock(self);
     ret.ClockTime = GetDeviceClockTime(device);
-    ret.Latency  = std::chrono::seconds{ll_ringbuffer_read_space(self->mRing)*device->UpdateSize};
+    ret.Latency = std::chrono::seconds{ll_ringbuffer_read_space(self->mRing.get()) *
+        device->UpdateSize};
     ret.Latency /= device->Frequency;
     ALCopenslPlayback_unlock(self);
 
@@ -658,7 +654,7 @@ struct ALCopenslCapture final : public ALCbackend {
     /* recording interfaces */
     SLObjectItf mRecordObj{nullptr};
 
-    ll_ringbuffer_t *mRing{nullptr};
+    RingBufferPtr mRing{nullptr};
     ALCuint mSplOffset{0u};
 
     ALsizei mFrameSize{0};
@@ -699,9 +695,6 @@ static void ALCopenslCapture_Destruct(ALCopenslCapture *self)
     self->mEngineObj = NULL;
     self->mEngine = NULL;
 
-    ll_ringbuffer_free(self->mRing);
-    self->mRing = NULL;
-
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCopenslCapture();
 }
@@ -711,7 +704,7 @@ static void ALCopenslCapture_process(SLAndroidSimpleBufferQueueItf UNUSED(bq), v
 {
     ALCopenslCapture *self = static_cast<ALCopenslCapture*>(context);
     /* A new chunk has been written into the ring buffer, advance it. */
-    ll_ringbuffer_write_advance(self->mRing, 1);
+    ll_ringbuffer_write_advance(self->mRing.get(), 1);
 }
 
 
@@ -830,9 +823,8 @@ static ALCenum ALCopenslCapture_open(ALCopenslCapture *self, const ALCchar *name
 
     if(SL_RESULT_SUCCESS == result)
     {
-        self->mRing = ll_ringbuffer_create(device->NumUpdates,
-            device->UpdateSize*self->mFrameSize, false
-        );
+        self->mRing.reset(ll_ringbuffer_create(device->NumUpdates,
+            device->UpdateSize*self->mFrameSize, false));
 
         result = VCALL(self->mRecordObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
                                                       &bufferQueue);
@@ -848,7 +840,7 @@ static ALCenum ALCopenslCapture_open(ALCopenslCapture *self, const ALCchar *name
         ALsizei chunk_size = device->UpdateSize * self->mFrameSize;
         size_t i;
 
-        auto data = ll_ringbuffer_get_write_vector(self->mRing);
+        auto data = ll_ringbuffer_get_write_vector(self->mRing.get());
         for(i = 0;i < data.first.len && SL_RESULT_SUCCESS == result;i++)
         {
             result = VCALL(bufferQueue,Enqueue)(data.first.buf + chunk_size*i, chunk_size);
@@ -935,7 +927,7 @@ static ALCenum ALCopenslCapture_captureSamples(ALCopenslCapture *self, ALCvoid *
     /* Read the desired samples from the ring buffer then advance its read
      * pointer.
      */
-    auto data = ll_ringbuffer_get_read_vector(self->mRing);
+    auto data = ll_ringbuffer_get_read_vector(self->mRing.get());
     for(i = 0;i < samples;)
     {
         ALCuint rem = minu(samples - i, device->UpdateSize - self->mSplOffset);
@@ -949,7 +941,7 @@ static ALCenum ALCopenslCapture_captureSamples(ALCopenslCapture *self, ALCvoid *
             /* Finished a chunk, reset the offset and advance the read pointer. */
             self->mSplOffset = 0;
 
-            ll_ringbuffer_read_advance(self->mRing, 1);
+            ll_ringbuffer_read_advance(self->mRing.get(), 1);
             result = VCALL(bufferQueue,Enqueue)(data.first.buf, chunk_size);
             PRINTERR(result, "bufferQueue->Enqueue");
             if(SL_RESULT_SUCCESS != result) break;
@@ -978,7 +970,7 @@ static ALCenum ALCopenslCapture_captureSamples(ALCopenslCapture *self, ALCvoid *
 static ALCuint ALCopenslCapture_availableSamples(ALCopenslCapture *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    return ll_ringbuffer_read_space(self->mRing) * device->UpdateSize;
+    return ll_ringbuffer_read_space(self->mRing.get()) * device->UpdateSize;
 }
 
 

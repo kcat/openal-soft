@@ -31,25 +31,9 @@
 #include "compat.h"
 
 
-/* NOTE: This lockless ringbuffer implementation is copied from JACK, extended
- * to include an element size. Consequently, parameters and return values for a
- * size or count is in 'elements', not bytes. Additionally, it only supports
- * single-consumer/single-provider operation. */
-struct ll_ringbuffer {
-    std::atomic<size_t> write_ptr{0u};
-    std::atomic<size_t> read_ptr{0u};
-    size_t size{0u};
-    size_t size_mask{0u};
-    size_t elem_size{0u};
-
-    alignas(16) char buf[];
-
-    DEF_PLACE_NEWDEL()
-};
-
-ll_ringbuffer_t *ll_ringbuffer_create(size_t sz, size_t elem_sz, int limit_writes)
+ll_ringbuffer *ll_ringbuffer_create(size_t sz, size_t elem_sz, int limit_writes)
 {
-    ll_ringbuffer_t *rb;
+    ll_ringbuffer *rb;
     size_t power_of_two = 0;
 
     if(sz > 0)
@@ -75,12 +59,7 @@ ll_ringbuffer_t *ll_ringbuffer_create(size_t sz, size_t elem_sz, int limit_write
     return rb;
 }
 
-void ll_ringbuffer_free(ll_ringbuffer_t *rb)
-{
-    delete rb;
-}
-
-void ll_ringbuffer_reset(ll_ringbuffer_t *rb)
+void ll_ringbuffer_reset(ll_ringbuffer *rb)
 {
     rb->write_ptr.store(0, std::memory_order_relaxed);
     rb->read_ptr.store(0, std::memory_order_relaxed);
@@ -88,14 +67,14 @@ void ll_ringbuffer_reset(ll_ringbuffer_t *rb)
 }
 
 
-size_t ll_ringbuffer_read_space(const ll_ringbuffer_t *rb)
+size_t ll_ringbuffer_read_space(const ll_ringbuffer *rb)
 {
     size_t w = rb->write_ptr.load(std::memory_order_acquire);
     size_t r = rb->read_ptr.load(std::memory_order_acquire);
     return (w-r) & rb->size_mask;
 }
 
-size_t ll_ringbuffer_write_space(const ll_ringbuffer_t *rb)
+size_t ll_ringbuffer_write_space(const ll_ringbuffer *rb)
 {
     size_t w = rb->write_ptr.load(std::memory_order_acquire);
     size_t r = rb->read_ptr.load(std::memory_order_acquire);
@@ -104,7 +83,7 @@ size_t ll_ringbuffer_write_space(const ll_ringbuffer_t *rb)
 }
 
 
-size_t ll_ringbuffer_read(ll_ringbuffer_t *rb, void *dest, size_t cnt)
+size_t ll_ringbuffer_read(ll_ringbuffer *rb, void *dest, size_t cnt)
 {
     size_t read_ptr;
     size_t free_cnt;
@@ -143,7 +122,7 @@ size_t ll_ringbuffer_read(ll_ringbuffer_t *rb, void *dest, size_t cnt)
     return to_read;
 }
 
-size_t ll_ringbuffer_peek(ll_ringbuffer_t *rb, void *dest, size_t cnt)
+size_t ll_ringbuffer_peek(ll_ringbuffer *rb, void *dest, size_t cnt)
 {
     size_t free_cnt;
     size_t cnt2;
@@ -180,7 +159,7 @@ size_t ll_ringbuffer_peek(ll_ringbuffer_t *rb, void *dest, size_t cnt)
     return to_read;
 }
 
-size_t ll_ringbuffer_write(ll_ringbuffer_t *rb, const void *src, size_t cnt)
+size_t ll_ringbuffer_write(ll_ringbuffer *rb, const void *src, size_t cnt)
 {
     size_t write_ptr;
     size_t free_cnt;
@@ -220,18 +199,18 @@ size_t ll_ringbuffer_write(ll_ringbuffer_t *rb, const void *src, size_t cnt)
 }
 
 
-void ll_ringbuffer_read_advance(ll_ringbuffer_t *rb, size_t cnt)
+void ll_ringbuffer_read_advance(ll_ringbuffer *rb, size_t cnt)
 {
     rb->read_ptr.fetch_add(cnt, std::memory_order_acq_rel);
 }
 
-void ll_ringbuffer_write_advance(ll_ringbuffer_t *rb, size_t cnt)
+void ll_ringbuffer_write_advance(ll_ringbuffer *rb, size_t cnt)
 {
     rb->write_ptr.fetch_add(cnt, std::memory_order_acq_rel);
 }
 
 
-ll_ringbuffer_data_pair ll_ringbuffer_get_read_vector(const ll_ringbuffer_t *rb)
+ll_ringbuffer_data_pair ll_ringbuffer_get_read_vector(const ll_ringbuffer *rb)
 {
     ll_ringbuffer_data_pair ret;
     size_t free_cnt;
@@ -265,7 +244,7 @@ ll_ringbuffer_data_pair ll_ringbuffer_get_read_vector(const ll_ringbuffer_t *rb)
     return ret;
 }
 
-ll_ringbuffer_data_pair ll_ringbuffer_get_write_vector(const ll_ringbuffer_t *rb)
+ll_ringbuffer_data_pair ll_ringbuffer_get_write_vector(const ll_ringbuffer *rb)
 {
     ll_ringbuffer_data_pair ret;
     size_t free_cnt;

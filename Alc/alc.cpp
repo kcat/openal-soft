@@ -2459,7 +2459,7 @@ ALCcontext_struct::~ALCcontext_struct()
     }
     TRACE("Freed " SZFMT " listener property object%s\n", count, (count==1)?"":"s");
 
-    ll_ringbuffer_free(AsyncEvents);
+    delete AsyncEvents;
     AsyncEvents = nullptr;
 
     ALCdevice_DecRef(Device);

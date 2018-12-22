@@ -279,7 +279,7 @@ static void SndioPlayback_stop(SndioPlayback *self)
 struct SndioCapture final : public ALCbackend {
     struct sio_hdl *sndHandle{nullptr};
 
-    ll_ringbuffer_t *ring{nullptr};
+    RingBufferPtr ring{nullptr};
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
@@ -316,9 +316,6 @@ static void SndioCapture_Destruct(SndioCapture *self)
         sio_close(self->sndHandle);
     self->sndHandle = nullptr;
 
-    ll_ringbuffer_free(self->ring);
-    self->ring = nullptr;
-
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~SndioCapture();
 }
@@ -339,7 +336,7 @@ static int SndioCapture_recordProc(SndioCapture *self)
     {
         size_t total, todo;
 
-        auto data = ll_ringbuffer_get_write_vector(self->ring);
+        auto data = ll_ringbuffer_get_write_vector(self->ring.get());
         todo = data.first.len + data.second.len;
         if(todo == 0)
         {
@@ -372,7 +369,7 @@ static int SndioCapture_recordProc(SndioCapture *self)
             data.first.len -= got;
             total += got;
         }
-        ll_ringbuffer_write_advance(self->ring, total / frameSize);
+        ll_ringbuffer_write_advance(self->ring.get(), total / frameSize);
     }
 
     return 0;
@@ -468,7 +465,8 @@ static ALCenum SndioCapture_open(SndioCapture *self, const ALCchar *name)
         return ALC_INVALID_VALUE;
     }
 
-    self->ring = ll_ringbuffer_create(device->UpdateSize*device->NumUpdates, par.bps*par.rchan, 0);
+    self->ring.reset(ll_ringbuffer_create(device->UpdateSize*device->NumUpdates,
+        par.bps*par.rchan, false));
     if(!self->ring)
     {
         ERR("Failed to allocate %u-byte ringbuffer\n",
@@ -516,13 +514,13 @@ static void SndioCapture_stop(SndioCapture *self)
 
 static ALCenum SndioCapture_captureSamples(SndioCapture *self, void *buffer, ALCuint samples)
 {
-    ll_ringbuffer_read(self->ring, static_cast<char*>(buffer), samples);
+    ll_ringbuffer_read(self->ring.get(), static_cast<char*>(buffer), samples);
     return ALC_NO_ERROR;
 }
 
 static ALCuint SndioCapture_availableSamples(SndioCapture *self)
 {
-    return ll_ringbuffer_read_space(self->ring);
+    return ll_ringbuffer_read_space(self->ring.get());
 }
 
 

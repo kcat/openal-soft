@@ -319,7 +319,7 @@ struct ALCportCapture final : public ALCbackend {
     PaStream *Stream{nullptr};
     PaStreamParameters Params;
 
-    ll_ringbuffer_t *Ring{nullptr};
+    RingBufferPtr Ring{nullptr};
 };
 
 int ALCportCapture_ReadCallback(const void *inputBuffer, void *outputBuffer,
@@ -356,9 +356,6 @@ void ALCportCapture_Destruct(ALCportCapture *self)
         ERR("Error closing stream: %s\n", Pa_GetErrorText(err));
     self->Stream = nullptr;
 
-    ll_ringbuffer_free(self->Ring);
-    self->Ring = nullptr;
-
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCportCapture();
 }
@@ -369,10 +366,7 @@ int ALCportCapture_ReadCallback(const void *inputBuffer, void *UNUSED(outputBuff
     const PaStreamCallbackFlags UNUSED(statusFlags), void *userData)
 {
     ALCportCapture *self = static_cast<ALCportCapture*>(userData);
-    size_t writable = ll_ringbuffer_write_space(self->Ring);
-
-    if(framesPerBuffer > writable) framesPerBuffer = writable;
-    ll_ringbuffer_write(self->Ring, inputBuffer, framesPerBuffer);
+    ll_ringbuffer_write(self->Ring.get(), inputBuffer, framesPerBuffer);
     return 0;
 }
 
@@ -392,8 +386,8 @@ ALCenum ALCportCapture_open(ALCportCapture *self, const ALCchar *name)
     samples = maxu(samples, 100 * device->Frequency / 1000);
     frame_size = device->frameSizeFromFmt();
 
-    self->Ring = ll_ringbuffer_create(samples, frame_size, false);
-    if(self->Ring == nullptr) return ALC_INVALID_VALUE;
+    self->Ring.reset(ll_ringbuffer_create(samples, frame_size, false));
+    if(!self->Ring) return ALC_INVALID_VALUE;
 
     self->Params.device = -1;
     if(!ConfigValueInt(nullptr, "port", "capture", &self->Params.device) ||
@@ -462,12 +456,12 @@ void ALCportCapture_stop(ALCportCapture *self)
 
 ALCuint ALCportCapture_availableSamples(ALCportCapture *self)
 {
-    return ll_ringbuffer_read_space(self->Ring);
+    return ll_ringbuffer_read_space(self->Ring.get());
 }
 
 ALCenum ALCportCapture_captureSamples(ALCportCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    ll_ringbuffer_read(self->Ring, buffer, samples);
+    ll_ringbuffer_read(self->Ring.get(), buffer, samples);
     return ALC_NO_ERROR;
 }
 

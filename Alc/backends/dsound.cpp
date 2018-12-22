@@ -655,7 +655,7 @@ struct ALCdsoundCapture final : public ALCbackend {
     DWORD BufferBytes{0u};
     DWORD Cursor{0u};
 
-    ll_ringbuffer_t *Ring{nullptr};
+    RingBufferPtr Ring{nullptr};
 };
 
 void ALCdsoundCapture_Construct(ALCdsoundCapture *self, ALCdevice *device);
@@ -681,9 +681,6 @@ void ALCdsoundCapture_Construct(ALCdsoundCapture *self, ALCdevice *device)
 
 void ALCdsoundCapture_Destruct(ALCdsoundCapture *self)
 {
-    ll_ringbuffer_free(self->Ring);
-    self->Ring = nullptr;
-
     if(self->DSCbuffer)
     {
         self->DSCbuffer->Stop();
@@ -838,8 +835,8 @@ ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *deviceName)
         self->DSC->CreateCaptureBuffer(&DSCBDescription, &self->DSCbuffer, nullptr);
     if(SUCCEEDED(hr))
     {
-         self->Ring = ll_ringbuffer_create(device->UpdateSize*device->NumUpdates,
-                                           InputType.Format.nBlockAlign, false);
+         self->Ring.reset(ll_ringbuffer_create(device->UpdateSize*device->NumUpdates,
+            InputType.Format.nBlockAlign, false));
          if(!self->Ring) hr = DSERR_OUTOFMEMORY;
     }
 
@@ -847,7 +844,6 @@ ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *deviceName)
     {
         ERR("Device init failed: 0x%08lx\n", hr);
 
-        ll_ringbuffer_free(self->Ring);
         self->Ring = nullptr;
         if(self->DSCbuffer)
             self->DSCbuffer->Release();
@@ -893,7 +889,7 @@ void ALCdsoundCapture_stop(ALCdsoundCapture *self)
 
 ALCenum ALCdsoundCapture_captureSamples(ALCdsoundCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    ll_ringbuffer_read(self->Ring, buffer, samples);
+    ll_ringbuffer_read(self->Ring.get(), buffer, samples);
     return ALC_NO_ERROR;
 }
 
@@ -902,7 +898,7 @@ ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
     ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
 
     if(!device->Connected.load(std::memory_order_acquire))
-        return static_cast<ALCuint>(ll_ringbuffer_read_space(self->Ring));
+        return static_cast<ALCuint>(ll_ringbuffer_read_space(self->Ring.get()));
 
     ALsizei FrameSize{device->frameSizeFromFmt()};
     DWORD BufferBytes{self->BufferBytes};
@@ -915,15 +911,15 @@ ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
     if(SUCCEEDED(hr))
     {
         DWORD NumBytes{(ReadCursor-LastCursor + BufferBytes) % BufferBytes};
-        if(!NumBytes) return static_cast<ALCubyte>(ll_ringbuffer_read_space(self->Ring));
+        if(!NumBytes) return static_cast<ALCubyte>(ll_ringbuffer_read_space(self->Ring.get()));
         hr = self->DSCbuffer->Lock(LastCursor, NumBytes, &ReadPtr1, &ReadCnt1,
                                    &ReadPtr2, &ReadCnt2, 0);
     }
     if(SUCCEEDED(hr))
     {
-        ll_ringbuffer_write(self->Ring, ReadPtr1, ReadCnt1/FrameSize);
+        ll_ringbuffer_write(self->Ring.get(), ReadPtr1, ReadCnt1/FrameSize);
         if(ReadPtr2 != nullptr)
-            ll_ringbuffer_write(self->Ring, ReadPtr2, ReadCnt2/FrameSize);
+            ll_ringbuffer_write(self->Ring.get(), ReadPtr2, ReadCnt2/FrameSize);
         hr = self->DSCbuffer->Unlock(ReadPtr1, ReadCnt1, ReadPtr2, ReadCnt2);
         self->Cursor = (LastCursor+ReadCnt1+ReadCnt2) % BufferBytes;
     }
@@ -934,7 +930,7 @@ ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
         aluHandleDisconnect(device, "Failure retrieving capture data: 0x%lx", hr);
     }
 
-    return static_cast<ALCuint>(ll_ringbuffer_read_space(self->Ring));
+    return static_cast<ALCuint>(ll_ringbuffer_read_space(self->Ring.get()));
 }
 
 } // namespace

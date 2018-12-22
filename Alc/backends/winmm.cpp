@@ -401,7 +401,7 @@ struct ALCwinmmCapture final : public ALCbackend {
 
     HWAVEIN InHdl{nullptr};
 
-    ll_ringbuffer_t *Ring{nullptr};
+    RingBufferPtr Ring{nullptr};
 
     WAVEFORMATEX Format{};
 
@@ -447,9 +447,6 @@ void ALCwinmmCapture_Destruct(ALCwinmmCapture *self)
 
     al_free(self->WaveBuffer[0].lpData);
     std::fill(self->WaveBuffer.begin(), self->WaveBuffer.end(), WAVEHDR{});
-
-    ll_ringbuffer_free(self->Ring);
-    self->Ring = nullptr;
 
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCwinmmCapture();
@@ -497,7 +494,7 @@ int ALCwinmmCapture_captureProc(ALCwinmmCapture *self)
             WAVEHDR &waveHdr = self->WaveBuffer[widx];
             widx = (widx+1) % self->WaveBuffer.size();
 
-            ll_ringbuffer_write(self->Ring, waveHdr.lpData,
+            ll_ringbuffer_write(self->Ring.get(), waveHdr.lpData,
                 waveHdr.dwBytesRecorded / self->Format.nBlockAlign
             );
             self->Readable.fetch_sub(1, std::memory_order_acq_rel);
@@ -585,7 +582,7 @@ ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *deviceName)
         std::max<size_t>(device->UpdateSize*device->NumUpdates, BufferSize*self->WaveBuffer.size())
     );
 
-    self->Ring = ll_ringbuffer_create(CapturedDataSize, self->Format.nBlockAlign, false);
+    self->Ring.reset(ll_ringbuffer_create(CapturedDataSize, self->Format.nBlockAlign, false));
     if(!self->Ring) return ALC_INVALID_VALUE;
 
     al_free(self->WaveBuffer[0].lpData);
@@ -648,13 +645,13 @@ void ALCwinmmCapture_stop(ALCwinmmCapture *self)
 
 ALCenum ALCwinmmCapture_captureSamples(ALCwinmmCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    ll_ringbuffer_read(self->Ring, buffer, samples);
+    ll_ringbuffer_read(self->Ring.get(), buffer, samples);
     return ALC_NO_ERROR;
 }
 
 ALCuint ALCwinmmCapture_availableSamples(ALCwinmmCapture *self)
 {
-    return (ALCuint)ll_ringbuffer_read_space(self->Ring);
+    return (ALCuint)ll_ringbuffer_read_space(self->Ring.get());
 }
 
 } // namespace

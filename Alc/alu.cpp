@@ -585,15 +585,13 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
 
             if(Device->AvgSpeakerDist > 0.0f)
             {
-                const ALfloat mdist{Distance * Listener.Params.MetersPerUnit};
-                const ALfloat w1{SPEEDOFSOUNDMETRESPERSEC /
-                    (Device->AvgSpeakerDist * (ALfloat)Device->Frequency)};
-                ALfloat w0{SPEEDOFSOUNDMETRESPERSEC /
-                    (mdist * (ALfloat)Device->Frequency)};
-                /* Clamp w0 for really close distances, to prevent excessive
-                 * bass.
+                /* Clamp the distance for really close sources, to prevent
+                 * excessive bass.
                  */
-                w0 = minf(w0, w1*4.0f);
+                const ALfloat mdist{maxf(Distance*Listener.Params.MetersPerUnit,
+                    Device->AvgSpeakerDist/4.0f)};
+                const ALfloat w0{SPEEDOFSOUNDMETRESPERSEC /
+                    (mdist * (ALfloat)Device->Frequency)};
 
                 /* Only need to adjust the first channel of a B-Format source. */
                 voice->Direct.Params[0].NFCtrlFilter.adjust(w0);
@@ -604,6 +602,12 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 voice->Flags |= VOICE_HAS_NFC;
             }
 
+            /* Always render B-Format sources to the FOA output, to ensure
+             * smooth changes if it switches between panned and unpanned.
+             */
+            voice->Direct.Buffer = Device->FOAOut.Buffer;
+            voice->Direct.Channels = Device->FOAOut.NumChannels;
+
             /* A scalar of 1.5 for plain stereo results in +/-60 degrees being
              * moved to +/-90 degrees for direct right and left speaker
              * responses.
@@ -612,14 +616,14 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
             CalcAngleCoeffs((Device->Render_Mode==StereoPair) ? ScaleAzimuthFront(Azi, 1.5f) : Azi,
                             Elev, Spread, coeffs);
 
-            /* NOTE: W needs to be scaled by sqrt(2) due to FuMa normalization. */
-            ComputePanGains(&Device->Dry, coeffs, DryGain*SQRTF_2,
+            /* NOTE: W needs to be scaled due to FuMa normalization. */
+            ComputePanGains(&Device->FOAOut, coeffs, DryGain*AmbiScale::FromFuMa[0],
                 voice->Direct.Params[0].Gains.Target);
             for(ALsizei i{0};i < NumSends;i++)
             {
                 if(const ALeffectslot *Slot{SendSlots[i]})
                     ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, coeffs,
-                        WetGain[i]*SQRTF_2, voice->Send[i].Params[0].Gains.Target
+                        WetGain[i]*AmbiScale::FromFuMa[0], voice->Send[i].Params[0].Gains.Target
                     );
             }
         }
@@ -663,12 +667,16 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
              * matrix is transposed, for the inputs to align on the rows and
              * outputs on the columns.
              */
+            static constexpr ALfloat scale0{AmbiScale::FromFuMa[0]};
+            static constexpr ALfloat scale1{AmbiScale::FromFuMa[1]};
+            static constexpr ALfloat scale2{AmbiScale::FromFuMa[2]};
+            static constexpr ALfloat scale3{AmbiScale::FromFuMa[3]};
             const alu::Matrix matrix{
-                // ACN0           ACN1           ACN2           ACN3
-                SQRTF_2,          0.0f,          0.0f,          0.0f, // Ambi W
-                   0.0f, -N[0]*SQRTF_3,  N[1]*SQRTF_3, -N[2]*SQRTF_3, // Ambi X
-                   0.0f,  U[0]*SQRTF_3, -U[1]*SQRTF_3,  U[2]*SQRTF_3, // Ambi Y
-                   0.0f, -V[0]*SQRTF_3,  V[1]*SQRTF_3, -V[2]*SQRTF_3  // Ambi Z
+            //    ACN0          ACN1          ACN2          ACN3
+                scale0,         0.0f,         0.0f,         0.0f, // Ambi W
+                  0.0f, -N[0]*scale1,  N[1]*scale2, -N[2]*scale3, // Ambi X
+                  0.0f,  U[0]*scale1, -U[1]*scale2,  U[2]*scale3, // Ambi Y
+                  0.0f, -V[0]*scale1,  V[1]*scale2, -V[2]*scale3  // Ambi Z
             };
 
             voice->Direct.Buffer = Device->FOAOut.Buffer;
@@ -808,15 +816,13 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
             /* Calculate NFC filter coefficient if needed. */
             if(Device->AvgSpeakerDist > 0.0f)
             {
-                const ALfloat mdist{Distance * Listener.Params.MetersPerUnit};
-                const ALfloat w1{SPEEDOFSOUNDMETRESPERSEC /
-                    (Device->AvgSpeakerDist * (ALfloat)Device->Frequency)};
-                ALfloat w0{SPEEDOFSOUNDMETRESPERSEC /
-                    (mdist * (ALfloat)Device->Frequency)};
-                /* Clamp w0 for really close distances, to prevent excessive
-                 * bass.
+                /* Clamp the distance for really close sources, to prevent
+                 * excessive bass.
                  */
-                w0 = minf(w0, w1*4.0f);
+                const ALfloat mdist{maxf(Distance*Listener.Params.MetersPerUnit,
+                    Device->AvgSpeakerDist/4.0f)};
+                const ALfloat w0{SPEEDOFSOUNDMETRESPERSEC /
+                    (mdist * (ALfloat)Device->Frequency)};
 
                 /* Adjust NFC filters. */
                 for(ALsizei c{0};c < num_channels;c++)

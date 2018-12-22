@@ -188,7 +188,7 @@ ALsizei CalcAzIndex(ALsizei azcount, ALfloat az, ALfloat *mu)
 void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread,
                    ALfloat (*RESTRICT coeffs)[2], ALsizei *delays)
 {
-    ALfloat dirfact{1.0f - (spread / F_TAU)};
+    const ALfloat dirfact{1.0f - (spread / F_TAU)};
 
     /* Claculate the lower elevation index. */
     ALfloat emu;
@@ -230,7 +230,7 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
     /* Calculate bilinear blending weights, attenuated according to the
      * directional panning factor.
      */
-    ALfloat blend[4]{
+    const ALfloat blend[4]{
         (1.0f-emu) * (1.0f-amu[0]) * dirfact,
         (1.0f-emu) * (     amu[0]) * dirfact,
         (     emu) * (1.0f-amu[1]) * dirfact,
@@ -247,30 +247,28 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
         Hrtf->delays[idx[2]][1]*blend[2] + Hrtf->delays[idx[3]][1]*blend[3]
     );
 
-    /* Calculate the sample offsets for the HRIR indices. */
-    idx[0] *= Hrtf->irSize;
-    idx[1] *= Hrtf->irSize;
-    idx[2] *= Hrtf->irSize;
-    idx[3] *= Hrtf->irSize;
+    const ALsizei irSize{Hrtf->irSize};
+    ASSUME(irSize >= MIN_IR_SIZE);
 
-    ASSUME(Hrtf->irSize >= MIN_IR_SIZE && (Hrtf->irSize%MOD_IR_SIZE) == 0);
+    /* Calculate the sample offsets for the HRIR indices. */
+    idx[0] *= irSize;
+    idx[1] *= irSize;
+    idx[2] *= irSize;
+    idx[3] *= irSize;
 
     /* Calculate the blended HRIR coefficients. */
-    coeffs[0][0] = PassthruCoeff * (1.0f-dirfact);
-    coeffs[0][1] = PassthruCoeff * (1.0f-dirfact);
-    for(ALsizei i{1};i < Hrtf->irSize;i++)
-    {
-        coeffs[i][0] = 0.0f;
-        coeffs[i][1] = 0.0f;
-    }
+    ALfloat *coeffout{al::assume_aligned<16>(coeffs[0])};
+    coeffout[0] = PassthruCoeff * (1.0f-dirfact);
+    coeffout[1] = PassthruCoeff * (1.0f-dirfact);
+    std::fill(coeffout+2, coeffout + irSize*2, 0.0f);
     for(ALsizei c{0};c < 4;c++)
     {
-        const ALfloat (*RESTRICT srccoeffs)[2] = Hrtf->coeffs + idx[c];
-        for(ALsizei i{0};i < Hrtf->irSize;i++)
-        {
-            coeffs[i][0] += srccoeffs[i][0] * blend[c];
-            coeffs[i][1] += srccoeffs[i][1] * blend[c];
-        }
+        const ALfloat *srccoeffs{al::assume_aligned<16>(Hrtf->coeffs[idx[c]])};
+        const ALfloat mult{blend[c]};
+        auto blend_coeffs = [mult](const ALfloat src, const ALfloat coeff) noexcept -> ALfloat
+        { return src*mult + coeff; };
+        std::transform<const ALfloat*RESTRICT>(srccoeffs, srccoeffs + irSize*2, coeffout,
+            coeffout, blend_coeffs);
     }
 }
 

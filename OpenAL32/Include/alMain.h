@@ -236,8 +236,8 @@ static const union {
 #endif
 
 
-struct Hrtf;
 struct HrtfEntry;
+struct HrtfHandle;
 struct DirectHrtfState;
 struct FrontStablizer;
 struct Compressor;
@@ -600,7 +600,7 @@ struct FilterSubList {
 typedef struct EnumeratedHrtf {
     std::string name;
 
-    struct HrtfEntry *hrtf;
+    HrtfHandle *hrtf;
 } EnumeratedHrtf;
 
 
@@ -760,7 +760,7 @@ struct ALCdevice_struct {
 
     /* HRTF state and info */
     std::unique_ptr<DirectHrtfState> mHrtfState;
-    Hrtf *HrtfHandle{nullptr};
+    HrtfEntry *mHrtf{nullptr};
 
     /* UHJ encoder state */
     std::unique_ptr<Uhj2Encoder> Uhj_Encoder;

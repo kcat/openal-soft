@@ -122,7 +122,7 @@ struct BackendInfo {
     BackendFactory& (*getFactory)(void);
 };
 
-struct BackendInfo BackendList[] = {
+BackendInfo BackendList[] = {
 #ifdef HAVE_JACK
     { "jack", JackBackendFactory::getFactory },
 #endif
@@ -173,8 +173,8 @@ struct BackendInfo BackendList[] = {
 };
 ALsizei BackendListSize = static_cast<ALsizei>(COUNTOF(BackendList));
 
-struct BackendInfo PlaybackBackend;
-struct BackendInfo CaptureBackend;
+BackendInfo PlaybackBackend;
+BackendInfo CaptureBackend;
 
 
 /************************************************
@@ -1087,7 +1087,7 @@ static void alc_initconfig(void)
                     }
                     else
                     {
-                        struct BackendInfo Bkp = BackendList[n];
+                        BackendInfo Bkp = BackendList[n];
                         for(;n > i;n--)
                             BackendList[n] = BackendList[n-1];
                         BackendList[n] = Bkp;
@@ -1167,7 +1167,7 @@ static void alc_initconfig(void)
 /************************************************
  * Device enumeration
  ************************************************/
-static void ProbeDevices(std::string *list, struct BackendInfo *backendinfo, enum DevProbe type)
+static void ProbeDevices(std::string *list, BackendInfo *backendinfo, enum DevProbe type)
 {
     DO_INITCONFIG();
 
@@ -1550,7 +1550,7 @@ static void alcSetError(ALCdevice *device, ALCenum errorCode)
 }
 
 
-static struct Compressor *CreateDeviceLimiter(const ALCdevice *device, const ALfloat threshold)
+static Compressor *CreateDeviceLimiter(const ALCdevice *device, const ALfloat threshold)
 {
     return CompressorInit(device->RealOut.NumChannels, device->Frequency,
         AL_TRUE, AL_TRUE, AL_TRUE, AL_TRUE, AL_TRUE, 0.001f, 0.002f,
@@ -1849,7 +1849,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 
         if(hrtf_userreq == Hrtf_Enable || (hrtf_userreq != Hrtf_Disable && hrtf_appreq == Hrtf_Enable))
         {
-            struct Hrtf *hrtf = nullptr;
+            HrtfEntry *hrtf{nullptr};
             if(device->HrtfList.empty())
                 device->HrtfList = EnumerateHrtf(device->DeviceName.c_str());
             if(!device->HrtfList.empty())
@@ -1865,9 +1865,9 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 device->FmtChans = DevFmtStereo;
                 device->Frequency = hrtf->sampleRate;
                 device->Flags |= DEVICE_CHANNELS_REQUEST | DEVICE_FREQUENCY_REQUEST;
-                if(device->HrtfHandle)
-                    Hrtf_DecRef(device->HrtfHandle);
-                device->HrtfHandle = hrtf;
+                if(device->mHrtf)
+                    Hrtf_DecRef(device->mHrtf);
+                device->mHrtf = hrtf;
             }
             else
             {
@@ -2225,9 +2225,9 @@ ALCdevice_struct::~ALCdevice_struct()
     if(count > 0)
         WARN(SZFMT " Filter%s not deleted\n", count, (count==1)?"":"s");
 
-    if(HrtfHandle)
-        Hrtf_DecRef(HrtfHandle);
-    HrtfHandle = nullptr;
+    if(mHrtf)
+        Hrtf_DecRef(mHrtf);
+    mHrtf = nullptr;
 }
 
 
@@ -2322,20 +2322,20 @@ ALCcontext_struct::ALCcontext_struct(ALCdevice *device)
 static ALvoid InitContext(ALCcontext *Context)
 {
     ALlistener &listener = Context->Listener;
-    struct ALeffectslotArray *auxslots;
+    ALeffectslotArray *auxslots;
 
     //Validate Context
     if(Context->DefaultSlot)
     {
         auxslots = static_cast<ALeffectslotArray*>(al_calloc(DEF_ALIGN,
-            FAM_SIZE(struct ALeffectslotArray, slot, 1)));
+            FAM_SIZE(ALeffectslotArray, slot, 1)));
         auxslots->count = 1;
         auxslots->slot[0] = Context->DefaultSlot.get();
     }
     else
     {
         auxslots = static_cast<ALeffectslotArray*>(al_calloc(DEF_ALIGN,
-            sizeof(struct ALeffectslotArray)));
+            sizeof(ALeffectslotArray)));
         auxslots->count = 0;
     }
     Context->ActiveAuxSlots.store(auxslots, std::memory_order_relaxed);
@@ -2824,7 +2824,7 @@ ALC_API const ALCchar* ALC_APIENTRY alcGetString(ALCdevice *Device, ALCenum para
         else
         {
             std::lock_guard<std::mutex> _{dev->BackendLock};
-            value = (dev->HrtfHandle ? dev->HrtfName.c_str() : "");
+            value = (dev->mHrtf ? dev->HrtfName.c_str() : "");
         }
         break;
 
@@ -3009,7 +3009,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
                 values[i++] = device->NumAuxSends;
 
                 values[i++] = ALC_HRTF_SOFT;
-                values[i++] = (device->HrtfHandle ? ALC_TRUE : ALC_FALSE);
+                values[i++] = (device->mHrtf ? ALC_TRUE : ALC_FALSE);
 
                 values[i++] = ALC_HRTF_STATUS_SOFT;
                 values[i++] = device->HrtfStatus;
@@ -3128,7 +3128,7 @@ static ALCsizei GetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALC
             return 1;
 
         case ALC_HRTF_SOFT:
-            values[0] = (device->HrtfHandle ? ALC_TRUE : ALC_FALSE);
+            values[0] = (device->mHrtf ? ALC_TRUE : ALC_FALSE);
             return 1;
 
         case ALC_HRTF_STATUS_SOFT:
@@ -3239,7 +3239,7 @@ ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname,
                     values[i++] = dev->NumAuxSends;
 
                     values[i++] = ALC_HRTF_SOFT;
-                    values[i++] = (dev->HrtfHandle ? ALC_TRUE : ALC_FALSE);
+                    values[i++] = (dev->mHrtf ? ALC_TRUE : ALC_FALSE);
 
                     values[i++] = ALC_HRTF_STATUS_SOFT;
                     values[i++] = dev->HrtfStatus;

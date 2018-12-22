@@ -19,9 +19,9 @@
 #define HRIR_MASK        (HRIR_LENGTH-1)
 
 
-struct HrtfEntry;
+struct HrtfHandle;
 
-struct Hrtf {
+struct HrtfEntry {
     RefCount ref;
 
     ALuint sampleRate;
@@ -69,11 +69,11 @@ struct AngularPoint {
 
 
 al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname);
-struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry);
-void Hrtf_IncRef(struct Hrtf *hrtf);
-void Hrtf_DecRef(struct Hrtf *hrtf);
+HrtfEntry *GetLoadedHrtf(HrtfHandle *handle);
+void Hrtf_IncRef(HrtfEntry *hrtf);
+void Hrtf_DecRef(HrtfEntry *hrtf);
 
-void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat (*RESTRICT coeffs)[2], ALsizei *delays);
+void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread, ALfloat (*RESTRICT coeffs)[2], ALsizei *delays);
 
 /**
  * Produces HRTF filter coefficients for decoding B-Format, given a set of
@@ -82,6 +82,6 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
  * ordered and scaled according to the matrix input. Note the specified virtual
  * positions should be in degrees, not radians!
  */
-void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, const ALsizei NumChannels, const AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_COEFFS], const ALsizei AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain);
+void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsizei NumChannels, const AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_COEFFS], const ALsizei AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain);
 
 #endif /* ALC_HRTF_H */

@@ -715,12 +715,12 @@ void InitHrtfPanning(ALCdevice *device)
 
     device->RealOut.NumChannels = device->channelsFromFmt();
 
-    BuildBFormatHrtf(device->HrtfHandle,
+    BuildBFormatHrtf(device->mHrtf,
         device->mHrtfState.get(), device->Dry.NumChannels, AmbiPoints, AmbiMatrix,
         static_cast<ALsizei>(COUNTOF(AmbiPoints)), AmbiOrderHFGain
     );
 
-    InitNearFieldCtrl(device, device->HrtfHandle->distance, device->AmbiUp ? 2 : 1,
+    InitNearFieldCtrl(device, device->mHrtf->distance, device->AmbiUp ? 2 : 1,
                       ChansPerOrder);
 }
 
@@ -871,10 +871,10 @@ void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, con
 void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appreq, HrtfRequestMode hrtf_userreq)
 {
     /* Hold the HRTF the device last used, in case it's used again. */
-    Hrtf *old_hrtf{device->HrtfHandle};
+    HrtfEntry *old_hrtf{device->mHrtf};
 
     device->mHrtfState = nullptr;
-    device->HrtfHandle = nullptr;
+    device->mHrtf = nullptr;
     device->HrtfName.clear();
     device->Render_Mode = NormalRender;
 
@@ -1026,35 +1026,35 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
     if(hrtf_id >= 0 && (size_t)hrtf_id < device->HrtfList.size())
     {
         const EnumeratedHrtf &entry = device->HrtfList[hrtf_id];
-        Hrtf *hrtf{GetLoadedHrtf(entry.hrtf)};
+        HrtfEntry *hrtf{GetLoadedHrtf(entry.hrtf)};
         if(hrtf && hrtf->sampleRate == device->Frequency)
         {
-            device->HrtfHandle = hrtf;
+            device->mHrtf = hrtf;
             device->HrtfName = entry.name;
         }
         else if(hrtf)
             Hrtf_DecRef(hrtf);
     }
 
-    if(!device->HrtfHandle)
+    if(!device->mHrtf)
     {
         auto find_hrtf = [device](const EnumeratedHrtf &entry) -> bool
         {
-            Hrtf *hrtf{GetLoadedHrtf(entry.hrtf)};
+            HrtfEntry *hrtf{GetLoadedHrtf(entry.hrtf)};
             if(!hrtf) return false;
             if(hrtf->sampleRate != device->Frequency)
             {
                 Hrtf_DecRef(hrtf);
                 return false;
             }
-            device->HrtfHandle = hrtf;
+            device->mHrtf = hrtf;
             device->HrtfName = entry.name;
             return true;
         };
         std::find_if(device->HrtfList.cbegin(), device->HrtfList.cend(), find_hrtf);
     }
 
-    if(device->HrtfHandle)
+    if(device->mHrtf)
     {
         if(old_hrtf)
             Hrtf_DecRef(old_hrtf);

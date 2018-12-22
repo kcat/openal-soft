@@ -43,8 +43,8 @@
 #include "almalloc.h"
 
 
-struct HrtfEntry {
-    Hrtf *handle{nullptr};
+struct HrtfHandle {
+    HrtfEntry *entry{nullptr};
     char filename[];
 
     DEF_PLACE_NEWDEL()
@@ -52,7 +52,7 @@ struct HrtfEntry {
 
 namespace {
 
-using HrtfEntryPtr = std::unique_ptr<HrtfEntry>;
+using HrtfHandlePtr = std::unique_ptr<HrtfHandle>;
 
 /* Current data set limits defined by the makehrtf utility. */
 #define MIN_IR_SIZE                  (8)
@@ -82,7 +82,7 @@ constexpr ALchar magicMarker02[8]{'M','i','n','P','H','R','0','2'};
 constexpr ALfloat PassthruCoeff{0.707106781187f/*sqrt(0.5)*/};
 
 std::mutex LoadedHrtfLock;
-al::vector<HrtfEntryPtr> LoadedHrtfs;
+al::vector<HrtfHandlePtr> LoadedHrtfs;
 
 
 class databuf final : public std::streambuf {
@@ -185,7 +185,7 @@ ALsizei CalcAzIndex(ALsizei azcount, ALfloat az, ALfloat *mu)
 /* Calculates static HRIR coefficients and delays for the given polar elevation
  * and azimuth in radians. The coefficients are normalized.
  */
-void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread,
+void GetHrtfCoeffs(const HrtfEntry *Hrtf, ALfloat elevation, ALfloat azimuth, ALfloat spread,
                    ALfloat (*RESTRICT coeffs)[2], ALsizei *delays)
 {
     const ALfloat dirfact{1.0f - (spread / F_TAU)};
@@ -273,7 +273,7 @@ void GetHrtfCoeffs(const struct Hrtf *Hrtf, ALfloat elevation, ALfloat azimuth, 
 }
 
 
-void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, const ALsizei NumChannels, const AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_COEFFS], const ALsizei AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain)
+void BuildBFormatHrtf(const HrtfEntry *Hrtf, DirectHrtfState *state, const ALsizei NumChannels, const AngularPoint *AmbiPoints, const ALfloat (*RESTRICT AmbiMatrix)[MAX_AMBI_COEFFS], const ALsizei AmbiCount, const ALfloat *RESTRICT AmbiOrderHFGain)
 {
     static constexpr int OrderFromChan[MAX_AMBI_COEFFS]{
         0, 1,1,1, 2,2,2,2,2, 3,3,3,3,3,3,3,
@@ -413,14 +413,14 @@ void BuildBFormatHrtf(const struct Hrtf *Hrtf, DirectHrtfState *state, const ALs
 
 namespace {
 
-struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALfloat distance, ALsizei evCount,
+HrtfEntry *CreateHrtfStore(ALuint rate, ALsizei irSize, ALfloat distance, ALsizei evCount,
   ALsizei irCount, const ALubyte *azCount, const ALushort *evOffset, const ALfloat (*coeffs)[2],
   const ALubyte (*delays)[2], const char *filename)
 {
-    struct Hrtf *Hrtf;
+    HrtfEntry *Hrtf;
     size_t total;
 
-    total  = sizeof(struct Hrtf);
+    total  = sizeof(HrtfEntry);
     total += sizeof(Hrtf->azCount[0])*evCount;
     total  = RoundUp(total, sizeof(ALushort)); /* Align for ushort fields */
     total += sizeof(Hrtf->evOffset[0])*evCount;
@@ -428,12 +428,12 @@ struct Hrtf *CreateHrtfStore(ALuint rate, ALsizei irSize, ALfloat distance, ALsi
     total += sizeof(Hrtf->coeffs[0])*irSize*irCount;
     total += sizeof(Hrtf->delays[0])*irCount;
 
-    Hrtf = static_cast<struct Hrtf*>(al_calloc(16, total));
+    Hrtf = static_cast<HrtfEntry*>(al_calloc(16, total));
     if(Hrtf == nullptr)
         ERR("Out of memory allocating storage for %s.\n", filename);
     else
     {
-        uintptr_t offset = sizeof(struct Hrtf);
+        uintptr_t offset = sizeof(HrtfEntry);
         char *base = (char*)Hrtf;
         ALushort *_evOffset;
         ALubyte *_azCount;
@@ -524,7 +524,7 @@ ALuint GetLE_ALuint(std::istream &data)
     return ret;
 }
 
-struct Hrtf *LoadHrtf00(std::istream &data, const char *filename)
+HrtfEntry *LoadHrtf00(std::istream &data, const char *filename)
 {
     ALuint rate{GetLE_ALuint(data)};
     ALushort irCount{GetLE_ALushort(data)};
@@ -642,7 +642,7 @@ struct Hrtf *LoadHrtf00(std::istream &data, const char *filename)
                            &reinterpret_cast<ALubyte(&)[2]>(delays[0]), filename);
 }
 
-struct Hrtf *LoadHrtf01(std::istream &data, const char *filename)
+HrtfEntry *LoadHrtf01(std::istream &data, const char *filename)
 {
     ALuint rate{GetLE_ALuint(data)};
     ALushort irSize{GetLE_ALubyte(data)};
@@ -746,7 +746,7 @@ struct Hrtf *LoadHrtf01(std::istream &data, const char *filename)
 #define CHANTYPE_LEFTONLY  0
 #define CHANTYPE_LEFTRIGHT 1
 
-struct Hrtf *LoadHrtf02(std::istream &data, const char *filename)
+HrtfEntry *LoadHrtf02(std::istream &data, const char *filename)
 {
     ALuint rate{GetLE_ALuint(data)};
     ALubyte sampleType{GetLE_ALubyte(data)};
@@ -982,9 +982,9 @@ void AddFileEntry(al::vector<EnumeratedHrtf> &list, const std::string &filename)
     {
         TRACE("Got new file \"%s\"\n", filename.c_str());
 
-        LoadedHrtfs.emplace_back(HrtfEntryPtr{new
-            (al_calloc(DEF_ALIGN, FAM_SIZE(HrtfEntry, filename, filename.length()+1)))
-        HrtfEntry{}});
+        LoadedHrtfs.emplace_back(HrtfHandlePtr{new
+            (al_calloc(DEF_ALIGN, FAM_SIZE(HrtfHandle, filename, filename.length()+1)))
+            HrtfHandle{}});
         loaded_entry = LoadedHrtfs.end()-1;
         strcpy((*loaded_entry)->filename, filename.c_str());
     }
@@ -1044,9 +1044,9 @@ void AddBuiltInEntry(al::vector<EnumeratedHrtf> &list, const std::string &filena
 
         TRACE("Got new file \"%s\"\n", filename.c_str());
 
-        LoadedHrtfs.emplace_back(HrtfEntryPtr{new
-            (al_calloc(DEF_ALIGN, FAM_SIZE(HrtfEntry, filename, namelen)))
-        HrtfEntry{}});
+        LoadedHrtfs.emplace_back(HrtfHandlePtr{new
+            (al_calloc(DEF_ALIGN, FAM_SIZE(HrtfHandle, filename, namelen)))
+            HrtfHandle{}});
         loaded_entry = LoadedHrtfs.end()-1;
         snprintf((*loaded_entry)->filename, namelen,  "!%u_%s",
                  residx, filename.c_str());
@@ -1172,13 +1172,13 @@ al::vector<EnumeratedHrtf> EnumerateHrtf(const char *devname)
     return list;
 }
 
-struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry)
+HrtfEntry *GetLoadedHrtf(HrtfHandle *handle)
 {
     std::lock_guard<std::mutex> _{LoadedHrtfLock};
 
-    if(entry->handle)
+    if(handle->entry)
     {
-        Hrtf *hrtf{entry->handle};
+        HrtfEntry *hrtf{handle->entry};
         Hrtf_IncRef(hrtf);
         return hrtf;
     }
@@ -1187,9 +1187,9 @@ struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry)
     const char *name{""};
     ALuint residx{};
     char ch{};
-    if(sscanf(entry->filename, "!%u%c", &residx, &ch) == 2 && ch == '_')
+    if(sscanf(handle->filename, "!%u%c", &residx, &ch) == 2 && ch == '_')
     {
-        name = strchr(entry->filename, ch)+1;
+        name = strchr(handle->filename, ch)+1;
 
         TRACE("Loading %s...\n", name);
         ResData res{GetResource(residx)};
@@ -1202,19 +1202,19 @@ struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry)
     }
     else
     {
-        name = entry->filename;
+        name = handle->filename;
 
-        TRACE("Loading %s...\n", entry->filename);
-        std::unique_ptr<al::ifstream> fstr{new al::ifstream{entry->filename, std::ios::binary}};
+        TRACE("Loading %s...\n", handle->filename);
+        std::unique_ptr<al::ifstream> fstr{new al::ifstream{handle->filename, std::ios::binary}};
         if(!fstr->is_open())
         {
-            ERR("Could not open %s\n", entry->filename);
+            ERR("Could not open %s\n", handle->filename);
             return nullptr;
         }
         stream = std::move(fstr);
     }
 
-    Hrtf *hrtf{};
+    HrtfEntry *hrtf{nullptr};
     char magic[sizeof(magicMarker02)];
     stream->read(magic, sizeof(magic));
     if(stream->gcount() < static_cast<std::streamsize>(sizeof(magicMarker02)))
@@ -1242,7 +1242,7 @@ struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry)
         ERR("Failed to load %s\n", name);
     else
     {
-        entry->handle = hrtf;
+        handle->entry = hrtf;
         Hrtf_IncRef(hrtf);
         TRACE("Loaded HRTF support for format: %s %uhz\n",
               DevFmtChannelsString(DevFmtStereo), hrtf->sampleRate);
@@ -1252,13 +1252,13 @@ struct Hrtf *GetLoadedHrtf(struct HrtfEntry *entry)
 }
 
 
-void Hrtf_IncRef(struct Hrtf *hrtf)
+void Hrtf_IncRef(HrtfEntry *hrtf)
 {
     auto ref = IncrementRef(&hrtf->ref);
     TRACEREF("%p increasing refcount to %u\n", hrtf, ref);
 }
 
-void Hrtf_DecRef(struct Hrtf *hrtf)
+void Hrtf_DecRef(HrtfEntry *hrtf)
 {
     auto ref = DecrementRef(&hrtf->ref);
     TRACEREF("%p decreasing refcount to %u\n", hrtf, ref);
@@ -1271,13 +1271,13 @@ void Hrtf_DecRef(struct Hrtf *hrtf)
          * before the lock was taken.
          */
         auto iter = std::find_if(LoadedHrtfs.begin(), LoadedHrtfs.end(),
-            [hrtf](const HrtfEntryPtr &entry) noexcept -> bool
-            { return hrtf == entry->handle; }
+            [hrtf](const HrtfHandlePtr &entry) noexcept -> bool
+            { return hrtf == entry->entry; }
         );
         if(iter != LoadedHrtfs.end() && ReadRef(&hrtf->ref) == 0)
         {
-            al_free((*iter)->handle);
-            (*iter)->handle = nullptr;
+            al_free((*iter)->entry);
+            (*iter)->entry = nullptr;
             TRACE("Unloaded unused HRTF %s\n", (*iter)->filename);
         }
     }

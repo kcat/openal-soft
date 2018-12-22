@@ -202,7 +202,7 @@ void DeinitVoice(ALvoice *voice) noexcept
 
 void aluSelectPostProcess(ALCdevice *device)
 {
-    if(device->HrtfHandle)
+    if(device->mHrtf)
         device->PostProcess = ProcessHrtf;
     else if(device->AmbiDecoder)
         device->PostProcess = ProcessAmbiDec;
@@ -730,7 +730,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
             /* Get the HRIR coefficients and delays just once, for the given
              * source direction.
              */
-            GetHrtfCoeffs(Device->HrtfHandle, Elev, Azi, Spread,
+            GetHrtfCoeffs(Device->mHrtf, Elev, Azi, Spread,
                           voice->Direct.Params[0].Hrtf.Target.Coeffs,
                           voice->Direct.Params[0].Hrtf.Target.Delay);
             voice->Direct.Params[0].Hrtf.Target.Gain = DryGain * downmix_gain;
@@ -777,8 +777,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                 /* Get the HRIR coefficients and delays for this channel
                  * position.
                  */
-                GetHrtfCoeffs(Device->HrtfHandle,
-                    chans[c].elevation, chans[c].angle, Spread,
+                GetHrtfCoeffs(Device->mHrtf, chans[c].elevation, chans[c].angle, Spread,
                     voice->Direct.Params[c].Hrtf.Target.Coeffs,
                     voice->Direct.Params[c].Hrtf.Target.Delay
                 );

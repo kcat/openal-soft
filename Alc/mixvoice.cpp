@@ -310,7 +310,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
     ASSUME(increment > 0);
 
     ALCdevice *Device{Context->Device};
-    ALsizei IrSize{Device->HrtfHandle ? Device->HrtfHandle->irSize : 0};
+    ALsizei IrSize{Device->mHrtf ? Device->mHrtf->irSize : 0};
 
     ResamplerFunc Resample{(increment == FRACTIONONE && DataPosFrac == 0) ?
                            Resample_copy_C : voice->Resampler};

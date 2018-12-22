@@ -667,10 +667,10 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
              * matrix is transposed, for the inputs to align on the rows and
              * outputs on the columns.
              */
-            static constexpr ALfloat scale0{AmbiScale::FromFuMa[0]};
-            static constexpr ALfloat scale1{AmbiScale::FromFuMa[1]};
-            static constexpr ALfloat scale2{AmbiScale::FromFuMa[2]};
-            static constexpr ALfloat scale3{AmbiScale::FromFuMa[3]};
+            static const ALfloat scale0{AmbiScale::FromFuMa[0]};
+            static const ALfloat scale1{AmbiScale::FromFuMa[1]};
+            static const ALfloat scale2{AmbiScale::FromFuMa[2]};
+            static const ALfloat scale3{AmbiScale::FromFuMa[3]};
             const alu::Matrix matrix{
             //    ACN0          ACN1          ACN2          ACN3
                 scale0,         0.0f,         0.0f,         0.0f, // Ambi W

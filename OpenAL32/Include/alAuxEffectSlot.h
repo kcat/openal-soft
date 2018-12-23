@@ -78,6 +78,7 @@ struct ALeffectslot {
     struct {
         ALfloat   Gain{1.0f};
         ALboolean AuxSendAuto{AL_TRUE};
+        ALeffectslot *Target{nullptr};
 
         ALenum EffectType{AL_EFFECT_NULL};
         ALeffectProps EffectProps{};

@@ -1429,8 +1429,10 @@ void ProcessParamUpdates(ALCcontext *ctx, const ALeffectslotArray *slots)
     IncrementRef(&ctx->UpdateCount);
 }
 
-void ProcessContext(ALCcontext *ctx, ALsizei SamplesToDo)
+void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
 {
+    ASSUME(SamplesToDo > 0);
+
     const ALeffectslotArray *auxslots{ctx->ActiveAuxSlots.load(std::memory_order_acquire)};
 
     /* Process pending propery updates for objects on the context. */
@@ -1465,7 +1467,42 @@ void ProcessContext(ALCcontext *ctx, ALsizei SamplesToDo)
     );
 
     /* Process effects. */
-    std::for_each(auxslots->slot, auxslots->slot+auxslots->count,
+    if(auxslots->count < 1) return;
+    auto slots = auxslots->slot;
+    auto slots_end = slots + auxslots->count;
+
+    /* First sort the slots into scratch storage, so that effects come before
+     * their effect target (or their targets' target).
+     */
+    auto sorted_slots = const_cast<ALeffectslot**>(slots_end);
+    auto sorted_slots_end = sorted_slots;
+    auto in_chain = [](const ALeffectslot *slot1, const ALeffectslot *slot2) noexcept -> bool
+    {
+        while((slot1=slot1->Params.Target) != nullptr) {
+            if(slot1 == slot2) return true;
+        }
+        return false;
+    };
+
+    *sorted_slots_end = *slots;
+    ++sorted_slots_end;
+    while(++slots != slots_end)
+    {
+        /* If this effect slot targets an effect slot already in the list (i.e.
+         * slots outputs to something in sorted_slots), directly or indirectly,
+         * insert it prior to that element.
+         */
+        auto checker = sorted_slots;
+        do {
+            if(in_chain(*slots, *checker)) break;
+        } while(++checker != sorted_slots_end);
+
+        checker = std::move_backward(checker, sorted_slots_end, sorted_slots_end+1);
+        *--checker = *slots;
+        ++sorted_slots_end;
+    }
+
+    std::for_each(sorted_slots, sorted_slots_end,
         [SamplesToDo](const ALeffectslot *slot) -> void
         {
             EffectState *state{slot->Params.mEffectState};

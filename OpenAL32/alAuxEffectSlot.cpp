@@ -71,10 +71,11 @@ void AddActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *cont
     ALsizei newcount{curarray->count + count};
 
     /* Insert the new effect slots into the head of the array, followed by the
-     * existing ones.
+     * existing ones. Allocate twice as much space for effect slots so the
+     * mixer has a place to sort them.
      */
     auto newarray = static_cast<ALeffectslotArray*>(al_calloc(DEF_ALIGN,
-        FAM_SIZE(ALeffectslotArray, slot, newcount)));
+        FAM_SIZE(ALeffectslotArray, slot, newcount*2)));
     newarray->count = newcount;
     auto slotiter = std::transform(slotids, slotids+count, newarray->slot,
         [context](ALuint id) noexcept -> ALeffectslot*
@@ -99,7 +100,7 @@ void AddActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *cont
     {
         curarray = newarray;
         newarray = static_cast<ALeffectslotArray*>(al_calloc(DEF_ALIGN,
-            FAM_SIZE(ALeffectslotArray, slot, newcount)));
+            FAM_SIZE(ALeffectslotArray, slot, newcount*2)));
         newarray->count = newcount;
         std::copy_n(curarray->slot, newcount, newarray->slot);
         al_free(curarray);
@@ -122,7 +123,7 @@ void RemoveActiveEffectSlots(const ALuint *slotids, ALsizei count, ALCcontext *c
      * any) of the effect slots to remove are in the array.
      */
     auto newarray = static_cast<ALeffectslotArray*>(al_calloc(DEF_ALIGN,
-        FAM_SIZE(ALeffectslotArray, slot, curarray->count)));
+        FAM_SIZE(ALeffectslotArray, slot, curarray->count*2)));
 
     /* Copy each element in curarray to newarray whose ID is not in slotids. */
     const ALuint *slotids_end{slotids + count};

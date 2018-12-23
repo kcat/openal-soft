@@ -2327,9 +2327,13 @@ static ALvoid InitContext(ALCcontext *Context)
     //Validate Context
     if(Context->DefaultSlot)
     {
+        static constexpr int count{1};
+        /* Allocate twice as much space for effect slots so the mixer has a
+         * place to sort them.
+         */
         auxslots = static_cast<ALeffectslotArray*>(al_calloc(DEF_ALIGN,
-            FAM_SIZE(ALeffectslotArray, slot, 1)));
-        auxslots->count = 1;
+            FAM_SIZE(ALeffectslotArray, slot, count*2)));
+        auxslots->count = count;
         auxslots->slot[0] = Context->DefaultSlot.get();
     }
     else

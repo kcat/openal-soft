@@ -763,11 +763,8 @@ alu::Matrix GetTransformFromVector(const ALfloat *vec)
 }
 
 /* Update the early and late 3D panning gains. */
-ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, const ALfloat earlyGain, const ALfloat lateGain, ReverbState *State)
+ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, const ALfloat *LateReverbPan, const ALfloat earlyGain, const ALfloat lateGain, ALeffectslot *target, ReverbState *State)
 {
-    State->mOutBuffer = Device->FOAOut.Buffer;
-    State->mOutChannels = Device->FOAOut.NumChannels;
-
     /* Note: ret is transposed. */
     auto MatrixMult = [](const alu::Matrix &m1, const alu::Matrix &m2) noexcept -> alu::Matrix
     {
@@ -784,17 +781,27 @@ ALvoid Update3DPanning(const ALCdevice *Device, const ALfloat *ReflectionsPan, c
     /* Create a matrix that first converts A-Format to B-Format, then
      * transforms the B-Format signal according to the panning vector.
      */
-    alu::Matrix rot{GetTransformFromVector(ReflectionsPan)};
-    alu::Matrix transform{MatrixMult(rot, A2B)};
-    for(ALsizei i{0};i < MAX_EFFECT_CHANNELS;i++)
-        ComputePanGains(&Device->FOAOut, transform[i].data(), earlyGain,
-                        State->mEarly.PanGain[i]);
-
-    rot = GetTransformFromVector(LateReverbPan);
-    transform = MatrixMult(rot, A2B);
-    for(ALsizei i{0};i < MAX_EFFECT_CHANNELS;i++)
-        ComputePanGains(&Device->FOAOut, transform[i].data(), lateGain,
-                        State->mLate.PanGain[i]);
+    alu::Matrix earlymat{MatrixMult(GetTransformFromVector(ReflectionsPan), A2B)};
+    alu::Matrix latemat{MatrixMult(GetTransformFromVector(LateReverbPan), A2B)};
+    if(target)
+    {
+        State->mOutBuffer = target->WetBuffer;
+        State->mOutChannels = target->NumChannels;
+        for(ALsizei i{0};i < MAX_EFFECT_CHANNELS;i++)
+            ComputePanGains(target, earlymat[i].data(), earlyGain, State->mEarly.PanGain[i]);
+        for(ALsizei i{0};i < MAX_EFFECT_CHANNELS;i++)
+            ComputePanGains(target, latemat[i].data(), lateGain, State->mLate.PanGain[i]);
+    }
+    else
+    {
+        State->mOutBuffer = Device->FOAOut.Buffer;
+        State->mOutChannels = Device->FOAOut.NumChannels;
+        for(ALsizei i{0};i < MAX_EFFECT_CHANNELS;i++)
+            ComputePanGains(&Device->FOAOut, earlymat[i].data(), earlyGain,
+                State->mEarly.PanGain[i]);
+        for(ALsizei i{0};i < MAX_EFFECT_CHANNELS;i++)
+            ComputePanGains(&Device->FOAOut, latemat[i].data(), lateGain, State->mLate.PanGain[i]);
+    }
 }
 
 void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props)
@@ -858,7 +865,7 @@ void ReverbState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
     const ALfloat gain{props->Reverb.Gain * Slot->Params.Gain * ReverbBoost};
     Update3DPanning(Device, props->Reverb.ReflectionsPan, props->Reverb.LateReverbPan,
                     props->Reverb.ReflectionsGain*gain, props->Reverb.LateReverbGain*gain,
-                    this);
+                    Slot->Params.Target, this);
 
     /* Calculate the max update size from the smallest relevant delay. */
     mMaxUpdate[1] = mini(MAX_UPDATE_SAMPLES, mini(mEarly.Offset[0][1], mLate.Offset[0][1]));

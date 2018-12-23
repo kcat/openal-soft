@@ -146,11 +146,23 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
     mFeedback = props->Chorus.Feedback;
 
     /* Gains for left and right sides */
-    ALfloat coeffs[MAX_AMBI_COEFFS];
-    CalcAngleCoeffs(-F_PI_2, 0.0f, 0.0f, coeffs);
-    ComputePanGains(&device->Dry, coeffs, Slot->Params.Gain, mGains[0].Target);
-    CalcAngleCoeffs( F_PI_2, 0.0f, 0.0f, coeffs);
-    ComputePanGains(&device->Dry, coeffs, Slot->Params.Gain, mGains[1].Target);
+    ALfloat coeffs[2][MAX_AMBI_COEFFS];
+    CalcAngleCoeffs(-F_PI_2, 0.0f, 0.0f, coeffs[0]);
+    CalcAngleCoeffs( F_PI_2, 0.0f, 0.0f, coeffs[1]);
+    if(ALeffectslot *target{Slot->Params.Target})
+    {
+        mOutBuffer = target->WetBuffer;
+        mOutChannels = target->NumChannels;
+        ComputePanGains(target, coeffs[0], Slot->Params.Gain, mGains[0].Target);
+        ComputePanGains(target, coeffs[1], Slot->Params.Gain, mGains[1].Target);
+    }
+    else
+    {
+        mOutBuffer = device->Dry.Buffer;
+        mOutChannels = device->Dry.NumChannels;
+        ComputePanGains(&device->Dry, coeffs[0], Slot->Params.Gain, mGains[0].Target);
+        ComputePanGains(&device->Dry, coeffs[1], Slot->Params.Gain, mGains[1].Target);
+    }
 
     ALfloat rate{props->Chorus.Rate};
     if(!(rate > 0.0f))

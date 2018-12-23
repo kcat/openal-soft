@@ -867,6 +867,9 @@ void ComputePanningGainsBF(const BFChannelConfig *chanmap, ALsizei numchans, con
     std::fill(iter, std::end(gains), 0.0f);
 }
 
+void ComputePanGains(const ALeffectslot *slot, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS])
+{ ComputePanningGainsBF(slot->ChanMap, slot->NumChannels, coeffs, ingain, gains); }
+
 
 void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appreq, HrtfRequestMode hrtf_userreq)
 {

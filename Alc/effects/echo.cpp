@@ -94,7 +94,6 @@ void ALechoState::update(const ALCcontext *context, const ALeffectslot *slot, co
 {
     const ALCdevice *device = context->Device;
     ALuint frequency = device->Frequency;
-    ALfloat coeffs[MAX_AMBI_COEFFS];
     ALfloat gainhf, lrpan, spread;
 
     mTap[0].delay = maxi(float2int(props->Echo.Delay*frequency + 0.5f), 1);
@@ -116,13 +115,24 @@ void ALechoState::update(const ALCcontext *context, const ALeffectslot *slot, co
         calc_rcpQ_from_slope(gainhf, 1.0f)
     );
 
-    /* First tap panning */
-    CalcAngleCoeffs(-F_PI_2*lrpan, 0.0f, spread, coeffs);
-    ComputePanGains(&device->Dry, coeffs, slot->Params.Gain, mGains[0].Target);
+    ALfloat coeffs[2][MAX_AMBI_COEFFS];
+    CalcAngleCoeffs(-F_PI_2*lrpan, 0.0f, spread, coeffs[0]);
+    CalcAngleCoeffs( F_PI_2*lrpan, 0.0f, spread, coeffs[1]);
 
-    /* Second tap panning */
-    CalcAngleCoeffs( F_PI_2*lrpan, 0.0f, spread, coeffs);
-    ComputePanGains(&device->Dry, coeffs, slot->Params.Gain, mGains[1].Target);
+    if(ALeffectslot *target{slot->Params.Target})
+    {
+        mOutBuffer = target->WetBuffer;
+        mOutChannels = target->NumChannels;
+        ComputePanGains(target, coeffs[0], slot->Params.Gain, mGains[0].Target);
+        ComputePanGains(target, coeffs[1], slot->Params.Gain, mGains[1].Target);
+    }
+    else
+    {
+        mOutBuffer = device->Dry.Buffer;
+        mOutChannels = device->Dry.NumChannels;
+        ComputePanGains(&device->Dry, coeffs[0], slot->Params.Gain, mGains[0].Target);
+        ComputePanGains(&device->Dry, coeffs[1], slot->Params.Gain, mGains[1].Target);
+    }
 }
 
 void ALechoState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

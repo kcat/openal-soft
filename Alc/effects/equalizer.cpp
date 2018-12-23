@@ -152,11 +152,22 @@ void ALequalizerState::update(const ALCcontext *context, const ALeffectslot *slo
         mChans[i].filter[3].copyParamsFrom(mChans[0].filter[3]);
     }
 
-    mOutBuffer = device->FOAOut.Buffer;
-    mOutChannels = device->FOAOut.NumChannels;
-    for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
-        ComputePanGains(&device->FOAOut, alu::Matrix::Identity()[i].data(), slot->Params.Gain,
-                        mChans[i].TargetGains);
+    if(ALeffectslot *target{slot->Params.Target})
+    {
+        mOutBuffer = target->WetBuffer;
+        mOutChannels = target->NumChannels;
+        for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
+            ComputePanGains(target, alu::Matrix::Identity()[i].data(), slot->Params.Gain,
+                mChans[i].TargetGains);
+    }
+    else
+    {
+        mOutBuffer = device->FOAOut.Buffer;
+        mOutChannels = device->FOAOut.NumChannels;
+        for(i = 0;i < MAX_EFFECT_CHANNELS;i++)
+            ComputePanGains(&device->FOAOut, alu::Matrix::Identity()[i].data(), slot->Params.Gain,
+                mChans[i].TargetGains);
+    }
 }
 
 void ALequalizerState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

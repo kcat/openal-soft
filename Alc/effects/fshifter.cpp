@@ -132,7 +132,18 @@ void ALfshifterState::update(const ALCcontext *context, const ALeffectslot *slot
 
     ALfloat coeffs[MAX_AMBI_COEFFS];
     CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
-    ComputePanGains(&device->Dry, coeffs, slot->Params.Gain, mTargetGains);
+    if(ALeffectslot *target{slot->Params.Target})
+    {
+        mOutBuffer = target->WetBuffer;
+        mOutChannels = target->NumChannels;
+        ComputePanGains(target, coeffs, slot->Params.Gain, mTargetGains);
+    }
+    else
+    {
+        mOutBuffer = device->Dry.Buffer;
+        mOutChannels = device->Dry.NumChannels;
+        ComputePanGains(&device->Dry, coeffs, slot->Params.Gain, mTargetGains);
+    }
 }
 
 void ALfshifterState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

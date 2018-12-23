@@ -175,18 +175,27 @@ ALboolean ALpshifterState::deviceUpdate(const ALCdevice *device)
 
 void ALpshifterState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
 {
-    const ALCdevice *device = context->Device;
-    ALfloat coeffs[MAX_AMBI_COEFFS];
-    float pitch;
-
-    pitch = std::pow(2.0f,
+    const float pitch{std::pow(2.0f,
         (ALfloat)(props->Pshifter.CoarseTune*100 + props->Pshifter.FineTune) / 1200.0f
-    );
+    )};
     mPitchShiftI = fastf2i(pitch*FRACTIONONE);
     mPitchShift  = mPitchShiftI * (1.0f/FRACTIONONE);
 
+    ALfloat coeffs[MAX_AMBI_COEFFS];
     CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
-    ComputePanGains(&device->Dry, coeffs, slot->Params.Gain, mTargetGains);
+    if(ALeffectslot *target{slot->Params.Target})
+    {
+        mOutBuffer = target->WetBuffer;
+        mOutChannels = target->NumChannels;
+        ComputePanGains(target, coeffs, slot->Params.Gain, mTargetGains);
+    }
+    else
+    {
+        const ALCdevice *device{context->Device};
+        mOutBuffer = device->Dry.Buffer;
+        mOutChannels = device->Dry.NumChannels;
+        ComputePanGains(&device->Dry, coeffs, slot->Params.Gain, mTargetGains);
+    }
 }
 
 void ALpshifterState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

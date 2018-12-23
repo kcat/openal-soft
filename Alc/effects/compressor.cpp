@@ -74,15 +74,25 @@ ALboolean ALcompressorState::deviceUpdate(const ALCdevice *device)
 
 void ALcompressorState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
 {
-    const ALCdevice *device = context->Device;
-
     mEnabled = props->Compressor.OnOff;
 
-    mOutBuffer = device->FOAOut.Buffer;
-    mOutChannels = device->FOAOut.NumChannels;
-    for(ALsizei i{0};i < 4;i++)
-        ComputePanGains(&device->FOAOut, alu::Matrix::Identity()[i].data(),
-            slot->Params.Gain, mGain[i]);
+    if(ALeffectslot *target{slot->Params.Target})
+    {
+        mOutBuffer = target->WetBuffer;
+        mOutChannels = target->NumChannels;
+        for(ALsizei i{0};i < MAX_EFFECT_CHANNELS;i++)
+            ComputePanGains(target, alu::Matrix::Identity()[i].data(), slot->Params.Gain,
+                mGain[i]);
+    }
+    else
+    {
+        const ALCdevice *device{context->Device};
+        mOutBuffer = device->FOAOut.Buffer;
+        mOutChannels = device->FOAOut.NumChannels;
+        for(ALsizei i{0};i < 4;i++)
+            ComputePanGains(&device->FOAOut, alu::Matrix::Identity()[i].data(),
+                slot->Params.Gain, mGain[i]);
+    }
 }
 
 void ALcompressorState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

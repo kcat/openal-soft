@@ -52,11 +52,23 @@ ALboolean ALdedicatedState::deviceUpdate(const ALCdevice *UNUSED(device))
 void ALdedicatedState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
 {
     const ALCdevice *device = context->Device;
-    ALfloat Gain;
 
     std::fill(std::begin(mTargetGains), std::end(mTargetGains), 0.0f);
 
-    Gain = slot->Params.Gain * props->Dedicated.Gain;
+    const ALfloat Gain{slot->Params.Gain * props->Dedicated.Gain};
+    if(ALeffectslot *target{slot->Params.Target})
+    {
+        mOutBuffer = target->WetBuffer;
+        mOutChannels = target->NumChannels;
+        if(slot->Params.EffectType == AL_EFFECT_DEDICATED_DIALOGUE)
+        {
+            ALfloat coeffs[MAX_AMBI_COEFFS];
+            CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
+            ComputePanGains(target, coeffs, Gain, mTargetGains);
+        }
+        return;
+    }
+
     if(slot->Params.EffectType == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
     {
         int idx;

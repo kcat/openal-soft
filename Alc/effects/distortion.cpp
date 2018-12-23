@@ -90,7 +90,18 @@ void ALdistortionState::update(const ALCcontext *context, const ALeffectslot *sl
     );
 
     CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
-    ComputePanGains(&device->Dry, coeffs, slot->Params.Gain*props->Distortion.Gain, mGain);
+    if(ALeffectslot *target{slot->Params.Target})
+    {
+        mOutBuffer = target->WetBuffer;
+        mOutChannels = target->NumChannels;
+        ComputePanGains(target, coeffs, slot->Params.Gain*props->Distortion.Gain, mGain);
+    }
+    else
+    {
+        mOutBuffer = device->Dry.Buffer;
+        mOutChannels = device->Dry.NumChannels;
+        ComputePanGains(&device->Dry, coeffs, slot->Params.Gain*props->Distortion.Gain, mGain);
+    }
 }
 
 void ALdistortionState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

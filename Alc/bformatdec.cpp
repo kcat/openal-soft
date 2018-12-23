@@ -49,9 +49,23 @@ constexpr ALfloat Ambi3DDecoderHFScale[MAX_AMBI_COEFFS] = {
     2.0f,
     1.15470054f, 1.15470054f, 1.15470054f
 };
+constexpr ALfloat Ambi3DDecoderHFScale2O[MAX_AMBI_COEFFS] = {
+    1.49071198f,
+    1.15470054f, 1.15470054f, 1.15470054f
+};
+constexpr ALfloat Ambi3DDecoderHFScale3O[MAX_AMBI_COEFFS] = {
+    1.17958441f,
+    1.01578297f, 1.01578297f, 1.01578297f
+};
 
+inline auto GetDecoderHFScales(ALsizei order) noexcept -> const ALfloat(&)[MAX_AMBI_COEFFS]
+{
+    if(order >= 3) return Ambi3DDecoderHFScale3O;
+    if(order == 2) return Ambi3DDecoderHFScale2O;
+    return Ambi3DDecoderHFScale;
+}
 
-auto GetAmbiScales(AmbDecScale scaletype) noexcept -> const std::array<float,MAX_AMBI_COEFFS>&
+inline auto GetAmbiScales(AmbDecScale scaletype) noexcept -> const std::array<float,MAX_AMBI_COEFFS>&
 {
     if(scaletype == AmbDecScale::FuMa) return AmbiScale::FromFuMa;
     if(scaletype == AmbDecScale::SN3D) return AmbiScale::FromSN3D;
@@ -77,10 +91,15 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
         { return mask | (1 << chan); }
     );
 
-    mUpSampler[0].XOver.init(400.0f / (float)srate);
+    mUpSampler[0].XOver.init(conf->XOverFreq / (float)srate);
     std::fill(std::begin(mUpSampler[0].Gains), std::end(mUpSampler[0].Gains), 0.0f);
     std::fill(std::begin(mUpSampler)+1, std::end(mUpSampler), mUpSampler[0]);
 
+    const ALsizei out_order{
+        (conf->ChanMask > AMBI_3ORDER_MASK) ? 4 :
+        (conf->ChanMask > AMBI_2ORDER_MASK) ? 3 :
+        (conf->ChanMask > AMBI_1ORDER_MASK) ? 2 : 1
+    };
     const bool periphonic{(conf->ChanMask&AMBI_PERIPHONIC_MASK) != 0};
     if(periphonic)
     {
@@ -92,12 +111,13 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
             std::copy(std::begin(coeffs), std::begin(coeffs)+chancount, std::begin(encgains[k]));
         }
         assert(chancount >= 4);
+        const ALfloat (&hfscales)[MAX_AMBI_COEFFS] = GetDecoderHFScales(out_order);
         for(ALsizei i{0};i < 4;i++)
         {
             ALdouble gain{0.0};
             for(size_t k{0u};k < COUNTOF(Ambi3DDecoder);k++)
                 gain += (ALdouble)Ambi3DDecoder[k][i] * encgains[k][i];
-            mUpSampler[i].Gains[HF_BAND] = (ALfloat)(gain * Ambi3DDecoderHFScale[i]);
+            mUpSampler[i].Gains[HF_BAND] = (ALfloat)(gain*Ambi3DDecoderHFScale[i]/hfscales[i]);
             mUpSampler[i].Gains[LF_BAND] = (ALfloat)gain;
         }
     }
@@ -115,13 +135,14 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
             );
         }
         assert(chancount >= 3);
+        const ALfloat (&hfscales)[MAX_AMBI_COEFFS] = GetDecoderHFScales(out_order);
         for(ALsizei c{0};c < 3;c++)
         {
             const ALsizei i{AmbiIndex::From2D[c]};
             ALdouble gain{0.0};
             for(size_t k{0u};k < COUNTOF(Ambi3DDecoder);k++)
                 gain += (ALdouble)Ambi3DDecoder[k][i] * encgains[k][c];
-            mUpSampler[c].Gains[HF_BAND] = (ALfloat)(gain * Ambi3DDecoderHFScale[i]);
+            mUpSampler[c].Gains[HF_BAND] = (ALfloat)(gain*Ambi3DDecoderHFScale[i]/hfscales[i]);
             mUpSampler[c].Gains[LF_BAND] = (ALfloat)gain;
         }
         mUpSampler[3].Gains[HF_BAND] = 0.0f;
@@ -273,15 +294,21 @@ void AmbiUpsampler::reset(const ALCdevice *device)
      * and output are transposed, so the input channels line up with the rows
      * and the output channels line up with the columns.
      */
+    const ALfloat (&hfscales)[MAX_AMBI_COEFFS] = GetDecoderHFScales(
+        (device->Dry.NumChannels > 16) ? 4 :
+        (device->Dry.NumChannels >  9) ? 3 :
+        (device->Dry.NumChannels >  4) ? 2 : 1
+    );
     mGains.fill({});
     for(ALsizei i{0};i < 4;i++)
     {
+        const ALdouble hfscale = static_cast<ALdouble>(Ambi3DDecoderHFScale[i]) / hfscales[i];
         for(ALsizei j{0};j < device->Dry.NumChannels;j++)
         {
             ALdouble gain{0.0};
             for(size_t k{0u};k < COUNTOF(Ambi3DDecoder);k++)
                 gain += (ALdouble)Ambi3DDecoder[k][i] * encgains[k][j];
-            mGains[i][HF_BAND][j] = (ALfloat)(gain * Ambi3DDecoderHFScale[i]);
+            mGains[i][HF_BAND][j] = (ALfloat)(gain * hfscale);
             mGains[i][LF_BAND][j] = (ALfloat)gain;
         }
     }

@@ -3335,8 +3335,8 @@ ALsource::ALsource(ALsizei num_sends)
     DirectChannels = AL_FALSE;
     Spatialize = SpatializeAuto;
 
-    StereoPan[0] = DEG2RAD( 30.0f);
-    StereoPan[1] = DEG2RAD(-30.0f);
+    StereoPan[0] = Deg2Rad( 30.0f);
+    StereoPan[1] = Deg2Rad(-30.0f);
 
     Radius = 0.0f;
 

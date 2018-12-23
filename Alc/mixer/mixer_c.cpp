@@ -2,6 +2,8 @@
 
 #include <assert.h>
 
+#include <limits>
+
 #include "alMain.h"
 #include "alu.h"
 #include "alSource.h"
@@ -137,7 +139,7 @@ void Mix_C(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffer)[
         ALfloat gain = CurrentGains[c];
         const ALfloat diff = TargetGains[c] - gain;
 
-        if(fabsf(diff) > FLT_EPSILON)
+        if(fabsf(diff) > std::numeric_limits<float>::epsilon())
         {
             ALsizei minsize = mini(BufferSize, Counter);
             const ALfloat step = diff * delta;

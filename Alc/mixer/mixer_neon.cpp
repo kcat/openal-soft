@@ -2,6 +2,8 @@
 
 #include <arm_neon.h>
 
+#include <limits>
+
 #include "AL/al.h"
 #include "AL/alc.h"
 #include "alMain.h"
@@ -182,7 +184,7 @@ void Mix_Neon(const ALfloat *data, ALsizei OutChans, ALfloat (*RESTRICT OutBuffe
         ALfloat gain = CurrentGains[c];
         const ALfloat diff = TargetGains[c] - gain;
 
-        if(fabsf(diff) > FLT_EPSILON)
+        if(fabsf(diff) > std::numeric_limits<float>::epsilon())
         {
             ALsizei minsize = mini(BufferSize, Counter);
             const ALfloat step = diff * delta;

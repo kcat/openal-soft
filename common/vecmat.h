@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <array>
+#include <limits>
 #include <algorithm>
 
 #include "math_defs.h"
@@ -41,7 +42,7 @@ public:
     float normalize()
     {
         const float length{std::sqrt(mVals[0]*mVals[0] + mVals[1]*mVals[1] + mVals[2]*mVals[2])};
-        if(length > FLT_EPSILON)
+        if(length > std::numeric_limits<float>::epsilon())
         {
             float inv_length = 1.0f/length;
             mVals[0] *= inv_length;

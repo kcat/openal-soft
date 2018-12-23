@@ -10,6 +10,7 @@
 #include <ieeefp.h>
 #endif
 
+#include <cmath>
 #include <array>
 
 #include "alMain.h"
@@ -106,15 +107,15 @@ enum {
 };
 
 
-typedef struct MixHrtfParams {
+struct MixHrtfParams {
     const ALfloat (*Coeffs)[2];
     ALsizei Delay[2];
     ALfloat Gain;
     ALfloat GainStep;
-} MixHrtfParams;
+};
 
 
-typedef struct DirectParams {
+struct DirectParams {
     BiquadFilter LowPass;
     BiquadFilter HighPass;
 
@@ -130,9 +131,9 @@ typedef struct DirectParams {
         ALfloat Current[MAX_OUTPUT_CHANNELS];
         ALfloat Target[MAX_OUTPUT_CHANNELS];
     } Gains;
-} DirectParams;
+};
 
-typedef struct SendParams {
+struct SendParams {
     BiquadFilter LowPass;
     BiquadFilter HighPass;
 
@@ -140,7 +141,7 @@ typedef struct SendParams {
         ALfloat Current[MAX_OUTPUT_CHANNELS];
         ALfloat Target[MAX_OUTPUT_CHANNELS];
     } Gains;
-} SendParams;
+};
 
 
 struct ALvoicePropsBase {
@@ -359,9 +360,7 @@ inline size_t clampz(size_t val, size_t min, size_t max) noexcept
 
 
 inline ALfloat lerp(ALfloat val1, ALfloat val2, ALfloat mu) noexcept
-{
-    return val1 + (val2-val1)*mu;
-}
+{ return val1 + (val2-val1)*mu; }
 inline ALfloat cubic(ALfloat val1, ALfloat val2, ALfloat val3, ALfloat val4, ALfloat mu) noexcept
 {
     ALfloat mu2 = mu*mu, mu3 = mu2*mu;
@@ -383,16 +382,16 @@ void aluInit(void);
 
 void aluInitMixer(void);
 
-ResamplerFunc SelectResampler(enum Resampler resampler);
+ResamplerFunc SelectResampler(Resampler resampler);
 
 /* aluInitRenderer
  *
  * Set up the appropriate panning method and mixing method given the device
  * properties.
  */
-void aluInitRenderer(ALCdevice *device, ALint hrtf_id, enum HrtfRequestMode hrtf_appreq, enum HrtfRequestMode hrtf_userreq);
+void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appreq, HrtfRequestMode hrtf_userreq);
 
-void aluInitEffectPanning(struct ALeffectslot *slot);
+void aluInitEffectPanning(ALeffectslot *slot);
 
 void aluSelectPostProcess(ALCdevice *device);
 
@@ -435,9 +434,9 @@ inline void CalcDirectionCoeffs(const ALfloat dir[3], ALfloat spread, ALfloat (&
  */
 inline void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, ALfloat (&coeffs)[MAX_AMBI_COEFFS])
 {
-    ALfloat x = -sinf(azimuth) * cosf(elevation);
-    ALfloat y = sinf(elevation);
-    ALfloat z = cosf(azimuth) * cosf(elevation);
+    ALfloat x = -std::sin(azimuth) * std::cos(elevation);
+    ALfloat y = std::sin(elevation);
+    ALfloat z = std::cos(azimuth) * std::cos(elevation);
 
     CalcAmbiCoeffs(x, y, z, spread, coeffs);
 }
@@ -450,9 +449,9 @@ inline void CalcAngleCoeffs(ALfloat azimuth, ALfloat elevation, ALfloat spread, 
  */
 inline float ScaleAzimuthFront(float azimuth, float scale)
 {
-    ALfloat sign = copysignf(1.0f, azimuth);
-    if(!(fabsf(azimuth) > F_PI_2))
-        return minf(fabsf(azimuth) * scale, F_PI_2) * sign;
+    ALfloat sign = std::copysign(1.0f, azimuth);
+    if(!(std::fabs(azimuth) > F_PI_2))
+        return minf(std::fabs(azimuth) * scale, F_PI_2) * sign;
     return azimuth;
 }
 

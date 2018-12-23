@@ -4,6 +4,7 @@
 #include "splitter.h"
 
 #include <cmath>
+#include <limits>
 #include <algorithm>
 
 #include "math_defs.h"
@@ -13,7 +14,7 @@ void BandSplitter::init(float f0norm)
 {
     float w = f0norm * F_TAU;
     float cw = std::cos(w);
-    if(cw > FLT_EPSILON)
+    if(cw > std::numeric_limits<float>::epsilon())
         coeff = (std::sin(w) - 1.0f) / cw;
     else
         coeff = cw * -0.5f;
@@ -63,7 +64,7 @@ void SplitterAllpass::init(float f0norm)
 {
     float w = f0norm * F_TAU;
     float cw = std::cos(w);
-    if(cw > FLT_EPSILON)
+    if(cw > std::numeric_limits<float>::epsilon())
         coeff = (std::sin(w) - 1.0f) / cw;
     else
         coeff = cw * -0.5f;

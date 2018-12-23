@@ -1,6 +1,7 @@
 #include "config.h"
 
 #include <cmath>
+#include <limits>
 #include <algorithm>
 #include <functional>
 
@@ -395,7 +396,7 @@ Compressor* CompressorInit(const ALsizei NumChans, const ALuint SampleRate,
         if(hold > 1)
         {
             Comp->Hold = new ((void*)(Comp + 1)) SlidingHold{};
-            Comp->Hold->Values[0] = -HUGE_VALF;
+            Comp->Hold->Values[0] = -std::numeric_limits<float>::infinity();
             Comp->Hold->Expiries[0] = hold;
             Comp->Hold->Length = hold;
             Comp->Delay = (ALfloat(*)[BUFFERSIZE])(Comp->Hold + 1);

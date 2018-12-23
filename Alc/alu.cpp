@@ -27,6 +27,7 @@
 #include <assert.h>
 
 #include <cmath>
+#include <limits>
 #include <algorithm>
 
 #include "alMain.h"
@@ -437,37 +438,37 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
 constexpr struct ChanMap MonoMap[1]{
     { FrontCenter, 0.0f, 0.0f }
 }, RearMap[2]{
-    { BackLeft,  DEG2RAD(-150.0f), DEG2RAD(0.0f) },
-    { BackRight, DEG2RAD( 150.0f), DEG2RAD(0.0f) }
+    { BackLeft,  Deg2Rad(-150.0f), Deg2Rad(0.0f) },
+    { BackRight, Deg2Rad( 150.0f), Deg2Rad(0.0f) }
 }, QuadMap[4]{
-    { FrontLeft,  DEG2RAD( -45.0f), DEG2RAD(0.0f) },
-    { FrontRight, DEG2RAD(  45.0f), DEG2RAD(0.0f) },
-    { BackLeft,   DEG2RAD(-135.0f), DEG2RAD(0.0f) },
-    { BackRight,  DEG2RAD( 135.0f), DEG2RAD(0.0f) }
+    { FrontLeft,  Deg2Rad( -45.0f), Deg2Rad(0.0f) },
+    { FrontRight, Deg2Rad(  45.0f), Deg2Rad(0.0f) },
+    { BackLeft,   Deg2Rad(-135.0f), Deg2Rad(0.0f) },
+    { BackRight,  Deg2Rad( 135.0f), Deg2Rad(0.0f) }
 }, X51Map[6]{
-    { FrontLeft,   DEG2RAD( -30.0f), DEG2RAD(0.0f) },
-    { FrontRight,  DEG2RAD(  30.0f), DEG2RAD(0.0f) },
-    { FrontCenter, DEG2RAD(   0.0f), DEG2RAD(0.0f) },
+    { FrontLeft,   Deg2Rad( -30.0f), Deg2Rad(0.0f) },
+    { FrontRight,  Deg2Rad(  30.0f), Deg2Rad(0.0f) },
+    { FrontCenter, Deg2Rad(   0.0f), Deg2Rad(0.0f) },
     { LFE, 0.0f, 0.0f },
-    { SideLeft,    DEG2RAD(-110.0f), DEG2RAD(0.0f) },
-    { SideRight,   DEG2RAD( 110.0f), DEG2RAD(0.0f) }
+    { SideLeft,    Deg2Rad(-110.0f), Deg2Rad(0.0f) },
+    { SideRight,   Deg2Rad( 110.0f), Deg2Rad(0.0f) }
 }, X61Map[7]{
-    { FrontLeft,   DEG2RAD(-30.0f), DEG2RAD(0.0f) },
-    { FrontRight,  DEG2RAD( 30.0f), DEG2RAD(0.0f) },
-    { FrontCenter, DEG2RAD(  0.0f), DEG2RAD(0.0f) },
+    { FrontLeft,   Deg2Rad(-30.0f), Deg2Rad(0.0f) },
+    { FrontRight,  Deg2Rad( 30.0f), Deg2Rad(0.0f) },
+    { FrontCenter, Deg2Rad(  0.0f), Deg2Rad(0.0f) },
     { LFE, 0.0f, 0.0f },
-    { BackCenter,  DEG2RAD(180.0f), DEG2RAD(0.0f) },
-    { SideLeft,    DEG2RAD(-90.0f), DEG2RAD(0.0f) },
-    { SideRight,   DEG2RAD( 90.0f), DEG2RAD(0.0f) }
+    { BackCenter,  Deg2Rad(180.0f), Deg2Rad(0.0f) },
+    { SideLeft,    Deg2Rad(-90.0f), Deg2Rad(0.0f) },
+    { SideRight,   Deg2Rad( 90.0f), Deg2Rad(0.0f) }
 }, X71Map[8]{
-    { FrontLeft,   DEG2RAD( -30.0f), DEG2RAD(0.0f) },
-    { FrontRight,  DEG2RAD(  30.0f), DEG2RAD(0.0f) },
-    { FrontCenter, DEG2RAD(   0.0f), DEG2RAD(0.0f) },
+    { FrontLeft,   Deg2Rad( -30.0f), Deg2Rad(0.0f) },
+    { FrontRight,  Deg2Rad(  30.0f), Deg2Rad(0.0f) },
+    { FrontCenter, Deg2Rad(   0.0f), Deg2Rad(0.0f) },
     { LFE, 0.0f, 0.0f },
-    { BackLeft,    DEG2RAD(-150.0f), DEG2RAD(0.0f) },
-    { BackRight,   DEG2RAD( 150.0f), DEG2RAD(0.0f) },
-    { SideLeft,    DEG2RAD( -90.0f), DEG2RAD(0.0f) },
-    { SideRight,   DEG2RAD(  90.0f), DEG2RAD(0.0f) }
+    { BackLeft,    Deg2Rad(-150.0f), Deg2Rad(0.0f) },
+    { BackRight,   Deg2Rad( 150.0f), Deg2Rad(0.0f) },
+    { SideLeft,    Deg2Rad( -90.0f), Deg2Rad(0.0f) },
+    { SideRight,   Deg2Rad(  90.0f), Deg2Rad(0.0f) }
 };
 
 void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev,
@@ -480,8 +481,8 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                            const ALCdevice *Device)
 {
     ChanMap StereoMap[2]{
-        { FrontLeft,  DEG2RAD(-30.0f), DEG2RAD(0.0f) },
-        { FrontRight, DEG2RAD( 30.0f), DEG2RAD(0.0f) }
+        { FrontLeft,  Deg2Rad(-30.0f), Deg2Rad(0.0f) },
+        { FrontRight, Deg2Rad( 30.0f), Deg2Rad(0.0f) }
     };
 
     bool DirectChannels{props->DirectChannels != AL_FALSE};
@@ -576,7 +577,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
     {
         /* Special handling for B-Format sources. */
 
-        if(Distance > FLT_EPSILON)
+        if(Distance > std::numeric_limits<float>::epsilon())
         {
             /* Panning a B-Format sound toward some direction is easy. Just pan
              * the first (W) channel as a normal mono sound and silence the
@@ -733,7 +734,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
         voice->Direct.Buffer = Device->RealOut.Buffer;
         voice->Direct.Channels = Device->RealOut.NumChannels;
 
-        if(Distance > FLT_EPSILON)
+        if(Distance > std::numeric_limits<float>::epsilon())
         {
             /* Get the HRIR coefficients and delays just once, for the given
              * source direction.
@@ -811,7 +812,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
     {
         /* Non-HRTF rendering. Use normal panning to the output. */
 
-        if(Distance > FLT_EPSILON)
+        if(Distance > std::numeric_limits<float>::epsilon())
         {
             /* Calculate NFC filter coefficient if needed. */
             if(Device->AvgSpeakerDist > 0.0f)
@@ -1206,8 +1207,8 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
     /* Calculate directional soundcones */
     if(directional && props->InnerAngle < 360.0f)
     {
-        ALfloat Angle{std::acos(aluDotproduct(Direction, SourceToListener))};
-        Angle = RAD2DEG(Angle * ConeScale * 2.0f);
+        const ALfloat Angle{Rad2Deg(std::acos(aluDotproduct(Direction, SourceToListener)) *
+            ConeScale * 2.0f)};
 
         ALfloat ConeVolume, ConeHF;
         if(!(Angle > props->InnerAngle))
@@ -1322,7 +1323,7 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
             /* Source moving toward the listener at the speed of sound. Sound
              * waves bunch up to extreme frequencies.
              */
-            Pitch = HUGE_VALF;
+            Pitch = std::numeric_limits<float>::infinity();
         }
         else
         {

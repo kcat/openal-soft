@@ -81,14 +81,14 @@ struct ALfshifterState final : public EffectState {
     ALfloat mTargetGains[MAX_OUTPUT_CHANNELS]{};
 
 
-    ALboolean deviceUpdate(ALCdevice *device) override;
+    ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
 
     DEF_NEWDEL(ALfshifterState)
 };
 
-ALboolean ALfshifterState::deviceUpdate(ALCdevice *UNUSED(device))
+ALboolean ALfshifterState::deviceUpdate(const ALCdevice *UNUSED(device))
 {
     /* (Re-)initializing parameters and clear the buffers. */
     mCount     = FIFO_LATENCY;

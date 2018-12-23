@@ -90,14 +90,14 @@ struct ChorusState final : public EffectState {
     ALfloat mFeedback{0.0f};
 
 
-    ALboolean deviceUpdate(ALCdevice *device) override;
+    ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
 
     DEF_NEWDEL(ChorusState)
 };
 
-ALboolean ChorusState::deviceUpdate(ALCdevice *Device)
+ALboolean ChorusState::deviceUpdate(const ALCdevice *Device)
 {
     const ALfloat max_delay = maxf(AL_CHORUS_MAX_DELAY, AL_FLANGER_MAX_DELAY);
     size_t maxlen;

@@ -36,14 +36,14 @@ struct ALdedicatedState final : public EffectState {
     ALfloat mTargetGains[MAX_OUTPUT_CHANNELS];
 
 
-    ALboolean deviceUpdate(ALCdevice *device) override;
+    ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
 
     DEF_NEWDEL(ALdedicatedState)
 };
 
-ALboolean ALdedicatedState::deviceUpdate(ALCdevice *UNUSED(device))
+ALboolean ALdedicatedState::deviceUpdate(const ALCdevice *UNUSED(device))
 {
     std::fill(std::begin(mCurrentGains), std::end(mCurrentGains), 0.0f);
     return AL_TRUE;

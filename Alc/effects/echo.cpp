@@ -56,14 +56,14 @@ struct ALechoState final : public EffectState {
     BiquadFilter mFilter;
 
 
-    ALboolean deviceUpdate(ALCdevice *device) override;
+    ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
 
     DEF_NEWDEL(ALechoState)
 };
 
-ALboolean ALechoState::deviceUpdate(ALCdevice *Device)
+ALboolean ALechoState::deviceUpdate(const ALCdevice *Device)
 {
     ALuint maxlen;
 

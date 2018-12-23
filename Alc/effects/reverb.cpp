@@ -338,7 +338,7 @@ struct ReverbState final : public EffectState {
     alignas(16) ALfloat mMixBuffer[NUM_LINES][MAX_UPDATE_SAMPLES]{};
 
 
-    ALboolean deviceUpdate(ALCdevice *device) override;
+    ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
 
@@ -456,7 +456,7 @@ static ALboolean AllocLines(const ALuint frequency, ReverbState *State)
     return AL_TRUE;
 }
 
-ALboolean ReverbState::deviceUpdate(ALCdevice *Device)
+ALboolean ReverbState::deviceUpdate(const ALCdevice *Device)
 {
     const ALuint frequency{Device->Frequency};
 

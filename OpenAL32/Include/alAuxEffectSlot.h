@@ -20,7 +20,7 @@ struct EffectState {
 
     virtual ~EffectState() = default;
 
-    virtual ALboolean deviceUpdate(ALCdevice *device) = 0;
+    virtual ALboolean deviceUpdate(const ALCdevice *device) = 0;
     virtual void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) = 0;
     virtual void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) = 0;
 

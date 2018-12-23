@@ -48,14 +48,14 @@ struct ALcompressorState final : public EffectState {
     ALfloat mEnvFollower{1.0f};
 
 
-    ALboolean deviceUpdate(ALCdevice *device) override;
+    ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
 
     DEF_NEWDEL(ALcompressorState)
 };
 
-ALboolean ALcompressorState::deviceUpdate(ALCdevice *device)
+ALboolean ALcompressorState::deviceUpdate(const ALCdevice *device)
 {
     /* Number of samples to do a full attack and release (non-integer sample
      * counts are okay).

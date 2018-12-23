@@ -15,7 +15,7 @@ struct ALnullState final : public EffectState {
     ALnullState();
     ~ALnullState() override;
 
-    ALboolean deviceUpdate(ALCdevice *device) override;
+    ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
 
@@ -40,7 +40,7 @@ ALnullState::~ALnullState()
  * initialization and any time the device parameters (eg. playback frequency,
  * format) have been changed.
  */
-ALboolean ALnullState::deviceUpdate(ALCdevice* UNUSED(device))
+ALboolean ALnullState::deviceUpdate(const ALCdevice* UNUSED(device))
 {
     return AL_TRUE;
 }

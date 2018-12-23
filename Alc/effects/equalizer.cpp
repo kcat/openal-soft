@@ -90,14 +90,14 @@ struct ALequalizerState final : public EffectState {
     ALfloat mSampleBuffer[MAX_EFFECT_CHANNELS][BUFFERSIZE]{};
 
 
-    ALboolean deviceUpdate(ALCdevice *device) override;
+    ALboolean deviceUpdate(const ALCdevice *device) override;
     void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
 
     DEF_NEWDEL(ALequalizerState)
 };
 
-ALboolean ALequalizerState::deviceUpdate(ALCdevice *UNUSED(device))
+ALboolean ALequalizerState::deviceUpdate(const ALCdevice *UNUSED(device))
 {
     for(auto &e : mChans)
     {

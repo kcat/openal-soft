@@ -62,13 +62,14 @@ public:
 private:
     alignas(16) ALfloat mSamples[sNumBands][BUFFERSIZE];
 
-    BandSplitter mXOver[4];
-
-    std::array<std::array<std::array<ALfloat,MAX_OUTPUT_CHANNELS>,sNumBands>,4> mGains;
+    struct {
+        BandSplitter XOver;
+        std::array<std::array<ALfloat,MAX_OUTPUT_CHANNELS>,sNumBands> Gains;
+    } mInput[4];
 
 public:
     void reset(const ALCdevice *device);
-    void process(ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*RESTRICT InSamples)[BUFFERSIZE], const ALsizei SamplesToDo);
+    void process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei SamplesToDo);
 
     DEF_NEWDEL(AmbiUpsampler)
 };

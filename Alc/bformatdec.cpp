@@ -278,8 +278,9 @@ void BFormatDec::upSample(ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALflo
 
 void AmbiUpsampler::reset(const ALCdevice *device)
 {
-    mXOver[0].init(400.0f / (float)device->Frequency);
-    std::fill(std::begin(mXOver)+1, std::end(mXOver), mXOver[0]);
+    mInput[0].XOver.init(400.0f / (float)device->Frequency);
+    for(auto input = std::begin(mInput)+1;input != std::end(mInput);++input)
+        input->XOver = mInput[0].XOver;
 
     ALfloat encgains[8][MAX_OUTPUT_CHANNELS];
     for(size_t k{0u};k < COUNTOF(Ambi3DPoints);k++)
@@ -299,30 +300,30 @@ void AmbiUpsampler::reset(const ALCdevice *device)
         (device->Dry.NumChannels >  9) ? 3 :
         (device->Dry.NumChannels >  4) ? 2 : 1
     );
-    mGains.fill({});
     for(ALsizei i{0};i < 4;i++)
     {
+        mInput[i].Gains.fill({});
         const ALdouble hfscale = static_cast<ALdouble>(Ambi3DDecoderHFScale[i]) / hfscales[i];
         for(ALsizei j{0};j < device->Dry.NumChannels;j++)
         {
             ALdouble gain{0.0};
             for(size_t k{0u};k < COUNTOF(Ambi3DDecoder);k++)
                 gain += (ALdouble)Ambi3DDecoder[k][i] * encgains[k][j];
-            mGains[i][HF_BAND][j] = (ALfloat)(gain * hfscale);
-            mGains[i][LF_BAND][j] = (ALfloat)gain;
+            mInput[i].Gains[HF_BAND][j] = (ALfloat)(gain * hfscale);
+            mInput[i].Gains[LF_BAND][j] = (ALfloat)gain;
         }
     }
 }
 
-void AmbiUpsampler::process(ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*RESTRICT InSamples)[BUFFERSIZE], const ALsizei SamplesToDo)
+void AmbiUpsampler::process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei SamplesToDo)
 {
-    for(ALsizei i{0};i < 4;i++)
+    for(auto input = std::begin(mInput);input != std::end(mInput);++input)
     {
-        mXOver[i].process(mSamples[HF_BAND], mSamples[LF_BAND], InSamples[i], SamplesToDo);
+        input->XOver.process(mSamples[HF_BAND], mSamples[LF_BAND], *(InSamples++), SamplesToDo);
 
-        MixSamples(mSamples[HF_BAND], OutChannels, OutBuffer, mGains[i][HF_BAND].data(),
-            mGains[i][HF_BAND].data(), 0, 0, SamplesToDo);
-        MixSamples(mSamples[LF_BAND], OutChannels, OutBuffer, mGains[i][LF_BAND].data(),
-            mGains[i][LF_BAND].data(), 0, 0, SamplesToDo);
+        MixSamples(mSamples[HF_BAND], OutChannels, OutBuffer, input->Gains[HF_BAND].data(),
+            input->Gains[HF_BAND].data(), 0, 0, SamplesToDo);
+        MixSamples(mSamples[LF_BAND], OutChannels, OutBuffer, input->Gains[LF_BAND].data(),
+            input->Gains[LF_BAND].data(), 0, 0, SamplesToDo);
     }
 }

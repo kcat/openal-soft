@@ -13,7 +13,7 @@
 
 #define SQRTF_3 1.73205080756887719318f
 
-constexpr inline float Deg2Rad(float x) noexcept { return x * float{M_PI/180.0}; }
-constexpr inline float Rad2Deg(float x) noexcept { return x * float{180.0/M_PI}; }
+constexpr inline float Deg2Rad(float x) noexcept { return x * static_cast<float>(M_PI/180.0); }
+constexpr inline float Rad2Deg(float x) noexcept { return x * static_cast<float>(180.0/M_PI); }
 
 #endif /* AL_MATH_DEFS_H */

@@ -1721,19 +1721,22 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
                 WARN("Missing format for loopback device\n");
                 return ALC_INVALID_VALUE;
             }
-            if(schans == ALC_BFORMAT3D_SOFT && (!alayout || !ascale || !aorder))
-            {
-                WARN("Missing ambisonic info for loopback device\n");
-                return ALC_INVALID_VALUE;
-            }
             if(!IsValidALCChannels(schans) || !IsValidALCType(stype) || freq < MIN_OUTPUT_RATE)
                 return ALC_INVALID_VALUE;
-            if(!IsValidAmbiLayout(alayout) || !IsValidAmbiScaling(ascale))
-                return ALC_INVALID_VALUE;
-            if(aorder < 1 || aorder > MAX_AMBI_ORDER)
-                return ALC_INVALID_VALUE;
-            if((alayout == ALC_FUMA_SOFT || ascale == ALC_FUMA_SOFT) && aorder > 3)
-                return ALC_INVALID_VALUE;
+            if(schans == ALC_BFORMAT3D_SOFT)
+            {
+                if(!alayout || !ascale || !aorder)
+                {
+                    WARN("Missing ambisonic info for loopback device\n");
+                    return ALC_INVALID_VALUE;
+                }
+                if(!IsValidAmbiLayout(alayout) || !IsValidAmbiScaling(ascale))
+                    return ALC_INVALID_VALUE;
+                if(aorder < 1 || aorder > MAX_AMBI_ORDER)
+                    return ALC_INVALID_VALUE;
+                if((alayout == ALC_FUMA_SOFT || ascale == ALC_FUMA_SOFT) && aorder > 3)
+                    return ALC_INVALID_VALUE;
+            }
         }
 
         if((device->Flags&DEVICE_RUNNING))

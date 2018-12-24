@@ -778,10 +778,10 @@ struct ALCdevice_struct {
 
     std::unique_ptr<FrontStablizer> Stablizer;
 
+    std::unique_ptr<Compressor> Limiter;
+
     /* Delay buffers used to compensate for speaker distances. */
     DistanceComp ChannelDelay;
-
-    std::unique_ptr<Compressor> Limiter;
 
     /* Dithering control. */
     ALfloat DitherDepth{0.0f};

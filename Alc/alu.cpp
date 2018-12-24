@@ -1559,12 +1559,13 @@ void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*RESTRICT Buffer)[BUFFER
     }
 }
 
-void ApplyDistanceComp(ALfloat (*RESTRICT Samples)[BUFFERSIZE], const DistanceComp &distcomp,
-                       ALfloat *RESTRICT Values, const ALsizei SamplesToDo, const ALsizei numchans)
+void ApplyDistanceComp(ALfloat (*Samples)[BUFFERSIZE], const DistanceComp &distcomp,
+                       ALfloat (&Values)[BUFFERSIZE], const ALsizei SamplesToDo, const ALsizei numchans)
 {
     ASSUME(SamplesToDo > 0);
     ASSUME(numchans > 0);
 
+    ALfloat *RESTRICT tempvals{al::assume_aligned<16>(&Values[0])};
     for(ALsizei c{0};c < numchans;c++)
     {
         ALfloat *RESTRICT inout{al::assume_aligned<16>(Samples[c])};
@@ -1584,17 +1585,17 @@ void ApplyDistanceComp(ALfloat (*RESTRICT Samples)[BUFFERSIZE], const DistanceCo
 
         if(LIKELY(SamplesToDo >= base))
         {
-            auto out = std::copy_n(distbuf, base, Values);
+            auto out = std::copy_n(distbuf, base, tempvals);
             std::copy_n(inout, SamplesToDo-base, out);
             std::copy_n(inout+SamplesToDo-base, base, distbuf);
         }
         else
         {
-            std::copy_n(distbuf, SamplesToDo, Values);
+            std::copy_n(distbuf, SamplesToDo, tempvals);
             auto out = std::copy(distbuf+SamplesToDo, distbuf+base, distbuf);
             std::copy_n(inout, SamplesToDo, out);
         }
-        std::transform<ALfloat*RESTRICT>(Values, Values+SamplesToDo, inout,
+        std::transform(tempvals, tempvals+SamplesToDo, inout,
             [gain](const ALfloat in) noexcept -> ALfloat { return in * gain; }
         );
     }
@@ -1743,13 +1744,13 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
                            SamplesToDo, device->RealOut.NumChannels);
         }
 
+        /* Apply compression, limiting sample amplitude if needed or desired. */
+        if(device->Limiter)
+            ApplyCompression(device->Limiter.get(), SamplesToDo, device->RealOut.Buffer);
+
         /* Apply delays and attenuation for mismatched speaker distances. */
         ApplyDistanceComp(device->RealOut.Buffer, device->ChannelDelay, device->TempBuffer[0],
                           SamplesToDo, device->RealOut.NumChannels);
-
-        /* Apply compression, limiting final sample amplitude, if desired. */
-        if(device->Limiter)
-            ApplyCompression(device->Limiter.get(), SamplesToDo, device->RealOut.Buffer);
 
         /* Apply dithering. The compressor should have left enough headroom for
          * the dither noise to not saturate.

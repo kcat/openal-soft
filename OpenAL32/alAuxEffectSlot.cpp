@@ -589,6 +589,10 @@ ALenum InitEffectSlot(ALeffectslot *slot)
 
 ALeffectslot::~ALeffectslot()
 {
+    if(Target)
+        DecrementRef(&Target->ref);
+    Target = nullptr;
+
     struct ALeffectslotProps *props{Update.load()};
     if(props)
     {
@@ -621,6 +625,7 @@ void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context)
     /* Copy in current property values. */
     props->Gain = slot->Gain;
     props->AuxSendAuto = slot->AuxSendAuto;
+    props->Target = slot->Target;
 
     props->Type = slot->Effect.Type;
     props->Props = slot->Effect.Props;

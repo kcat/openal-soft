@@ -53,6 +53,7 @@ struct ALeffectslotArray {
 struct ALeffectslotProps {
     ALfloat   Gain;
     ALboolean AuxSendAuto;
+    ALeffectslot *Target;
 
     ALenum Type;
     ALeffectProps Props;
@@ -66,6 +67,7 @@ struct ALeffectslotProps {
 struct ALeffectslot {
     ALfloat   Gain{1.0f};
     ALboolean AuxSendAuto{AL_TRUE};
+    ALeffectslot *Target{nullptr};
 
     struct {
         ALenum Type{AL_EFFECT_NULL};

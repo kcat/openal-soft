@@ -371,6 +371,7 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
     {
         slot->Params.Gain = props->Gain;
         slot->Params.AuxSendAuto = props->AuxSendAuto;
+        slot->Params.Target = props->Target;
         slot->Params.EffectType = props->Type;
         slot->Params.EffectProps = props->Props;
         if(IsReverbEffect(props->Type))

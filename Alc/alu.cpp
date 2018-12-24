@@ -1514,8 +1514,12 @@ void ProcessContext(ALCcontext *ctx, const ALsizei SamplesToDo)
 
 
 void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*RESTRICT Buffer)[BUFFERSIZE],
-                    int lidx, int ridx, int cidx, ALsizei SamplesToDo, ALsizei NumChannels)
+                    int lidx, int ridx, int cidx, const ALsizei SamplesToDo,
+                    const ALsizei NumChannels)
 {
+    ASSUME(SamplesToDo > 0);
+    ASSUME(NumChannels > 0);
+
     /* Apply an all-pass to all channels, except the front-left and front-
      * right, so they maintain the same relative phase.
      */
@@ -1558,6 +1562,9 @@ void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*RESTRICT Buffer)[BUFFER
 void ApplyDistanceComp(ALfloat (*RESTRICT Samples)[BUFFERSIZE], const DistanceComp &distcomp,
                        ALfloat *RESTRICT Values, ALsizei SamplesToDo, ALsizei numchans)
 {
+    ASSUME(SamplesToDo > 0);
+    ASSUME(numchans > 0);
+
     for(ALsizei c{0};c < numchans;c++)
     {
         ALfloat *RESTRICT inout{Samples[c]};
@@ -1565,12 +1572,12 @@ void ApplyDistanceComp(ALfloat (*RESTRICT Samples)[BUFFERSIZE], const DistanceCo
         const ALsizei base{distcomp[c].Length};
         ALfloat *RESTRICT distbuf{distcomp[c].Buffer};
 
-        if(base == 0)
+        if(base <= 0)
         {
             if(gain < 1.0f)
-                std::for_each(inout, inout+SamplesToDo,
-                    [gain](ALfloat &in) noexcept -> void
-                    { in *= gain; }
+                std::transform(inout, inout+SamplesToDo, inout,
+                    [gain](const ALfloat in) noexcept -> ALfloat
+                    { return in * gain; }
                 );
             continue;
         }
@@ -1588,7 +1595,7 @@ void ApplyDistanceComp(ALfloat (*RESTRICT Samples)[BUFFERSIZE], const DistanceCo
             std::copy_n(inout, SamplesToDo, out);
         }
         std::transform<ALfloat*RESTRICT>(Values, Values+SamplesToDo, inout,
-            [gain](ALfloat in) noexcept -> ALfloat { return in * gain; }
+            [gain](const ALfloat in) noexcept -> ALfloat { return in * gain; }
         );
     }
 }

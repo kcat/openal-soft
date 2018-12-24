@@ -32,6 +32,7 @@
 #include <memory.h>
 #include <unistd.h>
 #include <errno.h>
+#include <poll.h>
 #include <math.h>
 
 #include <thread>
@@ -102,52 +103,44 @@ static void ALCsolarisBackend_Destruct(ALCsolarisBackend *self)
 
 static int ALCsolarisBackend_mixerProc(ALCsolarisBackend *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    struct timeval timeout;
-    ALubyte *write_ptr;
-    ALint frame_size;
-    ALint to_write;
-    ssize_t wrote;
-    fd_set wfds;
-    int sret;
+    ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
 
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    frame_size = device->frameSizeFromFmt();
+    const int frame_size{device->frameSizeFromFmt()};
 
     ALCsolarisBackend_lock(self);
     while(!self->mKillNow.load(std::memory_order_acquire) &&
           device->Connected.load(std::memory_order_acquire))
     {
-        FD_ZERO(&wfds);
-        FD_SET(self->fd, &wfds);
-        timeout.tv_sec = 1;
-        timeout.tv_usec = 0;
+        pollfd pollitem{};
+        pollitem.fd = self->fd;
+        pollitem.events = POLLOUT;
 
         ALCsolarisBackend_unlock(self);
-        sret = select(self->fd+1, nullptr, &wfds, nullptr, &timeout);
+        int pret{poll(&pollitem, 1, 1000)};
         ALCsolarisBackend_lock(self);
-        if(sret < 0)
+        if(pret < 0)
         {
-            if(errno == EINTR)
+            if(errno == EINTR || errno == EAGAIN)
                 continue;
-            ERR("select failed: %s\n", strerror(errno));
+            ERR("poll failed: %s\n", strerror(errno));
             aluHandleDisconnect(device, "Failed to wait for playback buffer: %s", strerror(errno));
             break;
         }
-        else if(sret == 0)
+        else if(pret == 0)
         {
-            WARN("select timeout\n");
+            WARN("poll timeout\n");
             continue;
         }
 
-        write_ptr = self->mix_data;
-        to_write = self->data_size;
+        ALubyte *write_ptr{self->mix_data};
+        int to_write{self->data_size};
         aluMixData(device, write_ptr, to_write/frame_size);
         while(to_write > 0 && !self->mKillNow.load())
         {
-            wrote = write(self->fd, write_ptr, to_write);
+            ssize_t wrote{write(self->fd, write_ptr, to_write)};
             if(wrote < 0)
             {
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)

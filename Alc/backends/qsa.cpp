@@ -27,6 +27,7 @@
 #include <sched.h>
 #include <errno.h>
 #include <memory.h>
+#include <poll.h>
 
 #include <thread>
 #include <memory>
@@ -36,7 +37,6 @@
 #include "alu.h"
 #include "threads.h"
 
-#include <sys/select.h>
 #include <sys/asoundlib.h>
 #include <sys/neutrino.h>
 
@@ -196,9 +196,7 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
     qsa_data *data = self->ExtraData;
     snd_pcm_channel_status_t status;
     struct sched_param param;
-    struct timeval timeout;
     char* write_ptr;
-    fd_set wfds;
     ALint len;
     int sret;
 
@@ -215,24 +213,25 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
     PlaybackWrapper_lock(self);
     while(!data->mKillNow.load(std::memory_order_acquire))
     {
-        FD_ZERO(&wfds);
-        FD_SET(data->audio_fd, &wfds);
-        timeout.tv_sec=2;
-        timeout.tv_usec=0;
+        pollfd pollitem{};
+        pollitem.fd = data->audio_fd;
+        pollitem.events = POLLOUT;
 
         /* Select also works like time slice to OS */
         PlaybackWrapper_unlock(self);
-        sret = select(data->audio_fd+1, NULL, &wfds, NULL, &timeout);
+        sret = poll(&pollitem, 1, 2000);
         PlaybackWrapper_lock(self);
         if(sret == -1)
         {
-            ERR("select error: %s\n", strerror(errno));
+            if(errno == EINTR || errno == EAGAIN)
+                continue;
+            ERR("poll error: %s\n", strerror(errno));
             aluHandleDisconnect(device, "Failed waiting for playback buffer: %s", strerror(errno));
             break;
         }
         if(sret == 0)
         {
-            ERR("select timeout\n");
+            ERR("poll timeout\n");
             continue;
         }
 
@@ -850,9 +849,7 @@ static ALCenum qsa_capture_samples(CaptureWrapper *self, ALCvoid *buffer, ALCuin
     qsa_data *data = self->ExtraData.get();
     char* read_ptr;
     snd_pcm_channel_status_t status;
-    fd_set rfds;
     int selectret;
-    struct timeval timeout;
     int bytes_read;
     ALint frame_size=device->frameSizeFromFmt();
     ALint len=samples*frame_size;
@@ -862,14 +859,13 @@ static ALCenum qsa_capture_samples(CaptureWrapper *self, ALCvoid *buffer, ALCuin
 
     while (len>0)
     {
-        FD_ZERO(&rfds);
-        FD_SET(data->audio_fd, &rfds);
-        timeout.tv_sec=2;
-        timeout.tv_usec=0;
+        pollfd pollitem{};
+        pollitem.fd = data->audio_fd;
+        pollitem.events = POLLOUT;
 
         /* Select also works like time slice to OS */
         bytes_read=0;
-        selectret=select(data->audio_fd+1, &rfds, NULL, NULL, &timeout);
+        selectret = poll(&pollitem, 1, 2000);
         switch (selectret)
         {
             case -1:
@@ -878,11 +874,7 @@ static ALCenum qsa_capture_samples(CaptureWrapper *self, ALCvoid *buffer, ALCuin
             case 0:
                  break;
             default:
-                 if (FD_ISSET(data->audio_fd, &rfds))
-                 {
-                     bytes_read=snd_pcm_plugin_read(data->pcmHandle, read_ptr, len);
-                     break;
-                 }
+                 bytes_read=snd_pcm_plugin_read(data->pcmHandle, read_ptr, len);
                  break;
         }
 

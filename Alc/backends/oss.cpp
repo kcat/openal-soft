@@ -33,6 +33,7 @@
 #include <memory.h>
 #include <unistd.h>
 #include <errno.h>
+#include <poll.h>
 #include <math.h>
 
 #include <atomic>
@@ -286,52 +287,44 @@ void ALCplaybackOSS_Destruct(ALCplaybackOSS *self)
 
 int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    struct timeval timeout;
-    ALubyte *write_ptr;
-    ALint frame_size;
-    ALint to_write;
-    ssize_t wrote;
-    fd_set wfds;
-    int sret;
+    ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
 
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
 
-    frame_size = device->frameSizeFromFmt();
+    const int frame_size{device->frameSizeFromFmt()};
 
     ALCplaybackOSS_lock(self);
     while(!self->mKillNow.load(std::memory_order_acquire) &&
           device->Connected.load(std::memory_order_acquire))
     {
-        FD_ZERO(&wfds);
-        FD_SET(self->fd, &wfds);
-        timeout.tv_sec = 1;
-        timeout.tv_usec = 0;
+        pollfd pollitem{};
+        pollitem.fd = self->fd;
+        pollitem.events = POLLOUT;
 
         ALCplaybackOSS_unlock(self);
-        sret = select(self->fd+1, nullptr, &wfds, nullptr, &timeout);
+        int pret{poll(&pollitem, 1, 1000)};
         ALCplaybackOSS_lock(self);
-        if(sret < 0)
+        if(pret < 0)
         {
-            if(errno == EINTR)
+            if(errno == EINTR || errno == EAGAIN)
                 continue;
-            ERR("select failed: %s\n", strerror(errno));
+            ERR("poll failed: %s\n", strerror(errno));
             aluHandleDisconnect(device, "Failed waiting for playback buffer: %s", strerror(errno));
             break;
         }
-        else if(sret == 0)
+        else if(pret == 0)
         {
-            WARN("select timeout\n");
+            WARN("poll timeout\n");
             continue;
         }
 
-        write_ptr = self->mMixData.data();
-        to_write = self->mMixData.size();
+        ALubyte *write_ptr{self->mMixData.data()};
+        size_t to_write{self->mMixData.size()};
         aluMixData(device, write_ptr, to_write/frame_size);
         while(to_write > 0 && !self->mKillNow.load())
         {
-            wrote = write(self->fd, write_ptr, to_write);
+            ssize_t wrote{write(self->fd, write_ptr, to_write)};
             if(wrote < 0)
             {
                 if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
@@ -544,44 +537,37 @@ void ALCcaptureOSS_Destruct(ALCcaptureOSS *self)
 
 int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    struct timeval timeout;
-    int frame_size;
-    fd_set rfds;
-    ssize_t amt;
-    int sret;
+    ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
 
     SetRTPriority();
     althrd_setname(RECORD_THREAD_NAME);
 
-    frame_size = device->frameSizeFromFmt();
-
+    const int frame_size{device->frameSizeFromFmt()};
     while(!self->mKillNow.load())
     {
-        FD_ZERO(&rfds);
-        FD_SET(self->fd, &rfds);
-        timeout.tv_sec = 1;
-        timeout.tv_usec = 0;
+        pollfd pollitem{};
+        pollitem.fd = self->fd;
+        pollitem.events = POLLIN;
 
-        sret = select(self->fd+1, &rfds, nullptr, nullptr, &timeout);
+        int sret{poll(&pollitem, 1, 1000)};
         if(sret < 0)
         {
-            if(errno == EINTR)
+            if(errno == EINTR || errno == EAGAIN)
                 continue;
-            ERR("select failed: %s\n", strerror(errno));
+            ERR("poll failed: %s\n", strerror(errno));
             aluHandleDisconnect(device, "Failed to check capture samples: %s", strerror(errno));
             break;
         }
         else if(sret == 0)
         {
-            WARN("select timeout\n");
+            WARN("poll timeout\n");
             continue;
         }
 
         auto vec = ll_ringbuffer_get_write_vector(self->mRing.get());
         if(vec.first.len > 0)
         {
-            amt = read(self->fd, vec.first.buf, vec.first.len*frame_size);
+            ssize_t amt{read(self->fd, vec.first.buf, vec.first.len*frame_size)};
             if(amt < 0)
             {
                 ERR("read failed: %s\n", strerror(errno));

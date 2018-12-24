@@ -295,6 +295,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
     if(UNLIKELY(!slot))
         SETERR_RETURN(context.get(), AL_INVALID_NAME,, "Invalid effect slot ID %u", effectslot);
 
+    ALeffectslot *target{};
     ALCdevice *device{};
     ALenum err{};
     switch(param)
@@ -322,6 +323,37 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSloti(ALuint effectslot, ALenum param
         slot->AuxSendAuto = value;
         break;
 
+    case AL_EFFECTSLOT_TARGET_SOFT:
+        target = (value ? LookupEffectSlot(context.get(), value) : nullptr);
+        if(value && !target)
+            SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Invalid effect slot target ID");
+        if(target)
+        {
+            ALeffectslot *checker{target};
+            while(checker && checker != slot)
+                checker = checker->Target;
+            if(checker)
+                SETERR_RETURN(context.get(), AL_INVALID_OPERATION,,
+                    "Setting target of effect slot ID %u to %u creates circular chain", slot->id,
+                    target->id);
+        }
+
+        if(ALeffectslot *oldtarget{slot->Target})
+        {
+            /* We must force an update if there was an existing effect slot
+             * target, in case it's about to be deleted.
+             */
+            if(target) IncrementRef(&target->ref);
+            DecrementRef(&oldtarget->ref);
+            slot->Target = target;
+            UpdateEffectSlotProps(slot, context.get());
+            return;
+        }
+
+        if(target) IncrementRef(&target->ref);
+        slot->Target = target;
+        break;
+
     default:
         SETERR_RETURN(context.get(), AL_INVALID_ENUM,,
                       "Invalid effect slot integer property 0x%04x", param);
@@ -335,6 +367,7 @@ AL_API ALvoid AL_APIENTRY alAuxiliaryEffectSlotiv(ALuint effectslot, ALenum para
     {
     case AL_EFFECTSLOT_EFFECT:
     case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
+    case AL_EFFECTSLOT_TARGET_SOFT:
         alAuxiliaryEffectSloti(effectslot, param, values[0]);
         return;
     }
@@ -422,6 +455,10 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSloti(ALuint effectslot, ALenum pa
         *value = slot->AuxSendAuto;
         break;
 
+    case AL_EFFECTSLOT_TARGET_SOFT:
+        *value = slot->Target ? slot->Target->id : 0;
+        break;
+
     default:
         SETERR_RETURN(context.get(), AL_INVALID_ENUM,,
                       "Invalid effect slot integer property 0x%04x", param);
@@ -434,6 +471,7 @@ AL_API ALvoid AL_APIENTRY alGetAuxiliaryEffectSlotiv(ALuint effectslot, ALenum p
     {
     case AL_EFFECTSLOT_EFFECT:
     case AL_EFFECTSLOT_AUXILIARY_SEND_AUTO:
+    case AL_EFFECTSLOT_TARGET_SOFT:
         alGetAuxiliaryEffectSloti(effectslot, param, values);
         return;
     }

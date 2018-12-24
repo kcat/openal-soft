@@ -80,6 +80,11 @@ AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint src, ALsizei nb, co
 #endif
 #endif
 
+#ifndef AL_SOFT_effect_chain
+#define AL_SOFT_effect_chain
+#define AL_EFFECTSLOT_TARGET_SOFT                0xf000
+#endif
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

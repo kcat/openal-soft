@@ -1530,8 +1530,8 @@ void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*RESTRICT Buffer)[BUFFER
         Stablizer->APFilter[i].process(Buffer[i], SamplesToDo);
     }
 
-    ALfloat (*RESTRICT lsplit)[BUFFERSIZE]{Stablizer->LSplit};
-    ALfloat (*RESTRICT rsplit)[BUFFERSIZE]{Stablizer->RSplit};
+    ALfloat (&lsplit)[2][BUFFERSIZE] = Stablizer->LSplit;
+    ALfloat (&rsplit)[2][BUFFERSIZE] = Stablizer->RSplit;
     Stablizer->LFilter.process(lsplit[1], lsplit[0], Buffer[lidx], SamplesToDo);
     Stablizer->RFilter.process(rsplit[1], rsplit[0], Buffer[ridx], SamplesToDo);
 
@@ -1560,17 +1560,17 @@ void ApplyStablizer(FrontStablizer *Stablizer, ALfloat (*RESTRICT Buffer)[BUFFER
 }
 
 void ApplyDistanceComp(ALfloat (*RESTRICT Samples)[BUFFERSIZE], const DistanceComp &distcomp,
-                       ALfloat *RESTRICT Values, ALsizei SamplesToDo, ALsizei numchans)
+                       ALfloat *RESTRICT Values, const ALsizei SamplesToDo, const ALsizei numchans)
 {
     ASSUME(SamplesToDo > 0);
     ASSUME(numchans > 0);
 
     for(ALsizei c{0};c < numchans;c++)
     {
-        ALfloat *RESTRICT inout{Samples[c]};
+        ALfloat *RESTRICT inout{al::assume_aligned<16>(Samples[c])};
         const ALfloat gain{distcomp[c].Gain};
         const ALsizei base{distcomp[c].Length};
-        ALfloat *RESTRICT distbuf{distcomp[c].Buffer};
+        ALfloat *RESTRICT distbuf{al::assume_aligned<16>(distcomp[c].Buffer)};
 
         if(base <= 0)
         {
@@ -1600,8 +1600,8 @@ void ApplyDistanceComp(ALfloat (*RESTRICT Samples)[BUFFERSIZE], const DistanceCo
     }
 }
 
-void ApplyDither(ALfloat (*RESTRICT Samples)[BUFFERSIZE], ALuint *dither_seed,
-                 const ALfloat quant_scale, const ALsizei SamplesToDo, const ALsizei numchans)
+void ApplyDither(ALfloat (*Samples)[BUFFERSIZE], ALuint *dither_seed, const ALfloat quant_scale,
+                 const ALsizei SamplesToDo, const ALsizei numchans)
 {
     ASSUME(numchans > 0);
 
@@ -1611,9 +1611,10 @@ void ApplyDither(ALfloat (*RESTRICT Samples)[BUFFERSIZE], ALuint *dither_seed,
      */
     const ALfloat invscale{1.0f / quant_scale};
     ALuint seed{*dither_seed};
-    auto dither_channel = [&seed,invscale,quant_scale,SamplesToDo](ALfloat *buffer) -> void
+    auto dither_channel = [&seed,invscale,quant_scale,SamplesToDo](ALfloat *input) -> void
     {
         ASSUME(SamplesToDo > 0);
+        ALfloat *buffer{al::assume_aligned<16>(input)};
         std::transform(buffer, buffer+SamplesToDo, buffer,
             [&seed,invscale,quant_scale](ALfloat sample) noexcept -> ALfloat
             {

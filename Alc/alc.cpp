@@ -1550,7 +1550,7 @@ static void alcSetError(ALCdevice *device, ALCenum errorCode)
 }
 
 
-static Compressor *CreateDeviceLimiter(const ALCdevice *device, const ALfloat threshold)
+static std::unique_ptr<Compressor> CreateDeviceLimiter(const ALCdevice *device, const ALfloat threshold)
 {
     return CompressorInit(device->RealOut.NumChannels, device->Frequency,
         AL_TRUE, AL_TRUE, AL_TRUE, AL_TRUE, AL_TRUE, 0.001f, 0.002f,
@@ -1816,6 +1816,7 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
     device->Uhj_Encoder = nullptr;
     device->Bs2b = nullptr;
 
+    device->Limiter = nullptr;
     device->ChannelDelay.clear();
     device->ChannelDelay.shrink_to_fit();
 
@@ -2044,14 +2045,12 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         if(device->DitherDepth > 0.0f)
             thrshld -= 1.0f / device->DitherDepth;
 
-        device->Limiter.reset(CreateDeviceLimiter(device, std::log10(thrshld) * 20.0f));
+        auto limiter = CreateDeviceLimiter(device, std::log10(thrshld) * 20.0f);
         /* Convert the lookahead from samples to nanosamples to nanoseconds. */
         device->FixedLatency += std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::seconds(GetCompressorLookAhead(device->Limiter.get()))
-        ) / device->Frequency;
+            std::chrono::seconds(limiter->getLookAhead())) / device->Frequency;
+        device->Limiter = std::move(limiter);
     }
-    else
-        device->Limiter = nullptr;
     TRACE("Output limiter %s\n", device->Limiter ? "enabled" : "disabled");
 
     aluSelectPostProcess(device);

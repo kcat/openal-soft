@@ -1745,8 +1745,8 @@ void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples)
         }
 
         /* Apply compression, limiting sample amplitude if needed or desired. */
-        if(device->Limiter)
-            ApplyCompression(device->Limiter.get(), SamplesToDo, device->RealOut.Buffer);
+        if(Compressor *comp{device->Limiter.get()})
+            comp->process(SamplesToDo, device->RealOut.Buffer);
 
         /* Apply delays and attenuation for mismatched speaker distances. */
         ApplyDistanceComp(device->RealOut.Buffer, device->ChannelDelay, device->TempBuffer[0],

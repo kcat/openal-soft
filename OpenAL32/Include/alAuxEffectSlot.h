@@ -10,6 +10,11 @@
 
 struct ALeffectslot;
 
+struct EffectTarget {
+    MixParams *Main;
+    MixParams *FOAOut;
+    RealMixParams *RealOut;
+};
 
 struct EffectState {
     RefCount mRef{1u};
@@ -21,7 +26,7 @@ struct EffectState {
     virtual ~EffectState() = default;
 
     virtual ALboolean deviceUpdate(const ALCdevice *device) = 0;
-    virtual void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) = 0;
+    virtual void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) = 0;
     virtual void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) = 0;
 
     void IncRef() noexcept;

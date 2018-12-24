@@ -538,10 +538,10 @@ enum RenderMode {
 
 
 typedef ALfloat ChannelConfig[MAX_AMBI_COEFFS];
-typedef struct BFChannelConfig {
+struct BFChannelConfig {
     ALfloat Scale;
     ALsizei Index;
-} BFChannelConfig;
+};
 
 typedef union AmbiConfig {
     /* Ambisonic coefficients for mixing to the dry buffer. */

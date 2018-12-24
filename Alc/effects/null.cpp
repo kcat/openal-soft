@@ -16,7 +16,7 @@ struct ALnullState final : public EffectState {
     ~ALnullState() override;
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
+    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
 
     DEF_NEWDEL(ALnullState)
@@ -48,7 +48,7 @@ ALboolean ALnullState::deviceUpdate(const ALCdevice* UNUSED(device))
 /* This updates the effect state. This is called any time the effect is
  * (re)loaded into a slot.
  */
-void ALnullState::update(const ALCcontext* UNUSED(context), const ALeffectslot* UNUSED(slot), const ALeffectProps* UNUSED(props))
+void ALnullState::update(const ALCcontext* UNUSED(context), const ALeffectslot* UNUSED(slot), const ALeffectProps* UNUSED(props), const EffectTarget UNUSED(target))
 {
 }
 

@@ -37,7 +37,7 @@ struct ALdedicatedState final : public EffectState {
 
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
+    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
 
     DEF_NEWDEL(ALdedicatedState)
@@ -49,33 +49,19 @@ ALboolean ALdedicatedState::deviceUpdate(const ALCdevice *UNUSED(device))
     return AL_TRUE;
 }
 
-void ALdedicatedState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
+void ALdedicatedState::update(const ALCcontext* UNUSED(context), const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device = context->Device;
-
     std::fill(std::begin(mTargetGains), std::end(mTargetGains), 0.0f);
 
     const ALfloat Gain{slot->Params.Gain * props->Dedicated.Gain};
-    if(ALeffectslot *target{slot->Params.Target})
-    {
-        mOutBuffer = target->WetBuffer;
-        mOutChannels = target->NumChannels;
-        if(slot->Params.EffectType == AL_EFFECT_DEDICATED_DIALOGUE)
-        {
-            ALfloat coeffs[MAX_AMBI_COEFFS];
-            CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
-            ComputePanGains(target, coeffs, Gain, mTargetGains);
-        }
-        return;
-    }
 
     if(slot->Params.EffectType == AL_EFFECT_DEDICATED_LOW_FREQUENCY_EFFECT)
     {
-        int idx;
-        if((idx=GetChannelIdxByName(device->RealOut, LFE)) != -1)
+        const int idx{!target.RealOut ? -1 : GetChannelIdxByName(*target.RealOut, LFE)};
+        if(idx != -1)
         {
-            mOutBuffer = device->RealOut.Buffer;
-            mOutChannels = device->RealOut.NumChannels;
+            mOutBuffer = target.RealOut->Buffer;
+            mOutChannels = target.RealOut->NumChannels;
             mTargetGains[idx] = Gain;
         }
     }
@@ -83,11 +69,11 @@ void ALdedicatedState::update(const ALCcontext *context, const ALeffectslot *slo
     {
         /* Dialog goes to the front-center speaker if it exists, otherwise it
          * plays from the front-center location. */
-        int idx{GetChannelIdxByName(device->RealOut, FrontCenter)};
+        const int idx{!target.RealOut ? -1 : GetChannelIdxByName(*target.RealOut, FrontCenter)};
         if(idx != -1)
         {
-            mOutBuffer = device->RealOut.Buffer;
-            mOutChannels = device->RealOut.NumChannels;
+            mOutBuffer = target.RealOut->Buffer;
+            mOutChannels = target.RealOut->NumChannels;
             mTargetGains[idx] = Gain;
         }
         else
@@ -95,9 +81,9 @@ void ALdedicatedState::update(const ALCcontext *context, const ALeffectslot *slo
             ALfloat coeffs[MAX_AMBI_COEFFS];
             CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
 
-            mOutBuffer = device->Dry.Buffer;
-            mOutChannels = device->Dry.NumChannels;
-            ComputePanGains(&device->Dry, coeffs, Gain, mTargetGains);
+            mOutBuffer = target.Main->Buffer;
+            mOutChannels = target.Main->NumChannels;
+            ComputePanGains(target.Main, coeffs, Gain, mTargetGains);
         }
     }
 }

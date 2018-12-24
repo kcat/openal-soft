@@ -144,7 +144,7 @@ struct ALpshifterState final : public EffectState {
 
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
+    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
 
     DEF_NEWDEL(ALpshifterState)
@@ -173,7 +173,7 @@ ALboolean ALpshifterState::deviceUpdate(const ALCdevice *device)
     return AL_TRUE;
 }
 
-void ALpshifterState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
+void ALpshifterState::update(const ALCcontext* UNUSED(context), const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
 {
     const float pitch{std::pow(2.0f,
         (ALfloat)(props->Pshifter.CoarseTune*100 + props->Pshifter.FineTune) / 1200.0f
@@ -183,19 +183,10 @@ void ALpshifterState::update(const ALCcontext *context, const ALeffectslot *slot
 
     ALfloat coeffs[MAX_AMBI_COEFFS];
     CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
-    if(ALeffectslot *target{slot->Params.Target})
-    {
-        mOutBuffer = target->WetBuffer;
-        mOutChannels = target->NumChannels;
-        ComputePanGains(target, coeffs, slot->Params.Gain, mTargetGains);
-    }
-    else
-    {
-        const ALCdevice *device{context->Device};
-        mOutBuffer = device->Dry.Buffer;
-        mOutChannels = device->Dry.NumChannels;
-        ComputePanGains(&device->Dry, coeffs, slot->Params.Gain, mTargetGains);
-    }
+
+    mOutBuffer = target.Main->Buffer;
+    mOutChannels = target.Main->NumChannels;
+    ComputePanGains(target.Main, coeffs, slot->Params.Gain, mTargetGains);
 }
 
 void ALpshifterState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

@@ -82,7 +82,7 @@ struct ALfshifterState final : public EffectState {
 
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
+    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
 
     DEF_NEWDEL(ALfshifterState)
@@ -107,7 +107,7 @@ ALboolean ALfshifterState::deviceUpdate(const ALCdevice *UNUSED(device))
     return AL_TRUE;
 }
 
-void ALfshifterState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
+void ALfshifterState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device{context->Device};
 
@@ -132,18 +132,10 @@ void ALfshifterState::update(const ALCcontext *context, const ALeffectslot *slot
 
     ALfloat coeffs[MAX_AMBI_COEFFS];
     CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
-    if(ALeffectslot *target{slot->Params.Target})
-    {
-        mOutBuffer = target->WetBuffer;
-        mOutChannels = target->NumChannels;
-        ComputePanGains(target, coeffs, slot->Params.Gain, mTargetGains);
-    }
-    else
-    {
-        mOutBuffer = device->Dry.Buffer;
-        mOutChannels = device->Dry.NumChannels;
-        ComputePanGains(&device->Dry, coeffs, slot->Params.Gain, mTargetGains);
-    }
+
+    mOutBuffer = target.Main->Buffer;
+    mOutChannels = target.Main->NumChannels;
+    ComputePanGains(target.Main, coeffs, slot->Params.Gain, mTargetGains);
 }
 
 void ALfshifterState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

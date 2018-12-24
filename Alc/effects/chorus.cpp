@@ -91,7 +91,7 @@ struct ChorusState final : public EffectState {
 
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
+    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
 
     DEF_NEWDEL(ChorusState)
@@ -121,7 +121,7 @@ ALboolean ChorusState::deviceUpdate(const ALCdevice *Device)
     return AL_TRUE;
 }
 
-void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props)
+void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, const ALeffectProps *props, const EffectTarget target)
 {
     static constexpr ALsizei mindelay = MAX_RESAMPLE_PADDING << FRACTIONBITS;
 
@@ -149,20 +149,11 @@ void ChorusState::update(const ALCcontext *Context, const ALeffectslot *Slot, co
     ALfloat coeffs[2][MAX_AMBI_COEFFS];
     CalcAngleCoeffs(-F_PI_2, 0.0f, 0.0f, coeffs[0]);
     CalcAngleCoeffs( F_PI_2, 0.0f, 0.0f, coeffs[1]);
-    if(ALeffectslot *target{Slot->Params.Target})
-    {
-        mOutBuffer = target->WetBuffer;
-        mOutChannels = target->NumChannels;
-        ComputePanGains(target, coeffs[0], Slot->Params.Gain, mGains[0].Target);
-        ComputePanGains(target, coeffs[1], Slot->Params.Gain, mGains[1].Target);
-    }
-    else
-    {
-        mOutBuffer = device->Dry.Buffer;
-        mOutChannels = device->Dry.NumChannels;
-        ComputePanGains(&device->Dry, coeffs[0], Slot->Params.Gain, mGains[0].Target);
-        ComputePanGains(&device->Dry, coeffs[1], Slot->Params.Gain, mGains[1].Target);
-    }
+
+    mOutBuffer = target.Main->Buffer;
+    mOutChannels = target.Main->NumChannels;
+    ComputePanGains(target.Main, coeffs[0], Slot->Params.Gain, mGains[0].Target);
+    ComputePanGains(target.Main, coeffs[1], Slot->Params.Gain, mGains[1].Target);
 
     ALfloat rate{props->Chorus.Rate};
     if(!(rate > 0.0f))

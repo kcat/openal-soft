@@ -57,7 +57,7 @@ struct ALechoState final : public EffectState {
 
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
+    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
 
     DEF_NEWDEL(ALechoState)
@@ -90,7 +90,7 @@ ALboolean ALechoState::deviceUpdate(const ALCdevice *Device)
     return AL_TRUE;
 }
 
-void ALechoState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
+void ALechoState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
 {
     const ALCdevice *device = context->Device;
     ALuint frequency = device->Frequency;
@@ -119,20 +119,10 @@ void ALechoState::update(const ALCcontext *context, const ALeffectslot *slot, co
     CalcAngleCoeffs(-F_PI_2*lrpan, 0.0f, spread, coeffs[0]);
     CalcAngleCoeffs( F_PI_2*lrpan, 0.0f, spread, coeffs[1]);
 
-    if(ALeffectslot *target{slot->Params.Target})
-    {
-        mOutBuffer = target->WetBuffer;
-        mOutChannels = target->NumChannels;
-        ComputePanGains(target, coeffs[0], slot->Params.Gain, mGains[0].Target);
-        ComputePanGains(target, coeffs[1], slot->Params.Gain, mGains[1].Target);
-    }
-    else
-    {
-        mOutBuffer = device->Dry.Buffer;
-        mOutChannels = device->Dry.NumChannels;
-        ComputePanGains(&device->Dry, coeffs[0], slot->Params.Gain, mGains[0].Target);
-        ComputePanGains(&device->Dry, coeffs[1], slot->Params.Gain, mGains[1].Target);
-    }
+    mOutBuffer = target.Main->Buffer;
+    mOutChannels = target.Main->NumChannels;
+    ComputePanGains(target.Main, coeffs[0], slot->Params.Gain, mGains[0].Target);
+    ComputePanGains(target.Main, coeffs[1], slot->Params.Gain, mGains[1].Target);
 }
 
 void ALechoState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

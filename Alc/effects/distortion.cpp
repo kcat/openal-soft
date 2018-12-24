@@ -23,6 +23,8 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include <cmath>
+
 #include "alMain.h"
 #include "alcontext.h"
 #include "alAuxEffectSlot.h"
@@ -45,7 +47,7 @@ struct ALdistortionState final : public EffectState {
 
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
+    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
 
     DEF_NEWDEL(ALdistortionState)
@@ -58,26 +60,21 @@ ALboolean ALdistortionState::deviceUpdate(const ALCdevice *UNUSED(device))
     return AL_TRUE;
 }
 
-void ALdistortionState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
+void ALdistortionState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
 {
-    const ALCdevice *device = context->Device;
-    ALfloat frequency = (ALfloat)device->Frequency;
-    ALfloat coeffs[MAX_AMBI_COEFFS];
-    ALfloat bandwidth;
-    ALfloat cutoff;
-    ALfloat edge;
+    const ALCdevice *device{context->Device};
 
     /* Store waveshaper edge settings. */
-    edge = sinf(props->Distortion.Edge * (F_PI_2));
-    edge = minf(edge, 0.99f);
+    const ALfloat edge{minf(std::sin(props->Distortion.Edge * F_PI_2), 0.99f)};
     mEdgeCoeff = 2.0f * edge / (1.0f-edge);
 
-    cutoff = props->Distortion.LowpassCutoff;
+    ALfloat cutoff{props->Distortion.LowpassCutoff};
     /* Bandwidth value is constant in octaves. */
-    bandwidth = (cutoff / 2.0f) / (cutoff * 0.67f);
+    ALfloat bandwidth{(cutoff / 2.0f) / (cutoff * 0.67f)};
     /* Multiply sampling frequency by the amount of oversampling done during
      * processing.
      */
+    auto frequency = static_cast<ALfloat>(device->Frequency);
     mLowpass.setParams(BiquadType::LowPass, 1.0f, cutoff / (frequency*4.0f),
         calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
     );
@@ -89,19 +86,12 @@ void ALdistortionState::update(const ALCcontext *context, const ALeffectslot *sl
         calc_rcpQ_from_bandwidth(cutoff / (frequency*4.0f), bandwidth)
     );
 
+    ALfloat coeffs[MAX_AMBI_COEFFS];
     CalcAngleCoeffs(0.0f, 0.0f, 0.0f, coeffs);
-    if(ALeffectslot *target{slot->Params.Target})
-    {
-        mOutBuffer = target->WetBuffer;
-        mOutChannels = target->NumChannels;
-        ComputePanGains(target, coeffs, slot->Params.Gain*props->Distortion.Gain, mGain);
-    }
-    else
-    {
-        mOutBuffer = device->Dry.Buffer;
-        mOutChannels = device->Dry.NumChannels;
-        ComputePanGains(&device->Dry, coeffs, slot->Params.Gain*props->Distortion.Gain, mGain);
-    }
+
+    mOutBuffer = target.Main->Buffer;
+    mOutChannels = target.Main->NumChannels;
+    ComputePanGains(target.Main, coeffs, slot->Params.Gain*props->Distortion.Gain, mGain);
 }
 
 void ALdistortionState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

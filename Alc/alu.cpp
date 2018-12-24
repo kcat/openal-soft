@@ -412,7 +412,7 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
             evt.u.mEffectState = slot->Params.mEffectState;
 
             slot->Params.mEffectState = state;
-            props->State = NULL;
+            props->State = nullptr;
 
             if(LIKELY(ll_ringbuffer_write(context->AsyncEvents, &evt, 1) != 0))
                 context->EventSem.post();
@@ -430,7 +430,25 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
         AtomicReplaceHead(context->FreeEffectslotProps, props);
     }
 
-    state->update(context, slot, &slot->Params.EffectProps);
+    MixParams params;
+    EffectTarget output;
+    if(ALeffectslot *target{slot->Params.Target})
+    {
+        auto iter = std::copy(std::begin(target->ChanMap), std::end(target->ChanMap),
+            std::begin(params.Ambi.Map));
+        std::fill(iter, std::end(params.Ambi.Map), BFChannelConfig{});
+        params.CoeffCount = 0;
+        params.Buffer = target->WetBuffer;
+        params.NumChannels = target->NumChannels;
+
+        output = EffectTarget{&params, &params, nullptr};
+    }
+    else
+    {
+        ALCdevice *device{context->Device};
+        output = EffectTarget{&device->Dry, &device->FOAOut, &device->RealOut};
+    }
+    state->update(context, slot, &slot->Params.EffectProps, output);
     return true;
 }
 

@@ -49,7 +49,7 @@ struct ALcompressorState final : public EffectState {
 
 
     ALboolean deviceUpdate(const ALCdevice *device) override;
-    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props) override;
+    void update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target) override;
     void process(ALsizei samplesToDo, const ALfloat (*RESTRICT samplesIn)[BUFFERSIZE], ALfloat (*RESTRICT samplesOut)[BUFFERSIZE], ALsizei numChannels) override;
 
     DEF_NEWDEL(ALcompressorState)
@@ -72,27 +72,15 @@ ALboolean ALcompressorState::deviceUpdate(const ALCdevice *device)
     return AL_TRUE;
 }
 
-void ALcompressorState::update(const ALCcontext *context, const ALeffectslot *slot, const ALeffectProps *props)
+void ALcompressorState::update(const ALCcontext* UNUSED(context), const ALeffectslot *slot, const ALeffectProps *props, const EffectTarget target)
 {
     mEnabled = props->Compressor.OnOff;
 
-    if(ALeffectslot *target{slot->Params.Target})
-    {
-        mOutBuffer = target->WetBuffer;
-        mOutChannels = target->NumChannels;
-        for(ALsizei i{0};i < MAX_EFFECT_CHANNELS;i++)
-            ComputePanGains(target, alu::Matrix::Identity()[i].data(), slot->Params.Gain,
-                mGain[i]);
-    }
-    else
-    {
-        const ALCdevice *device{context->Device};
-        mOutBuffer = device->FOAOut.Buffer;
-        mOutChannels = device->FOAOut.NumChannels;
-        for(ALsizei i{0};i < 4;i++)
-            ComputePanGains(&device->FOAOut, alu::Matrix::Identity()[i].data(),
-                slot->Params.Gain, mGain[i]);
-    }
+    mOutBuffer = target.FOAOut->Buffer;
+    mOutChannels = target.FOAOut->NumChannels;
+    for(ALsizei i{0};i < 4;i++)
+        ComputePanGains(target.FOAOut, alu::Matrix::Identity()[i].data(),
+            slot->Params.Gain, mGain[i]);
 }
 
 void ALcompressorState::process(ALsizei SamplesToDo, const ALfloat (*RESTRICT SamplesIn)[BUFFERSIZE], ALfloat (*RESTRICT SamplesOut)[BUFFERSIZE], ALsizei NumChannels)

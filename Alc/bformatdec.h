@@ -29,8 +29,6 @@ private:
     std::array<ALfloat,BUFFERSIZE> *mSamplesHF;
     std::array<ALfloat,BUFFERSIZE> *mSamplesLF;
 
-    alignas(16) ALfloat mChannelMix[BUFFERSIZE];
-
     struct {
         BandSplitter XOver;
         ALfloat Gains[sNumBands];
@@ -43,10 +41,10 @@ public:
     void reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, const ALsizei (&chanmap)[MAX_OUTPUT_CHANNELS]);
 
     /* Decodes the ambisonic input to the given output channels. */
-    void process(ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*RESTRICT InSamples)[BUFFERSIZE], const ALsizei SamplesToDo);
+    void process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei SamplesToDo);
 
     /* Up-samples a first-order input to the decoder's configuration. */
-    void upSample(ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALfloat (*RESTRICT InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo);
+    void upSample(ALfloat (*OutBuffer)[BUFFERSIZE], const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo);
 
     DEF_NEWDEL(BFormatDec)
 };

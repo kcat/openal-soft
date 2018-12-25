@@ -198,10 +198,11 @@ void BFormatDec::reset(const AmbDecConf *conf, ALsizei chancount, ALuint srate, 
     }
 }
 
-void BFormatDec::process(ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*RESTRICT InSamples)[BUFFERSIZE], const ALsizei SamplesToDo)
+void BFormatDec::process(ALfloat (*OutBuffer)[BUFFERSIZE], const ALsizei OutChannels, const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei SamplesToDo)
 {
     ASSUME(OutChannels > 0);
     ASSUME(SamplesToDo > 0);
+    ASSUME(mNumChannels > 0);
 
     if(mDualBand)
     {
@@ -214,18 +215,14 @@ void BFormatDec::process(ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALsize
             if(UNLIKELY(!(mEnabled&(1<<chan))))
                 continue;
 
-            std::fill(std::begin(mChannelMix), std::begin(mChannelMix)+SamplesToDo, 0.0f);
-            MixRowSamples(mChannelMix, mMatrix.Dual[chan][HF_BAND],
+            MixRowSamples(OutBuffer[chan], mMatrix.Dual[chan][HF_BAND],
                 &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(mSamplesHF[0]),
                 mNumChannels, 0, SamplesToDo
             );
-            MixRowSamples(mChannelMix, mMatrix.Dual[chan][LF_BAND],
+            MixRowSamples(OutBuffer[chan], mMatrix.Dual[chan][LF_BAND],
                 &reinterpret_cast<ALfloat(&)[BUFFERSIZE]>(mSamplesLF[0]),
                 mNumChannels, 0, SamplesToDo
             );
-
-            std::transform(std::begin(mChannelMix), std::begin(mChannelMix)+SamplesToDo,
-                OutBuffer[chan], OutBuffer[chan], std::plus<float>());
         }
     }
     else
@@ -235,17 +232,13 @@ void BFormatDec::process(ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALsize
             if(UNLIKELY(!(mEnabled&(1<<chan))))
                 continue;
 
-            std::fill(std::begin(mChannelMix), std::begin(mChannelMix)+SamplesToDo, 0.0f);
-            MixRowSamples(mChannelMix, mMatrix.Single[chan], InSamples,
+            MixRowSamples(OutBuffer[chan], mMatrix.Single[chan], InSamples,
                           mNumChannels, 0, SamplesToDo);
-
-            std::transform(std::begin(mChannelMix), std::begin(mChannelMix)+SamplesToDo,
-                OutBuffer[chan], OutBuffer[chan], std::plus<float>());
         }
     }
 }
 
-void BFormatDec::upSample(ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], const ALfloat (*RESTRICT InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo)
+void BFormatDec::upSample(ALfloat (*OutBuffer)[BUFFERSIZE], const ALfloat (*InSamples)[BUFFERSIZE], const ALsizei InChannels, const ALsizei SamplesToDo)
 {
     ASSUME(InChannels > 0);
     ASSUME(SamplesToDo > 0);

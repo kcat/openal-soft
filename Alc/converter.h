@@ -29,9 +29,8 @@ struct SampleConverter {
     DEF_PLACE_NEWDEL()
 };
 
-SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType dstType,
-                                       ALsizei numchans, ALsizei srcRate, ALsizei dstRate,
-                                       Resampler resampler);
+SampleConverter *CreateSampleConverter(DevFmtType srcType, DevFmtType dstType, ALsizei numchans,
+    ALsizei srcRate, ALsizei dstRate, Resampler resampler);
 void DestroySampleConverter(SampleConverter **converter);
 
 ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALsizei *srcframes, ALvoid *dst, ALsizei dstframes);
@@ -49,7 +48,7 @@ struct ChannelConverter {
     DEF_NEWDEL(ChannelConverter)
 };
 
-ChannelConverter *CreateChannelConverter(enum DevFmtType srcType, enum DevFmtChannels srcChans, enum DevFmtChannels dstChans);
+ChannelConverter *CreateChannelConverter(DevFmtType srcType, DevFmtChannels srcChans, DevFmtChannels dstChans);
 void DestroyChannelConverter(ChannelConverter **converter);
 
 void ChannelConverterInput(ChannelConverter *converter, const ALvoid *src, ALfloat *dst, ALsizei frames);

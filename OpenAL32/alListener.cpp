@@ -405,7 +405,7 @@ void UpdateListenerProps(ALCcontext *context)
         props = static_cast<ALlistenerProps*>(al_calloc(16, sizeof(*props)));
     else
     {
-        struct ALlistenerProps *next;
+        ALlistenerProps *next;
         do {
             next = props->next.load(std::memory_order_relaxed);
         } while(context->FreeListenerProps.compare_exchange_weak(props, next,

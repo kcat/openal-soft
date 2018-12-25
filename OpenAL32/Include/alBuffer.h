@@ -33,12 +33,10 @@ enum UserFmtChannels {
     UserFmtBFormat3D, /* WXYZ */
 };
 
-ALsizei BytesFromUserFmt(enum UserFmtType type);
-ALsizei ChannelsFromUserFmt(enum UserFmtChannels chans);
-inline ALsizei FrameSizeFromUserFmt(enum UserFmtChannels chans, enum UserFmtType type)
-{
-    return ChannelsFromUserFmt(chans) * BytesFromUserFmt(type);
-}
+ALsizei BytesFromUserFmt(UserFmtType type);
+ALsizei ChannelsFromUserFmt(UserFmtChannels chans);
+inline ALsizei FrameSizeFromUserFmt(UserFmtChannels chans, UserFmtType type)
+{ return ChannelsFromUserFmt(chans) * BytesFromUserFmt(type); }
 
 
 /* Storable formats */
@@ -81,12 +79,10 @@ template<>
 struct FmtTypeTraits<FmtAlaw> { using Type = ALubyte; };
 
 
-ALsizei BytesFromFmt(enum FmtType type);
-ALsizei ChannelsFromFmt(enum FmtChannels chans);
-inline ALsizei FrameSizeFromFmt(enum FmtChannels chans, enum FmtType type)
-{
-    return ChannelsFromFmt(chans) * BytesFromFmt(type);
-}
+ALsizei BytesFromFmt(FmtType type);
+ALsizei ChannelsFromFmt(FmtChannels chans);
+inline ALsizei FrameSizeFromFmt(FmtChannels chans, FmtType type)
+{ return ChannelsFromFmt(chans) * BytesFromFmt(type); }
 
 
 struct ALbuffer {
@@ -96,11 +92,11 @@ struct ALbuffer {
     ALbitfieldSOFT Access{0u};
     ALsizei SampleLen{0};
 
-    enum FmtChannels FmtChannels{};
-    enum FmtType     FmtType{};
+    FmtChannels mFmtChannels{};
+    FmtType     mFmtType{};
     ALsizei BytesAlloc{0};
 
-    enum UserFmtType OriginalType{};
+    UserFmtType OriginalType{};
     ALsizei OriginalSize{0};
     ALsizei OriginalAlign{0};
 

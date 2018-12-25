@@ -32,9 +32,7 @@ struct EffectList {
     int type;
     ALenum val;
 };
-#define EFFECTLIST_SIZE 14
-extern const EffectList EffectList[EFFECTLIST_SIZE];
-
+extern const EffectList gEffectList[14];
 
 struct ALeffectVtable {
     void (*const setParami)(ALeffect *effect, ALCcontext *context, ALenum param, ALint val);
@@ -72,7 +70,7 @@ extern const ALeffectVtable ALpshifter_vtable;
 extern const ALeffectVtable ALdedicated_vtable;
 
 
-typedef union ALeffectProps {
+union ALeffectProps {
     struct {
         // Shared Reverb Properties
         ALfloat Density;
@@ -173,7 +171,7 @@ typedef union ALeffectProps {
     struct {
         ALfloat Gain;
     } Dedicated;
-} ALeffectProps;
+};
 
 struct ALeffect {
     // Effect type (AL_EFFECT_NULL, ...)

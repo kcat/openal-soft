@@ -44,8 +44,8 @@ struct ALCsdl2Backend final : public ALCbackend {
     ALsizei frameSize;
 
     ALuint Frequency;
-    enum DevFmtChannels FmtChans;
-    enum DevFmtType     FmtType;
+    DevFmtChannels FmtChans;
+    DevFmtType     FmtType;
     ALuint UpdateSize;
 };
 
@@ -233,7 +233,7 @@ bool SDL2BackendFactory::querySupport(ALCbackend_Type type)
     return (type == ALCbackend_Playback);
 }
 
-void SDL2BackendFactory::probe(enum DevProbe type, std::string *outnames)
+void SDL2BackendFactory::probe(DevProbe type, std::string *outnames)
 {
     if(type != ALL_DEVICE_PROBE)
         return;

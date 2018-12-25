@@ -100,7 +100,7 @@ void ClearArray(ALfloat (&f)[MAX_OUTPUT_CHANNELS])
 }
 
 struct ChanMap {
-    enum Channel channel;
+    Channel channel;
     ALfloat angle;
     ALfloat elevation;
 };
@@ -454,7 +454,7 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
 }
 
 
-constexpr struct ChanMap MonoMap[1]{
+constexpr ChanMap MonoMap[1]{
     { FrontCenter, 0.0f, 0.0f }
 }, RearMap[2]{
     { BackLeft,  Deg2Rad(-150.0f), Deg2Rad(0.0f) },
@@ -509,7 +509,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
     ALsizei num_channels{0};
     bool isbformat{false};
     ALfloat downmix_gain{1.0f};
-    switch(Buffer->FmtChannels)
+    switch(Buffer->mFmtChannels)
     {
     case FmtMono:
         chans = MonoMap;
@@ -633,7 +633,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
              * responses.
              */
             ALfloat coeffs[MAX_AMBI_COEFFS];
-            CalcAngleCoeffs((Device->Render_Mode==StereoPair) ? ScaleAzimuthFront(Azi, 1.5f) : Azi,
+            CalcAngleCoeffs((Device->mRenderMode==StereoPair) ? ScaleAzimuthFront(Azi, 1.5f) : Azi,
                             Elev, Spread, coeffs);
 
             /* NOTE: W needs to be scaled due to FuMa normalization. */
@@ -745,7 +745,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
             }
         }
     }
-    else if(Device->Render_Mode == HrtfRender)
+    else if(Device->mRenderMode == HrtfRender)
     {
         /* Full HRTF rendering. Skip the virtual channels and render to the
          * real outputs.
@@ -858,7 +858,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
              * input channels.
              */
             ALfloat coeffs[MAX_AMBI_COEFFS];
-            CalcAngleCoeffs((Device->Render_Mode==StereoPair) ? ScaleAzimuthFront(Azi, 1.5f) : Azi,
+            CalcAngleCoeffs((Device->mRenderMode==StereoPair) ? ScaleAzimuthFront(Azi, 1.5f) : Azi,
                             Elev, Spread, coeffs);
 
             for(ALsizei c{0};c < num_channels;c++)
@@ -927,7 +927,7 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
 
                 ALfloat coeffs[MAX_AMBI_COEFFS];
                 CalcAngleCoeffs(
-                    (Device->Render_Mode==StereoPair) ? ScaleAzimuthFront(chans[c].angle, 3.0f)
+                    (Device->mRenderMode==StereoPair) ? ScaleAzimuthFront(chans[c].angle, 3.0f)
                                                       : chans[c].angle,
                     chans[c].elevation, Spread, coeffs
                 );
@@ -1023,11 +1023,11 @@ void CalcNonAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, cons
         voice->Step = MAX_PITCH<<FRACTIONBITS;
     else
         voice->Step = maxi(fastf2i(Pitch * FRACTIONONE), 1);
-    if(props->Resampler == BSinc24Resampler)
+    if(props->mResampler == BSinc24Resampler)
         BsincPrepare(voice->Step, &voice->ResampleState.bsinc, &bsinc24);
-    else if(props->Resampler == BSinc12Resampler)
+    else if(props->mResampler == BSinc12Resampler)
         BsincPrepare(voice->Step, &voice->ResampleState.bsinc, &bsinc12);
-    voice->Resampler = SelectResampler(props->Resampler);
+    voice->Resampler = SelectResampler(props->mResampler);
 
     /* Calculate gains */
     const ALlistener &Listener = ALContext->Listener;
@@ -1361,11 +1361,11 @@ void CalcAttnSourceParams(ALvoice *voice, const ALvoicePropsBase *props, const A
         voice->Step = MAX_PITCH<<FRACTIONBITS;
     else
         voice->Step = maxi(fastf2i(Pitch * FRACTIONONE), 1);
-    if(props->Resampler == BSinc24Resampler)
+    if(props->mResampler == BSinc24Resampler)
         BsincPrepare(voice->Step, &voice->ResampleState.bsinc, &bsinc24);
-    else if(props->Resampler == BSinc12Resampler)
+    else if(props->mResampler == BSinc12Resampler)
         BsincPrepare(voice->Step, &voice->ResampleState.bsinc, &bsinc12);
-    voice->Resampler = SelectResampler(props->Resampler);
+    voice->Resampler = SelectResampler(props->mResampler);
 
     ALfloat ev{0.0f}, az{0.0f};
     if(Distance > 0.0f)
@@ -1413,8 +1413,8 @@ void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
         );
         if(LIKELY(buffer != buffers_end))
         {
-            if(voice->Props.SpatializeMode==SpatializeOn ||
-               (voice->Props.SpatializeMode==SpatializeAuto && (*buffer)->FmtChannels==FmtMono))
+            if(voice->Props.mSpatializeMode==SpatializeOn ||
+               (voice->Props.mSpatializeMode==SpatializeAuto && (*buffer)->mFmtChannels==FmtMono))
                 CalcAttnSourceParams(voice, &voice->Props, *buffer, context);
             else
                 CalcNonAttnSourceParams(voice, &voice->Props, *buffer, context);

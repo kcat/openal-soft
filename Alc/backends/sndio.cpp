@@ -40,7 +40,7 @@ static const ALCchar sndio_device[] = "SndIO Default";
 
 
 struct SndioPlayback final : public ALCbackend {
-    struct sio_hdl *sndHandle{nullptr};
+    sio_hdl *sndHandle{nullptr};
 
     ALvoid *mix_data{nullptr};
     ALsizei data_size{0};
@@ -152,7 +152,7 @@ static ALCenum SndioPlayback_open(SndioPlayback *self, const ALCchar *name)
 static ALCboolean SndioPlayback_reset(SndioPlayback *self)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
-    struct sio_par par;
+    sio_par par;
 
     sio_initpar(&par);
 
@@ -277,7 +277,7 @@ static void SndioPlayback_stop(SndioPlayback *self)
 
 
 struct SndioCapture final : public ALCbackend {
-    struct sio_hdl *sndHandle{nullptr};
+    sio_hdl *sndHandle{nullptr};
 
     RingBufferPtr ring{nullptr};
 
@@ -379,7 +379,7 @@ static int SndioCapture_recordProc(SndioCapture *self)
 static ALCenum SndioCapture_open(SndioCapture *self, const ALCchar *name)
 {
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
-    struct sio_par par;
+    sio_par par;
 
     if(!name)
         name = sndio_device;
@@ -536,7 +536,7 @@ bool SndIOBackendFactory::init()
 bool SndIOBackendFactory::querySupport(ALCbackend_Type type)
 { return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
 
-void SndIOBackendFactory::probe(enum DevProbe type, std::string *outnames)
+void SndIOBackendFactory::probe(DevProbe type, std::string *outnames)
 {
     switch(type)
     {

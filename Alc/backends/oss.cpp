@@ -170,7 +170,7 @@ void ALCossListPopulate(al::vector<DevMap> *devlist, int type_flag)
         goto done;
     }
 
-    struct oss_sysinfo si;
+    oss_sysinfo si;
     if(ioctl(fd, SNDCTL_SYSINFO, &si) == -1)
     {
         TRACE("SNDCTL_SYSINFO failed: %s\n", strerror(errno));
@@ -179,7 +179,7 @@ void ALCossListPopulate(al::vector<DevMap> *devlist, int type_flag)
 
     for(int i{0};i < si.numaudios;i++)
     {
-        struct oss_audioinfo ai;
+        oss_audioinfo ai;
         ai.dev = i;
         if(ioctl(fd, SNDCTL_AUDIOINFO, &ai) == -1)
         {
@@ -759,7 +759,7 @@ void OSSBackendFactory::deinit()
 bool OSSBackendFactory::querySupport(ALCbackend_Type type)
 { return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
 
-void OSSBackendFactory::probe(enum DevProbe type, std::string *outnames)
+void OSSBackendFactory::probe(DevProbe type, std::string *outnames)
 {
     auto add_device = [outnames](const DevMap &entry) -> void
     {

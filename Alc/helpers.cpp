@@ -125,13 +125,13 @@ DEFINE_PROPERTYKEY(PKEY_AudioEndpoint_GUID, 0x1da5d803, 0xd492, 0x4edd, 0x8c, 0x
 
 #if defined(HAVE_GCC_GET_CPUID) && (defined(__i386__) || defined(__x86_64__) || \
                                     defined(_M_IX86) || defined(_M_X64))
-typedef unsigned int reg_type;
+using reg_type = unsigned int;
 static inline void get_cpuid(int f, reg_type *regs)
 { __get_cpuid(f, &regs[0], &regs[1], &regs[2], &regs[3]); }
 #define CAN_GET_CPUID
 #elif defined(HAVE_CPUID_INTRINSIC) && (defined(__i386__) || defined(__x86_64__) || \
                                         defined(_M_IX86) || defined(_M_X64))
-typedef int reg_type;
+using reg_type = int;
 static inline void get_cpuid(int f, reg_type *regs)
 { (__cpuid)(regs, f); }
 #define CAN_GET_CPUID

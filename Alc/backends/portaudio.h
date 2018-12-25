@@ -10,7 +10,7 @@ public:
 
     bool querySupport(ALCbackend_Type type) override;
 
-    void probe(enum DevProbe type, std::string *outnames) override;
+    void probe(DevProbe type, std::string *outnames) override;
 
     ALCbackend *createBackend(ALCdevice *device, ALCbackend_Type type) override;
 

@@ -669,7 +669,7 @@ void WinMMBackendFactory::deinit()
 bool WinMMBackendFactory::querySupport(ALCbackend_Type type)
 { return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
 
-void WinMMBackendFactory::probe(enum DevProbe type, std::string *outnames)
+void WinMMBackendFactory::probe(DevProbe type, std::string *outnames)
 {
     auto add_device = [outnames](const std::string &dname) -> void
     {

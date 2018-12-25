@@ -301,7 +301,7 @@ bool SolarisBackendFactory::init()
 bool SolarisBackendFactory::querySupport(ALCbackend_Type type)
 { return (type == ALCbackend_Playback); }
 
-void SolarisBackendFactory::probe(enum DevProbe type, std::string *outnames)
+void SolarisBackendFactory::probe(DevProbe type, std::string *outnames)
 {
     switch(type)
     {

@@ -119,7 +119,7 @@ void deviceList(int type, al::vector<DevMap> *devmap)
     int max_cards, card, err, dev;
     DevMap entry;
     char name[1024];
-    struct snd_ctl_hw_info info;
+    snd_ctl_hw_info info;
 
     max_cards = snd_cards();
     if(max_cards < 0)
@@ -195,7 +195,7 @@ FORCE_ALIGN static int qsa_proc_playback(void *ptr)
     ALCdevice *device = STATIC_CAST(ALCbackend,self)->mDevice;
     qsa_data *data = self->ExtraData;
     snd_pcm_channel_status_t status;
-    struct sched_param param;
+    sched_param param;
     char* write_ptr;
     ALint len;
     int sret;
@@ -978,7 +978,7 @@ void QSABackendFactory::deinit()
 bool QSABackendFactory::querySupport(ALCbackend_Type type)
 { return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
 
-void QSABackendFactory::probe(enum DevProbe type, std::string *outnames)
+void QSABackendFactory::probe(DevProbe type, std::string *outnames)
 {
     auto add_device = [outnames](const DevMap &entry) -> void
     {

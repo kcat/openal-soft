@@ -46,7 +46,7 @@ struct EffectStateFactory {
 
 struct ALeffectslotArray {
     ALsizei count;
-    struct ALeffectslot *slot[];
+    ALeffectslot *slot[];
 };
 
 

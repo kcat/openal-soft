@@ -559,7 +559,7 @@ void JackBackendFactory::deinit()
 bool JackBackendFactory::querySupport(ALCbackend_Type type)
 { return (type == ALCbackend_Playback); }
 
-void JackBackendFactory::probe(enum DevProbe type, std::string *outnames)
+void JackBackendFactory::probe(DevProbe type, std::string *outnames)
 {
     switch(type)
     {

@@ -754,7 +754,7 @@ bool CoreAudioBackendFactory::init() { return true; }
 bool CoreAudioBackendFactory::querySupport(ALCbackend_Type type)
 { return (type == ALCbackend_Playback || ALCbackend_Capture); }
 
-void CoreAudioBackendFactory::probe(enum DevProbe type, std::string *outnames)
+void CoreAudioBackendFactory::probe(DevProbe type, std::string *outnames)
 {
     switch(type)
     {

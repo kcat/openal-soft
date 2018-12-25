@@ -46,7 +46,7 @@
 static const ALCchar opensl_device[] = "OpenSL";
 
 
-static SLuint32 GetChannelMask(enum DevFmtChannels chans)
+static SLuint32 GetChannelMask(DevFmtChannels chans)
 {
     switch(chans)
     {
@@ -75,7 +75,7 @@ static SLuint32 GetChannelMask(enum DevFmtChannels chans)
 }
 
 #ifdef SL_DATAFORMAT_PCM_EX
-static SLuint32 GetTypeRepresentation(enum DevFmtType type)
+static SLuint32 GetTypeRepresentation(DevFmtType type)
 {
     switch(type)
     {
@@ -979,7 +979,7 @@ bool OSLBackendFactory::init() { return true; }
 bool OSLBackendFactory::querySupport(ALCbackend_Type type)
 { return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
 
-void OSLBackendFactory::probe(enum DevProbe type, std::string *outnames)
+void OSLBackendFactory::probe(DevProbe type, std::string *outnames)
 {
     switch(type)
     {

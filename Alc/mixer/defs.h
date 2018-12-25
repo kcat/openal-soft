@@ -6,12 +6,8 @@
 #include "alMain.h"
 #include "alu.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 struct MixGains;
-
 struct MixHrtfParams;
 struct HrtfState;
 
@@ -26,8 +22,8 @@ const ALfloat *Resample_bsinc_C(const InterpState *state, const ALfloat *RESTRIC
 /* C mixers */
 void MixHrtf_C(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                const ALfloat *data, ALsizei Offset, ALsizei OutPos,
-               const ALsizei IrSize, struct MixHrtfParams *hrtfparams,
-               struct HrtfState *hrtfstate, ALsizei BufferSize);
+               const ALsizei IrSize, MixHrtfParams *hrtfparams,
+               HrtfState *hrtfstate, ALsizei BufferSize);
 void MixHrtfBlend_C(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                     const ALfloat *data, ALsizei Offset, ALsizei OutPos,
                     const ALsizei IrSize, const HrtfParams *oldparams,
@@ -47,8 +43,8 @@ void MixRow_C(ALfloat *OutBuffer, const ALfloat *Gains,
 /* SSE mixers */
 void MixHrtf_SSE(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                  const ALfloat *data, ALsizei Offset, ALsizei OutPos,
-                 const ALsizei IrSize, struct MixHrtfParams *hrtfparams,
-                 struct HrtfState *hrtfstate, ALsizei BufferSize);
+                 const ALsizei IrSize, MixHrtfParams *hrtfparams,
+                 HrtfState *hrtfstate, ALsizei BufferSize);
 void MixHrtfBlend_SSE(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                       const ALfloat *data, ALsizei Offset, ALsizei OutPos,
                       const ALsizei IrSize, const HrtfParams *oldparams,
@@ -94,8 +90,8 @@ const ALfloat *Resample_bsinc_SSE(const InterpState *state, const ALfloat *RESTR
 /* Neon mixers */
 void MixHrtf_Neon(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                   const ALfloat *data, ALsizei Offset, ALsizei OutPos,
-                  const ALsizei IrSize, struct MixHrtfParams *hrtfparams,
-                  struct HrtfState *hrtfstate, ALsizei BufferSize);
+                  const ALsizei IrSize, MixHrtfParams *hrtfparams,
+                  HrtfState *hrtfstate, ALsizei BufferSize);
 void MixHrtfBlend_Neon(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                        const ALfloat *data, ALsizei Offset, ALsizei OutPos,
                        const ALsizei IrSize, const HrtfParams *oldparams,
@@ -119,9 +115,5 @@ const ALfloat *Resample_lerp_Neon(const InterpState *state, const ALfloat *RESTR
 const ALfloat *Resample_bsinc_Neon(const InterpState *state, const ALfloat *RESTRICT src,
                                    ALsizei frac, ALint increment, ALfloat *RESTRICT dst,
                                    ALsizei dstlen);
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
 
 #endif /* MIXER_DEFS_H */

@@ -34,7 +34,7 @@ ClockLatency GetClockLatency(ALCdevice *device);
 struct ALCbackendVtable;
 
 struct ALCbackend {
-    const struct ALCbackendVtable *vtbl;
+    const ALCbackendVtable *vtbl;
 
     ALCdevice *mDevice;
 
@@ -84,7 +84,7 @@ DECLARE_THUNK(T, ALCbackend, void, unlock)                                    \
 static void T##_ALCbackend_Delete(void *ptr)                                  \
 { T##_Delete(STATIC_UPCAST(T, ALCbackend, (ALCbackend*)ptr)); }               \
                                                                               \
-static const struct ALCbackendVtable T##_ALCbackend_vtable = {                \
+static const ALCbackendVtable T##_ALCbackend_vtable = {                       \
     T##_ALCbackend_Destruct,                                                  \
                                                                               \
     T##_ALCbackend_open,                                                      \
@@ -114,7 +114,7 @@ struct BackendFactory {
 
     virtual bool querySupport(ALCbackend_Type type) = 0;
 
-    virtual void probe(enum DevProbe type, std::string *outnames) = 0;
+    virtual void probe(DevProbe type, std::string *outnames) = 0;
 
     virtual ALCbackend *createBackend(ALCdevice *device, ALCbackend_Type type) = 0;
 };

@@ -35,7 +35,7 @@
 #include "alError.h"
 
 
-const struct EffectList EffectList[EFFECTLIST_SIZE] = {
+const EffectList gEffectList[14]{
     { "eaxreverb",  EAXREVERB_EFFECT,  AL_EFFECT_EAXREVERB },
     { "reverb",     REVERB_EFFECT,     AL_EFFECT_REVERB },
     { "autowah",    AUTOWAH_EFFECT,    AL_EFFECT_AUTOWAH },
@@ -397,9 +397,9 @@ AL_API ALvoid AL_APIENTRY alEffecti(ALuint effect, ALenum param, ALint value)
         if(param == AL_EFFECT_TYPE)
         {
             ALboolean isOk = (value == AL_EFFECT_NULL);
-            for(ALsizei i{0};!isOk && i < EFFECTLIST_SIZE;i++)
+            for(size_t i{0u};!isOk && i < countof(gEffectList);i++)
             {
-                if(value == EffectList[i].val && !DisabledEffects[EffectList[i].type])
+                if(value == gEffectList[i].val && !DisabledEffects[gEffectList[i].type])
                     isOk = AL_TRUE;
             }
 

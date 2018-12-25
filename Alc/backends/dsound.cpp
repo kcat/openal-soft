@@ -45,7 +45,7 @@
 #include "compat.h"
 
 /* MinGW-w64 needs this for some unknown reason now. */
-typedef const WAVEFORMATEX *LPCWAVEFORMATEX;
+using LPCWAVEFORMATEX = const WAVEFORMATEX*;
 #include <dsound.h>
 
 
@@ -960,7 +960,7 @@ void DSoundBackendFactory::deinit()
 bool DSoundBackendFactory::querySupport(ALCbackend_Type type)
 { return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
 
-void DSoundBackendFactory::probe(enum DevProbe type, std::string *outnames)
+void DSoundBackendFactory::probe(DevProbe type, std::string *outnames)
 {
     auto add_device = [outnames](const DevMap &entry) -> void
     {

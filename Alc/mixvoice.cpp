@@ -54,7 +54,7 @@ static_assert((INT_MAX>>FRACTIONBITS)/MAX_PITCH > BUFFERSIZE,
 static_assert(MAX_RESAMPLE_PADDING >= 24, "MAX_RESAMPLE_PADDING must be at least 24!");
 
 
-enum Resampler ResamplerDefault = LinearResampler;
+Resampler ResamplerDefault = LinearResampler;
 
 MixerFunc MixSamples = Mix_C;
 RowMixerFunc MixRowSamples = MixRow_C;
@@ -113,7 +113,7 @@ static inline HrtfMixerBlendFunc SelectHrtfBlendMixer(void)
     return MixHrtfBlend_C;
 }
 
-ResamplerFunc SelectResampler(enum Resampler resampler)
+ResamplerFunc SelectResampler(Resampler resampler)
 {
     switch(resampler)
     {
@@ -183,7 +183,7 @@ void aluInitMixer(void)
             char *end;
             long n = strtol(str, &end, 0);
             if(*end == '\0' && (n == PointResampler || n == LinearResampler || n == FIR4Resampler))
-                ResamplerDefault = static_cast<enum Resampler>(n);
+                ResamplerDefault = static_cast<Resampler>(n);
             else
                 WARN("Invalid resampler: %s\n", str);
         }
@@ -393,7 +393,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                         const ALbyte *Data{buffer->mData.data()};
                         LoadSamples(&SrcData[FilledAmt],
                             &Data[(DataPosInt*NumChannels + chan)*SampleSize],
-                            NumChannels, buffer->FmtType, DataSize
+                            NumChannels, buffer->mFmtType, DataSize
                         );
                         return CompLen;
                     };
@@ -417,7 +417,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                         const ALbyte *Data{buffer->mData.data()};
                         LoadSamples(&SrcData[FilledAmt],
                             &Data[(DataPosInt*NumChannels + chan)*SampleSize],
-                            NumChannels, buffer->FmtType, DataSize
+                            NumChannels, buffer->mFmtType, DataSize
                         );
                         return CompLen;
                     };
@@ -440,7 +440,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                             const ALbyte *Data{buffer->mData.data()};
                             LoadSamples(&SrcData[FilledAmt],
                                 &Data[(LoopStart*NumChannels + chan)*SampleSize],
-                                NumChannels, buffer->FmtType, DataSize
+                                NumChannels, buffer->mFmtType, DataSize
                             );
                             return CompLen;
                         };
@@ -479,7 +479,7 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                         Data += (pos*NumChannels + chan)*SampleSize;
 
                         LoadSamples(&SrcData[FilledAmt], Data, NumChannels,
-                                    buffer->FmtType, DataSize);
+                                    buffer->mFmtType, DataSize);
                         return CompLen;
                     };
                     auto buffers_end = tmpiter->buffers + tmpiter->num_buffers;

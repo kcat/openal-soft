@@ -678,7 +678,7 @@ void InitHrtfPanning(ALCdevice *device)
     /* Don't bother with HOA when using full HRTF rendering. Nothing needs it,
      * and it eases the CPU/memory load.
      */
-    if(device->Render_Mode != HrtfRender)
+    if(device->mRenderMode != HrtfRender)
     {
         device->AmbiUp.reset(new AmbiUpsampler{});
 
@@ -879,7 +879,7 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
     device->mHrtfState = nullptr;
     device->mHrtf = nullptr;
     device->HrtfName.clear();
-    device->Render_Mode = NormalRender;
+    device->mRenderMode = NormalRender;
 
     device->Dry.Ambi = AmbiConfig{};
     device->Dry.CoeffCount = 0;
@@ -1063,20 +1063,20 @@ void aluInitRenderer(ALCdevice *device, ALint hrtf_id, HrtfRequestMode hrtf_appr
             Hrtf_DecRef(old_hrtf);
         old_hrtf = nullptr;
 
-        device->Render_Mode = HrtfRender;
+        device->mRenderMode = HrtfRender;
         const char *mode;
         if(ConfigValueStr(device->DeviceName.c_str(), nullptr, "hrtf-mode", &mode))
         {
             if(strcasecmp(mode, "full") == 0)
-                device->Render_Mode = HrtfRender;
+                device->mRenderMode = HrtfRender;
             else if(strcasecmp(mode, "basic") == 0)
-                device->Render_Mode = NormalRender;
+                device->mRenderMode = NormalRender;
             else
                 ERR("Unexpected hrtf-mode: %s\n", mode);
         }
 
         TRACE("%s HRTF rendering enabled, using \"%s\"\n",
-            ((device->Render_Mode == HrtfRender) ? "Full" : "Basic"), device->HrtfName.c_str()
+            ((device->mRenderMode == HrtfRender) ? "Full" : "Basic"), device->HrtfName.c_str()
         );
         InitHrtfPanning(device);
         return;
@@ -1089,7 +1089,7 @@ no_hrtf:
     old_hrtf = nullptr;
     TRACE("HRTF disabled\n");
 
-    device->Render_Mode = StereoPair;
+    device->mRenderMode = StereoPair;
 
     int bs2blevel{((headphones && hrtf_appreq != Hrtf_Disable) ||
                    (hrtf_appreq == Hrtf_Enable)) ? 5 : 0};
@@ -1110,11 +1110,11 @@ no_hrtf:
     if(ConfigValueStr(device->DeviceName.c_str(), nullptr, "stereo-encoding", &mode))
     {
         if(strcasecmp(mode, "uhj") == 0)
-            device->Render_Mode = NormalRender;
+            device->mRenderMode = NormalRender;
         else if(strcasecmp(mode, "panpot") != 0)
             ERR("Unexpected stereo-encoding: %s\n", mode);
     }
-    if(device->Render_Mode == NormalRender)
+    if(device->mRenderMode == NormalRender)
     {
         device->Uhj_Encoder.reset(new Uhj2Encoder{});
         TRACE("UHJ enabled\n");

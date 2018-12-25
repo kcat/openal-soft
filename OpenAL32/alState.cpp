@@ -766,12 +766,12 @@ AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index)
 void UpdateContextProps(ALCcontext *context)
 {
     /* Get an unused proprty container, or allocate a new one as needed. */
-    struct ALcontextProps *props{context->FreeContextProps.load(std::memory_order_acquire)};
+    ALcontextProps *props{context->FreeContextProps.load(std::memory_order_acquire)};
     if(!props)
         props = static_cast<ALcontextProps*>(al_calloc(16, sizeof(*props)));
     else
     {
-        struct ALcontextProps *next;
+        ALcontextProps *next;
         do {
             next = props->next.load(std::memory_order_relaxed);
         } while(context->FreeContextProps.compare_exchange_weak(props, next,

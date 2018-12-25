@@ -59,7 +59,7 @@ enum Resampler {
 
     ResamplerMax = BSinc24Resampler
 };
-extern enum Resampler ResamplerDefault;
+extern Resampler ResamplerDefault;
 
 /* The number of distinct scale and phase intervals within the bsinc filter
  * table.
@@ -73,7 +73,7 @@ extern enum Resampler ResamplerDefault;
  * stateless.  This just keeps it from having to recompute scale-related
  * mappings for every sample.
  */
-typedef struct BsincState {
+struct BsincState {
     ALfloat sf; /* Scale interpolation factor. */
     ALsizei m;  /* Coefficient count. */
     ALsizei l;  /* Left coefficient offset. */
@@ -82,18 +82,17 @@ typedef struct BsincState {
      * index follows contiguously.
      */
     const ALfloat *filter;
-} BsincState;
+};
 
-typedef union InterpState {
+union InterpState {
     BsincState bsinc;
-} InterpState;
+};
 
-typedef const ALfloat* (*ResamplerFunc)(const InterpState *state,
+using ResamplerFunc = const ALfloat*(*)(const InterpState *state,
     const ALfloat *RESTRICT src, ALsizei frac, ALint increment,
-    ALfloat *RESTRICT dst, ALsizei dstlen
-);
+    ALfloat *RESTRICT dst, ALsizei dstlen);
 
-void BsincPrepare(const ALuint increment, BsincState *state, const struct BSincTable *table);
+void BsincPrepare(const ALuint increment, BsincState *state, const BSincTable *table);
 
 extern const BSincTable bsinc12;
 extern const BSincTable bsinc24;
@@ -161,9 +160,9 @@ struct ALvoicePropsBase {
     ALfloat Orientation[2][3];
     ALboolean HeadRelative;
     DistanceModel mDistanceModel;
-    enum Resampler Resampler;
+    Resampler mResampler;
     ALboolean DirectChannels;
-    enum SpatializeMode SpatializeMode;
+    SpatializeMode mSpatializeMode;
 
     ALboolean DryGainHFAuto;
     ALboolean WetGainAuto;
@@ -187,7 +186,7 @@ struct ALvoicePropsBase {
         ALfloat LFReference;
     } Direct;
     struct SendData {
-        struct ALeffectslot *Slot;
+        ALeffectslot *Slot;
         ALfloat Gain;
         ALfloat GainHF;
         ALfloat HFReference;
@@ -272,26 +271,22 @@ struct ALvoice {
 void DeinitVoice(ALvoice *voice) noexcept;
 
 
-typedef void (*MixerFunc)(const ALfloat *data, ALsizei OutChans,
-                          ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], ALfloat *CurrentGains,
-                          const ALfloat *TargetGains, ALsizei Counter, ALsizei OutPos,
-                          ALsizei BufferSize);
-typedef void (*RowMixerFunc)(ALfloat *OutBuffer, const ALfloat *gains,
-                             const ALfloat (*RESTRICT data)[BUFFERSIZE], ALsizei InChans,
-                             ALsizei InPos, ALsizei BufferSize);
-typedef void (*HrtfMixerFunc)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-                              const ALfloat *data, ALsizei Offset, ALsizei OutPos,
-                              const ALsizei IrSize, MixHrtfParams *hrtfparams,
-                              HrtfState *hrtfstate, ALsizei BufferSize);
-typedef void (*HrtfMixerBlendFunc)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-                                   const ALfloat *data, ALsizei Offset, ALsizei OutPos,
-                                   const ALsizei IrSize, const HrtfParams *oldparams,
-                                   MixHrtfParams *newparams, HrtfState *hrtfstate,
-                                   ALsizei BufferSize);
-typedef void (*HrtfDirectMixerFunc)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-                                    const ALfloat *data, ALsizei Offset, const ALsizei IrSize,
-                                    const ALfloat (*RESTRICT Coeffs)[2],
-                                    ALfloat (*RESTRICT Values)[2], ALsizei BufferSize);
+using MixerFunc = void(*)(const ALfloat *data, ALsizei OutChans,
+    ALfloat (*RESTRICT OutBuffer)[BUFFERSIZE], ALfloat *CurrentGains,
+    const ALfloat *TargetGains, ALsizei Counter, ALsizei OutPos, ALsizei BufferSize);
+using RowMixerFunc = void(*)(ALfloat *OutBuffer, const ALfloat *gains,
+    const ALfloat (*RESTRICT data)[BUFFERSIZE], ALsizei InChans, ALsizei InPos,
+    ALsizei BufferSize);
+using HrtfMixerFunc = void(*)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
+    const ALfloat *data, ALsizei Offset, ALsizei OutPos, const ALsizei IrSize,
+    MixHrtfParams *hrtfparams, HrtfState *hrtfstate, ALsizei BufferSize);
+using HrtfMixerBlendFunc = void(*)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
+    const ALfloat *data, ALsizei Offset, ALsizei OutPos, const ALsizei IrSize,
+    const HrtfParams *oldparams, MixHrtfParams *newparams, HrtfState *hrtfstate,
+    ALsizei BufferSize);
+using HrtfDirectMixerFunc = void(*)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
+    const ALfloat *data, ALsizei Offset, const ALsizei IrSize, const ALfloat (*RESTRICT Coeffs)[2],
+    ALfloat (*RESTRICT Values)[2], ALsizei BufferSize);
 
 
 #define GAIN_MIX_MAX  (1000.0f) /* +60dB */
@@ -479,7 +474,7 @@ inline void ComputePanGains(const MixParams *dry, const ALfloat*RESTRICT coeffs,
 void ComputePanGains(const ALeffectslot *slot, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS]);
 
 
-ALboolean MixSource(struct ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsizei SamplesToDo);
+ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsizei SamplesToDo);
 
 void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples);
 /* Caller must lock the device, and the mixer must not be running. */

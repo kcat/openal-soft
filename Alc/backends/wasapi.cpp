@@ -1601,7 +1601,7 @@ HRESULT ALCwasapiCapture::resetProxy()
         wfx = nullptr;
     }
 
-    enum DevFmtType srcType;
+    DevFmtType srcType;
     if(IsEqualGUID(OutputType.SubFormat, KSDATAFORMAT_SUBTYPE_PCM))
     {
         if(OutputType.Format.wBitsPerSample == 8)
@@ -1839,7 +1839,7 @@ void WasapiBackendFactory::deinit()
 bool WasapiBackendFactory::querySupport(ALCbackend_Type type)
 { return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
 
-void WasapiBackendFactory::probe(enum DevProbe type, std::string *outnames)
+void WasapiBackendFactory::probe(DevProbe type, std::string *outnames)
 {
     ThreadRequest req{ nullptr, 0 };
 

@@ -100,8 +100,8 @@ constexpr inline size_t countof(const T(&)[N]) noexcept
 #define FAM_SIZE(T, M, N)  (offsetof(T, M) + sizeof(((T*)NULL)->M[0])*(N))
 
 
-typedef ALint64SOFT ALint64;
-typedef ALuint64SOFT ALuint64;
+using ALint64 = ALint64SOFT;
+using ALuint64 = ALuint64SOFT;
 
 #ifndef U64
 #if defined(_MSC_VER)
@@ -537,23 +537,23 @@ enum RenderMode {
 };
 
 
-typedef ALfloat ChannelConfig[MAX_AMBI_COEFFS];
+using ChannelConfig = ALfloat[MAX_AMBI_COEFFS];
 struct BFChannelConfig {
     ALfloat Scale;
     ALsizei Index;
 };
 
-typedef union AmbiConfig {
+union AmbiConfig {
     /* Ambisonic coefficients for mixing to the dry buffer. */
     ChannelConfig Coeffs[MAX_OUTPUT_CHANNELS];
     /* Coefficient channel mapping for mixing to the dry buffer. */
     BFChannelConfig Map[MAX_OUTPUT_CHANNELS];
-} AmbiConfig;
+};
 
 
 struct BufferSubList {
     uint64_t FreeMask{~uint64_t{}};
-    struct ALbuffer *Buffers{nullptr}; /* 64 */
+    ALbuffer *Buffers{nullptr}; /* 64 */
 
     BufferSubList() noexcept = default;
     BufferSubList(const BufferSubList&) = delete;
@@ -568,7 +568,7 @@ struct BufferSubList {
 
 struct EffectSubList {
     uint64_t FreeMask{~uint64_t{}};
-    struct ALeffect *Effects{nullptr}; /* 64 */
+    ALeffect *Effects{nullptr}; /* 64 */
 
     EffectSubList() noexcept = default;
     EffectSubList(const EffectSubList&) = delete;
@@ -583,7 +583,7 @@ struct EffectSubList {
 
 struct FilterSubList {
     uint64_t FreeMask{~uint64_t{}};
-    struct ALfilter *Filters{nullptr}; /* 64 */
+    ALfilter *Filters{nullptr}; /* 64 */
 
     FilterSubList() noexcept = default;
     FilterSubList(const FilterSubList&) = delete;
@@ -597,11 +597,11 @@ struct FilterSubList {
 };
 
 
-typedef struct EnumeratedHrtf {
+struct EnumeratedHrtf {
     std::string name;
 
     HrtfHandle *hrtf;
-} EnumeratedHrtf;
+};
 
 
 /* Maximum delay in samples for speaker distance compensation. */
@@ -654,7 +654,7 @@ public:
  */
 #define BUFFERSIZE 2048
 
-typedef struct MixParams {
+struct MixParams {
     AmbiConfig Ambi{};
     /* Number of coefficients in each Ambi.Coeffs to mix together (4 for first-
      * order, 9 for second-order, etc). If the count is 0, Ambi.Map is used
@@ -664,16 +664,16 @@ typedef struct MixParams {
 
     ALfloat (*Buffer)[BUFFERSIZE]{nullptr};
     ALsizei NumChannels{0};
-} MixParams;
+};
 
-typedef struct RealMixParams {
-    enum Channel ChannelName[MAX_OUTPUT_CHANNELS]{};
+struct RealMixParams {
+    Channel ChannelName[MAX_OUTPUT_CHANNELS]{};
 
     ALfloat (*Buffer)[BUFFERSIZE]{nullptr};
     ALsizei NumChannels{0};
-} RealMixParams;
+};
 
-typedef void (*POSTPROCESS)(ALCdevice *device, ALsizei SamplesToDo);
+using POSTPROCESS = void(*)(ALCdevice *device, ALsizei SamplesToDo);
 
 struct ALCdevice_struct {
     RefCount ref{1u};
@@ -729,7 +729,7 @@ struct ALCdevice_struct {
     std::mutex FilterLock;
 
     /* Rendering mode. */
-    RenderMode Render_Mode{NormalRender};
+    RenderMode mRenderMode{NormalRender};
 
     /* The average speaker distance as determined by the ambdec configuration
      * (or alternatively, by the NFC-HOA reference delay). Only used for NFC.

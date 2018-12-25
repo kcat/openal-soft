@@ -1791,7 +1791,7 @@ bool PulseBackendFactory::querySupport(ALCbackend_Type type)
     return false;
 }
 
-void PulseBackendFactory::probe(enum DevProbe type, std::string *outnames)
+void PulseBackendFactory::probe(DevProbe type, std::string *outnames)
 {
     auto add_device = [outnames](const DevMap &entry) -> void
     {

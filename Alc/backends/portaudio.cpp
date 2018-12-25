@@ -488,7 +488,7 @@ void PortBackendFactory::deinit()
 bool PortBackendFactory::querySupport(ALCbackend_Type type)
 { return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
 
-void PortBackendFactory::probe(enum DevProbe type, std::string *outnames)
+void PortBackendFactory::probe(DevProbe type, std::string *outnames)
 {
     switch(type)
     {

@@ -11,27 +11,25 @@
 
 struct ALfilter;
 
-typedef struct ALfilterVtable {
-    void (*const setParami)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALint val);
-    void (*const setParamiv)(struct ALfilter *filter, ALCcontext *context, ALenum param, const ALint *vals);
-    void (*const setParamf)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALfloat val);
-    void (*const setParamfv)(struct ALfilter *filter, ALCcontext *context, ALenum param, const ALfloat *vals);
+struct ALfilterVtable {
+    void (*const setParami)(ALfilter *filter, ALCcontext *context, ALenum param, ALint val);
+    void (*const setParamiv)(ALfilter *filter, ALCcontext *context, ALenum param, const ALint *vals);
+    void (*const setParamf)(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat val);
+    void (*const setParamfv)(ALfilter *filter, ALCcontext *context, ALenum param, const ALfloat *vals);
 
-    void (*const getParami)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALint *val);
-    void (*const getParamiv)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALint *vals);
-    void (*const getParamf)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *val);
-    void (*const getParamfv)(struct ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *vals);
-} ALfilterVtable;
+    void (*const getParami)(ALfilter *filter, ALCcontext *context, ALenum param, ALint *val);
+    void (*const getParamiv)(ALfilter *filter, ALCcontext *context, ALenum param, ALint *vals);
+    void (*const getParamf)(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *val);
+    void (*const getParamfv)(ALfilter *filter, ALCcontext *context, ALenum param, ALfloat *vals);
+};
 
-#define DEFINE_ALFILTER_VTABLE(T)           \
-const struct ALfilterVtable T##_vtable = {  \
-    T##_setParami, T##_setParamiv,          \
-    T##_setParamf, T##_setParamfv,          \
-    T##_getParami, T##_getParamiv,          \
-    T##_getParamf, T##_getParamfv,          \
+#define DEFINE_ALFILTER_VTABLE(T)                                  \
+const ALfilterVtable T##_vtable = {                                \
+    T##_setParami, T##_setParamiv, T##_setParamf, T##_setParamfv,  \
+    T##_getParami, T##_getParamiv, T##_getParamf, T##_getParamfv,  \
 }
 
-typedef struct ALfilter {
+struct ALfilter {
     // Filter type (AL_FILTER_NULL, ...)
     ALenum type;
 
@@ -41,11 +39,11 @@ typedef struct ALfilter {
     ALfloat GainLF;
     ALfloat LFReference;
 
-    const struct ALfilterVtable *vtab;
+    const ALfilterVtable *vtab;
 
     /* Self ID */
     ALuint id;
-} ALfilter;
+};
 #define ALfilter_setParami(o, c, p, v)   ((o)->vtab->setParami(o, c, p, v))
 #define ALfilter_setParamf(o, c, p, v)   ((o)->vtab->setParamf(o, c, p, v))
 #define ALfilter_setParamiv(o, c, p, v)  ((o)->vtab->setParamiv(o, c, p, v))

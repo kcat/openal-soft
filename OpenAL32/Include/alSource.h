@@ -9,23 +9,20 @@
 
 #define DEFAULT_SENDS  2
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 struct ALbuffer;
 struct ALsource;
+struct ALeffectslot;
 
 
-typedef struct ALbufferlistitem {
+struct ALbufferlistitem {
     std::atomic<ALbufferlistitem*> next;
     ALsizei max_samples;
     ALsizei num_buffers;
-    struct ALbuffer *buffers[];
-} ALbufferlistitem;
+    ALbuffer *buffers[];
+};
 
 
-typedef struct ALsource {
+struct ALsource {
     /** Source properties. */
     ALfloat   Pitch;
     ALfloat   Gain;
@@ -44,9 +41,9 @@ typedef struct ALsource {
     ALboolean HeadRelative;
     ALboolean Looping;
     DistanceModel mDistanceModel;
-    enum Resampler Resampler;
+    Resampler mResampler;
     ALboolean DirectChannels;
-    enum SpatializeMode Spatialize;
+    SpatializeMode mSpatialize;
 
     ALboolean DryGainHFAuto;
     ALboolean WetGainAuto;
@@ -73,7 +70,7 @@ typedef struct ALsource {
         ALfloat LFReference;
     } Direct;
     struct SendData {
-        struct ALeffectslot *Slot;
+        ALeffectslot *Slot;
         ALfloat Gain;
         ALfloat GainHF;
         ALfloat HFReference;
@@ -114,12 +111,8 @@ typedef struct ALsource {
 
     ALsource(const ALsource&) = delete;
     ALsource& operator=(const ALsource&) = delete;
-} ALsource;
+};
 
 void UpdateAllSourceProps(ALCcontext *context);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

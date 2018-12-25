@@ -241,7 +241,7 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
     if((access&AL_PRESERVE_DATA_BIT_SOFT))
     {
         /* Can only preserve data with the same format and alignment. */
-        if(UNLIKELY(ALBuf->FmtChannels != DstChannels || ALBuf->OriginalType != SrcType))
+        if(UNLIKELY(ALBuf->mFmtChannels != DstChannels || ALBuf->OriginalType != SrcType))
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched format");
         if(UNLIKELY(ALBuf->OriginalAlign != align))
             SETERR_RETURN(context, AL_INVALID_VALUE,, "Preserving data of mismatched alignment");
@@ -322,8 +322,8 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALuint freq, ALsizei size, U
     ALBuf->OriginalType = SrcType;
 
     ALBuf->Frequency = freq;
-    ALBuf->FmtChannels = DstChannels;
-    ALBuf->FmtType = DstType;
+    ALBuf->mFmtChannels = DstChannels;
+    ALBuf->mFmtType = DstType;
     ALBuf->Access = access;
 
     ALBuf->SampleLen = frames;
@@ -683,7 +683,7 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
     ALsizei align{SanitizeAlignment(srctype, unpack_align)};
     if(UNLIKELY(align < 1))
         alSetError(context.get(), AL_INVALID_VALUE, "Invalid unpack alignment %d", unpack_align);
-    else if(UNLIKELY((long)srcchannels != (long)albuf->FmtChannels ||
+    else if(UNLIKELY((long)srcchannels != (long)albuf->mFmtChannels ||
                     srctype != albuf->OriginalType))
         alSetError(context.get(), AL_INVALID_ENUM, "Unpacking data with mismatched format");
     else if(UNLIKELY(align != albuf->OriginalAlign))
@@ -695,8 +695,8 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
                 buffer);
     else
     {
-        ALsizei num_chans{ChannelsFromFmt(albuf->FmtChannels)};
-        ALsizei frame_size{num_chans * BytesFromFmt(albuf->FmtType)};
+        ALsizei num_chans{ChannelsFromFmt(albuf->mFmtChannels)};
+        ALsizei frame_size{num_chans * BytesFromFmt(albuf->mFmtType)};
         ALsizei byte_align{
             (albuf->OriginalType == UserFmtIMA4) ? ((align-1)/2 + 4) * num_chans :
             (albuf->OriginalType == UserFmtMSADPCM) ? ((align-2)/2 + 7) * num_chans :
@@ -722,15 +722,15 @@ AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, cons
             length = length/byte_align * align;
 
             void *dst = albuf->mData.data() + offset;
-            if(srctype == UserFmtIMA4 && albuf->FmtType == FmtShort)
+            if(srctype == UserFmtIMA4 && albuf->mFmtType == FmtShort)
                 Convert_ALshort_ALima4(static_cast<ALshort*>(dst),
                     static_cast<const ALubyte*>(data), num_chans, length, align);
-            else if(srctype == UserFmtMSADPCM && albuf->FmtType == FmtShort)
+            else if(srctype == UserFmtMSADPCM && albuf->mFmtType == FmtShort)
                 Convert_ALshort_ALmsadpcm(static_cast<ALshort*>(dst),
                     static_cast<const ALubyte*>(data), num_chans, length, align);
             else
             {
-                assert((long)srctype == (long)albuf->FmtType);
+                assert((long)srctype == (long)albuf->mFmtType);
                 memcpy(dst, data, length*frame_size);
             }
         }
@@ -1019,16 +1019,15 @@ AL_API ALvoid AL_APIENTRY alGetBufferi(ALuint buffer, ALenum param, ALint *value
         break;
 
     case AL_BITS:
-        *value = BytesFromFmt(albuf->FmtType) * 8;
+        *value = BytesFromFmt(albuf->mFmtType) * 8;
         break;
 
     case AL_CHANNELS:
-        *value = ChannelsFromFmt(albuf->FmtChannels);
+        *value = ChannelsFromFmt(albuf->mFmtChannels);
         break;
 
     case AL_SIZE:
-        *value = albuf->SampleLen * FrameSizeFromFmt(albuf->FmtChannels,
-                                                     albuf->FmtType);
+        *value = albuf->SampleLen * FrameSizeFromFmt(albuf->mFmtChannels, albuf->mFmtType);
         break;
 
     case AL_UNPACK_BLOCK_ALIGNMENT_SOFT:

@@ -44,8 +44,7 @@ inline void LoadSampleArray(ALfloat *RESTRICT dst, const void *src, ALint srcste
         dst[i] = LoadSample<T>(ssrc[i*srcstep]);
 }
 
-void LoadSamples(ALfloat *dst, const ALvoid *src, ALint srcstep, enum DevFmtType srctype,
-                 ALsizei samples)
+void LoadSamples(ALfloat *dst, const ALvoid *src, ALint srcstep, DevFmtType srctype, ALsizei samples)
 {
 #define HANDLE_FMT(T)                                                         \
     case T: LoadSampleArray<T>(dst, src, srcstep, samples); break
@@ -95,7 +94,7 @@ inline void StoreSampleArray(void *dst, const ALfloat *RESTRICT src, ALint dstst
 }
 
 
-void StoreSamples(ALvoid *dst, const ALfloat *src, ALint dststep, enum DevFmtType dsttype, ALsizei samples)
+void StoreSamples(ALvoid *dst, const ALfloat *src, ALint dststep, DevFmtType dsttype, ALsizei samples)
 {
 #define HANDLE_FMT(T)                                                         \
     case T: StoreSampleArray<T>(dst, src, dststep, samples); break
@@ -136,9 +135,8 @@ void Stereo2Mono(ALfloat *RESTRICT dst, const void *src, ALsizei frames)
 
 } // namespace
 
-SampleConverter *CreateSampleConverter(enum DevFmtType srcType, enum DevFmtType dstType,
-                                       ALsizei numchans, ALsizei srcRate, ALsizei dstRate,
-                                       Resampler resampler)
+SampleConverter *CreateSampleConverter(DevFmtType srcType, DevFmtType dstType, ALsizei numchans,
+                                       ALsizei srcRate, ALsizei dstRate, Resampler resampler)
 {
     if(numchans <= 0 || srcRate <= 0 || dstRate <= 0)
         return nullptr;

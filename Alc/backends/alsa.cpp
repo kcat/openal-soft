@@ -742,7 +742,7 @@ ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
     {
         static const struct {
             snd_pcm_format_t format;
-            enum DevFmtType fmttype;
+            DevFmtType fmttype;
         } formatlist[] = {
             { SND_PCM_FORMAT_FLOAT, DevFmtFloat  },
             { SND_PCM_FORMAT_S32,   DevFmtInt    },
@@ -767,7 +767,7 @@ ALCboolean ALCplaybackAlsa_reset(ALCplaybackAlsa *self)
     /* test and set channels (implicitly sets frame bits) */
     if(snd_pcm_hw_params_test_channels(self->PcmHandle, hp, device->channelsFromFmt()) < 0)
     {
-        static const enum DevFmtChannels channellist[] = {
+        static const DevFmtChannels channellist[] = {
             DevFmtStereo,
             DevFmtQuad,
             DevFmtX51,
@@ -1308,7 +1308,7 @@ void AlsaBackendFactory::deinit()
 bool AlsaBackendFactory::querySupport(ALCbackend_Type type)
 { return (type == ALCbackend_Playback || type == ALCbackend_Capture); }
 
-void AlsaBackendFactory::probe(enum DevProbe type, std::string *outnames)
+void AlsaBackendFactory::probe(DevProbe type, std::string *outnames)
 {
     auto add_device = [outnames](const DevMap &entry) -> void
     {

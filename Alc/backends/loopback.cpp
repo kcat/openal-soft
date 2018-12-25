@@ -92,7 +92,7 @@ bool LoopbackBackendFactory::init()
 bool LoopbackBackendFactory::querySupport(ALCbackend_Type type)
 { return (type == ALCbackend_Loopback); }
 
-void LoopbackBackendFactory::probe(enum DevProbe, std::string*)
+void LoopbackBackendFactory::probe(DevProbe, std::string*)
 { }
 
 ALCbackend *LoopbackBackendFactory::createBackend(ALCdevice *device, ALCbackend_Type type)

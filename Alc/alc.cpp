@@ -1148,11 +1148,11 @@ static void alc_initconfig(void)
                 continue;
 
             size_t len{next ? (size_t)(next-str) : strlen(str)};
-            for(n = 0;n < EFFECTLIST_SIZE;n++)
+            for(size_t n{0u};n < countof(gEffectList);n++)
             {
-                if(len == strlen(EffectList[n].name) &&
-                   strncmp(EffectList[n].name, str, len) == 0)
-                    DisabledEffects[EffectList[n].type] = AL_TRUE;
+                if(len == strlen(gEffectList[n].name) &&
+                   strncmp(gEffectList[n].name, str, len) == 0)
+                    DisabledEffects[gEffectList[n].type] = AL_TRUE;
             }
         } while(next++);
     }
@@ -1168,7 +1168,7 @@ static void alc_initconfig(void)
 /************************************************
  * Device enumeration
  ************************************************/
-static void ProbeDevices(std::string *list, BackendInfo *backendinfo, enum DevProbe type)
+static void ProbeDevices(std::string *list, BackendInfo *backendinfo, DevProbe type)
 {
     DO_INITCONFIG();
 
@@ -1246,13 +1246,12 @@ ALsizei ChannelsFromDevFmt(DevFmtChannels chans, ALsizei ambiorder) noexcept
     return 0;
 }
 
-static ALboolean DecomposeDevFormat(ALenum format, enum DevFmtChannels *chans,
-                                    enum DevFmtType *type)
+static ALboolean DecomposeDevFormat(ALenum format, DevFmtChannels *chans, DevFmtType *type)
 {
     static const struct {
         ALenum format;
-        enum DevFmtChannels channels;
-        enum DevFmtType type;
+        DevFmtChannels channels;
+        DevFmtType type;
     } list[] = {
         { AL_FORMAT_MONO8,        DevFmtMono, DevFmtUByte },
         { AL_FORMAT_MONO16,       DevFmtMono, DevFmtShort },
@@ -1585,13 +1584,13 @@ static inline void UpdateClockBase(ALCdevice *device)
  */
 static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
 {
-    enum HrtfRequestMode hrtf_userreq = Hrtf_Default;
-    enum HrtfRequestMode hrtf_appreq = Hrtf_Default;
+    HrtfRequestMode hrtf_userreq = Hrtf_Default;
+    HrtfRequestMode hrtf_appreq = Hrtf_Default;
     ALCenum gainLimiter = device->LimiterState;
     const ALsizei old_sends = device->NumAuxSends;
     ALsizei new_sends = device->NumAuxSends;
-    enum DevFmtChannels oldChans;
-    enum DevFmtType oldType;
+    DevFmtChannels oldChans;
+    DevFmtType oldType;
     ALboolean update_failed;
     ALCsizei hrtf_id = -1;
     ALCcontext *context;
@@ -1778,8 +1777,8 @@ static ALCenum UpdateDeviceParams(ALCdevice *device, const ALCint *attrList)
         else
         {
             device->Frequency = freq;
-            device->FmtChans = static_cast<enum DevFmtChannels>(schans);
-            device->FmtType = static_cast<enum DevFmtType>(stype);
+            device->FmtChans = static_cast<DevFmtChannels>(schans);
+            device->FmtType = static_cast<DevFmtType>(stype);
             if(schans == ALC_BFORMAT3D_SOFT)
             {
                 device->mAmbiOrder = aorder;
@@ -3661,7 +3660,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     {
         static constexpr struct ChannelMap {
             const char name[16];
-            enum DevFmtChannels chans;
+            DevFmtChannels chans;
             ALsizei order;
         } chanlist[] = {
             { "mono",       DevFmtMono,   0 },
@@ -3693,7 +3692,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
     {
         static constexpr struct TypeMap {
             const char name[16];
-            enum DevFmtType type;
+            DevFmtType type;
         } typelist[] = {
             { "int8",    DevFmtByte   },
             { "uint8",   DevFmtUByte  },

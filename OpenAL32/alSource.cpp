@@ -96,9 +96,9 @@ void UpdateSourceProps(ALsource *source, ALvoice *voice, ALCcontext *context)
     std::copy(std::begin(source->Orientation[1]), std::end(source->Orientation[1]), props->Orientation[1]);
     props->HeadRelative = source->HeadRelative;
     props->mDistanceModel = source->mDistanceModel;
-    props->Resampler = source->Resampler;
+    props->mResampler = source->mResampler;
     props->DirectChannels = source->DirectChannels;
-    props->SpatializeMode = source->Spatialize;
+    props->mSpatializeMode = source->mSpatialize;
 
     props->DryGainHFAuto = source->DryGainHFAuto;
     props->WetGainAuto = source->WetGainAuto;
@@ -323,7 +323,7 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
                 if(BufferFmt->OriginalType == UserFmtIMA4)
                 {
                     ALsizei align = (BufferFmt->OriginalAlign-1)/2 + 4;
-                    ALuint BlockSize = align * ChannelsFromFmt(BufferFmt->FmtChannels);
+                    ALuint BlockSize = align * ChannelsFromFmt(BufferFmt->mFmtChannels);
                     ALuint FrameBlockSize = BufferFmt->OriginalAlign;
 
                     /* Round down to nearest ADPCM block */
@@ -332,7 +332,7 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
                 else if(BufferFmt->OriginalType == UserFmtMSADPCM)
                 {
                     ALsizei align = (BufferFmt->OriginalAlign-2)/2 + 7;
-                    ALuint BlockSize = align * ChannelsFromFmt(BufferFmt->FmtChannels);
+                    ALuint BlockSize = align * ChannelsFromFmt(BufferFmt->mFmtChannels);
                     ALuint FrameBlockSize = BufferFmt->OriginalAlign;
 
                     /* Round down to nearest ADPCM block */
@@ -340,8 +340,8 @@ ALdouble GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
                 }
                 else
                 {
-                    ALuint FrameSize = FrameSizeFromFmt(BufferFmt->FmtChannels,
-                                                        BufferFmt->FmtType);
+                    const ALsizei FrameSize{FrameSizeFromFmt(BufferFmt->mFmtChannels,
+                        BufferFmt->mFmtType)};
                     offset = (ALdouble)(readPos * FrameSize);
                 }
                 break;
@@ -388,17 +388,17 @@ ALboolean GetSampleOffset(ALsource *Source, ALuint *offset, ALsizei *frac)
         if(BufferFmt->OriginalType == UserFmtIMA4)
         {
             ALsizei align = (BufferFmt->OriginalAlign-1)/2 + 4;
-            *offset /= align * ChannelsFromFmt(BufferFmt->FmtChannels);
+            *offset /= align * ChannelsFromFmt(BufferFmt->mFmtChannels);
             *offset *= BufferFmt->OriginalAlign;
         }
         else if(BufferFmt->OriginalType == UserFmtMSADPCM)
         {
             ALsizei align = (BufferFmt->OriginalAlign-2)/2 + 7;
-            *offset /= align * ChannelsFromFmt(BufferFmt->FmtChannels);
+            *offset /= align * ChannelsFromFmt(BufferFmt->mFmtChannels);
             *offset *= BufferFmt->OriginalAlign;
         }
         else
-            *offset /= FrameSizeFromFmt(BufferFmt->FmtChannels, BufferFmt->FmtType);
+            *offset /= FrameSizeFromFmt(BufferFmt->mFmtChannels, BufferFmt->mFmtType);
         *frac = 0;
         break;
 
@@ -1398,14 +1398,14 @@ ALboolean SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
         case AL_SOURCE_RESAMPLER_SOFT:
             CHECKVAL(*values >= 0 && *values <= ResamplerMax);
 
-            Source->Resampler = static_cast<enum Resampler>(*values);
+            Source->mResampler = static_cast<Resampler>(*values);
             DO_UPDATEPROPS();
             return AL_TRUE;
 
         case AL_SOURCE_SPATIALIZE_SOFT:
             CHECKVAL(*values >= AL_FALSE && *values <= AL_AUTO_SOFT);
 
-            Source->Spatialize = static_cast<enum SpatializeMode>(*values);
+            Source->mSpatialize = static_cast<SpatializeMode>(*values);
             DO_UPDATEPROPS();
             return AL_TRUE;
 
@@ -1889,11 +1889,11 @@ ALboolean GetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop, AL
             return AL_TRUE;
 
         case AL_SOURCE_RESAMPLER_SOFT:
-            *values = Source->Resampler;
+            *values = Source->mResampler;
             return AL_TRUE;
 
         case AL_SOURCE_SPATIALIZE_SOFT:
-            *values = Source->Spatialize;
+            *values = Source->mSpatialize;
             return AL_TRUE;
 
         /* 1x float/double */
@@ -2814,8 +2814,8 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
         );
         if(buffer != buffers_end)
         {
-            voice->NumChannels = ChannelsFromFmt((*buffer)->FmtChannels);
-            voice->SampleSize  = BytesFromFmt((*buffer)->FmtType);
+            voice->NumChannels = ChannelsFromFmt((*buffer)->mFmtChannels);
+            voice->SampleSize  = BytesFromFmt((*buffer)->mFmtType);
         }
 
         /* Clear previous samples. */
@@ -3058,7 +3058,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint src, ALsizei nb, const ALu
         if(BufferFmt == nullptr)
             BufferFmt = buffer;
         else if(BufferFmt->Frequency != buffer->Frequency ||
-                BufferFmt->FmtChannels != buffer->FmtChannels ||
+                BufferFmt->mFmtChannels != buffer->mFmtChannels ||
                 BufferFmt->OriginalType != buffer->OriginalType)
         {
             alSetError(context.get(), AL_INVALID_OPERATION,
@@ -3166,7 +3166,7 @@ AL_API void AL_APIENTRY alSourceQueueBufferLayersSOFT(ALuint src, ALsizei nb, co
         if(BufferFmt == nullptr)
             BufferFmt = buffer;
         else if(BufferFmt->Frequency != buffer->Frequency ||
-                BufferFmt->FmtChannels != buffer->FmtChannels ||
+                BufferFmt->mFmtChannels != buffer->mFmtChannels ||
                 BufferFmt->OriginalType != buffer->OriginalType)
         {
             alSetError(context.get(), AL_INVALID_OPERATION,
@@ -3331,9 +3331,9 @@ ALsource::ALsource(ALsizei num_sends)
     HeadRelative = AL_FALSE;
     Looping = AL_FALSE;
     mDistanceModel = DistanceModel::Default;
-    Resampler = ResamplerDefault;
+    mResampler = ResamplerDefault;
     DirectChannels = AL_FALSE;
-    Spatialize = SpatializeAuto;
+    mSpatialize = SpatializeAuto;
 
     StereoPan[0] = Deg2Rad( 30.0f);
     StereoPan[1] = Deg2Rad(-30.0f);

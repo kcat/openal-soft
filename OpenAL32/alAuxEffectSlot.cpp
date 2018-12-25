@@ -631,7 +631,7 @@ ALeffectslot::~ALeffectslot()
         DecrementRef(&Target->ref);
     Target = nullptr;
 
-    struct ALeffectslotProps *props{Update.load()};
+    ALeffectslotProps *props{Update.load()};
     if(props)
     {
         if(props->State) props->State->DecRef();
@@ -653,7 +653,7 @@ void UpdateEffectSlotProps(ALeffectslot *slot, ALCcontext *context)
         props = static_cast<ALeffectslotProps*>(al_calloc(16, sizeof(*props)));
     else
     {
-        struct ALeffectslotProps *next;
+        ALeffectslotProps *next;
         do {
             next = props->next.load(std::memory_order_relaxed);
         } while(context->FreeEffectslotProps.compare_exchange_weak(props, next,

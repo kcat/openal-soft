@@ -642,14 +642,14 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
                             Elev, Spread, coeffs);
 
             /* NOTE: W needs to be scaled due to FuMa normalization. */
-            ComputePanGains(&Device->FOAOut, coeffs, DryGain*AmbiScale::FromFuMa[0],
+            const ALfloat &scale0 = AmbiScale::FromFuMa[0];
+            ComputePanGains(&Device->FOAOut, coeffs, DryGain*scale0,
                 voice->Direct.Params[0].Gains.Target);
             for(ALsizei i{0};i < NumSends;i++)
             {
                 if(const ALeffectslot *Slot{SendSlots[i]})
                     ComputePanningGainsBF(Slot->ChanMap, Slot->NumChannels, coeffs,
-                        WetGain[i]*AmbiScale::FromFuMa[0], voice->Send[i].Params[0].Gains.Target
-                    );
+                        WetGain[i]*scale0, voice->Send[i].Params[0].Gains.Target);
             }
         }
         else
@@ -692,10 +692,10 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
              * matrix is transposed, for the inputs to align on the rows and
              * outputs on the columns.
              */
-            static const ALfloat scale0{AmbiScale::FromFuMa[0]};
-            static const ALfloat scale1{AmbiScale::FromFuMa[1]};
-            static const ALfloat scale2{AmbiScale::FromFuMa[2]};
-            static const ALfloat scale3{AmbiScale::FromFuMa[3]};
+            const ALfloat &scale0 = AmbiScale::FromFuMa[0];
+            const ALfloat &scale1 = AmbiScale::FromFuMa[1];
+            const ALfloat &scale2 = AmbiScale::FromFuMa[2];
+            const ALfloat &scale3 = AmbiScale::FromFuMa[3];
             const alu::Matrix matrix{
             //    ACN0          ACN1          ACN2          ACN3
                 scale0,         0.0f,         0.0f,         0.0f, // Ambi W

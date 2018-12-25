@@ -18,7 +18,7 @@
 
 #include "hrtf.h"
 #include "math_defs.h"
-#include "filters/defs.h"
+#include "filters/biquad.h"
 #include "filters/nfc.h"
 #include "almalloc.h"
 

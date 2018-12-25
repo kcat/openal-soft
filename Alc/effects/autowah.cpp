@@ -30,7 +30,7 @@
 #include "alAuxEffectSlot.h"
 #include "alError.h"
 #include "alu.h"
-#include "filters/defs.h"
+#include "filters/biquad.h"
 #include "vecmat.h"
 
 #define MIN_FREQ 20.0f

@@ -33,7 +33,7 @@
 #include "alAuxEffectSlot.h"
 #include "alListener.h"
 #include "alError.h"
-#include "filters/defs.h"
+#include "filters/biquad.h"
 #include "vector.h"
 #include "vecmat.h"
 

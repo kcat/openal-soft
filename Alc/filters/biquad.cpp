@@ -7,7 +7,7 @@
 #include "AL/al.h"
 
 #include "alMain.h"
-#include "defs.h"
+#include "biquad.h"
 
 
 void BiquadFilter::setParams(BiquadType type, float gain, float f0norm, float rcpQ)

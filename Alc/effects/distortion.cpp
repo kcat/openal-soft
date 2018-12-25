@@ -30,7 +30,7 @@
 #include "alAuxEffectSlot.h"
 #include "alError.h"
 #include "alu.h"
-#include "filters/defs.h"
+#include "filters/biquad.h"
 
 
 struct ALdistortionState final : public EffectState {

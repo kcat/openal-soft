@@ -752,8 +752,8 @@ SET(ALC_OBJS
     Alc/effects/null.cpp
     Alc/effects/pshifter.cpp
     Alc/effects/reverb.cpp
-    Alc/filters/defs.h
-    Alc/filters/filter.cpp
+    Alc/filters/biquad.h
+    Alc/filters/biquad.cpp
     Alc/filters/nfc.cpp
     Alc/filters/nfc.h
     Alc/filters/splitter.cpp

@@ -1,7 +1,8 @@
-#ifndef ALC_FILTER_H
-#define ALC_FILTER_H
+#ifndef FILTERS_BIQUAD_H
+#define FILTERS_BIQUAD_H
 
 #include <cmath>
+#include <utility>
 
 #include "AL/al.h"
 #include "math_defs.h"
@@ -122,4 +123,4 @@ inline ALfloat calc_rcpQ_from_bandwidth(float f0norm, float bandwidth)
     return 2.0f*std::sinh(std::log(2.0f)/2.0f*bandwidth*w0/std::sin(w0));
 }
 
-#endif /* ALC_FILTER_H */
+#endif /* FILTERS_BIQUAD_H */

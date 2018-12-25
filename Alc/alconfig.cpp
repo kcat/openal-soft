@@ -45,6 +45,7 @@
 
 #include "alMain.h"
 #include "alconfig.h"
+#include "logging.h"
 #include "compat.h"
 
 

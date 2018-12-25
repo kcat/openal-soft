@@ -27,8 +27,6 @@
 #include "AL/alext.h"
 
 #include "inprogext.h"
-#include "logging.h"
-#include "polymorphism.h"
 #include "atomic.h"
 #include "vector.h"
 #include "almalloc.h"
@@ -75,10 +73,6 @@ constexpr inline size_t countof(const T(&)[N]) noexcept
 #else
 #define ASSUME(x) ((void)0)
 #endif
-#endif
-
-#ifndef UINT64_MAX
-#define UINT64_MAX U64(18446744073709551615)
 #endif
 
 #ifndef UNUSED
@@ -238,6 +232,7 @@ static const union {
 
 struct HrtfEntry;
 struct HrtfHandle;
+struct EnumeratedHrtf;
 struct DirectHrtfState;
 struct FrontStablizer;
 struct Compressor;
@@ -594,13 +589,6 @@ struct FilterSubList {
     FilterSubList& operator=(const FilterSubList&) = delete;
     FilterSubList& operator=(FilterSubList&& rhs) noexcept
     { std::swap(FreeMask, rhs.FreeMask); std::swap(Filters, rhs.Filters); return *this; }
-};
-
-
-struct EnumeratedHrtf {
-    std::string name;
-
-    HrtfHandle *hrtf;
 };
 
 

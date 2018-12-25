@@ -1,11 +1,13 @@
-#ifndef AL_BACKENDS_BASE_H
-#define AL_BACKENDS_BASE_H
-
-#include "alMain.h"
+#ifndef ALC_BACKENDS_BASE_H
+#define ALC_BACKENDS_BASE_H
 
 #include <chrono>
 #include <string>
 #include <mutex>
+
+#include "alMain.h"
+#include "polymorphism.h"
+
 
 struct ClockLatency {
     std::chrono::nanoseconds ClockTime;
@@ -119,4 +121,4 @@ struct BackendFactory {
     virtual ALCbackend *createBackend(ALCdevice *device, ALCbackend_Type type) = 0;
 };
 
-#endif /* AL_BACKENDS_BASE_H */
+#endif /* ALC_BACKENDS_BASE_H */

@@ -1,11 +1,11 @@
 #ifndef ALC_HRTF_H
 #define ALC_HRTF_H
 
+#include <string>
+
 #include "AL/al.h"
 #include "AL/alc.h"
 
-#include "alMain.h"
-#include "atomic.h"
 #include "vector.h"
 #include "almalloc.h"
 
@@ -34,6 +34,12 @@ struct HrtfEntry {
     const ALushort *evOffset;
     const ALfloat (*coeffs)[2];
     const ALubyte (*delays)[2];
+};
+
+struct EnumeratedHrtf {
+    std::string name;
+
+    HrtfHandle *hrtf;
 };
 
 

@@ -17,6 +17,7 @@
 #include "alBuffer.h"
 
 #include "hrtf.h"
+#include "logging.h"
 #include "math_defs.h"
 #include "filters/biquad.h"
 #include "filters/nfc.h"

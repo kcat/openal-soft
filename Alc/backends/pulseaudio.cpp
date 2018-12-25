@@ -406,7 +406,7 @@ pa_context *connect_context(pa_threaded_mainloop *loop, ALboolean silent)
 {
     const char *name{"OpenAL Soft"};
 
-    PathNamePair binname = GetProcBinary();
+    const PathNamePair &binname = GetProcBinary();
     if(!binname.fname.empty())
         name = binname.fname.c_str();
 

@@ -310,9 +310,11 @@ void FPUCtl::leave() noexcept
 
 #ifdef _WIN32
 
-PathNamePair GetProcBinary()
+const PathNamePair &GetProcBinary()
 {
-    PathNamePair ret;
+    static PathNamePair ret;
+    if(!ret.fname.empty() || !ret.path.empty())
+        return ret;
 
     al::vector<WCHAR> fullpath(256);
     DWORD len;
@@ -477,11 +479,13 @@ void SetRTPriority(void)
 
 #else
 
-PathNamePair GetProcBinary()
+const PathNamePair &GetProcBinary()
 {
-    PathNamePair ret;
-    al::vector<char> pathname;
+    static PathNamePair ret;
+    if(!ret.fname.empty() || !ret.path.empty())
+        return ret;
 
+    al::vector<char> pathname;
 #ifdef __FreeBSD__
     size_t pathlen;
     int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };

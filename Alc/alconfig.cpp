@@ -299,12 +299,12 @@ void ReadALConfig(void) noexcept
             LoadConfigFromFile(f);
     }
 
-    PathNamePair ppath = GetProcBinary();
-    if(!ppath.path.empty())
+    std::string ppath{GetProcBinary().path};
+    if(!ppath.empty())
     {
-        ppath.path += "\\alsoft.ini";
-        TRACE("Loading config %s...\n", ppath.path.c_str());
-        al::ifstream f{ppath.path.c_str()};
+        ppath += "\\alsoft.ini";
+        TRACE("Loading config %s...\n", ppath.c_str());
+        al::ifstream f{ppath};
         if(f.is_open())
             LoadConfigFromFile(f);
     }
@@ -422,14 +422,14 @@ void ReadALConfig(void) noexcept
             LoadConfigFromFile(f);
     }
 
-    PathNamePair ppath = GetProcBinary();
-    if(!ppath.path.empty())
+    std::string ppath{GetProcBinary().path};
+    if(!ppath.empty())
     {
-        if(ppath.path.back() != '/') ppath.path += "/alsoft.conf";
-        else ppath.path += "alsoft.conf";
+        if(ppath.back() != '/') ppath += "/alsoft.conf";
+        else ppath += "alsoft.conf";
 
-        TRACE("Loading config %s...\n", ppath.path.c_str());
-        al::ifstream f{ppath.path};
+        TRACE("Loading config %s...\n", ppath.c_str());
+        al::ifstream f{ppath};
         if(f.is_open())
             LoadConfigFromFile(f);
     }

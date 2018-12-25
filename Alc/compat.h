@@ -223,7 +223,7 @@ using ifstream = std::ifstream;
 #include <string>
 
 struct PathNamePair { std::string path, fname; };
-PathNamePair GetProcBinary(void);
+const PathNamePair &GetProcBinary(void);
 
 #ifdef HAVE_DYNLOAD
 void *LoadLib(const char *name);

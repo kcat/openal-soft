@@ -18,10 +18,10 @@
 static int EventThread(ALCcontext *context)
 {
     bool quitnow{false};
-    AsyncEvent evt{};
     while(LIKELY(!quitnow))
     {
-        if(ll_ringbuffer_read(context->AsyncEvents, &evt, 1) == 0)
+        auto evt_data = ll_ringbuffer_get_read_vector(context->AsyncEvents).first;
+        if(evt_data.len == 0)
         {
             context->EventSem.wait();
             continue;
@@ -29,6 +29,22 @@ static int EventThread(ALCcontext *context)
 
         std::lock_guard<std::mutex> _{context->EventCbLock};
         do {
+            auto &evt = *reinterpret_cast<AsyncEvent*>(evt_data.buf);
+            evt_data.buf += sizeof(AsyncEvent);
+            evt_data.len -= 1;
+            /* This automatically destructs the event object and advances the
+             * ringbuffer's read offset at the end of scope.
+             */
+            const struct EventAutoDestructor {
+                AsyncEvent &evt;
+                ll_ringbuffer *ring;
+                ~EventAutoDestructor()
+                {
+                    evt.~AsyncEvent();
+                    ll_ringbuffer_read_advance(ring, 1);
+                }
+            } _{evt, context->AsyncEvents};
+
             quitnow = evt.EnumType == EventType_KillThread;
             if(UNLIKELY(quitnow)) break;
 
@@ -73,7 +89,7 @@ static int EventThread(ALCcontext *context)
                     static_cast<ALsizei>(strlen(evt.u.user.msg)), evt.u.user.msg,
                     context->EventParam
                 );
-        } while(ll_ringbuffer_read(context->AsyncEvents, &evt, 1) != 0);
+        } while(evt_data.len != 0);
     }
     return 0;
 }
@@ -94,8 +110,17 @@ void StartEventThrd(ALCcontext *ctx)
 void StopEventThrd(ALCcontext *ctx)
 {
     static constexpr AsyncEvent kill_evt{EventType_KillThread};
-    while(ll_ringbuffer_write(ctx->AsyncEvents, &kill_evt, 1) == 0)
-        std::this_thread::yield();
+    ll_ringbuffer_data evt_data = ll_ringbuffer_get_write_vector(ctx->AsyncEvents).first;
+    if(evt_data.len == 0)
+    {
+        do {
+            std::this_thread::yield();
+            evt_data = ll_ringbuffer_get_write_vector(ctx->AsyncEvents).first;
+        } while(evt_data.len == 0);
+    }
+    new (evt_data.buf) AsyncEvent{kill_evt};
+    ll_ringbuffer_write_advance(ctx->AsyncEvents, 1);
+
     ctx->EventSem.post();
     if(ctx->EventThread.joinable())
         ctx->EventThread.join();

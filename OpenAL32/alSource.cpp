@@ -687,16 +687,18 @@ void SendStateChangeEvent(ALCcontext *context, ALuint id, ALenum state)
     ALbitfieldSOFT enabledevt{context->EnabledEvts.load(std::memory_order_acquire)};
     if(!(enabledevt&EventType_SourceStateChange)) return;
 
-    AsyncEvent evt{EventType_SourceStateChange};
-    evt.u.srcstate.id = id;
-    evt.u.srcstate.state = state;
-
     /* The mixer may have queued a state change that's not yet been processed,
      * and we don't want state change messages to occur out of order, so send
      * it through the async queue to ensure proper ordering.
      */
-    if(ll_ringbuffer_write(context->AsyncEvents, &evt, 1) == 1)
-        context->EventSem.post();
+    auto evt_data = ll_ringbuffer_get_write_vector(context->AsyncEvents).first;
+    if(evt_data.len < 1) return;
+
+    AsyncEvent *evt{new (evt_data.buf) AsyncEvent{EventType_SourceStateChange}};
+    evt->u.srcstate.id = id;
+    evt->u.srcstate.state = state;
+    ll_ringbuffer_write_advance(context->AsyncEvents, 1);
+    context->EventSem.post();
 }
 
 

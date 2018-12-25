@@ -2465,6 +2465,25 @@ ALCcontext_struct::~ALCcontext_struct()
     }
     TRACE("Freed " SZFMT " listener property object%s\n", count, (count==1)?"":"s");
 
+    count = 0;
+    auto evt_vec = ll_ringbuffer_get_read_vector(AsyncEvents);
+    while(evt_vec.first.len > 0)
+    {
+        reinterpret_cast<AsyncEvent*>(evt_vec.first.buf)->~AsyncEvent();
+        evt_vec.first.buf += sizeof(AsyncEvent);
+        evt_vec.first.len -= 1;
+        ++count;
+    }
+    while(evt_vec.second.len > 0)
+    {
+        reinterpret_cast<AsyncEvent*>(evt_vec.second.buf)->~AsyncEvent();
+        evt_vec.second.buf += sizeof(AsyncEvent);
+        evt_vec.second.len -= 1;
+        ++count;
+    }
+    if(count > 0)
+        TRACE("Destructed " SZFMT " orphaned event%s\n", count, (count==1)?"":"s");
+
     delete AsyncEvents;
     AsyncEvents = nullptr;
 

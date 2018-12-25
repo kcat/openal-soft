@@ -293,12 +293,14 @@ void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
     ALbitfieldSOFT enabledevt{context->EnabledEvts.load(std::memory_order_acquire)};
     if(!(enabledevt&EventType_SourceStateChange)) return;
 
-    AsyncEvent evt{EventType_SourceStateChange};
-    evt.u.srcstate.id = id;
-    evt.u.srcstate.state = AL_STOPPED;
+    auto evt_data = ll_ringbuffer_get_write_vector(context->AsyncEvents).first;
+    if(evt_data.len < 1) return;
 
-    if(ll_ringbuffer_write(context->AsyncEvents, &evt, 1) == 1)
-        context->EventSem.post();
+    AsyncEvent *evt{new (evt_data.buf) AsyncEvent{EventType_SourceStateChange}};
+    evt->u.srcstate.id = id;
+    evt->u.srcstate.state = AL_STOPPED;
+    ll_ringbuffer_write_advance(context->AsyncEvents, 1);
+    context->EventSem.post();
 }
 
 
@@ -394,6 +396,7 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
         }
 
         state = props->State;
+        props->State = nullptr;
 
         if(state == slot->Params.mEffectState)
         {
@@ -402,21 +405,23 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
              * 0 refs since the current params also hold a reference).
              */
             DecrementRef(&state->mRef);
-            props->State = nullptr;
         }
         else
         {
             /* Otherwise, replace it and send off the old one with a release
              * event.
              */
-            AsyncEvent evt{EventType_ReleaseEffectState};
-            evt.u.mEffectState = slot->Params.mEffectState;
-
+            EffectState *oldstate{slot->Params.mEffectState};
             slot->Params.mEffectState = state;
-            props->State = nullptr;
 
-            if(LIKELY(ll_ringbuffer_write(context->AsyncEvents, &evt, 1) != 0))
+            auto evt_data = ll_ringbuffer_get_write_vector(context->AsyncEvents).first;
+            if(LIKELY(evt_data.len > 0))
+            {
+                AsyncEvent *evt{new (evt_data.buf) AsyncEvent{EventType_ReleaseEffectState}};
+                evt->u.mEffectState = oldstate;
+                ll_ringbuffer_write_advance(context->AsyncEvents, 1);
                 context->EventSem.post();
+            }
             else
             {
                 /* If writing the event failed, the queue was probably full.
@@ -424,7 +429,7 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
                  * eventually be cleaned up sometime later (not ideal, but
                  * better than blocking or leaking).
                  */
-                props->State = evt.u.mEffectState;
+                props->State = oldstate;
             }
         }
 
@@ -1828,9 +1833,16 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
     while(ctx)
     {
         const ALbitfieldSOFT enabledevt{ctx->EnabledEvts.load(std::memory_order_acquire)};
-        if((enabledevt&EventType_Disconnected) &&
-           ll_ringbuffer_write(ctx->AsyncEvents, &evt, 1) == 1)
-            ctx->EventSem.post();
+        if((enabledevt&EventType_Disconnected))
+        {
+            auto evt_data = ll_ringbuffer_get_write_vector(ctx->AsyncEvents).first;
+            if(evt_data.len > 0)
+            {
+                new (evt_data.buf) AsyncEvent{evt};
+                ll_ringbuffer_write_advance(ctx->AsyncEvents, 1);
+                ctx->EventSem.post();
+            }
+        }
 
         std::for_each(ctx->Voices, ctx->Voices+ctx->VoiceCount.load(std::memory_order_acquire),
             [ctx](ALvoice *voice) -> void

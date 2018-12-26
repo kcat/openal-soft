@@ -53,7 +53,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>5</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="tab_3">
      <attribute name="title">
@@ -131,8 +131,8 @@ to stereo output.</string>
        <rect>
         <x>380</x>
         <y>20</y>
-        <width>80</width>
-        <height>20</height>
+        <width>93</width>
+        <height>29</height>
        </rect>
       </property>
       <property name="toolTip">
@@ -1185,6 +1185,9 @@ application or system to determine if it should be used.</string>
         <height>361</height>
        </rect>
       </property>
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
       <widget class="QWidget" name="page">
        <widget class="QCheckBox" name="backendCheckBox">
         <property name="geometry">
@@ -1317,6 +1320,26 @@ rate to match the PulseAudio device.</string>
         </property>
         <property name="text">
          <string>Fix Sample Rate</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="pulseAdjLatencyCheckBox">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>100</y>
+          <width>111</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Attempts to adjust the overall latency of device
+playback. Note that this may have adverse effects
+on the resulting internal buffer sizes and mixing
+updates, leading to performance problems and
+drop-outs.</string>
+        </property>
+        <property name="text">
+         <string>Adjust Latency</string>
         </property>
        </widget>
       </widget>
@@ -2178,8 +2201,8 @@ added by the ALC_EXT_DEDICATED extension.</string>
        <rect>
         <x>160</x>
         <y>20</y>
-        <width>108</width>
-        <height>20</height>
+        <width>125</width>
+        <height>29</height>
        </rect>
       </property>
       <property name="sizeAdjustPolicy">
@@ -2348,7 +2371,7 @@ added by the ALC_EXT_DEDICATED extension.</string>
      <x>0</x>
      <y>0</y>
      <width>564</width>
-     <height>21</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

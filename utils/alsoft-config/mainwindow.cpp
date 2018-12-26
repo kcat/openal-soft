@@ -387,6 +387,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->pulseAutospawnCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->pulseAllowMovesCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->pulseFixRateCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
+    connect(ui->pulseAdjLatencyCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
 
     connect(ui->jackAutospawnCheckBox, SIGNAL(stateChanged(int)), this, SLOT(enableApplyButton()));
     connect(ui->jackBufferSizeSlider, SIGNAL(valueChanged(int)), this, SLOT(updateJackBufferSizeEdit(int)));
@@ -855,6 +856,7 @@ void MainWindow::loadConfig(const QString &fname)
     ui->pulseAutospawnCheckBox->setChecked(settings.value("pulse/spawn-server", true).toBool());
     ui->pulseAllowMovesCheckBox->setChecked(settings.value("pulse/allow-moves", false).toBool());
     ui->pulseFixRateCheckBox->setChecked(settings.value("pulse/fix-rate", false).toBool());
+    ui->pulseAdjLatencyCheckBox->setChecked(settings.value("pulse/adjust-latency", false).toBool());
 
     ui->jackAutospawnCheckBox->setChecked(settings.value("jack/spawn-server", false).toBool());
     ui->jackBufferSizeLine->setText(settings.value("jack/buffer-size", QString()).toString());
@@ -1080,6 +1082,9 @@ void MainWindow::saveConfig(const QString &fname) const
     );
     settings.setValue("pulse/fix-rate",
         ui->pulseFixRateCheckBox->isChecked() ? QString("true") : QString(/*"false"*/)
+    );
+    settings.setValue("pulse/adjust-latency",
+        ui->pulseAdjLatencyCheckBox->isChecked() ? QString("true") : QString(/*"false"*/)
     );
 
     settings.setValue("jack/spawn-server",

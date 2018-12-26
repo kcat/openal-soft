@@ -345,6 +345,14 @@ surround71 =
 #  PulseAudio server.
 #fix-rate = false
 
+## adjust-latency:
+#  Attempts to adjust the overall latency of device playback. Note that this
+#  may have adverse effects on the resulting internal buffer sizes and mixing
+#  updates, leading to performance problems and drop-outs. However, if the
+#  PulseAudio server is creating a lot of latency, enabling this may help make
+#  it more manageable.
+#adjust-latency = false
+
 ##
 ## ALSA backend stuff
 ##

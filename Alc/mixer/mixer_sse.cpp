@@ -79,16 +79,16 @@ const ALfloat *Resample_bsinc_SSE(const InterpState *state, const ALfloat *RESTR
 }
 
 
-static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*RESTRICT Values)[2],
-                               const ALsizei IrSize,
-                               const ALfloat (*RESTRICT Coeffs)[2],
-                               ALfloat left, ALfloat right)
+static inline void ApplyCoeffs(ALsizei Offset, ALfloat (&Values)[HRIR_LENGTH][2],
+                               const ALsizei IrSize, const ALfloat (&Coeffs)[HRIR_LENGTH][2],
+                               const ALfloat left, const ALfloat right)
 {
     const __m128 lrlr = _mm_setr_ps(left, right, left, right);
     __m128 vals = _mm_setzero_ps();
     __m128 coeffs;
 
-    ASSUME(IrSize > 1);
+    ASSUME(IrSize >= 2);
+    ASSUME(&Values != &Coeffs);
 
     ALsizei off{Offset&HRIR_MASK};
     if((Offset&1))

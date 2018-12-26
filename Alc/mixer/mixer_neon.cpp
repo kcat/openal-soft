@@ -133,12 +133,13 @@ const ALfloat *Resample_bsinc_Neon(const InterpState *state,
 }
 
 
-static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*RESTRICT Values)[2],
-                               const ALsizei IrSize,
-                               const ALfloat (*RESTRICT Coeffs)[2],
-                               ALfloat left, ALfloat right)
+static inline void ApplyCoeffs(ALsizei Offset, ALfloat (&Values)[HRIR_LENGTH][2],
+                               const ALsizei IrSize, const ALfloat (&Coeffs)[HRIR_LENGTH][2],
+                               const ALfloat left, const ALfloat right)
 {
-    ALsizei c;
+    ASSUME(IrSize >= 2);
+    ASSUME(&Values != &Coeffs);
+
     float32x4_t leftright4;
     {
         float32x2_t leftright2 = vdup_n_f32(0.0);
@@ -147,7 +148,7 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*RESTRICT Values)[2],
         leftright4 = vcombine_f32(leftright2, leftright2);
     }
 
-    for(c = 0;c < IrSize;c += 2)
+    for(ALsizei c{0};c < IrSize;c += 2)
     {
         const ALsizei o0 = (Offset+c)&HRIR_MASK;
         const ALsizei o1 = (o0+1)&HRIR_MASK;

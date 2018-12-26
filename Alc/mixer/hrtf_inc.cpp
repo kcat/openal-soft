@@ -8,10 +8,9 @@
 #include "defs.h"
 
 
-static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*RESTRICT Values)[2],
-                               const ALsizei irSize,
-                               const ALfloat (*RESTRICT Coeffs)[2],
-                               ALfloat left, ALfloat right);
+static inline void ApplyCoeffs(ALsizei Offset, ALfloat (&Values)[HRIR_LENGTH][2],
+                               const ALsizei irSize, const ALfloat (&Coeffs)[HRIR_LENGTH][2],
+                               const ALfloat left, const ALfloat right);
 
 
 void MixHrtf(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
@@ -19,7 +18,7 @@ void MixHrtf(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
              const ALsizei IrSize, MixHrtfParams *hrtfparams, HrtfState *hrtfstate,
              ALsizei BufferSize)
 {
-    const ALfloat (*Coeffs)[2] = hrtfparams->Coeffs;
+    const ALfloat (&Coeffs)[HRIR_LENGTH][2] = *hrtfparams->Coeffs;
     const ALsizei Delay[2] = { hrtfparams->Delay[0], hrtfparams->Delay[1] };
     const ALfloat gainstep = hrtfparams->GainStep;
     const ALfloat gain = hrtfparams->Gain;
@@ -59,11 +58,11 @@ void MixHrtfBlend(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                   MixHrtfParams *newparams, HrtfState *hrtfstate,
                   ALsizei BufferSize)
 {
-    const ALfloat (*OldCoeffs)[2] = oldparams->Coeffs;
+    const ALfloat (&OldCoeffs)[HRIR_LENGTH][2] = oldparams->Coeffs;
     const ALsizei OldDelay[2] = { oldparams->Delay[0], oldparams->Delay[1] };
     const ALfloat oldGain = oldparams->Gain;
     const ALfloat oldGainStep = -oldGain / (ALfloat)BufferSize;
-    const ALfloat (*NewCoeffs)[2] = newparams->Coeffs;
+    const ALfloat (&NewCoeffs)[HRIR_LENGTH][2] = *newparams->Coeffs;
     const ALsizei NewDelay[2] = { newparams->Delay[0], newparams->Delay[1] };
     const ALfloat newGain = newparams->Gain;
     const ALfloat newGainStep = newparams->GainStep;
@@ -103,10 +102,14 @@ void MixHrtfBlend(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
 }
 
 void MixDirectHrtf(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-                   const ALfloat *data, ALsizei Offset, const ALsizei IrSize,
-                   const ALfloat (*RESTRICT Coeffs)[2], ALfloat (*RESTRICT Values)[2],
-                   ALsizei BufferSize)
+                   const ALfloat *data, DirectHrtfState *State, const ALsizei Chan,
+                   const ALsizei BufferSize)
 {
+    const ALsizei IrSize{State->IrSize};
+    ALsizei Offset{State->Offset};
+    ALfloat (&Values)[HRIR_LENGTH][2] = State->Chan[Chan].Values;
+    const ALfloat (&Coeffs)[HRIR_LENGTH][2] = State->Chan[Chan].Coeffs;
+
     ASSUME(IrSize >= 4);
     ASSUME(BufferSize > 0);
 

@@ -108,7 +108,7 @@ enum {
 
 
 struct MixHrtfParams {
-    const ALfloat (*Coeffs)[2];
+    const ALfloat (*Coeffs)[HRIR_LENGTH][2];
     ALsizei Delay[2];
     ALfloat Gain;
     ALfloat GainStep;
@@ -286,8 +286,7 @@ using HrtfMixerBlendFunc = void(*)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT 
     const HrtfParams *oldparams, MixHrtfParams *newparams, HrtfState *hrtfstate,
     ALsizei BufferSize);
 using HrtfDirectMixerFunc = void(*)(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
-    const ALfloat *data, ALsizei Offset, const ALsizei IrSize, const ALfloat (*RESTRICT Coeffs)[2],
-    ALfloat (*RESTRICT Values)[2], ALsizei BufferSize);
+    const ALfloat *data, DirectHrtfState *State, const ALsizei Chan, const ALsizei BufferSize);
 
 
 #define GAIN_MIX_MAX  (1000.0f) /* +60dB */

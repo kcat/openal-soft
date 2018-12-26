@@ -103,15 +103,15 @@ const ALfloat *Resample_bsinc_C(const InterpState *state, const ALfloat *RESTRIC
 { return DoResample<do_bsinc>(state, src-state->bsinc.l, frac, increment, dst, numsamples); }
 
 
-static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*RESTRICT Values)[2],
-                               const ALsizei IrSize,
-                               const ALfloat (*RESTRICT Coeffs)[2],
-                               ALfloat left, ALfloat right)
+static inline void ApplyCoeffs(ALsizei Offset, ALfloat (&Values)[HRIR_LENGTH][2],
+                               const ALsizei IrSize, const ALfloat (&Coeffs)[HRIR_LENGTH][2],
+                               const ALfloat left, const ALfloat right)
 {
     ALsizei off{Offset&HRIR_MASK};
     ALsizei count{mini(IrSize, HRIR_LENGTH - off)};
 
-    ASSUME(IrSize > 0);
+    ASSUME(IrSize >= 2);
+    ASSUME(&Values != &Coeffs);
     ASSUME(count > 0);
 
     for(ALsizei c{0};;)

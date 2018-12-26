@@ -139,10 +139,7 @@ void ProcessHrtf(ALCdevice *device, ALsizei SamplesToDo)
     const ALfloat (*Input)[BUFFERSIZE]{device->Dry.Buffer};
     DirectHrtfState *state{device->mHrtfState.get()};
     for(ALsizei c{0};c < num_chans;c++)
-    {
-        MixDirectHrtf(LeftOut, RightOut, Input[c], state->Offset, state->IrSize,
-            state->Chan[c].Coeffs, state->Chan[c].Values, SamplesToDo);
-    }
+        MixDirectHrtf(LeftOut, RightOut, Input[c], state, c, SamplesToDo);
     state->Offset += SamplesToDo;
 }
 

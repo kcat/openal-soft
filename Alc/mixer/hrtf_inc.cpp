@@ -107,19 +107,16 @@ void MixDirectHrtf(ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut,
                    const ALfloat (*RESTRICT Coeffs)[2], ALfloat (*RESTRICT Values)[2],
                    ALsizei BufferSize)
 {
-    ALfloat insample;
-    ALsizei i;
-
     ASSUME(IrSize >= 4);
     ASSUME(BufferSize > 0);
 
-    for(i = 0;i < BufferSize;i++)
+    for(ALsizei i{0};i < BufferSize;i++)
     {
         Values[(Offset+IrSize)&HRIR_MASK][0] = 0.0f;
         Values[(Offset+IrSize)&HRIR_MASK][1] = 0.0f;
         Offset++;
 
-        insample = *(data++);
+        const ALfloat insample{*(data++)};
         ApplyCoeffs(Offset, Values, IrSize, Coeffs, insample, insample);
         *(LeftOut++)  += Values[Offset&HRIR_MASK][0];
         *(RightOut++) += Values[Offset&HRIR_MASK][1];

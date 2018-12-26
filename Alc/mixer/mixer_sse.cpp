@@ -87,46 +87,64 @@ static inline void ApplyCoeffs(ALsizei Offset, ALfloat (*RESTRICT Values)[2],
     const __m128 lrlr = _mm_setr_ps(left, right, left, right);
     __m128 vals = _mm_setzero_ps();
     __m128 coeffs;
-    ALsizei i;
 
+    ASSUME(IrSize > 1);
+
+    ALsizei off{Offset&HRIR_MASK};
     if((Offset&1))
     {
-        const ALsizei o0 = Offset&HRIR_MASK;
-        const ALsizei o1 = (Offset+IrSize-1)&HRIR_MASK;
-        __m128 imp0, imp1;
+        ALsizei count{mini(IrSize-1, HRIR_LENGTH - off)};
+        ASSUME(count >= 1);
 
+        __m128 imp0, imp1;
         coeffs = _mm_load_ps(&Coeffs[0][0]);
-        vals = _mm_loadl_pi(vals, (__m64*)&Values[o0][0]);
+        vals = _mm_loadl_pi(vals, (__m64*)&Values[off][0]);
         imp0 = _mm_mul_ps(lrlr, coeffs);
         vals = _mm_add_ps(imp0, vals);
-        _mm_storel_pi((__m64*)&Values[o0][0], vals);
-        for(i = 1;i < IrSize-1;i += 2)
+        _mm_storel_pi((__m64*)&Values[off][0], vals);
+        ++off;
+        for(ALsizei i{1};;)
         {
-            const ALsizei o2 = (Offset+i)&HRIR_MASK;
-
-            coeffs = _mm_load_ps(&Coeffs[i+1][0]);
-            vals = _mm_load_ps(&Values[o2][0]);
-            imp1 = _mm_mul_ps(lrlr, coeffs);
-            imp0 = _mm_shuffle_ps(imp0, imp1, _MM_SHUFFLE(1, 0, 3, 2));
-            vals = _mm_add_ps(imp0, vals);
-            _mm_store_ps(&Values[o2][0], vals);
-            imp0 = imp1;
+            for(;i < count;i += 2)
+            {
+                coeffs = _mm_load_ps(&Coeffs[i+1][0]);
+                vals = _mm_load_ps(&Values[off][0]);
+                imp1 = _mm_mul_ps(lrlr, coeffs);
+                imp0 = _mm_shuffle_ps(imp0, imp1, _MM_SHUFFLE(1, 0, 3, 2));
+                vals = _mm_add_ps(imp0, vals);
+                _mm_store_ps(&Values[off][0], vals);
+                imp0 = imp1;
+                off += 2;
+            }
+            off &= HRIR_MASK;
+            if(i >= IrSize-1)
+                break;
+            count = IrSize-1;
         }
-        vals = _mm_loadl_pi(vals, (__m64*)&Values[o1][0]);
+        vals = _mm_loadl_pi(vals, (__m64*)&Values[off][0]);
         imp0 = _mm_movehl_ps(imp0, imp0);
         vals = _mm_add_ps(imp0, vals);
-        _mm_storel_pi((__m64*)&Values[o1][0], vals);
+        _mm_storel_pi((__m64*)&Values[off][0], vals);
     }
     else
     {
-        for(i = 0;i < IrSize;i += 2)
-        {
-            const ALsizei o = (Offset + i)&HRIR_MASK;
+        ALsizei count{mini(IrSize, HRIR_LENGTH - off)};
+        ASSUME(count >= 2);
 
-            coeffs = _mm_load_ps(&Coeffs[i][0]);
-            vals = _mm_load_ps(&Values[o][0]);
-            vals = _mm_add_ps(vals, _mm_mul_ps(lrlr, coeffs));
-            _mm_store_ps(&Values[o][0], vals);
+        for(ALsizei i{0};;)
+        {
+            for(;i < count;i += 2)
+            {
+                coeffs = _mm_load_ps(&Coeffs[i][0]);
+                vals = _mm_load_ps(&Values[off][0]);
+                vals = _mm_add_ps(vals, _mm_mul_ps(lrlr, coeffs));
+                _mm_store_ps(&Values[off][0], vals);
+                off += 2;
+            }
+            if(i >= IrSize)
+                break;
+            off = 0;
+            count = IrSize;
         }
     }
 }

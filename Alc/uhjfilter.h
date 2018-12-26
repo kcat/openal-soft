@@ -37,17 +37,17 @@ struct AllPassState {
  */
 
 struct Uhj2Encoder {
-    AllPassState Filter1_Y[4];
-    AllPassState Filter2_WX[4];
-    AllPassState Filter1_WX[4];
-    ALfloat LastY{0.0f}, LastWX{0.0f};
+    AllPassState mFilter1_Y[4];
+    AllPassState mFilter2_WX[4];
+    AllPassState mFilter1_WX[4];
+    ALfloat mLastY{0.0f}, mLastWX{0.0f};
+
+    /* Encodes a 2-channel UHJ (stereo-compatible) signal from a B-Format input
+     * signal. The input must use FuMa channel ordering and scaling.
+     */
+    void encode(ALfloat *LeftOut, ALfloat *RightOut, ALfloat (*InSamples)[BUFFERSIZE], const ALsizei SamplesToDo);
 
     DEF_NEWDEL(Uhj2Encoder)
 };
-
-/* Encodes a 2-channel UHJ (stereo-compatible) signal from a B-Format input
- * signal. The input must use FuMa channel ordering and scaling.
- */
-void EncodeUhj2(Uhj2Encoder *enc, ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, ALfloat (*RESTRICT InSamples)[BUFFERSIZE], ALsizei SamplesToDo);
 
 #endif /* UHJFILTER_H */

@@ -22,16 +22,13 @@ void allpass_process(AllPassState *state, ALfloat *RESTRICT dst, const ALfloat *
 {
     ALfloat z1 = state->z[0];
     ALfloat z2 = state->z[1];
-    ALsizei i;
-
-    for(i = 0;i < todo;i++)
+    for(ALsizei i{0};i < todo;i++)
     {
         ALfloat input = src[i];
         ALfloat output = input*aa + z1;
         z1 = z2; z2 = output*aa - input;
         dst[i] = output;
     }
-
     state->z[0] = z1;
     state->z[1] = z2;
 }
@@ -59,65 +56,67 @@ void allpass_process(AllPassState *state, ALfloat *RESTRICT dst, const ALfloat *
  * know which is the intended result.
  */
 
-void EncodeUhj2(Uhj2Encoder *enc, ALfloat *RESTRICT LeftOut, ALfloat *RESTRICT RightOut, ALfloat (*RESTRICT InSamples)[BUFFERSIZE], ALsizei SamplesToDo)
+void Uhj2Encoder::encode(ALfloat *LeftOut, ALfloat *RightOut, ALfloat (*InSamples)[BUFFERSIZE], const ALsizei SamplesToDo)
 {
-    ALfloat D[MAX_UPDATE_SAMPLES], S[MAX_UPDATE_SAMPLES];
-    ALfloat temp[2][MAX_UPDATE_SAMPLES];
-    ALsizei base, i;
+    alignas(16) ALfloat D[MAX_UPDATE_SAMPLES], S[MAX_UPDATE_SAMPLES];
+    alignas(16) ALfloat temp[2][MAX_UPDATE_SAMPLES];
 
     ASSUME(SamplesToDo > 0);
 
-    for(base = 0;base < SamplesToDo;)
+    for(ALsizei base{0};base < SamplesToDo;)
     {
         ALsizei todo = mini(SamplesToDo - base, MAX_UPDATE_SAMPLES);
         ASSUME(todo > 0);
 
         /* D = 0.6554516*Y */
-        for(i = 0;i < todo;i++)
-            temp[0][i] = 0.6554516f*InSamples[2][base+i];
-        allpass_process(&enc->Filter1_Y[0], temp[1], temp[0], Filter1CoeffSqr[0], todo);
-        allpass_process(&enc->Filter1_Y[1], temp[0], temp[1], Filter1CoeffSqr[1], todo);
-        allpass_process(&enc->Filter1_Y[2], temp[1], temp[0], Filter1CoeffSqr[2], todo);
-        allpass_process(&enc->Filter1_Y[3], temp[0], temp[1], Filter1CoeffSqr[3], todo);
+        const ALfloat *RESTRICT input{al::assume_aligned<16>(InSamples[2]+base)};
+        for(ALsizei i{0};i < todo;i++)
+            temp[0][i] = 0.6554516f*input[i];
+        allpass_process(&mFilter1_Y[0], temp[1], temp[0], Filter1CoeffSqr[0], todo);
+        allpass_process(&mFilter1_Y[1], temp[0], temp[1], Filter1CoeffSqr[1], todo);
+        allpass_process(&mFilter1_Y[2], temp[1], temp[0], Filter1CoeffSqr[2], todo);
+        allpass_process(&mFilter1_Y[3], temp[0], temp[1], Filter1CoeffSqr[3], todo);
         /* NOTE: Filter1 requires a 1 sample delay for the final output, so
          * take the last processed sample from the previous run as the first
          * output sample.
          */
-        D[0] = enc->LastY;
-        for(i = 1;i < todo;i++)
+        D[0] = mLastY;
+        for(ALsizei i{1};i < todo;i++)
             D[i] = temp[0][i-1];
-        enc->LastY = temp[0][i-1];
+        mLastY = temp[0][todo-1];
 
         /* D += j(-0.3420201*W + 0.5098604*X) */
-        for(i = 0;i < todo;i++)
-            temp[0][i] = -0.3420201f*InSamples[0][base+i] +
-                          0.5098604f*InSamples[1][base+i];
-        allpass_process(&enc->Filter2_WX[0], temp[1], temp[0], Filter2CoeffSqr[0], todo);
-        allpass_process(&enc->Filter2_WX[1], temp[0], temp[1], Filter2CoeffSqr[1], todo);
-        allpass_process(&enc->Filter2_WX[2], temp[1], temp[0], Filter2CoeffSqr[2], todo);
-        allpass_process(&enc->Filter2_WX[3], temp[0], temp[1], Filter2CoeffSqr[3], todo);
-        for(i = 0;i < todo;i++)
+        const ALfloat *RESTRICT input0{al::assume_aligned<16>(InSamples[0]+base)};
+        const ALfloat *RESTRICT input1{al::assume_aligned<16>(InSamples[1]+base)};
+        for(ALsizei i{0};i < todo;i++)
+            temp[0][i] = -0.3420201f*input0[i] + 0.5098604f*input1[i];
+        allpass_process(&mFilter2_WX[0], temp[1], temp[0], Filter2CoeffSqr[0], todo);
+        allpass_process(&mFilter2_WX[1], temp[0], temp[1], Filter2CoeffSqr[1], todo);
+        allpass_process(&mFilter2_WX[2], temp[1], temp[0], Filter2CoeffSqr[2], todo);
+        allpass_process(&mFilter2_WX[3], temp[0], temp[1], Filter2CoeffSqr[3], todo);
+        for(ALsizei i{0};i < todo;i++)
             D[i] += temp[0][i];
 
         /* S = 0.9396926*W + 0.1855740*X */
-        for(i = 0;i < todo;i++)
-            temp[0][i] = 0.9396926f*InSamples[0][base+i] +
-                         0.1855740f*InSamples[1][base+i];
-        allpass_process(&enc->Filter1_WX[0], temp[1], temp[0], Filter1CoeffSqr[0], todo);
-        allpass_process(&enc->Filter1_WX[1], temp[0], temp[1], Filter1CoeffSqr[1], todo);
-        allpass_process(&enc->Filter1_WX[2], temp[1], temp[0], Filter1CoeffSqr[2], todo);
-        allpass_process(&enc->Filter1_WX[3], temp[0], temp[1], Filter1CoeffSqr[3], todo);
-        S[0] = enc->LastWX;
-        for(i = 1;i < todo;i++)
+        for(ALsizei i{0};i < todo;i++)
+            temp[0][i] = 0.9396926f*input0[i] + 0.1855740f*input1[i];
+        allpass_process(&mFilter1_WX[0], temp[1], temp[0], Filter1CoeffSqr[0], todo);
+        allpass_process(&mFilter1_WX[1], temp[0], temp[1], Filter1CoeffSqr[1], todo);
+        allpass_process(&mFilter1_WX[2], temp[1], temp[0], Filter1CoeffSqr[2], todo);
+        allpass_process(&mFilter1_WX[3], temp[0], temp[1], Filter1CoeffSqr[3], todo);
+        S[0] = mLastWX;
+        for(ALsizei i{1};i < todo;i++)
             S[i] = temp[0][i-1];
-        enc->LastWX = temp[0][i-1];
+        mLastWX = temp[0][todo-1];
 
         /* Left = (S + D)/2.0 */
-        for(i = 0;i < todo;i++)
-            *(LeftOut++) += (S[i] + D[i]) * 0.5f;
+        ALfloat *RESTRICT left = al::assume_aligned<16>(LeftOut+base);
+        for(ALsizei i{0};i < todo;i++)
+            left[i] += (S[i] + D[i]) * 0.5f;
         /* Right = (S - D)/2.0 */
-        for(i = 0;i < todo;i++)
-            *(RightOut++) += (S[i] - D[i]) * 0.5f;
+        ALfloat *RESTRICT right = al::assume_aligned<16>(RightOut+base);
+        for(ALsizei i{0};i < todo;i++)
+            right[i] += (S[i] - D[i]) * 0.5f;
 
         base += todo;
     }

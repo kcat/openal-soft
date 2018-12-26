@@ -348,11 +348,11 @@ bool CalcListenerParams(ALCcontext *Context)
         0.0f, 0.0f,  0.0f, 1.0f
     };
 
-    alu::Vector P{props->Position[0], props->Position[1], props->Position[2], 1.0f};
-    P = Listener.Params.Matrix * P;
+    const alu::Vector P{Listener.Params.Matrix *
+        alu::Vector{props->Position[0], props->Position[1], props->Position[2], 1.0f}};
     Listener.Params.Matrix.setRow(3, -P[0], -P[1], -P[2], 1.0f);
 
-    alu::Vector vel{props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0f};
+    const alu::Vector vel{props->Velocity[0], props->Velocity[1], props->Velocity[2], 0.0f};
     Listener.Params.Velocity = Listener.Params.Matrix * vel;
 
     Listener.Params.Gain = props->Gain * Context->GainBoost;

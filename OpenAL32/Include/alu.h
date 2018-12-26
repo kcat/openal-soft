@@ -475,7 +475,7 @@ inline void ComputePanGains(const MixParams *dry, const ALfloat*RESTRICT coeffs,
 void ComputePanGains(const ALeffectslot *slot, const ALfloat*RESTRICT coeffs, ALfloat ingain, ALfloat (&gains)[MAX_OUTPUT_CHANNELS]);
 
 
-ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsizei SamplesToDo);
+ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const ALsizei SamplesToDo);
 
 void aluMixData(ALCdevice *device, ALvoid *OutBuffer, ALsizei NumSamples);
 /* Caller must lock the device, and the mixer must not be running. */

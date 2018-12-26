@@ -288,7 +288,7 @@ const ALfloat *DoFilters(BiquadFilter *lpfilter, BiquadFilter *hpfilter,
 #define RESAMPLED_BUF 1
 #define FILTERED_BUF 2
 #define NFC_DATA_BUF 3
-ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsizei SamplesToDo)
+ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, const ALsizei SamplesToDo)
 {
     ASSUME(SamplesToDo > 0);
 
@@ -310,15 +310,60 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
     ASSUME(increment > 0);
 
     ALCdevice *Device{Context->Device};
-    ALsizei IrSize{Device->mHrtf ? Device->mHrtf->irSize : 0};
+    const ALsizei IrSize{Device->mHrtf ? Device->mHrtf->irSize : 0};
+    const ALsizei NumAuxSends{Device->NumAuxSends};
+    const int OutLIdx{GetChannelIdxByName(Device->RealOut, FrontLeft)};
+    const int OutRIdx{GetChannelIdxByName(Device->RealOut, FrontRight)};
+
+    ASSUME(IrSize >= 0);
+    ASSUME(NumAuxSends >= 0);
 
     ResamplerFunc Resample{(increment == FRACTIONONE && DataPosFrac == 0) ?
                            Resample_copy_C : voice->Resampler};
 
     ALsizei Counter{(voice->Flags&VOICE_IS_FADING) ? SamplesToDo : 0};
+    if(!Counter)
+    {
+        /* No fading, just overwrite the old/current params. */
+        for(ALsizei chan{0};chan < NumChannels;chan++)
+        {
+            DirectParams &parms = voice->Direct.Params[chan];
+            if(!(voice->Flags&VOICE_HAS_HRTF))
+                std::copy(std::begin(parms.Gains.Target), std::end(parms.Gains.Target),
+                    std::begin(parms.Gains.Current));
+            else
+                parms.Hrtf.Old = parms.Hrtf.Target;
+            auto set_current = [chan](ALvoice::SendData &send) -> void
+            {
+                if(!send.Buffer)
+                    return;
+
+                SendParams &parms = send.Params[chan];
+                std::copy(std::begin(parms.Gains.Target), std::end(parms.Gains.Target),
+                    std::begin(parms.Gains.Current));
+            };
+            std::for_each(voice->Send, voice->Send+NumAuxSends, set_current);
+        }
+    }
+    else if((voice->Flags&VOICE_HAS_HRTF))
+    {
+        for(ALsizei chan{0};chan < NumChannels;chan++)
+        {
+            DirectParams &parms = voice->Direct.Params[chan];
+            if(!(parms.Hrtf.Old.Gain > GAIN_SILENCE_THRESHOLD))
+            {
+                /* The old HRTF params are silent, so overwrite the old
+                 * coefficients with the new, and reset the old gain to 0. The
+                 * future mix will then fade from silence.
+                 */
+                parms.Hrtf.Old = parms.Hrtf.Target;
+                parms.Hrtf.Old.Gain = 0.0f;
+            }
+        }
+    }
+
     ALsizei buffers_done{0};
     ALsizei OutPos{0};
-
     do {
         /* Figure out how many buffer samples will be needed */
         ALsizei DstBufferSize{SamplesToDo - OutPos};
@@ -504,43 +549,36 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                 Device->TempBuffer[RESAMPLED_BUF], DstBufferSize
             )};
             {
-                DirectParams *parms{&voice->Direct.Params[chan]};
-                const ALfloat *samples{DoFilters(&parms->LowPass, &parms->HighPass,
+                DirectParams &parms = voice->Direct.Params[chan];
+                const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass,
                     Device->TempBuffer[FILTERED_BUF], ResampledData, DstBufferSize,
                     voice->Direct.FilterType
                 )};
 
                 if(!(voice->Flags&VOICE_HAS_HRTF))
                 {
-                    if(!Counter)
-                        std::copy(std::begin(parms->Gains.Target), std::end(parms->Gains.Target),
-                                  std::begin(parms->Gains.Current));
-
                     if(!(voice->Flags&VOICE_HAS_NFC))
                         MixSamples(samples, voice->Direct.Channels, voice->Direct.Buffer,
-                            parms->Gains.Current, parms->Gains.Target, Counter, OutPos,
-                            DstBufferSize
-                        );
+                            parms.Gains.Current, parms.Gains.Target, Counter, OutPos,
+                            DstBufferSize);
                     else
                     {
                         MixSamples(samples,
                             voice->Direct.ChannelsPerOrder[0], voice->Direct.Buffer,
-                            parms->Gains.Current, parms->Gains.Target, Counter, OutPos,
-                            DstBufferSize
-                        );
+                            parms.Gains.Current, parms.Gains.Target, Counter, OutPos,
+                            DstBufferSize);
 
                         ALfloat *nfcsamples{Device->TempBuffer[NFC_DATA_BUF]};
                         ALsizei chanoffset{voice->Direct.ChannelsPerOrder[0]};
                         using FilterProc = void (NfcFilter::*)(float*,const float*,int);
-                        auto apply_nfc = [voice,parms,samples,DstBufferSize,Counter,OutPos,&chanoffset,nfcsamples](FilterProc process, ALsizei order) -> void
+                        auto apply_nfc = [voice,&parms,samples,DstBufferSize,Counter,OutPos,&chanoffset,nfcsamples](FilterProc process, ALsizei order) -> void
                         {
                             if(voice->Direct.ChannelsPerOrder[order] < 1)
                                 return;
-                            (parms->NFCtrlFilter.*process)(nfcsamples, samples, DstBufferSize);
+                            (parms.NFCtrlFilter.*process)(nfcsamples, samples, DstBufferSize);
                             MixSamples(nfcsamples, voice->Direct.ChannelsPerOrder[order],
-                                voice->Direct.Buffer+chanoffset, parms->Gains.Current+chanoffset,
-                                parms->Gains.Target+chanoffset, Counter, OutPos, DstBufferSize
-                            );
+                                voice->Direct.Buffer+chanoffset, parms.Gains.Current+chanoffset,
+                                parms.Gains.Target+chanoffset, Counter, OutPos, DstBufferSize);
                             chanoffset += voice->Direct.ChannelsPerOrder[order];
                         };
                         apply_nfc(&NfcFilter::process1, 1);
@@ -550,28 +588,12 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                 }
                 else
                 {
-                    const int lidx{GetChannelIdxByName(Device->RealOut, FrontLeft)};
-                    const int ridx{GetChannelIdxByName(Device->RealOut, FrontRight)};
-                    assert(lidx != -1 && ridx != -1);
-
                     ALsizei fademix{0};
-                    if(!Counter)
+                    /* If fading, the old gain is not silence, and this is the
+                     * first mixing pass, fade between the IRs.
+                     */
+                    if(Counter && (parms.Hrtf.Old.Gain > GAIN_SILENCE_THRESHOLD) && OutPos == 0)
                     {
-                        /* No fading, just overwrite the old HRTF params. */
-                        parms->Hrtf.Old = parms->Hrtf.Target;
-                    }
-                    else if(!(parms->Hrtf.Old.Gain > GAIN_SILENCE_THRESHOLD))
-                    {
-                        /* The old HRTF params are silent, so overwrite the old
-                         * coefficients with the new, and reset the old gain to
-                         * 0. The future mix will then fade from silence.
-                         */
-                        parms->Hrtf.Old = parms->Hrtf.Target;
-                        parms->Hrtf.Old.Gain = 0.0f;
-                    }
-                    else if(OutPos == 0)
-                    {
-                        /* First mixing pass, fade between the coefficients. */
                         fademix = mini(DstBufferSize, 128);
 
                         /* The new coefficients need to fade in completely
@@ -580,56 +602,54 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                          * and new target gains given how much of the fade time
                          * this mix handles.
                          */
-                        ALfloat gain{lerp(parms->Hrtf.Old.Gain, parms->Hrtf.Target.Gain,
+                        ALfloat gain{lerp(parms.Hrtf.Old.Gain, parms.Hrtf.Target.Gain,
                                           minf(1.0f, (ALfloat)fademix/Counter))};
                         MixHrtfParams hrtfparams;
-                        hrtfparams.Coeffs = parms->Hrtf.Target.Coeffs;
-                        hrtfparams.Delay[0] = parms->Hrtf.Target.Delay[0];
-                        hrtfparams.Delay[1] = parms->Hrtf.Target.Delay[1];
+                        hrtfparams.Coeffs = parms.Hrtf.Target.Coeffs;
+                        hrtfparams.Delay[0] = parms.Hrtf.Target.Delay[0];
+                        hrtfparams.Delay[1] = parms.Hrtf.Target.Delay[1];
                         hrtfparams.Gain = 0.0f;
                         hrtfparams.GainStep = gain / (ALfloat)fademix;
 
                         MixHrtfBlendSamples(
-                            voice->Direct.Buffer[lidx], voice->Direct.Buffer[ridx],
-                            samples, voice->Offset, OutPos, IrSize, &parms->Hrtf.Old,
-                            &hrtfparams, &parms->Hrtf.State, fademix
-                        );
+                            voice->Direct.Buffer[OutLIdx], voice->Direct.Buffer[OutRIdx],
+                            samples, voice->Offset, OutPos, IrSize, &parms.Hrtf.Old,
+                            &hrtfparams, &parms.Hrtf.State, fademix);
                         /* Update the old parameters with the result. */
-                        parms->Hrtf.Old = parms->Hrtf.Target;
+                        parms.Hrtf.Old = parms.Hrtf.Target;
                         if(fademix < Counter)
-                            parms->Hrtf.Old.Gain = hrtfparams.Gain;
+                            parms.Hrtf.Old.Gain = hrtfparams.Gain;
                     }
 
                     if(fademix < DstBufferSize)
                     {
                         const ALsizei todo{DstBufferSize - fademix};
-                        ALfloat gain{parms->Hrtf.Target.Gain};
+                        ALfloat gain{parms.Hrtf.Target.Gain};
 
                         /* Interpolate the target gain if the gain fading lasts
                          * longer than this mix.
                          */
                         if(Counter > DstBufferSize)
-                            gain = lerp(parms->Hrtf.Old.Gain, gain,
+                            gain = lerp(parms.Hrtf.Old.Gain, gain,
                                         (ALfloat)todo/(Counter-fademix));
 
                         MixHrtfParams hrtfparams;
-                        hrtfparams.Coeffs = parms->Hrtf.Target.Coeffs;
-                        hrtfparams.Delay[0] = parms->Hrtf.Target.Delay[0];
-                        hrtfparams.Delay[1] = parms->Hrtf.Target.Delay[1];
-                        hrtfparams.Gain = parms->Hrtf.Old.Gain;
-                        hrtfparams.GainStep = (gain - parms->Hrtf.Old.Gain) / (ALfloat)todo;
+                        hrtfparams.Coeffs = parms.Hrtf.Target.Coeffs;
+                        hrtfparams.Delay[0] = parms.Hrtf.Target.Delay[0];
+                        hrtfparams.Delay[1] = parms.Hrtf.Target.Delay[1];
+                        hrtfparams.Gain = parms.Hrtf.Old.Gain;
+                        hrtfparams.GainStep = (gain - parms.Hrtf.Old.Gain) / (ALfloat)todo;
                         MixHrtfSamples(
-                            voice->Direct.Buffer[lidx], voice->Direct.Buffer[ridx],
+                            voice->Direct.Buffer[OutLIdx], voice->Direct.Buffer[OutRIdx],
                             samples+fademix, voice->Offset+fademix, OutPos+fademix, IrSize,
-                            &hrtfparams, &parms->Hrtf.State, todo
-                        );
+                            &hrtfparams, &parms.Hrtf.State, todo);
                         /* Store the interpolated gain or the final target gain
                          * depending if the fade is done.
                          */
                         if(DstBufferSize < Counter)
-                            parms->Hrtf.Old.Gain = gain;
+                            parms.Hrtf.Old.Gain = gain;
                         else
-                            parms->Hrtf.Old.Gain = parms->Hrtf.Target.Gain;
+                            parms.Hrtf.Old.Gain = parms.Hrtf.Target.Gain;
                     }
                 }
             }
@@ -640,19 +660,14 @@ ALboolean MixSource(ALvoice *voice, ALuint SourceID, ALCcontext *Context, ALsize
                 if(!send.Buffer)
                     return;
 
-                SendParams *parms = &send.Params[chan];
-                const ALfloat *samples{DoFilters(&parms->LowPass, &parms->HighPass,
-                    FilterBuf, ResampledData, DstBufferSize, send.FilterType
-                )};
+                SendParams &parms = send.Params[chan];
+                const ALfloat *samples{DoFilters(&parms.LowPass, &parms.HighPass,
+                    FilterBuf, ResampledData, DstBufferSize, send.FilterType)};
 
-                if(!Counter)
-                    std::copy(std::begin(parms->Gains.Target), std::end(parms->Gains.Target),
-                              std::begin(parms->Gains.Current));
-                MixSamples(samples, send.Channels, send.Buffer,
-                    parms->Gains.Current, parms->Gains.Target, Counter, OutPos, DstBufferSize
-                );
+                MixSamples(samples, send.Channels, send.Buffer, parms.Gains.Current,
+                    parms.Gains.Target, Counter, OutPos, DstBufferSize);
             };
-            std::for_each(voice->Send, voice->Send+Device->NumAuxSends, mix_send);
+            std::for_each(voice->Send, voice->Send+NumAuxSends, mix_send);
         }
         /* Update positions */
         DataPosFrac += increment*DstBufferSize;

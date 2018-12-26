@@ -397,27 +397,31 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
 
         state = props->State;
         props->State = nullptr;
+        EffectState *oldstate{slot->Params.mEffectState};
+        slot->Params.mEffectState = state;
 
-        if(state == slot->Params.mEffectState)
+        /* Manually decrement the old effect state's refcount if it's greater
+         * than 1. We need to be a bit clever here to avoid the refcount
+         * reaching 0 since it can't be deleted in the mixer.
+         */
+        ALuint oldval{oldstate->mRef.load(std::memory_order_acquire)};
+        while(oldval > 1 && !oldstate->mRef.compare_exchange_weak(oldval, oldval-1,
+            std::memory_order_acq_rel, std::memory_order_acquire))
         {
-            /* If the effect state is the same as current, we can decrement its
-             * count safely to remove it from the update object (it can't reach
-             * 0 refs since the current params also hold a reference).
+            /* oldval was updated with the current value on failure, so just
+             * try again.
              */
-            DecrementRef(&state->mRef);
         }
-        else
+
+        if(oldval < 2)
         {
-            /* Otherwise, replace it and send off the old one with a release
+            /* Otherwise, if it would be deleted, send it off with a release
              * event.
              */
-            EffectState *oldstate{slot->Params.mEffectState};
-            slot->Params.mEffectState = state;
-
-            auto evt_data = ll_ringbuffer_get_write_vector(context->AsyncEvents).first;
-            if(LIKELY(evt_data.len > 0))
+            auto evt_vec = ll_ringbuffer_get_write_vector(context->AsyncEvents);
+            if(LIKELY(evt_vec.first.len > 0))
             {
-                AsyncEvent *evt{new (evt_data.buf) AsyncEvent{EventType_ReleaseEffectState}};
+                AsyncEvent *evt{new (evt_vec.first.buf) AsyncEvent{EventType_ReleaseEffectState}};
                 evt->u.mEffectState = oldstate;
                 ll_ringbuffer_write_advance(context->AsyncEvents, 1);
                 context->EventSem.post();

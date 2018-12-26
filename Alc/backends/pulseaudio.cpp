@@ -533,8 +533,8 @@ struct PulsePlayback final : public ALCbackend {
     pa_stream *stream{nullptr};
     pa_context *context{nullptr};
 
-    std::atomic<ALenum> mKillNow{ALC_TRUE};
-    std::thread mThread;
+    ALuint mBufferSize{0u};
+    ALuint mFrameSize{0u};
 };
 
 void PulsePlayback_deviceCallback(pa_context *context, const pa_sink_info *info, int eol, void *pdata);
@@ -551,7 +551,6 @@ pa_stream *PulsePlayback_connectStream(const char *device_name, pa_threaded_main
                                        pa_context *context, pa_stream_flags_t flags,
                                        pa_buffer_attr *attr, pa_sample_spec *spec,
                                        pa_channel_map *chanmap);
-int PulsePlayback_mixerProc(PulsePlayback *self);
 
 void PulsePlayback_Construct(PulsePlayback *self, ALCdevice *device);
 void PulsePlayback_Destruct(PulsePlayback *self);
@@ -679,13 +678,17 @@ void PulsePlayback_bufferAttrCallback(pa_stream *stream, void *pdata)
 {
     auto self = reinterpret_cast<PulsePlayback*>(pdata);
 
-    self->attr = *pa_stream_get_buffer_attr(stream);
-    TRACE("minreq=%d, tlength=%d, prebuf=%d\n", self->attr.minreq, self->attr.tlength, self->attr.prebuf);
     /* FIXME: Update the device's UpdateSize (and/or NumUpdates) using the new
      * buffer attributes? Changing UpdateSize will change the ALC_REFRESH
      * property, which probably shouldn't change between device resets. But
      * leaving it alone means ALC_REFRESH will be off.
      */
+    self->attr = *(pa_stream_get_buffer_attr(stream));
+    TRACE("minreq=%d, tlength=%d, prebuf=%d\n", self->attr.minreq, self->attr.tlength,
+        self->attr.prebuf);
+
+    const ALuint num_periods{(self->attr.tlength + self->attr.minreq/2u) / self->attr.minreq};
+    self->mBufferSize = maxu(num_periods, 2u) * self->attr.minreq;
 }
 
 void PulsePlayback_contextStateCallback(pa_context *context, void *pdata)
@@ -710,10 +713,22 @@ void PulsePlayback_streamStateCallback(pa_stream *stream, void *pdata)
     pa_threaded_mainloop_signal(self->loop, 0);
 }
 
-void PulsePlayback_streamWriteCallback(pa_stream* UNUSED(p), size_t UNUSED(nbytes), void *pdata)
+void PulsePlayback_streamWriteCallback(pa_stream *stream, size_t nbytes, void *pdata)
 {
-    auto self = reinterpret_cast<PulsePlayback*>(pdata);
-    pa_threaded_mainloop_signal(self->loop, 0);
+    auto self = static_cast<PulsePlayback*>(pdata);
+    ALCdevice *device{self->mDevice};
+
+    /* Round down to the nearest period/minreq multiple if doing more than 1. */
+    const size_t frame_size{self->mFrameSize};
+    if(nbytes > self->attr.minreq)
+        nbytes -= nbytes%self->attr.minreq;
+
+    void *buf{pa_xmalloc(nbytes)};
+    aluMixData(device, buf, nbytes/frame_size);
+
+    int ret{pa_stream_write(stream, buf, nbytes, pa_xfree, 0, PA_SEEK_RELATIVE)};
+    if(UNLIKELY(ret != PA_OK))
+        ERR("Failed to write to stream: %d, %s\n", ret, pa_strerror(ret));
 }
 
 void PulsePlayback_sinkInfoCallback(pa_context *UNUSED(context), const pa_sink_info *info, int eol, void *pdata)
@@ -824,8 +839,7 @@ pa_stream *PulsePlayback_connectStream(const char *device_name,
     }
 
     pa_stream *stream{pa_stream_new_with_proplist(context,
-        "Playback Stream", spec, chanmap, prop_filter
-    )};
+        "Playback Stream", spec, chanmap, prop_filter)};
     if(!stream)
     {
         ERR("pa_stream_new_with_proplist() failed: %s\n", pa_strerror(pa_context_errno(context)));
@@ -856,65 +870,6 @@ pa_stream *PulsePlayback_connectStream(const char *device_name,
     pa_stream_set_state_callback(stream, nullptr, nullptr);
 
     return stream;
-}
-
-
-int PulsePlayback_mixerProc(PulsePlayback *self)
-{
-    ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
-
-    SetRTPriority();
-    althrd_setname(MIXER_THREAD_NAME);
-
-    unique_palock palock{self->loop};
-    size_t frame_size{pa_frame_size(&self->spec)};
-
-    while(!self->mKillNow.load(std::memory_order_acquire) &&
-          device->Connected.load(std::memory_order_acquire))
-    {
-        ssize_t len{static_cast<ssize_t>(pa_stream_writable_size(self->stream))};
-        if(UNLIKELY(len < 0))
-        {
-            ERR("Failed to get writable size: %ld", (long)len);
-            aluHandleDisconnect(device, "Failed to get writable size: %ld", (long)len);
-            break;
-        }
-
-        /* Make sure we're going to write at least 2 'periods' (minreqs), in
-         * case the server increased it since starting playback. Also round up
-         * the number of writable periods if it's not an integer count.
-         */
-        ALint buffer_size{static_cast<int32_t>(self->attr.minreq) * maxi(
-            (self->attr.tlength + self->attr.minreq/2) / self->attr.minreq, 2
-        )};
-
-        /* NOTE: This assumes pa_stream_writable_size returns between 0 and
-         * tlength, else there will be more latency than intended.
-         */
-        len = buffer_size - maxi((ssize_t)self->attr.tlength - len, 0);
-        if(len < self->attr.minreq)
-        {
-            if(pa_stream_is_corked(self->stream))
-            {
-                pa_operation *op{pa_stream_cork(self->stream, 0, nullptr, nullptr)};
-                if(op) pa_operation_unref(op);
-            }
-            pa_threaded_mainloop_wait(self->loop);
-            continue;
-        }
-
-        len -= len%self->attr.minreq;
-        len -= len%frame_size;
-
-        void *buf{pa_xmalloc(len)};
-        aluMixData(device, buf, len/frame_size);
-
-        int ret{pa_stream_write(self->stream, buf, len, pa_xfree, 0, PA_SEEK_RELATIVE)};
-        if(UNLIKELY(ret != PA_OK))
-            ERR("Failed to write to stream: %d, %s\n", ret, pa_strerror(ret));
-    }
-
-    return 0;
 }
 
 
@@ -965,6 +920,7 @@ ALCenum PulsePlayback_open(PulsePlayback *self, const ALCchar *name)
         return ALC_INVALID_VALUE;
     }
     pa_stream_set_moved_callback(self->stream, PulsePlayback_streamMovedCallback, self);
+    self->mFrameSize = pa_frame_size(pa_stream_get_sample_spec(self->stream));
 
     self->device_name = pa_stream_get_device_name(self->stream);
     if(!dev_name)
@@ -999,15 +955,16 @@ ALCboolean PulsePlayback_reset(PulsePlayback *self)
     }
 
     pa_operation *op{pa_context_get_sink_info_by_name(self->context,
-        self->device_name.c_str(), PulsePlayback_sinkInfoCallback, self
-    )};
+        self->device_name.c_str(), PulsePlayback_sinkInfoCallback, self)};
     wait_for_operation(op, self->loop);
 
     ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
-    pa_stream_flags_t flags{PA_STREAM_START_CORKED | PA_STREAM_ADJUST_LATENCY |
-                            PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE};
+    pa_stream_flags_t flags{PA_STREAM_START_CORKED | PA_STREAM_INTERPOLATE_TIMING |
+        PA_STREAM_AUTO_TIMING_UPDATE};
     if(!GetConfigValueBool(nullptr, "pulse", "allow-moves", 0))
         flags |= PA_STREAM_DONT_MOVE;
+    if(GetConfigValueBool(device->DeviceName.c_str(), "pulse", "adjust-latency", 0))
+        flags |= PA_STREAM_ADJUST_LATENCY;
     if(GetConfigValueBool(device->DeviceName.c_str(), "pulse", "fix-rate", 0) ||
        !(device->Flags&DEVICE_FREQUENCY_REQUEST))
         flags |= PA_STREAM_FIX_RATE;
@@ -1081,37 +1038,38 @@ ALCboolean PulsePlayback_reset(PulsePlayback *self)
     }
     SetDefaultWFXChannelOrder(device);
 
-    self->attr.fragsize = -1;
-    self->attr.prebuf = 0;
-    self->attr.minreq = device->UpdateSize * pa_frame_size(&self->spec);
-    self->attr.tlength = self->attr.minreq * maxu(device->NumUpdates, 2);
+    size_t period_size{device->UpdateSize * pa_frame_size(&self->spec)};
     self->attr.maxlength = -1;
+    self->attr.tlength = period_size * maxu(device->NumUpdates, 2);
+    self->attr.prebuf = 0;
+    self->attr.minreq = period_size;
+    self->attr.fragsize = -1;
 
     self->stream = PulsePlayback_connectStream(self->device_name.c_str(),
-        self->loop, self->context, flags, &self->attr, &self->spec, &chanmap
-    );
-    if(!self->stream)
-        return ALC_FALSE;
+        self->loop, self->context, flags, &self->attr, &self->spec, &chanmap);
+    if(!self->stream) return ALC_FALSE;
+
     pa_stream_set_state_callback(self->stream, PulsePlayback_streamStateCallback, self);
     pa_stream_set_moved_callback(self->stream, PulsePlayback_streamMovedCallback, self);
-    pa_stream_set_write_callback(self->stream, PulsePlayback_streamWriteCallback, self);
 
     self->spec = *(pa_stream_get_sample_spec(self->stream));
+    self->mFrameSize = pa_frame_size(&self->spec);
+
     if(device->Frequency != self->spec.rate)
     {
         /* Server updated our playback rate, so modify the buffer attribs
          * accordingly. */
-        device->NumUpdates = (ALuint)clampd(
-            (ALdouble)device->NumUpdates/device->Frequency*self->spec.rate + 0.5, 2.0, 16.0
-        );
+        device->NumUpdates = static_cast<ALuint>(clampd(
+            (ALdouble)self->spec.rate/device->Frequency*device->NumUpdates + 0.5, 2.0, 16.0));
 
-        self->attr.minreq  = device->UpdateSize * pa_frame_size(&self->spec);
-        self->attr.tlength = self->attr.minreq * device->NumUpdates;
+        period_size = device->UpdateSize * self->mFrameSize;
         self->attr.maxlength = -1;
-        self->attr.prebuf  = 0;
+        self->attr.tlength = period_size * maxu(device->NumUpdates, 2);
+        self->attr.prebuf = 0;
+        self->attr.minreq = period_size;
 
-        op = pa_stream_set_buffer_attr(self->stream, &self->attr,
-                                       stream_success_callback, self->loop);
+        op = pa_stream_set_buffer_attr(self->stream, &self->attr, stream_success_callback,
+            self->loop);
         wait_for_operation(op, self->loop);
 
         device->Frequency = self->spec.rate;
@@ -1120,10 +1078,8 @@ ALCboolean PulsePlayback_reset(PulsePlayback *self)
     pa_stream_set_buffer_attr_callback(self->stream, PulsePlayback_bufferAttrCallback, self);
     PulsePlayback_bufferAttrCallback(self->stream, self);
 
-    device->NumUpdates = (ALuint)clampu64(
-        (self->attr.tlength + self->attr.minreq/2) / self->attr.minreq, 2, 16
-    );
-    device->UpdateSize = self->attr.minreq / pa_frame_size(&self->spec);
+    device->NumUpdates = clampu((self->attr.tlength + self->attr.minreq/2u) / self->attr.minreq, 2u, 16u);
+    device->UpdateSize = self->attr.minreq / self->mFrameSize;
 
     /* HACK: prebuf should be 0 as that's what we set it to. However on some
      * systems it comes back as non-0, so we have to make sure the device will
@@ -1133,7 +1089,7 @@ ALCboolean PulsePlayback_reset(PulsePlayback *self)
      */
     if(self->attr.prebuf != 0)
     {
-        ALuint len{self->attr.prebuf / (ALuint)pa_frame_size(&self->spec)};
+        ALuint len{self->attr.prebuf / self->mFrameSize};
         if(len <= device->UpdateSize*device->NumUpdates)
             ERR("Non-0 prebuf, %u samples (%u bytes), device has %u samples\n",
                 len, self->attr.prebuf, device->UpdateSize*device->NumUpdates);
@@ -1150,39 +1106,20 @@ ALCboolean PulsePlayback_reset(PulsePlayback *self)
 
 ALCboolean PulsePlayback_start(PulsePlayback *self)
 {
-    try {
-        self->mKillNow.store(AL_FALSE, std::memory_order_release);
-        self->mThread = std::thread(PulsePlayback_mixerProc, self);
-        return ALC_TRUE;
-    }
-    catch(std::exception& e) {
-        ERR("Failed to start thread: %s\n", e.what());
-    }
-    catch(...) {
-        ERR("Failed to start thread\n");
-    }
-    return ALC_FALSE;
+    unique_palock palock{self->loop};
+
+    pa_stream_set_write_callback(self->stream, PulsePlayback_streamWriteCallback, self);
+    pa_operation *op{pa_stream_cork(self->stream, 0, stream_success_callback, self->loop)};
+    wait_for_operation(op, self->loop);
+
+    return ALC_TRUE;
 }
 
 void PulsePlayback_stop(PulsePlayback *self)
 {
-    self->mKillNow.store(AL_TRUE, std::memory_order_release);
-    if(!self->stream || !self->mThread.joinable())
-        return;
-
-    /* Signal the main loop in case PulseAudio isn't sending us audio requests
-     * (e.g. if the device is suspended). We need to lock the mainloop in case
-     * the mixer is between checking the mKillNow flag but before waiting for
-     * the signal.
-     */
     unique_palock palock{self->loop};
-    palock.unlock();
 
-    pa_threaded_mainloop_signal(self->loop, 0);
-    self->mThread.join();
-
-    palock.lock();
-
+    pa_stream_set_write_callback(self->stream, nullptr, nullptr);
     pa_operation *op{pa_stream_cork(self->stream, 1, stream_success_callback, self->loop)};
     wait_for_operation(op, self->loop);
 }

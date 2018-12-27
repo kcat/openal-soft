@@ -736,11 +736,11 @@ ALboolean MixSource(ALvoice *voice, const ALuint SourceID, ALCcontext *Context, 
     ALbitfieldSOFT enabledevt{Context->EnabledEvts.load(std::memory_order_acquire)};
     if(buffers_done > 0 && (enabledevt&EventType_BufferCompleted))
     {
-        RingBuffer *ring{Context->AsyncEvents};
-        auto evt_data = ring->getWriteVector().first;
-        if(evt_data.len > 0)
+        RingBuffer *ring{Context->AsyncEvents.get()};
+        auto evt_vec = ring->getWriteVector();
+        if(evt_vec.first.len > 0)
         {
-            AsyncEvent *evt{new (evt_data.buf) AsyncEvent{EventType_BufferCompleted}};
+            AsyncEvent *evt{new (evt_vec.first.buf) AsyncEvent{EventType_BufferCompleted}};
             evt->u.bufcomp.id = SourceID;
             evt->u.bufcomp.count = buffers_done;
             ring->writeAdvance(1);

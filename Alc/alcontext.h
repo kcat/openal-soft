@@ -112,7 +112,7 @@ struct ALCcontext_struct {
 
     std::thread EventThread;
     al::semaphore EventSem;
-    RingBuffer *AsyncEvents{nullptr};
+    std::unique_ptr<RingBuffer> AsyncEvents;
     std::atomic<ALbitfieldSOFT> EnabledEvts{0u};
     std::mutex EventCbLock;
     ALEVENTPROCSOFT EventCb{};

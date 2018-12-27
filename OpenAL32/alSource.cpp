@@ -697,7 +697,7 @@ void SendStateChangeEvent(ALCcontext *context, ALuint id, ALenum state)
      * and we don't want state change messages to occur out of order, so send
      * it through the async queue to ensure proper ordering.
      */
-    RingBuffer *ring{context->AsyncEvents};
+    RingBuffer *ring{context->AsyncEvents.get()};
     auto evt_vec = ring->getWriteVector();
     if(evt_vec.first.len < 1) return;
 

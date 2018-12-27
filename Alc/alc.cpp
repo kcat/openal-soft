@@ -2369,7 +2369,7 @@ static ALvoid InitContext(ALCcontext *Context)
     listener.Params.mDistanceModel = Context->mDistanceModel;
 
 
-    Context->AsyncEvents = ll_ringbuffer_create(511, sizeof(AsyncEvent), false);
+    Context->AsyncEvents.reset(ll_ringbuffer_create(511, sizeof(AsyncEvent), false));
     StartEventThrd(Context);
 }
 
@@ -2483,9 +2483,6 @@ ALCcontext_struct::~ALCcontext_struct()
     }
     if(count > 0)
         TRACE("Destructed " SZFMT " orphaned event%s\n", count, (count==1)?"":"s");
-
-    delete AsyncEvents;
-    AsyncEvents = nullptr;
 
     ALCdevice_DecRef(Device);
 }

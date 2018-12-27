@@ -292,11 +292,11 @@ void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
     ALbitfieldSOFT enabledevt{context->EnabledEvts.load(std::memory_order_acquire)};
     if(!(enabledevt&EventType_SourceStateChange)) return;
 
-    RingBuffer *ring{context->AsyncEvents};
-    auto evt_data = ring->getWriteVector().first;
-    if(evt_data.len < 1) return;
+    RingBuffer *ring{context->AsyncEvents.get()};
+    auto evt_vec = ring->getWriteVector();
+    if(evt_vec.first.len < 1) return;
 
-    AsyncEvent *evt{new (evt_data.buf) AsyncEvent{EventType_SourceStateChange}};
+    AsyncEvent *evt{new (evt_vec.first.buf) AsyncEvent{EventType_SourceStateChange}};
     evt->u.srcstate.id = id;
     evt->u.srcstate.state = AL_STOPPED;
 
@@ -419,7 +419,7 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
             /* Otherwise, if it would be deleted, send it off with a release
              * event.
              */
-            RingBuffer *ring{context->AsyncEvents};
+            RingBuffer *ring{context->AsyncEvents.get()};
             auto evt_vec = ring->getWriteVector();
             if(LIKELY(evt_vec.first.len > 0))
             {
@@ -1839,7 +1839,7 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
         const ALbitfieldSOFT enabledevt{ctx->EnabledEvts.load(std::memory_order_acquire)};
         if((enabledevt&EventType_Disconnected))
         {
-            RingBuffer *ring{ctx->AsyncEvents};
+            RingBuffer *ring{ctx->AsyncEvents.get()};
             auto evt_data = ring->getWriteVector().first;
             if(evt_data.len > 0)
             {

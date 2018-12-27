@@ -17,7 +17,7 @@
 
 static int EventThread(ALCcontext *context)
 {
-    RingBuffer *ring{context->AsyncEvents};
+    RingBuffer *ring{context->AsyncEvents.get()};
     bool quitnow{false};
     while(LIKELY(!quitnow))
     {
@@ -44,7 +44,7 @@ static int EventThread(ALCcontext *context)
                     evt.~AsyncEvent();
                     ring->readAdvance(1);
                 }
-            } _{evt, context->AsyncEvents};
+            } _{evt, context->AsyncEvents.get()};
 
             quitnow = evt.EnumType == EventType_KillThread;
             if(UNLIKELY(quitnow)) break;
@@ -111,7 +111,7 @@ void StartEventThrd(ALCcontext *ctx)
 void StopEventThrd(ALCcontext *ctx)
 {
     static constexpr AsyncEvent kill_evt{EventType_KillThread};
-    RingBuffer *ring{ctx->AsyncEvents};
+    RingBuffer *ring{ctx->AsyncEvents.get()};
     auto evt_data = ring->getWriteVector().first;
     if(evt_data.len == 0)
     {

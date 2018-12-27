@@ -28,6 +28,7 @@
 #include <thread>
 #include <limits>
 #include <algorithm>
+#include <functional>
 
 #include "AL/al.h"
 #include "AL/alc.h"
@@ -48,6 +49,8 @@
 
 
 namespace {
+
+using namespace std::placeholders;
 
 inline ALvoice *GetSourceVoice(ALsource *source, ALCcontext *context)
 {
@@ -465,7 +468,7 @@ ALsource *AllocSource(ALCcontext *context)
         return nullptr;
     }
     auto sublist = std::find_if(context->SourceList.begin(), context->SourceList.end(),
-        [](const SourceSubList &entry) -> bool
+        [](const SourceSubList &entry) noexcept -> bool
         { return entry.FreeMask != 0; }
     );
     auto lidx = static_cast<ALsizei>(std::distance(context->SourceList.begin(), sublist));
@@ -2812,9 +2815,7 @@ AL_API ALvoid AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
 
         auto buffers_end = BufferList->buffers + BufferList->num_buffers;
         auto buffer = std::find_if(BufferList->buffers, buffers_end,
-            [](const ALbuffer *buffer) noexcept -> bool
-            { return buffer != nullptr; }
-        );
+            std::bind(std::not_equal_to<const ALbuffer*>{}, _1, nullptr));
         if(buffer != buffers_end)
         {
             voice->NumChannels = ChannelsFromFmt((*buffer)->mFmtChannels);

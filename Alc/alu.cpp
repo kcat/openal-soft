@@ -29,6 +29,7 @@
 #include <cmath>
 #include <limits>
 #include <algorithm>
+#include <functional>
 
 #include "alMain.h"
 #include "alcontext.h"
@@ -52,6 +53,8 @@
 
 
 namespace {
+
+using namespace std::placeholders;
 
 ALfloat InitConeScale()
 {
@@ -1418,9 +1421,7 @@ void CalcSourceParams(ALvoice *voice, ALCcontext *context, bool force)
     {
         auto buffers_end = BufferListItem->buffers+BufferListItem->num_buffers;
         auto buffer = std::find_if(BufferListItem->buffers, buffers_end,
-            [](const ALbuffer *buffer) noexcept -> bool
-            { return buffer != nullptr; }
-        );
+            std::bind(std::not_equal_to<const ALbuffer*>{}, _1, nullptr));
         if(LIKELY(buffer != buffers_end))
         {
             if(voice->Props.mSpatializeMode==SpatializeOn ||

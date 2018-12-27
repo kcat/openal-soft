@@ -1,6 +1,8 @@
 #ifndef _AL_SOURCE_H_
 #define _AL_SOURCE_H_
 
+#include <array>
+
 #include "alMain.h"
 #include "alu.h"
 #include "hrtf.h"
@@ -34,10 +36,11 @@ struct ALsource {
     ALfloat   RefDistance;
     ALfloat   MaxDistance;
     ALfloat   RolloffFactor;
-    ALfloat   Position[3];
-    ALfloat   Velocity[3];
-    ALfloat   Direction[3];
-    ALfloat   Orientation[2][3];
+    std::array<ALfloat,3> Position;
+    std::array<ALfloat,3> Velocity;
+    std::array<ALfloat,3> Direction;
+    std::array<ALfloat,3> OrientAt;
+    std::array<ALfloat,3> OrientUp;
     ALboolean HeadRelative;
     ALboolean Looping;
     DistanceModel mDistanceModel;
@@ -57,7 +60,7 @@ struct ALsource {
     /* NOTE: Stereo pan angles are specified in radians, counter-clockwise
      * rather than clockwise.
      */
-    ALfloat StereoPan[2];
+    std::array<ALfloat,2> StereoPan;
 
     ALfloat Radius;
 

@@ -134,12 +134,12 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
              std::isfinite(values[3]) && std::isfinite(values[4]) && std::isfinite(values[5])))
             SETERR_RETURN(context.get(), AL_INVALID_VALUE,, "Listener orientation out of range");
         /* AT then UP */
-        listener.Forward[0] = values[0];
-        listener.Forward[1] = values[1];
-        listener.Forward[2] = values[2];
-        listener.Up[0] = values[3];
-        listener.Up[1] = values[4];
-        listener.Up[2] = values[5];
+        listener.OrientAt[0] = values[0];
+        listener.OrientAt[1] = values[1];
+        listener.OrientAt[2] = values[2];
+        listener.OrientUp[0] = values[3];
+        listener.OrientUp[1] = values[4];
+        listener.OrientUp[2] = values[5];
         DO_UPDATEPROPS();
         break;
 
@@ -303,12 +303,12 @@ AL_API ALvoid AL_APIENTRY alGetListenerfv(ALenum param, ALfloat *values)
     {
     case AL_ORIENTATION:
         // AT then UP
-        values[0] = listener.Forward[0];
-        values[1] = listener.Forward[1];
-        values[2] = listener.Forward[2];
-        values[3] = listener.Up[0];
-        values[4] = listener.Up[1];
-        values[5] = listener.Up[2];
+        values[0] = listener.OrientAt[0];
+        values[1] = listener.OrientAt[1];
+        values[2] = listener.OrientAt[2];
+        values[3] = listener.OrientUp[0];
+        values[4] = listener.OrientUp[1];
+        values[5] = listener.OrientUp[2];
         break;
 
     default:
@@ -383,12 +383,12 @@ AL_API void AL_APIENTRY alGetListeneriv(ALenum param, ALint* values)
     {
     case AL_ORIENTATION:
         // AT then UP
-        values[0] = (ALint)listener.Forward[0];
-        values[1] = (ALint)listener.Forward[1];
-        values[2] = (ALint)listener.Forward[2];
-        values[3] = (ALint)listener.Up[0];
-        values[4] = (ALint)listener.Up[1];
-        values[5] = (ALint)listener.Up[2];
+        values[0] = (ALint)listener.OrientAt[0];
+        values[1] = (ALint)listener.OrientAt[1];
+        values[2] = (ALint)listener.OrientAt[2];
+        values[3] = (ALint)listener.OrientUp[0];
+        values[4] = (ALint)listener.OrientUp[1];
+        values[5] = (ALint)listener.OrientUp[2];
         break;
 
     default:
@@ -414,21 +414,10 @@ void UpdateListenerProps(ALCcontext *context)
 
     /* Copy in current property values. */
     ALlistener &listener = context->Listener;
-    props->Position[0] = listener.Position[0];
-    props->Position[1] = listener.Position[1];
-    props->Position[2] = listener.Position[2];
-
-    props->Velocity[0] = listener.Velocity[0];
-    props->Velocity[1] = listener.Velocity[1];
-    props->Velocity[2] = listener.Velocity[2];
-
-    props->Forward[0] = listener.Forward[0];
-    props->Forward[1] = listener.Forward[1];
-    props->Forward[2] = listener.Forward[2];
-    props->Up[0] = listener.Up[0];
-    props->Up[1] = listener.Up[1];
-    props->Up[2] = listener.Up[2];
-
+    props->Position = listener.Position;
+    props->Velocity = listener.Velocity;
+    props->OrientAt = listener.OrientAt;
+    props->OrientUp = listener.OrientUp;
     props->Gain = listener.Gain;
 
     /* Set the new container for updating internal parameters. */

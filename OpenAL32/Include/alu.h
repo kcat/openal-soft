@@ -155,10 +155,11 @@ struct ALvoicePropsBase {
     ALfloat RefDistance;
     ALfloat MaxDistance;
     ALfloat RolloffFactor;
-    ALfloat Position[3];
-    ALfloat Velocity[3];
-    ALfloat Direction[3];
-    ALfloat Orientation[2][3];
+    std::array<ALfloat,3> Position;
+    std::array<ALfloat,3> Velocity;
+    std::array<ALfloat,3> Direction;
+    std::array<ALfloat,3> OrientAt;
+    std::array<ALfloat,3> OrientUp;
     ALboolean HeadRelative;
     DistanceModel mDistanceModel;
     Resampler mResampler;
@@ -174,7 +175,7 @@ struct ALvoicePropsBase {
     ALfloat RoomRolloffFactor;
     ALfloat DopplerFactor;
 
-    ALfloat StereoPan[2];
+    std::array<ALfloat,2> StereoPan;
 
     ALfloat Radius;
 

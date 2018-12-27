@@ -334,9 +334,9 @@ bool CalcListenerParams(ALCcontext *Context)
     if(!props) return false;
 
     /* AT then UP */
-    alu::Vector N{props->Forward[0], props->Forward[1], props->Forward[2], 0.0f};
+    alu::Vector N{props->OrientAt[0], props->OrientAt[1], props->OrientAt[2], 0.0f};
     N.normalize();
-    alu::Vector V{props->Up[0], props->Up[1], props->Up[2], 0.0f};
+    alu::Vector V{props->OrientUp[0], props->OrientUp[1], props->OrientUp[2], 0.0f};
     V.normalize();
     /* Build and normalize right-vector */
     alu::Vector U{aluCrossproduct(N, V)};
@@ -681,11 +681,9 @@ void CalcPanningAndFilters(ALvoice *voice, const ALfloat Azi, const ALfloat Elev
              * to the orientation.
              */
             /* AT then UP */
-            alu::Vector N{props->Orientation[0][0], props->Orientation[0][1],
-                props->Orientation[0][2], 0.0f};
+            alu::Vector N{props->OrientAt[0], props->OrientAt[1], props->OrientAt[2], 0.0f};
             N.normalize();
-            alu::Vector V{props->Orientation[1][0], props->Orientation[1][1],
-                props->Orientation[1][2], 0.0f};
+            alu::Vector V{props->OrientUp[0], props->OrientUp[1], props->OrientUp[2], 0.0f};
             V.normalize();
             if(!props->HeadRelative)
             {

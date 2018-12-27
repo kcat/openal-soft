@@ -66,7 +66,7 @@ inline ALvoice *GetSourceVoice(ALsource *source, ALCcontext *context)
     return nullptr;
 }
 
-void UpdateSourceProps(ALsource *source, ALvoice *voice, ALCcontext *context)
+void UpdateSourceProps(const ALsource *source, ALvoice *voice, ALCcontext *context)
 {
     /* Get an unused property container, or allocate a new one as needed. */
     ALvoiceProps *props{context->FreeVoiceProps.load(std::memory_order_acquire)};
@@ -92,11 +92,11 @@ void UpdateSourceProps(ALsource *source, ALvoice *voice, ALCcontext *context)
     props->RefDistance = source->RefDistance;
     props->MaxDistance = source->MaxDistance;
     props->RolloffFactor = source->RolloffFactor;
-    std::copy(std::begin(source->Position), std::end(source->Position), props->Position);
-    std::copy(std::begin(source->Velocity), std::end(source->Velocity), props->Velocity);
-    std::copy(std::begin(source->Direction), std::end(source->Direction), props->Direction);
-    std::copy(std::begin(source->Orientation[0]), std::end(source->Orientation[0]), props->Orientation[0]);
-    std::copy(std::begin(source->Orientation[1]), std::end(source->Orientation[1]), props->Orientation[1]);
+    props->Position = source->Position;
+    props->Velocity = source->Velocity;
+    props->Direction = source->Direction;
+    props->OrientAt = source->OrientAt;
+    props->OrientUp = source->OrientUp;
     props->HeadRelative = source->HeadRelative;
     props->mDistanceModel = source->mDistanceModel;
     props->mResampler = source->mResampler;
@@ -112,7 +112,7 @@ void UpdateSourceProps(ALsource *source, ALvoice *voice, ALCcontext *context)
     props->RoomRolloffFactor = source->RoomRolloffFactor;
     props->DopplerFactor = source->DopplerFactor;
 
-    std::copy(std::begin(source->StereoPan), std::end(source->StereoPan), props->StereoPan);
+    props->StereoPan = source->StereoPan;
 
     props->Radius = source->Radius;
 
@@ -122,15 +122,18 @@ void UpdateSourceProps(ALsource *source, ALvoice *voice, ALCcontext *context)
     props->Direct.GainLF = source->Direct.GainLF;
     props->Direct.LFReference = source->Direct.LFReference;
 
-    for(size_t i{0u};i < source->Send.size();i++)
+    auto copy_send = [](const ALsource::SendData &srcsend) noexcept -> ALvoicePropsBase::SendData
     {
-        props->Send[i].Slot = source->Send[i].Slot;
-        props->Send[i].Gain = source->Send[i].Gain;
-        props->Send[i].GainHF = source->Send[i].GainHF;
-        props->Send[i].HFReference = source->Send[i].HFReference;
-        props->Send[i].GainLF = source->Send[i].GainLF;
-        props->Send[i].LFReference = source->Send[i].LFReference;
-    }
+        ALvoicePropsBase::SendData ret;
+        ret.Slot = srcsend.Slot;
+        ret.Gain = srcsend.Gain;
+        ret.GainHF = srcsend.GainHF;
+        ret.HFReference = srcsend.HFReference;
+        ret.GainLF = srcsend.GainLF;
+        ret.LFReference = srcsend.LFReference;
+        return ret;
+    };
+    std::transform(source->Send.cbegin(), source->Send.cend(), props->Send, copy_send);
 
     /* Set the new container for updating internal parameters. */
     props = voice->Update.exchange(props, std::memory_order_acq_rel);
@@ -1157,12 +1160,12 @@ ALboolean SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop, co
             CHECKVAL(std::isfinite(values[0]) && std::isfinite(values[1]) && std::isfinite(values[2]) &&
                      std::isfinite(values[3]) && std::isfinite(values[4]) && std::isfinite(values[5]));
 
-            Source->Orientation[0][0] = values[0];
-            Source->Orientation[0][1] = values[1];
-            Source->Orientation[0][2] = values[2];
-            Source->Orientation[1][0] = values[3];
-            Source->Orientation[1][1] = values[4];
-            Source->Orientation[1][2] = values[5];
+            Source->OrientAt[0] = values[0];
+            Source->OrientAt[1] = values[1];
+            Source->OrientAt[2] = values[2];
+            Source->OrientUp[0] = values[3];
+            Source->OrientUp[1] = values[4];
+            Source->OrientUp[2] = values[5];
             DO_UPDATEPROPS();
             return AL_TRUE;
 
@@ -1763,12 +1766,12 @@ ALboolean GetSourcedv(ALsource *Source, ALCcontext *Context, SourceProp prop, AL
             return AL_TRUE;
 
         case AL_ORIENTATION:
-            values[0] = Source->Orientation[0][0];
-            values[1] = Source->Orientation[0][1];
-            values[2] = Source->Orientation[0][2];
-            values[3] = Source->Orientation[1][0];
-            values[4] = Source->Orientation[1][1];
-            values[5] = Source->Orientation[1][2];
+            values[0] = Source->OrientAt[0];
+            values[1] = Source->OrientAt[1];
+            values[2] = Source->OrientAt[2];
+            values[3] = Source->OrientUp[0];
+            values[4] = Source->OrientUp[1];
+            values[5] = Source->OrientUp[2];
             return AL_TRUE;
 
         /* 1x int */
@@ -3311,14 +3314,14 @@ ALsource::ALsource(ALsizei num_sends)
     Direction[0] = 0.0f;
     Direction[1] = 0.0f;
     Direction[2] = 0.0f;
-    Orientation[0][0] =  0.0f;
-    Orientation[0][1] =  0.0f;
-    Orientation[0][2] = -1.0f;
-    Orientation[1][0] =  0.0f;
-    Orientation[1][1] =  1.0f;
-    Orientation[1][2] =  0.0f;
+    OrientAt[0] =  0.0f;
+    OrientAt[1] =  0.0f;
+    OrientAt[2] = -1.0f;
+    OrientUp[0] =  0.0f;
+    OrientUp[1] =  1.0f;
+    OrientUp[2] =  0.0f;
     RefDistance = 1.0f;
-    MaxDistance = FLT_MAX;
+    MaxDistance = std::numeric_limits<float>::max();
     RolloffFactor = 1.0f;
     Gain = 1.0f;
     MinGain = 0.0f;

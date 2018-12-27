@@ -1,6 +1,8 @@
 #ifndef _AL_LISTENER_H_
 #define _AL_LISTENER_H_
 
+#include <array>
+
 #include "AL/alc.h"
 #include "AL/al.h"
 #include "AL/alext.h"
@@ -12,20 +14,20 @@ enum class DistanceModel;
 
 
 struct ALlistenerProps {
-    ALfloat Position[3];
-    ALfloat Velocity[3];
-    ALfloat Forward[3];
-    ALfloat Up[3];
+    std::array<ALfloat,3> Position;
+    std::array<ALfloat,3> Velocity;
+    std::array<ALfloat,3> OrientAt;
+    std::array<ALfloat,3> OrientUp;
     ALfloat Gain;
 
     std::atomic<ALlistenerProps*> next;
 };
 
 struct ALlistener {
-    ALfloat Position[3]{0.0f, 0.0f, 0.0f};
-    ALfloat Velocity[3]{0.0f, 0.0f, 0.0f};
-    ALfloat Forward[3]{0.0f, 0.0f, -1.0f};
-    ALfloat Up[3]{0.0f, 1.0f, 0.0f};
+    std::array<ALfloat,3> Position{{0.0f, 0.0f, 0.0f}};
+    std::array<ALfloat,3> Velocity{{0.0f, 0.0f, 0.0f}};
+    std::array<ALfloat,3> OrientAt{{0.0f, 0.0f, -1.0f}};
+    std::array<ALfloat,3> OrientUp{{0.0f, 1.0f, 0.0f}};
     ALfloat Gain{1.0f};
 
     std::atomic_flag PropsClean{true};

@@ -667,7 +667,7 @@ struct ALCdevice_struct {
     RefCount ref{1u};
 
     std::atomic<ALenum> Connected{AL_TRUE};
-    DeviceType Type{};
+    const DeviceType Type{};
 
     ALuint Frequency{};
     ALuint UpdateSize{};
@@ -705,16 +705,16 @@ struct ALCdevice_struct {
     ALsizei NumAuxSends{};
 
     // Map of Buffers for this device
-    al::vector<BufferSubList> BufferList;
     std::mutex BufferLock;
+    al::vector<BufferSubList> BufferList;
 
     // Map of Effects for this device
-    al::vector<EffectSubList> EffectList;
     std::mutex EffectLock;
+    al::vector<EffectSubList> EffectList;
 
     // Map of Filters for this device
-    al::vector<FilterSubList> FilterList;
     std::mutex FilterLock;
+    al::vector<FilterSubList> FilterList;
 
     /* Rendering mode. */
     RenderMode mRenderMode{NormalRender};

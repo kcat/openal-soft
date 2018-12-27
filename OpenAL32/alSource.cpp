@@ -691,13 +691,14 @@ void SendStateChangeEvent(ALCcontext *context, ALuint id, ALenum state)
      * and we don't want state change messages to occur out of order, so send
      * it through the async queue to ensure proper ordering.
      */
-    auto evt_data = ll_ringbuffer_get_write_vector(context->AsyncEvents).first;
-    if(evt_data.len < 1) return;
+    RingBuffer *ring{context->AsyncEvents};
+    auto evt_vec = ring->getWriteVector();
+    if(evt_vec.first.len < 1) return;
 
-    AsyncEvent *evt{new (evt_data.buf) AsyncEvent{EventType_SourceStateChange}};
+    AsyncEvent *evt{new (evt_vec.first.buf) AsyncEvent{EventType_SourceStateChange}};
     evt->u.srcstate.id = id;
     evt->u.srcstate.state = state;
-    ll_ringbuffer_write_advance(context->AsyncEvents, 1);
+    ring->writeAdvance(1);
     context->EventSem.post();
 }
 

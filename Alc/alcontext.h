@@ -27,7 +27,7 @@ struct ALvoiceProps;
 struct ALeffectslotProps;
 struct ALvoice;
 struct ALeffectslotArray;
-struct ll_ringbuffer;
+struct RingBuffer;
 
 enum class DistanceModel {
     InverseClamped  = AL_INVERSE_DISTANCE_CLAMPED,
@@ -112,7 +112,7 @@ struct ALCcontext_struct {
 
     std::thread EventThread;
     al::semaphore EventSem;
-    ll_ringbuffer *AsyncEvents{nullptr};
+    RingBuffer *AsyncEvents{nullptr};
     std::atomic<ALbitfieldSOFT> EnabledEvts{0u};
     std::mutex EventCbLock;
     ALEVENTPROCSOFT EventCb{};

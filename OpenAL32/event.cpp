@@ -17,10 +17,11 @@
 
 static int EventThread(ALCcontext *context)
 {
+    RingBuffer *ring{context->AsyncEvents};
     bool quitnow{false};
     while(LIKELY(!quitnow))
     {
-        auto evt_data = ll_ringbuffer_get_read_vector(context->AsyncEvents).first;
+        auto evt_data = ring->getReadVector().first;
         if(evt_data.len == 0)
         {
             context->EventSem.wait();
@@ -37,11 +38,11 @@ static int EventThread(ALCcontext *context)
              */
             const struct EventAutoDestructor {
                 AsyncEvent &evt;
-                ll_ringbuffer *ring;
+                RingBuffer *ring;
                 ~EventAutoDestructor()
                 {
                     evt.~AsyncEvent();
-                    ll_ringbuffer_read_advance(ring, 1);
+                    ring->readAdvance(1);
                 }
             } _{evt, context->AsyncEvents};
 
@@ -110,16 +111,17 @@ void StartEventThrd(ALCcontext *ctx)
 void StopEventThrd(ALCcontext *ctx)
 {
     static constexpr AsyncEvent kill_evt{EventType_KillThread};
-    ll_ringbuffer_data evt_data = ll_ringbuffer_get_write_vector(ctx->AsyncEvents).first;
+    RingBuffer *ring{ctx->AsyncEvents};
+    auto evt_data = ring->getWriteVector().first;
     if(evt_data.len == 0)
     {
         do {
             std::this_thread::yield();
-            evt_data = ll_ringbuffer_get_write_vector(ctx->AsyncEvents).first;
+            evt_data = ring->getWriteVector().first;
         } while(evt_data.len == 0);
     }
     new (evt_data.buf) AsyncEvent{kill_evt};
-    ll_ringbuffer_write_advance(ctx->AsyncEvents, 1);
+    ring->writeAdvance(1);
 
     ctx->EventSem.post();
     if(ctx->EventThread.joinable())

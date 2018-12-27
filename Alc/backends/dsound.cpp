@@ -889,16 +889,18 @@ void ALCdsoundCapture_stop(ALCdsoundCapture *self)
 
 ALCenum ALCdsoundCapture_captureSamples(ALCdsoundCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    ll_ringbuffer_read(self->Ring.get(), buffer, samples);
+    RingBuffer *ring{self->Ring.get()};
+    ring->read(buffer, samples);
     return ALC_NO_ERROR;
 }
 
 ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
+    RingBuffer *ring{self->Ring.get()};
 
     if(!device->Connected.load(std::memory_order_acquire))
-        return static_cast<ALCuint>(ll_ringbuffer_read_space(self->Ring.get()));
+        return static_cast<ALCuint>(ring->readSpace());
 
     ALsizei FrameSize{device->frameSizeFromFmt()};
     DWORD BufferBytes{self->BufferBytes};
@@ -911,15 +913,15 @@ ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
     if(SUCCEEDED(hr))
     {
         DWORD NumBytes{(ReadCursor-LastCursor + BufferBytes) % BufferBytes};
-        if(!NumBytes) return static_cast<ALCubyte>(ll_ringbuffer_read_space(self->Ring.get()));
+        if(!NumBytes) return static_cast<ALCubyte>(ring->readSpace());
         hr = self->DSCbuffer->Lock(LastCursor, NumBytes, &ReadPtr1, &ReadCnt1,
                                    &ReadPtr2, &ReadCnt2, 0);
     }
     if(SUCCEEDED(hr))
     {
-        ll_ringbuffer_write(self->Ring.get(), ReadPtr1, ReadCnt1/FrameSize);
+        ring->write(ReadPtr1, ReadCnt1/FrameSize);
         if(ReadPtr2 != nullptr)
-            ll_ringbuffer_write(self->Ring.get(), ReadPtr2, ReadCnt2/FrameSize);
+            ring->write(ReadPtr2, ReadCnt2/FrameSize);
         hr = self->DSCbuffer->Unlock(ReadPtr1, ReadCnt1, ReadPtr2, ReadCnt2);
         self->Cursor = (LastCursor+ReadCnt1+ReadCnt2) % BufferBytes;
     }
@@ -930,7 +932,7 @@ ALCuint ALCdsoundCapture_availableSamples(ALCdsoundCapture *self)
         aluHandleDisconnect(device, "Failure retrieving capture data: 0x%lx", hr);
     }
 
-    return static_cast<ALCuint>(ll_ringbuffer_read_space(self->Ring.get()));
+    return static_cast<ALCuint>(ring->readSpace());
 }
 
 } // namespace

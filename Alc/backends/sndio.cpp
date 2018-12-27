@@ -323,20 +323,20 @@ static void SndioCapture_Destruct(SndioCapture *self)
 
 static int SndioCapture_recordProc(SndioCapture *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
-    ALsizei frameSize;
+    ALCdevice *device{self->mDevice};
+    RingBuffer *ring{self->ring.get()};
 
     SetRTPriority();
     althrd_setname(RECORD_THREAD_NAME);
 
-    frameSize = device->frameSizeFromFmt();
+    const ALsizei frameSize{device->frameSizeFromFmt()};
 
     while(!self->mKillNow.load(std::memory_order_acquire) &&
           device->Connected.load(std::memory_order_acquire))
     {
         size_t total, todo;
 
-        auto data = ll_ringbuffer_get_write_vector(self->ring.get());
+        auto data = ring->getWriteVector();
         todo = data.first.len + data.second.len;
         if(todo == 0)
         {
@@ -369,7 +369,7 @@ static int SndioCapture_recordProc(SndioCapture *self)
             data.first.len -= got;
             total += got;
         }
-        ll_ringbuffer_write_advance(self->ring.get(), total / frameSize);
+        ring->writeAdvance(total / frameSize);
     }
 
     return 0;
@@ -514,13 +514,15 @@ static void SndioCapture_stop(SndioCapture *self)
 
 static ALCenum SndioCapture_captureSamples(SndioCapture *self, void *buffer, ALCuint samples)
 {
-    ll_ringbuffer_read(self->ring.get(), static_cast<char*>(buffer), samples);
+    RingBuffer *ring{self->ring.get()};
+    ring->read(buffer, samples);
     return ALC_NO_ERROR;
 }
 
 static ALCuint SndioCapture_availableSamples(SndioCapture *self)
 {
-    return ll_ringbuffer_read_space(self->ring.get());
+    RingBuffer *ring{self->ring.get()};
+    return ring->readSpace();
 }
 
 

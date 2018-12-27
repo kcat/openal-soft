@@ -2466,7 +2466,7 @@ ALCcontext_struct::~ALCcontext_struct()
     TRACE("Freed " SZFMT " listener property object%s\n", count, (count==1)?"":"s");
 
     count = 0;
-    auto evt_vec = ll_ringbuffer_get_read_vector(AsyncEvents);
+    auto evt_vec = AsyncEvents->getReadVector();
     while(evt_vec.first.len > 0)
     {
         reinterpret_cast<AsyncEvent*>(evt_vec.first.buf)->~AsyncEvent();

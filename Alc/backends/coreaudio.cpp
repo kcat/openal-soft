@@ -404,7 +404,8 @@ static OSStatus ALCcoreAudioCapture_RecordProc(void *inRefCon,
   const AudioTimeStamp *inTimeStamp, UInt32 UNUSED(inBusNumber),
   UInt32 inNumberFrames, AudioBufferList* UNUSED(ioData))
 {
-    ALCcoreAudioCapture *self = static_cast<ALCcoreAudioCapture*>(inRefCon);
+    auto self = static_cast<ALCcoreAudioCapture*>(inRefCon);
+    RingBuffer *ring{self->Ring.get()};
     AudioUnitRenderActionFlags flags = 0;
     OSStatus err;
 
@@ -416,7 +417,7 @@ static OSStatus ALCcoreAudioCapture_RecordProc(void *inRefCon,
         return err;
     }
 
-    ll_ringbuffer_write(self->Ring.get(), self->BufferList->mBuffers[0].mData, inNumberFrames);
+    ring->write(self->BufferList->mBuffers[0].mData, inNumberFrames);
     return noErr;
 }
 
@@ -425,10 +426,11 @@ static OSStatus ALCcoreAudioCapture_ConvertCallback(AudioConverterRef UNUSED(inA
   AudioStreamPacketDescription** UNUSED(outDataPacketDescription),
   void *inUserData)
 {
-    ALCcoreAudioCapture *self = reinterpret_cast<ALCcoreAudioCapture*>(inUserData);
+    auto self = reinterpret_cast<ALCcoreAudioCapture*>(inUserData);
+    RingBuffer *ring{self->Ring.get()};
 
     // Read from the ring buffer and store temporarily in a large buffer
-    ll_ringbuffer_read(self->Ring.get(), self->ResampleBuffer, *ioNumberDataPackets);
+    ring->read(self->ResampleBuffer, *ioNumberDataPackets);
 
     // Set the input data
     ioData->mNumberBuffers = 1;
@@ -739,7 +741,8 @@ static ALCenum ALCcoreAudioCapture_captureSamples(ALCcoreAudioCapture *self, ALC
 
 static ALCuint ALCcoreAudioCapture_availableSamples(ALCcoreAudioCapture *self)
 {
-    return ll_ringbuffer_read_space(self->Ring.get()) / self->SampleRateRatio;
+    RingBuffer *ring{self->Ring.get()};
+    return ring->readSpace() / self->SampleRateRatio;
 }
 
 

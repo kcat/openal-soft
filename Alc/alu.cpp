@@ -289,13 +289,15 @@ void SendSourceStoppedEvent(ALCcontext *context, ALuint id)
     ALbitfieldSOFT enabledevt{context->EnabledEvts.load(std::memory_order_acquire)};
     if(!(enabledevt&EventType_SourceStateChange)) return;
 
-    auto evt_data = ll_ringbuffer_get_write_vector(context->AsyncEvents).first;
+    RingBuffer *ring{context->AsyncEvents};
+    auto evt_data = ring->getWriteVector().first;
     if(evt_data.len < 1) return;
 
     AsyncEvent *evt{new (evt_data.buf) AsyncEvent{EventType_SourceStateChange}};
     evt->u.srcstate.id = id;
     evt->u.srcstate.state = AL_STOPPED;
-    ll_ringbuffer_write_advance(context->AsyncEvents, 1);
+
+    ring->writeAdvance(1);
     context->EventSem.post();
 }
 
@@ -414,12 +416,13 @@ bool CalcEffectSlotParams(ALeffectslot *slot, ALCcontext *context, bool force)
             /* Otherwise, if it would be deleted, send it off with a release
              * event.
              */
-            auto evt_vec = ll_ringbuffer_get_write_vector(context->AsyncEvents);
+            RingBuffer *ring{context->AsyncEvents};
+            auto evt_vec = ring->getWriteVector();
             if(LIKELY(evt_vec.first.len > 0))
             {
                 AsyncEvent *evt{new (evt_vec.first.buf) AsyncEvent{EventType_ReleaseEffectState}};
                 evt->u.mEffectState = oldstate;
-                ll_ringbuffer_write_advance(context->AsyncEvents, 1);
+                ring->writeAdvance(1);
                 context->EventSem.post();
             }
             else
@@ -1837,11 +1840,12 @@ void aluHandleDisconnect(ALCdevice *device, const char *msg, ...)
         const ALbitfieldSOFT enabledevt{ctx->EnabledEvts.load(std::memory_order_acquire)};
         if((enabledevt&EventType_Disconnected))
         {
-            auto evt_data = ll_ringbuffer_get_write_vector(ctx->AsyncEvents).first;
+            RingBuffer *ring{ctx->AsyncEvents};
+            auto evt_data = ring->getWriteVector().first;
             if(evt_data.len > 0)
             {
                 new (evt_data.buf) AsyncEvent{evt};
-                ll_ringbuffer_write_advance(ctx->AsyncEvents, 1);
+                ring->writeAdvance(1);
                 ctx->EventSem.post();
             }
         }

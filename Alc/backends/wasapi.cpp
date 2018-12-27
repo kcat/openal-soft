@@ -1230,7 +1230,8 @@ void ALCwasapiCapture_Destruct(ALCwasapiCapture *self)
 
 FORCE_ALIGN int ALCwasapiCapture_recordProc(ALCwasapiCapture *self)
 {
-    ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
+    ALCdevice *device{self->mDevice};
+    RingBuffer *ring{self->mRing.get()};
     IAudioCaptureClient *capture{self->mCapture};
 
     HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
@@ -1272,7 +1273,7 @@ FORCE_ALIGN int ALCwasapiCapture_recordProc(ALCwasapiCapture *self)
                     rdata = reinterpret_cast<BYTE*>(samples.data());
                 }
 
-                auto data = ll_ringbuffer_get_write_vector(self->mRing.get());
+                auto data = ring->getWriteVector();
 
                 size_t dstframes;
                 if(self->mSampleConv)
@@ -1308,7 +1309,7 @@ FORCE_ALIGN int ALCwasapiCapture_recordProc(ALCwasapiCapture *self)
                     dstframes = len1 + len2;
                 }
 
-                ll_ringbuffer_write_advance(self->mRing.get(), dstframes);
+                ring->writeAdvance(dstframes);
 
                 hr = capture->ReleaseBuffer(numsamples);
                 if(FAILED(hr)) ERR("Failed to release capture buffer: 0x%08lx\n", hr);
@@ -1786,12 +1787,14 @@ void ALCwasapiCapture::stopProxy()
 
 ALuint ALCwasapiCapture_availableSamples(ALCwasapiCapture *self)
 {
-    return (ALuint)ll_ringbuffer_read_space(self->mRing.get());
+    RingBuffer *ring{self->mRing.get()};
+    return (ALuint)ring->readSpace();
 }
 
 ALCenum ALCwasapiCapture_captureSamples(ALCwasapiCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    ll_ringbuffer_read(self->mRing.get(), reinterpret_cast<char*>(buffer), samples);
+    RingBuffer *ring{self->mRing.get()};
+    ring->read(buffer, samples);
     return ALC_NO_ERROR;
 }
 

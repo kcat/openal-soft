@@ -537,7 +537,8 @@ void ALCcaptureOSS_Destruct(ALCcaptureOSS *self)
 
 int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
 {
-    ALCdevice *device{STATIC_CAST(ALCbackend, self)->mDevice};
+    ALCdevice *device{self->mDevice};
+    RingBuffer *ring{self->mRing.get()};
 
     SetRTPriority();
     althrd_setname(RECORD_THREAD_NAME);
@@ -564,7 +565,7 @@ int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
             continue;
         }
 
-        auto vec = ll_ringbuffer_get_write_vector(self->mRing.get());
+        auto vec = ring->getWriteVector();
         if(vec.first.len > 0)
         {
             ssize_t amt{read(self->fd, vec.first.buf, vec.first.len*frame_size)};
@@ -576,7 +577,7 @@ int ALCcaptureOSS_recordProc(ALCcaptureOSS *self)
                 ALCcaptureOSS_unlock(self);
                 break;
             }
-            ll_ringbuffer_write_advance(self->mRing.get(), amt/frame_size);
+            ring->writeAdvance(amt/frame_size);
         }
     }
 
@@ -724,13 +725,15 @@ void ALCcaptureOSS_stop(ALCcaptureOSS *self)
 
 ALCenum ALCcaptureOSS_captureSamples(ALCcaptureOSS *self, ALCvoid *buffer, ALCuint samples)
 {
-    ll_ringbuffer_read(self->mRing.get(), static_cast<char*>(buffer), samples);
+    RingBuffer *ring{self->mRing.get()};
+    ring->read(buffer, samples);
     return ALC_NO_ERROR;
 }
 
 ALCuint ALCcaptureOSS_availableSamples(ALCcaptureOSS *self)
 {
-    return ll_ringbuffer_read_space(self->mRing.get());
+    RingBuffer *ring{self->mRing.get()};
+    return ring->readSpace();
 }
 
 } // namespace

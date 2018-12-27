@@ -365,8 +365,9 @@ int ALCportCapture_ReadCallback(const void *inputBuffer, void *UNUSED(outputBuff
     unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo *UNUSED(timeInfo),
     const PaStreamCallbackFlags UNUSED(statusFlags), void *userData)
 {
-    ALCportCapture *self = static_cast<ALCportCapture*>(userData);
-    ll_ringbuffer_write(self->Ring.get(), inputBuffer, framesPerBuffer);
+    auto self = static_cast<ALCportCapture*>(userData);
+    RingBuffer *ring{self->Ring.get()};
+    ring->write(inputBuffer, framesPerBuffer);
     return 0;
 }
 
@@ -456,12 +457,14 @@ void ALCportCapture_stop(ALCportCapture *self)
 
 ALCuint ALCportCapture_availableSamples(ALCportCapture *self)
 {
-    return ll_ringbuffer_read_space(self->Ring.get());
+    RingBuffer *ring{self->Ring.get()};
+    return ring->readSpace();
 }
 
 ALCenum ALCportCapture_captureSamples(ALCportCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    ll_ringbuffer_read(self->Ring.get(), buffer, samples);
+    RingBuffer *ring{self->Ring.get()};
+    ring->read(buffer, samples);
     return ALC_NO_ERROR;
 }
 

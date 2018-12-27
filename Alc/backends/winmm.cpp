@@ -472,7 +472,8 @@ void CALLBACK ALCwinmmCapture_waveInProc(HWAVEIN UNUSED(device), UINT msg,
 
 int ALCwinmmCapture_captureProc(ALCwinmmCapture *self)
 {
-    ALCdevice *device = STATIC_CAST(ALCbackend, self)->mDevice;
+    ALCdevice *device{self->mDevice};
+    RingBuffer *ring{self->Ring.get()};
 
     althrd_setname(RECORD_THREAD_NAME);
 
@@ -494,9 +495,7 @@ int ALCwinmmCapture_captureProc(ALCwinmmCapture *self)
             WAVEHDR &waveHdr = self->WaveBuffer[widx];
             widx = (widx+1) % self->WaveBuffer.size();
 
-            ll_ringbuffer_write(self->Ring.get(), waveHdr.lpData,
-                waveHdr.dwBytesRecorded / self->Format.nBlockAlign
-            );
+            ring->write(waveHdr.lpData, waveHdr.dwBytesRecorded / self->Format.nBlockAlign);
             self->Readable.fetch_sub(1, std::memory_order_acq_rel);
             waveInAddBuffer(self->InHdl, &waveHdr, sizeof(WAVEHDR));
         } while(--todo);
@@ -645,13 +644,15 @@ void ALCwinmmCapture_stop(ALCwinmmCapture *self)
 
 ALCenum ALCwinmmCapture_captureSamples(ALCwinmmCapture *self, ALCvoid *buffer, ALCuint samples)
 {
-    ll_ringbuffer_read(self->Ring.get(), buffer, samples);
+    RingBuffer *ring{self->Ring.get()};
+    ring->read(buffer, samples);
     return ALC_NO_ERROR;
 }
 
 ALCuint ALCwinmmCapture_availableSamples(ALCwinmmCapture *self)
 {
-    return (ALCuint)ll_ringbuffer_read_space(self->Ring.get());
+    RingBuffer *ring{self->Ring.get()};
+    return (ALCuint)ring->readSpace();
 }
 
 } // namespace

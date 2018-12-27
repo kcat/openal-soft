@@ -245,7 +245,8 @@ int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
         out[numchans++] = static_cast<float*>(jack_port_get_buffer(port, numframes));
     }
 
-    auto data = ll_ringbuffer_get_read_vector(self->mRing.get());
+    RingBuffer *ring{self->mRing.get()};
+    auto data = ring->getReadVector();
     jack_nframes_t todo{minu(numframes, data.first.len)};
     std::transform(out, out+numchans, out,
         [&data,numchans,todo](ALfloat *outbuf) -> ALfloat*
@@ -287,7 +288,7 @@ int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
         total += todo;
     }
 
-    ll_ringbuffer_read_advance(self->mRing.get(), total);
+    ring->readAdvance(total);
     self->mSem.post();
 
     if(numframes > total)
@@ -307,7 +308,8 @@ int ALCjackPlayback_process(jack_nframes_t numframes, void *arg)
 
 int ALCjackPlayback_mixerProc(ALCjackPlayback *self)
 {
-    ALCdevice *device{STATIC_CAST(ALCbackend,self)->mDevice};
+    ALCdevice *device{self->mDevice};
+    RingBuffer *ring{self->mRing.get()};
 
     SetRTPriority();
     althrd_setname(MIXER_THREAD_NAME);
@@ -316,7 +318,7 @@ int ALCjackPlayback_mixerProc(ALCjackPlayback *self)
     while(!self->mKillNow.load(std::memory_order_acquire) &&
           device->Connected.load(std::memory_order_acquire))
     {
-        if(ll_ringbuffer_write_space(self->mRing.get()) < device->UpdateSize)
+        if(ring->writeSpace() < device->UpdateSize)
         {
             ALCjackPlayback_unlock(self);
             self->mSem.wait();
@@ -324,7 +326,7 @@ int ALCjackPlayback_mixerProc(ALCjackPlayback *self)
             continue;
         }
 
-        auto data = ll_ringbuffer_get_write_vector(self->mRing.get());
+        auto data = ring->getWriteVector();
         auto todo = static_cast<ALuint>(data.first.len + data.second.len);
         todo -= todo%device->UpdateSize;
 
@@ -334,7 +336,7 @@ int ALCjackPlayback_mixerProc(ALCjackPlayback *self)
         aluMixData(device, data.first.buf, len1);
         if(len2 > 0)
             aluMixData(device, data.second.buf, len2);
-        ll_ringbuffer_write_advance(self->mRing.get(), todo);
+        ring->writeAdvance(todo);
     }
     ALCjackPlayback_unlock(self);
 
@@ -506,8 +508,9 @@ ClockLatency ALCjackPlayback_getClockLatency(ALCjackPlayback *self)
 
     ALCjackPlayback_lock(self);
     ALCdevice *device{self->mDevice};
+    RingBuffer *ring{self->mRing.get()};
     ret.ClockTime = GetDeviceClockTime(device);
-    ret.Latency  = std::chrono::seconds{ll_ringbuffer_read_space(self->mRing.get())};
+    ret.Latency  = std::chrono::seconds{ring->readSpace()};
     ret.Latency /= device->Frequency;
     ALCjackPlayback_unlock(self);
 

@@ -29,6 +29,7 @@
 namespace {
 
 struct ALCloopback final : public ALCbackend {
+    ALCloopback(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 void ALCloopback_Construct(ALCloopback *self, ALCdevice *device);
@@ -48,14 +49,12 @@ DEFINE_ALCBACKEND_VTABLE(ALCloopback);
 
 void ALCloopback_Construct(ALCloopback *self, ALCdevice *device)
 {
-    new (self) ALCloopback{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) ALCloopback{device};
     SET_VTABLE2(ALCloopback, ALCbackend, self);
 }
 
 void ALCloopback_Destruct(ALCloopback *self)
 {
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCloopback();
 }
 

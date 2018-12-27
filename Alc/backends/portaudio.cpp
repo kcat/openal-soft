@@ -134,6 +134,8 @@ struct ALCportPlayback final : public ALCbackend {
     PaStream *Stream{nullptr};
     PaStreamParameters Params;
     ALuint UpdateSize{0u};
+
+    ALCportPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 int ALCportPlayback_WriteCallback(const void *inputBuffer, void *outputBuffer,
@@ -158,8 +160,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCportPlayback);
 
 void ALCportPlayback_Construct(ALCportPlayback *self, ALCdevice *device)
 {
-    new (self) ALCportPlayback{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) ALCportPlayback{device};
     SET_VTABLE2(ALCportPlayback, ALCbackend, self);
 }
 
@@ -170,7 +171,6 @@ void ALCportPlayback_Destruct(ALCportPlayback *self)
         ERR("Error closing stream: %s\n", Pa_GetErrorText(err));
     self->Stream = nullptr;
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCportPlayback();
 }
 
@@ -320,6 +320,8 @@ struct ALCportCapture final : public ALCbackend {
     PaStreamParameters Params;
 
     RingBufferPtr Ring{nullptr};
+
+    ALCportCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 int ALCportCapture_ReadCallback(const void *inputBuffer, void *outputBuffer,
@@ -344,8 +346,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCportCapture);
 
 void ALCportCapture_Construct(ALCportCapture *self, ALCdevice *device)
 {
-    new (self) ALCportCapture{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) ALCportCapture{device};
     SET_VTABLE2(ALCportCapture, ALCbackend, self);
 }
 
@@ -356,7 +357,6 @@ void ALCportCapture_Destruct(ALCportCapture *self)
         ERR("Error closing stream: %s\n", Pa_GetErrorText(err));
     self->Stream = nullptr;
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCportCapture();
 }
 

@@ -193,6 +193,8 @@ struct ALCdsoundPlayback final : public ALCbackend {
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
+
+    ALCdsoundPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 int ALCdsoundPlayback_mixerProc(ALCdsoundPlayback *self);
@@ -215,8 +217,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCdsoundPlayback);
 
 void ALCdsoundPlayback_Construct(ALCdsoundPlayback *self, ALCdevice *device)
 {
-    new (self) ALCdsoundPlayback{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) ALCdsoundPlayback{device};
     SET_VTABLE2(ALCdsoundPlayback, ALCbackend, self);
 }
 
@@ -239,7 +240,6 @@ void ALCdsoundPlayback_Destruct(ALCdsoundPlayback *self)
         CloseHandle(self->mNotifyEvent);
     self->mNotifyEvent = nullptr;
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCdsoundPlayback();
 }
 
@@ -656,6 +656,8 @@ struct ALCdsoundCapture final : public ALCbackend {
     DWORD mCursor{0u};
 
     RingBufferPtr mRing;
+
+    ALCdsoundCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 void ALCdsoundCapture_Construct(ALCdsoundCapture *self, ALCdevice *device);
@@ -674,8 +676,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCdsoundCapture);
 
 void ALCdsoundCapture_Construct(ALCdsoundCapture *self, ALCdevice *device)
 {
-    new (self) ALCdsoundCapture{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) ALCdsoundCapture{device};
     SET_VTABLE2(ALCdsoundCapture, ALCbackend, self);
 }
 
@@ -692,7 +693,6 @@ void ALCdsoundCapture_Destruct(ALCdsoundCapture *self)
         self->mDSC->Release();
     self->mDSC = nullptr;
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCdsoundCapture();
 }
 

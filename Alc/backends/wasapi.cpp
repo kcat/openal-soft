@@ -491,6 +491,8 @@ DWORD CALLBACK WasapiProxy_messageHandler(void *ptr)
 
 
 struct ALCwasapiPlayback final : public ALCbackend, WasapiProxy {
+    ALCwasapiPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
+
     HRESULT openProxy() override;
     void closeProxy() override;
 
@@ -533,9 +535,8 @@ DEFINE_ALCBACKEND_VTABLE(ALCwasapiPlayback);
 
 void ALCwasapiPlayback_Construct(ALCwasapiPlayback *self, ALCdevice *device)
 {
-    new (self) ALCwasapiPlayback{};
+    new (self) ALCwasapiPlayback{device};
     SET_VTABLE2(ALCwasapiPlayback, ALCbackend, self);
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
 }
 
 void ALCwasapiPlayback_Destruct(ALCwasapiPlayback *self)
@@ -558,7 +559,6 @@ void ALCwasapiPlayback_Destruct(ALCwasapiPlayback *self)
         CloseHandle(self->mMsgEvent);
     self->mMsgEvent = nullptr;
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCwasapiPlayback();
 }
 
@@ -1154,6 +1154,8 @@ ClockLatency ALCwasapiPlayback_getClockLatency(ALCwasapiPlayback *self)
 
 
 struct ALCwasapiCapture final : public ALCbackend, WasapiProxy {
+    ALCwasapiCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
+
     HRESULT openProxy() override;
     void closeProxy() override;
 
@@ -1198,9 +1200,8 @@ DEFINE_ALCBACKEND_VTABLE(ALCwasapiCapture);
 
 void ALCwasapiCapture_Construct(ALCwasapiCapture *self, ALCdevice *device)
 {
-    new (self) ALCwasapiCapture{};
+    new (self) ALCwasapiCapture{device};
     SET_VTABLE2(ALCwasapiCapture, ALCbackend, self);
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
 }
 
 void ALCwasapiCapture_Destruct(ALCwasapiCapture *self)
@@ -1220,7 +1221,6 @@ void ALCwasapiCapture_Destruct(ALCwasapiCapture *self)
         CloseHandle(self->mNotifyEvent);
     self->mNotifyEvent = nullptr;
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCwasapiCapture();
 }
 

@@ -535,6 +535,8 @@ struct PulsePlayback final : public ALCbackend {
 
     ALuint mBufferSize{0u};
     ALuint mFrameSize{0u};
+
+    PulsePlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 void PulsePlayback_deviceCallback(pa_context *context, const pa_sink_info *info, int eol, void *pdata);
@@ -570,8 +572,7 @@ DEFINE_ALCBACKEND_VTABLE(PulsePlayback);
 
 void PulsePlayback_Construct(PulsePlayback *self, ALCdevice *device)
 {
-    new (self) PulsePlayback();
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) PulsePlayback{device};
     SET_VTABLE2(PulsePlayback, ALCbackend, self);
 }
 
@@ -584,7 +585,6 @@ void PulsePlayback_Destruct(PulsePlayback *self)
         self->context = nullptr;
         self->stream = nullptr;
     }
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~PulsePlayback();
 }
 
@@ -1182,6 +1182,8 @@ struct PulseCapture final : public ALCbackend {
 
     pa_stream *stream{nullptr};
     pa_context *context{nullptr};
+
+    PulseCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 void PulseCapture_deviceCallback(pa_context *context, const pa_source_info *info, int eol, void *pdata);
@@ -1214,8 +1216,7 @@ DEFINE_ALCBACKEND_VTABLE(PulseCapture);
 
 void PulseCapture_Construct(PulseCapture *self, ALCdevice *device)
 {
-    new (self) PulseCapture();
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) PulseCapture{device};
     SET_VTABLE2(PulseCapture, ALCbackend, self);
 }
 
@@ -1228,7 +1229,6 @@ void PulseCapture_Destruct(PulseCapture *self)
         self->context = nullptr;
         self->stream = nullptr;
     }
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~PulseCapture();
 }
 

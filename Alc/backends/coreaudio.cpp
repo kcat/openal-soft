@@ -44,6 +44,8 @@ struct ALCcoreAudioPlayback final : public ALCbackend {
 
     ALuint mFrameSize{0u};
     AudioStreamBasicDescription mFormat{}; // This is the OpenAL format as a CoreAudio ASBD
+
+    ALCcoreAudioPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 static void ALCcoreAudioPlayback_Construct(ALCcoreAudioPlayback *self, ALCdevice *device);
@@ -64,8 +66,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCcoreAudioPlayback);
 
 static void ALCcoreAudioPlayback_Construct(ALCcoreAudioPlayback *self, ALCdevice *device)
 {
-    new (self) ALCcoreAudioPlayback{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) ALCcoreAudioPlayback{device};
     SET_VTABLE2(ALCcoreAudioPlayback, ALCbackend, self);
 }
 
@@ -74,7 +75,6 @@ static void ALCcoreAudioPlayback_Destruct(ALCcoreAudioPlayback *self)
     AudioUnitUninitialize(self->mAudioUnit);
     AudioComponentInstanceDispose(self->mAudioUnit);
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCcoreAudioPlayback();
 }
 
@@ -324,6 +324,8 @@ struct ALCcoreAudioCapture final : public ALCbackend {
     SampleConverterPtr mConverter;
 
     RingBufferPtr mRing{nullptr};
+
+    ALCcoreAudioCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 static void ALCcoreAudioCapture_Construct(ALCcoreAudioCapture *self, ALCdevice *device);
@@ -344,8 +346,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCcoreAudioCapture);
 
 static void ALCcoreAudioCapture_Construct(ALCcoreAudioCapture *self, ALCdevice *device)
 {
-    new (self) ALCcoreAudioCapture{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) ALCcoreAudioCapture{device};
     SET_VTABLE2(ALCcoreAudioCapture, ALCbackend, self);
 }
 
@@ -355,7 +356,6 @@ static void ALCcoreAudioCapture_Destruct(ALCcoreAudioCapture *self)
         AudioComponentInstanceDispose(self->mAudioUnit);
     self->mAudioUnit = 0;
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCcoreAudioCapture();
 }
 

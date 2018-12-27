@@ -47,6 +47,8 @@ constexpr ALCchar nullDevice[] = "No Output";
 struct ALCnullBackend final : public ALCbackend {
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
+
+    ALCnullBackend(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 int ALCnullBackend_mixerProc(ALCnullBackend *self);
@@ -69,14 +71,12 @@ DEFINE_ALCBACKEND_VTABLE(ALCnullBackend);
 
 void ALCnullBackend_Construct(ALCnullBackend *self, ALCdevice *device)
 {
-    new (self) ALCnullBackend{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) ALCnullBackend{device};
     SET_VTABLE2(ALCnullBackend, ALCbackend, self);
 }
 
 void ALCnullBackend_Destruct(ALCnullBackend *self)
 {
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCnullBackend();
 }
 

@@ -26,14 +26,11 @@ ClockLatency GetClockLatency(ALCdevice *device)
 
 
 /* Base ALCbackend method implementations. */
-void ALCbackend_Construct(ALCbackend *self, ALCdevice *device)
-{
-    self->mDevice = device;
-}
+ALCbackend::ALCbackend(ALCdevice *device) noexcept : mDevice{device}
+{ }
 
-void ALCbackend_Destruct(ALCbackend* UNUSED(self))
-{
-}
+ALCbackend::~ALCbackend()
+{ }
 
 ALCboolean ALCbackend_reset(ALCbackend* UNUSED(self))
 {

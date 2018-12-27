@@ -41,10 +41,11 @@ struct ALCbackend {
     ALCdevice *mDevice;
 
     std::recursive_mutex mMutex;
+
+    ALCbackend(ALCdevice *device) noexcept;
+    virtual ~ALCbackend();
 };
 
-void ALCbackend_Construct(ALCbackend *self, ALCdevice *device);
-void ALCbackend_Destruct(ALCbackend *self);
 ALCboolean ALCbackend_reset(ALCbackend *self);
 ALCenum ALCbackend_captureSamples(ALCbackend *self, void *buffer, ALCuint samples);
 ALCuint ALCbackend_availableSamples(ALCbackend *self);

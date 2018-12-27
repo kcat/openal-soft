@@ -47,6 +47,8 @@ struct SndioPlayback final : public ALCbackend {
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
+
+    SndioPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 static int SndioPlayback_mixerProc(SndioPlayback *self);
@@ -69,8 +71,7 @@ DEFINE_ALCBACKEND_VTABLE(SndioPlayback);
 
 static void SndioPlayback_Construct(SndioPlayback *self, ALCdevice *device)
 {
-    new (self) SndioPlayback{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) SndioPlayback{device};
     SET_VTABLE2(SndioPlayback, ALCbackend, self);
 }
 
@@ -83,7 +84,6 @@ static void SndioPlayback_Destruct(SndioPlayback *self)
     al_free(self->mix_data);
     self->mix_data = nullptr;
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~SndioPlayback();
 }
 
@@ -283,6 +283,8 @@ struct SndioCapture final : public ALCbackend {
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
+
+    SndioCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 static int SndioCapture_recordProc(SndioCapture *self);
@@ -305,8 +307,7 @@ DEFINE_ALCBACKEND_VTABLE(SndioCapture);
 
 static void SndioCapture_Construct(SndioCapture *self, ALCdevice *device)
 {
-    new (self) SndioCapture{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) SndioCapture{device};
     SET_VTABLE2(SndioCapture, ALCbackend, self);
 }
 
@@ -316,7 +317,6 @@ static void SndioCapture_Destruct(SndioCapture *self)
         sio_close(self->sndHandle);
     self->sndHandle = nullptr;
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~SndioCapture();
 }
 

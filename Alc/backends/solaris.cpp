@@ -54,6 +54,8 @@ struct ALCsolarisBackend final : public ALCbackend {
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
+
+    ALCsolarisBackend(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 static int ALCsolarisBackend_mixerProc(ALCsolarisBackend *self);
@@ -81,8 +83,7 @@ static const char *solaris_driver = "/dev/audio";
 
 static void ALCsolarisBackend_Construct(ALCsolarisBackend *self, ALCdevice *device)
 {
-    new (self) ALCsolarisBackend{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) ALCsolarisBackend{device};
     SET_VTABLE2(ALCsolarisBackend, ALCbackend, self);
 }
 
@@ -96,7 +97,6 @@ static void ALCsolarisBackend_Destruct(ALCsolarisBackend *self)
     self->mix_data = nullptr;
     self->data_size = 0;
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCsolarisBackend();
 }
 

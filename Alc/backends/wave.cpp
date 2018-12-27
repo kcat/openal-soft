@@ -86,6 +86,8 @@ struct ALCwaveBackend final : public ALCbackend {
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
+
+    ALCwaveBackend(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 int ALCwaveBackend_mixerProc(ALCwaveBackend *self);
@@ -108,8 +110,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCwaveBackend);
 
 void ALCwaveBackend_Construct(ALCwaveBackend *self, ALCdevice *device)
 {
-    new (self) ALCwaveBackend{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) ALCwaveBackend{device};
     SET_VTABLE2(ALCwaveBackend, ALCbackend, self);
 }
 
@@ -119,7 +120,6 @@ void ALCwaveBackend_Destruct(ALCwaveBackend *self)
         fclose(self->mFile);
     self->mFile = nullptr;
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCwaveBackend();
 }
 

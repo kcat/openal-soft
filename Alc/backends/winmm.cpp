@@ -132,6 +132,8 @@ struct ALCwinmmPlayback final : public ALCbackend {
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
+
+    ALCwinmmPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 void ALCwinmmPlayback_Construct(ALCwinmmPlayback *self, ALCdevice *device);
@@ -156,8 +158,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCwinmmPlayback);
 
 void ALCwinmmPlayback_Construct(ALCwinmmPlayback *self, ALCdevice *device)
 {
-    new (self) ALCwinmmPlayback{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) ALCwinmmPlayback{device};
     SET_VTABLE2(ALCwinmmPlayback, ALCbackend, self);
 
     std::fill(self->WaveBuffer.begin(), self->WaveBuffer.end(), WAVEHDR{});
@@ -172,7 +173,6 @@ void ALCwinmmPlayback_Destruct(ALCwinmmPlayback *self)
     al_free(self->WaveBuffer[0].lpData);
     std::fill(self->WaveBuffer.begin(), self->WaveBuffer.end(), WAVEHDR{});
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCwinmmPlayback();
 }
 
@@ -407,6 +407,8 @@ struct ALCwinmmCapture final : public ALCbackend {
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
+
+    ALCwinmmCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 void ALCwinmmCapture_Construct(ALCwinmmCapture *self, ALCdevice *device);
@@ -431,8 +433,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCwinmmCapture);
 
 void ALCwinmmCapture_Construct(ALCwinmmCapture *self, ALCdevice *device)
 {
-    new (self) ALCwinmmCapture{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) ALCwinmmCapture{device};
     SET_VTABLE2(ALCwinmmCapture, ALCbackend, self);
 
     std::fill(self->WaveBuffer.begin(), self->WaveBuffer.end(), WAVEHDR{});
@@ -448,7 +449,6 @@ void ALCwinmmCapture_Destruct(ALCwinmmCapture *self)
     al_free(self->WaveBuffer[0].lpData);
     std::fill(self->WaveBuffer.begin(), self->WaveBuffer.end(), WAVEHDR{});
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCwinmmCapture();
 }
 

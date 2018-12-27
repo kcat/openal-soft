@@ -152,6 +152,8 @@ struct ALCopenslPlayback final : public ALCbackend {
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
+
+    ALCopenslPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 static void ALCopenslPlayback_process(SLAndroidSimpleBufferQueueItf bq, void *context);
@@ -175,8 +177,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCopenslPlayback);
 
 static void ALCopenslPlayback_Construct(ALCopenslPlayback *self, ALCdevice *device)
 {
-    new (self) ALCopenslPlayback{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) ALCopenslPlayback{device};
     SET_VTABLE2(ALCopenslPlayback, ALCbackend, self);
 }
 
@@ -195,7 +196,6 @@ static void ALCopenslPlayback_Destruct(ALCopenslPlayback* self)
     self->mEngineObj = NULL;
     self->mEngine = NULL;
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCopenslPlayback();
 }
 
@@ -660,6 +660,8 @@ struct ALCopenslCapture final : public ALCbackend {
     ALCuint mSplOffset{0u};
 
     ALsizei mFrameSize{0};
+
+    ALCopenslCapture(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 static void ALCopenslCapture_process(SLAndroidSimpleBufferQueueItf bq, void *context);
@@ -681,8 +683,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCopenslCapture);
 
 static void ALCopenslCapture_Construct(ALCopenslCapture *self, ALCdevice *device)
 {
-    new (self) ALCopenslCapture{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) ALCopenslCapture{device};
     SET_VTABLE2(ALCopenslCapture, ALCbackend, self);
 }
 
@@ -697,7 +698,6 @@ static void ALCopenslCapture_Destruct(ALCopenslCapture *self)
     self->mEngineObj = NULL;
     self->mEngine = NULL;
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCopenslCapture();
 }
 

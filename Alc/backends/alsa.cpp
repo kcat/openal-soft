@@ -429,6 +429,8 @@ struct ALCplaybackAlsa final : public ALCbackend {
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
+
+    ALCplaybackAlsa(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 int ALCplaybackAlsa_mixerProc(ALCplaybackAlsa *self);
@@ -451,8 +453,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCplaybackAlsa);
 
 void ALCplaybackAlsa_Construct(ALCplaybackAlsa *self, ALCdevice *device)
 {
-    new (self) ALCplaybackAlsa{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) ALCplaybackAlsa{device};
     SET_VTABLE2(ALCplaybackAlsa, ALCbackend, self);
 }
 
@@ -462,7 +463,6 @@ void ALCplaybackAlsa_Destruct(ALCplaybackAlsa *self)
         snd_pcm_close(self->mPcmHandle);
     self->mPcmHandle = nullptr;
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCplaybackAlsa();
 }
 
@@ -932,6 +932,8 @@ struct ALCcaptureAlsa final : public ALCbackend {
     RingBufferPtr mRing{nullptr};
 
     snd_pcm_sframes_t mLastAvail{0};
+
+    ALCcaptureAlsa(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device);
@@ -952,8 +954,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCcaptureAlsa);
 
 void ALCcaptureAlsa_Construct(ALCcaptureAlsa *self, ALCdevice *device)
 {
-    new (self) ALCcaptureAlsa{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) ALCcaptureAlsa{device};
     SET_VTABLE2(ALCcaptureAlsa, ALCbackend, self);
 }
 
@@ -963,7 +964,6 @@ void ALCcaptureAlsa_Destruct(ALCcaptureAlsa *self)
         snd_pcm_close(self->mPcmHandle);
     self->mPcmHandle = nullptr;
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCcaptureAlsa();
 }
 

@@ -157,6 +157,8 @@ struct ALCjackPlayback final : public ALCbackend {
 
     std::atomic<bool> mKillNow{true};
     std::thread mThread;
+
+    ALCjackPlayback(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 int ALCjackPlayback_bufferSizeNotify(jack_nframes_t numframes, void *arg);
@@ -182,8 +184,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCjackPlayback);
 
 void ALCjackPlayback_Construct(ALCjackPlayback *self, ALCdevice *device)
 {
-    new (self) ALCjackPlayback{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) ALCjackPlayback{device};
     SET_VTABLE2(ALCjackPlayback, ALCbackend, self);
 }
 
@@ -200,7 +201,6 @@ void ALCjackPlayback_Destruct(ALCjackPlayback *self)
         self->mClient = nullptr;
     }
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCjackPlayback();
 }
 

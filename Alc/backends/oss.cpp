@@ -248,6 +248,8 @@ struct ALCplaybackOSS final : public ALCbackend {
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
+
+    ALCplaybackOSS(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 int ALCplaybackOSS_mixerProc(ALCplaybackOSS *self);
@@ -269,8 +271,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCplaybackOSS);
 
 void ALCplaybackOSS_Construct(ALCplaybackOSS *self, ALCdevice *device)
 {
-    new (self) ALCplaybackOSS{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) ALCplaybackOSS{device};
     SET_VTABLE2(ALCplaybackOSS, ALCbackend, self);
 }
 
@@ -280,7 +281,6 @@ void ALCplaybackOSS_Destruct(ALCplaybackOSS *self)
         close(self->fd);
     self->fd = -1;
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCplaybackOSS();
 }
 
@@ -498,6 +498,8 @@ struct ALCcaptureOSS final : public ALCbackend {
 
     std::atomic<ALenum> mKillNow{AL_TRUE};
     std::thread mThread;
+
+    ALCcaptureOSS(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 int ALCcaptureOSS_recordProc(ALCcaptureOSS *self);
@@ -519,8 +521,7 @@ DEFINE_ALCBACKEND_VTABLE(ALCcaptureOSS);
 
 void ALCcaptureOSS_Construct(ALCcaptureOSS *self, ALCdevice *device)
 {
-    new (self) ALCcaptureOSS{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) ALCcaptureOSS{device};
     SET_VTABLE2(ALCcaptureOSS, ALCbackend, self);
 }
 
@@ -530,7 +531,6 @@ void ALCcaptureOSS_Destruct(ALCcaptureOSS *self)
         close(self->fd);
     self->fd = -1;
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCcaptureOSS();
 }
 

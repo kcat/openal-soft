@@ -172,6 +172,8 @@ void deviceList(int type, al::vector<DevMap> *devmap)
 /* Wrappers to use an old-style backend with the new interface. */
 struct PlaybackWrapper final : public ALCbackend {
     std::unique_ptr<qsa_data> ExtraData;
+
+    PlaybackWrapper(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 static void PlaybackWrapper_Construct(PlaybackWrapper *self, ALCdevice *device);
@@ -613,11 +615,8 @@ static void qsa_stop_playback(PlaybackWrapper *self)
 
 static void PlaybackWrapper_Construct(PlaybackWrapper *self, ALCdevice *device)
 {
-    new (self) PlaybackWrapper{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) PlaybackWrapper{device};
     SET_VTABLE2(PlaybackWrapper, ALCbackend, self);
-
-    self->ExtraData = NULL;
 }
 
 static void PlaybackWrapper_Destruct(PlaybackWrapper *self)
@@ -625,7 +624,6 @@ static void PlaybackWrapper_Destruct(PlaybackWrapper *self)
     if(self->ExtraData)
         qsa_close_playback(self);
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~PlaybackWrapper();
 }
 
@@ -657,6 +655,8 @@ static void PlaybackWrapper_stop(PlaybackWrapper *self)
 
 struct CaptureWrapper final : public ALCbackend {
     std::unique_ptr<qsa_data> ExtraData;
+
+    CaptureWrapper(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 static void CaptureWrapper_Construct(CaptureWrapper *self, ALCdevice *device);
@@ -916,8 +916,7 @@ static ALCenum qsa_capture_samples(CaptureWrapper *self, ALCvoid *buffer, ALCuin
 
 static void CaptureWrapper_Construct(CaptureWrapper *self, ALCdevice *device)
 {
-    new (self) CaptureWrapper{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) CaptureWrapper{device};
     SET_VTABLE2(CaptureWrapper, ALCbackend, self);
 }
 
@@ -926,7 +925,6 @@ static void CaptureWrapper_Destruct(CaptureWrapper *self)
     if(self->ExtraData)
         qsa_close_capture(self);
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~CaptureWrapper();
 }
 

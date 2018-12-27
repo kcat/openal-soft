@@ -40,13 +40,15 @@
 #endif
 
 struct ALCsdl2Backend final : public ALCbackend {
-    SDL_AudioDeviceID deviceID;
-    ALsizei frameSize;
+    SDL_AudioDeviceID deviceID{0u};
+    ALsizei frameSize{0};
 
-    ALuint Frequency;
-    DevFmtChannels FmtChans;
-    DevFmtType     FmtType;
-    ALuint UpdateSize;
+    ALuint Frequency{0u};
+    DevFmtChannels FmtChans{};
+    DevFmtType     FmtType{};
+    ALuint UpdateSize{0u};
+
+    ALCsdl2Backend(ALCdevice *device) noexcept : ALCbackend{device} { }
 };
 
 static void ALCsdl2Backend_Construct(ALCsdl2Backend *self, ALCdevice *device);
@@ -68,11 +70,9 @@ static const ALCchar defaultDeviceName[] = DEVNAME_PREFIX "Default Device";
 
 static void ALCsdl2Backend_Construct(ALCsdl2Backend *self, ALCdevice *device)
 {
-    new (self) ALCsdl2Backend{};
-    ALCbackend_Construct(STATIC_CAST(ALCbackend, self), device);
+    new (self) ALCsdl2Backend{device};
     SET_VTABLE2(ALCsdl2Backend, ALCbackend, self);
 
-    self->deviceID = 0;
     self->frameSize = device->frameSizeFromFmt();
     self->Frequency = device->Frequency;
     self->FmtChans = device->FmtChans;
@@ -86,7 +86,6 @@ static void ALCsdl2Backend_Destruct(ALCsdl2Backend *self)
         SDL_CloseAudioDevice(self->deviceID);
     self->deviceID = 0;
 
-    ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCsdl2Backend();
 }
 

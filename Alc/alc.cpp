@@ -3806,7 +3806,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
                 device->mAmbiScale = AmbiNorm::FuMa;
             }
         }
-        else if(strcasecmp(fmt, "acn+sn3d") == 0)
+        else if(strcasecmp(fmt, "ambix") == 0 || strcasecmp(fmt, "acn+sn3d") == 0)
         {
             device->mAmbiLayout = AmbiLayout::ACN;
             device->mAmbiScale = AmbiNorm::SN3D;

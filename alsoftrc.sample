@@ -100,8 +100,8 @@
 
 ## ambi-format:
 #  Specifies the channel order and normalization for the "ambi*" set of channel
-#  configurations. Valid settings are: fuma, acn+sn3d, acn+n3d
-#ambi-format = acn+sn3d
+#  configurations. Valid settings are: fuma, ambix (or acn+sn3d), acn+n3d
+#ambi-format = ambix
 
 ## hrtf:
 #  Controls HRTF processing. These filters provide better spatialization of

@@ -119,8 +119,8 @@ static const struct NameValuePair {
     { "", "" }
 }, ambiFormatList[] = {
     { "Default", "" },
-    { "ACN + SN3D", "acn+sn3d" },
-    { "ACN + N3D", "acn+n3d" },
+    { "AmbiX (ACN, SN3D)", "ambix" },
+    { "ACN, N3D", "acn+n3d" },
     { "Furse-Malham", "fuma" },
 
     { "", "" }

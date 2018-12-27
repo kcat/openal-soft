@@ -33,11 +33,9 @@
 #include "compat.h"
 
 
-RingBuffer *ll_ringbuffer_create(size_t sz, size_t elem_sz, int limit_writes)
+RingBufferPtr CreateRingBuffer(size_t sz, size_t elem_sz, int limit_writes)
 {
-    RingBuffer *rb;
-    size_t power_of_two = 0;
-
+    size_t power_of_two{0u};
     if(sz > 0)
     {
         power_of_two = sz;
@@ -50,14 +48,14 @@ RingBuffer *ll_ringbuffer_create(size_t sz, size_t elem_sz, int limit_writes)
         power_of_two |= power_of_two>>32;
 #endif
     }
-    power_of_two++;
-    if(power_of_two < sz) return NULL;
+    ++power_of_two;
+    if(power_of_two < sz) return nullptr;
 
-    rb = new (al_malloc(16, sizeof(*rb) + power_of_two*elem_sz)) RingBuffer{};
-
+    RingBufferPtr rb{new (al_malloc(16, sizeof(*rb) + power_of_two*elem_sz)) RingBuffer{}};
     rb->mSize = limit_writes ? sz : power_of_two;
     rb->mSizeMask = power_of_two - 1;
     rb->mElemSize = elem_sz;
+
     return rb;
 }
 

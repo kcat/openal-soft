@@ -321,7 +321,7 @@ struct ALCcoreAudioCapture final : public ALCbackend {
     ALuint mFrameSize{0u};
     AudioStreamBasicDescription mFormat{};  // This is the OpenAL format as a CoreAudio ASBD
 
-    std::unique_ptr<SampleConverter> mConverter;
+    SampleConverterPtr mConverter;
 
     RingBufferPtr mRing{nullptr};
 };
@@ -633,11 +633,11 @@ static ALCenum ALCcoreAudioCapture_open(ALCcoreAudioCapture *self, const ALCchar
 
     // Set up sample converter if needed
     if(outputFormat.mSampleRate != device->Frequency)
-        self->mConverter.reset(CreateSampleConverter(device->FmtType, device->FmtType,
+        self->mConverter = CreateSampleConverter(device->FmtType, device->FmtType,
             self->mFormat.mChannelsPerFrame, hardwareFormat.mSampleRate, device->Frequency,
-            BSinc24Resampler));
+            BSinc24Resampler);
 
-    self->mRing.reset(ll_ringbuffer_create(outputFrameCount, self->mFrameSize, false));
+    self->mRing = CreateRingBuffer(outputFrameCount, self->mFrameSize, false);
     if(!self->mRing) return ALC_INVALID_VALUE;
 
     device->DeviceName = name;

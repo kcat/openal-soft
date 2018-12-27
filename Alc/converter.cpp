@@ -135,14 +135,14 @@ void Stereo2Mono(ALfloat *RESTRICT dst, const void *src, ALsizei frames)
 
 } // namespace
 
-SampleConverter *CreateSampleConverter(DevFmtType srcType, DevFmtType dstType, ALsizei numchans,
-                                       ALsizei srcRate, ALsizei dstRate, Resampler resampler)
+SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType, ALsizei numchans,
+                                         ALsizei srcRate, ALsizei dstRate, Resampler resampler)
 {
     if(numchans <= 0 || srcRate <= 0 || dstRate <= 0)
         return nullptr;
 
-    size_t alloc_size{FAM_SIZE(SampleConverter, Chan, numchans)};
-    auto converter = new (al_calloc(16, alloc_size)) SampleConverter{};
+    const size_t alloc_size{FAM_SIZE(SampleConverter, Chan, numchans)};
+    SampleConverterPtr converter{new (al_calloc(16, alloc_size)) SampleConverter{}};
     converter->mSrcType = srcType;
     converter->mDstType = dstType;
     converter->mNumChannels = numchans;
@@ -170,16 +170,6 @@ SampleConverter *CreateSampleConverter(DevFmtType srcType, DevFmtType dstType, A
 
     return converter;
 }
-
-void DestroySampleConverter(SampleConverter **converter)
-{
-    if(converter)
-    {
-        delete *converter;
-        *converter = nullptr;
-    }
-}
-
 
 ALsizei SampleConverterAvailableOut(SampleConverter *converter, ALsizei srcframes)
 {
@@ -339,22 +329,13 @@ ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALs
 }
 
 
-ChannelConverter *CreateChannelConverter(DevFmtType srcType, DevFmtChannels srcChans, DevFmtChannels dstChans)
+ChannelConverterPtr CreateChannelConverter(DevFmtType srcType, DevFmtChannels srcChans, DevFmtChannels dstChans)
 {
     if(srcChans != dstChans && !((srcChans == DevFmtMono && dstChans == DevFmtStereo) ||
                                  (srcChans == DevFmtStereo && dstChans == DevFmtMono)))
         return nullptr;
 
-    return new ChannelConverter{srcType, srcChans, dstChans};
-}
-
-void DestroyChannelConverter(ChannelConverter **converter)
-{
-    if(converter)
-    {
-        delete *converter;
-        *converter = nullptr;
-    }
+    return ChannelConverterPtr{new ChannelConverter{srcType, srcChans, dstChans}};
 }
 
 void ChannelConverterInput(ChannelConverter *converter, const ALvoid *src, ALfloat *dst, ALsizei frames)

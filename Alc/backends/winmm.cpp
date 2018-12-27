@@ -581,7 +581,7 @@ ALCenum ALCwinmmCapture_open(ALCwinmmCapture *self, const ALCchar *deviceName)
         std::max<size_t>(device->UpdateSize*device->NumUpdates, BufferSize*self->WaveBuffer.size())
     );
 
-    self->Ring.reset(ll_ringbuffer_create(CapturedDataSize, self->Format.nBlockAlign, false));
+    self->Ring = CreateRingBuffer(CapturedDataSize, self->Format.nBlockAlign, false);
     if(!self->Ring) return ALC_INVALID_VALUE;
 
     al_free(self->WaveBuffer[0].lpData);

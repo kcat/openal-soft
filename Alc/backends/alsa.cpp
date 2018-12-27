@@ -1065,8 +1065,8 @@ ALCenum ALCcaptureAlsa_open(ALCcaptureAlsa *self, const ALCchar *name)
 
     if(needring)
     {
-        self->mRing.reset(ll_ringbuffer_create(device->UpdateSize*device->NumUpdates,
-            device->frameSizeFromFmt(), false));
+        self->mRing = CreateRingBuffer(device->UpdateSize*device->NumUpdates,
+            device->frameSizeFromFmt(), false);
         if(!self->mRing)
         {
             ERR("ring buffer create failed\n");

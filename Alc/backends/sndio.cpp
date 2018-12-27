@@ -465,8 +465,7 @@ static ALCenum SndioCapture_open(SndioCapture *self, const ALCchar *name)
         return ALC_INVALID_VALUE;
     }
 
-    self->ring.reset(ll_ringbuffer_create(device->UpdateSize*device->NumUpdates,
-        par.bps*par.rchan, false));
+    self->ring = CreateRingBuffer(device->UpdateSize*device->NumUpdates, par.bps*par.rchan, false);
     if(!self->ring)
     {
         ERR("Failed to allocate %u-byte ringbuffer\n",

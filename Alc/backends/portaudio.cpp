@@ -387,7 +387,7 @@ ALCenum ALCportCapture_open(ALCportCapture *self, const ALCchar *name)
     samples = maxu(samples, 100 * device->Frequency / 1000);
     frame_size = device->frameSizeFromFmt();
 
-    self->Ring.reset(ll_ringbuffer_create(samples, frame_size, false));
+    self->Ring = CreateRingBuffer(samples, frame_size, false);
     if(!self->Ring) return ALC_INVALID_VALUE;
 
     self->Params.device = -1;

@@ -534,8 +534,8 @@ static ALCboolean ALCopenslPlayback_reset(ALCopenslPlayback *self)
     }
     if(SL_RESULT_SUCCESS == result)
     {
-        self->mRing.reset(ll_ringbuffer_create(device->NumUpdates,
-            self->mFrameSize*device->UpdateSize, true));
+        self->mRing = CreateRingBuffer(device->NumUpdates,
+            self->mFrameSize*device->UpdateSize, true);
         if(!self->mRing)
         {
             ERR("Out of memory allocating ring buffer %ux%u %u\n", device->UpdateSize,
@@ -826,8 +826,8 @@ static ALCenum ALCopenslCapture_open(ALCopenslCapture *self, const ALCchar *name
 
     if(SL_RESULT_SUCCESS == result)
     {
-        self->mRing.reset(ll_ringbuffer_create(device->NumUpdates,
-            device->UpdateSize*self->mFrameSize, false));
+        self->mRing = CreateRingBuffer(device->NumUpdates,
+            device->UpdateSize*self->mFrameSize, false);
 
         result = VCALL(self->mRecordObj,GetInterface)(SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
                                                       &bufferQueue);

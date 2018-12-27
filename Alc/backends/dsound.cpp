@@ -835,8 +835,8 @@ ALCenum ALCdsoundCapture_open(ALCdsoundCapture *self, const ALCchar *deviceName)
         self->DSC->CreateCaptureBuffer(&DSCBDescription, &self->DSCbuffer, nullptr);
     if(SUCCEEDED(hr))
     {
-         self->Ring.reset(ll_ringbuffer_create(device->UpdateSize*device->NumUpdates,
-            InputType.Format.nBlockAlign, false));
+         self->Ring = CreateRingBuffer(device->UpdateSize*device->NumUpdates,
+            InputType.Format.nBlockAlign, false);
          if(!self->Ring) hr = DSERR_OUTOFMEMORY;
     }
 

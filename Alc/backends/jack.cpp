@@ -222,7 +222,7 @@ int ALCjackPlayback_bufferSizeNotify(jack_nframes_t numframes, void *arg)
     TRACE("%u update size x%u\n", device->UpdateSize, device->NumUpdates);
 
     self->mRing = nullptr;
-    self->mRing.reset(ll_ringbuffer_create(bufsize, device->frameSizeFromFmt(), true));
+    self->mRing = CreateRingBuffer(bufsize, device->frameSizeFromFmt(), true);
     if(!self->mRing)
     {
         ERR("Failed to reallocate ringbuffer\n");
@@ -431,7 +431,7 @@ ALCboolean ALCjackPlayback_reset(ALCjackPlayback *self)
     }
 
     self->mRing = nullptr;
-    self->mRing.reset(ll_ringbuffer_create(bufsize, device->frameSizeFromFmt(), true));
+    self->mRing = CreateRingBuffer(bufsize, device->frameSizeFromFmt(), true);
     if(!self->mRing)
     {
         ERR("Failed to allocate ringbuffer\n");

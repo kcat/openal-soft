@@ -1170,9 +1170,9 @@ struct ALCwasapiCapture final : public ALCbackend, WasapiProxy {
 
     HANDLE mMsgEvent{nullptr};
 
-    ChannelConverter *mChannelConv{nullptr};
-    SampleConverter *mSampleConv{nullptr};
-    RingBufferPtr mRing{nullptr};
+    ChannelConverterPtr mChannelConv;
+    SampleConverterPtr mSampleConv;
+    RingBufferPtr mRing;
 
     std::atomic<int> mKillNow{AL_TRUE};
     std::thread mThread;
@@ -1220,9 +1220,6 @@ void ALCwasapiCapture_Destruct(ALCwasapiCapture *self)
         CloseHandle(self->mNotifyEvent);
     self->mNotifyEvent = nullptr;
 
-    DestroySampleConverter(&self->mSampleConv);
-    DestroyChannelConverter(&self->mChannelConv);
-
     ALCbackend_Destruct(STATIC_CAST(ALCbackend, self));
     self->~ALCwasapiCapture();
 }
@@ -1266,35 +1263,31 @@ FORCE_ALIGN int ALCwasapiCapture_recordProc(ALCwasapiCapture *self)
                 ERR("Failed to get capture buffer: 0x%08lx\n", hr);
             else
             {
-                if(self->mChannelConv)
+                if(ChannelConverter *conv{self->mChannelConv.get()})
                 {
                     samples.resize(numsamples*2);
-                    ChannelConverterInput(self->mChannelConv, rdata, samples.data(), numsamples);
+                    ChannelConverterInput(conv, rdata, samples.data(), numsamples);
                     rdata = reinterpret_cast<BYTE*>(samples.data());
                 }
 
                 auto data = ring->getWriteVector();
 
                 size_t dstframes;
-                if(self->mSampleConv)
+                if(SampleConverter *conv{self->mSampleConv.get()})
                 {
                     const ALvoid *srcdata = rdata;
                     ALsizei srcframes = numsamples;
 
-                    dstframes = SampleConverterInput(self->mSampleConv,
-                        &srcdata, &srcframes, data.first.buf,
-                        (ALsizei)minz(data.first.len, INT_MAX)
-                    );
+                    dstframes = SampleConverterInput(conv, &srcdata, &srcframes, data.first.buf,
+                        (ALsizei)minz(data.first.len, INT_MAX));
                     if(srcframes > 0 && dstframes == data.first.len && data.second.len > 0)
                     {
                         /* If some source samples remain, all of the first dest
                          * block was filled, and there's space in the second
                          * dest block, do another run for the second block.
                          */
-                        dstframes += SampleConverterInput(self->mSampleConv,
-                            &srcdata, &srcframes, data.second.buf,
-                            (ALsizei)minz(data.second.len, INT_MAX)
-                        );
+                        dstframes += SampleConverterInput(conv, &srcdata, &srcframes,
+                            data.second.buf, (ALsizei)minz(data.second.len, INT_MAX));
                     }
                 }
                 else
@@ -1576,8 +1569,8 @@ HRESULT ALCwasapiCapture::resetProxy()
         return hr;
     }
 
-    DestroySampleConverter(&mSampleConv);
-    DestroyChannelConverter(&mChannelConv);
+    mSampleConv = nullptr;
+    mChannelConv = nullptr;
 
     if(wfx != nullptr)
     {
@@ -1694,7 +1687,7 @@ HRESULT ALCwasapiCapture::resetProxy()
     }
 
     buffer_len = maxu(device->UpdateSize*device->NumUpdates, buffer_len);
-    mRing.reset(ll_ringbuffer_create(buffer_len, device->frameSizeFromFmt(), false));
+    mRing = CreateRingBuffer(buffer_len, device->frameSizeFromFmt(), false);
     if(!mRing)
     {
         ERR("Failed to allocate capture ring buffer\n");

@@ -1,6 +1,8 @@
 #ifndef CONVERTER_H
 #define CONVERTER_H
 
+#include <memory>
+
 #include "alMain.h"
 #include "alu.h"
 #include "almalloc.h"
@@ -28,10 +30,10 @@ struct SampleConverter {
 
     DEF_PLACE_NEWDEL()
 };
+using SampleConverterPtr = std::unique_ptr<SampleConverter>;
 
-SampleConverter *CreateSampleConverter(DevFmtType srcType, DevFmtType dstType, ALsizei numchans,
+SampleConverterPtr CreateSampleConverter(DevFmtType srcType, DevFmtType dstType, ALsizei numchans,
     ALsizei srcRate, ALsizei dstRate, Resampler resampler);
-void DestroySampleConverter(SampleConverter **converter);
 
 ALsizei SampleConverterInput(SampleConverter *converter, const ALvoid **src, ALsizei *srcframes, ALvoid *dst, ALsizei dstframes);
 ALsizei SampleConverterAvailableOut(SampleConverter *converter, ALsizei srcframes);
@@ -47,10 +49,12 @@ struct ChannelConverter {
     { }
     DEF_NEWDEL(ChannelConverter)
 };
+using ChannelConverterPtr = std::unique_ptr<ChannelConverter>;
 
-ChannelConverter *CreateChannelConverter(DevFmtType srcType, DevFmtChannels srcChans, DevFmtChannels dstChans);
-void DestroyChannelConverter(ChannelConverter **converter);
+ChannelConverterPtr CreateChannelConverter(DevFmtType srcType, DevFmtChannels srcChans,
+    DevFmtChannels dstChans);
 
-void ChannelConverterInput(ChannelConverter *converter, const ALvoid *src, ALfloat *dst, ALsizei frames);
+void ChannelConverterInput(ChannelConverter *converter, const ALvoid *src, ALfloat *dst,
+    ALsizei frames);
 
 #endif /* CONVERTER_H */

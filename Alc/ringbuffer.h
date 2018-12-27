@@ -81,6 +81,7 @@ struct RingBuffer {
 
     DEF_PLACE_NEWDEL()
 };
+using RingBufferPtr = std::unique_ptr<RingBuffer>;
 
 
 /**
@@ -88,9 +89,6 @@ struct RingBuffer {
  * The number of elements is rounded up to the next power of two (even if it is
  * already a power of two, to ensure the requested amount can be written).
  */
-RingBuffer *ll_ringbuffer_create(size_t sz, size_t elem_sz, int limit_writes);
-
-
-using RingBufferPtr = std::unique_ptr<RingBuffer>;
+RingBufferPtr CreateRingBuffer(size_t sz, size_t elem_sz, int limit_writes);
 
 #endif /* RINGBUFFER_H */

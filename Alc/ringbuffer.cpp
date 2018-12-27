@@ -192,7 +192,7 @@ void RingBuffer::writeAdvance(size_t cnt) noexcept
 }
 
 
-ll_ringbuffer_data_pair RingBuffer::getWriteVector() const noexcept
+ll_ringbuffer_data_pair RingBuffer::getReadVector() const noexcept
 {
     ll_ringbuffer_data_pair ret;
 
@@ -205,7 +205,7 @@ ll_ringbuffer_data_pair RingBuffer::getWriteVector() const noexcept
     const size_t cnt2{r + free_cnt};
     if(cnt2 > mSizeMask+1)
     {
-        /* Two part vector: the rest of the buffer after the current write ptr,
+        /* Two part vector: the rest of the buffer after the current read ptr,
          * plus some from the start of the buffer. */
         ret.first.buf = const_cast<char*>(&mBuffer[r*mElemSize]);
         ret.first.len = mSizeMask+1 - r;
@@ -224,7 +224,7 @@ ll_ringbuffer_data_pair RingBuffer::getWriteVector() const noexcept
     return ret;
 }
 
-ll_ringbuffer_data_pair RingBuffer::getReadVector() const noexcept
+ll_ringbuffer_data_pair RingBuffer::getWriteVector() const noexcept
 {
     ll_ringbuffer_data_pair ret;
 

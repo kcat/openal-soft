@@ -37,14 +37,14 @@ static int EventThread(ALCcontext *context)
              * ringbuffer's read offset at the end of scope.
              */
             const struct EventAutoDestructor {
-                AsyncEvent &evt;
-                RingBuffer *ring;
+                AsyncEvent &evt_;
+                RingBuffer *ring_;
                 ~EventAutoDestructor()
                 {
-                    evt.~AsyncEvent();
-                    ring->readAdvance(1);
+                    evt_.~AsyncEvent();
+                    ring_->readAdvance(1);
                 }
-            } _{evt, context->AsyncEvents.get()};
+            } _{evt, ring};
 
             quitnow = evt.EnumType == EventType_KillThread;
             if(UNLIKELY(quitnow)) break;
